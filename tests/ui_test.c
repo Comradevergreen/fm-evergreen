@@ -2487,8 +2487,8 @@ static int test_layer(void)
         memset(dx_mot, 0, 4);
     }
     go_title("CHORUS");
-    bad += check("  CHORUS page: CRT CDP", cur_page()->fam == FAM_FX && cur_page()->id[0] == G_CRATE &&
-                 cur_page()->id[1] == G_CDEPTH && cur_page()->id[2] == 0xFFu);
+    bad += check("  CHORUS page: CRT CDP STER (0.6.9)", cur_page()->fam == FAM_FX && cur_page()->id[0] == G_CRATE &&
+                 cur_page()->id[1] == G_CDEPTH && cur_page()->id[2] == G_CSTER && cur_page()->id[3] == 0xFFu);
     /* chording: a key held before FX stays a note, its note-off arrives */
     ui_power_on();
     mo = mo_w;
@@ -2957,11 +2957,11 @@ static int test_quick_layers(void)
         t1 = cur_page()->title;
         turn(EN_PRESET, 2); frame();                    /* two on */
         t3 = cur_page()->title;
-        ok = !ui.home && str_eq(t1, "FX") && str_eq(t3, "SLICER") && msg_is("SLICER");
+        ok = !ui.home && str_eq(t1, "FX") && str_eq(t3, "AUTOPAN") && msg_is("AUTOPAN");   /* (0.6.9: after DIST) */
         frames(600);                                    /* (held past HOLD: still no map) */
         ok &= !ui.layer;
         btn_up(B_FX); frames(4);
-        ok &= str_eq(cur_page()->title, "SLICER") && !ui.layer;   /* (no tap: no next page) */
+        ok &= str_eq(cur_page()->title, "AUTOPAN") && !ui.layer;   /* (no tap: no next page) */
         btn_down(B_FX); frame(); turn(EN_PRESET, -1); frame(); btn_up(B_FX); frames(4);
         ok &= str_eq(cur_page()->title, "DIST");
         btn_down(B_FX); frame(); turn(EN_PRESET, -9); frame(); btn_up(B_FX); frames(4);
@@ -6045,7 +6045,7 @@ static int test_div_order(void)
 {
     int bad = 0, ok = 1;
     uint32_t id, c, k, found = 0;
-    static const param_desc_t *const LISTS[] = {&TP[P_SDIV], &TP[P_ARATE], &GP[G_DTIME], &TP[P_SLRATE]};
+    static const param_desc_t *const LISTS[] = {&TP[P_SDIV], &TP[P_ARATE], &GP[G_DTIME], &GP[G_SLRATE]};   /* (0.6.9: the bus's) */
     ui_power_on();
     for (k = 0; k < NELEM(LISTS); k++) {           /* left end -> right end: each one shorter than the one before */
         const param_desc_t *d = LISTS[k];

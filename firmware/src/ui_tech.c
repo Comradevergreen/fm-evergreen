@@ -334,12 +334,48 @@ static void tech_global(void)
                 heat_col(60 + (tune > 0 ? tune : -tune) * 180 / 50));
 }
 
+/* (JIANT 0.6.9) AUTOPAN: the stereo field across (L left, R right, the track's PAN the centre line), the swing down
+ * the panel as time (two cycles, the newest at the top), a dot where the pan is now (fx.c ap_ph) */
+static int32_t tk_apwave(uint32_t w, uint32_t ph, uint32_t cyc)
+{
+    switch (w) {
+    case 1: return ph < 0x80000000u ? (int32_t)(ph >> 15) - 32768 : 98303 - (int32_t)(ph >> 15);
+    case 2: return (int32_t)(ph >> 16) - 32768;
+    case 3: return ph < 0x80000000u ? 32767 : -32767;
+    case 4: return (int32_t)((cyc * 2654435761u) >> 16) - 32768;   /* (S&H: a place a cycle) */
+    default: return bg_sin(ph);
+    }
+}
+static void tech_autopan(const track_t *t)
+{
+    int32_t x0 = TK_X0 + 6, w = PANEL_W - 12, y0 = TK_Y0 + 4, h = TK_Y1 - TK_Y0 - 8, dep = clamp(t->p[P_APDEP], 0, 127);
+    int32_t base = x0 + w / 2 + clamp(t->p[P_PAN], -64, 63) * (w / 2) / 64, i, px = 0, py = 0;
+    uint32_t ti = (uint32_t)(t - trk) % NTRK, wv = (uint32_t)clamp(t->p[P_APWAVE], 0, 4), now = ap_ph[ti];
+    cv_rect(x0 + w / 2, y0, 1, h, T_RAISE);              /* the centre */
+    cv_rect(x0, y0, 1, h, T_LINE);
+    cv_rect(x0 + w - 1, y0, 1, h, T_LINE);
+    cv_text(x0 + 3, y0, &AF_S, "L", T_DIM);
+    cv_text(x0 + w - 10, y0, &AF_S, "R", T_DIM);
+    for (i = 0; i <= h; i++) {                          /* row i: i / h of two cycles ago */
+        uint64_t back = (uint64_t)i * 0x200000000ull / (uint64_t)h;
+        uint32_t ph = now - (uint32_t)back, cyc = (uint32_t)(((uint64_t)now - back + 0x400000000ull) >> 32);
+        int32_t x = clamp(base + (tk_apwave(wv, ph, cyc) * dep / 127) * (w / 2) / 32768, x0, x0 + w - 1), y = y0 + i;
+        if (i)
+            cv_line_t(px, py, x, y, heat_y(y, y0 + h, y0, T_THEME), 2);
+        px = x;
+        py = y;
+    }
+    tk_dot(clamp(base + (tk_apwave(wv, now, (uint32_t)(((uint64_t)now + 0x400000000ull) >> 32)) * dep / 127) * (w / 2) / 32768,
+                 x0, x0 + w - 1), y0);
+}
+
 /* the page's technical graph, if it has one (1) */
 static int graph_tech(const track_t *t, const page_t *pg)
 {
     if (pg->scope != SC_GLOBAL)
         switch (pg->id[0]) {
         case P_DIST: tech_dist(t); return 1;
+        case P_APDEP: tech_autopan(t); return 1;
         case P_ED_FLT: tech_dest(t, 0); return 1;
         case P_LD_PIT: tech_dest(t, 1); return 1;
         case P_VOICE: tech_voice(t); return 1;

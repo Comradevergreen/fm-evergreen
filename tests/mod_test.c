@@ -86,6 +86,8 @@ static void fresh(uint32_t e, uint32_t pi)        /* the boot state (no FX tails
     memset(rev_ap, 0, sizeof rev_ap);
     memset(&fx, 0, sizeof fx);
     lim_env = LIM_T; lev_env = 0; lev_g = lev_cur = 32768; lev_dg = 0;
+    mp_seen = 0; memset(dist_w, 0, sizeof dist_w);      /* (0.6.8: LEVEL / PAN glide, DST blend; 0.6.9: AUTO PAN) */
+    memset(ap_ph, 0, sizeof ap_ph); memset(ap_free, 0, sizeof ap_free); memset(ap_sh, 0, sizeof ap_sh);
     memset(trk, 0, sizeof trk);
     memset(&mod, 0, sizeof mod);
     host_tracks_init();
@@ -641,6 +643,40 @@ static uint64_t phrase_lr(int32_t *diff)
     }
     return hash;
 }
+/* (JIANT 0.6.9) AUTO PAN: a note held 2 s (4 beats at 120), sends off; per 1/16 window the balance (R - L) / (R + L);
+ * out: the sign changes of the balance (its centre crossings), *swing its range, *step the largest sample step left */
+static uint32_t ap_run(int16_t dep, int16_t rate, int16_t sync, int16_t wave, double *swing, int32_t *step)
+{
+    uint32_t b, i, w = 0, cross = 0, nw = beat_samples() / 4u;
+    double el = 0, er = 0, lo = 1, hi = -1, prev = 0;
+    int32_t lastl = 0;
+    track_t *t = &trk[0];
+    fresh(0, 0);
+    t->p[P_CHOR] = t->p[P_DLY] = t->p[P_REV] = 0;
+    t->p[P_APDEP] = dep; t->p[P_APRATE] = rate; t->p[P_APSYNC] = sync; t->p[P_APWAVE] = wave;
+    *step = 0;
+    trk_note_on(t, 48, 110);
+    for (b = 0; b < 2u * FS / CTL; b++) {
+        blocks(1);
+        for (i = 0; i < CTL; i++) {
+            int32_t l = out_buf[2u * i], r = out_buf[2u * i + 1u], d = l - lastl;
+            el += (double)l * l; er += (double)r * r;
+            if (b > 64u && (d < 0 ? -d : d) > *step) *step = d < 0 ? -d : d;
+            lastl = l;
+            if (++w == nw) {
+                double bal = (er - el) / (er + el + 1);
+                if (b * CTL > FS / 8u) {                /* (past the attack) */
+                    lo = bal < lo ? bal : lo; hi = bal > hi ? bal : hi;
+                    cross += (bal > 0.05 && prev < -0.05) || (bal < -0.05 && prev > 0.05);
+                }
+                if (bal > 0.05 || bal < -0.05) prev = bal;
+                w = 0; el = er = 0;
+            }
+        }
+    }
+    *swing = hi - lo;
+    return cross;
+}
 /* (JIANT 0.4) ENV LOOP: held, the envelope starts its attack again at the sustain: the level rises and falls again
  * and again (an ADSR-shaped LFO); OFF: one rise; released: it ends */
 static uint32_t env_rises(int16_t loop, int *ended)
@@ -1084,13 +1120,38 @@ static void test_jiant_fx(void)
         check("CHORUS: a stereo ensemble at WIDTH 0, wider at 127", d2 > 1000 && d3 > d2);
     }
     song.g[G_WIDTH] = 0;
-    fresh(0, 0);
-    trk[0].p[P_DLY] = 110; song.g[G_DFDBK] = 100;
-    h0 = phrase();
-    fresh(0, 0);
-    trk[0].p[P_DLY] = 110; song.g[G_DFDBK] = 100; song.g[G_DHPF] = 100;
-    check("delay HPF: the repeats thinner (another sound)", phrase() != h0);
-    song.g[G_DHPF] = 0;
+    {   /* (JIANT 0.6.9) CHORUS STEREO (G_CSTER, was the delay's unused HPF): -64 mono, 0 as before, 63 wider */
+        int32_t dm, d0s, dw;
+        uint64_t hb, ha;
+        fresh(0, 0);
+        trk[0].p[P_CHOR] = 90; song.g[G_CSTER] = -64; trk[0].p[P_DLY] = trk[0].p[P_REV] = 0;
+        (void)phrase_lr(&dm);
+        fresh(0, 0);
+        trk[0].p[P_CHOR] = 90; song.g[G_CSTER] = 0; trk[0].p[P_DLY] = trk[0].p[P_REV] = 0;
+        hb = phrase_lr(&d0s);
+        fresh(0, 0);
+        trk[0].p[P_CHOR] = 90; song.g[G_CSTER] = 63; trk[0].p[P_DLY] = trk[0].p[P_REV] = 0;
+        ha = phrase_lr(&dw);
+        song.g[G_CSTER] = 0;
+        printf("mod:   (CHORUS STEREO L-R: -64 %d, 0 %d, 63 %d)\n", (int)dm, (int)d0s, (int)dw);
+        check("CHORUS STEREO: -64 the chorus mono (L - R under 1/1000 of 0's), 0 stereo as before, 63 wider", dm < d0s / 1000 && d0s > 1000 &&
+              dw > d0s * 3 / 2 && ha != hb);
+    }
+    {   /* (JIANT 0.6.9) AUTO PAN */
+        double sw0, sw1, sw2, sw3, sw4;
+        int32_t st0, st1, st2, st3, st4;
+        uint32_t c0 = ap_run(0, 4, 1, 0, &sw0, &st0);   /* DPTH 0: still */
+        uint32_t c1 = ap_run(127, 4, 1, 0, &sw1, &st1); /* BEAT 1/4: a swing a beat */
+        uint32_t c2 = ap_run(127, 2, 1, 0, &sw2, &st2); /* BEAT 1BAR: one over the 4 beats */
+        uint32_t c3 = ap_run(127, 70, 0, 0, &sw3, &st3);   /* FREE ~2 Hz */
+        uint32_t c4 = ap_run(127, 4, 1, 3, &sw4, &st4); /* BEAT 1/4 SQR */
+        printf("mod:   (AUTO PAN centre crossings / swing: DPTH 0 %u %.2f, 1/4 %u %.2f, 1BAR %u %.2f, FREE 70 %u %.2f, SQR %u %.2f;"
+               " largest step SIN %d SQR %d)\n", c0, sw0, c1, sw1, c2, sw2, c3, sw3, c4, sw4, (int)st1, (int)st4);
+        check("AUTO PAN: DPTH 0 still; BEAT 1/4 swings L-R each beat (7..8 crossings in 4 beats), 1BAR 1..2, FREE moves too",
+              c0 == 0 && sw0 < 0.05 && c1 >= 7 && c1 <= 8 && sw1 > 1.2 && c2 >= 1 && c2 <= 2 && c3 >= 4 && sw3 > 1.0);
+        check("AUTO PAN: SQR jumps side to side without a click (its largest sample step as SIN's, the glide)",
+              c4 >= 7 && sw4 > 1.2 && st4 < st1 * 3 / 2 + 200);
+    }
     for (k = 0; k < 5u; k++) {                         /* (JIANT 0.5: + SHIMMER RESO CLOUD) */
         static const char *const RT[5] = {"ROOM: MOD (its combs drift) and PRE each change the tail",
                                           "SPRING: MOD (its wobble deeper) and PRE each change the tail",

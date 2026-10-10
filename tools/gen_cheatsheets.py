@@ -7,7 +7,7 @@ import html, os
 
 R = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(R, 'docs', 'cheatsheet')
-VERSION = 'v0.6.8'
+VERSION = 'v0.6.9'
 
 HEAT = ['#22d3ee', '#3b82f6', '#8b5cf6', '#d946ef', '#ef4444', '#ff7a00', '#facc15', '#f4f1ea']
 
@@ -143,7 +143,7 @@ def controls():
     pb = [
         ('ENV', 'ENV · ENV DEST', '—'),
         ('LFO', 'LFO · LFO DEST · MOD · MSEQ · MSEQ 2', 'MACROS M1–M4 (stay latched)'),
-        ('FX', 'FX · DIST · SLICER · SL BUS · SL BUS 2 · SL PITCH · DLY · DLY 2 · REVERB · REVERB 2 · CHORUS · MASTER',
+        ('FX', 'FX · DIST · AUTOPAN · SLICER · SL BUS · SL BUS 2 · SL PITCH · DLY · DLY 2 · REVERB · REVERB 2 · CHORUS · MASTER',
          'PUNCH-IN FX'),
         ('SCL', 'SCL · SCL 2', 'ROOT by key'),
         ('EDIT', 'EDIT 1 · EDIT 2 · FILTER · VOICE  (DRUM: LANES · LANES 2 · SOUND 1–3 · X-MOD)', 'INIT · RECALL · sound mutes'),
@@ -224,11 +224,11 @@ def controls():
         ('ENV', HEAT[0], [('ENV', 'ATK DEC SUS REL'), ('ENV DEST', 'FLT PIT SHP LOOP')]),
         ('LFO', HEAT[1], [('LFO', 'RATE WAVE PHS FADE'), ('LFO DEST', 'PIT FLT SHP AMP'), ('MOD', 'SLOT SRC DST AMT'),
                           ('MSEQ', 'STEP LVL LEN SLEW'), ('MSEQ 2', 'DIV - - -')]),
-        ('FX', HEAT[5], [('FX', 'DST CHO DLY REV'), ('DIST', 'DST TYPE TONE -'), ('SLICER', 'SLCR PAT RATE DEPTH'),
+        ('FX', HEAT[5], [('FX', 'DST CHO DLY REV'), ('DIST', 'DST TYPE TONE -'), ('AUTOPAN', 'DPTH RATE SYNC WAVE'), ('SLICER', 'SLCR PAT RATE DEPTH'),
                          ('SL BUS', 'T1 T2 T3 T4'), ('SL BUS 2', 'T5 T6 FX -'), ('SL PITCH', 'STEP PIT LEN QNT'),
                          ('DLY', 'TIME FDBK TONE MIX'), ('DLY 2', 'WIDE PITCH SPRY -'),
                          ('REVERB', 'TYPE SIZE DAMP PRE'), ('REVERB 2', 'MOD RATE FILT WIDE'),
-                         ('CHORUS', 'RATE DEPTH - -'), ('MASTER', 'CLIP PNCH DUCK REL')]),
+                         ('CHORUS', 'RATE DEPTH STER -'), ('MASTER', 'CLIP PNCH DUCK REL')]),
         ('EDIT', HEAT[3], [('EDIT 1', 'E1 E2 E3 E4'), ('EDIT 2', 'E5 E6 E7 E8'), ('FILTER', 'TYPE CUT RES DRV'),
                            ('VOICE', 'VCE GLD GLMOD PRIO'), ('LANES', 'KICK SNARE CLAP HATCL'),
                            ('LANES 2', 'HATOP TOM RIM BELL'), ('SOUND', 'LANE SIDE PTCH PMOD'),
@@ -346,7 +346,10 @@ def sound():
     b.append('<div class="grid g3">')
     b.append(card('PER TRACK', HEAT[5], '<h4>FX · SENDS</h4>' + knobs('DST', 'CHO', 'DLY', 'REV') +
                   '<h4>DIST</h4>' + knobs('DST', 'TYPE', 'TONE', '-') +
-                  '<p style="margin-top:6px">SOFT · HARD · FOLD · CRUSH · RECT.</p>'))
+                  '<p style="margin-top:6px">SOFT · HARD · FOLD · CRUSH · RECT.</p>'
+                  '<h4>AUTOPAN</h4>' + knobs('DPTH', 'RATE', 'SYNC', 'WAVE') +
+                  '<p style="margin-top:6px">The track\'s pan swung L–R around its PAN. SYNC <b>BEAT</b>: RATE 4 BARS … 1/32, '
+                  'in time with the bar; <b>FREE</b>: in Hz. SIN · TRI · SAW · SQR · S&amp;H, never a click.</p>'))
     b.append(card('SLICER · ONE ON A BUS', HEAT[3], knobs('SLCR', 'PAT', 'RATE', 'DEPTH') +
                   '<p style="margin-top:6px">OFF · GATE · STUT, 16 patterns, 1/8 … 32T. <b>SL BUS</b>: T1–T6 and '
                   '<b>FX</b> (the delay / reverb / chorus returns) ON / OFF: everything on = the whole mix chopped after '
@@ -354,7 +357,8 @@ def sound():
     b.append(card('DELAY · CHORUS', HEAT[1], '<h4>DLY</h4>' + knobs('TIME', 'FDBK', 'TONE', 'MIX') +
                   '<h4>DLY 2</h4>' + knobs('WIDE', 'PITCH', 'SPRY', '-') +
                   '<p style="margin-top:6px">Synced or free (5 ms – 1.48 s); PITCH / SPRY: a grain delay.</p>'
-                  '<h4>CHORUS</h4>' + knobs('RATE', 'DEPTH', '-', '-')))
+                  '<h4>CHORUS</h4>' + knobs('RATE', 'DEPTH', 'STER', '-') +
+                  '<p style="margin-top:6px">STER: 0 as always, down to mono, up to twice as wide.</p>'))
     b.append('</div>')
     rv = [
         ('ROOM', 'Classic room', 'decay', 'darkens', 'chorus on the tail', 'its speed', 'stereo'),

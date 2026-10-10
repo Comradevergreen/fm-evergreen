@@ -79,7 +79,7 @@ glow_c = glow_m * np.array(VIOLET, np.float32) * 0.55 + glow_m ** 3 * np.array(O
 sig = Image.open(ROOT / 'docs/cheatsheet/signature.png').convert('RGB')
 
 brand = text_layer(['JIANT FM'], F_SMALL, WHITE)
-tag = text_layer(['M-VAVE FM-1 · v0.6.8'], F_SMALL, DIM)
+tag = text_layer(['M-VAVE FM-1 · v0.6.9'], F_SMALL, DIM)
 LAYERS = [(text_layer([sc[2] or ' '], F_SMALL, ORANGE), text_layer(sc[3], F_BIG, WHITE, 0.98, gradient=True),
            text_layer(sc[4] or [' '], F_SUB, WHITE, 1.3)) for sc in SCENES]
 intro_t = text_layer(['JIANT FM'], font('Bold', 150), WHITE, gradient=True)

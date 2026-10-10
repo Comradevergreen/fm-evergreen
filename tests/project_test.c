@@ -158,8 +158,8 @@ static int track_v3_ok(const proj_trk_t *n, const proj_trk_v3_t *o, uint32_t t)
 {
     uint32_t k;
     int ok = n->engine == o->engine && n->preset == o->preset && steps_same(n->step, o->step);
-    for (k = 0; k <= P_SLDEPTH; k++)
-        ok &= n->p[k] == oldv3(t, k);           /* up to the SLICER: the same ids */
+    for (k = 0; k <= P_SLDEPTH; k++)            /* up to the SLICER: the same ids (0.6.9: its slots AUTO PAN's, off) */
+        ok &= n->p[k] == (k >= P_SLCR ? TP[k].def : oldv3(t, k));
     for (k = P_M1SRC; k <= P_M4AMT; k++)
         ok &= n->p[k] == TP[k].def && TP[k].def == 0;
     {
@@ -298,7 +298,7 @@ int main(void)
     ok = proj_import(&q2, &buf, (int)sizeof v3) && proj_ok(&q2) && q2.parts == NPART && q2.t[3].engine == ENGI_DRUM &&
          q2.t[3].preset == PROJ_DEF_KEEP && q2.t[3].p[P_LEVEL] == 90 && q2.t[3].p[P_REV] == 20 &&
          q2.t[3].p[P_PAN] == oldv3(0, P_PAN) && q2.t[3].p[P_SLEN] == oldv3(0, P_SLEN) &&
-         q2.t[3].p[P_SLCR] == oldv3(0, P_SLCR) && q2.t[3].p[P_M1SRC] == 0 &&
+         q2.t[3].p[P_APDEP] == 0 && q2.t[3].p[P_M1SRC] == 0 &&   /* (0.6.9: the old SLICER's slots: AUTO PAN off) */
          steps_grid_same(q2.t[3].step, v3.t[0].step) && !memcmp(&q2.t[0], &q.t[0], sizeof q.t[0]);
     bad += check("FUN3 before 1.0: the drum track -> part 4 (LEVEL / REV from G_DRLVL / G_DRREV)", ok);
 
@@ -931,6 +931,10 @@ int main(void)
                  s2.g[G_SLRATE] == 2 && s2.g[G_SLDEP] == 90 && !s2.g[G_SLT1] && s2.g[G_SLT1 + 1] && !s2.g[G_SLT1 + 2] &&
                  s2.g[G_SLT1 + 3] && !s2.g[G_SLT1 + 4] && !s2.g[G_SLFX];
             bad += check("FUNB of 0.5: the tracks' SLICERs become the bus (T2's settings, T2 and T4 in, FX out)", ok);
+            for (k = 0, ok = 1; k < NTRK; k++)                /* (0.6.9: their slots are AUTO PAN's: off) */
+                ok &= s2.t[k].p[P_APDEP] == 0 && s2.t[k].p[P_APRATE] == TP[P_APRATE].def &&
+                      s2.t[k].p[P_APWAVE] == TP[P_APWAVE].def && s2.t[k].p[P_APSYNC] == TP[P_APSYNC].def;
+            bad += check("  .. and AUTO PAN, in the old SLICER's slots, off on every track (its defaults)", ok);
         }
         {   /* damaged on purpose with the hash made right: refused or loaded, never read past the room (ASan) */
             static project_store_t z;

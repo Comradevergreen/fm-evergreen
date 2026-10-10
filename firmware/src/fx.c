@@ -782,6 +782,8 @@ static void fx_buses(const int32_t *cho_in, const int32_t *dly_in, const int32_t
     uint32_t cinc = LFO_INC[song.g[G_CRATE] & 127] / CTL;
     int32_t hk = tn > 0 ? tn * tn * 4 : 0, wd = song.g[G_WIDTH];   /* (the low cut: up to ~3 kHz); WIDTH */
     int32_t gr = song.g[G_DPIT] || song.g[G_DSPRY];     /* (JIANT) the GRAIN delay */
+    int32_t cs = song.g[G_CSTER], cw = 80 + wd / 2;    /* (0.6.9) the chorus's side: 0 as before, - to mono, + ~2x */
+    cw = cs >= 0 ? cw + cs * 2 : (cw * (64 + cs)) >> 6;
     uint32_t dr = dl + (wd ? div_samples(3) * (uint32_t)wd / 127u : 0u);   /* the right echo: up to 1/32 later */
     if (dr >= DLY_LEN)
         dr = DLY_LEN - 1u;
@@ -819,7 +821,7 @@ static void fx_buses(const int32_t *cho_in, const int32_t *dly_in, const int32_t
         {
             int32_t sd;
             y += cho_ens(cho_buf, fx.cho_w, fx.cho_ph, cdepth, &sd);
-            sd = (sd * (80 + wd / 2)) >> 7;
+            sd = (sd * cw) >> 7;
             side += sd;
         }
         fx.cho_w++;
@@ -873,6 +875,44 @@ static __attribute__((noinline)) int32_t duck_ramp(int32_t l0, int32_t l1, int32
  * them: a quarter of the way to the knob's a block (~3 ms), ramped across it, never a step */
 static int32_t mp_lvl[NTRK], mp_pan[NTRK];
 static uint8_t mp_seen;                                   /* the part's first block: at once */
+/* (JIANT 0.6.9) AUTO PAN: the part's PAN swung by an LFO of its own, DPTH up to the whole field either way, its RATE
+ * FREE (the LFO's rates) or on the tempo (BEAT: 4 bars .. 1/32, in time with the bar while playing, as X-MOD), SIN TRI
+ * SAW SQR or S&H; through mp_pan's glide (no step even on SQR / S&H). Per part: the phase and the S&H value */
+static uint32_t ap_ph[NTRK], ap_free[NTRK];
+static int16_t ap_sh[NTRK];
+static uint32_t ap_rng = 0x2545F491u;
+static const uint8_t AP_SIXT[8] = {128, 64, 32, 16, 8, 4, 2, 1};   /* a cycle in 1/32 notes: 4 BARS .. 1/32 (N_APDIV) */
+static __attribute__((noinline)) int32_t autopan(const track_t *t, uint32_t ti, uint32_t n)   /* the offset, pan << 8 */
+{
+    const int16_t *p = t->p;
+    uint32_t ph, old = ap_ph[ti], w = (uint32_t)clamp(p[P_APWAVE], 0, 4);
+    int32_t v;
+    if (p[P_APSYNC]) {                                    /* BEAT: from the transport's grid (free while stopped) */
+        uint32_t len = beat_samples() * AP_SIXT[clamp(p[P_APRATE], 0, 7)] / 8u, pos;
+        if (len < 64u)
+            len = 64u;
+        ap_free[ti] += n;
+        pos = song.playing ? ms_clock : ap_free[ti];
+        ph = (pos % len) * (0xFFFFFFFFu / len);
+    } else {
+        ph = old + LFO_INC[p[P_APRATE] & 127] * (n / CTL);   /* (the LFO's rates: once a block, as track_lfo_tick) */
+    }
+    ap_ph[ti] = ph;
+    switch (w) {
+    case 1: v = ph < 0x80000000u ? (int32_t)(ph >> 15) - 32768 : 98303 - (int32_t)(ph >> 15); break;   /* TRI */
+    case 2: v = (int32_t)(ph >> 16) - 32768; break;                                                   /* SAW */
+    case 3: v = ph < 0x80000000u ? 32767 : -32767; break;                                             /* SQR */
+    case 4:                                                                                             /* S&H */
+        if (ph < old) {                                   /* (a new cycle: a new place) */
+            ap_rng = ap_rng * 1664525u + 1013904223u;
+            ap_sh[ti] = (int16_t)((int32_t)(ap_rng >> 16) - 32768);
+        }
+        v = ap_sh[ti];
+        break;
+    default: v = osc_sine(ph); break;                                                                  /* SIN */
+    }
+    return ((v >> 7) * clamp(p[P_APDEP], 0, 127)) >> 1;   /* (+-256 x 127 / 2: +-64 << 8 at full depth) */
+}
 
 /* one synth part into the dry mix and the sends; a part with no voice sounding costs
  * the LFO tick and a cleared buffer only (after the DIST tail has run out) */
@@ -892,6 +932,8 @@ static void mix_part(track_t *t, uint32_t n)
     {
         uint32_t ti = (uint32_t)(t - trk) % NTRK;
         int32_t lvl = LEVEL_Q12[t->p[P_LEVEL] & 127] << 8, pan = t->p[P_PAN] << 8, l0, p0, lq, dl, gl, gr, dgl, dgr;
+        if (t->p[P_APDEP] > 0)                          /* (0.6.9) AUTO PAN */
+            pan = clamp(pan + autopan(t, ti, n), -64 << 8, 63 << 8);
         if (!((mp_seen >> ti) & 1u)) {
             mp_lvl[ti] = lvl;
             mp_pan[ti] = pan;

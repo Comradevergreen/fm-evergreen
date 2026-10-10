@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.6.8).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.6.9).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 ## Cheat sheets
 
@@ -29,6 +29,15 @@ Two printable sheets with everything on the device. Click an image to open it fu
 ## Changelog
 
 Every update is listed here, newest first.
+
+### v0.6.9
+- **AUTOPAN** per track (FX > AUTOPAN, after DIST): DPTH, RATE, SYNC (BEAT: 4 BARS .. 1/32 in time with the bar;
+  FREE: Hz) and WAVE (SIN TRI SAW SQR S&H), through the pan's glide so even SQR doesn't click; its own graph. It
+  lives in the slots of the old per-track slicer (a bus since 0.6.3): no more memory, the project format unchanged,
+  every old project and preset loads with it off.
+- **CHORUS > STER**: the chorus's stereo amount, 0 as it always sounded, down to mono, up to about twice as wide
+  (in a stored slot that was unused).
+- Cheat sheets and manual updated.
 
 ### v0.6.8
 Fixes from the first users' reports:
@@ -59,7 +68,7 @@ Fixes from the first users' reports:
 
 ### v0.6.6
 - **Jump straight to a page**: hold a page button (ENV, LFO, FX, SCL, EDIT, GLO, SAVE, ARP, SEQ) and turn **PRESETS**
-  to go through that button's pages forwards or back (FX has 12, EDIT up to 16), the title on screen; let go and you
+  to go through that button's pages forwards or back (FX has 13, EDIT up to 16), the title on screen; let go and you
   stay on that page. It doesn't take anything away: with a button held, PRESETS did nothing before; a tap still goes to
   the next page, and once you used a layer's knobs or keys while holding, PRESETS stays out of it.
 
@@ -243,7 +252,7 @@ as the firmware draws them.*
   clustered clap, star-shaped cowbell) that swells and heats up when it hits.
 - **Live technical graphs**: LFO (the wave runs at its rate, with playhead and current value), ENV (a dot travels the
   curve with the sounding voice), DIST (transfer curve by TYPE and TONE response), DLY and DLY 2 (the echoes, L and
-  R), REVERB and REVERB 2 (the impulse response, stereo, drawn per model), CHORUS (the three modulated lines), MASTER
+  R), REVERB and REVERB 2 (the impulse response, stereo, drawn per model), CHORUS (the three modulated lines), AUTOPAN (the swing across the stereo field), MASTER
   (clipper curve, PUNCH shape, how much DUCK pulls down), ENV/LFO DEST (bipolar columns under each knob, lit by what
   they send), VOICE (one cell per voice and the glide curve), GLOBAL (the bar in thermal columns with swing, clock and
   tuning).
@@ -449,7 +458,12 @@ locks it into a short window. CHIP sets the resolution: FULL is smooth, 4BIT and
 - **FX held** turns the keyboard into effects that act while you hold the key and come in on tempo: REPEAT, LPF/HPF,
   octaves, stutter, short/long decay, ARP, RANDOM… (details in [Controls](#controls)). With REC armed and playing,
   they're recorded into the section's lane; G5 erases it.
-- **FX** pages: DIST per track; SLICER, SL BUS, SL BUS 2 and SL PITCH (the slicer bus, per section); the global DLY / DLY 2, REVERB / REVERB 2, CHORUS and MASTER.
+- **FX** pages: DIST and AUTOPAN per track; SLICER, SL BUS, SL BUS 2 and SL PITCH (the slicer bus, per section); the global DLY / DLY 2, REVERB / REVERB 2, CHORUS and MASTER.
+- **AUTOPAN** (FX, after DIST): the track's pan swings left and right around its PAN. **DPTH** how far (0: off),
+  **RATE** how fast, **SYNC** BEAT (RATE in divisions, 4 BARS to 1/32, in time with the bar while playing) or FREE
+  (RATE in Hz), **WAVE** SIN, TRI, SAW, SQR or S&H. Square and S&H jump side to side without clicking. The screen
+  draws the stereo field with the swing running down it and a dot where the sound is now.
+- **CHORUS > STER**: the chorus's stereo spread. 0 sounds as it always did; down to mono, up to about twice as wide.
 
 **REVERB > TYPE** (KNOB 1) picks the model. **SIZE is the decay** on every model: the top of the knob gives very long
 tails. The other knobs change meaning with the type:

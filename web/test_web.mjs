@@ -53,18 +53,19 @@ async function editorMock() {
   for (let i = 0; i < info.pcount; i++) if (E.parse[E.CMD.DESC](await rq(E.req.desc(0, i))).label) descs++;
   ok(descs === info.pcount, "editor: DESC for every parameter");
   {
-    /* the SLICER (core.h P_SLCR..P_SLDEPTH = 45..48, just before P_E0; its descriptors: mockTables) is the
-       track's: a factory preset keeps it, as ui.c apply_preset_to does (param_kept) */
+    /* AUTO PAN (JIANT 0.6.9, in the old per-track SLICER's slots: core.h P_APDEP..P_APSYNC = 45..48, just before
+       P_E0; its descriptors: mockTables) is the track's: a factory preset keeps it, as ui.c apply_preset_to does
+       (param_kept) */
     const sd = [];
     for (let i = 45; i < 49; i++) sd.push(E.parse[E.CMD.DESC](await rq(E.req.desc(0, i))));
-    ok(sd.map((d) => d.label).join() === "SLCR,PAT,RATE,DEPTH" && sd[0].names.join() === "OFF,GATE,STUT",
-      "editor: SLICER parameters 45..48 over DESC");
+    ok(sd.map((d) => d.label).join() === "DPTH,RATE,WAVE,SYNC" && sd[3].names.join() === "FREE,BEAT" &&
+      sd[2].names.join() === "SIN,TRI,SAW,SQR,S&H", "editor: AUTO PAN parameters 45..48 over DESC");
     await rq(E.req.set(0, 45, 2));
     await rq(E.req.set(0, 46, 7));
     const on = E.parse[E.CMD.DUMP](await rq(E.req.dump()), info);
     await rq(E.req.preset(0, 1));
     const off = E.parse[E.CMD.DUMP](await rq(E.req.dump()), info);
-    ok(on.p[45] === 2 && on.p[46] === 7 && off.p[45] === 2 && off.p[46] === 7 && off.preset === 1, "editor: a factory preset keeps the SLICER (the track's)");
+    ok(on.p[45] === 2 && on.p[46] === 7 && off.p[45] === 2 && off.p[46] === 7 && off.preset === 1, "editor: a factory preset keeps AUTO PAN (the track's)");
     await rq(E.req.set(0, 45, 0));
   }
   {
@@ -347,7 +348,7 @@ function mockTables() {
   const sd = (fw.SHOWN || []).filter(([sc, i, names]) => JSON.stringify(shown((sc ? T.GP : T.TP)[i])) !== JSON.stringify(names));
   sd.slice(0, 5).forEach((x) => console.log("  SHOWN " + JSON.stringify(x) + " editor " + JSON.stringify(shown((x[0] ? T.GP : T.TP)[x[1]]))));
   ok(fw.SHOWN && fw.SHOWN.length > 20 && !sd.length, `editor: enum lists in the device's knob order (${fw.SHOWN ? fw.SHOWN.length : 0} lists)`);
-  const div = T.TP.find((d) => d.label === "DIV"), slr = T.TP.filter((d) => d.label === "RATE" && d.fmt === E.F.ENUM);
+  const div = T.TP.find((d) => d.label === "DIV"), slr = [...T.TP, ...T.GP].filter((d) => d.label === "RATE" && d.fmt === E.F.ENUM);   /* (0.6.9: the SLICER bus's) */
   ok(shown(div).join() === "4BAR,2BAR,1/1,1/2,1/4,1/8,8T,1/16,16T,1/32" &&
      slr.some((d) => shown(d).join() === "1/8,8T,1/16,16T,1/32,32T") && div.names[2] === "1/16",
      "editor: #48 DIV / RATE / TIME longest first (values unchanged: 2 is still 1/16)");
