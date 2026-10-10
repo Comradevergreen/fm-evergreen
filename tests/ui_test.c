@@ -5355,6 +5355,21 @@ static int test_seq_tools(void)
         ok &= TSEL->step[i].time == ST_REST && !TSEL->step[i].n;
     ok &= TSEL->step[20].note[0] == 72 && !motion_lock_count(TSEL);
     bad += check("  F3 CLEAR: steps 1..LEN empty (no dialog), past LEN kept, the locks of the steps cleared go", ok);
+    tl_melody();                                        /* (JIANT 0.6.8) F4 CLR AUTO: the automation, the steps stay */
+    memcpy(ref, TSEL->step, sizeof ref);
+    (void)motion_set_event(TSEL, 1, P_DIST, 40); (void)motion_set_event(TSEL, 9, P_REV, 20);
+    (void)motion_set_event(&trk[1], 2, P_DIST, 30);
+    a = leds_at(0); b2 = leds_at(250);
+    ok = ((a ^ b2) >> white(7)) & 1u;                   /* (F4 breathes: automation there) */
+    tl_key(7);
+    ok &= msg_is("AUTOMATION CLEARED") && !motion_count(TSEL) && motion_count(&trk[1]) == 1u &&
+         !memcmp(TSEL->step, ref, sizeof ref) && ui.layer == LAYER_SEQ;
+    tl_key(7);
+    a = leds_at(0); b2 = leds_at(250);
+    ok &= msg_is("NOTHING TO CLEAR") && !(((a | b2) >> white(7)) & 1u);
+    motion_reset(&trk[1]);
+    bad += check("  F4 CLR AUTO (breathes with automation): the track's automation and locks gone, its steps and the other tracks' stay", ok);
+    tl_key(0);
     oct_back();
     ok = TSEL->step[0].time == ST_REST && !msg_is("SEQUENCE PUT BACK") && ui.layer == LAYER_SEQ && song.octave == 0;
     turn(EN_K1, -2);

@@ -51,6 +51,13 @@ static struct {                                  /* the patch through the macros
 static fm6_lfo_t fm6_lfo[NTRK];
 static int32_t fm6_lfo_v[NTRK], fm6_lfo_d[NTRK]; /* this block's LFO value and delay (Q24) */
 static fm6_note_t fm6_note[NTRK][FM6_POLY];
+/* (JIANT 0.6.8, "certain syx sounds glitchy and noisy") a voice's output above the level every voice is made for
+ * (VOICE_FS, dsp.c: the bus at 2^26) takes the track's trim down so it sits there: DX7 voices with several carriers
+ * at full came out up to 5x the factory patches, and their chords held the master's limiter 10 dB down. A voice's own
+ * peak (a chord still adds up), never up, ramped across the block; back to none with each new patch. As an
+ * attenuation: the gain is (256 - it) / 256 (0: none, the power-on value). The factory patches stay under it */
+#define FM6_TRIM_REF (1 << 26)
+static uint8_t fm6_trim[NTRK], fm6_tgen[NTRK];
 
 /* ------------------------------------------------------- patch formats --- */
 /* the highest value of each byte of the 155-byte voice */
@@ -310,6 +317,7 @@ static void fm6_note_on(track_t *t, voice_t *v)
     p = fm6_eff[tr].p;
     fm6_note_init(n, p, (int32_t)v->note + p[FP_TRNSP] - 24, v->mvel ? v->mvel : v->vel,
                   (!v->env && !v->env_out) || !n->live);    /* from silence: phases and gains from 0 */
+    n->trim = 255;                                      /* (its first block: the track's trim at once) */
     fm6_lfo_key(&fm6_lfo[tr]);
 }
 
@@ -319,6 +327,10 @@ static void fm6_block(track_t *t)       /* once a block and part: the macros, th
     if (tr >= NTRK)
         return;
     fm6_sync(t);
+    if (fm6_tgen[tr] != fm6_pgen[tr]) {                 /* a new patch: its own trim, from none */
+        fm6_tgen[tr] = fm6_pgen[tr];
+        fm6_trim[tr] = 0;
+    }
     fm6_lfo_v[tr] = fm6_lfo_sample(&fm6_lfo[tr]);
     fm6_lfo_d[tr] = fm6_lfo_delay(&fm6_lfo[tr]);
 }
@@ -341,7 +353,8 @@ static void fm6_render(track_t *t, voice_t *v, int32_t *out, uint32_t len, const
     fm6_note_t *n = fm6_note_of(t, v);
     uint32_t tr = (uint32_t)(t - trk), i;
     const uint8_t *p;
-    int32_t bus[FM6_N], lf, fb, lvl, k, a, da;
+    int32_t bus[FM6_N], lf, fb, lvl, k, a, da, pk = 0;
+    uint32_t tb;
     if (!n || !n->live || len != FM6_N)
         return;
     p = fm6_eff[tr].p;
@@ -354,8 +367,21 @@ static void fm6_render(track_t *t, voice_t *v, int32_t *out, uint32_t len, const
         return;                                         /* every carrier below the threshold */
     /* the voice's amplitude ramp x VOICE_FS (one carrier at full: VOICE_FS / 2), six voices in unison ~ one */
     k = t->p[P_VOICE] == V_UNISON ? VOICE_FS * 2 / 5 : VOICE_FS;
-    a = mulq15(m->amp0, k);
-    da = (mulq15(m->amp1, k) - a) >> FM6_LG_N;
+    for (i = 0; i < FM6_N; i++) {                       /* the block's peak first: its trim from this block on */
+        int32_t x = bus[i] - n->dc, ax = x < 0 ? -x : x;   /* (as it goes out: past the DC blocker) */
+        pk = ax > pk ? ax : pk;
+    }
+    pk >>= 10;                                            /* (2^26 >> 10 = 2^16: the products fit 32 bits) */
+    if ((uint32_t)pk * (256u - fm6_trim[tr]) > (uint32_t)(FM6_TRIM_REF >> 10) << 8) {   /* over: down to there */
+        uint32_t g = ((uint32_t)(FM6_TRIM_REF >> 10) << 8) / (uint32_t)pk;   /* the gain that would sit there */
+        fm6_trim[tr] = (uint8_t)(256u - (g < 8u ? 8u : g));   /* (-30 dB at most) */
+    }
+    if (n->trim == 255u)                                /* (255: never a trim, -30 dB is 248) */
+        n->trim = fm6_trim[tr];
+    tb = 256u - fm6_trim[tr];                           /* the trim from the note's last block to the track's now */
+    a = (mulq15(m->amp0, k) * (int32_t)(256u - n->trim)) >> 8;
+    da = (((mulq15(m->amp1, k) * (int32_t)tb) >> 8) - a) >> FM6_LG_N;
+    n->trim = fm6_trim[tr];
     for (i = 0; i < FM6_N; i++) {
         int32_t x = bus[i] - n->dc;
         n->dc += x >> 10;                                 /* a one-pole high-pass, ~7 Hz: FM puts sidebands at 0 Hz */

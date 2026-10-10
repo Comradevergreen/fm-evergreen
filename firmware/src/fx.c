@@ -94,12 +94,25 @@ static __attribute__((noinline)) int32_t dist_shape(track_t *t, uint32_t type, i
         return softclip(v + 2400) - softclip(2400);
     }
 }
+/* (JIANT 0.6.8, the crackles turning DIST up from 0) DST 1..8 blends the dry part into the drive (it was all drive
+ * at 1: the low cut and the clip at once), the blend eased a block at a time and ramped across it; at 0 out of the
+ * chain once the blend is down */
+static int32_t dist_w[NTRK];                            /* the blend the last block ended at, Q12 */
 static void track_dist(track_t *t, int32_t *b, uint32_t n)
 {
-    int32_t d = t->p[P_DIST], i, g, k, mk, b0 = softclip(2400);
-    uint32_t type = (uint32_t)t->p[P_DTYPE];
-    if (!d)
-        return;                                         /* states kept: switching on does not click */
+    int32_t d = t->p[P_DIST], i, g, k, mk, b0 = softclip(2400), w0, w1, dw, full;
+    uint32_t type = (uint32_t)t->p[P_DTYPE], ti = (uint32_t)(t - trk) % NTRK;
+    w0 = dist_w[ti];
+    w1 = d >= 8 ? 4096 : d * 512;
+    if (w1 != w0)                                       /* (half the way a block, then there) */
+        w1 = w1 - w0 > 64 || w0 - w1 > 64 ? w0 + (w1 - w0) / 2 : w1;
+    dist_w[ti] = w1;
+    if (!w0 && !w1)
+        return;                                         /* out of the chain */
+    if (!w0)                                            /* in: the filters from silence, the low cut from here */
+        t->dist_lp1 = t->dist_lp2 = 0, t->dist_hp = 0;
+    dw = (w1 - w0) >> CTL_LOG2;
+    full = w0 >= 4096 && w1 >= 4096;
     g = 4096 + d * d * 2;                                /* Q12: 1x .. ~9x, gentle at first */
     k = clamp(32000 - d * 95 + t->p[P_DTONE] * 300, 2500, 32767);   /* tone: transparent at low drive .. ~3 kHz, Q15 */
     mk = type == DT_HARD || type == DT_FOLD || type == DT_CRUSH ? 30000 - d * 60 : 30000 - d * 120;   /* make-up */
@@ -112,7 +125,8 @@ static void track_dist(track_t *t, int32_t *b, uint32_t n)
         y = type == DT_SOFT ? softclip((((x >> 2) * g) >> 10) + 2400) - b0 : dist_shape(t, type, x, g, d);
         t->dist_lp1 += mulq15(y - t->dist_lp1, k);         /* two poles: tames the fizz */
         t->dist_lp2 += mulq15(t->dist_lp1 - t->dist_lp2, k);
-        b[i] = mulq15(t->dist_lp2, mk);
+        y = mulq15(t->dist_lp2, mk);
+        b[i] = full ? y : b[i] + ((((y - b[i]) >> 2) * (w0 + dw * (i + 1))) >> 10);   /* (>> 2: fits 32 bits) */
     }
 }
 
@@ -847,13 +861,18 @@ static void fx_buses(const int32_t *cho_in, const int32_t *dly_in, const int32_t
  * -> dist -> level / pan / sends -> buses -> (the SLICER's bus) -> master; out: stereo Q15 */
 static void events_block(uint32_t n);                    /* seq.c */
 static int32_t send_c[CTL], send_d[CTL], send_r[CTL];   /* (mix_l mix_r wet: above, clip_block) */
-/* a part's level (Q12) over the block, ducked: its start << 8, its step a sample in *dl (a block is CTL: no divide) */
-static __attribute__((noinline)) int32_t duck_ramp(int32_t lvl, int32_t *dl)
+/* a part's level (Q12) over the block from l0 to l1, ducked: its start << 8, its step a sample in *dl (a block is
+ * CTL: no divide) */
+static __attribute__((noinline)) int32_t duck_ramp(int32_t l0, int32_t l1, int32_t *dl)
 {
-    int32_t l0 = ((lvl * (duck_g0 >> 3)) >> 12) << 8;
-    *dl = ((((lvl * (duck_g1 >> 3)) >> 12) << 8) - l0) >> CTL_LOG2;
-    return l0;
+    int32_t a = ((l0 * (duck_g0 >> 3)) >> 12) << 8;
+    *dl = ((((l1 * (duck_g1 >> 3)) >> 12) << 8) - a) >> CTL_LOG2;
+    return a;
 }
+/* (JIANT 0.6.8, the crackles turning LEVEL / PAN) each part's LEVEL (Q12 << 8) and PAN (-64..63 << 8) as the mix has
+ * them: a quarter of the way to the knob's a block (~3 ms), ramped across it, never a step */
+static int32_t mp_lvl[NTRK], mp_pan[NTRK];
+static uint8_t mp_seen;                                   /* the part's first block: at once */
 
 /* one synth part into the dry mix and the sends; a part with no voice sounding costs
  * the LFO tick and a cleared buffer only (after the DIST tail has run out) */
@@ -865,13 +884,31 @@ static void mix_part(track_t *t, uint32_t n)
     if (track_render(t, b, n))
         t->tail = 16;                                   /* blocks of DIST state to run out after the last voice */
     else if (!t->tail || !t->p[P_DIST] || !--t->tail) {
+        mp_seen &= (uint8_t)~(1u << ((uint32_t)(t - trk) % NTRK));   /* (silent: the next sound at its LEVEL and PAN) */
         if (mod.on)
             mod_end(t);
         return;
     }
     {
-        int32_t lvl = LEVEL_Q12[t->p[P_LEVEL] & 127], pan = t->p[P_PAN], lq = lvl << 8, dl = 0;
-        int32_t gl = 4096 - (pan > 0 ? pan * 64 : 0), gr = 4096 + (pan < 0 ? pan * 64 : 0);
+        uint32_t ti = (uint32_t)(t - trk) % NTRK;
+        int32_t lvl = LEVEL_Q12[t->p[P_LEVEL] & 127] << 8, pan = t->p[P_PAN] << 8, l0, p0, lq, dl, gl, gr, dgl, dgr;
+        if (!((mp_seen >> ti) & 1u)) {
+            mp_lvl[ti] = lvl;
+            mp_pan[ti] = pan;
+            mp_seen |= (uint8_t)(1u << ti);
+        }
+        l0 = mp_lvl[ti];
+        p0 = mp_pan[ti];
+        mp_lvl[ti] += (lvl - l0) >> 2;
+        mp_pan[ti] += (pan - p0) >> 2;
+        if (mp_lvl[ti] - lvl < 256 && lvl - mp_lvl[ti] < 256) mp_lvl[ti] = lvl;   /* (there: exactly) */
+        if (mp_pan[ti] - pan < 64 && pan - mp_pan[ti] < 64) mp_pan[ti] = pan;
+        lq = l0;
+        dl = (mp_lvl[ti] - l0) >> CTL_LOG2;
+        gl = 4096 - (p0 > 0 ? p0 >> 2 : 0);                 /* (pan << 8: x64 is >> 2) */
+        gr = 4096 + (p0 < 0 ? p0 >> 2 : 0);
+        dgl = ((4096 - (mp_pan[ti] > 0 ? mp_pan[ti] >> 2 : 0)) - gl) >> CTL_LOG2;
+        dgr = ((4096 + (mp_pan[ti] < 0 ? mp_pan[ti] >> 2 : 0)) - gr) >> CTL_LOG2;
         int32_t c = t->p[P_CHOR] * 258, d = t->p[P_DLY] * 258, r = t->p[P_REV] * 258, pk = t->peak;
         int32_t xmax = c > d ? c : d, *ol = mix_l, *or_ = mix_r;
         if (slicer_routes((uint32_t)(t - trk))) {       /* (JIANT 0.6.3) into the SLICER's bus, not the dry mix */
@@ -880,11 +917,11 @@ static void mix_part(track_t *t, uint32_t n)
         }
         xmax = 0x7FFFFFFF / ((xmax > r ? xmax : r) | 1);   /* sends: loud chords at a high LEVEL */
         if ((duck_g0 < 32767 || duck_g1 < 32767) && ENGINES[t->engine] != &ENG_DRUM)   /* DUCK: the kick's */
-            lq = duck_ramp(lvl, &dl);
+            lq = duck_ramp(l0 >> 8, mp_lvl[ti] >> 8, &dl);
         track_dist(t, b, n);
         if ((pf.mute >> (t - trk)) & 1u)
             perf_mute((uint32_t)(t - trk), b, n);       /* perform.c: a black key in the FX layer */
-        for (i = 0; i < n; i++, lq += dl) {
+        for (i = 0; i < n; i++, lq += dl, gl += dgl, gr += dgr) {
             int32_t x = ((b[i] >> 2) * (lq >> 8)) >> 10, a = x < 0 ? -x : x;   /* pre-shift: 8 loud voices */
             int32_t xs = clamp(x, -xmax, xmax);         /* sends: mulq15 would overflow */
             if (a > pk)

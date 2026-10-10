@@ -78,8 +78,12 @@ static __attribute__((noinline)) void track_comb(track_t *t, int32_t *out, uint3
 /* (JIANT 0.5) the FILTER of every engine but ANALOG (its own, per voice): the part's sum through a drive (DRV: x1 ..
  * x4 into the soft clip, the level kept) and a state-variable filter, LP HP BP at CUT (moved by the LFO and the loudest
  * voice's envelope through LFO DEST / ENV DEST FLT) and RES; COMB the comb above (CUT about the newest note, RES its
- * feedback). LP open (127), no drive: out of the chain */
+ * feedback). LP open (127), no drive: out of the chain.
+ * (JIANT 0.6.8, the crackles turning CUT / RES) going in and out of the chain, and from one TYPE to another, crossfade
+ * over the block, the state taken from the input on the way in (it was stale: a step each time CUT or RES crossed the
+ * open LP) */
 static int32_t tf_ic1[NTRK], tf_ic2[NTRK];
+static uint8_t tf_on, tf_ft[NTRK];              /* in the chain the last block (a bit a track), its TYPE then */
 static __attribute__((noinline)) void track_filter(track_t *t, int32_t *out, uint32_t n)
 {
     const int16_t *p = t->p;
@@ -94,12 +98,37 @@ static __attribute__((noinline)) void track_filter(track_t *t, int32_t *out, uin
         return;
     }
     cut += ((mulq15(t->lfo_val, t->lfo_fade) * p[P_LD_FLT]) >> 7) + ((envq * p[P_ED_FLT]) >> 7);
-    if (ft == FT_LP && cut >= (127 << 8) && !p[P_FRES])
-        return;                                         /* (open: nothing to filter) */
-    tsvf_coef(&c, cut, p[P_FRES]);
-    k = 8192 - p[P_FRES] * 7600 / 127;
-    for (i = 0; i < n; i++)
-        out[i] = soft_knee(svf_mode(&c, out[i], &ic1, &ic2, ft, k), 30000);
+    {
+        uint32_t on = !(ft == FT_LP && cut >= (127 << 8) && !p[P_FRES]), was = (tf_on >> ti) & 1u, f0 = tf_ft[ti];
+        int32_t xf = was && f0 != ft && f0 != FT_COMB;   /* TYPE changed: from the old one's output */
+        if (!on && !was)
+            return;                                     /* (open: nothing to filter) */
+        if (!was) {                                     /* in: the state as the input (no step) */
+            ic1 = 0;
+            ic2 = out[0];
+        }
+        tsvf_coef(&c, cut, p[P_FRES]);
+        k = 8192 - p[P_FRES] * 7600 / 127;
+        for (i = 0; i < n; i++) {
+            int32_t x = out[i], y, w = (int32_t)((i + 1u) << (12 - CTL_LOG2));   /* 0 .. 1 over the block, Q12 */
+            int32_t v3 = x - ic2, v1 = (c.a1 * ic1 + c.a2 * v3) >> 13, v2 = ic2 + ((c.a2 * ic1 + c.a3 * v3) >> 13);
+            ic1 = clamp(2 * v1 - ic1, -150000, 150000);
+            ic2 = clamp(2 * v2 - ic2, -150000, 150000);
+            y = ft == FT_HP ? x - v2 - ((k * v1) >> 12) : ft == FT_BP ? (k * v1) >> 12 : v2;
+            if (xf) {
+                int32_t y0 = f0 == FT_HP ? x - v2 - ((k * v1) >> 12) : f0 == FT_BP ? (k * v1) >> 12 : v2;
+                y = y0 + (((y - y0) * w) >> 12);
+            }
+            y = soft_knee(y, 30000);                    /* (the dry part has no knee: the fades after it) */
+            if (!was)
+                y = x + (((y - x) * w) >> 12);          /* in */
+            else if (!on)
+                y = y + (((x - y) * w) >> 12);          /* out */
+            out[i] = y;
+        }
+        tf_on = (uint8_t)((tf_on & ~(1u << ti)) | on << ti);
+        tf_ft[ti] = (uint8_t)ft;
+    }
     tf_ic1[ti] = ic1;
     tf_ic2[ti] = ic2;
 }
@@ -678,7 +707,8 @@ static uint32_t track_render(track_t *t, int32_t *out, uint32_t n)
         e->render(t, v, out, n, &m);
         nr++;
     }
-    if (nr && (t->p[P_FTYPE] || t->p[P_FCUT] < 127 || t->p[P_FRES]))   /* (JIANT 0.5) the FILTER (track_post) */
+    if (nr && (t->p[P_FTYPE] || t->p[P_FCUT] < 127 || t->p[P_FRES] || ((tf_on >> ((uint32_t)(t - trk) % NTRK)) & 1u)))
+        /* (JIANT 0.5) the FILTER (track_post); 0.6.8: and a block more to leave the chain (track_filter's fade) */
         track_post(t, e, out, n);
     if (fade) {
         for (i = 0; i < 8u; i++)

@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # (JIANT 0.6.7) the presentation video: tools/video/capture.c's footage (the FM-1's screen at 30 fps and its audio)
 # composed at 1920 x 1080 in the project's look (black, violet to orange, Chakra Petch), scene titles timed to the
-# capture's script (2 s a bar), a glitch at each cut, the screen's glow pulsing with the audio. Pipes the frames to
+# capture's script (its scenes.txt), a glitch at each cut, the screen's glow pulsing with the audio. Pipes the frames to
 # ffmpeg.
 #   python3 tools/video/compose.py build/video          -> build/video/jiant-fm.mp4
 import subprocess, sys, wave
@@ -11,7 +11,7 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 ROOT = Path(__file__).resolve().parents[2]
 D = Path(sys.argv[1] if len(sys.argv) > 1 else ROOT / 'build/video')
-W, H, FPS, N = 1920, 1080, 30, 1800
+W, H, FPS = 1920, 1080, 30
 SC = 4                                             # 240 -> 960, nearest: the pixels stay sharp
 SX, SY = W - 960 - 80, 60                          # the screen's place after the intro
 VIOLET, ORANGE, WHITE, DIM = (184, 112, 255), (255, 122, 0), (240, 236, 248), (120, 110, 140)
@@ -19,19 +19,23 @@ FONT = ROOT / 'assets/fonts'
 def font(w, s): return ImageFont.truetype(str(FONT / f'ChakraPetch-{w}.ttf'), s)
 F_BIG, F_MID, F_SUB, F_SMALL = font('Bold', 92), font('SemiBold', 54), font('Medium', 34), font('Medium', 24)
 
-# (start s, end s, index, title lines, subtitle lines): the capture's at_bar() script
-SCENES = [
-    (4.4, 8, 1, ['ALTERNATIVE', 'FIRMWARE'], ['for the M-VAVE FM-1', 'open source · flash it from the browser']),
-    (8, 14, 2, ['6 TRACKS', '8 ENGINES'], ['ANALOG · FM6 · PHASE · LOFI', 'VOICE · WHEEL · NOISE · DRUM-X', 'all synthesis, no samples']),
-    (14, 20, 3, ['DRUM-X'], ['eight drum voices, one MORPH', 'from kit A to kit B, automatable']),
-    (20, 26, 4, ['THE SLICER', 'BUS'], ['any of the 6 tracks, post FX', 'stutter patterns + a 16-step', 'pitch sequencer']),
-    (26, 32, 5, ['RESO', 'REVERB'], ['tuned to the scale', 'FOLW: it follows your notes']),
-    (32, 38, 6, ['6-CHANNEL', 'MIXER'], ['level · pan · reverb send · mute', 'thermal meters']),
-    (38, 44, 7, ['SONGS'], ['8 songs × 4 rows of sections', 'chains, scenes, SLOOP-style']),
-    (44, 50, 8, ['PUNCH-IN', 'FX'], ['hold FX, play the pads:', 'repeats, octaves, stutters', 'recorded into the pattern']),
-    (50, 56, 9, ['MODULATION'], ['MSEQ · LFOs · MOD matrix', 'macros · dice']),
-]
-CUTS = [3.6] + [s[1] for s in SCENES]   # (the splash -> HOME cut, then each scene's end)
+# the captions, from the capture's script (scenes.txt: start s, tag, title lines, subtitle lines; '|' splits lines;
+# an empty title ends the captions: the outro)
+_hdr, *_rows = (D / 'scenes.txt').read_text().splitlines()
+SPLASH = float(_hdr.split('splash ')[1].split(' s')[0])
+END = float(_hdr.split('end ')[1].split(' s')[0])
+N = int(END * FPS)
+_cap = []
+for r in _rows:
+    t0, tg, ti, su = (r.split('\t') + ['', '', ''])[:4]
+    _cap.append((float(t0), tg, [x for x in ti.split('|') if x], [x for x in su.split('|') if x]))
+OUT = next(c[0] for c in _cap if not c[2])         # the outro: from the first empty caption
+SCENES = []                                        # (start, end, tag, title, subtitle, same title as before)
+for i, (t0, tg, ti, su) in enumerate(_cap):
+    if not ti: break
+    t1 = _cap[i + 1][0] if i + 1 < len(_cap) else OUT
+    SCENES.append((t0, t1, tg, ti, su, i > 0 and _cap[i - 1][2] == ti))
+CUTS = [SPLASH] + [sc[0] for sc in SCENES] + [OUT]
 
 def grad(w, h):                                    # violet -> orange, left to right
     t = np.linspace(0, 1, w)[None, :, None]
@@ -75,12 +79,9 @@ glow_c = glow_m * np.array(VIOLET, np.float32) * 0.55 + glow_m ** 3 * np.array(O
 sig = Image.open(ROOT / 'docs/cheatsheet/signature.png').convert('RGB')
 
 brand = text_layer(['JIANT FM'], F_SMALL, WHITE)
-tag = text_layer(['M-VAVE FM-1 · v0.6.7'], F_SMALL, DIM)
-LAYERS = {}
-for s in SCENES:
-    LAYERS[s[2]] = (text_layer([f'{s[2]:02d} / {len(SCENES):02d}'], F_SMALL, DIM),
-                    text_layer(s[3], F_BIG, WHITE, 0.98, gradient=True),
-                    text_layer(s[4], F_SUB, WHITE, 1.3))
+tag = text_layer(['M-VAVE FM-1 · v0.6.8'], F_SMALL, DIM)
+LAYERS = [(text_layer([sc[2] or ' '], F_SMALL, ORANGE), text_layer(sc[3], F_BIG, WHITE, 0.98, gradient=True),
+           text_layer(sc[4] or [' '], F_SUB, WHITE, 1.3)) for sc in SCENES]
 intro_t = text_layer(['JIANT FM'], font('Bold', 150), WHITE, gradient=True)
 intro_s = text_layer(['alternative firmware for the M-VAVE FM-1'], F_SUB, WHITE)
 out_l = [text_layer(['JIANT FM'], font('Bold', 120), WHITE, gradient=True),
@@ -107,7 +108,7 @@ def glitch(arr, x0, y0, w, h, amt, rng):
 PREVIEW = [int(x) for x in sys.argv[2].split(',')] if len(sys.argv) > 2 else None   # frame numbers -> PNGs
 ff = None if PREVIEW else subprocess.Popen(['ffmpeg', '-y', '-loglevel', 'error', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-s', f'{W}x{H}',
                        '-r', str(FPS), '-i', '-', '-i', str(D / 'audio.wav'),
-                       '-af', 'afade=t=in:d=0.3,afade=t=out:st=58.6:d=1.4',
+                       '-af', f'afade=t=in:d=0.3,afade=t=out:st={END - 1.6:.2f}:d=1.6',
                        '-c:v', 'libx264', '-preset', 'slow', '-crf', '18', '-pix_fmt', 'yuv420p',
                        '-c:a', 'aac', '-b:a', '256k', '-movflags', '+faststart', '-shortest',
                        str(D / 'jiant-fm.mp4')], stdin=subprocess.PIPE)
@@ -115,8 +116,8 @@ rng = np.random.default_rng(7)
 for f in (PREVIEW or range(N)):
     t = f / FPS
     # the screen's place: centred during the splash, sliding right as the intro title comes, back left for the outro
-    k = ease((t - 2.4) / 1.0)
-    ko = ease((t - 56.0) / 0.9)
+    k = ease((t - (SPLASH - 1.2)) / 1.0)
+    ko = ease((t - OUT) / 0.9)
     sx = int((W - 960) / 2 * (1 - k) + SX * k)
     sx = int(sx * (1 - ko) + 120 * ko)
     sy = int(60 * (1 - k) + SY * k)
@@ -133,41 +134,45 @@ for f in (PREVIEW or range(N)):
     elif pulse[f] > 0.97 and rng.random() < 0.25: glitch(arr, sx, sy, 960, 960, 0.25, rng)
     img = Image.fromarray(arr).convert('RGBA')
     # frame chrome: brand, tag, progress line
-    if 3.0 < t < 56.2:
-        a_ = min(ease((t - 3.0) / 0.5), 1 - ease((t - 55.7) / 0.5))
+    if SPLASH - 0.6 < t < OUT + 0.2:
+        a_ = min(ease((t - SPLASH + 0.6) / 0.5), 1 - ease((t - OUT + 0.3) / 0.5))
         paste(img, brand, 80, 50, a_); paste(img, tag, SX - 40 - tag.width, H - 62, a_ * 0.9)
     pw = int(W * (f + 1) / N)
     img.paste(Image.fromarray(grad(W, 4)[:, :pw]), (0, H - 4))
     # intro title
-    if 2.5 < t < 4.4:
-        a_ = ease((t - 2.6) / 0.4) * (1 - ease((t - 3.95) / 0.35))
-        paste(img, intro_t, 80, 340, a_, ease((t - 2.5) / 0.5))
-        paste(img, intro_s, 86, 540, a_ * 0.9, ease((t - 2.9) / 0.6))
-    # scene titles
-    for (s0, s1, i, _, _) in SCENES:
+    t_in = SPLASH - 1.1                            # the intro title, until the first scene
+    if t_in < t < SCENES[0][0]:
+        a_ = ease((t - t_in - 0.1) / 0.4) * (1 - ease((t - SCENES[0][0] + 0.4) / 0.35))
+        paste(img, intro_t, 80, 340, a_, ease((t - t_in) / 0.5))
+        paste(img, intro_s, 86, 540, a_ * 0.9, ease((t - t_in - 0.4) / 0.6))
+    # scene titles: quick ones (the montage) come in faster; the same title again only changes the subtitle
+    for i, (s0, s1, tg, _, _, same) in enumerate(SCENES):
         if s0 <= t < s1:
             num, ti, su = LAYERS[i]
-            a_ = 1 - ease((t - (s1 - 0.35)) / 0.3)
-            dx = -40 * (1 - ease((t - s0) / 0.45))
-            paste(img, num, 80, 300, a_ * ease((t - s0) / 0.3))
-            # a gradient rule that draws in, then the title
-            rw = int(560 * ease((t - s0 - 0.05) / 0.5))
+            d = min(0.45, (s1 - s0) * 0.35)
+            nxt_same = i + 1 < len(SCENES) and SCENES[i + 1][5]
+            a_ = 1.0 if nxt_same else 1 - ease((t - (s1 - d * 0.7)) / (d * 0.6))
+            e = 1.0 if same else ease((t - s0) / d)
+            dx = -40 * (1 - e)
+            paste(img, num, 80, 300, a_ * e)
+            rw = int(560 * (1.0 if same else ease((t - s0 - 0.05) / d)))
             if rw > 0 and a_ > 0: img.alpha_composite(Image.fromarray(grad(rw, 5)).convert('RGBA'), (80, 345))
-            paste(img, ti, 80 + dx, 372, a_, ease((t - s0 - 0.1) / 0.45))
-            paste(img, su, 84 + dx * 0.5, 380 + ti.height + 24, a_ * 0.92, ease((t - s0 - 0.45) / 0.8))
+            paste(img, ti, 80 + dx, 372, a_, 1.0 if same else ease((t - s0 - 0.05) / d))
+            sa = ease((t - s0) / 0.25) if same else 1.0
+            paste(img, su, 84 + dx * 0.5, 380 + ti.height + 24, a_ * 0.92 * sa, ease((t - s0 - (0.1 if same else d)) / 0.7))
     # outro
-    if t >= 56.0:
+    if t >= OUT:
         ox = 1180
-        a_ = ease((t - 56.4) / 0.5)
+        a_ = ease((t - OUT - 0.4) / 0.5)
         sg = Image.fromarray(np.minimum(np.asarray(sig, np.float32) * a_, 255).astype(np.uint8))
         base = np.asarray(img.convert('RGB'))[120:120 + sg.height, ox:ox + sg.width]
         img.paste(Image.fromarray(np.maximum(base, np.asarray(sg))), (ox, 120))
         y = 120 + sig.height + 30
         for j, L in enumerate(out_l):
-            paste(img, L, ox, y, ease((t - 56.7 - j * 0.18) / 0.4), ease((t - 56.7 - j * 0.18) / 0.5))
+            paste(img, L, ox, y, ease((t - OUT - 0.7 - j * 0.18) / 0.4), ease((t - OUT - 0.7 - j * 0.18) / 0.5))
             y += L.height + (18 if j else 4)
     out = np.asarray(img.convert('RGB'))
-    if t > 59.0: out = (out * (1 - ease((t - 59.0) / 0.95))).astype(np.uint8)
+    if t > END - 1.0: out = (out * (1 - ease((t - END + 1.0) / 0.95))).astype(np.uint8)
     if PREVIEW: Image.fromarray(out).save(D / f'preview-{f:04d}.png'); continue
     ff.stdin.write(out.tobytes())
     if f % 300 == 0: print(f'{f}/{N}', flush=True)

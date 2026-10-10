@@ -52,6 +52,7 @@ static track_t *kitx(int16_t morph, int16_t tune)
             trk[k].v[i].active = 0;
     host_tracks_init();
     lev_env = 0; lev_g = lev_cur = 32768; lev_dg = 0; lim_env = LIM_T;   /* (0.5.1: the slow leveler from rest each time) */
+    mp_seen = 0; memset(dist_w, 0, sizeof dist_w);   /* (0.6.8: the parts' LEVEL / PAN / DST blend from rest too) */
     host_preset(t, ENGI_DRUM, 0);
     t->p[P_E0] = morph;
     t->p[P_E1] = tune;
