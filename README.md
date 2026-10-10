@@ -36,6 +36,8 @@ Every update is listed here, newest first.
 - **Page jump fix**: once you turn PRESETS with a page button held, that button's layer (its map) stays off until you
   let the button go, even if you keep holding past the HOLD time or the first turn came at the very moment you pressed
   it. Hold it again afterwards and the layer works as always.
+- **Presentation video tools** (`tools/video/`): `capture.c` plays a 60 s demo song on the real engines in the host
+  build and records the FM-1's screen and audio; `compose.py` makes a 1080p video from them in the project's look.
 
 ### v0.6.6
 - **Jump straight to a page**: hold a page button (ENV, LFO, FX, SCL, EDIT, GLO, SAVE, ARP, SEQ) and turn **PRESETS**
