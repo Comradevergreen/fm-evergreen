@@ -72,6 +72,14 @@ enum {                          /* per-track parameters */
     P_COUNT
 };
 #define P_ELOOP P_ED_FX                /* (JIANT 0.4) ENV LOOP: OFF / ON (voice.c env_tick) */
+/* (JIANT 0.6.9) AUTO PAN (fx.c mix_part), in the slots of the old per-track SLICER (one on a bus since 0.6.3, its
+ * slots stored, never read but by proj_sl_migrate). Laid so what old stores hold means OFF: DPTH where SLCR was (0, or
+ * 1..2 from a project of before 0.6.3: inaudible), RATE where PAT was (1..16: slow), WAVE where RATE was (1: TRI), SYNC
+ * where DEPTH was (127: BEAT) */
+#define P_APDEP P_SLCR                 /* depth 0..127 (0: off) */
+#define P_APRATE P_SLPAT               /* FREE: 0..127 as the LFO's RATE; BEAT: 0..7, 4 BARS .. 1/32 (fx.c AP_SIXT) */
+#define P_APWAVE P_SLRATE              /* SIN TRI SAW SQR S&H (N_LWAVE) */
+#define P_APSYNC P_SLDEPTH             /* FREE / BEAT (any value but 0: BEAT) */
 
 enum {                          /* global parameters */
     G_BPM, G_SWING, G_CLOCK, G_TUNE,
@@ -90,7 +98,8 @@ enum {                          /* global parameters */
                                  * reverb send, read only by the import of a project of before 1.0
                                  * (proj_drums_to_part, which clears them after) */
     G_NSTORE,                   /* the 27 a project's header holds (FUN7 on: their ids kept) */
-    G_DHPF = G_NSTORE,          /* (JIANT, FUNB: after the punch-in lane, project.c) the delay's feedback low cut, */
+    G_DHPF = G_NSTORE,          /* (JIANT, FUNB: after the punch-in lane, project.c) the delay's feedback low cut (0.4:
+                                 * in DLY's TONE; stored, unused); 0.6.9: the CHORUS's STEREO (G_CSTER), */
     G_WIDTH,                    /* the buses' stereo width (the delay's right echo later, the chorus's taps apart), */
     G_RMOD, G_RRATE,            /* the reverb's modulation (ROOM: its combs' lengths; SPRING: its wobble) depth, rate, */
     G_RPRE,                     /* its pre-delay */
@@ -104,6 +113,7 @@ enum {                          /* global parameters */
     G_COUNT
 };
 #define G_SL_N (G_SLP15 + 1 - G_SLMODE)     /* the SLICER's globals (stored together: project.c, song_chain.c) */
+#define G_CSTER G_DHPF                 /* (JIANT 0.6.9) CHORUS STEREO -64..63: 0 as before (G_DHPF's 0), - narrower .. mono */
 #define G_SYNC G_DREL                   /* (the old names, for the formats' importers and their tests) */
 #define G_ENGGO G_CLIP
 #define G_DRLVL G_PUNCH

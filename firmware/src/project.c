@@ -563,6 +563,17 @@ static int proj_engines_ok(const project_t *q)
  * (its mode, pattern, rate, depth), the tracks whose SLICER was on go in, the effects' returns not (the old one cut the
  * dry sound before the sends); none on: the bus at its defaults (OFF, everything in) */
 static uint8_t proj_sl_found;                           /* proj_unpack_c read the SLICER's block */
+/* (JIANT 0.6.9) the old SLICER's slots are AUTO PAN's now (core.h): read by the migration, then AUTO PAN off */
+static void proj_ap_clear(project_t *q)
+{
+    uint32_t i;
+    for (i = 0; i < NTRK; i++) {
+        q->t[i].p[P_APDEP] = TP[P_APDEP].def;
+        q->t[i].p[P_APRATE] = TP[P_APRATE].def;
+        q->t[i].p[P_APWAVE] = TP[P_APWAVE].def;
+        q->t[i].p[P_APSYNC] = TP[P_APSYNC].def;
+    }
+}
 static void proj_sl_migrate(project_t *q)
 {
     uint32_t i, first = NTRK;
@@ -571,8 +582,10 @@ static void proj_sl_migrate(project_t *q)
     for (i = 0; i < NTRK; i++)
         if (q->t[i].p[P_SLCR] > 0 && q->t[i].p[P_SLCR] <= 2 && first == NTRK)
             first = i;
-    if (first == NTRK)
+    if (first == NTRK) {
+        proj_ap_clear(q);
         return;
+    }
     q->g[G_SLMODE] = q->t[first].p[P_SLCR];
     q->g[G_SLPAT] = (int16_t)clamp(q->t[first].p[P_SLPAT], 1, 16);
     q->g[G_SLRATE] = (int16_t)clamp(q->t[first].p[P_SLRATE], 0, 5);
@@ -580,6 +593,7 @@ static void proj_sl_migrate(project_t *q)
     for (i = 0; i < NTRK; i++)
         q->g[G_SLT1 + i] = (int16_t)(q->t[i].p[P_SLCR] > 0 && q->t[i].p[P_SLCR] <= 2);
     q->g[G_SLFX] = 0;
+    proj_ap_clear(q);
 }
 static int proj_import(project_t *q, const void *b, int n)
 {
