@@ -15,8 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.6.8).** It builds and passes every test (Felucca's and its own), but **it has not been
-> tested thoroughly on a real FM-1 yet**. Back up the flash before installing it.
+> **Status: in development (v0.6.8).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 ## Cheat sheets
 
