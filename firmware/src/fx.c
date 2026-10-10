@@ -933,7 +933,7 @@ static void mix_part(track_t *t, uint32_t n)
         uint32_t ti = (uint32_t)(t - trk) % NTRK;
         int32_t lvl = LEVEL_Q12[t->p[P_LEVEL] & 127] << 8, pan = t->p[P_PAN] << 8, l0, p0, lq, dl, gl, gr, dgl, dgr;
         if (t->p[P_APDEP] > 0)                          /* (0.6.9) AUTO PAN */
-            pan = clamp(pan + autopan(t, ti, n), -64 << 8, 63 << 8);
+            pan = clamp(pan + autopan(t, ti, n), -(64 << 8), 63 << 8);
         if (!((mp_seen >> ti) & 1u)) {
             mp_lvl[ti] = lvl;
             mp_pan[ti] = pan;
