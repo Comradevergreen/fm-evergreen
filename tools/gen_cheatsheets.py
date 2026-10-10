@@ -7,7 +7,7 @@ import html, os
 
 R = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(R, 'docs', 'cheatsheet')
-VERSION = 'v0.6.7'
+VERSION = 'v0.6.8'
 
 HEAT = ['#22d3ee', '#3b82f6', '#8b5cf6', '#d946ef', '#ef4444', '#ff7a00', '#facc15', '#f4f1ea']
 
@@ -196,7 +196,7 @@ def controls():
                                   'G3 clears them, SELECT rolls too (only tracks that sound).', ('M1', 'M2', 'M3', 'M4')),
         ('SCL · SCALE', HEAT[0], 'Any key sets the ROOT. ROOT and SCALE are every melodic track\'s (and RESO\'s).',
          ('ROOT', 'SCL', 'OFS', 'PIT')),
-        ('SEQ · TOOLS', HEAT[4], 'On the SEQ pages: the SEQ TOOLS actions on the keys (reverse, shift, fill…).',
+        ('SEQ · TOOLS', HEAT[4], 'On the SEQ pages: F3 CLEAR · G3 REVERSE · A3 B3 SHIFT · C4 RANDOM · D4 COOK · E4 BEAT · F4 CLR AUTO (the automation).',
          ('LEN', 'DIV', 'SWING', 'GATE')),
         ('REC · RECORD', '#ef4444', 'F3 CLEAR the track (asks first), G3 the metronome CLICK.', ('CLICK', '-', '-', '-')),
     ]

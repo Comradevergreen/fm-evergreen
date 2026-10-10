@@ -19,7 +19,7 @@
  *              (eng_drum.c DXM_LANE, saved with the section; lit = sounding)
  *   SEQ  SET   (1.2, on the SEQ pages that show the pattern: STEP / the DRUM grid, PATTERN, CHANCE, AUTOMATION; elsewhere
  *              SEQ held opens SONG as before) TOOLS: the white keys from F3 the sequence tools (ui_tools.c: CLEAR,
- *              REVERSE, SHIFT < >, RANDOM, COOK; on a DRUM track BEAT and the lane's CLEAR REVERSE FILL RANDOM), black
+ *              REVERSE, SHIFT < >, RANDOM, COOK, CLR AUTO (0.6.8: the track's automation); on a DRUM track BEAT and the lane's CLEAR REVERSE FILL RANDOM), black
  *              keys 1..8 the lane (DRUM); KNOB 1..4 the PATTERN page's LEN DIV SWING GATE. No undo (TONIC: the song
  *              layer's RECALL)
  *   REC  SET   (1.1.5, on every page; REC's tap still arms / disarms) the white keys from F3: CLEAR (the selected
@@ -664,7 +664,8 @@ static uint32_t layer_leds(uint32_t *br)
             on = !dx_lane_muted(p);
         } else if (l == LAYER_SEQ) {                    /* the tools breathe (not while a song plays); DRUM: the lane */
             on = b && p < NLANE && drum_track(TSEL) && p == ui.lane;   /* lit, the other lanes breathe */
-            can = b ? p < NLANE && drum_track(TSEL) : tl_cell(TSEL, p) && !chain_busy();
+            can = b ? p < NLANE && drum_track(TSEL) : tl_cell(TSEL, p) && !chain_busy() &&
+                  (p != TL_CAUTO || motion_count(TSEL));   /* (CLR AUTO: automation to clear) */
         } else if (l == LAYER_SAVE && !b) {             /* the section playing lit, the saved ones and the */
             on = (p < SK_STORE && live.cur == (int8_t)p) || (p == SK_REC && live.srec) ||   /* actions breathe */
                  (p == SK_MODE && live.mode);
@@ -889,13 +890,13 @@ static void layer_edit(void)                            /* F3 INIT, G3 RECALL (a
  * track the lanes of black keys 1..8 under them (the selected one: the selection's fill). A melodic track: the two
  * rows of the sequence's tools only */
 static const uint8_t TL_ICON[TL_N] = {ICON_CLEAR, ICON_X_REVERSE, ICON_X_LEFT, ICON_X_RIGHT, ICON_PROB, ICON_W_SH,
-    ICON_DRUM, 0, ICON_CLEAR, ICON_X_REVERSE, ICON_STEPS, ICON_PROB};
-static const char *const TL_NAME[TL_N] = {"CLEAR", "REVERSE", "SHIFT", "SHIFT", "RANDOM", "COOK", "BEAT", 0,
+    ICON_DRUM, ICON_X_MOTION_DEL, ICON_CLEAR, ICON_X_REVERSE, ICON_STEPS, ICON_PROB};
+static const char *const TL_NAME[TL_N] = {"CLEAR", "REVERSE", "SHIFT", "SHIFT", "RANDOM", "COOK", "BEAT", "CLR AUTO",
     "CLR", "REV", "FILL", "RND"};
 static void layer_seq(void)
 {
     uint32_t p, st = chain_busy() ? LS_DIM : LS_OFF, drum = (uint32_t)drum_track(TSEL);
-    char n[3] = {0, 0, 0}, nm[8];
+    char n[3] = {0, 0, 0}, nm[10];
     for (p = 0; p < TL_N; p++) {
         if (!tl_cell(TSEL, p))
             continue;

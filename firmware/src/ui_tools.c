@@ -3,14 +3,15 @@
 /* Felucca 1.2: the SEQ TOOLS layer's actions (ui_layer.c: SEQ held on STEP / the DRUM grid, PATTERN, CHANCE,
  * AUTOMATION). Included by ui_layer.c. The white keys from F3 (TL_*):
  *   F3 CLEAR  G3 REVERSE  A3 SHIFT <  B3 SHIFT >       the whole sequence
- *   C4 RANDOM D4 COOK     E4 BEAT (DRUM)                 new / a little changed
+ *   C4 RANDOM D4 COOK     E4 BEAT (DRUM) F4 CLR AUTO     new / a little changed; (JIANT 0.6.8) F4: the track's automation
  *   G4 CLEAR  A4 REVERSE  B4 FILL  C5 RANDOM             the selected lane (DRUM: ui.lane, black keys 1..8 pick it)
- * Each works on the selected track's steps 1..LEN (the steps past LEN stay); the track's automation stays. No undo
+ * Each works on the selected track's steps 1..LEN (the steps past LEN stay); the track's automation stays (but
+ * CLR AUTO's: it clears the track's automation and locks, every step, the steps stay). No undo
  * (TONIC): the song layer's RECALL brings the section back as it was stored.
  * A step that held something and is empty after loses its locks (as EDIT's step clear); REVERSE and SHIFT move the
  * steps' automation and locks with them. RANDOM and COOK draw from libc.c rng(): no seed is kept, each press
  * differs. A sequence of ties reversed keeps its note first: N T T -> N T T at the mirrored place */
-enum { TL_CLEAR, TL_REV, TL_LEFT, TL_RIGHT, TL_RANDOM, TL_COOK, TL_BEAT, TL_GAP, TL_LCLR, TL_LREV, TL_LFILL, TL_LRND,
+enum { TL_CLEAR, TL_REV, TL_LEFT, TL_RIGHT, TL_RANDOM, TL_COOK, TL_BEAT, TL_CAUTO, TL_LCLR, TL_LREV, TL_LFILL, TL_LRND,
        TL_N };
 
 /* the steps as they were just before an action (tl_take): what REVERSE and SHIFT read; in the pool (RAM's .bss is
@@ -22,7 +23,7 @@ static uint32_t tl_rnd(uint32_t n) { return n ? rng() % n : 0u; }
 static int tl_gate(const step_t *s) { return s->time == ST_NOTE && s->n; }
 static uint32_t tl_lane(const step_t *s, uint32_t l) { return (step_lanes(s) >> l) & 1u; }
 /* place p's action is there for this track (the lane row and BEAT: DRUM only) */
-static int tl_cell(const track_t *t, uint32_t p) { return p < TL_N && p != TL_GAP && (p < TL_BEAT || drum_track(t)); }
+static int tl_cell(const track_t *t, uint32_t p) { return p < TL_N && (p < TL_BEAT || p == TL_CAUTO || drum_track(t)); }
 
 /* the steps of t as they are now, before an action */
 static void tl_take(const track_t *t) { memcpy(tl_src, t->step, sizeof tl_src); }
@@ -321,6 +322,14 @@ static const char *tl_do(track_t *t, uint32_t p, uint32_t l)
     int drum = drum_track(t);
     const char *msg = 0;
     l %= NLANE;
+    if (p == TL_CAUTO) {                                /* (JIANT 0.6.8) the automation and locks, every step */
+        if (!motion_count(t)) {
+            ui_message("NOTHING TO CLEAR");
+            return 0;
+        }
+        motion_clear(t);
+        return "AUTOMATION CLEARED";
+    }
     if (p == TL_COOK) {                                 /* (nothing there: nothing to cook) */
         for (i = 0; i < len; i++)
             n += drum ? (uint32_t)__builtin_popcount(step_lanes(&t->step[i])) : (uint32_t)tl_gate(&t->step[i]);

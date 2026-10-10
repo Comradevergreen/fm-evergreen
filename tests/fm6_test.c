@@ -170,12 +170,46 @@ static void algorithms(void)
             n7[n]++;
         }
     }
-    for (k = 1; k < 6u; k++)          /* (FM is not additive: the mean over the algorithms with that many) */
-        if (n7[k] && n7[k + 1])
-            grows &= lvl[k + 1] / n7[k + 1] > lvl[k] / n7[k];
-    check("algorithms: the classic carrier counts of all 32 (operators on the output bus)", counts);
-    check("algorithms: each of the 32 sounds with every operator at full level", sound);
-    check("algorithms: more carriers, more level (1 .. 6)", grows);
+    {   /* (JIANT 0.6.8) every operator at full: from 2 carriers the voice is at its ceiling (eng_fm6.c fm6_trim), so the
+         * level climbs from 1 carrier to 2 and then holds (the mean over the algorithms with that many: FM is not
+         * additive) */
+        double lo = 1e30, hi = 0;
+        for (k = 2; k <= 6u; k++)
+            if (n7[k]) {
+                double m = lvl[k] / n7[k];
+                lo = m < lo ? m : lo;
+                hi = m > hi ? m : hi;
+            }
+        grows = n7[1] && lvl[1] / n7[1] < lo && hi < lo * 1.25;
+        check("algorithms: the classic carrier counts of all 32 (operators on the output bus)", counts);
+        check("algorithms: each of the 32 sounds with every operator at full level", sound);
+        check("algorithms: more carriers, more level up to the voice's ceiling, then held there (2 .. 6 within 25 %)", grows);
+    }
+    {   /* (JIANT 0.6.8) the trim: a voice over the level every voice is made for (VOICE_FS) comes down to it; a factory
+         * patch is never trimmed; a new patch starts untrimmed */
+        double pk = 0;
+        uint32_t i, ok;
+        init_patch(base);
+        for (k = 1; k <= 6u; k++) {
+            static const int R[4] = {99, 99, 99, 99}, L[4] = {99, 99, 99, 0};
+            op_set(base, k, R, L, 99, 1);
+        }
+        base[FP_ALG] = 31;                                /* (algorithm 32: six carriers at full) */
+        setup(base, 0);
+        voice_render(60, 127, y, FS / 2, 0);
+        for (i = FS / 50; i < FS / 2; i++)
+            pk = fabs(y[i]) > pk ? fabs(y[i]) : pk;
+        ok = fm6_trim[0] > 0 && pk < VOICE_FS * 1.15;
+        check("trim: six carriers at full, the voice at its ceiling (peak under 1.15 x VOICE_FS), not 6x", ok);
+        for (k = 0, ok = 1; k < FM6_NFACTORY; k++) {
+            uint8_t v[FP_SIZE + 1u];
+            fm6_unpack(FM6_FACTORY[k], v);
+            setup(v, 0);
+            voice_render(36 + 6 * k, 127, y, FS / 4, 0);
+            ok &= fm6_trim[0] == 0;
+        }
+        check("trim: the 8 factory patches (velocity 127) never trimmed", ok);
+    }
 }
 
 /* ---------------------------------------------------------- envelopes --- */

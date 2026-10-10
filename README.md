@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.6.7).** It builds and passes every test (Felucca's and its own), but **it has not been
+> **Status: in development (v0.6.8).** It builds and passes every test (Felucca's and its own), but **it has not been
 > tested thoroughly on a real FM-1 yet**. Back up the flash before installing it.
 
 ## Cheat sheets
@@ -30,6 +30,25 @@ Two printable sheets with everything on the device. Click an image to open it fu
 ## Changelog
 
 Every update is listed here, newest first.
+
+### v0.6.8
+Fixes from the first users' reports:
+- **No more crackles turning knobs.** Measured on every engine, a knob turned fast against the same move made smooth:
+  - **FILTER** (every engine but ANALOG): going in and out of the chain (CUT at the top with RES 0, the LP open) and
+    changing TYPE now crossfade, the filter starting from the sound instead of a stale state. It clicked each time CUT
+    or RES crossed the open point (FM6's CUT 17x the high-frequency energy, now as smooth as a slow turn).
+  - **LEVEL and PAN** glide (~3 ms) instead of stepping at each knob move.
+  - **DIST** comes in smoothly from 0: DST 1..8 blend the dry sound into the drive (at 1 it was the full drive, with
+    its low cut, at once).
+- **FM6: SysEx voices no longer distort.** DX7 voices with several carriers at full came out up to 5x louder than the
+  factory patches, and their chords kept the master's limiter about 10 dB down (that was the glitchy, noisy sound). A
+  voice above the level every voice is made for is now trimmed to it, per patch and automatically: its chords
+  sit where the factory patches' do (the limiter about 2 dB, as theirs). Quieter voices and the 8 factory patches are
+  untouched; nothing is ever boosted. Tested with 71 classic DX7 voices.
+- **SEQ TOOLS: F4 CLR AUTO** clears the selected track's automation and parameter locks (every step), the steps stay.
+  It breathes when there is automation to clear. Next to F3 CLEAR (the sequence).
+- **Video v2** (`tools/video/`): every effect, DRUM-X's pages, the modulators, sequencers and automation, a beat from
+  soft to industrial at 132 BPM, fast montage cuts; the captions come from the capture's own script.
 
 ### v0.6.7
 - **Cheat sheets** in the README: controls, and sound · effects · modulation, as images and printable PDFs.
