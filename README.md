@@ -18,11 +18,21 @@ editor update themselves with every change merged into `main`.
 > **Status: in development (v0.6.7).** It builds and passes every test (Felucca's and its own), but **it has not been
 > tested thoroughly on a real FM-1 yet**. Back up the flash before installing it.
 
+## Cheat sheets
+
+Two printable sheets with everything on the device. Click an image to open it full size, or download the PDF.
+
+| Controls | Sound · FX · Mod |
+| --- | --- |
+| [![JIANT FM cheat sheet: controls](docs/cheatsheet-controls.png)](docs/cheatsheet-controls.png) | [![JIANT FM cheat sheet: sound, effects and modulation](docs/cheatsheet-sound.png)](docs/cheatsheet-sound.png) |
+| Every knob and button, the layers with their key maps (FX, GLO, SAVE, EDIT, LFO, SCL, SEQ, REC), the combos and every page's four knobs. **[PDF](docs/cheatsheet-controls.pdf)** | The eight engines' EDIT pages, FILTER, VOICE, ENV, LFO, the MOD matrix, MSEQ, macros, the sequencer, scales and ARP, songs, and every effect: DIST, the SLICER bus, delay, the five reverbs and the master. **[PDF](docs/cheatsheet-sound.pdf)** |
+
 ## Changelog
 
 Every update is listed here, newest first.
 
 ### v0.6.7
+- **Cheat sheets** in the README: controls, and sound · effects · modulation, as images and printable PDFs.
 - **Page jump fix**: once you turn PRESETS with a page button held, that button's layer (its map) stays off until you
   let the button go, even if you keep holding past the HOLD time or the first turn came at the very moment you pressed
   it. Hold it again afterwards and the layer works as always.
@@ -506,6 +516,7 @@ These design notes are in Spanish.
 | [docs/TONIC-SONG-PLAN.md](docs/TONIC-SONG-PLAN.md) | Song mode plan |
 | [docs/TONIC-DRUMX.md](docs/TONIC-DRUMX.md) | DRUM-X: the voice, the per-section kit and the phases |
 | [docs/TONIC-UI.md](docs/TONIC-UI.md) | The JIANT FM interface: screen map, format, flash measurements |
+| [Cheat sheets](#cheat-sheets) | Controls and sound reference (PNG and PDF; made by `tools/gen_cheatsheets.py` + `tools/render_cheatsheets.mjs`) |
 | [BUILDING.md](BUILDING.md) | Toolchain, build, emulator and tests |
 | [web/EDITOR_PROTOCOL.md](web/EDITOR_PROTOCOL.md) | The editor's SysEx protocol |
 | [LICENSING.md](LICENSING.md) | Licenses of each part |
