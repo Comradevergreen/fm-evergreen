@@ -360,14 +360,19 @@ static void at_new(uint32_t q, uint32_t r)
     if (r == 6u) {
         project_capture(&proj_scratch); proj_pack(&film_song, &proj_scratch);
         home(T_DRUM); enc_turn(EN_SELECT, 1);
-        caption(q, ONLY, "DICE ALL", "HOME + SELECT: a whole new song idea|engines · sequences · scale · FX", 1);
+        caption(q, ONLY, "DICE ALL", "HOME + SELECT: a whole new piece|genre · energy · orchestration · sounds · FX", 1);
     }
-    if (r == 7u || r == 11u || r == 15u) hold_btn(B_OCTUP, 1);   /* OK: the dice */
+    if (r == 7u || r == 11u || r == 15u) {              /* OK: the dice (0.6.34: three of its worlds, the film's tempo) */
+        static const int8_t G[3] = {2, 0, 10}, E[3] = {1, 2, 0};   /* DARK MINIMAL MID, IDM FRANTIC, SOUNDTRACK SPACE */
+        dice_force_style = G[(r - 7u) / 4u]; dice_force_energy = E[(r - 7u) / 4u];
+        hold_btn(B_OCTUP, 1);
+    }
     if (r == 8u || r == 12u || r == 16u) song.g[G_BPM] = BPM;   /* (each roll a tempo of its own: the film keeps 125) */
     if (r == 10u || r == 14u) enc_turn(EN_SELECT, 1);
-    if (r == 10u) caption(q, ONLY, "NEVER THE SAME", "9 styles, Kraftwerk to Aphex Twin|every roll a new track", 1);
+    if (r == 10u) caption(q, ONLY, "NEVER THE SAME", "15 genres · SPACE to FRANTIC|soundtrack, IDM, hard techno, neo classical", 1);
     if (r == 18u) caption(q, ONLY, "UNDO", "GLO + G4: back one step|again: forward", 1);
     if (r == 19u) {                                             /* (the GLO layer's G4: what the key does) */
+        dice_force_style = dice_force_energy = -1;
         if (!undo_do()) ui_message("UNDONE (AGAIN: REDO)");
         song.g[G_BPM] = BPM;
     }
