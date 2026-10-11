@@ -915,7 +915,7 @@ static int test_actions(void)
     press(B_OCTUP);
     bad += check("TOOLS CLEAR first asks confirmation", ui.confirm == CF_CLEAR_SEQ && !seq_is_empty(t));
     press(B_OCTUP);
-    bad += check("OCT+ clears the pattern, the pick dropped", seq_is_empty(t) && msg_is("PATTERN CLEARED") && ui.act == 0u);
+    bad += check("OCT+ clears the pattern, the pick dropped", seq_is_empty(t) && msg_is("T1 CLEARED") && str_eq(ui.msg2, "SEQ+REC: ALL TRACKS") && ui.act == 0u);
     turn(EN_K1, 1);
     bad += check("nothing to clear: OCT+ dark", oct_leds_seen(0) == 1u);
     turn(EN_K2, 1);
@@ -5474,7 +5474,7 @@ static int test_seq_tools(void)
     ok &= !memcmp(TSEL->step, ref, sizeof ref);
     bad += check("  B3 / A3 SHIFT > <: one step round inside LEN (the lock with it); back again: as it was", ok);
     tl_key(0);                                          /* F3: CLEAR */
-    for (ok = msg_is("SEQUENCE CLEARED"), i = 0; i < 8u; i++)
+    for (ok = msg_is("T1 CLEARED") || msg_is("T2 CLEARED") || msg_is("T3 CLEARED") || msg_is("T4 CLEARED"), i = 0; i < 8u; i++)
         ok &= TSEL->step[i].time == ST_REST && !TSEL->step[i].n;
     ok &= TSEL->step[20].note[0] == 72 && !motion_lock_count(TSEL);
     bad += check("  F3 CLEAR: steps 1..LEN empty (no dialog), past LEN kept, the locks of the steps cleared go", ok);
@@ -5919,6 +5919,48 @@ static int test_key_latch(void)
     return bad;
 }
 
+/* (0.6.28) a user: "after clearing a sequence, it still randomly triggers notes on all 6 tracks". The punch-in lane's
+ * STUTTER / ARP replayed the cleared steps' last notes (and ARP made random fills on a DRUM track with no steps); a clear
+ * now ends them and forgets the notes; a pending section jump is called off */
+static int test_clear_ghosts(void)
+{
+    int bad = 0;
+    uint32_t k, i, on[NTRK];
+    ui_power_on();
+    trk_live = NTRK; ui_rec_prefs |= 0x80u;
+    for (k = 0; k < NTRK; k++) my_steps(&trk[k]);
+    memset(pfx_lane, 0, sizeof pfx_lane);
+    pfx_ltgt = 0; pfx_tgt = 0; perf_latched = 0; scene_pfx = 0;
+    for (i = 0; i < 64u; i++) pfx_lane_put(i, i < 32u ? PF_S16 - PF_OCTD + 1u : PF_ARP - PF_OCTD + 1u);   /* (STUTTER 1/16,
+                                                         * then ARP, on every track) */
+    transport_req = 1;
+    for (i = 0; i < 2000u; i++) { int32_t o[2 * CTL]; mix_block(o, CTL); }
+    for (k = 0; k < NTRK; k++) {                        /* every track cleared, one by one (SAVE > TOOLS CLEAR) */
+        song.sel = (uint8_t)k;
+        load_begin(&trk[k], LOAD_PAT); track_defaults_steps(&trk[k]); load_end(&trk[k]);
+    }
+    for (i = 0; i < 4u; i++) { int32_t o[2 * CTL]; mix_block(o, CTL); }
+    for (k = 0; k < NTRK; k++) {
+        uint32_t v;
+        on[k] = 0;
+        for (v = 0; v < NVOICE; v++) trk[k].v[v].active = 0;
+    }
+    for (i = 0; i < 6000u; i++) {                       /* (4 bars and more: the lane plays on) */
+        int32_t o[2 * CTL];
+        mix_block(o, CTL);
+        for (k = 0; k < NTRK; k++) {
+            uint32_t v;
+            for (v = 0; v < NVOICE; v++) on[k] += trk[k].v[v].gate;
+        }
+    }
+    for (k = 0, i = 0; k < NTRK; k++) i += on[k];
+    bad += check("clear: the punch-in lane repeats nothing of the cleared steps (no note on any of the 6 tracks)", i == 0u);
+    transport_req = 2; events_block(CTL);
+    memset(pfx_lane, 0, sizeof pfx_lane);
+    ui_power_on();
+    return bad;
+}
+
 /* (0.6.24) FX in sections: a tap the next page, two quick taps the next section; the footer counts within it */
 static int test_fx_sections(void)
 {
@@ -6192,8 +6234,8 @@ static int test_rec_layer(void)
     memcpy(before, trk[1].step, sizeof before);
     rec_down(); frame();
     key_down(white(0)); frame();                        /* a combo: the map at once, cleared */
-    ok = ui.layer == LAYER_REC && seq_is_empty(&trk[1]) && !ui.confirm && msg_is("SEQUENCE CLEARED") && !gates() &&
-         !ui.msg2[0];
+    ok = ui.layer == LAYER_REC && seq_is_empty(&trk[1]) && !ui.confirm && msg_is("T2 CLEARED") && !gates() &&
+         str_eq(ui.msg2, "SEQ+REC: ALL TRACKS");
     key_up(white(0)); frame();
     rec_up();
     ok &= !ui.layer && song.rec == 0u && !transport_req && seq_is_empty(&trk[1]);
@@ -6764,6 +6806,13 @@ static int test_click_menu(void)
         events_block(CTL);
         song.sel = (uint8_t)sel; ui.msg_t = 0; ui.msg[0] = ui.msg2[0] = 0; frame();
         bad += check("TRACKS 4 LOW: T5 asleep (no note, no voice); 6 HIGH wakes it", ok);
+        ui_rec_prefs &= (uint8_t)~0x80u; frame();       /* (0.6.28) a note sent to it: the screen says why it is silent */
+        ui.msg_t = 0; ui.msg[0] = 0; fm1_ms += 5000u;
+        trk_note_on(&trk[4], 60, 100); frame();
+        ok = msg_is("T5-T6 ASLEEP: ") && str_eq(ui.msg2, "GLO>SYSTEM>TRACKS 6");
+        ui.msg_t = 0; ui.msg[0] = ui.msg2[0] = 0;
+        ui_rec_prefs |= 0x80u; frame();
+        bad += check("TRACKS 4: a note for T5 says T5-T6 ASLEEP, GLO>SYSTEM>TRACKS 6", ok);
     }
     {   /* (0.6.19) GLO > SYSTEM's TRKS (KNOB 2): the same setting, both ways */
         go_title("SYSTEM");
@@ -7647,6 +7696,7 @@ int main(void)
     bad += test_load_budget();
     bad += test_dice_all();
     bad += test_fx_sections();
+    bad += test_clear_ghosts();
     bad += test_dx_sound();
     bad += test_clear_all();
     bad += test_lane_mutes();

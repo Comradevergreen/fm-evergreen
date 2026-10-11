@@ -1297,13 +1297,24 @@ static void ui_input_frame(void)
     perf_latch_on = fx_latch & 1u;                      /* (MENU > FX LATCH; a settings load sets it too) */
     fx_usb_fixed = (ui_prefs & PREF_USB_FIXED) != 0u;   /* (MENU > USB LEVEL: fx.c, audio.c) */
     rp_apply();                                         /* (MENU > CLICK, CLICK LEVEL, COUNT-IN: click.c, seq.c) */
-    {   /* (0.6.18) TRACKS 4 LOW: T5 / T6 picked, the screen says how to wake them (once a pick) */
-        static uint8_t sel0 = 0xFFu;
-        if (song.sel != sel0 && song.sel >= trk_live) {
+    {   /* (0.6.18) TRACKS 4 LOW: T5 / T6 picked, the screen says how to wake them (once a pick). (0.6.28) Also when a
+         * note is sent to them (a key, MIDI, their steps) and when PLAY starts with steps on them: they were silent and
+         * people did not know why (at most every 4 s) */
+        static uint8_t sel0 = 0xFFu, play0;
+        static uint32_t said_ms;
+        uint32_t k, said = song.sel != sel0 && song.sel >= trk_live;
+        int quiet = !said_ms || fm1_ms - said_ms > 4000u;
+        if (song.playing && !play0 && quiet)
+            for (k = trk_live; k < NTRK; k++)
+                if (!seq_is_empty(&trk[k]) && !trk[k].p[P_MUTE]) said = 1;
+        if (asleep_hit) { asleep_hit = 0; said |= quiet; }
+        if (said) {
             ui_say("T5-T6 ASLEEP: ", "");
-            str_cpy(ui.msg2, "MENU>TRACKS 6", sizeof ui.msg2);
+            str_cpy(ui.msg2, "GLO>SYSTEM>TRACKS 6", sizeof ui.msg2);
+            said_ms = fm1_ms | 1u;
         }
         sel0 = song.sel;
+        play0 = song.playing;
     }
     if (!ui.menu)
         usb_serial_apply();                             /* (MENU > USB SERIAL: when the menu has closed) */
@@ -1501,7 +1512,12 @@ static void ui_input_frame(void)
                     b[0] = (char)('1' + ui.confirm_trk);
                     ui_say("TRACK ", b);
                 } else {
-                    ui_message("PATTERN CLEARED");
+                    {   /* (0.6.28) which track: the others play on (SEQ + REC clears them all) */
+                        char cb[16] = "T1 CLEARED";
+                        cb[1] = (char)('1' + ui.confirm_trk % NTRK);
+                        ui_say(cb, "");
+                        str_cpy(ui.msg2, "SEQ+REC: ALL TRACKS", sizeof ui.msg2);
+                    }
                 }
             }
         } else if (oct & 1u) {

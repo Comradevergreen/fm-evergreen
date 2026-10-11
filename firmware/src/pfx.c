@@ -71,6 +71,11 @@ static __attribute__((noinline)) void pfx_fire(track_t *t, int arp)
     uint32_t i, n = t->pfx_lnn;
     if (!n && !(arp && t->engine == ENGI_DRUM))         /* (a drum fill needs no notes struck) */
         return;
+    if (!n) {                                           /* (0.6.28) .. but a kit with steps: a cleared DRUM track stays
+                                                         * silent (the lane's ARP made random fills on it) */
+        for (i = 0; i < NSTEP && !(t->step[i].time == ST_NOTE && (t->step[i].n || t->step[i].hit)); i++) {}
+        if (i == NSTEP) return;
+    }
     pfx_hush(t);
     pfx_in = 1;
     t->pfx_rpit = 0;
@@ -123,9 +128,11 @@ static void pfx_lane_put(uint32_t s, uint32_t v)
 }
 
 /* each block, before the events (fx.c mix_block). held: the effects held (PF_* bits) */
+static uint32_t pfx_rec_held;                           /* (0.6.28) the effects held by hand: only they record into the
+                                                         * lane (a latched one wrote itself on every step it passed) */
 static __attribute__((noinline)) void pfx_block(uint32_t n, uint32_t held)
 {
-    uint32_t k, b = beat_samples(), lane = 0, raw = held, nw;
+    uint32_t k, b = beat_samples(), lane = 0, raw = held & pfx_rec_held, nw;
     pfx_blk++;
     pfx_qon &= held;                                    /* (JIANT) let go: at once; pressed: on the next 1/16 */
     nw = held & ~pfx_qon;
