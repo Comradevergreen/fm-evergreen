@@ -244,15 +244,35 @@ static void voice_kill(voice_t *v)                      /* fade out over the nex
     voice_kills++;
 }
 
+/* (0.6.18) the load budget takes only a tail that is nearly gone: the oldest released voice under -30 dB (any part).
+ * NVOICE = none: the new voice is added and the tails ring out (0.6.16-17 took the oldest released one, loud or not:
+ * with a sequence running every note cut the tails; the overload guard at 80 % stays the last line) */
+static uint32_t quiet_tail(track_t **pp)
+{
+    uint32_t p, i, best = NVOICE;
+    for (p = 0; p < NPART; p++)
+        for (i = 0; i < NVOICE; i++) {
+            const voice_t *v = &trk[p].v[i];
+            if (!v->active || v->gate || v->stage == 4u || v->env_out >= 1024)
+                continue;
+            if (best == NVOICE || v->age < (*pp)->v[best].age) {
+                best = i;
+                *pp = &trk[p];
+            }
+        }
+    return best;
+}
+
 /* the budget is full: free a voice for part t. 0 = nothing to take (soft) */
 static int voice_room(track_t *t, int soft)
 {
     track_t *vp = 0;
     uint32_t k;
-    if (!load_tight && voices_busy() < NVOICE)
+    if (voices_busy() < NVOICE) {
+        if (load_tight && (k = quiet_tail(&vp)) < NVOICE)
+            voice_kill(&vp->v[k]);                      /* (the load budget: a dying tail makes the room) */
         return 1;
-    if (load_tight && !voices_busy())
-        return 1;                                       /* (nothing to take: the first voice) */
+    }
     k = voice_victim(t, soft, &vp);
     if (k == NVOICE)
         return !soft;                                   /* hard: over the budget (cannot happen: each of the
@@ -290,9 +310,9 @@ static voice_t *voice_alloc(track_t *t, uint32_t note)
             return voice_reuse(t, &t->v[i]);
         nfree += !t->v[i].active;
     }
-    if (nfree && (voices_busy() >= NVOICE || (load_tight && voices_busy()))) {   /* (0.6.16: the load budget too) */
+    if (nfree && (voices_busy() >= NVOICE || load_tight)) {   /* (0.6.16: the load budget too; 0.6.18: a dying tail) */
         track_t *vp = 0;
-        uint32_t k = voice_victim(t, 0, &vp);
+        uint32_t k = voices_busy() >= NVOICE ? voice_victim(t, 0, &vp) : quiet_tail(&vp);
         if (k < np && vp == t)
             return &t->v[k];                            /* our own: restart it in place (no click) */
         if (k < NVOICE)
@@ -455,13 +475,16 @@ static void mono_remove(track_t *t, uint32_t note)
 }
 
 static int pfx_note(track_t *t, uint32_t note, uint32_t vel);   /* pfx.c (in fx.c) */
-static uint8_t trk_hush;                                /* (0.6.15) bit k: track k muted by GLO's solo / the FX layer's
+static uint8_t trk_hush;
+static uint8_t trk_live = 4;                            /* (JIANT 0.6.18) MENU > TRACKS: the tracks that play (4 LOW CPU, the
+                                                         * default; 6 HIGH): the ones past it get no notes and stop,
+                                                         * their sounds and steps kept (fx.c mix_part) */                                /* (0.6.15) bit k: track k muted by GLO's solo / the FX layer's
                                                          * black key (perform.c): no new notes, as MUTE (a MIDI mute: a
                                                          * silenced track's voices end, it costs nothing) */
 static void trk_note_on(track_t *t, uint32_t note, uint32_t vel)
 {
     uint32_t any = 0, i, mode = trk_vmode(t);
-    if (t->p[P_MUTE] || ((trk_hush >> ((uint32_t)(t - trk) % NTRK)) & 1u) ||
+    if (t->p[P_MUTE] || ((trk_hush >> ((uint32_t)(t - trk) % NTRK)) & 1u) || (uint32_t)(t - trk) >= trk_live ||
         (t->engine == ENGI_DRUM && drum_muted(note)))   /* (DRUM: its group mutes) */
         return;
     if (pfx_note(t, note, vel))                         /* the punch-in effects (pfx.c): a repeat holds the track */

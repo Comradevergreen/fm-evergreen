@@ -1254,6 +1254,14 @@ static void ui_input_frame(void)
     perf_latch_on = fx_latch & 1u;                      /* (MENU > FX LATCH; a settings load sets it too) */
     fx_usb_fixed = (ui_prefs & PREF_USB_FIXED) != 0u;   /* (MENU > USB LEVEL: fx.c, audio.c) */
     rp_apply();                                         /* (MENU > CLICK, CLICK LEVEL, COUNT-IN: click.c, seq.c) */
+    {   /* (0.6.18) TRACKS 4 LOW: T5 / T6 picked, the screen says how to wake them (once a pick) */
+        static uint8_t sel0 = 0xFFu;
+        if (song.sel != sel0 && song.sel >= trk_live) {
+            ui_say("T5-T6 ASLEEP: ", "");
+            str_cpy(ui.msg2, "MENU>TRACKS 6", sizeof ui.msg2);
+        }
+        sel0 = song.sel;
+    }
     if (!ui.menu)
         usb_serial_apply();                             /* (MENU > USB SERIAL: when the menu has closed) */
     if (scr_input(pressed, notes))                      /* MENU > SCREEN OFF: dark, or the wake gesture: swallowed */

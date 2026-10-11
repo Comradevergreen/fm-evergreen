@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.6.17).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.6.18).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 ## Cheat sheets
 
@@ -29,6 +29,15 @@ Two printable sheets with everything on the device. Click an image to open it fu
 ## Changelog
 
 Every update is listed here, newest first.
+
+### v0.6.18
+- **MENU > AUDIO > TRACKS: 4 LOW (the default) or 6 HIGH.** With 4, tracks 5 and 6 sleep: they keep their sound,
+  steps and mix but don't play or cost anything, and the whole CPU goes to T1-T4 (selecting T5 or T6 says so). With
+  6, all six play and you know you're near the limit: watch the load meter. The setting is kept with the others.
+- **Release tails ring out again with a sequence running.** Since 0.6.16 the load budget took the oldest released
+  voice for every new note once the audio passed 65 %, so with the sequencer playing the tails were cut. Now it only
+  takes a tail that is nearly gone (under -30 dB); otherwise the note is added and the tails ring. The guard at 80 %
+  stays the last line.
 
 ### v0.6.17
 - **DRUM-X at half the work**: each hit computed at 22 kHz (it is low-passed at ~8 kHz anyway) and brought back to
@@ -498,7 +507,7 @@ each layer.
 - **Load meter** (top right, next to the battery): five small bars showing how much of the audio time the sound is
   using right now. The firmware's RAM is reserved entirely at boot and doesn't change, so this is what's worth
   watching: with all five lit (red, yellow) you're close to the limit and should cut voices, the CLOUD reverb or heavy
-  effects.
+  effects. If it's often full, MENU > AUDIO > **TRACKS 4 LOW** (the default) leaves T5 and T6 asleep for headroom.
 - **Power-on**: the signature draws itself in about a second, with beings swimming round it. To boot straight in: MENU > **ANIM OFF**.
 
 ### 3. Making a sound

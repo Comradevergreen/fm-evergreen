@@ -62,6 +62,8 @@ static uint32_t up_gen;                      /* bumped on every user bank change
 #define ui_rec_prefs (favorites.factory[15][28])
 #define PREF_REC 0xFF00u                       /* (menu_items.c MENU_FLAGS: a bit of ui_rec_prefs, << 8) */
 #define PREF_SCALE_LEDS (0x40u << 8)
+#define PREF_SIX (0x80u << 8)                  /* (JIANT 0.6.18) MENU > TRACKS 6 HIGH: all six tracks play; clear (the
+                                                * default): 4 LOW, T5 and T6 asleep (voice.c trk_live) */
 enum { RP_CLICK, RP_LEVEL, RP_COUNTIN };
 static uint32_t rp_get(uint32_t f)                     /* a field as the MENU steps it: 0..2 */
 {
@@ -74,6 +76,7 @@ static void rp_apply(void)                             /* the settings into clic
     click_mode = (uint8_t)rp_get(RP_CLICK);
     click_lvl = (uint8_t)rp_get(RP_LEVEL);
     cin_bars = (uint8_t)rp_get(RP_COUNTIN);
+    trk_live = (ui_rec_prefs & (PREF_SIX >> 8)) ? NTRK : 4u;
 }
 static void rp_put(uint32_t f, uint32_t v)
 {

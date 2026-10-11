@@ -80,6 +80,7 @@ static void host_tracks_init(void)                /* as felucca_init: defaults, 
             trk[k].step[i].time = ST_REST;
     }
     song.master_q12 = 4096;
+    trk_live = NTRK;                             /* (the tests play all six: TRACKS 6) */
 }
 
 /* the factory preset as ui.c apply_preset_to sets it (sound, sends; not the steps, not the track's own:

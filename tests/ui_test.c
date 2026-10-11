@@ -1331,9 +1331,9 @@ static int test_menu_tabs(void)
             }
     }
     ui_prefs = 0;
-    bad += check("MENU tabs: DISPLAY CONTROL AUDIO SYSTEM (6 5 5 4 rows), 1..6 each in a run, fit the page; tab gaps constant (S, LARGE)",
+    bad += check("MENU tabs: DISPLAY CONTROL AUDIO SYSTEM (6 5 6 4 rows), 1..6 each in a run, fit the page; tab gaps constant (S, LARGE)",
                  ok && MTAB_COUNT == 4u && str_eq(MTAB_NAME[0], "DISPLAY") && mtab_rows(MTAB_DISPLAY) == 6u &&
-                 mtab_rows(MTAB_CONTROL) == 5u && mtab_rows(MTAB_AUDIO) == 5u && mtab_rows(MTAB_SYSTEM) == 4u);
+                 mtab_rows(MTAB_CONTROL) == 5u && mtab_rows(MTAB_AUDIO) == 6u && mtab_rows(MTAB_SYSTEM) == 4u);
 
     ui_power_on();
     hold(B_HOME);
@@ -5862,9 +5862,19 @@ static int test_load_budget(void)
     n0 = voices_busy();
     load_tight = 1;
     trk_note_on(t, 71, 100);
-    bad += check("LOAD BUDGET: tight, a new note takes a voice (the count stays)", voices_busy() == n0 && n0 == 3u);
-    load_tight = 0;
+    bad += check("LOAD BUDGET (0.6.18): tight, held notes and no dying tail: a new note still adds a voice",
+                 voices_busy() == n0 + 1u && n0 == 3u);
+    t->v[0].gate = 0; t->v[0].stage = 3; t->v[0].env_out = 20000;   /* a loud release tail */
     trk_note_on(t, 74, 100);
+    bad += check("  tight: a loud release tail rings out (not taken; with a sequence they all were)",
+                 voices_busy() == n0 + 2u && t->v[0].stage == 3u);
+    t->v[0].env_out = 300;                              /* the same tail nearly gone (under -30 dB) */
+    trk_note_on(t, 76, 100);
+    bad += check("  tight: a dying tail makes the room (the count stays)", voices_busy() == n0 + 2u);
+    load_tight = 0;
+    { uint32_t i; for (i = 0; i < NVOICE; i++) if (t->v[i].note == 76) t->v[i].gate = 0, t->v[i].active = 0; }
+    n0 = voices_busy();
+    trk_note_on(t, 77, 100);
     bad += check("  calm: a new note adds a voice", voices_busy() == n0 + 1u);
     load_tight = 1;
     trk_all_off(t); { uint32_t i; for (i = 0; i < NVOICE; i++) t->v[i].active = 0; }
@@ -6558,10 +6568,31 @@ static int test_click_menu(void)
     turn(EN_PRESET, 1); ok &= ui.menu_sel == MI_COUNTIN;
     turn(EN_K4, 1); ok &= cin_bars == 1u;
     turn(EN_K4, 1); ok &= cin_bars == 2u;
+    turn(EN_PRESET, 1); ok &= ui.menu_sel == MI_TRACKS;
+    turn(EN_K1, -1); frame(); ok &= trk_live == 4u && !(ui_rec_prefs & 0x80u);   /* (0.6.18) TRACKS 4 LOW */
+    turn(EN_K1, 1); frame(); ok &= trk_live == NTRK && (ui_rec_prefs & 0x80u);   /* 6 HIGH */
     turn(EN_PRESET, 1); ok &= ui.menu_sel == MI_LOWCUT;   /* (wraps within AUDIO) */
     press(B_HOME);
     ok &= !ui.menu;
-    bad += check("MENU > AUDIO: PRESETS to CLICK, CLICK LEVEL, COUNT-IN; knobs / OCT step them, applied at once", ok);
+    bad += check("MENU > AUDIO: PRESETS to CLICK, CLICK LEVEL, COUNT-IN, TRACKS; knobs / OCT step them, applied at once", ok);
+    {   /* (0.6.18) TRACKS 4 LOW: T5 takes no note and sounds nothing (its voices off); TRACKS 6: it plays again */
+        uint32_t k, on = 0, sel = song.sel;
+        ui_rec_prefs &= (uint8_t)~0x80u; frame();
+        trk_note_on(&trk[4], 60, 100);
+        events_block(CTL);
+        for (k = 0; k < NVOICE; k++) on |= trk[4].v[k].active | trk[4].v[k].gate;
+        ok = trk_live == 4u && !on;
+        trk_all_off(&trk[4]);
+        ui_rec_prefs |= 0x80u; frame();
+        trk_note_on(&trk[4], 60, 100);
+        events_block(CTL);
+        for (k = 0; k < NVOICE; k++) on |= trk[4].v[k].gate;
+        ok &= trk_live == NTRK && on;
+        trk_all_off(&trk[4]);
+        events_block(CTL);
+        song.sel = (uint8_t)sel; ui.msg_t = 0; ui.msg[0] = ui.msg2[0] = 0; frame();
+        bad += check("TRACKS 4 LOW: T5 asleep (no note, no voice); 6 HIGH wakes it", ok);
+    }
     {
         persist_t p;
         settings_export(&p);

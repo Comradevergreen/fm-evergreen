@@ -18,6 +18,7 @@ static const uint8_t ED_MENU[][2] = {
     {MI_RESTORE, 15},                                  /* 1.2 (Discussion #130), a row of SYSTEM */
     {MI_SCLLED, 16},                                   /* 1.2 (Discussion #127), a row of CONTROL */
     {MI_SCROFF, 17},                                   /* 1.1.5, a row of DISPLAY */
+    {MI_TRACKS, 18},                                   /* (JIANT 0.6.18) TRACKS 4 LOW / 6 HIGH, a row of AUDIO */
 };
 #define ED_MENU_N NELEM(ED_MENU)
 
