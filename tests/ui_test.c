@@ -7313,10 +7313,14 @@ static int test_scale_link(void)
     TSEL->p[P_ROOT] = 9; TSEL->p[P_SCALE] = 2;    /* (any path: a knob, the layer, the editor) */
     frames(48);
     ok = trk[0].p[P_ROOT] == 9 && trk[2].p[P_SCALE] == 2 && trk[1].p[P_ROOT] == 9 && trk[3].p[P_ROOT] == 0 && trk[3].p[P_SCALE] == 0;
-    trk[2].p[P_ROOT] = 4;                          /* another track's own value; selecting it moves nothing */
+    trk[2].p[P_ROOT] = 4; trk[2].p[P_QUANT] = 1;   /* (0.6.19) another track's own value (MIDI, a load): undone */
+    frames(16);
+    ok &= trk[2].p[P_ROOT] == 9 && trk[2].p[P_QUANT] == trk[1].p[P_QUANT];
     song.sel = 2; frames(48);
-    ok &= trk[0].p[P_ROOT] == 9 && trk[2].p[P_ROOT] == 4;
-    bad += check("SCALE: ROOT / SCALE on the selected track -> every melodic track (not DRUM); selecting moves nothing", ok);
+    ok &= trk[0].p[P_ROOT] == 9 && trk[2].p[P_ROOT] == 9;
+    TSEL->p[P_QUANT] = 2; frames(16);              /* QNT is the song's too */
+    ok &= trk[0].p[P_QUANT] == 2 && trk[1].p[P_QUANT] == 2;
+    bad += check("SCALE (0.6.19): ROOT / SCALE / QNT one for every melodic track (not DRUM); no track keeps its own", ok);
     trk[0].p[P_ROOT] = 0;                          /* C major (SCALE 1: check its mask) */
     trk[0].p[P_SCALE] = 0;
     {
