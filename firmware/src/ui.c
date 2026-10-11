@@ -7,6 +7,9 @@
 static int project_save(uint32_t slot);
 static void panel_setup(void);
 static void project_load(uint32_t slot);
+static void undo_mark(void);                    /* (0.6.21) project.c: the music before a change, */
+static int undo_do(void);                       /* .. back (and again: forward) */
+static uint8_t undo_ok;
 static int project_used(uint32_t slot);
 static int project_recall_sound(uint32_t slot, uint32_t k);
 static int project_recall_slot(void);
@@ -172,7 +175,8 @@ static struct {
 
 enum { CF_NONE, CF_CLEAR_SEQ, CF_CLEAR_TRK, CF_OVR_PROJ, CF_OVR_USER, CF_LOAD_PAT,
        CF_DEL_ROW, CF_CLEAR_SONG, CF_INIT_SOUND, CF_CLEAR_MOTION, CF_ERASE_USER,
-       CF_RECALL_SOUND, CF_CLEAR_ALL };   /* ui.confirm: TOOLS' clears;
+       CF_RECALL_SOUND, CF_CLEAR_ALL, CF_DICE_ALL };   /* ui.confirm: TOOLS' clears; (0.6.21) HOME + SELECT:
+                                   * everything diced;
                                    * SAVE over a used slot; a pattern over the user's steps;
                                    * USER ERASE */
 

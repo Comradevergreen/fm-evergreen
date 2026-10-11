@@ -866,8 +866,10 @@ static void act_do(void)
         if (chain_busy()) { ui_message("STOP TO EDIT"); return; }
         if (pat_needs_confirm(TSEL))                      /* the user's steps: the dialog */
             confirm_open(CF_LOAD_PAT, song.sel);
-        else                                              /* empty, or a pattern loaded and untouched */
+        else {                                            /* empty, or a pattern loaded and untouched */
+            undo_mark();
             pat_load_ui(TSEL, pat_pick());
+        }
         return;
     }
     if (cur_page()->graph == GR_USER) {                   /* 1 LOAD, 2 ERASE, 3 SAVE (the NAME screen first) */
@@ -890,6 +892,7 @@ static void act_do(void)
         ui.act = 0;
     switch (id) {
     case G_LOAD:
+        undo_mark();                                      /* (0.6.21) UNDO: the music before the load */
         project_load(k);
         break;
     case G_SAVE:                                          /* the NAME screen writes it */
@@ -1059,9 +1062,8 @@ static int32_t dice_by(int32_t v, int32_t lo, int32_t hi, int32_t span)
 {
     return clamp(v + (int32_t)(rng() % (uint32_t)(2 * span + 1)) - span, lo, hi);
 }
-static void sound_dice(void)
+static void sound_dice_of(track_t *t, int quiet)
 {
-    track_t *t = TSEL;
     uint32_t e = t->eng_req % NENGINES, i, l;
     if (e == ENGI_DRUM) {
         for (l = 0; l < 8u; l++) {
@@ -1074,11 +1076,11 @@ static void sound_dice(void)
             }                                            /* (a new wave: SINE or FM, the gentle two) */
             L->mode = (uint8_t)((D->mode & ~3u) | (rng() % 5u ? (D->mode & 3u) : rng() % 2u));
         }
-        ui_message("KIT DICED");
+        if (!quiet) ui_message("KIT DICED");
         return;
     }
     if (ENGINES[e]->npresets)
-        apply_preset(rng() % ENGINES[e]->npresets);
+        apply_preset_to(t, rng() % ENGINES[e]->npresets);
     for (i = 0; i < 8u; i++) {
         const param_desc_t *d = track_desc(t, P_E0 + i);
         int32_t span = (d->max - d->min) / 4;
@@ -1089,7 +1091,162 @@ static void sound_dice(void)
         else
             t->p[P_E0 + i] = (int16_t)dice_by(t->p[P_E0 + i], d->min, d->max, span ? span : 1);
     }
-    ui_message("SOUND DICED");
+    if (!quiet) ui_message("SOUND DICED");
+}
+/* (0.6.21) EDIT + SELECT: the selected track's sound diced; UNDO (GLO + G4) brings back the sound before the turns
+ * (marked once a burst: a pause of 2 s starts another) */
+static void sound_dice(void)
+{
+    static uint32_t mark_ms;
+    if (!mark_ms || fm1_ms - mark_ms > 2000u)
+        undo_mark();
+    mark_ms = fm1_ms | 1u;
+    sound_dice_of(TSEL, 0);
+}
+
+/* (0.6.21) HOME + SELECT (after the dialog): everything diced into a new piece. One scale for the song (ROOT, a
+ * musical SCALE: never CHR / WHOLE / DIM; the RESO reverb and the SLICER follow it), each melodic track an engine, a
+ * sound (dice of a factory preset) and a sequence in that scale by its role (T1 the bass; the others a lead, a pad or an
+ * arpeggio), a DRUM track a diced kit and a beat; the macros' routes rolled for every track; the delay, reverb and
+ * chorus their settings within musical ranges. Tempo, mixer levels, mutes and the master are left alone. UNDO brings
+ * the music before it back */
+static void macro_dice(uint32_t mode);
+static int16_t sl_root = -1, sl_scale, sl_quant;      /* (scale_link: the song's scale) */
+static int32_t rr(int32_t lo, int32_t hi) { return lo + (int32_t)(rng() % (uint32_t)(hi - lo + 1)); }
+static void dice_note(step_t *s, const int32_t *n, uint32_t cnt, int acc)
+{
+    uint32_t j;
+    s->n = (uint8_t)cnt;
+    for (j = 0; j < 4u; j++)
+        s->note[j] = (uint8_t)(j < cnt ? clamp(n[j], 0, 127) : 0);
+    s->time = ST_NOTE;
+    s->flags = acc ? SF_ACCENT : 0;
+    s->vel = (uint8_t)(acc ? 118 : rr(82, 104));
+}
+static void dice_drums(track_t *t, uint32_t len)
+{
+    uint32_t i, hats = rng() % 3u, four = rng() % 3u == 0u, clap = rng() & 1u;
+    for (i = 0; i < len; i++) {
+        step_t *s = &t->step[i];
+        uint32_t h = 0;
+        if (i % 8u == 0u || (four && i % 4u == 0u) || (i % 2u == 0u && rng() % 6u == 0u))
+            h |= 1u << 0;                               /* KICK */
+        if (i % 8u == 4u)
+            h |= 1u << (clap ? 2 : 1);                  /* SNARE / CLAP on 2 and 4 */
+        else if (rng() % 16u == 0u)
+            h |= 1u << 1;                               /* (a ghost) */
+        if ((hats == 0u && i % 2u == 0u) || (hats == 1u && rng() % 10u < 7u) || (hats == 2u && i % 4u == 2u))
+            h |= (i % 4u == 2u && rng() % 4u == 0u) ? 1u << 4 : 1u << 3;   /* HATS: closed, now and then open */
+        if (rng() % 14u == 0u)
+            h |= 1u << (5u + rng() % 3u);               /* TOM / RIM / BELL, sparse */
+        if (h) {
+            s->time = ST_NOTE;
+            s->hit = (uint8_t)h;
+            s->acc = (uint8_t)(i == 0u ? 1u : 0u);
+            s->vel = 100;
+        }
+    }
+}
+static void dice_melody(track_t *t, uint32_t k, uint32_t len)
+{
+    uint32_t i, role = k == 0u ? 0u : 1u + rng() % 3u, poly = trk_vmode(t) == V_POLY;   /* bass, lead, pad, arp */
+    int32_t base = (role == 0u ? 36 : role == 2u ? 55 : 60) + t->p[P_ROOT], deg = rr(0, 4), n[4];
+    static const int8_t BASS[] = {0, 0, 0, 4, 7, -3, 2, 0};
+    static const int8_t PROG[] = {0, 3, 4, 5, -2, 2};
+    int8_t arp[4] = {0, 2, 4, 7};
+    base = scale_snap(t, base);
+    if (role == 3u)                                     /* the arpeggio's order */
+        for (i = 0; i < 3u; i++) { uint32_t j = i + rng() % (4u - i); int8_t x = arp[i]; arp[i] = arp[j]; arp[j] = x; }
+    for (i = 0; i < len; i++) {
+        step_t *s = &t->step[i];
+        uint32_t c = 1;
+        int on, acc = i % 4u == 0u && rng() % 3u == 0u;
+        switch (role) {
+        case 0:                                         /* bass: the downbeats, the root and fifth mostly */
+            on = (int)(rng() % 100u) < (i % 4u == 0u ? 85 : i % 2u == 0u ? 40 : 22);
+            n[0] = scale_steps(t, base, BASS[rng() % sizeof BASS]);
+            break;
+        case 1:                                         /* lead: a walk on the scale */
+            on = (int)(rng() % 100u) < (i % 2u == 0u ? 45 : 22);
+            deg = clamp(deg + rr(-2, 2), -3, 9);
+            n[0] = scale_steps(t, base, deg);
+            break;
+        case 2:                                         /* pad: a chord every half bar, held */
+            on = i % 8u == 0u;
+            if (on) {
+                deg = PROG[rng() % sizeof PROG];
+                n[0] = scale_steps(t, base, deg);
+                if (poly) { n[1] = scale_steps(t, base, deg + 2); n[2] = scale_steps(t, base, deg + 4); c = 3; }
+            } else {
+                s->time = ST_TIE;                       /* (the chord held over the next steps) */
+                continue;
+            }
+            break;
+        default:                                        /* arp: the chord's notes in a figure */
+            on = (int)(rng() % 100u) < (i % 2u == 0u ? 90 : 55);
+            n[0] = scale_steps(t, base, arp[i % 4u] + ((i / 8u) & 1u ? 2 : 0));
+            break;
+        }
+        if (!on)
+            continue;
+        dice_note(s, n, c, acc);
+        if (role <= 1u && rng() % 7u == 0u)
+            s->flags |= SF_SLIDE;
+    }
+}
+static void dice_all(void)
+{
+    static const uint8_t SCALES[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12};   /* MAJ MIN DOR MIX PEN MPEN HARM PHRY LYD MEL BLUES */
+    static const uint8_t DTIME[] = {0, 1, 2, 4, 5, 6};                       /* 1/4 1/8 1/16 8T 16T 1/2 */
+    static const int8_t DPIT[] = {-12, -5, 7, 12};
+    uint32_t k, kit = 0;
+    int16_t root = (int16_t)rr(0, 11), scale = (int16_t)SCALES[rng() % sizeof SCALES];
+    undo_mark();
+    for (k = 0; k < NTRK; k++) {
+        track_t *t = &trk[k];
+        uint32_t len = rng() % 4u ? 16u : rng() & 1u ? 8u : 32u;
+        if (drum_track(t)) {
+            if (!kit++)
+                sound_dice_of(t, 1);                    /* (one kit: DRUM-X's is the song's) */
+        } else {
+            uint32_t e;
+            do e = eng_vis(rng() % NENG_SHOWN); while (e == ENGI_DRUM);
+            set_engine_of(t, e);
+            sound_dice_of(t, 1);
+            t->p[P_ROOT] = root;
+            t->p[P_SCALE] = scale;
+            t->p[P_PAN] = (int16_t)(k ? rr(-28, 28) : 0);
+        }
+        t->p[P_DLY] = (int16_t)clamp(t->p[P_DLY] + rr(-15, 20), 0, 80);
+        t->p[P_REV] = (int16_t)clamp(t->p[P_REV] + rr(-15, 20), 0, 90);
+        load_begin(t, LOAD_PAT);
+        track_defaults_steps(t);
+        if (drum_track(t)) dice_drums(t, len);
+        else dice_melody(t, k, len);
+        t->p[P_SLEN] = (int16_t)len;
+        load_end(t);
+        pat_sig[k] = steps_sig(t);
+    }
+    sl_root = root; sl_scale = scale;                   /* (scale_link: the song's now) */
+    song.g[G_DTIME] = DTIME[rng() % sizeof DTIME];
+    song.g[G_DFDBK] = (int16_t)rr(20, 75);
+    song.g[G_DMIX] = (int16_t)rr(50, 110);
+    song.g[G_DCOLOR] = (int16_t)rr(35, 90);
+    song.g[G_DPIT] = rng() % 4u ? 0 : DPIT[rng() % sizeof DPIT];
+    song.g[G_DSPRY] = song.g[G_DPIT] ? (int16_t)rr(0, 40) : 0;
+    song.g[G_RTYPE] = (int16_t)rr(0, 4);
+    song.g[G_RSIZE] = (int16_t)rr(50, 110);
+    song.g[G_RDAMP] = (int16_t)rr(20, 90);
+    song.g[G_RMOD] = (int16_t)rr(0, 60);
+    song.g[G_RPRE] = (int16_t)(song.g[G_RTYPE] == 3 ? rr(0, 7) : song.g[G_RTYPE] == 2 || song.g[G_RTYPE] == 4 ? rr(-12, 12) : rr(0, 40));
+    song.g[G_CRATE] = (int16_t)rr(10, 70);
+    song.g[G_CDEPTH] = (int16_t)rr(20, 90);
+    song.g[G_STRN] = 0;
+    song.g[G_SLPQ] = 1;                                 /* (the SLICER's pitches in the scale) */
+    macro_dice(3);                                      /* (every track not muted: the routes rolled) */
+    ui_say("ALL DICED", "");
+    str_cpy(ui.msg2, "UNDO: GLO + G4", sizeof ui.msg2);
+    ui.force = 1;
 }
 
 /* HOME / REC / SAVE: tap on release, hold 0.7 s fires once. t0 = press time | 1,
@@ -1196,21 +1353,20 @@ static void ui_notices(void)
  * never plays in another scale). A DRUM track has none to follow. Each track keeps its TRN */
 static void scale_link(void)
 {
-    static int16_t g_root = -1, g_scale, g_quant;
     const track_t *t = TSEL;
     uint32_t k;
-    if (!drum_track(t) && (t->p[P_ROOT] != g_root || t->p[P_SCALE] != g_scale || t->p[P_QUANT] != g_quant)) {
-        g_root = t->p[P_ROOT];
-        g_scale = t->p[P_SCALE];
-        g_quant = t->p[P_QUANT];
+    if (!drum_track(t) && (t->p[P_ROOT] != sl_root || t->p[P_SCALE] != sl_scale || t->p[P_QUANT] != sl_quant)) {
+        sl_root = t->p[P_ROOT];
+        sl_scale = t->p[P_SCALE];
+        sl_quant = t->p[P_QUANT];
     }
-    if (g_root < 0)
+    if (sl_root < 0)
         return;                                         /* (a DRUM track selected from the start: nothing yet) */
     for (k = 0; k < NTRK; k++)
         if (!drum_track(&trk[k])) {
-            trk[k].p[P_ROOT] = g_root;
-            trk[k].p[P_SCALE] = g_scale;
-            trk[k].p[P_QUANT] = g_quant;
+            trk[k].p[P_ROOT] = sl_root;
+            trk[k].p[P_SCALE] = sl_scale;
+            trk[k].p[P_QUANT] = sl_quant;
         }
 }
 
@@ -1387,12 +1543,17 @@ static void ui_input_frame(void)
             uint32_t kind = ui.confirm;
             ui.confirm = 0;
             ui.force = 1;
+            if (kind != CF_OVR_PROJ && kind != CF_OVR_USER && kind != CF_ERASE_USER && kind != CF_DICE_ALL &&
+                kind != CF_DEL_ROW && kind != CF_CLEAR_SONG && !chain_busy())
+                undo_mark();                            /* (0.6.21) the music before a clear, INIT, RECALL, pattern */
             if (kind == CF_OVR_PROJ) {                  /* overwrite: the NAME screen writes it */
                 name_open(NK_PROJ_SAVE, ui.confirm_trk & 3u);
             } else if (kind == CF_OVR_USER) {
                 name_open(NK_USER_SAVE, ui.confirm_trk);
             } else if (kind == CF_ERASE_USER) {
                 up_ui(1u, ui.confirm_trk);
+            } else if (kind == CF_DICE_ALL) {           /* (0.6.21) HOME + SELECT */
+                if (!chain_busy()) dice_all();
             } else if (kind == CF_LOAD_PAT) {
                 pat_load_ui(&trk[ui.confirm_trk % NTRK], pat_pick());
             } else if (kind == CF_CLEAR_MOTION) {
@@ -1583,17 +1744,19 @@ static void ui_input_frame(void)
             }
         }
         dice_ms = fm1_ms | 1u;
-    } else if ((s = glo ? sel : panel_enc(EN_SELECT)) != 0 && !glo && !ui.home &&
-               !(cur_page()->scope == SC_GLOBAL && cur_page()->id[0] == G_BPM)) {   /* (JIANT 0.5) off HOME (and GLOBAL,
-                                                         * BPM's page): SELECT dices the track's sound, once a turn (menus,
-                                                         * dialogs: nothing) */
+    } else if ((s = glo ? sel : panel_enc(EN_SELECT)) != 0 && !glo && !ui.menu &&
+               (ui.home || cur_page()->fam != FAM_GLO)) {   /* (0.6.21) SELECT: HOME dices everything (the dialog
+                                                         * first), EDIT the track's sound, GLO's pages the tempo; the
+                                                         * other pages nothing (it says where); once a turn */
         static uint32_t sd_ms;
-        if (!ui.menu && !ui.confirm && (!sd_ms || fm1_ms - sd_ms > 400u)) {
+        if (!ui.confirm && (!sd_ms || fm1_ms - sd_ms > 400u)) {
             if (chain_busy()) ui_message("STOP TO EDIT");
-            else sound_dice();
+            else if (ui.home) confirm_open(CF_DICE_ALL, song.sel);
+            else if (cur_page()->fam == FAM_EDIT) sound_dice();
+            else ui_message("DICE: HOME / EDIT");
         }
         sd_ms = fm1_ms | 1u;
-    } else if (s != 0) {                                /* SELECT knob = global tempo: on HOME, GLOBAL (or GLO held) */
+    } else if (s != 0) {                                /* SELECT knob = global tempo: GLO's pages (or GLO held) */
         if (glo || !(ui_prefs & PREF_BPM_LOCK)) {
             song.g[G_BPM] = (int16_t)clamp(song.g[G_BPM] + accel(EN_SELECT, s, 200), GP[G_BPM].min, GP[G_BPM].max);
             ui.bpm_t = 40;                              /* the header's BPM lights up; no message over the header */

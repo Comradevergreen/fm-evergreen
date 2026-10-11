@@ -37,8 +37,14 @@
   <p class="small" data-t="beta"></p>
   <p class="small"><span data-t="brick"></span>
     <a href="https://github.com/kurogedelic/FM-1-transporter" target="_blank" rel="noopener" style="color:inherit">FM-1-transporter</a></p>
+  <div style="border:2px solid #ec6e50;padding:12px 14px;margin:0 0 16px">
+    <p style="margin:0 0 8px;font-weight:600" data-t="firstTitle"></p>
+    <p class="small" style="margin:0 0 10px" data-t="firstText"></p>
+    <p style="margin:0 0 10px"><button id="first-stock" data-t="firstStock"></button></p>
+    <p class="small" style="margin:0"><label><input id="first-ok" type="checkbox"> <span data-t="firstOk"></span></label></p>
+  </div>
   <p><button id="go" disabled data-t="install"></button></p>
-  <details style="margin-top:24px">
+  <details id="stock" style="margin-top:24px">
     <summary data-t="stockTitle"></summary>
     <p class="small" data-t="back"></p>
     <p class="small"><a href="https://www.m-vave.com/download" target="_blank" rel="noopener" style="color:inherit">M-VAVE Downloads</a></p>
@@ -66,6 +72,10 @@ const TEXT = {
     warn: "書き込み中は USB を抜かないでください。",
     samples: "注意: JIANT にはユーザーサンプルがありません。Felucca のユーザーサンプル (USR1–3) はインストールで失われます（その領域は曲の保存に使われます）。元の WAV ファイルは手元に残しておいてください。",
     install: "インストール", other: "English",
+    firstTitle: "他のカスタムファームウェアから入れる場合は、先に公式V15へ戻してください",
+    firstText: "Felucca・baudgirl などの別のカスタムファームウェアが入った FM-1 に直接 JIANT を書き込むと、起動しなくなることがあります。まず下のボタンで公式V15に戻し（全体バックアップも取れます）、それから JIANT をインストールしてください。公式V15 か JIANT がすでに入っている場合はそのままで大丈夫です。",
+    firstStock: "先に公式V15へ戻す",
+    firstOk: "この FM-1 には公式V15 か JIANT が入っています（インストールを有効にする）",
     editor: "エディタ（インストール後、パソコンから音色やシーケンスを編集）",
     direct: "USB ケーブルはパソコンに直接つないでください。Probe や Transporter などの機材は不要です。",
     brick: "万一インストールに失敗して起動しなくなった場合は、復旧に Transporter が必要です:",
@@ -98,6 +108,10 @@ const TEXT = {
     warn: "Do not unplug the USB cable while writing.",
     samples: "Note: JIANT has no user samples. Felucca's user samples (USR1–3) are lost when you install it (that flash holds the songs now). Keep your original WAV files.",
     install: "Install", other: "日本語",
+    firstTitle: "Coming from another custom firmware? Return to official V15 first",
+    firstText: "Writing JIANT straight over another custom firmware (Felucca, baudgirl or any other) can leave the FM-1 unable to start. First return to official V15 with the button below (it also saves a complete backup), then install JIANT. If the FM-1 already runs official V15 or JIANT, go ahead.",
+    firstStock: "Return to official V15 first",
+    firstOk: "This FM-1 runs official V15 or JIANT (enables Install)",
     editor: "Editor (after installing: edit sounds and sequences from the computer)",
     direct: "Connect the USB cable directly to the computer. No probe or Transporter is needed.",
     brick: "If an install fails and the FM-1 no longer starts, recovering it needs a Transporter:",
@@ -144,7 +158,7 @@ let image = null;
 const meta = /*META*/;
 
 let writing = false, stock = null, stockFileEpoch = 0;
-const lockInstaller = (on) => { writing = on; $("go").disabled = on || !image; $("stock-go").disabled = on || !stock; $("stock-file").disabled = on; $("stock-recovery").disabled = on; };
+const lockInstaller = (on) => { writing = on; $("go").disabled = on || !image || !$("first-ok").checked; $("stock-go").disabled = on || !stock; $("stock-file").disabled = on; $("stock-recovery").disabled = on; };
 window.addEventListener("beforeunload", (e) => { if (writing) { e.preventDefault(); e.returnValue = t("leave"); } });
 
 (async () => {
@@ -156,9 +170,12 @@ window.addEventListener("beforeunload", (e) => { if (writing) { e.preventDefault
     if (productOf(pkg) !== meta.product) { sayK("badpkg"); return; }
     image = logicalImage(pkg);
     say(`JIANT FM ${meta.version}`);
-    $("go").disabled = false;
+    $("go").disabled = !$("first-ok").checked;
   } catch (e) { sayK("loadfail", e.message); }
 })();
+/* (0.6.21) a report of a brick from another custom firmware: Install only once the FM-1 is said to run V15 or JIANT */
+$("first-ok").addEventListener("change", () => { $("go").disabled = writing || !image || !$("first-ok").checked; });
+$("first-stock").addEventListener("click", () => { $("stock").open = true; $("stock").scrollIntoView({ behavior: "smooth" }); });
 
 $("go").addEventListener("click", async () => {
   if (writing) return;
