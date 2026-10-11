@@ -35,6 +35,7 @@ typedef struct {                                         /* a hit */
     int32_t mo;                                          /* WARP: the modulator's last output (its feedback) */
     uint32_t ph3;                                        /* (JIANT 0.4) the SINE pitch modulation's phase */
     int32_t lp;                                          /* (JIANT 0.5) the output's one-pole low-pass state */
+    int32_t hl;                                          /* (0.6.17) the last half-rate sample (dx_run's upsampling) */
     uint8_t live, trig, choke;
 } dx_voice_t;
 
@@ -82,11 +83,15 @@ static __attribute__((noinline)) void dx_run(const dx_lane_t *L, dx_voice_t *v, 
     int32_t q[DXP_N], p16, depth, ea1, en1, ep1, og, ng, ga, dga, gn, dgn, kd, inc, dinc;
     uint32_t i, k, wave = L->mode & 3u, flt = (L->mode >> 2) & 3u, ta, tn, tp, kb, inc1;
     tsvf_t c;
+    uint32_t nf = n;
     if (!v->live && !v->trig) {
         for (i = 0; i < n; i++)
             y[i] = 0;
         return;
     }
+    n >>= 1;                                             /* (0.6.17) at half rate (22 kHz): the hit is low-passed
+                                                          * at ~8 kHz below anyway; the block back to full rate at
+                                                          * the end, linearly (half the work of the heaviest lanes) */
     morph = clamp(morph, 0, 127);
     for (k = 0; k < DXP_N; k++)
         q[k] = L->a[k] + ((L->b[k] - L->a[k]) * morph) / 127;
@@ -134,8 +139,8 @@ static __attribute__((noinline)) void dx_run(const dx_lane_t *L, dx_voice_t *v, 
     dga = ((mulq15(og, ea1 >> 15) << 8) - ga) / (int32_t)n;
     gn = mulq15(ng, v->en >> 15) << 8;                   /* the noise's */
     dgn = ((mulq15(ng, en1 >> 15) << 8) - gn) / (int32_t)n;
-    inc = (int32_t)(v->inc >> 4);                        /* (>> 4: the step fits) */
-    dinc = ((int32_t)(inc1 >> 4) - inc) / (int32_t)n;
+    inc = (int32_t)(v->inc >> 4) * 2;                    /* (>> 4: the step fits; x 2: half rate) */
+    dinc = ((int32_t)(inc1 >> 4) * 2 - inc) / (int32_t)n;
     if (og) {                                            /* the oscillator */
         uint32_t ph = v->ph;
         int32_t fold = clamp(warp, 0, 127);
@@ -195,11 +200,12 @@ static __attribute__((noinline)) void dx_run(const dx_lane_t *L, dx_voice_t *v, 
     if (ng) {                                            /* the noise through its filter */
         int32_t ic1 = v->ic1, ic2 = v->ic2, rng = v->rng;
         kd = flt == DXF_BP ? 2400 : 6000;                /* (BP a little resonant) */
-        tsvf_coef_k(&c, q[DXP_COLOR] << 8, kd);
+        tsvf_coef_k(&c, (q[DXP_COLOR] + 14) << 8, kd);   /* (+ an octave of the table: the same Hz at half rate) */
 /* (one loop per filter: the choice is not made per sample) */
 #define DX_NOISE(OUT)                                                                                              \
         for (i = 0; i < n; i++, gn += dgn) {                                                                       \
-            int32_t r = (int32_t)noise32(&rng) >> 17, v3 = r - ic2, v1, v2;   /* +-16384 */                      \
+            int32_t r = (((int32_t)noise32(&rng) >> 17) * 23170) >> 15, v3 = r - ic2, v1, v2;   /* +-11585: 1/sqrt2,  \
+                                                          * half rate (the same power in half the band: +3 dB) */      \
             v1 = (c.a1 * ic1 + c.a2 * v3) >> 13;                                                                   \
             v2 = ic2 + ((c.a2 * ic1 + c.a3 * v3) >> 13);                                                           \
             ic1 = clamp(2 * v1 - ic1, -150000, 150000);                                                            \
@@ -222,17 +228,28 @@ static __attribute__((noinline)) void dx_run(const dx_lane_t *L, dx_voice_t *v, 
                                                           * were knife-sharp, the dice's above all) */
         int32_t lp = v->lp;
         for (i = 0; i < n; i++) {
-            lp += ((y[i] - lp) * 22300) >> 15;
+            lp += ((y[i] - lp) * 29400) >> 15;           /* (~8 kHz at 22 kHz; 22300 at 44.1) */
             y[i] = lp;
         }
         v->lp = lp;
     }
+    for (i = n; i-- > 0;) {                              /* (0.6.17) back to full rate: each half-rate sample and the
+                                                          * mean of it and the one before (the last block's: v->hl) */
+        int32_t a = y[i], b = i ? y[i - 1] : v->hl;
+        y[2u * i + 1u] = a;
+        y[2u * i] = (a + b) >> 1;
+    }
+    if (nf & 1u)                                         /* (an odd block: its last sample held) */
+        y[nf - 1u] = y[nf - 2u];
+    v->hl = y[nf - 1u];
     v->ea = ea1;
     v->en = en1;
     v->ep = ep1;
     v->inc = inc1;
-    if (v->ea < (1 << 19) && v->en < (1 << 19))         /* -66 dB (0.6.14: was -84: a tail computed below hearing) */
+    if (v->ea < (1 << 19) && v->en < (1 << 19)) {       /* -66 dB (0.6.14: was -84: a tail computed below hearing) */
         v->live = 0;
+        v->hl = 0;
+    }
 }
 
 /* the factory kit (DRUM's): {mode, A, B}, A and B {PITCH PMOD DECAY NOISE COLOR}. dx_kit is the music's

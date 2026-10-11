@@ -112,6 +112,17 @@ static int32_t menu_document(int32_t y, int draw)
         cv_text(6, y + 174, &AF_S, "/JIANT", T_MID);
         draw_about_qr(158, y + 122);
     }
+    {   /* (0.6.17) the audio's load since power-on (voice.c load_diag): to tell what happened when it clicked */
+        char b[40], n[12];
+        y = menu_text("AUDIO LOAD", y + 216, T_THEME, draw);
+        str_cpy(b, "NOW ", sizeof b); fmt_int(n, (int32_t)((song.cpu_q8 * 100u) >> 8)); str_cpy(b + str_len(b), n, 8);
+        str_cpy(b + str_len(b), "%  PEAK ", 10); fmt_int(n, (int32_t)load_diag.peak); str_cpy(b + str_len(b), n, 8);
+        str_cpy(b + str_len(b), "%", 2);
+        y = menu_text(b, y, T_TEXT, draw);
+        str_cpy(b, "LATE ", sizeof b); fmt_int(n, (int32_t)load_diag.late); str_cpy(b + str_len(b), n, 12);
+        str_cpy(b + str_len(b), "  SHED ", 8); fmt_int(n, (int32_t)load_diag.shed); str_cpy(b + str_len(b), n, 12);
+        y = menu_text(b, y, T_TEXT, draw) - 216 + 8;
+    }
     y = menu_text("CREDITS", y + 216, T_THEME, draw) + 8;
     for (i = 0; i < NELEM(MENU_CREDITS); i++) {
         const menu_credit_t *c = &MENU_CREDITS[i];

@@ -47,6 +47,7 @@ static void fresh(void)
     memset(&felucca_dbg, 0, sizeof felucca_dbg);
     audio_cpu_rem = audio_halves = audio_max_us = 0;
     shed_req = 0; shed_count = 0; shed_over = 0;
+    load_tight = 0; tight_calm = 0; memset((void *)&load_diag, 0, sizeof load_diag);
     host_clock = host_us = host_half_reads = host_dma_advanced = host_acks = host_nest = 0;
     host_pending = FM1_AUDIO_HALF;
     transport_req = panic_req = 0;
@@ -120,9 +121,11 @@ static void dma(void)
     host_pending = FM1_AUDIO_HALF;
     host_us = 5000;
     fm1_alnk0_irq();
-    check("one slow half records elapsed load but does not shed yet", host_acks == 1u && !shed_req && felucca_dbg.last_us == 5000u && !felucca_dbg.late);
+    check("one slow half records elapsed load and sheds at once (0.6.17: was two in a row)", host_acks == 1u && shed_req &&
+          felucca_dbg.last_us == 5000u && !felucca_dbg.late && load_tight && load_diag.peak >= 80u);
+    shed_req = 0;
     fm1_alnk0_irq();
-    check("a second slow half in a row requests shedding", host_acks == 2u && shed_req);
+    check("a second slow half requests shedding again", host_acks == 2u && shed_req);
     shed_req = 0;
     host_half_reads = 0; host_dma_advanced = 1; host_us = 100;
     fm1_alnk0_irq();
@@ -135,7 +138,7 @@ static void dma(void)
     fresh();
     host_us = 5000;
     fm1_alnk0_irq(); host_us = 100; fm1_alnk0_irq(); host_us = 5000; fm1_alnk0_irq();
-    check("slow halves that are not consecutive do not shed", !shed_req);
+    check("a slow half sheds even between fast ones (0.6.17)", shed_req);
     fresh();
     host_us = 580;
     for (i = 0; i < 512u; i++) fm1_alnk0_irq();
