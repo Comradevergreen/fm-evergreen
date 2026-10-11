@@ -664,7 +664,8 @@ static uint32_t layer_leds(uint32_t *br)
         } else if (l == LAYER_GLO) {                    /* sounding lit; SOLO held lit, the others, C4, F4 breathe */
             on = b ? (p < NTRK && glo_sounding(p)) || (p >= NTRK && p < NTRK + 4u && !((dx_mute >> (p - NTRK)) & 1u))
                    : p < NTRK && ((lys.solo >> k) & 1u);      /* (a group sounding: lit) */
-            can = !b && (p < NTRK || p == GLO_ALL || (p == GLO_TAP && !song.g[G_CLOCK]) || (p == GLO_UNDO && undo_ok));
+            can = !b && ((p < NTRK && p < trk_live) || p == GLO_ALL || (p == GLO_TAP && !song.g[G_CLOCK]) ||
+                         (p == GLO_UNDO && undo_ok));   /* (the keys that do something breathe: not an asleep track's) */
         } else if (l == LAYER_SCL) {                    /* the root lit, the scale's notes breathe */
             e = (k + 5u + 12u - root) % 12u;
             on = e == 0u;
@@ -853,7 +854,7 @@ static void layer_glo(void)
     lc_w = G6_W;
     for (e = 0; e < NTRK; e++) {                        /* F3 .. D4: SOLO while held */
         n[0] = W_NOTE[e];
-        lcell(G6_X(e), 4, h, n, trk_icon(e, 0), 0, "SOLO", (perf_solo >> e) & 1u ? LS_HELD : LS_OFF, 1);
+        lcell(G6_X(e), 4, h, n, trk_icon(e, 0), 0, "SOLO", (perf_solo >> e) & 1u ? LS_HELD : e >= trk_live ? LS_DIM : LS_OFF, 1);
     }
     lc_w = LC_W;
     n[0] = W_NOTE[GLO_ALL];
@@ -869,7 +870,8 @@ static void layer_glo(void)
     lc_w = G6_W;
     for (e = 0; e < NTRK; e++) {                        /* the black keys 1..6: MUTE, latched */
         bnote(n, e);
-        lcell(G6_X(e), LM_Y, LM_H, n, ICON_NONE, trk_icon(e, 0), 0, trk[e].p[P_MUTE] ? LS_MUTE : LS_OFF, 0);
+        lcell(G6_X(e), LM_Y, LM_H, n, ICON_NONE, trk_icon(e, 0), 0, trk[e].p[P_MUTE] ? LS_MUTE : e >= trk_live ? LS_DIM : LS_OFF,
+              0);                                       /* (0.6.25: a track asleep, TRACKS 4: dim) */
     }
     lc_w = LC_W;
 }

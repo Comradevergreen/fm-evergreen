@@ -774,7 +774,7 @@ static int test_save(void)
     bad += check("stopped, an empty slot: OCT+ opens NAME (no name yet: PROJECT A)", name_on() && nm.kind == NK_PROJ_SAVE &&
                  nm.len == 0u && str_eq(nm.ph, "PROJECT A") && !project_used(0));
     press(B_OCTUP);
-    bad += check("..OCT+ saves it unnamed, SAVE dropped", !name_on() && project_used(0) && msg_is("SAVED (RAM)") &&
+    bad += check("..OCT+ saves it unnamed, SAVE dropped", !name_on() && project_used(0) && msg_is("SAVED (NO FLASH)") &&
                  ui.act == 0u);
     turn(EN_K4, 1);
     press(B_OCTUP);
@@ -829,6 +829,12 @@ static void go_title(const char *title)
     ui.home = 0;
     ui.page = (uint8_t)i;
     page_entered();
+}
+static void tools_pick(uint32_t n)                /* (0.6.25) TOOLS: the n-th action picked (KNOB 1 down the list) */
+{
+    uint32_t k;
+    ui.act = 0;
+    for (k = 0; k < n; k++) turn(EN_K1, 1);
 }
 static uint32_t oct_leds_seen(int all)            /* over 1 s: the OCT LED bits lit at some point (all: throughout) */
 {
@@ -897,6 +903,11 @@ static int test_actions(void)
     }
     turn(EN_K1, -1);
     bad += check("KNOB 1 left drops it", ui.act == 0u);
+    turn(EN_PRESET, 1); turn(EN_PRESET, 1);
+    bad += check("(0.6.25) TOOLS is a list: PRESETS / KNOB 1 move the pick down (INIT SOUND), any knob too", ui.act == 2u);
+    turn(EN_K3, -1);
+    bad += check("  .. and up", ui.act == 1u);
+    turn(EN_K1, -1);
     turn(EN_K1, 1);
     press(B_OCTDN);
     bad += check("OCT- cancels the pick (still on TOOLS)", ui.act == 0u && !ui.home && !seq_is_empty(t));
@@ -2084,7 +2095,7 @@ static int test_chain(void)
     for (k = chain_config.count; k < CHAIN_ROWS; k++) { turn(EN_K2, 1); turn(EN_K1, 1); }
     bad += check("SONG: + ADD, then END the last row (full: END right after row 16)", ui.song_row == CHAIN_ROWS);
     bad += check("SONG append row stays bounded at 16", chain_config.count == CHAIN_ROWS && chain_valid(&chain_config));
-    go_title("TOOLS"); turn(EN_K4, 1); press(B_OCTUP);
+    go_title("TOOLS"); tools_pick(4); press(B_OCTUP);
     bad += check("CLEAR SONG requires explicit confirmation", ui.confirm == CF_CLEAR_SONG && chain_config.count == CHAIN_ROWS);
     press(B_OCTDN);
     bad += check("cancel preserves the full song", chain_config.count == CHAIN_ROWS);
@@ -2097,7 +2108,7 @@ static int test_chain(void)
     bad += check("SONG: SECT left of A asks DELETE ROW?, OCT+ deletes it", ok && chain_config.count == n0 - 1u);
     ui.page = (uint8_t)pg0; ui.force = 1; frame();
     }
-    turn(EN_K4, 1); press(B_OCTUP); press(B_OCTUP);
+    tools_pick(4); press(B_OCTUP); press(B_OCTUP);
     bad += check("confirmed CLEAR SONG keeps musical steps", !chain_config.count && !ui.song_row);
     return bad;
 }
@@ -2775,7 +2786,7 @@ static int test_name(void)
     press(B_OCTUP);
     up_name(2, b);
     bad += check("  OCT+ stopped: saved as typed, the trailing space dropped (CB 2)", !name_on() && up_used(2) && str_eq(b, "CB 2") &&
-                 msg_is("SAVED (RAM)"));
+                 msg_is("SAVED (NO FLASH)"));
     /* SAVE held does nothing in NAME; the FX layer neither */
     ui.act = 4; press(B_OCTUP); press(B_OCTUP);   /* (U03 used: OVERWRITE?, YES) */
     bad += check("  overwrite: the dialog, then NAME", name_on() && nm.kind == NK_USER_SAVE);
@@ -2799,7 +2810,7 @@ static int test_name(void)
     press(B_OCTUP);
     up_name(2, b);
     bad += check("  OCT+: renamed (CB W), the sound stored there unchanged", !name_on() && str_eq(b, "CB W") &&
-                 up_value(up_rec(2), P_E0) != 33 && msg_is("RENAMED (RAM)"));
+                 up_value(up_rec(2), P_E0) != 33 && msg_is("RENAMED (NO FLASH)"));
     press(B_EDIT);
     for (i = 0; i < 12u; i++) nm_tap(nm_black_key(NB_DEL, 0));
     press(B_OCTUP);
@@ -2840,7 +2851,7 @@ static int test_name(void)
         char pn[16];
         project_name(1, pn);
         bad += check("  EDIT renames a project (PNPN); its music unchanged", str_eq(pn, "PNPN") && stored_param(1, 0, P_LEVEL) != 7 &&
-                     msg_is("RENAMED (RAM)"));
+                     msg_is("RENAMED (NO FLASH)"));
     }
     song.g[G_SLOT] = 4;
     press(B_EDIT);
@@ -3310,19 +3321,19 @@ static int test_bughunt_ui(void)
     ui_power_on();
     go_title("TOOLS"); frame();
     chain_defaults(&chain_config);                      /* no song rows */
-    turn(EN_K1 + 2, 1);                                 /* DELETE ROW */
+    tools_pick(3);                                      /* DELETE ROW */
     press(B_OCTUP);
     ok = !ui.confirm && msg_is("NOTHING TO DELETE") && text_w(&AF_S, ui.msg) <= 236 - 106;   /* (fits the header) */
-    turn(EN_K1 + 3, 1);                                 /* CLEAR SONG */
+    tools_pick(4);                                      /* CLEAR SONG */
     press(B_OCTUP);
     ok &= !ui.confirm && msg_is("NOTHING TO CLEAR");
     track_defaults_steps(TSEL);
     chain_config.count = 1; chain_config.row[0].slot = 0; chain_config.row[0].bars = 1;
-    turn(EN_K1, 1);                                     /* CLEAR PAT on an empty track, the song with a row */
+    tools_pick(1);                                      /* CLEAR PAT on an empty track, the song with a row */
     ok &= !act_ready();
     press(B_OCTUP);
     ok &= !ui.confirm && msg_is("NOTHING TO CLEAR");
-    turn(EN_K1 + 3, 1);
+    tools_pick(4);
     ok &= act_ready();
     press(B_OCTUP);
     bad += check("TOOLS: DELETE ROW / CLEAR SONG / CLEAR PAT with nothing there: NOTHING TO ..; a song: its dialog",

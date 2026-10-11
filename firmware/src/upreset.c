@@ -554,7 +554,7 @@ static void up_ui_named(uint32_t op, uint32_t k, const char *name)   /* 0 load, 
     }
     rc = op == 1u ? up_put(k, 0) : op == 3u ? up_rename(k, name) : up_store(k, name);
     if (rc == 3)
-        ui_message(op == 1u ? "ERASED (RAM)" : op == 3u ? "RENAMED (RAM)" : "SAVED (RAM)");
+        ui_message(op == 1u ? "ERASED (NO FLASH)" : op == 3u ? "RENAMED (NO FLASH)" : "SAVED (NO FLASH)");
     else if (rc)
         ui_message(op == 1u ? "ERASE ERROR" : "SAVE ERROR");
     else
