@@ -13,6 +13,7 @@
 /* the height ADSR and LFO are drawn on: 100 px, or (MENU > LARGE's strip: draw_graph) the strip's ~ 56 */
 static int32_t graph_ht = 100;
 #include "ui_organic.c"                              /* JIANT FM's organic line art (drawn by code) */
+#include "ui_fm6op.c"                                /* (0.6.10, from Felucca 1.5) EDIT > OPERATOR, OP ENV, OPERATOR 2 */
 static uint16_t heat_col(int32_t v);
 /* JIANT (thermal): a curve's colour at canvas row y, hot at the top (y0) and cold at the bottom (y1); else c */
 static uint16_t heat_y(int32_t y, int32_t y0, int32_t y1, uint16_t c)
@@ -593,7 +594,7 @@ static uint32_t fm6_alg_of(const track_t *t)
  * numerals, modulators RAISE with THEME ones; an operator at output level 0: a DIM numeral (a carrier on RAISE).
  * Routes THEME, the feedback loop MID (DIM at feedback 0), the output bus MID. The knob just turned in ACCENT:
  * ALG and PTCH the label, FB the loop, MLVL the routes, MRAT MEG VMOD the modulators, DTUN the carriers. */
-static void graph_fm6(const track_t *t, uint16_t c)
+static void graph_fm6(const track_t *t, uint16_t c, uint32_t sel)   /* sel < 6: the operator picked (ui_fm6op.c) */
 {
     uint32_t alg = fm6_alg_of(t), k, j, car = fm6_car_ops(alg), top = 0, hi = 0, fbop = fm6_fb_op(alg), hotset = 0;
     uint32_t hot = ui.hot_t ? (uint32_t)cur_page()->id[ui.hot_col & 3u] : 0u;
@@ -640,16 +641,61 @@ static void graph_fm6(const track_t *t, uint16_t c)
     fm_loop(x[fbop], y[fbop], hot == P_E1 ? T_ACCENT : fb ? T_MID : T_DIM);
     for (k = 0; k < 6u; k++) {
         uint32_t on = pt[(5u - k) * FP_OP + FP_OL] != 0, fill_c = (car >> k & 1u) && on;
-        uint16_t f = hotset >> k & 1u ? T_ACCENT : c, fill = fill_c ? f : T_RAISE;
+        uint16_t f = hotset >> k & 1u ? T_ACCENT : c, fill = k == sel ? T_ACCENT : fill_c ? f : T_RAISE;
         char n[2] = {(char)('1' + k), 0};
         FM6_CHART_HOOK(FMH_BOX, k, 0);
         cv_rrect(x[k] - 10, y[k], 21, FM_BH, 3, fill, T_SURF);
         GFX_HOOK_ALIGN(x[k] - 10, y[k], x[k] + 11, y[k] + FM_BH, AL_HV, "FM6 operator number in its box");
-        cv_text_in(x[k] - 10, y[k] + CAP_IN(S, FM_BH), 21, &AF_S, n, fill_c ? T_INK : on ? f : T_DIM, fill);
+        cv_text_in(x[k] - 10, y[k] + CAP_IN(S, FM_BH), 21, &AF_S, n, fill_c || k == sel ? T_INK : on ? f : T_DIM, fill);
     }
     FM6_CHART_HOOK(FMH_LABEL, 0, 0);
     cv_text(10, 4 - GOY, &AF_S, b, hot == P_E0 || hot == P_E7 ? T_ACCENT : T_MID);
+    if (sel < 6u) {                                  /* the operator picked: "OP3 x1.50" */
+        char fq[16] = {'O', 'P', (char)('1' + sel), ' ', 0};
+        fop_freq(pt + (5u - sel) * FP_OP, fq + 4);
+        cv_text_r(228, 4 - GOY, &AF_S, fq, T_TEXT, T_SURF);
+    }
     FM6_CHART_HOOK(FMH_END, alg, 0);
+}
+
+/* OP ENV (ui_fm6op.c): the picked operator's envelope as the patch has it: from L4 to L1 at R1, L2 at R2, L3 at R3, held
+ * there while the key is down (a RAISE mark where it is let go), back to L4 at R4. A stage's width grows as its rate
+ * falls (4..48 px: 99 is a step, 0 the longest), the levels 0..99 linearly (dB). The curve THEME, the stage KNOB 3 / 4
+ * edit (STAGE) ACCENT with a dot at its target; "OP3" top left, the stage's rate and level top right */
+static void graph_fm6env(const track_t *t, uint16_t c)
+{
+    static const char *const STG[4] = {"ATK", "DEC", "SUS", "REL"};
+    const uint8_t *op = fop_bytes((uint32_t)(t - trk));
+    int32_t top = 24, bot = 88, x[6], y[6], k;
+    uint32_t sg = fop_stg & 3u;
+    char b[24] = {'O', 'P', (char)('1' + fop_op % 6u), 0};
+#define FEGY(l) (bot - (int32_t)(l) * (bot - top) / 99)
+#define FEGW(r) (4 + (99 - (int32_t)(r)) * (99 - (int32_t)(r)) * 44 / 9801)
+    x[0] = 12;
+    y[0] = FEGY(op[FP_L1 + 3]);
+    for (k = 0; k < 3; k++) {
+        x[k + 1] = x[k] + FEGW(op[FP_R1 + k]);
+        y[k + 1] = FEGY(op[FP_L1 + k]);
+    }
+    x[5] = 228;
+    x[4] = x[5] - FEGW(op[FP_R1 + 3]);
+    y[4] = y[3];
+    y[5] = y[0];
+    cv_rect(PANEL_X0, bot + 2, PANEL_W, 1, T_RAISE);
+    cv_rect(x[4], top, 1, bot - top + 1, T_RAISE);   /* the key let go */
+    for (k = 0; k < 5; k++)                          /* (3: the hold, no stage of its own) */
+        cv_line_t(x[k], y[k], x[k + 1], y[k + 1], k != 3 && (uint32_t)(k < 3 ? k : 3) == sg ? T_ACCENT : c, 2);
+    k = sg < 3u ? (int32_t)sg + 1 : 5;
+    fm_dot(x[k], y[k], T_ACCENT);
+#undef FEGY
+#undef FEGW
+    cv_text(10, 4 - GOY, &AF_S, b, T_MID);
+    str_cpy(b, STG[sg], sizeof b);
+    str_cpy(b + str_len(b), "  R ", 5);
+    fmt_int(b + str_len(b), op[FP_R1 + sg]);
+    str_cpy(b + str_len(b), "  L ", 5);
+    fmt_int(b + str_len(b), op[FP_L1 + sg]);
+    cv_text_r(228, 4 - GOY, &AF_S, b, T_TEXT, T_SURF);
 }
 
 #if FELUCCA_FM4
@@ -1559,6 +1605,13 @@ static void draw_graph(void)
             cv_oy = 0;
             graph_events();
             break;
+        case GR_FMOP:                                /* (0.6.10) FM6's operators: the chart, the operator picked */
+        case GR_FMOP2:
+            if (fop_ok()) graph_fm6(t, c, fop_op % 6u);
+            break;
+        case GR_FMENV:                               /* .. its envelope */
+            if (fop_ok()) graph_fm6env(t, c);
+            break;
         case GR_DXSND:                               /* EDIT > SOUND: the kit's lanes, the sound edited singled out */
             cv_oy = 0;
             graph_colony(t, dx_ui_lane);
@@ -1569,7 +1622,7 @@ static void draw_graph(void)
             break;
         default:
             if (pg->scope == SC_ENGINE && ENGINES[t->eng_req % NENGINES] == &ENG_WHEEL) graph_wheel(t, c);
-            else if (pg->scope == SC_ENGINE && t->eng_req % NENGINES == ENGI_FM6) graph_fm6(t, c);   /* EDIT 1 and 2 */
+            else if (pg->scope == SC_ENGINE && t->eng_req % NENGINES == ENGI_FM6) graph_fm6(t, c, 6u);   /* EDIT 1 and 2 */
             else if (pg->scope == SC_ENGINE && t->eng_req % NENGINES == ENGI_DRUM) {
                 cv_oy = 0;
                 graph_colony(t, -1);

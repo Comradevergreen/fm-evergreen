@@ -802,6 +802,10 @@ static void edit_param(uint32_t slot, int32_t steps)
         ms_ui_step = (uint8_t)clamp((int32_t)ms_ui_step + steps, 0, 15);
         return;
     }
+    if (fop_page(pg->graph)) {                           /* (0.6.10) FM6's operators: KNOB 1 OP, 2..4 its bytes (ui_fm6op.c) */
+        fop_knob(slot, steps);
+        return;
+    }
     if (pg->graph == GR_MOD && slot == 0u) {             /* MOD: KNOB 1 the slot, 2..4 its SRC DST AMT */
         mod_ui_slot = (uint8_t)clamp((int32_t)mod_ui_slot + (steps > 0 ? 1 : -1), 0, 3);
         return;

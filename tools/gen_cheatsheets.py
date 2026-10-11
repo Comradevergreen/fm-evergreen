@@ -7,7 +7,7 @@ import html, os
 
 R = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(R, 'docs', 'cheatsheet')
-VERSION = 'v0.6.9'
+VERSION = 'v0.6.10'
 
 HEAT = ['#22d3ee', '#3b82f6', '#8b5cf6', '#d946ef', '#ef4444', '#ff7a00', '#facc15', '#f4f1ea']
 
@@ -146,7 +146,7 @@ def controls():
         ('FX', 'FX · DIST · AUTOPAN · SLICER · SL BUS · SL BUS 2 · SL PITCH · DLY · DLY 2 · REVERB · REVERB 2 · CHORUS · MASTER',
          'PUNCH-IN FX'),
         ('SCL', 'SCL · SCL 2', 'ROOT by key'),
-        ('EDIT', 'EDIT 1 · EDIT 2 · FILTER · VOICE  (DRUM: LANES · LANES 2 · SOUND 1–3 · X-MOD)', 'INIT · RECALL · sound mutes'),
+        ('EDIT', 'EDIT 1 · EDIT 2 · FILTER · VOICE  (FM6: OPERATOR · OP ENV · OPERATOR 2; DRUM: LANES · LANES 2 · SOUND 1–3 · X-MOD)', 'INIT · RECALL · sound mutes'),
         ('GLO', 'MIXER · GLOBAL · SYSTEM', 'MUTE · SOLO · LEVEL · TAP'),
         ('SAVE', 'PRESETS · USER · PROJECT · TOOLS', 'SONG layer'),
         ('ARP', 'ARP · ARP 2', '—'),
@@ -229,7 +229,8 @@ def controls():
                          ('DLY', 'TIME FDBK TONE MIX'), ('DLY 2', 'WIDE PITCH SPRY -'),
                          ('REVERB', 'TYPE SIZE DAMP PRE'), ('REVERB 2', 'MOD RATE FILT WIDE'),
                          ('CHORUS', 'RATE DEPTH STER -'), ('MASTER', 'CLIP PNCH DUCK REL')]),
-        ('EDIT', HEAT[3], [('EDIT 1', 'E1 E2 E3 E4'), ('EDIT 2', 'E5 E6 E7 E8'), ('FILTER', 'TYPE CUT RES DRV'),
+        ('EDIT', HEAT[3], [('EDIT 1', 'E1 E2 E3 E4'), ('EDIT 2', 'E5 E6 E7 E8'), ('OPERATOR', 'OP RATIO FINE LEVEL'),
+                           ('OP ENV', 'OP STAGE RATE LEVEL'), ('OPERATOR 2', 'OP MODE DTUN VEL'), ('FILTER', 'TYPE CUT RES DRV'),
                            ('VOICE', 'VCE GLD GLMOD PRIO'), ('LANES', 'KICK SNARE CLAP HATCL'),
                            ('LANES 2', 'HATOP TOM RIM BELL'), ('SOUND', 'LANE SIDE PTCH PMOD'),
                            ('SOUND 2', 'DCAY NOIS COLR MODE'), ('SOUND 3', 'LANE PMOD DRV WAVE'),
@@ -270,7 +271,9 @@ def sound():
         ('ANALOG', HEAT[1], 'WAVE DTN MIX NOIS', 'CUT RES DRV INT',
          'SAW SQR TRI SIN PWM <b>SYNC RING SAW3</b>; INT: osc 2 ±24 st. Its filter is per voice.'),
         ('FM6', HEAT[3], 'ALG FB MLVL MRAT', 'MEG VMOD DTUN SLOT',
-         'Dexed\'s 6 operators, 32 algorithms drawn, .syx patches (SLOT), MLVL / MRAT move the modulators.'),
+         'Dexed\'s 6 operators, 32 algorithms drawn, .syx patches (SLOT), MLVL / MRAT move the modulators. '
+         '<b>OPERATOR · OP ENV · OPERATOR 2</b>: each operator on the device (ratio / fixed, fine, level, its envelope, '
+         'mode, detune, velocity).'),
         ('PHASE', HEAT[2], 'WAVE WAVE2 DCW ENV', 'DTN LINE SUB FB',
          'Phase distortion (CZ); <b>FB</b> feeds the output back into the phase: hard edge to growl.'),
         ('LOFI', HEAT[0], 'CHIP WAVE DUTY CRSH', '- VIB BEND MASK',
