@@ -341,14 +341,39 @@ static void dice_sound(track_t *t, uint32_t role, const uint8_t *el)
     }
 }
 
+/* (0.6.27) never the same piece twice: the moment of the press (the timer's ticks, a human's timing) stirred into the
+ * random numbers each throw; a fingerprint of the last 32 pieces (every track's steps, the tempo, the style) kept, and a
+ * piece that matches one is thrown again; the tempo always moves (unless MENU > BPM LOCK) */
+static uint32_t dice_seen[32], dice_seen_n;
+static uint32_t dice_print(void)
+{
+    uint32_t k, h = 2166136261u ^ (uint32_t)song.g[G_BPM];
+    for (k = 0; k < NTRK; k++)
+        h = (h ^ steps_sig(&trk[k]) ^ trk[k].eng_req) * 16777619u;
+    return h;
+}
+static void dice_one(void);
 static void dice_all(void)
+{
+    uint32_t tries, k, h = 0;
+    undo_mark();
+    for (tries = 0; tries < 4u; tries++) {
+        rng_state ^= fm1_ticks() * 2654435761u + tries * 40503u;
+        if (!rng_state) rng_state = 0x1234567u;        /* (xorshift: never 0) */
+        dice_one();
+        h = dice_print();
+        for (k = 0; k < 32u && k < dice_seen_n && dice_seen[k] != h; k++) {}
+        if (k == 32u || k >= dice_seen_n) break;        /* (new: kept) */
+    }
+    dice_seen[dice_seen_n++ % 32u] = h;
+}
+static void dice_one(void)
 {
     const dstyle_t *st = &DSTYLE[rng() % NDSTYLE];
     uint32_t k, dr = NTRK, role[NTRK], next = 0, nlive = trk_live < NTRK ? trk_live : NTRK, lens[NTRK];
     int16_t root = (int16_t)rr(0, 11), scale = (int16_t)st->scale[rng() % 4u];
     int pick_arp = st->pads == PS_SPARSE || chance(40);
     uint32_t pr = rng() % 3u;
-    undo_mark();
     dice_fm6 = 0;
     if (st->prog[pr][0] == 127) pr = 0;
     dh.prog = st->prog[pr];
@@ -403,8 +428,12 @@ static void dice_all(void)
         lens[k] = len;
     }
     (void)lens;
-    if (!(ui_prefs & PREF_BPM_LOCK))
-        song.g[G_BPM] = (int16_t)rr(st->bpm_lo, st->bpm_hi);
+    if (!(ui_prefs & PREF_BPM_LOCK)) {                  /* (the tempo always moves: at least 3 BPM) */
+        int32_t old = song.g[G_BPM], v = rr(st->bpm_lo, st->bpm_hi), t;
+        for (t = 0; t < 8 && (v - old < 3 && old - v < 3); t++) v = rr(st->bpm_lo, st->bpm_hi);
+        if (v - old < 3 && old - v < 3) v = old + (old < 150 ? 5 : -5);
+        song.g[G_BPM] = (int16_t)v;
+    }
     song.g[G_SWING] = (int16_t)clamp((int32_t)st->swing + rr(-4, 4), 0, 100);
     song.g[G_DTIME] = st->dtime[rng() & 1u];
     song.g[G_DFDBK] = (int16_t)rr(25, 70);

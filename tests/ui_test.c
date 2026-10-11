@@ -6002,6 +6002,20 @@ static int test_dice_all(void)
             for (k = 0; k < 8u; k++) events_block(CTL);
         }
         bad += check("DICE ALL (0.6.26): a style named, engines changed, FM6 on two tracks at most, one DRUM track; 30 throws", ok);
+        {   /* (0.6.27) 40 throws: never the same piece, the tempo moved every time (even from the same random state) */
+            uint32_t h[40], n2, m, same = 0, bpm_same = 0;
+            int16_t b0;
+            for (n2 = 0; n2 < 40u; n2++) {
+                b0 = song.g[G_BPM];
+                if (n2 % 10u == 0u) rng_state = 0x1234567u;   /* (the same state again: the press time still differs) */
+                host_ticks += 13777u;
+                dice_all();
+                bpm_same += song.g[G_BPM] == b0;
+                h[n2] = dice_print();
+                for (m = 0; m < n2; m++) same += h[m] == h[n2];
+            }
+            bad += check("DICE ALL (0.6.27): 40 throws, none the same piece, the tempo moved every time", !same && !bpm_same);
+        }
     }
     ui_power_on();
     return bad;
