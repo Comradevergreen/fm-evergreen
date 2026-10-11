@@ -551,32 +551,50 @@ Hold **SAVE**:
 On **HOME**, turn **SELECT**. The dialog **DICE EVERYTHING?** appears (with "UNDO AFTER: GLO + G4"). **OCT+ YES** /
 **OCT− NO**.
 
-Each throw picks a **style** — DARK MINIMAL, DUB TECHNO, IDM, DARK IDM, DARK ELECTRO, ACID NIGHT, COLD WAVE, BROKEN,
-HYPNOTIC or DEEP BREAKS (IDM and DARK IDM about 4 throws in 10): the night's music, dark and minor (think Kraftwerk, Anthony Rother, The Chemical Brothers, Juana Molina,
-Radiohead, The Hacker, Marc Houle, Aphex Twin), in minor modes only (MIN, DOR, PHRY, HARM, MEL, MPEN) — and then:
+Each throw makes three choices, then guard rails keep the result musical:
 
-- gives every track a **role** (DRUMS, BASS, CHORDS, LEAD, ARP, TEXTURE), a **new engine** the style likes for that
-  role and a factory sound whose name fits it, moved a little; FM6 goes on two tracks at most. The drums go on an
-  existing DRUM track, or on T4;
-- writes every part from **one harmony**, every part anchored on the same tonic: one scale (ROOT and SCALE), a chord
-  progression, the bass on the roots, chords voiced as the style likes (7ths, 9ths, fourths, suspended) and led
-  smoothly in a middle register, low arps, a lead (a motif of small steps, a hypnotic ostinato or a few long notes),
-  drums with fills, ghosts and accents, whole bars of silence; some styles use loops of odd lengths;
-- **filters** the sounds by role (chords and arps darkest), with a **filter envelope on every sound** (strongest on
-  the bass and the arps, made plucky), a filter **TYPE** that changes (LP mostly; BP, and COMB tuned to the note on
-  arps and textures), a slow LFO of its own shape (SIN, TRI, S&H) on the chords and textures, a little drive on some
-  basses and leads, the drums through a soft low-pass; never picks the bright factory sounds (bells, brass, marimbas,
-  organs, chiptune);
-- gives each track its own space: delay and reverb sends by role, now and then one track soaked and another dry; the
-  delay time, the GRAIN delay's pitch (an octave or a fourth down, a fifth up), the reverb type (ROOM, SPRING, RESO,
-  CLOUD; never SHIMMER), its size, modulation and width all change from throw to throw;
-- sets voice mode, gate, **level, pan and sends** per role, the swing, the delay, reverb and chorus;
-- picks a **new tempo** in the style's range (always at least 3 BPM away), unless MENU > **BPM LOCK** is on;
-- rolls new macro routes.
+- **A genre** — the night's: **DARK MINIMAL**, **DUB TECHNO**, **IDM**, **DARK IDM**, **DARK ELECTRO**, **ACID NIGHT**,
+  **COLD WAVE**, **BROKEN**, **HYPNOTIC**, **DEEP BREAKS**; and the other worlds the engines can do: **SOUNDTRACK**
+  (enveloping pads, no drums or a heartbeat), **HARD TECHNO**, **INDIE POP**, **ELECTRO PUNK** and **NEO CLASSICAL**
+  (Reich's pulses and phases, Glass's additive arps, Pärt's tintinnabuli; never drums). IDM and DARK IDM come up a
+  little more often. Each genre has its tempo range, scales, progressions, drum family (or none) and kits, bass
+  figure, how its chords move, how its lead and arp speak, the engines it likes per role and how wet its space is.
+- **An energy** — **SPACE** (two or three things sounding, long tails: minimalism, with cared-for timbres), **MID**,
+  or **FRANTIC** (everything, denser, ratchets). The screen shows SPACE or FRANTIC under the genre's name.
+- **An orchestration** — which roles play: the genre's order of importance cut by the energy. **The drums may not
+  play at all.** A role left out keeps its sound with an empty sequence, ready to play or record.
+
+The guard rails:
+
+- **One harmony**, every part anchored on the same tonic; **chords always of four notes** (7ths, 9ths, fourths,
+  suspended, add9), voiced in a middle register and led to the nearest voicing.
+- **Deep basses** (from E1); **arps in the middle octaves** (C3–C5): up and down, Alberti, Glass groups, a Reich
+  pulse or a random walk.
+- **Coherent melodies**: a rhythmic motif of a few notes, its contour in steps (a leap is filled back by a step), its
+  strong beats on chord tones, developed over four bars (the motif, the motif moved to the next chord, the motif with
+  its end varied, then a cadence that lands and holds); or a hypnotic ostinato, a few long notes, or a tintinnabuli
+  line. **Space between notes**, more of it with less energy.
+- **High notes measured**: the lead stays under G5, high notes are played softer, and a part that sits high plays
+  quieter.
+- **Sounds**: a factory sound that fits the role (never a bass sound off the bass, never the bright ones: bells,
+  brass, marimbas, organs, chiptune), its envelope shaped for the role and the energy (pads that swell in SPACE,
+  plucked arps and basses), filtered by role with an **envelope on the filter**, a filter **TYPE** that changes (LP,
+  BP, COMB), a slow LFO of its own shape, a little drive on some basses and leads.
+- **Seven drum kits** built on DRUM-X: **808** (the long boom), **HARD** (driven, folded), **CLICK** (minimal, short,
+  dry), **INDUS** (metal and noise), **SOFT** (round, brushed), **GLITCH** (bells, lasers, grit), **ELECTRO** (808 and
+  909 together), with the kit's knobs set to match.
+- **Space**: delay and reverb sends by role and scaled by how wet the genre and the energy are, now and then one track
+  soaked and another dry; the delay time, the GRAIN delay's pitch, the reverb type (ROOM, SPRING, RESO, CLOUD; never
+  SHIMMER), size, modulation and width change from throw to throw.
+- **A twist** in about one throw in five: one experiment — two copies of the arp drifting apart (Reich's phase), a
+  comb filter on the chords and arp, the grain delay pitched down, a lead in another metre, or a drone under
+  everything.
+- A **new tempo** in the genre's range (SPACE in its lower half, FRANTIC in its upper; always at least 3 BPM away),
+  unless MENU > **BPM LOCK** is on; new macro routes.
 
 It remembers your last 32 pieces and throws again if a new one would match one of them. It does not write automation or modulation routings (other than the
 macros' routes), but it replaces every track's steps, and with them that track's existing automation. Mutes are left
-as they are. All six tracks are written; with TRACKS 4 only T1–T4 sound. The screen says **DICED:** and the style.
+as they are. The roles that play go on the first tracks, so with TRACKS 4 you hear the most important ones. The screen says **DICED:** and the style.
 
 ### Sound dice (EDIT + SELECT)
 

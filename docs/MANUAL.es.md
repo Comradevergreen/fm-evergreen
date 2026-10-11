@@ -578,37 +578,53 @@ Mantené **SAVE**:
 En **HOME**, girá **SELECT**. Aparece el diálogo **DICE EVERYTHING?** (con "UNDO AFTER: GLO + G4"). **OCT+ YES** /
 **OCT− NO**.
 
-Cada tirada elige un **estilo** — DARK MINIMAL, DUB TECHNO, IDM, DARK IDM, DARK ELECTRO, ACID NIGHT, COLD WAVE,
-BROKEN, HYPNOTIC o DEEP BREAKS (IDM y DARK IDM salen en unas 4 de cada 10 tiradas): música de noche, oscura y menor (pensá en Kraftwerk, Anthony Rother, The Chemical Brothers,
-Juana Molina, Radiohead, The Hacker, Marc Houle, Aphex Twin), solo en modos menores (MIN, DOR, PHRY, HARM, MEL, MPEN) —
-y después:
+Cada tirada toma tres decisiones, y después unas barandas mantienen el resultado musical:
 
-- le da a cada pista un **rol** (DRUMS, BASS, CHORDS, LEAD, ARP, TEXTURE), un **motor nuevo** que al estilo le gusta
-  para ese rol y un sonido de fábrica cuyo nombre le queda bien, movido un poco; FM6 va en dos pistas como máximo. La
-  batería va en una pista DRUM existente, o en T4;
-- escribe todas las partes a partir de **una sola armonía**, todas ancladas en la misma tónica: una escala (ROOT y
-  SCALE), una progresión de acordes, el bajo sobre las fundamentales, acordes con las voces que le gustan al estilo
-  (séptimas, novenas, cuartas, suspendidos) enlazados suavemente en un registro medio, arpegios graves, un lead (un
-  motivo de pasos chicos, un ostinato hipnótico o unas pocas notas largas), baterías con fills, ghost notes y acentos,
-  compases enteros de silencio; algunos estilos usan loops de largos impares;
-- **filtra** los sonidos según el rol (acordes y arpegios lo más oscuros), con **envolvente de filtro en todos los
-  sonidos** (más fuerte en el bajo y los arpegios, que quedan punteados), un **TYPE** de filtro que cambia (LP casi
-  siempre; BP, y COMB afinado a la nota en arpegios y texturas), un LFO lento de forma propia (SIN, TRI, S&H) en los
-  acordes y las texturas, un poco de saturación en algunos bajos y leads, y la batería por un low-pass suave; nunca
-  elige los sonidos de fábrica brillantes (campanas, bronces, marimbas, órganos, chiptune);
-- le da a cada pista su propio espacio: envíos de delay y reverb por rol, y a veces una pista empapada y otra seca; el
-  tiempo del delay, el pitch del GRAIN delay (una octava o una cuarta abajo, una quinta arriba), el tipo de reverb
-  (ROOM, SPRING, RESO, CLOUD; nunca SHIMMER), su tamaño, modulación y ancho cambian en cada tirada;
-- fija el modo de voz, el gate, **el nivel, el paneo y los envíos** por rol, el swing, el delay, la reverb y el
-  chorus;
-- elige un **tempo nuevo** dentro del rango del estilo (siempre a 3 BPM o más del anterior), salvo que MENU >
-  **BPM LOCK** esté activado;
-- tira rutas de macro nuevas.
+- **Un género**: los de la noche, **DARK MINIMAL**, **DUB TECHNO**, **IDM**, **DARK IDM**, **DARK ELECTRO**,
+  **ACID NIGHT**, **COLD WAVE**, **BROKEN**, **HYPNOTIC**, **DEEP BREAKS**; y los otros mundos que pueden hacer los
+  motores: **SOUNDTRACK** (pads envolventes, sin batería o con un latido), **HARD TECHNO**, **INDIE POP**,
+  **ELECTRO PUNK** y **NEO CLASSICAL** (los pulsos y desfasajes de Reich, los arpegios aditivos de Glass, el
+  tintinnabuli de Pärt; nunca batería). IDM y DARK IDM salen un poco más seguido. Cada género tiene su rango de tempo,
+  escalas, progresiones, familia de batería (o ninguna) y kits, figura de bajo, cómo se mueven sus acordes, cómo hablan
+  su lead y su arpegio, los motores que prefiere por rol y qué tan húmedo es su espacio.
+- **Una energía**: **SPACE** (dos o tres cosas sonando, colas largas: minimalismo, con timbres cuidados), **MID**, o
+  **FRANTIC** (todo, más denso, ratchets). La pantalla muestra SPACE o FRANTIC debajo del nombre del género.
+- **Una orquestación**: qué roles suenan, según el orden de importancia del género recortado por la energía. **La
+  batería puede no sonar.** Un rol que queda afuera conserva su sonido con la secuencia vacía, listo para tocar o
+  grabar.
+
+Las barandas:
+
+- **Una sola armonía**, todas las partes ancladas en la misma tónica; **acordes siempre de cuatro notas** (séptimas,
+  novenas, cuartas, suspendidos, add9), en registro medio y enlazados con la voz más cercana.
+- **Bajos profundos** (desde E1); **arpegios en las octavas medias** (C3–C5): arriba y abajo, Alberti, grupos de Glass,
+  un pulso de Reich o una caminata al azar.
+- **Melodías coherentes**: un motivo rítmico de pocas notas, con contorno por pasos (un salto se compensa volviendo por
+  paso), los tiempos fuertes en notas del acorde, desarrollado en cuatro compases (el motivo, el motivo movido al
+  acorde siguiente, el motivo con el final variado, y una cadencia que aterriza y se sostiene); o un ostinato
+  hipnótico, unas pocas notas largas, o una línea tintinnabuli. **Espacio entre notas**, más cuanto menos energía.
+- **Agudos medidos**: el lead queda por debajo de G5, las notas agudas suenan más suaves y una parte que va aguda suena
+  más baja.
+- **Sonidos**: un sonido de fábrica que corresponde al rol (nunca un sonido de bajo fuera del bajo, nunca los
+  brillantes: campanas, bronces, marimbas, órganos, chiptune), con la envolvente adaptada al rol y a la energía (pads
+  que crecen en SPACE, arpegios y bajos punteados), filtrado según el rol con **envolvente al filtro**, un **TYPE** de
+  filtro que cambia (LP, BP, COMB), un LFO lento de forma propia y un poco de saturación en algunos bajos y leads.
+- **Siete kits de batería** construidos sobre DRUM-X: **808** (el boom largo), **HARD** (saturado, plegado), **CLICK**
+  (minimal, corto, seco), **INDUS** (metal y ruido), **SOFT** (redondo, con escobillas), **GLITCH** (campanitas, lásers,
+  arena), **ELECTRO** (808 y 909 juntos), con las perillas del kit acordes.
+- **Espacio**: envíos de delay y reverb por rol, escalados según qué tan húmedos son el género y la energía, y a veces
+  una pista empapada y otra seca; el tiempo del delay, el pitch del GRAIN delay, el tipo de reverb (ROOM, SPRING, RESO,
+  CLOUD; nunca SHIMMER), su tamaño, modulación y ancho cambian en cada tirada.
+- **Un giro** en más o menos una de cada cinco tiradas: un experimento — dos copias del arpegio que se desfasan (el
+  phase de Reich), un filtro comb en los acordes y el arpegio, el grain delay hacia abajo, un lead en otro compás, o un
+  drone debajo de todo.
+- Un **tempo nuevo** dentro del rango del género (SPACE en su mitad baja, FRANTIC en la alta; siempre al menos 3 BPM de
+  diferencia), salvo con MENU > **BPM LOCK** activado; rutas de macro nuevas.
 
 Recuerda tus últimas 32 piezas y vuelve a tirar si una nueva coincidiera con alguna de ellas. No escribe automatización
 ni ruteos de modulación (aparte de las rutas de las macros), pero reemplaza los pasos de todas las pistas y, con ellos,
-la automatización que tuviera cada pista. Los mutes quedan como estaban. Se escriben las seis pistas; con TRACKS 4
-solo suenan T1–T4. La pantalla dice **DICED:** y el estilo.
+la automatización que tuviera cada pista. Los mutes quedan como estaban. Los roles que suenan van en las primeras
+pistas, así que con TRACKS 4 escuchás los más importantes. La pantalla dice **DICED:** y el estilo.
 
 ### Dados de sonido (EDIT + SELECT)
 
