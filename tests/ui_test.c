@@ -2088,6 +2088,15 @@ static int test_chain(void)
     bad += check("CLEAR SONG requires explicit confirmation", ui.confirm == CF_CLEAR_SONG && chain_config.count == CHAIN_ROWS);
     press(B_OCTDN);
     bad += check("cancel preserves the full song", chain_config.count == CHAIN_ROWS);
+    { uint32_t n0 = chain_config.count, pg0 = ui.page;
+    go_title("ARRANGE"); frame();
+    ui.song_row = 0; chain_config.row[0].slot = 0;
+    turn(EN_K2, -1);
+    ok = ui.confirm == CF_DEL_ROW && ui.confirm_trk == 0u;
+    press(B_OCTUP);
+    bad += check("SONG: SECT left of A asks DELETE ROW?, OCT+ deletes it", ok && chain_config.count == n0 - 1u);
+    ui.page = (uint8_t)pg0; ui.force = 1; frame();
+    }
     turn(EN_K4, 1); press(B_OCTUP); press(B_OCTUP);
     bad += check("confirmed CLEAR SONG keeps musical steps", !chain_config.count && !ui.song_row);
     return bad;
