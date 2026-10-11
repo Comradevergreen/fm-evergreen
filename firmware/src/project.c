@@ -1269,6 +1269,8 @@ static int project_save_as(uint32_t slot, const char *name)
         memcpy(&proj_slot[slot & 3u], &proj_wire, sizeof proj_wire);
         proj_name_get(proj_name, (const uint8_t *)p->name);
         proj_cur = (uint8_t)(slot & 3u);
+        live.cur = (int8_t)(slot & 3u);                 /* (0.6.12: the section playing, SAVE > PROJECT shows it) */
+        live.dirty &= (uint8_t)~(1u << (slot & 3u));    /* (stored in flash now) */
         ui_message("SAVED");
         return 0;
     }
@@ -1276,6 +1278,7 @@ static int project_save_as(uint32_t slot, const char *name)
     memcpy(&proj_slot[slot & 3u], &proj_wire, sizeof proj_wire);
     proj_name_get(proj_name, (const uint8_t *)p->name);
     proj_cur = (uint8_t)(slot & 3u);
+    live.cur = (int8_t)(slot & 3u);
     ui_message("SAVED (RAM)");
     return 0;
 }
@@ -1465,8 +1468,10 @@ static void project_load(uint32_t slot)
 #endif
     if (!proj_import(&proj_scratch, &proj_slot[slot & 3u], sizeof(project_store_t))) { ui_message("EMPTY SLOT"); return; }
     proj_bound(&proj_scratch);                          /* a retained RAM slot of an older format: as from flash */
-    if (!project_restore_runtime(&proj_scratch))
+    if (!project_restore_runtime(&proj_scratch)) {
         proj_cur = (uint8_t)(slot & 3u);
+        live.cur = (int8_t)(slot & 3u);                 /* (0.6.12: the section playing) */
+    }
 }
 
 /* settings + learned panel table: one flash object. The flash copy wins at

@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.6.11).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.6.12).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 ## Cheat sheets
 
@@ -29,6 +29,15 @@ Two printable sheets with everything on the device. Click an image to open it fu
 ## Changelog
 
 Every update is listed here, newest first.
+
+### v0.6.12
+- **Projects in SAVE**: SAVE > PROJECT now shows the project (1–8, each a whole song) and its four **sections A–D**,
+  each with its own sequences and sounds for the six tracks. KNOB 1 opens another project (stopped; the music you are
+  playing stays, ready to be stored into one of its sections), KNOB 2 or PRESETS picks the section, LOAD makes it the
+  music, SAVE stores the music into it. Each section shows whether it's saved, **NOW** on the one playing and the bars
+  it plays in the song; the arrangement sits below in a line (A4>B8>D4>B8).
+- **ARRANGE**, right after PROJECT: the project's song, sections chained by bars as in SLOOP (the same rows as
+  SEQ > SONG; OCT+ plays it). To copy a section, LOAD it and SAVE it into another letter.
 
 ### v0.6.11
 - **FM6 voice bank**, from Felucca 1.5.1: a whole 32-voice DX7 cartridge (.syx) sent from the web editor (6-OP FM tab,
@@ -525,7 +534,7 @@ makes the kick pull the rest down. The leveler is always on: no need to babysit 
 ### 9. Saving
 - **Sound presets**: SAVE > **USER**: KNOB 1 picks the slot (32), KNOB 4 SAVE stores the track's sound, KNOB 2 LOAD
   loads it, KNOB 3 ERASE deletes it. EDIT names it.
-- **Project**: SAVE > PROJECT. Everything autosaves at power-off.
+- **Project**: SAVE > PROJECT: KNOB 1 the project (1–8), KNOB 2 the section A–D, LOAD, SAVE; SAVE > ARRANGE chains the sections into the song. Everything autosaves at power-off.
 - **Backup**: the web editor (USB) downloads and restores everything: songs, sections, scenes and presets.
 
 ### Share your presets

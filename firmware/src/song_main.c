@@ -298,16 +298,17 @@ static int song_index_save(void)
     song_idx_dirty = 0;
     return 0;
 }
-/* song n (0..NSONG - 1) in, stopped only: the current one kept first, then n's sections and rows; its section A
- * becomes the music (an empty song: the music stays, a new song to store sections into). 0 done */
-static int song_select(uint32_t n)
+/* song n (0..NSONG - 1) in, stopped only: the current one kept first, then n's sections and rows; load_a: its
+ * section A becomes the music (an empty song: the music stays, a new song to store sections into); else (JIANT 0.6.12,
+ * SAVE > PROJECT) the music stays as it is, to be stored into one of n's sections or replaced by one. 0 done */
+static int song_switch(uint32_t n, int load_a)
 {
     char nm[PROJ_NAME_LEN + 1u];
     uint32_t k;
     if (n >= NSONG || n == song_cur)
         return 1;
     if (transport_busy()) {
-        ui_message("STOP TO CHANGE SONG");
+        ui_message(load_a ? "STOP TO CHANGE SONG" : "STOP TO CHANGE PROJECT");
         return 1;
     }
     if (song_flush()) {
@@ -331,14 +332,24 @@ static int song_select(uint32_t n)
     ui.song_row = 0;
     live.cur = -1;
     live.req = -1;
-    if (project_used(0))
+    if (load_a && project_used(0))
         (void)section_load(0);
     else
         proj_cur = PROJ_NO_SLOT;
-    song_name(nm);
-    ui_say(nm, "");
+    ui.force = 1;
+    if (load_a) {
+        song_name(nm);
+        ui_say(nm, "");
+    } else {                                          /* PROJECT n, then its section A's name */
+        char b[12] = "PROJECT  ";
+        b[8] = (char)('1' + n);
+        if (!project_name(0, nm) || !nm[0]) b[9] = 0;
+        ui_say(b, b[9] ? nm : "");
+    }
     return 0;
 }
+static int song_select(uint32_t n) { return song_switch(n, 1); }   /* (the song layer's KNOB 1) */
+static int song_open(uint32_t n) { return song_switch(n, 0); }     /* (SAVE > PROJECT's KNOB 1) */
 
 /* Main loop, each pass: the next section staged; the music back after the song; SONG REC's rows; stored sections
  * into flash once stopped */
