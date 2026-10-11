@@ -26,6 +26,15 @@ _hdr, *_rows = (D / 'scenes.txt').read_text().splitlines()
 SPLASH = float(_hdr.split('splash ')[1].split(' s')[0])
 END = float(_hdr.split('end ')[1].split(' s')[0])
 BEAT = float(_hdr.split('beat ')[1].split(' s')[0])
+# (0.6.34) a film whose tempo changes (the DICE ALL film: each piece its own) gives its beats' times in beats.txt;
+# else every BEAT seconds
+BEATS = np.array([float(x) for x in (D / 'beats.txt').read_text().split()]) if (D / 'beats.txt').exists() else None
+def beat_at(t):                                    # (phase 0..1 in the beat, the beat's number)
+    if BEATS is None or len(BEATS) < 2: return (t / BEAT) % 1.0, int(t / BEAT)
+    i = int(np.searchsorted(BEATS, t, 'right')) - 1
+    if i < 0: return 0.0, 0
+    nx = BEATS[i + 1] if i + 1 < len(BEATS) else BEATS[i] + (BEATS[i] - BEATS[i - 1])
+    return (t - BEATS[i]) / max(nx - BEATS[i], 1e-3), i
 N = int(END * FPS)
 _cap = []
 for r in _rows:
@@ -101,7 +110,9 @@ def thermal(t, e):
 sig = Image.open(ROOT / 'docs/cheatsheet/signature.png').convert('RGB')
 
 brand = text_layer(['JIANT FM'], F_SMALL, WHITE)
-tag = text_layer(['M-VAVE FM-1 · v0.6.34'], F_SMALL, DIM)
+import re as _re
+_VER = _re.search(r'FELUCCA_VERSION "(v[^"]+)"', (ROOT / 'firmware/src/felucca.c').read_text()).group(1)
+tag = text_layer([f'M-VAVE FM-1 · {_VER}'], F_SMALL, DIM)
 def pill(txt):                                     # the tag: dark letters on an orange plate
     L = text_layer([txt], F_SMALL, (14, 8, 20))
     p_ = Image.new('RGBA', (L.width + 28, L.height + 6))
@@ -112,8 +123,10 @@ F_HUGE = font('Bold', 168)
 LAYERS = [((pill(sc[2]) if sc[2] else text_layer([' '], F_SMALL, ORANGE)),
            text_layer(sc[3], F_BIG if sc[2] else F_HUGE, WHITE, 0.98, gradient=True),
            text_layer(sc[4] or [' '], F_SUB, WHITE, 1.3)) for sc in SCENES]
-intro_t = text_layer(['JIANT FM'], font('Bold', 150), WHITE, gradient=True)
-intro_s = text_layer(['alternative firmware for the M-VAVE FM-1'], F_SUB, WHITE)
+_intro = (D / 'intro.txt').read_text().strip().split('|') if (D / 'intro.txt').exists() else \
+    ['JIANT FM', 'alternative firmware for the M-VAVE FM-1']   # (0.6.34: a film may name itself: title|subtitle)
+intro_t = text_layer([_intro[0]], font('Bold', 150), WHITE, gradient=True)
+intro_s = text_layer([_intro[1] if len(_intro) > 1 else ' '], F_SUB, WHITE)
 out_l = [text_layer(['JIANT FM'], font('Bold', 120), WHITE, gradient=True),
          text_layer(['try it in your browser'], F_MID, WHITE),
          text_layer(['juanjiant-bit.github.io/JIANT'], F_SUB, ORANGE),
@@ -153,7 +166,7 @@ for f in (PREVIEW or range(N)):
     sx = int(sx * (1 - ko) + 120 * ko)
     sy = int(60 * (1 - k) + SY * k)
     fr = bg + thermal(t, env[f])
-    ph = (t / BEAT) % 1.0                          # the beat's punch: louder, harder
+    ph, bi = beat_at(t)                            # the beat's punch: louder, harder
     kick = np.exp(-ph * 7) * env[f]
     g = 0.35 + 0.9 * env[f] + 0.4 * kick
     gx, gy = sx - 120, sy - 120
@@ -179,7 +192,7 @@ for f in (PREVIEW or range(N)):
             arr[max(yb - 26, sy):yb, sx:sx + 960] = (arr[max(yb - 26, sy):yb, sx:sx + 960] * 0.3
                                                      + grad(960, 1)[0] * 0.7).astype(np.uint8)
     # the techno: a flash on every bar's one, the whole frame
-    if SCENES[0][0] < t < OUT and ph < 0.12 and int(t / BEAT) % 4 == 0 and env[f] > 0.55:
+    if SCENES[0][0] < t < OUT and ph < 0.12 and bi % 4 == 0 and env[f] > 0.55:
         arr = np.clip(arr.astype(np.float32) + (1 - ph / 0.12) * 26 * np.array([1.0, 0.6, 1.2]), 0, 255).astype(np.uint8)
     img = Image.fromarray(arr).convert('RGBA')
     # frame chrome: brand, tag, progress line

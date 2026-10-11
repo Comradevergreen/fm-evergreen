@@ -142,7 +142,7 @@ static int chance(uint32_t pct) { return rng() % 100u < pct; }
 enum { TW_NONE, TW_PHASE, TW_COMB, TW_GRAIN, TW_POLY, TW_DRONE };
 static struct {
     const int8_t *prog;
-    uint32_t n, steps, voicing, nlast, energy, twist;
+    uint32_t n, steps, voicing, nlast, energy, twist, kit;
     int32_t last[4];
 } dh;
 static int32_t chord_at(uint32_t step) { return dh.prog[(step / dh.steps) % dh.n]; }
@@ -269,6 +269,7 @@ static void dice_kit(track_t *t, uint32_t kt)
     uint32_t l;
     int16_t *p = t->p;
     for (l = 0; l < 8u; l++) dx_kit[l] = DX_KIT_DEF[l];
+    dh.kit = kt;
     switch (kt) {
     case KT_808:                                        /* the boom: a long pitch fall, deep toms, soft hats */
         dx_kit[DV_KICK].mode = kmode(dx_kit[DV_KICK].mode, DXW_SINE, DXM_LONG, 0);
@@ -725,9 +726,11 @@ static void dice_all(void)
     }
     dice_seen[dice_seen_n++ % 32u] = h;
 }
+static int8_t dice_force_style = -1, dice_force_energy = -1;   /* (a film's script: this genre, this energy; -1 any) */
 static void dice_one(void)
 {
-    const dstyle_t *st = &DSTYLE[chance(25) ? rng() % DSTYLE_IDM : rng() % NDSTYLE];   /* (IDM, DARK IDM more often) */
+    const dstyle_t *st = &DSTYLE[dice_force_style >= 0 ? (uint32_t)dice_force_style % NDSTYLE :
+                                 chance(25) ? rng() % DSTYLE_IDM : rng() % NDSTYLE];   /* (IDM, DARK IDM more often) */
     uint32_t k, dr = NTRK, role[NTRK], nlive = trk_live < NTRK ? trk_live : NTRK, act[RL_N], nmel, drums, next;
     int16_t root = (int16_t)rr(0, 11), scale = (int16_t)st->scale[rng() % 4u];
     uint32_t pr = rng() % 3u, wet;
@@ -739,7 +742,7 @@ static void dice_one(void)
     if (dh.steps * dh.n > NSTEP) dh.steps = NSTEP / dh.n;   /* (the whole progression inside the 64 steps) */
     dh.voicing = st->voicing;
     dh.nlast = 0;
-    dh.energy = (uint32_t)rr(st->e_lo, st->e_hi);
+    dh.energy = dice_force_energy >= 0 ? (uint32_t)dice_force_energy : (uint32_t)rr(st->e_lo, st->e_hi);
     dh.twist = chance(20) ? 1u + rng() % 5u : TW_NONE;
     /* the orchestration: the genre's melodic roles in their order, as many as the energy asks (SPACE 2..3, MID 3..4,
      * FRANTIC all five), now and then two swapped; the drums as often as the genre plays them (less in SPACE, more
