@@ -323,6 +323,8 @@ typedef struct {                 /* msfa FmOpParams */
 } fm6_op_t;
 
 #define FM6_THRESH 1120          /* msfa kLevelThresh: an operator below it on both block ends is skipped */
+#define FM6_DONE (FM6_THRESH * 8) /* (JIANT 0.6.14) a released note ends once its carriers are under it (~18 dB above
+                                   * the skip: a long release's tail, inaudible, computed for seconds on six operators) */
 
 /* one operator over the block: modulated by in (0: none), into out (add: += else =). Four loops, so none
  * tests a flag per sample */
@@ -547,7 +549,7 @@ static int fm6_note_done(const fm6_note_t *n, const uint8_t *p, uint32_t alg)
         const fm6_env_t *e = &n->env[k];
         if (!((car >> k) & 1u))
             continue;
-        if (n->op[k].gain_out >= FM6_THRESH)
+        if (n->op[k].gain_out >= FM6_DONE)
             return 0;
         if (e->ix < 3u)
             return 0;

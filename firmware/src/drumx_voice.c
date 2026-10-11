@@ -231,7 +231,7 @@ static __attribute__((noinline)) void dx_run(const dx_lane_t *L, dx_voice_t *v, 
     v->en = en1;
     v->ep = ep1;
     v->inc = inc1;
-    if (v->ea < (1 << 16) && v->en < (1 << 16))         /* -84 dB */
+    if (v->ea < (1 << 19) && v->en < (1 << 19))         /* -66 dB (0.6.14: was -84: a tail computed below hearing) */
         v->live = 0;
 }
 
