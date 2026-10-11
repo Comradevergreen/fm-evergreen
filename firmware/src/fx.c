@@ -144,9 +144,13 @@ static int32_t mix_l[CTL], mix_r[CTL], wet[CTL];
 static __attribute__((noinline)) void clip_block(uint32_t n)
 {
     uint32_t i;
-    for (i = 0; i < n; i++) {                           /* (>> 4: the sums may be far above Q15; << 2 back) */
-        mix_l[i] = ((softclip(((mix_l[i] + wet[i]) >> 4) * clip_g >> 10) * clip_mk) >> 15) << 2;
-        mix_r[i] = ((softclip(((mix_r[i] + wet[i]) >> 4) * clip_g >> 10) * clip_mk) >> 15) << 2;
+    for (i = 0; i < n; i++) {                           /* (>> 4: the sums may be far above Q15; << 2 back; 0.6.14:
+                                                         * rounded, not floored: -1 .. -15 of a tail's residue came
+                                                         * out -1, x4 drive, a -96 offset with a hiss on the side
+                                                         * that held it, while +1 .. +15 were 0) */
+        int32_t l = (mix_l[i] + wet[i] + 8) >> 4, r = (mix_r[i] + wet[i] + 8) >> 4;
+        mix_l[i] = ((softclip(l * clip_g >> 10) * clip_mk + 16384) >> 15) << 2;
+        mix_r[i] = ((softclip(r * clip_g >> 10) * clip_mk + 16384) >> 15) << 2;
         wet[i] = 0;
     }
 }
@@ -681,8 +685,11 @@ static __attribute__((noinline)) void rev_cloud(const int32_t *rev_in, int32_t *
     int32_t gap = 1700 - song.g[G_RRATE] * 11, dk = 32767 - song.g[G_RDAMP] * 220, wd = song.g[G_RWIDE], air = rev_air();
     uint32_t ar = semi_q16(air);                         /* (0.6.12) AIR: the grains up / down, the tone with them */
     if (air < 0) dk = clamp(dk + air * 1100, 1500, 32767);
-    int32_t fb = song.g[G_RSIZE] * 24, fg = song.g[G_RSIZE] * 110, g[CTL], t[CTL];   /* (Q15: the tail, ~0.09, and the
-                                                         * grains themselves, ~0.66, back into the line) */
+    int32_t fb = 0, fg = song.g[G_RSIZE] * 110, g[CTL], t[CTL];   /* (0.6.14: the tail no more back into the line, was
+                                                         * SIZE x24: past SIZE ~80 the loop rang on for ever, any share
+                                                         * of it sustained; now it dies out: ~5 s at 110, at 126 a
+                                                         * faint wash for long, nearly the FREEZE; Q15: the grains,
+                                                         * ~0.43, back into the line) */
     for (i = 0; i < n; i++) {
         int32_t l = 0, r = 0, m;
         if (!freeze) {                                   /* the line: the input and the tail, two samples into one */
@@ -815,10 +822,51 @@ static inline int32_t cho_ens(const int16_t *buf, uint32_t w, uint32_t ph, int32
 }
 
 /* process the three buses for one block; sends in, wet stereo-equal out */
+/* (0.6.14) the buses' gate: their feedback (the delay's low-pass, ROOM's combs, CLOUD's grains) rounds to a small
+ * signal that never reaches 0 (a limit cycle, ~-55 dB, the CLIP's drive lifting it into a hiss with nothing playing).
+ * Nothing sent to them for 1.5 s and their output that small: faded to 0 in ~25 ms; anything sent opens it at once (the
+ * residue is all it hides). CLOUD's FREEZE (SIZE 127) is meant to hold: never gated */
+#define FXG_QUIET ((uint32_t)FS * 3u / 2u / CTL)
+#define FXG_FLOOR 64
+#define FXG_QUIET2 ((uint32_t)FS * 4u / CTL)         /* (and after 4 s, a residue up to ~-36 dB: RESO's strings, a
+                                                       * pitched delay's; after 8 s, ~-30 dB: CLOUD's grains) */
+#define FXG_FLOOR2 512
+#define FXG_QUIET3 ((uint32_t)FS * 8u / CTL)
+#define FXG_FLOOR3 1024
+static uint32_t fxg_quiet;
+static int32_t fxg_g = 32767;
+static void fx_gate(int32_t *wet, uint32_t n)
+{
+    int32_t pk = 0, g0 = fxg_g, d;
+    uint32_t i;
+    for (i = 0; i < n; i++) {
+        int32_t a = wet[i] < 0 ? -wet[i] : wet[i];
+        if (a > pk) pk = a;
+    }
+    if (((fxg_quiet > FXG_QUIET && pk < FXG_FLOOR) || (fxg_quiet > FXG_QUIET2 && pk < FXG_FLOOR2) ||
+         (fxg_quiet > FXG_QUIET3 && pk < FXG_FLOOR3)) &&
+        !(song.g[G_RTYPE] == 4 && song.g[G_RSIZE] >= 127))
+        fxg_g = g0 > 1024 ? g0 - 1024 : 0;
+    else
+        fxg_g = 32767;
+    if (g0 == 32767 && fxg_g == 32767)
+        return;
+    d = (fxg_g - g0) / (int32_t)n;
+    for (i = 0; i < n; i++, g0 += d)
+        wet[i] = mulq15(wet[i], g0);
+}
 static void fx_buses(const int32_t *cho_in, const int32_t *dly_in, const int32_t *rev_in, int32_t *wet,
                      uint32_t n)
 {
     uint32_t i, dl = delay_samples();
+    {   /* (0.6.14) anything sent to the buses this block: their gate open (fx_gate) */
+        int32_t any = 0;
+        for (i = 0; i < n; i++)
+            any |= cho_in[i] | dly_in[i] | rev_in[i];
+        fxg_quiet = any ? 0u : fxg_quiet < 0xFFFFFFu ? fxg_quiet + 1u : fxg_quiet;
+        if (any)
+            fxg_g = 32767;
+    }
     int32_t fb = song.g[G_DFDBK] * 230, tn = song.g[G_DCOLOR] - 64;   /* (JIANT 0.4) TONE: one knob, low-pass .. open .. low cut */
     int32_t col = tn < 0 ? 500 + (64 + tn) * (64 + tn) * 8 : 32767;
     int32_t dmix = song.g[G_DMIX] * 258;
@@ -885,6 +933,8 @@ static void fx_buses(const int32_t *cho_in, const int32_t *dly_in, const int32_t
         y += mulq15(x << 1, dmix);
         wet[i] = y;
         if (side) {                                     /* (the side: left +, right -) */
+            if (fxg_g < 32767)                          /* (0.6.14: gated as the rest, fx_gate) */
+                side = mulq15(side, fxg_g);
             mix_l[i] += side;
             mix_r[i] -= side;
         }
@@ -899,9 +949,11 @@ static void fx_buses(const int32_t *cho_in, const int32_t *dly_in, const int32_t
             wet[i] += mulq16(t[i], (uint32_t)g);
         rev_clear();
         fx.rtype = (uint8_t)rt;
+        fx_gate(wet, n);
         return;
     }
     rev_run(rt, rev_in, wet, n);
+    fx_gate(wet, n);
 }
 
 /* one block of the whole mix (shared with hostsim.c): events -> each part (with its modulation matrix)

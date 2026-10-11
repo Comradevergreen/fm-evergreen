@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.6.14).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.6.15).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 ## Cheat sheets
 
@@ -29,6 +29,17 @@ Two printable sheets with everything on the device. Click an image to open it fu
 ## Changelog
 
 Every update is listed here, newest first.
+
+### v0.6.15
+- **No hiss at rest with CLIP up**: the clipper rounded a tail's tiny negative residue down (-1) and drove it x4: a
+  constant offset with a faint hiss on one side, even with every track off. Now rounded; and the FX buses (delay,
+  chorus, reverbs) fade their own last residue to silence once nothing has been sent to them for a while (1.5 s at
+  -55 dB, 4 s at -36 dB, 8 s at -30 dB), so the tails' rounding never leaves a hum. CLOUD's FREEZE is never gated.
+- **CLOUD always dies out**: past SIZE ~80 its loop rang on for ever (its tail fed back into its own line); now only
+  the grains feed it: a long tail that ends (SIZE 126 stays a faint wash for long, close to FREEZE).
+- **More headroom**: DRUM-X stops computing a hit at -66 dB (was -84), FM6 ends a released note once its carriers
+  are under ~-66 dB (its six operators no longer run for seconds on an inaudible tail), and the overload guard steps
+  in at 80 % of the audio's time (was 85 %): it fades a voice before the sound clicks and the screen starves.
 
 ### v0.6.14
 - **No more sharp highs when changing presets**: the notes still sounding used to take the new sound's values at once
