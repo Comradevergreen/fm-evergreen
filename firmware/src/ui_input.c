@@ -43,6 +43,7 @@ static uint32_t cur_fam(void) { return ui.home ? FAM_HOME : cur_page()->fam; }
 /* (JIANT 0.6.6) a page button held + PRESETS: that family's pages one by one, forwards / back (GLO: the mixer and the
  * global pages), the page shown at once with its title; the button let go stays there (its tap, its layer: not now) */
 static uint8_t ly_used;                                  /* the held layer's knobs or keys used: PRESETS stays its */
+static int song_open(uint32_t n);                         /* (song_main.c: SAVE > PROJECT's KNOB 1) */
 static uint8_t pj_btn = 0xFFu;                           /* the button a page jump was made with: no layer while held */
 static uint32_t held_family(void)
 {
@@ -784,6 +785,11 @@ static void edit_param(uint32_t slot, int32_t steps)
             ui.act = steps > 0 ? (uint8_t)(slot + 1u) : ui.act == slot + 1u ? 0u : ui.act;
         return;
     }
+    if (pg->graph == GR_SLOTS && slot == 0u) {            /* (0.6.12) KNOB 1 the project: its sections, the music kept */
+        int32_t n = clamp((int32_t)song_cur + (steps > 0 ? 1 : -1), 0, (int32_t)NSONG - 1);
+        if ((uint32_t)n != song_cur) (void)song_open((uint32_t)n);
+        return;
+    }
     if (pg->graph == GR_USER) {                           /* KNOB 1 the slot */
         if (slot == 0u)
             ui.uslot = (uint8_t)clamp((int32_t)ui.uslot + steps, 0, UP_SLOTS - 1);
@@ -1026,8 +1032,9 @@ static void presets_turn(int32_t s)
         preset_step(s);
     } else if (g == GR_ROLL || g == GR_CHANCE || g == GR_USER || g == GR_SLOTS || g == GR_PATS || g == GR_SONG ||
                g == GR_EVENTS) {
-        edit_param(0, s);                                 /* KNOB 1's (STEP: STOP TO EDIT while a song plays) */
-        ui.hot_col = 0;
+        uint32_t c = g == GR_SLOTS ? 1u : 0u;             /* (0.6.12 PROJECT: the list is the sections, KNOB 2's) */
+        edit_param(c, s);                                 /* KNOB 1's (STEP: STOP TO EDIT while a song plays) */
+        ui.hot_col = (uint8_t)c;
         ui.hot_t = 40;
     } else if (pg->fam == FAM_SEQ && (g == GR_STEPS || g == GR_MOTION)) {
         cursor_set(ui.cursor + s);                        /* (PATTERN draws it; MOTION: STEP shows it) */

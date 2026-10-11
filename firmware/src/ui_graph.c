@@ -916,10 +916,12 @@ static uint32_t graph_signature(void)
             h = (h ^ (uint32_t)song.g[G_SLMODE + i]) * 16777619u;
     if (pg->graph == GR_SLPIT)
         h ^= (sl_ui_step + 1u) * 40503u;
-    if (pg->graph == GR_SLOTS) {                     /* (a checksum over each slot) */
+    if (pg->graph == GR_SLOTS) {                     /* (a checksum over each slot; the project, the music's section, the song) */
         for (i = 0; i < 4u; i++)
             h ^= (uint32_t)graph_project_used(i) << (20u + i);
-        h += graph_pname_sig;
+        h += graph_pname_sig + song_cur * 2654435761u + (uint32_t)(live.cur + 1) * 40503u + chain_config.count * 7919u;
+        for (i = 0; i < CHAIN_ROWS; i++)
+            h = (h ^ (chain_config.row[i].slot + 4u * chain_config.row[i].bars)) * 16777619u;
     }
     if (pg->graph == GR_MOTION) h ^= motion_count(t) * 131u + motion_enabled(t);
     if (pg->graph == GR_EVENTS) {                    /* AUTO LIST: the rows, the one selected, + ADD LOCK's place */
@@ -1166,19 +1168,50 @@ static void graph_events(void)
         }
     }
 }
-/* project slots: the name (none: USED) / EMPTY, the selected one filled */
+/* (0.6.12) SAVE > PROJECT: the project (one of NSONG: a song of storage.c) and its four sections. A title line
+ * (PROJECT n, the section the music came from or went to), the sections A-D (name, USED or --; the one picked filled;
+ * the music's: NOW; the bars each plays in the project's song), then the song (ARRANGE) in a line: A4 > B8 > .. */
 static void graph_slots(void)
 {
-    uint32_t i;
+    uint32_t i, r, bars[4] = {0, 0, 0, 0};
+    char b[40];
+    for (r = 0; r < chain_config.count && r < CHAIN_ROWS; r++)
+        bars[chain_config.row[r].slot & 3u] += chain_config.row[r].bars;
+    str_cpy(b, "PROJECT ", sizeof b);
+    fmt_int(b + 8, (int32_t)song_cur + 1);
+    cv_text_on(14, LIST_Y(0) + CAP_IN(S, 16), &AF_S, b, T_ACCENT, T_SURF);
+    str_cpy(b, "OF ", sizeof b);
+    fmt_int(b + 3, (int32_t)NSONG);
+    cv_text_r(226, LIST_Y(0) + CAP_IN(S, 16), &AF_S, b, T_DIM, T_SURF);
     for (i = 0; i < 4u; i++) {
-        int32_t y = 12 + (int32_t)i * 26;
-        char b[4];
-        int sel = (int32_t)i + 1 == song.g[G_SLOT], used = graph_project_used(i);
+        int32_t y = LIST_Y(i + 1u);
+        int sel = (int32_t)i + 1 == song.g[G_SLOT], used = graph_project_used(i), now = live.cur == (int8_t)i;
         const char *n = graph_project_name(i);
+        uint16_t bg = sel ? T_THEME : T_SURF;
         b[0] = (char)('A' + i);
         b[1] = 0;
-        list_row(y, sel, b, T_MID, !used ? "--" : n[0] ? n : "USED", used ? T_TEXT : T_DIM, 232);
+        list_row(y, sel, b, now ? T_ACCENT : T_MID, !used ? "--" : n[0] ? n : "USED", used ? T_TEXT : T_DIM, 150);
+        if (bars[i]) {                               /* (its bars in the song) */
+            fmt_int(b, (int32_t)bars[i]);
+            str_cpy(b + str_len(b), " BAR", 8);
+            cv_text_r(now ? 190 : 226, y + CAP_IN(S, 16), &AF_S, b, sel ? T_INK : T_DIM, bg);
+        }
+        if (now) cv_text_r(226, y + CAP_IN(S, 16), &AF_S, "NOW", sel ? T_INK : T_ACCENT, bg);
     }
+    if (!chain_config.count)
+        str_cpy(b, "NO SONG YET: SAVE > ARRANGE", sizeof b);
+    else {
+        uint32_t n = 0;
+        for (r = 0; r < chain_config.count && n + 6u < sizeof b; r++) {
+            if (r) { b[n++] = '>'; }
+            b[n++] = (char)('A' + (chain_config.row[r].slot & 3u));
+            fmt_int(b + n, chain_config.row[r].bars);
+            n = str_len(b);
+        }
+        if (r < chain_config.count) { b[n++] = '.'; b[n++] = '.'; }
+        b[n] = 0;
+    }
+    cv_free_text(14, LIST_Y(5) + 2 + CAP_IN(S, 16), &AF_S, b, chain_config.count ? T_THEME : T_DIM, T_SURF, 226 - 14);
 }
 /* MIXER page: four SURF columns, one under each card: the track number on its cushion (in the accent:
  * the selected track) with a REC / ARM / MUTE badge (P_MUTE, KNOB 1), the sound's short name (a MUTE badge
@@ -1489,7 +1522,7 @@ static void graph_song(void)
 {
     uint32_t first = ui.song_row > 2u ? ui.song_row - 2u : 0u, i;
     if (!chain_config.count) {
-        panel_note("A 4 BARS > B 2 BARS", "[K2] ADD SECTION", "[SAVE] PROJECT A-D");
+        panel_note("A 4 BARS > B 2 BARS", "[K2] ADD SECTION", "SECTIONS: SAVE > PROJECT");
         return;
     }
     for (i = first; i < CHAIN_ROWS && i < first + 7u; i++) {

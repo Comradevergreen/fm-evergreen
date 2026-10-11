@@ -5777,6 +5777,7 @@ static int test_song_layer(void)
     sl_key(12);
     ok &= !live.mode;
     bad += check("  D5 LOOP / SONG: in SONG, PLAY plays the song from any page; the music back after it", ok);
+    chain_defaults(&song_idx.rows[1]);                  /* (song 2 empty: the page sweeps above may have opened it) */
     btn_down(B_SAVE); frame();                          /* KNOB 1: song 2, in when SAVE lets go */
     turn(EN_K1, 1); frame();
     ok = song_cur == 0 && lys.song == 2u;
@@ -5787,6 +5788,51 @@ static int test_song_layer(void)
     btn_down(B_SAVE); frame(); turn(EN_K1, -1); frame(); btn_up(B_SAVE); frame();
     ok &= song_cur == 0;
     bad += check("  KNOB 1: the song, in when SAVE lets go (stopped)", ok);
+    return bad;
+}
+
+/* (0.6.12) SAVE > PROJECT: KNOB 1 the project (its sections and song in, the music kept), KNOB 2 / PRESETS the
+ * section, LOAD and SAVE on it; ARRANGE (the project's song) right after it */
+static int test_project_page(void)
+{
+    int bad = 0, ok;
+    uint32_t k;
+    ui_power_on();
+    if (song_cur) (void)song_select(0);
+    sl_steps(60); project_save(0);                      /* project 1, A: notes 60.. */
+    chain_config.count = 2;                             /* .. its song: A 4 > B 8 */
+    chain_config.row[0] = (chain_row_t){0, 4}; chain_config.row[1] = (chain_row_t){1, 8};
+    sl_steps(80);                                       /* the music now: 80.. */
+    go_title("PROJECT");
+    ok = cur_page()->graph == GR_SLOTS && PAGES[ui.page + 1u].graph == GR_SONG && str_eq(PAGES[ui.page + 1u].title, "ARRANGE");
+    bad += check("PROJECT: SAVE > PROJECT, then ARRANGE (the project's song)", ok);
+    turn(EN_K1, 1); frame();
+    ok = song_cur == 1 && trk[0].step[0].note[0] == 80 && live.cur < 0 && !chain_config.count && msg_is("PROJECT 2");
+    bad += check("  KNOB 1: project 2 in (its sections, its song), the music kept", ok);
+    song.g[G_SLOT] = 1;
+    turn(EN_PRESET, 1); frame();
+    ok = song.g[G_SLOT] == 2;
+    turn(EN_K2, 1); frame();
+    ok &= song.g[G_SLOT] == 3;
+    bad += check("  KNOB 2 / PRESETS: the section (C)", ok);
+    turn(EN_K4, 1); press(B_OCTUP); frame();            /* SAVE into project 2's C: the NAME screen, then OK */
+    for (k = 0; k < 8u && name_on(); k++) { press(B_OCTUP); frame(); }
+    ok = project_used(2) && live.cur == 2;
+    bad += check("  SAVE: the music into project 2's section C (the music's section: NOW)", ok);
+    turn(EN_K1, -1); frame();
+    ok = song_cur == 0 && (!FELUCCA_FLASH || project_used(0)) && !project_used(2) && chain_config.count == 2 &&
+         trk[0].step[0].note[0] == 80;                  /* (no flash here: the sections were RAM only) */
+    bad += check("  KNOB 1 back: project 1, its song still there (its A: from flash), the music kept", ok);
+    if (!FELUCCA_FLASH) { sl_steps(60); project_save(0); sl_steps(80); }
+    song.g[G_SLOT] = 1;
+    turn(EN_K3, 1); press(B_OCTUP); frame();            /* LOAD A */
+    ok = trk[0].step[0].note[0] == 60 && live.cur == 0 && chain_config.count == 2;
+    bad += check("  LOAD: section A is the music, the project's song kept", ok);
+    transport_req = 1; frame();
+    turn(EN_K1, 1); frame();
+    ok = song_cur == 0 && msg_is("STOP TO CHANGE PROJECT");
+    transport_req = 2; frame();
+    bad += check("  playing: the project stays (STOP TO CHANGE PROJECT)", ok);
     return bad;
 }
 
@@ -7278,6 +7324,7 @@ int main(void)
     bad += test_fx_latch();
     bad += test_rec_layer();
     bad += test_song_layer();
+    bad += test_project_page();
     bad += test_dx_sound();
     bad += test_clear_all();
     bad += test_lane_mutes();

@@ -7,7 +7,7 @@ import html, os
 
 R = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(R, 'docs', 'cheatsheet')
-VERSION = 'v0.6.11'
+VERSION = 'v0.6.12'
 
 HEAT = ['#22d3ee', '#3b82f6', '#8b5cf6', '#d946ef', '#ef4444', '#ff7a00', '#facc15', '#f4f1ea']
 
@@ -148,7 +148,7 @@ def controls():
         ('SCL', 'SCL · SCL 2', 'ROOT by key'),
         ('EDIT', 'EDIT 1 · EDIT 2 · FILTER · VOICE  (FM6: OPERATOR · OP ENV · OPERATOR 2; DRUM: LANES · LANES 2 · SOUND 1–3 · X-MOD)', 'INIT · RECALL · sound mutes'),
         ('GLO', 'MIXER · GLOBAL · SYSTEM', 'MUTE · SOLO · LEVEL · TAP'),
-        ('SAVE', 'PRESETS · USER · PROJECT · TOOLS', 'SONG layer'),
+        ('SAVE', 'PRESETS · USER · PROJECT · ARRANGE · TOOLS', 'SONG layer'),
         ('ARP', 'ARP · ARP 2', '—'),
         ('SEQ', 'STEP · PATTERN · SHIFT · PHRASES · SONG · CHANCE · AUTOMATION · AUTO LIST', 'SEQ TOOLS'),
         ('REC', '(transport)', 'CLEAR · CLICK'),
@@ -242,7 +242,7 @@ def controls():
                           ('AUTOMATION', 'PLAY EVENT LOCK CLEAR'), ('AUTO LIST', 'ROW STEP PARAM VALUE')]),
         ('GLO · SAVE', HEAT[6], [('MIXER', 'LEVEL PAN REV MUTE'), ('GLOBAL', 'BPM SWG CLK TUNE'),
                                  ('SYSTEM', 'MIDI - ROUT -'), ('PRESETS', 'No. ENG FAV LIST'),
-                                 ('USER', 'SLOT LOAD ERASE SAVE'), ('PROJECT', 'SLOT - LOAD SAVE'),
+                                 ('USER', 'SLOT LOAD ERASE SAVE'), ('PROJECT', 'PROJ SECT LOAD SAVE'), ('ARRANGE', 'ROW SECT BARS SCENE'),
                                  ('TOOLS', 'CLRSQ INIT - -')]),
     ]
 
