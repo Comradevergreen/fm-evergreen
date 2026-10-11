@@ -578,16 +578,22 @@ Mantené **SAVE**:
 En **HOME**, girá **SELECT**. Aparece el diálogo **DICE EVERYTHING?** (con "UNDO AFTER: GLO + G4"). **OCT+ YES** /
 **OCT− NO**.
 
-Cada tirada elige un **estilo** — ROBOT POP, ELECTRO, BIG BEAT, ORGANIC, ART ROCK, DUB PUNK, MINIMAL, SYNTH POP o IDM,
-con nombres tomados del tipo de discos que los inspiraron (pensá en Kraftwerk, Anthony Rother, The Chemical Brothers,
-Juana Molina, Radiohead, The Clash, The Hacker, Marc Houle, MGMT, Aphex Twin) — y después:
+Cada tirada elige un **estilo** — DARK MINIMAL, DUB TECHNO, IDM, DARK ELECTRO, ACID NIGHT, COLD WAVE, BROKEN,
+HYPNOTIC o DEEP BREAKS: música de noche, oscura y menor (pensá en Kraftwerk, Anthony Rother, The Chemical Brothers,
+Juana Molina, Radiohead, The Hacker, Marc Houle, Aphex Twin), solo en modos menores (MIN, DOR, PHRY, HARM, MEL, MPEN) —
+y después:
 
 - le da a cada pista un **rol** (DRUMS, BASS, CHORDS, LEAD, ARP, TEXTURE), un **motor nuevo** que al estilo le gusta
   para ese rol y un sonido de fábrica cuyo nombre le queda bien, movido un poco; FM6 va en dos pistas como máximo. La
   batería va en una pista DRUM existente, o en T4;
-- escribe todas las partes a partir de **una sola armonía**: una escala (ROOT y SCALE), una progresión de acordes, el
-  bajo sobre las fundamentales, acordes, arpegios, un motivo principal, baterías con fills y acentos, compases enteros
-  de silencio; algunos estilos usan loops de largos impares;
+- escribe todas las partes a partir de **una sola armonía**, todas ancladas en la misma tónica: una escala (ROOT y
+  SCALE), una progresión de acordes, el bajo sobre las fundamentales, acordes con las voces que le gustan al estilo
+  (séptimas, novenas, cuartas, suspendidos) enlazados suavemente en un registro medio, arpegios graves, un lead (un
+  motivo de pasos chicos, un ostinato hipnótico o unas pocas notas largas), baterías con fills, ghost notes y acentos,
+  compases enteros de silencio; algunos estilos usan loops de largos impares;
+- **filtra** los sonidos según el rol (acordes y arpegios lo más oscuros, un LFO lento que hace respirar los acordes,
+  los arpegios punteados) y nunca elige los sonidos de fábrica brillantes (campanas, bronces, marimbas, órganos,
+  chiptune);
 - fija el modo de voz, el gate, **el nivel, el paneo y los envíos** por rol, el swing, el delay, la reverb y el
   chorus;
 - elige un **tempo nuevo** dentro del rango del estilo (siempre a 3 BPM o más del anterior), salvo que MENU >
