@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.6.16).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.6.17).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 ## Cheat sheets
 
@@ -29,6 +29,15 @@ Two printable sheets with everything on the device. Click an image to open it fu
 ## Changelog
 
 Every update is listed here, newest first.
+
+### v0.6.17
+- **DRUM-X at half the work**: each hit computed at 22 kHz (it is low-passed at ~8 kHz anyway) and brought back to
+  full rate, its noise kept at the same level: the kit costs about 45 % less, the heaviest part of a busy song.
+- **The guard acts sooner**: the load budget from 65 % (was 70), and over 80 % a voice fades after a single
+  overloaded block (was two in a row).
+- **MENU > ABOUT shows the audio's load** (scroll with PRESETS): NOW and PEAK (% of the time the audio took), LATE
+  (blocks that came too late: each one a click) and SHED (voices the guard faded), since power-on. Send a photo of
+  it after a click to tell what happened.
 
 ### v0.6.16
 - **Stable under load: the load budget.** The device measures how much of its time the audio takes. Past 70 %, the

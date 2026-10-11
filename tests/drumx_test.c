@@ -285,7 +285,8 @@ int main(int argc, char **argv)
                 pk = abs(buf[i]) > pk ? abs(buf[i]) : pk;
                 pk = abs(a1[i]) > pk ? abs(a1[i]) : pk;
             }
-            ok3 &= d0 / (FS / 8u) > 200 && d1 / (FS / 8u) > 200 && pk < 32700;
+            ok3 &= d0 / (FS / 8u) > 150 && d1 / (FS / 8u) > 150 && pk < 32700;   /* (0.6.17: 150, was 200: at half
+                                                          * rate the closed hat's FM partials past 11 kHz are gone, 195) */
         }
         check("FM (E5): 40 and 120 each another sound on every lane, under full scale, still ends", ok2 && ok3, 0);
     }

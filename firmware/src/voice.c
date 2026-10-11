@@ -180,6 +180,9 @@ static uint32_t trk_vmode(const track_t *t)
  * first) instead of adding one (voice_room), CLOUD spawns half its grains (fx.c). Ahead of the overload guard (80 %:
  * a voice faded) and of a late half (a click): the load stops climbing before it gets there */
 static volatile uint8_t load_tight;
+/* (0.6.17) what the audio did since power-on, for MENU > ABOUT (audio.c fills it): the slowest half's share of its
+ * time (%), the halves that came late (each a click), the voices the overload guard faded */
+static struct { volatile uint32_t peak, late, shed; } load_diag;
 static uint32_t voices_busy(void)                       /* sounding voices of all parts (not the fading ones) */
 {
     uint32_t p, i, n = 0;
