@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.6.26).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.6.27).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 ## Cheat sheets
 
@@ -29,6 +29,12 @@ Two printable sheets with everything on the device. Click an image to open it fu
 ## Changelog
 
 Every update is listed here, newest first.
+
+### v0.6.27
+- **DICE ALL never repeats itself**: the moment you press (the timer's ticks) stirs the random numbers on every throw,
+  and the last 32 pieces are remembered by a fingerprint (every track's steps, engines and the tempo): a piece that
+  matched one would be thrown again. **The tempo moves on every throw** (at least 3 BPM, inside the style's range),
+  unless MENU > BPM LOCK is on.
 
 ### v0.6.26
 - **HOME + SELECT is a song-idea generator.** Each throw picks a **style** with its own tempo, swing, scales, chord
