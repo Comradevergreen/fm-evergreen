@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.6.25).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.6.26).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 ## Cheat sheets
 
@@ -29,6 +29,19 @@ Two printable sheets with everything on the device. Click an image to open it fu
 ## Changelog
 
 Every update is listed here, newest first.
+
+### v0.6.26
+- **HOME + SELECT is a song-idea generator.** Each throw picks a **style** with its own tempo, swing, scales, chord
+  progressions, drums, bass, how much silence it leaves, the engines it likes and its delay and reverb: **ROBOT POP**,
+  **ELECTRO**, **BIG BEAT**, **ORGANIC**, **ART ROCK**, **DUB PUNK**, **MINIMAL**, **SYNTH POP**, **IDM** (the screen
+  says which). Every track gets a **role** (DRUMS, BASS, CHORDS, LEAD, ARP, TEXTURE; with TRACKS 4 the first four), a
+  **new engine** the style likes for it (FM6 on two tracks at most: its CPU), a factory sound whose name fits the role,
+  moved a little, its voice mode, gate, level, pan and sends, and a part written from **one harmony**: the bass on the
+  chords' roots (octaves, pumping, acid with slides, walking, drones, blips), chords voiced in the scale (7ths in some
+  styles; held, stabbed, pulsed or sparse), the arp over the chord's notes with holes, the lead a motif repeated with a
+  variation or answered, and whole bars left silent. ORGANIC, MINIMAL and IDM put loops of odd lengths against each
+  other. Drums from each style's bars with fills, ghosts and accents; IDM's euclidean, ratcheted and by chance.
+  No automation and no modulation beyond the macros' routes (nothing that takes RAM). UNDO (GLO + G4) as before.
 
 ### v0.6.25
 - **Interface audit, second round.**
@@ -452,9 +465,9 @@ An 8-sound kit (BD SD CP CH OH TM RS CB) generated in real time, Microtonic styl
 - **SELECT** changes the tempo on GLO's pages (GLOBAL, SYSTEM, MIXER) and with GLO held. On **EDIT** it **rolls the
   track's sound dice**: a synth loads one of its factory presets at random and moves each engine parameter up to a
   quarter of its range; DRUM-X rolls the A and B sides of each sound around the factory kit. On **HOME** it asks
-  **DICE EVERYTHING?** (OCT+ yes, OCT− no) and then dices the whole piece: one musical scale for every engine and the
-  effects, each track an engine, a sound and a sequence in that scale (T1 a bass; the others a lead, a pad or an
-  arpeggio; DRUM a beat), the macros' routes and the delay, reverb and chorus. Tempo, levels and mutes stay.
+  **DICE EVERYTHING?** (OCT+ yes, OCT− no) and then writes a new piece in a style (ROBOT POP, ELECTRO, BIG BEAT,
+  ORGANIC, ART ROCK, DUB PUNK, MINIMAL, SYNTH POP, IDM): its tempo, one scale for every engine and the effects, each
+  track a role, an engine, a sound and a part from one chord progression, silences included (see v0.6.26).
 - **UNDO: GLO held + G4** takes back the last big change (DICE ALL, a sound diced, a clear, INIT, RECALL, a pattern or
   project loaded); pressing it again goes forward (redo). G4 breathes when there is something to undo.
 - **Macros M1–M4** (LFO held; they stay latched when released until you press LFO again): every session starts with
