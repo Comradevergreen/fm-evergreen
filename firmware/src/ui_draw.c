@@ -780,9 +780,9 @@ static void draw_foot(void)
         if (pi != ICON_NONE) {
             GFX_HOOK_ALIGN(0, 19 + AF_S_CAP_Y, 0, 19 + AF_S_CAP_Y + AF_S_CAP_H, AL_V,
                            "footer icons on the names' line");
-            cv_icon_in(tx, 19 + AF_S_CAP_Y, 0, AF_S_CAP_H, 12, pi, T_MID, T_BG);
+            cv_icon_in(tx, 19 + AF_S_CAP_Y, 0, AF_S_CAP_H, 12, pi, T_THEME, T_BG);
         }
-        cv_text_r(r, 19, &AF_S, ti, T_MID, T_BG);
+        cv_text_r(r, 19, &AF_S, ti, T_TEXT, T_BG);      /* (0.6.12: the page's name lit, not dim: where you are) */
     }
     cv_blit(0, Y_FOOT);
 }

@@ -7,10 +7,11 @@
  *   DLY        the echoes as an impulse train: the first at MIX, each FDBK lower, TIME apart; a playhead at tempo
  *   DLY 2      the echoes left (top) and right (bottom): WIDTH sets the right ones later, PITCH steps them up / down,
  *              SPRAY scatters them
- *   REVERB     the impulse response: PRE's gap, then a dense tail as long as SIZE, cooling as fast as DAMP (SPRING: a
+ *   REVERB     the impulse response: PRE's gap (CLOUD: a swarm of dots that AIR lifts / sinks), then a dense tail as long as SIZE, cooling as fast as DAMP (SPRING: a
  *              chirp)
  *   REVERB 2   the tail left (up) and right (down), WIDE apart, MOD wobbling it (at RATE, while it sounds), FILT tilting
- *   CHORUS     the taps' delay lines: three sines a third apart, as deep as DEPTH, running at RATE while it sounds
+ *   CHORUS     the taps' delay lines: three sines a third apart, as deep as DEPTH, running at RATE while it sounds,
+ *              fanned apart by STER (mono: one line)
  *   MASTER     CLIP's curve with the level now; PUNCH's transient shape; DUCK's gain now as a meter
  *   ENV / LFO DEST  the source now (the envelope's level, the LFO's value) into four bipolar columns under the cards,
  *              each as long as its amount and lit by what it sends now
@@ -135,7 +136,8 @@ static void tech_dly2(void)
 static void tech_rev(void)
 {
     int32_t size = song.g[G_RSIZE], damp = song.g[G_RDAMP], pre = song.g[G_RPRE], spring = song.g[G_RTYPE] == 1;
-    int32_t x0 = TK_X0 + 6, w = PANEL_W - 12, base = TK_Y1 - 4, h = 92, len = 40 + size * (w - 50) / 127, gap = pre * 40 / 100;
+    int32_t x0 = TK_X0 + 6, w = PANEL_W - 12, base = TK_Y1 - 4, h = 92, len = 40 + size * (w - 50) / 127;
+    int32_t gap = song.g[G_RTYPE] <= 1 ? clamp(pre, 0, 100) * 40 / 100 : 0;   /* (PRE: ROOM, SPRING; else AIR) */
     int32_t i, ty = song.g[G_RTYPE], mod = song.g[G_RMOD];
     tk_axes(x0, TK_Y0, x0 + w, base);
     if (ty == 3) {                                      /* RESO: four strings, each a comb's teeth at its pitch, ringing as
@@ -152,25 +154,34 @@ static void tech_rev(void)
         }
         return;
     }
-    if (ty == 4) {                                      /* CLOUD: its bloom, the grains scattered back over SIZE, as many as RATE,
-                                                         * up (an octave), down and level by MOD; FREEZE: a line over them */
-        int32_t ng = 12 + song.g[G_RRATE] / 3, spread = 40 + size * (w - 40) / 127;
-        for (i = 0; i < w - 8; i += 2) {                 /* (0.5.1) the bloom: the network's tail under the grains,
-                                                         * longer with SIZE */
-            int32_t env = 1000 - i * 1000 / (40 + size * (w - 40) / 127 + 1), bh;
-            if (env <= 0)
-                break;
-            bh = env * (28 + (int32_t)(((uint32_t)(i + 3) * 2654435761u) >> 27)) / 1000;
-            cv_rect(x0 + 6 + i, base - bh, 1, bh, heat_col(clamp(env * 120 / 1000 - damp / 4, 6, 236)));
+    if (ty == 4) {                                      /* CLOUD (0.6.12): a swarm of dots, as many as RATE, drifting back
+                                                         * over SIZE while it sounds; AIR lifts or sinks the whole cloud
+                                                         * (and warms / cools it), MOD splits it into octave layers;
+                                                         * the grains playing now bigger; FREEZE: a line over them */
+        int32_t air = clamp(pre, -24, 24), cy = (TK_Y0 + base) / 2 - air * 30 / 24, nd = 24 + song.g[G_RRATE] / 3;
+        int32_t spread = 40 + size * (w - 40) / 127, live = bg_energy() > 2, k;
+        uint32_t fr = live ? ui.frame : 0u;
+        for (i = 0; i < nd; i++) {
+            uint32_t hsh = (uint32_t)(i + 1) * 2654435761u, sp = 1u + (hsh >> 28);
+            int32_t lane = (int32_t)((hsh >> 20) % 100u) < mod * 3 / 4 ? (int32_t)((hsh >> 24) % 3u) + 1 : 0;
+            int32_t dx = (int32_t)(((hsh >> 8) + fr * sp) % (uint32_t)spread);
+            int32_t gx = x0 + w - 6 - dx, wob = (bg_sin((hsh >> 6) + fr * 900u) * 4) >> 15;
+            int32_t gy = cy - (lane == 1 ? 24 : lane == 2 ? -24 : lane == 3 ? 12 : 0) + (int32_t)((hsh >> 4) % 13u) - 6 + wob;
+            int32_t fade = 1000 - dx * 1000 / spread;    /* (older, further back: cooler) */
+            uint16_t c = heat_col(clamp(fade * 200 / 1000 + air * 2 - damp / 3 + 20, 8, 240));
+            if (gy > TK_Y0 + 1 && gy < base - 2)
+                cv_rect(gx, gy, 2, 2, c);
         }
-        for (i = 0; i < ng; i++) {
-            uint32_t hsh = (uint32_t)(i + 1) * 2654435761u;
-            int32_t gx = x0 + w - 6 - (int32_t)((hsh >> 8) % (uint32_t)spread), lane = (int32_t)((hsh >> 20) % 100u) < mod * 3 / 4 ?
-                         (int32_t)((hsh >> 24) % 3u) + 1 : 0;
-            int32_t gy = base - 46 - (lane == 1 ? 26 : lane == 2 ? -26 : lane == 3 ? 14 : 0) + (int32_t)((hsh >> 4) % 9u) - 4;
-            int32_t gw = 6 + (int32_t)((hsh >> 12) % 10u);
-            cv_rect(gx - gw / 2, gy, gw, 3, heat_col(clamp(60 + (int32_t)((hsh >> 16) % 160u) - damp / 2, 10, 236)));
+        for (k = 0; k < (int32_t)CL_N; k++) {            /* the grains now: their place in their life, their pitch */
+            int32_t gx, gy, up;
+            if (!cl_g[k].len || !live) continue;
+            gx = x0 + w - 6 - (int32_t)cl_g[k].age * spread / (int32_t)cl_g[k].len;
+            up = cl_g[k].inc > 50000u ? 24 : cl_g[k].inc < 24000u ? -24 : 0;
+            gy = cy - up + (int32_t)(k % 5u) * 3 - 6;
+            if (gy > TK_Y0 + 2 && gy < base - 3)
+                cv_rrect(gx - 2, gy - 2, 5, 5, 2, heat_col(clamp(200 + air * 2, 60, 250)), T_SURF);
         }
+        cv_rect(x0 + 2, cy, 3, 1, T_MID);                /* (where AIR has it) */
         if (size >= 127)
             cv_rect(x0 + 4, TK_Y0 + 4, w - 8, 1, T_ACCENT);
         return;
@@ -184,8 +195,12 @@ static void tech_rev(void)
             bh = bh * (600 + (bg_sin((uint32_t)(i * i * 9)) >> 6) * 400 / 512) / 1000;
         if (bh > 0)
             cv_rect(x0 + 6 + gap + i, base - bh, 1, bh, heat_col(heat));
-        if (ty == 2 && mod && i % 6 == 0 && bh > 4)   /* SHIMMER: sparks an octave up over the tail, as many as MOD */
-            cv_rect(x0 + 6 + gap + i, base - bh - 6 - (i * 7 % 23) * mod / 127, 2, 2, heat_col(clamp(heat + 40, 0, 250)));
+        if (ty == 2 && mod && i % 6 == 0 && bh > 4) {   /* SHIMMER: sparks an octave (+ AIR) over the tail, as many as MOD;
+                                                         * AIR down: they sink and cool */
+            int32_t air = clamp(pre, -24, 24), sy = base - bh - 6 - (i * 7 % 23) * mod / 127 - air * 18 / 24;
+            if (sy > TK_Y0 && sy < base - 2)
+                cv_rect(x0 + 6 + gap + i, sy, 2, 2, heat_col(clamp(heat + 40 + air * 3, 0, 250)));
+        }
     }
 }
 
@@ -209,12 +224,16 @@ static void tech_rev2(void)
 static void tech_chorus(void)
 {
     int32_t rate = tk(0), depth = tk(1), x0 = TK_X0 + 6, w = PANEL_W - 12, mid = (TK_Y0 + TK_Y1) / 2, k, i;
+    int32_t spread = 64 + song.g[G_CSTER];              /* (0.6.12) STER: the taps fanned out, left up, right down
+                                                         * (-64: one line, mono; 63: twice as far apart) */
     uint32_t ph = bg_energy() > 2 ? ui.frame * (uint32_t)(40 + rate) * 8u : 0u;
     cv_rect(x0, mid, w, 1, T_RAISE);
     for (k = 0; k < 3; k++) {
-        int32_t py = mid;
+        int32_t py = mid, off = (k - 1) * spread * 9 / 64;
         for (i = 0; i <= w; i++) {
-            int32_t y = mid - ((bg_sin((uint32_t)(i * (60 + rate / 4)) + ph + (uint32_t)k * 21845u) * depth / 1000 * 40) >> 15);
+            int32_t y = mid - off - ((bg_sin((uint32_t)(i * (60 + rate / 4)) + ph + (uint32_t)(k * 21845 * spread / 64)) *
+                                      depth / 1000 * 30) >> 15) * (spread + 64) / 128;
+            y = clamp(y, TK_Y0, TK_Y1);
             if (i)
                 cv_line_t(x0 + i - 1, py, x0 + i, y, heat_y(y, mid - 40, mid + 40, T_THEME), k ? 1 : 2);
             py = y;
@@ -343,30 +362,52 @@ static int32_t tk_apwave(uint32_t w, uint32_t ph, uint32_t cyc)
     case 2: return (int32_t)(ph >> 16) - 32768;
     case 3: return ph < 0x80000000u ? 32767 : -32767;
     case 4: return (int32_t)((cyc * 2654435761u) >> 16) - 32768;   /* (S&H: a place a cycle) */
-    default: return bg_sin(ph);
+    default: return bg_sin(ph >> 16);                   /* (0.6.12: bg_sin takes 16 bits of the turn) */
     }
 }
+/* (0.6.12) as LFO's chart: two cycles of the pan's wave across the panel, L up, R down, centred on PAN, DEPTH its
+ * swing; the playhead a quarter in (the past to its left, dimmed), a dot on where the pan is now */
 static void tech_autopan(const track_t *t)
 {
-    int32_t x0 = TK_X0 + 6, w = PANEL_W - 12, y0 = TK_Y0 + 4, h = TK_Y1 - TK_Y0 - 8, dep = clamp(t->p[P_APDEP], 0, 127);
-    int32_t base = x0 + w / 2 + clamp(t->p[P_PAN], -64, 63) * (w / 2) / 64, i, px = 0, py = 0;
-    uint32_t ti = (uint32_t)(t - trk) % NTRK, wv = (uint32_t)clamp(t->p[P_APWAVE], 0, 4), now = ap_ph[ti];
-    cv_rect(x0 + w / 2, y0, 1, h, T_RAISE);              /* the centre */
-    cv_rect(x0, y0, 1, h, T_LINE);
-    cv_rect(x0 + w - 1, y0, 1, h, T_LINE);
-    cv_text(x0 + 3, y0, &AF_S, "L", T_DIM);
-    cv_text(x0 + w - 10, y0, &AF_S, "R", T_DIM);
-    for (i = 0; i <= h; i++) {                          /* row i: i / h of two cycles ago */
-        uint64_t back = (uint64_t)i * 0x200000000ull / (uint64_t)h;
-        uint32_t ph = now - (uint32_t)back, cyc = (uint32_t)(((uint64_t)now - back + 0x400000000ull) >> 32);
-        int32_t x = clamp(base + (tk_apwave(wv, ph, cyc) * dep / 127) * (w / 2) / 32768, x0, x0 + w - 1), y = y0 + i;
-        if (i)
-            cv_line_t(px, py, x, y, heat_y(y, y0 + h, y0, T_THEME), 2);
-        px = x;
+    int32_t x0 = TK_X0, w = PANEL_W, dep = clamp(t->p[P_APDEP], 0, 127), xp = w / 4, x, py = 0;
+    int32_t a = (TK_Y1 - TK_Y0) / 2 - 6, cy = (TK_Y0 + TK_Y1) / 2 + clamp(t->p[P_PAN], -64, 63) * a / 128;
+    uint32_t ti = (uint32_t)(t - trk) % NTRK, wv = (uint32_t)clamp(t->p[P_APWAVE], 0, 4);
+    uint64_t now = ap_ph[ti] + 0x400000000ull, span = 0x200000000ull / (uint64_t)w;   /* (two cycles a panel) */
+    cv_rect(x0, (TK_Y0 + TK_Y1) / 2, w, 1, T_RAISE);     /* the centre */
+    cv_text(x0 + 4, TK_Y0, &AF_S, "L", T_DIM);
+    cv_text(x0 + 4, TK_Y1 - 14, &AF_S, "R", T_DIM);
+    for (x = 0; x < w; x++) {
+        uint64_t q = now + (uint64_t)(int64_t)(x - xp) * span;
+        int32_t y = clamp(cy - (tk_apwave(wv, (uint32_t)q, (uint32_t)(q >> 32)) * dep / 127) * a / 32768, TK_Y0, TK_Y1);
+        if (x)
+            cv_line_t(x0 + x - 1, py, x0 + x, y,
+                      x < xp ? ux_mix(T_SURF, heat_y(y, cy - a, cy + a, T_THEME), 45) : heat_y(y, cy - a, cy + a, T_THEME), 2);
         py = y;
     }
-    tk_dot(clamp(base + (tk_apwave(wv, now, (uint32_t)(((uint64_t)now + 0x400000000ull) >> 32)) * dep / 127) * (w / 2) / 32768,
-                 x0, x0 + w - 1), y0);
+    cv_rect(x0 + xp, TK_Y0, 1, TK_Y1 - TK_Y0, T_MID);    /* the playhead */
+    {
+        int32_t y = clamp(cy - (tk_apwave(wv, (uint32_t)now, (uint32_t)(now >> 32)) * dep / 127) * a / 32768, TK_Y0, TK_Y1);
+        cv_rrect(x0 + xp - 3, y - 3, 7, 7, 3, T_TEXT, T_SURF);
+    }
+}
+
+/* (0.6.12) RETRIG (LOFI BYTE / FLOAT): the formula's time over four notes (their ticks under it): RTRG ON a ramp from 0
+ * at each note (the formula from its start every time), OFF one ramp running on under them */
+static void tech_retrig(const track_t *t)
+{
+    int32_t x0 = TK_X0 + 10, w = PANEL_W - 20, base = TK_Y1 - 12, top = TK_Y0 + 10, on = t->p[P_LRTRG] != 0, i, py = base;
+    for (i = 0; i < 4; i++)                              /* the notes */
+        cv_rect(x0 + i * w / 4, base + 3, 3, 6, T_ACCENT);
+    for (i = 0; i <= w; i++) {
+        int32_t ph = on ? (i % (w / 4)) * 1000 / (w / 4) : i * 1000 / w;
+        int32_t y = base - ph * (base - top) / 1000;
+        if (i && !(on && i % (w / 4) == 0))
+            cv_line_t(x0 + i - 1, py, x0 + i, y, heat_y(y, base, top, T_THEME), 2);
+        else if (i)
+            cv_rect(x0 + i, y, 1, py - y + 1, T_RAISE);  /* (back to 0) */
+        py = y;
+    }
+    cv_text(x0, TK_Y0, &AF_S, on ? "FROM THE START, EVERY NOTE" : "THE FORMULA RUNS ON", T_DIM);
 }
 
 /* the page's technical graph, if it has one (1) */
@@ -376,6 +417,7 @@ static int graph_tech(const track_t *t, const page_t *pg)
         switch (pg->id[0]) {
         case P_DIST: tech_dist(t); return 1;
         case P_APDEP: tech_autopan(t); return 1;
+        case P_LRTRG: if (pg->id[1] != 0xFFu) return 0; tech_retrig(t); return 1;   /* (not DIGITAL's OP1 ENV) */
         case P_ED_FLT: tech_dest(t, 0); return 1;
         case P_LD_PIT: tech_dest(t, 1); return 1;
         case P_VOICE: tech_voice(t); return 1;

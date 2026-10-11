@@ -916,6 +916,8 @@ static uint32_t graph_signature(void)
             h = (h ^ (uint32_t)song.g[G_SLMODE + i]) * 16777619u;
     if (pg->graph == GR_SLPIT)
         h ^= (sl_ui_step + 1u) * 40503u;
+    if (pg->graph == GR_TOOLS)                       /* (0.6.12) the action picked, the song's row */
+        h ^= ui.act * 7919u + ui.song_row * 104729u;
     if (pg->graph == GR_SLOTS) {                     /* (a checksum over each slot; the project, the music's section, the song) */
         for (i = 0; i < 4u; i++)
             h ^= (uint32_t)graph_project_used(i) << (20u + i);
@@ -1167,6 +1169,30 @@ static void graph_events(void)
             cv_text_r(226, y + CAP_IN(S, 16), &AF_S, b, sel ? T_INK : T_TEXT, bg);
         }
     }
+}
+/* (0.6.12) SAVE > TOOLS: a row a knob, what it does (on what: the track, the song's row), the one picked (turned right)
+ * filled; OCT+ does it (a dialog first) */
+static void graph_tools(void)
+{
+    static const char *const WHAT[4] = {"CLEAR SEQ", "INIT SOUND", "DELETE ROW", "CLEAR SONG"};
+    static const char *const ON[4] = {"STEPS + AUTO", "ENGINE DEFAULT", "", "ALL ROWS"};
+    uint32_t c;
+    char b[24];
+    for (c = 0; c < 4u; c++) {
+        int32_t y = LIST_Y(c);
+        int sel = ui.act == c + 1u;
+        uint16_t bg = sel ? T_THEME : T_SURF;
+        b[0] = 'K'; b[1] = (char)('1' + c); b[2] = 0;
+        list_row(y, sel, b, T_MID, WHAT[c], T_TEXT, 150);
+        if (c == 2u) {                                   /* (the row SONG has picked) */
+            str_cpy(b, "ROW ", sizeof b);
+            fmt_int(b + 4, (int32_t)ui.song_row + 1);
+            cv_text_r(226, y + CAP_IN(S, 16), &AF_S, b, sel ? T_INK : T_DIM, bg);
+        } else {
+            cv_text_r(226, y + CAP_IN(S, 16), &AF_S, ON[c], sel ? T_INK : T_DIM, bg);
+        }
+    }
+    note_line(LIST_Y(4) + 10, ui.act ? "[OCT+] DO IT" : "TURN A KNOB RIGHT TO PICK", ui.act ? T_ACCENT : T_DIM);
 }
 /* (0.6.12) SAVE > PROJECT: the project (one of NSONG: a song of storage.c) and its four sections. A title line
  * (PROJECT n, the section the music came from or went to), the sections A-D (name, USED or --; the one picked filled;
@@ -1656,9 +1682,9 @@ static void draw_graph(void)
             cv_oy = 0;
             graph_colony(t, dx_ui_lane);
             break;
-        case GR_TOOLS:
+        case GR_TOOLS:                               /* (0.6.12) what each knob does, the one picked filled */
             cv_oy = 0;
-            panel_note("TURN TO PICK", "[OCT+] CONFIRM", 0);
+            graph_tools();
             break;
         default:
             if (pg->scope == SC_ENGINE && ENGINES[t->eng_req % NENGINES] == &ENG_WHEEL) graph_wheel(t, c);
