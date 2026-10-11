@@ -551,8 +551,8 @@ Hold **SAVE**:
 On **HOME**, turn **SELECT**. The dialog **DICE EVERYTHING?** appears (with "UNDO AFTER: GLO + G4"). **OCT+ YES** /
 **OCT− NO**.
 
-Each throw picks a **style** — DARK MINIMAL, DUB TECHNO, IDM, DARK ELECTRO, ACID NIGHT, COLD WAVE, BROKEN, HYPNOTIC
-or DEEP BREAKS: the night's music, dark and minor (think Kraftwerk, Anthony Rother, The Chemical Brothers, Juana Molina,
+Each throw picks a **style** — DARK MINIMAL, DUB TECHNO, IDM, DARK IDM, DARK ELECTRO, ACID NIGHT, COLD WAVE, BROKEN,
+HYPNOTIC or DEEP BREAKS (IDM and DARK IDM about 4 throws in 10): the night's music, dark and minor (think Kraftwerk, Anthony Rother, The Chemical Brothers, Juana Molina,
 Radiohead, The Hacker, Marc Houle, Aphex Twin), in minor modes only (MIN, DOR, PHRY, HARM, MEL, MPEN) — and then:
 
 - gives every track a **role** (DRUMS, BASS, CHORDS, LEAD, ARP, TEXTURE), a **new engine** the style likes for that
@@ -562,8 +562,14 @@ Radiohead, The Hacker, Marc Houle, Aphex Twin), in minor modes only (MIN, DOR, P
   progression, the bass on the roots, chords voiced as the style likes (7ths, 9ths, fourths, suspended) and led
   smoothly in a middle register, low arps, a lead (a motif of small steps, a hypnotic ostinato or a few long notes),
   drums with fills, ghosts and accents, whole bars of silence; some styles use loops of odd lengths;
-- **filters** the sounds by role (chords and arps darkest, a slow LFO breathing on the chords, the arps plucked) and
-  never picks the bright factory sounds (bells, brass, marimbas, organs, chiptune);
+- **filters** the sounds by role (chords and arps darkest), with a **filter envelope on every sound** (strongest on
+  the bass and the arps, made plucky), a filter **TYPE** that changes (LP mostly; BP, and COMB tuned to the note on
+  arps and textures), a slow LFO of its own shape (SIN, TRI, S&H) on the chords and textures, a little drive on some
+  basses and leads, the drums through a soft low-pass; never picks the bright factory sounds (bells, brass, marimbas,
+  organs, chiptune);
+- gives each track its own space: delay and reverb sends by role, now and then one track soaked and another dry; the
+  delay time, the GRAIN delay's pitch (an octave or a fourth down, a fifth up), the reverb type (ROOM, SPRING, RESO,
+  CLOUD; never SHIMMER), its size, modulation and width all change from throw to throw;
 - sets voice mode, gate, **level, pan and sends** per role, the swing, the delay, reverb and chorus;
 - picks a **new tempo** in the style's range (always at least 3 BPM away), unless MENU > **BPM LOCK** is on;
 - rolls new macro routes.

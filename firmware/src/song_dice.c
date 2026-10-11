@@ -64,10 +64,14 @@ static const dstyle_t DSTYLE[] = {
      DS_DEEP, BS_SUB, PS_DUB, 55, VC_9, LM_SPARSE, 0,
      {EG_A, EG_FM, EG_A}, {EG_A, EG_PH, EG_FM}, {EG_PH, EG_A, EG_VO}, {EG_FM, EG_A, EG_PH}, {EG_NO, EG_VO, EG_A},
      {4, 0}, {0, 4}, 2},
-    {"IDM", 86, 140, 10, {SC_DOR, SC_MEL, SC_MIN, SC_HARM}, {{0, 5, 3, 1}, {0, 3, 6, 4}, {0, 2, 5, X}},
+    {"IDM", 86, 140, 10, {SC_PHRY, SC_HARM, SC_MIN, SC_DOR}, {{0, 5, 1, X}, {0, 3, 1, 5}, {0, 1, 5, 4}},
      DS_IDM, BS_IDM, PS_SPARSE, 45, VC_MIX, LM_MOTIF, 1,
      {EG_FM, EG_A, EG_PH}, {EG_FM, EG_PH, EG_LO}, {EG_PH, EG_LO, EG_FM}, {EG_FM, EG_LO, EG_PH}, {EG_NO, EG_LO, EG_PH},
      {4, 3}, {4, 5}, 1},
+    {"DARK IDM", 78, 112, 14, {SC_PHRY, SC_HARM, SC_PHRY, SC_MIN}, {{0, X, X, X}, {0, 1, X, X}, {0, 5, 1, X}},
+     DS_IDM, BS_DRONE, PS_SPARSE, 55, VC_QUART, LM_SPARSE, 1,
+     {EG_FM, EG_PH, EG_A}, {EG_PH, EG_FM, EG_VO}, {EG_PH, EG_VO, EG_FM}, {EG_FM, EG_PH, EG_LO}, {EG_NO, EG_VO, EG_LO},
+     {4, 3}, {5, 4}, 2},
     {"DARK ELECTRO", 126, 134, 0, {SC_PHRY, SC_MIN, SC_HARM, SC_PHRY}, {{0, 0, 1, 0}, {0, 5, 1, X}, {0, X, X, X}},
      DS_ELECTRO, BS_PUMP, PS_STAB, 40, VC_SUS, LM_OSTINATO, 0,
      {EG_A, EG_FM, EG_PH}, {EG_A, EG_PH, EG_FM}, {EG_A, EG_PH, EG_VO}, {EG_A, EG_LO, EG_FM}, {EG_NO, EG_VO, EG_A},
@@ -144,7 +148,7 @@ static const char *const DRUM_BAR[][8] = {
     [DS_ORGANIC] = {"x.....x.........", "", "", "..g...g...g...g.", "", "......x....x....", "...x.....x..x...", "x..x..x...x..x.."},
     [DS_BROKEN]  = {"x..x....x.x.....", "....a..g.g..a...", "", "x.xgx.x.x.xgx.x.", ".......x........", "", "", ""},
     [DS_DUB]     = {"........a.......", "........x.......", "", "..x...x...x...x.", "......x.......x.", "", "...x.......x....", ""},
-    [DS_MINIMAL] = {"a...x...a...x...", "", "....g.......g...", "ggxgggxgggxgggxg", "..x...x...x...x.", "", "...x..g...x..x..", "......g........."},
+    [DS_MINIMAL] = {"a...x...a...x...", "", "....g.......g...", "g.x...xgg.x...x.", "..x...x...x...x.", "", "...x..g...x..x..", "......g........."},
     [DS_DEEP]    = {"a...x...a...x...", "", "............g...", "..x...x...x...x.", "..g...x...g...x.", "", ".g.....x.g....x.", ""},
 };
 static void dice_drums(track_t *t, const dstyle_t *st, uint32_t len)
@@ -430,25 +434,44 @@ static void dice_sound(track_t *t, uint32_t role, const uint8_t *el)
         if (!d->label || d->label[0] == '-' || d->max <= d->min || d->fmt == F_ENUM) continue;
         t->p[P_E0 + i] = (int16_t)dice_by(t->p[P_E0 + i], d->min, d->max, span ? span : 1);
     }
-    {   /* (0.6.32) filtered: the cutoff down by role (ANALOG its own filter, the others the part's), some resonance; the
-         * chords breathing (a slow LFO on the cutoff), the arps plucked (the envelope opens it a little) */
-        static const uint8_t CUT[6][2] = {{0, 0}, {44, 76}, {52, 74}, {64, 86}, {54, 76}, {50, 80}};
-        int32_t cut = rr(CUT[role][0], CUT[role][1]), res = rr(role == RL_BASS ? 10 : 18, role == RL_ARP ? 60 : 45);
+    {   /* (0.6.32) filtered: the cutoff down by role (ANALOG its own filter, the others the part's), some resonance.
+         * (0.6.33) Never flat: the TYPE changes (LP mostly; band-pass, the comb tuned to the note for the arps and the
+         * textures), the envelope opens the filter on every sound (more on the bass and the arps, their envelope made a
+         * pluck: decay and sustain down), a slow LFO of its own shape on the cutoff of the chords, the textures and now
+         * and then the lead and the arp (S&H: the IDM's), a little grit on some basses and leads */
+        static const uint8_t CUT[6][2] = {{0, 0}, {40, 70}, {48, 70}, {58, 82}, {46, 70}, {44, 76}};
+        static const uint8_t ENV[6][2] = {{0, 0}, {18, 48}, {8, 28}, {12, 36}, {22, 50}, {0, 24}};
+        static const uint8_t FT[6][4] = {{100, 0, 0, 0}, {100, 0, 0, 0}, {65, 0, 30, 5}, {75, 0, 20, 5}, {50, 0, 30, 20},
+                                         {30, 10, 35, 25}};   /* LP HP BP COMB, percent */
+        int32_t cut = rr(CUT[role][0], CUT[role][1]), res = rr(role == RL_BASS ? 12 : 20, role == RL_ARP ? 62 : 48);
+        uint32_t ft = 0, w = rng() % 100u, acc = 0;
         if (role == RL_DRUM) return;
+        for (ft = 0; ft < 3u; ft++) { acc += FT[role][ft]; if (w < acc) break; }
+        t->p[P_FTYPE] = (int16_t)ft;
+        if (ft == 2u) cut += 10;                        /* (a band-pass: higher, or it is only a rumble) */
         if (e == EG_A) {
             t->p[P_E4] = (int16_t)(t->p[P_E4] < cut ? t->p[P_E4] : cut);
             t->p[P_E5] = (int16_t)clamp(t->p[P_E5], res, 90);
         } else {
-            t->p[P_FTYPE] = (int16_t)(role == RL_TEX && chance(35) ? 2 : 0);   /* (a texture: now and then band-passed) */
             t->p[P_FCUT] = (int16_t)(role == RL_BASS ? cut + 22 : cut);       /* (a bass: only its fizz taken) */
             t->p[P_FRES] = (int16_t)res;
         }
-        if (role == RL_PAD || role == RL_TEX) {
-            t->p[P_LRATE] = (int16_t)rr(4, 22);
-            t->p[P_LD_FLT] = (int16_t)rr(8, 24);
+        t->p[P_ED_FLT] = (int16_t)rr(ENV[role][0], ENV[role][1]);
+        if (role == RL_BASS || role == RL_ARP) {
+            t->p[P_DEC] = (int16_t)rr(28, 62);
+            t->p[P_SUS] = (int16_t)rr(25, 75);
         }
-        if (role == RL_ARP || (role == RL_PAD && chance(50))) t->p[P_ED_FLT] = (int16_t)rr(10, 32);
+        if (role == RL_PAD || role == RL_TEX || chance(35)) {
+            static const uint8_t LW[4] = {0, 1, 4, 0};  /* SIN TRI S&H */
+            t->p[P_LWAVE] = (int16_t)(role == RL_ARP && chance(50) ? 4 : LW[rng() % 4u]);
+            t->p[P_LRATE] = (int16_t)(t->p[P_LWAVE] == 4 ? rr(30, 70) : rr(4, 26));
+            t->p[P_LD_FLT] = (int16_t)rr(8, role == RL_TEX ? 34 : 24);
+        }
         if (role == RL_PAD) t->p[P_ATK] = (int16_t)clamp(t->p[P_ATK], 0, 40);
+        if ((role == RL_BASS || role == RL_LEAD) && chance(35)) {
+            t->p[P_DIST] = (int16_t)rr(10, 38);
+            t->p[P_DTYPE] = (int16_t)(chance(60) ? 0 : 2);   /* SOFT, or FOLD */
+        }
     }
 }
 
@@ -480,7 +503,8 @@ static void dice_all(void)
 }
 static void dice_one(void)
 {
-    const dstyle_t *st = &DSTYLE[rng() % NDSTYLE];
+    const dstyle_t *st = &DSTYLE[chance(35) ? 2u + rng() % 2u : rng() % NDSTYLE];   /* (0.6.33: IDM / DARK IDM more
+                                                         * often: about 4 throws in 10) */
     uint32_t k, dr = NTRK, role[NTRK], next = 0, nlive = trk_live < NTRK ? trk_live : NTRK, lens[NTRK];
     int16_t root = (int16_t)rr(0, 11), scale = (int16_t)st->scale[rng() % 4u];
     int pick_arp = st->pads == PS_SPARSE || chance(40);
@@ -512,7 +536,12 @@ static void dice_one(void)
         if (len < 16u) len = 16u;
         if (st->odd && (r == RL_ARP || r == RL_TEX || (r == RL_LEAD && chance(40))))
             len = (uint32_t)rr(5, 7) * 2u + (chance(50) ? 1u : 0u);   /* (an odd loop against the others: 10 .. 15) */
-        if (r == RL_DRUM) { if (chance(70)) sound_dice_of(t, 1); }
+        if (r == RL_DRUM) {
+            if (chance(70)) sound_dice_of(t, 1);
+            t->p[P_FTYPE] = 0;                          /* (0.6.33) the kit through a soft low-pass: the hats not glassy */
+            t->p[P_FCUT] = (int16_t)rr(100, 116);
+            t->p[P_FRES] = (int16_t)rr(0, 18);
+        }
         else dice_sound(t, r, r == RL_BASS ? st->e_bass : r == RL_PAD ? st->e_pad : r == RL_LEAD ? st->e_lead :
                               r == RL_ARP ? st->e_arp : st->e_tex);
         t->p[P_ROOT] = root; t->p[P_SCALE] = scale;
@@ -526,6 +555,11 @@ static void dice_one(void)
         t->p[P_REV] = (int16_t)(r == RL_PAD || r == RL_TEX ? rr(45, 85) : r == RL_LEAD ? rr(30, 60) : r == RL_DRUM ? rr(4, 16) : rr(0, 8));
         t->p[P_DLY] = (int16_t)(r == RL_LEAD || r == RL_ARP ? rr(25, 60) : r == RL_PAD && st->pads == PS_DUB ? rr(55, 90) :
                                 r == RL_DRUM ? rr(0, 8) : 0);   /* (0.6.32: the dub chords into the delay) */
+        if (r != RL_DRUM && r != RL_BASS && chance(25)) {   /* (0.6.33: contrast: now and then one soaked, one dry) */
+            if (chance(50)) { t->p[P_REV] = (int16_t)rr(85, 115); t->p[P_DLY] = (int16_t)rr(60, 95); }
+            else { t->p[P_REV] = (int16_t)rr(0, 10); t->p[P_DLY] = 0; }
+        }
+        if (r == RL_PAD && chance(40)) t->p[P_CHOR] = (int16_t)rr(20, 60);
         load_begin(t, LOAD_PAT);
         track_defaults_steps(t);
         switch (r) {
@@ -549,17 +583,28 @@ static void dice_one(void)
         song.g[G_BPM] = (int16_t)v;
     }
     song.g[G_SWING] = (int16_t)clamp((int32_t)st->swing + rr(-4, 4), 0, 100);
-    song.g[G_DTIME] = st->dtime[rng() & 1u];
+    {   /* (0.6.33) the delay: the style's time, or one of the other musical ones */
+        static const uint8_t DT[6] = {0, 1, 4, 5, 2, 0};   /* 1/4 1/8 8T 16T 1/16 */
+        song.g[G_DTIME] = chance(70) ? st->dtime[rng() & 1u] : DT[rng() % 6u];
+    }
     song.g[G_DFDBK] = (int16_t)(st->pads == PS_DUB ? rr(60, 85) : rr(30, 70));
     song.g[G_DMIX] = (int16_t)rr(70, 110);
     song.g[G_DCOLOR] = (int16_t)rr(28, 58);              /* (0.6.32: the repeats darker each time) */
-    song.g[G_DPIT] = st->drums == DS_IDM && chance(40) ? (chance(50) ? -12 : 7) : 0;
-    song.g[G_DSPRY] = song.g[G_DPIT] ? (int16_t)rr(0, 40) : 0;
-    song.g[G_RTYPE] = st->rtype[rng() & 1u];
-    song.g[G_RSIZE] = (int16_t)rr(55, 105);
+    {   /* (0.6.33) the GRAIN delay's pitch: down an octave, a fourth or up a fifth, often on IDM, now and then elsewhere */
+        static const int8_t DP[4] = {-12, -5, 7, -12};
+        song.g[G_DPIT] = chance(st->drums == DS_IDM ? 55u : 18u) ? DP[rng() % 4u] : 0;
+    }
+    song.g[G_DSPRY] = song.g[G_DPIT] ? (int16_t)rr(0, 50) : 0;
+    {   /* (0.6.33) the reverb: the style's, or any of the dark four (no SHIMMER) */
+        static const uint8_t RT[4] = {0, 1, 3, 4};
+        song.g[G_RTYPE] = chance(70) ? st->rtype[rng() & 1u] : RT[rng() % 4u];
+    }
+    song.g[G_RSIZE] = (int16_t)rr(45, 120);
+    song.g[G_RRATE] = (int16_t)rr(10, 60);
+    song.g[G_RWIDE] = (int16_t)rr(20, 100);
     song.g[G_RDAMP] = (int16_t)rr(55, 100);
     song.g[G_RFILT] = (int16_t)rr(-40, -8);               /* (0.6.32: dark rooms) */
-    song.g[G_RMOD] = (int16_t)rr(0, 50);
+    song.g[G_RMOD] = (int16_t)rr(0, 80);
     song.g[G_RPRE] = (int16_t)(song.g[G_RTYPE] == 3 ? rr(0, 4) : song.g[G_RTYPE] == 2 || song.g[G_RTYPE] == 4 ? rr(-12, 0) : rr(0, 30));
     song.g[G_CRATE] = (int16_t)rr(10, 60);
     song.g[G_CDEPTH] = (int16_t)rr(20, 80);
