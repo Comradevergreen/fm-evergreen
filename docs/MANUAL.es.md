@@ -578,8 +578,8 @@ Mantené **SAVE**:
 En **HOME**, girá **SELECT**. Aparece el diálogo **DICE EVERYTHING?** (con "UNDO AFTER: GLO + G4"). **OCT+ YES** /
 **OCT− NO**.
 
-Cada tirada elige un **estilo** — DARK MINIMAL, DUB TECHNO, IDM, DARK ELECTRO, ACID NIGHT, COLD WAVE, BROKEN,
-HYPNOTIC o DEEP BREAKS: música de noche, oscura y menor (pensá en Kraftwerk, Anthony Rother, The Chemical Brothers,
+Cada tirada elige un **estilo** — DARK MINIMAL, DUB TECHNO, IDM, DARK IDM, DARK ELECTRO, ACID NIGHT, COLD WAVE,
+BROKEN, HYPNOTIC o DEEP BREAKS (IDM y DARK IDM salen en unas 4 de cada 10 tiradas): música de noche, oscura y menor (pensá en Kraftwerk, Anthony Rother, The Chemical Brothers,
 Juana Molina, Radiohead, The Hacker, Marc Houle, Aphex Twin), solo en modos menores (MIN, DOR, PHRY, HARM, MEL, MPEN) —
 y después:
 
@@ -591,9 +591,14 @@ y después:
   (séptimas, novenas, cuartas, suspendidos) enlazados suavemente en un registro medio, arpegios graves, un lead (un
   motivo de pasos chicos, un ostinato hipnótico o unas pocas notas largas), baterías con fills, ghost notes y acentos,
   compases enteros de silencio; algunos estilos usan loops de largos impares;
-- **filtra** los sonidos según el rol (acordes y arpegios lo más oscuros, un LFO lento que hace respirar los acordes,
-  los arpegios punteados) y nunca elige los sonidos de fábrica brillantes (campanas, bronces, marimbas, órganos,
-  chiptune);
+- **filtra** los sonidos según el rol (acordes y arpegios lo más oscuros), con **envolvente de filtro en todos los
+  sonidos** (más fuerte en el bajo y los arpegios, que quedan punteados), un **TYPE** de filtro que cambia (LP casi
+  siempre; BP, y COMB afinado a la nota en arpegios y texturas), un LFO lento de forma propia (SIN, TRI, S&H) en los
+  acordes y las texturas, un poco de saturación en algunos bajos y leads, y la batería por un low-pass suave; nunca
+  elige los sonidos de fábrica brillantes (campanas, bronces, marimbas, órganos, chiptune);
+- le da a cada pista su propio espacio: envíos de delay y reverb por rol, y a veces una pista empapada y otra seca; el
+  tiempo del delay, el pitch del GRAIN delay (una octava o una cuarta abajo, una quinta arriba), el tipo de reverb
+  (ROOM, SPRING, RESO, CLOUD; nunca SHIMMER), su tamaño, modulación y ancho cambian en cada tirada;
 - fija el modo de voz, el gate, **el nivel, el paneo y los envíos** por rol, el swing, el delay, la reverb y el
   chorus;
 - elige un **tempo nuevo** dentro del rango del estilo (siempre a 3 BPM o más del anterior), salvo que MENU >
