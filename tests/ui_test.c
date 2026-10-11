@@ -2008,6 +2008,35 @@ static int test_chain(void)
     bad += check("SONG end: stops, the music as before PLAY back (patterns, timing), record arms back", ok &&
                  msg_is("SONG END"));
     bad += check("SONG source projects stay unchanged", project_used(0) && project_used(1) && stored_note(0, 0, 0) == 60);
+    {   /* (0.6.22) the song's END x2: twice through, then the end */
+        uint32_t b2, rows_seen = 0;
+        chain_config_t keep = chain_config;
+        chain_config.count = 2;
+        chain_config.row[0] = (chain_row_t){0, 1};
+        chain_config.row[1] = (chain_row_t){1, 1};
+        SONG_END(&chain_config) = 2;
+        ok = chain_prepare() == 0;
+        events_block(n);
+        for (b2 = 0; b2 < 6u && chain.running; b2++) {
+            song_poll();
+            events_block(chain_bar());
+            rows_seen++;
+        }
+        ok &= rows_seen == 4u && !chain.running && !song.playing && chain.pass == 1u;
+        song_poll();
+        bad += check("SONG END x2: the rows twice through, then it stops", ok);
+        SONG_END(&chain_config) = SONG_FOREVER;
+        ok = chain_prepare() == 0;
+        events_block(n);
+        for (b2 = 0; b2 < 9u; b2++) { song_poll(); events_block(chain_bar()); }
+        ok &= chain.running && song.playing;
+        bad += check("SONG END LOOP: still going after 9 bars", ok);
+        transport_req = 2; events_block(n); song_poll();
+        chain_config = keep;
+        ok = song_end_step(0, 1) == 2u && song_end_step(2, -1) == 0u && song_end_step(8, 1) == SONG_FOREVER &&
+             song_end_step(SONG_FOREVER, 1) == SONG_FOREVER && song_end_step(SONG_FOREVER, -1) == 8u;
+        bad += check("SONG END steps: STOP x2 .. x8 LOOP", ok);
+    }
     chain_config.row[0].bars = 1;
     chain_prepare(); events_block(n);
     song_poll();
@@ -2051,7 +2080,9 @@ static int test_chain(void)
     uint32_t old_count = chain_config.count;
     turn(EN_K4, 30);
     bad += check("SONG unused K4 cannot accidentally add or clear rows", chain_config.count == old_count);
-    for (k = chain_config.count; k < CHAIN_ROWS; k++) { turn(EN_K1, 1); turn(EN_K2, 1); }
+    ui.song_row = (uint8_t)chain_config.count;          /* (0.6.22: + ADD; past it the END row) */
+    for (k = chain_config.count; k < CHAIN_ROWS; k++) { turn(EN_K2, 1); turn(EN_K1, 1); }
+    bad += check("SONG: + ADD, then END the last row (full: END right after row 16)", ui.song_row == CHAIN_ROWS);
     bad += check("SONG append row stays bounded at 16", chain_config.count == CHAIN_ROWS && chain_valid(&chain_config));
     go_title("TOOLS"); turn(EN_K4, 1); press(B_OCTUP);
     bad += check("CLEAR SONG requires explicit confirmation", ui.confirm == CF_CLEAR_SONG && chain_config.count == CHAIN_ROWS);

@@ -903,7 +903,8 @@ static uint32_t graph_signature(void)
         h ^= ui.song_row * 40503u + chain_config.count * 7919u;
         for (i = 0; i < CHAIN_ROWS; i++)
             h = (h ^ (chain_config.row[i].slot + 4u * chain_config.row[i].bars)) * 16777619u;
-        h ^= chain.running ? (chain.row + 1u) * 104729u + chain.remaining * 1299709u : 0u;
+        h ^= chain.running ? (chain.row + 1u) * 104729u + chain.remaining * 1299709u + chain.pass * 15485863u : 0u;
+        h ^= SONG_END(&chain_config) * 2246822519u;      /* (0.6.22: the END) */
         for (i = 0; i < 4u; i++) h ^= (uint32_t)graph_project_used(i) << (24u + i);
         h += graph_pname_sig;
     }
@@ -1371,7 +1372,8 @@ static void track_col6(uint32_t c, uint32_t sel, uint32_t st, uint32_t mute, uin
     if (st == 1u || st == 2u)                        /* armed: a dot (recording: red) */
         cv_rrect(T6_W - 11, 10, 6, 6, 3, st == 1u ? T_REC : T_ACCENT, T_SURF);
     if (mute)
-        cv_text_in(2, 22, T6_W - 4, &AF_S, "MUTE", hot == 4u ? T_ACCENT : T_KEY, T_SURF);
+        cv_text_in(2, 22, T6_W - 4, &AF_S, mute == 2u ? "OFF" : "MUTE", mute == 2u ? T_DIM : hot == 4u ? T_ACCENT : T_KEY,
+                   T_SURF);
     else
         cv_free_text(4, 22, &AF_S, b, sel ? T_TEXT : T_MID, T_SURF, T6_W - 7);
     for (k = 0; k < 14; k++) {                       /* LEVEL: cold at the bottom, hot at the top */
@@ -1413,6 +1415,8 @@ static void draw_tracks(void)
         track_t *t = &trk[c];
         uint32_t sel = c == song.sel, lvl = trk_level(c), mute = t->p[P_MUTE] != 0;
         uint32_t arm = (song.rec >> c) & 1u, st = arm ? (song.playing ? 1u : 2u) : mute ? 3u : 0u, sig;
+        if (c >= trk_live)                           /* (0.6.22) TRACKS 4: asleep, grey as muted, "OFF" (mute 2) */
+            mute = 2u;
         uint32_t hot = sel && ui.hot_t ? ui.hot_col + 1u : 0u;   /* the knob just turned (hot_col + 1): 1 LEVEL, 2 PAN,
                                                                 * 3 REV, 4 MUTE (its badge) */
         int32_t pk = t->peak, m, pan = clamp(t->p[P_PAN], -64, 63), rv = clamp(t->p[P_REV], 0, 127);
@@ -1544,37 +1548,108 @@ static void graph_mseq(const track_t *t, uint16_t c)
     if (song.playing)
         cv_rect(13, y0 - t->ms_v * hmax / 32767, 205, 1, T_TEXT);
 }
+/* (0.6.22) ARRANGE / SEQ > SONG, after SLOOP's arranger in JIANT's colours: the song as a column of rows, each a section
+ * chip (A..D, each its own heat), its bars as blocks (one a bar, up to 16; past 16 each a 16th of it) filling as they
+ * play, the bars' count, a dot for its scene; under them + ADD (the rows used of CHAIN_ROWS) and the song's END (STOP,
+ * x2..x8, LOOP). On the right the whole song as a strip, each row's height its share of the bars, the play head on it,
+ * the bars in all. KNOB 1 the row, 2 its section (on END: STOP / x2 .. / LOOP), 3 its bars, 4 its scene */
+static uint16_t sec_col(uint32_t s)
+{
+    static const uint8_t HJ[4] = {60, 115, 175, 230}, HO[4] = {120, 160, 200, 240};
+    return heat_col(settings.palette == UI_JIANT_INDEX ? HJ[s & 3u] : HO[s & 3u]);
+}
+static void song_chip(int32_t x, int32_t y, uint32_t s, int saved, int sel, uint16_t bg)
+{
+    char b[2] = {(char)('A' + (s & 3u)), 0};
+    uint16_t c = sel ? T_INK : saved ? sec_col(s) : T_RAISE;   /* (on the selected row: ink, its letter the theme's) */
+    cv_rrect(x, y, 18, 14, 3, c, bg);
+    GFX_HOOK_ALIGN(x, y, x + 18, y + 14, AL_HV, "song chip letter centred");
+    cv_text_on(x + (18 - text_w(&AF_S, b)) / 2, y + CAP_IN(S, 14), &AF_S, b, sel ? T_THEME : saved ? T_BG : T_DIM, c);
+}
 static void graph_song(void)
 {
-    uint32_t first = ui.song_row > 2u ? ui.song_row - 2u : 0u, i;
-    if (!chain_config.count) {
+    uint32_t end = song_end_row(), first, i, total = 0, played = 0;
+    int32_t mh = (int32_t)graph_h() - 22, my = 4, acc = 0;
+    if (!chain_config.count && ui.song_row == 0u) {
         panel_note("A 4 BARS > B 2 BARS", "[K2] ADD SECTION", "SECTIONS: SAVE > PROJECT");
         return;
     }
-    for (i = first; i < CHAIN_ROWS && i < first + 7u; i++) {
+    first = ui.song_row > 3u ? ui.song_row - 3u : 0u;
+    if (first + 7u > end + 1u)
+        first = end + 1u > 7u ? end + 1u - 7u : 0u;
+    for (i = first; i <= end && i < first + 7u; i++) {
         char b[16];
-        int32_t y = LIST_Y(i - first);
-        int sel = i == ui.song_row;
-        uint16_t bg = sel ? T_THEME : T_SURF, col = sel ? T_INK : T_TEXT, dim = sel ? T_INK : T_DIM;
-        if (i > chain_config.count) break;
-        if (sel) cv_rrect(6, y, 228, 16, 4, T_THEME, T_SURF);
-        if (chain.running && i == chain.row) cv_icon_on(9, y + 2, 12, ICON_X_RIGHT, sel ? T_INK : T_ACCENT, bg);
-        fmt_int(b, (int32_t)i + 1); cv_text_on(24, y + 1, &AF_S, b, sel ? T_INK : T_MID, bg);
-        if (i == chain_config.count) { cv_text_on(54, y + 1, &AF_S, "+ ADD SECTION", dim, bg); break; }
-        b[0] = (char)('A' + chain_config.row[i].slot); b[1] = 0;
-        cv_text_on(54, y + 1, &AF_S, b, col, bg);
-        fmt_int(b, chain_config.row[i].bars); str_cpy(b + str_len(b), " BAR", 8);
-        cv_text_on(82, y + 1, &AF_S, b, col, bg);
-        if (i + 1u < chain_config.count) cv_text_on(122, y + 1, &AF_S, ">", dim, bg);
-        if (song_idx.scene[song_cur][i].on)            /* (JIANT) the row has a scene: a dot */
-            cv_rrect(131, y + 5, 6, 6, 3, sel ? T_INK : T_ACCENT, bg);
-        if (!graph_project_used(chain_config.row[i].slot)) cv_text_on(142, y + 1, &AF_S, "NOT SAVED", dim, bg);
-        else if (chain.running && i == chain.row) {
-            fmt_int(b, chain.remaining); str_cpy(b + str_len(b), " TO GO", 8);
-            cv_text_on(142, y + 1, &AF_S, b, sel ? T_INK : T_THEME, bg);
-        } else if (graph_project_name(chain_config.row[i].slot)[0]) {   /* the project's name, cut to fit */
-            cv_free_text(142, y + 1, &AF_S, graph_project_name(chain_config.row[i].slot), sel ? T_INK : T_MID, bg, 232 - 142);
+        int32_t y = LIST_Y(i - first), k, nb;
+        int sel = i == ui.song_row, play = chain.running && i == chain.row;
+        uint16_t bg = sel ? T_THEME : T_SURF, dim = sel ? T_INK : T_DIM;
+        if (sel) cv_rrect(5, y, 182, 16, 4, T_THEME, T_SURF);
+        if (i == end) {                                  /* the song's END */
+            uint32_t e = SONG_END(&chain_config);
+            cv_icon_on(9, y + 2, 12, ICON_LOOP, sel ? T_INK : T_MID, bg);
+            cv_text_on(28, y + 1, &AF_S, "END", sel ? T_INK : T_MID, bg);
+            if (e == SONG_FOREVER) str_cpy(b, "LOOP", sizeof b);
+            else if (e >= 2u) { b[0] = 'x'; fmt_int(b + 1, (int32_t)e); }
+            else str_cpy(b, "STOP", sizeof b);
+            cv_text_on(60, y + 1, &AF_S, b, sel ? T_INK : T_TEXT, bg);
+            if (e >= 2u && e != SONG_FOREVER && chain.running) {   /* (the time through) */
+                fmt_int(b, chain.pass + 1); str_cpy(b + str_len(b), "/", 2); fmt_int(b + str_len(b), (int32_t)e);
+                cv_text_on(110, y + 1, &AF_S, b, dim, bg);
+            }
+            break;
         }
+        if (i == chain_config.count) {                   /* + ADD: the rows used of all */
+            cv_text_on(28, y + 1, &AF_S, "+ ADD", sel ? T_INK : T_MID, bg);
+            fmt_int(b, (int32_t)chain_config.count); str_cpy(b + str_len(b), "/", 2);
+            fmt_int(b + str_len(b), (int32_t)CHAIN_ROWS);
+            cv_text_on(110, y + 1, &AF_S, b, dim, bg);
+            continue;
+        }
+        if (play) cv_icon_on(8, y + 2, 12, ICON_X_RIGHT, sel ? T_INK : T_ACCENT, bg);
+        else { fmt_int(b, (int32_t)i + 1); cv_text_on(9, y + 1, &AF_S, b, sel ? T_INK : T_MID, bg); }
+        {
+            const chain_row_t *r = &chain_config.row[i];
+            int saved = graph_project_used(r->slot);
+            uint32_t bars = r->bars, done = play ? bars - chain.remaining : 0u;
+            song_chip(28, y + 1, r->slot, saved, sel, bg);
+            if (!saved && bars <= 9u)                    /* (a section with nothing stored: it plays silence) */
+                cv_text_on(108, y + 1, &AF_S, "EMPTY", dim, bg);
+            nb = bars > 16u ? 16 : (int32_t)bars;
+            for (k = 0; k < nb; k++) {                   /* the bars as blocks, played ones full */
+                uint32_t upto = bars > 16u ? (uint32_t)(k + 1) * bars / 16u : (uint32_t)k + 1u;
+                uint16_t c = play && upto <= done ? (sel ? T_INK : T_TEXT) : saved ? sec_col(r->slot) : T_RAISE;
+                cv_rect(52 + k * 6, y + 4, 5, 8, sel && !(play && upto <= done) ? (saved ? T_INK : T_DIM) : c);
+            }
+            if (song_idx.scene[song_cur][i].on)          /* the row has a scene: a dot */
+                cv_rrect(150, y + 5, 6, 6, 3, sel ? T_INK : T_ACCENT, bg);
+            fmt_int(b, (int32_t)bars);
+            cv_text_r(182, y + 1, &AF_S, b, sel ? T_INK : saved ? T_TEXT : T_DIM, bg);
+        }
+    }
+    for (i = 0; i < chain_config.count; i++) {          /* the song strip: the bars in all, played so far */
+        total += chain_config.row[i].bars;
+        if (chain.running && i < chain.row) played += chain_config.row[i].bars;
+    }
+    if (chain.running && chain.row < chain_config.count)
+        played += chain_config.row[chain.row].bars - chain.remaining;
+    if (!total)
+        return;
+    for (i = 0; i < chain_config.count; i++) {
+        int32_t y0 = my + acc * mh / (int32_t)total, y1;
+        acc += chain_config.row[i].bars;
+        y1 = my + acc * mh / (int32_t)total;
+        if (y1 - y0 < 2) y1 = y0 + 2;
+        cv_rect(196, y0, 30, y1 - y0 - (y1 - y0 > 3 ? 1 : 0),
+                graph_project_used(chain_config.row[i].slot) ? sec_col(chain_config.row[i].slot) : T_RAISE);
+        if (i == ui.song_row)
+            cv_rect(192, y0, 2, y1 - y0 - (y1 - y0 > 3 ? 1 : 0), T_THEME);
+    }
+    if (chain.running)
+        cv_rect(194, my + (int32_t)(played * (uint32_t)mh / total), 34, 2, T_TEXT);   /* the play head */
+    {
+        char b[12];
+        fmt_int(b, (int32_t)total);
+        str_cpy(b + str_len(b), " BAR", 6);
+        cv_text_r(230, my + mh + 4, &AF_S, b, T_MID, T_SURF);
     }
 }
 #include "ui_tech.c"                                /* (JIANT 0.5) the technical graphs (FX, DEST, VOICE, GLOBAL) */

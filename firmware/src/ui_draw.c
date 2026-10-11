@@ -823,7 +823,19 @@ static void draw_columns(void)
     if (cur_page()->graph == GR_SONG) {
         uint32_t row = ui.song_row < CHAIN_ROWS ? ui.song_row : CHAIN_ROWS - 1u;
         int used = row < chain_config.count;
-        fmt_int(val, (int32_t)row + 1);
+        if (ui.song_row >= song_end_row()) {            /* (0.6.22) the song's END: STOP / x2 .. x8 / LOOP */
+            uint32_t e = SONG_END(&chain_config);
+            draw_column(0, "ROW", "END", "", VAL(0u), -1, ICON_X_SONG);
+            if (e == SONG_FOREVER) str_cpy(val, "LOOP", sizeof val);
+            else if (e >= 2u) { val[0] = 'x'; fmt_int(val + 1, (int32_t)e); }
+            else str_cpy(val, "STOP", sizeof val);
+            draw_column(1, "END", val, "", VAL(1u), -1, ICON_LOOP);
+            draw_column(2, "", "", "", T_THEME, -1, ICON_NONE);
+            draw_column(3, "", "", "", T_THEME, -1, ICON_NONE);
+            return;
+        }
+        if (row == chain_config.count) str_cpy(val, "ADD", sizeof val);
+        else fmt_int(val, (int32_t)row + 1);
         draw_column(0, "ROW", val, "", VAL(0u), -1, ICON_X_SONG);
         if (used) { val[0] = (char)('A' + chain_config.row[row].slot); val[1] = 0; }
         else str_cpy(val, "--", sizeof val);

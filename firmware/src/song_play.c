@@ -172,10 +172,13 @@ static void chain_tick(uint32_t n)
             return;
         }
         if (next >= chain.config.count) {
-            if (!chain.loop) {                        /* the song's end */
+            uint32_t e = SONG_END(&chain.config);
+            if (!chain.loop && !(e == SONG_FOREVER || (e >= 2u && chain.pass + 1u < e))) {   /* the song's end */
                 seq_stop();
                 return;
             }
+            if (sec_stage.ready && sec_stage.row == 0u && !chain.loop && chain.pass < 254u)
+                chain.pass++;                         /* (0.6.22: its END: once more round) */
             next = 0;                                 /* (a quick chain: round again) */
         }
         if (sec_stage.ready && sec_stage.row == next) {

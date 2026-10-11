@@ -78,6 +78,7 @@ static struct {
     volatile uint8_t applied;         /* ISR: a section went in (song_poll: the FM6 SLOTs, the screen) */
     volatile uint8_t armed_bar;       /* a quick chain asked for while playing: it starts on the next bar */
     uint8_t loop;                     /* the quick chain: round and round (a song stops at its end) */
+    volatile uint8_t pass;            /* (0.6.22) the song's times through so far (its END: chain_wraps) */
     uint8_t scn;                      /* the row whose scene is in effect + 1 (0: none since the song began) */
     uint8_t rec, kept;
     uint32_t carry;                   /* samples past the bar line at the end of the block: the first step's */
@@ -106,6 +107,16 @@ static void chain_defaults(chain_config_t *c)
     memset(c, 0, sizeof *c);
     for (i = 0; i < CHAIN_ROWS; i++)
         c->row[i].bars = 1;
+}
+/* (0.6.22) a song's END (rsv[0]): 0 it stops after once, 2..8 it plays that many times, SONG_FOREVER round and round.
+ * The rows' rsv bytes were zero (older songs: once, as before) */
+#define SONG_END(c) ((c)->rsv[0])
+#define SONG_FOREVER 255u
+static uint32_t song_end_step(uint32_t v, int32_t d)   /* ARRANGE's END: STOP x2 .. x8 LOOP */
+{
+    uint32_t i = v == SONG_FOREVER ? 8u : v >= 2u && v <= 8u ? v - 1u : 0u;   /* 0 STOP, 1..7 x2..x8, 8 LOOP */
+    i = (uint32_t)clamp((int32_t)i + d, 0, 8);
+    return i == 8u ? SONG_FOREVER : i ? i + 1u : 0u;
 }
 static int chain_valid(const chain_config_t *c)
 {

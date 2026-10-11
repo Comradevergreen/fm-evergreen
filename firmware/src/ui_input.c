@@ -726,12 +726,19 @@ static void edit_param(uint32_t slot, int32_t steps)
         return;
     }
     if (pg->graph == GR_SONG) {
+        uint32_t end = song_end_row();                  /* (0.6.22) the rows, + ADD, then the song's END */
         if (slot == 0u) {
-            ui.song_row = (uint8_t)clamp((int32_t)ui.song_row + steps, 0,
-                chain_config.count < CHAIN_ROWS ? chain_config.count : CHAIN_ROWS - 1u);
+            ui.song_row = (uint8_t)clamp((int32_t)ui.song_row + steps, 0, (int32_t)end);
             return;
         }
         if (chain_busy()) { ui_message("STOP TO EDIT"); return; }
+        if (ui.song_row >= end) {                       /* END: KNOB 2 STOP / x2 .. x8 / LOOP (the song's times) */
+            if (slot == 1u) {
+                SONG_END(&chain_config) = (uint8_t)song_end_step(SONG_END(&chain_config), steps > 0 ? 1 : -1);
+                song_idx_touch();
+            }
+            return;
+        }
         if (slot == 3u) {                     /* (JIANT) SCENE: right stores the state now (mutes, macros, punch-in), */
             scene_t *sc = &song_idx.scene[song_cur][ui.song_row % CHAIN_ROWS];   /* left takes it away */
             if (ui.song_row >= chain_config.count) { ui_message("NO ROW"); return; }

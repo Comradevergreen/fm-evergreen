@@ -101,7 +101,7 @@ def thermal(t, e):
 sig = Image.open(ROOT / 'docs/cheatsheet/signature.png').convert('RGB')
 
 brand = text_layer(['JIANT FM'], F_SMALL, WHITE)
-tag = text_layer(['M-VAVE FM-1 · v0.6.21'], F_SMALL, DIM)
+tag = text_layer(['M-VAVE FM-1 · v0.6.22'], F_SMALL, DIM)
 def pill(txt):                                     # the tag: dark letters on an orange plate
     L = text_layer([txt], F_SMALL, (14, 8, 20))
     p_ = Image.new('RGBA', (L.width + 28, L.height + 6))
