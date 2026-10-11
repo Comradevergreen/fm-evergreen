@@ -340,7 +340,8 @@ const CMD = { INFO: 1, GET: 2, SET: 3, DUMP: 4, DESC: 5, STEP_GET: 6, STEP_SET: 
   TRACK_PARAM: 31, TRACK_CHANGED: 32, SONG: 33,
   UI_STATE: 34, UI_SET: 35, UI_PALETTES: 36, FAV_GET: 37, FAV_SET: 38,
   MOTION: 64, BACKUP_LIST: 65, BACKUP_GET: 66, BACKUP_PUT: 67,
-  FM6_GET: 68, FM6_PUT: 69, FM6_LIST: 70, FM6_ERASE: 71 };
+  FM6_GET: 68, FM6_PUT: 69, FM6_LIST: 70, FM6_ERASE: 71,
+  FM6B_BEGIN: 74, FM6B_WRITE: 75, FM6B_END: 76, FM6B_LIST: 77 };   /* (JIANT 0.6.11, Felucca 1.4.1) FM6's voice bank */
 /* frames the device sends on its own (while WATCH is on); never replies */
 const PUSH = new Set([CMD.CHANGED, CMD.RELOAD, CMD.STEP_CHANGED, CMD.TRACK_CHANGED]);
 /* user preset bank: name 1..12 printable ASCII, a 16-step pattern of (note, flags 1 acc 2 slide 4 tie) */
@@ -425,6 +426,7 @@ const parse = {
     o.fm6 = null;                                 /* FM6 patches (cmds 68..71): the factory and bank slot counts */
     o.syncCaps = 0;                               /* live sync: bit 0 WATCH while on keeps pending pushes, bit 1 no RELOAD */
     o.ratchet = 0;                                /* a step's ratchet (STEP_SET's byte after the chance), 0 = none */
+    o.fm6Bank = 0;                                /* (JIANT 0.6.11) FM6's voice bank: its voices (cmds 74..77), 0 = none */
     for (const p of [8, 11]) if (o.motionMax && trailer[p] === 0x46 && trailer[p + 1] === 1) {   /* for the editor's */
       o.fm6 = { factory: trailer[p + 2], bank: trailer[p + 3], caps: 0 };                         /* PRESET / G_ENGSEL */
       if (trailer[p + 4] === 0x53 && trailer[p + 5] === 1) o.syncCaps = trailer[p + 6] & 3;
@@ -432,7 +434,9 @@ const parse = {
       if (trailer[p + 7] === 0x50 && trailer[p + 8] === 1) o.fm6.caps = trailer[p + 9] & 3;
       let r = trailer[p + 7] === 0x50 ? p + 10 : p + 7;                                   /* RATCH after FM6 v2 */
       if (trailer[r] === 0x4E && trailer[r + 1] === 1) r += 3;                            /* and the MENU settings (1.0.4) */
-      if (o.syncCaps && trailer[r] === 0x52 && trailer[r + 1] === 1) o.ratchet = trailer[r + 2];   /* RATCH: max hits */
+      if (o.syncCaps && trailer[r] === 0x52 && trailer[r + 1] === 1) { o.ratchet = trailer[r + 2]; r += 3; }   /* RATCH: max hits */
+      if (trailer[r] === 0x4C && trailer[r + 1] === 1) r += 3;                            /* parameter locks (1.1) */
+      if (trailer[r] === 0x56 && trailer[r + 1] === 1) o.fm6Bank = trailer[r + 2];          /* (0.6.11) the voice bank's size */
     }
     return o;
   },
@@ -556,6 +560,15 @@ const parse = {
     return o;
   },
   [CMD.FM6_ERASE](a) { return { index: a[0], rc: a[1] }; },
+  /* (JIANT 0.6.11, Felucca 1.4.1) FM6's voice bank, EDITOR_PROTOCOL.md "FM6 voice bank (74-77)" */
+  [CMD.FM6B_BEGIN](a) { return { rc: a[0] }; },
+  [CMD.FM6B_WRITE](a) { return { index: a[0], rc: a[1] }; },
+  [CMD.FM6B_END](a) { return { rc: a[0], voices: a[1] }; },
+  [CMD.FM6B_LIST](a) {
+    const r = new Reader(a), o = { n: r.b(), valid: !!r.b(), name: r.s(), voices: [] };
+    for (let i = 0; i < o.n; i++) { const used = !!r.b(); o.voices.push({ used, name: r.s() }); }
+    return o;
+  },
 };
 
 /* a name the device accepts: printable ASCII, 1..12 characters */
@@ -619,6 +632,13 @@ const req = {
   fm6Put: (target, i, packed) => [CMD.FM6_PUT, [target & 0x7F, i & 0x7F, ...packed.map((x) => x & 0x7F)]],
   fm6List: () => [CMD.FM6_LIST, []],
   fm6Erase: (i) => [CMD.FM6_ERASE, [i & 0x7F]],
+  /* (0.6.11) the voice bank: BEGIN, a WRITE per voice (index, the 128-byte record), END (name, the CRC of the records
+     written, in index order: 5 x 7 bits), LIST */
+  fm6bBegin: () => [CMD.FM6B_BEGIN, []],
+  fm6bWrite: (i, packed) => [CMD.FM6B_WRITE, [i & 0x7F, ...packed.map((x) => x & 0x7F)]],
+  fm6bEnd: (name, crc) => [CMD.FM6B_END, [...String(name ?? "").padEnd(10, " ").slice(0, 10)].map((c) => c.charCodeAt(0) & 0x7F)
+    .concat([0, 7, 14, 21, 28].map((sh) => (crc >>> sh) & 0x7F))],
+  fm6bList: () => [CMD.FM6B_LIST, []],
 };
 
 /* which reply belongs to which request (the device echoes these) */
@@ -635,6 +655,7 @@ function replyMatches(cmd, args, a) {
     case CMD.SONG: return a[0] === args[0];
     case CMD.FM6_GET: case CMD.FM6_PUT: return a[0] === args[0] && a[1] === args[1];
     case CMD.FM6_ERASE: return a[0] === args[0];
+    case CMD.FM6B_WRITE: return a[0] === args[0];
     case CMD.PROJECT: return a[0] === args[0] && a[1] === args[1];
     case CMD.UP_LIST: case CMD.UP_GET: case CMD.UP_PUT: case CMD.UP_STORE: case CMD.UP_LOAD: case CMD.UP_ERASE:
     case CMD.TRACK_MIX: case CMD.TRACK_DUMP: return a[0] === args[0];
@@ -945,6 +966,36 @@ function readLibraryFile(obj, ctx) {
 /* device side; rq(r, opt) -> reply args (Link.request), info from INFO */
 const FLASH_OPT = { timeout: 2500, retries: 0 };
 const presetPatches = (info) => !!(info && info.fm6 && info.fm6.caps & 2);   /* user presets carry FM6 patches (1.0.3) */
+/* zlib's CRC-32 (the voice bank's END: of the records written, in index order) */
+function crc32(bytes, c = 0xFFFFFFFF) {
+  for (const x of bytes) { c ^= x; for (let k = 0; k < 8; k++) c = (c >>> 1) ^ (0xEDB88320 & -(c & 1)); }
+  return (c ^ 0xFFFFFFFF) >>> 0;
+}
+/* (JIANT 0.6.11, Felucca 1.4.1) FM6's voice bank on the device: 32 voices in flash, SLOT B1..B32 picks them. A 32-voice
+   .syx is sent whole (fm6_vbank.c: the old bank stays until END answers 0, a power cut leaves one or the other) */
+const fm6Bank = {
+  N: 32,
+  /* the voices of an import ({name, v} or 155-byte voices; null: an empty slot) -> 128-byte records */
+  fromVoices: (voices) => Array.from({ length: Math.min(32, voices.length) }, (_, k) => {
+    const x = voices[k]; return x ? FM6.pack(x.v || x) : null;
+  }),
+  /* the bank's name from a file name: its base, capitals, printable ASCII, 10 at most */
+  nameOf: (file) => String(file ?? "").replace(/\.[^.]*$/, "").toUpperCase().replace(/[^\x20-\x7E]/g, " ").trim().slice(0, 10).trim(),
+  async list(rq) { return parse[CMD.FM6B_LIST](await rq(req.fm6bList())); },
+  /* packed: up to 32 records (null: not written, empty in the new bank) -> END's rc (0: the new bank is on the device) */
+  async send(rq, packed, name) {
+    let rc = parse[CMD.FM6B_BEGIN](await rq(req.fm6bBegin(), { timeout: 3000, retries: 0 })).rc;   /* (no retries: a WRITE twice is rc 1) */
+    if (rc) return rc;
+    const done = [];
+    for (let k = 0; k < Math.min(32, packed.length); k++) {
+      if (!packed[k]) continue;
+      rc = parse[CMD.FM6B_WRITE](await rq(req.fm6bWrite(k, packed[k]), { timeout: 2000, retries: 0 })).rc;
+      if (rc) return rc;
+      done.push(...packed[k].map((x) => x & 0x7F));
+    }
+    return parse[CMD.FM6B_END](await rq(req.fm6bEnd(name, crc32(done)), { timeout: 5000, retries: 0 })).rc;
+  },
+};
 const bank = {
   async list(rq) {
     const first = parse[CMD.UP_LIST](await rq(req.upList(0, UP.LIST_MAX)));
@@ -1524,7 +1575,7 @@ function makeMockDevice(opt = {}) {
         P("ARCADE", [2, 0, 127, 0, 127, 112, 0, 84], [0, 80, 0, 50], 0, 3), P("METAL", [3, 0, 100, 40, 100, 32, 0, 0], [0, 75, 40, 60], 0, 7)] },
     { name: "FM6", titles: ["OPS", "PATCH"], edit: [D("ALG", F.INT, 0, 32, 0), D("FB", F.INT, -7, 7, 0), D("MLVL", F.BIPCT, -64, 63, 0),
         D("MRAT", F.INT, -16, 16, 0), D("MEG", F.BIPCT, -64, 63, 0), D("VMOD", F.INT, -7, 7, 0), D("DTUN", F.PCT, 0, 127, 0),
-        D("SLOT", F.INT, 0, FM6.FACTORY_PK.length, 0)],   /* F1..F8, then OWN (eng_fm6.c, 1.0.3) */
+        D("SLOT", F.INT, 0, FM6.FACTORY_PK.length + 32, 0)],   /* F1..F8, then OWN (eng_fm6.c, 1.0.3) */
       presets: [P("TINE EP", [0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 127, 0], 0, 6), P("BELL", [0, 0, 0, 0, 0, 0, 0, 1], [0, 0, 127, 0], 0, 7),
         P("FM BASS", [0, 0, 0, 0, 0, 0, 0, 2], [0, 0, 127, 0], 1, 2), P("BRASS", [0, 0, 0, 0, 0, 0, 0, 3], [0, 0, 127, 0], 0, 4),
         P("PAD", [0, 0, 0, 0, 0, 0, 30, 4], [0, 0, 127, 0], 0, 5), P("MARIMBA", [0, 0, 0, 0, 0, 0, 0, 5], [0, 0, 127, 0], 0, 3),
@@ -1577,6 +1628,7 @@ function makeMockDevice(opt = {}) {
     bank: new Array(opt.slots || 32).fill(null),     /* user presets: {engine, name, p, pattern, grid, fm6 (FM6: its patch)} */
     uiCaps: opt.legacy || opt.v3 || opt.v5 ? 0 : opt.uiCaps ?? 9,
     palette: 0, font: 0, monitor: 0, filter: 0, bankSig: 0,
+    vbank: { valid: false, name: "", voices: new Array(32).fill(null) }, vtx: null,   /* (0.6.11) FM6's voice bank */
     palettes: ["GREY", "GREEN", "AMBER", "ICE", "VIOLET", "ROSE", "PAPER", "HI-CON", "NIGHT", "MONO"],
     favorites: Array.from({ length: ENG.length + 1 }, () => []),
     watch: false, v4: false, lastReq: 0,
@@ -1625,9 +1677,11 @@ function makeMockDevice(opt = {}) {
      patch back */
   function fm6Slot(t, s) {
     if (s === t.slot) return;
-    if (s >= FM6_OWN) { if (t.own) t.fm6 = t.own; t.own = null; t.slot = FM6_OWN; return; }
+    const bk = s > FM6_OWN && s <= FM6_OWN + 32 ? s - FM6_OWN - 1 : -1;   /* (0.6.11) B1..B32: the voice bank's */
+    if (bk >= 0 && !st.vbank.voices[bk]) { t.p[P_E0 + 7] = t.slot ?? FM6_OWN; return; }   /* (none there: refused) */
+    if (s >= FM6_OWN && bk < 0) { if (t.own) t.fm6 = t.own; t.own = null; t.slot = FM6_OWN; return; }
     if (t.slot === FM6_OWN && !t.own) t.own = t.fm6.slice();
-    t.fm6 = FM6.FACTORY_PK[s].slice(); t.slot = s;
+    t.fm6 = (bk >= 0 ? st.vbank.voices[bk] : FM6.FACTORY_PK[s]).slice(); t.slot = s;
   }
   /* t's patch was put in as its own (eng_fm6.c fm6_adopt): SLOT = the factory patch it equals, else OWN */
   function fm6Adopt(t) {
@@ -1831,7 +1885,8 @@ function makeMockDevice(opt = {}) {
         if (!opt.legacy && !opt.v3 && !opt.v5) {
           b(16);
           if (st.uiCaps) { b(0x55); b(1); b(st.uiCaps); b(0x4d); b(1); b(64); b(1); if (!opt.noFm6) { b(0x46); b(1); b(FM6.FACTORY_PK.length); b(0); }
-            if (syncCaps()) { b(0x53); b(1); b(syncCaps()); if (!opt.noFm6) { b(0x50); b(1); b(3); } if (ratchetOn()) { b(0x52); b(1); b(4); } } }   /* (FM6 v2: no bank, preset patches) */
+            if (syncCaps()) { b(0x53); b(1); b(syncCaps()); if (!opt.noFm6) { b(0x50); b(1); b(3); } if (ratchetOn()) { b(0x52); b(1); b(4); }
+              if (!opt.noFm6 && !opt.noVbank && ratchetOn()) { b(0x56); b(1); b(32); } } }   /* (FM6 v2: no bank, preset patches; 0.6.11: the voice bank) */
         }
         break;
       case CMD.GET: case CMD.SET: {
@@ -1898,6 +1953,37 @@ function makeMockDevice(opt = {}) {
         const x = st.step[a[0]];
         if (cmd === CMD.STEP_SET && a.length >= 9) stepIn(x, a.slice(1));
         b(a[0]); stepOut(x, b);
+        break;
+      }
+      case CMD.FM6B_BEGIN: case CMD.FM6B_WRITE: case CMD.FM6B_END: case CMD.FM6B_LIST: {   /* (0.6.11) fm6_vbank.c */
+        if (opt.noFm6 || !st.uiCaps) return null;
+        const vb = st.vbank;
+        if (cmd === CMD.FM6B_BEGIN) {
+          if (a.length) { b(1); break; }
+          st.vtx = { voices: new Array(32).fill(null) }; b(0);
+        } else if (cmd === CMD.FM6B_WRITE) {
+          b(a.length ? a[0] : 127);
+          if (!st.vtx) b(5);
+          else if (a.length !== 1 + 128 || a[0] > 31 || st.vtx.voices[a[0]]) b(1);
+          else { st.vtx.voices[a[0]] = Array.from(a.slice(1)); b(0); }
+        } else if (cmd === CMD.FM6B_END) {
+          let rc = a.length !== 15 || a[14] > 15 ? 1 : !st.vtx ? 5 : 0;
+          if (!rc) {
+            const crc = (a[10] | a[11] << 7 | a[12] << 14 | a[13] << 21 | a[14] << 28) >>> 0;
+            const tx = st.vtx; st.vtx = null;
+            if (crc32(tx.voices.filter(Boolean).flat()) !== crc) rc = 2;
+            else {
+              st.vbank = { valid: true, name: String.fromCharCode(...a.slice(0, 10)).replace(/[\s\0]+$/, ""), voices: tx.voices };
+              for (const t of st.tracks)                 /* a track on a bank slot keeps its voice, as its own */
+                if (t.slot > FM6_OWN) { t.own = null; t.p[P_E0 + 7] = t.slot = FM6_OWN; }
+            }
+          }
+          b(rc); b(st.vbank.voices.filter(Boolean).length);
+        } else {
+          if (a.length) return null;
+          b(32); b(vb.valid ? 1 : 0); s(vb.name);
+          vb.voices.forEach((pk) => { b(pk ? 1 : 0); s(pk ? FM6.name(FM6.unpack(pk)) : ""); });
+        }
         break;
       }
       case CMD.FM6_GET: case CMD.FM6_PUT: case CMD.FM6_LIST: case CMD.FM6_ERASE: {   /* editor_fm6.c */
@@ -2221,6 +2307,7 @@ const TEXT = {
     fm6Init: "初期音色", fm6Voice: "ボイス", fm6Ops: "オペレーター", fm6Carriers: "キャリア", fm6Feedback: "フィードバック",
     fm6PitchEg: "ピッチ EG", fm6Freq: "周波数",
     fm6Legend: "R1〜R4 / L1〜L4: EG のレートとレベル、BP LD RD LC RC: キーボードレベルスケーリング、RS: レートスケーリング、AMS: LFO 音量変調、KVS: ベロシティ、OL: 出力レベル、MODE: 比率 / 固定、FC FF: 周波数（粗・細）、DET: デチューン（7 が中央）。● はキャリア。",
+    fm6BankSend: "本体のボイスバンクへ送る (B1–B32)", fm6BankSent: "ボイスバンクを送りました:", fm6BankFail: "ボイスバンクを送れませんでした (rc ", fm6BankNow: "本体のボイスバンク:", fm6BankNone: "なし",
     fm6Pick: "読み込んだファイルの音色（押すと編集へ）:", fm6Picked: "編集中:", fm6Sent: "トラックへ送りました:", fm6Read: "トラックから読みました",
     fm6Loaded: "読み込みました", fm6BadSum: "チェックサム不一致あり",
     fm6Keep: "残すには、トラックへ送ってから本体でユーザープリセット（SAVE）かプロジェクトに保存してください。",
@@ -2317,6 +2404,7 @@ const TEXT = {
     fm6Init: "Init voice", fm6Voice: "Voice", fm6Ops: "Operators", fm6Carriers: "carriers", fm6Feedback: "feedback",
     fm6PitchEg: "Pitch EG", fm6Freq: "Frequency",
     fm6Legend: "R1..R4 / L1..L4: EG rates and levels; BP LD RD LC RC: keyboard level scaling; RS: rate scaling; AMS: LFO amplitude modulation; KVS: velocity; OL: output level; MODE: ratio / fixed; FC FF: coarse / fine frequency; DET: detune (7 = centre). ● = carrier.",
+    fm6BankSend: "Send to the device's voice bank (B1–B32)", fm6BankSent: "Voice bank sent:", fm6BankFail: "The voice bank was not sent (rc ", fm6BankNow: "The device's voice bank:", fm6BankNone: "none",
     fm6Pick: "Voices of the imported file (click to edit):", fm6Picked: "Editing:", fm6Sent: "Sent to track", fm6Read: "Read from track",
     fm6Loaded: "Loaded", fm6BadSum: "a checksum did not match",
     fm6Keep: "To keep a voice, send it to a track, then save a user preset (SAVE) or a project on the device.",
@@ -4221,11 +4309,30 @@ function renderFm6Ops() {
 }
 function renderFm6Imported() {
   const box = $("fm6imported");
-  if (!fm6Imported.length || !fm6Ok()) { box.replaceChildren(); return; }
+  if (!fm6Ok()) { box.replaceChildren(); return; }
+  /* (JIANT 0.6.11) the device's voice bank (SLOT B1..B32): its name, and the imported file sent to it whole */
+  const bankRow = dev.info.fm6Bank ? [el("p", { class: "dim",
+    text: `${t("fm6BankNow")} ${fm6BankList ? (fm6BankList.valid ? `${fm6BankList.name || "-"} (${fm6BankList.voices.filter((v) => v.used).length})` : t("fm6BankNone")) : "…"}` })] : [];
+  if (dev.info.fm6Bank && fm6Imported.length > 1)
+    bankRow.push(el("p", { class: "bar" }, el("button", { text: t("fm6BankSend"), onclick: () => op(fm6BankSend) })));
+  if (!fm6Imported.length) { box.replaceChildren(...bankRow); return; }
   box.replaceChildren(el("p", { class: "dim", text: t("fm6Pick") }),
     el("p", { class: "bar" }, ...fm6Imported.map((x, k) => el("button", { text: `${k + 1} ${x.name}`,
       "aria-pressed": k === fm6Picked ? "true" : "false",
-      onclick: () => { fm6v = Uint8Array.from(x.v); fm6Picked = k; renderFm6(); sayK("fm6Picked", ` ${x.name}`); } }))));
+      onclick: () => { fm6v = Uint8Array.from(x.v); fm6Picked = k; renderFm6(); sayK("fm6Picked", ` ${x.name}`); } }))), ...bankRow);
+}
+let fm6BankList = null, fm6ImportName = "";    /* (0.6.11) the device's voice bank (FM6B_LIST), the file imported last */
+async function fm6BankRefresh(d = dev) {
+  if (!d || !d.info.fm6Bank) return;
+  fm6BankList = await fm6Bank.list((r, o) => sessionRequest(d, r, o));
+  renderFm6Imported();
+}
+async function fm6BankSend() {
+  const name = fm6Bank.nameOf(fm6ImportName) || "BANK";
+  const rc = await fm6Bank.send((r, o) => sessionRequest(dev, r, o), fm6Bank.fromVoices(fm6Imported), name);
+  if (rc) { sayK("fm6BankFail", `${rc})`); return; }
+  await fm6BankRefresh();
+  sayK("fm6BankSent", ` ${name} (${Math.min(32, fm6Imported.length)})`);
 }
 function renderFm6() {
   if (!fm6Ok()) return;
@@ -4246,6 +4353,7 @@ async function fm6Refresh(d = dev) {
   fm6Listing = true;
   try { fm6List = parse[CMD.FM6_LIST](await sessionRequest(d, req.fm6List())); } finally { fm6Listing = false; }
   renderFm6();
+  await fm6BankRefresh(d);
 }
 async function fm6Send(quiet) {
   const r = parse[CMD.FM6_PUT](await sessionRequest(dev, req.fm6Put(FM6.TARGET.TRACK, fm6Track(), FM6.pack(fm6v))));
@@ -4278,6 +4386,7 @@ $("fm6file").addEventListener("change", async (e) => {
   const r = FM6.parseSysex(new Uint8Array(await f.arrayBuffer()));
   if (!r.voices.length) { const [k, x] = fm6Why(r); sayK(k, `${x}: ${f.name}`); return; }
   fm6Imported = r.voices;
+  fm6ImportName = f.name;
   fm6Picked = r.voices.length === 1 ? 0 : -1;
   if (r.voices.length === 1) fm6v = Uint8Array.from(r.voices[0].v);
   renderFm6();
