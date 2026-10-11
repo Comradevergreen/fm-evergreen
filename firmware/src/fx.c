@@ -1018,6 +1018,14 @@ static void mix_part(track_t *t, uint32_t n)
 {
     int32_t *b = part_buf;
     uint32_t i;
+    if ((uint32_t)(t - trk) >= trk_live) {              /* (0.6.18) TRACKS 4: asleep, its voices out (as a sound load's
+                                                         * fade, a block), nothing rendered */
+        uint32_t k;
+        for (k = 0; k < NVOICE; k++)
+            t->v[k].active = t->v[k].gate = 0, t->v[k].stage = 0, t->v[k].env = t->v[k].env_out = 0;
+        mp_seen &= (uint8_t)~(1u << ((uint32_t)(t - trk) % NTRK));
+        return;
+    }
     mod_begin(t);                                       /* the matrix's per-block values into t->p (mod.c) */
     if (track_render(t, b, n))
         t->tail = 16;                                   /* blocks of DIST state to run out after the last voice */

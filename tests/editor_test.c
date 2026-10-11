@@ -157,7 +157,7 @@ static int preferences(void)
         host_wire[n - 20] == 0 &&                        /* (no bank since 1.0.3) */
         host_wire[n - 19] == 0x53 && host_wire[n - 18] == 1 && host_wire[n - 17] == 3 &&
         host_wire[n - 16] == 0x50 && host_wire[n - 15] == 1 && host_wire[n - 14] == 3 &&   /* FM6 v2: no bank, preset patches */
-        host_wire[n - 13] == 0x4E && host_wire[n - 12] == 1 && host_wire[n - 11] == 18 &&   /* MENU settings: 18 items (1.2) */
+        host_wire[n - 13] == 0x4E && host_wire[n - 12] == 1 && host_wire[n - 11] == 19 &&   /* MENU settings: 19 items (0.6.18) */
         host_wire[n - 10] == 0x52 && host_wire[n - 9] == 1 && host_wire[n - 8] == 4 &&   /* RATCH */
         host_wire[n - 7] == 0x4C && host_wire[n - 6] == 1 && host_wire[n - 5] == 1 &&   /* 1.1 parameter locks */
         host_wire[n - 4] == 0x56 && host_wire[n - 3] == 1 && host_wire[n - 2] == 32);   /* (0.6.11) FM6 voice bank */
@@ -724,15 +724,15 @@ static uint32_t menu_set(uint32_t id, int32_t v)            /* -> rc; host_wire[
 }
 static int menu_protocol(void)
 {
-    static const char *const WANT[18][2] = {
+    static const char *const WANT[19][2] = {
         {"COLOR", 0}, {"STYLE", "FLAT,LINE"}, {"LARGE", "OFF,ON"}, {"ANIM", "ON,OFF"}, {"LEDS", "OFF,DIM LO,DIM HI,INV"},
         {"HOLD", "0.3 s,0.4 s,0.5 s,0.6 s"}, {"KNOB ACCEL", "ON,OFF"}, {"FX LATCH", "OFF,ON"}, {"BPM LOCK", "OFF,ON"},
         {"SPEAKER EQ", "FLAT,LOWCUT,BASS+"}, {"USB LEVEL", "MASTER,FIXED"}, {"USB SERIAL", "ON,OFF"},
         {"CLICK", "OFF,REC,ON"}, {"CLICK LEVEL", "LOW,MID,HIGH"}, {"COUNT-IN", "OFF,1 BAR,2 BARS"},   /* (1.1: appended) */
         {"RESTORE LAST", "ON,OFF"}, {"SCALE LEDS", "OFF,ON"},                                        /* (1.2) */
-        {"SCREEN OFF", "NEVER,5 MIN,15 MIN,30 MIN,60 MIN"}};
-    static const int32_t DEF[18] = {-1, 0, 0, 0, 2, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0};   /* (COLOR: the default palette) */
-    static const uint8_t TAB[18] = {0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 3, 2, 2, 2, 3, 1, 0};      /* DISPLAY CONTROL AUDIO SYSTEM */
+        {"SCREEN OFF", "NEVER,5 MIN,15 MIN,30 MIN,60 MIN"}, {"TRACKS", "4 LOW,6 HIGH"}};   /* (0.6.18) */
+    static const int32_t DEF[19] = {-1, 0, 0, 0, 2, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0};   /* (COLOR: the default palette) */
+    static const uint8_t TAB[19] = {0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 3, 2, 2, 2, 3, 1, 0, 2};      /* DISPLAY CONTROL AUDIO SYSTEM */
     static const char *const TABN[4] = {"DISPLAY", "CONTROL", "AUDIO", "SYSTEM"};
     int bad = 0, ok = 1;
     uint32_t i, k, n;
@@ -742,7 +742,7 @@ static int menu_protocol(void)
     FILE *jf = json ? fopen(json, "w") : 0;
     reset();
     if (jf) fprintf(jf, "[");
-    for (i = 0; i < 18u; i++) {
+    for (i = 0; i < 19u; i++) {
         n = menu_desc(i, &it);
         joined[0] = 0;
         for (k = 0; k < it.nnames; k++) { if (k) strcat(joined, ","); strcat(joined, it.names[k]); }
@@ -772,12 +772,12 @@ static int menu_protocol(void)
         bad += check("MENU_DESC: the tab comes after every byte of the 1.0.4 reply (older editors ignore it)", ok);
     }
     ok = 1;
-    for (i = 0; i < 18u; i++) {
+    for (i = 0; i < 19u; i++) {
         menu_desc(i, &it);
         ok &= strcmp(it.name, "CALIBRATION") && strcmp(it.name, "ABOUT");
     }
-    n = menu_desc(18, &it);
-    ok &= n == 2u && it.index == 18 && it.id == 127;
+    n = menu_desc(19, &it);
+    ok &= n == 2u && it.index == 19 && it.id == 127;
     n = menu_desc(127, &it);
     bad += check("MENU_DESC: no CALIBRATION / ABOUT; an index past the list answers index, 127 (no item)",
                  ok && n == 2u && it.index == 127 && it.id == 127);
@@ -810,8 +810,9 @@ static int menu_protocol(void)
     ok &= menu_set(16, 1) == 3 && (ui_rec_prefs & 0x40u) && click_mode == CLICK_ON && cin_bars == 2u;   /* (its own bit) */
     ok &= menu_set(17, 0) == 3 && scr_get() == 0u && menu_set(17, 9) == 3 && scr_get() == 4u &&   /* (clamped) */
           menu_set(17, 2) == 3 && scr_get() == 2u && ui_scr == 1u;
-    for (i = 0; i < 18u; i++) {                         /* MENU_DESC reads them back */
-        static const int32_t SET[18] = {2, 1, 1, 1, 1, 3, 1, 1, 1, 2, 1, 0, 2, 0, 2, 1, 1, 2};
+    ok &= menu_set(18, 1) == 3 && (ui_rec_prefs & 0x80u);   /* TRACKS 6 HIGH (0.6.18; rp_apply: the next frame) */
+    for (i = 0; i < 19u; i++) {                         /* MENU_DESC reads them back */
+        static const int32_t SET[19] = {2, 1, 1, 1, 1, 3, 1, 1, 1, 2, 1, 0, 2, 0, 2, 1, 1, 2, 1};
         menu_desc(i, &it);
         ok &= it.value == SET[i];
     }
@@ -835,7 +836,7 @@ static int menu_protocol(void)
         static uint8_t fav0[sizeof favorites], set0[sizeof settings];
         uint8_t hold0 = settings_hold, leds0 = settings_leds;
         memcpy(fav0, &favorites, sizeof favorites); memcpy(set0, &settings, sizeof settings);
-        ok = menu_set(18, 1) == 1 && host_wire[6] == 18 && ed_rv(host_wire + 7) == 1;
+        ok = menu_set(19, 1) == 1 && host_wire[6] == 19 && ed_rv(host_wire + 7) == 1;
         ok &= menu_set(126, -3) == 1 && host_wire[6] == 126 && ed_rv(host_wire + 7) == -3;
         ok &= menu_set(127, 0) == 1 && host_wire[6] == 127;
         ok &= !memcmp(fav0, &favorites, sizeof favorites) && !memcmp(set0, &settings, sizeof settings) &&
