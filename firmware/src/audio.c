@@ -60,14 +60,17 @@ static uint32_t shed_count;
 static uint8_t tight_calm;                             /* halves in a row under 60 % */
 static __attribute__((noinline)) uint32_t shed_check(uint32_t all)
 {
-    if (all > TIGHT_ON) {                              /* (voice.c load_tight: no voice added while set) */
+    uint32_t r = all - t5_nested_ticks;                /* (0.6.19) the budget on the render alone: a key scan or
+                                                         * USB burst nested in it is not the sound's */
+    if (r > TIGHT_ON) {                                /* (voice.c load_tight: no voice added while set) */
         load_tight = 1;
         tight_calm = 0;
-    } else if (load_tight && all < TIGHT_OFF && ++tight_calm >= 16u) {
+    } else if (load_tight && r < TIGHT_OFF && ++tight_calm >= 16u) {
         load_tight = 0;
     }
     shed_over = (uint8_t)(shed_over << 1 | (all > SHED_TICKS));
-    if (shed_over & 1u)                                /* (0.6.17: one half over, was two in a row: at once) */
+    if ((shed_over & 3u) == 3u)                        /* (0.6.19: two in a row again, as before 0.6.17: one
+                                                         * spike shed a voice every 2.9 ms, tails cut, clicks) */
         shed_req = 1;
     return (all - t5_nested_ticks) / FM1_TICKS_PER_US;
 }

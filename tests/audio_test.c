@@ -121,11 +121,11 @@ static void dma(void)
     host_pending = FM1_AUDIO_HALF;
     host_us = 5000;
     fm1_alnk0_irq();
-    check("one slow half records elapsed load and sheds at once (0.6.17: was two in a row)", host_acks == 1u && shed_req &&
-          felucca_dbg.last_us == 5000u && !felucca_dbg.late && load_tight && load_diag.peak >= 80u);
-    shed_req = 0;
+    check("one slow half records elapsed load, tightens the budget, does not shed yet (0.6.19: two in a row again)",
+          host_acks == 1u && !shed_req && felucca_dbg.last_us == 5000u && !felucca_dbg.late && load_tight &&
+          load_diag.peak >= 80u);
     fm1_alnk0_irq();
-    check("a second slow half requests shedding again", host_acks == 2u && shed_req);
+    check("a second slow half in a row requests shedding", host_acks == 2u && shed_req);
     shed_req = 0;
     host_half_reads = 0; host_dma_advanced = 1; host_us = 100;
     fm1_alnk0_irq();
@@ -138,7 +138,7 @@ static void dma(void)
     fresh();
     host_us = 5000;
     fm1_alnk0_irq(); host_us = 100; fm1_alnk0_irq(); host_us = 5000; fm1_alnk0_irq();
-    check("a slow half sheds even between fast ones (0.6.17)", shed_req);
+    check("a lone slow half between fast ones does not shed (0.6.19: a spike is not an overload)", !shed_req);
     fresh();
     host_us = 580;
     for (i = 0; i < 512u; i++) fm1_alnk0_irq();

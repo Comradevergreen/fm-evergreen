@@ -328,8 +328,7 @@ static void rec_clear(void)
     load_begin(t, LOAD_PAT);
     track_defaults_steps(t);
     load_end(t);
-    t->nheld = 0;
-    t->arp_phys = 0;
+    latch_drop_req |= (uint8_t)(1u << (t - trk));       /* (0.6.19) the latched chord too (events_block) */
     ui_message("SEQUENCE CLEARED");
     ui.force = 1;
 }

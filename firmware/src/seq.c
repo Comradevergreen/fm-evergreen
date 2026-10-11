@@ -582,6 +582,18 @@ static void latch_release(track_t *t)
     t->nheld = 0;
 }
 
+/* (0.6.19) the UI (main loop) lets a track's held / latched notes go through here, in events_block: SEQ TOOLS CLEAR,
+ * REC CLEAR ALL (they zeroed the list from the main loop: the latched voices kept sounding, nothing left to end them) */
+static volatile uint8_t latch_drop_req;
+static uint8_t latch_was;                           /* bit i: track i was in LATCH last block */
+static void latch_drop(track_t *t)
+{
+    latch_release(t);                               /* (their voices and MIDI OUT's notes end) */
+    t->arp_phys = 0;
+    if (t->arp_note)
+        arp_silence(t);
+}
+
 /* key k plays kb_note[k] on track t. A note another key holds already sounds: it is not started again (nor sent
  * to MIDI OUT); the key keeps its note */
 static void key_on(uint32_t k, track_t *t)
@@ -1082,7 +1094,15 @@ static void events_block(uint32_t n)
     }
     for (i = 0; i < NTRK; i++) {
         track_t *t = &trk[i];
+        if (((latch_drop_req >> i) & 1u) || (((latch_was >> i) & 1u) && !key_latch(t))) {
+            latch_drop_req &= (uint8_t)~(1u << i);  /* (0.6.19) a clear, or LATCH left (HOLD off, ARP on, whatever
+                                                     * the keys: a key down kept it all sounding, and stacking) */
+            latch_drop(t);
+        }
+        latch_was = (uint8_t)(key_latch(t) ? latch_was | 1u << i : latch_was & ~(1u << i));
         if ((pr >> i) & 1u) {
+            if ((latch_was >> i) & 1u)
+                latch_release(t);                   /* (0.6.19: MIDI OUT's latched notes end too) */
             midi_forget_track(i);
             trk_all_off(t);
             if ((fo >> i) & 1u)

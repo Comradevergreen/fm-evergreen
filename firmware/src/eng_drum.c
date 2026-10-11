@@ -254,6 +254,7 @@ static void drum_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const 
         uint32_t g0 = L->mg;
         if (!g0) {
             L->x.live = L->x.trig = 0;                   /* (drum_amp ends the voice) */
+            L->x.hl = 0;                                 /* (0.6.19: the next hit starts its upsampling from 0) */
             return;
         }
         L->mg = (uint8_t)(g0 - 1u);
@@ -317,8 +318,9 @@ static __attribute__((noinline)) void drum_bus(const track_t *t, int32_t *out, u
     }
     for (i = 0; i < n; i++) {
         int32_t s = out[i] >> 1;
-        if (g)
-            s = (softclip((s * g) >> 12) * mk) >> 15;
+        if (g)                                           /* (0.6.19: s held to +-131071: s * g fits; several loud hits
+                                                         * at once with DRV high wrapped it: a full-scale click) */
+            s = (softclip((clamp(s, -131071, 131071) * g) >> 12) * mk) >> 15;
         out[i] = soft_knee(s, 24000) << 1;
     }
 }
