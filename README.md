@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.6.33).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.6.34).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 > 🫶 If you resonate with my work, consider supporting me on **[Ko-fi](https://ko-fi.com/juanjiant)** (in Argentina:
 > **[Cafecito](https://cafecito.app/juanjiant)**). Thanks for all the good energy, hope you enjoy this little beast ✨🎹
@@ -37,6 +37,21 @@ Two printable sheets with everything on the device. Click an image to open it fu
 ## Changelog
 
 Every update is listed here, newest first.
+
+### v0.6.34
+- **DICE ALL: a generator of pieces, not of conditions.** Each throw makes three choices and guard rails keep it
+  musical inside the chaos (see the manual, chapter 8):
+  - **A genre**: the dark ones, plus five new worlds: **SOUNDTRACK** (enveloping pads, no drums or a heartbeat),
+    **HARD TECHNO**, **INDIE POP**, **ELECTRO PUNK** and **NEO CLASSICAL** (Reich's pulses and phases, Glass's additive
+    arps, Pärt's tintinnabuli).
+  - **An energy**: **SPACE** (two or three things, long tails: minimalism with cared-for timbres), MID, **FRANTIC**.
+  - **An orchestration**: which roles play; **the drums may not play at all** (about a third of the throws).
+  - Guard rails: **chords always of four notes**, **deep basses** (from E1), **arps in the middle octaves** (C3–C5:
+    Alberti, Glass groups, a Reich pulse, a walk), **coherent melodies** (a motif in steps developed over four bars,
+    ending on a cadence), **space between notes**, **high notes softer** and high parts quieter, the lead under G5.
+  - **Seven drum kits** built on DRUM-X: 808, HARD, CLICK, INDUS, SOFT, GLITCH, ELECTRO.
+  - Sounds always fit their role (never a bass sound off the bass); envelopes shaped for the role and the energy.
+  - **A twist** in one throw in five: two loops phasing, a comb, the grain delay down, a polymetric lead, a drone.
 
 ### v0.6.33
 - **DICE ALL: more IDM, darker, never flat.** IDM and a new **DARK IDM** (slow, phrygian, a drone, in-scale fourths,
@@ -562,8 +577,9 @@ An 8-sound kit (BD SD CP CH OH TM RS CB) generated in real time, Microtonic styl
 - **SELECT** changes the tempo on GLO's pages (GLOBAL, SYSTEM, MIXER) and with GLO held. On **EDIT** it **rolls the
   track's sound dice**: a synth loads one of its factory presets at random and moves each engine parameter up to a
   quarter of its range; DRUM-X rolls the A and B sides of each sound around the factory kit. On **HOME** it asks
-  **DICE EVERYTHING?** (OCT+ yes, OCT− no) and then writes a new piece in a style (DARK MINIMAL, DUB TECHNO,
-  IDM, DARK IDM, DARK ELECTRO, ACID NIGHT, COLD WAVE, BROKEN, HYPNOTIC, DEEP BREAKS): its tempo, one scale for every engine and the effects, each
+  **DICE EVERYTHING?** (OCT+ yes, OCT− no) and then writes a new piece: a genre (the night's: DARK MINIMAL, DUB
+  TECHNO, IDM, DARK IDM, DARK ELECTRO, ACID NIGHT, COLD WAVE, BROKEN, HYPNOTIC, DEEP BREAKS; and SOUNDTRACK, HARD TECHNO,
+  INDIE POP, ELECTRO PUNK, NEO CLASSICAL), an energy (SPACE, MID, FRANTIC) and which roles play (drums optional): its tempo, one scale for every engine and the effects, each
   track a role, an engine, a sound and a part from one chord progression, silences included (see v0.6.26).
 - **UNDO: GLO held + G4** takes back the last big change (DICE ALL, a sound diced, a clear, INIT, RECALL, a pattern or
   project loaded); pressing it again goes forward (redo). G4 breathes when there is something to undo.

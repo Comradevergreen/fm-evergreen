@@ -6006,17 +6006,23 @@ static int test_dice_all(void)
     fm1_ms += 1200u;
     turn(EN_SELECT, 1); press(B_OCTUP); frames(4);
     ok = !ui.confirm && undo_ok;
+    {   /* (0.6.34) the orchestration leaves some roles silent, the drums too: at least two melodic voices play */
+        uint32_t mel = 0;
+        for (k = 0; k < NTRK; k++) {
+            for (i = 0, on = 0; i < (uint32_t)trk[k].p[P_SLEN]; i++) on += step_on(&trk[k].step[i]);
+            mel += on > 0u && !drum_track(&trk[k]);
+        }
+        ok &= mel >= 2u;
+    }
     for (k = 0; k < NTRK; k++) {
         const track_t *t = &trk[k];
-        for (i = 0, on = 0; i < (uint32_t)t->p[P_SLEN]; i++) on += step_on(&t->step[i]);
-        ok &= on > 0u;
         if (!drum_track(t))
             ok &= t->p[P_ROOT] == trk[0].p[P_ROOT] && t->p[P_SCALE] == trk[0].p[P_SCALE] && t->p[P_SCALE] != 0 &&
                   t->p[P_SCALE] != 13 && t->p[P_SCALE] < 14;
         sig1[k] = steps_sig(t);
     }
     for (i = 0; i < 64u; i++) events_block(CTL);       /* (it plays: no crash) */
-    bad += check("DICE ALL: OK dices every track (a sequence each, one musical scale for the melodic ones)", ok);
+    bad += check("DICE ALL: OK dices every track (two melodic voices at least, one musical scale for the melodic ones)", ok);
     btn_down(B_GLO); frames(40);
     key_down(white(8)); frame(); key_up(white(8)); frame();
     btn_up(B_GLO); frames(8);
@@ -6042,6 +6048,15 @@ static int test_dice_all(void)
             dice_all();
             for (k = 0, fm = 0, drums = 0; k < NTRK; k++) { fm += trk[k].eng_req == ENGI_FM6; drums += drum_track(&trk[k]); }
             ok &= fm <= 2u && drums == 1u;
+            for (k = 0; k < NTRK; k++) {                /* (0.6.34) the guard rails: chords of four, the lead under G5 */
+                uint32_t i2;
+                for (i2 = 0; i2 < (uint32_t)trk[k].p[P_SLEN]; i2++) {
+                    const step_t *s2 = &trk[k].step[i2];
+                    if (drum_track(&trk[k]) || s2->time != ST_NOTE) continue;
+                    ok &= s2->n == 1u || s2->n == 4u;
+                    ok &= s2->note[0] <= 84u;
+                }
+            }
             for (k = 0; k < 8u; k++) events_block(CTL);
         }
         bad += check("DICE ALL (0.6.26): a style named, engines changed, FM6 on two tracks at most, one DRUM track; 30 throws", ok);
