@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.6.19).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.6.20).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 ## Cheat sheets
 
@@ -29,6 +29,10 @@ Two printable sheets with everything on the device. Click an image to open it fu
 ## Changelog
 
 Every update is listed here, newest first.
+
+### v0.6.20
+- **SCALE is global, strictly**: ROOT, SCALE and QNT are one for the whole song. Before, a project, MIDI or
+  automation could leave a track in its own scale; now every melodic track follows the selected one's at once.
 
 ### v0.6.19
 - **TRACKS on GLO > SYSTEM** (KNOB 2: TRKS 4 LOW / 6 HIGH), next to the tracks: the same setting as MENU > AUDIO >
@@ -423,7 +427,8 @@ With FX held the keys become effects that act while held; on release everything 
 - 64 steps per track, piano roll, drum grid, parameter locks, chance, ratchets, slide and knob automation; live
   recording with overdub, metronome and count-in.
 - **SHIFT**: shifts the sequence in steps (OFS) and in pitch (PIT), automatable.
-- **One scale for everything**: ROOT and SCALE apply to every melodic track; **STRN** moves all sequences through the
+- **One scale for everything**: ROOT, SCALE and QNT are the song's, the same on every melodic track (no track keeps
+  a scale of its own, whatever loads it); **STRN** moves all sequences through the
   scale degrees. **ARP TRNS**: the keys transpose the sequence.
 - **SEQ + REC** clears every sequence; **REC + FX / EDIT / ENV / LFO…** clears only that part's automation.
 

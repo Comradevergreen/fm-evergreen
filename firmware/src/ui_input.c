@@ -1190,29 +1190,27 @@ static void ui_notices(void)
     }
 }
 
-/* (JIANT 0.4) one scale for the whole instrument: ROOT or SCALE changed on the selected track (a knob, the SCL layer,
- * the editor, MIDI, automation) -> every melodic track's (a DRUM track has none to follow). Selecting another track
- * changes nothing; each track keeps its QNT and TRN */
+/* (JIANT 0.4) one scale for the whole instrument. (0.6.19) Strictly: ROOT, SCALE and QNT are the song's, held here;
+ * the selected track's (a knob, the SCL layer, the editor, MIDI, automation, a project load) is the one that counts,
+ * and every melodic track is kept on it each frame (any other way a track got its own scale undone: a sequence
+ * never plays in another scale). A DRUM track has none to follow. Each track keeps its TRN */
 static void scale_link(void)
 {
-    static uint8_t sel_was = 0xFF;
-    static int16_t root_was, scale_was;
+    static int16_t g_root = -1, g_scale, g_quant;
     const track_t *t = TSEL;
     uint32_t k;
-    if (song.sel != sel_was || drum_track(t)) {
-        sel_was = song.sel;
-        root_was = t->p[P_ROOT];
-        scale_was = t->p[P_SCALE];
-        return;
+    if (!drum_track(t) && (t->p[P_ROOT] != g_root || t->p[P_SCALE] != g_scale || t->p[P_QUANT] != g_quant)) {
+        g_root = t->p[P_ROOT];
+        g_scale = t->p[P_SCALE];
+        g_quant = t->p[P_QUANT];
     }
-    if (t->p[P_ROOT] == root_was && t->p[P_SCALE] == scale_was)
-        return;
-    root_was = t->p[P_ROOT];
-    scale_was = t->p[P_SCALE];
+    if (g_root < 0)
+        return;                                         /* (a DRUM track selected from the start: nothing yet) */
     for (k = 0; k < NTRK; k++)
         if (!drum_track(&trk[k])) {
-            trk[k].p[P_ROOT] = root_was;
-            trk[k].p[P_SCALE] = scale_was;
+            trk[k].p[P_ROOT] = g_root;
+            trk[k].p[P_SCALE] = g_scale;
+            trk[k].p[P_QUANT] = g_quant;
         }
 }
 
