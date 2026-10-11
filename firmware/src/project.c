@@ -1279,7 +1279,7 @@ static int project_save_as(uint32_t slot, const char *name)
     proj_name_get(proj_name, (const uint8_t *)p->name);
     proj_cur = (uint8_t)(slot & 3u);
     live.cur = (int8_t)(slot & 3u);
-    ui_message("SAVED (RAM)");
+    ui_message("SAVED (NO FLASH)");
     return 0;
 }
 static int project_save(uint32_t slot) { return project_save_as(slot, 0); }
@@ -1325,7 +1325,7 @@ static int project_rename(uint32_t slot, const char *name)
 #if FELUCCA_FLASH
     if (flash_ok) { ui_message("RENAMED"); return 0; }
 #endif
-    ui_message("RENAMED (RAM)");
+    ui_message("RENAMED (NO FLASH)");
     return 0;
 }
 

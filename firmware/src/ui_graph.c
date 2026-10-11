@@ -1183,8 +1183,8 @@ static void graph_events(void)
         }
     }
 }
-/* (0.6.12) SAVE > TOOLS: a row a knob, what it does (on what: the track, the song's row), the one picked (turned right)
- * filled; OCT+ does it (a dialog first) */
+/* (0.6.12) SAVE > TOOLS: a list of what it can do (on what: the track, the song's row), the one picked (KNOB 1 or
+ * PRESETS, 0.6.25: was a knob each) filled; OCT+ does it (a dialog first) */
 static void graph_tools(void)
 {
     static const char *const WHAT[4] = {"CLEAR SEQ", "INIT SOUND", "DELETE ROW", "CLEAR SONG"};
@@ -1195,7 +1195,7 @@ static void graph_tools(void)
         int32_t y = LIST_Y(c);
         int sel = ui.act == c + 1u;
         uint16_t bg = sel ? T_THEME : T_SURF;
-        b[0] = 'K'; b[1] = (char)('1' + c); b[2] = 0;
+        b[0] = (char)('1' + c); b[1] = 0;               /* (0.6.25: a list, KNOB 1 / PRESETS: was a knob each) */
         list_row(y, sel, b, T_MID, WHAT[c], T_TEXT, 150);
         if (c == 2u) {                                   /* (the row SONG has picked) */
             str_cpy(b, "ROW ", sizeof b);
@@ -1205,7 +1205,7 @@ static void graph_tools(void)
             cv_text_r(226, y + CAP_IN(S, 16), &AF_S, ON[c], sel ? T_INK : T_DIM, bg);
         }
     }
-    note_line(LIST_Y(4) + 10, ui.act ? "[OCT+] DO IT" : "TURN A KNOB RIGHT TO PICK", ui.act ? T_ACCENT : T_DIM);
+    note_line(LIST_Y(4) + 10, ui.act ? "[OCT+] DO IT" : "TURN [K1] TO PICK", ui.act ? T_ACCENT : T_DIM);
 }
 /* (0.6.12) SAVE > PROJECT: the project (one of NSONG: a song of storage.c) and its four sections. A title line
  * (PROJECT n, the section the music came from or went to), the sections A-D (name, USED or --; the one picked filled;

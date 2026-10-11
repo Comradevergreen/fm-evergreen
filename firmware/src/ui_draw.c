@@ -685,7 +685,17 @@ static void draw_foot(void)
     const engine_t *e = ENGINES[TSEL->eng_req % NENGINES];
     const char *ename = e->name;
     int32_t x;
+    int glob = !ui.home && (pg->graph == GR_SLOTS || pg->graph == GR_SONG || pg->graph == GR_TOOLS || pg->fam == FAM_GLO);
+    char pj[12];
     sound_name(t, pn);
+    if (glob) {                                        /* (0.6.25) a page of the song / the instrument: the project and
+                                                        * its name, not the track's engine and sound */
+        str_cpy(pj, "PROJECT ", sizeof pj);
+        fmt_int(pj + 8, (int32_t)song_cur + 1);
+        ename = pj;
+        project_cur_name(pn);
+        if (!pn[0]) str_cpy(pn, "NO NAME", 16);
+    }
     if (ui.home)
         str_cpy(ti, "HOME", sizeof ti);
     else                                               /* page title + number in its family: "ENV DEST 2/2" */
@@ -760,7 +770,7 @@ static void draw_foot(void)
     }
     {   /* row 2: engine icon + name, sound, page title at the right with its icon before it (MIXER, PHRASES, SONG,
          * CHANCE, AUTOMATION); icons: their ink on the names' capitals */
-        uint32_t pi = ui.home ? ICON_NONE : page_icon(pg), ei = FELUCCA_ICONS ? engine_icon(ename) : ICON_NONE;
+        uint32_t pi = ui.home ? ICON_NONE : page_icon(pg), ei = FELUCCA_ICONS ? (glob ? ICON_X_SONG : engine_icon(ename)) : ICON_NONE;
         int32_t r = 232, tx, ex, need = text_w(&AF_S, pn), ew = text_w(&AF_S, ename);
         ex = 8 + (FELUCCA_ICONS ? 12 + 5 : 0) + (ew < 80 ? ew : 80);   /* (where the engine's name ends) */
         tx = r - text_w(&AF_S, ti) - (pi != ICON_NONE ? 16 : 0);
@@ -933,9 +943,10 @@ static void draw_columns(void)
         uint32_t total, cur = preset_pos(&total);
         char u[8];
         if (cur < total) fmt_int(val, (int32_t)cur + 1);
-        else str_cpy(val, "--", 8);
+        else str_cpy(val, total ? "--" : "NONE", 8);   /* (0.6.25: an empty list said "--/0") */
         str_cpy(u, "/", 8);
         fmt_int(u + 1, (int32_t)total);
+        if (!total) u[0] = 0;
         draw_column(0, "No.", val, u, VAL(0u), -1, ICON_NONE);
         draw_column(1, "ENG", ENGINES[TSEL->eng_req]->name, "", VAL(1u), -1, engine_icon(ENGINES[TSEL->eng_req]->name));
         draw_column(2, "FAV", preset_favorite() ? "ON" : "OFF", "", VAL(2u), -1, ICON_X_STAR);
