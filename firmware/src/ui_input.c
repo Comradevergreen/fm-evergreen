@@ -754,6 +754,10 @@ static void edit_param(uint32_t slot, int32_t steps)
             chain_config.count = ui.song_row + 1u;
             if (slot == 1u) return;
         }
+        if (slot == 1u && steps < 0 && chain_config.row[ui.song_row].slot == 0u) {
+            confirm_open(CF_DEL_ROW, ui.song_row);      /* (0.6.22) SECT left of A: DELETE ROW? (the dialog) */
+            return;
+        }
         if (slot == 1u)
             chain_config.row[ui.song_row].slot = (uint8_t)clamp((int32_t)chain_config.row[ui.song_row].slot + steps, 0, 3);
         if (slot == 2u)
