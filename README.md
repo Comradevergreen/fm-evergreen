@@ -5,7 +5,7 @@
 [![License: GPL-3.0-only](https://img.shields.io/badge/license-GPL--3.0--only-blue.svg)](LICENSE)
 [![Emulator](https://img.shields.io/badge/try%20it-in%20the%20browser-ff7a00.svg)](https://juanjiant-bit.github.io/JIANT/)
 
-![JIANT FM: the signature, the screens and what's new in 0.5](docs/jiant-hero.png)
+![JIANT FM: the signature, the screens and what's new: song ideas, ARRANGE, undo, TRACKS and LOAD](docs/jiant-hero.png)
 
 JIANT FM is an alternative firmware for the **M-VAVE FM-1**, made for playing live and building whole songs without
 a computer. It is a fork of [Felucca](https://github.com/hugelton/Felucca) 1.1.5.1 by Hügelton Instruments (GPL-3.0)
@@ -446,10 +446,11 @@ audio CPU budget, the signature shown at power-on is 428 bytes. An instrument th
 
 ### A living screen
 
-![HOME, ANALOG, DRUM-X, LFO, DIST and GLOBAL](docs/jiant-screens.png)
+![HOME, DICE ALL, ARRANGE, DRUM-X, PUNCH-IN FX and TRACKS · LOAD](docs/jiant-screens.png)
 
-*HOME (the ecosystem), ANALOG's being, the DRUM-X colony, the running LFO, the DIST curve and the GLOBAL bar, exactly
-as the firmware draws them.*
+*HOME with its six beings, the DICE ALL dialog, the song in ARRANGE, the DRUM-X colony, the punch-in FX keys and
+GLO > SYSTEM's TRACKS and LOAD, exactly as the firmware draws them while a song plays (frames of the presentation
+video).*
 
 - **Thermal palette**: values, curves, steps, hits and notes are coloured by intensity (cyan → blue → violet → red →
   orange → yellow → white). Selection is violet and active is orange. Font:

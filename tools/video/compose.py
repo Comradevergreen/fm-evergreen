@@ -117,7 +117,8 @@ intro_s = text_layer(['alternative firmware for the M-VAVE FM-1'], F_SUB, WHITE)
 out_l = [text_layer(['JIANT FM'], font('Bold', 120), WHITE, gradient=True),
          text_layer(['try it in your browser'], F_MID, WHITE),
          text_layer(['juanjiant-bit.github.io/JIANT'], F_SUB, ORANGE),
-         text_layer(['emulator · web installer · editor · cheat sheets'], F_SMALL, DIM)]
+         text_layer(['emulator · web installer · editor · cheat sheets'], F_SMALL, DIM),
+         text_layer(['support: ko-fi.com/juanjiant · cafecito.app/juanjiant'], F_SMALL, VIOLET)]
 
 def paste(img, layer, x, y, alpha=1.0, reveal=1.0):
     if alpha <= 0 or reveal <= 0: return
