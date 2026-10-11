@@ -589,6 +589,8 @@ static uint8_t latch_was;                           /* bit i: track i was in LAT
 static void latch_drop(track_t *t)
 {
     latch_release(t);                               /* (their voices and MIDI OUT's notes end) */
+    pfx_hush(t);                                    /* (0.6.28) the punch-in repeats end and forget the notes struck */
+    t->pfx_lnn = 0;                                 /* (STUTTER / ARP replayed the cleared steps' last notes) */
     t->arp_phys = 0;
     if (t->arp_note)
         arp_silence(t);

@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.6.27).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.6.28).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 ## Cheat sheets
 
@@ -29,6 +29,18 @@ Two printable sheets with everything on the device. Click an image to open it fu
 ## Changelog
 
 Every update is listed here, newest first.
+
+### v0.6.28
+- **"After clearing a sequence it still triggers notes on all tracks" — fixed.** The punch-in FX lane (effects
+  recorded by holding FX keys while REC is armed) kept repeating the last notes of the cleared steps with STUTTER and
+  ARP, and ARP played random fills on a DRUM track with no steps. Now a clear ends those repeats and forgets the notes,
+  a DRUM track with no steps gets no fill, and an effect **latched** with FX LATCH no longer records itself into the lane
+  (only one held by hand does). A section jump or quick chain waiting for the next bar is called off by a clear (it
+  brought the steps back). To erase the lane itself: hold REC and press FX.
+- **Clears say which track**: "T3 CLEARED", and below it "SEQ+REC: ALL TRACKS" (the others play on; SEQ held + REC
+  clears all six).
+- **T5 and T6 asleep (TRACKS 4) can't go unnoticed**: when a note is sent to them (a key, MIDI, their steps) or PLAY
+  starts with steps on them, the screen says T5-T6 ASLEEP · GLO>SYSTEM>TRACKS 6.
 
 ### v0.6.27
 - **DICE ALL never repeats itself**: the moment you press (the timer's ticks) stirs the random numbers on every throw,

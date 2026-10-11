@@ -340,11 +340,16 @@ static const char *tl_do(track_t *t, uint32_t p, uint32_t l)
     }
     tl_take(t);
     switch (p) {
-    case TL_CLEAR:
+    case TL_CLEAR: {                                     /* (0.6.28: names the track, ends its held / repeated notes) */
+        static char cb[20];
         for (i = 0; i < len; i++)
             step_clear(&t->step[i]);
-        msg = "SEQUENCE CLEARED";
+        latch_drop_req |= (uint8_t)(1u << trk_index(t));
+        str_cpy(cb, "T1 CLEARED", sizeof cb);
+        cb[1] = (char)('1' + trk_index(t));
+        msg = cb;
         break;
+    }
     case TL_REV: tl_reverse(t, len); msg = "REVERSED"; break;
     case TL_LEFT: tl_shift(t, len, len - 1u); msg = "SHIFTED LEFT"; break;
     case TL_RIGHT: tl_shift(t, len, 1u); msg = "SHIFTED RIGHT"; break;

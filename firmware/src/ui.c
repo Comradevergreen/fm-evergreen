@@ -768,6 +768,11 @@ static void load_grid16(track_t *t, const uint8_t *hit, const uint8_t *acc)
 static void track_defaults_steps(track_t *t)
 {
     uint32_t i;
+    latch_drop_req |= (uint8_t)(1u << trk_index(t));    /* (0.6.28) its held / latched / repeated notes end too */
+    if (!chain_busy() && (live.req >= 0 || chain.armed_bar)) {   /* (a section jump or quick chain waiting for the bar */
+        live.req = -1;                                  /* would bring the steps back: called off) */
+        chain.armed_bar = 0;
+    }
     motion_reset(t);
     for (i = 0; i < NSTEP; i++)
         step_clear(&t->step[i]);

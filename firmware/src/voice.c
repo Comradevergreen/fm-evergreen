@@ -476,7 +476,8 @@ static void mono_remove(track_t *t, uint32_t note)
 
 static int pfx_note(track_t *t, uint32_t note, uint32_t vel);   /* pfx.c (in fx.c) */
 static uint8_t trk_hush;
-static uint8_t trk_live = 4;                            /* (JIANT 0.6.18) MENU > TRACKS: the tracks that play (4 LOW CPU, the
+static uint8_t trk_live = 4;
+static volatile uint8_t asleep_hit;                     /* (0.6.28) a note went to a track asleep (ui_input: the hint) */                            /* (JIANT 0.6.18) MENU > TRACKS: the tracks that play (4 LOW CPU, the
                                                          * default; 6 HIGH): the ones past it get no notes and stop,
                                                          * their sounds and steps kept (fx.c mix_part) */                                /* (0.6.15) bit k: track k muted by GLO's solo / the FX layer's
                                                          * black key (perform.c): no new notes, as MUTE (a MIDI mute: a
@@ -484,7 +485,11 @@ static uint8_t trk_live = 4;                            /* (JIANT 0.6.18) MENU >
 static void trk_note_on(track_t *t, uint32_t note, uint32_t vel)
 {
     uint32_t any = 0, i, mode = trk_vmode(t);
-    if (t->p[P_MUTE] || ((trk_hush >> ((uint32_t)(t - trk) % NTRK)) & 1u) || (uint32_t)(t - trk) >= trk_live ||
+    if ((uint32_t)(t - trk) >= trk_live && !t->p[P_MUTE]) {
+        asleep_hit = 1;                                 /* (0.6.28) a note for a track asleep: the UI says so */
+        return;
+    }
+    if (t->p[P_MUTE] || ((trk_hush >> ((uint32_t)(t - trk) % NTRK)) & 1u) ||
         (t->engine == ENGI_DRUM && drum_muted(note)))   /* (DRUM: its group mutes) */
         return;
     if (pfx_note(t, note, vel))                         /* the punch-in effects (pfx.c): a repeat holds the track */
