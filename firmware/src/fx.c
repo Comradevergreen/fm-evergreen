@@ -359,13 +359,15 @@ static __attribute__((noinline)) int32_t dly_grain(uint32_t dl)
     uint32_t e = (GR_LEN * (uint32_t)(s < 0 ? -s : s)) >> 8, j;   /* the read point's sweep over a grain, Q8 */
     fx.gr_ph = (fx.gr_ph + 65536u / GR_LEN) & 0xFFFFu;
     for (j = 0; j < 2u; j++) {
-        uint32_t ph = (fx.gr_ph + j * 32768u) & 0xFFFFu, d, di;
+        uint32_t ph = (fx.gr_ph + j * 32768u) & 0xFFFFu, d, di, gl = dl;
         int32_t a, b, w;
         if (ph < 65536u / GR_LEN)                       /* this grain starts again: its spray */
             fx.gr_sp[j] = song.g[G_DSPRY] ? rng() % ((uint32_t)song.g[G_DSPRY] * 64u + 1u) : 0u;
-        if (dl + fx.gr_sp[j] > DLY_LEN - 2u - GR_LEN * 2u)   /* (JIANT 0.5) a long TIME (1/1 and up: the whole line): */
-            dl = DLY_LEN - 2u - GR_LEN * 2u - fx.gr_sp[j];  /* room for the sweep, else the read point sat clamped (no pitch) */
-        d = ((dl + fx.gr_sp[j]) << 8) + ((e * ((s > 0 ? 65535u - ph : ph) >> 4)) >> 12);   /* Q8: up, the delay
+        if (gl + fx.gr_sp[j] > DLY_LEN - 2u - GR_LEN * 2u)   /* (JIANT 0.5) a long TIME (1/1 and up: the whole line): */
+            gl = DLY_LEN - 2u - GR_LEN * 2u - fx.gr_sp[j];  /* room for the sweep, else the read point sat clamped (no pitch).
+                                                         * (0.6.19: each grain its own: grain 0's new spray moved grain 1's
+                                                         * read point in the middle of its window: a click every grain) */
+        d = ((gl + fx.gr_sp[j]) << 8) + ((e * ((s > 0 ? 65535u - ph : ph) >> 4)) >> 12);   /* Q8: up, the delay
                                                          * shrinks over the grain; down, it grows */
         di = d >> 8;
         if (di > DLY_LEN - 2u)
@@ -848,6 +850,13 @@ static void fx_gate(int32_t *wet, uint32_t n)
          (fxg_quiet > FXG_QUIET3 && pk < FXG_FLOOR3)) &&
         !(song.g[G_RTYPE] == 4 && song.g[G_RSIZE] >= 127))
         fxg_g = g0 > 1024 ? g0 - 1024 : 0;
+    else if (g0 < 32767 && (g0 > 0 || fxg_quiet == 0u))   /* (0.6.19) closing and the residue swells again (a pitched
+                                                         * delay's feedback): back up as it went down, ~25 ms (it
+                                                         * snapped open: a click); */
+        fxg_g = g0 < 32767 - (fxg_quiet ? 1024 : 4096) ? g0 + (fxg_quiet ? 1024 : 4096) : 32767;
+    else if (g0 == 0 && !(song.g[G_RTYPE] == 4 && song.g[G_RSIZE] >= 127))   /* .. closed: it stays closed until
+                                                         * something is sent (CLOUD's FREEZE: open) */
+        fxg_g = 0;                                      /* (something sent: the branch above opens it) */
     else
         fxg_g = 32767;
     if (g0 == 32767 && fxg_g == 32767)
@@ -865,9 +874,8 @@ static void fx_buses(const int32_t *cho_in, const int32_t *dly_in, const int32_t
         for (i = 0; i < n; i++)
             any |= cho_in[i] | dly_in[i] | rev_in[i];
         fxg_quiet = any ? 0u : fxg_quiet < 0xFFFFFFu ? fxg_quiet + 1u : fxg_quiet;
-        if (any)
-            fxg_g = 32767;
-    }
+    }                                                   /* (0.6.19: it opens over ~6 ms, fx_gate: at once, the
+                                                         * residue in the lines stepped in: a tick on the next note) */
     int32_t fb = song.g[G_DFDBK] * 230, tn = song.g[G_DCOLOR] - 64;   /* (JIANT 0.4) TONE: one knob, low-pass .. open .. low cut */
     int32_t col = tn < 0 ? 500 + (64 + tn) * (64 + tn) * 8 : 32767;
     int32_t dmix = song.g[G_DMIX] * 258;
@@ -1018,13 +1026,21 @@ static void mix_part(track_t *t, uint32_t n)
 {
     int32_t *b = part_buf;
     uint32_t i;
-    if ((uint32_t)(t - trk) >= trk_live) {              /* (0.6.18) TRACKS 4: asleep, its voices out (as a sound load's
-                                                         * fade, a block), nothing rendered */
-        uint32_t k;
+    if ((uint32_t)(t - trk) >= trk_live) {              /* (0.6.18) TRACKS 4: asleep, nothing rendered. (0.6.19) Its
+                                                         * voices first fade out over a block (voice_kill: they were
+                                                         * cut at once, a click), its mute let go (perform.c) */
+        uint32_t k, on = 0;
         for (k = 0; k < NVOICE; k++)
-            t->v[k].active = t->v[k].gate = 0, t->v[k].stage = 0, t->v[k].env = t->v[k].env_out = 0;
-        mp_seen &= (uint8_t)~(1u << ((uint32_t)(t - trk) % NTRK));
-        return;
+            if (t->v[k].active) {
+                if (t->v[k].stage != 4u)
+                    voice_kill(&t->v[k]);
+                on = 1;
+            }
+        pf.mg[(uint32_t)(t - trk) % NTRK] = 32768;
+        if (!on) {
+            mp_seen &= (uint8_t)~(1u << ((uint32_t)(t - trk) % NTRK));
+            return;
+        }
     }
     mod_begin(t);                                       /* the matrix's per-block values into t->p (mod.c) */
     if (track_render(t, b, n))

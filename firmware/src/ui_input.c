@@ -821,6 +821,13 @@ static void edit_param(uint32_t slot, int32_t steps)
         return;
     v = param_turn(d, *vp, accel(EN_K1 + slot, steps, d->fmt == F_ENUM ? 0 : d->max - d->min));
     *vp = (int16_t)v;
+    if (vp == &trks_ui) {                               /* (0.6.18) GLO > SYSTEM's TRKS: the MENU's setting, saved */
+        ui_rec_prefs = (uint8_t)(v ? ui_rec_prefs | PREF_SIX >> 8 : ui_rec_prefs & ~(PREF_SIX >> 8));
+        rp_apply();
+        ui_message(v ? "6 TRACKS: HIGH CPU" : "4 TRACKS: T5-T6 ASLEEP");
+        settings_save();
+        return;
+    }
     if (pg->scope != SC_GLOBAL) motion_capture(TSEL, (uint32_t)(vp - TSEL->p), *vp);
 }
 
@@ -1422,8 +1429,7 @@ static void ui_input_frame(void)
                         track_defaults_steps(&trk[k]);
                         motion_clear(&trk[k]);
                         load_end(&trk[k]);
-                        trk[k].nheld = 0;
-                        trk[k].arp_phys = 0;
+                        latch_drop_req |= (uint8_t)(1u << k);   /* (the held / latched notes: events_block) */
                     }
                     memset(pfx_lane, 0, sizeof pfx_lane);
                     ui_message("ALL CLEARED");
@@ -1448,8 +1454,7 @@ static void ui_input_frame(void)
                 load_begin(t, LOAD_PAT);
                 track_defaults_steps(t);
                 load_end(t);
-                t->nheld = 0;                           /* and the latched arp chord */
-                t->arp_phys = 0;
+                latch_drop_req |= (uint8_t)(1u << (t - trk));   /* and the latched chord (events_block) */
                 if (kind == CF_CLEAR_TRK) {
                     char b[12] = "1 CLEARED";
                     b[0] = (char)('1' + ui.confirm_trk);

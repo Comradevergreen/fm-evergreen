@@ -5846,6 +5846,20 @@ static int test_key_latch(void)
     bad += check("  HOLD off: the latched note goes", !gate_on(t, b));
     fm1_in.notes = 1u; events_block(CTL); fm1_in.notes = 0; events_block(CTL);
     bad += check("  HOLD OFF: a key let go ends its note as ever", !gate_on(t, a));
+    t->p[P_AHOLD] = 1;                                  /* (0.6.19) HOLD off with a key still down */
+    fm1_in.notes = 1u; events_block(CTL); fm1_in.notes = 0; events_block(CTL);
+    fm1_in.notes = 4u; events_block(CTL);               /* (b down: arp_phys 1) */
+    t->p[P_AHOLD] = 0; events_block(CTL);
+    fm1_in.notes = 0; events_block(CTL);
+    bad += check("  HOLD off with a key down: the latched notes still go (they droned)", !gate_on(t, a) && !gate_on(t, b));
+    t->p[P_AHOLD] = 1;
+    fm1_in.notes = 1u; events_block(CTL); fm1_in.notes = 0; events_block(CTL);
+    t->p[P_AMODE] = 1; events_block(CTL);               /* ARP turned on */
+    t->p[P_AMODE] = 0; t->p[P_AHOLD] = 1;
+    fm1_in.notes = 1u; events_block(CTL); fm1_in.notes = 0; events_block(CTL);
+    latch_drop_req |= 1u; events_block(CTL);            /* SEQ TOOLS CLEAR's request */
+    bad += check("  a clear lets the latched chord go (it was orphaned)", !gate_on(t, a) && !t->nheld && !t->arp_phys);
+    t->p[P_AHOLD] = 0; events_block(CTL);
     return bad;
 }
 
@@ -5868,7 +5882,7 @@ static int test_load_budget(void)
     trk_note_on(t, 74, 100);
     bad += check("  tight: a loud release tail rings out (not taken; with a sequence they all were)",
                  voices_busy() == n0 + 2u && t->v[0].stage == 3u);
-    t->v[0].env_out = 300;                              /* the same tail nearly gone (under -30 dB) */
+    t->v[0].env_out = 50;                               /* the same tail nearly gone (under -50 dB) */
     trk_note_on(t, 76, 100);
     bad += check("  tight: a dying tail makes the room (the count stays)", voices_busy() == n0 + 2u);
     load_tight = 0;
@@ -6592,6 +6606,18 @@ static int test_click_menu(void)
         events_block(CTL);
         song.sel = (uint8_t)sel; ui.msg_t = 0; ui.msg[0] = ui.msg2[0] = 0; frame();
         bad += check("TRACKS 4 LOW: T5 asleep (no note, no voice); 6 HIGH wakes it", ok);
+    }
+    {   /* (0.6.19) GLO > SYSTEM's TRKS (KNOB 2): the same setting, both ways */
+        go_title("SYSTEM");
+        turn(EN_K2, -1); frame();
+        ok = trk_live == 4u && !(ui_rec_prefs & 0x80u) && trks_ui == 0;
+        turn(EN_K2, 1); frame();
+        ok &= trk_live == NTRK && (ui_rec_prefs & 0x80u) && trks_ui == 1;
+        ui_rec_prefs &= (uint8_t)~0x80u; frame();
+        ok &= trks_ui == 0;                             /* (MENU's change shown there) */
+        ui_rec_prefs |= 0x80u; frame();
+        ui.msg_t = 0; ui.msg[0] = 0; press(B_HOME); frame();
+        bad += check("GLO > SYSTEM: KNOB 2 TRKS 4 LOW / 6 HIGH, the MENU's setting both ways", ok);
     }
     {
         persist_t p;

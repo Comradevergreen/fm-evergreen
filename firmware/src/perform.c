@@ -195,6 +195,19 @@ static void perf_buf_select(uint32_t e)
 
 /* each block, after the keys (seq.c) and before the parts: what runs, the 1/16, the filters, the mutes.
  * Returns 1 when a stage has something to do */
+/* (0.6.19) a track let go from its mute, silent (its voices ended at 0, perf_hush_end): nothing to ramp back, open at
+ * once; else mix_part never reached perf_mute again (no signal) and the FX layer stayed busy every block */
+static __attribute__((noinline)) void perf_unhush(void)   /* (out of perf_begin: target_budget.py) */
+{
+    uint32_t k, i, on;
+    for (k = 0; k < NTRK; k++)
+        if (!pf.mg[k] && !((pf.act >> (PF_M1 + k)) & 1u)) {
+            for (i = on = 0; i < NVOICE; i++)
+                on |= trk[k].v[i].active;
+            if (!on)
+                pf.mg[k] = 32768;
+        }
+}
 static __attribute__((noinline)) int perf_begin(uint32_t n)
 {
     uint32_t held = perf_kill ? 0u : (perf_held | perf_latched | (perf_solo ? (~(uint32_t)perf_solo & ((1u << NTRK) - 1u)) << PF_M1 : 0u)) & perf_avail() & ~PF_MIDI;
@@ -256,6 +269,7 @@ static __attribute__((noinline)) int perf_begin(uint32_t n)
         }
     }
     pf.mute = 0;
+    perf_unhush();
     for (k = 0; k < NTRK; k++)
         if (((held >> (PF_M1 + k)) & 1u) || pf.mg[k] != 32768)
             pf.mute |= (uint8_t)(1u << k);

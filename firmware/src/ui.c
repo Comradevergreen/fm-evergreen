@@ -77,6 +77,7 @@ static void rp_apply(void)                             /* the settings into clic
     click_lvl = (uint8_t)rp_get(RP_LEVEL);
     cin_bars = (uint8_t)rp_get(RP_COUNTIN);
     trk_live = (ui_rec_prefs & (PREF_SIX >> 8)) ? NTRK : 4u;
+    trks_ui = trk_live == NTRK;                         /* (GLO > SYSTEM's TRKS shows it) */
 }
 static void rp_put(uint32_t f, uint32_t v)
 {

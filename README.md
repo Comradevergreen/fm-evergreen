@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.6.18).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.6.19).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 ## Cheat sheets
 
@@ -29,6 +29,21 @@ Two printable sheets with everything on the device. Click an image to open it fu
 ## Changelog
 
 Every update is listed here, newest first.
+
+### v0.6.19
+- **TRACKS on GLO > SYSTEM** (KNOB 2: TRKS 4 LOW / 6 HIGH), next to the tracks: the same setting as MENU > AUDIO >
+  TRACKS, saved. Going to 4, T5 and T6 now fade out (they were cut: a click).
+- **Less stutter under load** (a full check of the last updates):
+  - the overload guard sheds a voice again only after two overloaded blocks in a row (since 0.6.17 one spike, e.g. a
+    key scan, was enough: a voice cut every 3 ms, clicks and cut tails);
+  - the load budget is measured on the sound alone, and it only takes tails under -50 dB (was -30: audible);
+  - a track let go from a black-key mute or a solo no longer keeps the FX layer working every block.
+- **GRAIN delay without clicks**: with a long TIME, a grain's new spray moved the other grain in the middle of its
+  window (a click every grain); and the FX buses' quiet gate now opens and reopens with a short fade (it jumped).
+- **DRUM-X DRV**: several loud hits at once with DRV high could wrap into a full-scale click; held now.
+- **LATCH**: turning HOLD off or ARP on with a key down, SEQ TOOLS CLEAR and REC CLEAR ALL now let the latched notes
+  go (they kept droning and stacked up); a panic also ends them on MIDI OUT.
+- MENU > ABOUT's AUDIO LOAD updates live.
 
 ### v0.6.18
 - **MENU > AUDIO > TRACKS: 4 LOW (the default) or 6 HIGH.** With 4, tracks 5 and 6 sleep: they keep their sound,
@@ -507,7 +522,7 @@ each layer.
 - **Load meter** (top right, next to the battery): five small bars showing how much of the audio time the sound is
   using right now. The firmware's RAM is reserved entirely at boot and doesn't change, so this is what's worth
   watching: with all five lit (red, yellow) you're close to the limit and should cut voices, the CLOUD reverb or heavy
-  effects. If it's often full, MENU > AUDIO > **TRACKS 4 LOW** (the default) leaves T5 and T6 asleep for headroom.
+  effects. If it's often full, GLO > SYSTEM > **TRKS 4 LOW** (the default; also in MENU > AUDIO > TRACKS) leaves T5 and T6 asleep for headroom.
 - **Power-on**: the signature draws itself in about a second, with beings swimming round it. To boot straight in: MENU > **ANIM OFF**.
 
 ### 3. Making a sound

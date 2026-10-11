@@ -175,7 +175,7 @@ static uint32_t trk_vmode(const track_t *t)
 }
 
 /* ------------------------------------------------- the shared voice budget --- */
-/* (JIANT 0.6.16) the load budget: audio.c sets it when a half took more than 70 % of its time (the render), clears
+/* (JIANT 0.6.16) the load budget: audio.c sets it when a half took more than 65 % of its time (the render), clears
  * it after a while under 60 %. While it is set the sound may not grow: a new note takes a voice (the oldest released
  * first) instead of adding one (voice_room), CLOUD spawns half its grains (fx.c). Ahead of the overload guard (80 %:
  * a voice faded) and of a late half (a click): the load stops climbing before it gets there */
@@ -244,7 +244,7 @@ static void voice_kill(voice_t *v)                      /* fade out over the nex
     voice_kills++;
 }
 
-/* (0.6.18) the load budget takes only a tail that is nearly gone: the oldest released voice under -30 dB (any part).
+/* (0.6.18) the load budget takes only a tail that is nearly gone: the oldest released voice under -50 dB (any part; 0.6.19, was -30).
  * NVOICE = none: the new voice is added and the tails ring out (0.6.16-17 took the oldest released one, loud or not:
  * with a sequence running every note cut the tails; the overload guard at 80 % stays the last line) */
 static uint32_t quiet_tail(track_t **pp)
@@ -253,7 +253,7 @@ static uint32_t quiet_tail(track_t **pp)
     for (p = 0; p < NPART; p++)
         for (i = 0; i < NVOICE; i++) {
             const voice_t *v = &trk[p].v[i];
-            if (!v->active || v->gate || v->stage == 4u || v->env_out >= 1024)
+            if (!v->active || v->gate || v->stage == 4u || v->env_out >= 104)
                 continue;
             if (best == NVOICE || v->age < (*pp)->v[best].age) {
                 best = i;
