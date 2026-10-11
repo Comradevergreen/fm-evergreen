@@ -1,0 +1,1023 @@
+# JIANT FM — User Manual
+
+**Firmware v0.6.30 for the M-VAVE FM-1**
+
+> *Versión en español: [MANUAL.es.md](MANUAL.es.md).*
+
+This manual is for musicians who have just installed JIANT FM and want to know how to play it, build songs with it
+and, above all, **save their work without losing anything**. It follows the firmware as it is in v0.6.30: every
+button, knob and message is named exactly as the device shows it.
+
+If you only read one chapter, read [12. Saving and loading](#12-saving-and-loading).
+
+## Contents
+
+0. [Quick start](#0-quick-start)
+1. [The panel](#1-the-panel)
+2. [The screen](#2-the-screen)
+3. [Pages and layers](#3-pages-and-layers)
+4. [Engines](#4-engines)
+5. [DRUM-X](#5-drum-x)
+6. [The sequencer](#6-the-sequencer)
+7. [ARRANGE: songs, sections and scenes](#7-arrange-songs-sections-and-scenes)
+8. [Dice and UNDO](#8-dice-and-undo)
+9. [Effects and master](#9-effects-and-master)
+10. [Modulation and macros](#10-modulation-and-macros)
+11. [Performance](#11-performance)
+12. [Saving and loading](#12-saving-and-loading)
+13. [System: TRACKS, LOAD and the MENU](#13-system-tracks-load-and-the-menu)
+14. [MIDI and USB](#14-midi-and-usb)
+15. [Web tools: emulator, installer, editor, backup](#15-web-tools-emulator-installer-editor-backup)
+16. [Troubleshooting and FAQ](#16-troubleshooting-and-faq)
+
+---
+
+## 0. Quick start
+
+### Install
+
+1. Open the **web installer** in Chrome or Edge: <https://juanjiant-bit.github.io/JIANT/webapp/installer/>
+2. Connect the FM-1 **directly** to the computer with a USB data cable.
+3. **Coming from another custom firmware (Felucca, baudgirl or any other)?** Return to the official V15 firmware
+   first, with the installer's **Return to official V15 first** button (it also saves a complete backup). Writing
+   JIANT straight over another custom firmware has left an FM-1 unable to start.
+4. Tick **"This FM-1 runs official V15 or JIANT"** and press **Install**. Don't unplug the cable while it writes.
+
+JIANT has no user samples: if you come from Felucca, its user samples (USR1–3) are lost on install. Keep your WAV
+files.
+
+### Your first sound (1 minute)
+
+1. Power on. The signature draws itself, then you land on **HOME**: six creatures, one per track.
+2. Turn **ALGORITHM** to pick a track (T1–T6). With the default **TRACKS 4**, use T1–T4 (see
+   [13](#13-system-tracks-load-and-the-menu)).
+3. Turn **PRESETS** to browse sounds. Play the keys.
+4. Turn **KNOB 1–4**: on HOME they are the four most useful controls of the track's engine.
+5. Don't like it? Press **EDIT** and turn **SELECT**: the sound is rolled into a new variation. **GLO held + G4**
+   takes it back.
+
+### Your first song (5 minutes)
+
+1. On **HOME**, turn **SELECT**. The screen asks **DICE EVERYTHING?** Press **OCT+** (YES). A whole song idea
+   appears: engines, sounds, parts, scale, tempo and effects. Press **PLAY**.
+2. Not your thing? Turn SELECT again and confirm. Every throw is new. To go back to the one before: hold **GLO** and
+   press **G4** (UNDO).
+3. Like it? **Stop** (PLAY), then press **SAVE** twice to reach **SAVE > PROJECT** (the first SAVE press opens
+   USER, the second PROJECT). Turn **KNOB 4** to the right so it shows **[OCT+]**, then press **OCT+**. Type a name with the keys (or keep
+   the one offered) and press **OCT+** again. The screen says **SAVED**.
+4. Make a variation (change some steps, mute a track) and save it into section **B**: on SAVE > PROJECT turn
+   **KNOB 2** to **B**, then KNOB 4 and OCT+ as before.
+5. Press **SAVE** again to reach **ARRANGE**. Turn **KNOB 2** on the **+ ADD** row to add a row, set its section
+   with KNOB 2 and its length with **KNOB 3** (bars). Add a row for A, one for B. Press **PLAY**: the song plays the
+   rows in order.
+
+That's the whole loop: **make music → save it into a section → chain sections in ARRANGE**.
+
+---
+
+## 1. The panel
+
+The names below are the ones the firmware uses (the HARDWARE CALIBRATION screen asks for them by these names).
+
+### Encoders and knobs
+
+| Control | What it does |
+| --- | --- |
+| **SELECT** (encoder) | On **HOME**: opens **DICE EVERYTHING?** (the song-idea generator). On **EDIT** pages: rolls the selected track's sound. On **GLO's pages (MIXER, GLOBAL, SYSTEM)**, or with **GLO held** anywhere: the tempo (BPM). With the macros open or latched: rolls new macro routes. On other pages it says **DICE: HOME / EDIT**. |
+| **ALGORITHM** (encoder) | Selects the track, T1–T6, from any page. In the MENU: switches tabs. |
+| **PRESETS** (encoder) | On HOME, PRESETS and the sound pages: browses sounds (every engine's factory presets, then your user presets). On step pages (STEP, PATTERN, CHANCE, AUTOMATION): moves the step cursor. On list pages (USER, PROJECT, PHRASES, ARRANGE, TOOLS, AUTO LIST): moves the selection. **Hold a page button and turn PRESETS** to jump straight through that button's pages. |
+| **KNOB 1–4** | The four cards (columns) on screen. With a layer held, the layer's own knobs. Turning fast sweeps the whole range, slowly fine-tunes (MENU > KNOB ACCEL turns this off). |
+| **MASTER** | The output volume. |
+
+### Buttons
+
+| Button | Tap | Hold |
+| --- | --- | --- |
+| **HOME** | Back to HOME (the ecosystem). | About 0.7 s: opens the **MENU**. |
+| **ENV** | ENV pages. | (no layer) |
+| **LFO** | LFO pages. | **MACRO** layer: KNOB 1–4 are M1–M4. |
+| **FX** | FX pages (two quick taps: next FX section). | **Punch-in FX** layer. |
+| **SCL** | SCL pages. | **SCL** layer: keys set the root. |
+| **EDIT** | EDIT pages (on STEP: clears the step; on USER / PROJECT: rename). | **EDIT** layer: INIT, RECALL, DRUM-X sound mutes. |
+| **GLO** | MIXER → GLOBAL → SYSTEM → MIXER. | **GLO** layer: mutes, solos, levels, tap tempo, UNDO. |
+| **SAVE** | SAVE pages (first press: USER). | **SAVE** layer: play/store sections live. |
+| **ARP** | ARP pages. | (no layer) |
+| **SEQ** | SEQ pages. | **SEQ TOOLS** layer (on STEP, PATTERN, CHANCE and AUTOMATION). |
+| **PLAY** | Start / stop. | — |
+| **REC** | Arms / disarms recording on the selected track. | **REC** layer: CLEAR, CLICK. |
+| **OCT− / OCT+** | Keyboard octave (−3 to +3; both together: back to 0). On action pages and in dialogs: **OCT−** = back / NO, **OCT+** = do it / YES. | — |
+
+### The keys
+
+27 keys from **F3 to G5** (16 white, 11 black). They play the selected track. With a layer held they become that
+layer's shortcuts; on the DRUM grid they are steps and lanes; on the NAME screen they type.
+
+### Useful combinations
+
+| Combination | Result |
+| --- | --- |
+| **GLO** held + **PLAY** | Restart from the top without stopping (internal clock). |
+| **GLO** held + **SELECT** | Tempo, from any page. |
+| **GLO** held + **G4** | **UNDO** the last big change (again: redo). |
+| **SEQ** held + **REC** | **CLEAR ALL SEQUENCES?** — all six tracks' steps and automation, and the punch-in lane. |
+| **REC** held + **FX / EDIT / ENV / LFO / SCL / ARP / GLO** | Clears that part's automation on the selected track (GLO: the level and pan automation of all tracks; FX: also the punch-in lane). No dialog. |
+| **SAVE** held + **OCT+** / **OCT−** | Store the music into the section playing / recall that section as stored. |
+| A page button held + **PRESETS** | Jump through that button's pages. |
+| A step held (SEQ > STEP) + **KNOB 1–4** | A parameter lock on that step. |
+| **OCT− + OCT+** held at power-on | HARDWARE CALIBRATION. |
+| **OCT− + OCT+** held 5 s while running | Update mode (UBOOT), with a countdown from 2 s; let go to cancel. |
+
+---
+
+## 2. The screen
+
+- **Header (top)**: play state, the metronome, the **BPM** (lit while it changes), the octave (or the song row
+  while a song plays), the **load meter** (five small bars next to the battery: how much of the audio time the sound
+  takes now) and the USB icon. Messages appear here too ("SAVED", "T1 CLEARED"...), sometimes with a second line.
+- **Cards**: the four columns under the header are KNOB 1–4. A value that is automated or locked is marked; a dim card
+  means "nothing here now".
+- **Panel (middle)**: the page's graph — the engine's creature, an envelope, the LFO running, the step grid, a list...
+- **Footer**: the page name and its place in its family (e.g. **DLY 2/2**), or key hints. On the song pages
+  (PROJECT, ARRANGE, TOOLS, GLOBAL, SYSTEM) it shows the project and its name instead of the track's sound.
+
+**Colours** work like a thermal camera: cold (cyan, blue) is little, hot (orange, yellow, white) is a lot. Violet is
+what's selected, orange what's active.
+
+**HOME** is the ecosystem: one creature per track, its species from its engine, its shape from its four knobs, swelling
+and heating up with its own audio. The selected track is drawn bigger, a muted one goes dark, a track asleep
+(TRACKS 4) is drawn as muted. On the **MIXER**, asleep tracks are greyed and say OFF.
+
+**Dialogs** ask before anything destructive: **OCT− NO**, **OCT+ YES**.
+
+---
+
+## 3. Pages and layers
+
+### How navigation works
+
+- **Tap** a page button: its pages. Tap again: the next page of that family. From another family you return to the
+  page you were last on.
+- **HOME** returns to the ecosystem.
+- **FX** is long, so it is split into sections: TRACK (FX, DIST, AUTOPAN), SLICER (SLICER, SL BUS, SL BUS 2, SL PITCH),
+  DELAY (DLY, DLY 2), REVERB (REVERB, REVERB 2), CHORUS, MASTER. **Two quick taps** on FX jump to the next section.
+- **Hold a page button and turn PRESETS** to go through its pages forwards or back (no wrap); let go and you stay there.
+- **Hold** a page button (past the HOLD time, MENU > HOLD, 0.4 s by default) to open its **layer**: the keys and
+  knobs change function while you hold it, and a map shows what each key does. Pressing a key or turning a knob
+  opens it at once. Let go and you're back where you were.
+- Some pages only appear when they apply: FM6's operator pages on an FM6 track, DRUM-X's pages on a DRUM track,
+  RETRIG on LOFI BYTE/FLOAT, and with **LOAD ECO** the SLICER and CHORUS pages are hidden.
+
+### Every page and its four knobs
+
+"—" means an empty card. "Action" cards show **[OCT+]** when picked (turn the knob right); press OCT+ to do it.
+
+**ENV** (per track)
+
+| Page | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
+| --- | --- | --- | --- | --- |
+| ENV | ATK | DEC | SUS | REL |
+| ENV DEST | FILTER | PITCH | SHAPE | LOOP |
+
+**LFO** (per track)
+
+| Page | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
+| --- | --- | --- | --- | --- |
+| LFO | RATE | WAVE | PHASE | FADE |
+| LFO DEST | PITCH | FILTER | SHAPE | AMP |
+| MOD | SLOT (1–4) | SRC | DEST | AMT |
+| MSEQ | STEP (1–16) | LEVEL | LEN | SLEW |
+| MSEQ 2 | DIV | — | — | — |
+
+**FX** (TRACK pages are per track; the rest are global)
+
+| Page | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
+| --- | --- | --- | --- | --- |
+| FX | DIST | CHORUS (send) | DLY (send) | REV (send) |
+| DIST | DIST | TYPE | TONE | — |
+| AUTOPAN | DEPTH | RATE | SYNC | WAVE |
+| SLICER | MODE | PAT | RATE | DEPTH |
+| SL BUS | T1 | T2 | T3 | T4 |
+| SL BUS 2 | T5 | T6 | FX | — |
+| SL PITCH | STEP | PITCH | LEN | QUANT |
+| DLY | TIME | FEEDBK | TONE | MIX |
+| DLY 2 | WIDE | PITCH | SPRAY | — |
+| REVERB | TYPE | SIZE | DAMP (RESO: FOLLOW) | PRE (SHIMMER/CLOUD: AIR; RESO: PITCH) |
+| REVERB 2 | MOD | RATE | FILT | WIDE |
+| CHORUS | RATE | DEPTH | STEREO | — |
+| MASTER | CLIP | PUNCH | DUCK | REL |
+
+**SCL**
+
+| Page | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
+| --- | --- | --- | --- | --- |
+| SCL | ROOT | SCALE | QUANT | TRANS |
+| SCL 2 | STRN | — | — | — |
+
+**EDIT** (per track; which pages appear depends on the engine)
+
+| Page | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 | Shown on |
+| --- | --- | --- | --- | --- | --- |
+| EDIT 1 | E1 | E2 | E3 | E4 | every engine (see [4](#4-engines)) |
+| EDIT 2 | E5 | E6 | E7 | E8 | every engine |
+| RETRIG | RTRG | — | — | — | LOFI with WAVE on BYTE or FLOAT |
+| OPERATOR | OP | RATIO / FIXED | FINE | LEVEL | FM6 |
+| OP ENV | OP | STAGE | RATE | LEVEL | FM6 |
+| OPERATOR 2 | OP | MODE | DTUN | VEL | FM6 |
+| FILTER | TYPE | CUT | RES | DRIVE (ANALOG) / DIST (others) | every engine |
+| LANES | KICK | SNARE | CLAP | HATCL | DRUM |
+| LANES 2 | HATOP | TOM | RIM | BELL | DRUM |
+| SOUND | LANE | SIDE | PITCH | PMOD | DRUM |
+| SOUND 2 | DECAY | NOISE | COLOR | MODE | DRUM |
+| SOUND 3 | LANE | PMOD | DRIVE | WAVE | DRUM |
+| X-MOD | RATE | DEPTH | SHAPE | RAND | DRUM |
+| VOICE | VOICE | GLIDE | MODE | PRIO | every engine |
+
+**GLO** (MIXER is per track; GLOBAL and SYSTEM are global)
+
+| Page | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
+| --- | --- | --- | --- | --- |
+| MIXER | LEVEL | PAN | REV | MUTE (right ON, left OFF) |
+| GLOBAL | BPM | SWING | CLOCK | TUNE |
+| SYSTEM | TRACKS | LOAD | ROUTE | CPU (%) |
+
+**SAVE**
+
+| Page | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
+| --- | --- | --- | --- | --- |
+| PRESETS | No. (the sound) | ENG (the engine) | FAV (mark a favourite) | LIST (ALL / FAV) |
+| USER | SLOT (U01–U32) | LOAD (action) | ERASE (action) | SAVE (action) |
+| PROJECT | PROJ (1–8) | SECT (A–D) | LOAD (action) | SAVE (action) |
+| ARRANGE | ROW | SECT (on END: STOP / x2–x8 / LOOP) | BARS | SCENE |
+| TOOLS | any knob or PRESETS picks from the list: CLEAR SEQ, INIT SOUND, DELETE ROW, CLEAR SONG | | | |
+
+**ARP** (per track)
+
+| Page | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
+| --- | --- | --- | --- | --- |
+| ARP | MODE | RATE | OCT | GATE |
+| ARP 2 | SWING | PROB | HOLD | ORDER |
+
+**SEQ** (per track)
+
+| Page | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
+| --- | --- | --- | --- | --- |
+| STEP (melodic: piano roll) | STEP | NOTE | TIME (NOTE / TIE / REST) | FLAG (– / ACC / SLD / A+S) |
+| STEP (DRUM: grid) | STEP | LANE | HIT | ACC |
+| PATTERN | LEN | DIV | SWING | GATE |
+| SHIFT | OFFSET | PITCH | — | — |
+| PHRASES | PAT | LOAD (action) | — | — |
+| CHANCE | STEP | CHANCE | RATCH | — |
+| AUTOMATION | PLAY (ON/OFF) | EVENT (count) | LOCK (count) | CLEAR (action) |
+| AUTO LIST | ROW | STEP | PARAM | VALUE |
+
+### The layers (hold the button)
+
+**FX — punch-in effects** (details in [11](#11-performance))
+
+| Keys | Effect |
+| --- | --- |
+| F3 G3 A3 | REPEAT 1/8, 1/16, 1/32 |
+| B3 / C4 | LPF / HPF |
+| D4 / E4 | OCT− / OCT+ |
+| F4 | 1/2 TEMPO |
+| G4 / A4 | DEC− / DEC+ |
+| B4 / C5 | STUTTER 1/8 / 1/16 |
+| D5 | ATK+ |
+| E5 | ARP |
+| F5 | RANDOM |
+| G5 | erases the punch-in lane |
+| Black keys 1–6 (F#3 G#3 A#3 C#4 D#4 F#4) | mute T1–T6 while held |
+| A#4 | which tracks the note effects touch: ALL / SYN / DRM |
+| **Knobs** | FILTER, CRUSH, THROW, DEPTH |
+
+**GLO — mix**
+
+| Keys | Action |
+| --- | --- |
+| Black keys 1–6 | MUTE T1–T6 (latched: press again to unmute) |
+| Black keys 7–10 (G#4 A#4 C#5 D#5) | DRUM-X group mutes: KICK, SNARE, HAT, PERC |
+| F3–D4 | SOLO T1–T6 while held |
+| E4 | unmute everything (tracks and drum groups) |
+| F4 | TAP tempo (from the third tap; internal clock only) |
+| G4 | **UNDO** (again: redo) |
+| PLAY | restart from the top |
+| SELECT | tempo |
+| **Knobs** | LEVEL T1–T4 (with T5 or T6 selected: T3–T6) |
+
+**SCL** — any key sets the ROOT to its note name. Knobs: ROOT, SCALE, OFFSET, PITCH (the last two are SEQ > SHIFT's).
+
+**EDIT** — F3 **INIT** (the track's sound back to its engine's first factory preset; on DRUM the factory DRUM-X kit
+too), G3 **RECALL** (the sound as the current section stored it; on DRUM with its kit). Both ask first and leave the
+steps alone. On a DRUM track, black keys 1–8 mute each DRUM-X sound (BD SD CP CH OH TM RS CB). Knobs: EDIT 1's four.
+
+**SEQ TOOLS** (only on STEP, PATTERN, CHANCE and AUTOMATION) — F3 CLEAR, G3 REVERSE, A3 / B3 SHIFT left / right,
+C4 RANDOM, D4 COOK, E4 BEAT (DRUM), F4 CLR AUTO (the track's automation and locks; the steps stay). On a DRUM track the
+lane tools: G4 CLR, A4 REV, B4 FILL, C5 RND on the lane picked with black keys 1–8. **REC** (while SEQ is held): CLEAR
+ALL. Knobs: LEN, DIV, SWING, GATE. These tools have no undo.
+
+**REC** — F3 **CLEAR** the selected track's steps and automation (no dialog; UNDO can bring it back), G3 **CLICK**
+(OFF / REC / ON). KNOB 1: CLICK.
+
+**SAVE — song layer** (details in [7](#7-arrange-songs-sections-and-scenes))
+
+| Keys | Action |
+| --- | --- |
+| F3 G3 A3 B3 | play section A / B / C / D (next bar while playing; at once when stopped). Several in one hold: a quick chain. |
+| C4 D4 E4 F4 | STORE the music into A / B / C / D |
+| D5 | LOOP / SONG: what PLAY plays |
+| E5 | SONG REC |
+| G5 | go to the ARRANGE page |
+| OCT+ / OCT− | store into / recall the section playing |
+| **KNOB 1** | the project (1–8); applied when you let go of SAVE, stopped only |
+
+**LFO — macros**: KNOB 1–4 are M1–M4. Let go and they stay **latched** (the header says [LFO] LATCH, and KNOB 1–4
+keep controlling the macros on every page) until you press LFO again. F3 rolls new routes, G3 clears them, SELECT
+rolls too.
+
+---
+
+## 4. Engines
+
+Eight engines, all synthesis, no samples. Any engine can go on any track. Pick them with **PRESETS** (one list over
+every engine) or with KNOB 2 (ENG) on SAVE > PRESETS. Each track's four HOME knobs are listed too.
+
+| Engine | EDIT 1 | EDIT 2 | HOME knobs |
+| --- | --- | --- | --- |
+| **ANALOG** | WAVE, DETUNE, MIX, NOISE | CUT, RES, DRIVE, INT | CUT, RES, ATK, REL |
+| **FM6** | ALG, FB, MOD, RATIO | MEG, VMOD, DETUNE, SLOT | MOD, RATIO, MEG, SLOT |
+| **PHASE** | WAVE, WAVE2, DCW, ENV | DETUNE, LINE, SUB, FB | DCW, ENV, DETUNE, REL |
+| **LOFI** | CHIP, WAVE, DUTY, CRUSH | —, VIB, BEND, MASK | WAVE, DUTY, CRUSH, REL |
+| **VOICE** | VOWEL, VOWEL2, TALK, SHIFT | BUZZ, BREATH, Q, RAND | VOWEL, BUZZ, BREATH, TALK |
+| **WHEEL** | REG, SUB, BODY, TOP | PERC, CLICK, DRIVE, ROTOR | REG, PERC, DRIVE, ROTOR |
+| **NOISE** | MODE, COLOR, FREQ, PEAK | TRK, DENSE, DRIFT, CRUSH | FREQ, PEAK, COLOR, REL |
+| **DRUM** (DRUM-X) | MORPH, TUNE, TONE, DECAY | NOISE, FM, FOLD, DRIVE | MORPH, TUNE, TONE, DECAY |
+
+- **ANALOG**: two oscillators. WAVE: SAW, SQR, TRI, SIN, PWM, SYNC, RING, SAW3. **INT** sets oscillator 2's interval
+  (±24 semitones). Its filter is per voice.
+- **FM6**: a six-operator FM engine (Dexed's msfa), 32 algorithms drawn on screen, four voices per track. The EDIT 1/2
+  knobs are macros over the patch. **SLOT**: the factory patches F1–F8, OWN (an edited or imported patch) and B1–B32
+  (a 32-voice DX7 bank sent from the web editor; empty slots are skipped). **OPERATOR / OP ENV / OPERATOR 2** edit each
+  of the six operators on the device (KNOB 1 picks the operator); editing makes the patch the track's own (SLOT OWN),
+  saved with the project. A bank voice you pick is copied into the track, so projects keep it even if you send
+  another bank later.
+- **PHASE**: phase distortion. WAVE / WAVE2: SAW, SQR, PLS, DSIN, SPLS, RSAW, RTRI, RTRP. LINE: MIX or RING.
+  **FB** feeds the output back into the phase.
+- **LOFI**: chip sounds. CHIP: 4BIT, 4B/2, 8BIT, 1BIT, STEP. WAVE: PLS, TRI, SAW, NOIS, WRAM, **BYTE**, **FLOAT**.
+  - **BYTE** (bytebeat): KNOB 3 becomes **ALGO** (32 formulas), KNOB 4 **VAR** (mutates the formula); EDIT 2 becomes
+    **MOTION, GRIT, BEND, LOOP**. MOTION speeds the formula's rhythm up or down (64 = as written), GRIT is a rate
+    crusher, BEND folds time, LOOP repeats a tiny stretch (high LOOP turns the noise into a tuned note).
+  - **FLOAT** (floatbeat): CHIP becomes the resolution (4BIT, 4B/2, FULL, 1BIT), KNOB 3 **ALGO** (32 formulas made of
+    sines), KNOB 4 **VAR**; EDIT 2: **MOTION, FEEDBK, BEND, LOOP**. Hold a key: the formula plays in that key.
+  - **RETRIG** page (BYTE / FLOAT): **RTRG ON** restarts the formula from the top on every note.
+- **VOICE**: a formant voice (after klattsch): vowels, talk, breath.
+- **WHEEL**: a drawbar organ: registrations (REG), percussion (PERC: OFF, 2ND, 3RD, 2SOFT, 3SOFT, 2SLOW, 3SLOW),
+  key click, drive, ROTOR (OFF, SLOW, FAST).
+- **NOISE**: coloured and metallic noise. MODE: ANLG, DUST, LFSR, META. PEAK is its own resonance.
+- **DRUM**: DRUM-X, see [5](#5-drum-x).
+
+### FILTER (every engine)
+
+EDIT > **FILTER**: **TYPE** LP, HP, BP or **COMB** (a comb tuned to the note you play; CUT moves it, RES is how much
+it rings), **CUT**, **RES**, and KNOB 4: on ANALOG its own DRIVE, on every other engine the track's DIST. On ANALOG
+the filter is per voice; on LOFI the filter page drives its per-voice filter; on the others it is a filter on the
+track that follows LFO DEST / ENV DEST FILTER.
+
+### VOICE (every engine)
+
+EDIT > **VOICE**: **VOICE** POLY, MONO, LEG (legato), UNI (unison); **GLIDE**; **MODE** RATE or TIME (how glide is
+measured); **PRIO** LAST, LOW, HIGH. The six tracks share a budget of 8 voices; FM6 plays at most four per track.
+
+---
+
+## 5. DRUM-X
+
+DRUM-X is a synthesized kit of eight sounds, **BD SD CP CH OH TM RS CB**, generated in real time.
+
+- Every sound has two sides, **A** and **B**. **MORPH** (EDIT 1, KNOB 1, also on HOME) moves the whole kit between
+  them: the knob to play live.
+- EDIT 1: MORPH, TUNE, TONE, DECAY. EDIT 2: NOISE, **FM**, **FOLD** (a wavefolder after the envelope: a bright
+  attack, a clean tail), DRIVE.
+- **LANES / LANES 2**: the level of each sound (KICK, SNARE, CLAP, HATCL, HATOP, TOM, RIM, BELL).
+- **SOUND** (per sound, per side): LANE (which sound; striking a key also picks it), SIDE (A / B), PITCH, PMOD.
+- **SOUND 2**: DECAY, NOISE, COLOR, MODE (wave SIN / FM / MTL / BEL, noise filter LP / BP / HP, and "+" for snap).
+- **SOUND 3**: LANE, PMOD (how the pitch moves: DECAY, LONG, NOISE, SINE), DRIVE (ON / OFF), WAVE (SIN, FM, MTL, BEL).
+- **X-MOD** (the whole kit): **RATE** (OFF, 4BAR … 1/32, in time), **DEPTH** (how far MORPH swings), **SHAPE** (SINE,
+  TRI, SAW, RAMP, S&H), **RAND** (each hit gets its own MORPH and a little tune).
+- **Mutes**: GLO held + black keys 7–10 mute the groups KICK, SNARE, HAT, PERC; EDIT held + black keys 1–8 mute each
+  sound.
+- **SELECT** on an EDIT page rolls a new kit around the factory one. **EDIT held + F3 (INIT)** brings the factory kit
+  back.
+
+The kit is saved with each section of a project (not with user presets — see [12](#12-saving-and-loading)).
+
+---
+
+## 6. The sequencer
+
+Each track has its own **64-step** pattern with its own length (LEN), division (DIV), swing and gate, so patterns
+of different lengths turn against each other.
+
+### Writing steps
+
+- **SEQ > STEP** on a melodic track is a **piano roll**. KNOB 1 moves the step cursor, KNOB 2 transposes the step,
+  KNOB 3 sets NOTE / TIE / REST, KNOB 4 sets accent / slide. A step holds up to four notes.
+- **Step recording**: on STEP, while **stopped**, press **REC** (the screen says KEYS WRITE STEPS). Play a note or a
+  chord: it goes into the cursor step, and when you let go the cursor moves on. Not armed, the keys just play.
+- **EDIT** (tap) on STEP clears the cursor step.
+- On a **DRUM** track, STEP is a **grid**: white keys are the 16 steps of the page, black keys 1–8 pick the lane
+  (and play it), black key 9 held is ACC (white keys then toggle accents), black keys 10 / 11 page down / up when
+  LEN is over 16. Knobs: STEP, LANE, HIT, ACC.
+
+### Live recording
+
+Press **REC** anywhere (not on STEP while stopped): the track is armed and the transport starts. What you play is
+recorded into the pattern, quantized to its steps, overdubbing. Knob moves on the selected track are recorded as
+**automation**. MENU > AUDIO has the **CLICK** (OFF / REC / ON), **CLICK LEVEL** and **COUNT-IN** (OFF, 1 BAR, 2 BARS).
+
+### Pattern pages
+
+- **PATTERN**: LEN (1–64), DIV, SWING, GATE.
+- **SHIFT**: **OFFSET** (−32 to +32 steps) and **PITCH** (±24 semitones; not on drums). Both can be automated and are
+  also on the SCL layer's KNOB 3 / 4.
+- **PHRASES**: load a pattern into the track: the factory ones ("01"…) and the patterns of your user presets ("U07").
+  KNOB 1 picks, OCT+ loads (it asks first if the track has your own steps).
+- **CHANCE**: per step, CHANCE (0–100 %) and RATCH (x1–x4).
+- **AUTOMATION**: PLAY turns the track's automation on or off, EVENT and LOCK count the records, CLEAR erases them
+  (OCT+, with a dialog).
+- **AUTO LIST**: every automation event and lock as a list. KNOB 1 the row, 2 the step, 3 the parameter, 4 the value.
+  On **+ ADD LOCK**, OCT+ adds a lock; on a record, OCT+ switches it between LOCK and AUTO; **EDIT** deletes it.
+
+### Parameter locks
+
+On **SEQ > STEP**, **hold a step** (a grid key, or the note being entered on the roll) and turn a knob: that step gets
+its own value of the parameter that knob edits on the sound page you visited last. Tap EDIT while holding the step to
+clear its locks. Automation events and locks share **64 records per section** (all tracks together); when they run out
+the screen says **AUTOMATION FULL**.
+
+### Scale
+
+**ROOT, SCALE and QUANT are global**: one scale for the whole song. Whatever track you set them on (knob, SCL layer,
+MIDI, a project load), every melodic track follows it at once; drum tracks have none. Each track keeps its own TRANS.
+
+- SCALE: CHR, MAJ, MIN, DOR, MIX, PEN, MPEN, HARM, PHRY, LYD, LOC, MEL, BLUES, WHOLE, DIMHW, DIMWH.
+- QUANT: OFF; SNAP (keys snap to the scale); WHITE (the white keys walk the scale, black keys are silent); SEQ (as SNAP,
+  and the sequencer's notes snap too as they play).
+- **SCL 2 > STRN** moves every sequence up or down the scale (±14 degrees).
+- The RESO reverb and the SLICER's pitch steps follow the scale too.
+
+### ARP
+
+ARP: MODE, RATE, OCT (1–4), GATE. ARP 2: SWING, PROB, HOLD, ORDER (NOTE / PLAY). Modes: OFF, UP, DN, UPDN, RND, ORD,
+REPEAT, DNUP, UP+8, CONV, DIVG, PINKY, THUMB, WALK, CHORD, **TRNS** (the keys and incoming MIDI transpose the track's
+sequence by their distance from C4, without playing notes). **Key latch**: with MODE OFF, **HOLD ON** keeps the notes
+sounding after you let go; the next chord replaces them.
+
+### Clearing
+
+| To clear | Do |
+| --- | --- |
+| The selected track's steps and automation | **REC held + F3**, or SAVE > TOOLS > CLEAR SEQ, or SEQ TOOLS F3 |
+| All six tracks' steps, automation and the punch-in lane | **SEQ held + REC**, then OCT+ |
+| Only one part's automation on the selected track | **REC held + FX / EDIT / ENV / LFO / SCL / ARP / GLO** |
+| The track's automation, keeping the steps | SEQ TOOLS **F4 CLR AUTO**, or SEQ > AUTOMATION > CLEAR |
+
+A track clear says **T3 CLEARED** with **SEQ+REC: ALL TRACKS** under it as a reminder of the all-tracks combo.
+
+---
+
+## 7. ARRANGE: songs, sections and scenes
+
+### The pieces
+
+- A **project** is a song. There are **8 projects**.
+- Each project has **4 sections, A–D**. A section is a full snapshot of the music: every track's sound, steps and
+  automation, the DRUM-X kit and its mutes, the punch-in lane, the SLICER, the macros, plus the tempo and global effects.
+- Each project has one **arrangement**: up to **16 rows**, each a section played for **1–64 bars**, optionally with a
+  **scene**, and an **END** rule.
+
+That's 32 sections in total (8 × 4).
+
+### The ARRANGE page (SAVE > ARRANGE)
+
+The song as a column of rows. Each row shows its section chip (A–D, each in its own colour), its bars as blocks that
+fill as they play, its bar count and a dot if it has a scene. A row pointing to a section with nothing stored says
+**EMPTY**. Below the rows: **+ ADD** (with how many of the 16 rows are used) and **END**. On the right, the whole song as
+one strip with the play head, and the total bars.
+
+| Knob | On a row | On + ADD | On END |
+| --- | --- | --- | --- |
+| KNOB 1 (or PRESETS) | choose the row | | |
+| KNOB 2 | its section A–D; turned left past A: **DELETE SONG ROW?** | adds a row (same section as the row above, 1 bar) | **STOP**, **x2 … x8**, **LOOP** |
+| KNOB 3 | its bars (1–64) | adds a row | |
+| KNOB 4 | right: store a **scene** (SCENE STORED); left: clear it | | |
+
+- **PLAY** (or OCT+) on ARRANGE plays the song from the top; again: stop.
+- When the song ends (or you stop it), the music you had before pressing PLAY comes back (SONG END).
+- END: **STOP** plays the song once, **x2–x8** that many times, **LOOP** forever.
+- If a row points to an empty section the song won't start: the screen says **PATTERN A EMPTY** (or B, C, D).
+- While a song plays, step editing is blocked (**STOP TO EDIT**).
+- To delete a row you can also use SAVE > TOOLS > DELETE ROW (the row ARRANGE has selected). To delete the whole
+  arrangement: TOOLS > CLEAR SONG (**CLEAR SONG ORDER?**). Neither can be undone.
+- The arrangement is saved automatically (about 2 seconds after a change, while stopped). See [12](#12-saving-and-loading).
+
+### Scenes
+
+A scene is stored per row and recalls, when that row starts: the track mutes (T1–T6), the DRUM-X group mutes, the
+macros M1–M4 and the punch-in note effects being held. It stays in effect through the following rows that have none.
+Scenes apply when a song plays, not in a quick chain. SONG REC also stores one per row as it begins.
+
+### Playing sections live (SAVE layer)
+
+Hold **SAVE**:
+
+- **F3–B3**: play section A–D. While playing it comes in on the **next bar**; stopped, it loads at once.
+- Tap **two or more** of F3–B3 in one hold: a **quick chain** — they play in turn, each for its longest pattern's
+  length, round and round, starting on the next bar (stopped: at once).
+- **C4–F4**: **store** the music now into A–D (works while playing; see [12](#12-saving-and-loading) for when it
+  reaches flash).
+- **OCT+**: store into the section playing (PLAY A SECTION FIRST if none). **OCT−**: recall it as stored.
+- **D5**: **LOOP / SONG** — in SONG mode, PLAY from any page plays the arrangement.
+- **E5**: **SONG REC** — the sections you play live (and their bars) are written into the arrangement's rows, with a
+  scene each. It replaces the current rows.
+- **G5**: jump to ARRANGE.
+- **KNOB 1**: pick another project; it switches when you let go of SAVE (stopped only) and **loads its section A**.
+
+---
+
+## 8. Dice and UNDO
+
+### DICE ALL — the song-idea generator (HOME + SELECT)
+
+On **HOME**, turn **SELECT**. The dialog **DICE EVERYTHING?** appears (with "UNDO AFTER: GLO + G4"). **OCT+ YES** /
+**OCT− NO**.
+
+Each throw picks a **style** — ROBOT POP, ELECTRO, BIG BEAT, ORGANIC, ART ROCK, DUB PUNK, MINIMAL, SYNTH POP or IDM,
+named after the kind of records that inspired them (think Kraftwerk, Anthony Rother, The Chemical Brothers, Juana
+Molina, Radiohead, The Clash, The Hacker, Marc Houle, MGMT, Aphex Twin) — and then:
+
+- gives every track a **role** (DRUMS, BASS, CHORDS, LEAD, ARP, TEXTURE), a **new engine** the style likes for that
+  role and a factory sound whose name fits it, moved a little; FM6 goes on two tracks at most. The drums go on an
+  existing DRUM track, or on T4;
+- writes every part from **one harmony**: one scale (ROOT and SCALE), a chord progression, the bass on the roots,
+  chords, arps, a lead motif, drums with fills and accents, whole bars of silence; some styles use loops of odd lengths;
+- sets voice mode, gate, **level, pan and sends** per role, the swing, the delay, reverb and chorus;
+- picks a **new tempo** in the style's range (always at least 3 BPM away), unless MENU > **BPM LOCK** is on;
+- rolls new macro routes.
+
+It remembers your last 32 pieces and throws again if a new one would match one of them. It does not write automation or modulation routings (other than the
+macros' routes), but it replaces every track's steps, and with them that track's existing automation. Mutes are left
+as they are. All six tracks are written; with TRACKS 4 only T1–T4 sound. The screen says **DICED:** and the style.
+
+### Sound dice (EDIT + SELECT)
+
+On any **EDIT** page, turn SELECT: the selected track loads a random factory preset of its engine and each engine
+parameter moves up to a quarter of its range. On DRUM, both sides of every kit sound are rolled around the factory kit
+(**KIT DICED**).
+
+### Macro dice
+
+With the macros open (LFO held) or latched: SELECT or F3 rolls new macro routes on the tracks that are sounding;
+G3 clears them. See [10](#10-modulation-and-macros).
+
+### UNDO (GLO held + G4)
+
+One step back over the **last big change**. Pressing it again goes forward (redo). The transport keeps playing.
+G4 breathes on the GLO map when there is something to undo; with nothing, it says **NOTHING TO UNDO**.
+
+**UNDO covers**: DICE ALL, a sound diced, a track cleared (REC F3, TOOLS CLEAR SEQ), CLEAR ALL SEQUENCES (SEQ + REC),
+INIT and RECALL (EDIT layer or TOOLS), a pattern loaded from PHRASES, clearing the automation (SEQ > AUTOMATION),
+and a section loaded with **SAVE > PROJECT > LOAD**. It restores the music as it was: sounds, steps, automation, the
+kit, the punch-in lane, the macros, the tempo and global effects.
+
+**UNDO does not cover**: section jumps, quick chains and RECALL from the SAVE layer, switching project with the SAVE
+layer's KNOB 1, CLEAR SONG, deleting a row, SONG REC, anything saved (sections, user presets), user preset loads,
+sounds picked with PRESETS, SEQ TOOLS actions, or ordinary knob turns. It is not available while a song plays
+(**STOP TO EDIT**). It keeps only one step, in RAM: it's gone after power-off.
+
+---
+
+## 9. Effects and master
+
+### Per track
+
+- **FX**: DIST amount and the three sends (CHORUS, DLY, REV).
+- **DIST**: amount, **TYPE** (SOFT, HARD, FOLD, CRUSH, RECT), **TONE** (darker / brighter).
+- **AUTOPAN**: the track's pan swung left and right around its PAN. **DEPTH** (0 = off), **RATE**, **SYNC** (BEAT:
+  RATE in divisions 4BAR … 1/32, locked to the bar; FREE: RATE in Hz), **WAVE** (SIN, TRI, SAW, SQR, S&H).
+- **FILTER**: see [4](#4-engines).
+
+### SLICER (one, on a bus)
+
+- **SLICER**: **MODE** OFF, GATE, STUT; **PAT** 1–16; **RATE** 1/8 … 32T; **DEPTH**.
+- **SL BUS / SL BUS 2**: ON / OFF for what goes in: **T1–T6** and **FX** (the delay, reverb and chorus returns).
+  Everything on chops the whole mix after the effects; with FX off the tails ring free.
+- **SL PITCH**: the repeats follow a 16-step pitch sequence (±24 semitones). KNOB 1 the step, KNOB 2 its pitch, LEN,
+  QUANT (CHR or SCL: the song's scale).
+- Each section keeps its own SLICER settings. With **LOAD ECO** there is no SLICER (its tracks go straight to the mix).
+
+### Delay
+
+- **DLY**: **TIME** (synced divisions 4BAR … 1/32, or free times from 5 ms to 1.48 s), **FEEDBK**, **TONE** (below the
+  middle darker, above thinner), **MIX**.
+- **DLY 2**: **WIDE** (the right echo later), and the **GRAIN** delay: **PITCH** (±12 semitones per repeat) and
+  **SPRAY**. With LOAD LITE or ECO the GRAIN delay plays as a plain delay (the card says LITE / ECO).
+
+### Reverb (five models)
+
+**REVERB > TYPE** picks the model; **SIZE** is the decay on every model. KNOB 3 and 4 change meaning with the type:
+
+| TYPE | What it is | KNOB 3 | KNOB 4 |
+| --- | --- | --- | --- |
+| **ROOM** | Classic room | DAMP | PRE (pre-delay, ms) |
+| **SPRING** | Amp spring tank | DAMP | PRE |
+| **SHIMR** (shimmer) | Rises an octave on every pass | DAMP | **AIR** (±24 st: darker and lower / airier and higher) |
+| **RESO** | Four strings tuned to the song's scale | **FOLLOW** (OFF / T1–T6: the chord follows the lowest note that track plays) | **PITCH** (the chord 0–14 steps up the scale) |
+| **CLOUD** | Granular wash; SIZE at max freezes it | DAMP | **AIR** |
+
+**REVERB 2**: **MOD** (modulation depth), **RATE**, **FILT** (input tone: darker / brighter), **WIDE**.
+
+With **LOAD LITE**, SHIMMER and CLOUD play as ROOM and RESO as SPRING; with **LOAD ECO** every reverb plays as SPRING.
+The settings stay; the TYPE card shows LITE or ECO under its value.
+
+### Chorus
+
+**CHORUS**: RATE, DEPTH, **STEREO** (0 as always, down to mono, up to about twice as wide). Hidden with LOAD ECO
+(a track's chorus send card then says ECO).
+
+### MASTER
+
+- **CLIP**: saturation that adds character, not volume.
+- **PUNCH**: fattens the DRUM tracks.
+- **DUCK**: the kick pulls the rest down; **REL** is its release.
+
+---
+
+## 10. Modulation and macros
+
+- **ENV DEST**: the envelope to FILTER, PITCH, SHAPE; **LOOP ON**: with the note held, the envelope goes back to the
+  attack when it reaches sustain (an ADSR-shaped LFO).
+- **LFO**: RATE, WAVE (SIN, TRI, SAW, SQR, S&H), PHASE, FADE. **LFO DEST**: PITCH, FILTER, SHAPE, AMP.
+- **MOD matrix**: 4 slots per track (KNOB 1 picks the slot).
+  - Sources: OFF, LFO, ENV, VEL, KEY, RAND, MODW (MIDI CC1), AT (aftertouch), EXPR (CC11), **M1–M4**, **STEP** (MSEQ).
+  - Destinations: PITCH, CUT, SHP, AMP, PAN, DIST, CHO, DLY, REV, RATE (LFO rate), VIB, **E1–E8** (the engine's own
+    EDIT knobs, shown by name), **CLIP** and **PNCH** (the master).
+- **MSEQ**: a 16-step modulation sequencer per track, like a CV sequencer. KNOB 1 picks the step, KNOB 2 sets its
+  level, LEN and SLEW; DIV on MSEQ 2. Use it from MOD with SRC **STEP**.
+
+### Macros M1–M4
+
+- **Hold LFO**: KNOB 1–4 become M1–M4, and the map shows where each one goes ("NO ROUTE: MOD SRC" if nowhere).
+- Let go: they stay **latched** — KNOB 1–4 keep moving the macros on any page — until you press LFO again.
+- Every power-on starts with random routes (two per track) on tracks that have none. **SELECT** or **F3** rolls new
+  routes on the tracks that are sounding; **G3** clears them.
+- Routes are ordinary MOD slots (SRC M1–M4): edit them by hand on LFO > MOD. Macro values are saved with each section.
+
+---
+
+## 11. Performance
+
+### Punch-in FX (hold FX)
+
+Effects that act while their key is held and go back exactly when you let go.
+
+- **On the audio**: REPEAT 1/8, 1/16, 1/32 (F3 G3 A3), LPF (B3), HPF (C4). REPEAT starts on the next 1/16 while
+  playing. Below about 81 BPM, REPEAT 1/8 is too long for its buffer and is shown dimmed.
+- **On the notes**: OCT− / OCT+ (D4 E4), 1/2 TEMPO (F4), DEC− (short, plucky) / DEC+ (long) (G4 A4), STUTTER 1/8 / 1/16
+  (B4 C5), ATK+ (slow attacks, drums too) (D5), ARP (E5; on a DRUM track a new fill every press), RANDOM (F5). They come
+  in on the next 1/16. **A#4** chooses which tracks they touch: ALL, SYN (synths) or DRM (drums); the header shows it.
+- **Knobs** while FX is held: **FILTER** (left low-pass, right high-pass), **CRUSH**, **THROW** (sends the dry mix into
+  the delay and reverb), **DEPTH** (the REPEAT's level).
+- **Black keys 1–6**: mute T1–T6 while held (not saved).
+
+**The punch-in lane**: each section has a lane of 64 steps of 1/16 (4 bars). With **REC armed and playing** (not
+during a song), the **note effects (D4–F5)** you hold are recorded into it, one per step (REPEAT, LPF, HPF and the mutes
+are not recorded). Hold **FX + G5** while playing to erase where the play head passes; stopped, FX + G5 erases the whole
+lane. **REC held + FX** also clears it (along with the track's FX automation).
+
+**FX LATCH** (MENU > CONTROL > FX LATCH ON): a key pressed with FX toggles its effect on and off, the knob macros keep
+their values, **FX + OCT−** turns everything off (FX ALL OFF). Latched effects are not recorded into the lane.
+
+### Mutes and solos
+
+- **GLO held**: black keys 1–6 mute T1–T6 (latched, saved with the project and in scenes); F3–D4 solo while held;
+  black keys 7–10 mute the DRUM-X groups; E4 unmutes everything.
+- **MIXER** KNOB 4: MUTE of the selected track.
+- **EDIT held** on a DRUM track: black keys 1–8 mute each DRUM-X sound.
+- **FX held**: black keys 1–6 mute while held.
+
+### Live layers and the song
+
+The SAVE layer (section jumps on the bar, quick chains, store, recall, SONG REC) is described in
+[7](#7-arrange-songs-sections-and-scenes). GLO + PLAY restarts from the top without stopping.
+
+---
+
+## 12. Saving and loading
+
+This is the chapter to read carefully. JIANT keeps several kinds of data in different places, saved in different ways.
+
+### The big picture
+
+- **The music** is what's playing now, in RAM: all six tracks' sounds and steps, automation, effects, tempo.
+- **Sections** (A–D of each of the 8 projects) are where you **save** music permanently, in flash.
+- **The arrangement** (rows, END, scenes) belongs to the project and saves itself.
+- **User presets** (32 slots) save single sounds.
+- **Settings** (the MENU, TRACKS, LOAD) save themselves.
+- **The autosave** is a safety copy of the music, so you find it again after power-off. **It is not a save into a
+  section**, and it does not happen at power-off.
+
+### What is saved where
+
+| What | Where it lives | How it gets saved | Survives power-off? |
+| --- | --- | --- | --- |
+| The music now (sounds, steps, automation, tempo, effects, kit, macros, punch-in lane, SLICER) | RAM | Not saved by itself — store it into a section. The **autosave** keeps a copy. | Only via the autosave |
+| A **section** (A–D of a project) | Flash | **SAVE > PROJECT > SAVE** (stopped), or **SAVE layer C4–F4 / OCT+** | Yes (layer stores: once you stop) |
+| The **arrangement** (rows, bars, END, scenes) of each project | Flash (song index) | Automatically, ~2 s after a change while stopped | Yes |
+| **User presets** U01–U32 (one sound + a 16-step pattern) | Flash | **SAVE > USER > SAVE** (stopped) | Yes |
+| **Settings** (MENU, TRACKS, LOAD, favourites) | Flash | Automatically (MENU: when it closes; while playing: after you stop) | Yes |
+| The **autosave** | Flash, its own place | 10 s after the last change, stopped and idle, at most once a minute | Yes (restored at power-on if RESTORE LAST is ON) |
+| The **FM6 voice bank** B1–B32 | Flash, its own place | Sent from the web editor | Yes (not in the backup: keep the .syx) |
+| **UNDO** | RAM | — | No |
+
+### How the autosave really works
+
+- It writes a copy of the music **after 10 seconds without changes**, only when the transport is **stopped**, no key or
+  button is held and nothing is sounding, and **at most once a minute**.
+- It does **not** save when you switch off. If you change something and power off within those seconds, that last
+  change is lost. To be safe: **stop, wait ~10 s**, or better, save into a section.
+- At power-on, with **MENU > SYSTEM > RESTORE LAST ON** (the default), the autosave becomes the music (the screen says
+  **RESTORED**). With RESTORE LAST OFF there is no autosave at all and the device starts fresh.
+- After a crash, a hang or a failed start, the autosave is not restored (the music that was playing could be what
+  crashed).
+
+### To save a project section
+
+1. **Stop** the transport (saving needs it stopped: otherwise **STOP TO SAVE**).
+2. Press **SAVE** until you reach **PROJECT** (SAVE opens USER first, then PROJECT).
+3. **KNOB 1**: the project (1–8). Turning it does **not** change the music you're playing — it only chooses where to
+   save. (It switches projects, so do this stopped.)
+4. **KNOB 2** (or PRESETS): the section A–D. The list shows each section's name (or USED / --), **NOW** on the one
+   the music came from, and the bars it plays in the arrangement.
+5. **KNOB 4** to the right: SAVE is picked ([OCT+]). Press **OCT+**.
+6. If the section already holds something: **OVERWRITE PROJECT A?** (with its name). OCT+ YES.
+7. The **NAME** screen opens with a name ready. Edit it or not, then **OCT+** writes. **OCT−** cancels and writes
+   nothing.
+8. The screen says **SAVED**.
+
+A section stores the music **including the tempo and global effects**. The **project's name** is its section A's name.
+
+### To load a section
+
+1. SAVE > PROJECT, **KNOB 1** the project, **KNOB 2** the section.
+2. **KNOB 3** to the right (LOAD), press **OCT+**. The screen says **LOADED**.
+
+LOAD **stops playback** and replaces the music: sounds, steps, automation, the kit, the punch-in lane, the macros,
+and the **tempo, effects, MIDI routing and clock settings** stored with it. The arrangement stays. If you didn't mean
+it, **GLO + G4** (UNDO) brings back what you had.
+
+### Quick store while playing (SAVE layer)
+
+Hold SAVE and press **C4–F4** to store the music into section A–D of the current project, or **OCT+** to store into
+the section playing. This works **while playing**, without naming. The store is in **RAM at once and goes to flash
+when you stop**. If you power off before stopping, it's lost — so stop before switching off.
+
+### Copying
+
+- **A section to another letter**: LOAD it, then SAVE it into the other letter.
+- **A section to another project**: LOAD it, turn KNOB 1 to the other project (the music stays), SAVE into a letter.
+- **"Save as" a new project**: with your music playing, stop, go to SAVE > PROJECT, turn KNOB 1 to an empty project
+  and SAVE into A.
+
+### Switching projects
+
+- On **SAVE > PROJECT, KNOB 1** changes project but **keeps the music** (to store it there or load one of its sections).
+- With the **SAVE layer's KNOB 1** (hold SAVE, turn, let go) the project changes **and its section A becomes the
+  music** (if it has one). The previous music is replaced and **UNDO cannot bring it back** — save it first.
+- Both need the transport stopped (**STOP TO CHANGE PROJECT** / **STOP TO CHANGE SONG**). Sections stored with the
+  SAVE layer are written to flash before switching.
+
+### Naming (the NAME screen)
+
+Opens when you save a section or a user preset, and when you press **EDIT** on SAVE > USER or SAVE > PROJECT
+(renames the selected slot; only the name is written). Up to 12 characters, upper case.
+
+| Control | Does |
+| --- | --- |
+| White keys | Letters phone-style: AB, CD, EF, GH, IJK, LM, NO, PQ, RS, TU, VW, XYZ, then 123, 456, 789, 0-. — tap again within 0.8 s for the next character |
+| Black keys (by name) | **F#** cursor left, **G#** space, **A#** cursor right, **C#** delete, **D#** switch ABC / 123 (digits and symbols, one per key) |
+| KNOB 1 | move the cursor |
+| KNOB 2 | change the character at the cursor |
+| OCT+ / OCT− | write / cancel |
+
+An empty name: a project section gets none, a user preset an automatic one.
+
+### User presets (SAVE > USER)
+
+32 slots for single sounds. **SAVE** opens straight on this page with SAVE already picked, so **SAVE, OCT+, OCT+**
+saves the selected track's sound with the offered name.
+
+- **KNOB 1**: the slot (U01–U32). **KNOB 2** LOAD, **KNOB 3** ERASE (asks first), **KNOB 4** SAVE (asks before
+  overwriting, then NAME). Turn the knob right to pick, **OCT+** to do it. Saving and erasing need the transport stopped.
+- A user preset stores the **engine, its sound parameters and a 16-step pattern**; an FM6 sound keeps its patch.
+- It does **not** store the **DRUM-X kit** (that lives in the project sections).
+- Loading one loads the sound only. Its pattern is offered on **SEQ > PHRASES** (as "U07") — load it from there.
+- Your user presets also appear when browsing with PRESETS, after the factory sounds.
+
+### Saving FAQ
+
+**I switched off and my last changes are gone.** The autosave only writes after 10 s of no changes while stopped, at
+most once a minute, never at power-off. Stop and wait a moment, or save into a section.
+
+**It says STOP TO SAVE.** Saving into a section or a user preset writes flash, which pauses the audio for a moment, so
+it only happens stopped. Press PLAY to stop and try again (the NAME screen stays open; PLAY there only stops).
+
+**It says SAVED (NO FLASH).** The flash chip wasn't detected, so the save only went to RAM. It survives a reset, not a
+power-off. Restart the device; if it keeps saying it, see [16](#16-troubleshooting-and-faq).
+
+**It says SECTION 90% FULL / TOO FULL TO SAVE / SECTION FULL.** A section has a fixed size. Very busy music (six tracks
+of chords on all 64 steps plus lots of automation) can outgrow it. Saving a section that doesn't fit says SECTION FULL
+and leaves the stored one untouched. Shorten patterns, clear unused steps or automation.
+
+**I stored with the SAVE layer while playing and lost it.** Layer stores reach flash when you stop. Stop before
+switching off.
+
+**Is my arrangement saved?** Yes, automatically, a couple of seconds after each change while stopped.
+
+**Where's my drum kit in a user preset?** User presets don't store the DRUM-X kit; save the project section instead.
+
+**Can I back everything up?** Yes: the web editor's complete backup includes all 8 projects with their sections,
+arrangements and scenes, the user presets and the settings. See [15](#15-web-tools-emulator-installer-editor-backup).
+
+---
+
+## 13. System: TRACKS, LOAD and the MENU
+
+### TRACKS (GLO > SYSTEM, KNOB 1 — also MENU > AUDIO > TRACKS)
+
+- **4** (the default): T1–T4 play; **T5 and T6 are asleep**. They keep their sound, steps and mix and cost nothing.
+  If a note is sent to an asleep track (a key, MIDI, its steps) or PLAY starts with steps on them, the screen says
+  **T5-T6 ASLEEP** and **GLO>SYSTEM>TRACKS 6**. Asleep tracks are dim on the GLO map, greyed on HOME and the MIXER.
+- **6**: all six tracks play. Watch the load meter.
+
+### LOAD (GLO > SYSTEM, KNOB 2 — also MENU > SYSTEM > LOAD)
+
+How heavy the sound may get.
+
+| LOAD | What changes while it sounds |
+| --- | --- |
+| **FULL** (default) | Everything as set. |
+| **LITE** | SHIMMER and CLOUD reverbs play as ROOM, RESO as SPRING; the GRAIN delay plays plain; FM6 plays two voices. |
+| **ECO** | LITE, plus every reverb plays as SPRING, **no SLICER** (its tracks go straight to the mix), **no chorus** (their pages are hidden), at most **4 voices** per synth track. Drums unchanged. |
+
+LOAD only changes how things are rendered: **projects keep their settings** and sound as saved on FULL (or on another
+FM-1). The cards of swapped effects say LITE or ECO. LOAD frees **CPU**, not RAM: the firmware reserves all its memory
+at start-up. The **CPU** card (KNOB 4 on SYSTEM) and the header's load meter show the audio load. TRACKS and LOAD are
+device settings, not part of a project.
+
+### ROUTE (GLO > SYSTEM, KNOB 3)
+
+**CH1-6**: MIDI channels 1–6 play tracks 1–6, channels 7–16 are ignored. **SEL**: every channel plays the selected
+track.
+
+### GLOBAL (GLO > GLOBAL)
+
+**BPM** (40–240), **SWING**, **CLOCK** (INT, USB, TRS: follow MIDI clock and start/stop from that input), **TUNE**
+(±50).
+
+### The MENU (hold HOME)
+
+**ALGORITHM** switches tabs, **PRESETS** moves between rows, **any knob** or **OCT+ / OCT−** changes the value. HOME
+closes it (settings are saved then).
+
+| Tab | Row | Values |
+| --- | --- | --- |
+| DISPLAY | COLOR | GREY, GREEN, AMBER, ICE, VIOLET, ROSE, PAPER, HI-CON, NIGHT, MONO, **JIANT** (default) |
+| DISPLAY | STYLE | FLAT, LINE |
+| DISPLAY | LARGE | OFF, ON (big labels and values) |
+| DISPLAY | ANIM | ON, OFF (values snap; the power-on signature appears whole) |
+| DISPLAY | LEDS | OFF, DIM LO, **DIM HI** (default), INV |
+| DISPLAY | SCREEN OFF | **NEVER** (default), 5 MIN, 15 MIN, 30 MIN, 60 MIN |
+| CONTROL | HOLD | 0.3 s, **0.4 s** (default), 0.5 s, 0.6 s — how long until a held button opens its layer |
+| CONTROL | KNOB ACCEL | **ON** (default), OFF |
+| CONTROL | FX LATCH | OFF, ON |
+| CONTROL | BPM LOCK | OFF, ON — SELECT sets the tempo only with GLO held; DICE ALL keeps the tempo |
+| CONTROL | SCALE LEDS | OFF, ON — the keys of the scale glow, the root brighter |
+| AUDIO | SPEAKER EQ | FLAT, LOWCUT, BASS+ (an EQ on the master for the small speaker; also reaches the outputs and USB) |
+| AUDIO | USB LEVEL | MASTER (USB follows the MASTER knob), FIXED (USB at full level) |
+| AUDIO | CLICK | OFF, REC (while a track is armed and playing), ON |
+| AUDIO | CLICK LEVEL | LOW, MID, HIGH |
+| AUDIO | COUNT-IN | OFF, 1 BAR, 2 BARS |
+| AUDIO | TRACKS | **4** (default), 6 |
+| SYSTEM | USB SERIAL | ON, OFF (OFF helps macOS 13–15 see the USB audio input; USB-MIDI and the editor still work) |
+| SYSTEM | RESTORE LAST | **ON** (default), OFF (no autosave, power-on starts fresh) |
+| SYSTEM | LOAD | ECO, LITE, **FULL** (default) |
+| SYSTEM | CALIBRATION | OCT+ opens HARDWARE CALIBRATION (teach each button and knob) |
+| SYSTEM | ABOUT | OCT+ opens: version, QR code, AUDIO LOAD (NOW, PEAK, LATE, SHED since power-on) and credits (scroll with PRESETS, OCT− back) |
+
+If you hear clicks, open ABOUT and look at **LATE** (audio blocks that came too late) and **SHED** (voices the guard
+faded): a photo of that screen helps when you report a problem.
+
+---
+
+## 14. MIDI and USB
+
+- **USB** is class-compliant MIDI and audio: the master output reaches the computer as a USB audio input.
+- **MIDI IN** over USB and the **TRS** jack. **ROUTE** decides which track each channel plays (see
+  [13](#13-system-tracks-load-and-the-menu)). Incoming notes on an armed track are recorded like the keys.
+- **MIDI OUT** (over USB): the keys send their notes on the selected track's channel (T1 = channel 1 … T6 = channel 6).
+- **Clock**: GLO > GLOBAL > CLOCK **USB** or **TRS** follows that input's clock and Start / Continue / Stop. With an
+  external clock, TAP and GLO + PLAY restart are disabled.
+- **Controllers** (on the track the channel plays): CC5 glide, CC7 level, CC10 pan, CC71 resonance and CC74 cutoff (the
+  engine's own, where it has them), CC72 release, CC73 attack, CC75 decay, CC91 reverb send, CC93 chorus send,
+  CC94 delay send. CC1 (mod wheel), CC11 (expression) and channel aftertouch are sources in the MOD matrix (MODW, EXPR,
+  AT). Pitch bend, sustain (CC64), All Sound Off (CC120) and All Notes Off (CC123) work. A CC is recorded as automation
+  like a knob move.
+- USB MIDI name: the device still presents itself as "Felucca", so the web editor connects.
+
+---
+
+## 15. Web tools: emulator, installer, editor, backup
+
+All three run in the browser and update themselves with every change to the firmware.
+
+### Emulator — <https://juanjiant-bit.github.io/JIANT/>
+
+The same code as the FM-1, with sound, in the browser. Play it with the mouse or the computer keyboard: **Z–'** and
+**Q–O** rows are the keys, **1** to **=** the buttons from FX to REC, **[ ]** OCT− / OCT+, **↑ ↓** SELECT, **← →**
+ALGORITHM; **Shift-click** holds a button. Great for learning the layers without the device.
+
+### Installer — <https://juanjiant-bit.github.io/JIANT/webapp/installer/>
+
+Chrome or Edge, the FM-1 connected straight to the computer.
+
+- **Install** JIANT (tick "This FM-1 runs official V15 or JIANT" first).
+- **Return to official V15**: give it M-VAVE's unmodified **FM-1.fwsc** (checked locally in the browser). It first
+  saves a complete backup (current music, saved music, sound banks and settings; not user samples). Use this before
+  installing JIANT if your FM-1 runs **another custom firmware** (Felucca, baudgirl…), and whenever you want to go back
+  to stock. Official V15 cannot open JIANT music; to restore the backup later, reinstall JIANT and use the editor.
+
+### Editor — <https://juanjiant-bit.github.io/JIANT/webapp/editor/>
+
+Every parameter from the computer, over USB. Tabs: Sound, 6-OP FM, Sequencer, Tracks, Library, Projects, Settings.
+
+- **6-OP FM**: edit FM6 patches, import .syx, and **Send to the device's voice bank (B1–B32)**.
+- **Projects**: the project slots, and the **Complete backup**: **Save backup** and **Restore backup**.
+
+### The complete backup
+
+**Save backup** downloads one file with: the current music, **all 8 projects with their 4 sections each**, the
+arrangements and scenes, the 32 user presets (with their FM6 patches) and the settings. **Restore backup** replaces
+all of that on the device (keep USB connected). The **FM6 voice bank (B1–B32) is not included**: keep your .syx files.
+
+Back up before updating, before returning to stock, and whenever you finish something you love.
+
+---
+
+## 16. Troubleshooting and FAQ
+
+**T5 or T6 is silent.** TRACKS is set to 4 (the default): T5 and T6 are asleep. GLO > SYSTEM > TRACKS **6** (or
+MENU > AUDIO > TRACKS). The screen tells you when you play into an asleep track.
+
+**After clearing a sequence, notes still played on all tracks.** This was fixed in v0.6.28: a clear now ends the
+punch-in lane's repeats (STUTTER, ARP), a DRUM track with no steps gets no ARP fill, and a section jump or quick chain
+waiting for the bar is called off. If something still plays after a clear, it may be the **punch-in lane**: hold
+**REC and press FX** to erase it (or **SEQ + REC** to clear everything).
+
+**Clicks, stutters, the load meter full.** Keep TRACKS on 4, try **LOAD LITE** or **ECO**, use fewer voices (MONO,
+fewer FM6 tracks), lighter reverbs (CLOUD and SHIMMER are the heaviest). Check MENU > SYSTEM > ABOUT > AUDIO LOAD.
+
+**SELECT doesn't change the tempo.** SELECT sets the tempo only on GLO's pages (MIXER, GLOBAL, SYSTEM), or with GLO held; on HOME
+it dices, on EDIT it rolls the sound. With MENU > BPM LOCK ON, only GLO + SELECT changes it. With the macros latched
+(LFO), SELECT rolls macros — press LFO to unlatch.
+
+**The knobs control M1–M4 instead of the page.** The macros are latched (header [LFO] LATCH). Press LFO.
+
+**A song won't start: "PATTERN A EMPTY" / "ADD A SONG ROW".** A row points to an empty section, or there are no rows.
+Save music into that section, or change the row.
+
+**It says STOP TO EDIT.** A song (arrangement) or quick chain is playing; stop it to edit steps, use tools or UNDO.
+
+**The keys feel inverted / a button does the wrong thing.** Run HARDWARE CALIBRATION: hold OCT− and OCT+ while powering
+on (or MENU > SYSTEM > CALIBRATION) and teach each button and knob. A piano key cancels.
+
+**USB audio input doesn't appear on macOS.** MENU > SYSTEM > USB SERIAL **OFF**.
+
+**SAVED (NO FLASH).** The flash chip wasn't detected; saves stay in RAM only. Power-cycle the device. If it persists,
+back up what you can with the editor and reinstall.
+
+**The FM-1 stays black after an interrupted update.** Check whether the computer sees it as **WL80UBOOT** (a USB device
+4C4A:8057): that's the chip's boot mode and the installer can write it again (try another cable). To enter update mode
+deliberately from a running device, hold **OCT− + OCT+** for 5 seconds. If that isn't enough,
+[FM-1 Transporter](https://github.com/kurogedelic/FM-1-transporter) reads and writes the flash with a Seeed XIAO RP2040.
+
+**I want the factory firmware back.** Use the installer's **Return to official V15** section (it backs up first), or
+M-VAVE's own updater.
+
+**I came from baudgirl / Felucca. Can I install directly?** No: return to official V15 first with the installer, then
+install JIANT. Going straight from another custom firmware has bricked an FM-1.
+
+**Where did my Felucca samples go?** JIANT has no user samples; that flash now holds the songs.
+
+---
+
+If you resonate with my work, consider supporting me on Ko-fi (https://ko-fi.com/juanjiant) — in Argentina: Cafecito (https://cafecito.app/juanjiant).

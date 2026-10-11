@@ -15,10 +15,15 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.6.30).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.6.31).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 > 🫶 If you resonate with my work, consider supporting me on **[Ko-fi](https://ko-fi.com/juanjiant)** (in Argentina:
 > **[Cafecito](https://cafecito.app/juanjiant)**). Thanks for all the good energy, hope you enjoy this little beast ✨🎹
+
+## Manual
+
+The full user manual, every page, layer and setting, with a careful chapter on saving: **[English](docs/MANUAL.md)** ·
+**[Español](docs/MANUAL.es.md)**.
 
 ## Cheat sheets
 
@@ -32,6 +37,18 @@ Two printable sheets with everything on the device. Click an image to open it fu
 ## Changelog
 
 Every update is listed here, newest first.
+
+### v0.6.31
+- **The full manual, in English and Spanish**: [docs/MANUAL.md](docs/MANUAL.md) · [docs/MANUAL.es.md](docs/MANUAL.es.md).
+  Every page and its four knobs, every layer's keys, the engines, DRUM-X, the sequencer, ARRANGE, the dice and UNDO,
+  effects, modulation, performance, the MENU, MIDI, the web tools and troubleshooting, and a careful chapter on
+  **saving**: what is saved where, how the autosave really works (10 s after the last change while stopped, never at
+  power-off), quick stores, copying, switching projects, names and user presets.
+- **SELECT on the MIXER sets the tempo**, as on GLO's other pages (GLO's button opens it); it said DICE: HOME / EDIT.
+- **New README images** and **presentation video v3**: the screens as they look now, taken from the video's footage
+  (song ideas, ARRANGE, UNDO, TRACKS and LOAD, one scale), with the support links at the end.
+- README and cheat sheets corrected against the firmware: the autosave, ARRANGE instead of the SONG page, what the
+  punch-in lane records, UNDO on GLO's G4, HOME held for MENU, the reverbs' AIR knob, DRUM-X's labels.
 
 ### v0.6.30
 - **LOAD, next to TRACKS** (GLO > SYSTEM: KNOB 1 **TRACKS 4 / 6**, KNOB 2 **LOAD ECO / LITE / FULL**; also MENU > SYSTEM >
@@ -543,9 +560,10 @@ With FX held the keys become effects that act while held; on release everything 
 - **SEQ + REC** clears every sequence; **REC + FX / EDIT / ENV / LFO…** clears only that part's automation.
 
 ### Songs inside the device
-**8 songs**, each with **4 sections (A–D)** and a chain of rows by bars, SLOOP style: live sections that come in on
-the next bar, quick chain, SONG REC and STORE / RECALL. Each row can hold a **scene** (mutes, DRUM-X group mutes,
-macros and MIDI punch-ins), saved with KNOB 4 on the SONG page or on its own when recording with SONG REC.
+**8 projects**, each with **4 sections (A–D)** and a song of up to 16 rows by bars (SAVE > **ARRANGE**), SLOOP style:
+live sections that come in on the next bar, quick chain, SONG REC and STORE / RECALL. Each row can hold a **scene**
+(mutes, DRUM-X group mutes, macros and MIDI punch-ins), saved with KNOB 4 on ARRANGE or on its own when recording with
+SONG REC. The song's END plays it once (STOP), x2..x8 or forever (LOOP).
 
 ### Modulation
 - **MOD matrix**: 4 slots per track. Sources: LFO, ENV, VEL, KEY, RAND, MIDI controllers, the 4 macros and STEP.
@@ -568,7 +586,7 @@ Turning fast sweeps the whole range; turning slowly is fine adjustment. Turn it 
 
 ### Connections and storage
 - USB: class-compliant MIDI and audio (the master reaches the computer); TRS MIDI; internal, USB or TRS clock.
-- 32 named user presets and autosave at power-off.
+- 32 named user presets; the project autosaves 10 s after the last change while stopped (not at power-off).
 - **Web editor** for every parameter: FM6 patches, grid, mix and full backup (all 8 songs with their sections, rows
   and scenes).
 
@@ -583,7 +601,7 @@ Turning fast sweeps the whole range; turning slowly is fine adjustment. Turn it 
   the punch-ins and the songs. A sound from those engines loads as ANALOG.
 - **8 songs**: song 1 is the usual 4 projects, so whatever you saved with Felucca shows up there.
 - **FX layer**: REVERSE, TAPE STOP, FREEZE and the harmonizer are gone; the MIDI punch-ins came in.
-- **SELECT**: tempo on GLO's pages, the sound's dice on EDIT, everything diced on HOME (after OK).
+- **SELECT**: tempo on GLO's pages and the MIXER, the sound's dice on EDIT, everything diced on HOME (after YES).
 - **EDIT held**: INIT / RECALL instead of the voice selector. One-step **UNDO** with GLO held + G4 (SAVE held: OCT+ stores the
   section, OCT− recalls it). **No layer lock.**
 - **USB names**: still "Felucca" so the web editor connects.
@@ -597,29 +615,30 @@ Turning fast sweeps the whole range; turning slowly is fine adjustment. Turn it 
 
 | Hold | Keys | Knobs |
 | --- | --- | --- |
-| **FX** | F3 G3 A3 REPEAT 1/8, 1/16, 1/32; B3 LPF; C4 HPF. MIDI punch-ins: D4 OCT−, E4 OCT+, F4 1/2 TEMPO, G4 DEC−, A4 DEC+, B4 C5 STUTTER 1/8 · 1/16, D5 ATK+ (everything's attack up, drums included), E5 ARP (drums: a new fill on every press), F5 RANDOM (notes and steps). Everything comes in on the transport's next 1/16. Black keys 1–6: mute T1–T6; A#4 chooses which tracks the MIDI ones affect (all, synths, drums). **Automate**: with REC armed and playing, whatever you hold is recorded in the section's lane (64 steps of 1/16); G5 erases it where the playhead passes, or entirely with the transport stopped | FILTER, CRUSH, THROW, DEPTH |
+| **FX** | F3 G3 A3 REPEAT 1/8, 1/16, 1/32; B3 LPF; C4 HPF. MIDI punch-ins: D4 OCT−, E4 OCT+, F4 1/2 TEMPO, G4 DEC−, A4 DEC+, B4 C5 STUTTER 1/8 · 1/16, D5 ATK+ (everything's attack up, drums included), E5 ARP (drums: a new fill on every press), F5 RANDOM (notes and steps). Everything comes in on the transport's next 1/16. Black keys 1–6: mute T1–T6; A#4 chooses which tracks the MIDI ones affect (all, synths, drums). **Automate**: with REC armed and playing (not in a song), the note effects D4–F5 you hold are recorded in the section's lane (64 steps of 1/16, one a step: the lowest held); repeats, filters, mutes and latched effects are not; G5 erases it where the playhead passes, or entirely with the transport stopped | FILTER, CRUSH, THROW, DEPTH |
 | **ARP TRNS** | With the ARP mode on TRNS, the keys (and incoming MIDI) transpose the track's sequence by their interval from C4, without playing notes; the transposition stays on release | — |
 | **SEQ > SHIFT** | OFFSET shifts the track's sequence from −32 to +32 steps (within LEN; live recording writes where you hear it) and PITCH transposes it ±24 semitones (not on kits). Both can be automated and are also on the SCL layer (KNOB 3 / 4) | OFFSET, PIT |
 | **REC + another button** | Hold REC and press FX, EDIT, ENV, LFO, SCL, ARP or GLO: clears that part's automation on the selected track (knob movements and per-step locks; stored values stay). FX: the punch-in lane too. GLO: levels and pan of the 6 tracks. The other way round (FX held then REC) arms recording, as always | — |
 | **SEQ + REC** | Hold SEQ and press REC: CLEAR ALL SEQUENCES? (OCT+ confirms): clears the steps and automation of the 6 tracks and the punch-in lane | — |
 | **LFO** | — (**MACRO** layer: below, where each macro goes) | M1, M2, M3, M4 |
-| **GLO** | Black keys 1–6 mute T1–T6 (latched); 7–10 DRUM group mutes: KICK, SNARE, HAT, PERC; F3–D4 solo T1–T6 while held; E4 unmutes everything; F4 tap tempo | T1–T4 level (with T5 or T6 selected: T3–T6) |
+| **GLO** | Black keys 1–6 mute T1–T6 (latched); 7–10 DRUM group mutes: KICK, SNARE, HAT, PERC; F3–D4 solo T1–T6 while held; E4 unmutes everything; F4 tap tempo; G4 **UNDO** the last big change (again: redo) | T1–T4 level (with T5 or T6 selected: T3–T6) |
 | **SCL** | Any key picks the root | ROOT, SCALE, OFFSET, PITCH |
 | **EDIT** | F3 **INIT**: the track's sound goes back to factory (on DRUM, the DRUM-X kit too). G3 **RECALL**: back to the sound saved in the section (on DRUM, with its kit). Both ask for confirmation and leave the steps alone. On a DRUM track, black keys 1–8 mute each DRUM-X sound. The engine and sounds are picked in PRESETS | The engine's first 4 EDIT knobs |
 | **SEQ** | On the SEQ pages: SEQ TOOLS | LEN, DIV, SWING, GATE |
 | **REC** | F3 CLEAR the track, G3 CLICK | CLICK |
-| **HOME** | Menu | — |
-| **SAVE** | Song layer (on the SONG page, KNOB 4 = SCENE): F3–B3 play A–D on the next bar (several in one hold: quick chain), C4–F4 store into A–D, D5 LOOP / SONG, E5 SONG REC, G5 SONG page; OCT+ stores the playing section, OCT− recalls it | KNOB 1: song 1–8 (applies when SAVE is released, stopped) |
+| **HOME** | Tap: HOME; held ~0.7 s: MENU | — |
+| **SAVE** | Song layer (on SAVE > ARRANGE, KNOB 4 = SCENE): F3–B3 play A–D on the next bar (stopped: at once; several in one hold: quick chain), C4–F4 store into A–D, D5 LOOP / SONG, E5 SONG REC, G5 ARRANGE; OCT+ stores the playing section, OCT− recalls it | KNOB 1: project 1–8 (on release, stopped: loads its section A, replacing the music, no UNDO) |
 
 Others: **PLAY** starts and stops; **REC** arms the selected track; **SELECT** changes the tempo on GLO's pages, rolls
-the sound's dice on EDIT and dices everything on HOME (after OK); **ALGORITHM** picks the track on every page; **PRESETS** changes the
+the sound's dice on EDIT and dices everything on HOME (after YES); **ALGORITHM** picks the track on every page; **PRESETS** changes the
 sound; **OCT− / OCT+** the octave (on action pages and dialogs: back / confirm); GLO + PLAY restarts from the
 beginning.
 
 ## User manual
 
 A practical guide to what's new, in the order you'll run into it. The [Controls](#controls) table has the details of
-each layer.
+each layer; the complete manual is in **[docs/MANUAL.md](docs/MANUAL.md)** (en español:
+**[docs/MANUAL.es.md](docs/MANUAL.es.md)**).
 
 ### 1. Getting around
 - Each page button (EDIT, ENV, LFO, FX, SEQ, SCL, ARP, GLO, SAVE) opens its first page; pressing it again moves to the
@@ -674,12 +693,13 @@ locks it into a short window. CHIP sets the resolution: FULL is smooth, 4BIT and
 ### 4. DRUM-X drums
 - Set a track to DRUM. **KNOB 1 MORPH** goes from side A to side B of the whole kit: it's the knob to play live.
 - **FOLD** folds each hit's wave: the attack shines and the tail comes back clean. **FM** dirties the timbre.
-- **EDIT > SOUND 1–3** edits each sound (BD, SD, CP, CH, OH, TM, RS, CB; KNOB 1 picks which). SOUND 3 has **PMOD**
+- **EDIT > SOUND, SOUND 2, SOUND 3** edit each sound (BD, SD, CP, CH, OH, TM, RS, CB; KNOB 1 on SOUND and SOUND 3
+  picks which). SOUND 3 has **PMOD**
   (how the pitch falls: DECAY, 808-style LONG, NOISE, SINE), DRV and WAVE.
 - Mutes: **GLO held** + black keys 7–10 (KICK, SNARE, HAT, PERC); **EDIT held** + black keys 1–8 (each sound).
 - SELECT on a DRUM track rolls a new kit around the factory one.
 - **EDIT > X-MOD** moves the kit by itself: **RATE** (OFF, 4 bars … 1/32, in time with the tempo), **DEPTH** (how far
-  it swings MORPH), **SHPE** (SINE, TRI, SAW, RAMP, S&H) and **RAND** (each hit gets its own MORPH and up to a
+  it swings MORPH), **SHAPE** (SINE, TRI, SAW, RAMP, S&H) and **RAND** (each hit gets its own MORPH and up to a
   semitone of tune: no two hits alike, great on hats and percussion). INIT turns it off.
 
 ### 5. Macros (M1–M4)
@@ -710,7 +730,9 @@ tails. The other knobs change meaning with the type:
 | **RESO** | Four strings ringing **tuned to the scale** (I, III, V and VII of ROOT/SCALE). On RESO, PRE becomes **PITCH** (the chord 0–14 steps up the scale) and DAMP becomes **FOLLOW** (OFF / T1–T6: the chord follows the lowest note that track plays, gliding) | Decay (how long they ring) | FOLLOW | Past halfway: opens the chord an octave | — | — |
 | **CLOUD** | Granular wash: grains of the last ~0.7 s, scattered and bloomed into a reverb tail that feeds back into itself | Decay; **at max it freezes** the cloud | Darkens | How many grains change pitch (×2, ×½, fifth), plus a chorus on the tail | Grain density | Stereo spread of the grains and the tail |
 
-PRE (pre-delay) and FILT (input tone) work on all of them. Ideas: RESO on the drums so the kit sings in the song's
+PRE (pre-delay) and FILT (input tone) work on ROOM and SPRING; on SHIMMER and CLOUD the PRE knob is **AIR** (±24
+semitones), on RESO it is PITCH (and DAMP is FOLLOW). LOAD LITE / ECO swaps the heavy ones while they sound (see
+GLO > SYSTEM). Ideas: RESO on the drums so the kit sings in the song's
 key; CLOUD with SIZE at max to freeze a chord and keep playing over it; SHIMR on a slow pad.
 
 **MASTER**: CLIP saturates without raising the volume (the leveler compensates), PUNCH fattens the drums (more body and density, the tails stay whole), DUCK
@@ -726,16 +748,20 @@ makes the kick pull the rest down. The leveler is always on: no need to babysit 
 - Clearing: **REC + button** clears that part's automation; **SEQ + REC** clears every sequence.
 
 ### 8. Songs and scenes
-- **SAVE held**: F3–B3 launch sections A–D on the next bar (several in a row build a chain), C4–F4 store the current
+- **SAVE held**: F3–B3 launch sections A–D on the next bar while playing (stopped: at once; several in a row build a
+  chain), C4–F4 store the current
   section into A–D, D5 toggles LOOP / SONG, E5 records the song live (SONG REC).
-- The **SONG** page builds the chain of rows by bars; KNOB 4 stores a **scene** (mutes, macros, punch-ins) in the
-  row.
-- 8 songs: KNOB 1 with SAVE held picks which (applies on release, with the transport stopped).
+- SAVE > **ARRANGE** builds the song: a column of rows (up to 16), each a section and its bars; + ADD adds one; the END
+  row plays the song once, x2..x8 or in a LOOP. KNOB 4 stores a **scene** (mutes, macros, punch-ins) in the row.
+- 8 projects: KNOB 1 with SAVE held picks which (on release, with the transport stopped: it loads that project's
+  section A, replacing the music; no UNDO).
 
 ### 9. Saving
 - **Sound presets**: SAVE > **USER**: KNOB 1 picks the slot (32), KNOB 4 SAVE stores the track's sound, KNOB 2 LOAD
   loads it, KNOB 3 ERASE deletes it. EDIT names it.
-- **Project**: SAVE > PROJECT: KNOB 1 the project (1–8), KNOB 2 the section A–D, LOAD, SAVE; SAVE > ARRANGE chains the sections into the song. Everything autosaves at power-off.
+- **Project**: SAVE > PROJECT: KNOB 1 the project (1–8), KNOB 2 the section A–D, LOAD, SAVE; SAVE > ARRANGE chains the sections into the song. The project autosaves 10 s after your last change while stopped
+  (at most once a minute; never at power-off: stop and wait a moment before switching off). MENU > RESTORE LAST OFF
+  turns it off. The full story, with what is saved where: **[the manual, chapter 12](docs/MANUAL.md)**.
 - **Backup**: the web editor (USB) downloads and restores everything: songs, sections, scenes and presets.
 
 ### Share your presets
