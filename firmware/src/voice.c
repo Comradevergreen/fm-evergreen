@@ -581,6 +581,30 @@ static void engine_block(track_t *t)
         t->pe_old[i] = t->p[P_E0 + i];
 }
 
+/* (0.6.13) the sound a track had before a load (ui.c load_begin, the main loop, before it writes the new values): the
+ * fade renders with all of it, not only its engine's values (pe_old): the filter, its envelope, the LFO .. as they were.
+ * One at a time (a load is one track's; a section's six: the others fade on pe_old as before) */
+static int16_t xf_snap[P_COUNT];
+static volatile uint8_t xf_snap_t = 0xFFu;              /* its track, 0xFF none */
+/* (0.6.13) a sound loaded (a preset, a user preset, a section: seq.c panic_req): what still sounds fades out over
+ * XF_BLOCKS on the values it had (as an engine switch does), not its release on the new sound's (its filter, its
+ * levels: the old notes jumped bright and loud, sharp highs at every preset change); the notes asked for meanwhile
+ * after it */
+static void trk_fade_out(track_t *t)
+{
+    uint32_t i, any = 0;
+    if (t->xf_on)
+        return;
+    for (i = 0; i < NVOICE; i++)
+        any |= t->v[i].active;
+    if (any) {
+        t->xf_on = 1;
+        t->xf = XF_BLOCKS;
+    } else if (xf_snap_t == (uint32_t)(t - trk)) {
+        xf_snap_t = 0xFFu;                              /* (nothing to fade: no snapshot left for a later one) */
+    }
+}
+
 /* one control tick (CTL samples) of the amplitude envelope; returns Q15 */
 static int32_t env_tick(track_t *t, voice_t *v)
 {
@@ -644,11 +668,14 @@ static uint32_t track_render(track_t *t, int32_t *out, uint32_t n)
     bend = midi_bend_q8[ti];
     bend16 = bend >= 0 ? bend / 16 : -((-bend + 15) / 16);
     bend_fine = (bend - bend16 * 16) * 2367 / 2560;
-    uint32_t nr = 0, fade = t->xf_on && t->xf;
-    int16_t pe_new[8];
+    uint32_t nr = 0, fade = t->xf_on && t->xf, snap = fade && xf_snap_t == ti;
+    int16_t pe_new[8], p_new[P_COUNT];
     for (i = 0; i < n; i++)
         out[i] = 0;
-    if (fade)                                           /* engine switch: the old engine, its own values */
+    if (snap) {                                         /* (0.6.13) a sound load: the whole sound as it was */
+        memcpy(p_new, t->p, sizeof p_new);
+        memcpy(t->p, xf_snap, sizeof p_new);
+    } else if (fade)                                    /* engine switch: the old engine, its own values */
         for (i = 0; i < 8u; i++) {
             pe_new[i] = t->p[P_E0 + i];
             t->p[P_E0 + i] = t->pe_old[i];
@@ -712,10 +739,12 @@ static uint32_t track_render(track_t *t, int32_t *out, uint32_t n)
     if (nr && (t->p[P_FTYPE] || t->p[P_FCUT] < 127 || t->p[P_FRES] || ((tf_on >> ((uint32_t)(t - trk) % NTRK)) & 1u)))
         /* (JIANT 0.5) the FILTER (track_post); 0.6.8: and a block more to leave the chain (track_filter's fade) */
         track_post(t, e, out, n);
-    if (fade) {
+    if (snap)
+        memcpy(t->p, p_new, sizeof p_new);
+    else if (fade)
         for (i = 0; i < 8u; i++)
             t->p[P_E0 + i] = pe_new[i];
-        t->xf--;
-    }
+    if (fade && !--t->xf && snap)
+        xf_snap_t = 0xFFu;                              /* (faded out: the snapshot done with) */
     return nr;
 }

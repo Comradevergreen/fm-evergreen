@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.6.13).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.6.14).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 ## Cheat sheets
 
@@ -29,6 +29,18 @@ Two printable sheets with everything on the device. Click an image to open it fu
 ## Changelog
 
 Every update is listed here, newest first.
+
+### v0.6.14
+- **No more sharp highs when changing presets**: the notes still sounding used to take the new sound's values at once
+  (its filter, its envelope amounts), jumping bright and loud. Now they fade out in ~3 ms with the sound they had
+  (all of it, kept the moment before the change), and the new notes start clean. Also on user presets and sections.
+- **SEQ TOOLS** (SEQ held): each cell shows its key with the octave (F3 CLEAR, F4 CLR AUTO: both read "F" before),
+  and the footer shows **REC: CLEAR ALL** (all six tracks' steps and automation, OCT+ confirms), which was nowhere
+  on screen.
+- **Key LATCH**: with ARP OFF, **ARP 2 > HOLD ON** latches the keys: the notes keep sounding when you let go, the
+  next chord replaces them, HOLD OFF lets them go.
+- **CLOUD costs about a third less CPU**: its grains computed every other sample (the line they read is written at
+  half rate anyway), the same sound. First step against the lag and clicks with six tracks busy.
 
 ### v0.6.13
 - **AIR on SHIMMER and CLOUD** (REVERB's fourth knob, PRE on ROOM / SPRING): ±24 semitones. Down, the reverb goes lower

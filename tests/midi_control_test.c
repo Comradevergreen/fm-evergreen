@@ -88,6 +88,7 @@ static int ownership_test(void)
     song.sel = 0; queued(0x94, 67, 100, 1); queued(0xB4, 64, 127, 1); queued(0x84, 67, 0, 1);
     panic_req |= 1u; events_block(CTL);
     queued(0x90, 67, 100, 1); queued(0xB4, 64, 0, 1);
+    trk[0].xf = 0; events_block(CTL);                   /* (0.6.13: the old sound's fade done: the note asked for plays) */
     bad += check("preset panic forgets old pedal owners so later pedal-up preserves new notes", !mn_get(4, 67) && gate_note(&trk[0], 67));
     for (uint32_t i = 0; i <= MQ; i++) midi_enqueue(0x09u | 0x90u << 8 | 70u << 16 | 100u << 24, 1);
     events_block(CTL);

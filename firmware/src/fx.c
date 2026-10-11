@@ -33,7 +33,7 @@ static struct {
     uint8_t rs_root;                     /* .. the note FOLW last heard + 1 (0: none yet) */
     uint16_t rs_w;                       /* .. their write index (each its own line, 1024) */
     uint32_t cl_w, cl_rng;               /* .. CLOUD: its line's write count (half rate), its random numbers */
-    int32_t cl_next, cl_lp, cl_half;     /* .. the samples to the next grain, the output's low-pass, the odd sample */
+    int32_t cl_next, cl_lp, cl_half, cl_gl, cl_gr;     /* .. the samples to the next grain, the output's low-pass, the odd sample */
     uint16_t sp_w;                       /* SPRING: the loop's write index (SP_MASK) */
     int32_t sp_lp, sp_hp, sp_he, sp_size;   /* .. its loop low-pass, low cut (and its remainder), the loop
                                              * length (Q8, glides) */
@@ -712,18 +712,31 @@ static __attribute__((noinline)) void rev_cloud(const int32_t *rev_in, int32_t *
                 cl_g[k].pr = (int16_t)(128 + pan);
             }
         }
-        for (k = 0; k < CL_N; k++) {
-            if (!cl_g[k].len) continue;
-            {
-                uint32_t p = cl_g[k].pos >> 16, f = (cl_g[k].pos >> 8) & 255u, a = cl_g[k].age, L = cl_g[k].len;
-                int32_t x0 = cloud_buf[p & (CL_LEN - 1u)], x1 = cloud_buf[(p + 1u) & (CL_LEN - 1u)];
-                int32_t x = x0 + (((x1 - x0) * (int32_t)f) >> 8), w = (int32_t)((a < L - a ? a : L - a) * 2u * 256u / L);
-                x = (x * w) >> 8;
-                l += (x * cl_g[k].pl) >> 7;
-                r += (x * cl_g[k].pr) >> 7;
-                cl_g[k].pos += cl_g[k].inc;
-                if (++cl_g[k].age >= cl_g[k].len) cl_g[k].len = 0;
+        if (!(i & 1u)) {                                 /* (0.6.12) the grains every other sample, as the line is
+                                                         * written (half rate): half the work; in between, the two
+                                                         * averaged (a linear step, half a sample late) */
+            int32_t gl = 0, gr = 0;
+            for (k = 0; k < CL_N; k++) {
+                if (!cl_g[k].len) continue;
+                {
+                    uint32_t p = cl_g[k].pos >> 16, f = (cl_g[k].pos >> 8) & 255u, a = cl_g[k].age, L = cl_g[k].len;
+                    int32_t x0 = cloud_buf[p & (CL_LEN - 1u)], x1 = cloud_buf[(p + 1u) & (CL_LEN - 1u)];
+                    int32_t x = x0 + (((x1 - x0) * (int32_t)f) >> 8), w = (int32_t)((a < L - a ? a : L - a) * 2u * 256u / L);
+                    x = (x * w) >> 8;
+                    gl += (x * cl_g[k].pl) >> 7;
+                    gr += (x * cl_g[k].pr) >> 7;
+                    cl_g[k].pos += cl_g[k].inc << 1;
+                    cl_g[k].age = (uint16_t)(a + 2u);
+                    if (cl_g[k].age >= cl_g[k].len) cl_g[k].len = 0;
+                }
             }
+            l = (gl + fx.cl_gl) >> 1;
+            r = (gr + fx.cl_gr) >> 1;
+            fx.cl_gl = gl;
+            fx.cl_gr = gr;
+        } else {
+            l = fx.cl_gl;
+            r = fx.cl_gr;
         }
         m = (l + r) >> 1;
         fx.cl_lp = m + mulq15(fx.cl_lp - m, 32767 - dk);
@@ -779,6 +792,7 @@ static void rev_clear(void)
     sh_tlp = 0;
     for (i = 0; i < CL_N; i++)
         cl_g[i].len = 0;
+    fx.cl_gl = fx.cl_gr = 0;
 }
 
 static int32_t part_buf[CTL];                            /* a part's block (mix_part); the fade of a model change */
