@@ -661,6 +661,14 @@ static void load_begin(track_t *t, uint32_t what)
 {
     if (load_depth++)
         return;
+    if (what & LOAD_SOUND) {                      /* (0.6.13) the sound as it is: the fade of what sounds renders
+                                                   * with it (voice.c xf_snap), unless one is fading on it now */
+        uint32_t k = trk_index(t);
+        if (xf_snap_t == 0xFFu || !trk[xf_snap_t % NTRK].xf_on) {
+            memcpy(xf_snap, t->p, sizeof xf_snap);
+            xf_snap_t = (uint8_t)k;
+        }
+    }
     motion_restore(t);
     load_motion_hold(t, what);
 }

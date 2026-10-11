@@ -998,7 +998,7 @@ static int32_t click_beat_now(void)
 /* everything that happens between two rendered blocks */
 static void events_block(uint32_t n)
 {
-    uint32_t i, pr, seq_n = n;
+    uint32_t i, pr, fo, seq_n = n;
     uint32_t clock_mode = (uint32_t)song.g[G_CLOCK];
     if (midi_clock.mode != clock_mode) {
         seq_stop();
@@ -1035,6 +1035,7 @@ static void events_block(uint32_t n)
     }
     pr = panic_req;
     panic_req = 0;
+    fo = pr;                                           /* (0.6.13) sound loads: what sounds fades on the old sound */
     if (midi_in_overflow) {                            /* a lost note-off must never leave a held note */
         mi_r = mi_w;
         memset(midi_sel_on, 0, sizeof midi_sel_on);
@@ -1054,6 +1055,8 @@ static void events_block(uint32_t n)
         if ((pr >> i) & 1u) {
             midi_forget_track(i);
             trk_all_off(t);
+            if ((fo >> i) & 1u)
+                trk_fade_out(t);                        /* (0.6.13: a sound load: on the old values, ~3 ms; voice.c) */
             t->nheld = 0;
             t->arp_phys = 0;
             arp_forget(t);

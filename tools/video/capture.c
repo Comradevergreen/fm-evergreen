@@ -9,7 +9,7 @@
  *   build/video/capture build/video        -> audio.wav (44.1 kHz stereo), screen.rgb (240 x 240 RGB24 a frame)
  * tools/video/compose.py makes the 1080p video from them. */
 #define UI_TEST_NO_MAIN 1
-#define FELUCCA_VERSION "v0.6.13"
+#define FELUCCA_VERSION "v0.6.14"
 #include "ui_test.c"
 
 #define FPS 30u
