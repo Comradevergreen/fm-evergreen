@@ -5984,6 +5984,25 @@ static int test_dice_all(void)
     btn_up(B_GLO); frames(8);
     for (k = 0, ok = 1; k < NTRK; k++) ok &= steps_sig(&trk[k]) == sig1[k];
     bad += check("  UNDO again: forward (REDO)", ok);
+    {   /* (0.6.26) a style, the engines really changed, FM6 on two tracks at most, the drums on one */
+        uint32_t moved = 0, fm = 0, drums = 0, r;
+        for (k = 0; k < NTRK; k++) eng0[k] = trk[k].eng_req;
+        dice_all();
+        for (k = 0; k < NTRK; k++) {
+            moved += trk[k].eng_req != eng0[k];
+            fm += trk[k].eng_req == ENGI_FM6;
+            drums += drum_track(&trk[k]);
+        }
+        ok = str_eq(ui.msg, "DICED: ") || !strncmp(ui.msg, "DICED: ", 7);
+        ok &= moved >= 3u && fm <= 2u && drums == 1u;
+        for (r = 0; r < 30u && ok; r++) {               /* thirty more throws: the same holds, every style seen */
+            dice_all();
+            for (k = 0, fm = 0, drums = 0; k < NTRK; k++) { fm += trk[k].eng_req == ENGI_FM6; drums += drum_track(&trk[k]); }
+            ok &= fm <= 2u && drums == 1u;
+            for (k = 0; k < 8u; k++) events_block(CTL);
+        }
+        bad += check("DICE ALL (0.6.26): a style named, engines changed, FM6 on two tracks at most, one DRUM track; 30 throws", ok);
+    }
     ui_power_on();
     return bad;
 }
