@@ -87,8 +87,8 @@ static void dx_cards(const page_t *pg)
         draw_column(0, "RATE", RT[dx_mot[XM_RATE] % 9u], "", dx_mot[XM_RATE] ? VAL(0u) : T_DIM, dx_mot[XM_RATE] * 125,
                     ICON_RATE);
         fmt_int(val, dx_mot[XM_DPTH]);
-        draw_column(1, "DPTH", val, "", dx_mot[XM_DPTH] ? VAL(1u) : T_DIM, dx_mot[XM_DPTH] * 1000 / 127, ICON_LEVEL);
-        draw_column(2, "SHPE", SH[dx_mot[XM_SHPE] % 5u], "", VAL(2u), dx_mot[XM_SHPE] * 250, ICON_WAVE);
+        draw_column(1, "DEPTH", val, "", dx_mot[XM_DPTH] ? VAL(1u) : T_DIM, dx_mot[XM_DPTH] * 1000 / 127, ICON_LEVEL);
+        draw_column(2, "SHAPE", SH[dx_mot[XM_SHPE] % 5u], "", VAL(2u), dx_mot[XM_SHPE] * 250, ICON_WAVE);
         fmt_int(val, dx_mot[XM_RAND]);
         draw_column(3, "RAND", val, "", dx_mot[XM_RAND] ? VAL(3u) : T_DIM, dx_mot[XM_RAND] * 1000 / 127, ICON_NOISE);
         return;
@@ -98,7 +98,7 @@ static void dx_cards(const page_t *pg)
         draw_column(0, "LANE", DX_LANE_ABBR[dx_ui_lane & 7u], "", VAL(0u), (int32_t)(dx_ui_lane & 7u) * 1000 / 7,
                     ICON_X_PATTERN);
         draw_column(1, "PMOD", PM[(L->mode >> 5) & 3u], "", VAL(1u), (int32_t)((L->mode >> 5) & 3u) * 333, ICON_ENV);
-        draw_column(2, "DRV", L->mode & DX_DRIVE ? "ON" : "OFF", "", L->mode & DX_DRIVE ? VAL(2u) : T_DIM,
+        draw_column(2, "DRIVE", L->mode & DX_DRIVE ? "ON" : "OFF", "", L->mode & DX_DRIVE ? VAL(2u) : T_DIM,
                     L->mode & DX_DRIVE ? 1000 : 0, ICON_DRIVE);
         draw_column(3, "WAVE", W[L->mode & 3u], "", VAL(3u), (int32_t)(L->mode & 3u) * 333, ICON_WAVE);
         return;
@@ -108,17 +108,17 @@ static void dx_cards(const page_t *pg)
                     ICON_X_PATTERN);
         draw_column(1, "SIDE", dx_ui_side ? "B" : "A", "", VAL(1u), dx_ui_side ? 1000 : 0, ICON_MIX);
         fmt_int(val, v[DXP_PITCH]);
-        draw_column(2, "PTCH", val, "", VAL(2u), v[DXP_PITCH] * 1000 / 127, ICON_PITCH);
+        draw_column(2, "PITCH", val, "", VAL(2u), v[DXP_PITCH] * 1000 / 127, ICON_PITCH);
         fmt_int(val, v[DXP_PMOD]);
         draw_column(3, "PMOD", val, "", VAL(3u), v[DXP_PMOD] * 1000 / 127, ICON_ENV);
         return;
     }
     fmt_int(val, v[DXP_DECAY]);
-    draw_column(0, "DCAY", val, "", VAL(0u), v[DXP_DECAY] * 1000 / 127, ICON_DECAY);
+    draw_column(0, "DECAY", val, "", VAL(0u), v[DXP_DECAY] * 1000 / 127, ICON_DECAY);
     fmt_int(val, v[DXP_NOISE]);
-    draw_column(1, "NOIS", val, "", VAL(1u), v[DXP_NOISE] * 1000 / 127, ICON_NOISE);
+    draw_column(1, "NOISE", val, "", VAL(1u), v[DXP_NOISE] * 1000 / 127, ICON_NOISE);
     fmt_int(val, v[DXP_COLOR]);
-    draw_column(2, "COLR", val, "", VAL(2u), v[DXP_COLOR] * 1000 / 127, ICON_TONE);
+    draw_column(2, "COLOR", val, "", VAL(2u), v[DXP_COLOR] * 1000 / 127, ICON_TONE);
     dx_mode_name(val, L->mode);
     draw_column(3, "MODE", val, "", VAL(3u), (int32_t)dx_mode_ix(L->mode) * 1000 / 23, ICON_WAVE);
 }

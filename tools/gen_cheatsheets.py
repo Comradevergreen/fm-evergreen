@@ -7,7 +7,7 @@ import html, os
 
 R = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(R, 'docs', 'cheatsheet')
-VERSION = 'v0.6.23'
+VERSION = 'v0.6.24'
 
 HEAT = ['#22d3ee', '#3b82f6', '#8b5cf6', '#d946ef', '#ef4444', '#ff7a00', '#facc15', '#f4f1ea']
 
@@ -143,7 +143,7 @@ def controls():
     pb = [
         ('ENV', 'ENV · ENV DEST', '—'),
         ('LFO', 'LFO · LFO DEST · MOD · MSEQ · MSEQ 2', 'MACROS M1–M4 (stay latched)'),
-        ('FX', 'FX · DIST · AUTOPAN · SLICER · SL BUS · SL BUS 2 · SL PITCH · DLY · DLY 2 · REVERB · REVERB 2 · CHORUS · MASTER',
+        ('FX', 'TRACK · SLICER · DELAY · REVERB · CHORUS · MASTER (two quick taps: next section)',
          'PUNCH-IN FX'),
         ('SCL', 'SCL · SCL 2', 'ROOT by key'),
         ('EDIT', 'EDIT 1 · EDIT 2 · FILTER · VOICE  (FM6: OPERATOR · OP ENV · OPERATOR 2; DRUM: LANES · LANES 2 · SOUND 1–3 · X-MOD)', 'INIT · RECALL · sound mutes'),
@@ -221,27 +221,27 @@ def controls():
 
     b.append(sec('EVERY PAGE · KNOB 1 – 4'))
     fams = [
-        ('ENV', HEAT[0], [('ENV', 'ATK DEC SUS REL'), ('ENV DEST', 'FLT PIT SHP LOOP')]),
-        ('LFO', HEAT[1], [('LFO', 'RATE WAVE PHS FADE'), ('LFO DEST', 'PIT FLT SHP AMP'), ('MOD', 'SLOT SRC DST AMT'),
-                          ('MSEQ', 'STEP LVL LEN SLEW'), ('MSEQ 2', 'DIV - - -')]),
-        ('FX', HEAT[5], [('FX', 'DST CHO DLY REV'), ('DIST', 'DST TYPE TONE -'), ('AUTOPAN', 'DPTH RATE SYNC WAVE'), ('SLICER', 'SLCR PAT RATE DEPTH'),
-                         ('SL BUS', 'T1 T2 T3 T4'), ('SL BUS 2', 'T5 T6 FX -'), ('SL PITCH', 'STEP PIT LEN QNT'),
-                         ('DLY', 'TIME FDBK TONE MIX'), ('DLY 2', 'WIDE PITCH SPRY -'),
+        ('ENV', HEAT[0], [('ENV', 'ATK DEC SUS REL'), ('ENV DEST', 'FILTER PITCH SHAPE LOOP')]),
+        ('LFO', HEAT[1], [('LFO', 'RATE WAVE PHASE FADE'), ('LFO DEST', 'PITCH FILTER SHAPE AMP'), ('MOD', 'SLOT SRC DEST AMT'),
+                          ('MSEQ', 'STEP LEVEL LEN SLEW'), ('MSEQ 2', 'DIV - - -')]),
+        ('FX', HEAT[5], [('FX', 'DIST CHORUS DLY REV'), ('DIST', 'DIST TYPE TONE -'), ('AUTOPAN', 'DEPTH RATE SYNC WAVE'), ('SLICER', 'MODE PAT RATE DEPTH'),
+                         ('SL BUS', 'T1 T2 T3 T4'), ('SL BUS 2', 'T5 T6 FX -'), ('SL PITCH', 'STEP PITCH LEN QUANT'),
+                         ('DLY', 'TIME FEEDBK TONE MIX'), ('DLY 2', 'WIDE PITCH SPRAY -'),
                          ('REVERB', 'TYPE SIZE DAMP PRE/AIR'), ('REVERB 2', 'MOD RATE FILT WIDE'),
-                         ('CHORUS', 'RATE DEPTH STER -'), ('MASTER', 'CLIP PNCH DUCK REL')]),
+                         ('CHORUS', 'RATE DEPTH STEREO -'), ('MASTER', 'CLIP PUNCH DUCK REL')]),
         ('EDIT', HEAT[3], [('EDIT 1', 'E1 E2 E3 E4'), ('EDIT 2', 'E5 E6 E7 E8'), ('RETRIG', 'RTRG - - -'), ('OPERATOR', 'OP RATIO FINE LEVEL'),
-                           ('OP ENV', 'OP STAGE RATE LEVEL'), ('OPERATOR 2', 'OP MODE DTUN VEL'), ('FILTER', 'TYPE CUT RES DRV'),
-                           ('VOICE', 'VCE GLD GLMOD PRIO'), ('LANES', 'KICK SNARE CLAP HATCL'),
-                           ('LANES 2', 'HATOP TOM RIM BELL'), ('SOUND', 'LANE SIDE PTCH PMOD'),
-                           ('SOUND 2', 'DCAY NOIS COLR MODE'), ('SOUND 3', 'LANE PMOD DRV WAVE'),
-                           ('X-MOD', 'RATE DPTH SHPE RAND')]),
-        ('SCL · ARP', HEAT[2], [('SCL', 'ROOT SCL QNT TRN'), ('SCL 2', 'STRN - - -'), ('ARP', 'MODE RATE OCT GATE'),
-                                ('ARP 2', 'SWG PROB HOLD ORD')]),
-        ('SEQ', HEAT[4], [('STEP', 'STEP NOTE TIME FLAG'), ('STEP · DRUM', 'STEP LANE HIT ACC'), ('PATTERN', 'LEN DIV SWG GATE'), ('SHIFT', 'OFS PIT - -'),
-                          ('PHRASES', 'PAT LOAD - -'), ('SONG', 'ROW SECT BARS SCENE'), ('CHANCE', 'STEP CHANCE RATCH -'),
+                           ('OP ENV', 'OP STAGE RATE LEVEL'), ('OPERATOR 2', 'OP MODE DETUNE VEL'), ('FILTER', 'TYPE CUT RES DRIVE'),
+                           ('VOICE', 'VOICE GLIDE MODE PRIO'), ('LANES', 'KICK SNARE CLAP HATCL'),
+                           ('LANES 2', 'HATOP TOM RIM BELL'), ('SOUND', 'LANE SIDE PITCH PMOD'),
+                           ('SOUND 2', 'DECAY NOISE COLOR MODE'), ('SOUND 3', 'LANE PMOD DRIVE WAVE'),
+                           ('X-MOD', 'RATE DEPTH SHAPE RAND')]),
+        ('SCL · ARP', HEAT[2], [('SCL', 'ROOT SCALE QUANT TRANS'), ('SCL 2', 'STRN - - -'), ('ARP', 'MODE RATE OCT GATE'),
+                                ('ARP 2', 'SWING PROB HOLD ORDER')]),
+        ('SEQ', HEAT[4], [('STEP', 'STEP NOTE TIME FLAG'), ('STEP · DRUM', 'STEP LANE HIT ACC'), ('PATTERN', 'LEN DIV SWING GATE'), ('SHIFT', 'OFFSET PITCH - -'),
+                          ('PHRASES', 'PAT LOAD - -'), ('CHANCE', 'STEP CHANCE RATCH -'),
                           ('AUTOMATION', 'PLAY EVENT LOCK CLEAR'), ('AUTO LIST', 'ROW STEP PARAM VALUE')]),
-        ('GLO · SAVE', HEAT[6], [('MIXER', 'LEVEL PAN REV MUTE'), ('GLOBAL', 'BPM SWG CLK TUNE'),
-                                 ('SYSTEM', 'MIDI TRKS ROUT -'), ('PRESETS', 'No. ENG FAV LIST'),
+        ('GLO · SAVE', HEAT[6], [('MIXER', 'LEVEL PAN REV MUTE'), ('GLOBAL', 'BPM SWING CLOCK TUNE'),
+                                 ('SYSTEM', 'MIDI TRACKS ROUTE -'), ('PRESETS', 'No. ENG FAV LIST'),
                                  ('USER', 'SLOT LOAD ERASE SAVE'), ('PROJECT', 'PROJ SECT LOAD SAVE'), ('ARRANGE', 'ROW SECT BARS SCENE'),
                                  ('TOOLS', 'CLRSQ INIT - -')]),
     ]
@@ -268,21 +268,21 @@ def sound():
     b = []
     b.append(sec('ENGINES · EDIT 1 / EDIT 2'))
     eng = [
-        ('ANALOG', HEAT[1], 'WAVE DTN MIX NOIS', 'CUT RES DRV INT',
+        ('ANALOG', HEAT[1], 'WAVE DETUNE MIX NOISE', 'CUT RES DRIVE INT',
          'SAW SQR TRI SIN PWM <b>SYNC RING SAW3</b>; INT: osc 2 ±24 st. Its filter is per voice.'),
-        ('FM6', HEAT[3], 'ALG FB MLVL MRAT', 'MEG VMOD DTUN SLOT',
-         'Dexed\'s 6 operators, 32 algorithms drawn, .syx patches (SLOT), MLVL / MRAT move the modulators. '
+        ('FM6', HEAT[3], 'ALG FB MOD RATIO', 'MEG VMOD DETUNE SLOT',
+         'Dexed\'s 6 operators, 32 algorithms drawn, .syx patches (SLOT), MOD / RATIO move the modulators. '
          '<b>OPERATOR · OP ENV · OPERATOR 2</b>: each operator on the device (ratio / fixed, fine, level, its envelope, '
          'mode, detune, velocity). <b>SLOT B1–B32</b>: a 32-voice .syx sent from the web editor.'),
-        ('PHASE', HEAT[2], 'WAVE WAVE2 DCW ENV', 'DTN LINE SUB FB',
+        ('PHASE', HEAT[2], 'WAVE WAVE2 DCW ENV', 'DETUNE LINE SUB FB',
          'Phase distortion (CZ); <b>FB</b> feeds the output back into the phase: hard edge to growl.'),
-        ('LOFI', HEAT[0], 'CHIP WAVE DUTY CRSH', '- VIB BEND MASK',
+        ('LOFI', HEAT[0], 'CHIP WAVE DUTY CRUSH', '- VIB BEND MASK',
          'Chip: PLS TRI SAW NOIS WRAM. <b>BYTE</b>: ALGO VAR · MOTN GRIT BEND LOOP. <b>FLOAT</b> (floatbeat): '
          'ALGO VAR · MOTN FBK BEND LOOP; CHIP sets FULL / 4BIT / 1BIT.'),
-        ('VOICE', HEAT[6], 'VOWL VOWL2 TALK SHIFT', 'BUZZ BRTH Q RAND', 'Formant voice (after klattsch): vowels, talk, breath.'),
-        ('WHEEL', HEAT[5], 'REG SUB BODY TOP', 'PERC CLICK DRV ROTR', 'Drawbar organ: registrations, percussion, rotary.'),
-        ('NOISE', HEAT[4], 'MODE COLR FREQ PEAK', 'TRK DENS DRFT CRSH', 'Coloured and metallic noise, tracked or free.'),
-        ('DRUM-X', '#ff7a00', 'MRPH TUNE TONE DECY', 'NOIS FM FOLD DRV',
+        ('VOICE', HEAT[6], 'VOWEL VOWEL2 TALK SHIFT', 'BUZZ BREATH Q RAND', 'Formant voice (after klattsch): vowels, talk, breath.'),
+        ('WHEEL', HEAT[5], 'REG SUB BODY TOP', 'PERC CLICK DRIVE ROTOR', 'Drawbar organ: registrations, percussion, rotary.'),
+        ('NOISE', HEAT[4], 'MODE COLOR FREQ PEAK', 'TRK DENSE DRIFT CRUSH', 'Coloured and metallic noise, tracked or free.'),
+        ('DRUM-X', '#ff7a00', 'MORPH TUNE TONE DECAY', 'NOISE FM FOLD DRIVE',
          '8 sounds BD SD CP CH OH TM RS CB, sides A / B: <b>MRPH</b> morphs the kit. SOUND 1–3: LANE SIDE PTCH PMOD · '
          'DCAY NOIS COLR MODE · LANE PMOD DRV WAVE. <b>X-MOD</b>: RATE DPTH SHPE RAND.'),
     ]

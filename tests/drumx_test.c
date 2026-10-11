@@ -221,7 +221,7 @@ int main(int argc, char **argv)
     {
         double r0, r1;
         track_t *t = kitx(64, 64);
-        ok = str_eq(ENG_DRUM.edit[0].label, "MRPH") && str_eq(ENG_DRUM.edit[4].label, "NOIS") &&
+        ok = str_eq(ENG_DRUM.edit[0].label, "MORPH") && str_eq(ENG_DRUM.edit[4].label, "NOISE") &&
              ENG_DRUM.knob[0] == P_E0;
         t->p[P_E4] = 0;                                  /* NOIS: the snare's noise out, then all noise */
         strike(t, 1, FS / 4u);

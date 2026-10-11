@@ -190,12 +190,12 @@ static const engine_t ENG_ANALOG = {
     .page_title = {"OSC", "FLT"},
     .edit = {
         {"WAVE", F_ENUM, 0, 7, 0, N_ANALOG_WAVE, 0},
-        {"DTN", F_INT, 0, 127, 10, 0, "ct"},
+        {"DETUNE", F_INT, 0, 127, 10, 0, "ct"},
         {"MIX", F_PCT, 0, 127, 64, 0, 0},
-        {"NOIS", F_PCT, 0, 127, 0, 0, 0},
+        {"NOISE", F_PCT, 0, 127, 0, 0, 0},
         {"CUT", F_CUTOFF, 0, 127, 90, 0, 0},
         {"RES", F_PCT, 0, 127, 30, 0, 0},
-        {"DRV", F_PCT, 0, 127, 0, 0, 0},
+        {"DRIVE", F_PCT, 0, 127, 0, 0, 0},
         {"INT", F_SEMI, -24, 24, 0, 0, 0},             /* (JIANT 0.4: osc 2's interval, was KTR: the filter's key
                                                          * tracking, fixed at its old default, half) */
     },

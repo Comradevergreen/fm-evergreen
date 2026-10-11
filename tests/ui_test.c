@@ -2055,7 +2055,7 @@ static int test_chain(void)
         trk[0].p[P_SLEN] == 2 && trk[0].step[0].note[0] == 60 && chain_config.count == 2);   /* (the rows: the song's) */
     ui_power_on();
     open_family(FAM_SEQ);
-    for (k = 0; k < NPAGES && cur_page()->graph != GR_SONG; k++) open_family(FAM_SEQ);
+    go_page(GR_SONG); frame();                          /* (0.6.24: SAVE > ARRANGE, the song in one place) */
     press(B_PLAY);
     bad += check("SONG page empty PLAY explains how to start", msg_is("ADD A SONG ROW") && !transport_req);
     turn(EN_K2, 1);
@@ -3532,7 +3532,7 @@ static int test_macro_layer(void)
     ui_power_on();                                     /* SONG KNOB 4: SCENE, the state now into the row */
     chain_config.count = 2; chain_config.row[0] = (chain_row_t){0, 1}; chain_config.row[1] = (chain_row_t){1, 1};
     memset(song_idx.scene[song_cur], 0, sizeof song_idx.scene[song_cur]);
-    go_title("SONG"); ui.song_row = 1; frame();
+    go_title("ARRANGE"); ui.song_row = 1; frame();
     trk[3].p[P_MUTE] = 1; macro_v[1] = 77;
     turn(EN_K4, 1); frame();
     ok = song_idx.scene[song_cur][1].on && ((song_idx.scene[song_cur][1].mute >> 3) & 1u) &&
@@ -5908,6 +5908,32 @@ static int test_key_latch(void)
     return bad;
 }
 
+/* (0.6.24) FX in sections: a tap the next page, two quick taps the next section; the footer counts within it */
+static int test_fx_sections(void)
+{
+    int bad = 0, ok;
+    char ti[20];
+    ui_power_on();
+    go_title("FX"); frame();
+    press(B_FX); frames(600);
+    ok = str_eq(cur_page()->title, "DIST");
+    press(B_FX); press(B_FX); frames(600);             /* two quick taps from DIST: SLICER */
+    ok &= str_eq(cur_page()->title, "SLICER");
+    press(B_FX); press(B_FX); frames(600);
+    ok &= str_eq(cur_page()->title, "DLY");
+    press(B_FX); frames(600);
+    page_title(ti);
+    ok &= str_eq(cur_page()->title, "DLY 2") && str_eq(ti, "DLY 2/2");
+    go_title("MASTER"); frame();
+    press(B_FX); press(B_FX); frames(600);             /* (past MASTER: round to the first) */
+    ok &= str_eq(cur_page()->title, "FX");
+    page_title(ti);
+    ok &= str_eq(ti, "FX 1/3");
+    bad += check("FX sections: tap next page, two quick taps next section (TRACK SLICER DELAY REVERB CHORUS MASTER), 'DLY 2/2'", ok);
+    ui_power_on();
+    return bad;
+}
+
 /* (0.6.21) HOME + SELECT: the dialog, OCT+: everything diced (one musical scale, a sequence on every track, DRUM a
  * beat); GLO + G4: UNDO puts the music back, again: forward */
 static int test_dice_all(void)
@@ -7576,6 +7602,7 @@ int main(void)
     bad += test_key_latch();
     bad += test_load_budget();
     bad += test_dice_all();
+    bad += test_fx_sections();
     bad += test_dx_sound();
     bad += test_clear_all();
     bad += test_lane_mutes();

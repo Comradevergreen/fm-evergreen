@@ -115,52 +115,52 @@ typedef struct {
  * told apart by descriptor in param_icon(). Unknown labels get ICON_GENERIC. */
 static const icon_map_t ICON_MAP[] = {
     /* track: ENV, LFO, destinations */
-    {"LVL", ICON_LEVEL}, {"ATK", ICON_ATTACK}, {"DEC", ICON_DECAY}, {"SUS", ICON_SUSTAIN},
-    {"REL", ICON_RELEASE}, {"FLT", ICON_CUTOFF}, {"PIT", ICON_PITCH}, {"SHP", ICON_SHAPE},
-    {"FX", ICON_MOD}, {"RATE", ICON_RATE}, {"WAVE", ICON_WAVE}, {"PHS", ICON_PHASE},
+    {"LEVEL", ICON_LEVEL}, {"ATK", ICON_ATTACK}, {"DEC", ICON_DECAY}, {"SUS", ICON_SUSTAIN},
+    {"REL", ICON_RELEASE}, {"FILTER", ICON_CUTOFF}, {"PITCH", ICON_PITCH}, {"SHAPE", ICON_SHAPE},
+    {"FX", ICON_MOD}, {"RATE", ICON_RATE}, {"WAVE", ICON_WAVE}, {"PHASE", ICON_PHASE},
     {"FADE", ICON_FADE}, {"AMP", ICON_LEVEL},
     /* arp, scale, pattern */
-    {"MODE", ICON_ARP}, {"OCT", ICON_OCTAVE}, {"GATE", ICON_GATE}, {"SWG", ICON_SWING},
-    {"PROB", ICON_PROB}, {"HOLD", ICON_HOLD}, {"ORD", ICON_ORDER}, {"ROOT", ICON_PITCH},
-    {"SCL", ICON_SCALE}, {"QNT", ICON_QUANTIZE}, {"TRN", ICON_TRANSPOSE}, {"LEN", ICON_LENGTH},
+    {"MODE", ICON_ARP}, {"OCT", ICON_OCTAVE}, {"GATE", ICON_GATE}, {"SWING", ICON_SWING},
+    {"PROB", ICON_PROB}, {"HOLD", ICON_HOLD}, {"ORDER", ICON_ORDER}, {"ROOT", ICON_PITCH},
+    {"SCALE", ICON_SCALE}, {"QUANT", ICON_QUANTIZE}, {"TRANS", ICON_TRANSPOSE}, {"LEN", ICON_LENGTH},
     {"DIV", ICON_DIVISION}, {"VOIC", ICON_OCTAVE},   /* (CHRD: below, PHYS's) */
     /* fx sends, voice */
-    {"DST", ICON_DIST}, {"CHO", ICON_CHORUS}, {"DLY", ICON_DELAY}, {"REV", ICON_REVERB},
-    {"VCE", ICON_VOICE}, {"GLD", ICON_GLIDE}, {"GLMOD", ICON_GLIDE}, {"PRIO", ICON_ORDER},
-    {"ALLOC", ICON_VOICE}, {"DTUNE", ICON_DETUNE}, {"PAN", ICON_PAN}, {"MUTE", ICON_MUTE},
+    {"DIST", ICON_DIST}, {"CHORUS", ICON_CHORUS}, {"DLY", ICON_DELAY}, {"REV", ICON_REVERB},
+    {"VOICE", ICON_VOICE}, {"GLIDE", ICON_GLIDE}, {"PRIO", ICON_ORDER},
+    {"ALLOC", ICON_VOICE}, {"PAN", ICON_PAN}, {"MUTE", ICON_MUTE},
     /* global */
-    {"BPM", ICON_TEMPO}, {"CLK", ICON_TEMPO}, {"TUNE", ICON_TUNE}, {"TIME", ICON_TIME},
-    {"FDBK", ICON_FEEDBACK}, {"COLR", ICON_TONE}, {"MIX", ICON_MIX}, {"SIZE", ICON_SIZE},
-    {"DAMP", ICON_DAMP}, {"TYPE", ICON_REVERB}, {"CRT", ICON_RATE}, {"CDP", ICON_MOD}, {"MIDI", ICON_MIDI},
-    {"SYNC", ICON_TEMPO}, {"ROUT", ICON_MIX}, {"CPU", ICON_CHIP}, {"SLOT", ICON_SAVE},
+    {"BPM", ICON_TEMPO}, {"CLOCK", ICON_TEMPO}, {"TUNE", ICON_TUNE}, {"TIME", ICON_TIME},
+    {"FEEDBK", ICON_FEEDBACK}, {"COLOR", ICON_TONE}, {"MIX", ICON_MIX}, {"SIZE", ICON_SIZE},
+    {"DAMP", ICON_DAMP}, {"TYPE", ICON_REVERB}, {"DEPTH", ICON_MOD}, {"MIDI", ICON_MIDI},
+    {"SYNC", ICON_TEMPO}, {"ROUTE", ICON_MIX}, {"CPU", ICON_CHIP}, {"SLOT", ICON_SAVE},
     {"LOAD", ICON_LOAD}, {"SAVE", ICON_SAVE}, {"ENG", ICON_WAVE}, {"CLRSQ", ICON_CLEAR},
-    {"INIT", ICON_CLEAR}, {"ERASE", ICON_CLEAR}, {"CH", ICON_MIDI}, {"LEVEL", ICON_LEVEL},
+    {"INIT", ICON_CLEAR}, {"ERASE", ICON_CLEAR}, {"CH", ICON_MIDI}, 
     /* engines (eng_*.c edit[] labels) */
-    {"DTN", ICON_DETUNE}, {"NOIS", ICON_NOISE}, {"CUT", ICON_CUTOFF}, {"RES", ICON_RESO},
-    {"DRV", ICON_DRIVE}, {"KTR", ICON_KEYTRACK}, {"ALG", ICON_ALGORITHM}, {"R2", ICON_RATIO},
+    {"DETUNE", ICON_DETUNE}, {"NOISE", ICON_NOISE}, {"CUT", ICON_CUTOFF}, {"RES", ICON_RESO},
+    {"DRIVE", ICON_DRIVE}, {"KTR", ICON_KEYTRACK}, {"ALG", ICON_ALGORITHM}, {"R2", ICON_RATIO},
     {"R3", ICON_RATIO}, {"R4", ICON_RATIO}, {"IDX", ICON_MOD}, {"MDEC", ICON_DECAY},
-    {"FB", ICON_FEEDBACK}, {"CHIP", ICON_CHIP}, {"DUTY", ICON_PULSE}, {"CRSH", ICON_BITS},
+    {"FB", ICON_FEEDBACK}, {"CHIP", ICON_CHIP}, {"DUTY", ICON_PULSE}, {"CRUSH", ICON_BITS},
     {"SWP", ICON_SWEEP}, {"VIB", ICON_VIBRATO}, {"ARP", ICON_ARP}, {"TONE", ICON_TONE},
     {"SET", ICON_SAMPLE}, {"BITS", ICON_BITS}, {"LOOP", ICON_LOOP}, {"WAVE2", ICON_WAVE},
     {"DCW", ICON_SHAPE}, {"ENV", ICON_ENV}, {"LINE", ICON_MIX}, {"SUB", ICON_SUB},
-    {"FOLD", ICON_FOLD}, {"WAV#", ICON_WAVE}, {"DCY", ICON_DECAY}, {"INT2", ICON_TRANSPOSE},
+    {"FOLD", ICON_FOLD}, {"WAV#", ICON_WAVE}, {"DECAY", ICON_DECAY}, {"INT2", ICON_TRANSPOSE},
     {"INT3", ICON_TRANSPOSE}, {"PW", ICON_PULSE},
     {"REG", ICON_DRAWBAR}, {"BODY", ICON_LEVEL}, {"TOP", ICON_TONE}, {"PERC", ICON_DECAY},
-    {"CLICK", ICON_ATTACK}, {"ROTR", ICON_VIBRATO},
+    {"CLICK", ICON_ATTACK}, {"ROTOR", ICON_VIBRATO},
     {"SRC", ICON_SAMPLE}, {"START", ICON_STEPS}, {"PTCH", ICON_PITCH}, {"DCAY", ICON_DECAY},
-    {"POS", ICON_PHASE}, {"DENS", ICON_GRAIN}, {"SPRD", ICON_NOISE},
+    {"POS", ICON_PHASE}, {"DENSE", ICON_GRAIN}, {"SPRD", ICON_NOISE},
     {"MODEL", ICON_PHYS}, {"STRC", ICON_SHAPE}, {"BRIT", ICON_TONE}, {"BOW", ICON_SUSTAIN}, {"EXC", ICON_MIX},   /* PHYS */
-    {"HARM", ICON_RATIO}, {"BEND", ICON_SWEEP}, {"CHRD", ICON_SCALE}, {"SYMP", ICON_MIX}, {"DECY", ICON_DECAY},
+    {"HARM", ICON_RATIO}, {"BEND", ICON_SWEEP}, {"CHRD", ICON_SCALE}, {"SYMP", ICON_MIX}, 
     {"SNAP", ICON_NOISE}, {"KIT", ICON_SAMPLE}, {"KICK", ICON_ATTACK},       /* PHYS: MEMB, SYMP; DRUM */
-    {"VOWL", ICON_VOICE}, {"VOWL2", ICON_VOICE}, {"TALK", ICON_SWEEP}, {"SHIFT", ICON_TRANSPOSE},
-    {"BUZZ", ICON_PULSE}, {"BRTH", ICON_NOISE}, {"Q", ICON_RESO}, {"RAND", ICON_PROB},
-    {"FREQ", ICON_CUTOFF}, {"TRK", ICON_KEYTRACK}, {"DRFT", ICON_SWEEP},   /* NOISE (COLR, DENS, CRSH: above) */
-    {"MLVL", ICON_MOD}, {"MRAT", ICON_RATIO}, {"MEG", ICON_DECAY}, {"VMOD", ICON_ACCENT}, {"DTUN", ICON_DETUNE},
-    {"SLOT", ICON_LOAD},                                                    /* FM6 (ALG, FB: above) */
+    {"VOWEL", ICON_VOICE}, {"VOWEL2", ICON_VOICE}, {"TALK", ICON_SWEEP}, {"SHIFT", ICON_TRANSPOSE},
+    {"BUZZ", ICON_PULSE}, {"BREATH", ICON_NOISE}, {"Q", ICON_RESO}, {"RAND", ICON_PROB},
+    {"FREQ", ICON_CUTOFF}, {"TRK", ICON_KEYTRACK}, {"DRIFT", ICON_SWEEP},   /* NOISE (COLR, DENS, CRSH: above) */
+    {"MOD", ICON_MOD}, {"RATIO", ICON_RATIO}, {"MEG", ICON_DECAY}, {"VMOD", ICON_ACCENT}, 
+                                                       /* FM6 (ALG, FB: above) */
     /* fixed columns drawn by ui_draw.c (STEP page, preset browser, SYSTEM) */
     {"NOTE", ICON_PITCH}, {"STEP", ICON_STEPS}, {"FLAG", ICON_ACCENT}, {"ACC", ICON_ACCENT}, {"LANE", ICON_DRUM}, {"HIT", ICON_GATE}, {"SLD", ICON_SLIDE}, {"USB", ICON_MIDI},
     {"TRACK", ICON_MIX},                  /* TRACKS page (LEVEL, LEN, PAN: above) */
-    {"SLCR", ICON_SLICE}, {"PAT", ICON_STEPS}, {"DEPTH", ICON_MIX},   /* SLICER page (RATE: param_icon) */
+    {"PAT", ICON_STEPS},   /* SLICER page (RATE: param_icon) */
 };
 
 static uint32_t icon_for_label(const char *l)
@@ -200,6 +200,10 @@ static uint32_t param_icon(const param_desc_t *d, int32_t v)
         return ICON_NOISE;                    /* NOISE's MODE is the source; its CLK the register clock */
     if (d == &NOISE_CLK)
         return ICON_RATE;
+    if (d == &GP[G_SLMODE])
+        return ICON_SLICE;                    /* (0.6.24: "MODE" also the arp's and the glide's) */
+    if (d == &TP[P_GLMODE])
+        return ICON_GLIDE;
     return icon_for_label(d->label);
 }
 

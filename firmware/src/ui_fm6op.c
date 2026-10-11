@@ -174,7 +174,7 @@ static int fop_card(uint32_t slot, const char **label, char *val, const char **u
         *icon = ICON_RATIO;
         return 1;
     case FO_DTUN:
-        *label = "DTUN";
+        *label = "DETUNE";
         val[0] = v > 7u ? '+' : 0;
         fmt_int(val + (v > 7u), (int32_t)v - 7);
         *icon = ICON_DETUNE;

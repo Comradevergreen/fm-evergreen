@@ -804,6 +804,18 @@ static void page_title(char *ti)
     const engine_t *e = ENGINES[t->eng_req % NENGINES];
     uint32_t i, n = 0, k = 0;
     const char *pt = pg->scope == SC_ENGINE ? e->page_title[pg->id[0] != P_E0] : 0;   /* EDIT: the engine's */
+    if (pg->fam == FAM_FX && !page_over) {              /* (0.6.24) FX: the page within its section */
+        uint32_t h = ui.page;
+        while (h > 0u && !fx_head(h))
+            h--;
+        for (i = h; i < NPAGES && PAGES[i].fam == FAM_FX && (i == h || !fx_head(i)); i++)
+            if (page_visible(i)) {
+                n++;
+                if (i == ui.page)
+                    k = n;
+            }
+        pt = PAGES[h].title;                            /* (the section's name: "DLY 2/2", "SLICER 4/4") */
+    } else
     for (i = 0; i < NPAGES; i++)
         if (PAGES[i].fam == pg->fam && page_visible(i)) {
             n++;
@@ -1371,11 +1383,20 @@ static void track_col6(uint32_t c, uint32_t sel, uint32_t st, uint32_t mute, uin
     cv_icon_on(4, 5, 16, trk_icon(c, sel), sel ? T_ACCENT : mute ? T_DIM : T_MID, T_SURF);
     if (st == 1u || st == 2u)                        /* armed: a dot (recording: red) */
         cv_rrect(T6_W - 11, 10, 6, 6, 3, st == 1u ? T_REC : T_ACCENT, T_SURF);
-    if (mute)
-        cv_text_in(2, 22, T6_W - 4, &AF_S, mute == 2u ? "OFF" : "MUTE", mute == 2u ? T_DIM : hot == 4u ? T_ACCENT : T_KEY,
-                   T_SURF);
-    else
-        cv_free_text(4, 22, &AF_S, b, sel ? T_TEXT : T_MID, T_SURF, T6_W - 7);
+    if (mute == 2u)                                  /* asleep (TRACKS 4) */
+        cv_text_in(2, 22, T6_W - 4, &AF_S, "OFF", T_DIM, T_SURF);
+    else {                                           /* (0.6.24) the sound's name cut to the column (its first word, as
+                                                      * many letters as fit, no "..."); muted: in MUTE's colour, still
+                                                      * there (it said MUTE instead: which sound, gone) */
+        char sn[13];
+        uint32_t n;
+        for (n = 0; b[n] && b[n] != ' ' && n < 12u; n++)
+            sn[n] = b[n];
+        sn[n] = 0;
+        while (n > 1u && text_w(&AF_S, sn) > T6_W - 7)
+            sn[--n] = 0;
+        cv_text_on(4, 22, &AF_S, sn, mute ? T_ACCENT : sel ? T_TEXT : T_MID, T_SURF);
+    }
     for (k = 0; k < 14; k++) {                       /* LEVEL: cold at the bottom, hot at the top */
         int32_t sy = 95 - k * 4;
         uint16_t sc = heat_col(20 + k * 220 / 13);

@@ -156,8 +156,8 @@ static void bg_feat(const track_t *t, const genome_t *g, const uint8_t *ids, bfe
         const char *l = lab[c];
         if (str_eq(l, "CUT")) { f->spikes = 10 + k[c] * 22 / 256; f->len = k[c] * k[c] / 256; }
         else if (str_eq(l, "RES") || str_eq(l, "RESO")) f->ripple = k[c];
-        else if (str_eq(l, "DTN") || str_eq(l, "SPRD") || str_eq(l, "DTUNE")) { f->sep = k[c]; if (f->nuc < 2) f->nuc = 2; }
-        else if (str_eq(l, "NOIS") || str_eq(l, "RAND") || str_eq(l, "BRTH") || str_eq(l, "CRSH")) f->fray = k[c];
+        else if (str_eq(l, "DETUNE") || str_eq(l, "SPRD") || str_eq(l, "DTUNE")) { f->sep = k[c]; if (f->nuc < 2) f->nuc = 2; }
+        else if (str_eq(l, "NOISE") || str_eq(l, "RAND") || str_eq(l, "BREATH") || str_eq(l, "CRUSH")) f->fray = k[c];
         else if (str_eq(l, "WAVE")) f->lob = 2 + k[c] * 5 / 257;
     }
 }

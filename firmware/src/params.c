@@ -49,56 +49,56 @@ static const char *const N_ENGNAME[] = {"ANALOG", FELUCCA_FM4 ? "DIGITAL" : "-",
 #define PE(l, n, df) {l, F_ENUM, 0, (int16_t)(sizeof(n) / sizeof(n[0]) - 1), df, n, 0}
 
 static const param_desc_t TP[P_COUNT] = {
-    [P_LEVEL] = PD("LVL", F_DB, 0, 127, 104),
+    [P_LEVEL] = PD("LEVEL", F_DB, 0, 127, 104),
     [P_ATK] = PD("ATK", F_TIME, 0, 127, 10),
     [P_DEC] = PD("DEC", F_TIME, 0, 127, 70),
     [P_SUS] = PD("SUS", F_PCT, 0, 127, 90),
     [P_REL] = PD("REL", F_TIME, 0, 127, 60),
-    [P_ED_FLT] = PD("FLT", F_BIPCT, -64, 63, 0),
-    [P_ED_PIT] = PD("PIT", F_BIPCT, -64, 63, 0),
-    [P_ED_SHP] = PD("SHP", F_BIPCT, -64, 63, 0),
+    [P_ED_FLT] = PD("FILTER", F_BIPCT, -64, 63, 0),
+    [P_ED_PIT] = PD("PITCH", F_BIPCT, -64, 63, 0),
+    [P_ED_SHP] = PD("SHAPE", F_BIPCT, -64, 63, 0),
     [P_ED_FX] = PE("LOOP", N_ONOFF, 0),          /* (JIANT 0.4, P_ELOOP) ON: held, the ENV starts again at the sustain */
     [P_LRATE] = PD("RATE", F_LFOHZ, 0, 127, 60),
     [P_LWAVE] = PE("WAVE", N_LWAVE, 0),
-    [P_LPHASE] = PD("PHS", F_INT, 0, 127, 0),
+    [P_LPHASE] = PD("PHASE", F_INT, 0, 127, 0),
     [P_LFADE] = PD("FADE", F_TIME, 0, 127, 0),
-    [P_LD_PIT] = PD("PIT", F_BIPCT, -64, 63, 0),
-    [P_LD_FLT] = PD("FLT", F_BIPCT, -64, 63, 0),
-    [P_LD_SHP] = PD("SHP", F_BIPCT, -64, 63, 0),
+    [P_LD_PIT] = PD("PITCH", F_BIPCT, -64, 63, 0),
+    [P_LD_FLT] = PD("FILTER", F_BIPCT, -64, 63, 0),
+    [P_LD_SHP] = PD("SHAPE", F_BIPCT, -64, 63, 0),
     [P_LD_AMP] = PD("AMP", F_PCT, 0, 127, 0),
     [P_AMODE] = PE("MODE", N_AMODE, 0),
     [P_ARATE] = PE("RATE", N_DIV, 2),
     [P_AOCT] = PD("OCT", F_INT, 1, 4, 1),
     [P_AGATE] = PD("GATE", F_PCT, 1, 127, 64),
-    [P_ASWING] = PD("SWG", F_PCT, 0, 100, 0),
+    [P_ASWING] = PD("SWING", F_PCT, 0, 100, 0),
     [P_APROB] = PD("PROB", F_PCT, 0, 127, 127),
     [P_AHOLD] = PE("HOLD", N_ONOFF, 0),
-    [P_AORDER] = PE("ORD", N_ORDER, 0),
+    [P_AORDER] = PE("ORDER", N_ORDER, 0),
     [P_ROOT] = PD("ROOT", F_NOTE, 0, 11, 0),
-    [P_SCALE] = PE("SCL", N_SCALE, 0),
-    [P_QUANT] = PE("QNT", N_QUANT, 0),
-    [P_TRANS] = PD("TRN", F_SEMI, -24, 24, 0),
+    [P_SCALE] = PE("SCALE", N_SCALE, 0),
+    [P_QUANT] = PE("QUANT", N_QUANT, 0),
+    [P_TRANS] = PD("TRANS", F_SEMI, -24, 24, 0),
     [P_SLEN] = PD("LEN", F_STEPS, 1, NSTEP, 16),
     [P_SDIV] = PE("DIV", N_DIV, 2),
-    [P_SSWING] = PD("SWG", F_PCT, 0, 100, 0),
+    [P_SSWING] = PD("SWING", F_PCT, 0, 100, 0),
     [P_SGATE] = PD("GATE", F_PCT, 1, 127, 64),
-    [P_DIST] = PD("DST", F_PCT, 0, 127, 0),
-    [P_CHOR] = PD("CHO", F_PCT, 0, 127, 0),
+    [P_DIST] = PD("DIST", F_PCT, 0, 127, 0),
+    [P_CHOR] = PD("CHORUS", F_PCT, 0, 127, 0),
     [P_DLY] = PD("DLY", F_PCT, 0, 127, 0),
     [P_REV] = PD("REV", F_PCT, 0, 127, 0),
-    [P_VOICE] = PE("VCE", N_VOICE, 0),
-    [P_GLIDE] = PD("GLD", F_TIME, 0, 127, 0),
-    [P_GLMODE] = PE("GLMOD", N_GLMODE, 0),
+    [P_VOICE] = PE("VOICE", N_VOICE, 0),
+    [P_GLIDE] = PD("GLIDE", F_TIME, 0, 127, 0),
+    [P_GLMODE] = PE("MODE", N_GLMODE, 0),
     [P_PRIO] = PE("PRIO", N_PRIO, 0),
     [P_ALLOC] = PE("ALLOC", N_ALLOC, 0),
-    [P_DETUNE] = PD("DTUNE", F_INT, 0, 127, 40),
+    [P_DETUNE] = PD("DETUNE", F_INT, 0, 127, 40),
     [P_PAN] = PD("PAN", F_BIPCT, -64, 63, 0),
     [P_MUTE] = PE("MUTE", N_ONOFF, 0),
-    [P_APDEP] = PD("DPTH", F_PCT, 0, 127, 0),       /* (JIANT 0.6.9) AUTO PAN (core.h: the old SLICER's slots) */
+    [P_APDEP] = PD("DEPTH", F_PCT, 0, 127, 0),       /* (JIANT 0.6.9) AUTO PAN (core.h: the old SLICER's slots) */
     [P_APRATE] = PD("RATE", F_LFOHZ, 0, 127, 2),    /* (BEAT: 0..7, page_desc AP_BEAT) */
     [P_APWAVE] = PE("WAVE", N_LWAVE, 1),
     [P_APSYNC] = PE("SYNC", N_APSYNC, 1),
-#define MSLOT(k) [P_M##k##SRC] = PE("SRC" #k, N_MSRC, 0), [P_M##k##DST] = PE("DST" #k, N_MDST, 0), \
+#define MSLOT(k) [P_M##k##SRC] = PE("SRC" #k, N_MSRC, 0), [P_M##k##DST] = PE("DEST" #k, N_MDST, 0), \
                  [P_M##k##AMT] = PD("AMT" #k, F_BIPCT, -64, 63, 0)
     MSLOT(1), MSLOT(2), MSLOT(3), MSLOT(4),
 #undef MSLOT
@@ -109,11 +109,11 @@ static const param_desc_t TP[P_COUNT] = {
                 [P_FM##k##_DEC] = PD("DEC", F_TIME, 0, 127, 0), \
                 [P_FM##k##_SUS] = PD("SUS", F_PCT, 0, 127, 127), \
                 [P_FM##k##_REL] = PD("REL", F_TIME, 0, 127, 0), \
-                [P_FM##k##_LEVEL] = PD("LVL", F_PCT, 0, 127, 127)
+                [P_FM##k##_LEVEL] = PD("LEVEL", F_PCT, 0, 127, 127)
     FMOP(1), FMOP(2), FMOP(3), FMOP(4),
 #undef FMOP
-    [P_SOFS] = PD("OFS", F_INT, -32, 32, 0),    /* the sequence played OFS steps later (seq.c seq_src) */
-    [P_POFS] = PD("PIT", F_SEMI, -24, 24, 0),   /* its notes PIT semitones up (not on a kit) */
+    [P_SOFS] = PD("OFFSET", F_INT, -32, 32, 0),    /* the sequence played OFS steps later (seq.c seq_src) */
+    [P_POFS] = PD("PITCH", F_SEMI, -24, 24, 0),   /* its notes PIT semitones up (not on a kit) */
 /* the DRUM engine's lane levels (eng_drum.c, #97): 100 % = the kit as designed (the sound before 1.1) */
 #define LANE(k, l) [P_LN0 + (k)] = PD(l, F_PCT, 0, 127, 127)
     LANE(0, "KICK"), LANE(1, "SNARE"), LANE(2, "CLAP"), LANE(3, "HATCL"),
@@ -124,7 +124,7 @@ static const param_desc_t TP[P_COUNT] = {
     [P_MSLEN] = PD("LEN", F_STEPS, 1, 16, 16),  /* (JIANT) the modulation sequence (mod.c MS_STEP) */
     [P_MSDIV] = PE("DIV", N_DIV, 2),
     [P_MSSLW] = PD("SLEW", F_PCT, 0, 127, 0),
-#define MSTEP(k) [P_MS0 + (k)] = PD("LVL", F_PCT, 0, 127, 0)
+#define MSTEP(k) [P_MS0 + (k)] = PD("LEVEL", F_PCT, 0, 127, 0)
     MSTEP(0), MSTEP(1), MSTEP(2), MSTEP(3), MSTEP(4), MSTEP(5), MSTEP(6), MSTEP(7),
     MSTEP(8), MSTEP(9), MSTEP(10), MSTEP(11), MSTEP(12), MSTEP(13), MSTEP(14), MSTEP(15),
 #undef MSTEP
@@ -135,21 +135,21 @@ static const param_desc_t TP[P_COUNT] = {
 
 static const param_desc_t GP[G_COUNT] = {
     [G_BPM] = PD("BPM", F_BPM, 40, 240, 120),
-    [G_SWING] = PD("SWG", F_PCT, 0, 100, 0),
-    [G_CLOCK] = PE("CLK", N_CLOCK, 0),
+    [G_SWING] = PD("SWING", F_PCT, 0, 100, 0),
+    [G_CLOCK] = PE("CLOCK", N_CLOCK, 0),
     [G_TUNE] = PD("TUNE", F_INT, -50, 50, 0),
     [G_DTIME] = PE("TIME", N_DTIME, 1),                 /* (JIANT 0.4: past the divisions, free times) */
-    [G_DFDBK] = PD("FDBK", F_PCT, 0, 120, 60),
+    [G_DFDBK] = PD("FEEDBK", F_PCT, 0, 120, 60),
     [G_DCOLOR] = PD("TONE", F_PCT, 0, 127, 64),        /* (JIANT 0.4, was COLR + HPF) the repeats: below 64 darker, above
                                                         * thinner (64 open) */
     [G_DMIX] = PD("MIX", F_PCT, 0, 127, 90),
     [G_RSIZE] = PD("SIZE", F_PCT, 0, 127, 90),
     [G_RDAMP] = PD("DAMP", F_PCT, 0, 127, 60),
-    [G_CRATE] = PD("CRT", F_LFOHZ, 0, 127, 40),
-    [G_CDEPTH] = PD("CDP", F_PCT, 0, 127, 60),
+    [G_CRATE] = PD("RATE", F_LFOHZ, 0, 127, 40),
+    [G_CDEPTH] = PD("DEPTH", F_PCT, 0, 127, 60),
     [G_MIDI] = PE("MIDI", N_MIDI_INPUT, 0),
     [G_DREL] = PD("REL", F_PCT, 0, 100, 30),     /* DUCK's release: 40 .. 600 ms (fx.c duck_block) */
-    [G_ROUTE] = PE("ROUT", N_ROUTE, 0),          /* (was "--": stored 0 = CH1-4, as MIDI IN always was) */
+    [G_ROUTE] = PE("ROUTE", N_ROUTE, 0),          /* (was "--": stored 0 = CH1-4, as MIDI IN always was) */
     [G_INFO] = PD("CPU", F_INT, 0, 0, 0),
     [G_SLOT] = PD("SLOT", F_INT, 1, 4, 1),
     [G_NAME] = PE("NAME", N_DASH, 0),
@@ -163,10 +163,10 @@ static const param_desc_t GP[G_COUNT] = {
     [G_RTYPE] = PE("TYPE", N_RTYPE, 0),
     /* (JIANT) the drum bus and the kick's ducking (fx.c, eng_drum.c); the ids of the GM drum part's level and
      * reverb send, inert since 1.0 */
-    [G_PUNCH] = PD("PNCH", F_PCT, 0, 100, 0),    /* DRUM fattened: up to +5 dB the first 4 ms, the body +3 dB (0.5) */
+    [G_PUNCH] = PD("PUNCH", F_PCT, 0, 100, 0),    /* DRUM fattened: up to +5 dB the first 4 ms, the body +3 dB (0.5) */
     [G_DUCK] = PD("DUCK", F_PCT, 0, 100, 0),     /* the kick ducks the other parts: up to -18 dB */
     /* (JIANT, FUNB) the buses: not in a project's header (project.c: after the punch-in lane) */
-    [G_CSTER] = PD("STER", F_BIPCT, -64, 63, 0), /* (0.6.9) the CHORUS's stereo: 0 as before, -64 mono, 63 ~2x (was G_DHPF) */
+    [G_CSTER] = PD("STEREO", F_BIPCT, -64, 63, 0), /* (0.6.9) the CHORUS's stereo: 0 as before, -64 mono, 63 ~2x (was G_DHPF) */
     [G_WIDTH] = PD("WIDE", F_PCT, 0, 127, 0),    /* the delay's right echo up to 1/32 later, the chorus's taps apart */
     [G_RMOD] = PD("MOD", F_PCT, 0, 127, 0),      /* the reverb's modulation depth (ROOM: the combs, SPRING: its wobble) */
     [G_RRATE] = PD("RATE", F_LFOHZ, 0, 127, 30), /* .. its rate */
@@ -174,9 +174,9 @@ static const param_desc_t GP[G_COUNT] = {
     [G_RFILT] = PD("FILT", F_BIPCT, -64, 63, 0), /* (JIANT 0.3) the reverb's input: darker (low-pass) / brighter (low cut) */
     [G_RWIDE] = PD("WIDE", F_PCT, 0, 127, 0),    /* .. its width: its combs (ROOM) / taps (SPRING) apart, left and right */
     [G_DPIT] = PD("PITCH", F_SEMI, -12, 12, 0),  /* the GRAIN delay: each repeat through two grains this far up / down */
-    [G_DSPRY] = PD("SPRY", F_PCT, 0, 127, 0),    /* .. their spray: each grain from a random place (0: plain delay) */
+    [G_DSPRY] = PD("SPRAY", F_PCT, 0, 127, 0),    /* .. their spray: each grain from a random place (0: plain delay) */
     [G_STRN] = PD("STRN", F_INT, -14, 14, 0),    /* (JIANT 0.4) every sequence this many steps up / down its scale */
-    [G_SLMODE] = PE("SLCR", N_SLCR, 0),         /* (JIANT 0.6.3) the SLICER bus (slicer.c) */
+    [G_SLMODE] = PE("MODE", N_SLCR, 0),         /* (JIANT 0.6.3) the SLICER bus (slicer.c) */
     [G_SLPAT] = PD("PAT", F_INT, 1, 16, 1),
     [G_SLRATE] = PE("RATE", N_SLDIV, 1),
     [G_SLDEP] = PD("DEPTH", F_PCT, 0, 127, 127),
@@ -184,15 +184,15 @@ static const param_desc_t GP[G_COUNT] = {
     [G_SLT1 + 3] = PE("T4", N_ONOFF, 1), [G_SLT1 + 4] = PE("T5", N_ONOFF, 1), [G_SLT6] = PE("T6", N_ONOFF, 1),
     [G_SLFX] = PE("FX", N_ONOFF, 1),            /* the delay, reverb and chorus returns: on, the tails cut too */
     [G_SLPLEN] = PD("LEN", F_INT, 1, 16, 16),
-    [G_SLPQ] = PE("QNT", N_SLPQ, 1),            /* the pitch steps: every semitone / the scale's */
-    [G_SLP0] = PD("PIT", F_SEMI, -24, 24, 0), [G_SLP0 + 1] = PD("PIT", F_SEMI, -24, 24, 0),
-    [G_SLP0 + 2] = PD("PIT", F_SEMI, -24, 24, 0), [G_SLP0 + 3] = PD("PIT", F_SEMI, -24, 24, 0),
-    [G_SLP0 + 4] = PD("PIT", F_SEMI, -24, 24, 0), [G_SLP0 + 5] = PD("PIT", F_SEMI, -24, 24, 0),
-    [G_SLP0 + 6] = PD("PIT", F_SEMI, -24, 24, 0), [G_SLP0 + 7] = PD("PIT", F_SEMI, -24, 24, 0),
-    [G_SLP0 + 8] = PD("PIT", F_SEMI, -24, 24, 0), [G_SLP0 + 9] = PD("PIT", F_SEMI, -24, 24, 0),
-    [G_SLP0 + 10] = PD("PIT", F_SEMI, -24, 24, 0), [G_SLP0 + 11] = PD("PIT", F_SEMI, -24, 24, 0),
-    [G_SLP0 + 12] = PD("PIT", F_SEMI, -24, 24, 0), [G_SLP0 + 13] = PD("PIT", F_SEMI, -24, 24, 0),
-    [G_SLP0 + 14] = PD("PIT", F_SEMI, -24, 24, 0), [G_SLP15] = PD("PIT", F_SEMI, -24, 24, 0),
+    [G_SLPQ] = PE("QUANT", N_SLPQ, 1),            /* the pitch steps: every semitone / the scale's */
+    [G_SLP0] = PD("PITCH", F_SEMI, -24, 24, 0), [G_SLP0 + 1] = PD("PITCH", F_SEMI, -24, 24, 0),
+    [G_SLP0 + 2] = PD("PITCH", F_SEMI, -24, 24, 0), [G_SLP0 + 3] = PD("PITCH", F_SEMI, -24, 24, 0),
+    [G_SLP0 + 4] = PD("PITCH", F_SEMI, -24, 24, 0), [G_SLP0 + 5] = PD("PITCH", F_SEMI, -24, 24, 0),
+    [G_SLP0 + 6] = PD("PITCH", F_SEMI, -24, 24, 0), [G_SLP0 + 7] = PD("PITCH", F_SEMI, -24, 24, 0),
+    [G_SLP0 + 8] = PD("PITCH", F_SEMI, -24, 24, 0), [G_SLP0 + 9] = PD("PITCH", F_SEMI, -24, 24, 0),
+    [G_SLP0 + 10] = PD("PITCH", F_SEMI, -24, 24, 0), [G_SLP0 + 11] = PD("PITCH", F_SEMI, -24, 24, 0),
+    [G_SLP0 + 12] = PD("PITCH", F_SEMI, -24, 24, 0), [G_SLP0 + 13] = PD("PITCH", F_SEMI, -24, 24, 0),
+    [G_SLP0 + 14] = PD("PITCH", F_SEMI, -24, 24, 0), [G_SLP15] = PD("PITCH", F_SEMI, -24, 24, 0),
 };
 
 static const param_desc_t LOFI_RTRG = {"RTRG", F_ONOFF, 0, 1, 0, 0, 0};   /* (0.6.12) P_LRTRG on a LOFI track */
@@ -410,7 +410,7 @@ typedef struct {
  * (ui.c rp_apply), a turn writes it back (ui_input.c knob_turn) */
 #define G_TRKS 0xFEu
 static const char *const N_TRKS[] = {"4 LOW", "6 HIGH"};
-static const param_desc_t TRKS_DESC = PE("TRKS", N_TRKS, 0);
+static const param_desc_t TRKS_DESC = PE("TRACKS", N_TRKS, 0);
 static int16_t trks_ui;
 static const page_t PAGES[] = {
     {"ENV", FAM_ENV, SC_TRACK, GR_ADSR, {P_ATK, P_DEC, P_SUS, P_REL}},
@@ -481,7 +481,7 @@ static uint8_t mod_ui_slot;      /* the MOD page: the matrix slot (0..3) KNOB 2.
 static uint8_t ms_ui_step;       /* (JIANT) the MSEQ page: the step (0..15) KNOB 2 edits */
 static const char *const N_RFOLW[] = {"OFF", "T1", "T2", "T3", "T4", "T5", "T6"};
 static const param_desc_t RESO_PITCH = PD("PITCH", F_INT, 0, 14, 0);   /* (0.6.5) RESO: the chord's steps up the scale (G_RPRE) */
-static const param_desc_t RESO_FOLW = PE("FOLW", N_RFOLW, 0);          /* .. the track whose notes it follows (G_RDAMP) */
+static const param_desc_t RESO_FOLW = PE("FOLLOW", N_RFOLW, 0);          /* .. the track whose notes it follows (G_RDAMP) */
 static const param_desc_t REV_PRE = PD("PRE", F_INT, 0, 100, 0);       /* ROOM / SPRING: the pre-delay, ms (G_RPRE) */
 static const param_desc_t REV_AIR = PD("AIR", F_SEMI, -24, 24, 0);    /* (0.6.12) SHIMMER / CLOUD: pitch and tone, down dark,
                                                                        * up airy (G_RPRE; fx.c rev_air) */

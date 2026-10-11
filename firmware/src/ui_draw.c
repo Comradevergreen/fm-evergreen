@@ -978,11 +978,11 @@ static void draw_columns(void)
         draw_column(0, "STEP", val, "/16", sl_ui_step < (uint32_t)song.g[G_SLPLEN] ? VAL(0u) : T_DIM,
                     (int32_t)sl_ui_step * 1000 / 15, ICON_AUTO);
         param_format(&GP[id], song.g[id], val, &unit);
-        draw_column(1, "PIT", val, unit, song.g[id] ? VAL(1u) : T_DIM, RATIO(&GP[id], song.g[id]), ICON_AUTO);
+        draw_column(1, "PITCH", val, unit, song.g[id] ? VAL(1u) : T_DIM, RATIO(&GP[id], song.g[id]), ICON_AUTO);
         param_format(&GP[G_SLPLEN], song.g[G_SLPLEN], val, &unit);
         draw_column(2, "LEN", val, unit, VAL(2u), RATIO(&GP[G_SLPLEN], song.g[G_SLPLEN]), ICON_AUTO);
         param_format(&GP[G_SLPQ], song.g[G_SLPQ], val, &unit);
-        draw_column(3, "QNT", val, unit, VAL(3u), -1, ICON_AUTO);
+        draw_column(3, "QUANT", val, unit, VAL(3u), -1, ICON_AUTO);
         return;
     }
     if (cur_page()->graph == GR_MSEQ) {                  /* (JIANT) STEP, its LVL, LEN, SLEW */
@@ -992,7 +992,7 @@ static void draw_columns(void)
         draw_column(0, "STEP", val, "/16", ms_ui_step < (uint32_t)t->p[P_MSLEN] ? VAL(0u) : T_DIM,
                     (int32_t)ms_ui_step * 1000 / 15, ICON_AUTO);
         param_format(&TP[id], t->p[id], val, &unit);
-        draw_column(1, "LVL", val, unit, VAL(1u), RATIO(&TP[id], t->p[id]), ICON_LEVEL);
+        draw_column(1, "LEVEL", val, unit, VAL(1u), RATIO(&TP[id], t->p[id]), ICON_LEVEL);
         param_format(&TP[P_MSLEN], t->p[P_MSLEN], val, &unit);
         draw_column(2, "LEN", val, unit, VAL(2u), RATIO(&TP[P_MSLEN], t->p[P_MSLEN]), ICON_AUTO);
         param_format(&TP[P_MSSLW], t->p[P_MSSLW], val, &unit);
@@ -1021,7 +1021,7 @@ static void draw_columns(void)
         fmt_int(val, (int32_t)mod_ui_slot + 1);
         draw_column(0, "SLOT", val, "/4", VAL(0u), (int32_t)mod_ui_slot * 1000 / 3, mod_src_icon(MS_OFF));   /* (the mod icon) */
         draw_column(1, "SRC", N_MSRC[clamp(s, 0, MS_N - 1)], "", s ? VAL(1u) : T_DIM, -1, mod_src_icon(s));
-        draw_column(2, "DST", mod_dst_name(t, d), "", d ? VAL(2u) : T_DIM, -1, mod_dst_icon(t, d));
+        draw_column(2, "DEST", mod_dst_name(t, d), "", d ? VAL(2u) : T_DIM, -1, mod_dst_icon(t, d));
         param_format(&TP[id + 2u], a, val, &unit);
         draw_column(3, "AMT", val, unit, a ? VAL(3u) : T_DIM, RATIO(&TP[id + 2u], a), mod_src_icon(MS_OFF));
         return;
