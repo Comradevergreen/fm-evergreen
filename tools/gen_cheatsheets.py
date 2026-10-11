@@ -7,7 +7,7 @@ import html, os
 
 R = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(R, 'docs', 'cheatsheet')
-VERSION = 'v0.6.20'
+VERSION = 'v0.6.21'
 
 HEAT = ['#22d3ee', '#3b82f6', '#8b5cf6', '#d946ef', '#ef4444', '#ff7a00', '#facc15', '#f4f1ea']
 
@@ -126,8 +126,8 @@ def controls():
     b.append(sec('THE PANEL'))
     rows = [
         ('MASTER', 'Master volume.'),
-        ('SELECT', 'HOME and GLOBAL: the tempo. Any other page: <b>rolls the sound\'s dice</b>. Macros open (LFO held '
-                   'or latched): new random routes. GLO held: the tempo.'),
+        ('SELECT', 'HOME: <b>DICE EVERYTHING?</b> (OCT+ yes): a new piece in one scale. EDIT: <b>the sound\'s dice</b>. '
+                   'GLO\'s pages or GLO held: the tempo. Macros open (LFO held or latched): new random routes.'),
         ('PRESETS', 'Browses the sounds (factory and user). On step, list and song pages: the cursor / the row. '
                     '<b>Hold a page button + PRESETS: jump through its pages.</b>'),
         ('ALGORITHM', 'Selects the track, T1–T6, from any page.'),
@@ -166,7 +166,7 @@ def controls():
             'F5': 'RAND', 'G5': 'ERASE'}
     fx_b = {'F#3': 'M1', 'G#3': 'M2', 'A#3': 'M3', 'C#4': 'M4', 'D#4': 'M5', 'F#4': 'M6', 'A#4': 'TGT'}
     glo_w = {'F3': 'SOLO 1', 'G3': 'SOLO 2', 'A3': 'SOLO 3', 'B3': 'SOLO 4', 'C4': 'SOLO 5', 'D4': 'SOLO 6',
-             'E4': 'ALL', 'F4': 'TAP'}
+             'E4': 'ALL', 'F4': 'TAP', 'G4': 'UNDO'}
     glo_b = {'F#3': 'M1', 'G#3': 'M2', 'A#3': 'M3', 'C#4': 'M4', 'D#4': 'M5', 'F#4': 'M6', 'G#4': 'KICK',
              'A#4': 'SNR', 'C#5': 'HAT', 'D#5': 'PERC'}
     sv_w = {'F3': 'PLAY A', 'G3': 'PLAY B', 'A3': 'PLAY C', 'B3': 'PLAY D', 'C4': 'STORE A', 'D4': 'STORE B',
@@ -180,7 +180,7 @@ def controls():
                   'erases it.</p><h4>KNOBS</h4>' + knobs('FILTER', 'CRUSH', 'THROW', 'DEPTH')))
     b.append(card('GLO · MIX', HEAT[1], keyboard(glo_w, glo_b) +
                   '<p>Black 1–6 mute T1–T6 (latched), 7–10 the DRUM-X groups. White: solo while held, E4 unmutes all, '
-                  'F4 tap tempo. SELECT: the tempo. PLAY: restart.</p><h4>KNOBS</h4>' +
+                  'F4 tap tempo, G4 <b>UNDO</b> the last big change (again: redo). SELECT: the tempo. PLAY: restart.</p><h4>KNOBS</h4>' +
                   knobs('LEVEL T1', 'LEVEL T2', 'LEVEL T3', 'LEVEL T4') +
                   '<p class="dim" style="margin-top:4px">T5 or T6 selected: the knobs are T3–T6.</p>'))
     b.append(card('SAVE · SONG', HEAT[6], keyboard(sv_w, {}) +
@@ -300,9 +300,9 @@ def sound():
     b.append(card('VOICE · PLAYING', HEAT[2], knobs('VCE', 'GLD', 'GLMOD', 'PRIO') +
                   '<p style="margin-top:8px">POLY · MONO · LEG · UNI; glide and its mode; LAST / LOW / HIGH priority. '
                   '<b>8 voices</b> shared by the six tracks (MONO and LEGATO keep their note).</p>'))
-    b.append(card('DICE', HEAT[5], '<p><b>SELECT</b> off HOME / GLOBAL: a random factory preset of the engine, every '
+    b.append(card('DICE', HEAT[5], '<p><b>SELECT</b> on EDIT: a random factory preset of the engine, every '
                   'parameter moved up to a quarter of its range. DRUM-X: both sides of every sound around the factory '
-                  'kit. Roll until something clicks.</p>'))
+                  'kit. On HOME (after OK): everything, one scale for all. GLO + G4 undoes.</p>'))
     b.append('</div>')
 
     b.append(sec('MODULATION'))

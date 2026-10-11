@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.6.20).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.6.21).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 ## Cheat sheets
 
@@ -29,6 +29,18 @@ Two printable sheets with everything on the device. Click an image to open it fu
 ## Changelog
 
 Every update is listed here, newest first.
+
+### v0.6.21
+- **HOME + SELECT dices everything** (after **DICE EVERYTHING?**, OCT+ yes / OCT− no): one musical scale for every
+  engine and the effects, each track a new engine, sound and sequence in that scale (T1 a bass; the others a lead, pad
+  or arpeggio; DRUM a beat), the macros' routes and the delay, reverb and chorus. Tempo, levels and mutes stay.
+- **SELECT by page**: the tempo on GLO's pages (GLOBAL, SYSTEM, MIXER), the sound's dice on EDIT only, nothing on the
+  others (it says where).
+- **UNDO: GLO held + G4**: the last big change taken back (DICE ALL, a sound diced, a clear, INIT, RECALL, a pattern or
+  project loaded); again: forward. The transport keeps playing.
+- **Installer**: a warning to return to official V15 first when coming from another custom firmware (a brick was
+  reported going straight from one), with the button right there; Install is enabled once you confirm the FM-1 runs
+  official V15 or JIANT.
 
 ### v0.6.20
 - **SCALE is global, strictly**: ROOT, SCALE and QNT are one for the whole song. Before, a project, MIDI or
@@ -327,7 +339,7 @@ voice is, the distortion draws its transfer curve, the delay its echoes, the rev
 you to play; the technical lets you understand what you did.
 
 The second idea is that **randomness is an invitation, not an accident**. Every session starts with macros rolled
-towards what your sounds have; SELECT rolls the sound's dice on any page; macro dice only land on what is playing.
+towards what your sounds have; SELECT on HOME dices the whole piece, on EDIT the sound; macro dice only land on what is playing.
 The system pushes you to move things and always leaves you near something that works: the dice start from factory
 presets and vary around them, never from nothing.
 
@@ -405,9 +417,14 @@ An 8-sound kit (BD SD CP CH OH TM RS CB) generated in real time, Microtonic styl
 - **EDIT > X-MOD** (0.5.1): a tempo-synced LFO on MORPH and RAND, which gives every hit its own MORPH and tune.
 
 ### Dice: the system invites you to move everything
-- **SELECT** changes the tempo on HOME and GLOBAL (and with GLO held). On any other page it **rolls the track's sound
-  dice**: a synth loads one of its factory presets at random and moves each engine parameter up to a quarter of its
-  range; DRUM-X rolls the A and B sides of each sound around the factory kit.
+- **SELECT** changes the tempo on GLO's pages (GLOBAL, SYSTEM, MIXER) and with GLO held. On **EDIT** it **rolls the
+  track's sound dice**: a synth loads one of its factory presets at random and moves each engine parameter up to a
+  quarter of its range; DRUM-X rolls the A and B sides of each sound around the factory kit. On **HOME** it asks
+  **DICE EVERYTHING?** (OCT+ yes, OCT− no) and then dices the whole piece: one musical scale for every engine and the
+  effects, each track an engine, a sound and a sequence in that scale (T1 a bass; the others a lead, a pad or an
+  arpeggio; DRUM a beat), the macros' routes and the delay, reverb and chorus. Tempo, levels and mutes stay.
+- **UNDO: GLO held + G4** takes back the last big change (DICE ALL, a sound diced, a clear, INIT, RECALL, a pattern or
+  project loaded); pressing it again goes forward (redo). G4 breathes when there is something to undo.
 - **Macros M1–M4** (LFO held; they stay latched when released until you press LFO again): every session starts with
   two random routes per track towards what its sound has. With the macros open, **SELECT** rolls new routes, only on
   the tracks that are playing; F3 too, G3 clears them. They can be assigned by hand in MOD (SRC M1…M4) and are saved
@@ -473,9 +490,9 @@ Turning fast sweeps the whole range; turning slowly is fine adjustment. Turn it 
   the punch-ins and the songs. A sound from those engines loads as ANALOG.
 - **8 songs**: song 1 is the usual 4 projects, so whatever you saved with Felucca shows up there.
 - **FX layer**: REVERSE, TAPE STOP, FREEZE and the harmonizer are gone; the MIDI punch-ins came in.
-- **SELECT** is tempo only on HOME and GLOBAL; elsewhere, the sound's dice.
-- **EDIT held**: INIT / RECALL instead of the voice selector. **No undo** (SAVE held: OCT+ stores the section, OCT−
-  recalls it). **No layer lock.**
+- **SELECT**: tempo on GLO's pages, the sound's dice on EDIT, everything diced on HOME (after OK).
+- **EDIT held**: INIT / RECALL instead of the voice selector. One-step **UNDO** with GLO held + G4 (SAVE held: OCT+ stores the
+  section, OCT− recalls it). **No layer lock.**
 - **USB names**: still "Felucca" so the web editor connects.
 
 </details>
@@ -501,8 +518,8 @@ Turning fast sweeps the whole range; turning slowly is fine adjustment. Turn it 
 | **HOME** | Menu | — |
 | **SAVE** | Song layer (on the SONG page, KNOB 4 = SCENE): F3–B3 play A–D on the next bar (several in one hold: quick chain), C4–F4 store into A–D, D5 LOOP / SONG, E5 SONG REC, G5 SONG page; OCT+ stores the playing section, OCT− recalls it | KNOB 1: song 1–8 (applies when SAVE is released, stopped) |
 
-Others: **PLAY** starts and stops; **REC** arms the selected track; **SELECT** changes the tempo on HOME and GLOBAL
-and rolls the sound's dice on every other page; **ALGORITHM** picks the track on every page; **PRESETS** changes the
+Others: **PLAY** starts and stops; **REC** arms the selected track; **SELECT** changes the tempo on GLO's pages, rolls
+the sound's dice on EDIT and dices everything on HOME (after OK); **ALGORITHM** picks the track on every page; **PRESETS** changes the
 sound; **OCT− / OCT+** the octave (on action pages and dialogs: back / confirm); GLO + PLAY restarts from the
 beginning.
 
@@ -537,8 +554,8 @@ each layer.
    RES and CUT near the centre turns any sound metallic, tuned to the note.
 3. **ENV** and **LFO** have their DEST pages: each column sends to a destination (FLT also moves the FILTER page's
    filter). **ENV LOOP** turns the envelope into an LFO while the note is held.
-4. **Out of ideas?** **SELECT** (outside HOME and GLOBAL) rolls the dice: it loads a random factory preset of the
-   engine and moves its parameters. Roll a few times until something clicks and carry on from there.
+4. **Out of ideas?** **SELECT** on EDIT rolls the sound's dice: it loads a random factory preset of the engine and
+   moves its parameters. On HOME it dices the whole piece. Roll until something clicks; GLO + G4 undoes the last one.
 5. **EDIT held**: F3 INIT puts the sound back to factory, G3 RECALL to the one you saved in the section.
 
 **LOFI BYTE** (LOFI with WAVE on BYTE): ALGO picks one of 32 bytebeat formulas and **VAR** mutates it (0–15 as
@@ -646,9 +663,11 @@ Settings → Pages → Source: **GitHub Actions**, once).
 
 1. **Back up the flash** before the first install. **JIANT has no user samples:** if you're coming from Felucca,
    samples USR1–3 are lost on install (that flash now stores the songs). Keep your WAVs.
-2. Install from the **[web installer](https://juanjiant-bit.github.io/JIANT/webapp/installer/)** (Chrome or Edge, the
-   FM-1 connected by USB straight to the computer), whatever firmware it has (official V15, Felucca or an earlier
-   JIANT). It rebuilds itself with every change merged into `main`. Offline: `python3 tools/fm1_install.py build/felucca.fwsc`.
+2. **Coming from another custom firmware (Felucca, baudgirl or any other)? Return to official V15 first** (the
+   installer's **Return to official V15 first** button, which also saves a complete backup), then install JIANT: writing
+   it straight over another custom firmware has bricked an FM-1. From official V15 or an earlier JIANT, install
+   directly from the **[web installer](https://juanjiant-bit.github.io/JIANT/webapp/installer/)** (Chrome or Edge, the
+   FM-1 connected by USB straight to the computer; tick "This FM-1 runs official V15 or JIANT"). It rebuilds itself with every change merged into `main`. Offline: `python3 tools/fm1_install.py build/felucca.fwsc`.
 3. To go back to the official firmware, use M-VAVE's updater or the installer's **Return to official V15**.
 
 If the FM-1 stays black after an interrupted update, check whether the computer sees it as **WL80UBOOT** (or a USB

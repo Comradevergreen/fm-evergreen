@@ -1379,6 +1379,10 @@ static void confirm_text(char *a, char *b)
     case CF_CLEAR_ALL:
         str_cpy(a, "CLEAR ALL SEQUENCES?", 24);
         break;
+    case CF_DICE_ALL:                                /* (0.6.21) HOME + SELECT */
+        str_cpy(a, "DICE EVERYTHING?", 24);
+        str_cpy(b, "UNDO AFTER: GLO + G4", 24);
+        break;
     case CF_RECALL_SOUND:
         str_cpy(a, drum_track(TSEL) ? "RECALL SOUND + KIT?" : "RECALL SAVED SOUND?", 24);
         break;

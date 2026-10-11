@@ -1871,6 +1871,10 @@ static int test_soak_cards(void)
         else if (r == 31u && SOAK_RND(3u) == 0u) rec_tap();
         else if (r == 32u) { host_enc[panel.enc[EN_ALGO]] += SOAK_RND(2u) ? 1 : -1; quiet = 0; }
         else if (r == 33u) trk[SOAK_RND(NTRK)].p[P_LRATE] = (int16_t)SOAK_RND(128u);
+        if (ui.confirm && SOAK_RND(6u) == 0u) {         /* (0.6.21: HOME + SELECT's dialog: now and then OK) */
+            if (ui.confirm == CF_DICE_ALL && SOAK_RND(3u) == 0u) dice_all();
+            ui.confirm = 0; ui.force = 1;
+        }
         fm1_ms += SOAK_RND(50u) ? 16u : 1u + SOAK_RND(200u);
         host_ticks += 16000u + SOAK_RND(3u) * 4000u;
         ui_input();
@@ -2992,6 +2996,7 @@ static int test_quick_layers(void)
     }
     /* GLO: mutes latch (lit = sounding), SOLO while held, UNMUTE ALL, TAP, levels, OCT- */
     ui_power_on();
+    undo_ok = 0;                                        /* (G4 UNDO: dark with nothing to undo) */
     usb.config = 1; mo = mo_w;
     lay_combo(B_GLO, black(1));
     ok = trk[1].p[P_MUTE] == 1 && ui.layer == LAYER_GLO && !gates() && mo_w == mo;
@@ -5863,6 +5868,49 @@ static int test_key_latch(void)
     return bad;
 }
 
+/* (0.6.21) HOME + SELECT: the dialog, OCT+: everything diced (one musical scale, a sequence on every track, DRUM a
+ * beat); GLO + G4: UNDO puts the music back, again: forward */
+static int test_dice_all(void)
+{
+    int bad = 0, ok;
+    uint32_t k, i, sig0[NTRK], eng0[NTRK], sig1[NTRK], on;
+    ui_power_on();
+    go_home(); frames(16);
+    for (k = 0; k < NTRK; k++) { sig0[k] = steps_sig(&trk[k]); eng0[k] = trk[k].eng_req; }
+    fm1_ms += 1200u;
+    turn(EN_SELECT, 1);
+    ok = ui.confirm == CF_DICE_ALL;
+    press(B_OCTDN);
+    ok &= !ui.confirm && steps_sig(&trk[0]) == sig0[0];
+    bad += check("DICE ALL: HOME + SELECT asks first (OCT- NO: nothing changed)", ok);
+    fm1_ms += 1200u;
+    turn(EN_SELECT, 1); press(B_OCTUP); frames(4);
+    ok = !ui.confirm && undo_ok;
+    for (k = 0; k < NTRK; k++) {
+        const track_t *t = &trk[k];
+        for (i = 0, on = 0; i < (uint32_t)t->p[P_SLEN]; i++) on += step_on(&t->step[i]);
+        ok &= on > 0u;
+        if (!drum_track(t))
+            ok &= t->p[P_ROOT] == trk[0].p[P_ROOT] && t->p[P_SCALE] == trk[0].p[P_SCALE] && t->p[P_SCALE] != 0 &&
+                  t->p[P_SCALE] != 13 && t->p[P_SCALE] < 14;
+        sig1[k] = steps_sig(t);
+    }
+    for (i = 0; i < 64u; i++) events_block(CTL);       /* (it plays: no crash) */
+    bad += check("DICE ALL: OK dices every track (a sequence each, one musical scale for the melodic ones)", ok);
+    btn_down(B_GLO); frames(40);
+    key_down(white(8)); frame(); key_up(white(8)); frame();
+    btn_up(B_GLO); frames(8);
+    for (k = 0, ok = 1; k < NTRK; k++) ok &= steps_sig(&trk[k]) == sig0[k] && trk[k].eng_req == eng0[k];
+    bad += check("UNDO (GLO + G4): the music before the dice back (steps, engines)", ok);
+    btn_down(B_GLO); frames(40);
+    key_down(white(8)); frame(); key_up(white(8)); frame();
+    btn_up(B_GLO); frames(8);
+    for (k = 0, ok = 1; k < NTRK; k++) ok &= steps_sig(&trk[k]) == sig1[k];
+    bad += check("  UNDO again: forward (REDO)", ok);
+    ui_power_on();
+    return bad;
+}
+
 /* (0.6.16) the load budget: tight (audio.c), a new note takes a voice instead of adding one; calm, it adds */
 static int test_load_budget(void)
 {
@@ -6770,10 +6818,12 @@ static int test_bpm_lock(void)
     ui_power_on();
     ui_prefs = 0;
     frame();
+    go_title("GLOBAL"); frame();                       /* (0.6.21: GLO's pages; HOME dices everything) */
     b0 = song.g[G_BPM];
     turn(EN_SELECT, 2);
     ok = song.g[G_BPM] == b0 + 2 && !msg_is("BPM LOCKED") && str_eq(menu_flag(MI_BPMLOCK)->name[0], "OFF");
-    bad += check("#58 BPM LOCK OFF (the default): SELECT sets the tempo as before", ok);
+    bad += check("#58 BPM LOCK OFF (the default): SELECT on GLO's pages sets the tempo", ok);
+    go_home(); frame();
 
     hold(B_HOME);
     ui.menu_sel = MI_BPMLOCK;
@@ -6793,7 +6843,7 @@ static int test_bpm_lock(void)
     /* ON: no tempo from SELECT on HOME and GLOBAL; "BPM LOCKED" once per burst (JIANT 0.5: the other pages dice) */
     ok = 1;
     for (i = 0; i < 2u; i++) {
-        if (i == 1u) go_title("GLOBAL");
+        go_title(i ? "SYSTEM" : "GLOBAL");
         frame();
         ui.msg_t = 0; fm1_ms += 1200u;
         b0 = song.g[G_BPM];
@@ -6807,7 +6857,7 @@ static int test_bpm_lock(void)
     turn(EN_SELECT, 1);
     ok &= msg_is("BPM LOCKED");                                       /* (a new burst: said again) */
     ok &= text_w(&AF_S, "BPM LOCKED") <= 236 - 106;                   /* (fits the header's message zone) */
-    bad += check("#58 BPM LOCK ON: SELECT leaves the tempo on HOME and GLOBAL, \"BPM LOCKED\" once per turn burst", ok);
+    bad += check("#58 BPM LOCK ON: SELECT leaves the tempo on GLOBAL and SYSTEM, \"BPM LOCKED\" once per turn burst", ok);
     /* (JIANT 0.5) SELECT off HOME and GLOBAL: the track's sound diced (a synth: its engine's parameters move; DRUM-X:
      * the kit), never the tempo; once a turn burst */
     {
@@ -6816,13 +6866,18 @@ static int test_bpm_lock(void)
         go_title("ENV"); frame();
         for (j = 0; j < 8u; j++) before[j] = TSEL->p[P_E0 + j];
         b0 = song.g[G_BPM]; fm1_ms += 1200u;
+        turn(EN_SELECT, 1);                             /* (0.6.21) ENV: nothing, it says where */
+        for (j = 0; j < 8u; j++) moved += TSEL->p[P_E0 + j] != before[j];
+        ok = !moved && song.g[G_BPM] == b0 && msg_is("DICE: HOME / EDIT") && !ui.confirm;
+        press(B_EDIT); frame(); fm1_ms += 1200u;
+        ok &= cur_page()->fam == FAM_EDIT;
         turn(EN_SELECT, 1);
         for (j = 0; j < 8u; j++) moved += TSEL->p[P_E0 + j] != before[j];
-        ok = song.g[G_BPM] == b0 && msg_is("SOUND DICED") && moved > 0u;
+        ok &= song.g[G_BPM] == b0 && msg_is("SOUND DICED") && moved > 0u && undo_ok;
         for (j = 0; j < 8u; j++) before[j] = TSEL->p[P_E0 + j];
         turn(EN_SELECT, 1);                                           /* (the same burst: no second dice) */
         for (j = 0; j < 8u; j++) ok &= TSEL->p[P_E0 + j] == before[j];
-        bad += check("JIANT 0.5: SELECT off HOME and GLOBAL dices the sound (not the tempo), once a turn burst", ok);
+        bad += check("0.6.21: SELECT on EDIT dices the sound (not the tempo), once a turn burst; other pages nothing", ok);
     }
 
     /* ON: GLO > GLOBAL's BPM knob */
@@ -6871,9 +6926,10 @@ static int test_bpm_lock(void)
         ok &= settings_import(&q, (int)sizeof q) == 1 && !(ui_prefs & ~PREF_ACCEL_OFF);
         frame();
         b0 = song.g[G_BPM];
-        go_home(); frame();
+        go_title("GLOBAL"); frame();
         turn(EN_SELECT, 1);
         ok &= song.g[G_BPM] == b0 + 1;
+        go_home(); frame();
         bad += check("#58 BPM LOCK saved with the settings; settings from before it: OFF (idempotent)", ok);
     }
     ui_prefs = 0;
@@ -7431,10 +7487,13 @@ static int test_organic(void)
             for (j = 0; j < 12u; j++) diff += before[k][j] != trk[k].p[P_M1SRC + j];
         ok = diff > 0u && song.g[G_BPM] == bpm;
         mac_latch = 0;
+        fm1_ms += 1200u;
         turn(EN_SELECT, 1);
-        ok &= song.g[G_BPM] == bpm + 1;
+        ok &= song.g[G_BPM] == bpm && ui.confirm == CF_DICE_ALL;   /* (0.6.21) not latched: DICE EVERYTHING? */
+        press(B_OCTDN);
+        ok &= !ui.confirm && song.g[G_BPM] == bpm;
         song.playing = 0;
-        bad += check("SELECT on the latched macros rolls the dice (the tempo kept); not latched, the tempo", ok);
+        bad += check("SELECT on the latched macros rolls the dice (the tempo kept); not latched, the DICE ALL dialog", ok);
     }
     return bad;
 }
@@ -7476,6 +7535,7 @@ int main(void)
     bad += test_lofi_rtrg();
     bad += test_key_latch();
     bad += test_load_budget();
+    bad += test_dice_all();
     bad += test_dx_sound();
     bad += test_clear_all();
     bad += test_lane_mutes();

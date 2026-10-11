@@ -1461,6 +1461,35 @@ static int project_restore_runtime(const project_t *input)
     ui_message("LOADED");
     return 0;
 }
+/* (0.6.21) UNDO (GLO held + G4): one step back over the last big change (HOME's DICE ALL, a sound diced, a clear, an
+ * INIT / RECALL, a pattern or project loaded). undo_mark keeps the music as it is (packed as a project: ~3.8 KB);
+ * undo_do brings it back and keeps what it replaced, so a second UNDO goes forward again. The transport plays on */
+static project_store_t undo_st[2] __attribute__((section(".pool")));
+static void undo_mark(void)
+{
+    project_capture(&proj_scratch);
+    undo_ok = (uint8_t)(proj_pack(&undo_st[0], &proj_scratch) ? 1u : 0u);
+}
+static int undo_do(void)                                /* 0: done */
+{
+    char name[PROJ_NAME_LEN + 1u];
+    uint8_t cur = proj_cur, play = song.playing;
+    if (!undo_ok)
+        return 1;
+    project_capture(&proj_scratch);
+    if (!proj_pack(&undo_st[1], &proj_scratch) || !proj_import(&proj_scratch, &undo_st[0], sizeof undo_st[0]))
+        return 1;
+    str_cpy(name, proj_name, sizeof name);
+    if (project_restore_runtime(&proj_scratch))
+        return 1;
+    proj_cur = cur;                                     /* (the project's slot and name stay) */
+    str_cpy(proj_name, name, sizeof proj_name);
+    undo_st[0] = undo_st[1];                            /* (UNDO again: what it replaced) */
+    if (play)
+        transport_req = 1;                              /* (the restore stopped it: it plays on) */
+    return 0;
+}
+
 static void project_load(uint32_t slot)
 {
 #if FELUCCA_FLASH

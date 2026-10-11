@@ -325,6 +325,7 @@ static void rec_clear(void)
         ui_message("NOTHING TO CLEAR");
         return;
     }
+    undo_mark();                                        /* (0.6.21) UNDO: GLO + G4 */
     load_begin(t, LOAD_PAT);
     track_defaults_steps(t);
     load_end(t);
@@ -442,6 +443,8 @@ static void macro_dice(uint32_t mode)
             continue;
         if (mode == 1u && !track_sounding(t))           /* (JIANT 0.5) a reroll: only the tracks that sound now */
             continue;
+        if (mode == 3u && t->p[P_MUTE])                 /* (0.6.21) DICE ALL: every track not muted */
+            continue;
         for (j = 0, n = 0; j < 4u && n < 2u; j++) {
             int16_t *m = &t->p[P_M1SRC + 3u * j];
             uint32_t d, tries;
@@ -481,6 +484,7 @@ static void session_dice(uint32_t seed)
 /* GLO's white keys after the SOLOs (F3 ..): unmute all, tap tempo; KNOB 1..4: the levels from track trk_base4() */
 #define GLO_ALL ((uint32_t)NTRK)
 #define GLO_TAP 7u
+#define GLO_UNDO 8u                                     /* (0.6.21) G4: UNDO the last big change (project.c undo_do) */
 static void layer_key(uint32_t l, uint32_t k)
 {
     uint32_t p = key_place(k), i;
@@ -498,6 +502,13 @@ static void layer_key(uint32_t l, uint32_t k)
             dx_mute_set(0);
         } else if (p == GLO_TAP) {
             glo_tap();
+        } else if (p == GLO_UNDO) {
+            if (chain_busy())
+                ui_message("STOP TO EDIT");
+            else if (undo_do())
+                ui_message("NOTHING TO UNDO");
+            else
+                ui_message("UNDONE (AGAIN: REDO)");
         }
     } else if (l == LAYER_SCL) {
         TSEL->p[P_ROOT] = (int16_t)((k + 5u) % 12u);    /* the key's note name (F3 = F) */
@@ -653,7 +664,7 @@ static uint32_t layer_leds(uint32_t *br)
         } else if (l == LAYER_GLO) {                    /* sounding lit; SOLO held lit, the others, C4, F4 breathe */
             on = b ? (p < NTRK && glo_sounding(p)) || (p >= NTRK && p < NTRK + 4u && !((dx_mute >> (p - NTRK)) & 1u))
                    : p < NTRK && ((lys.solo >> k) & 1u);      /* (a group sounding: lit) */
-            can = !b && (p < NTRK || p == GLO_ALL || (p == GLO_TAP && !song.g[G_CLOCK]));
+            can = !b && (p < NTRK || p == GLO_ALL || (p == GLO_TAP && !song.g[G_CLOCK]) || (p == GLO_UNDO && undo_ok));
         } else if (l == LAYER_SCL) {                    /* the root lit, the scale's notes breathe */
             e = (k + 5u + 12u - root) % 12u;
             on = e == 0u;
@@ -849,6 +860,8 @@ static void layer_glo(void)
     lcell(LC_X(0), y2, h, n, ICON_MUTE, 0, "ALL", LS_OFF, 0);   /* (unmute all) */
     n[0] = W_NOTE[GLO_TAP];
     lcell(LC_X(3), y2, h, n, ICON_TEMPO, 0, "TAP", song.g[G_CLOCK] ? LS_DIM : LS_OFF, 0);
+    n[0] = W_NOTE[GLO_UNDO];
+    lcell(LC_X(2), y2, h, n, ICON_LOOP, 0, "UNDO", undo_ok ? LS_OFF : LS_DIM, 0);   /* (0.6.21) */
     for (e = 0; dr && e < 4u; e++) {                    /* black keys 7..10: the DRUM groups, latched */
         bnote(n, NTRK + e);
         lcell(LC_X(e), 68, 24, n, 0, 0, GLO_GROUP[e], (dx_mute >> e) & 1u ? LS_MUTE : LS_OFF, 0);
