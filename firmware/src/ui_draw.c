@@ -1133,10 +1133,12 @@ static void draw_columns(void)
             unit = "%";
         } else {
             param_format(d, *vp, val, &unit);
-            if (fx_lite && cur_page()->scope == SC_GLOBAL && *vp &&   /* (0.6.29) 6 LITE swaps it while it sounds */
-                ((cur_page()->id[c] == G_RTYPE && REV_LITE[*vp <= 4 ? *vp : 0] != *vp) ||
-                 cur_page()->id[c] == G_DPIT || cur_page()->id[c] == G_DSPRY))
-                unit = "LITE";
+            if (sys_load && cur_page()->scope == SC_GLOBAL &&   /* (0.6.29) LOAD LITE / ECO swaps it while it sounds */
+                ((cur_page()->id[c] == G_RTYPE && REV_LITE[sys_load % 3u][*vp <= 4 ? *vp : 0] != *vp) ||
+                 ((cur_page()->id[c] == G_DPIT || cur_page()->id[c] == G_DSPRY) && *vp)))
+                unit = N_LOAD[LOAD_ECO - sys_load % 3u];
+            if (sys_load == LOAD_ECO && cur_page()->scope == SC_TRACK && cur_page()->id[c] == P_CHOR && *vp)
+                unit = "ECO";                           /* (0.6.30) no chorus: the send goes nowhere */
         }
         card_mot_of(vp);                                /* (a global: never) */
         draw_column(c, d->label, val, unit, VAL(c), d->fmt == F_ENUM && d->max < 2 ? -1 : RATIO(d, enum_rank(d, *vp)),

@@ -409,9 +409,15 @@ typedef struct {
  * kept with the settings, not in the song). An id past the globals (no song.g of its own): trks_ui mirrors the setting
  * (ui.c rp_apply), a turn writes it back (ui_input.c knob_turn) */
 #define G_TRKS 0xFEu
-static const char *const N_TRKS[] = {"4 FULL", "6 LITE", "6 FULL"};   /* (0.6.29: + LITE) */
+static const char *const N_TRKS[] = {"4", "6"};
 static const param_desc_t TRKS_DESC = PE("TRACKS", N_TRKS, 0);
 static int16_t trks_ui;
+/* (0.6.30) .. and LOAD, next to it (ui.c ui_load, voice.c sys_load): the heavy parts lightened or gone while they
+ * sound, ECO the lightest. load_ui mirrors it as trks_ui does */
+#define G_LOADP 0xFDu
+static const char *const N_LOAD[] = {"ECO", "LITE", "FULL"};
+static const param_desc_t LOAD_DESC = PE("LOAD", N_LOAD, 2);
+static int16_t load_ui;
 static const page_t PAGES[] = {
     {"ENV", FAM_ENV, SC_TRACK, GR_ADSR, {P_ATK, P_DEC, P_SUS, P_REL}},
     {"ENV DEST", FAM_ENV, SC_TRACK, GR_NONE, {P_ED_FLT, P_ED_PIT, P_ED_SHP, P_ELOOP}},   /* JIANT 0.4: LOOP */
@@ -458,7 +464,8 @@ static const page_t PAGES[] = {
     {"OP LEVEL", FAM_EDIT, SC_TRACK, GR_NONE, {P_FM1_LEVEL, P_FM2_LEVEL, P_FM3_LEVEL, P_FM4_LEVEL}},
     {"VOICE", FAM_EDIT, SC_TRACK, GR_NONE, {P_VOICE, P_GLIDE, P_GLMODE, P_PRIO}},
     {"GLOBAL", FAM_GLO, SC_GLOBAL, GR_NONE, {G_BPM, G_SWING, G_CLOCK, G_TUNE}},
-    {"SYSTEM", FAM_GLO, SC_GLOBAL, GR_NONE, {G_MIDI, G_TRKS, G_ROUTE, G_INFO}},   /* (0.6.18) TRKS: 4 FULL / 6 LITE / 6 FULL */
+    {"SYSTEM", FAM_GLO, SC_GLOBAL, GR_NONE, {G_TRKS, G_LOADP, G_ROUTE, G_INFO}},   /* (0.6.18) TRACKS 4 / 6; (0.6.30)
+                                                         * LOAD ECO / LITE / FULL (the USB card: the header's icon) */
     {"PRESETS", FAM_SAVE, SC_GLOBAL, GR_BROWSE, {0xFF, 0xFF, 0xFF, 0xFF}},   /* browser: PRESETS knob / KNOB 1 */
     {"USER", FAM_SAVE, SC_GLOBAL, GR_USER, {0xFF, 0xFF, 0xFF, 0xFF}},       /* user presets: SLOT LOAD ERASE SAVE */
     {"PROJECT", FAM_SAVE, SC_GLOBAL, GR_SLOTS, {0xFF, G_SLOT, G_LOAD, G_SAVE}},   /* (0.6.12) PROJECT 1-8, SECT A-D */
@@ -498,6 +505,10 @@ static const param_desc_t *page_desc(const page_t *pg, uint32_t slot, int16_t **
     if (id == G_TRKS) {                               /* (0.6.18) not a song global: the device's setting */
         *valp = &trks_ui;
         return &TRKS_DESC;
+    }
+    if (id == G_LOADP) {                              /* (0.6.30) the same */
+        *valp = &load_ui;
+        return &LOAD_DESC;
     }
     if (pg->scope == SC_STEP || pg->scope == SC_TRK) {
         *valp = 0;

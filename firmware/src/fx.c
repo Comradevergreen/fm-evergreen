@@ -235,7 +235,8 @@ static __attribute__((noinline)) void duck_block(void)
  * full MASTER level, USB audio takes that (audio.c uac_tap), and only then does MASTER scale what the DAC gets
  * (usb_fixed_dac). MASTER (0, the default): MASTER before master_out, as always (USB follows the knob) */
 static volatile uint8_t fx_usb_fixed;
-static const uint8_t REV_LITE[5] = {0, 1, 0, 1, 0};   /* (0.6.29) 6 LITE (voice.c fx_lite): each reverb's light kin */
+static const uint8_t REV_LITE[3][5] = {{0, 1, 2, 3, 4}, {0, 1, 0, 1, 0}, {1, 1, 1, 1, 1}};   /* (0.6.29) LOAD FULL, LITE, ECO
+                                                         * (voice.c sys_load): each reverb's lighter kin */
 #define MASTER_FULL 4096                /* main.c: the MASTER knob's top, Q12 */
 /* the MASTER pot (ADC 0..1023, smoothed in main.c) to its level, square law: 0 .. 4088 (Q12) */
 static inline uint32_t master_of_pot(uint32_t k10) { return (k10 * k10) >> 8; }
@@ -883,7 +884,8 @@ static void fx_buses(const int32_t *cho_in, const int32_t *dly_in, const int32_t
     int32_t cdepth = song.g[G_CDEPTH] * 6, rt;
     uint32_t cinc = LFO_INC[song.g[G_CRATE] & 127] / CTL;
     int32_t hk = tn > 0 ? tn * tn * 4 : 0, wd = song.g[G_WIDTH];   /* (the low cut: up to ~3 kHz); WIDTH */
-    int32_t gr = !fx_lite && (song.g[G_DPIT] || song.g[G_DSPRY]);   /* (JIANT) the GRAIN delay (6 LITE: plain) */
+    int32_t gr = !sys_load && (song.g[G_DPIT] || song.g[G_DSPRY]);   /* (JIANT) the GRAIN delay (LOAD LITE / ECO: plain) */
+    int32_t cho = sys_load != LOAD_ECO;                /* (0.6.30) LOAD ECO: no chorus */
     int32_t cs = song.g[G_CSTER], cw = 80 + wd / 2;    /* (0.6.9) the chorus's side: 0 as before, - to mono, + ~2x */
     cw = cs >= 0 ? cw + cs * 2 : (cw * (64 + cs)) >> 6;
     uint32_t dr = dl + (wd ? div_samples(3) * (uint32_t)wd / 127u : 0u);   /* the right echo: up to 1/32 later */
@@ -921,7 +923,7 @@ static void fx_buses(const int32_t *cho_in, const int32_t *dly_in, const int32_t
          * turn apart; the first left, the second right, the third in the middle: always stereo (WIDTH wider) */
         cho_buf[fx.cho_w & (CHO_LEN - 1u)] = (int16_t)clamp(cho_in[i] >> 1, -32768, 32767);
         fx.cho_ph += cinc;
-        {
+        if (cho) {
             int32_t sd;
             y += cho_ens(cho_buf, fx.cho_w, fx.cho_ph, cdepth, &sd);
             sd = (sd * cw) >> 7;
@@ -950,8 +952,8 @@ static void fx_buses(const int32_t *cho_in, const int32_t *dly_in, const int32_t
         }
     }
     rt = (uint32_t)song.g[G_RTYPE] <= 4u ? song.g[G_RTYPE] : 0;
-    if (fx_lite)                                        /* (0.6.29) 6 LITE: SHIMMER, CLOUD as ROOM; RESO as SPRING */
-        rt = REV_LITE[rt];
+    rt = REV_LITE[sys_load % 3u][rt];                   /* (0.6.29) LOAD LITE: SHIMMER, CLOUD as ROOM, RESO as SPRING; ECO:
+                                                         * all SPRING */
     if (rt != fx.rtype) {                               /* the model changed: the old one's block fades out, */
         int32_t *t = part_buf, g = 65536, d = 65536 / (int32_t)n;   /* its buffers are cleared, the new */
         for (i = 0; i < n; i++)                                     /* one starts from silence */

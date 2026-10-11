@@ -15,7 +15,10 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.6.29).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.6.30).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+
+> 🫶 If you resonate with my work, consider supporting me on **[Ko-fi](https://ko-fi.com/juanjiant)** (in Argentina:
+> **[Cafecito](https://cafecito.app/juanjiant)**). Thanks for all the good energy, hope you enjoy this little beast ✨🎹
 
 ## Cheat sheets
 
@@ -29,6 +32,23 @@ Two printable sheets with everything on the device. Click an image to open it fu
 ## Changelog
 
 Every update is listed here, newest first.
+
+### v0.6.30
+- **LOAD, next to TRACKS** (GLO > SYSTEM: KNOB 1 **TRACKS 4 / 6**, KNOB 2 **LOAD ECO / LITE / FULL**; also MENU > SYSTEM >
+  LOAD). TRACKS says how many tracks play, LOAD how heavy the sound may get, so you choose: a lean, ultra-optimised
+  system to push to the limit, or a slow one full of heavy effects. Everything is swapped only while it sounds; the
+  project keeps its settings and sounds as saved back on FULL (or on another unit).
+  - **FULL** (the default): everything as set.
+  - **LITE**: the heavy parts swapped for their nearest light kin: SHIMMER and CLOUD reverbs as ROOM, RESO as SPRING,
+    the GRAIN delay as a plain delay, FM6 two voices.
+  - **ECO**: LITE, and every reverb a SPRING (the lightest), **no SLICER** (its tracks go straight to the mix) and
+    **no chorus**: their pages disappear until you leave ECO. Every synth track plays at most **4 voices** (the drums
+    as ever).
+  - The cards of what's swapped say **LITE** or **ECO** under their value.
+  - Why CPU and not RAM: the firmware reserves all its memory at boot, so nothing can be freed while it runs. What runs
+    out is the audio time (the load meter, the CPU % card next to LOAD), and that's what LOAD gives back.
+- 0.6.29's **6 LITE** comes up as TRACKS 6 + LOAD LITE. GLO > SYSTEM's USB card is gone (the header shows USB).
+- **Ko-fi / Cafecito**: support links in the README, the web installer, the web editor and the emulator.
 
 ### v0.6.29
 - **TRACKS has a middle option: 6 LITE.** GLO > SYSTEM > TRACKS (and MENU > AUDIO > TRACKS) now reads **4 FULL** (the
@@ -618,9 +638,11 @@ each layer.
 - **Load meter** (top right, next to the battery): five small bars showing how much of the audio time the sound is
   using right now. The firmware's RAM is reserved entirely at boot and doesn't change, so this is what's worth
   watching: with all five lit (red, yellow) you're close to the limit and should cut voices, the CLOUD reverb or heavy
-  effects. If it's often full, GLO > SYSTEM > **TRACKS 4 FULL** (the default; also in MENU > AUDIO > TRACKS) leaves T5 and T6 asleep for headroom,
-  and **6 LITE** plays all six with the heavy reverbs, the GRAIN delay and FM6 lightened (SHIMMER and CLOUD as ROOM,
-  RESO as SPRING, the GRAIN delay plain, FM6 two voices); **6 FULL** plays everything as it is.
+  effects. If it's often full: GLO > SYSTEM > **TRACKS 4** (the default; also MENU > AUDIO > TRACKS) leaves T5 and T6
+  asleep for headroom, and **LOAD** (next to it; also MENU > SYSTEM > LOAD) lightens the sound: **FULL** everything as
+  set, **LITE** the heavy reverbs, the GRAIN delay and FM6 lightened (SHIMMER and CLOUD as ROOM, RESO as SPRING, the
+  GRAIN delay plain, FM6 two voices), **ECO** that plus every reverb a SPRING, no SLICER, no chorus (their pages
+  hidden) and at most 4 voices a synth track. The project keeps its settings: back on FULL it sounds as saved.
 - **Power-on**: the signature draws itself in about a second, with beings swimming round it. To boot straight in: MENU > **ANIM OFF**.
 
 ### 3. Making a sound
