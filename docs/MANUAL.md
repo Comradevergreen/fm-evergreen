@@ -551,15 +551,19 @@ Hold **SAVE**:
 On **HOME**, turn **SELECT**. The dialog **DICE EVERYTHING?** appears (with "UNDO AFTER: GLO + G4"). **OCT+ YES** /
 **OCT− NO**.
 
-Each throw picks a **style** — ROBOT POP, ELECTRO, BIG BEAT, ORGANIC, ART ROCK, DUB PUNK, MINIMAL, SYNTH POP or IDM,
-named after the kind of records that inspired them (think Kraftwerk, Anthony Rother, The Chemical Brothers, Juana
-Molina, Radiohead, The Clash, The Hacker, Marc Houle, MGMT, Aphex Twin) — and then:
+Each throw picks a **style** — DARK MINIMAL, DUB TECHNO, IDM, DARK ELECTRO, ACID NIGHT, COLD WAVE, BROKEN, HYPNOTIC
+or DEEP BREAKS: the night's music, dark and minor (think Kraftwerk, Anthony Rother, The Chemical Brothers, Juana Molina,
+Radiohead, The Hacker, Marc Houle, Aphex Twin), in minor modes only (MIN, DOR, PHRY, HARM, MEL, MPEN) — and then:
 
 - gives every track a **role** (DRUMS, BASS, CHORDS, LEAD, ARP, TEXTURE), a **new engine** the style likes for that
   role and a factory sound whose name fits it, moved a little; FM6 goes on two tracks at most. The drums go on an
   existing DRUM track, or on T4;
-- writes every part from **one harmony**: one scale (ROOT and SCALE), a chord progression, the bass on the roots,
-  chords, arps, a lead motif, drums with fills and accents, whole bars of silence; some styles use loops of odd lengths;
+- writes every part from **one harmony**, every part anchored on the same tonic: one scale (ROOT and SCALE), a chord
+  progression, the bass on the roots, chords voiced as the style likes (7ths, 9ths, fourths, suspended) and led
+  smoothly in a middle register, low arps, a lead (a motif of small steps, a hypnotic ostinato or a few long notes),
+  drums with fills, ghosts and accents, whole bars of silence; some styles use loops of odd lengths;
+- **filters** the sounds by role (chords and arps darkest, a slow LFO breathing on the chords, the arps plucked) and
+  never picks the bright factory sounds (bells, brass, marimbas, organs, chiptune);
 - sets voice mode, gate, **level, pan and sends** per role, the swing, the delay, reverb and chorus;
 - picks a **new tempo** in the style's range (always at least 3 BPM away), unless MENU > **BPM LOCK** is on;
 - rolls new macro routes.

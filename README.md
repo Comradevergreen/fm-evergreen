@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.6.31).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.6.32).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 > 🫶 If you resonate with my work, consider supporting me on **[Ko-fi](https://ko-fi.com/juanjiant)** (in Argentina:
 > **[Cafecito](https://cafecito.app/juanjiant)**). Thanks for all the good energy, hope you enjoy this little beast ✨🎹
@@ -37,6 +37,25 @@ Two printable sheets with everything on the device. Click an image to open it fu
 ## Changelog
 
 Every update is listed here, newest first.
+
+### v0.6.32
+- **DICE ALL goes dark.** "Out of 30 sequences one is OK": the song ideas were shrill, cheesy, too bright and happy.
+  Now they are night music: **DARK MINIMAL**, **DUB TECHNO**, **IDM**, **DARK ELECTRO**, **ACID NIGHT**, **COLD WAVE**,
+  **BROKEN**, **HYPNOTIC**, **DEEP BREAKS**, in minor modes only (MIN, DOR, PHRY, HARM, MEL, MPEN; no major,
+  mixolydian, lydian or blues), no pop progressions.
+  - **A harmony bug fixed**: the chords were built from the scale's fifth and the lead from its third, so a v chord
+    sounded over a i bass. Every part now starts from the same tonic.
+  - **Chords with colour**: voiced as 7ths, 9ths without the 5th, in-scale fourths or suspended, and led to the
+    nearest voicing in a middle register (no leaps); dub stabs keep one voicing, offbeat after offbeat, into the delay.
+  - **Filtered**: every synth's cutoff goes down by role (chords and arps darkest), with some resonance; a slow LFO
+    makes the chords breathe, the envelope plucks the arps. Bright factory sounds (bells, brass, marimbas, organs,
+    chiptune) are never picked.
+  - **Melodies lower and stranger**: the lead around C3–C4 in small steps, or a hypnotic euclidean ostinato that turns
+    on itself (Marc Houle, The Hacker), or a few long notes; arps an octave lower without octave jumps.
+  - **Grooves**: a rolling offbeat sub and a dub bass, minimal and deep-techno beats with ghosts, rims and chance,
+    velocities a little human; darker delay and reverb (lower tone, more damping, no SHIMMER, CLOUD pitched down).
+  - Measured over 90 throws: the mix's brightness (its spectral centroid) **1714 Hz → 1376 Hz**, the average note
+    **an octave lower** (65 → 55).
 
 ### v0.6.31
 - **The full manual, in English and Spanish**: [docs/MANUAL.md](docs/MANUAL.md) · [docs/MANUAL.es.md](docs/MANUAL.es.md).
@@ -530,8 +549,8 @@ An 8-sound kit (BD SD CP CH OH TM RS CB) generated in real time, Microtonic styl
 - **SELECT** changes the tempo on GLO's pages (GLOBAL, SYSTEM, MIXER) and with GLO held. On **EDIT** it **rolls the
   track's sound dice**: a synth loads one of its factory presets at random and moves each engine parameter up to a
   quarter of its range; DRUM-X rolls the A and B sides of each sound around the factory kit. On **HOME** it asks
-  **DICE EVERYTHING?** (OCT+ yes, OCT− no) and then writes a new piece in a style (ROBOT POP, ELECTRO, BIG BEAT,
-  ORGANIC, ART ROCK, DUB PUNK, MINIMAL, SYNTH POP, IDM): its tempo, one scale for every engine and the effects, each
+  **DICE EVERYTHING?** (OCT+ yes, OCT− no) and then writes a new piece in a style (DARK MINIMAL, DUB TECHNO,
+  IDM, DARK ELECTRO, ACID NIGHT, COLD WAVE, BROKEN, HYPNOTIC, DEEP BREAKS): its tempo, one scale for every engine and the effects, each
   track a role, an engine, a sound and a part from one chord progression, silences included (see v0.6.26).
 - **UNDO: GLO held + G4** takes back the last big change (DICE ALL, a sound diced, a clear, INIT, RECALL, a pattern or
   project loaded); pressing it again goes forward (redo). G4 breathes when there is something to undo.
