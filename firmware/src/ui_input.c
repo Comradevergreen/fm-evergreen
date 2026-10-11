@@ -840,7 +840,13 @@ static void edit_param(uint32_t slot, int32_t steps)
     *vp = (int16_t)v;
     if (vp == &trks_ui) {                               /* (0.6.18) GLO > SYSTEM's TRKS: the MENU's setting, saved */
         trks_put(v);
-        ui_message(v == 2 ? "6 TRACKS: HIGH CPU" : v ? "6 TRACKS: LITE FX" : "4 TRACKS: T5-T6 ASLEEP");
+        ui_message(v ? "6 TRACKS: MORE CPU" : "4 TRACKS: T5-T6 ASLEEP");
+        settings_save();
+        return;
+    }
+    if (vp == &load_ui) {                               /* (0.6.30) GLO > SYSTEM's LOAD: the same */
+        load_put(v);
+        ui_message(v == 2 ? "LOAD FULL: ALL FX" : v ? "LOAD LITE: LIGHTER FX" : "LOAD ECO: NO SLICER/CHORUS");
         settings_save();
         return;
     }

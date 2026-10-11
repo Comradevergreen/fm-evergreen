@@ -1344,7 +1344,7 @@ static int test_menu_tabs(void)
     ui_prefs = 0;
     bad += check("MENU tabs: DISPLAY CONTROL AUDIO SYSTEM (6 5 6 4 rows), 1..6 each in a run, fit the page; tab gaps constant (S, LARGE)",
                  ok && MTAB_COUNT == 4u && str_eq(MTAB_NAME[0], "DISPLAY") && mtab_rows(MTAB_DISPLAY) == 6u &&
-                 mtab_rows(MTAB_CONTROL) == 5u && mtab_rows(MTAB_AUDIO) == 6u && mtab_rows(MTAB_SYSTEM) == 4u);
+                 mtab_rows(MTAB_CONTROL) == 5u && mtab_rows(MTAB_AUDIO) == 6u && mtab_rows(MTAB_SYSTEM) == 5u);
 
     ui_power_on();
     hold(B_HOME);
@@ -6784,9 +6784,8 @@ static int test_click_menu(void)
     turn(EN_K4, 1); ok &= cin_bars == 1u;
     turn(EN_K4, 1); ok &= cin_bars == 2u;
     turn(EN_PRESET, 1); ok &= ui.menu_sel == MI_TRACKS;
-    turn(EN_K1, -1); turn(EN_K1, -1); frame(); ok &= trk_live == 4u && !(ui_rec_prefs & 0x80u) && !fx_lite;   /* 4 FULL */
-    turn(EN_K1, 1); frame(); ok &= trk_live == NTRK && (ui_rec_prefs & 0x80u) && fx_lite;   /* (0.6.29) 6 LITE */
-    turn(EN_K1, 1); frame(); ok &= trk_live == NTRK && (ui_rec_prefs & 0x80u) && !fx_lite;  /* 6 FULL */
+    turn(EN_K1, -1); frame(); ok &= trk_live == 4u && !(ui_rec_prefs & 0x80u);   /* (0.6.18) TRACKS 4 */
+    turn(EN_K1, 1); frame(); ok &= trk_live == NTRK && (ui_rec_prefs & 0x80u);   /* 6 */
     turn(EN_PRESET, 1); ok &= ui.menu_sel == MI_LOWCUT;   /* (wraps within AUDIO) */
     press(B_HOME);
     ok &= !ui.menu;
@@ -6818,24 +6817,29 @@ static int test_click_menu(void)
     }
     {   /* (0.6.19) GLO > SYSTEM's TRKS (KNOB 2): the same setting, both ways */
         go_title("SYSTEM");
-        turn(EN_K2, -1); turn(EN_K2, -1); frame();
+        turn(EN_K1, -1); frame();
         ok = trk_live == 4u && !(ui_rec_prefs & 0x80u) && trks_ui == 0;
-        turn(EN_K2, 1); frame();
-        ok &= trk_live == NTRK && (ui_rec_prefs & 0x80u) && trks_ui == 1 && fx_lite && msg_is("6 TRACKS: LITE FX");
-        turn(EN_K2, 1); frame();
-        ok &= trk_live == NTRK && trks_ui == 2 && !fx_lite;
+        turn(EN_K1, 1); frame();
+        ok &= trk_live == NTRK && (ui_rec_prefs & 0x80u) && trks_ui == 1 && msg_is("6 TRACKS: MORE CPU");
         ui_rec_prefs &= (uint8_t)~0x80u; frame();
         ok &= trks_ui == 0;                             /* (MENU's change shown there) */
         ui_rec_prefs |= 0x80u; frame();
+        ok &= load_ui == 2 && sys_load == LOAD_FULL;    /* (0.6.30) KNOB 2 LOAD: FULL, the default */
+        turn(EN_K2, -1); frame();
+        ok &= load_ui == 1 && sys_load == LOAD_LITE && ui_load == 1u && msg_is("LOAD LITE: LIGHTER FX");
+        turn(EN_K2, -1); frame();
+        ok &= load_ui == 0 && sys_load == LOAD_ECO && ui_load == 2u && trk_live == NTRK;   /* (TRACKS its own) */
+        load_put(2u); frame();
+        ok &= load_ui == 2 && sys_load == LOAD_FULL && !ui_load;
         ui.msg_t = 0; ui.msg[0] = 0; press(B_HOME); frame();
-        bad += check("GLO > SYSTEM: KNOB 2 TRKS 4 FULL / 6 LITE / 6 FULL, the MENU's setting both ways", ok);
+        bad += check("GLO > SYSTEM: KNOB 1 TRACKS 4 / 6, KNOB 2 LOAD ECO / LITE / FULL, the MENU's settings both ways", ok);
     }
     {   /* (0.6.29) 6 LITE: the heavy parts swapped while they sound, the project's values kept */
         int16_t rt0 = song.g[G_RTYPE], dp0 = song.g[G_DPIT];
         int32_t o[2u * CTL];
         track_t ft = trk[0];
-        trks_put(1u);
-        ok = fx_lite;
+        load_put(1u);
+        ok = sys_load == LOAD_LITE;
         song.g[G_RTYPE] = 2; mix_block(o, CTL); mix_block(o, CTL);
         ok &= fx.rtype == 0u && song.g[G_RTYPE] == 2;   /* SHIMMER sounds as ROOM */
         song.g[G_RTYPE] = 3; mix_block(o, CTL); mix_block(o, CTL);
@@ -6846,13 +6850,43 @@ static int test_click_menu(void)
         ok &= trk_nvoice(&ft) == LITE_FM6_POLY;         /* FM6: two voices */
         song.g[G_RTYPE] = 2; go_title("REVERB"); frame();
         ok &= strstr(ui.col[0], "|SHIMR|LITE") != 0;   /* the card says it is swapped */
-        trks_put(2u);
-        ok &= !fx_lite && trk_nvoice(&ft) == FM6_POLY;
+        load_put(2u);
+        ok &= !sys_load && trk_nvoice(&ft) == FM6_POLY;
         song.g[G_RTYPE] = 2; mix_block(o, CTL); mix_block(o, CTL);
-        ok &= fx.rtype == 2u;                           /* 6 FULL: SHIMMER again */
-        song.g[G_RTYPE] = rt0; song.g[G_DPIT] = dp0; mix_block(o, CTL); mix_block(o, CTL);
+        ok &= fx.rtype == 2u;                           /* FULL: SHIMMER again */
         press(B_HOME); frame();
-        bad += check("6 LITE: SHIMMER / CLOUD sound as ROOM, RESO as SPRING, FM6 two voices, TYPE says LITE; 6 FULL as saved", ok);
+        bad += check("LOAD LITE: SHIMMER / CLOUD sound as ROOM, RESO as SPRING, FM6 two voices, TYPE says LITE; FULL as saved", ok);
+        {   /* (0.6.30) LOAD ECO: every reverb a SPRING, no SLICER (its tracks to the mix, its pages gone), no chorus
+             * page, ECO_POLY voices a track (DRUM as ever) */
+            int16_t sm0 = song.g[G_SLMODE];
+            uint32_t i, hidden = 1, shown = 0;
+            ft.engine = ENGI_ANALOG;
+            song.g[G_SLMODE] = 1;
+            ok = slicer_on();
+            load_put(0u);
+            song.g[G_RTYPE] = 0; mix_block(o, CTL); mix_block(o, CTL);
+            ok &= sys_load == LOAD_ECO && fx.rtype == 1u && !slicer_on() && song.g[G_SLMODE] == 1;
+            ok &= trk_nvoice(&ft) == ECO_POLY;
+            ft.engine = ENGI_FM6;
+            ok &= trk_nvoice(&ft) == LITE_FM6_POLY;
+            ft.engine = ENGI_DRUM;
+            ok &= trk_nvoice(&ft) == (ENGINES[ENGI_DRUM]->poly ? ENGINES[ENGI_DRUM]->poly : NVOICE);
+            for (i = 0; i < NPAGES; i++) {
+                int sl = PAGES[i].graph == GR_SLCR || PAGES[i].graph == GR_SLPIT || str_eq(PAGES[i].title, "CHORUS");
+                if (sl) hidden &= !page_visible(i);
+                shown += str_eq(PAGES[i].title, "REVERB") && page_visible(i);
+            }
+            ok &= hidden && shown == 1u;
+            go_title("REVERB"); frame();
+            ok &= strstr(ui.col[0], "|ROOM|ECO") != 0;
+            load_put(2u);
+            for (i = 0; i < NPAGES && !str_eq(PAGES[i].title, "SLICER"); i++) {}
+            ok &= slicer_on() && page_visible(i);
+            song.g[G_SLMODE] = sm0;
+            press(B_HOME); frame();
+            bad += check("LOAD ECO: reverb SPRING, no SLICER / chorus (pages hidden), 4 voices a synth, DRUM as ever; FULL back", ok);
+        }
+        song.g[G_RTYPE] = rt0; song.g[G_DPIT] = dp0; mix_block(o, CTL); mix_block(o, CTL);
     }
     {
         persist_t p;

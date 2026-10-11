@@ -162,16 +162,22 @@ static void track_lfo_tick(track_t *t)
 }
 
 /* voices the engine may use (POLY and UNISON): its cap, else all of them */
-/* (JIANT 0.6.29) MENU > TRACKS 6 LITE: six tracks, the heavy parts swapped for their light kin while they sound (the
- * project keeps its settings): FM6 two voices, the reverb SHIMMER / CLOUD as ROOM, RESO as SPRING, the GRAIN delay
- * plain (fx.c). Set by ui.c rp_apply */
-static volatile uint8_t fx_lite;
+/* (JIANT 0.6.29, 0.6.30) GLO > SYSTEM > LOAD (MENU > SYSTEM > LOAD): how much of the CPU the heavy parts may take,
+ * swapped while they sound, the project keeping its settings (ui.c ui_load, rp_apply). FULL: all as set. LITE: their
+ * light kin: FM6 two voices, the reverb SHIMMER / CLOUD as ROOM, RESO as SPRING, the GRAIN delay plain (fx.c). ECO:
+ * LITE, and every reverb a SPRING (the lightest), no chorus, no SLICER (slicer.c: its tracks straight to the mix, its
+ * pages hidden), at most ECO_POLY voices a track (an engine of hits, DRUM, as ever) */
+enum { LOAD_FULL, LOAD_LITE, LOAD_ECO };
+static volatile uint8_t sys_load;
 #define LITE_FM6_POLY 2u
+#define ECO_POLY 4u
 static uint32_t trk_nvoice(const track_t *t)
 {
     uint32_t c = ENGINES[t->engine]->poly;
-    if (fx_lite && t->engine == ENGI_FM6 && c > LITE_FM6_POLY)
+    if (sys_load && t->engine == ENGI_FM6 && c > LITE_FM6_POLY)
         c = LITE_FM6_POLY;
+    if (sys_load == LOAD_ECO && !ENGINES[t->engine]->oneshot && (!c || c > ECO_POLY))
+        c = ECO_POLY;
     return c && c < NVOICE ? c : NVOICE;
 }
 

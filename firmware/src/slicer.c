@@ -82,7 +82,8 @@ static void slicer_drop(void)    /* the recording dropped (perform.c takes the b
 
 static uint32_t sl_pattern(void) { return SL_PAT[(uint32_t)(song.g[G_SLPAT] - 1) % SL_NPAT]; }
 /* running or still fading: the routed tracks go through it */
-static int slicer_on(void) { return song.g[G_SLMODE] != SL_OFF || sl.gc || sl.w; }
+static int slicer_on(void) { return sys_load != LOAD_ECO && (song.g[G_SLMODE] != SL_OFF || sl.gc || sl.w); }   /* (0.6.30: LOAD ECO
+                                                                                                            * none) */
 static int slicer_routes(uint32_t k) { return k < NTRK && song.g[G_SLT1 + k] && slicer_on(); }
 static int slicer_fx(void) { return song.g[G_SLFX] && slicer_on(); }
 
