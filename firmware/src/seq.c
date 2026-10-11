@@ -568,11 +568,35 @@ static uint32_t perf_key(uint32_t k)
     return !key_black(k) ? (p < PF_M1 ? p : p == PF_M1 ? PF_CLR : PF_N) : p < NTRK ? PF_M1 + p : p == 7u ? PF_TGT : PF_N;
 }
 
+/* (0.6.14) LATCH: ARP OFF and ARP 2's HOLD ON, the keys' notes keep sounding when let go; the first key of the next
+ * chord (no key down) lets the latched ones go. In the arp's note list (held / nheld / arp_phys, unused with ARP OFF);
+ * HOLD turned off lets them go (events_block) */
+static int key_latch(const track_t *t) { return t->p[P_AHOLD] && !t->p[P_AMODE]; }
+static void latch_release(track_t *t)
+{
+    uint32_t i;
+    for (i = 0; i < t->nheld; i++) {
+        trk_note_off(t, t->held[i]);
+        midi_out_event(0x08u | (0x80u | trk_midi_ch(trk_index(t))) << 8 | (uint32_t)t->held[i] << 16);
+    }
+    t->nheld = 0;
+}
+
 /* key k plays kb_note[k] on track t. A note another key holds already sounds: it is not started again (nor sent
  * to MIDI OUT); the key keeps its note */
 static void key_on(uint32_t k, track_t *t)
 {
     uint32_t x = kb_note[k], mc = trk_midi_ch(trk_index(t));
+    if (key_latch(t)) {                             /* LATCH: a new chord lets the last one go */
+        uint32_t i;
+        if (!t->arp_phys)
+            latch_release(t);
+        t->arp_phys++;
+        for (i = 0; i < t->nheld && t->held[i] != x; i++)
+            ;
+        if (i == t->nheld && t->nheld < 16u)
+            t->held[t->nheld++] = (uint8_t)x;
+    }
     kb_on[k] = 0;
     if (!midi_local_held(t, x)) {
         input_on(t, x, 100);
@@ -590,6 +614,12 @@ static void key_off(uint32_t k, track_t *t)
     if (!kb_on[k])
         return;
     kb_on[k] = 0;
+    if (key_latch(t)) {                             /* LATCH: it keeps sounding (recorded as let go) */
+        if (t->arp_phys)
+            t->arp_phys--;
+        rec_release(t, x);
+        return;
+    }
     if (midi_local_held(t, x))
         return;
     input_off(t, x);
@@ -1064,6 +1094,8 @@ static void events_block(uint32_t n)
         engine_block(t);                              /* engine switch: fade, then switch (voice.c) */
         /* ARP turned off, or HOLD released with no key down: drop the latched chord */
         if ((t->armp && !t->p[P_AMODE]) || (t->aholdp && !t->p[P_AHOLD] && !t->arp_phys)) {
+            if (!t->armp && t->aholdp && !t->p[P_AHOLD])
+                latch_release(t);                       /* (0.6.14) LATCH off: its notes go */
             t->nheld = 0;
             if (!t->p[P_AMODE])
                 t->arp_phys = 0;

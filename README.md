@@ -34,6 +34,11 @@ Every update is listed here, newest first.
 - **No more sharp highs when changing presets**: the notes still sounding used to take the new sound's values at once
   (its filter, its envelope amounts), jumping bright and loud. Now they fade out in ~3 ms with the sound they had
   (all of it, kept the moment before the change), and the new notes start clean. Also on user presets and sections.
+- **SEQ TOOLS** (SEQ held): each cell shows its key with the octave (F3 CLEAR, F4 CLR AUTO: both read "F" before),
+  and the footer shows **REC: CLEAR ALL** (all six tracks' steps and automation, OCT+ confirms), which was nowhere
+  on screen.
+- **Key LATCH**: with ARP OFF, **ARP 2 > HOLD ON** latches the keys: the notes keep sounding when you let go, the
+  next chord replaces them, HOLD OFF lets them go.
 - **CLOUD costs about a third less CPU**: its grains computed every other sample (the line they read is written at
   half rate anyway), the same sound. First step against the lag and clicks with six tracks busy.
 

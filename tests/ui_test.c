@@ -5820,6 +5820,35 @@ static int test_lofi_rtrg(void)
     return bad;
 }
 
+/* (0.6.14) LATCH: ARP OFF + HOLD ON, the keys' notes stay when let go; the next chord replaces them; HOLD off ends them */
+static int gate_on(const track_t *t, uint32_t note)
+{
+    uint32_t i;
+    for (i = 0; i < NVOICE; i++) if (t->v[i].active && t->v[i].gate && t->v[i].note == note) return 1;
+    return 0;
+}
+static int test_key_latch(void)
+{
+    int bad = 0;
+    track_t *t;
+    uint32_t a, b;
+    ui_power_on();
+    song.sel = 0; t = &trk[0];
+    t->p[P_AMODE] = 0; t->p[P_AHOLD] = 1; t->p[P_SUS] = 127; t->p[P_MUTE] = 0;
+    fm1_in.notes = 1u; events_block(CTL); a = kb_note[0];
+    fm1_in.notes = 0; events_block(CTL);
+    bad += check("LATCH: ARP OFF, HOLD ON: the key let go, its note still sounds", gate_on(t, a));
+    fm1_in.notes = 4u; events_block(CTL); b = kb_note[2];
+    fm1_in.notes = 0; events_block(CTL);
+    t->xf = 0; events_block(CTL);
+    bad += check("  the next key: the latched note goes, the new one stays", !gate_on(t, a) && gate_on(t, b));
+    t->p[P_AHOLD] = 0; events_block(CTL);
+    bad += check("  HOLD off: the latched note goes", !gate_on(t, b));
+    fm1_in.notes = 1u; events_block(CTL); fm1_in.notes = 0; events_block(CTL);
+    bad += check("  HOLD OFF: a key let go ends its note as ever", !gate_on(t, a));
+    return bad;
+}
+
 /* (0.6.12) SAVE > PROJECT: KNOB 1 the project (its sections and song in, the music kept), KNOB 2 / PRESETS the
  * section, LOAD and SAVE on it; ARRANGE (the project's song) right after it */
 static int test_project_page(void)
@@ -7355,6 +7384,7 @@ int main(void)
     bad += test_song_layer();
     bad += test_project_page();
     bad += test_lofi_rtrg();
+    bad += test_key_latch();
     bad += test_dx_sound();
     bad += test_clear_all();
     bad += test_lane_mutes();
