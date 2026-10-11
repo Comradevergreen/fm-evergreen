@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.6.15).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.6.16).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 ## Cheat sheets
 
@@ -29,6 +29,16 @@ Two printable sheets with everything on the device. Click an image to open it fu
 ## Changelog
 
 Every update is listed here, newest first.
+
+### v0.6.16
+- **Stable under load: the load budget.** The device measures how much of its time the audio takes. Past 70 %, the
+  sound may not grow: a new note takes a voice (the oldest released first) instead of adding one, and CLOUD spawns
+  half its grains; under 60 % for a while, back to normal. The overload guard (80 %) stays as the last line. The
+  load stops climbing before the screen lags or the sound clicks, whatever you turn on.
+- **Mutes and solos cost nothing**: GLO's solo and the FX layer's black-key mutes were the sound silenced after
+  being made; now they are MIDI mutes: the track gets no new notes and, once faded, its voices end.
+- **FM6 plays 4 voices a track** (was 6): six operators a voice, the heaviest engine.
+- **DRUM-X's DRV and knee on the kit's sum** (were each hit's): the same glue on the bus, half the work.
 
 ### v0.6.15
 - **No hiss at rest with CLIP up**: the clipper rounded a tail's tiny negative residue down (-1) and drove it x4: a

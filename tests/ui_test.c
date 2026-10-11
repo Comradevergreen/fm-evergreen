@@ -5849,6 +5849,35 @@ static int test_key_latch(void)
     return bad;
 }
 
+/* (0.6.16) the load budget: tight (audio.c), a new note takes a voice instead of adding one; calm, it adds */
+static int test_load_budget(void)
+{
+    int bad = 0;
+    uint32_t n0, e;
+    track_t *t = &trk[0];
+    ui_power_on();
+    for (e = 0; e < NENGINES && ENGINES[e] != &ENG_ANALOG; e++) {}
+    set_engine_of(t, e); t->engine = t->eng_req; t->p[P_VOICE] = V_POLY; t->p[P_SUS] = 127; t->p[P_MUTE] = 0;
+    trk_note_on(t, 60, 100); trk_note_on(t, 64, 100); trk_note_on(t, 67, 100);
+    n0 = voices_busy();
+    load_tight = 1;
+    trk_note_on(t, 71, 100);
+    bad += check("LOAD BUDGET: tight, a new note takes a voice (the count stays)", voices_busy() == n0 && n0 == 3u);
+    load_tight = 0;
+    trk_note_on(t, 74, 100);
+    bad += check("  calm: a new note adds a voice", voices_busy() == n0 + 1u);
+    load_tight = 1;
+    trk_all_off(t); { uint32_t i; for (i = 0; i < NVOICE; i++) t->v[i].active = 0; }
+    trk_note_on(t, 60, 100);
+    bad += check("  tight with nothing sounding: the first note still plays", voices_busy() == 1u);
+    load_tight = 0;
+    trk_hush = 1u;                                      /* (0.6.15) GLO solo / FX black key: a MIDI mute */
+    trk_note_on(t, 72, 100);
+    bad += check("MUTE / SOLO: a silenced track gets no new note (it costs nothing)", voices_busy() == 1u);
+    trk_hush = 0;
+    return bad;
+}
+
 /* (0.6.12) SAVE > PROJECT: KNOB 1 the project (its sections and song in, the music kept), KNOB 2 / PRESETS the
  * section, LOAD and SAVE on it; ARRANGE (the project's song) right after it */
 static int test_project_page(void)
@@ -7385,6 +7414,7 @@ int main(void)
     bad += test_project_page();
     bad += test_lofi_rtrg();
     bad += test_key_latch();
+    bad += test_load_budget();
     bad += test_dx_sound();
     bad += test_clear_all();
     bad += test_lane_mutes();
