@@ -7100,6 +7100,16 @@ static int test_bpm_lock(void)
         for (j = 0; j < 8u; j++) ok &= TSEL->p[P_E0 + j] == before[j];
         bad += check("0.6.21: SELECT on EDIT dices the sound (not the tempo), once a turn burst; other pages nothing", ok);
     }
+    {   /* (0.6.31) the MIXER (GLO's button opens it): SELECT the tempo, as on GLO's pages */
+        uint8_t pr = ui_prefs;
+        ui_prefs &= (uint8_t)~PREF_BPM_LOCK;
+        go_title("MIXER"); frame(); fm1_ms += 1200u; ui.msg_t = 0;
+        b0 = song.g[G_BPM];
+        turn(EN_SELECT, 1);
+        ok = song.g[G_BPM] == b0 + 1 && !msg_is("DICE: HOME / EDIT") && !ui.confirm;
+        ui_prefs = pr;
+        bad += check("0.6.31: SELECT on the MIXER sets the tempo", ok);
+    }
 
     /* ON: GLO > GLOBAL's BPM knob */
     go_title("GLOBAL"); frame();

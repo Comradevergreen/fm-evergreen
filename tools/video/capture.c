@@ -9,12 +9,12 @@
  *   build/video/capture build/video        -> audio.wav (44.1 kHz stereo), screen.rgb (240 x 240 RGB24 a frame)
  * tools/video/compose.py makes the 1080p video from them. */
 #define UI_TEST_NO_MAIN 1
-#define FELUCCA_VERSION "v0.6.30"
+#define FELUCCA_VERSION "v0.6.31"
 #include "ui_test.c"
 
 #define FPS 30u
 #define BPM 125u
-#define BARS 72u
+#define BARS 80u                                   /* (0.6.30: + 8, the song ideas, ARRANGE, LOAD) */
 #define BEAT_S (60.0 / BPM)
 #define SECS (BARS * 4u * 60.0 / BPM)
 #define SPLASH_BEATS 8u                             /* the power-on splash: the first two bars */
@@ -98,6 +98,7 @@ static void song_build(void)
     uint32_t i, k;
     ui_power_on();
     settings.palette = UI_JIANT_INDEX; palette_set(UI_JIANT_INDEX);
+    ui_rec_prefs |= PREF_SIX >> 8; rp_apply();               /* (0.6.30) TRACKS 6: all six play (4 the default) */
     song.g[G_BPM] = BPM;
     song.master_q12 = 4096;                                  /* (the pot: ui_power_on leaves 0) */
     sound(T_VOX, "VOICE", "VOX LEAD");
@@ -144,12 +145,15 @@ static void song_build(void)
     chain_config.row[0] = (chain_row_t){0, 4}; chain_config.row[1] = (chain_row_t){1, 8};
     chain_config.row[2] = (chain_row_t){2, 4}; chain_config.row[3] = (chain_row_t){0, 8};
     fm6_bank_used = 0xFFFFFFFFu; fm6_bank_read = vbank_read;  /* (a bank sent from the editor) */
+    for (k = 0; k < 4u; k++) project_save(k);                 /* (ARRANGE's sections: stored, not EMPTY) */
+    ui.msg_t = 0; ui.msg[0] = ui.msg2[0] = 0;
     transport_req = 1;
 }
 
+static uint32_t qoff;                               /* (0.6.30) the beats the script after the new part runs late */
 static void caption(uint32_t q, const char *tag, const char *title, const char *sub, int zoom)   /* (lines split by '|') */
 {
-    fprintf(cap, "%.4f\t%s\t%s\t%s\t%d\n", q * BEAT_S, tag, title, sub, zoom);
+    fprintf(cap, "%.4f\t%s\t%s\t%s\t%d\n", (q + qoff) * BEAT_S, tag, title, sub, zoom);
 }
 static void page(uint32_t sel, const char *title) { song.sel = (uint8_t)sel; go_title(title); }
 static void home(uint32_t sel) { song.sel = (uint8_t)sel; go_home(); }
@@ -168,13 +172,13 @@ static void enc_turn(uint32_t role, int32_t s) { host_enc[panel.enc[role]] += s 
 static void mute(uint32_t k, int m) { trk[k].p[P_MUTE] = (int16_t)m; }
 
 /* the script: at each beat q (bar q / 4); the captions go with it */
-static void at_beat(uint32_t q)
+static void at_beat_v2(uint32_t q)
 {
     static const char *const WORDS[16] = {"DRUM-X", "SLICER BUS", "RESO", "CLOUD", "SHIMMER", "GRAIN DELAY", "AUTOPAN",
-                                          "MSEQ", "MACROS", "DICE", "PUNCH-IN", "SONGS", "6 TRACKS", "FM6 OPS",
+                                          "MSEQ", "MACROS", "DICE ALL", "PUNCH-IN", "ARRANGE", "6 TRACKS", "FM6 OPS",
                                           "VOICE BANK", "ENV LOOP"};
     static const char *const MPG[16] = {"SOUND", "SLICER", "REVERB", "REVERB", "REVERB", "DLY 2", "AUTOPAN", "MSEQ",
-                                        "MOD", "MOD", "FX", "SONG", "MIXER", "OPERATOR", "EDIT 2", "ENV DEST"};
+                                        "MOD", "MOD", "FX", "ARRANGE", "MIXER", "OPERATOR", "EDIT 2", "ENV DEST"};
     static const uint8_t MSEL[16] = {T_DRUM, T_DRUM, T_VOX, T_VOX, T_VOX, T_ARP, T_ARP, T_VOX, T_VOX, T_VOX, T_VOX, T_VOX,
                                      T_VOX, T_PAD, T_PAD, T_PAD};
     static const uint8_t MRT[16] = {0, 0, 3, 4, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
@@ -232,7 +236,7 @@ static void at_beat(uint32_t q)
         page(T_VOX, "MSEQ"); caption(q, ONLY, "MSEQ", "a 16-step modulation sequencer|here: the robot's vowels", 0);
     }
     if (q == B(19, 0)) { page(T_VOX, "EDIT 1"); caption(q, ONLY, "THE ROBOT TALKS", "the being follows the vowels", 1); }
-    if (q == B(20, 0)) { home(T_VOX); hold_btn(B_LFO, 1); caption(q, ONLY, "MACROS · DICE", "4 macros over what's playing|SELECT rolls new routes", 0); }
+    if (q == B(20, 0)) { home(T_VOX); hold_btn(B_LFO, 1); caption(q, ONLY, "MACROS · DICE", "4 macros over what's playing|their dice roll new routes", 0); }
     if (q >= B(20, 0) && q < B(21, 0)) for (k = 0; k < 4u; k++) macro_v[k] = (uint8_t)clamp((int32_t)((q - B(20, 0) + 1u) * (12u + 5u * k)), 0, 127);
     if (q == B(20, 2)) { macro_dice(1); ui_message("MACROS DICED"); }
     if (q == B(20, 3)) { hold_btn(B_LFO, 0); for (k = 0; k < 4u; k++) macro_v[k] = 0; }
@@ -313,7 +317,7 @@ static void at_beat(uint32_t q)
         home(T_DRUM); caption(q, ONLY, "ALL SYNTHESIS", "no samples|six beings, all alive", 1);
     }
     if (q == B(50, 0)) { go_title("MIXER"); caption(q, ONLY, "6-CHANNEL MIXER", "level · pan · send · mute|thermal meters", 0); }
-    if (q == B(52, 0)) { go_title("SONG"); caption(q, ONLY, "SONGS", "8 songs × 4 sections|chains · scenes, SLOOP-style", 0); }
+    if (q == B(52, 0)) { go_title("ARRANGE"); caption(q, ONLY, "SONGS", "8 projects × 4 sections|chains · scenes, SLOOP-style", 0); }
     if (q == B(54, 0)) { home(T_PAD); hold_btn(B_ENV, 1); caption(q, ONLY, "PAGE JUMP", "hold a page button|turn PRESETS: straight to a page", 0); }
     if (q > B(54, 0) && q < B(55, 3)) enc_turn(EN_PRESET, q % 2u ? 1 : -1);
     if (q == B(55, 3)) hold_btn(B_ENV, 0);
@@ -335,6 +339,61 @@ static void at_beat(uint32_t q)
     }
     if (q == B(66, 0)) { caption(q, "", "", "", 0); }        /* (the outro card) */
     if (q == B(70, 0)) mute(T_VOX, 1);
+}
+
+/* (0.6.30) the new part, 8 bars after PAGE JUMP: ARRANGE, DICE ALL three times (a song idea each, the tempo kept for
+ * the film's beat), UNDO, TRACKS / LOAD and the one SCALE; then the song as it was (packed before the dice, restored
+ * as UNDO does) and the rest of the film */
+static project_store_t film_song;
+static void at_new(uint32_t q, uint32_t r)
+{
+    if (r % 4u == 0u || r % 4u == 2u) { hold_btn(B_OCTUP, 0); hold_btn(B_GLO, 0); }
+    if (r == 0u) {
+        chain_config.count = 5;
+        chain_config.row[0] = (chain_row_t){0, 4}; chain_config.row[1] = (chain_row_t){1, 8};
+        chain_config.row[2] = (chain_row_t){2, 4}; chain_config.row[3] = (chain_row_t){3, 2}; chain_config.row[4] = (chain_row_t){1, 8};
+        SONG_END(&chain_config) = SONG_FOREVER;                 /* END: LOOP */
+        go_title("ARRANGE"); ui.song_row = 0;
+        caption(q, ONLY, "ARRANGE", "sections in a column|bars · scenes · END x2..x8 · LOOP", 0);
+    }
+    if (r > 0u && r < 6u) ui.song_row = (uint8_t)(r < 5u ? r : 6u);   /* (down the rows, to the END) */
+    if (r == 6u) {
+        project_capture(&proj_scratch); proj_pack(&film_song, &proj_scratch);
+        home(T_DRUM); enc_turn(EN_SELECT, 1);
+        caption(q, ONLY, "DICE ALL", "HOME + SELECT: a whole new song idea|engines · sequences · scale · FX", 1);
+    }
+    if (r == 7u || r == 11u || r == 15u) hold_btn(B_OCTUP, 1);   /* OK: the dice */
+    if (r == 8u || r == 12u || r == 16u) song.g[G_BPM] = BPM;   /* (each roll a tempo of its own: the film keeps 125) */
+    if (r == 10u || r == 14u) enc_turn(EN_SELECT, 1);
+    if (r == 10u) caption(q, ONLY, "NEVER THE SAME", "9 styles, Kraftwerk to Aphex Twin|every roll a new track", 1);
+    if (r == 18u) caption(q, ONLY, "UNDO", "GLO + G4: back one step|again: forward", 1);
+    if (r == 19u) {                                             /* (the GLO layer's G4: what the key does) */
+        if (!undo_do()) ui_message("UNDONE (AGAIN: REDO)");
+        song.g[G_BPM] = BPM;
+    }
+    if (r == 20u) {
+        go_title("SYSTEM");
+        caption(q, ONLY, "TRACKS · LOAD", "4 or 6 tracks|ECO · LITE · FULL: you pick the weight", 0);
+    }
+    if (r == 21u || r == 22u) enc_turn(EN_K2, -1);              /* LOAD: LITE, ECO */
+    if (r == 23u) enc_turn(EN_K2, 2);                           /* .. FULL again */
+    if (r == 24u) {                                             /* the song back, as UNDO brings one */
+        if (proj_import(&proj_scratch, &film_song, sizeof film_song) && !project_restore_runtime(&proj_scratch))
+            transport_req = 1;
+        song.g[G_BPM] = BPM;
+        page(T_VOX, "SCL");
+        caption(q, ONLY, "ONE SCALE", "every track, the reverb and the arp|follow it", 0);
+    }
+    if (r >= 25u && r < 28u) enc_turn(EN_K1, 1);                /* the root up */
+    if (r == 28u) enc_turn(EN_K1, -3);
+}
+static void at_beat(uint32_t q)
+{
+    if (q < B(56, 0)) { at_beat_v2(q); return; }
+    if (q < B(64, 0)) { at_new(q, q - B(56, 0)); return; }
+    qoff = 32u;
+    at_beat_v2(q - 32u);
+    qoff = 0;
 }
 
 static void put_screen(void)
@@ -371,6 +430,8 @@ int main(int argc, char **argv)
             int16_t s[2 * CTL];
             uint32_t i, n = CTL;
             mix_block(o, CTL);
+            for (i = 1; i < CTL; i += 2u)                /* (the scope, as audio.c audio_block fills it) */
+                scope_buf[scope_w++ & (SCOPE_N - 1u)] = (int16_t)clamp(o[2u * i], -32768, 32767);
             if (nsamp + n > nwav) n = nwav - nsamp;
             for (i = 0; i < 2u * n; i++) s[i] = (int16_t)clamp(o[i], -32768, 32767);
             fwrite(s, 2, 2u * n, wav);

@@ -101,7 +101,7 @@ def thermal(t, e):
 sig = Image.open(ROOT / 'docs/cheatsheet/signature.png').convert('RGB')
 
 brand = text_layer(['JIANT FM'], F_SMALL, WHITE)
-tag = text_layer(['M-VAVE FM-1 · v0.6.30'], F_SMALL, DIM)
+tag = text_layer(['M-VAVE FM-1 · v0.6.31'], F_SMALL, DIM)
 def pill(txt):                                     # the tag: dark letters on an orange plate
     L = text_layer([txt], F_SMALL, (14, 8, 20))
     p_ = Image.new('RGBA', (L.width + 28, L.height + 6))
@@ -117,7 +117,8 @@ intro_s = text_layer(['alternative firmware for the M-VAVE FM-1'], F_SUB, WHITE)
 out_l = [text_layer(['JIANT FM'], font('Bold', 120), WHITE, gradient=True),
          text_layer(['try it in your browser'], F_MID, WHITE),
          text_layer(['juanjiant-bit.github.io/JIANT'], F_SUB, ORANGE),
-         text_layer(['emulator · web installer · editor · cheat sheets'], F_SMALL, DIM)]
+         text_layer(['emulator · web installer · editor · cheat sheets'], F_SMALL, DIM),
+         text_layer(['support: ko-fi.com/juanjiant · cafecito.app/juanjiant'], F_SMALL, VIOLET)]
 
 def paste(img, layer, x, y, alpha=1.0, reveal=1.0):
     if alpha <= 0 or reveal <= 0: return

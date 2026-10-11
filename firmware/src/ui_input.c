@@ -1648,9 +1648,11 @@ static void ui_input_frame(void)
         }
         dice_ms = fm1_ms | 1u;
     } else if ((s = glo ? sel : panel_enc(EN_SELECT)) != 0 && !glo && !ui.menu &&
-               (ui.home || cur_page()->fam != FAM_GLO)) {   /* (0.6.21) SELECT: HOME dices everything (the dialog
-                                                         * first), EDIT the track's sound, GLO's pages the tempo; the
-                                                         * other pages nothing (it says where); once a turn */
+               (ui.home || (cur_page()->fam != FAM_GLO && cur_page()->graph != GR_TRK))) {   /* (0.6.21) SELECT: HOME
+                                                         * dices everything (the dialog
+                                                         * first), EDIT the track's sound, GLO's pages the tempo (0.6.31:
+                                                         * the MIXER too, GLO's button opens it); the other pages nothing
+                                                         * (it says where); once a turn */
         static uint32_t sd_ms;
         if (!ui.confirm && (!sd_ms || fm1_ms - sd_ms > 400u)) {
             if (chain_busy()) ui_message("STOP TO EDIT");
