@@ -654,6 +654,13 @@ static void graph_fm6(const track_t *t, uint16_t c, uint32_t sel)   /* sel < 6: 
         char fq[16] = {'O', 'P', (char)('1' + sel), ' ', 0};
         fop_freq(pt + (5u - sel) * FP_OP, fq + 4);
         cv_text_r(228, 4 - GOY, &AF_S, fq, T_TEXT, T_SURF);
+    } else if (fm6_bank_slot(fm6_slot[(t - trk) % NTRK]) >= 0) {   /* (0.6.11) SLOT B1..B32: the bank voice's name */
+        char nm[11];
+        for (k = 0; k < 10u; k++)
+            nm[k] = (char)pt[FP_NAME + k];
+        for (nm[10] = 0; k && nm[k - 1] == ' '; k--)
+            nm[k - 1] = 0;
+        cv_text_r(228, 4 - GOY, &AF_S, nm, T_TEXT, T_SURF);
     }
     FM6_CHART_HOOK(FMH_END, alg, 0);
 }

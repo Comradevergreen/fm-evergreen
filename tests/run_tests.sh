@@ -85,6 +85,9 @@
 #                   operator envelopes (stages, rates, the voice ending), bit-stable notes, a click-free retrigger, no DC /
 #                   clipping over the factory patches, the macros' directions, PTCH, pack / unpack and the SysEx
 #                   layouts, the 6-voice cap, the cost per voice; demos in build/fm6_demo/.
+# FM6 BANK (tests/fm6bank_test.c, JIANT 0.6.11 from Felucca 1.4.1): the voice bank (src/fm6_vbank.c) and its editor
+#                   commands against simulated NOR: write / read back, its sectors only, a power cut at any byte or erase
+#                   (the old bank or the new one), a wrong CRC, SLOT B1..B32, the SLOT values stored before as before.
 # ROBUST (tests/robust_test.c): damaged or crafted stored data and editor requests: engine numbers past the last
 #                   refused, a retained older
 #                   RAM project bounded, user preset patterns inside their fields, malformed requests never stop PLAY.
@@ -236,6 +239,8 @@ if [ -f build/gen/felucca_tables.h ]; then
     $CC -O2 -w -Ibuild/gen -Ifirmware/src -o "$OUT/fm6_test" tests/fm6_test.c -lm
     mkdir -p build/fm6_demo
     run "FM6: algorithms, envelopes, retrigger, DC, clipping, macros, patch formats, voices, cost, demos" "$OUT/fm6_test" build/fm6_demo
+    $CC -w -Ibuild/gen -Ifirmware/src -o "$OUT/fm6bank_test" tests/fm6bank_test.c -lm
+    run "FM6 voice bank: write / read, power cuts, CRC, SLOT B1..B32, stored SLOT values as before" "$OUT/fm6bank_test"
 else
     echo "== skip hostsim (run ./build.sh once)"
 fi
@@ -262,7 +267,7 @@ else
     run "ASan/UBSan: update loader (other app -> this build)" "$A/ldr_test" "$OUT/old.fwsc" build/felucca.fwsc
     $SCC -DOWN_PKG=1 -o "$A/ota_test" tests/ota_test.c
     run "ASan/UBSan: M-UPGRADE entry (own loader)" "$A/ota_test" build/felucca.fwsc
-    for t in editor_test project_test backup_test robust_test; do
+    for t in editor_test project_test backup_test robust_test fm6bank_test; do
         $SCC -o "$A/$t" tests/$t.c -lm
         run "ASan/UBSan: $t" "$A/$t"
     done

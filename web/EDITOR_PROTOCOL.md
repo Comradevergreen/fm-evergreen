@@ -208,7 +208,7 @@ at 1..3 and hides 6 5 8: what it sets still plays the right kit, and the device 
 
 | cmd | Request args | Reply args |
 | --- | --- | --- |
-| 1 INFO | — | version string, NENGINES, P_COUNT, G_COUNT, NSTEP, P_E0, then NENGINES engine-name strings, then (v3) NTRK (6 since JIANT 0.6, 4 before), then (v6) CHAIN_ROWS (16), then the tagged blocks `55 01 uiCaps`, `4D 01 64 01`, `42 01 3`, `46 01 nfactory nbank`, `53 01 3`, (1.0.3) `50 01 3` and (1.0.4) `4E 01 count` (MENU settings; 12, 1.1: 15, 1.2: 17, 1.1.5: 18) and (1.0.5) `52 01 4` (ratchet) and (1.1) `4C 01 1` (parameter locks) (below); older firmware ends earlier |
+| 1 INFO | — | version string, NENGINES, P_COUNT, G_COUNT, NSTEP, P_E0, then NENGINES engine-name strings, then (v3) NTRK (6 since JIANT 0.6, 4 before), then (v6) CHAIN_ROWS (16), then the tagged blocks `55 01 uiCaps`, `4D 01 64 01`, `42 01 3`, `46 01 nfactory nbank`, `53 01 3`, (1.0.3) `50 01 3` and (1.0.4) `4E 01 count` (MENU settings; 12, 1.1: 15, 1.2: 17, 1.1.5: 18) and (1.0.5) `52 01 4` (ratchet) and (1.1) `4C 01 1` (parameter locks) and (JIANT 0.6.11) `56 01 32` (FM6's voice bank) (below); older firmware ends earlier |
 | 2 GET | scope, id | scope, id, v14 |
 | 3 SET | scope, id, v14 | scope, id, v14 (the value after clamping). Setting global `G_ENGSEL` (id from DESC label "ENG") changes the engine: its defaults, then its first preset (as on the device) |
 | 4 DUMP | — | engine, preset, then P_COUNT × v14 (the selected track), then G_COUNT × v14 (globals) |
@@ -884,3 +884,30 @@ device gone at ~0.3 s, the MIDI port gone at ~0.57 s and back at ~1.15 s; ON -> 
 at ~0.6 s while the MIDI port was not seen to disappear at all (so do not wait for a disconnect event: after
 a real change, wait ~1.5 s and open again). What the editor sends in that window is lost, `WATCH` ends with the
 bus reset (send `INFO` and `WATCH` again after reconnecting), and a backup in progress answers rc 5 (stale).
+
+## FM6 voice bank (74-77; JIANT 0.6.11, from Felucca 1.4.1)
+
+32 voices in flash, written whole from the editor (a 32-voice SysEx file: its 128-byte packed records, the format
+`FM6_PUT` takes), picked on the device with SLOT B1..B32 (9..40). Loading one copies it into the track's patch as F1..F8
+do: the patch is the track's from then on, saved with projects and user presets (`FM6_GET` target 0 reads it), so a
+project made with a bank voice sounds the same after the bank was replaced. INFO advertises `56 01 32` (32 voices)
+after `4C 01 1` (Felucca: after its `57 01 4`); firmware without the tag answers none of 74..77 and has SLOT 0..8.
+
+| cmd | Request args | Reply args |
+| --- | --- | --- |
+| 74 FM6B_BEGIN | — | rc. Starts a transfer (stops the transport; erases a sector: allow 1 s) |
+| 75 FM6B_WRITE | index 0..31, the 128 bytes | index, rc. Each index at most once per transfer; voices not written are empty in the new bank |
+| 76 FM6B_END | name (10 ASCII bytes, space-padded), CRC-32 (zlib's) of the written records, 128 bytes each in index order (5 × 7 bits, LSB first: bits 0..6, 7..13, .., 28..31) | rc, voices (how many the bank the device holds now has). rc 0: the new bank replaced the old one (allow 1 s) |
+| 77 FM6B_LIST | — | 32, bank (1 there is one, 0 none), its name string, then per voice: used (0/1), name string ("" if empty) |
+
+rc: 0 ok, 1 arguments (an index past 31 or written twice, a record that is not 128 bytes, an END that is not 15
+bytes), 2 the CRC did not match (nothing changed: the old bank stays; start again with `FM6B_BEGIN`), 3 playback did
+not stop, 4 flash (no flash, an erase or a write failed), 5 no transfer (no `FM6B_BEGIN`, an END already answered, or
+the device's autosave took the transfer's flash between two requests, after 10 s without one: start again).
+
+- An END with no WRITE (the CRC of nothing: 0) writes an empty bank: every B slot is empty.
+- The old bank stays until END answers rc 0; a power cut at any point leaves the old bank or the new one, never a mix.
+- A track on a bank slot when a new bank arrives keeps the voice it played, as its own patch: SLOT becomes OWN.
+- The editor's import (6-OP FM tab): a 32-voice file's voices, each packed as for a single voice (every value into
+  its range); an empty slot of a shorter file is not written. Flash: the bank is at 0xE7000; a transfer is staged in
+  the autosave's older sector first (0xE5000 / 0xE6000), which the next autosave writes over anyway.

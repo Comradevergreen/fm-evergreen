@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.6.10).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.6.11).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 ## Cheat sheets
 
@@ -29,6 +29,13 @@ Two printable sheets with everything on the device. Click an image to open it fu
 ## Changelog
 
 Every update is listed here, newest first.
+
+### v0.6.11
+- **FM6 voice bank**, from Felucca 1.5.1: a whole 32-voice DX7 cartridge (.syx) sent from the web editor (6-OP FM tab,
+  **Send to the device's voice bank**), picked on the device with **SLOT B1–B32** after F1–F8 and OWN (empty slots
+  skipped; the voice's name above the algorithm). Loading a voice copies it into the track, so projects and presets
+  keep it whatever the bank holds later. Its own flash sector (0xE7000), written so a power cut leaves the old bank or
+  the new one, never half; editor commands 74–77 as Felucca's. The full backup doesn't include it: keep the .syx.
 
 ### v0.6.10
 - **FM6 fully editable on the device**, brought from Felucca 1.5.1: EDIT > **OPERATOR** (operator 1–6, RATIO / FIXED,
@@ -277,6 +284,11 @@ Eight engines, all synthesis, no samples: **ANALOG, FM6, PHASE, LOFI, VOICE, WHE
   ATK DEC SUS REL, its RATE and LEVEL, drawn as the envelope) and **OPERATOR 2** (MODE ratio/fixed, DTUN, VEL), the
   operator lit on the algorithm chart with its frequency. Editing makes the patch the track's own (SLOT OWN) and it is
   saved with the project; the macros (EDIT 1 / 2) still act on top. The web editor edits every byte of it too.
+  **Voice bank** (from Felucca 1.4.1): import a 32-voice DX7 cartridge (.syx) in the web editor's 6-OP FM tab and press
+  **Send to the device's voice bank**; on an FM6 track **SLOT** (EDIT 2, KNOB 4) then goes F1–F8, OWN, **B1–B32**
+  (empty slots skipped), the voice's name on the chart. A voice loaded is copied into the track: projects and user
+  presets keep it even after you send another bank. The bank lives in its own flash sector, written power-cut safe;
+  the full backup does not include it (keep the .syx).
 - **PHASE**: phase distortion with **FB** (the output feeds back into the phase: from hard edge to growl).
 - **LOFI**: 1, 4 and 8-bit chip with **BYTE** (bytebeat: 32 formulas picked with ALGO and mutated with VAR). In
   BYTE, **MOTN** sets the speed of the formula's rhythm, **GRIT** crushes its rate, **BEND** folds time and **LOOP**

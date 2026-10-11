@@ -7,7 +7,7 @@ import html, os
 
 R = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(R, 'docs', 'cheatsheet')
-VERSION = 'v0.6.10'
+VERSION = 'v0.6.11'
 
 HEAT = ['#22d3ee', '#3b82f6', '#8b5cf6', '#d946ef', '#ef4444', '#ff7a00', '#facc15', '#f4f1ea']
 
@@ -273,7 +273,7 @@ def sound():
         ('FM6', HEAT[3], 'ALG FB MLVL MRAT', 'MEG VMOD DTUN SLOT',
          'Dexed\'s 6 operators, 32 algorithms drawn, .syx patches (SLOT), MLVL / MRAT move the modulators. '
          '<b>OPERATOR · OP ENV · OPERATOR 2</b>: each operator on the device (ratio / fixed, fine, level, its envelope, '
-         'mode, detune, velocity).'),
+         'mode, detune, velocity). <b>SLOT B1–B32</b>: a 32-voice .syx sent from the web editor.'),
         ('PHASE', HEAT[2], 'WAVE WAVE2 DCW ENV', 'DTN LINE SUB FB',
          'Phase distortion (CZ); <b>FB</b> feeds the output back into the phase: hard edge to growl.'),
         ('LOFI', HEAT[0], 'CHIP WAVE DUTY CRSH', '- VIB BEND MASK',
