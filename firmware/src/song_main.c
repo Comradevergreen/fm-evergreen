@@ -126,6 +126,7 @@ static uint32_t chain_prepare(void)
     chain.kept = (uint8_t)proj_pack(&song_keep, &proj_scratch);
     chain.config = chain_config;
     chain.loop = 0;
+    chain.pass = 0;
     chain.ended = 0;
     if (song_stage(chain.config.row[0].slot, 0))
         return 3u + chain.config.row[0].slot;
@@ -365,8 +366,9 @@ static void song_poll(void)
     }
     if (chain.running && !sec_stage.ready) {
         uint32_t next = chain.row + 1u;
-        if (next >= chain.config.count && chain.loop)
-            next = 0;
+        if (next >= chain.config.count && (chain.loop || SONG_END(&chain.config) == SONG_FOREVER ||
+                                           (SONG_END(&chain.config) >= 2u && chain.pass + 1u < SONG_END(&chain.config))))
+            next = 0;                                 /* (0.6.22: the song's END: round again) */
         if (next < chain.config.count)
             (void)song_stage(chain.config.row[next].slot, next);
     }

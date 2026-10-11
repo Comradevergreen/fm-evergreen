@@ -397,6 +397,8 @@ static void ui_message(const char *s) { ui_say(s, ""); }
 #define MSG_NOFILE "\x01"                      /* the no-file icon (ICON_X_NOFILE) */
 
 static int chain_busy(void) { return chain.running || chain.armed; }
+/* (0.6.22) ARRANGE: the rows 0..count-1, + ADD (while there is room), then the song's END row */
+static uint32_t song_end_row(void) { return chain_config.count < CHAIN_ROWS ? chain_config.count + 1u : CHAIN_ROWS; }
 /* Main loop only, with interrupts enabled. PLAY may be consumed between reads;
  * take one coherent snapshot before a flash operation or song preparation. */
 static int transport_busy(void)

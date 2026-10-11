@@ -244,13 +244,13 @@ static void graph_ecosys(void)
             if (sy[c] < (rad + 4) << 8) { sy[c] = (rad + 4) << 8; vy[c] = -vy[c]; }
             if (sy[c] > (104 - rad) << 8) { sy[c] = (104 - rad) << 8; vy[c] = -vy[c]; }
         }
-        if (t->p[P_MUTE])
+        if (t->p[P_MUTE] || c >= trk_live)          /* (0.6.22: a track asleep, TRACKS 4: as a muted one) */
             bg_outline(g, &f, sx[c] >> 4, sy[c] >> 4, r, 1, tm[c], ux.mono || settings.palette == UI_BW_INDEX ?
                        ux_gray(ux_luma(T_DIM) >> 3) : T_DIM);
         else
             being_lines(g, &f, sx[c] >> 4, sy[c] >> 4, r, en[c], tm[c] + c * 20000u);
         cv_text_in((sx[c] >> 8) - 30, clamp((sy[c] >> 8) + rad / 2 + 4, 4, 104), 60, &AF_S, num,
-                   c == song.sel ? T_THEME : t->p[P_MUTE] ? T_DIM : T_MID, T_SURF);
+                   c == song.sel ? T_THEME : t->p[P_MUTE] || c >= trk_live ? T_DIM : T_MID, T_SURF);
     }
     f0 = ui.frame;
 }
