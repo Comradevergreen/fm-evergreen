@@ -730,7 +730,7 @@ static int menu_protocol(void)
         {"SPEAKER EQ", "FLAT,LOWCUT,BASS+"}, {"USB LEVEL", "MASTER,FIXED"}, {"USB SERIAL", "ON,OFF"},
         {"CLICK", "OFF,REC,ON"}, {"CLICK LEVEL", "LOW,MID,HIGH"}, {"COUNT-IN", "OFF,1 BAR,2 BARS"},   /* (1.1: appended) */
         {"RESTORE LAST", "ON,OFF"}, {"SCALE LEDS", "OFF,ON"},                                        /* (1.2) */
-        {"SCREEN OFF", "NEVER,5 MIN,15 MIN,30 MIN,60 MIN"}, {"TRACKS", "4 LOW,6 HIGH"}};   /* (0.6.18) */
+        {"SCREEN OFF", "NEVER,5 MIN,15 MIN,30 MIN,60 MIN"}, {"TRACKS", "4 FULL,6 LITE,6 FULL"}};   /* (0.6.18; 0.6.29: + LITE) */
     static const int32_t DEF[19] = {-1, 0, 0, 0, 2, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0};   /* (COLOR: the default palette) */
     static const uint8_t TAB[19] = {0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 3, 2, 2, 2, 3, 1, 0, 2};      /* DISPLAY CONTROL AUDIO SYSTEM */
     static const char *const TABN[4] = {"DISPLAY", "CONTROL", "AUDIO", "SYSTEM"};
@@ -810,7 +810,7 @@ static int menu_protocol(void)
     ok &= menu_set(16, 1) == 3 && (ui_rec_prefs & 0x40u) && click_mode == CLICK_ON && cin_bars == 2u;   /* (its own bit) */
     ok &= menu_set(17, 0) == 3 && scr_get() == 0u && menu_set(17, 9) == 3 && scr_get() == 4u &&   /* (clamped) */
           menu_set(17, 2) == 3 && scr_get() == 2u && ui_scr == 1u;
-    ok &= menu_set(18, 1) == 3 && (ui_rec_prefs & 0x80u);   /* TRACKS 6 HIGH (0.6.18; rp_apply: the next frame) */
+    ok &= menu_set(18, 1) == 3 && (ui_rec_prefs & 0x80u) && ui_lite == 1u && fx_lite;   /* TRACKS 6 LITE (0.6.29) */
     for (i = 0; i < 19u; i++) {                         /* MENU_DESC reads them back */
         static const int32_t SET[19] = {2, 1, 1, 1, 1, 3, 1, 1, 1, 2, 1, 0, 2, 0, 2, 1, 1, 2, 1};
         menu_desc(i, &it);

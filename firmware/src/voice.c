@@ -162,9 +162,16 @@ static void track_lfo_tick(track_t *t)
 }
 
 /* voices the engine may use (POLY and UNISON): its cap, else all of them */
+/* (JIANT 0.6.29) MENU > TRACKS 6 LITE: six tracks, the heavy parts swapped for their light kin while they sound (the
+ * project keeps its settings): FM6 two voices, the reverb SHIMMER / CLOUD as ROOM, RESO as SPRING, the GRAIN delay
+ * plain (fx.c). Set by ui.c rp_apply */
+static volatile uint8_t fx_lite;
+#define LITE_FM6_POLY 2u
 static uint32_t trk_nvoice(const track_t *t)
 {
     uint32_t c = ENGINES[t->engine]->poly;
+    if (fx_lite && t->engine == ENGI_FM6 && c > LITE_FM6_POLY)
+        c = LITE_FM6_POLY;
     return c && c < NVOICE ? c : NVOICE;
 }
 

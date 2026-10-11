@@ -409,7 +409,7 @@ typedef struct {
  * kept with the settings, not in the song). An id past the globals (no song.g of its own): trks_ui mirrors the setting
  * (ui.c rp_apply), a turn writes it back (ui_input.c knob_turn) */
 #define G_TRKS 0xFEu
-static const char *const N_TRKS[] = {"4 LOW", "6 HIGH"};
+static const char *const N_TRKS[] = {"4 FULL", "6 LITE", "6 FULL"};   /* (0.6.29: + LITE) */
 static const param_desc_t TRKS_DESC = PE("TRACKS", N_TRKS, 0);
 static int16_t trks_ui;
 static const page_t PAGES[] = {
@@ -458,7 +458,7 @@ static const page_t PAGES[] = {
     {"OP LEVEL", FAM_EDIT, SC_TRACK, GR_NONE, {P_FM1_LEVEL, P_FM2_LEVEL, P_FM3_LEVEL, P_FM4_LEVEL}},
     {"VOICE", FAM_EDIT, SC_TRACK, GR_NONE, {P_VOICE, P_GLIDE, P_GLMODE, P_PRIO}},
     {"GLOBAL", FAM_GLO, SC_GLOBAL, GR_NONE, {G_BPM, G_SWING, G_CLOCK, G_TUNE}},
-    {"SYSTEM", FAM_GLO, SC_GLOBAL, GR_NONE, {G_MIDI, G_TRKS, G_ROUTE, G_INFO}},   /* (0.6.18) TRKS: 4 LOW / 6 HIGH */
+    {"SYSTEM", FAM_GLO, SC_GLOBAL, GR_NONE, {G_MIDI, G_TRKS, G_ROUTE, G_INFO}},   /* (0.6.18) TRKS: 4 FULL / 6 LITE / 6 FULL */
     {"PRESETS", FAM_SAVE, SC_GLOBAL, GR_BROWSE, {0xFF, 0xFF, 0xFF, 0xFF}},   /* browser: PRESETS knob / KNOB 1 */
     {"USER", FAM_SAVE, SC_GLOBAL, GR_USER, {0xFF, 0xFF, 0xFF, 0xFF}},       /* user presets: SLOT LOAD ERASE SAVE */
     {"PROJECT", FAM_SAVE, SC_GLOBAL, GR_SLOTS, {0xFF, G_SLOT, G_LOAD, G_SAVE}},   /* (0.6.12) PROJECT 1-8, SECT A-D */

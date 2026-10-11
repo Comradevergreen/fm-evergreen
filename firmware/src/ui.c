@@ -65,8 +65,10 @@ static uint32_t up_gen;                      /* bumped on every user bank change
 #define ui_rec_prefs (favorites.factory[15][28])
 #define PREF_REC 0xFF00u                       /* (menu_items.c MENU_FLAGS: a bit of ui_rec_prefs, << 8) */
 #define PREF_SCALE_LEDS (0x40u << 8)
-#define PREF_SIX (0x80u << 8)                  /* (JIANT 0.6.18) MENU > TRACKS 6 HIGH: all six tracks play; clear (the
-                                                * default): 4 LOW, T5 and T6 asleep (voice.c trk_live) */
+#define ui_lite (favorites.factory[15][26])    /* (JIANT 0.6.29) bit 0: TRACKS 6 LITE (with PREF_SIX; a byte no engine
+                                                * uses, 0 in older settings: 6 HIGH reads as 6 FULL) */
+#define PREF_SIX (0x80u << 8)                  /* (JIANT 0.6.18) MENU > TRACKS 6 LITE / 6 FULL: all six tracks play; clear
+                                                * (the default): 4 FULL, T5 and T6 asleep (voice.c trk_live) */
 enum { RP_CLICK, RP_LEVEL, RP_COUNTIN };
 static uint32_t rp_get(uint32_t f)                     /* a field as the MENU steps it: 0..2 */
 {
@@ -80,7 +82,19 @@ static void rp_apply(void)                             /* the settings into clic
     click_lvl = (uint8_t)rp_get(RP_LEVEL);
     cin_bars = (uint8_t)rp_get(RP_COUNTIN);
     trk_live = (ui_rec_prefs & (PREF_SIX >> 8)) ? NTRK : 4u;
-    trks_ui = trk_live == NTRK;                         /* (GLO > SYSTEM's TRKS shows it) */
+    fx_lite = trk_live == NTRK && (ui_lite & 1u);       /* (0.6.29) 6 LITE (voice.c) */
+    trks_ui = (int16_t)(trk_live != NTRK ? 0 : fx_lite ? 1 : 2);   /* (GLO > SYSTEM's TRKS shows it) */
+}
+/* (0.6.29) TRACKS as MENU and GLO > SYSTEM step it: 0 4 FULL, 1 6 LITE, 2 6 FULL (PREF_SIX and ui_lite) */
+static uint32_t trks_get(void)
+{
+    return !(ui_rec_prefs & (PREF_SIX >> 8)) ? 0u : (ui_lite & 1u) ? 1u : 2u;
+}
+static void trks_put(uint32_t v)
+{
+    ui_rec_prefs = (uint8_t)(v ? ui_rec_prefs | PREF_SIX >> 8 : ui_rec_prefs & ~(PREF_SIX >> 8));
+    ui_lite = v == 1u;
+    rp_apply();
 }
 static void rp_put(uint32_t f, uint32_t v)
 {
