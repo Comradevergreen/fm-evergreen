@@ -154,7 +154,7 @@ static struct {
     char msg2[24];               /* a second message, shown when the first is over */
     uint32_t enc_t[NE];
     /* drawn-state cache */
-    char col[4][32];
+    char col[4][56];   /* (0.6.10: was 32, a key up to 51 lost its colour / gauge / icon tail) */
     uint32_t graph_sig, head_sig, foot_sig, frame;
     /* rolling digits (ui_draw.c roll_*): the four card values and the header BPM */
     struct {
@@ -354,6 +354,8 @@ static int page_visible(uint32_t i)
         return TSEL->eng_req % NENGINES == ENGI_DRUM;
     if (PAGES[i].scope == SC_TRACK && PAGES[i].id[0] >= P_LN0 && PAGES[i].id[0] <= P_LN7)
         return TSEL->eng_req % NENGINES == ENGI_DRUM;
+    if (PAGES[i].graph >= GR_FMOP && PAGES[i].graph <= GR_FMENV)   /* (0.6.10) OPERATOR, OP ENV, OPERATOR 2: FM6's */
+        return TSEL->eng_req % NENGINES == ENGI_FM6;
     if (PAGES[i].scope == SC_TRACK && PAGES[i].id[0] == P_FTYPE)   /* (JIANT 0.5) FILTER: ANALOG's, or the part's */
         return (TSEL->eng_req % NENGINES == ENGI_ANALOG) == (PAGES[i].id[1] == P_E4);
     return !(PAGES[i].fam == FAM_EDIT && PAGES[i].id[0] >= P_FM1_ATK &&

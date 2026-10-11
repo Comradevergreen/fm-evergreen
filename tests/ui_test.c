@@ -2826,7 +2826,8 @@ static int engine_cycle(const char *const *want, uint32_t n)   /* EDIT tapped fr
 static int test_edit_cycle(void)
 {
     static const char *const CYC_A[] = {"EDIT 1", "EDIT 2", "FILTER", "VOICE", "EDIT 1"};   /* (JIANT 0.5: ANALOG's FILTER) */
-    static const char *const CYC_F[] = {"EDIT 1", "EDIT 2", "FILTER", "VOICE", "EDIT 1"};   /* (the part's FILTER) */
+    static const char *const CYC_F[] = {"EDIT 1", "EDIT 2", "OPERATOR", "OP ENV", "OPERATOR 2", "FILTER", "VOICE",
+                                        "EDIT 1"};   /* (the part's FILTER; 0.6.10: FM6's operator pages) */
     static const char *const CYC_D[] = {"EDIT 1", "EDIT 2", "FILTER", "OP1 ENV", "OP2 ENV", "OP3 ENV", "OP4 ENV",
                                         "OP LEVEL", "VOICE", "EDIT 1"};
     int bad = 0, ok;
@@ -2847,7 +2848,7 @@ static int test_edit_cycle(void)
                  engine_cycle(CYC_D, NELEM(CYC_D)));
 #else
     set_engine_of(TSEL, ENGI_DIGITAL);
-    bad += check("EDIT cycle (engine 1 asked for: FM6, DIGITAL retired): EDIT 1 EDIT 2 FILTER VOICE EDIT 1",
+    bad += check("EDIT cycle (engine 1 asked for: FM6, DIGITAL retired): EDIT 1 EDIT 2 OPERATOR OP ENV OPERATOR 2 FILTER VOICE EDIT 1",
                  TSEL->eng_req == ENGI_FM6 && engine_cycle(CYC_F, NELEM(CYC_F)));
     (void)CYC_D;
 #endif
@@ -3375,6 +3376,72 @@ static int test_rec_combos(void)
 
 /* MACRO (JIANT): LFO held is the macros' layer, KNOB 1..4 M1..M4; a MOD slot with SRC M1..M4 moves its destination
  * by the macro (an engine parameter, the master's CLIP); the project keeps them */
+/* (JIANT 0.6.10, from Felucca 1.5) FM6's operator pages, EDIT > OPERATOR, OP ENV, OPERATOR 2 (ui_fm6op.c): KNOB 1 the
+ * operator, KNOB 2..4 a byte of the track's patch each (OP ENV: KNOB 2 the stage, 3 / 4 its rate and level); a detent
+ * writes that byte only, within 0..its highest, the patch the track's own (SLOT OWN); an edit keeps the output trim */
+static uint32_t fop_diff(const uint8_t *a, const uint8_t *b, uint32_t *at)
+{
+    uint32_t i, n = 0;
+    for (i = 0; i < FP_SIZE; i++)
+        if (a[i] != b[i]) { n++; *at = i; }
+    return n;
+}
+static void fop_pick(uint32_t opn) { turn(EN_K1, -9); turn(EN_K1, (int32_t)opn - 1); }
+static int test_fm6_ops(void)
+{
+    static const struct { const char *page; uint32_t k, off; } F[] = {
+        {"OPERATOR", EN_K2, FP_FC}, {"OPERATOR", EN_K3, FP_FF}, {"OPERATOR", EN_K4, FP_OL},
+        {"OPERATOR 2", EN_K2, FP_MODE}, {"OPERATOR 2", EN_K3, FP_DET}, {"OPERATOR 2", EN_K4, FP_KVS},
+        {"OP ENV", EN_K3, FP_R1}, {"OP ENV", EN_K4, FP_L1}};
+    int bad = 0, ok = 1;
+    uint32_t opn, f, st, at = 0, n = 0, tr;
+    uint8_t v[FP_SIZE + 1u];
+    ui_power_on();
+    set_engine_of(TSEL, ENGI_FM6);
+    TSEL->engine = TSEL->eng_req;
+    tr = song.sel;
+    go_title("OPERATOR"); frame();
+    ok = str_eq(cur_page()->title, "OPERATOR");
+    set_engine_of(TSEL, 0); TSEL->engine = TSEL->eng_req;
+    ok &= !page_visible((uint32_t)(cur_page() - PAGES));
+    set_engine_of(TSEL, ENGI_FM6); TSEL->engine = TSEL->eng_req;
+    bad += check("FM6 ops: OPERATOR / OP ENV / OPERATOR 2 on an FM6 track only", ok);
+    ok = 1;
+    for (opn = 1; opn <= 6u; opn++)
+        for (f = 0; f < NELEM(F); f++)
+            for (st = 0; st < (F[f].off == FP_R1 || F[f].off == FP_L1 ? 4u : 1u); st++) {
+                uint32_t b = (6u - opn) * FP_OP + F[f].off + st, max = fm6_max(b);
+                int32_t d;
+                go_title(F[f].page); frame();
+                fop_pick(opn);
+                if (F[f].off == FP_R1 || F[f].off == FP_L1) { turn(EN_K2, -4); turn(EN_K2, (int32_t)st); }
+                memcpy(v, fm6_patch[tr], FP_SIZE);
+                d = v[b] < max ? 1 : -1;
+                frames(1600);
+                turn(F[f].k, d);
+                if (fop_diff(v, fm6_patch[tr], &at) != 1 || at != b || fm6_patch[tr][b] != (uint8_t)(v[b] + d) ||
+                    fm6_slot[tr] != FM6_OWN || TSEL->p[P_E7] != FM6_OWN) {
+                    printf("ui: FM6 ops: OP %u %s KNOB %u stage %u: byte %u, not %u\n", opn, F[f].page, F[f].k - EN_K1 + 1u,
+                           st + 1u, at, b);
+                    ok = 0;
+                }
+                turn(F[f].k, 200);                       /* the range: never past the byte's highest, nor below 0 */
+                ok &= fm6_patch[tr][b] == max;
+                turn(F[f].k, -200);
+                ok &= fm6_patch[tr][b] == 0u;
+                n++;
+            }
+    bad += check("FM6 ops: 6 operators x 14 bytes, each knob writes its byte only (+-1, 0..its highest), SLOT OWN", ok && n == 84u);
+    fm6_trim[tr] = 40; fm6_tgen[tr] = fm6_pgen[tr];     /* (a trimmed patch, then an edit: the trim stays) */
+    go_title("OPERATOR"); frame(); fop_pick(1); turn(EN_K3, 1);
+    fm6_block(TSEL);
+    ok = fm6_trim[tr] == 40;
+    fm6_set_patch(tr, fm6_patch[tr]);                   /* (a patch put in from elsewhere: from none again) */
+    fm6_block(TSEL);
+    bad += check("FM6 ops: an operator edit keeps the patch's output trim; a new patch starts from none", ok && fm6_trim[tr] == 0);
+    ui_power_on();
+    return bad;
+}
 static int test_macro_layer(void)
 {
     int bad = 0, ok;
@@ -7234,6 +7301,7 @@ int main(void)
     bad += test_quick_layers();
     bad += test_shift_page();
     bad += test_macro_layer();
+    bad += test_fm6_ops();
     bad += test_rec_combos();
     bad += test_bughunt_ui();
     bad += test_bughunt_ui2();

@@ -507,7 +507,7 @@ static void draw_column_tall(uint32_t c, const char *label, const char *val, con
 static void draw_column(uint32_t c, const char *label, const char *val, const char *unit, uint16_t vc,
                         int32_t ratio, uint32_t icon)
 {
-    char key[48];
+    char key[56];
     int hot = c == ui.hot_col && ui.hot_t, named = fmt_named, mot = card_mot_next && label[0], strip, snap;
     uint32_t kind = large_kind();                       /* MENU > LARGE: tall (draw_column_tall), or the label in M */
     uint8_t sig;
@@ -535,10 +535,17 @@ static void draw_column(uint32_t c, const char *label, const char *val, const ch
     key[n + 1] = (char)('A' + ((vc >> 4) & 15u));
     key[n + 2] = (char)('A' + ((vc >> 8) & 15u));
     key[n + 3] = (char)('A' + (vc >> 12));
-    key[n + 4] = (char)(' ' + (ratio < 0 ? 0 : 1 + ratio / 20));
+    key[n + 4] = (char)(' ' + (ratio < 0 ? 0 : 1 + clamp(ratio, 0, 1000) * (COL_W - 10) / 1000));   /* (the gauge's px) */
     key[n + 5] = (char)(icon == ICON_NONE ? '~' : '!' + icon % 90u);
     key[n + 6] = (char)('0' + hot + 2 * mot + 4 * (int)kind);
-    key[n + 7] = 0;
+    {   /* (0.6.10) the gauge's colour too: JIANT's heat runs over 256 steps, the width over its pixels */
+        uint16_t gc = ratio < 0 ? 0u : gauge_col(ratio);
+        key[n + 7] = (char)('A' + (gc & 15u));
+        key[n + 8] = (char)('A' + ((gc >> 4) & 15u));
+        key[n + 9] = (char)('A' + ((gc >> 8) & 15u));
+        key[n + 10] = (char)('A' + (gc >> 12));
+    }
+    key[n + 11] = 0;
     uw = unit[0] ? text_w(&AF_S, unit) + 3 : 0;
     if (text_w(vf, val) + uw > room)
         vf = &AF_S;
@@ -967,6 +974,21 @@ static void draw_columns(void)
         draw_column(2, "LEN", val, unit, VAL(2u), RATIO(&TP[P_MSLEN], t->p[P_MSLEN]), ICON_AUTO);
         param_format(&TP[P_MSSLW], t->p[P_MSSLW], val, &unit);
         draw_column(3, "SLEW", val, unit, t->p[P_MSSLW] ? VAL(3u) : T_DIM, RATIO(&TP[P_MSSLW], t->p[P_MSSLW]), ICON_GLIDE);
+        return;
+    }
+    if (fop_page(cur_page()->graph)) {                   /* (0.6.10) FM6: OP, then three of its bytes (ui_fm6op.c) */
+        for (c = 0; c < 4u; c++) {
+            const char *lb, *u;
+            int32_t r;
+            uint32_t ic;
+            int on;
+            if (!fop_ok()) {                             /* (the engine changed before ui_draw left the page) */
+                draw_column(c, "", "", "", T_THEME, -1, ICON_NONE);
+                continue;
+            }
+            on = fop_card(c, &lb, val, &u, &r, &ic);
+            draw_column(c, lb, val, u, on ? VAL(c) : T_DIM, r, ic);
+        }
         return;
     }
     if (cur_page()->graph == GR_MOD) {                   /* SLOT, then that slot's SRC DST AMT */
