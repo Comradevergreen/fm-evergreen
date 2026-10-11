@@ -341,14 +341,14 @@ static const engine_t ENG_DRUM = {
     .name = "DRUM",
     .page_title = {"KIT", "HIT"},
     .edit = {
-        {"MRPH", F_PCT, 0, 127, 64, 0, 0},
+        {"MORPH", F_PCT, 0, 127, 64, 0, 0},
         {"TUNE", F_PCT, 0, 127, 64, 0, 0},
         {"TONE", F_PCT, 0, 127, 64, 0, 0},
-        {"DECY", F_PCT, 0, 127, 64, 0, 0},
-        {"NOIS", F_PCT, 0, 127, 64, 0, 0},
+        {"DECAY", F_PCT, 0, 127, 64, 0, 0},
+        {"NOISE", F_PCT, 0, 127, 64, 0, 0},
         {"FM", F_PCT, 0, 127, 0, 0, 0},                 /* (JIANT: was ACC) */
         {"FOLD", F_PCT, 0, 127, 0, 0, 0},              /* (JIANT 0.5: a wavefolder, was WARP) */
-        {"DRV", F_PCT, 0, 127, 0, 0, 0},
+        {"DRIVE", F_PCT, 0, 127, 0, 0, 0},
     },
     .presets = DRUM_PRESETS,
     .npresets = NELEM(DRUM_PRESETS),

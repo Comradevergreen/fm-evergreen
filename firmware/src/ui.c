@@ -358,6 +358,9 @@ static uint32_t layer_btn(void);
  * LANES 2 a DRUM track's (its lane levels); SOUND / SOUND 2 a DRUM track's (DRUM-X: ui_dx.c) */
 static int page_visible(uint32_t i)
 {
+    if (PAGES[i].graph == GR_SONG && PAGES[i].fam == FAM_SEQ)
+        return 0;                                       /* (0.6.24) the song in one place: SAVE > ARRANGE (SEQ > SONG
+                                                         * was the same page twice; kept in the table: its index) */
     if (PAGES[i].graph == GR_DXSND)
         return TSEL->eng_req % NENGINES == ENGI_DRUM;
     if (PAGES[i].scope == SC_TRACK && PAGES[i].id[0] >= P_LN0 && PAGES[i].id[0] <= P_LN7)
@@ -570,8 +573,35 @@ static void note_name(char *b, uint32_t n)
     fmt_int(b + str_len(b), (int32_t)(n / 12u) - 1);
 }
 
+/* (0.6.24) FX's pages in sections: TRACK (FX, DIST, AUTOPAN), SLICER (SLICER, SL BUS, SL BUS 2, SL PITCH), DELAY (DLY,
+ * DLY 2), REVERB (REVERB, REVERB 2), CHORUS, MASTER. A tap the next page, as before; two taps quickly the next section's
+ * first page; the footer counts the page within its section ("DLY 2/2") */
+static int fx_head(uint32_t i)
+{
+    const char *t = PAGES[i].title;
+    return PAGES[i].fam == FAM_FX && (str_eq(t, "FX") || str_eq(t, "SLICER") || str_eq(t, "DLY") ||
+                                      str_eq(t, "REVERB") || str_eq(t, "CHORUS") || str_eq(t, "MASTER"));
+}
 static void open_family(uint32_t fam)
 {
+    static uint32_t fx_ms, fx_from = 0xFFu;
+    if (fam == FAM_FX && !ui.home && cur_page()->fam == FAM_FX && fx_from < NPAGES && fm1_ms - fx_ms < 350u) {
+        uint32_t n, i = fx_from;                        /* the second of two quick taps: the section after the one the
+                                                         * first tap left */
+        for (n = 0; n < NPAGES; n++) {
+            i = (i + 1u) % NPAGES;
+            if (fx_head(i) && page_visible(i)) break;
+        }
+        fx_from = 0xFFu;
+        ui.page = (uint8_t)i;
+        ui.fam_last[fam] = ui.page;
+        page_entered();
+        return;
+    }
+    if (fam == FAM_FX) {
+        fx_from = !ui.home && cur_page()->fam == FAM_FX ? ui.page : 0xFFu;
+        fx_ms = fm1_ms;
+    }
     if (!ui.home && cur_page()->fam == fam) {          /* same button again: next page */
         uint32_t n, i = ui.page;
         for (n = 0; n < NPAGES; n++) {

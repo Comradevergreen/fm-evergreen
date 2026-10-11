@@ -897,12 +897,12 @@ static int drum_kit_retired(void)
     request(ED_SET, a, 4);
     a[0] = 0; a[1] = P_E0;
     request(ED_DESC, a, 2);
-    ok = ed_eng(TSEL) == ENGI_DRUM && !strcmp((const char *)host_wire + 5 + 3 + 6, "MRPH");   /* (scope, id, fmt, min max def) */
+    ok = ed_eng(TSEL) == ENGI_DRUM && !strcmp((const char *)host_wire + 5 + 3 + 6, "MORPH");   /* (scope, id, fmt, min max def) */
     a[1] = P_E4;
     request(ED_DESC, a, 2);
-    ok &= !strcmp((const char *)host_wire + 5 + 3 + 6, "NOIS");
+    ok &= !strcmp((const char *)host_wire + 5 + 3 + 6, "NOISE");
     ok &= !strcmp(ENG_DRUM.edit[6].label, "FOLD");
-    bad += check("DESC of DRUM: MRPH (KIT's slot), NOIS (SNAP's), FOLD (KICK's)", ok);
+    bad += check("DESC of DRUM: MORPH (KIT's slot), NOISE (SNAP's), FOLD (KICK's)", ok);
     {   /* a project whose DRUM tracks hold KIT 0..3: loaded as MRPH 0..3 */
         static project_t p;
         for (r = 0; r < NTRK; r++) {

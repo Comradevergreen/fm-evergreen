@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.6.23).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.6.24).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 ## Cheat sheets
 
@@ -29,6 +29,17 @@ Two printable sheets with everything on the device. Click an image to open it fu
 ## Changelog
 
 Every update is listed here, newest first.
+
+### v0.6.24
+- **Interface audit, first round.**
+  - **The song in one place**: SAVE > ARRANGE (SEQ > SONG was the same page twice and is gone from SEQ).
+  - **Readable names**: LEVEL, SWING, CLOCK, DEPTH, STEREO, FEEDBK, SPRAY, FOLLOW, PUNCH, TRACKS, ROUTE, SCALE, QUANT,
+    TRANS, OFFSET, PITCH, FILTER, SHAPE, PHASE, ORDER, VOICE, GLIDE, DEST, DETUNE, NOISE, CRUSH, DRIFT, DECAY, COLOR,
+    VOWEL, BREATH, MORPH, MOTION, DRIVE, ROTOR, RATIO... instead of LVL, SWG, CLK, CDP, STER, FDBK, SPRY, FOLW...
+    Library files saved by the web editor with the old names load as before.
+  - **Mixer (6 columns)**: each sound's name cut to fit (no "..."); a muted track keeps its name, in the accent colour.
+  - **FX in sections** (TRACK, SLICER, DELAY, REVERB, CHORUS, MASTER): a tap the next page, two quick taps the next
+    section; the footer counts within the section.
 
 ### v0.6.23
 - **ARRANGE: delete a row right there**: KNOB 2 (SECT) turned left of A asks **DELETE ROW?** (OCT+ yes).
@@ -398,7 +409,7 @@ Eight engines, all synthesis, no samples: **ANALOG, FM6, PHASE, LOFI, VOICE, WHE
   TRI, SIN and PWM it has **SYNC**, **RING** and **SAW3** (three saws). Its filter is per voice.
 - **FM6**: Dexed's engine (imports .syx), with its algorithms drawn. Fully editable on the device (from Felucca 1.5):
   **EDIT > OPERATOR** (KNOB 1 the operator 1–6, then RATIO or FIXED frequency, FINE, LEVEL), **OP ENV** (the stage
-  ATK DEC SUS REL, its RATE and LEVEL, drawn as the envelope) and **OPERATOR 2** (MODE ratio/fixed, DTUN, VEL), the
+  ATK DEC SUS REL, its RATE and LEVEL, drawn as the envelope) and **OPERATOR 2** (MODE ratio/fixed, DETUNE, VEL), the
   operator lit on the algorithm chart with its frequency. Editing makes the patch the track's own (SLOT OWN) and it is
   saved with the project; the macros (EDIT 1 / 2) still act on top. The web editor edits every byte of it too.
   **Voice bank** (from Felucca 1.4.1): import a 32-voice DX7 cartridge (.syx) in the web editor's 6-OP FM tab and press
@@ -455,8 +466,8 @@ With FX held the keys become effects that act while held; on release everything 
 ### Sequencing
 - 64 steps per track, piano roll, drum grid, parameter locks, chance, ratchets, slide and knob automation; live
   recording with overdub, metronome and count-in.
-- **SHIFT**: shifts the sequence in steps (OFS) and in pitch (PIT), automatable.
-- **One scale for everything**: ROOT, SCALE and QNT are the song's, the same on every melodic track (no track keeps
+- **SHIFT**: shifts the sequence in steps (OFFSET) and in pitch (PITCH), automatable.
+- **One scale for everything**: ROOT, SCALE and QUANT are the song's, the same on every melodic track (no track keeps
   a scale of its own, whatever loads it); **STRN** moves all sequences through the
   scale degrees. **ARP TRNS**: the keys transpose the sequence.
 - **SEQ + REC** clears every sequence; **REC + FX / EDIT / ENV / LFO…** clears only that part's automation.
@@ -478,7 +489,7 @@ macros and MIDI punch-ins), saved with KNOB 4 on the SONG page or on its own whe
 - **Reverb** with five models: ROOM, SPRING, **SHIMR** (shimmer, goes up an octave on every pass), **RESO** (four
   strings tuned to the song's scale) and **CLOUD** (a granular wash that blooms into a tail and can freeze); with pre-delay, modulation,
   filter and width; **chorus**, a three-voice stereo ensemble.
-- **Master**: **CLIP** (saturation with level compensation: adds character, not volume), **PNCH** (drives the drums into saturation: denser, fatter body),
+- **Master**: **CLIP** (saturation with level compensation: adds character, not volume), **PUNCH** (drives the drums into saturation: denser, fatter body),
   **DUCK** (the kick pulls the rest down) and an **always-on leveler** (a slow 2:1 rider with automatic make-up, from
   −9 to +6 dB: it follows the song, not each hit) before the limiter and the soft clip: quiet patches and heavy CLIP play at a consistent volume.
 
@@ -518,12 +529,12 @@ Turning fast sweeps the whole range; turning slowly is fine adjustment. Turn it 
 | --- | --- | --- |
 | **FX** | F3 G3 A3 REPEAT 1/8, 1/16, 1/32; B3 LPF; C4 HPF. MIDI punch-ins: D4 OCT−, E4 OCT+, F4 1/2 TEMPO, G4 DEC−, A4 DEC+, B4 C5 STUTTER 1/8 · 1/16, D5 ATK+ (everything's attack up, drums included), E5 ARP (drums: a new fill on every press), F5 RANDOM (notes and steps). Everything comes in on the transport's next 1/16. Black keys 1–6: mute T1–T6; A#4 chooses which tracks the MIDI ones affect (all, synths, drums). **Automate**: with REC armed and playing, whatever you hold is recorded in the section's lane (64 steps of 1/16); G5 erases it where the playhead passes, or entirely with the transport stopped | FILTER, CRUSH, THROW, DEPTH |
 | **ARP TRNS** | With the ARP mode on TRNS, the keys (and incoming MIDI) transpose the track's sequence by their interval from C4, without playing notes; the transposition stays on release | — |
-| **SEQ > SHIFT** | OFS shifts the track's sequence from −32 to +32 steps (within LEN; live recording writes where you hear it) and PIT transposes it ±24 semitones (not on kits). Both can be automated and are also on the SCL layer (KNOB 3 / 4) | OFS, PIT |
+| **SEQ > SHIFT** | OFFSET shifts the track's sequence from −32 to +32 steps (within LEN; live recording writes where you hear it) and PITCH transposes it ±24 semitones (not on kits). Both can be automated and are also on the SCL layer (KNOB 3 / 4) | OFFSET, PIT |
 | **REC + another button** | Hold REC and press FX, EDIT, ENV, LFO, SCL, ARP or GLO: clears that part's automation on the selected track (knob movements and per-step locks; stored values stay). FX: the punch-in lane too. GLO: levels and pan of the 6 tracks. The other way round (FX held then REC) arms recording, as always | — |
 | **SEQ + REC** | Hold SEQ and press REC: CLEAR ALL SEQUENCES? (OCT+ confirms): clears the steps and automation of the 6 tracks and the punch-in lane | — |
 | **LFO** | — (**MACRO** layer: below, where each macro goes) | M1, M2, M3, M4 |
 | **GLO** | Black keys 1–6 mute T1–T6 (latched); 7–10 DRUM group mutes: KICK, SNARE, HAT, PERC; F3–D4 solo T1–T6 while held; E4 unmutes everything; F4 tap tempo | T1–T4 level (with T5 or T6 selected: T3–T6) |
-| **SCL** | Any key picks the root | ROOT, SCL, OFS, PIT |
+| **SCL** | Any key picks the root | ROOT, SCALE, OFFSET, PITCH |
 | **EDIT** | F3 **INIT**: the track's sound goes back to factory (on DRUM, the DRUM-X kit too). G3 **RECALL**: back to the sound saved in the section (on DRUM, with its kit). Both ask for confirmation and leave the steps alone. On a DRUM track, black keys 1–8 mute each DRUM-X sound. The engine and sounds are picked in PRESETS | The engine's first 4 EDIT knobs |
 | **SEQ** | On the SEQ pages: SEQ TOOLS | LEN, DIV, SWING, GATE |
 | **REC** | F3 CLEAR the track, G3 CLICK | CLICK |
@@ -543,6 +554,8 @@ each layer.
 ### 1. Getting around
 - Each page button (EDIT, ENV, LFO, FX, SEQ, SCL, ARP, GLO, SAVE) opens its first page; pressing it again moves to the
   next one. The title at the top tells you where you are. **HOME** takes you back to the ecosystem.
+- **FX in sections**: TRACK (FX, DIST, AUTOPAN), SLICER (4 pages), DELAY (2), REVERB (2), CHORUS, MASTER. A tap goes to
+  the next page; **two quick taps** jump to the next section. The footer counts the page within its section (DLY 2/2).
 - **Jump to a page**: hold a page button (ENV, LFO, FX, SCL, EDIT, GLO, SAVE, ARP, SEQ) and turn **PRESETS**: its pages go by one by one, forwards or back, with the title on screen; let go and you stay there (no tap, no layer). A plain tap still steps to the next page.
 - **ALGORITHM** picks the track (T1–T6) from any page; track pages show the selected track.
 - The four knobs drive the four columns on screen. Turning fast sweeps the whole range, slowly fine-tunes.
@@ -556,7 +569,7 @@ each layer.
 - **Load meter** (top right, next to the battery): five small bars showing how much of the audio time the sound is
   using right now. The firmware's RAM is reserved entirely at boot and doesn't change, so this is what's worth
   watching: with all five lit (red, yellow) you're close to the limit and should cut voices, the CLOUD reverb or heavy
-  effects. If it's often full, GLO > SYSTEM > **TRKS 4 LOW** (the default; also in MENU > AUDIO > TRACKS) leaves T5 and T6 asleep for headroom.
+  effects. If it's often full, GLO > SYSTEM > **TRACKS 4 LOW** (the default; also in MENU > AUDIO > TRACKS) leaves T5 and T6 asleep for headroom.
 - **Power-on**: the signature draws itself in about a second, with beings swimming round it. To boot straight in: MENU > **ANIM OFF**.
 
 ### 3. Making a sound
@@ -591,7 +604,7 @@ locks it into a short window. CHIP sets the resolution: FULL is smooth, 4BIT and
   (how the pitch falls: DECAY, 808-style LONG, NOISE, SINE), DRV and WAVE.
 - Mutes: **GLO held** + black keys 7–10 (KICK, SNARE, HAT, PERC); **EDIT held** + black keys 1–8 (each sound).
 - SELECT on a DRUM track rolls a new kit around the factory one.
-- **EDIT > X-MOD** moves the kit by itself: **RATE** (OFF, 4 bars … 1/32, in time with the tempo), **DPTH** (how far
+- **EDIT > X-MOD** moves the kit by itself: **RATE** (OFF, 4 bars … 1/32, in time with the tempo), **DEPTH** (how far
   it swings MORPH), **SHPE** (SINE, TRI, SAW, RAMP, S&H) and **RAND** (each hit gets its own MORPH and up to a
   semitone of tune: no two hits alike, great on hats and percussion). INIT turns it off.
 
@@ -606,11 +619,11 @@ locks it into a short window. CHIP sets the resolution: FULL is smooth, 4BIT and
   octaves, stutter, short/long decay, ARP, RANDOM… (details in [Controls](#controls)). With REC armed and playing,
   they're recorded into the section's lane; G5 erases it.
 - **FX** pages: DIST and AUTOPAN per track; SLICER, SL BUS, SL BUS 2 and SL PITCH (the slicer bus, per section); the global DLY / DLY 2, REVERB / REVERB 2, CHORUS and MASTER.
-- **AUTOPAN** (FX, after DIST): the track's pan swings left and right around its PAN. **DPTH** how far (0: off),
+- **AUTOPAN** (FX, after DIST): the track's pan swings left and right around its PAN. **DEPTH** how far (0: off),
   **RATE** how fast, **SYNC** BEAT (RATE in divisions, 4 BARS to 1/32, in time with the bar while playing) or FREE
   (RATE in Hz), **WAVE** SIN, TRI, SAW, SQR or S&H. Square and S&H jump side to side without clicking. The screen
   draws the stereo field with the swing running down it and a dot where the sound is now.
-- **CHORUS > STER**: the chorus's stereo spread. 0 sounds as it always did; down to mono, up to about twice as wide.
+- **CHORUS > STEREO**: the chorus's stereo spread. 0 sounds as it always did; down to mono, up to about twice as wide.
 
 **REVERB > TYPE** (KNOB 1) picks the model. **SIZE is the decay** on every model: the top of the knob gives very long
 tails. The other knobs change meaning with the type:
@@ -620,19 +633,19 @@ tails. The other knobs change meaning with the type:
 | **ROOM** | Classic room | Decay | Darkens the highs | Modulates the tail (chorus) | Modulation speed | Stereo |
 | **SPRING** | Amp spring tank | Spring length and decay | Darkens | How much it wobbles | Wobble speed | Stereo |
 | **SHIMR** (shimmer) | A room that rises an octave on every pass: angelic tail | Decay | Darkens | **How much shimmer** (0 = ROOM) | — | — |
-| **RESO** | Four strings ringing **tuned to the scale** (I, III, V and VII of ROOT/SCALE). On RESO, PRE becomes **PITCH** (the chord 0–14 steps up the scale) and DAMP becomes **FOLW** (OFF / T1–T6: the chord follows the lowest note that track plays, gliding) | Decay (how long they ring) | FOLW | Past halfway: opens the chord an octave | — | — |
+| **RESO** | Four strings ringing **tuned to the scale** (I, III, V and VII of ROOT/SCALE). On RESO, PRE becomes **PITCH** (the chord 0–14 steps up the scale) and DAMP becomes **FOLLOW** (OFF / T1–T6: the chord follows the lowest note that track plays, gliding) | Decay (how long they ring) | FOLLOW | Past halfway: opens the chord an octave | — | — |
 | **CLOUD** | Granular wash: grains of the last ~0.7 s, scattered and bloomed into a reverb tail that feeds back into itself | Decay; **at max it freezes** the cloud | Darkens | How many grains change pitch (×2, ×½, fifth), plus a chorus on the tail | Grain density | Stereo spread of the grains and the tail |
 
 PRE (pre-delay) and FILT (input tone) work on all of them. Ideas: RESO on the drums so the kit sings in the song's
 key; CLOUD with SIZE at max to freeze a chord and keep playing over it; SHIMR on a slow pad.
 
-**MASTER**: CLIP saturates without raising the volume (the leveler compensates), PNCH fattens the drums (more body and density, the tails stay whole), DUCK
+**MASTER**: CLIP saturates without raising the volume (the leveler compensates), PUNCH fattens the drums (more body and density, the tails stay whole), DUCK
 makes the kick pull the rest down. The leveler is always on: no need to babysit the volume between patches.
 
 ### 7. Sequencing and modulation
 - **SEQ**: steps, piano roll, per-step locks, chance, ratchets. **REC** arms live recording; moving a knob while it
   plays records automation.
-- **SEQ > SHIFT**: OFS shifts the sequence in time, PIT transposes it. **SCL**: ROOT and SCALE apply to every track
+- **SEQ > SHIFT**: OFFSET shifts the sequence in time, PITCH transposes it. **SCL**: ROOT and SCALE apply to every track
   (and to the RESO reverb).
 - **LFO > MSEQ**: a 16-step modulation sequencer. KNOB 1 picks the step, KNOB 2 its level, LEN and SLEW its length and
   smoothness; send it to a destination from MOD (SRC STEP).

@@ -200,7 +200,7 @@ static const engine_t ENG_PHASE = {
         {"WAVE2", F_ENUM, 0, 8, 0, N_PD_WAVE2, 0},
         {"DCW", F_PCT, 0, 127, 60, 0, 0},
         {"ENV", F_PCT, 0, 127, 64, 0, 0},
-        {"DTN", F_INT, 0, 127, 0, 0, "ct"},
+        {"DETUNE", F_INT, 0, 127, 0, 0, "ct"},
         {"LINE", F_ENUM, 0, 1, 0, N_PD_LINE, 0},
         {"SUB", F_PCT, 0, 127, 0, 0, 0},
         {"FB", F_PCT, 0, 127, 0, 0, 0},

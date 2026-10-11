@@ -45,7 +45,7 @@ static const char *const N_DCY[] = {"CONST", "D0", "D1", "D2", "D3", "D4", "D5",
                                     "D11", "D12", "D13", "D14", "D15", "L1", "L2", "L3", "L4", "L5", "L6", "L7",
                                     "L8", "L9", "L10", "L11", "L12", "L13", "L14", "L15", 0};
 static const param_desc_t LOFI_WAVNUM = {"WAV#", F_INT, 0, 127, 64, N_WRAM, 0};   /* = edit[2] but the names */
-static const param_desc_t LOFI_DCY = {"DCY", F_INT, 0, 127, 0, N_DCY, 0};        /* = edit[3] but the names */
+static const param_desc_t LOFI_DCY = {"DECAY", F_INT, 0, 127, 0, N_DCY, 0};        /* = edit[3] but the names */
 
 /* (JIANT 0.4) WAVE = BYTE: bytebeat, an 8-bit formula of the time t played as the wave (after viznut's 2011
  * one-liners: the music is in the formula). DUTY picks one of 32 (ALGO, DUTY / 4), CRSH is the formulas' variable
@@ -122,9 +122,9 @@ static const char *const N_FCHIP[] = {"4BIT", "4B/2", "FULL", "1BIT"};
 static const param_desc_t LOFI_FCHIP = {"CHIP", F_ENUM, 0, 3, 2, N_FCHIP, 0};    /* = edit[0] (FLOAT; 0.5.5: no STEP) */
 /* (0.5.4) BYTE's and FLOAT's own second page: MOTN (E4, where CUT was: the time's speed, 64 as written), GRIT (BYTE,
  * E5: the samples held longer, a rate crusher), FBK (FLOAT, E5: the output back into the formula's time) */
-static const param_desc_t LOFI_MOTN = {"MOTN", F_INT, 0, 127, 64, 0, 0};          /* = edit[4] (BYTE, FLOAT) */
+static const param_desc_t LOFI_MOTN = {"MOTION", F_INT, 0, 127, 64, 0, 0};          /* = edit[4] (BYTE, FLOAT) */
 static const param_desc_t LOFI_GRIT = {"GRIT", F_PCT, 0, 127, 0, 0, 0};           /* = edit[5] (BYTE) */
-static const param_desc_t LOFI_FDCY = {"FBK", F_PCT, 0, 127, 0, 0, 0};            /* = edit[5] (FLOAT, 0.6.4: was DRV, a
+static const param_desc_t LOFI_FDCY = {"FEEDBK", F_PCT, 0, 127, 0, 0, 0};            /* = edit[5] (FLOAT, 0.6.4: was DRV, a
                                                          * fold that silenced it and doubled the FILTER page's DIST) */
 /* MOTN 0..127 -> the time's speed, Q8: x1/16 .. x1 (64) .. x15.5, exponential */
 static uint32_t lofi_motion(int32_t m)
@@ -548,7 +548,7 @@ static const engine_t ENG_LOFI = {
         {"CHIP", F_ENUM, 0, 4, 0, N_CHIP, 0},
         {"WAVE", F_ENUM, 0, 6, 0, N_RWAVE, 0},
         {"DUTY", F_INT, 0, 127, 64, 0, 0},              /* WRAM: the table, DUTY / 8 (lofi_desc) */
-        {"CRSH", F_PCT, 0, 127, 0, 0, 0},               /* STEP: the envelope (lofi_desc) */
+        {"CRUSH", F_PCT, 0, 127, 0, 0, 0},               /* STEP: the envelope (lofi_desc) */
         {"CUT", F_CUTOFF, 0, 127, 110, 0, 0},          /* (JIANT 0.4: the filter, was SWP) */
         {"VIB", F_PCT, 0, 127, 0, 0, 0},
         {"BEND", F_PCT, 0, 127, 0, 0, 0},               /* (JIANT 0.4: the deformations, were ARP and TONE) */
