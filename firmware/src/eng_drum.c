@@ -243,7 +243,7 @@ static void drum_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const 
 {
     const int16_t *p = t->p;
     drum_lane_t *L = drum_lane_of(t, v);
-    int32_t y[CTL], drv = p[P_E7], g = 0, mk = 0, pb0 = 4096, pb1 = 4096;
+    int32_t y[CTL], pb0 = 4096, pb1 = 4096;
     int32_t lv = clamp(p[P_LN0 + ((uint32_t)v->s[0] & (DV_NLANE - 1u))], 0, 127);
     uint32_t i;
     vmod_t ml;                                           /* (only its amplitude ramp is read: voice_amp) */
@@ -273,10 +273,6 @@ static void drum_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const 
     dx_run(&dx_kit[(uint32_t)v->s[0] & (DV_NLANE - 1u)], &L->x, p[P_E0] + dx_mot_v + L->rm,
            L->st * 16 + L->rt + (p[P_E1] - 64) * 3 + t->pfx_pit,
            p[P_E3] - 64, p[P_E2] - 64, p[P_E4] - 64, p[P_E6], p[P_E5], y, n);
-    if (drv > 0) {                                       /* DRV: x1..x4 into the soft clip, the level kept (Q12) */
-        g = 4096 + drv * 3 * 4096 / 127;
-        mk = (int32_t)((19661u << 15) / (uint32_t)softclip((19661 * g) >> 12));
-    }
     {                                                    /* PUNCH: the boost before the knee (driven into it, as
                                                           * Drum Buss), the tail's cut on the amplitude ramp */
         int32_t pu = pnch_eff;
@@ -300,13 +296,30 @@ static void drum_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const 
         if (L->age < 255u)
             L->age++;
     }
-    for (i = 0; i < n; i++) {                            /* x1.25 and the knee below, in 32 bits */
+    if (pb0 != 4096 || pb1 != 4096)                      /* (0.6.16: DRV and the knee on the kit's sum, drum_bus) */
+        for (i = 0; i < n; i++)
+            y[i] = (y[i] * (pb0 + (((pb1 - pb0) * (int32_t)i) >> CTL_LOG2))) >> 12;
+    for (i = 0; i < n; i++) {                            /* x1.25 */
         int32_t s = y[i];
+        out[i] += voice_amp(s + (s >> 2), m, i) << 1;
+    }
+}
+
+/* (JIANT 0.6.16) the kit's sum, once a block (voice.c track_render): DRV x1..x4 into the soft clip, its level kept,
+ * and the knee (were each hit's: eight lanes, two curves a sample each; now the bus's, a glue) */
+static __attribute__((noinline)) void drum_bus(const track_t *t, int32_t *out, uint32_t n)
+{
+    int32_t drv = t->p[P_E7], g = 0, mk = 0;
+    uint32_t i;
+    if (drv > 0) {
+        g = 4096 + drv * 3 * 4096 / 127;
+        mk = (int32_t)((19661u << 15) / (uint32_t)softclip((19661 * g) >> 12));
+    }
+    for (i = 0; i < n; i++) {
+        int32_t s = out[i] >> 1;
         if (g)
             s = (softclip((s * g) >> 12) * mk) >> 15;
-        if (pb0 != 4096 || pb1 != 4096)
-            s = (s * (pb0 + (((pb1 - pb0) * (int32_t)i) >> CTL_LOG2))) >> 12;
-        out[i] += voice_amp(soft_knee(s + (s >> 2), 24000), m, i) << 1;
+        out[i] = soft_knee(s, 24000) << 1;
     }
 }
 

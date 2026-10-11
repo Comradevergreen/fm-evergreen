@@ -702,8 +702,9 @@ static __attribute__((noinline)) void rev_cloud(const int32_t *rev_in, int32_t *
         }
         if (--fx.cl_next <= 0) {                         /* a grain is born, in the first one free */
             fx.cl_next = gap / 2 + (int32_t)(cl_rand() % (uint32_t)gap);
-            for (k = 0; k < CL_N && cl_g[k].len; k++) {}
-            if (k < CL_N) {
+            uint32_t cap = load_tight ? CL_N / 2u : CL_N;   /* (0.6.16: the load budget: half the grains) */
+            for (k = 0; k < cap && cl_g[k].len; k++) {}
+            if (k < cap) {
                 uint32_t pk = cl_rand() % 100u < (uint32_t)song.g[G_RMOD] * 3u / 4u ? 1u + cl_rand() % 3u : 0u;
                 int32_t pan = (int32_t)(cl_rand() % 257u) - 128;   /* -128 .. 128, times WIDE */
                 pan = pan * wd >> 7;

@@ -55,8 +55,17 @@ static uint32_t shed_count;
 
 /* end of a half: all = its ticks, TIMER5 nested in it included -> the render alone in us. The deadline sees
  * both; shed after 2 overloaded halves in a row (out of line: keeps the ISR's render loops as they were) */
+#define TIGHT_ON ((HALF_FRAMES * 1000000u / FS) * 70u / 100u * FM1_TICKS_PER_US)    /* (0.6.16) the load budget */
+#define TIGHT_OFF ((HALF_FRAMES * 1000000u / FS) * 60u / 100u * FM1_TICKS_PER_US)
+static uint8_t tight_calm;                             /* halves in a row under 60 % */
 static __attribute__((noinline)) uint32_t shed_check(uint32_t all)
 {
+    if (all > TIGHT_ON) {                              /* (voice.c load_tight: no voice added while set) */
+        load_tight = 1;
+        tight_calm = 0;
+    } else if (load_tight && all < TIGHT_OFF && ++tight_calm >= 16u) {
+        load_tight = 0;
+    }
     shed_over = (uint8_t)(shed_over << 1 | (all > SHED_TICKS));
     if ((shed_over & 3u) == 3u)
         shed_req = 1;

@@ -175,6 +175,11 @@ static uint32_t trk_vmode(const track_t *t)
 }
 
 /* ------------------------------------------------- the shared voice budget --- */
+/* (JIANT 0.6.16) the load budget: audio.c sets it when a half took more than 70 % of its time (the render), clears
+ * it after a while under 60 %. While it is set the sound may not grow: a new note takes a voice (the oldest released
+ * first) instead of adding one (voice_room), CLOUD spawns half its grains (fx.c). Ahead of the overload guard (80 %:
+ * a voice faded) and of a late half (a click): the load stops climbing before it gets there */
+static volatile uint8_t load_tight;
 static uint32_t voices_busy(void)                       /* sounding voices of all parts (not the fading ones) */
 {
     uint32_t p, i, n = 0;
@@ -241,8 +246,10 @@ static int voice_room(track_t *t, int soft)
 {
     track_t *vp = 0;
     uint32_t k;
-    if (voices_busy() < NVOICE)
+    if (!load_tight && voices_busy() < NVOICE)
         return 1;
+    if (load_tight && !voices_busy())
+        return 1;                                       /* (nothing to take: the first voice) */
     k = voice_victim(t, soft, &vp);
     if (k == NVOICE)
         return !soft;                                   /* hard: over the budget (cannot happen: each of the
@@ -280,7 +287,7 @@ static voice_t *voice_alloc(track_t *t, uint32_t note)
             return voice_reuse(t, &t->v[i]);
         nfree += !t->v[i].active;
     }
-    if (nfree && voices_busy() >= NVOICE) {
+    if (nfree && (voices_busy() >= NVOICE || (load_tight && voices_busy()))) {   /* (0.6.16: the load budget too) */
         track_t *vp = 0;
         uint32_t k = voice_victim(t, 0, &vp);
         if (k < np && vp == t)
@@ -445,10 +452,14 @@ static void mono_remove(track_t *t, uint32_t note)
 }
 
 static int pfx_note(track_t *t, uint32_t note, uint32_t vel);   /* pfx.c (in fx.c) */
+static uint8_t trk_hush;                                /* (0.6.15) bit k: track k muted by GLO's solo / the FX layer's
+                                                         * black key (perform.c): no new notes, as MUTE (a MIDI mute: a
+                                                         * silenced track's voices end, it costs nothing) */
 static void trk_note_on(track_t *t, uint32_t note, uint32_t vel)
 {
     uint32_t any = 0, i, mode = trk_vmode(t);
-    if (t->p[P_MUTE] || (t->engine == ENGI_DRUM && drum_muted(note)))   /* (DRUM: its group mutes) */
+    if (t->p[P_MUTE] || ((trk_hush >> ((uint32_t)(t - trk) % NTRK)) & 1u) ||
+        (t->engine == ENGI_DRUM && drum_muted(note)))   /* (DRUM: its group mutes) */
         return;
     if (pfx_note(t, note, vel))                         /* the punch-in effects (pfx.c): a repeat holds the track */
         return;
@@ -736,6 +747,8 @@ static uint32_t track_render(track_t *t, int32_t *out, uint32_t n)
         e->render(t, v, out, n, &m);
         nr++;
     }
+    if (nr && e == &ENG_DRUM)                           /* (0.6.16) DRUM-X: DRV and the knee on the kit's sum */
+        drum_bus(t, out, n);
     if (nr && (t->p[P_FTYPE] || t->p[P_FCUT] < 127 || t->p[P_FRES] || ((tf_on >> ((uint32_t)(t - trk) % NTRK)) & 1u)))
         /* (JIANT 0.5) the FILTER (track_post); 0.6.8: and a block more to leave the chain (track_filter's fade) */
         track_post(t, e, out, n);

@@ -37,7 +37,7 @@
 #include "felucca_fm6.h"         /* tools/gen_fm6_patches.py: FM6_INIT, FM6_FACTORY[] */
 
 #define ENGI_FM6 12u             /* engines.c ENGINES[] (append-only) */
-#define FM6_POLY 6               /* engine_t.poly */
+#define FM6_POLY 4               /* engine_t.poly (0.6.16: 4, was 6: six operators a voice, the heaviest engine) */
 #define FM6_OWN FM6_NFACTORY     /* SLOT: the track's own patch (F1..F8 before it) */
 #define FM6_NBANK 32u            /* SLOT: B1..B32 after OWN, the voice bank (fm6_vbank.c) */
 #define FM6_PACKED 128u

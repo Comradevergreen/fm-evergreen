@@ -204,6 +204,7 @@ static __attribute__((noinline)) int perf_begin(uint32_t n)
         pf.ph += n;
         pf.sync = 0;
         perf_act = 0;
+        trk_hush = 0;
         return 0;
     }
     pf.P = beat_samples() >> 2;
@@ -258,11 +259,22 @@ static __attribute__((noinline)) int perf_begin(uint32_t n)
     for (k = 0; k < NTRK; k++)
         if (((held >> (PF_M1 + k)) & 1u) || pf.mg[k] != 32768)
             pf.mute |= (uint8_t)(1u << k);
+    trk_hush = (uint8_t)((pf.act >> PF_M1) & ((1u << NTRK) - 1u));   /* (0.6.15) muted: no new notes (voice.c) */
     pf.busy = 1;
     return 1;
 }
 
 /* a track muted by its black key: its signal ramps to 0 and back (fx.c mix_part, after the SLICER) */
+static __attribute__((noinline)) void perf_hush_end(uint32_t k)   /* (out of perf_mute's loop: target_budget.py) */
+{
+    uint32_t i;
+    for (i = 0; i < NVOICE; i++) {
+        voice_t *v = &trk[k].v[i];
+        v->active = v->gate = 0;
+        v->stage = 0;
+        v->env = v->env_out = 0;
+    }
+}
 static __attribute__((noinline)) void perf_mute(uint32_t k, int32_t *b, uint32_t n)
 {
     uint32_t i;
@@ -272,6 +284,9 @@ static __attribute__((noinline)) void perf_mute(uint32_t k, int32_t *b, uint32_t
         b[i] = mulq16(b[i], (uint32_t)g << 1);
     }
     pf.mg[k] = g;
+    if (!g && !t)                                       /* (0.6.15) silent: its voices end, the track costs nothing
+                                                         * while muted (a MIDI mute: no new notes, trk_hush) */
+        perf_hush_end(k);
 }
 
 /* before the buses: THROW (KNOB 3) adds the dry mix (and the SLICER's bus, bl / br) to the delay and reverb sends */
