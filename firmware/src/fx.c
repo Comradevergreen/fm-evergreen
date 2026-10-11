@@ -27,7 +27,7 @@ static struct {
     uint16_t comb_i[4], ap_i[2];
     int32_t comb_lp[4];
     uint8_t rtype;                       /* the reverb model running (G_RTYPE: 0 ROOM, 1 SPRING, 0.5: 2 SHIMMER 3 RESO 4 CLOUD) */
-    uint32_t sh_w, sh_ph;                /* (JIANT 0.5) SHIMMER: its line's write count, the grains' phase */
+    uint32_t sh_w, sh_ph;                /* (JIANT 0.5) SHIMMER: its line's write count, the grains' phase (Q16, 0.6.12) */
     int32_t rs_lp[4];                    /* .. RESO: the combs' loop low-passes */
     uint32_t rs_per[4];                  /* .. (0.6.5) their periods now (Q8), gliding to the chord's */
     uint8_t rs_root;                     /* .. the note FOLW last heard + 1 (0: none yet) */
@@ -549,9 +549,25 @@ static uint32_t scale_mask(const track_t *t);           /* seq.c */
 #define SH_LEN 2048u
 static int16_t shim_buf[SH_LEN] __attribute__((section(".pool")));
 static int32_t shim_fb[CTL];
+/* (0.6.12) AIR (G_RPRE on SHIMMER and CLOUD, -24..24 st): the pitch moved, the tone with it. A semitone count as a
+ * speed, Q16: 2^(st / 12) (-24 .. 36) */
+static uint32_t semi_q16(int32_t st)
+{
+    static const uint16_t R[12] = {32768, 34716, 36781, 38968, 41285, 43740, 46341, 49097, 52016, 55109, 58386, 61858};
+    int32_t o = (st + 48) / 12 - 4, k = (st + 48) % 12;   /* (an octave down, Q15: then shifted) */
+    uint32_t r = (uint32_t)R[k] << 1;                   /* 2^(k / 12), Q16 */
+    return o >= 0 ? r << o : r >> -o;
+}
+static int32_t rev_air(void)
+{
+    return song.g[G_RTYPE] == 2 || song.g[G_RTYPE] == 4 ? clamp(song.g[G_RPRE], -24, 24) : 0;
+}
+static int32_t sh_tlp;                                  /* (0.6.12) SHIMMER's tone: AIR's low-pass / its shelf */
 static __attribute__((noinline)) void rev_shimmer(const int32_t *rev_in, int32_t *out, uint32_t n)
 {
     int32_t in[CTL], t[CTL], amt = song.g[G_RMOD] * 190;   /* Q15: up to ~0.74 */
+    int32_t air = rev_air(), st = clamp(12 + air, -12, 24), tk = air < 0 ? 32767 + air * 1150 : 9000;
+    int32_t step = (int32_t)semi_q16(st) - 65536;       /* (the delay changes by 1 - speed a sample, Q16) */
     uint32_t i, j;
     for (i = 0; i < n; i++) {
         in[i] = rev_in[i] + mulq15(shim_fb[i], amt);
@@ -559,15 +575,21 @@ static __attribute__((noinline)) void rev_shimmer(const int32_t *rev_in, int32_t
     }
     rev_room(in, t, n);
     for (i = 0; i < n; i++) {
-        int32_t x = 0;
-        out[i] += t[i];
-        shim_buf[fx.sh_w & (SH_LEN - 1u)] = (int16_t)clamp(t[i] >> 1, -32768, 32767);
-        for (j = 0; j < 2u; j++) {                      /* the delay falls a sample a sample: read at twice the speed */
-            uint32_t ph = (fx.sh_ph + j * (SH_LEN / 2u)) & (SH_LEN - 1u), d = SH_LEN - 1u - ph;
-            int32_t w = (int32_t)(ph < SH_LEN / 2u ? ph : SH_LEN - 1u - ph);   /* the triangles: their sum flat */
-            x += (shim_buf[(fx.sh_w - d) & (SH_LEN - 1u)] * w) >> 9;
+        int32_t x = 0, y = t[i];
+        if (air) {                                      /* AIR: down a low-pass (dark), up a high shelf (air) */
+            sh_tlp += mulq15(y - sh_tlp, tk);
+            y = air < 0 ? sh_tlp : y + (((y - sh_tlp) >> 3) * air) / 3;
         }
-        fx.sh_ph++;
+        out[i] += y;
+        shim_buf[fx.sh_w & (SH_LEN - 1u)] = (int16_t)clamp(y >> 1, -32768, 32767);
+        for (j = 0; j < 2u; j++) {                      /* two grains, the delay sliding: read at octave + AIR's speed */
+            uint32_t q = fx.sh_ph + j * ((SH_LEN / 2u) << 16), ph = (q >> 16) & (SH_LEN - 1u), d = SH_LEN - 1u - ph;
+            int32_t w = (int32_t)(ph < SH_LEN / 2u ? ph : SH_LEN - 1u - ph);   /* the triangles: their sum flat */
+            int32_t f = (int32_t)((q >> 8) & 255u), x0 = shim_buf[(fx.sh_w - d) & (SH_LEN - 1u)];
+            int32_t x1 = shim_buf[(fx.sh_w - d + 1u) & (SH_LEN - 1u)];
+            x += ((x0 + (((x1 - x0) * f) >> 8)) * w) >> 9;
+        }
+        fx.sh_ph += (uint32_t)step;
         fx.sh_w++;
         shim_fb[i] = x;                                 /* (into the next block's input) */
     }
@@ -656,7 +678,9 @@ static __attribute__((noinline)) void rev_cloud(const int32_t *rev_in, int32_t *
 {
     static const uint32_t PITCH[4] = {65536u, 131072u, 32768u, 98184u};   /* x1, an octave up, down, a fifth up (Q16) */
     uint32_t i, k, freeze = song.g[G_RSIZE] >= 127;
-    int32_t gap = 1700 - song.g[G_RRATE] * 11, dk = 32767 - song.g[G_RDAMP] * 220, wd = song.g[G_RWIDE];
+    int32_t gap = 1700 - song.g[G_RRATE] * 11, dk = 32767 - song.g[G_RDAMP] * 220, wd = song.g[G_RWIDE], air = rev_air();
+    uint32_t ar = semi_q16(air);                         /* (0.6.12) AIR: the grains up / down, the tone with them */
+    if (air < 0) dk = clamp(dk + air * 1100, 1500, 32767);
     int32_t fb = song.g[G_RSIZE] * 24, fg = song.g[G_RSIZE] * 110, g[CTL], t[CTL];   /* (Q15: the tail, ~0.09, and the
                                                          * grains themselves, ~0.66, back into the line) */
     for (i = 0; i < n; i++) {
@@ -676,9 +700,12 @@ static __attribute__((noinline)) void rev_cloud(const int32_t *rev_in, int32_t *
                 uint32_t pk = cl_rand() % 100u < (uint32_t)song.g[G_RMOD] * 3u / 4u ? 1u + cl_rand() % 3u : 0u;
                 int32_t pan = (int32_t)(cl_rand() % 257u) - 128;   /* -128 .. 128, times WIDE */
                 pan = pan * wd >> 7;
+                uint32_t inc = (uint32_t)(((uint64_t)(PITCH[pk] >> 1) * ar) >> 16), back;
                 cl_g[k].len = (uint16_t)(2000u + cl_rand() % 4200u);
-                cl_g[k].pos = ((fx.cl_w >> 1) - 200u - cl_rand() % (CL_LEN - 6000u)) << 16;
-                cl_g[k].inc = (PITCH[pk] >> 1) + (cl_rand() % 129u) - 64u;   /* (the line at half rate; each grain
+                back = inc > 32768u ? (uint32_t)(((uint64_t)cl_g[k].len * (inc - 32768u)) >> 16) : 0u;   /* (faster than
+                                                         * the line is written: started that much further back) */
+                cl_g[k].pos = ((fx.cl_w >> 1) - 200u - back - cl_rand() % (CL_LEN - 6000u - back)) << 16;
+                cl_g[k].inc = inc + (cl_rand() % 129u) - 64u;   /* (the line at half rate; each grain
                                                          * a few cents off: a chorused shimmer, not one pitch) */
                 cl_g[k].age = 0;
                 cl_g[k].pl = (int16_t)(128 - pan);       /* (0 .. 256: 128 the centre) */
@@ -701,6 +728,8 @@ static __attribute__((noinline)) void rev_cloud(const int32_t *rev_in, int32_t *
         m = (l + r) >> 1;
         fx.cl_lp = m + mulq15(fx.cl_lp - m, 32767 - dk);
         g[i] = fx.cl_lp * 2;                             /* (into the network: its input is 1/8 at -4 dB) */
+        if (air > 0)                                     /* (AIR up: the grains' highs lifted) */
+            g[i] += ((m - fx.cl_lp) * air) / 12;
         t[i] = 0;
         if (wd) {                                        /* the grains' own place, left and right (a side) */
             int32_t sd = ((l - r) * wd) >> 9;
@@ -747,6 +776,7 @@ static void rev_clear(void)
         shim_buf[i] = 0;
     for (i = 0; i < CTL; i++)
         shim_fb[i] = 0;
+    sh_tlp = 0;
     for (i = 0; i < CL_N; i++)
         cl_g[i].len = 0;
 }
@@ -798,7 +828,8 @@ static void fx_buses(const int32_t *cho_in, const int32_t *dly_in, const int32_t
         }
         rev_in = rpre_out;
     }
-    if (song.g[G_RPRE] && song.g[G_RTYPE] != 3) {       /* (JIANT) the reverb's pre-delay (in place; RESO: PITCH) */
+    if (song.g[G_RPRE] > 0 && song.g[G_RTYPE] <= 1) {   /* (JIANT) the reverb's pre-delay (in place; RESO: PITCH;
+                                                         * 0.6.12: SHIMMER, CLOUD: AIR) */
         uint32_t pd = (uint32_t)song.g[G_RPRE] * 20u;   /* (ms -> half-rate samples: 2000 at 100) */
         for (i = 0; i < n; i++) {                       /* half rate: two samples averaged in, read back between */
             uint32_t h = fx.rpre_w >> 1;

@@ -1232,10 +1232,15 @@ static void ui_input_frame(void)
         if (rt == 3u) {
             if (song.g[G_RDAMP] > 6) song.g[G_RDAMP] = 0;
             if (song.g[G_RPRE] > 14) song.g[G_RPRE] = 14;
+            if (song.g[G_RPRE] < 0) song.g[G_RPRE] = 0;
         } else if (rt0 == 3u) {
             song.g[G_RDAMP] = GP[G_RDAMP].def;
             song.g[G_RPRE] = GP[G_RPRE].def;
-        }
+        }   /* (0.6.12) PRE (ROOM, SPRING) and AIR (SHIMMER, CLOUD) share the slot: from one to the other it starts at 0 */
+        if (rt0 != 0xFFu && rt0 != rt && (rt == 2u || rt == 4u) != (rt0 == 2u || rt0 == 4u) && rt != 3u && rt0 != 3u)
+            song.g[G_RPRE] = 0;
+        if (rt != 2u && rt != 4u && song.g[G_RPRE] < 0) song.g[G_RPRE] = 0;
+        if ((rt == 2u || rt == 4u) && song.g[G_RPRE] > 24) song.g[G_RPRE] = 24;
         rt0 = (uint8_t)rt;
     }
 #if !FELUCCA_FM4

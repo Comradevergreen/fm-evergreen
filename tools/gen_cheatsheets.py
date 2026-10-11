@@ -7,7 +7,7 @@ import html, os
 
 R = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(R, 'docs', 'cheatsheet')
-VERSION = 'v0.6.12'
+VERSION = 'v0.6.13'
 
 HEAT = ['#22d3ee', '#3b82f6', '#8b5cf6', '#d946ef', '#ef4444', '#ff7a00', '#facc15', '#f4f1ea']
 
@@ -227,9 +227,9 @@ def controls():
         ('FX', HEAT[5], [('FX', 'DST CHO DLY REV'), ('DIST', 'DST TYPE TONE -'), ('AUTOPAN', 'DPTH RATE SYNC WAVE'), ('SLICER', 'SLCR PAT RATE DEPTH'),
                          ('SL BUS', 'T1 T2 T3 T4'), ('SL BUS 2', 'T5 T6 FX -'), ('SL PITCH', 'STEP PIT LEN QNT'),
                          ('DLY', 'TIME FDBK TONE MIX'), ('DLY 2', 'WIDE PITCH SPRY -'),
-                         ('REVERB', 'TYPE SIZE DAMP PRE'), ('REVERB 2', 'MOD RATE FILT WIDE'),
+                         ('REVERB', 'TYPE SIZE DAMP PRE/AIR'), ('REVERB 2', 'MOD RATE FILT WIDE'),
                          ('CHORUS', 'RATE DEPTH STER -'), ('MASTER', 'CLIP PNCH DUCK REL')]),
-        ('EDIT', HEAT[3], [('EDIT 1', 'E1 E2 E3 E4'), ('EDIT 2', 'E5 E6 E7 E8'), ('OPERATOR', 'OP RATIO FINE LEVEL'),
+        ('EDIT', HEAT[3], [('EDIT 1', 'E1 E2 E3 E4'), ('EDIT 2', 'E5 E6 E7 E8'), ('RETRIG', 'RTRG - - -'), ('OPERATOR', 'OP RATIO FINE LEVEL'),
                            ('OP ENV', 'OP STAGE RATE LEVEL'), ('OPERATOR 2', 'OP MODE DTUN VEL'), ('FILTER', 'TYPE CUT RES DRV'),
                            ('VOICE', 'VCE GLD GLMOD PRIO'), ('LANES', 'KICK SNARE CLAP HATCL'),
                            ('LANES 2', 'HATOP TOM RIM BELL'), ('SOUND', 'LANE SIDE PTCH PMOD'),
@@ -366,10 +366,10 @@ def sound():
     rv = [
         ('ROOM', 'Classic room', 'decay', 'darkens', 'chorus on the tail', 'its speed', 'stereo'),
         ('SPRING', 'Amp spring tank', 'length · decay', 'darkens', 'wobble', 'wobble speed', 'stereo'),
-        ('SHIMR', 'Up an octave on every pass', 'decay', 'darkens', 'how much shimmer', '—', '—'),
+        ('SHIMR', 'Up an octave on every pass; <b>PRE → AIR</b> (±24 st: down darker and lower, up airier and higher)', 'decay', 'darkens', 'how much shimmer', '—', '—'),
         ('RESO', '4 strings tuned to the scale; <b>PRE → PITCH</b> (0–14 steps up), <b>DAMP → FOLW</b> (OFF / T1–T6: the '
                  'chord follows that track\'s notes)', 'how long they ring', 'FOLW', 'past half: the chord opens', '—', '—'),
-        ('CLOUD', 'Granular wash; SIZE max <b>freezes</b> it', 'decay · freeze', 'darkens', 'grains pitched + chorus',
+        ('CLOUD', 'Granular wash; SIZE max <b>freezes</b> it; <b>PRE → AIR</b> (±24 st: the cloud down / up, darker / airier)', 'decay · freeze', 'darkens', 'grains pitched + chorus',
          'grain density', 'grain spread'),
     ]
     t = ('<table><tr><th>TYPE</th><th>WHAT IT IS</th><th>SIZE</th><th>DAMP</th><th>MOD</th><th>RATE</th><th>WIDE</th></tr>' +

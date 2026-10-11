@@ -1494,7 +1494,7 @@ function makeMockDevice(opt = {}) {
     E("TYPE", ["ROOM", "SPRING", "SHIMR", "RESO", "CLOUD"], 0),               /* G_RTYPE (id 24, was G_DRCH): the reverb's model */
     D("PNCH", F.PCT, 0, 100, 0), D("DUCK", F.PCT, 0, 100, 0),   /* G_PUNCH, G_DUCK (JIANT; were G_DRLVL, G_DRREV) */
     D("STER", F.BIPCT, -64, 63, 0), D("WIDE", F.PCT, 0, 127, 0),   /* (JIANT, FUNB) G_DHPF (0.6.9: G_CSTER, the CHORUS's stereo), G_WIDTH: width */
-    D("MOD", F.PCT, 0, 127, 0), D("RATE", F.LFOHZ, 0, 127, 30), D("PRE", F.INT, 0, 100, 0),   /* the reverb's modulation, pre-delay */
+    D("MOD", F.PCT, 0, 127, 0), D("RATE", F.LFOHZ, 0, 127, 30), D("PRE", F.INT, -24, 100, 0),   /* the reverb's modulation, pre-delay (0.6.12: SHIMMER / CLOUD AIR below 0) */
     D("FILT", F.BIPCT, -64, 63, 0), D("WIDE", F.PCT, 0, 127, 0),   /* (JIANT 0.3) G_RFILT, G_RWIDE: the reverb's tone, width */
     D("PITCH", F.SEMI, -12, 12, 0), D("SPRY", F.PCT, 0, 127, 0),   /* .. G_DPIT, G_DSPRY: the GRAIN delay */
     D("STRN", F.INT, -14, 14, 0),                   /* (JIANT 0.4) G_STRN: every sequence this many steps along the scale */

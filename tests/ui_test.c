@@ -5696,6 +5696,7 @@ static int test_song_layer(void)
     int bad = 0, ok;
     uint32_t bar, i;
     ui_power_on();
+    if (song_cur) (void)song_select(0);                 /* (song 1: the page sweeps above may have opened another) */
     sl_steps(60); project_save(0);                      /* A: notes 60.. */
     sl_steps(70); project_save(1);                      /* B: notes 70.. */
     sl_steps(80);                                       /* the music now: 80.. */
@@ -5788,6 +5789,34 @@ static int test_song_layer(void)
     btn_down(B_SAVE); frame(); turn(EN_K1, -1); frame(); btn_up(B_SAVE); frame();
     ok &= song_cur == 0;
     bad += check("  KNOB 1: the song, in when SAVE lets go (stopped)", ok);
+    return bad;
+}
+
+/* (0.6.12) LOFI BYTE / FLOAT's RTRG: a note on a sounding voice restarts the formula's time (off: it runs on) */
+static int test_lofi_rtrg(void)
+{
+    int bad = 0;
+    uint32_t e;
+    track_t *t = &trk[0];
+    voice_t *v;
+    ui_power_on();
+    for (e = 0; e < NENGINES && ENGINES[e] != &ENG_LOFI; e++) {}
+    set_engine_of(t, e); t->engine = t->eng_req;
+    t->p[P_E1] = RW_FLOAT; t->p[P_VOICE] = V_MONO; t->p[P_SUS] = 127;   /* (held: the voice sounding) */
+    trk_note_on(t, 60, 100);
+    v = &t->v[0];
+    v->ph[0] = v->ph[1] = 12345u;                       /* (the formula running: sounding, its time on) */
+    trk_note_on(t, 64, 100);
+    bad += check("RETRIG: OFF, a note again: FLOAT's time runs on", v->ph[0] == 12345u && v->ph[1] == 12345u);
+    t->p[P_LRTRG] = 1;
+    v->ph[0] = v->ph[1] = 12345u;
+    trk_note_on(t, 62, 100);                            /* (MONO: another key retriggers; the same one held does not) */
+    bad += check("  ON: the formula from its start", v->ph[0] == 0u && v->ph[1] == 0u);
+    go_title("RETRIG");
+    bad += check("  the RETRIG page: LOFI FLOAT's, RTRG on KNOB 1", str_eq(cur_page()->title, "RETRIG") &&
+                 str_eq(track_desc(t, P_LRTRG)->label, "RTRG"));
+    t->p[P_E1] = 0;
+    bad += check("  not on LOFI's other waves", !page_visible(ui.page));
     return bad;
 }
 
@@ -7325,6 +7354,7 @@ int main(void)
     bad += test_rec_layer();
     bad += test_song_layer();
     bad += test_project_page();
+    bad += test_lofi_rtrg();
     bad += test_dx_sound();
     bad += test_clear_all();
     bad += test_lane_mutes();
