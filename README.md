@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.6.28).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.6.29).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 ## Cheat sheets
 
@@ -29,6 +29,15 @@ Two printable sheets with everything on the device. Click an image to open it fu
 ## Changelog
 
 Every update is listed here, newest first.
+
+### v0.6.29
+- **TRACKS has a middle option: 6 LITE.** GLO > SYSTEM > TRACKS (and MENU > AUDIO > TRACKS) now reads **4 FULL** (the
+  default), **6 LITE** or **6 FULL** (the old 6 HIGH). With 6 LITE all six tracks play and the heaviest parts are
+  swapped for their nearest light kin while they sound: the **SHIMMER** and **CLOUD** reverbs play as **ROOM**,
+  **RESO** as **SPRING**, the **GRAIN** delay (DLY 2 PITCH / SPRAY) as a plain delay, and **FM6** plays two voices
+  instead of four. Nothing in the project changes: back on 6 FULL (or on another unit) it sounds as saved. The cards
+  that are swapped say **LITE** under their value.
+- **Fixed**: when a message covered the header while the BPM was rolling, the old BPM could stay half-rolled.
 
 ### v0.6.28
 - **"After clearing a sequence it still triggers notes on all tracks" — fixed.** The punch-in FX lane (effects
@@ -609,7 +618,9 @@ each layer.
 - **Load meter** (top right, next to the battery): five small bars showing how much of the audio time the sound is
   using right now. The firmware's RAM is reserved entirely at boot and doesn't change, so this is what's worth
   watching: with all five lit (red, yellow) you're close to the limit and should cut voices, the CLOUD reverb or heavy
-  effects. If it's often full, GLO > SYSTEM > **TRACKS 4 LOW** (the default; also in MENU > AUDIO > TRACKS) leaves T5 and T6 asleep for headroom.
+  effects. If it's often full, GLO > SYSTEM > **TRACKS 4 FULL** (the default; also in MENU > AUDIO > TRACKS) leaves T5 and T6 asleep for headroom,
+  and **6 LITE** plays all six with the heavy reverbs, the GRAIN delay and FM6 lightened (SHIMMER and CLOUD as ROOM,
+  RESO as SPRING, the GRAIN delay plain, FM6 two voices); **6 FULL** plays everything as it is.
 - **Power-on**: the signature draws itself in about a second, with beings swimming round it. To boot straight in: MENU > **ANIM OFF**.
 
 ### 3. Making a sound

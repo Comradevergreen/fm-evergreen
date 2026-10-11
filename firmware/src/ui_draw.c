@@ -296,6 +296,8 @@ static void draw_head(void)
     } else if (ui.force) {
         ui.roll[ROLL_BPM].from[0] = 0;
     }
+    if (!centre)
+        ui.roll[ROLL_BPM].from[0] = 0;                  /* (0.6.29) a message over it: no roll left to finish later */
     fmt_int(b, song.g[G_BPM]);
     head_geo(&g, b);
     if (!ui.force && sig == ui.head_sig) {
@@ -1131,6 +1133,10 @@ static void draw_columns(void)
             unit = "%";
         } else {
             param_format(d, *vp, val, &unit);
+            if (fx_lite && cur_page()->scope == SC_GLOBAL && *vp &&   /* (0.6.29) 6 LITE swaps it while it sounds */
+                ((cur_page()->id[c] == G_RTYPE && REV_LITE[*vp <= 4 ? *vp : 0] != *vp) ||
+                 cur_page()->id[c] == G_DPIT || cur_page()->id[c] == G_DSPRY))
+                unit = "LITE";
         }
         card_mot_of(vp);                                /* (a global: never) */
         draw_column(c, d->label, val, unit, VAL(c), d->fmt == F_ENUM && d->max < 2 ? -1 : RATIO(d, enum_rank(d, *vp)),

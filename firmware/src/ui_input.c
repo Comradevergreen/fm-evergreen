@@ -839,9 +839,8 @@ static void edit_param(uint32_t slot, int32_t steps)
     v = param_turn(d, *vp, accel(EN_K1 + slot, steps, d->fmt == F_ENUM ? 0 : d->max - d->min));
     *vp = (int16_t)v;
     if (vp == &trks_ui) {                               /* (0.6.18) GLO > SYSTEM's TRKS: the MENU's setting, saved */
-        ui_rec_prefs = (uint8_t)(v ? ui_rec_prefs | PREF_SIX >> 8 : ui_rec_prefs & ~(PREF_SIX >> 8));
-        rp_apply();
-        ui_message(v ? "6 TRACKS: HIGH CPU" : "4 TRACKS: T5-T6 ASLEEP");
+        trks_put(v);
+        ui_message(v == 2 ? "6 TRACKS: HIGH CPU" : v ? "6 TRACKS: LITE FX" : "4 TRACKS: T5-T6 ASLEEP");
         settings_save();
         return;
     }

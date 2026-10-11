@@ -1860,7 +1860,7 @@ static int test_roll(void)
  * roll, nothing hot) the cards are pixel-identical to a forced redraw (what a page change would show). */
 static int test_soak_cards(void)
 {
-    uint32_t seed = 63u, f, quiet = 0, old = 0, stale = 0, cmp = 0, c;
+    uint32_t seed = 63u, f, quiet = 0, was_hot, old = 0, stale = 0, cmp = 0, c;
     static uint16_t shot[240 * CARD_H];
 #define SOAK_RND(n) ((seed = seed * 1103515245u + 12345u) >> 8) % (n)
     ui_power_on();
@@ -1890,13 +1890,14 @@ static int test_soak_cards(void)
         host_ticks += 16000u + SOAK_RND(3u) * 4000u;
         ui_input();
         if (song.playing || transport_req) events_block(FS * 16u / 1000u);
+        was_hot = ui.hot_t;                             /* (its last frame still drawn hot: the next one redraws) */
         ui_draw();
         quiet++;
         if (ui.menu || ui.layer || ui.confirm || name_on() || ui.uboot)
             continue;                                   /* (the cards are not drawn) */
         for (c = 0; c < 5u; c++)
             old += ui.roll[c].from[0] && (uint8_t)(ui.frame - ui.roll[c].t0) >= ROLL_FRAMES;
-        if (quiet > 45u && !ui.hot_t && !ui.bpm_t && !ui.msg_t && SOAK_RND(8u) == 0u) {
+        if (quiet > 45u && !was_hot && !ui.bpm_t && !ui.msg_t && SOAK_RND(8u) == 0u) {
             for (c = 0; c < 5u && !ui.roll[c].from[0]; c++) {}
             if (c < 5u)
                 continue;
@@ -6783,8 +6784,9 @@ static int test_click_menu(void)
     turn(EN_K4, 1); ok &= cin_bars == 1u;
     turn(EN_K4, 1); ok &= cin_bars == 2u;
     turn(EN_PRESET, 1); ok &= ui.menu_sel == MI_TRACKS;
-    turn(EN_K1, -1); frame(); ok &= trk_live == 4u && !(ui_rec_prefs & 0x80u);   /* (0.6.18) TRACKS 4 LOW */
-    turn(EN_K1, 1); frame(); ok &= trk_live == NTRK && (ui_rec_prefs & 0x80u);   /* 6 HIGH */
+    turn(EN_K1, -1); turn(EN_K1, -1); frame(); ok &= trk_live == 4u && !(ui_rec_prefs & 0x80u) && !fx_lite;   /* 4 FULL */
+    turn(EN_K1, 1); frame(); ok &= trk_live == NTRK && (ui_rec_prefs & 0x80u) && fx_lite;   /* (0.6.29) 6 LITE */
+    turn(EN_K1, 1); frame(); ok &= trk_live == NTRK && (ui_rec_prefs & 0x80u) && !fx_lite;  /* 6 FULL */
     turn(EN_PRESET, 1); ok &= ui.menu_sel == MI_LOWCUT;   /* (wraps within AUDIO) */
     press(B_HOME);
     ok &= !ui.menu;
@@ -6805,7 +6807,7 @@ static int test_click_menu(void)
         trk_all_off(&trk[4]);
         events_block(CTL);
         song.sel = (uint8_t)sel; ui.msg_t = 0; ui.msg[0] = ui.msg2[0] = 0; frame();
-        bad += check("TRACKS 4 LOW: T5 asleep (no note, no voice); 6 HIGH wakes it", ok);
+        bad += check("TRACKS 4 FULL: T5 asleep (no note, no voice); 6 wakes it", ok);
         ui_rec_prefs &= (uint8_t)~0x80u; frame();       /* (0.6.28) a note sent to it: the screen says why it is silent */
         ui.msg_t = 0; ui.msg[0] = 0; fm1_ms += 5000u;
         trk_note_on(&trk[4], 60, 100); frame();
@@ -6816,15 +6818,41 @@ static int test_click_menu(void)
     }
     {   /* (0.6.19) GLO > SYSTEM's TRKS (KNOB 2): the same setting, both ways */
         go_title("SYSTEM");
-        turn(EN_K2, -1); frame();
+        turn(EN_K2, -1); turn(EN_K2, -1); frame();
         ok = trk_live == 4u && !(ui_rec_prefs & 0x80u) && trks_ui == 0;
         turn(EN_K2, 1); frame();
-        ok &= trk_live == NTRK && (ui_rec_prefs & 0x80u) && trks_ui == 1;
+        ok &= trk_live == NTRK && (ui_rec_prefs & 0x80u) && trks_ui == 1 && fx_lite && msg_is("6 TRACKS: LITE FX");
+        turn(EN_K2, 1); frame();
+        ok &= trk_live == NTRK && trks_ui == 2 && !fx_lite;
         ui_rec_prefs &= (uint8_t)~0x80u; frame();
         ok &= trks_ui == 0;                             /* (MENU's change shown there) */
         ui_rec_prefs |= 0x80u; frame();
         ui.msg_t = 0; ui.msg[0] = 0; press(B_HOME); frame();
-        bad += check("GLO > SYSTEM: KNOB 2 TRKS 4 LOW / 6 HIGH, the MENU's setting both ways", ok);
+        bad += check("GLO > SYSTEM: KNOB 2 TRKS 4 FULL / 6 LITE / 6 FULL, the MENU's setting both ways", ok);
+    }
+    {   /* (0.6.29) 6 LITE: the heavy parts swapped while they sound, the project's values kept */
+        int16_t rt0 = song.g[G_RTYPE], dp0 = song.g[G_DPIT];
+        int32_t o[2u * CTL];
+        track_t ft = trk[0];
+        trks_put(1u);
+        ok = fx_lite;
+        song.g[G_RTYPE] = 2; mix_block(o, CTL); mix_block(o, CTL);
+        ok &= fx.rtype == 0u && song.g[G_RTYPE] == 2;   /* SHIMMER sounds as ROOM */
+        song.g[G_RTYPE] = 3; mix_block(o, CTL); mix_block(o, CTL);
+        ok &= fx.rtype == 1u;                           /* RESO as SPRING */
+        song.g[G_RTYPE] = 4; mix_block(o, CTL); mix_block(o, CTL);
+        ok &= fx.rtype == 0u;                           /* CLOUD as ROOM */
+        ft.engine = ENGI_FM6;
+        ok &= trk_nvoice(&ft) == LITE_FM6_POLY;         /* FM6: two voices */
+        song.g[G_RTYPE] = 2; go_title("REVERB"); frame();
+        ok &= strstr(ui.col[0], "|SHIMR|LITE") != 0;   /* the card says it is swapped */
+        trks_put(2u);
+        ok &= !fx_lite && trk_nvoice(&ft) == FM6_POLY;
+        song.g[G_RTYPE] = 2; mix_block(o, CTL); mix_block(o, CTL);
+        ok &= fx.rtype == 2u;                           /* 6 FULL: SHIMMER again */
+        song.g[G_RTYPE] = rt0; song.g[G_DPIT] = dp0; mix_block(o, CTL); mix_block(o, CTL);
+        press(B_HOME); frame();
+        bad += check("6 LITE: SHIMMER / CLOUD sound as ROOM, RESO as SPRING, FM6 two voices, TYPE says LITE; 6 FULL as saved", ok);
     }
     {
         persist_t p;

@@ -42,6 +42,8 @@ static int settings_import(persist_t *p, int n)
                 b &= ~(3u << (2u * f));
         p->favorites.factory[15][28] = (uint8_t)b;
     }
+    if (p->favorites.factory[15][26] > 1u)         /* TRACKS 6 LITE (JIANT 0.6.29, ui.c ui_lite): unknown = FULL */
+        p->favorites.factory[15][26] = 0;
     if (p->favorites.factory[15][27] > 7u)         /* SCREEN OFF (1.1.5, ui.c SCR_CODE): unknown = 0 (NEVER since 1.1.5.1) */
         p->favorites.factory[15][27] = 0;
     p->magic = PERSIST_MAGIC;
