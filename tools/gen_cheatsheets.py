@@ -7,7 +7,7 @@ import html, os
 
 R = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(R, 'docs', 'cheatsheet')
-VERSION = 'v0.6.35'
+VERSION = 'v0.6.36'
 
 HEAT = ['#22d3ee', '#3b82f6', '#8b5cf6', '#d946ef', '#ef4444', '#ff7a00', '#facc15', '#f4f1ea']
 
@@ -282,9 +282,9 @@ def sound():
         ('VOICE', HEAT[6], 'VOWEL VOWEL2 TALK SHIFT', 'BUZZ BREATH Q RAND', 'Formant voice (after klattsch): vowels, talk, breath.'),
         ('WHEEL', HEAT[5], 'REG SUB BODY TOP', 'PERC CLICK DRIVE ROTOR', 'Drawbar organ: registrations, percussion, rotary.'),
         ('NOISE', HEAT[4], 'MODE COLOR FREQ PEAK', 'TRK DENSE DRIFT CRUSH', 'Coloured and metallic noise, tracked or free.'),
-        ('DRUM-X', '#ff7a00', 'MORPH TUNE TONE DECAY', 'NOISE FM FOLD DRIVE',
+        ('DRUM-X', '#ff7a00', 'MORPH TUNE TONE DECAY', 'NOISE FM ENV FOLD DRIVE',
          '8 sounds BD SD CP CH OH TM RS CB, sides A / B: <b>MORPH</b> morphs the kit. SOUND · SOUND 2 · SOUND 3: LANE SIDE PITCH PMOD · '
-         'DECAY NOISE COLOR MODE · LANE PMOD DRIVE WAVE. <b>X-MOD</b>: RATE DEPTH SHAPE RAND.'),
+         'DECAY NOISE COLOR MODE · LANE PMOD DRIVE WAVE. <b>X-MOD</b>: RATE DEPTH SHAPE RAND. <b>TONE</b>: BP (hats, rim, cowbell) FEEDBK.'),
     ]
     t = '<table><tr><th>ENGINE</th><th>EDIT 1</th><th>EDIT 2</th><th>WHAT TO KNOW</th></tr>'
     for n, c, e1, e2, d in eng:

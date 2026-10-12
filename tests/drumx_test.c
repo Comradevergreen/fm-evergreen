@@ -279,16 +279,44 @@ int main(int argc, char **argv)
             t = kitx(64, 64);
             t->p[P_E5] = 120;
             strike(t, lf, FS / 8u);
-            for (i = 0; i < FS / 8u; i++) {
-                d0 += fabs((double)a1[i] - a0[i]);
-                d1 += fabs((double)buf[i] - a1[i]);
-                pk = abs(buf[i]) > pk ? abs(buf[i]) : pk;
-                pk = abs(a1[i]) > pk ? abs(a1[i]) : pk;
+            {   /* (0.6.36: FM ENV) the attack (its first 4 ms) struck differently, the tail (past 80 ms) as the kit's */
+                double ta = 0, tt = 0, ra = 0, rt = 0;
+                for (i = 0; i < FS / 8u; i++) {
+                    double e = fabs((double)buf[i] - a0[i]), r = fabs((double)a0[i]);
+                    if (i < FS / 250u) { ta += e; ra += r; }
+                    else if (i > FS / 12u) { tt += (double)buf[i] * buf[i]; rt += (double)a0[i] * a0[i]; }   /* (energies:
+                                                          * the noise is another each hit) */
+                    pk = abs(buf[i]) > pk ? abs(buf[i]) : pk;
+                    pk = abs(a1[i]) > pk ? abs(a1[i]) : pk;
+                }
+                d0 = ta / (ra + 1.0); d1 = fabs(sqrt(tt / (rt + 1.0)) - 1.0);
+                if (getenv("DX_FMENV")) printf("lane %u attack %.3f tail %.3f pk %d\n", lf, d0, d1, pk);
+                ok3 &= (ra < 1000.0 || d0 > 0.05) && (rt < 1000.0 * (FS / 8u - FS / 12u) || d1 < 0.25) && pk < 32700;
+                                                         /* (a hit already gone by then: no tail to compare) */
             }
-            ok3 &= d0 / (FS / 8u) > 150 && d1 / (FS / 8u) > 150 && pk < 32700;   /* (0.6.17: 150, was 200: at half
-                                                          * rate the closed hat's FM partials past 11 kHz are gone, 195) */
         }
-        check("FM (E5): 40 and 120 each another sound on every lane, under full scale, still ends", ok2 && ok3, 0);
+        check("FM ENV (E5, 0.6.36): the attack struck, the tail as the kit has it, under full scale, still ends", ok2 && ok3, 0);
+        {   /* (0.6.36) TONE: BP moves the metal sounds only (hats, rim, cowbell), FEEDBK every sound; under full scale */
+            static int32_t r0[FS / 8];
+            uint32_t l2;
+            int okb = 1, okf = 1;
+            for (l2 = 0; l2 < 8u; l2++) {
+                double dbp = 0, dfb = 0, e0 = 0;
+                int32_t pk2 = 0;
+                int metal = l2 == DV_HATC || l2 == DV_HATO || l2 == DV_RIM || l2 == DV_BELL;
+                dx_tone = 0; strike(kitx(64, 64), l2, FS / 8u); memcpy(r0, buf, sizeof r0);
+                dx_tone = 8; strike(kitx(64, 64), l2, FS / 8u);
+                for (i = 0; i < FS / 8u; i++) { dbp += fabs((double)buf[i] - r0[i]); e0 += fabs((double)r0[i]); }
+                dx_tone = 12u << 4; strike(kitx(64, 64), l2, FS / 8u);
+                for (i = 0; i < FS / 8u; i++) { dfb += fabs((double)buf[i] - r0[i]); pk2 = abs(buf[i]) > pk2 ? abs(buf[i]) : pk2; }
+                if (getenv("DX_TONE")) printf("lane %u bp %.3f fb %.3f pk %d\n", l2, dbp / (e0 + 1), dfb / (e0 + 1), pk2);
+                if (metal) okb &= dbp / (e0 + 1) > 0.1;
+                else if (l2 == DV_KICK || l2 == DV_TOM) okb &= dbp / (e0 + 1) < 0.05;   /* (the noisy ones: another each hit) */
+                okf &= dfb / (e0 + 1) > 0.05 && pk2 < 32700;
+            }
+            dx_tone = 0;
+            check("TONE (0.6.36): BP on the hats, rim and cowbell only; FEEDBK moves every sound, under full scale", okb && okf, 0);
+        }
     }
     {
         double e0, t0, e1, t1;

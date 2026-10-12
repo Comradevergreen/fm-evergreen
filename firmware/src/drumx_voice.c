@@ -36,6 +36,7 @@ typedef struct {                                         /* a hit */
     uint32_t ph3;                                        /* (JIANT 0.4) the SINE pitch modulation's phase */
     int32_t lp;                                          /* (JIANT 0.5) the output's one-pole low-pass state */
     int32_t hl;                                          /* (0.6.17) the last half-rate sample (dx_run's upsampling) */
+    int32_t b1, b2;                                      /* (0.6.36) TONE's band-pass state */
     uint8_t live, trig, choke;
 } dx_voice_t;
 
@@ -72,14 +73,21 @@ static uint32_t dx_tau(uint32_t d) { return ((dv_exp2(d * 9u * 4096u / 127u) >> 
  * dofs / cofs / nofs move DECAY / COLOR / NOISE (-64..63). warp (DRUM's FOLD since JIANT 0.5, was WARP, 0..127): the
  * oscillator through a wavefolder after its envelope, x1 .. x9 into three folds at +-T: the hit's loud start folds
  * into bright partials, its tail unfolds back to the plain wave (a West Coast drum); 0: the patch as it is.
- * fm (DRUM's FM, JIANT, 0..127): every wave through FM with a harmonic modulator, its ratio in eight bands (x0.5 1 1.5
- * 2 3 4 5 7: the timbre's family) and, inside a band, its index rising (subtle .. hard); with WARP the two add. The oscillator and the noise each run their own loop (the wave and the
+ * fm (DRUM's FM ENV, JIANT 0.6.36; was FM, 0..127): how much FM the hit strikes with, its index following the pitch
+ * envelope (1..40 ms) down to the lane's own: an attack's beater / click / metal edge, the tail as the kit has it
+ * (the old FM, a fixed harmonic FM over the whole hit, muddied every sound). The oscillator and the noise each run their own loop (the wave and the
  * filter picked once a block), skipped when the mix leaves them out; gains and the pitch step per sample */
+/* (JIANT 0.6.36) EDIT > TONE, the kit's (project.c keeps it in the kit's reserved byte 7: 0 in older projects, off):
+ * low nibble BP, a band-pass on the metal sounds (the hats, the rim, the cowbell), 1..15 its centre ~1.5 .. 9 kHz;
+ * high nibble FEEDBK, every sound's oscillator fed back into its own phase (1..15: warm, growl, grit, noise) */
+static uint8_t dx_tone;
+static dx_lane_t dx_kit[8];                              /* (defined below with the factory kit: the BP knows its lanes) */
+#define DX_TONE_BP(t) ((uint32_t)(t) & 15u)
+#define DX_TONE_FB(t) ((uint32_t)(t) >> 4)
 static __attribute__((noinline)) void dx_run(const dx_lane_t *L, dx_voice_t *v, int32_t morph, int32_t tune16,
                                              int32_t dofs, int32_t cofs, int32_t nofs, int32_t warp, int32_t fm, int32_t *y,
                                              uint32_t n)
 {
-    static const uint16_t FM_RATIO[8] = {128, 256, 384, 512, 768, 1024, 1280, 1792};   /* Q8 of the carrier */
     int32_t q[DXP_N], p16, depth, ea1, en1, ep1, og, ng, ga, dga, gn, dgn, kd, inc, dinc;
     uint32_t i, k, wave = L->mode & 3u, flt = (L->mode >> 2) & 3u, ta, tn, tp, kb, inc1;
     tsvf_t c;
@@ -111,6 +119,8 @@ static __attribute__((noinline)) void dx_run(const dx_lane_t *L, dx_voice_t *v, 
         v->ep = 32767;
         v->ph = v->ph2 = 0;
         v->ic1 = v->ic2 = 0;
+        v->b1 = v->b2 = 0;
+        v->mo = 0;
         if (!v->rng)
             v->rng = 0x2545F491;
         v->inc = pitch_inc((uint32_t)clamp(p16 + depth, 0, 2047));
@@ -145,7 +155,7 @@ static __attribute__((noinline)) void dx_run(const dx_lane_t *L, dx_voice_t *v, 
         uint32_t ph = v->ph;
         int32_t fold = clamp(warp, 0, 127);
         fm = clamp(fm, 0, 127);
-        warp = fm ? 0x100 : 0;                           /* (FM: the FM loop below; the flag stripped there) */
+        warp = fm || DX_TONE_FB(dx_tone) ? 0x100 : 0;   /* (FM ENV, FEEDBK: the loop below; the flag stripped there) */
         if (wave == DXW_SINE && q[DXP_COLOR] && !warp) {   /* drive x1 .. x2.5 into the soft clip */
             int32_t g = 4096 + q[DXP_COLOR] * 48;
             for (i = 0; i < n; i++, inc += dinc, ga += dga) {
@@ -166,19 +176,23 @@ static __attribute__((noinline)) void dx_run(const dx_lane_t *L, dx_voice_t *v, 
                 ph2 += ((uint32_t)inc >> 8) * ratio;
             }
             v->ph2 = ph2;
-        } else {                                         /* FM: harmonic, every wave */
-            uint32_t w = 0u;
-            uint32_t ph2 = v->ph2, ratio = (fm ? FM_RATIO[(uint32_t)fm >> 4] : DX_RATIO[wave]) + w * 70u, fb = w << 10;
-            int32_t idx = q[DXP_COLOR] * 3 + (int32_t)w * 3 + (fm ? (((fm & 15) + 3) * 12) : 0), mo = v->mo;   /* (JIANT
-                                                          * 0.5: the band's index halved and more, no glassy edge) */
-            for (i = 0; i < n; i++, inc += dinc, ga += dga) {
-                mo = sine_i(ph2 + (uint32_t)mo * fb);    /* (up to a turn of feedback; uint32: wraps as a phase) */
-                y[i] = mulq15(sine_i(ph + (uint32_t)(mo * idx) * 512u), ga >> 8);
+        } else {                                         /* (0.6.36) FM ENV: the FM struck with the hit and gone with
+                                                          * the pitch envelope (1..40 ms): a beater, a click, a metal
+                                                          * edge on the attack, the tail clean; a SINE gets its octave
+                                                          * as the modulator, the other waves their own ratio and
+                                                          * COLOR's index under it */
+            uint32_t ph2 = v->ph2, ratio = wave == DXW_SINE ? 8192u : DX_RATIO[wave];
+            int32_t base = wave == DXW_SINE ? 0 : q[DXP_COLOR] * 3;
+            int32_t ix = base + ((fm * 3 * v->ep) >> 15), dix = ((base + ((fm * 3 * ep1) >> 15)) - ix) / (int32_t)n;
+            int32_t o = v->mo, fbk = (int32_t)DX_TONE_FB(dx_tone) * 4096;   /* (FEEDBK: up to half a turn) */
+            for (i = 0; i < n; i++, inc += dinc, ga += dga, ix += dix) {
+                o = sine_i(ph + (uint32_t)(sine_i(ph2) * ix) * 512u + (uint32_t)(o * fbk));
+                y[i] = mulq15(o, ga >> 8);
                 ph += (uint32_t)inc << 4;
                 ph2 += ((uint32_t)inc >> 8) * ratio;
             }
             v->ph2 = ph2;
-            v->mo = mo;
+            v->mo = o;
         }
         v->ph = ph;
         if (L->mode & DX_DRIVE)                         /* (JIANT 0.4) DRIVE: x3 into the soft clip, the level near */
@@ -222,6 +236,20 @@ static __attribute__((noinline)) void dx_run(const dx_lane_t *L, dx_voice_t *v, 
         v->ic1 = ic1;
         v->ic2 = ic2;
         v->rng = rng;
+    }
+    if (DX_TONE_BP(dx_tone) && (L == &dx_kit[DV_HATC] || L == &dx_kit[DV_HATO] || L == &dx_kit[DV_RIM] ||
+                                L == &dx_kit[DV_BELL])) {   /* (0.6.36) TONE's BP on the metal sounds */
+        int32_t b1 = v->b1, b2 = v->b2;
+        tsvf_t cb;
+        tsvf_coef_k(&cb, (int32_t)(92u + DX_TONE_BP(dx_tone) * 2u) << 8, 1800);   /* (half rate: + an octave) */
+        for (i = 0; i < n; i++) {
+            int32_t v3 = y[i] - b2, v1 = (cb.a1 * b1 + cb.a2 * v3) >> 13, v2 = b2 + ((cb.a2 * b1 + cb.a3 * v3) >> 13);
+            b1 = clamp(2 * v1 - b1, -150000, 150000);
+            b2 = clamp(2 * v2 - b2, -150000, 150000);
+            y[i] = clamp(v1 + (v1 >> 1), -32767, 32767);   /* (its centre a little louder: the band sings) */
+        }
+        v->b1 = b1;
+        v->b2 = b2;
     }
     {                                                    /* (JIANT 0.5) the edge taken off: a one-pole low-pass at
                                                           * ~8 kHz on the sound (FM, FOLD and bright noise at 16 kHz

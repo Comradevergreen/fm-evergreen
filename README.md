@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.6.35).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.6.36).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 > 🫶 If you resonate with my work, consider supporting me on **[Ko-fi](https://ko-fi.com/juanjiant)** (in Argentina:
 > **[Cafecito](https://cafecito.app/juanjiant)**). Thanks for all the good energy, hope you enjoy this little beast ✨🎹
@@ -37,6 +37,17 @@ Two printable sheets with everything on the device. Click an image to open it fu
 ## Changelog
 
 Every update is listed here, newest first.
+
+### v0.6.36
+- **DRUM-X: FM becomes FM ENV.** The old FM knob put a fixed FM over every hit and muddied the kit (the macros' dice
+  liked it a lot). **FM ENV** strikes the FM with each hit and lets it go with the pitch envelope (a few ms): a beater,
+  a click, a metal edge on the attack, the tail as the kit has it. Projects keep the value; its effect is the new one.
+- **DRUM-X: EDIT > TONE**, a new page after X-MOD: **BP**, a band-pass on the hats, the rim and the cowbell (OFF or 15
+  centres, about 1.5 to 9 kHz), and **FEEDBK**, every sound's oscillator fed back into itself (warm to growl to noise).
+  Saved with the section's kit in a byte it already reserved: older projects open with both OFF, sections no bigger.
+- **Films**: the features film's music is new and darker (E harmonic minor, Em(add9) Cmaj7 Am7 B7, a rolling sub, a
+  low arp, the robot low and spaced) and the camera cuts to HOME's beings every two bars of a long scene; the DICE ALL
+  film shows HOME's beings instead of the mixer.
 
 ### v0.6.35
 - **DICE ALL: the drums as before, darker.** The chords, the variety and the guard rails of 0.6.34 stay; the drums go
@@ -748,7 +759,7 @@ locks it into a short window. CHIP sets the resolution: FULL is smooth, 4BIT and
 
 ### 4. DRUM-X drums
 - Set a track to DRUM. **KNOB 1 MORPH** goes from side A to side B of the whole kit: it's the knob to play live.
-- **FOLD** folds each hit's wave: the attack shines and the tail comes back clean. **FM** dirties the timbre.
+- **FOLD** folds each hit's wave: the attack shines and the tail comes back clean. **FM ENV** strikes FM on each hit's attack (a beater, a click, a metal edge) and leaves the tail clean; EDIT > **TONE** has a band-pass for the hats, rim and cowbell (**BP**) and the oscillators' **FEEDBK**.
 - **EDIT > SOUND, SOUND 2, SOUND 3** edit each sound (BD, SD, CP, CH, OH, TM, RS, CB; KNOB 1 on SOUND and SOUND 3
   picks which). SOUND 3 has **PMOD**
   (how the pitch falls: DECAY, 808-style LONG, NOISE, SINE), DRV and WAVE.

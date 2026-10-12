@@ -125,6 +125,7 @@ typedef struct {
     uint16_t dx_mute;                          /* its mutes (eng_drum.c: the groups DXG_* in the first reserved byte, the
                                                 * sounds' DXM_LANE in the second) */
     uint8_t dx_mot[4];                         /* (0.5.1) the kit's X-MOD (eng_drum.c), in its reserved bytes 3..6 */
+    uint8_t dx_tone;                           /* (0.6.36) the kit's TONE (drumx_voice.c: BP, FEEDBK), its byte 7 */
     uint8_t pfx_lane[32], pfx_ltgt;            /* the punch-in lane (pfx.c), in FUN9's spare bytes (PROJ_PFX_OFF) */
     uint8_t macro[4];                          /* the macros M1..M4 (mod.c macro_v), 0..127: after the lane's tracks */
     char name[PROJ_NAME_LEN];                  /* the project's name: upper-case ASCII 32..126, 0-padded; "" = none */
@@ -542,6 +543,7 @@ static void proj_fm6_init(project_t *q)
     memcpy(q->dx, DX_KIT_DEF, sizeof q->dx);
     q->dx_mute = 0;
     memset(q->dx_mot, 0, sizeof q->dx_mot);
+    q->dx_tone = 0;
     q->sum = proj_sum(q);
 }
 static int proj_import_old(project_t *q, const void *b, int n);
@@ -820,6 +822,7 @@ static int proj_pack(project_store_t *out, const project_t *q)
     b[PROJC_DX_OFF + sizeof q->dx + 1u] = (uint8_t)(q->dx_mute >> 8);
     b[PROJC_DX_OFF + sizeof q->dx + 2u] = 4u;           /* (FUNB's marker 4: the values as today's) */
     memcpy(b + PROJC_DX_OFF + sizeof q->dx + 3u, q->dx_mot, sizeof q->dx_mot);
+    b[PROJC_DX_OFF + sizeof q->dx + 7u] = q->dx_tone;   /* (0.6.36) TONE: 0 before it (off) */
     {   /* the name (0-padded; stops at the first 0) */
         char n[PROJ_NAME_LEN + 1u];
         memcpy(b + PROJ_NAME_OFF, n, proj_name_get(n, (const uint8_t *)q->name));
@@ -875,6 +878,7 @@ static int proj_pack_vb(project_store_t *out, const project_t *q)
                                                                  * 4 (0.5.4) LOFI BYTE / FLOAT's MOTN, GRIT / DCY;
                                                                  * 3 (0.4) LOFI's and ANALOG's new E values (core.h sound_v04) */
     memcpy(b + PROJ_DX_OFF + sizeof q->dx + 3u, q->dx_mot, sizeof q->dx_mot);   /* (0.5.1) X-MOD: 0 before it (off) */
+    b[PROJ_DX_OFF + sizeof q->dx + 7u] = q->dx_tone;
     memcpy(b + PROJ_FM6_OFF, q->fm6, PROJ_LT * FM6_PACKED);
     {   /* the name (0-padded; stops at the first 0) */
         char n[PROJ_NAME_LEN + 1u];
@@ -983,6 +987,7 @@ static int proj_unpack_c(project_t *q, const uint8_t *b)
     if (!dx_kit_ok(q->dx)) return 0;
     q->dx_mute = (uint16_t)((b[PROJC_DX_OFF + sizeof q->dx] & DXG_ALL) | b[PROJC_DX_OFF + sizeof q->dx + 1u] << 8);
     memcpy(q->dx_mot, b + PROJC_DX_OFF + sizeof q->dx + 3u, sizeof q->dx_mot);
+    q->dx_tone = b[PROJC_DX_OFF + sizeof q->dx + 7u];
     q->dx_mot[XM_RATE] = q->dx_mot[XM_RATE] > 8u ? 0u : q->dx_mot[XM_RATE];
     q->dx_mot[XM_DPTH] &= 127u;
     q->dx_mot[XM_SHPE] = q->dx_mot[XM_SHPE] > 4u ? 0u : q->dx_mot[XM_SHPE];
@@ -1080,6 +1085,7 @@ static int proj_unpack(project_t *q, const uint8_t *b, uint32_t st)
         if (!dx_kit_ok(q->dx)) return 0;
         q->dx_mute = (uint16_t)((b[end + sizeof q->dx] & DXG_ALL) | b[end + sizeof q->dx + 1u] << 8);
         memcpy(q->dx_mot, b + end + sizeof q->dx + 3u, sizeof q->dx_mot);
+        q->dx_tone = b[end + sizeof q->dx + 7u];
         q->dx_mot[XM_RATE] = q->dx_mot[XM_RATE] > 8u ? 0u : q->dx_mot[XM_RATE];   /* (out of range: off) */
         q->dx_mot[XM_DPTH] &= 127u;
         q->dx_mot[XM_SHPE] = q->dx_mot[XM_SHPE] > 4u ? 0u : q->dx_mot[XM_SHPE];
@@ -1105,6 +1111,7 @@ static int proj_unpack(project_t *q, const uint8_t *b, uint32_t st)
         memcpy(q->dx, DX_KIT_DEF, sizeof q->dx);
         q->dx_mute = 0;
         memset(q->dx_mot, 0, sizeof q->dx_mot);
+        q->dx_tone = 0;
     }
     proj_new_tracks(q, PROJ_LT);                       /* (JIANT 0.6: tracks 5, 6 their power-on sounds) */
     {
@@ -1235,6 +1242,7 @@ static void project_capture(project_t *p)
     memcpy(p->dx, dx_kit, sizeof p->dx);
     p->dx_mute = dx_mute;
     memcpy(p->dx_mot, dx_mot, sizeof p->dx_mot);
+    p->dx_tone = dx_tone;
     memcpy(p->pfx_lane, pfx_lane, sizeof p->pfx_lane);
     p->pfx_ltgt = pfx_ltgt;
     memcpy(p->macro, macro_v, sizeof p->macro);
@@ -1372,6 +1380,7 @@ static int project_recall_sound(uint32_t slot, uint32_t k)
     if (e == ENGI_DRUM) {
         memcpy(dx_kit, dx_kit_ok(p->dx) ? p->dx : DX_KIT_DEF, sizeof dx_kit);
         memcpy(dx_mot, p->dx_mot, sizeof dx_mot);
+        dx_tone = p->dx_tone;
     }
     fm1_irq_on();
     if (t == TSEL)
@@ -1401,6 +1410,7 @@ static int project_restore_runtime(const project_t *input)
     memcpy(dx_kit, dx_kit_ok(p->dx) ? p->dx : DX_KIT_DEF, sizeof dx_kit);   /* (the section's DRUM-X kit) */
     dx_mute_set(p->dx_mute);
     memcpy(dx_mot, p->dx_mot, sizeof dx_mot);           /* (0.5.1: the kit's X-MOD) */
+    dx_tone = p->dx_tone;                               /* (0.6.36: its TONE) */
     memcpy(pfx_lane, p->pfx_lane, sizeof pfx_lane);    /* (the section's punch-in lane) */
     pfx_ltgt = p->pfx_ltgt > 2u ? 0u : p->pfx_ltgt;
     for (i = 0; i < 4u; i++)

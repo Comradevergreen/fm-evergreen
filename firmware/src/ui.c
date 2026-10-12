@@ -1222,7 +1222,7 @@ static void track_select(uint32_t i)
 static uint8_t dx_ui_lane, dx_ui_side;
 static uint32_t dx_pagen(const page_t *pg)            /* "SOUND 2"; (0.5.1) "X-MOD": 4 */
 {
-    return pg->title[0] == 'X' ? 4u : pg->title[5] == ' ' ? (uint32_t)(pg->title[6] - '0') : 1u;
+    return pg->title[0] == 'X' ? 4u : pg->title[0] == 'T' ? 5u : pg->title[5] == ' ' ? (uint32_t)(pg->title[6] - '0') : 1u;
 }
 static uint32_t dx_page2(const page_t *pg) { return dx_pagen(pg) == 2u; }
 static void dx_knob(const page_t *pg, uint32_t k, int32_t s);

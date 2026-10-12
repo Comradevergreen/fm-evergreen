@@ -2910,9 +2910,9 @@ static int test_edit_cycle(void)
 #endif
     {   /* #97: a DRUM track's lane levels on EDIT > LANES (KICK SNARE CLAP HATCL) and LANES 2 (HATOP TOM RIM BELL) */
         static const char *const CYC_K[] = {"EDIT 1", "EDIT 2", "FILTER", "LANES", "LANES 2", "SOUND", "SOUND 2", "SOUND 3", "X-MOD",
-                                            "VOICE", "EDIT 1"};
+                                            "TONE", "VOICE", "EDIT 1"};
         set_engine_of(TSEL, ENGI_DRUM);
-        bad += check("EDIT cycle (DRUM): EDIT 1 EDIT 2 FILTER LANES LANES 2 SOUND SOUND 2 SOUND 3 X-MOD VOICE EDIT 1",
+        bad += check("EDIT cycle (DRUM): EDIT 1 EDIT 2 FILTER LANES LANES 2 SOUND SOUND 2 SOUND 3 X-MOD TONE VOICE EDIT 1",
                      engine_cycle(CYC_K, NELEM(CYC_K)));
         go_title("LANES 2"); frame();
         ok = TSEL->p[P_LN5] == 127;
