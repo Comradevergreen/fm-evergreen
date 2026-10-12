@@ -39,6 +39,13 @@ static void dx_knob(const page_t *pg, uint32_t k, int32_t s)
 {
     dx_lane_t *L = &dx_kit[dx_ui_lane & 7u];
     uint8_t *v = dx_ui_side ? L->b : L->a;
+    if (dx_pagen(pg) == 5u) {                           /* (JIANT 0.6.36) TONE: the kit's BP and FEEDBK */
+        uint32_t bp = DX_TONE_BP(dx_tone), fb = DX_TONE_FB(dx_tone);
+        if (k == 0u) bp = (uint32_t)clamp((int32_t)bp + (s > 0 ? 1 : -1), 0, 15);
+        else if (k == 1u) fb = (uint32_t)clamp((int32_t)fb + (s > 0 ? 1 : -1), 0, 15);
+        dx_tone = (uint8_t)(bp | fb << 4);
+        return;
+    }
     if (dx_pagen(pg) == 4u) {                           /* (JIANT 0.5.1) X-MOD: the kit's, not a sound's */
         static const uint8_t MX[4] = {8, 127, 4, 127};
         int32_t v0 = dx_mot[k & 3u];
@@ -81,6 +88,21 @@ static void dx_cards(const page_t *pg)
     const uint8_t *v = dx_ui_side ? L->b : L->a;
     char val[12];
     dx_follow();
+    if (dx_pagen(pg) == 5u) {                           /* (JIANT 0.6.36) TONE */
+        uint32_t bp = DX_TONE_BP(dx_tone), fb = DX_TONE_FB(dx_tone);
+        if (bp) {                                       /* (its centre, as the filter sets it) */
+            uint32_t hz = CUTOFF_HZ[78u + bp * 2u];
+            if (hz < 1000u) { fmt_int(val, (int32_t)hz); }
+            else { fmt_fix(val, (int32_t)(hz / 100u), 1); }
+        } else str_cpy(val, "OFF", sizeof val);
+        draw_column(0, "BP", val, bp ? (CUTOFF_HZ[78u + bp * 2u] < 1000u ? "Hz" : "kHz") : "", bp ? VAL(0u) : T_DIM,
+                    (int32_t)bp * 1000 / 15, ICON_TONE);
+        fmt_int(val, (int32_t)fb);
+        draw_column(1, "FEEDBK", fb ? val : "OFF", "", fb ? VAL(1u) : T_DIM, (int32_t)fb * 1000 / 15, ICON_DRIVE);
+        draw_column(2, "", "", "", T_THEME, -1, ICON_NONE);
+        draw_column(3, "", "", "", T_THEME, -1, ICON_NONE);
+        return;
+    }
     if (dx_pagen(pg) == 4u) {                           /* (JIANT 0.5.1) X-MOD */
         static const char *const RT[9] = {"OFF", "4BAR", "2BAR", "1BAR", "1/2", "1/4", "1/8", "1/16", "1/32"};
         static const char *const SH[5] = {"SINE", "TRI", "SAW", "RAMP", "S&H"};
@@ -128,6 +150,7 @@ static uint32_t dx_sig(void)
     const dx_lane_t *L = &dx_kit[dx_ui_lane & 7u];
     uint32_t h = (uint32_t)dx_ui_lane * 31u + dx_ui_side * 977u + L->mode * 131u, i;
     h ^= (uint32_t)dx_mot[0] << 24 ^ (uint32_t)dx_mot[1] << 16 ^ (uint32_t)dx_mot[2] << 8 ^ dx_mot[3];   /* (X-MOD) */
+    h = (h ^ dx_tone) * 2654435761u;                    /* (TONE) */
     for (i = 0; i < DXP_N; i++)
         h = (h ^ (uint32_t)L->a[i] << 8 ^ L->b[i]) * 16777619u;
     return h;

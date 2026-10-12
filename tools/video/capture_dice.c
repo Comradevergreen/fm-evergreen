@@ -9,7 +9,7 @@
  *   build/video_dice/capture build/video_dice      -> audio.wav, screen.rgb, scenes.txt, beats.txt, seps.txt, intro.txt
  *   python3 tools/video/compose.py build/video_dice -> build/video_dice/jiant-fm.mp4 */
 #define UI_TEST_NO_MAIN 1
-#define FELUCCA_VERSION "v0.6.35"
+#define FELUCCA_VERSION "v0.6.36"
 #include "ui_test.c"
 
 #define FPS 30u
@@ -67,16 +67,15 @@ static int32_t show_track(void)
     for (k = 0; k < NTRK; k++) if (plays(k) && !drum_track(&trk[k])) return (int32_t)k;
     return 0;
 }
-static void look(uint32_t view)                         /* the camera: the beings, the piano roll, the kit, the mixer */
+static void look(uint32_t view)                         /* the camera: the beings, the piano roll, the beings, the kit */
 {
     int32_t k = show_track();
     uint32_t dr = NTRK, j;
     for (j = 0; j < NTRK; j++) if (drum_track(&trk[j]) && plays(j)) dr = j;
-    switch (view % 4u) {
+    switch (view % 4u) {                                /* (0.6.36: HOME's beings most, no mixer) */
     case 1: song.sel = (uint8_t)k; go_title("STEP"); break;
-    case 2: if (dr < NTRK) { song.sel = (uint8_t)dr; go_title("EDIT 1"); } else { song.sel = (uint8_t)k; go_title("EDIT 1"); } break;
-    case 3: go_title("MIXER"); break;
-    default: song.sel = (uint8_t)k; go_home(); break;
+    case 3: if (dr < NTRK) { song.sel = (uint8_t)dr; go_title("EDIT 1"); } else { song.sel = (uint8_t)k; go_home(); } break;
+    default: song.sel = (uint8_t)(view & 2u && dr < NTRK ? dr : (uint32_t)k); go_home(); break;
     }
 }
 

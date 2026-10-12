@@ -237,6 +237,7 @@ a la derecha); apretá OCT+ para ejecutarla.
 | SOUND 2 | DECAY | NOISE | COLOR | MODE | DRUM |
 | SOUND 3 | LANE | PMOD | DRIVE | WAVE | DRUM |
 | X-MOD | RATE | DEPTH | SHAPE | RAND | DRUM |
+| TONE | BP | FEEDBK | — | — | DRUM |
 | VOICE | VOICE | GLIDE | MODE | PRIO | todos los motores |
 
 **GLO** (MIXER es por pista; GLOBAL y SYSTEM son globales)
@@ -361,7 +362,7 @@ HOME de cada pista.
 | **VOICE** | VOWEL, VOWEL2, TALK, SHIFT | BUZZ, BREATH, Q, RAND | VOWEL, BUZZ, BREATH, TALK |
 | **WHEEL** | REG, SUB, BODY, TOP | PERC, CLICK, DRIVE, ROTOR | REG, PERC, DRIVE, ROTOR |
 | **NOISE** | MODE, COLOR, FREQ, PEAK | TRK, DENSE, DRIFT, CRUSH | FREQ, PEAK, COLOR, REL |
-| **DRUM** (DRUM-X) | MORPH, TUNE, TONE, DECAY | NOISE, FM, FOLD, DRIVE | MORPH, TUNE, TONE, DECAY |
+| **DRUM** (DRUM-X) | MORPH, TUNE, TONE, DECAY | NOISE, FM ENV, FOLD, DRIVE | MORPH, TUNE, TONE, DECAY |
 
 - **ANALOG**: dos osciladores. WAVE: SAW, SQR, TRI, SIN, PWM, SYNC, RING, SAW3. **INT** fija el intervalo del
   oscilador 2 (±24 semitonos). Su filtro es por voz.
@@ -409,8 +410,9 @@ DRUM-X es un kit sintetizado de ocho sonidos, **BD SD CP CH OH TM RS CB**, gener
 
 - Cada sonido tiene dos lados, **A** y **B**. **MORPH** (EDIT 1, KNOB 1, también en HOME) mueve todo el kit entre
   ellos: la perilla para tocar en vivo.
-- EDIT 1: MORPH, TUNE, TONE, DECAY. EDIT 2: NOISE, **FM**, **FOLD** (un wavefolder después de la envolvente: un
-  ataque brillante, una cola limpia), DRIVE.
+- EDIT 1: MORPH, TUNE, TONE, DECAY. EDIT 2: NOISE, **FM ENV** (FM que golpea con cada nota y se va en pocos
+  milisegundos: un parche, un click, un filo metálico en el ataque, la cola limpia), **FOLD** (un wavefolder después de
+  la envolvente: un ataque brillante, una cola limpia), DRIVE.
 - **LANES / LANES 2**: el nivel de cada sonido (KICK, SNARE, CLAP, HATCL, HATOP, TOM, RIM, BELL).
 - **SOUND** (por sonido, por lado): LANE (qué sonido; tocar una tecla también lo elige), SIDE (A / B), PITCH, PMOD.
 - **SOUND 2**: DECAY, NOISE, COLOR, MODE (onda SIN / FM / MTL / BEL, filtro de ruido LP / BP / HP, y "+" para snap).
@@ -418,6 +420,9 @@ DRUM-X es un kit sintetizado de ocho sonidos, **BD SD CP CH OH TM RS CB**, gener
   MTL, BEL).
 - **X-MOD** (todo el kit): **RATE** (OFF, 4BAR … 1/32, a tempo), **DEPTH** (cuánto oscila MORPH), **SHAPE** (SINE,
   TRI, SAW, RAMP, S&H), **RAND** (cada golpe recibe su propio MORPH y un poco de afinación).
+- **TONE** (todo el kit): **BP**, un pasa-banda sobre los sonidos de metal (los hi-hats, el rim, el cowbell), OFF o 15
+  centros de 1,5 a 9 kHz aprox.; **FEEDBK**, el oscilador de cada sonido realimentado sobre sí mismo (OFF, 1–15:
+  cálido, gruñido, arena, ruido). Se guarda con el kit de la sección.
 - **Mutes**: GLO mantenido + teclas negras 7–10 mutean los grupos KICK, SNARE, HAT, PERC; EDIT mantenido + teclas
   negras 1–8 mutean cada sonido.
 - **SELECT** en una página EDIT tira un kit nuevo alrededor del de fábrica. **EDIT mantenido + F3 (INIT)** trae de

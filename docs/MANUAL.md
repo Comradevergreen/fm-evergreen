@@ -230,6 +230,7 @@ and heating up with its own audio. The selected track is drawn bigger, a muted o
 | SOUND 2 | DECAY | NOISE | COLOR | MODE | DRUM |
 | SOUND 3 | LANE | PMOD | DRIVE | WAVE | DRUM |
 | X-MOD | RATE | DEPTH | SHAPE | RAND | DRUM |
+| TONE | BP | FEEDBK | — | — | DRUM |
 | VOICE | VOICE | GLIDE | MODE | PRIO | every engine |
 
 **GLO** (MIXER is per track; GLOBAL and SYSTEM are global)
@@ -350,7 +351,7 @@ every engine) or with KNOB 2 (ENG) on SAVE > PRESETS. Each track's four HOME kno
 | **VOICE** | VOWEL, VOWEL2, TALK, SHIFT | BUZZ, BREATH, Q, RAND | VOWEL, BUZZ, BREATH, TALK |
 | **WHEEL** | REG, SUB, BODY, TOP | PERC, CLICK, DRIVE, ROTOR | REG, PERC, DRIVE, ROTOR |
 | **NOISE** | MODE, COLOR, FREQ, PEAK | TRK, DENSE, DRIFT, CRUSH | FREQ, PEAK, COLOR, REL |
-| **DRUM** (DRUM-X) | MORPH, TUNE, TONE, DECAY | NOISE, FM, FOLD, DRIVE | MORPH, TUNE, TONE, DECAY |
+| **DRUM** (DRUM-X) | MORPH, TUNE, TONE, DECAY | NOISE, FM ENV, FOLD, DRIVE | MORPH, TUNE, TONE, DECAY |
 
 - **ANALOG**: two oscillators. WAVE: SAW, SQR, TRI, SIN, PWM, SYNC, RING, SAW3. **INT** sets oscillator 2's interval
   (±24 semitones). Its filter is per voice.
@@ -395,14 +396,18 @@ DRUM-X is a synthesized kit of eight sounds, **BD SD CP CH OH TM RS CB**, genera
 
 - Every sound has two sides, **A** and **B**. **MORPH** (EDIT 1, KNOB 1, also on HOME) moves the whole kit between
   them: the knob to play live.
-- EDIT 1: MORPH, TUNE, TONE, DECAY. EDIT 2: NOISE, **FM**, **FOLD** (a wavefolder after the envelope: a bright
-  attack, a clean tail), DRIVE.
+- EDIT 1: MORPH, TUNE, TONE, DECAY. EDIT 2: NOISE, **FM ENV** (FM struck with each hit and gone in a few
+  milliseconds: a beater, a click, a metal edge on the attack, the tail clean), **FOLD** (a wavefolder after the
+  envelope: a bright attack, a clean tail), DRIVE.
 - **LANES / LANES 2**: the level of each sound (KICK, SNARE, CLAP, HATCL, HATOP, TOM, RIM, BELL).
 - **SOUND** (per sound, per side): LANE (which sound; striking a key also picks it), SIDE (A / B), PITCH, PMOD.
 - **SOUND 2**: DECAY, NOISE, COLOR, MODE (wave SIN / FM / MTL / BEL, noise filter LP / BP / HP, and "+" for snap).
 - **SOUND 3**: LANE, PMOD (how the pitch moves: DECAY, LONG, NOISE, SINE), DRIVE (ON / OFF), WAVE (SIN, FM, MTL, BEL).
 - **X-MOD** (the whole kit): **RATE** (OFF, 4BAR … 1/32, in time), **DEPTH** (how far MORPH swings), **SHAPE** (SINE,
   TRI, SAW, RAMP, S&H), **RAND** (each hit gets its own MORPH and a little tune).
+- **TONE** (the whole kit): **BP**, a band-pass on the metal sounds (the hats, the rim, the cowbell), OFF or 15
+  centres from about 1.5 to 9 kHz; **FEEDBK**, every sound's oscillator fed back into itself (OFF, 1–15: warm, growl,
+  grit, noise). Saved with the section's kit.
 - **Mutes**: GLO held + black keys 7–10 mute the groups KICK, SNARE, HAT, PERC; EDIT held + black keys 1–8 mute each
   sound.
 - **SELECT** on an EDIT page rolls a new kit around the factory one. **EDIT held + F3 (INIT)** brings the factory kit

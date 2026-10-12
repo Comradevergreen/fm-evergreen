@@ -9,7 +9,7 @@
  *   build/video/capture build/video        -> audio.wav (44.1 kHz stereo), screen.rgb (240 x 240 RGB24 a frame)
  * tools/video/compose.py makes the 1080p video from them. */
 #define UI_TEST_NO_MAIN 1
-#define FELUCCA_VERSION "v0.6.35"
+#define FELUCCA_VERSION "v0.6.36"
 #include "ui_test.c"
 
 #define FPS 30u
@@ -85,16 +85,18 @@ static int vbank_read(uint32_t k, uint8_t *pk)
 
 static void song_build(void)
 {
-    static const uint8_t ROOT[4] = {33, 29, 36, 31};                 /* Am F C G, a bar each */
-    static const int8_t BOFS[16] = {0, -1, 12, 0, -1, 0, 12, -1, 0, -1, 7, -1, 12, -1, 7, -1};   /* the electro bass */
-    static const uint8_t CH[4][4] = {{57, 60, 64, 69}, {53, 57, 60, 65}, {55, 60, 64, 67}, {55, 59, 62, 67}};
-    static const uint8_t AIX[16] = {0, 1, 2, 3, 2, 1, 0, 1, 2, 3, 2, 1, 0, 1, 2, 3};   /* the computer arp */
+    /* (0.6.36) the night: E harmonic minor, Em(add9) Cmaj7 Am7 B7, a bar each; a rolling sub on the offbeats, a low arp,
+     * the robot's line low and spaced (it was A minor's I-vi-ish pop: too bright, too happy) */
+    static const uint8_t ROOT[4] = {28, 24, 33, 35};                 /* E1 C1 A1 B1 */
+    static const int8_t BOFS[16] = {-1, -1, 12, -1, -1, 12, 12, -1, -1, -1, 12, 12, -1, 7, 12, -1};   /* the rolling sub */
+    static const uint8_t CH[4][4] = {{55, 59, 64, 66}, {55, 59, 60, 64}, {57, 60, 64, 67}, {54, 57, 59, 63}};
+    static const uint8_t AIX[16] = {0, 2, 1, 3, 0, 2, 1, 2, 0, 3, 1, 2, 0, 2, 3, 1};   /* the low arp, turning */
     /* the robot's melody (64 steps: note, 0 rest, 1 hold) */
     static const uint8_t MEL[64] = {
-        76, 1, 1, 1, 74, 1, 72, 1, 1, 1, 69, 1, 1, 1, 1, 1,
-        72, 0, 72, 0, 69, 0, 72, 1, 1, 1, 74, 0, 72, 1, 1, 1,
-        76, 1, 1, 1, 79, 0, 76, 0, 74, 1, 1, 1, 72, 0, 74, 0,
-        71, 1, 1, 1, 74, 0, 0, 0, 71, 0, 67, 1, 1, 1, 1, 1};
+        64, 1, 1, 1, 0, 0, 67, 1, 66, 1, 1, 1, 0, 0, 0, 0,
+        0, 0, 64, 1, 67, 1, 1, 1, 71, 1, 1, 1, 1, 1, 0, 0,
+        72, 1, 71, 1, 69, 1, 1, 1, 0, 0, 67, 1, 66, 1, 1, 1,
+        63, 1, 1, 1, 1, 1, 66, 1, 1, 1, 0, 0, 71, 1, 1, 1};
     uint32_t i, k;
     ui_power_on();
     settings.palette = UI_JIANT_INDEX; palette_set(UI_JIANT_INDEX);
@@ -103,13 +105,13 @@ static void song_build(void)
     song.master_q12 = 4096;                                  /* (the pot: ui_power_on leaves 0) */
     sound(T_VOX, "VOICE", "VOX LEAD");
     sound(T_BASS, "ANALOG", "FAT BASS");
-    sound(T_ARP, "LOFI", "8BIT KEYS");
+    sound(T_ARP, "LOFI", "FLOAT ARP");
     sound(T_DRUM, "DRUM", "DRUM-X");
     sound(T_PAD, "FM6", "PAD");
     sound(T_ZAP, "NOISE", "WIND");
     for (k = 0; k < NTRK; k++) {
         track_defaults_steps(&trk[k]);
-        trk[k].p[P_ROOT] = 9; trk[k].p[P_SCALE] = 2;          /* A minor */
+        trk[k].p[P_ROOT] = 4; trk[k].p[P_SCALE] = 7;          /* E harmonic minor (0.6.36) */
         trk[k].p[P_SLEN] = 16;
         trk[k].p[P_MUTE] = 1;
     }
@@ -194,7 +196,7 @@ static void at_beat_v2(uint32_t q)
         mute(T_VOX, 0); page(T_VOX, "EDIT 1");
         caption(q, ONLY, "THE ROBOT", "VOICE: formant synthesis|its own being on every engine page", 1);
     }
-    if (q == B(6, 0)) { page(T_ARP, "EDIT 1"); caption(q, ONLY, "LOFI", "bytebeat and floatbeat machines|8-bit keys and chips", 1); }
+    if (q == B(6, 0)) { page(T_ARP, "EDIT 1"); caption(q, ONLY, "LOFI", "bytebeat and floatbeat machines|grit, glass, ghosts", 1); }
     if (q == B(7, 0)) { trk[T_ARP].p[P_E0] = (int16_t)(trk[T_ARP].p[P_E0] ^ 1); }
     if (q == B(8, 0)) {
         mute(T_BASS, 0); trk[T_BASS].p[P_E0] = 5;           /* the bass: ANALOG's SYNC */
@@ -313,7 +315,7 @@ static void at_beat_v2(uint32_t q)
     if (q == B(48, 0)) {
         drums(FLOOR); sound(T_ZAP, "NOISE", "ARCADE");
         for (k = 0; k < 16u; k++) { uint8_t n = 84; put(T_ZAP, k, k == 3u || k == 11u ? 1u : 0u, &n, k == 3u || k == 11u ? ST_NOTE : ST_REST, 0); }
-        trk[T_ZAP].p[P_ROOT] = 9; trk[T_ZAP].p[P_SCALE] = 2; trk[T_ZAP].p[P_SLEN] = 16; mute(T_ZAP, 0); trk[T_ZAP].p[P_LEVEL] = 55;
+        trk[T_ZAP].p[P_ROOT] = 4; trk[T_ZAP].p[P_SCALE] = 7; trk[T_ZAP].p[P_SLEN] = 16; mute(T_ZAP, 0); trk[T_ZAP].p[P_LEVEL] = 55;
         home(T_DRUM); caption(q, ONLY, "ALL SYNTHESIS", "no samples|six beings, all alive", 1);
     }
     if (q == B(50, 0)) { go_title("MIXER"); caption(q, ONLY, "6-CHANNEL MIXER", "level · pan · send · mute|thermal meters", 0); }
@@ -392,13 +394,30 @@ static void at_new(uint32_t q, uint32_t r)
     if (r >= 25u && r < 28u) enc_turn(EN_K1, 1);                /* the root up */
     if (r == 28u) enc_turn(EN_K1, -3);
 }
-static void at_beat(uint32_t q)
+static void at_beat_script(uint32_t q)
 {
     if (q < B(56, 0)) { at_beat_v2(q); return; }
     if (q < B(64, 0)) { at_new(q, q - B(56, 0)); return; }
     qoff = 32u;
     at_beat_v2(q - 32u);
     qoff = 0;
+}
+/* (0.6.36) more alive: a page held for a while cuts to HOME's beings for two beats every two bars, then back */
+static void at_beat(uint32_t q)
+{
+    static uint32_t since, cut;
+    static uint8_t pg, sel;
+    uint8_t p0, h0, s0;
+    if (cut && --cut == 0) { ui.home = 0; ui.page = pg; song.sel = sel; page_entered(); }   /* (back to the page) */
+    p0 = ui.page; h0 = ui.home; s0 = song.sel;
+    at_beat_script(q);
+    if (ui.page != p0 || ui.home != h0 || song.sel != s0 || q < SPLASH_BEATS + 8u) {   /* (the script moved: a scene) */
+        cut = 0; since = q; pg = ui.page; sel = song.sel;
+        return;
+    }
+    if (!cut && !ui.home && q - since >= 6u && (q - since) % 8u == 6u && q + 26u < B(BARS, 0)) {
+        go_home(); cut = 3;                          /* (two beats of beings, the page back on the third) */
+    }
 }
 
 static void put_screen(void)

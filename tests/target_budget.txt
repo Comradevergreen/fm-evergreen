@@ -14,7 +14,7 @@ noise_render 259
 fm6_render 378
 fm6_op_run 72
 fm6_op_fb 26
-dx_run 368
+dx_run 420
 slicer_bus 794
 fm1_alnk0_irq 271
 fm1_timer5_irq 33823
