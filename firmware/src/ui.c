@@ -654,10 +654,10 @@ static int fx_head(uint32_t i)
     return PAGES[i].fam == FAM_FX && (str_eq(t, "FX") || str_eq(t, "SLICER") || str_eq(t, "DLY") ||
                                       str_eq(t, "REVERB") || str_eq(t, "CHORUS") || str_eq(t, "MASTER"));
 }
-/* (JIANT 0.6.51) a page (or the track) changed by hand: its name big over the cards (0.6.58) for PF_MS, so the
+/* (JIANT 0.6.51) a page (or the track) changed by hand: its name in the header (0.6.61) for PF_MS, so the
  * pages need no memorising (ui_graph.c page_flash_draw); a page set by code (a test, a dialog's way back) shows none */
 #ifndef PF_MS                                        /* (tests/ui_test.c: 0, the cards always shown) */
-#define PF_MS 450u                                   /* (0.6.58: was 700, over the cards since) */
+#define PF_MS 900u                                   /* (0.6.61: in the header, so it can stay a little longer) */
 #endif
 static uint8_t fg_ui;                                /* (0.6.52) SEQ > FUGUE: the head edited (0..2: heads 2..4) */
 static uint32_t pf_ms;

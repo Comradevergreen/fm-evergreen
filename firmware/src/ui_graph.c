@@ -1134,57 +1134,69 @@ static void graph_fugue(const track_t *t)
     }
 }
 
-/* (0.6.51) the page's name big (page_flash). (0.6.58) Over the four cards, not the graph (it hid what a turn changes):
- * one line, the name in L (Michroma) at the left, the track and its engine at the right, for PF_MS; the cards come back
- * whole after it (ui.force). JIANT: the landing's tag (a dark window, accent HUD corners); else the accent fill */
+/* (0.6.51) the page's name big (page_flash). (0.6.61) In the header, not over the cards or the graph (covering them
+ * lost the sense of what a turn did): for PF_MS the header shows the page's name (M) and, smaller at the right, the
+ * track and its engine; on HOME (a track picked there) the track's engine big and "HOME" small. Then the header comes
+ * back (ui.force) */
 static void page_flash_draw(void)
 {
     static uint32_t drawn;
-    uint32_t e = fm1_ms - pf_ms, ph;
-    int32_t h = (int32_t)card_h(), w = 234, dim;
-    uint16_t fill, ink, k;
-    char sub[20] = {'T', 0, 0};
+    uint32_t e = fm1_ms - pf_ms, ph, dim;
+    char nm[20], sub[20] = {'T', 0, 0};
     const page_t *pg = cur_page();
     const char *pt = pg->scope == SC_ENGINE ? ENGINES[TSEL->eng_req % NENGINES]->page_title[pg->id[0] != P_E0] : 0;
+    const char *en = ENGINES[TSEL->eng_req % NENGINES]->name;
     if (e >= PF_MS) {
         pf_on = 0;
-        ui.force = 1;                                /* (the cards, whole again) */
+        ui.force = 1;                                /* (the header, whole again) */
         return;
     }
     dim = e > PF_MS - 120u;
-    ph = 1u + (uint32_t)dim + (e < 60u ? 2u : 0u);
-    if (!ui.force && ph == drawn)
+    ph = (pf_ms << 1 | dim) + 1u;                     /* (a new flash or its dimming; else every 4th frame: cheap) */
+    if (!ui.force && ph == drawn && (ui.frame & 3u))
         return;
     drawn = ph;
     sub[1] = (char)('1' + song.sel % NTRK);
     sub[2] = ' ';
-    str_cpy(sub + 3, ENGINES[TSEL->eng_req % NENGINES]->name, sizeof sub - 3u);
-    cv_begin(240, (uint32_t)h, T_BG);
-    if (ux.chamfer) {
-        k = dim ? T_DIM : T_ACCENT;
-        fill = T_BG;
-        ink = dim ? T_MID : T_TEXT;
-        cv_rect(3, 0, w, h, T_SURF);
-        cv_rect(3, 0, 10, 2, k), cv_rect(3, 0, 2, 10, k), cv_rect(3 + w - 10, 0, 10, 2, k), cv_rect(3 + w - 2, 0, 2, 10, k);
-        cv_rect(3, h - 2, 10, 2, k), cv_rect(3, h - 10, 2, 10, k), cv_rect(3 + w - 10, h - 2, 10, 2, k), cv_rect(3 + w - 2, h - 10, 2, 10, k);
-        fill = T_SURF;
+    if (ui.home) {                                   /* HOME: the engine big, "T2 HOME" small */
+        str_cpy(nm, en, sizeof nm);
+        str_cpy(sub + 3, "HOME", sizeof sub - 3u);
     } else {
-        fill = dim ? T_RAISE : T_ACCENT;
-        ink = dim ? T_MID : T_INK;
-        k = ink;
-        cv_rrect(3, 0, w, h, 6, fill, T_BG);
+        str_cpy(nm, pt && pt[0] != '-' ? pt : pg->title, sizeof nm);
+        str_cpy(sub + 3, en, sizeof sub - 3u);
     }
-    {
-        const char *nm = ui.home ? "HOME" : pt && pt[0] != '-' ? pt : pg->title;
-        const aafont_t *f = large_face_has(nm) && text_w(&AF_L, nm) <= 150 ? &AF_L : &AF_M;
-        cv_bg = fill;                                /* (the name's edges blend into the window) */
-        cv_text(12, (h - (int32_t)f->h) / 2, f, nm, ink);
-    }
-    cv_text_r(3 + w - 9, (h - (int32_t)AF_S.h) / 2, &AF_S, sub, ux.chamfer && !dim ? T_ACCENT : ink, fill);
-    (void)k;
-    cv_blit(0, Y_LABEL);
+    cv_begin(240, H_HEAD, T_BG);
+    cv_bg = T_BG;
+    cv_text(8, (H_HEAD - (int32_t)AF_M.h) / 2, &AF_M, nm, dim ? T_MID : T_TEXT);
+    cv_text_r(232, (H_HEAD - (int32_t)AF_S.h) / 2, &AF_S, sub, dim ? T_DIM : T_ACCENT, T_BG);
+    cv_blit(0, 0);
 }
 
+/* (0.6.61) the panels' cytoplasm: a few granules drifting behind the graph, as HOME's, so the screen breathes. LOAD
+ * FULL and ANIM ON only, not on HOME (its own), the lists and the dense grids (the roll, the steps); ~15 frames a
+ * second (graph_signature) */
+#ifndef UI_NO_DRIFT
+#define UI_NO_DRIFT 0                                /* (tests/ui_test.c: 1, its frames compared pixel by pixel) */
+#endif
+static int drift_on(void)
+{
+    uint32_t g = cur_page()->graph;
+    if (UI_NO_DRIFT)
+        return 0;
+    return !ui.home && !sys_load && !(ui_prefs & PREF_ANIM_OFF) && strip_kind() == SK_NONE && g != GR_ROLL &&
+           g != GR_STEPS && g != GR_CHANCE && g != GR_BROWSE && g != GR_USER && g != GR_SLOTS && g != GR_EVENTS &&
+           g != GR_SONG && g != GR_TOOLS && g != GR_PATS;
+}
+static void graph_drift(void)
+{
+    uint32_t k, gh = graph_h();
+    for (k = 0; k < 14u; k++) {
+        uint32_t h = k * 2654435761u + 0x9E37u;
+        int32_t gx = 10 + (int32_t)((h >> 8) % 220u + ui.frame * (1u + (h >> 28)) / 8u) % 220;
+        int32_t gy = 4 + (int32_t)(((h >> 16) % (gh - 8u)) + (uint32_t)(sine_i((ui.frame * 200u + h) << 16) >> 13)) % (int32_t)(gh - 8u);
+        cv_rect(gx, gy, 1 + (int32_t)(h >> 31), 1 + (int32_t)(h >> 31), ux_mix(T_SURF, T_THEME, 18 + (int32_t)(h >> 29) * 3));
+    }
+}
 static uint32_t graph_signature(void)
 {
     const page_t *pg = cur_page();
@@ -1193,6 +1205,8 @@ static uint32_t graph_signature(void)
     if (ui.home)
         return h ^ (ui.frame / 2u);                  /* scope: redraw every other frame */
     h ^= (uint32_t)pg->graph * 131u + TSEL->eng_req + song.sel * 7777u + ui.page * 1291u;
+    if (drift_on())                                  /* (0.6.61) the granules: every 4th frame */
+        h ^= (ui.frame / 4u) * 2246822519u;
     if (strip_kind() == SK_TITLE)                    /* MENU > LARGE: the page's title (its engine, its number) */
         return h ^ 0x5A17u;
     if (pg->graph == GR_NONE || pg->graph == GR_ARP || pg->graph == GR_MOTION) h ^= ui.frame / 2u;
@@ -2027,6 +2041,8 @@ static void draw_graph(void)
     cv_begin(240, graph_h(), T_BG);
     cv_rrect(3, 0, 234, graph_h(), 5, T_SURF, T_BG);   /* the panel (MENU > LARGE: the strip) */
     cv_bg = T_SURF;                                  /* (text drawn with cv_text lands on it) */
+    if (drift_on())
+        graph_drift();
     cv_oy = GOY;                                     /* graphs on a 100 px scale */
     if (strip_kind() != SK_NONE) {                   /* MENU > LARGE: the strip */
         uint32_t k = strip_kind();
