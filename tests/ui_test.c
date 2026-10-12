@@ -544,6 +544,65 @@ static int test_transitions(void)
     trk_note_off(t, 57);
     return bad;
 }
+/* (0.6.43) MUTATE (project.c mutate_poll): on the bar, AMOUNT 64 when turned on, never LEVEL / PAN, ORBIT near the
+ * anchor, the kick kept, FREEZE stops it */
+static void mut_bars(uint32_t bars)
+{
+    int32_t o[2u * CTL];
+    uint32_t b, n = bars * 4u * beat_samples() / CTL + 4u;
+    for (b = 0; b < n; b++) { mix_block(o, CTL); if (!(b & 7u)) mutate_poll(); }
+}
+static int test_mutate(void)
+{
+    int bad = 0, ok;
+    uint32_t k, i, kick0 = 0, kick1 = 0;
+    int16_t lvl, pan, e0[8];
+    track_t *t, *d;
+    ui_power_on();
+    t = &trk[0];
+    d = &trk[3];
+    mut_freeze = 0;
+    ok = mut_progress(0) == 0xFFFFu;
+    t->p[P_MSND] = 1;                                     /* every bar */
+    mutate_poll();
+    ok &= t->p[P_MAMT] == 64 && mut.ok;
+    bad += check("MUTATE: off, no ring; SOUND on: AMOUNT 64, the anchor taken", ok);
+    for (i = 0; i < 8u; i++) e0[i] = t->p[P_E0 + i];
+    lvl = t->p[P_LEVEL]; pan = t->p[P_PAN];
+    press(B_PLAY);
+    mutate_poll();
+    mut_bars(1);
+    ok = bar_n >= 1u;
+    for (i = 0, k = 0; i < 8u; i++) k += t->p[P_E0 + i] != e0[i];
+    ok &= k > 0u && t->p[P_LEVEL] == lvl && t->p[P_PAN] == pan;
+    bad += check("MUTATE: on the bar the sound changed, LEVEL and PAN never", ok);
+    mut_bars(6);                                          /* ORBIT: still near the anchor */
+    for (i = 0, ok = 1; i < 8u; i++) {
+        const param_desc_t *pd = track_desc(t, P_E0 + i);
+        if (pd->fmt != F_ENUM)
+            ok &= abs(t->p[P_E0 + i] - e0[i]) <= (pd->max - pd->min) * 64 / 256 + 1;
+    }
+    bad += check("MUTATE ORBIT: after 7 bars every value within AMOUNT of the anchor", ok);
+    /* PATTERN on the DRUM track: hits change, the kick lane never */
+    for (i = 0; i < 16u; i++) { d->step[i] = (step_t){{0}, 0, ST_NOTE, 0, 100}; d->step[i].hit = i % 4u ? 0x08u : 0x09u; }
+    for (i = 0; i < 16u; i++) kick0 |= (uint32_t)(d->step[i].hit & 1u) << i;
+    d->p[P_MPAT] = 1; d->p[P_MAMT] = 127;
+    mutate_poll();
+    mut_bars(3);
+    for (i = 0, k = 0; i < 16u; i++) { kick1 |= (uint32_t)(d->step[i].hit & 1u) << i; k += d->step[i].hit != (i % 4u ? 0x08u : 0x09u); }
+    bad += check("MUTATE PATTERN on DRUM: hits changed, the kick lane as it was", k > 0u && kick0 == kick1);
+    /* FREEZE: nothing changes */
+    for (i = 0; i < 8u; i++) e0[i] = t->p[P_E0 + i];
+    mut_freeze = 1;
+    mut_bars(2);
+    for (i = 0, k = 0; i < 8u; i++) k += t->p[P_E0 + i] != e0[i];
+    mut_freeze = 0;
+    bad += check("MUTATE FREEZE: no change while frozen", k == 0u);
+    stop_transport();
+    t->p[P_MSND] = 0; d->p[P_MPAT] = 0;
+    mutate_poll();
+    return bad;
+}
 static int test_patterns(void)
 {
     int bad = 0;
@@ -5568,6 +5627,8 @@ static int test_seq_tools(void)
     press(B_SEQ); frames(320);
     ok &= cur_page()->graph == GR_EVENTS;
     press(B_SEQ); frames(320);
+    ok &= cur_page()->graph == GR_MUTATE;              /* (0.6.43) */
+    press(B_SEQ); frames(320);
     ok &= str_eq(cur_page()->title, "SHIFT");
     bad += check("  a tap on STEP: the next SEQ page, as always (the hint until the layer was opened)", ok);
     {   /* (0.6.37) SHIFT: OFFSET PITCH CHANCE, the last SEQ page; CHANCE 0 skips every step, 100 % (stored 0) none */
@@ -7901,6 +7962,7 @@ int main(void)
     bad += test_patterns();
     bad += test_init_system();
     bad += test_transitions();
+    bad += test_mutate();
     bad += test_rec();
     bad += test_step_rec();
     bad += test_step_rec();

@@ -76,6 +76,12 @@ enum {                          /* per-track parameters */
                                          * voice_start), in a slot of the retired DIGITAL's (0: OFF, its default) */
 #define P_TCHAN P_FM1_DEC              /* (JIANT 0.6.37) SHIFT > CHANCE: how much of the track's steps it skips, 0 none (100 %,
                                          * every project and preset before it); seq.c trk_chance; DIGITAL's OP1 DEC slot */
+/* (JIANT 0.6.43) MUTATE (project.c mutate_poll), in DIGITAL's OP1 REL / OP2 slots (0, every project and preset before it:
+ * OFF, 0 %, ORBIT): SOUND and PATTERN every OFF / 1 / 2 / 4 / 8 / 16 / 32 bars, AMOUNT, MODE ORBIT / DRIFT */
+#define P_MSND P_FM1_REL
+#define P_MPAT P_FM2_ATK
+#define P_MAMT P_FM2_DEC
+#define P_MMODE P_FM2_REL
 #define P_ELOOP P_ED_FX                /* (JIANT 0.4) ENV LOOP: OFF / ON (voice.c env_tick) */
 /* (JIANT 0.6.9) AUTO PAN (fx.c mix_part), in the slots of the old per-track SLICER (one on a bus since 0.6.3, its
  * slots stored, never read but by proj_sl_migrate). Laid so what old stores hold means OFF: DPTH where SLCR was (0, or

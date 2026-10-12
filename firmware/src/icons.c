@@ -264,6 +264,7 @@ static uint32_t page_icon(const page_t *pg)
     case GR_SONG: return ICON_X_SONG;         /* SONG: the disc */
     case GR_CHANCE: return ICON_PROB;         /* CHANCE: the die */
     case GR_COMP: return ICON_ARP;            /* (0.6.39) COMP: the step components */
+    case GR_MUTATE: return ICON_PROB;         /* (0.6.43) MUTATE */
     case GR_MOTION: return motion_icon();
     case GR_EVENTS: return ICON_X_MOTION;     /* AUTO LIST */
     default: return ICON_NONE;

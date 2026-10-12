@@ -268,6 +268,7 @@ and heating up with its own audio. The selected track is drawn bigger, a muted o
 | PATTERN | LEN | DIV | SWING | GATE |
 | AUTOMATION | PLAY (ON/OFF) | EVENT (count) | LOCK (count) | CLEAR (action) |
 | AUTO LIST | ROW | STEP | PARAM | VALUE |
+| MUTATE | SOUND (every) | PATTERN (every) | AMOUNT | MODE |
 | SHIFT (last) | OFFSET | PITCH | CHANCE | — |
 
 ### The layers (hold the button)
@@ -475,6 +476,15 @@ recorded into the pattern, quantized to its steps, overdubbing. Knob moves on th
 - **AUTOMATION**: PLAY turns the track's automation on or off, EVENT and LOCK count the records, CLEAR erases them
   (OCT+, with a dialog).
 - **AUTO LIST**: every automation event and lock as a list. KNOB 1 the row, 2 the step, 3 the parameter, 4 the value.
+- **MUTATE**: the track changes by itself, in time with the clock, so a texture can evolve for minutes.
+  **SOUND** and **PATTERN**: every OFF, 1, 2, 4, 8, 16 or 32 bars (the change lands on the bar's one). **AMOUNT**: how
+  much (turning one on sets 50 %). **MODE**: **ORBIT** varies around the anchor (the music as it was when MUTATE came
+  on, when PLAY started, or when you pressed **OCT+** here: KEEP), so it never loses itself; **DRIFT** goes on from
+  what it is now. SOUND changes the engine's values, the filter, its envelope, DEC, REL and the sends (never LEVEL, PAN
+  or MUTE); PATTERN moves notes along the scale, flips accents, adds or takes a note off the beat (never on it); on
+  DRUM it flips hits, never the kick. **OCT−** here (or **GLO + A4**, FREEZE) stops every mutation until pressed again.
+  The page shows each track's next 32 bars (orange: SOUND, violet: PATTERN); on HOME each being has a ring of dots
+  filling up to its next change, all lit when it changes.
 - **SHIFT** (the last SEQ page): **OFFSET** (−32 to +32 steps), **PITCH** (±24 semitones; not on drums) and
   **CHANCE**: the whole track's chance, 100 % plays every step as written, lower thins it out (each step's own chance,
   from the dice or the editor, scaled). All three can be automated; OFFSET and PITCH are also on the SCL layer's

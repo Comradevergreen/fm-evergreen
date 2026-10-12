@@ -491,6 +491,7 @@ static void session_dice(uint32_t seed)
 #define GLO_ALL ((uint32_t)NTRK)
 #define GLO_TAP 7u
 #define GLO_UNDO 8u                                     /* (0.6.21) G4: UNDO the last big change (project.c undo_do) */
+#define GLO_FRZ 9u                                      /* (0.6.43) A4: MUTATE frozen / free (project.c mutate_poll) */
 static void layer_key(uint32_t l, uint32_t k)
 {
     uint32_t p = key_place(k), i;
@@ -508,6 +509,9 @@ static void layer_key(uint32_t l, uint32_t k)
             dx_mute_set(0);
         } else if (p == GLO_TAP) {
             glo_tap();
+        } else if (p == GLO_FRZ) {
+            mut_freeze = (uint8_t)!mut_freeze;
+            ui_message(mut_freeze ? "MUTATE FROZEN" : "MUTATE FREE");
         } else if (p == GLO_UNDO) {
             if (chain_busy())
                 ui_message("STOP TO EDIT");
@@ -671,7 +675,9 @@ static uint32_t layer_leds(uint32_t *br)
             on = b ? (p < NTRK && glo_sounding(p)) || (p >= NTRK && p < NTRK + 4u && !((dx_mute >> (p - NTRK)) & 1u))
                    : p < NTRK && ((lys.solo >> k) & 1u);      /* (a group sounding: lit) */
             can = !b && ((p < NTRK && p < trk_live) || p == GLO_ALL || (p == GLO_TAP && !song.g[G_CLOCK]) ||
-                         (p == GLO_UNDO && undo_ok));   /* (the keys that do something breathe: not an asleep track's) */
+                         (p == GLO_UNDO && undo_ok) || p == GLO_FRZ);   /* (the keys that do something breathe: not an
+                                                         * asleep track's) */
+            on |= !b && p == GLO_FRZ && mut_freeze;      /* (0.6.43: FREEZE on: lit) */
         } else if (l == LAYER_SCL) {                    /* the root lit, the scale's notes breathe */
             e = (k + 5u + 12u - root) % 12u;
             on = e == 0u;
@@ -869,6 +875,8 @@ static void layer_glo(void)
     lcell(LC_X(3), y2, h, n, ICON_TEMPO, 0, "TAP", song.g[G_CLOCK] ? LS_DIM : LS_OFF, 0);
     n[0] = W_NOTE[GLO_UNDO];
     lcell(LC_X(2), y2, h, n, ICON_LOOP, 0, "UNDO", undo_ok ? LS_OFF : LS_DIM, 0);   /* (0.6.21) */
+    n[0] = W_NOTE[GLO_FRZ];
+    lcell(LC_X(1), y2, h, n, ICON_HOLD, 0, "FREEZE", mut_freeze ? LS_HELD : LS_OFF, 0);   /* (0.6.43) MUTATE */
     for (e = 0; dr && e < 4u; e++) {                    /* black keys 7..10: the DRUM groups, latched */
         bnote(n, NTRK + e);
         lcell(LC_X(e), 68, 24, n, 0, 0, GLO_GROUP[e], (dx_mute >> e) & 1u ? LS_MUTE : LS_OFF, 0);
