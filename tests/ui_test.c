@@ -7738,11 +7738,34 @@ static int test_bpm_lock(void)
         ok &= cur_page()->fam == FAM_EDIT;
         turn(EN_SELECT, 1);
         for (j = 0; j < 8u; j++) moved += TSEL->p[P_E0 + j] != before[j];
-        ok &= song.g[G_BPM] == b0 && msg_is("SOUND DICED") && moved > 0u && undo_ok;
-        for (j = 0; j < 8u; j++) before[j] = TSEL->p[P_E0 + j];
-        turn(EN_SELECT, 1);                                           /* (the same burst: no second dice) */
-        for (j = 0; j < 8u; j++) ok &= TSEL->p[P_E0 + j] == before[j];
-        bad += check("0.6.21: SELECT on EDIT dices the sound (not the tempo), once a turn burst; other pages nothing", ok);
+        ok &= song.g[G_BPM] == b0 && ui.confirm == CF_DICE_SOUND && moved > 0u && undo_ok;   /* (0.6.65) heard, asked */
+        {
+            int16_t orig[8], d1[8];
+            uint32_t same = 1;
+            for (j = 0; j < 8u; j++) orig[j] = before[j];
+            for (j = 0; j < 8u; j++) d1[j] = TSEL->p[P_E0 + j];
+            turn(EN_SELECT, 1);                                       /* (the same burst: no second dice) */
+            for (j = 0; j < 8u; j++) ok &= TSEL->p[P_E0 + j] == d1[j];
+            fm1_ms += 1200u;
+            for (uint32_t n = 0; n < 4u && same; n++) {               /* SELECT again (a new burst): another dice */
+                turn(EN_SELECT, 1); fm1_ms += 1200u;
+                for (j = 0; j < 8u; j++) same &= TSEL->p[P_E0 + j] == d1[j];
+            }
+            ok &= !same && ui.confirm == CF_DICE_SOUND;
+            press(B_OCTDN); frame();                                  /* CANCEL: the sound before the first dice */
+            for (j = 0; j < 8u; j++) ok &= TSEL->p[P_E0 + j] == orig[j];
+            ok &= !ui.confirm && msg_is("SOUND BACK");
+            bad += check("0.6.65: EDIT + SELECT dices at once under KEEP DICED SOUND?; SELECT again dices again; CANCEL "
+                         "brings the sound back", ok);
+            fm1_ms += 1200u;
+            turn(EN_SELECT, 1);
+            for (j = 0; j < 8u; j++) d1[j] = TSEL->p[P_E0 + j];
+            press(B_OCTUP); frame();                                  /* OK: the dice stays */
+            ok = !ui.confirm && msg_is("SOUND DICED");
+            for (j = 0; j < 8u; j++) ok &= TSEL->p[P_E0 + j] == d1[j];
+        }
+        bad += check("0.6.21: SELECT on EDIT dices the sound (not the tempo), once a turn burst (0.6.65: OK keeps it); "
+                     "other pages nothing", ok);
     }
     {   /* (0.6.31) the MIXER (GLO's button opens it): SELECT the tempo, as on GLO's pages */
         uint8_t pr = ui_prefs;

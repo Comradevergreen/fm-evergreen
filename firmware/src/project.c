@@ -1431,14 +1431,21 @@ static int project_recall_slot(void)
 /* EDIT layer RECALL (JIANT): track k's sound as section slot stored it, the safe state to come back to: its engine
  * and sound (the parameters a sound load sets: not LEVEL PAN MUTE, the pattern's, the SLICER: param_kept), its FM6
  * patch; a DRUM track also the section's DRUM-X kit. The steps and the motion stay. 0 done, 1 nothing stored there */
+static void sound_put(project_t *p, uint32_t k);
 static int project_recall_sound(uint32_t slot, uint32_t k)
 {
     project_t *p = &proj_scratch;
+    if (slot > 3u || !proj_import(p, &proj_slot[slot], sizeof(project_store_t)) || !proj_ok(p) || !proj_engines_ok(p))
+        return 1;
+    sound_put(p, k);
+    return 0;
+}
+/* track k's sound (engine, sound parameters, FM6 patch; DRUM: the DRUM-X kit) from project p; the rest plays on */
+static void sound_put(project_t *p, uint32_t k)
+{
     track_t *t = &trk[k % NTRK];
     const proj_trk_t *s;
     uint32_t i, e;
-    if (slot > 3u || !proj_import(p, &proj_slot[slot], sizeof(project_store_t)) || !proj_ok(p) || !proj_engines_ok(p))
-        return 1;
     proj_phys(p);                                       /* (as project_restore_runtime: the old formats' tracks) */
     proj_fm4(p);
     proj_perc(p);
@@ -1472,7 +1479,6 @@ static int project_recall_sound(uint32_t slot, uint32_t k)
         sync_reload = 1;
     load_end(t);
     ui.force = 1;
-    return 0;
 }
 
 /* (0.6.52) a section's FUGUE settings into the heads' (fugue.c fg_set) */
@@ -1774,6 +1780,16 @@ static int undo_do(void)                                /* 0: done */
     undo_st[0] = undo_st[1];                            /* (UNDO again: what it replaced) */
     if (play)
         transport_req = 1;                              /* (the restore stopped it: it plays on) */
+    return 0;
+}
+
+/* (0.6.65) the sound dice's CANCEL (ui_input.c CF_DICE_SOUND): track k's sound back from the undo mark taken just
+ * before the dice; only that track's sound, so the transport and the rest play on. 0 done */
+static int undo_sound(uint32_t k)
+{
+    if (!undo_ok || !proj_import(&proj_scratch, &undo_st[0], sizeof undo_st[0]))
+        return 1;
+    sound_put(&proj_scratch, k);
     return 0;
 }
 

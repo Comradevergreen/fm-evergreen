@@ -54,8 +54,8 @@ files.
    [13](#13-system-tracks-load-and-the-menu)).
 3. Turn **PRESETS** to browse sounds. Play the keys.
 4. Turn **KNOB 1–4**: on HOME they are the four most useful controls of the track's engine.
-5. Don't like it? Press **EDIT** and turn **SELECT**: the sound is rolled into a new variation. **GLO held + G4**
-   takes it back.
+5. Don't like it? Press **EDIT** and turn **SELECT**: the sound is rolled into a new variation and you hear it at once.
+   **OCT+ OK** keeps it, **OCT− CANCEL** brings the sound back.
 
 ### Your first song (5 minutes)
 
@@ -684,8 +684,10 @@ as they are. The roles that play go on the first tracks, so with TRACKS 4 you he
 ### Sound dice (EDIT + SELECT)
 
 On any **EDIT** page, turn SELECT: the selected track loads a random factory preset of its engine and each engine
-parameter moves up to a quarter of its range. On DRUM, both sides of every kit sound are rolled around the factory kit
-(**KIT DICED**).
+parameter moves up to a quarter of its range. On DRUM, both sides of every kit sound are rolled around the factory kit.
+You hear it at once under **KEEP DICED SOUND?** (DRUM: **KEEP DICED KIT?**): turn SELECT again for another roll,
+**OCT+ OK** keeps it, **OCT− CANCEL** brings back the sound you had before the first roll (only that track's sound:
+the music plays on). After OK, **GLO held + G4** still undoes it.
 
 ### Macro dice
 

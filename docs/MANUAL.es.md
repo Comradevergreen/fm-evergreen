@@ -54,8 +54,8 @@ Guardá tus archivos WAV.
    [13](#13-sistema-tracks-load-y-el-menu)).
 3. Girá **PRESETS** para recorrer sonidos. Tocá las teclas.
 4. Girá **KNOB 1–4**: en HOME son los cuatro controles más útiles del motor de la pista.
-5. ¿No te gusta? Apretá **EDIT** y girá **SELECT**: el sonido se tira a los dados y sale una variación nueva.
-   **GLO mantenido + G4** lo devuelve.
+5. ¿No te gusta? Apretá **EDIT** y girá **SELECT**: el sonido se tira a los dados y sale una variación nueva, que escuchás al
+   instante. **OCT+ OK** la deja, **OCT− CANCEL** devuelve el sonido.
 
 ### Tu primer tema (5 minutos)
 
@@ -722,7 +722,9 @@ pistas, así que con TRACKS 4 escuchás los más importantes. La pantalla dice *
 
 En cualquier página **EDIT**, girá SELECT: la pista seleccionada carga un preset de fábrica al azar de su motor y cada
 parámetro del motor se mueve hasta un cuarto de su rango. En DRUM, los dos lados de cada sonido del kit se tiran
-alrededor del kit de fábrica (**KIT DICED**).
+alrededor del kit de fábrica. Lo escuchás al instante bajo **KEEP DICED SOUND?** (DRUM: **KEEP DICED KIT?**): girá
+SELECT otra vez para otra tirada, **OCT+ OK** la deja, **OCT− CANCEL** devuelve el sonido que tenías antes de la
+primera tirada (solo el sonido de esa pista: la música sigue). Después de OK, **GLO mantenido + G4** también lo deshace.
 
 ### Dados de macros
 
