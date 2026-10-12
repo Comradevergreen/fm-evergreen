@@ -1496,12 +1496,25 @@ static void ui_input_frame(void)
     oct = oct_taps(pressed, ui.menu || ui.confirm || act_cols() || name_on() || layer_set_open());
     oct = layer_oct(pressed, oct);                      /* (a SET layer's OCT-: put back) */
     layer_masks();                                      /* seq.c: keys pressed with a layer's button are its own */
-    {   /* (0.6.6) a page button held + PRESETS: its pages (page_jump); not in the menu, a dialog, NAME */
+    {   /* (0.6.6) a page button held + PRESETS: its pages (page_jump); not in the menu, a dialog, NAME. (0.6.66)
+         * SELECT too, first (GLO's aside: GLO + SELECT stays the tempo): no dice while it pages, nor for a moment
+         * after (the last detents of the turn, the button let go first) */
+        static uint32_t pj_sel_ms;
         uint32_t f = held_family();
         int32_t ps;
-        if (f != FAM_COUNT && !ui.menu && !ui.confirm && !name_on() && !ly_used &&
-            (ps = panel_enc(EN_PRESET)) != 0)           /* (a layer already used: PRESETS stays its, dropped) */
-            page_jump(f, ps);
+        if (f != FAM_COUNT && !ui.menu && !ui.confirm && !name_on() && !ly_used) {
+            if (f != FAM_GLO && (ps = panel_enc(EN_SELECT)) != 0) {
+                page_jump(f, ps);
+                pj_sel_ms = fm1_ms | 1u;
+            } else if ((ps = panel_enc(EN_PRESET)) != 0) {   /* (a layer already used: PRESETS stays its, dropped) */
+                page_jump(f, ps);
+            }
+        } else if (pj_sel_ms && fm1_ms - pj_sel_ms < 400u) {
+            if (panel_enc(EN_SELECT))
+                pj_sel_ms = fm1_ms | 1u;                /* (dropped: still the paging turn) */
+        } else {
+            pj_sel_ms = 0;
+        }
         pj_hold();
     }
     lay = layer_held();
