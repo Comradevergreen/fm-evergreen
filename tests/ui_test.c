@@ -836,6 +836,37 @@ static void tools_pick(uint32_t n)                /* (0.6.25) TOOLS: the n-th ac
     ui.act = 0;
     for (k = 0; k < n; k++) turn(EN_K1, 1);
 }
+static int test_init_system(void)
+{
+    int bad = 0;
+    ui_power_on();
+    {   /* (0.6.40) TOOLS 5 INIT SYSTEM: its dialog; everything as at power-on (sounds, steps, automation, mix, effects,
+         * song, macros, the kit), the setup kept; UNDO brings the music back */
+        uint32_t k, sig0, ok2;
+        trk[0].step[2] = (step_t){{60}, 1, ST_NOTE, 0, 100};
+        trk[2].p[P_LEVEL] = 30; trk[2].p[P_REV] = 90;
+        song.g[G_BPM] = 97; song.g[G_RTYPE] = 3; song.g[G_TUNE] = 5; song.g[G_CLOCK] = 1;
+        macro_v[1] = 77; dx_tone = 0x35u; dx_mot[XM_DPTH] = 50; pfx_lane[3] = 9;
+        motion_capture(&trk[1], P_LEVEL, 40);
+        sig0 = steps_sig(&trk[0]);
+        go_title("TOOLS"); tools_pick(5); press(B_OCTUP);
+        ok2 = ui.confirm == CF_INIT_SYS && trk[0].step[2].n == 1u;
+        press(B_OCTUP);
+        ok2 &= !ui.confirm && msg_is("SYSTEM INIT") && chain_config.count == 0u;
+        for (k = 0; k < NTRK; k++)
+            ok2 &= seq_is_empty(&trk[k]) && !motion_count(&trk[k]) && trk[k].eng_req == trk_def_engine(k);
+        ok2 &= trk[2].p[P_LEVEL] != 30 && trk[2].p[P_REV] != 90;   /* (the first sound's level and sends) */
+        ok2 &= song.g[G_BPM] == GP[G_BPM].def && song.g[G_RTYPE] == GP[G_RTYPE].def && !macro_v[1] && !dx_tone &&
+               !dx_mot[XM_DPTH] && !pfx_lane[3] && !memcmp(dx_kit, DX_KIT_DEF, sizeof dx_kit);
+        ok2 &= song.g[G_TUNE] == 5 && song.g[G_CLOCK] == 1;       /* (the setup stays) */
+        bad += check("TOOLS 5 INIT SYSTEM: everything as at power-on, CLOCK and TUNE kept", ok2);
+        ok2 = !undo_do() && steps_sig(&trk[0]) == sig0 && trk[2].p[P_LEVEL] == 30 && song.g[G_BPM] == 97;
+        bad += check("  UNDO after INIT SYSTEM: the music back", ok2);
+        song.g[G_TUNE] = GP[G_TUNE].def; song.g[G_CLOCK] = GP[G_CLOCK].def;
+        memset(macro_v, 0, sizeof macro_v); dx_tone = 0; memset(dx_mot, 0, sizeof dx_mot); pfx_lane[3] = 0;   /* (UNDO brought them) */
+    }
+    return bad;
+}
 static uint32_t oct_leds_seen(int all)            /* over 1 s: the OCT LED bits lit at some point (all: throughout) */
 {
     uint32_t k, any = 0, every = 3u | OCT_BREATH;
@@ -7802,6 +7833,7 @@ int main(void)
     bad += test_large_face();
     bad += test_sound_loads();
     bad += test_patterns();
+    bad += test_init_system();
     bad += test_rec();
     bad += test_step_rec();
     bad += test_step_rec();

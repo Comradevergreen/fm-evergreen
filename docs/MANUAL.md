@@ -249,7 +249,7 @@ and heating up with its own audio. The selected track is drawn bigger, a muted o
 | USER | SLOT (U01–U32) | LOAD (action) | ERASE (action) | SAVE (action) |
 | PROJECT | PROJ (1–8) | SECT (A–D) | LOAD (action) | SAVE (action) |
 | ARRANGE | ROW | SECT (on END: STOP / x2–x8 / LOOP) | BARS | SCENE |
-| TOOLS | any knob or PRESETS picks from the list: CLEAR SEQ, INIT SOUND, DELETE ROW, CLEAR SONG | | | |
+| TOOLS | any knob or PRESETS picks from the list: CLEAR SEQ, INIT SOUND, DELETE ROW, CLEAR SONG, INIT SYSTEM | | | |
 
 **ARP** (per track)
 
@@ -498,6 +498,7 @@ sounding after you let go; the next chord replaces them.
 | --- | --- |
 | The selected track's steps and automation | **REC held + F3**, or SAVE > TOOLS > CLEAR SEQ, or SEQ TOOLS F3 |
 | All six tracks' steps, automation and the punch-in lane | **SEQ held + REC**, then OCT+ |
+| **Everything** (INIT SYSTEM): every track its engine's default sound, no steps or automation, the mix, effects, tempo and SLICER at their defaults, the song empty, macros at 0, the factory DRUM-X kit. Saved projects, user presets, MENU, CLOCK, TUNE and MIDI stay | **SAVE > TOOLS > 5 INIT SYSTEM**, then OCT+ (UNDO brings the music back) |
 | Only one part's automation on the selected track | **REC held + FX / EDIT / ENV / LFO / SCL / ARP / GLO** |
 | The track's automation, keeping the steps | SEQ TOOLS **F4 CLR AUTO**, or SEQ > AUTOMATION > CLEAR |
 
@@ -632,7 +633,7 @@ One step back over the **last big change**. Pressing it again goes forward (redo
 G4 breathes on the GLO map when there is something to undo; with nothing, it says **NOTHING TO UNDO**.
 
 **UNDO covers**: DICE ALL, a sound diced, a track cleared (REC F3, TOOLS CLEAR SEQ), CLEAR ALL SEQUENCES (SEQ + REC),
-INIT and RECALL (EDIT layer or TOOLS), clearing the automation (SEQ > AUTOMATION),
+INIT SYSTEM, INIT and RECALL (EDIT layer or TOOLS), clearing the automation (SEQ > AUTOMATION),
 and a section loaded with **SAVE > PROJECT > LOAD**. It restores the music as it was: sounds, steps, automation, the
 kit, the punch-in lane, the macros, the tempo and global effects.
 
@@ -792,8 +793,9 @@ This is the chapter to read carefully. JIANT keeps several kinds of data in diff
   button is held and nothing is sounding, and **at most once a minute**.
 - It does **not** save when you switch off. If you change something and power off within those seconds, that last
   change is lost. To be safe: **stop, wait ~10 s**, or better, save into a section.
-- At power-on, with **MENU > SYSTEM > RESTORE LAST ON** (the default), the autosave becomes the music (the screen says
-  **RESTORED**). With RESTORE LAST OFF there is no autosave at all and the device starts fresh.
+- At power-on the device starts at zero, as **INIT SYSTEM** leaves it (every track its engine's default sound, no
+  steps). With **MENU > SYSTEM > RESTORE LAST ON** the autosave becomes the music instead (the screen says
+  **RESTORED**). RESTORE LAST is **OFF** by default since 0.6.40: no autosave at all.
 - After a crash, a hang or a failed start, the autosave is not restored (the music that was playing could be what
   crashed).
 
@@ -956,7 +958,7 @@ closes it (settings are saved then).
 | AUDIO | COUNT-IN | OFF, 1 BAR, 2 BARS |
 | AUDIO | TRACKS | **4** (default), 6 |
 | SYSTEM | USB SERIAL | ON, OFF (OFF helps macOS 13–15 see the USB audio input; USB-MIDI and the editor still work) |
-| SYSTEM | RESTORE LAST | **ON** (default), OFF (no autosave, power-on starts fresh) |
+| SYSTEM | RESTORE LAST | **OFF** (default: no autosave, power-on at zero), ON (the last session back at power-on) |
 | SYSTEM | LOAD | ECO, LITE, **FULL** (default) |
 | SYSTEM | CALIBRATION | OCT+ opens HARDWARE CALIBRATION (teach each button and knob) |
 | SYSTEM | ABOUT | OCT+ opens: version, QR code, AUDIO LOAD (NOW, PEAK, LATE, SHED since power-on) and credits (scroll with PRESETS, OCT− back) |

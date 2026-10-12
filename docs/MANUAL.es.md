@@ -256,7 +256,7 @@ a la derecha); apretá OCT+ para ejecutarla.
 | USER | SLOT (U01–U32) | LOAD (acción) | ERASE (acción) | SAVE (acción) |
 | PROJECT | PROJ (1–8) | SECT (A–D) | LOAD (acción) | SAVE (acción) |
 | ARRANGE | ROW | SECT (en END: STOP / x2–x8 / LOOP) | BARS | SCENE |
-| TOOLS | cualquier perilla o PRESETS elige de la lista: CLEAR SEQ, INIT SOUND, DELETE ROW, CLEAR SONG | | | |
+| TOOLS | cualquier perilla o PRESETS elige de la lista: CLEAR SEQ, INIT SOUND, DELETE ROW, CLEAR SONG, INIT SYSTEM | | | |
 
 **ARP** (por pista)
 
@@ -520,6 +520,7 @@ las notas sonando después de soltarlas; el acorde siguiente las reemplaza.
 | --- | --- |
 | Los pasos y la automatización de la pista seleccionada | **REC mantenido + F3**, o SAVE > TOOLS > CLEAR SEQ, o SEQ TOOLS F3 |
 | Los pasos y la automatización de las seis pistas, y el carril de punch-in | **SEQ mantenido + REC**, después OCT+ |
+| **Todo** (INIT SYSTEM): cada pista con el sonido por defecto de su motor, sin pasos ni automatización; mezcla, efectos, tempo y SLICER por defecto; el arreglo vacío, las macros en 0, el kit DRUM-X de fábrica. Quedan los proyectos guardados, los presets de usuario, el MENU, CLOCK, TUNE y MIDI | **SAVE > TOOLS > 5 INIT SYSTEM**, después OCT+ (UNDO devuelve la música) |
 | Solo la automatización de una parte en la pista seleccionada | **REC mantenido + FX / EDIT / ENV / LFO / SCL / ARP / GLO** |
 | La automatización de la pista, conservando los pasos | SEQ TOOLS **F4 CLR AUTO**, o SEQ > AUTOMATION > CLEAR |
 
@@ -663,7 +664,7 @@ Un paso atrás sobre el **último cambio grande**. Apretarlo otra vez va hacia a
 sonando. G4 "respira" en el mapa de GLO cuando hay algo para deshacer; si no hay nada, dice **NOTHING TO UNDO**.
 
 **UNDO cubre**: DICE ALL, un sonido tirado a los dados, una pista borrada (REC F3, TOOLS CLEAR SEQ), CLEAR ALL
-SEQUENCES (SEQ + REC), INIT y RECALL (capa EDIT o TOOLS), borrar la automatización
+SEQUENCES (SEQ + REC), INIT SYSTEM, INIT y RECALL (capa EDIT o TOOLS), borrar la automatización
 (SEQ > AUTOMATION) y una sección cargada con **SAVE > PROJECT > LOAD**. Restaura la música tal como estaba: sonidos,
 pasos, automatización, el kit, el carril de punch-in, las macros, el tempo y los efectos globales.
 
@@ -835,8 +836,9 @@ distintas.
   no hay ninguna tecla ni botón mantenido y no está sonando nada, y **como máximo una vez por minuto**.
 - **No** guarda cuando apagás. Si cambiás algo y apagás dentro de esos segundos, ese último cambio se pierde. Para ir
   a lo seguro: **pará, esperá ~10 s**, o mejor, guardá en una sección.
-- Al encender, con **MENU > SYSTEM > RESTORE LAST ON** (el valor por defecto), el autoguardado pasa a ser la música
-  (la pantalla dice **RESTORED**). Con RESTORE LAST OFF no hay autoguardado en absoluto y el equipo arranca de cero.
+- Al encender, el equipo arranca en cero, como lo deja **INIT SYSTEM** (cada pista con el sonido por defecto de su motor,
+  sin pasos). Con **MENU > SYSTEM > RESTORE LAST ON** el autoguardado pasa a ser la música (la pantalla dice
+  **RESTORED**). Desde 0.6.40 RESTORE LAST viene en **OFF**: sin autoguardado.
 - Después de un crash, un cuelgue o un arranque fallido, el autoguardado no se restaura (la música que estaba sonando
   podría ser lo que causó el crash).
 
@@ -1008,7 +1010,7 @@ valor. HOME lo cierra (en ese momento se guarda la configuración).
 | AUDIO | COUNT-IN | OFF, 1 BAR, 2 BARS |
 | AUDIO | TRACKS | **4** (por defecto), 6 |
 | SYSTEM | USB SERIAL | ON, OFF (OFF ayuda a que macOS 13–15 vea la entrada de audio USB; el USB-MIDI y el editor siguen funcionando) |
-| SYSTEM | RESTORE LAST | **ON** (por defecto), OFF (sin autoguardado, el encendido arranca de cero) |
+| SYSTEM | RESTORE LAST | **OFF** (por defecto: sin autoguardado, el encendido arranca en cero), ON (la última sesión vuelve al encender) |
 | SYSTEM | LOAD | ECO, LITE, **FULL** (por defecto) |
 | SYSTEM | CALIBRATION | OCT+ abre HARDWARE CALIBRATION (enseñarle cada botón y perilla) |
 | SYSTEM | ABOUT | OCT+ abre: versión, código QR, AUDIO LOAD (NOW, PEAK, LATE, SHED desde el encendido) y créditos (se desplaza con PRESETS, OCT− vuelve) |

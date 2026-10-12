@@ -8,6 +8,7 @@ static int project_save(uint32_t slot);
 static void panel_setup(void);
 static void project_load(uint32_t slot);
 static void undo_mark(void);                    /* (0.6.21) project.c: the music before a change, */
+static void system_init(void);                  /* (0.6.40) project.c: INIT SYSTEM */
 static int undo_do(void);                       /* .. back (and again: forward) */
 static uint8_t undo_ok;
 static int project_used(uint32_t slot);
@@ -54,8 +55,9 @@ static uint32_t up_gen;                      /* bumped on every user bank change
                                                 * (ui_draw.c large_kind); clear in every older setting = OFF */
 #define PREF_SERIAL_OFF 64u                    /* MENU > USB SERIAL OFF (#67): no serial console, the device enumerates as
                                                 * audio + MIDI only (usb.c usb_cdc_switch); clear in every older setting = ON */
-#define PREF_RESTORE_OFF 128u                  /* MENU > RESTORE LAST OFF (1.2, Discussion #130): no autosave written, none
-                                                * restored at power-on (project.c); clear in every older setting = ON */
+#define PREF_RESTORE_ON 128u                   /* MENU > RESTORE LAST ON (1.2, Discussion #130: the autosave written and
+                                                * restored at power-on, project.c). JIANT 0.6.40: OFF by default (clear =
+                                                * OFF, power-on as INIT SYSTEM leaves it); the bit was RESTORE LAST OFF */
 #define fx_latch ui_prefs
 /* MENU > AUDIO CLICK, CLICK LEVEL, COUNT-IN (1.1, Discussion #131; click.c, seq.c): two bits each in another byte no
  * engine uses, saved with the settings: bits 0-1 CLICK (OFF REC ON), 2-3 CLICK LEVEL (stored 0 MID, 1 LOW, 2 HIGH),
@@ -197,7 +199,7 @@ static struct {
 
 enum { CF_NONE, CF_CLEAR_SEQ, CF_CLEAR_TRK, CF_OVR_PROJ, CF_OVR_USER, CF_LOAD_PAT,
        CF_DEL_ROW, CF_CLEAR_SONG, CF_INIT_SOUND, CF_CLEAR_MOTION, CF_ERASE_USER,
-       CF_RECALL_SOUND, CF_CLEAR_ALL, CF_DICE_ALL };   /* ui.confirm: TOOLS' clears; (0.6.21) HOME + SELECT:
+       CF_RECALL_SOUND, CF_CLEAR_ALL, CF_DICE_ALL, CF_INIT_SYS };   /* ui.confirm: TOOLS' clears; (0.6.21) HOME + SELECT:
                                    * everything diced;
                                    * SAVE over a used slot; a pattern over the user's steps;
                                    * USER ERASE */
@@ -1296,8 +1298,8 @@ static const char *act_name(uint32_t c)          /* column c's action (the foote
     if (cur_page()->graph == GR_MOTION) return "CLEAR";
     if (cur_page()->graph == GR_EVENTS) return ev_act_name();
     if (cur_page()->graph == GR_TOOLS) {
-        static const char *const actions[] = {"CLEAR", "INIT", "DELETE", "CLEAR"};
-        return actions[c & 3u];
+        static const char *const actions[] = {"CLEAR", "INIT", "DELETE", "CLEAR", "INIT"};
+        return actions[c < 5u ? c : 4u];
     }
     if (cur_page()->graph == GR_SONG)
         return song.playing || chain_busy() ? "STOP" : "PLAY";
@@ -1318,7 +1320,7 @@ static int act_ready(void)
     if (cur_page()->graph == GR_MOTION) return !chain_busy() && motion_count(TSEL);
     if (cur_page()->graph == GR_EVENTS) return ev_act_ready();
     if (cur_page()->graph == GR_TOOLS)                  /* one case per column: CLEAR PAT, INIT, DELETE ROW, CLEAR SONG */
-        return !chain_busy() && (c == 0u ? !seq_is_empty(TSEL) || motion_count(TSEL) : c == 1u ? 1 :
+        return !chain_busy() && (c == 0u ? !seq_is_empty(TSEL) || motion_count(TSEL) : c == 1u || c == 4u ? 1 :
                                  c == 2u ? ui.song_row < chain_config.count : chain_config.count != 0u);
     if (cur_page()->graph == GR_SONG)
         return song.playing || chain_busy() || chain_config.count;

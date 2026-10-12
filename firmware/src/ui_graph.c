@@ -1271,11 +1271,11 @@ static void graph_events(void)
  * PRESETS, 0.6.25: was a knob each) filled; OCT+ does it (a dialog first) */
 static void graph_tools(void)
 {
-    static const char *const WHAT[4] = {"CLEAR SEQ", "INIT SOUND", "DELETE ROW", "CLEAR SONG"};
-    static const char *const ON[4] = {"STEPS + AUTO", "ENGINE DEFAULT", "", "ALL ROWS"};
+    static const char *const WHAT[5] = {"CLEAR SEQ", "INIT SOUND", "DELETE ROW", "CLEAR SONG", "INIT SYSTEM"};
+    static const char *const ON[5] = {"STEPS + AUTO", "ENGINE DEFAULT", "", "ALL ROWS", "EVERYTHING"};
     uint32_t c;
     char b[24];
-    for (c = 0; c < 4u; c++) {
+    for (c = 0; c < 5u; c++) {
         int32_t y = LIST_Y(c);
         int sel = ui.act == c + 1u;
         uint16_t bg = sel ? T_THEME : T_SURF;
@@ -1289,7 +1289,7 @@ static void graph_tools(void)
             cv_text_r(226, y + CAP_IN(S, 16), &AF_S, ON[c], sel ? T_INK : T_DIM, bg);
         }
     }
-    note_line(LIST_Y(4) + 10, ui.act ? "[OCT+] DO IT" : "TURN [K1] TO PICK", ui.act ? T_ACCENT : T_DIM);
+    note_line(LIST_Y(5) + 6, ui.act ? "[OCT+] DO IT" : "TURN [K1] TO PICK", ui.act ? T_ACCENT : T_DIM);
 }
 /* (0.6.12) SAVE > PROJECT: the project (one of NSONG: a song of storage.c) and its four sections. A title line
  * (PROJECT n, the section the music came from or went to), the sections A-D (name, USED or --; the one picked filled;

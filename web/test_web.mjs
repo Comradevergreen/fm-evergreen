@@ -272,7 +272,7 @@ async function editorMock() {
        "editor: MENU_SET round trip (1.1: COUNT-IN 1 BAR)");
     await rq(E.req.menuSet(14, 0));
     r = E.parse[E.CMD.MENU_SET](await rq(E.req.menuSet(15, 1)));
-    ok(r.rc === 0 && r.id === 15 && r.value === 1, "editor: MENU_SET round trip (1.2: RESTORE LAST OFF)");
+    ok(r.rc === 0 && r.id === 15 && r.value === 1, "editor: MENU_SET round trip (1.2: RESTORE LAST; 0.6.40: 1 is ON)");
     await rq(E.req.menuSet(15, 0));
     r = E.parse[E.CMD.MENU_SET](await rq(E.req.menuSet(16, 1)));
     ok(r.rc === 0 && r.id === 16 && r.value === 1, "editor: MENU_SET round trip (1.2: SCALE LEDS ON)");

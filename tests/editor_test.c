@@ -729,7 +729,7 @@ static int menu_protocol(void)
         {"HOLD", "0.3 s,0.4 s,0.5 s,0.6 s"}, {"KNOB ACCEL", "ON,OFF"}, {"FX LATCH", "OFF,ON"}, {"BPM LOCK", "OFF,ON"},
         {"SPEAKER EQ", "FLAT,LOWCUT,BASS+"}, {"USB LEVEL", "MASTER,FIXED"}, {"USB SERIAL", "ON,OFF"},
         {"CLICK", "OFF,REC,ON"}, {"CLICK LEVEL", "LOW,MID,HIGH"}, {"COUNT-IN", "OFF,1 BAR,2 BARS"},   /* (1.1: appended) */
-        {"RESTORE LAST", "ON,OFF"}, {"SCALE LEDS", "OFF,ON"},                                        /* (1.2) */
+        {"RESTORE LAST", "OFF,ON"}, {"SCALE LEDS", "OFF,ON"},                                        /* (1.2) */
         {"SCREEN OFF", "NEVER,5 MIN,15 MIN,30 MIN,60 MIN"}, {"TRACKS", "4,6"},   /* (0.6.18) */
         {"LOAD", "ECO,LITE,FULL"}};                                                                 /* (0.6.30) */
     static const int32_t DEF[20] = {-1, 0, 0, 0, 2, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 2};   /* (COLOR: the default palette) */
@@ -807,7 +807,7 @@ static int menu_protocol(void)
     ok &= menu_set(12, 1) == 3 && click_mode == CLICK_REC && menu_set(12, 2) == 3 && click_mode == CLICK_ON;
     ok &= menu_set(13, 0) == 3 && click_lvl == 0u;
     ok &= menu_set(14, 2) == 3 && cin_bars == 2u;
-    ok &= menu_set(15, 1) == 3 && (ui_prefs & PREF_RESTORE_OFF);
+    ok &= menu_set(15, 1) == 3 && (ui_prefs & PREF_RESTORE_ON);
     ok &= menu_set(16, 1) == 3 && (ui_rec_prefs & 0x40u) && click_mode == CLICK_ON && cin_bars == 2u;   /* (its own bit) */
     ok &= menu_set(17, 0) == 3 && scr_get() == 0u && menu_set(17, 9) == 3 && scr_get() == 4u &&   /* (clamped) */
           menu_set(17, 2) == 3 && scr_get() == 2u && ui_scr == 1u;

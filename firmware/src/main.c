@@ -95,7 +95,8 @@ static void fm1_fault(const fm1_crash_t *c)
     fm1_reboot();
 }
 
-/* power-on: the parts with their default sounds (TRK_DEF); the sequencers empty */
+/* power-on: the parts with their engines' defaults and first sounds (TRK_DEF's engines; JIANT 0.6.40: as INIT SYSTEM,
+ * was TRK_DEF's presets); the sequencers empty. RESTORE LAST ON brings the last session back after (autosave_boot) */
 static void felucca_init(void)
 {
     uint32_t i;
@@ -107,8 +108,7 @@ static void felucca_init(void)
     for (i = 0; i < NTRK; i++) {
         track_t *t = &trk[i];
         track_defaults(t);
-        set_engine_of(t, TRK_DEF[i][0]);
-        apply_preset_to(t, TRK_DEF[i][1]);    /* with its sends */
+        set_engine_of(t, TRK_DEF[i][0]);      /* (its defaults and first sound, with its sends) */
         t->engine = t->eng_req;
         track_defaults_steps(t);              /* (a sound load never touches them) */
         if (TRK_DEF[i][2])
