@@ -341,6 +341,10 @@ rolls too.
 Eight engines, all synthesis, no samples. Any engine can go on any track. Pick them with **PRESETS** (one list over
 every engine) or with KNOB 2 (ENG) on SAVE > PRESETS. Each track's four HOME knobs are listed too.
 
+**Smooth changes**: switching a track to another engine fades the old one out (about 12 ms) and what you are holding
+(keys, or the notes the sequencer holds) goes on in the new engine, fading in; nothing is cut. Changing a list value
+(WAVE, CHIP, a type) while notes sound makes a short dip (about 3 ms) instead of a click; the notes go on.
+
 | Engine | EDIT 1 | EDIT 2 | HOME knobs |
 | --- | --- | --- | --- |
 | **ANALOG** | WAVE, DETUNE, MIX, NOISE | CUT, RES, DRIVE, INT | CUT, RES, ATK, REL |

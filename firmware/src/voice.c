@@ -600,20 +600,66 @@ static void trk_all_off(track_t *t)
  * then the engine switches and the notes that came during the fade start on it. A part with nothing
  * sounding switches at once. */
 #define XF_BLOCKS 4u                                    /* 4 x 32 samples: 2.9 ms */
+/* (0.6.41) smoother: an engine switch fades out over XF_ENG (11.6 ms) and what was held (keys, the sequencer's notes:
+ * xf_held, before the load's release) starts on the new engine, fading in over XF_ENG; an engine's list value
+ * (WAVE, CHIP, TYPE .. F_ENUM) changed while it sounds: a dip, XF_DIP out on the old value and in on the new one, the
+ * voices going on (it clicked: the wave swapped mid-cycle) */
+#define XF_ENG 16u
+#define XF_DIP 2u
+static int eng_kit(uint32_t e) { return ENGINES[e % NENGINES]->oneshot; }
+static uint32_t xf_held(const track_t *t, uint8_t *nt, uint8_t *vl)   /* the notes held (up to 4): their count */
+{
+    uint32_t i, k, n = 0;
+    if (eng_kit(t->engine) || eng_kit(t->eng_req))
+        return 0;                                       /* (hits: nothing held) */
+    for (i = 0; i < NVOICE; i++) {
+        const voice_t *v = &t->v[i];
+        if (!v->active || !v->gate)
+            continue;
+        for (k = 0; k < n && nt[k] != v->note; k++)
+            ;
+        if (k == n && n < 4u) { nt[n] = v->note; vl[n++] = v->vel; }
+    }
+    return n;
+}
 static void engine_block(track_t *t)
 {
     uint32_t i, any = 0;
+    if (!t->xf_on && t->eng_req == t->engine && !eng_kit(t->engine)) {   /* a list value changed while it sounds */
+        const engine_t *e = ENGINES[t->engine % NENGINES];
+        for (i = 0; i < 8u; i++) {
+            const param_desc_t *d = e->desc ? e->desc(t, i) : 0;
+            if (t->p[P_E0 + i] != t->pe_old[i] && (d ? d : &e->edit[i])->fmt == F_ENUM)
+                break;
+        }
+        for (any = 0; i < 8u && any < NVOICE; any++)
+            if (t->v[any].active && t->v[any].env_out)
+                break;
+        if (i < 8u && any < NVOICE) {
+            t->xf_on = 1; t->xf = t->xf_len = XF_DIP; t->xf_dip = 1;
+            return;                                     /* (pe_old: the old value, for the dip's way out) */
+        }
+        any = 0;
+    }
     if (t->xf_on || t->eng_req != t->engine) {
         if (!t->xf_on) {
             for (i = 0; i < NVOICE; i++)
                 any |= t->v[i].active;
             if (any) {
                 t->xf_on = 1;
-                t->xf = XF_BLOCKS;
+                t->xf = t->xf_len = XF_ENG;
+                t->xf_dip = 0;
                 return;
             }
         } else if (t->xf) {
             return;                                     /* still fading (track_render counts down) */
+        }
+        if (t->xf_dip) {                                /* the dip's end: the same voices, in again on the new value */
+            t->xf_on = t->xf_dip = 0;
+            t->xin = t->xin_len = XF_DIP;
+            for (i = 0; i < 8u; i++)
+                t->pe_old[i] = t->p[P_E0 + i];
+            return;
         }
         for (i = 0; i < NVOICE; i++) {                  /* faded to 0: gone */
             voice_t *v = &t->v[i];
@@ -621,6 +667,7 @@ static void engine_block(track_t *t)
             v->stage = 0;
             v->env = v->env_out = 0;
         }
+        any = t->engine != eng_idx(t->eng_req);
         t->engine = eng_idx(t->eng_req);
         t->xf_on = 0;
         t->nmono = 0;
@@ -630,6 +677,8 @@ static void engine_block(track_t *t)
             t->xp_n = 0;
             for (i = 0; i < n; i++)
                 trk_note_on(t, t->xp_note[i], t->xp_vel[i]);
+            if (n && any)                               /* (0.6.41) on the new engine: in, not at once */
+                t->xin = t->xin_len = XF_ENG;
         }
     }
     for (i = 0; i < 8u; i++)                            /* the engine's own values, for a later fade */
@@ -654,7 +703,8 @@ static void trk_fade_out(track_t *t)
         any |= t->v[i].active;
     if (any) {
         t->xf_on = 1;
-        t->xf = XF_BLOCKS;
+        t->xf = t->xf_len = t->eng_req != t->engine ? XF_ENG : XF_BLOCKS;   /* (0.6.41: another engine, longer) */
+        t->xf_dip = 0;
     } else if (xf_snap_t == (uint32_t)(t - trk)) {
         xf_snap_t = 0xFFu;                              /* (nothing to fade: no snapshot left for a later one) */
     }
@@ -763,7 +813,9 @@ static uint32_t track_render(track_t *t, int32_t *out, uint32_t n)
             if (p[P_LD_AMP])
                 m.amp1 = mulq15(m.amp1, 32767 - mulq15((lfo + 32768) >> 1, p[P_LD_AMP] * 258));
             if (fade)                                   /* linear to 0 over the fade */
-                m.amp1 = m.amp1 * (int32_t)(t->xf - 1u) / (int32_t)XF_BLOCKS;
+                m.amp1 = m.amp1 * (int32_t)(t->xf - 1u) / (int32_t)(t->xf_len ? t->xf_len : XF_BLOCKS);
+            else if (t->xin)                            /* (0.6.41) in, linear, after a switch or a dip */
+                m.amp1 = m.amp1 * (int32_t)(t->xin_len - t->xin + 1u) / (int32_t)(t->xin_len + 1u);
             m.amp0 = v->env_out;
             v->env_out = m.amp1;
         }
@@ -801,6 +853,8 @@ static uint32_t track_render(track_t *t, int32_t *out, uint32_t n)
     else if (fade)
         for (i = 0; i < 8u; i++)
             t->p[P_E0 + i] = pe_new[i];
+    if (!fade && t->xin)
+        t->xin--;                                       /* (0.6.41) the fade-in's next block */
     if (fade && !--t->xf && snap)
         xf_snap_t = 0xFFu;                              /* (faded out: the snapshot done with) */
     return nr;

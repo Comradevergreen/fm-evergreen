@@ -1204,7 +1204,13 @@ static void events_block(uint32_t n)
             if ((latch_was >> i) & 1u)
                 latch_release(t);                   /* (0.6.19: MIDI OUT's latched notes end too) */
             midi_forget_track(i);
-            trk_all_off(t);
+            {   /* (0.6.41) another engine: what is held sounds on in it (kept past the release, which forgets) */
+                uint8_t hn[4], hv[4];
+                uint32_t hc = t->eng_req != t->engine ? xf_held(t, hn, hv) : 0u, h;
+                trk_all_off(t);
+                for (h = 0; h < hc; h++) { t->xp_note[h] = hn[h]; t->xp_vel[h] = hv[h]; }
+                t->xp_n = (uint8_t)hc;
+            }
             if ((fo >> i) & 1u)
                 trk_fade_out(t);                        /* (0.6.13: a sound load: on the old values, ~3 ms; voice.c) */
             t->nheld = 0;

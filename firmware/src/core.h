@@ -435,6 +435,8 @@ typedef struct track {
     int16_t armp, aholdp;        /* P_AMODE / P_AHOLD as last seen by the ISR */
     /* engine switch (voice.c engine_block): the old engine's voices fade out, then it switches */
     uint8_t xf_on, xf;           /* fading; blocks of the fade still to render */
+    uint8_t xf_len, xf_dip;      /* (0.6.41) the fade's length; a dip (an engine's list value changed: the voices stay) */
+    uint8_t xin, xin_len;        /* (0.6.41) fading in after it: blocks still to come, of xin_len */
     int16_t pe_old[8];           /* P_E0..P_E7 of the sounding engine: the fade renders with these */
     uint8_t xp_n, xp_note[4], xp_vel[4];   /* note-ons during the fade, played on the new engine */
     /* modulation matrix (mod.c): MIDI performance controllers of the track's channel, 0..127 */
