@@ -1515,7 +1515,7 @@ function makeMockDevice(opt = {}) {
     D("MOD", F.PCT, 0, 127, 0), D("RATE", F.LFOHZ, 0, 127, 30), D("PRE", F.INT, -24, 100, 0),   /* the reverb's modulation, pre-delay (0.6.12: SHIMMER / CLOUD AIR below 0) */
     D("FILT", F.BIPCT, -64, 63, 0), D("WIDE", F.PCT, 0, 127, 0),   /* (JIANT 0.3) G_RFILT, G_RWIDE: the reverb's tone, width */
     D("PITCH", F.SEMI, -12, 12, 0), D("SPRAY", F.PCT, 0, 127, 0),   /* .. G_DPIT, G_DSPRY: the GRAIN delay */
-    D("STRN", F.INT, -14, 14, 0),                   /* (JIANT 0.4) G_STRN: every sequence this many steps along the scale */
+    D("ALL TR", F.INT, -14, 14, 0),                   /* (JIANT 0.4) G_STRN: every sequence this many steps along the scale */
     /* (JIANT 0.6.3) G_SLMODE 37 ..: the SLICER, one on a bus: mode, pattern, rate, depth; T1..T6 and FX in; the repeats'
        pitch sequence: LEN, QNT, 16 steps */
     E("MODE", ["OFF", "GATE", "STUT"], 0), D("PAT", F.INT, 1, 16, 1), E("RATE", ["1/8", "1/16", "1/32", "8T", "16T", "32T"], 1), D("DEPTH", F.PCT, 0, 127, 127),

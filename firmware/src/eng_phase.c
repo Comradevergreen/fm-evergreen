@@ -139,18 +139,30 @@ static void phase_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const
     uint32_t ph0 = v->ph[0], ph1 = v->ph[1], ph2 = v->ph[2];
     int32_t tg0 = v->s[0], tg1 = v->s[1];                    /* WAVE / WAVE2 toggles */
     int32_t fb = p[P_E7], f1 = v->s[2], f2 = v->s[3];        /* (JIANT 0.4) FB and its two samples */
-    pd_t b1, b2;
+    pd_t b1, b2, bm;
+    int32_t mf = 0;                                          /* (0.6.45) MORPH: line 1 towards the next WAVEs */
     depth = clamp(depth + (m->shape - (64 << 8)), 0, 127 << 8);
     dcw = (uint32_t)depth * 65535u / (127u << 8);
     dcw = (dcw * 56000u) >> 16;                              /* the classic range of the bend */
     inc2 = pitch_inc(clamp(m->pitch16 + d16, 0, 2047));
     inc2 += (uint32_t)((int32_t)(inc2 >> 12) * (rem * 2367 / 16000));
+    if (p[P_MORPH]) {
+        int32_t pos = (int32_t)w1 * 256 + p[P_MORPH] * 768 / 127;
+        w1 = ((uint32_t)pos >> 8) & 7u;
+        mf = pos & 255;
+        pd_setup(&bm, (w1 + 1u) & 7u, dcw);
+    }
     pd_setup(&b1, w1, dcw);
     pd_setup(&b2, w2 ? w2 - 1u : w1, dcw);                   /* WAVE2 (every other cycle) */
     for (i = 0; i < n; i++) {
         uint32_t old = ph0;
         int32_t s;
-        s = pd_wave(tg0 ? &b2 : &b1, ((ph0 >> 16) + (uint32_t)((((f1 + f2) >> 1) * fb) >> 8)) & 0xFFFFu);
+        {
+            uint32_t pp = ((ph0 >> 16) + (uint32_t)((((f1 + f2) >> 1) * fb) >> 8)) & 0xFFFFu;
+            s = pd_wave(tg0 ? &b2 : &b1, pp);
+            if (mf && !tg0)
+                s += ((pd_wave(&bm, pp) - s) * mf) >> 8;
+        }
         f2 = f1;
         f1 = s;
         ph0 += inc;

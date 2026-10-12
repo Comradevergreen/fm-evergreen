@@ -1420,6 +1420,15 @@ static void ui_input_frame(void)
         static uint32_t said_ms;
         uint32_t k, said = song.sel != sel0 && song.sel >= trk_live;
         int quiet = !said_ms || fm1_ms - said_ms > 4000u;
+        if (song.playing && !play0 && song.g[G_STRN]) {   /* (0.6.45) PLAY with every sequence moved: say so (it
+                                                         * looked like a bug: notes lower than the roll shows) */
+            char b[24];
+            str_cpy(b, "ALL TR ", sizeof b);
+            if (song.g[G_STRN] < 0) str_cpy(b + 7, "-", 2);
+            fmt_int(b + str_len(b), song.g[G_STRN] < 0 ? -song.g[G_STRN] : song.g[G_STRN]);
+            ui_say(b, " DEG");
+            str_cpy(ui.msg2, "SCL 2 > ALL TR: 0 = OFF", sizeof ui.msg2);
+        }
         if (song.playing && !play0 && quiet)
             for (k = trk_live; k < NTRK; k++)
                 if (!seq_is_empty(&trk[k]) && !trk[k].p[P_MUTE]) said = 1;

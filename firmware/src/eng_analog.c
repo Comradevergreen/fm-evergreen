@@ -31,6 +31,26 @@ static void analog_note_on(track_t *t, voice_t *v)
         v->s[2] = 0x1234567 + (int32_t)v->age;        /* noise state */
 }
 
+/* (0.6.45) MORPH: the plain WAVEs (SAW SQR TRI SIN) on towards the next ones: the place, Q8 from WAVE (0..768), the
+ * knob and the SHAPE modulation (LFO / ENV -> SHAPE) together; -1: none (the WAVE as it is) */
+static int32_t an_mpos(const int16_t *p, const vmod_t *m)
+{
+    int32_t mo;
+    if (p[P_E0] >= 4 || (!p[P_MORPH] && m->shape == (64 << 8)))
+        return -1;
+    mo = clamp((p[P_MORPH] << 8) + m->shape - (64 << 8), 0, 127 << 8);
+    return clamp(p[P_E0] * 256 + mo * 768 / (127 << 8), 0, 768);
+}
+static inline int32_t an_osc(uint32_t w, uint32_t ph, uint32_t inc)
+{
+    return w == 1u ? osc_pulse(ph, inc, 0x80000000u) : w == 2u ? osc_tri(ph) : w == 3u ? osc_sine(ph) : osc_saw(ph, inc);
+}
+static inline int32_t an_morph(int32_t pos, uint32_t ph, uint32_t inc)
+{
+    int32_t a = an_osc((uint32_t)pos >> 8, ph, inc), f = pos & 255;
+    return f ? a + (((an_osc(((uint32_t)pos >> 8) + 1u, ph, inc) - a) * f) >> 8) : a;
+}
+
 /* SYNC RING SAW3 (see the top): a render of their own (the other WAVEs' loop untouched), the same noise, drive and
  * filter */
 static __attribute__((noinline)) void analog_ext(track_t *t, voice_t *v, int32_t *out, uint32_t n, const vmod_t *m)
@@ -40,7 +60,7 @@ static __attribute__((noinline)) void analog_ext(track_t *t, voice_t *v, int32_t
     uint32_t ft = (uint32_t)p[P_FTYPE] & 3u, pw = 0x80000000u + (uint32_t)((m->shape - (64 << 8)) << 15);
     int32_t det = p[P_E1], m2 = p[P_E2] * 258, m1 = 32767 - m2, nz = p[P_E3] * 200, drv = p[P_E6], kd = 8192 - p[P_E5] * 7600 / 127;
     int32_t drive = 32768 + drv * 512, cut = (p[P_E4] << 8) + m->cutoff + ((v->pitch16 - 60 * 16) << 2);
-    int32_t ic1 = v->s[0], ic2 = v->s[1], nst = v->s[2];
+    int32_t ic1 = v->s[0], ic2 = v->s[1], nst = v->s[2], mpos = an_mpos(p, m);
     tsvf_t flt;
     tsvf_coef(&flt, cut, p[P_E5]);
     r = 16u + (uint32_t)det;                            /* SYNC / RING: osc 2 at r / 16 of osc 1 (1 .. 8.9) */
@@ -55,7 +75,10 @@ static __attribute__((noinline)) void analog_ext(track_t *t, voice_t *v, int32_t
         inc2 = det || p[P_E7] ? cents_inc(m->pitch16 + p[P_E7] * 16, det, 0) : inc1;
     for (i = 0; i < n; i++) {
         int32_t a = osc_saw(ph0, inc1), b, s;
-        if (wave < AW_SYNC) {
+        if (mpos >= 0) {                                /* (0.6.45) MORPH */
+            a = an_morph(mpos, ph0, inc1);
+            b = an_morph(mpos, ph1, inc2);
+        } else if (wave < AW_SYNC) {
             switch (wave) {
             case 1: a = osc_pulse(ph0, inc1, 0x80000000u); b = osc_pulse(ph1, inc2, 0x80000000u); break;
             case 2: a = osc_tri(ph0); b = osc_tri(ph1); break;
@@ -160,7 +183,7 @@ static __attribute__((noinline)) void analog_render(track_t *t, voice_t *v, int3
  * (a dispatch of its own: analog_render's loop as before) */
 static void analog_dispatch(track_t *t, voice_t *v, int32_t *out, uint32_t n, const vmod_t *m)
 {
-    if ((uint32_t)t->p[P_E0] >= AW_SYNC || t->p[P_FTYPE])
+    if ((uint32_t)t->p[P_E0] >= AW_SYNC || t->p[P_FTYPE] || an_mpos(t->p, m) >= 0)   /* (0.6.45: MORPH there too) */
         analog_ext(t, v, out, n, m);
     else
         analog_render(t, v, out, n, m);

@@ -7,7 +7,7 @@ import html, os
 
 R = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(R, 'docs', 'cheatsheet')
-VERSION = 'v0.6.44'
+VERSION = 'v0.6.45'
 
 HEAT = ['#22d3ee', '#3b82f6', '#8b5cf6', '#d946ef', '#ef4444', '#ff7a00', '#facc15', '#f4f1ea']
 
@@ -236,7 +236,7 @@ def controls():
                            ('LANES 2', 'HATOP TOM RIM BELL'), ('SOUND', 'LANE SIDE PITCH PMOD'),
                            ('SOUND 2', 'DECAY NOISE COLOR MODE'), ('SOUND 3', 'LANE PMOD DRIVE WAVE'),
                            ('X-MOD', 'RATE DEPTH SHAPE RAND')]),
-        ('SCL · ARP', HEAT[2], [('SCL', 'ROOT SCALE QUANT TRANS'), ('SCL 2', 'STRN - - -'), ('ARP', 'MODE RATE OCT GATE'),
+        ('SCL · ARP', HEAT[2], [('SCL', 'ROOT SCALE QUANT TRANS'), ('SCL 2', 'ALL TR - - -'), ('ARP', 'MODE RATE OCT GATE'),
                                 ('ARP 2', 'SWING PROB HOLD ORDER')]),
         ('SEQ', HEAT[4], [('STEP', 'STEP NOTE TIME FLAG'), ('STEP · DRUM', 'STEP LANE HIT ACC'), ('COMP', 'STEP TYPE VAL VAL'), ('PATTERN', 'LEN DIV SWING GATE'), 
                           ('AUTOMATION', 'PLAY EVENT LOCK CLEAR'), ('AUTO LIST', 'ROW STEP PARAM VALUE'),
@@ -335,7 +335,7 @@ def sound():
                   '<h4>PATTERN · SHIFT</h4>' + knobs('LEN', 'DIV', 'SWG', 'GATE') + knobs('OFS', 'PIT', 'CHN', '-')))
     b.append(card('SCALE · ARP', HEAT[0],
                   '<p><b>ROOT and SCALE</b> are every melodic track\'s: CHR MAJ MIN DOR MIX PEN MPEN HARM PHRY LYD LOC MEL '
-                  'BLUES WHOLE DIMHW DIMWH. QNT snaps keys or the sequence, TRN transposes, <b>STRN</b> (SCL 2) moves '
+                  'BLUES WHOLE DIMHW DIMWH. QNT snaps keys or the sequence, TRN transposes, <b>ALL TR</b> (SCL 2) moves '
                   'every sequence along the scale.</p><h4>ARP MODES</h4><p class="dim">OFF UP DN UPDN RND ORD REPEAT DNUP '
                   'UP+8 CONV DIVG PINKY THUMB WALK CHORD <b style="color:#f4f1ea">TRNS</b> (the keys transpose the '
                   'sequence)</p>'))

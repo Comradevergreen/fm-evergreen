@@ -82,6 +82,8 @@ enum {                          /* per-track parameters */
 #define P_MPAT P_FM2_ATK
 #define P_MAMT P_FM2_DEC
 #define P_MMODE P_FM2_REL
+#define P_MORPH P_FM3_ATK              /* (JIANT 0.6.45) EDIT > MORPH: ANALOG PHASE LOFI's wave on towards the next ones
+                                         * (0: as WAVE has it; every project and preset before it), in DIGITAL's slot */
 #define P_ELOOP P_ED_FX                /* (JIANT 0.4) ENV LOOP: OFF / ON (voice.c env_tick) */
 /* (JIANT 0.6.9) AUTO PAN (fx.c mix_part), in the slots of the old per-track SLICER (one on a bus since 0.6.3, its
  * slots stored, never read but by proj_sl_migrate). Laid so what old stores hold means OFF: DPTH where SLCR was (0, or
