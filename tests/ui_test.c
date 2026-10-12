@@ -697,6 +697,81 @@ static int test_init_dry(void)
     }
     return bad;
 }
+/* (0.6.48) DRUM-X IMAGE and the sounds' SENDs: IMAGE 0 and no SEND the part as mono as before; IMAGE puts each sound
+ * on its side; a sound's SEND feeds its bus alone; the SENDs go with the project */
+static void dximg_hit(uint32_t note, int16_t img, int64_t *el, int64_t *er, int64_t *sr)
+{
+    int32_t o[2u * CTL];
+    uint32_t b, i, k;
+    track_t *t;
+    ui_power_on();
+    t = &trk[0];
+    song.master_q12 = 4096;
+    for (k = 1; k < NTRK; k++) trk[k].p[P_MUTE] = 1;
+    set_engine_of(t, ENGI_DRUM);
+    t->engine = t->eng_req;
+    t->p[P_REV] = t->p[P_DLY] = t->p[P_CHOR] = t->p[P_DIST] = 0;
+    t->p[P_DXIMG] = img;
+    for (b = 0; b < 40u; b++) mix_block(o, CTL);       /* (past the engine change's crossfade: voice.c XF_ENG) */
+    trk_note_on(t, note, 110);
+    *el = *er = *sr = 0;
+    for (b = 0; b < 60u; b++) {
+        mix_block(o, CTL);
+        for (i = 0; i < CTL; i++) {
+            *el += (int64_t)o[2u * i] * o[2u * i] >> 8;
+            *er += (int64_t)o[2u * i + 1u] * o[2u * i + 1u] >> 8;
+            *sr += send_r[i] < 0 ? -send_r[i] : send_r[i];
+        }
+    }
+}
+static int test_dximg(void)
+{
+    int bad = 0, ok = 1;
+    int64_t el, er, sr;
+    int16_t img;
+    uint32_t l, side = 0;
+    project_store_t st;
+    memset(dx_snd, 0, sizeof dx_snd);
+    dximg_hit(38, 0, &el, &er, &sr);                     /* the snare, IMAGE 0 */
+    ok &= el > 0 && el - er < el / 32 && er - el < el / 32 && sr == 0 && !dx_xon;   /* (the master's own tiny width) */
+    bad += check("DRUM IMAGE 0, no SEND: the part mono as before (L = R), nothing to the reverb", ok);
+    for (img = 20, ok = 0; img < 128 && !ok; img++)     /* an IMAGE that puts the snare well to one side */
+        if (dx_img_pan(DV_SNARE, img) > 40 || dx_img_pan(DV_SNARE, img) < -40) {
+            int32_t p = dx_img_pan(DV_SNARE, img);
+            dximg_hit(38, img, &el, &er, &sr);
+            ok = p > 0 ? er > el * 4 : el > er * 4;
+            side = p > 0;
+        }
+    bad += check(side ? "DRUM IMAGE: the snare to the right" : "DRUM IMAGE: the snare to the left", ok);
+    for (img = 1, ok = 1; img < 128; img++)
+        for (l = 0; l < DV_NLANE; l++)
+            ok &= dx_img_pan(l, img) >= -64 && dx_img_pan(l, img) <= 64 && (l != DV_KICK || (dx_img_pan(l, img) >= -16 &&
+                  dx_img_pan(l, img) <= 16));
+    bad += check("DRUM IMAGE: pans in range, the kick near the middle", ok);
+    memset(dx_snd, 0, sizeof dx_snd);
+    dx_snd[DV_SNARE] = 3u << 6 | 63u;                   /* the snare alone to the REVERB */
+    {
+        int64_t a, b2, s1, s2;
+        uint8_t keep[8];
+        memcpy(keep, dx_snd, sizeof keep);
+        dximg_hit(38, 0, &a, &b2, &s1);
+        memcpy(dx_snd, keep, sizeof keep);
+        dximg_hit(36, 0, &a, &b2, &s2);                 /* the kick: no SEND */
+        bad += check("DRUM SEND: the snare's REVERB feeds the bus, the kick's none", s1 > 0 && s2 == 0);
+    }
+    ui_power_on();
+    memset(dx_snd, 0, sizeof dx_snd);
+    dx_snd[2] = 2u << 6 | 40u;
+    project_capture(&proj_scratch);
+    ok = proj_pack(&st, &proj_scratch);
+    memset(dx_snd, 0, sizeof dx_snd);
+    ok &= proj_import(&proj_scratch, &st, sizeof st) && !project_restore_runtime(&proj_scratch);
+    ok &= dx_snd[2] == (2u << 6 | 40u) && !dx_snd[0];
+    bad += check("DRUM SEND: kept with the project (FUNC 'D' 'S')", ok);
+    memset(dx_snd, 0, sizeof dx_snd);
+    ui_power_on();
+    return bad;
+}
 static int test_patterns(void)
 {
     int bad = 0;
@@ -3162,9 +3237,9 @@ static int test_edit_cycle(void)
 #endif
     {   /* #97: a DRUM track's lane levels on EDIT > LANES (KICK SNARE CLAP HATCL) and LANES 2 (HATOP TOM RIM BELL) */
         static const char *const CYC_K[] = {"EDIT 1", "EDIT 2", "FILTER", "LANES", "LANES 2", "SOUND", "SOUND 2", "SOUND 3", "X-MOD",
-                                            "TONE", "VOICE", "EDIT 1"};
+                                            "TONE", "SEND", "IMAGE", "VOICE", "EDIT 1"};
         set_engine_of(TSEL, ENGI_DRUM);
-        bad += check("EDIT cycle (DRUM): EDIT 1 EDIT 2 FILTER LANES LANES 2 SOUND SOUND 2 SOUND 3 X-MOD TONE VOICE EDIT 1",
+        bad += check("EDIT cycle (DRUM): EDIT 1 EDIT 2 FILTER LANES LANES 2 SOUND SOUND 2 SOUND 3 X-MOD TONE SEND IMAGE VOICE EDIT 1",
                      engine_cycle(CYC_K, NELEM(CYC_K)));
         go_title("LANES 2"); frame();
         ok = TSEL->p[P_LN5] == 127;
@@ -8081,6 +8156,7 @@ int main(void)
     bad += test_mutate();
     bad += test_morph();
     bad += test_init_dry();
+    bad += test_dximg();
     bad += test_rec();
     bad += test_step_rec();
     bad += test_step_rec();

@@ -786,6 +786,9 @@ static uint32_t track_render(track_t *t, int32_t *out, uint32_t n)
             t->p[P_E0 + i] = t->pe_old[i];
         }
     track_lfo_tick(t);
+    dx_xon = 0;                                         /* (0.6.48) a DRUM part's IMAGE and SENDs (eng_drum.c) */
+    if (e == &ENG_DRUM)
+        drum_side_begin(t, n);
     if (e->block)                                       /* the engine's per-part work (WHEEL: bars, rotor) */
         e->block(t);
     for (i = 0; i < NVOICE; i++) {

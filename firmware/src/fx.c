@@ -1025,6 +1025,42 @@ static __attribute__((noinline)) int32_t autopan(const track_t *t, uint32_t ti, 
     return ((v >> 7) * clamp(p[P_APDEP], 0, 127)) >> 1;   /* (+-256 x 127 / 2: +-64 << 8 at full depth) */
 }
 
+/* (JIANT 0.6.48) a DRUM part's IMAGE and SENDs (eng_drum.c dx_sl dx_sr dx_sb), after mix_part's loop put its sum in: what
+ * each side gives up (at the part's LEVEL ramp lq and PAN gains gl gr, as that loop), each bus fed by its sounds; pm0 ..
+ * pm1 the FX layer's mute over the block (perform.c perf_mute: 32768 open) */
+static __attribute__((noinline)) void drum_mix(int32_t *ol, int32_t *or_, uint32_t n, int32_t lq, int32_t dl, int32_t gl,
+                                               int32_t dgl, int32_t gr, int32_t dgr, int32_t pm0, int32_t pm1)
+{
+    uint32_t i, b, on = dx_xon;
+    int32_t dpm = (pm1 - pm0) / (int32_t)(n ? n : 1u), mute = pm0 != 32768 || pm1 != 32768;
+    int32_t *sd[3] = {send_c, send_d, send_r};
+    if (n > CTL)
+        n = CTL;
+    if (mute)                                           /* (the FX layer's mute: on what is taken and sent too) */
+        for (i = 0; i < n; i++) {
+            uint32_t g = (uint32_t)(pm0 + dpm * (int32_t)i) << 1;
+            dx_sl[i] = mulq16(dx_sl[i], g);
+            dx_sr[i] = mulq16(dx_sr[i], g);
+            dx_sb[0][i] = mulq16(dx_sb[0][i], g);
+            dx_sb[1][i] = mulq16(dx_sb[1][i], g);
+            dx_sb[2][i] = mulq16(dx_sb[2][i], g);
+        }
+    if (on & 1u) {                                      /* what each side gives up, at the part's LEVEL and PAN */
+        int32_t q = lq, l = gl, r = gr;
+        for (i = 0; i < n; i++, q += dl, l += dgl, r += dgr) {
+            ol[i] -= ((((dx_sl[i] >> 2) * (q >> 8)) >> 10) * l) >> 12;
+            or_[i] -= ((((dx_sr[i] >> 2) * (q >> 8)) >> 10) * r) >> 12;
+        }
+    }
+    for (b = 0; b < 3u; b++)                            /* each bus its sounds' */
+        if ((on >> (b + 1u)) & 1u) {
+            const int32_t *x = dx_sb[b];
+            int32_t *d = sd[b], q = lq;
+            for (i = 0; i < n; i++, q += dl)
+                d[i] += ((x[i] >> 2) * (q >> 8)) >> 10;
+        }
+}
+
 /* one synth part into the dry mix and the sends; a part with no voice sounding costs
  * the LFO tick and a cleared buffer only (after the DIST tail has run out) */
 static void mix_part(track_t *t, uint32_t n)
@@ -1088,8 +1124,14 @@ static void mix_part(track_t *t, uint32_t n)
         if ((duck_g0 < 32767 || duck_g1 < 32767) && ENGINES[t->engine] != &ENG_DRUM)   /* DUCK: the kick's */
             lq = duck_ramp(l0 >> 8, mp_lvl[ti] >> 8, &dl);
         track_dist(t, b, n);
-        if ((pf.mute >> (t - trk)) & 1u)
+        int32_t pm0 = 32768, pm1 = 32768;               /* (0.6.48: drum_mix's; pf.mg counts only while muting) */
+        if ((pf.mute >> (t - trk)) & 1u) {
+            pm0 = pf.mg[ti];
             perf_mute((uint32_t)(t - trk), b, n);       /* perform.c: a black key in the FX layer */
+            pm1 = pf.mg[ti];
+        }
+        if (dx_xon && ENGINES[t->engine] == &ENG_DRUM)  /* (0.6.48) IMAGE, SENDs: from the same ramps as below */
+            drum_mix(ol, or_, n, lq, dl, gl, dgl, gr, dgr, pm0, pm1);
         for (i = 0; i < n; i++, lq += dl, gl += dgl, gr += dgr) {
             int32_t x = ((b[i] >> 2) * (lq >> 8)) >> 10, a = x < 0 ? -x : x;   /* pre-shift: 8 loud voices */
             int32_t xs = clamp(x, -xmax, xmax);         /* sends: mulq15 would overflow */

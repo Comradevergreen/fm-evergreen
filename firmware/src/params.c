@@ -205,6 +205,7 @@ static const char *const N_CLEN[] = {"OFF", "1", "2", "3", "4", "5", "6", "7", "
                                      "44", "45", "46", "47", "48", "49", "50", "51", "52", "53", "54", "55", "56", "57",
                                      "58", "59", "60", "61", "62", "63", "64", 0};
 static const param_desc_t CLEN_DESC = {"C.LEN", F_ENUM, 0, 64, 0, N_CLEN, 0};   /* (0.6.47) P_CLEN */
+static const param_desc_t DXIMG_DESC = {"IMAGE", F_INT, 0, 127, 0, 0, 0};       /* (0.6.48) P_DXIMG */
 static const char *const N_MUTBARS[] = {"OFF", "1", "2", "4", "8", "16", "32"};
 static const char *const N_MUTMODE[] = {"ORBIT", "DRIFT"};
 static const param_desc_t MUT_DESC[4] = {                /* (0.6.43) MUTATE: P_MSND P_MPAT P_MAMT P_MMODE */
@@ -229,6 +230,7 @@ static const param_desc_t *track_desc(const track_t *t, uint32_t id)
         case P_MMODE: return &MUT_DESC[3];
         case P_MORPH: return &MORPH_DESC;
         case P_CLEN: return &CLEN_DESC;
+        case P_DXIMG: return &DXIMG_DESC;
         default: break;
         }
     return &TP[id];
@@ -430,7 +432,7 @@ enum { SC_TRACK, SC_GLOBAL, SC_ENGINE, SC_STEP, SC_TRK };   /* SC_TRK: the TRACK
 enum { GR_NONE, GR_ADSR, GR_LFO, GR_STEPS, GR_ARP, GR_SCALE, GR_FX, GR_ROLL, GR_BROWSE, GR_SLOTS, GR_USER, GR_TRK,
        GR_SLCR, GR_MOD, GR_PATS, GR_SONG, GR_TOOLS, GR_CHANCE, GR_MOTION, GR_EVENTS, GR_DXSND, GR_MSEQ, GR_SLPIT,
        GR_FMOP, GR_FMOP2, GR_FMENV,
-       GR_COMP, GR_MUTATE, GR_MORPH };   /* (JIANT 0.6.39) SEQ > COMP: the step components (ui_input.c comp_*, ui_graph.c graph_comp) */   /* (JIANT 0.6.10, from Felucca 1.5: FM6's operator pages, ui_fm6op.c) */
+       GR_COMP, GR_MUTATE, GR_MORPH, GR_DXIMG };   /* (JIANT 0.6.39) SEQ > COMP: the step components (ui_input.c comp_*, ui_graph.c graph_comp) */   /* (JIANT 0.6.10, from Felucca 1.5: FM6's operator pages, ui_fm6op.c) */
 
 typedef struct {
     const char *title;
@@ -492,6 +494,8 @@ static const page_t PAGES[] = {
     {"SOUND 3", FAM_EDIT, SC_TRACK, GR_DXSND, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (JIANT 0.4) the pitch modulation, DRIVE */
     {"X-MOD", FAM_EDIT, SC_TRACK, GR_DXSND, {0xFF, 0xFF, 0xFF, 0xFF}},     /* (JIANT 0.5.1) the kit's LFO on MORPH, RAND */
     {"TONE", FAM_EDIT, SC_TRACK, GR_DXSND, {0xFF, 0xFF, 0xFF, 0xFF}},      /* (JIANT 0.6.36) the kit's BP (the metal), FEEDBK */
+    {"SEND", FAM_EDIT, SC_TRACK, GR_DXSND, {0xFF, 0xFF, 0xFF, 0xFF}},      /* (JIANT 0.6.48) a sound's own SEND and AMOUNT */
+    {"IMAGE", FAM_EDIT, SC_TRACK, GR_DXIMG, {P_DXIMG, 0xFF, 0xFF, 0xFF}}, /* (JIANT 0.6.48) the kit's pan maps, one knob */
     {"OP1 ENV", FAM_EDIT, SC_TRACK, GR_ADSR, {P_FM1_ATK, P_FM1_DEC, P_FM1_SUS, P_FM1_REL}},
     {"OP2 ENV", FAM_EDIT, SC_TRACK, GR_ADSR, {P_FM2_ATK, P_FM2_DEC, P_FM2_SUS, P_FM2_REL}},
     {"OP3 ENV", FAM_EDIT, SC_TRACK, GR_ADSR, {P_FM3_ATK, P_FM3_DEC, P_FM3_SUS, P_FM3_REL}},
