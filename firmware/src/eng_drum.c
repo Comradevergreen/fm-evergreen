@@ -28,7 +28,7 @@
  * sends, DIST, the SLICER, LFO DEST AMP, velocity, the matrix's AMP and its E1..E8 (the knobs, per
  * block) do. A released key does not end a hit.
  *
- * State: 8 lanes per part in the pool section (drum_kit: each lane's hit). */
+ * State: 8 lanes per part (drum_kit: each lane's hit; .bss since JIANT 0.6.53). */
 #include "drumx_voice.c"
 
 typedef struct {
@@ -48,7 +48,7 @@ static uint8_t dx_mot[4];
 static int32_t dx_mot_v;
 static uint32_t dx_mot_rng = 0x9E3779B9u;
 
-static drum_lane_t drum_kit[NPART][DV_NLANE] __attribute__((section(".pool")));
+static drum_lane_t drum_kit[NPART][DV_NLANE];   /* (0.6.53: in .bss, was .pool: the pool kept for the FX lines) */
 
 /* The group mutes (JIANT): KICK (the kick), SNARE (snare and clap), HAT (both hats), PERCS (tom, rim, bell), on every
  * DRUM track. A section's (project.c keeps them with its DRUM-X kit, the song stages them); set live on the
