@@ -741,6 +741,15 @@ static void edit_param(uint32_t slot, int32_t steps)
         comp_knob(slot, steps);
         return;
     }
+    if (pg->graph == GR_FUGUE) {                        /* (0.6.52) HEAD, RATE, DIR, INTERVAL */
+        fg_set_t *f = &fg_set[song.sel % NTRK][fg_ui % FG_HEADS];
+        int32_t d = steps > 0 ? 1 : -1;
+        if (slot == 0u) fg_ui = (uint8_t)clamp((int32_t)fg_ui + d, 0, FG_HEADS - 1);
+        else if (slot == 1u) f->rate = (uint8_t)clamp((int32_t)f->rate + d, 0, FG_NRATE - 1);
+        else if (slot == 2u) f->dir = (uint8_t)clamp((int32_t)f->dir + d, 0, 3);
+        else f->ivl = (int8_t)clamp((int32_t)f->ivl + d, -14, 14);
+        return;
+    }
     if (pg->graph == GR_CHANCE) {
         if (slot == 0u) cursor_set(ui.cursor + steps);
         else if (slot == 1u || slot == 2u) {

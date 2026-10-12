@@ -720,6 +720,7 @@ static void keyboard_block(void)
 }
 
 /* -------------------------------------------------------- sequencer --- */
+static void fg_reset(void);                         /* (fugue.c) */
 static void seq_start(void)
 {
     uint32_t i;
@@ -737,6 +738,7 @@ static void seq_start(void)
         t->tonal = 0; t->pulse_from = t->jump_to = t->rev = 0;   /* (0.6.42) no TONAL, PULSE, JUMP, REV */
         t->cpos = t->cv_on = 0;                    /* (0.6.47) C.LEN's lane from its first step */
     }
+    fg_reset();                                    /* (0.6.52) FUGUE's heads from their first step */
     song.tick = 0;
     beat_pos = 0; beat_n = 0;                      /* the ARP LED's beat from the top too */
     bar_n = 0;
@@ -891,6 +893,7 @@ static void seq_stop(void)
         trk[i].pulse_from = trk[i].jump_to = trk[i].rev = 0;
         trk[i].cpos = trk[i].cv_on = 0;
     }
+    fg_reset();                                    /* (0.6.52) FUGUE's heads silent */
     chain_stop();
     motion_end();
 }
@@ -1093,6 +1096,8 @@ static __attribute__((noinline)) void pfx_resync(track_t *t, uint32_t period, ui
     t->seq_pos = pos;
 }
 
+#include "fugue.c"                                 /* (JIANT 0.6.52) SEQ > FUGUE: three more playheads a track */
+
 static void seq_tick(track_t *t, uint32_t n)
 {
     uint32_t period, len;
@@ -1170,6 +1175,7 @@ static void seq_tick(track_t *t, uint32_t n)
     }
     if (t->rat_left)
         seq_ratchet(t, period);
+    fugue_tick(t, n, period, len);                      /* (0.6.52) */
 }
 
 /* MIDI in: the track a channel plays (0..15): G_ROUTE CH1-4 (0) channels 1..4 their parts (5..16 never get

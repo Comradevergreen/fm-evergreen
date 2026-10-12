@@ -528,6 +528,13 @@ seleccionada se graban como **automatización**. MENU > AUDIO tiene el **CLICK**
   hasta volver a apretarlo. La página muestra los próximos 32 compases de cada pista (naranja: SOUND, violeta:
   PATTERN); en HOME cada bichito tiene un anillo de puntos que se llena hasta su próximo cambio y se enciende entero
   cuando cambia.
+- **FUGUE** (SEQ, antes de SHIFT), a la Fugue Machine: tres **cabezales** más (2, 3 y 4) leen los mismos pasos que el
+  secuenciador de la pista. KNOB 1 **HEAD** elige uno, KNOB 2 **RATE** (OFF, 1/4, 1/3, 1/2, 2/3, x1, 3/2, x2, x3, x4 del
+  de la pista), KNOB 3 **DIR** (FWD, REV, PING, RND), KNOB 4 **INTVL**, su intervalo en grados de la escala (−14 a +14; una
+  pista de batería mantiene sus carriles). Un cabezal toca las notas de cada paso con su velocidad, acento y probabilidad
+  y el GATE de la pista (sin components, locks ni ratchets: esos son del secuenciador): cánones, contrapunto, patrones
+  que se desfasan consigo mismos. La página dibuja los pasos, el cabezal del secuenciador y dónde va cada cabezal. Se
+  guarda con la sección; los cabezales arrancan y paran con el transporte.
 - **SHIFT** (la última página SEQ): **OFFSET** (−32 a +32 pasos), **PITCH** (±24 semitonos; no en baterías) y
   **CHANCE**: la probabilidad de toda la pista; 100 % toca cada paso como está escrito, menos lo va raleando (escala la
   probabilidad propia de cada paso, la de los dados o el editor). Las tres se pueden automatizar; OFFSET y PITCH también

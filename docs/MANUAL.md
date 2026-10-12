@@ -503,6 +503,13 @@ recorded into the pattern, quantized to its steps, overdubbing. Knob moves on th
   DRUM it flips hits, never the kick. **OCT−** here (or **GLO + A4**, FREEZE) stops every mutation until pressed again.
   The page shows each track's next 32 bars (orange: SOUND, violet: PATTERN); on HOME each being has a ring of dots
   filling up to its next change, all lit when it changes.
+- **FUGUE** (SEQ, before SHIFT), after the Fugue Machine: three more **playheads** (heads 2, 3, 4) read the same steps
+  as the track's sequencer. KNOB 1 **HEAD** picks one, KNOB 2 **RATE** (OFF, 1/4, 1/3, 1/2, 2/3, x1, 3/2, x2, x3, x4 of
+  the track's), KNOB 3 **DIR** (FWD, REV, PING, RND), KNOB 4 **INTVL**, its interval in degrees of the scale (−14 to +14;
+  a drum track keeps its lanes). A head plays each step's notes with the step's velocity, accent and chance and the
+  track's GATE (no components, locks or ratchets: those are the sequencer's): canons, counterpoint, patterns phasing
+  against themselves. The page draws the steps, the sequencer's playhead and each head where it is. Saved with the
+  section; the heads start and stop with the transport.
 - **SHIFT** (the last SEQ page): **OFFSET** (−32 to +32 steps), **PITCH** (±24 semitones; not on drums) and
   **CHANCE**: the whole track's chance, 100 % plays every step as written, lower thins it out (each step's own chance,
   from the dice or the editor, scaled). All three can be automated; OFFSET and PITCH are also on the SCL layer's

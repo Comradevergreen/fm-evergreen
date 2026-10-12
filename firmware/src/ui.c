@@ -644,6 +644,7 @@ static int fx_head(uint32_t i)
 /* (JIANT 0.6.51) a page (or the track) changed by hand: its name big in the middle of the graph for PF_MS, so the
  * pages need no memorising (ui_graph.c page_flash_draw); a page set by code (a test, a dialog's way back) shows none */
 #define PF_MS 700u
+static uint8_t fg_ui;                                /* (0.6.52) SEQ > FUGUE: the head edited (0..2: heads 2..4) */
 static uint32_t pf_ms;
 static uint8_t pf_on;
 static void page_flash(void)

@@ -812,6 +812,14 @@ static int test_dxlay(void)
     ok &= proj_import(&proj_scratch, &st, sizeof st) && !project_restore_runtime(&proj_scratch);
     ok &= dx_lay[DV_BELL] == 0x5Fu && dx_lay[DV_SNARE] == DX_LAY_DEF[DV_SNARE];
     bad += check("DRUM LAYER: kept with the project (FUNC 'D' 'L')", ok);
+    fg_set[2][1] = (fg_set_t){8, 2, -5};                 /* (0.6.52) FUGUE: T3's head 3 x3 PING -5 */
+    project_capture(&proj_scratch);
+    ok = proj_pack(&st, &proj_scratch);
+    memset(fg_set, 0, sizeof fg_set);
+    ok &= proj_import(&proj_scratch, &st, sizeof st) && !project_restore_runtime(&proj_scratch);
+    ok &= fg_set[2][1].rate == 8u && fg_set[2][1].dir == 2u && fg_set[2][1].ivl == -5 && !fg_set[0][0].rate;
+    memset(fg_set, 0, sizeof fg_set);
+    bad += check("FUGUE: kept with the project (FUNC 'F' 'G')", ok);
     system_init();
     ok = !memcmp(dx_lay, DX_LAY_DEF, sizeof dx_lay) && 1;
     for (i = 0; i < NTRK; i++) {
@@ -5949,6 +5957,8 @@ static int test_seq_tools(void)
     ok &= cur_page()->graph == GR_EVENTS;
     press(B_SEQ); frames(320);
     ok &= cur_page()->graph == GR_MUTATE;              /* (0.6.43) */
+    press(B_SEQ); frames(320);
+    ok &= cur_page()->graph == GR_FUGUE;               /* (0.6.52) */
     press(B_SEQ); frames(320);
     ok &= str_eq(cur_page()->title, "SHIFT");
     bad += check("  a tap on STEP: the next SEQ page, as always (the hint until the layer was opened)", ok);

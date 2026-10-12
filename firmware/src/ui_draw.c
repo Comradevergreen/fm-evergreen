@@ -859,6 +859,18 @@ static void draw_columns(void)
                     used && song_idx.scene[song_cur][row].on ? VAL(3u) : T_DIM, -1, ICON_MIX);   /* (JIANT) */
         return;
     }
+    if (cur_page()->graph == GR_FUGUE) {               /* (0.6.52) HEAD RATE DIR INTERVAL */
+        const fg_set_t *f = &fg_set[song.sel % NTRK][fg_ui % FG_HEADS];
+        fmt_int(val, (int32_t)(fg_ui % FG_HEADS) + 2);
+        draw_column(0, "HEAD", val, "", VAL(0u), (int32_t)(fg_ui % FG_HEADS) * 500, ICON_X_PATTERN);
+        draw_column(1, "RATE", N_FGRATE[f->rate % FG_NRATE], "", f->rate ? VAL(1u) : T_DIM, (int32_t)f->rate * 1000 / 9,
+                    ICON_RATE);
+        draw_column(2, "DIR", N_FGDIR[f->dir & 3u], "", f->rate ? VAL(2u) : T_DIM, (int32_t)(f->dir & 3u) * 333, ICON_ORDER);
+        val[0] = f->ivl > 0 ? '+' : 0;
+        fmt_int(val + (f->ivl > 0), f->ivl);
+        draw_column(3, "INTVL", val, "DEG", f->rate ? VAL(3u) : T_DIM, (int32_t)(f->ivl + 14) * 1000 / 28, ICON_PITCH);
+        return;
+    }
     if (cur_page()->graph == GR_COMP) {                /* (0.6.39) STEP TYPE and the TYPE's two values */
         const step_t *cs = &TSEL->step[ui.cursor];
         uint32_t v = comp_view();

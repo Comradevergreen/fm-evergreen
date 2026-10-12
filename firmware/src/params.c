@@ -444,7 +444,7 @@ enum { SC_TRACK, SC_GLOBAL, SC_ENGINE, SC_STEP, SC_TRK };   /* SC_TRK: the TRACK
 enum { GR_NONE, GR_ADSR, GR_LFO, GR_STEPS, GR_ARP, GR_SCALE, GR_FX, GR_ROLL, GR_BROWSE, GR_SLOTS, GR_USER, GR_TRK,
        GR_SLCR, GR_MOD, GR_PATS, GR_SONG, GR_TOOLS, GR_CHANCE, GR_MOTION, GR_EVENTS, GR_DXSND, GR_MSEQ, GR_SLPIT,
        GR_FMOP, GR_FMOP2, GR_FMENV,
-       GR_COMP, GR_MUTATE, GR_MORPH, GR_DXIMG };   /* (JIANT 0.6.39) SEQ > COMP: the step components (ui_input.c comp_*, ui_graph.c graph_comp) */   /* (JIANT 0.6.10, from Felucca 1.5: FM6's operator pages, ui_fm6op.c) */
+       GR_COMP, GR_MUTATE, GR_MORPH, GR_DXIMG, GR_FUGUE };   /* (JIANT 0.6.39) SEQ > COMP: the step components (ui_input.c comp_*, ui_graph.c graph_comp) */   /* (JIANT 0.6.10, from Felucca 1.5: FM6's operator pages, ui_fm6op.c) */
 
 typedef struct {
     const char *title;
@@ -538,6 +538,7 @@ static const page_t PAGES[] = {
      * out of the cycle (ui.c page_visible; a step's chance and ratchet stay in the pattern: SEQ TOOLS, the editor,
      * the dice set them) */
     {"MUTATE", FAM_SEQ, SC_TRACK, GR_MUTATE, {P_MSND, P_MPAT, P_MAMT, P_MMODE}},   /* (0.6.43) project.c mutate_poll */
+    {"FUGUE", FAM_SEQ, SC_TRACK, GR_FUGUE, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (0.6.52) three more playheads (fugue.c) */
     {"SHIFT", FAM_SEQ, SC_TRACK, GR_STEPS, {P_SOFS, P_POFS, P_TCHAN, P_CLEN}},
 };
 #define NPAGES (sizeof(PAGES) / sizeof(PAGES[0]))
