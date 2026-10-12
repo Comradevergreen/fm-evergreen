@@ -356,6 +356,14 @@ static void dice_pads(track_t *t, const dstyle_t *st, uint32_t len)
     }
 }
 
+/* (0.6.37) a lead note: the scale's degree d from base, folded down under G5 whatever the path (a cell, a line, a
+ * cadence: the motif's fold alone let a FRANTIC cell reach C#6) */
+static int32_t dlead_note(const track_t *t, int32_t base, int32_t d)
+{
+    int32_t n = scale_steps(t, base, d);
+    while (n > 79) n -= 12;
+    return n;
+}
 /* ---- the lead (around the tonic at G3..: never past G5). LM_MOTIF: a rhythmic motif of 2..5 notes (more with the
  * energy), its contour in steps (a leap filled back by a step the other way), its strong steps on chord tones;
  * the phrase A, A moved to the next chord (a sequence), A (its end varied), a cadence (its first half, then the tonic
@@ -383,7 +391,7 @@ static void dice_lead(track_t *t, const dstyle_t *st, uint32_t len)
             uint32_t b = i / 16u;
             if (!euclid(i % 16u, k, 16, rot)) continue;
             if (b % 4u == 3u && chance(50)) continue;  /* (the fourth bar: a breath) */
-            n[0] = scale_steps(t, base, cl[j % nc] + (b % 4u == 2u && j % nc == nc - 1u ? 1 : 0));
+            n[0] = dlead_note(t, base, cl[j % nc] + (b % 4u == 2u && j % nc == nc - 1u ? 1 : 0));
             dstep_note(&t->step[i], n, 1, j % nc == 0u ? 98u : 82u, chance(15) ? SF_SLIDE : 0);
             j++;
         }
@@ -396,7 +404,7 @@ static void dice_lead(track_t *t, const dstyle_t *st, uint32_t len)
             if (st->lead == LM_SPARSE && ((i % 16u) || (b % 2u == 1u && chance(40)))) continue;
             if (st->lead == LM_SPARSE) d = dnear_ct(d + rr(-1, 1), chord_at(i));
             else { d += dir; if (d < -2 || d > 7) { dir = -dir; d += 2 * dir; } }
-            n[0] = scale_steps(t, base, d);
+            n[0] = dlead_note(t, base, d);
             dstep_note(&t->step[i], n, 1, 84, 0);
             dhold(t, i, st->lead == LM_TINTI ? 6 : 12, len);
         }
@@ -425,12 +433,12 @@ static void dice_lead(track_t *t, const dstyle_t *st, uint32_t len)
                                                          * tonic held to the end */
                 uint32_t h = (k + 1u) / 2u, land;
                 for (j = 0; j < h; j++) {
-                    n[0] = scale_steps(t, base, at[j] % 4u == 0u ? dnear_ct(deg[j] + shift, ch) : deg[j] + shift);
+                    n[0] = dlead_note(t, base, at[j] % 4u == 0u ? dnear_ct(deg[j] + shift, ch) : deg[j] + shift);
                     dstep_note(&t->step[b0 + at[j]], n, 1, at[j] % 4u == 0u ? 96u : 84u, 0);
                 }
                 land = b0 + (h < k && at[h] > 8u ? at[h] : 8u);
                 if (land > b0 + at[h - 1u] && land < len) {
-                    n[0] = scale_steps(t, base, dnear_ct(0, ch));
+                    n[0] = dlead_note(t, base, dnear_ct(0, ch));
                     dstep_note(&t->step[land], n, 1, 90, 0);
                     dhold(t, land, len - land - 1u, len);
                 }
@@ -443,8 +451,7 @@ static void dice_lead(track_t *t, const dstyle_t *st, uint32_t len)
                 if (ph == 2u && j == k - 1u) dd += chance(50) ? 1 : -1;   /* (A's end varied) */
                 if (at[j] % 4u == 0u) dd = dnear_ct(dd, ch);
                 if (pos >= len) break;
-                n[0] = scale_steps(t, base, dd);
-                if (n[0] > 79) n[0] -= 12;              /* (under G5) */
+                n[0] = dlead_note(t, base, dd);
                 dstep_note(&t->step[pos], n, 1, at[j] % 4u == 0u ? 96u : 82u, chance(10) ? SF_SLIDE : 0);
                 {   /* held to the next onset, a step of air before it (more air with less energy) */
                     uint32_t nxt = j + 1u < k ? at[j + 1u] : 16u + at[0], gap = nxt - at[j];

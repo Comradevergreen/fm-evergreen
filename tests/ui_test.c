@@ -3681,6 +3681,38 @@ static int test_step_rec(void)
     frame();
     key_down(9); frame(); key_up(9); frame();
     bad += check("#133 the last step of LEN 8: written, the cursor wraps to step 1", t->step[7].n == 1u && ui.cursor == 0u);
+    {   /* (0.6.37) a chord held: KNOB 1 its length in steps (TIEs after it), written when let go; ARP pressed while
+         * held: arpeggiated, KNOB 1 the steps a note, 2 the order, 3 the octaves */
+        uint32_t i;
+        t->p[P_VOICE] = 0; t->p[P_SLEN] = 16;
+        for (i = 0; i < NSTEP; i++) step_clear(&t->step[i]);
+        cursor_set(0); frame();
+        key_down(7); frame(); key_down(11); frame();
+        turn(EN_K1, 3);
+        ok = ui.ent_len == 4u && msg_is("LEN 4 STEPS") && ui.cursor == 0u;
+        key_up(7); key_up(11); frame();
+        ok &= t->step[0].n == 2u && t->step[0].time == ST_NOTE && t->step[1].time == ST_TIE && t->step[2].time == ST_TIE &&
+              t->step[3].time == ST_TIE && t->step[4].time != ST_TIE && ui.cursor == 4u;
+        bad += check("step recording: a chord held + KNOB 1: LEN 4, the chord then three TIEs, the cursor after them", ok);
+        key_down(7); frame(); key_down(11); frame(); key_down(14); frame();
+        press(B_ARP);
+        turn(EN_K1, 1);                                               /* RES 1/8: a note every two steps */
+        turn(EN_K3, 1);                                               /* two octaves */
+        ok = ui.ent_arp && ui.ent_res == 2u && ui.ent_oct == 2u && !ui.home && cur_page()->graph == GR_ROLL;
+        key_up(7); key_up(11); key_up(14); frame();
+        ok &= t->step[4].n == 1u && t->step[4].note[0] == kb_map(t, 7) && t->step[5].time == ST_TIE &&
+              t->step[6].note[0] == kb_map(t, 11) && t->step[8].note[0] == kb_map(t, 14) &&
+              t->step[10].note[0] == kb_map(t, 7) + 12u && t->step[14].note[0] == kb_map(t, 14) + 12u &&
+              ui.cursor == (4u + 12u) % 16u;
+        bad += check("step recording: ARP while the chord is held: arpeggiated UP, 1/8, two octaves, into the roll", ok);
+        cursor_set(0); frame();
+        key_down(7); frame(); key_down(11); frame();
+        press(B_ARP); turn(EN_K2, 1);                                 /* DOWN */
+        key_up(7); key_up(11); frame();
+        bad += check("step recording: ARP ORDER DOWN (KNOB 2): the high note first",
+                     t->step[0].note[0] == kb_map(t, 11) && t->step[1].note[0] == kb_map(t, 7) && ui.cursor == 2u);
+        t->p[P_SLEN] = 8;
+    }
     cursor_set(4);                                                    /* (an empty step, away from the play head) */
     step_clear(&t->step[4]);
     frame();

@@ -7,7 +7,7 @@ import html, os
 
 R = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(R, 'docs', 'cheatsheet')
-VERSION = 'v0.6.37'
+VERSION = 'v0.6.38'
 
 HEAT = ['#22d3ee', '#3b82f6', '#8b5cf6', '#d946ef', '#ef4444', '#ff7a00', '#facc15', '#f4f1ea']
 
@@ -329,7 +329,7 @@ def sound():
     b.append('<div class="grid g3" style="margin-top:22px">')
     b.append(card('SEQUENCER', HEAT[4],
                   '<p>64 steps a track, up to 4 notes a step, piano roll and drum grid. <b>Hold a step + turn a knob</b>: '
-                  'a parameter lock. SHIFT\'s CHANCE thins the whole track. REC + knobs while playing: '
+                  'a parameter lock. Step recording: hold a chord + KNOB 1 its length; + ARP: arpeggiated (K1 rate, K2 order, K3 oct). SHIFT\'s CHANCE thins the whole track. REC + knobs while playing: '
                   'automation (64 records a section, MOTION page plays / clears them, AUTO LIST edits them).</p>'
                   '<h4>PATTERN · SHIFT</h4>' + knobs('LEN', 'DIV', 'SWG', 'GATE') + knobs('OFS', 'PIT', 'CHN', '-')))
     b.append(card('SCALE · ARP', HEAT[0],
