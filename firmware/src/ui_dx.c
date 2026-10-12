@@ -105,7 +105,6 @@ static void dx_kit3_knob(uint32_t k, int32_t s)
 static void dx_kit3_cards(void)
 {
     uint32_t bp = DX_TONE_BP(dx_tone), fb = DX_TONE_FB(dx_tone);
-    int32_t img = TSEL->p[P_DXIMG];
     char val[12];
     if (bp) {                                           /* (its centre, as the filter sets it) */
         uint32_t hz = CUTOFF_HZ[78u + bp * 2u];
@@ -117,8 +116,7 @@ static void dx_kit3_cards(void)
                 (int32_t)bp * 1000 / 15, ICON_TONE);
     fmt_int(val, (int32_t)fb);
     draw_column(1, "FEEDBK", fb ? val : "OFF", "", fb ? VAL(1u) : T_DIM, (int32_t)fb * 1000 / 15, ICON_DRIVE);
-    fmt_int(val, img);
-    draw_column(2, "IMAGE", img ? val : "MONO", "", img ? VAL(2u) : T_DIM, img * 1000 / 127, ICON_MIX);
+    draw_column(2, "", "", "", T_THEME, -1, ICON_NONE);   /* (0.6.58: IMAGE on STEREO, with the volumes) */
     draw_column(3, "", "", "", T_THEME, -1, ICON_NONE);
 }
 

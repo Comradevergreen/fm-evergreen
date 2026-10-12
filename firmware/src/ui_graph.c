@@ -1134,45 +1134,55 @@ static void graph_fugue(const track_t *t)
     }
 }
 
-/* (0.6.51) the page's name big in the middle (page_flash): it opens, holds, dims and goes, under PF_MS; under it the
- * track and its engine */
+/* (0.6.51) the page's name big (page_flash). (0.6.58) Over the four cards, not the graph (it hid what a turn changes):
+ * one line, the name in L (Michroma) at the left, the track and its engine at the right, for PF_MS; the cards come back
+ * whole after it (ui.force). JIANT: the landing's tag (a dark window, accent HUD corners); else the accent fill */
 static void page_flash_draw(void)
 {
-    uint32_t e = fm1_ms - pf_ms;
-    int32_t h = (int32_t)graph_h(), w, x, y, bh = 46;
-    uint16_t fill, ink;
+    static uint32_t drawn;
+    uint32_t e = fm1_ms - pf_ms, ph;
+    int32_t h = (int32_t)card_h(), w = 234, dim;
+    uint16_t fill, ink, k;
     char sub[20] = {'T', 0, 0};
-    if (!pf_on)
-        return;
+    const page_t *pg = cur_page();
+    const char *pt = pg->scope == SC_ENGINE ? ENGINES[TSEL->eng_req % NENGINES]->page_title[pg->id[0] != P_E0] : 0;
     if (e >= PF_MS) {
         pf_on = 0;
+        ui.force = 1;                                /* (the cards, whole again) */
         return;
     }
-    w = e < 90u ? 140 + (int32_t)e * 80 / 90 : 220;
-    x = (240 - w) / 2;
-    y = (h - bh) / 2;
-    fill = e > PF_MS - 160u ? T_RAISE : T_ACCENT;
-    ink = e > PF_MS - 160u ? T_MID : T_INK;
+    dim = e > PF_MS - 120u;
+    ph = 1u + (uint32_t)dim + (e < 60u ? 2u : 0u);
+    if (!ui.force && ph == drawn)
+        return;
+    drawn = ph;
     sub[1] = (char)('1' + song.sel % NTRK);
     sub[2] = ' ';
     str_cpy(sub + 3, ENGINES[TSEL->eng_req % NENGINES]->name, sizeof sub - 3u);
-    if (ux.chamfer) {                                /* (0.6.56) JIANT: the landing's tag, a dark window with four
-                                                     * accent HUD corners, the name in Michroma, the track under it */
-        uint16_t k = e > PF_MS - 160u ? T_DIM : T_ACCENT;
+    cv_begin(240, (uint32_t)h, T_BG);
+    if (ux.chamfer) {
+        k = dim ? T_DIM : T_ACCENT;
         fill = T_BG;
-        ink = e > PF_MS - 160u ? T_MID : T_TEXT;
-        cv_rect(x, y, w, bh, fill);
-        cv_rect(x, y, 10, 2, k), cv_rect(x, y, 2, 10, k), cv_rect(x + w - 10, y, 10, 2, k), cv_rect(x + w - 2, y, 2, 10, k);
-        cv_rect(x, y + bh - 2, 10, 2, k), cv_rect(x, y + bh - 10, 2, 10, k);
-        cv_rect(x + w - 10, y + bh - 2, 10, 2, k), cv_rect(x + w - 2, y + bh - 10, 2, 10, k);
-    } else
-        cv_rrect(x, y, w, bh, 6, fill, T_SURF);
-    {   /* (0.6.54) EDIT 1 / 2: the engine's names for them (DRUM: KIT, KIT 2; FM6: OPS, PATCH), as the footer */
-        const page_t *pg = cur_page();
-        const char *pt = pg->scope == SC_ENGINE ? ENGINES[TSEL->eng_req % NENGINES]->page_title[pg->id[0] != P_E0] : 0;
-        cv_text_in(x, y + CAP_IN(L, 30), w, &AF_L, ui.home ? "HOME" : pt && pt[0] != '-' ? pt : pg->title, ink, fill);
+        ink = dim ? T_MID : T_TEXT;
+        cv_rect(3, 0, w, h, T_SURF);
+        cv_rect(3, 0, 10, 2, k), cv_rect(3, 0, 2, 10, k), cv_rect(3 + w - 10, 0, 10, 2, k), cv_rect(3 + w - 2, 0, 2, 10, k);
+        cv_rect(3, h - 2, 10, 2, k), cv_rect(3, h - 10, 2, 10, k), cv_rect(3 + w - 10, h - 2, 10, 2, k), cv_rect(3 + w - 2, h - 10, 2, 10, k);
+        fill = T_SURF;
+    } else {
+        fill = dim ? T_RAISE : T_ACCENT;
+        ink = dim ? T_MID : T_INK;
+        k = ink;
+        cv_rrect(3, 0, w, h, 6, fill, T_BG);
     }
-    cv_text_in(x, y + 30 + CAP_IN(S, 14), w, &AF_S, sub, ux.chamfer && e <= PF_MS - 160u ? T_ACCENT : ink, fill);
+    {
+        const char *nm = ui.home ? "HOME" : pt && pt[0] != '-' ? pt : pg->title;
+        const aafont_t *f = large_face_has(nm) && text_w(&AF_L, nm) <= 150 ? &AF_L : &AF_M;
+        cv_bg = fill;                                /* (the name's edges blend into the window) */
+        cv_text(12, (h - (int32_t)f->h) / 2, f, nm, ink);
+    }
+    cv_text_r(3 + w - 9, (h - (int32_t)AF_S.h) / 2, &AF_S, sub, ux.chamfer && !dim ? T_ACCENT : ink, fill);
+    (void)k;
+    cv_blit(0, Y_LABEL);
 }
 
 static uint32_t graph_signature(void)
@@ -1180,8 +1190,6 @@ static uint32_t graph_signature(void)
     const page_t *pg = cur_page();
     const track_t *t = TSEL;
     uint32_t h = 2166136261u, i;
-    if (pf_on)                                       /* (0.6.51) the page's name over it: drawn as it fades */
-        h = (h ^ ((fm1_ms - pf_ms) / 30u + 1u)) * 16777619u;
     if (ui.home)
         return h ^ (ui.frame / 2u);                  /* scope: redraw every other frame */
     h ^= (uint32_t)pg->graph * 131u + TSEL->eng_req + song.sel * 7777u + ui.page * 1291u;
@@ -2053,8 +2061,12 @@ static void draw_graph(void)
         case GR_MORPH:
             graph_morph(t);
             break;
-        case GR_DXIMG:
-            graph_dximg(t);
+        case GR_DXIMG:                               /* (0.6.58) KIT 3: the colony; STEREO: IMAGE */
+            if (DX_KIT3(pg)) {
+                cv_oy = 0;
+                graph_colony(t, -1);
+            } else
+                graph_dximg(t);
             break;
         case GR_FUGUE:
             graph_fugue(t);
@@ -2146,6 +2158,5 @@ static void draw_graph(void)
         }
     }
     cv_oy = 0;
-    page_flash_draw();                               /* (0.6.51) */
     cv_blit(0, graph_y());
 }

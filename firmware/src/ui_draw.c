@@ -833,7 +833,7 @@ static void draw_columns(void)
         dx_cards(cur_page());
         return;
     }
-    if (cur_page()->graph == GR_DXIMG) {               /* (0.6.54) EDIT > KIT 3 */
+    if (DX_KIT3(cur_page())) {                         /* (0.6.54) EDIT > KIT 3 */
         dx_kit3_cards();
         return;
     }
@@ -1647,7 +1647,10 @@ static void ui_draw_page(uint32_t counting)
     felucca_dbg.stage = 3;
     draw_head();
     felucca_dbg.stage = 4;
-    draw_columns();
+    if (pf_on)                                          /* (0.6.58) the page's name over the cards for a moment */
+        page_flash_draw();
+    if (!pf_on)                                         /* (its end: the cards forced back at once) */
+        draw_columns();
     felucca_dbg.stage = 5;
     draw_graph();
     if (ui.msg_t && !--ui.msg_t && ui.msg2[0]) {     /* the second message (ui_notices) */
