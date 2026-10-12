@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.6.37).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.6.38).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 > 🫶 If you resonate with my work, consider supporting me on **[Ko-fi](https://ko-fi.com/juanjiant)** (in Argentina:
 > **[Cafecito](https://cafecito.app/juanjiant)**). Thanks for all the good energy, hope you enjoy this little beast ✨🎹
@@ -37,6 +37,13 @@ Two printable sheets with everything on the device. Click an image to open it fu
 ## Changelog
 
 Every update is listed here, newest first.
+
+### v0.6.38
+- **Step recording, chords with a length and arpeggios**: on STEP with REC (stopped), hold a note or a chord and turn
+  **KNOB 1**: it lasts that many steps, written when you let go. Press **ARP** while holding it: the chord goes into
+  the roll as an arpeggio, KNOB 1 its resolution (1/16 .. 1/4), KNOB 2 the order (UP, DOWN, UP-DN, RND), KNOB 3 the
+  octaves.
+- **DICE ALL**: the lead never goes past G5 on any of its paths (a FRANTIC cell could reach C#6).
 
 ### v0.6.37
 - **SEQ pages, lighter**: PHRASES and the step CHANCE page are out of the cycle; **SHIFT** is now the last SEQ page

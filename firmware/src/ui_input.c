@@ -1017,6 +1017,68 @@ static void rec_clear_auto(uint32_t b)
 /* SEQ step entry = step recording (1.2, Discussion #133: only with the track armed and the transport stopped), acid
  * style: the keys pressed together (POLY: up to 4 notes, MONO: the last one) become the cursor step; releasing all
  * keys moves on one step (wrapping inside LEN) */
+/* (0.6.37) the entry let go: a chord held for LEN steps (TIEs after it), or arpeggiated (ARP pressed while held): its
+ * notes over the octaves in the ORDER, one every RES steps; the cursor after it */
+static const char *const ENT_ORD[4] = {"UP", "DOWN", "UP-DN", "RND"};
+static const char *const ENT_RES[4] = {"1/16", "1/8", "1/8.", "1/4"};
+static void ent_message(void)
+{
+    char a[24], b[24];
+    if (ui.ent_arp) {
+        str_cpy(a, "ARP ", sizeof a); str_cpy(a + str_len(a), ENT_ORD[ui.ent_ord & 3u], 8);
+        str_cpy(b, ENT_RES[(ui.ent_res - 1u) & 3u], 8); str_cpy(b + str_len(b), " x", 4);
+        fmt_int(b + str_len(b), ui.ent_oct); str_cpy(b + str_len(b), " OCT", 6);
+    } else {
+        str_cpy(a, "LEN ", sizeof a); fmt_int(a + str_len(a), ui.ent_len);
+        str_cpy(a + str_len(a), ui.ent_len > 1u ? " STEPS" : " STEP", 8);
+        str_cpy(b, "ARP: ARPEGGIATE", sizeof b);
+    }
+    str_cpy(ui.msg, a, sizeof ui.msg); str_cpy(ui.msg2, b, sizeof ui.msg2); ui.msg_t = 40;
+}
+static void ent_knob(uint32_t k, int32_t s)
+{
+    int32_t d = clamp(s, -4, 4);                        /* (detents, not accelerated: small ranges) */
+    if (k == 0u && !ui.ent_arp) ui.ent_len = (uint8_t)clamp(ui.ent_len + d, 1, TSEL->p[P_SLEN] > 16 ? 16 : TSEL->p[P_SLEN]);
+    else if (k == 0u) ui.ent_res = (uint8_t)clamp(ui.ent_res + d, 1, 4);
+    else if (k == 1u) ui.ent_ord = (uint8_t)clamp(ui.ent_ord + d, 0, 3);
+    else ui.ent_oct = (uint8_t)clamp(ui.ent_oct + d, 1, 3);
+    ent_message();
+}
+static void ent_commit(void)
+{
+    track_t *t = TSEL;
+    uint32_t len = t->p[P_SLEN] > 0 ? (uint32_t)t->p[P_SLEN] : 1u, cur = ui.cursor, i, j, n = 0, span;
+    uint8_t vel = t->step[cur].vel, list[24];
+    if (!ui.ent_arp || !ui.ent_nn) {
+        span = ui.ent_len < len ? ui.ent_len : len;
+        for (i = 1; i < span; i++) {
+            step_t *s = &t->step[(cur + i) % len];
+            memset(s, 0, sizeof *s);
+            s->time = ST_TIE; s->vel = vel;
+        }
+        cursor_set((int32_t)(cur + (span ? span : 1u)));
+        return;
+    }
+    for (j = 0; j < ui.ent_oct; j++)                    /* the notes over the octaves, low to high */
+        for (i = 0; i < ui.ent_nn; i++)
+            if (ui.ent_notes[i] + 12u * j <= 127u) list[n++] = (uint8_t)(ui.ent_notes[i] + 12u * j);
+    if (ui.ent_ord == 1u)                               /* DOWN */
+        for (i = 0; i < n / 2u; i++) { uint8_t x = list[i]; list[i] = list[n - 1u - i]; list[n - 1u - i] = x; }
+    else if (ui.ent_ord == 2u && n > 2u)                /* UP-DN: back down without the ends twice */
+        for (i = n - 2u; i > 0u && n < sizeof list; i--) list[n++] = list[i];
+    else if (ui.ent_ord == 3u)                          /* RND */
+        for (i = n; i > 1u; i--) { uint32_t r = rng() % i; uint8_t x = list[i - 1u]; list[i - 1u] = list[r]; list[r] = x; }
+    if (n * ui.ent_res > len) n = len / ui.ent_res ? len / ui.ent_res : 1u;
+    span = n * ui.ent_res;
+    for (i = 0; i < span; i++) {
+        step_t *s = &t->step[(cur + i) % len];
+        memset(s, 0, sizeof *s);
+        s->vel = vel;
+        if (i % ui.ent_res == 0u) { s->time = ST_NOTE; s->n = 1; s->note[0] = list[i / ui.ent_res]; }
+        else s->time = ST_TIE;
+    }
+    cursor_set((int32_t)(cur + span));
+}
 static void seq_entry(uint32_t pressed)
 {
     track_t *t = TSEL;
@@ -1033,6 +1095,14 @@ static void seq_entry(uint32_t pressed)
             ui.entry_open = 1;
             st->n = 0;
             st->time = ST_NOTE;
+            ui.ent_len = ui.ent_res = ui.ent_oct = 1; ui.ent_arp = ui.ent_ord = ui.ent_nn = 0;
+        }
+        for (j = 0; j < ui.ent_nn && ui.ent_notes[j] < note; j++)   /* (the arpeggio's notes, in order of pitch) */
+            ;
+        if (ui.ent_nn < sizeof ui.ent_notes && (j == ui.ent_nn || ui.ent_notes[j] != note)) {
+            uint32_t m;
+            for (m = ui.ent_nn; m > j; m--) ui.ent_notes[m] = ui.ent_notes[m - 1u];
+            ui.ent_notes[j] = (uint8_t)note; ui.ent_nn++;
         }
         if (t->p[P_VOICE] && !ENGINES[t->engine]->oneshot) {   /* (drums: hits stack as a chord) */
             st->note[0] = (uint8_t)note;
@@ -1046,7 +1116,7 @@ static void seq_entry(uint32_t pressed)
         last_note = (uint8_t)note;
     }
     if (ui.entry_open && !(fm1_in.notes & ~kb_layer))
-        cursor_set(ui.cursor + 1);
+        ent_commit();                                   /* (let go: LEN / the arpeggio written, the cursor on) */
 }
 
 /* Discussions #92 / #94: the PRESETS knob by page (the menu, a dialog, NAME and the layers: ui_input before this).
@@ -1593,6 +1663,11 @@ static void ui_input_frame(void)
                 rec_clear_auto(b);
                 break;
             }
+            if (b == B_ARP && ui.entry_open && !ui.home && cur_page()->graph == GR_ROLL) {
+                ui.ent_arp ^= 1u;                       /* (0.6.37) a chord held in step recording: arpeggiate it */
+                ent_message();
+                break;
+            }
             if (!lay)                                   /* (with FX held: swallowed) */
                 ui.pg_down |= (uint16_t)(1u << id);
             break;
@@ -1680,6 +1755,11 @@ static void ui_input_frame(void)
             continue;
         if (mac_latch && !ui.menu && !ui.confirm) {     /* (JIANT 0.4) the MACRO layer latched: M1..M4 */
             macro_v[k] = (uint8_t)clamp(macro_v[k] + accel(EN_K1 + k, s, 127), 0, 127);
+            continue;
+        }
+        if (ui.entry_open && !ui.home && cur_page()->graph == GR_ROLL && !grid_on() && lock_held() &&
+            (k == 0u || (ui.ent_arp && k < 3u))) {      /* (0.6.37) a chord being entered: KNOB 1 its LEN (ARP: RES), */
+            ent_knob(k, s);                             /* 2 ORDER, 3 OCT; the others still lock */
             continue;
         }
         if ((held = lock_held()) != 0u) {               /* a step held on STEP: KNOB k locks (parameter locks) */

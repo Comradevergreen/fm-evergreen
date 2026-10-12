@@ -141,6 +141,10 @@ static struct {
     uint8_t bank;                /* SEQ: 16-step bank (follows the cursor) */
     uint8_t cursor;              /* SEQ: step being edited (STEP page KNOB 1 moves it) */
     uint8_t entry_open;          /* SEQ: keys held since the first press of this entry */
+    uint8_t ent_len, ent_arp, ent_res, ent_ord, ent_oct, ent_nn;   /* (0.6.37) that entry while held (ui_input.c
+                                  * seq_entry): KNOB 1 its LEN in steps; ARP pressed: arpeggiated, KNOB 1 the steps a
+                                  * note (RES), 2 the ORDER, 3 the octaves; the keys' notes in order of pitch */
+    uint8_t ent_notes[8];
     uint8_t lane;                /* SEQ > STEP on a DRUM track (the grid): the lane the keys and KNOB 3 / 4 edit */
     uint8_t plk_src;             /* parameter locks (ui_input.c lock_*): the sound page whose KNOB 1..4 a step held
                                   * locks, PAGES index + 1; 0 = HOME's four */
