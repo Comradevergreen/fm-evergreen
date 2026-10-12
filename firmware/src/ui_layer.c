@@ -193,9 +193,11 @@ static void layer_let_go(uint32_t quiet)
     lys.song = 0;
     if (ui.ly == LAYER_FX && !perf_latch_on)
         perf_k[0] = perf_k[1] = perf_k[2] = perf_k[3] = 0;
-    if (ui.ly == LAYER_FX && perf_latch_on && (ui.ly_t0 & LY_OPEN) && !(ui.ly_t0 & (LY_DEAD | LY_COMBO)) &&
+    if (ui.ly == LAYER_FX && (ui.ly_t0 & LY_OPEN) && !(ui.ly_t0 & (LY_DEAD | LY_COMBO)) &&
         !lys.used && !kb_layer && layer_allowed()) {
-        fx_lock = 1;                                    /* (0.6.44) FX LATCH: held open, nothing used, let go: locked */
+        fx_lock = 1;                                    /* (0.6.44) held open, nothing used, let go: locked open;
+                                                         * (0.6.64) whatever FX LATCH (the effects' own: momentary by
+                                                         * default) */
         ui_message("FX LOCKED: [FX] TO UNLOCK");
         quiet = 0;
         ui.force = 1;

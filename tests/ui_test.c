@@ -2918,8 +2918,19 @@ static int test_layer(void)
     frames(64);
     ok &= ui.layer == LAYER_FX;
     btn_up(B_FX); frame();
-    bad += check("FX held past 0.4 s: the map (not before); let go: no page, the map gone",
-                 ok && ui.home && !ui.layer);
+    frame();                                           /* (the keys follow the lock from the next frame) */
+    ok &= ui.home && ui.layer == LAYER_FX && fx_lock;   /* (0.6.64) let go unused: locked open, FX LATCH OFF too */
+    {   /* the effects momentary (FX LATCH OFF, the default): a key held plays it, let go stops it */
+        uint32_t k = white(3);                         /* (the LPF key) */
+        key_down(k); frame();
+        ok &= (perf_held & PF_BIT(PF_LPF)) != 0u && !perf_latched;
+        key_up(k); frame();
+        ok &= !(perf_held & PF_BIT(PF_LPF)) && !perf_latched;
+    }
+    press(B_FX); frames(64);
+    ok &= !fx_lock && !ui.layer;
+    bad += check("FX held past 0.4 s: the map (not before); let go: no page, the map locked open (0.6.64), the effects "
+                 "momentary; FX again: closed", ok && ui.home);
     /* the HOLD setting: 0.6 s */
     ui_power_on();
     hold(B_HOME); ui.menu_sel = MI_HOLD; turn(EN_K1, 1); turn(EN_K1, 1); ok = settings_hold == 3u; hold(B_HOME);

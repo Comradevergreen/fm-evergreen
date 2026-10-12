@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.6.63).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.6.64).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 > 🫶 If you resonate with my work, consider supporting me on **[Ko-fi](https://ko-fi.com/juanjiant)** (in Argentina:
 > **[Cafecito](https://cafecito.app/juanjiant)**). Thanks for all the good energy, hope you enjoy this little beast ✨🎹
@@ -37,6 +37,15 @@ Two printable sheets with everything on the device. Click an image to open it fu
 ## Changelog
 
 Every update is listed here, newest first.
+
+### v0.6.64
+- **FX held opens the punch-in FX and stays**: hold FX until its map opens and let go: the FX screen stays open, both
+  hands free, until you press FX again. The effects are **momentary** again by default (a key plays its effect while
+  held); MENU > CONTROL > FX LATCH ON makes them toggle, as in 0.6.44–0.6.63.
+- **Page name at the bottom**: the page's name now shows for a moment over the footer (which says the same), so the
+  header, the cards and the graph stay in sight.
+- **Granules for free**: the drifting dots behind the panels move only when the panel redraws anyway (a knob, the LFO,
+  the envelope); they no longer redraw the panel on their own.
 
 ### v0.6.63
 - **A safer installer**: before writing, it checks the FM-1's firmware by itself (no tick box any more): official V15

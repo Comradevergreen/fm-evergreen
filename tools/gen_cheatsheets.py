@@ -7,7 +7,7 @@ import html, os
 
 R = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(R, 'docs', 'cheatsheet')
-VERSION = 'v0.6.63'
+VERSION = 'v0.6.64'
 
 HEAT = ['#22d3ee', '#3b82f6', '#8b5cf6', '#d946ef', '#ef4444', '#ff7a00', '#facc15', '#f4f1ea']
 
@@ -175,8 +175,8 @@ def controls():
     ed_b = {'F#3': 'BD', 'G#3': 'SD', 'A#3': 'CP', 'C#4': 'CH', 'D#4': 'OH', 'F#4': 'TM', 'G#4': 'RS', 'A#4': 'CB'}
     b.append('<div class="grid g2">')
     b.append(card('FX · PUNCH-IN EFFECTS', HEAT[5], keyboard(fx_w, fx_b) +
-                  '<p>LATCH (default): a key toggles its effect; hold FX and let go untouched: <b>LOCKED</b> open, FX '
-                  'again unlocks; OCT- all off. In on the next 1/16. Black 1–6 mute T1–T6, A#4 picks which tracks the MIDI ones '
+                  '<p>A key plays its effect while held (MENU FX LATCH ON: toggles); hold FX and let go untouched: <b>LOCKED</b> '
+                  'open, FX again unlocks; OCT- all off. In on the next 1/16. Black 1–6 mute T1–T6, A#4 picks which tracks the MIDI ones '
                   'touch (all · synths · drums). With REC armed and playing they record into the section\'s lane; G5 '
                   'erases it.</p><h4>KNOBS</h4>' + knobs('FILTER', 'CRUSH', 'THROW', 'DEPTH')))
     b.append(card('GLO · MIX', HEAT[1], keyboard(glo_w, glo_b) +
