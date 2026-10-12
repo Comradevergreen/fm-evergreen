@@ -41,7 +41,8 @@ Si vas a leer un solo capítulo, leé [12. Guardar y cargar](#12-guardar-y-carga
 3. **¿Venís de otro firmware custom (Felucca, baudgirl o cualquier otro)?** Volvé primero al firmware oficial V15
    con el botón **Return to official V15 first** del instalador (que además guarda un backup completo). Escribir
    JIANT directamente encima de otro firmware custom ya dejó algún FM-1 sin poder arrancar.
-4. Tildá **"This FM-1 runs official V15 or JIANT"** y apretá **Install**. No desenchufes el cable mientras escribe.
+4. Apretá **Install**. Primero revisa el firmware del FM-1 y solo escribe sobre el oficial V15 o JIANT (si encuentra otro,
+te manda a volver al V15 oficial primero). No desenchufes el cable mientras escribe.
 
 JIANT no tiene samples de usuario: si venís de Felucca, sus samples de usuario (USR1–3) se pierden al instalar.
 Guardá tus archivos WAV.
@@ -1130,7 +1131,7 @@ filas **Z–'** y **Q–O** son las teclas, **1** a **=** los botones de FX a RE
 
 Chrome o Edge, con el FM-1 conectado directo a la computadora.
 
-- **Install**: instala JIANT (tildá antes "This FM-1 runs official V15 or JIANT").
+- **Install**: instala JIANT (primero revisa el FM-1: solo sobre el oficial V15 o JIANT).
 - **Return to official V15**: dale el **FM-1.fwsc** original sin modificar de M-VAVE (se verifica localmente en el
   navegador). Primero guarda un backup completo (música actual, música guardada, bancos de sonido y configuración; no
   los samples de usuario). Usalo antes de instalar JIANT si tu FM-1 tiene **otro firmware custom** (Felucca,
