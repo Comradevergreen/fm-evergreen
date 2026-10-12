@@ -3558,6 +3558,27 @@ static int test_quick_layers(void)
         press(B_ENV); frames(8);
         ok &= str_eq(cur_page()->title, "ENV");         /* (a plain tap: the next page, as always) */
         bad += check("JIANT 0.6.6: a page button held + PRESETS jumps through its pages (no wrap); let go: no tap, no layer; a tap as before", ok);
+        {   /* (0.6.66) SELECT as PRESETS: EDIT held pages its pages, no dice (now, nor the turn's last detents after
+             * letting go); GLO held + SELECT stays the tempo */
+            int16_t e0[8];
+            uint32_t j, same = 1;
+            int16_t bpm;
+            go_home(); frames(8);
+            for (j = 0; j < 8u; j++) e0[j] = TSEL->p[P_E0 + j];
+            btn_down(B_EDIT); frame(); turn(EN_SELECT, 1); frame();
+            t1 = cur_page()->title;
+            turn(EN_SELECT, 1); frame();
+            ok = cur_page()->fam == FAM_EDIT && !str_eq(t1, cur_page()->title) && !ui.confirm;
+            btn_up(B_EDIT); frame(); turn(EN_SELECT, 1); frame();   /* (the same turn, the button let go first) */
+            for (j = 0; j < 8u; j++) same &= TSEL->p[P_E0 + j] == e0[j];
+            ok &= same && !ui.confirm && !ui.layer && cur_page()->fam == FAM_EDIT;
+            bpm = song.g[G_BPM];
+            btn_down(B_GLO); frame(); turn(EN_SELECT, 3); frame(); btn_up(B_GLO); frames(4);
+            ok &= song.g[G_BPM] != bpm;
+            song.g[G_BPM] = bpm;
+            bad += check("0.6.66: a page button held + SELECT pages too (no dice, nor right after); GLO + SELECT the tempo", ok);
+            fm1_ms += 1200u;
+        }
         {   /* (0.6.7) turned in the press's own frame, or before HOLD: the map never comes while it is held; held again
              * afterwards: the layer as always */
             static const uint8_t LB[5] = {B_FX, B_GLO, B_SCL, B_EDIT, B_LFO};

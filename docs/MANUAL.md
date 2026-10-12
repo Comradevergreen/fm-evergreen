@@ -86,7 +86,7 @@ The names below are the ones the firmware uses (the HARDWARE CALIBRATION screen 
 | --- | --- |
 | **SELECT** (encoder) | On **HOME**: opens **DICE EVERYTHING?** (the song-idea generator). On **EDIT** pages: rolls the selected track's sound. On **GLO's pages (MIXER, GLOBAL, SYSTEM)**, or with **GLO held** anywhere: the tempo (BPM). With the macros open or latched: rolls new macro routes. On other pages it says **DICE: HOME / EDIT**. |
 | **ALGORITHM** (encoder) | Selects the track from any page: T1–T4, or T1–T6 with TRACKS 6. In the MENU: switches tabs. |
-| **PRESETS** (encoder) | On HOME, PRESETS and the sound pages: browses sounds (every engine's factory presets, then your user presets). On step pages (STEP, COMP, PATTERN, AUTOMATION, SHIFT): moves the step cursor. On list pages (USER, PROJECT, ARRANGE, TOOLS, AUTO LIST): moves the selection. **Hold a page button and turn PRESETS** to jump straight through that button's pages. |
+| **PRESETS** (encoder) | On HOME, PRESETS and the sound pages: browses sounds (every engine's factory presets, then your user presets). On step pages (STEP, COMP, PATTERN, AUTOMATION, SHIFT): moves the step cursor. On list pages (USER, PROJECT, ARRANGE, TOOLS, AUTO LIST): moves the selection. **Hold a page button and turn SELECT** (or PRESETS) to jump straight through that button's pages. |
 | **KNOB 1–4** | The four cards (columns) on screen. With a layer held, the layer's own knobs. Turning fast sweeps the whole range, slowly fine-tunes (MENU > KNOB ACCEL turns this off). |
 | **MASTER** | The output volume. |
 
@@ -123,7 +123,7 @@ layer's shortcuts; on the DRUM grid they are steps and lanes; on the NAME screen
 | **SEQ** held + **REC** | **CLEAR ALL SEQUENCES?** — all six tracks' steps and automation, and the punch-in lane. |
 | **REC** held + **FX / EDIT / ENV / LFO / SCL / ARP / GLO** | Clears that part's automation on the selected track (GLO: the level and pan automation of all tracks; FX: also the punch-in lane). No dialog. |
 | **SAVE** held + **OCT+** / **OCT−** | Store the music into the section playing / recall that section as stored. |
-| A page button held + **PRESETS** | Jump through that button's pages. |
+| A page button held + **SELECT** (or PRESETS) | Jump through that button's pages (GLO + SELECT: the tempo). |
 | A step held (SEQ > STEP) + **KNOB 1–4** | A parameter lock on that step. |
 | **OCT− + OCT+** held at power-on | HARDWARE CALIBRATION. |
 | **OCT− + OCT+** held 5 s while running | Update mode (UBOOT), with a countdown from 2 s; let go to cancel. |
@@ -165,7 +165,9 @@ and heating up with its own audio. The selected track is drawn bigger, a muted o
 - **HOME** returns to the ecosystem.
 - **FX** is long, so it is split into sections: TRACK (FX, DIST, AUTOPAN), SLICER (SLICER, SL BUS, SL BUS 2, SL PITCH),
   DELAY (DLY, DLY 2), REVERB (REVERB, REVERB 2), CHORUS, MASTER. **Two quick taps** on FX jump to the next section.
-- **Hold a page button and turn PRESETS** to go through its pages forwards or back (no wrap); let go and you stay there.
+- **Hold a page button and turn SELECT** (or PRESETS) to go through its pages forwards or back (no wrap); let go and
+  you stay there. While it pages, SELECT dices nothing. GLO is the exception: GLO + SELECT is the tempo (GLO + PRESETS
+  pages).
 - **Hold** a page button (past the HOLD time, MENU > HOLD, 0.4 s by default) to open its **layer**: the keys and
   knobs change function while you hold it, and a map shows what each key does. Pressing a key or turning a knob
   opens it at once. Let go and you're back where you were.
@@ -691,7 +693,7 @@ the music plays on). After OK, **GLO held + G4** still undoes it.
 
 ### Macro dice
 
-With the macros open (LFO held) or latched: SELECT or F3 rolls new macro routes on the tracks that are sounding;
+With the macros latched: SELECT or F3 rolls; with LFO held: F3 rolls (LFO + SELECT goes through LFO's pages) new macro routes on the tracks that are sounding;
 G3 clears them. See [10](#10-modulation-and-macros).
 
 ### UNDO (GLO held + G4)

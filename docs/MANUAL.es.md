@@ -87,7 +87,7 @@ Los nombres de abajo son los que usa el firmware (la pantalla HARDWARE CALIBRATI
 | --- | --- |
 | **SELECT** (encoder) | En **HOME**: abre **DICE EVERYTHING?** (el generador de ideas de temas). En las páginas **EDIT**: tira a los dados el sonido de la pista seleccionada. En las páginas de **GLO (MIXER, GLOBAL, SYSTEM)**, o con **GLO mantenido** en cualquier lado: el tempo (BPM). Con las macros abiertas o enganchadas: tira rutas de macro nuevas. En las demás páginas dice **DICE: HOME / EDIT**. |
 | **ALGORITHM** (encoder) | Elige la pista desde cualquier página: T1–T4, o T1–T6 con TRACKS 6. En el MENU: cambia de pestaña. |
-| **PRESETS** (encoder) | En HOME, PRESETS y las páginas de sonido: recorre sonidos (los presets de fábrica de cada motor y después tus presets de usuario). En las páginas de pasos (STEP, COMP, PATTERN, AUTOMATION, SHIFT): mueve el cursor de paso. En las páginas de lista (USER, PROJECT, ARRANGE, TOOLS, AUTO LIST): mueve la selección. **Mantené un botón de página y girá PRESETS** para saltar directo por las páginas de ese botón. |
+| **PRESETS** (encoder) | En HOME, PRESETS y las páginas de sonido: recorre sonidos (los presets de fábrica de cada motor y después tus presets de usuario). En las páginas de pasos (STEP, COMP, PATTERN, AUTOMATION, SHIFT): mueve el cursor de paso. En las páginas de lista (USER, PROJECT, ARRANGE, TOOLS, AUTO LIST): mueve la selección. **Mantené un botón de página y girá SELECT** (o PRESETS) para saltar directo por las páginas de ese botón. |
 | **KNOB 1–4** | Las cuatro tarjetas (columnas) de la pantalla. Con una capa mantenida, las perillas propias de la capa. Girar rápido recorre todo el rango, despacio ajusta fino (MENU > KNOB ACCEL lo desactiva). |
 | **MASTER** | El volumen de salida. |
 
@@ -124,7 +124,7 @@ atajos de esa capa; en la grilla DRUM son pasos y carriles; en la pantalla NAME 
 | **SEQ** mantenido + **REC** | **CLEAR ALL SEQUENCES?** — los pasos y la automatización de las seis pistas, y el carril de punch-in. |
 | **REC** mantenido + **FX / EDIT / ENV / LFO / SCL / ARP / GLO** | Borra la automatización de esa parte en la pista seleccionada (GLO: la automatización de nivel y paneo de todas las pistas; FX: también el carril de punch-in). Sin diálogo. |
 | **SAVE** mantenido + **OCT+** / **OCT−** | Guarda la música en la sección que está sonando / recupera esa sección tal como quedó guardada. |
-| Un botón de página mantenido + **PRESETS** | Salta por las páginas de ese botón. |
+| Un botón de página mantenido + **SELECT** (o PRESETS) | Salta por las páginas de ese botón (GLO + SELECT: el tempo). |
 | Un paso mantenido (SEQ > STEP) + **KNOB 1–4** | Un parameter lock en ese paso. |
 | **OCT− + OCT+** mantenidos al encender | HARDWARE CALIBRATION. |
 | **OCT− + OCT+** mantenidos 5 s con el equipo funcionando | Modo de actualización (UBOOT), con una cuenta regresiva desde los 2 s; soltá para cancelar. |
@@ -171,8 +171,9 @@ Los **diálogos** preguntan antes de cualquier cosa destructiva: **OCT− NO**, 
 - **FX** es largo, así que está dividido en secciones: TRACK (FX, DIST, AUTOPAN), SLICER (SLICER, SL BUS, SL BUS 2,
   SL PITCH), DELAY (DLY, DLY 2), REVERB (REVERB, REVERB 2), CHORUS, MASTER. **Dos toques rápidos** en FX saltan a la
   siguiente sección.
-- **Mantené un botón de página y girá PRESETS** para recorrer sus páginas hacia adelante o hacia atrás (sin dar la
-  vuelta); soltá y te quedás ahí.
+- **Mantené un botón de página y girá SELECT** (o PRESETS) para recorrer sus páginas hacia adelante o hacia atrás (sin
+  dar la vuelta); soltá y te quedás ahí. Mientras pasa páginas, SELECT no tira dados. GLO es la excepción: GLO + SELECT
+  es el tempo (GLO + PRESETS pasa páginas).
 - **Mantené** un botón de página (más allá del tiempo HOLD, MENU > HOLD, 0,4 s por defecto) para abrir su **capa**:
   las teclas y perillas cambian de función mientras lo mantenés, y un mapa muestra qué hace cada tecla. Apretar una
   tecla o girar una perilla la abre al instante. Soltá y volvés a donde estabas.
@@ -728,7 +729,7 @@ primera tirada (solo el sonido de esa pista: la música sigue). Después de OK, 
 
 ### Dados de macros
 
-Con las macros abiertas (LFO mantenido) o enganchadas: SELECT o F3 tira rutas de macro nuevas en las pistas que están
+Con las macros enganchadas: SELECT o F3 tira; con LFO mantenido: F3 tira (LFO + SELECT recorre las páginas de LFO) rutas de macro nuevas en las pistas que están
 sonando; G3 las borra. Ver [10](#10-modulación-y-macros).
 
 ### UNDO (GLO mantenido + G4)

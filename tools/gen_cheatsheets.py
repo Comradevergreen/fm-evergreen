@@ -7,7 +7,7 @@ import html, os
 
 R = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(R, 'docs', 'cheatsheet')
-VERSION = 'v0.6.65'
+VERSION = 'v0.6.66'
 
 HEAT = ['#22d3ee', '#3b82f6', '#8b5cf6', '#d946ef', '#ef4444', '#ff7a00', '#facc15', '#f4f1ea']
 
@@ -127,9 +127,9 @@ def controls():
     rows = [
         ('MASTER', 'Master volume.'),
         ('SELECT', 'HOME: <b>DICE EVERYTHING?</b> (OCT+ yes): a new piece in one scale. EDIT: <b>the sound\'s dice</b> (OK keeps, CANCEL back). '
-                   'GLO\'s pages or GLO held: the tempo. Macros open (LFO held or latched): new random routes.'),
+                   'GLO\'s pages or GLO held: the tempo. Macros latched: new random routes. A page button held: its pages.'),
         ('PRESETS', 'Browses the sounds (factory and user). On step, list and song pages: the cursor / the row. '
-                    '<b>Hold a page button + PRESETS: jump through its pages.</b>'),
+                    '<b>Hold a page button + PRESETS (or SELECT): jump through its pages.</b>'),
         ('ALGORITHM', 'Selects the track from any page: T1–T4, or T1–T6 with TRACKS 6.'),
         ('KNOB 1–4', 'The four columns on screen. Fast sweeps the whole range, slow fine-tunes. With a layer held: '
                      'the layer\'s.'),
@@ -158,7 +158,7 @@ def controls():
           '</table>')
     b.append('<div class="grid g2">' + card('KNOBS AND TRANSPORT', HEAT[0], t) +
              card('PAGE BUTTONS', HEAT[2], t2 + '<p style="margin-top:10px">' + k('BUTTON', cls='v') + ' + ' +
-                  k('PRESETS', cls='v') + ' jumps straight to a page (no wrap); let go and you stay there.</p>') + '</div>')
+                  k('SELECT', cls='v') + ' (or PRESETS) jumps straight to a page (no wrap), no dice; GLO + SELECT: the tempo.</p>') + '</div>')
 
     b.append(sec('LAYERS · HOLD A BUTTON'))
     fx_w = {'F3': 'REP 1/8', 'G3': 'REP 1/16', 'A3': 'REP 1/32', 'B3': 'LPF', 'C4': 'HPF', 'D4': 'OCT−', 'E4': 'OCT+',
@@ -206,7 +206,7 @@ def controls():
 
     b.append(sec('COMBOS'))
     combos = [
-        (k('PAGE BUTTON', cls='v') + ' + ' + k('PRESETS', cls='v'), 'Jump through that button\'s pages.'),
+        (k('PAGE BUTTON', cls='v') + ' + ' + k('SELECT', cls='v'), 'Jump through that button\'s pages (or PRESETS).'),
         (k('REC') + ' + ' + k('FX') + k('EDIT') + k('ENV') + k('LFO') + k('SCL') + k('ARP') + k('GLO'),
          'Clear that part\'s automation on the selected track (FX: the punch-in lane too).'),
         (k('SEQ') + ' + ' + k('REC'), 'CLEAR ALL SEQUENCES? (OCT+ confirms).'),
