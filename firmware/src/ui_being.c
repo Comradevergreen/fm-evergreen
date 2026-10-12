@@ -73,9 +73,11 @@ static int32_t bg_energy(void)
 static void bg_outline(const genome_t *g, const bfeat_t *f, int32_t cx, int32_t cy, int32_t r, int outer, uint32_t t,
                        uint16_t c)
 {
-    int32_t i, px = 0, py = 0;
-    for (i = 0; i <= BG_N; i++) {
-        uint32_t th = (uint32_t)(i % BG_N) * 65536u / BG_N;
+    /* (0.6.57) LOAD LITE / ECO: fewer vertices, the inner isotherms (no spikes to draw) the coarsest: LITE about half
+     * the lines a being, ECO a third; FULL as drawn */
+    int32_t i, px = 0, py = 0, nv = !sys_load ? BG_N : outer ? (sys_load == LOAD_ECO ? 48 : 64) : (sys_load == LOAD_ECO ? 24 : 32);
+    for (i = 0; i <= nv; i++) {
+        uint32_t th = (uint32_t)(i % nv) * 65536u / (uint32_t)nv;
         int32_t rr = r + ((((r * f->wob) >> 8) * ((9175 * bg_sin((uint32_t)f->lob * th + t) +
                                                     3932 * bg_sin((uint32_t)(f->lob + 2) * th - 2u * t)) >> 15)) >> 15);
         int32_t x, y;

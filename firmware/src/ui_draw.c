@@ -109,7 +109,7 @@ static void roll_note(uint32_t k, const char *a, const char *b, int snap)
     int d = roll_dir(a, b);
     ui.roll[k].t0 = (uint8_t)ui.frame;
     ui.roll[k].from[0] = 0;
-    if (snap || !d || el < ROLL_SNAP || (ui_prefs & PREF_ANIM_OFF))
+    if (snap || !d || el < ROLL_SNAP || ANIM_SNAP())
         return;
     str_cpy(ui.roll[k].from, a, sizeof ui.roll[k].from);
     ui.roll[k].dir = (int8_t)d;

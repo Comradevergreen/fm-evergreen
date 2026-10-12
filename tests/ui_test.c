@@ -7425,6 +7425,28 @@ static int test_click_menu(void)
         ui.msg_t = 0; ui.msg[0] = 0; press(B_HOME); frame();
         bad += check("GLO > SYSTEM: KNOB 1 TRACKS 4 / 6, KNOB 2 LOAD ECO / LITE / FULL, the MENU's settings both ways", ok);
     }
+    {   /* (0.6.57) LOAD LITE / ECO: the panel's animation at most every 50 / 70 ms; FULL as it changes; a new page
+         * at once; the values snap (no rolling digits) */
+        uint8_t home0 = ui.home;
+        uint32_t s0;
+        ui.home = 1;
+        load_put(1u);
+        ui.force = 1; draw_graph(); ui.force = 0; s0 = ui.graph_sig;
+        ui.frame += 2u; fm1_ms += 20u; draw_graph();
+        ok = ui.graph_sig == s0 && ANIM_SNAP();         /* (20 ms later: not yet) */
+        ui.frame += 2u; fm1_ms += 40u; draw_graph();
+        ok &= ui.graph_sig != s0;                       /* (60 ms: drawn) */
+        load_put(0u);
+        s0 = ui.graph_sig; ui.frame += 2u; fm1_ms += 60u; draw_graph();
+        ok &= ui.graph_sig == s0;                       /* ECO: 60 ms not yet */
+        ui.frame += 2u; fm1_ms += 20u; draw_graph();
+        ok &= ui.graph_sig != s0;
+        load_put(2u);
+        s0 = ui.graph_sig; ui.frame += 2u; fm1_ms += 16u; draw_graph();
+        ok &= ui.graph_sig != s0 && !ANIM_SNAP();       /* FULL: every change */
+        ui.home = home0; ui.force = 1; frame();
+        bad += check("LOAD LITE / ECO: the panel animates at most every 50 / 70 ms, values snap; FULL as before", ok);
+    }
     {   /* (0.6.29) 6 LITE: the heavy parts swapped while they sound, the project's values kept */
         int16_t rt0 = song.g[G_RTYPE], dp0 = song.g[G_DPIT];
         int32_t o[2u * CTL];

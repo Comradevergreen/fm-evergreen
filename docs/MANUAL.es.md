@@ -1036,8 +1036,8 @@ Cuán pesado puede ponerse el sonido.
 | LOAD | Qué cambia mientras suena |
 | --- | --- |
 | **FULL** (por defecto) | Todo tal como está configurado. |
-| **LITE** | Las reverbs SHIMMER y CLOUD suenan como ROOM, RESO como SPRING; el delay GRAIN suena común; FM6 toca dos voces. |
-| **ECO** | LITE, más: todas las reverbs suenan como SPRING, **sin SLICER** (sus pistas van directo a la mezcla), **sin chorus** (sus páginas se ocultan), como máximo **4 voces** por pista de sinte. Las baterías no cambian. |
+| **LITE** | Las reverbs SHIMMER y CLOUD suenan como ROOM, RESO como SPRING; el delay GRAIN suena común; FM6 toca dos voces. La pantalla se dibuja más liviana: los seres y gráficos se animan a unos 20 cuadros por segundo con contornos más simples, y los valores cambian al instante (sin dígitos que ruedan). |
+| **ECO** | LITE, más: todas las reverbs suenan como SPRING, **sin SLICER** (sus pistas van directo a la mezcla), **sin chorus** (sus páginas se ocultan), como máximo **4 voces** por pista de sinte. Las baterías no cambian. La pantalla a unos 14 cuadros por segundo, los seres aún más simples. |
 
 LOAD solo cambia cómo se renderizan las cosas: **los proyectos conservan su configuración** y suenan como se guardaron
 en FULL (o en otro FM-1). Las tarjetas de los efectos sustituidos dicen LITE o ECO. LOAD libera **CPU**, no RAM: el

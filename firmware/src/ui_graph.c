@@ -392,7 +392,7 @@ static void pr_follow(const track_t *t)
 {
     uint32_t i, j, len = (uint32_t)t->p[P_SLEN], base = ui.bank * 16u;
     int32_t lo = 127, hi = -1, tgt, d, cur = proll.lo;
-    int snap = ui.force || !proll.init || proll.trk != song.sel || ui.frame != proll.frame + 1u || (ui_prefs & PREF_ANIM_OFF);
+    int snap = ui.force || !proll.init || proll.trk != song.sel || ui.frame != proll.frame + 1u || ANIM_SNAP();
     if (proll.init && proll.frame == ui.frame)
         return;
     for (i = 0; i < 16u && base + i < len; i++) {
@@ -2005,6 +2005,16 @@ static void draw_graph(void)
     sig = graph_signature();
     if (!ui.force && sig == ui.graph_sig)
         return;
+    {   /* (0.6.57) LOAD LITE / ECO: the panel's animation (the beings, the scope, LFO, the envelope's dot, a turn
+         * redrawing a curve) at most every 50 / 70 ms (~20 / 14 frames a second, FULL: as fast as it changes), so the
+         * main loop keeps its time for the keys, the knobs and the LCD. A new page, track or engine: at once */
+        static uint32_t gr_ms, gr_key;
+        uint32_t key = ui.page * 7u + song.sel * 131u + ui.home * 3u + TSEL->eng_req * 1031u;
+        if (sys_load && !ui.force && key == gr_key && fm1_ms - gr_ms < (sys_load == LOAD_ECO ? 70u : 50u))
+            return;                                  /* (graph_sig stays: drawn on a later frame) */
+        gr_key = key;
+        gr_ms = fm1_ms;
+    }
     ui.graph_sig = sig;
     cv_begin(240, graph_h(), T_BG);
     cv_rrect(3, 0, 234, graph_h(), 5, T_SURF, T_BG);   /* the panel (MENU > LARGE: the strip) */

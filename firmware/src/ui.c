@@ -54,6 +54,9 @@ static uint32_t up_gen;                      /* bumped on every user bank change
 #define prefs_rev (favorites.factory[15][25])  /* (JIANT 0.6.44) the settings' revision (a byte no engine uses: engine 15):
                                                 * 0 before; 1: FX LATCH turned ON once (main.c prefs_update) */
 #define PREF_ANIM_OFF 2u                       /* MENU > ANIM OFF (#46): values snap (no rolling digits, no glide) */
+/* (0.6.57) values snap: MENU > ANIM OFF, or LOAD LITE / ECO (the rolling digits, the roll's and the tabs' glides are
+ * frames drawn again for a look: the time goes to the keys and knobs instead; the beings still move) */
+#define ANIM_SNAP() ((ui_prefs & PREF_ANIM_OFF) || sys_load)
 #define PREF_ACCEL_OFF 4u                      /* MENU > KNOB ACCEL OFF (#52; JIANT: ON by default, the bit now means OFF):
                                                 * fast turns of wide values x2..x16 */
 #define PREF_USB_FIXED 8u                      /* MENU > USB LEVEL FIXED: USB audio at the full level, MASTER after */
