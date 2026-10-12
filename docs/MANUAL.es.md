@@ -138,6 +138,8 @@ atajos de esa capa; en la grilla DRUM son pasos y carriles; en la pantalla NAME 
   "T1 CLEARED"...), a veces con una segunda línea.
 - **Tarjetas**: las cuatro columnas debajo del encabezado son KNOB 1–4. Un valor automatizado o con lock aparece
   marcado; una tarjeta apagada significa "acá ahora no hay nada".
+- **Nombre de página**: al cambiar de página (o de pista) a mano, el nombre de la página aparece grande en el medio un
+  momento, con la pista y su motor debajo.
 - **Panel (al medio)**: el gráfico de la página — la criatura del motor, una envolvente, el LFO en movimiento, la
   grilla de pasos, una lista...
 - **Pie**: el nombre de la página y su lugar dentro de su familia (p. ej. **DLY 2/2**), o ayudas de teclas. En las
@@ -791,6 +793,11 @@ ancho). Se oculta con LOAD ECO (la tarjeta de envío de chorus de una pista dice
 - **ENV DEST**: la envolvente hacia FILTER, PITCH, SHAPE; **LOOP ON**: con la nota mantenida, la envolvente vuelve al
   ataque cuando llega al sustain (un LFO con forma de ADSR).
 - **LFO**: RATE, WAVE (SIN, TRI, SAW, SQR, S&H), PHASE, FADE. **LFO DEST**: PITCH, FILTER, SHAPE, AMP.
+  - **RATE** es libre en Hz; girándolo a la izquierda pasado el más lento queda **a tempo** (4BAR, 2BAR, 1BAR, 1/2,
+    1/4, 1/8D, 1/4T, 1/8, 1/8T, 1/16, 1/16T, 1/32), enganchado al compás mientras el transporte toca (PHASE es su
+    desfase).
+  - **PHASE** es dónde reinicia el LFO una frase nueva; girándolo a la izquierda pasado 0 queda en **FREE**: nunca se
+    reinicia, corre libre.
 - **Matriz MOD**: 4 slots por pista (KNOB 1 elige el slot).
   - Fuentes: OFF, LFO, ENV, VEL, KEY, RAND, MODW (MIDI CC1), AT (aftertouch), EXPR (CC11), **M1–M4**, **STEP** (MSEQ).
   - Destinos: PITCH, CUT, SHP, AMP, PAN, DIST, CHO, DLY, REV, RATE (velocidad del LFO), VIB, **E1–E8** (las perillas

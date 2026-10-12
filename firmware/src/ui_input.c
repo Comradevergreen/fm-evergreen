@@ -82,6 +82,7 @@ static void page_jump(uint32_t fam, int32_t s)
     ui.fam_last[PAGES[i].fam] = ui.page;
     ui.home = 0;
     page_entered();
+    page_flash();                                       /* (0.6.51) */
     ui_message(PAGES[i].title);
     ui.pg_down &= (uint16_t)~(1u << panel.btn[b]);     /* (the button let go: no next page) */
     if (b == B_SEQ) ui.seq_t0 |= 2u;

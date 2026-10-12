@@ -681,6 +681,7 @@ static int test_init_dry(void)
         track_t *t;
         ui_power_on();
         t = &trk[0];
+        song.master_q12 = 4096;
         for (k = 1; k < NTRK; k++) trk[k].p[P_MUTE] = 1;
         set_engine_of(t, 11u);                                  /* NOISE */
         t->engine = t->eng_req;
@@ -868,6 +869,56 @@ static int test_morph_click(void)
         }
     }
     bad += check("MORPH turned fast (0 <-> 40): no step larger than with it held (ANALOG TRI, PHASE, LOFI TRI)", ok);
+    return bad;
+}
+/* (0.6.51) the LFO in time (RATE below 0) and FREE (PHASE -1): in time a cycle is that many beats on the transport's
+ * grid; FREE a note does not restart it; RETRIG (PHASE 0..127) as before; the display */
+static int test_lfo_sync(void)
+{
+    int bad = 0, ok = 1;
+    int32_t o[2u * CTL];
+    uint32_t b, ph0, len;
+    char v[12];
+    const char *u;
+    track_t *t;
+    ui_power_on();
+    t = &trk[0];
+    t->p[P_LRATE] = -5;                                  /* 1/4: a cycle a beat */
+    song.playing = 1;
+    ms_clock = 0;
+    track_lfo_tick(t);
+    ph0 = t->lfo_ph;
+    len = beat_samples();
+    ms_clock = len / 2u;
+    track_lfo_tick(t);
+    ok &= ph0 < 0x01000000u && t->lfo_ph > 0x7E000000u && t->lfo_ph < 0x82000000u;   /* half a beat: half a turn */
+    ms_clock = len;
+    track_lfo_tick(t);
+    ok &= t->lfo_ph < 0x01000000u || t->lfo_ph > 0xFF000000u;
+    song.playing = 0;
+    bad += check("LFO RATE 1/4 (in time): a cycle a beat on the transport's grid", ok);
+    param_format(&TP[P_LRATE], -5, v, &u);
+    ok = str_eq(v, "1/4");
+    param_format(&TP[P_LRATE], -1, v, &u);
+    ok &= str_eq(v, "4BAR");
+    param_format(&TP[P_LPHASE], -1, v, &u);
+    ok &= str_eq(v, "FREE");
+    bad += check("LFO RATE below 0 shows the division, PHASE -1 FREE", ok);
+    ui_power_on();
+    t = &trk[0];
+    t->p[P_LRATE] = 60;
+    t->p[P_LPHASE] = -1;                                 /* FREE */
+    for (b = 0; b < 10u; b++) mix_block(o, CTL);
+    ph0 = t->lfo_ph;
+    trk_note_on(t, 60, 100);
+    ok = t->lfo_ph == ph0;
+    trk_note_off(t, 60);
+    for (b = 0; b < 400u; b++) mix_block(o, CTL);
+    t->p[P_LPHASE] = 0;                                  /* RETRIG */
+    trk_note_on(t, 62, 100);
+    ok &= t->lfo_ph == 0u;
+    trk_note_off(t, 62);
+    bad += check("LFO PHASE FREE: a note does not restart it; 0: it does", ok);
     return bad;
 }
 static int test_patterns(void)
@@ -8255,6 +8306,7 @@ int main(void)
     bad += test_mutate();
     bad += test_morph();
     bad += test_morph_click();
+    bad += test_lfo_sync();
     bad += test_init_dry();
     bad += test_dximg();
     bad += test_dxlay();

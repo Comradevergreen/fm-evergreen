@@ -1097,11 +1097,40 @@ static void graph_title(void)
     cv_text_in(0, y, 240, f, ti, T_THEME, T_SURF);
 }
 
+/* (0.6.51) the page's name big in the middle (page_flash): it opens, holds, dims and goes, under PF_MS; under it the
+ * track and its engine */
+static void page_flash_draw(void)
+{
+    uint32_t e = fm1_ms - pf_ms;
+    int32_t h = (int32_t)graph_h(), w, x, y, bh = 46;
+    uint16_t fill, ink;
+    char sub[20] = {'T', 0, 0};
+    if (!pf_on)
+        return;
+    if (e >= PF_MS) {
+        pf_on = 0;
+        return;
+    }
+    w = e < 90u ? 140 + (int32_t)e * 80 / 90 : 220;
+    x = (240 - w) / 2;
+    y = (h - bh) / 2;
+    fill = e > PF_MS - 160u ? T_RAISE : T_ACCENT;
+    ink = e > PF_MS - 160u ? T_MID : T_INK;
+    sub[1] = (char)('1' + song.sel % NTRK);
+    sub[2] = ' ';
+    str_cpy(sub + 3, ENGINES[TSEL->eng_req % NENGINES]->name, sizeof sub - 3u);
+    cv_rrect(x, y, w, bh, 6, fill, T_SURF);
+    cv_text_in(x, y + CAP_IN(L, 30), w, &AF_L, ui.home ? "HOME" : cur_page()->title, ink, fill);
+    cv_text_in(x, y + 30 + CAP_IN(S, 14), w, &AF_S, sub, ink, fill);
+}
+
 static uint32_t graph_signature(void)
 {
     const page_t *pg = cur_page();
     const track_t *t = TSEL;
     uint32_t h = 2166136261u, i;
+    if (pf_on)                                       /* (0.6.51) the page's name over it: drawn as it fades */
+        h = (h ^ ((fm1_ms - pf_ms) / 30u + 1u)) * 16777619u;
     if (ui.home)
         return h ^ (ui.frame / 2u);                  /* scope: redraw every other frame */
     h ^= (uint32_t)pg->graph * 131u + TSEL->eng_req + song.sel * 7777u + ui.page * 1291u;
@@ -2046,5 +2075,6 @@ static void draw_graph(void)
         }
     }
     cv_oy = 0;
+    page_flash_draw();                               /* (0.6.51) */
     cv_blit(0, graph_y());
 }
