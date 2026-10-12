@@ -766,8 +766,12 @@ during a song), the **note effects (D4–F5)** you hold are recorded into it, on
 are not recorded). Hold **FX + G5** while playing to erase where the play head passes; stopped, FX + G5 erases the whole
 lane. **REC held + FX** also clears it (along with the track's FX automation).
 
-**FX LATCH** (MENU > CONTROL > FX LATCH ON): a key pressed with FX toggles its effect on and off, the knob macros keep
-their values, **FX + OCT−** turns everything off (FX ALL OFF). Latched effects are not recorded into the lane.
+**FX LATCH** (MENU > CONTROL > FX LATCH, **ON by default** since 0.6.44): a key pressed with FX toggles its effect on and
+off, the knob macros keep their values, **FX + OCT−** turns everything off (FX ALL OFF). Latched effects are not
+recorded into the lane. **Lock**: hold FX until its map opens and let go without touching anything: the FX layer stays
+open (**[FX] LOCKED**), as the macros do with LFO; the keys toggle effects, the knobs are FX's macros and OCT− is ALL
+OFF, with both hands free. Press **FX** again to unlock (the effects you left on stay on). Held with keys or knobs, FX
+works as before and closes when let go.
 
 ### Mutes and solos
 
@@ -972,7 +976,7 @@ closes it (settings are saved then).
 | DISPLAY | SCREEN OFF | **NEVER** (default), 5 MIN, 15 MIN, 30 MIN, 60 MIN |
 | CONTROL | HOLD | 0.3 s, **0.4 s** (default), 0.5 s, 0.6 s — how long until a held button opens its layer |
 | CONTROL | KNOB ACCEL | **ON** (default), OFF |
-| CONTROL | FX LATCH | OFF, ON |
+| CONTROL | FX LATCH | **ON** (default since 0.6.44), OFF |
 | CONTROL | BPM LOCK | OFF, ON — SELECT sets the tempo only with GLO held; DICE ALL keeps the tempo |
 | CONTROL | SCALE LEDS | OFF, ON — the keys of the scale glow, the root brighter |
 | AUDIO | SPEAKER EQ | FLAT, LOWCUT, BASS+ (an EQ on the master for the small speaker; also reaches the outputs and USB) |

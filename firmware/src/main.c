@@ -152,6 +152,12 @@ static void fm1_main(void)
         ota_boot_cleanup();                             /* staging area left by an update */
 #endif
     settings_init();
+    if (prefs_rev < 1u) {                               /* (JIANT 0.6.44) FX LATCH ON by default, once: who turns it
+                                                         * OFF after keeps it so */
+        ui_prefs |= PREF_LATCH;
+        prefs_rev = 1u;
+        settings_save();
+    }
     usb_serial_apply();                                 /* (#67: the saved USB SERIAL before usb_start) */
     lcd_init();
     spl_anim = 1;                                       /* (JIANT 0.5) the signature written: splash_write */

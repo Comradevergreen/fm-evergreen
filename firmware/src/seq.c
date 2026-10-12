@@ -282,6 +282,8 @@ static __attribute__((noinline)) uint32_t arp_pick(track_t *t, uint32_t *list, u
 
 /* n: samples the arp advances by (the external clock's while it runs, 0 stopped); gate_n: samples its
  * gate counts down by (real time when the external transport stops: a tapped or latched note still ends) */
+static volatile uint8_t fx_lock_on;              /* (0.6.44) ui_layer.c: the FX layer locked open, no other layer armed:
+                                                 * the keys are its effects without FX held */
 static volatile uint32_t beat_pos, beat_n;      /* samples into the beat, the beat of the bar (0..3) */
 static volatile uint32_t bar_n;                 /* (0.6.43) the bars since PLAY (MUTATE: project.c mutate_poll) */
 
@@ -673,8 +675,8 @@ static void keyboard_block(void)
         kb_prev = cur;
         return;
     }
-    lay = (fm1_in.buttons & kb_mask) != 0u;
-    fx = (fm1_in.buttons & perf_mask) != 0u;
+    lay = (fm1_in.buttons & kb_mask) != 0u || fx_lock_on;
+    fx = (fm1_in.buttons & perf_mask) != 0u || fx_lock_on;   /* (0.6.44: the FX layer locked open) */
     for (k = 0; k < 27u; k++) {
         if (!((ch >> k) & 1u))
             continue;

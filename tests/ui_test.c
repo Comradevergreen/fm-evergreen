@@ -145,6 +145,7 @@ static void ui_power_on(void)
     ui_prefs = PREF_ACCEL_OFF;                    /* (the tests turn a detent a frame: one step each; KNOB ACCEL, ON on the
                                                    * device by default, has its own test) */
     mac_latch = 0;
+    fx_lock = 0;                                  /* (0.6.44) */
     memset(pat_last, 0, sizeof pat_last);
     memset(proj_slot, 0, sizeof proj_slot);
     memset(up_bank, 0, sizeof up_bank);
@@ -6673,6 +6674,26 @@ static int test_fx_latch(void)
     press(B_HOME);
     bad += check("  the menu turns the latched effects off; MENU > FX LATCH: OCT+ / KNOB 1 right ON, OCT- / left OFF",
                  ok && !ui.menu);
+    {   /* (0.6.44) FX held past HOLD and let go with nothing used: locked open, as the macros; the keys toggle the
+         * effects and the knobs are FX's without FX held; OCT- all off; FX again: unlocked, the effects stay */
+        fx_latch = PREF_LATCH | PREF_ACCEL_OFF;
+        go_home(); frames(400);
+        btn_down(B_FX); frames(800); btn_up(B_FX); frames(64);
+        ok = fx_lock && ui.layer == LAYER_FX;
+        key_down(lpf); frame(); key_up(lpf); frame();
+        turn(EN_K2, 10);
+        ok &= perf_latched == PF_BIT(PF_LPF) && perf_k[1] == 10 && ui.layer == LAYER_FX;
+        press(B_OCTDN);
+        ok &= !perf_latched && !perf_k[1] && song.octave == 0;
+        key_down(lpf); frame(); key_up(lpf); frame();
+        press(B_FX); frames(64);
+        ok &= !fx_lock && !ui.layer && perf_latched == PF_BIT(PF_LPF) && ui.home;
+        key_down(lpf); frame(); key_up(lpf); frame();                 /* (unlocked: the key plays its note) */
+        ok &= perf_latched == PF_BIT(PF_LPF);
+        perf_latched = 0;
+        bad += check("  FX LATCH: FX held and let go unused locks the FX layer open (keys, knobs, OCT- ALL OFF); FX again "
+                     "unlocks, the effects stay", ok);
+    }
     {   /* kept with the settings, in the favorites record (an older one: OFF) */
         persist_t p;
         fx_latch = PREF_LATCH | PREF_ACCEL_OFF;

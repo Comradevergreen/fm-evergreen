@@ -1492,6 +1492,11 @@ static void ui_input_frame(void)
         panel_enc(EN_ALGO);                             /* (another track: OCT- puts back the layer's track only) */
         if (glo && (sel = panel_enc(EN_SELECT)) != 0)   /* GLO + SELECT: the tempo, a combo (OCT- puts it back) */
             combo = 1;
+    } else if (fx_lock_on) {                            /* (0.6.44) the FX layer locked open: KNOB 1..4 its macros */
+        for (k = 0; k < 4u; k++)
+            ks[k] = panel_enc(EN_K1 + k);
+        panel_enc(EN_PRESET);
+        kq = 1;
     } else if ((kq = (uint32_t)layer_knobs_quiet()) != 0) {   /* a layer letting go: KNOB 1..4 are nobody's (#39) */
         for (k = 0; k < 4u; k++)
             if (panel_enc(EN_K1 + k) != 0)
