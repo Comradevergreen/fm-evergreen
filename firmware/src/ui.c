@@ -1048,13 +1048,21 @@ static void set_engine_of(track_t *t, uint32_t ei)
 
 static void apply_preset(uint32_t pi) { apply_preset_to(TSEL, pi); }
 static void set_engine(uint32_t ei) { set_engine_of(TSEL, ei); }
-/* (0.6.46) INIT SOUND, NEW PROJECT: the engine's defaults and first sound, but dry (no DIST CHOR DLY REV send: the
- * effects are the player's to add) and on FM6 the init voice instead of a factory patch */
+/* (0.6.46) INIT SOUND, NEW PROJECT, (0.6.49) the power-on: the engine's own defaults (its EDIT values as the engine
+ * declares them, not its first preset's colour; the envelope, VOICE and the filter envelope as a new track has them),
+ * dry (no DIST CHOR DLY REV send: the effects are the player's to add), on FM6 the init voice */
 static void init_sound_of(track_t *t, uint32_t ei)
 {
+    static const uint8_t ENVP[6] = {P_ATK, P_DEC, P_SUS, P_REL, P_ED_FLT, P_VOICE};
+    const engine_t *e;
     uint32_t i;
     load_begin(t, LOAD_SOUND);
     set_engine_of(t, ei);
+    e = ENGINES[t->eng_req % NENGINES];
+    for (i = 0; i < 8u; i++)
+        t->p[P_E0 + i] = e->edit[i].def;
+    for (i = 0; i < 6u; i++)
+        t->p[ENVP[i]] = TP[ENVP[i]].def;
     for (i = 0; i < 4u; i++)
         t->p[P_DIST + i] = 0;
     fm6_init_voice(t);
@@ -1275,6 +1283,7 @@ static uint8_t dx_ui_lane, dx_ui_side;
 static uint32_t dx_pagen(const page_t *pg)            /* "SOUND 2"; (0.5.1) "X-MOD": 4 */
 {
     return pg->title[0] == 'X' ? 4u : pg->title[0] == 'T' ? 5u : pg->title[1] == 'E' ? 6u :   /* (0.6.48) SEND */
+           pg->title[0] == 'L' ? 7u :                   /* (0.6.49) LAYER */
            pg->title[5] == ' ' ? (uint32_t)(pg->title[6] - '0') : 1u;
 }
 static uint32_t dx_page2(const page_t *pg) { return dx_pagen(pg) == 2u; }

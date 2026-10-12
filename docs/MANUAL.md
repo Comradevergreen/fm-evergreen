@@ -308,7 +308,7 @@ and heating up with its own audio. The selected track is drawn bigger, a muted o
 
 **SCL** — any key sets the ROOT to its note name. Knobs: ROOT, SCALE, OFFSET, PITCH (the last two are SEQ > SHIFT's).
 
-**EDIT** — F3 **INIT** (the track's sound back to its engine's first factory preset, dry: every effect send at 0; FM6 the init
+**EDIT** — F3 **INIT** (the track's sound back to its engine's own defaults (a plain INIT, not a preset), dry: every effect send at 0; FM6 the init
 voice, OP1 alone at full level; on DRUM the factory DRUM-X kit too), G3 **RECALL** (the sound as the current section stored it; on DRUM with its kit). Both ask first and leave the
 steps alone. On a DRUM track, black keys 1–8 mute each DRUM-X sound (BD SD CP CH OH TM RS CB). Knobs: EDIT 1's four.
 
@@ -417,6 +417,11 @@ DRUM-X is a synthesized kit of eight sounds, **BD SD CP CH OH TM RS CB**, genera
 - **TONE** (the whole kit): **BP**, a band-pass on the metal sounds (the hats, the rim, the cowbell), OFF or 15
   centres from about 1.5 to 9 kHz; **FEEDBK**, every sound's oscillator fed back into itself (OFF, 1–15: warm, growl,
   grit, noise). Saved with the section's kit.
+- **LAYER** (a sound's own): **LANE**, **LAYER** (OFF, 1–15): a second oscillator at an out-of-tune interval, frequency
+  modulated by the sound, more as it goes up: from a metal edge to a clang with no note, so the sound melts into the
+  rhythm and stays out of the harmony (the factory kit has it on the snare, the hats and the cowbell); **FEEDBK** (OFF,
+  1–15): that sound's oscillator fed back (added to TONE's FEEDBK, the kit's). Saved with the section's kit; the dice
+  (SELECT on a DRUM page, DICE ALL) set them boldly. Each sound with a LAYER costs a little CPU (about as FEEDBK).
 - **SEND** (a sound's own): **LANE**, **SEND** (OFF, CHORUS, DELAY, REVERB) and **AMOUNT**: that hit alone into one
   effect, the rest of the kit as it is (on top of the track's own sends). Saved with the section's kit.
 - **IMAGE** (the track's, one knob, automatable): sweeps the kit through its placings in the stereo field. 0: every

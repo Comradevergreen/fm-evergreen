@@ -108,7 +108,8 @@ static void felucca_init(void)
     for (i = 0; i < NTRK; i++) {
         track_t *t = &trk[i];
         track_defaults(t);
-        set_engine_of(t, TRK_DEF[i][0]);      /* (its defaults and first sound, with its sends) */
+        init_sound_of(t, TRK_DEF[i][0]);      /* (0.6.49: as INIT SOUND: the engine's defaults, dry, FM6 the init
+                                               * voice; was its first preset with its sends) */
         t->engine = t->eng_req;
         track_defaults_steps(t);              /* (a sound load never touches them) */
         if (TRK_DEF[i][2])
