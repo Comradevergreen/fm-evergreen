@@ -139,10 +139,11 @@ atajos de esa capa; en la grilla DRUM son pasos y carriles; en la pantalla NAME 
   "T1 CLEARED"...), a veces con una segunda línea.
 - **Tarjetas**: las cuatro columnas debajo del encabezado son KNOB 1–4. Un valor automatizado o con lock aparece
   marcado; una tarjeta apagada significa "acá ahora no hay nada".
-- **Nombre de página**: al cambiar de página (o de pista) a mano, el nombre de la página aparece un momento en la barra
-  de arriba, con la pista y su motor a la derecha; en HOME el motor de la pista, y "T1 HOME" en chico. Las tarjetas y
-  el gráfico quedan a la vista.
-- **Gránulos**: unos puntitos flotan detrás del gráfico del panel, como en HOME (LOAD FULL con ANIM ON).
+- **Nombre de página**: al cambiar de página (o de pista) a mano, el nombre de la página aparece un momento sobre el pie
+  de la pantalla, con la pista y su motor a la derecha; en HOME el motor de la pista, y "T1 HOME" en chico. La barra de
+  arriba, las tarjetas y el gráfico quedan a la vista.
+- **Gránulos**: unos puntitos flotan detrás del gráfico del panel, como en HOME (LOAD FULL con ANIM ON). Se mueven solo cuando
+  el panel se redibuja igual (una perilla, el LFO, la envolvente), así que no gastan CPU.
 - **Panel (al medio)**: el gráfico de la página — la criatura del motor, una envolvente, el LFO en movimiento, la
   grilla de pasos, una lista...
 - **Pie**: el nombre de la página y su lugar dentro de su familia (p. ej. **DLY 2/2**), o ayudas de teclas. En las
@@ -856,12 +857,14 @@ Efectos que actúan mientras mantenés su tecla y vuelven exactamente atrás cua
 los mutes no se graban). Mantené **FX + G5** mientras suena para borrar por donde pasa el cabezal; parado, FX + G5
 borra todo el carril. **REC mantenido + FX** también lo borra (junto con la automatización de FX de la pista).
 
-**FX LATCH** (MENU > CONTROL > FX LATCH, **ON por defecto** desde 0.6.44): una tecla apretada con FX activa y desactiva
-su efecto, las macros de las perillas conservan sus valores, **FX + OCT−** apaga todo (FX ALL OFF). Los efectos
-trabados no se graban en el carril. **Traba**: mantené FX hasta que se abra su mapa y soltalo sin tocar nada: la capa
-FX queda abierta (**[FX] LOCKED**), como las macros con LFO; las teclas prenden y apagan efectos, las perillas son las
-macros del FX y OCT− es ALL OFF, con las dos manos libres. Apretá **FX** otra vez para destrabar (los efectos que
-dejaste prendidos siguen). Si lo mantenés tocando teclas o perillas, FX funciona como siempre y se cierra al soltar.
+**Traba**: mantené FX hasta que se abra su mapa y soltalo sin tocar nada: la capa FX queda abierta (**[FX] LOCKED**),
+como las macros con LFO; las teclas tocan los efectos (momentáneos: apretada suena, soltada se apaga), las perillas son
+las macros del FX y OCT− es ALL OFF, con las dos manos libres. Apretá **FX** otra vez para destrabar (los efectos
+trabados que dejaste prendidos siguen). Si lo mantenés tocando teclas o perillas, FX funciona como siempre y se cierra al soltar.
+
+**FX LATCH** (MENU > CONTROL > FX LATCH, **OFF por defecto**; ON por defecto de 0.6.44 a 0.6.63): en ON, una tecla
+apretada con FX activa y desactiva su efecto, las macros de las perillas conservan sus valores, **FX + OCT−** apaga
+todo (FX ALL OFF). Los efectos trabados no se graban en el carril.
 
 ### Mutes y solos
 
@@ -1078,7 +1081,7 @@ valor. HOME lo cierra (en ese momento se guarda la configuración).
 | DISPLAY | SCREEN OFF | **NEVER** (por defecto), 5 MIN, 15 MIN, 30 MIN, 60 MIN |
 | CONTROL | HOLD | 0.3 s, **0.4 s** (por defecto), 0.5 s, 0.6 s — cuánto tarda un botón mantenido en abrir su capa |
 | CONTROL | KNOB ACCEL | **ON** (por defecto), OFF |
-| CONTROL | FX LATCH | **ON** (por defecto desde 0.6.44), OFF |
+| CONTROL | FX LATCH | **OFF** (por defecto desde 0.6.64), ON |
 | CONTROL | BPM LOCK | OFF, ON — SELECT fija el tempo solo con GLO mantenido; DICE ALL conserva el tempo |
 | CONTROL | SCALE LEDS | OFF, ON — las teclas de la escala se iluminan, la tónica más brillante |
 | AUDIO | SPEAKER EQ | FLAT, LOWCUT, BASS+ (un EQ en el master para el parlante chico; también llega a las salidas y al USB) |

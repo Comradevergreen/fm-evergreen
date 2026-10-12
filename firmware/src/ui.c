@@ -50,9 +50,10 @@ static uint32_t up_gen;                      /* bumped on every user bank change
  * saved with the settings; 0 in older ones = every setting's default (append-only: a new setting takes a new bit,
  * its default is 0) */
 #define ui_prefs (favorites.factory[15][30])
-#define PREF_LATCH 1u                          /* MENU > FX LATCH ON (#40); JIANT 0.6.44: ON once for everyone (prefs_rev) */
+#define PREF_LATCH 1u                          /* MENU > FX LATCH ON (#40); JIANT 0.6.44: ON once for everyone (prefs_rev);
+                                                * 0.6.64: OFF again (the FX screen locks open by itself) */
 #define prefs_rev (favorites.factory[15][25])  /* (JIANT 0.6.44) the settings' revision (a byte no engine uses: engine 15):
-                                                * 0 before; 1: FX LATCH turned ON once (main.c prefs_update) */
+                                                * 0 before; 1: FX LATCH turned ON once (main.c prefs_update); 2: OFF once (0.6.64) */
 #define PREF_ANIM_OFF 2u                       /* MENU > ANIM OFF (#46): values snap (no rolling digits, no glide) */
 /* (0.6.57) values snap: MENU > ANIM OFF, or LOAD LITE / ECO (the rolling digits, the roll's and the tabs' glides are
  * frames drawn again for a look: the time goes to the keys and knobs instead; the beings still move) */
@@ -70,12 +71,14 @@ static uint32_t up_gen;                      /* bumped on every user bank change
                                                 * OFF, power-on as INIT SYSTEM leaves it); the bit was RESTORE LAST OFF */
 #define fx_latch ui_prefs
 /* (JIANT 0.6.44) the settings brought up to date at power-on (main.c; 0.6.58 the browser emulator too, web/emu, where
- * the punch-in FX had no LATCH): FX LATCH ON by default, once, so who turns it OFF after keeps it so */
+ * the punch-in FX had no LATCH): FX LATCH ON by default, once; (0.6.64) OFF again, once, so who turns it ON after
+ * keeps it so */
 static void prefs_update(void)
 {
-    if (prefs_rev < 1u) {
-        ui_prefs |= PREF_LATCH;
-        prefs_rev = 1u;
+    if (prefs_rev < 2u) {                              /* (0.6.64) FX LATCH OFF again (the punch-in effects momentary:
+                                                        * held FX locks the FX screen open instead), once */
+        ui_prefs &= (uint8_t)~PREF_LATCH;
+        prefs_rev = 2u;
         settings_save();
     }
 }
@@ -654,7 +657,7 @@ static int fx_head(uint32_t i)
     return PAGES[i].fam == FAM_FX && (str_eq(t, "FX") || str_eq(t, "SLICER") || str_eq(t, "DLY") ||
                                       str_eq(t, "REVERB") || str_eq(t, "CHORUS") || str_eq(t, "MASTER"));
 }
-/* (JIANT 0.6.51) a page (or the track) changed by hand: its name in the header (0.6.61) for PF_MS, so the
+/* (JIANT 0.6.51) a page (or the track) changed by hand: its name in the header (0.6.61), (0.6.64) the footer, for PF_MS, so the
  * pages need no memorising (ui_graph.c page_flash_draw); a page set by code (a test, a dialog's way back) shows none */
 #ifndef PF_MS                                        /* (tests/ui_test.c: 0, the cards always shown) */
 #define PF_MS 900u                                   /* (0.6.61: in the header, so it can stay a little longer) */

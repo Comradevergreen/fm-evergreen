@@ -1137,7 +1137,7 @@ static void graph_fugue(const track_t *t)
 /* (0.6.51) the page's name big (page_flash). (0.6.61) In the header, not over the cards or the graph (covering them
  * lost the sense of what a turn did): for PF_MS the header shows the page's name (M) and, smaller at the right, the
  * track and its engine; on HOME (a track picked there) the track's engine big and "HOME" small. Then the header comes
- * back (ui.force) */
+ * back (ui.force). (0.6.64) Over the footer instead, which says the same: the header (load, battery) stays */
 static void page_flash_draw(void)
 {
     static uint32_t drawn;
@@ -1148,7 +1148,7 @@ static void page_flash_draw(void)
     const char *en = ENGINES[TSEL->eng_req % NENGINES]->name;
     if (e >= PF_MS) {
         pf_on = 0;
-        ui.force = 1;                                /* (the header, whole again) */
+        ui.foot_sig ^= 1u;                           /* (0.6.64) the footer, whole again: that alone redrawn */
         return;
     }
     dim = e > PF_MS - 120u;
@@ -1165,16 +1165,16 @@ static void page_flash_draw(void)
         str_cpy(nm, pt && pt[0] != '-' ? pt : pg->title, sizeof nm);
         str_cpy(sub + 3, en, sizeof sub - 3u);
     }
-    cv_begin(240, H_HEAD, T_BG);
+    cv_begin(240, H_FOOT, T_BG);                     /* (0.6.64) at the bottom: the footer says the same */
     cv_bg = T_BG;
-    cv_text(8, (H_HEAD - (int32_t)AF_M.h) / 2, &AF_M, nm, dim ? T_MID : T_TEXT);
-    cv_text_r(232, (H_HEAD - (int32_t)AF_S.h) / 2, &AF_S, sub, dim ? T_DIM : T_ACCENT, T_BG);
-    cv_blit(0, 0);
+    cv_text(8, (H_FOOT - (int32_t)AF_M.h) / 2, &AF_M, nm, dim ? T_MID : T_TEXT);
+    cv_text_r(232, (H_FOOT - (int32_t)AF_S.h) / 2, &AF_S, sub, dim ? T_DIM : T_ACCENT, T_BG);
+    cv_blit(0, Y_FOOT);
 }
 
 /* (0.6.61) the panels' cytoplasm: a few granules drifting behind the graph, as HOME's, so the screen breathes. LOAD
- * FULL and ANIM ON only, not on HOME (its own), the lists and the dense grids (the roll, the steps); ~15 frames a
- * second (graph_signature) */
+ * FULL and ANIM ON only, not on HOME (its own), the lists and the dense grids (the roll, the steps); (0.6.64) no
+ * redraw of their own: they move when the panel redraws anyway (a knob, the LFO, the envelope), so they cost nothing */
 #ifndef UI_NO_DRIFT
 #define UI_NO_DRIFT 0                                /* (tests/ui_test.c: 1, its frames compared pixel by pixel) */
 #endif
@@ -1205,8 +1205,6 @@ static uint32_t graph_signature(void)
     if (ui.home)
         return h ^ (ui.frame / 2u);                  /* scope: redraw every other frame */
     h ^= (uint32_t)pg->graph * 131u + TSEL->eng_req + song.sel * 7777u + ui.page * 1291u;
-    if (drift_on())                                  /* (0.6.61) the granules: every 4th frame */
-        h ^= (ui.frame / 4u) * 2246822519u;
     if (strip_kind() == SK_TITLE)                    /* MENU > LARGE: the page's title (its engine, its number) */
         return h ^ 0x5A17u;
     if (pg->graph == GR_NONE || pg->graph == GR_ARP || pg->graph == GR_MOTION) h ^= ui.frame / 2u;
