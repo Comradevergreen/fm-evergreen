@@ -28,7 +28,8 @@
 /* ------------------------------------------------------- parameters --- */
 enum {
     F_INT, F_PCT, F_BIPCT, F_TIME, F_LFOHZ, F_CUTOFF, F_DB, F_SEMI, F_ENUM, F_BPM, F_NOTE,
-    F_ONOFF, F_OCT, F_STEPS
+    F_ONOFF, F_OCT, F_STEPS,
+    F_PCTINV                     /* (JIANT 0.6.37) a share of 127 shown and turned the other way: 0 is 100 % */
 };
 
 typedef struct {
@@ -73,6 +74,8 @@ enum {                          /* per-track parameters */
 };
 #define P_LRTRG P_FM1_ATK              /* (JIANT 0.6.12) LOFI BYTE / FLOAT's RTRG: a note restarts the formula's time (voice.c
                                          * voice_start), in a slot of the retired DIGITAL's (0: OFF, its default) */
+#define P_TCHAN P_FM1_DEC              /* (JIANT 0.6.37) SHIFT > CHANCE: how much of the track's steps it skips, 0 none (100 %,
+                                         * every project and preset before it); seq.c trk_chance; DIGITAL's OP1 DEC slot */
 #define P_ELOOP P_ED_FX                /* (JIANT 0.4) ENV LOOP: OFF / ON (voice.c env_tick) */
 /* (JIANT 0.6.9) AUTO PAN (fx.c mix_part), in the slots of the old per-track SLICER (one on a bus since 0.6.3, its
  * slots stored, never read but by proj_sl_migrate). Laid so what old stores hold means OFF: DPTH where SLCR was (0, or

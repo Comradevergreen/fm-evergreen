@@ -7,7 +7,7 @@ import html, os
 
 R = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(R, 'docs', 'cheatsheet')
-VERSION = 'v0.6.36'
+VERSION = 'v0.6.37'
 
 HEAT = ['#22d3ee', '#3b82f6', '#8b5cf6', '#d946ef', '#ef4444', '#ff7a00', '#facc15', '#f4f1ea']
 
@@ -150,7 +150,7 @@ def controls():
         ('GLO', 'MIXER · GLOBAL · SYSTEM', 'MUTE · SOLO · LEVEL · TAP'),
         ('SAVE', 'PRESETS · USER · PROJECT · ARRANGE · TOOLS', 'SONG layer'),
         ('ARP', 'ARP · ARP 2', '—'),
-        ('SEQ', 'STEP · PATTERN · SHIFT · PHRASES · SONG · CHANCE · AUTOMATION · AUTO LIST', 'SEQ TOOLS'),
+        ('SEQ', 'STEP · PATTERN · AUTOMATION · AUTO LIST · SHIFT', 'SEQ TOOLS'),
         ('REC', '(transport)', 'CLEAR · CLICK'),
     ]
     t2 = ('<table class="pages"><tr><th>BUTTON</th><th>TAP: ITS PAGES, ONE PER TAP</th><th>HOLD</th></tr>' +
@@ -237,9 +237,9 @@ def controls():
                            ('X-MOD', 'RATE DEPTH SHAPE RAND')]),
         ('SCL · ARP', HEAT[2], [('SCL', 'ROOT SCALE QUANT TRANS'), ('SCL 2', 'STRN - - -'), ('ARP', 'MODE RATE OCT GATE'),
                                 ('ARP 2', 'SWING PROB HOLD ORDER')]),
-        ('SEQ', HEAT[4], [('STEP', 'STEP NOTE TIME FLAG'), ('STEP · DRUM', 'STEP LANE HIT ACC'), ('PATTERN', 'LEN DIV SWING GATE'), ('SHIFT', 'OFFSET PITCH - -'),
-                          ('PHRASES', 'PAT LOAD - -'), ('CHANCE', 'STEP CHANCE RATCH -'),
-                          ('AUTOMATION', 'PLAY EVENT LOCK CLEAR'), ('AUTO LIST', 'ROW STEP PARAM VALUE')]),
+        ('SEQ', HEAT[4], [('STEP', 'STEP NOTE TIME FLAG'), ('STEP · DRUM', 'STEP LANE HIT ACC'), ('PATTERN', 'LEN DIV SWING GATE'), 
+                          ('AUTOMATION', 'PLAY EVENT LOCK CLEAR'), ('AUTO LIST', 'ROW STEP PARAM VALUE'),
+                          ('SHIFT', 'OFFSET PITCH CHANCE -')]),
         ('GLO · SAVE', HEAT[6], [('MIXER', 'LEVEL PAN REV MUTE'), ('GLOBAL', 'BPM SWING CLOCK TUNE'),
                                  ('SYSTEM', 'TRACKS LOAD ROUTE CPU'), ('PRESETS', 'No. ENG FAV LIST'),
                                  ('USER', 'SLOT LOAD ERASE SAVE'), ('PROJECT', 'PROJ SECT LOAD SAVE'), ('ARRANGE', 'ROW SECT BARS SCENE'),
@@ -329,9 +329,9 @@ def sound():
     b.append('<div class="grid g3" style="margin-top:22px">')
     b.append(card('SEQUENCER', HEAT[4],
                   '<p>64 steps a track, up to 4 notes a step, piano roll and drum grid. <b>Hold a step + turn a knob</b>: '
-                  'a parameter lock. CHANCE (0–100 %) and RATCH (x1–x4) per step. REC + knobs while playing: '
+                  'a parameter lock. SHIFT\'s CHANCE thins the whole track. REC + knobs while playing: '
                   'automation (64 records a section, MOTION page plays / clears them, AUTO LIST edits them).</p>'
-                  '<h4>PATTERN · SHIFT</h4>' + knobs('LEN', 'DIV', 'SWG', 'GATE') + knobs('OFS', 'PIT', '-', '-')))
+                  '<h4>PATTERN · SHIFT</h4>' + knobs('LEN', 'DIV', 'SWG', 'GATE') + knobs('OFS', 'PIT', 'CHN', '-')))
     b.append(card('SCALE · ARP', HEAT[0],
                   '<p><b>ROOT and SCALE</b> are every melodic track\'s: CHR MAJ MIN DOR MIX PEN MPEN HARM PHRY LYD LOC MEL '
                   'BLUES WHOLE DIMHW DIMWH. QNT snaps keys or the sequence, TRN transposes, <b>STRN</b> (SCL 2) moves '

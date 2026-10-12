@@ -5433,10 +5433,27 @@ static int test_seq_tools(void)
     press(B_SEQ); frames(320);
     ok = cur_page()->graph == GR_STEPS && msg_is("HOLD [SEQ] QUICK");
     press(B_SEQ); frames(320);
-    ok &= str_eq(cur_page()->title, "SHIFT");          /* (JIANT: PATTERN, then SHIFT) */
+    ok &= cur_page()->graph == GR_MOTION;             /* (0.6.37: PATTERN, AUTOMATION; PHRASES, CHANCE out, SHIFT last) */
     press(B_SEQ); frames(320);
-    ok &= cur_page()->graph == GR_PATS;
+    ok &= cur_page()->graph == GR_EVENTS;
+    press(B_SEQ); frames(320);
+    ok &= str_eq(cur_page()->title, "SHIFT");
     bad += check("  a tap on STEP: the next SEQ page, as always (the hint until the layer was opened)", ok);
+    {   /* (0.6.37) SHIFT: OFFSET PITCH CHANCE, the last SEQ page; CHANCE 0 skips every step, 100 % (stored 0) none */
+        char v[12]; const char *u; step_t st; track_t *t3 = &trk[0];
+        ui_power_on(); go_title("SHIFT"); frame();
+        ok = str_eq(cur_page()->title, "SHIFT") && cur_page()->id[2] == P_TCHAN;
+        param_format(track_desc(t3, P_TCHAN), t3->p[P_TCHAN], v, &u);
+        ok &= str_eq(v, "100") && str_eq(track_desc(t3, P_TCHAN)->label, "CHANCE");
+        turn(EN_K3, -127);
+        param_format(track_desc(t3, P_TCHAN), t3->p[P_TCHAN], v, &u);
+        memset(&st, 0, sizeof st);
+        ok &= str_eq(v, "0") && trk_chance(t3, &st) == 0u;
+        turn(EN_K3, 127);
+        step_set_chance(&st, 40);
+        ok &= t3->p[P_TCHAN] == 0 && trk_chance(t3, &st) == 40u;
+        bad += check("SHIFT > CHANCE: the track's chance (100 % as before, 0 % silent), K3", ok);
+    }
 
     /* the whole sequence: REVERSE (a note's ties stay after it), SHIFT, CLEAR, locks, LEN, silent keys, undo */
     ui_power_on();
