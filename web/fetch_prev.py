@@ -19,6 +19,16 @@ def get(url):
         return r.read()
 
 
+def withdrawn():
+    """(JIANT 0.6.61) web/WITHDRAWN: versions taken back (one a line, e.g. 0.6.59): the installer no longer offers them"""
+    p = Path(__file__).resolve().parent / "WITHDRAWN"
+    try:
+        return [l.split("#")[0].strip().lstrip("v") for l in p.read_text(encoding="utf-8").splitlines()
+                if l.split("#")[0].strip()]
+    except OSError:
+        return []
+
+
 def main(site, out):
     site, out = site.rstrip("/"), Path(out)
     out.mkdir(parents=True, exist_ok=True)
@@ -34,9 +44,13 @@ def main(site, out):
         except Exception as e:
             print(f"fetch_prev: nothing from {site}: {e}")
     kept = []
+    gone = withdrawn()
     for e in listed[:12] if isinstance(listed, list) else []:
         f = str(e.get("file", ""))
         if not SAFE.fullmatch(f):
+            continue
+        if any(str(e.get("version", "")).lstrip("v").startswith(w) for w in gone):
+            print(f"fetch_prev: {e.get('version')} withdrawn (web/WITHDRAWN): not offered")
             continue
         try:
             (out / f).write_bytes(get(f"{site}/firmware/{f}"))
