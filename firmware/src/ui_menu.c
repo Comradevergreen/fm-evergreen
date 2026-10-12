@@ -216,7 +216,7 @@ static struct { int16_t pos; uint32_t frame; } mt;
 static void mt_follow(void)
 {
     int32_t want = (int32_t)menu_tab() * MT_ONE, d = want - mt.pos;
-    if (ui.frame != mt.frame + 1u || (ui_prefs & PREF_ANIM_OFF) || (d < 3 && d > -3))
+    if (ui.frame != mt.frame + 1u || ANIM_SNAP() || (d < 3 && d > -3))
         mt.pos = (int16_t)want;
     else
         mt.pos = (int16_t)(mt.pos + d / 2);

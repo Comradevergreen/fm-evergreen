@@ -979,8 +979,8 @@ How heavy the sound may get.
 | LOAD | What changes while it sounds |
 | --- | --- |
 | **FULL** (default) | Everything as set. |
-| **LITE** | SHIMMER and CLOUD reverbs play as ROOM, RESO as SPRING; the GRAIN delay plays plain; FM6 plays two voices. |
-| **ECO** | LITE, plus every reverb plays as SPRING, **no SLICER** (its tracks go straight to the mix), **no chorus** (their pages are hidden), at most **4 voices** per synth track. Drums unchanged. |
+| **LITE** | SHIMMER and CLOUD reverbs play as ROOM, RESO as SPRING; the GRAIN delay plays plain; FM6 plays two voices. The screen draws lighter: the beings and graphs animate at about 20 frames a second with simpler outlines, and values change at once (no rolling digits). |
+| **ECO** | LITE, plus every reverb plays as SPRING, **no SLICER** (its tracks go straight to the mix), **no chorus** (their pages are hidden), at most **4 voices** per synth track. Drums unchanged. The screen at about 14 frames a second, the beings simpler still. |
 
 LOAD only changes how things are rendered: **projects keep their settings** and sound as saved on FULL (or on another
 FM-1). The cards of swapped effects say LITE or ECO. LOAD frees **CPU**, not RAM: the firmware reserves all its memory
