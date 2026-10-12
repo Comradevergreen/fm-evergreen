@@ -718,7 +718,7 @@ static uint32_t proj_name_get(char *d, const uint8_t *s)   /* its length */
 static uint8_t proj_full;                               /* the last proj_pack failed for room (not for a value) */
 static int proj_step_empty(const step_t *s)
 {
-    return !s->n && s->time == ST_REST && !s->flags && !s->vel && !s->hit && !s->acc && !s->probability;
+    return !s->n && s->time == ST_REST && !s->flags && !s->vel && !s->hit && !s->acc && !s->probability && !s->comp;
 }
 static uint32_t proj_step_x(const step_t *s, uint32_t *nn)   /* its x byte (0: none), *nn the notes stored */
 {
@@ -726,12 +726,13 @@ static uint32_t proj_step_x(const step_t *s, uint32_t *nn)   /* its x byte (0: n
     for (j = s->n; j < 4u; j++)
         all |= s->note[j];
     *nn = all ? 4u : s->n;
-    return (s->hit || s->acc ? 1u : 0u) | (s->probability ? 2u : 0u) | (r & 2u ? 4u : 0u) | (all ? 8u : 0u);
+    return (s->hit || s->acc ? 1u : 0u) | (s->probability ? 2u : 0u) | (r & 2u ? 4u : 0u) | (all ? 8u : 0u) |
+           (s->comp ? 16u : 0u);                        /* (0.6.39) a component: two bytes, its type and arguments */
 }
 static uint32_t proj_step_size(const step_t *s)
 {
     uint32_t nn, x = proj_step_x(s, &nn);
-    return 2u + nn + (x ? 1u + (x & 1u ? 2u : 0u) + (x & 2u ? 1u : 0u) : 0u);
+    return 2u + nn + (x ? 1u + (x & 1u ? 2u : 0u) + (x & 2u ? 1u : 0u) + (x & 16u ? 2u : 0u) : 0u);
 }
 static int proj_fm_kept(const project_t *q, uint32_t t)
 {
@@ -764,7 +765,8 @@ static int proj_pack(project_store_t *out, const project_t *q)
             if (q->t[t].p[i] < -64 || q->t[t].p[i] > 127) return 0;
         for (i = 0; i < NSTEP; i++) {
             const step_t *s = &q->t[t].step[i];
-            if (s->n > 4u || s->time > ST_REST || (s->flags & ~(3u | SF_RATCH)) || s->probability > 101u) return 0;
+            if (s->n > 4u || s->time > ST_REST || (s->flags & ~(3u | SF_RATCH)) || s->probability > 101u ||
+                s->comp >= CP_N) return 0;
         }
     }
     if (!chain_valid(&q->chain) || !motion_valid(&q->motion) || P_COUNT > 127u || !dx_kit_ok(q->dx)) return 0;
@@ -801,6 +803,7 @@ static int proj_pack(project_store_t *out, const project_t *q)
             b[pos++] = (uint8_t)((s->vel > 127u ? 127u : s->vel) | (r & 1u) << 7);
             if (x & 1u) { b[pos++] = s->hit; b[pos++] = s->acc & s->hit; }
             if (x & 2u) b[pos++] = s->probability;
+            if (x & 16u) { b[pos++] = s->comp; b[pos++] = s->carg; }
         }
     }
     memcpy(b + pos, &q->chain, sizeof q->chain); pos += sizeof q->chain;
@@ -945,7 +948,7 @@ static int proj_unpack_c(project_t *q, const uint8_t *b)
             if (meta & 128u) {
                 if (pos + 1u > room) return 0;
                 x = b[pos++];
-                if (!x || (x & ~15u)) return 0;
+                if (!x || (x & ~31u)) return 0;
                 if (x & 8u) nn = 4u;
             }
             if (pos + nn + 1u > room) return 0;
@@ -959,6 +962,11 @@ static int proj_unpack_c(project_t *q, const uint8_t *b)
             }
             if (x & 2u) {
                 if (pos + 1u > room || (s->probability = b[pos++]) > 101u || !s->probability) return 0;
+            }
+            s->comp = s->carg = 0;
+            if (x & 16u) {                              /* (0.6.39) a component */
+                if (pos + 2u > room || (s->comp = b[pos++]) >= CP_N || !s->comp) return 0;
+                s->carg = b[pos++];
             }
             r |= (x >> 1) & 2u;
             step_set_ratchet(s, r + 1u);

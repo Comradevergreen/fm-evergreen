@@ -145,6 +145,8 @@ static struct {
                                   * seq_entry): KNOB 1 its LEN in steps; ARP pressed: arpeggiated, KNOB 1 the steps a
                                   * note (RES), 2 the ORDER, 3 the octaves; the keys' notes in order of pitch */
     uint8_t ent_notes[8];
+    uint8_t comp_sel;            /* (0.6.39) SEQ > COMP: the TYPE shown (COMP_*); comp_at: the step + 1 (+ the track x 64) */
+    uint16_t comp_at;
     uint8_t lane;                /* SEQ > STEP on a DRUM track (the grid): the lane the keys and KNOB 3 / 4 edit */
     uint8_t plk_src;             /* parameter locks (ui_input.c lock_*): the sound page whose KNOB 1..4 a step held
                                   * locks, PAGES index + 1; 0 = HOME's four */
@@ -347,7 +349,7 @@ static uint32_t large_kind(void)
         return LK_TALL;
     g = cur_page()->graph;
     return g == GR_BROWSE || g == GR_SLOTS || g == GR_USER || g == GR_PATS || g == GR_SONG || g == GR_ROLL ||
-           g == GR_CHANCE || g == GR_EVENTS ? LK_LABEL : LK_TALL;
+           g == GR_CHANCE || g == GR_COMP || g == GR_EVENTS ? LK_LABEL : LK_TALL;
 }
 /* the geometry of the page shown: the cards' height, the panel's top and height */
 static uint32_t card_h(void) { return large_kind() == LK_TALL ? LG_CARD_H : CARD_H; }
@@ -489,6 +491,21 @@ static void page_entered(void)
 
 static int step_on(const step_t *st) { return st->time == ST_NOTE && (st->n || st->hit); }
 
+enum { COMP_OFF, COMP_CHANCE, COMP_RATCH, COMP_ARPN, COMP_ARPQ, COMP_ARPS, COMP_TRIG, COMP_N };
+static const char *const COMP_NAMES[COMP_N] = {"OFF", "CHANCE", "RATCH", "NOTES", "SEQ", "SCALE", "TRIG"};
+static uint32_t comp_view(void)                         /* the TYPE shown for the cursor step (read once a step) */
+{
+    const step_t *s = &TSEL->step[ui.cursor];
+    uint32_t at = (uint32_t)ui.cursor + 1u + (uint32_t)song.sel * 64u;
+    if (ui.comp_at != at || ui.comp_sel >= COMP_N) {
+        ui.comp_at = (uint16_t)at;
+        ui.comp_sel = (uint8_t)(s->comp ? COMP_ARPN + s->comp - CP_ARPN : step_chance(s) < 100u ? COMP_CHANCE :
+                                step_ratchet(s) > 1u ? COMP_RATCH : COMP_OFF);
+    }
+    if (s->comp && ui.comp_sel != COMP_ARPN + s->comp - CP_ARPN)   /* (changed elsewhere: the editor, a dice) */
+        ui.comp_sel = (uint8_t)(COMP_ARPN + s->comp - CP_ARPN);
+    return ui.comp_sel;
+}
 static void step_clear(step_t *st)
 {
     st->n = 0;
@@ -496,6 +513,7 @@ static void step_clear(step_t *st)
     st->flags = 0;
     st->vel = 0;
     st->hit = st->acc = 0;
+    st->comp = st->carg = 0;
     st->probability = 0;
 }
 

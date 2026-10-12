@@ -730,6 +730,7 @@ static void seq_start(void)
         t->rskip_n = 0;
         t->rh_n = 0;
         t->rat_left = 0;
+        t->arp_from = 0; t->loops = 0;             /* (0.6.39) the components: the first loop, no arpeggio */
     }
     song.tick = 0;
     beat_pos = 0; beat_n = 0;                      /* the ARP LED's beat from the top too */
@@ -743,6 +744,80 @@ static void seq_start(void)
 static uint32_t trk_chance(const track_t *t, const step_t *s)
 {
     return step_chance(s) * (127u - (uint32_t)clamp(t->p[P_TCHAN], 0, 127)) / 127u;
+}
+/* (0.6.39) a TRIG component: this loop of the pattern is one it plays on (any other step: yes) */
+static int cp_trig_ok(const track_t *t, const step_t *s)
+{
+    const uint8_t *c;
+    if (s->comp != CP_TRIG)
+        return 1;
+    c = CP_TRIGS[s->carg % CP_NTRIG];
+    if (!c[0])
+        return c[1] == 1u ? t->loops == 0u : t->loops != 0u;   /* FIRST, NOT FIRST */
+    return t->loops % c[1] == c[0] - 1u;
+}
+/* the step's one roll: its TRIG, then its chance (the track's scaling it) */
+static int step_rolls(const track_t *t, const step_t *s)
+{
+    uint32_t c = trk_chance(t, s);
+    return cp_trig_ok(t, s) && (c >= 100u || rng() % 100u < c);
+}
+/* (0.6.39) the step whose ARP component plays at s: s itself (a NOTE step with one), or the one a TIE continues
+ * (arp_from); 0: none (a drum kit, the slices: never) */
+static int trk_kit(const track_t *t)
+{
+    const engine_t *e = ENGINES[eng_idx(t->eng_req)];
+    return e->oneshot || (e->keys && e->keys(t, 0) >= 0);
+}
+static const step_t *arp_owner(const track_t *t, const step_t *s)
+{
+    const step_t *o = s;
+    if (trk_kit(t))
+        return 0;
+    if (s->time == ST_TIE && t->arp_from)
+        o = &seq_steps(t)[(t->arp_from - 1u) % NSTEP];
+    return o->time == ST_NOTE && o->n && cp_arp(o) ? o : 0;
+}
+/* the parts a step plays in its length: an ARP's RATE, else its RATCH */
+static uint32_t step_hits(const track_t *t, const step_t *s)
+{
+    const step_t *o = arp_owner(t, s);
+    return o ? CP_RATES[CP_RATE(o->carg) % CP_NRATE] : step_ratchet(s);
+}
+/* (0.6.39) an ARP component's next note: its notes (NOTES: the step's; SEQ: the pattern's, every one once; both
+ * over RANGE octaves, low to high; SCALE: the scale's degrees up from the step's lowest note), the k-th in its ORDER */
+static uint32_t cp_arp_note(const track_t *t, const step_t *s, uint32_t k)
+{
+    uint8_t base[16];
+    uint32_t nb = 0, n, i, j, m, o2, o = CP_ORD(s->carg), len = t->p[P_SLEN] ? (uint32_t)t->p[P_SLEN] : 1u;
+    if (s->comp == CP_ARPS) {
+        n = CP_DEGS[CP_RNG(s->carg)];
+    } else {
+        const step_t *src = s->comp == CP_ARPQ ? seq_steps(t) : s;
+        uint32_t cnt = s->comp == CP_ARPQ ? len : 1u;
+        for (m = 0; m < cnt; m++)
+            for (i = 0; i < src[m].n && i < 4u && src[m].time == ST_NOTE; i++) {
+                uint8_t x = src[m].note[i];
+                for (j = 0; j < nb && base[j] < x; j++)
+                    ;
+                if (j < nb && base[j] == x) continue;
+                if (nb == sizeof base) break;
+                for (o2 = nb; o2 > j; o2--) base[o2] = base[o2 - 1u];   /* (no memmove on the target) */
+                base[j] = x; nb++;
+            }
+        if (!nb) return s->n ? s->note[0] : 60u;
+        n = nb * (CP_RNG(s->carg) + 1u);
+    }
+    if (o == 1u) k = n - 1u - k % n;                    /* DOWN */
+    else if (o == 2u && n > 1u) { k %= 2u * n - 2u; if (k >= n) k = 2u * n - 2u - k; }   /* UP-DN */
+    else if (o == 3u) k = rng() % n;                    /* RND */
+    else k %= n;                                        /* UP */
+    if (s->comp == CP_ARPS) {
+        uint32_t lo = 127u;
+        for (i = 0; i < s->n && i < 4u; i++) if (s->note[i] < lo) lo = s->note[i];
+        return (uint32_t)clamp(scale_steps(t, (int32_t)lo, (int32_t)k), 0, 127);
+    }
+    return (uint32_t)clamp(base[k % nb] + 12 * (int32_t)(k / nb), 0, 127);
 }
 static void seq_release(track_t *t)
 {
@@ -769,6 +844,7 @@ static void seq_stop(void)
         seq_release(&trk[i]);
         trk[i].rh_n = 0;                           /* a recorded note held over the stop: as far as it got */
         trk[i].rat_left = 0;
+        trk[i].arp_from = 0;
     }
     chain_stop();
     motion_end();
@@ -792,7 +868,9 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
     uint32_t slide_in = t->seq_hold && t->seq_n && !(skip & SEQ_REP);
     uint32_t len = t->p[P_SLEN] ? (uint32_t)t->p[P_SLEN] : 1u;
     uint32_t next_tie = seq_steps(t)[seq_src(t, (t->seq_idx + 1u) % len)].time == ST_TIE;
-    uint32_t hits = step_ratchet(s);
+    uint32_t hits = step_hits(t, s);
+    const step_t *arp = arp_owner(t, s);            /* (0.6.39) an ARP component: one of its notes a part */
+    int cont = 0;                                   /* .. going on over a TIE */
     uint8_t nn[4 + NLANE], vv[4 + NLANE];           /* the notes it plays: its notes, then its hits */
     uint32_t m = 0, sk = 0;
     /* QNT SEQ: the step's notes (not the lane hits) snap to the scale as they play; never on a drum kit, the slices
@@ -805,17 +883,29 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
     if (!(skip & SEQ_REP)) {
         t->rat_left = 0;
         if ((skip & SEQ_MISS) ||
-            (!(skip & SEQ_ROLLED) && trk_chance(t, s) < 100u && rng() % 100u >= trk_chance(t, s))) {
+            (!(skip & SEQ_ROLLED) && !step_rolls(t, s))) {
             seq_release(t);
             return;
         }
     }
-    if (s->time == ST_TIE) {
+    if (s->time == ST_TIE && arp) {
+        s = arp;                                    /* (0.6.39) the arpeggio goes on over the TIE */
+        cont = 1;
+        vel = (s->flags & SF_ACCENT) ? 127u : (s->vel ? s->vel : 96u);
+    } else if (s->time == ST_TIE) {
         if (t->seq_n) {
             t->seq_off = gate + period / 2u;
             t->seq_hold = (s->flags & SF_SLIDE) != 0 || next_tie;   /* chains hold at any GATE / swing */
         }
         return;
+    }
+    if (!(skip & SEQ_REP) && !cont) {
+        t->arp_from = 0;                            /* (0.6.39) a step of its own: no arpeggio, or a new one */
+        if (arp) {
+            uint32_t ai = (uint32_t)(arp - seq_steps(t));
+            t->arp_from = (uint8_t)(ai < NSTEP ? ai + 1u : 0u);
+            t->arp_k = 0;
+        }
     }
     if (s->time == ST_REST || (!s->n && !s->hit)) {
         seq_release(t);
@@ -826,8 +916,8 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
         if (!(skip & SEQ_REP))
             t->rat_left = (uint8_t)(hits - 1u);
     }
-    for (i = 0; i < s->n && i < 4u; i++) {
-        uint32_t x = s->note[i];
+    for (i = 0; i < (arp ? 1u : s->n) && i < 4u; i++) {
+        uint32_t x = arp ? cp_arp_note(t, arp, t->arp_k++) : s->note[i];
         x = (uint32_t)clamp((int32_t)x + up, 0, 127);
         if (song.g[G_STRN] && !kit)                 /* (JIANT 0.4) STRN: up / down the scale, every sequence */
             x = (uint32_t)clamp(scale_steps(t, (int32_t)x, song.g[G_STRN]), 0, 127);
@@ -843,7 +933,7 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
         sk |= ((skip >> i) & 1u) << m;
         m++;
     }
-    for (i = 0; i < NLANE; i++)
+    for (i = 0; i < NLANE && !arp; i++)
         if ((s->hit >> i) & 1u) {
             nn[m] = DRUM_LANE_NOTE[i];
             vv[m] = (uint8_t)((s->acc >> i) & 1u ? 127u : vel);
@@ -876,7 +966,7 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
 static __attribute__((noinline)) void seq_ratchet(track_t *t, uint32_t period)
 {
     const step_t *s = &seq_steps(t)[seq_src(t, t->seq_idx)];
-    uint32_t hits = step_ratchet(s);
+    uint32_t hits = step_hits(t, s);
     if (t->rat_left >= hits) {
         t->rat_left = 0;
         return;
@@ -929,11 +1019,14 @@ static void seq_tick(track_t *t, uint32_t n)
     len = (uint32_t)t->p[P_SLEN];
     t->seq_pos += n;
     for (;;) {
-        uint32_t cur_len = step_samples(t, period, t->seq_idx);
+        uint32_t cur_len = step_samples(t, period, t->seq_idx), start;
         if (t->seq_pos < cur_len && t->seq_pos != 0x7FFFFFFFu + n)
             break;
-        t->seq_pos = t->seq_pos >= 0x7FFFFFFFu ? chain.carry : t->seq_pos - cur_len;   /* (a start: 0; a section in: its carry) */
+        start = t->seq_pos >= 0x7FFFFFFFu;
+        t->seq_pos = start ? chain.carry : t->seq_pos - cur_len;   /* (a start: 0; a section in: its carry) */
         t->seq_idx = (uint16_t)((t->seq_idx + 1u) % (len ? len : 1u));
+        if (!t->seq_idx && !start && t->loops < 0xFFFFu)
+            t->loops++;                                 /* (0.6.39) one more loop of the pattern (TRIG) */
         rec_hold(t, t->seq_idx, len ? len : 1u);
         {
             const step_t *s = &seq_steps(t)[(t->pfx & PFX_RND) && !(rng() & 1u)   /* (JIANT) RANDOM held: half the */
@@ -941,7 +1034,7 @@ static void seq_tick(track_t *t, uint32_t n)
             uint32_t skip = SEQ_ROLLED, i, k;
             /* the chance first (the one roll, as seq_step made it): a step that does not play applies no lock; the
              * automation and the locks before the notes, so a note-on reads them (eng_drum's KIT, ..) */
-            if (trk_chance(t, s) < 100u && rng() % 100u >= trk_chance(t, s))
+            if (!step_rolls(t, s))
                 skip = SEQ_MISS;
             motion_step(t, t->seq_idx, &motion, skip == SEQ_ROLLED);   /* (a song: its section's motion is the motion) */
             if (t->rskip_n && t->rskip_idx == t->seq_idx) {

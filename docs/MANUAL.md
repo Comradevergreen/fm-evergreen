@@ -85,7 +85,7 @@ The names below are the ones the firmware uses (the HARDWARE CALIBRATION screen 
 | --- | --- |
 | **SELECT** (encoder) | On **HOME**: opens **DICE EVERYTHING?** (the song-idea generator). On **EDIT** pages: rolls the selected track's sound. On **GLO's pages (MIXER, GLOBAL, SYSTEM)**, or with **GLO held** anywhere: the tempo (BPM). With the macros open or latched: rolls new macro routes. On other pages it says **DICE: HOME / EDIT**. |
 | **ALGORITHM** (encoder) | Selects the track, T1–T6, from any page. In the MENU: switches tabs. |
-| **PRESETS** (encoder) | On HOME, PRESETS and the sound pages: browses sounds (every engine's factory presets, then your user presets). On step pages (STEP, PATTERN, AUTOMATION, SHIFT): moves the step cursor. On list pages (USER, PROJECT, ARRANGE, TOOLS, AUTO LIST): moves the selection. **Hold a page button and turn PRESETS** to jump straight through that button's pages. |
+| **PRESETS** (encoder) | On HOME, PRESETS and the sound pages: browses sounds (every engine's factory presets, then your user presets). On step pages (STEP, COMP, PATTERN, AUTOMATION, SHIFT): moves the step cursor. On list pages (USER, PROJECT, ARRANGE, TOOLS, AUTO LIST): moves the selection. **Hold a page button and turn PRESETS** to jump straight through that button's pages. |
 | **KNOB 1–4** | The four cards (columns) on screen. With a layer held, the layer's own knobs. Turning fast sweeps the whole range, slowly fine-tunes (MENU > KNOB ACCEL turns this off). |
 | **MASTER** | The output volume. |
 
@@ -264,6 +264,7 @@ and heating up with its own audio. The selected track is drawn bigger, a muted o
 | --- | --- | --- | --- | --- |
 | STEP (melodic: piano roll) | STEP | NOTE | TIME (NOTE / TIE / REST) | FLAG (– / ACC / SLD / A+S) |
 | STEP (DRUM: grid) | STEP | LANE | HIT | ACC |
+| COMP | STEP | TYPE | (its value) | (its value) |
 | PATTERN | LEN | DIV | SWING | GATE |
 | AUTOMATION | PLAY (ON/OFF) | EVENT (count) | LOCK (count) | CLEAR (action) |
 | AUTO LIST | ROW | STEP | PARAM | VALUE |
@@ -445,6 +446,17 @@ recorded into the pattern, quantized to its steps, overdubbing. Knob moves on th
 
 ### Pattern pages
 
+- **COMP** (step components, OP-Z style): one per step. KNOB 1 picks the step, KNOB 2 its **TYPE**, KNOB 3 / 4 its
+  values. The row on top marks every step that has one (orange ARP, violet TRIG, gray CHANCE, theme RATCH); below,
+  the step's component drawn (the arpeggio's ladder, the note playing lit; TRIG's loops).
+  - **CHANCE** (0–100 %) and **RATCH** (x1–x4): the step's own chance and ratchet.
+  - **ARP NOTES / SEQ / SCALE**: the step plays an arpeggio, **RATE** notes in its length (x2 x3 x4 x6 x8), and goes
+    on over the TIEs after it. NOTES: the step's notes; SEQ: every note of the track's pattern; both over 1–4
+    octaves. SCALE: the scale up from the step's lowest note, 3, 5, 8 or 15 degrees. KNOB 3 the **ORDER** (UP, DOWN,
+    UP-DN, RND), KNOB 4 **RATE** and range together.
+  - **TRIG**: the step plays only on some loops of the pattern: 1:2, 2:2, 1:3, 2:3, 3:3, 1:4 … 4:4, 1:8, FIRST, !1ST
+    (every loop but the first).
+  Projects keep them; a drum kit ignores the ARPs (TRIG, CHANCE and RATCH work on drums too).
 - **PATTERN**: LEN (1–64), DIV, SWING, GATE.
 - **AUTOMATION**: PLAY turns the track's automation on or off, EVENT and LOCK count the records, CLEAR erases them
   (OCT+, with a dialog).
