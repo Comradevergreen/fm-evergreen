@@ -523,6 +523,31 @@ static int components2(void)
         t->p[P_CLEN] = 0;
         bad += check("C.LEN 3 over 4 steps: the components drift over the steps (OCT, ECHO's repeats); OFF as before", ok);
     }
+    {   /* (0.6.52) FUGUE: head 2 at x2, +2 degrees: two notes a step, a third up the scale; head 2 REV x1: the pattern
+         * backwards beside it; OFF: as before */
+        static const uint8_t P4[4] = {60, 62, 64, 65};
+        uint32_t c67 = 0, c69 = 0;
+        t = pat(4, P4);
+        t->p[P_VOICE] = V_POLY;                           /* (the heads beside the sequencer: voices of their own) */
+        fg_set[0][0] = (fg_set_t){7, 0, 2};
+        seq_start();
+        n = run_steps(t, 4, nt, sizeof nt);
+        for (i = 0; i < n; i++) { c67 += nt[i] == 67u; c69 += nt[i] == 69u; }
+        ok = n == 11u && c67 == 2u && c69 == 2u;       /* (12 notes: on step 3 both play 64, one voice) */
+        t = pat(4, P4);
+        t->p[P_VOICE] = V_POLY;
+        fg_set[0][0] = (fg_set_t){5, 1, 0};
+        seq_start();
+        n = run_steps(t, 4, nt, sizeof nt);
+        ok &= n == 8u && nt[0] == 60u && nt[1] == 65u && nt[2] == 62u && nt[3] == 64u && nt[4] == 64u && nt[5] == 62u &&
+              nt[6] == 65u && nt[7] == 60u;
+        memset(fg_set, 0, sizeof fg_set);
+        t = pat(4, P4);
+        n = run_steps(t, 4, nt, sizeof nt);
+        ok &= n == 4u;
+        seq_stop();
+        bad += check("FUGUE: a head x2 +2 degrees plays twice as many a third up; REV the pattern backwards; OFF as before", ok);
+    }
     {   /* TONAL +2 on step 1: it and the rest of the loop two degrees up, the next loop from its start again */
         static const uint8_t P2[3] = {60, 64, 67};
         t = pat(3, P2); t->step[1].comp = CP_TONAL; t->step[1].carg = 9;

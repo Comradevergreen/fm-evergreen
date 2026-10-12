@@ -634,7 +634,7 @@ static void eng(uint32_t e) { set_engine_of(TSEL, e); }
 #define E_FM (FELUCCA_FM4 ? ENGI_DIGITAL : ENGI_FM6)
 
 enum { S_HOME, S_HOME_IDLE, S_MESSAGE, S_MESSAGE_KEY, S_MESSAGE_NOFILE, S_PRESETS, S_PRESETS_NOFAV, S_USER, S_PHRASES, S_PROJECT, S_TOOLS,
-       S_SONG_EMPTY, S_SONG, S_STEP, S_PATTERN, S_CHANCE, S_COMP, S_COMP_TRIG, S_COMP_ECHO, S_MUTATE, S_MORPH, S_DXIMG, S_DXSEND, S_PFLASH, S_MOTION, S_DRUM, S_DRUM_HAND, S_DRUM_CYM, S_MIXER, S_MIXER_PAN,
+       S_SONG_EMPTY, S_SONG, S_STEP, S_PATTERN, S_CHANCE, S_COMP, S_COMP_TRIG, S_COMP_ECHO, S_MUTATE, S_MORPH, S_DXIMG, S_DXSEND, S_PFLASH, S_FUGUE, S_MOTION, S_DRUM, S_DRUM_HAND, S_DRUM_CYM, S_MIXER, S_MIXER_PAN,
        S_ENV, S_ENVDEST, S_LFO, S_MOD, S_FX, S_SLICER, S_SLBUS, S_SLPITCH, S_DLY, S_SCL, S_SHIFT, S_ARP, S_VOICE, S_GLOBAL, S_SYSTEM,
        S_EDIT_ANALOG, S_EDIT_DIGITAL, S_OP_ENV, S_EDIT_WHEEL, S_EDIT_SAMPLE, S_EDIT_GRAIN,
        S_ALG1, S_ALG2, S_ALG3, S_ALG4, S_ALG5, S_ALG6, S_ALG7, S_ALG8, S_OP_LEVEL,
@@ -653,7 +653,7 @@ enum { S_HOME, S_HOME_IDLE, S_MESSAGE, S_MESSAGE_KEY, S_MESSAGE_NOFILE, S_PRESET
        S_HEAD_BPM_LOCKED, S_HEAD_GLO_TURN, S_HEAD_DOWNBEAT, S_HEAD_BEAT_2,
        S_MIXER_T4, S_HOME_T4, S_MOCK_HOME, S_MOCK_PRESETS, S_MOCK_SEQ, S_MOCK_DRUM, S_MOCK_MIXER, S_MOCK_DIALOG, S_MOCK_MENU, S_COUNT };
 static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "message", "message_key", "message_nofile", "presets", "presets_nofav", "user",
-    "phrases", "project", "tools", "song_empty", "song", "step", "pattern", "chance", "comp", "comp_trig", "comp_echo", "mutate", "morph", "dx_image", "dx_send", "page_flash", "motion", "drum",
+    "phrases", "project", "tools", "song_empty", "song", "step", "pattern", "chance", "comp", "comp_trig", "comp_echo", "mutate", "morph", "dx_image", "dx_send", "page_flash", "fugue", "motion", "drum",
     "drum_hand", "drum_cym", "mixer", "mixer_pan", "env", "env_dest", "lfo", "mod", "fx", "slicer", "slbus", "slpitch", "dly", "scl", "shift", "arp",
     "voice", "global", "system", "edit_analog", FELUCCA_FM4 ? "edit_digital" : "edit_fm6", "op_env", "edit_wheel", "edit_voice",
     "edit_noise", "alg_1", "alg_2", "alg_3", "alg_4", "alg_5", "alg_6", "alg_7", "alg_8", "op_level", "fm6_alg_01", "fm6_alg_05", "fm6_alg_22", "fm6_alg_32", "drumx", "drumx_hit", "dx_sound", "dx_sound2", "confirm_seq", "confirm_project", "confirm_user", "confirm_pattern",
@@ -846,6 +846,13 @@ static void setup(int s)
         break;
     case S_STEP: song.rec = 1; go_page(GR_ROLL); ui.cursor = 6; break;
     case S_PATTERN: go_title("PATTERN"); ui.cursor = 3; break;
+    case S_FUGUE:                                       /* (0.6.52) heads 2 x2 +2, 3 1/2 REV -3, playing */
+        for (uint32_t j = 0; j < 8u; j++) { uint8_t nn = (uint8_t)(60 + (j * 5u) % 12u); step_put(&TSEL->step[j], ST_NOTE, 0, 1, &nn); }
+        TSEL->p[P_SLEN] = 8;
+        fg_set[song.sel][0] = (fg_set_t){7, 0, 2}; fg_set[song.sel][1] = (fg_set_t){3, 1, -3};
+        fg_head[song.sel][0].idx = 5; fg_head[song.sel][1].idx = 2; song.playing = 1; fg_ui = 1;
+        go_page(GR_FUGUE);
+        break;
     case S_PFLASH:                                      /* (0.6.51) a page changed by hand: its name big, held */
         go_title("LFO"); page_flash(); pf_ms = fm1_ms - 200u;
         break;
@@ -1177,6 +1184,8 @@ static void setup(int s)
     case S_USER_FOOT: song.playing = 0; up_store(3, "MY BASS"); ui.uslot = 3; go_page(GR_USER); break;   /* EDIT NAME lit */
     default: break;
     }
+    if (s != S_FUGUE)
+        memset(fg_set, 0, sizeof fg_set);
     if (s != S_PFLASH)                            /* (0.6.51) the page's big name: its own screen only (the clock stands */
         pf_on = 0;                                /* still here: it would never go) */
 }

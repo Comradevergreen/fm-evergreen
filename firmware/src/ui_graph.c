@@ -1097,6 +1097,43 @@ static void graph_title(void)
     cv_text_in(0, y, 240, f, ti, T_THEME, T_SURF);
 }
 
+/* (0.6.52) SEQ > FUGUE: the steps (their notes as heat) with the sequencer's playhead, then a lane each for heads 2..4:
+ * where it is, its RATE DIR INTERVAL; the head edited lit */
+static void graph_fugue(const track_t *t)
+{
+    uint32_t len = (uint32_t)clamp(t->p[P_SLEN], 1, NSTEP), i, k, ti = song.sel % NTRK;
+    int32_t w = PANEL_W / (int32_t)len, x0 = PANEL_X0 + (PANEL_W - w * (int32_t)len) / 2;
+    if (w < 2) w = 2;
+    for (i = 0; i < len; i++) {
+        const step_t *st = &seq_steps(t)[i];
+        int on = step_on(st);
+        cv_rect(x0 + (int32_t)i * w, on ? 4 : 14, w - (w > 3 ? 1 : 0), on ? 14 : 4, on ? step_heat(st, st->flags & SF_ACCENT, ACC) : T_RAISE);
+        if (song.playing && i == seq_src(t, t->seq_idx)) cv_rect(x0 + (int32_t)i * w, 20, w, 2, T_TEXT);
+    }
+    for (k = 0; k < FG_HEADS; k++) {
+        const fg_set_t *f = &fg_set[ti][k];
+        const fg_head_t *h = &fg_head[ti][k];
+        int32_t y = 28 + (int32_t)k * 23;
+        uint16_t c = f->rate ? heat_col(70u + k * 60u) : T_DIM;
+        char b[24] = {(char)('2' + k), ' ', 0};
+        if (k == fg_ui % FG_HEADS) cv_rrect(PANEL_X0, y - 2, PANEL_W, 22, 3, T_RAISE, T_SURF);
+        cv_rect(x0, y + 17, w * (int32_t)len, 1, T_MID);
+        if (f->rate && song.playing && h->idx < len)
+            cv_rect(x0 + (int32_t)h->idx * w, y + 14, w, 6, c);
+        str_cpy(b + 2, N_FGRATE[f->rate % FG_NRATE], sizeof b - 2u);
+        if (f->rate) {
+            uint32_t n = str_len(b);
+            b[n] = ' '; b[n + 1u] = 0;
+            str_cpy(b + n + 1u, N_FGDIR[f->dir & 3u], sizeof b - n - 1u);
+            n = str_len(b);
+            b[n] = ' ';
+            b[n + 1u] = f->ivl > 0 ? '+' : 0;
+            fmt_int(b + n + 1u + (f->ivl > 0), f->ivl);
+        }
+        cv_text(PANEL_X0 + 4, y, &AF_S, b, f->rate ? T_TEXT : T_DIM);
+    }
+}
+
 /* (0.6.51) the page's name big in the middle (page_flash): it opens, holds, dims and goes, under PF_MS; under it the
  * track and its engine */
 static void page_flash_draw(void)
@@ -1187,6 +1224,13 @@ static uint32_t graph_signature(void)
         h = (h ^ (n + 1u) * 40503u ^ ev_row(n) * 2654435761u ^ ((uint32_t)ui.ev_step << 8 | ui.ev_id) * 104729u) * 16777619u;
     }
     if (pg->graph == GR_CHANCE) h ^= ui.cursor * 40503u + step_chance(&t->step[ui.cursor]);
+    if (pg->graph == GR_FUGUE) {                     /* (0.6.52) the heads, their settings, where they are */
+        uint32_t ti = song.sel % NTRK, k;
+        h = (h ^ (steps_hash(t) + (song.playing ? seq_src(t, t->seq_idx) : 0xFFFFu) * 31u + fg_ui * 7u)) * 16777619u;
+        for (k = 0; k < FG_HEADS; k++)
+            h = (h ^ ((uint32_t)fg_set[ti][k].rate | (uint32_t)fg_set[ti][k].dir << 4 | (uint32_t)(uint8_t)fg_set[ti][k].ivl << 8 |
+                      (song.playing ? (uint32_t)fg_head[ti][k].idx << 16 : 0u))) * 16777619u;
+    }
     if (pg->graph == GR_DXIMG)                       /* (0.6.48) IMAGE and how wide it plays */
         h = (h ^ ((uint32_t)t->p[P_DXIMG] << 16 | (uint32_t)dx_img_k(t))) * 16777619u;
     if (pg->graph == GR_MORPH)                       /* (0.6.45) the wave, MORPH */
@@ -1987,6 +2031,9 @@ static void draw_graph(void)
             break;
         case GR_DXIMG:
             graph_dximg(t);
+            break;
+        case GR_FUGUE:
+            graph_fugue(t);
             break;
         case GR_ROLL:
         case GR_CHANCE:
