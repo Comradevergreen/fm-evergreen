@@ -460,6 +460,16 @@ recorded into the pattern, quantized to its steps, overdubbing. Knob moves on th
     UP-DN, RND), KNOB 4 **RATE** and range together.
   - **TRIG**: the step plays only on some loops of the pattern: 1:2, 2:2, 1:3, 2:3, 3:3, 1:4 … 4:4, 1:8, FIRST, !1ST
     (every loop but the first).
+  - **RAND**: the note moves up or down the scale at random, up to RANGE degrees (1–7).
+  - **OCT**: an octave: +1, −1, +1 every other loop, −1 every other loop, ALT (up and down by turns), RND.
+  - **TONAL**: from this step to the end of the loop every note moves SHIFT degrees (−7 to +7) along the scale.
+  - **BEND**: the note glides BEND semitones (−12 to +12) over the step.
+  - **ECHO**: the step repeats x2–x4 in its length, each repeat softer.
+  - **PULSE**: the note plays again on the empty steps after it, EVERY 1–4 steps, until the next note.
+  - **JUMP**: after this step the pattern goes on from TO STEP.
+  - **REV**: from this step the pattern plays backwards to step 1, then forwards again (ping-pong).
+  - **FILL**: the step plays only while **FX** is held.
+  - **KILL**: the step first cuts everything the track is sounding (long releases, held notes), then plays.
   Projects keep them; a drum kit ignores the ARPs (TRIG, CHANCE and RATCH work on drums too).
 - **PATTERN**: LEN (1–64), DIV, SWING, GATE.
 - **AUTOMATION**: PLAY turns the track's automation on or off, EVENT and LOCK count the records, CLEAR erases them

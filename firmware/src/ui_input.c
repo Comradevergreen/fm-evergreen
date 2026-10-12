@@ -709,9 +709,9 @@ static void comp_knob(uint32_t slot, int32_t steps)
         if (v >= COMP_ARPN) {
             uint32_t c = CP_ARPN + v - COMP_ARPN;
             if (st->comp != c) {
-                int keep = cp_arp(st) && c != CP_TRIG;  /* (ARP to ARP: its ORDER, RATE, RANGE kept) */
+                int keep = cp_arp(st) && c >= CP_ARPN && c <= CP_ARPS;   /* (ARP to ARP: ORDER, RATE, RANGE kept) */
                 st->comp = (uint8_t)c;
-                if (!keep) st->carg = c == CP_TRIG ? 0u : CP_ARG(0u, 2u, 0u);   /* (UP x4 1 OCT; TRIG 1:2) */
+                if (!keep) st->carg = c <= CP_ARPS ? CP_ARG(0u, 2u, 0u) : CP_ADEF[c];   /* (UP x4 1 OCT; the others' own) */
             }
         } else
             st->comp = st->carg = 0;
@@ -721,8 +721,8 @@ static void comp_knob(uint32_t slot, int32_t steps)
         step_set_chance(st, (uint32_t)clamp((int32_t)step_chance(st) + steps, 0, 100));
     else if (v == COMP_RATCH && slot == 2u)
         step_set_ratchet(st, (uint32_t)clamp((int32_t)step_ratchet(st) + d, 1, 4));
-    else if (v == COMP_TRIG && slot == 2u)
-        st->carg = (uint8_t)clamp((int32_t)st->carg + d, 0, CP_NTRIG - 1);
+    else if (v >= COMP_TRIG && slot == 2u && st->comp > CP_ARPS && CP_AMAX[st->comp])   /* TRIG .. JUMP: their value */
+        st->carg = (uint8_t)clamp((int32_t)st->carg + (st->comp == CP_JUMP ? steps : d), CP_AMIN[st->comp], CP_AMAX[st->comp]);
     else if (v >= COMP_ARPN && v <= COMP_ARPS && slot == 2u)
         st->carg = CP_ARG((uint32_t)clamp((int32_t)CP_ORD(st->carg) + d, 0, 3), CP_RATE(st->carg), CP_RNG(st->carg));
     else if (v >= COMP_ARPN && v <= COMP_ARPS && slot == 3u) {   /* RATE x RANGE: one list, 1 range after another */
@@ -1735,6 +1735,7 @@ static void ui_input_frame(void)
             go_home();
     }
     song.grid = (uint8_t)keys_mode();                 /* (seq.c: the keys are the grid's) */
+    seq_fill = (uint8_t)((fm1_in.buttons >> panel.btn[B_FX]) & 1u);   /* (0.6.42) FILL steps: FX held */
     lock_keys();                                        /* (a grid key on a hit let go: the hit goes) */
     if (song.grid) {
         grid_keys(notes);

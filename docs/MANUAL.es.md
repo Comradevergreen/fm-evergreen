@@ -480,6 +480,16 @@ seleccionada se graban como **automatización**. MENU > AUDIO tiene el **CLICK**
     **ORDER** (UP, DOWN, UP-DN, RND), KNOB 4 **RATE** y rango juntos.
   - **TRIG**: el paso suena solo en algunas vueltas del patrón: 1:2, 2:2, 1:3, 2:3, 3:3, 1:4 … 4:4, 1:8, FIRST, !1ST
     (todas menos la primera).
+  - **RAND**: la nota sube o baja por la escala al azar, hasta RANGE grados (1–7).
+  - **OCT**: una octava: +1, −1, +1 cada dos vueltas, −1 cada dos vueltas, ALT (arriba y abajo alternando), RND.
+  - **TONAL**: desde este paso hasta el final de la vuelta todas las notas se mueven SHIFT grados (−7 a +7) por la escala.
+  - **BEND**: la nota se desliza BEND semitonos (−12 a +12) durante el paso.
+  - **ECHO**: el paso se repite x2–x4 en su duración, cada repetición más suave.
+  - **PULSE**: la nota vuelve a sonar en los pasos vacíos que siguen, cada 1–4 pasos (EVERY), hasta la próxima nota.
+  - **JUMP**: después de este paso el patrón sigue desde TO STEP.
+  - **REV**: desde este paso el patrón vuelve hacia atrás hasta el paso 1 y después sigue hacia adelante (ping-pong).
+  - **FILL**: el paso suena solo mientras mantenés **FX**.
+  - **KILL**: el paso primero corta todo lo que suena en la pista (releases largos, notas sostenidas) y después toca.
   Los proyectos los guardan; un kit de batería ignora los ARP (TRIG, CHANCE y RATCH funcionan también en baterías).
 - **PATTERN**: LEN (1–64), DIV, SWING, GATE.
 - **AUTOMATION**: PLAY activa o desactiva la automatización de la pista, EVENT y LOCK cuentan los registros, CLEAR

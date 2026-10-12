@@ -319,7 +319,17 @@ typedef struct {                 /* acid-style step: up to 4 notes (POLY), time,
  * the step's lowest note, RANGE: 3 5 8 15 degrees) in the ORDER. TRIG: the step plays on some loops of the pattern
  * only (1:2 the first of every two, .., FIRST, NOT FIRST). carg: ARP ORDER bits 0-1, RATE 2-4, RANGE 5-6; TRIG the
  * condition. */
-enum { CP_NONE, CP_ARPN, CP_ARPQ, CP_ARPS, CP_TRIG, CP_N };
+/* (0.6.42) RAND: the notes up / down the scale at random (carg 1..7 degrees); OCT: an octave (carg: +1, -1, +1 every
+ * other loop, -1 every other loop, + / - by turns, at random); TONAL: the rest of the loop moved (carg 0..14: -7..+7
+ * degrees); BEND: the notes glide over the step (carg 0..24: -12..+12 semitones); ECHO: repeats fading (carg 0..2:
+ * x2..x4); PULSE: its notes again on the empty steps after it (carg 0..3: every 1..4); JUMP: then step carg + 1;
+ * REV: back from here to step 1 (ping-pong); FILL: only while FX is held; KILL: what the track sounds cut first */
+enum { CP_NONE, CP_ARPN, CP_ARPQ, CP_ARPS, CP_TRIG, CP_RAND, CP_OCT, CP_TONAL, CP_BEND, CP_ECHO, CP_PULSE, CP_JUMP,
+       CP_REV, CP_FILL, CP_KILL, CP_N };
+/* the range of carg each component's KNOB 3 turns (ARP: KNOB 3 / 4 their own) */
+static const uint8_t CP_AMAX[CP_N] = {0, 0, 0, 0, 11, 7, 5, 14, 24, 2, 3, 63, 0, 0, 0};
+static const uint8_t CP_ADEF[CP_N] = {0, 0, 0, 0, 0, 2, 0, 9, 7, 1, 0, 0, 0, 0, 0};
+static const uint8_t CP_AMIN[CP_N] = {0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 #define CP_ORD(a) ((uint32_t)(a) & 3u)            /* UP DOWN UP-DN RND */
 #define CP_RATE(a) (((uint32_t)(a) >> 2) & 7u)    /* 0..4: x2 x3 x4 x6 x8 */
 #define CP_RNG(a) (((uint32_t)(a) >> 5) & 3u)     /* 0..3: 1..4 octaves (SCALE: 3 5 8 15 degrees) */
@@ -410,6 +420,9 @@ typedef struct track {
     uint8_t arp_from;            /* (0.6.39) an ARP component playing: its step + 1 (0: none), over the TIEs after it */
     uint8_t arp_k;               /* .. the arpeggio's next note (its position in the ORDER) */
     uint16_t loops;              /* (0.6.39) the pattern's loops since PLAY (TRIG components) */
+    int8_t tonal;                /* (0.6.42) TONAL: the rest of the loop this many degrees up / down */
+    uint8_t pulse_from, pulse_k; /* .. PULSE: its step + 1 (0: none), the empty steps since */
+    uint8_t jump_to, rev;        /* .. JUMP: the next step + 1 (0: the next one); REV: backwards to step 1 */
     uint32_t seq_off;
     uint8_t seq_active;          /* any step programmed */
     uint8_t rskip_idx;           /* live recording put notes into the step about to play: */

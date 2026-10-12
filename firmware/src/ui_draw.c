@@ -878,6 +878,23 @@ static void draw_columns(void)
             if (!c[0]) str_cpy(val, c[1] == 1u ? "FIRST" : "!1ST", sizeof val);
             else { val[0] = (char)('0' + c[0]); val[1] = ':'; val[2] = (char)('0' + c[1]); val[3] = 0; }
             draw_column(2, "COND", val, "", VAL(2u), -1, ICON_PROB);
+        } else if (v > COMP_TRIG) {                    /* (0.6.42) the others' one value */
+            static const char *const OCTN[6] = {"+1", "-1", "+1/2", "-1/2", "ALT", "RND"};
+            int32_t a = cs->carg;
+            const char *lb = "", *un = "";
+            val[0] = 0;
+            switch (v) {
+            case COMP_RAND: lb = "RANGE"; fmt_int(val, a); un = "DEG"; break;
+            case COMP_OCT: lb = "MODE"; str_cpy(val, OCTN[a % 6], sizeof val); un = "OCT"; break;
+            case COMP_TONAL: lb = "SHIFT"; a -= 7; val[0] = a < 0 ? '-' : '+'; fmt_int(val + 1, a < 0 ? -a : a); un = "DEG"; break;
+            case COMP_BEND: lb = "BEND"; a -= 12; val[0] = a < 0 ? '-' : '+'; fmt_int(val + 1, a < 0 ? -a : a); un = "ST"; break;
+            case COMP_ECHO: lb = "REPEAT"; val[0] = 'x'; fmt_int(val + 1, 2 + a % 3); break;
+            case COMP_PULSE: lb = "EVERY"; fmt_int(val, 1 + a % 4); un = a ? "STEPS" : "STEP"; break;
+            case COMP_JUMP: lb = "TO STEP"; fmt_int(val, a + 1); break;
+            default: break;
+            }
+            if (lb[0]) draw_column(2, lb, val, un, VAL(2u), -1, ICON_X_REPEAT);
+            else draw_column(2, "", "", "", T_THEME, -1, ICON_NONE);
         } else if (v != COMP_OFF) {
             draw_column(2, "ORDER", ORD[CP_ORD(cs->carg)], "", VAL(2u), -1, ICON_ORDER);
         } else
