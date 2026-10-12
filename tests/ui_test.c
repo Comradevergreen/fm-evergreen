@@ -109,7 +109,9 @@ static struct { uint32_t stage; } felucca_dbg;
 #ifndef FELUCCA_VERSION
 #define FELUCCA_VERSION "TEST"
 #endif
+#ifndef UI_NO_DRIFT
 #define UI_NO_DRIFT 1                                    /* (0.6.61) no drifting granules: frames compared pixel by pixel */
+#endif
 #ifndef PF_MS                                            /* (0.6.58) no page name drawn: the tests read the screen */
 #define PF_MS 0u                                         /* (ui_render.c sets the real one: it shows it) */
 #endif
