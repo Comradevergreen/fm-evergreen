@@ -493,6 +493,9 @@ recorded into the pattern, quantized to its steps, overdubbing. Knob moves on th
   - **PULSE**: the note plays again on the empty steps after it, EVERY 1–4 steps, until the next note.
   - **JUMP**: after this step the pattern goes on from TO STEP.
   - **REV**: from this step the pattern plays backwards to step 1, then forwards again (ping-pong).
+  - **TIMES** (KNOB 4, JUMP and REV): **ALWAYS** turns the pattern every time; **x1** once a pass, then the pattern plays
+    on past it to its end (a section played twice, then the rest); **x2** twice a pass; **1:2** once, every other pass.
+    A pass ends where the pattern wraps by itself.
   - **FILL**: the step plays only while **FX** is held.
   - **KILL**: the step first cuts everything the track is sounding (long releases, held notes), then plays.
   Projects keep them; a drum kit ignores the ARPs (TRIG, CHANCE and RATCH work on drums too).

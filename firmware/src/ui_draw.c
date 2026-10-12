@@ -907,7 +907,7 @@ static void draw_columns(void)
             case COMP_BEND: lb = "BEND"; a -= 12; val[0] = a < 0 ? '-' : '+'; fmt_int(val + 1, a < 0 ? -a : a); un = "ST"; break;
             case COMP_ECHO: lb = "REPEAT"; val[0] = 'x'; fmt_int(val + 1, 2 + a % 3); break;
             case COMP_PULSE: lb = "EVERY"; fmt_int(val, 1 + a % 4); un = a ? "STEPS" : "STEP"; break;
-            case COMP_JUMP: lb = "TO STEP"; fmt_int(val, a + 1); break;
+            case COMP_JUMP: lb = "TO STEP"; fmt_int(val, (int32_t)CP_JTO(a) + 1); break;
             default: break;
             }
             if (lb[0]) draw_column(2, lb, val, un, VAL(2u), -1, ICON_X_REPEAT);
@@ -923,6 +923,10 @@ static void draw_columns(void)
             fmt_int(un, v == COMP_ARPS ? CP_DEGS[g] : (int32_t)g + 1);
             str_cpy(un + str_len(un), v == COMP_ARPS ? " DEG" : " OCT", 5);
             draw_column(3, "RATE", val, un, VAL(3u), -1, ICON_X_REPEAT);
+        } else if (v == COMP_JUMP || v == COMP_REV) {  /* (0.6.62) how often it turns the track */
+            static const char *const TIMES[4] = {"ALWAYS", "x1", "x2", "1:2"};
+            draw_column(3, "TIMES", TIMES[CP_TIMES(cs->comp, cs->carg)], "", CP_TIMES(cs->comp, cs->carg) ? VAL(3u) : T_DIM,
+                        -1, ICON_X_REPEAT);
         } else
             draw_column(3, "", "", "", T_THEME, -1, ICON_NONE);
         return;

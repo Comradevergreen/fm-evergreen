@@ -596,6 +596,32 @@ static int components2(void)
         ok &= n == 8u && nt[0] == 60u && nt[1] == 62u && nt[2] == 64u && nt[3] == 62u && nt[4] == 60u && nt[6] == 64u;
         bad += check("JUMP to step 1 from step 2: 60 62 60 62; REV on step 3: 60 62 64 62 60 62 64 ..", ok);
     }
+    {   /* (0.6.62) TIMES: JUMP x1 on step 2 to step 1: 60 62 60 62 64 65 | 60 62 60 62 64 65; x2: two turns; 1:2: once,
+         * every other pass; REV x1 on step 3: 60 62 64 62 60 62 64 65 | (the pass over) */
+        static const uint8_t P4[4] = {60, 62, 64, 65};
+        static const uint8_t X1[12] = {60, 62, 60, 62, 64, 65, 60, 62, 60, 62, 64, 65};
+        static const uint8_t X2[8] = {60, 62, 60, 62, 60, 62, 64, 65};
+        static const uint8_t AL[10] = {60, 62, 60, 62, 64, 65, 60, 62, 64, 65};
+        static const uint8_t RV[9] = {60, 62, 64, 62, 60, 62, 64, 65, 60};
+        uint32_t i;
+        t = pat(4, P4); t->step[1].comp = CP_JUMP; t->step[1].carg = 0 | 1u << 6;
+        n = run_steps(t, 12, nt, sizeof nt);
+        ok = n == 12u;
+        for (i = 0; i < 12u; i++) ok &= nt[i] == X1[i];
+        t = pat(4, P4); t->step[1].comp = CP_JUMP; t->step[1].carg = 0 | 2u << 6;
+        n = run_steps(t, 8, nt, sizeof nt);
+        ok &= n == 8u;
+        for (i = 0; i < 8u; i++) ok &= nt[i] == X2[i];
+        t = pat(4, P4); t->step[1].comp = CP_JUMP; t->step[1].carg = 0 | 3u << 6;
+        n = run_steps(t, 10, nt, sizeof nt);
+        ok &= n == 10u;
+        for (i = 0; i < 10u; i++) ok &= nt[i] == AL[i];
+        t = pat(4, P4); t->step[2].comp = CP_REV; t->step[2].carg = 1;
+        n = run_steps(t, 9, nt, sizeof nt);
+        ok &= n == 9u;
+        for (i = 0; i < 9u; i++) ok &= nt[i] == RV[i];
+        bad += check("TIMES: JUMP x1 / x2 turn the track once / twice a pass, 1:2 once every other pass; REV x1 once", ok);
+    }
     {   /* FILL: silent unless FX is held */
         static const uint8_t P1[1] = {60};
         t = pat(1, P1); t->step[0].comp = CP_FILL;
@@ -627,9 +653,13 @@ static int components2(void)
         turn(EN_K2, 4); turn(EN_K2, 2);                   /* .. JUMP */
         turn(EN_K3, 9);
         ok &= t->step[0].comp == CP_JUMP && t->step[0].carg == 9u;
+        turn(EN_K4, 1); frame();                          /* (0.6.62) TIMES x1, the step kept */
+        ok &= CP_TIMES(CP_JUMP, t->step[0].carg) == 1u && CP_JTO(t->step[0].carg) == 9u && strstr(ui.col[3], "x1") != 0;
+        turn(EN_K3, -2);
+        ok &= CP_TIMES(CP_JUMP, t->step[0].carg) == 1u && CP_JTO(t->step[0].carg) == 7u;
         turn(EN_K2, 3);                                   /* KILL */
         ok &= t->step[0].comp == CP_KILL && comp_view() == COMP_KILL;
-        bad += check("SEQ > COMP: RAND .. KILL on KNOB 2, JUMP's step on KNOB 3", ok);
+        bad += check("SEQ > COMP: RAND .. KILL on KNOB 2, JUMP's step on KNOB 3, its TIMES on KNOB 4", ok);
     }
     return bad;
 }

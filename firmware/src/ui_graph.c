@@ -170,8 +170,8 @@ static void graph_comp(const track_t *t, uint16_t c)
         else if (st->time == ST_TIE) cv_rrect(x, y0 + bh - 6, 9, 6, 1, T_MID, T_SURF);
         else cv_rrect(x, y0 + bh - 3, 9, 3, 1, T_RAISE, T_SURF);
         if ((mk = comp_mark(st)) != 0 && (!cl || i < cl)) cv_rect(x, y0 + bh + 3, 9, 3, mk);
-        if (st->comp == CP_JUMP && st->carg / 16u == ui.bank)   /* (0.6.42) JUMP: a line to the step it names */
-            cv_line(x + 4, y0 + bh + 4, bar_x(st->carg) + 4, y0 + bh + 4, mk);
+        if (st->comp == CP_JUMP && CP_JTO(st->carg) / 16u == ui.bank)   /* (0.6.42) JUMP: a line to the step it names */
+            cv_line(x + 4, y0 + bh + 4, bar_x(CP_JTO(st->carg)) + 4, y0 + bh + 4, mk);
         if (i == ui.cursor) cv_rect(x, y0 + bh + 8, 9, 2, T_ACCENT);
         else if (song.playing && i == seq_src(t, t->seq_idx)) cv_rect(x, y0 + bh + 8, 9, 2, T_TEXT);
     }
