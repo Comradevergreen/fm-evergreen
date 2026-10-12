@@ -374,6 +374,35 @@ static void draw_rules(uint32_t y, uint32_t h)
     for (i = 0; i < 3u; i++)
         lcd_rule((uint32_t)(CARD_X(i) + CARD_W), y, 1, h);
 }
+/* (JIANT 0.6.59) a card's body: JIANT an organelle (gfx.c cv_membrane: violet, uneven, each card its own shape) whose
+ * loop reaches past the card, round its label and gauge, into the gaps (draw_frame draws those parts); another palette
+ * the rounded card */
+#define CARD_EXT_X 2
+#define CARD_EXT_Y 3
+static uint32_t card_seed(uint32_t c) { return (c * 2654435761u >> 12) & 0xFFFFFu; }   /* (each card its own shape) */
+static void card_body(uint32_t c)
+{
+    if (ux.chamfer && !ux.style) {
+        mb_ext_x = CARD_EXT_X, mb_ext_y = CARD_EXT_Y, mb_seed = (int32_t)card_seed(c);
+        cv_rrect(0, 0, COL_W, COL_H, 4, T_SURF, T_BG);
+        mb_ext_x = mb_ext_y = 0, mb_seed = -1;
+    } else
+        cv_rrect(0, 0, COL_W, COL_H, 4, T_SURF, T_BG);
+}
+/* the parts of the cards' loops outside the cards (the gaps above, below and between them): with the frame */
+static void draw_loops(uint32_t y, uint32_t h)
+{
+    uint32_t c;
+    cv_begin(240, h, T_BG);
+    cv_oy = -(int32_t)y;
+    mb_ext_x = CARD_EXT_X;                              /* (the cards' shapes: card_body's) */
+    for (c = 0; c < 4u; c++)
+        mb_body((CARD_X(c) * 2 + COL_W) * 8, (Y_LABEL * 2 + COL_H) * 8, COL_W * 8 + CARD_EXT_X * 16 - 8,
+                COL_H * 8 + CARD_EXT_Y * 16 - 8, 0, T_SURF, MB_VIOLET, card_seed(c));
+    mb_ext_x = 0;
+    cv_oy = 0;
+    cv_blit(0, y);
+}
 /* full redraw: the strips (header, cards, panel, footer) cover the rest; only the BG between them is filled */
 static void draw_frame(void)
 {
@@ -387,6 +416,8 @@ static void draw_frame(void)
                  240u - (uint32_t)(CARD_X(i) + CARD_W), ch, T_BG);
     if (ux.style)                                       /* LINE: the dividers in the gaps */
         draw_rules(Y_LABEL, ch);
+    else if (ux.chamfer && ch == CARD_H)                /* (0.6.59) JIANT: the cards' loops in the gaps */
+        draw_loops(H_HEAD, gy - H_HEAD);
 }
 
 /* MOTION on the cards (#63: values that move on their own): the selected track's motion-driven parameters
@@ -582,7 +613,7 @@ static void draw_column(uint32_t c, const char *label, const char *val, const ch
             return;
         }
         cv_begin(COL_W, COL_H, T_BG);
-        cv_rrect(0, 0, COL_W, COL_H, 4, T_SURF, T_BG);
+        card_body(c);
     }
     if (label[0] || val[0]) {
         if (!strip && label[0]) {
@@ -761,7 +792,12 @@ static void draw_foot(void)
             const step_t *st = &seq_steps(t)[si];
             if (si >= (uint32_t)t->p[P_SLEN])
                 continue;
-            if (step_on(st))                          /* a note: a bar (accented: the accent) */
+            if (ux.chamfer && !ux.style) {            /* (0.6.59) JIANT: cells, a note a round one in its heat */
+                if (step_on(st))
+                    cv_rrect(sx, 2, 9, 9, -5, (st->flags & SF_ACCENT) ? T_ACCENT : mb_heat(110 + (st->vel ? st->vel : 96) * 50 / 127), T_BG);
+                else
+                    cv_rrect(sx, 6, 9, 3, -2, st->time == ST_TIE ? T_MID : T_RAISE, T_BG);   /* (a stub between) */
+            } else if (step_on(st))                   /* a note: a bar (accented: the accent) */
                 cv_rrect(sx, 1, 9, 11, 2, (st->flags & SF_ACCENT) ? T_ACCENT : T_THEME, T_BG);
             else                                      /* empty: a stub (a tie: brighter) */
                 cv_rrect(sx, 9, 9, 3, 1, st->time == ST_TIE ? T_MID : T_RAISE, T_BG);
