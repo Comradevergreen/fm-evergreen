@@ -243,6 +243,7 @@ static void web_power_on(void)
 {
     persist_boot();
     settings_init();
+    prefs_update();                       /* main.c (JIANT 0.6.44): FX LATCH ON by default (0.6.58: here too) */
     usb_serial_apply();
     lcd_init();
     spl_anim = 1;                         /* main.c (JIANT 0.5): the signature written */

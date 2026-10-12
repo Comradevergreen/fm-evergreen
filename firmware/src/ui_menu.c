@@ -338,6 +338,7 @@ static uint32_t menu_split(uint32_t n)
         s = mr_y(--k) - 1;
     return (uint32_t)(s < 240 - 124 ? 240 - 124 : s);
 }
+static void confirm_open(uint32_t kind, uint32_t trk);   /* (0.6.58) INIT SYSTEM: ui_input.c */
 static void draw_menu(void)
 {
     static const khint_t KEYS[2][3] = {{{KC_ALGO, "TAB"}, {KC_PRESETS, "ROW"}, {KC_OCTPM, "VALUE"}},
@@ -464,6 +465,11 @@ static void menu_input(uint32_t oct)                  /* oct: ui_input.c oct_tap
         if (ui.menu_sel == MI_PANEL) {
             panel_setup();
             scrn.idle = fm1_ms;                         /* (SCREEN OFF: its own loop had the input) */
+            ui.force = 1;
+        } else if (ui.menu_sel == MI_INIT) {           /* (0.6.58) INIT SYSTEM: a new song from zero (as SAVE > TOOLS 5,
+                                                         * its dialog; UNDO brings the music back) */
+            ui.menu = 0;
+            confirm_open(CF_INIT_SYS, song.sel);
             ui.force = 1;
         } else {                                       /* MI_ABOUT */
             ui.menu = 2;

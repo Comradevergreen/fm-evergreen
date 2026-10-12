@@ -857,7 +857,7 @@ static void setup(int s)
         go_title("LFO"); page_flash(); pf_ms = fm1_ms - 200u;
         break;
     case S_DXIMG:                                       /* (0.6.48) DRUM IMAGE 40 */
-        set_engine_of(TSEL, ENGI_DRUM); TSEL->p[P_DXIMG] = 40; go_page(GR_DXIMG);
+        set_engine_of(TSEL, ENGI_DRUM); TSEL->p[P_DXIMG] = 40; go_title("STEREO");
         break;
     case S_DXSEND:                                      /* (0.6.48) SEND: the snare to the REVERB, 70 % */
         set_engine_of(TSEL, ENGI_DRUM); dx_ui_lane = 1; dx_snd[1] = 3u << 6 | 47u; dx_lay[1] = 0x26; go_title("SOUND 4");

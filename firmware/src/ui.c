@@ -69,6 +69,16 @@ static uint32_t up_gen;                      /* bumped on every user bank change
                                                 * restored at power-on, project.c). JIANT 0.6.40: OFF by default (clear =
                                                 * OFF, power-on as INIT SYSTEM leaves it); the bit was RESTORE LAST OFF */
 #define fx_latch ui_prefs
+/* (JIANT 0.6.44) the settings brought up to date at power-on (main.c; 0.6.58 the browser emulator too, web/emu, where
+ * the punch-in FX had no LATCH): FX LATCH ON by default, once, so who turns it OFF after keeps it so */
+static void prefs_update(void)
+{
+    if (prefs_rev < 1u) {
+        ui_prefs |= PREF_LATCH;
+        prefs_rev = 1u;
+        settings_save();
+    }
+}
 /* MENU > AUDIO CLICK, CLICK LEVEL, COUNT-IN (1.1, Discussion #131; click.c, seq.c): two bits each in another byte no
  * engine uses, saved with the settings: bits 0-1 CLICK (OFF REC ON), 2-3 CLICK LEVEL (stored 0 MID, 1 LOW, 2 HIGH),
  * 4-5 COUNT-IN (OFF, 1 BAR, 2 BARS); 0 in older settings = OFF / MID / OFF, so nothing clicks or counts in that did
@@ -644,9 +654,11 @@ static int fx_head(uint32_t i)
     return PAGES[i].fam == FAM_FX && (str_eq(t, "FX") || str_eq(t, "SLICER") || str_eq(t, "DLY") ||
                                       str_eq(t, "REVERB") || str_eq(t, "CHORUS") || str_eq(t, "MASTER"));
 }
-/* (JIANT 0.6.51) a page (or the track) changed by hand: its name big in the middle of the graph for PF_MS, so the
+/* (JIANT 0.6.51) a page (or the track) changed by hand: its name big over the cards (0.6.58) for PF_MS, so the
  * pages need no memorising (ui_graph.c page_flash_draw); a page set by code (a test, a dialog's way back) shows none */
-#define PF_MS 700u
+#ifndef PF_MS                                        /* (tests/ui_test.c: 0, the cards always shown) */
+#define PF_MS 450u                                   /* (0.6.58: was 700, over the cards since) */
+#endif
 static uint8_t fg_ui;                                /* (0.6.52) SEQ > FUGUE: the head edited (0..2: heads 2..4) */
 static uint32_t pf_ms;
 static uint8_t pf_on;
@@ -1306,7 +1318,8 @@ static uint32_t dx_pagen(const page_t *pg)            /* SOUND 1..3; (0.5.1) X-M
 }
 static void dx_knob(const page_t *pg, uint32_t k, int32_t s);
 static void dx_cards(const page_t *pg);
-static void dx_kit3_knob(uint32_t k, int32_t s);      /* (0.6.54) KIT 3: TONE's BP, FEEDBK; IMAGE */
+static void dx_kit3_knob(uint32_t k, int32_t s);      /* (0.6.54) KIT 3: TONE's BP, FEEDBK */
+#define DX_KIT3(pg) ((pg)->graph == GR_DXIMG && (pg)->title[0] == 'K')   /* (0.6.58) GR_DXIMG: KIT 3, or STEREO (IMAGE) */
 static void dx_kit3_cards(void);
 static uint32_t dx_sig(void);
 

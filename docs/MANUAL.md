@@ -136,8 +136,8 @@ layer's shortcuts; on the DRUM grid they are steps and lanes; on the NAME screen
   takes now) and the USB icon. Messages appear here too ("SAVED", "T1 CLEARED"...), sometimes with a second line.
 - **Cards**: the four columns under the header are KNOB 1–4. A value that is automated or locked is marked; a dim card
   means "nothing here now".
-- **Page name**: changing page (or track) by hand shows the page's name big in the middle for a moment, with the
-  track and its engine under it.
+- **Page name**: changing page (or track) by hand shows the page's name big for a moment over the four cards (the
+  graph stays visible), with the track and its engine at the right.
 - **Panel (middle)**: the page's graph — the engine's creature, an envelope, the LFO running, the step grid, a list...
 - **Footer**: the page name and its place in its family (e.g. **DLY 2/2**), or key hints. On the song pages
   (PROJECT, ARRANGE, TOOLS, GLOBAL, SYSTEM) it shows the project and its name instead of the track's sound.
@@ -227,14 +227,15 @@ and heating up with its own audio. The selected track is drawn bigger, a muted o
 | OP ENV | OP | STAGE | RATE | LEVEL | FM6 |
 | OPERATOR 2 | OP | MODE | DTUN | VEL | FM6 |
 | FILTER | TYPE | CUT | RES | DRIVE (ANALOG) / DIST (others) | every engine |
-| KIT 3 | BP | FEEDBK | IMAGE | — | DRUM (the whole kit) |
+| KIT 3 | BP | FEEDBK | — | — | DRUM (the whole kit) |
 | X-MOD | RATE | DEPTH | SHAPE | RAND | DRUM (the whole kit) |
-| LEVELS | KICK | SNARE | CLAP | HATCL | DRUM |
-| LEVELS 2 | HATOP | TOM | RIM | BELL | DRUM |
 | SOUND | SOUND | SIDE | PITCH | PMOD | DRUM (one sound) |
 | SOUND 2 | SOUND | DECAY | NOISE | COLOR | DRUM (one sound) |
 | SOUND 3 | SOUND | MODE | PM.TYPE | DRIVE | DRUM (one sound) |
 | SOUND 4 | SOUND | LAYER | FEEDBK | SEND | DRUM (one sound) |
+| LEVELS | KICK | SNARE | CLAP | HATCL | DRUM |
+| LEVELS 2 | HATOP | TOM | RIM | BELL | DRUM |
+| STEREO | IMAGE | — | — | — | DRUM (the whole kit) |
 | VOICE | VOICE | GLIDE | MODE | PRIO | every engine |
 
 **GLO** (MIXER is per track; GLOBAL and SYSTEM are global)
@@ -408,19 +409,15 @@ DRUM-X is a synthesized kit of eight sounds, **BD SD CP CH OH TM RS CB**, genera
 
 - Every sound has two sides, **A** and **B**. **MORPH** (KIT, KNOB 1, also on HOME) moves the whole kit between them:
   the knob to play live.
-- The pages go **the whole kit first, then one sound** (0.6.54):
+- The pages go **the whole kit first, then one sound, then the volumes and the stereo** (0.6.58):
   - **KIT** (EDIT 1): MORPH, TUNE, TONE, DECAY. **KIT 2** (EDIT 2): NOISE, **FM ENV** (FM struck with each hit and gone
     in a few milliseconds: a beater, a click, a metal edge on the attack, the tail clean), **FOLD** (a wavefolder after
     the envelope: a bright attack, a clean tail), DRIVE.
   - **KIT 3**: **BP**, a band-pass on the metal sounds (the hats, the rim, the cowbell), OFF or 15 centres from about
-    1.5 to 9 kHz; **FEEDBK**, every sound's oscillator fed back into itself (OFF, 1–15: warm, growl, grit, noise);
-    **IMAGE** (automatable): sweeps the kit through its placings in the stereo field. 0 (MONO): every sound in the
-    middle; the first turns open it; from there each step is another placing (each sound moves on its own curve), so
-    turn it until the image sits right. The kick stays near the middle. DRV, DIST and the FILTER work on the kit's sum,
-    so with them the image narrows (the page draws the sounds grey).
+    1.5 to 9 kHz; **FEEDBK**, every sound's oscillator fed back into itself (OFF, 1–15: warm, growl, grit, noise).
   - **X-MOD**: **RATE** (OFF, 4BAR … 1/32, in time), **DEPTH** (how far MORPH swings), **SHAPE** (SINE, TRI, SAW, RAMP,
     S&H), **RAND** (each hit gets its own MORPH and a little tune).
-  - **FILTER**, then **LEVELS / LEVELS 2**: the level of each sound (KICK, SNARE, CLAP, HATCL, HATOP, TOM, RIM, BELL).
+  - **FILTER**: the kit's.
   - **SOUND 1–4**, one sound each: KNOB 1 is always **SOUND** (which one; striking a key also picks it).
     - **SOUND**: SIDE (A / B), PITCH, PMOD (how far the pitch falls).
     - **SOUND 2**: DECAY, NOISE, COLOR, of the side picked on SOUND (KNOB 1 shows it: "SD B").
@@ -432,6 +429,11 @@ DRUM-X is a synthesized kit of eight sounds, **BD SD CP CH OH TM RS CB**, genera
       sound's own (added to KIT 3's); **SEND**: that hit alone into one effect, OFF then CHO, DLY, REV with 16 amounts
       each, on one knob ("REV 75%"), on top of the track's own sends. The dice (SELECT on a DRUM page, DICE ALL) set
       LAYER and FEEDBK boldly. Each sound with a LAYER costs a little CPU (about as FEEDBK).
+  - **LEVELS / LEVELS 2**: the level of each sound (KICK, SNARE, CLAP, HATCL, HATOP, TOM, RIM, BELL).
+  - **STEREO**: **IMAGE** (automatable) sweeps the kit through its placings in the stereo field. 0 (MONO): every sound
+    in the middle; the first turns open it; from there each step is another placing (each sound moves on its own
+    curve), so turn it until the image sits right. The kick stays near the middle. DRV, DIST and the FILTER work on the
+    kit's sum, so with them the image narrows (the page draws the sounds grey).
   - KIT 3, X-MOD, LAYER, FEEDBK and SEND are saved with the section's kit.
 - **Mutes**: GLO held + black keys 7–10 mute the groups KICK, SNARE, HAT, PERC; EDIT held + black keys 1–8 mute each
   sound.
@@ -555,7 +557,7 @@ sounding after you let go; the next chord replaces them.
 | --- | --- |
 | The selected track's steps and automation | **REC held + F3**, or SAVE > TOOLS > CLEAR SEQ, or SEQ TOOLS F3 |
 | All six tracks' steps, automation and the punch-in lane | **SEQ held + REC**, then OCT+ |
-| **Everything** (NEW PROJECT): every track its engine's default sound (dry, FM6 the init voice), no steps or automation, the mix, effects, tempo and SLICER at their defaults, the song empty, macros at 0, the factory DRUM-X kit. Saved projects, user presets, MENU, CLOCK, TUNE and MIDI stay | **SAVE > TOOLS > 5 NEW PROJECT**, then OCT+ (UNDO brings the music back) |
+| **Everything** (NEW PROJECT): every track its engine's default sound (dry, FM6 the init voice), no steps or automation, the mix, effects, tempo and SLICER at their defaults, the song empty, macros at 0, the factory DRUM-X kit. Saved projects, user presets, MENU, CLOCK, TUNE and MIDI stay | **MENU > SYSTEM > INIT SYSTEM** or **SAVE > TOOLS > 5 NEW PROJECT**, then OCT+ (UNDO brings the music back) |
 | Only one part's automation on the selected track | **REC held + FX / EDIT / ENV / LFO / SCL / ARP / GLO** |
 | The track's automation, keeping the steps | SEQ TOOLS **F4 CLR AUTO**, or SEQ > AUTOMATION > CLEAR |
 
@@ -1025,6 +1027,7 @@ closes it (settings are saved then).
 | SYSTEM | RESTORE LAST | **OFF** (default: no autosave, power-on at zero), ON (the last session back at power-on) |
 | SYSTEM | LOAD | ECO, LITE, **FULL** (default) |
 | SYSTEM | CALIBRATION | OCT+ opens HARDWARE CALIBRATION (teach each button and knob) |
+| SYSTEM | INIT SYSTEM | OCT+ asks, then everything back to zero for a new song (as SAVE > TOOLS > NEW PROJECT; UNDO brings the music back) |
 | SYSTEM | ABOUT | OCT+ opens: version, QR code, AUDIO LOAD (NOW, PEAK, LATE, SHED since power-on) and credits (scroll with PRESETS, OCT− back) |
 
 If you hear clicks, open ABOUT and look at **LATE** (audio blocks that came too late) and **SHED** (voices the guard

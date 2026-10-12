@@ -109,6 +109,7 @@ static struct { uint32_t stage; } felucca_dbg;
 #ifndef FELUCCA_VERSION
 #define FELUCCA_VERSION "TEST"
 #endif
+#define PF_MS 0u                                         /* (0.6.58) no page name over the cards: their tests read them (ui_render shows it) */
 #include "../firmware/src/gfx.c"
 #include "../firmware/src/panel.c"
 #include "../firmware/src/ui.c"
@@ -1839,9 +1840,9 @@ static int test_menu_tabs(void)
             }
     }
     ui_prefs = 0;
-    bad += check("MENU tabs: DISPLAY CONTROL AUDIO SYSTEM (6 5 6 4 rows), 1..6 each in a run, fit the page; tab gaps constant (S, LARGE)",
+    bad += check("MENU tabs: DISPLAY CONTROL AUDIO SYSTEM (6 5 6 6 rows), 1..6 each in a run, fit the page; tab gaps constant (S, LARGE)",
                  ok && MTAB_COUNT == 4u && str_eq(MTAB_NAME[0], "DISPLAY") && mtab_rows(MTAB_DISPLAY) == 6u &&
-                 mtab_rows(MTAB_CONTROL) == 5u && mtab_rows(MTAB_AUDIO) == 6u && mtab_rows(MTAB_SYSTEM) == 5u);
+                 mtab_rows(MTAB_CONTROL) == 5u && mtab_rows(MTAB_AUDIO) == 6u && mtab_rows(MTAB_SYSTEM) == 6u);   /* (0.6.58: INIT SYSTEM) */
 
     ui_power_on();
     hold(B_HOME);
@@ -1948,6 +1949,10 @@ static int test_menu_tabs(void)
     press(B_OCTUP); ok &= ui.menu == 2;
     ok &= oct_leds() == 1u;                             /* (ABOUT: OCT- back, lit) */
     press(B_OCTDN); ok &= ui.menu == 1 && ui.menu_sel == MI_ABOUT;
+    turn(EN_PRESET, -1); ok &= ui.menu_sel == MI_INIT;   /* (0.6.58) INIT SYSTEM: OCT+ its dialog, the menu closed */
+    press(B_OCTUP); ok &= ui.menu == 0 && ui.confirm == CF_INIT_SYS;
+    press(B_OCTDN); ok &= ui.confirm == CF_NONE;        /* (OCT- cancels: nothing changed) */
+    hold(B_HOME); ok &= ui.menu == 1 && ui.menu_sel == MI_INIT;
     turn(EN_PRESET, -1); ok &= ui.menu_sel == MI_PANEL;
     press(B_OCTDN); ok &= ui.menu == 1 && ui.menu_sel == MI_PANEL;
     {   /* CALIBRATION: OCT+ starts the setup (nothing pressed here: it times out and keeps the table) */
@@ -1967,7 +1972,7 @@ static int test_menu_tabs(void)
         ok &= !memcmp(&p0, &panel, sizeof panel) && msg_is("SETUP CANCELLED") && ui.menu == 1 && fm1_ms - t < 1000u;
     }
     bad += check("MENU SYSTEM: OCT+ opens ABOUT (OCT- back to the tab) and CALIBRATION; OCT- does nothing on them", ok);
-    turn(EN_PRESET, 1); press(B_OCTUP);                /* ABOUT, HOME: closed, from the document */
+    turn(EN_PRESET, 1); turn(EN_PRESET, 1); press(B_OCTUP);   /* ABOUT (past INIT SYSTEM), HOME: closed, from the document */
     ok = ui.menu == 2;
     press(B_HOME);
     ok &= !ui.menu && ui.home;
@@ -3408,11 +3413,23 @@ static int test_edit_cycle(void)
     (void)CYC_D;
 #endif
     {   /* #97: a DRUM track's lane levels on EDIT > LANES (KICK SNARE CLAP HATCL) and LANES 2 (HATOP TOM RIM BELL) */
-        static const char *const CYC_K[] = {"EDIT 1", "EDIT 2", "KIT 3", "X-MOD", "FILTER", "LEVELS", "LEVELS 2", "SOUND",
-                                            "SOUND 2", "SOUND 3", "SOUND 4", "VOICE", "EDIT 1"};
+        static const char *const CYC_K[] = {"EDIT 1", "EDIT 2", "KIT 3", "X-MOD", "FILTER", "SOUND", "SOUND 2", "SOUND 3",
+                                            "SOUND 4", "LEVELS", "LEVELS 2", "STEREO", "VOICE", "EDIT 1"};
         set_engine_of(TSEL, ENGI_DRUM);
-        bad += check("EDIT cycle (DRUM, 0.6.54): the kit's (KIT KIT 2 KIT 3 X-MOD FILTER LEVELS) then a sound's (SOUND 1..4), VOICE",
+        bad += check("EDIT cycle (DRUM, 0.6.58): the kit's (KIT KIT 2 KIT 3 X-MOD FILTER), a sound's (SOUND 1..4), then the volumes and the stereo (LEVELS LEVELS 2 STEREO), VOICE",
                      engine_cycle(CYC_K, NELEM(CYC_K)));
+        {   /* (0.6.58) KIT 3 turns BP and FEEDBK only; STEREO's KNOB 1 is IMAGE */
+            uint8_t t0 = dx_tone;
+            int16_t i0 = TSEL->p[P_DXIMG];
+            go_title("KIT 3"); frame();
+            turn(EN_K3, 3); frame();
+            ok = TSEL->p[P_DXIMG] == i0 && dx_tone == t0;
+            go_title("STEREO"); frame();
+            turn(EN_K1, 5); frame();
+            ok &= TSEL->p[P_DXIMG] > i0 && dx_tone == t0;
+            TSEL->p[P_DXIMG] = i0;
+            bad += check("KIT 3: KNOB 3 does nothing (IMAGE moved); STEREO: KNOB 1 turns IMAGE", ok);
+        }
         go_title("LEVELS 2"); frame();
         ok = TSEL->p[P_LN5] == 127;
         turn(EN_K2, -3);
