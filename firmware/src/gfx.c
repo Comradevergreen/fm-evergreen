@@ -285,107 +285,11 @@ static uint32_t rr_cov(int32_t r, int32_t i, int32_t j)
         }
     return (uint32_t)n;
 }
-/* (JIANT 0.6.59) the JIANT palette's boxes as organelles, the beings' kin: each a soft body, a superellipse (n 3 for a
- * card or a button, 5 for a long row or the panel: rounder than a box, flatter than an ellipse), drawn as one clean
- * antialiased line in the thermal camera's colours, its heat by where it sits (the four cards violet, red, orange,
- * yellow from the left; a wide box, the panel or a row, blue), its inside filled. A card's loop reaches past its box
- * (mb_ext: into the gaps, round the label and the gauge); draw_frame draws those parts. Tables: tools/gen (python,
- * the unit curve in Q12) */
-static const int16_t MB_HW3[33] = {4096, 4096, 4096, 4095, 4093, 4091, 4087, 4082, 4075, 4065, 4054, 4040, 4023, 4002, 3978, 3950, 3918, 3880, 3837, 3788, 3731, 3667, 3593, 3509, 3412, 3300, 3170, 3016, 2831, 2600, 2296, 1841, 0};
-static const int16_t MB_PT3[64][2] = {{4096, 0}, {4083, 871}, {4043, 1378}, {3978, 1796}, {3885, 2159}, {3767, 2481}, {3622, 2768}, {3450, 3024}, {3251, 3251}, {3024, 3450}, {2768, 3622}, {2481, 3767}, {2159, 3885}, {1796, 3978}, {1378, 4043}, {871, 4083}, {0, 4096}, {-871, 4083}, {-1378, 4043}, {-1796, 3978}, {-2159, 3885}, {-2481, 3767}, {-2768, 3622}, {-3024, 3450}, {-3251, 3251}, {-3450, 3024}, {-3622, 2768}, {-3767, 2481}, {-3885, 2159}, {-3978, 1796}, {-4043, 1378}, {-4083, 871}, {-4096, 0}, {-4083, -871}, {-4043, -1378}, {-3978, -1796}, {-3885, -2159}, {-3767, -2481}, {-3622, -2768}, {-3450, -3024}, {-3251, -3251}, {-3024, -3450}, {-2768, -3622}, {-2481, -3767}, {-2159, -3885}, {-1796, -3978}, {-1378, -4043}, {-871, -4083}, {0, -4096}, {871, -4083}, {1378, -4043}, {1796, -3978}, {2159, -3885}, {2481, -3767}, {2768, -3622}, {3024, -3450}, {3251, -3251}, {3450, -3024}, {3622, -2768}, {3767, -2481}, {3885, -2159}, {3978, -1796}, {4043, -1378}, {4083, -871}};
-static const int16_t MB_HW5[33] = {4096, 4096, 4096, 4096, 4096, 4096, 4096, 4096, 4095, 4095, 4094, 4092, 4090, 4087, 4083, 4077, 4070, 4061, 4049, 4034, 4015, 3991, 3962, 3925, 3880, 3824, 3753, 3663, 3547, 3391, 3166, 2791, 0};
-static const int16_t MB_PT5[64][2] = {{4096, 0}, {4088, 1618}, {4064, 2130}, {4025, 2497}, {3968, 2789}, {3895, 3032}, {3805, 3238}, {3695, 3414}, {3566, 3566}, {3414, 3695}, {3238, 3805}, {3032, 3895}, {2789, 3968}, {2497, 4025}, {2130, 4064}, {1618, 4088}, {0, 4096}, {-1618, 4088}, {-2130, 4064}, {-2497, 4025}, {-2789, 3968}, {-3032, 3895}, {-3238, 3805}, {-3414, 3695}, {-3566, 3566}, {-3695, 3414}, {-3805, 3238}, {-3895, 3032}, {-3968, 2789}, {-4025, 2497}, {-4064, 2130}, {-4088, 1618}, {-4096, 0}, {-4088, -1618}, {-4064, -2130}, {-4025, -2497}, {-3968, -2789}, {-3895, -3032}, {-3805, -3238}, {-3695, -3414}, {-3566, -3566}, {-3414, -3695}, {-3238, -3805}, {-3032, -3895}, {-2789, -3968}, {-2497, -4025}, {-2130, -4064}, {-1618, -4088}, {0, -4096}, {1618, -4088}, {2130, -4064}, {2497, -4025}, {2789, -3968}, {3032, -3895}, {3238, -3805}, {3414, -3695}, {3566, -3566}, {3695, -3414}, {3805, -3238}, {3895, -3032}, {3968, -2789}, {4025, -2497}, {4064, -2130}, {4088, -1618}};
-static int16_t mb_ext_x, mb_ext_y;                     /* (a card: the loop this far past its box; ui_draw.c) */
-static int32_t mb_seed = -1;                           /* (a card: its shape, by its place; else -1: by the box) */
-#define MB_VIOLET 0xB19Cu                              /* (0.6.59) every organelle's line: the beings' violet */
-static uint16_t mb_heat(int32_t v)                     /* 0..255 -> the thermal ramp (ui_graph.c heat_col's stops) */
-{
-    static const uint16_t H[7] = {0x069Fu, 0x59FFu, 0xB19Cu, 0xF146u, 0xFBC0u, 0xFEA0u, 0xFFFFu};
-    int32_t i = v < 0 ? 0 : v > 255 ? 255 : v, k = i * 6 / 256, f = (i * 6 % 256) * 100 / 256;
-    return ux_mix(H[k], H[k + 1 < 7 ? k + 1 : 6], f);
-}
-static void mb_plot(int32_t x, int32_t y, uint16_t c, int32_t a)   /* c over the canvas pixel, a 0..256 */
-{
-    uint16_t *p;
-    y += cv_oy;
-    if (a <= 0 || (uint32_t)x >= cv_w || (uint32_t)y >= cv_h)
-        return;
-    p = &cv_px[(uint32_t)y * cv_w + (uint32_t)x];
-    *p = swap16(a >= 256 ? c : ux_mix(swap16(*p), c, a * 100 / 256));
-}
-static void mb_line(int32_t x0, int32_t y0, int32_t x1, int32_t y1, uint16_t c)   /* antialiased, Q4 */
-{
-    int32_t dx = x1 - x0, dy = y1 - y0, t, g, p, e, f;
-    if ((dx < 0 ? -dx : dx) >= (dy < 0 ? -dy : dy)) {
-        if (x0 > x1) { t = x0; x0 = x1; x1 = t; t = y0; y0 = y1; y1 = t; }
-        g = x1 != x0 ? ((y1 - y0) << 8) / (x1 - x0) : 0;
-        for (p = x0 >> 4, e = x1 >> 4; p <= e; p++) {
-            int32_t y = (y0 << 4) + g * (p - (x0 >> 4)) - 128;
-            f = y & 255;
-            mb_plot(p, y >> 8, c, 256 - f), mb_plot(p, (y >> 8) + 1, c, f);
-        }
-    } else {
-        if (y0 > y1) { t = x0; x0 = x1; x1 = t; t = y0; y0 = y1; y1 = t; }
-        g = ((x1 - x0) << 8) / (y1 - y0);
-        for (p = y0 >> 4, e = y1 >> 4; p <= e; p++) {
-            int32_t x = (x0 << 4) + g * (p - (y0 >> 4)) - 128;
-            f = x & 255;
-            mb_plot(x >> 8, p, c, 256 - f), mb_plot((x >> 8) + 1, p, c, f);
-        }
-    }
-}
-/* the organelle centred on (cx, cy) (Q4), half sizes a b (Q4), filled with fill (-1: not) and its line k. Uneven as a
- * cell: its radius swells and dips along the rim by two slow waves (seed: each box its own shape, always the same),
- * +-8 % (a card's outward, past its box; any other box's inward, inside it); the fill follows the same rim */
-static int32_t mb_wave(int32_t a)                      /* a: 0..1023 a turn -> -64..64 */
-{
-    int32_t t = a & 511, v = t * (512 - t) >> 10;
-    return (a & 512) ? -v : v;
-}
-static void mb_body(int32_t cx, int32_t cy, int32_t a, int32_t b, int n5, int32_t fill, uint16_t k, uint32_t seed)
-{
-    const int16_t (*pt)[2] = n5 ? MB_PT5 : MB_PT3;
-    int32_t X[65], Y[65], y, i, y0 = 1 << 30, y1 = -(1 << 30);
-    for (i = 0; i < 64; i++) {                          /* the rim's points (Q4) */
-        int32_t w = (mb_ext_x ? 1060 : 940) + ((mb_wave(i * 32 + (int32_t)(seed & 1023)) * 3 +   /* (inside its box unless a card) */
-                                               mb_wave(i * 48 + (int32_t)(seed >> 10 & 1023)) * 2) >> 2);
-        X[i] = cx + ((pt[i][0] * a >> 12) * w >> 10);   /* (w: 1024 = the curve) */
-        Y[i] = cy + ((pt[i][1] * b >> 12) * w >> 10);
-        if (Y[i] < y0) y0 = Y[i];
-        if (Y[i] > y1) y1 = Y[i];
-    }
-    X[64] = X[0], Y[64] = Y[0];
-    if (fill >= 0)
-        for (y = y0 >> 4; y <= (y1 >> 4) + 1; y++) {    /* rows: where the rim crosses the row's centre, the ends blended */
-            int32_t yc = y * 16 + 8, xl = 1 << 30, xr = -(1 << 30), x;
-            for (i = 0; i < 64; i++)
-                if ((Y[i] <= yc) != (Y[i + 1] <= yc)) {
-                    int32_t xi = X[i] + (X[i + 1] - X[i]) * (yc - Y[i]) / (Y[i + 1] - Y[i]);
-                    if (xi < xl) xl = xi;
-                    if (xi > xr) xr = xi;
-                }
-            if (xl > xr) continue;
-            for (x = (xl >> 4) + 1; x < (xr >> 4); x++)
-                mb_plot(x, y, (uint16_t)fill, 256);
-            mb_plot(xl >> 4, y, (uint16_t)fill, (16 - (xl & 15)) * 16);
-            mb_plot(xr >> 4, y, (uint16_t)fill, (xr & 15) * 16);
-        }
-    for (i = 0; i < 64; i++)                            /* the line */
-        mb_line(X[i], Y[i], X[i + 1], Y[i + 1], k);
-}
-static void cv_membrane(int32_t x, int32_t y, int32_t w, int32_t h, uint16_t c, uint16_t under)
-{
-    int n5 = w > 2 * h || w > 150;                      /* (a long row, the panel: flatter) */
-    cv_rect(x, y, w, h, under);
-    mb_body((x * 2 + w) * 8, (y * 2 + h) * 8, (w * 8) + mb_ext_x * 16 - 8, (h * 8) + mb_ext_y * 16 - 8, n5, c, MB_VIOLET,
-            mb_seed >= 0 ? (uint32_t)mb_seed : ((uint32_t)x * 2654435761u ^ (uint32_t)w * 40503u ^ (uint32_t)h * 977u) >> 8);
-}
 /* a filled rectangle with rounded corners (r <= 8), the corners anti-aliased against `under` (what lies
  * behind it): the flat look's cards, panels, rows, bars and buttons */
 static void cv_rrect(int32_t x, int32_t y, int32_t w, int32_t h, int32_t r, uint16_t c, uint16_t under)
 {
-    int32_t i, j, cut = ux.chamfer && r > 0 && w >= 20 && h >= 14;   /* (JIANT 0.5: a -r cushion, a switch, stays round;
-                                                  * 0.6.59: a small box, a chip or a bar, round too) */
+    int32_t i, j, cut = ux.chamfer && r > 0;      /* (JIANT 0.5: a -r cushion, a switch, stays round) */
     GFX_HOOK_CELL(x, y + cv_oy, x + w, y + h + cv_oy);   /* (the lint: what is drawn on it stays inside it) */
     if (r < 0) r = -r;                           /* (-r: rounded in every style: a keycap-like cushion) */
     else if (ux.style == ST_LINE) r = 0;         /* LINE: square cursors, selections and fills (FLAT: rounded) */
@@ -395,10 +299,11 @@ static void cv_rrect(int32_t x, int32_t y, int32_t w, int32_t h, int32_t r, uint
         cv_rect(x, y, w, h, c);
         return;
     }
-    if (cut) {                                   /* (JIANT 0.6.59) an organelle: cv_membrane */
-        cv_membrane(x, y, w, h, c, under);
+    if (cut && c == T_SURF) {                    /* (JIANT 0.6.60) all black: a card, the panel, a row, a dialog are
+                                                  * their text and graphs on the dark, no box drawn (SURF is black) */
+        cv_rect(x, y, w, h, c);
         return;
-    }
+    }                                            /* (a lit one, the chosen row or a button: rounded, as elsewhere) */
     cv_rect(x + r, y, w - 2 * r, h, c);
     cv_rect(x, y + r, r, h - 2 * r, c);
     cv_rect(x + w - r, y + r, r, h - 2 * r, c);
