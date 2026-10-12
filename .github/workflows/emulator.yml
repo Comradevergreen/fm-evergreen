@@ -2,6 +2,9 @@
 # The browser emulator (web/emu) on GitHub Pages: the firmware's sources compiled to WebAssembly, on every push to
 # main. Needs Settings > Pages > Source: "GitHub Actions" once. The emulator needs only the generated headers; the
 # installer (webapp/installer) and the editor (webapp/editor) need the package, built with JieLi's toolchain (downloaded).
+# (JIANT 0.6.61) Two channels: the emulator and preview/webapp/installer are main as it is now (to check before anyone
+# installs it); webapp/installer, the one people use, is the version approved in web/STABLE (a commit of main, set by
+# a PR once the preview was checked in the emulator). No web/STABLE yet: main, as before.
 name: emulator
 on:
   push:
@@ -19,6 +22,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0                 # (web/STABLE's commit: built for the public installer)
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
@@ -61,11 +66,24 @@ jobs:
           AC79_SDK: /home/runner/fw-AC79_AIoT_SDK
           JIELI_TOOLCHAIN: /home/runner/.jieli/toolchain
         run: |
+          ver() { sed -n 's/^#define FELUCCA_VERSION "\([^"]*\)".*/\1/p' "$1/firmware/src/felucca.c" | head -1; }
+          # the preview: main as it is now, next to the emulator that runs it (preview/webapp/installer)
           python3 tools/build.py
-          V=$(sed -n 's/^#define FELUCCA_VERSION "\([^"]*\)".*/\1/p' firmware/src/felucca.c | head -1)
+          V=$(ver .)
+          python3 web/make_site.py build/felucca.fwsc "${V:-dev}-${GITHUB_SHA::7}-preview" build/site_preview
+          mkdir -p build/emu/preview
+          cp -r build/site_preview/webapp build/site_preview/firmware build/emu/preview/
+          # the public installer: the approved commit (web/STABLE), built from its own sources
+          S=$(tr -d ' \n' < web/STABLE 2>/dev/null || true)
+          PKG=build/felucca.fwsc; SV=${V:-dev}; SH=${GITHUB_SHA::7}
+          if [ -n "$S" ] && git cat-file -e "$S^{commit}" 2>/dev/null; then
+            git worktree add -f /tmp/stable "$S"
+            (cd /tmp/stable && python3 tools/build.py)
+            PKG=/tmp/stable/build/felucca.fwsc; SV=$(ver /tmp/stable); SH=${S::7}
+          fi
           # (0.6.46) the versions the site offers now stay installable (the last few, web/fetch_prev.py)
           python3 web/fetch_prev.py "https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}" build/prev || true
-          python3 web/make_site.py build/felucca.fwsc "${V:-dev}-${GITHUB_SHA::7}" build/site build/prev
+          python3 web/make_site.py "$PKG" "${SV:-dev}-$SH" build/site build/prev
           cp -r build/site/webapp build/site/firmware build/emu/
       - uses: actions/upload-pages-artifact@v3
         with:

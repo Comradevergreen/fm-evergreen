@@ -1019,7 +1019,9 @@ Settings → Pages → Source: **GitHub Actions**, once).
    installer's **Return to official V15 first** button, which also saves a complete backup), then install JIANT: writing
    it straight over another custom firmware has bricked an FM-1. From official V15 or an earlier JIANT, install
    directly from the **[web installer](https://juanjiant-bit.github.io/JIANT/webapp/installer/)** (Chrome or Edge, the
-   FM-1 connected by USB straight to the computer; tick "This FM-1 runs official V15 or JIANT"). It rebuilds itself with every change merged into `main`. Offline: `python3 tools/fm1_install.py build/felucca.fwsc`.
+   FM-1 connected by USB straight to the computer; tick "This FM-1 runs official V15 or JIANT"). It offers the **approved** version only: every change merged into `main` goes first to the
+   [emulator](https://juanjiant-bit.github.io/JIANT/) (and a preview installer for testing), is checked there, and only
+   then reaches this installer ([web/STABLE](web/STABLE.md)). Offline: `python3 tools/fm1_install.py build/felucca.fwsc`.
 3. To go back to the official firmware, use M-VAVE's updater or the installer's **Return to official V15**.
 
 If the FM-1 stays black after an interrupted update, check whether the computer sees it as **WL80UBOOT** (or a USB
