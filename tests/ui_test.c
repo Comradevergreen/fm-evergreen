@@ -478,6 +478,72 @@ static int test_sound_loads(void)
 }
 
 /* SEQ > PATTERNS: K1 PAT, OCT+ LOAD; the dialog over the user's steps */
+/* (0.6.41) smoother switches (voice.c engine_block): another engine keeps a held note sounding (faded out, then in on
+ * the new one); a WAVE changed under a held note dips (out on the old wave, in on the new) instead of jumping */
+static uint32_t tr_jump(track_t *t, uint32_t blocks, uint32_t at, int16_t wave, int dip_on)
+{
+    int32_t o[2u * CTL], prev = 0;
+    uint32_t b, i, big = 0;
+    for (b = 0; b < blocks; b++) {
+        if (b == at) {
+            t->p[P_E0] = wave;
+            if (!dip_on) t->pe_old[0] = wave;            /* (as before 0.6.41: the new wave at once, no dip) */
+        }
+        memset(o, 0, sizeof o);
+        mix_block(o, CTL);
+        for (i = 0; i < CTL; i++) {
+            int32_t d = o[2u * i] - prev;
+            prev = o[2u * i];
+            if (b + 2u >= at && b < at + 8u && (uint32_t)(d < 0 ? -d : d) > big) big = (uint32_t)(d < 0 ? -d : d);
+        }
+    }
+    return big;
+}
+static int test_transitions(void)
+{
+    int bad = 0, ok;
+    uint32_t k, b, held, j0, j1;
+    int32_t o[2u * CTL];
+    track_t *t;
+    ui_power_on();
+    t = &trk[0];
+    song.master_q12 = 4096;
+    for (k = 1; k < NTRK; k++) trk[k].p[P_MUTE] = 1;
+    set_engine_of(t, ENGI_ANALOG);
+    t->engine = t->eng_req;
+    t->p[P_REV] = t->p[P_DLY] = t->p[P_CHOR] = 0;
+    for (b = 0; b < 8u; b++) mix_block(o, CTL);         /* (the load's release done) */
+    trk_note_on(t, 60, 100);
+    for (b = 0; b < 40u; b++) mix_block(o, CTL);
+    set_engine_of(t, 3u);                                /* LOFI, the note still held */
+    for (b = 0; b < 4u; b++) events_block(CTL), mix_block(o, CTL);
+    ok = t->xf_on && t->xf_len == 16u;
+    for (b = 0; b < 40u; b++) events_block(CTL), mix_block(o, CTL);
+    for (k = 0, held = 0; k < NVOICE; k++) held |= t->v[k].active && t->v[k].gate && t->v[k].note == 60u;
+    ok &= t->engine == 3u && held;
+    bad += check("another engine under a held note: faded out over 16 blocks, the note on in the new engine", ok);
+    trk_note_off(t, 60);
+    /* ANALOG SIN -> TRI under a held note: a dip, the voices on; the jump against the same change at once */
+    ui_power_on();
+    t = &trk[0];
+    song.master_q12 = 4096;
+    for (k = 1; k < NTRK; k++) trk[k].p[P_MUTE] = 1;
+    set_engine_of(t, ENGI_ANALOG);
+    t->engine = t->eng_req;
+    t->p[P_REV] = t->p[P_DLY] = t->p[P_CHOR] = 0;
+    t->p[P_E0] = 3; t->p[P_E1] = 0; t->p[P_E3] = 0;    /* SIN, no detune, no noise */
+    for (b = 0; b < 8u; b++) mix_block(o, CTL);
+    trk_note_on(t, 57, 100);
+    for (b = 0; b < 60u; b++) mix_block(o, CTL);
+    j1 = tr_jump(t, 30u, 7u, 2, 1);
+    for (k = 0, held = 0; k < NVOICE; k++) held |= t->v[k].active && t->v[k].gate && t->v[k].note == 57u;
+    ok = held;
+    t->p[P_E0] = 3; for (b = 0; b < 60u; b++) mix_block(o, CTL);
+    j0 = tr_jump(t, 30u, 7u, 2, 0);
+    bad += check("WAVE changed under a held note: a dip (the voice goes on), a smaller jump than at once", ok && j1 < j0);
+    trk_note_off(t, 57);
+    return bad;
+}
 static int test_patterns(void)
 {
     int bad = 0;
@@ -7834,6 +7900,7 @@ int main(void)
     bad += test_sound_loads();
     bad += test_patterns();
     bad += test_init_system();
+    bad += test_transitions();
     bad += test_rec();
     bad += test_step_rec();
     bad += test_step_rec();
