@@ -145,6 +145,7 @@ static uint16_t comp_mark(const step_t *st)
 {
     if (cp_arp(st)) return heat_col(200);
     if (st->comp == CP_TRIG) return heat_col(90);
+    if (st->comp > CP_TRIG) return heat_col(20 + (uint32_t)(st->comp - CP_RAND) * 22u);   /* (0.6.42) the others */
     if (step_chance(st) < 100u) return T_MID;
     if (step_ratchet(st) > 1u) return T_THEME;
     return 0;
@@ -164,6 +165,8 @@ static void graph_comp(const track_t *t, uint16_t c)
         else if (st->time == ST_TIE) cv_rrect(x, y0 + bh - 6, 9, 6, 1, T_MID, T_SURF);
         else cv_rrect(x, y0 + bh - 3, 9, 3, 1, T_RAISE, T_SURF);
         if ((mk = comp_mark(st)) != 0) cv_rect(x, y0 + bh + 3, 9, 3, mk);
+        if (st->comp == CP_JUMP && st->carg / 16u == ui.bank)   /* (0.6.42) JUMP: a line to the step it names */
+            cv_line(x + 4, y0 + bh + 4, bar_x(st->carg) + 4, y0 + bh + 4, mk);
         if (i == ui.cursor) cv_rect(x, y0 + bh + 8, 9, 2, T_ACCENT);
         else if (song.playing && i == seq_src(t, t->seq_idx)) cv_rect(x, y0 + bh + 8, 9, 2, T_TEXT);
     }
@@ -200,6 +203,30 @@ static void graph_comp(const track_t *t, uint16_t c)
             x = PANEL_X0 + (PANEL_W - (int32_t)nb * (w + 4)) / 2 + (int32_t)i * (w + 4);
             if (i == cur) cv_rrect(x - 2, 58, w + 4, w + 4, 3, T_ACCENT, T_SURF);
             cv_rrect(x, 60, w, w, 3, on ? heat_col(90) : T_RAISE, i == cur ? T_ACCENT : T_SURF);
+        }
+    } else if (v > COMP_TRIG) {                         /* (0.6.42) what it does, in a line, and its picture */
+        static const char *const SAY[COMP_N - COMP_RAND] = {
+            "THE NOTE AT RANDOM IN THE SCALE", "AN OCTAVE UP OR DOWN", "THE REST OF THE LOOP MOVED",
+            "THE NOTE GLIDES OVER THE STEP", "REPEATS, EACH SOFTER", "AGAIN ON THE EMPTY STEPS AFTER",
+            "THEN TO ANOTHER STEP", "THEN BACK TO STEP 1", "ONLY WHILE [FX] IS HELD", "CUTS WHAT THE TRACK SOUNDS"};
+        int32_t a = cs->carg, cx = PANEL_X0 + PANEL_W / 2;
+        cv_text(PANEL_X0 + 2, 50, &AF_S, SAY[v - COMP_RAND], T_DIM);
+        if (v == COMP_RAND || v == COMP_TONAL || v == COMP_OCT) {   /* the span it moves in, the note in the middle */
+            int32_t r = v == COMP_RAND ? a * 4 : v == COMP_TONAL ? (a - 7) * 4 : (a % 6u == 1u || a % 6u == 3u ? -24 : 24);
+            int32_t lo = v == COMP_RAND ? -r : r < 0 ? r : 0, hi = v == COMP_RAND ? r : r > 0 ? r : 0;
+            cv_rrect(cx - 10, 82 - hi, 20, hi - lo + 4, 3, T_RAISE, T_SURF);
+            cv_rrect(cx - 10, 82, 20, 4, 1, heat_col(200), T_SURF);
+            if (v != COMP_RAND) cv_rrect(cx - 10, 82 - r, 20, 4, 1, T_ACCENT, T_SURF);
+        } else if (v == COMP_BEND) {                    /* the glide */
+            int32_t d = (a - 12) * 2;
+            cv_line_t(PANEL_X0 + 20, 82, PANEL_X0 + PANEL_W - 20, 82 - d, heat_col(200), 3);
+        } else if (v == COMP_ECHO) {                    /* the repeats fading */
+            uint32_t h = 2u + (uint32_t)a % 3u;
+            w = (PANEL_W - 8) / (int32_t)h;
+            for (i = 0; i < h; i++) {
+                int32_t hh = 34 * (int32_t)(h - i) / (int32_t)h;
+                cv_rrect(PANEL_X0 + 4 + (int32_t)i * w, 98 - hh, w - 6, hh, 3, heat_col(200 - i * 40u), T_SURF);
+            }
         }
     } else if (v == COMP_CHANCE) {
         cv_rrect(PANEL_X0 + 2, 64, PANEL_W - 4, 12, 3, T_RAISE, T_SURF);

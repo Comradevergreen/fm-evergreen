@@ -466,9 +466,137 @@ static int components(void)
     return bad;
 }
 
+/* (0.6.42) the second set: a pattern of LEN len with the notes nts (0: a REST), run for `steps` steps */
+static track_t *pat(uint32_t len, const uint8_t *nts)
+{
+    track_t *t = one_step(1, 0);
+    uint32_t i;
+    t->p[P_SLEN] = (int16_t)len;
+    t->p[P_ROOT] = 0; t->p[P_SCALE] = 1;                  /* C major */
+    for (i = 0; i < len; i++) {
+        t->step[i] = nts[i] ? (step_t){{nts[i]}, 1, ST_NOTE, 0, 100} : (step_t){{0}, 0, ST_REST, 0, 0};
+    }
+    seq_start();
+    return t;
+}
+static uint32_t run_steps(track_t *t, uint32_t steps, uint8_t *nt, uint32_t max)
+{
+    return run_notes(t, steps * step_len(t, 0) / CTL - 1u, nt, max);
+}
+static int components2(void)
+{
+    int bad = 0, ok;
+    uint8_t nt[64];
+    uint32_t n, i, k;
+    track_t *t;
+    {   /* RAND 1 degree: 59 60 62 only, more than one of them */
+        static const uint8_t P1[1] = {60};
+        uint32_t seen = 0;
+        t = pat(1, P1); t->step[0].comp = CP_RAND; t->step[0].carg = 1;
+        n = run_steps(t, 40, nt, sizeof nt);
+        ok = n == 40u;
+        for (i = 0; i < n; i++) { ok &= nt[i] == 59u || nt[i] == 60u || nt[i] == 62u; seen |= 1u << (nt[i] - 59u); }
+        bad += check("RAND 1: the note a degree up / down at random (C major: 59 60 62)", ok && seen != 1u && seen != 2u && seen != 8u);
+    }
+    {   /* OCT: +1 always; +1 every other loop */
+        static const uint8_t P1[1] = {60};
+        t = pat(1, P1); t->step[0].comp = CP_OCT; t->step[0].carg = 0;
+        n = run_steps(t, 2, nt, sizeof nt);
+        ok = n == 2u && nt[0] == 72u && nt[1] == 72u;
+        t = pat(1, P1); t->step[0].comp = CP_OCT; t->step[0].carg = 2;
+        n = run_steps(t, 4, nt, sizeof nt);
+        ok &= n == 4u && nt[0] == 60u && nt[1] == 72u && nt[2] == 60u && nt[3] == 72u;
+        bad += check("OCT: +1 every time; +1/2 every other loop", ok);
+    }
+    {   /* TONAL +2 on step 1: it and the rest of the loop two degrees up, the next loop from its start again */
+        static const uint8_t P2[3] = {60, 64, 67};
+        t = pat(3, P2); t->step[1].comp = CP_TONAL; t->step[1].carg = 9;
+        n = run_steps(t, 6, nt, sizeof nt);
+        bad += check("TONAL +2 on step 2: 60 67 71 | 60 67 71", n == 6u && nt[0] == 60u && nt[1] == 67u && nt[2] == 71u &&
+                     nt[3] == 60u && nt[4] == 67u && nt[5] == 71u);
+    }
+    {   /* BEND +12: the voice from 60 towards 72 over the step */
+        static const uint8_t P1[1] = {60};
+        t = pat(1, P1); t->step[0].comp = CP_BEND; t->step[0].carg = 24;
+        run_notes(t, 2, nt, sizeof nt);
+        ok = 0;
+        for (k = 0; k < NVOICE; k++)
+            if (t->v[k].active && t->v[k].note == 60u)
+                ok = t->v[k].pitch16 == 72 * 16 && t->v[k].pitch_cur < 72 * 16 && t->v[k].gstep > 0;
+        bad += check("BEND +12: the note glides to 72 over the step", ok);
+    }
+    {   /* ECHO x3: three note-ons in a step, each softer */
+        static const uint8_t P1[1] = {60};
+        uint32_t b, v0, vel[8], nv = 0;
+        t = pat(1, P1); t->step[0].comp = CP_ECHO; t->step[0].carg = 1;
+        for (b = 0; b + 1u < step_len(t, 0) / CTL; b++) {
+            v0 = vage;
+            seq_tick(t, CTL);
+            for (k = 0; k < NVOICE; k++)
+                if (t->v[k].age > v0 && nv < 8u) vel[nv++] = t->v[k].vel;
+        }
+        bad += check("ECHO x3: three in the step, each softer", nv == 3u && vel[0] > vel[1] && vel[1] > vel[2]);
+    }
+    {   /* PULSE: on every empty step after it; every 2 */
+        static const uint8_t P4[4] = {60, 0, 0, 0};
+        t = pat(4, P4); t->step[0].comp = CP_PULSE; t->step[0].carg = 0;
+        n = run_steps(t, 4, nt, sizeof nt);
+        ok = n == 4u && nt[0] == 60u && nt[3] == 60u;
+        t = pat(4, P4); t->step[0].comp = CP_PULSE; t->step[0].carg = 1;
+        n = run_steps(t, 4, nt, sizeof nt);
+        bad += check("PULSE: the note again on each empty step after it; EVERY 2: every other", ok && n == 2u);
+    }
+    {   /* JUMP: step 2 then step 1 again; REV on step 3: 1 2 3 2 | 1 2 3 2 */
+        static const uint8_t P4[4] = {60, 62, 64, 65};
+        t = pat(4, P4); t->step[1].comp = CP_JUMP; t->step[1].carg = 0;
+        n = run_steps(t, 4, nt, sizeof nt);
+        ok = n == 4u && nt[0] == 60u && nt[1] == 62u && nt[2] == 60u && nt[3] == 62u;
+        t = pat(4, P4); t->step[2].comp = CP_REV;
+        n = run_steps(t, 8, nt, sizeof nt);
+        ok &= n == 8u && nt[0] == 60u && nt[1] == 62u && nt[2] == 64u && nt[3] == 62u && nt[4] == 60u && nt[6] == 64u;
+        bad += check("JUMP to step 1 from step 2: 60 62 60 62; REV on step 3: 60 62 64 62 60 62 64 ..", ok);
+    }
+    {   /* FILL: silent unless FX is held */
+        static const uint8_t P1[1] = {60};
+        t = pat(1, P1); t->step[0].comp = CP_FILL;
+        seq_fill = 0;
+        n = run_steps(t, 2, nt, sizeof nt);
+        ok = n == 0u;
+        seq_fill = 1;
+        n = run_steps(t, 2, nt, sizeof nt);
+        seq_fill = 0;
+        bad += check("FILL: only while FX is held", ok && n == 2u);
+    }
+    {   /* KILL: the long note before it gone, its own on */
+        static const uint8_t P2[2] = {48, 67};
+        uint32_t old = 0, mine = 0;
+        int32_t o[2u * CTL];
+        t = pat(2, P2); t->p[P_REL] = 127; t->p[P_SGATE] = 30; t->step[1].comp = CP_KILL;
+        for (k = 1; k < NTRK; k++) trk[k].p[P_MUTE] = 1;
+        for (i = 0; i < step_len(t, 0) / CTL + 30u; i++) mix_block(o, CTL);   /* (step 2 and its fade) */
+        for (k = 0; k < NVOICE; k++) { old |= t->v[k].active && t->v[k].note == 48u; mine |= t->v[k].active && t->v[k].note == 67u; }
+        bad += check("KILL: what sounded (a long release) cut, its own note on", !old && mine);
+    }
+    {   /* SEQ > COMP: KNOB 2 to the new TYPES, KNOB 3 their value (JUMP: any step) */
+        ui_power_on();
+        t = TSEL;
+        t->step[0] = (step_t){{60}, 1, ST_NOTE, 0, 100};
+        go_page(GR_COMP); frame();
+        turn(EN_K2, 4); turn(EN_K2, 3);                   /* .. RAND */
+        ok = t->step[0].comp == CP_RAND && t->step[0].carg == 2u;
+        turn(EN_K2, 4); turn(EN_K2, 2);                   /* .. JUMP */
+        turn(EN_K3, 9);
+        ok &= t->step[0].comp == CP_JUMP && t->step[0].carg == 9u;
+        turn(EN_K2, 3);                                   /* KILL */
+        ok &= t->step[0].comp == CP_KILL && comp_view() == COMP_KILL;
+        bad += check("SEQ > COMP: RAND .. KILL on KNOB 2, JUMP's step on KNOB 3", ok);
+    }
+    return bad;
+}
+
 int main(void)
 {
-    int bad = play() + projects() + presets() + screens() + components();
+    int bad = play() + projects() + presets() + screens() + components() + components2();
     printf("%s\n", bad ? "RATCHET TEST FAILED" : "ratchet tests passed");
     return bad != 0;
 }

@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.6.41).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.6.42).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 > 🫶 If you resonate with my work, consider supporting me on **[Ko-fi](https://ko-fi.com/juanjiant)** (in Argentina:
 > **[Cafecito](https://cafecito.app/juanjiant)**). Thanks for all the good energy, hope you enjoy this little beast ✨🎹
@@ -37,6 +37,13 @@ Two printable sheets with everything on the device. Click an image to open it fu
 ## Changelog
 
 Every update is listed here, newest first.
+
+### v0.6.42
+- **Step components, the second set** (SEQ > COMP): **RAND** (the note at random in the scale), **OCT** (an octave,
+  every loop or every other one, by turns, at random), **TONAL** (the rest of the loop moved along the scale),
+  **BEND** (the note glides over the step), **ECHO** (repeats, each softer), **PULSE** (again on the empty steps
+  after it), **JUMP** (then another step), **REV** (back to step 1: ping-pong), **FILL** (only while FX is held) and
+  **KILL** (cuts what the track sounds). Each with its picture on the page.
 
 ### v0.6.41
 - **Smooth engine and waveform changes**: another engine fades the old one out (~12 ms) and what is held (keys, the
