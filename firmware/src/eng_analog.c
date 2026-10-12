@@ -51,6 +51,36 @@ static inline int32_t an_morph(int32_t pos, uint32_t ph, uint32_t inc)
     return f ? a + (((an_osc(((uint32_t)pos >> 8) + 1u, ph, inc) - a) * f) >> 8) : a;
 }
 
+/* (0.6.45) MORPH: the plain WAVEs blended toward the next (an_mpos), osc 2 as analog_render's, the same noise, drive
+ * and filter as analog_ext (a loop of its own: the others' as they were) */
+static __attribute__((noinline)) void analog_morph(track_t *t, voice_t *v, int32_t *out, uint32_t n, const vmod_t *m,
+                                                   int32_t mpos)
+{
+    const int16_t *p = t->p;
+    uint32_t i, inc1 = m->inc, ph0 = v->ph[0], ph1 = v->ph[1], ft = (uint32_t)p[P_FTYPE] & 3u;
+    uint32_t inc2 = p[P_E1] || p[P_E7] ? cents_inc(m->pitch16 + p[P_E7] * 16, p[P_E1], 0) : inc1;
+    int32_t m2 = p[P_E2] * 258, m1 = 32767 - m2, nz = p[P_E3] * 200, drv = p[P_E6], kd = 8192 - p[P_E5] * 7600 / 127;
+    int32_t drive = 32768 + drv * 512, cut = (p[P_E4] << 8) + m->cutoff + ((v->pitch16 - 60 * 16) << 2);
+    int32_t ic1 = v->s[0], ic2 = v->s[1], nst = v->s[2];
+    tsvf_t flt;
+    tsvf_coef(&flt, cut, p[P_E5]);
+    for (i = 0; i < n; i++) {
+        int32_t s = mulq15(an_morph(mpos, ph0, inc1), m1) + mulq15(an_morph(mpos, ph1, inc2), m2);
+        ph0 += inc1;
+        ph1 += inc2;
+        if (nz)
+            s += mulq15((int32_t)(noise32(&nst) >> 17) - 16384, nz);
+        if (drv)
+            s = softclip(((s >> 2) * (drive >> 2)) >> 11);
+        out[i] += voice_amp(soft_knee(svf_mode(&flt, s >> 1, &ic1, &ic2, ft, kd), 16000) << 1, m, i) << 1;
+    }
+    v->ph[0] = ph0;
+    v->ph[1] = ph1;
+    v->s[0] = ic1;
+    v->s[1] = ic2;
+    v->s[2] = nst;
+}
+
 /* SYNC RING SAW3 (see the top): a render of their own (the other WAVEs' loop untouched), the same noise, drive and
  * filter */
 static __attribute__((noinline)) void analog_ext(track_t *t, voice_t *v, int32_t *out, uint32_t n, const vmod_t *m)
@@ -60,7 +90,7 @@ static __attribute__((noinline)) void analog_ext(track_t *t, voice_t *v, int32_t
     uint32_t ft = (uint32_t)p[P_FTYPE] & 3u, pw = 0x80000000u + (uint32_t)((m->shape - (64 << 8)) << 15);
     int32_t det = p[P_E1], m2 = p[P_E2] * 258, m1 = 32767 - m2, nz = p[P_E3] * 200, drv = p[P_E6], kd = 8192 - p[P_E5] * 7600 / 127;
     int32_t drive = 32768 + drv * 512, cut = (p[P_E4] << 8) + m->cutoff + ((v->pitch16 - 60 * 16) << 2);
-    int32_t ic1 = v->s[0], ic2 = v->s[1], nst = v->s[2], mpos = an_mpos(p, m);
+    int32_t ic1 = v->s[0], ic2 = v->s[1], nst = v->s[2];
     tsvf_t flt;
     tsvf_coef(&flt, cut, p[P_E5]);
     r = 16u + (uint32_t)det;                            /* SYNC / RING: osc 2 at r / 16 of osc 1 (1 .. 8.9) */
@@ -75,10 +105,7 @@ static __attribute__((noinline)) void analog_ext(track_t *t, voice_t *v, int32_t
         inc2 = det || p[P_E7] ? cents_inc(m->pitch16 + p[P_E7] * 16, det, 0) : inc1;
     for (i = 0; i < n; i++) {
         int32_t a = osc_saw(ph0, inc1), b, s;
-        if (mpos >= 0) {                                /* (0.6.45) MORPH */
-            a = an_morph(mpos, ph0, inc1);
-            b = an_morph(mpos, ph1, inc2);
-        } else if (wave < AW_SYNC) {
+        if (wave < AW_SYNC) {
             switch (wave) {
             case 1: a = osc_pulse(ph0, inc1, 0x80000000u); b = osc_pulse(ph1, inc2, 0x80000000u); break;
             case 2: a = osc_tri(ph0); b = osc_tri(ph1); break;
@@ -183,7 +210,10 @@ static __attribute__((noinline)) void analog_render(track_t *t, voice_t *v, int3
  * (a dispatch of its own: analog_render's loop as before) */
 static void analog_dispatch(track_t *t, voice_t *v, int32_t *out, uint32_t n, const vmod_t *m)
 {
-    if ((uint32_t)t->p[P_E0] >= AW_SYNC || t->p[P_FTYPE] || an_mpos(t->p, m) >= 0)   /* (0.6.45: MORPH there too) */
+    int32_t mpos = an_mpos(t->p, m);
+    if (mpos >= 0)                                    /* (0.6.45) MORPH */
+        analog_morph(t, v, out, n, m, mpos);
+    else if ((uint32_t)t->p[P_E0] >= AW_SYNC || t->p[P_FTYPE])
         analog_ext(t, v, out, n, m);
     else
         analog_render(t, v, out, n, m);

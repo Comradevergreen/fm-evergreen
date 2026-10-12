@@ -15,7 +15,7 @@ import re
 import sys
 
 FUNCS = ["analog_render", "digital_render", "digital_render_legacy", "digital_render_custom", "phase_render", "lofi_render", "formant_render",
-         "wheel_render", "wheel_block", "analog_ext", "lofi_byte_render",   # (JIANT 0.4: SYNC RING SAW3, BYTE)
+         "wheel_render", "wheel_block", "analog_ext", "analog_morph", "lofi_byte_render",   # (JIANT 0.4: SYNC RING SAW3, BYTE)
          "drum_render", "noise_render", "fm6_render", "fm6_op_run", "fm6_op_fb",
          "dx_run",                                          # DRUM-X (drumx_voice.c): a hit, osc + noise
          "slicer_bus",                                      # (JIANT 0.6.3) the SLICER, one on a bus
