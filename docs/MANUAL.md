@@ -270,7 +270,7 @@ and heating up with its own audio. The selected track is drawn bigger, a muted o
 | AUTOMATION | PLAY (ON/OFF) | EVENT (count) | LOCK (count) | CLEAR (action) |
 | AUTO LIST | ROW | STEP | PARAM | VALUE |
 | MUTATE | SOUND (every) | PATTERN (every) | AMOUNT | MODE |
-| SHIFT (last) | OFFSET | PITCH | CHANCE | — |
+| SHIFT (last) | OFFSET | PITCH | CHANCE | C.LEN |
 
 ### The layers (hold the button)
 
@@ -493,7 +493,10 @@ recorded into the pattern, quantized to its steps, overdubbing. Knob moves on th
 - **SHIFT** (the last SEQ page): **OFFSET** (−32 to +32 steps), **PITCH** (±24 semitones; not on drums) and
   **CHANCE**: the whole track's chance, 100 % plays every step as written, lower thins it out (each step's own chance,
   from the dice or the editor, scaled). All three can be automated; OFFSET and PITCH are also on the SCL layer's
-  KNOB 3 / 4.
+  KNOB 3 / 4. **C.LEN** (KNOB 4): the step components as a lane of their own length. OFF: each step plays its own
+  component. 1–64: the components of steps 1..C.LEN are read in turn, one per step the track plays, so with C.LEN 3 over
+  a 4-step pattern each component lands one step earlier every loop (polymeter: the components drift over the notes).
+  The COMP page marks the lane and where it is; components past LEN still play when C.LEN reaches them.
   On **+ ADD LOCK**, OCT+ adds a lock; on a record, OCT+ switches it between LOCK and AUTO; **EDIT** deletes it.
 
 ### Parameter locks

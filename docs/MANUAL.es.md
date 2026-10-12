@@ -277,7 +277,7 @@ a la derecha); apretá OCT+ para ejecutarla.
 | AUTOMATION | PLAY (ON/OFF) | EVENT (cantidad) | LOCK (cantidad) | CLEAR (acción) |
 | AUTO LIST | ROW | STEP | PARAM | VALUE |
 | MUTATE | SOUND (cada) | PATTERN (cada) | AMOUNT | MODE |
-| SHIFT (última) | OFFSET | PITCH | CHANCE | — |
+| SHIFT (última) | OFFSET | PITCH | CHANCE | C.LEN |
 
 ### Las capas (mantené el botón)
 
@@ -517,7 +517,11 @@ seleccionada se graban como **automatización**. MENU > AUDIO tiene el **CLICK**
 - **SHIFT** (la última página SEQ): **OFFSET** (−32 a +32 pasos), **PITCH** (±24 semitonos; no en baterías) y
   **CHANCE**: la probabilidad de toda la pista; 100 % toca cada paso como está escrito, menos lo va raleando (escala la
   probabilidad propia de cada paso, la de los dados o el editor). Las tres se pueden automatizar; OFFSET y PITCH también
-  están en KNOB 3 / 4 de la capa SCL.
+  están en KNOB 3 / 4 de la capa SCL. **C.LEN** (KNOB 4): los step components como un carril con su propio largo. OFF:
+  cada paso toca su propio componente. 1–64: se leen por turno los componentes de los pasos 1..C.LEN, uno por cada paso
+  que toca la pista; con C.LEN 3 sobre un patrón de 4 pasos cada componente cae un paso antes en cada vuelta (polimetría:
+  los componentes se corren sobre las notas). La página COMP marca el carril y dónde va; los componentes más allá de LEN
+  igual suenan cuando C.LEN llega a ellos.
 
 ### Parameter locks
 

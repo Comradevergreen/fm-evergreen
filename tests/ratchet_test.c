@@ -508,6 +508,21 @@ static int components2(void)
         ok &= n == 4u && nt[0] == 60u && nt[1] == 72u && nt[2] == 60u && nt[3] == 72u;
         bad += check("OCT: +1 every time; +1/2 every other loop", ok);
     }
+    {   /* (0.6.47) C.LEN 3 over LEN 4: step 1's OCT on the lane, so on plays 1, 4, 7 (steps 1 4 3 ..); C.LEN OFF as before */
+        static const uint8_t P4[4] = {60, 62, 64, 65};
+        t = pat(4, P4); t->step[0].comp = CP_OCT; t->step[0].carg = 0; t->p[P_CLEN] = 3;
+        n = run_steps(t, 8, nt, sizeof nt);
+        ok = n == 8u && nt[0] == 72u && nt[1] == 62u && nt[2] == 64u && nt[3] == 77u && nt[4] == 60u && nt[5] == 62u &&
+             nt[6] == 76u && nt[7] == 65u;
+        t = pat(4, P4); t->step[0].comp = CP_OCT; t->step[0].carg = 0; t->p[P_CLEN] = 0;
+        n = run_steps(t, 8, nt, sizeof nt);
+        ok &= n == 8u && nt[0] == 72u && nt[3] == 65u && nt[4] == 72u && nt[6] == 64u;
+        t = pat(4, P4); t->step[0].comp = CP_ECHO; t->step[0].carg = 0; t->p[P_CLEN] = 3;   /* the repeats too */
+        n = run_steps(t, 4, nt, sizeof nt);
+        ok &= n == 6u && nt[0] == 60u && nt[1] == 60u && nt[2] == 62u && nt[3] == 64u && nt[4] == 65u && nt[5] == 65u;
+        t->p[P_CLEN] = 0;
+        bad += check("C.LEN 3 over 4 steps: the components drift over the steps (OCT, ECHO's repeats); OFF as before", ok);
+    }
     {   /* TONAL +2 on step 1: it and the rest of the loop two degrees up, the next loop from its start again */
         static const uint8_t P2[3] = {60, 64, 67};
         t = pat(3, P2); t->step[1].comp = CP_TONAL; t->step[1].carg = 9;

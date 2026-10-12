@@ -84,6 +84,9 @@ enum {                          /* per-track parameters */
 #define P_MMODE P_FM2_REL
 #define P_MORPH P_FM3_ATK              /* (JIANT 0.6.45) EDIT > MORPH: ANALOG PHASE LOFI's wave on towards the next ones
                                          * (0: as WAVE has it; every project and preset before it), in DIGITAL's slot */
+#define P_CLEN P_FM3_DEC               /* (JIANT 0.6.47) SHIFT > C.LEN: the step components as a lane of their own, steps
+                                         * 1..C.LEN's read in turn as the track plays (polymetric over the steps); 0 OFF
+                                         * (each step its own: every project and preset before it); seq.c comp_lane */
 #define P_ELOOP P_ED_FX                /* (JIANT 0.4) ENV LOOP: OFF / ON (voice.c env_tick) */
 /* (JIANT 0.6.9) AUTO PAN (fx.c mix_part), in the slots of the old per-track SLICER (one on a bus since 0.6.3, its
  * slots stored, never read but by proj_sl_migrate). Laid so what old stores hold means OFF: DPTH where SLCR was (0, or
@@ -431,6 +434,8 @@ typedef struct track {
     int8_t tonal;                /* (0.6.42) TONAL: the rest of the loop this many degrees up / down */
     uint8_t pulse_from, pulse_k; /* .. PULSE: its step + 1 (0: none), the empty steps since */
     uint8_t jump_to, rev;        /* .. JUMP: the next step + 1 (0: the next one); REV: backwards to step 1 */
+    uint8_t cpos, cv_on;         /* (0.6.47) C.LEN: the component lane's next step; the step playing is cvs */
+    step_t cvs, cva, cvp;        /* .. the step playing with the lane's component; the ARP's and PULSE's (CV_IDX) */
     uint32_t seq_off;
     uint8_t seq_active;          /* any step programmed */
     uint8_t rskip_idx;           /* live recording put notes into the step about to play: */

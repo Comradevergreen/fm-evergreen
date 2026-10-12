@@ -735,6 +735,7 @@ static void seq_start(void)
         t->rat_left = 0;
         t->arp_from = 0; t->loops = 0;             /* (0.6.39) the components: the first loop, no arpeggio */
         t->tonal = 0; t->pulse_from = t->jump_to = t->rev = 0;   /* (0.6.42) no TONAL, PULSE, JUMP, REV */
+        t->cpos = t->cv_on = 0;                    /* (0.6.47) C.LEN's lane from its first step */
     }
     song.tick = 0;
     beat_pos = 0; beat_n = 0;                      /* the ARP LED's beat from the top too */
@@ -778,13 +779,32 @@ static int trk_kit(const track_t *t)
     const engine_t *e = ENGINES[eng_idx(t->eng_req)];
     return e->oneshot || (e->keys && e->keys(t, 0) >= 0);
 }
+/* (0.6.47) C.LEN (P_CLEN 1..64): the step s with the component of the lane's next step (steps 1..C.LEN in turn, one a
+ * step the track plays, apart from where the steps are: the components drift over a pattern of another length);
+ * OFF: s as it is. The copy is the track's (cvs: a RATCH repeats it); an ARP or a PULSE keeps theirs (CV_IDX) */
+#define CV_IDX 255u
+static const step_t *comp_lane(track_t *t, const step_t *s)
+{
+    uint32_t cl = (uint32_t)clamp(t->p[P_CLEN], 0, NSTEP);
+    const step_t *c;
+    t->cv_on = 0;
+    if (!cl)
+        return s;
+    c = &seq_steps(t)[t->cpos % cl];
+    t->cpos = (uint8_t)((t->cpos + 1u) % cl);
+    t->cvs = *s;
+    t->cvs.comp = c->comp;
+    t->cvs.carg = c->carg;
+    t->cv_on = 1;
+    return &t->cvs;
+}
 static const step_t *arp_owner(const track_t *t, const step_t *s)
 {
     const step_t *o = s;
     if (trk_kit(t))
         return 0;
     if (s->time == ST_TIE && t->arp_from)
-        o = &seq_steps(t)[(t->arp_from - 1u) % NSTEP];
+        o = t->arp_from == CV_IDX ? &t->cva : &seq_steps(t)[(t->arp_from - 1u) % NSTEP];
     return o->time == ST_NOTE && o->n && cp_arp(o) ? o : 0;
 }
 /* the parts a step plays in its length: an ARP's RATE, else its RATCH */
@@ -869,6 +889,7 @@ static void seq_stop(void)
         trk[i].rat_left = 0;
         trk[i].arp_from = 0;
         trk[i].pulse_from = trk[i].jump_to = trk[i].rev = 0;
+        trk[i].cpos = trk[i].cv_on = 0;
     }
     chain_stop();
     motion_end();
@@ -926,7 +947,8 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
     if (!(skip & SEQ_REP) && !cont && s->comp == CP_KILL)
         trk_fade_out(t);                            /* (0.6.42) KILL: what sounds goes (~3 ms), its notes after */
     if (!(skip & SEQ_REP) && !cont && (s->time == ST_REST || (!s->n && !s->hit)) && t->pulse_from) {
-        const step_t *o = &seq_steps(t)[(t->pulse_from - 1u) % NSTEP];   /* (0.6.42) PULSE: again on an empty step */
+        const step_t *o = t->pulse_from == CV_IDX ? &t->cvp :   /* (0.6.42) PULSE: again on an empty step */
+                          &seq_steps(t)[(t->pulse_from - 1u) % NSTEP];
         if (o->comp == CP_PULSE && o->time == ST_NOTE && (o->n || o->hit) && ++t->pulse_k % (o->carg % 4u + 1u) == 0u) {
             s = o;
             cont = 2;
@@ -936,6 +958,10 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
     if (!(skip & SEQ_REP) && !cont && s->time == ST_NOTE && (s->n || s->hit)) {
         uint32_t pi = (uint32_t)(s - seq_steps(t));    /* (0.6.42) PULSE from here; another note ends one */
         t->pulse_from = (uint8_t)(s->comp == CP_PULSE && pi < NSTEP ? pi + 1u : 0u);
+        if (s == &t->cvs && s->comp == CP_PULSE) {      /* (0.6.47) C.LEN: the lane's step, kept */
+            t->cvp = t->cvs;
+            t->pulse_from = CV_IDX;
+        }
         t->pulse_k = 0;
         if (s->comp == CP_TONAL)
             t->tonal = (int8_t)((int32_t)(s->carg % 15u) - 7);
@@ -945,6 +971,10 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
         if (arp) {
             uint32_t ai = (uint32_t)(arp - seq_steps(t));
             t->arp_from = (uint8_t)(ai < NSTEP ? ai + 1u : 0u);
+            if (arp == &t->cvs) {                       /* (0.6.47) C.LEN: the lane's step, kept over the TIEs */
+                t->cva = t->cvs;
+                t->arp_from = CV_IDX;
+            }
             t->arp_k = 0;
         }
     }
@@ -1035,7 +1065,7 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
  * The step is read again: an edit to fewer parts (or another source in a song) ends the repeats */
 static __attribute__((noinline)) void seq_ratchet(track_t *t, uint32_t period)
 {
-    const step_t *s = &seq_steps(t)[seq_src(t, t->seq_idx)];
+    const step_t *s = t->cv_on ? &t->cvs : &seq_steps(t)[seq_src(t, t->seq_idx)];   /* (0.6.47: C.LEN's) */
     uint32_t hits = step_hits(t, s);
     if (t->rat_left >= hits) {
         t->rat_left = 0;
@@ -1114,6 +1144,7 @@ static void seq_tick(track_t *t, uint32_t n)
             const step_t *s = &seq_steps(t)[(t->pfx & PFX_RND) && !(rng() & 1u)   /* (JIANT) RANDOM held: half the */
                                             ? rng() % (len ? len : 1u) : seq_src(t, t->seq_idx)];   /* steps, any */
             uint32_t skip = SEQ_ROLLED, i, k;
+            s = comp_lane(t, s);                        /* (0.6.47) C.LEN: the lane's component on it */
             /* the chance first (the one roll, as seq_step made it): a step that does not play applies no lock; the
              * automation and the locks before the notes, so a note-on reads them (eng_drum's KIT, ..) */
             if (!step_rolls(t, s))
