@@ -50,7 +50,9 @@ def zoom_at(t):                                    # the camera: 1 on the close-
     for s0, s1, *_r, zm in SCENES:
         if s0 <= t < s1 and zm: return ease((t - s0) / 0.8) * (1 - ease((t - s1 + 0.5) / 0.5))
     return 0.0
-CUTS = [SPLASH] + [sc[0] for sc in SCENES] + [OUT]
+# (0.6.35) a film of throws (the DICE ALL film) gives each throw's time in seps.txt: a die rolls there, and it is a cut
+SEPS = [float(x) for x in (D / 'seps.txt').read_text().split()] if (D / 'seps.txt').exists() else []
+CUTS = [SPLASH] + [sc[0] for sc in SCENES] + [OUT] + [x + 0.5 for x in SEPS]
 
 def grad(w, h):                                    # violet -> orange, left to right
     t = np.linspace(0, 1, w)[None, :, None]
@@ -133,6 +135,41 @@ out_l = [text_layer(['JIANT FM'], font('Bold', 120), WHITE, gradient=True),
          text_layer(['emulator · web installer · editor · cheat sheets'], F_SMALL, DIM),
          text_layer(['support: ko-fi.com/juanjiant · cafecito.app/juanjiant'], F_SMALL, VIOLET)]
 
+PIPS = {1: [(0, 0)], 2: [(-1, -1), (1, 1)], 3: [(-1, -1), (0, 0), (1, 1)], 4: [(-1, -1), (1, -1), (-1, 1), (1, 1)],
+        5: [(-1, -1), (1, -1), (0, 0), (-1, 1), (1, 1)], 6: [(-1, -1), (1, -1), (-1, 0), (1, 0), (-1, 1), (1, 1)]}
+def die_face(n, size=300):                         # a die: dark face, a violet-orange rim, white pips
+    im = Image.new('RGBA', (size, size))
+    d = ImageDraw.Draw(im)
+    m = Image.new('L', (size, size)); ImageDraw.Draw(m).rounded_rectangle((0, 0, size - 1, size - 1), size // 6, fill=255)
+    rim = Image.fromarray(grad(size, size)).convert('RGBA'); rim.putalpha(m)
+    im.alpha_composite(rim)
+    d.rounded_rectangle((12, 12, size - 13, size - 13), size // 7, fill=(14, 9, 22, 255))
+    r = size // 11
+    for px, py in PIPS[n]:
+        cx, cy = size // 2 + px * size // 4, size // 2 + py * size // 4
+        d.ellipse((cx - r, cy - r, cx + r, cy + r), fill=(240, 236, 248, 255))
+    return im
+DIE = {n: die_face(n) for n in range(1, 7)}
+def draw_dice(img, t):                             # over a throw: the die tumbles in, its faces flicker, it lands
+    for i, s0 in enumerate(SEPS):
+        u = t - s0
+        if -0.05 <= u < 0.75:
+            k = ease(u / 0.6)
+            face = (1 + int(u * 30) * 7 + i) % 6 + 1 if u < 0.55 else (i * 5 + 3) % 6 + 1
+            sz = int(300 * (0.6 + 0.55 * k) * (1 + 0.15 * np.exp(-max(u - 0.55, 0) * 12)))
+            L = DIE[face].resize((sz, sz), Image.BILINEAR).rotate(-540 * (1 - k), resample=Image.BICUBIC, expand=True)
+            x = int(-200 + 620 * k) - L.width // 2; y = int(540 - 120 * np.sin(np.pi * min(u / 0.6, 1)) * (1 - k * 0.3)) - L.height // 2
+            for g_ in (3, 2, 1):                   # a trail
+                gx = x - int(60 * g_ * (1 - k))
+                paste(img, L, gx, y, 0.18 * (1 - k) / g_)
+            paste(img, L, x, y, min(1.0, (u + 0.05) / 0.12) * (1 - ease((u - 0.62) / 0.13)))
+            return True
+    if SEPS and SEPS[0] < t < OUT:                 # between throws: the last face, small and calm
+        i = max(j for j, s0 in enumerate(SEPS) if s0 <= t)
+        L = DIE[(i * 5 + 3) % 6 + 1].resize((150, 150), Image.BILINEAR)
+        paste(img, L, 420 - 75, 540 - 75, 0.55 * ease((t - SEPS[i] - 0.7) / 0.3))
+    return False
+
 def paste(img, layer, x, y, alpha=1.0, reveal=1.0):
     if alpha <= 0 or reveal <= 0: return
     L = layer
@@ -201,6 +238,7 @@ for f in (PREVIEW or range(N)):
         paste(img, brand, 80, 50, a_); paste(img, tag, SX - 40 - tag.width, H - 62, a_ * 0.9)
     pw = int(W * (f + 1) / N)
     img.paste(Image.fromarray(grad(W, 4)[:, :pw]), (0, H - 4))
+    if SEPS: draw_dice(img, t)
     # intro title
     t_in = SPLASH - 1.1                            # the intro title, until the first scene
     if t_in < t < SCENES[0][0]:

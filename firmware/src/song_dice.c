@@ -21,7 +21,7 @@
  * experiment (two loops phasing, a comb, the grain delay an octave down, a polymetric lead, a drone): surprises with
  * refinement. Sounds: a preset whose name fits the role and is not a bright one, its envelope shaped for the role and
  * the energy, filtered by role with an envelope on the filter, a TYPE that changes, an LFO of its own shape; the kit
- * one of seven families (808, HARD, CLICK, INDUS, SOFT, GLITCH, ELECTRO) built on the DRUM-X kit. No automation and no
+ * (0.6.35: back to 0.6.33's, it sounded better) the DRUM-X kit diced around the factory one, through a soft low-pass. No automation and no
  * modulation matrix beyond the macros' routes. UNDO (GLO + G4) brings back what was there */
 
 enum { RL_DRUM, RL_BASS, RL_PAD, RL_LEAD, RL_ARP, RL_TEX, RL_N };
@@ -70,19 +70,19 @@ typedef struct {
 #define P_CLASS {RL_ARP, RL_PAD, RL_LEAD, RL_TEX, RL_BASS}
 static const dstyle_t DSTYLE[] = {
     {"IDM", 86, 140, 10, {SC_PHRY, SC_HARM, SC_MIN, SC_DOR}, {{0, 5, 1, X}, {0, 3, 1, 5}, {0, 1, 5, 4}},
-     DS_IDM, 85, {KT_GLITCH, KT_CLICK}, BS_IDM, PS_SPARSE, VC_MIX, LM_MOTIF, AR_WALK, 0, 2, P_ARPS, 60,
+     DS_IDM, 100, {KT_GLITCH, KT_CLICK}, BS_IDM, PS_SPARSE, VC_MIX, LM_MOTIF, AR_WALK, 0, 2, P_ARPS, 60,
      {EG_FM, EG_A, EG_PH}, {EG_FM, EG_PH, EG_LO}, {EG_PH, EG_LO, EG_FM}, {EG_FM, EG_LO, EG_PH}, {EG_NO, EG_LO, EG_PH},
      {4, 3}, {4, 5}, 1, 60},
     {"DARK IDM", 78, 112, 14, {SC_PHRY, SC_HARM, SC_PHRY, SC_MIN}, {{0, X, X, X}, {0, 1, X, X}, {0, 5, 1, X}},
-     DS_IDM, 65, {KT_GLITCH, KT_INDUS}, BS_DRONE, PS_SPARSE, VC_QUART, LM_SPARSE, AR_WALK, 0, 1, P_PADS, 60,
+     DS_IDM, 90, {KT_GLITCH, KT_INDUS}, BS_DRONE, PS_SPARSE, VC_QUART, LM_SPARSE, AR_WALK, 0, 1, P_PADS, 60,
      {EG_FM, EG_PH, EG_A}, {EG_PH, EG_FM, EG_VO}, {EG_PH, EG_VO, EG_FM}, {EG_FM, EG_PH, EG_LO}, {EG_NO, EG_VO, EG_LO},
      {4, 3}, {5, 4}, 2, 75},
     {"DARK MINIMAL", 122, 128, 4, {SC_MIN, SC_PHRY, SC_DOR, SC_MIN}, {{0, X, X, X}, {0, 5, X, X}, {0, 1, X, X}},
-     DS_MINIMAL, 90, {KT_CLICK, KT_808}, BS_ROLL, PS_DUB, VC_9, LM_OSTINATO, AR_PULSE, 0, 1, P_DANCE, 40,
+     DS_MINIMAL, 100, {KT_CLICK, KT_808}, BS_ROLL, PS_DUB, VC_9, LM_OSTINATO, AR_PULSE, 0, 1, P_DANCE, 40,
      {EG_A, EG_FM, EG_A}, {EG_PH, EG_A, EG_FM}, {EG_A, EG_PH, EG_FM}, {EG_FM, EG_A, EG_PH}, {EG_NO, EG_VO, EG_PH},
      {0, 4}, {1, 4}, 2, 60},
     {"DUB TECHNO", 116, 124, 6, {SC_MIN, SC_DOR, SC_MIN, SC_MPEN}, {{0, X, X, X}, {0, 3, X, X}, {0, 5, 3, X}},
-     DS_DEEP, 90, {KT_SOFT, KT_808}, BS_SUB, PS_DUB, VC_9, LM_SPARSE, AR_PULSE, 0, 1, P_PADS, 0,
+     DS_DEEP, 100, {KT_SOFT, KT_808}, BS_SUB, PS_DUB, VC_9, LM_SPARSE, AR_PULSE, 0, 1, P_PADS, 0,
      {EG_A, EG_FM, EG_A}, {EG_A, EG_PH, EG_FM}, {EG_PH, EG_A, EG_VO}, {EG_FM, EG_A, EG_PH}, {EG_NO, EG_VO, EG_A},
      {4, 0}, {0, 4}, 2, 85},
     {"DARK ELECTRO", 126, 134, 0, {SC_PHRY, SC_MIN, SC_HARM, SC_PHRY}, {{0, 0, 1, 0}, {0, 5, 1, X}, {0, X, X, X}},
@@ -94,15 +94,15 @@ static const dstyle_t DSTYLE[] = {
      {EG_A, EG_A, EG_PH}, {EG_PH, EG_A, EG_FM}, {EG_A, EG_PH, EG_VO}, {EG_FM, EG_A, EG_PH}, {EG_NO, EG_VO, EG_PH},
      {0, 4}, {4, 1}, 2, 45},
     {"COLD WAVE", 108, 120, 0, {SC_MIN, SC_DOR, SC_MPEN, SC_MIN}, {{0, 5, 6, 4}, {0, 3, 5, 6}, {0, 6, 5, X}},
-     DS_MOTORIK, 85, {KT_ELECTRO, KT_SOFT}, BS_OCT8, PS_HOLD, VC_7, LM_MOTIF, AR_UPDOWN, 1, 2, P_SONG, 0,
+     DS_MOTORIK, 100, {KT_ELECTRO, KT_SOFT}, BS_OCT8, PS_HOLD, VC_7, LM_MOTIF, AR_UPDOWN, 1, 2, P_SONG, 0,
      {EG_A, EG_FM, EG_A}, {EG_A, EG_PH, EG_FM}, {EG_A, EG_VO, EG_PH}, {EG_A, EG_FM, EG_LO}, {EG_VO, EG_NO, EG_PH},
      {0, 1}, {1, 4}, 1, 45},
     {"BROKEN", 80, 100, 14, {SC_DOR, SC_MIN, SC_MEL, SC_DOR}, {{0, 3, X, X}, {0, X, X, X}, {0, 6, 3, X}},
-     DS_BROKEN, 70, {KT_SOFT, KT_GLITCH}, BS_DRONE, PS_SPARSE, VC_QUART, LM_MOTIF, AR_WALK, 0, 1, P_SONG, 60,
+     DS_BROKEN, 90, {KT_SOFT, KT_GLITCH}, BS_DRONE, PS_SPARSE, VC_QUART, LM_MOTIF, AR_WALK, 0, 1, P_SONG, 60,
      {EG_FM, EG_VO, EG_PH}, {EG_PH, EG_VO, EG_FM}, {EG_VO, EG_FM, EG_PH}, {EG_FM, EG_PH, EG_LO}, {EG_VO, EG_NO, EG_PH},
      {4, 3}, {0, 4}, 2, 65},
     {"HYPNOTIC", 124, 130, 2, {SC_PHRY, SC_MIN, SC_DOR, SC_HARM}, {{0, X, X, X}, {0, X, X, X}, {0, 1, X, X}},
-     DS_DEEP, 95, {KT_CLICK, KT_808}, BS_BLIP, PS_DUB, VC_SUS, LM_OSTINATO, AR_PULSE, 1, 2, P_ARPS, 50,
+     DS_DEEP, 100, {KT_CLICK, KT_808}, BS_BLIP, PS_DUB, VC_SUS, LM_OSTINATO, AR_PULSE, 1, 2, P_ARPS, 50,
      {EG_A, EG_FM, EG_PH}, {EG_PH, EG_A, EG_FM}, {EG_A, EG_PH, EG_LO}, {EG_A, EG_FM, EG_PH}, {EG_NO, EG_PH, EG_VO},
      {0, 4}, {5, 1}, 2, 55},
     {"DEEP BREAKS", 108, 122, 8, {SC_MIN, SC_HARM, SC_DOR, SC_PHRY}, {{0, 5, X, X}, {0, 6, 5, X}, {0, 3, 1, X}},
@@ -132,7 +132,8 @@ static const dstyle_t DSTYLE[] = {
 };
 #undef X
 #define NDSTYLE (sizeof DSTYLE / sizeof DSTYLE[0])
-#define DSTYLE_IDM 2u                                   /* (the first two: IDM, DARK IDM; picked more often) */
+#define DSTYLE_IDM 2u
+#define DSTYLE_DARK 10u                                 /* (the first ten: the night's) */                                   /* (the first two: IDM, DARK IDM; picked more often) */
 
 static int32_t rr(int32_t lo, int32_t hi) { return lo + (int32_t)(rng() % (uint32_t)(hi - lo + 1)); }
 static int chance(uint32_t pct) { return rng() % 100u < pct; }
@@ -142,7 +143,7 @@ static int chance(uint32_t pct) { return rng() % 100u < pct; }
 enum { TW_NONE, TW_PHASE, TW_COMB, TW_GRAIN, TW_POLY, TW_DRONE };
 static struct {
     const int8_t *prog;
-    uint32_t n, steps, voicing, nlast, energy, twist, kit;
+    uint32_t n, steps, voicing, nlast, energy, twist;
     int32_t last[4];
 } dh;
 static int32_t chord_at(uint32_t step) { return dh.prog[(step / dh.steps) % dh.n]; }
@@ -183,8 +184,8 @@ static int euclid(uint32_t i, uint32_t k, uint32_t n, uint32_t rot)
 }
 
 /* ---- DRUMS (lanes: 0 BD, 1 SD, 2 CP, 3 CH, 4 OH, 5 TM, 6 RS, 7 CB): a family's bar as strings ('x' a hit, 'a'
- * accented, 'g' a ghost: three times in four), a fill over the loop's last beat; the energy thins (SPACE: the hats
- * mostly gone) or fills (FRANTIC: ghost hats, ratchets) it */
+ * accented, 'g' a ghost: three times in four), a fill over the loop's last beat (0.6.35: as 0.6.33 wrote them, the
+ * energy leaves the drums alone: they sounded better) */
 static const char *const DRUM_BAR[][8] = {
     [DS_MOTORIK] = {"x...x...x...x...", "....x.......x...", "", "x.x.x.x.x.x.x.x.", "", "", "..x.....x.x.....", ""},
     [DS_ELECTRO] = {"a......x..x.....", "....a.......a...", "....x.......x..x", "xgxgxgxgxgxgxgxg", "", "..............x.", "", "......x........."},
@@ -199,20 +200,20 @@ static const char *const DRUM_BAR[][8] = {
 };
 static void dice_drums(track_t *t, const dstyle_t *st, uint32_t len)
 {
-    uint32_t i, l, e = dh.energy;
-    if (st->drums == DS_IDM) {                          /* euclids against each other, ratchets, chance */
-        uint32_t kb = (uint32_t)rr(3, 6), ks = (uint32_t)rr(2, 4), kh = (uint32_t)rr(5, 9) + e * 2u, rot = (uint32_t)rr(0, 7);
+    uint32_t i, l;
+    if (st->drums == DS_IDM) {                          /* euclids against each other, ratchets, chance (0.6.33's) */
+        uint32_t kb = (uint32_t)rr(3, 6), ks = (uint32_t)rr(2, 4), kh = (uint32_t)rr(7, 13), rot = (uint32_t)rr(0, 7);
         for (i = 0; i < len; i++) {
             step_t *s = &t->step[i];
-            uint32_t h = 0, b = i / 16u;
+            uint32_t h = 0, b = i / 16u;                /* (each bar its own: the hats denser or sparser, the kick turned) */
             if (euclid(i, kb, 16, rot + (b == 3u ? 2u : 0u))) h |= 1u << 0;
             if (euclid(i, ks, 16, rot + 4u) && !(h & 1u)) h |= 1u << (chance(50) ? 1 : 6);
-            if (euclid(i, kh + (b & 1u) * 2u, 16, b) && (e || chance(40))) h |= 1u << (chance(20) ? 4 : 3);
+            if (euclid(i, kh + (b & 1u) * 2u - (b == 2u ? 3u : 0u), 16, b)) h |= 1u << (chance(20) ? 4 : 3);
             if (chance(8)) h |= 1u << (5u + rng() % 3u);
             if (!h) continue;
             s->time = ST_NOTE; s->hit = (uint8_t)h; s->acc = (uint8_t)(i % 4u == 0u ? h & 1u : 0u);
             s->vel = (uint8_t)(h & 1u ? 104 : rr(70, 100));
-            if ((h & (1u << 3)) && chance(e == 2u ? 40 : 15)) step_set_ratchet(s, (uint32_t)rr(2, 4));
+            if ((h & (1u << 3)) && chance(25)) step_set_ratchet(s, (uint32_t)rr(2, 4));
             if (!(h & 1u) && chance(30)) step_set_chance(s, (uint32_t)rr(45, 85));
         }
         return;
@@ -220,7 +221,7 @@ static void dice_drums(track_t *t, const dstyle_t *st, uint32_t len)
     for (i = 0; i < len; i++) {
         step_t *s = &t->step[i];
         uint32_t h = 0, a = 0, ghost = 0, p = i % 16u;
-        uint32_t fill = len > 16u && i >= len - 4u && st->drums != DS_DEEP && st->drums != DS_SPARSE && e;
+        uint32_t fill = len > 16u && i >= len - 4u && st->drums != DS_DEEP && st->drums != DS_SPARSE;
         for (l = 0; l < NLANE; l++) {
             const char *b = DRUM_BAR[st->drums][l];
             char c = b && b[0] ? b[p] : '.';
@@ -228,8 +229,6 @@ static void dice_drums(track_t *t, const dstyle_t *st, uint32_t len)
             if (c == 'a') a |= 1u << l;
             if (c == 'g') ghost = 1;
         }
-        if (e == 0u && (h & 0x18u) && chance(65)) h &= ~0x18u;   /* (SPACE: the hats mostly gone) */
-        if (e == 2u && !(h & 0x18u) && p % 2u == 1u && chance(35)) { h |= 1u << 3; ghost = 1; }   /* (FRANTIC: more) */
         if (fill) {
             if (chance(50)) h |= 1u << (chance(50) ? 1 : 5);
             h &= ~(1u << 4);
@@ -239,85 +238,12 @@ static void dice_drums(track_t *t, const dstyle_t *st, uint32_t len)
         s->time = ST_NOTE; s->hit = (uint8_t)h; s->acc = (uint8_t)a;
         s->vel = (uint8_t)(ghost && !a ? rr(62, 82) : rr(96, 110));
         if (fill && chance(40)) step_set_ratchet(s, 2);
-        if ((h & (1u << 3)) && chance(e == 2u ? 14 : 4)) step_set_ratchet(s, 2);
+        if ((st->drums == DS_ELECTRO || st->drums == DS_MINIMAL || st->drums == DS_HARD) && (h & (1u << 3)) && chance(10))
+            step_set_ratchet(s, 2);
         if (!(h & 1u) && (st->drums == DS_MINIMAL || st->drums == DS_DEEP || st->drums == DS_SPARSE) && chance(15))
             step_set_chance(s, (uint32_t)rr(50, 85));
     }
 }
-/* the kit: a family built on the DRUM-X kit (each sound's wave, pitch modulation, drive, decay, pitch, noise and
- * colour moved, both patches), then the kit's knobs (TONE DECAY NOISE FM FOLD DRIVE) */
-static uint8_t kmode(uint8_t m, int32_t w, int32_t pm, int32_t drv)   /* -1: keep that field */
-{
-    if (w >= 0) m = (uint8_t)((m & ~3u) | (uint32_t)w);
-    if (pm >= 0) m = (uint8_t)((m & ~(3u << 5)) | (uint32_t)pm << 5);
-    if (drv >= 0) m = (uint8_t)(drv ? m | DX_DRIVE : m & ~DX_DRIVE);
-    return m;
-}
-static void kmove(dx_lane_t *L, int32_t pitch, int32_t decay, int32_t noise, int32_t color)
-{
-    uint8_t *ab[2] = {L->a, L->b};
-    uint32_t k;
-    for (k = 0; k < 2u; k++) {
-        ab[k][DXP_PITCH] = (uint8_t)clamp(ab[k][DXP_PITCH] + pitch + rr(-3, 3), 0, 127);
-        ab[k][DXP_DECAY] = (uint8_t)clamp(ab[k][DXP_DECAY] + decay + rr(-4, 4), 0, 127);
-        ab[k][DXP_NOISE] = (uint8_t)clamp(ab[k][DXP_NOISE] + noise, 0, 127);
-        ab[k][DXP_COLOR] = (uint8_t)clamp(ab[k][DXP_COLOR] + color + rr(-4, 4), 0, 127);
-    }
-}
-static void dice_kit(track_t *t, uint32_t kt)
-{
-    uint32_t l;
-    int16_t *p = t->p;
-    for (l = 0; l < 8u; l++) dx_kit[l] = DX_KIT_DEF[l];
-    dh.kit = kt;
-    switch (kt) {
-    case KT_808:                                        /* the boom: a long pitch fall, deep toms, soft hats */
-        dx_kit[DV_KICK].mode = kmode(dx_kit[DV_KICK].mode, DXW_SINE, DXM_LONG, 0);
-        kmove(&dx_kit[DV_KICK], -3, 26, -4, -10); kmove(&dx_kit[DV_TOM], -6, 14, 0, -10);
-        kmove(&dx_kit[DV_HATC], -6, 0, 0, -18); kmove(&dx_kit[DV_HATO], -6, 0, 0, -18);
-        p[P_E2] = (int16_t)rr(48, 62); p[P_E3] = (int16_t)rr(64, 84); p[P_E7] = 0; p[P_E6] = 0; break;
-    case KT_HARD:                                       /* driven kick, big clap, bright metal hats, folded */
-        dx_kit[DV_KICK].mode = kmode(dx_kit[DV_KICK].mode, DXW_SINE, DXM_DECAY, 1);
-        kmove(&dx_kit[DV_KICK], 2, 6, 6, 20); kmove(&dx_kit[DV_CLAP], 0, 14, 0, 6);
-        dx_kit[DV_TOM].mode = kmode(dx_kit[DV_TOM].mode, -1, -1, 1);
-        p[P_E2] = (int16_t)rr(62, 80); p[P_E3] = (int16_t)rr(48, 62); p[P_E7] = (int16_t)rr(60, 105);
-        p[P_E6] = (int16_t)rr(15, 45); break;
-    case KT_CLICK:                                      /* minimal: short, dry, clicks and blips */
-        for (l = 0; l < 8u; l++) kmove(&dx_kit[l], 0, -20, -6, 0);
-        kmove(&dx_kit[DV_KICK], 6, 6, 0, 0);
-        dx_kit[DV_RIM].mode = kmode(dx_kit[DV_RIM].mode, DXW_BELL, -1, -1);
-        dx_kit[DV_BELL].mode = kmode(dx_kit[DV_BELL].mode, DXW_FM, DXM_SINE, -1);
-        p[P_E2] = (int16_t)rr(55, 70); p[P_E3] = (int16_t)rr(30, 46); p[P_E7] = 0; p[P_E6] = 0; break;
-    case KT_INDUS:                                      /* metal, noise, the pitch scrambled */
-        dx_kit[DV_SNARE].mode = kmode(dx_kit[DV_SNARE].mode, DXW_METAL, DXM_NOISE, -1);
-        dx_kit[DV_CLAP].mode = kmode(dx_kit[DV_CLAP].mode, DXW_METAL, -1, -1);
-        dx_kit[DV_TOM].mode = kmode(dx_kit[DV_TOM].mode, DXW_FM, DXM_NOISE, 1);
-        kmove(&dx_kit[DV_SNARE], -4, 10, 14, 0); kmove(&dx_kit[DV_TOM], 0, 0, 30, 10);
-        p[P_E2] = (int16_t)rr(55, 72); p[P_E4] = (int16_t)rr(64, 90); p[P_E5] = (int16_t)rr(35, 80);
-        p[P_E6] = (int16_t)rr(25, 65); p[P_E7] = (int16_t)rr(20, 60); break;
-    case KT_SOFT:                                       /* round, brushed, warm */
-        kmove(&dx_kit[DV_KICK], 0, 4, 0, -14); kmove(&dx_kit[DV_SNARE], 0, 4, 12, -24);
-        dx_kit[DV_SNARE].mode = (uint8_t)((dx_kit[DV_SNARE].mode & ~(3u << 2)) | (uint32_t)DXF_LP << 2);
-        kmove(&dx_kit[DV_HATC], -4, 2, 0, -24); kmove(&dx_kit[DV_HATO], -4, -8, 0, -24);
-        p[P_E2] = (int16_t)rr(38, 54); p[P_E3] = (int16_t)rr(54, 70); p[P_E7] = 0; p[P_E6] = 0; break;
-    case KT_GLITCH:                                     /* bells, lasers, grit, short */
-        dx_kit[DV_RIM].mode = kmode(dx_kit[DV_RIM].mode, DXW_BELL, DXM_NOISE, -1);
-        dx_kit[DV_BELL].mode = kmode(dx_kit[DV_BELL].mode, DXW_BELL, DXM_SINE, -1);
-        dx_kit[DV_TOM].mode = kmode(dx_kit[DV_TOM].mode, DXW_FM, DXM_SINE, -1);
-        dx_kit[DV_CLAP].mode = kmode(dx_kit[DV_CLAP].mode, -1, DXM_NOISE, -1);
-        for (l = 2; l < 8u; l++) kmove(&dx_kit[l], rr(-8, 8), -14, 0, 0);
-        p[P_E2] = (int16_t)rr(50, 70); p[P_E3] = (int16_t)rr(36, 56); p[P_E5] = (int16_t)rr(15, 55); p[P_E7] = 0; break;
-    default:                                            /* KT_ELECTRO: 808 and 909 together, a snappy snare */
-        kmove(&dx_kit[DV_KICK], -2, 12, 0, 0); kmove(&dx_kit[DV_SNARE], 2, -6, 6, 8);
-        p[P_E2] = (int16_t)rr(56, 72); p[P_E3] = (int16_t)rr(52, 70); p[P_E7] = (int16_t)rr(0, 30); p[P_E6] = 0; break;
-    }
-    p[P_E0] = (int16_t)rr(20, 100);                     /* MORPH: somewhere between A and B */
-    p[P_E1] = (int16_t)rr(52, 70);                      /* TUNE */
-    t->p[P_FTYPE] = 0;                                  /* the kit through a soft low-pass: the hats not glassy */
-    t->p[P_FCUT] = (int16_t)(kt == KT_HARD ? rr(108, 120) : rr(100, 116));
-    t->p[P_FRES] = (int16_t)rr(0, 18);
-}
-
 /* ---- the chords: degree d's four notes from the tonic t0 in the voicing, then led (each note an octave up or down)
  * to the nearest of the last chord inside [t0 - 2, t0 + 17] (C3..F4 or so): no leaps, a middle register */
 static uint32_t dchord(const track_t *t, int32_t t0, int32_t d, uint32_t vc, int32_t *n)
@@ -730,7 +656,9 @@ static int8_t dice_force_style = -1, dice_force_energy = -1;   /* (a film's scri
 static void dice_one(void)
 {
     const dstyle_t *st = &DSTYLE[dice_force_style >= 0 ? (uint32_t)dice_force_style % NDSTYLE :
-                                 chance(25) ? rng() % DSTYLE_IDM : rng() % NDSTYLE];   /* (IDM, DARK IDM more often) */
+                                 chance(25) ? rng() % DSTYLE_IDM : chance(80) ? rng() % DSTYLE_DARK :
+                                 DSTYLE_DARK + rng() % (NDSTYLE - DSTYLE_DARK)];   /* (IDM, DARK IDM most often; the night's
+                                                         * genres four times in five, 0.6.35) */
     uint32_t k, dr = NTRK, role[NTRK], nlive = trk_live < NTRK ? trk_live : NTRK, act[RL_N], nmel, drums, next;
     int16_t root = (int16_t)rr(0, 11), scale = (int16_t)st->scale[rng() % 4u];
     uint32_t pr = rng() % 3u, wet;
@@ -753,7 +681,8 @@ static void dice_one(void)
         if (chance(30)) { uint32_t a = 1u + rng() % 3u; uint8_t x = pri[a]; pri[a] = pri[a + 1u]; pri[a + 1u] = x; }
         nmel = dh.energy == 0u ? (uint32_t)rr(2, 3) : dh.energy == 1u ? (uint32_t)rr(3, 4) : 5u;
         drums = st->drums != DS_NONE &&
-                chance((uint32_t)clamp((int32_t)st->drum_pct + (dh.energy == 0u ? -30 : dh.energy == 2u ? 20 : 0), 0, 100));
+                chance((uint32_t)clamp((int32_t)st->drum_pct - (dh.energy == 0u ? 10 : 0), 0, 100));   /* (0.6.35: the
+                                                         * drums as in 0.6.33: almost always, in the night's genres) */
         if (!drums && nmel < 3u && pri[0] != RL_PAD && pri[1] != RL_PAD) nmel = 3u;
         for (k = 0; k < RL_N; k++) act[k] = 0;
         act[RL_DRUM] = drums;
@@ -783,7 +712,13 @@ static void dice_one(void)
         if (chance(st->odd) && (r == RL_ARP || r == RL_TEX || (r == RL_LEAD && chance(40))))
             len = (uint32_t)rr(5, 7) * 2u + (chance(50) ? 1u : 0u);   /* (an odd loop against the others: 10 .. 15) */
         if (dh.twist == TW_POLY && r == RL_LEAD) len = chance(50) ? 12u : 20u;   /* (a lead in another metre) */
-        if (r == RL_DRUM) dice_kit(t, st->kit[rng() & 1u]);
+        if (r == RL_DRUM) {                             /* (0.6.35: the kit as 0.6.33 made it, it sounded better: the
+                                                         * DRUM-X kit diced around the factory one, a soft low-pass) */
+            if (chance(70)) sound_dice_of(t, 1);
+            t->p[P_FTYPE] = 0;
+            t->p[P_FCUT] = (int16_t)rr(100, 116);
+            t->p[P_FRES] = (int16_t)rr(0, 18);
+        }
         else dice_sound(t, r, r == RL_BASS ? st->e_bass : r == RL_PAD ? st->e_pad : r == RL_LEAD ? st->e_lead :
                               r == RL_ARP ? st->e_arp : st->e_tex);
         t->p[P_ROOT] = root; t->p[P_SCALE] = scale;
