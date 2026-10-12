@@ -49,7 +49,7 @@ Guardá tus archivos WAV.
 ### Tu primer sonido (1 minuto)
 
 1. Encendé el equipo. La firma se dibuja sola y después llegás a **HOME**: seis criaturas, una por pista.
-2. Girá **ALGORITHM** para elegir una pista (T1–T6). Con el valor por defecto, **TRACKS 4**, usá T1–T4 (ver
+2. Girá **ALGORITHM** para elegir una pista (T1–T6). Con el valor por defecto, **TRACKS 4**, se detiene en T4: T5 y T6 aparecen solo con TRACKS 6 (ver
    [13](#13-sistema-tracks-load-y-el-menu)).
 3. Girá **PRESETS** para recorrer sonidos. Tocá las teclas.
 4. Girá **KNOB 1–4**: en HOME son los cuatro controles más útiles del motor de la pista.
@@ -85,7 +85,7 @@ Los nombres de abajo son los que usa el firmware (la pantalla HARDWARE CALIBRATI
 | Control | Qué hace |
 | --- | --- |
 | **SELECT** (encoder) | En **HOME**: abre **DICE EVERYTHING?** (el generador de ideas de temas). En las páginas **EDIT**: tira a los dados el sonido de la pista seleccionada. En las páginas de **GLO (MIXER, GLOBAL, SYSTEM)**, o con **GLO mantenido** en cualquier lado: el tempo (BPM). Con las macros abiertas o enganchadas: tira rutas de macro nuevas. En las demás páginas dice **DICE: HOME / EDIT**. |
-| **ALGORITHM** (encoder) | Elige la pista, T1–T6, desde cualquier página. En el MENU: cambia de pestaña. |
+| **ALGORITHM** (encoder) | Elige la pista desde cualquier página: T1–T4, o T1–T6 con TRACKS 6. En el MENU: cambia de pestaña. |
 | **PRESETS** (encoder) | En HOME, PRESETS y las páginas de sonido: recorre sonidos (los presets de fábrica de cada motor y después tus presets de usuario). En las páginas de pasos (STEP, COMP, PATTERN, AUTOMATION, SHIFT): mueve el cursor de paso. En las páginas de lista (USER, PROJECT, ARRANGE, TOOLS, AUTO LIST): mueve la selección. **Mantené un botón de página y girá PRESETS** para saltar directo por las páginas de ese botón. |
 | **KNOB 1–4** | Las cuatro tarjetas (columnas) de la pantalla. Con una capa mantenida, las perillas propias de la capa. Girar rápido recorre todo el rango, despacio ajusta fino (MENU > KNOB ACCEL lo desactiva). |
 | **MASTER** | El volumen de salida. |

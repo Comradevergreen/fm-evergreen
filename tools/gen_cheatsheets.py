@@ -7,7 +7,7 @@ import html, os
 
 R = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(R, 'docs', 'cheatsheet')
-VERSION = 'v0.6.54'
+VERSION = 'v0.6.55'
 
 HEAT = ['#22d3ee', '#3b82f6', '#8b5cf6', '#d946ef', '#ef4444', '#ff7a00', '#facc15', '#f4f1ea']
 
@@ -130,7 +130,7 @@ def controls():
                    'GLO\'s pages or GLO held: the tempo. Macros open (LFO held or latched): new random routes.'),
         ('PRESETS', 'Browses the sounds (factory and user). On step, list and song pages: the cursor / the row. '
                     '<b>Hold a page button + PRESETS: jump through its pages.</b>'),
-        ('ALGORITHM', 'Selects the track, T1–T6, from any page.'),
+        ('ALGORITHM', 'Selects the track from any page: T1–T4, or T1–T6 with TRACKS 6.'),
         ('KNOB 1–4', 'The four columns on screen. Fast sweeps the whole range, slow fine-tunes. With a layer held: '
                      'the layer\'s.'),
         ('OCT− · OCT+', 'The keyboard\'s octave (both together: back to 0). On action pages and dialogs: back / confirm.'),

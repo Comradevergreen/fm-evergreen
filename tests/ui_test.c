@@ -1447,6 +1447,21 @@ static int test_tracks(void)
     bad += check("MIXER KNOB 4 left: MUTE OFF", trk[0].p[P_MUTE] == 0);
     turn(EN_ALGO, 1);
     bad += check("ALGORITHM selects the track", song.sel == 1);
+    {   /* (0.6.55) TRACKS 4: ALGORITHM stops at T4, T5 / T6 are not offered; TRACKS 6 reaches T6; back to 4 from T6: T4 */
+        uint32_t k;
+        trks_put(0);
+        for (k = 0; k < 8u; k++) turn(EN_ALGO, 1);
+        bad += check("TRACKS 4: ALGORITHM stops at T4", song.sel == 3);
+        trks_put(1);
+        for (k = 0; k < 8u; k++) turn(EN_ALGO, 1);
+        bad += check("TRACKS 6: ALGORITHM reaches T6", song.sel == 5);
+        trks_put(0);
+        ui_input();
+        bad += check("TRACKS 6 -> 4 on T6: T4 selected", song.sel == 3);
+        for (k = 0; k < 8u; k++) turn(EN_ALGO, -1);
+        bad += check("ALGORITHM back down to T1", song.sel == 0);
+        turn(EN_ALGO, 1);
+    }
     return bad;
 }
 
