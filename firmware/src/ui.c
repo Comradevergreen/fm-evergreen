@@ -1048,6 +1048,18 @@ static void set_engine_of(track_t *t, uint32_t ei)
 
 static void apply_preset(uint32_t pi) { apply_preset_to(TSEL, pi); }
 static void set_engine(uint32_t ei) { set_engine_of(TSEL, ei); }
+/* (0.6.46) INIT SOUND, NEW PROJECT: the engine's defaults and first sound, but dry (no DIST CHOR DLY REV send: the
+ * effects are the player's to add) and on FM6 the init voice instead of a factory patch */
+static void init_sound_of(track_t *t, uint32_t ei)
+{
+    uint32_t i;
+    load_begin(t, LOAD_SOUND);
+    set_engine_of(t, ei);
+    for (i = 0; i < 4u; i++)
+        t->p[P_DIST + i] = 0;
+    fm6_init_voice(t);
+    load_end(t);
+}
 
 static void track_defaults(track_t *t)
 {

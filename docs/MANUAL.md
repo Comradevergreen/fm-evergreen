@@ -250,7 +250,7 @@ and heating up with its own audio. The selected track is drawn bigger, a muted o
 | USER | SLOT (U01–U32) | LOAD (action) | ERASE (action) | SAVE (action) |
 | PROJECT | PROJ (1–8) | SECT (A–D) | LOAD (action) | SAVE (action) |
 | ARRANGE | ROW | SECT (on END: STOP / x2–x8 / LOOP) | BARS | SCENE |
-| TOOLS | any knob or PRESETS picks from the list: CLEAR SEQ, INIT SOUND, DELETE ROW, CLEAR SONG, INIT SYSTEM | | | |
+| TOOLS | any knob or PRESETS picks from the list: CLEAR SEQ, INIT SOUND, DELETE ROW, CLEAR SONG, NEW PROJECT | | | |
 
 **ARP** (per track)
 
@@ -308,8 +308,8 @@ and heating up with its own audio. The selected track is drawn bigger, a muted o
 
 **SCL** — any key sets the ROOT to its note name. Knobs: ROOT, SCALE, OFFSET, PITCH (the last two are SEQ > SHIFT's).
 
-**EDIT** — F3 **INIT** (the track's sound back to its engine's first factory preset; on DRUM the factory DRUM-X kit
-too), G3 **RECALL** (the sound as the current section stored it; on DRUM with its kit). Both ask first and leave the
+**EDIT** — F3 **INIT** (the track's sound back to its engine's first factory preset, dry: every effect send at 0; FM6 the init
+voice, OP1 alone at full level; on DRUM the factory DRUM-X kit too), G3 **RECALL** (the sound as the current section stored it; on DRUM with its kit). Both ask first and leave the
 steps alone. On a DRUM track, black keys 1–8 mute each DRUM-X sound (BD SD CP CH OH TM RS CB). Knobs: EDIT 1's four.
 
 **SEQ TOOLS** (only on STEP, PATTERN, AUTOMATION and SHIFT) — F3 CLEAR, G3 REVERSE, A3 / B3 SHIFT left / right,
@@ -382,7 +382,7 @@ every engine) or with KNOB 2 (ENG) on SAVE > PRESETS. Each track's four HOME kno
 - **VOICE**: a formant voice (after klattsch): vowels, talk, breath.
 - **WHEEL**: a drawbar organ: registrations (REG), percussion (PERC: OFF, 2ND, 3RD, 2SOFT, 3SOFT, 2SLOW, 3SLOW),
   key click, drive, ROTOR (OFF, SLOW, FAST).
-- **NOISE**: coloured and metallic noise. MODE: ANLG, DUST, LFSR, META. PEAK is its own resonance.
+- **NOISE**: coloured and metallic noise. MODE: ANLG, DUST, LFSR, META (DUST is only the crackle: at DENS 0 it still crackles softly). PEAK is its own resonance.
 - **DRUM**: DRUM-X, see [5](#5-drum-x).
 
 ### FILTER (every engine)
@@ -529,7 +529,7 @@ sounding after you let go; the next chord replaces them.
 | --- | --- |
 | The selected track's steps and automation | **REC held + F3**, or SAVE > TOOLS > CLEAR SEQ, or SEQ TOOLS F3 |
 | All six tracks' steps, automation and the punch-in lane | **SEQ held + REC**, then OCT+ |
-| **Everything** (INIT SYSTEM): every track its engine's default sound, no steps or automation, the mix, effects, tempo and SLICER at their defaults, the song empty, macros at 0, the factory DRUM-X kit. Saved projects, user presets, MENU, CLOCK, TUNE and MIDI stay | **SAVE > TOOLS > 5 INIT SYSTEM**, then OCT+ (UNDO brings the music back) |
+| **Everything** (NEW PROJECT): every track its engine's default sound (dry, FM6 the init voice), no steps or automation, the mix, effects, tempo and SLICER at their defaults, the song empty, macros at 0, the factory DRUM-X kit. Saved projects, user presets, MENU, CLOCK, TUNE and MIDI stay | **SAVE > TOOLS > 5 NEW PROJECT**, then OCT+ (UNDO brings the music back) |
 | Only one part's automation on the selected track | **REC held + FX / EDIT / ENV / LFO / SCL / ARP / GLO** |
 | The track's automation, keeping the steps | SEQ TOOLS **F4 CLR AUTO**, or SEQ > AUTOMATION > CLEAR |
 
@@ -664,7 +664,7 @@ One step back over the **last big change**. Pressing it again goes forward (redo
 G4 breathes on the GLO map when there is something to undo; with nothing, it says **NOTHING TO UNDO**.
 
 **UNDO covers**: DICE ALL, a sound diced, a track cleared (REC F3, TOOLS CLEAR SEQ), CLEAR ALL SEQUENCES (SEQ + REC),
-INIT SYSTEM, INIT and RECALL (EDIT layer or TOOLS), clearing the automation (SEQ > AUTOMATION),
+NEW PROJECT, INIT and RECALL (EDIT layer or TOOLS), clearing the automation (SEQ > AUTOMATION),
 and a section loaded with **SAVE > PROJECT > LOAD**. It restores the music as it was: sounds, steps, automation, the
 kit, the punch-in lane, the macros, the tempo and global effects.
 
@@ -828,7 +828,7 @@ This is the chapter to read carefully. JIANT keeps several kinds of data in diff
   button is held and nothing is sounding, and **at most once a minute**.
 - It does **not** save when you switch off. If you change something and power off within those seconds, that last
   change is lost. To be safe: **stop, wait ~10 s**, or better, save into a section.
-- At power-on the device starts at zero, as **INIT SYSTEM** leaves it (every track its engine's default sound, no
+- At power-on the device starts at zero, as **NEW PROJECT** leaves it (every track its engine's default sound, no
   steps). With **MENU > SYSTEM > RESTORE LAST ON** the autosave becomes the music instead (the screen says
   **RESTORED**). RESTORE LAST is **OFF** by default since 0.6.40: no autosave at all.
 - After a crash, a hang or a failed start, the autosave is not restored (the music that was playing could be what

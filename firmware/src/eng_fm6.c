@@ -237,6 +237,21 @@ static void fm6_track_loaded(const track_t *t)
     }
 }
 
+/* (0.6.46) INIT SOUND / NEW PROJECT: track t the init voice (OP1 alone at 99, the rates at 99: a plain sine) as its
+ * own patch (SLOT OWN), nothing kept aside */
+static void fm6_init_voice(track_t *t)
+{
+    uint8_t v[FP_SIZE + 1u];
+    uint32_t tr = (uint32_t)(t - trk);
+    if (tr >= NTRK || t->eng_req != ENGI_FM6)
+        return;
+    fm6_unpack(FM6_INIT, v);
+    fm6_set_patch(tr, v);
+    fm6_own_ok &= (uint8_t)~(1u << tr);
+    fm6_slot[tr] = FM6_OWN;
+    t->p[P_E7] = FM6_OWN;
+}
+
 /* power-on: every track the init voice (what a project stores for the tracks that never played FM6) */
 static void fm6_init(void)
 {

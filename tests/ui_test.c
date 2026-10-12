@@ -653,6 +653,50 @@ static int test_morph(void)
     bad += check("EDIT > MORPH on ANALOG, not on FM6", ok);
     return bad;
 }
+/* (0.6.46) INIT SOUND dry (no effect sends), FM6 the init voice (OP1 alone at 99, SLOT OWN); NOISE DUST at DENS 0
+ * still crackles */
+static int test_init_dry(void)
+{
+    int bad = 0, ok = 1;
+    uint32_t k;
+    const uint8_t *pt;
+    ui_power_on();
+    set_engine_of(TSEL, ENGI_FM6);
+    TSEL->engine = TSEL->eng_req;
+    for (k = 0; k < 4u; k++) TSEL->p[P_DIST + k] = 50;
+    init_sound_of(TSEL, ENGI_FM6);
+    for (k = 0; k < 4u; k++) ok &= TSEL->p[P_DIST + k] == 0;
+    pt = fm6_patch[song.sel % NTRK];
+    ok &= TSEL->p[P_E7] == FM6_OWN && pt[5u * FP_OP + FP_OL] == 99;
+    for (k = 1; k < 6u; k++) ok &= pt[(5u - k) * FP_OP + FP_OL] == 0;
+    fm6_poll();
+    ok &= fm6_patch[song.sel % NTRK][5u * FP_OP + FP_OL] == 99 && fm6_patch[song.sel % NTRK][4u * FP_OP + FP_OL] == 0;
+    bad += check("INIT SOUND: dry (sends 0), FM6 the init voice (OP1 alone, SLOT OWN)", ok);
+    set_engine_of(TSEL, ENGI_ANALOG);
+    init_sound_of(TSEL, ENGI_ANALOG);
+    for (k = 0, ok = 1; k < 4u; k++) ok &= TSEL->p[P_DIST + k] == 0;
+    bad += check("INIT SOUND on ANALOG: dry", ok);
+    {
+        int32_t o[2u * CTL], pk = 0;
+        uint32_t b, i;
+        track_t *t;
+        ui_power_on();
+        t = &trk[0];
+        for (k = 1; k < NTRK; k++) trk[k].p[P_MUTE] = 1;
+        set_engine_of(t, 11u);                                  /* NOISE */
+        t->engine = t->eng_req;
+        t->p[P_E0] = 1;                                         /* DUST */
+        t->p[P_E5] = 0;                                         /* DENS 0 */
+        for (b = 0; b < 8u; b++) mix_block(o, CTL);
+        trk_note_on(t, 60, 100);
+        for (b = 0; b < 400u; b++) {
+            mix_block(o, CTL);
+            for (i = 0; i < 2u * CTL; i++) pk = o[i] > pk ? o[i] : -o[i] > pk ? -o[i] : pk;
+        }
+        bad += check("NOISE DUST at DENS 0 still crackles", pk > 200);
+    }
+    return bad;
+}
 static int test_patterns(void)
 {
     int bad = 0;
@@ -1027,16 +1071,16 @@ static int test_init_system(void)
         go_title("TOOLS"); tools_pick(5); press(B_OCTUP);
         ok2 = ui.confirm == CF_INIT_SYS && trk[0].step[2].n == 1u;
         press(B_OCTUP);
-        ok2 &= !ui.confirm && msg_is("SYSTEM INIT") && chain_config.count == 0u;
+        ok2 &= !ui.confirm && msg_is("NEW PROJECT") && chain_config.count == 0u;
         for (k = 0; k < NTRK; k++)
             ok2 &= seq_is_empty(&trk[k]) && !motion_count(&trk[k]) && trk[k].eng_req == trk_def_engine(k);
         ok2 &= trk[2].p[P_LEVEL] != 30 && trk[2].p[P_REV] != 90;   /* (the first sound's level and sends) */
         ok2 &= song.g[G_BPM] == GP[G_BPM].def && song.g[G_RTYPE] == GP[G_RTYPE].def && !macro_v[1] && !dx_tone &&
                !dx_mot[XM_DPTH] && !pfx_lane[3] && !memcmp(dx_kit, DX_KIT_DEF, sizeof dx_kit);
         ok2 &= song.g[G_TUNE] == 5 && song.g[G_CLOCK] == 1;       /* (the setup stays) */
-        bad += check("TOOLS 5 INIT SYSTEM: everything as at power-on, CLOCK and TUNE kept", ok2);
+        bad += check("TOOLS 5 NEW PROJECT: everything as at power-on, CLOCK and TUNE kept", ok2);
         ok2 = !undo_do() && steps_sig(&trk[0]) == sig0 && trk[2].p[P_LEVEL] == 30 && song.g[G_BPM] == 97;
-        bad += check("  UNDO after INIT SYSTEM: the music back", ok2);
+        bad += check("  UNDO after NEW PROJECT: the music back", ok2);
         song.g[G_TUNE] = GP[G_TUNE].def; song.g[G_CLOCK] = GP[G_CLOCK].def;
         memset(macro_v, 0, sizeof macro_v); dx_tone = 0; memset(dx_mot, 0, sizeof dx_mot); pfx_lane[3] = 0;   /* (UNDO brought them) */
     }
@@ -8036,6 +8080,7 @@ int main(void)
     bad += test_transitions();
     bad += test_mutate();
     bad += test_morph();
+    bad += test_init_dry();
     bad += test_rec();
     bad += test_step_rec();
     bad += test_step_rec();

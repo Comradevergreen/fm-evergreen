@@ -63,7 +63,9 @@ jobs:
         run: |
           python3 tools/build.py
           V=$(sed -n 's/^#define FELUCCA_VERSION "\([^"]*\)".*/\1/p' firmware/src/felucca.c | head -1)
-          python3 web/make_site.py build/felucca.fwsc "${V:-dev}-${GITHUB_SHA::7}" build/site
+          # (0.6.46) the versions the site offers now stay installable (the last few, web/fetch_prev.py)
+          python3 web/fetch_prev.py "https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}" build/prev || true
+          python3 web/make_site.py build/felucca.fwsc "${V:-dev}-${GITHUB_SHA::7}" build/site build/prev
           cp -r build/site/webapp build/site/firmware build/emu/
       - uses: actions/upload-pages-artifact@v3
         with:

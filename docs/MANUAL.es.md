@@ -257,7 +257,7 @@ a la derecha); apretá OCT+ para ejecutarla.
 | USER | SLOT (U01–U32) | LOAD (acción) | ERASE (acción) | SAVE (acción) |
 | PROJECT | PROJ (1–8) | SECT (A–D) | LOAD (acción) | SAVE (acción) |
 | ARRANGE | ROW | SECT (en END: STOP / x2–x8 / LOOP) | BARS | SCENE |
-| TOOLS | cualquier perilla o PRESETS elige de la lista: CLEAR SEQ, INIT SOUND, DELETE ROW, CLEAR SONG, INIT SYSTEM | | | |
+| TOOLS | cualquier perilla o PRESETS elige de la lista: CLEAR SEQ, INIT SOUND, DELETE ROW, CLEAR SONG, NEW PROJECT | | | |
 
 **ARP** (por pista)
 
@@ -316,7 +316,8 @@ a la derecha); apretá OCT+ para ejecutarla.
 **SCL** — cualquier tecla fija la ROOT (tónica) en el nombre de su nota. Perillas: ROOT, SCALE, OFFSET, PITCH (las dos
 últimas son las de SEQ > SHIFT).
 
-**EDIT** — F3 **INIT** (el sonido de la pista vuelve al primer preset de fábrica de su motor; en DRUM, también el kit
+**EDIT** — F3 **INIT** (el sonido de la pista vuelve al primer preset de fábrica de su motor, seco: todos los envíos a efectos
+en 0; en FM6 la voz init, solo OP1 a nivel máximo; en DRUM, también el kit
 DRUM-X de fábrica), G3 **RECALL** (el sonido tal como lo guardó la sección actual; en DRUM, con su kit). Los dos
 preguntan antes y no tocan los pasos. En una pista DRUM, las teclas negras 1–8 mutean cada sonido de DRUM-X (BD SD CP
 CH OH TM RS CB). Perillas: las cuatro de EDIT 1.
@@ -396,7 +397,7 @@ click; las notas siguen.
 - **VOICE**: una voz por formantes (basada en klattsch): vocales, habla, aliento.
 - **WHEEL**: un órgano de drawbars: registraciones (REG), percusión (PERC: OFF, 2ND, 3RD, 2SOFT, 3SOFT, 2SLOW,
   3SLOW), click de tecla, drive, ROTOR (OFF, SLOW, FAST).
-- **NOISE**: ruido coloreado y metálico. MODE: ANLG, DUST, LFSR, META. PEAK es su propia resonancia.
+- **NOISE**: ruido coloreado y metálico. MODE: ANLG, DUST, LFSR, META (DUST es solo el crepitar: con DENS en 0 igual crepita suave). PEAK es su propia resonancia.
 - **DRUM**: DRUM-X, ver [5](#5-drum-x).
 
 ### FILTER (todos los motores)
@@ -554,7 +555,7 @@ las notas sonando después de soltarlas; el acorde siguiente las reemplaza.
 | --- | --- |
 | Los pasos y la automatización de la pista seleccionada | **REC mantenido + F3**, o SAVE > TOOLS > CLEAR SEQ, o SEQ TOOLS F3 |
 | Los pasos y la automatización de las seis pistas, y el carril de punch-in | **SEQ mantenido + REC**, después OCT+ |
-| **Todo** (INIT SYSTEM): cada pista con el sonido por defecto de su motor, sin pasos ni automatización; mezcla, efectos, tempo y SLICER por defecto; el arreglo vacío, las macros en 0, el kit DRUM-X de fábrica. Quedan los proyectos guardados, los presets de usuario, el MENU, CLOCK, TUNE y MIDI | **SAVE > TOOLS > 5 INIT SYSTEM**, después OCT+ (UNDO devuelve la música) |
+| **Todo** (NEW PROJECT): cada pista con el sonido por defecto de su motor (seco, FM6 con la voz init), sin pasos ni automatización; mezcla, efectos, tempo y SLICER por defecto; el arreglo vacío, las macros en 0, el kit DRUM-X de fábrica. Quedan los proyectos guardados, los presets de usuario, el MENU, CLOCK, TUNE y MIDI | **SAVE > TOOLS > 5 NEW PROJECT**, después OCT+ (UNDO devuelve la música) |
 | Solo la automatización de una parte en la pista seleccionada | **REC mantenido + FX / EDIT / ENV / LFO / SCL / ARP / GLO** |
 | La automatización de la pista, conservando los pasos | SEQ TOOLS **F4 CLR AUTO**, o SEQ > AUTOMATION > CLEAR |
 
@@ -698,7 +699,7 @@ Un paso atrás sobre el **último cambio grande**. Apretarlo otra vez va hacia a
 sonando. G4 "respira" en el mapa de GLO cuando hay algo para deshacer; si no hay nada, dice **NOTHING TO UNDO**.
 
 **UNDO cubre**: DICE ALL, un sonido tirado a los dados, una pista borrada (REC F3, TOOLS CLEAR SEQ), CLEAR ALL
-SEQUENCES (SEQ + REC), INIT SYSTEM, INIT y RECALL (capa EDIT o TOOLS), borrar la automatización
+SEQUENCES (SEQ + REC), NEW PROJECT, INIT y RECALL (capa EDIT o TOOLS), borrar la automatización
 (SEQ > AUTOMATION) y una sección cargada con **SAVE > PROJECT > LOAD**. Restaura la música tal como estaba: sonidos,
 pasos, automatización, el kit, el carril de punch-in, las macros, el tempo y los efectos globales.
 
@@ -873,7 +874,7 @@ distintas.
   no hay ninguna tecla ni botón mantenido y no está sonando nada, y **como máximo una vez por minuto**.
 - **No** guarda cuando apagás. Si cambiás algo y apagás dentro de esos segundos, ese último cambio se pierde. Para ir
   a lo seguro: **pará, esperá ~10 s**, o mejor, guardá en una sección.
-- Al encender, el equipo arranca en cero, como lo deja **INIT SYSTEM** (cada pista con el sonido por defecto de su motor,
+- Al encender, el equipo arranca en cero, como lo deja **NEW PROJECT** (cada pista con el sonido por defecto de su motor,
   sin pasos). Con **MENU > SYSTEM > RESTORE LAST ON** el autoguardado pasa a ser la música (la pantalla dice
   **RESTORED**). Desde 0.6.40 RESTORE LAST viene en **OFF**: sin autoguardado.
 - Después de un crash, un cuelgue o un arranque fallido, el autoguardado no se restaura (la música que estaba sonando
