@@ -283,6 +283,7 @@ static __attribute__((noinline)) uint32_t arp_pick(track_t *t, uint32_t *list, u
 /* n: samples the arp advances by (the external clock's while it runs, 0 stopped); gate_n: samples its
  * gate counts down by (real time when the external transport stops: a tapped or latched note still ends) */
 static volatile uint32_t beat_pos, beat_n;      /* samples into the beat, the beat of the bar (0..3) */
+static volatile uint32_t bar_n;                 /* (0.6.43) the bars since PLAY (MUTATE: project.c mutate_poll) */
 
 /* the metronome (click.c) and the count-in (1.1, Discussion #131). The click follows the song tempo's quarter notes
  * (BPM, or the external clock's 24 pulses), 4 to the bar, the first accented, whatever a track's DIV or SWING: a beat is
@@ -735,6 +736,7 @@ static void seq_start(void)
     }
     song.tick = 0;
     beat_pos = 0; beat_n = 0;                      /* the ARP LED's beat from the top too */
+    bar_n = 0;
     clk_pos = CLK_START;                           /* the metronome's first beat with step 0 */
     song.playing = 1;
     slicer_start();                                /* slicer.c: its step 0 with the sequencer's */
@@ -1355,6 +1357,8 @@ static void events_block(uint32_t n)
         beat_pos -= beat_samples();
         beat_pos = beat_pos < beat_samples() ? beat_pos : 0u;
         beat_n = (beat_n + 1u) & 3u;
+        if (!beat_n && song.playing)
+            bar_n++;
     }
     if (song.playing)
         song.tick++;

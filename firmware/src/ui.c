@@ -9,6 +9,11 @@ static void panel_setup(void);
 static void project_load(uint32_t slot);
 static void undo_mark(void);                    /* (0.6.21) project.c: the music before a change, */
 static void system_init(void);                  /* (0.6.40) project.c: INIT SYSTEM */
+static uint32_t mut_progress(uint32_t k);       /* (0.6.43) project.c: MUTATE's next, 0..256 (0xFFFF: off) */
+static void mut_keep(void);                     /* .. the music now the anchor */
+static uint8_t mut_flash[NTRK];                 /* .. a mutation just now: frames left of its flash (HOME) */
+static uint8_t mut_freeze;                      /* .. GLO + A4: no mutation until again */
+static const uint8_t MUT_BARS[7] = {0, 1, 2, 4, 8, 16, 32};   /* .. SOUND / PATTERN every (OFF, bars) */
 static int undo_do(void);                       /* .. back (and again: forward) */
 static uint8_t undo_ok;
 static int project_used(uint32_t slot);

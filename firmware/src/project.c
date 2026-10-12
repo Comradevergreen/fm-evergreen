@@ -1521,6 +1521,142 @@ static void system_init(void)
     proj_name[0] = 0;
     ui.force = 1;
 }
+/* (JIANT 0.6.43) MUTATE: each track's SOUND and PATTERN change by themselves every OFF / 1 .. 32 bars, on the bar (the
+ * change made in the bar before's last sixteenth, so it lands on the one), by AMOUNT, in the clock with the rest of the
+ * gear. ORBIT (the default): around the anchor, the music as it was when MUTATE came on, PLAY started or KEEP (the
+ * MUTATE page's OCT+) took it, so it varies for minutes and stays itself; DRIFT: from what it is now, on and on.
+ * SOUND: the engine's eight values and the filter, its envelope, DEC, REL and the sends (never LEVEL, PAN, MUTE; FM6's
+ * SLOT stays); a list value now and then. PATTERN: notes up / down the scale, accents, a note added off the beat or
+ * one taken (never on a beat); DRUM: hits on and off, never the kick. GLO + A4 freezes them all; main loop only */
+static project_store_t mut_anchor __attribute__((section(".pool")));
+static struct { uint8_t ok, playing; uint32_t en, done; } mut;
+static uint32_t mut_every(const track_t *t, uint32_t id) { return MUT_BARS[(uint32_t)clamp(t->p[id], 0, 6)]; }
+static uint32_t mut_enabled(void)
+{
+    uint32_t k, m = 0;
+    for (k = 0; k < NTRK; k++)
+        if (k < trk_live && (mut_every(&trk[k], P_MSND) || mut_every(&trk[k], P_MPAT)))
+            m |= 1u << k;
+    return m;
+}
+static void mut_keep(void)
+{
+    project_capture(&proj_scratch);
+    mut.ok = (uint8_t)proj_pack(&mut_anchor, &proj_scratch);
+}
+static int32_t mut_rr(int32_t lo, int32_t hi) { return hi <= lo ? lo : lo + (int32_t)(rng() % (uint32_t)(hi - lo + 1)); }
+static void mut_value(track_t *t, uint32_t id, const int16_t *base, uint32_t amt)
+{
+    const param_desc_t *d = track_desc(t, id);
+    int32_t v = base[id];
+    if (d->max <= d->min)
+        return;
+    if (d->fmt == F_ENUM)
+        v = rng() % 254u < amt ? mut_rr(d->min, d->max) : v;
+    else {
+        int32_t span = (d->max - d->min) * (int32_t)amt / 256;
+        v += mut_rr(-span, span);
+    }
+    t->p[id] = (int16_t)clamp(v, d->min, d->max);
+}
+static void mut_sound(track_t *t, const proj_trk_t *a)
+{
+    static const uint8_t COMMON[7] = {P_FCUT, P_FRES, P_ED_FLT, P_DEC, P_REL, P_DLY, P_REV};
+    uint32_t i, amt = (uint32_t)clamp(t->p[P_MAMT], 0, 127), e = t->eng_req % NENGINES;
+    const int16_t *base = a ? a->p : t->p;
+    for (i = 0; i < 8u; i++)
+        if (!(e == ENGI_FM6 && i == 7u))                /* (FM6's SLOT: its patch stays) */
+            mut_value(t, P_E0 + i, base, amt);
+    for (i = 0; i < 7u; i++)
+        if (!(e == ENGI_ANALOG && (COMMON[i] == P_FCUT || COMMON[i] == P_FRES)))   /* (ANALOG: its own CUT RES) */
+            mut_value(t, COMMON[i], base, amt);
+}
+static void mut_pattern(track_t *t, const proj_trk_t *a)
+{
+    uint32_t i, len = t->p[P_SLEN] > 0 ? (uint32_t)t->p[P_SLEN] : 1u, amt = (uint32_t)clamp(t->p[P_MAMT], 0, 127), l;
+    int kit = drum_track(t);
+    int32_t last = -1;
+    for (i = 0; i < len && i < NSTEP; i++) {
+        step_t s = a ? a->step[i] : t->step[i];
+        if (kit) {                                      /* hits on and off, the kick never */
+            for (l = 1; l < NLANE; l++)
+                if (rng() % 640u < amt) {
+                    s.hit ^= (uint8_t)(1u << l);
+                    s.acc &= s.hit;
+                }
+            if (s.hit && s.time != ST_NOTE) s.time = ST_NOTE;
+            if (!s.hit && !s.n) s.time = ST_REST;
+        } else if (s.time == ST_NOTE && s.n) {
+            uint32_t j;
+            if (i % 4u && rng() % 1024u < amt) {        /* one taken (never on a beat) */
+                s.n = 0; s.time = ST_REST;
+            } else {
+                if (rng() % 256u < amt) {               /* up / down the scale */
+                    int32_t d = mut_rr(-2, 2);
+                    if (!d) d = 1;
+                    for (j = 0; j < s.n && j < 4u; j++)
+                        s.note[j] = (uint8_t)clamp(scale_steps(t, s.note[j], d), 0, 127);
+                }
+                if (rng() % 512u < amt) s.flags ^= SF_ACCENT;
+                last = s.note[0];
+            }
+        } else if (s.time == ST_REST && (i & 1u) && last >= 0 && rng() % 1024u < amt) {   /* one added, off the beat */
+            memset(&s, 0, sizeof s);
+            s.n = 1; s.time = ST_NOTE; s.vel = 90;
+            s.note[0] = (uint8_t)clamp(scale_steps(t, last, mut_rr(-1, 1)), 0, 127);
+        }
+        t->step[i] = s;
+    }
+}
+static uint32_t mut_progress(uint32_t k)
+{
+    const track_t *t = &trk[k % NTRK];
+    uint32_t s = mut_every(t, P_MSND), q = mut_every(t, P_MPAT), e = s && q ? (s < q ? s : q) : s ? s : q;
+    if (!e || k >= trk_live)
+        return 0xFFFFu;
+    if (!song.playing || mut_freeze)
+        return 0;
+    return (((bar_n % e) * 4u + beat_n) * 256u) / (e * 4u);
+}
+static void mutate_poll(void)
+{
+    uint32_t en = mut_enabled(), k, nx, anc;
+    for (k = 0; k < NTRK; k++)                          /* turned on: an AMOUNT to hear (0: half) */
+        if (((en & ~mut.en) >> k) & 1u && !trk[k].p[P_MAMT])
+            trk[k].p[P_MAMT] = 64;
+    if (en & ~mut.en)
+        mut_keep();                                     /* (the anchor: the music now) */
+    mut.en = en;
+    for (k = 0; k < NTRK; k++)
+        if (mut_flash[k]) mut_flash[k]--;
+    if (!song.playing) {
+        mut.playing = 0;
+        return;
+    }
+    if (!mut.playing) {                                 /* PLAY: the anchor as it starts */
+        mut.playing = 1;
+        mut.done = 0;
+        if (en) mut_keep();
+    }
+    if (!en || mut_freeze)
+        return;
+    nx = bar_n + 1u;
+    if (beat_n != 3u || beat_pos < beat_samples() * 3u / 4u || mut.done == nx)
+        return;
+    mut.done = nx;
+    anc = mut.ok && proj_import(&proj_scratch, &mut_anchor, sizeof mut_anchor);
+    for (k = 0; k < NTRK; k++) {
+        track_t *t = &trk[k];
+        uint32_t s = mut_every(t, P_MSND), q = mut_every(t, P_MPAT), hit = 0;
+        const proj_trk_t *a = anc && !t->p[P_MMODE] && proj_scratch.t[k].engine == t->eng_req % NENGINES ?
+                              &proj_scratch.t[k] : 0;  /* (ORBIT, the same engine: around it; else from now) */
+        if (!((en >> k) & 1u))
+            continue;
+        if (s && nx % s == 0u) { mut_sound(t, a); hit = 1; }
+        if (q && nx % q == 0u) { mut_pattern(t, a); hit = 1; }
+        if (hit) mut_flash[k] = 12;
+    }
+}
 static void undo_mark(void)
 {
     project_capture(&proj_scratch);

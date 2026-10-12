@@ -1700,6 +1700,11 @@ static void ui_input_frame(void)
             uint32_t both = (1u << panel.btn[B_OCTDN]) | (1u << panel.btn[B_OCTUP]);
             if (act_cols() || layer_set_open())         /* action pages: enter / back (below); SET layers: OCT- */
                 break;
+            if (!ui.home && !ui.menu && !ui.confirm && cur_page()->graph == GR_MUTATE) {   /* (0.6.43) KEEP, FREEZE */
+                if (b == B_OCTUP) { mut_keep(); ui_message("ANCHOR: THE MUSIC NOW"); }
+                else { mut_freeze = (uint8_t)!mut_freeze; ui_message(mut_freeze ? "MUTATE FROZEN" : "MUTATE FREE"); }
+                break;
+            }
             if ((fm1_in.buttons & both) == both)
                 song.octave = 0;
             else

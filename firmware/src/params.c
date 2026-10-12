@@ -197,6 +197,11 @@ static const param_desc_t GP[G_COUNT] = {
 
 static const param_desc_t LOFI_RTRG = {"RTRG", F_ONOFF, 0, 1, 0, 0, 0};   /* (0.6.12) P_LRTRG on a LOFI track */
 static const param_desc_t TRK_CHANCE = {"CHANCE", F_PCTINV, 0, 127, 0, 0, 0};   /* (0.6.37) P_TCHAN: 0 = 100 % */
+static const char *const N_MUTBARS[] = {"OFF", "1", "2", "4", "8", "16", "32"};
+static const char *const N_MUTMODE[] = {"ORBIT", "DRIFT"};
+static const param_desc_t MUT_DESC[4] = {                /* (0.6.43) MUTATE: P_MSND P_MPAT P_MAMT P_MMODE */
+    {"SOUND", F_ENUM, 0, 6, 0, N_MUTBARS, 0}, {"PATTERN", F_ENUM, 0, 6, 0, N_MUTBARS, 0},
+    {"AMOUNT", F_PCT, 0, 127, 0, 0, 0}, {"MODE", F_ENUM, 0, 1, 0, N_MUTMODE, 0}};
 static const param_desc_t *track_desc(const track_t *t, uint32_t id)
 {
     if (id >= P_E0 && id <= P_E7) {                   /* the engine asked for (t->engine follows after a fade) */
@@ -208,6 +213,14 @@ static const param_desc_t *track_desc(const track_t *t, uint32_t id)
         return &LOFI_RTRG;
     if (id == P_TCHAN && !(FELUCCA_FM4 && t->eng_req % NENGINES == ENGI_DIGITAL))   /* (0.6.37) SHIFT's CHANCE */
         return &TRK_CHANCE;
+    if (!(FELUCCA_FM4 && t->eng_req % NENGINES == ENGI_DIGITAL))   /* (0.6.43) MUTATE's four */
+        switch (id) {
+        case P_MSND: return &MUT_DESC[0];
+        case P_MPAT: return &MUT_DESC[1];
+        case P_MAMT: return &MUT_DESC[2];
+        case P_MMODE: return &MUT_DESC[3];
+        default: break;
+        }
     return &TP[id];
 }
 
@@ -407,7 +420,7 @@ enum { SC_TRACK, SC_GLOBAL, SC_ENGINE, SC_STEP, SC_TRK };   /* SC_TRK: the TRACK
 enum { GR_NONE, GR_ADSR, GR_LFO, GR_STEPS, GR_ARP, GR_SCALE, GR_FX, GR_ROLL, GR_BROWSE, GR_SLOTS, GR_USER, GR_TRK,
        GR_SLCR, GR_MOD, GR_PATS, GR_SONG, GR_TOOLS, GR_CHANCE, GR_MOTION, GR_EVENTS, GR_DXSND, GR_MSEQ, GR_SLPIT,
        GR_FMOP, GR_FMOP2, GR_FMENV,
-       GR_COMP };   /* (JIANT 0.6.39) SEQ > COMP: the step components (ui_input.c comp_*, ui_graph.c graph_comp) */   /* (JIANT 0.6.10, from Felucca 1.5: FM6's operator pages, ui_fm6op.c) */
+       GR_COMP, GR_MUTATE };   /* (JIANT 0.6.39) SEQ > COMP: the step components (ui_input.c comp_*, ui_graph.c graph_comp) */   /* (JIANT 0.6.10, from Felucca 1.5: FM6's operator pages, ui_fm6op.c) */
 
 typedef struct {
     const char *title;
@@ -496,6 +509,7 @@ static const page_t PAGES[] = {
     /* JIANT: the sequence offset and the track's chance (automatable); 0.6.37: last, PHRASES and the step CHANCE page
      * out of the cycle (ui.c page_visible; a step's chance and ratchet stay in the pattern: SEQ TOOLS, the editor,
      * the dice set them) */
+    {"MUTATE", FAM_SEQ, SC_TRACK, GR_MUTATE, {P_MSND, P_MPAT, P_MAMT, P_MMODE}},   /* (0.6.43) project.c mutate_poll */
     {"SHIFT", FAM_SEQ, SC_TRACK, GR_STEPS, {P_SOFS, P_POFS, P_TCHAN, 0xFF}},
 };
 #define NPAGES (sizeof(PAGES) / sizeof(PAGES[0]))

@@ -275,6 +275,7 @@ a la derecha); apretá OCT+ para ejecutarla.
 | PATTERN | LEN | DIV | SWING | GATE |
 | AUTOMATION | PLAY (ON/OFF) | EVENT (cantidad) | LOCK (cantidad) | CLEAR (acción) |
 | AUTO LIST | ROW | STEP | PARAM | VALUE |
+| MUTATE | SOUND (cada) | PATTERN (cada) | AMOUNT | MODE |
 | SHIFT (última) | OFFSET | PITCH | CHANCE | — |
 
 ### Las capas (mantené el botón)
@@ -497,6 +498,16 @@ seleccionada se graban como **automatización**. MENU > AUDIO tiene el **CLICK**
 - **AUTO LIST**: cada evento de automatización y cada lock en forma de lista. KNOB 1 la fila, 2 el paso, 3 el
   parámetro, 4 el valor. En **+ ADD LOCK**, OCT+ agrega un lock; sobre un registro, OCT+ lo alterna entre LOCK y AUTO;
   **EDIT** lo borra.
+- **MUTATE**: la pista cambia sola, sincronizada con el clock, para que una textura evolucione durante minutos.
+  **SOUND** y **PATTERN**: cada OFF, 1, 2, 4, 8, 16 o 32 compases (el cambio cae en el 1 del compás). **AMOUNT**:
+  cuánto (al activar uno queda en 50 %). **MODE**: **ORBIT** varía alrededor del ancla (la música como estaba al
+  activar MUTATE, al dar PLAY o cuando apretás **OCT+** acá: KEEP), así nunca pierde su identidad; **DRIFT** sigue desde
+  como está ahora. SOUND cambia los valores del motor, el filtro, su envolvente, DEC, REL y los envíos (nunca LEVEL, PAN
+  ni MUTE); PATTERN mueve notas por la escala, cambia acentos, agrega o saca una nota fuera del tiempo (nunca en el
+  tiempo); en DRUM cambia golpes, nunca el bombo. **OCT−** acá (o **GLO + A4**, FREEZE) frena todas las mutaciones
+  hasta volver a apretarlo. La página muestra los próximos 32 compases de cada pista (naranja: SOUND, violeta:
+  PATTERN); en HOME cada bichito tiene un anillo de puntos que se llena hasta su próximo cambio y se enciende entero
+  cuando cambia.
 - **SHIFT** (la última página SEQ): **OFFSET** (−32 a +32 pasos), **PITCH** (±24 semitonos; no en baterías) y
   **CHANCE**: la probabilidad de toda la pista; 100 % toca cada paso como está escrito, menos lo va raleando (escala la
   probabilidad propia de cada paso, la de los dados o el editor). Las tres se pueden automatizar; OFFSET y PITCH también

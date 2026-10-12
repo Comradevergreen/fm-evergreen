@@ -249,6 +249,15 @@ static void graph_ecosys(void)
                        ux_gray(ux_luma(T_DIM) >> 3) : T_DIM);
         else
             being_lines(g, &f, sx[c] >> 4, sy[c] >> 4, r, en[c], tm[c] + c * 20000u);
+        {   /* (0.6.43) MUTATE: a ring of 12 dots filling to its next change; a change: all lit */
+            static const int8_t RX[12] = {0, 50, 87, 100, 87, 50, 0, -50, -87, -100, -87, -50};
+            uint32_t pr = mut_progress(c), d, lit = pr == 0xFFFFu ? 0u : mut_flash[c] ? 12u : pr * 12u / 256u;
+            int32_t rr2 = (rad >> 4) + 6;
+            for (d = 0; pr != 0xFFFFu && d < 12u; d++) {
+                int32_t dx = (sx[c] >> 8) + RX[d] * rr2 / 100, dy = (sy[c] >> 8) - RX[(d + 9u) % 12u] * rr2 / 100;
+                cv_rect(dx - 1, dy - 1, 2, 2, d < lit ? (mut_flash[c] ? T_ACCENT : heat_col(160)) : T_RAISE);
+            }
+        }
         cv_text_in((sx[c] >> 8) - 30, clamp((sy[c] >> 8) + rad / 2 + 4, 4, 104), 60, &AF_S, num,
                    c == song.sel ? T_THEME : t->p[P_MUTE] || c >= trk_live ? T_DIM : T_MID, T_SURF);
     }

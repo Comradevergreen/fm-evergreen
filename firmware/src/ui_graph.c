@@ -238,6 +238,30 @@ static void graph_comp(const track_t *t, uint16_t c)
     }
 }
 
+/* (0.6.43) SEQ > MUTATE: a row a track, the next 32 bars: SOUND's changes an orange mark on top, PATTERN's a violet one
+ * under it; the bar now ACCENT; the selected track's row lit; ORBIT / DRIFT at the right; FROZEN over it all */
+static void graph_mutate(void)
+{
+    uint32_t k, b, now = song.playing ? bar_n : 0u;
+    for (k = 0; k < NTRK; k++) {
+        const track_t *t = &trk[k];
+        uint32_t s = MUT_BARS[(uint32_t)clamp(t->p[P_MSND], 0, 6)], q = MUT_BARS[(uint32_t)clamp(t->p[P_MPAT], 0, 6)];
+        int32_t y = 4 + (int32_t)k * 16, on = (s || q) && k < trk_live;
+        char nm[3] = {'T', (char)('1' + k), 0};
+        cv_text(PANEL_X0, y + 1, &AF_S, nm, k == song.sel ? T_THEME : on ? T_MID : T_DIM);
+        for (b = 0; b < 32u; b++) {
+            uint32_t bar = now + 1u + b;
+            int32_t x = PANEL_X0 + 22 + (int32_t)b * 5;
+            cv_rect(x, y + 6, 4, 1, T_RAISE);
+            if (on && s && bar % s == 0u) cv_rect(x, y + 1, 4, 4, mut_freeze ? T_DIM : heat_col(190));
+            if (on && q && bar % q == 0u) cv_rect(x, y + 8, 4, 4, mut_freeze ? T_DIM : heat_col(90));
+        }
+        if (on) cv_text_r(PANEL_X0 + PANEL_W, y + 1, &AF_S, t->p[P_MMODE] ? "DRIFT" : "ORBIT", T_DIM, T_SURF);
+    }
+    cv_rect(PANEL_X0 + 22, 2, 4, 96, ux_mix(T_SURF, T_ACCENT, 25));   /* (the next bar's column) */
+    if (mut_freeze) cv_text(PANEL_X0 + 70, 98, &AF_S, "FROZEN  [OCT-]", T_ACCENT);
+}
+
 /* STEP page (a melodic track): a piano roll of the cursor's 16-step page. PR_ROWS semitone rows of PR_RH px,
  * the highest on top; on the left the C rows named (S, DIM) and a keyboard strip (white keys RAISE, black keys a
  * shorter DIM; a key held on the track: its row ACCENT). Rows in the track's scale (SCL ROOT / SCALE; CHR: the white
@@ -1049,6 +1073,11 @@ static uint32_t graph_signature(void)
         h = (h ^ (n + 1u) * 40503u ^ ev_row(n) * 2654435761u ^ ((uint32_t)ui.ev_step << 8 | ui.ev_id) * 104729u) * 16777619u;
     }
     if (pg->graph == GR_CHANCE) h ^= ui.cursor * 40503u + step_chance(&t->step[ui.cursor]);
+    if (pg->graph == GR_MUTATE) {                    /* (0.6.43) the bar, the settings, FREEZE */
+        h = (h ^ (song.playing ? bar_n : 0u) * 2654435761u ^ mut_freeze * 977u) * 16777619u;
+        for (i = 0; i < NTRK; i++)
+            h = (h ^ ((uint32_t)trk[i].p[P_MSND] | (uint32_t)trk[i].p[P_MPAT] << 4 | (uint32_t)trk[i].p[P_MMODE] << 8)) * 16777619u;
+    }
     if (pg->graph == GR_COMP) {                      /* (0.6.39) the steps, their components, the arpeggio and the loop */
         const step_t *cs = &t->step[ui.cursor];
         uint32_t ph = song.playing ? seq_src(t, t->seq_idx) : 0xFFFFu;
@@ -1829,6 +1858,9 @@ static void draw_graph(void)
             break;
         case GR_COMP:
             graph_comp(t, c);
+            break;
+        case GR_MUTATE:
+            graph_mutate();
             break;
         case GR_ROLL:
         case GR_CHANCE:
