@@ -26,9 +26,9 @@ SCR = np.memmap(V / 'screen.rgb', dtype=np.uint8, mode='r').reshape(-1, 240, 240
 BEAT = 60 / 125
 def shot(beat):                                      # the screen at that beat of the film
     return Image.fromarray(np.array(SCR[int(beat * BEAT * 30)]))
-# the film's beats (capture.c's script; after its new part, bar 56, the old script runs 32 beats later)
-HOME, ANALOG, DRUMX, DICE, ARRANGE, LOAD = 194, 34, 190, 230.6, 227.5, 246.5
-MIXER, RESO, SLICER, PUNCH, FM6, MSEQ, MASTER, DIST, TOOLS, SCALE = 202, 138, 170, 179, 154, 74, 186, 98, 126, 249.5
+# the film's beats (capture.c's script, 0.6.37)
+HOME, ANALOG, DRUMX, DICE, ARRANGE, LOAD = 232, 34.5, 18.5, 193.5, 186.5, 205.5
+MIXER, RESO, SLICER, PUNCH, FM6, MSEQ, MASTER, DIST, TOOLS, SCALE = 178, 122.5, 146.5, 155, 50.5, 98.5, 162, 138.5, 222.5, 209.5
 
 def signature(d, ox, oy, sc, width):
     src = (R / 'firmware/src/ui_signature.h').read_text()
@@ -61,7 +61,7 @@ y0 = 370
 big = [(HOME, 'HOME · six living tracks'), (DICE, 'DICE ALL · a new song idea'), (ARRANGE, 'ARRANGE · the song in a column')]
 for i, (b, c) in enumerate(big):
     x = 70 + i * 500; framed(im, shot(b), x, y0, 2); d.text((x, y0 + 492), c, font=cap, fill=heat(0.15 + 0.3 * i))
-strips = [[(ANALOG, 'ANALOG'), (DRUMX, 'DRUM-X'), (MIXER, 'MIXER · 6'), (RESO, 'RESO REVERB'), (SLICER, 'SLICER BUS'), (PUNCH, 'PUNCH-IN FX')],
+strips = [[(ANALOG, 'ACID ANALOG'), (DRUMX, 'DRUM-X'), (MIXER, 'MIXER · 6'), (RESO, 'RESO REVERB'), (SLICER, 'SLICER BUS'), (PUNCH, 'PUNCH-IN FX')],
           [(FM6, 'FM6 OPERATORS'), (MSEQ, 'MSEQ'), (MASTER, 'MASTER'), (DIST, 'DIST'), (TOOLS, 'SEQ TOOLS'), (LOAD, 'TRACKS · LOAD')]]
 y1 = y0 + 545
 for r, row in enumerate(strips):
@@ -70,12 +70,12 @@ for r, row in enumerate(strips):
         im.paste(shot(b).resize((216, 216), Image.LANCZOS), (x, y))
         d.text((x, y + 222), c, font=font('SemiBold', 18), fill=MID)
 y2 = y1 + 2 * 270 + 20
-cards = [("SONG IDEAS", "HOME + SELECT writes a whole song:\n9 styles, never the same twice."),
+cards = [("SONG IDEAS", "HOME + SELECT writes a whole song:\n15 genres, never the same twice."),
          ("ARRANGE", "Sections in a column, bars and scenes;\nEND plays x2..x8 or loops."),
          ("UNDO", "GLO + G4 takes the last big change\nback; again, forward."),
          ("TRACKS · LOAD", "4 or 6 tracks; ECO, LITE or FULL:\nyou choose how heavy it gets."),
          ("BEINGS", "Each engine is an organism shaped\nby its knobs and its own audio."),
-         ("DRUM-X", "Synthesized drums: morph from A to B,\nFOLD and FM, no samples."),
+         ("DRUM-X", "Synthesized drums: morph from A to B,\nFOLD, FM ENV, TONE: no samples."),
          ("FIVE REVERBS", "ROOM, SPRING, SHIMMER, RESO tuned\nto the scale and a granular CLOUD."),
          ("PUNCH-IN FX", "Hold FX and play the keys: repeats,\noctaves, stutters, recorded."),
          ("ONE SCALE", "Every track, the reverb and the arp\nfollow the same scale.")]

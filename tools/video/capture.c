@@ -1,10 +1,10 @@
 /* SPDX-License-Identifier: GPL-3.0-only
- * (JIANT 0.6.11) the presentation video's footage: the firmware's own UI and audio, from the host build of the tests
- * (tests/ui_test.c): an electro song at 125 BPM (A minor, six tracks: a talking robot on VOICE, a sync bass on ANALOG,
- * a computer arp on LOFI, DRUM-X, an FM6 pad, NOISE zaps) played by the real engines, soft at first, electro techno at
- * the peak, its screen captured at 30 fps as the script below goes through what JIANT FM has, beat by beat. The
- * captions go to scenes.txt (time, tag, title, subtitle, camera: 0 the screen, 1 a close-up of its living panel), from
- * the same script.
+ * (JIANT 0.6.11; 0.6.37 dark minimal techno) the presentation video's footage: the firmware's own UI and audio, from the
+ * host build of the tests (tests/ui_test.c): a dark minimal techno track at 125 BPM in A minor (six tracks: low FM6
+ * chords held for two bars, an acid line on ANALOG, a cyber line on PHASE, LOFI blips, DRUM-X, NOISE wind) played by
+ * the real engines, its screen captured at 30 fps as the script below goes through what JIANT FM has, a feature and
+ * its page at a time. The captions go to scenes.txt (time, category, title, subtitle, kind: 0 a feature on its page,
+ * 2 the grid of pages whose titles the subtitle lists), from the same script.
  *   cc -O2 -w -Ibuild/gen -Ifirmware/src -Itests -o build/video/capture tools/video/capture.c -lm
  *   build/video/capture build/video        -> audio.wav (44.1 kHz stereo), screen.rgb (240 x 240 RGB24 a frame)
  * tools/video/compose.py makes the 1080p video from them. */
@@ -14,13 +14,12 @@
 
 #define FPS 30u
 #define BPM 125u
-#define BARS 80u                                   /* (0.6.30: + 8, the song ideas, ARRANGE, LOAD) */
+#define BARS 66u
 #define BEAT_S (60.0 / BPM)
 #define SECS (BARS * 4u * 60.0 / BPM)
 #define SPLASH_BEATS 8u                             /* the power-on splash: the first two bars */
 #define B(bar, q) ((bar) * 4u + (q))                /* the beat q of a bar */
-enum { T_VOX, T_BASS, T_ARP, T_DRUM, T_PAD, T_ZAP };   /* the six tracks */
-static const char *const ONLY = "ONLY ON JIANT FM";
+enum { T_LEAD, T_BASS, T_ARP, T_DRUM, T_PAD, T_ZAP };   /* the six tracks */
 static FILE *wav, *rgb, *cap;
 static uint32_t nsamp;
 
@@ -65,97 +64,101 @@ static void drums(const char *const rows[8])      /* one row a lane (BD SD CP CH
         step_to_grid(&trk[T_DRUM].step[i]);
     }
 }
-/* the beats: a soft pulse, the electro break (syncopated kick, claps on 2 and 4), electro techno at the peak */
-static const char *const SOFTK[8] = {"X.......X.......", 0, 0, "....x.......x...", 0, 0, 0, 0};
-static const char *const ELECTRO[8] = {"X..X..X...X.X...", 0, "....X.......X...", "x.x.x.x.x.x.x.x.", 0, 0, "......x.......x.",
-                                       "...x.......x...."};
-static const char *const PEAK[8] = {"X..X..X.X.X..X..", 0, "....X.......X..X", "xxxxxxxxxxxxxxxx", 0, 0, 0,
-                                    "..x.....x.....x."};
-static const char *const FLOOR[8] = {"X...X...X...X...", 0, "....X.......X...", "xx.xxx.xxx.xxx.x", "..x...x...x...x.",
-                                     ".........x....x.", 0, 0};
+/* the beats: the kick alone, the minimal groove (open hats on the offbeat, a rim that wanders), the clap and the
+ * ticking hats, the peak; the breakdown keeps only the metal */
+static const char *const KICK[8] = {"X...X...X...X...", 0, 0, 0, 0, 0, 0, 0};
+static const char *const MIN1[8] = {"X...X...X...X...", 0, 0, 0, "..x...x...x...x.", 0, "......x..x....x.", 0};
+static const char *const MIN2[8] = {"X...X...X...X...", 0, "....x.......x...", "x.xxx.xxx.xxx.xx", "..x...x...x...x.", 0,
+                                    "......x..x....x.", 0};
+static const char *const BREAK[8] = {0, 0, 0, 0, "..x...x...x...x.", 0, "...x.....x....x.", 0};
+static const char *const PEAK[8] = {"X...X...X...X..x", 0, "....X.......X...", "x.xxx.xxx.xxx.xx", "..x...x...x...x.",
+                                    0, "...x.....x....x.", "..........x....."};
 
-/* the voice bank (fm6_vbank.c) as a sent .syx would leave it: 32 voices, here the factory patches renamed */
-static int vbank_read(uint32_t k, uint8_t *pk)
+/* the chords: four notes low, two bars each (A minor: Am9, Fmaj7#11; the breakdown Dm9, E7b9) */
+static const uint8_t CHA[2][4] = {{45, 52, 59, 60}, {41, 48, 52, 59}};
+static const uint8_t CHB[2][4] = {{38, 45, 52, 53}, {40, 47, 50, 56}};
+static void chords(const uint8_t ch[2][4])
 {
-    static const char *const NM[4] = {"LASER BELL", "ROBO BRASS", "TIN CHOIR ", "NEON KEYS "};
-    memcpy(pk, FM6_FACTORY[k % FM6_NFACTORY], FM6_PACKED);
-    memcpy(pk + 118, NM[k % 4u], 10);
-    return 0;
+    uint32_t i;
+    for (i = 0; i < 64u; i++)
+        put(T_PAD, i, i % 32u == 0u ? 4u : 0u, ch[i / 32u], i % 32u == 0u ? ST_NOTE : i % 32u < 31u ? ST_TIE : ST_REST, 0);
 }
 
 static void song_build(void)
 {
-    /* (0.6.36) the night: E harmonic minor, Em(add9) Cmaj7 Am7 B7, a bar each; a rolling sub on the offbeats, a low arp,
-     * the robot's line low and spaced (it was A minor's I-vi-ish pop: too bright, too happy) */
-    static const uint8_t ROOT[4] = {28, 24, 33, 35};                 /* E1 C1 A1 B1 */
-    static const int8_t BOFS[16] = {-1, -1, 12, -1, -1, 12, 12, -1, -1, -1, 12, 12, -1, 7, 12, -1};   /* the rolling sub */
-    static const uint8_t CH[4][4] = {{55, 59, 64, 66}, {55, 59, 60, 64}, {57, 60, 64, 67}, {54, 57, 59, 63}};
-    static const uint8_t AIX[16] = {0, 2, 1, 3, 0, 2, 1, 2, 0, 3, 1, 2, 0, 2, 3, 1};   /* the low arp, turning */
-    /* the robot's melody (64 steps: note, 0 rest, 1 hold) */
+    /* the acid (32 steps, two bars: note, 0 a rest; S slides into the next, A accented) */
+#define S_ 0x100
+#define A_ 0x200
+    static const uint16_t ACID[32] = {
+        33 | A_, 33, 45 | S_, 33, 0, 36, 33 | A_, 43 | S_, 45, 33, 0, 40, 33, 46 | S_, 45, 33,
+        33 | A_, 33, 45, 36 | S_, 0, 33, 31 | A_, 33, 45 | S_, 44, 33, 0, 40, 33 | A_, 45 | S_, 43};
+    /* the cyber line (64 steps: note, 0 rest, 1 hold), the leading tone G#4 at the end */
     static const uint8_t MEL[64] = {
-        64, 1, 1, 1, 0, 0, 67, 1, 66, 1, 1, 1, 0, 0, 0, 0,
-        0, 0, 64, 1, 67, 1, 1, 1, 71, 1, 1, 1, 1, 1, 0, 0,
-        72, 1, 71, 1, 69, 1, 1, 1, 0, 0, 67, 1, 66, 1, 1, 1,
-        63, 1, 1, 1, 1, 1, 66, 1, 1, 1, 0, 0, 71, 1, 1, 1};
+        64, 1, 1, 0, 0, 0, 67, 1, 1, 1, 0, 0, 69, 1, 72, 1,
+        71, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 67, 1, 64, 1,
+        0, 0, 0, 0, 76, 1, 1, 0, 74, 1, 72, 1, 71, 1, 1, 1,
+        68, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0};
+    static const uint8_t BLIP[16] = {0, 0, 0, 81, 0, 0, 0, 0, 0, 0, 76, 0, 0, 0, 0, 0};
     uint32_t i, k;
     ui_power_on();
     settings.palette = UI_JIANT_INDEX; palette_set(UI_JIANT_INDEX);
     ui_rec_prefs |= PREF_SIX >> 8; rp_apply();               /* (0.6.30) TRACKS 6: all six play (4 the default) */
     song.g[G_BPM] = BPM;
     song.master_q12 = 4096;                                  /* (the pot: ui_power_on leaves 0) */
-    sound(T_VOX, "VOICE", "VOX LEAD");
-    sound(T_BASS, "ANALOG", "FAT BASS");
-    sound(T_ARP, "LOFI", "FLOAT ARP");
+    sound(T_LEAD, "PHASE", "WIRE");
+    sound(T_BASS, "ANALOG", "ACID");
+    sound(T_ARP, "LOFI", "PULSE LD");
     sound(T_DRUM, "DRUM", "DRUM-X");
     sound(T_PAD, "FM6", "PAD");
     sound(T_ZAP, "NOISE", "WIND");
     for (k = 0; k < NTRK; k++) {
         track_defaults_steps(&trk[k]);
-        trk[k].p[P_ROOT] = 4; trk[k].p[P_SCALE] = 7;          /* E harmonic minor (0.6.36) */
+        trk[k].p[P_ROOT] = 9; trk[k].p[P_SCALE] = 2;          /* A minor */
         trk[k].p[P_SLEN] = 16;
         trk[k].p[P_MUTE] = 1;
     }
-    trk[T_VOX].p[P_SLEN] = 64;
+    trk[T_LEAD].p[P_SLEN] = 64;
     for (i = 0; i < 64u; i++) {
         uint8_t n = MEL[i];
-        put(T_VOX, i, n > 1u ? 1u : 0u, &n, n > 1u ? ST_NOTE : n ? ST_TIE : ST_REST, 0);
+        put(T_LEAD, i, n > 1u ? 1u : 0u, &n, n > 1u ? ST_NOTE : n ? ST_TIE : ST_REST, 0);
     }
-    trk[T_VOX].p[P_REV] = 55; trk[T_VOX].p[P_DLY] = 45; trk[T_VOX].p[P_LEVEL] = 96;
-    trk[T_BASS].p[P_SLEN] = 64;
-    for (i = 0; i < 64u; i++) {
-        uint8_t n = (uint8_t)(ROOT[i / 16u] + BOFS[i % 16u]);
-        put(T_BASS, i, BOFS[i % 16u] >= 0 ? 1u : 0u, &n, BOFS[i % 16u] >= 0 ? ST_NOTE : ST_REST, i % 4u == 0u ? SF_ACCENT : 0u);
+    trk[T_LEAD].p[P_REV] = 70; trk[T_LEAD].p[P_DLY] = 60; trk[T_LEAD].p[P_LEVEL] = 76; trk[T_LEAD].p[P_PAN] = 12;
+    trk[T_BASS].p[P_SLEN] = 32;
+    for (i = 0; i < 32u; i++) {
+        uint8_t n = (uint8_t)(ACID[i] & 0xFFu);
+        put(T_BASS, i, n ? 1u : 0u, &n, n ? ST_NOTE : ST_REST,
+            (ACID[i] & A_ ? SF_ACCENT : 0u) | (ACID[i] & S_ ? SF_SLIDE : 0u));
     }
-    trk[T_BASS].p[P_LEVEL] = 92;
-    trk[T_ARP].p[P_SLEN] = 64;
-    for (i = 0; i < 64u; i++) {
-        uint8_t n = CH[i / 16u][AIX[i % 16u]];
-        put(T_ARP, i, 1, &n, ST_NOTE, 0);
-    }
-    trk[T_ARP].p[P_DLY] = 55; trk[T_ARP].p[P_LEVEL] = 70; trk[T_ARP].p[P_PAN] = -10;
+    trk[T_BASS].p[P_E4] = 28; trk[T_BASS].p[P_E5] = 110; trk[T_BASS].p[P_E6] = 20;   /* closed, ringing */
+    trk[T_BASS].p[P_DLY] = 20; trk[T_BASS].p[P_LEVEL] = 112;
+    for (i = 0; i < 16u; i++) { uint8_t n = BLIP[i]; put(T_ARP, i, n ? 1u : 0u, &n, n ? ST_NOTE : ST_REST, 0); }
+    trk[T_ARP].p[P_DLY] = 80; trk[T_ARP].p[P_REV] = 60; trk[T_ARP].p[P_LEVEL] = 80; trk[T_ARP].p[P_PAN] = -20;
     trk[T_PAD].p[P_SLEN] = 64; trk[T_PAD].p[P_SGATE] = 120;
-    for (i = 0; i < 64u; i++)
-        put(T_PAD, i, i % 16u == 0u ? 4u : 0u, CH[i / 16u], i % 16u == 0u ? ST_NOTE : i % 16u < 15u ? ST_TIE : ST_REST, 0);
-    trk[T_PAD].p[P_REV] = 90; trk[T_PAD].p[P_CHOR] = 70; trk[T_PAD].p[P_LEVEL] = 84;
+    chords(CHA);
+    trk[T_PAD].p[P_FTYPE] = 0; trk[T_PAD].p[P_FCUT] = 62; trk[T_PAD].p[P_FRES] = 20;   /* dark */
+    trk[T_PAD].p[P_REV] = 90; trk[T_PAD].p[P_CHOR] = 50; trk[T_PAD].p[P_LEVEL] = 90;
     {   uint8_t n = 45; put(T_ZAP, 0, 1, &n, ST_NOTE, 0); for (i = 1; i < 16u; i++) put(T_ZAP, i, 0, &n, ST_TIE, 0); }
-    trk[T_ZAP].p[P_LEVEL] = 58; trk[T_ZAP].p[P_REV] = 100;
-    drums(SOFTK);
-    trk[T_DRUM].p[P_REV] = 12;
-    song.g[G_RTYPE] = 0; song.g[G_RSIZE] = 100;
+    trk[T_ZAP].p[P_LEVEL] = 60; trk[T_ZAP].p[P_REV] = 100;
+    drums(KICK);
+    trk[T_DRUM].p[P_E0] = 16; trk[T_DRUM].p[P_REV] = 14; trk[T_DRUM].p[P_LEVEL] = 84;
+    trk[T_DRUM].p[P_LN2] = 80; trk[T_DRUM].p[P_LN3] = 52; trk[T_DRUM].p[P_LN4] = 62; trk[T_DRUM].p[P_LN6] = 76;
+    trk[T_DRUM].p[P_LN7] = 60;                               /* (square law: the metal well under the kick) */
+    dx_tone = 5u;                                            /* the hats a little narrower */
+    song.g[G_RTYPE] = 0; song.g[G_RSIZE] = 110;
     song.g[G_DTIME] = 3;
     chain_config.count = 4;                                    /* (the SONG page: a chain to look at) */
     chain_config.row[0] = (chain_row_t){0, 4}; chain_config.row[1] = (chain_row_t){1, 8};
     chain_config.row[2] = (chain_row_t){2, 4}; chain_config.row[3] = (chain_row_t){0, 8};
-    fm6_bank_used = 0xFFFFFFFFu; fm6_bank_read = vbank_read;  /* (a bank sent from the editor) */
     for (k = 0; k < 4u; k++) project_save(k);                 /* (ARRANGE's sections: stored, not EMPTY) */
     ui.msg_t = 0; ui.msg[0] = ui.msg2[0] = 0;
     transport_req = 1;
+#undef S_
+#undef A_
 }
 
-static uint32_t qoff;                               /* (0.6.30) the beats the script after the new part runs late */
-static void caption(uint32_t q, const char *tag, const char *title, const char *sub, int zoom)   /* (lines split by '|') */
+static void caption(uint32_t q, const char *tag, const char *title, const char *sub, int kind)   /* (lines split by '|') */
 {
-    fprintf(cap, "%.4f\t%s\t%s\t%s\t%d\n", (q + qoff) * BEAT_S, tag, title, sub, zoom);
+    fprintf(cap, "%.4f\t%s\t%s\t%s\t%d\n", q * BEAT_S, tag, title, sub, kind);
 }
 static void page(uint32_t sel, const char *title) { song.sel = (uint8_t)sel; go_title(title); }
 static void home(uint32_t sel) { song.sel = (uint8_t)sel; go_home(); }
@@ -174,250 +177,176 @@ static void enc_turn(uint32_t role, int32_t s) { host_enc[panel.enc[role]] += s 
 static void mute(uint32_t k, int m) { trk[k].p[P_MUTE] = (int16_t)m; }
 
 /* the script: at each beat q (bar q / 4); the captions go with it */
-static void at_beat_v2(uint32_t q)
-{
-    static const char *const WORDS[16] = {"DRUM-X", "SLICER BUS", "RESO", "CLOUD", "SHIMMER", "GRAIN DELAY", "AUTOPAN",
-                                          "MSEQ", "MACROS", "DICE ALL", "PUNCH-IN", "ARRANGE", "6 TRACKS", "FM6 OPS",
-                                          "VOICE BANK", "ENV LOOP"};
-    static const char *const MPG[16] = {"SOUND", "SLICER", "REVERB", "REVERB", "REVERB", "DLY 2", "AUTOPAN", "MSEQ",
-                                        "MOD", "MOD", "FX", "ARRANGE", "MIXER", "OPERATOR", "EDIT 2", "ENV DEST"};
-    static const uint8_t MSEL[16] = {T_DRUM, T_DRUM, T_VOX, T_VOX, T_VOX, T_ARP, T_ARP, T_VOX, T_VOX, T_VOX, T_VOX, T_VOX,
-                                     T_VOX, T_PAD, T_PAD, T_PAD};
-    static const uint8_t MRT[16] = {0, 0, 3, 4, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    uint32_t bar = q / 4u, k;
-
-    /* ---- the intro: the pad and the wind under the splash, then the robot and the computer arp */
-    if (q == B(0, 0)) { mute(T_PAD, 0); mute(T_ZAP, 0); }
-    if (q == B(2, 0)) {
-        mute(T_ARP, 0); home(T_ARP);
-        caption(q, ONLY, "THE BEINGS", "every track a living creature|they breathe with the sound", 1);
-    }
-    if (q == B(4, 0)) {
-        mute(T_VOX, 0); page(T_VOX, "EDIT 1");
-        caption(q, ONLY, "THE ROBOT", "VOICE: formant synthesis|its own being on every engine page", 1);
-    }
-    if (q == B(6, 0)) { page(T_ARP, "EDIT 1"); caption(q, ONLY, "LOFI", "bytebeat and floatbeat machines|grit, glass, ghosts", 1); }
-    if (q == B(7, 0)) { trk[T_ARP].p[P_E0] = (int16_t)(trk[T_ARP].p[P_E0] ^ 1); }
-    if (q == B(8, 0)) {
-        mute(T_BASS, 0); trk[T_BASS].p[P_E0] = 5;           /* the bass: ANALOG's SYNC */
-        page(T_BASS, "EDIT 1"); caption(q, ONLY, "ANALOG", "SYNC · RING · SAW3|two oscillators, INT ±24 st", 1);
-    }
-    if (q == B(9, 0)) {
-        trk[T_BASS].p[P_FTYPE] = 0; page(T_BASS, "FILTER");
-        caption(q, ONLY, "FILTERS", "LP · HP · BP · COMB|on every engine", 0);
-    }
-    if (q >= B(9, 0) && q < B(10, 0)) trk[T_BASS].p[P_FTYPE] = (int16_t)(q - B(9, 0));
-    /* ---- the drums: the soft pulse, then DRUM-X's pages */
-    if (q == B(10, 0)) {
-        trk[T_BASS].p[P_FTYPE] = 0; mute(T_DRUM, 0); page(T_DRUM, "EDIT 1");
-        caption(q, ONLY, "DRUM-X", "8 synthesized voices, no samples|a living colony on screen", 1);
-    }
-    if (q >= B(10, 0) && q < B(14, 0)) trk[T_DRUM].p[P_E0] = (int16_t)((q - B(10, 0)) * 60u / 15u);
-    if (q == B(11, 0)) { dx_ui_lane = 0; page(T_DRUM, "SOUND"); caption(q, ONLY, "DRUM-X", "every voice its own|pitch · decay · noise · color · wave", 1); }
-    if (q == B(11, 2)) dx_ui_lane = 3;
-    if (q == B(12, 0)) {
-        drums(ELECTRO); trk[T_DRUM].p[P_E0] = 30;
-        dx_mot[XM_RATE] = 5; dx_mot[XM_DPTH] = 70; dx_mot[XM_SHPE] = 1; dx_mot[XM_RAND] = 30;
-        page(T_DRUM, "X-MOD"); caption(q, ONLY, "X-MOD", "the kit's own LFO on MORPH|and a random one per hit", 1);
-    }
-    if (q == B(13, 0)) { page(T_DRUM, "EDIT 2"); caption(q, ONLY, "MORPH", "from kit A to kit B|NOISE · FM · FOLD · DRIVE", 1); }
-    if (q == B(14, 0)) { mute(T_ZAP, 1); home(T_DRUM); caption(q, ONLY, "6 TRACKS", "eight engines, all synthesis|six beings at once", 1); }
-    /* ---- the groove: modulation, effects, sequencers */
-    if (q == B(16, 0)) {
-        trk[T_PAD].p[P_ELOOP] = 1; trk[T_PAD].p[P_ED_FLT] = 30; page(T_PAD, "ENV DEST");
-        caption(q, ONLY, "ENVELOPES THAT LOOP", "an ADSR held cycles|like a shaped LFO", 0);
-    }
-    if (q == B(17, 0)) {
-        trk[T_ARP].p[P_M1SRC] = MS_LFO; trk[T_ARP].p[P_M1DST] = MD_CUT; trk[T_ARP].p[P_M1AMT] = 30;
-        page(T_ARP, "MOD"); caption(q, ONLY, "MOD MATRIX", "4 slots a track|macros · MSEQ · the master", 0);
-    }
-    if (q == B(18, 0)) {                                      /* the robot talks: MSEQ on its vowel */
-        trk[T_VOX].p[P_M1SRC] = MS_STEP; trk[T_VOX].p[P_M1DST] = MD_E1; trk[T_VOX].p[P_M1AMT] = 60;
-        trk[T_VOX].p[P_MSLEN] = 8; trk[T_VOX].p[P_MSDIV] = 3;
-        for (k = 0; k < 16u; k++) trk[T_VOX].p[P_MS0 + k] = (int16_t)((k * 47u + 20u) % 128u);
-        page(T_VOX, "MSEQ"); caption(q, ONLY, "MSEQ", "a 16-step modulation sequencer|here: the robot's vowels", 0);
-    }
-    if (q == B(19, 0)) { page(T_VOX, "EDIT 1"); caption(q, ONLY, "THE ROBOT TALKS", "the being follows the vowels", 1); }
-    if (q == B(20, 0)) { home(T_VOX); hold_btn(B_LFO, 1); caption(q, ONLY, "MACROS · DICE", "4 macros over what's playing|their dice roll new routes", 0); }
-    if (q >= B(20, 0) && q < B(21, 0)) for (k = 0; k < 4u; k++) macro_v[k] = (uint8_t)clamp((int32_t)((q - B(20, 0) + 1u) * (12u + 5u * k)), 0, 127);
-    if (q == B(20, 2)) { macro_dice(1); ui_message("MACROS DICED"); }
-    if (q == B(20, 3)) { hold_btn(B_LFO, 0); for (k = 0; k < 4u; k++) macro_v[k] = 0; }
-    if (q == B(21, 0)) hold_btn(B_LFO, 1);                     /* (LFO again: DONE) */
-    if (q == B(21, 1)) hold_btn(B_LFO, 0);
-    if (q == B(22, 0)) {
-        trk[T_ARP].p[P_APDEP] = 110; trk[T_ARP].p[P_APRATE] = 5; trk[T_ARP].p[P_APSYNC] = 1; trk[T_ARP].p[P_APWAVE] = 1;
-        page(T_ARP, "AUTOPAN"); caption(q, ONLY, "AUTOPAN", "on the beat or free|SIN · TRI · SAW · SQR · S&H", 0);
-    }
-    if (q == B(23, 0)) { song.g[G_CSTER] = 50; page(T_PAD, "CHORUS"); caption(q, ONLY, "CHORUS STEREO", "from mono to twice as wide", 0); }
-    if (q == B(24, 0)) {
-        trk[T_BASS].p[P_DIST] = 50; page(T_BASS, "DIST");
-        caption(q, ONLY, "5 DISTORTIONS", "SOFT · HARD · FOLD · CRUSH · RECT|on every track", 0);
-    }
-    if (q >= B(24, 0) && q < B(26, 0) && q % 2u == 0u) trk[T_BASS].p[P_DTYPE] = (int16_t)((q - B(24, 0)) / 2u % 5u);
-    if (q == B(26, 0)) {
-        trk[T_BASS].p[P_DTYPE] = 2; trk[T_BASS].p[P_DIST] = 30;
-        song.g[G_DPIT] = 7; song.g[G_DFDBK] = 75; page(T_ARP, "DLY 2");
-        caption(q, ONLY, "GRAIN DELAY", "repeats pitched ±12 semitones|grain spray", 0);
-    }
-    if (q == B(27, 0)) song.g[G_DPIT] = 12;
-    if (q == B(28, 0)) {
-        song.g[G_DPIT] = 0; song.g[G_DFDBK] = 60;
-        page(T_VOX, "STEP"); caption(q, ONLY, "SEQUENCERS", "piano roll · chance · ratchets|shift · parameter locks", 0);
-    }
-    if (q == B(28, 2)) page(T_VOX, "CHANCE");
-    if (q == B(29, 0)) page(T_VOX, "SHIFT");
-    if (q == B(29, 2)) page(T_VOX, "AUTOMATION");
-    if (q == B(30, 0)) { page(T_DRUM, "STEP"); caption(q, ONLY, "SEQ TOOLS", "reverse · shift · random · cook|beat · clear automation", 0); }
-    if (q == B(30, 1)) hold_btn(B_SEQ, 1);
-    if (q == B(31, 3)) hold_btn(B_SEQ, 0);
-    if (q == B(32, 0)) { home(T_BASS); caption(q, ONLY, "THE BEINGS", "they swell and heat up|with every hit", 1); }
-    /* ---- the breakdown: the drums and the bass out, the reverbs */
-    if (q == B(34, 0)) {
-        mute(T_DRUM, 1); mute(T_BASS, 1); trk[T_ARP].p[P_LEVEL] = 56;
-        song.g[G_RTYPE] = 3; song.g[G_RDAMP] = 1; song.g[G_RPRE] = 2; trk[T_VOX].p[P_REV] = 90;
-        page(T_VOX, "REVERB"); caption(q, ONLY, "RESO REVERB", "it rings in the scale|and follows the robot's notes", 0);
-    }
-    if (q == B(36, 0)) { song.g[G_RTYPE] = 2; caption(q, ONLY, "5 REVERBS", "ROOM · SPRING · SHIMMER|RESO · CLOUD", 0); }
-    if (q == B(37, 0)) song.g[G_RTYPE] = 4;
-    if (q == B(38, 0)) {
-        song.g[G_RTYPE] = 3; page(T_PAD, "OPERATOR");
-        caption(q, ONLY, "FM6 · FULLY EDITABLE", "six operators on the device|ratio · level · envelopes", 0);
-    }
-    if (q >= B(38, 0) && q < B(39, 0)) enc_turn(EN_K1, 1);
-    if (q == B(39, 0)) page(T_PAD, "OP ENV");
-    if (q >= B(39, 0) && q < B(40, 0)) enc_turn(EN_K2, 1);
-    if (q == B(40, 0)) {
-        trk[T_PAD].p[P_E7] = (int16_t)(FM6_OWN + 1u); page(T_PAD, "EDIT 2");
-        caption(q, ONLY, "VOICE BANK", "a 32-voice DX7 cartridge|from the web editor, SLOT B1–B32", 0);
-    }
-    if (q == B(41, 0)) trk[T_PAD].p[P_E7] = (int16_t)(FM6_OWN + 3u);
-    /* ---- the build and the peak: electro techno */
-    if (q == B(42, 0)) {
-        mute(T_DRUM, 0); mute(T_BASS, 0); drums(ELECTRO); trk[T_ARP].p[P_LEVEL] = 70; trk[T_VOX].p[P_REV] = 55;
-        slicer(2, (1u << T_DRUM) | (1u << T_VOX));
-        song.g[G_SLPLEN] = 4; song.g[G_SLP0] = 0; song.g[G_SLP0 + 1] = 12; song.g[G_SLP0 + 2] = 7; song.g[G_SLP0 + 3] = -5;
-        page(T_DRUM, "SLICER"); caption(q, ONLY, "SLICER BUS", "stutter and gate after the effects|on any of the 6 tracks", 0);
-    }
-    if (q == B(43, 0)) { page(T_DRUM, "SL PITCH"); caption(q, ONLY, "SLICER BUS", "its own 16-step pitch sequencer", 0); }
-    if (q == B(44, 0)) { slicer(0, 0); drums(PEAK); home(T_VOX); hold_btn(B_FX, 1); caption(q, ONLY, "PUNCH-IN FX", "hold FX, play the keys|repeat · octave · stutter", 0); }
-    if (bar == 44u && q % 4u == 3u) perf_press(PF_R16, 1);
-    if (bar == 45u) { perf_press(PF_R16, q % 4u == 0u); perf_press(PF_OCTU, q % 4u == 1u || q % 4u == 2u); perf_press(PF_S16, q % 4u >= 2u); }
-    if (q == B(46, 0)) {
-        hold_btn(B_FX, 0); perf_press(PF_S16, 0); perf_press(PF_OCTU, 0); perf_press(PF_R16, 0);
-        song.g[G_CLIP] = 55; song.g[G_PUNCH] = 80; song.g[G_DUCK] = 40;
-        page(T_DRUM, "MASTER"); caption(q, ONLY, "MASTER", "clipper · drum punch|sidechain duck · leveler", 0);
-    }
-    if (q == B(47, 0)) {
-        trk[T_DRUM].p[P_E0] = 110; trk[T_DRUM].p[P_E7] = 70; trk[T_DRUM].p[P_E6] = 40;
-        dx_mot[XM_RATE] = 6; dx_mot[XM_DPTH] = 100; dx_mot[XM_SHPE] = 4;
-        page(T_DRUM, "EDIT 1"); caption(q, ONLY, "DRUM-X", "the colony morphs to kit B|harder, louder", 1);
-    }
-    if (q == B(48, 0)) {
-        drums(FLOOR); sound(T_ZAP, "NOISE", "ARCADE");
-        for (k = 0; k < 16u; k++) { uint8_t n = 84; put(T_ZAP, k, k == 3u || k == 11u ? 1u : 0u, &n, k == 3u || k == 11u ? ST_NOTE : ST_REST, 0); }
-        trk[T_ZAP].p[P_ROOT] = 4; trk[T_ZAP].p[P_SCALE] = 7; trk[T_ZAP].p[P_SLEN] = 16; mute(T_ZAP, 0); trk[T_ZAP].p[P_LEVEL] = 55;
-        home(T_DRUM); caption(q, ONLY, "ALL SYNTHESIS", "no samples|six beings, all alive", 1);
-    }
-    if (q == B(50, 0)) { go_title("MIXER"); caption(q, ONLY, "6-CHANNEL MIXER", "level · pan · send · mute|thermal meters", 0); }
-    if (q == B(52, 0)) { go_title("ARRANGE"); caption(q, ONLY, "SONGS", "8 projects × 4 sections|chains · scenes, SLOOP-style", 0); }
-    if (q == B(54, 0)) { home(T_PAD); hold_btn(B_ENV, 1); caption(q, ONLY, "PAGE JUMP", "hold a page button|turn PRESETS: straight to a page", 0); }
-    if (q > B(54, 0) && q < B(55, 3)) enc_turn(EN_PRESET, q % 2u ? 1 : -1);
-    if (q == B(55, 3)) hold_btn(B_ENV, 0);
-    if (q >= B(56, 0) && q < B(60, 0)) {                      /* the montage: a page and a word a beat */
-        k = q - B(56, 0);
-        page(MSEL[k], MPG[k]);
-        if (MRT[k]) song.g[G_RTYPE] = MRT[k];
-        if (k == 1u) slicer(2, (1u << T_DRUM)); else if (k == 2u) slicer(0, 0);
-        caption(q, "", WORDS[k], "", 0);
-    }
-    if (q == B(60, 0)) { song.g[G_RTYPE] = 3; drums(PEAK); home(T_DRUM); caption(q, "", "JIANT FM", "a living synth|in your pocket", 1); }
-    if (q == B(62, 0)) { slicer(2, (1u << T_DRUM) | (1u << T_BASS)); }
-    if (q == B(62, 2)) slicer(0, 0);
-    if (q == B(63, 3)) { trk[T_DRUM].p[P_REV] = 100; trk[T_BASS].p[P_REV] = 80; }
-    /* ---- the outro: the beat stops, the robot sings alone in RESO */
-    if (q == B(64, 0)) {
-        mute(T_DRUM, 1); mute(T_BASS, 1); mute(T_ZAP, 1); mute(T_ARP, 1); song.g[G_CLIP] = 0;
-        home(T_VOX); caption(q, ONLY, "THE BEINGS", "rest", 1);
-    }
-    if (q == B(66, 0)) { caption(q, "", "", "", 0); }        /* (the outro card) */
-    if (q == B(70, 0)) mute(T_VOX, 1);
-}
-
-/* (0.6.30) the new part, 8 bars after PAGE JUMP: ARRANGE, DICE ALL three times (a song idea each, the tempo kept for
- * the film's beat), UNDO, TRACKS / LOAD and the one SCALE; then the song as it was (packed before the dice, restored
- * as UNDO does) and the rest of the film */
 static project_store_t film_song;
-static void at_new(uint32_t q, uint32_t r)
+static void at_beat(uint32_t q)
 {
-    if (r % 4u == 0u || r % 4u == 2u) { hold_btn(B_OCTUP, 0); hold_btn(B_GLO, 0); }
-    if (r == 0u) {
+    uint32_t bar = q / 4u, k;
+    /* ---- the acid opens slowly from its entry to the breakdown, again over the peak */
+    if (q >= B(8, 0) && q < B(28, 0)) trk[T_BASS].p[P_E4] = (int16_t)(28 + (q - B(8, 0)) * 34u / 80u);
+    if (q >= B(36, 0) && q < B(48, 0)) trk[T_BASS].p[P_E4] = (int16_t)(44 + (q - B(36, 0)) * 30u / 48u);
+
+    /* ---- the intro: the chords and the wind under the splash */
+    if (q == B(0, 0)) { mute(T_PAD, 0); mute(T_ZAP, 0); }
+    if (q == B(3, 0)) {
+        home(T_PAD);
+        caption(q, "SYSTEM", "SIX LIVE TRACKS", "eight synthesis engines|no samples", 0);
+    }
+    /* ---- the drums */
+    if (q == B(4, 0)) {
+        mute(T_DRUM, 0); page(T_DRUM, "EDIT 1");
+        caption(q, "DRUMS", "DRUM-X", "8 synthesized voices|morph from kit A to kit B", 0);
+    }
+    if (q >= B(4, 0) && q < B(6, 0)) trk[T_DRUM].p[P_E0] = (int16_t)(16 + (q - B(4, 0)) * 6u);
+    if (q == B(6, 0)) {
+        drums(MIN1); dx_ui_lane = 0; page(T_DRUM, "SOUND");
+        caption(q, "DRUMS", "EVERY VOICE ITS OWN", "pitch · decay · noise|color · wave", 0);
+    }
+    if (q == B(7, 0)) dx_ui_lane = 4;
+    /* ---- the synths */
+    if (q == B(8, 0)) {
+        mute(T_BASS, 0); page(T_BASS, "EDIT 2");
+        caption(q, "SYNTHESIS", "ACID ANALOG", "cutoff · resonance · drive|slides and accents in the steps", 0);
+    }
+    if (q == B(10, 0)) {
+        page(T_BASS, "FILTER");
+        caption(q, "SYNTHESIS", "FILTERS", "LP · HP · BP · COMB|on every engine", 0);
+    }
+    if (q >= B(10, 1) && q < B(11, 2)) trk[T_BASS].p[P_FTYPE] = (int16_t)((q - B(10, 1)) % 4u);   /* LP HP BP COMB */
+    if (q == B(11, 2)) trk[T_BASS].p[P_FTYPE] = 0;
+    if (q == B(12, 0)) {
+        mute(T_ARP, 0); page(T_PAD, "OPERATOR");
+        caption(q, "SYNTHESIS", "FM6 OPERATORS", "six operators on the device|ratio · level · envelopes", 0);
+    }
+    if (q >= B(12, 0) && q < B(13, 0)) enc_turn(EN_K1, 1);
+    if (q == B(13, 0)) page(T_PAD, "OP ENV");
+    if (q >= B(13, 0) && q < B(14, 0)) enc_turn(EN_K2, 1);
+    if (q == B(14, 0)) {
+        page(T_ARP, "EDIT 1");
+        caption(q, "SYNTHESIS", "LOFI BYTEBEAT", "formulas as oscillators|bytebeat · floatbeat · wave RAM", 0);
+    }
+    /* ---- the groove: X-MOD, TONE, the cyber line */
+    if (q == B(16, 0)) {
+        drums(MIN2);
+        dx_mot[XM_RATE] = 5; dx_mot[XM_DPTH] = 60; dx_mot[XM_SHPE] = 1; dx_mot[XM_RAND] = 25;
+        page(T_DRUM, "X-MOD"); caption(q, "DRUMS", "X-MOD", "the kit's own LFO on MORPH|a random push on every hit", 0);
+    }
+    if (q == B(18, 0)) { page(T_DRUM, "TONE"); caption(q, "DRUMS", "TONE", "band-pass on hats · rim · bell|feedback on every voice", 0); }
+    if (q >= B(18, 0) && q < B(20, 0)) dx_tone = (uint8_t)((q >= B(19, 0) ? 0x20u : 0u) | (2u + (q - B(18, 0)) * 3u / 2u));
+    if (q == B(20, 0)) {
+        dx_tone = 0x18u; mute(T_LEAD, 0); page(T_LEAD, "EDIT 1");
+        caption(q, "SYNTHESIS", "PHASE", "phase distortion|two waves · DCW · feedback", 0);
+    }
+    /* ---- modulation */
+    if (q == B(22, 0)) {
+        trk[T_BASS].p[P_M1SRC] = MS_LFO; trk[T_BASS].p[P_M1DST] = MD_CUT; trk[T_BASS].p[P_M1AMT] = 18;
+        page(T_BASS, "MOD"); caption(q, "MODULATION", "MOD MATRIX", "4 slots a track|LFO · envelopes · macros · MSEQ", 0);
+    }
+    if (q == B(24, 0)) {
+        trk[T_BASS].p[P_M2SRC] = MS_STEP; trk[T_BASS].p[P_M2DST] = MD_CUT; trk[T_BASS].p[P_M2AMT] = 26;
+        trk[T_BASS].p[P_MSLEN] = 8; trk[T_BASS].p[P_MSDIV] = 3;
+        for (k = 0; k < 16u; k++) trk[T_BASS].p[P_MS0 + k] = (int16_t)((k * 53u + 10u) % 128u);
+        page(T_BASS, "MSEQ"); caption(q, "MODULATION", "MSEQ", "a 16-step modulation sequencer|here on the acid's cutoff", 0);
+    }
+    if (q == B(26, 0)) {
+        trk[T_PAD].p[P_ELOOP] = 1; trk[T_PAD].p[P_ED_FLT] = 30; page(T_PAD, "ENV DEST");
+        caption(q, "MODULATION", "ENVELOPES THAT LOOP", "an ADSR held cycles|like a shaped LFO", 0);
+    }
+    /* ---- the breakdown: the kick out, the other chords, the effects */
+    if (q == B(28, 0)) {
+        drums(BREAK); chords(CHB);
+        page(T_LEAD, "STEP"); caption(q, "SEQUENCING", "PIANO ROLL", "chance · ratchets · slides|parameter locks", 0);
+    }
+    if (q == B(28, 2)) page(T_LEAD, "CHANCE");
+    if (q == B(29, 0)) page(T_BASS, "STEP");
+    if (q == B(29, 2)) page(T_LEAD, "AUTOMATION");
+    if (q == B(30, 0)) {
+        song.g[G_RTYPE] = 3; song.g[G_RDAMP] = 1; song.g[G_RPRE] = 2; trk[T_LEAD].p[P_REV] = 100;
+        page(T_LEAD, "REVERB"); caption(q, "EFFECTS", "FIVE REVERBS", "ROOM · SPRING · SHIMMER|RESO tuned to the scale · CLOUD", 0);
+    }
+    if (q == B(31, 0)) song.g[G_RTYPE] = 2;
+    if (q == B(31, 2)) song.g[G_RTYPE] = 4;
+    if (q == B(32, 0)) {
+        song.g[G_RTYPE] = 3; song.g[G_DPIT] = 7; song.g[G_DFDBK] = 70; page(T_LEAD, "DLY 2");
+        caption(q, "EFFECTS", "GRAIN DELAY", "repeats pitched ±12 semitones|a spray of grains", 0);
+    }
+    if (q == B(33, 0)) song.g[G_DPIT] = 12;
+    if (q == B(34, 0)) {
+        song.g[G_DPIT] = 0; song.g[G_DFDBK] = 55; trk[T_BASS].p[P_DIST] = 50; page(T_BASS, "DIST");
+        caption(q, "EFFECTS", "FIVE DISTORTIONS", "SOFT · HARD · FOLD · CRUSH · RECT|on every track", 0);
+    }
+    if (q >= B(34, 0) && q < B(36, 0) && q % 2u == 0u) trk[T_BASS].p[P_DTYPE] = (int16_t)((q - B(34, 0)) / 2u % 5u);
+    /* ---- the peak */
+    if (q == B(36, 0)) {
+        trk[T_BASS].p[P_DTYPE] = 2; trk[T_BASS].p[P_DIST] = 26; trk[T_LEAD].p[P_REV] = 70;
+        drums(PEAK); chords(CHA); trk[T_DRUM].p[P_E0] = 40;
+        slicer(2, (1u << T_DRUM) | (1u << T_BASS));
+        song.g[G_SLPLEN] = 4; song.g[G_SLP0] = 0; song.g[G_SLP0 + 1] = 12; song.g[G_SLP0 + 2] = 7; song.g[G_SLP0 + 3] = -5;
+        page(T_DRUM, "SLICER"); caption(q, "PERFORMANCE", "SLICER BUS", "stutter and gate after the effects|on any of the 6 tracks", 0);
+    }
+    if (q == B(37, 0)) page(T_DRUM, "SL PITCH");
+    if (q == B(38, 0)) { slicer(0, 0); home(T_LEAD); hold_btn(B_FX, 1); caption(q, "PERFORMANCE", "PUNCH-IN FX", "hold FX, play the keys|repeat · octave · stutter", 0); }
+    if (bar == 38u && q % 4u == 3u) perf_press(PF_R16, 1);
+    if (bar == 39u) { perf_press(PF_R16, q % 4u == 0u); perf_press(PF_OCTU, q % 4u == 1u || q % 4u == 2u); perf_press(PF_S16, q % 4u >= 2u); }
+    if (q == B(40, 0)) {
+        hold_btn(B_FX, 0); perf_press(PF_S16, 0); perf_press(PF_OCTU, 0); perf_press(PF_R16, 0);
+        song.g[G_CLIP] = 50; song.g[G_PUNCH] = 80; song.g[G_DUCK] = 40;
+        page(T_DRUM, "MASTER"); caption(q, "PERFORMANCE", "MASTER", "clipper · drum punch|sidechain duck · leveler", 0);
+    }
+    if (q == B(42, 0)) { home(T_BASS); hold_btn(B_LFO, 1); caption(q, "PERFORMANCE", "MACROS", "4 macros over what's playing|their dice roll new routes", 0); }
+    if (q >= B(42, 0) && q < B(43, 0)) for (k = 0; k < 4u; k++) macro_v[k] = (uint8_t)clamp((int32_t)((q - B(42, 0) + 1u) * (10u + 4u * k)), 0, 127);
+    if (q == B(42, 2)) { macro_dice(1); ui_message("MACROS DICED"); }
+    if (q == B(42, 3)) { hold_btn(B_LFO, 0); for (k = 0; k < 4u; k++) macro_v[k] = 0; }
+    if (q == B(43, 0)) hold_btn(B_LFO, 1);                     /* (LFO again: DONE) */
+    if (q == B(43, 1)) hold_btn(B_LFO, 0);
+    /* ---- the song */
+    if (q == B(44, 0)) { go_title("MIXER"); caption(q, "SONG", "6-CHANNEL MIXER", "level · pan · send · mute|thermal meters", 0); }
+    if (q == B(46, 0)) {
         chain_config.count = 5;
         chain_config.row[0] = (chain_row_t){0, 4}; chain_config.row[1] = (chain_row_t){1, 8};
         chain_config.row[2] = (chain_row_t){2, 4}; chain_config.row[3] = (chain_row_t){3, 2}; chain_config.row[4] = (chain_row_t){1, 8};
         SONG_END(&chain_config) = SONG_FOREVER;                 /* END: LOOP */
         go_title("ARRANGE"); ui.song_row = 0;
-        caption(q, ONLY, "ARRANGE", "sections in a column|bars · scenes · END x2..x8 · LOOP", 0);
+        caption(q, "SONG", "ARRANGE", "sections in a column|bars · scenes · END x2..x8 · LOOP", 0);
     }
-    if (r > 0u && r < 6u) ui.song_row = (uint8_t)(r < 5u ? r : 6u);   /* (down the rows, to the END) */
-    if (r == 6u) {
+    if (q > B(46, 0) && q < B(48, 0)) ui.song_row = (uint8_t)((q - B(46, 0)) < 5u ? q - B(46, 0) : 6u);
+    if (q == B(48, 0)) {                                       /* DICE ALL: the song packed first, UNDO after */
         project_capture(&proj_scratch); proj_pack(&film_song, &proj_scratch);
         home(T_DRUM); enc_turn(EN_SELECT, 1);
-        caption(q, ONLY, "DICE ALL", "HOME + SELECT: a whole new piece|genre · energy · orchestration · sounds · FX", 1);
+        caption(q, "SONG", "DICE ALL", "HOME + SELECT: a whole new piece|15 genres · SPACE to FRANTIC", 0);
     }
-    if (r == 7u || r == 11u || r == 15u) {              /* OK: the dice (0.6.34: three of its worlds, the film's tempo) */
-        static const int8_t G[3] = {2, 0, 10}, E[3] = {1, 2, 0};   /* DARK MINIMAL MID, IDM FRANTIC, SOUNDTRACK SPACE */
-        dice_force_style = G[(r - 7u) / 4u]; dice_force_energy = E[(r - 7u) / 4u];
-        hold_btn(B_OCTUP, 1);
-    }
-    if (r == 8u || r == 12u || r == 16u) song.g[G_BPM] = BPM;   /* (each roll a tempo of its own: the film keeps 125) */
-    if (r == 10u || r == 14u) enc_turn(EN_SELECT, 1);
-    if (r == 10u) caption(q, ONLY, "NEVER THE SAME", "15 genres · SPACE to FRANTIC|soundtrack, IDM, hard techno, neo classical", 1);
-    if (r == 18u) caption(q, ONLY, "UNDO", "GLO + G4: back one step|again: forward", 1);
-    if (r == 19u) {                                             /* (the GLO layer's G4: what the key does) */
+    if (q == B(48, 2)) { dice_force_style = 2; dice_force_energy = 1; hold_btn(B_OCTUP, 1); }   /* DARK MINIMAL */
+    if (q == B(48, 3)) hold_btn(B_OCTUP, 0);
+    if (q == B(49, 0)) song.g[G_BPM] = BPM;                    /* (the film keeps its tempo) */
+    if (q == B(50, 0)) {
         dice_force_style = dice_force_energy = -1;
         if (!undo_do()) ui_message("UNDONE (AGAIN: REDO)");
-        song.g[G_BPM] = BPM;
-    }
-    if (r == 20u) {
-        go_title("SYSTEM");
-        caption(q, ONLY, "TRACKS · LOAD", "4 or 6 tracks|ECO · LITE · FULL: you pick the weight", 0);
-    }
-    if (r == 21u || r == 22u) enc_turn(EN_K2, -1);              /* LOAD: LITE, ECO */
-    if (r == 23u) enc_turn(EN_K2, 2);                           /* .. FULL again */
-    if (r == 24u) {                                             /* the song back, as UNDO brings one */
         if (proj_import(&proj_scratch, &film_song, sizeof film_song) && !project_restore_runtime(&proj_scratch))
             transport_req = 1;
         song.g[G_BPM] = BPM;
-        page(T_VOX, "SCL");
-        caption(q, ONLY, "ONE SCALE", "every track, the reverb and the arp|follow it", 0);
+        caption(q, "SONG", "UNDO", "GLO + G4: back one step|again: forward", 0);
     }
-    if (r >= 25u && r < 28u) enc_turn(EN_K1, 1);                /* the root up */
-    if (r == 28u) enc_turn(EN_K1, -3);
-}
-static void at_beat_script(uint32_t q)
-{
-    if (q < B(56, 0)) { at_beat_v2(q); return; }
-    if (q < B(64, 0)) { at_new(q, q - B(56, 0)); return; }
-    qoff = 32u;
-    at_beat_v2(q - 32u);
-    qoff = 0;
-}
-/* (0.6.36) more alive: a page held for a while cuts to HOME's beings for two beats every two bars, then back */
-static void at_beat(uint32_t q)
-{
-    static uint32_t since, cut;
-    static uint8_t pg, sel;
-    uint8_t p0, h0, s0;
-    if (cut && --cut == 0) { ui.home = 0; ui.page = pg; song.sel = sel; page_entered(); }   /* (back to the page) */
-    p0 = ui.page; h0 = ui.home; s0 = song.sel;
-    at_beat_script(q);
-    if (ui.page != p0 || ui.home != h0 || song.sel != s0 || q < SPLASH_BEATS + 8u) {   /* (the script moved: a scene) */
-        cut = 0; since = q; pg = ui.page; sel = song.sel;
-        return;
+    /* ---- the system */
+    if (q == B(51, 0)) { go_title("SYSTEM"); caption(q, "SYSTEM", "TRACKS · LOAD", "4 or 6 tracks|ECO · LITE · FULL: you pick the weight", 0); }
+    if (q == B(51, 1) || q == B(51, 2)) enc_turn(EN_K2, -1);    /* LOAD: LITE, ECO */
+    if (q == B(51, 3)) enc_turn(EN_K2, 2);                      /* .. FULL again */
+    if (q == B(52, 0)) { page(T_LEAD, "SCL"); caption(q, "SYSTEM", "ONE SCALE", "every track, the reverb|and the arp follow it", 0); }
+    if (q == B(52, 1) || q == B(52, 2)) enc_turn(EN_K1, 1);
+    if (q == B(52, 3)) enc_turn(EN_K1, -2);
+    if (q == B(53, 0)) { home(T_PAD); hold_btn(B_ENV, 1); caption(q, "SYSTEM", "PAGE JUMP", "hold a page button|turn PRESETS: straight to a page", 0); }
+    if (q > B(53, 0) && q < B(54, 3)) enc_turn(EN_PRESET, q % 2u ? 1 : -1);
+    if (q == B(54, 3)) hold_btn(B_ENV, 0);
+    if (q == B(55, 0)) { page(T_DRUM, "STEP"); caption(q, "SEQUENCING", "SEQ TOOLS", "reverse · shift · random · cook|beat · clear automation", 0); }
+    if (q == B(55, 1)) hold_btn(B_SEQ, 1);
+    if (q == B(55, 3)) hold_btn(B_SEQ, 0);
+    /* ---- the grid of pages (compose.py replays them), the beings under it; the outro */
+    if (q == B(56, 0)) {
+        home(T_DRUM);
+        caption(q, "", "ONE SMALL SCREEN", "DRUM-X|ACID ANALOG|FM6 OPERATORS|TONE|MSEQ|SLICER BUS|PUNCH-IN FX|ARRANGE", 2);
     }
-    if (!cut && !ui.home && q - since >= 6u && (q - since) % 8u == 6u && q + 26u < B(BARS, 0)) {
-        go_home(); cut = 3;                          /* (two beats of beings, the page back on the third) */
-    }
+    if (q == B(60, 0)) { caption(q, "", "", "", 0); slicer(2, 1u << T_DRUM); }
+    if (q == B(60, 2)) slicer(0, 0);
+    if (q == B(62, 0)) { mute(T_DRUM, 1); mute(T_BASS, 1); mute(T_ARP, 1); trk[T_PAD].p[P_REV] = 110; }
+    if (q == B(64, 0)) mute(T_LEAD, 1);
 }
 
 static void put_screen(void)
@@ -448,7 +377,13 @@ int main(int argc, char **argv)
     for (f = 0; f < total; f++) {
         double t = (double)f / FPS;
         uint32_t want = (uint32_t)((uint64_t)(f + 1u) * FS / FPS), beat = (uint32_t)(t / BEAT_S);
-        if (beat != beat_done) { beat_done = beat; at_beat(beat); }
+        if (beat != beat_done) {
+            beat_done = beat; at_beat(beat);
+            if (getenv("FILM_SOLO")) {                  /* (a check: only these tracks sound, a bit each) */
+                uint32_t m = (uint32_t)strtoul(getenv("FILM_SOLO"), 0, 0), k;
+                for (k = 0; k < NTRK; k++) if (!((m >> k) & 1u)) trk[k].p[P_MUTE] = 1;
+            }
+        }
         while (nsamp < want && nsamp < nwav) {          /* the audio up to this frame's end */
             int32_t o[2 * CTL];
             int16_t s[2 * CTL];
