@@ -33,12 +33,12 @@ static void analog_note_on(track_t *t, voice_t *v)
 
 /* (0.6.45) MORPH: the plain WAVEs (SAW SQR TRI SIN) on towards the next ones: the place, Q8 from WAVE (0..768), the
  * knob and the SHAPE modulation (LFO / ENV -> SHAPE) together; -1: none (the WAVE as it is) */
-static int32_t an_mpos(const int16_t *p, const vmod_t *m)
+static int32_t an_mpos(const int16_t *p, int32_t mq8, const vmod_t *m)   /* (mq8: the morph Q8, track_t.mo_cur) */
 {
     int32_t mo;
-    if (p[P_E0] >= 4 || (!p[P_MORPH] && m->shape == (64 << 8)))
+    if (p[P_E0] >= 4 || (!mq8 && m->shape == (64 << 8)))
         return -1;
-    mo = clamp((p[P_MORPH] << 8) + m->shape - (64 << 8), 0, 127 << 8);
+    mo = clamp(mq8 + m->shape - (64 << 8), 0, 127 << 8);
     return clamp(p[P_E0] * 256 + mo * 768 / (127 << 8), 0, 768);
 }
 static inline int32_t an_osc(uint32_t w, uint32_t ph, uint32_t inc)
@@ -54,7 +54,7 @@ static inline int32_t an_morph(int32_t pos, uint32_t ph, uint32_t inc)
 /* (0.6.45) MORPH: the plain WAVEs blended toward the next (an_mpos), osc 2 as analog_render's, the same noise, drive
  * and filter as analog_ext (a loop of its own: the others' as they were) */
 static __attribute__((noinline)) void analog_morph(track_t *t, voice_t *v, int32_t *out, uint32_t n, const vmod_t *m,
-                                                   int32_t mpos)
+                                                   int32_t mpos0, int32_t mpos1)   /* (0.6.50: ramped mpos0 -> mpos1) */
 {
     const int16_t *p = t->p;
     uint32_t i, inc1 = m->inc, ph0 = v->ph[0], ph1 = v->ph[1], ft = (uint32_t)p[P_FTYPE] & 3u;
@@ -64,7 +64,9 @@ static __attribute__((noinline)) void analog_morph(track_t *t, voice_t *v, int32
     int32_t ic1 = v->s[0], ic2 = v->s[1], nst = v->s[2];
     tsvf_t flt;
     tsvf_coef(&flt, cut, p[P_E5]);
+    int32_t dq = ((mpos1 - mpos0) << 8) / (int32_t)(n ? n : 1u);
     for (i = 0; i < n; i++) {
+        int32_t mpos = mpos0 + ((dq * (int32_t)i) >> 8);
         int32_t s = mulq15(an_morph(mpos, ph0, inc1), m1) + mulq15(an_morph(mpos, ph1, inc2), m2);
         ph0 += inc1;
         ph1 += inc2;
@@ -210,9 +212,11 @@ static __attribute__((noinline)) void analog_render(track_t *t, voice_t *v, int3
  * (a dispatch of its own: analog_render's loop as before) */
 static void analog_dispatch(track_t *t, voice_t *v, int32_t *out, uint32_t n, const vmod_t *m)
 {
-    int32_t mpos = an_mpos(t->p, m);
-    if (mpos >= 0)                                    /* (0.6.45) MORPH */
-        analog_morph(t, v, out, n, m, mpos);
+    int32_t m1 = an_mpos(t->p, t->mo_cur, m), m0 = an_mpos(t->p, t->mo_prev, m);
+    if (m1 >= 0 || m0 >= 0) {                         /* (0.6.45) MORPH; (0.6.50) ramped from the last block's */
+        int32_t base = (int32_t)t->p[P_E0] * 256;      /* (as it leaves or comes: the plain WAVE) */
+        analog_morph(t, v, out, n, m, m0 < 0 ? base : m0, m1 < 0 ? base : m1);
+    }
     else if ((uint32_t)t->p[P_E0] >= AW_SYNC || t->p[P_FTYPE])
         analog_ext(t, v, out, n, m);
     else

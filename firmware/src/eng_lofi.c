@@ -451,7 +451,7 @@ static void lofi_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const 
     lofi_bend_t bd;
     uint32_t inc, ph = v->ph[0], lfsr = (uint32_t)v->s[2];
     const uint8_t *wr = WRAM[((uint32_t)p[P_E2] >> 3) & 15u];
-    int32_t wdc = 0, mf = 0;
+    int32_t wdc = 0, mf = 0, dmf = 0;                    /* (0.6.50: MORPH's blend Q8, ramped across the block) */
     if (wave == RW_WRAM) {                              /* the table's mean: no DC from lopsided shapes */
         int32_t sum = 0;
         for (i = 0; i < 16u; i++)
@@ -481,11 +481,15 @@ static void lofi_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const 
         return;
     }
     {   /* (0.6.45) MORPH: from WAVE on towards the next ones (to WRAM), the knob and SHAPE's modulation */
-        int32_t mo = clamp((p[P_MORPH] << 8) + m->shape - (64 << 8), 0, 127 << 8);
-        if (mo) {
+        int32_t mo = clamp(t->mo_cur + m->shape - (64 << 8), 0, 127 << 8);
+        int32_t mo0 = clamp(t->mo_prev + m->shape - (64 << 8), 0, 127 << 8);
+        if (mo || mo0) {
             int32_t pos = clamp((int32_t)wave * 256 + mo * 768 / (127 << 8), 0, RW_WRAM * 256);
+            int32_t p0 = clamp((int32_t)wave * 256 + mo0 * 768 / (127 << 8), 0, RW_WRAM * 256);
             wave = (uint32_t)pos >> 8;
-            mf = pos & 255;
+            mf = (pos & 255) << 8;
+            dmf = (p0 >> 8) == (pos >> 8) ? (mf - ((p0 & 255) << 8)) / (int32_t)(n ? n : 1u) : 0;
+            mf -= dmf * (int32_t)n;
             if ((wave == RW_WRAM || (mf && wave + 1u == RW_WRAM)) && !wdc) {   /* (into WRAM: its mean, as above) */
                 int32_t sum = 0;
                 for (i = 0; i < 16u; i++)
@@ -531,8 +535,8 @@ static void lofi_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const 
                 s = (ph0 < duty ? 32767 : -32768) - ((int32_t)(duty >> 16) - 32768);
                 break;
             }
-            if (mf)                                     /* (0.6.45) MORPH: towards the next wave */
-                s += ((lofi_mto(wave + 1u, ph0, duty, wr, wdc, lfsr) - s) * mf) >> 8;
+            if (mf >> 8)                                /* (0.6.45) MORPH: towards the next wave */
+                s += ((lofi_mto(wave + 1u, ph0, duty, wr, wdc, lfsr) - s) * (mf >> 8)) >> 8;
             if (q)                                      /* rounded, not floored (floor = DC) */
                 s = ((s + (1 << (15 - bits))) >> (16 - bits)) << (16 - bits);
             if (crush > 64)
@@ -540,6 +544,7 @@ static void lofi_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const 
             held = lofi_mask(s, msk);
         }
         ph += inc;
+        mf += dmf;                                      /* (0.6.50) MORPH's ramp */
         out[i] += voice_amp(soft_knee(svf_mode(&flt, held >> 1, &ic1, &ic2, ft, kd), 16000) << 1, m, i);
     }
     v->ph[0] = ph;

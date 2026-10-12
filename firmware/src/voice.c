@@ -786,6 +786,11 @@ static uint32_t track_render(track_t *t, int32_t *out, uint32_t n)
             t->p[P_E0 + i] = t->pe_old[i];
         }
     track_lfo_tick(t);
+    {   /* (0.6.50) MORPH slewed (at most 3 of the knob's steps a block) and ramped by the engines across the block */
+        int32_t g = clamp(p[P_MORPH], 0, 127) << 8, c = t->mo_cur;
+        t->mo_prev = (uint16_t)c;
+        t->mo_cur = (uint16_t)(c + clamp(g - c, -(3 << 8), 3 << 8));
+    }
     dx_xon = 0;                                         /* (0.6.48) a DRUM part's IMAGE and SENDs (eng_drum.c) */
     if (e == &ENG_DRUM)
         drum_side_begin(t, n);

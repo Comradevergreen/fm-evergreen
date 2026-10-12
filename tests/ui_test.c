@@ -635,11 +635,10 @@ static int test_morph(void)
     static const uint32_t ENG[3] = {ENGI_ANALOG, 2u, 3u};   /* ANALOG, PHASE, LOFI */
     memset(&m, 0, sizeof m);
     m.shape = 64 << 8;
-    ok &= an_mpos(p, &m) == -1;                              /* 0: the WAVE's own render */
-    p[P_MORPH] = 127;
-    ok &= an_mpos(p, &m) == 768;                             /* SAW all the way to SIN */
-    p[P_MORPH] = 0; m.shape = 127 << 8;
-    ok &= an_mpos(p, &m) > 0;                                /* SHAPE modulation moves it */
+    ok &= an_mpos(p, 0, &m) == -1;                           /* 0: the WAVE's own render */
+    ok &= an_mpos(p, 127 << 8, &m) == 768;                   /* SAW all the way to SIN */
+    m.shape = 127 << 8;
+    ok &= an_mpos(p, 0, &m) > 0;                                /* SHAPE modulation moves it */
     for (ph = 0; ph < 0xF0000000u; ph += 0x0F000000u)
         ok &= an_morph(256, ph, 1u << 24) == an_osc(1u, ph, 1u << 24) && an_morph(0, ph, 1u << 24) == an_osc(0u, ph, 1u << 24);
     bad += check("MORPH (ANALOG): 0 = the WAVE as it is, 127 = SIN, SHAPE moves it, whole steps are the next wave", ok);
@@ -821,6 +820,54 @@ static int test_dxlay(void)
     }
     bad += check("NEW PROJECT: every track dry, the engine's own defaults, the factory LAYERs", ok);
     ui_power_on();
+    return bad;
+}
+/* (0.6.50) MORPH turned fast makes no click: its knob jumped 0 <-> 40 every few blocks (across the plain WAVE's render too)
+ * the largest step between two samples no larger than with MORPH held (a smooth wave: a step shows) */
+static int32_t morph_jump(uint32_t eng, int16_t e0, int mode)
+{
+    int32_t o[2u * CTL], last = 0, mx = 0;
+    uint32_t b, i, k;
+    track_t *t;
+    ui_power_on();
+    t = &trk[0];
+    song.master_q12 = 4096;
+    for (k = 1; k < NTRK; k++) trk[k].p[P_MUTE] = 1;
+    set_engine_of(t, eng);
+    t->engine = t->eng_req;
+    t->p[P_E0] = e0;
+    if (eng == 3u) t->p[P_E1] = 1;                       /* (LOFI: TRI) */
+    t->p[P_REV] = t->p[P_DLY] = t->p[P_CHOR] = t->p[P_DIST] = 0;
+    t->p[P_APDEP] = 0;
+    t->p[P_MORPH] = mode == 2 ? 40 : 0;
+    for (b = 0; b < 40u; b++) mix_block(o, CTL);
+    trk_note_on(t, 45, 100);
+    for (b = 0; b < 40u; b++) mix_block(o, CTL);
+    for (b = 0; b < 120u; b++) {
+        if (mode == 1) t->p[P_MORPH] = (b / 6u) & 1u ? 40 : 0;
+        mix_block(o, CTL);
+        for (i = 0; i < CTL; i++) {
+            int32_t d = o[2u * i] - last;
+            last = o[2u * i];
+            if (b || i) mx = d > mx ? d : -d > mx ? -d : mx;
+        }
+    }
+    return mx;
+}
+static int test_morph_click(void)
+{
+    int bad = 0, ok = 1;
+    static const struct { uint32_t eng; int16_t e0; } C[3] = {{ENGI_ANALOG, 2}, {2u, 0}, {3u, 0}};
+    uint32_t c;
+    for (c = 0; c < 3u; c++) {
+        int32_t a = morph_jump(C[c].eng, C[c].e0, 0), b = morph_jump(C[c].eng, C[c].e0, 2), j = morph_jump(C[c].eng, C[c].e0, 1);
+        int32_t ref = a > b ? a : b;
+        if (j > ref + ref / 4) {
+            ok = 0;
+            fprintf(stderr, "  morph click: engine %u: held %d / %d, jumped %d\n", C[c].eng, a, b, j);
+        }
+    }
+    bad += check("MORPH turned fast (0 <-> 40): no step larger than with it held (ANALOG TRI, PHASE, LOFI TRI)", ok);
     return bad;
 }
 static int test_patterns(void)
@@ -8207,6 +8254,7 @@ int main(void)
     bad += test_transitions();
     bad += test_mutate();
     bad += test_morph();
+    bad += test_morph_click();
     bad += test_init_dry();
     bad += test_dximg();
     bad += test_dxlay();

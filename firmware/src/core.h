@@ -436,6 +436,8 @@ typedef struct track {
     int8_t tonal;                /* (0.6.42) TONAL: the rest of the loop this many degrees up / down */
     uint8_t pulse_from, pulse_k; /* .. PULSE: its step + 1 (0: none), the empty steps since */
     uint8_t jump_to, rev;        /* .. JUMP: the next step + 1 (0: the next one); REV: backwards to step 1 */
+    uint16_t mo_cur, mo_prev;    /* (0.6.50) MORPH as the engines play it: Q8, slewed a block at a time (voice.c
+                                  * track_render) and ramped across the block from mo_prev (no step: no click) */
     uint8_t cpos, cv_on;         /* (0.6.47) C.LEN: the component lane's next step; the step playing is cvs */
     step_t cvs, cva, cvp;        /* .. the step playing with the lane's component; the ARP's and PULSE's (CV_IDX) */
     uint32_t seq_off;
