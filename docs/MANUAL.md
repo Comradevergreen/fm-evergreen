@@ -580,9 +580,8 @@ The guard rails:
   brass, marimbas, organs, chiptune), its envelope shaped for the role and the energy (pads that swell in SPACE,
   plucked arps and basses), filtered by role with an **envelope on the filter**, a filter **TYPE** that changes (LP,
   BP, COMB), a slow LFO of its own shape, a little drive on some basses and leads.
-- **Seven drum kits** built on DRUM-X: **808** (the long boom), **HARD** (driven, folded), **CLICK** (minimal, short,
-  dry), **INDUS** (metal and noise), **SOFT** (round, brushed), **GLITCH** (bells, lasers, grit), **ELECTRO** (808 and
-  909 together), with the kit's knobs set to match.
+- **Drums**: in the night's genres they almost always play; the DRUM-X kit is rolled around the factory kit (as SELECT
+  on a DRUM track does) and goes through a soft low-pass so the hats are not glassy.
 - **Space**: delay and reverb sends by role and scaled by how wet the genre and the energy are, now and then one track
   soaked and another dry; the delay time, the GRAIN delay's pitch, the reverb type (ROOM, SPRING, RESO, CLOUD; never
   SHIMMER), size, modulation and width change from throw to throw.

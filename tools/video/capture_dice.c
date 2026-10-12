@@ -1,32 +1,29 @@
 /* SPDX-License-Identifier: GPL-3.0-only
- * (JIANT 0.6.34) the DICE ALL film's footage: the generator thrown live on the host build of the tests (tests/ui_test.c),
- * the real engines playing each piece at its own tempo, the FM-1's screen at 30 fps. A script of throws: each one
- * HOME + SELECT (the dialog), OCT+ (YES), then the piece for a few bars while the camera visits its pages (HOME's beings,
- * the lead's piano roll, the kit, the mixer: what plays and what stays silent); then a montage of quick throws, and a
- * last one, in SPACE, under the outro. The captions (genre, energy, how many tracks, the kit or no drums, the twist) go
- * to scenes.txt, every beat's time to beats.txt (the tempo changes), the intro's words to intro.txt.
+ * (JIANT 0.6.34; 0.6.35 short, no names) the DICE ALL film's footage: the generator thrown live on the host build of the
+ * tests (tests/ui_test.c), the real engines playing each piece at its own tempo, the FM-1's screen at 30 fps. About a
+ * minute: a first piece under the splash, then a throw every four seconds or so, each one HOME + SELECT (the dialog),
+ * OCT+ (YES) and the piece while the camera visits a page or two (the beings, the lead's piano roll, the kit, the
+ * mixer); the last one under the outro. No captions: compose.py rolls an animated die over each throw (its times in
+ * seps.txt). Every beat's time goes to beats.txt (the tempo changes), the intro's words to intro.txt.
  *   cc -O2 -w -Ibuild/gen -Ifirmware/src -Itests -o build/video_dice/capture tools/video/capture_dice.c -lm
- *   build/video_dice/capture build/video_dice      -> audio.wav, screen.rgb, scenes.txt, beats.txt, intro.txt
+ *   build/video_dice/capture build/video_dice      -> audio.wav, screen.rgb, scenes.txt, beats.txt, seps.txt, intro.txt
  *   python3 tools/video/compose.py build/video_dice -> build/video_dice/jiant-fm.mp4 */
 #define UI_TEST_NO_MAIN 1
-#define FELUCCA_VERSION "v0.6.34"
+#define FELUCCA_VERSION "v0.6.35"
 #include "ui_test.c"
 
 #define FPS 30u
 #define SPLASH_S 3.0
-static FILE *wav, *rgb, *cap, *bts;
+#define FIRST_S 5.0                                     /* the intro title until here */
+#define PIECE_S 3.3                                     /* about how long a piece plays */
+static FILE *wav, *rgb, *cap, *bts, *sep;
 static uint32_t nsamp;
-static const char *const ONLY = "DICE ALL";
-static const char *const KIT_N[] = {"808 KIT", "HARD KIT", "CLICK KIT", "INDUS KIT", "SOFT KIT", "GLITCH KIT", "ELECTRO KIT"};
-static const char *const TW_N[] = {"", "TWIST: PHASE", "TWIST: COMB", "TWIST: GRAIN DOWN", "TWIST: POLYMETER", "TWIST: DRONE"};
 enum { G_IDM, G_DIDM, G_DMIN, G_DUB, G_DELEC, G_ACID, G_COLD, G_BROKEN, G_HYPNO, G_BREAKS, G_SOUND, G_HARD, G_INDIE,
        G_PUNK, G_CLASS };
-/* the script: genre, energy, bars (0: as many as ~9 s), a quick one (the montage) */
-static const struct { int8_t g, e; uint8_t bars, quick; } SCRIPT[] = {
-    {G_SOUND, 0, 0, 0}, {G_CLASS, 0, 0, 0}, {G_DIDM, 0, 0, 0}, {G_DUB, 1, 0, 0}, {G_INDIE, 1, 0, 0}, {G_IDM, 2, 0, 0},
-    {G_DELEC, 1, 0, 0}, {G_PUNK, 2, 0, 0}, {G_HARD, 2, 0, 0},
-    {G_HYPNO, 1, 1, 1}, {G_ACID, 2, 1, 1}, {G_COLD, 1, 1, 1}, {G_BROKEN, 1, 1, 1}, {G_BREAKS, 2, 1, 1}, {G_DMIN, 1, 1, 1},
-    {G_SOUND, 0, 4, 0},
+/* the throws: genre, energy (the night's mostly, as the generator throws them) */
+static const struct { int8_t g, e; } SCRIPT[] = {
+    {G_DIDM, 0}, {G_DMIN, 1}, {G_IDM, 2}, {G_DUB, 1}, {G_ACID, 2}, {G_SOUND, 0}, {G_HYPNO, 1}, {G_DELEC, 2},
+    {G_CLASS, 0}, {G_BREAKS, 2}, {G_HARD, 2}, {G_DIDM, 0},
 };
 #define NSCRIPT (sizeof SCRIPT / sizeof SCRIPT[0])
 
@@ -36,10 +33,6 @@ static void hold_btn(uint32_t label, int on)
     else fm1_in.buttons &= ~(1u << panel.btn[label]);
 }
 static void enc_turn(uint32_t role, int32_t s) { host_enc[panel.enc[role]] += s * panel.dir[role]; }
-static void caption(double t, const char *tag, const char *title, const char *sub, int zoom)
-{
-    fprintf(cap, "%.4f\t%s\t%s\t%s\t%d\n", t, tag, title, sub, zoom);
-}
 static void put_screen(void)
 {
     static uint8_t buf[240u * 240u * 3u];
@@ -58,13 +51,6 @@ static int plays(uint32_t k)
     for (i = 0; i < (uint32_t)trk[k].p[P_SLEN]; i++) if (trk[k].step[i].time == ST_NOTE) return 1;
     return 0;
 }
-static void sub_line(char *b, size_t n)                 /* "SPACE · 3 TRACKS · NO DRUMS|TWIST: PHASE" */
-{
-    uint32_t k, act = 0, dr = 0;
-    for (k = 0; k < NTRK; k++) if (plays(k)) { act++; dr |= (uint32_t)drum_track(&trk[k]); }
-    snprintf(b, n, "%s · %u TRACKS · %s%s%s · %d BPM", dh.energy == 0u ? "SPACE" : dh.energy == 2u ? "FRANTIC" : "MID", act,
-             dr ? KIT_N[dh.kit % 7u] : "NO DRUMS", dh.twist ? "|" : "", TW_N[dh.twist % 6u], song.g[G_BPM]);
-}
 /* the melodic track to watch: of those that play above the bass (their notes' average from E3), the one with the
  * most notes (the lead or the arp, rarely the chords); else any that plays */
 static int32_t show_track(void)
@@ -81,19 +67,32 @@ static int32_t show_track(void)
     for (k = 0; k < NTRK; k++) if (plays(k) && !drum_track(&trk[k])) return (int32_t)k;
     return 0;
 }
+static void look(uint32_t view)                         /* the camera: the beings, the piano roll, the kit, the mixer */
+{
+    int32_t k = show_track();
+    uint32_t dr = NTRK, j;
+    for (j = 0; j < NTRK; j++) if (drum_track(&trk[j]) && plays(j)) dr = j;
+    switch (view % 4u) {
+    case 1: song.sel = (uint8_t)k; go_title("STEP"); break;
+    case 2: if (dr < NTRK) { song.sel = (uint8_t)dr; go_title("EDIT 1"); } else { song.sel = (uint8_t)k; go_title("EDIT 1"); } break;
+    case 3: go_title("MIXER"); break;
+    default: song.sel = (uint8_t)k; go_home(); break;
+    }
+}
 
 int main(int argc, char **argv)
 {
-    char p[512], sb[96];
+    char p[512];
     const char *dir = argc > 1 ? argv[1] : "build/video_dice";
-    uint32_t f, si = 0, phase = 0, page_k = 0, nbars = 0, total;
-    double t_ev = 0, bar_s = 2.0, beat_acc = 0, end_t = 0;
+    uint32_t f, si = 0, phase = 0, view = 0, total = 0;
+    double t_ev = 0, t_end_piece = 0, t_look = 0, beat_acc = 0, end_t = 1e9;
     int first_screen = 1;
     snprintf(p, sizeof p, "%s/audio.wav", dir); wav = fopen(p, "wb");
     snprintf(p, sizeof p, "%s/screen.rgb", dir); rgb = fopen(p, "wb");
     snprintf(p, sizeof p, "%s/scenes.txt", dir); cap = fopen(p, "w");
     snprintf(p, sizeof p, "%s/beats.txt", dir); bts = fopen(p, "w");
-    if (!wav || !rgb || !cap || !bts) { fprintf(stderr, "cannot write in %s\n", dir); return 1; }
+    snprintf(p, sizeof p, "%s/seps.txt", dir); sep = fopen(p, "w");
+    if (!wav || !rgb || !cap || !bts || !sep) { fprintf(stderr, "cannot write in %s\n", dir); return 1; }
     wav_hdr(wav, 0);                                    /* (its length written at the end) */
     snprintf(p, sizeof p, "%s/intro.txt", dir);
     { FILE *it = fopen(p, "w"); if (it) { fputs("DICE ALL|one press, a whole new piece", it); fclose(it); } }
@@ -102,65 +101,50 @@ int main(int argc, char **argv)
     ui_rec_prefs |= PREF_SIX >> 8; rp_apply();          /* TRACKS 6 */
     song.master_q12 = 4096;
     host_ticks = 777u;
-    /* the first piece under the splash (no dialog); the rest as the script goes */
     dice_force_style = SCRIPT[0].g; dice_force_energy = SCRIPT[0].e;
-    dice_all();
+    dice_all();                                         /* the first piece under the splash */
     transport_req = 1;
-    bar_s = 4.0 * 60.0 / song.g[G_BPM];
-    nbars = (uint32_t)(SPLASH_S / bar_s) + 3u;
-    phase = 4; t_ev = SPLASH_S + 2.2;                   /* (its caption after the intro title) */
-    total = 0;
-    end_t = 1e9;
+    fprintf(cap, "%.4f\t\t \t\t0\n", FIRST_S);          /* (one silent scene: the intro title ends there) */
+    t_end_piece = FIRST_S + PIECE_S * 0.6; t_look = FIRST_S; si = 1; phase = 3;
     for (f = 0; ; f++) {
         double t = (double)f / FPS;
         uint32_t want = (uint32_t)((uint64_t)(f + 1u) * FS / FPS);
         if (t >= end_t) break;
         /* ---- the script */
-        if (t >= t_ev) {
-            if (phase == 0) {                           /* HOME + SELECT: the dialog */
+        if (phase == 3 && t >= t_look && t < t_end_piece) {   /* a page every two seconds or a bar, whichever longer */
+            double bar_s = 4.0 * 60.0 / song.g[G_BPM];
+            look(view++);
+            t_look = t + (bar_s > 2.0 ? bar_s : 2.0);
+        }
+        if (phase == 3 && t >= t_end_piece) {
+            if (si >= NSCRIPT) {                        /* the last piece goes on under the outro */
+                fprintf(cap, "%.4f\t\t\t\t0\n", t);
+                end_t = t + 6.5;
+                phase = 9;
+            } else {                                    /* the next throw: HOME + SELECT, the die rolls */
+                fprintf(sep, "%.4f\n", t);
                 song.sel = 0; go_home(); enc_turn(EN_SELECT, 1); fm1_ms += 1200u;
-                phase = 1; t_ev = t + (SCRIPT[si].quick ? 0.35 : 0.6);
-            } else if (phase == 1) {                    /* OCT+: YES, the piece */
-                dice_force_style = SCRIPT[si].g; dice_force_energy = SCRIPT[si].e;
-                hold_btn(B_OCTUP, 1);
-                phase = 2; t_ev = t + 0.07;
-            } else if (phase == 2) {                    /* the button up: the dice (a tap acts on its release) */
-                hold_btn(B_OCTUP, 0);
-                phase = 4; t_ev = si ? t + 0.1 : SPLASH_S + 2.2;
-            } else if (phase == 4) {                    /* the piece's length and caption */
-                const char *gname = DSTYLE[(uint32_t)SCRIPT[si].g % NDSTYLE].name;
-                bar_s = 4.0 * 60.0 / song.g[G_BPM];
-                if (SCRIPT[si].bars) nbars = SCRIPT[si].bars;
-                else { nbars = (uint32_t)(9.0 / bar_s + 0.5); if (nbars < 2u) nbars = 2u; if (nbars > 6u) nbars = 6u; }
-                sub_line(sb, sizeof sb);
-                if (si + 1u == NSCRIPT) caption(t, ONLY, gname, sb, 0);
-                else if (SCRIPT[si].quick) caption(t, "", gname, sb, 0);
-                else caption(si ? t : SPLASH_S + 2.2, ONLY, gname, sb, 0);
-                page_k = 0;
-                phase = 3; t_ev = (si ? t : SPLASH_S + 2.2) + bar_s;
-                if (si + 1u == NSCRIPT) {               /* the last: the outro over it */
-                    caption(t + 2.0 * bar_s, "", "", "", 0);
-                    end_t = t + 2.0 * bar_s + 7.0;
-                    t_ev = 1e9;
-                }
-            } else if (phase == 3) {                    /* the camera: a page a bar */
-                int32_t k = show_track();
-                uint32_t dr = NTRK, j;
-                for (j = 0; j < NTRK; j++) if (drum_track(&trk[j]) && plays(j)) dr = j;
-                page_k++;
-                if (page_k >= nbars - (SCRIPT[si].quick ? 0u : 0u)) {   /* the next throw */
-                    si++; phase = 0; t_ev = t;
-                    if (si >= NSCRIPT) { si = NSCRIPT - 1u; t_ev = 1e9; }
-                    continue;
-                }
-                switch (page_k % 4u) {
-                case 1: song.sel = (uint8_t)k; go_title("STEP"); break;
-                case 2: if (dr < NTRK) { song.sel = (uint8_t)dr; go_title("EDIT 1"); } else { song.sel = (uint8_t)k; go_title("EDIT 1"); } break;
-                case 3: go_title("MIXER"); break;
-                default: song.sel = (uint8_t)k; go_home(); break;
-                }
-                t_ev = t + bar_s;
+                phase = 1; t_ev = t + 0.42;
             }
+        }
+        if (phase == 1 && t >= t_ev) {                  /* OCT+: YES */
+            dice_force_style = SCRIPT[si].g; dice_force_energy = SCRIPT[si].e;
+            hold_btn(B_OCTUP, 1);
+            phase = 2; t_ev = t + 0.07;
+        } else if (phase == 2 && t >= t_ev) {           /* the button up: the dice (a tap acts on its release) */
+            double bar_s;
+            hold_btn(B_OCTUP, 0);
+            ui_input();                                 /* (taken this frame: the piece's tempo for its length) */
+            ui.msg_t = 0; ui.msg[0] = ui.msg2[0] = 0;   /* (no genre's name on the screen: the film names nothing) */
+            bar_s = 4.0 * 60.0 / song.g[G_BPM];
+            {
+                uint32_t nb = (uint32_t)(PIECE_S / bar_s + 0.5);
+                if (nb < 1u) nb = 1u;
+                if (si + 1u == NSCRIPT) nb += 1u;       /* (the last a little longer) */
+                t_end_piece = t + nb * bar_s;
+            }
+            t_look = t + 0.25;
+            si++; phase = 3;
         }
         /* ---- the audio up to this frame's end, the beats' times */
         while (nsamp < want) {
@@ -188,15 +172,10 @@ int main(int argc, char **argv)
         put_screen();
         total++;
     }
-    fclose(rgb); fclose(cap); fclose(bts);
-    /* the header now that the length is known */
-    {
-        FILE *w2;
-        fclose(wav);
-        snprintf(p, sizeof p, "%s/audio.wav", dir);
-        w2 = fopen(p, "r+b");
-        if (w2) { wav_hdr(w2, nsamp); fclose(w2); }
-    }
+    fclose(rgb); fclose(cap); fclose(bts); fclose(sep);
+    fclose(wav);
+    snprintf(p, sizeof p, "%s/audio.wav", dir);
+    { FILE *w2 = fopen(p, "r+b"); if (w2) { wav_hdr(w2, nsamp); fclose(w2); } }
     {   /* scenes.txt's header line first (compose.py reads it): splash, end, beat */
         FILE *in, *out;
         char path2[600], line[512];

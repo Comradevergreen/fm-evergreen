@@ -609,9 +609,8 @@ Las barandas:
   brillantes: campanas, bronces, marimbas, órganos, chiptune), con la envolvente adaptada al rol y a la energía (pads
   que crecen en SPACE, arpegios y bajos punteados), filtrado según el rol con **envolvente al filtro**, un **TYPE** de
   filtro que cambia (LP, BP, COMB), un LFO lento de forma propia y un poco de saturación en algunos bajos y leads.
-- **Siete kits de batería** construidos sobre DRUM-X: **808** (el boom largo), **HARD** (saturado, plegado), **CLICK**
-  (minimal, corto, seco), **INDUS** (metal y ruido), **SOFT** (redondo, con escobillas), **GLITCH** (campanitas, lásers,
-  arena), **ELECTRO** (808 y 909 juntos), con las perillas del kit acordes.
+- **Batería**: en los géneros de la noche casi siempre suena; el kit de DRUM-X se tira a los dados alrededor del kit de
+  fábrica (como hace SELECT en una pista DRUM) y pasa por un low-pass suave para que los hi-hats no suenen vidriosos.
 - **Espacio**: envíos de delay y reverb por rol, escalados según qué tan húmedos son el género y la energía, y a veces
   una pista empapada y otra seca; el tiempo del delay, el pitch del GRAIN delay, el tipo de reverb (ROOM, SPRING, RESO,
   CLOUD; nunca SHIMMER), su tamaño, modulación y ancho cambian en cada tirada.
