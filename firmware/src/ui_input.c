@@ -1252,15 +1252,21 @@ static void sound_dice_of(track_t *t, int quiet)
     }
     if (!quiet) ui_message("SOUND DICED");
 }
-/* (0.6.21) EDIT + SELECT: the selected track's sound diced; UNDO (GLO + G4) brings back the sound before the turns
- * (marked once a burst: a pause of 2 s starts another) */
+/* (0.6.21) EDIT + SELECT: the selected track's sound diced. (0.6.65) At once, so it is heard, under a dialog: OCT+
+ * OK keeps it, OCT- CANCEL brings back the sound before the first dice (undo_sound: only that track's, the music plays
+ * on); SELECT again dices again. UNDO (GLO + G4) still brings back the sound before */
 static void sound_dice(void)
 {
-    static uint32_t mark_ms;
-    if (!mark_ms || fm1_ms - mark_ms > 2000u)
+    static uint32_t last_ms;                            /* (once a turn burst, the dialog's turns too) */
+    uint32_t again = last_ms && fm1_ms - last_ms <= 400u;
+    last_ms = fm1_ms | 1u;
+    if (again && ui.confirm == CF_DICE_SOUND)
+        return;
+    if (ui.confirm != CF_DICE_SOUND) {
         undo_mark();
-    mark_ms = fm1_ms | 1u;
-    sound_dice_of(TSEL, 0);
+        confirm_open(CF_DICE_SOUND, song.sel);
+    }
+    sound_dice_of(TSEL, 1);
 }
 
 /* (0.6.21) HOME + SELECT (after the dialog): everything diced into a new piece. One scale for the song (ROOT, a
@@ -1599,7 +1605,7 @@ static void ui_input_frame(void)
             ui.confirm = 0;
             ui.force = 1;
             if (kind != CF_OVR_PROJ && kind != CF_OVR_USER && kind != CF_ERASE_USER && kind != CF_DICE_ALL &&
-                kind != CF_DEL_ROW && kind != CF_CLEAR_SONG && !chain_busy())
+                kind != CF_DICE_SOUND && kind != CF_DEL_ROW && kind != CF_CLEAR_SONG && !chain_busy())
                 undo_mark();                            /* (0.6.21) the music before a clear, INIT, RECALL, pattern */
             if (kind == CF_OVR_PROJ) {                  /* overwrite: the NAME screen writes it */
                 name_open(NK_PROJ_SAVE, ui.confirm_trk & 3u);
@@ -1607,6 +1613,8 @@ static void ui_input_frame(void)
                 name_open(NK_USER_SAVE, ui.confirm_trk);
             } else if (kind == CF_ERASE_USER) {
                 up_ui(1u, ui.confirm_trk);
+            } else if (kind == CF_DICE_SOUND) {         /* (0.6.65) OK: the diced sound stays */
+                ui_message(drum_track(TSEL) ? "KIT DICED" : "SOUND DICED");
             } else if (kind == CF_DICE_ALL) {           /* (0.6.21) HOME + SELECT */
                 if (!chain_busy()) dice_all();
             } else if (kind == CF_LOAD_PAT) {
@@ -1692,8 +1700,13 @@ static void ui_input_frame(void)
                 }
             }
         } else if (oct & 1u) {
+            if (ui.confirm == CF_DICE_SOUND)            /* (0.6.65) CANCEL: the sound before the dice */
+                ui_message(undo_sound(ui.confirm_trk) ? "CAN'T UNDO" : "SOUND BACK");
             ui.confirm = 0;
             ui.force = 1;
+        } else if (ui.confirm == CF_DICE_SOUND && panel_enc(EN_SELECT)) {   /* (0.6.65) SELECT again: another dice
+                                                         * (once a turn burst) */
+            sound_dice();
         }
         ui.pg_down = 0;
         enc_drop();

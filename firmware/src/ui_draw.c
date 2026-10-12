@@ -1486,6 +1486,10 @@ static void confirm_text(char *a, char *b)
         str_cpy(a, "NEW PROJECT?", 24);
         str_cpy(b, "UNDO AFTER: GLO + G4", 24);
         break;
+    case CF_DICE_SOUND:                              /* (0.6.65) EDIT + SELECT: heard already */
+        str_cpy(a, drum_track(TSEL) ? "KEEP DICED KIT?" : "KEEP DICED SOUND?", 24);
+        str_cpy(b, "SELECT: DICE AGAIN", 24);
+        break;
     case CF_DICE_ALL:                                /* (0.6.21) HOME + SELECT */
         str_cpy(a, "DICE EVERYTHING?", 24);
         str_cpy(b, "UNDO AFTER: GLO + G4", 24);
@@ -1525,6 +1529,7 @@ static void draw_confirm(void)
 {
     char a[24], b[24];
     const aafont_t *tf = &AF_M;
+    const char *no = ui.confirm == CF_DICE_SOUND ? "CANCEL" : "NO", *yes = ui.confirm == CF_DICE_SOUND ? "OK" : "YES";
     confirm_text(a, b);
     lcd_fill(0, H_HEAD, 240, 240 - H_HEAD, T_BG);
     ui.head_sig = ~0u;
@@ -1547,13 +1552,13 @@ static void draw_confirm(void)
     }
     cv_rrect(10, 80, 90, 26, 6, T_RAISE, T_SURF);     /* OCT-: NO */
     GFX_HOOK_ALIGN(10, 80, 100, 106, AL_HV | AL_N(2), "dialog button NO");
-    cv_key_hint(10 + HALF_UP(90 - kh_ink(KC_OCTDN, "NO")), 80 + HALF_UP(26 - KC_H), KC_OCTDN, "NO", 1, T_RAISE);   /* (ink centred) */
+    cv_key_hint(10 + HALF_UP(90 - kh_ink(KC_OCTDN, no)), 80 + HALF_UP(26 - KC_H), KC_OCTDN, no, 1, T_RAISE);   /* (ink centred) */
     cv_rrect(108, 80, 90, 26, 6, T_THEME, T_SURF);    /* OCT+: YES (on the THEME fill: an INK keycap, THEME label) */
     {
-        int32_t x = 108 + HALF_UP(90 - kh_ink(KC_OCTUP, "YES"));
+        int32_t x = 108 + HALF_UP(90 - kh_ink(KC_OCTUP, yes));
         GFX_HOOK_ALIGN(108, 80, 198, 106, AL_HV | AL_N(2), "dialog button YES");
         x = cv_keycap(x, 80 + HALF_UP(26 - KC_H), KC_OCTUP, T_INK, T_THEME, T_THEME);
-        cv_text_on(x + KH_GAP, 80 + HALF_UP(26 - KC_H) - 1, &AF_S, "YES", T_INK, T_THEME);
+        cv_text_on(x + KH_GAP, 80 + HALF_UP(26 - KC_H) - 1, &AF_S, yes, T_INK, T_THEME);
     }
     cv_blit(DLG_X, DLG_Y);
 }

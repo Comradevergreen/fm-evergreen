@@ -1472,7 +1472,7 @@ static void align_sweeps(void)
         }
         ui.layer = 0; ui.hot_t = 0; ui_prefs = 0;
         cur_name = st ? "sweep LINE: dialogs" : "sweep FLAT: dialogs";
-        for (i = CF_CLEAR_SEQ; i <= CF_ERASE_USER; i++)
+        for (i = CF_CLEAR_SEQ; i <= CF_DICE_SOUND; i++)   /* (0.6.65: every dialog, the sound dice's CANCEL / OK too) */
             for (k = 0; k < 4u; k++) {
                 ui.confirm = (uint8_t)i; ui.confirm_trk = (uint8_t)k;
                 draw_confirm();

@@ -18,6 +18,7 @@ static int undo_do(void);                       /* .. back (and again: forward) 
 static uint8_t undo_ok;
 static int project_used(uint32_t slot);
 static int project_recall_sound(uint32_t slot, uint32_t k);
+static int undo_sound(uint32_t k);                 /* (0.6.65) project.c: the sound dice's CANCEL */
 static int project_recall_slot(void);
 static uint32_t chain_prepare(void);
 static int up_used(uint32_t k);              /* user presets: upreset.c */
@@ -222,8 +223,8 @@ static struct {
 
 enum { CF_NONE, CF_CLEAR_SEQ, CF_CLEAR_TRK, CF_OVR_PROJ, CF_OVR_USER, CF_LOAD_PAT,
        CF_DEL_ROW, CF_CLEAR_SONG, CF_INIT_SOUND, CF_CLEAR_MOTION, CF_ERASE_USER,
-       CF_RECALL_SOUND, CF_CLEAR_ALL, CF_DICE_ALL, CF_INIT_SYS };   /* ui.confirm: TOOLS' clears; (0.6.21) HOME + SELECT:
-                                   * everything diced;
+       CF_RECALL_SOUND, CF_CLEAR_ALL, CF_DICE_ALL, CF_INIT_SYS, CF_DICE_SOUND };   /* ui.confirm: TOOLS' clears; (0.6.21) HOME + SELECT:
+                                   * everything diced; (0.6.65) EDIT + SELECT: keep the diced sound?;
                                    * SAVE over a used slot; a pattern over the user's steps;
                                    * USER ERASE */
 
