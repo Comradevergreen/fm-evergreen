@@ -659,6 +659,49 @@ static void dice_all(void)
     }
     dice_seen[dice_seen_n++ % 32u] = h;
 }
+/* (0.6.67) SEQ + SELECT: the selected track's sequence diced as DICE ALL writes a part (a genre, its progression and
+ * energy; the track's own scale and root): the drums on a DRUM track; else the role its steps sound like (low: the
+ * bass, chords: a pad, else a lead or an arp). The sound, the mix and the automation stay. Its message */
+static const char *dice_seq(track_t *t)
+{
+    static const char *const RN[RL_N] = {"SEQ DICED: DRUMS", "SEQ DICED: BASS", "SEQ DICED: PAD", "SEQ DICED: LEAD",
+                                         "SEQ DICED: ARP", "SEQ DICED: TEXTURE"};
+    const dstyle_t *st = &DSTYLE[chance(25) ? rng() % DSTYLE_IDM : chance(80) ? rng() % DSTYLE_DARK :
+                                 DSTYLE_DARK + rng() % (NDSTYLE - DSTYLE_DARK)];
+    uint32_t r, i, len, pr = rng() % 3u, lo = 0, cnt = 0, chord = 0;
+    rng_state ^= fm1_ticks() * 2654435761u;
+    if (!rng_state) rng_state = 0x1234567u;
+    if (st->prog[pr][0] == 127) pr = 0;
+    dh.prog = st->prog[pr];
+    for (dh.n = 0; dh.n < 4u && dh.prog[dh.n] != 127; dh.n++) {}
+    dh.steps = 16u * st->bars;
+    if (dh.steps * dh.n > NSTEP) dh.steps = NSTEP / dh.n;
+    dh.voicing = st->voicing;
+    dh.nlast = 0;
+    dh.energy = (uint32_t)rr(st->e_lo, st->e_hi);
+    dh.twist = TW_NONE;
+    for (i = 0; i < NSTEP; i++)                         /* (what it plays now: its register, its chords) */
+        if (t->step[i].time == ST_NOTE && t->step[i].n) { lo += t->step[i].note[0]; cnt++; chord += t->step[i].n > 1u; }
+    r = drum_track(t) ? RL_DRUM : cnt && lo / cnt < 48u ? RL_BASS : chord * 3u > cnt && cnt ? RL_PAD :
+        chance(50) ? RL_LEAD : RL_ARP;
+    len = (uint32_t)t->p[P_SLEN];
+    if (len < 8u || len > NSTEP) len = dh.steps * dh.n < 16u ? 16u : dh.steps * dh.n;
+    load_begin(t, LOAD_PAT);
+    latch_drop_req |= (uint8_t)(1u << trk_index(t));
+    for (i = 0; i < NSTEP; i++)
+        step_clear(&t->step[i]);
+    switch (r) {
+    case RL_DRUM: dice_drums(t, st, len); break;
+    case RL_BASS: dice_bass(t, st, len); break;
+    case RL_PAD: dice_pads(t, st, len); break;
+    case RL_LEAD: dice_lead(t, st, len); break;
+    default: dice_arp(t, st, len); break;
+    }
+    t->p[P_SLEN] = (int16_t)len;
+    if (r != RL_DRUM) dlevel(t, len);
+    load_end(t);
+    return RN[r];
+}
 static int8_t dice_force_style = -1, dice_force_energy = -1;   /* (a film's script: this genre, this energy; -1 any) */
 static void dice_one(void)
 {

@@ -7,7 +7,7 @@ import html, os
 
 R = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(R, 'docs', 'cheatsheet')
-VERSION = 'v0.6.66'
+VERSION = 'v0.6.67'
 
 HEAT = ['#22d3ee', '#3b82f6', '#8b5cf6', '#d946ef', '#ef4444', '#ff7a00', '#facc15', '#f4f1ea']
 
@@ -126,10 +126,10 @@ def controls():
     b.append(sec('THE PANEL'))
     rows = [
         ('MASTER', 'Master volume.'),
-        ('SELECT', 'HOME: <b>DICE EVERYTHING?</b> (OCT+ yes): a new piece in one scale. EDIT: <b>the sound\'s dice</b> (OK keeps, CANCEL back). '
-                   'GLO\'s pages or GLO held: the tempo. Macros latched: new random routes. A page button held: its pages.'),
+        ('SELECT', '<b>Scrolls through the pages.</b> Held with a button, its <b>dice</b> (OK keeps, CANCEL back): HOME everything, '
+                   'EDIT the sound, SEQ the sequence, LFO the LFO, FX the effects. GLO + SELECT: the tempo.'),
         ('PRESETS', 'Browses the sounds (factory and user). On step, list and song pages: the cursor / the row. '
-                    '<b>Hold a page button + PRESETS (or SELECT): jump through its pages.</b>'),
+                    '<b>Hold a page button + PRESETS: jump through its pages.</b>'),
         ('ALGORITHM', 'Selects the track from any page: T1–T4, or T1–T6 with TRACKS 6.'),
         ('KNOB 1–4', 'The four columns on screen. Fast sweeps the whole range, slow fine-tunes. With a layer held: '
                      'the layer\'s.'),
@@ -158,7 +158,7 @@ def controls():
           '</table>')
     b.append('<div class="grid g2">' + card('KNOBS AND TRANSPORT', HEAT[0], t) +
              card('PAGE BUTTONS', HEAT[2], t2 + '<p style="margin-top:10px">' + k('BUTTON', cls='v') + ' + ' +
-                  k('SELECT', cls='v') + ' (or PRESETS) jumps straight to a page (no wrap), no dice; GLO + SELECT: the tempo.</p>') + '</div>')
+                  k('PRESETS', cls='v') + ' jumps through its pages (no wrap). ' + k('SELECT', cls='v') + ' alone scrolls every page.</p>') + '</div>')
 
     b.append(sec('LAYERS · HOLD A BUTTON'))
     fx_w = {'F3': 'REP 1/8', 'G3': 'REP 1/16', 'A3': 'REP 1/32', 'B3': 'LPF', 'C4': 'HPF', 'D4': 'OCT−', 'E4': 'OCT+',
@@ -194,7 +194,7 @@ def controls():
     b.append('</div>')
     small = [
         ('LFO · MACROS', HEAT[2], 'Knobs M1–M4; they stay latched when let go (LFO again: off). F3 rolls new routes, '
-                                  'G3 clears them, SELECT rolls too (only tracks that sound).', ('M1', 'M2', 'M3', 'M4')),
+                                  'G3 clears them (only tracks that sound). LFO + SELECT: the track\'s LFO diced.', ('M1', 'M2', 'M3', 'M4')),
         ('SCL · SCALE', HEAT[0], 'Any key sets the ROOT. ROOT and SCALE are every melodic track\'s (and RESO\'s).',
          ('ROOT', 'SCL', 'OFS', 'PIT')),
         ('SEQ · TOOLS', HEAT[4], 'On the SEQ pages: F3 CLEAR · G3 REVERSE · A3 B3 SHIFT · C4 RANDOM · D4 COOK · E4 BEAT · F4 CLR AUTO (the automation).',
@@ -206,7 +206,8 @@ def controls():
 
     b.append(sec('COMBOS'))
     combos = [
-        (k('PAGE BUTTON', cls='v') + ' + ' + k('SELECT', cls='v'), 'Jump through that button\'s pages (or PRESETS).'),
+        (k('HOME · EDIT · SEQ · LFO · FX', cls='v') + ' + ' + k('SELECT', cls='v'), 'Their dice: everything · sound · sequence · LFO · effects (KEEP? OK / CANCEL).'),
+        (k('PAGE BUTTON', cls='v') + ' + ' + k('PRESETS', cls='v'), 'Jump through that button\'s pages.'),
         (k('REC') + ' + ' + k('FX') + k('EDIT') + k('ENV') + k('LFO') + k('SCL') + k('ARP') + k('GLO'),
          'Clear that part\'s automation on the selected track (FX: the punch-in lane too).'),
         (k('SEQ') + ' + ' + k('REC'), 'CLEAR ALL SEQUENCES? (OCT+ confirms).'),
@@ -303,9 +304,9 @@ def sound():
     b.append(card('VOICE · PLAYING', HEAT[2], knobs('VCE', 'GLD', 'GLMOD', 'PRIO') +
                   '<p style="margin-top:8px">POLY · MONO · LEG · UNI; glide and its mode; LAST / LOW / HIGH priority. '
                   '<b>8 voices</b> shared by the six tracks (MONO and LEGATO keep their note).</p>'))
-    b.append(card('DICE', HEAT[5], '<p><b>SELECT</b> on EDIT: a random factory preset of the engine, every '
+    b.append(card('DICE', HEAT[5], '<p><b>EDIT + SELECT</b>: a random factory preset of the engine, every '
                   'parameter moved up to a quarter of its range. DRUM-X: both sides of every sound around the factory '
-                  'kit. Heard at once: OCT+ OK keeps it, OCT- CANCEL brings the sound back. On HOME (after YES): a new piece: a genre, an energy (SPACE · MID · FRANTIC), its orchestration, every track a role. GLO + G4 undoes.</p>'))
+                  'kit. Heard at once: OCT+ OK keeps it, OCT- CANCEL brings the sound back. SEQ / LFO / FX + SELECT: the sequence, the LFO, the effects, the same way. HOME + SELECT (after YES): a new piece: a genre, an energy (SPACE · MID · FRANTIC), its orchestration, every track a role. GLO + G4 undoes.</p>'))
     b.append('</div>')
 
     b.append(sec('MODULATION'))
@@ -326,7 +327,7 @@ def sound():
                   '<h4>MSEQ · A CV SEQUENCER PER TRACK</h4>' + knobs('STEP', 'LVL', 'LEN', 'SLEW') +
                   '<p style="margin-top:6px">16 levels, DIV on MSEQ 2, in time with the transport. Use it from MOD, '
                   'SRC STEP.</p><h4>MACROS M1–M4</h4><p>Hold LFO: the knobs are M1–M4, latched until LFO again. Each '
-                  'session starts with 2 random routes a track; SELECT / F3 roll new ones, G3 clears. By hand: MOD, '
+                  'session starts with 2 random routes a track; F3 rolls new ones, G3 clears. By hand: MOD, '
                   'SRC M1…M4. Saved with the project.</p>'))
     b.append('</div>')
     b.append('<div class="grid g3" style="margin-top:22px">')

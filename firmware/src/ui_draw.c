@@ -1487,7 +1487,11 @@ static void confirm_text(char *a, char *b)
         str_cpy(b, "UNDO AFTER: GLO + G4", 24);
         break;
     case CF_DICE_SOUND:                              /* (0.6.65) EDIT + SELECT: heard already */
-        str_cpy(a, drum_track(TSEL) ? "KEEP DICED KIT?" : "KEEP DICED SOUND?", 24);
+    case CF_DICE_SEQ:                                /* (0.6.67) SEQ / LFO / FX + SELECT */
+    case CF_DICE_LFO:
+    case CF_DICE_FX:
+        str_cpy(a, ui.confirm == CF_DICE_SEQ ? "KEEP DICED SEQ?" : ui.confirm == CF_DICE_LFO ? "KEEP DICED LFO?" :
+                   ui.confirm == CF_DICE_FX ? "KEEP DICED FX?" : drum_track(TSEL) ? "KEEP DICED KIT?" : "KEEP DICED SOUND?", 24);
         str_cpy(b, "SELECT: DICE AGAIN", 24);
         break;
     case CF_DICE_ALL:                                /* (0.6.21) HOME + SELECT */
@@ -1529,7 +1533,8 @@ static void draw_confirm(void)
 {
     char a[24], b[24];
     const aafont_t *tf = &AF_M;
-    const char *no = ui.confirm == CF_DICE_SOUND ? "CANCEL" : "NO", *yes = ui.confirm == CF_DICE_SOUND ? "OK" : "YES";
+    int dk = ui.confirm >= CF_DICE_SOUND && ui.confirm <= CF_DICE_FX;
+    const char *no = dk ? "CANCEL" : "NO", *yes = dk ? "OK" : "YES";
     confirm_text(a, b);
     lcd_fill(0, H_HEAD, 240, 240 - H_HEAD, T_BG);
     ui.head_sig = ~0u;

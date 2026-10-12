@@ -12,7 +12,7 @@
  *   build/video5/capture_dark build/video5/feat feat;  build/video5/capture_dark build/video5/seq seq
  * tools/video/film.mjs makes the 1080p films from them. */
 #define UI_TEST_NO_MAIN 1
-#define FELUCCA_VERSION "v0.6.66"
+#define FELUCCA_VERSION "v0.6.67"
 #define PF_MS 900u                                   /* (the page's name shown, as on the device) */
 #define UI_NO_DRIFT 0                                /* (the granules, as on the device) */
 #include "ui_test.c"
@@ -266,18 +266,33 @@ static void feat_beat(uint32_t q)
     /* new in this version */
     if (q == B(54, 0)) {
         project_capture(&proj_scratch); proj_pack(&film_song, &proj_scratch);
-        page(T_LEAD, "EDIT 1"); enc_turn(EN_SELECT, 1);
+        page(T_LEAD, "EDIT 1"); hold_btn(B_EDIT, 1); enc_turn(EN_SELECT, 1);
         caption(q, "NEW", "SOUND DICE · OK / CANCEL", "EDIT + SELECT: a new sound, heard at once|CANCEL brings yours back", 0);
     }
+    if (q == B(54, 1)) hold_btn(B_EDIT, 0);
     if (q == B(55, 0)) enc_turn(EN_SELECT, 1);         /* again */
     if (q == B(55, 2)) hold_btn(B_OCTDN, 1);           /* CANCEL */
     if (q == B(55, 3)) hold_btn(B_OCTDN, 0);
-    if (q == B(56, 0)) { hold_btn(B_EDIT, 1); caption(q, "NEW", "PAGE JUMP", "hold a page button, turn SELECT|the page's name below for a moment", 0); }
-    if (q > B(56, 0) && q < B(57, 3)) enc_turn(EN_SELECT, 1);
-    if (q == B(57, 3)) hold_btn(B_EDIT, 0);
+    if (q == B(56, 0)) { home(T_LEAD); caption(q, "NEW", "SELECT: EVERY PAGE", "turn it alone: page after page|the page's name below for a moment", 0); }
+    if (q > B(56, 0) && q < B(58, 0)) enc_turn(EN_SELECT, 1);
+    if (q == B(58, 0)) {
+        hold_btn(B_SEQ, 1); enc_turn(EN_SELECT, 1);
+        caption(q, "NEW", "A BUTTON + SELECT: ITS DICE", "HOME everything · EDIT the sound|SEQ · LFO · FX: KEEP? OK or CANCEL", 0);
+    }
+    if (q == B(58, 1)) hold_btn(B_SEQ, 0);
+    if (q == B(59, 0)) enc_turn(EN_SELECT, 1);          /* (SELECT again: another sequence) */
+    if (q == B(59, 2)) hold_btn(B_OCTUP, 1);
+    if (q == B(59, 3)) hold_btn(B_OCTUP, 0);
+    if (q == B(60, 0)) { song.sel = T_PAD; hold_btn(B_LFO, 1); enc_turn(EN_SELECT, 1); }
+    if (q == B(60, 1)) hold_btn(B_LFO, 0);
+    if (q == B(60, 3)) hold_btn(B_OCTUP, 1);
+    if (q == B(61, 0)) { hold_btn(B_OCTUP, 0); song.sel = T_ARP; hold_btn(B_FX, 1); enc_turn(EN_SELECT, 1); }
+    if (q == B(61, 1)) hold_btn(B_FX, 0);
+    if (q == B(61, 3)) hold_btn(B_OCTDN, 1);           /* (CANCEL: the effects as they were) */
+    if (q == B(62, 0)) hold_btn(B_OCTDN, 0);
     /* the song */
-    if (q == B(58, 0)) { section(1); drums(POST); go_title("MIXER"); caption(q, "SONG", "6-CHANNEL MIXER", "level · pan · send · mute|thermal meters", 0); }
-    if (q == B(60, 0)) {
+    if (q == B(62, 0)) { section(1); drums(POST); go_title("MIXER"); caption(q, "SONG", "6-CHANNEL MIXER", "level · pan · send · mute|thermal meters", 0); }
+    if (q == B(64, 0)) {
         chain_config.count = 5;
         chain_config.row[0] = (chain_row_t){0, 4}; chain_config.row[1] = (chain_row_t){1, 8};
         chain_config.row[2] = (chain_row_t){2, 4}; chain_config.row[3] = (chain_row_t){3, 2}; chain_config.row[4] = (chain_row_t){1, 8};
@@ -285,29 +300,30 @@ static void feat_beat(uint32_t q)
         go_title("ARRANGE"); ui.song_row = 0;
         caption(q, "SONG", "ARRANGE", "sections in a column|bars · scenes · END x2..x8 · LOOP", 0);
     }
-    if (q > B(60, 0) && q < B(62, 0)) ui.song_row = (uint8_t)((q - B(60, 0)) < 5u ? q - B(60, 0) : 6u);
-    if (q == B(62, 0)) {
+    if (q > B(64, 0) && q < B(66, 0)) ui.song_row = (uint8_t)((q - B(64, 0)) < 5u ? q - B(64, 0) : 6u);
+    if (q == B(66, 0)) {
         project_capture(&proj_scratch); proj_pack(&film_song, &proj_scratch);
-        home(T_DRUM); enc_turn(EN_SELECT, 1);
+        home(T_DRUM); hold_btn(B_HOME, 1); enc_turn(EN_SELECT, 1);
         caption(q, "SONG", "DICE ALL", "HOME + SELECT: a whole new piece|15 genres · SPACE to FRANTIC", 0);
     }
-    if (q == B(62, 2)) { dice_force_style = 4; dice_force_energy = 1; hold_btn(B_OCTUP, 1); }   /* DARK ELECTRO */
-    if (q == B(62, 3)) hold_btn(B_OCTUP, 0);
-    if (q == B(63, 0)) song.g[G_BPM] = BPM;
-    if (q == B(64, 0)) {
+    if (q == B(66, 1)) hold_btn(B_HOME, 0);
+    if (q == B(66, 2)) { dice_force_style = 4; dice_force_energy = 1; hold_btn(B_OCTUP, 1); }   /* DARK ELECTRO */
+    if (q == B(66, 3)) hold_btn(B_OCTUP, 0);
+    if (q == B(67, 0)) song.g[G_BPM] = BPM;
+    if (q == B(68, 0)) {
         dice_force_style = dice_force_energy = -1;
         if (proj_import(&proj_scratch, &film_song, sizeof film_song) && !project_restore_runtime(&proj_scratch))
             transport_req = 1;
         song.g[G_BPM] = BPM; ui_message("UNDONE (AGAIN: REDO)");
         caption(q, "SONG", "UNDO", "GLO + G4: back one step|again: forward", 0);
     }
-    if (q == B(66, 0)) {
+    if (q == B(70, 0)) {
         band(1); home(T_LEAD);
-        caption(q, "", "ONE SMALL SCREEN", "DRUM-X|STEREO|MORPH|OPERATOR|MSEQ|REVERB|MASTER|ARRANGE", 2);
+        caption(q, "", "ONE SMALL SCREEN", "DRUM-X|STEREO IMAGE|WAVE MORPH|FM6|MSEQ|FIVE REVERBS|MASTER|ARRANGE", 2);
     }
-    if (q == B(70, 0)) caption(q, "", "", "", 0);
-    if (q == B(74, 0)) { mute(T_DRUM, 1); mute(T_BASS, 1); mute(T_ARP, 1); }
-    if (q == B(76, 0)) mute(T_LEAD, 1);
+    if (q == B(74, 0)) caption(q, "", "", "", 0);
+    if (q == B(78, 0)) { mute(T_DRUM, 1); mute(T_BASS, 1); mute(T_ARP, 1); }
+    if (q == B(80, 0)) mute(T_LEAD, 1);
 }
 
 /* ---------------------------------------------------------------- the sequencing film */
@@ -427,9 +443,16 @@ static void seq_beat(uint32_t q)
     if (q == B(55, 0)) { page(T_DRUM, "STEP"); caption(q, "SEQUENCER", "SEQ TOOLS", "reverse · shift · random · cook|beat · clear the automation", 0); }
     if (q == B(55, 1)) hold_btn(B_SEQ, 1);
     if (q == B(56, 3)) hold_btn(B_SEQ, 0);
+    if (q == B(57, 0)) {
+        hold_btn(B_SEQ, 1); enc_turn(EN_SELECT, 1);
+        caption(q, "SEQUENCER", "SEQ + SELECT", "a new sequence for the track, heard at once|KEEP? OK or CANCEL", 0);
+    }
+    if (q == B(57, 1)) hold_btn(B_SEQ, 0);
+    if (q == B(57, 3)) hold_btn(B_OCTDN, 1);           /* (CANCEL: the line as it was) */
     if (q == B(58, 0)) {
+        hold_btn(B_OCTDN, 0);
         section(1); band(1); home(T_LEAD);
-        caption(q, "", "EVERY STEP ALIVE", "STEP|COMP|SHIFT|AUTOMATION|MUTATE|FUGUE|SOUND 4|MORPH", 2);
+        caption(q, "", "EVERY STEP ALIVE", "PIANO ROLL|TRIG|SHIFT|AUTOMATION|MUTATE|FUGUE|DRUM SENDS|STEREO IMAGE", 2);
     }
     if (q == B(62, 0)) caption(q, "", "", "", 0);
     if (q == B(66, 0)) { mute(T_DRUM, 1); mute(T_BASS, 1); mute(T_ARP, 1); }
@@ -455,7 +478,7 @@ int main(int argc, char **argv)
     double secs;
     uint32_t f, total, beat_done = 0xFFFFFFFFu, nwav, k;
     film_seq = argc > 2 && !strcmp(argv[2], "seq");
-    film_bars = film_seq ? 72u : 80u;
+    film_bars = film_seq ? 72u : 84u;
     secs = film_bars * 4u * BEAT_S;
     total = (uint32_t)(FPS * secs); nwav = (uint32_t)(FS * secs);
     snprintf(p, sizeof p, "%s/audio.wav", dir); wav = fopen(p, "wb");

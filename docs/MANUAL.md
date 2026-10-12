@@ -54,14 +54,14 @@ files.
    [13](#13-system-tracks-load-and-the-menu)).
 3. Turn **PRESETS** to browse sounds. Play the keys.
 4. Turn **KNOB 1–4**: on HOME they are the four most useful controls of the track's engine.
-5. Don't like it? Press **EDIT** and turn **SELECT**: the sound is rolled into a new variation and you hear it at once.
+5. Don't like it? Hold **EDIT** and turn **SELECT**: the sound is rolled into a new variation and you hear it at once.
    **OCT+ OK** keeps it, **OCT− CANCEL** brings the sound back.
 
 ### Your first song (5 minutes)
 
-1. On **HOME**, turn **SELECT**. The screen asks **DICE EVERYTHING?** Press **OCT+** (YES). A whole song idea
+1. Hold **HOME** and turn **SELECT**. The screen asks **DICE EVERYTHING?** Press **OCT+** (YES). A whole song idea
    appears: engines, sounds, parts, scale, tempo and effects. Press **PLAY**.
-2. Not your thing? Turn SELECT again and confirm. Every throw is new. To go back to the one before: hold **GLO** and
+2. Not your thing? HOME + SELECT again and confirm. Every throw is new. To go back to the one before: hold **GLO** and
    press **G4** (UNDO).
 3. Like it? **Stop** (PLAY), then press **SAVE** twice to reach **SAVE > PROJECT** (the first SAVE press opens
    USER, the second PROJECT). Turn **KNOB 4** to the right so it shows **[OCT+]**, then press **OCT+**. Type a name with the keys (or keep
@@ -84,7 +84,7 @@ The names below are the ones the firmware uses (the HARDWARE CALIBRATION screen 
 
 | Control | What it does |
 | --- | --- |
-| **SELECT** (encoder) | On **HOME**: opens **DICE EVERYTHING?** (the song-idea generator). On **EDIT** pages: rolls the selected track's sound. On **GLO's pages (MIXER, GLOBAL, SYSTEM)**, or with **GLO held** anywhere: the tempo (BPM). With the macros open or latched: rolls new macro routes. On other pages it says **DICE: HOME / EDIT**. |
+| **SELECT** (encoder) | Alone: **scrolls through the pages**, one a detent: HOME, then EDIT, ENV, LFO, FX, SCL, ARP, SEQ, GLO (with the MIXER), SAVE, each button's pages in order; back past EDIT's first page: HOME. With a button held, that button's **dice**: **HOME** + SELECT **DICE EVERYTHING?**, **EDIT** + SELECT the sound, **SEQ** + SELECT the sequence, **LFO** + SELECT the LFO, **FX** + SELECT the effects. **GLO** + SELECT: the tempo. Any other page button + SELECT: its pages. |
 | **ALGORITHM** (encoder) | Selects the track from any page: T1–T4, or T1–T6 with TRACKS 6. In the MENU: switches tabs. |
 | **PRESETS** (encoder) | On HOME, PRESETS and the sound pages: browses sounds (every engine's factory presets, then your user presets). On step pages (STEP, COMP, PATTERN, AUTOMATION, SHIFT): moves the step cursor. On list pages (USER, PROJECT, ARRANGE, TOOLS, AUTO LIST): moves the selection. **Hold a page button and turn SELECT** (or PRESETS) to jump straight through that button's pages. |
 | **KNOB 1–4** | The four cards (columns) on screen. With a layer held, the layer's own knobs. Turning fast sweeps the whole range, slowly fine-tunes (MENU > KNOB ACCEL turns this off). |
@@ -123,7 +123,8 @@ layer's shortcuts; on the DRUM grid they are steps and lanes; on the NAME screen
 | **SEQ** held + **REC** | **CLEAR ALL SEQUENCES?** — all six tracks' steps and automation, and the punch-in lane. |
 | **REC** held + **FX / EDIT / ENV / LFO / SCL / ARP / GLO** | Clears that part's automation on the selected track (GLO: the level and pan automation of all tracks; FX: also the punch-in lane). No dialog. |
 | **SAVE** held + **OCT+** / **OCT−** | Store the music into the section playing / recall that section as stored. |
-| A page button held + **SELECT** (or PRESETS) | Jump through that button's pages (GLO + SELECT: the tempo). |
+| **HOME / EDIT / SEQ / LFO / FX** held + **SELECT** | The dice: everything / the sound / the sequence / the LFO / the effects (see [8](#8-dice-and-undo)). |
+| **ENV / SCL / ARP / SAVE** held + **SELECT**, any page button + **PRESETS** | Jump through that button's pages. |
 | A step held (SEQ > STEP) + **KNOB 1–4** | A parameter lock on that step. |
 | **OCT− + OCT+** held at power-on | HARDWARE CALIBRATION. |
 | **OCT− + OCT+** held 5 s while running | Update mode (UBOOT), with a countdown from 2 s; let go to cancel. |
@@ -165,9 +166,11 @@ and heating up with its own audio. The selected track is drawn bigger, a muted o
 - **HOME** returns to the ecosystem.
 - **FX** is long, so it is split into sections: TRACK (FX, DIST, AUTOPAN), SLICER (SLICER, SL BUS, SL BUS 2, SL PITCH),
   DELAY (DLY, DLY 2), REVERB (REVERB, REVERB 2), CHORUS, MASTER. **Two quick taps** on FX jump to the next section.
-- **Hold a page button and turn SELECT** (or PRESETS) to go through its pages forwards or back (no wrap); let go and
-  you stay there. While it pages, SELECT dices nothing. GLO is the exception: GLO + SELECT is the tempo (GLO + PRESETS
-  pages).
+- **Turn SELECT** to scroll through every page, one a detent, in the panel's order (HOME, EDIT, ENV, LFO, FX, SCL,
+  ARP, SEQ, GLO, SAVE); the page's name shows over the footer for a moment.
+- **Hold a page button and turn PRESETS** to go through its pages forwards or back (no wrap); let go and you stay
+  there. ENV, SCL, ARP and SAVE do the same with SELECT; HOME, EDIT, SEQ, LFO and FX + SELECT are their dice, GLO +
+  SELECT the tempo.
 - **Hold** a page button (past the HOLD time, MENU > HOLD, 0.4 s by default) to open its **layer**: the keys and
   knobs change function while you hold it, and a map shows what each key does. Pressing a key or turning a knob
   opens it at once. Let go and you're back where you were.
@@ -342,8 +345,8 @@ ALL. Knobs: LEN, DIV, SWING, GATE. These tools have no undo.
 | **KNOB 1** | the project (1–8); applied when you let go of SAVE, stopped only |
 
 **LFO — macros**: KNOB 1–4 are M1–M4. Let go and they stay **latched** (the header says [LFO] LATCH, and KNOB 1–4
-keep controlling the macros on every page) until you press LFO again. F3 rolls new routes, G3 clears them, SELECT
-rolls too.
+keep controlling the macros on every page) until you press LFO again. F3 rolls new routes, G3 clears them.
+(LFO + SELECT rolls the track's LFO, with KEEP / CANCEL: see the dice.)
 
 ---
 
@@ -432,7 +435,7 @@ DRUM-X is a synthesized kit of eight sounds, **BD SD CP CH OH TM RS CB**, genera
       sound, more as it goes up: from a metal edge to a clang with no note, so the sound melts into the rhythm and stays
       out of the harmony (the factory kit has it on the snare, the hats and the cowbell); **FEEDBK** (OFF, 1–15): that
       sound's own (added to KIT 3's); **SEND**: that hit alone into one effect, OFF then CHO, DLY, REV with 16 amounts
-      each, on one knob ("REV 75%"), on top of the track's own sends. The dice (SELECT on a DRUM page, DICE ALL) set
+      each, on one knob ("REV 75%"), on top of the track's own sends. The dice (EDIT + SELECT on a DRUM track, DICE ALL) set
       LAYER and FEEDBK boldly. Each sound with a LAYER costs a little CPU (about as FEEDBK).
   - **LEVELS / LEVELS 2**: the level of each sound (KICK, SNARE, CLAP, HATCL, HATOP, TOM, RIM, BELL).
   - **STEREO**: **IMAGE** (automatable) sweeps the kit through its placings in the stereo field. 0 (MONO): every sound
@@ -442,7 +445,7 @@ DRUM-X is a synthesized kit of eight sounds, **BD SD CP CH OH TM RS CB**, genera
   - KIT 3, X-MOD, LAYER, FEEDBK and SEND are saved with the section's kit.
 - **Mutes**: GLO held + black keys 7–10 mute the groups KICK, SNARE, HAT, PERC; EDIT held + black keys 1–8 mute each
   sound.
-- **SELECT** on an EDIT page rolls a new kit around the factory one. **EDIT held + F3 (INIT)** brings the factory kit
+- **EDIT held + SELECT** rolls a new kit around the factory one. **EDIT held + F3 (INIT)** brings the factory kit
   back.
 
 The kit is saved with each section of a project (not with user presets — see [12](#12-saving-and-loading)).
@@ -636,7 +639,7 @@ Hold **SAVE**:
 
 ### DICE ALL — the song-idea generator (HOME + SELECT)
 
-On **HOME**, turn **SELECT**. The dialog **DICE EVERYTHING?** appears (with "UNDO AFTER: GLO + G4"). **OCT+ YES** /
+Hold **HOME** and turn **SELECT** (from any page). The dialog **DICE EVERYTHING?** appears (with "UNDO AFTER: GLO + G4"). **OCT+ YES** /
 **OCT− NO**.
 
 Each throw makes three choices, then guard rails keep the result musical:
@@ -685,15 +688,28 @@ as they are. The roles that play go on the first tracks, so with TRACKS 4 you he
 
 ### Sound dice (EDIT + SELECT)
 
-On any **EDIT** page, turn SELECT: the selected track loads a random factory preset of its engine and each engine
+Hold **EDIT** and turn SELECT (from any page): the selected track loads a random factory preset of its engine and each engine
 parameter moves up to a quarter of its range. On DRUM, both sides of every kit sound are rolled around the factory kit.
 You hear it at once under **KEEP DICED SOUND?** (DRUM: **KEEP DICED KIT?**): turn SELECT again for another roll,
 **OCT+ OK** keeps it, **OCT− CANCEL** brings back the sound you had before the first roll (only that track's sound:
 the music plays on). After OK, **GLO held + G4** still undoes it.
 
+### Sequence, LFO and FX dice (SEQ / LFO / FX + SELECT)
+
+The same idea for the other parts of the selected track, each heard at once under its **KEEP DICED …?** dialog
+(SELECT again: another roll, **OCT+ OK** keeps it, **OCT− CANCEL** puts back what was there, the rest plays on):
+
+- **SEQ + SELECT**: a new sequence as DICE ALL writes a part, in the track's own scale: a beat on a DRUM track, else
+  the role its steps sound like (low notes: a bass line, chords: a pad, else a lead or an arp). Its sound, mix and
+  automation stay.
+- **LFO + SELECT**: the track's LFO: a rate in the middle of the range, any wave and phase, a fade now and then, aimed
+  mostly at the filter, a little at the shape, seldom at the pitch or the level.
+- **FX + SELECT**: the track's drive (half the time none), its chorus, delay and reverb sends, an AUTOPAN one time in
+  three, and the shared reverb's kind, size and damping and the delay's time and feedback (pitched one time in five).
+
 ### Macro dice
 
-With the macros latched: SELECT or F3 rolls; with LFO held: F3 rolls (LFO + SELECT goes through LFO's pages) new macro routes on the tracks that are sounding;
+With the macros open (LFO held) or latched: **F3** rolls new macro routes on the tracks that are sounding;
 G3 clears them. See [10](#10-modulation-and-macros).
 
 ### UNDO (GLO held + G4)
@@ -788,7 +804,7 @@ The settings stay; the TYPE card shows LITE or ECO under its value.
 
 - **Hold LFO**: KNOB 1–4 become M1–M4, and the map shows where each one goes ("NO ROUTE: MOD SRC" if nowhere).
 - Let go: they stay **latched** — KNOB 1–4 keep moving the macros on any page — until you press LFO again.
-- Every power-on starts with random routes (two per track) on tracks that have none. **SELECT** or **F3** rolls new
+- Every power-on starts with random routes (two per track) on tracks that have none. **F3** rolls new
   routes on the tracks that are sounding; **G3** clears them.
 - Routes are ordinary MOD slots (SRC M1–M4): edit them by hand on LFO > MOD. Macro values are saved with each section.
 
@@ -1027,7 +1043,7 @@ closes it (settings are saved then).
 | CONTROL | HOLD | 0.3 s, **0.4 s** (default), 0.5 s, 0.6 s — how long until a held button opens its layer |
 | CONTROL | KNOB ACCEL | **ON** (default), OFF |
 | CONTROL | FX LATCH | **OFF** (default since 0.6.64), ON |
-| CONTROL | BPM LOCK | OFF, ON — SELECT sets the tempo only with GLO held; DICE ALL keeps the tempo |
+| CONTROL | BPM LOCK | OFF, ON — DICE ALL keeps the tempo (the tempo is GLO + SELECT, GLO's F4 TAP or GLOBAL's BPM) |
 | CONTROL | SCALE LEDS | OFF, ON — the keys of the scale glow, the root brighter |
 | AUDIO | SPEAKER EQ | FLAT, LOWCUT, BASS+ (an EQ on the master for the small speaker; also reaches the outputs and USB) |
 | AUDIO | USB LEVEL | MASTER (USB follows the MASTER knob), FIXED (USB at full level) |
@@ -1114,9 +1130,8 @@ waiting for the bar is called off. If something still plays after a clear, it ma
 **Clicks, stutters, the load meter full.** Keep TRACKS on 4, try **LOAD LITE** or **ECO**, use fewer voices (MONO,
 fewer FM6 tracks), lighter reverbs (CLOUD and SHIMMER are the heaviest). Check MENU > SYSTEM > ABOUT > AUDIO LOAD.
 
-**SELECT doesn't change the tempo.** SELECT sets the tempo only on GLO's pages (MIXER, GLOBAL, SYSTEM), or with GLO held; on HOME
-it dices, on EDIT it rolls the sound. With MENU > BPM LOCK ON, only GLO + SELECT changes it. With the macros latched
-(LFO), SELECT rolls macros — press LFO to unlatch.
+**SELECT doesn't change the tempo.** Since 0.6.67 SELECT alone scrolls the pages; the tempo is **GLO held + SELECT**
+(or GLO's F4 TAP, or GLO > GLOBAL's BPM knob).
 
 **The knobs control M1–M4 instead of the page.** The macros are latched (header [LFO] LATCH). Press LFO.
 
