@@ -807,9 +807,12 @@ Efectos que actúan mientras mantenés su tecla y vuelven exactamente atrás cua
 los mutes no se graban). Mantené **FX + G5** mientras suena para borrar por donde pasa el cabezal; parado, FX + G5
 borra todo el carril. **REC mantenido + FX** también lo borra (junto con la automatización de FX de la pista).
 
-**FX LATCH** (MENU > CONTROL > FX LATCH ON): una tecla apretada con FX activa y desactiva su efecto, las macros de
-perilla conservan sus valores, **FX + OCT−** apaga todo (FX ALL OFF). Los efectos enganchados no se graban en el
-carril.
+**FX LATCH** (MENU > CONTROL > FX LATCH, **ON por defecto** desde 0.6.44): una tecla apretada con FX activa y desactiva
+su efecto, las macros de las perillas conservan sus valores, **FX + OCT−** apaga todo (FX ALL OFF). Los efectos
+trabados no se graban en el carril. **Traba**: mantené FX hasta que se abra su mapa y soltalo sin tocar nada: la capa
+FX queda abierta (**[FX] LOCKED**), como las macros con LFO; las teclas prenden y apagan efectos, las perillas son las
+macros del FX y OCT− es ALL OFF, con las dos manos libres. Apretá **FX** otra vez para destrabar (los efectos que
+dejaste prendidos siguen). Si lo mantenés tocando teclas o perillas, FX funciona como siempre y se cierra al soltar.
 
 ### Mutes y solos
 
@@ -1026,7 +1029,7 @@ valor. HOME lo cierra (en ese momento se guarda la configuración).
 | DISPLAY | SCREEN OFF | **NEVER** (por defecto), 5 MIN, 15 MIN, 30 MIN, 60 MIN |
 | CONTROL | HOLD | 0.3 s, **0.4 s** (por defecto), 0.5 s, 0.6 s — cuánto tarda un botón mantenido en abrir su capa |
 | CONTROL | KNOB ACCEL | **ON** (por defecto), OFF |
-| CONTROL | FX LATCH | OFF, ON |
+| CONTROL | FX LATCH | **ON** (por defecto desde 0.6.44), OFF |
 | CONTROL | BPM LOCK | OFF, ON — SELECT fija el tempo solo con GLO mantenido; DICE ALL conserva el tempo |
 | CONTROL | SCALE LEDS | OFF, ON — las teclas de la escala se iluminan, la tónica más brillante |
 | AUDIO | SPEAKER EQ | FLAT, LOWCUT, BASS+ (un EQ en el master para el parlante chico; también llega a las salidas y al USB) |

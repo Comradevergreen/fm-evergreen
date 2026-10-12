@@ -50,7 +50,9 @@ static uint32_t up_gen;                      /* bumped on every user bank change
  * saved with the settings; 0 in older ones = every setting's default (append-only: a new setting takes a new bit,
  * its default is 0) */
 #define ui_prefs (favorites.factory[15][30])
-#define PREF_LATCH 1u                          /* MENU > FX LATCH ON (#40) */
+#define PREF_LATCH 1u                          /* MENU > FX LATCH ON (#40); JIANT 0.6.44: ON once for everyone (prefs_rev) */
+#define prefs_rev (favorites.factory[15][25])  /* (JIANT 0.6.44) the settings' revision (a byte no engine uses: engine 15):
+                                                * 0 before; 1: FX LATCH turned ON once (main.c prefs_update) */
 #define PREF_ANIM_OFF 2u                       /* MENU > ANIM OFF (#46): values snap (no rolling digits, no glide) */
 #define PREF_ACCEL_OFF 4u                      /* MENU > KNOB ACCEL OFF (#52; JIANT: ON by default, the bit now means OFF):
                                                 * fast turns of wide values x2..x16 */

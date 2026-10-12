@@ -89,9 +89,13 @@ static struct {
     uint8_t ntap;
     uint8_t quiet;                     /* #39: a layer closed after it opened: KNOB 1..4 do nothing until quiet_t + */
     uint32_t quiet_t;                  /* LY_QUIET_MS (fm1_ms) */
+    uint8_t used;                      /* (0.6.44) a key, a knob or OCT used in the layer since it was armed */
 } lys;
 #define LY_QUIET_MS 250u
 
+/* (0.6.44) FX LATCH: FX held open and let go locks its layer open, as the macros latch: its keys, knobs and map stay
+ * until FX is pressed again (or another layer is held over it, for as long as it is) */
+static uint8_t fx_lock;
 static int layer_allowed(void) { return !ui.menu && !ui.confirm && !ui.uboot && !name_on(); }
 static uint32_t ly_bit(uint32_t l) { return 1u << panel.btn[LAYERS[l].btn]; }
 /* SEQ's layer is there on the SEQ pages that show the pattern only (elsewhere SEQ held opens SONG: ui_input) */
@@ -115,13 +119,19 @@ static uint32_t layer_btn(void) { return LAYERS[ui.layer % LAYER_N].btn; }
 static uint32_t layer_open(void);
 static const char *layer_head(void)                     /* FX: LATCH, and the MIDI effects' tracks (A#4) */
 {
-    static const char *const H[2][3] = {{"[FX] HOLD", "[FX] HOLD SYN", "[FX] HOLD DRM"},
-                                        {"[FX] LATCH", "[FX] LATCH SYN", "[FX] LATCH DRM"}};
+    static const char *const H[3][3] = {{"[FX] HOLD", "[FX] HOLD SYN", "[FX] HOLD DRM"},
+                                        {"[FX] LATCH", "[FX] LATCH SYN", "[FX] LATCH DRM"},
+                                        {"[FX] LOCKED", "[FX] LOCK SYN", "[FX] LOCK DRM"}};
     if (ui.layer == LAYER_MACRO && !layer_open())       /* (JIANT 0.4) the MACRO layer latched */
         return "[LFO] LATCH";
-    return ui.layer == LAYER_FX ? H[perf_latch_on ? 1 : 0][pfx_tgt % 3u] : LAYERS[ui.layer % LAYER_N].head;
+    return ui.layer == LAYER_FX ? H[fx_lock && !ui.ly ? 2 : perf_latch_on ? 1 : 0][pfx_tgt % 3u] : LAYERS[ui.layer % LAYER_N].head;
 }
-static uint32_t layer_open(void) { return ui.ly && (ui.ly_t0 & LY_OPEN) && ly_down(ui.ly) && layer_allowed() ? ui.ly : 0u; }
+static uint32_t layer_open(void)
+{
+    if (ui.ly && (ui.ly_t0 & LY_OPEN) && ly_down(ui.ly) && layer_allowed())
+        return ui.ly;
+    return fx_lock && !ui.ly && layer_allowed() ? LAYER_FX : 0u;
+}
 static int layer_set_open(void)                 /* (FX LATCH: FX is one too, OCT- turns all off) */
 {
     return layer_open() && (LAYERS[layer_open()].kind == LK_SET || (layer_open() == LAYER_FX && perf_latch_on));
@@ -138,6 +148,7 @@ static void layer_masks(void)
                : ui.ly ? ly_bit(ui.ly) : layer_bits() & ~fm1_in.buttons;
     kb_mask = m;
     perf_mask = m & ly_bit(LAYER_FX);
+    fx_lock_on = (uint8_t)(fx_lock && !ui.ly && layer_allowed());
 }
 
 /* a layer button pressed (its edge) while none is armed: it is now, a dead one where no layer opens */
@@ -146,6 +157,14 @@ static void layer_arm(uint32_t pressed, uint32_t now)
     uint32_t l;
     if (ui.ly)
         return;
+    if (fx_lock && (pressed & ly_bit(LAYER_FX))) {      /* (0.6.44) FX pressed again: the lock off, nothing else */
+        fx_lock = 0;
+        ui.force = 1;
+        ui.ly = LAYER_FX;
+        ui.ly_t0 = (now & ~15u) | 1u | LY_DEAD;
+        ui_message("FX UNLOCKED");
+        return;
+    }
     if (mac_latch && (pressed & ly_bit(LAYER_MACRO))) { /* (JIANT 0.4) LFO pressed again: the latch off, nothing else */
         mac_latch = 0;
         ui.force = 1;
@@ -155,6 +174,7 @@ static void layer_arm(uint32_t pressed, uint32_t now)
     }
     for (l = LAYER_FX; l < LAYER_N; l++)
         if ((pressed & ly_bit(l)) && ly_avail(l)) {
+            lys.used = 0;
             ui.ly = (uint8_t)l;
             ui.ly_t0 = (now & ~15u) | 1u | (layer_allowed() ? 0u : LY_DEAD);
             return;
@@ -173,6 +193,13 @@ static void layer_let_go(uint32_t quiet)
     lys.song = 0;
     if (ui.ly == LAYER_FX && !perf_latch_on)
         perf_k[0] = perf_k[1] = perf_k[2] = perf_k[3] = 0;
+    if (ui.ly == LAYER_FX && perf_latch_on && (ui.ly_t0 & LY_OPEN) && !(ui.ly_t0 & (LY_DEAD | LY_COMBO)) &&
+        !lys.used && !kb_layer && layer_allowed()) {
+        fx_lock = 1;                                    /* (0.6.44) FX LATCH: held open, nothing used, let go: locked */
+        ui_message("FX LOCKED: [FX] TO UNLOCK");
+        quiet = 0;
+        ui.force = 1;
+    }
     if (ui.ly == LAYER_MACRO && (ui.ly_t0 & LY_OPEN) && !(ui.ly_t0 & LY_DEAD)) {   /* (JIANT 0.4) MACRO opened, let go: */
         mac_latch = 1;                                  /* latched (its knobs at once: no quiet time) */
         quiet = 0;
@@ -554,6 +581,7 @@ static void layer_key(uint32_t l, uint32_t k)
 static void layer_keys(uint32_t keys)
 {
     uint32_t k, l = layer_open() ? layer_open() : ui.layer, s = 0;
+    if (keys) lys.used = 1;
     for (k = 0; keys && k < 27u; k++)
         if ((keys >> k) & 1u)
             layer_key(l, k);
@@ -568,6 +596,7 @@ static void layer_keys(uint32_t keys)
 static void layer_knob(uint32_t k, int32_t s)
 {
     uint32_t l = layer_open();
+    lys.used = 1;
     if (l == LAYER_FX) {                                /* perform.c perf_k, not recorded */
         if (k == 3u)
             s = -s;                                     /* DEPTH (100 - perf_k[3]) rises to the right (#40: it fell) */
@@ -630,6 +659,8 @@ static uint32_t layer_oct(uint32_t pressed, uint32_t oct)
     uint32_t dn = panel.btn[B_OCTDN], up = panel.btn[B_OCTUP], mine;
     if (layer_set_open())
         lys.oct |= (uint8_t)(((pressed >> dn) & 1u) | ((pressed >> up) & 1u) << 1);
+    if (ui.ly && (pressed & (1u << dn | 1u << up)))
+        lys.used = 1;                                   /* (0.6.44: an OCT with it: no FX lock) */
     mine = oct & lys.oct;
     if ((mine & 1u) && lys.l == LAYER_FX) {             /* OCT- (FX LATCH): every effect and macro off */
         perf_latched = 0;
