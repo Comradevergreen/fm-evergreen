@@ -27,6 +27,19 @@ const HERE = new URL(".", import.meta.url).pathname;
 const DESC = process.env.FELUCCA_DESC || join(HERE, "../build/host/desc.json");
 const FW_ROOT = process.env.FELUCCA_ROOT || join(HERE, "..");
 
+/* (0.6.62) the installer's firmware check (index_pkg.html isJiantInfo): JIANT by its tag, an older JIANT by its six
+ * tracks and v0.x, Felucca (four tracks, 1.x) and anything else not */
+function installerCheck() {
+  const html = readFileSync(join(HERE, "index_pkg.html"), "utf8");
+  const src = html.slice(html.indexOf("function isJiantInfo"), html.indexOf("async function fwKind"));
+  const isJiantInfo = vm.runInNewContext(`(${src.trim()})`);
+  const info = (ver, ntrk, ext) => [...Buffer.from(ver), 0, 2, 0, 0, 0, 0, ...Buffer.from("A"), 0, ...Buffer.from("B"), 0, ntrk, 8, ...ext];
+  ok(isJiantInfo(info("FELUCCA v0.6.62", 6, [0x56, 1, 32, 0x4A, 1, 1])), "installer: JIANT (its tag) may be written over");
+  ok(isJiantInfo(info("FELUCCA v0.6.40", 6, [0x56, 1, 32])), "installer: an older JIANT (six tracks, v0.x) too");
+  ok(!isJiantInfo(info("FELUCCA 1.5.1", 4, [0x56, 1, 32])), "installer: Felucca 1.x (four tracks) is not");
+  ok(!isJiantInfo(info("BAUDGIRL 2.0", 4, [])), "installer: another firmware is not");
+}
+
 /* ------------------------------------------------------------ editor protocol --- */
 const html = readFileSync(join(HERE, "editor.html"), "utf8");
 const proto = html.slice(html.indexOf("/*PROTO-BEGIN*/"), html.indexOf("/*PROTO-END*/"));
@@ -1516,5 +1529,6 @@ editorTabs();
 editorIcons();
 await packages();
 await updater();
+installerCheck();
 console.log(failed ? `WEB TESTS FAILED (${failed})` : "web tests passed");
 process.exit(failed ? 1 : 0);

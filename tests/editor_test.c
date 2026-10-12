@@ -148,19 +148,20 @@ static int preferences(void)
     uint32_t n = request(ED_INFO, a, 0);
     bad += check("INFO explicitly tags display capabilities after SONG without changing command 33",
         ED_SONG == 33 && ED_UI_STATE == 34 && ED_FAV_SET == 38 &&
-        host_wire[n - 34] == CHAIN_ROWS && host_wire[n - 33] == 0x55 &&
-        host_wire[n - 32] == 1 && host_wire[n - 31] == 9 &&
-        host_wire[n - 30] == 0x4d && host_wire[n - 29] == 1 &&
-        host_wire[n - 28] == MOTION_MAX && host_wire[n - 27] == 1 &&
-        host_wire[n - 26] == 0x42 && host_wire[n - 25] == 1 && host_wire[n - 24] == 3 &&
-        host_wire[n - 23] == 0x46 && host_wire[n - 22] == 1 && host_wire[n - 21] == FM6_NFACTORY &&
-        host_wire[n - 20] == 0 &&                        /* (no bank since 1.0.3) */
-        host_wire[n - 19] == 0x53 && host_wire[n - 18] == 1 && host_wire[n - 17] == 3 &&
-        host_wire[n - 16] == 0x50 && host_wire[n - 15] == 1 && host_wire[n - 14] == 3 &&   /* FM6 v2: no bank, preset patches */
-        host_wire[n - 13] == 0x4E && host_wire[n - 12] == 1 && host_wire[n - 11] == 20 &&   /* MENU settings: 20 items (0.6.30) */
-        host_wire[n - 10] == 0x52 && host_wire[n - 9] == 1 && host_wire[n - 8] == 4 &&   /* RATCH */
-        host_wire[n - 7] == 0x4C && host_wire[n - 6] == 1 && host_wire[n - 5] == 1 &&   /* 1.1 parameter locks */
-        host_wire[n - 4] == 0x56 && host_wire[n - 3] == 1 && host_wire[n - 2] == 32);   /* (0.6.11) FM6 voice bank */
+        host_wire[n - 37] == CHAIN_ROWS && host_wire[n - 36] == 0x55 &&
+        host_wire[n - 35] == 1 && host_wire[n - 34] == 9 &&
+        host_wire[n - 33] == 0x4d && host_wire[n - 32] == 1 &&
+        host_wire[n - 31] == MOTION_MAX && host_wire[n - 30] == 1 &&
+        host_wire[n - 29] == 0x42 && host_wire[n - 28] == 1 && host_wire[n - 27] == 3 &&
+        host_wire[n - 26] == 0x46 && host_wire[n - 25] == 1 && host_wire[n - 24] == FM6_NFACTORY &&
+        host_wire[n - 23] == 0 &&                        /* (no bank since 1.0.3) */
+        host_wire[n - 22] == 0x53 && host_wire[n - 21] == 1 && host_wire[n - 20] == 3 &&
+        host_wire[n - 19] == 0x50 && host_wire[n - 18] == 1 && host_wire[n - 17] == 3 &&   /* FM6 v2: no bank, preset patches */
+        host_wire[n - 16] == 0x4E && host_wire[n - 15] == 1 && host_wire[n - 14] == 20 &&   /* MENU settings: 20 items (0.6.30) */
+        host_wire[n - 13] == 0x52 && host_wire[n - 12] == 1 && host_wire[n - 11] == 4 &&   /* RATCH */
+        host_wire[n - 10] == 0x4C && host_wire[n - 9] == 1 && host_wire[n - 8] == 1 &&   /* 1.1 parameter locks */
+        host_wire[n - 7] == 0x56 && host_wire[n - 6] == 1 && host_wire[n - 5] == 32 &&   /* (0.6.11) FM6 voice bank */
+        host_wire[n - 4] == 0x4A && host_wire[n - 3] == 1 && host_wire[n - 2] == 1);   /* (0.6.62) JIANT: the installer */
     request(ED_UI_SET, a, 2);
     bad += check("UI_SET updates the actual palette and reports RAM-only saving",
         host_wire[5] == 3 && settings.palette == 7 && T_BG == UI_PALETTES[7].bg);

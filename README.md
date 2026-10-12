@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.6.62).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.6.63).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 > 🫶 If you resonate with my work, consider supporting me on **[Ko-fi](https://ko-fi.com/juanjiant)** (in Argentina:
 > **[Cafecito](https://cafecito.app/juanjiant)**). Thanks for all the good energy, hope you enjoy this little beast ✨🎹
@@ -37,6 +37,12 @@ Two printable sheets with everything on the device. Click an image to open it fu
 ## Changelog
 
 Every update is listed here, newest first.
+
+### v0.6.63
+- **A safer installer**: before writing, it checks the FM-1's firmware by itself (no tick box any more): official V15
+  or JIANT, it installs; Felucca, baudgirl or anything else, it writes nothing and sends you to **Return to official
+  V15 first** (going straight from another custom firmware has bricked an FM-1). JIANT now tags itself in the editor's
+  INFO for it; older JIANT versions are recognised by their six tracks.
 
 ### v0.6.62
 - **Step components with TIMES**: JUMP and REV get KNOB 4, **TIMES**: ALWAYS (as before), **x1** (once a pass, then
@@ -1030,7 +1036,7 @@ Settings → Pages → Source: **GitHub Actions**, once).
    installer's **Return to official V15 first** button, which also saves a complete backup), then install JIANT: writing
    it straight over another custom firmware has bricked an FM-1. From official V15 or an earlier JIANT, install
    directly from the **[web installer](https://juanjiant-bit.github.io/JIANT/webapp/installer/)** (Chrome or Edge, the
-   FM-1 connected by USB straight to the computer; tick "This FM-1 runs official V15 or JIANT"). It offers the **approved** version only: every change merged into `main` goes first to the
+   FM-1 connected by USB straight to the computer). It checks the FM-1 first and writes only over official V15 or JIANT. It offers the **approved** version only: every change merged into `main` goes first to the
    [emulator](https://juanjiant-bit.github.io/JIANT/) (and a preview installer for testing), is checked there, and only
    then reaches this installer ([web/STABLE](web/STABLE.md)). Offline: `python3 tools/fm1_install.py build/felucca.fwsc`.
 3. To go back to the official firmware, use M-VAVE's updater or the installer's **Return to official V15**.

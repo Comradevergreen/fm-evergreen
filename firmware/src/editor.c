@@ -409,6 +409,7 @@ static void ed_handle(const uint8_t *f, uint32_t n)   /* f: the bytes between F0
         ed_b(0x52); ed_b(1); ed_b(4);   /* RATCH: a step's ratchet (1..4 hits) after its chance */
         ed_b(0x4C); ed_b(1); ed_b(1);   /* 1.1 parameter locks: MOTION ops 5..7, the kinds after the records */
         ed_b(0x56); ed_b(1); ed_b(FM6_NBANK);   /* (JIANT 0.6.11, Felucca 1.4.1) FM6's voice bank: cmds 74..77, SLOT 9..40 */
+        ed_b(0x4A); ed_b(1); ed_b(1);   /* (JIANT 0.6.62) 'J': this is JIANT (the web installer writes over it, web/index_pkg.html) */
         break;
     case ED_GET:
     case ED_SET:
