@@ -142,8 +142,10 @@ static void noise_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const
         if (gq > 65535)
             gq = 65535;
     }
-    if (mode <= NZ_DUST && p[P_E5]) {                 /* impulses: 1 .. 2000 a second */
-        uint32_t e = (uint32_t)p[P_E5] * 22u, r = 1u << (e >> 8);   /* 2^(DENS * 11 / 127), Q8 fraction */
+    if (mode <= NZ_DUST && (p[P_E5] || mode == NZ_DUST)) {   /* impulses: 1 .. 2000 a second */
+        uint32_t dn = p[P_E5] ? (uint32_t)p[P_E5] : 48u;          /* (0.6.46) DUST is nothing but them: at DENS 0
+                                                                   * some still (~16 a second), never silence */
+        uint32_t e = dn * 22u, r = 1u << (e >> 8);    /* 2^(DENS * 11 / 127), Q8 fraction */
         r += (r * (e & 255u)) >> 8;
         thr = (int32_t)((r * 97391u) >> 16);          /* per 2^16 of a sample: rate * 65536 / FS, Q16 */
     }

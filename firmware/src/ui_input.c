@@ -1608,7 +1608,7 @@ static void ui_input_frame(void)
                     undo_mark();
                     if (song.playing) transport_req = 2;
                     system_init();
-                    ui_message("SYSTEM INIT");
+                    ui_message("NEW PROJECT");
                 }
             } else if (kind == CF_CLEAR_ALL) {          /* SEQ + REC: every track's steps and automation, the lane */
                 if (!chain_busy()) {
@@ -1625,7 +1625,7 @@ static void ui_input_frame(void)
                 }
             } else if (kind == CF_INIT_SOUND) {         /* (DRUM: the factory DRUM-X kit too) */
                 if (!chain_busy()) {
-                    set_engine(TSEL->eng_req);
+                    init_sound_of(TSEL, TSEL->eng_req);
                     if (drum_track(TSEL)) {
                         memcpy(dx_kit, DX_KIT_DEF, sizeof dx_kit);
                         memset(dx_mot, 0, sizeof dx_mot);   /* (0.5.1: X-MOD off) */

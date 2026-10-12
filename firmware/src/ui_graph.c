@@ -782,7 +782,9 @@ static void graph_fm6(const track_t *t, uint16_t c, uint32_t sel)   /* sel < 6: 
     int32_t x[6], y[6], bus, cl = 240, cr = 0, fb = clamp(pt[FP_FB] + t->p[P_E1], 0, 7);
     uint8_t m[6], fan[6] = {0, 0, 0, 0, 0, 0};
     uint16_t rc = hot == P_E2 ? T_ACCENT : c;
-    char b[7] = {'A', 'L', 'G', ' ', (char)('0' + (alg + 1u) / 10u), (char)('0' + (alg + 1u) % 10u), 0};
+    char b[11] = {'A', 'L', 'G', ' ', (char)('0' + (alg + 1u) / 10u), (char)('0' + (alg + 1u) % 10u), 0};
+    if (!t->p[P_E0])                                 /* (0.6.46) ALG on PAT: the patch's number, and that it is the patch's */
+        str_cpy(b + 6, " PAT", 5);
     if (hot == P_E3 || hot == P_E4 || hot == P_E5)
         hotset = 63u & ~car;
     else if (hot == P_E6)
@@ -1385,7 +1387,7 @@ static void graph_events(void)
  * PRESETS, 0.6.25: was a knob each) filled; OCT+ does it (a dialog first) */
 static void graph_tools(void)
 {
-    static const char *const WHAT[5] = {"CLEAR SEQ", "INIT SOUND", "DELETE ROW", "CLEAR SONG", "INIT SYSTEM"};
+    static const char *const WHAT[5] = {"CLEAR SEQ", "INIT SOUND", "DELETE ROW", "CLEAR SONG", "NEW PROJECT"};
     static const char *const ON[5] = {"STEPS + AUTO", "ENGINE DEFAULT", "", "ALL ROWS", "EVERYTHING"};
     uint32_t c;
     char b[24];

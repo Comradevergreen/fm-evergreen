@@ -1511,7 +1511,7 @@ static void system_init(void)
         motion_clear(t);
         load_begin(t, LOAD_SOUND | LOAD_PAT);
         track_defaults(t);
-        set_engine_of(t, trk_def_engine(i));          /* (its defaults and first sound) */
+        init_sound_of(t, trk_def_engine(i));          /* (its defaults and first sound, dry; FM6 the init voice) */
         motion_clear(t);
         load_end(t);
         pat_sig[i] = steps_sig(t);
