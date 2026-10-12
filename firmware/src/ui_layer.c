@@ -99,7 +99,8 @@ static int tools_page(void)
 {
     const page_t *pg = &PAGES[ui.page];
     return !ui.home && pg->fam == FAM_SEQ &&
-           (pg->graph == GR_ROLL || pg->graph == GR_STEPS || pg->graph == GR_CHANCE || pg->graph == GR_MOTION);
+           (pg->graph == GR_ROLL || pg->graph == GR_STEPS || pg->graph == GR_CHANCE || pg->graph == GR_COMP ||
+            pg->graph == GR_MOTION);
 }
 static int ly_avail(uint32_t l) { return l != LAYER_SEQ || tools_page(); }   /* (REC: on every page) */
 static uint32_t ly_down(uint32_t l) { return l && (fm1_in.buttons & ly_bit(l)) != 0u; }

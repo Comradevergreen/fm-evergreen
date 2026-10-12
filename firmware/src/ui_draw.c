@@ -859,6 +859,40 @@ static void draw_columns(void)
                     used && song_idx.scene[song_cur][row].on ? VAL(3u) : T_DIM, -1, ICON_MIX);   /* (JIANT) */
         return;
     }
+    if (cur_page()->graph == GR_COMP) {                /* (0.6.39) STEP TYPE and the TYPE's two values */
+        const step_t *cs = &TSEL->step[ui.cursor];
+        uint32_t v = comp_view();
+        static const char *const ORD[4] = {"UP", "DOWN", "UP-DN", "RND"};
+        fmt_int(val, (int32_t)ui.cursor + 1);
+        draw_column(0, "STEP", val, "", VAL(0u), -1, ICON_AUTO);
+        draw_column(1, v >= COMP_ARPN && v <= COMP_ARPS ? "ARP" : "TYPE", COMP_NAMES[v], "", v ? VAL(1u) : T_DIM, -1,
+                    v == COMP_CHANCE ? ICON_PROB : v == COMP_RATCH ? ICON_X_REPEAT : ICON_ARP);
+        if (v == COMP_CHANCE) {
+            fmt_int(val, (int32_t)step_chance(cs));
+            draw_column(2, "CHANCE", val, "%", VAL(2u), -1, ICON_PROB);
+        } else if (v == COMP_RATCH) {
+            val[0] = 'x'; val[1] = (char)('0' + step_ratchet(cs)); val[2] = 0;
+            draw_column(2, "RATCH", val, "", VAL(2u), -1, ICON_X_REPEAT);
+        } else if (v == COMP_TRIG) {
+            const uint8_t *c = CP_TRIGS[cs->carg % CP_NTRIG];
+            if (!c[0]) str_cpy(val, c[1] == 1u ? "FIRST" : "!1ST", sizeof val);
+            else { val[0] = (char)('0' + c[0]); val[1] = ':'; val[2] = (char)('0' + c[1]); val[3] = 0; }
+            draw_column(2, "COND", val, "", VAL(2u), -1, ICON_PROB);
+        } else if (v != COMP_OFF) {
+            draw_column(2, "ORDER", ORD[CP_ORD(cs->carg)], "", VAL(2u), -1, ICON_ORDER);
+        } else
+            draw_column(2, "", "", "", T_THEME, -1, ICON_NONE);
+        if (v >= COMP_ARPN && v <= COMP_ARPS) {
+            uint32_t g = CP_RNG(cs->carg);
+            char un[8];
+            val[0] = 'x'; fmt_int(val + 1, CP_RATES[CP_RATE(cs->carg) % CP_NRATE]);
+            fmt_int(un, v == COMP_ARPS ? CP_DEGS[g] : (int32_t)g + 1);
+            str_cpy(un + str_len(un), v == COMP_ARPS ? " DEG" : " OCT", 5);
+            draw_column(3, "RATE", val, un, VAL(3u), -1, ICON_X_REPEAT);
+        } else
+            draw_column(3, "", "", "", T_THEME, -1, ICON_NONE);
+        return;
+    }
     if (cur_page()->graph == GR_CHANCE) {              /* STEP CHANCE RATCH: the cursor step's, of all of it */
         const step_t *cs = &TSEL->step[ui.cursor];
         int rplays = cs->time == ST_NOTE && (cs->n || cs->hit);   /* RATCH does nothing on a REST, a TIE, empty: DIM */

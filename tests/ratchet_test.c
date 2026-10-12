@@ -360,9 +360,115 @@ static int screens(void)
     return bad;
 }
 
+/* (0.6.39) the step components (core.h CP_*, seq.c cp_arp_note / cp_trig_ok, SEQ > COMP): the notes the voices start
+ * over `blocks` blocks, in order */
+static uint32_t run_notes(track_t *t, uint32_t blocks, uint8_t *nt, uint32_t max)
+{
+    uint32_t b, n = 0, a, k;
+    for (b = 0; b < blocks; b++) {
+        uint32_t v0 = vage;
+        seq_tick(t, CTL);
+        for (a = v0 + 1u; a <= vage; a++)
+            for (k = 0; k < NVOICE; k++)
+                if (t->v[k].age == a && n < max) nt[n++] = t->v[k].note;
+    }
+    return n;
+}
+static int components(void)
+{
+    int bad = 0, ok;
+    uint8_t nt[32];
+    uint32_t n;
+    track_t *t;
+    project_store_t st;
+    /* ARP NOTES: x4 UP over a chord, one octave: the chord's notes in turn, again from the bottom */
+    t = one_step(1, 0);
+    t->step[0] = (step_t){{60, 64, 67}, 3, ST_NOTE, 0, 100};
+    t->step[0].comp = CP_ARPN; t->step[0].carg = CP_ARG(0u, 2u, 0u);
+    n = run_notes(t, passes(t, 1), nt, sizeof nt);
+    bad += check("ARP NOTES x4 UP: 60 64 67 60 in one step", n == 4u && nt[0] == 60u && nt[1] == 64u && nt[2] == 67u &&
+                 nt[3] == 60u);
+    t = one_step(1, 0);
+    t->step[0] = (step_t){{60, 64, 67}, 3, ST_NOTE, 0, 100};
+    t->step[0].comp = CP_ARPN; t->step[0].carg = CP_ARG(1u, 1u, 1u);   /* DOWN x3, two octaves */
+    n = run_notes(t, passes(t, 1), nt, sizeof nt);
+    bad += check("ARP NOTES x3 DOWN over two octaves: 79 76 72", n == 3u && nt[0] == 79u && nt[1] == 76u && nt[2] == 72u);
+    t = one_step(1, 0);                                   /* over the TIE after it: the arpeggio goes on */
+    t->p[P_SLEN] = 2;
+    t->step[0] = (step_t){{60, 64, 67}, 3, ST_NOTE, 0, 100};
+    t->step[0].comp = CP_ARPN; t->step[0].carg = CP_ARG(0u, 0u, 0u);   /* x2 */
+    t->step[1] = (step_t){{0}, 0, ST_TIE, 0, 0};
+    seq_start();
+    n = run_notes(t, 2u * step_len(t, 0) / CTL - 1u, nt, sizeof nt);
+    bad += check("ARP x2 over a TIE: 60 64 | 67 60 (the TIE goes on with it)", n == 4u && nt[0] == 60u && nt[1] == 64u &&
+                 nt[2] == 67u && nt[3] == 60u);
+    t = one_step(1, 0);                                   /* SCALE: C major up from the step's note, 3 degrees */
+    t->p[P_ROOT] = 0; t->p[P_SCALE] = 1;
+    t->step[0] = (step_t){{60}, 1, ST_NOTE, 0, 100};
+    t->step[0].comp = CP_ARPS; t->step[0].carg = CP_ARG(0u, 2u, 0u);
+    n = run_notes(t, passes(t, 1), nt, sizeof nt);
+    bad += check("ARP SCALE x4 UP, 3 degrees of C major: 60 62 64 60", n == 4u && nt[0] == 60u && nt[1] == 62u &&
+                 nt[2] == 64u && nt[3] == 60u);
+    t = one_step(1, 0);                                   /* SEQ: every note of the pattern */
+    t->p[P_SLEN] = 2;
+    t->step[0] = (step_t){{60}, 1, ST_NOTE, 0, 100};
+    t->step[0].comp = CP_ARPQ; t->step[0].carg = CP_ARG(0u, 0u, 0u);
+    t->step[1] = (step_t){{67}, 1, ST_NOTE, 0, 100};
+    seq_start();
+    n = run_notes(t, 2u * step_len(t, 0) / CTL - 1u, nt, sizeof nt);
+    bad += check("ARP SEQ x2: the pattern's notes (60 67), then the next step's own 67", n == 3u && nt[0] == 60u &&
+                 nt[1] == 67u && nt[2] == 67u);
+    /* TRIG: the loops it plays on (a one-step loop: a loop a pass) */
+    {
+        static const uint8_t COND[4] = {0, 1, 10, 11}, WANT[4] = {2, 2, 1, 3};   /* 1:2 2:2 FIRST NOT FIRST, 4 loops */
+        uint32_t k;
+        ok = 1;
+        for (k = 0; k < 4u; k++) {
+            t = one_step(1, 0);
+            t->step[0].comp = CP_TRIG; t->step[0].carg = COND[k];
+            n = run_notes(t, passes(t, 4), nt, sizeof nt);
+            ok &= n == WANT[k];
+        }
+        bad += check("TRIG over 4 loops: 1:2 twice, 2:2 twice, FIRST once, NOT FIRST three times", ok);
+    }
+    /* a project keeps them (FUNC: x bit 16, two bytes), an old step none */
+    ui_power_on();
+    trk[0].step[3] = (step_t){{60, 64}, 2, ST_NOTE, 0, 100};
+    trk[0].step[3].comp = CP_ARPS; trk[0].step[3].carg = CP_ARG(2u, 3u, 2u);
+    trk[1].step[0] = (step_t){{50}, 1, ST_NOTE, 0, 100};
+    trk[1].step[0].comp = CP_TRIG; trk[1].step[0].carg = 7;
+    project_capture(&proj_scratch);
+    ok = proj_pack(&st, &proj_scratch);
+    trk[0].step[3].comp = trk[1].step[0].comp = 0;
+    ok &= proj_import(&proj_scratch, &st, sizeof st) && !project_restore_runtime(&proj_scratch);
+    ok &= trk[0].step[3].comp == CP_ARPS && trk[0].step[3].carg == CP_ARG(2u, 3u, 2u) && trk[1].step[0].comp == CP_TRIG &&
+          trk[1].step[0].carg == 7u && !trk[0].step[2].comp;
+    bad += check("a project keeps the components (FUNC round trip)", ok);
+    /* SEQ > COMP: K2 the TYPE, K3 / K4 its values; OFF / CHANCE / RATCH take a component away */
+    ui_power_on();
+    t = TSEL;
+    t->step[0] = (step_t){{60, 64, 67}, 3, ST_NOTE, 0, 100};
+    go_page(GR_COMP); frame();
+    ok = str_eq(cur_page()->title, "COMP") && comp_view() == COMP_OFF;
+    turn(EN_K2, 3);                                       /* OFF CHANCE RATCH NOTES */
+    ok &= t->step[0].comp == CP_ARPN && t->step[0].carg == CP_ARG(0u, 2u, 0u);
+    turn(EN_K3, 1); turn(EN_K4, 1);                       /* DOWN; x4 over two octaves */
+    ok &= CP_ORD(t->step[0].carg) == 1u && CP_RATE(t->step[0].carg) == 2u && CP_RNG(t->step[0].carg) == 1u;
+    turn(EN_K2, 2);                                       /* SCALE: the values kept */
+    ok &= t->step[0].comp == CP_ARPS && CP_ORD(t->step[0].carg) == 1u;
+    turn(EN_K2, 1); turn(EN_K3, 4); turn(EN_K3, 1);      /* TRIG 1:2 .. 2:4 (4 detents a pass at most) */
+    ok &= t->step[0].comp == CP_TRIG && t->step[0].carg == 5u;
+    turn(EN_K2, -4); turn(EN_K2, -1); turn(EN_K3, -40);  /* CHANCE 60 %: the TRIG gone */
+    ok &= !t->step[0].comp && step_chance(&t->step[0]) == 60u && comp_view() == COMP_CHANCE;
+    turn(EN_K1, 1); frame();
+    ok &= ui.cursor == 1u && comp_view() == COMP_OFF;
+    bad += check("SEQ > COMP: TYPE, ORDER, RATE x RANGE, TRIG's condition, CHANCE takes the component away", ok);
+    return bad;
+}
+
 int main(void)
 {
-    int bad = play() + projects() + presets() + screens();
+    int bad = play() + projects() + presets() + screens() + components();
     printf("%s\n", bad ? "RATCHET TEST FAILED" : "ratchet tests passed");
     return bad != 0;
 }

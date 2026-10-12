@@ -137,6 +137,80 @@ static void graph_steps(const track_t *t, uint16_t c)
     }
 }
 
+/* (0.6.39) SEQ > COMP: the cursor's 16 steps as on PATTERN, each with its mark under it (an ARP component: heat
+ * orange, TRIG: violet, a CHANCE under 100 %: MID, a RATCH: THEME); below, the cursor step's TYPE drawn: an ARP's
+ * notes as a ladder in its ORDER (the one playing ACCENT), TRIG's loops as boxes (the ones it plays filled, the loop
+ * now framed), CHANCE as a bar, RATCH as its parts */
+static uint16_t comp_mark(const step_t *st)
+{
+    if (cp_arp(st)) return heat_col(200);
+    if (st->comp == CP_TRIG) return heat_col(90);
+    if (step_chance(st) < 100u) return T_MID;
+    if (step_ratchet(st) > 1u) return T_THEME;
+    return 0;
+}
+static void graph_comp(const track_t *t, uint16_t c)
+{
+    uint32_t i, len = (uint32_t)t->p[P_SLEN], v = comp_view();
+    const step_t *cs = &t->step[ui.cursor];
+    int32_t y0 = 4, bh = 14, x, w;
+    char b[32];
+    for (i = ui.bank * 16u; i < ui.bank * 16u + 16u && i < NSTEP; i++) {
+        const step_t *st = &seq_steps(t)[i];
+        uint16_t mk;
+        x = bar_x(i);
+        if (i >= len) continue;
+        if (step_on(st)) cv_rrect(x, y0, 9, bh, 2, step_heat(st, st->flags & SF_ACCENT, c), T_SURF);
+        else if (st->time == ST_TIE) cv_rrect(x, y0 + bh - 6, 9, 6, 1, T_MID, T_SURF);
+        else cv_rrect(x, y0 + bh - 3, 9, 3, 1, T_RAISE, T_SURF);
+        if ((mk = comp_mark(st)) != 0) cv_rect(x, y0 + bh + 3, 9, 3, mk);
+        if (i == ui.cursor) cv_rect(x, y0 + bh + 8, 9, 2, T_ACCENT);
+        else if (song.playing && i == seq_src(t, t->seq_idx)) cv_rect(x, y0 + bh + 8, 9, 2, T_TEXT);
+    }
+    str_cpy(b, v >= COMP_ARPN && v <= COMP_ARPS ? "ARP " : "", sizeof b);
+    str_cpy(b + str_len(b), v ? COMP_NAMES[v] : "NO COMPONENT  K2: TYPE", sizeof b - 8u);
+    cv_text(PANEL_X0 + 2, 36, &AF_S, b, v ? T_MID : T_DIM);
+    if (v >= COMP_ARPN && v <= COMP_ARPS) {             /* the ladder: one cycle (up to 16 notes), as it plays */
+        step_t sh = *cs;
+        uint32_t n, lo = 127u, hi = 0u, now = 0xFFu;
+        uint8_t nt[16];
+        if (!cs->n) { cv_text(PANEL_X0 + 2, 60, &AF_S, "A STEP WITH NOTES PLAYS IT", T_DIM); return; }
+        if (CP_ORD(sh.carg) == 3u) sh.carg = (uint8_t)(sh.carg & ~3u);   /* (RND: drawn UP, the order is the dice's) */
+        n = CP_ORD(sh.carg) == 2u ? 2u * 16u : 16u;
+        for (i = 0; i < 16u && i < n; i++) {
+            nt[i] = (uint8_t)cp_arp_note(t, &sh, i);
+            if (nt[i] < lo) lo = nt[i];
+            if (nt[i] > hi) hi = nt[i];
+        }
+        n = i;
+        if (song.playing && t->arp_from == ui.cursor + 1u && t->arp_k)
+            now = (uint32_t)(t->arp_k - 1u) % n;
+        w = PANEL_W / (int32_t)n;
+        for (i = 0; i < n; i++) {
+            int32_t hgt = 8 + (hi > lo ? (int32_t)(nt[i] - lo) * 40 / (int32_t)(hi - lo) : 20);
+            cv_rrect(PANEL_X0 + (int32_t)i * w + 1, 98 - hgt, w - 2, hgt, 2,
+                     i == now ? T_ACCENT : heat_col(60 + (uint32_t)(nt[i] - lo) * 150u / (hi > lo ? hi - lo : 1u)), T_SURF);
+        }
+    } else if (v == COMP_TRIG) {                        /* the loops: a of b filled, the loop now framed */
+        const uint8_t *cd = CP_TRIGS[cs->carg % CP_NTRIG];
+        uint32_t nb = cd[0] ? cd[1] : 4u, cur = song.playing ? (cd[0] ? t->loops % nb : (t->loops < 3u ? t->loops : 3u)) : 0xFFu;
+        w = 24;
+        for (i = 0; i < nb; i++) {
+            int on = cd[0] ? i == cd[0] - 1u : (cd[1] == 1u ? i == 0u : i > 0u);
+            x = PANEL_X0 + (PANEL_W - (int32_t)nb * (w + 4)) / 2 + (int32_t)i * (w + 4);
+            if (i == cur) cv_rrect(x - 2, 58, w + 4, w + 4, 3, T_ACCENT, T_SURF);
+            cv_rrect(x, 60, w, w, 3, on ? heat_col(90) : T_RAISE, i == cur ? T_ACCENT : T_SURF);
+        }
+    } else if (v == COMP_CHANCE) {
+        cv_rrect(PANEL_X0 + 2, 64, PANEL_W - 4, 12, 3, T_RAISE, T_SURF);
+        cv_rrect(PANEL_X0 + 2, 64, (PANEL_W - 4) * (int32_t)step_chance(cs) / 100 + 1, 12, 3, heat_col(160), T_SURF);
+    } else if (v == COMP_RATCH) {
+        uint32_t r = step_ratchet(cs);
+        w = (PANEL_W - 8) / (int32_t)r;
+        for (i = 0; i < r; i++) cv_rrect(PANEL_X0 + 4 + (int32_t)i * w, 60, w - 6, 30, 3, heat_col(120 + i * 30u), T_SURF);
+    }
+}
+
 /* STEP page (a melodic track): a piano roll of the cursor's 16-step page. PR_ROWS semitone rows of PR_RH px,
  * the highest on top; on the left the C rows named (S, DIM) and a keyboard strip (white keys RAISE, black keys a
  * shorter DIM; a key held on the track: its row ACCENT). Rows in the track's scale (SCL ROOT / SCALE; CHR: the white
@@ -948,6 +1022,16 @@ static uint32_t graph_signature(void)
         h = (h ^ (n + 1u) * 40503u ^ ev_row(n) * 2654435761u ^ ((uint32_t)ui.ev_step << 8 | ui.ev_id) * 104729u) * 16777619u;
     }
     if (pg->graph == GR_CHANCE) h ^= ui.cursor * 40503u + step_chance(&t->step[ui.cursor]);
+    if (pg->graph == GR_COMP) {                      /* (0.6.39) the steps, their components, the arpeggio and the loop */
+        const step_t *cs = &t->step[ui.cursor];
+        uint32_t ph = song.playing ? seq_src(t, t->seq_idx) : 0xFFFFu;
+        h = (h ^ (steps_hash(t) + ph * 31u + ui.cursor * 7919u + ui.bank * 613u)) * 16777619u;
+        for (i = ui.bank * 16u; i < ui.bank * 16u + 16u && i < NSTEP; i++)
+            h = (h ^ ((uint32_t)t->step[i].comp << 8 | t->step[i].carg | (uint32_t)t->step[i].probability << 16 |
+                      (uint32_t)t->step[i].flags << 24)) * 16777619u;
+        h = (h ^ (comp_view() * 977u + cs->carg + (song.playing ? t->arp_k * 131u + t->loops * 7u + t->arp_from : 0u))) *
+            16777619u;
+    }
     if (pg->scope == SC_ENGINE && (ENGINES[t->eng_req % NENGINES] == &ENG_WHEEL || t->eng_req % NENGINES == ENGI_FM6 ||
                                    (FELUCCA_FM4 && t->eng_req % NENGINES == ENGI_DIGITAL)))
         h ^= (ui.hot_t ? ui.hot_col + 1u : 0u) * 65537u;
@@ -1715,6 +1799,9 @@ static void draw_graph(void)
             break;
         case GR_STEPS:
             graph_steps(t, c);
+            break;
+        case GR_COMP:
+            graph_comp(t, c);
             break;
         case GR_ROLL:
         case GR_CHANCE:

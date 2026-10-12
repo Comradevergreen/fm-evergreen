@@ -86,7 +86,7 @@ Los nombres de abajo son los que usa el firmware (la pantalla HARDWARE CALIBRATI
 | --- | --- |
 | **SELECT** (encoder) | En **HOME**: abre **DICE EVERYTHING?** (el generador de ideas de temas). En las páginas **EDIT**: tira a los dados el sonido de la pista seleccionada. En las páginas de **GLO (MIXER, GLOBAL, SYSTEM)**, o con **GLO mantenido** en cualquier lado: el tempo (BPM). Con las macros abiertas o enganchadas: tira rutas de macro nuevas. En las demás páginas dice **DICE: HOME / EDIT**. |
 | **ALGORITHM** (encoder) | Elige la pista, T1–T6, desde cualquier página. En el MENU: cambia de pestaña. |
-| **PRESETS** (encoder) | En HOME, PRESETS y las páginas de sonido: recorre sonidos (los presets de fábrica de cada motor y después tus presets de usuario). En las páginas de pasos (STEP, PATTERN, AUTOMATION, SHIFT): mueve el cursor de paso. En las páginas de lista (USER, PROJECT, ARRANGE, TOOLS, AUTO LIST): mueve la selección. **Mantené un botón de página y girá PRESETS** para saltar directo por las páginas de ese botón. |
+| **PRESETS** (encoder) | En HOME, PRESETS y las páginas de sonido: recorre sonidos (los presets de fábrica de cada motor y después tus presets de usuario). En las páginas de pasos (STEP, COMP, PATTERN, AUTOMATION, SHIFT): mueve el cursor de paso. En las páginas de lista (USER, PROJECT, ARRANGE, TOOLS, AUTO LIST): mueve la selección. **Mantené un botón de página y girá PRESETS** para saltar directo por las páginas de ese botón. |
 | **KNOB 1–4** | Las cuatro tarjetas (columnas) de la pantalla. Con una capa mantenida, las perillas propias de la capa. Girar rápido recorre todo el rango, despacio ajusta fino (MENU > KNOB ACCEL lo desactiva). |
 | **MASTER** | El volumen de salida. |
 
@@ -271,6 +271,7 @@ a la derecha); apretá OCT+ para ejecutarla.
 | --- | --- | --- | --- | --- |
 | STEP (melódica: piano roll) | STEP | NOTE | TIME (NOTE / TIE / REST) | FLAG (– / ACC / SLD / A+S) |
 | STEP (DRUM: grilla) | STEP | LANE | HIT | ACC |
+| COMP | STEP | TYPE | (su valor) | (su valor) |
 | PATTERN | LEN | DIV | SWING | GATE |
 | AUTOMATION | PLAY (ON/OFF) | EVENT (cantidad) | LOCK (cantidad) | CLEAR (acción) |
 | AUTO LIST | ROW | STEP | PARAM | VALUE |
@@ -463,6 +464,18 @@ seleccionada se graban como **automatización**. MENU > AUDIO tiene el **CLICK**
 
 ### Páginas de patrón
 
+- **COMP** (step components, al estilo OP-Z): uno por paso. KNOB 1 elige el paso, KNOB 2 su **TYPE**, KNOB 3 / 4 sus
+  valores. La fila de arriba marca cada paso que tiene uno (naranja ARP, violeta TRIG, gris CHANCE, color del tema
+  RATCH); abajo se dibuja el componente del paso (la escalera del arpegio con la nota que suena encendida; las vueltas
+  del TRIG).
+  - **CHANCE** (0–100 %) y **RATCH** (x1–x4): la probabilidad y el ratchet propios del paso.
+  - **ARP NOTES / SEQ / SCALE**: el paso toca un arpegio, **RATE** notas en su duración (x2 x3 x4 x6 x8), y sigue sobre
+    los ties que vienen después. NOTES: las notas del paso; SEQ: todas las notas de la secuencia de la pista; los dos
+    sobre 1–4 octavas. SCALE: la escala hacia arriba desde la nota más grave del paso, 3, 5, 8 o 15 grados. KNOB 3 el
+    **ORDER** (UP, DOWN, UP-DN, RND), KNOB 4 **RATE** y rango juntos.
+  - **TRIG**: el paso suena solo en algunas vueltas del patrón: 1:2, 2:2, 1:3, 2:3, 3:3, 1:4 … 4:4, 1:8, FIRST, !1ST
+    (todas menos la primera).
+  Los proyectos los guardan; un kit de batería ignora los ARP (TRIG, CHANCE y RATCH funcionan también en baterías).
 - **PATTERN**: LEN (1–64), DIV, SWING, GATE.
 - **AUTOMATION**: PLAY activa o desactiva la automatización de la pista, EVENT y LOCK cuentan los registros, CLEAR
   los borra (OCT+, con diálogo).

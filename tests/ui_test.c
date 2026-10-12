@@ -2141,7 +2141,7 @@ static int test_presets_knob(void)
             int same_snd = TSEL->preset == before.preset && TSEL->eng_req == before.eng_req &&
                            !memcmp(TSEL->p, before.p, sizeof before.p);
             int same_steps = !memcmp(TSEL->step, before.step, sizeof before.step);
-            if (PAGES[i].fam == FAM_SEQ && (g == GR_ROLL || g == GR_STEPS || g == GR_CHANCE || g == GR_MOTION)) {
+            if (PAGES[i].fam == FAM_SEQ && (g == GR_ROLL || g == GR_STEPS || g == GR_CHANCE || g == GR_COMP || g == GR_MOTION)) {
                 cur_ok &= ui.cursor == 1u && same_snd && same_steps && ui.page == i;
                 n_cur++;
             } else if (g == GR_USER) {
@@ -2160,8 +2160,8 @@ static int test_presets_knob(void)
             }
         }
     }
-    bad += check("#92 PRESETS on STEP, PATTERN, SHIFT, CHANCE, AUTOMATION: the step cursor; the sound and the steps stay",
-                 cur_ok && n_cur == 5u);
+    bad += check("#92 PRESETS on STEP, COMP, PATTERN, SHIFT, CHANCE, AUTOMATION: the step cursor; the sound and the steps stay",
+                 cur_ok && n_cur == 6u);
     bad += check("#94 PRESETS on USER, PROJECT, PHRASES, SONG: the selection (KNOB 1's); nothing loaded", sel_ok);
     bad += check("#94 PRESETS on TOOLS does nothing", tools_ok);
     bad += check("#94 PRESETS elsewhere (EDIT, ENV, LFO, FX, SCL, ARP, MIXER, GLOBAL, ...): the next sound, the steps stay",
@@ -5463,7 +5463,9 @@ static int test_seq_tools(void)
     ui_power_on();
     go_page(GR_ROLL); frame();
     press(B_SEQ); frames(320);
-    ok = cur_page()->graph == GR_STEPS && msg_is("HOLD [SEQ] QUICK");
+    ok = cur_page()->graph == GR_COMP && msg_is("HOLD [SEQ] QUICK");   /* (0.6.39: STEP, COMP, PATTERN) */
+    press(B_SEQ); frames(320);
+    ok &= cur_page()->graph == GR_STEPS;
     press(B_SEQ); frames(320);
     ok &= cur_page()->graph == GR_MOTION;             /* (0.6.37: PATTERN, AUTOMATION; PHRASES, CHANCE out, SHIFT last) */
     press(B_SEQ); frames(320);

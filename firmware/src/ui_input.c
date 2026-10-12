@@ -693,12 +693,53 @@ static void step_edit(uint32_t slot, int32_t steps)
     }
 }
 
+/* (0.6.39) SEQ > COMP: KNOB 1 the step, KNOB 2 its TYPE (OFF, the step's CHANCE and RATCH, the components), KNOB 3 / 4
+ * the TYPE's values (CHANCE %, RATCH x1..x4; ARP: ORDER, RATE x RANGE; TRIG: the condition). CHANCE and RATCH are the
+ * step's own fields; a component is one at a time: turning to OFF, CHANCE or RATCH takes it away */
+static void comp_knob(uint32_t slot, int32_t steps)
+{
+    step_t *st = &TSEL->step[ui.cursor];
+    uint32_t v = comp_view();
+    int32_t d = clamp(steps, -4, 4);
+    if (slot == 0u) { cursor_set(ui.cursor + steps); return; }
+    if (chain_busy()) { ui_message("STOP TO EDIT"); return; }
+    if (slot == 1u) {
+        v = (uint32_t)clamp((int32_t)v + d, 0, COMP_N - 1);
+        ui.comp_sel = (uint8_t)v;
+        if (v >= COMP_ARPN) {
+            uint32_t c = CP_ARPN + v - COMP_ARPN;
+            if (st->comp != c) {
+                int keep = cp_arp(st) && c != CP_TRIG;  /* (ARP to ARP: its ORDER, RATE, RANGE kept) */
+                st->comp = (uint8_t)c;
+                if (!keep) st->carg = c == CP_TRIG ? 0u : CP_ARG(0u, 2u, 0u);   /* (UP x4 1 OCT; TRIG 1:2) */
+            }
+        } else
+            st->comp = st->carg = 0;
+        return;
+    }
+    if (v == COMP_CHANCE && slot == 2u)
+        step_set_chance(st, (uint32_t)clamp((int32_t)step_chance(st) + steps, 0, 100));
+    else if (v == COMP_RATCH && slot == 2u)
+        step_set_ratchet(st, (uint32_t)clamp((int32_t)step_ratchet(st) + d, 1, 4));
+    else if (v == COMP_TRIG && slot == 2u)
+        st->carg = (uint8_t)clamp((int32_t)st->carg + d, 0, CP_NTRIG - 1);
+    else if (v >= COMP_ARPN && v <= COMP_ARPS && slot == 2u)
+        st->carg = CP_ARG((uint32_t)clamp((int32_t)CP_ORD(st->carg) + d, 0, 3), CP_RATE(st->carg), CP_RNG(st->carg));
+    else if (v >= COMP_ARPN && v <= COMP_ARPS && slot == 3u) {   /* RATE x RANGE: one list, 1 range after another */
+        int32_t i = clamp((int32_t)(CP_RATE(st->carg) % CP_NRATE * 4u + CP_RNG(st->carg)) + d, 0, CP_NRATE * 4 - 1);
+        st->carg = CP_ARG(CP_ORD(st->carg), (uint32_t)i / 4u, (uint32_t)i % 4u);
+    }
+}
 static void edit_param(uint32_t slot, int32_t steps)
 {
     int16_t *vp;
     const page_t *pg = cur_page();
     const param_desc_t *d;
     int32_t v;
+    if (pg->graph == GR_COMP) {
+        comp_knob(slot, steps);
+        return;
+    }
     if (pg->graph == GR_CHANCE) {
         if (slot == 0u) cursor_set(ui.cursor + steps);
         else if (slot == 1u || slot == 2u) {
@@ -1132,7 +1173,7 @@ static void presets_turn(int32_t s)
     uint32_t g = pg->graph;
     if (ui.home || g == GR_BROWSE) {
         preset_step(s);
-    } else if (g == GR_ROLL || g == GR_CHANCE || g == GR_USER || g == GR_SLOTS || g == GR_PATS || g == GR_SONG ||
+    } else if (g == GR_ROLL || g == GR_CHANCE || g == GR_COMP || g == GR_USER || g == GR_SLOTS || g == GR_PATS || g == GR_SONG ||
                g == GR_EVENTS || g == GR_TOOLS) {
         uint32_t c = g == GR_SLOTS ? 1u : 0u;             /* (0.6.12 PROJECT: the list is the sections, KNOB 2's) */
         edit_param(c, s);                                 /* KNOB 1's (STEP: STOP TO EDIT while a song plays) */

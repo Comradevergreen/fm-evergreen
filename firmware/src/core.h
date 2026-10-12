@@ -311,7 +311,26 @@ typedef struct {                 /* acid-style step: up to 4 notes (POLY), time,
     uint8_t hit;                 /* bit l: lane l hits (its GM note, on any engine): the DRUM grid */
     uint8_t acc;                 /* bit l: that hit is accented (velocity 127) */
     uint8_t probability;         /* 0 = legacy 100%; 1..100 = percent, 101 = silent */
+    uint8_t comp, carg;          /* (JIANT 0.6.39) the step's component (CP_*, 0 none) and its arguments (seq.c) */
 } step_t;
+/* (JIANT 0.6.39) step components, OP-Z style (SEQ > COMP): one a step, on a NOTE step of a melodic track.
+ * ARP NOTES / SEQ / SCALE: the step plays an arpeggio, RATE notes in its length, over the TIEs after it; its notes
+ * (NOTES: the step's own, SEQ: every note of the track's pattern, both over RANGE octaves; SCALE: the scale up from
+ * the step's lowest note, RANGE: 3 5 8 15 degrees) in the ORDER. TRIG: the step plays on some loops of the pattern
+ * only (1:2 the first of every two, .., FIRST, NOT FIRST). carg: ARP ORDER bits 0-1, RATE 2-4, RANGE 5-6; TRIG the
+ * condition. */
+enum { CP_NONE, CP_ARPN, CP_ARPQ, CP_ARPS, CP_TRIG, CP_N };
+#define CP_ORD(a) ((uint32_t)(a) & 3u)            /* UP DOWN UP-DN RND */
+#define CP_RATE(a) (((uint32_t)(a) >> 2) & 7u)    /* 0..4: x2 x3 x4 x6 x8 */
+#define CP_RNG(a) (((uint32_t)(a) >> 5) & 3u)     /* 0..3: 1..4 octaves (SCALE: 3 5 8 15 degrees) */
+#define CP_ARG(o, r, g) ((uint8_t)(((o) & 3u) | ((r) & 7u) << 2 | ((g) & 3u) << 5))
+#define CP_NRATE 5u
+#define CP_NTRIG 12u
+static const uint8_t CP_RATES[CP_NRATE] = {2, 3, 4, 6, 8};
+static const uint8_t CP_DEGS[4] = {3, 5, 8, 15};
+static const uint8_t CP_TRIGS[CP_NTRIG][2] = {{1, 2}, {2, 2}, {1, 3}, {2, 3}, {3, 3}, {1, 4}, {2, 4}, {3, 4}, {4, 4},
+                                              {1, 8}, {0, 1}, {0, 2}};   /* (a of b; {0, 1} FIRST, {0, 2} NOT FIRST) */
+static int cp_arp(const step_t *s) { return s->comp >= CP_ARPN && s->comp <= CP_ARPS; }
 typedef struct {                 /* a step as formats 1..4 (projects to FUN4) stored it: no hits */
     uint8_t note[4];
     uint8_t n, time, flags, vel;
@@ -388,6 +407,9 @@ typedef struct track {
     uint8_t seq_hold;            /* last step slides: keep the notes until the next step */
     uint8_t slide_glide;         /* next legato note glides (slide) */
     uint8_t rat_left;            /* RATCH: repeats of the playing step still to come (seq.c seq_ratchet) */
+    uint8_t arp_from;            /* (0.6.39) an ARP component playing: its step + 1 (0: none), over the TIEs after it */
+    uint8_t arp_k;               /* .. the arpeggio's next note (its position in the ORDER) */
+    uint16_t loops;              /* (0.6.39) the pattern's loops since PLAY (TRIG components) */
     uint32_t seq_off;
     uint8_t seq_active;          /* any step programmed */
     uint8_t rskip_idx;           /* live recording put notes into the step about to play: */
