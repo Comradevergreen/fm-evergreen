@@ -196,13 +196,17 @@ static __attribute__((noinline)) int mod_begin(track_t *t)
                 off[j] = 0;
                 mod.nk++;
             }
-            off[j] += (((x * a) >> 6) * (pd->max - pd->min)) >> 15;
+            off[j] += (((x * a) >> 6) * (id == P_LRATE ? 127 : pd->max - pd->min)) >> 15;   /* (0.6.51: RATE's free span,
+                                                                                               * as before its in-time values) */
         }
     }
     for (j = 0; j < mod.nk; j++) {
         uint32_t id = mod.kid[j];
         const param_desc_t *pd = id >= P_E0 ? &ENGINES[t->engine]->edit[id - P_E0] : &TP[id];
-        t->p[id] = (int16_t)clamp(mod.keep[j] + off[j], pd->min, pd->max);
+        int32_t lo = pd->min, hi = pd->max;
+        if (id == P_LRATE)                              /* (0.6.51) the LFO's RATE moved within its kind: free / in time */
+            lo = mod.keep[j] < 0 ? lo : 0, hi = mod.keep[j] < 0 ? -1 : hi;
+        t->p[id] = (int16_t)clamp(mod.keep[j] + off[j], lo, hi);
     }
     return 1;
 }

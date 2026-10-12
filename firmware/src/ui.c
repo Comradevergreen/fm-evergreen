@@ -641,6 +641,16 @@ static int fx_head(uint32_t i)
     return PAGES[i].fam == FAM_FX && (str_eq(t, "FX") || str_eq(t, "SLICER") || str_eq(t, "DLY") ||
                                       str_eq(t, "REVERB") || str_eq(t, "CHORUS") || str_eq(t, "MASTER"));
 }
+/* (JIANT 0.6.51) a page (or the track) changed by hand: its name big in the middle of the graph for PF_MS, so the
+ * pages need no memorising (ui_graph.c page_flash_draw); a page set by code (a test, a dialog's way back) shows none */
+#define PF_MS 700u
+static uint32_t pf_ms;
+static uint8_t pf_on;
+static void page_flash(void)
+{
+    pf_ms = fm1_ms;
+    pf_on = 1;
+}
 static void open_family(uint32_t fam)
 {
     static uint32_t fx_ms, fx_from = 0xFFu;
@@ -655,6 +665,7 @@ static void open_family(uint32_t fam)
         ui.page = (uint8_t)i;
         ui.fam_last[fam] = ui.page;
         page_entered();
+        page_flash();
         return;
     }
     if (fam == FAM_FX) {
@@ -680,6 +691,7 @@ static void open_family(uint32_t fam)
     ui.fam_last[fam] = ui.page;
     ui.home = 0;
     page_entered();
+    page_flash();
 }
 
 /* GLO always enters the mixer from another family. Subsequent taps visit the
@@ -697,6 +709,7 @@ static void open_global(void)
     }
     ui.home = 0;
     page_entered();
+    page_flash();
 }
 
 static void go_home(void)
@@ -1275,6 +1288,7 @@ static void track_select(uint32_t i)
     ui.bank = 0;
     sync_reload = 1;
     ui.force = 1;
+    page_flash();                                    /* (0.6.51) the track's number and engine shown big */
 }
 
 #include "ui_events.c"                            /* SEQ > AUTO LIST: the locks and events as a list (an action page) */

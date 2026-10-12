@@ -148,10 +148,25 @@ static __attribute__((noinline)) void track_post(track_t *t, const engine_t *e, 
     }
 }
 
+static uint32_t beat_samples(void);                     /* (fx.c) */
 static void track_lfo_tick(track_t *t)
 {
     uint32_t old = t->lfo_ph;
-    t->lfo_ph += LFO_INC[t->p[P_LRATE] & 127];
+    int32_t r = t->p[P_LRATE];
+    if (r < 0) {                                        /* (JIANT 0.6.51) in time: 4BAR .. 1/32 (params.c N_LSYNC), on
+                                                         * the transport's grid while it plays (PHASE its offset), free
+                                                         * while it is stopped */
+        static const uint16_t U[12] = {384, 192, 96, 48, 24, 18, 16, 12, 8, 6, 4, 3};   /* 1/24 of a quarter */
+        uint32_t len = beat_samples() * U[(uint32_t)(-r - 1) % 12u] / 24u;
+        if (len < 64u)
+            len = 64u;
+        if (song.playing)
+            t->lfo_ph = (uint32_t)(((uint64_t)(ms_clock % len) << 32) / len) +
+                        (t->p[P_LPHASE] > 0 ? (uint32_t)t->p[P_LPHASE] << 25 : 0u);
+        else
+            t->lfo_ph += (uint32_t)(((uint64_t)CTL << 32) / len);
+    } else
+        t->lfo_ph += LFO_INC[r & 127];
     if (t->lfo_ph < old)
         t->lfo_rnd = lfo_rand(t);
     t->lfo_val = lfo_wave(t, t->lfo_ph);
@@ -521,7 +536,8 @@ static void trk_note_on(track_t *t, uint32_t note, uint32_t vel)
     for (i = 0; i < NVOICE; i++)
         any |= t->v[i].gate;
     if (!any) {                                        /* fresh phrase: LFO retrigger and fade */
-        t->lfo_ph = (uint32_t)t->p[P_LPHASE] << 25;
+        if (t->p[P_LPHASE] >= 0)                        /* (0.6.51: PHASE FREE: it runs on) */
+            t->lfo_ph = (uint32_t)t->p[P_LPHASE] << 25;
         t->lfo_fade = 0;
     }
     if (mode == V_POLY) {
