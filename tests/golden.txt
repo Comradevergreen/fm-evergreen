@@ -44,7 +44,7 @@ preset/WHEEL/01_JAZZ_PERC c20ffae2936320bc
 preset/WHEEL/02_GOSPEL e69e7225ee527c74
 preset/WHEEL/03_SOFT_FLUTE 17d174f999cbce38
 preset/WHEEL/04_ROCK_DRIVE 497865bcb64514b8
-preset/DRUM/00_DRUM-X b5092089ecbc1524
+preset/DRUM/00_DRUM-X 6bb1e38da3c82608
 preset/NOISE/00_WIND e5cfc2a381898f2e
 preset/NOISE/01_RAIN ad494ac06116427c
 preset/NOISE/02_ARCADE 4ff6f5d60113fd3c
@@ -57,7 +57,7 @@ preset/FM6/04_PAD c4b9fdec6e3e8fc0
 preset/FM6/05_MARIMBA 92111c49fcaab3b8
 preset/FM6/06_ORGAN d327f9a4f35f615e
 preset/FM6/07_PLUCK cc991af9edde8ea4
-drums/drum_gm_kit 62ce282bb1f9e95c
+drums/drum_gm_kit cf21ed27d52a646c
 mode/ANALOG/POLY 03afb92fc3f54c8c
 mode/ANALOG/MONO 7d93b87310f31766
 mode/ANALOG/LEGATO d80f97be3a7669de
@@ -72,6 +72,6 @@ sends/ANALOG/delay 6cfd33d249788f9c
 sends/ANALOG/reverb c9afc7beac2ff8d0
 sends/ANALOG/all 0a8dd3c0a9eb2dfa
 sends/ANALOG/dist 87912f70a07c8bd4
-song/4track_mix 75b2554a399e23b0
+song/4track_mix 53b4e1ff3880e5c8
 slicer/gate/ANALOG_ACID bbd8ad1d0715bc94
-slicer/song_gate_stut 79b22e90d6fab808
+slicer/song_gate_stut d5f2fe50f6bb0fe4

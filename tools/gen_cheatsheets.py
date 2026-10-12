@@ -7,7 +7,7 @@ import html, os
 
 R = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(R, 'docs', 'cheatsheet')
-VERSION = 'v0.6.48'
+VERSION = 'v0.6.49'
 
 HEAT = ['#22d3ee', '#3b82f6', '#8b5cf6', '#d946ef', '#ef4444', '#ff7a00', '#facc15', '#f4f1ea']
 
@@ -146,7 +146,7 @@ def controls():
         ('FX', 'TRACK · SLICER · DELAY · REVERB · CHORUS · MASTER (two quick taps: next section)',
          'PUNCH-IN FX'),
         ('SCL', 'SCL · SCL 2', 'ROOT by key'),
-        ('EDIT', 'EDIT 1 · EDIT 2 · FILTER · VOICE  (FM6: OPERATOR · OP ENV · OPERATOR 2; DRUM: LANES · LANES 2 · SOUND 1–3 · X-MOD · TONE · SEND · IMAGE)', 'INIT · RECALL · sound mutes'),
+        ('EDIT', 'EDIT 1 · EDIT 2 · FILTER · VOICE  (FM6: OPERATOR · OP ENV · OPERATOR 2; DRUM: LANES · LANES 2 · SOUND 1–3 · LAYER · X-MOD · TONE · SEND · IMAGE)', 'INIT · RECALL · sound mutes'),
         ('GLO', 'MIXER · GLOBAL · SYSTEM', 'MUTE · SOLO · LEVEL · TAP'),
         ('SAVE', 'PRESETS · USER · PROJECT · ARRANGE · TOOLS', 'SONG layer'),
         ('ARP', 'ARP · ARP 2', '—'),
@@ -234,7 +234,7 @@ def controls():
                            ('OP ENV', 'OP STAGE RATE LEVEL'), ('OPERATOR 2', 'OP MODE DETUNE VEL'), ('FILTER', 'TYPE CUT RES DRIVE'),
                            ('VOICE', 'VOICE GLIDE MODE PRIO'), ('LANES', 'KICK SNARE CLAP HATCL'),
                            ('LANES 2', 'HATOP TOM RIM BELL'), ('SOUND', 'LANE SIDE PITCH PMOD'),
-                           ('SOUND 2', 'DECAY NOISE COLOR MODE'), ('SOUND 3', 'LANE PMOD DRIVE WAVE'),
+                           ('SOUND 2', 'DECAY NOISE COLOR MODE'), ('SOUND 3', 'LANE PMOD DRIVE WAVE'), ('LAYER', 'LANE LAYER FEEDBK -'),
                            ('X-MOD', 'RATE DEPTH SHAPE RAND'), ('SEND', 'LANE SEND AMOUNT -'), ('IMAGE', 'IMAGE - - -')]),
         ('SCL · ARP', HEAT[2], [('SCL', 'ROOT SCALE QUANT TRANS'), ('SCL 2', 'ALL TR - - -'), ('ARP', 'MODE RATE OCT GATE'),
                                 ('ARP 2', 'SWING PROB HOLD ORDER')]),

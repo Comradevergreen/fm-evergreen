@@ -1209,6 +1209,13 @@ static void sound_dice_of(track_t *t, int quiet)
             }                                            /* (a new wave: SINE or FM, the gentle two) */
             L->mode = (uint8_t)((D->mode & ~3u) | (rng() % 5u ? (D->mode & 3u) : rng() % 2u));
         }
+        for (l = 0; l < 8u; l++) {                      /* (0.6.49) LAYER strong where a note is in the way (snare,
+                                                         * hats, rim, bell), light on the kick, clap and tom; FEEDBK
+                                                         * one sound in three */
+            static const uint8_t LO[8] = {0, 4, 0, 6, 6, 0, 3, 8}, HI[8] = {6, 15, 8, 15, 15, 7, 12, 15};
+            uint32_t la = LO[l] + rng() % (HI[l] - LO[l] + 1u), fb = rng() % 3u ? 0u : 1u + rng() % 9u;
+            dx_lay[l] = (uint8_t)(la | fb << 4);
+        }
         if (!quiet) ui_message("KIT DICED");
         return;
     }
@@ -1630,6 +1637,7 @@ static void ui_input_frame(void)
                         memcpy(dx_kit, DX_KIT_DEF, sizeof dx_kit);
                         memset(dx_mot, 0, sizeof dx_mot);   /* (0.5.1: X-MOD off) */
                         memset(dx_snd, 0, sizeof dx_snd);   /* (0.6.48: no SEND) */
+                        memcpy(dx_lay, DX_LAY_DEF, sizeof dx_lay);   /* (0.6.49: the factory LAYERs) */
                     }
                     ui_message("SOUND INIT");
                 }

@@ -37,6 +37,7 @@ typedef struct {                                         /* a hit */
     int32_t lp;                                          /* (JIANT 0.5) the output's one-pole low-pass state */
     int32_t hl;                                          /* (0.6.17) the last half-rate sample (dx_run's upsampling) */
     int32_t b1, b2;                                      /* (0.6.36) TONE's band-pass state */
+    uint32_t ph4;                                        /* (0.6.49) LAYER's oscillator phase */
     uint8_t live, trig, choke;
 } dx_voice_t;
 
@@ -69,6 +70,47 @@ static void dx_choke(dx_voice_t *v) { if (v->live) v->choke = 1; }
 /* a decay value (0..127) -> its tau in us: 3 ms x 2^(9 d / 127) */
 static uint32_t dx_tau(uint32_t d) { return ((dv_exp2(d * 9u * 4096u / 127u) >> 8) * 3000u) >> 8; }
 
+/* (0.6.49) LAYER's oscillator: a triangle (no table, a few operations; its odd partials add to the clang) */
+static inline int32_t dx_tri(uint32_t ph)
+{
+    int32_t s = (int32_t)(ph >> 15);                     /* 0 .. 131071 */
+    return s < 65536 ? s - 32768 : 98303 - s;
+}
+
+/* (0.6.49) the oscillator's loop with LAYER (dx_run's FM ENV / FEEDBK loop and a triangle at sqrt 2 of it, frequency
+ * modulated by it, its index up as LAYER's square; up to ~70 % of the mix): a function of its own (dx_run's loops as
+ * they were) */
+static __attribute__((noinline)) void dx_layer(dx_voice_t *v, int32_t *y, uint32_t n, uint32_t *php, uint32_t *ph2p,
+                                               int32_t *op, int32_t inc, int32_t dinc, int32_t ga, int32_t dga, int32_t ix,
+                                               int32_t dix, uint32_t ratio, int32_t fbk, int32_t lay)
+{
+    uint32_t i, ph = *php, ph2 = *ph2p, ph4 = v->ph4;
+    int32_t o = *op, lx = lay * lay * 600, lm = lay * 3;
+    if (ix || dix)
+        for (i = 0; i < n; i++, inc += dinc, ga += dga, ix += dix) {
+            int32_t o2;
+            o = sine_i(ph + (uint32_t)(sine_i(ph2) * ix) * 512u + (uint32_t)(o * fbk));
+            o2 = dx_tri(ph4 + (uint32_t)(o * lx));
+            y[i] = mulq15(o + (((o2 - o) * lm) >> 6), ga >> 8);
+            ph += (uint32_t)inc << 4;
+            ph2 += ((uint32_t)inc >> 8) * ratio;
+            ph4 += ((uint32_t)inc >> 6) * 1448u;         /* (x 22.6: x 16 the step, sqrt 2) */
+        }
+    else                                                 /* (no FM on it: the modulator not run) */
+        for (i = 0; i < n; i++, inc += dinc, ga += dga) {
+            int32_t o2;
+            o = sine_i(ph + (uint32_t)(o * fbk));
+            o2 = dx_tri(ph4 + (uint32_t)(o * lx));
+            y[i] = mulq15(o + (((o2 - o) * lm) >> 6), ga >> 8);
+            ph += (uint32_t)inc << 4;
+            ph4 += ((uint32_t)inc >> 6) * 1448u;
+        }
+    *php = ph;
+    *ph2p = ph2;
+    *op = o;
+    v->ph4 = ph4;
+}
+
 /* one block of lane L's hit v into y (n <= CTL): Q15, peaks near full scale. morph 0..127; tune16 1/16 semitones;
  * dofs / cofs / nofs move DECAY / COLOR / NOISE (-64..63). warp (DRUM's FOLD since JIANT 0.5, was WARP, 0..127): the
  * oscillator through a wavefolder after its envelope, x1 .. x9 into three folds at +-T: the hit's loud start folds
@@ -82,6 +124,14 @@ static uint32_t dx_tau(uint32_t d) { return ((dv_exp2(d * 9u * 4096u / 127u) >> 
  * high nibble FEEDBK, every sound's oscillator fed back into its own phase (1..15: warm, growl, grit, noise) */
 static uint8_t dx_tone;
 static dx_lane_t dx_kit[8];                              /* (defined below with the factory kit: the BP knows its lanes) */
+/* (JIANT 0.6.49) EDIT > LAYER, each sound's (the kit's: project.c keeps it, FUNC's 'D' 'L' block; 0 before it): low
+ * nibble LAYER, a second oscillator (a triangle) at sqrt 2 of the pitch (the most out of tune with it there is) frequency-modulated
+ * by the first, more as it goes up (1..15: a metal edge .. a clang with no note: the sound melts into the rhythm and
+ * stays out of the harmony); high nibble FEEDBK, the sound's own oscillator fed back (on top of TONE's, the kit's) */
+#define DX_LAY_INIT {0, 6, 0, 9, 9, 0, 0, 11}            /* (the factory kit's: DX_LAY_DEF) */
+static uint8_t dx_lay[8] = DX_LAY_INIT;
+#define DX_LAY_L(x) ((uint32_t)(x) & 15u)
+#define DX_LAY_FB(x) ((uint32_t)(x) >> 4)
 #define DX_TONE_BP(t) ((uint32_t)(t) & 15u)
 #define DX_TONE_FB(t) ((uint32_t)(t) >> 4)
 static __attribute__((noinline)) void dx_run(const dx_lane_t *L, dx_voice_t *v, int32_t morph, int32_t tune16,
@@ -91,7 +141,8 @@ static __attribute__((noinline)) void dx_run(const dx_lane_t *L, dx_voice_t *v, 
     int32_t q[DXP_N], p16, depth, ea1, en1, ep1, og, ng, ga, dga, gn, dgn, kd, inc, dinc;
     uint32_t i, k, wave = L->mode & 3u, flt = (L->mode >> 2) & 3u, ta, tn, tp, kb, inc1;
     tsvf_t c;
-    uint32_t nf = n;
+    uint32_t nf = n, ln = L >= dx_kit && L < dx_kit + 8 ? (uint32_t)(L - dx_kit) : 0u;
+    int32_t lay = (int32_t)DX_LAY_L(dx_lay[ln]), lfb = (int32_t)DX_TONE_FB(dx_tone) + (int32_t)DX_LAY_FB(dx_lay[ln]);
     if (!v->live && !v->trig) {
         for (i = 0; i < n; i++)
             y[i] = 0;
@@ -117,7 +168,7 @@ static __attribute__((noinline)) void dx_run(const dx_lane_t *L, dx_voice_t *v, 
         v->live = 1;
         v->ea = v->en = 1 << 30;
         v->ep = 32767;
-        v->ph = v->ph2 = 0;
+        v->ph = v->ph2 = v->ph4 = 0;
         v->ic1 = v->ic2 = 0;
         v->b1 = v->b2 = 0;
         v->mo = 0;
@@ -155,7 +206,7 @@ static __attribute__((noinline)) void dx_run(const dx_lane_t *L, dx_voice_t *v, 
         uint32_t ph = v->ph;
         int32_t fold = clamp(warp, 0, 127);
         fm = clamp(fm, 0, 127);
-        warp = fm || DX_TONE_FB(dx_tone) ? 0x100 : 0;   /* (FM ENV, FEEDBK: the loop below; the flag stripped there) */
+        warp = fm || lfb || lay ? 0x100 : 0;            /* (FM ENV, FEEDBK, LAYER: the loop below; the flag stripped there) */
         if (wave == DXW_SINE && q[DXP_COLOR] && !warp) {   /* drive x1 .. x2.5 into the soft clip */
             int32_t g = 4096 + q[DXP_COLOR] * 48;
             for (i = 0; i < n; i++, inc += dinc, ga += dga) {
@@ -184,13 +235,16 @@ static __attribute__((noinline)) void dx_run(const dx_lane_t *L, dx_voice_t *v, 
             uint32_t ph2 = v->ph2, ratio = wave == DXW_SINE ? 8192u : DX_RATIO[wave];
             int32_t base = wave == DXW_SINE ? 0 : q[DXP_COLOR] * 3;
             int32_t ix = base + ((fm * 3 * v->ep) >> 15), dix = ((base + ((fm * 3 * ep1) >> 15)) - ix) / (int32_t)n;
-            int32_t o = v->mo, fbk = (int32_t)DX_TONE_FB(dx_tone) * 4096;   /* (FEEDBK: up to half a turn) */
-            for (i = 0; i < n; i++, inc += dinc, ga += dga, ix += dix) {
-                o = sine_i(ph + (uint32_t)(sine_i(ph2) * ix) * 512u + (uint32_t)(o * fbk));
-                y[i] = mulq15(o, ga >> 8);
-                ph += (uint32_t)inc << 4;
-                ph2 += ((uint32_t)inc >> 8) * ratio;
-            }
+            int32_t o = v->mo, fbk = (lfb > 15 ? 15 : lfb) * 4096;   /* (FEEDBK: up to half a turn) */
+            if (lay) {                                   /* (0.6.49) LAYER: a second one at sqrt 2, FM'd by the first */
+                dx_layer(v, y, n, &ph, &ph2, &o, inc, dinc, ga, dga, ix, dix, ratio, fbk, lay);
+            } else
+                for (i = 0; i < n; i++, inc += dinc, ga += dga, ix += dix) {
+                    o = sine_i(ph + (uint32_t)(sine_i(ph2) * ix) * 512u + (uint32_t)(o * fbk));
+                    y[i] = mulq15(o, ga >> 8);
+                    ph += (uint32_t)inc << 4;
+                    ph2 += ((uint32_t)inc >> 8) * ratio;
+                }
             v->ph2 = ph2;
             v->mo = o;
         }
@@ -291,9 +345,11 @@ static __attribute__((noinline)) void dx_run(const dx_lane_t *L, dx_voice_t *v, 
     {DX_MODE(DXW_METAL, DXF_HP, 0), {100, 0, 62, 96, 112}, {108, 0, 74, 112, 118}},  /* HAT OP */                   \
     {DX_MODE(DXW_SINE, DXF_LP, 1), {30, 40, 66, 10, 30}, {36, 60, 76, 20, 50}},      /* TOM */                      \
     {DX_MODE(DXW_BELL, DXF_HP, 1), {63, 10, 14, 16, 46}, {70, 24, 20, 30, 60}},     /* RIM */                       \
-    {DX_MODE(DXW_METAL, DXF_BP, 0), {69, 0, 72, 0, 40}, {74, 0, 84, 12, 56}},        /* BELL */                     \
+    {DX_MODE(DXW_METAL, DXF_BP, 1), {64, 0, 44, 34, 50}, {68, 0, 54, 46, 62}},       /* BELL (0.6.49: shorter, noisier) */\
 }
 static const dx_lane_t DX_KIT_DEF[8] = DX_KIT_INIT;
+/* (0.6.49) the factory kit's LAYERs (FEEDBK 0): the snare, the hats and the bell (no note to them); the rest clean (CPU) */
+static const uint8_t DX_LAY_DEF[8] = DX_LAY_INIT;
 static dx_lane_t dx_kit[8] = DX_KIT_INIT;
 /* a stored kit as the voice takes it: values 0..127, the mode's fields in range (wave 0..3, filter 0..2, snap) */
 static int dx_kit_ok(const dx_lane_t *k)

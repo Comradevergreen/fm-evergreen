@@ -772,6 +772,57 @@ static int test_dximg(void)
     ui_power_on();
     return bad;
 }
+/* (0.6.49) DRUM-X LAYER and each sound's FEEDBK: 0 runs the sound as before; LAYER moves it; kept with the project;
+ * a new project has the factory LAYERs, an older one none; NEW PROJECT: every track dry, the engine's own defaults */
+static uint64_t dxlay_hash(uint32_t lane, uint8_t ly)
+{
+    dx_voice_t v;
+    int32_t y[CTL];
+    uint32_t b, i;
+    uint64_t h = 1469598103934665603ull;
+    uint8_t keep = dx_lay[lane], tone = dx_tone;
+    memset(&v, 0, sizeof v);
+    dx_lay[lane] = ly;
+    dx_tone = 0;
+    dx_trigger(&v);
+    for (b = 0; b < 30u; b++) {
+        dx_run(&dx_kit[lane], &v, 64, 0, 0, 0, 0, 0, 0, y, CTL);
+        for (i = 0; i < CTL; i++) h = (h ^ (uint32_t)y[i]) * 1099511628211ull;
+    }
+    dx_lay[lane] = keep;
+    dx_tone = tone;
+    return h;
+}
+static int test_dxlay(void)
+{
+    int bad = 0, ok = 1;
+    uint32_t i;
+    project_store_t st;
+    ui_power_on();
+    memcpy(dx_kit, DX_KIT_DEF, sizeof dx_kit);
+    ok &= dxlay_hash(DV_SNARE, 0) == dxlay_hash(DV_SNARE, 0);
+    ok &= dxlay_hash(DV_SNARE, 12) != dxlay_hash(DV_SNARE, 0) && dxlay_hash(DV_BELL, 0x30) != dxlay_hash(DV_BELL, 0);
+    ok &= dxlay_hash(DV_HATC, 15) != dxlay_hash(DV_HATC, 6);
+    bad += check("DRUM LAYER / FEEDBK: each sound's, 0 as it was, more another sound", ok);
+    memcpy(dx_lay, DX_LAY_DEF, sizeof dx_lay);
+    dx_lay[DV_BELL] = 0x5Fu;
+    project_capture(&proj_scratch);
+    ok = proj_pack(&st, &proj_scratch);
+    memset(dx_lay, 0, sizeof dx_lay);
+    ok &= proj_import(&proj_scratch, &st, sizeof st) && !project_restore_runtime(&proj_scratch);
+    ok &= dx_lay[DV_BELL] == 0x5Fu && dx_lay[DV_SNARE] == DX_LAY_DEF[DV_SNARE];
+    bad += check("DRUM LAYER: kept with the project (FUNC 'D' 'L')", ok);
+    system_init();
+    ok = !memcmp(dx_lay, DX_LAY_DEF, sizeof dx_lay) && 1;
+    for (i = 0; i < NTRK; i++) {
+        const engine_t *e = ENGINES[trk[i].eng_req % NENGINES];
+        ok &= !trk[i].p[P_DIST] && !trk[i].p[P_CHOR] && !trk[i].p[P_DLY] && !trk[i].p[P_REV];
+        if (e != &ENG_FM6) ok &= trk[i].p[P_E1] == e->edit[1].def && trk[i].p[P_ATK] == TP[P_ATK].def;
+    }
+    bad += check("NEW PROJECT: every track dry, the engine's own defaults, the factory LAYERs", ok);
+    ui_power_on();
+    return bad;
+}
 static int test_patterns(void)
 {
     int bad = 0;
@@ -3236,10 +3287,10 @@ static int test_edit_cycle(void)
     (void)CYC_D;
 #endif
     {   /* #97: a DRUM track's lane levels on EDIT > LANES (KICK SNARE CLAP HATCL) and LANES 2 (HATOP TOM RIM BELL) */
-        static const char *const CYC_K[] = {"EDIT 1", "EDIT 2", "FILTER", "LANES", "LANES 2", "SOUND", "SOUND 2", "SOUND 3", "X-MOD",
+        static const char *const CYC_K[] = {"EDIT 1", "EDIT 2", "FILTER", "LANES", "LANES 2", "SOUND", "SOUND 2", "SOUND 3", "LAYER", "X-MOD",
                                             "TONE", "SEND", "IMAGE", "VOICE", "EDIT 1"};
         set_engine_of(TSEL, ENGI_DRUM);
-        bad += check("EDIT cycle (DRUM): EDIT 1 EDIT 2 FILTER LANES LANES 2 SOUND SOUND 2 SOUND 3 X-MOD TONE SEND IMAGE VOICE EDIT 1",
+        bad += check("EDIT cycle (DRUM): EDIT 1 EDIT 2 FILTER LANES LANES 2 SOUND SOUND 2 SOUND 3 LAYER X-MOD TONE SEND IMAGE VOICE EDIT 1",
                      engine_cycle(CYC_K, NELEM(CYC_K)));
         go_title("LANES 2"); frame();
         ok = TSEL->p[P_LN5] == 127;
@@ -3517,7 +3568,8 @@ static int test_quick_layers(void)
     TSEL->p[P_E1] = (int16_t)(TSEL->p[P_E1] + 7);
     btn_down(B_EDIT); frame(); key_down(white(0)); frame(); key_up(white(0)); btn_up(B_EDIT); frame();
     press(B_OCTUP);
-    bad += check("  INIT on a synth: its first preset", msg_is("SOUND INIT") && TSEL->p[P_E1] == ENGINES[0]->presets[0].e[1]);
+    bad += check("  INIT on a synth: the engine's own defaults (0.6.49), dry", msg_is("SOUND INIT") &&
+                 TSEL->p[P_E1] == ENGINES[0]->edit[1].def && TSEL->p[P_E4] == ENGINES[0]->edit[4].def && !TSEL->p[P_REV]);
     memcpy(dx_kit, DX_KIT_DEF, sizeof dx_kit);
     live.cur = -1;
 
@@ -8157,6 +8209,7 @@ int main(void)
     bad += test_morph();
     bad += test_init_dry();
     bad += test_dximg();
+    bad += test_dxlay();
     bad += test_rec();
     bad += test_step_rec();
     bad += test_step_rec();

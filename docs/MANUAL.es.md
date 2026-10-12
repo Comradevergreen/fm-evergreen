@@ -316,7 +316,7 @@ a la derecha); apretá OCT+ para ejecutarla.
 **SCL** — cualquier tecla fija la ROOT (tónica) en el nombre de su nota. Perillas: ROOT, SCALE, OFFSET, PITCH (las dos
 últimas son las de SEQ > SHIFT).
 
-**EDIT** — F3 **INIT** (el sonido de la pista vuelve al primer preset de fábrica de su motor, seco: todos los envíos a efectos
+**EDIT** — F3 **INIT** (el sonido de la pista vuelve a los valores por defecto de su motor (un INIT limpio, no un preset), seco: todos los envíos a efectos
 en 0; en FM6 la voz init, solo OP1 a nivel máximo; en DRUM, también el kit
 DRUM-X de fábrica), G3 **RECALL** (el sonido tal como lo guardó la sección actual; en DRUM, con su kit). Los dos
 preguntan antes y no tocan los pasos. En una pista DRUM, las teclas negras 1–8 mutean cada sonido de DRUM-X (BD SD CP
@@ -434,6 +434,12 @@ DRUM-X es un kit sintetizado de ocho sonidos, **BD SD CP CH OH TM RS CB**, gener
 - **TONE** (todo el kit): **BP**, un pasa-banda sobre los sonidos de metal (los hi-hats, el rim, el cowbell), OFF o 15
   centros de 1,5 a 9 kHz aprox.; **FEEDBK**, el oscilador de cada sonido realimentado sobre sí mismo (OFF, 1–15:
   cálido, gruñido, arena, ruido). Se guarda con el kit de la sección.
+- **LAYER** (de cada sonido): **LANE**, **LAYER** (OFF, 1–15): un segundo oscilador en un intervalo desafinado,
+  modulado en frecuencia por el sonido, más cuanto más alto: de un filo metálico a un golpe sin nota, así el sonido se
+  funde en el ritmo y no molesta a la armonía (el kit de fábrica lo tiene en el redoblante, los hi-hats y el cowbell);
+  **FEEDBK** (OFF, 1–15): el oscilador de ese sonido realimentado (se suma al FEEDBK de TONE, el del kit). Se guarda con
+  el kit de la sección; los dados (SELECT en una página DRUM, DICE ALL) los mueven fuerte. Cada sonido con LAYER usa
+  un poco de CPU (como FEEDBK).
 - **SEND** (de cada sonido): **LANE**, **SEND** (OFF, CHORUS, DELAY, REVERB) y **AMOUNT**: ese golpe solo hacia un
   efecto, el resto del kit como está (se suma a los envíos de la pista). Se guarda con el kit de la sección.
 - **IMAGE** (de la pista, una perilla, automatizable): barre el kit por sus ubicaciones en el estéreo. 0: todos los
