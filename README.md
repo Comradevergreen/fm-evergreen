@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.6.55).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.6.56).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 > 🫶 If you resonate with my work, consider supporting me on **[Ko-fi](https://ko-fi.com/juanjiant)** (in Argentina:
 > **[Cafecito](https://cafecito.app/juanjiant)**). Thanks for all the good energy, hope you enjoy this little beast ✨🎹
@@ -37,6 +37,12 @@ Two printable sheets with everything on the device. Click an image to open it fu
 ## Changelog
 
 Every update is listed here, newest first.
+
+### v0.6.56
+- **The landing's typography and windows** (the JIANT palette; the beings, DRUM-X and the colours stay as they are):
+  values in **IBM Plex Mono**, page names and big numbers in **Michroma**, labels still in Chakra Petch. Cards, panels,
+  rows, tabs and buttons are square with four **HUD corners**; the page banner is the landing's tag (a dark window,
+  orange corners, the name in Michroma, the track under it). The fonts take 4 KB less flash than before; no CPU cost.
 
 ### v0.6.55
 - **ALGORITHM only offers the tracks that play**: with TRACKS 4 it stops at T4, T5 and T6 no longer show up (they were
@@ -669,8 +675,10 @@ GLO > SYSTEM's TRACKS and LOAD, exactly as the firmware draws them while a song 
 video).*
 
 - **Thermal palette**: values, curves, steps, hits and notes are coloured by intensity (cyan → blue → violet → red →
-  orange → yellow → white). Selection is violet and active is orange. Font:
-  [Chakra Petch](https://github.com/m4rc1e/Chakra-Petch): technical, legible, primitive-tech.
+  orange → yellow → white). Selection is violet and active is orange. Fonts, the landing page's: values in
+  [IBM Plex Mono](https://github.com/IBM/plex), page names in [Michroma](https://github.com/googlefonts/Michroma-font),
+  labels in [Chakra Petch](https://github.com/m4rc1e/Chakra-Petch). Windows, cards and buttons are square, with the
+  landing's HUD corners.
 - **HOME, the ecosystem**: one being per track (its species from its engine, its shape from its four knobs). Each one
   heats up, swells and moves with its own audio; the selected track is drawn bigger; muted ones go dark; in silence
   they all stay still.
@@ -1027,7 +1035,8 @@ These design notes are in Spanish.
 - **[SLOOP](https://github.com/isod89/sloop-fm1)** by isod89 (GPL-3.0): the sections, quick chain and SONG REC system
   the song mode is based on.
 - Fonts: [Chakra Petch](https://github.com/m4rc1e/Chakra-Petch) ([SIL OFL 1.1](LICENSES/OFL-ChakraPetch.txt)), the
-  interface font; up to 0.4, [Inter Tight](https://github.com/rsms/inter-tight) ([SIL OFL 1.1](LICENSES/OFL-InterTight.txt));
+  labels; since 0.6.56 [IBM Plex Mono](https://github.com/IBM/plex) ([SIL OFL 1.1](LICENSES/OFL-IBMPlexMono.txt)), the values,
+  and [Michroma](https://github.com/googlefonts/Michroma-font) ([SIL OFL 1.1](LICENSES/OFL-Michroma.txt)), the big titles; up to 0.4, [Inter Tight](https://github.com/rsms/inter-tight) ([SIL OFL 1.1](LICENSES/OFL-InterTight.txt));
   in the emulator, [DotGothic16](https://github.com/fontworks-fonts/DotGothic16) ([SIL OFL 1.1](LICENSES/OFL-DotGothic16.txt)).
 - VOICE: after [klattsch](https://github.com/tgies/klattsch) by Tony Gies (MIT); formant data from Klatt (1980) and
   Hillenbrand et al. (1995).

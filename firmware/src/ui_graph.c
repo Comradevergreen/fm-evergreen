@@ -1156,13 +1156,23 @@ static void page_flash_draw(void)
     sub[1] = (char)('1' + song.sel % NTRK);
     sub[2] = ' ';
     str_cpy(sub + 3, ENGINES[TSEL->eng_req % NENGINES]->name, sizeof sub - 3u);
-    cv_rrect(x, y, w, bh, 6, fill, T_SURF);
+    if (ux.chamfer) {                                /* (0.6.56) JIANT: the landing's tag, a dark window with four
+                                                     * accent HUD corners, the name in Michroma, the track under it */
+        uint16_t k = e > PF_MS - 160u ? T_DIM : T_ACCENT;
+        fill = T_BG;
+        ink = e > PF_MS - 160u ? T_MID : T_TEXT;
+        cv_rect(x, y, w, bh, fill);
+        cv_rect(x, y, 10, 2, k), cv_rect(x, y, 2, 10, k), cv_rect(x + w - 10, y, 10, 2, k), cv_rect(x + w - 2, y, 2, 10, k);
+        cv_rect(x, y + bh - 2, 10, 2, k), cv_rect(x, y + bh - 10, 2, 10, k);
+        cv_rect(x + w - 10, y + bh - 2, 10, 2, k), cv_rect(x + w - 2, y + bh - 10, 2, 10, k);
+    } else
+        cv_rrect(x, y, w, bh, 6, fill, T_SURF);
     {   /* (0.6.54) EDIT 1 / 2: the engine's names for them (DRUM: KIT, KIT 2; FM6: OPS, PATCH), as the footer */
         const page_t *pg = cur_page();
         const char *pt = pg->scope == SC_ENGINE ? ENGINES[TSEL->eng_req % NENGINES]->page_title[pg->id[0] != P_E0] : 0;
         cv_text_in(x, y + CAP_IN(L, 30), w, &AF_L, ui.home ? "HOME" : pt && pt[0] != '-' ? pt : pg->title, ink, fill);
     }
-    cv_text_in(x, y + 30 + CAP_IN(S, 14), w, &AF_S, sub, ink, fill);
+    cv_text_in(x, y + 30 + CAP_IN(S, 14), w, &AF_S, sub, ux.chamfer && e <= PF_MS - 160u ? T_ACCENT : ink, fill);
 }
 
 static uint32_t graph_signature(void)
