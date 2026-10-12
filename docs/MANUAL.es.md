@@ -54,15 +54,15 @@ Guardá tus archivos WAV.
    [13](#13-sistema-tracks-load-y-el-menu)).
 3. Girá **PRESETS** para recorrer sonidos. Tocá las teclas.
 4. Girá **KNOB 1–4**: en HOME son los cuatro controles más útiles del motor de la pista.
-5. ¿No te gusta? Apretá **EDIT** y girá **SELECT**: el sonido se tira a los dados y sale una variación nueva, que escuchás al
+5. ¿No te gusta? Mantené **EDIT** y girá **SELECT**: el sonido se tira a los dados y sale una variación nueva, que escuchás al
    instante. **OCT+ OK** la deja, **OCT− CANCEL** devuelve el sonido.
 
 ### Tu primer tema (5 minutos)
 
-1. En **HOME**, girá **SELECT**. La pantalla pregunta **DICE EVERYTHING?** (¿tirar todo a los dados?). Apretá
+1. Mantené **HOME** y girá **SELECT**. La pantalla pregunta **DICE EVERYTHING?** (¿tirar todo a los dados?). Apretá
    **OCT+** (YES). Aparece una idea de tema completa: motores, sonidos, partes, escala, tempo y efectos. Apretá
    **PLAY**.
-2. ¿No te convence? Girá SELECT de nuevo y confirmá. Cada tirada es nueva. Para volver a la anterior: mantené **GLO** y
+2. ¿No te convence? HOME + SELECT de nuevo y confirmá. Cada tirada es nueva. Para volver a la anterior: mantené **GLO** y
    apretá **G4** (UNDO).
 3. ¿Te gusta? **Pará** (PLAY) y apretá **SAVE** dos veces para llegar a **SAVE > PROJECT** (la primera pulsación de
    SAVE abre USER, la segunda PROJECT). Girá **KNOB 4** a la derecha para que muestre **[OCT+]** y apretá **OCT+**.
@@ -85,7 +85,7 @@ Los nombres de abajo son los que usa el firmware (la pantalla HARDWARE CALIBRATI
 
 | Control | Qué hace |
 | --- | --- |
-| **SELECT** (encoder) | En **HOME**: abre **DICE EVERYTHING?** (el generador de ideas de temas). En las páginas **EDIT**: tira a los dados el sonido de la pista seleccionada. En las páginas de **GLO (MIXER, GLOBAL, SYSTEM)**, o con **GLO mantenido** en cualquier lado: el tempo (BPM). Con las macros abiertas o enganchadas: tira rutas de macro nuevas. En las demás páginas dice **DICE: HOME / EDIT**. |
+| **SELECT** (encoder) | Solo: **recorre las páginas**, una por paso: HOME, después EDIT, ENV, LFO, FX, SCL, ARP, SEQ, GLO (con el MIXER), SAVE, las páginas de cada botón en orden; hacia atrás desde la primera de EDIT: HOME. Con un botón mantenido, los **dados** de ese botón: **HOME** + SELECT **DICE EVERYTHING?**, **EDIT** + SELECT el sonido, **SEQ** + SELECT la secuencia, **LFO** + SELECT el LFO, **FX** + SELECT los efectos. **GLO** + SELECT: el tempo. Cualquier otro botón de página + SELECT: sus páginas. |
 | **ALGORITHM** (encoder) | Elige la pista desde cualquier página: T1–T4, o T1–T6 con TRACKS 6. En el MENU: cambia de pestaña. |
 | **PRESETS** (encoder) | En HOME, PRESETS y las páginas de sonido: recorre sonidos (los presets de fábrica de cada motor y después tus presets de usuario). En las páginas de pasos (STEP, COMP, PATTERN, AUTOMATION, SHIFT): mueve el cursor de paso. En las páginas de lista (USER, PROJECT, ARRANGE, TOOLS, AUTO LIST): mueve la selección. **Mantené un botón de página y girá SELECT** (o PRESETS) para saltar directo por las páginas de ese botón. |
 | **KNOB 1–4** | Las cuatro tarjetas (columnas) de la pantalla. Con una capa mantenida, las perillas propias de la capa. Girar rápido recorre todo el rango, despacio ajusta fino (MENU > KNOB ACCEL lo desactiva). |
@@ -124,7 +124,8 @@ atajos de esa capa; en la grilla DRUM son pasos y carriles; en la pantalla NAME 
 | **SEQ** mantenido + **REC** | **CLEAR ALL SEQUENCES?** — los pasos y la automatización de las seis pistas, y el carril de punch-in. |
 | **REC** mantenido + **FX / EDIT / ENV / LFO / SCL / ARP / GLO** | Borra la automatización de esa parte en la pista seleccionada (GLO: la automatización de nivel y paneo de todas las pistas; FX: también el carril de punch-in). Sin diálogo. |
 | **SAVE** mantenido + **OCT+** / **OCT−** | Guarda la música en la sección que está sonando / recupera esa sección tal como quedó guardada. |
-| Un botón de página mantenido + **SELECT** (o PRESETS) | Salta por las páginas de ese botón (GLO + SELECT: el tempo). |
+| **HOME / EDIT / SEQ / LFO / FX** mantenido + **SELECT** | Los dados: todo / el sonido / la secuencia / el LFO / los efectos (ver [8](#8-dados-y-undo)). |
+| **ENV / SCL / ARP / SAVE** mantenido + **SELECT**, cualquier botón de página + **PRESETS** | Salta por las páginas de ese botón. |
 | Un paso mantenido (SEQ > STEP) + **KNOB 1–4** | Un parameter lock en ese paso. |
 | **OCT− + OCT+** mantenidos al encender | HARDWARE CALIBRATION. |
 | **OCT− + OCT+** mantenidos 5 s con el equipo funcionando | Modo de actualización (UBOOT), con una cuenta regresiva desde los 2 s; soltá para cancelar. |
@@ -171,9 +172,11 @@ Los **diálogos** preguntan antes de cualquier cosa destructiva: **OCT− NO**, 
 - **FX** es largo, así que está dividido en secciones: TRACK (FX, DIST, AUTOPAN), SLICER (SLICER, SL BUS, SL BUS 2,
   SL PITCH), DELAY (DLY, DLY 2), REVERB (REVERB, REVERB 2), CHORUS, MASTER. **Dos toques rápidos** en FX saltan a la
   siguiente sección.
-- **Mantené un botón de página y girá SELECT** (o PRESETS) para recorrer sus páginas hacia adelante o hacia atrás (sin
-  dar la vuelta); soltá y te quedás ahí. Mientras pasa páginas, SELECT no tira dados. GLO es la excepción: GLO + SELECT
-  es el tempo (GLO + PRESETS pasa páginas).
+- **Girá SELECT** para recorrer todas las páginas, una por paso, en el orden del panel (HOME, EDIT, ENV, LFO, FX,
+  SCL, ARP, SEQ, GLO, SAVE); el nombre de la página aparece un momento sobre el pie.
+- **Mantené un botón de página y girá PRESETS** para recorrer sus páginas hacia adelante o hacia atrás (sin dar la
+  vuelta); soltá y te quedás ahí. ENV, SCL, ARP y SAVE hacen lo mismo con SELECT; HOME, EDIT, SEQ, LFO y FX + SELECT son
+  sus dados, GLO + SELECT el tempo.
 - **Mantené** un botón de página (más allá del tiempo HOLD, MENU > HOLD, 0,4 s por defecto) para abrir su **capa**:
   las teclas y perillas cambian de función mientras lo mantenés, y un mapa muestra qué hace cada tecla. Apretar una
   tecla o girar una perilla la abre al instante. Soltá y volvés a donde estabas.
@@ -354,7 +357,7 @@ recuperar), G3 **CLICK** (OFF / REC / ON). KNOB 1: CLICK.
 
 **LFO — macros**: KNOB 1–4 son M1–M4. Soltá y quedan **enganchadas** (el encabezado dice [LFO] LATCH, y KNOB 1–4
 siguen controlando las macros en todas las páginas) hasta que apretás LFO de nuevo. F3 tira rutas nuevas, G3 las
-borra, SELECT también tira.
+borra. (LFO + SELECT tira el LFO de la pista, con KEEP / CANCEL: ver los dados.)
 
 ---
 
@@ -449,8 +452,8 @@ DRUM-X es un kit sintetizado de ocho sonidos, **BD SD CP CH OH TM RS CB**, gener
       sonido, más cuanto más alto: de un filo metálico a un golpe sin nota, así el sonido se funde en el ritmo y no
       molesta a la armonía (el kit de fábrica lo tiene en redoblante, hi-hats y cowbell); **FEEDBK** (OFF, 1–15): el de
       ese sonido (se suma al de KIT 3); **SEND**: ese golpe solo hacia un efecto, OFF y después CHO, DLY, REV con 16
-      cantidades cada uno, en una sola perilla ("REV 75%"), además de los envíos de la pista. Los dados (SELECT en una
-      página DRUM, DICE ALL) mueven fuerte LAYER y FEEDBK. Cada sonido con LAYER usa un poco de CPU (como FEEDBK).
+      cantidades cada uno, en una sola perilla ("REV 75%"), además de los envíos de la pista. Los dados (EDIT + SELECT en
+      una pista DRUM, DICE ALL) mueven fuerte LAYER y FEEDBK. Cada sonido con LAYER usa un poco de CPU (como FEEDBK).
   - **LEVELS / LEVELS 2**: el nivel de cada sonido (KICK, SNARE, CLAP, HATCL, HATOP, TOM, RIM, BELL).
   - **STEREO**: **IMAGE** (automatizable) barre el kit por sus ubicaciones en el estéreo. 0 (MONO): todos al medio; los
     primeros pasos lo abren; desde ahí cada paso es otra ubicación (cada sonido por su propia curva), así que girala
@@ -459,7 +462,7 @@ DRUM-X es un kit sintetizado de ocho sonidos, **BD SD CP CH OH TM RS CB**, gener
   - KIT 3, X-MOD, LAYER, FEEDBK y SEND se guardan con el kit de la sección.
 - **Mutes**: GLO mantenido + teclas negras 7–10 mutean los grupos KICK, SNARE, HAT, PERC; EDIT mantenido + teclas
   negras 1–8 mutean cada sonido.
-- **SELECT** en una página EDIT tira un kit nuevo alrededor del de fábrica. **EDIT mantenido + F3 (INIT)** trae de
+- **EDIT mantenido + SELECT** tira un kit nuevo alrededor del de fábrica. **EDIT mantenido + F3 (INIT)** trae de
   vuelta el kit de fábrica.
 
 El kit se guarda con cada sección de un proyecto (no con los presets de usuario — ver [12](#12-guardar-y-cargar)).
@@ -669,7 +672,7 @@ Mantené **SAVE**:
 
 ### DICE ALL — el generador de ideas de temas (HOME + SELECT)
 
-En **HOME**, girá **SELECT**. Aparece el diálogo **DICE EVERYTHING?** (con "UNDO AFTER: GLO + G4"). **OCT+ YES** /
+Mantené **HOME** y girá **SELECT** (desde cualquier página). Aparece el diálogo **DICE EVERYTHING?** (con "UNDO AFTER: GLO + G4"). **OCT+ YES** /
 **OCT− NO**.
 
 Cada tirada toma tres decisiones, y después unas barandas mantienen el resultado musical:
@@ -721,15 +724,30 @@ pistas, así que con TRACKS 4 escuchás los más importantes. La pantalla dice *
 
 ### Dados de sonido (EDIT + SELECT)
 
-En cualquier página **EDIT**, girá SELECT: la pista seleccionada carga un preset de fábrica al azar de su motor y cada
+Mantené **EDIT** y girá SELECT (desde cualquier página): la pista seleccionada carga un preset de fábrica al azar de su motor y cada
 parámetro del motor se mueve hasta un cuarto de su rango. En DRUM, los dos lados de cada sonido del kit se tiran
 alrededor del kit de fábrica. Lo escuchás al instante bajo **KEEP DICED SOUND?** (DRUM: **KEEP DICED KIT?**): girá
 SELECT otra vez para otra tirada, **OCT+ OK** la deja, **OCT− CANCEL** devuelve el sonido que tenías antes de la
 primera tirada (solo el sonido de esa pista: la música sigue). Después de OK, **GLO mantenido + G4** también lo deshace.
 
+### Dados de secuencia, LFO y FX (SEQ / LFO / FX + SELECT)
+
+La misma idea para las otras partes de la pista seleccionada, cada una se escucha al instante bajo su diálogo **KEEP
+DICED …?** (SELECT otra vez: otra tirada, **OCT+ OK** la deja, **OCT− CANCEL** devuelve lo que había, el resto sigue
+sonando):
+
+- **SEQ + SELECT**: una secuencia nueva como escribe una parte DICE ALL, en la escala de la pista: un beat en una pista
+  DRUM; si no, el rol al que suenan sus pasos (notas graves: un bajo, acordes: un pad, si no una lead o un arpegio). Su
+  sonido, su mezcla y su automatización quedan.
+- **LFO + SELECT**: el LFO de la pista: un rate en el medio del rango, cualquier onda y fase, a veces un fade, apuntado
+  sobre todo al filtro, un poco a la forma, rara vez al pitch o al volumen.
+- **FX + SELECT**: el drive de la pista (la mitad de las veces nada), sus envíos de chorus, delay y reverb, un AUTOPAN
+  una vez de cada tres, y el tipo, tamaño y damping del reverb compartido y el tiempo y feedback del delay (con pitch una
+  vez de cada cinco).
+
 ### Dados de macros
 
-Con las macros enganchadas: SELECT o F3 tira; con LFO mantenido: F3 tira (LFO + SELECT recorre las páginas de LFO) rutas de macro nuevas en las pistas que están
+Con las macros abiertas (LFO mantenido) o enganchadas: **F3** tira rutas de macro nuevas en las pistas que están
 sonando; G3 las borra. Ver [10](#10-modulación-y-macros).
 
 ### UNDO (GLO mantenido + G4)
@@ -832,8 +850,8 @@ ancho). Se oculta con LOAD ECO (la tarjeta de envío de chorus de una pista dice
   ningún lado).
 - Soltá: quedan **enganchadas** — KNOB 1–4 siguen moviendo las macros en cualquier página — hasta que apretás LFO de
   nuevo.
-- Cada encendido arranca con rutas al azar (dos por pista) en las pistas que no tienen ninguna. **SELECT** o **F3**
-  tiran rutas nuevas en las pistas que están sonando; **G3** las borra.
+- Cada encendido arranca con rutas al azar (dos por pista) en las pistas que no tienen ninguna. **F3**
+  tira rutas nuevas en las pistas que están sonando; **G3** las borra.
 - Las rutas son slots MOD comunes (SRC M1–M4): editalas a mano en LFO > MOD. Los valores de las macros se guardan con
   cada sección.
 
@@ -1085,7 +1103,7 @@ valor. HOME lo cierra (en ese momento se guarda la configuración).
 | CONTROL | HOLD | 0.3 s, **0.4 s** (por defecto), 0.5 s, 0.6 s — cuánto tarda un botón mantenido en abrir su capa |
 | CONTROL | KNOB ACCEL | **ON** (por defecto), OFF |
 | CONTROL | FX LATCH | **OFF** (por defecto desde 0.6.64), ON |
-| CONTROL | BPM LOCK | OFF, ON — SELECT fija el tempo solo con GLO mantenido; DICE ALL conserva el tempo |
+| CONTROL | BPM LOCK | OFF, ON — DICE ALL conserva el tempo (el tempo es GLO + SELECT, F4 TAP de GLO o el BPM de GLOBAL) |
 | CONTROL | SCALE LEDS | OFF, ON — las teclas de la escala se iluminan, la tónica más brillante |
 | AUDIO | SPEAKER EQ | FLAT, LOWCUT, BASS+ (un EQ en el master para el parlante chico; también llega a las salidas y al USB) |
 | AUDIO | USB LEVEL | MASTER (el USB sigue a la perilla MASTER), FIXED (USB a nivel completo) |
@@ -1180,9 +1198,8 @@ después de un borrado, puede ser el **carril de punch-in**: mantené **REC y ap
 menos pistas FM6), reverbs más livianas (CLOUD y SHIMMER son las más pesadas). Revisá MENU > SYSTEM > ABOUT >
 AUDIO LOAD.
 
-**SELECT no cambia el tempo.** SELECT fija el tempo solo en las páginas de GLO (MIXER, GLOBAL, SYSTEM), o con GLO mantenido; en HOME tira
-los dados, en EDIT tira el sonido. Con MENU > BPM LOCK ON, solo GLO + SELECT lo cambia. Con las macros enganchadas
-(LFO), SELECT tira macros — apretá LFO para desengancharlas.
+**SELECT no cambia el tempo.** Desde 0.6.67 SELECT solo recorre las páginas; el tempo es **GLO mantenido + SELECT**
+(o F4 TAP de GLO, o la perilla BPM de GLO > GLOBAL).
 
 **Las perillas controlan M1–M4 en lugar de la página.** Las macros están enganchadas (el encabezado dice [LFO] LATCH).
 Apretá LFO.

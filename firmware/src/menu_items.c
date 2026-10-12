@@ -64,7 +64,7 @@ static const menu_flag_t MENU_FLAGS[] = {
     {MI_ACCEL, PREF_ACCEL_OFF, {"ON", "OFF"}},        /* #52: ui_input.c accel (JIANT: ON by default) */
     {MI_LATCH, PREF_LATCH, {"OFF", "ON"}},
     {MI_USB, PREF_USB_FIXED, {"MASTER", "FIXED"}},     /* fx.c fx_usb_fixed: FIXED, USB at the full level */
-    {MI_BPMLOCK, PREF_BPM_LOCK, {"OFF", "ON"}},        /* #58: ON, SELECT sets the tempo with GLO held only (ui_input.c) */
+    {MI_BPMLOCK, PREF_BPM_LOCK, {"OFF", "ON"}},        /* #58: ON, DICE ALL keeps the tempo (0.6.67: SELECT alone never sets it) */
     {MI_SERIAL, PREF_SERIAL_OFF, {"ON", "OFF"}},       /* #67: OFF, no serial console (usb_serial_apply) */
     {MI_RESTORE, PREF_RESTORE_ON, {"OFF", "ON"}},      /* 1.2, #130; JIANT 0.6.40: OFF (the default), no autosave, power-on as
                                                         * INIT SYSTEM; ON, the last session back (project.c) */

@@ -89,6 +89,14 @@ static void page_jump(uint32_t fam, int32_t s)
     if (b == B_SAVE) ui.save_t0 |= 2u;
     pj_btn = (uint8_t)b;                                /* (its layer off until it is let go: pj_hold) */
 }
+/* (0.6.67) a button whose SELECT combo was used: no next page when let go, no tap, its layer shut until let go */
+static void btn_used(uint32_t b)
+{
+    ui.pg_down &= (uint16_t)~(1u << panel.btn[b]);
+    if (b == B_SEQ) ui.seq_t0 |= 2u;
+    if (b == B_SAVE) ui.save_t0 |= 2u;
+    pj_btn = (uint8_t)b;
+}
 /* every pass: while the button of a page jump is held its layer stays shut (no map at HOLD, no tap when let go), its
  * page taps too; let go: free again */
 static void pj_hold(void)
@@ -1252,21 +1260,166 @@ static void sound_dice_of(track_t *t, int quiet)
     }
     if (!quiet) ui_message("SOUND DICED");
 }
-/* (0.6.21) EDIT + SELECT: the selected track's sound diced. (0.6.65) At once, so it is heard, under a dialog: OCT+
- * OK keeps it, OCT- CANCEL brings back the sound before the first dice (undo_sound: only that track's, the music plays
- * on); SELECT again dices again. UNDO (GLO + G4) still brings back the sound before */
-static void sound_dice(void)
+/* (0.6.67) a button held + SELECT: that part of the selected track diced (EDIT the sound, SEQ the sequence, LFO the
+ * LFO, FX its effects and the shared reverb and delay), at once so it is heard, under a dialog: OCT+ OK keeps it, OCT-
+ * CANCEL brings back what it was before the first dice (only that part: the music plays on), SELECT again dices again.
+ * (0.6.65: the sound first.) UNDO (GLO + G4) still brings back what was before */
+static const uint8_t DK_LFO[8] = {P_LRATE, P_LWAVE, P_LPHASE, P_LFADE, P_LD_PIT, P_LD_FLT, P_LD_SHP, P_LD_AMP};
+static const uint8_t DK_FXT[9] = {P_DIST, P_DTYPE, P_DTONE, P_CHOR, P_DLY, P_REV, P_APDEP, P_APRATE, P_APWAVE};
+static const uint8_t DK_FXG[6] = {G_RTYPE, G_RSIZE, G_RDAMP, G_DTIME, G_DFDBK, G_DPIT};
+static struct {                                         /* what CANCEL puts back (the sound: undo_sound) */
+    step_t step[NSTEP];
+    int16_t slen, v[9], g[6];
+    const char *msg;
+} dk;
+static const char *dice_seq(track_t *t);                /* song_dice.c */
+static int32_t dk_rr(int32_t lo, int32_t hi) { return hi <= lo ? lo : lo + (int32_t)(rng() % (uint32_t)(hi - lo + 1)); }
+static int32_t dk_frac(const param_desc_t *d, int32_t a, int32_t b)   /* a value a% .. b% up the range */
+{
+    int32_t span = d->max - d->min;
+    return dk_rr(d->min + span * a / 100, d->min + span * b / 100);
+}
+static void dk_keep(uint32_t kind)
+{
+    track_t *t = TSEL;
+    uint32_t i;
+    if (kind == CF_DICE_SEQ) {
+        for (i = 0; i < NSTEP; i++) dk.step[i] = t->step[i];
+        dk.slen = t->p[P_SLEN];
+    } else if (kind == CF_DICE_LFO) {
+        for (i = 0; i < 8u; i++) dk.v[i] = t->p[DK_LFO[i]];
+    } else if (kind == CF_DICE_FX) {
+        for (i = 0; i < 9u; i++) dk.v[i] = t->p[DK_FXT[i]];
+        for (i = 0; i < 6u; i++) dk.g[i] = song.g[DK_FXG[i]];
+    }
+}
+static int dk_back(uint32_t kind, uint32_t k)           /* CANCEL: 0 done */
+{
+    track_t *t = &trk[k % NTRK];
+    uint32_t i;
+    if (kind == CF_DICE_SOUND)
+        return undo_sound(k);
+    if (kind == CF_DICE_SEQ) {
+        load_begin(t, LOAD_PAT);
+        for (i = 0; i < NSTEP; i++) t->step[i] = dk.step[i];
+        t->p[P_SLEN] = dk.slen;
+        load_end(t);
+        latch_drop_req |= (uint8_t)(1u << (k % NTRK));
+    } else if (kind == CF_DICE_LFO) {
+        for (i = 0; i < 8u; i++) t->p[DK_LFO[i]] = dk.v[i];
+    } else {
+        for (i = 0; i < 9u; i++) t->p[DK_FXT[i]] = dk.v[i];
+        for (i = 0; i < 6u; i++) song.g[DK_FXG[i]] = dk.g[i];
+    }
+    return 0;
+}
+/* the LFO: its rate in the middle of the range, any wave and phase, a fade now and then; aimed mostly at the filter,
+ * a little at the shape, seldom at the pitch or the level (a wobble, not a siren) */
+static void lfo_dice(track_t *t)
+{
+    const param_desc_t *d;
+    d = track_desc(t, P_LRATE); t->p[P_LRATE] = (int16_t)dk_frac(d, 25, 80);
+    d = track_desc(t, P_LWAVE); t->p[P_LWAVE] = (int16_t)dk_frac(d, 0, 100);
+    d = track_desc(t, P_LPHASE); t->p[P_LPHASE] = (int16_t)(rng() % 3u ? d->min : dk_frac(d, 0, 100));
+    d = track_desc(t, P_LFADE); t->p[P_LFADE] = (int16_t)(rng() % 3u ? d->min : dk_frac(d, 0, 50));
+    d = track_desc(t, P_LD_PIT); t->p[P_LD_PIT] = (int16_t)(rng() % 4u ? 0 : dk_frac(d, 44, 56));
+    d = track_desc(t, P_LD_FLT); t->p[P_LD_FLT] = (int16_t)dk_frac(d, d->min < 0 ? 15 : 20, d->min < 0 ? 85 : 70);
+    d = track_desc(t, P_LD_SHP); t->p[P_LD_SHP] = (int16_t)(rng() % 2u ? 0 : dk_frac(d, d->min < 0 ? 30 : 0, d->min < 0 ? 70 : 40));
+    d = track_desc(t, P_LD_AMP); t->p[P_LD_AMP] = (int16_t)(rng() % 3u ? 0 : dk_frac(d, 0, 35));
+}
+/* the effects: the track's drive (half the time none), its sends, an AUTOPAN one time in three; the shared reverb's
+ * kind and size and the delay's time and feedback, a pitched delay one time in five */
+static void fx_dice(track_t *t)
+{
+    const param_desc_t *d;
+    d = track_desc(t, P_DIST); t->p[P_DIST] = (int16_t)(rng() % 2u ? 0 : dk_frac(d, 8, 55));
+    d = track_desc(t, P_DTYPE); t->p[P_DTYPE] = (int16_t)dk_frac(d, 0, 100);
+    d = track_desc(t, P_DTONE); t->p[P_DTONE] = (int16_t)dk_frac(d, 30, 80);
+    d = track_desc(t, P_CHOR); t->p[P_CHOR] = (int16_t)(rng() % 2u ? 0 : dk_frac(d, 15, 70));
+    d = track_desc(t, P_DLY); t->p[P_DLY] = (int16_t)dk_frac(d, 0, 65);
+    d = track_desc(t, P_REV); t->p[P_REV] = (int16_t)dk_frac(d, 10, 85);
+    d = track_desc(t, P_APDEP); t->p[P_APDEP] = (int16_t)(rng() % 3u ? 0 : dk_frac(d, 25, 80));
+    d = track_desc(t, P_APRATE); t->p[P_APRATE] = (int16_t)dk_frac(d, 20, 80);
+    d = track_desc(t, P_APWAVE); t->p[P_APWAVE] = (int16_t)dk_frac(d, 0, 100);
+    song.g[G_RTYPE] = (int16_t)dk_rr(GP[G_RTYPE].min, GP[G_RTYPE].max);
+    song.g[G_RSIZE] = (int16_t)dk_rr(GP[G_RSIZE].min + (GP[G_RSIZE].max - GP[G_RSIZE].min) / 3, GP[G_RSIZE].max);
+    song.g[G_RDAMP] = (int16_t)dk_rr(GP[G_RDAMP].min, GP[G_RDAMP].max);
+    song.g[G_DTIME] = (int16_t)dk_rr(GP[G_DTIME].min, GP[G_DTIME].max);
+    song.g[G_DFDBK] = (int16_t)dk_rr(20, 70);
+    {   static const int8_t PIT[4] = {-12, -5, 7, 12};
+        song.g[G_DPIT] = (int16_t)(rng() % 5u ? 0 : clamp(PIT[rng() % 4u], GP[G_DPIT].min, GP[G_DPIT].max)); }
+}
+static void part_dice(uint32_t kind)
 {
     static uint32_t last_ms;                            /* (once a turn burst, the dialog's turns too) */
     uint32_t again = last_ms && fm1_ms - last_ms <= 400u;
     last_ms = fm1_ms | 1u;
-    if (again && ui.confirm == CF_DICE_SOUND)
+    if (again && ui.confirm == kind)
         return;
-    if (ui.confirm != CF_DICE_SOUND) {
-        undo_mark();
-        confirm_open(CF_DICE_SOUND, song.sel);
+    if (chain_busy()) {
+        ui_message("STOP TO EDIT");
+        return;
     }
-    sound_dice_of(TSEL, 1);
+    if (ui.confirm != kind) {
+        undo_mark();
+        dk_keep(kind);
+        confirm_open(kind, song.sel);
+    }
+    dk.msg = kind == CF_DICE_SEQ ? dice_seq(TSEL) : kind == CF_DICE_LFO ? "LFO DICED" : kind == CF_DICE_FX ? "FX DICED" :
+             drum_track(TSEL) ? "KIT DICED" : "SOUND DICED";
+    if (kind == CF_DICE_SOUND) sound_dice_of(TSEL, 1);
+    else if (kind == CF_DICE_LFO) lfo_dice(TSEL);
+    else if (kind == CF_DICE_FX) fx_dice(TSEL);
+}
+static int dice_kind(uint32_t c) { return c == CF_DICE_SOUND || c == CF_DICE_SEQ || c == CF_DICE_LFO || c == CF_DICE_FX; }
+/* (0.6.67) SELECT alone: the pages, one a detent, in the panel's order: HOME, then EDIT, ENV, LFO, FX, SCL, ARP, SEQ,
+ * GLO (the MIXER with it), SAVE; each button's pages as its taps go; no wrap (back past EDIT's first: HOME) */
+static const uint8_t SCROLL_FAM[9] = {FAM_EDIT, FAM_ENV, FAM_LFO, FAM_FX, FAM_SCL, FAM_ARP, FAM_SEQ, FAM_GLO, FAM_SAVE};
+static void page_scroll(int32_t s)
+{
+    uint32_t fi = 0, i = ui.page, j, f;
+    int32_t d = s > 0 ? 1 : -1, n = s > 0 ? s : -s;
+    if (!ui.home) {
+        f = cur_page()->fam == FAM_TRK ? FAM_GLO : cur_page()->fam;
+        for (fi = 0; fi < 9u && SCROLL_FAM[fi] != f; fi++) {}
+        if (fi == 9u) fi = 0;
+    }
+    while (n--) {
+        if (ui.home) {
+            if (d < 0) break;
+            for (fi = 0; fi < 9u; fi++) {
+                for (j = 0; j < NPAGES && !page_in(j, SCROLL_FAM[fi]); j++) {}
+                if (j < NPAGES) { i = j; ui.home = 0; break; }
+            }
+            continue;
+        }
+        for (j = i; ; ) {                              /* the next (previous) page of the same button */
+            j = d > 0 ? j + 1u : j - 1u;
+            if (j >= NPAGES || page_in(j, SCROLL_FAM[fi])) break;
+        }
+        if (j < NPAGES) { i = j; continue; }
+        for (;;) {                                     /* else the next (previous) button's first (last) page */
+            if (d < 0 && fi == 0u) { ui.home = 1; break; }
+            if (d > 0 && fi == 8u) { j = NPAGES; break; }
+            fi = (uint32_t)((int32_t)fi + d);
+            if (d > 0) { for (j = 0; j < NPAGES && !page_in(j, SCROLL_FAM[fi]); j++) {} }
+            else { for (j = NPAGES; j-- > 0u && !page_in(j, SCROLL_FAM[fi]); ) {} }
+            if (j < NPAGES) break;
+        }
+        if (ui.home) break;
+        if (j >= NPAGES) break;                         /* (the last page: it stays) */
+        i = j;
+    }
+    if (ui.home) {
+        go_home();
+        page_flash();
+        return;
+    }
+    if (i == ui.page && !ui.home) return;
+    ui.page = (uint8_t)i;
+    ui.fam_last[PAGES[i].fam] = ui.page;
+    page_entered();
+    page_flash();
 }
 
 /* (0.6.21) HOME + SELECT (after the dialog): everything diced into a new piece. One scale for the song (ROOT, a
@@ -1414,7 +1567,6 @@ static void ui_input_frame(void)
     uint32_t oct;
     uint32_t lay, combo = 0, lytap, lkeys, glo, kq = 0;
     int32_t s, sel = 0, ks[4] = {0, 0, 0, 0};
-    static uint32_t lock_ms;                            /* BPM LOCK: the last locked SELECT turn (fm1_ms | 1; 0 none) */
     fm6_poll();                                         /* FM6: PTCH turned -> its patch */
     {   /* (JIANT 0.6.5) RESO's PITCH and FOLW live in PRE's and DAMP's slots: into RESO a ROOM's values become theirs
          * (DAMP past FOLW's T6: OFF; PRE past 14: 14), out of it the reverb's own defaults back */
@@ -1496,19 +1648,33 @@ static void ui_input_frame(void)
     oct = oct_taps(pressed, ui.menu || ui.confirm || act_cols() || name_on() || layer_set_open());
     oct = layer_oct(pressed, oct);                      /* (a SET layer's OCT-: put back) */
     layer_masks();                                      /* seq.c: keys pressed with a layer's button are its own */
-    {   /* (0.6.6) a page button held + PRESETS: its pages (page_jump); not in the menu, a dialog, NAME. (0.6.66)
-         * SELECT too, first (GLO's aside: GLO + SELECT stays the tempo): no dice while it pages, nor for a moment
-         * after (the last detents of the turn, the button let go first) */
+    {   /* (0.6.6) a page button held + PRESETS: its pages (page_jump); not in the menu, a dialog, NAME. (0.6.67) A
+         * button held + SELECT: its dice (HOME everything, EDIT the sound, SEQ the sequence, LFO the LFO, FX the
+         * effects; GLO + SELECT the tempo), the other buttons their pages; the button's tap and layer swallowed, and
+         * the turn's last detents for a moment after it is let go (no page scrolled by them) */
         static uint32_t pj_sel_ms;
-        uint32_t f = held_family();
+        uint32_t f = held_family(), hb = (fm1_in.buttons >> panel.btn[B_HOME]) & 1u;
         int32_t ps;
-        if (f != FAM_COUNT && !ui.menu && !ui.confirm && !name_on() && !ly_used) {
-            if (f != FAM_GLO && (ps = panel_enc(EN_SELECT)) != 0) {
-                page_jump(f, ps);
-                pj_sel_ms = fm1_ms | 1u;
-            } else if ((ps = panel_enc(EN_PRESET)) != 0) {   /* (a layer already used: PRESETS stays its, dropped) */
+        if (!ui.menu && !ui.confirm && !name_on() && (f != FAM_COUNT || hb) && f != FAM_GLO &&
+            (ps = panel_enc(EN_SELECT)) != 0) {
+            uint32_t k = f == FAM_EDIT ? CF_DICE_SOUND : f == FAM_SEQ ? CF_DICE_SEQ : f == FAM_LFO ? CF_DICE_LFO :
+                         f == FAM_FX ? CF_DICE_FX : 0u;
+            if (f == FAM_COUNT) {                       /* HOME held: the whole piece (the dialog first) */
+                ui.home_t0 |= 2u;
+                if (!pj_sel_ms || fm1_ms - pj_sel_ms > 400u) {
+                    if (chain_busy()) ui_message("STOP TO EDIT");
+                    else confirm_open(CF_DICE_ALL, song.sel);
+                }
+            } else if (k) {
+                part_dice(k);
+                btn_used(FAM_BTN[f]);
+            } else {
                 page_jump(f, ps);
             }
+            pj_sel_ms = fm1_ms | 1u;
+        } else if (f != FAM_COUNT && !ui.menu && !ui.confirm && !name_on() && !ly_used &&
+                   (ps = panel_enc(EN_PRESET)) != 0) {   /* (a layer already used: PRESETS stays its, dropped) */
+            page_jump(f, ps);
         } else if (pj_sel_ms && fm1_ms - pj_sel_ms < 400u) {
             if (panel_enc(EN_SELECT))
                 pj_sel_ms = fm1_ms | 1u;                /* (dropped: still the paging turn) */
@@ -1618,7 +1784,7 @@ static void ui_input_frame(void)
             ui.confirm = 0;
             ui.force = 1;
             if (kind != CF_OVR_PROJ && kind != CF_OVR_USER && kind != CF_ERASE_USER && kind != CF_DICE_ALL &&
-                kind != CF_DICE_SOUND && kind != CF_DEL_ROW && kind != CF_CLEAR_SONG && !chain_busy())
+                !dice_kind(kind) && kind != CF_DEL_ROW && kind != CF_CLEAR_SONG && !chain_busy())
                 undo_mark();                            /* (0.6.21) the music before a clear, INIT, RECALL, pattern */
             if (kind == CF_OVR_PROJ) {                  /* overwrite: the NAME screen writes it */
                 name_open(NK_PROJ_SAVE, ui.confirm_trk & 3u);
@@ -1626,8 +1792,8 @@ static void ui_input_frame(void)
                 name_open(NK_USER_SAVE, ui.confirm_trk);
             } else if (kind == CF_ERASE_USER) {
                 up_ui(1u, ui.confirm_trk);
-            } else if (kind == CF_DICE_SOUND) {         /* (0.6.65) OK: the diced sound stays */
-                ui_message(drum_track(TSEL) ? "KIT DICED" : "SOUND DICED");
+            } else if (dice_kind(kind)) {               /* (0.6.65) OK: the diced part stays */
+                ui_message(dk.msg);
             } else if (kind == CF_DICE_ALL) {           /* (0.6.21) HOME + SELECT */
                 if (!chain_busy()) dice_all();
             } else if (kind == CF_LOAD_PAT) {
@@ -1713,13 +1879,15 @@ static void ui_input_frame(void)
                 }
             }
         } else if (oct & 1u) {
-            if (ui.confirm == CF_DICE_SOUND)            /* (0.6.65) CANCEL: the sound before the dice */
-                ui_message(undo_sound(ui.confirm_trk) ? "CAN'T UNDO" : "SOUND BACK");
+            if (dice_kind(ui.confirm))                  /* (0.6.65) CANCEL: the part before the dice */
+                ui_message(dk_back(ui.confirm, ui.confirm_trk) ? "CAN'T UNDO" :
+                           ui.confirm == CF_DICE_SEQ ? "SEQ BACK" : ui.confirm == CF_DICE_LFO ? "LFO BACK" :
+                           ui.confirm == CF_DICE_FX ? "FX BACK" : "SOUND BACK");
             ui.confirm = 0;
             ui.force = 1;
-        } else if (ui.confirm == CF_DICE_SOUND && panel_enc(EN_SELECT)) {   /* (0.6.65) SELECT again: another dice
+        } else if (dice_kind(ui.confirm) && panel_enc(EN_SELECT)) {   /* (0.6.65) SELECT again: another dice
                                                          * (once a turn burst) */
-            sound_dice();
+            part_dice(ui.confirm);
         }
         ui.pg_down = 0;
         enc_drop();
@@ -1838,43 +2006,13 @@ static void ui_input_frame(void)
     if (!lay && (s = panel_enc(EN_ALGO)) != 0)     /* ALGORITHM: the selected track, on every page. (0.6.55) Only
                                                     * the tracks that play: TRACKS 4 stops at T4 (T5 / T6 asleep) */
         track_select((uint32_t)clamp((int32_t)song.sel + (s > 0 ? 1 : -1), 0, (int32_t)trk_live - 1));
-    if (((lay && ui.ly == LAYER_MACRO) || (!lay && mac_latch && !ui.menu && !ui.confirm)) &&
-        (s = panel_enc(EN_SELECT)) != 0) {              /* (JIANT 0.4) the macros (HOME, LFO held): SELECT rolls their
-                                                         * routes again, once a turn (latched: GLO + SELECT the tempo) */
-        static uint32_t dice_ms;
-        if (!dice_ms || fm1_ms - dice_ms > 400u) {
-            if (chain_busy()) {
-                ui_message("STOP TO EDIT");
-            } else {
-                macro_dice(1);
-                ui_message("MACROS DICED");
-            }
-        }
-        dice_ms = fm1_ms | 1u;
-    } else if ((s = glo ? sel : panel_enc(EN_SELECT)) != 0 && !glo && !ui.menu &&
-               (ui.home || (cur_page()->fam != FAM_GLO && cur_page()->graph != GR_TRK))) {   /* (0.6.21) SELECT: HOME
-                                                         * dices everything (the dialog
-                                                         * first), EDIT the track's sound, GLO's pages the tempo (0.6.31:
-                                                         * the MIXER too, GLO's button opens it); the other pages nothing
-                                                         * (it says where); once a turn */
-        static uint32_t sd_ms;
-        if (!ui.confirm && (!sd_ms || fm1_ms - sd_ms > 400u)) {
-            if (chain_busy()) ui_message("STOP TO EDIT");
-            else if (ui.home) confirm_open(CF_DICE_ALL, song.sel);
-            else if (cur_page()->fam == FAM_EDIT) sound_dice();
-            else ui_message("DICE: HOME / EDIT");
-        }
-        sd_ms = fm1_ms | 1u;
-    } else if (s != 0) {                                /* SELECT knob = global tempo: GLO's pages (or GLO held) */
-        if (glo || !(ui_prefs & PREF_BPM_LOCK)) {
-            song.g[G_BPM] = (int16_t)clamp(song.g[G_BPM] + accel(EN_SELECT, s, 200), GP[G_BPM].min, GP[G_BPM].max);
+    if (glo) {                                          /* GLO + SELECT: the tempo (0.6.67: the only way, with TAP) */
+        if (sel) {
+            song.g[G_BPM] = (int16_t)clamp(song.g[G_BPM] + accel(EN_SELECT, sel, 200), GP[G_BPM].min, GP[G_BPM].max);
             ui.bpm_t = 40;                              /* the header's BPM lights up; no message over the header */
-        } else {                                        /* MENU > BPM LOCK ON (#58): only with GLO held (and on GLO >
-                                                         * GLOBAL, GLO's F4 TAP); a turn burst says so once */
-            if (!lock_ms || fm1_ms - lock_ms > 1000u)
-                ui_message("BPM LOCKED");
-            lock_ms = fm1_ms | 1u;
         }
+    } else if ((s = panel_enc(EN_SELECT)) != 0 && !lay && !ui.menu) {   /* (0.6.67) SELECT alone: the pages */
+        page_scroll(s);
     }
     for (k = 0; k < 4u && !kq; k++) {
         const page_t *pg = cur_page();

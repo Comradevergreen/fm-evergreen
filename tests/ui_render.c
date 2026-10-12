@@ -1321,9 +1321,9 @@ static void sweep_columns(void)
 #define FS_N (1u + ROLL_FRAMES)                   /* frames per filmstrip row */
 #define FS_Z 4u                                   /* zoom */
 #define FS_GAP 2u                                 /* px between frames, before the zoom */
-static void roll_turns(int32_t s)                 /* one UI frame with SELECT and KNOB 4 turned by s */
+static void roll_turns(int32_t s)                 /* one UI frame with the tempo and KNOB 4 moved by s */
 {
-    host_enc[panel.enc[EN_SELECT]] += s * panel.dir[EN_SELECT];
+    song.g[G_BPM] = (int16_t)(song.g[G_BPM] + s);  /* (0.6.67: SELECT alone scrolls the pages; the tempo set here) */
     host_enc[panel.enc[EN_K4]] += s * panel.dir[EN_K4];
     host_ticks += 16000u; fm1_ms += 16u;
     ui_input();
