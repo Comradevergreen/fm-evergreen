@@ -4,7 +4,8 @@
  * and the frame; the panel between the cards and the footer is ui_graph.c. The layout:
  * flat SURF cards and panels on BG,
  * rounded corners, no rules (MENU > STYLE LINE: no SURF, 1 px rules between the areas instead: draw_rules), colours from the theme tokens only (gfx.c T_*). Type: S (12 px) labels,
- * M (15 px) values and the header, L (28 px) big numerals. A card value too wide for M is set in S;
+ * M (15 px) values and the header, L (28 px) big numerals. (JIANT 0.6.56: S Chakra Petch, M IBM Plex Mono, L Michroma 18 px;
+ * the JIANT palette's boxes square with HUD corners, gfx.c cv_rrect). A card value too wide for M is set in S;
  * free text (names, messages) is ellipsised at its size. */
 static void draw_menu(void);
 static int name_on(void);                              /* NAME (ui_name.c) */

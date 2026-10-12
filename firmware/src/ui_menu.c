@@ -251,7 +251,7 @@ static void menu_tabs(void)                            /* (in screen rows: cv_oy
     for (k = 0; k < MTAB_COUNT; k++) {
         int on = k == (uint32_t)((mt.pos + MT_ONE / 2) / MT_ONE);   /* (half way, the shown look moves over) */
         uint16_t bg = on ? T_ACCENT : T_SURF;
-        cv_rrect(x[k], MT_Y, w[k], MT_H, -8, bg, T_BG);
+        cv_rrect(x[k], MT_Y, w[k], MT_H, ux.chamfer ? 8 : -8, bg, T_BG);   /* (0.6.56 JIANT: a window) */
         GFX_HOOK_ALIGN(x[k], MT_Y, x[k] + MT_IW, MT_Y + MT_H, AL_HV, "menu tab icon centred in its cushion");
         cv_icon_in(x[k], MT_Y, MT_IW, MT_H, 16, MTAB_ICON[k], on ? T_INK : T_MID, bg);
         if (a[k] == MT_ONE) {                          /* (settled: its name) */

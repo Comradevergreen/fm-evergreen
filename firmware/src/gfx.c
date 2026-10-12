@@ -299,21 +299,24 @@ static void cv_rrect(int32_t x, int32_t y, int32_t w, int32_t h, int32_t r, uint
         cv_rect(x, y, w, h, c);
         return;
     }
+    if (cut) {                                   /* (JIANT 0.6.56) the landing's windows: a square box, and a box
+                                                  * big enough to be a window (a card, a panel, a row, a button) its
+                                                  * four HUD corners, L-shaped ticks a little lighter than its fill */
+        uint16_t k = ux_mix(c, T_TEXT, 30);
+        int32_t n = (h < w ? h : w) / 3;
+        cv_rect(x, y, w, h, c);
+        if (w < 20 || h < 14)
+            return;
+        if (n > 6) n = 6;
+        cv_rect(x, y, n, 1, k), cv_rect(x, y, 1, n, k);
+        cv_rect(x + w - n, y, n, 1, k), cv_rect(x + w - 1, y, 1, n, k);
+        cv_rect(x, y + h - 1, n, 1, k), cv_rect(x, y + h - n, 1, n, k);
+        cv_rect(x + w - n, y + h - 1, n, 1, k), cv_rect(x + w - 1, y + h - n, 1, n, k);
+        return;
+    }
     cv_rect(x + r, y, w - 2 * r, h, c);
     cv_rect(x, y + r, r, h - 2 * r, c);
     cv_rect(x + w - r, y + r, r, h - 2 * r, c);
-    if (cut) {                                   /* (JIANT 0.5) a cut corner: r - 1 px on the diagonal, its edge half */
-        for (j = 0; j < r; j++)
-            for (i = 0; i < r; i++) {
-                int32_t d = i + j - (r - 1);
-                uint16_t px = d > 0 ? c : d == 0 ? ux_mix(under, c, 50) : under;
-                cv_pset(x + i, y + j, px);
-                cv_pset(x + w - 1 - i, y + j, px);
-                cv_pset(x + i, y + h - 1 - j, px);
-                cv_pset(x + w - 1 - i, y + h - 1 - j, px);
-            }
-        return;
-    }
     for (j = 0; j < r; j++)
         for (i = 0; i < r; i++) {
             uint32_t a = rr_cov(r, i, j);
