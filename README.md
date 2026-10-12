@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.6.58).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.6.59).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 > 🫶 If you resonate with my work, consider supporting me on **[Ko-fi](https://ko-fi.com/juanjiant)** (in Argentina:
 > **[Cafecito](https://cafecito.app/juanjiant)**). Thanks for all the good energy, hope you enjoy this little beast ✨🎹
@@ -37,6 +37,13 @@ Two printable sheets with everything on the device. Click an image to open it fu
 ## Changelog
 
 Every update is listed here, newest first.
+
+### v0.6.59
+- **Organic boxes** (the JIANT palette): every card, the panel, menu rows, tabs, buttons and dialogs are organelles,
+  the beings' kin: a soft, uneven body (each its own shape, always the same) drawn as one clean antialiased **violet**
+  line. The four cards' bodies reach past the cards, round their labels and gauges. The footer's steps are round
+  cells, each as hot as its velocity. The beings, DRUM-X and the colours as they were; drawn with the boxes (no cost a
+  frame when nothing changes).
 
 ### v0.6.58
 - **Page name over the cards, shorter**: the big name now covers the four cards for 0.45 s (was the graph for 0.7 s), on

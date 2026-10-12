@@ -136,6 +136,8 @@ layer's shortcuts; on the DRUM grid they are steps and lanes; on the NAME screen
   takes now) and the USB icon. Messages appear here too ("SAVED", "T1 CLEARED"...), sometimes with a second line.
 - **Cards**: the four columns under the header are KNOB 1–4. A value that is automated or locked is marked; a dim card
   means "nothing here now".
+- **The look** (JIANT palette): every card, panel, row and button is an organelle, a soft, uneven body drawn as one
+  violet line; the beings live in the panels.
 - **Page name**: changing page (or track) by hand shows the page's name big for a moment over the four cards (the
   graph stays visible), with the track and its engine at the right.
 - **Panel (middle)**: the page's graph — the engine's creature, an envelope, the LFO running, the step grid, a list...

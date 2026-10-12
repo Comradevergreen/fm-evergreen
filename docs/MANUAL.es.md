@@ -138,6 +138,8 @@ atajos de esa capa; en la grilla DRUM son pasos y carriles; en la pantalla NAME 
   "T1 CLEARED"...), a veces con una segunda línea.
 - **Tarjetas**: las cuatro columnas debajo del encabezado son KNOB 1–4. Un valor automatizado o con lock aparece
   marcado; una tarjeta apagada significa "acá ahora no hay nada".
+- **El aspecto** (paleta JIANT): cada tarjeta, panel, fila y botón es una organela, un cuerpo blando e irregular dibujado
+  con una línea violeta; los seres viven en los paneles.
 - **Nombre de página**: al cambiar de página (o de pista) a mano, el nombre de la página aparece grande un momento sobre
   las cuatro tarjetas (el gráfico queda a la vista), con la pista y su motor a la derecha.
 - **Panel (al medio)**: el gráfico de la página — la criatura del motor, una envolvente, el LFO en movimiento, la
