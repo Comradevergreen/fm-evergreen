@@ -85,7 +85,7 @@ The names below are the ones the firmware uses (the HARDWARE CALIBRATION screen 
 | --- | --- |
 | **SELECT** (encoder) | On **HOME**: opens **DICE EVERYTHING?** (the song-idea generator). On **EDIT** pages: rolls the selected track's sound. On **GLO's pages (MIXER, GLOBAL, SYSTEM)**, or with **GLO held** anywhere: the tempo (BPM). With the macros open or latched: rolls new macro routes. On other pages it says **DICE: HOME / EDIT**. |
 | **ALGORITHM** (encoder) | Selects the track, T1–T6, from any page. In the MENU: switches tabs. |
-| **PRESETS** (encoder) | On HOME, PRESETS and the sound pages: browses sounds (every engine's factory presets, then your user presets). On step pages (STEP, PATTERN, CHANCE, AUTOMATION): moves the step cursor. On list pages (USER, PROJECT, PHRASES, ARRANGE, TOOLS, AUTO LIST): moves the selection. **Hold a page button and turn PRESETS** to jump straight through that button's pages. |
+| **PRESETS** (encoder) | On HOME, PRESETS and the sound pages: browses sounds (every engine's factory presets, then your user presets). On step pages (STEP, PATTERN, AUTOMATION, SHIFT): moves the step cursor. On list pages (USER, PROJECT, ARRANGE, TOOLS, AUTO LIST): moves the selection. **Hold a page button and turn PRESETS** to jump straight through that button's pages. |
 | **KNOB 1–4** | The four cards (columns) on screen. With a layer held, the layer's own knobs. Turning fast sweeps the whole range, slowly fine-tunes (MENU > KNOB ACCEL turns this off). |
 | **MASTER** | The output volume. |
 
@@ -102,7 +102,7 @@ The names below are the ones the firmware uses (the HARDWARE CALIBRATION screen 
 | **GLO** | MIXER → GLOBAL → SYSTEM → MIXER. | **GLO** layer: mutes, solos, levels, tap tempo, UNDO. |
 | **SAVE** | SAVE pages (first press: USER). | **SAVE** layer: play/store sections live. |
 | **ARP** | ARP pages. | (no layer) |
-| **SEQ** | SEQ pages. | **SEQ TOOLS** layer (on STEP, PATTERN, CHANCE and AUTOMATION). |
+| **SEQ** | SEQ pages. | **SEQ TOOLS** layer (on STEP, PATTERN, AUTOMATION and SHIFT). |
 | **PLAY** | Start / stop. | — |
 | **REC** | Arms / disarms recording on the selected track. | **REC** layer: CLEAR, CLICK. |
 | **OCT− / OCT+** | Keyboard octave (−3 to +3; both together: back to 0). On action pages and in dialogs: **OCT−** = back / NO, **OCT+** = do it / YES. | — |
@@ -265,11 +265,9 @@ and heating up with its own audio. The selected track is drawn bigger, a muted o
 | STEP (melodic: piano roll) | STEP | NOTE | TIME (NOTE / TIE / REST) | FLAG (– / ACC / SLD / A+S) |
 | STEP (DRUM: grid) | STEP | LANE | HIT | ACC |
 | PATTERN | LEN | DIV | SWING | GATE |
-| SHIFT | OFFSET | PITCH | — | — |
-| PHRASES | PAT | LOAD (action) | — | — |
-| CHANCE | STEP | CHANCE | RATCH | — |
 | AUTOMATION | PLAY (ON/OFF) | EVENT (count) | LOCK (count) | CLEAR (action) |
 | AUTO LIST | ROW | STEP | PARAM | VALUE |
+| SHIFT (last) | OFFSET | PITCH | CHANCE | — |
 
 ### The layers (hold the button)
 
@@ -311,7 +309,7 @@ and heating up with its own audio. The selected track is drawn bigger, a muted o
 too), G3 **RECALL** (the sound as the current section stored it; on DRUM with its kit). Both ask first and leave the
 steps alone. On a DRUM track, black keys 1–8 mute each DRUM-X sound (BD SD CP CH OH TM RS CB). Knobs: EDIT 1's four.
 
-**SEQ TOOLS** (only on STEP, PATTERN, CHANCE and AUTOMATION) — F3 CLEAR, G3 REVERSE, A3 / B3 SHIFT left / right,
+**SEQ TOOLS** (only on STEP, PATTERN, AUTOMATION and SHIFT) — F3 CLEAR, G3 REVERSE, A3 / B3 SHIFT left / right,
 C4 RANDOM, D4 COOK, E4 BEAT (DRUM), F4 CLR AUTO (the track's automation and locks; the steps stay). On a DRUM track the
 lane tools: G4 CLR, A4 REV, B4 FILL, C5 RND on the lane picked with black keys 1–8. **REC** (while SEQ is held): CLEAR
 ALL. Knobs: LEN, DIV, SWING, GATE. These tools have no undo.
@@ -442,14 +440,13 @@ recorded into the pattern, quantized to its steps, overdubbing. Knob moves on th
 ### Pattern pages
 
 - **PATTERN**: LEN (1–64), DIV, SWING, GATE.
-- **SHIFT**: **OFFSET** (−32 to +32 steps) and **PITCH** (±24 semitones; not on drums). Both can be automated and are
-  also on the SCL layer's KNOB 3 / 4.
-- **PHRASES**: load a pattern into the track: the factory ones ("01"…) and the patterns of your user presets ("U07").
-  KNOB 1 picks, OCT+ loads (it asks first if the track has your own steps).
-- **CHANCE**: per step, CHANCE (0–100 %) and RATCH (x1–x4).
 - **AUTOMATION**: PLAY turns the track's automation on or off, EVENT and LOCK count the records, CLEAR erases them
   (OCT+, with a dialog).
 - **AUTO LIST**: every automation event and lock as a list. KNOB 1 the row, 2 the step, 3 the parameter, 4 the value.
+- **SHIFT** (the last SEQ page): **OFFSET** (−32 to +32 steps), **PITCH** (±24 semitones; not on drums) and
+  **CHANCE**: the whole track's chance, 100 % plays every step as written, lower thins it out (each step's own chance,
+  from the dice or the editor, scaled). All three can be automated; OFFSET and PITCH are also on the SCL layer's
+  KNOB 3 / 4.
   On **+ ADD LOCK**, OCT+ adds a lock; on a record, OCT+ switches it between LOCK and AUTO; **EDIT** deletes it.
 
 ### Parameter locks
@@ -617,7 +614,7 @@ One step back over the **last big change**. Pressing it again goes forward (redo
 G4 breathes on the GLO map when there is something to undo; with nothing, it says **NOTHING TO UNDO**.
 
 **UNDO covers**: DICE ALL, a sound diced, a track cleared (REC F3, TOOLS CLEAR SEQ), CLEAR ALL SEQUENCES (SEQ + REC),
-INIT and RECALL (EDIT layer or TOOLS), a pattern loaded from PHRASES, clearing the automation (SEQ > AUTOMATION),
+INIT and RECALL (EDIT layer or TOOLS), clearing the automation (SEQ > AUTOMATION),
 and a section loaded with **SAVE > PROJECT > LOAD**. It restores the music as it was: sounds, steps, automation, the
 kit, the punch-in lane, the macros, the tempo and global effects.
 
@@ -852,7 +849,7 @@ saves the selected track's sound with the offered name.
   overwriting, then NAME). Turn the knob right to pick, **OCT+** to do it. Saving and erasing need the transport stopped.
 - A user preset stores the **engine, its sound parameters and a 16-step pattern**; an FM6 sound keeps its patch.
 - It does **not** store the **DRUM-X kit** (that lives in the project sections).
-- Loading one loads the sound only. Its pattern is offered on **SEQ > PHRASES** (as "U07") — load it from there.
+- Loading one loads the sound only.
 - Your user presets also appear when browsing with PRESETS, after the factory sounds.
 
 ### Saving FAQ

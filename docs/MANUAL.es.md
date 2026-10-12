@@ -86,7 +86,7 @@ Los nombres de abajo son los que usa el firmware (la pantalla HARDWARE CALIBRATI
 | --- | --- |
 | **SELECT** (encoder) | En **HOME**: abre **DICE EVERYTHING?** (el generador de ideas de temas). En las páginas **EDIT**: tira a los dados el sonido de la pista seleccionada. En las páginas de **GLO (MIXER, GLOBAL, SYSTEM)**, o con **GLO mantenido** en cualquier lado: el tempo (BPM). Con las macros abiertas o enganchadas: tira rutas de macro nuevas. En las demás páginas dice **DICE: HOME / EDIT**. |
 | **ALGORITHM** (encoder) | Elige la pista, T1–T6, desde cualquier página. En el MENU: cambia de pestaña. |
-| **PRESETS** (encoder) | En HOME, PRESETS y las páginas de sonido: recorre sonidos (los presets de fábrica de cada motor y después tus presets de usuario). En las páginas de pasos (STEP, PATTERN, CHANCE, AUTOMATION): mueve el cursor de paso. En las páginas de lista (USER, PROJECT, PHRASES, ARRANGE, TOOLS, AUTO LIST): mueve la selección. **Mantené un botón de página y girá PRESETS** para saltar directo por las páginas de ese botón. |
+| **PRESETS** (encoder) | En HOME, PRESETS y las páginas de sonido: recorre sonidos (los presets de fábrica de cada motor y después tus presets de usuario). En las páginas de pasos (STEP, PATTERN, AUTOMATION, SHIFT): mueve el cursor de paso. En las páginas de lista (USER, PROJECT, ARRANGE, TOOLS, AUTO LIST): mueve la selección. **Mantené un botón de página y girá PRESETS** para saltar directo por las páginas de ese botón. |
 | **KNOB 1–4** | Las cuatro tarjetas (columnas) de la pantalla. Con una capa mantenida, las perillas propias de la capa. Girar rápido recorre todo el rango, despacio ajusta fino (MENU > KNOB ACCEL lo desactiva). |
 | **MASTER** | El volumen de salida. |
 
@@ -103,7 +103,7 @@ Los nombres de abajo son los que usa el firmware (la pantalla HARDWARE CALIBRATI
 | **GLO** | MIXER → GLOBAL → SYSTEM → MIXER. | Capa **GLO**: mutes, solos, niveles, tap tempo, UNDO. |
 | **SAVE** | Páginas SAVE (primera pulsación: USER). | Capa **SAVE**: tocar/guardar secciones en vivo. |
 | **ARP** | Páginas ARP. | (sin capa) |
-| **SEQ** | Páginas SEQ. | Capa **SEQ TOOLS** (en STEP, PATTERN, CHANCE y AUTOMATION). |
+| **SEQ** | Páginas SEQ. | Capa **SEQ TOOLS** (en STEP, PATTERN, AUTOMATION y SHIFT). |
 | **PLAY** | Arranca / para. | — |
 | **REC** | Arma / desarma la grabación en la pista seleccionada. | Capa **REC**: CLEAR, CLICK. |
 | **OCT− / OCT+** | Octava del teclado (−3 a +3; los dos juntos: vuelve a 0). En páginas de acción y en diálogos: **OCT−** = atrás / NO, **OCT+** = hacerlo / YES. | — |
@@ -272,11 +272,9 @@ a la derecha); apretá OCT+ para ejecutarla.
 | STEP (melódica: piano roll) | STEP | NOTE | TIME (NOTE / TIE / REST) | FLAG (– / ACC / SLD / A+S) |
 | STEP (DRUM: grilla) | STEP | LANE | HIT | ACC |
 | PATTERN | LEN | DIV | SWING | GATE |
-| SHIFT | OFFSET | PITCH | — | — |
-| PHRASES | PAT | LOAD (acción) | — | — |
-| CHANCE | STEP | CHANCE | RATCH | — |
 | AUTOMATION | PLAY (ON/OFF) | EVENT (cantidad) | LOCK (cantidad) | CLEAR (acción) |
 | AUTO LIST | ROW | STEP | PARAM | VALUE |
+| SHIFT (última) | OFFSET | PITCH | CHANCE | — |
 
 ### Las capas (mantené el botón)
 
@@ -320,7 +318,7 @@ DRUM-X de fábrica), G3 **RECALL** (el sonido tal como lo guardó la sección ac
 preguntan antes y no tocan los pasos. En una pista DRUM, las teclas negras 1–8 mutean cada sonido de DRUM-X (BD SD CP
 CH OH TM RS CB). Perillas: las cuatro de EDIT 1.
 
-**SEQ TOOLS** (solo en STEP, PATTERN, CHANCE y AUTOMATION) — F3 CLEAR, G3 REVERSE, A3 / B3 SHIFT a la izquierda /
+**SEQ TOOLS** (solo en STEP, PATTERN, AUTOMATION y SHIFT) — F3 CLEAR, G3 REVERSE, A3 / B3 SHIFT a la izquierda /
 derecha, C4 RANDOM, D4 COOK, E4 BEAT (DRUM), F4 CLR AUTO (la automatización y los locks de la pista; los pasos quedan).
 En una pista DRUM, las herramientas de carril: G4 CLR, A4 REV, B4 FILL, C5 RND sobre el carril elegido con las teclas
 negras 1–8. **REC** (con SEQ mantenido): CLEAR ALL. Perillas: LEN, DIV, SWING, GATE. Estas herramientas no tienen
@@ -460,16 +458,15 @@ seleccionada se graban como **automatización**. MENU > AUDIO tiene el **CLICK**
 ### Páginas de patrón
 
 - **PATTERN**: LEN (1–64), DIV, SWING, GATE.
-- **SHIFT**: **OFFSET** (−32 a +32 pasos) y **PITCH** (±24 semitonos; no en baterías). Los dos se pueden automatizar y
-  también están en KNOB 3 / 4 de la capa SCL.
-- **PHRASES**: carga un patrón en la pista: los de fábrica ("01"…) y los patrones de tus presets de usuario ("U07").
-  KNOB 1 elige, OCT+ carga (pregunta antes si la pista tiene pasos tuyos).
-- **CHANCE**: por paso, CHANCE (0–100 %) y RATCH (x1–x4).
 - **AUTOMATION**: PLAY activa o desactiva la automatización de la pista, EVENT y LOCK cuentan los registros, CLEAR
   los borra (OCT+, con diálogo).
 - **AUTO LIST**: cada evento de automatización y cada lock en forma de lista. KNOB 1 la fila, 2 el paso, 3 el
   parámetro, 4 el valor. En **+ ADD LOCK**, OCT+ agrega un lock; sobre un registro, OCT+ lo alterna entre LOCK y AUTO;
   **EDIT** lo borra.
+- **SHIFT** (la última página SEQ): **OFFSET** (−32 a +32 pasos), **PITCH** (±24 semitonos; no en baterías) y
+  **CHANCE**: la probabilidad de toda la pista; 100 % toca cada paso como está escrito, menos lo va raleando (escala la
+  probabilidad propia de cada paso, la de los dados o el editor). Las tres se pueden automatizar; OFFSET y PITCH también
+  están en KNOB 3 / 4 de la capa SCL.
 
 ### Parameter locks
 
@@ -647,7 +644,7 @@ Un paso atrás sobre el **último cambio grande**. Apretarlo otra vez va hacia a
 sonando. G4 "respira" en el mapa de GLO cuando hay algo para deshacer; si no hay nada, dice **NOTHING TO UNDO**.
 
 **UNDO cubre**: DICE ALL, un sonido tirado a los dados, una pista borrada (REC F3, TOOLS CLEAR SEQ), CLEAR ALL
-SEQUENCES (SEQ + REC), INIT y RECALL (capa EDIT o TOOLS), un patrón cargado desde PHRASES, borrar la automatización
+SEQUENCES (SEQ + REC), INIT y RECALL (capa EDIT o TOOLS), borrar la automatización
 (SEQ > AUTOMATION) y una sección cargada con **SAVE > PROJECT > LOAD**. Restaura la música tal como estaba: sonidos,
 pasos, automatización, el kit, el carril de punch-in, las macros, el tempo y los efectos globales.
 
@@ -899,7 +896,7 @@ OCT+** guarda el sonido de la pista seleccionada con el nombre que te ofrece.
 - Un preset de usuario guarda el **motor, sus parámetros de sonido y un patrón de 16 pasos**; un sonido FM6 conserva
   su patch.
 - **No** guarda el **kit DRUM-X** (ese vive en las secciones del proyecto).
-- Cargar uno carga solo el sonido. Su patrón se ofrece en **SEQ > PHRASES** (como "U07") — cargalo desde ahí.
+- Cargar uno carga solo el sonido.
 - Tus presets de usuario también aparecen al recorrer con PRESETS, después de los sonidos de fábrica.
 
 ### Preguntas frecuentes sobre guardar

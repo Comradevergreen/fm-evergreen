@@ -739,6 +739,11 @@ static void seq_start(void)
     perf_start();                                  /* perform.c: its 1/16 grid too */
 }
 
+/* (0.6.37) a step's chance as the track plays it: its own, scaled by SHIFT > CHANCE (P_TCHAN 0: as it is) */
+static uint32_t trk_chance(const track_t *t, const step_t *s)
+{
+    return step_chance(s) * (127u - (uint32_t)clamp(t->p[P_TCHAN], 0, 127)) / 127u;
+}
 static void seq_release(track_t *t)
 {
     uint32_t i;
@@ -800,7 +805,7 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
     if (!(skip & SEQ_REP)) {
         t->rat_left = 0;
         if ((skip & SEQ_MISS) ||
-            (!(skip & SEQ_ROLLED) && step_chance(s) < 100u && rng() % 100u >= step_chance(s))) {
+            (!(skip & SEQ_ROLLED) && trk_chance(t, s) < 100u && rng() % 100u >= trk_chance(t, s))) {
             seq_release(t);
             return;
         }
@@ -936,7 +941,7 @@ static void seq_tick(track_t *t, uint32_t n)
             uint32_t skip = SEQ_ROLLED, i, k;
             /* the chance first (the one roll, as seq_step made it): a step that does not play applies no lock; the
              * automation and the locks before the notes, so a note-on reads them (eng_drum's KIT, ..) */
-            if (step_chance(s) < 100u && rng() % 100u >= step_chance(s))
+            if (trk_chance(t, s) < 100u && rng() % 100u >= trk_chance(t, s))
                 skip = SEQ_MISS;
             motion_step(t, t->seq_idx, &motion, skip == SEQ_ROLLED);   /* (a song: its section's motion is the motion) */
             if (t->rskip_n && t->rskip_idx == t->seq_idx) {
