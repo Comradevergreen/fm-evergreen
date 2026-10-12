@@ -832,6 +832,10 @@ static void draw_columns(void)
         dx_cards(cur_page());
         return;
     }
+    if (cur_page()->graph == GR_DXIMG) {               /* (0.6.54) EDIT > KIT 3 */
+        dx_kit3_cards();
+        return;
+    }
     if (cur_page()->graph == GR_SONG) {
         uint32_t row = ui.song_row < CHAIN_ROWS ? ui.song_row : CHAIN_ROWS - 1u;
         int used = row < chain_config.count;

@@ -3393,21 +3393,21 @@ static int test_edit_cycle(void)
     (void)CYC_D;
 #endif
     {   /* #97: a DRUM track's lane levels on EDIT > LANES (KICK SNARE CLAP HATCL) and LANES 2 (HATOP TOM RIM BELL) */
-        static const char *const CYC_K[] = {"EDIT 1", "EDIT 2", "FILTER", "LANES", "LANES 2", "SOUND", "SOUND 2", "SOUND 3", "LAYER", "X-MOD",
-                                            "TONE", "SEND", "IMAGE", "VOICE", "EDIT 1"};
+        static const char *const CYC_K[] = {"EDIT 1", "EDIT 2", "KIT 3", "X-MOD", "FILTER", "LEVELS", "LEVELS 2", "SOUND",
+                                            "SOUND 2", "SOUND 3", "SOUND 4", "VOICE", "EDIT 1"};
         set_engine_of(TSEL, ENGI_DRUM);
-        bad += check("EDIT cycle (DRUM): EDIT 1 EDIT 2 FILTER LANES LANES 2 SOUND SOUND 2 SOUND 3 LAYER X-MOD TONE SEND IMAGE VOICE EDIT 1",
+        bad += check("EDIT cycle (DRUM, 0.6.54): the kit's (KIT KIT 2 KIT 3 X-MOD FILTER LEVELS) then a sound's (SOUND 1..4), VOICE",
                      engine_cycle(CYC_K, NELEM(CYC_K)));
-        go_title("LANES 2"); frame();
+        go_title("LEVELS 2"); frame();
         ok = TSEL->p[P_LN5] == 127;
         turn(EN_K2, -3);
         ok &= TSEL->p[P_LN5] == 124 && TSEL->p[P_LN4] == 127 && TSEL->p[P_LN6] == 127;
-        bad += check("LANES 2: KNOB 2 turns TOM's level (100 % by default), the other lanes stay", ok);
+        bad += check("LEVELS 2: KNOB 2 turns TOM's level (100 % by default), the other lanes stay", ok);
         apply_preset_to(TSEL, 0);
         bad += check("a factory preset load: every lane 100 % again", TSEL->p[P_LN5] == 127);
         ui.fam_last[FAM_EDIT] = ui.page;
         set_engine_of(TSEL, 0); frame();
-        bad += check("LANES 2 of a track no longer DRUM falls back to EDIT 1", str_eq(cur_page()->title, "EDIT 1"));
+        bad += check("LEVELS 2 of a track no longer DRUM falls back to EDIT 1", str_eq(cur_page()->title, "EDIT 1"));
     }
     go_title("OP2 ENV"); ui.fam_last[FAM_EDIT] = ui.page;
     set_engine_of(TSEL, 0); frame();
@@ -6270,12 +6270,13 @@ static int test_dx_sound(void)
     turn(EN_K3, 3);
     ok = dx_ui_lane == 2u && dx_ui_side == 1u && dx_kit[2].b[DXP_PITCH] > k && dx_kit[2].a[DXP_PITCH] == DX_KIT_DEF[2].a[DXP_PITCH];
     bad += check("  SOUND: LANE, SIDE, PTCH edit that sound's patch (the other patch stays)", ok);
+    go_title("SOUND 3");                               /* (0.6.54: MODE on SOUND 3's KNOB 2, KNOB 1 the sound) */
+    turn(EN_K2, 1);
+    ok = dx_kit[2].mode != DX_KIT_DEF[2].mode && ((dx_kit[2].mode >> 2) & 3u) <= DXF_HP && dx_ui_lane == 2u;
     go_title("SOUND 2");
-    turn(EN_K4, 1);
-    ok = dx_kit[2].mode != DX_KIT_DEF[2].mode && ((dx_kit[2].mode >> 2) & 3u) <= DXF_HP;
-    turn(EN_K1, -5);
+    turn(EN_K2, -5);
     ok &= dx_kit[2].b[DXP_DECAY] < DX_KIT_DEF[2].b[DXP_DECAY];
-    bad += check("  SOUND 2: MODE steps the wave / filter / SNAP, DCAY the side's decay", ok);
+    bad += check("  SOUND 3: MODE steps the wave / filter / SNAP; SOUND 2: DECAY the side's decay", ok);
     key_down(key_at(1, 3)); frame(); key_up(key_at(1, 3)); frame(); frame();   /* a key on the track: its lane */
     ok = dx_ui_lane == drum_lane(last_note);
     bad += check("  a key struck picks the sound it plays", ok);

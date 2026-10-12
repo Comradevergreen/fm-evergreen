@@ -437,7 +437,7 @@ static const preset_t DRUM_PRESETS[] = {
 
 static const engine_t ENG_DRUM = {
     .name = "DRUM",
-    .page_title = {"KIT", "HIT"},
+    .page_title = {"KIT", "KIT 2"},                     /* (0.6.54: both the whole kit's, was HIT) */
     .edit = {
         {"MORPH", F_PCT, 0, 127, 64, 0, 0},
         {"TUNE", F_PCT, 0, 127, 64, 0, 0},

@@ -234,13 +234,14 @@ a la derecha); apretá OCT+ para ejecutarla.
 | OP ENV | OP | STAGE | RATE | LEVEL | FM6 |
 | OPERATOR 2 | OP | MODE | DTUN | VEL | FM6 |
 | FILTER | TYPE | CUT | RES | DRIVE (ANALOG) / DIST (los demás) | todos los motores |
-| LANES | KICK | SNARE | CLAP | HATCL | DRUM |
-| LANES 2 | HATOP | TOM | RIM | BELL | DRUM |
-| SOUND | LANE | SIDE | PITCH | PMOD | DRUM |
-| SOUND 2 | DECAY | NOISE | COLOR | MODE | DRUM |
-| SOUND 3 | LANE | PMOD | DRIVE | WAVE | DRUM |
-| X-MOD | RATE | DEPTH | SHAPE | RAND | DRUM |
-| TONE | BP | FEEDBK | — | — | DRUM |
+| KIT 3 | BP | FEEDBK | IMAGE | — | DRUM (todo el kit) |
+| X-MOD | RATE | DEPTH | SHAPE | RAND | DRUM (todo el kit) |
+| LEVELS | KICK | SNARE | CLAP | HATCL | DRUM |
+| LEVELS 2 | HATOP | TOM | RIM | BELL | DRUM |
+| SOUND | SOUND | SIDE | PITCH | PMOD | DRUM (un sonido) |
+| SOUND 2 | SOUND | DECAY | NOISE | COLOR | DRUM (un sonido) |
+| SOUND 3 | SOUND | MODE | PM.TYPE | DRIVE | DRUM (un sonido) |
+| SOUND 4 | SOUND | LAYER | FEEDBK | SEND | DRUM (un sonido) |
 | VOICE | VOICE | GLIDE | MODE | PRIO | todos los motores |
 
 **GLO** (MIXER es por pista; GLOBAL y SYSTEM son globales)
@@ -421,33 +422,33 @@ pista.
 
 DRUM-X es un kit sintetizado de ocho sonidos, **BD SD CP CH OH TM RS CB**, generados en tiempo real.
 
-- Cada sonido tiene dos lados, **A** y **B**. **MORPH** (EDIT 1, KNOB 1, también en HOME) mueve todo el kit entre
-  ellos: la perilla para tocar en vivo.
-- EDIT 1: MORPH, TUNE, TONE, DECAY. EDIT 2: NOISE, **FM ENV** (FM que golpea con cada nota y se va en pocos
-  milisegundos: un parche, un click, un filo metálico en el ataque, la cola limpia), **FOLD** (un wavefolder después de
-  la envolvente: un ataque brillante, una cola limpia), DRIVE.
-- **LANES / LANES 2**: el nivel de cada sonido (KICK, SNARE, CLAP, HATCL, HATOP, TOM, RIM, BELL).
-- **SOUND** (por sonido, por lado): LANE (qué sonido; tocar una tecla también lo elige), SIDE (A / B), PITCH, PMOD.
-- **SOUND 2**: DECAY, NOISE, COLOR, MODE (onda SIN / FM / MTL / BEL, filtro de ruido LP / BP / HP, y "+" para snap).
-- **SOUND 3**: LANE, PMOD (cómo se mueve la afinación: DECAY, LONG, NOISE, SINE), DRIVE (ON / OFF), WAVE (SIN, FM,
-  MTL, BEL).
-- **X-MOD** (todo el kit): **RATE** (OFF, 4BAR … 1/32, a tempo), **DEPTH** (cuánto oscila MORPH), **SHAPE** (SINE,
-  TRI, SAW, RAMP, S&H), **RAND** (cada golpe recibe su propio MORPH y un poco de afinación).
-- **TONE** (todo el kit): **BP**, un pasa-banda sobre los sonidos de metal (los hi-hats, el rim, el cowbell), OFF o 15
-  centros de 1,5 a 9 kHz aprox.; **FEEDBK**, el oscilador de cada sonido realimentado sobre sí mismo (OFF, 1–15:
-  cálido, gruñido, arena, ruido). Se guarda con el kit de la sección.
-- **LAYER** (de cada sonido): **LANE**, **LAYER** (OFF, 1–15): un segundo oscilador en un intervalo desafinado,
-  modulado en frecuencia por el sonido, más cuanto más alto: de un filo metálico a un golpe sin nota, así el sonido se
-  funde en el ritmo y no molesta a la armonía (el kit de fábrica lo tiene en el redoblante, los hi-hats y el cowbell);
-  **FEEDBK** (OFF, 1–15): el oscilador de ese sonido realimentado (se suma al FEEDBK de TONE, el del kit). Se guarda con
-  el kit de la sección; los dados (SELECT en una página DRUM, DICE ALL) los mueven fuerte. Cada sonido con LAYER usa
-  un poco de CPU (como FEEDBK).
-- **SEND** (de cada sonido): **LANE**, **SEND** (OFF, CHORUS, DELAY, REVERB) y **AMOUNT**: ese golpe solo hacia un
-  efecto, el resto del kit como está (se suma a los envíos de la pista). Se guarda con el kit de la sección.
-- **IMAGE** (de la pista, una perilla, automatizable): barre el kit por sus ubicaciones en el estéreo. 0: todos los
-  sonidos al medio, como antes; los primeros pasos lo abren; desde ahí cada paso es otra ubicación (cada sonido se mueve
-  por su propia curva), así que girala hasta que la imagen quede bien. El bombo queda cerca del medio. DRV, DIST y el
-  FILTER trabajan sobre la suma del kit, así que con ellos la imagen se angosta (la página dibuja los sonidos en gris).
+- Cada sonido tiene dos lados, **A** y **B**. **MORPH** (KIT, KNOB 1, también en HOME) mueve todo el kit entre ellos:
+  la perilla para tocar en vivo.
+- Las páginas van **primero todo el kit, después un sonido** (0.6.54):
+  - **KIT** (EDIT 1): MORPH, TUNE, TONE, DECAY. **KIT 2** (EDIT 2): NOISE, **FM ENV** (FM golpeada con cada golpe que se
+    va en pocos milisegundos: un parche, un click, un filo metálico en el ataque, la cola limpia), **FOLD** (un
+    wavefolder después de la envolvente: ataque brillante, cola limpia), DRIVE.
+  - **KIT 3**: **BP**, un pasa-banda sobre los sonidos de metal (hi-hats, rim, cowbell), OFF o 15 centros de 1,5 a 9 kHz
+    aprox.; **FEEDBK**, el oscilador de cada sonido realimentado sobre sí mismo (OFF, 1–15: cálido, gruñido, arena,
+    ruido); **IMAGE** (automatizable): barre el kit por sus ubicaciones en el estéreo. 0 (MONO): todos al medio; los
+    primeros pasos lo abren; desde ahí cada paso es otra ubicación (cada sonido por su propia curva), así que girala
+    hasta que la imagen quede bien. El bombo queda cerca del medio. DRV, DIST y el FILTER trabajan sobre la suma del
+    kit, así que con ellos la imagen se angosta (la página dibuja los sonidos en gris).
+  - **X-MOD**: **RATE** (OFF, 4BAR … 1/32, a tempo), **DEPTH** (cuánto oscila MORPH), **SHAPE** (SINE, TRI, SAW, RAMP,
+    S&H), **RAND** (cada golpe con su propio MORPH y un poco de afinación).
+  - **FILTER**, después **LEVELS / LEVELS 2**: el nivel de cada sonido (KICK, SNARE, CLAP, HATCL, HATOP, TOM, RIM, BELL).
+  - **SOUND 1–4**, un sonido cada una: la KNOB 1 es siempre **SOUND** (cuál; tocar una tecla también lo elige).
+    - **SOUND**: SIDE (A / B), PITCH, PMOD (cuánto cae la afinación).
+    - **SOUND 2**: DECAY, NOISE, COLOR, del lado elegido en SOUND (la KNOB 1 lo muestra: "SD B").
+    - **SOUND 3**: **MODE** (onda SIN / FM / MTL / BEL, filtro de ruido LP / BP / HP, "+" para snap), **PM.TYPE** (cómo
+      se mueve la afinación: DECAY, LONG, NOISE, SINE), **DRIVE** (ON / OFF).
+    - **SOUND 4**: **LAYER** (OFF, 1–15): un segundo oscilador en un intervalo desafinado, modulado en frecuencia por el
+      sonido, más cuanto más alto: de un filo metálico a un golpe sin nota, así el sonido se funde en el ritmo y no
+      molesta a la armonía (el kit de fábrica lo tiene en redoblante, hi-hats y cowbell); **FEEDBK** (OFF, 1–15): el de
+      ese sonido (se suma al de KIT 3); **SEND**: ese golpe solo hacia un efecto, OFF y después CHO, DLY, REV con 16
+      cantidades cada uno, en una sola perilla ("REV 75%"), además de los envíos de la pista. Los dados (SELECT en una
+      página DRUM, DICE ALL) mueven fuerte LAYER y FEEDBK. Cada sonido con LAYER usa un poco de CPU (como FEEDBK).
+  - KIT 3, X-MOD, LAYER, FEEDBK y SEND se guardan con el kit de la sección.
 - **Mutes**: GLO mantenido + teclas negras 7–10 mutean los grupos KICK, SNARE, HAT, PERC; EDIT mantenido + teclas
   negras 1–8 mutean cada sonido.
 - **SELECT** en una página EDIT tira un kit nuevo alrededor del de fábrica. **EDIT mantenido + F3 (INIT)** trae de
