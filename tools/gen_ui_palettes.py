@@ -52,7 +52,7 @@ PALETTES = [
     # JIANT FM (docs/TONIC-UI.md): a thermal camera. Black, white details, violet for what is selected, orange for the
     # one active thing; every value, curve and hit as heat (ui_graph.c heat_col: cyan blue violet red orange yellow
     # white). The default since JIANT 0.1 (src/panel.c); 0.5: violet selection (was cyan), the heat everywhere
-    ("JIANT",  (0, 0, 0),       (16, 12, 22),    (244, 241, 234), (184, 112, 255), (255, 122, 0)),
+    ("JIANT",  (0, 0, 0),       (0, 0, 0),       (244, 241, 234), (184, 112, 255), (255, 122, 0)),   # (0.6.60: SURF black, no boxes)
 ]
 BW = "MONO"
 BW_GREY = (82, 82, 82)             # MONO's one mid grey (RGB565 10/20/10): DIM LINE RAISE LANE

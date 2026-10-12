@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.6.58).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.6.60).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 > 🫶 If you resonate with my work, consider supporting me on **[Ko-fi](https://ko-fi.com/juanjiant)** (in Argentina:
 > **[Cafecito](https://cafecito.app/juanjiant)**). Thanks for all the good energy, hope you enjoy this little beast ✨🎹
@@ -37,6 +37,10 @@ Two printable sheets with everything on the device. Click an image to open it fu
 ## Changelog
 
 Every update is listed here, newest first.
+
+### v0.6.60
+- **All black**: cards, panels, menu rows and dialogs are their text, graphs and beings on black, with no box drawn
+  (the chosen row and the buttons keep their fill).
 
 ### v0.6.58
 - **Page name over the cards, shorter**: the big name now covers the four cards for 0.45 s (was the graph for 0.7 s), on
@@ -692,8 +696,8 @@ video).*
 - **Thermal palette**: values, curves, steps, hits and notes are coloured by intensity (cyan → blue → violet → red →
   orange → yellow → white). Selection is violet and active is orange. Fonts, the landing page's: values in
   [IBM Plex Mono](https://github.com/IBM/plex), page names in [Michroma](https://github.com/googlefonts/Michroma-font),
-  labels in [Chakra Petch](https://github.com/m4rc1e/Chakra-Petch). Windows, cards and buttons are square, with the
-  landing's HUD corners.
+  labels in [Chakra Petch](https://github.com/m4rc1e/Chakra-Petch). No boxes: the cards and panels are their text and
+  graphs on black.
 - **HOME, the ecosystem**: one being per track (its species from its engine, its shape from its four knobs). Each one
   heats up, swells and moves with its own audio; the selected track is drawn bigger; muted ones go dark; in silence
   they all stay still.
