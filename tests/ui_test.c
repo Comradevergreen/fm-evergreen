@@ -604,6 +604,55 @@ static int test_mutate(void)
     mutate_poll();
     return bad;
 }
+/* (0.6.45) MORPH: ANALOG, PHASE, LOFI: 0 keeps the WAVE's own render (an_mpos -1), more slides it toward the next
+ * waves, the three play with it; its page shows on them, not on FM6 */
+static int32_t morph_peak(uint32_t eng, int16_t mo)
+{
+    int32_t o[2u * CTL], pk = 0;
+    uint32_t b, i, k;
+    track_t *t;
+    ui_power_on();
+    t = &trk[0];
+    song.master_q12 = 4096;
+    for (k = 1; k < NTRK; k++) trk[k].p[P_MUTE] = 1;
+    set_engine_of(t, eng);
+    t->engine = t->eng_req;
+    t->p[P_MORPH] = mo;
+    for (b = 0; b < 8u; b++) mix_block(o, CTL);
+    trk_note_on(t, 57, 100);
+    for (b = 0; b < 40u; b++) {
+        mix_block(o, CTL);
+        for (i = 0; i < 2u * CTL; i++) pk = o[i] > pk ? o[i] : -o[i] > pk ? -o[i] : pk;
+    }
+    return pk;
+}
+static int test_morph(void)
+{
+    int bad = 0, ok = 1;
+    uint32_t e, k, ph;
+    int16_t p[P_COUNT] = {0};
+    vmod_t m;
+    static const uint32_t ENG[3] = {ENGI_ANALOG, 2u, 3u};   /* ANALOG, PHASE, LOFI */
+    memset(&m, 0, sizeof m);
+    m.shape = 64 << 8;
+    ok &= an_mpos(p, &m) == -1;                              /* 0: the WAVE's own render */
+    p[P_MORPH] = 127;
+    ok &= an_mpos(p, &m) == 768;                             /* SAW all the way to SIN */
+    p[P_MORPH] = 0; m.shape = 127 << 8;
+    ok &= an_mpos(p, &m) > 0;                                /* SHAPE modulation moves it */
+    for (ph = 0; ph < 0xF0000000u; ph += 0x0F000000u)
+        ok &= an_morph(256, ph, 1u << 24) == an_osc(1u, ph, 1u << 24) && an_morph(0, ph, 1u << 24) == an_osc(0u, ph, 1u << 24);
+    bad += check("MORPH (ANALOG): 0 = the WAVE as it is, 127 = SIN, SHAPE moves it, whole steps are the next wave", ok);
+    for (e = 0, ok = 1; e < 3u; e++) ok &= morph_peak(ENG[e], 90) > 1000;
+    bad += check("MORPH 90 on ANALOG PHASE LOFI plays", ok);
+    ui_power_on();
+    set_engine_of(TSEL, ENGI_ANALOG);
+    for (k = 0, ok = 0; k < NPAGES; k++) if (PAGES[k].graph == GR_MORPH) ok = page_visible(k);
+    set_engine_of(TSEL, ENGI_FM6);
+    for (k = 0; k < NPAGES; k++) if (PAGES[k].graph == GR_MORPH) ok &= !page_visible(k);
+    bad += check("EDIT > MORPH on ANALOG, not on FM6", ok);
+    return bad;
+}
 static int test_patterns(void)
 {
     int bad = 0;
@@ -2382,7 +2431,8 @@ static int test_product_ux(void)
     bad += check("REC cannot write borrowed patterns while SONG is armed", song.rec == 1 && msg_is("STOP TO RECORD"));
     ui_power_on(); open_family(FAM_EDIT);
     ok = 1;
-    for (i = 0; i < 8u; i++) { open_family(FAM_EDIT); ok &= page_visible(ui.page) && !(cur_page()->id[0] >= P_FM1_ATK && cur_page()->id[0] <= P_FM4_LEVEL); }
+    for (i = 0; i < 8u; i++) { open_family(FAM_EDIT); ok &= page_visible(ui.page) && (cur_page()->graph == GR_MORPH ||
+                                                         !(cur_page()->id[0] >= P_FM1_ATK && cur_page()->id[0] <= P_FM4_LEVEL)); }
     bad += check("operator envelope pages are hidden on non-DIGITAL instruments", ok);
 #if FELUCCA_FM4
     set_engine_of(TSEL, 1); open_family(FAM_EDIT); ok = 0;
@@ -3038,7 +3088,8 @@ static int engine_cycle(const char *const *want, uint32_t n)   /* EDIT tapped fr
 }
 static int test_edit_cycle(void)
 {
-    static const char *const CYC_A[] = {"EDIT 1", "EDIT 2", "FILTER", "VOICE", "EDIT 1"};   /* (JIANT 0.5: ANALOG's FILTER) */
+    static const char *const CYC_A[] = {"EDIT 1", "EDIT 2", "MORPH", "FILTER", "VOICE", "EDIT 1"};   /* (JIANT 0.5: ANALOG's
+                                                         * FILTER; 0.6.45: MORPH) */
     static const char *const CYC_F[] = {"EDIT 1", "EDIT 2", "OPERATOR", "OP ENV", "OPERATOR 2", "FILTER", "VOICE",
                                         "EDIT 1"};   /* (the part's FILTER; 0.6.10: FM6's operator pages) */
     static const char *const CYC_D[] = {"EDIT 1", "EDIT 2", "FILTER", "OP1 ENV", "OP2 ENV", "OP3 ENV", "OP4 ENV",
@@ -3054,7 +3105,7 @@ static int test_edit_cycle(void)
         ok &= !str_eq(PAGES[i].title, "ENGINE");
     bad += check("no ENGINE page (engines are the EDIT layer's)", ok);
     set_engine_of(TSEL, 0);
-    bad += check("EDIT cycle (ANALOG): EDIT 1 EDIT 2 FILTER VOICE EDIT 1", engine_cycle(CYC_A, NELEM(CYC_A)));
+    bad += check("EDIT cycle (ANALOG): EDIT 1 EDIT 2 MORPH FILTER VOICE EDIT 1", engine_cycle(CYC_A, NELEM(CYC_A)));
 #if FELUCCA_FM4
     set_engine_of(TSEL, 1);
     bad += check("EDIT cycle (DIGITAL): EDIT 1 EDIT 2 FILTER OP1..OP4 ENV OP LEVEL VOICE EDIT 1",
@@ -7984,6 +8035,7 @@ int main(void)
     bad += test_init_system();
     bad += test_transitions();
     bad += test_mutate();
+    bad += test_morph();
     bad += test_rec();
     bad += test_step_rec();
     bad += test_step_rec();

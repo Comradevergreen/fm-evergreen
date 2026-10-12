@@ -218,7 +218,7 @@ a la derecha); apretá OCT+ para ejecutarla.
 | Página | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 | --- | --- | --- | --- | --- |
 | SCL | ROOT | SCALE | QUANT | TRANS |
-| SCL 2 | STRN | — | — | — |
+| SCL 2 | ALL TR | — | — | — |
 
 **EDIT** (por pista; qué páginas aparecen depende del motor)
 
@@ -227,6 +227,7 @@ a la derecha); apretá OCT+ para ejecutarla.
 | EDIT 1 | E1 | E2 | E3 | E4 | todos los motores (ver [4](#4-motores)) |
 | EDIT 2 | E5 | E6 | E7 | E8 | todos los motores |
 | RETRIG | RTRG | — | — | — | LOFI con WAVE en BYTE o FLOAT |
+| MORPH | MORPH | — | — | — | ANALOG (SAW..SIN), PHASE, LOFI (hasta WRAM) |
 | OPERATOR | OP | RATIO / FIXED | FINE | LEVEL | FM6 |
 | OP ENV | OP | STAGE | RATE | LEVEL | FM6 |
 | OPERATOR 2 | OP | MODE | DTUN | VEL | FM6 |
@@ -388,6 +389,10 @@ click; las notas siguen.
     hechas de senos), KNOB 4 **VAR**; EDIT 2: **MOTION, FEEDBK, BEND, LOOP**. Mantené una tecla: la fórmula suena en
     esa tonalidad.
   - Página **RETRIG** (BYTE / FLOAT): **RTRG ON** reinicia la fórmula desde el principio en cada nota.
+- **MORPH** (EDIT > MORPH, en ANALOG, PHASE y LOFI): la onda se desliza de forma continua hacia las siguientes (en
+  ANALOG SAW > SQR > TRI > SIN, en PHASE hacia su forma siguiente, en LOFI hacia la onda siguiente hasta WRAM). 0 = la
+  onda tal como la elegiste. En ANALOG y LOFI la modulación **SHAPE** también mueve el morph, así un LFO o una
+  envolvente barren la onda. La página dibuja un ciclo de la onda resultante y dice qué dos ondas mezcla.
 - **VOICE**: una voz por formantes (basada en klattsch): vocales, habla, aliento.
 - **WHEEL**: un órgano de drawbars: registraciones (REG), percusión (PERC: OFF, 2ND, 3RD, 2SOFT, 3SOFT, 2SLOW,
   3SLOW), click de tecla, drive, ROTOR (OFF, SLOW, FAST).
@@ -530,7 +535,10 @@ tienen. Cada pista conserva su propio TRANS.
 - SCALE: CHR, MAJ, MIN, DOR, MIX, PEN, MPEN, HARM, PHRY, LYD, LOC, MEL, BLUES, WHOLE, DIMHW, DIMWH.
 - QUANT: OFF; SNAP (las teclas se ajustan a la escala); WHITE (las teclas blancas recorren la escala, las negras no
   suenan); SEQ (como SNAP, y además las notas del secuenciador se ajustan mientras suenan).
-- **SCL 2 > STRN** mueve todas las secuencias hacia arriba o hacia abajo por la escala (±14 grados).
+- **SCL 2 > ALL TR** (antes se llamaba STRN) mueve todas las secuencias hacia arriba o hacia abajo por la escala (±14
+  grados), en todas las pistas a la vez. Es global y se guarda con el proyecto: si tus notas suenan más graves o más
+  agudas de lo que muestra el piano roll, fijate acá. Cuando no está en 0 el piano roll muestra **ALL TR** y su valor, y
+  al dar PLAY también lo avisa. 0 = apagado.
 - La reverb RESO y los pasos de afinación del SLICER también siguen la escala.
 
 ### ARP

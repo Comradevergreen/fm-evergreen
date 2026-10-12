@@ -211,7 +211,7 @@ and heating up with its own audio. The selected track is drawn bigger, a muted o
 | Page | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 | --- | --- | --- | --- | --- |
 | SCL | ROOT | SCALE | QUANT | TRANS |
-| SCL 2 | STRN | — | — | — |
+| SCL 2 | ALL TR | — | — | — |
 
 **EDIT** (per track; which pages appear depends on the engine)
 
@@ -220,6 +220,7 @@ and heating up with its own audio. The selected track is drawn bigger, a muted o
 | EDIT 1 | E1 | E2 | E3 | E4 | every engine (see [4](#4-engines)) |
 | EDIT 2 | E5 | E6 | E7 | E8 | every engine |
 | RETRIG | RTRG | — | — | — | LOFI with WAVE on BYTE or FLOAT |
+| MORPH | MORPH | — | — | — | ANALOG (SAW..SIN), PHASE, LOFI (up to WRAM) |
 | OPERATOR | OP | RATIO / FIXED | FINE | LEVEL | FM6 |
 | OP ENV | OP | STAGE | RATE | LEVEL | FM6 |
 | OPERATOR 2 | OP | MODE | DTUN | VEL | FM6 |
@@ -374,6 +375,10 @@ every engine) or with KNOB 2 (ENG) on SAVE > PRESETS. Each track's four HOME kno
   - **FLOAT** (floatbeat): CHIP becomes the resolution (4BIT, 4B/2, FULL, 1BIT), KNOB 3 **ALGO** (32 formulas made of
     sines), KNOB 4 **VAR**; EDIT 2: **MOTION, FEEDBK, BEND, LOOP**. Hold a key: the formula plays in that key.
   - **RETRIG** page (BYTE / FLOAT): **RTRG ON** restarts the formula from the top on every note.
+- **MORPH** (EDIT > MORPH, on ANALOG, PHASE and LOFI): the wave slides continuously toward the next ones (on ANALOG
+  SAW > SQR > TRI > SIN, on PHASE toward its next shape, on LOFI toward the next wave up to WRAM). 0 = the wave as
+  chosen. On ANALOG and LOFI the **SHAPE** modulation moves the morph too, so an LFO or envelope sweeps the wave. The
+  page draws one cycle of the morphed wave and says which two waves it blends.
 - **VOICE**: a formant voice (after klattsch): vowels, talk, breath.
 - **WHEEL**: a drawbar organ: registrations (REG), percussion (PERC: OFF, 2ND, 3RD, 2SOFT, 3SOFT, 2SLOW, 3SLOW),
   key click, drive, ROTOR (OFF, SLOW, FAST).
@@ -506,7 +511,9 @@ MIDI, a project load), every melodic track follows it at once; drum tracks have 
 - SCALE: CHR, MAJ, MIN, DOR, MIX, PEN, MPEN, HARM, PHRY, LYD, LOC, MEL, BLUES, WHOLE, DIMHW, DIMWH.
 - QUANT: OFF; SNAP (keys snap to the scale); WHITE (the white keys walk the scale, black keys are silent); SEQ (as SNAP,
   and the sequencer's notes snap too as they play).
-- **SCL 2 > STRN** moves every sequence up or down the scale (±14 degrees).
+- **SCL 2 > ALL TR** (it was called STRN) moves every sequence up or down the scale (±14 degrees), on every track at
+  once. It is global and saved with the project: if your notes sound lower or higher than the piano roll shows, look
+  here. When it is not 0 the piano roll says **ALL TR** and its value, and PLAY says it too. 0 = off.
 - The RESO reverb and the SLICER's pitch steps follow the scale too.
 
 ### ARP

@@ -262,6 +262,54 @@ static void graph_mutate(void)
     if (mut_freeze) cv_text(PANEL_X0 + 70, 98, &AF_S, "FROZEN  [OCT-]", T_ACCENT);
 }
 
+/* (0.6.45) EDIT > MORPH: a cycle of the wave as it morphs (from WAVE towards the next ones), heat coloured by its
+ * height; under it the two waves it is between */
+static void graph_morph(const track_t *t)
+{
+    const int16_t *p = t->p;
+    uint32_t e = t->eng_req % NENGINES, i, a0 = 0, a1 = 0;
+    int32_t px = 0, py = 0, pos, f;
+    const char *n0 = "", *n1 = "";
+    char b[24];
+    pd_t pa, pb;
+    if (ENGINES[e] == &ENG_PHASE) {
+        uint32_t dcw = (uint32_t)(p[P_E2] << 8) * 65535u / (127u << 8);
+        pos = (int32_t)(p[P_E0] & 7) * 256 + p[P_MORPH] * 768 / 127;
+        dcw = (dcw * 56000u) >> 16;
+        a0 = ((uint32_t)pos >> 8) & 7u; a1 = (a0 + 1u) & 7u;
+        pd_setup(&pa, a0, dcw); pd_setup(&pb, a1, dcw);
+        n0 = N_PD_WAVE[a0]; n1 = N_PD_WAVE[a1];
+    } else if (ENGINES[e] == &ENG_LOFI) {
+        pos = clamp(p[P_E1] * 256 + p[P_MORPH] * 768 / 127, 0, RW_WRAM * 256);
+        a0 = (uint32_t)pos >> 8; a1 = a0 + 1u < RW_BYTE ? a0 + 1u : a0;
+        n0 = N_RWAVE[a0]; n1 = N_RWAVE[a1];
+    } else {
+        pos = clamp(p[P_E0] * 256 + p[P_MORPH] * 768 / 127, 0, 768);
+        a0 = (uint32_t)pos >> 8; a1 = a0 < 3u ? a0 + 1u : a0;
+        n0 = N_ANALOG_WAVE[a0]; n1 = N_ANALOG_WAVE[a1];
+    }
+    f = pos & 255;
+    cv_rect(PANEL_X0, 46, PANEL_W, 1, T_RAISE);
+    for (i = 0; i <= 110u; i++) {
+        uint32_t ph = (uint32_t)(i % 110u) * (0xFFFFFFFFu / 110u), inc = 0xFFFFFFFFu / 220u;
+        int32_t s, x = PANEL_X0 + (int32_t)i * 2, y;
+        if (ENGINES[e] == &ENG_PHASE) {
+            s = pd_wave(&pa, ph >> 16);
+            if (f) s += ((pd_wave(&pb, ph >> 16) - s) * f) >> 8;
+        } else if (ENGINES[e] == &ENG_LOFI) {
+            s = lofi_mto(a0, ph, 0x80000000u, WRAM[((uint32_t)p[P_E2] >> 3) & 15u], 0, 1u);
+            if (f) s += ((lofi_mto(a1, ph, 0x80000000u, WRAM[((uint32_t)p[P_E2] >> 3) & 15u], 0, 1u) - s) * f) >> 8;
+        } else
+            s = an_morph(pos, ph, inc);
+        y = 46 - s * 34 / 32768;
+        if (i) cv_line_t(px, py, x, y, heat_col(80 + (uint32_t)(46 - y + 34) * 2u), 2);
+        px = x; py = y;
+    }
+    str_cpy(b, n0, sizeof b);
+    if (f && a1 != a0) { str_cpy(b + str_len(b), " > ", 4); str_cpy(b + str_len(b), n1, 8); }
+    cv_text(PANEL_X0 + 2, 90, &AF_S, b, T_MID);
+}
+
 /* STEP page (a melodic track): a piano roll of the cursor's 16-step page. PR_ROWS semitone rows of PR_RH px,
  * the highest on top; on the left the C rows named (S, DIM) and a keyboard strip (white keys RAISE, black keys a
  * shorter DIM; a key held on the track: its row ACCENT). Rows in the track's scale (SCL ROOT / SCALE; CHR: the white
@@ -442,6 +490,13 @@ static void graph_roll(const track_t *t, uint16_t c)
             int32_t ny = clamp(pr_row_y(ns->note[0]), PR_Y0, ybot - PR_RH);
             cv_line(x + 10, y + 2, x + 14, ny + 2, T_TEXT);   /* the slide into the next note */
         }
+    }
+    if (song.g[G_STRN]) {                             /* (0.6.45) ALL TR (SCL 2): the notes sound moved, shown */
+        char b[16];
+        str_cpy(b, "ALL TR ", sizeof b);
+        b[7] = song.g[G_STRN] < 0 ? '-' : '+'; b[8] = 0;
+        fmt_int(b + 8, song.g[G_STRN] < 0 ? -song.g[G_STRN] : song.g[G_STRN]);
+        cv_text_r(PANEL_X0 + PANEL_W, 0, &AF_S, b, T_ACCENT, T_SURF);
     }
 }
 /* SEQ > STEP on a DRUM track: the grid, 8 lanes x the 16 steps of the page shown. Lanes by their two-letter
@@ -1073,6 +1128,9 @@ static uint32_t graph_signature(void)
         h = (h ^ (n + 1u) * 40503u ^ ev_row(n) * 2654435761u ^ ((uint32_t)ui.ev_step << 8 | ui.ev_id) * 104729u) * 16777619u;
     }
     if (pg->graph == GR_CHANCE) h ^= ui.cursor * 40503u + step_chance(&t->step[ui.cursor]);
+    if (pg->graph == GR_MORPH)                       /* (0.6.45) the wave, MORPH */
+        h = (h ^ ((uint32_t)t->p[P_MORPH] << 16 | (uint32_t)t->p[P_E0] << 8 | (uint32_t)t->p[P_E1] |
+                  (uint32_t)t->p[P_E2] << 24)) * 16777619u;
     if (pg->graph == GR_MUTATE) {                    /* (0.6.43) the bar, the settings, FREEZE */
         h = (h ^ (song.playing ? bar_n : 0u) * 2654435761u ^ mut_freeze * 977u) * 16777619u;
         for (i = 0; i < NTRK; i++)
@@ -1861,6 +1919,9 @@ static void draw_graph(void)
             break;
         case GR_MUTATE:
             graph_mutate();
+            break;
+        case GR_MORPH:
+            graph_morph(t);
             break;
         case GR_ROLL:
         case GR_CHANCE:
