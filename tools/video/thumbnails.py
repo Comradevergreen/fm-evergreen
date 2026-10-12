@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
-# (JIANT 0.6.35) the two films' thumbnails, 1280 x 720, from their footage (screen.rgb) in the project's look (black,
+# (JIANT 0.6.35; 0.6.37 the landing's black, bone white and heat rule) the two films' thumbnails, 1280 x 720, from their footage (screen.rgb) in the project's look (black,
 # violet to orange, Chakra Petch, the signature):
 #   python3 tools/video/thumbnails.py build/video_dice build/video3 OUTDIR
 #   -> OUTDIR/thumb-dice-all.png (the DICE ALL film), OUTDIR/thumb-jiant-fm.png (every feature)
@@ -24,6 +24,16 @@ def gtext(img, xy, s, f, a=VIOLET, b=ORANGE):     # gradient text
     g = Image.new('RGB', img.size); g.paste(Image.fromarray(grad(box[2] - box[0], box[3] - box[1], a, b)), box[:2])
     img.paste(g, (0, 0), m)
     return box
+HEAT = [(0, 210, 255), (90, 60, 255), (180, 50, 230), (240, 40, 50), (255, 122, 0), (255, 215, 0), (255, 255, 255)]
+def heat_c(v):
+    v = max(0, min(1, v)) * 6; k = min(5, int(v)); f = v - k
+    return tuple(int(HEAT[k][j] + (HEAT[k + 1][j] - HEAT[k][j]) * f) for j in range(3))
+def heat_rule(w, h):                               # (0.6.37) the landing page's rule: cyan to yellow
+    row = np.array([heat_c(0.86 * i / max(w - 1, 1)) for i in range(w)], np.uint8)
+    return Image.fromarray(np.repeat(row[None], h, 0))
+BONE = (244, 241, 234)
+def black():                                       # (0.6.37) the landing's page: pure black
+    return Image.new('RGBA', (W, H), (0, 0, 0, 255))
 def bg(seed):                                      # black, a faint grid, a violet and an orange glow
     rng = np.random.default_rng(seed)
     a = np.zeros((H, W, 3), np.float32); a[:] = (6, 4, 10)
@@ -89,45 +99,46 @@ seps = [float(x) for x in (DICE / 'seps.txt').read_text().split()]
 dialog = fr[int((seps[1] + 0.3) * 30)]
 home = busiest(fr, int(seps[2] * 30) + 20, int(seps[3] * 30))
 roll = busiest(fr, int(seps[5] * 30) + 20, int(seps[6] * 30))
-img = bg(3)
+img = black()
 screen(img, roll, 770, 210, 1.55, -8)
 screen(img, home, 900, 60, 1.6, 6)
 screen(img, dialog, 700, 300, 1.42, -2)
-gtext(img, (56, 150), "DICE", font('Bold', 210))
-gtext(img, (56, 330), "ALL", font('Bold', 210))
+ImageDraw.Draw(img).text((56, 150), "DICE", font=font('Bold', 210), fill=BONE)
+ImageDraw.Draw(img).text((56, 330), "ALL", font=font('Bold', 210), fill=BONE)
 d6 = die(5, 190).rotate(-18, resample=Image.BICUBIC, expand=True)
 img.alpha_composite(d6, (420, 360))
 d = ImageDraw.Draw(img)
 d.text((62, 560), "ONE PRESS · A WHOLE NEW PIECE", font=font("SemiBold", 34), fill=WHITE)
 d.text((62, 612), "JIANT FM · M-VAVE FM-1", font=font('Medium', 28), fill=DIM)
-img.paste(Image.fromarray(grad(W, 8)), (0, H - 8))
+img.paste(heat_rule(W, 8), (0, H - 8))
 img.convert('RGB').save(OUT / 'thumb-dice-all.png')
 
 # ---- every feature's: the signature and the name, a grid of six living screens
 fr = frames(FEAT)
 beat = 60 / 125
 def at_beat(b): return fr[int(b * beat * 30)]
-picks = [busiest(fr, int(190 * beat * 30), int(194 * beat * 30), 3),   # HOME, six beings
-         at_beat(190.5),                                                   # DRUM-X
-         at_beat(138.5),                                                   # the RESO reverb
-         at_beat(170.5),                                                   # the SLICER bus
-         at_beat(227.5),                                                   # ARRANGE
-         at_beat(179.2)]                                                   # the punch-in FX
-img = bg(5)
+picks = [busiest(fr, int(226 * beat * 30), int(238 * beat * 30), 3),   # HOME, six beings (under the grid)
+         at_beat(18.5),                                                    # DRUM-X
+         at_beat(122.5),                                                   # the RESO reverb
+         at_beat(146.5),                                                   # the SLICER bus
+         at_beat(186.5),                                                   # ARRANGE
+         at_beat(155.2)]                                                   # the punch-in FX
+img = black()
 for i, f_ in enumerate(picks):
     x = 610 + (i % 3) * 222; y = 70 + (i // 3) * 300
     screen(img, f_, x, y, 0.82, (-4, 3, -2, 2, -3, 4)[i])
 signature(img, 40, 40, 1.35, 4)
-gtext(img, (52, 250), "JIANT FM", font('Bold', 130))
+ImageDraw.Draw(img).text((52, 250), "JIANT FM", font=font('Bold', 130), fill=BONE)
+img.paste(heat_rule(520, 5), (58, 392))
 d = ImageDraw.Draw(img)
-d.text((58, 405), "ALTERNATIVE FIRMWARE", font=font('SemiBold', 40), fill=WHITE)
+d.text((58, 410), "ALTERNATIVE FIRMWARE", font=font('SemiBold', 40), fill=WHITE)
 d.text((58, 452), "FOR THE M-VAVE FM-1", font=font('SemiBold', 40), fill=WHITE)
 pill = font('Bold', 30)
 txt = f"EVERY FEATURE · {VER}"
 tw = int(pill.getlength(txt))
-d.rounded_rectangle((58, 530, 58 + tw + 36, 584), 10, fill=ORANGE)
+d.rounded_rectangle((58, 530, 58 + tw + 36, 584), 10, fill=heat_c(0.62))
 d.text((76, 535), txt, font=pill, fill=(14, 8, 20))
 d.text((58, 612), "synthesis · sequencing · mutation · performance", font=font('Medium', 26), fill=DIM)
-img.paste(Image.fromarray(grad(W, 8)), (0, H - 8))
+img.paste(heat_rule(W, 8), (0, H - 8))
 img.convert('RGB').save(OUT / 'thumb-jiant-fm.png')
 print(OUT / 'thumb-dice-all.png', OUT / 'thumb-jiant-fm.png')
