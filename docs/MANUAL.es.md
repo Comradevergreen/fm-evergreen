@@ -515,6 +515,9 @@ seleccionada se graban como **automatización**. MENU > AUDIO tiene el **CLICK**
   - **PULSE**: la nota vuelve a sonar en los pasos vacíos que siguen, cada 1–4 pasos (EVERY), hasta la próxima nota.
   - **JUMP**: después de este paso el patrón sigue desde TO STEP.
   - **REV**: desde este paso el patrón vuelve hacia atrás hasta el paso 1 y después sigue hacia adelante (ping-pong).
+  - **TIMES** (KNOB 4, en JUMP y REV): **ALWAYS** gira el patrón siempre; **x1** una vez por vuelta, y después el patrón
+    sigue de largo hasta su final (una parte que suena dos veces y después el resto); **x2** dos veces por vuelta;
+    **1:2** una vez, una vuelta sí y otra no. Una vuelta termina cuando el patrón vuelve solo al principio.
   - **FILL**: el paso suena solo mientras mantenés **FX**.
   - **KILL**: el paso primero corta todo lo que suena en la pista (releases largos, notas sostenidas) y después toca.
   Los proyectos los guardan; un kit de batería ignora los ARP (TRIG, CHANCE y RATCH funcionan también en baterías).

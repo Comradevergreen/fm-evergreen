@@ -719,6 +719,24 @@ static void keyboard_block(void)
     kb_prev = cur;
 }
 
+/* (0.6.62) a JUMP's or REV's TIMES: how often it has turned the track this pass (a step each; a pass ends where the
+ * pattern wraps by itself, not by a jump) and the passes since PLAY (1:2) */
+static uint8_t fl_cnt[NTRK][NSTEP], fl_pass[NTRK];
+static void fl_reset(uint32_t ti) { memset(fl_cnt[ti % NTRK], 0, NSTEP); }
+static int fl_ok(const track_t *t, const step_t *s)   /* it turns the track now (and counts it) */
+{
+    uint32_t ti = (uint32_t)(t - trk) % NTRK, k = t->seq_idx % NSTEP, m = CP_TIMES(s->comp, s->carg);
+    if (m == 3u) {                                  /* 1:2: once, every other pass */
+        if (fl_pass[ti] & 1u)
+            return 0;
+        m = 1u;
+    }
+    if (m && fl_cnt[ti][k] >= m)
+        return 0;
+    if (m)
+        fl_cnt[ti][k]++;
+    return 1;
+}
 /* -------------------------------------------------------- sequencer --- */
 static void fg_reset(void);                         /* (fugue.c) */
 static void seq_start(void)
@@ -737,6 +755,7 @@ static void seq_start(void)
         t->arp_from = 0; t->loops = 0;             /* (0.6.39) the components: the first loop, no arpeggio */
         t->tonal = 0; t->pulse_from = t->jump_to = t->rev = 0;   /* (0.6.42) no TONAL, PULSE, JUMP, REV */
         t->cpos = t->cv_on = 0;                    /* (0.6.47) C.LEN's lane from its first step */
+        fl_reset(i), fl_pass[i] = 0;               /* (0.6.62) TIMES from the first pass */
     }
     fg_reset();                                    /* (0.6.52) FUGUE's heads from their first step */
     song.tick = 0;
@@ -1137,8 +1156,13 @@ static void seq_tick(track_t *t, uint32_t n)
         } else if (t->rev && !start) {
             t->seq_idx = 0;
             t->rev = 0;
-        } else
+        } else {
             t->seq_idx = (uint16_t)((t->seq_idx + 1u) % (len ? len : 1u));
+            if (!t->seq_idx && !start) {                /* (0.6.62) the pattern wrapped by itself: a new pass */
+                fl_reset((uint32_t)(t - trk));
+                fl_pass[(t - trk) % NTRK]++;
+            }
+        }
         t->jump_to = 0;
         if (start) t->rev = 0;
         if (!t->seq_idx) t->tonal = 0;                  /* (0.6.42) TONAL lasts to the loop's end */
@@ -1167,9 +1191,9 @@ static void seq_tick(track_t *t, uint32_t n)
                 t->rskip_n = 0;
             }
             seq_step(t, s, period, skip);
-            if (skip != SEQ_MISS && s->comp == CP_JUMP)
-                t->jump_to = (uint8_t)(s->carg % NSTEP + 1u);   /* (0.6.42) then that step */
-            else if (skip != SEQ_MISS && s->comp == CP_REV && t->seq_idx > 0u)
+            if (skip != SEQ_MISS && s->comp == CP_JUMP && fl_ok(t, s))
+                t->jump_to = (uint8_t)(CP_JTO(s->carg) % NSTEP + 1u);   /* (0.6.42) then that step */
+            else if (skip != SEQ_MISS && s->comp == CP_REV && t->seq_idx > 0u && fl_ok(t, s))
                 t->rev = 1;                             /* (0.6.42) then backwards to step 1 */
         }
     }

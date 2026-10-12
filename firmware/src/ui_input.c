@@ -722,8 +722,13 @@ static void comp_knob(uint32_t slot, int32_t steps)
         step_set_chance(st, (uint32_t)clamp((int32_t)step_chance(st) + steps, 0, 100));
     else if (v == COMP_RATCH && slot == 2u)
         step_set_ratchet(st, (uint32_t)clamp((int32_t)step_ratchet(st) + d, 1, 4));
-    else if (v >= COMP_TRIG && slot == 2u && st->comp > CP_ARPS && CP_AMAX[st->comp])   /* TRIG .. JUMP: their value */
-        st->carg = (uint8_t)clamp((int32_t)st->carg + (st->comp == CP_JUMP ? steps : d), CP_AMIN[st->comp], CP_AMAX[st->comp]);
+    else if (st->comp == CP_JUMP && slot == 2u)       /* (0.6.62) TO STEP (its TIMES kept) */
+        st->carg = (uint8_t)((st->carg & 0xC0u) | (uint32_t)clamp((int32_t)CP_JTO(st->carg) + steps, 0, 63));
+    else if ((st->comp == CP_JUMP || st->comp == CP_REV) && slot == 3u) {   /* (0.6.62) TIMES */
+        uint32_t m = (uint32_t)clamp((int32_t)CP_TIMES(st->comp, st->carg) + (d > 0 ? 1 : -1), 0, 3);
+        st->carg = (uint8_t)(st->comp == CP_JUMP ? (st->carg & 63u) | m << 6 : m);
+    } else if (v >= COMP_TRIG && slot == 2u && st->comp > CP_ARPS && CP_AMAX[st->comp])   /* TRIG .. PULSE: their value */
+        st->carg = (uint8_t)clamp((int32_t)st->carg + d, CP_AMIN[st->comp], CP_AMAX[st->comp]);
     else if (v >= COMP_ARPN && v <= COMP_ARPS && slot == 2u)
         st->carg = CP_ARG((uint32_t)clamp((int32_t)CP_ORD(st->carg) + d, 0, 3), CP_RATE(st->carg), CP_RNG(st->carg));
     else if (v >= COMP_ARPN && v <= COMP_ARPS && slot == 3u) {   /* RATE x RANGE: one list, 1 range after another */
