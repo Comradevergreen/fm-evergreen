@@ -156,15 +156,20 @@ static void graph_comp(const track_t *t, uint16_t c)
     const step_t *cs = &t->step[ui.cursor];
     int32_t y0 = 4, bh = 14, x, w;
     char b[32];
+    uint32_t cl = (uint32_t)clamp(t->p[P_CLEN], 0, NSTEP), cnow = cl && song.playing ? (t->cpos + cl - 1u) % cl : 0xFFu;
     for (i = ui.bank * 16u; i < ui.bank * 16u + 16u && i < NSTEP; i++) {
         const step_t *st = &seq_steps(t)[i];
         uint16_t mk;
         x = bar_x(i);
-        if (i >= len) continue;
+        if (cl && i < cl && i == cnow) cv_rect(x, y0 + bh + 12, 9, 2, T_MID);   /* (0.6.47) C.LEN: the lane playing */
+        if (i >= len) {                                 /* (past LEN: only C.LEN's components) */
+            if (i < cl && (mk = comp_mark(st)) != 0) cv_rect(x, y0 + bh + 3, 9, 3, mk);
+            continue;
+        }
         if (step_on(st)) cv_rrect(x, y0, 9, bh, 2, step_heat(st, st->flags & SF_ACCENT, c), T_SURF);
         else if (st->time == ST_TIE) cv_rrect(x, y0 + bh - 6, 9, 6, 1, T_MID, T_SURF);
         else cv_rrect(x, y0 + bh - 3, 9, 3, 1, T_RAISE, T_SURF);
-        if ((mk = comp_mark(st)) != 0) cv_rect(x, y0 + bh + 3, 9, 3, mk);
+        if ((mk = comp_mark(st)) != 0 && (!cl || i < cl)) cv_rect(x, y0 + bh + 3, 9, 3, mk);
         if (st->comp == CP_JUMP && st->carg / 16u == ui.bank)   /* (0.6.42) JUMP: a line to the step it names */
             cv_line(x + 4, y0 + bh + 4, bar_x(st->carg) + 4, y0 + bh + 4, mk);
         if (i == ui.cursor) cv_rect(x, y0 + bh + 8, 9, 2, T_ACCENT);
@@ -173,6 +178,11 @@ static void graph_comp(const track_t *t, uint16_t c)
     str_cpy(b, v >= COMP_ARPN && v <= COMP_ARPS ? "ARP " : "", sizeof b);
     str_cpy(b + str_len(b), v ? COMP_NAMES[v] : "NO COMPONENT  K2: TYPE", sizeof b - 8u);
     cv_text(PANEL_X0 + 2, 36, &AF_S, b, v ? T_MID : T_DIM);
+    if (cl) {                                           /* (0.6.47) the lane's own length (SHIFT > C.LEN) */
+        char lb[12] = {'C', '.', 'L', 'E', 'N', ' ', 0};
+        fmt_int(lb + 6, (int32_t)cl);
+        cv_text_r(228, 36, &AF_S, lb, T_ACCENT, T_SURF);
+    }
     if (v >= COMP_ARPN && v <= COMP_ARPS) {             /* the ladder: one cycle (up to 16 notes), as it plays */
         step_t sh = *cs;
         uint32_t n, lo = 127u, hi = 0u, now = 0xFFu;
@@ -1142,6 +1152,7 @@ static uint32_t graph_signature(void)
         const step_t *cs = &t->step[ui.cursor];
         uint32_t ph = song.playing ? seq_src(t, t->seq_idx) : 0xFFFFu;
         h = (h ^ (steps_hash(t) + ph * 31u + ui.cursor * 7919u + ui.bank * 613u)) * 16777619u;
+        h = (h ^ ((uint32_t)t->p[P_CLEN] << 8 | (song.playing ? t->cpos : 0xFFu))) * 16777619u;   /* (0.6.47) C.LEN */
         for (i = ui.bank * 16u; i < ui.bank * 16u + 16u && i < NSTEP; i++)
             h = (h ^ ((uint32_t)t->step[i].comp << 8 | t->step[i].carg | (uint32_t)t->step[i].probability << 16 |
                       (uint32_t)t->step[i].flags << 24)) * 16777619u;

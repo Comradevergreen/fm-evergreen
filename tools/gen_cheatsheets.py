@@ -7,7 +7,7 @@ import html, os
 
 R = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(R, 'docs', 'cheatsheet')
-VERSION = 'v0.6.46'
+VERSION = 'v0.6.47'
 
 HEAT = ['#22d3ee', '#3b82f6', '#8b5cf6', '#d946ef', '#ef4444', '#ff7a00', '#facc15', '#f4f1ea']
 
@@ -240,7 +240,7 @@ def controls():
                                 ('ARP 2', 'SWING PROB HOLD ORDER')]),
         ('SEQ', HEAT[4], [('STEP', 'STEP NOTE TIME FLAG'), ('STEP · DRUM', 'STEP LANE HIT ACC'), ('COMP', 'STEP TYPE VAL VAL'), ('PATTERN', 'LEN DIV SWING GATE'), 
                           ('AUTOMATION', 'PLAY EVENT LOCK CLEAR'), ('AUTO LIST', 'ROW STEP PARAM VALUE'),
-                          ('MUTATE', 'SOUND PATTERN AMOUNT MODE'), ('SHIFT', 'OFFSET PITCH CHANCE -')]),
+                          ('MUTATE', 'SOUND PATTERN AMOUNT MODE'), ('SHIFT', 'OFFSET PITCH CHANCE C.LEN')]),
         ('GLO · SAVE', HEAT[6], [('MIXER', 'LEVEL PAN REV MUTE'), ('GLOBAL', 'BPM SWING CLOCK TUNE'),
                                  ('SYSTEM', 'TRACKS LOAD ROUTE CPU'), ('PRESETS', 'No. ENG FAV LIST'),
                                  ('USER', 'SLOT LOAD ERASE SAVE'), ('PROJECT', 'PROJ SECT LOAD SAVE'), ('ARRANGE', 'ROW SECT BARS SCENE'),
@@ -330,9 +330,9 @@ def sound():
     b.append('<div class="grid g3" style="margin-top:22px">')
     b.append(card('SEQUENCER', HEAT[4],
                   '<p>64 steps a track, up to 4 notes a step, piano roll and drum grid. <b>Hold a step + turn a knob</b>: '
-                  'a parameter lock. Step recording: hold a chord + KNOB 1 its length; + ARP: arpeggiated (K1 rate, K2 order, K3 oct). COMP: a component a step (CHANCE, RATCH, ARP NOTES / SEQ / SCALE, TRIG, RAND, OCT, TONAL, BEND, ECHO, PULSE, JUMP, REV, FILL, KILL). SHIFT\'s CHANCE thins the whole track. REC + knobs while playing: '
+                  'a parameter lock. Step recording: hold a chord + KNOB 1 its length; + ARP: arpeggiated (K1 rate, K2 order, K3 oct). COMP: a component a step (CHANCE, RATCH, ARP NOTES / SEQ / SCALE, TRIG, RAND, OCT, TONAL, BEND, ECHO, PULSE, JUMP, REV, FILL, KILL). SHIFT\'s CHANCE thins the whole track; C.LEN gives the components a length of their own (they drift over the steps). REC + knobs while playing: '
                   'automation (64 records a section, MOTION page plays / clears them, AUTO LIST edits them).</p>'
-                  '<h4>PATTERN · SHIFT</h4>' + knobs('LEN', 'DIV', 'SWG', 'GATE') + knobs('OFS', 'PIT', 'CHN', '-')))
+                  '<h4>PATTERN · SHIFT</h4>' + knobs('LEN', 'DIV', 'SWG', 'GATE') + knobs('OFS', 'PIT', 'CHN', 'CLEN')))
     b.append(card('SCALE · ARP', HEAT[0],
                   '<p><b>ROOT and SCALE</b> are every melodic track\'s: CHR MAJ MIN DOR MIX PEN MPEN HARM PHRY LYD LOC MEL '
                   'BLUES WHOLE DIMHW DIMWH. QNT snaps keys or the sequence, TRN transposes, <b>ALL TR</b> (SCL 2) moves '
