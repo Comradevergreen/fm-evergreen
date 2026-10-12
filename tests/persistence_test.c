@@ -264,6 +264,7 @@ static int autosave_test(void)
     step_t st[NSTEP];
     project_store_t raw;
     reset();
+    ui_prefs |= PREF_RESTORE_ON;                          /* (JIANT 0.6.40: RESTORE LAST OFF by default) */
     as_power_on();
     as_erases = 0;
     ok = !autosave_boot(1) && !as.writes;
@@ -345,12 +346,12 @@ static int autosave_test(void)
     as_run(60000u);
     bad += check("autosave: after a crash / hang / failed boot: not restored, nothing written", ok && as_erases == b0);
     as_power_on();
-    ui_prefs |= PREF_RESTORE_OFF;
+    ui_prefs &= (uint8_t)~PREF_RESTORE_ON;
     ok = autosave_boot(1) == 0 && song.g[G_BPM] != 97;
     as_edit(7);
     as_run(300000u);
     bad += check("autosave: RESTORE LAST OFF: none restored, none written", ok && !as.writes && as_erases == b0);
-    ui_prefs &= (uint8_t)~PREF_RESTORE_OFF;
+    ui_prefs |= PREF_RESTORE_ON;
     {   /* a damaged copy: the other one (A/B); both damaged: none */
         st_hdr_t h;
         int cur, other;

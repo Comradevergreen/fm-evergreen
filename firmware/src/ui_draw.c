@@ -1444,6 +1444,10 @@ static void confirm_text(char *a, char *b)
     case CF_CLEAR_ALL:
         str_cpy(a, "CLEAR ALL SEQUENCES?", 24);
         break;
+    case CF_INIT_SYS:                                /* (0.6.40) SAVE > TOOLS 5 */
+        str_cpy(a, "INIT SYSTEM?", 24);
+        str_cpy(b, "UNDO AFTER: GLO + G4", 24);
+        break;
     case CF_DICE_ALL:                                /* (0.6.21) HOME + SELECT */
         str_cpy(a, "DICE EVERYTHING?", 24);
         str_cpy(b, "UNDO AFTER: GLO + G4", 24);

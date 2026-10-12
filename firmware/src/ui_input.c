@@ -834,7 +834,7 @@ static void edit_param(uint32_t slot, int32_t steps)
     }
     if (pg->graph == GR_TOOLS) {                          /* (0.6.25) TOOLS: a list, any knob (and PRESETS) moves the
                                                          * pick down / up; OCT+ does it (its dialog first) */
-        ui.act = steps < 0 && ui.act <= 1u ? 0u : (uint8_t)clamp((int32_t)ui.act + (steps > 0 ? 1 : -1), 1, 4);   /* (left
+        ui.act = steps < 0 && ui.act <= 1u ? 0u : (uint8_t)clamp((int32_t)ui.act + (steps > 0 ? 1 : -1), 1, 5);   /* (left
                                                          * past the first: none picked) */
         return;
     }
@@ -916,8 +916,8 @@ static void act_do(void)
             ui_message(c == 2u ? "NOTHING TO DELETE" : "NOTHING TO CLEAR");
             return;
         }
-        confirm_open(c == 0u ? CF_CLEAR_SEQ : c == 1u ? CF_INIT_SOUND :
-                     c == 2u ? CF_DEL_ROW : CF_CLEAR_SONG, c == 2u ? ui.song_row : song.sel);
+        confirm_open(c == 0u ? CF_CLEAR_SEQ : c == 1u ? CF_INIT_SOUND : c == 2u ? CF_DEL_ROW : c == 4u ? CF_INIT_SYS :
+                     CF_CLEAR_SONG, c == 2u ? ui.song_row : song.sel);
         return;
     }
     if (cur_page()->graph == GR_SONG) {
@@ -1588,6 +1588,13 @@ static void ui_input_frame(void)
                     song_idx_touch();
                     ui.song_row = 0;
                     ui_message("SONG CLEARED");
+                }
+            } else if (kind == CF_INIT_SYS) {           /* (0.6.40) SAVE > TOOLS 5: everything as at power-on */
+                if (!chain_busy()) {
+                    undo_mark();
+                    if (song.playing) transport_req = 2;
+                    system_init();
+                    ui_message("SYSTEM INIT");
                 }
             } else if (kind == CF_CLEAR_ALL) {          /* SEQ + REC: every track's steps and automation, the lane */
                 if (!chain_busy()) {

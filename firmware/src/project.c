@@ -1483,6 +1483,44 @@ static int project_restore_runtime(const project_t *input)
  * INIT / RECALL, a pattern or project loaded). undo_mark keeps the music as it is (packed as a project: ~3.8 KB);
  * undo_do brings it back and keeps what it replaced, so a second UNDO goes forward again. The transport plays on */
 static project_store_t undo_st[2] __attribute__((section(".pool")));
+/* (JIANT 0.6.40) INIT SYSTEM (SAVE > TOOLS 5, its dialog; UNDO brings the music back) and the power-on (main.c, with
+ * RESTORE LAST OFF): the six tracks their engine (TRK_DEF's) at its defaults and first sound, as INIT SOUND does; no
+ * steps, automation or locks; the mix, the global effects, the tempo and the SLICER at their defaults; the song empty,
+ * the macros at 0, the punch-in lane clear, the factory DRUM-X kit (X-MOD, TONE off, nothing muted), every FM6 patch
+ * the init voice. What is saved (projects, user presets) and the setup (CLOCK, TUNE, MIDI, ROUTE, the project slot,
+ * MENU) stay */
+static void system_init(void)
+{
+    static const uint8_t KEEP[5] = {G_CLOCK, G_TUNE, G_MIDI, G_ROUTE, G_SLOT};
+    int16_t kept[5];
+    uint32_t i;
+    for (i = 0; i < 5u; i++) kept[i] = song.g[KEEP[i]];
+    for (i = 0; i < G_COUNT; i++) song.g[i] = GP[i].def;
+    for (i = 0; i < 5u; i++) song.g[KEEP[i]] = kept[i];
+    chain_defaults(&chain_config);
+    memset(song_idx.scene[song_cur], 0, sizeof song_idx.scene[song_cur]);
+    memset(pfx_lane, 0, sizeof pfx_lane);
+    for (i = 0; i < 4u; i++) macro_v[i] = 0;
+    memcpy(dx_kit, DX_KIT_DEF, sizeof dx_kit);
+    memset(dx_mot, 0, sizeof dx_mot);
+    dx_tone = 0;
+    dx_mute_set(0);
+    fm6_init();
+    for (i = 0; i < NTRK; i++) {
+        track_t *t = &trk[i];
+        motion_clear(t);
+        load_begin(t, LOAD_SOUND | LOAD_PAT);
+        track_defaults(t);
+        set_engine_of(t, trk_def_engine(i));          /* (its defaults and first sound) */
+        motion_clear(t);
+        load_end(t);
+        pat_sig[i] = steps_sig(t);
+        pat_last[i] = 0;
+        latch_drop_req |= (uint8_t)(1u << i);
+    }
+    proj_name[0] = 0;
+    ui.force = 1;
+}
 static void undo_mark(void)
 {
     project_capture(&proj_scratch);
@@ -1711,7 +1749,7 @@ static void autosave_poll(void)
         as.t = fm1_ms;
         return;
     }
-    if (sig == as.saved || (ui_prefs & PREF_RESTORE_OFF) || fm1_ms - as.t < AS_IDLE_MS ||
+    if (sig == as.saved || !(ui_prefs & PREF_RESTORE_ON) || fm1_ms - as.t < AS_IDLE_MS ||
         (as.wrote && fm1_ms - as.last < (as.err ? AS_RETRY_MS : AS_GAP_MS)))
         return;
     as.last = fm1_ms;
@@ -1733,7 +1771,7 @@ static int autosave_boot(int allowed)
 {
     int rc = 0;
 #if FELUCCA_FLASH
-    if (flash_ok && allowed && !(ui_prefs & PREF_RESTORE_OFF)) {
+    if (flash_ok && allowed && (ui_prefs & PREF_RESTORE_ON)) {
         int n;
         proj_wire_gen++;
         n = st_load(OBJ_AUTOSAVE, &proj_wire, sizeof proj_wire);
