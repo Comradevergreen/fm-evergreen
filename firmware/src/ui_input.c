@@ -1434,6 +1434,12 @@ static void ui_input_frame(void)
     perf_latch_on = fx_latch & 1u;                      /* (MENU > FX LATCH; a settings load sets it too) */
     fx_usb_fixed = (ui_prefs & PREF_USB_FIXED) != 0u;   /* (MENU > USB LEVEL: fx.c, audio.c) */
     rp_apply();                                         /* (MENU > CLICK, CLICK LEVEL, COUNT-IN: click.c, seq.c) */
+    {   /* (0.6.55) TRACKS 6 -> 4 (MENU or GLO > SYSTEM) on T5 / T6: T4 selected (ALGORITHM stops there) */
+        static uint8_t live0 = NTRK;
+        if (trk_live < live0 && song.sel >= trk_live)
+            track_select(trk_live - 1u);
+        live0 = trk_live;
+    }
     {   /* (0.6.18) TRACKS 4 LOW: T5 / T6 picked, the screen says how to wake them (once a pick). (0.6.28) Also when a
          * note is sent to them (a key, MIDI, their steps) and when PLAY starts with steps on them: they were silent and
          * people did not know why (at most every 4 s) */
@@ -1798,8 +1804,9 @@ static void ui_input_frame(void)
     kq |= lay;
     if (!lay && (s = panel_enc(EN_PRESET)) != 0)
         presets_turn(s);
-    if (!lay && (s = panel_enc(EN_ALGO)) != 0)     /* ALGORITHM: the selected track, on every page */
-        track_select((uint32_t)clamp((int32_t)song.sel + (s > 0 ? 1 : -1), 0, NTRK - 1));
+    if (!lay && (s = panel_enc(EN_ALGO)) != 0)     /* ALGORITHM: the selected track, on every page. (0.6.55) Only
+                                                    * the tracks that play: TRACKS 4 stops at T4 (T5 / T6 asleep) */
+        track_select((uint32_t)clamp((int32_t)song.sel + (s > 0 ? 1 : -1), 0, (int32_t)trk_live - 1));
     if (((lay && ui.ly == LAYER_MACRO) || (!lay && mac_latch && !ui.menu && !ui.confirm)) &&
         (s = panel_enc(EN_SELECT)) != 0) {              /* (JIANT 0.4) the macros (HOME, LFO held): SELECT rolls their
                                                          * routes again, once a turn (latched: GLO + SELECT the tempo) */

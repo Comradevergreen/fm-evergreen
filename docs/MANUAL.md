@@ -49,7 +49,7 @@ files.
 ### Your first sound (1 minute)
 
 1. Power on. The signature draws itself, then you land on **HOME**: six creatures, one per track.
-2. Turn **ALGORITHM** to pick a track (T1–T6). With the default **TRACKS 4**, use T1–T4 (see
+2. Turn **ALGORITHM** to pick a track (T1–T6). With the default **TRACKS 4** it stops at T4: T5 and T6 appear only with TRACKS 6 (see
    [13](#13-system-tracks-load-and-the-menu)).
 3. Turn **PRESETS** to browse sounds. Play the keys.
 4. Turn **KNOB 1–4**: on HOME they are the four most useful controls of the track's engine.
@@ -84,7 +84,7 @@ The names below are the ones the firmware uses (the HARDWARE CALIBRATION screen 
 | Control | What it does |
 | --- | --- |
 | **SELECT** (encoder) | On **HOME**: opens **DICE EVERYTHING?** (the song-idea generator). On **EDIT** pages: rolls the selected track's sound. On **GLO's pages (MIXER, GLOBAL, SYSTEM)**, or with **GLO held** anywhere: the tempo (BPM). With the macros open or latched: rolls new macro routes. On other pages it says **DICE: HOME / EDIT**. |
-| **ALGORITHM** (encoder) | Selects the track, T1–T6, from any page. In the MENU: switches tabs. |
+| **ALGORITHM** (encoder) | Selects the track from any page: T1–T4, or T1–T6 with TRACKS 6. In the MENU: switches tabs. |
 | **PRESETS** (encoder) | On HOME, PRESETS and the sound pages: browses sounds (every engine's factory presets, then your user presets). On step pages (STEP, COMP, PATTERN, AUTOMATION, SHIFT): moves the step cursor. On list pages (USER, PROJECT, ARRANGE, TOOLS, AUTO LIST): moves the selection. **Hold a page button and turn PRESETS** to jump straight through that button's pages. |
 | **KNOB 1–4** | The four cards (columns) on screen. With a layer held, the layer's own knobs. Turning fast sweeps the whole range, slowly fine-tunes (MENU > KNOB ACCEL turns this off). |
 | **MASTER** | The output volume. |
