@@ -228,6 +228,7 @@ static uint32_t lg_nwide, lg_nsmall;
 static void lg_hook(const char *s, int why);
 #define LARGE_HOOK(s, why) lg_hook(s, why)
 #define UI_TEST_NO_MAIN 1
+#define PF_MS 900u                                       /* (0.6.61) the page name drawn (ui_test.c: off) */
 #include "ui_test.c"
 
 static uint8_t large_on;                         /* the LARGE pass: every scene with MENU > LARGE ON */
@@ -634,7 +635,7 @@ static void eng(uint32_t e) { set_engine_of(TSEL, e); }
 #define E_FM (FELUCCA_FM4 ? ENGI_DIGITAL : ENGI_FM6)
 
 enum { S_HOME, S_HOME_IDLE, S_MESSAGE, S_MESSAGE_KEY, S_MESSAGE_NOFILE, S_PRESETS, S_PRESETS_NOFAV, S_USER, S_PHRASES, S_PROJECT, S_TOOLS,
-       S_SONG_EMPTY, S_SONG, S_STEP, S_PATTERN, S_CHANCE, S_COMP, S_COMP_TRIG, S_COMP_ECHO, S_MUTATE, S_MORPH, S_DXIMG, S_DXSEND, S_PFLASH, S_FUGUE, S_MOTION, S_DRUM, S_DRUM_HAND, S_DRUM_CYM, S_MIXER, S_MIXER_PAN,
+       S_SONG_EMPTY, S_SONG, S_STEP, S_PATTERN, S_CHANCE, S_COMP, S_COMP_TRIG, S_COMP_ECHO, S_MUTATE, S_MORPH, S_DXIMG, S_DXSEND, S_PFLASH, S_PFLASH_HOME, S_FUGUE, S_MOTION, S_DRUM, S_DRUM_HAND, S_DRUM_CYM, S_MIXER, S_MIXER_PAN,
        S_ENV, S_ENVDEST, S_LFO, S_MOD, S_FX, S_SLICER, S_SLBUS, S_SLPITCH, S_DLY, S_SCL, S_SHIFT, S_ARP, S_VOICE, S_GLOBAL, S_SYSTEM,
        S_EDIT_ANALOG, S_EDIT_DIGITAL, S_OP_ENV, S_EDIT_WHEEL, S_EDIT_SAMPLE, S_EDIT_GRAIN,
        S_ALG1, S_ALG2, S_ALG3, S_ALG4, S_ALG5, S_ALG6, S_ALG7, S_ALG8, S_OP_LEVEL,
@@ -653,7 +654,7 @@ enum { S_HOME, S_HOME_IDLE, S_MESSAGE, S_MESSAGE_KEY, S_MESSAGE_NOFILE, S_PRESET
        S_HEAD_BPM_LOCKED, S_HEAD_GLO_TURN, S_HEAD_DOWNBEAT, S_HEAD_BEAT_2,
        S_MIXER_T4, S_HOME_T4, S_MOCK_HOME, S_MOCK_PRESETS, S_MOCK_SEQ, S_MOCK_DRUM, S_MOCK_MIXER, S_MOCK_DIALOG, S_MOCK_MENU, S_COUNT };
 static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "message", "message_key", "message_nofile", "presets", "presets_nofav", "user",
-    "phrases", "project", "tools", "song_empty", "song", "step", "pattern", "chance", "comp", "comp_trig", "comp_echo", "mutate", "morph", "dx_image", "dx_send", "page_flash", "fugue", "motion", "drum",
+    "phrases", "project", "tools", "song_empty", "song", "step", "pattern", "chance", "comp", "comp_trig", "comp_echo", "mutate", "morph", "dx_image", "dx_send", "page_flash", "page_flash_home", "fugue", "motion", "drum",
     "drum_hand", "drum_cym", "mixer", "mixer_pan", "env", "env_dest", "lfo", "mod", "fx", "slicer", "slbus", "slpitch", "dly", "scl", "shift", "arp",
     "voice", "global", "system", "edit_analog", FELUCCA_FM4 ? "edit_digital" : "edit_fm6", "op_env", "edit_wheel", "edit_voice",
     "edit_noise", "alg_1", "alg_2", "alg_3", "alg_4", "alg_5", "alg_6", "alg_7", "alg_8", "op_level", "fm6_alg_01", "fm6_alg_05", "fm6_alg_22", "fm6_alg_32", "drumx", "drumx_hit", "dx_sound", "dx_sound2", "confirm_seq", "confirm_project", "confirm_user", "confirm_pattern",
@@ -855,6 +856,9 @@ static void setup(int s)
         break;
     case S_PFLASH:                                      /* (0.6.51) a page changed by hand: its name big, held */
         go_title("LFO"); page_flash(); pf_ms = fm1_ms - 200u;
+        break;
+    case S_PFLASH_HOME:                                 /* (0.6.61) a track picked on HOME: its engine, "T1 HOME" */
+        ui.home = 1; page_flash(); pf_ms = fm1_ms - 200u;
         break;
     case S_DXIMG:                                       /* (0.6.48) DRUM IMAGE 40 */
         set_engine_of(TSEL, ENGI_DRUM); TSEL->p[P_DXIMG] = 40; go_title("STEREO");
@@ -1186,7 +1190,7 @@ static void setup(int s)
     }
     if (s != S_FUGUE)
         memset(fg_set, 0, sizeof fg_set);
-    if (s != S_PFLASH)                            /* (0.6.51) the page's big name: its own screen only (the clock stands */
+    if (s != S_PFLASH && s != S_PFLASH_HOME)      /* (0.6.51) the page's big name: its own screen only (the clock stands */
         pf_on = 0;                                /* still here: it would never go) */
 }
 static void draw(int s)

@@ -1645,12 +1645,13 @@ static void ui_draw_page(uint32_t counting)
     if (ui.force)
         draw_frame();
     felucca_dbg.stage = 3;
-    draw_head();
-    felucca_dbg.stage = 4;
-    if (pf_on)                                          /* (0.6.58) the page's name over the cards for a moment */
+    if (pf_on)                                          /* (0.6.61) the page's name in the header for a moment: the
+                                                         * cards and the graph stay in sight */
         page_flash_draw();
-    if (!pf_on)                                         /* (its end: the cards forced back at once) */
-        draw_columns();
+    if (!pf_on)                                         /* (its end: the header forced back at once) */
+        draw_head();
+    felucca_dbg.stage = 4;
+    draw_columns();
     felucca_dbg.stage = 5;
     draw_graph();
     if (ui.msg_t && !--ui.msg_t && ui.msg2[0]) {     /* the second message (ui_notices) */

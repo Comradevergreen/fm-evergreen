@@ -136,8 +136,9 @@ layer's shortcuts; on the DRUM grid they are steps and lanes; on the NAME screen
   takes now) and the USB icon. Messages appear here too ("SAVED", "T1 CLEARED"...), sometimes with a second line.
 - **Cards**: the four columns under the header are KNOB 1–4. A value that is automated or locked is marked; a dim card
   means "nothing here now".
-- **Page name**: changing page (or track) by hand shows the page's name big for a moment over the four cards (the
-  graph stays visible), with the track and its engine at the right.
+- **Page name**: changing page (or track) by hand shows the page's name in the header for a moment, with the track and
+  its engine at the right; on HOME the track's engine, "T1 HOME" small. The cards and the graph stay in sight.
+- **Granules**: a few dots drift behind the panel's graph, as on HOME (LOAD FULL with ANIM ON).
 - **Panel (middle)**: the page's graph — the engine's creature, an envelope, the LFO running, the step grid, a list...
 - **Footer**: the page name and its place in its family (e.g. **DLY 2/2**), or key hints. On the song pages
   (PROJECT, ARRANGE, TOOLS, GLOBAL, SYSTEM) it shows the project and its name instead of the track's sound.
