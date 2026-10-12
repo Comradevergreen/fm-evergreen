@@ -7,7 +7,7 @@ import html, os
 
 R = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(R, 'docs', 'cheatsheet')
-VERSION = 'v0.6.53'
+VERSION = 'v0.6.54'
 
 HEAT = ['#22d3ee', '#3b82f6', '#8b5cf6', '#d946ef', '#ef4444', '#ff7a00', '#facc15', '#f4f1ea']
 
@@ -146,7 +146,7 @@ def controls():
         ('FX', 'TRACK · SLICER · DELAY · REVERB · CHORUS · MASTER (two quick taps: next section)',
          'PUNCH-IN FX'),
         ('SCL', 'SCL · SCL 2', 'ROOT by key'),
-        ('EDIT', 'EDIT 1 · EDIT 2 · FILTER · VOICE  (FM6: OPERATOR · OP ENV · OPERATOR 2; DRUM: LANES · LANES 2 · SOUND 1–3 · LAYER · X-MOD · TONE · SEND · IMAGE)', 'INIT · RECALL · sound mutes'),
+        ('EDIT', 'EDIT 1 · EDIT 2 · FILTER · VOICE  (FM6: OPERATOR · OP ENV · OPERATOR 2; DRUM: KIT · KIT 2 · KIT 3 · X-MOD · FILTER · LEVELS 1–2 · SOUND 1–4)', 'INIT · RECALL · sound mutes'),
         ('GLO', 'MIXER · GLOBAL · SYSTEM', 'MUTE · SOLO · LEVEL · TAP'),
         ('SAVE', 'PRESETS · USER · PROJECT · ARRANGE · TOOLS', 'SONG layer'),
         ('ARP', 'ARP · ARP 2', '—'),
@@ -232,10 +232,11 @@ def controls():
                          ('CHORUS', 'RATE DEPTH STEREO -'), ('MASTER', 'CLIP PUNCH DUCK REL')]),
         ('EDIT', HEAT[3], [('EDIT 1', 'E1 E2 E3 E4'), ('EDIT 2', 'E5 E6 E7 E8'), ('RETRIG', 'RTRG - - -'), ('OPERATOR', 'OP RATIO FINE LEVEL'),
                            ('OP ENV', 'OP STAGE RATE LEVEL'), ('OPERATOR 2', 'OP MODE DETUNE VEL'), ('FILTER', 'TYPE CUT RES DRIVE'),
-                           ('VOICE', 'VOICE GLIDE MODE PRIO'), ('LANES', 'KICK SNARE CLAP HATCL'),
-                           ('LANES 2', 'HATOP TOM RIM BELL'), ('SOUND', 'LANE SIDE PITCH PMOD'),
-                           ('SOUND 2', 'DECAY NOISE COLOR MODE'), ('SOUND 3', 'LANE PMOD DRIVE WAVE'), ('LAYER', 'LANE LAYER FEEDBK -'),
-                           ('X-MOD', 'RATE DEPTH SHAPE RAND'), ('SEND', 'LANE SEND AMOUNT -'), ('IMAGE', 'IMAGE - - -')]),
+                           ('VOICE', 'VOICE GLIDE MODE PRIO'), ('KIT 3', 'BP FEEDBK IMAGE -'),
+                           ('X-MOD', 'RATE DEPTH SHAPE RAND'), ('LEVELS', 'KICK SNARE CLAP HATCL'),
+                           ('LEVELS 2', 'HATOP TOM RIM BELL'), ('SOUND', 'SOUND SIDE PITCH PMOD'),
+                           ('SOUND 2', 'SOUND DECAY NOISE COLOR'), ('SOUND 3', 'SOUND MODE PM.TYPE DRIVE'),
+                           ('SOUND 4', 'SOUND LAYER FEEDBK SEND')]),
         ('SCL · ARP', HEAT[2], [('SCL', 'ROOT SCALE QUANT TRANS'), ('SCL 2', 'ALL TR - - -'), ('ARP', 'MODE RATE OCT GATE'),
                                 ('ARP 2', 'SWING PROB HOLD ORDER')]),
         ('SEQ', HEAT[4], [('STEP', 'STEP NOTE TIME FLAG'), ('STEP · DRUM', 'STEP LANE HIT ACC'), ('COMP', 'STEP TYPE VAL VAL'), ('PATTERN', 'LEN DIV SWING GATE'), 
@@ -284,8 +285,9 @@ def sound():
         ('WHEEL', HEAT[5], 'REG SUB BODY TOP', 'PERC CLICK DRIVE ROTOR', 'Drawbar organ: registrations, percussion, rotary.'),
         ('NOISE', HEAT[4], 'MODE COLOR FREQ PEAK', 'TRK DENSE DRIFT CRUSH', 'Coloured and metallic noise, tracked or free.'),
         ('DRUM-X', '#ff7a00', 'MORPH TUNE TONE DECAY', 'NOISE FM ENV FOLD DRIVE',
-         '8 sounds BD SD CP CH OH TM RS CB, sides A / B: <b>MORPH</b> morphs the kit. SOUND · SOUND 2 · SOUND 3: LANE SIDE PITCH PMOD · '
-         'DECAY NOISE COLOR MODE · LANE PMOD DRIVE WAVE. <b>X-MOD</b>: RATE DEPTH SHAPE RAND. <b>TONE</b>: BP (hats, rim, cowbell) FEEDBK. <b>SEND</b>: one sound to CHO / DLY / REV. <b>IMAGE</b>: one knob sweeps the kit\'s stereo placings.'),
+         '8 sounds BD SD CP CH OH TM RS CB, sides A / B: <b>MORPH</b> morphs the kit. The kit first: <b>KIT 3</b> BP FEEDBK IMAGE (a knob through the '
+         'kit\'s stereo placings), <b>X-MOD</b> RATE DEPTH SHAPE RAND, LEVELS. Then a sound (KNOB 1 the sound): SIDE PITCH PMOD · DECAY NOISE COLOR · '
+         'MODE PM.TYPE DRIVE · <b>LAYER</b> (no note) FEEDBK <b>SEND</b> (CHO / DLY / REV).'),
     ]
     t = '<table><tr><th>ENGINE</th><th>EDIT 1</th><th>EDIT 2</th><th>WHAT TO KNOW</th></tr>'
     for n, c, e1, e2, d in eng:

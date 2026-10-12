@@ -227,13 +227,14 @@ and heating up with its own audio. The selected track is drawn bigger, a muted o
 | OP ENV | OP | STAGE | RATE | LEVEL | FM6 |
 | OPERATOR 2 | OP | MODE | DTUN | VEL | FM6 |
 | FILTER | TYPE | CUT | RES | DRIVE (ANALOG) / DIST (others) | every engine |
-| LANES | KICK | SNARE | CLAP | HATCL | DRUM |
-| LANES 2 | HATOP | TOM | RIM | BELL | DRUM |
-| SOUND | LANE | SIDE | PITCH | PMOD | DRUM |
-| SOUND 2 | DECAY | NOISE | COLOR | MODE | DRUM |
-| SOUND 3 | LANE | PMOD | DRIVE | WAVE | DRUM |
-| X-MOD | RATE | DEPTH | SHAPE | RAND | DRUM |
-| TONE | BP | FEEDBK | — | — | DRUM |
+| KIT 3 | BP | FEEDBK | IMAGE | — | DRUM (the whole kit) |
+| X-MOD | RATE | DEPTH | SHAPE | RAND | DRUM (the whole kit) |
+| LEVELS | KICK | SNARE | CLAP | HATCL | DRUM |
+| LEVELS 2 | HATOP | TOM | RIM | BELL | DRUM |
+| SOUND | SOUND | SIDE | PITCH | PMOD | DRUM (one sound) |
+| SOUND 2 | SOUND | DECAY | NOISE | COLOR | DRUM (one sound) |
+| SOUND 3 | SOUND | MODE | PM.TYPE | DRIVE | DRUM (one sound) |
+| SOUND 4 | SOUND | LAYER | FEEDBK | SEND | DRUM (one sound) |
 | VOICE | VOICE | GLIDE | MODE | PRIO | every engine |
 
 **GLO** (MIXER is per track; GLOBAL and SYSTEM are global)
@@ -405,31 +406,33 @@ measured); **PRIO** LAST, LOW, HIGH. The six tracks share a budget of 8 voices; 
 
 DRUM-X is a synthesized kit of eight sounds, **BD SD CP CH OH TM RS CB**, generated in real time.
 
-- Every sound has two sides, **A** and **B**. **MORPH** (EDIT 1, KNOB 1, also on HOME) moves the whole kit between
-  them: the knob to play live.
-- EDIT 1: MORPH, TUNE, TONE, DECAY. EDIT 2: NOISE, **FM ENV** (FM struck with each hit and gone in a few
-  milliseconds: a beater, a click, a metal edge on the attack, the tail clean), **FOLD** (a wavefolder after the
-  envelope: a bright attack, a clean tail), DRIVE.
-- **LANES / LANES 2**: the level of each sound (KICK, SNARE, CLAP, HATCL, HATOP, TOM, RIM, BELL).
-- **SOUND** (per sound, per side): LANE (which sound; striking a key also picks it), SIDE (A / B), PITCH, PMOD.
-- **SOUND 2**: DECAY, NOISE, COLOR, MODE (wave SIN / FM / MTL / BEL, noise filter LP / BP / HP, and "+" for snap).
-- **SOUND 3**: LANE, PMOD (how the pitch moves: DECAY, LONG, NOISE, SINE), DRIVE (ON / OFF), WAVE (SIN, FM, MTL, BEL).
-- **X-MOD** (the whole kit): **RATE** (OFF, 4BAR … 1/32, in time), **DEPTH** (how far MORPH swings), **SHAPE** (SINE,
-  TRI, SAW, RAMP, S&H), **RAND** (each hit gets its own MORPH and a little tune).
-- **TONE** (the whole kit): **BP**, a band-pass on the metal sounds (the hats, the rim, the cowbell), OFF or 15
-  centres from about 1.5 to 9 kHz; **FEEDBK**, every sound's oscillator fed back into itself (OFF, 1–15: warm, growl,
-  grit, noise). Saved with the section's kit.
-- **LAYER** (a sound's own): **LANE**, **LAYER** (OFF, 1–15): a second oscillator at an out-of-tune interval, frequency
-  modulated by the sound, more as it goes up: from a metal edge to a clang with no note, so the sound melts into the
-  rhythm and stays out of the harmony (the factory kit has it on the snare, the hats and the cowbell); **FEEDBK** (OFF,
-  1–15): that sound's oscillator fed back (added to TONE's FEEDBK, the kit's). Saved with the section's kit; the dice
-  (SELECT on a DRUM page, DICE ALL) set them boldly. Each sound with a LAYER costs a little CPU (about as FEEDBK).
-- **SEND** (a sound's own): **LANE**, **SEND** (OFF, CHORUS, DELAY, REVERB) and **AMOUNT**: that hit alone into one
-  effect, the rest of the kit as it is (on top of the track's own sends). Saved with the section's kit.
-- **IMAGE** (the track's, one knob, automatable): sweeps the kit through its placings in the stereo field. 0: every
-  sound in the middle, as before; the first turns open it; from there each step is another placing (each sound moves
-  on its own curve), so turn it until the image sits right. The kick stays near the middle. DRV, DIST and the FILTER
-  work on the kit's sum, so with them the image narrows (the page draws the sounds grey).
+- Every sound has two sides, **A** and **B**. **MORPH** (KIT, KNOB 1, also on HOME) moves the whole kit between them:
+  the knob to play live.
+- The pages go **the whole kit first, then one sound** (0.6.54):
+  - **KIT** (EDIT 1): MORPH, TUNE, TONE, DECAY. **KIT 2** (EDIT 2): NOISE, **FM ENV** (FM struck with each hit and gone
+    in a few milliseconds: a beater, a click, a metal edge on the attack, the tail clean), **FOLD** (a wavefolder after
+    the envelope: a bright attack, a clean tail), DRIVE.
+  - **KIT 3**: **BP**, a band-pass on the metal sounds (the hats, the rim, the cowbell), OFF or 15 centres from about
+    1.5 to 9 kHz; **FEEDBK**, every sound's oscillator fed back into itself (OFF, 1–15: warm, growl, grit, noise);
+    **IMAGE** (automatable): sweeps the kit through its placings in the stereo field. 0 (MONO): every sound in the
+    middle; the first turns open it; from there each step is another placing (each sound moves on its own curve), so
+    turn it until the image sits right. The kick stays near the middle. DRV, DIST and the FILTER work on the kit's sum,
+    so with them the image narrows (the page draws the sounds grey).
+  - **X-MOD**: **RATE** (OFF, 4BAR … 1/32, in time), **DEPTH** (how far MORPH swings), **SHAPE** (SINE, TRI, SAW, RAMP,
+    S&H), **RAND** (each hit gets its own MORPH and a little tune).
+  - **FILTER**, then **LEVELS / LEVELS 2**: the level of each sound (KICK, SNARE, CLAP, HATCL, HATOP, TOM, RIM, BELL).
+  - **SOUND 1–4**, one sound each: KNOB 1 is always **SOUND** (which one; striking a key also picks it).
+    - **SOUND**: SIDE (A / B), PITCH, PMOD (how far the pitch falls).
+    - **SOUND 2**: DECAY, NOISE, COLOR, of the side picked on SOUND (KNOB 1 shows it: "SD B").
+    - **SOUND 3**: **MODE** (wave SIN / FM / MTL / BEL, noise filter LP / BP / HP, "+" for snap), **PM.TYPE** (how the
+      pitch moves: DECAY, LONG, NOISE, SINE), **DRIVE** (ON / OFF).
+    - **SOUND 4**: **LAYER** (OFF, 1–15): a second oscillator at an out-of-tune interval, frequency modulated by the
+      sound, more as it goes up: from a metal edge to a clang with no note, so the sound melts into the rhythm and stays
+      out of the harmony (the factory kit has it on the snare, the hats and the cowbell); **FEEDBK** (OFF, 1–15): that
+      sound's own (added to KIT 3's); **SEND**: that hit alone into one effect, OFF then CHO, DLY, REV with 16 amounts
+      each, on one knob ("REV 75%"), on top of the track's own sends. The dice (SELECT on a DRUM page, DICE ALL) set
+      LAYER and FEEDBK boldly. Each sound with a LAYER costs a little CPU (about as FEEDBK).
+  - KIT 3, X-MOD, LAYER, FEEDBK and SEND are saved with the section's kit.
 - **Mutes**: GLO held + black keys 7–10 mute the groups KICK, SNARE, HAT, PERC; EDIT held + black keys 1–8 mute each
   sound.
 - **SELECT** on an EDIT page rolls a new kit around the factory one. **EDIT held + F3 (INIT)** brings the factory kit

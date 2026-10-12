@@ -766,6 +766,10 @@ static void edit_param(uint32_t slot, int32_t steps)
         dx_knob(pg, slot, steps);
         return;
     }
+    if (pg->graph == GR_DXIMG && slot != 2u) {            /* (0.6.54) KIT 3: BP, FEEDBK (KNOB 3 IMAGE: a parameter) */
+        dx_kit3_knob(slot, steps);
+        return;
+    }
     if (pg->graph == GR_EVENTS) {                         /* AUTO LIST (ui_events.c) */
         ev_knob(slot, steps);
         return;

@@ -1157,7 +1157,11 @@ static void page_flash_draw(void)
     sub[2] = ' ';
     str_cpy(sub + 3, ENGINES[TSEL->eng_req % NENGINES]->name, sizeof sub - 3u);
     cv_rrect(x, y, w, bh, 6, fill, T_SURF);
-    cv_text_in(x, y + CAP_IN(L, 30), w, &AF_L, ui.home ? "HOME" : cur_page()->title, ink, fill);
+    {   /* (0.6.54) EDIT 1 / 2: the engine's names for them (DRUM: KIT, KIT 2; FM6: OPS, PATCH), as the footer */
+        const page_t *pg = cur_page();
+        const char *pt = pg->scope == SC_ENGINE ? ENGINES[TSEL->eng_req % NENGINES]->page_title[pg->id[0] != P_E0] : 0;
+        cv_text_in(x, y + CAP_IN(L, 30), w, &AF_L, ui.home ? "HOME" : pt && pt[0] != '-' ? pt : pg->title, ink, fill);
+    }
     cv_text_in(x, y + 30 + CAP_IN(S, 14), w, &AF_S, sub, ink, fill);
 }
 
