@@ -11,11 +11,13 @@ analog_ext 782
 analog_morph 808
 lofi_byte_render 164
 drum_render 33
-noise_render 259
+noise_render 256
 fm6_render 378
 fm6_op_run 72
 fm6_op_fb 26
 dx_run 420
+drum_side_add 30
+drum_mix 126
 slicer_bus 819
 fm1_alnk0_irq 270
 fm1_timer5_irq 33439
@@ -27,6 +29,6 @@ perf_begin 28
 perf_mute 21
 perf_pre 31
 perf_block 522
-perf_master 33
+perf_master 32
 rev_room 218
 rev_spring 127

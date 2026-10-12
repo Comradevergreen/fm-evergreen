@@ -39,6 +39,21 @@ static void dx_knob(const page_t *pg, uint32_t k, int32_t s)
 {
     dx_lane_t *L = &dx_kit[dx_ui_lane & 7u];
     uint8_t *v = dx_ui_side ? L->b : L->a;
+    if (dx_pagen(pg) == 6u) {                           /* (JIANT 0.6.48) SEND: the sound's own bus and how much */
+        uint8_t *sn = &dx_snd[dx_ui_lane & 7u];
+        uint32_t b = DXS_BUS(*sn);
+        int32_t a = DXS_AMT(*sn);
+        if (k == 0u)
+            dx_ui_lane = (uint8_t)clamp((int32_t)dx_ui_lane + (s > 0 ? 1 : -1), 0, 7);
+        else if (k == 1u)
+            b = (uint32_t)clamp((int32_t)b + (s > 0 ? 1 : -1), 0, 3);
+        else if (k == 2u)
+            a = clamp(a + accel(EN_K1 + k, s, 63), 0, 63);
+        if (k == 1u && b && !a)
+            a = 32;                                     /* (a bus picked: something to hear) */
+        *sn = (uint8_t)(b << 6 | (uint32_t)a);
+        return;
+    }
     if (dx_pagen(pg) == 5u) {                           /* (JIANT 0.6.36) TONE: the kit's BP and FEEDBK */
         uint32_t bp = DX_TONE_BP(dx_tone), fb = DX_TONE_FB(dx_tone);
         if (k == 0u) bp = (uint32_t)clamp((int32_t)bp + (s > 0 ? 1 : -1), 0, 15);
@@ -88,6 +103,17 @@ static void dx_cards(const page_t *pg)
     const uint8_t *v = dx_ui_side ? L->b : L->a;
     char val[12];
     dx_follow();
+    if (dx_pagen(pg) == 6u) {                           /* (JIANT 0.6.48) SEND */
+        static const char *const BUS[4] = {"OFF", "CHORUS", "DELAY", "REVERB"};
+        uint32_t sn = dx_snd[dx_ui_lane & 7u], b = DXS_BUS(sn);
+        draw_column(0, "LANE", DX_LANE_ABBR[dx_ui_lane & 7u], "", VAL(0u), (int32_t)(dx_ui_lane & 7u) * 1000 / 7,
+                    ICON_X_PATTERN);
+        draw_column(1, "SEND", BUS[b], "", b ? VAL(1u) : T_DIM, (int32_t)b * 333, ICON_MIX);
+        fmt_int(val, DXS_AMT(sn) * 100 / 63);
+        draw_column(2, "AMOUNT", b ? val : "--", b ? "%" : "", b ? VAL(2u) : T_DIM, DXS_AMT(sn) * 1000 / 63, ICON_LEVEL);
+        draw_column(3, "", "", "", T_THEME, -1, ICON_NONE);
+        return;
+    }
     if (dx_pagen(pg) == 5u) {                           /* (JIANT 0.6.36) TONE */
         uint32_t bp = DX_TONE_BP(dx_tone), fb = DX_TONE_FB(dx_tone);
         if (bp) {                                       /* (its centre, as the filter sets it) */
@@ -151,6 +177,8 @@ static uint32_t dx_sig(void)
     uint32_t h = (uint32_t)dx_ui_lane * 31u + dx_ui_side * 977u + L->mode * 131u, i;
     h ^= (uint32_t)dx_mot[0] << 24 ^ (uint32_t)dx_mot[1] << 16 ^ (uint32_t)dx_mot[2] << 8 ^ dx_mot[3];   /* (X-MOD) */
     h = (h ^ dx_tone) * 2654435761u;                    /* (TONE) */
+    for (i = 0; i < DV_NLANE; i++)                      /* (0.6.48) the SENDs */
+        h = (h ^ dx_snd[i]) * 16777619u;
     for (i = 0; i < DXP_N; i++)
         h = (h ^ (uint32_t)L->a[i] << 8 ^ L->b[i]) * 16777619u;
     return h;

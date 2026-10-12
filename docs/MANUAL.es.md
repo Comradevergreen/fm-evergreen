@@ -434,6 +434,12 @@ DRUM-X es un kit sintetizado de ocho sonidos, **BD SD CP CH OH TM RS CB**, gener
 - **TONE** (todo el kit): **BP**, un pasa-banda sobre los sonidos de metal (los hi-hats, el rim, el cowbell), OFF o 15
   centros de 1,5 a 9 kHz aprox.; **FEEDBK**, el oscilador de cada sonido realimentado sobre sí mismo (OFF, 1–15:
   cálido, gruñido, arena, ruido). Se guarda con el kit de la sección.
+- **SEND** (de cada sonido): **LANE**, **SEND** (OFF, CHORUS, DELAY, REVERB) y **AMOUNT**: ese golpe solo hacia un
+  efecto, el resto del kit como está (se suma a los envíos de la pista). Se guarda con el kit de la sección.
+- **IMAGE** (de la pista, una perilla, automatizable): barre el kit por sus ubicaciones en el estéreo. 0: todos los
+  sonidos al medio, como antes; los primeros pasos lo abren; desde ahí cada paso es otra ubicación (cada sonido se mueve
+  por su propia curva), así que girala hasta que la imagen quede bien. El bombo queda cerca del medio. DRV, DIST y el
+  FILTER trabajan sobre la suma del kit, así que con ellos la imagen se angosta (la página dibuja los sonidos en gris).
 - **Mutes**: GLO mantenido + teclas negras 7–10 mutean los grupos KICK, SNARE, HAT, PERC; EDIT mantenido + teclas
   negras 1–8 mutean cada sonido.
 - **SELECT** en una página EDIT tira un kit nuevo alrededor del de fábrica. **EDIT mantenido + F3 (INIT)** trae de

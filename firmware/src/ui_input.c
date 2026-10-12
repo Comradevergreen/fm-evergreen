@@ -1629,6 +1629,7 @@ static void ui_input_frame(void)
                     if (drum_track(TSEL)) {
                         memcpy(dx_kit, DX_KIT_DEF, sizeof dx_kit);
                         memset(dx_mot, 0, sizeof dx_mot);   /* (0.5.1: X-MOD off) */
+                        memset(dx_snd, 0, sizeof dx_snd);   /* (0.6.48: no SEND) */
                     }
                     ui_message("SOUND INIT");
                 }

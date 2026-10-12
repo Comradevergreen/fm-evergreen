@@ -274,6 +274,24 @@ static void graph_mutate(void)
 
 /* (0.6.45) EDIT > MORPH: a cycle of the wave as it morphs (from WAVE towards the next ones), heat coloured by its
  * height; under it the two waves it is between */
+/* (0.6.48) EDIT > IMAGE (a DRUM track): the eight sounds from left to right as IMAGE places them (as wide as DRV,
+ * DIST and the FILTER let it play: dx_img_k), a row each, the kick on top, on a line from the middle */
+static void graph_dximg(const track_t *t)
+{
+    static const char *const AB[DV_NLANE] = {"BD", "SD", "CP", "CH", "OH", "TM", "RS", "CB"};
+    int32_t img = clamp(t->p[P_DXIMG], 0, 127), k = img ? dx_img_k(t) : 0, cx = PANEL_X0 + PANEL_W / 2;
+    uint32_t l;
+    cv_rect(cx, 0, 1, 96, T_RAISE);
+    for (l = 0; l < DV_NLANE; l++) {
+        int32_t p = img ? dx_img_pan(l, img) * k >> 8 : 0, y = (int32_t)l * 12;
+        int32_t x = cx + p * (PANEL_W / 2 - 14) / 64;
+        uint16_t c = k < 256 && img ? T_MID : heat_col(60u + l * 22u);   /* (narrowed by DRV DIST FILTER: grey) */
+        cv_rect(p < 0 ? x : cx, y + 6, p < 0 ? cx - x : x - cx, 1, c);
+        cv_rrect(x - 13, y, 26, 12, 2, c, T_SURF);
+        cv_text_in(x - 13, y + CAP_IN(S, 12), 26, &AF_S, AB[l], T_INK, c);
+    }
+}
+
 static void graph_morph(const track_t *t)
 {
     const int16_t *p = t->p;
@@ -1140,6 +1158,8 @@ static uint32_t graph_signature(void)
         h = (h ^ (n + 1u) * 40503u ^ ev_row(n) * 2654435761u ^ ((uint32_t)ui.ev_step << 8 | ui.ev_id) * 104729u) * 16777619u;
     }
     if (pg->graph == GR_CHANCE) h ^= ui.cursor * 40503u + step_chance(&t->step[ui.cursor]);
+    if (pg->graph == GR_DXIMG)                       /* (0.6.48) IMAGE and how wide it plays */
+        h = (h ^ ((uint32_t)t->p[P_DXIMG] << 16 | (uint32_t)dx_img_k(t))) * 16777619u;
     if (pg->graph == GR_MORPH)                       /* (0.6.45) the wave, MORPH */
         h = (h ^ ((uint32_t)t->p[P_MORPH] << 16 | (uint32_t)t->p[P_E0] << 8 | (uint32_t)t->p[P_E1] |
                   (uint32_t)t->p[P_E2] << 24)) * 16777619u;
@@ -1935,6 +1955,9 @@ static void draw_graph(void)
             break;
         case GR_MORPH:
             graph_morph(t);
+            break;
+        case GR_DXIMG:
+            graph_dximg(t);
             break;
         case GR_ROLL:
         case GR_CHANCE:
