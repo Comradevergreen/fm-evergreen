@@ -24,7 +24,7 @@
 enum { T_LEAD, T_BASS, T_BRASS, T_DRUM, T_CHOIR, T_ANVIL };
 static FILE *wav, *rgb, *cap, *frm, *lst;
 static uint32_t nsamp;
-static int weird;
+static int weird, es;                              /* (es: the project's quotes translated) */
 static uint32_t eng_of(const char *name)
 {
     uint32_t e;
@@ -307,9 +307,13 @@ static void project_beat(uint32_t q)
         mute(T_LEAD, 0); mute(T_ANVIL, 0); page(T_DRUM, "EDIT 1");
         caption(q, "EN REDES", "EL RECIBIMIENTO", "lo están instalando y comentando|esto dicen en YouTube", 0, "");
     }
-    if (q == B(6, 0)) caption(q, "COMENTARIO EN YOUTUBE", "Been playing around with|Jiant and it's my|favorite so far.", "", 4, "");
-    if (q == B(7, 2)) caption(q, "COMENTARIO EN YOUTUBE", "The level of destruction|through the FX alone|is amazing.", "", 4, "");
-    if (q == B(9, 0)) caption(q, "COMENTARIO EN YOUTUBE", "My FM-1 is in the mail and|I'm not sure I'm even gonna|try the default firmware|before installing this.", "", 4, "");
+    if (q == B(6, 0)) caption(q, es ? "COMENTARIO EN YOUTUBE · TRADUCIDO" : "COMENTARIO EN YOUTUBE",
+                              es ? "Estuve probando Jiant|y por ahora|es mi favorito." : "Been playing around with|Jiant and it's my|favorite so far.", "", 4, "");
+    if (q == B(7, 2)) caption(q, es ? "COMENTARIO EN YOUTUBE · TRADUCIDO" : "COMENTARIO EN YOUTUBE",
+                              es ? "El nivel de destrucción|solo con los FX|es increíble." : "The level of destruction|through the FX alone|is amazing.", "", 4, "");
+    if (q == B(9, 0)) caption(q, es ? "COMENTARIO EN YOUTUBE · TRADUCIDO" : "COMENTARIO EN YOUTUBE",
+                              es ? "Mi FM-1 está en camino|y no sé si voy a probar|el firmware original|antes de instalar esto." :
+                                   "My FM-1 is in the mail and|I'm not sure I'm even gonna|try the default firmware|before installing this.", "", 4, "");
     if (q == B(11, 0)) { home(T_LEAD); caption(q, "QUÉ TIENE", "6 PISTAS · 6 MOTORES", "cada una con su ser|que reacciona al sonido", 0, "ANALOG · FM6 · PHASE|LOFI · VOICE · DRUM-X"); }
     if (q == B(12, 0)) { page(T_DRUM, "SOUND"); dx_ui_lane = 1; caption(q, "QUÉ TIENE", "DRUM-X", "8 voces sintetizadas|MORPH del kit A al B", 0, "sin samples|cada voz a su efecto"); }
     if (q == B(13, 0)) { page(T_LEAD, "OPERATOR"); caption(q, "QUÉ TIENE", "FM6", "seis operadores en el aparato|32 voces clásicas", 0, ""); }
@@ -353,7 +357,8 @@ int main(int argc, char **argv)
 {
     char p[512];
     const char *dir = argc > 1 ? argv[1] : "build/video5/story_weird";
-    weird = !(argc > 2 && !strcmp(argv[2], "project"));
+    weird = !(argc > 2 && (!strcmp(argv[2], "project") || !strcmp(argv[2], "project_es")));
+    es = argc > 2 && !strcmp(argv[2], "project_es");
     uint32_t f, total = (uint32_t)(FPS * SECS), beat_done = 0xFFFFFFFFu, nwav = (uint32_t)(FS * SECS), k;
     snprintf(p, sizeof p, "%s/audio.wav", dir); wav = fopen(p, "wb");
     snprintf(p, sizeof p, "%s/screen.rgb", dir); rgb = fopen(p, "wb");
