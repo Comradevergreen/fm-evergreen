@@ -16,7 +16,7 @@
 
 #define FPS 30u
 #define BPM 112u
-#define BARS 24u
+#define BARS film_bars
 #define BEAT_S (60.0 / BPM)
 #define SECS (BARS * 4u * BEAT_S)
 #define SPLASH_BEATS 8u
@@ -24,7 +24,8 @@
 enum { T_LEAD, T_BASS, T_BRASS, T_DRUM, T_CHOIR, T_ANVIL };
 static FILE *wav, *rgb, *cap, *frm, *lst;
 static uint32_t nsamp;
-static int weird, es;                              /* (es: the project's quotes translated) */
+static uint32_t film_bars = 24u;
+static int weird, es, yt;                              /* (es: the project's quotes translated) */
 static uint32_t eng_of(const char *name)
 {
     uint32_t e;
@@ -207,6 +208,73 @@ static void slicer_unused(uint32_t mode, uint32_t mask)
 }
 
 static project_store_t film_song;
+/* (the YouTube film, 16:9, tools/video/plate.html) the project, told in English over the song in full: an intro, the
+ * verse, the mystery under the quotes, the choruses, a break, the end */
+static const char *const BRK[8] = {0, 0, 0, "x...x...x...x...", "......x.......x.", 0, "...x.....x..x...", "..x.......x....."};
+static void yt_beat(uint32_t q)
+{
+    if (q == B(0, 0)) { mute(T_CHOIR, 0); mute(T_BASS, 0); }
+    if (q == B(2, 0)) {
+        mute(T_DRUM, 0); mute(T_BRASS, 0); home(T_BASS);
+        caption(q, "PROJECT", "JIANT FM", "a custom firmware for the M-Vave FM1|designed by one artist in Buenos Aires", 0,
+                "hardware · M-Vave FM1|base · Felucca|author · JIANT, one person|license · free, open source");
+    }
+    if (q == B(6, 0)) {
+        mute(T_LEAD, 0); mute(T_ANVIL, 0); page(T_BRASS, "OPERATOR");
+        caption(q, "WHY IT EXISTS", "MORE INSIDE", "the FM1 is small and cheap|and holds far more than it shows", 0,
+                "play whole songs|bend them live|sequence every change");
+    }
+    if (q == B(10, 0)) {
+        drums(STOMP2); page(T_DRUM, "EDIT 1");
+        caption(q, "FIELD NOTES", "THE RECEPTION", "people are installing it|and talking about it on YouTube", 0, "");
+    }
+    if (q == B(12, 0)) {
+        drums(BRK); mute(T_BRASS, 1);
+        caption(q, "FIELD NOTE 01 · YOUTUBE", "Been playing around with|Jiant and it's my|favorite so far.", "", 4, "");
+    }
+    if (q == B(14, 0)) caption(q, "FIELD NOTE 02 · YOUTUBE", "The level of destruction|through the FX alone|is amazing.", "", 4, "");
+    if (q == B(16, 0)) caption(q, "FIELD NOTE 03 · YOUTUBE", "My FM-1 is in the mail and|I'm not sure I'm even gonna|try the default firmware|before installing this.", "", 4, "");
+    if (q == B(19, 0)) {
+        drums(STOMP2); mute(T_BRASS, 0); page(T_DRUM, "SOUND"); dx_ui_lane = 1;
+        caption(q, "ANATOMY · A", "DRUM-X", "eight synthesized voices, no samples|MORPH from kit A to kit B", 0,
+                "per-voice send to the reverb|stereo image on one knob");
+    }
+    if (q == B(21, 0)) {
+        home(T_LEAD); hold_btn(B_FX, 1);
+        caption(q, "ANATOMY · B", "PUNCH-IN FX", "hold FX and play the keys|repeats, octaves, stutters, live", 0, "the screen locks open|momentary effects");
+    }
+    if (q == B(21, 2)) hold_btn(B_FX, 0);
+    if (q >= B(22, 0) && q < B(23, 0)) { perf_press(PF_R16, q % 2u == 0u); perf_press(PF_OCTU, q % 2u == 1u); }
+    if (q == B(23, 0)) {
+        perf_press(PF_R16, 0); perf_press(PF_OCTU, 0); hold_btn(B_FX, 1);
+        chain_config.count = 4;
+        chain_config.row[0] = (chain_row_t){0, 4}; chain_config.row[1] = (chain_row_t){1, 8};
+        chain_config.row[2] = (chain_row_t){2, 4}; chain_config.row[3] = (chain_row_t){1, 8};
+        caption(q, "ANATOMY · C", "SONG MODE", "sections, scenes, a whole set|played from the device", 0, "A · B · C · B|END x2..x8 · LOOP");
+    }
+    if (q == B(23, 1)) { hold_btn(B_FX, 0); go_title("ARRANGE"); ui.song_row = 1; }
+    if (q == B(25, 0)) {
+        trk[T_LEAD].step[0].comp = CP_RAND; trk[T_LEAD].step[0].carg = 4;
+        trk[T_LEAD].step[16].comp = CP_ECHO; trk[T_LEAD].step[16].carg = 1;
+        page(T_LEAD, "COMP"); ui.cursor = 16; ui.bank = 1;
+        caption(q, "ANATOMY · D", "STEP COMPONENTS", "steps that arpeggiate, echo,|wander and jump", 0, "ARP · TRIG · RAND · ECHO|JUMP with TIMES");
+    }
+    if (q == B(27, 0)) {
+        trk[T_BRASS].p[P_MPAT] = 1; trk[T_BRASS].p[P_MAMT] = 55; page(T_BRASS, "MUTATE");
+        caption(q, "ANATOMY · E", "MUTATE · FUGUE", "tracks that evolve by themselves|playheads that make canons", 0, "ORBIT · DRIFT|three more heads in the scale");
+    }
+    if (q == B(29, 0)) {
+        trk[T_BRASS].p[P_MPAT] = 0; home(T_LEAD);
+        caption(q, "ANATOMY · F", "A LIVING SCREEN", "six beings, one for each track|everything follows the sound", 0, "nucleus = the level|membrane = the sound's shape");
+    }
+    if (q == B(31, 0)) {
+        drums(BRK); go_title("SYSTEM");
+        caption(q, "OPEN", "FREE FOR EVERYONE", "install it from the browser|no app, no account", 0,
+                "juanjiant-bit.github.io/JIANT|github.com/juanjiant-bit/JIANT");
+    }
+    if (q == B(34, 0)) { drums(STOMP2); home(T_LEAD); caption(q, "", "", "", 0, ""); }
+    if (q == B(38, 0)) { mute(T_DRUM, 1); mute(T_BRASS, 1); mute(T_ANVIL, 1); }
+}
 static void weird_beat(uint32_t q)
 {
     uint32_t bar = q / 4u, k;
@@ -357,7 +425,9 @@ int main(int argc, char **argv)
 {
     char p[512];
     const char *dir = argc > 1 ? argv[1] : "build/video5/story_weird";
-    weird = !(argc > 2 && (!strcmp(argv[2], "project") || !strcmp(argv[2], "project_es")));
+    yt = argc > 2 && !strcmp(argv[2], "yt");
+    if (yt) film_bars = 40u;
+    weird = !yt && !(argc > 2 && (!strcmp(argv[2], "project") || !strcmp(argv[2], "project_es")));
     es = argc > 2 && !strcmp(argv[2], "project_es");
     uint32_t f, total = (uint32_t)(FPS * SECS), beat_done = 0xFFFFFFFFu, nwav = (uint32_t)(FS * SECS), k;
     snprintf(p, sizeof p, "%s/audio.wav", dir); wav = fopen(p, "wb");
@@ -373,7 +443,7 @@ int main(int argc, char **argv)
     for (f = 0; f < total; f++) {
         double t = (double)f / FPS;
         uint32_t want = (uint32_t)((uint64_t)(f + 1u) * FS / FPS), beat = (uint32_t)(t / BEAT_S);
-        if (beat != beat_done) { beat_done = beat; if (weird) weird_beat(beat); else project_beat(beat); }
+        if (beat != beat_done) { beat_done = beat; if (yt) yt_beat(beat); else if (weird) weird_beat(beat); else project_beat(beat); }
         while (nsamp < want && nsamp < nwav) {
             int32_t o[2 * CTL];
             int16_t s[2 * CTL];

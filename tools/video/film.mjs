@@ -32,7 +32,7 @@ await page.route("http://film/**", async r => {
   if (p === "/data.json") return r.fulfill({ path: path.join(dir, "data.json"), contentType: "application/json" });
   if (p === "/version") return r.fulfill({ body: ver, contentType: "text/plain" });
   if (p.startsWith("/fonts/")) return r.fulfill({ path: path.join(FONTS, path.basename(p)) });
-  return r.fulfill({ path: path.join(root, film === "promo" ? "tools/video/promo.html" : film.startsWith("story") ? "tools/video/stories.html" : "tools/video/film.html"), contentType: "text/html" });
+  return r.fulfill({ path: path.join(root, film === "promo" ? "tools/video/promo.html" : film === "plate" ? "tools/video/plate.html" : film.startsWith("story") ? "tools/video/stories.html" : "tools/video/film.html"), contentType: "text/html" });
 });
 await page.goto("http://film/film.html");
 const n = await page.evaluate(f => boot(f), film);
