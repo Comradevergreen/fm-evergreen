@@ -1107,6 +1107,7 @@ valor. HOME lo cierra (en ese momento se guarda la configuración).
 | CONTROL | FX LATCH | **OFF** (por defecto desde 0.6.64), ON |
 | CONTROL | BPM LOCK | OFF, ON — DICE ALL conserva el tempo (el tempo es GLO + SELECT, F4 TAP de GLO o el BPM de GLOBAL) |
 | CONTROL | SCALE LEDS | OFF, ON — las teclas de la escala se iluminan, la tónica más brillante |
+| CONTROL | MIDI OUT | **KEYS**, CLOCK, ALL, OFF — qué sale por MIDI USB (ver [14](#14-midi-y-usb)) |
 | AUDIO | SPEAKER EQ | FLAT, LOWCUT, BASS+ (un EQ en el master para el parlante chico; también llega a las salidas y al USB) |
 | AUDIO | USB LEVEL | MASTER (el USB sigue a la perilla MASTER), FIXED (USB a nivel completo) |
 | AUDIO | CLICK | OFF, REC (mientras una pista está armada y sonando), ON |
@@ -1130,8 +1131,22 @@ protección desvaneció): una foto de esa pantalla ayuda cuando reportás un pro
 - **USB** es MIDI y audio class-compliant: la salida master le llega a la computadora como una entrada de audio USB.
 - **MIDI IN** por USB y por el jack **TRS**. **ROUTE** decide qué pista toca cada canal (ver
   [13](#13-sistema-tracks-load-y-el-menu)). Las notas entrantes en una pista armada se graban igual que las teclas.
-- **MIDI OUT** (por USB): las teclas mandan sus notas por el canal de la pista seleccionada (T1 = canal 1 … T6 =
-  canal 6).
+- **MIDI OUT** (por USB; MENU > CONTROL > **MIDI OUT**, 0.6.72), cada pista por su canal (T1 = canal 1 … T6 =
+  canal 6):
+  - **KEYS** (por defecto): las teclas mandan sus notas, como siempre.
+  - **CLOCK**: y además el clock (24 por negra) con **START / STOP**, mientras el tempo es el del FM-1 (CLOCK INT): una
+    caja de ritmos o un DAW lo siguen. El clock corre también parado, así el que sigue conoce el tempo antes del PLAY.
+  - **ALL**: y además todas las notas que toca el FM-1: el secuenciador, el arpegiador, FUGUE y las repeticiones de
+    los punch-in, con el OCT− / OCT+ y el RANDOM de los punch-in aplicados; cada nota tiene su note-off, y STOP, un
+    pánico o un cambio del ajuste apagan lo que quede sonando. Grabá la música del FM-1 en un DAW como MIDI, o tocá
+    otros sintes con él.
+  - **OFF**: nada.
+- **PROGRAM CHANGE** (0.6.72): el programa *n* en el canal que toca una pista carga en esa pista el sonido número
+  *n* + 1 de la lista de PRESETS (los presets de cada motor en su orden, después los presets de usuario); la pista
+  seleccionada no cambia.
+- **No es posible**: MIDI OUT por el jack **TRS** (el jack del FM-1 es solo de entrada: no le llega ninguna línea de
+  salida) ni **MIDI por Bluetooth** (el chip tiene radio, pero su software de Bluetooth es el SDK cerrado de JieLi,
+  que JIANT no usa).
 - **Clock**: GLO > GLOBAL > CLOCK **USB** o **TRS** sigue el clock y los Start / Continue / Stop de esa entrada. Con un
   clock externo, TAP y el reinicio con GLO + PLAY quedan desactivados.
 - **Controladores** (en la pista que toca el canal): CC5 glide, CC7 nivel, CC10 paneo, CC71 resonancia y CC74 cutoff

@@ -1570,7 +1570,9 @@ static void ui_input_frame(void)
             set_engine_of(&trk[k], ENGI_PHYS_TO);
     perf_latch_on = fx_latch & 1u;                      /* (MENU > FX LATCH; a settings load sets it too) */
     fx_usb_fixed = (ui_prefs & PREF_USB_FIXED) != 0u;   /* (MENU > USB LEVEL: fx.c, audio.c) */
-    rp_apply();                                         /* (MENU > CLICK, CLICK LEVEL, COUNT-IN: click.c, seq.c) */
+    mo_lvl = (uint8_t)(midi_out_mode & 3u);             /* (0.6.72) MENU > MIDI OUT (seq.c) */
+    midi_pc_poll();                                     /* (0.6.72) PROGRAM CHANGE in: the sounds it asked for */
+    rp_apply();                                        /* (MENU > CLICK, CLICK LEVEL, COUNT-IN: click.c, seq.c) */
     {   /* (0.6.55) TRACKS 6 -> 4 (MENU or GLO > SYSTEM) on T5 / T6: T4 selected (ALGORITHM stops there) */
         static uint8_t live0 = NTRK;
         if (trk_live < live0 && song.sel >= trk_live)

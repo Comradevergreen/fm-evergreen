@@ -347,7 +347,9 @@ static uint32_t div_samples(uint32_t div)
 }
 
 #include "perform.c"                                 /* the FX hold layer's effects (the master) */
-#include "pfx.c"                                     /* .. its punch-in MIDI effects (on the notes) */
+static void seq_note_on(track_t *t, uint32_t note, uint32_t vel);   /* (0.6.72: seq.c, a note MIDI OUT ALL sends) */
+static void seq_note_off(track_t *t, uint32_t note);
+#include "pfx.c"                                   /* .. its punch-in MIDI effects (on the notes) */
 #include "click.c"                                   /* the metronome's click (after the master: audio.c) */
 
 /* (JIANT) GRAIN delay (G_DPIT / G_DSPRY not 0): the line is read by two grains of GR_LEN samples, half a grain
@@ -1255,6 +1257,7 @@ static int mc_wait(void) { return 0; }
 static volatile uint8_t mc_off;                          /* REC held at power-on: one core this session (main.c) */
 static volatile int8_t mc_cur = -1;                      /* the part core 1 is in (a job given up: its matrix put back) */
 static uint8_t mc_mask_last;                             /* the parts core 1 had the last block (MENU > ABOUT, tests) */
+static uint32_t mc_jobs;                                 /* (0.6.72) blocks core 1 rendered parts in (console status) */
 static __attribute__((noinline)) void mc_job(uint32_t a)   /* core 1: the parts of mask a & 0xFF, a >> 8 samples */
 {
     uint32_t i, n = a >> 8;
@@ -1367,8 +1370,10 @@ static __attribute__((noinline)) void mix_block(int32_t *out, uint32_t n)   /* (
         if (!((c1m >> i) & 1u))
             mix_part(&trk[i], n);
     if (c1m) {
-        if (!mc_wait())
+        if (!mc_wait()) {
             mc_join(n);
+            mc_jobs++;
+        }
         else
             mc_lost();                                  /* (its parts' block dropped; one core from here) */
     }

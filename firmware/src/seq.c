@@ -50,6 +50,88 @@ static uint32_t trk_midi_ch(uint32_t i) { return i % NTRK; }   /* MIDI channel 0
 
 static int drum_track(const track_t *t) { return ENGINES[eng_idx(t->eng_req)] == &ENG_DRUM; }
 
+/* (JIANT 0.6.72) MENU > CONTROL > MIDI OUT (ui.c midi_out_mode, over USB): KEYS (as ever: the keys' notes), CLOCK (and
+ * the clock, 24 a beat, with START / STOP while the tempo is the FM-1's own), ALL (and every note the FM-1 plays: the
+ * sequencer, the arp, FUGUE, the punch-in repeats, OCT and RANDOM on them, each track on its channel; the keys then
+ * only where no arp plays them), OFF. The notes sent are remembered (mo_out): each gets its note-off, all of them at
+ * STOP, a panic or a change of setting */
+enum { MO_KEYS, MO_CLOCK, MO_ALL, MO_OFF };
+static volatile uint8_t mo_lvl;                    /* the setting (ui.c sets it every frame) */
+static uint8_t mo_last;                            /* .. as the ISR last saw it */
+static uint8_t mo_out[NTRK][128];                  /* a played note's note sent on, + 1 (0: none) */
+static uint32_t mo_pulse_acc;                      /* (samples towards the next clock) */
+static void mo_send(uint32_t st, uint32_t d1, uint32_t d2)
+{
+    midi_out_event((st >> 4) | st << 8 | d1 << 16 | d2 << 24);
+}
+static int mo_plays(const track_t *t, uint32_t note)   /* trk_note_on would sound it (voice.c: the same tests) */
+{
+    return trk_index(t) < trk_live && !t->p[P_MUTE] && !((trk_hush >> trk_index(t)) & 1u) &&
+           !(t->engine == ENGI_DRUM && drum_muted(note));
+}
+/* a note the FM-1 plays (not a key's): sounded, and with ALL sent as it sounds: the punch-ins' OCT- / OCT+ and RANDOM
+ * on it (pfx.c pfx_pit, pfx_rpit: drawn by trk_note_on) */
+static void seq_note_on(track_t *t, uint32_t note, uint32_t vel)
+{
+    uint32_t i = trk_index(t) % NTRK, send = mo_lvl == MO_ALL && note < 128u && mo_plays(t, note) && !pfx_holds(t);
+    trk_note_on(t, note, vel);
+    if (send) {
+        uint32_t x = (uint32_t)clamp((int32_t)note + (t->pfx_pit + t->pfx_rpit) / 16, 0, 127);
+        if (mo_out[i][note])
+            mo_send(0x80u | trk_midi_ch(i), mo_out[i][note] - 1u, 0);   /* (struck again: its last one ends first) */
+        mo_out[i][note] = (uint8_t)(x + 1u);
+        mo_send(0x90u | trk_midi_ch(i), x, vel ? vel : 1u);
+    }
+}
+static void seq_note_off(track_t *t, uint32_t note)
+{
+    uint32_t i = trk_index(t) % NTRK;
+    if (note < 128u && mo_out[i][note]) {
+        mo_send(0x80u | trk_midi_ch(i), mo_out[i][note] - 1u, 0);
+        mo_out[i][note] = 0;
+    }
+    trk_note_off(t, note);
+}
+static __attribute__((noinline)) void mo_flush_of(uint32_t mask)   /* the notes sent on, of these tracks: off */
+{
+    uint32_t i, n;
+    for (i = 0; i < NTRK; i++)
+        if ((mask >> i) & 1u)
+            for (n = 0; n < 128u; n++)
+                if (mo_out[i][n]) {
+                    mo_send(0x80u | trk_midi_ch(i), mo_out[i][n] - 1u, 0);
+                    mo_out[i][n] = 0;
+                }
+}
+#define mo_flush() mo_flush_of(0xFFu)
+static void mo_key(const track_t *t, uint32_t pkt)   /* a key's note: not with OFF; with ALL, an arp sends its own */
+{
+    if (mo_lvl != MO_OFF && !(mo_lvl == MO_ALL && t->p[P_AMODE]))
+        midi_out_event(pkt);
+}
+static int mo_clock_on(void) { return (mo_lvl == MO_CLOCK || mo_lvl == MO_ALL) && !song.g[G_CLOCK]; }
+static __attribute__((noinline)) void mo_block(uint32_t n)   /* events_block: the setting changed; the clock */
+{
+    if (mo_lvl != mo_last) {
+        if (mo_last == MO_ALL)
+            mo_flush();
+        if ((mo_last == MO_CLOCK || mo_last == MO_ALL) && !(mo_lvl == MO_CLOCK || mo_lvl == MO_ALL) && song.playing &&
+            !song.g[G_CLOCK])
+            mo_send(0xFCu, 0, 0);                    /* (the clock leaves: whatever follows it stops) */
+        mo_last = mo_lvl;
+    }
+    if (mo_clock_on()) {                             /* 24 a beat, also while stopped (a follower holds the tempo) */
+        uint32_t len = beat_samples() / 24u;
+        if (len < 64u)
+            len = 64u;
+        mo_pulse_acc += n;
+        while (mo_pulse_acc >= len) {
+            mo_pulse_acc -= len;
+            midi_out_event(0x0Fu | 0xF8u << 8);
+        }
+    }
+}
+
 /* the 27 keys from F: black or white, and the key's place among the keys of its colour (white 0..15, black
  * 0..10). The DRUM grid: white keys are steps, black keys 1..8 lanes, 9 ACC, 10 / 11 the page */
 static int key_black(uint32_t k) { return (int)((0x54Au >> ((k + 5u) % 12u)) & 1u); }
@@ -196,7 +278,7 @@ static __attribute__((noinline)) void arp_chord_off(track_t *t, int rec)   /* th
         if (t->arp_ch[i]) {
             if (rec)
                 rec_release(t, t->arp_ch[i]);
-            trk_note_off(t, t->arp_ch[i]);
+            seq_note_off(t, t->arp_ch[i]);
             t->arp_ch[i] = 0;
         }
 }
@@ -216,7 +298,7 @@ static __attribute__((noinline)) void arp_chord(track_t *t, const uint32_t *list
             t->arp_ch[i - 1u] = (uint8_t)nt;
         if (rec_on(t))
             rec_note(t, nt, 100);
-        trk_note_on(t, nt, 100);
+        seq_note_on(t, nt, 100);
     }
 }
 
@@ -224,7 +306,7 @@ static void arp_silence(track_t *t)              /* the sounding arp note(s) end
 {
     if (t->arp_ch[0] | t->arp_ch[1] | t->arp_ch[2])
         arp_chord_off(t, 0);
-    trk_note_off(t, t->arp_note);
+    seq_note_off(t, t->arp_note);
     t->arp_note = 0;
 }
 
@@ -232,7 +314,7 @@ static void arp_off(track_t *t)                  /* the sounding arp note(s) end
 {
     if (t->arp_ch[0] | t->arp_ch[1] | t->arp_ch[2])
         arp_chord_off(t, rec_on(t));
-    trk_note_off(t, t->arp_note);
+    seq_note_off(t, t->arp_note);
     if (rec_on(t))
         rec_release(t, t->arp_note);
     t->arp_note = 0;
@@ -360,7 +442,7 @@ static void arp_step(track_t *t, uint32_t n, uint32_t gate_n)
         t->arp_note = (uint8_t)list[j];
         if (rec_on(t))
             rec_note(t, t->arp_note, 100);           /* recording: what the arp plays */
-        trk_note_on(t, t->arp_note, 100);
+        seq_note_on(t, t->arp_note, 100);
     }
 }
 
@@ -580,7 +662,7 @@ static void latch_release(track_t *t)
     uint32_t i;
     for (i = 0; i < t->nheld; i++) {
         trk_note_off(t, t->held[i]);
-        midi_out_event(0x08u | (0x80u | trk_midi_ch(trk_index(t))) << 8 | (uint32_t)t->held[i] << 16);
+        mo_key(t, 0x08u | (0x80u | trk_midi_ch(trk_index(t))) << 8 | (uint32_t)t->held[i] << 16);
     }
     t->nheld = 0;
 }
@@ -617,7 +699,7 @@ static void key_on(uint32_t k, track_t *t)
     kb_on[k] = 0;
     if (!midi_local_held(t, x)) {
         input_on(t, x, 100);
-        midi_out_event(0x09u | (0x90u | mc) << 8 | x << 16 | 100u << 24);
+        mo_key(t, 0x09u | (0x90u | mc) << 8 | x << 16 | 100u << 24);
     }
     kb_snd[k] = (uint8_t)x;
     kb_on[k] = 1;
@@ -640,7 +722,7 @@ static void key_off(uint32_t k, track_t *t)
     if (midi_local_held(t, x))
         return;
     input_off(t, x);
-    midi_out_event(0x08u | (0x80u | mc) << 8 | x << 16);
+    mo_key(t, 0x08u | (0x80u | mc) << 8 | x << 16);
 }
 
 #ifdef FM1_INPUT_LAT
@@ -743,6 +825,10 @@ static void seq_start(void)
 {
     uint32_t i;
     ms_clock = 0;                                  /* (JIANT) the modulation sequences from their step 0 */
+    if (mo_clock_on()) {                           /* (0.6.72) MIDI OUT CLOCK / ALL: START, the clock from here */
+        mo_send(0xFAu, 0, 0);
+        mo_pulse_acc = 0;
+    }
     motion_begin();
     chain_start();
     for (i = 0; i < NTRK; i++) {                   /* every track from its step 0, together */
@@ -887,7 +973,7 @@ static void seq_release(track_t *t)
 {
     uint32_t i;
     for (i = 0; i < t->seq_n; i++)
-        trk_note_off(t, t->seq_notes[i]);
+        seq_note_off(t, t->seq_notes[i]);
     t->seq_n = 0;
     t->seq_hold = 0;
     t->slide_glide = 0;                             /* live MONO / LEG keys must not glide after it */
@@ -896,6 +982,8 @@ static void seq_release(track_t *t)
 static void seq_stop(void)
 {
     uint32_t i;
+    if (song.playing && mo_clock_on())             /* (0.6.72) MIDI OUT CLOCK / ALL: STOP */
+        mo_send(0xFCu, 0, 0);
     song.playing = 0;
     cin_left = 0;                                  /* (a count-in: cancelled, nothing recorded) */
     cin_flush = 0;
@@ -913,6 +1001,7 @@ static void seq_stop(void)
         trk[i].cpos = trk[i].cv_on = 0;
     }
     fg_reset();                                    /* (0.6.52) FUGUE's heads silent */
+    mo_flush();                                    /* (0.6.72) MIDI OUT ALL: nothing left hanging */
     chain_stop();
     motion_end();
 }
@@ -1053,7 +1142,7 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
     for (i = 0; i < m; i++)
         if (!((sk >> i) & 1u)) {
             uint32_t a0 = vage;
-            trk_note_on(t, nn[i], vv[i]);
+            seq_note_on(t, nn[i], vv[i]);
             if (s->comp == CP_BEND && !kit && vage != a0) {   /* (0.6.42) BEND: its voice glides over the step */
                 uint32_t k2, ticks = step_samples(t, period, t->seq_idx) / CTL;
                 int32_t d = ((int32_t)(s->carg % 25u) - 12) * 16;
@@ -1073,7 +1162,7 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
             for (j = 0; j < m && nn[j] != t->seq_notes[i]; j++)
                 ;
             if (j == m)
-                trk_note_off(t, t->seq_notes[i]);
+                seq_note_off(t, t->seq_notes[i]);
         }
     t->seq_n = 0;
     for (i = 0; i < m; i++)
@@ -1295,6 +1384,7 @@ static void events_block(uint32_t n)
         midi_clock.mode = (uint8_t)clock_mode;
         midi_beat_samples = 0;
     }
+    mo_block(n);                                    /* (0.6.72) MIDI OUT: its setting, the clock */
     if (cin_left && !clock_mode)
         cin_block(n);
     if (transport_req == 1u) {
@@ -1324,6 +1414,8 @@ static void events_block(uint32_t n)
     }
     pr = panic_req;
     panic_req = 0;
+    if (pr)
+        mo_flush_of(pr);                               /* (0.6.72) their MIDI OUT notes too */
     fo = pr;                                           /* (0.6.13) sound loads: what sounds fades on the old sound */
     if (midi_in_overflow) {                            /* a lost note-off must never leave a held note */
         mi_r = mi_w;
