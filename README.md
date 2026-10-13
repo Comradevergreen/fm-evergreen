@@ -17,6 +17,12 @@ editor update themselves with every change merged into `main`.
 
 > **Status: in development (v0.6.71).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
+> ⚡ **New in 0.6.71: both cores (experimental).** The FM-1's chip has two processor cores and JIANT used one. Now the
+> second renders some of the synth tracks while the first renders the rest, so the same song leaves much more room
+> before the sound breaks up. It is new and not every FM-1 handles it: if yours cannot, JIANT notices, stops the second
+> core and goes on with one, without crashing. **MENU > ABOUT** tells you which (**CORES 2** or **CORES 1** and why);
+> hold **REC** while switching on to play on one core. [Details](#both-cores-dual-core).
+
 > 🫶 If you resonate with my work, consider supporting me on **[Ko-fi](https://ko-fi.com/juanjiant)** (in Argentina:
 > **[Cafecito](https://cafecito.app/juanjiant)**). Thanks for all the good energy, hope you enjoy this little beast ✨🎹
 
@@ -38,8 +44,8 @@ Two printable sheets with everything on the device. Click an image to open it fu
 
 Every update is listed here, newest first.
 
-### v0.6.71 (test build)
-- **Both cores** (experimental): the FM-1's chip has two cores and JIANT used one. Now, while the first renders its
+### v0.6.71
+- **Both cores** (experimental, [details](#both-cores-dual-core)): the FM-1's chip has two cores and JIANT used one. Now, while the first renders its
   tracks, the second renders some synth tracks of its own (the drums stay on the first), whichever has less to do;
   the sound is bit for bit the one core's (a test checks it). The way to start it safely and the guard for units that
   cannot run it come from Melodee (keremimo) and fm1-x0x (Charles Vestal), GPL-3.0: if the second core reads a wrong
@@ -358,6 +364,8 @@ Feedback from users (YouTube, Reddit):
   - **ECO**: LITE, and every reverb a light SPRING (0.6.70: a shorter chain), **no SLICER** (its tracks go straight
     to the mix) and **no chorus**: their pages disappear until you leave ECO. Every synth track plays at most
     **4 voices** (the drums as ever), **6** between all tracks (8 otherwise), and the load budget steps in sooner.
+  - Since 0.6.71 the second core takes part of the synth work ([both cores](#both-cores-dual-core)): FULL goes much
+    further before LOAD is needed.
   - The cards of what's swapped say **LITE** or **ECO** under their value.
   - Why CPU and not RAM: the firmware reserves all its memory at boot, so nothing can be freed while it runs. What runs
     out is the audio time (the load meter, the CPU % card next to LOAD), and that's what LOAD gives back.
@@ -758,6 +766,32 @@ audio CPU budget, the signature shown at power-on is 428 bytes. An instrument th
 
 ## The system
 
+### Both cores (dual core)
+
+*Since 0.6.71, experimental.* The FM-1's chip (JieLi AC791N) has **two processor cores**; Felucca and JIANT up to
+0.6.70 used one, which ran everything: the sound, the screen, the keys. Now the second one helps with the sound:
+
+- **How the work is shared.** Every 0.7 ms block, the synth tracks are split between the two cores by how much each
+  has to do (its sounding voices and its engine: FM6 is the heaviest). While the first core renders its tracks, the
+  second renders the others into buffers of its own; then they are added together and go through the effects and
+  the master on the first core. The drum tracks always stay on the first core.
+- **The same sound.** The sum is exactly the one-core sum: a test plays a whole six-track song both ways and checks
+  that the output is identical, bit for bit.
+- **More room.** With the second core doing part of the synth work, the load meter stays lower: more tracks, voices,
+  FM6 and heavy reverbs before the clicks and the cut notes start. LOAD LITE / ECO are still there for the heaviest
+  songs.
+- **Units that cannot run it.** On some FM-1s the second core now and then reads a word of memory wrong, more often
+  under load (found by the Melodee and fm1-x0x developers). JIANT guards against it: every job carries a check word,
+  and if the second core reads a wrong one, faults or does not answer in time, it is **stopped at once and the first
+  core plays every track again**, with no crash (at most one 0.7 ms block of those tracks is lost). Such a unit
+  then stays on one core **until it is switched off**, and so does any unit after a crash while both cores ran.
+- **What it says.** MENU > ABOUT, under AUDIO LOAD: **CORES 2**, or **CORES 1** with the reason: REC AT POWER-ON,
+  BAD READ, NO ANSWER, FAULT, SINCE A FAULT (an earlier one this power-on), NO START.
+- **One core on purpose.** Hold **REC** while switching the FM-1 on: that session plays on one core, as before.
+- **Credits.** How to start the second core safely on the FM-1 and the guard against misreads come from
+  [Melodee](https://github.com/keremimo/melodee) (keremimo) and [fm1-x0x](https://github.com/charlesvestal/fm1-x0x)
+  (Charles Vestal), both GPL-3.0; JIANT's version is in `firmware/hal/fm1_multicore.h`.
+
 ### A living screen
 
 ![HOME, DICE ALL, ARRANGE, DRUM-X, PUNCH-IN FX and TRACKS · LOAD](docs/jiant-screens.png)
@@ -1095,7 +1129,9 @@ Settings → Pages → Source: **GitHub Actions**, once).
    FM-1 connected by USB straight to the computer). It checks the FM-1 first and writes only over official V15 or JIANT. It offers the **approved** version only: every change merged into `main` goes first to the
    [emulator](https://juanjiant-bit.github.io/JIANT/) (and a preview installer for testing), is checked there, and only
    then reaches this installer ([web/STABLE](web/STABLE.md)). Offline: `python3 tools/fm1_install.py build/felucca.fwsc`.
-3. To go back to the official firmware, use M-VAVE's updater or the installer's **Return to official V15**.
+3. **Since 0.6.71 JIANT uses both cores** ([details](#both-cores-dual-core)). If your FM-1 crashes, freezes or
+   clicks more than before, hold **REC** while switching it on (one core) and tell us what MENU > ABOUT says.
+4. To go back to the official firmware, use M-VAVE's updater or the installer's **Return to official V15**.
 
 If the FM-1 stays black after an interrupted update, check whether the computer sees it as **WL80UBOOT** (or a USB
 device 4C4A:8057): that's the chip's boot mode and it can be recovered by running the installer again with another
@@ -1136,6 +1172,9 @@ These design notes are in Spanish.
   Hillenbrand et al. (1995).
 - FM6: msfa from [Dexed](https://github.com/asb2m10/dexed), Google Inc. and Pascal Gauthier
   ([Apache-2.0](LICENSES/Apache-2.0-msfa.txt)).
+- Both cores (0.6.71): the way to start the AC79's second core and the guard against its misreads after
+  [Melodee](https://github.com/keremimo/melodee) by keremimo and [fm1-x0x](https://github.com/charlesvestal/fm1-x0x)
+  by Charles Vestal (both GPL-3.0).
 - Emulator: after [X0X](https://github.com/charlesvestal/fm1-x0x) by charlesvestal (GPL-3.0).
 - Package format: [JieLi AC79 SDK](https://gitee.com/Jieli-Tech/fw-AC79_AIoT_SDK)
   ([Apache-2.0](LICENSES/Apache-2.0.txt); three of its files go into every package, none in this tree).
