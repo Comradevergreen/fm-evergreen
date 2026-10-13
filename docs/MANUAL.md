@@ -646,11 +646,13 @@ On **HOME**, turn **SELECT** (or hold HOME and turn SELECT, from any page). The 
 
 Each throw makes three choices, then guard rails keep the result musical:
 
-- **A genre** — the night's: **DARK MINIMAL**, **DUB TECHNO**, **IDM**, **DARK IDM**, **DARK ELECTRO**, **ACID NIGHT**,
-  **COLD WAVE**, **BROKEN**, **HYPNOTIC**, **DEEP BREAKS**; and the other worlds the engines can do: **SOUNDTRACK**
-  (enveloping pads, no drums or a heartbeat), **HARD TECHNO**, **INDIE POP**, **ELECTRO PUNK** and **NEO CLASSICAL**
-  (Reich's pulses and phases, Glass's additive arps, Pärt's tintinnabuli; never drums). IDM and DARK IDM come up a
-  little more often. Each genre has its tempo range, scales, progressions, drum family (or none) and kits, bass
+- **A genre** — the wave's four (two throws in five): **POST PUNK** (Joy Division: the bass singing the tune high,
+  power chords, a tight kit), **SYNTH POP** (New Order: a melodic bass, a sequencer, four on the floor and a
+  handclap), **MINIMAL SYNTH** (Suicide: a rockabilly bass ostinato over one organ chord, a cheap rhythm box) and
+  **MAN MACHINE** (Kraftwerk: a sequencer, a machine's tune repeated exactly, a dry electronic kit); the night's:
+  **DARK MINIMAL**, **DUB TECHNO**, **IDM**, **DARK IDM**, **DARK ELECTRO**, **ACID NIGHT**, **BROKEN**, **HYPNOTIC**,
+  **DEEP BREAKS**; and **SOUNDTRACK** (enveloping pads, no drums or a heartbeat), **HARD TECHNO** and **NEO CLASSICAL**
+  (Reich's pulses and phases, Glass's additive arps, Pärt's tintinnabuli; never drums). Each genre has its tempo range, scales, progressions, drum family (or none) and kits, bass
   figure, how its chords move, how its lead and arp speak, the engines it likes per role and how wet its space is.
 - **An energy** — **SPACE** (two or three things sounding, long tails: minimalism, with cared-for timbres), **MID**,
   or **FRANTIC** (everything, denser, ratchets). The screen shows SPACE or FRANTIC under the genre's name.
@@ -1082,6 +1084,10 @@ faded): a photo of that screen helps when you report a problem.
   - **OFF**: nothing.
 - **PROGRAM CHANGE** (0.6.72): program *n* on the channel a track plays loads the PRESETS list's sound number *n* + 1
   (every engine's presets in their order, then the user presets) into that track; the selection stays where it was.
+- **Sections and projects** (0.6.80): **channel 16** is the song's: its PROGRAM CHANGE never loads a sound (whatever
+  ROUTE). Programs **0–3** jump to section **A–D** of the project (playing: on the next bar, as the song layer's keys;
+  stopped: at once; an empty one is said so); programs **16–23** load project **1–8** with its section A (stopped only,
+  as SAVE > PROJECT). A foot controller or a DAW can run a set.
 - **Not possible**: MIDI OUT on the **TRS** jack (the FM-1's jack is an input only: no output line goes to it) and
   **Bluetooth MIDI** (the chip has a radio, but its Bluetooth software is JieLi's closed SDK, which JIANT does not use).
 - **Clock**: GLO > GLOBAL > CLOCK **USB** or **TRS** follows that input's clock and Start / Continue / Stop. With an

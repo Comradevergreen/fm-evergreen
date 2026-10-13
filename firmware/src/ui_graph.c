@@ -1763,11 +1763,12 @@ static void track_col6(uint32_t c, uint32_t sel, uint32_t st, uint32_t mute, uin
 }
 static void draw_tracks(void)
 {
-    uint32_t c, sk = strip_kind() == SK_TRK, six = ux.chamfer && !ux.style && !sk;
+    uint32_t c, sk = strip_kind() == SK_TRK, six = !sk;   /* (0.6.80: the six columns with every COLOR and STYLE;
+                                                         * MENU > LARGE: four, bigger) */
     uint32_t b4 = six ? 0u : trk_base4(), n = six ? NTRK : 4u;
     if (ui.force) {
         lcd_fill(0, graph_y(), 240, graph_h(), T_BG);
-        if (ux.style)                                /* LINE: the strips divided as the cards above */
+        if (ux.style && !six)                        /* LINE: the strips divided as the cards above (four) */
             draw_rules(graph_y(), graph_h());
         for (c = 0; c < NTRK; c++)
             ts.meter[c] = 0;

@@ -679,11 +679,14 @@ En **HOME**, girá **SELECT** (o mantené HOME y girá SELECT, desde cualquier p
 
 Cada tirada toma tres decisiones, y después unas barandas mantienen el resultado musical:
 
-- **Un género**: los de la noche, **DARK MINIMAL**, **DUB TECHNO**, **IDM**, **DARK IDM**, **DARK ELECTRO**,
-  **ACID NIGHT**, **COLD WAVE**, **BROKEN**, **HYPNOTIC**, **DEEP BREAKS**; y los otros mundos que pueden hacer los
-  motores: **SOUNDTRACK** (pads envolventes, sin batería o con un latido), **HARD TECHNO**, **INDIE POP**,
-  **ELECTRO PUNK** y **NEO CLASSICAL** (los pulsos y desfasajes de Reich, los arpegios aditivos de Glass, el
-  tintinnabuli de Pärt; nunca batería). IDM y DARK IDM salen un poco más seguido. Cada género tiene su rango de tempo,
+- **Un género**: los cuatro de la onda (dos tiradas de cada cinco): **POST PUNK** (Joy Division: el bajo canta la
+  melodía arriba, acordes de quinta, una batería seca), **SYNTH POP** (New Order: bajo melódico, secuenciador, bombo
+  en negras y palmas), **MINIMAL SYNTH** (Suicide: un ostinato rockabilly de bajo sobre un único acorde de órgano, una
+  caja de ritmos barata) y **MAN MACHINE** (Kraftwerk: secuenciador, una melodía de máquina que repite exacto, una
+  batería electrónica seca); los de la noche, **DARK MINIMAL**, **DUB TECHNO**, **IDM**, **DARK IDM**,
+  **DARK ELECTRO**, **ACID NIGHT**, **BROKEN**, **HYPNOTIC**, **DEEP BREAKS**; y **SOUNDTRACK** (pads envolventes, sin
+  batería o con un latido), **HARD TECHNO** y **NEO CLASSICAL** (los pulsos y desfasajes de Reich, los arpegios
+  aditivos de Glass, el tintinnabuli de Pärt; nunca batería). Cada género tiene su rango de tempo,
   escalas, progresiones, familia de batería (o ninguna) y kits, figura de bajo, cómo se mueven sus acordes, cómo hablan
   su lead y su arpegio, los motores que prefiere por rol y qué tan húmedo es su espacio.
 - **Una energía**: **SPACE** (dos o tres cosas sonando, colas largas: minimalismo, con timbres cuidados), **MID**, o
@@ -1144,6 +1147,11 @@ protección desvaneció): una foto de esa pantalla ayuda cuando reportás un pro
 - **PROGRAM CHANGE** (0.6.72): el programa *n* en el canal que toca una pista carga en esa pista el sonido número
   *n* + 1 de la lista de PRESETS (los presets de cada motor en su orden, después los presets de usuario); la pista
   seleccionada no cambia.
+- **Secciones y proyectos** (0.6.80): el **canal 16** es el de la canción: su PROGRAM CHANGE nunca carga un sonido
+  (con cualquier ROUTE). Los programas **0–3** saltan a la sección **A–D** del proyecto (sonando: en el compás
+  siguiente, como las teclas de la capa de la canción; parado: en el momento; si está vacía, lo avisa); los programas
+  **16–23** cargan el proyecto **1–8** con su sección A (solo parado, como SAVE > PROJECT). Un pedal MIDI o un DAW
+  pueden llevar un set entero.
 - **No es posible**: MIDI OUT por el jack **TRS** (el jack del FM-1 es solo de entrada: no le llega ninguna línea de
   salida) ni **MIDI por Bluetooth** (el chip tiene radio, pero su software de Bluetooth es el SDK cerrado de JieLi,
   que JIANT no usa).
