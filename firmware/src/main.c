@@ -4,6 +4,9 @@
  * guards; then LCD, input (TIMER5 IRQ, 10 kHz), audio (ALNK0 IRQ). */
 extern uint32_t _data_start[], _data_end[], _data_load[], _bss_start[], _bss_end[];
 extern uint32_t _pool_start[], _pool_end[], _rt_start[], _rt_end[], _rt_load[];
+#if FELUCCA_DUAL_CORE
+extern uint32_t _c1t_start[], _c1t_end[], _c1t_load[];   /* (0.6.71) the second core's loop (app.ld .c1_text) */
+#endif
 
 
 /* TIMER5 outranks ALNK0, so the scan keeps its 100 us pace while a half buffer renders: before,
@@ -75,6 +78,11 @@ static void fm1_fault(const fm1_crash_t *c)
 {
     char b[12];
     uint32_t t0;
+#if FELUCCA_DUAL_CORE
+    if (fm1_mc_on)
+        fm1_mc_bar_set();                             /* (0.6.71) a crash beside the second core: one core until power-off */
+    fm1_mc_hold();
+#endif
     fm1_audio_stop();
     scr_wake_now();                                   /* (MENU > SCREEN OFF: the panel on first) */
     lcd_fill(0, 0, 240, 240, UI_CRASH_BG);            /* fixed, outside the palettes */
@@ -191,6 +199,19 @@ static void fm1_main(void)
         panel_setup();                        /* OCT- + OCT+ held at power-on */
         settings_save();
     }
+#if FELUCCA_DUAL_CORE
+    /* (0.6.71) the second core, unless REC is held at power-on (one core this session: mc_off), a boot failed (a second
+     * would enter UBOOT), or it was given up / beside a crash since power-on (hal/fm1_multicore.h fm1_mc_bar). Its entry
+     * word is in the protected top of RAM: opened for it, interrupts off (up to 20 ms: under the splash) */
+    mc_off = (uint8_t)((fm1_in.buttons >> panel.btn[B_REC]) & 1u);
+    if (!mc_off && !bootguard.failed && !fm1_mc_barred()) {
+        fm1_irq_off();
+        fm1_guard_unlock_top();
+        fm1_mc_start();
+        fm1_guard_lock_top();
+        fm1_irq_on();
+    }
+#endif
     autosave_boot(boot_clean);                /* (1.2) the last session's music, under the splash */
     session_dice(fm1_ticks() ^ (uint32_t)fm1_adc_read(FM1_ADC_BATT) << 16);   /* (JIANT 0.4) this session's macros */
     {                                         /* the splash, its signature written (JIANT 0.5: was 400 ms); the pot
@@ -309,6 +330,8 @@ void fm1_cstart(void)
     src = fm1_boot.rst_src;
     wdt = fm1_boot.wdt_con;
     fm1_wdt_arm(0x0D);
+    fm1_core1_stop();                           /* (0.6.71) a second core a reset left running would read the RAM
+                                                 * cleared below */
     if (bootguard.magic != BOOTGUARD_MAGIC) {
         bootguard.magic = BOOTGUARD_MAGIC;
         bootguard.failed = 0;
@@ -331,6 +354,10 @@ void fm1_cstart(void)
         *d = *s;
     for (s = _rt_load, d = _rt_start; d < _rt_end; s++, d++)
         *d = *s;                                /* flash driver code that must run from RAM */
+#if FELUCCA_DUAL_CORE
+    for (s = _c1t_load, d = _c1t_start; d < _c1t_end; s++, d++)
+        *d = *s;                                /* (0.6.71) the second core's waiting loop (hal/fm1_multicore.h) */
+#endif
     fm1_mailbox_clear();
     fm1_guard_enable(FM1_GUARD_STACK | FM1_GUARD_WRITE | FM1_GUARD_BUS | FM1_GUARD_PC);
     fm1_boot.p3_rst = (uint8_t)p3;

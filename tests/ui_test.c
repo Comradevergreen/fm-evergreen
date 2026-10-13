@@ -7597,6 +7597,52 @@ static int test_click_menu(void)
         }
         song.g[G_RTYPE] = rt0; song.g[G_DPIT] = dp0; mix_block(o, CTL); mix_block(o, CTL);
     }
+    {   /* (0.6.71) the second core: some synth parts on it (here run at once, as core 1: mc_host), each core with its
+         * own buffers; the sound bit for bit the one core's. A diced song, six tracks, FM6 and ANALOG among them, the
+         * matrix and a filter on, played for ~3 s in two children from the same state, one on one core, one on two */
+        uint64_t h[2] = {0, 0}, used = 0;
+        uint32_t k;
+        int fds[2][2];
+        uint8_t ld0 = ui_load;
+        load_put(2u);                                   /* FULL */
+        dice_all();
+        set_engine_of(&trk[1], ENGI_FM6);
+        set_engine_of(&trk[2], 0);
+        trk[2].p[P_FCUT] = 70; trk[2].p[P_FRES] = 60;  /* (voice.c tf_on) */
+        trk[1].p[P_CHOR] = 60; trk[2].p[P_DLY] = 50; trk[0].p[P_REV] = 40;
+        if (!song.playing) transport_req = 1;
+        for (k = 0; k < 2u; k++) {
+            pid_t pid;
+            if (pipe(fds[k])) break;
+            pid = fork();
+            if (pid == 0) {
+                int32_t o[2u * CTL];
+                uint64_t hh = 1469598103934665603ull, u = 0;
+                uint32_t b, j;
+                mc_host = (uint8_t)k;
+                song.master_q12 = 4096;                 /* (heard: the test's power-on leaves MASTER at 0) */
+                for (b = 0; b < 4000u; b++) {
+                    mix_block(o, CTL);
+                    for (j = 0; j < 2u * CTL; j++)
+                        hh = (hh ^ (uint32_t)o[j]) * 1099511628211ull;
+                    for (j = 0; j < 2u * CTL; j++)
+                        u |= (uint64_t)(o[j] != 0) << 8;     /* (not silence) */
+                    u |= mc_mask_last;
+                }
+                if (write(fds[k][1], &hh, 8) != 8 || write(fds[k][1], &u, 8) != 8) {}
+                _exit(0);
+            }
+            close(fds[k][1]);
+            if (read(fds[k][0], &h[k], 8) != 8 || read(fds[k][0], k ? &used : &h[k], k ? 8 : 0) < 0) {}
+            waitpid(pid, 0, 0);
+            close(fds[k][0]);
+        }
+        ok = h[0] && h[0] == h[1] && (used & 0xFFu) && (used >> 8);   /* parts on core 1, and sound */
+        if (!ok) printf("  dual core: one %016llx two %016llx, parts on core 1 %llx\n", (unsigned long long)h[0],
+                        (unsigned long long)h[1], (unsigned long long)used);
+        load_put(ld0 <= 2u ? 2u - ld0 : 2u);
+        bad += check("DUAL CORE: some synth parts on the second core, the sound bit for bit one core's", ok);
+    }
     {
         persist_t p;
         settings_export(&p);

@@ -209,6 +209,7 @@ static void fm1_timer5_ack(void) {}
 static void fm1_timer5_start(void (*isr)(void), uint32_t prio) { (void)isr; (void)prio; }
 void isr_timer5(void) {}
 static void fm1_reboot(void) {}
+static void fm1_core1_stop(void) {}               /* (0.6.71: no second core here, FELUCCA_DUAL_CORE 0) */
 static void fm1_enter_uboot(void) {}
 static void fm1_guard_lock_top(void) {}
 static void fm1_irq_enable_all(void) {}
