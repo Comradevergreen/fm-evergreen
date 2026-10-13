@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.6.78).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.6.79).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 > ⚡ **New in 0.6.71: both cores (experimental).** The FM-1's chip has two processor cores and JIANT used one. Now the
 > second renders some of the synth tracks while the first renders the rest, so the same song leaves much more room
@@ -44,6 +44,11 @@ Two printable sheets with everything on the device. Click an image to open it fu
 ## Changelog
 
 Every update is listed here, newest first.
+
+### v0.6.79
+- **Credits:** praztalfractal ([GitHub: gospodindilly-ops](https://github.com/gospodindilly-ops)), who tests JIANT
+  on a real FM-1 and brings the CPU ideas (the effects' guard, the code in RAM), joins the credits: MENU > ABOUT and
+  [Credits](#credits). Welcome!
 
 ### v0.6.78
 - **Experimental: the hottest sound code runs from RAM** (another idea from a tester, after Melodee). The firmware runs
@@ -1239,6 +1244,8 @@ These design notes are in Spanish.
   [Melodee](https://github.com/keremimo/melodee) by keremimo and [fm1-x0x](https://github.com/charlesvestal/fm1-x0x)
   by Charles Vestal (both GPL-3.0).
 - Emulator: after [X0X](https://github.com/charlesvestal/fm1-x0x) by charlesvestal (GPL-3.0).
+- Testing and CPU work on a real FM-1: **praztalfractal** ([GitHub: gospodindilly-ops](https://github.com/gospodindilly-ops)):
+  the load measurements behind the dual core work, the guard on the effects (0.6.76) and the hot code in RAM (0.6.78).
 - Package format: [JieLi AC79 SDK](https://gitee.com/Jieli-Tech/fw-AC79_AIoT_SDK)
   ([Apache-2.0](LICENSES/Apache-2.0.txt); three of its files go into every package, none in this tree).
 
