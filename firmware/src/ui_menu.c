@@ -45,6 +45,10 @@ static const menu_credit_t MENU_CREDITS[] = {
     {"https://github.com/keremimo/melodee", MC_URL},
     {"https://github.com/charlesvestal/fm1-x0x", MC_URL},
     {"", MC_TEXT},
+    {"TESTING, CPU", MC_TITLE},              /* (JIANT 0.6.79) on a real FM-1: the load, the dual core, the RAM code */
+    {"praztalfractal", MC_TEXT},
+    {"https://github.com/gospodindilly-ops", MC_URL},
+    {"", MC_TEXT},
     {"KLATTSCH", MC_TITLE},
     {"Tony Gies / MIT", MC_TEXT},
     {"https://github.com/tgies/klattsch", MC_URL},
