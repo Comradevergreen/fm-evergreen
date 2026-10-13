@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.6.68).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.6.69).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 > 🫶 If you resonate with my work, consider supporting me on **[Ko-fi](https://ko-fi.com/juanjiant)** (in Argentina:
 > **[Cafecito](https://cafecito.app/juanjiant)**). Thanks for all the good energy, hope you enjoy this little beast ✨🎹
@@ -37,6 +37,14 @@ Two printable sheets with everything on the device. Click an image to open it fu
 ## Changelog
 
 Every update is listed here, newest first.
+
+### v0.6.69
+- **SELECT scrolls inside the section**: alone it goes through the pages of the section you are in (EDIT's on an EDIT
+  page, FX's on an FX page …), stopping at its first and last page; on HOME it opens DICE EVERYTHING? as before. The button combos stay:
+  HOME / EDIT / SEQ / LFO / FX + SELECT their dice, GLO + SELECT the tempo.
+- **The presentation film**: a new one for this version (tools/video/capture_promo.c, promo.html): dark hypnotic
+  techno by the real engines, the screen floating in a living membrane, annotated like a specimen, and the list of all
+  that is new.
 
 ### v0.6.68
 - **Fix: a cleared sequence came back by itself.** With MUTATE PATTERN on, clearing a track while it played let the

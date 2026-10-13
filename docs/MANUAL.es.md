@@ -59,10 +59,10 @@ Guardá tus archivos WAV.
 
 ### Tu primer tema (5 minutos)
 
-1. Mantené **HOME** y girá **SELECT**. La pantalla pregunta **DICE EVERYTHING?** (¿tirar todo a los dados?). Apretá
+1. En **HOME**, girá **SELECT**. La pantalla pregunta **DICE EVERYTHING?** (¿tirar todo a los dados?). Apretá
    **OCT+** (YES). Aparece una idea de tema completa: motores, sonidos, partes, escala, tempo y efectos. Apretá
    **PLAY**.
-2. ¿No te convence? HOME + SELECT de nuevo y confirmá. Cada tirada es nueva. Para volver a la anterior: mantené **GLO** y
+2. ¿No te convence? Girá SELECT de nuevo y confirmá. Cada tirada es nueva. Para volver a la anterior: mantené **GLO** y
    apretá **G4** (UNDO).
 3. ¿Te gusta? **Pará** (PLAY) y apretá **SAVE** dos veces para llegar a **SAVE > PROJECT** (la primera pulsación de
    SAVE abre USER, la segunda PROJECT). Girá **KNOB 4** a la derecha para que muestre **[OCT+]** y apretá **OCT+**.
@@ -85,7 +85,7 @@ Los nombres de abajo son los que usa el firmware (la pantalla HARDWARE CALIBRATI
 
 | Control | Qué hace |
 | --- | --- |
-| **SELECT** (encoder) | Solo: **recorre las páginas**, una por paso: HOME, después EDIT, ENV, LFO, FX, SCL, ARP, SEQ, GLO (con el MIXER), SAVE, las páginas de cada botón en orden; hacia atrás desde la primera de EDIT: HOME. Con un botón mantenido, los **dados** de ese botón: **HOME** + SELECT **DICE EVERYTHING?**, **EDIT** + SELECT el sonido, **SEQ** + SELECT la secuencia, **LFO** + SELECT el LFO, **FX** + SELECT los efectos. **GLO** + SELECT: el tempo. Cualquier otro botón de página + SELECT: sus páginas. |
+| **SELECT** (encoder) | Solo: **recorre las páginas de la sección en la que estás** (las de EDIT en una página EDIT, las de FX en una de FX …), una por paso, sin dar la vuelta; en **HOME** abre **DICE EVERYTHING?** (como HOME + SELECT). Con un botón mantenido, los **dados** de ese botón: **HOME** + SELECT **DICE EVERYTHING?**, **EDIT** + SELECT el sonido, **SEQ** + SELECT la secuencia, **LFO** + SELECT el LFO, **FX** + SELECT los efectos. **GLO** + SELECT: el tempo. Cualquier otro botón de página + SELECT: sus páginas. |
 | **ALGORITHM** (encoder) | Elige la pista desde cualquier página: T1–T4, o T1–T6 con TRACKS 6. En el MENU: cambia de pestaña. |
 | **PRESETS** (encoder) | En HOME, PRESETS y las páginas de sonido: recorre sonidos (los presets de fábrica de cada motor y después tus presets de usuario). En las páginas de pasos (STEP, COMP, PATTERN, AUTOMATION, SHIFT): mueve el cursor de paso. En las páginas de lista (USER, PROJECT, ARRANGE, TOOLS, AUTO LIST): mueve la selección. **Mantené un botón de página y girá SELECT** (o PRESETS) para saltar directo por las páginas de ese botón. |
 | **KNOB 1–4** | Las cuatro tarjetas (columnas) de la pantalla. Con una capa mantenida, las perillas propias de la capa. Girar rápido recorre todo el rango, despacio ajusta fino (MENU > KNOB ACCEL lo desactiva). |
@@ -172,8 +172,9 @@ Los **diálogos** preguntan antes de cualquier cosa destructiva: **OCT− NO**, 
 - **FX** es largo, así que está dividido en secciones: TRACK (FX, DIST, AUTOPAN), SLICER (SLICER, SL BUS, SL BUS 2,
   SL PITCH), DELAY (DLY, DLY 2), REVERB (REVERB, REVERB 2), CHORUS, MASTER. **Dos toques rápidos** en FX saltan a la
   siguiente sección.
-- **Girá SELECT** para recorrer todas las páginas, una por paso, en el orden del panel (HOME, EDIT, ENV, LFO, FX,
-  SCL, ARP, SEQ, GLO, SAVE); el nombre de la página aparece un momento sobre el pie.
+- **Girá SELECT** para recorrer las páginas de la sección en la que estás (las de EDIT en una página EDIT, las de FX en
+  una de FX), una por paso, frenando en la primera y la última; el nombre de la página aparece un momento sobre el pie.
+  En HOME abre DICE EVERYTHING?.
 - **Mantené un botón de página y girá PRESETS** para recorrer sus páginas hacia adelante o hacia atrás (sin dar la
   vuelta); soltá y te quedás ahí. ENV, SCL, ARP y SAVE hacen lo mismo con SELECT; HOME, EDIT, SEQ, LFO y FX + SELECT son
   sus dados, GLO + SELECT el tempo.
@@ -673,7 +674,7 @@ Mantené **SAVE**:
 
 ### DICE ALL — el generador de ideas de temas (HOME + SELECT)
 
-Mantené **HOME** y girá **SELECT** (desde cualquier página). Aparece el diálogo **DICE EVERYTHING?** (con "UNDO AFTER: GLO + G4"). **OCT+ YES** /
+En **HOME**, girá **SELECT** (o mantené HOME y girá SELECT, desde cualquier página). Aparece el diálogo **DICE EVERYTHING?** (con "UNDO AFTER: GLO + G4"). **OCT+ YES** /
 **OCT− NO**.
 
 Cada tirada toma tres decisiones, y después unas barandas mantienen el resultado musical:

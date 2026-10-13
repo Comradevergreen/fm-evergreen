@@ -7,7 +7,7 @@ import html, os
 
 R = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(R, 'docs', 'cheatsheet')
-VERSION = 'v0.6.68'
+VERSION = 'v0.6.69'
 
 HEAT = ['#22d3ee', '#3b82f6', '#8b5cf6', '#d946ef', '#ef4444', '#ff7a00', '#facc15', '#f4f1ea']
 
@@ -126,7 +126,7 @@ def controls():
     b.append(sec('THE PANEL'))
     rows = [
         ('MASTER', 'Master volume.'),
-        ('SELECT', '<b>Scrolls through the pages.</b> Held with a button, its <b>dice</b> (OK keeps, CANCEL back): HOME everything, '
+        ('SELECT', '<b>Scrolls the section\'s pages</b> (HOME: DICE EVERYTHING?). Held with a button, its <b>dice</b> (OK keeps, CANCEL back): HOME everything, '
                    'EDIT the sound, SEQ the sequence, LFO the LFO, FX the effects. GLO + SELECT: the tempo.'),
         ('PRESETS', 'Browses the sounds (factory and user). On step, list and song pages: the cursor / the row. '
                     '<b>Hold a page button + PRESETS: jump through its pages.</b>'),
@@ -158,7 +158,7 @@ def controls():
           '</table>')
     b.append('<div class="grid g2">' + card('KNOBS AND TRANSPORT', HEAT[0], t) +
              card('PAGE BUTTONS', HEAT[2], t2 + '<p style="margin-top:10px">' + k('BUTTON', cls='v') + ' + ' +
-                  k('PRESETS', cls='v') + ' jumps through its pages (no wrap). ' + k('SELECT', cls='v') + ' alone scrolls every page.</p>') + '</div>')
+                  k('PRESETS', cls='v') + ' jumps through its pages (no wrap). ' + k('SELECT', cls='v') + ' alone scrolls the section\'s pages.</p>') + '</div>')
 
     b.append(sec('LAYERS · HOLD A BUTTON'))
     fx_w = {'F3': 'REP 1/8', 'G3': 'REP 1/16', 'A3': 'REP 1/32', 'B3': 'LPF', 'C4': 'HPF', 'D4': 'OCT−', 'E4': 'OCT+',

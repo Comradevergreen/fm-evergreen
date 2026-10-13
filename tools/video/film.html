@@ -252,15 +252,15 @@ function outro(t0,f,t,A){
     shadowed(()=>text(l,X,Y+140+i*44,`400 34px ${BODY}`,'#d6cfe6')));
   x.globalAlpha=q(1.2);
   text('HELP ME KEEP THE FIRMWARE GROWING',X,Y+320,'600 22px "IBM Plex Mono"',C.yellow,4);
-  [['K0F1','zone: global · usd','Ko-fi',C.mag,'card or PayPal, from any country'],['CF4R','zone: AR · ars','Cafecito',C.orange,'en pesos, Mercado Pago o tarjeta']].forEach((c,i)=>{
+  [['K0F1','zone: global · usd','Ko-fi',C.mag,'ko-fi.com/juanjiant'],['CF4R','zone: AR · ars','Cafecito',C.orange,'cafecito.app/juanjiant']].forEach((c,i)=>{
     const bx=X+i*440,by=Y+350,bw=420,bh=200,b=1+.03*A.low;
     brk(bx,by,bw,bh,C.yellow,22,'rgba(6,5,12,.9)');
     x.fillStyle=C.yellow;x.fillRect(bx+26,by+30,11,11);text(c[0],bx+46,by+41,'500 16px "IBM Plex Mono"',C.line,2);
     x.textAlign='right';text(c[1].toUpperCase(),bx+bw-24,by+41,'500 14px "IBM Plex Mono"',C.dim,2);x.textAlign='left';
     text(c[2],bx+26,by+112,`400 ${Math.round(50*b)}px ${DISPLAY}`,c[3]);
-    text(c[4],bx+26,by+158,`400 24px ${BODY}`,'#cfc8df');});
+    text(c[4],bx+26,by+160,'600 22px "IBM Plex Mono"',C.yellow,1);});
   x.globalAlpha=q(1.8);
-  text('links in the description  ·  github.com/juanjiant-bit/JIANT',X,Y+610,'500 20px "IBM Plex Mono"',C.line,2);
+  text('code: github.com/juanjiant-bit/JIANT',X,Y+610,'500 20px "IBM Plex Mono"',C.line,2);
   text('install from the browser: juanjiant-bit.github.io/JIANT',X,Y+644,'500 20px "IBM Plex Mono"',C.dim,2);
   x.globalAlpha=1;
 }
