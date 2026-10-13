@@ -117,8 +117,8 @@ async function rgbFrame(f, ctx, im){
 }
 function easeIO(u){u=Math.min(1,Math.max(0,u));return u<.5?4*u*u*u:1-Math.pow(-2*u+2,3)/2;}
 /* where the specimen floats: big and drifting; small and aside during the list */
-function pose(t,A,listK){
-  const big={cx:1920*.615,cy:572,sw:860}, small={cx:1920*.84,cy:820,sw:300};
+function pose(t,A,listK,outK){
+  const big={cx:1920*.615+outK*1920*.115,cy:572,sw:860-outK*240}, small={cx:1920*.84,cy:820,sw:300};
   const k=easeIO(listK);
   const cx=big.cx+(small.cx-big.cx)*k, cy=big.cy+(small.cy-big.cy)*k, sw=big.sw+(small.sw-big.sw)*k;
   const amp=1-k*.6;
@@ -347,7 +347,9 @@ async function render(f){
   const ls=D.scenes.find(q=>q.kind===3), le=ls?D.scenes.find(q=>q.t>ls.t):null;
   let listK=0; if(ls){if(t>=ls.t)listK=Math.min(1,(t-ls.t)/1.2); if(le&&t>=le.t)listK=Math.max(0,1-(t-le.t)/1.2);}
   background(f,t,A);
-  const P=pose(t,A,listK);
+  const oc=D.scenes.find(q=>q.kind!==3&&!q.title.length);   /* the outro: the screen aside, smaller */
+  const outK=oc&&t>=oc.t?easeIO(Math.min(1,(t-oc.t)/1.2)):0;
+  const P=pose(t,A,listK,outK);
   if(listK<1){x.globalAlpha=1-listK;specimen(f,t,A,P,cut);x.globalAlpha=1;}
   beings(f,t,A,P);
   if(!sc)cover(t,A);
