@@ -466,13 +466,14 @@ static void midi_pkt(uint32_t st, uint32_t d1, uint32_t d2)   /* as usb.c: the q
 
 /* the shared budget: 4 POLY parts (ANALOG, DIGITAL (without FELUCCA_FM4 its BELL converted: FM6), VOICE, WHEEL)
  * play random notes on and off for
- * 6 s, up to 8 held each; after every block: at most 8 part voices active, none still fading (a stolen voice
- * fades within its one block), the VOICE part at most 4; then all off: every voice free */
+ * 6 s, up to 8 held each; after every block: at most 8 part voices sounding, none fading longer than 6 blocks (a stolen
+ * voice fades over ~4 ms, 0.6.74; was one block), the VOICE part at most 4; then all off: every voice free */
 static int chk_budget(char *msg, uint32_t n)
 {
     static const uint8_t E[NPART][2] = {{0, 1}, {1, 1}, {5, 1}, {7, 0}};   /* (JIANT 0.4: WHEEL, TRIO folded into ANALOG) */
     uint8_t held[NPART][128] = {{0}};
     uint32_t p, k, worst = 0, vworst = 0, fading = 0, kills0 = voice_kills;
+    uint8_t fade_age[NPART][NVOICE] = {{0}};               /* (0.6.74) blocks each given-up voice has been fading */
     host_tracks_init();
     for (p = 0; p < NPART; p++) {
         host_preset(&trk[p], E[p][0], E[p][1]);
@@ -496,9 +497,14 @@ static int chk_budget(char *msg, uint32_t n)
         blk();
         for (p = 0; p < NPART; p++)
             for (i = 0; i < NVOICE; i++) {
-                a += trk[p].v[i].active;
-                va += p == 2u && trk[p].v[i].active;
-                fading += trk[p].v[i].active && trk[p].v[i].stage == 4u;
+                a += trk[p].v[i].active && trk[p].v[i].stage != 4u;
+                va += p == 2u && trk[p].v[i].active && trk[p].v[i].stage != 4u;
+                if (trk[p].v[i].active && trk[p].v[i].stage == 4u) {
+                    if (++fade_age[p][i] > 6u)
+                        fading++;                       /* (a fade past ~4 ms) */
+                } else {
+                    fade_age[p][i] = 0;
+                }
             }
         worst = a > worst ? a : worst;
         vworst = va > vworst ? va : vworst;
@@ -510,7 +516,7 @@ static int chk_budget(char *msg, uint32_t n)
     rel_at = fpos;
     finish();
     snprintf(msg, n, "4 POLY parts, random notes: at most %u voices active (budget %u), VOICE part at most %u (cap 4), "
-             "%u voices taken, %u still fading after their block, all free %.2f s after the note-offs",
+             "%u voices taken (each faded over ~4 ms), %u blocks of a fade past 6, all free %.2f s after the note-offs",
              worst, NVOICE, vworst, voice_kills - kills0, fading, R.free_s);
     return worst <= NVOICE && vworst <= 4u && !fading && R.free_s >= 0 && voice_kills > kills0;
 }
@@ -726,6 +732,42 @@ static int chk_mode_release(char *msg, uint32_t n)
 /* a stolen voice fades: plain sines (filter open, no sends) on 3 parts; part 1 holds 7 notes, part 2 one,
  * then parts 2 and 3 take voices in turn. The largest sample step in the 2 blocks of each take must stay
  * within 1.5 x the largest one in the 0.25 s before it (a hard cut is several times larger) */
+/* (0.6.74) a voice given up (a steal, the load guard) does not click, on a bass note least of all: a plain 55 Hz sine,
+ * loud and held, given up; the largest second difference of the output (what a click is: a bend in the wave, the
+ * highs it throws) in the ~6 ms after, against the largest in the 0.25 s before (a 55 Hz sine's own: tiny). The cut
+ * within one block before 0.6.74 (0.7 ms) gave 24 x; the half-cosine fade over 6 blocks (~4.4 ms) 3.5 x: limit 5 x */
+static int chk_kill_bass(char *msg, uint32_t n)
+{
+    const uint32_t frames = FS;
+    int32_t *L = calloc(frames + CTL, sizeof *L), calm = 1, at = 0;
+    uint32_t f, i, kill_at = FS / 2u / CTL * CTL;
+    host_tracks_init();
+    xfade_sine(&trk[0]);
+    for (f = 0; f < frames; f += CTL) {
+        if (f == 0)
+            trk_note_on(&trk[0], 33, 127);              /* A1, 55 Hz */
+        if (f == kill_at)
+            for (i = 0; i < NVOICE; i++)
+                if (trk[0].v[i].active)
+                    voice_kill(&trk[0].v[i]);
+        blk();
+        for (i = 0; i < CTL; i++)
+            L[f + i] = last_out[2 * i];
+    }
+    for (i = kill_at - FS / 4u; i < kill_at - 2u; i++) {
+        int32_t d = abs(L[i] - 2 * L[i - 1] + L[i - 2]);
+        calm = d > calm ? d : calm;
+    }
+    for (i = kill_at; i < kill_at + 9u * CTL; i++) {
+        int32_t d = abs(L[i] - 2 * L[i - 1] + L[i - 2]);
+        at = d > at ? d : at;
+    }
+    free(L);
+    snprintf(msg, n, "55 Hz sine given up: largest bend %d after vs %d before (%.1f x, limit 5 x; a 0.7 ms cut: 24 x)",
+             at, calm, (double)at / calm);
+    return at <= calm * 5;
+}
+
 static int chk_steal_fade(char *msg, uint32_t n)
 {
     static const uint8_t N1[7] = {48, 52, 55, 59, 62, 65, 69};
@@ -1038,6 +1080,7 @@ int main(int argc, char **argv)
     add(J_CHECK, "voices: budget after voice mode changes")->check = chk_cap_mode_budget;
     add(J_CHECK, "voices: note-offs after live voice mode changes")->check = chk_mode_release;
     add(J_CHECK, "voices: a stolen voice fades")->check = chk_steal_fade;
+    add(J_CHECK, "voices: a bass note given up does not click (0.6.74)")->check = chk_kill_bass;
     add(J_CHECK, "voices: MONO keeps its note")->check = chk_keep_mono;
     add(J_CHECK, "voices: LEGATO keeps its note")->check = chk_keep_legato;
     add(J_CHECK, "voices: UNISON keeps its note")->check = chk_keep_unison;
