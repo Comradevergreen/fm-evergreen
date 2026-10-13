@@ -36,7 +36,7 @@ static void fg_release(track_t *t, fg_head_t *h)
 {
     uint32_t i;
     for (i = 0; i < h->n; i++)
-        trk_note_off(t, h->note[i]);
+        seq_note_off(t, h->note[i]);
     h->n = 0;
 }
 /* the transport starts (seq_start) or stops (seq_stop): every head silent, back before its first step */
@@ -96,7 +96,7 @@ static void fg_play(track_t *t, fg_head_t *h, const fg_set_t *f, uint32_t i, uin
         if ((s->hit >> k) & 1u)
             h->note[h->n++] = DRUM_LANE_NOTE[k];
     for (k = 0; k < h->n; k++)
-        trk_note_on(t, h->note[k], vel);
+        seq_note_on(t, h->note[k], vel);
     h->off = (uint32_t)((uint64_t)steplen * (uint32_t)clamp(t->p[P_SGATE], 1, 127) / 128u);
     if (h->off < CTL)
         h->off = CTL;

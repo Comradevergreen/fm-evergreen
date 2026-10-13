@@ -347,7 +347,9 @@ static uint32_t div_samples(uint32_t div)
 }
 
 #include "perform.c"                                 /* the FX hold layer's effects (the master) */
-#include "pfx.c"                                     /* .. its punch-in MIDI effects (on the notes) */
+static void seq_note_on(track_t *t, uint32_t note, uint32_t vel);   /* (0.6.72: seq.c, a note MIDI OUT ALL sends) */
+static void seq_note_off(track_t *t, uint32_t note);
+#include "pfx.c"                                   /* .. its punch-in MIDI effects (on the notes) */
 #include "click.c"                                   /* the metronome's click (after the master: audio.c) */
 
 /* (JIANT) GRAIN delay (G_DPIT / G_DSPRY not 0): the line is read by two grains of GR_LEN samples, half a grain

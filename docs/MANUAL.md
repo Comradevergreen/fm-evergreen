@@ -1047,6 +1047,7 @@ closes it (settings are saved then).
 | CONTROL | FX LATCH | **OFF** (default since 0.6.64), ON |
 | CONTROL | BPM LOCK | OFF, ON — DICE ALL keeps the tempo (the tempo is GLO + SELECT, GLO's F4 TAP or GLOBAL's BPM) |
 | CONTROL | SCALE LEDS | OFF, ON — the keys of the scale glow, the root brighter |
+| CONTROL | MIDI OUT | **KEYS**, CLOCK, ALL, OFF — what goes out over USB MIDI (see [14](#14-midi-and-usb)) |
 | AUDIO | SPEAKER EQ | FLAT, LOWCUT, BASS+ (an EQ on the master for the small speaker; also reaches the outputs and USB) |
 | AUDIO | USB LEVEL | MASTER (USB follows the MASTER knob), FIXED (USB at full level) |
 | AUDIO | CLICK | OFF, REC (while a track is armed and playing), ON |
@@ -1070,7 +1071,19 @@ faded): a photo of that screen helps when you report a problem.
 - **USB** is class-compliant MIDI and audio: the master output reaches the computer as a USB audio input.
 - **MIDI IN** over USB and the **TRS** jack. **ROUTE** decides which track each channel plays (see
   [13](#13-system-tracks-load-and-the-menu)). Incoming notes on an armed track are recorded like the keys.
-- **MIDI OUT** (over USB): the keys send their notes on the selected track's channel (T1 = channel 1 … T6 = channel 6).
+- **MIDI OUT** (over USB; MENU > CONTROL > **MIDI OUT**, 0.6.72), each track on its channel (T1 = channel 1 … T6 =
+  channel 6):
+  - **KEYS** (the default): the keys send their notes, as before.
+  - **CLOCK**: and the clock (24 a beat) with **START / STOP**, while the tempo is the FM-1's own (CLOCK INT): a drum
+    machine or a DAW follows it. The clock runs while stopped too, so the follower knows the tempo before PLAY.
+  - **ALL**: and every note the FM-1 plays: the sequencer, the arp, FUGUE and the punch-in repeats, with the punch-ins'
+    OCT− / OCT+ and RANDOM on them; each note gets its note-off, and STOP, a panic or a change of the setting end
+    whatever is still on. Record the FM-1's music into a DAW as MIDI, or play other synths from it.
+  - **OFF**: nothing.
+- **PROGRAM CHANGE** (0.6.72): program *n* on the channel a track plays loads the PRESETS list's sound number *n* + 1
+  (every engine's presets in their order, then the user presets) into that track; the selection stays where it was.
+- **Not possible**: MIDI OUT on the **TRS** jack (the FM-1's jack is an input only: no output line goes to it) and
+  **Bluetooth MIDI** (the chip has a radio, but its Bluetooth software is JieLi's closed SDK, which JIANT does not use).
 - **Clock**: GLO > GLOBAL > CLOCK **USB** or **TRS** follows that input's clock and Start / Continue / Stop. With an
   external clock, TAP and GLO + PLAY restart are disabled.
 - **Controllers** (on the track the channel plays): CC5 glide, CC7 level, CC10 pan, CC71 resonance and CC74 cutoff (the

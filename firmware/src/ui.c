@@ -94,6 +94,8 @@ static void prefs_update(void)
 #define PREF_SCALE_LEDS (0x40u << 8)
 #define ui_load (favorites.factory[15][26])    /* (JIANT 0.6.30) LOAD (voice.c sys_load): 0 FULL, 1 LITE, 2 ECO; a byte no
                                                 * engine uses, 0 in older settings (0.6.29's 6 LITE: 1, LITE) */
+#define midi_out_mode (favorites.factory[15][24])   /* (JIANT 0.6.72) MENU > MIDI OUT (seq.c MO_*): 0 KEYS (older settings,
+                                                * as ever), 1 CLOCK, 2 ALL, 3 OFF; a byte no engine uses */
 #define PREF_SIX (0x80u << 8)                  /* (JIANT 0.6.18) MENU > TRACKS 6: all six tracks play; clear (the
                                                 * default): 4, T5 and T6 asleep (voice.c trk_live) */
 enum { RP_CLICK, RP_LEVEL, RP_COUNTIN };
@@ -1227,6 +1229,32 @@ static void preset_go(uint32_t n)                    /* load list index n into t
         apply_preset(k);
     }
     preset_hinted();
+}
+
+/* (JIANT 0.6.72) PROGRAM CHANGE (midi_control.c midi_pc_req): the list's n-th sound into the track whose channel it
+ * came on, the selection kept; out of the list's range, nothing. Every frame (ui_input) */
+static void midi_pc_poll(void)
+{
+    uint32_t i, sel = song.sel;
+    for (i = 0; i < NTRK; i++)
+        if (midi_pc_req[i]) {
+            uint32_t n = midi_pc_req[i] - 1u, all, k, e;
+            midi_pc_req[i] = 0;
+            song.sel = (uint8_t)i;
+            preset_all_pos(&all);
+            if (n < all) {
+                e = preset_all_at(n, &k);
+                if (e == NENGINES) {
+                    up_load(k);
+                } else {
+                    if (e != TSEL->eng_req)
+                        set_engine(e);
+                    apply_preset(k);
+                }
+                ui.force = 1;
+            }
+            song.sel = (uint8_t)sel;
+        }
 }
 
 /* the EDIT layer's KNOB 2 (ui_layer.c): the selected track's engine only: its factory presets, then the used user presets

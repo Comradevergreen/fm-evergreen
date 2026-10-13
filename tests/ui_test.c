@@ -1866,9 +1866,10 @@ static int test_menu_tabs(void)
             }
     }
     ui_prefs = 0;
-    bad += check("MENU tabs: DISPLAY CONTROL AUDIO SYSTEM (6 5 6 6 rows), 1..6 each in a run, fit the page; tab gaps constant (S, LARGE)",
+    bad += check("MENU tabs: DISPLAY CONTROL AUDIO SYSTEM (6 6 6 6 rows), 1..6 each in a run, fit the page; tab gaps constant (S, LARGE)",
                  ok && MTAB_COUNT == 4u && str_eq(MTAB_NAME[0], "DISPLAY") && mtab_rows(MTAB_DISPLAY) == 6u &&
-                 mtab_rows(MTAB_CONTROL) == 5u && mtab_rows(MTAB_AUDIO) == 6u && mtab_rows(MTAB_SYSTEM) == 6u);   /* (0.6.58: INIT SYSTEM) */
+                 mtab_rows(MTAB_CONTROL) == 6u && mtab_rows(MTAB_AUDIO) == 6u && mtab_rows(MTAB_SYSTEM) == 6u);   /* (0.6.58: INIT SYSTEM;
+                                                                         * 0.6.72: MIDI OUT in CONTROL) */
 
     ui_power_on();
     hold(B_HOME);
@@ -7642,6 +7643,64 @@ static int test_click_menu(void)
                         (unsigned long long)h[1], (unsigned long long)used);
         load_put(ld0 <= 2u ? 2u - ld0 : 2u);
         bad += check("DUAL CORE: some synth parts on the second core, the sound bit for bit one core's", ok);
+    }
+    {   /* (0.6.72) MIDI OUT (USB): ALL sends the sequencer's notes, each with its note-off (all of them by STOP), the
+         * clock 24 a beat with START / STOP; KEYS none of that; CLOCK the clock only. PROGRAM CHANGE n on a track's
+         * channel loads the PRESETS list's n + 1-th sound into that track */
+        int32_t o[2u * CTL];
+        uint32_t lv, b, on[4], off[4], f8[4], fa[4], fc[4], bal[4], k, e, n0 = 0;
+        uint8_t held[NTRK][128];
+        usb.config = 1;
+        load_put(2u);
+        for (lv = 0; lv < 4u; lv++) {
+            menu_put(MI_MIDIOUT, lv); frame();
+            ok = mo_lvl == lv;
+            dice_all();
+            if (lv == 2u)
+                n0 = 2800u * CTL / (beat_samples() / 24u);   /* clocks in the 2800 blocks (also stopped) */
+            if (song.playing) { transport_req = 2; mix_block(o, CTL); }
+            mo_r = mo_w;
+            memset(held, 0, sizeof held);
+            on[lv] = off[lv] = f8[lv] = fa[lv] = fc[lv] = 0; bal[lv] = 1;
+            transport_req = 1;
+            for (b = 0; b < 2800u; b++) {               /* ~2 s, then STOP */
+                if (b == 2700u) transport_req = 2;
+                mix_block(o, CTL);
+                while (mo_r != mo_w) {                  /* (as usb.c drains it) */
+                    uint32_t p = midi_out_q[mo_r++ % MQ], st = (p >> 8) & 0xFFu, ch = st & 15u, nt = (p >> 16) & 127u;
+                    if ((st & 0xF0u) == 0x90u) { on[lv]++; bal[lv] &= ch < NTRK && !held[ch][nt]; if (ch < NTRK) held[ch][nt] = 1; }
+                    else if ((st & 0xF0u) == 0x80u) { off[lv]++; if (ch < NTRK) held[ch][nt] = 0; }
+                    else if (st == 0xF8u) f8[lv]++;
+                    else if (st == 0xFAu) fa[lv]++;
+                    else if (st == 0xFCu) fc[lv]++;
+                }
+            }
+            for (k = 0; k < NTRK; k++)
+                for (b = 0; b < 128u; b++)
+                    bal[lv] &= !held[k][b];             /* nothing left on */
+        }
+        ok = on[2] > 8u && bal[2] && fa[2] == 1u && fc[2] == 1u && f8[2] + 8u >= n0 && f8[2] <= n0 + 60u;   /* ALL */
+        ok &= !on[0] && !f8[0] && !fa[0] && !fc[0];     /* KEYS: no sequencer notes, no clock */
+        ok &= !on[1] && f8[1] > 8u && fa[1] == 1u && fc[1] == 1u;   /* CLOCK */
+        ok &= !on[3] && !f8[3] && !fa[3];               /* OFF */
+        if (!ok) printf("  midi out: on %u %u %u %u f8 %u %u %u %u (%u) fa %u %u fc %u %u bal %u\n", on[0], on[1], on[2], on[3],
+                        f8[0], f8[1], f8[2], f8[3], n0, fa[1], fa[2], fc[1], fc[2], bal[2]);
+        menu_put(MI_MIDIOUT, 0); frame();
+        bad += check("MIDI OUT: ALL the sequencer's notes (each ended), clock + START / STOP; CLOCK the clock; KEYS / OFF none", ok);
+        {
+            uint32_t all, sel0 = song.sel;
+            song.sel = 1;
+            preset_all_pos(&all);
+            e = preset_all_at(9u, &k);
+            song.sel = (uint8_t)sel0;
+            midi_enqueue(0x0Cu | 0xC1u << 8 | 9u << 16, 1u);   /* PROGRAM CHANGE 9 on channel 2 */
+            mix_block(o, CTL); frame();
+            ok = all > 9u && e < NENGINES && trk[1].eng_req == e && song.sel == sel0;
+            midi_enqueue(0x0Cu | 0xC1u << 8 | 127u << 16, 1u);   /* past the list: nothing */
+            mix_block(o, CTL); frame();
+            ok &= trk[1].eng_req == e;
+            bad += check("PROGRAM CHANGE n: the PRESETS list's n + 1-th sound into the channel's track, the selection kept", ok);
+        }
     }
     {
         persist_t p;

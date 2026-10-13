@@ -297,6 +297,11 @@ static void __attribute__((noinline)) midi_route_ch14(void)
         midi_expression(&trk[ch], midi_channel(ch));
 }
 
+/* (JIANT 0.6.72) PROGRAM CHANGE n on the channel a track plays: the n + 1-th sound of the PRESETS list (every engine's
+ * presets in their order, then the user presets; the favourites filter aside), loaded by the UI between frames (a
+ * sound load is the main loop's: ui.c midi_pc_poll). 0 none, else n + 1 */
+static volatile uint8_t midi_pc_req[NTRK];
+
 /* Keep the occasional controller/panic dispatch outside the hot rendering loop. Channel voice messages only
  * (realtime and clock are handled in events_block, SysEx never reaches here). With ROUT CH1-4 channels
  * 5..16 are ignored entirely: notes, bend, CCs (CC1/11/64, RPN, and the CC120/121/123 panic and reset),
@@ -315,4 +320,6 @@ static void __attribute__((noinline)) midi_event(uint32_t st, uint32_t ch, uint3
         midi_control(ch, d1, d2);
     } else if (st == 0xD0u)
         mod_midi(midi_track(ch), st, d1, d2);
+    else if (st == 0xC0u)                          /* (0.6.72) PROGRAM CHANGE: the UI loads it (ui.c midi_pc_poll) */
+        midi_pc_req[trk_index(midi_track(ch)) % NTRK] = (uint8_t)(d1 + 1u);
 }

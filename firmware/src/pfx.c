@@ -31,6 +31,9 @@ static uint8_t pfx_any;               /* a track has something running (or to pu
 static uint32_t pfx_blk;              /* blocks: the notes of one block were struck together */
 static uint32_t pfx_seed = 0x9E3779B9u;
 
+/* (0.6.72) a repeat holds the track: trk_note_on drops its notes (seq.c MIDI OUT sends none of them either) */
+static int pfx_holds(const track_t *t) { return !pfx_in && (t->pfx & PFX_REP); }
+
 /* voice.c trk_note_on, before it starts a note: 1 = not played (a repeat holds the track). Remembers the notes
  * struck together; RANDOM draws the note's offset */
 static int pfx_note(track_t *t, uint32_t note, uint32_t vel)
@@ -61,7 +64,7 @@ static void pfx_hush(track_t *t)
 {
     uint32_t i;
     for (i = 0; i < t->pfx_snn; i++)
-        trk_note_off(t, t->pfx_sn[i]);
+        seq_note_off(t, t->pfx_sn[i]);
     t->pfx_snn = 0;
 }
 
@@ -92,19 +95,19 @@ static __attribute__((noinline)) void pfx_fire(track_t *t, int arp)
              : r < 215u ? FILL[4u + ((t->pfx_si + ((pfx_seed >> 16) & 1u)) % 6u)]   /* toms, mostly downwards */
              : FILL[10u + ((pfx_seed >> 16) % 6u)];
         t->pfx_si++;
-        trk_note_on(t, note, 60u + ((pfx_seed >> 8) & 63u) + (r & 1u ? 0u : 4u));
+        seq_note_on(t, note, 60u + ((pfx_seed >> 8) & 63u) + (r & 1u ? 0u : 4u));
         t->pfx_sn[0] = (uint8_t)note;
         t->pfx_snn = 1;
     } else if (arp) {
         uint32_t k = t->pfx_si++ % (t->engine == ENGI_DRUM ? n : 3u * n);
         uint32_t note = t->pfx_ln[k % n] + 12u * (k / n);
         note = note > 127u ? 127u : note;
-        trk_note_on(t, note, t->pfx_lv[k % n]);
+        seq_note_on(t, note, t->pfx_lv[k % n]);
         t->pfx_sn[0] = (uint8_t)note;
         t->pfx_snn = 1;
     } else {
         for (i = 0; i < n; i++) {
-            trk_note_on(t, t->pfx_ln[i], t->pfx_lv[i]);
+            seq_note_on(t, t->pfx_ln[i], t->pfx_lv[i]);
             t->pfx_sn[i] = t->pfx_ln[i];
         }
         t->pfx_snn = (uint8_t)n;
