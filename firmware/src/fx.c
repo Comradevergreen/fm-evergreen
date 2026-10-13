@@ -1049,11 +1049,11 @@ static __attribute__((noinline)) int32_t autopan(const track_t *t, uint32_t ti, 
  * each side gives up (at the part's LEVEL ramp lq and PAN gains gl gr, as that loop), each bus fed by its sounds; pm0 ..
  * pm1 the FX layer's mute over the block (perform.c perf_mute: 32768 open) */
 static __attribute__((noinline)) void drum_mix(int32_t *ol, int32_t *or_, uint32_t n, int32_t lq, int32_t dl, int32_t gl,
-                                               int32_t dgl, int32_t gr, int32_t dgr, int32_t pm0, int32_t pm1)
+                                               int32_t dgl, int32_t gr, int32_t dgr, int32_t pm0, int32_t pm1,
+                                               int32_t *const sd[3])   /* (0.6.71: this core's sends) */
 {
     uint32_t i, b, on = dx_xon;
     int32_t dpm = (pm1 - pm0) / (int32_t)(n ? n : 1u), mute = pm0 != 32768 || pm1 != 32768;
-    int32_t *sd[3] = {send_c, send_d, send_r};
     if (n > CTL)
         n = CTL;
     if (mute)                                           /* (the FX layer's mute: on what is taken and sent too) */
@@ -1152,7 +1152,10 @@ static void mix_part(track_t *t, uint32_t n)
             pm1 = pf.mg[ti];
         }
         if (dx_xon && ENGINES[t->engine] == &ENG_DRUM)  /* (0.6.48) IMAGE, SENDs: from the same ramps as below */
-            drum_mix(ol, or_, n, lq, dl, gl, dgl, gr, dgr, pm0, pm1);
+        {
+            int32_t *const sx[3] = {sc, sd, sr};
+            drum_mix(ol, or_, n, lq, dl, gl, dgl, gr, dgr, pm0, pm1, sx);
+        }
         for (i = 0; i < n; i++, lq += dl, gl += dgl, gr += dgr) {
             int32_t x = ((b[i] >> 2) * (lq >> 8)) >> 10, a = x < 0 ? -x : x;   /* pre-shift: 8 loud voices */
             int32_t xs = clamp(x, -xmax, xmax);         /* sends: mulq15 would overflow */
@@ -1232,9 +1235,10 @@ static __attribute__((noinline)) void perf_master(int32_t *out, uint32_t n)
 
 /* (JIANT 0.6.71) the second core (hal/fm1_multicore.h). Each block, while core 0 renders its parts, core 1 renders
  * some synth parts of its own into its own buffers (c1_buf, c1_mix; mod.c, fm6_core.c, voice.c keep theirs a core);
- * they are added in after it is done: the same sum, the same sound as one core. A DRUM part stays on core 0 (DRUM-X's
- * kit and its IMAGE / SEND buffers are one for all). The parts go to whichever core has less to do, by their sounding
- * voices and engines. A core 1 that misread, faulted or did not come back is held for good: its block of those parts is
+ * they are added in after it is done: the same sum, the same sound as one core. The DRUM parts go together, on one core
+ * or the other (DRUM-X's kit and its IMAGE / SEND buffers are one for all; 0.6.71: always core 0). The parts go to
+ * whichever core has less to do, by what each took the last blocks (0.6.73: measured; was their sounding voices and
+ * engines, mc_split). A core 1 that misread, faulted or did not come back is held for good: its block of those parts is
  * dropped and core 0 renders every part from the next one. REC held at power-on: core 0 alone (mc_off). MENU > ABOUT
  * says which (mc_status) */
 #if FELUCCA_DUAL_CORE
@@ -1258,7 +1262,8 @@ static volatile uint8_t mc_off;                          /* REC held at power-on
 static volatile int8_t mc_cur = -1;                      /* the part core 1 is in (a job given up: its matrix put back) */
 static uint8_t mc_mask_last;                             /* the parts core 1 had the last block (MENU > ABOUT, tests) */
 static uint32_t mc_jobs;                                 /* (0.6.72) blocks core 1 rendered parts in (console status) */
-static __attribute__((noinline)) void mc_job(uint32_t a)   /* core 1: the parts of mask a & 0xFF, a >> 8 samples */
+static void mix_part_m(track_t *t, uint32_t n);         /* (below) */
+static __attribute__((noinline)) void mc_job(uint32_t a)  /* core 1: the parts of mask a & 0xFF, a >> 8 samples */
 {
     uint32_t i, n = a >> 8;
     for (i = 0; i < n; i++)
@@ -1266,7 +1271,7 @@ static __attribute__((noinline)) void mc_job(uint32_t a)   /* core 1: the parts 
     for (i = 0; i < NPART; i++)
         if ((a >> i) & 1u) {
             mc_cur = (int8_t)i;
-            mix_part(&trk[i], n);
+            mix_part_m(&trk[i], n);
         }
     mc_cur = -1;
 }
@@ -1278,24 +1283,54 @@ static uint32_t mc_cost(const track_t *t)               /* a part's share of the
         v += t->v[k].active;
     return v ? 1u + v * w : 0u;
 }
-static __attribute__((noinline)) uint32_t mc_split(void)   /* the parts for core 1 this block (a bit each) */
+/* (0.6.73) what each part really took, measured as it renders (on either core: TIMER4, 24 MHz), smoothed over a few
+ * blocks; the split goes by it, the voices only breaking ties and starting a part that was silent (the host has no
+ * clock: the voices alone) */
+#if FELUCCA_DUAL_CORE
+#define MC_TICKS() fm1_mc_ticks()
+#define MC_VW 24u                                        /* a voice-weight unit in ticks (~1 us) */
+#else
+#define MC_TICKS() 0u
+#define MC_VW 1u
+#endif
+static uint32_t mc_tk[NTRK];
+static void mix_part_m(track_t *t, uint32_t n)          /* mix_part, timed */
 {
-    uint32_t i, j, c0 = 0, c1 = 0, mask = 0, cost[NPART], left = 0;
+    uint32_t t0 = MC_TICKS(), i = (uint32_t)(t - trk) % NTRK, d;
+    mix_part(t, n);
+    d = MC_TICKS() - t0;
+    mc_tk[i] = d > mc_tk[i] ? mc_tk[i] + ((d - mc_tk[i]) >> 1) : mc_tk[i] - ((mc_tk[i] - d) >> 3);   /* (up fast) */
+}
+/* the parts for core 1 this block (a bit each): whichever core has less to do takes the dearest left. The DRUM parts
+ * go together, as one (DRUM-X's kit and its IMAGE / SEND buffers are one for all): on one core or the other */
+static __attribute__((noinline)) uint32_t mc_split(void)
+{
+    uint32_t i, j, c0 = 0, c1 = 0, mask = 0, cost[NPART + 1], unit[NPART + 1], nu = 0, left = 0;
+    cost[0] = unit[0] = 0;
+    nu = 1;                                              /* (item 0: the DRUM parts) */
     for (i = 0; i < NPART && i < trk_live; i++) {
-        cost[i] = mc_cost(&trk[i]);
-        if (ENGINES[trk[i].engine] == &ENG_DRUM)
-            c0 += cost[i];                               /* (always core 0's) */
-        else if (cost[i])
-            left |= 1u << i;
+        uint32_t v = mc_cost(&trk[i]), c = v ? mc_tk[i] + v * MC_VW : 0u;
+        if (!c)
+            continue;
+        if (ENGINES[trk[i].engine] == &ENG_DRUM) {
+            cost[0] += c;
+            unit[0] |= 1u << i;
+        } else {
+            cost[nu] = c;
+            unit[nu++] = 1u << i;
+        }
     }
-    while (left) {                                       /* the dearest left to the core with less */
-        for (j = NPART, i = 0; i < NPART; i++)
-            if (((left >> i) & 1u) && (j == NPART || cost[i] > cost[j]))
+    for (i = 0; i < nu; i++)
+        if (unit[i])
+            left |= 1u << i;
+    while (left) {
+        for (j = nu, i = 0; i < nu; i++)
+            if (((left >> i) & 1u) && (j == nu || cost[i] > cost[j]))
                 j = i;
         left &= ~(1u << j);
         if (c1 < c0) {
             c1 += cost[j];
-            mask |= 1u << j;
+            mask |= unit[j];
         } else {
             c0 += cost[j];
         }
@@ -1368,7 +1403,7 @@ static __attribute__((noinline)) void mix_block(int32_t *out, uint32_t n)   /* (
         c1m = 0;                                        /* (0.6.71) core 1 at its parts meanwhile */
     for (i = 0; i < NPART; i++)
         if (!((c1m >> i) & 1u))
-            mix_part(&trk[i], n);
+            mix_part_m(&trk[i], n);
     if (c1m) {
         if (!mc_wait()) {
             mc_join(n);

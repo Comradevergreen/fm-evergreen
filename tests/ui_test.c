@@ -7611,6 +7611,10 @@ static int test_click_menu(void)
         set_engine_of(&trk[2], 0);
         trk[2].p[P_FCUT] = 70; trk[2].p[P_FRES] = 60;  /* (voice.c tf_on) */
         trk[1].p[P_CHOR] = 60; trk[2].p[P_DLY] = 50; trk[0].p[P_REV] = 40;
+        for (k = 0; k < NPART; k++)                     /* (0.6.73) the drums' IMAGE and their sounds' SENDs on */
+            if (ENGINES[trk[k].eng_req] == &ENG_DRUM)
+                trk[k].p[P_DXIMG] = 60;
+        dx_snd[DV_SNARE] = (3u << 6) | 40u; dx_snd[DV_HATC] = (2u << 6) | 40u;
         if (!song.playing) transport_req = 1;
         for (k = 0; k < 2u; k++) {
             pid_t pid;
@@ -7629,6 +7633,13 @@ static int test_click_menu(void)
                     for (j = 0; j < 2u * CTL; j++)
                         u |= (uint64_t)(o[j] != 0) << 8;     /* (not silence) */
                     u |= mc_mask_last;
+                    {   /* (0.6.73) the DRUM parts together, on one core or the other */
+                        uint32_t dm = 0, q;
+                        for (q = 0; q < NPART; q++)
+                            dm |= (uint32_t)(ENGINES[trk[q].engine] == &ENG_DRUM && mc_cost(&trk[q])) << q;
+                        if ((mc_mask_last & dm) && (mc_mask_last & dm) != dm) u |= 1ull << 16;   /* (split: wrong) */
+                        if (mc_mask_last & dm) u |= 1ull << 17;                                  /* (on core 1) */
+                    }
                 }
                 if (write(fds[k][1], &hh, 8) != 8 || write(fds[k][1], &u, 8) != 8) {}
                 _exit(0);
@@ -7638,11 +7649,12 @@ static int test_click_menu(void)
             waitpid(pid, 0, 0);
             close(fds[k][0]);
         }
-        ok = h[0] && h[0] == h[1] && (used & 0xFFu) && (used >> 8);   /* parts on core 1, and sound */
+        ok = h[0] && h[0] == h[1] && (used & 0xFFu) && ((used >> 8) & 1u) &&   /* parts on core 1, and sound */
+             !((used >> 16) & 1u) && ((used >> 17) & 1u);   /* (0.6.73) the drums together, on core 1 too */
         if (!ok) printf("  dual core: one %016llx two %016llx, parts on core 1 %llx\n", (unsigned long long)h[0],
                         (unsigned long long)h[1], (unsigned long long)used);
         load_put(ld0 <= 2u ? 2u - ld0 : 2u);
-        bad += check("DUAL CORE: some synth parts on the second core, the sound bit for bit one core's", ok);
+        bad += check("DUAL CORE: parts on the second core (the DRUM ones together, there too), the sound bit for bit one core's", ok);
     }
     {   /* (0.6.72) MIDI OUT (USB): ALL sends the sequencer's notes, each with its note-off (all of them by STOP), the
          * clock 24 a beat with START / STOP; KEYS none of that; CLOCK the clock only. PROGRAM CHANGE n on a track's
