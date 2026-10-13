@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.6.72).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.6.73).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 > ⚡ **New in 0.6.71: both cores (experimental).** The FM-1's chip has two processor cores and JIANT used one. Now the
 > second renders some of the synth tracks while the first renders the rest, so the same song leaves much more room
@@ -44,6 +44,14 @@ Two printable sheets with everything on the device. Click an image to open it fu
 ## Changelog
 
 Every update is listed here, newest first.
+
+### v0.6.73
+- **Both cores, better shared** (after the first tests on a real unit: mean load 54 %, but a few blocks near the limit,
+  a click now and then): each track's render is now **timed** as it plays, and the tracks are split between the cores
+  by what they really take (it was an estimate from their voices and engines). The **drums can go to the second core
+  too** (all the DRUM tracks together, on one core or the other): they were always on the first, often the heaviest
+  part of a song, which left the cores uneven.
+- USB console `status`: `cpu2`, `cpu2_jobs`, `cpu2_tracks`, `cpu2_wait_max_us` (0.6.72), to see the second core at work.
 
 ### v0.6.72
 - **MIDI OUT** (MENU > CONTROL > MIDI OUT, over USB): **KEYS** (as before), **CLOCK** (and the clock with START / STOP
@@ -781,10 +789,10 @@ audio CPU budget, the signature shown at power-on is 428 bytes. An instrument th
 *Since 0.6.71, experimental.* The FM-1's chip (JieLi AC791N) has **two processor cores**; Felucca and JIANT up to
 0.6.70 used one, which ran everything: the sound, the screen, the keys. Now the second one helps with the sound:
 
-- **How the work is shared.** Every 0.7 ms block, the synth tracks are split between the two cores by how much each
-  has to do (its sounding voices and its engine: FM6 is the heaviest). While the first core renders its tracks, the
-  second renders the others into buffers of its own; then they are added together and go through the effects and
-  the master on the first core. The drum tracks always stay on the first core.
+- **How the work is shared.** Every 0.7 ms block, the tracks are split between the two cores by how long each took to
+  render over the last blocks (timed as they play, since 0.6.73). While the first core renders its tracks, the second
+  renders the others into buffers of its own; then they are added together and go through the effects and the master
+  on the first core. The drum tracks go together, on one core or the other.
 - **The same sound.** The sum is exactly the one-core sum: a test plays a whole six-track song both ways and checks
   that the output is identical, bit for bit.
 - **More room.** With the second core doing part of the synth work, the load meter stays lower: more tracks, voices,

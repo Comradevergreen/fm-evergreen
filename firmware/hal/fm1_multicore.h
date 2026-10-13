@@ -44,6 +44,7 @@ typedef struct {
     uint32_t pad1[13];
 } fm1_mc_box_t;
 static fm1_mc_box_t fm1_mc_box __attribute__((aligned(64)));
+static inline uint32_t fm1_mc_ticks(void) { return FM1_C1_T4(); }   /* (0.6.73) TIMER4 from either core: fx.c times the parts */
 static uint8_t fm1_mc_on;                       /* answering: core 0 may hand it work */
 static uint8_t fm1_mc_lost;                     /* why it stopped: 1 a wrong job, 2 a job not back, 3 a fault */
 static uint32_t fm1_mc_max_ticks;               /* the longest wait for a job (TIMER4 ticks): MENU > ABOUT */
