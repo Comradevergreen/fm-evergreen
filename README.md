@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.6.75).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.6.76).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 > ⚡ **New in 0.6.71: both cores (experimental).** The FM-1's chip has two processor cores and JIANT used one. Now the
 > second renders some of the synth tracks while the first renders the rest, so the same song leaves much more room
@@ -44,6 +44,16 @@ Two printable sheets with everything on the device. Click an image to open it fu
 ## Changelog
 
 Every update is listed here, newest first.
+
+### v0.6.76
+- **The effects guarded on the second core** (a tester's idea, thanks!). On some FM-1s the second core now and then
+  reads a word of memory wrong; the check word guards the hand-over of each job, not the numbers the job reads. With
+  the effects there since 0.6.75, a test now feeds every value of their state a wrong word (on all five reverbs):
+  their lines are 16-bit and clamped, so nothing can grow through the feedback, at worst a short burst the master's
+  limiter holds. Two guards came out of it: ROOM's modulation, given a wrong offset, now puts it back instead of
+  reading far outside its buffers; and if the effects' output ever goes far out of range (as the known wrong read
+  would make it), that block is muted, every delay and reverb line is cleared, and the second core is stopped as a
+  BAD READ (one core until switched off). USB console `status`: `fx_trips`.
 
 ### v0.6.75
 - **The effects on the second core.** The chorus, delay and reverb buses ran on the first core after both cores had
@@ -818,7 +828,9 @@ audio CPU budget, the signature shown at power-on is 428 bytes. An instrument th
 - **Units that cannot run it.** On some FM-1s the second core now and then reads a word of memory wrong, more often
   under load (found by the Melodee and fm1-x0x developers). JIANT guards against it: every job carries a check word,
   and if the second core reads a wrong one, faults or does not answer in time, it is **stopped at once and the first
-  core plays every track again**, with no crash (at most one 0.7 ms block of those tracks is lost). Such a unit
+  core plays every track again**, with no crash (at most one 0.7 ms block of those tracks is lost). Since 0.6.76 the
+  effects' output is checked too: far out of range, the block is muted, their lines cleared and the second core stopped
+  the same way. Such a unit
   then stays on one core **until it is switched off**, and so does any unit after a crash while both cores ran.
 - **What it says.** MENU > ABOUT, under AUDIO LOAD: **CORES 2**, or **CORES 1** with the reason: REC AT POWER-ON,
   BAD READ, NO ANSWER, FAULT, SINCE A FAULT (an earlier one this power-on), NO START.

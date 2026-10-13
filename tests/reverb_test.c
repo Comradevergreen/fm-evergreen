@@ -654,6 +654,57 @@ static void test_new_types(void)
     }
     song.g[G_RTYPE] = 0; song.g[G_RWIDE] = 0; song.g[G_RMOD] = 0;
 }
+/* (0.6.76) core 1 reads a word wrong now and then (0x00200000 for 0). The buses' lines are 16-bit and clamped, so a
+ * wrong word in their state gives a short burst, never a blow-up; ROOM's modulation offsets, wrong, are put back (they
+ * read far outside the combs); a 32-bit value out of range in the output (fx_insane) mutes the block, silences every
+ * line and state, and gives core 1 up if it ran the buses (fx_trip) */
+static void test_trip(void)
+{
+    int32_t o[2 * CTL];
+    uint32_t k, i, t0, quiet = 1, kept, in = 1;
+    jreset();
+    song.g[G_RTYPE] = 0;
+    fx.rtype = 0;
+    song.g[G_RMOD] = 60;
+    song.g[G_RWIDE] = 127;
+    trk[0].p[P_REV] = 127;
+    trk[0].p[P_DLY] = 127;
+    trk_note_on(&trk[0], 60, 100);
+    mc_host = 1;
+    t0 = fx_trips;
+    for (k = 0; k < 20u; k++)
+        mix_block(o, CTL);
+    for (k = 0; k < 4u; k++)
+        fx.rm_m[k] = k & 1u ? 0x00200000 : -0x00200000;
+    for (k = 0; k < 20u; k++) {
+        mix_block(o, CTL);
+        for (i = 0; i < 4u; i++)
+            in &= (uint32_t)fx.rm_m[i] <= 0xFFFFu;
+    }
+    check("ROOM MOD: offsets read wrong (0x00200000) put back in range, nothing out of range, core 1 kept",
+          in && fx_trips == t0 && mc_host);
+    for (i = 0; i < CTL; i++)
+        fx_wet[i] = fx_sl[i] = 45000;
+    k = fx_insane(CTL);
+    fx_wet[7] = 0x00200000;
+    check("the buses' check: 45000 in range, 0x00200000 out", !k && fx_insane(CTL));
+    fx_bad = 1;                                                 /* (as fx_run on core 1, out of range) */
+    mix_block(o, CTL);
+    kept = mc_host;
+    for (i = 0; i < CTL; i++)
+        quiet &= fx_wet[i] == 0 && fx_sl[i] == 0 && fx_sr[i] == 0;
+    for (i = 0; i < DLY_LEN; i++)
+        quiet &= dly_buf[i] == 0;
+    for (i = 0; i < sizeof rev_comb / 2u; i++)
+        quiet &= rev_comb[i] == 0;
+    trk_note_off(&trk[0], 60);
+    trk[0].p[P_REV] = trk[0].p[P_DLY] = 0;
+    mc_host = 0;
+    printf("reverb: trip: %u, core 1 %s, buses %s\n", fx_trips - t0, kept ? "kept" : "given up", quiet ? "silenced" : "sounding");
+    check("out of range: the block muted, the buses' lines silenced, core 1 given up (CORES 1)",
+          fx_trips == t0 + 1u && !kept && quiet);
+    song.g[G_RMOD] = song.g[G_RWIDE] = 0;
+}
 int main(int argc, char **argv)
 {
     test_room_identical();
@@ -663,6 +714,7 @@ int main(int argc, char **argv)
     test_cost();
     test_jiant();
     test_new_types();
+    test_trip();
     if (argc > 1) {
         demo(argv[1], "spring_drums", 1, 0);
         demo(argv[1], "spring_pluck", 1, 1);
