@@ -513,7 +513,8 @@ recorded into the pattern, quantized to its steps, overdubbing. Knob moves on th
 - **MUTATE**: the track changes by itself, in time with the clock, so a texture can evolve for minutes.
   **SOUND** and **PATTERN**: every OFF, 1, 2, 4, 8, 16 or 32 bars (the change lands on the bar's one). **AMOUNT**: how
   much (turning one on sets 50 %). **MODE**: **ORBIT** varies around the anchor (the music as it was when MUTATE came
-  on, when PLAY started, or when you pressed **OCT+** here: KEEP), so it never loses itself; **DRIFT** goes on from
+  on, when PLAY started, when you pressed **OCT+** here: KEEP, or when you last wrote or cleared steps), so it never
+  loses itself, and a sequence you clear stays cleared; an empty pattern is never filled by MUTATE; **DRIFT** goes on from
   what it is now. SOUND changes the engine's values, the filter, its envelope, DEC, REL and the sends (never LEVEL, PAN
   or MUTE); PATTERN moves notes along the scale, flips accents, adds or takes a note off the beat (never on it); on
   DRUM it flips hits, never the kick. **OCT−** here (or **GLO + A4**, FREEZE) stops every mutation until pressed again.

@@ -12,7 +12,7 @@
  *   build/video5/capture_dark build/video5/feat feat;  build/video5/capture_dark build/video5/seq seq
  * tools/video/film.mjs makes the 1080p films from them. */
 #define UI_TEST_NO_MAIN 1
-#define FELUCCA_VERSION "v0.6.67"
+#define FELUCCA_VERSION "v0.6.68"
 #define PF_MS 900u                                   /* (the page's name shown, as on the device) */
 #define UI_NO_DRIFT 0                                /* (the granules, as on the device) */
 #include "ui_test.c"
@@ -285,8 +285,9 @@ static void feat_beat(uint32_t q)
     if (q == B(59, 3)) hold_btn(B_OCTUP, 0);
     if (q == B(60, 0)) { song.sel = T_PAD; hold_btn(B_LFO, 1); enc_turn(EN_SELECT, 1); }
     if (q == B(60, 1)) hold_btn(B_LFO, 0);
-    if (q == B(60, 3)) hold_btn(B_OCTUP, 1);
-    if (q == B(61, 0)) { hold_btn(B_OCTUP, 0); song.sel = T_ARP; hold_btn(B_FX, 1); enc_turn(EN_SELECT, 1); }
+    if (q == B(60, 2)) hold_btn(B_OCTUP, 1);
+    if (q == B(60, 3)) hold_btn(B_OCTUP, 0);
+    if (q == B(61, 0)) { song.sel = T_ARP; hold_btn(B_FX, 1); enc_turn(EN_SELECT, 1); }
     if (q == B(61, 1)) hold_btn(B_FX, 0);
     if (q == B(61, 3)) hold_btn(B_OCTDN, 1);           /* (CANCEL: the effects as they were) */
     if (q == B(62, 0)) hold_btn(B_OCTDN, 0);
