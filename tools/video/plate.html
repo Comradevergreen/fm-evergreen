@@ -117,7 +117,7 @@ async function rgbFrame(f){
 }
 function easeIO(u){u=Math.min(1,Math.max(0,u));return u<.5?4*u*u*u:1-Math.pow(-2*u+2,3)/2;}
 const PL={x:720,y:118,w:1140,h:880};                       /* the plate's frame */
-const SPEC={cx:1290,cy:560,sw:600};                         /* the specimen inside it */
+const SPEC={cx:1290,cy:560,sw:660};                         /* the specimen inside it */
 const STIP=[], TREE=[];
 (function(){const R=rng(42);
   while(STIP.length<300){const a=R()*TAU,r=.8+R()*.18;STIP.push([a,r,R()*TAU]);}
@@ -143,7 +143,7 @@ function plate(f,t,A,P,cut){
   x.lineWidth=1.8;x.beginPath();x.ellipse(0,0,rx*(1+.012*A.kick),ry*(1+.012*A.kick),0,0,TAU);x.stroke();
   x.lineWidth=.8;x.beginPath();x.ellipse(0,0,rx*.93,ry*.9,0,0,TAU);x.stroke();
   /* the red band, its yellow ribs */
-  x.beginPath();for(let a=-2.75;a<=-.8;a+=.03)x.lineTo(Math.cos(a)*rx*.88,Math.sin(a)*ry*.86);for(let a=-.8;a>=-2.75;a-=.03)x.lineTo(Math.cos(a)*rx*.8,Math.sin(a)*ry*.76);x.closePath();
+  x.beginPath();for(let a=-2.75;a<=-.8;a+=.03)x.lineTo(Math.cos(a)*rx*.88,Math.sin(a)*ry*.86);for(let a=-.8;a>=-2.75;a-=.03)x.lineTo(Math.cos(a)*rx*.83,Math.sin(a)*ry*.8);x.closePath();
   x.fillStyle=`rgba(255,59,47,${.75+.2*A.mid})`;x.fill();x.strokeStyle=C.line;x.lineWidth=.8;x.stroke();
   x.strokeStyle='rgba(255,225,77,.7)';for(let a=-2.6;a<=-.95;a+=.12){x.beginPath();x.moveTo(Math.cos(a)*rx*.87,Math.sin(a)*ry*.84);x.lineTo(Math.cos(a)*rx*.81,Math.sin(a)*ry*.77);x.stroke();}
   /* the cytoplasm's stipple in the ring, drifting */
@@ -184,8 +184,11 @@ function legend(sc,idx,f,t,A,P,E){
     const cr=17;x.beginPath();x.arc(lx,ly,cr,0,TAU);x.fill();
     x.fillStyle='#030207';x.font='600 18px "IBM Plex Mono"';x.textAlign='center';x.textBaseline='middle';x.fillText(String.fromCharCode(65+i),lx,ly+1);
     x.textBaseline='alphabetic';
-    const left=lx>P.cx;x.textAlign=left?'left':'right';
-    x.font='500 19px "IBM Plex Mono"';const tx=left?lx+cr+10:lx-cr-10;
+    x.font='500 19px "IBM Plex Mono"';
+    let left=lx>P.cx;const tw0=x.measureText(s).width;
+    if(left&&lx+cr+10+tw0>PL.x+PL.w-12)left=false;              /* (never past the plate's edge) */
+    if(!left&&lx-cr-10-tw0<PL.x+12)left=true;
+    x.textAlign=left?'left':'right';const tx=left?lx+cr+10:lx-cr-10;
     x.fillStyle='rgba(3,2,7,.8)';const w=x.measureText(s).width;x.fillRect(left?tx-4:tx-w-4,ly-16,w+8,26);
     x.fillStyle=C.line;x.fillText(s,tx,ly+3);x.textAlign='left';
     x.globalAlpha=1;

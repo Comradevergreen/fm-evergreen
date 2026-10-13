@@ -102,6 +102,7 @@ const TEXT = {
     reboot: "再起動中", done: "完了しました", stopped: "途中で止まりました。USB を挿し直してもう一度押してください。",
     error: "エラー: ",
     denied: "MIDI（SysEx）の使用が許可されませんでした。アドレスバーのサイト設定で MIDI を許可して、もう一度押してください。",
+    blocked: "このサイトでは MIDI がブロックされています（以前に許可ダイアログを閉じたか拒否した場合、ブラウザーはもう尋ねません）。アドレスバー左のアイコン → 権限（サイトの設定）→ MIDI デバイスの制御 → 許可。ページを再読み込みして、もう一度インストールを押してください。",
     notfound: "FM-1 が見つかりません。USB ケーブル（データ通信用か）を確かめ、MIDI を使う他のアプリを閉じてから、もう一度押してください。",
     model: "接続されている機器は FM-1 ではありません。",
     lost: "USB の接続が切れました。挿し直してもう一度押してください。",
@@ -141,6 +142,7 @@ const TEXT = {
     reboot: "Restarting", done: "Done", stopped: "Stopped. Replug the USB cable and press Install again.",
     error: "Error: ",
     denied: "MIDI (SysEx) access was not allowed. Allow MIDI in the site settings (address bar) and press Install again.",
+    blocked: "MIDI is blocked for this site (once its prompt was dismissed or refused, the browser stops asking). Tap the icon left of the address → Permissions (Site settings) → MIDI device control → Allow. Reload the page and press Install again.",
     notfound: "FM-1 not found. Check the USB cable (a data cable), close other apps that use MIDI, and press Install again.",
     model: "The connected device is not an FM-1.",
     lost: "The USB connection was lost. Replug it and press Install again.",
@@ -207,6 +209,13 @@ $("ver").addEventListener("change", () => { if (!writing) loadVersion(+$("ver").
 /* (0.6.21) a report of a brick from another custom firmware; (0.6.62) the installer checks it itself (fwKind): it
  * writes only over official V15 (FM-1_015) or JIANT (FM-1_9xx answering the editor's INFO as JIANT: its tag 0x4A, or
  * an older JIANT's six tracks with a v0.x version); anything else is sent to Return to official V15 first */
+/* (0.6.70) MIDI refused: blocked for the site (the browser no longer asks: say where to allow it) or just dismissed */
+async function midiRefused(e) {
+  let state = "";
+  try { state = (await navigator.permissions.query({ name: "midi", sysex: true })).state; } catch (_) {}
+  log(`midi: ${e && e.name} ${state}`);
+  sayK(state === "denied" ? "blocked" : "denied");
+}
 function isJiantInfo(a) {
   const z = a.indexOf(0); if (z < 0) return false;
   const version = String.fromCharCode(...a.slice(0, z));
@@ -236,7 +245,7 @@ $("go").addEventListener("click", async () => {
   lockInstaller(true);
   let midi;
   try { midi = await navigator.requestMIDIAccess({ sysex: true }); }
-  catch (e) { sayK("denied"); lockInstaller(false); return; }
+  catch (e) { await midiRefused(e); lockInstaller(false); return; }
   try {
     const up = new Updater(midi, log);
     const total = 74 + 1167;
@@ -300,7 +309,7 @@ $("stock-go").addEventListener("click", async () => {
   let link = null;
   try {
     let midi;
-    try { midi = await navigator.requestMIDIAccess({sysex:true}); } catch (e) { sayK("denied"); return; }
+    try { midi = await navigator.requestMIDIAccess({sysex:true}); } catch (e) { await midiRefused(e); return; }
     const up = new Updater(midi, log);
     const step = (k, n) => { log(`${k} ${n ?? ""}`); if (["start","verify","loader","write","reboot","done"].includes(k)) sayK(k); if (k === "done") $("bar").value = 100; };
     const loader = await up.find(id => id.model === "ota-FM-1");
