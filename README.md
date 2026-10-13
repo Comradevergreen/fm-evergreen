@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.6.69).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.6.70).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 > 🫶 If you resonate with my work, consider supporting me on **[Ko-fi](https://ko-fi.com/juanjiant)** (in Argentina:
 > **[Cafecito](https://cafecito.app/juanjiant)**). Thanks for all the good energy, hope you enjoy this little beast ✨🎹
@@ -37,6 +37,13 @@ Two printable sheets with everything on the device. Click an image to open it fu
 ## Changelog
 
 Every update is listed here, newest first.
+
+### v0.6.70
+- **LOAD ECO really lighter** (4 tracks with reverb and delay still crackled on ECO): the SPRING every reverb becomes
+  on ECO was heavier than a plain ROOM; on ECO it now runs a shorter chain (4 stages instead of 10, a third of the
+  reverb's cost gone). The voices all tracks share drop from **8 to 6** on ECO, and the load budget steps in sooner
+  (at half the time instead of 65 %), taking only tails that are nearly silent: the peaks when every track hits at
+  once no longer reach the point where the sound breaks.
 
 ### v0.6.69
 - **SELECT scrolls inside the section**: alone it goes through the pages of the section you are in (EDIT's on an EDIT
@@ -339,9 +346,9 @@ Feedback from users (YouTube, Reddit):
   - **FULL** (the default): everything as set.
   - **LITE**: the heavy parts swapped for their nearest light kin: SHIMMER and CLOUD reverbs as ROOM, RESO as SPRING,
     the GRAIN delay as a plain delay, FM6 two voices.
-  - **ECO**: LITE, and every reverb a SPRING (the lightest), **no SLICER** (its tracks go straight to the mix) and
-    **no chorus**: their pages disappear until you leave ECO. Every synth track plays at most **4 voices** (the drums
-    as ever).
+  - **ECO**: LITE, and every reverb a light SPRING (0.6.70: a shorter chain), **no SLICER** (its tracks go straight
+    to the mix) and **no chorus**: their pages disappear until you leave ECO. Every synth track plays at most
+    **4 voices** (the drums as ever), **6** between all tracks (8 otherwise), and the load budget steps in sooner.
   - The cards of what's swapped say **LITE** or **ECO** under their value.
   - Why CPU and not RAM: the firmware reserves all its memory at boot, so nothing can be freed while it runs. What runs
     out is the audio time (the load meter, the CPU % card next to LOAD), and that's what LOAD gives back.

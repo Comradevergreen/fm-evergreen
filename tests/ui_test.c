@@ -7583,14 +7583,17 @@ static int test_click_menu(void)
                 shown += str_eq(PAGES[i].title, "REVERB") && page_visible(i);
             }
             ok &= hidden && shown == 1u;
+            ok &= voice_cap() == ECO_VOICES && fx.sp_ns == SP_N_ECO;   /* (0.6.70) 6 voices shared, a shorter SPRING */
             go_title("REVERB"); frame();
             ok &= strstr(ui.col[0], "|ROOM|ECO") != 0;
             load_put(2u);
+            song.g[G_RTYPE] = 1; mix_block(o, CTL);
+            ok &= voice_cap() == NVOICE && fx.sp_ns == SP_N;   /* FULL: all of them */
             for (i = 0; i < NPAGES && !str_eq(PAGES[i].title, "SLICER"); i++) {}
             ok &= slicer_on() && page_visible(i);
             song.g[G_SLMODE] = sm0;
             press(B_HOME); frame();
-            bad += check("LOAD ECO: reverb SPRING, no SLICER / chorus (pages hidden), 4 voices a synth, DRUM as ever; FULL back", ok);
+            bad += check("LOAD ECO: reverb SPRING (4 stages), no SLICER / chorus (pages hidden), 4 voices a synth, 6 shared, DRUM as ever; FULL back", ok);
         }
         song.g[G_RTYPE] = rt0; song.g[G_DPIT] = dp0; mix_block(o, CTL); mix_block(o, CTL);
     }
