@@ -180,12 +180,14 @@ static void track_lfo_tick(track_t *t)
 /* (JIANT 0.6.29, 0.6.30) GLO > SYSTEM > LOAD (MENU > SYSTEM > LOAD): how much of the CPU the heavy parts may take,
  * swapped while they sound, the project keeping its settings (ui.c ui_load, rp_apply). FULL: all as set. LITE: their
  * light kin: FM6 two voices, the reverb SHIMMER / CLOUD as ROOM, RESO as SPRING, the GRAIN delay plain (fx.c). ECO:
- * LITE, and every reverb a SPRING (the lightest), no chorus, no SLICER (slicer.c: its tracks straight to the mix, its
- * pages hidden), at most ECO_POLY voices a track (an engine of hits, DRUM, as ever) */
+ * LITE, and every reverb a SPRING (0.6.70: its chain shortened, fx.c SP_N_ECO), no chorus, no SLICER (slicer.c: its
+ * tracks straight to the mix, its pages hidden), at most ECO_POLY voices a track (an engine of hits, DRUM, as ever),
+ * ECO_VOICES between all (voice_cap), the load budget sooner (audio.c TIGHT_ON_ECO) */
 enum { LOAD_FULL, LOAD_LITE, LOAD_ECO };
 static volatile uint8_t sys_load;
 #define LITE_FM6_POLY 2u
 #define ECO_POLY 4u
+#define ECO_VOICES 6u            /* (0.6.70) LOAD ECO: the voices all parts share (NVOICE else) */
 static uint32_t trk_nvoice(const track_t *t)
 {
     uint32_t c = ENGINES[t->engine]->poly;
@@ -211,6 +213,9 @@ static volatile uint8_t load_tight;
 /* (0.6.17) what the audio did since power-on, for MENU > ABOUT (audio.c fills it): the slowest half's share of its
  * time (%), the halves that came late (each a click), the voices the overload guard faded */
 static struct { volatile uint32_t peak, late, shed; } load_diag;
+/* (JIANT 0.6.70) the budget shared by all parts: NVOICE, LOAD ECO ECO_VOICES (4 parts with reverb and delay still
+ * crackled on ECO: the peaks are the voices, a tail ringing on each part as the next hits come) */
+static uint32_t voice_cap(void) { return sys_load == LOAD_ECO ? ECO_VOICES : NVOICE; }
 static uint32_t voices_busy(void)                       /* sounding voices of all parts (not the fading ones) */
 {
     uint32_t p, i, n = 0;
@@ -296,7 +301,7 @@ static int voice_room(track_t *t, int soft)
 {
     track_t *vp = 0;
     uint32_t k;
-    if (voices_busy() < NVOICE) {
+    if (voices_busy() < voice_cap()) {
         if (load_tight && (k = quiet_tail(&vp)) < NVOICE)
             voice_kill(&vp->v[k]);                      /* (the load budget: a dying tail makes the room) */
         return 1;
@@ -338,9 +343,9 @@ static voice_t *voice_alloc(track_t *t, uint32_t note)
             return voice_reuse(t, &t->v[i]);
         nfree += !t->v[i].active;
     }
-    if (nfree && (voices_busy() >= NVOICE || load_tight)) {   /* (0.6.16: the load budget too; 0.6.18: a dying tail) */
+    if (nfree && (voices_busy() >= voice_cap() || load_tight)) {   /* (0.6.16: the load budget too; 0.6.18: a dying tail) */
         track_t *vp = 0;
-        uint32_t k = voices_busy() >= NVOICE ? voice_victim(t, 0, &vp) : quiet_tail(&vp);
+        uint32_t k = voices_busy() >= voice_cap() ? voice_victim(t, 0, &vp) : quiet_tail(&vp);
         if (k < np && vp == t)
             return &t->v[k];                            /* our own: restart it in place (no click) */
         if (k < NVOICE)

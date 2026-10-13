@@ -35,6 +35,7 @@ static struct {
     uint32_t cl_w, cl_rng;               /* .. CLOUD: its line's write count (half rate), its random numbers */
     int32_t cl_next, cl_lp, cl_half, cl_gl, cl_gr;     /* .. the samples to the next grain, the output's low-pass, the odd sample */
     uint16_t sp_w;                       /* SPRING: the loop's write index (SP_MASK) */
+    uint8_t sp_ns;                       /* (0.6.70) SPRING's allpass stages last block (SP_N, LOAD ECO SP_N_ECO) */
     int32_t sp_lp, sp_hp, sp_he, sp_size;   /* .. its loop low-pass, low cut (and its remainder), the loop
                                              * length (Q8, glides) */
     uint32_t sp_ph;                      /* .. the output tap's wobble */
@@ -53,6 +54,7 @@ static struct {
 #define SP_LEN 4096u                     /* the loop's line in rev_comb (4937 samples) */
 #define SP_MASK (SP_LEN - 1u)
 #define SP_N 10u                         /* allpass stages */
+#define SP_N_ECO 4u                      /* (0.6.70) .. on LOAD ECO: the chain was most of its cost (heavier than ROOM) */
 #define SP_A 2867                        /* their coefficient, Q12 (0.7: Q12 keeps (x - o) * a in 32 bits up to
                                           * |x - o| < 749000, far past any peak the chain reaches) */
 _Static_assert(sizeof rev_comb / 2u >= SP_LEN && sizeof rev_u.sp / 4u >= 4u * (SP_N + 1u), "SPRING in ROOM's buffers");
@@ -485,6 +487,15 @@ static __attribute__((noinline)) void rev_room_mod(const int32_t *rev_in, int32_
         fx.rm_m[k] = m1[k];                             /* (exact at the block's end) */
 }
 
+/* (0.6.70) SPRING's chain shortened / lengthened (LOAD): the stages coming back start silent, not with what they held */
+static __attribute__((noinline)) void sp_chain(int32_t *ap, uint32_t ns)
+{
+    uint32_t j, k;
+    for (j = 0; j < 4u; j++)
+        for (k = ns + 1u; k <= SP_N; k++)
+            ap[j * (SP_N + 1u) + k] = 0;
+    fx.sp_ns = (uint8_t)ns;
+}
 /* SPRING (see the top), added to out */
 static __attribute__((noinline)) void rev_spring(const int32_t *rev_in, int32_t *out, uint32_t n)
 {
@@ -494,6 +505,7 @@ static __attribute__((noinline)) void rev_spring(const int32_t *rev_in, int32_t 
     int32_t len = (int32_t)(1323u + ((s * 1323u) >> 7)) << 8, L, L2, L3, f, w;
     int16_t *ln = rev_comb;
     int32_t *ap = rev_u.sp;
+    uint32_t ns = sys_load == LOAD_ECO ? SP_N_ECO : SP_N;   /* (0.6.70) LOAD ECO: a shorter chain */
     if (!fx.sp_size)
         fx.sp_size = len;
     fx.sp_size += clamp(len - fx.sp_size, -256, 256);   /* SIZE glides (a sample a block at most) */
@@ -503,6 +515,8 @@ static __attribute__((noinline)) void rev_spring(const int32_t *rev_in, int32_t 
     L2 = w >> 8;
     f = w & 255;
     L3 = (L * 3) >> 2;
+    if (ns != fx.sp_ns)
+        sp_chain(ap, ns);
     for (i = 0; i < n; i++) {
         uint32_t wp = fx.sp_w, j = (wp & 3u) * (SP_N + 1u);
         int32_t x = mulq15(rev_in[i], 2580), r = ln[(wp - (uint32_t)L) & SP_MASK], p, o;
@@ -516,7 +530,7 @@ static __attribute__((noinline)) void rev_spring(const int32_t *rev_in, int32_t 
         x -= fx.sp_hp;
         p = ap[j];                                      /* the chain: ap[j + k], stage k's output 4 samples ago */
         ap[j] = x;
-        for (k = 1; k <= SP_N; k++) {                   /* (lossless: bounded by the loop's input, no clamp) */
+        for (k = 1; k <= ns; k++) {                     /* (lossless: bounded by the loop's input, no clamp) */
             int32_t v = (x - ap[j + k]) * SP_A;         /* towards 0, as the loop's gain: floors would feed */
             o = ap[j + k];                              /* the loop a little offset and noise for ever */
             x = ((v + ((v >> 31) & 4095)) >> 12) + p;
