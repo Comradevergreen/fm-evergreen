@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.6.74).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.6.75).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 > ⚡ **New in 0.6.71: both cores (experimental).** The FM-1's chip has two processor cores and JIANT used one. Now the
 > second renders some of the synth tracks while the first renders the rest, so the same song leaves much more room
@@ -44,6 +44,15 @@ Two printable sheets with everything on the device. Click an image to open it fu
 ## Changelog
 
 Every update is listed here, newest first.
+
+### v0.6.75
+- **The effects on the second core.** The chorus, delay and reverb buses ran on the first core after both cores had
+  rendered their tracks: a fixed piece of every block the second core could not help with (up to a quarter of the
+  work, more with a heavy reverb). Now they run on the second core while the first renders its tracks, on the sends
+  of the block before, so the wet signal comes 0.7 ms later than the dry one, too little to hear. With one core they
+  run at the same point, so the sound is the same either way (the test still checks it bit for bit). In the
+  simulation of a heavy six-track song the mean load falls from 77 % to 63 % of one core, and the peaks (the ones that
+  make the LATE and SHED counts in ABOUT) are now about 18 % lower than on one core (before, they barely moved).
 
 ### v0.6.74
 - **Fewer clicks.** When the FM-1 has to let a voice go (all 8 voices busy and a new note comes, or the load guard
@@ -798,8 +807,9 @@ audio CPU budget, the signature shown at power-on is 428 bytes. An instrument th
 
 - **How the work is shared.** Every 0.7 ms block, the tracks are split between the two cores by how long each took to
   render over the last blocks (timed as they play, since 0.6.73). While the first core renders its tracks, the second
-  renders the others into buffers of its own; then they are added together and go through the effects and the master
-  on the first core. The drum tracks go together, on one core or the other.
+  renders the others into buffers of its own; then they are added together and go through the master on the first
+  core. The drum tracks go together, on one core or the other. Since 0.6.75 the second core also runs the effect
+  buses (chorus, delay, reverb), on the sends of the block before (0.7 ms later, inaudible), so they no longer wait.
 - **The same sound.** The sum is exactly the one-core sum: a test plays a whole six-track song both ways and checks
   that the output is identical, bit for bit.
 - **More room.** With the second core doing part of the synth work, the load meter stays lower: more tracks, voices,

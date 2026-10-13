@@ -441,11 +441,11 @@ static void jrun(int32_t (*d)(uint32_t), int32_t (*r)(uint32_t), uint32_t n, dou
             c[i] = 0;
             dd[i] = d ? d(t + i) : 0;
             rr[i] = r ? r(t + i) : 0;
-            mix_l[i] = mix_r[i] = 0;
+            fx_sl[i] = fx_sr[i] = 0;
         }
         fx_buses(c, dd, rr, jw + t, CTL);
         for (i = 0; i < CTL; i++)
-            *side += (double)(mix_l[i] - mix_r[i]) * (mix_l[i] - mix_r[i]);
+            *side += (double)(fx_sl[i] - fx_sr[i]) * (fx_sl[i] - fx_sr[i]);
     }
 }
 static int32_t sine500(uint32_t t) { return (int32_t)(40000.0 * sin(2.0 * M_PI * 500.0 * t / FS)); }

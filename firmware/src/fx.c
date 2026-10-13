@@ -143,6 +143,10 @@ static int32_t clip_g, clip_mk;
 /* the mix (dry + wet, before the MASTER knob: the same saturation at any volume) through CLIP, in place; wet
  * cleared (it is in the mix now). Its own loop, only while CLIP is on: the ISR's master loop stays as it was */
 static int32_t mix_l[CTL], mix_r[CTL], wet[CTL];
+/* (JIANT 0.6.75) the buses run a block behind, on the second core when there is one (mix_block): what they give, kept
+ * apart until the next block's mix takes it: their sides (the chorus's, the delay's, the reverbs' WIDE: left and right
+ * as they were added to mix_l / mix_r), their return; the sends they work on (the block before's); their scratch */
+static int32_t fx_sl[CTL], fx_sr[CTL], fx_wet[CTL], fxq_c[CTL], fxq_d[CTL], fxq_r[CTL], fx_tmp[CTL];
 static __attribute__((noinline)) void clip_block(uint32_t n)
 {
     uint32_t i;
@@ -470,8 +474,8 @@ static __attribute__((noinline)) void rev_room_mod(const int32_t *rev_in, int32_
         }
         if (wd) {
             sd = (sd * wd) >> 7;
-            mix_l[i] += sd;
-            mix_r[i] -= sd;
+            fx_sl[i] += sd;
+            fx_sr[i] -= sd;
         }
         c = rev_ap;
         for (k = 0; k < 2u; k++) {
@@ -552,8 +556,8 @@ static __attribute__((noinline)) void rev_spring_side(uint32_t n, int32_t wd)
     uint32_t i, L = (uint32_t)fx.sp_size >> 8, L3 = (L * 3u) >> 2, wp = (uint32_t)fx.sp_w - n;
     for (i = 0; i < n; i++, wp++) {
         int32_t sd = ((ln[(wp - L3) & SP_MASK] - ln[(wp - (L >> 2)) & SP_MASK]) * 3 * wd) >> 7;
-        mix_l[i] += sd;
-        mix_r[i] -= sd;
+        fx_sl[i] += sd;
+        fx_sr[i] -= sd;
     }
 }
 
@@ -774,8 +778,8 @@ static __attribute__((noinline)) void rev_cloud(const int32_t *rev_in, int32_t *
         t[i] = 0;
         if (wd) {                                        /* the grains' own place, left and right (a side) */
             int32_t sd = ((l - r) * wd) >> 9;
-            mix_l[i] += sd;
-            mix_r[i] -= sd;
+            fx_sl[i] += sd;
+            fx_sr[i] -= sd;
         }
     }
     if (song.g[G_RMOD] || wd)
@@ -964,15 +968,15 @@ static void fx_buses(const int32_t *cho_in, const int32_t *dly_in, const int32_t
         if (side) {                                     /* (the side: left +, right -) */
             if (fxg_g < 32767)                          /* (0.6.14: gated as the rest, fx_gate) */
                 side = mulq15(side, fxg_g);
-            mix_l[i] += side;
-            mix_r[i] -= side;
+            fx_sl[i] += side;
+            fx_sr[i] -= side;
         }
     }
     rt = (uint32_t)song.g[G_RTYPE] <= 4u ? song.g[G_RTYPE] : 0;
     rt = REV_LITE[sys_load % 3u][rt];                   /* (0.6.29) LOAD LITE: SHIMMER, CLOUD as ROOM, RESO as SPRING; ECO:
                                                          * all SPRING */
     if (rt != fx.rtype) {                               /* the model changed: the old one's block fades out, */
-        int32_t *t = part_buf, g = 65536, d = 65536 / (int32_t)n;   /* its buffers are cleared, the new */
+        int32_t *t = fx_tmp, g = 65536, d = 65536 / (int32_t)n;   /* its buffers are cleared, the new */
         for (i = 0; i < n; i++)                                     /* one starts from silence */
             t[i] = 0;
         rev_run(fx.rtype, rev_in, t, n);
@@ -1263,9 +1267,14 @@ static volatile int8_t mc_cur = -1;                      /* the part core 1 is i
 static uint8_t mc_mask_last;                             /* the parts core 1 had the last block (MENU > ABOUT, tests) */
 static uint32_t mc_jobs;                                 /* (0.6.72) blocks core 1 rendered parts in (console status) */
 static void mix_part_m(track_t *t, uint32_t n);         /* (below) */
-static __attribute__((noinline)) void mc_job(uint32_t a)  /* core 1: the parts of mask a & 0xFF, a >> 8 samples */
+#define MC_FX 0x80u                                       /* (0.6.75) mc_job: the buses too */
+static void fx_run(uint32_t n);                          /* (below) */
+static __attribute__((noinline)) void mc_job(uint32_t a)  /* core 1: the buses (MC_FX), the parts of mask a & 0x3F, a >> 8
+                                                         * samples */
 {
     uint32_t i, n = a >> 8;
+    if (a & MC_FX)
+        fx_run(n);
     for (i = 0; i < n; i++)
         c1_mix.l[i] = c1_mix.r[i] = c1_mix.c[i] = c1_mix.d[i] = c1_mix.rv[i] = c1_mix.sl[i] = c1_mix.sr[i] = 0;
     for (i = 0; i < NPART; i++)
@@ -1293,7 +1302,7 @@ static uint32_t mc_cost(const track_t *t)               /* a part's share of the
 #define MC_TICKS() 0u
 #define MC_VW 1u
 #endif
-static uint32_t mc_tk[NTRK];
+static uint32_t mc_tk[NTRK], mc_fx_tk;                  /* (and the buses': fx_run) */
 static void mix_part_m(track_t *t, uint32_t n)          /* mix_part, timed */
 {
     uint32_t t0 = MC_TICKS(), i = (uint32_t)(t - trk) % NTRK, d;
@@ -1303,9 +1312,9 @@ static void mix_part_m(track_t *t, uint32_t n)          /* mix_part, timed */
 }
 /* the parts for core 1 this block (a bit each): whichever core has less to do takes the dearest left. The DRUM parts
  * go together, as one (DRUM-X's kit and its IMAGE / SEND buffers are one for all): on one core or the other */
-static __attribute__((noinline)) uint32_t mc_split(void)
+static __attribute__((noinline)) uint32_t mc_split(uint32_t c1)   /* c1: what core 1 has already (0.6.75: the buses) */
 {
-    uint32_t i, j, c0 = 0, c1 = 0, mask = 0, cost[NPART + 1], unit[NPART + 1], nu = 0, left = 0;
+    uint32_t i, j, c0 = 0, mask = 0, cost[NPART + 1], unit[NPART + 1], nu = 0, left = 0;
     cost[0] = unit[0] = 0;
     nu = 1;                                              /* (item 0: the DRUM parts) */
     for (i = 0; i < NPART && i < trk_live; i++) {
@@ -1337,6 +1346,19 @@ static __attribute__((noinline)) uint32_t mc_split(void)
     }
     return mask;
 }
+/* (0.6.75) the buses, a block behind: on the sends of the block before (fxq_*), their return into fx_wet, their sides
+ * into fx_sl / fx_sr; mix_block puts them in the mix. On core 1 while core 0 renders its parts (mc_job), else on core
+ * 0 at the same place: the same sound either way (a block, 0.7 ms, later than before 0.6.75: inaudible) */
+static void fx_run(uint32_t n)
+{
+    uint32_t i, t0 = MC_TICKS(), d;
+    for (i = 0; i < n; i++)
+        fx_sl[i] = fx_sr[i] = 0;
+    fx_buses(fxq_c, fxq_d, fxq_r, fx_wet, n);
+    d = MC_TICKS() - t0;
+    mc_fx_tk = d > mc_fx_tk ? mc_fx_tk + ((d - mc_fx_tk) >> 1) : mc_fx_tk - ((mc_fx_tk - d) >> 3);
+}
+
 static __attribute__((noinline)) void mc_join(uint32_t n)   /* core 1's parts into the mix */
 {
     uint32_t i;
@@ -1383,7 +1405,7 @@ static const char *mc_status(void)                      /* MENU > ABOUT's line *
 static __attribute__((noinline)) void mix_block(int32_t *out, uint32_t n)   /* (0.6.71: kept out of the ISR's
                                                                                * body, as before: target_budget.py) */
 {
-    uint32_t i, c1m = 0;
+    uint32_t i, c1m = 0, c1j = 0;
     int perf;
     int32_t mg = fx_usb_fixed ? MASTER_FULL : (int32_t)song.master_q12;   /* (USB LEVEL FIXED: MASTER after) */
     for (i = 0; i < n; i++)
@@ -1399,25 +1421,42 @@ static __attribute__((noinline)) void mix_block(int32_t *out, uint32_t n)   /* (
     master_begin();
     duck_block();
     perf = perf_begin(n);                               /* the FX hold layer at work (perform.c) */
-    if (!mc_off && mc_live() && (c1m = mc_split()) != 0 && !mc_run(mc_job, c1m | n << 8))
-        c1m = 0;                                        /* (0.6.71) core 1 at its parts meanwhile */
+    if (!mc_off && mc_live()) {                         /* (0.6.71) core 1 at its parts meanwhile; (0.6.75) and the buses */
+        c1m = mc_split(mc_fx_tk + 4u * MC_VW);
+        if (mc_run(mc_job, c1m | MC_FX | n << 8))
+            c1j = 1;
+        else
+            c1m = 0;
+    }
+    if (!c1j)
+        fx_run(n);                                      /* (0.6.75) the buses here: one core */
     for (i = 0; i < NPART; i++)
         if (!((c1m >> i) & 1u))
             mix_part_m(&trk[i], n);
-    if (c1m) {
+    if (c1j) {
         if (!mc_wait()) {
-            mc_join(n);
+            if (c1m)
+                mc_join(n);
             mc_jobs++;
+        } else {
+            mc_lost();                                  /* (its parts' block and the buses' dropped; one core from here) */
+            for (i = 0; i < n; i++)
+                fx_wet[i] = fx_sl[i] = fx_sr[i] = 0;
         }
-        else
-            mc_lost();                                  /* (its parts' block dropped; one core from here) */
     }
     mc_mask_last = (uint8_t)c1m;
     if (pfx_any)
         pfx_end();                                      /* (DEC- / DEC+ back) */
     if (perf)
         perf_pre(mix_l, mix_r, sl_l, sl_r, send_d, send_r, n);   /* (THROW: the SLICER's bus too) */
-    fx_buses(send_c, send_d, send_r, wet, n);
+    for (i = 0; i < n; i++) {                           /* (0.6.75) the buses' return and sides (the block before's sends); */
+        wet[i] = fx_wet[i];                             /* this block's sends for the next */
+        mix_l[i] += fx_sl[i];
+        mix_r[i] += fx_sr[i];
+        fxq_c[i] = send_c[i];
+        fxq_d[i] = send_d[i];
+        fxq_r[i] = send_r[i];
+    }
     if (slicer_fx())                                    /* (JIANT 0.6.3) FX ON: the returns through the SLICER */
         for (i = 0; i < n; i++) {
             sl_l[i] += wet[i];
