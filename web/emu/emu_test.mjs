@@ -99,7 +99,11 @@ a.render(800);
 const brK = a.ex.web_breath_keys(), brB = a.ex.web_breath_buttons(), litK = a.ex.web_lit_keys();
 a.ex.web_buttons(0);
 a.render(300);
-check("FX held: its button and the effects' keys breathe, none lit; let go: nothing",
+const lockedK = a.ex.web_breath_keys();                      // (0.6.44: held open, nothing played, let go: locked open)
+a.tap(B.FX);                                                 // .. FX again: unlocked
+a.render(300);
+check("FX held: its button and the effects' keys breathe, none lit; let go: locked open; FX again: nothing",
+      lockedK !== 0 &&
       (brB >> B.FX & 1) === 1 && brK !== 0 && (brK & litK) === 0 && litK === 0 &&
       a.ex.web_breath_keys() === 0 && a.ex.web_breath_buttons() === 0);
 { // the page's breathing peaks against the firmware's (hal/fm1_input.h FM1_LED_BREATH_PK / _LO, /256 of lit): the
