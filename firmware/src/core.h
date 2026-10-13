@@ -249,7 +249,8 @@ static int drum_from_perc(uint32_t engine, int16_t *e)
 enum { V_POLY, V_MONO, V_LEGATO, V_UNISON };   /* P_VOICE */
 typedef struct {
     uint8_t note, vel, gate, active;
-    uint8_t stage;               /* env: 0 off, 1 attack, 2 decay/sustain, 3 release */
+    uint8_t stage;               /* env: 0 off, 1 attack, 2 decay/sustain, 3 release, 4 given up (fading) */
+    uint8_t kfade;               /* (0.6.74) stage 4: the fade's blocks so far (voice.c env_tick) */
     int32_t env;                 /* Q24 */
     int32_t env_out;             /* last control-rate amplitude, Q15 */
     int32_t pitch16, pitch_cur;  /* 1/16 semitone, with glide */
