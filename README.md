@@ -19,7 +19,8 @@ editor update themselves with every change merged into `main`.
 
 > ⚡ **New in 0.6.71: both cores (experimental).** The FM-1's chip has two processor cores and JIANT used one. Now the
 > second renders some of the synth tracks while the first renders the rest, so the same song leaves much more room
-> before the sound breaks up. It is new and not every FM-1 handles it: if yours cannot, JIANT notices, stops the second
+> before the sound breaks up. It has passed every virtual test but **has not been tried on a real unit yet**, and not
+> every FM-1 handles it: if yours cannot, JIANT notices, stops the second
 > core and goes on with one, without crashing. **MENU > ABOUT** tells you which (**CORES 2** or **CORES 1** and why);
 > hold **REC** while switching on to play on one core. [Details](#both-cores-dual-core).
 
