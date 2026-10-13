@@ -40,6 +40,11 @@ static const menu_credit_t MENU_CREDITS[] = {
     {"Fukiai icon font: MIT", MC_TEXT},
     {"https://github.com/hugelton", MC_URL},
     {"", MC_TEXT},
+    {"DUAL CORE", MC_TITLE},                 /* (JIANT 0.6.71) hal/fm1_multicore.h */
+    {"Melodee (keremimo), fm1-x0x (Charles Vestal): GPL-3.0", MC_TEXT},
+    {"https://github.com/keremimo/melodee", MC_URL},
+    {"https://github.com/charlesvestal/fm1-x0x", MC_URL},
+    {"", MC_TEXT},
     {"KLATTSCH", MC_TITLE},
     {"Tony Gies / MIT", MC_TEXT},
     {"https://github.com/tgies/klattsch", MC_URL},
@@ -121,7 +126,8 @@ static int32_t menu_document(int32_t y, int draw)
         y = menu_text(b, y, T_TEXT, draw);
         str_cpy(b, "LATE ", sizeof b); fmt_int(n, (int32_t)load_diag.late); str_cpy(b + str_len(b), n, 12);
         str_cpy(b + str_len(b), "  SHED ", 8); fmt_int(n, (int32_t)load_diag.shed); str_cpy(b + str_len(b), n, 12);
-        y = menu_text(b, y, T_TEXT, draw) - 216 + 8;
+        y = menu_text(b, y, T_TEXT, draw);
+        y = menu_text(mc_status(), y, T_TEXT, draw) - 216 + 8;   /* (0.6.71) the second core (fx.c) */
     }
     y = menu_text("CREDITS", y + 216, T_THEME, draw) + 8;
     for (i = 0; i < NELEM(MENU_CREDITS); i++) {

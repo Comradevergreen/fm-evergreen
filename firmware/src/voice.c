@@ -83,7 +83,8 @@ static __attribute__((noinline)) void track_comb(track_t *t, int32_t *out, uint3
  * over the block, the state taken from the input on the way in (it was stale: a step each time CUT or RES crossed the
  * open LP) */
 static int32_t tf_ic1[NTRK], tf_ic2[NTRK];
-static uint8_t tf_on, tf_ft[NTRK];              /* in the chain the last block (a bit a track), its TYPE then */
+static uint8_t tf_on[NTRK], tf_ft[NTRK];        /* in the chain the last block, its TYPE then (0.6.71: a byte a
+                                                 * track, not a bit: two cores write two tracks at once) */
 static __attribute__((noinline)) void track_filter(track_t *t, int32_t *out, uint32_t n)
 {
     const int16_t *p = t->p;
@@ -99,7 +100,7 @@ static __attribute__((noinline)) void track_filter(track_t *t, int32_t *out, uin
     }
     cut += ((mulq15(t->lfo_val, t->lfo_fade) * p[P_LD_FLT]) >> 7) + ((envq * p[P_ED_FLT]) >> 7);
     {
-        uint32_t on = !(ft == FT_LP && cut >= (127 << 8) && !p[P_FRES]), was = (tf_on >> ti) & 1u, f0 = tf_ft[ti];
+        uint32_t on = !(ft == FT_LP && cut >= (127 << 8) && !p[P_FRES]), was = tf_on[ti], f0 = tf_ft[ti];
         int32_t xf = was && f0 != ft && f0 != FT_COMB;   /* TYPE changed: from the old one's output */
         if (!on && !was)
             return;                                     /* (open: nothing to filter) */
@@ -126,7 +127,7 @@ static __attribute__((noinline)) void track_filter(track_t *t, int32_t *out, uin
                 y = y + (((x - y) * w) >> 12);          /* out */
             out[i] = y;
         }
-        tf_on = (uint8_t)((tf_on & ~(1u << ti)) | on << ti);
+        tf_on[ti] = (uint8_t)on;
         tf_ft[ti] = (uint8_t)ft;
     }
     tf_ic1[ti] = ic1;
@@ -867,14 +868,14 @@ static uint32_t track_render(track_t *t, int32_t *out, uint32_t n)
         if (v->vel > 110)                               /* accent opens the filter with the env */
             m.cutoff += (m.envq15 * 24) >> 7;
         m.shape = (64 << 8) + ((lfo * p[P_LD_SHP]) >> 7) + ((m.envq15 * p[P_ED_SHP]) >> 7);
-        if (mod.on)                                     /* the modulation matrix (mod.c) */
+        if (MOD.on)                                     /* the modulation matrix (mod.c) */
             mod_voice(t, v, &m, v->fine + tune_fine + bend_fine);
         e->render(t, v, out, n, &m);
         nr++;
     }
     if (nr && e == &ENG_DRUM)                           /* (0.6.16) DRUM-X: DRV and the knee on the kit's sum */
         drum_bus(t, out, n);
-    if (nr && (t->p[P_FTYPE] || t->p[P_FCUT] < 127 || t->p[P_FRES] || ((tf_on >> ((uint32_t)(t - trk) % NTRK)) & 1u)))
+    if (nr && (t->p[P_FTYPE] || t->p[P_FCUT] < 127 || t->p[P_FRES] || tf_on[(uint32_t)(t - trk) % NTRK]))
         /* (JIANT 0.5) the FILTER (track_post); 0.6.8: and a block more to leave the chain (track_filter's fade) */
         track_post(t, e, out, n);
     if (snap)

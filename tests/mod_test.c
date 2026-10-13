@@ -86,10 +86,10 @@ static void fresh(uint32_t e, uint32_t pi)        /* the boot state (no FX tails
     memset(rev_ap, 0, sizeof rev_ap);
     memset(&fx, 0, sizeof fx);
     lim_env = LIM_T; lev_env = 0; lev_g = lev_cur = 32768; lev_dg = 0;
-    mp_seen = 0; memset(dist_w, 0, sizeof dist_w);      /* (0.6.8: LEVEL / PAN glide, DST blend; 0.6.9: AUTO PAN) */
+    memset(mp_seen, 0, sizeof mp_seen); memset(dist_w, 0, sizeof dist_w);      /* (0.6.8: LEVEL / PAN glide, DST blend; 0.6.9: AUTO PAN) */
     memset(ap_ph, 0, sizeof ap_ph); memset(ap_free, 0, sizeof ap_free); memset(ap_sh, 0, sizeof ap_sh);
     memset(trk, 0, sizeof trk);
-    memset(&mod, 0, sizeof mod);
+    memset(mod_c, 0, sizeof mod_c);
     host_tracks_init();
     for (k = 0; k < NPART; k++)
         host_preset(&trk[k], k ? 0u : e, k ? 0u : pi);
@@ -142,7 +142,7 @@ static uint64_t phrase_child(uint32_t k)
         }
         memcpy(keep, trk[0].p, sizeof keep);
         h = phrase();
-        if (memcmp(keep, trk[0].p, sizeof keep) || mod.on)
+        if (memcmp(keep, trk[0].p, sizeof keep) || MOD.on)
             h = 0;
         if (write(fd[1], &h, sizeof h) != sizeof h)
             _exit(1);
@@ -184,43 +184,43 @@ static void test_math(void)
     lfo = mulq15(32767, 32767);
     slot(t, 0, MS_LFO, MD_CUT, 63);
     mod_begin(t);
-    check("LFO -> CUT +63: +63 steps at the top of the LFO (as ENV DEST)", mod.on && mod.cut == (lfo * 63) >> 7 && mod.cut / 256 == 62);
+    check("LFO -> CUT +63: +63 steps at the top of the LFO (as ENV DEST)", MOD.on && MOD.cut == (lfo * 63) >> 7 && MOD.cut / 256 == 62);
     mod_end(t);
     slot(t, 0, MS_LFO, MD_PITCH, 63);
     mod_begin(t);
-    check("LFO -> PITCH +63: +11.8 semitones (as LFO DEST PIT)", mod.pit == (lfo * 63 * 3) >> 15 && mod.pit == 188);
+    check("LFO -> PITCH +63: +11.8 semitones (as LFO DEST PIT)", MOD.pit == (lfo * 63 * 3) >> 15 && MOD.pit == 188);
     mod_end(t);
     lfo_at(t, -32768);
     slot(t, 0, MS_LFO, MD_SHP, 63);
     mod_begin(t);
-    check("LFO bipolar: the bottom of the LFO pulls SHP down", mod.shp < -16000);
+    check("LFO bipolar: the bottom of the LFO pulls SHP down", MOD.shp < -16000);
     mod_end(t);
     slot(t, 0, MS_LFO, MD_SHP, -64);
     mod_begin(t);
-    check("a negative AMT inverts it", mod.shp > 16000);
+    check("a negative AMT inverts it", MOD.shp > 16000);
     mod_end(t);
     lfo_at(t, 0);
     slot(t, 0, MS_MODW, MD_AMP, 64 - 1);
     t->mw = 0;
     mod_begin(t);
-    check("MODW -> AMP +63: the wheel down closes the amp (gain 1.6 %)", mod.amp && mod.gain >= 500 && mod.gain <= 512);
+    check("MODW -> AMP +63: the wheel down closes the amp (gain 1.6 %)", MOD.amp && MOD.gain >= 500 && MOD.gain <= 512);
     mod_end(t);
     t->mw = 127;
     mod_begin(t);
-    check("MODW -> AMP +63: the wheel up opens it fully", mod.gain >= 32760);
+    check("MODW -> AMP +63: the wheel up opens it fully", MOD.gain >= 32760);
     mod_end(t);
     slot(t, 0, MS_AT, MD_AMP, -64);
     t->at = 127;
     mod_begin(t);
-    check("AT -> AMP -64: full pressure closes it", mod.gain < 200);
+    check("AT -> AMP -64: full pressure closes it", MOD.gain < 200);
     mod_end(t);
     slot(t, 0, MS_EXPR, MD_AMP, 63);
     mod_begin(t);
-    check("EXPR before any CC11 is full (the MIDI default): AMP open", mod.gain >= 32760);
+    check("EXPR before any CC11 is full (the MIDI default): AMP open", MOD.gain >= 32760);
     mod_end(t);
     slot(t, 0, MS_LFO, MD_AMP, 64 - 1);
     mod_begin(t);
-    check("LFO -> AMP: bipolar as 0..1 (half way at an LFO of 0)", mod.gain > 16000 && mod.gain < 17000);
+    check("LFO -> AMP: bipolar as 0..1 (half way at an LFO of 0)", MOD.gain > 16000 && MOD.gain < 17000);
     mod_end(t);
 
     /* per-voice sources on per-voice destinations (mod_voice) */

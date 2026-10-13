@@ -20,7 +20,7 @@
  * fm1_irq.h (fm1_core1_fault). Once it was given up, or core 0 crashed while it worked (fm1_mc_bar), every boot plays
  * on one core until the unit is switched off.
  *
- * Its waiting loop is in RAM (.ram_text): idle it never fetches from the flash; it works only for the audio ISR, which
+ * Its waiting loop is in RAM (.c1_text, app.ld): idle it never fetches from the flash; it works only for the audio ISR, which
  * waits for it before it returns, and core 0 turns the flash off only with interrupts off. Both cores share the
  * caches: csync orders what each publishes. */
 #pragma once
@@ -56,7 +56,7 @@ static inline int fm1_mc_barred(void) { return fm1_mc_bar.magic == FM1_MC_BAR_MA
 static inline void fm1_mc_bar_set(void) { fm1_mc_bar.magic = FM1_MC_BAR_MAGIC; fm1_mc_bar.barred = 1; }
 
 void fm1_c1_main(void);
-void __attribute__((section(".ram_text"), noinline, noreturn, used)) fm1_c1_main(void)
+void __attribute__((section(".c1_text"), noinline, noreturn, used)) fm1_c1_main(void)
 {
     /* its stack limit in its own EMU bank (core 0's is at 0x1EEF0D0), the lowest 256 bytes left out, as Melodee sets it */
     uint32_t lo = (uint32_t)(uintptr_t)_c1_stack_lo + 256u, hi = (uint32_t)(uintptr_t)_c1_stack_hi - 1u, done;

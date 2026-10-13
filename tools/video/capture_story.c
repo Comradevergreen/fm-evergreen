@@ -9,7 +9,7 @@
  *   cc -O2 -w -Ibuild/gen -Ifirmware/src -Itests -o build/video5/capture_story tools/video/capture_story.c -lm
  *   build/video5/capture_story build/video5/story_weird weird;  ... build/video5/story_project project */
 #define UI_TEST_NO_MAIN 1
-#define FELUCCA_VERSION "v0.6.70"
+#define FELUCCA_VERSION "v0.6.71"
 #define PF_MS 900u
 #define UI_NO_DRIFT 0
 #include "ui_test.c"

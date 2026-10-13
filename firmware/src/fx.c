@@ -822,6 +822,7 @@ static void rev_clear(void)
 }
 
 static int32_t part_buf[CTL];                            /* a part's block (mix_part); the fade of a model change */
+static int32_t c1_buf[CTL];                              /* (0.6.71) the second core's part_buf (mix_part) */
 
 /* (0.5.1) the chorus ensemble: three taps of buf (written at w), the LFO phase ph a third apart each, base delays
  * 300 / 420 / 540 samples plus the sweep (depth Q8); returns the middle (Q15 x2 at unity), *sd the left - right */
@@ -988,6 +989,8 @@ static void fx_buses(const int32_t *cho_in, const int32_t *dly_in, const int32_t
  * -> dist -> level / pan / sends -> buses -> (the SLICER's bus) -> master; out: stereo Q15 */
 static void events_block(uint32_t n);                    /* seq.c */
 static int32_t send_c[CTL], send_d[CTL], send_r[CTL];   /* (mix_l mix_r wet: above, clip_block) */
+/* (JIANT 0.6.71) what the second core's parts add, summed into the above after it is done (mix_block) */
+static struct { int32_t l[CTL], r[CTL], c[CTL], d[CTL], rv[CTL], sl[CTL], sr[CTL]; } c1_mix;
 /* a part's level (Q12) over the block from l0 to l1, ducked: its start << 8, its step a sample in *dl (a block is
  * CTL: no divide) */
 static __attribute__((noinline)) int32_t duck_ramp(int32_t l0, int32_t l1, int32_t *dl)
@@ -999,7 +1002,8 @@ static __attribute__((noinline)) int32_t duck_ramp(int32_t l0, int32_t l1, int32
 /* (JIANT 0.6.8, the crackles turning LEVEL / PAN) each part's LEVEL (Q12 << 8) and PAN (-64..63 << 8) as the mix has
  * them: a quarter of the way to the knob's a block (~3 ms), ramped across it, never a step */
 static int32_t mp_lvl[NTRK], mp_pan[NTRK];
-static uint8_t mp_seen;                                   /* the part's first block: at once */
+static uint8_t mp_seen[NTRK];                             /* the part's first block: at once (0.6.71: a byte a part,
+                                                          * two cores write two parts at once) */
 /* (JIANT 0.6.9) AUTO PAN: the part's PAN swung by an LFO of its own, DPTH up to the whole field either way, its RATE
  * FREE (the LFO's rates) or on the tempo (BEAT: 4 bars .. 1/32, in time with the bar while playing, as X-MOD), SIN TRI
  * SAW SQR or S&H; through mp_pan's glide (no step even on SQR / S&H). Per part: the phase and the S&H value */
@@ -1079,8 +1083,8 @@ static __attribute__((noinline)) void drum_mix(int32_t *ol, int32_t *or_, uint32
  * the LFO tick and a cleared buffer only (after the DIST tail has run out) */
 static void mix_part(track_t *t, uint32_t n)
 {
-    int32_t *b = part_buf;
-    uint32_t i;
+    uint32_t i, c1 = MC_CPU() & 1u;                     /* (0.6.71) on the second core: its own buffers */
+    int32_t *b = c1 ? c1_buf : part_buf;
     if ((uint32_t)(t - trk) >= trk_live) {              /* (0.6.18) TRACKS 4: asleep, nothing rendered. (0.6.19) Its
                                                          * voices first fade out over a block (voice_kill: they were
                                                          * cut at once, a click), its mute let go (perform.c) */
@@ -1093,7 +1097,7 @@ static void mix_part(track_t *t, uint32_t n)
             }
         pf.mg[(uint32_t)(t - trk) % NTRK] = 32768;
         if (!on) {
-            mp_seen &= (uint8_t)~(1u << ((uint32_t)(t - trk) % NTRK));
+            mp_seen[(uint32_t)(t - trk) % NTRK] = 0;
             return;
         }
     }
@@ -1101,8 +1105,8 @@ static void mix_part(track_t *t, uint32_t n)
     if (track_render(t, b, n))
         t->tail = 16;                                   /* blocks of DIST state to run out after the last voice */
     else if (!t->tail || !t->p[P_DIST] || !--t->tail) {
-        mp_seen &= (uint8_t)~(1u << ((uint32_t)(t - trk) % NTRK));   /* (silent: the next sound at its LEVEL and PAN) */
-        if (mod.on)
+        mp_seen[(uint32_t)(t - trk) % NTRK] = 0;       /* (silent: the next sound at its LEVEL and PAN) */
+        if (MOD.on)
             mod_end(t);
         return;
     }
@@ -1111,10 +1115,10 @@ static void mix_part(track_t *t, uint32_t n)
         int32_t lvl = LEVEL_Q12[t->p[P_LEVEL] & 127] << 8, pan = t->p[P_PAN] << 8, l0, p0, lq, dl, gl, gr, dgl, dgr;
         if (t->p[P_APDEP] > 0)                          /* (0.6.9) AUTO PAN */
             pan = clamp(pan + autopan(t, ti, n), -(64 << 8), 63 << 8);
-        if (!((mp_seen >> ti) & 1u)) {
+        if (!mp_seen[ti]) {
             mp_lvl[ti] = lvl;
             mp_pan[ti] = pan;
-            mp_seen |= (uint8_t)(1u << ti);
+            mp_seen[ti] = 1;
         }
         l0 = mp_lvl[ti];
         p0 = mp_pan[ti];
@@ -1129,10 +1133,11 @@ static void mix_part(track_t *t, uint32_t n)
         dgl = ((4096 - (mp_pan[ti] > 0 ? mp_pan[ti] >> 2 : 0)) - gl) >> CTL_LOG2;
         dgr = ((4096 + (mp_pan[ti] < 0 ? mp_pan[ti] >> 2 : 0)) - gr) >> CTL_LOG2;
         int32_t c = t->p[P_CHOR] * 258, d = t->p[P_DLY] * 258, r = t->p[P_REV] * 258, pk = t->peak;
-        int32_t xmax = c > d ? c : d, *ol = mix_l, *or_ = mix_r;
+        int32_t xmax = c > d ? c : d, *ol = c1 ? c1_mix.l : mix_l, *or_ = c1 ? c1_mix.r : mix_r;
+        int32_t *sc = c1 ? c1_mix.c : send_c, *sd = c1 ? c1_mix.d : send_d, *sr = c1 ? c1_mix.rv : send_r;
         if (slicer_routes((uint32_t)(t - trk))) {       /* (JIANT 0.6.3) into the SLICER's bus, not the dry mix */
-            ol = sl_l;
-            or_ = sl_r;
+            ol = c1 ? c1_mix.sl : sl_l;
+            or_ = c1 ? c1_mix.sr : sl_r;
         }
         xmax = 0x7FFFFFFF / ((xmax > r ? xmax : r) | 1);   /* sends: loud chords at a high LEVEL */
         if ((duck_g0 < 32767 || duck_g1 < 32767) && ENGINES[t->engine] != &ENG_DRUM)   /* DUCK: the kick's */
@@ -1152,17 +1157,17 @@ static void mix_part(track_t *t, uint32_t n)
             if (a > pk)
                 pk = a;
             if (c)
-                send_c[i] += mulq15(xs, c);
+                sc[i] += mulq15(xs, c);
             if (d)
-                send_d[i] += mulq15(xs, d);
+                sd[i] += mulq15(xs, d);
             if (r)
-                send_r[i] += mulq15(xs, r);
+                sr[i] += mulq15(xs, r);
             ol[i] += (x * gl) >> 12;
             or_[i] += (x * gr) >> 12;
         }
         t->peak = pk;
     }
-    if (mod.on)
+    if (MOD.on)
         mod_end(t);                                     /* the stored values back */
 }
 
@@ -1223,9 +1228,124 @@ static __attribute__((noinline)) void perf_master(int32_t *out, uint32_t n)
     }
 }
 
-static void mix_block(int32_t *out, uint32_t n)
+/* (JIANT 0.6.71) the second core (hal/fm1_multicore.h). Each block, while core 0 renders its parts, core 1 renders
+ * some synth parts of its own into its own buffers (c1_buf, c1_mix; mod.c, fm6_core.c, voice.c keep theirs a core);
+ * they are added in after it is done: the same sum, the same sound as one core. A DRUM part stays on core 0 (DRUM-X's
+ * kit and its IMAGE / SEND buffers are one for all). The parts go to whichever core has less to do, by their sounding
+ * voices and engines. A core 1 that misread, faulted or did not come back is held for good: its block of those parts is
+ * dropped and core 0 renders every part from the next one. REC held at power-on: core 0 alone (mc_off). MENU > ABOUT
+ * says which (mc_status) */
+#if FELUCCA_DUAL_CORE
+#define mc_run(f, a) fm1_mc_run(f, a)
+#define mc_wait() fm1_mc_wait()
+#define mc_live() (fm1_mc_on != 0)
+#else
+static int mc_run(void (*f)(uint32_t), uint32_t a)      /* (the host: at once, as core 1) */
+{
+    if (!mc_host)
+        return 0;
+    mc_host_cpu = 1;
+    f(a);
+    mc_host_cpu = 0;
+    return 1;
+}
+static int mc_wait(void) { return 0; }
+#define mc_live() (mc_host != 0)
+#endif
+static volatile uint8_t mc_off;                          /* REC held at power-on: one core this session (main.c) */
+static volatile int8_t mc_cur = -1;                      /* the part core 1 is in (a job given up: its matrix put back) */
+static uint8_t mc_mask_last;                             /* the parts core 1 had the last block (MENU > ABOUT, tests) */
+static __attribute__((noinline)) void mc_job(uint32_t a)   /* core 1: the parts of mask a & 0xFF, a >> 8 samples */
+{
+    uint32_t i, n = a >> 8;
+    for (i = 0; i < n; i++)
+        c1_mix.l[i] = c1_mix.r[i] = c1_mix.c[i] = c1_mix.d[i] = c1_mix.rv[i] = c1_mix.sl[i] = c1_mix.sr[i] = 0;
+    for (i = 0; i < NPART; i++)
+        if ((a >> i) & 1u) {
+            mc_cur = (int8_t)i;
+            mix_part(&trk[i], n);
+        }
+    mc_cur = -1;
+}
+static uint32_t mc_cost(const track_t *t)               /* a part's share of the work, roughly: its voices by engine */
+{
+    const engine_t *e = ENGINES[t->engine];
+    uint32_t k, v = 0, w = e == &ENG_FM6 ? 4u : e == &ENG_LOFI || e == &ENG_NOISE ? 2u : 3u;
+    for (k = 0; k < NVOICE; k++)
+        v += t->v[k].active;
+    return v ? 1u + v * w : 0u;
+}
+static __attribute__((noinline)) uint32_t mc_split(void)   /* the parts for core 1 this block (a bit each) */
+{
+    uint32_t i, j, c0 = 0, c1 = 0, mask = 0, cost[NPART], left = 0;
+    for (i = 0; i < NPART && i < trk_live; i++) {
+        cost[i] = mc_cost(&trk[i]);
+        if (ENGINES[trk[i].engine] == &ENG_DRUM)
+            c0 += cost[i];                               /* (always core 0's) */
+        else if (cost[i])
+            left |= 1u << i;
+    }
+    while (left) {                                       /* the dearest left to the core with less */
+        for (j = NPART, i = 0; i < NPART; i++)
+            if (((left >> i) & 1u) && (j == NPART || cost[i] > cost[j]))
+                j = i;
+        left &= ~(1u << j);
+        if (c1 < c0) {
+            c1 += cost[j];
+            mask |= 1u << j;
+        } else {
+            c0 += cost[j];
+        }
+    }
+    return mask;
+}
+static __attribute__((noinline)) void mc_join(uint32_t n)   /* core 1's parts into the mix */
 {
     uint32_t i;
+    for (i = 0; i < n; i++) {
+        mix_l[i] += c1_mix.l[i];
+        mix_r[i] += c1_mix.r[i];
+        send_c[i] += c1_mix.c[i];
+        send_d[i] += c1_mix.d[i];
+        send_r[i] += c1_mix.rv[i];
+        sl_l[i] += c1_mix.sl[i];
+        sl_r[i] += c1_mix.sr[i];
+    }
+}
+static __attribute__((noinline)) void mc_lost(void)    /* core 1 given up mid-job: a part's matrix values put back */
+{
+    int32_t k = mc_cur;
+    if (k >= 0 && k < (int32_t)NPART && mod_c[1].on) {
+        mod_c[0] = mod_c[1];
+        mod_end(&trk[k]);
+    }
+    mc_cur = -1;
+#if FELUCCA_DUAL_CORE
+    fm1_mc_bar_set();                                    /* one core until power-off (hal/fm1_multicore.h) */
+#endif
+}
+
+static const char *mc_status(void)                      /* MENU > ABOUT's line */
+{
+#if FELUCCA_DUAL_CORE
+    static const char *const LOST[4] = {"CORES 1 (SINCE A FAULT)", "CORES 1 (BAD READ)", "CORES 1 (NO ANSWER)",
+                                        "CORES 1 (FAULT)"};
+    if (fm1_mc_on)
+        return "CORES 2";
+    if (mc_off)
+        return "CORES 1 (REC AT POWER-ON)";
+    if (fm1_mc_lost)
+        return LOST[fm1_mc_lost & 3u];
+    return fm1_mc_barred() ? LOST[0] : "CORES 1 (NO START)";
+#else
+    return mc_host ? "CORES 2" : "CORES 1";
+#endif
+}
+
+static __attribute__((noinline)) void mix_block(int32_t *out, uint32_t n)   /* (0.6.71: kept out of the ISR's
+                                                                               * body, as before: target_budget.py) */
+{
+    uint32_t i, c1m = 0;
     int perf;
     int32_t mg = fx_usb_fixed ? MASTER_FULL : (int32_t)song.master_q12;   /* (USB LEVEL FIXED: MASTER after) */
     for (i = 0; i < n; i++)
@@ -1241,8 +1361,18 @@ static void mix_block(int32_t *out, uint32_t n)
     master_begin();
     duck_block();
     perf = perf_begin(n);                               /* the FX hold layer at work (perform.c) */
+    if (!mc_off && mc_live() && (c1m = mc_split()) != 0 && !mc_run(mc_job, c1m | n << 8))
+        c1m = 0;                                        /* (0.6.71) core 1 at its parts meanwhile */
     for (i = 0; i < NPART; i++)
-        mix_part(&trk[i], n);
+        if (!((c1m >> i) & 1u))
+            mix_part(&trk[i], n);
+    if (c1m) {
+        if (!mc_wait())
+            mc_join(n);
+        else
+            mc_lost();                                  /* (its parts' block dropped; one core from here) */
+    }
+    mc_mask_last = (uint8_t)c1m;
     if (pfx_any)
         pfx_end();                                      /* (DEC- / DEC+ back) */
     if (perf)

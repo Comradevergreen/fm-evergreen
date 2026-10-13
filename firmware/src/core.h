@@ -22,6 +22,18 @@
 #define NENG_SHOWN (NENGINES - !FELUCCA_FM4 - 5)   /* the engines one can pick: PRESETS, the EDIT layer, the editor,
                                                 * in the display order of engines.c ENGINE_ORDER (PHYS 9, and in
                                                 * JIANT SAMPLE 4, GRAIN 8, SLICE 13: retired) */
+/* (JIANT 0.6.71) the second core (hal/fm1_multicore.h; fx.c mix_block hands it some synth tracks). MC_CPU(): the core
+ * running this, for the scratch each core has its own of (fx.c part_buf and the mix, mod.c's matrix, fm6_core.c's
+ * buses, voice.c's filter flags). The host (tests): no second core; mc_host runs its jobs at once, as core 1 */
+#ifndef FELUCCA_DUAL_CORE
+#define FELUCCA_DUAL_CORE 0
+#endif
+#if FELUCCA_DUAL_CORE
+#define MC_CPU() fm1_cnum()
+#else
+static uint8_t mc_host, mc_host_cpu;     /* tests: 1 = jobs handed over (run at once); the core "running" */
+#define MC_CPU() ((uint32_t)mc_host_cpu)
+#endif
 #define UP_SLOTS 32u             /* user presets (upreset.c) */
 #define NELEM(a) (sizeof(a) / sizeof((a)[0]))
 

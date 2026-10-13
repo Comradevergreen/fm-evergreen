@@ -28,11 +28,14 @@
 #ifndef FELUCCA_UART
 #define FELUCCA_UART 1           /* TRS MIDI IN on UART1 / PH8 */
 #endif
+#ifndef FELUCCA_DUAL_CORE
+#define FELUCCA_DUAL_CORE 1      /* (JIANT 0.6.71) the second core renders some synth tracks (hal/fm1_multicore.h) */
+#endif
 #ifndef FELUCCA_ID
 #define FELUCCA_ID "FM-1_900"    /* package identity (build.py: the .fwsc marker string) */
 #endif
 #ifndef FELUCCA_VERSION
-#define FELUCCA_VERSION "v0.6.70" /* JIANT's (based on Felucca 1.1.5.1): the splash, the menu, the console, the editor */
+#define FELUCCA_VERSION "v0.6.71" /* JIANT's (based on Felucca 1.1.5.1): the splash, the menu, the console, the editor */
 #endif
 #if FELUCCA_OTA && !FELUCCA_FLASH
 #error "FELUCCA_OTA needs FELUCCA_FLASH"
@@ -44,6 +47,9 @@
 #include "fm1_sys.h"
 #include "fm1_irq.h"
 #include "fm1_guard.h"
+#if FELUCCA_DUAL_CORE
+#include "fm1_multicore.h"
+#endif
 #include "fm1_input.h"
 #include "fm1_timer.h"
 #include "fm1_audio.h"
