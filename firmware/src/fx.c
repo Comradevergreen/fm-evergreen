@@ -448,6 +448,8 @@ static __attribute__((noinline)) void rev_room_mod(const int32_t *rev_in, int32_
     fx.rm_ph += LFO_INC[song.g[G_RRATE] & 127];
     for (k = 0; k < 4u; k++) {
         m1[k] = (int32_t)(((uint32_t)(osc_sine(fx.rm_ph + k * 0x40000000u) + 32768) * (uint32_t)depth) >> 16);
+        if ((uint32_t)fx.rm_m[k] > 0xFFFFu)             /* (0.6.76) past any depth (252 Q8): a wrong word would read */
+            fx.rm_m[k] = m1[k];                         /* far outside the combs; from the new offset */
         dm[k] = (m1[k] - fx.rm_m[k]) / (int32_t)CTL;    /* (Q8, per sample) */
     }
     for (i = 0; i < n; i++) {
@@ -1349,12 +1351,28 @@ static __attribute__((noinline)) uint32_t mc_split(uint32_t c1)   /* c1: what co
 /* (0.6.75) the buses, a block behind: on the sends of the block before (fxq_*), their return into fx_wet, their sides
  * into fx_sl / fx_sr; mix_block puts them in the mix. On core 1 while core 0 renders its parts (mc_job), else on core
  * 0 at the same place: the same sound either way (a block, 0.7 ms, later than before 0.6.75: inaudible) */
+/* (0.6.76) out of range: the buses' return or side past FX_SANE, 2^20. The most they reach: ~45000 at any setting,
+ * ~290000 with any word of their state (fx) wrong (their lines are 16-bit and clamped: nothing grows through the
+ * feedback); core 1's known misread, 0x00200000 in a 32-bit load (a send, a sum, a spilled value), is 2^21. The bias +
+ * OR: one bit test for the whole block */
+#define FX_SANE (1u << 20)
+static volatile uint8_t fx_bad;
+static uint32_t fx_trips;                                /* (console status: fx_trips) */
+static int fx_insane(uint32_t n)
+{
+    uint32_t i, m = 0;
+    for (i = 0; i < n; i++)                             /* (fx_sr is -fx_sl) */
+        m |= ((uint32_t)fx_wet[i] + FX_SANE) | ((uint32_t)fx_sl[i] + FX_SANE);
+    return m >= 2u * FX_SANE;
+}
 static void fx_run(uint32_t n)
 {
     uint32_t i, t0 = MC_TICKS(), d;
     for (i = 0; i < n; i++)
         fx_sl[i] = fx_sr[i] = 0;
     fx_buses(fxq_c, fxq_d, fxq_r, fx_wet, n);
+    if (fx_insane(n))
+        fx_bad = 1;                                     /* (mix_block: fx_trip) */
     d = MC_TICKS() - t0;
     mc_fx_tk = d > mc_fx_tk ? mc_fx_tk + ((d - mc_fx_tk) >> 1) : mc_fx_tk - ((mc_fx_tk - d) >> 3);
 }
@@ -1383,6 +1401,39 @@ static __attribute__((noinline)) void mc_lost(void)    /* core 1 given up mid-jo
 #if FELUCCA_DUAL_CORE
     fm1_mc_bar_set();                                    /* one core until power-off (hal/fm1_multicore.h) */
 #endif
+}
+
+/* (0.6.76) the buses went out of range (fx_run): their block muted, every line and state of theirs silenced (one
+ * long block, once), and core 1 given up as a wrong read if it ran them: a wrong word in a reverb's or the delay's
+ * state could ring for seconds or grow through the feedback; no check word can catch that */
+static __attribute__((noinline)) void fx_trip(uint32_t c1, uint32_t n)
+{
+    uint32_t i;
+    for (i = 0; i < n; i++)
+        fx_wet[i] = fx_sl[i] = fx_sr[i] = 0;
+    for (i = 0; i < CTL; i++)
+        fxq_c[i] = fxq_d[i] = fxq_r[i] = 0;
+    for (i = 0; i < DLY_LEN; i++)
+        dly_buf[i] = 0;
+    for (i = 0; i < CHO_LEN; i++)
+        cho_buf[i] = 0;
+    for (i = 0; i < RPRE_LEN; i++)
+        rpre_buf[i] = 0;
+    for (i = 0; i < CL_LEN; i++)
+        cloud_buf[i] = 0;
+    rev_clear();
+    fx.dly_lp = fx.dly_hp = fx.rf_lp = fx.rpre_s = fx.cl_lp = fx.cl_half = 0;
+    fx_bad = 0;
+    fx_trips++;
+    if (c1) {
+#if FELUCCA_DUAL_CORE
+        fm1_mc_lost = 1u;                                /* CORES 1 (BAD READ) */
+        fm1_mc_hold();
+#else
+        mc_host = 0;
+#endif
+        mc_lost();
+    }
 }
 
 static const char *mc_status(void)                      /* MENU > ABOUT's line */
@@ -1444,6 +1495,8 @@ static __attribute__((noinline)) void mix_block(int32_t *out, uint32_t n)   /* (
                 fx_wet[i] = fx_sl[i] = fx_sr[i] = 0;
         }
     }
+    if (fx_bad)
+        fx_trip(c1j, n);
     mc_mask_last = (uint8_t)c1m;
     if (pfx_any)
         pfx_end();                                      /* (DEC- / DEC+ back) */

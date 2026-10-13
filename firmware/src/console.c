@@ -209,6 +209,7 @@ static void con_status(void)
 #if FELUCCA_DUAL_CORE
     con_kv("cpu2_wait_max_us", (int32_t)(fm1_mc_max_ticks / 24u));   /* the longest core 0 waited for it */
 #endif
+    con_kv("fx_trips", (int32_t)fx_trips);              /* (0.6.76) the buses muted and reset, out of range (fx_trip) */
     con_kv("track", (int32_t)song.sel + 1);
     con_kv("batt_raw", song.batt_raw);
     con_puts("engine ");
