@@ -612,6 +612,20 @@ static int test_mutate(void)
     for (i = 0, k = 0; i < 8u; i++) k += t->p[P_E0 + i] != e0[i];
     mut_freeze = 0;
     bad += check("MUTATE FREEZE: no change while frozen", k == 0u);
+    /* (0.6.68) a sequence cleared while it mutates never comes back from the anchor; an empty kit stays empty */
+    d->p[P_MPAT] = 0;
+    for (i = 0; i < 16u; i++) { t->step[i] = (step_t){{0}, 0, ST_REST, 0, 0}; if (!(i & 1u)) { t->step[i].n = 1; t->step[i].note[0] = (uint8_t)(60 + i); t->step[i].time = ST_NOTE; t->step[i].vel = 100; } }
+    t->p[P_MSND] = 0; t->p[P_MPAT] = 1; t->p[P_MAMT] = 60;
+    mutate_poll(); mut_bars(2);
+    for (i = 0; i < NSTEP; i++) step_clear(&t->step[i]);
+    mut_bars(4);
+    for (i = 0, k = 0; i < NSTEP; i++) k += step_on(&t->step[i]);
+    for (i = 0; i < NSTEP; i++) step_clear(&d->step[i]);
+    d->p[P_MPAT] = 1; d->p[P_MAMT] = 127; d->p[P_MMODE] = 1;   /* (DRIFT, all the AMOUNT) */
+    mut_bars(4);
+    for (i = 0; i < NSTEP; i++) k += step_on(&d->step[i]);
+    d->p[P_MMODE] = 0;
+    bad += check("0.6.68: MUTATE PATTERN: a cleared sequence stays silent (no melody back from the anchor), an empty kit too", k == 0u);
     stop_transport();
     t->p[P_MSND] = 0; d->p[P_MPAT] = 0;
     mutate_poll();

@@ -1630,7 +1630,8 @@ static void system_init(void)
  * SLOT stays); a list value now and then. PATTERN: notes up / down the scale, accents, a note added off the beat or
  * one taken (never on a beat); DRUM: hits on and off, never the kick. GLO + A4 freezes them all; main loop only */
 static project_store_t mut_anchor __attribute__((section(".pool")));
-static struct { uint8_t ok, playing; uint32_t en, done; } mut;
+static struct { uint8_t ok, playing; uint32_t en, done, sig[NTRK]; } mut;   /* sig: each track's steps as the anchor or
+                                                         * the last mutation left them (0.6.68) */
 static uint32_t mut_every(const track_t *t, uint32_t id) { return MUT_BARS[(uint32_t)clamp(t->p[id], 0, 6)]; }
 static uint32_t mut_enabled(void)
 {
@@ -1644,6 +1645,8 @@ static void mut_keep(void)
 {
     project_capture(&proj_scratch);
     mut.ok = (uint8_t)proj_pack(&mut_anchor, &proj_scratch);
+    for (uint32_t k = 0; k < NTRK; k++)
+        mut.sig[k] = steps_sig(&trk[k]);
 }
 static int32_t mut_rr(int32_t lo, int32_t hi) { return hi <= lo ? lo : lo + (int32_t)(rng() % (uint32_t)(hi - lo + 1)); }
 static void mut_value(track_t *t, uint32_t id, const int16_t *base, uint32_t amt)
@@ -1677,6 +1680,10 @@ static void mut_pattern(track_t *t, const proj_trk_t *a)
     uint32_t i, len = t->p[P_SLEN] > 0 ? (uint32_t)t->p[P_SLEN] : 1u, amt = (uint32_t)clamp(t->p[P_MAMT], 0, 127), l;
     int kit = drum_track(t);
     int32_t last = -1;
+    for (i = 0, l = 0; i < len && i < NSTEP; i++)       /* (0.6.68) an empty pattern stays empty: nothing out of */
+        l += a ? step_on(&a->step[i]) : step_on(&t->step[i]);   /* silence (a cleared track, a blank kit) */
+    if (!l)
+        return;
     for (i = 0; i < len && i < NSTEP; i++) {
         step_t s = a ? a->step[i] : t->step[i];
         if (kit) {                                      /* hits on and off, the kick never */
@@ -1745,6 +1752,12 @@ static void mutate_poll(void)
     if (beat_n != 3u || beat_pos < beat_samples() * 3u / 4u || mut.done == nx)
         return;
     mut.done = nx;
+    for (k = 0; k < NTRK; k++)                          /* (0.6.68) steps written or cleared since: the anchor is the
+                                                         * music now (a cleared sequence never comes back from it) */
+        if (((en >> k) & 1u) && steps_sig(&trk[k]) != mut.sig[k]) {
+            mut_keep();
+            break;
+        }
     anc = mut.ok && proj_import(&proj_scratch, &mut_anchor, sizeof mut_anchor);
     for (k = 0; k < NTRK; k++) {
         track_t *t = &trk[k];
@@ -1757,6 +1770,8 @@ static void mutate_poll(void)
         if (q && nx % q == 0u) { mut_pattern(t, a); hit = 1; }
         if (hit) mut_flash[k] = 12;
     }
+    for (k = 0; k < NTRK; k++)
+        mut.sig[k] = steps_sig(&trk[k]);
 }
 static void undo_mark(void)
 {

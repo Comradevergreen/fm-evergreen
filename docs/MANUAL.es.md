@@ -536,7 +536,8 @@ seleccionada se graban como **automatización**. MENU > AUDIO tiene el **CLICK**
 - **MUTATE**: la pista cambia sola, sincronizada con el clock, para que una textura evolucione durante minutos.
   **SOUND** y **PATTERN**: cada OFF, 1, 2, 4, 8, 16 o 32 compases (el cambio cae en el 1 del compás). **AMOUNT**:
   cuánto (al activar uno queda en 50 %). **MODE**: **ORBIT** varía alrededor del ancla (la música como estaba al
-  activar MUTATE, al dar PLAY o cuando apretás **OCT+** acá: KEEP), así nunca pierde su identidad; **DRIFT** sigue desde
+  activar MUTATE, al dar PLAY, cuando apretás **OCT+** acá: KEEP, o cuando escribiste o borraste pasos por última
+  vez), así nunca pierde su identidad y una secuencia que borrás queda borrada; MUTATE nunca llena un patrón vacío; **DRIFT** sigue desde
   como está ahora. SOUND cambia los valores del motor, el filtro, su envolvente, DEC, REL y los envíos (nunca LEVEL, PAN
   ni MUTE); PATTERN mueve notas por la escala, cambia acentos, agrega o saca una nota fuera del tiempo (nunca en el
   tiempo); en DRUM cambia golpes, nunca el bombo. **OCT−** acá (o **GLO + A4**, FREEZE) frena todas las mutaciones
