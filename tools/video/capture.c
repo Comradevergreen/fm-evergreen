@@ -230,7 +230,7 @@ static void at_beat(uint32_t q)
         dx_mot[XM_RATE] = 5; dx_mot[XM_DPTH] = 60; dx_mot[XM_SHPE] = 1; dx_mot[XM_RAND] = 25;
         page(T_DRUM, "X-MOD"); caption(q, "DRUMS", "X-MOD", "the kit's own LFO on MORPH|a random push on every hit", 0);
     }
-    if (q == B(18, 0)) { page(T_DRUM, "TONE"); caption(q, "DRUMS", "TONE", "band-pass on hats · rim · bell|feedback on every voice", 0); }
+    if (q == B(18, 0)) { page(T_DRUM, "KIT 3"); caption(q, "DRUMS", "KIT 3", "band-pass on hats · rim · bell|feedback on every voice", 0); }
     if (q >= B(18, 0) && q < B(20, 0)) dx_tone = (uint8_t)((q >= B(19, 0) ? 0x20u : 0u) | (2u + (q - B(18, 0)) * 3u / 2u));
     if (q == B(20, 0)) {
         dx_tone = 0x18u; mute(T_LEAD, 0); page(T_LEAD, "EDIT 1");
@@ -285,7 +285,8 @@ static void at_beat(uint32_t q)
     }
     if (q == B(37, 0)) page(T_DRUM, "SL PITCH");
     if (q == B(38, 0)) { slicer(0, 0); home(T_LEAD); hold_btn(B_FX, 1); caption(q, "PERFORMANCE", "PUNCH-IN FX", "hold FX, play the keys|repeat · octave · stutter", 0); }
-    if (bar == 38u && q % 4u == 3u) perf_press(PF_R16, 1);
+    if (bar == 38u && q % 4u == 3u) { perf_press(PF_R16, 1); lys.used = 1; }   /* (0.6.80: used, as the keys mark it:
+                                                         * let go, FX does not lock open, 0.6.44) */
     if (bar == 39u) { perf_press(PF_R16, q % 4u == 0u); perf_press(PF_OCTU, q % 4u == 1u || q % 4u == 2u); perf_press(PF_S16, q % 4u >= 2u); }
     if (q == B(40, 0)) {
         hold_btn(B_FX, 0); perf_press(PF_S16, 0); perf_press(PF_OCTU, 0); perf_press(PF_R16, 0);

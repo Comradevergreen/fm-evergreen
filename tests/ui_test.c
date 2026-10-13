@@ -1304,6 +1304,10 @@ static void go_title(const char *title)
     uint32_t i;
     for (i = 0; i < NPAGES && !str_eq(PAGES[i].title, title); i++)
         ;
+    if (i == NPAGES) {                          /* (0.6.80: a page renamed under a script; it read past PAGES) */
+        fprintf(stderr, "go_title: no page \"%s\"\n", title);
+        exit(2);
+    }
     ui.home = 0;
     ui.page = (uint8_t)i;
     page_entered();
