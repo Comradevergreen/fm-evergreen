@@ -186,6 +186,7 @@ static void section_store(uint32_t s)
 {
     char b[8] = "A";
     s &= 3u;
+    dice_secs &= (uint8_t)~(1u << s);                 /* (0.6.81) a STORE: the section yours (DICE ALL marks its own after) */
     b[0] = (char)('A' + s);
     project_capture(&proj_scratch);
     if (!proj_pack(&proj_wire, &proj_scratch)) {        /* (0.6: packed aside first, the section kept if it does not fit) */
@@ -318,6 +319,7 @@ static int song_switch(uint32_t n, int load_a)
     }
     song_idx.rows[song_cur] = chain_config;           /* (the rows of the song left) */
     song_cur = (uint8_t)n;
+    dice_secs = 0;                                    /* (0.6.81) another project's sections: none DICE ALL's */
     chain_config = song_idx.rows[n];
     if (song_index_save()) {                          /* (failed: written again by song_poll) */
         song_idx_dirty = 1;

@@ -6728,9 +6728,11 @@ static int test_dice_all(void)
                     ok &= s2->note[0] <= 84u;
                 }
             }
+            project_capture(&proj_scratch);              /* (0.6.81) every piece storable (a send past 127 was not) */
+            ok &= proj_pack(&proj_wire, &proj_scratch) != 0;
             for (k = 0; k < 8u; k++) events_block(CTL);
         }
-        bad += check("DICE ALL (0.6.26): a style named, engines changed, FM6 on two tracks at most, one DRUM track; 30 throws", ok);
+        bad += check("DICE ALL (0.6.26): a style named, engines changed, FM6 on two tracks at most, one DRUM track, every piece storable; 30 throws", ok);
         {   /* (0.6.27) 40 throws: never the same piece, the tempo moved every time (even from the same random state) */
             uint32_t h[40], n2, m, same = 0, bpm_same = 0;
             int16_t b0;
