@@ -159,6 +159,13 @@ static void song_build(void)
     /* the lead: sync saw through FOLD, delay and reverb */
     trk[T_LEAD].p[P_DTYPE] = 2; trk[T_LEAD].p[P_DIST] = 40; trk[T_LEAD].p[P_LEVEL] = 102;
     trk[T_LEAD].p[P_DLY] = 50; trk[T_LEAD].p[P_REV] = 60; trk[T_LEAD].p[P_PAN] = 8; trk[T_LEAD].p[P_VOICE] = V_POLY;
+    {   track_t *t = &trk[T_LEAD];                       /* (sound design) the punk lead: a release, chorus, the LFO
+                                                          * on the filter, the envelope biting it, a short glide */
+        t->p[P_REL] = 52; t->p[P_GLIDE] = 12; t->p[P_CHOR] = 56; t->p[P_FTYPE] = 0; t->p[P_FCUT] = 92; t->p[P_FRES] = 40;
+        t->p[P_ED_FLT] = 22; t->p[P_LRATE] = 30; t->p[P_LD_FLT] = 22; t->p[P_LD_PIT] = 2; }
+    trk[T_BASS].p[P_ED_FLT] = 30; trk[T_BASS].p[P_LRATE] = 6; trk[T_BASS].p[P_LD_FLT] = 10;   /* (the bass breathing) */
+    trk[T_BLIP].p[P_REL] = 40; trk[T_BLIP].p[P_CHOR] = 50; trk[T_BLIP].p[P_LRATE] = 44; trk[T_BLIP].p[P_LD_FLT] = 20;
+    trk[T_CHOIR].p[P_ATK] = 60; trk[T_CHOIR].p[P_REL] = 100; trk[T_CHOIR].p[P_LRATE] = 10; trk[T_CHOIR].p[P_LD_FLT] = 16;
     trk[T_BLIP].p[P_LEVEL] = 112; trk[T_BLIP].p[P_DLY] = 80; trk[T_BLIP].p[P_REV] = 70; trk[T_BLIP].p[P_PAN] = -24;
     trk[T_CHOIR].p[P_LEVEL] = 66; trk[T_CHOIR].p[P_REV] = 120; trk[T_CHOIR].p[P_CHOR] = 60;
     trk[T_WIND].p[P_LEVEL] = 52; trk[T_WIND].p[P_REV] = 110;
