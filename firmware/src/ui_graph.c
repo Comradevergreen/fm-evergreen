@@ -1294,6 +1294,8 @@ static uint32_t graph_signature(void)
     if (pg->graph == GR_DXSND) h ^= ui.frame * 2654435761u ^ dx_sig();
     if (pg->scope == SC_ENGINE && t->eng_req % NENGINES == ENGI_FM6)   /* the patch (PAT's algorithm, levels, FB) */
         h ^= (fm6_pgen[(t - trk) % NTRK] + 1u) * 2246822519u;
+    if (fop_page(pg->graph))                         /* (0.6.77) OPERATOR, OP ENV (track pages): the patch, the operator */
+        h = (h ^ ((fm6_pgen[(t - trk) % NTRK] + 1u) * 2246822519u ^ (uint32_t)fop_op << 8 ^ fop_stg)) * 16777619u;
     if (pg->graph == GR_STEPS || pg->graph == GR_ROLL || pg->graph == GR_CHANCE) {
         uint32_t ph = song.playing ? seq_src(t, t->seq_idx) : 0xFFFFu;
         if (pg->graph != GR_STEPS && ph / 16u != ui.bank)
