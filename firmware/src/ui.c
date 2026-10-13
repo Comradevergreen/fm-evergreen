@@ -7,6 +7,8 @@
 static int project_save(uint32_t slot);
 static void panel_setup(void);
 static void project_load(uint32_t slot);
+static int section_jump(uint32_t s);    /* (song_main.c: 0.6.80, channel 16's PROGRAM CHANGE) */
+static int song_select(uint32_t n);
 static void undo_mark(void);                    /* (0.6.21) project.c: the music before a change, */
 static void system_init(void);                  /* (0.6.40) project.c: INIT SYSTEM */
 static uint32_t mut_progress(uint32_t k);       /* (0.6.43) project.c: MUTATE's next, 0..256 (0xFFFF: off) */
@@ -1236,6 +1238,14 @@ static void preset_go(uint32_t n)                    /* load list index n into t
 static void midi_pc_poll(void)
 {
     uint32_t i, sel = song.sel;
+    if (midi_song_req) {                               /* (0.6.80) channel 16: 0..3 a section, 16..23 a project */
+        uint32_t n = midi_song_req - 1u;
+        midi_song_req = 0;
+        if (n < 4u)
+            (void)section_jump(n);
+        else if (n >= 16u && n < 16u + NSONG)
+            (void)song_select(n - 16u);
+    }
     for (i = 0; i < NTRK; i++)
         if (midi_pc_req[i]) {
             uint32_t n = midi_pc_req[i] - 1u, all, k, e;

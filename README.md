@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.6.79).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.6.80).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 > ⚡ **New in 0.6.71: both cores (experimental).** The FM-1's chip has two processor cores and JIANT used one. Now the
 > second renders some of the synth tracks while the first renders the rest, so the same song leaves much more room
@@ -44,6 +44,28 @@ Two printable sheets with everything on the device. Click an image to open it fu
 ## Changelog
 
 Every update is listed here, newest first.
+
+### v0.6.80
+- **DICE ALL (HOME + SELECT): less cheesy, closer to the wave.** The generator wrote textbook pieces: a lead phrased
+  like a nursery tune (a motif, its sequence, a cadence held on the tonic), every chord four lush notes, the arps up
+  and down. Now:
+  - **Four new genres** after Joy Division, Suicide, New Order and Kraftwerk, two throws in five: **POST PUNK** (the
+    bass singing the tune high, power chords, a tight kit with sixteenths on the hat), **SYNTH POP** (a melodic bass,
+    a sequencer, four on the floor and a handclap, Blue Monday's sixteenth kicks at the loop's end), **MINIMAL SYNTH**
+    (a rockabilly bass ostinato over one organ chord held through, a cheap rhythm box) and **MAN MACHINE** (a
+    sequencer bass, root, octave, fifth; a machine's tune repeated exactly, the same strength every note; a dry
+    machine kit with its metal). They take the places of COLD WAVE, INDIE POP and ELECTRO PUNK. Their chords are one
+    or two, never the scale's diminished one.
+  - **Every genre:** the lead repeats its motif (A A A A', the last note moved or left out) instead of ending on the
+    tonic; its strong notes a chord tone three times in five, a ninth or an eleventh the others; repeated notes in its
+    contour. Chords may be power chords (root, fifth, octave) or triads.
+  - **A fix:** the arps built their chords a scale step above the harmony (against the bass); now on it.
+  - `tools/dice_render.c` writes thrown pieces as WAV files, to judge the generator by ear.
+- **MIDI: sections and projects by PROGRAM CHANGE on channel 16** (the song's channel: it never loads a sound there).
+  Programs 0–3 jump to section A–D (playing: on the next bar, as the song layer's keys; stopped: at once), 16–23 load
+  project 1–8 (stopped only). A foot controller or a DAW can run a set. A test sends them.
+- **MIXER: the six columns with every COLOR and STYLE** (they showed only with COLOR JIANT FM and STYLE FLAT; any other
+  showed Felucca's four). MENU > LARGE still shows four, bigger.
 
 ### v0.6.79
 - **Credits:** praztalfractal ([GitHub: gospodindilly-ops](https://github.com/gospodindilly-ops)), who tests JIANT
@@ -106,6 +128,7 @@ Every update is listed here, newest first.
   sequencer, the arp, FUGUE, the punch-in repeats with OCT and RANDOM, each track on its channel, every note ended),
   **OFF**.
 - **PROGRAM CHANGE**: program *n* on a track's channel loads the PRESETS list's sound *n* + 1 into that track.
+  (0.6.80) On **channel 16**, the song's: 0–3 jump to section A–D (on the next bar), 16–23 load project 1–8.
 - MIDI check: USB / TRS MIDI IN, clock, Start / Continue / Stop and the punch-ins verified by the tests. MIDI OUT on the
   TRS jack is not possible (the jack is an input only) and neither is Bluetooth MIDI (it needs JieLi's closed SDK).
 
@@ -931,9 +954,9 @@ An 8-sound kit (BD SD CP CH OH TM RS CB) generated in real time, Microtonic styl
 - **SELECT** changes the tempo on GLO's pages (GLOBAL, SYSTEM, MIXER) and with GLO held. On **EDIT** it **rolls the
   track's sound dice**: a synth loads one of its factory presets at random and moves each engine parameter up to a
   quarter of its range; DRUM-X rolls the A and B sides of each sound around the factory kit. On **HOME** it asks
-  **DICE EVERYTHING?** (OCT+ yes, OCT− no) and then writes a new piece: a genre (the night's: DARK MINIMAL, DUB
-  TECHNO, IDM, DARK IDM, DARK ELECTRO, ACID NIGHT, COLD WAVE, BROKEN, HYPNOTIC, DEEP BREAKS; and SOUNDTRACK, HARD TECHNO,
-  INDIE POP, ELECTRO PUNK, NEO CLASSICAL), an energy (SPACE, MID, FRANTIC) and which roles play (drums optional): its tempo, one scale for every engine and the effects, each
+  **DICE EVERYTHING?** (OCT+ yes, OCT− no) and then writes a new piece: a genre (the wave's, since 0.6.80: POST PUNK,
+  SYNTH POP, MINIMAL SYNTH, MAN MACHINE; the night's: DARK MINIMAL, DUB TECHNO, IDM, DARK IDM, DARK ELECTRO, ACID NIGHT,
+  BROKEN, HYPNOTIC, DEEP BREAKS; and SOUNDTRACK, HARD TECHNO, NEO CLASSICAL), an energy (SPACE, MID, FRANTIC) and which roles play (drums optional): its tempo, one scale for every engine and the effects, each
   track a role, an engine, a sound and a part from one chord progression, silences included (see v0.6.26).
 - **UNDO: GLO held + G4** takes back the last big change (DICE ALL, a sound diced, a clear, INIT, RECALL, a pattern or
   project loaded); pressing it again goes forward (redo). G4 breathes when there is something to undo.

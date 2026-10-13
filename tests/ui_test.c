@@ -4448,26 +4448,27 @@ static int test_bughunt_ui2(void)
                            : "dead FX held from a dialog: no map, the key plays a note, no effect", ok);
         }
     }
-    {   /* 3. MIXER: the knob just turned is the one drawn in the accent (K1 LEVEL, K2 PAN, K3 REV, K4 the MUTE badge) */
+    {   /* 3. MIXER: the knob just turned is the one drawn in the accent (K1 LEVEL's dB, K2 PAN's middle, K3 REV, K4
+         * MUTE: the sound's name); (0.6.80) in the six columns, with any COLOR (here not JIANT FM's) */
         uint32_t k, a[4][4], ok = 1;
         for (k = 0; k < 4u; k++) {
-            int32_t X = CARD_X(0), Y = Y_GRAPH;
+            int32_t X = T6_X(0), Y = Y_GRAPH;
             ui_power_on();
             settings.palette = 1; palette_set(1);
             go_page(GR_TRK); frame(); frame();
             turn(EN_K1 + k, 1);                                       /* (K4 right: MUTE on, its badge shown) */
             ui.force = 1; frame();
-            a[k][0] = accent_in(X + 4, Y + 37, X + 38, Y + 71);       /* LEVEL */
-            a[k][1] = accent_in(X + 3, Y + 84, X + 28, Y + 115);      /* PAN */
-            a[k][2] = accent_in(X + 30, Y + 84, X + 55, Y + 115);     /* REV */
-            a[k][3] = accent_in(X + 22, Y + 4, X + 56, Y + 20);       /* the MUTE badge */
+            a[k][0] = accent_in(X + 17, Y + 44, X + 37, Y + 57);      /* LEVEL's dB */
+            a[k][1] = accent_in(X + 4, Y + 100, X + 37, Y + 110);     /* PAN */
+            a[k][2] = accent_in(X + 4, Y + 112, X + 37, Y + 117);     /* REV */
+            a[k][3] = accent_in(X + 4, Y + 22, X + 37, Y + 37);       /* MUTE: the name */
         }
         for (k = 0; k < 4u; k++) {
             uint32_t j;
             for (j = 0; j < 4u; j++)
                 ok &= j == k ? a[k][j] > 0u : a[k][j] == 0u;
         }
-        bad += check("MIXER: K1..K4 light LEVEL / PAN / REV / the MUTE badge, nothing else", ok);
+        bad += check("MIXER (six columns, any COLOR): K1..K4 light LEVEL / PAN / REV / MUTE, nothing else", ok);
     }
     {   /* 4. renaming the slot the music came from renames the music: the next SAVE prefills the new name */
         char pn[16];
@@ -6714,12 +6715,12 @@ static int test_dice_all(void)
             dice_all();
             for (k = 0, fm = 0, drums = 0; k < NTRK; k++) { fm += trk[k].eng_req == ENGI_FM6; drums += drum_track(&trk[k]); }
             ok &= fm <= 2u && drums == 1u;
-            for (k = 0; k < NTRK; k++) {                /* (0.6.34) the guard rails: chords of four, the lead under G5 */
+            for (k = 0; k < NTRK; k++) {                /* (0.6.34) the guard rails: chords of three or four, the lead under G5 */
                 uint32_t i2;
                 for (i2 = 0; i2 < (uint32_t)trk[k].p[P_SLEN]; i2++) {
                     const step_t *s2 = &trk[k].step[i2];
                     if (drum_track(&trk[k]) || s2->time != ST_NOTE) continue;
-                    ok &= s2->n == 1u || s2->n == 4u;
+                    ok &= s2->n >= 1u && s2->n <= 4u;   /* (0.6.80: power chords, triads: three) */
                     ok &= s2->note[0] <= 84u;
                 }
             }
@@ -7455,6 +7456,36 @@ static void cin_beat(void)                       /* the audio until the count-in
     uint32_t left = cin_left, k;
     for (k = 0; k < 4000u && cin_left == left && seq_counting(); k++)
         events_block(CTL);
+}
+/* (0.6.80) channel 16's PROGRAM CHANGE: 0..3 a section (stopped: at once), 16 + n the project n + 1; never a track's
+ * sound, whatever ROUTE */
+static int test_midi_song_pc(void)
+{
+    int bad = 0, ok;
+    int32_t o[2 * CTL];
+    uint32_t eng[NTRK], kk, s0;
+    ui_power_on();
+    s0 = song_cur;
+    song.g[G_ROUTE] = 1;                                /* (SEL: every channel to the selected track, but not 16's PC) */
+    sl_steps(70); section_store(1);                     /* section B: notes 70.. */
+    sl_steps(80);                                       /* the music now: 80.. */
+    for (kk = 0; kk < NTRK; kk++) eng[kk] = trk[kk].eng_req;
+    midi_enqueue(0x0Cu | 0xCFu << 8 | 1u << 16, 1u);   /* PROGRAM CHANGE 1 on channel 16: section B */
+    mix_block(o, CTL); frame();
+    ok = trk[0].step[0].note[0] == 70 && live.cur == 1;
+    for (kk = 0; kk < NTRK; kk++) ok &= trk[kk].eng_req == eng[kk];
+    midi_enqueue(0x0Cu | 0xCFu << 8 | (16u + (s0 + 1u) % NSONG) << 16, 1u);   /* 16 + n: project n + 1 */
+    mix_block(o, CTL); frame();
+    ok &= song_cur == (s0 + 1u) % NSONG;
+    midi_enqueue(0x0Cu | 0xCFu << 8 | (16u + s0) << 16, 1u);   /* and back */
+    mix_block(o, CTL); frame();
+    ok &= song_cur == s0;
+    bad += check("PROGRAM CHANGE on channel 16: 0..3 a section (no track's sound), 16 + n project n + 1", ok);
+    memset(proj_slot[1].raw, 0, 4);                     /* (section B emptied again) */
+    live.cur = -1;
+    song.g[G_ROUTE] = 0;
+    ui_power_on();
+    return bad;
 }
 static int test_click_menu(void)
 {
@@ -8640,6 +8671,7 @@ int main(void)
     bad += test_key_latch();
     bad += test_load_budget();
     bad += test_dice_all();
+    bad += test_midi_song_pc();
     bad += test_fx_sections();
     bad += test_clear_ghosts();
     bad += test_dx_sound();
