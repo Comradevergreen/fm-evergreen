@@ -53,11 +53,16 @@ for k in range(6):
         s = max(pkn[f, k], s * 0.82)
 scenes = []
 for r in rows:
-    t0, tg, ti, su, kd = (r.split('\t') + ['', '', '', '0'])[:5]
+    t0, tg, ti, su, kd, da = (r.split('\t') + ['', '', '', '0', ''])[:6]
     scenes.append({'t': float(t0), 'tag': tg, 'title': [x for x in ti.split('|') if x],
-                   'sub': [x for x in su.split('|') if x], 'kind': int(kd or 0)})
+                   'sub': [x for x in su.split('|') if x], 'kind': int(kd or 0), 'data': [x for x in da.split('|') if x]})
+lst = []
+if (D / 'list.txt').exists():                           # (capture_promo.c: what is new, the second of its picture)
+    for r in (D / 'list.txt').read_text().splitlines():
+        ti, wo, t0 = r.split('\t')
+        lst.append({'title': ti, 'words': wo, 't': float(t0)})
 r2 = lambda x: [round(float(v), 3) for v in x]
-json.dump({'fps': FPS, 'n': N, 'splash': splash, 'end': end, 'beat': beat, 'scenes': scenes,
+json.dump({'fps': FPS, 'n': N, 'list': lst, 'splash': splash, 'end': end, 'beat': beat, 'scenes': scenes,
            'rms': r2(rms), 'low': r2(low), 'mid': r2(mid), 'high': r2(high), 'kick': r2(kick), 'home': home.tolist(),
            'trk': [r2(pkn[f]) for f in range(N)], 'on': [r2(on[f]) for f in range(N)],
            'spec': [r2(spec[f]) for f in range(N)]}, open(D / 'data.json', 'w'))

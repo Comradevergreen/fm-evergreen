@@ -3,6 +3,7 @@
 // directory (tools/video/capture_dark.c + film_prep.py), piped as JPEG to ffmpeg with the audio:
 //   NODE_PATH=$(npm root -g) node tools/video/film.mjs build/video5/feat feat out.mp4
 //   NODE_PATH=$(npm root -g) node tools/video/film.mjs build/video5/feat feat preview 100,400,900   -> preview-*.jpg
+//   film "promo": tools/video/promo.html (the presentation film, tools/video/capture_promo.c)
 // The fonts (the landing's: Michroma, IBM Plex Mono, Instrument Sans, VT323) come from build/video5/fonts.
 import { createRequire } from "module";
 import { fileURLToPath } from "url";
@@ -31,7 +32,7 @@ await page.route("http://film/**", async r => {
   if (p === "/data.json") return r.fulfill({ path: path.join(dir, "data.json"), contentType: "application/json" });
   if (p === "/version") return r.fulfill({ body: ver, contentType: "text/plain" });
   if (p.startsWith("/fonts/")) return r.fulfill({ path: path.join(FONTS, path.basename(p)) });
-  return r.fulfill({ path: path.join(root, "tools/video/film.html"), contentType: "text/html" });
+  return r.fulfill({ path: path.join(root, film === "promo" ? "tools/video/promo.html" : "tools/video/film.html"), contentType: "text/html" });
 });
 await page.goto("http://film/film.html");
 const n = await page.evaluate(f => boot(f), film);

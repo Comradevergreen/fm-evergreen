@@ -1372,50 +1372,24 @@ static void part_dice(uint32_t kind)
     else if (kind == CF_DICE_FX) fx_dice(TSEL);
 }
 static int dice_kind(uint32_t c) { return c == CF_DICE_SOUND || c == CF_DICE_SEQ || c == CF_DICE_LFO || c == CF_DICE_FX; }
-/* (0.6.67) SELECT alone: the pages, one a detent, in the panel's order: HOME, then EDIT, ENV, LFO, FX, SCL, ARP, SEQ,
- * GLO (the MIXER with it), SAVE; each button's pages as its taps go; no wrap (back past EDIT's first: HOME) */
-static const uint8_t SCROLL_FAM[9] = {FAM_EDIT, FAM_ENV, FAM_LFO, FAM_FX, FAM_SCL, FAM_ARP, FAM_SEQ, FAM_GLO, FAM_SAVE};
+/* (0.6.67) SELECT alone: the pages, one a detent. (0.6.69) Only the section's (the button's) pages, as its taps go,
+ * no wrap (its first and last pages are where it stops); on HOME (no pages) the caller dices everything */
 static void page_scroll(int32_t s)
 {
-    uint32_t fi = 0, i = ui.page, j, f;
-    int32_t d = s > 0 ? 1 : -1, n = s > 0 ? s : -s;
-    if (!ui.home) {
-        f = cur_page()->fam == FAM_TRK ? FAM_GLO : cur_page()->fam;
-        for (fi = 0; fi < 9u && SCROLL_FAM[fi] != f; fi++) {}
-        if (fi == 9u) fi = 0;
-    }
+    uint32_t i = ui.page, j, f;
+    int32_t n = s > 0 ? s : -s;
+    if (ui.home)
+        return;
+    f = cur_page()->fam == FAM_TRK ? FAM_GLO : cur_page()->fam;
     while (n--) {
-        if (ui.home) {
-            if (d < 0) break;
-            for (fi = 0; fi < 9u; fi++) {
-                for (j = 0; j < NPAGES && !page_in(j, SCROLL_FAM[fi]); j++) {}
-                if (j < NPAGES) { i = j; ui.home = 0; break; }
-            }
-            continue;
+        for (j = i; ; ) {
+            j = s > 0 ? j + 1u : j - 1u;
+            if (j >= NPAGES || page_in(j, f)) break;
         }
-        for (j = i; ; ) {                              /* the next (previous) page of the same button */
-            j = d > 0 ? j + 1u : j - 1u;
-            if (j >= NPAGES || page_in(j, SCROLL_FAM[fi])) break;
-        }
-        if (j < NPAGES) { i = j; continue; }
-        for (;;) {                                     /* else the next (previous) button's first (last) page */
-            if (d < 0 && fi == 0u) { ui.home = 1; break; }
-            if (d > 0 && fi == 8u) { j = NPAGES; break; }
-            fi = (uint32_t)((int32_t)fi + d);
-            if (d > 0) { for (j = 0; j < NPAGES && !page_in(j, SCROLL_FAM[fi]); j++) {} }
-            else { for (j = NPAGES; j-- > 0u && !page_in(j, SCROLL_FAM[fi]); ) {} }
-            if (j < NPAGES) break;
-        }
-        if (ui.home) break;
-        if (j >= NPAGES) break;                         /* (the last page: it stays) */
+        if (j >= NPAGES) break;
         i = j;
     }
-    if (ui.home) {
-        go_home();
-        page_flash();
-        return;
-    }
-    if (i == ui.page && !ui.home) return;
+    if (i == ui.page) return;
     ui.page = (uint8_t)i;
     ui.fam_last[PAGES[i].fam] = ui.page;
     page_entered();
@@ -2011,8 +1985,15 @@ static void ui_input_frame(void)
             song.g[G_BPM] = (int16_t)clamp(song.g[G_BPM] + accel(EN_SELECT, sel, 200), GP[G_BPM].min, GP[G_BPM].max);
             ui.bpm_t = 40;                              /* the header's BPM lights up; no message over the header */
         }
-    } else if ((s = panel_enc(EN_SELECT)) != 0 && !lay && !ui.menu) {   /* (0.6.67) SELECT alone: the pages */
-        page_scroll(s);
+    } else if ((s = panel_enc(EN_SELECT)) != 0 && !lay && !ui.menu) {   /* (0.6.67) SELECT alone: the section's pages;
+                                                         * (0.6.69) on HOME, as before: DICE EVERYTHING? (once a turn) */
+        static uint32_t hd_ms;
+        if (!ui.home) page_scroll(s);
+        else if (!ui.confirm && (!hd_ms || fm1_ms - hd_ms > 400u)) {
+            if (chain_busy()) ui_message("STOP TO EDIT");
+            else confirm_open(CF_DICE_ALL, song.sel);
+        }
+        if (ui.home) hd_ms = fm1_ms | 1u;
     }
     for (k = 0; k < 4u && !kq; k++) {
         const page_t *pg = cur_page();

@@ -59,9 +59,9 @@ files.
 
 ### Your first song (5 minutes)
 
-1. Hold **HOME** and turn **SELECT**. The screen asks **DICE EVERYTHING?** Press **OCT+** (YES). A whole song idea
+1. On **HOME**, turn **SELECT**. The screen asks **DICE EVERYTHING?** Press **OCT+** (YES). A whole song idea
    appears: engines, sounds, parts, scale, tempo and effects. Press **PLAY**.
-2. Not your thing? HOME + SELECT again and confirm. Every throw is new. To go back to the one before: hold **GLO** and
+2. Not your thing? Turn SELECT again and confirm. Every throw is new. To go back to the one before: hold **GLO** and
    press **G4** (UNDO).
 3. Like it? **Stop** (PLAY), then press **SAVE** twice to reach **SAVE > PROJECT** (the first SAVE press opens
    USER, the second PROJECT). Turn **KNOB 4** to the right so it shows **[OCT+]**, then press **OCT+**. Type a name with the keys (or keep
@@ -84,7 +84,7 @@ The names below are the ones the firmware uses (the HARDWARE CALIBRATION screen 
 
 | Control | What it does |
 | --- | --- |
-| **SELECT** (encoder) | Alone: **scrolls through the pages**, one a detent: HOME, then EDIT, ENV, LFO, FX, SCL, ARP, SEQ, GLO (with the MIXER), SAVE, each button's pages in order; back past EDIT's first page: HOME. With a button held, that button's **dice**: **HOME** + SELECT **DICE EVERYTHING?**, **EDIT** + SELECT the sound, **SEQ** + SELECT the sequence, **LFO** + SELECT the LFO, **FX** + SELECT the effects. **GLO** + SELECT: the tempo. Any other page button + SELECT: its pages. |
+| **SELECT** (encoder) | Alone: **scrolls through the pages of the section you are in** (EDIT's pages on an EDIT page, FX's on an FX page …), one a detent, no wrap; on **HOME** it opens **DICE EVERYTHING?** (as HOME + SELECT). With a button held, that button's **dice**: **HOME** + SELECT **DICE EVERYTHING?**, **EDIT** + SELECT the sound, **SEQ** + SELECT the sequence, **LFO** + SELECT the LFO, **FX** + SELECT the effects. **GLO** + SELECT: the tempo. Any other page button + SELECT: its pages. |
 | **ALGORITHM** (encoder) | Selects the track from any page: T1–T4, or T1–T6 with TRACKS 6. In the MENU: switches tabs. |
 | **PRESETS** (encoder) | On HOME, PRESETS and the sound pages: browses sounds (every engine's factory presets, then your user presets). On step pages (STEP, COMP, PATTERN, AUTOMATION, SHIFT): moves the step cursor. On list pages (USER, PROJECT, ARRANGE, TOOLS, AUTO LIST): moves the selection. **Hold a page button and turn SELECT** (or PRESETS) to jump straight through that button's pages. |
 | **KNOB 1–4** | The four cards (columns) on screen. With a layer held, the layer's own knobs. Turning fast sweeps the whole range, slowly fine-tunes (MENU > KNOB ACCEL turns this off). |
@@ -166,8 +166,9 @@ and heating up with its own audio. The selected track is drawn bigger, a muted o
 - **HOME** returns to the ecosystem.
 - **FX** is long, so it is split into sections: TRACK (FX, DIST, AUTOPAN), SLICER (SLICER, SL BUS, SL BUS 2, SL PITCH),
   DELAY (DLY, DLY 2), REVERB (REVERB, REVERB 2), CHORUS, MASTER. **Two quick taps** on FX jump to the next section.
-- **Turn SELECT** to scroll through every page, one a detent, in the panel's order (HOME, EDIT, ENV, LFO, FX, SCL,
-  ARP, SEQ, GLO, SAVE); the page's name shows over the footer for a moment.
+- **Turn SELECT** to scroll through the pages of the section you are in (EDIT's on an EDIT page, FX's on an FX page),
+  one a detent, stopping at its first and last; the page's name shows over the footer for a moment. On HOME it opens
+  DICE EVERYTHING?.
 - **Hold a page button and turn PRESETS** to go through its pages forwards or back (no wrap); let go and you stay
   there. ENV, SCL, ARP and SAVE do the same with SELECT; HOME, EDIT, SEQ, LFO and FX + SELECT are their dice, GLO +
   SELECT the tempo.
@@ -640,7 +641,7 @@ Hold **SAVE**:
 
 ### DICE ALL — the song-idea generator (HOME + SELECT)
 
-Hold **HOME** and turn **SELECT** (from any page). The dialog **DICE EVERYTHING?** appears (with "UNDO AFTER: GLO + G4"). **OCT+ YES** /
+On **HOME**, turn **SELECT** (or hold HOME and turn SELECT, from any page). The dialog **DICE EVERYTHING?** appears (with "UNDO AFTER: GLO + G4"). **OCT+ YES** /
 **OCT− NO**.
 
 Each throw makes three choices, then guard rails keep the result musical:

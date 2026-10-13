@@ -7752,12 +7752,15 @@ static int test_bpm_lock(void)
     turn(EN_SELECT, -1);
     ok &= str_eq(cur_page()->title, "GLOBAL");
     go_home(); frame(); turn(EN_SELECT, 1);
-    ok &= !ui.home && str_eq(cur_page()->title, "EDIT 1") && song.g[G_BPM] == b0;   /* (HOME, then EDIT's pages) */
-    turn(EN_SELECT, -1);
-    ok &= ui.home;                                                    /* (back past EDIT's first: HOME) */
-    turn(EN_SELECT, -1);
-    ok &= ui.home && !ui.confirm;                                     /* (no wrap, no dice) */
-    bad += check("0.6.67: SELECT alone scrolls the pages (HOME, EDIT ..), back to HOME; never the tempo", ok);
+    ok &= ui.home && ui.confirm == CF_DICE_ALL && song.g[G_BPM] == b0;   /* (0.6.69) HOME: DICE EVERYTHING? as before */
+    press(B_OCTDN); frame(); ok &= !ui.confirm;
+    go_title("EDIT 1"); frame(); turn(EN_SELECT, 1);
+    ok &= str_eq(cur_page()->title, "EDIT 2");
+    turn(EN_SELECT, -5);
+    ok &= str_eq(cur_page()->title, "EDIT 1");                        /* (no wrap: the section's first) */
+    go_title("ENV DEST"); frame(); turn(EN_SELECT, 3);
+    ok &= str_eq(cur_page()->title, "ENV DEST") && !ui.home;          /* (the section's last: it stays, no LFO) */
+    bad += check("0.6.69: SELECT alone scrolls the section's pages (no wrap, never out of it); HOME: DICE ALL; never the tempo", ok);
     go_home(); frame();
 
     hold(B_HOME);
@@ -7831,9 +7834,9 @@ static int test_bpm_lock(void)
     {   /* (0.6.67) the MIXER: SELECT the next of GLO's pages, the tempo kept */
         go_title("MIXER"); frame(); fm1_ms += 1200u;
         b0 = song.g[G_BPM];
-        turn(EN_SELECT, 1);
-        ok = song.g[G_BPM] == b0 && !str_eq(cur_page()->title, "MIXER") && !ui.confirm;
-        bad += check("0.6.67: SELECT on the MIXER goes on through the pages", ok);
+        turn(EN_SELECT, -1);
+        ok = song.g[G_BPM] == b0 && cur_page()->fam == FAM_GLO && !ui.confirm;
+        bad += check("0.6.69: SELECT on the MIXER goes through GLO's pages", ok);
     }
 
     /* ON: GLO > GLOBAL's BPM knob */
