@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.6.77).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.6.78).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 > ⚡ **New in 0.6.71: both cores (experimental).** The FM-1's chip has two processor cores and JIANT used one. Now the
 > second renders some of the synth tracks while the first renders the rest, so the same song leaves much more room
@@ -44,6 +44,16 @@ Two printable sheets with everything on the device. Click an image to open it fu
 ## Changelog
 
 Every update is listed here, newest first.
+
+### v0.6.78
+- **Experimental: the hottest sound code runs from RAM** (another idea from a tester, after Melodee). The firmware runs
+  from the flash through a cache; between two audio blocks the screen and the keys fill that cache with their own
+  code, and the next block has to fetch its code from the slow flash again: likely one source of the load peaks
+  (LATE, SHED in ABOUT). Now 18 KB of it is copied to RAM at power-on and runs from there: the mix and the master, the
+  FX layer, the SLICER, and the first core's copies of a track's mix and the effect buses. The second core keeps the
+  flash copies (it now and then misreads RAM on some units). The code itself is the same as before (only its place
+  changed), so the sound is identical; whether the peaks go down can only be measured on a real FM-1: compare PEAK,
+  LATE and SHED in MENU > ABOUT with 0.6.77 on the same song. If it does not help, it goes.
 
 ### v0.6.77
 - **FM6: the operator graphs follow the knobs again.** On EDIT > OP ENV the envelope's curve did not move while you

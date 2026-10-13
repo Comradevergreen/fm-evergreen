@@ -6,6 +6,8 @@ extern uint32_t _data_start[], _data_end[], _data_load[], _bss_start[], _bss_end
 extern uint32_t _pool_start[], _pool_end[], _rt_start[], _rt_end[], _rt_load[];
 #if FELUCCA_DUAL_CORE
 extern uint32_t _c1t_start[], _c1t_end[], _c1t_load[];   /* (0.6.71) the second core's loop (app.ld .c1_text) */
+extern uint32_t _hot_start[], _hot_end[], _hot_load[];   /* (0.6.78) core 0's hottest audio code (app.ld .hot_text) */
+extern uint32_t _low_start[], _low_end[];                /* (0.6.78) main-loop buffers below the RAM code (app.ld) */
 #endif
 
 
@@ -350,6 +352,8 @@ void fm1_cstart(void)
         *d = 0;
     for (d = _pool_start; d < _pool_end; d++)
         *d = 0;
+    for (d = _low_start; d < _low_end; d++)
+        *d = 0;
     for (s = _data_load, d = _data_start; d < _data_end; s++, d++)
         *d = *s;
     for (s = _rt_load, d = _rt_start; d < _rt_end; s++, d++)
@@ -358,6 +362,8 @@ void fm1_cstart(void)
     for (s = _c1t_load, d = _c1t_start; d < _c1t_end; s++, d++)
         *d = *s;                                /* (0.6.71) the second core's waiting loop (hal/fm1_multicore.h) */
 #endif
+    for (s = _hot_load, d = _hot_start; d < _hot_end; s++, d++)
+        *d = *s;                                /* (0.6.78) core 0's hottest audio code (core.h HOTRAM) */
     fm1_mailbox_clear();
     fm1_guard_enable(FM1_GUARD_STACK | FM1_GUARD_WRITE | FM1_GUARD_BUS | FM1_GUARD_PC);
     fm1_boot.p3_rst = (uint8_t)p3;

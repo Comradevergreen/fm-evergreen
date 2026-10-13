@@ -2,8 +2,12 @@
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments */
 /* FELUCCA memory map.
  * Code + constants execute in place from XIP (app.bin offset 0 = 0x02000120).
- * 0x01C00000..0x01C06000 holds .ram_text (code that must run while the flash
- * is busy: the flash driver); 0x01C06000..0x01C08000 stays for RAM-run debug.
+ * RAMTEXT (JIANT 0.6.78: at the top of the pool, was 0x01C00000): .ram_text (code that must run while the flash is
+ * busy: the flash driver), .c1_text (the second core's loop), .hot_text (core 0's hottest audio code). A call reaches
+ * +-4 MiB (pi32v2 imm23 x 2, no long calls in this compiler): RAM code there reaches the whole XIP image (build.py
+ * checks the margin); at 0x01C00000 it reached none of it.
+ * LOWBUF 0x01C00000..0x01C06000 (0.6.78): main-loop buffers (undo, the project scratch, the song section's stage),
+ * zeroed at boot; 0x01C06000..0x01C08000 stays for RAM-run debug.
  * RAM  : .data/.bss (96 KiB)
  * POOL : big zero-initialised buffers (FX lines, canvases), section .pool
  * STACKS with 256-byte guard bands; NOINIT survives resets and UBOOT entry.
@@ -11,9 +15,10 @@
 MEMORY
 {
     XIP    (rx)  : ORIGIN = 0x02000120, LENGTH = 0x8DFBC
-    RAMTEXT (rwx): ORIGIN = 0x01C00000, LENGTH = 0x6000
+    LOWBUF (rw)  : ORIGIN = 0x01C00000, LENGTH = 0x6000
     RAM    (rwx) : ORIGIN = 0x01C08000, LENGTH = 96K
-    POOL   (rw)  : ORIGIN = 0x01C20000, LENGTH = 0x54000
+    POOL   (rw)  : ORIGIN = 0x01C20000, LENGTH = 0x4E000
+    RAMTEXT (rwx): ORIGIN = 0x01C6E000, LENGTH = 0x6000
     NOINIT (rw)  : ORIGIN = 0x01C7C000, LENGTH = 0x3D50
 }
 SECTIONS
@@ -26,6 +31,15 @@ SECTIONS
      * .ram_text calls nothing still holds) */
     .c1_text : { _c1t_start = .; KEEP(*(.c1_text*)) . = ALIGN(4); _c1t_end = .; } > RAMTEXT AT > XIP
     _c1t_load = LOADADDR(.c1_text);
+    /* (JIANT 0.6.78) core 0's hottest audio code (tools/build.py HOT_FNS): in RAM after the second core's loop, inside the
+     * same RAM code window (_rt_start .. _hot_end) */
+    .hot_text : {
+        _hot_start = .;
+        KEEP(*(.hot_text*))   /* (tools/build.py HOT_FNS: their sections renamed in the optimised IR) */
+        . = ALIGN(4);
+        _hot_end = .;
+    } > RAMTEXT AT > XIP
+    _hot_load = LOADADDR(.hot_text);
     .data : { . = ALIGN(4); _data_start = .; *(.data*) *(.sdata*) . = ALIGN(4); _data_end = .; } > RAM AT > XIP
     _data_load = LOADADDR(.data);
     .bss (NOLOAD) : { _bss_start = .; *(.bss*) *(.sbss*) *(COMMON) . = ALIGN(4); _bss_end = .; } > RAM
@@ -34,6 +48,7 @@ SECTIONS
     .c1_stacks (NOLOAD) : { . = ALIGN(32); _c1_stack_lo = .; . += 7168; _c1_stack_hi = .; } > POOL
     _c1_ustack_top = _c1_stack_lo + 6144;
     _c1_sstack_top = _c1_stack_hi;
+    .lowbuf (NOLOAD) : { _low_start = .; *(.lowbuf*) . = ALIGN(4); _low_end = .; } > LOWBUF
     .noinit (NOLOAD) : { *(.noinit*) } > NOINIT
     _guard0 = 0x01C74000; _ustack_lo = 0x01C74100; _ustack_top = 0x01C7A000;
     _guard1 = 0x01C7A000; _sstack_lo = 0x01C7A100; _sstack_top = 0x01C7C000;

@@ -34,6 +34,13 @@
 static uint8_t mc_host, mc_host_cpu;     /* tests: 1 = jobs handed over (run at once); the core "running" */
 #define MC_CPU() ((uint32_t)mc_host_cpu)
 #endif
+/* (JIANT 0.6.78) the hottest audio code in RAM, for core 0 (felucca.c FELUCCA_HOTRAM): app.ld puts these functions'
+ * sections (-ffunction-sections) in .hot_text by name, so the compiler builds them as before (this clang inlines
+ * nothing across a section attribute, not even a static inline). Core 1 keeps running the flash copies (fx.c
+ * mix_part_m, fx_run): it now and then reads a word of RAM wrong (hal/fm1_multicore.h) */
+#ifndef FELUCCA_HOTRAM
+#define FELUCCA_HOTRAM 1
+#endif
 #define UP_SLOTS 32u             /* user presets (upreset.c) */
 #define NELEM(a) (sizeof(a) / sizeof((a)[0]))
 
