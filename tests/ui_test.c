@@ -4083,6 +4083,22 @@ static int test_fm6_ops(void)
                 n++;
             }
     bad += check("FM6 ops: 6 operators x 14 bytes, each knob writes its byte only (+-1, 0..its highest), SLOT OWN", ok && n == 84u);
+    {   /* (0.6.77) the graphs redraw on an edit: OP ENV's curve with KNOB 3 / 4, the stage, the operator (track
+         * pages: the patch was in the redraw's signature on the engine pages only) */
+        uint32_t s0;
+        go_title("OP ENV"); frame(); fop_pick(2); turn(EN_K2, -4); frame();
+        s0 = graph_signature(); turn(EN_K3, fm6_patch[tr][4u * FP_OP + FP_R1] ? -1 : 1);
+        ok = graph_signature() != s0;
+        frame(); s0 = graph_signature(); turn(EN_K4, fm6_patch[tr][4u * FP_OP + FP_L1] ? -1 : 1);
+        ok &= graph_signature() != s0;
+        frame(); s0 = graph_signature(); turn(EN_K2, 1);
+        ok &= graph_signature() != s0;
+        frame(); s0 = graph_signature(); turn(EN_K1, 1);
+        ok &= graph_signature() != s0;
+        go_title("OPERATOR"); frame(); s0 = graph_signature(); turn(EN_K4, fm6_patch[tr][3u * FP_OP + FP_OL] ? -1 : 1);
+        ok &= graph_signature() != s0;
+        bad += check("FM6 ops: OP ENV's curve and OPERATOR's chart redraw on every knob (rate, level, stage, operator)", ok);
+    }
     fm6_trim[tr] = 40; fm6_tgen[tr] = fm6_pgen[tr];     /* (a trimmed patch, then an edit: the trim stays) */
     go_title("OPERATOR"); frame(); fop_pick(1); turn(EN_K3, 1);
     fm6_block(TSEL);
