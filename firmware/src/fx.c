@@ -890,7 +890,7 @@ static void fx_gate(int32_t *wet, uint32_t n)
     for (i = 0; i < n; i++, g0 += d)
         wet[i] = mulq15(wet[i], g0);
 }
-static void fx_buses(const int32_t *cho_in, const int32_t *dly_in, const int32_t *rev_in, int32_t *wet,
+static inline __attribute__((always_inline)) void fx_buses(const int32_t *cho_in, const int32_t *dly_in, const int32_t *rev_in, int32_t *wet,
                      uint32_t n)
 {
     uint32_t i, dl = delay_samples();
@@ -1089,7 +1089,8 @@ static __attribute__((noinline)) void drum_mix(int32_t *ol, int32_t *or_, uint32
 
 /* one synth part into the dry mix and the sends; a part with no voice sounding costs
  * the LFO tick and a cleared buffer only (after the DIST tail has run out) */
-static void mix_part(track_t *t, uint32_t n)
+static inline __attribute__((always_inline)) void mix_part(track_t *t, uint32_t n)   /* (0.6.78: inlined in both
+                                                         * copies of mix_part_m, flash and RAM) */
 {
     uint32_t i, c1 = MC_CPU() & 1u;                     /* (0.6.71) on the second core: its own buffers */
     int32_t *b = c1 ? c1_buf : part_buf;
@@ -1305,13 +1306,19 @@ static uint32_t mc_cost(const track_t *t)               /* a part's share of the
 #define MC_VW 1u
 #endif
 static uint32_t mc_tk[NTRK], mc_fx_tk;                  /* (and the buses': fx_run) */
-static void mix_part_m(track_t *t, uint32_t n)          /* mix_part, timed */
+static inline __attribute__((always_inline)) void mix_part_t(track_t *t, uint32_t n)   /* mix_part, timed */
 {
     uint32_t t0 = MC_TICKS(), i = (uint32_t)(t - trk) % NTRK, d;
     mix_part(t, n);
     d = MC_TICKS() - t0;
     mc_tk[i] = d > mc_tk[i] ? mc_tk[i] + ((d - mc_tk[i]) >> 1) : mc_tk[i] - ((mc_tk[i] - d) >> 3);   /* (up fast) */
 }
+static void mix_part_m(track_t *t, uint32_t n) { mix_part_t(t, n); }   /* (core 1: from the flash) */
+#if FELUCCA_HOTRAM                                       /* (0.6.78) core 0's copy, in RAM (app.ld .hot_text) */
+static __attribute__((noinline)) void mix_part_m0(track_t *t, uint32_t n) { mix_part_t(t, n); }
+#else
+#define mix_part_m0 mix_part_m
+#endif
 /* the parts for core 1 this block (a bit each): whichever core has less to do takes the dearest left. The DRUM parts
  * go together, as one (DRUM-X's kit and its IMAGE / SEND buffers are one for all): on one core or the other */
 static __attribute__((noinline)) uint32_t mc_split(uint32_t c1)   /* c1: what core 1 has already (0.6.75: the buses) */
@@ -1365,7 +1372,7 @@ static int fx_insane(uint32_t n)
         m |= ((uint32_t)fx_wet[i] + FX_SANE) | ((uint32_t)fx_sl[i] + FX_SANE);
     return m >= 2u * FX_SANE;
 }
-static void fx_run(uint32_t n)
+static inline __attribute__((always_inline)) void fx_run_t(uint32_t n)
 {
     uint32_t i, t0 = MC_TICKS(), d;
     for (i = 0; i < n; i++)
@@ -1376,6 +1383,12 @@ static void fx_run(uint32_t n)
     d = MC_TICKS() - t0;
     mc_fx_tk = d > mc_fx_tk ? mc_fx_tk + ((d - mc_fx_tk) >> 1) : mc_fx_tk - ((mc_fx_tk - d) >> 3);
 }
+static void fx_run(uint32_t n) { fx_run_t(n); }         /* (core 1: from the flash) */
+#if FELUCCA_HOTRAM                                       /* (0.6.78) core 0's copy, in RAM */
+static __attribute__((noinline)) void fx_run0(uint32_t n) { fx_run_t(n); }
+#else
+#define fx_run0 fx_run
+#endif
 
 static __attribute__((noinline)) void mc_join(uint32_t n)   /* core 1's parts into the mix */
 {
@@ -1480,10 +1493,10 @@ static __attribute__((noinline)) void mix_block(int32_t *out, uint32_t n)   /* (
             c1m = 0;
     }
     if (!c1j)
-        fx_run(n);                                      /* (0.6.75) the buses here: one core */
+        fx_run0(n);                                     /* (0.6.75) the buses here: one core */
     for (i = 0; i < NPART; i++)
         if (!((c1m >> i) & 1u))
-            mix_part_m(&trk[i], n);
+            mix_part_m0(&trk[i], n);
     if (c1j) {
         if (!mc_wait()) {
             if (c1m)

@@ -37,6 +37,8 @@ import lz4blk  # noqa: E402
 APP_XIP = 0x02000120                # app.bin offset 0 in the XIP map; the SPL jumps here
 APP_SLOT = fm1pkg_make.APP_SLOT
 LOADER_LOAD = 0x01C0A800
+POOL_END = 0x01C6E000            # (JIANT 0.6.78) app.ld: POOL's end, RAMTEXT's start
+RAMTEXT_END = 0x01C74000         # .. RAMTEXT's end (the user stack's guard band)
 LOADER_NAME = b"usb_hid_ota.bin"    # the file name the SPL looks for
 DOCKER_IMAGE = os.environ.get("JIELI_DOCKER_IMAGE", "debian:bookworm-slim")
 CFLAGS = ["-Os", "-ffunction-sections", "-fno-builtin", "-Wall", "-Wno-unused-function"]
@@ -176,6 +178,23 @@ def build_loader():
 
 # ---- app
 
+# (JIANT 0.6.78) core 0's hottest audio code, run from RAM (app.ld .hot_text, src/core.h FELUCCA_HOTRAM): the mix, the
+# master, the FX layer, the SLICER, and core 0's own copies of a part's mix and the buses (core 1 runs the flash ones)
+HOT_FNS = ("mix_block", "mix_part_m0", "fx_run0", "perf_begin", "perf_pre", "perf_block", "perf_master", "slicer_bus")
+
+
+def hot_sections(ir):
+    """HOT_FNS' definitions in the optimised IR given section ".hot_text.<name>"; (the IR, how many found)"""
+    found = 0
+
+    def put(m):
+        nonlocal found
+        found += 1
+        return f'{m.group(1)} section ".hot_text.{m.group(2)}" {{'
+    ir = re.sub(r"^(define [^\n]*?@(" + "|".join(HOT_FNS) + r")\([^\n]*?)\s*\{$", put, ir, flags=re.M)
+    return ir, found
+
+
 def build_app():
     flags = [*CFLAGS, "-Ifirmware/hal", "-Ifirmware/src", "-Ibuild/gen"]
     for flag in ("FELUCCA_FLASH", "FELUCCA_OTA", "FELUCCA_OTA_DRYRUN", "FELUCCA_OTA_RAMONLY", "FELUCCA_CDC",
@@ -193,6 +212,8 @@ def build_app():
     # felucca.c goes to LLVM IR without the optimizer, the main-loop functions (UI, stores, editor) are
     # marked minsize (tools/size_fns.py), then the IR is compiled at -Os. FELUCCA_SIZE=0: -Os everywhere
     size = os.environ.get("FELUCCA_SIZE") != "0"
+    hot = size and os.environ.get("FELUCCA_HOTRAM") != "0"   # (0.6.78) core 0's hottest audio code in RAM (HOT_FNS)
+    flags.append(f"-DFELUCCA_HOTRAM={int(hot)}")
     cmain = (("cc", *flags, "-S", "-emit-llvm", "-Xclang", "-disable-llvm-optzns", "-c",
               FW / "src" / "felucca.c", "-o", OUT / "felucca.ll") if size else
              ("cc", *flags, "-c", FW / "src" / "felucca.c", "-o", OUT / "felucca.o"))
@@ -203,17 +224,28 @@ def build_app():
     if size:
         subprocess.run([sys.executable, SRC / "tools" / "size_fns.py", OUT / "felucca.ll", OUT / "felucca_size.ll"],
                        check=True)
-        tc("cc", *[f for f in flags if not f.startswith(("-I", "-D", "-W"))], "-c",
-           OUT / "felucca_size.ll", "-o", OUT / "felucca.o")
+        cf = [f for f in flags if not f.startswith(("-I", "-D", "-W"))]
+        if hot:   # (JIANT 0.6.78) optimised first, then HOT_FNS put in .hot_text, then only the code generator: a
+            # section attribute before the optimiser would stop it inlining anything into them (this clang inlines
+            # nothing across sections), so they come out as they were, only in RAM (app.ld)
+            tc("cc", *cf, "-S", "-emit-llvm", "-c", OUT / "felucca_size.ll", "-o", OUT / "felucca_opt.ll")
+            ir, n = hot_sections((OUT / "felucca_opt.ll").read_text())
+            if n != len(HOT_FNS):
+                raise SystemExit(f"hot RAM code: {n} of the {len(HOT_FNS)} functions found in the IR ({HOT_FNS})")
+            (OUT / "felucca_hot.ll").write_text(ir)
+            tc("cc", *cf, "-Xclang", "-disable-llvm-optzns", "-c", OUT / "felucca_hot.ll", "-o", OUT / "felucca.o")
+        else:
+            tc("cc", *cf, "-c", OUT / "felucca_size.ll", "-o", OUT / "felucca.o")
     elf = OUT / "felucca.elf"
     tc("pi32v2/bin/ld", "-T", FW / "app.ld", OUT / "crt0.o", OUT / "fm1_vec.o", OUT / "fm1_isr.o",
        OUT / "felucca.o", "-o", elf)
-    for sect in ("text.bin", "data.bin", "ramtext.bin", "c1text.bin"):
+    for sect in ("text.bin", "data.bin", "ramtext.bin", "c1text.bin", "hottext.bin"):
         (OUT / sect).unlink(missing_ok=True)
     *_, syms, dis, rt = tc_all(("common/bin/objcopy", "-O", "binary", "-j", ".text", elf, OUT / "text.bin"),
                                ("common/bin/objcopy", "-O", "binary", "-j", ".data", elf, OUT / "data.bin"),
                                ("common/bin/objcopy", "-O", "binary", "-j", ".ram_text", elf, OUT / "ramtext.bin"),
                                ("common/bin/objcopy", "-O", "binary", "-j", ".c1_text", elf, OUT / "c1text.bin"),
+                               ("common/bin/objcopy", "-O", "binary", "-j", ".hot_text", elf, OUT / "hottext.bin"),
                                ("common/bin/objdump", "-t", elf),
                                ("common/bin/objdump", "-d", elf),
                                ("common/bin/objdump", "-d", "-j", ".ram_text", elf))
@@ -222,9 +254,10 @@ def build_app():
     def symv(name):
         return int(re.search(r"^([0-9a-f]+) .*\s" + name + r"$", syms, re.M).group(1), 16)
     img = bytearray((OUT / "text.bin").read_bytes())
-    # .ram_text, .c1_text (0.6.71: the second core's loop) and .data follow .text at their load addresses; crt0 copies
+    # .ram_text, .c1_text (0.6.71: the second core's loop), .hot_text (0.6.78: core 0's hot audio code) and .data follow .text at their load addresses; crt0 copies
     # them by words
-    for sect, lname in (("ramtext.bin", "_rt_load"), ("c1text.bin", "_c1t_load"), ("data.bin", "_data_load")):
+    for sect, lname in (("ramtext.bin", "_rt_load"), ("c1text.bin", "_c1t_load"), ("hottext.bin", "_hot_load"),
+                        ("data.bin", "_data_load")):
         load = symv(lname)
         if load % 4:
             raise SystemExit(f"{lname} {load:#x} is not word aligned")
@@ -267,11 +300,21 @@ def check(img, syms, dis, rt):
         return int(mm.group(1), 16) if mm else 0
     bss = sym("_bss_end") - 0x01C08000
     pool = sym("_pool_end") - sym("_pool_start")
-    notes.append(f"image {len(img)} B; RAM .data+.bss {bss} B of 98304; pool {pool} B of {0x54000}")
+    pool_top = max(sym("_pool_end"), sym("_c1_stack_hi"))   # (the second core's stacks after the pool)
+    notes.append(f"image {len(img)} B; RAM .data+.bss {bss} B of 98304; pool {pool} B, spare {POOL_END - pool_top} B")
     if bss > 96 * 1024:
         errors.append("RAM region overflow")
-    if 0x54000 - pool < 8192:                     # keep >= 8 KiB of the pool spare
-        errors.append(f"pool headroom {0x54000 - pool} B < 8192 B")
+    if POOL_END - pool_top < 8192:                # keep >= 8 KiB of the pool spare
+        errors.append(f"pool headroom {POOL_END - pool_top} B < 8192 B")
+    # (JIANT 0.6.78) the RAM code at the pool's top: a call reaches +-4 MiB (app.ld), so from the lowest RAM code
+    # address the XIP image must end within 4 MiB; and the room left for RAM code
+    reach = sym("_rt_start") + 0x400000 - sym("_etext")
+    ramcode = sym("_hot_end") - sym("_rt_start")
+    notes.append(f"RAM code {ramcode} B of {RAMTEXT_END - sym('_rt_start')}; calls reach {reach} B past the image's end")
+    if reach < 16384:
+        errors.append(f"RAM code reaches only {reach} B past the XIP image's end (< 16 KiB): move RAMTEXT up (app.ld)")
+    if RAMTEXT_END - sym("_hot_end") < 2048:
+        errors.append(f"RAM code headroom {RAMTEXT_END - sym('_hot_end')} B < 2048 B")
     return errors, notes
 
 

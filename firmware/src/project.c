@@ -1220,7 +1220,7 @@ static void proj_legacy_drums(track_t *t)
         t->p[P_DIST + i] = (int16_t)(pr->fx[i] ? pr->fx[i] - 1 : FX_DEF[i]);
 }
 
-static project_t proj_scratch __attribute__((section(".pool")));   /* decoded main-loop work, never audio ISR (0.6: pool) */
+static project_t proj_scratch __attribute__((section(".lowbuf")));   /* (0.6.78: below the RAM code, app.ld) */   /* decoded main-loop work, never audio ISR (0.6: pool) */
 static char proj_name[PROJ_NAME_LEN + 1u]    /* the name of the music as it is now (loaded, saved, the editor's */
     __attribute__((section(".pool")));       /* runtime restore); "" = none. A save takes it unless one is given */
 #define PROJ_NO_SLOT 0xFFu
@@ -1580,7 +1580,7 @@ static int project_restore_runtime(const project_t *input)
 /* (0.6.21) UNDO (GLO held + G4): one step back over the last big change (HOME's DICE ALL, a sound diced, a clear, an
  * INIT / RECALL, a pattern or project loaded). undo_mark keeps the music as it is (packed as a project: ~3.8 KB);
  * undo_do brings it back and keeps what it replaced, so a second UNDO goes forward again. The transport plays on */
-static project_store_t undo_st[2] __attribute__((section(".pool")));
+static project_store_t undo_st[2] __attribute__((section(".lowbuf")));   /* (0.6.78: app.ld LOWBUF) */
 /* (JIANT 0.6.40) INIT SYSTEM (SAVE > TOOLS 5, its dialog; UNDO brings the music back) and the power-on (main.c, with
  * RESTORE LAST OFF): the six tracks their engine (TRK_DEF's) at its defaults and first sound, as INIT SOUND does; no
  * steps, automation or locks; the mix, the global effects, the tempo and the SLICER at their defaults; the song empty,
