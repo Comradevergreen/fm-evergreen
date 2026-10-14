@@ -1316,6 +1316,17 @@ static int chord_auto(const track_t *t, uint32_t len)
     return nx->time == ST_NOTE && nx->n;
 }
 
+/* (0.6.87) HUMAN: SEQ > HUMAN's VEL / TIME / GATE amount (0..127; stored 127 - it: 127 none); its own random numbers
+ * (never libc's rng: the UI's dice keep theirs) */
+static uint32_t hum_rs = 0x2545F491u;
+static uint32_t hum_rnd(void) { hum_rs ^= hum_rs << 13; hum_rs ^= hum_rs >> 17; hum_rs ^= hum_rs << 5; return hum_rs; }
+static uint32_t hum_amt(const track_t *t, uint32_t id)
+{
+    if (FELUCCA_FM4 && t->eng_req % NENGINES == ENGI_DIGITAL) return 0;
+    return 127u - (uint32_t)clamp(t->p[id], 0, 127);
+}
+static int32_t hum_pm(uint32_t r) { return (int32_t)(hum_rnd() % (2u * r + 1u)) - (int32_t)r; }   /* -r .. r */
+#define HUM_TMAX (FS * 30u / 1000u)                 /* TIME at 100 %: up to 30 ms late */
 static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint32_t period, uint32_t skip)
 {
     uint32_t i, j, gate = period * (uint32_t)t->p[P_SGATE] / 128u;
@@ -1329,7 +1340,7 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
     uint32_t ac = 0, rnd = 0, oct = 0, bend = 0;
     int cont = 0;                                   /* .. going on over a TIE */
     uint8_t nn[4 + NLANE], vv[4 + NLANE];           /* the notes it plays: its notes, then its hits */
-    uint32_t m = 0, sk = 0, sk0;
+    uint32_t m = 0, sk = 0, sk0, hdel = 0;
     /* QNT SEQ: the step's notes (not the lane hits) snap to the scale as they play; never on a drum kit, the slices
      * or another engine that maps the keys itself. seq_notes keeps the notes that sound: their note-offs match */
     const engine_t *e = ENGINES[eng_idx(t->eng_req)];
@@ -1483,6 +1494,18 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
     if (!slide_in)
         seq_release(t);
     t->ss_n = t->ss_i = 0;
+    {   /* (0.6.87) HUMAN: each note's velocity up to +-38 at 100 %, the gate +-40 %, the step up to 30 ms late */
+        uint32_t hv = hum_amt(t, P_HVEL), hg = hum_amt(t, P_HGAT), ht = hum_amt(t, P_HTIM);
+        if (hv)
+            for (i = 0; i < m; i++)
+                vv[i] = (uint8_t)clamp((int32_t)vv[i] + hum_pm(hv * 38u / 127u), 1, 127);
+        if (hg && hits == 1u)
+            gate = (uint32_t)clamp((int32_t)gate + (int32_t)gate / 100 * hum_pm(hg * 40u / 127u), 16, 0x7FFFFFFF);
+        if (ht && hits == 1u && !bend && !slide_in) {   /* (late, never early: the step can't play before it starts) */
+            uint32_t d = hum_rnd() % (HUM_TMAX * ht / 127u + 1u), cap = period / 3u;
+            hdel = d < cap ? d : cap;
+        }
+    }
     sk0 = sk;                                       /* (the notes the step sounds, strummed or not: seq_notes) */
     if (!kit && !arp && m > 1u && t->p[P_CSTR] > 0 && t->p[P_VOICE] == V_POLY) {   /* (0.6.84) STRUM: the chord in
                                                          * one note after another, low to high, as the keys strum it
@@ -1500,6 +1523,20 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
             sk |= 1u << ord[q];
         }
         t->ss_due = t->ss_gap = (uint16_t)clamp((int32_t)(g < cap ? g : cap), 1, 65535);
+    }
+    if (hdel) {                                     /* (0.6.87) HUMAN TIME: every note of the step queued, hdel late
+                                                     * (a strum's after it, its gaps kept; else all at once) */
+        uint32_t q, gap = t->ss_n ? t->ss_gap : 0u;
+        for (q = 0; q < m; q++)                     /* (the strum's first, the ones not queued yet, to the front) */
+            if (!((sk >> q) & 1u) && t->ss_n < sizeof t->ss_nn) {
+                for (j = t->ss_n; j > 0u; j--) { t->ss_nn[j] = t->ss_nn[j - 1u]; t->ss_vv[j] = t->ss_vv[j - 1u]; }
+                t->ss_nn[0] = nn[q]; t->ss_vv[0] = vv[q];
+                t->ss_n++;
+                sk |= 1u << q;
+            }
+        t->ss_gap = (uint16_t)gap;
+        t->ss_due = (uint16_t)clamp((int32_t)hdel, 1, 65535);
+        gate += hdel;
     }
     for (i = 0; i < m; i++)
         if (!((sk >> i) & 1u)) {
@@ -1588,8 +1625,10 @@ static void seq_tick(track_t *t, uint32_t n)
         if (t->ss_due > n) {
             t->ss_due = (uint16_t)(t->ss_due - n);
         } else {
-            seq_note_on(t, t->ss_nn[t->ss_i], t->ss_vv[t->ss_i]);
-            t->ss_i++;
+            do {                                    /* (0.6.87: HUMAN TIME without a strum: the chord together) */
+                seq_note_on(t, t->ss_nn[t->ss_i], t->ss_vv[t->ss_i]);
+                t->ss_i++;
+            } while (!t->ss_gap && t->ss_i < t->ss_n);
             t->ss_due = t->ss_gap;
         }
     }

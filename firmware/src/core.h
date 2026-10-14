@@ -113,6 +113,12 @@ enum {                          /* per-track parameters */
 #define P_CHRD P_FM4_ATK               /* OFF; in the scale: TRIAD 7TH ADD9 SUS2 SUS4; any key: MAJ MIN 7 MAJ7 MIN7 POWER */
 #define P_CVOI P_FM4_DEC               /* CLOSE, LEAD (each chord the inversion nearest the last), OPEN, +BASS */
 #define P_CSTR P_FM4_REL               /* STRUM: 0 at once; up to ~63 ms between the notes, low to high */
+/* (JIANT 0.6.87) SEQ > HUMAN, in DIGITAL's OP1 SUS / LEVEL and OP2 SUS slots (127, every project and preset before
+ * it: shown as 0 %, none): how much each note's VELOCITY, TIME (a little late) and GATE vary at random as the sequencer
+ * plays them (seq.c hum_amt); stored the other way round, 127 - the amount */
+#define P_HVEL P_FM1_SUS
+#define P_HTIM P_FM1_LEVEL
+#define P_HGAT P_FM2_SUS
 #define P_ELOOP P_ED_FX                /* (JIANT 0.4) ENV LOOP: OFF / ON (voice.c env_tick) */
 /* (JIANT 0.6.9) AUTO PAN (fx.c mix_part), in the slots of the old per-track SLICER (one on a bus since 0.6.3, its
  * slots stored, never read but by proj_sl_migrate). Laid so what old stores hold means OFF: DPTH where SLCR was (0, or
@@ -530,7 +536,7 @@ typedef struct track {
     int16_t dbend;               /* .. BEND: where the hit glides to over dbt blocks (1/16 semitones; eng_drum.c) */
     uint16_t dbt;
     uint8_t ss_n, ss_i;          /* (0.6.84) STRUM on the sequencer's chords: the step's notes still to come in, in */
-    uint8_t ss_nn[4], ss_vv[4];  /* order low to high (seq.c seq_step, seq_tick), ss_due samples to the next */
+    uint8_t ss_nn[4 + NLANE], ss_vv[4 + NLANE];  /* order low to high (seq.c seq_step, seq_tick), ss_due samples to the next */
     uint16_t ss_due, ss_gap;     /* (.. and the gap between them) */
     uint8_t pfx_half;            /* 1/2 TEMPO: the odd sample carried; pfx_rs: let go, back to the real place */
     uint8_t pfx_rs;

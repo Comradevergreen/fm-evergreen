@@ -7,7 +7,7 @@ import html, os
 
 R = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(R, 'docs', 'cheatsheet')
-VERSION = 'v0.6.86'
+VERSION = 'v0.6.87'
 
 HEAT = ['#22d3ee', '#3b82f6', '#8b5cf6', '#d946ef', '#ef4444', '#ff7a00', '#facc15', '#f4f1ea']
 
@@ -150,7 +150,7 @@ def controls():
         ('GLO', 'MIXER · GLOBAL · SYSTEM', 'MUTE · SOLO · LEVEL · TAP'),
         ('SAVE', 'PRESETS · USER · PROJECT · ARRANGE · TOOLS', 'SONG layer'),
         ('ARP', 'ARP · ARP 2', '—'),
-        ('SEQ', 'STEP · PATTERN · SHIFT · PLAYHEADS · NOTE · STRETCH · COMP · COMP 2 · WHEN · AUTOMATION · AUTO LIST · MUTATE', 'SEQ TOOLS'),
+        ('SEQ', 'STEP · PATTERN · SHIFT · PLAYHEADS · NOTE · STRETCH · HUMAN · COMP · COMP 2 · WHEN · AUTOMATION · AUTO LIST · MUTATE', 'SEQ TOOLS'),
         ('REC', '(transport)', 'CLEAR · CLICK'),
     ]
     t2 = ('<table class="pages"><tr><th>BUTTON</th><th>TAP: ITS PAGES, ONE PER TAP</th><th>HOLD</th></tr>' +
@@ -242,7 +242,7 @@ def controls():
                                 ('ARP 2', 'SWING PROB HOLD ORDER')]),
         ('SEQ', HEAT[4], [('STEP', 'STEP NOTE TIME FLAG'), ('STEP · DRUM', 'STEP LANE HIT ACC'), ('COMP', 'STEP TYPE VAL VAL'), ('COMP 2', 'STEP TYPE VAL VAL'), ('WHEN', 'STEP A B LEN'), ('PATTERN', 'LEN DIV SWING GATE'), 
                           ('AUTOMATION', 'PLAY EVENT LOCK CLEAR'), ('AUTO LIST', 'ROW STEP PARAM VALUE'),
-                          ('MUTATE', 'SOUND PATTERN AMOUNT MODE'), ('PLAYHEADS', 'HEAD RATE DIR INTVL'), ('NOTE', 'FOCUS PITCH MOVE LEN'), ('STRETCH', 'x/÷ REPEAT NUDGE LEN'), ('SHIFT', 'OFFSET PITCH CHANCE C.LEN')]),
+                          ('MUTATE', 'SOUND PATTERN AMOUNT MODE'), ('PLAYHEADS', 'HEAD RATE DIR INTVL'), ('NOTE', 'FOCUS PITCH MOVE LEN'), ('STRETCH', 'x/÷ REPEAT NUDGE LEN'), ('HUMAN', 'VEL TIME GATE -'), ('SHIFT', 'OFFSET PITCH CHANCE C.LEN')]),
         ('GLO · SAVE', HEAT[6], [('MIXER', 'LEVEL PAN REV MUTE'), ('GLOBAL', 'BPM SWING CLOCK TUNE'),
                                  ('SYSTEM', 'TRACKS LOAD ROUTE CPU'), ('PRESETS', 'No. ENG FAV LIST'),
                                  ('USER', 'SLOT LOAD ERASE SAVE'), ('PROJECT', 'PROJ SECT LOAD SAVE'), ('ARRANGE', 'ROW SECT BARS SCENE'),

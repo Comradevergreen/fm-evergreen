@@ -801,9 +801,56 @@ static int components3(void)
     return bad;
 }
 
+/* (0.6.87) SEQ > HUMAN: at 0 % (stored 127, every project before it) each note as written, on the step; VEL varies each
+ * note's velocity (+-38 at 100 %), TIME starts it up to 30 ms late (a third of the step at most), never early, GATE
+ * varies its length; a chord stays together */
+static int human(void)
+{
+    int bad = 0;
+    uint32_t pass, k;
+    for (pass = 0; pass < 3u; pass++) {
+        track_t *t = one_step(1, 0);
+        uint32_t len = step_len(t, 0), b, n = 0, lo = 999999, hi = 0, vlo = 127, vhi = 0, cmax = len / 3u, early = 0;
+        uint32_t cap = FS * 30u / 1000u < cmax ? FS * 30u / 1000u : cmax, apart = 0, lo_b = 0;
+        if (pass == 2u) { t->p[P_VOICE] = V_POLY; t->step[0].n = 3; t->step[0].note[1] = 64; t->step[0].note[2] = 67; }
+        t->p[P_HVEL] = pass ? 0 : 127;                  /* (100 %, 0 %) */
+        t->p[P_HTIM] = pass ? 0 : 127;
+        uint32_t st = 0;
+        for (b = 0; b < 64u * len / CTL; b++) {
+            uint32_t v0 = vage, first = 1;
+            seq_tick(t, CTL);
+            if (t->seq_pos < CTL) st = b;              /* (a step began in this block) */
+            for (; v0 < vage; v0++) {
+                uint32_t off = (b - st) * CTL, vel = 0;
+                for (k = 0; k < NVOICE; k++)
+                    if (t->v[k].active && t->v[k].age == v0 + 1u) vel = t->v[k].vel;
+                if (off > len / 2u) early++;           /* (a note just before a step: early) */
+                if (off < lo) lo = off;
+                if (off > hi) hi = off;
+                if (vel < vlo) vlo = vel;
+                if (vel > vhi) vhi = vel;
+                if (!first) apart += off != lo_b;
+                lo_b = off;
+                first = 0;
+                n++;
+            }
+        }
+        if (pass == 0u)
+            bad += check("HUMAN 0 %: every note on its step, as written (velocity 100)", n >= 60u && hi == 0u && vlo == 100u && vhi == 100u);
+        else if (pass == 1u) {
+            printf("  human: start %u .. %u samples late (cap %u), velocity %u .. %u\n", lo, hi, cap, vlo, vhi);
+            bad += check("HUMAN 100 %: notes up to 30 ms late (a third of a step), never early; velocities spread +-38",
+                         n >= 60u && !early && hi > cap / 2u && hi <= cap + CTL && lo < cap / 3u && vlo >= 62u && vhi <= 127u &&
+                         vhi - vlo > 30u);
+        } else
+            printf("  chord: n %u apart %u early %u\n", n, apart, early), bad += check("HUMAN 100 % on a chord: its notes together (one start), each its own velocity", n >= 180u && !apart && !early);
+    }
+    return bad;
+}
+
 int main(void)
 {
-    int bad = play() + projects() + presets() + screens() + components() + components2() + components3();
+    int bad = play() + projects() + presets() + screens() + components() + components2() + components3() + human();
     printf("%s\n", bad ? "RATCHET TEST FAILED" : "ratchet tests passed");
     return bad != 0;
 }
