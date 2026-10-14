@@ -312,8 +312,20 @@ static void graph_morph(const track_t *t)
         a0 = (uint32_t)pos >> 8; a1 = a0 + 1u < RW_BYTE ? a0 + 1u : a0;
         n0 = N_RWAVE[a0]; n1 = N_RWAVE[a1];
     } else {
-        pos = clamp(p[P_E0] * 256 + p[P_MORPH] * 768 / 127, 0, 768);
-        a0 = (uint32_t)pos >> 8; a1 = a0 < 3u ? a0 + 1u : a0;
+        if (p[P_E0] >= 4) {                             /* (0.6.81) PWM SYNC RING SAW3: the WAVE, what MORPH moves */
+            static const char *const WHAT[4] = {"PWM  WIDTH", "SYNC  RATIO", "RING  RATIO", "SAW3  SPREAD"};
+            str_cpy(b, WHAT[(p[P_E0] - 4) & 3], sizeof b);
+            cv_rect(PANEL_X0, 46, PANEL_W, 1, T_RAISE);
+            for (i = 0; i <= 110u; i++) {
+                int32_t x = PANEL_X0 + (int32_t)i * 2, y = 46 - (int32_t)((i * 34u * (uint32_t)p[P_MORPH]) / (110u * 127u)) + 17;
+                if (i) cv_line_t(px, py, x, y, heat_col(80 + (uint32_t)(46 - y + 34) * 2u), 2);
+                px = x; py = y;
+            }
+            cv_text(PANEL_X0 + 2, 90, &AF_S, b, T_MID);
+            return;
+        }
+        pos = clamp(p[P_E0] * 256 + p[P_MORPH] * 768 / 127, 0, 1536);
+        a0 = ((uint32_t)pos >> 8) & 3u; a1 = (a0 + 1u) & 3u;
         n0 = N_ANALOG_WAVE[a0]; n1 = N_ANALOG_WAVE[a1];
     }
     f = pos & 255;

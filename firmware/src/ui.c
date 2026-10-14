@@ -421,7 +421,7 @@ static int page_visible(uint32_t i)
         return 0;                                       /* (0.6.30) LOAD ECO: no SLICER, no chorus: their pages gone */
     if (PAGES[i].graph == GR_MORPH) {                   /* (0.6.45) MORPH: ANALOG's plain waves, PHASE, LOFI's (not BYTE FLOAT) */
         uint32_t e = TSEL->eng_req % NENGINES;
-        return (e == ENGI_ANALOG && TSEL->p[P_E0] < 4) || ENGINES[e] == &ENG_PHASE ||
+        return e == ENGI_ANALOG || ENGINES[e] == &ENG_PHASE ||   /* (0.6.81: every ANALOG WAVE) */
                (ENGINES[e] == &ENG_LOFI && TSEL->p[P_E1] < RW_BYTE);
     }
     if (PAGES[i].graph == GR_PATS || PAGES[i].graph == GR_CHANCE)   /* (0.6.37) PHRASES, a step's CHANCE: out of the */

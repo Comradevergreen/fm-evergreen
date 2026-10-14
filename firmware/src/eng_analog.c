@@ -31,18 +31,26 @@ static void analog_note_on(track_t *t, voice_t *v)
         v->s[2] = 0x1234567 + (int32_t)v->age;        /* noise state */
 }
 
-/* (0.6.45) MORPH: the plain WAVEs (SAW SQR TRI SIN) on towards the next ones: the place, Q8 from WAVE (0..768), the
- * knob and the SHAPE modulation (LFO / ENV -> SHAPE) together; -1: none (the WAVE as it is) */
+/* (0.6.45) MORPH: the plain WAVEs (SAW SQR TRI SIN) on towards the next ones: the place, Q8 from WAVE (0..1536), the
+ * knob and the SHAPE modulation (LFO / ENV -> SHAPE) together; -1: none (the WAVE as it is). (0.6.81) Round in a
+ * loop: SIN on towards SAW (it did nothing from SIN) */
 static int32_t an_mpos(const int16_t *p, int32_t mq8, const vmod_t *m)   /* (mq8: the morph Q8, track_t.mo_cur) */
 {
     int32_t mo;
     if (p[P_E0] >= 4 || (!mq8 && m->shape == (64 << 8)))
         return -1;
     mo = clamp(mq8 + m->shape - (64 << 8), 0, 127 << 8);
-    return clamp(p[P_E0] * 256 + mo * 768 / (127 << 8), 0, 768);
+    return clamp(p[P_E0] * 256 + mo * 768 / (127 << 8), 0, 1536);
+}
+/* (0.6.81) MORPH on PWM SYNC RING SAW3 (and the SHAPE modulation on the last three, which had none): how far, Q8
+ * 0..127 << 8, the knob and SHAPE together */
+static int32_t an_mext(int32_t mq8, const vmod_t *m)
+{
+    return clamp(mq8 + m->shape - (64 << 8), 0, 127 << 8);
 }
 static inline int32_t an_osc(uint32_t w, uint32_t ph, uint32_t inc)
 {
+    w &= 3u;
     return w == 1u ? osc_pulse(ph, inc, 0x80000000u) : w == 2u ? osc_tri(ph) : w == 3u ? osc_sine(ph) : osc_saw(ph, inc);
 }
 static inline int32_t an_morph(int32_t pos, uint32_t ph, uint32_t inc)
@@ -83,19 +91,28 @@ static __attribute__((noinline)) void analog_morph(track_t *t, voice_t *v, int32
     v->s[2] = nst;
 }
 
+/* PWM's width: SHAPE as before, (0.6.81) MORPH narrowing it further (toward ~4 %) */
+static uint32_t an_pw(const track_t *t, const vmod_t *m)
+{
+    int32_t q = (m->shape - (64 << 8)) + (t->p[P_E0] == 4 ? t->mo_cur * 2 : 0);
+    return 0x80000000u + (uint32_t)(clamp(q, -16384, 65000) << 15);
+}
+
 /* SYNC RING SAW3 (see the top): a render of their own (the other WAVEs' loop untouched), the same noise, drive and
  * filter */
 static __attribute__((noinline)) void analog_ext(track_t *t, voice_t *v, int32_t *out, uint32_t n, const vmod_t *m)
 {
     const int16_t *p = t->p;
     uint32_t wave = (uint32_t)p[P_E0], i, inc1 = m->inc, ph0 = v->ph[0], ph1 = v->ph[1], ph2 = v->ph[2], r, inc2, inc3;
-    uint32_t ft = (uint32_t)p[P_FTYPE] & 3u, pw = 0x80000000u + (uint32_t)((m->shape - (64 << 8)) << 15);
-    int32_t det = p[P_E1], m2 = p[P_E2] * 258, m1 = 32767 - m2, nz = p[P_E3] * 200, drv = p[P_E6], kd = 8192 - p[P_E5] * 7600 / 127;
+    uint32_t ft = (uint32_t)p[P_FTYPE] & 3u, pw = an_pw(t, m);
+    int32_t mx = wave >= AW_SYNC ? an_mext(t->mo_cur, m) : 0;   /* (0.6.81) MORPH, SHAPE on SYNC RING SAW3 */
+    int32_t det = p[P_E1] + (wave == AW_SAW3 ? mx * 40 / (127 << 8) : 0), m2 = p[P_E2] * 258, m1 = 32767 - m2, nz = p[P_E3] * 200, drv = p[P_E6], kd = 8192 - p[P_E5] * 7600 / 127;
     int32_t drive = 32768 + drv * 512, cut = (p[P_E4] << 8) + m->cutoff + ((v->pitch16 - 60 * 16) << 2);
     int32_t ic1 = v->s[0], ic2 = v->s[1], nst = v->s[2];
     tsvf_t flt;
     tsvf_coef(&flt, cut, p[P_E5]);
-    r = 16u + (uint32_t)det;                            /* SYNC / RING: osc 2 at r / 16 of osc 1 (1 .. 8.9) */
+    r = 16u + (uint32_t)det + (wave != AW_SAW3 ? (uint32_t)(mx * 64 / (127 << 8)) : 0u);   /* SYNC / RING: osc 2 at r / 16
+                                                         * of osc 1 (1 .. 8.9; 0.6.81: MORPH up to 4 more) */
     inc2 = wave == AW_SAW3 ? cents_inc(m->pitch16 + p[P_E7] * 16, det, 0) : (inc1 >> 4) * r;   /* (SAW3: osc 2 at INT) */
     if (wave != AW_SAW3 && p[P_E7]) {                   /* (JIANT 0.5) SYNC / RING: INT moves osc 2 too, semitones */
         inc2 = (cents_inc(m->pitch16 + p[P_E7] * 16, 0, 0) >> 4) * r;
@@ -153,7 +170,7 @@ static __attribute__((noinline)) void analog_render(track_t *t, voice_t *v, int3
     uint32_t inc1 = m->inc;
     uint32_t inc2 = det || p[P_E7] ? cents_inc(m->pitch16 + p[P_E7] * 16, det, 0) : inc1;   /* (JIANT 0.4) osc 2: INT
                                                          * semitones away, DTN cents */
-    uint32_t pw = 0x80000000u + (uint32_t)((m->shape - (64 << 8)) << 15);
+    uint32_t pw = an_pw(t, m);
     int32_t m2 = mix * 258, m1 = 32767 - m2;                    /* osc mix Q15 */
     int32_t nz = noise * 200, drv = p[P_E6];
     uint32_t ph0 = v->ph[0], ph1 = v->ph[1];                  /* state in locals: out[] may alias v->s[] */
