@@ -110,7 +110,12 @@ static void fm1_fault(const fm1_crash_t *c)
 static void felucca_init(void)
 {
     uint32_t i;
-    chain_defaults(&chain_config);
+    if (song_idx.magic == SONG_MAGIC && song_cur < NSONG && chain_valid(&song_idx.rows[song_cur]))
+        chain_config = song_idx.rows[song_cur];       /* (JIANT 0.6.81) the song's rows as persist_boot read them (it
+                                                       * runs first): reset here, the main loop then saved the empty
+                                                       * rows over them, the ARRANGE lost at every power-on */
+    else
+        chain_defaults(&chain_config);
     for (i = 0; i < G_COUNT; i++)
         song.g[i] = GP[i].def;
     load_depth++;                             /* (the power-on loads: one outer load) */

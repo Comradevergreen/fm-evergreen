@@ -60,6 +60,8 @@ static struct {
     int32_t dly_lp;
     uint16_t comb_i[4], ap_i[2];
     int32_t comb_lp[4];
+    uint32_t dl_now, dl_old, dl_xf;      /* (0.6.81) TIME's crossfade; DEPTH and MIX gliding (fx.c) */
+    int32_t cd, dm;
 } rf;
 static void ref_buses(const int32_t *cho_in, const int32_t *dly_in, const int32_t *rev_in, int32_t *wet, uint32_t n)
 {
@@ -70,21 +72,30 @@ static void ref_buses(const int32_t *cho_in, const int32_t *dly_in, const int32_
     int32_t size = 25000 + song.g[G_RSIZE] * 40 + song.g[G_RSIZE] * song.g[G_RSIZE] / 7, damp = 32767 - song.g[G_RDAMP] * 200;
     int32_t cdepth = song.g[G_CDEPTH] * 6;
     uint32_t cinc = LFO_INC[song.g[G_CRATE] & 127] / CTL;
+    int32_t dcd = fx_glide(rf.cd, cdepth, n), ddm = fx_glide(rf.dm, dmix, n);
+    if (!rf.dl_now) { rf.dl_now = dl; rf.cd = cdepth; rf.dm = dmix; }   /* (the first block: fx.primed) */
+    if (!rf.dl_xf && dl != rf.dl_now) { rf.dl_old = rf.dl_now; rf.dl_now = dl; rf.dl_xf = DXF_LEN; }
     for (i = 0; i < n; i++) {
         int32_t y = 0, x, r, a;
+        rf.cd += dcd; rf.dm += ddm;
         ref_cho[rf.cho_w & (CHO_LEN - 1u)] = (int16_t)clamp(cho_in[i] >> 1, -32768, 32767);
         rf.cho_ph += cinc;
         {                                                       /* (0.5.1: the chorus is the ensemble, its middle) */
             int32_t sd;
-            y += cho_ens(ref_cho, rf.cho_w, rf.cho_ph, cdepth, &sd);
+            y += cho_ens(ref_cho, rf.cho_w, rf.cho_ph, rf.cd, &sd);
             (void)r;
         }
         rf.cho_w++;
-        x = ref_dly[(rf.dly_w - dl) & (DLY_LEN - 1u)];
+        x = ref_dly[(rf.dly_w - rf.dl_now) & (DLY_LEN - 1u)];
+        if (rf.dl_xf) {
+            int32_t xo = ref_dly[(rf.dly_w - rf.dl_old) & (DLY_LEN - 1u)];
+            x += ((xo - x) * (int32_t)rf.dl_xf) >> DXF_LOG2;
+            rf.dl_xf--;
+        }
         rf.dly_lp += mulq15(x - rf.dly_lp, col);
         ref_dly[rf.dly_w & (DLY_LEN - 1u)] = (int16_t)clamp((dly_in[i] >> 1) + mulq15(rf.dly_lp, fb), -32768, 32767);
         rf.dly_w++;
-        y += mulq15(x << 1, dmix);
+        y += mulq15(x << 1, rf.dm);
         a = 0;
         {
             int16_t *c = ref_comb;
@@ -135,8 +146,9 @@ static void test_room_identical(void)
         }
         fx_buses(c, d, r, w0, CTL);
         ref_buses(c, d, r, w1, CTL);
-        for (i = 0; i < CTL; i++)
+        for (i = 0; i < CTL; i++) {
             diff += w0[i] != w1[i];
+        }
     }
     check("ROOM: the buses bit for bit as before SPRING (30 s of noise sends, settings changing)", !diff && !fx.rtype);
 }

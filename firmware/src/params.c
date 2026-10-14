@@ -214,6 +214,11 @@ static const char *const N_MUTMODE[] = {"ORBIT", "DRIFT"};
 static const param_desc_t MUT_DESC[4] = {                /* (0.6.43) MUTATE: P_MSND P_MPAT P_MAMT P_MMODE */
     {"SOUND", F_ENUM, 0, 6, 0, N_MUTBARS, 0}, {"PATTERN", F_ENUM, 0, 6, 0, N_MUTBARS, 0},
     {"AMOUNT", F_PCT, 0, 127, 0, 0, 0}, {"MODE", F_ENUM, 0, 1, 0, N_MUTMODE, 0}};
+static const char *const N_CHRD[] = {"OFF", "TRIAD", "7TH", "ADD9", "SUS2", "SUS4", "MAJ", "MIN", "7", "MAJ7", "MIN7",
+                                     "POWER", 0};
+static const char *const N_CVOI[] = {"CLOSE", "LEAD", "OPEN", "+BASS", 0};
+static const param_desc_t CHORD_DESC[3] = {              /* (0.6.81) SCL > CHORD: P_CHRD P_CVOI P_CSTR */
+    {"CHORD", F_ENUM, 0, 11, 0, N_CHRD, 0}, {"VOICING", F_ENUM, 0, 3, 0, N_CVOI, 0}, {"STRUM", F_PCT, 0, 127, 0, 0, 0}};
 static const param_desc_t *track_desc(const track_t *t, uint32_t id)
 {
     if (id >= P_E0 && id <= P_E7) {                   /* the engine asked for (t->engine follows after a fade) */
@@ -234,6 +239,9 @@ static const param_desc_t *track_desc(const track_t *t, uint32_t id)
         case P_MORPH: return &MORPH_DESC;
         case P_CLEN: return &CLEN_DESC;
         case P_DXIMG: return &DXIMG_DESC;
+        case P_CHRD: return &CHORD_DESC[0];
+        case P_CVOI: return &CHORD_DESC[1];
+        case P_CSTR: return &CHORD_DESC[2];
         default: break;
         }
     return &TP[id];
@@ -489,6 +497,7 @@ static const page_t PAGES[] = {
     {"MASTER", FAM_FX, SC_GLOBAL, GR_NONE, {G_CLIP, G_PUNCH, G_DUCK, G_DREL}},   /* JIANT: clipper, drum bus, ducking */
     {"SCL", FAM_SCL, SC_TRACK, GR_SCALE, {P_ROOT, P_SCALE, P_QUANT, P_TRANS}},   /* (JIANT: ROOT, SCALE every melodic track's) */
     {"SCL 2", FAM_SCL, SC_GLOBAL, GR_NONE, {G_STRN, 0xFF, 0xFF, 0xFF}},   /* (JIANT 0.4) every sequence up / down the scale */
+    {"CHORD", FAM_SCL, SC_TRACK, GR_NONE, {P_CHRD, P_CVOI, P_CSTR, 0xFF}},   /* (0.6.81) a key plays a chord (seq.c) */
     {"EDIT 1", FAM_EDIT, SC_ENGINE, GR_NONE, {P_E0, P_E1, P_E2, P_E3}},
     {"EDIT 2", FAM_EDIT, SC_ENGINE, GR_NONE, {P_E4, P_E5, P_E6, P_E7}},
     {"RETRIG", FAM_EDIT, SC_TRACK, GR_NONE, {P_LRTRG, 0xFF, 0xFF, 0xFF}},

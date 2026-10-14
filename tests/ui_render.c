@@ -760,7 +760,7 @@ static void roll_scene(int s)
         t->p[P_ROOT] = 9; t->p[P_SCALE] = 2; ui.cursor = 6;
         if (s == S_ROLL_PLAYING) {
             song.playing = 1; t->seq_idx = 9;
-            kb_trk[3] = 0; kb_on[3] = 1; kb_snd[3] = 57;            /* A3 held */
+            kb_trk[3] = 0; kb_on[3] = 1; kb_snd[3][0] = 57;           /* A3 held */
         }
         break;
     case S_ROLL_CHORDS:

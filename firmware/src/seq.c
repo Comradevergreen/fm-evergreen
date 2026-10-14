@@ -212,8 +212,80 @@ static uint32_t kb_map(const track_t *t, uint32_t k)
     return (uint32_t)clamp(n + 12 * song.octave + t->p[P_TRANS], 0, 127);
 }
 
-/* the note key k started (kb_on 0: none) */
-static uint8_t kb_snd[27], kb_on[27];
+/* the notes key k plays (kb_sn: how many, its chord; kb_on: how many of them started, the rest strummed in later) */
+#define KB_CH 4u
+static uint8_t kb_snd[27][KB_CH], kb_sn[27], kb_on[27];
+static uint16_t kb_sdue[27];                    /* (0.6.81) samples to the strum's next note */
+
+/* (JIANT 0.6.81) CHORD (SCL > CHORD; after the Omnichord and the Orchid, light): a key plays a chord on the track.
+ * TRIAD 7TH ADD9 SUS2 SUS4 are built in the track's scale on the key (every tone in key; a key outside it takes the
+ * scale note below; CHR: the major scale of ROOT), MAJ MIN 7 MAJ7 MIN7 POWER that shape on any key. VOICING CLOSE
+ * (root position), LEAD (each chord the inversion nearest the last one the track played: voice leading), OPEN (the
+ * second tone an octave up), +BASS (the root an octave down added). STRUM: the notes one after the other, low to
+ * high. The root alone on a kit and on MONO / LEGATO / UNISON. The keys only (MIDI notes play as they come); the
+ * notes go to the sequencer's recording and the ARP as the key's own would */
+enum { CD_OFF, CD_TRI, CD_SEV, CD_ADD9, CD_SUS2, CD_SUS4, CD_MAJ, CD_MIN, CD_DOM7, CD_MAJ7, CD_MIN7, CD_POW };
+enum { CV_CLOSE, CV_LEAD, CV_OPEN, CV_BASS };
+static uint8_t chord_last[NTRK][KB_CH], chord_nlast[NTRK];   /* the last chord each track played (LEAD) */
+static uint32_t chord_build(const track_t *t, uint32_t root, uint8_t *out)
+{
+    static const int8_t DIA[5][4] = {{0, 2, 4, -1}, {0, 2, 4, 6}, {0, 2, 4, 8}, {0, 1, 4, -1}, {0, 3, 4, -1}};
+    static const int8_t SHP[6][4] = {{0, 4, 7, -1}, {0, 3, 7, -1}, {0, 4, 7, 10}, {0, 4, 7, 11}, {0, 3, 7, 10},
+                                     {0, 7, 12, -1}};
+    const engine_t *e = ENGINES[eng_idx(t->eng_req)];
+    uint32_t mode = (uint32_t)t->p[P_CHRD], vc = (uint32_t)t->p[P_CVOI], n = 0, i, j, ti = trk_index(t) % NTRK;
+    int32_t nt[KB_CH + 1], r = (int32_t)root;
+    if (!mode || mode > CD_POW || e->oneshot || (e->keys && e->keys(t, 0) >= 0) || t->p[P_VOICE] != V_POLY) {
+        out[0] = (uint8_t)root;
+        return 1;
+    }
+    if (mode >= CD_MAJ) {
+        for (i = 0; i < 4u && SHP[mode - CD_MAJ][i] >= 0; i++)
+            nt[n++] = r + SHP[mode - CD_MAJ][i];
+    } else {                                    /* every other note of the scale from the key's */
+        uint32_t mask = scale_mask(t), deg[12], c = 0, at = 0, guard = 12;
+        int32_t rt = t->p[P_ROOT];
+        if ((mask & 0xFFFu) == 0xFFFu || !(mask & 0xFFFu))
+            mask = SCALE_MASK[1];               /* (CHR: the major scale of ROOT) */
+        while (guard-- && !((mask >> (uint32_t)((r - rt + 120) % 12)) & 1u))
+            r--;
+        for (i = 0; i < 12u; i++)
+            if ((mask >> i) & 1u) {
+                if (i == (uint32_t)((r - rt + 120) % 12)) at = c;
+                deg[c++] = i;
+            }
+        for (i = 0; i < 4u && DIA[mode - CD_TRI][i] >= 0; i++) {
+            uint32_t k = at + (uint32_t)DIA[mode - CD_TRI][i];
+            nt[n++] = r + (int32_t)deg[k % c] + 12 * (int32_t)(k / c) - (int32_t)deg[at];
+        }
+    }
+    if (vc == CV_OPEN && n > 2u)
+        nt[1] += 12;
+    if (vc == CV_LEAD && chord_nlast[ti]) {     /* each tone the octave nearest the last chord's middle */
+        int32_t mid = 0;
+        for (i = 0; i < chord_nlast[ti]; i++) mid += chord_last[ti][i];
+        mid /= (int32_t)chord_nlast[ti];
+        for (i = 0; i < n; i++) {
+            while (nt[i] - mid > 6 && nt[i] - 12 >= 24) nt[i] -= 12;
+            while (mid - nt[i] > 6 && nt[i] + 12 <= 108) nt[i] += 12;
+        }
+    }
+    if (vc == CV_BASS) {                        /* the root an octave down (a four-note chord leaves its fifth out) */
+        if (n == 4u) { nt[2] = nt[3]; n = 3; }
+        nt[n++] = r - 12;
+    }
+    for (i = 1; i < n; i++)                     /* low to high, no unisons */
+        for (j = i; j > 0 && nt[j] < nt[j - 1]; j--) { int32_t x = nt[j]; nt[j] = nt[j - 1]; nt[j - 1] = x; }
+    for (i = 1; i < n; i++)
+        if (nt[i] <= nt[i - 1]) nt[i] = nt[i - 1] + 12;
+    for (i = 0, j = 0; i < n && j < KB_CH; i++)
+        if (nt[i] >= 0 && nt[i] <= 127) out[j++] = (uint8_t)nt[i];
+    if (!j) out[j++] = (uint8_t)root;
+    for (i = 0; i < j; i++) chord_last[ti][i] = out[i];
+    chord_nlast[ti] = (uint8_t)j;
+    return j;
+}
+static uint32_t chord_gap(const track_t *t) { return (uint32_t)clamp(t->p[P_CSTR], 0, 127) * (FS / 2000u); }   /* (~0.5 ms a step) */
 
 /* ------------------------------------------------------------- arp --- */
 static void arp_add(track_t *t, uint32_t note)
@@ -683,46 +755,76 @@ static void latch_drop(track_t *t)
 
 /* key k plays kb_note[k] on track t. A note another key holds already sounds: it is not started again (nor sent
  * to MIDI OUT); the key keeps its note */
-static void key_on(uint32_t k, track_t *t)
+/* (0.6.81) the next note of key k's chord in (a note another key holds already sounds: not started again) */
+static void key_next(uint32_t k, track_t *t)
 {
-    uint32_t x = kb_note[k], mc = trk_midi_ch(trk_index(t));
-    if (key_latch(t)) {                             /* LATCH: a new chord lets the last one go */
-        uint32_t i;
-        if (!t->arp_phys)
-            latch_release(t);
-        t->arp_phys++;
-        for (i = 0; i < t->nheld && t->held[i] != x; i++)
-            ;
-        if (i == t->nheld && t->nheld < 16u)
-            t->held[t->nheld++] = (uint8_t)x;
-    }
-    kb_on[k] = 0;
+    uint32_t x = kb_snd[k][kb_on[k]], mc = trk_midi_ch(trk_index(t));
     if (!midi_local_held(t, x)) {
         input_on(t, x, 100);
         mo_key(t, 0x09u | (0x90u | mc) << 8 | x << 16 | 100u << 24);
     }
-    kb_snd[k] = (uint8_t)x;
-    kb_on[k] = 1;
+    kb_on[k]++;
+}
+static void key_on(uint32_t k, track_t *t)
+{
+    uint32_t n = chord_build(t, kb_note[k], kb_snd[k]), gap = n > 1u ? chord_gap(t) : 0u, i;
+    if (key_latch(t)) {                             /* LATCH: a new chord lets the last one go */
+        uint32_t j;
+        if (!t->arp_phys)
+            latch_release(t);
+        t->arp_phys++;
+        for (j = 0; j < n; j++) {
+            for (i = 0; i < t->nheld && t->held[i] != kb_snd[k][j]; i++)
+                ;
+            if (i == t->nheld && t->nheld < 16u)
+                t->held[t->nheld++] = kb_snd[k][j];
+        }
+    }
+    kb_on[k] = 0;
+    kb_sn[k] = (uint8_t)n;
+    for (i = 0; i < n && (!gap || !i); i++)        /* (STRUM: the first now, the others by keys_strum) */
+        key_next(k, t);
+    kb_sdue[k] = (uint16_t)(gap < 65535u ? gap : 65535u);
     last_note = kb_note[k];                         /* (step entry, the SAMPLE zone: the key's note) */
+}
+/* (0.6.81) STRUM: the keys' chords still coming in, a block on */
+static void keys_strum(uint32_t n)
+{
+    uint32_t k;
+    for (k = 0; k < 27u; k++) {
+        if (kb_on[k] >= kb_sn[k] || !kb_on[k])
+            continue;
+        if (kb_sdue[k] > n) {
+            kb_sdue[k] = (uint16_t)(kb_sdue[k] - n);
+            continue;
+        }
+        key_next(k, &trk[kb_trk[k] % NTRK]);
+        kb_sdue[k] = (uint16_t)clamp((int32_t)chord_gap(&trk[kb_trk[k] % NTRK]), 1, 65535);
+    }
 }
 
 /* key k is up: the note it started ends, unless another key still holds it */
 static void key_off(uint32_t k, track_t *t)
 {
-    uint32_t x = kb_snd[k], mc = trk_midi_ch(trk_index(t));
-    if (!kb_on[k])
+    uint32_t n = kb_on[k], i, mc = trk_midi_ch(trk_index(t));
+    if (!n)
         return;
-    kb_on[k] = 0;
+    kb_on[k] = 0;                                   /* (the strum's notes not in yet: never) */
+    kb_sn[k] = 0;
     if (key_latch(t)) {                             /* LATCH: it keeps sounding (recorded as let go) */
         if (t->arp_phys)
             t->arp_phys--;
-        rec_release(t, x);
+        for (i = 0; i < n; i++)
+            rec_release(t, kb_snd[k][i]);
         return;
     }
-    if (midi_local_held(t, x))
-        return;
-    input_off(t, x);
-    mo_key(t, 0x08u | (0x80u | mc) << 8 | x << 16);
+    for (i = 0; i < n; i++) {
+        uint32_t x = kb_snd[k][i];
+        if (midi_local_held(t, x))
+            continue;
+        input_off(t, x);
+        mo_key(t, 0x08u | (0x80u | mc) << 8 | x << 16);
+    }
 }
 
 #ifdef FM1_INPUT_LAT
@@ -747,6 +849,7 @@ static void keyboard_block(void)
 {
     uint32_t cur = fm1_in.notes, ch, k;
     uint32_t lay, fx;
+    keys_strum(CTL);                              /* (0.6.81) the chords' strums */
     ch = cur ^ kb_prev;                           /* keys also sound while entering steps */
     if (!ch)
         return;

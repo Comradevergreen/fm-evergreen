@@ -108,6 +108,11 @@ enum {                          /* per-track parameters */
                                          * (each step its own: every project and preset before it); seq.c comp_lane */
 #define P_DXIMG P_FM3_REL              /* (JIANT 0.6.48) a DRUM track's EDIT > IMAGE: one knob through the kit's pan maps
                                          * (eng_drum.c dx_img_pan; 0: every sound in the middle, as before) */
+/* (JIANT 0.6.81) SCL > CHORD (seq.c chord_build), in DIGITAL's OP4 slots (0, every project and preset before it: OFF,
+ * CLOSE, no strum) */
+#define P_CHRD P_FM4_ATK               /* OFF; in the scale: TRIAD 7TH ADD9 SUS2 SUS4; any key: MAJ MIN 7 MAJ7 MIN7 POWER */
+#define P_CVOI P_FM4_DEC               /* CLOSE, LEAD (each chord the inversion nearest the last), OPEN, +BASS */
+#define P_CSTR P_FM4_REL               /* STRUM: 0 at once; up to ~63 ms between the notes, low to high */
 #define P_ELOOP P_ED_FX                /* (JIANT 0.4) ENV LOOP: OFF / ON (voice.c env_tick) */
 /* (JIANT 0.6.9) AUTO PAN (fx.c mix_part), in the slots of the old per-track SLICER (one on a bus since 0.6.3, its
  * slots stored, never read but by proj_sl_migrate). Laid so what old stores hold means OFF: DPTH where SLCR was (0, or

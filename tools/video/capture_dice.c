@@ -9,7 +9,7 @@
  *   build/video_dice/capture build/video_dice      -> audio.wav, screen.rgb, scenes.txt, beats.txt, seps.txt, intro.txt
  *   python3 tools/video/compose.py build/video_dice -> build/video_dice/jiant-fm.mp4 */
 #define UI_TEST_NO_MAIN 1
-#define FELUCCA_VERSION "v0.6.80"
+#define FELUCCA_VERSION "v0.6.81"
 #include "ui_test.c"
 
 #define FPS 30u

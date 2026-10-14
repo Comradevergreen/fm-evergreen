@@ -119,7 +119,7 @@ static int32_t pd_wave(const pd_t *b, uint32_t ph)
 
 static void phase_note_on(track_t *t, voice_t *v)
 {
-    (void)t;
+    v->s[4] = t->p[P_E7] << 8;   /* (0.6.81) FB as it plays, Q8 (glides to the knob's) */
     v->ph[1] = 0;
     v->ph[2] = 0;
     v->s[0] = 0;                 /* WAVE / WAVE2 toggle, line 1 */
@@ -138,7 +138,10 @@ static void phase_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const
                                                                  * compiler makes the loop slower with it) */
     uint32_t ph0 = v->ph[0], ph1 = v->ph[1], ph2 = v->ph[2];
     int32_t tg0 = v->s[0], tg1 = v->s[1];                    /* WAVE / WAVE2 toggles */
-    int32_t fb = p[P_E7], f1 = v->s[2], f2 = v->s[3];        /* (JIANT 0.4) FB and its two samples */
+    int32_t fb = v->s[4], f1 = v->s[2], f2 = v->s[3];        /* (JIANT 0.4) FB and its two samples; (0.6.81) FB
+                                                              * ramped across the block to the knob's (Q8: a step of the
+                                                              * knob jumped the phase: a click, louder the higher it was) */
+    int32_t dfb = ((p[P_E7] << 8) - fb) / (int32_t)(n ? n : 1u);
     pd_t b1, b2, bm;
     int32_t mf = 0, dmf = 0;                                 /* (0.6.45) MORPH: line 1 towards the next WAVEs; (0.6.50)
                                                               * its blend ramped across the block, Q8 */
@@ -161,7 +164,8 @@ static void phase_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const
         uint32_t old = ph0;
         int32_t s;
         {
-            uint32_t pp = ((ph0 >> 16) + (uint32_t)((((f1 + f2) >> 1) * fb) >> 8)) & 0xFFFFu;
+            uint32_t pp = ((ph0 >> 16) + (uint32_t)((((f1 + f2) >> 1) * (fb >> 8)) >> 8)) & 0xFFFFu;
+            fb += dfb;
             s = pd_wave(tg0 ? &b2 : &b1, pp);
             if (mf && !tg0)
                 s += ((pd_wave(&bm, pp) - s) * (mf >> 8)) >> 8;
@@ -193,6 +197,7 @@ static void phase_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const
     v->s[1] = tg1;
     v->s[2] = f1;
     v->s[3] = f2;
+    v->s[4] = p[P_E7] << 8;
 }
 
 static const preset_t PHASE_PRESETS[] = {

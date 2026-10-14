@@ -1844,8 +1844,10 @@ static void persist_boot(void)                    /* before settings_init / pane
         return;
     {
         int n = st_load(OBJ_SETTINGS, &p, sizeof p);
-        if (settings_import(&p, n))
+        if (settings_import(&p, n)) {
             persist_saved = p;
+            settings_jiant_once(&p);               /* (0.6.81: the saved copy without the mark: saved again later) */
+        }
     }
     song_index_load();                             /* the current song: whose sections fill the slots */
     {   /* projects: fill empty RAM slots from flash, so the slot list is right after power-on */

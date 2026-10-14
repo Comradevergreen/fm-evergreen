@@ -250,7 +250,11 @@ static int32_t drum_amp(track_t *t, voice_t *v, int32_t adsr)
 #define DXS_AMT(s) ((int32_t)(s) & 63)                   /* 0..63 */
 static uint8_t dx_snd[DV_NLANE];
 static int32_t dx_sl[CTL], dx_sr[CTL], dx_sb[3][CTL];
-static int8_t dx_lpan[DV_NLANE];                         /* this block's pans, -64 (left) .. 64 */
+static int8_t dx_lpan[DV_NLANE];                         /* this block's pans, -64 (left) .. 64, at its end */
+static int8_t dx_lpan0[DV_NLANE];                        /* (0.6.81) .. and at its start: each ramped across the block */
+static int8_t dx_pcur[NTRK][DV_NLANE];                   /* (0.6.81) each part's pans as they are, slewed toward the
+                                                          * knob's: a turn of IMAGE jumped a sound across (a click) */
+#define DX_PSLEW 2                                       /* (a pan's step a block at most: across in ~45 ms) */
 static uint8_t dx_xon;                                   /* this part's render: bit 0 the image, bits 1..3 a bus fed */
 /* IMAGE img 1..127 -> lane l's pan, -64..64: each sound on a sine of its own rate over the knob (1 to 9 turns), so a
  * sweep goes through the kit's placings one after another, every one coming back at the same value; the first 16 open
@@ -264,20 +268,15 @@ static int32_t dx_img_pan(uint32_t l, int32_t img)
     s = (osc_sine((uint32_t)img * F[l & 7u] * 33554432u + (l & 7u) * 0x2E000000u) * w) >> 15;
     return l == DV_KICK ? s / 4 : s;
 }
-/* how wide the image plays, Q8: all of it, less with DRV, DIST and the FILTER (they shape the mono sum) */
+/* how wide the image plays, Q8: all of it, less with DRV, DIST and the COMB (they shape the mono sum only) */
 static int32_t dx_img_k(const track_t *t)
 {
     int32_t k = 256 - clamp(t->p[P_E7], 0, 127) * 160 / 127, d = clamp(t->p[P_DIST], 0, 64);
     if (d)
         k = k * (256 - d * 3) >> 8;
-    if (t->p[P_FTYPE])
+    if (t->p[P_FTYPE] == FT_COMB)                        /* (0.6.81: the other filters shape the sides too, voice.c
+                                                          * tf_sides: the image stays whole through them) */
         k >>= 2;
-    else if (t->p[P_FCUT] < 127 || t->p[P_FRES]) {
-        int32_t c = clamp(t->p[P_FCUT], 0, 127);
-        k = k * (c * c) / 16129;
-        if (t->p[P_FRES])
-            k = k * 3 >> 2;
-    }
     return k;
 }
 /* a DRUM part's render starts (voice.c track_render): the pans of the block, the buffers that will be fed cleared */
@@ -285,10 +284,14 @@ static __attribute__((noinline)) void drum_side_begin(const track_t *t, uint32_t
 {
     int32_t img = clamp(t->p[P_DXIMG], 0, 127), k = img ? dx_img_k(t) : 0;
     uint32_t l, i, on = 0;
+    int8_t *pc = dx_pcur[(uint32_t)(t - trk) % NTRK];
     for (l = 0; l < DV_NLANE; l++) {
-        int32_t p = img ? dx_img_pan(l, img) * k >> 8 : 0;
+        int32_t p = img ? dx_img_pan(l, img) * k >> 8 : 0, p0 = pc[l];
+        p = p0 + clamp(p - p0, -DX_PSLEW, DX_PSLEW);
+        pc[l] = (int8_t)p;
+        dx_lpan0[l] = (int8_t)p0;
         dx_lpan[l] = (int8_t)p;
-        if (p)
+        if (p || p0)
             on |= 1u;
         if (DXS_BUS(dx_snd[l]) && DXS_AMT(dx_snd[l]))
             on |= 1u << DXS_BUS(dx_snd[l]);
@@ -304,19 +307,24 @@ static __attribute__((noinline)) void drum_side_begin(const track_t *t, uint32_t
             for (i = 0; i < n; i++)
                 dx_sb[l][i] = 0;
 }
-/* lane l's side and bus this block (drum_render's loop feeds them as it adds the hit to the part): 0 when none */
-static int32_t dx_dump[CTL];                             /* (the one of the two not fed: a sink, so the loop has no branch) */
-static int drum_side_of(uint32_t l, int32_t **d1, int32_t *g, int32_t **d2, int32_t *a)
+/* lane l's sides and bus this block (drum_render's loop feeds them as it adds the hit to the part): 0 when none. (0.6.81)
+ * g[0..3]: what it gives up of the left at the block's start and end, of the right at its start and end (a pan crossing
+ * the middle within a block fades out of one side into the other) */
+static int32_t dx_dump[CTL];                             /* (the bus not fed: a sink, so the loop has no branch) */
+static int drum_side_of(uint32_t l, int32_t *g, int32_t **d2, int32_t *a)
 {
-    int32_t p = dx_lpan[l & 7u];
+    int32_t p0 = dx_lpan0[l & 7u], p1 = dx_lpan[l & 7u];
     uint32_t b = DXS_BUS(dx_snd[l & 7u]);
     *a = b ? DXS_AMT(dx_snd[l & 7u]) : 0;
-    *g = (dx_xon & 1u) ? (p < 0 ? -p : p) : 0;
-    *d1 = *g ? (p > 0 ? dx_sl : dx_sr) : dx_dump;
+    if (!(dx_xon & 1u))
+        p0 = p1 = 0;
+    g[0] = p0 > 0 ? p0 : 0; g[1] = p1 > 0 ? p1 : 0;
+    g[2] = p0 < 0 ? -p0 : 0; g[3] = p1 < 0 ? -p1 : 0;
     *d2 = *a ? dx_sb[b - 1u] : dx_dump;
-    return *g || *a;
+    return p0 || p1 || *a;
 }
-/* the voice's output loop with them: the hit into the part, its side and its bus at once */
+/* the voice's output loop with them: the hit into the part, its side and its bus at once (the pan steady this block:
+ * one side fed) */
 static __attribute__((noinline)) void drum_side_add(int32_t *y, int32_t *out, uint32_t n, const vmod_t *m, int32_t *d1,
                                                     int32_t g, int32_t *d2, int32_t a)
 {
@@ -325,6 +333,20 @@ static __attribute__((noinline)) void drum_side_add(int32_t *y, int32_t *out, ui
         int32_t s = y[i], o = voice_amp(s + (s >> 2), m, i) << 1;
         out[i] += o;
         d1[i] += (o * g) >> 6;
+        d2[i] += (o * a) >> 6;
+    }
+}
+/* (0.6.81) .. its pan moving (IMAGE turned): both sides fed, each ramped across the block (only while it slews) */
+static __attribute__((noinline)) void drum_side_ramp(int32_t *y, int32_t *out, uint32_t n, const vmod_t *m,
+                                                     const int32_t *g, int32_t *d2, int32_t a)
+{
+    uint32_t i;
+    int32_t gl = g[0] << CTL_LOG2, dgl = g[1] - g[0], gr = g[2] << CTL_LOG2, dgr = g[3] - g[2];   /* (Q6 + CTL_LOG2) */
+    for (i = 0; i < n; i++, gl += dgl, gr += dgr) {
+        int32_t s = y[i], o = voice_amp(s + (s >> 2), m, i) << 1;
+        out[i] += o;
+        dx_sl[i] += (o * gl) >> (6 + CTL_LOG2);
+        dx_sr[i] += (o * gr) >> (6 + CTL_LOG2);
         d2[i] += (o * a) >> 6;
     }
 }
@@ -393,9 +415,12 @@ static void drum_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const 
         for (i = 0; i < n; i++)
             y[i] = (y[i] * (pb0 + (((pb1 - pb0) * (int32_t)i) >> CTL_LOG2))) >> 12;
     {
-        int32_t *d1, *d2, g, a;
-        if (dx_xon && drum_side_of((uint32_t)v->s[0], &d1, &g, &d2, &a)) {   /* (0.6.48) IMAGE, SEND: the same loop */
-            drum_side_add(y, out, n, m, d1, g, d2, a);
+        int32_t *d2, g[4], a;
+        if (dx_xon && drum_side_of((uint32_t)v->s[0], g, &d2, &a)) {   /* (0.6.48) IMAGE, SEND: the same loop */
+            if (g[0] != g[1] || g[2] != g[3])
+                drum_side_ramp(y, out, n, m, g, d2, a);
+            else
+                drum_side_add(y, out, n, m, g[0] ? dx_sl : g[2] ? dx_sr : dx_dump, g[0] | g[2], d2, a);
             return;
         }
     }

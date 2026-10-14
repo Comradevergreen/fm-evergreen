@@ -2,7 +2,8 @@
  * (JIANT 0.6.80) DICE ALL heard: pieces from the generator (firmware/src/song_dice.c) on the host build of the tests,
  * the real engines playing each at its tempo, written as WAV files, to compare the generator before and after a
  * change by ear. Each argument is STYLE:ENERGY:SEED (the style's index in DSTYLE, the energy 0..2, any seed: the same
- * seed, the same throw); the files are DIR/NN_<style>_e<energy>.wav, SECONDS long each (default 20).
+ * seed, the same throw); the files are DIR/NN_<style>_e<energy>.wav, SECONDS long each (default 20). (0.6.81) A throw
+ * that made parts plays its song, as PLAY in SONG mode.
  *   cc -O1 -w -Ibuild/gen -Ifirmware/src -Itests -o build/dice_render tools/dice_render.c -lm
  *   build/dice_render DIR SECONDS 6:1:11 12:1:22 ... */
 #define UI_TEST_NO_MAIN 1
@@ -35,11 +36,13 @@ int main(int argc, char **argv)
         snprintf(path, sizeof path, "%s/%02d_%s_e%d_s%u.wav", dir, a - 2, name, en, seed);
         if (!(wav = fopen(path, "wb"))) { fprintf(stderr, "cannot write %s\n", path); return 1; }
         wav_hdr(wav, 0);
-        transport_req = 1;
+        if (live.mode) chain_play_ui();                 /* (0.6.81: its parts in ARRANGE: PLAY plays the song) */
+        else transport_req = 1;
         want = (uint32_t)(secs * FS);
         while (nsamp < want) {                          /* a frame (1/30 s) of the main loop, then its audio */
             uint32_t to = (uint32_t)((uint64_t)(++f) * FS / 30u);
             ui_input();
+            song_poll();                                /* (the main loop's: the song's next section staged) */
             while (nsamp < to && nsamp < want) {
                 int32_t o[2 * CTL];
                 int16_t s[2 * CTL];

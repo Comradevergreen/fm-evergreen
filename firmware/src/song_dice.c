@@ -28,10 +28,13 @@
 
 enum { RL_DRUM, RL_BASS, RL_PAD, RL_LEAD, RL_ARP, RL_TEX, RL_N };
 enum { DS_MOTORIK, DS_ELECTRO, DS_BREAK, DS_BROKEN, DS_MINIMAL, DS_DEEP, DS_HARD, DS_PUNK, DS_INDIE, DS_SPARSE,
-       DS_POSTPUNK, DS_RBOX, DS_NEWORD, DS_KLING, DS_IDM, DS_NONE };   /* (0.6.80: the wave's four before DS_IDM) */
+       DS_POSTPUNK, DS_RBOX, DS_NEWORD, DS_KLING, DS_EBM, DS_DARK, DS_IDM, DS_NONE };   /* (0.6.80: the wave's four before
+                                                         * DS_IDM; 0.6.81: EBM's, darkwave's) */
 enum { KT_808, KT_HARD, KT_CLICK, KT_INDUS, KT_SOFT, KT_GLITCH, KT_ELECTRO };
 enum { BS_OCT8, BS_PUMP, BS_ACID, BS_DRONE, BS_ROLL, BS_BLIP, BS_SUB, BS_PUNK, BS_INDIE, BS_RUMBLE, BS_IDM,
-       BS_HOOK, BS_SUICIDE, BS_SEQ };                  /* (0.6.80) a bass that sings high, a rockabilly ostinato, a sequencer */
+       BS_HOOK, BS_SUICIDE, BS_SEQ, BS_EBM, BS_DARK };   /* (0.6.80) a bass that sings high, a rockabilly ostinato, a
+                                                         * sequencer; (0.6.81) EBM's galloping sixteenths, darkwave's
+                                                         * low root hammered in eighths */
 enum { PS_HOLD, PS_STAB, PS_PULSE, PS_SPARSE, PS_DUB, PS_SWELL, PS_DRONE, PS_POWER };   /* (0.6.80: an organ's drone, a
                                                          * guitar's power chords) */
 enum { VC_7, VC_9, VC_QUART, VC_SUS, VC_ADD9, VC_MIX, VC_POWER, VC_TRIAD };   /* the chords' voicings: four notes; (0.6.80)
@@ -51,6 +54,8 @@ enum { AR_UPDOWN, AR_ALBERTI, AR_GLASS, AR_PULSE, AR_WALK, AR_SEQ };   /* how th
 #define SC_HARM 7u
 #define SC_PHRY 8u
 #define SC_MEL 11u
+#define SC_MIX 4u
+#define SC_LYD 9u
 
 typedef struct {
     const char *name;
@@ -64,7 +69,9 @@ typedef struct {
     uint8_t odd;                                        /* percent: loops of odd lengths against each other */
     uint8_t e_bass[3], e_pad[3], e_lead[3], e_arp[3], e_tex[3];
     uint8_t rtype[2], dtime[2];                         /* reverb types (no SHIMMER), delay times (N_DTIME) */
-    uint8_t bars, wet;                                  /* chords every 1 or 2 bars; 0..100: how wet the space */
+    uint8_t bars, wet;                                  /* chords every 1, 2 or 4 bars; 0..100: how wet the space */
+    uint8_t plain;                                      /* (0.6.81) a band's sound: open filters (air, cymbals), plain
+                                                         * chords (rarely the rich ones), hats on the offbeat eighths */
 } dstyle_t;
 
 #define X 127
@@ -101,11 +108,14 @@ static const dstyle_t DSTYLE[] = {
     /* (0.6.80) the wave: Joy Division, Suicide, New Order, Kraftwerk. Few chords (one, two), the bass carrying the
      * tune high, machines' drums, power chords and triads instead of lush ones, a lead that repeats; their degrees
      * major or minor in every scale they take (iv, VII: never dorian's diminished sixth) */
-    {"POST PUNK", 118, 150, 0, {SC_MIN, SC_DOR, SC_PHRY, SC_MIN}, {{0, X, X, X}, {0, 3, X, X}, {0, 6, X, X}},
-     DS_POSTPUNK, 100, {KT_SOFT, KT_808}, BS_HOOK, PS_POWER, VC_POWER, LM_SPARSE, AR_SEQ, 1, 2,
+    /* (0.6.81, measured on Joy Division and Bauhaus: the kick on every beat, the hat on the offbeat eighths, the bass
+     * repeating each note two to four eighths, one chord or two over four bars, major too (Love Will Tear Us Apart:
+     * A, D), bright) */
+    {"POST PUNK", 118, 150, 0, {SC_MIN, SC_MAJ, SC_PHRY, SC_MIN}, {{0, X, X, X}, {0, 3, X, X}, {0, 5, X, X}},
+     DS_POSTPUNK, 100, {KT_SOFT, KT_808}, BS_HOOK, PS_POWER, VC_POWER, LM_SPARSE, AR_UPDOWN, 1, 2,
      {RL_BASS, RL_LEAD, RL_PAD, RL_TEX, RL_ARP}, 0,
      {EG_A, EG_A, EG_PH}, {EG_A, EG_PH, EG_FM}, {EG_A, EG_FM, EG_PH}, {EG_A, EG_PH, EG_FM}, {EG_NO, EG_A, EG_VO},
-     {0, 1}, {1, 0}, 2, 55},
+     {0, 1}, {1, 0}, 4, 55, 1},
     {"BROKEN", 80, 100, 14, {SC_DOR, SC_MIN, SC_MEL, SC_DOR}, {{0, 3, X, X}, {0, X, X, X}, {0, 6, 3, X}},
      DS_BROKEN, 90, {KT_SOFT, KT_GLITCH}, BS_DRONE, PS_SPARSE, VC_QUART, LM_MOTIF, AR_WALK, 0, 1, P_SONG, 60,
      {EG_FM, EG_VO, EG_PH}, {EG_PH, EG_VO, EG_FM}, {EG_VO, EG_FM, EG_PH}, {EG_FM, EG_PH, EG_LO}, {EG_VO, EG_NO, EG_PH},
@@ -145,19 +155,50 @@ static const dstyle_t DSTYLE[] = {
      {RL_BASS, RL_LEAD, RL_ARP, RL_PAD, RL_TEX}, 0,
      {EG_A, EG_PH, EG_FM}, {EG_A, EG_PH, EG_FM}, {EG_A, EG_PH, EG_FM}, {EG_PH, EG_A, EG_FM}, {EG_VO, EG_NO, EG_PH},
      {0, 0}, {1, 0}, 2, 15},
+    /* (0.6.81) EBM (DAF, Nitzer Ebb, Front 242: a galloping sequenced bass, a hard machine, a shout), GOTHIC (Bauhaus,
+     * Sisters of Mercy, the Cure: the bass singing, chorused chords, a big room), BREAKBEAT (the break and an acid
+     * bass), IMPRESSION (Debussy, Ravel: lydian, ninths moving in parallel, arps like water, no beat or a breath) */
+    {"EBM", 112, 126, 0, {SC_PHRY, SC_MIN, SC_PHRY, SC_HARM}, {{0, X, X, X}, {0, X, X, X}, {0, 3, X, X}},
+     DS_EBM, 100, {KT_HARD, KT_ELECTRO}, BS_EBM, PS_STAB, VC_POWER, LM_SPARSE, AR_SEQ, 1, 2,
+     {RL_BASS, RL_LEAD, RL_ARP, RL_PAD, RL_TEX}, 0,
+     {EG_A, EG_PH, EG_FM}, {EG_A, EG_PH, EG_FM}, {EG_VO, EG_A, EG_PH}, {EG_A, EG_PH, EG_LO}, {EG_NO, EG_VO, EG_LO},
+     {0, 1}, {1, 2}, 2, 25},
+    {"GOTHIC", 98, 140, 0, {SC_MIN, SC_HARM, SC_PHRY, SC_MIN}, {{0, X, X, X}, {0, X, X, X}, {0, 5, X, X}},
+     DS_POSTPUNK, 100, {KT_SOFT, KT_808}, BS_HOOK, PS_SWELL, VC_TRIAD, LM_SPARSE, AR_UPDOWN, 1, 2,
+     {RL_BASS, RL_PAD, RL_LEAD, RL_ARP, RL_TEX}, 0,
+     {EG_A, EG_PH, EG_A}, {EG_A, EG_FM, EG_PH}, {EG_A, EG_FM, EG_PH}, {EG_PH, EG_A, EG_FM}, {EG_NO, EG_VO, EG_A},
+     {1, 0}, {1, 4}, 4, 75, 1},
+    {"BREAKBEAT", 126, 140, 6, {SC_MIN, SC_DOR, SC_PHRY, SC_MIN}, {{0, X, X, X}, {0, 3, X, X}, {0, 6, X, X}},
+     DS_BREAK, 100, {KT_ELECTRO, KT_HARD}, BS_ACID, PS_STAB, VC_9, LM_OSTINATO, AR_UPDOWN, 1, 2, P_DANCE, 0,
+     {EG_A, EG_PH, EG_A}, {EG_PH, EG_A, EG_FM}, {EG_A, EG_PH, EG_VO}, {EG_A, EG_FM, EG_PH}, {EG_NO, EG_VO, EG_PH},
+     {1, 0}, {2, 4}, 1, 40},
+    {"IMPRESSION", 60, 92, 0, {SC_LYD, SC_MAJ, SC_LYD, SC_MPEN}, {{0, 1, X, X}, {0, 3, X, X}, {0, 5, 1, X}},
+     DS_SPARSE, 30, {KT_SOFT, KT_SOFT}, BS_SUB, PS_SWELL, VC_9, LM_TINTI, AR_UPDOWN, 0, 1,
+     {RL_PAD, RL_ARP, RL_LEAD, RL_TEX, RL_BASS}, 50,
+     {EG_FM, EG_PH, EG_A}, {EG_FM, EG_PH, EG_A}, {EG_FM, EG_PH, EG_VO}, {EG_FM, EG_PH, EG_A}, {EG_VO, EG_PH, EG_NO},
+     {4, 0}, {0, 4}, 2, 90},
+    /* (0.6.81) DARKWAVE (Boy Harsher, measured: four on the floor, the snare on 2 and 4, the hat on the offbeat, a low
+     * synth bass hammering its root in eighths, minor, one chord or two, a lot of room) */
+    {"DARKWAVE", 124, 136, 0, {SC_MIN, SC_PHRY, SC_DOR, SC_MIN}, {{0, X, X, X}, {0, 3, X, X}, {0, 6, X, X}},
+     DS_DARK, 100, {KT_808, KT_ELECTRO}, BS_DARK, PS_HOLD, VC_TRIAD, LM_SPARSE, AR_PULSE, 1, 2,
+     {RL_BASS, RL_PAD, RL_LEAD, RL_TEX, RL_ARP}, 0,
+     {EG_A, EG_A, EG_PH}, {EG_A, EG_PH, EG_A}, {EG_A, EG_PH, EG_FM}, {EG_A, EG_PH, EG_FM}, {EG_NO, EG_VO, EG_A},
+     {0, 1}, {1, 2}, 4, 50, 1},
 };
 #undef X
 #define NDSTYLE (sizeof DSTYLE / sizeof DSTYLE[0])
 #define DSTYLE_IDM 2u
 #define DSTYLE_DARK 10u                                 /* (the first ten: the night's) */
-/* (0.6.80) the wave's four (POST PUNK, SYNTH POP, MINIMAL SYNTH, MAN MACHINE): two throws in five */
-static const uint8_t DSTYLE_WAVE[4] = {6, 12, 13, 15};
+/* (0.6.80) the wave's four (POST PUNK, SYNTH POP, MINIMAL SYNTH, MAN MACHINE; 0.6.81: and EBM, GOTHIC, BREAKBEAT,
+ * IMPRESSION): nearly one throw in two */
+static const uint8_t DSTYLE_WAVE[9] = {6, 12, 13, 15, 16, 17, 18, 19, 20};   /* (0.6.81: EBM, GOTHIC, BREAKBEAT,
+                                                         * IMPRESSION, DARKWAVE) */
 
 static int32_t rr(int32_t lo, int32_t hi) { return lo + (int32_t)(rng() % (uint32_t)(hi - lo + 1)); }
 static int chance(uint32_t pct) { return rng() % 100u < pct; }
 static uint32_t dstyle_pick(void)
 {
-    return chance(40) ? DSTYLE_WAVE[rng() % 4u] : chance(25) ? rng() % DSTYLE_IDM : chance(80) ? rng() % DSTYLE_DARK :
+    return chance(45) ? DSTYLE_WAVE[rng() % 9u] : chance(25) ? rng() % DSTYLE_IDM : chance(80) ? rng() % DSTYLE_DARK :
            DSTYLE_DARK + rng() % (NDSTYLE - DSTYLE_DARK);
 }
 
@@ -166,7 +207,9 @@ static uint32_t dstyle_pick(void)
 enum { TW_NONE, TW_PHASE, TW_COMB, TW_GRAIN, TW_POLY, TW_DRONE };
 static struct {
     const int8_t *prog;
-    uint32_t n, steps, voicing, nlast, energy, twist;
+    uint32_t n, steps, voicing, nlast, energy, twist, plain;
+    uint32_t arp;                                       /* (0.6.81) how the arp speaks this throw (the genre's, or
+                                                         * ambient: up and down in eighths over a rich chord) */
     int32_t last[4];
 } dh;
 static int32_t chord_at(uint32_t step) { return dh.prog[(step / dh.steps) % dh.n]; }
@@ -222,10 +265,13 @@ static const char *const DRUM_BAR[][8] = {
     [DS_SPARSE]  = {"x...............", "", "", "", "", "", "......g.....x...", "..........g....."},
     /* (0.6.80) the wave's: Stephen Morris's tight kit (sixteenths on the hat, the floor tom answering), a cheap rhythm
      * box (Suicide), Blue Monday's four on the floor and its handclap, Kraftwerk's dry machine and its metal */
-    [DS_POSTPUNK] = {"x.....x...x.....", "....a.......a...", "", "xgxgxgxgxgxgxgxg", "", "...............x", "", ""},
+    [DS_POSTPUNK] = {"a...x...a...x...", "....a.......a...", "", "x.a.x.a.x.a.x.a.", "", "", "", ""},   /* (0.6.81:
+                                                         * measured, the kick on every beat, the hat's offbeats) */
     [DS_RBOX]     = {"x.......x.x.....", "....x.......x...", "", "xgxgxgxgxgxgxgxg", "", "", "", ""},
     [DS_NEWORD]   = {"a...a...a...a...", "", "....a.......a...", "xgxgxgxgxgxgxgxg", "..x.......x.....", "", "", ""},
     [DS_KLING]    = {"x.....x.x.......", "....x.......x...", "", "x.x.x.x.x.x.x.x.", "", "", "..........x...x.", "x..x..x...x.x..."},
+    [DS_EBM]      = {"a...a...a...a...", "....a.......a...", "....x.......x...", "..x...x...x...x.", "", "", "", ""},   /* (0.6.81) */
+    [DS_DARK]     = {"a...a...a...a...", "....a.......a...", "....x.......x...", "..a...a...a...a.", "", "", "", ""},
 };
 static void dice_drums(track_t *t, const dstyle_t *st, uint32_t len)
 {
@@ -247,18 +293,24 @@ static void dice_drums(track_t *t, const dstyle_t *st, uint32_t len)
         }
         return;
     }
+    /* (0.6.81) the post punk kick now and then on 1 and 3 and an eighth before 3 (Boy Harsher's Pain); darkwave's
+     * snare now and then a sixteenth before the bar (step 15); the hat's open one on the last offbeat */
+    const char *kick = st->drums == DS_POSTPUNK && chance(30) ? "a.......a.x....." : 0;
+    uint32_t snr15 = st->drums == DS_DARK && chance(50), oh = (st->drums == DS_POSTPUNK || st->drums == DS_DARK) && chance(40);
     for (i = 0; i < len; i++) {
         step_t *s = &t->step[i];
         uint32_t h = 0, a = 0, ghost = 0, p = i % 16u;
         uint32_t fill = len > 16u && i >= len - 4u && st->drums != DS_DEEP && st->drums != DS_SPARSE &&
-                        st->drums != DS_KLING && st->drums != DS_RBOX;   /* (machines: no fills) */
+                        st->drums != DS_KLING && st->drums != DS_RBOX && st->drums != DS_DARK;   /* (machines: no fills) */
         for (l = 0; l < NLANE; l++) {
-            const char *b = DRUM_BAR[st->drums][l];
+            const char *b = l == 0u && kick ? kick : DRUM_BAR[st->drums][l];
             char c = b && b[0] ? b[p] : '.';
             if (c == 'x' || c == 'a' || (c == 'g' && rng() % 4u)) h |= 1u << l;
             if (c == 'a') a |= 1u << l;
             if (c == 'g') ghost = 1;
         }
+        if (snr15 && p == 15u && (i / 16u) % 2u == 1u) h |= 1u << 1;
+        if (oh && p == 14u && (i / 16u) % 2u == 1u) h = (h & ~(1u << 3)) | (1u << 4);
         if (fill) {
             if (st->drums == DS_NEWORD) h |= 1u;        /* (Blue Monday's sixteenth kicks) */
             else if (chance(50)) h |= 1u << (chance(50) ? 1 : 5);
@@ -324,16 +376,22 @@ static void dice_bass(track_t *t, const dstyle_t *st, uint32_t len)
     static const uint8_t PUMP[16] = {1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 0};
     uint8_t acid[16], roll[16], ind[16];
     int8_t hook[8];
-    {   /* (0.6.80) Peter Hook's line: eight eighths a bar, high, a tune of its own in steps and repeated notes around
-         * the chord's root (a leap back by a step), the bar's last two moved on the fourth bar */
-        int32_t d = 0, j, mv;
+    {   /* (0.6.80) Peter Hook's line: eight eighths a bar, high, a tune of its own around the chord's root, the bar's
+         * last two moved on the fourth bar. (0.6.81, measured: a real one repeats the note before it in half to three
+         * quarters of its eighths: each note now hammered two to four eighths (one now and then), then a step, a
+         * third now and then; it started on the root) */
+        int32_t d = 0, j, mv, run = 0;
         for (j = 0; j < 8; j++) {
-            if (j) {
-                mv = chance(30) ? 0 : chance(70) ? (chance(50) ? 1 : -1) : (chance(50) ? 2 : -2);
-                if (d + mv > 5 || d + mv < -2) mv = -mv;
-                d += mv;
+            if (!run) {
+                if (j) {
+                    mv = chance(70) ? (chance(50) ? 1 : -1) : (chance(50) ? 2 : -2);
+                    if (d + mv > 5 || d + mv < -2) mv = -mv;
+                    d += mv;
+                }
+                run = chance(15) ? 1 : rr(2, 4);
             }
             hook[j] = (int8_t)d;
+            run--;
         }
     }
     for (i = 0; i < 16u; i++) {                         /* (one bar's figure, kept: a riff, not noise) */
@@ -343,6 +401,7 @@ static void dice_bass(track_t *t, const dstyle_t *st, uint32_t len)
     }
     if (st->bass != BS_DRONE && st->bass != BS_SUB && base < 33) base += 12;   /* (a figure: from A1; a drone: E1) */
     if (st->bass == BS_HOOK) base = dtonic(t, 40);     /* (0.6.80: the hook an octave up, from E2: it sings) */
+    if (st->bass == BS_DARK) base = dtonic(t, 31);     /* (0.6.81: darkwave's, low: from G1) */
     for (i = 0; i < len; i++) {
         step_t *s = &t->step[i];
         int32_t d = chord_at(i), on = 0, oct = 0, step = 0, vel = 96;
@@ -381,6 +440,21 @@ static void dice_bass(track_t *t, const dstyle_t *st, uint32_t len)
             vel = 92;
             break;
         }
+        case BS_EBM: {                                  /* (0.6.81) EBM's gallop: sixteenths, root, root, octave, root;
+                                                         * the off-beat ones softer */
+            static const int8_t EB[4] = {0, 0, 12, 0};
+            n[0] = scale_steps(t, base, d) + EB[p % 4u];
+            dstep_note(s, n, 1, p % 2u ? 82u : 96u, 0);
+            continue;
+        }
+        case BS_DARK:                                   /* (0.6.81) the root hammered in eighths, the downbeats harder;
+                                                         * the octave at the end of every second bar, the fifth before
+                                                         * it now and then */
+            on = p % 2u == 0u;
+            oct = (i / 16u) % 2u == 1u && p == 14u;
+            step = (i / 16u) % 4u == 3u && p == 12u && chance(50) ? 4 : 0;
+            vel = p % 4u == 0u ? 100 : 86;
+            break;
         case BS_SEQ: {                                  /* (0.6.80) Kraftwerk's sequencer: sixteenths, root, octave,
                                                          * fifth, octave; the same strength every step */
             static const int8_t SQ[4] = {0, 12, 7, 12};   /* (semitones: the fifth always perfect) */
@@ -560,10 +634,10 @@ static void dice_lead(track_t *t, const dstyle_t *st, uint32_t len)
 static void dice_arp(track_t *t, const dstyle_t *st, uint32_t len)
 {
     int32_t t0 = dtonic(t, 52), n[1], c[4];
-    uint32_t i, e = dh.energy, rate = e == 2u || st->arp == AR_GLASS ? 1u : 2u, k = (uint32_t)rr(5, 9) + e * 2u, w = 0;
+    uint32_t i, e = dh.energy, rate = e == 2u || dh.arp == AR_GLASS ? 1u : 2u, k = (uint32_t)rr(5, 9) + e * 2u, w = 0;
     static const uint8_t ALB[4] = {0, 3, 1, 3};
-    if (st->arp == AR_GLASS || st->arp == AR_PULSE || st->arp == AR_SEQ) k = 16;   /* (a steady pulse: no holes) */
-    if (st->arp == AR_SEQ) rate = 1;                    /* (0.6.80: the sequencer's sixteenths) */
+    if (dh.arp == AR_GLASS || dh.arp == AR_PULSE || dh.arp == AR_SEQ) k = 16;   /* (a steady pulse: no holes) */
+    if (dh.arp == AR_SEQ) rate = 1;                    /* (0.6.80: the sequencer's sixteenths) */
     dh.nlast = 0;
     for (i = 0; i < len; i++) {
         uint32_t idx = i / rate, j;
@@ -573,7 +647,7 @@ static void dice_arp(track_t *t, const dstyle_t *st, uint32_t len)
                                                          * tonic; t0 + 2 snapped to the scale's next degree, so the arp
                                                          * played the chord a step above the harmony, against the bass) */
         else for (j = 0; j < dh.nlast; j++) c[j] = dh.last[j];
-        switch (st->arp) {
+        switch (dh.arp) {
         case AR_ALBERTI: j = ALB[idx % 4u]; break;
         case AR_GLASS: { uint32_t g = (idx / 8u) % 2u ? 5u : 3u; j = (idx % g) % 4u; break; }
         case AR_PULSE: j = idx % 8u == 7u ? 2u : 0u; break;
@@ -586,7 +660,7 @@ static void dice_arp(track_t *t, const dstyle_t *st, uint32_t len)
         n[0] = c[j];
         while (n[0] > 72) n[0] -= 12;                   /* (the middle octaves) */
         while (n[0] < 48) n[0] += 12;
-        dstep_note(&t->step[i], n, 1, st->arp == AR_SEQ ? 84u : idx % 4u == 0u ? 92u : st->arp == AR_PULSE ? 70u : 78u, 0);
+        dstep_note(&t->step[i], n, 1, dh.arp == AR_SEQ ? 84u : idx % 4u == 0u ? 92u : dh.arp == AR_PULSE ? 70u : 78u, 0);
         if (st->drums == DS_IDM && chance(10)) step_set_ratchet(&t->step[i], 2);
     }
 }
@@ -696,6 +770,8 @@ static void dice_sound(track_t *t, uint32_t role, const uint8_t *el)
         if (dh.twist == TW_COMB && (role == RL_PAD || role == RL_ARP)) ft = 3;
         t->p[P_FTYPE] = (int16_t)ft;
         if (ft == 2u) cut += 10;                        /* (a band-pass: higher, or it is only a rumble) */
+        if (dh.plain && role != RL_BASS) cut += rr(12, 22);   /* (0.6.81, measured: a band's chords, guitars and leads
+                                                         * open, air above 5 kHz; ours were twice as dark) */
         if (e == EG_A) {
             t->p[P_E4] = (int16_t)(t->p[P_E4] < cut ? t->p[P_E4] : cut);
             t->p[P_E5] = (int16_t)clamp(t->p[P_E5], res, 90);
@@ -714,6 +790,20 @@ static void dice_sound(track_t *t, uint32_t role, const uint8_t *el)
             t->p[P_DIST] = (int16_t)rr(10, 38);
             t->p[P_DTYPE] = (int16_t)(chance(60) ? 0 : 2);   /* SOFT, or FOLD */
         }
+        if (role == RL_PAD) {                           /* (0.6.81) the chords: a slow, soft LFO on the filter always */
+            t->p[P_LWAVE] = (int16_t)(chance(70) ? 0 : 1);   /* (SIN, TRI) */
+            t->p[P_LRATE] = (int16_t)rr(4, 16);
+            t->p[P_LD_FLT] = (int16_t)rr(8, 20);
+        }
+        if (role == RL_LEAD) {                          /* (0.6.81) a lead never stands still: its filter's envelope
+                                                         * always opening it, and an LFO on the filter one in two */
+            if (t->p[P_ED_FLT] < 12) t->p[P_ED_FLT] = (int16_t)rr(12, 36);
+            if (chance(50)) {
+                t->p[P_LWAVE] = (int16_t)(chance(60) ? 0 : 1);
+                t->p[P_LRATE] = (int16_t)rr(6, 30);
+                t->p[P_LD_FLT] = (int16_t)rr(8, 22);
+            }
+        }
     }
 }
 
@@ -731,6 +821,202 @@ static void dlevel(track_t *t, uint32_t len)
     if (top > 79) t->p[P_LEVEL] = (int16_t)clamp(t->p[P_LEVEL] - (top - 79), 50, 127);
 }
 
+
+/* ---- (0.6.81) after every part is written (after a listener's idea, Grids and Marbles): the bass out of the kick's
+ * way where the genre pumps (its notes on a kick softer), the lead in the bass's holes (a lead note starting with a
+ * bass note moved a step later, now and then) and never a minor second or a tritone against the bass sounding (moved
+ * to the nearest scale degree that is not), a breath at the end of every four bars (the last two steps of each fourth
+ * bar softer on every track), and now and then a step component (an echo, an octave, a few random degrees, a chord
+ * arpeggiated) */
+static uint32_t dlen(const track_t *t) { uint32_t l = (uint32_t)t->p[P_SLEN]; return l >= 1u && l <= NSTEP ? l : 16u; }
+static int dstarts(const track_t *t, uint32_t i) { const step_t *s = &t->step[i % dlen(t)]; return s->time == ST_NOTE && s->n; }
+static int32_t dsounding(const track_t *t, uint32_t i)  /* the note sounding at step i of t's loop (held), -1 none */
+{
+    uint32_t len = dlen(t), j;
+    for (j = 0; j < len; j++) {
+        const step_t *s = &t->step[(i + len - j) % len];
+        if (s->time == ST_NOTE) return s->n ? s->note[0] : -1;
+        if (s->time != ST_TIE) return -1;
+    }
+    return -1;
+}
+static void dice_post(const uint32_t *role, const uint32_t *act, const dstyle_t *st)
+{
+    uint32_t k, i, dr = NTRK, bs = NTRK, ld = NTRK;
+    for (k = 0; k < NTRK; k++) {
+        if (role[k] == RL_DRUM && act[RL_DRUM]) dr = k;
+        else if (role[k] == RL_BASS && act[RL_BASS] && bs == NTRK) bs = k;
+        else if (role[k] == RL_LEAD && act[RL_LEAD] && ld == NTRK) ld = k;
+    }
+    if (dr < NTRK && bs < NTRK && st->drums != DS_POSTPUNK && st->drums != DS_RBOX && st->drums != DS_MOTORIK &&
+        st->drums != DS_PUNK && st->drums != DS_INDIE && st->drums != DS_SPARSE && st->drums != DS_BROKEN) {
+        track_t *b = &trk[bs], *d = &trk[dr];           /* the bass under the kick: softer there, a touch after */
+        for (i = 0; i < dlen(b); i++) {
+            const step_t *ks = &d->step[i % dlen(d)];
+            if (ks->time != ST_NOTE || !(ks->hit & 1u)) continue;
+            if (dstarts(b, i)) b->step[i].vel = (uint8_t)clamp((int32_t)b->step[i].vel - 22, 40, 127);
+            if (i + 1u < dlen(b) && dstarts(b, i + 1u)) b->step[i + 1u].vel = (uint8_t)clamp((int32_t)b->step[i + 1u].vel - 8, 40, 127);
+        }
+    }
+    if (ld < NTRK && bs < NTRK) {
+        track_t *l = &trk[ld], *b = &trk[bs];
+        uint32_t len = dlen(l);
+        for (i = 0; i + 1u < len; i++) {                /* the lead in the bass's holes */
+            step_t *s = &l->step[i], *nx = &l->step[i + 1u];
+            if (!dstarts(l, i) || !dstarts(b, i) || dstarts(b, i + 1u) || nx->time == ST_NOTE || !chance(60)) continue;
+            *nx = *s;
+            step_clear(s);
+            memset(s->note, 0, sizeof s->note);         /* (an empty step as UNDO stores one: no note left in it, or
+                                                         * REDO's steps differ) */
+            i++;
+        }
+        for (i = 0; i < len; i++) {                     /* no minor second, no tritone against the bass */
+            step_t *s = &l->step[i];
+            int32_t bn = dsounding(b, i), iv, up, dn;
+            if (!dstarts(l, i) || bn < 0) continue;
+            iv = ((s->note[0] - bn) % 12 + 12) % 12;
+            if (iv != 1 && iv != 6) continue;
+            up = scale_steps(l, s->note[0], 1);
+            dn = scale_steps(l, s->note[0], -1);
+            iv = ((dn - bn) % 12 + 12) % 12;
+            s->note[0] = (uint8_t)(iv != 1 && iv != 6 ? dn : up <= 84 ? up : dn - 12 >= 0 ? dn : s->note[0]);
+        }
+    }
+    for (k = 0; k < NTRK; k++) {                        /* the breath: each fourth bar's last two steps softer */
+        track_t *t = &trk[k];
+        uint32_t len = dlen(t);
+        if (len < 64u) continue;
+        for (i = 0; i < len; i++)
+            if ((i / 16u) % 4u == 3u && i % 16u >= 14u && t->step[i].time == ST_NOTE)
+                t->step[i].vel = (uint8_t)clamp((int32_t)t->step[i].vel * 55 / 100, 30, 127);
+    }
+    if (chance(50)) {                                   /* a step component or three, on a part or two */
+        uint32_t nt = 1u + (chance(40) ? 1u : 0u), tries;
+        for (tries = 0; tries < 12u && nt; tries++) {
+            uint32_t r, c, at, j;
+            k = rng() % NTRK;
+            r = role[k];
+            if (!act[r] || r == RL_DRUM || r == RL_TEX) continue;
+            for (c = 0, j = 0; j < 3u && c < 1u + rng() % 3u; j++) {
+                step_t *s;
+                at = 1u + rng() % (dlen(&trk[k]) - 1u > 0u ? dlen(&trk[k]) - 1u : 1u);
+                s = &trk[k].step[at % dlen(&trk[k])];
+                if (s->time != ST_NOTE || !s->n || s->comp) continue;
+                if (r == RL_PAD) { if (s->n < 2u) continue; s->comp = CP_ARPN; s->carg = CP_ARG(rng() % 4u, chance(50) ? 0u : 2u, 0u); }
+                else if (r == RL_LEAD) { s->comp = chance(50) ? CP_ECHO : CP_OCT; s->carg = (uint8_t)(s->comp == CP_ECHO ? rng() % 2u : 2u); }
+                else if (r == RL_ARP) { s->comp = chance(50) ? CP_RAND : CP_OCT; s->carg = (uint8_t)(s->comp == CP_RAND ? 1u + rng() % 2u : 4u); }
+                else { s->comp = CP_OCT; s->carg = 2u; }   /* (the bass: an octave up every other loop) */
+                c++;
+            }
+            if (c) nt--;
+        }
+    }
+}
+
+/* ---- (0.6.81) the song: two to four parts (sections A..D of the project) and their order in ARRANGE (A B A B, A B A C,
+ * A B C A D; 4 or 8 bars a row, round and round), PLAY set to the song. Each part the piece varied: BREAK (the drums
+ * and the bass out), BUILD (the lead and the chords out), THEME (a new lead and arp), DROP (the drums denser, all in).
+ * Only into sections that are empty or that a DICE ALL wrote (dice_secs; a STORE of yours takes a section back, another
+ * project clears it): a section of yours is never written over; then the piece stays one loop. 0, or the parts made */
+static void section_store(uint32_t s);                  /* (song_main.c) */
+static step_t dice_keep[3][NSTEP];                      /* the lead's, the arp's and the drums' steps, to put back */
+static void dice_put_back(const uint32_t *tk, const int16_t *mute)
+{
+    uint32_t k, j;
+    for (k = 0; k < NTRK; k++)
+        trk[k].p[P_MUTE] = mute[k];
+    for (j = 0; j < 3u; j++)
+        if (tk[j] < NTRK) {
+            load_begin(&trk[tk[j]], LOAD_PAT);
+            memcpy(trk[tk[j]].step, dice_keep[j], sizeof dice_keep[j]);
+            load_end(&trk[tk[j]]);
+        }
+}
+static uint32_t dice_parts(const uint32_t *role, const uint32_t *act, const dstyle_t *st)
+{
+    enum { V_BREAK, V_BUILD, V_THEME, V_DROP, V_N };
+    static const uint8_t ORD[3][5] = {{0, 1, 0, 1, 0xFF}, {0, 1, 0, 2, 0xFF}, {0, 1, 2, 0, 3}};
+    uint32_t n = 2u + rng() % 3u, k, p, used = 0, rows, e0 = dh.energy;
+    uint32_t dr = NTRK, bs = NTRK, pd = NTRK, tk[3] = {NTRK, NTRK, NTRK};   /* (tk: the lead, the arp, the drums) */
+    int16_t mute[NTRK];
+    for (k = 0; k < n; k++)
+        if (project_used(k) && !((dice_secs >> k) & 1u))
+            return 0;                                   /* (a section of yours: kept, the piece one loop) */
+    for (k = 0; k < NTRK; k++) {
+        uint32_t r = role[k];
+        mute[k] = trk[k].p[P_MUTE];
+        if (!act[r]) continue;
+        if (r == RL_DRUM) dr = tk[2] = k;
+        else if (r == RL_BASS && bs == NTRK) bs = k;
+        else if (r == RL_PAD && pd == NTRK) pd = k;
+        else if (r == RL_LEAD && tk[0] == NTRK) tk[0] = k;
+        else if (r == RL_ARP && tk[1] == NTRK) tk[1] = k;
+    }
+    for (k = 0; k < 3u; k++)
+        if (tk[k] < NTRK) memcpy(dice_keep[k], trk[tk[k]].step, sizeof dice_keep[k]);
+    live.cur = -1;
+    section_store(0);                                   /* (stored: live.cur is the section; full: not) */
+    if (live.cur != 0) return 0;
+    dice_secs |= 1u;
+    for (p = 1; p < n; p++) {
+        uint32_t v;
+        do v = rng() % V_N; while ((used >> v) & 1u);
+        used |= 1u << v;
+        dice_put_back(tk, mute);
+        switch (v) {
+        case V_BREAK:                                   /* (the drums out; the bass too when something else plays) */
+            if (dr < NTRK) trk[dr].p[P_MUTE] = 1;
+            if (bs < NTRK && (tk[0] < NTRK || tk[1] < NTRK || pd < NTRK)) trk[bs].p[P_MUTE] = 1;
+            break;
+        case V_BUILD:                                   /* (the lead and the chords out, when the drums or bass play) */
+            if (dr < NTRK || bs < NTRK) {
+                if (tk[0] < NTRK) trk[tk[0]].p[P_MUTE] = 1;
+                if (pd < NTRK) trk[pd].p[P_MUTE] = 1;
+            }
+            break;
+        case V_THEME:                                   /* (a new lead, a new arp over the same harmony) */
+            for (k = 0; k < 2u; k++)
+                if (tk[k] < NTRK) {
+                    track_t *t = &trk[tk[k]];
+                    uint32_t i;
+                    load_begin(t, LOAD_PAT);
+                    for (i = 0; i < NSTEP; i++) step_clear(&t->step[i]);
+                    if (k == 0u) dice_lead(t, st, dlen(t)); else dice_arp(t, st, dlen(t));
+                    load_end(t);
+                }
+            break;
+        default:                                        /* V_DROP: the drums at full energy, everything in */
+            for (k = 0; k < NTRK; k++) trk[k].p[P_MUTE] = 0;
+            if (dr < NTRK) {
+                track_t *t = &trk[dr];
+                uint32_t i;
+                load_begin(t, LOAD_PAT);
+                for (i = 0; i < NSTEP; i++) step_clear(&t->step[i]);
+                dh.energy = 2;
+                dice_drums(t, st, dlen(t));
+                dh.energy = e0;
+                load_end(t);
+            }
+            break;
+        }
+        section_store(p);
+        if (live.cur != (int8_t)p) { n = p; break; }
+        dice_secs |= (uint8_t)(1u << p);
+    }
+    dice_put_back(tk, mute);
+    live.cur = 0;
+    if (n < 2u) return 0;
+    chain_defaults(&chain_config);
+    for (k = 0, rows = 0; k < 5u && ORD[n - 2u][k] != 0xFFu; k++, rows++) {
+        chain_config.row[rows].slot = ORD[n - 2u][k];
+        chain_config.row[rows].bars = (uint8_t)(chance(60) ? 8u : 4u);
+    }
+    chain_config.count = (uint8_t)rows;
+    SONG_END(&chain_config) = SONG_FOREVER;
+    ui.song_row = 0;
+    live.mode = 1;                                      /* (PLAY: the song) */
+    return n;
+}
 /* (0.6.27) never the same piece twice: the moment of the press (the timer's ticks, a human's timing) stirred into the
  * random numbers each throw; a fingerprint of the last 32 pieces (every track's steps, the tempo, the style) kept, and a
  * piece that matches one is thrown again; the tempo always moves (unless MENU > BPM LOCK) */
@@ -774,6 +1060,8 @@ static const char *dice_seq(track_t *t)
     dh.steps = 16u * st->bars;
     if (dh.steps * dh.n > NSTEP) dh.steps = NSTEP / dh.n;
     dh.voicing = st->voicing;
+    dh.arp = st->arp;
+    dh.plain = st->plain;
     dh.nlast = 0;
     dh.energy = (uint32_t)rr(st->e_lo, st->e_hi);
     dh.twist = TW_NONE;
@@ -806,7 +1094,7 @@ static void dice_one(void)
                                                          * wave's two in five, 0.6.80; then IDM, DARK IDM; the night's) */
     uint32_t k, dr = NTRK, role[NTRK], nlive = trk_live < NTRK ? trk_live : NTRK, act[RL_N], nmel, drums, next;
     int16_t root = (int16_t)rr(0, 11), scale = (int16_t)st->scale[rng() % 4u];
-    uint32_t pr = rng() % 3u, wet;
+    uint32_t pr = rng() % 3u, wet, nparts;
     dice_fm6 = 0;
     if (st->prog[pr][0] == 127) pr = 0;
     dh.prog = st->prog[pr];
@@ -814,6 +1102,14 @@ static void dice_one(void)
     dh.steps = 16u * st->bars;
     if (dh.steps * dh.n > NSTEP) dh.steps = NSTEP / dh.n;   /* (the whole progression inside the 64 steps) */
     dh.voicing = st->voicing;
+    dh.arp = st->arp;
+    dh.plain = st->plain;
+    if (chance(st->plain ? 10 : 33)) {                  /* (0.6.81) one throw in three a richer harmony: sevenths,
+                                                         * ninths, suspended, mixed; the arps ambient (up and down,
+                                                         * eighths) where the genre's was a sequencer or a pulse */
+        dh.voicing = VC_MIX;
+        if (dh.arp == AR_SEQ || dh.arp == AR_PULSE || dh.arp == AR_WALK) dh.arp = AR_UPDOWN;
+    }
     dh.nlast = 0;
     dh.energy = dice_force_energy >= 0 ? (uint32_t)dice_force_energy : (uint32_t)rr(st->e_lo, st->e_hi);
     dh.twist = chance(20) ? 1u + rng() % 5u : TW_NONE;
@@ -860,8 +1156,13 @@ static void dice_one(void)
         if (r == RL_DRUM) {                             /* (0.6.35: the kit as 0.6.33 made it, it sounded better: the
                                                          * DRUM-X kit diced around the factory one, a soft low-pass) */
             if (chance(70)) sound_dice_of(t, 1);
+            /* (0.6.81) the kick low or middle (never a high percussion), the bell short */
+            dx_kit[0].a[DXP_PITCH] = (uint8_t)(dx_kit[0].a[DXP_PITCH] < 22u ? dx_kit[0].a[DXP_PITCH] : 22u);
+            dx_kit[0].b[DXP_PITCH] = (uint8_t)(dx_kit[0].b[DXP_PITCH] < 28u ? dx_kit[0].b[DXP_PITCH] : 28u);
+            dx_kit[7].a[DXP_DECAY] = (uint8_t)(dx_kit[7].a[DXP_DECAY] < 30u ? dx_kit[7].a[DXP_DECAY] : 30u);
+            dx_kit[7].b[DXP_DECAY] = (uint8_t)(dx_kit[7].b[DXP_DECAY] < 36u ? dx_kit[7].b[DXP_DECAY] : 36u);
             t->p[P_FTYPE] = 0;
-            t->p[P_FCUT] = (int16_t)rr(100, 116);
+            t->p[P_FCUT] = (int16_t)(dh.plain ? rr(120, 127) : rr(100, 116));   /* (0.6.81: a band's cymbals bright) */
             t->p[P_FRES] = (int16_t)rr(0, 18);
         }
         else dice_sound(t, r, r == RL_BASS ? st->e_bass : r == RL_PAD ? st->e_pad : r == RL_LEAD ? st->e_lead :
@@ -870,7 +1171,7 @@ static void dice_one(void)
         t->p[P_VOICE] = (int16_t)(r == RL_PAD ? V_POLY : r == RL_ARP ? (chance(50) ? V_POLY : V_MONO) : V_LEGATO);
         t->p[P_SGATE] = (int16_t)(r == RL_BASS ? (st->bass == BS_PUMP || st->bass == BS_BLIP || st->bass == BS_ROLL ||
                                                   st->bass == BS_RUMBLE || st->bass == BS_PUNK || st->bass == BS_SEQ ||
-                                                  st->bass == BS_SUICIDE ? 40 : 75) :
+                                                  st->bass == BS_SUICIDE || st->bass == BS_EBM || st->bass == BS_DARK ? 40 : 75) :
                                   r == RL_PAD ? (st->pads == PS_DUB || st->pads == PS_STAB ? rr(25, 45) : 120) :
                                   r == RL_ARP ? (st->arp == AR_GLASS ? rr(60, 80) : rr(30, 55)) :
                                   r == RL_LEAD ? (st->lead == LM_MECH ? 50 : 85) : 120);
@@ -884,9 +1185,23 @@ static void dice_one(void)
         t->p[P_DLY] = (int16_t)((r == RL_LEAD || r == RL_ARP ? rr(25, 70) : r == RL_PAD && st->pads == PS_DUB ? rr(55, 95) :
                                  r == RL_DRUM ? rr(0, 10) : 0) * (40 + (int32_t)wet) / 100);
         if (r != RL_DRUM && r != RL_BASS && chance(25)) {
-            if (chance(50)) { t->p[P_REV] = (int16_t)rr(85, 115); t->p[P_DLY] = (int16_t)rr(60, 95); }
+            if (chance(50) || r == RL_LEAD) { t->p[P_REV] = (int16_t)rr(85, 115); t->p[P_DLY] = (int16_t)rr(60, 95); }
             else { t->p[P_REV] = (int16_t)rr(0, 10); t->p[P_DLY] = 0; }
         }
+        if (r == RL_LEAD) {                             /* (0.6.81) a lead always in some space and moving: a delay
+                                                         * or a reverb it can be heard in, and an AUTO PAN or chorus */
+            if (t->p[P_REV] < 25 && t->p[P_DLY] < 20) t->p[P_DLY] = (int16_t)rr(25, 55);
+            if (chance(50)) {
+                t->p[P_APDEP] = (int16_t)rr(30, 70);
+                t->p[P_APSYNC] = 1;
+                t->p[P_APRATE] = (int16_t)rr(2, 5);
+                t->p[P_APWAVE] = (int16_t)(rng() % 2u);
+            } else {
+                t->p[P_CHOR] = (int16_t)rr(20, 50);
+            }
+        }
+        t->p[P_REV] = (int16_t)clamp(t->p[P_REV], 0, 127);   /* (0.6.81: a wet genre in SPACE took a pad's or a texture's
+        t->p[P_DLY] = (int16_t)clamp(t->p[P_DLY], 0, 127);    * send past 127: a piece no SAVE could store, SAVE FORMAT ERROR) */
         if (r == RL_PAD && chance(40)) t->p[P_CHOR] = (int16_t)rr(20, 60);
         load_begin(t, LOAD_PAT);
         track_defaults_steps(t);
@@ -923,6 +1238,10 @@ static void dice_one(void)
             pat_sig[dst] = steps_sig(d);
         }
     }
+    dice_post(role, act, st);                           /* (0.6.81) the parts against each other */
+    for (k = 0; k < NTRK; k++)
+        pat_sig[k] = steps_sig(&trk[k]);
+    nparts = dice_parts(role, act, st);                 /* (0.6.81) the song's parts, in ARRANGE */
     if (!(ui_prefs & PREF_BPM_LOCK)) {                  /* the tempo: SPACE in the genre's lower half, FRANTIC its upper;
                                                          * always at least 3 BPM away */
         int32_t old = song.g[G_BPM], lo = st->bpm_lo, hi = st->bpm_hi, mid = (lo + hi) / 2, v, t;
@@ -961,8 +1280,18 @@ static void dice_one(void)
     song.g[G_STRN] = 0;
     song.g[G_SLPQ] = 1;
     macro_dice(3);
+    /* (0.6.81) the master glued: with drums a little sidechain (DUCK), the clipper and the drum bus's PUNCH; without,
+     * a touch of the clipper */
+    song.g[G_DUCK] = (int16_t)(act[RL_DRUM] ? rr(18, 40) : 0);
+    song.g[G_DREL] = (int16_t)rr(20, 45);
+    song.g[G_CLIP] = (int16_t)(act[RL_DRUM] ? rr(25, 55) : rr(10, 30));
+    song.g[G_PUNCH] = (int16_t)(act[RL_DRUM] ? rr(45, 85) : 0);
     ui_say("DICED: ", st->name);
     str_cpy(ui.msg2, dh.energy == 0u ? "SPACE  UNDO:GLO+G4" : dh.energy == 2u ? "FRANTIC UNDO:GLO+G4" : "UNDO: GLO + G4",
             sizeof ui.msg2);
+    if (nparts) {                                       /* (0.6.81) "3 PARTS: PLAY THE SONG" */
+        str_cpy(ui.msg2, "N PARTS: PLAY THE SONG", sizeof ui.msg2);
+        ui.msg2[0] = (char)('0' + nparts);
+    }
     ui.force = 1;
 }

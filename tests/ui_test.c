@@ -142,6 +142,10 @@ static void ui_power_on(void)
     memset(&song, 0, sizeof song);
     memset(&chain, 0, sizeof chain);
     chain_defaults(&chain_config);
+    live.mode = 0;                                /* (0.6.81: PLAY the loop, as at power-on; a DICE ALL leaves SONG) */
+    for (i = 0; i < 4u; i++)                      /* (and the sections a DICE ALL wrote emptied: power-on has none) */
+        if ((dice_secs >> i) & 1u) memset(proj_slot[i].raw, 0, 4);
+    dice_secs = 0;
     memset(&ui, 0, sizeof ui);
     cin_left = cin_total = 0;                     /* (no count-in) */
     memset(&nm, 0, sizeof nm);                    /* NAME closed, no project name */
@@ -4409,7 +4413,7 @@ static int test_piano_roll(void)
     song.rec = 1;                                                     /* (#133: armed, the key writes the step) */
     key_down(7); frames(200);                                         /* a key held: its row lit on the strip */
     {
-        int32_t r = (int32_t)proll.lo + PR_ROWS - 1 - (int32_t)kb_snd[7];
+        int32_t r = (int32_t)proll.lo + PR_ROWS - 1 - (int32_t)kb_snd[7][0];
         uint16_t c = r >= 0 && r < PR_ROWS ? swap16(host_screen[(Y_GRAPH + PR_Y0 + (uint32_t)r * PR_RH + 1u) * 240u + PR_KX + 7]) : 0;
         bad += check("  a key held: its row on the keyboard strip is the accent", kb_on[7] && c == T_ACCENT);
     }
@@ -6728,9 +6732,11 @@ static int test_dice_all(void)
                     ok &= s2->note[0] <= 84u;
                 }
             }
+            project_capture(&proj_scratch);              /* (0.6.81) every piece storable (a send past 127 was not) */
+            ok &= proj_pack(&proj_wire, &proj_scratch) != 0;
             for (k = 0; k < 8u; k++) events_block(CTL);
         }
-        bad += check("DICE ALL (0.6.26): a style named, engines changed, FM6 on two tracks at most, one DRUM track; 30 throws", ok);
+        bad += check("DICE ALL (0.6.26): a style named, engines changed, FM6 on two tracks at most, one DRUM track, every piece storable; 30 throws", ok);
         {   /* (0.6.27) 40 throws: never the same piece, the tempo moved every time (even from the same random state) */
             uint32_t h[40], n2, m, same = 0, bpm_same = 0;
             int16_t b0;
@@ -7463,6 +7469,82 @@ static void cin_beat(void)                       /* the audio until the count-in
 }
 /* (0.6.80) channel 16's PROGRAM CHANGE: 0..3 a section (stopped: at once), 16 + n the project n + 1; never a track's
  * sound, whatever ROUTE */
+/* (0.6.81) SCL > CHORD: a key plays the chord of its degree in the scale (TRIAD, 7TH), a shape on any key (MAJ7), the
+ * root alone when OFF, on MONO and on a kit; LEAD the inversion nearest the last chord; STRUM the notes in one by one;
+ * the key's release ends every note it started (those strummed in later too, none still to come) */
+static uint32_t chord_sounding(const track_t *t, uint8_t *nn)
+{
+    uint32_t i, n = 0, j;
+    for (i = 0; i < NVOICE; i++)
+        if (t->v[i].active && t->v[i].gate) {
+            for (j = 0; j < n && nn[j] != t->v[i].note; j++) {}
+            if (j == n && n < 8u) nn[n++] = t->v[i].note;
+        }
+    for (i = 1; i < n; i++)
+        for (j = i; j > 0 && nn[j] < nn[j - 1]; j--) { uint8_t x = nn[j]; nn[j] = nn[j - 1]; nn[j - 1] = x; }
+    return n;
+}
+static int test_chord(void)
+{
+    int bad = 0, ok;
+    track_t *t;
+    uint8_t nn[8];
+    uint32_t n, k = white(4), i;                        /* C4 (white keys from F3) */
+    ui_power_on();
+    song.sel = 0;
+    t = &trk[0];
+    t->p[P_VOICE] = V_POLY;
+    t->p[P_ROOT] = 0; t->p[P_SCALE] = 2;                /* C minor */
+    t->p[P_QUANT] = QN_OFF; t->p[P_AMODE] = 0;
+    events_block(CTL);
+    key_down(k); events_block(CTL); n = chord_sounding(t, nn); key_up(k); events_block(CTL);
+    ok = n == 1u && nn[0] == kb_note[k];
+    bad += check("CHORD OFF: a key plays its note alone", ok);
+    t->p[P_CHRD] = CD_TRI;
+    key_down(k); events_block(CTL); n = chord_sounding(t, nn);
+    ok = n == 3u && nn[1] - nn[0] == 3 && nn[2] - nn[0] == 7;   /* C Eb G */
+    key_up(k); events_block(CTL);
+    ok &= chord_sounding(t, nn) == 0u;
+    bad += check("CHORD TRIAD in C minor: C4 plays C Eb G; the release ends all three", ok);
+    t->p[P_CHRD] = CD_SEV;
+    key_down(white(5)); events_block(CTL); n = chord_sounding(t, nn);   /* D: D F Ab C (half diminished) */
+    ok = n == 4u && nn[1] - nn[0] == 3 && nn[2] - nn[0] == 6 && nn[3] - nn[0] == 10;
+    key_up(white(5)); events_block(CTL);
+    t->p[P_CHRD] = CD_MAJ7;
+    key_down(white(5)); events_block(CTL); n = chord_sounding(t, nn);   /* D MAJ7 whatever the scale */
+    ok &= n == 4u && nn[1] - nn[0] == 4 && nn[2] - nn[0] == 7 && nn[3] - nn[0] == 11;
+    key_up(white(5)); events_block(CTL);
+    bad += check("CHORD 7TH: the scale's seventh on D (D F Ab C); MAJ7: D F# A C# on any scale", ok);
+    t->p[P_CHRD] = CD_TRI; t->p[P_CVOI] = CV_LEAD;
+    {
+        int32_t mid = 0, d;
+        key_down(k); events_block(CTL); n = chord_sounding(t, nn);   /* C minor, as near the last chord as it can */
+        for (i = 0; i < n; i++) mid += nn[i];
+        mid /= (int32_t)(n ? n : 1u);
+        key_up(k); events_block(CTL);
+        key_down(white(7)); events_block(CTL); n = chord_sounding(t, nn);   /* F minor: every tone within a fifth */
+        ok = n == 3u;
+        for (i = 0; i < n; i++) { d = nn[i] - mid; ok &= d <= 6 && d >= -6; }
+        key_up(white(7)); events_block(CTL);
+    }
+    bad += check("VOICING LEAD: F minor after C minor is the inversion nearest it (every tone within a fifth of its middle)", ok);
+    t->p[P_CVOI] = CV_CLOSE; t->p[P_CSTR] = 40;         /* ~20 ms apart */
+    key_down(k);
+    for (i = 0; i < 2u; i++) events_block(CTL);
+    ok = chord_sounding(t, nn) == 1u;
+    for (i = 0; i < 40u; i++) events_block(CTL);       /* ~27 ms: the second */
+    ok &= chord_sounding(t, nn) == 2u;
+    key_up(k);
+    for (i = 0; i < 80u; i++) events_block(CTL);
+    ok &= chord_sounding(t, nn) == 0u;                  /* (the third never came) */
+    bad += check("STRUM: the notes one after the other; let go before the last: everything ends, none comes later", ok);
+    t->p[P_CSTR] = 0; t->p[P_VOICE] = V_MONO;
+    key_down(k); events_block(CTL); n = chord_sounding(t, nn); key_up(k); events_block(CTL);
+    bad += check("CHORD on a MONO track: the root alone", n == 1u);
+    ui_power_on();
+    return bad;
+}
+
 static int test_midi_song_pc(void)
 {
     int bad = 0, ok;
@@ -8676,6 +8758,7 @@ int main(void)
     bad += test_load_budget();
     bad += test_dice_all();
     bad += test_midi_song_pc();
+    bad += test_chord();
     bad += test_fx_sections();
     bad += test_clear_ghosts();
     bad += test_dx_sound();

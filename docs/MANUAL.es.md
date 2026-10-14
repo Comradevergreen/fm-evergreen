@@ -584,6 +584,23 @@ tienen. Cada pista conserva su propio TRANS.
   al dar PLAY también lo avisa. 0 = apagado.
 - La reverb RESO y los pasos de afinación del SLICER también siguen la escala.
 
+### CHORD (0.6.81)
+
+**SCL > CHORD** hace que una tecla toque un acorde en la pista (inspirado en el Omnichord y el Orchid):
+
+- **CHORD**: OFF; en la escala (todos los acordes afinados, sin pensar): **TRIAD**, **7TH**, **ADD9**, **SUS2**,
+  **SUS4**, armados sobre el grado de la tecla (una tecla fuera de la escala toma la nota de la escala de abajo; CHR: la
+  escala mayor de ROOT); formas en cualquier tecla: **MAJ**, **MIN**, **7**, **MAJ7**, **MIN7**, **POWER**.
+- **VOICING**: CLOSE (posición fundamental); **LEAD** (cada acorde toma la inversión más cercana al anterior: el voice
+  leading, la suavidad del Orchid); OPEN (la segunda nota una octava arriba); +BASS (suma la fundamental una octava
+  abajo).
+- **STRUM**: 0 todas a la vez; desde ahí, las notas entran una tras otra de grave a agudo (hasta ~63 ms entre ellas),
+  como un arpa.
+
+Al soltar la tecla terminan todas las notas del acorde (las que faltaban del strum ya no entran). El acorde se graba en
+el paso y el ARP lo arpegia. Una pista de batería, MONO, LEGATO y UNISON tocan solo la fundamental. Las notas MIDI
+suenan tal cual llegan.
+
 ### ARP
 
 ARP: MODE, RATE, OCT (1–4), GATE. ARP 2: SWING, PROB, HOLD, ORDER (NOTE / PLAY). Modos: OFF, UP, DN, UPDN, RND, ORD,
