@@ -299,7 +299,8 @@ static uint32_t scale_leds(uint32_t *root)
         if (t->p[P_QUANT] == QN_WHITE) {
             if ((note = kb_map(t, k)) > 127u)
                 continue;                               /* (a black key: silent) */
-            pc = (int32_t)note - t->p[P_TRANS];         /* (WHITE walks the scale before TRN) */
+            pc = (int32_t)note + t->p[P_TRANS];         /* (0.6.81: the note it sounds: TRANS added as it sounds,
+                                                         * voice.c trk_trans; WHITE walks the scale before it) */
         } else {
             pc = 53 + (int32_t)k + t->p[P_TRANS];
         }

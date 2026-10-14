@@ -184,7 +184,7 @@ static uint32_t kb_map(const track_t *t, uint32_t k)
         return (uint32_t)n;
     n = 53 + (int32_t)k;
     if (t->p[P_QUANT] == QN_SNAP || t->p[P_QUANT] == QN_SEQ)   /* SNAP (and SEQ): every key, rounded down */
-        return (uint32_t)clamp(scale_snap(t, n + 12 * song.octave + t->p[P_TRANS]), 0, 127);
+        return (uint32_t)clamp(scale_snap(t, n + 12 * song.octave), 0, 127);   /* (0.6.81: TRANS as it sounds, voice.c) */
     if (t->p[P_QUANT] == QN_WHITE) {                    /* WHITE: white keys walk the scale, black keys are silent */
         uint32_t mask = scale_mask(t), i;
         int32_t count = 0, degree = DEGREE[n % 12], oct;
@@ -209,7 +209,7 @@ static uint32_t kb_map(const track_t *t, uint32_t k)
             }
         n = 60 + t->p[P_ROOT] + 12 * oct + (int32_t)i;
     }
-    return (uint32_t)clamp(n + 12 * song.octave + t->p[P_TRANS], 0, 127);
+    return (uint32_t)clamp(n + 12 * song.octave, 0, 127);
 }
 
 /* the notes key k plays (kb_sn: how many, its chord; kb_on: how many of them started, the rest strummed in later) */

@@ -499,6 +499,13 @@ static void glide_set(track_t *t, voice_t *v, int glide)
     }
 }
 
+/* (JIANT 0.6.81) SCL TRANS: the track's every note this many semitones up or down as it sounds (the keys, the
+ * sequence, MIDI, the ARP alike; recorded as played: it was the keys' alone, the sequence did not follow). Kits: none */
+static int32_t trk_trans(const track_t *t)
+{
+    const engine_t *e = ENGINES[t->engine % NENGINES];
+    return e->oneshot || e->keys ? 0 : t->p[P_TRANS];
+}
 static void voice_start(track_t *t, voice_t *v, uint32_t note, uint32_t vel, int glide)
 {
     const engine_t *e = ENGINES[t->engine];
@@ -512,7 +519,7 @@ static void voice_start(track_t *t, voice_t *v, uint32_t note, uint32_t vel, int
     v->active = 1;
     v->stage = 1;
     v->age = ++vage;
-    v->pitch16 = (int32_t)note * 16 + t->pfx_rpit;      /* (pfx.c RANDOM: 0 but while it is held) */
+    v->pitch16 = ((int32_t)note + trk_trans(t)) * 16 + t->pfx_rpit;   /* (pfx.c RANDOM: 0 but while it is held) */
     v->mvel = t->m_vel;                                 /* mod.c: the note's VEL and RAND */
     v->mrnd = t->m_rnd;
     t->m_vi = (uint8_t)(v - t->v);
@@ -566,7 +573,7 @@ static void mono_play(track_t *t, uint32_t note, uint32_t vel, int retrig, int g
             }
         } else {                                            /* legato: new pitch, same envelope */
             v->note = (uint8_t)note;
-            v->pitch16 = (int32_t)note * 16 + t->pfx_rpit;
+            v->pitch16 = ((int32_t)note + trk_trans(t)) * 16 + t->pfx_rpit;
             v->mvel = t->m_vel;
             v->mrnd = t->m_rnd;
             if (vel > v->vel && nv == 1u)

@@ -4813,10 +4813,10 @@ static int test_play_leds(void)
     song.octave = 1;
     ok &= play_leds() == 0u;                           /* (C4 and E4 below the keys an octave up) */
     song.octave = 0;
-    t->p[P_TRANS] = 2;
-    ok &= play_leds() == (1u << 5 | 1u << 9);
+    t->p[P_TRANS] = 2;                                 /* (0.6.81: TRN moves the sequence as the keys: the same keys) */
+    ok &= play_leds() == (1u << 7 | 1u << 11);
     t->p[P_TRANS] = 0;
-    bad += check("the keys follow the octave and TRN; notes off the keyboard are not shown", ok);
+    bad += check("the keys follow the octave (TRN moves the keys and the sequence alike); notes off the keyboard are not shown", ok);
     t->p[P_QUANT] = 1;                                 /* SNAP in C major: C#4 rounds down to C4 too */
     t->p[P_SCALE] = 1;
     t->p[P_ROOT] = 0;
@@ -7545,6 +7545,28 @@ static int test_chord(void)
     return bad;
 }
 
+/* (0.6.81) SCL TRANS: the sequence's notes sound TRANS semitones away as the keys' do (it moved the keys only) */
+static int test_trans_seq(void)
+{
+    int ok, bad = 0;
+    uint32_t i, f = 0;
+    track_t *t;
+    ui_power_on();
+    t = &trk[0];
+    t->p[P_VOICE] = V_POLY;
+    t->p[P_TRANS] = 2;
+    t->step[0].time = ST_NOTE; t->step[0].n = 1; t->step[0].note[0] = 60; t->step[0].vel = 100;
+    transport_req = 1; ui_input();
+    for (i = 0; i < 8u; i++) events_block(CTL);
+    for (i = 0; i < NVOICE; i++)
+        if (t->v[i].active && t->v[i].gate && t->v[i].note == 60u) f = (uint32_t)t->v[i].pitch16;
+    ok = f == 62u * 16u;
+    transport_req = 2; ui_input();
+    bad += check("SCL TRANS +2: the sequence's C4 sounds D4 (as a key's would)", ok);
+    t->p[P_TRANS] = 0;
+    ui_power_on();
+    return bad;
+}
 static int test_midi_song_pc(void)
 {
     int bad = 0, ok;
@@ -8759,6 +8781,7 @@ int main(void)
     bad += test_dice_all();
     bad += test_midi_song_pc();
     bad += test_chord();
+    bad += test_trans_seq();
     bad += test_fx_sections();
     bad += test_clear_ghosts();
     bad += test_dx_sound();
