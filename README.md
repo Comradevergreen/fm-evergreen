@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.6.87).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.6.88).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 > ⚡ **New in 0.6.71: both cores (experimental).** The FM-1's chip has two processor cores and JIANT used one. Now the
 > second renders some of the synth tracks while the first renders the rest, so the same song leaves much more room
@@ -510,6 +510,15 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### v0.6.88
+- **Record off the grid.** SEQ > TIMING's **REC Q** (per track): at 100 % (the default) live recording snaps to the
+  grid as always; lower, each step keeps where you played it, up to half a step early or late (in sixteenths of a
+  step), and plays it back there. 50 % keeps half of it, 0 % all of it.
+- **SEQ > TIMING** (after NOTE): KNOB 1 the step, KNOB 2 its **OFFSET** (−8/16 … +7/16: early / late; EDIT puts it
+  back on the grid), KNOB 3 REC Q. The piano roll draws each note where it plays. Early notes really play early (the
+  step before ends that much sooner, the grid kept); a moved, stretched or repeated step keeps its offset; stored with
+  the project, no extra memory.
 
 ### v0.6.87
 - **SEQ > HUMAN**: the sequencer plays like a person, each note a little different every time round (the steps

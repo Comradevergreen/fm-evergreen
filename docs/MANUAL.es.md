@@ -291,6 +291,7 @@ a la derecha); apretá OCT+ para ejecutarla.
 | NOTE | FOCUS | PITCH | MOVE | LEN |
 | STRETCH | STRETCH (/8 … /2, x2 … x8) | REPEAT (x2 … x8, TO 64) | NUDGE (ya) | LEN (antes > después) |
 | HUMAN | VEL | TIME | GATE | — |
+| TIMING | STEP | OFFSET (−8/16 … +7/16) | REC Q | — |
 | COMP | STEP | TYPE | (su valor) | (su valor; RATCH / ECHO: DIV) |
 | COMP 2 | STEP | TYPE (el segundo componente) | (su valor) | (su valor; ECHO: DIV) |
 | WHEN | STEP | A (WHEN) | B (WHEN) | LEN |
@@ -565,6 +566,13 @@ seleccionada se graban como **automatización**. MENU > AUDIO tiene el **CLICK**
     más notas (REC en vivo suma encima).
   - **KNOB 3 NUDGE**: toda la secuencia un paso a la derecha / izquierda en el momento, dando la vuelta dentro de LEN
     (como TOOLS A3 / B3).
+- **TIMING** (0.6.88, después de NOTE): el lugar propio de cada paso fuera de la grilla. KNOB 1 el paso, KNOB 2 su
+  **OFFSET** en dieciseisavos de paso, de −8/16 (medio paso antes) a +7/16 (después); **EDIT** lo devuelve a la
+  grilla. KNOB 3 **REC Q**, la cuantización de la grabación de la pista: en 100 % (por defecto) la grabación en vivo
+  se ajusta a la grilla; más abajo, el paso guarda esa parte de dónde lo tocaste (0 %: todo), antes o después. Los
+  pasos adelantados suenan realmente antes: el paso anterior termina antes y la grilla se mantiene. El piano roll
+  dibuja las notas donde suenan. Un acorde comparte el offset de su paso; mover, estirar o repetir pasos lo conserva;
+  se guarda con el proyecto.
 - **HUMAN** (0.6.87, después de STRETCH): la pista toca como una persona, cada nota un poco distinta en cada vuelta;
   los pasos quedan como están escritos. **VEL**: la velocity de cada nota sube o baja al azar (hasta ±38 al 100 %).
   **TIME**: cada paso entra un poco tarde al azar (hasta 30 ms, nunca más de un tercio del paso, nunca antes; las notas

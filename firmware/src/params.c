@@ -222,6 +222,7 @@ static const param_desc_t CHORD_DESC[3] = {              /* (0.6.81) SCL > CHORD
     {"CHORD", F_ENUM, 0, 11, 0, N_CHRD, 0}, {"VOICING", F_ENUM, 0, 3, 0, N_CVOI, 0}, {"STRUM", F_PCT, 0, 127, 0, 0, 0}};
 static const param_desc_t HUM_DESC[3] = {                /* (0.6.87) SEQ > HUMAN: P_HVEL P_HTIM P_HGAT (127 = 0 %) */
     {"VEL", F_PCTINV, 0, 127, 127, 0, 0}, {"TIME", F_PCTINV, 0, 127, 127, 0, 0}, {"GATE", F_PCTINV, 0, 127, 127, 0, 0}};
+static const param_desc_t RECQ_DESC = {"REC Q", F_PCT, 0, 127, 127, 0, 0};   /* (0.6.88) P_HRQ: 100 % on the grid */
 static const param_desc_t *track_desc(const track_t *t, uint32_t id)
 {
     if (id >= P_E0 && id <= P_E7) {                   /* the engine asked for (t->engine follows after a fade) */
@@ -248,6 +249,7 @@ static const param_desc_t *track_desc(const track_t *t, uint32_t id)
         case P_HVEL: return &HUM_DESC[0];
         case P_HTIM: return &HUM_DESC[1];
         case P_HGAT: return &HUM_DESC[2];
+        case P_HRQ: return &RECQ_DESC;
         default: break;
         }
     return &TP[id];
@@ -551,6 +553,7 @@ static const page_t PAGES[] = {
     {"SHIFT", FAM_SEQ, SC_TRACK, GR_STEPS, {P_SOFS, P_POFS, P_TCHAN, P_CLEN}},   /* the sequence offset, the track's chance */
     {"PLAYHEADS", FAM_SEQ, SC_TRACK, GR_FUGUE, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (0.6.52) three more playheads (fugue.c; was FUGUE) */
     {"NOTE", FAM_SEQ, SC_STEP, GR_ROLL, {4, 5, 6, 7}},   /* (0.6.81) the piano roll's edits: FOCUS PITCH MOVE LEN */
+    {"TIMING", FAM_SEQ, SC_STEP, GR_ROLL, {8, 9, 10, 0xFF}},   /* (0.6.88) STEP, its OFFSET off the grid, REC Q */
     {"STRETCH", FAM_SEQ, SC_TRACK, GR_SHAPE, {0xFF, 0xFF, 0xFF, 0xFF}},
     {"HUMAN", FAM_SEQ, SC_TRACK, GR_STEPS, {P_HVEL, P_HTIM, P_HGAT, 0xFF}},   /* (0.6.87) each note a little different */   /* (0.6.85) STRETCH REPEAT NUDGE, OCT+ (ui_tools.c) */
     {"COMP", FAM_SEQ, SC_STEP, GR_COMP, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (0.6.39) STEP TYPE and its two values */

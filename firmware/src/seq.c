@@ -548,18 +548,26 @@ static uint32_t seq_src(const track_t *t, uint32_t idx)
 static void rec_note(track_t *t, uint32_t note, uint32_t vel)
 {
     uint32_t len = t->p[P_SLEN] > 0 ? (uint32_t)t->p[P_SLEN] : 1u, idx = t->seq_idx % len, k;
-    uint32_t period = div_samples((uint32_t)t->p[P_SDIV]);
-    uint32_t next = t->seq_pos > step_samples(t, period, t->seq_idx) / 2u;
+    uint32_t period = div_samples((uint32_t)t->p[P_SDIV]), sl = step_samples(t, period, t->seq_idx);
+    int32_t gp = (int32_t)t->seq_pos - (int32_t)t->ext;   /* (0.6.88: from the step's place; an early one began before) */
+    uint32_t next = t->seq_pos < 0x7FFFFFFFu && gp > (int32_t)(sl / 2u);
+    int32_t mic = 0;
     step_t *s;
     if (next)
         idx = (idx + 1u) % len;
     s = &t->step[seq_src(t, idx)];
+    if (t->seq_pos < 0x7FFFFFFFu && t->p[P_HRQ] < 127) {   /* (0.6.88) REC Q under 100 %: where it was played, kept */
+        int32_t off = next ? gp - (int32_t)sl : gp, l = (int32_t)(next ? step_samples(t, period, idx) : sl);
+        mic = (off * 16 + (off < 0 ? -l / 2 : l / 2)) / (l ? l : 1);   /* (sixteenths of the step, rounded) */
+        mic = clamp(mic * (127 - clamp(t->p[P_HRQ], 0, 127)) / 127, -8, 7);
+    }
     if (drum_track(t)) {                            /* DRUM: into the grid, no holds (hits) */
         uint32_t l = drum_lane(note);
         if (s->time != ST_NOTE || (!s->n && !s->hit)) {
             s->n = s->hit = s->acc = 0;
             s->flags = 0;
             s->vel = 0;
+            ST_MICRO_SET(s, mic);                       /* (0.6.88) its place off the grid (REC Q) */
         }
         s->time = ST_NOTE;
         if (note == DRUM_LANE_NOTE[l]) {            /* a lane's note: its hit */
@@ -593,6 +601,7 @@ static void rec_note(track_t *t, uint32_t note, uint32_t vel)
         s->n = 0;                                   /* a fresh step */
         s->flags = 0;
         s->vel = 0;
+        ST_MICRO_SET(s, mic);                       /* (0.6.88) its place off the grid (REC Q) */
     }
     for (k = 0; k < s->n && s->note[k] != note; k++)
         ;
@@ -947,6 +956,7 @@ static void seq_start(void)
         track_t *t = &trk[i];
         t->seq_idx = (uint16_t)(t->p[P_SLEN] - 1);
         t->seq_pos = 0x7FFFFFFF;                   /* step 0 fires on the first block */
+        t->ext = 0;
         t->rskip_n = 0;
         t->rh_n = 0;
         t->rat_left = 0;
@@ -1027,6 +1037,22 @@ static int trk_kit(const track_t *t)
  * step the track plays, apart from where the steps are: the components drift over a pattern of another length);
  * OFF: s as it is. The copy is the track's (cvs: a RATCH repeats it); an ARP or a PULSE keeps theirs (CV_IDX) */
 #define CV_IDX 255u
+/* (0.6.88) TIMING early: how much before its place the step after the playing one starts (its ST_MICRO < 0), so the
+ * playing one ends that much sooner (seq_tick); 0 when the next step is not known yet (a JUMP or REV coming, RANDOM
+ * held, a song's section about to change) */
+static uint32_t seq_early(const track_t *t, uint32_t period, uint32_t len)
+{
+    uint32_t ni = (t->seq_idx + 1u) % (len ? len : 1u);
+    const step_t *s;
+    int32_t m;
+    if (t->jump_to || t->rev || (t->pfx & PFX_RND) || (!ni && (chain.running || chain.armed)))
+        return 0;
+    s = &seq_steps(t)[seq_src(t, ni)];
+    if (s->time != ST_NOTE || (!s->n && !s->hit))       /* (nothing to play there: never early) */
+        return 0;
+    m = ST_MICRO(s);
+    return m < 0 ? (uint32_t)-m * step_samples(t, period, ni) / 16u : 0u;
+}
 static const step_t *comp_lane(track_t *t, const step_t *s)
 {
     uint32_t cl = (uint32_t)clamp(t->p[P_CLEN], 0, NSTEP);
@@ -1041,7 +1067,7 @@ static const step_t *comp_lane(track_t *t, const step_t *s)
     t->cvs.carg = c->carg;
     t->cvs.comp2 = c->comp2;                        /* (0.6.82) the second one, their WHENs, DIV and LEN */
     t->cvs.carg2 = c->carg2;
-    t->cvs.cwhen = c->cwhen;
+    t->cvs.cwhen = (uint8_t)((c->cwhen & 15u) | (s->cwhen & 0xF0u));   /* (0.6.88: the step's own TIMING kept) */
     t->cvs.ctime = c->ctime;
     t->cv_on = 1;
     return &t->cvs;
@@ -1505,6 +1531,8 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
             uint32_t d = hum_rnd() % (HUM_TMAX * ht / 127u + 1u), cap = period / 3u;
             hdel = d < cap ? d : cap;
         }
+        if (t->mic > 0 && hits == 1u && !bend && !slide_in && !(skip & SEQ_REP))   /* (0.6.88) TIMING late: on top */
+            hdel += (uint32_t)t->mic * step_samples(t, period, t->seq_idx) / 16u;
     }
     sk0 = sk;                                       /* (the notes the step sounds, strummed or not: seq_notes) */
     if (!kit && !arp && m > 1u && t->p[P_CSTR] > 0 && t->p[P_VOICE] == V_POLY) {   /* (0.6.84) STRUM: the chord in
@@ -1522,7 +1550,7 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
             t->ss_vv[t->ss_n++] = vv[ord[q]];
             sk |= 1u << ord[q];
         }
-        t->ss_due = t->ss_gap = (uint16_t)clamp((int32_t)(g < cap ? g : cap), 1, 65535);
+        t->ss_due = t->ss_gap = (uint32_t)clamp((int32_t)(g < cap ? g : cap), 1, 65535);
     }
     if (hdel) {                                     /* (0.6.87) HUMAN TIME: every note of the step queued, hdel late
                                                      * (a strum's after it, its gaps kept; else all at once) */
@@ -1534,8 +1562,8 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
                 t->ss_n++;
                 sk |= 1u << q;
             }
-        t->ss_gap = (uint16_t)gap;
-        t->ss_due = (uint16_t)clamp((int32_t)hdel, 1, 65535);
+        t->ss_gap = gap;
+        t->ss_due = hdel ? hdel : 1u;
         gate += hdel;
     }
     for (i = 0; i < m; i++)
@@ -1623,7 +1651,7 @@ static void seq_tick(track_t *t, uint32_t n)
     }
     if (t->ss_i < t->ss_n) {                         /* (0.6.84) STRUM: the step's chord coming in */
         if (t->ss_due > n) {
-            t->ss_due = (uint16_t)(t->ss_due - n);
+            t->ss_due -= n;
         } else {
             do {                                    /* (0.6.87: HUMAN TIME without a strum: the chord together) */
                 seq_note_on(t, t->ss_nn[t->ss_i], t->ss_vv[t->ss_i]);
@@ -1644,11 +1672,13 @@ static void seq_tick(track_t *t, uint32_t n)
     len = (uint32_t)t->p[P_SLEN];
     t->seq_pos += n;
     for (;;) {
-        uint32_t cur_len = step_samples(t, period, t->seq_idx), start;
-        if (t->seq_pos < cur_len && t->seq_pos != 0x7FFFFFFFu + n)
+        uint32_t cur_len = step_samples(t, period, t->seq_idx) + t->ext, start, e = seq_early(t, period, len);
+        if (e >= cur_len) e = cur_len - 1u;             /* (0.6.88) TIMING: the next step early, this one shorter */
+        if (t->seq_pos < cur_len - e && t->seq_pos != 0x7FFFFFFFu + n)
             break;
         start = t->seq_pos >= 0x7FFFFFFFu;
-        t->seq_pos = start ? chain.carry : t->seq_pos - cur_len;   /* (a start: 0; a section in: its carry) */
+        t->seq_pos = start ? chain.carry : t->seq_pos - (cur_len - e);   /* (a start: 0; a section in: its carry) */
+        t->ext = (uint16_t)(start ? 0u : e);            /* (the next one longer by as much: the grid kept) */
         if (t->jump_to && !start) {                     /* (0.6.42) JUMP: the step it names */
             t->seq_idx = (uint16_t)((t->jump_to - 1u) % (len ? len : 1u));
             t->rev = 0;
@@ -1675,6 +1705,7 @@ static void seq_tick(track_t *t, uint32_t n)
                                             ? rng() % (len ? len : 1u) : seq_src(t, t->seq_idx)];   /* steps, any */
             uint32_t skip = SEQ_ROLLED, i, k;
             uint8_t ja = 0;
+            t->mic = (int8_t)ST_MICRO(s);               /* (0.6.88) its own TIMING (late: seq_step) */
             s = comp_lane(t, s);                        /* (0.6.47) C.LEN: the lane's component on it */
             /* the chance first (the one roll, as seq_step made it): a step that does not play applies no lock; the
              * automation and the locks before the notes, so a note-on reads them (eng_drum's KIT, ..) */

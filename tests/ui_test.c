@@ -2719,7 +2719,7 @@ static int test_presets_knob(void)
         }
     }
     bad += check("#92 PRESETS on STEP, COMP, PATTERN, SHIFT, CHANCE, AUTOMATION: the step cursor; the sound and the steps stay",
-                 cur_ok && n_cur == 10u);   /* (0.6.81: and NOTE; 0.6.82: COMP 2, WHEN; 0.6.87: HUMAN) */
+                 cur_ok && n_cur == 11u);   /* (0.6.81: and NOTE; 0.6.82: COMP 2, WHEN; 0.6.87: HUMAN; 0.6.88: TIMING) */
     bad += check("#94 PRESETS on USER, PROJECT, PHRASES, SONG: the selection (KNOB 1's); nothing loaded", sel_ok);
     bad += check("#94 PRESETS on TOOLS does nothing", tools_ok);
     bad += check("#94 PRESETS elsewhere (EDIT, ENV, LFO, FX, SCL, ARP, MIXER, GLOBAL, ...): the next sound, the steps stay",
@@ -6164,6 +6164,8 @@ static int test_seq_tools(void)
     ok &= str_eq(cur_page()->title, "PLAYHEADS");
     press(B_SEQ); frames(320);
     ok &= str_eq(cur_page()->title, "NOTE");
+    press(B_SEQ); frames(320);
+    ok &= str_eq(cur_page()->title, "TIMING");          /* (0.6.88) */
     press(B_SEQ); frames(320);
     ok &= str_eq(cur_page()->title, "STRETCH");         /* (0.6.85) */
     press(B_SEQ); frames(320);

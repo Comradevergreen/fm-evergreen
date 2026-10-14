@@ -284,6 +284,7 @@ and heating up with its own audio. The selected track is drawn bigger, a muted o
 | NOTE | FOCUS | PITCH | MOVE | LEN |
 | STRETCH | STRETCH (/8 … /2, x2 … x8) | REPEAT (x2 … x8, TO 64) | NUDGE (now) | LEN (before > after) |
 | HUMAN | VEL | TIME | GATE | — |
+| TIMING | STEP | OFFSET (−8/16 … +7/16) | REC Q | — |
 | COMP | STEP | TYPE | (its value) | (its value; RATCH / ECHO: DIV) |
 | COMP 2 | STEP | TYPE (the second component) | (its value) | (its value; ECHO: DIV) |
 | WHEN | STEP | A (WHEN) | B (WHEN) | LEN |
@@ -540,6 +541,12 @@ recorded into the pattern, quantized to its steps, overdubbing. Knob moves on th
   - **KNOB 2 REPEAT**: copies steps 1..LEN after themselves, **x2 … x8** times or **TO 64** (as many whole copies as
     fit), automation and locks too. Four notes become a 64-step bed to record more notes over (live REC overdubs).
   - **KNOB 3 NUDGE**: the whole sequence one step right / left at once, round inside LEN (as TOOLS A3 / B3).
+- **TIMING** (0.6.88, after NOTE): each step's own place off the grid. KNOB 1 the step, KNOB 2 its **OFFSET** in
+  sixteenths of a step, from −8/16 (half a step early) to +7/16 (late); **EDIT** puts it back on the grid. KNOB 3
+  **REC Q**, the track's recording quantize: 100 % (the default) live recording snaps to the grid; lower, the step keeps
+  that much of where you played it (0 %: all of it), early or late. Early steps really sound early: the step before
+  ends that much sooner and the grid is kept. The piano roll draws the notes where they play. A chord shares its
+  step's offset; moving, stretching or repeating steps keeps it; saved with the project.
 - **HUMAN** (0.6.87, after STRETCH): the track plays like a person, each note a little different every time round;
   the steps stay as written. **VEL**: each note's velocity up or down at random (up to ±38 at 100 %). **TIME**: each
   step starts a little late at random (up to 30 ms, never more than a third of the step, never early; a chord's notes

@@ -12,7 +12,7 @@
  *   build/video5/capture_dark build/video5/feat feat;  build/video5/capture_dark build/video5/seq seq
  * tools/video/film.mjs makes the 1080p films from them. */
 #define UI_TEST_NO_MAIN 1
-#define FELUCCA_VERSION "v0.6.87"
+#define FELUCCA_VERSION "v0.6.88"
 #define PF_MS 900u                                   /* (the page's name shown, as on the device) */
 #define UI_NO_DRIFT 0                                /* (the granules, as on the device) */
 #include "ui_test.c"
