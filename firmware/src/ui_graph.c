@@ -143,16 +143,17 @@ static void graph_steps(const track_t *t, uint16_t c)
  * now framed), CHANCE as a bar, RATCH as its parts */
 static uint16_t comp_mark(const step_t *st)
 {
-    if (cp_arp(st)) return heat_col(200);
-    if (st->comp == CP_TRIG) return heat_col(90);
-    if (st->comp > CP_TRIG) return heat_col(20 + (uint32_t)(st->comp - CP_RAND) * 22u);   /* (0.6.42) the others */
+    uint32_t c = st->comp ? st->comp : st->comp2;      /* (0.6.82: the second, when it is the only one) */
+    if (cp_isarp(c)) return heat_col(200);
+    if (c == CP_TRIG) return heat_col(90);
+    if (c > CP_TRIG) return heat_col(20 + (c - CP_RAND) * 22u);   /* (0.6.42) the others */
     if (step_chance(st) < 100u) return T_MID;
     if (step_ratchet(st) > 1u) return T_THEME;
     return 0;
 }
 static void graph_comp(const track_t *t, uint16_t c)
 {
-    uint32_t i, len = (uint32_t)t->p[P_SLEN], v = comp_view();
+    uint32_t i, len = (uint32_t)t->p[P_SLEN], v = comp_view(), ct;
     const step_t *cs = &t->step[ui.cursor];
     int32_t y0 = 4, bh = 14, x, w;
     char b[32];
@@ -172,9 +173,30 @@ static void graph_comp(const track_t *t, uint16_t c)
         if ((mk = comp_mark(st)) != 0 && (!cl || i < cl)) cv_rect(x, y0 + bh + 3, 9, 3, mk);
         if (st->comp == CP_JUMP && CP_JTO(st->carg) / 16u == ui.bank)   /* (0.6.42) JUMP: a line to the step it names */
             cv_line(x + 4, y0 + bh + 4, bar_x(CP_JTO(st->carg)) + 4, y0 + bh + 4, mk);
+        if (st->comp && st->comp2)                      /* (0.6.82) two components: a second mark */
+            cv_rect(x, y0 + bh + 6, 9, 1, comp_mark(&(step_t){.comp = st->comp2}));
         if (i == ui.cursor) cv_rect(x, y0 + bh + 8, 9, 2, T_ACCENT);
         else if (song.playing && i == seq_src(t, t->seq_idx)) cv_rect(x, y0 + bh + 8, 9, 2, T_TEXT);
     }
+    if (comp_slot() == 2u) {                            /* (0.6.82) WHEN: the two, the loop now */
+        static const char *const WN[4] = {"ALWAYS", "ON 1:2", "ON 2:2", "SKIPPED"};
+        uint32_t k;
+        for (k = 0; k < 2u; k++) {
+            uint32_t c = k ? cs->comp2 : cs->comp;
+            str_cpy(b, k ? "B " : "A ", sizeof b);
+            str_cpy(b + 2, c ? COMP_NAMES[COMP_ARPN + c - CP_ARPN] : "-", 12);
+            if (c) { str_cpy(b + str_len(b), "  ", 3); str_cpy(b + str_len(b), WN[CW_OF(cs, k)], 9); }
+            cv_text(PANEL_X0 + 2, 40 + (int32_t)k * 16, &AF_S, b, c ? T_MID : T_DIM);
+        }
+        cv_text(PANEL_X0 + 2, 80, &AF_S, "A SILENCING ONE (TRIG, FILL) WINS", T_DIM);
+        if (song.playing) {
+            str_cpy(b, "LOOP ", sizeof b);
+            fmt_int(b + 5, (int32_t)t->loops + 1);
+            cv_text_r(228, 40, &AF_S, b, t->loops & 1u ? T_THEME : T_ACCENT, T_SURF);
+        }
+        return;
+    }
+    ct = comp_type(cs);
     str_cpy(b, v >= COMP_ARPN && v <= COMP_ARPS ? "ARP " : "", sizeof b);
     str_cpy(b + str_len(b), v ? COMP_NAMES[v] : "NO COMPONENT  K2: TYPE", sizeof b - 8u);
     cv_text(PANEL_X0 + 2, 36, &AF_S, b, v ? T_MID : T_DIM);
@@ -186,12 +208,13 @@ static void graph_comp(const track_t *t, uint16_t c)
     if (v >= COMP_ARPN && v <= COMP_ARPS) {             /* the ladder: one cycle (up to 16 notes), as it plays */
         step_t sh = *cs;
         uint32_t n, lo = 127u, hi = 0u, now = 0xFFu;
+        sh.carg = (uint8_t)comp_arg(cs);
         uint8_t nt[16];
         if (!cs->n) { cv_text(PANEL_X0 + 2, 60, &AF_S, "A STEP WITH NOTES PLAYS IT", T_DIM); return; }
         if (CP_ORD(sh.carg) == 3u) sh.carg = (uint8_t)(sh.carg & ~3u);   /* (RND: drawn UP, the order is the dice's) */
         n = CP_ORD(sh.carg) == 2u ? 2u * 16u : 16u;
         for (i = 0; i < 16u && i < n; i++) {
-            nt[i] = (uint8_t)cp_arp_note(t, &sh, i);
+            nt[i] = (uint8_t)cp_arp_note(t, &sh, ct, sh.carg, i);
             if (nt[i] < lo) lo = nt[i];
             if (nt[i] > hi) hi = nt[i];
         }
@@ -205,7 +228,7 @@ static void graph_comp(const track_t *t, uint16_t c)
                      i == now ? T_ACCENT : heat_col(60 + (uint32_t)(nt[i] - lo) * 150u / (hi > lo ? hi - lo : 1u)), T_SURF);
         }
     } else if (v == COMP_TRIG) {                        /* the loops: a of b filled, the loop now framed */
-        const uint8_t *cd = CP_TRIGS[cs->carg % CP_NTRIG];
+        const uint8_t *cd = CP_TRIGS[comp_arg(cs) % CP_NTRIG];
         uint32_t nb = cd[0] ? cd[1] : 4u, cur = song.playing ? (cd[0] ? t->loops % nb : (t->loops < 3u ? t->loops : 3u)) : 0xFFu;
         w = 24;
         for (i = 0; i < nb; i++) {
@@ -219,7 +242,7 @@ static void graph_comp(const track_t *t, uint16_t c)
             "THE NOTE AT RANDOM IN THE SCALE", "AN OCTAVE UP OR DOWN", "THE REST OF THE LOOP MOVED",
             "THE NOTE GLIDES OVER THE STEP", "REPEATS, EACH SOFTER", "AGAIN ON THE EMPTY STEPS AFTER",
             "THEN TO ANOTHER STEP", "THEN BACK TO STEP 1", "ONLY WHILE [FX] IS HELD", "CUTS WHAT THE TRACK SOUNDS"};
-        int32_t a = cs->carg, cx = PANEL_X0 + PANEL_W / 2;
+        int32_t a = (int32_t)comp_arg(cs), cx = PANEL_X0 + PANEL_W / 2;
         cv_text(PANEL_X0 + 2, 50, &AF_S, SAY[v - COMP_RAND], T_DIM);
         if (v == COMP_RAND || v == COMP_TONAL || v == COMP_OCT) {   /* the span it moves in, the note in the middle */
             int32_t r = v == COMP_RAND ? a * 4 : v == COMP_TONAL ? (a - 7) * 4 : (a % 6u == 1u || a % 6u == 3u ? -24 : 24);
@@ -231,11 +254,12 @@ static void graph_comp(const track_t *t, uint16_t c)
             int32_t d = (a - 12) * 2;
             cv_line_t(PANEL_X0 + 20, 82, PANEL_X0 + PANEL_W - 20, 82 - d, heat_col(200), 3);
         } else if (v == COMP_ECHO) {                    /* the repeats fading */
-            uint32_t h = 2u + (uint32_t)a % 3u;
-            w = (PANEL_W - 8) / (int32_t)h;
+            uint32_t h = 2u + (uint32_t)a % 7u, dv = CT_DIVS[CT_DIV(cs) % CT_NDIV];
+            if (dv && h > dv) h = dv;                    /* (0.6.82) DIV: as many as fit, that far apart */
+            w = (PANEL_W - 8) / (int32_t)(dv ? dv : h);
             for (i = 0; i < h; i++) {
                 int32_t hh = 34 * (int32_t)(h - i) / (int32_t)h;
-                cv_rrect(PANEL_X0 + 4 + (int32_t)i * w, 98 - hh, w - 6, hh, 3, heat_col(200 - i * 40u), T_SURF);
+                cv_rrect(PANEL_X0 + 4 + (int32_t)i * w, 98 - hh, w - 6, hh, 3, heat_col(200 - i * 160u / h), T_SURF);
             }
         }
     } else if (v == COMP_CHANCE) {
@@ -312,8 +336,20 @@ static void graph_morph(const track_t *t)
         a0 = (uint32_t)pos >> 8; a1 = a0 + 1u < RW_BYTE ? a0 + 1u : a0;
         n0 = N_RWAVE[a0]; n1 = N_RWAVE[a1];
     } else {
-        pos = clamp(p[P_E0] * 256 + p[P_MORPH] * 768 / 127, 0, 768);
-        a0 = (uint32_t)pos >> 8; a1 = a0 < 3u ? a0 + 1u : a0;
+        if (p[P_E0] >= 4) {                             /* (0.6.81) PWM SYNC RING SAW3: the WAVE, what MORPH moves */
+            static const char *const WHAT[4] = {"PWM  WIDTH", "SYNC  RATIO", "RING  RATIO", "SAW3  SPREAD"};
+            str_cpy(b, WHAT[(p[P_E0] - 4) & 3], sizeof b);
+            cv_rect(PANEL_X0, 46, PANEL_W, 1, T_RAISE);
+            for (i = 0; i <= 110u; i++) {
+                int32_t x = PANEL_X0 + (int32_t)i * 2, y = 46 - (int32_t)((i * 34u * (uint32_t)p[P_MORPH]) / (110u * 127u)) + 17;
+                if (i) cv_line_t(px, py, x, y, heat_col(80 + (uint32_t)(46 - y + 34) * 2u), 2);
+                px = x; py = y;
+            }
+            cv_text(PANEL_X0 + 2, 90, &AF_S, b, T_MID);
+            return;
+        }
+        pos = clamp(p[P_E0] * 256 + p[P_MORPH] * 768 / 127, 0, 1536);
+        a0 = ((uint32_t)pos >> 8) & 3u; a1 = (a0 + 1u) & 3u;
         n0 = N_ANALOG_WAVE[a0]; n1 = N_ANALOG_WAVE[a1];
     }
     f = pos & 255;
@@ -512,7 +548,14 @@ static void graph_roll(const track_t *t, uint16_t c)
             continue;                                 /* a REST, empty, or a TIE after one */
         st = &seq_steps(t)[s];
         col = s == ui.cursor || si == ui.cursor ? T_ACCENT : step_heat(st, 0, c);   /* (JIANT: as hot as it plays) */
-        if (s == si)
+        if (s == ui.cursor && ui.pr_focus && ui.pr_focus <= st->n && cur_page()->id[0] == 4u) {   /* (0.6.81) SEQ >
+                                                         * NOTE: the chord dimmed, the note in focus lit */
+            step_t one = *st;
+            int32_t yy = -10000;
+            pr_bars(st, s == si ? x + 2 : x - 1, s == si ? 9 : 12, T_MID, 0, &y, s == si ? step_ratchet(st) : 1u);
+            one.n = 1; one.note[0] = st->note[ui.pr_focus - 1u]; one.hit = 0;
+            pr_bars(&one, s == si ? x + 2 : x - 1, s == si ? 9 : 12, T_ACCENT, 1, &yy, s == si ? step_ratchet(st) : 1u);
+        } else if (s == si)
             pr_bars(st, x + 2, 9, col, (st->flags & SF_ACCENT) != 0u, &y, step_ratchet(st));
         else                                          /* a TIE: the bars on through the gap before */
             pr_bars(st, x - 1, 12, col, (st->flags & SF_ACCENT) != 0u, &y, 1u);
@@ -520,6 +563,21 @@ static void graph_roll(const track_t *t, uint16_t c)
             ns->time == ST_NOTE && ns->n && y >= PR_Y0 && y < ybot) {
             int32_t ny = clamp(pr_row_y(ns->note[0]), PR_Y0, ybot - PR_RH);
             cv_line(x + 10, y + 2, x + 14, ny + 2, T_TEXT);   /* the slide into the next note */
+        }
+    }
+    if (ui.entry_open && !ui.ent_arp && ui.ent_nn && ui.ent_len > 1u) {   /* (0.6.81) a chord held, KNOB 1 its length:
+                                                         * the length to be written, outlined from the cursor on */
+        uint32_t k, j;
+        for (k = 0; k < ui.ent_len && k < len; k++) {
+            uint32_t si = (ui.cursor + k) % len;
+            int32_t x;
+            if (si < base || si >= base + ncol) continue;
+            x = PR_X0 + (int32_t)(si - base) * PR_CW;
+            for (j = 0; j < ui.ent_nn; j++) {
+                int32_t y = pr_row_y(ui.ent_notes[j]);
+                if (y < PR_Y0 || y >= ybot) continue;
+                cv_frame(k ? x - 1 : x + 2, y, k ? 13 : 10, PR_RH, T_ACCENT);
+            }
         }
     }
     if (song.g[G_STRN]) {                             /* (0.6.45) ALL TR (SCL 2): the notes sound moved, shown */
@@ -1027,7 +1085,9 @@ static void page_title(char *ti)
                 if (i == ui.page)
                     k = n;
             }
-        pt = PAGES[h].title;                            /* (the section's name: "DLY 2/2", "SLICER 4/4") */
+        pt = str_eq(PAGES[h].title, "FX") ? pg->title : PAGES[h].title;   /* (the section's name: "DLY 2/2", "SLICER
+                                                         * 4/4"; 0.6.81: TRACK's its pages' own, "AUTO PAN 3/3" was
+                                                         * "FX 3/3") */
     } else
     for (i = 0; i < NPAGES; i++)
         if (PAGES[i].fam == pg->fam && page_visible(i)) {
@@ -1285,9 +1345,11 @@ static uint32_t graph_signature(void)
         h = (h ^ ((uint32_t)t->p[P_CLEN] << 8 | (song.playing ? t->cpos : 0xFFu))) * 16777619u;   /* (0.6.47) C.LEN */
         for (i = ui.bank * 16u; i < ui.bank * 16u + 16u && i < NSTEP; i++)
             h = (h ^ ((uint32_t)t->step[i].comp << 8 | t->step[i].carg | (uint32_t)t->step[i].probability << 16 |
-                      (uint32_t)t->step[i].flags << 24)) * 16777619u;
+                      (uint32_t)t->step[i].flags << 24 | (uint32_t)t->step[i].comp2 << 4)) * 16777619u;
         h = (h ^ (comp_view() * 977u + cs->carg + (song.playing ? t->arp_k * 131u + t->loops * 7u + t->arp_from : 0u))) *
             16777619u;
+        h = (h ^ ((uint32_t)cs->carg2 | (uint32_t)cs->cwhen << 8 | (uint32_t)cs->ctime << 16 | comp_slot() << 24)) *
+            16777619u;                                  /* (0.6.82) COMP 2, WHEN */
     }
     if (pg->scope == SC_ENGINE && (ENGINES[t->eng_req % NENGINES] == &ENG_WHEEL || t->eng_req % NENGINES == ENGI_FM6 ||
                                    (FELUCCA_FM4 && t->eng_req % NENGINES == ENGI_DIGITAL)))
@@ -1312,6 +1374,8 @@ static uint32_t graph_signature(void)
             pr_follow(t);
             h = (h ^ (proll.lo + 1u)) * 16777619u;
             h = (h ^ pr_held()) * 16777619u;
+            h = (h ^ (ui.pr_focus | (uint32_t)pg->id[0] << 4 | (ui.entry_open ? (uint32_t)ui.ent_len << 8 : 0u) |
+                      (uint32_t)ui.ent_nn << 16)) * 16777619u;   /* (0.6.81: NOTE's focus, the length being held) */
         }
     }
     return h;

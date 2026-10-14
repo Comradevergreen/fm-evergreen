@@ -172,6 +172,7 @@ static struct {
     uint8_t bank;                /* SEQ: 16-step bank (follows the cursor) */
     uint8_t cursor;              /* SEQ: step being edited (STEP page KNOB 1 moves it) */
     uint8_t entry_open;          /* SEQ: keys held since the first press of this entry */
+    uint8_t pr_focus;            /* (0.6.81) SEQ > NOTE: the chord (0) or its note 1..4 (ui_input.c note_edit) */
     uint8_t ent_len, ent_arp, ent_res, ent_ord, ent_oct, ent_nn;   /* (0.6.37) that entry while held (ui_input.c
                                   * seq_entry): KNOB 1 its LEN in steps; ARP pressed: arpeggiated, KNOB 1 the steps a
                                   * note (RES), 2 the ORDER, 3 the octaves; the keys' notes in order of pitch */
@@ -421,7 +422,7 @@ static int page_visible(uint32_t i)
         return 0;                                       /* (0.6.30) LOAD ECO: no SLICER, no chorus: their pages gone */
     if (PAGES[i].graph == GR_MORPH) {                   /* (0.6.45) MORPH: ANALOG's plain waves, PHASE, LOFI's (not BYTE FLOAT) */
         uint32_t e = TSEL->eng_req % NENGINES;
-        return (e == ENGI_ANALOG && TSEL->p[P_E0] < 4) || ENGINES[e] == &ENG_PHASE ||
+        return e == ENGI_ANALOG || ENGINES[e] == &ENG_PHASE ||   /* (0.6.81: every ANALOG WAVE) */
                (ENGINES[e] == &ENG_LOFI && TSEL->p[P_E1] < RW_BYTE);
     }
     if (PAGES[i].graph == GR_PATS || PAGES[i].graph == GR_CHANCE)   /* (0.6.37) PHRASES, a step's CHANCE: out of the */
@@ -533,7 +534,26 @@ enum { COMP_OFF, COMP_CHANCE, COMP_RATCH, COMP_ARPN, COMP_ARPQ, COMP_ARPS, COMP_
        COMP_BEND, COMP_ECHO, COMP_PULSE, COMP_JUMP, COMP_REV, COMP_FILL, COMP_KILL, COMP_N };   /* (CP_* in order) */
 static const char *const COMP_NAMES[COMP_N] = {"OFF", "CHANCE", "RATCH", "NOTES", "SEQ", "SCALE", "TRIG", "RAND", "OCT",
                                                "TONAL", "BEND", "ECHO", "PULSE", "JUMP", "REV", "FILL", "KILL"};
-static uint32_t comp_view(void)                         /* the TYPE shown for the cursor step (read once a step) */
+/* (0.6.82) the COMP pages one after another: COMP (the step's first component), COMP 2 (its second), WHEN (theirs, and
+ * the step's LEN): which this is (0..2) */
+static uint32_t comp_slot(void)
+{
+    uint32_t i = ui.page, k = 0;
+    while (i > 0u && k < 2u && PAGES[i - 1u].graph == GR_COMP)
+        i--, k++;
+    return k;
+}
+static uint32_t comp_type(const step_t *s) { return comp_slot() == 1u ? s->comp2 : s->comp; }   /* (the page's) */
+static uint32_t comp_arg(const step_t *s) { return comp_slot() == 1u ? s->carg2 : s->carg; }
+static uint32_t comp_view1(void);
+static uint32_t comp_view(void)                         /* the TYPE shown for the cursor step: COMP 2's its second */
+{
+    const step_t *s = &TSEL->step[ui.cursor];
+    if (comp_slot() == 1u)
+        return s->comp2 ? COMP_ARPN + s->comp2 - CP_ARPN : COMP_OFF;
+    return comp_view1();
+}
+static uint32_t comp_view1(void)                        /* the first's, CHANCE and RATCH (read once a step) */
 {
     const step_t *s = &TSEL->step[ui.cursor];
     uint32_t at = (uint32_t)ui.cursor + 1u + (uint32_t)song.sel * 64u;
@@ -554,6 +574,7 @@ static void step_clear(step_t *st)
     st->vel = 0;
     st->hit = st->acc = 0;
     st->comp = st->carg = 0;
+    st->comp2 = st->carg2 = st->cwhen = st->ctime = 0;
     st->probability = 0;
 }
 
@@ -642,6 +663,7 @@ static void cursor_set(int32_t c)
     ui.cursor = (uint8_t)((c % len + len) % len);
     ui.bank = (uint8_t)(ui.cursor / 16u);
     ui.entry_open = 0;
+    ui.pr_focus = 0;                                    /* (0.6.81: another step, the whole chord) */
 }
 
 static void cursor_fix(void)                           /* LEN got shorter: onto the last step */

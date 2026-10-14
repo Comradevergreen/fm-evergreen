@@ -9,7 +9,7 @@
  *   cc -O2 -w -Ibuild/gen -Ifirmware/src -Itests -o build/video5/capture_promo tools/video/capture_promo.c -lm
  *   build/video5/capture_promo build/video5/promo */
 #define UI_TEST_NO_MAIN 1
-#define FELUCCA_VERSION "v0.6.81"
+#define FELUCCA_VERSION "v0.6.82"
 #define PF_MS 900u
 #define UI_NO_DRIFT 0
 #include "ui_test.c"
@@ -277,7 +277,7 @@ static void at_beat(uint32_t q)
     }
     if (q == B(28, 0)) {
         trk[T_BLIP].p[P_MPAT] = 0;
-        fg_set[T_LEAD][0] = (fg_set_t){3, FG_REV, -3}; page(T_LEAD, "FUGUE");
+        fg_set[T_LEAD][0] = (fg_set_t){3, FG_REV, -3}; page(T_LEAD, "PLAYHEADS");
         caption(q, "SEQUENCER", "FUGUE", "three more playheads on the lead|rate · direction · interval in the scale", 0,
                 "head 2 · 1/2 · REV · -3|counterpoint from one line");
     }

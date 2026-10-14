@@ -354,6 +354,8 @@ static uint32_t fm4_convert(int16_t *p, uint8_t *v)
     p[P_E7] = FM4_TO_FM6[near];
     for (k = P_FM1_ATK; k <= P_FM4_LEVEL; k++)
         p[k] = (k - P_FM1_ATK) % 5u == 2u || (k - P_FM1_ATK) % 5u == 4u ? 127 : 0;
+    p[P_ATK] = p[P_DEC] = p[P_REL] = 0;                 /* (0.6.81) the ADSR is in the operators' envelopes now: the */
+    p[P_SUS] = 127;                                    /* track's on FM6 neutral (it moves the carriers' since) */
     return FM4_TO_FM6[near];
 }
 

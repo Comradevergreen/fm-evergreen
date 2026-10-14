@@ -144,6 +144,12 @@ static __attribute__((noinline)) void tf_run(track_t *t, int32_t *out, uint32_t 
     for (i = 0; i < NVOICE; i++)
         if (t->v[i].active && t->v[i].stage && t->v[i].stage < 4u && (t->v[i].env >> 9) > envq)
             envq = t->v[i].env >> 9;
+    {   /* (0.6.81) the sweep kept where it is heard: CUT moved down so its top stays open at most (an open filter swept
+         * up did nothing: half an LFO's cycle, a whole ENV, lost) */
+        int32_t span = (p[P_LD_FLT] < 0 ? -p[P_LD_FLT] : p[P_LD_FLT]) * 256 + (p[P_ED_FLT] > 0 ? p[P_ED_FLT] * 256 : 0);
+        if (cut + span > (127 << 8))
+            cut = (127 << 8) - span > 0 ? (127 << 8) - span : 0;
+    }
     cut += ((mulq15(t->lfo_val, t->lfo_fade) * p[P_LD_FLT]) >> 7) + ((envq * p[P_ED_FLT]) >> 7);
     {
         uint32_t on = !(ft == FT_LP && fo == TF_DRY && cut >= (127 << 8) && !p[P_FRES]), was = tf_on[ti];
@@ -493,6 +499,13 @@ static void glide_set(track_t *t, voice_t *v, int glide)
     }
 }
 
+/* (JIANT 0.6.81) SCL TRANS: the track's every note this many semitones up or down as it sounds (the keys, the
+ * sequence, MIDI, the ARP alike; recorded as played: it was the keys' alone, the sequence did not follow). Kits: none */
+static int32_t trk_trans(const track_t *t)
+{
+    const engine_t *e = ENGINES[t->engine % NENGINES];
+    return e->oneshot || e->keys ? 0 : t->p[P_TRANS];
+}
 static void voice_start(track_t *t, voice_t *v, uint32_t note, uint32_t vel, int glide)
 {
     const engine_t *e = ENGINES[t->engine];
@@ -506,7 +519,8 @@ static void voice_start(track_t *t, voice_t *v, uint32_t note, uint32_t vel, int
     v->active = 1;
     v->stage = 1;
     v->age = ++vage;
-    v->pitch16 = (int32_t)note * 16 + t->pfx_rpit;      /* (pfx.c RANDOM: 0 but while it is held) */
+    v->fin = 0;
+    v->pitch16 = ((int32_t)note + trk_trans(t)) * 16 + t->pfx_rpit;   /* (pfx.c RANDOM: 0 but while it is held) */
     v->mvel = t->m_vel;                                 /* mod.c: the note's VEL and RAND */
     v->mrnd = t->m_rnd;
     t->m_vi = (uint8_t)(v - t->v);
@@ -560,7 +574,7 @@ static void mono_play(track_t *t, uint32_t note, uint32_t vel, int retrig, int g
             }
         } else {                                            /* legato: new pitch, same envelope */
             v->note = (uint8_t)note;
-            v->pitch16 = (int32_t)note * 16 + t->pfx_rpit;
+            v->pitch16 = ((int32_t)note + trk_trans(t)) * 16 + t->pfx_rpit;
             v->mvel = t->m_vel;
             v->mrnd = t->m_rnd;
             if (vel > v->vel && nv == 1u)
@@ -948,6 +962,10 @@ static uint32_t track_render(track_t *t, int32_t *out, uint32_t n)
                 m.amp1 = m.amp1 * (int32_t)(t->xf - 1u) / (int32_t)(t->xf_len ? t->xf_len : XF_BLOCKS);
             else if (t->xin)                            /* (0.6.41) in, linear, after a switch or a dip */
                 m.amp1 = m.amp1 * (int32_t)(t->xin_len - t->xin + 1u) / (int32_t)(t->xin_len + 1u);
+            if (v->fin) {                               /* (0.6.81) a chord glide's new note, in */
+                m.amp1 = m.amp1 * (int32_t)(v->fin_len - v->fin + 1u) / (int32_t)(v->fin_len + 1u);
+                v->fin--;
+            }
             m.amp0 = v->env_out;
             v->env_out = m.amp1;
         }
@@ -978,6 +996,8 @@ static uint32_t track_render(track_t *t, int32_t *out, uint32_t n)
     if (nr && e == &ENG_DRUM)                           /* (0.6.16) DRUM-X: DRV and the knee on the kit's sum */
         drum_bus(t, out, n);
     if (nr && (t->p[P_FTYPE] || t->p[P_FCUT] < 127 || t->p[P_FRES] || tf_on[(uint32_t)(t - trk) % NTRK] ||
+               ((e == &ENG_WHEEL || e == &ENG_DRUM) && (t->p[P_LD_FLT] || t->p[P_ED_FLT])) ||   /* (0.6.81: their
+                                                         * only filter, for the LFO / ENV -> FILTER) */
                tf_xb[(uint32_t)(t - trk) % NTRK] || tf_cmb[(uint32_t)(t - trk) % NTRK]))
         /* (JIANT 0.5) the FILTER (track_post); 0.6.8: and a block more to leave the chain (track_filter's fade) */
         track_post(t, e, out, n);

@@ -25,8 +25,9 @@
  *         the user presets, up_fm6.c). A stored value is never a bank slot: projects, user presets and motion
  *         load 9..40 as 8, OWN (params.c param_fit), and the patch comes with the project / the record. So a
  *         project or a preset made with a bank voice sounds the same after the bank is replaced
- * The operator envelopes are the voice's amplitude and end it (engine_t.ownenv / done): the track's ADSR,
- * ENV DEST and the matrix's ENV do nothing here. The track's FLT moves MLVL (ENV / LFO -> FLT, the
+ * The operator envelopes are the voice's amplitude and end it (engine_t.ownenv / done): (0.6.81) the track's ADSR
+ * moves the carriers' (ATK DEC REL slower, SUS below 127 their sustain level; 0 0 127 0 the patch as it is); ENV DEST
+ * and the matrix's ENV do nothing here. The track's FLT moves MLVL (ENV / LFO -> FLT, the
  * matrix's CUT), SHP the feedback, PIT the pitch (bend, glide, tune: the voice's pitch and fine factor).
  * Six voices per part at most (engine_t.poly).
  *
@@ -51,6 +52,7 @@ static struct {                                  /* the patch through the macros
     uint8_t p[FP_SIZE + 1u];
     uint8_t gen, alg, fb, ok;
     int16_t e[7];                                /* P_E0..P_E6 it was made with */
+    int16_t env[4];                              /* (0.6.81) .. and the track's ATK DEC SUS REL */
     int32_t dt[6];                               /* DTUN: per operator, Q24 log2 */
 } fm6_eff[NTRK];
 static fm6_lfo_t fm6_lfo[NTRK];
@@ -308,13 +310,17 @@ static void fm6_sync(const track_t *t)
     if (fm6_eff[tr].ok && fm6_eff[tr].gen == fm6_pgen[tr]) {
         for (k = 0; k < 7u && fm6_eff[tr].e[k] == e[k]; k++)
             ;
-        if (k == 7u)
+        for (j = 0; k == 7u && j < 4u && fm6_eff[tr].env[j] == t->p[P_ATK + j]; j++)
+            ;
+        if (k == 7u && j == 4u)
             return;
     }
     fm6_eff[tr].gen = fm6_pgen[tr];
     memcpy(fm6_eff[tr].p, fm6_patch[tr], FP_SIZE);
     for (k = 0; k < 7u; k++)
         fm6_eff[tr].e[k] = e[k];
+    for (j = 0; j < 4u; j++)
+        fm6_eff[tr].env[j] = t->p[P_ATK + j];
     {
         uint8_t *p = fm6_eff[tr].p;
         uint32_t alg = e[0] >= 1 && e[0] <= 32 ? (uint32_t)e[0] - 1u : p[FP_ALG] & 31u;
@@ -330,6 +336,16 @@ static void fm6_sync(const track_t *t)
             if ((car >> ki) & 1u) {                          /* carriers 0, +1, -1, +2, -2, +3 steps apart */
                 static const int8_t SPREAD[6] = {0, 1, -1, 2, -2, 3};
                 fm6_eff[tr].dt[ki] = SPREAD[n++] * step;
+                /* (0.6.81) the track's ADSR on the carriers, relative to the patch (its defaults 0 0 127 0: the
+                 * patch as it is; the ENV page did nothing on FM6): ATK DEC REL slow their stages, SUS sets the
+                 * sustain level */
+                op[FP_R1] = (uint8_t)clamp(op[FP_R1] - clamp(t->p[P_ATK], 0, 127) * 90 / 127, 1, 99);
+                op[FP_R1 + 1u] = (uint8_t)clamp(op[FP_R1 + 1u] - clamp(t->p[P_DEC], 0, 127) * 90 / 127, 1, 99);
+                if (t->p[P_SUS] < 127)                       /* (SUS below the top: the carriers' sustain level, so
+                                                         * a decaying patch can be held too) */
+                    op[FP_L1 + 2u] = (uint8_t)(t->p[P_SUS] > 0 ? 50 + clamp(t->p[P_SUS], 0, 126) * 49 / 126 : 0);   /* (the
+                                                         * EG's levels are logarithmic, ~0.75 dB a step: 50..99) */
+                op[FP_R1 + 3u] = (uint8_t)clamp(op[FP_R1 + 3u] - clamp(t->p[P_REL], 0, 127) * 90 / 127, 1, 99);
                 continue;
             }
             if (!op[FP_MODE])
@@ -411,7 +427,9 @@ static void fm6_render(track_t *t, voice_t *v, int32_t *out, uint32_t len, const
         fm6_note_key(n, p, 0);
     lf = fm6_note_logfreq(m->pitch16 + (p[FP_TRNSP] - 24) * 16, m->fine);
     fb = clamp(fm6_eff[tr].fb + ((m->shape - (64 << 8)) >> 11), 0, 7);
-    lvl = clamp(t->p[P_E2], -64, 63) * 24 + clamp(m->cutoff >> 8, -150, 150) * 16;   /* microsteps */
+    lvl = clamp(t->p[P_E2], -64, 63) * 24 + clamp(m->cutoff >> 8, -150, 150) * 16 +   /* microsteps */
+          clamp((m->shape - (64 << 8)) >> 8, -150, 150) * 16;   /* (0.6.81) SHAPE: the modulators' depth too (the
+                                                         * feedback alone was silent where its operator is quiet) */
     if (!fm6_note_compute(n, p, bus, fm6_lfo_v[tr], fm6_lfo_d[tr], lf, fm6_eff[tr].alg, fb, fm6_eff[tr].dt, lvl << 16))
         return;                                         /* every carrier below the threshold */
     /* the voice's amplitude ramp x VOICE_FS (one carrier at full: VOICE_FS / 2), six voices in unison ~ one */

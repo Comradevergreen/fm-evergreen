@@ -418,6 +418,17 @@ static int components(void)
     n = run_notes(t, 2u * step_len(t, 0) / CTL - 1u, nt, sizeof nt);
     bad += check("ARP SEQ x2: the pattern's notes (60 67), then the next step's own 67", n == 3u && nt[0] == 60u &&
                  nt[1] == 67u && nt[2] == 67u);
+    /* (0.6.82) SEQ: the pattern's melody in its order (67 60 64), NOTES would sort it */
+    t = one_step(1, 0);
+    t->p[P_SLEN] = 3;
+    t->step[0] = (step_t){{67}, 1, ST_NOTE, 0, 100};
+    t->step[0].comp = CP_ARPQ; t->step[0].carg = CP_ARG(0u, 2u, 0u);
+    t->step[1] = (step_t){{60}, 1, ST_NOTE, 0, 100};
+    t->step[2] = (step_t){{64}, 1, ST_NOTE, 0, 100};
+    seq_start();
+    n = run_notes(t, step_len(t, 0) / CTL - 1u, nt, sizeof nt);
+    bad += check("ARP SEQ x4: the pattern's melody as it plays: 67 60 64 67", n == 4u && nt[0] == 67u && nt[1] == 60u &&
+                 nt[2] == 64u && nt[3] == 67u);
     /* TRIG: the loops it plays on (a one-step loop: a loop a pass) */
     {
         static const uint8_t COND[4] = {0, 1, 10, 11}, WANT[4] = {2, 2, 1, 3};   /* 1:2 2:2 FIRST NOT FIRST, 4 loops */
@@ -664,9 +675,112 @@ static int components2(void)
     return bad;
 }
 
+
+/* (0.6.82) two components a step, WHEN, DIV, LEN */
+static uint32_t onsets(track_t *t, uint32_t *at, uint32_t max)   /* one step: the blocks its note-ons start on */
+{
+    uint32_t b, n = 0, k;
+    for (b = 0; b + 1u < step_len(t, 0) / CTL; b++) {
+        uint32_t v0 = vage;
+        seq_tick(t, CTL);
+        for (k = 0; k < NVOICE; k++)
+            if (t->v[k].age > v0 && n < max) { at[n++] = b; break; }
+    }
+    return n;
+}
+static int components3(void)
+{
+    int bad = 0, ok;
+    uint8_t nt[64];
+    uint32_t n, at[8], nb;
+    track_t *t;
+    project_store_t st;
+    static const uint8_t P1[1] = {60};
+    /* WHEN: OCT +1 on odd loops (1:2): 72 60 72 60; on even (2:2): 60 72 ..; SKIP: never */
+    t = pat(1, P1); t->step[0].comp = CP_OCT; t->step[0].carg = 0; t->step[0].cwhen = CW_ODD;
+    n = run_steps(t, 4, nt, sizeof nt);
+    ok = n == 4u && nt[0] == 72u && nt[1] == 60u && nt[2] == 72u && nt[3] == 60u;
+    t = pat(1, P1); t->step[0].comp = CP_OCT; t->step[0].carg = 0; t->step[0].cwhen = CW_EVEN;
+    n = run_steps(t, 4, nt, sizeof nt);
+    ok &= n == 4u && nt[0] == 60u && nt[1] == 72u && nt[2] == 60u && nt[3] == 72u;
+    t = pat(1, P1); t->step[0].comp = CP_OCT; t->step[0].carg = 0; t->step[0].cwhen = CW_SKIP;
+    n = run_steps(t, 3, nt, sizeof nt);
+    ok &= n == 3u && nt[0] == 60u && nt[1] == 60u && nt[2] == 60u;
+    bad += check("WHEN: OCT on 1:2 loops, on 2:2 loops, SKIP never", ok);
+    /* two components: ECHO x2 and OCT +1: both, two notes a step an octave up; the second one's WHEN its own */
+    t = pat(1, P1); t->step[0].comp = CP_ECHO; t->step[0].carg = 0; t->step[0].comp2 = CP_OCT; t->step[0].carg2 = 0;
+    n = run_steps(t, 2, nt, sizeof nt);
+    ok = n == 4u && nt[0] == 72u && nt[1] == 72u && nt[2] == 72u && nt[3] == 72u;
+    t = pat(1, P1); t->step[0].comp = CP_ECHO; t->step[0].carg = 0; t->step[0].comp2 = CP_OCT; t->step[0].carg2 = 0;
+    t->step[0].cwhen = CW_EVEN << 2;
+    n = run_steps(t, 2, nt, sizeof nt);
+    ok &= n == 4u && nt[0] == 60u && nt[1] == 60u && nt[2] == 72u && nt[3] == 72u;
+    bad += check("two components a step: ECHO x2 + OCT +1 together; the second's WHEN on its own", ok);
+    /* the one that silences wins: OCT and TRIG FIRST: the octave on the first loop, then nothing */
+    t = pat(1, P1); t->step[0].comp = CP_OCT; t->step[0].carg = 0; t->step[0].comp2 = CP_TRIG; t->step[0].carg2 = 10;
+    n = run_steps(t, 3, nt, sizeof nt);
+    ok = n == 1u && nt[0] == 72u;
+    t->step[0].cwhen = CW_SKIP << 2;                      /* (the TRIG skipped: it plays) */
+    seq_start();
+    n = run_steps(t, 3, nt, sizeof nt);
+    ok &= n == 3u;
+    bad += check("a TRIG beside an OCT: the TRIG keeps it silent (FIRST: one loop only); the TRIG SKIPped: every loop", ok);
+    /* DIV: ECHO x3 a step/4 apart: the third at half the step (shared out: at two thirds); RATCH x4 at 1/2: two */
+    nb = step_len(pat(1, P1), 0) / CTL;
+    t = pat(1, P1); t->step[0].comp = CP_ECHO; t->step[0].carg = 1; t->step[0].ctime = 3;
+    n = onsets(t, at, 8);
+    ok = n == 3u && at[2] * 10u < nb * 6u && at[2] * 10u > nb * 4u;
+    t = pat(1, P1); t->step[0].comp = CP_ECHO; t->step[0].carg = 1;
+    n = onsets(t, at, 8);
+    ok &= n == 3u && at[2] * 10u > nb * 6u;
+    t = pat(1, P1); step_set_ratchet(&t->step[0], 4); t->step[0].ctime = 1;
+    n = onsets(t, at, 8);
+    ok &= n == 2u;
+    t = pat(1, P1); t->step[0].comp = CP_ECHO; t->step[0].carg = 6;   /* (x8 now) */
+    n = onsets(t, at, 8);
+    ok &= n == 8u;
+    bad += check("DIV: ECHO x3 a step/4 apart (the third at half the step); RATCH x4 at 1/2 plays two; ECHO x8", ok);
+    /* LEN 4/16: the note off by half the step (the track's GATE holds it longer) */
+    t = pat(1, P1); t->p[P_SGATE] = 120; t->step[0].ctime = 4u << 3;
+    run_notes(t, nb / 2u, nt, sizeof nt);
+    ok = t->seq_n == 0u;
+    t = pat(1, P1); t->p[P_SGATE] = 120;
+    run_notes(t, nb / 2u, nt, sizeof nt);
+    ok &= t->seq_n == 1u;
+    bad += check("LEN 4/16: the note's gate a quarter step (GATE 120 holds it on)", ok);
+    /* a project keeps them (FUNC) */
+    t = pat(1, P1); t->step[0].comp2 = CP_REV; t->step[0].carg2 = 2; t->step[0].cwhen = 0xBu; t->step[0].ctime = 0x5Cu;
+    project_capture(&proj_scratch);
+    ok = proj_pack(&st, &proj_scratch);
+    t->step[0].comp2 = t->step[0].carg2 = t->step[0].cwhen = t->step[0].ctime = 0;
+    ok &= proj_import(&proj_scratch, &st, sizeof st) && !project_restore_runtime(&proj_scratch);
+    ok &= t->step[0].comp2 == CP_REV && t->step[0].carg2 == 2u && t->step[0].cwhen == 0xBu && t->step[0].ctime == 0x5Cu;
+    bad += check("a project keeps the second component, WHEN, DIV and LEN (FUNC round trip)", ok);
+    /* SEQ > COMP 2 and WHEN: their knobs */
+    ui_power_on();
+    t = TSEL;
+    t->step[0] = (step_t){{60, 64, 67}, 3, ST_NOTE, 0, 100};
+    go_page(GR_COMP); frame();
+    ui.page++; page_entered(); frame();
+    ok = str_eq(cur_page()->title, "COMP 2") && comp_slot() == 1u && comp_view() == COMP_OFF;
+    turn(EN_K2, 1);                                       /* OFF -> NOTES (no CHANCE, RATCH here) */
+    ok &= t->step[0].comp2 == CP_ARPN && !t->step[0].comp;
+    turn(EN_K2, 4); turn(EN_K2, 4);                       /* .. ECHO */
+    ok &= t->step[0].comp2 == CP_ECHO;
+    turn(EN_K4, 1); turn(EN_K4, 1); turn(EN_K4, 1);       /* DIV 1/4 */
+    ok &= CT_DIV(&t->step[0]) == 3u;
+    ui.page++; page_entered(); frame();
+    ok &= str_eq(cur_page()->title, "WHEN") && comp_slot() == 2u;
+    turn(EN_K3, 1); turn(EN_K3, 1);                       /* B 2:2 */
+    turn(EN_K4, 1); turn(EN_K4, 1); turn(EN_K4, 1); turn(EN_K4, 1);   /* LEN 4/16 */
+    ok &= CW_OF(&t->step[0], 1u) == CW_EVEN && CW_OF(&t->step[0], 0u) == CW_ALWAYS && CT_LEN(&t->step[0]) == 4u;
+    bad += check("SEQ > COMP 2: a second component (ECHO, DIV 1/4); WHEN: B on 2:2, LEN 4/16", ok);
+    return bad;
+}
+
 int main(void)
 {
-    int bad = play() + projects() + presets() + screens() + components() + components2();
+    int bad = play() + projects() + presets() + screens() + components() + components2() + components3();
     printf("%s\n", bad ? "RATCHET TEST FAILED" : "ratchet tests passed");
     return bad != 0;
 }

@@ -1200,8 +1200,10 @@ static void dice_one(void)
                 t->p[P_CHOR] = (int16_t)rr(20, 50);
             }
         }
-        t->p[P_REV] = (int16_t)clamp(t->p[P_REV], 0, 127);   /* (0.6.81: a wet genre in SPACE took a pad's or a texture's
-        t->p[P_DLY] = (int16_t)clamp(t->p[P_DLY], 0, 127);    * send past 127: a piece no SAVE could store, SAVE FORMAT ERROR) */
+        /* (0.6.81: a wet genre in SPACE took a pad's or a texture's send past 127: a piece no SAVE could store, SAVE FORMAT
+         * ERROR; 0.6.82: the DLY's clamp had ended up inside this comment) */
+        t->p[P_REV] = (int16_t)clamp(t->p[P_REV], 0, 127);
+        t->p[P_DLY] = (int16_t)clamp(t->p[P_DLY], 0, 127);
         if (r == RL_PAD && chance(40)) t->p[P_CHOR] = (int16_t)rr(20, 60);
         load_begin(t, LOAD_PAT);
         track_defaults_steps(t);

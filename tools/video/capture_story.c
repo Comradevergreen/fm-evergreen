@@ -9,7 +9,7 @@
  *   cc -O2 -w -Ibuild/gen -Ifirmware/src -Itests -o build/video5/capture_story tools/video/capture_story.c -lm
  *   build/video5/capture_story build/video5/story_weird weird;  ... build/video5/story_project project */
 #define UI_TEST_NO_MAIN 1
-#define FELUCCA_VERSION "v0.6.81"
+#define FELUCCA_VERSION "v0.6.82"
 #define PF_MS 900u
 #define UI_NO_DRIFT 0
 #include "ui_test.c"
@@ -330,7 +330,7 @@ static void weird_beat(uint32_t q)
     if (q == B(15, 0)) {
         trk[T_BRASS].p[P_MPAT] = 0; trk[T_BRASS].p[P_MSND] = 0;
         fg_set[T_LEAD][0] = (fg_set_t){7, FG_FWD, 4}; fg_set[T_LEAD][1] = (fg_set_t){3, FG_REV, -3};
-        page(T_LEAD, "FUGUE");
+        page(T_LEAD, "PLAYHEADS");
         caption(q, "CABEZALES", "FUGUE", "tres cabezales más leyendo la misma melodía|otra velocidad, otra dirección", 0,
                 "x2 hacia adelante, una quinta arriba|1/2 hacia atrás|canon en la escala");
     }

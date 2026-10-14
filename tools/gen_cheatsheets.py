@@ -7,7 +7,7 @@ import html, os
 
 R = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(R, 'docs', 'cheatsheet')
-VERSION = 'v0.6.81'
+VERSION = 'v0.6.82'
 
 HEAT = ['#22d3ee', '#3b82f6', '#8b5cf6', '#d946ef', '#ef4444', '#ff7a00', '#facc15', '#f4f1ea']
 
@@ -150,7 +150,7 @@ def controls():
         ('GLO', 'MIXER · GLOBAL · SYSTEM', 'MUTE · SOLO · LEVEL · TAP'),
         ('SAVE', 'PRESETS · USER · PROJECT · ARRANGE · TOOLS', 'SONG layer'),
         ('ARP', 'ARP · ARP 2', '—'),
-        ('SEQ', 'STEP · COMP · PATTERN · AUTOMATION · AUTO LIST · MUTATE · FUGUE · SHIFT', 'SEQ TOOLS'),
+        ('SEQ', 'STEP · PATTERN · SHIFT · PLAYHEADS · NOTE · COMP · COMP 2 · WHEN · AUTOMATION · AUTO LIST · MUTATE', 'SEQ TOOLS'),
         ('REC', '(transport)', 'CLEAR · CLICK'),
     ]
     t2 = ('<table class="pages"><tr><th>BUTTON</th><th>TAP: ITS PAGES, ONE PER TAP</th><th>HOLD</th></tr>' +
@@ -226,7 +226,7 @@ def controls():
         ('ENV', HEAT[0], [('ENV', 'ATK DEC SUS REL'), ('ENV DEST', 'FILTER PITCH SHAPE LOOP')]),
         ('LFO', HEAT[1], [('LFO', 'RATE WAVE PHASE FADE'), ('LFO DEST', 'PITCH FILTER SHAPE AMP'), ('MOD', 'SLOT SRC DEST AMT'),
                           ('MSEQ', 'STEP LEVEL LEN SLEW'), ('MSEQ 2', 'DIV - - -')]),
-        ('FX', HEAT[5], [('FX', 'DIST CHORUS DLY REV'), ('DIST', 'DIST TYPE TONE -'), ('AUTOPAN', 'DEPTH RATE SYNC WAVE'), ('SLICER', 'MODE PAT RATE DEPTH'),
+        ('FX', HEAT[5], [('FX', 'DIST CHORUS DLY REV'), ('DIST', 'DIST TYPE TONE -'), ('AUTO PAN', 'DEPTH RATE SYNC WAVE'), ('SLICER', 'MODE PAT RATE DEPTH'),
                          ('SL BUS', 'T1 T2 T3 T4'), ('SL BUS 2', 'T5 T6 FX -'), ('SL PITCH', 'STEP PITCH LEN QUANT'),
                          ('DLY', 'TIME FEEDBK TONE MIX'), ('DLY 2', 'WIDE PITCH SPRAY -'),
                          ('REVERB', 'TYPE SIZE DAMP PRE/AIR'), ('REVERB 2', 'MOD RATE FILT WIDE'),
@@ -240,9 +240,9 @@ def controls():
                            ('SOUND 4', 'SOUND LAYER FEEDBK SEND'), ('STEREO', 'IMAGE - - -')]),
         ('SCL · ARP', HEAT[2], [('SCL', 'ROOT SCALE QUANT TRANS'), ('SCL 2', 'ALL TR - - -'), ('CHORD', 'CHORD VOICING STRUM -'), ('ARP', 'MODE RATE OCT GATE'),
                                 ('ARP 2', 'SWING PROB HOLD ORDER')]),
-        ('SEQ', HEAT[4], [('STEP', 'STEP NOTE TIME FLAG'), ('STEP · DRUM', 'STEP LANE HIT ACC'), ('COMP', 'STEP TYPE VAL VAL'), ('PATTERN', 'LEN DIV SWING GATE'), 
+        ('SEQ', HEAT[4], [('STEP', 'STEP NOTE TIME FLAG'), ('STEP · DRUM', 'STEP LANE HIT ACC'), ('COMP', 'STEP TYPE VAL VAL'), ('COMP 2', 'STEP TYPE VAL VAL'), ('WHEN', 'STEP A B LEN'), ('PATTERN', 'LEN DIV SWING GATE'), 
                           ('AUTOMATION', 'PLAY EVENT LOCK CLEAR'), ('AUTO LIST', 'ROW STEP PARAM VALUE'),
-                          ('MUTATE', 'SOUND PATTERN AMOUNT MODE'), ('FUGUE', 'HEAD RATE DIR INTVL'), ('SHIFT', 'OFFSET PITCH CHANCE C.LEN')]),
+                          ('MUTATE', 'SOUND PATTERN AMOUNT MODE'), ('PLAYHEADS', 'HEAD RATE DIR INTVL'), ('NOTE', 'FOCUS PITCH MOVE LEN'), ('SHIFT', 'OFFSET PITCH CHANCE C.LEN')]),
         ('GLO · SAVE', HEAT[6], [('MIXER', 'LEVEL PAN REV MUTE'), ('GLOBAL', 'BPM SWING CLOCK TUNE'),
                                  ('SYSTEM', 'TRACKS LOAD ROUTE CPU'), ('PRESETS', 'No. ENG FAV LIST'),
                                  ('USER', 'SLOT LOAD ERASE SAVE'), ('PROJECT', 'PROJ SECT LOAD SAVE'), ('ARRANGE', 'ROW SECT BARS SCENE'),
@@ -333,7 +333,7 @@ def sound():
     b.append('<div class="grid g3" style="margin-top:22px">')
     b.append(card('SEQUENCER', HEAT[4],
                   '<p>64 steps a track, up to 4 notes a step, piano roll and drum grid. <b>Hold a step + turn a knob</b>: '
-                  'a parameter lock. Step recording: hold a chord + KNOB 1 its length; + ARP: arpeggiated (K1 rate, K2 order, K3 oct). COMP: a component a step (CHANCE, RATCH, ARP NOTES / SEQ / SCALE, TRIG, RAND, OCT, TONAL, BEND, ECHO, PULSE, JUMP, REV: TIMES x1 x2 1:2, FILL, KILL). SHIFT\'s CHANCE thins the whole track; C.LEN gives the components a length of their own (they drift over the steps). REC + knobs while playing: '
+                  'a parameter lock. Step recording: hold a chord + KNOB 1 its length; + ARP: arpeggiated (K1 rate, K2 order, K3 oct). COMP / COMP 2: two components a step (CHANCE, RATCH, ARP NOTES / SEQ / SCALE, TRIG, RAND, OCT, TONAL, BEND, ECHO, PULSE, JUMP, REV: TIMES x1 x2 1:2, FILL, KILL); a TRIG or FILL wins; RATCH / ECHO: DIV; WHEN: each one\'s loops (ALWAYS 1:2 2:2 SKIP) and the step\'s LEN. SHIFT\'s CHANCE thins the whole track; C.LEN gives the components a length of their own (they drift over the steps). REC + knobs while playing: '
                   'automation (64 records a section, MOTION page plays / clears them, AUTO LIST edits them).</p>'
                   '<h4>PATTERN · SHIFT</h4>' + knobs('LEN', 'DIV', 'SWG', 'GATE') + knobs('OFS', 'PIT', 'CHN', 'CLEN')))
     b.append(card('SCALE · ARP', HEAT[0],
@@ -355,7 +355,7 @@ def sound():
     b.append(card('PER TRACK', HEAT[5], '<h4>FX · SENDS</h4>' + knobs('DST', 'CHO', 'DLY', 'REV') +
                   '<h4>DIST</h4>' + knobs('DST', 'TYPE', 'TONE', '-') +
                   '<p style="margin-top:6px">SOFT · HARD · FOLD · CRUSH · RECT.</p>'
-                  '<h4>AUTOPAN</h4>' + knobs('DEPTH', 'RATE', 'SYNC', 'WAVE') +
+                  '<h4>AUTO PAN</h4>' + knobs('DEPTH', 'RATE', 'SYNC', 'WAVE') +
                   '<p style="margin-top:6px">The track\'s pan swung L–R around its PAN. SYNC <b>BEAT</b>: RATE 4 BARS … 1/32, '
                   'in time with the bar; <b>FREE</b>: in Hz. SIN · TRI · SAW · SQR · S&amp;H, never a click.</p>'))
     b.append(card('SLICER · ONE ON A BUS', HEAT[3], knobs('SLCR', 'PAT', 'RATE', 'DEPTH') +

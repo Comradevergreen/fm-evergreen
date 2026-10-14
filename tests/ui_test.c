@@ -2698,7 +2698,7 @@ static int test_presets_knob(void)
         }
     }
     bad += check("#92 PRESETS on STEP, COMP, PATTERN, SHIFT, CHANCE, AUTOMATION: the step cursor; the sound and the steps stay",
-                 cur_ok && n_cur == 6u);
+                 cur_ok && n_cur == 9u);   /* (0.6.81: and NOTE; 0.6.82: COMP 2, WHEN) */
     bad += check("#94 PRESETS on USER, PROJECT, PHRASES, SONG: the selection (KNOB 1's); nothing loaded", sel_ok);
     bad += check("#94 PRESETS on TOOLS does nothing", tools_ok);
     bad += check("#94 PRESETS elsewhere (EDIT, ENV, LFO, FX, SCL, ARP, MIXER, GLOBAL, ...): the next sound, the steps stay",
@@ -3576,11 +3576,11 @@ static int test_quick_layers(void)
         t1 = cur_page()->title;
         turn(EN_PRESET, 2); frame();                    /* two on */
         t3 = cur_page()->title;
-        ok = !ui.home && str_eq(t1, "FX") && str_eq(t3, "AUTOPAN") && msg_is("AUTOPAN");   /* (0.6.9: after DIST) */
+        ok = !ui.home && str_eq(t1, "FX") && str_eq(t3, "AUTO PAN") && msg_is("AUTO PAN");   /* (0.6.9: after DIST) */
         frames(600);                                    /* (held past HOLD: still no map) */
         ok &= !ui.layer;
         btn_up(B_FX); frames(4);
-        ok &= str_eq(cur_page()->title, "AUTOPAN") && !ui.layer;   /* (no tap: no next page) */
+        ok &= str_eq(cur_page()->title, "AUTO PAN") && !ui.layer;   /* (no tap: no next page) */
         btn_down(B_FX); frame(); turn(EN_PRESET, -1); frame(); btn_up(B_FX); frames(4);
         ok &= str_eq(cur_page()->title, "DIST");
         btn_down(B_FX); frame(); turn(EN_PRESET, -9); frame(); btn_up(B_FX); frames(4);
@@ -4813,10 +4813,10 @@ static int test_play_leds(void)
     song.octave = 1;
     ok &= play_leds() == 0u;                           /* (C4 and E4 below the keys an octave up) */
     song.octave = 0;
-    t->p[P_TRANS] = 2;
-    ok &= play_leds() == (1u << 5 | 1u << 9);
+    t->p[P_TRANS] = 2;                                 /* (0.6.81: TRN moves the sequence as the keys: the same keys) */
+    ok &= play_leds() == (1u << 7 | 1u << 11);
     t->p[P_TRANS] = 0;
-    bad += check("the keys follow the octave and TRN; notes off the keyboard are not shown", ok);
+    bad += check("the keys follow the octave (TRN moves the keys and the sequence alike); notes off the keyboard are not shown", ok);
     t->p[P_QUANT] = 1;                                 /* SNAP in C major: C#4 rounds down to C4 too */
     t->p[P_SCALE] = 1;
     t->p[P_ROOT] = 0;
@@ -6081,20 +6081,27 @@ static int test_seq_tools(void)
     bad += check("  elsewhere (PHRASES, SONG, MIXER, HOME, ENV) SEQ held is a tap: no SONG, no map", ok);
     ui_power_on();
     go_page(GR_ROLL); frame();
+    press(B_SEQ); frames(320);                         /* (0.6.81: STEP, PATTERN, SHIFT, PLAYHEADS, NOTE, COMP, AUTOMATION,
+                                                        * AUTO LIST, MUTATE) */
+    ok = str_eq(cur_page()->title, "PATTERN") && msg_is("HOLD [SEQ] QUICK");
     press(B_SEQ); frames(320);
-    ok = cur_page()->graph == GR_COMP && msg_is("HOLD [SEQ] QUICK");   /* (0.6.39: STEP, COMP, PATTERN) */
+    ok &= str_eq(cur_page()->title, "SHIFT");
     press(B_SEQ); frames(320);
-    ok &= cur_page()->graph == GR_STEPS;
+    ok &= str_eq(cur_page()->title, "PLAYHEADS");
     press(B_SEQ); frames(320);
-    ok &= cur_page()->graph == GR_MOTION;             /* (0.6.37: PATTERN, AUTOMATION; PHRASES, CHANCE out, SHIFT last) */
+    ok &= str_eq(cur_page()->title, "NOTE");
+    press(B_SEQ); frames(320);
+    ok &= str_eq(cur_page()->title, "COMP");
+    press(B_SEQ); frames(320);
+    ok &= str_eq(cur_page()->title, "COMP 2");          /* (0.6.82) */
+    press(B_SEQ); frames(320);
+    ok &= str_eq(cur_page()->title, "WHEN");
+    press(B_SEQ); frames(320);
+    ok &= cur_page()->graph == GR_MOTION;
     press(B_SEQ); frames(320);
     ok &= cur_page()->graph == GR_EVENTS;
     press(B_SEQ); frames(320);
-    ok &= cur_page()->graph == GR_MUTATE;              /* (0.6.43) */
-    press(B_SEQ); frames(320);
-    ok &= cur_page()->graph == GR_FUGUE;               /* (0.6.52) */
-    press(B_SEQ); frames(320);
-    ok &= str_eq(cur_page()->title, "SHIFT");
+    ok &= cur_page()->graph == GR_MUTATE;
     bad += check("  a tap on STEP: the next SEQ page, as always (the hint until the layer was opened)", ok);
     {   /* (0.6.37) SHIFT: OFFSET PITCH CHANCE, the last SEQ page; CHANCE 0 skips every step, 100 % (stored 0) none */
         char v[12]; const char *u; step_t st; track_t *t3 = &trk[0];
@@ -6646,19 +6653,20 @@ static int test_fx_sections(void)
     go_title("FX"); frame();
     press(B_FX); frames(600);
     ok = str_eq(cur_page()->title, "DIST");
-    press(B_FX); press(B_FX); frames(600);             /* two quick taps from DIST: SLICER */
-    ok &= str_eq(cur_page()->title, "SLICER");
-    press(B_FX); press(B_FX); frames(600);
+    press(B_FX); press(B_FX); frames(600);             /* two quick taps from DIST: DLY (0.6.81: the SLICER after CHORUS) */
     ok &= str_eq(cur_page()->title, "DLY");
     press(B_FX); frames(600);
     page_title(ti);
     ok &= str_eq(cur_page()->title, "DLY 2") && str_eq(ti, "DLY 2/2");
+    go_title("CHORUS"); frame();
+    press(B_FX); press(B_FX); frames(600);
+    ok &= str_eq(cur_page()->title, "SLICER");
     go_title("MASTER"); frame();
     press(B_FX); press(B_FX); frames(600);             /* (past MASTER: round to the first) */
     ok &= str_eq(cur_page()->title, "FX");
     page_title(ti);
     ok &= str_eq(ti, "FX 1/3");
-    bad += check("FX sections: tap next page, two quick taps next section (TRACK SLICER DELAY REVERB CHORUS MASTER), 'DLY 2/2'", ok);
+    bad += check("FX sections: tap next page, two quick taps next section (TRACK DELAY REVERB CHORUS SLICER MASTER), 'DLY 2/2'", ok);
     ui_power_on();
     return bad;
 }
@@ -7545,6 +7553,135 @@ static int test_chord(void)
     return bad;
 }
 
+/* (0.6.81) SCL TRANS: the sequence's notes sound TRANS semitones away as the keys' do (it moved the keys only) */
+static int test_trans_seq(void)
+{
+    int ok, bad = 0;
+    uint32_t i, f = 0;
+    track_t *t;
+    ui_power_on();
+    t = &trk[0];
+    t->p[P_VOICE] = V_POLY;
+    t->p[P_TRANS] = 2;
+    t->step[0].time = ST_NOTE; t->step[0].n = 1; t->step[0].note[0] = 60; t->step[0].vel = 100;
+    transport_req = 1; ui_input();
+    for (i = 0; i < 8u; i++) events_block(CTL);
+    for (i = 0; i < NVOICE; i++)
+        if (t->v[i].active && t->v[i].gate && t->v[i].note == 60u) f = (uint32_t)t->v[i].pitch16;
+    ok = f == 62u * 16u;
+    transport_req = 2; ui_input();
+    bad += check("SCL TRANS +2: the sequence's C4 sounds D4 (as a key's would)", ok);
+    t->p[P_TRANS] = 0;
+    ui_power_on();
+    return bad;
+}
+/* (0.6.81) SEQ > NOTE: FOCUS a note of the cursor's chord, PITCH it alone, MOVE it into the next step, LEN the chord's
+ * TIEs, EDIT deletes the note in focus (the chord stays); MOVE with the whole chord in focus takes its length along */
+static int test_note_page(void)
+{
+    int bad = 0, ok;
+    track_t *t;
+    ui_power_on();
+    t = &trk[0];
+    t->p[P_SLEN] = 16;
+    memset(t->step, 0, sizeof t->step);
+    { uint32_t i; for (i = 0; i < NSTEP; i++) t->step[i].time = ST_REST; }
+    t->step[0].time = ST_NOTE; t->step[0].n = 3; t->step[0].note[0] = 60; t->step[0].note[1] = 64; t->step[0].note[2] = 67;
+    t->step[0].vel = 100;
+    go_title("NOTE"); frame();
+    cursor_set(0);
+    turn(EN_K1, 1); turn(EN_K1, 1);                    /* FOCUS: note 2 (E4) */
+    ok = ui.pr_focus == 2u;
+    turn(EN_K2, 1);                                     /* PITCH: E4 -> F4, the others stay */
+    ok &= t->step[0].note[1] == 65u && t->step[0].note[0] == 60u && t->step[0].note[2] == 67u;
+    turn(EN_K3, 1);                                     /* MOVE: F4 into step 2 */
+    ok &= t->step[0].n == 2u && t->step[1].time == ST_NOTE && t->step[1].n == 1u && t->step[1].note[0] == 65u &&
+          ui.cursor == 1u;
+    bad += check("SEQ > NOTE: FOCUS one note of a chord, PITCH it alone, MOVE it into the next step", ok);
+    cursor_set(0);                                      /* the chord C4 G4: LEN 3, then MOVE it right (F4 changes places) */
+    turn(EN_K4, 1); turn(EN_K4, 1);
+    ok = t->step[0].time == ST_NOTE && t->step[1].time == ST_NOTE && t->step[2].time == ST_REST;   /* (blocked by F4) */
+    t->step[1].time = ST_REST; t->step[1].n = 0;
+    turn(EN_K4, 1); turn(EN_K4, 1);
+    ok &= t->step[1].time == ST_TIE && t->step[2].time == ST_TIE && t->step[3].time != ST_TIE;
+    turn(EN_K3, 1);                                     /* the chord and its TIEs a step right */
+    ok &= t->step[0].time == ST_REST && t->step[1].time == ST_NOTE && t->step[1].n == 2u && t->step[3].time == ST_TIE &&
+          ui.cursor == 1u;
+    bad += check("SEQ > NOTE: LEN adds TIEs over empty steps only; MOVE the chord takes its length along", ok);
+    turn(EN_K1, 1);                                     /* FOCUS note 1, EDIT: deleted, the chord's other note stays */
+    press(B_EDIT); frame();
+    ok = t->step[1].time == ST_NOTE && t->step[1].n == 1u && t->step[1].note[0] == 67u;
+    bad += check("SEQ > NOTE: EDIT deletes the note in focus, the rest of the chord stays", ok);
+    ui_power_on();
+    return bad;
+}
+/* (0.6.81) a POLY chord with SLD glides into the next: its voices go on (not struck again), their pitch moving to the
+ * new notes low to high; 3 -> 4 notes: the extra one starts from the nearest old note and fades in; 4 -> 3: the one
+ * left glides on, released */
+static int test_chord_glide(void)
+{
+    int bad = 0, ok;
+    track_t *t;
+    uint32_t i, k, ages[NVOICE], nact = 0, fresh = 0, fading = 0, rel = 0;
+    ui_power_on();
+    t = &trk[0];
+    set_engine_of(t, ENGI_ANALOG); apply_preset_to(t, 1); t->engine = t->eng_req;
+    t->p[P_VOICE] = V_POLY; t->p[P_SLEN] = 4; t->p[P_SGATE] = 120; t->p[P_SUS] = 120;
+    for (i = 0; i < NSTEP; i++) { memset(&t->step[i], 0, sizeof t->step[i]); t->step[i].time = ST_REST; }
+    t->step[0].time = ST_NOTE; t->step[0].n = 3; t->step[0].note[0] = 60; t->step[0].note[1] = 64; t->step[0].note[2] = 67;
+    t->step[0].vel = 100; t->step[0].flags = SF_SLIDE;
+    t->step[1].time = ST_NOTE; t->step[1].n = 4; t->step[1].note[0] = 62; t->step[1].note[1] = 65; t->step[1].note[2] = 69;
+    t->step[1].note[3] = 72; t->step[1].vel = 100; t->step[1].flags = SF_SLIDE;
+    t->step[2].time = ST_NOTE; t->step[2].n = 3; t->step[2].note[0] = 60; t->step[2].note[1] = 64; t->step[2].note[2] = 67;
+    t->step[2].vel = 100;
+    transport_req = 1; ui_input();
+    for (i = 0; i < 8u; i++) events_block(CTL);
+    for (k = 0; k < NVOICE; k++) ages[k] = t->v[k].active ? t->v[k].age : 0u;
+    while (t->seq_idx == 0u) events_block(CTL);         /* into step 2 */
+    for (i = 0; i < 2u; i++) events_block(CTL);
+    for (k = 0; k < NVOICE; k++) {
+        voice_t *v = &t->v[k];
+        if (!v->active || !v->gate) continue;
+        nact++;
+        if (ages[k] && v->age != ages[k]) continue;
+        if (!ages[k] || v->age != ages[k]) { fresh++; fading += v->fin > 0; }
+    }
+    ok = nact == 4u && fresh == 1u && fading == 1u;
+    {   /* the old voices: same ages, gliding toward D F A (pitch_cur between) */
+        uint32_t kept = 0;
+        for (k = 0; k < NVOICE; k++)
+            if (ages[k] && t->v[k].active && t->v[k].age == ages[k] && t->v[k].pitch16 != t->v[k].pitch_cur) kept++;
+        ok &= kept == 3u;
+    }
+    bad += check("chord glide (SLD, POLY): 3 -> 4 notes, three voices glide on unstruck, the fourth starts and fades in", ok);
+    while (t->seq_idx == 1u) events_block(CTL);         /* into step 3: four -> three */
+    for (i = 0; i < 2u; i++) events_block(CTL);
+    for (k = 0, nact = 0; k < NVOICE; k++) {
+        if (t->v[k].active && t->v[k].gate) nact++;
+        else if (t->v[k].active && t->v[k].stage == 3u) rel++;   /* (C5 left: the nearest new note is C5 itself) */
+    }
+    ok = nact == 3u && rel == 1u;
+    bad += check("chord glide: 4 -> 3 notes, the one left goes to its nearest new note as it is released", ok);
+    transport_req = 2; ui_input();
+    for (i = 0; i < 40u; i++) events_block(CTL);
+    for (i = 0; i < 3u; i++) t->step[i].flags = 0;    /* (0.6.81) no SLD: GLIDE on the POLY track glides by itself */
+    t->p[P_GLIDE] = 64; t->p[P_SGATE] = 60;            /* (a short GATE: held to the next chord all the same) */
+    transport_req = 1; ui_input();
+    for (i = 0; i < 8u; i++) events_block(CTL);
+    for (k = 0; k < NVOICE; k++) ages[k] = t->v[k].active && t->v[k].gate ? t->v[k].age : 0u;
+    while (t->seq_idx == 0u) events_block(CTL);
+    for (i = 0; i < 2u; i++) events_block(CTL);
+    {
+        uint32_t kept = 0;
+        for (k = 0; k < NVOICE; k++)
+            if (ages[k] && t->v[k].active && t->v[k].gate && t->v[k].age == ages[k]) kept++;
+        ok = kept == 3u;
+    }
+    bad += check("chord glide by itself: GLIDE on a POLY track, no SLD, a short GATE: the chord's voices go on into the next", ok);
+    transport_req = 2; ui_input();
+    ui_power_on();
+    return bad;
+}
 static int test_midi_song_pc(void)
 {
     int bad = 0, ok;
@@ -8759,6 +8896,9 @@ int main(void)
     bad += test_dice_all();
     bad += test_midi_song_pc();
     bad += test_chord();
+    bad += test_trans_seq();
+    bad += test_note_page();
+    bad += test_chord_glide();
     bad += test_fx_sections();
     bad += test_clear_ghosts();
     bad += test_dx_sound();
