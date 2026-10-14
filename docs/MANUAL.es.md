@@ -270,7 +270,7 @@ a la derecha); apretá OCT+ para ejecutarla.
 | USER | SLOT (U01–U32) | LOAD (acción) | ERASE (acción) | SAVE (acción) |
 | PROJECT | PROJ (1–8) | SECT (A–D) | LOAD (acción) | SAVE (acción) |
 | ARRANGE | ROW | SECT (en END: STOP / x2–x8 / LOOP) | BARS | SCENE |
-| TOOLS | cualquier perilla o PRESETS elige de la lista: CLEAR SEQ, INIT SOUND, DELETE ROW, CLEAR SONG, NEW PROJECT | | | |
+| TOOLS | cualquier perilla o PRESETS elige de la lista: CLEAR SEQ, INIT SOUND, DELETE ROW, CLEAR SONG, NEW PROJECT, CPU TEST | | | |
 
 **ARP** (por pista)
 
@@ -620,7 +620,11 @@ tienen. Cada pista conserva su propio TRANS.
   como un arpa.
 
 Al soltar la tecla terminan todas las notas del acorde (las que faltaban del strum ya no entran). El acorde se graba en
-el paso y el ARP lo arpegia. Una pista de batería, MONO, LEGATO y UNISON tocan solo la fundamental. Las notas MIDI
+el paso, en vivo y en la grabación por pasos (0.6.83: la grabación por pasos tomaba solo la nota de la tecla), y el ARP
+lo arpegia. Se encienden las teclas de todas las notas que suenan, la forma completa del acorde también: sirve para ver
+y aprender los acordes. Con **STRUM** (0.6.84) un acorde grabado entra entero en el paso donde bajaste la tecla (sus
+notas siguientes ya no se van al paso de al lado), y el secuenciador rasguea cada paso con acorde de la misma manera,
+de grave a agudo (dentro de la mitad del gate del paso). STRUM en 0: los acordes de los pasos como antes, todos juntos. Una pista de batería, MONO, LEGATO y UNISON tocan solo la fundamental. Las notas MIDI
 suenan tal cual llegan.
 
 ### ARP
@@ -637,6 +641,7 @@ las notas sonando después de soltarlas; el acorde siguiente las reemplaza.
 | Los pasos y la automatización de la pista seleccionada | **REC mantenido + F3**, o SAVE > TOOLS > CLEAR SEQ, o SEQ TOOLS F3 |
 | Los pasos y la automatización de las seis pistas, y el carril de punch-in | **SEQ mantenido + REC**, después OCT+ |
 | **Todo** (NEW PROJECT): cada pista con el sonido por defecto de su motor (seco, FM6 con la voz init), sin pasos ni automatización; mezcla, efectos, tempo y SLICER por defecto; el arreglo vacío, las macros en 0, el kit DRUM-X de fábrica. Quedan los proyectos guardados, los presets de usuario, el MENU, CLOCK, TUNE y MIDI | **MENU > SYSTEM > INIT SYSTEM** o **SAVE > TOOLS > 5 NEW PROJECT**, después OCT+ (UNDO devuelve la música) |
+| *(no borra)* Una canción de prueba pesada, para medir la CPU en el equipo y escuchar si hay clics (cada pista viva con acordes de cuatro notas, dos componentes por paso y glides largos, el kit con todos los carriles, todos los FX, 160 BPM) | **SAVE > TOOLS > 6 CPU TEST**, OCT+, después PLAY (UNDO devuelve tu música) |
 | Solo la automatización de una parte en la pista seleccionada | **REC mantenido + FX / EDIT / ENV / LFO / SCL / ARP / GLO** |
 | La automatización de la pista, conservando los pasos | SEQ TOOLS **F4 CLR AUTO**, o SEQ > AUTOMATION > CLEAR |
 

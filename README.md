@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.6.83).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.6.84).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 > ⚡ **New in 0.6.71: both cores (experimental).** The FM-1's chip has two processor cores and JIANT used one. Now the
 > second renders some of the synth tracks while the first renders the rest, so the same song leaves much more room
@@ -510,6 +510,21 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### v0.6.84
+- **CHORD records whole in step recording too.** Armed and stopped on STEP, a key now writes the chord it plays (it
+  wrote its note alone); live recording already did.
+- **STRUM records cleanly.** A strummed chord went into the grid note by note, its later notes falling into the next
+  step, irregular and ugly. Now the chord goes whole into the step where the key went down, and the sequencer strums
+  every chord step back as you played it, low to high (STRUM 0: all at once, as before).
+- **The keys show every note sounding**, a chord's whole shape included (CHORD, LATCH, a chord gliding, MIDI): see
+  the chords as you play them, and learn them.
+- **SAVE > TOOLS > 6 CPU TEST**: builds a heavy test song (chords of four, two step components a step, long glides,
+  the kit on every lane, every FX, 160 BPM) to measure the CPU on the device and listen for clicks; UNDO brings your
+  music back.
+- **CPU watched on Linux too**: the tests count the audio path's instructions under valgrind (every engine, every
+  reverb, a full mix, the sequencer at its heaviest, the CPU TEST song) and fail on +8 %; the Mac-only reverb check
+  follows what the FM-1's own code measures.
 
 ### v0.6.83
 - **Long, smooth chord slides.** The glide into a chord now lasts as long as that chord, its TIEs included (GLIDE: how
