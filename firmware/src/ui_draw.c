@@ -864,6 +864,21 @@ static void draw_columns(void)
                     used && song_idx.scene[song_cur][row].on ? VAL(3u) : T_DIM, -1, ICON_MIX);   /* (JIANT) */
         return;
     }
+    if (cur_page()->graph == GR_SHAPE) {               /* (0.6.85) STRETCH REPEAT NUDGE, the LEN after */
+        int32_t k = shp_k();
+        uint32_t len = (uint32_t)clamp(TSEL->p[P_SLEN], 1, NSTEP);
+        val[0] = k > 0 ? 'x' : '/';
+        fmt_int(val + 1, k > 0 ? k : -k);
+        draw_column(0, "STRETCH", val, "", ui.act == 1u ? VAL(0u) : T_DIM, (int32_t)shp_i * 1000 / 13, ICON_X_REPEAT);
+        if (shp_r < 7u) { val[0] = 'x'; fmt_int(val + 1, (int32_t)shp_r + 2); }
+        else str_cpy(val, "TO 64", sizeof val);
+        draw_column(1, "REPEAT", val, "", ui.act == 2u ? VAL(1u) : T_DIM, (int32_t)shp_r * 1000 / 7, ICON_X_PATTERN);
+        draw_column(2, "NUDGE", "< >", "", VAL(2u), -1, ICON_ORDER);
+        fmt_int(val, (int32_t)len);
+        if (ui.act == 1u || ui.act == 2u) { str_cpy(val + str_len(val), ">", 2); fmt_int(val + str_len(val), (int32_t)shp_len()); }
+        draw_column(3, "LEN", val, "", VAL(3u), -1, ICON_AUTO);
+        return;
+    }
     if (cur_page()->graph == GR_FUGUE) {               /* (0.6.52) HEAD RATE DIR INTERVAL */
         const fg_set_t *f = &fg_set[song.sel % NTRK][fg_ui % FG_HEADS];
         fmt_int(val, (int32_t)(fg_ui % FG_HEADS) + 2);

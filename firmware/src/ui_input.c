@@ -888,6 +888,27 @@ static void comp_knob(uint32_t slot, int32_t steps)
         *ap = CP_ARG(CP_ORD(*ap), (uint32_t)i / 4u, (uint32_t)i % 4u);
     }
 }
+/* (0.6.85) SEQ > STRETCH: KNOB 1 STRETCH /8 .. /2, x2 .. x8; KNOB 2 REPEAT x2 .. x8, TO 64 (turning one picks it); OCT+
+ * does the picked one to the selected track (UNDO: GLO + G4); KNOB 3 NUDGE: the whole sequence a step left / right now.
+ * ui_tools.c tl_stretch, tl_repeat, tl_shift */
+static uint32_t tl_len(const track_t *t);
+static void tl_take(const track_t *t);
+static void tl_shift(track_t *t, uint32_t len, uint32_t d);
+static uint32_t tl_stretch(track_t *t, int32_t k);
+static uint32_t tl_repeat(track_t *t, uint32_t k);
+static void shape_knob(uint32_t slot, int32_t steps)
+{
+    int32_t d = steps > 0 ? 1 : -1;
+    if (slot == 0u) { shp_i = (uint8_t)clamp((int32_t)shp_i + d, 0, 13); ui.act = 1; }
+    else if (slot == 1u) { shp_r = (uint8_t)clamp((int32_t)shp_r + d, 0, 7); ui.act = 2; }
+    else if (slot == 2u) {
+        track_t *t = TSEL;
+        if (chain_busy()) { ui_message("STOP TO EDIT"); return; }
+        tl_take(t);
+        tl_shift(t, tl_len(t), d > 0 ? 1u : tl_len(t) - 1u);
+        ui_message(d > 0 ? "NUDGED RIGHT" : "NUDGED LEFT");
+    }
+}
 static void edit_param(uint32_t slot, int32_t steps)
 {
     int16_t *vp;
@@ -896,6 +917,10 @@ static void edit_param(uint32_t slot, int32_t steps)
     int32_t v;
     if (pg->graph == GR_COMP) {
         comp_knob(slot, steps);
+        return;
+    }
+    if (pg->graph == GR_SHAPE) {                        /* (0.6.85) STRETCH, REPEAT (picked, OCT+ does it), NUDGE (now) */
+        shape_knob(slot, steps);
         return;
     }
     if (pg->graph == GR_FUGUE) {                        /* (0.6.52) HEAD, RATE, DIR, INTERVAL */
@@ -1079,6 +1104,21 @@ static void act_do(void)
     }
     if (cur_page()->graph == GR_EVENTS) {
         ev_oct();
+        return;
+    }
+    if (cur_page()->graph == GR_SHAPE) {                  /* (0.6.85) STRETCH / REPEAT, the music before kept (UNDO) */
+        track_t *t = TSEL;
+        uint32_t n, was = (uint32_t)clamp(t->p[P_SLEN], 1, NSTEP);
+        char m[24];
+        if (chain_busy()) { ui_message("STOP TO EDIT"); return; }
+        if (c == 1u && was >= NSTEP) { ui_message("LEN 64: NO ROOM"); return; }
+        undo_mark();
+        n = c == 0u ? tl_stretch(t, shp_k()) : tl_repeat(t, shp_r < 7u ? shp_r + 2u : 0u);
+        if (!n) { ui_message(c == 1u ? "LEN 64: NO ROOM" : "NOTHING TO DO"); return; }
+        str_cpy(m, "LEN ", sizeof m); fmt_int(m + 4, (int32_t)was); str_cpy(m + str_len(m), " > ", 4);
+        fmt_int(m + str_len(m), (int32_t)n);
+        if (c == 0u && shp_k() > 0 && was * (uint32_t)shp_k() > NSTEP) str_cpy(m + str_len(m), " CUT", 5);
+        ui_message(m);
         return;
     }
     if (cur_page()->graph == GR_TOOLS) {
