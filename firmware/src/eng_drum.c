@@ -360,6 +360,7 @@ static void drum_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const 
     if (((uint32_t)v->s[0] & (DV_NLANE - 1u)) == DV_BELL)   /* (JIANT 0.6.49) the cowbell 4 dB under the others: it */
         lv = lv * 100 / 127;                                  /* stood out of every kit (its LEVEL at 100 % is this) */
     uint32_t i;
+    int32_t lfo_pit, lfo_shp;
     vmod_t ml;                                           /* (only its amplitude ramp is read: voice_amp) */
     if (!L)
         return;
@@ -385,8 +386,14 @@ static void drum_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const 
     }
     if (n > CTL)
         n = CTL;
-    dx_run(&dx_kit[(uint32_t)v->s[0] & (DV_NLANE - 1u)], &L->x, p[P_E0] + dx_mot_v + L->rm,
-           L->st * 16 + L->rt + (p[P_E1] - 64) * 3 + t->pfx_pit,
+    {   /* (0.6.81) the part's LFO on the kit (its hits never had a vmod's pitch or shape): PITCH tunes it, SHAPE moves
+         * MORPH (both did nothing on DRUM) */
+        int32_t lfo = mulq15(t->lfo_val, t->lfo_fade);
+        lfo_pit = (lfo * p[P_LD_PIT] * 3) >> 15;
+        lfo_shp = (lfo * p[P_LD_SHP]) >> 15;
+    }
+    dx_run(&dx_kit[(uint32_t)v->s[0] & (DV_NLANE - 1u)], &L->x, p[P_E0] + dx_mot_v + L->rm + lfo_shp,
+           L->st * 16 + L->rt + (p[P_E1] - 64) * 3 + t->pfx_pit + lfo_pit,
            p[P_E3] - 64, p[P_E2] - 64, p[P_E4] - 64, p[P_E6], p[P_E5], y, n);
     {                                                    /* PUNCH: the boost before the knee (driven into it, as
                                                           * Drum Buss), the tail's cut on the amplitude ramp */

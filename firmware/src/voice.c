@@ -144,6 +144,12 @@ static __attribute__((noinline)) void tf_run(track_t *t, int32_t *out, uint32_t 
     for (i = 0; i < NVOICE; i++)
         if (t->v[i].active && t->v[i].stage && t->v[i].stage < 4u && (t->v[i].env >> 9) > envq)
             envq = t->v[i].env >> 9;
+    {   /* (0.6.81) the sweep kept where it is heard: CUT moved down so its top stays open at most (an open filter swept
+         * up did nothing: half an LFO's cycle, a whole ENV, lost) */
+        int32_t span = (p[P_LD_FLT] < 0 ? -p[P_LD_FLT] : p[P_LD_FLT]) * 256 + (p[P_ED_FLT] > 0 ? p[P_ED_FLT] * 256 : 0);
+        if (cut + span > (127 << 8))
+            cut = (127 << 8) - span > 0 ? (127 << 8) - span : 0;
+    }
     cut += ((mulq15(t->lfo_val, t->lfo_fade) * p[P_LD_FLT]) >> 7) + ((envq * p[P_ED_FLT]) >> 7);
     {
         uint32_t on = !(ft == FT_LP && fo == TF_DRY && cut >= (127 << 8) && !p[P_FRES]), was = tf_on[ti];
@@ -978,6 +984,8 @@ static uint32_t track_render(track_t *t, int32_t *out, uint32_t n)
     if (nr && e == &ENG_DRUM)                           /* (0.6.16) DRUM-X: DRV and the knee on the kit's sum */
         drum_bus(t, out, n);
     if (nr && (t->p[P_FTYPE] || t->p[P_FCUT] < 127 || t->p[P_FRES] || tf_on[(uint32_t)(t - trk) % NTRK] ||
+               ((e == &ENG_WHEEL || e == &ENG_DRUM) && (t->p[P_LD_FLT] || t->p[P_ED_FLT])) ||   /* (0.6.81: their
+                                                         * only filter, for the LFO / ENV -> FILTER) */
                tf_xb[(uint32_t)(t - trk) % NTRK] || tf_cmb[(uint32_t)(t - trk) % NTRK]))
         /* (JIANT 0.5) the FILTER (track_post); 0.6.8: and a block more to leave the chain (track_filter's fade) */
         track_post(t, e, out, n);

@@ -250,7 +250,9 @@ static __attribute__((noinline)) void lofi_byte_render(track_t *t, voice_t *v, i
                                                       const tsvf_t *flt)
 {
     const int16_t *p = t->p;
-    uint32_t f = (uint32_t)p[P_E2] >> 2, a = 1u + ((uint32_t)p[P_E3] >> 3), tt = (uint32_t)v->s[2], tf = v->ph[0], i;
+    uint32_t vr = (uint32_t)clamp(p[P_E3] + ((m->shape - (64 << 8)) >> 8), 0, 127);   /* (0.6.81) LFO / ENV ->
+                                                         * SHAPE move VAR (SHAPE did nothing on BYTE) */
+    uint32_t f = (uint32_t)p[P_E2] >> 2, a = 1u + (vr >> 3), tt = (uint32_t)v->s[2], tf = v->ph[0], i;
     uint32_t ti = (inc >> 8) * 31u;                     /* t a sample, Q24: C4 (inc ~2.55e7) ~0.18 = 8 kHz */
     uint32_t ft = (uint32_t)p[P_FTYPE] & 3u;            /* (JIANT 0.5) the FILTER's type (COMB: open, voice.c combs) */
     int32_t kd = 8192 - (p[P_FRES] > 50 ? p[P_FRES] : 50) * 7600 / 127;   /* (0.5.4: the FILTER page's RES alone) */
@@ -258,7 +260,7 @@ static __attribute__((noinline)) void lofi_byte_render(track_t *t, voice_t *v, i
     int32_t held = v->s[0], cnt = v->s[1], ic1 = v->s[4], ic2 = v->s[5], l1 = v->s[3], l2 = (int32_t)v->ph[2];
     uint32_t lm = p[P_E7] ? (1u << (17u - (uint32_t)p[P_E7] * 12u / 127u)) - 1u : 0xFFFFFFFFu;   /* LOOP: t's window */
     uint32_t t0 = (uint32_t)BYTE_T0[f & 31u] << 9;    /* (0.5.1: the formula's start) */
-    uint32_t mul = lofi_motion(p[P_E4]), ts = v->ph[1], var = (uint32_t)p[P_E3];   /* (0.5.4) MOTN: the slow time, Q8 */
+    uint32_t mul = lofi_motion(p[P_E4]), ts = v->ph[1], var = vr;   /* (0.5.4) MOTN: the slow time, Q8 */
     hold *= 1 + (p[P_E5] >> 3);                         /* (0.5.4) GRIT: each sample held up to 16 x longer */
     for (i = 0; i < n; i++) {
         if (--cnt <= 0) {
@@ -299,7 +301,8 @@ static __attribute__((noinline)) void lofi_float_render(track_t *t, voice_t *v, 
     const int16_t *p = t->p;
     uint32_t f = (uint32_t)p[P_E2] >> 2, tt = (uint32_t)v->s[2], tf = v->ph[0], ts = v->ph[1], i;
     uint32_t ti = inc >> 3;                             /* (t a sample, Q24: 32 a cycle of the note) */
-    uint32_t mul = lofi_motion(p[P_E4]), var = (uint32_t)p[P_E3];
+    uint32_t mul = lofi_motion(p[P_E4]), var = (uint32_t)clamp(p[P_E3] + ((m->shape - (64 << 8)) >> 8), 0, 127);   /*
+                                                         * (0.6.81: SHAPE moves VAR, as BYTE's) */
     uint32_t bs = p[P_E6] ? 13u - (uint32_t)p[P_E6] / 11u : 0u;   /* BEND: t ^ t >> 13 .. 2 */
     uint32_t lm = p[P_E7] ? (1u << (17u - (uint32_t)p[P_E7] * 12u / 127u)) - 1u : 0xFFFFFFFFu;   /* LOOP: t's window */
     uint32_t ft = (uint32_t)p[P_FTYPE] & 3u;

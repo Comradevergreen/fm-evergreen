@@ -257,8 +257,13 @@ static void wheel_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const
         V->nz = nst;
         V->hp = hp;
     }
-    if (T->dg) {                                        /* overdrive */
+    if (T->dg || m->shape != (64 << 8)) {               /* overdrive; (0.6.81) LFO / ENV -> SHAPE drive it (SHAPE did
+                                                         * nothing on the organ) */
         int32_t dg = T->dg, dcomp = T->dcomp;
+        if (m->shape != (64 << 8)) {
+            dg = clamp((dg ? dg : 256) + ((m->shape - (64 << 8)) * 3 >> 5), 256, 1024);
+            dcomp = (6 * 256 * 256) / (512 + dg);
+        }
         for (i = 0; i < n; i++)
             acc[i] = (softclip((acc[i] * dg) >> 9) * dcomp) >> 8;
     }
