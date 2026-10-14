@@ -73,6 +73,7 @@ static void ref_buses(const int32_t *cho_in, const int32_t *dly_in, const int32_
     int32_t cdepth = song.g[G_CDEPTH] * 6;
     uint32_t cinc = LFO_INC[song.g[G_CRATE] & 127] / CTL;
     int32_t dcd = fx_glide(rf.cd, cdepth, n), ddm = fx_glide(rf.dm, dmix, n);
+    if (!rf.dl_now) { rf.dl_now = dl; rf.cd = cdepth; rf.dm = dmix; }   /* (the first block: fx.primed) */
     if (!rf.dl_xf && dl != rf.dl_now) { rf.dl_old = rf.dl_now; rf.dl_now = dl; rf.dl_xf = DXF_LEN; }
     for (i = 0; i < n; i++) {
         int32_t y = 0, x, r, a;

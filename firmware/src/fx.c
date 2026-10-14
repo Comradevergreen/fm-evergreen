@@ -28,6 +28,7 @@ static struct {
                                          * ones faded from: TIME, WIDE, PITCH turned crossfade, never a jump */
     uint16_t dl_xf, dr_xf;               /* .. the fades left (DXF_LEN .. 0 samples) */
     uint8_t gr_on, gr_old;               /* .. the GRAIN read now, and in the read faded from */
+    uint8_t primed;                      /* .. set on the first block (no fade nor glide from 0 then) */
     int32_t cd_cur, cw_cur, dm_cur;      /* .. the chorus's DEPTH, its side's width, the delay's MIX as they are (glide) */
     int32_t rpre_s;                      /* .. the even sample, averaged with the odd one into the line */
     uint16_t comb_i[4], ap_i[2];
@@ -946,6 +947,11 @@ static inline __attribute__((always_inline)) void fx_buses(const int32_t *cho_in
         dr = DLY_LEN - 1u;
     /* (0.6.81) a new read point (TIME, WIDE) or read (the GRAIN in or out): faded into over DXF_LEN samples from the
      * old one, the next change once that fade is done (each step of the knob jumped the read: a click) */
+    if (!fx.primed) {
+        fx.primed = 1;
+        fx.dl_now = dl; fx.dr_now = dr; fx.gr_on = (uint8_t)gr;
+        fx.cd_cur = cdepth; fx.cw_cur = cw; fx.dm_cur = dmix;
+    }
     if (!fx.dl_xf && (dl != fx.dl_now || (uint32_t)gr != fx.gr_on)) {
         fx.dl_old = fx.dl_now; fx.gr_old = fx.gr_on;
         fx.dl_now = dl; fx.gr_on = (uint8_t)gr;
