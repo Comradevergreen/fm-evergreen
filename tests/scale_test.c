@@ -46,7 +46,8 @@ static void mapping_test(void)
                              * offset to independently handle the lower degrees. */
                             int d = (int)w - 4 + 12 * EXPECTED[s].count;
                             int want = 60 + root + 12 * (oct + d / EXPECTED[s].count - 12)
-                                + EXPECTED[s].notes[d % EXPECTED[s].count] + trans;
+                                + EXPECTED[s].notes[d % EXPECTED[s].count];   /* (0.6.81: TRANS as the note
+                                                                                 * sounds, voice.c, not in the map) */
                             assert(actual == (uint32_t)clamp(want, 0, 127));
                             w++;
                         } else {
@@ -59,7 +60,7 @@ static void mapping_test(void)
     song.octave = 0;
     t->p[P_TRANS] = -5;
     for (k = 0; k < 27u; k++)
-        assert(kb_map(t, k) == 48u + k);
+        assert(kb_map(t, k) == 53u + k);              /* (0.6.81: the map without TRANS) */
     t->p[P_QUANT] = 2;
     host_preset(t, ENGI_DRUM, 0);              /* DRUM (the GM map, any part; SAMPLE PERC until 1.0.2): the first */
     t->engine = t->eng_req = ENGI_DRUM;        /* C is the kick */

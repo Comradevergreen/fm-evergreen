@@ -1435,6 +1435,7 @@ const FM4 = (() => {
     for (let k = 0; k < 7; k++) p[pe0 + k] = 0;
     p[pe0 + 7] = TO_FM6[near];
     if (op) for (let i = 0; i < 20; i++) p[OPENV + i] = i % 5 === 2 || i % 5 === 4 ? 127 : 0;
+    p[ATK] = p[ATK + 1] = p[ATK + 3] = 0; p[ATK + 2] = 127;   /* (0.6.81) the ADSR in the operators': FM6's neutral */
     return { p, voice: FM6.sanitize(v), preset: TO_FM6[near] };
   }
   /* preset k's values into p (src/fm4_convert.c fm4_preset_values: EDIT, ENV, ENV -> FLT, VOICE, sends, OP ENV) */
