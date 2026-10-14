@@ -210,6 +210,10 @@ static void graph_comp(const track_t *t, uint16_t c)
         uint32_t n, lo = 127u, hi = 0u, now = 0xFFu;
         sh.carg = (uint8_t)comp_arg(cs);
         uint8_t nt[16];
+        if (drum_track(t)) {                            /* (0.6.82) a kit: its sounds in turn, or tuned up the scale */
+            cv_text(PANEL_X0 + 2, 60, &AF_S, ct == CP_ARPS ? "THE HITS UP THE SCALE" : "THE SOUNDS IN TURN", T_DIM);
+            return;
+        }
         if (!cs->n) { cv_text(PANEL_X0 + 2, 60, &AF_S, "A STEP WITH NOTES PLAYS IT", T_DIM); return; }
         if (CP_ORD(sh.carg) == 3u) sh.carg = (uint8_t)(sh.carg & ~3u);   /* (RND: drawn UP, the order is the dice's) */
         n = CP_ORD(sh.carg) == 2u ? 2u * 16u : 16u;

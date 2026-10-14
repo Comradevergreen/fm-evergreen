@@ -1040,11 +1040,10 @@ static const step_t *comp_lane(track_t *t, const step_t *s)
 static const step_t *arp_owner(const track_t *t, const step_t *s)
 {
     const step_t *o = s;
-    if (trk_kit(t))
-        return 0;
     if (s->time == ST_TIE && t->arp_from)
         o = t->arp_from == CV_IDX ? &t->cva : &seq_steps(t)[(t->arp_from - 1u) % NSTEP];
-    return o->time == ST_NOTE && o->n && cp_get(t, o, CP_ARPN, CP_ARPS, 0) ? o : 0;
+    return o->time == ST_NOTE && (o->n || (o->hit && trk_kit(t))) && cp_get(t, o, CP_ARPN, CP_ARPS, 0) ? o : 0;   /* (0.6.82:
+                                                         * a kit's hits too) */
 }
 /* the parts a step plays (*div: in how many equal parts of its length they fall, one each from the start): an ARP's
  * RATE, else its ECHO (0.6.42: x2..x4; 0.6.82: .. x8; an ARP wins over it), else its RATCH. (0.6.82) DIV: ECHO's and
@@ -1077,6 +1076,45 @@ static int32_t cp_oct(const track_t *t, uint32_t a)
     default: return ((int32_t)(rng() % 3u) - 1) * 12;
     }
 }
+/* an ARP's k-th of n in its ORDER: UP, DOWN, UP-DN, RND */
+static uint32_t cp_order(uint32_t o, uint32_t k, uint32_t n)
+{
+    if (!n) return 0;
+    if (o == 1u) return n - 1u - k % n;                 /* DOWN */
+    if (o == 2u && n > 1u) { k %= 2u * n - 2u; return k >= n ? 2u * n - 2u - k : k; }   /* UP-DN */
+    if (o == 3u) return rng() % n;                      /* RND */
+    return k % n;                                       /* UP */
+}
+/* (0.6.82) an ARP on a drum kit, its k-th part: NOTES the step's sounds one after another, SEQ the pattern's in the
+ * order it plays them, SCALE all of the step's at once, each part a degree further up the scale (*deg); into nn */
+static uint32_t cp_kit_arp(const track_t *t, const step_t *s, uint32_t c, uint32_t a, uint32_t k, uint8_t *nn,
+                           int32_t *deg)
+{
+    uint8_t l[16];
+    uint32_t n = 0, i, m, cnt = 1;
+    const step_t *src = s;
+    *deg = 0;
+    if (c == CP_ARPQ) {
+        src = seq_steps(t);
+        cnt = t->p[P_SLEN] ? (uint32_t)t->p[P_SLEN] : 1u;
+    }
+    for (m = 0; m < cnt && m < NSTEP; m++) {
+        if (src[m].time != ST_NOTE) continue;
+        for (i = 0; i < src[m].n && i < 4u; i++)
+            if (n < sizeof l && (!n || l[n - 1u] != src[m].note[i])) l[n++] = src[m].note[i];
+        for (i = 0; i < NLANE; i++)
+            if (((src[m].hit >> i) & 1u) && n < sizeof l && (!n || l[n - 1u] != DRUM_LANE_NOTE[i]))
+                l[n++] = DRUM_LANE_NOTE[i];
+    }
+    if (!n) return 0;
+    if (c == CP_ARPS) {
+        *deg = (int32_t)cp_order(CP_ORD(a), k, CP_DEGS[CP_RNG(a)]);
+        for (i = 0; i < n && i < 4u + NLANE; i++) nn[i] = l[i];
+        return n < 4u + NLANE ? n : 4u + NLANE;
+    }
+    nn[0] = l[cp_order(CP_ORD(a), k, n)];
+    return 1;
+}
 /* (0.6.39) an ARP component's next note: its notes (NOTES: the step's, low to high; SEQ: the pattern's, 0.6.82: in the
  * order the pattern plays them, its melody fast; both over RANGE octaves; SCALE: the scale's degrees up from the step's lowest note), the k-th in its ORDER */
 static uint32_t cp_arp_note(const track_t *t, const step_t *s, uint32_t c, uint32_t a, uint32_t k)
@@ -1106,10 +1144,7 @@ static uint32_t cp_arp_note(const track_t *t, const step_t *s, uint32_t c, uint3
         if (!nb) return s->n ? s->note[0] : 60u;
         n = nb * (CP_RNG(a) + 1u);
     }
-    if (o == 1u) k = n - 1u - k % n;                    /* DOWN */
-    else if (o == 2u && n > 1u) { k %= 2u * n - 2u; if (k >= n) k = 2u * n - 2u - k; }   /* UP-DN */
-    else if (o == 3u) k = rng() % n;                    /* RND */
-    else k %= n;                                        /* UP */
+    k = cp_order(o, k, n);
     if (c == CP_ARPS) {
         uint32_t lo = 127u;
         for (i = 0; i < s->n && i < 4u; i++) if (s->note[i] < lo) lo = s->note[i];
@@ -1169,22 +1204,45 @@ static void seq_stop(void)
  * high, none struck again; the next chord with more notes: each extra one rises from the nearest of the old (its
  * octave nearest), fading in; with fewer: each old one left glides to the nearest new one, fading out as it goes (its
  * release). The glide over three quarters of the step */
-static int32_t cg_near(int32_t x, const uint8_t *set, uint32_t n)   /* the note of set, in the octave nearest x */
+static int32_t cg_near(int32_t x, const uint8_t *set, uint32_t n, int other)   /* the note of set, in the octave
+                                                         * nearest x (other: never x itself, 0.6.82) */
 {
-    uint32_t i;
+    uint32_t i, o;
     int32_t best = x, bd = 1000;
-    for (i = 0; i < n; i++) {
-        int32_t y = set[i] + 12 * ((x - set[i] + 6 + 1200) / 12 - 100), d = y > x ? y - x : x - y;
-        if (d < bd) { bd = d; best = y; }
-    }
+    for (i = 0; i < n; i++)
+        for (o = 0; o < 2u; o++) {                      /* (its octave nearest, and the next nearest) */
+            int32_t y = set[i] + 12 * ((x - set[i] + 6 + 1200) / 12 - 100), d;
+            if (o) y += y > x ? -12 : 12;
+            d = y > x ? y - x : x - y;
+            if (other && !d) continue;
+            if (d < bd) { bd = d; best = y; }
+        }
     return clamp(best, 0, 127);
+}
+static int32_t glide_q8(int32_t d, uint32_t ticks)   /* (0.6.82) a glide's step over ticks: gstep, Q8 */
+{
+    int32_t g = ((d < 0 ? -d : d) * 256 + (int32_t)ticks - 1) / (int32_t)(ticks ? ticks : 1u);   /* (rounded up: there in time) */
+    return g ? g : 1;
+}
+/* (0.6.82) the samples from this step to the next that is not a TIE: a chord's slide lasts as long as the chord */
+static uint32_t tie_span(const track_t *t, uint32_t period, uint32_t len)
+{
+    uint32_t n = step_samples(t, period, t->seq_idx), k;
+    for (k = 1; k < len; k++) {
+        uint32_t i = (t->seq_idx + k) % len;
+        if (seq_steps(t)[seq_src(t, i)].time != ST_TIE)
+            break;
+        n += step_samples(t, period, i);
+    }
+    return n;
 }
 static void chord_glide(track_t *t, const uint8_t *nn, const uint8_t *vv, uint32_t m, uint32_t sk, uint32_t ssamp)
 {
     uint8_t o[8], n[8], nv[8];
     uint32_t a = 0, b = 0, i, j, k, ti = trk_index(t) % NTRK;
-    uint32_t ticks = (t->p[P_GLIDE] > 0 ? ssamp * (uint32_t)t->p[P_GLIDE] / 127u : ssamp * 3u / 4u) / CTL;   /* (GLIDE:
-                                                         * that much of the step; SLD alone: three quarters) */
+    uint32_t ticks = (uint32_t)((t->p[P_GLIDE] > 0 ? (uint64_t)ssamp * (uint32_t)t->p[P_GLIDE] / 127u :
+                                 (uint64_t)ssamp * 3u / 4u) / CTL);   /* (GLIDE: that much of the chord, its TIEs
+                                                         * too (0.6.82); SLD alone: three quarters) */
     int32_t tr = trk_trans(t);
     if (!ticks) ticks = 1;
     for (i = 0; i < t->seq_n && a < 8u; i++)            /* (0.6.81) the old chord: its notes still sounding (a voice
@@ -1207,8 +1265,7 @@ static void chord_glide(track_t *t, const uint8_t *nn, const uint8_t *vv, uint32
             v->note = n[i];
             v->pitch16 = ((int32_t)n[i] + tr) * 16 + t->pfx_rpit;
             d = v->pitch16 - v->pitch_cur;
-            v->gstep = (d < 0 ? -d : d) / (int32_t)ticks;
-            if (!v->gstep) v->gstep = 1;
+            v->gstep = glide_q8(d, ticks);
             if (mo_lvl == MO_ALL && mo_plays(t, n[i])) {
                 mo_out[ti][n[i]] = (uint8_t)(n[i] + 1u);
                 mo_send(0x90u | trk_midi_ch(ti), n[i], nv[i] ? nv[i] : 1u);
@@ -1221,18 +1278,17 @@ static void chord_glide(track_t *t, const uint8_t *nn, const uint8_t *vv, uint32
                     if (t->v[k].age == vage && t->v[k].active) {
                         voice_t *w = &t->v[k];
                         int32_t d;
-                        w->pitch_cur = (cg_near(n[i], o, a) + tr) * 16 + t->pfx_rpit;
+                        w->pitch_cur = (cg_near(n[i], o, a, 1) + tr) * 16 + t->pfx_rpit;
                         d = w->pitch16 - w->pitch_cur;
-                        w->gstep = (d < 0 ? -d : d) / (int32_t)ticks;
-                        if (!w->gstep) w->gstep = 1;
-                        w->fin = w->fin_len = (uint8_t)(ticks < 255u ? ticks : 255u);
+                        w->gstep = glide_q8(d, ticks);
+                        w->gacc = 0;
+                        w->fin_d = (uint16_t)(d < 0 ? -d : d);   /* (in as it glides; 0.6.82) */
                     }
         } else if (v) {                                 /* an old one left: to the nearest new note, fading out */
             int32_t d;
-            v->pitch16 = (cg_near(o[i], n, b) + tr) * 16 + t->pfx_rpit;
+            v->pitch16 = (cg_near(o[i], n, b, 0) + tr) * 16 + t->pfx_rpit;
             d = v->pitch16 - v->pitch_cur;
-            v->gstep = (d < 0 ? -d : d) / (int32_t)ticks;
-            if (!v->gstep) v->gstep = 1;
+            v->gstep = glide_q8(d, ticks);
             seq_note_off(t, o[i]);
         }
     }
@@ -1347,7 +1403,7 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
             if (vel < 8u) vel = 8u;
         }
     }
-    for (i = 0; i < (arp ? 1u : s->n) && i < 4u; i++) {
+    for (i = 0; i < (arp ? 1u : s->n) && i < 4u && !(kit && arp); i++) {
         uint32_t x = arp ? cp_arp_note(t, arp, ac, aa, t->arp_k++) : s->note[i];
         x = (uint32_t)clamp((int32_t)x + up, 0, 127);
         if (!kit) {                                 /* (0.6.42) TONAL, RAND, OCT */
@@ -1381,9 +1437,30 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
             sk |= ((skip >> (8u + i)) & 1u) << m;
             m++;
         }
+    if (kit) {                                      /* (0.6.82) on a drum kit: an ARP plays its sounds (cp_kit_arp); */
+        int32_t dp = 0, deg = 0;                    /* OCT RAND TONAL and ARP SCALE tune the hits, BEND bends them */
+        if (arp) {
+            uint8_t kn[4 + NLANE];
+            uint32_t c2 = cp_kit_arp(t, arp, ac, aa, t->arp_k++, kn, &deg);
+            for (i = 0; i < c2 && m < 4u + NLANE; i++) {
+                nn[m] = kn[i];
+                vv[m++] = (uint8_t)vel;
+            }
+        }
+        if (t->tonal) dp += scale_steps(t, 60, t->tonal) - 60;
+        if (deg) dp += scale_steps(t, 60, deg) - 60;
+        if (rnd) {
+            int32_t r = ra % 8u ? (int32_t)(ra % 8u) : 1;
+            dp += scale_steps(t, 60, (int32_t)(rng() % (uint32_t)(2 * r + 1)) - r) - 60;
+        }
+        if (oct) dp += cp_oct(t, oa);
+        t->dpit = (int8_t)clamp(dp, -48, 48);
+        t->dbend = (int16_t)(bend ? ((int32_t)(ba % 25u) - 12) * 16 : 0);
+        t->dbt = (uint16_t)clamp((int32_t)(step_samples(t, period, t->seq_idx) / CTL), 1, 65535);
+    }
     if (slide_in && !kit && !arp && hits == 1u && m && t->p[P_VOICE] == V_POLY) {   /* (0.6.81) a POLY chord sliding into
                                                          * this one: its notes glide to these */
-        chord_glide(t, nn, vv, m, sk, step_samples(t, period, t->seq_idx));
+        chord_glide(t, nn, vv, m, sk, tie_span(t, period, len));
         t->seq_n = 0;
         for (i = 0; i < m; i++)
             if (!((sk >> i) & 1u))
@@ -1407,12 +1484,13 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
                     if (v->age == vage && v->active) {
                         v->pitch_cur = v->pitch16;
                         v->pitch16 = clamp(v->pitch16 + d, 0, 2047);
-                        v->gstep = (d < 0 ? -d : d) / (int32_t)(ticks ? ticks : 1u);
-                        if (!v->gstep) v->gstep = 1;
+                        v->gstep = glide_q8(d, ticks);
                     }
                 }
             }
         }
+    t->dpit = 0;                                    /* (0.6.82: the keys' hits as they are) */
+    t->dbend = 0;
     if (slide_in)                                   /* release what is not held over */
         for (i = 0; i < t->seq_n; i++) {
             for (j = 0; j < m && nn[j] != t->seq_notes[i]; j++)

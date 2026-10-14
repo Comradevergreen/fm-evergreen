@@ -756,6 +756,29 @@ static int components3(void)
     ok &= proj_import(&proj_scratch, &st, sizeof st) && !project_restore_runtime(&proj_scratch);
     ok &= t->step[0].comp2 == CP_REV && t->step[0].carg2 == 2u && t->step[0].cwhen == 0xBu && t->step[0].ctime == 0x5Cu;
     bad += check("a project keeps the second component, WHEN, DIV and LEN (FUNC round trip)", ok);
+    /* on a drum kit: OCT +1 tunes the hit an octave up; ARP NOTES x4 over BD + SD plays them in turn; BEND bends it */
+    {
+        uint32_t kick = DRUM_LANE_NOTE[DV_KICK], snr = DRUM_LANE_NOTE[DV_SNARE];
+        int32_t base = DRUM_GM[drum_gm_ix(kick)][1];
+        t = one_step(1, 0);
+        set_engine_of(t, ENGI_DRUM);
+        t->engine = t->eng_req;
+        t->step[0] = (step_t){{0}, 0, ST_NOTE, 0, 100, 1u << DV_KICK, 0};
+        t->step[0].comp = CP_OCT; t->step[0].carg = 0;
+        seq_start();
+        run_notes(t, 2, nt, sizeof nt);
+        ok = drum_kit[0][DV_KICK].st == base + 12 && t->dpit == 0;
+        t->step[0].comp = CP_BEND; t->step[0].carg = 0;       /* (-12) */
+        seq_start();
+        run_notes(t, 2, nt, sizeof nt);
+        ok &= drum_kit[0][DV_KICK].st == base && drum_kit[0][DV_KICK].bd == -12 * 16 && drum_kit[0][DV_KICK].bs > 0;
+        t->step[0] = (step_t){{0}, 0, ST_NOTE, 0, 100, 1u << DV_KICK | 1u << DV_SNARE, 0};
+        t->step[0].comp = CP_ARPN; t->step[0].carg = CP_ARG(0u, 2u, 0u);
+        seq_start();
+        n = run_notes(t, step_len(t, 0) / CTL - 1u, nt, sizeof nt);
+        ok &= n == 4u && nt[0] == kick && nt[1] == snr && nt[2] == kick && nt[3] == snr;
+        bad += check("on a drum kit: OCT tunes the hit, BEND bends it, ARP NOTES plays its sounds in turn", ok);
+    }
     /* SEQ > COMP 2 and WHEN: their knobs */
     ui_power_on();
     t = TSEL;

@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.6.82).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.6.83).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 > ⚡ **New in 0.6.71: both cores (experimental).** The FM-1's chip has two processor cores and JIANT used one. Now the
 > second renders some of the synth tracks while the first renders the rest, so the same song leaves much more room
@@ -510,6 +510,15 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### v0.6.83
+- **Long, smooth chord slides.** The glide into a chord now lasts as long as that chord, its TIEs included (GLIDE: how
+  much of it). Hold a chord over TIEs on slow steps and it slides for seconds (DIV 1/4 at 120 BPM, ten steps: 5 s),
+  smoothly: the pitch moves in fractions of a step, and a new note fades in as it glides (it rises from the nearest
+  other note, never from its own pitch).
+- **Step components on drums.** OCT, RAND and TONAL tune the hits, BEND bends each one over the step; ARP NOTES plays
+  the step's sounds one after another, ARP SEQ the pattern's in the order they play, ARP SCALE retriggers the step's
+  hits a degree further up each part.
 
 ### v0.6.82
 - **Two step components on one step, and WHEN for every one (SEQ > COMP, COMP 2, WHEN).** COMP 2 gives a step a

@@ -38,6 +38,7 @@ typedef struct {
     uint8_t mg;                  /* its group mute's fade: DXG_FADE (sounding) .. 0 (muted, silent) */
     uint8_t age;                 /* blocks since the hit (255: and more): PUNCH's shape */
     int8_t rm, rt;               /* (0.5.1) X-MOD RAND: this hit's MORPH offset, its tune (1/16 semitones) */
+    int16_t bc, bd, bs;          /* (0.6.82) a step's BEND on the hit: now, where to, a block's step (1/16 semitones) */
 } drum_lane_t;
 /* (JIANT 0.5.1) X-MOD (EDIT > X-MOD on a DRUM track): the kit's own modulator, saved with the kit (project.c, in its
  * reserved bytes): RATE (OFF, 4BAR 2BAR 1BAR 1/2 1/4 1/8 1/16 1/32: a tempo-synced LFO), DPTH (how far it moves
@@ -197,7 +198,11 @@ static void drum_note_on(track_t *t, voice_t *v)
     if (L->owner == i + 1u)                              /* this voice played another lane: it stops there */
         L->owner = 0;
     L = &K[lane];
-    L->st = (int8_t)(DRUM_GM[drum_gm_ix(v->note)][1] + t->pfx_rpit / 16);   /* (pfx.c RANDOM) */
+    L->st = (int8_t)clamp(DRUM_GM[drum_gm_ix(v->note)][1] + t->pfx_rpit / 16 + t->dpit, -60, 60);   /* (pfx.c RANDOM;
+                                                          * 0.6.82: the step's components, seq.c) */
+    L->bc = 0;                                           /* (0.6.82) its BEND, from the step */
+    L->bd = t->dbend;
+    L->bs = (int16_t)(t->dbend ? ((t->dbend < 0 ? -t->dbend : t->dbend) + t->dbt) / (t->dbt ? t->dbt : 1u) : 0);
     L->owner = (uint8_t)(i + 1u);                        /* (its last voice, if another, ends: drum_amp) */
     v->s[0] = (int32_t)lane;
     v->env_out = v->vel * 258;                           /* the hit starts at its level (no ramp from 0) */
@@ -392,8 +397,12 @@ static void drum_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const 
         lfo_pit = (lfo * p[P_LD_PIT] * 3) >> 15;
         lfo_shp = (lfo * p[P_LD_SHP]) >> 15;
     }
+    if (L->bc != L->bd) {                                /* (0.6.82) BEND: towards its pitch over the step */
+        int32_t d = L->bd - L->bc;
+        L->bc = (int16_t)(L->bc + (d > 0 ? (d < L->bs ? d : L->bs) : (-d < L->bs ? d : -L->bs)));
+    }
     dx_run(&dx_kit[(uint32_t)v->s[0] & (DV_NLANE - 1u)], &L->x, p[P_E0] + dx_mot_v + L->rm + lfo_shp,
-           L->st * 16 + L->rt + (p[P_E1] - 64) * 3 + t->pfx_pit + lfo_pit,
+           L->st * 16 + L->rt + L->bc + (p[P_E1] - 64) * 3 + t->pfx_pit + lfo_pit,
            p[P_E3] - 64, p[P_E2] - 64, p[P_E4] - 64, p[P_E6], p[P_E5], y, n);
     {                                                    /* PUNCH: the boost before the knee (driven into it, as
                                                           * Drum Buss), the tail's cut on the amplitude ramp */
