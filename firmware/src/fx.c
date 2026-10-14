@@ -29,6 +29,9 @@ static struct {
     uint16_t dl_xf, dr_xf;               /* .. the fades left (DXF_LEN .. 0 samples) */
     uint8_t gr_on, gr_old;               /* .. the GRAIN read now, and in the read faded from */
     uint8_t primed;                      /* .. set on the first block (no fade nor glide from 0 then) */
+    uint32_t dw_ph, df_ph;               /* .. (0.6.86) the tape's WOW and FLUTTER phases */
+    int32_t dw_m;                        /* .. the read points' offset by them now (Q8 samples) */
+    int32_t dt1, dt2, rt1, rt2;          /* .. (0.6.86) the resonant TONE (delay loop) and FILT (reverb input) filters */
     int32_t cd_cur, cw_cur, dm_cur;      /* .. the chorus's DEPTH, its side's width, the delay's MIX as they are (glide) */
     int32_t rpre_s;                      /* .. the even sample, averaged with the odd one into the line */
     uint16_t comb_i[4], ap_i[2];
@@ -410,6 +413,65 @@ static __attribute__((noinline)) int32_t dly_grain(uint32_t dl)
     return x;
 }
 
+/* (0.6.86) the delay as an analog one (a tape, a BBD, a PT2399) feels: FEEDBK past 100 % grows into itself,
+ * held by a saturation in the loop (a cubic, gain 1 for small signals, smoothly to full scale: it was a hard clip,
+ * and the knob's top 84 %, so it never built up); each pass a little darker (~8 kHz, TONE lower darker still) and
+ * thinner (~80 Hz, TONE higher thinner still); the read points drift by WOW (0.6 Hz, +-6 samples) and FLUTTER
+ * (5.3 Hz, +-1), so each repeat bends a little further from the last. FEEDBK 0..80 as before */
+static int32_t dly_fb(int32_t v)                    /* FEEDBK (0..120) -> the loop's gain, Q15: 100 = 1 */
+{
+    return v <= 80 ? v * 230 : v <= 100 ? 18400 + (v - 80) * 718 : 32760 + (v - 100) * 245;
+}
+static inline int32_t dly_sat(int32_t u)            /* Q15 in (-1.5 .. 1.5 used), out within +-32767 */
+{
+    if (u > 49152) u = 49152;
+    if (u < -49152) u = -49152;
+    int32_t u2 = ((u >> 1) * (u >> 1)) >> 13, u3 = (u2 * (u >> 2)) >> 13;   /* (u^2, u^3 in Q15: 32 bits, no call) */
+    return u - ((u3 * 4855) >> 15);                     /* u - 4/27 u^3: 1.5 -> 1.0, flat there */
+}
+/* (0.6.86) TONE / FILT resonant: one knob, the middle open; one way a low-pass sweeping down, the other a low cut
+ * sweeping up, both resonant (Q 0.7 near the middle, up to qmax from a third of the way): the band at the cutoff
+ * stands out, so the knob carves where the repeats / the room sit. The level evened out (x 1/Q: the peak about
+ * unity, what is around it a little lower). v -64..63; lo the cutoff index (CUTOFF_HZ) at the far low-pass end, hi at
+ * the far low cut end, top the low-pass's start; kmin the damping at the most resonant (Q12) */
+typedef struct { tsvf_t c; int32_t k, g, hp; } tone_t;
+static int tone_set(tone_t *t, int32_t v, int32_t top, int32_t lo, int32_t base, int32_t hi, int32_t kmin, int half)
+{
+    int32_t a = v < 0 ? -v : v;
+    if (!v) return 0;
+    t->k = a >= 21 ? kmin : 5793 - (5793 - kmin) * a / 21;
+    t->hp = v > 0;
+    tsvf_coef_k(&t->c, (v < 0 ? top - (top - lo) * a / 64 : base + (hi - base) * a / 63) << 8, t->k);
+    t->g = t->k >= 4096 ? 32767 : half ? (32767 + t->k * 8) >> 1 : t->k * 8;   /* (1/Q, Q15; half: half way to it) */
+    return 1;
+}
+static inline int32_t tone_run(const tone_t *t, int32_t in, int32_t *ic1, int32_t *ic2)
+{
+    int32_t v3 = in - *ic2;
+    int32_t v1 = (t->c.a1 * *ic1 + t->c.a2 * v3) >> 13;
+    int32_t v2 = *ic2 + ((t->c.a2 * *ic1 + t->c.a3 * v3) >> 13);
+    *ic1 = clamp(2 * v1 - *ic1, -150000, 150000);
+    *ic2 = clamp(2 * v2 - *ic2, -150000, 150000);
+    return mulq15(t->hp ? in - v2 - ((t->k * v1) >> 12) : v2, t->g);
+}
+static void dly_wow_adv(uint32_t n, int32_t *m0, int32_t *dm)   /* the block's drift: from *m0, *dm a sample */
+{
+    int32_t m, d = song.g[G_DMOD];                      /* (0.6.86) MOD: 0 none, 20 a tape's (the default), 127 seasick */
+    fx.dw_ph += (uint32_t)(0.6 * 4294967296.0 / FS) * n;
+    fx.df_ph += (uint32_t)(5.3 * 4294967296.0 / FS) * n;
+    m = ((osc_sine(fx.dw_ph) * d) >> 12) + ((osc_sine(fx.df_ph) * d) >> 15);   /* (Q8: WOW +-d / 3.9, FLUTTER +-d / 16 samples) */
+    *m0 = fx.dw_m;
+    *dm = (m - fx.dw_m) / (int32_t)n;
+    fx.dw_m = *m0 + *dm * (int32_t)n;
+}
+static inline int32_t dly_rd(uint32_t d, int32_t m)   /* the line d samples back, plus m (Q8), between samples */
+{
+    int32_t q = (int32_t)(d << 8) + m, a, b;
+    uint32_t i = fx.dly_w - (uint32_t)(q >> 8);
+    a = dly_buf[i & (DLY_LEN - 1u)];
+    b = dly_buf[(i - 1u) & (DLY_LEN - 1u)];
+    return a + (((b - a) * (q & 255)) >> 8);
+}
 static uint32_t delay_samples(void)
 {
     uint32_t g = (uint32_t)song.g[G_DTIME];
@@ -932,12 +994,15 @@ static inline __attribute__((always_inline)) void fx_buses(const int32_t *cho_in
         fxg_quiet = any ? 0u : fxg_quiet < 0xFFFFFFu ? fxg_quiet + 1u : fxg_quiet;
     }                                                   /* (0.6.19: it opens over ~6 ms, fx_gate: at once, the
                                                          * residue in the lines stepped in: a tick on the next note) */
-    int32_t fb = song.g[G_DFDBK] * 230, tn = song.g[G_DCOLOR] - 64;   /* (JIANT 0.4) TONE: one knob, low-pass .. open .. low cut */
-    int32_t col = tn < 0 ? 500 + (64 + tn) * (64 + tn) * 8 : 32767;
+    int32_t fb = dly_fb(song.g[G_DFDBK]), tn = song.g[G_DCOLOR] - 64;   /* (JIANT 0.4) TONE: one knob, low-pass .. open .. low cut */
+    int32_t col = 22000, wm, dwm;                       /* (0.6.86: each pass a little darker, ~8 kHz; TONE resonant below) */
+    tone_t dtn, rtn;
+    int dton = tone_set(&dtn, tn > 63 ? 63 : tn, 113, 43, 18, 93, 2900, 0);
+    if (!dton) fx.dt1 = fx.dt2 = 0;   /* (8 kHz .. 250 Hz | 73 Hz .. 3 kHz, Q 1.4) */
     int32_t dmix = song.g[G_DMIX] * 258;
     int32_t cdepth = song.g[G_CDEPTH] * 6, rt;
     uint32_t cinc = LFO_INC[song.g[G_CRATE] & 127] / CTL;
-    int32_t hk = tn > 0 ? tn * tn * 4 : 0, wd = song.g[G_WIDTH];   /* (the low cut: up to ~3 kHz); WIDTH */
+    int32_t hk = 340, wd = song.g[G_WIDTH];            /* (the low cut: ~73 Hz, 0.6.86); WIDTH */
     int32_t gr = !sys_load && (song.g[G_DPIT] || song.g[G_DSPRY]);   /* (JIANT) the GRAIN delay (LOAD LITE / ECO: plain) */
     int32_t cho = sys_load != LOAD_ECO;                /* (0.6.30) LOAD ECO: no chorus */
     int32_t cs = song.g[G_CSTER], cw = 80 + wd / 2;    /* (0.6.9) the chorus's side: 0 as before, - to mono, + ~2x */
@@ -966,17 +1031,14 @@ static inline __attribute__((always_inline)) void fx_buses(const int32_t *cho_in
     dcd = fx_glide(fx.cd_cur, cdepth, n);
     dcw = fx_glide(fx.cw_cur, cw, n);
     ddm = fx_glide(fx.dm_cur, dmix, n);
-    if (!hk)
-        fx.dly_hp = 0;                                  /* (no low cut: none held over from one) */
-    if (song.g[G_RFILT]) {                              /* (JIANT) the reverb's tone: FILT < 0 a low-pass (~12 kHz ..
-                                                         * ~350 Hz), > 0 a low cut (~60 Hz .. ~1.5 kHz) */
-        int32_t rf = song.g[G_RFILT], k = rf < 0 ? 32767 - (-rf) * 495 : 300 + rf * 110;
-        for (i = 0; i < n; i++) {
-            fx.rf_lp += mulq15(rev_in[i] - fx.rf_lp, k);
-            rpre_out[i] = rf < 0 ? fx.rf_lp : rev_in[i] - fx.rf_lp;
-        }
+    dly_wow_adv(n, &wm, &dwm);
+    if (tone_set(&rtn, song.g[G_RFILT], 121, 50, 14, 79, 1600, 1)) {   /* (JIANT) the reverb's tone: FILT < 0 a low-pass (~12 kHz ..
+                                                         * ~350 Hz), > 0 a low cut (~60 Hz .. ~1.5 kHz); 0.6.86 resonant (Q 2.5) */
+        for (i = 0; i < n; i++)
+            rpre_out[i] = tone_run(&rtn, rev_in[i], &fx.rt1, &fx.rt2);
         rev_in = rpre_out;
-    }
+    } else
+        fx.rt1 = fx.rt2 = 0;
     if (song.g[G_RPRE] > 0 && song.g[G_RTYPE] <= 1) {   /* (JIANT) the reverb's pre-delay (in place; RESO: PITCH;
                                                          * 0.6.12: SHIMMER, CLOUD: AIR) */
         uint32_t pd = (uint32_t)song.g[G_RPRE] * 20u;   /* (ms -> half-rate samples: 2000 at 100) */
@@ -1009,18 +1071,19 @@ static inline __attribute__((always_inline)) void fx_buses(const int32_t *cho_in
         /* delay with a low-passed (COLR) and low-cut (HPF) feedback */
         if (fx.gr_on || (fx.dl_xf && fx.gr_old))
             dly_grain_adv();
-        x = fx.gr_on ? dly_grain(fx.dl_now) : dly_buf[(fx.dly_w - fx.dl_now) & (DLY_LEN - 1u)];
+        wm += dwm;
+        x = fx.gr_on ? dly_grain(fx.dl_now) : dly_rd(fx.dl_now, wm);
         if (fx.dl_xf) {                                 /* (0.6.81) the old read point fading out */
-            int32_t xo = fx.gr_old ? dly_grain(fx.dl_old) : dly_buf[(fx.dly_w - fx.dl_old) & (DLY_LEN - 1u)];
+            int32_t xo = fx.gr_old ? dly_grain(fx.dl_old) : dly_rd(fx.dl_old, wm);
             x += ((xo - x) * (int32_t)fx.dl_xf) >> DXF_LOG2;
             fx.dl_xf--;
         }
         if (wd || fx.dr_xf || fx.dr_now != fx.dl_now) {   /* (JIANT) the right echo later (0.6.81: on until it has
                                                          * faded back onto the left's, WIDE to 0 stepped; read before
                                                          * the line is written, as the left: at WIDE 0, the same sample) */
-            xr = dly_buf[(fx.dly_w - fx.dr_now) & (DLY_LEN - 1u)];
+            xr = dly_rd(fx.dr_now, wm);
             if (fx.dr_xf) {
-                int32_t xo = dly_buf[(fx.dly_w - fx.dr_old) & (DLY_LEN - 1u)];
+                int32_t xo = dly_rd(fx.dr_old, wm);
                 xr += ((xo - xr) * (int32_t)fx.dr_xf) >> DXF_LOG2;
                 fx.dr_xf--;
             }
@@ -1028,8 +1091,11 @@ static inline __attribute__((always_inline)) void fx_buses(const int32_t *cho_in
         }
         fx.dly_lp += mulq15(x - fx.dly_lp, col);
         fx.dly_hp += mulq15(fx.dly_lp - fx.dly_hp, hk);
-        dly_buf[fx.dly_w & (DLY_LEN - 1u)] =
-            (int16_t)clamp((dly_in[i] >> 1) + mulq15(fx.dly_lp - fx.dly_hp, fb), -32768, 32767);
+        {
+            int32_t lf = fx.dly_lp - fx.dly_hp;
+            if (dton) lf = tone_run(&dtn, lf, &fx.dt1, &fx.dt2);
+            dly_buf[fx.dly_w & (DLY_LEN - 1u)] = (int16_t)dly_sat((dly_in[i] >> 1) + mulq15(clamp(lf, -32767, 32767), fb));
+        }
         if (wr) {                                       /* mid and side */
             side += mulq15(x - xr, fx.dm_cur);
             x = (x + xr) >> 1;
@@ -1505,6 +1571,7 @@ static __attribute__((noinline)) void fx_trip(uint32_t c1, uint32_t n)
     for (i = 0; i < CL_LEN; i++)
         cloud_buf[i] = 0;
     rev_clear();
+    fx.dt1 = fx.dt2 = fx.rt1 = fx.rt2 = 0;
     fx.dly_lp = fx.dly_hp = fx.rf_lp = fx.rpre_s = fx.cl_lp = fx.cl_half = 0;
     fx_bad = 0;
     fx_trips++;

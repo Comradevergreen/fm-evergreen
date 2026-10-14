@@ -7,7 +7,7 @@ import html, os
 
 R = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(R, 'docs', 'cheatsheet')
-VERSION = 'v0.6.85'
+VERSION = 'v0.6.86'
 
 HEAT = ['#22d3ee', '#3b82f6', '#8b5cf6', '#d946ef', '#ef4444', '#ff7a00', '#facc15', '#f4f1ea']
 
@@ -228,7 +228,7 @@ def controls():
                           ('MSEQ', 'STEP LEVEL LEN SLEW'), ('MSEQ 2', 'DIV - - -')]),
         ('FX', HEAT[5], [('FX', 'DIST CHORUS DLY REV'), ('DIST', 'DIST TYPE TONE -'), ('AUTO PAN', 'DEPTH RATE SYNC WAVE'), ('SLICER', 'MODE PAT RATE DEPTH'),
                          ('SL BUS', 'T1 T2 T3 T4'), ('SL BUS 2', 'T5 T6 FX -'), ('SL PITCH', 'STEP PITCH LEN QUANT'),
-                         ('DLY', 'TIME FEEDBK TONE MIX'), ('DLY 2', 'WIDE PITCH SPRAY -'),
+                         ('DLY', 'TIME FEEDBK TONE MIX'), ('DLY 2', 'WIDE PITCH SPRAY MOD'),
                          ('REVERB', 'TYPE SIZE DAMP PRE/AIR'), ('REVERB 2', 'MOD RATE FILT WIDE'),
                          ('CHORUS', 'RATE DEPTH STEREO -'), ('MASTER', 'CLIP PUNCH DUCK REL')]),
         ('EDIT', HEAT[3], [('EDIT 1', 'E1 E2 E3 E4'), ('EDIT 2', 'E5 E6 E7 E8'), ('RETRIG', 'RTRG - - -'), ('OPERATOR', 'OP RATIO FINE LEVEL'),
@@ -363,7 +363,7 @@ def sound():
                   '<b>FX</b> (the delay / reverb / chorus returns) ON / OFF: everything on = the whole mix chopped after '
                   'the effects. <b>SL PITCH</b>: the repeats\' 16-step pitch (±24 st, tape style, QNT SCL to the scale).</p>'))
     b.append(card('DELAY · CHORUS', HEAT[1], '<h4>DLY</h4>' + knobs('TIME', 'FDBK', 'TONE', 'MIX') +
-                  '<h4>DLY 2</h4>' + knobs('WIDE', 'PITCH', 'SPRY', '-') +
+                  '<h4>DLY 2</h4>' + knobs('WIDE', 'PITCH', 'SPRY', 'MOD') +
                   '<p style="margin-top:6px">Synced or free (5 ms – 1.48 s); PITCH / SPRY: a grain delay.</p>'
                   '<h4>CHORUS</h4>' + knobs('RATE', 'DEPTH', 'STER', '-') +
                   '<p style="margin-top:6px">STER: 0 as always, down to mono, up to twice as wide.</p>'))

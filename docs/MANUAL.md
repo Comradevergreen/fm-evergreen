@@ -211,7 +211,7 @@ and heating up with its own audio. The selected track is drawn bigger, a muted o
 | SL BUS 2 | T5 | T6 | FX | — |
 | SL PITCH | STEP | PITCH | LEN | QUANT |
 | DLY | TIME | FEEDBK | TONE | MIX |
-| DLY 2 | WIDE | PITCH | SPRAY | — |
+| DLY 2 | WIDE | PITCH | SPRAY | MOD |
 | REVERB | TYPE | SIZE | DAMP (RESO: FOLLOW) | PRE (SHIMMER/CLOUD: AIR; RESO: PITCH) |
 | REVERB 2 | MOD | RATE | FILT | WIDE |
 | CHORUS | RATE | DEPTH | STEREO | — |
@@ -806,9 +806,16 @@ sounds picked with PRESETS, SEQ TOOLS actions, or ordinary knob turns. It is not
 ### Delay
 
 - **DLY**: **TIME** (synced divisions 4BAR … 1/32, or free times from 5 ms to 1.48 s), **FEEDBK**, **TONE** (below the
-  middle darker, above thinner), **MIX**.
+  middle darker, above thinner), **MIX**. FEEDBK (0.6.86) behaves like an analog delay's (a tape, a PT2399): each
+  repeat a little darker and thinner, slightly wobbling (wow and flutter); around **100 %** the echoes hang on for
+  many seconds, and **past 100 %** they grow into themselves and hold, saturating softly instead of clipping (turn it
+  back down to let them die). Up to 80 % it is as before. **TONE** is resonant (0.6.86): from the middle down a
+  low-pass sweeping from ~8 kHz to ~250 Hz, from the middle up a low cut sweeping from ~70 Hz to ~3 kHz, both with a
+  peak at the cutoff, so the repeats narrow to a band each pass (dub style) and you choose where they sit.
 - **DLY 2**: **WIDE** (the right echo later), and the **GRAIN** delay: **PITCH** (±12 semitones per repeat) and
-  **SPRAY**. With LOAD LITE or ECO the GRAIN delay plays as a plain delay (the card says LITE / ECO).
+  **SPRAY**. With LOAD LITE or ECO the GRAIN delay plays as a plain delay (the card says LITE / ECO). **MOD**
+  (0.6.86): the tape's drift, slow WOW and fast FLUTTER on the repeats (0 none, 20 the default, a tape's; up to
+  seasick chorus); saved with the project.
 
 ### Reverb (five models)
 
@@ -822,7 +829,7 @@ sounds picked with PRESETS, SEQ TOOLS actions, or ordinary knob turns. It is not
 | **RESO** | Four strings tuned to the song's scale | **FOLLOW** (OFF / T1–T6: the chord follows the lowest note that track plays) | **PITCH** (the chord 0–14 steps up the scale) |
 | **CLOUD** | Granular wash; SIZE at max freezes it | DAMP | **AIR** |
 
-**REVERB 2**: **MOD** (modulation depth), **RATE**, **FILT** (input tone: darker / brighter), **WIDE**.
+**REVERB 2**: **MOD** (modulation depth), **RATE**, **FILT** (input tone: darker / brighter; 0.6.86 resonant, a band at the cutoff to carve the room's place), **WIDE**.
 
 With **LOAD LITE**, SHIMMER and CLOUD play as ROOM and RESO as SPRING; with **LOAD ECO** every reverb plays as SPRING.
 The settings stay; the TYPE card shows LITE or ECO under its value.

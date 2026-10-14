@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.6.85).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.6.86).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 > ⚡ **New in 0.6.71: both cores (experimental).** The FM-1's chip has two processor cores and JIANT used one. Now the
 > second renders some of the synth tracks while the first renders the rest, so the same song leaves much more room
@@ -510,6 +510,18 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### v0.6.86
+- **The delay feeds back like an analog one** (a tape, a PT2399). Its FEEDBK reached only 84 % and the loop clipped
+  hard, so the echoes always died within a couple of seconds. Now each repeat gets a little darker and thinner and
+  wobbles slightly (wow and flutter); around **100 %** the echoes hang on for many seconds, and **past 100 %** they
+  grow into themselves and hold, saturating softly (turn it down to let them go). Up to 80 % it sounds as before; the
+  screen shows FEEDBK as 0–120 % (100 % = the loop's gain 1).
+- **DLY 2 > MOD**: the delay's tape drift (slow wow, fast flutter) on the repeats, as the reverb has its MOD: 0 none,
+  20 the default, up to a seasick chorus. Saved with the project.
+- **Resonant TONE (delay) and FILT (reverb)**: one way a low-pass sweeping down, the other a low cut sweeping up, both
+  with a peak at the cutoff, like a band-pass: carve where the repeats and the room sit. The delay's repeats narrow
+  to that band pass after pass. All this costs about 2 % more audio CPU.
 
 ### v0.6.85
 - **SEQ > STRETCH**, a new page after NOTE, to reshape a whole sequence (pick with a knob, OCT+ does it, UNDO
