@@ -868,17 +868,19 @@ disponible mientras suena un tema (**STOP TO EDIT**). Guarda un solo paso, en RA
 ### Delay
 
 - **DLY**: **TIME** (divisiones sincronizadas 4BAR … 1/32, o tiempos libres de 5 ms a 1,48 s), **FEEDBK**, **TONE**
-  (por debajo del centro más oscuro, por encima más fino), **MIX**. FEEDBK (0.6.86) se comporta como el de un delay
-  analógico (una cinta, un PT2399): cada repetición un poco más oscura y más fina, con un leve vaivén (wow y flutter);
-  cerca de **100 %** los ecos siguen durante muchos segundos, y **pasado 100 %** se realimentan y se sostienen,
-  saturando suave en vez de recortar (bajalo para que se apaguen). Hasta 80 % es igual que antes. **TONE** es
-  resonante (0.6.86): del centro hacia abajo un pasabajos que barre de ~8 kHz a ~250 Hz, del centro hacia arriba un
-  corte de graves que barre de ~70 Hz a ~3 kHz, los dos con un pico en el corte: las repeticiones se angostan a una
-  banda en cada pasada (estilo dub) y elegís dónde se ubican.
+  (por debajo del centro más oscuro, por encima más fino), **MIX**. FEEDBK se comporta como el de un delay analógico
+  (una cinta, un PT2399; 0.6.86, 0.6.89): con **TONE al centro (50 %)** cada repetición es una copia de lo que entró;
+  en **100 %** los ecos mantienen su volumen mucho tiempo (bajan muy de a poco y nunca se cortan), y **pasado 100 %**
+  se realimentan y se sostienen, saturando suave en vez de recortar (bajalo para que se apaguen). Hasta 80 % es igual
+  que antes. **TONE** es resonante: del centro hacia abajo un pasabajos que barre de ~8 kHz a ~250 Hz, del centro
+  hacia arriba un corte de graves que barre de ~70 Hz a ~3 kHz, los dos con un pico en el corte: las repeticiones se
+  oscurecen o afinan y se angostan a una banda en cada pasada (estilo dub), y en los extremos con FEEDBK alto el lazo
+  autooscila en esa banda.
 - **DLY 2**: **WIDE** (el eco derecho más tarde), y el delay **GRAIN**: **PITCH** (±12 semitonos por repetición) y
   **SPRAY**. Con LOAD LITE o ECO el delay GRAIN suena como un delay común (la tarjeta dice LITE / ECO). **MOD**
-  (0.6.86): la deriva de la cinta, WOW lento y FLUTTER rápido sobre las repeticiones (0 nada, 20 por defecto, como una
-  cinta; hasta un chorus mareado); se guarda con el proyecto.
+  (0.6.86): la deriva de la cinta, WOW lento y FLUTTER rápido sobre las repeticiones (0, por defecto: nada, copias
+  exactas; ~20 como una cinta; hasta un chorus mareado); las repeticiones siguen brillantes mientras derivan (0.6.89);
+  se guarda con el proyecto.
 
 ### Reverb (cinco modelos)
 

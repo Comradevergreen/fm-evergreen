@@ -15,14 +15,19 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.6.88).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.6.89).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
-> ⚡ **New in 0.6.71: both cores (experimental).** The FM-1's chip has two processor cores and JIANT used one. Now the
-> second renders some of the synth tracks while the first renders the rest, so the same song leaves much more room
-> before the sound breaks up. It has passed every virtual test but **has not been tried on a real unit yet**, and not
-> every FM-1 handles it: if yours cannot, JIANT notices, stops the second
-> core and goes on with one, without crashing. **MENU > ABOUT** tells you which (**CORES 2** or **CORES 1** and why);
-> hold **REC** while switching on to play on one core. [Details](#both-cores-dual-core).
+> ⚡ **New in 0.6.85 – 0.6.89: a sequencer that breathes, a delay that feeds back.**
+> - **Off the grid**: **REC Q** keeps where you played each note (up to half a step early or late) and **SEQ > TIMING**
+>   moves any step by sixteenths; early notes really play early.
+> - **HUMAN**: velocity, timing and gate vary a little every loop, per track.
+> - **STRETCH · REPEAT**: stretch a sequence x2 … x8 or squeeze it, clone a pattern of any length up to 64 steps,
+>   NUDGE it a step.
+> - **An analog-style delay**: with TONE in the middle the repeats are copies of what went in; FEEDBK 100 % holds them
+>   for a long time, past it they self-oscillate and saturate softly; resonant TONE (and FILT on the reverb); tape
+>   **MOD** on DLY 2.
+> - Still on both cores (0.6.71, experimental): **MENU > ABOUT** says **CORES 2** or **CORES 1**.
+> [Details](#both-cores-dual-core).
 
 > 🫶 If you resonate with my work, consider supporting me on **[Ko-fi](https://ko-fi.com/juanjiant)** (in Argentina:
 > **[Cafecito](https://cafecito.app/juanjiant)**). Thanks for all the good energy, hope you enjoy this little beast ✨🎹
@@ -106,9 +111,8 @@ audio CPU budget, the signature shown at power-on is 428 bytes. An instrument th
 
 ![HOME, DICE ALL, ARRANGE, DRUM-X, PUNCH-IN FX and TRACKS · LOAD](docs/jiant-screens.png)
 
-*HOME with its six beings, the DICE ALL dialog, the song in ARRANGE, the DRUM-X colony, the punch-in FX keys and
-GLO > SYSTEM's TRACKS and LOAD, exactly as the firmware draws them while a song plays (frames of the presentation
-video).*
+*HOME with its six beings, the song in ARRANGE, SEQ > TIMING with the lead off the grid, STRETCH, the delay feeding
+back and the DRUM-X colony, exactly as the firmware draws them while a song plays (frames of the presentation song).*
 
 - **Thermal palette**: values, curves, steps, hits and notes are coloured by intensity (cyan → blue → violet → red →
   orange → yellow → white). Selection is violet and active is orange. Fonts, the landing page's: values in
@@ -510,6 +514,16 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### v0.6.89
+- **The delay, fixed and cleaner.** Long FEEDBK tails were cut off abruptly after a few seconds: the effects' noise
+  gate, meant for the reverbs' residue, took them for silence; now a delay tail is never gated while it is heard. With
+  **TONE in the middle** each repeat is a copy of what went in (no fixed darkening any more; a DC block at 1 Hz only),
+  and at **FEEDBK 100 %** the echoes hold for a long time (about −0.2 dB a second). **TONE at either end** with high
+  FEEDBK self-oscillates at its band. The loop's saturation is exact up to half scale (it colored every repeat a
+  little). **MOD** reads the line with 4-point Hermite interpolation (as DaisySP's delay line), so drifting repeats
+  stay bright; its default is now 0.
+- README: new images (TIMING, HUMAN, STRETCH, CHORD, the delay) and what's new on top.
 
 ### v0.6.88
 - **Record off the grid.** SEQ > TIMING's **REC Q** (per track): at 100 % (the default) live recording snaps to the

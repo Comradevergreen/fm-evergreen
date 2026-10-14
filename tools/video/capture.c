@@ -9,7 +9,7 @@
  *   build/video/capture build/video        -> audio.wav (44.1 kHz stereo), screen.rgb (240 x 240 RGB24 a frame)
  * tools/video/compose.py makes the 1080p video from them. */
 #define UI_TEST_NO_MAIN 1
-#define FELUCCA_VERSION "v0.6.88"
+#define FELUCCA_VERSION "v0.6.89"
 #include "ui_test.c"
 
 #define FPS 30u
@@ -362,6 +362,7 @@ static void put_screen(void)
     }
     fwrite(buf, 1, sizeof buf, rgb);
 }
+#ifndef CAPTURE_NO_MAIN                             /* (0.6.89: capture_shots.c takes the song alone) */
 int main(int argc, char **argv)
 {
     char p[512];
@@ -413,3 +414,4 @@ int main(int argc, char **argv)
     printf("%u frames, %u samples\n", total, nsamp);
     return 0;
 }
+#endif

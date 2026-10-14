@@ -819,16 +819,17 @@ sounds picked with PRESETS, SEQ TOOLS actions, or ordinary knob turns. It is not
 ### Delay
 
 - **DLY**: **TIME** (synced divisions 4BAR … 1/32, or free times from 5 ms to 1.48 s), **FEEDBK**, **TONE** (below the
-  middle darker, above thinner), **MIX**. FEEDBK (0.6.86) behaves like an analog delay's (a tape, a PT2399): each
-  repeat a little darker and thinner, slightly wobbling (wow and flutter); around **100 %** the echoes hang on for
-  many seconds, and **past 100 %** they grow into themselves and hold, saturating softly instead of clipping (turn it
-  back down to let them die). Up to 80 % it is as before. **TONE** is resonant (0.6.86): from the middle down a
-  low-pass sweeping from ~8 kHz to ~250 Hz, from the middle up a low cut sweeping from ~70 Hz to ~3 kHz, both with a
-  peak at the cutoff, so the repeats narrow to a band each pass (dub style) and you choose where they sit.
+  middle darker, above thinner), **MIX**. FEEDBK behaves like an analog delay's (a tape, a PT2399; 0.6.86, 0.6.89):
+  with **TONE in the middle (50 %)** each repeat is a copy of what went in; at **100 %** the echoes hold their level
+  for a long time (they fade very slowly and are never cut off), and **past 100 %** they grow into themselves and
+  hold, saturating softly instead of clipping (turn it back down to let them die). Up to 80 % it is as before.
+  **TONE** is resonant: from the middle down a low-pass sweeping from ~8 kHz to ~250 Hz, from the middle up a low cut
+  sweeping from ~70 Hz to ~3 kHz, both with a peak at the cutoff, so the repeats get darker or thinner and narrow to
+  a band each pass (dub style), and at either end with FEEDBK high the loop self-oscillates at that band.
 - **DLY 2**: **WIDE** (the right echo later), and the **GRAIN** delay: **PITCH** (±12 semitones per repeat) and
   **SPRAY**. With LOAD LITE or ECO the GRAIN delay plays as a plain delay (the card says LITE / ECO). **MOD**
-  (0.6.86): the tape's drift, slow WOW and fast FLUTTER on the repeats (0 none, 20 the default, a tape's; up to
-  seasick chorus); saved with the project.
+  (0.6.86): the tape's drift, slow WOW and fast FLUTTER on the repeats (0, the default: none, exact copies; ~20 a
+  tape's; up to a seasick chorus); the repeats stay bright while they drift (0.6.89); saved with the project.
 
 ### Reverb (five models)
 

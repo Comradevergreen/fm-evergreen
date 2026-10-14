@@ -2,9 +2,12 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # (JIANT 0.5; 0.6.30: from the presentation video's footage) the README's images, docs/jiant-hero.png and
 # docs/jiant-screens.png, from the FM-1 screens the video's capture recorded (tools/video/capture.c -> screen.rgb,
-# 30 fps, its song at 125 BPM): every screen alive, as the firmware drew it while the song played.
+# 30 fps, its song at 125 BPM): every screen alive, as the firmware drew it while the song played. (0.6.89) The newer
+# pages from tools/video/capture_shots.c (the same song): shots.rgb, shots.txt.
 #   cc -O2 -w -Ibuild/gen -Ifirmware/src -Itests -o build/video/capture tools/video/capture.c -lm
 #   build/video/capture build/video
+#   cc -O2 -w -Ibuild/gen -Ifirmware/src -Itests -o build/video/capture_shots tools/video/capture_shots.c -lm
+#   build/video/capture_shots build/video
 #   python3 tools/gen_readme_hero.py build/video docs        (needs PIL, numpy)
 import re, sys
 from pathlib import Path
@@ -24,7 +27,12 @@ BG, TXT, MID, DIM = (0, 0, 0), (244, 241, 234), (160, 154, 150), (80, 76, 84)
 
 SCR = np.memmap(V / 'screen.rgb', dtype=np.uint8, mode='r').reshape(-1, 240, 240, 3)
 BEAT = 60 / 125
-def shot(beat):                                      # the screen at that beat of the film
+# (0.6.89) the newer pages, from tools/video/capture_shots.c: shots.rgb, their names in shots.txt
+SHOTS = np.fromfile(V / 'shots.rgb', dtype=np.uint8).reshape(-1, 240, 240, 3)
+SHOT_N = [l for l in (V / 'shots.txt').read_text().split('\n') if l]
+def shot(beat):                                      # the screen at that beat of the film, or a newer page by its name
+    if isinstance(beat, str):
+        return Image.fromarray(np.array(SHOTS[SHOT_N.index(beat)]))
     return Image.fromarray(np.array(SCR[int(beat * BEAT * 30)]))
 # the film's beats (capture.c's script, 0.6.37)
 HOME, ANALOG, DRUMX, DICE, ARRANGE, LOAD = 232, 34.5, 18.5, 193.5, 186.5, 205.5
@@ -61,8 +69,10 @@ y0 = 370
 big = [(HOME, 'HOME · six living tracks'), (DICE, 'DICE ALL · a new song idea'), (ARRANGE, 'ARRANGE · the song in a column')]
 for i, (b, c) in enumerate(big):
     x = 70 + i * 500; framed(im, shot(b), x, y0, 2); d.text((x, y0 + 492), c, font=cap, fill=heat(0.15 + 0.3 * i))
-strips = [[(ANALOG, 'ACID ANALOG'), (DRUMX, 'DRUM-X'), (MIXER, 'MIXER · 6'), (RESO, 'RESO REVERB'), (SLICER, 'SLICER BUS'), (PUNCH, 'PUNCH-IN FX')],
-          [(FM6, 'FM6 OPERATORS'), (MSEQ, 'MSEQ'), (MASTER, 'MASTER'), (DIST, 'DIST'), (TOOLS, 'SEQ TOOLS'), (LOAD, 'TRACKS · LOAD')]]
+strips = [[('TIMING', 'TIMING · OFF THE GRID'), ('HUMAN', 'HUMAN'), ('STRETCH', 'STRETCH · REPEAT'), ('CHORD', 'CHORD MODE'),
+           ('DLY', 'DELAY · FEEDBACK'), ('DLY 2', 'DELAY · MOD')],
+          [(ANALOG, 'ACID ANALOG'), (DRUMX, 'DRUM-X'), (FM6, 'FM6 OPERATORS'), (RESO, 'RESO REVERB'), (PUNCH, 'PUNCH-IN FX'),
+           (MIXER, 'MIXER · 6')]]
 y1 = y0 + 545
 for r, row in enumerate(strips):
     for i, (b, c) in enumerate(row):
@@ -70,15 +80,15 @@ for r, row in enumerate(strips):
         im.paste(shot(b).resize((216, 216), Image.LANCZOS), (x, y))
         d.text((x, y + 222), c, font=font('SemiBold', 18), fill=MID)
 y2 = y1 + 2 * 270 + 20
-cards = [("SONG IDEAS", "HOME + SELECT writes a whole song:\n21 genres, never the same twice."),
+cards = [("OFF THE GRID", "REC Q keeps where you played;\nTIMING moves a step by 1/16."),
+         ("HUMAN", "Velocity, timing and gate breathe\na little differently every loop."),
+         ("STRETCH · REPEAT", "x2..x8 or squeezed; clone a pattern\nof any length up to 64 steps."),
+         ("ANALOG DELAY", "Feedback past 100 % self-oscillates;\nresonant TONE, tape MOD."),
+         ("CHORD MODE", "One key, a whole chord; recorded\nwhole, strummed, lit on the keys."),
+         ("SONG IDEAS", "HOME + SELECT writes a whole song:\n21 genres, never the same twice."),
          ("ARRANGE", "Sections in a column, bars and scenes;\nEND plays x2..x8 or loops."),
-         ("UNDO", "GLO + G4 takes the last big change\nback; again, forward."),
-         ("TRACKS · LOAD", "4 or 6 tracks; ECO, LITE or FULL:\nyou choose how heavy it gets."),
-         ("BEINGS", "Each engine is an organism shaped\nby its knobs and its own audio."),
          ("DRUM-X", "Synthesized drums: morph from A to B,\nFOLD, FM ENV, TONE: no samples."),
-         ("FIVE REVERBS", "ROOM, SPRING, SHIMMER, RESO tuned\nto the scale and a granular CLOUD."),
-         ("PUNCH-IN FX", "Hold FX and play the keys: repeats,\noctaves, stutters, recorded."),
-         ("ONE SCALE", "Every track, the reverb and the arp\nfollow the same scale.")]
+         ("FIVE REVERBS", "ROOM, SPRING, SHIMMER, RESO tuned\nto the scale and a granular CLOUD.")]
 ft, fd = font('SemiBold', 27), font('Medium', 20)
 for i, (t, txt) in enumerate(cards):
     cx = 70 + (i % 3) * 500; cy = y2 + (i // 3) * 125
@@ -90,7 +100,8 @@ d.text((70, Hh - 50), "GPL-3.0  ·  fork of Felucca (Hügelton Instruments)  · 
 im.save(OUT / 'jiant-hero.png'); print(OUT / 'jiant-hero.png', im.size)
 
 # ---- the screens: six of them, 2x, as a grid
-sc = [(HOME, 'HOME'), (DICE, 'DICE ALL'), (ARRANGE, 'ARRANGE'), (DRUMX, 'DRUM-X'), (PUNCH, 'PUNCH-IN FX'), (LOAD, 'TRACKS · LOAD')]
+sc = [(HOME, 'HOME'), (ARRANGE, 'ARRANGE'), ('TIMING', 'TIMING · OFF THE GRID'), ('STRETCH', 'STRETCH · REPEAT'),
+      ('DLY', 'DELAY · FEEDBACK'), (DRUMX, 'DRUM-X')]
 g = Image.new('RGB', (3 * 520 + 40, 2 * 560 + 30), BG); d = ImageDraw.Draw(g)
 for i, (b, c) in enumerate(sc):
     x = 40 + (i % 3) * 520; y = 30 + (i // 3) * 560
