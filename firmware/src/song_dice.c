@@ -28,12 +28,13 @@
 
 enum { RL_DRUM, RL_BASS, RL_PAD, RL_LEAD, RL_ARP, RL_TEX, RL_N };
 enum { DS_MOTORIK, DS_ELECTRO, DS_BREAK, DS_BROKEN, DS_MINIMAL, DS_DEEP, DS_HARD, DS_PUNK, DS_INDIE, DS_SPARSE,
-       DS_POSTPUNK, DS_RBOX, DS_NEWORD, DS_KLING, DS_EBM, DS_IDM, DS_NONE };   /* (0.6.80: the wave's four before DS_IDM;
-                                                         * 0.6.81: EBM's) */
+       DS_POSTPUNK, DS_RBOX, DS_NEWORD, DS_KLING, DS_EBM, DS_DARK, DS_IDM, DS_NONE };   /* (0.6.80: the wave's four before
+                                                         * DS_IDM; 0.6.81: EBM's, darkwave's) */
 enum { KT_808, KT_HARD, KT_CLICK, KT_INDUS, KT_SOFT, KT_GLITCH, KT_ELECTRO };
 enum { BS_OCT8, BS_PUMP, BS_ACID, BS_DRONE, BS_ROLL, BS_BLIP, BS_SUB, BS_PUNK, BS_INDIE, BS_RUMBLE, BS_IDM,
-       BS_HOOK, BS_SUICIDE, BS_SEQ, BS_EBM };          /* (0.6.80) a bass that sings high, a rockabilly ostinato, a sequencer;
-                                                         * (0.6.81) EBM's galloping sixteenths */
+       BS_HOOK, BS_SUICIDE, BS_SEQ, BS_EBM, BS_DARK };   /* (0.6.80) a bass that sings high, a rockabilly ostinato, a
+                                                         * sequencer; (0.6.81) EBM's galloping sixteenths, darkwave's
+                                                         * low root hammered in eighths */
 enum { PS_HOLD, PS_STAB, PS_PULSE, PS_SPARSE, PS_DUB, PS_SWELL, PS_DRONE, PS_POWER };   /* (0.6.80: an organ's drone, a
                                                          * guitar's power chords) */
 enum { VC_7, VC_9, VC_QUART, VC_SUS, VC_ADD9, VC_MIX, VC_POWER, VC_TRIAD };   /* the chords' voicings: four notes; (0.6.80)
@@ -68,7 +69,9 @@ typedef struct {
     uint8_t odd;                                        /* percent: loops of odd lengths against each other */
     uint8_t e_bass[3], e_pad[3], e_lead[3], e_arp[3], e_tex[3];
     uint8_t rtype[2], dtime[2];                         /* reverb types (no SHIMMER), delay times (N_DTIME) */
-    uint8_t bars, wet;                                  /* chords every 1 or 2 bars; 0..100: how wet the space */
+    uint8_t bars, wet;                                  /* chords every 1, 2 or 4 bars; 0..100: how wet the space */
+    uint8_t plain;                                      /* (0.6.81) a band's sound: open filters (air, cymbals), plain
+                                                         * chords (rarely the rich ones), hats on the offbeat eighths */
 } dstyle_t;
 
 #define X 127
@@ -105,11 +108,14 @@ static const dstyle_t DSTYLE[] = {
     /* (0.6.80) the wave: Joy Division, Suicide, New Order, Kraftwerk. Few chords (one, two), the bass carrying the
      * tune high, machines' drums, power chords and triads instead of lush ones, a lead that repeats; their degrees
      * major or minor in every scale they take (iv, VII: never dorian's diminished sixth) */
-    {"POST PUNK", 118, 150, 0, {SC_MIN, SC_DOR, SC_PHRY, SC_MIN}, {{0, X, X, X}, {0, 3, X, X}, {0, 6, X, X}},
-     DS_POSTPUNK, 100, {KT_SOFT, KT_808}, BS_HOOK, PS_POWER, VC_POWER, LM_SPARSE, AR_SEQ, 1, 2,
+    /* (0.6.81, measured on Joy Division and Bauhaus: the kick on every beat, the hat on the offbeat eighths, the bass
+     * repeating each note two to four eighths, one chord or two over four bars, major too (Love Will Tear Us Apart:
+     * A, D), bright) */
+    {"POST PUNK", 118, 150, 0, {SC_MIN, SC_MAJ, SC_PHRY, SC_MIN}, {{0, X, X, X}, {0, 3, X, X}, {0, 5, X, X}},
+     DS_POSTPUNK, 100, {KT_SOFT, KT_808}, BS_HOOK, PS_POWER, VC_POWER, LM_SPARSE, AR_UPDOWN, 1, 2,
      {RL_BASS, RL_LEAD, RL_PAD, RL_TEX, RL_ARP}, 0,
      {EG_A, EG_A, EG_PH}, {EG_A, EG_PH, EG_FM}, {EG_A, EG_FM, EG_PH}, {EG_A, EG_PH, EG_FM}, {EG_NO, EG_A, EG_VO},
-     {0, 1}, {1, 0}, 2, 55},
+     {0, 1}, {1, 0}, 4, 55, 1},
     {"BROKEN", 80, 100, 14, {SC_DOR, SC_MIN, SC_MEL, SC_DOR}, {{0, 3, X, X}, {0, X, X, X}, {0, 6, 3, X}},
      DS_BROKEN, 90, {KT_SOFT, KT_GLITCH}, BS_DRONE, PS_SPARSE, VC_QUART, LM_MOTIF, AR_WALK, 0, 1, P_SONG, 60,
      {EG_FM, EG_VO, EG_PH}, {EG_PH, EG_VO, EG_FM}, {EG_VO, EG_FM, EG_PH}, {EG_FM, EG_PH, EG_LO}, {EG_VO, EG_NO, EG_PH},
@@ -157,11 +163,11 @@ static const dstyle_t DSTYLE[] = {
      {RL_BASS, RL_LEAD, RL_ARP, RL_PAD, RL_TEX}, 0,
      {EG_A, EG_PH, EG_FM}, {EG_A, EG_PH, EG_FM}, {EG_VO, EG_A, EG_PH}, {EG_A, EG_PH, EG_LO}, {EG_NO, EG_VO, EG_LO},
      {0, 1}, {1, 2}, 2, 25},
-    {"GOTHIC", 118, 146, 0, {SC_MIN, SC_HARM, SC_PHRY, SC_MIN}, {{0, 5, X, X}, {0, 3, X, X}, {0, 5, 3, X}},
-     DS_POSTPUNK, 100, {KT_SOFT, KT_808}, BS_HOOK, PS_SWELL, VC_ADD9, LM_SPARSE, AR_UPDOWN, 1, 2,
+    {"GOTHIC", 98, 140, 0, {SC_MIN, SC_HARM, SC_PHRY, SC_MIN}, {{0, X, X, X}, {0, X, X, X}, {0, 5, X, X}},
+     DS_POSTPUNK, 100, {KT_SOFT, KT_808}, BS_HOOK, PS_SWELL, VC_TRIAD, LM_SPARSE, AR_UPDOWN, 1, 2,
      {RL_BASS, RL_PAD, RL_LEAD, RL_ARP, RL_TEX}, 0,
      {EG_A, EG_PH, EG_A}, {EG_A, EG_FM, EG_PH}, {EG_A, EG_FM, EG_PH}, {EG_PH, EG_A, EG_FM}, {EG_NO, EG_VO, EG_A},
-     {1, 0}, {1, 4}, 2, 75},
+     {1, 0}, {1, 4}, 4, 75, 1},
     {"BREAKBEAT", 126, 140, 6, {SC_MIN, SC_DOR, SC_PHRY, SC_MIN}, {{0, X, X, X}, {0, 3, X, X}, {0, 6, X, X}},
      DS_BREAK, 100, {KT_ELECTRO, KT_HARD}, BS_ACID, PS_STAB, VC_9, LM_OSTINATO, AR_UPDOWN, 1, 2, P_DANCE, 0,
      {EG_A, EG_PH, EG_A}, {EG_PH, EG_A, EG_FM}, {EG_A, EG_PH, EG_VO}, {EG_A, EG_FM, EG_PH}, {EG_NO, EG_VO, EG_PH},
@@ -171,6 +177,13 @@ static const dstyle_t DSTYLE[] = {
      {RL_PAD, RL_ARP, RL_LEAD, RL_TEX, RL_BASS}, 50,
      {EG_FM, EG_PH, EG_A}, {EG_FM, EG_PH, EG_A}, {EG_FM, EG_PH, EG_VO}, {EG_FM, EG_PH, EG_A}, {EG_VO, EG_PH, EG_NO},
      {4, 0}, {0, 4}, 2, 90},
+    /* (0.6.81) DARKWAVE (Boy Harsher, measured: four on the floor, the snare on 2 and 4, the hat on the offbeat, a low
+     * synth bass hammering its root in eighths, minor, one chord or two, a lot of room) */
+    {"DARKWAVE", 124, 136, 0, {SC_MIN, SC_PHRY, SC_DOR, SC_MIN}, {{0, X, X, X}, {0, 3, X, X}, {0, 6, X, X}},
+     DS_DARK, 100, {KT_808, KT_ELECTRO}, BS_DARK, PS_HOLD, VC_TRIAD, LM_SPARSE, AR_PULSE, 1, 2,
+     {RL_BASS, RL_PAD, RL_LEAD, RL_TEX, RL_ARP}, 0,
+     {EG_A, EG_A, EG_PH}, {EG_A, EG_PH, EG_A}, {EG_A, EG_PH, EG_FM}, {EG_A, EG_PH, EG_FM}, {EG_NO, EG_VO, EG_A},
+     {0, 1}, {1, 2}, 4, 50, 1},
 };
 #undef X
 #define NDSTYLE (sizeof DSTYLE / sizeof DSTYLE[0])
@@ -178,13 +191,14 @@ static const dstyle_t DSTYLE[] = {
 #define DSTYLE_DARK 10u                                 /* (the first ten: the night's) */
 /* (0.6.80) the wave's four (POST PUNK, SYNTH POP, MINIMAL SYNTH, MAN MACHINE; 0.6.81: and EBM, GOTHIC, BREAKBEAT,
  * IMPRESSION): nearly one throw in two */
-static const uint8_t DSTYLE_WAVE[8] = {6, 12, 13, 15, 16, 17, 18, 19};   /* (0.6.81: EBM, GOTHIC, BREAKBEAT, IMPRESSION) */
+static const uint8_t DSTYLE_WAVE[9] = {6, 12, 13, 15, 16, 17, 18, 19, 20};   /* (0.6.81: EBM, GOTHIC, BREAKBEAT,
+                                                         * IMPRESSION, DARKWAVE) */
 
 static int32_t rr(int32_t lo, int32_t hi) { return lo + (int32_t)(rng() % (uint32_t)(hi - lo + 1)); }
 static int chance(uint32_t pct) { return rng() % 100u < pct; }
 static uint32_t dstyle_pick(void)
 {
-    return chance(45) ? DSTYLE_WAVE[rng() % 8u] : chance(25) ? rng() % DSTYLE_IDM : chance(80) ? rng() % DSTYLE_DARK :
+    return chance(45) ? DSTYLE_WAVE[rng() % 9u] : chance(25) ? rng() % DSTYLE_IDM : chance(80) ? rng() % DSTYLE_DARK :
            DSTYLE_DARK + rng() % (NDSTYLE - DSTYLE_DARK);
 }
 
@@ -193,7 +207,7 @@ static uint32_t dstyle_pick(void)
 enum { TW_NONE, TW_PHASE, TW_COMB, TW_GRAIN, TW_POLY, TW_DRONE };
 static struct {
     const int8_t *prog;
-    uint32_t n, steps, voicing, nlast, energy, twist;
+    uint32_t n, steps, voicing, nlast, energy, twist, plain;
     uint32_t arp;                                       /* (0.6.81) how the arp speaks this throw (the genre's, or
                                                          * ambient: up and down in eighths over a rich chord) */
     int32_t last[4];
@@ -251,11 +265,13 @@ static const char *const DRUM_BAR[][8] = {
     [DS_SPARSE]  = {"x...............", "", "", "", "", "", "......g.....x...", "..........g....."},
     /* (0.6.80) the wave's: Stephen Morris's tight kit (sixteenths on the hat, the floor tom answering), a cheap rhythm
      * box (Suicide), Blue Monday's four on the floor and its handclap, Kraftwerk's dry machine and its metal */
-    [DS_POSTPUNK] = {"x.....x...x.....", "....a.......a...", "", "xgxgxgxgxgxgxgxg", "", "...............x", "", ""},
+    [DS_POSTPUNK] = {"a...x...a...x...", "....a.......a...", "", "x.a.x.a.x.a.x.a.", "", "", "", ""},   /* (0.6.81:
+                                                         * measured, the kick on every beat, the hat's offbeats) */
     [DS_RBOX]     = {"x.......x.x.....", "....x.......x...", "", "xgxgxgxgxgxgxgxg", "", "", "", ""},
     [DS_NEWORD]   = {"a...a...a...a...", "", "....a.......a...", "xgxgxgxgxgxgxgxg", "..x.......x.....", "", "", ""},
     [DS_KLING]    = {"x.....x.x.......", "....x.......x...", "", "x.x.x.x.x.x.x.x.", "", "", "..........x...x.", "x..x..x...x.x..."},
     [DS_EBM]      = {"a...a...a...a...", "....a.......a...", "....x.......x...", "..x...x...x...x.", "", "", "", ""},   /* (0.6.81) */
+    [DS_DARK]     = {"a...a...a...a...", "....a.......a...", "....x.......x...", "..a...a...a...a.", "", "", "", ""},
 };
 static void dice_drums(track_t *t, const dstyle_t *st, uint32_t len)
 {
@@ -277,18 +293,24 @@ static void dice_drums(track_t *t, const dstyle_t *st, uint32_t len)
         }
         return;
     }
+    /* (0.6.81) the post punk kick now and then on 1 and 3 and an eighth before 3 (Boy Harsher's Pain); darkwave's
+     * snare now and then a sixteenth before the bar (step 15); the hat's open one on the last offbeat */
+    const char *kick = st->drums == DS_POSTPUNK && chance(30) ? "a.......a.x....." : 0;
+    uint32_t snr15 = st->drums == DS_DARK && chance(50), oh = (st->drums == DS_POSTPUNK || st->drums == DS_DARK) && chance(40);
     for (i = 0; i < len; i++) {
         step_t *s = &t->step[i];
         uint32_t h = 0, a = 0, ghost = 0, p = i % 16u;
         uint32_t fill = len > 16u && i >= len - 4u && st->drums != DS_DEEP && st->drums != DS_SPARSE &&
-                        st->drums != DS_KLING && st->drums != DS_RBOX;   /* (machines: no fills) */
+                        st->drums != DS_KLING && st->drums != DS_RBOX && st->drums != DS_DARK;   /* (machines: no fills) */
         for (l = 0; l < NLANE; l++) {
-            const char *b = DRUM_BAR[st->drums][l];
+            const char *b = l == 0u && kick ? kick : DRUM_BAR[st->drums][l];
             char c = b && b[0] ? b[p] : '.';
             if (c == 'x' || c == 'a' || (c == 'g' && rng() % 4u)) h |= 1u << l;
             if (c == 'a') a |= 1u << l;
             if (c == 'g') ghost = 1;
         }
+        if (snr15 && p == 15u && (i / 16u) % 2u == 1u) h |= 1u << 1;
+        if (oh && p == 14u && (i / 16u) % 2u == 1u) h = (h & ~(1u << 3)) | (1u << 4);
         if (fill) {
             if (st->drums == DS_NEWORD) h |= 1u;        /* (Blue Monday's sixteenth kicks) */
             else if (chance(50)) h |= 1u << (chance(50) ? 1 : 5);
@@ -354,16 +376,22 @@ static void dice_bass(track_t *t, const dstyle_t *st, uint32_t len)
     static const uint8_t PUMP[16] = {1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 0};
     uint8_t acid[16], roll[16], ind[16];
     int8_t hook[8];
-    {   /* (0.6.80) Peter Hook's line: eight eighths a bar, high, a tune of its own in steps and repeated notes around
-         * the chord's root (a leap back by a step), the bar's last two moved on the fourth bar */
-        int32_t d = 0, j, mv;
+    {   /* (0.6.80) Peter Hook's line: eight eighths a bar, high, a tune of its own around the chord's root, the bar's
+         * last two moved on the fourth bar. (0.6.81, measured: a real one repeats the note before it in half to three
+         * quarters of its eighths: each note now hammered two to four eighths (one now and then), then a step, a
+         * third now and then; it started on the root) */
+        int32_t d = 0, j, mv, run = 0;
         for (j = 0; j < 8; j++) {
-            if (j) {
-                mv = chance(30) ? 0 : chance(70) ? (chance(50) ? 1 : -1) : (chance(50) ? 2 : -2);
-                if (d + mv > 5 || d + mv < -2) mv = -mv;
-                d += mv;
+            if (!run) {
+                if (j) {
+                    mv = chance(70) ? (chance(50) ? 1 : -1) : (chance(50) ? 2 : -2);
+                    if (d + mv > 5 || d + mv < -2) mv = -mv;
+                    d += mv;
+                }
+                run = chance(15) ? 1 : rr(2, 4);
             }
             hook[j] = (int8_t)d;
+            run--;
         }
     }
     for (i = 0; i < 16u; i++) {                         /* (one bar's figure, kept: a riff, not noise) */
@@ -373,6 +401,7 @@ static void dice_bass(track_t *t, const dstyle_t *st, uint32_t len)
     }
     if (st->bass != BS_DRONE && st->bass != BS_SUB && base < 33) base += 12;   /* (a figure: from A1; a drone: E1) */
     if (st->bass == BS_HOOK) base = dtonic(t, 40);     /* (0.6.80: the hook an octave up, from E2: it sings) */
+    if (st->bass == BS_DARK) base = dtonic(t, 31);     /* (0.6.81: darkwave's, low: from G1) */
     for (i = 0; i < len; i++) {
         step_t *s = &t->step[i];
         int32_t d = chord_at(i), on = 0, oct = 0, step = 0, vel = 96;
@@ -418,6 +447,14 @@ static void dice_bass(track_t *t, const dstyle_t *st, uint32_t len)
             dstep_note(s, n, 1, p % 2u ? 82u : 96u, 0);
             continue;
         }
+        case BS_DARK:                                   /* (0.6.81) the root hammered in eighths, the downbeats harder;
+                                                         * the octave at the end of every second bar, the fifth before
+                                                         * it now and then */
+            on = p % 2u == 0u;
+            oct = (i / 16u) % 2u == 1u && p == 14u;
+            step = (i / 16u) % 4u == 3u && p == 12u && chance(50) ? 4 : 0;
+            vel = p % 4u == 0u ? 100 : 86;
+            break;
         case BS_SEQ: {                                  /* (0.6.80) Kraftwerk's sequencer: sixteenths, root, octave,
                                                          * fifth, octave; the same strength every step */
             static const int8_t SQ[4] = {0, 12, 7, 12};   /* (semitones: the fifth always perfect) */
@@ -733,6 +770,8 @@ static void dice_sound(track_t *t, uint32_t role, const uint8_t *el)
         if (dh.twist == TW_COMB && (role == RL_PAD || role == RL_ARP)) ft = 3;
         t->p[P_FTYPE] = (int16_t)ft;
         if (ft == 2u) cut += 10;                        /* (a band-pass: higher, or it is only a rumble) */
+        if (dh.plain && role != RL_BASS) cut += rr(12, 22);   /* (0.6.81, measured: a band's chords, guitars and leads
+                                                         * open, air above 5 kHz; ours were twice as dark) */
         if (e == EG_A) {
             t->p[P_E4] = (int16_t)(t->p[P_E4] < cut ? t->p[P_E4] : cut);
             t->p[P_E5] = (int16_t)clamp(t->p[P_E5], res, 90);
@@ -827,6 +866,8 @@ static void dice_post(const uint32_t *role, const uint32_t *act, const dstyle_t 
             if (!dstarts(l, i) || !dstarts(b, i) || dstarts(b, i + 1u) || nx->time == ST_NOTE || !chance(60)) continue;
             *nx = *s;
             step_clear(s);
+            memset(s->note, 0, sizeof s->note);         /* (an empty step as UNDO stores one: no note left in it, or
+                                                         * REDO's steps differ) */
             i++;
         }
         for (i = 0; i < len; i++) {                     /* no minor second, no tritone against the bass */
@@ -1021,6 +1062,7 @@ static const char *dice_seq(track_t *t)
     if (dh.steps * dh.n > NSTEP) dh.steps = NSTEP / dh.n;
     dh.voicing = st->voicing;
     dh.arp = st->arp;
+    dh.plain = st->plain;
     dh.nlast = 0;
     dh.energy = (uint32_t)rr(st->e_lo, st->e_hi);
     dh.twist = TW_NONE;
@@ -1062,7 +1104,8 @@ static void dice_one(void)
     if (dh.steps * dh.n > NSTEP) dh.steps = NSTEP / dh.n;   /* (the whole progression inside the 64 steps) */
     dh.voicing = st->voicing;
     dh.arp = st->arp;
-    if (chance(33)) {                                   /* (0.6.81) one throw in three a richer harmony: sevenths,
+    dh.plain = st->plain;
+    if (chance(st->plain ? 10 : 33)) {                  /* (0.6.81) one throw in three a richer harmony: sevenths,
                                                          * ninths, suspended, mixed; the arps ambient (up and down,
                                                          * eighths) where the genre's was a sequencer or a pulse */
         dh.voicing = VC_MIX;
@@ -1120,7 +1163,7 @@ static void dice_one(void)
             dx_kit[7].a[DXP_DECAY] = (uint8_t)(dx_kit[7].a[DXP_DECAY] < 30u ? dx_kit[7].a[DXP_DECAY] : 30u);
             dx_kit[7].b[DXP_DECAY] = (uint8_t)(dx_kit[7].b[DXP_DECAY] < 36u ? dx_kit[7].b[DXP_DECAY] : 36u);
             t->p[P_FTYPE] = 0;
-            t->p[P_FCUT] = (int16_t)rr(100, 116);
+            t->p[P_FCUT] = (int16_t)(dh.plain ? rr(120, 127) : rr(100, 116));   /* (0.6.81: a band's cymbals bright) */
             t->p[P_FRES] = (int16_t)rr(0, 18);
         }
         else dice_sound(t, r, r == RL_BASS ? st->e_bass : r == RL_PAD ? st->e_pad : r == RL_LEAD ? st->e_lead :
@@ -1129,7 +1172,7 @@ static void dice_one(void)
         t->p[P_VOICE] = (int16_t)(r == RL_PAD ? V_POLY : r == RL_ARP ? (chance(50) ? V_POLY : V_MONO) : V_LEGATO);
         t->p[P_SGATE] = (int16_t)(r == RL_BASS ? (st->bass == BS_PUMP || st->bass == BS_BLIP || st->bass == BS_ROLL ||
                                                   st->bass == BS_RUMBLE || st->bass == BS_PUNK || st->bass == BS_SEQ ||
-                                                  st->bass == BS_SUICIDE || st->bass == BS_EBM ? 40 : 75) :
+                                                  st->bass == BS_SUICIDE || st->bass == BS_EBM || st->bass == BS_DARK ? 40 : 75) :
                                   r == RL_PAD ? (st->pads == PS_DUB || st->pads == PS_STAB ? rr(25, 45) : 120) :
                                   r == RL_ARP ? (st->arp == AR_GLASS ? rr(60, 80) : rr(30, 55)) :
                                   r == RL_LEAD ? (st->lead == LM_MECH ? 50 : 85) : 120);
