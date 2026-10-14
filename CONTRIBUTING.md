@@ -1,22 +1,19 @@
-# Contributing to Felucca
+# Contributing to JIANT
 
-Thanks for helping! To keep things easy to follow, please use the right place:
+Thanks for helping! JIANT is a custom firmware for the FM-1, based on Felucca by Leo Kuroshita (Hügelton Instruments).
+Please report JIANT's bugs and ideas here, not to Felucca: JIANT's changes are not theirs to answer.
 
 | What | Where |
 |---|---|
-| A bug you can reproduce | [Issues](https://github.com/hugelton/Felucca/issues/new/choose): one issue per bug |
-| A feature idea or request | [Discussions › Ideas](https://github.com/hugelton/Felucca/discussions/categories/ideas) (no promise it will be added) |
-| How to use it, or how something works | [Discussions › Q&A](https://github.com/hugelton/Felucca/discussions/categories/q-a) |
-| Forks, mods, music, demos | [Discussions › Show and tell](https://github.com/hugelton/Felucca/discussions/categories/show-and-tell) |
-| Anything else | [Discussions › General](https://github.com/hugelton/Felucca/discussions/categories/general) |
-
-Feature requests posted as issues will be moved to Discussions or closed.
+| A bug you can reproduce | [JIANT Issues](https://github.com/juanjiant-bit/JIANT/issues/new): one issue per bug |
+| A feature idea or request | [JIANT Issues](https://github.com/juanjiant-bit/JIANT/issues/new) with "idea" in the title (no promise it will be added) |
+| How to use it, or how something works | the [manual](docs/MANUAL.md) ([español](docs/MANUAL.es.md)), then an issue if it is still unclear |
+| Forks, mods, music, demos | an issue or a message to the author: we love to see them |
 
 ## Reporting a bug
 
-Please include the Felucca version (hold HOME > ABOUT), your computer's OS and browser if the editor or
-installer is involved, the steps to reproduce it, what you expected and what happened. A photo or a short
-video helps.
+Please include the JIANT version (hold HOME > ABOUT), your computer's OS and browser if the editor or installer is
+involved, the steps to reproduce it, what you expected and what happened. A photo or a short video helps.
 
 ## Pull requests
 
@@ -30,4 +27,6 @@ Pull requests are welcome, including AI-assisted ones, with the same bar for all
 
 By contributing you agree that your contribution is licensed under GPL-3.0-only.
 
-The web editor and installer live in [Felucca-WebApp](https://github.com/hugelton/Felucca-WebApp).
+Felucca itself, its web editor and its installer live at [hugelton/Felucca](https://github.com/hugelton/Felucca) and
+[hugelton/Felucca-WebApp](https://github.com/hugelton/Felucca-WebApp); report there only what also happens on
+Felucca's own firmware.

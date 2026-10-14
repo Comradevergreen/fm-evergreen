@@ -263,16 +263,18 @@ typedef struct {
     uint8_t note, vel, gate, active;
     uint8_t stage;               /* env: 0 off, 1 attack, 2 decay/sustain, 3 release, 4 given up (fading) */
     uint8_t kfade;               /* (0.6.74) stage 4: the fade's blocks so far (voice.c env_tick) */
-    uint8_t fin, fin_len;        /* (0.6.81) a chord glide's new note fading in: blocks left, of (seq.c chord_glide) */
+    uint16_t fin_d;              /* (0.6.81) a chord glide's new note fading in (seq.c chord_glide); 0.6.82: as its glide
+                                  * goes, the distance it set out from (1/16 st; 0 none) */
     int32_t env;                 /* Q24 */
     int32_t env_out;             /* last control-rate amplitude, Q15 */
     int32_t pitch16, pitch_cur;  /* 1/16 semitone, with glide */
-    int32_t gstep;               /* glide TIME mode: 1/16 st per control tick, 0 = RATE mode */
+    int32_t gstep;               /* glide TIME mode: 1/16 st per control tick, Q8 (0.6.82: slow glides smooth), 0 = RATE */
     int32_t fine;                /* unison detune: phase increment * (1 + fine / 4096) */
     uint32_t ph[3];
     int32_t s[8];                /* engine state (filters, envs) */
     uint32_t age;
     uint8_t mvel;                /* mod.c: the note-on velocity (before UNISON scaling) and RAND of the note */
+    uint8_t gacc;                /* (0.6.82) the glide's fraction of a 1/16 st carried (gstep Q8) */
     int16_t mrnd;
 } voice_t;
 
@@ -522,6 +524,10 @@ typedef struct track {
     uint8_t pfx;                 /* PFX_* */
     int16_t pfx_pit;             /* OCT- / OCT+: 1/16 semitones on every voice */
     int16_t pfx_rpit;            /* RANDOM: the next note's offset (1/16 semitones), drawn by trk_note_on */
+    int8_t dpit;                 /* (0.6.82) the sequencer's next drum hits: their tune (semitones; a step's OCT, RAND,
+                                  * TONAL, ARP SCALE on a kit) */
+    int16_t dbend;               /* .. BEND: where the hit glides to over dbt blocks (1/16 semitones; eng_drum.c) */
+    uint16_t dbt;
     uint8_t pfx_half;            /* 1/2 TEMPO: the odd sample carried; pfx_rs: let go, back to the real place */
     uint8_t pfx_rs;
     uint16_t pfx_idx0;           /* .. where it was pressed (step, samples into it) and the samples since */

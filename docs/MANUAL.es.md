@@ -543,7 +543,13 @@ seleccionada se graban como **automatización**. MENU > AUDIO tiene el **CLICK**
     componente: **ALWAYS**, **1:2** (1ª, 3ª, … vuelta), **2:2** (2ª, 4ª, …), **SKIP** (se guarda pero no suena: un
     interruptor). KNOB 4 el **LEN** del paso: GATE (el de la pista) o 1/16 … 15/16 de la nota (o de cada parte de
     RATCH / ECHO / ARP) sonando.
-  Los proyectos los guardan; un kit de batería ignora los ARP (TRIG, CHANCE y RATCH funcionan también en baterías).
+  Los proyectos los guardan. **En un kit de batería** (0.6.83) también funcionan: OCT, RAND y TONAL afinan los golpes
+  (RAND y TONAL en la escala de la pista), BEND dobla cada golpe durante el paso; ARP NOTES toca los sonidos del paso
+  uno tras otro, SEQ los sonidos del patrón en el orden en que suenan, SCALE re-dispara los golpes del paso, cada parte
+  un grado más arriba.
+- **Un slide de acordes largo** (0.6.83): el glide hacia un acorde dura lo que dura ese acorde, con sus TIEs; GLIDE
+  fija cuánto de ese tramo (127: todo). Un acorde sostenido con TIEs en pasos lentos (p. ej. DIV 1/4 a 120 BPM: diez
+  pasos, 5 s) se desliza así de lento y suave; las notas nuevas aparecen a medida que se deslizan.
 - **PATTERN**: LEN (1–64), DIV, SWING, GATE.
 - **AUTOMATION**: PLAY activa o desactiva la automatización de la pista, EVENT y LOCK cuentan los registros, CLEAR
   los borra (OCT+, con diálogo).

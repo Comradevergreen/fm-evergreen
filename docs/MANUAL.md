@@ -521,7 +521,12 @@ recorded into the pattern, quantized to its steps, overdubbing. Knob moves on th
     **ALWAYS**, **1:2** (the 1st, 3rd, … loop), **2:2** (the 2nd, 4th, …), **SKIP** (kept, but not played: an
     on/off switch). KNOB 4 the step's **LEN**: GATE (the track's) or 1/16 … 15/16 of the note (or of each RATCH /
     ECHO / ARP part) sounding.
-  Projects keep them; a drum kit ignores the ARPs (TRIG, CHANCE and RATCH work on drums too).
+  Projects keep them. **On a drum kit** (0.6.83) they work too: OCT, RAND, TONAL tune the hits (RAND and TONAL in
+  the track's scale), BEND bends each hit over the step; ARP NOTES plays the step's sounds one after another, SEQ
+  the pattern's sounds in the order they play, SCALE retriggers the step's hits each part a degree further up.
+- **A long chord slide** (0.6.83): the glide into a chord lasts as long as that chord, its TIEs included; GLIDE sets
+  how much of it (127: all of it). A chord held over TIEs on slow steps (e.g. DIV 1/4 at 120 BPM: ten steps, 5 s)
+  slides that slowly and smoothly; new notes fade in as they glide.
 - **PATTERN**: LEN (1–64), DIV, SWING, GATE.
 - **AUTOMATION**: PLAY turns the track's automation on or off, EVENT and LOCK count the records, CLEAR erases them
   (OCT+, with a dialog).

@@ -493,7 +493,7 @@ static void glide_set(track_t *t, voice_t *v, int glide)
     if (t->p[P_GLMODE]) {
         int32_t d = v->pitch16 - v->pitch_cur, ticks = 1 + t->p[P_GLIDE] * t->p[P_GLIDE] / 8;
         d = d < 0 ? -d : d;
-        v->gstep = d / ticks > 0 ? d / ticks : 1;
+        v->gstep = d * 256 / ticks > 0 ? d * 256 / ticks : 1;
     } else {
         v->gstep = 0;
     }
@@ -519,7 +519,8 @@ static void voice_start(track_t *t, voice_t *v, uint32_t note, uint32_t vel, int
     v->active = 1;
     v->stage = 1;
     v->age = ++vage;
-    v->fin = 0;
+    v->fin_d = 0;
+    v->gacc = 0;
     v->pitch16 = ((int32_t)note + trk_trans(t)) * 16 + t->pfx_rpit;   /* (pfx.c RANDOM: 0 but while it is held) */
     v->mvel = t->m_vel;                                 /* mod.c: the note's VEL and RAND */
     v->mrnd = t->m_rnd;
@@ -962,18 +963,28 @@ static uint32_t track_render(track_t *t, int32_t *out, uint32_t n)
                 m.amp1 = m.amp1 * (int32_t)(t->xf - 1u) / (int32_t)(t->xf_len ? t->xf_len : XF_BLOCKS);
             else if (t->xin)                            /* (0.6.41) in, linear, after a switch or a dip */
                 m.amp1 = m.amp1 * (int32_t)(t->xin_len - t->xin + 1u) / (int32_t)(t->xin_len + 1u);
-            if (v->fin) {                               /* (0.6.81) a chord glide's new note, in */
-                m.amp1 = m.amp1 * (int32_t)(v->fin_len - v->fin + 1u) / (int32_t)(v->fin_len + 1u);
-                v->fin--;
+            if (v->fin_d) {                             /* (0.6.81) a chord glide's new note, in as it glides */
+                int32_t r = v->pitch16 - v->pitch_cur;
+                r = r < 0 ? -r : r;
+                if (r >= (int32_t)v->fin_d) r = v->fin_d - 1;
+                m.amp1 = m.amp1 * ((int32_t)v->fin_d - r) / (int32_t)v->fin_d;
+                if (!r) v->fin_d = 0;
             }
             m.amp0 = v->env_out;
             v->env_out = m.amp1;
         }
         if (v->pitch_cur != v->pitch16) {               /* glide */
             int32_t d = v->pitch16 - v->pitch_cur;
-            int32_t st = v->gstep ? v->gstep : (int32_t)(ENV_LIN[(p[P_GLIDE] ? p[P_GLIDE] : 40) & 127] >> 14);   /* slide: ~45 ms */
-            if (st < 1)
-                st = 1;
+            int32_t st;
+            if (v->gstep) {                             /* TIME: Q8, the fraction carried (0.6.82) */
+                int32_t q = v->gacc + v->gstep;
+                st = q >> 8;
+                v->gacc = (uint8_t)(q & 255);
+            } else {
+                st = (int32_t)(ENV_LIN[(p[P_GLIDE] ? p[P_GLIDE] : 40) & 127] >> 14);   /* slide: ~45 ms */
+                if (st < 1)
+                    st = 1;
+            }
             v->pitch_cur += d > 0 ? (d < st ? d : st) : (-d < st ? d : -st);
         }
         if (!env && !m.amp0 && v->stage == 2 && !e->sampled)

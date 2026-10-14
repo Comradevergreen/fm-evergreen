@@ -7644,7 +7644,7 @@ static int test_chord_glide(void)
         if (!v->active || !v->gate) continue;
         nact++;
         if (ages[k] && v->age != ages[k]) continue;
-        if (!ages[k] || v->age != ages[k]) { fresh++; fading += v->fin > 0; }
+        if (!ages[k] || v->age != ages[k]) { fresh++; fading += v->fin_d > 0; }
     }
     ok = nact == 4u && fresh == 1u && fading == 1u;
     {   /* the old voices: same ages, gliding toward D F A (pitch_cur between) */
@@ -7679,6 +7679,28 @@ static int test_chord_glide(void)
     }
     bad += check("chord glide by itself: GLIDE on a POLY track, no SLD, a short GATE: the chord's voices go on into the next", ok);
     transport_req = 2; ui_input();
+    for (i = 0; i < 40u; i++) events_block(CTL);
+    {   /* (0.6.82) a long slide: the next chord held over 14 TIEs, GLIDE 127: the voices glide over all of it, smooth */
+        static int32_t gl_o[2 * CTL];
+        int32_t p0 = -1, mid = -1, end = -1, tgt = 0;
+        t->p[P_SLEN] = 16; t->p[P_GLIDE] = 127; t->p[P_SGATE] = 120;
+        for (i = 2; i < 16u; i++) { memset(&t->step[i], 0, sizeof t->step[i]); t->step[i].time = ST_TIE; }
+        t->step[1].n = 3;                              /* (D F A) */
+        transport_req = 1; ui_input();
+        for (i = 0; i < 8u; i++) mix_block(gl_o, CTL);
+        while (t->seq_idx == 0u) mix_block(gl_o, CTL);
+        mix_block(gl_o, CTL);
+        for (k = 0; k < NVOICE; k++)
+            if (t->v[k].active && t->v[k].gate && t->v[k].pitch16 != t->v[k].pitch_cur) { p0 = t->v[k].pitch_cur; tgt = t->v[k].pitch16; break; }
+        while (t->seq_idx < 8u) mix_block(gl_o, CTL);
+        if (k < NVOICE) mid = t->v[k].pitch_cur;
+        while (t->seq_idx < 15u) mix_block(gl_o, CTL);
+        for (i = 0; i < 400u && t->seq_idx == 15u; i++) mix_block(gl_o, CTL);
+        if (k < NVOICE) end = t->v[k].pitch_cur;
+        ok = k < NVOICE && mid != tgt && (mid - p0) * (tgt - mid) > 0 && end == tgt;
+        bad += check("chord glide over the chord's TIEs (GLIDE 127): halfway at the 8th step, there by the last", ok);
+        transport_req = 2; ui_input();
+    }
     ui_power_on();
     return bad;
 }
