@@ -519,6 +519,7 @@ static void voice_start(track_t *t, voice_t *v, uint32_t note, uint32_t vel, int
     v->active = 1;
     v->stage = 1;
     v->age = ++vage;
+    v->fin = 0;
     v->pitch16 = ((int32_t)note + trk_trans(t)) * 16 + t->pfx_rpit;   /* (pfx.c RANDOM: 0 but while it is held) */
     v->mvel = t->m_vel;                                 /* mod.c: the note's VEL and RAND */
     v->mrnd = t->m_rnd;
@@ -961,6 +962,10 @@ static uint32_t track_render(track_t *t, int32_t *out, uint32_t n)
                 m.amp1 = m.amp1 * (int32_t)(t->xf - 1u) / (int32_t)(t->xf_len ? t->xf_len : XF_BLOCKS);
             else if (t->xin)                            /* (0.6.41) in, linear, after a switch or a dip */
                 m.amp1 = m.amp1 * (int32_t)(t->xin_len - t->xin + 1u) / (int32_t)(t->xin_len + 1u);
+            if (v->fin) {                               /* (0.6.81) a chord glide's new note, in */
+                m.amp1 = m.amp1 * (int32_t)(v->fin_len - v->fin + 1u) / (int32_t)(v->fin_len + 1u);
+                v->fin--;
+            }
             m.amp0 = v->env_out;
             v->env_out = m.amp1;
         }

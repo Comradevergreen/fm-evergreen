@@ -7610,6 +7610,57 @@ static int test_note_page(void)
     ui_power_on();
     return bad;
 }
+/* (0.6.81) a POLY chord with SLD glides into the next: its voices go on (not struck again), their pitch moving to the
+ * new notes low to high; 3 -> 4 notes: the extra one starts from the nearest old note and fades in; 4 -> 3: the one
+ * left glides on, released */
+static int test_chord_glide(void)
+{
+    int bad = 0, ok;
+    track_t *t;
+    uint32_t i, k, ages[NVOICE], nact = 0, fresh = 0, fading = 0, rel = 0;
+    ui_power_on();
+    t = &trk[0];
+    set_engine_of(t, ENGI_ANALOG); apply_preset_to(t, 1); t->engine = t->eng_req;
+    t->p[P_VOICE] = V_POLY; t->p[P_SLEN] = 4; t->p[P_SGATE] = 120; t->p[P_SUS] = 120;
+    for (i = 0; i < NSTEP; i++) { memset(&t->step[i], 0, sizeof t->step[i]); t->step[i].time = ST_REST; }
+    t->step[0].time = ST_NOTE; t->step[0].n = 3; t->step[0].note[0] = 60; t->step[0].note[1] = 64; t->step[0].note[2] = 67;
+    t->step[0].vel = 100; t->step[0].flags = SF_SLIDE;
+    t->step[1].time = ST_NOTE; t->step[1].n = 4; t->step[1].note[0] = 62; t->step[1].note[1] = 65; t->step[1].note[2] = 69;
+    t->step[1].note[3] = 72; t->step[1].vel = 100; t->step[1].flags = SF_SLIDE;
+    t->step[2].time = ST_NOTE; t->step[2].n = 3; t->step[2].note[0] = 60; t->step[2].note[1] = 64; t->step[2].note[2] = 67;
+    t->step[2].vel = 100;
+    transport_req = 1; ui_input();
+    for (i = 0; i < 8u; i++) events_block(CTL);
+    for (k = 0; k < NVOICE; k++) ages[k] = t->v[k].active ? t->v[k].age : 0u;
+    while (t->seq_idx == 0u) events_block(CTL);         /* into step 2 */
+    for (i = 0; i < 2u; i++) events_block(CTL);
+    for (k = 0; k < NVOICE; k++) {
+        voice_t *v = &t->v[k];
+        if (!v->active || !v->gate) continue;
+        nact++;
+        if (ages[k] && v->age != ages[k]) continue;
+        if (!ages[k] || v->age != ages[k]) { fresh++; fading += v->fin > 0; }
+    }
+    ok = nact == 4u && fresh == 1u && fading == 1u;
+    {   /* the old voices: same ages, gliding toward D F A (pitch_cur between) */
+        uint32_t kept = 0;
+        for (k = 0; k < NVOICE; k++)
+            if (ages[k] && t->v[k].active && t->v[k].age == ages[k] && t->v[k].pitch16 != t->v[k].pitch_cur) kept++;
+        ok &= kept == 3u;
+    }
+    bad += check("chord glide (SLD, POLY): 3 -> 4 notes, three voices glide on unstruck, the fourth starts and fades in", ok);
+    while (t->seq_idx == 1u) events_block(CTL);         /* into step 3: four -> three */
+    for (i = 0; i < 2u; i++) events_block(CTL);
+    for (k = 0, nact = 0; k < NVOICE; k++) {
+        if (t->v[k].active && t->v[k].gate) nact++;
+        else if (t->v[k].active && t->v[k].stage == 3u) rel++;   /* (C5 left: the nearest new note is C5 itself) */
+    }
+    ok = nact == 3u && rel == 1u;
+    bad += check("chord glide: 4 -> 3 notes, the one left goes to its nearest new note as it is released", ok);
+    transport_req = 2; ui_input();
+    ui_power_on();
+    return bad;
+}
 static int test_midi_song_pc(void)
 {
     int bad = 0, ok;
@@ -8826,6 +8877,7 @@ int main(void)
     bad += test_chord();
     bad += test_trans_seq();
     bad += test_note_page();
+    bad += test_chord_glide();
     bad += test_fx_sections();
     bad += test_clear_ghosts();
     bad += test_dx_sound();

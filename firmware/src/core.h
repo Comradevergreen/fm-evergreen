@@ -263,6 +263,7 @@ typedef struct {
     uint8_t note, vel, gate, active;
     uint8_t stage;               /* env: 0 off, 1 attack, 2 decay/sustain, 3 release, 4 given up (fading) */
     uint8_t kfade;               /* (0.6.74) stage 4: the fade's blocks so far (voice.c env_tick) */
+    uint8_t fin, fin_len;        /* (0.6.81) a chord glide's new note fading in: blocks left, of (seq.c chord_glide) */
     int32_t env;                 /* Q24 */
     int32_t env_out;             /* last control-rate amplitude, Q15 */
     int32_t pitch16, pitch_cur;  /* 1/16 semitone, with glide */

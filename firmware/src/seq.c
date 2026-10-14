@@ -1120,6 +1120,75 @@ static void seq_stop(void)
 #define SEQ_REP (1u << 16)
 #define SEQ_ROLLED (1u << 17)   /* seq_tick rolled the chance already (before the step's parameter locks): it passed */
 #define SEQ_MISS (1u << 18)     /* .. it failed: nothing plays */
+/* (JIANT 0.6.81) a chord's slide on a POLY track (SLD on a chord step): its notes glide to the next chord's, low to
+ * high, none struck again; the next chord with more notes: each extra one rises from the nearest of the old (its
+ * octave nearest), fading in; with fewer: each old one left glides to the nearest new one, fading out as it goes (its
+ * release). The glide over three quarters of the step */
+static int32_t cg_near(int32_t x, const uint8_t *set, uint32_t n)   /* the note of set, in the octave nearest x */
+{
+    uint32_t i;
+    int32_t best = x, bd = 1000;
+    for (i = 0; i < n; i++) {
+        int32_t y = set[i] + 12 * ((x - set[i] + 6 + 1200) / 12 - 100), d = y > x ? y - x : x - y;
+        if (d < bd) { bd = d; best = y; }
+    }
+    return clamp(best, 0, 127);
+}
+static void chord_glide(track_t *t, const uint8_t *nn, const uint8_t *vv, uint32_t m, uint32_t sk, uint32_t ssamp)
+{
+    uint8_t o[8], n[8], nv[8];
+    uint32_t a = t->seq_n < 8u ? t->seq_n : 8u, b = 0, i, j, k, ticks = ssamp * 3u / 4u / CTL, ti = trk_index(t) % NTRK;
+    int32_t tr = trk_trans(t);
+    if (!ticks) ticks = 1;
+    for (i = 0; i < a; i++) o[i] = t->seq_notes[i];
+    for (i = 0; i < m && b < 8u; i++)
+        if (!((sk >> i) & 1u)) { n[b] = nn[i]; nv[b++] = vv[i]; }
+    for (i = 1; i < a; i++) for (j = i; j > 0 && o[j] < o[j - 1]; j--) { uint8_t x = o[j]; o[j] = o[j - 1]; o[j - 1] = x; }
+    for (i = 1; i < b; i++) for (j = i; j > 0 && n[j] < n[j - 1]; j--) {
+        uint8_t x = n[j]; n[j] = n[j - 1]; n[j - 1] = x; x = nv[j]; nv[j] = nv[j - 1]; nv[j - 1] = x; }
+    for (i = 0; i < a || i < b; i++) {
+        voice_t *v = 0;
+        if (i < a)
+            for (k = 0; k < NVOICE; k++)
+                if (t->v[k].active && t->v[k].gate && t->v[k].note == o[i]) { v = &t->v[k]; break; }
+        if (i < a && i < b && v) {                      /* a pair: the old note glides to the new */
+            int32_t d;
+            if (mo_out[ti][o[i]]) { mo_send(0x80u | trk_midi_ch(ti), mo_out[ti][o[i]] - 1u, 0); mo_out[ti][o[i]] = 0; }
+            v->note = n[i];
+            v->pitch16 = ((int32_t)n[i] + tr) * 16 + t->pfx_rpit;
+            d = v->pitch16 - v->pitch_cur;
+            v->gstep = (d < 0 ? -d : d) / (int32_t)ticks;
+            if (!v->gstep) v->gstep = 1;
+            if (mo_lvl == MO_ALL && mo_plays(t, n[i])) {
+                mo_out[ti][n[i]] = (uint8_t)(n[i] + 1u);
+                mo_send(0x90u | trk_midi_ch(ti), n[i], nv[i] ? nv[i] : 1u);
+            }
+        } else if (i < b) {                             /* a new one: from the nearest old note, fading in */
+            uint32_t a0 = vage;
+            seq_note_on(t, n[i], nv[i]);
+            if (vage != a0 && a)
+                for (k = 0; k < NVOICE; k++)
+                    if (t->v[k].age == vage && t->v[k].active) {
+                        voice_t *w = &t->v[k];
+                        int32_t d;
+                        w->pitch_cur = (cg_near(n[i], o, a) + tr) * 16 + t->pfx_rpit;
+                        d = w->pitch16 - w->pitch_cur;
+                        w->gstep = (d < 0 ? -d : d) / (int32_t)ticks;
+                        if (!w->gstep) w->gstep = 1;
+                        w->fin = w->fin_len = (uint8_t)(ticks < 255u ? ticks : 255u);
+                    }
+        } else if (v) {                                 /* an old one left: to the nearest new note, fading out */
+            int32_t d;
+            v->pitch16 = (cg_near(o[i], n, b) + tr) * 16 + t->pfx_rpit;
+            d = v->pitch16 - v->pitch_cur;
+            v->gstep = (d < 0 ? -d : d) / (int32_t)ticks;
+            if (!v->gstep) v->gstep = 1;
+            seq_note_off(t, o[i]);
+        }
+    }
+    t->slide_glide = 0;
+}
+
 static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint32_t period, uint32_t skip)
 {
     uint32_t i, j, gate = period * (uint32_t)t->p[P_SGATE] / 128u;
@@ -1239,6 +1308,17 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
             sk |= ((skip >> (8u + i)) & 1u) << m;
             m++;
         }
+    if (slide_in && !kit && !arp && hits == 1u && m && t->p[P_VOICE] == V_POLY) {   /* (0.6.81) a POLY chord sliding into
+                                                         * this one: its notes glide to these */
+        chord_glide(t, nn, vv, m, sk, step_samples(t, period, t->seq_idx));
+        t->seq_n = 0;
+        for (i = 0; i < m; i++)
+            if (!((sk >> i) & 1u))
+                t->seq_notes[t->seq_n++] = nn[i];
+        t->seq_off = gate;
+        t->seq_hold = (s->flags & SF_SLIDE) != 0 || next_tie;
+        return;
+    }
     t->slide_glide = (uint8_t)slide_in;
     if (!slide_in)
         seq_release(t);
