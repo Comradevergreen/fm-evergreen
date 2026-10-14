@@ -49,13 +49,6 @@ static int settings_import(persist_t *p, int n)
         p->favorites.factory[15][24] = 0;
     if (p->favorites.factory[15][27] > 7u)         /* SCREEN OFF (1.1.5, ui.c SCR_CODE): unknown = 0 (NEVER since 1.1.5.1) */
         p->favorites.factory[15][27] = 0;
-    if (p->favorites.factory[15][23] != JIANT_PAL_SEEN) {   /* (JIANT 0.6.81) settings from Felucca or an earlier JIANT:
-                                                         * its palette (often GREY or MONO: a black and white screen
-                                                         * after installing) set to JIANT once; a palette picked after
-                                                         * this is kept (the mark saved with it) */
-        p->palette = palette_to_stored(UI_JIANT_INDEX);
-        p->favorites.factory[15][23] = JIANT_PAL_SEEN;
-    }
     p->magic = PERSIST_MAGIC;
     p->palette = palette_to_stored(palette_from_stored(p->palette));
     settings.magic = SETTINGS_MAGIC;
@@ -85,6 +78,21 @@ static int settings_import(persist_t *p, int n)
 #endif
     if (p->panel.magic == PANEL_MAGIC) panel = p->panel;
     return current ? 1 : 2;
+}
+
+/* (JIANT 0.6.81) at power-on (persist_boot, not a backup's restore): settings saved by Felucca or an earlier JIANT keep
+ * their palette, often GREY or MONO (a black and white screen after installing): set to JIANT once, marked (the mark
+ * saved with the next settings: a palette picked after this is kept) */
+static void settings_jiant_once(persist_t *p)
+{
+    if (p->favorites.factory[15][23] == JIANT_PAL_SEEN)
+        return;
+    p->favorites.factory[15][23] = JIANT_PAL_SEEN;
+    p->palette = palette_to_stored(UI_JIANT_INDEX);
+    settings.palette = UI_JIANT_INDEX;
+#ifdef FELUCCA_FAVORITES
+    favorites.factory[15][23] = JIANT_PAL_SEEN;
+#endif
 }
 
 /* Start with the last imported/saved object, including fields owned by a

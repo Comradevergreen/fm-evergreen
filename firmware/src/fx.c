@@ -987,7 +987,7 @@ static inline __attribute__((always_inline)) void fx_buses(const int32_t *cho_in
         rev_in = rpre_out;
     }
     for (i = 0; i < n; i++) {
-        int32_t y = 0, x, side = 0;
+        int32_t y = 0, x, side = 0, xr = 0, wr = 0;
         /* chorus (0.5.1: an ensemble): three taps of the line, ~7, 9.5 and 12 ms, each swept by the LFO a third of a
          * turn apart; the first left, the second right, the third in the middle: always stereo (WIDTH wider) */
         cho_buf[fx.cho_w & (CHO_LEN - 1u)] = (int16_t)clamp(cho_in[i] >> 1, -32768, 32767);
@@ -1009,18 +1009,22 @@ static inline __attribute__((always_inline)) void fx_buses(const int32_t *cho_in
             x += ((xo - x) * (int32_t)fx.dl_xf) >> DXF_LOG2;
             fx.dl_xf--;
         }
-        fx.dly_lp += mulq15(x - fx.dly_lp, col);
-        fx.dly_hp += mulq15(fx.dly_lp - fx.dly_hp, hk);
-        dly_buf[fx.dly_w & (DLY_LEN - 1u)] =
-            (int16_t)clamp((dly_in[i] >> 1) + mulq15(fx.dly_lp - fx.dly_hp, fb), -32768, 32767);
-        if (wd || fx.dr_xf || fx.dr_now != fx.dl_now) {   /* (JIANT) the right echo later: mid and side (0.6.81: on
-                                                         * until it has faded back onto the left's: WIDE to 0 stepped) */
-            int32_t xr = dly_buf[(fx.dly_w - fx.dr_now) & (DLY_LEN - 1u)];
+        if (wd || fx.dr_xf || fx.dr_now != fx.dl_now) {   /* (JIANT) the right echo later (0.6.81: on until it has
+                                                         * faded back onto the left's, WIDE to 0 stepped; read before
+                                                         * the line is written, as the left: at WIDE 0, the same sample) */
+            xr = dly_buf[(fx.dly_w - fx.dr_now) & (DLY_LEN - 1u)];
             if (fx.dr_xf) {
                 int32_t xo = dly_buf[(fx.dly_w - fx.dr_old) & (DLY_LEN - 1u)];
                 xr += ((xo - xr) * (int32_t)fx.dr_xf) >> DXF_LOG2;
                 fx.dr_xf--;
             }
+            wr = 1;
+        }
+        fx.dly_lp += mulq15(x - fx.dly_lp, col);
+        fx.dly_hp += mulq15(fx.dly_lp - fx.dly_hp, hk);
+        dly_buf[fx.dly_w & (DLY_LEN - 1u)] =
+            (int16_t)clamp((dly_in[i] >> 1) + mulq15(fx.dly_lp - fx.dly_hp, fb), -32768, 32767);
+        if (wr) {                                       /* mid and side */
             side += mulq15(x - xr, fx.dm_cur);
             x = (x + xr) >> 1;
         }

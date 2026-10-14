@@ -8306,8 +8306,7 @@ static int test_style(void)
         memset(&p.favorites, 0, sizeof p.favorites);
         p.magic = 0x50455233u;                          /* settings from before STYLE (PER3) */
         ok &= settings_import(&p, (int)(sizeof p - sizeof p.favorites)) == 2 && ui_style == ST_FLAT;
-        ok &= settings.palette == UI_JIANT_INDEX;       /* (0.6.81: settings from before, their palette set to JIANT once) */
-        settings.palette = UI_GREY_INDEX; palette_set(UI_GREY_INDEX); frame();
+        frame();
         ok &= ux.style == ST_FLAT && ux.surf != ux.bg;
         bad += check("  STYLE saved with the settings and read back; older settings and unknown values: FLAT, PIXEL: LINE (idempotent)", ok);
     }
