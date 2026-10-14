@@ -70,7 +70,9 @@ static __attribute__((noinline)) void track_comb(track_t *t, int32_t *out, uint3
         int32_t x = (a + (((c - a) * (int32_t)(per & 255u)) >> 8)) << 1, y = out[i] + mulq15(x, fb);
         b[w & (COMB_LEN - 1u)] = (int16_t)clamp(y >> 1, -32768, 32767);
         w++;
-        out[i] = soft_knee(mulq15(y, g) * 2 + (out[i] >> 2), 24000);
+        y = clamp(y, -262000, 262000);                  /* (0.6.81: y * g overflowed with a loud part, ~96000 in: the
+                                                         * sign flipped, a full-scale crackle; a quarter first) */
+        out[i] = soft_knee((((y >> 2) * g) >> 15) * 8 + (out[i] >> 2), 24000);
     }
     comb_w[ti] = (uint16_t)w;
 }
@@ -113,25 +115,38 @@ static __attribute__((noinline)) void tf_sides(uint32_t ti, const tsvf_t *c, int
         tf_side[ti][sd * 2u + 1u] = ic2;
     }
 }
-static uint8_t tf_on[NTRK], tf_ft[NTRK];        /* in the chain the last block, its TYPE then (0.6.71: a byte a
-                                                 * track, not a bit: two cores write two tracks at once) */
-static __attribute__((noinline)) void track_filter(track_t *t, int32_t *out, uint32_t n)
+static uint8_t tf_on[NTRK], tf_ft[NTRK];        /* the SVF in the chain the last block; the TYPE playing (0.6.71: a
+                                                 * byte a track, not a bit: two cores write two tracks at once) */
+static uint8_t tf_cmb[NTRK];                    /* (0.6.81) the COMB ran the last block (its line live) */
+static uint8_t tf_xb[NTRK], tf_fo[NTRK];        /* (0.6.81) a TYPE's crossfade: its blocks left, the TYPE from (TF_DRY:
+                                                 * no filter) */
+#define TF_XB 8u                                /* (~5 ms: one block's fade between two filters was a tick) */
+#define TF_DRY 0xFFu
+/* the filter of TYPE ft on a part's block; fo (not TF_DRY, an SVF TYPE): from fo's output to ft's, w0 + (i + 1) dw
+ * (Q12) of the way (the SVF's three outputs from one state); own: the engine filters its notes itself (ANALOG, LOFI):
+ * only the COMB here, at cut / res */
+static __attribute__((noinline)) void tf_run(track_t *t, int32_t *out, uint32_t n, uint32_t ft, uint32_t fo, int32_t w0,
+                                             int32_t dw, uint32_t own, int32_t ccut, int32_t cres)
 {
     const int16_t *p = t->p;
-    uint32_t ti = (uint32_t)(t - trk) % NTRK, ft = (uint32_t)p[P_FTYPE] & 3u, i;
+    uint32_t ti = (uint32_t)(t - trk) % NTRK, i;
     int32_t cut = p[P_FCUT] << 8, envq = 0, ic1 = tf_ic1[ti], ic2 = tf_ic2[ti], k;
     tsvf_t c;
+    if (ft == FT_COMB) {
+        if (!tf_cmb[ti])                                /* (0.6.81) in: its line cleared (the last time's, stale) */
+            memset(comb_buf[ti], 0, sizeof comb_buf[ti]);
+        track_comb(t, out, n, ccut, cres);
+        tf_cmb[ti] = 1;
+        return;
+    }
+    if (own)
+        return;
     for (i = 0; i < NVOICE; i++)
         if (t->v[i].active && t->v[i].stage && t->v[i].stage < 4u && (t->v[i].env >> 9) > envq)
             envq = t->v[i].env >> 9;
-    if (ft == FT_COMB) {
-        track_comb(t, out, n, p[P_FCUT], p[P_FRES]);
-        return;
-    }
     cut += ((mulq15(t->lfo_val, t->lfo_fade) * p[P_LD_FLT]) >> 7) + ((envq * p[P_ED_FLT]) >> 7);
     {
-        uint32_t on = !(ft == FT_LP && cut >= (127 << 8) && !p[P_FRES]), was = tf_on[ti], f0 = tf_ft[ti];
-        int32_t xf = was && f0 != ft && f0 != FT_COMB;   /* TYPE changed: from the old one's output */
+        uint32_t on = !(ft == FT_LP && fo == TF_DRY && cut >= (127 << 8) && !p[P_FRES]), was = tf_on[ti];
         if (!on && !was)
             return;                                     /* (open: nothing to filter) */
         if (!was) {                                     /* in: the state as the input (no step) */
@@ -146,9 +161,9 @@ static __attribute__((noinline)) void track_filter(track_t *t, int32_t *out, uin
             ic1 = clamp(2 * v1 - ic1, -150000, 150000);
             ic2 = clamp(2 * v2 - ic2, -150000, 150000);
             y = ft == FT_HP ? x - v2 - ((k * v1) >> 12) : ft == FT_BP ? (k * v1) >> 12 : v2;
-            if (xf) {
-                int32_t y0 = f0 == FT_HP ? x - v2 - ((k * v1) >> 12) : f0 == FT_BP ? (k * v1) >> 12 : v2;
-                y = y0 + (((y - y0) * w) >> 12);
+            if (fo != TF_DRY) {                         /* TYPE changed: from the old one's output */
+                int32_t y0 = fo == FT_HP ? x - v2 - ((k * v1) >> 12) : fo == FT_BP ? (k * v1) >> 12 : v2;
+                y = y0 + (((y - y0) * (w0 + (int32_t)(i + 1u) * dw)) >> 12);
             }
             y = soft_knee(y, 30000);                    /* (the dry part has no knee: the fades after it) */
             if (!was)
@@ -160,25 +175,64 @@ static __attribute__((noinline)) void track_filter(track_t *t, int32_t *out, uin
         if ((dx_xon & 1u) && ENGINES[t->engine] == &ENG_DRUM)
             tf_sides(ti, &c, k, ft, was, on, n > CTL ? CTL : n);
         tf_on[ti] = (uint8_t)on;
-        tf_ft[ti] = (uint8_t)ft;
     }
     tf_ic1[ti] = ic1;
     tf_ic2[ti] = ic2;
+}
+
+/* the FILTER after the voices. (0.6.81) A TYPE turned crossfades over TF_XB blocks from the one playing (the TYPE held
+ * until it is done): between LP HP BP inside the SVF; into or out of the COMB (or into it from no filter) both run, the
+ * old on a copy (was: one block, and the COMB left out: a step each way) */
+static int32_t tf_tmp[CTL];
+static __attribute__((noinline)) void track_filter(track_t *t, int32_t *out, uint32_t n, uint32_t own, int32_t ccut,
+                                                   int32_t cres)
+{
+    uint32_t ti = (uint32_t)(t - trk) % NTRK, r = (uint32_t)t->p[P_FTYPE] & 3u, ft, fo, i;
+    uint32_t act = (tf_on[ti] && !own) || tf_cmb[ti];
+    int32_t w0, dw;
+    if (own && r != FT_COMB)
+        r = FT_LP;                                      /* (an engine's own filter: COMB or nothing here) */
+    if (!tf_xb[ti]) {
+        if (r != tf_ft[ti] && (act || r == FT_COMB)) {
+            tf_fo[ti] = (uint8_t)(act ? tf_ft[ti] : TF_DRY);
+            tf_xb[ti] = TF_XB;
+        }
+        tf_ft[ti] = (uint8_t)r;
+    }
+    ft = tf_ft[ti];
+    if (!tf_xb[ti]) {
+        tf_run(t, out, n, ft, TF_DRY, 0, 0, own, ccut, cres);
+        tf_cmb[ti] = ft == FT_COMB;
+        return;
+    }
+    if (n > CTL)
+        n = CTL;
+    fo = tf_fo[ti];
+    w0 = (int32_t)(((TF_XB - tf_xb[ti]) << 12) / TF_XB);
+    dw = (4096 / (int32_t)TF_XB) >> CTL_LOG2;
+    if (fo != TF_DRY && fo != FT_COMB && ft != FT_COMB && !own) {
+        tf_run(t, out, n, ft, fo, w0, dw, own, ccut, cres);   /* (one SVF, two of its outputs) */
+    } else {
+        for (i = 0; i < n; i++)
+            tf_tmp[i] = out[i];
+        if (fo != TF_DRY)
+            tf_run(t, tf_tmp, n, fo, TF_DRY, 0, 0, own, ccut, cres);   /* the old one */
+        tf_run(t, out, n, ft, TF_DRY, 0, 0, own, ccut, cres);
+        for (i = 0; i < n; i++)
+            out[i] = tf_tmp[i] + (((out[i] - tf_tmp[i]) * (w0 + (int32_t)(i + 1u) * dw)) >> 12);
+    }
+    if (!--tf_xb[ti])
+        tf_cmb[ti] = ft == FT_COMB;
 }
 
 /* the FILTER after the voices: ANALOG's and LOFI's COMB here (their own filters are per voice), every other engine's
  * whole filter (track_filter). Its own function: the audio ISR's loop stays as it was */
 static __attribute__((noinline)) void track_post(track_t *t, const engine_t *e, int32_t *out, uint32_t n)
 {
-    if (e == &ENG_ANALOG) {
-        if (t->p[P_FTYPE] == FT_COMB)
-            track_comb(t, out, n, t->p[P_E4], t->p[P_E5]);
-    } else if (e == &ENG_LOFI) {
-        if (t->p[P_FTYPE] == FT_COMB)
-            track_comb(t, out, n, t->p[P_FCUT], t->p[P_FRES]);
-    } else {
-        track_filter(t, out, n);
-    }
+    if (e == &ENG_ANALOG)
+        track_filter(t, out, n, 1, t->p[P_E4], t->p[P_E5]);
+    else
+        track_filter(t, out, n, e == &ENG_LOFI, t->p[P_FCUT], t->p[P_FRES]);
 }
 
 static uint32_t beat_samples(void);                     /* (fx.c) */
@@ -659,9 +713,9 @@ static void trk_all_off(track_t *t)
 /* (0.6.41) smoother: an engine switch fades out over XF_ENG (11.6 ms) and what was held (keys, the sequencer's notes:
  * xf_held, before the load's release) starts on the new engine, fading in over XF_ENG; an engine's list value
  * (WAVE, CHIP, TYPE .. F_ENUM) changed while it sounds: a dip, XF_DIP out on the old value and in on the new one, the
- * voices going on (it clicked: the wave swapped mid-cycle) */
+ * voices going on (it clicked: the wave swapped mid-cycle); (0.6.81) a value with names too (FM6's ALG, its SLOT) */
 #define XF_ENG 16u
-#define XF_DIP 2u
+#define XF_DIP 4u                                       /* (0.6.81: 2.7 ms each way, was 1.3: a tick) */
 static int eng_kit(uint32_t e) { return ENGINES[e % NENGINES]->oneshot; }
 static uint32_t xf_held(const track_t *t, uint8_t *nt, uint8_t *vl)   /* the notes held (up to 4): their count */
 {
@@ -685,7 +739,7 @@ static void engine_block(track_t *t)
         const engine_t *e = ENGINES[t->engine % NENGINES];
         for (i = 0; i < 8u; i++) {
             const param_desc_t *d = e->desc ? e->desc(t, i) : 0;
-            if (t->p[P_E0 + i] != t->pe_old[i] && (d ? d : &e->edit[i])->fmt == F_ENUM)
+            if (t->p[P_E0 + i] != t->pe_old[i] && ((d ? d : &e->edit[i])->fmt == F_ENUM || (d ? d : &e->edit[i])->names))
                 break;
         }
         for (any = 0; i < 8u && any < NVOICE; any++)
@@ -923,7 +977,8 @@ static uint32_t track_render(track_t *t, int32_t *out, uint32_t n)
     }
     if (nr && e == &ENG_DRUM)                           /* (0.6.16) DRUM-X: DRV and the knee on the kit's sum */
         drum_bus(t, out, n);
-    if (nr && (t->p[P_FTYPE] || t->p[P_FCUT] < 127 || t->p[P_FRES] || tf_on[(uint32_t)(t - trk) % NTRK]))
+    if (nr && (t->p[P_FTYPE] || t->p[P_FCUT] < 127 || t->p[P_FRES] || tf_on[(uint32_t)(t - trk) % NTRK] ||
+               tf_xb[(uint32_t)(t - trk) % NTRK] || tf_cmb[(uint32_t)(t - trk) % NTRK]))
         /* (JIANT 0.5) the FILTER (track_post); 0.6.8: and a block more to leave the chain (track_filter's fade) */
         track_post(t, e, out, n);
     if (snap)

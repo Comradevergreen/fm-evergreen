@@ -23,6 +23,12 @@ static struct {
     uint32_t rpre_w, rm_ph;              /* (JIANT) the pre-delay's write count (samples); the reverb modulation's phase */
     int32_t rm_m[4], rf_lp;              /* .. the combs' offsets (Q8 samples); the reverb's input filter (FILT) */
     uint32_t gr_ph, gr_sp[2];            /* .. the GRAIN delay: grain 0's phase (Q16), each grain's spray (samples) */
+    int32_t gr_s[2];                     /* .. (0.6.81) each grain's PITCH (its ratio - 1, Q16), taken as it starts */
+    uint32_t dl_now, dl_old, dr_now, dr_old;   /* (0.6.81) the delay's read points (left / mid, the right echo) and the
+                                         * ones faded from: TIME, WIDE, PITCH turned crossfade, never a jump */
+    uint16_t dl_xf, dr_xf;               /* .. the fades left (DXF_LEN .. 0 samples) */
+    uint8_t gr_on, gr_old;               /* .. the GRAIN read now, and in the read faded from */
+    int32_t cd_cur, cw_cur, dm_cur;      /* .. the chorus's DEPTH, its side's width, the delay's MIX as they are (glide) */
     int32_t rpre_s;                      /* .. the even sample, averaged with the odd one into the line */
     uint16_t comb_i[4], ap_i[2];
     int32_t comb_lp[4];
@@ -362,17 +368,30 @@ static void seq_note_off(track_t *t, uint32_t note);
  * amount (up to ~190 ms). In the feedback: each repeat a further PITCH away (shimmer, falling echoes), scattered.
  * The same line (dly_buf), no RAM of its own */
 #define GR_LEN 2048u
+#define DXF_LOG2 10u
+#define DXF_LEN (1u << DXF_LOG2)                         /* (0.6.81) a read point's crossfade: ~21 ms */
 static const uint32_t GR_RATIO[25] = {32768, 34716, 36781, 38968, 41285, 43740, 46341, 49097, 52016, 55109, 58386, 61858, 65536, 69433, 73562, 77936, 82570, 87480, 92682, 98193, 104032, 110218, 116772, 123715, 131072};   /* 2^(st/12), Q16 */
+/* (0.6.81) the grains' clock, a sample: a grain starting again takes its spray and the PITCH now (turned in the middle
+ * of a grain, its read point jumped: a click at every step of the knob) */
+static void dly_grain_adv(void)
+{
+    uint32_t j;
+    fx.gr_ph = (fx.gr_ph + 65536u / GR_LEN) & 0xFFFFu;
+    for (j = 0; j < 2u; j++)
+        if (((fx.gr_ph + j * 32768u) & 0xFFFFu) < 65536u / GR_LEN) {
+            fx.gr_sp[j] = song.g[G_DSPRY] ? rng() % ((uint32_t)song.g[G_DSPRY] * 64u + 1u) : 0u;
+            fx.gr_s[j] = (int32_t)GR_RATIO[clamp(song.g[G_DPIT], -12, 12) + 12] - 65536;
+        }
+}
 static __attribute__((noinline)) int32_t dly_grain(uint32_t dl)
 {
-    int32_t s = (int32_t)GR_RATIO[song.g[G_DPIT] + 12] - 65536, x = 0;
-    uint32_t e = (GR_LEN * (uint32_t)(s < 0 ? -s : s)) >> 8, j;   /* the read point's sweep over a grain, Q8 */
-    fx.gr_ph = (fx.gr_ph + 65536u / GR_LEN) & 0xFFFFu;
+    int32_t x = 0;
+    uint32_t j;
     for (j = 0; j < 2u; j++) {
+        int32_t s = fx.gr_s[j];
+        uint32_t e = (GR_LEN * (uint32_t)(s < 0 ? -s : s)) >> 8;   /* the read point's sweep over a grain, Q8 */
         uint32_t ph = (fx.gr_ph + j * 32768u) & 0xFFFFu, d, di, gl = dl;
         int32_t a, b, w;
-        if (ph < 65536u / GR_LEN)                       /* this grain starts again: its spray */
-            fx.gr_sp[j] = song.g[G_DSPRY] ? rng() % ((uint32_t)song.g[G_DSPRY] * 64u + 1u) : 0u;
         if (gl + fx.gr_sp[j] > DLY_LEN - 2u - GR_LEN * 2u)   /* (JIANT 0.5) a long TIME (1/1 and up: the whole line): */
             gl = DLY_LEN - 2u - GR_LEN * 2u - fx.gr_sp[j];  /* room for the sweep, else the read point sat clamped (no pitch).
                                                          * (0.6.19: each grain its own: grain 0's new spray moved grain 1's
@@ -890,10 +909,21 @@ static void fx_gate(int32_t *wet, uint32_t n)
     for (i = 0; i < n; i++, g0 += d)
         wet[i] = mulq15(wet[i], g0);
 }
+/* (0.6.81) a value's step a sample from cur toward to: a quarter of the way over the block, one at least (never past) */
+static int32_t fx_glide(int32_t cur, int32_t to, uint32_t n)
+{
+    int32_t d = to - cur, s = (d >> 2) / (int32_t)n;
+    if (!s && d)
+        s = d > 0 ? 1 : -1;
+    if (s * (int32_t)n > d && d > 0) s = d / (int32_t)n;
+    if (s * (int32_t)n < d && d < 0) s = d / (int32_t)n;
+    return s;
+}
 static inline __attribute__((always_inline)) void fx_buses(const int32_t *cho_in, const int32_t *dly_in, const int32_t *rev_in, int32_t *wet,
                      uint32_t n)
 {
     uint32_t i, dl = delay_samples();
+    int32_t dcd, dcw, ddm;
     {   /* (0.6.14) anything sent to the buses this block: their gate open (fx_gate) */
         int32_t any = 0;
         for (i = 0; i < n; i++)
@@ -914,6 +944,22 @@ static inline __attribute__((always_inline)) void fx_buses(const int32_t *cho_in
     uint32_t dr = dl + (wd ? div_samples(3) * (uint32_t)wd / 127u : 0u);   /* the right echo: up to 1/32 later */
     if (dr >= DLY_LEN)
         dr = DLY_LEN - 1u;
+    /* (0.6.81) a new read point (TIME, WIDE) or read (the GRAIN in or out): faded into over DXF_LEN samples from the
+     * old one, the next change once that fade is done (each step of the knob jumped the read: a click) */
+    if (!fx.dl_xf && (dl != fx.dl_now || (uint32_t)gr != fx.gr_on)) {
+        fx.dl_old = fx.dl_now; fx.gr_old = fx.gr_on;
+        fx.dl_now = dl; fx.gr_on = (uint8_t)gr;
+        fx.dl_xf = DXF_LEN;
+    }
+    if (!fx.dr_xf && dr != fx.dr_now) {
+        fx.dr_old = fx.dr_now;
+        fx.dr_now = dr;
+        fx.dr_xf = DXF_LEN;
+    }
+    /* .. and the chorus's DEPTH, its width and the delay's MIX glide across the block (a quarter of the way) */
+    dcd = fx_glide(fx.cd_cur, cdepth, n);
+    dcw = fx_glide(fx.cw_cur, cw, n);
+    ddm = fx_glide(fx.dm_cur, dmix, n);
     if (!hk)
         fx.dly_hp = 0;                                  /* (no low cut: none held over from one) */
     if (song.g[G_RFILT]) {                              /* (JIANT) the reverb's tone: FILT < 0 a low-pass (~12 kHz ..
@@ -946,26 +992,40 @@ static inline __attribute__((always_inline)) void fx_buses(const int32_t *cho_in
          * turn apart; the first left, the second right, the third in the middle: always stereo (WIDTH wider) */
         cho_buf[fx.cho_w & (CHO_LEN - 1u)] = (int16_t)clamp(cho_in[i] >> 1, -32768, 32767);
         fx.cho_ph += cinc;
+        fx.cd_cur += dcd; fx.cw_cur += dcw; fx.dm_cur += ddm;
         if (cho) {
             int32_t sd;
-            y += cho_ens(cho_buf, fx.cho_w, fx.cho_ph, cdepth, &sd);
-            sd = (sd * cw) >> 7;
+            y += cho_ens(cho_buf, fx.cho_w, fx.cho_ph, fx.cd_cur, &sd);
+            sd = (sd * fx.cw_cur) >> 7;
             side += sd;
         }
         fx.cho_w++;
         /* delay with a low-passed (COLR) and low-cut (HPF) feedback */
-        x = gr ? dly_grain(dl) : dly_buf[(fx.dly_w - dl) & (DLY_LEN - 1u)];
+        if (fx.gr_on || (fx.dl_xf && fx.gr_old))
+            dly_grain_adv();
+        x = fx.gr_on ? dly_grain(fx.dl_now) : dly_buf[(fx.dly_w - fx.dl_now) & (DLY_LEN - 1u)];
+        if (fx.dl_xf) {                                 /* (0.6.81) the old read point fading out */
+            int32_t xo = fx.gr_old ? dly_grain(fx.dl_old) : dly_buf[(fx.dly_w - fx.dl_old) & (DLY_LEN - 1u)];
+            x += ((xo - x) * (int32_t)fx.dl_xf) >> DXF_LOG2;
+            fx.dl_xf--;
+        }
         fx.dly_lp += mulq15(x - fx.dly_lp, col);
         fx.dly_hp += mulq15(fx.dly_lp - fx.dly_hp, hk);
         dly_buf[fx.dly_w & (DLY_LEN - 1u)] =
             (int16_t)clamp((dly_in[i] >> 1) + mulq15(fx.dly_lp - fx.dly_hp, fb), -32768, 32767);
-        if (wd) {                                       /* (JIANT) the right echo later: mid and side */
-            int32_t xr = dly_buf[(fx.dly_w - dr) & (DLY_LEN - 1u)];
-            side += mulq15(x - xr, dmix);
+        if (wd || fx.dr_xf || fx.dr_now != fx.dl_now) {   /* (JIANT) the right echo later: mid and side (0.6.81: on
+                                                         * until it has faded back onto the left's: WIDE to 0 stepped) */
+            int32_t xr = dly_buf[(fx.dly_w - fx.dr_now) & (DLY_LEN - 1u)];
+            if (fx.dr_xf) {
+                int32_t xo = dly_buf[(fx.dly_w - fx.dr_old) & (DLY_LEN - 1u)];
+                xr += ((xo - xr) * (int32_t)fx.dr_xf) >> DXF_LOG2;
+                fx.dr_xf--;
+            }
+            side += mulq15(x - xr, fx.dm_cur);
             x = (x + xr) >> 1;
         }
         fx.dly_w++;
-        y += mulq15(x << 1, dmix);
+        y += mulq15(x << 1, fx.dm_cur);
         wet[i] = y;
         if (side) {                                     /* (the side: left +, right -) */
             if (fxg_g < 32767)                          /* (0.6.14: gated as the rest, fx_gate) */
