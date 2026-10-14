@@ -528,6 +528,9 @@ typedef struct track {
                                   * TONAL, ARP SCALE on a kit) */
     int16_t dbend;               /* .. BEND: where the hit glides to over dbt blocks (1/16 semitones; eng_drum.c) */
     uint16_t dbt;
+    uint8_t ss_n, ss_i;          /* (0.6.84) STRUM on the sequencer's chords: the step's notes still to come in, in */
+    uint8_t ss_nn[4], ss_vv[4];  /* order low to high (seq.c seq_step, seq_tick), ss_due samples to the next */
+    uint16_t ss_due, ss_gap;     /* (.. and the gap between them) */
     uint8_t pfx_half;            /* 1/2 TEMPO: the odd sample carried; pfx_rs: let go, back to the real place */
     uint8_t pfx_rs;
     uint16_t pfx_idx0;           /* .. where it was pressed (step, samples into it) and the samples since */

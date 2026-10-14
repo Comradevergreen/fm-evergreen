@@ -591,7 +591,10 @@ MIDI, a project load), every melodic track follows it at once; drum tracks have 
 
 Letting the key go ends every note of its chord (those still to strum never come). The chord records into the step,
 live and in step recording alike (0.6.83: step recording took the key's note alone), and the ARP arpeggiates it. The
-keys of every note sounding light up, the chord's whole shape too: a way to see and learn the chords. A drum track, MONO, LEGATO and UNISON play the root alone. MIDI notes play as they come.
+keys of every note sounding light up, the chord's whole shape too: a way to see and learn the chords. With **STRUM**
+(0.6.84) a recorded chord goes whole into the one step where the key went down (its later notes no longer spill into
+the next step), and the sequencer strums every chord step back the same way, low to high (within half the step's
+gate). STRUM at 0: the steps' chords as before, all at once. A drum track, MONO, LEGATO and UNISON play the root alone. MIDI notes play as they come.
 
 ### ARP
 

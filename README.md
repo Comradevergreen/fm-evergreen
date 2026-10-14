@@ -514,6 +514,9 @@ Every update is listed here, newest first. (Since 0.6.80 at the end of the page:
 ### v0.6.84
 - **CHORD records whole in step recording too.** Armed and stopped on STEP, a key now writes the chord it plays (it
   wrote its note alone); live recording already did.
+- **STRUM records cleanly.** A strummed chord went into the grid note by note, its later notes falling into the next
+  step, irregular and ugly. Now the chord goes whole into the step where the key went down, and the sequencer strums
+  every chord step back as you played it, low to high (STRUM 0: all at once, as before).
 - **The keys show every note sounding**, a chord's whole shape included (CHORD, LATCH, a chord gliding, MIDI): see
   the chords as you play them, and learn them.
 - **SAVE > TOOLS > 6 CPU TEST**: builds a heavy test song (chords of four, two step components a step, long glides,

@@ -683,6 +683,7 @@ static __attribute__((noinline)) void cin_keep(track_t *t, uint32_t note, uint32
     cin_up[i] &= (uint8_t)~(1u << k);
 }
 
+static uint8_t in_norec;                            /* (0.6.84) input_on plays without recording (key_next) */
 static void input_on(track_t *t, uint32_t note, uint32_t vel)
 {
     last_note = (uint8_t)note;
@@ -692,7 +693,8 @@ static void input_on(track_t *t, uint32_t note, uint32_t vel)
         t->trn = (int8_t)clamp((int32_t)note - 60, -36, 36);
         return;
     }
-    if (rec_on(t) && !t->p[P_AMODE])               /* (ARP on: arp_tick records its notes) */
+    if (rec_on(t) && !t->p[P_AMODE] && !in_norec)  /* (ARP on: arp_tick records its notes; 0.6.84: a key's chord was
+                                                     * recorded whole when the key went down) */
         rec_note(t, note, vel);
     if (t->p[P_AMODE])
         arp_add(t, note);
@@ -760,7 +762,9 @@ static void key_next(uint32_t k, track_t *t)
 {
     uint32_t x = kb_snd[k][kb_on[k]], mc = trk_midi_ch(trk_index(t));
     if (!midi_local_held(t, x)) {
+        in_norec = kb_sn[k] > 1u;                   /* (0.6.84: the chord's notes recorded at once, key_on) */
         input_on(t, x, 100);
+        in_norec = 0;
         mo_key(t, 0x09u | (0x90u | mc) << 8 | x << 16 | 100u << 24);
     }
     kb_on[k]++;
@@ -782,6 +786,11 @@ static void key_on(uint32_t k, track_t *t)
     }
     kb_on[k] = 0;
     kb_sn[k] = (uint8_t)n;
+    if (n > 1u && rec_on(t) && !t->p[P_AMODE])      /* (0.6.84) recording: the whole chord into one step, where the
+                                                     * key went down (the strum's later notes would fall into the next
+                                                     * step); the sequencer strums it back as it plays (seq_step) */
+        for (i = 0; i < n; i++)
+            rec_note(t, kb_snd[k][i], 100);
     for (i = 0; i < n && (!gap || !i); i++)        /* (STRUM: the first now, the others by keys_strum) */
         key_next(k, t);
     kb_sdue[k] = (uint16_t)(gap < 65535u ? gap : 65535u);
@@ -1160,6 +1169,7 @@ static void seq_release(track_t *t)
     t->seq_n = 0;
     t->seq_hold = 0;
     t->slide_glide = 0;                             /* live MONO / LEG keys must not glide after it */
+    t->ss_n = t->ss_i = 0;                          /* (0.6.84) a strum still coming in: never */
 }
 
 static void seq_stop(void)
@@ -1319,7 +1329,7 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
     uint32_t ac = 0, rnd = 0, oct = 0, bend = 0;
     int cont = 0;                                   /* .. going on over a TIE */
     uint8_t nn[4 + NLANE], vv[4 + NLANE];           /* the notes it plays: its notes, then its hits */
-    uint32_t m = 0, sk = 0;
+    uint32_t m = 0, sk = 0, sk0;
     /* QNT SEQ: the step's notes (not the lane hits) snap to the scale as they play; never on a drum kit, the slices
      * or another engine that maps the keys itself. seq_notes keeps the notes that sound: their note-offs match */
     const engine_t *e = ENGINES[eng_idx(t->eng_req)];
@@ -1472,6 +1482,25 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
     t->slide_glide = (uint8_t)slide_in;
     if (!slide_in)
         seq_release(t);
+    t->ss_n = t->ss_i = 0;
+    sk0 = sk;                                       /* (the notes the step sounds, strummed or not: seq_notes) */
+    if (!kit && !arp && m > 1u && t->p[P_CSTR] > 0 && t->p[P_VOICE] == V_POLY) {   /* (0.6.84) STRUM: the chord in
+                                                         * one note after another, low to high, as the keys strum it
+                                                         * (the first now, the others by seq_tick); within half the gate */
+        uint32_t g = chord_gap(t), cap = gate / (2u * (m - 1u)), q, w = 0;
+        uint8_t ord[4 + NLANE];
+        for (q = 0; q < m; q++)
+            if (!((sk >> q) & 1u)) {
+                for (j = w; j > 0 && nn[ord[j - 1u]] > nn[q]; j--) ord[j] = ord[j - 1u];
+                ord[j] = (uint8_t)q; w++;
+            }
+        for (q = 1; q < w && t->ss_n < 4u; q++) {       /* (the rest, queued; marked done here) */
+            t->ss_nn[t->ss_n] = nn[ord[q]];
+            t->ss_vv[t->ss_n++] = vv[ord[q]];
+            sk |= 1u << ord[q];
+        }
+        t->ss_due = t->ss_gap = (uint16_t)clamp((int32_t)(g < cap ? g : cap), 1, 65535);
+    }
     for (i = 0; i < m; i++)
         if (!((sk >> i) & 1u)) {
             uint32_t a0 = vage;
@@ -1500,7 +1529,7 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
         }
     t->seq_n = 0;
     for (i = 0; i < m; i++)
-        if (!((sk >> i) & 1u))
+        if (!((sk0 >> i) & 1u))
             t->seq_notes[t->seq_n++] = nn[i];
     t->seq_off = gate;
     t->seq_hold = hits == 1u && ((s->flags & SF_SLIDE) != 0 || next_tie ||   /* next step a TIE: keep the notes to it */
@@ -1554,6 +1583,15 @@ static void seq_tick(track_t *t, uint32_t n)
         t->pfx_el += n;
         t->pfx_half = (uint8_t)(h & 1u);
         n = h >> 1;
+    }
+    if (t->ss_i < t->ss_n) {                         /* (0.6.84) STRUM: the step's chord coming in */
+        if (t->ss_due > n) {
+            t->ss_due = (uint16_t)(t->ss_due - n);
+        } else {
+            seq_note_on(t, t->ss_nn[t->ss_i], t->ss_vv[t->ss_i]);
+            t->ss_i++;
+            t->ss_due = t->ss_gap;
+        }
     }
     if (t->seq_n && !t->seq_hold) {
         if (t->seq_off <= n)

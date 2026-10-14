@@ -4377,6 +4377,33 @@ static int test_step_rec(void)
         key_up(kr); events_block(CTL); frame();
         bad += check("SCL > CHORD, live recording: the whole chord into the step; its notes' keys lit while it sounds", ok);
     }
+    {   /* (0.6.84) STRUM: recorded whole into the one step where the key went down (its later notes no longer fall into
+         * the next step), and the sequencer strums the chord back, low to high */
+        uint32_t i, used = 0, kr = 7, b2, first = 0, later = 0;
+        t->p[P_CSTR] = 127;                            /* (~63 ms apart) */
+        for (i = 0; i < NSTEP; i++) step_clear(&t->step[i]);
+        while (t->seq_pos < step_samples(t, div_samples((uint32_t)t->p[P_SDIV]), t->seq_idx) * 2u / 5u)
+            events_block(CTL);                         /* (just before the middle of a step: a strum would cross it) */
+        key_down(kr);
+        for (b2 = 0; b2 < 200u; b2++) events_block(CTL);
+        key_up(kr); events_block(CTL); frame();
+        for (i = 0; i < NSTEP; i++) if (t->step[i].n) used++;
+        ok = used == 1u;
+        for (i = 0; i < NSTEP; i++) if (t->step[i].n) ok &= t->step[i].n == 3u;
+        bad += check("STRUM, live recording: the chord whole into one step, not spread over two", ok);
+        song.rec = 0;                                  /* (playing it back: the step strummed) */
+        while (t->seq_idx != 0u) events_block(CTL);
+        while (t->seq_idx == 0u) events_block(CTL);
+        for (i = 0; i < NSTEP && !t->step[i].n; i++) ;
+        while (t->seq_idx != i) events_block(CTL);
+        for (b2 = 0; b2 < NVOICE; b2++) first += t->v[b2].active && t->v[b2].gate;
+        for (b2 = 0; b2 < 200u; b2++) events_block(CTL);
+        for (b2 = 0; b2 < NVOICE; b2++) later += t->v[b2].active && t->v[b2].gate;
+        ok = first == 1u && later == 3u;
+        bad += check("STRUM, playing back: the step's chord comes in one note after another (1, then all 3)", ok);
+        t->p[P_CSTR] = 0;
+        song.rec = 1;
+    }
     stop_transport();
     {   /* (0.6.83) and step recording (armed, stopped) */
         uint32_t i;
