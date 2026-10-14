@@ -380,9 +380,12 @@ static uint32_t pr_held(void)
     uint32_t k, m = 0;
     for (k = 0; k < 27u; k++)
         if (kb_on[k] && kb_trk[k] == song.sel) {
-            int32_t r = (int32_t)proll.lo + PR_ROWS - 1 - kb_snd[k];
-            if (r >= 0 && r < PR_ROWS)
-                m |= 1u << r;
+            uint32_t i;
+            for (i = 0; i < kb_on[k]; i++) {            /* (0.6.81: a chord's every note) */
+                int32_t r = (int32_t)proll.lo + PR_ROWS - 1 - kb_snd[k][i];
+                if (r >= 0 && r < PR_ROWS)
+                    m |= 1u << r;
+            }
         }
     return m;
 }
