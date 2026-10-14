@@ -83,6 +83,36 @@ static __attribute__((noinline)) void track_comb(track_t *t, int32_t *out, uint3
  * over the block, the state taken from the input on the way in (it was stale: a step each time CUT or RES crossed the
  * open LP) */
 static int32_t tf_ic1[NTRK], tf_ic2[NTRK];
+static int32_t tf_side[NTRK][4];                /* (0.6.81) a DRUM part's IMAGE sides' filter states (L ic1 ic2, R) */
+/* (0.6.81) a DRUM part's IMAGE: what each side gives up (eng_drum.c dx_sl dx_sr) filtered as the part is, or the side
+ * taken out of the filtered sum was unfiltered: its highs back in raw, a grit like a bitcrusher. The same filter, linear,
+ * in and out with the part's fades */
+static __attribute__((noinline)) void tf_sides(uint32_t ti, const tsvf_t *c, int32_t k, uint32_t ft, uint32_t was,
+                                               uint32_t on, uint32_t n)
+{
+    uint32_t sd, i;
+    for (sd = 0; sd < 2u; sd++) {
+        int32_t *b = sd ? dx_sr : dx_sl, ic1 = tf_side[ti][sd * 2u], ic2 = tf_side[ti][sd * 2u + 1u];
+        if (!was) {
+            ic1 = 0;
+            ic2 = b[0];
+        }
+        for (i = 0; i < n; i++) {
+            int32_t x = b[i], y, w = (int32_t)((i + 1u) << (12 - CTL_LOG2));
+            int32_t v3 = x - ic2, v1 = (c->a1 * ic1 + c->a2 * v3) >> 13, v2 = ic2 + ((c->a2 * ic1 + c->a3 * v3) >> 13);
+            ic1 = clamp(2 * v1 - ic1, -150000, 150000);
+            ic2 = clamp(2 * v2 - ic2, -150000, 150000);
+            y = ft == FT_HP ? x - v2 - ((k * v1) >> 12) : ft == FT_BP ? (k * v1) >> 12 : v2;
+            if (!was)
+                y = x + (((y - x) * w) >> 12);
+            else if (!on)
+                y = y + (((x - y) * w) >> 12);
+            b[i] = y;
+        }
+        tf_side[ti][sd * 2u] = ic1;
+        tf_side[ti][sd * 2u + 1u] = ic2;
+    }
+}
 static uint8_t tf_on[NTRK], tf_ft[NTRK];        /* in the chain the last block, its TYPE then (0.6.71: a byte a
                                                  * track, not a bit: two cores write two tracks at once) */
 static __attribute__((noinline)) void track_filter(track_t *t, int32_t *out, uint32_t n)
@@ -127,6 +157,8 @@ static __attribute__((noinline)) void track_filter(track_t *t, int32_t *out, uin
                 y = y + (((x - y) * w) >> 12);          /* out */
             out[i] = y;
         }
+        if ((dx_xon & 1u) && ENGINES[t->engine] == &ENG_DRUM)
+            tf_sides(ti, &c, k, ft, was, on, n > CTL ? CTL : n);
         tf_on[ti] = (uint8_t)on;
         tf_ft[ti] = (uint8_t)ft;
     }
