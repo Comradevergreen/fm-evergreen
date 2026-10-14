@@ -247,6 +247,31 @@ static uint32_t play_leds(void)
     return m | midi_leds(t);
 }
 
+/* (0.6.83) the keys of every note the selected track's voices hold now, bit k = key k: a chord of SCL > CHORD, LATCH, a
+ * chord gliding, MIDI, all of what sounds is shown (its released tails are not), as play_leds: the lowest key that
+ * gives the note at the octave now; a kit's lanes not (its keys are its sounds). Read from the voices: no state */
+static uint32_t voice_leds(void)
+{
+    const track_t *t = TSEL;
+    const engine_t *e = ENGINES[eng_idx(t->eng_req)];
+    uint32_t i, k, m = 0, seen[4] = {0, 0, 0, 0}, have[4] = {0, 0, 0, 0}, any = 0, note;
+    if (e->oneshot || (e->keys && e->keys(t, 0) >= 0))
+        return 0;
+    for (i = 0; i < NVOICE; i++)
+        if (t->v[i].active && t->v[i].gate && t->v[i].note < 128u) {
+            have[t->v[i].note >> 5] |= 1u << (t->v[i].note & 31u);
+            any = 1;
+        }
+    for (k = 0; any && k < 27u; k++) {
+        note = kb_map(t, k);
+        if (note > 127u || ((seen[note >> 5] >> (note & 31u)) & 1u))
+            continue;                                   /* (silent, or a lower key gives it) */
+        seen[note >> 5] |= 1u << (note & 31u);
+        m |= ((have[note >> 5] >> (note & 31u)) & 1u) << k;
+    }
+    return m;
+}
+
 /* Discussion #89: on SEQ > STEP (the piano roll; the DRUM grid has its own map) while stopped, the keys of the
  * notes stored in the cursor step, bit k = key k: as play_leds, where the keys play that note now (kb_map: the
  * octave, TRN, QNT), the lowest key that gives it; a note no key plays is not shown, nor a REST step's. Playing,
@@ -313,14 +338,15 @@ static uint32_t scale_leds(uint32_t *root)
 }
 
 /* the key LEDs, bit k = key k: NAME's keys, the layer's map, the DRUM grid, else the keys held and the notes
- * the selected track's sequencer, ARP and MIDI IN play, on STEP while stopped the cursor step's notes (#89) */
+ * the selected track's sequencer, ARP and MIDI IN play, on STEP while stopped the cursor step's notes (#89), and
+ * (0.6.83) every note its voices hold (a CHORD's whole chord) */
 static uint32_t key_leds(uint32_t *br)                 /* (*br: a layer's keys that breathe, layer_leds) */
 {
     uint32_t c;
     if (br)
         *br = 0;
     c = name_on() && !ui.menu ? name_leds() : ui.layer ? layer_leds(br) : grid_on() ? grid_leds() :
-                 (fm1_in.notes & ~kb_layer) | play_leds() | step_leds();
+                 (fm1_in.notes & ~kb_layer) | play_leds() | step_leds() | voice_leds();
     return c;
 }
 
@@ -979,7 +1005,7 @@ static void edit_param(uint32_t slot, int32_t steps)
     }
     if (pg->graph == GR_TOOLS) {                          /* (0.6.25) TOOLS: a list, any knob (and PRESETS) moves the
                                                          * pick down / up; OCT+ does it (its dialog first) */
-        ui.act = steps < 0 && ui.act <= 1u ? 0u : (uint8_t)clamp((int32_t)ui.act + (steps > 0 ? 1 : -1), 1, 5);   /* (left
+        ui.act = steps < 0 && ui.act <= 1u ? 0u : (uint8_t)clamp((int32_t)ui.act + (steps > 0 ? 1 : -1), 1, 6);   /* (left
                                                          * past the first: none picked) */
         return;
     }
@@ -1062,7 +1088,7 @@ static void act_do(void)
             return;
         }
         confirm_open(c == 0u ? CF_CLEAR_SEQ : c == 1u ? CF_INIT_SOUND : c == 2u ? CF_DEL_ROW : c == 4u ? CF_INIT_SYS :
-                     CF_CLEAR_SONG, c == 2u ? ui.song_row : song.sel);
+                     c == 5u ? CF_CPU_TEST : CF_CLEAR_SONG, c == 2u ? ui.song_row : song.sel);
         return;
     }
     if (cur_page()->graph == GR_SONG) {
@@ -1265,40 +1291,57 @@ static void ent_commit(void)
     }
     cursor_set((int32_t)(cur + span));
 }
+static void ent_note(track_t *t, step_t *st, uint32_t note)   /* one note into the entry (the step, the arpeggio's) */
+{
+    uint32_t j;
+    if (!ui.entry_open) {
+        ui.entry_open = 1;
+        st->n = 0;
+        st->time = ST_NOTE;
+        ui.ent_len = ui.ent_res = ui.ent_oct = 1; ui.ent_arp = ui.ent_ord = ui.ent_nn = 0;
+    }
+    for (j = 0; j < ui.ent_nn && ui.ent_notes[j] < note; j++)   /* (the arpeggio's notes, in order of pitch) */
+        ;
+    if (ui.ent_nn < sizeof ui.ent_notes && (j == ui.ent_nn || ui.ent_notes[j] != note)) {
+        uint32_t m;
+        for (m = ui.ent_nn; m > j; m--) ui.ent_notes[m] = ui.ent_notes[m - 1u];
+        ui.ent_notes[j] = (uint8_t)note; ui.ent_nn++;
+    }
+    if (t->p[P_VOICE] && !ENGINES[t->engine]->oneshot) {   /* (drums: hits stack as a chord) */
+        st->note[0] = (uint8_t)note;
+        st->n = 1;
+    } else if (st->n < 4u) {
+        for (j = 0; j < st->n && st->note[j] != note; j++)
+            ;
+        if (j == st->n)
+            st->note[st->n++] = (uint8_t)note;
+    }
+}
 static void seq_entry(uint32_t pressed)
 {
     track_t *t = TSEL;
     step_t *st = &t->step[ui.cursor];
-    uint32_t k;
+    uint32_t k, ti = song.sel % NTRK;
     for (k = 0; k < 27u; k++) {
-        uint32_t note, j;
+        uint32_t note, c, nc;
+        uint8_t cn[KB_CH];
         if (!((pressed >> k) & 1u))
             continue;
         note = kb_map(t, k);
         if (note == KB_SILENT)
             continue;
-        if (!ui.entry_open) {
-            ui.entry_open = 1;
-            st->n = 0;
-            st->time = ST_NOTE;
-            ui.ent_len = ui.ent_res = ui.ent_oct = 1; ui.ent_arp = ui.ent_ord = ui.ent_nn = 0;
+        if (kb_sn[k] && kb_trk[k] == ti) {             /* (0.6.83) SCL > CHORD: the chord the key sounds (seq.c key_on), */
+            nc = kb_sn[k];                              /* all of it into the step, as live recording does */
+            memcpy(cn, kb_snd[k], KB_CH);
+        } else {                                        /* (the key not in yet: built here, LEAD's memory as it was) */
+            uint8_t last[KB_CH], nl = chord_nlast[ti];
+            memcpy(last, chord_last[ti], KB_CH);
+            nc = chord_build(t, note, cn);
+            memcpy(chord_last[ti], last, KB_CH);
+            chord_nlast[ti] = nl;
         }
-        for (j = 0; j < ui.ent_nn && ui.ent_notes[j] < note; j++)   /* (the arpeggio's notes, in order of pitch) */
-            ;
-        if (ui.ent_nn < sizeof ui.ent_notes && (j == ui.ent_nn || ui.ent_notes[j] != note)) {
-            uint32_t m;
-            for (m = ui.ent_nn; m > j; m--) ui.ent_notes[m] = ui.ent_notes[m - 1u];
-            ui.ent_notes[j] = (uint8_t)note; ui.ent_nn++;
-        }
-        if (t->p[P_VOICE] && !ENGINES[t->engine]->oneshot) {   /* (drums: hits stack as a chord) */
-            st->note[0] = (uint8_t)note;
-            st->n = 1;
-        } else if (st->n < 4u) {
-            for (j = 0; j < st->n && st->note[j] != note; j++)
-                ;
-            if (j == st->n)
-                st->note[st->n++] = (uint8_t)note;
-        }
+        for (c = 0; c < nc && c < KB_CH; c++)
+            ent_note(t, st, cn[c]);
         last_note = (uint8_t)note;
     }
     if (ui.entry_open && !(fm1_in.notes & ~kb_layer))
@@ -1926,6 +1969,11 @@ static void ui_input_frame(void)
                     song_idx_touch();
                     ui.song_row = 0;
                     ui_message("SONG CLEARED");
+                }
+            } else if (kind == CF_CPU_TEST) {           /* (0.6.83) SAVE > TOOLS 6: the heaviest song (UNDO: back) */
+                if (!chain_busy()) {
+                    cpu_test_song();
+                    ui_message("CPU TEST: PRESS PLAY");
                 }
             } else if (kind == CF_INIT_SYS) {           /* (0.6.40) SAVE > TOOLS 5: everything as at power-on */
                 if (!chain_busy()) {

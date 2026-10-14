@@ -280,6 +280,17 @@ fi
 run "regression: target cost of the render loops (pi32v2 disassembly)" python3 tests/target_budget.py \
     build/felucca.dis tests/target_budget.txt
 
+# (JIANT 0.6.83) the audio path's CPU where proc_pid_rusage is missing (Linux): callgrind's exact counts, section by
+# section (each engine's heaviest preset, every REVERB TYPE, a full mix, the sequencer at its heaviest), against
+# tests/cpu_baseline_vg.txt (x86-64 gcc; another compiler: BUDGET_UPDATE=1 once, then it watches from there)
+if command -v valgrind >/dev/null 2>&1 && [ "$(uname -s)" = Linux ] && [ "$(uname -m)" = x86_64 ]; then
+    $CC -O2 -w -Ibuild/gen -Ifirmware/src -Itests -o "$OUT/cpu_vg" tests/cpu_vg.c -lm
+    run "CPU under valgrind: engines, reverbs, full mix, the sequencer's heaviest (exact counts, +8 %)" \
+        python3 tests/cpu_vg.py "$OUT/cpu_vg" tests/cpu_baseline_vg.txt
+else
+    echo "== skip CPU under valgrind (no valgrind, or not Linux x86-64)"
+fi
+
 run "installer CLI (fm1_install.py) against a simulated FM-1" python3 tests/install_test.py
 
 if command -v node >/dev/null 2>&1; then

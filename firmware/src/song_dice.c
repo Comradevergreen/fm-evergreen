@@ -1046,6 +1046,50 @@ static void dice_all(void)
 /* (0.6.67) SEQ + SELECT: the selected track's sequence diced as DICE ALL writes a part (a genre, its progression and
  * energy; the track's own scale and root): the drums on a DRUM track; else the role its steps sound like (low: the
  * bass, chords: a pad, else a lead or an arp). The sound, the mix and the automation stay. Its message */
+/* (0.6.83) SAVE > TOOLS 6 CPU TEST: the heaviest song the instrument should play cleanly, to measure on the device
+ * (USB console status: audio_max_us, audio_late, voices_shed) and to listen for clicks. Every live track: chords of four
+ * on every step at 160 BPM, gliding into each other (GLIDE, POLY), two step components on each (ARP SEQ / ECHO x8 and
+ * RAND / OCT, DIV, LEN); the last live track the DRUM kit, every lane on every step, OCT / ARP on its steps; every FX
+ * on (DIST, CHORUS, DLY with PITCH, the CLOUD reverb). UNDO (GLO + G4) brings the music back */
+static void cpu_test_song(void)
+{
+    uint32_t k, i, n = trk_live;
+    if (song.playing) transport_req = 2;
+    song.g[G_BPM] = 160;
+    song.g[G_RTYPE] = 4;                                /* (CLOUD: the heaviest reverb) */
+    song.g[G_DPIT] = 12;                                /* (the delay's pitch shifter on) */
+    for (k = 0; k < n; k++) {
+        track_t *t = &trk[k];
+        int drum = k + 1u == n;
+        set_engine_of(t, drum ? ENGI_DRUM : k == 1u ? ENGI_FM6 : k == 2u ? 2u /* PHASE */ : ENGI_ANALOG);
+        apply_preset_to(t, 0);
+        load_begin(t, LOAD_PAT);
+        track_defaults_steps(t);
+        t->p[P_MUTE] = 0;
+        t->p[P_VOICE] = V_POLY; t->p[P_SLEN] = 32; t->p[P_SGATE] = 120;
+        t->p[P_GLIDE] = drum ? 0 : 90;
+        t->p[P_DIST] = 30; t->p[P_CHOR] = 50; t->p[P_DLY] = 60; t->p[P_REV] = 70;
+        for (i = 0; i < 32u; i++) {
+            step_t *s = &t->step[i];
+            memset(s, 0, sizeof *s);
+            s->time = ST_NOTE; s->vel = 100;
+            if (drum) {
+                s->hit = 0xFF;
+                s->comp = i % 4u ? CP_OCT : CP_ARPN;
+                s->carg = s->comp == CP_OCT ? 4u : CP_ARG(0u, 2u, 0u);
+            } else {
+                uint32_t r = 48u + (i * 5u) % 12u;
+                s->n = 4; s->note[0] = (uint8_t)r; s->note[1] = (uint8_t)(r + 4u); s->note[2] = (uint8_t)(r + 7u);
+                s->note[3] = (uint8_t)(r + 11u);
+                s->comp = i % 3u == 0u ? CP_ARPQ : CP_ECHO;
+                s->carg = s->comp == CP_ARPQ ? CP_ARG(3u, 4u, 3u) : 6u;
+                s->comp2 = i % 2u ? CP_RAND : CP_OCT; s->carg2 = i % 2u ? 7u : 5u;
+                s->ctime = 5u | (6u << 3);
+            }
+        }
+        load_end(t);
+    }
+}
 static const char *dice_seq(track_t *t)
 {
     static const char *const RN[RL_N] = {"SEQ DICED: DRUMS", "SEQ DICED: BASS", "SEQ DICED: PAD", "SEQ DICED: LEAD",

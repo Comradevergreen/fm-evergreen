@@ -263,7 +263,7 @@ and heating up with its own audio. The selected track is drawn bigger, a muted o
 | USER | SLOT (U01–U32) | LOAD (action) | ERASE (action) | SAVE (action) |
 | PROJECT | PROJ (1–8) | SECT (A–D) | LOAD (action) | SAVE (action) |
 | ARRANGE | ROW | SECT (on END: STOP / x2–x8 / LOOP) | BARS | SCENE |
-| TOOLS | any knob or PRESETS picks from the list: CLEAR SEQ, INIT SOUND, DELETE ROW, CLEAR SONG, NEW PROJECT | | | |
+| TOOLS | any knob or PRESETS picks from the list: CLEAR SEQ, INIT SOUND, DELETE ROW, CLEAR SONG, NEW PROJECT, CPU TEST | | | |
 
 **ARP** (per track)
 
@@ -589,8 +589,9 @@ MIDI, a project load), every melodic track follows it at once; drum tracks have 
 - **STRUM**: 0 all at once; up from there, the notes come in one after the other, low to high (up to ~63 ms apart), as
   a harp.
 
-Letting the key go ends every note of its chord (those still to strum never come). The chord records into the step
-and the ARP arpeggiates it. A drum track, MONO, LEGATO and UNISON play the root alone. MIDI notes play as they come.
+Letting the key go ends every note of its chord (those still to strum never come). The chord records into the step,
+live and in step recording alike (0.6.83: step recording took the key's note alone), and the ARP arpeggiates it. The
+keys of every note sounding light up, the chord's whole shape too: a way to see and learn the chords. A drum track, MONO, LEGATO and UNISON play the root alone. MIDI notes play as they come.
 
 ### ARP
 
@@ -607,6 +608,7 @@ sounding after you let go; the next chord replaces them.
 | All six tracks' steps, automation and the punch-in lane | **SEQ held + REC**, then OCT+ |
 | **Everything** (NEW PROJECT): every track its engine's default sound (dry, FM6 the init voice), no steps or automation, the mix, effects, tempo and SLICER at their defaults, the song empty, macros at 0, the factory DRUM-X kit. Saved projects, user presets, MENU, CLOCK, TUNE and MIDI stay | **MENU > SYSTEM > INIT SYSTEM** or **SAVE > TOOLS > 5 NEW PROJECT**, then OCT+ (UNDO brings the music back) |
 | Only one part's automation on the selected track | **REC held + FX / EDIT / ENV / LFO / SCL / ARP / GLO** |
+| *(not a clear)* A heavy test song, to measure the CPU on the device and listen for clicks (every live track chords of four with two step components a step and long glides, the kit on every lane, every FX on, 160 BPM) | **SAVE > TOOLS > 6 CPU TEST**, OCT+, then PLAY (UNDO brings your music back) |
 | The track's automation, keeping the steps | SEQ TOOLS **F4 CLR AUTO**, or SEQ > AUTOMATION > CLEAR |
 
 A track clear says **T3 CLEARED** with **SEQ+REC: ALL TRACKS** under it as a reminder of the all-tracks combo.

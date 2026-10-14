@@ -1513,6 +1513,10 @@ static void confirm_text(char *a, char *b)
     case CF_CLEAR_ALL:
         str_cpy(a, "CLEAR ALL SEQUENCES?", 24);
         break;
+    case CF_CPU_TEST:                                /* (0.6.83) SAVE > TOOLS 6 */
+        str_cpy(a, "BUILD CPU TEST SONG?", 24);
+        str_cpy(b, "UNDO AFTER: GLO + G4", 24);
+        break;
     case CF_INIT_SYS:                                /* (0.6.40) SAVE > TOOLS 5 */
         str_cpy(a, "NEW PROJECT?", 24);
         str_cpy(b, "UNDO AFTER: GLO + G4", 24);

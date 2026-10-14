@@ -230,7 +230,7 @@ static struct {
 enum { CF_NONE, CF_CLEAR_SEQ, CF_CLEAR_TRK, CF_OVR_PROJ, CF_OVR_USER, CF_LOAD_PAT,
        CF_DEL_ROW, CF_CLEAR_SONG, CF_INIT_SOUND, CF_CLEAR_MOTION, CF_ERASE_USER,
        CF_RECALL_SOUND, CF_CLEAR_ALL, CF_DICE_ALL, CF_INIT_SYS, CF_DICE_SOUND, CF_DICE_SEQ, CF_DICE_LFO,
-       CF_DICE_FX };   /* ui.confirm: TOOLS' clears; (0.6.21) HOME + SELECT:
+       CF_DICE_FX, CF_CPU_TEST };   /* ui.confirm: TOOLS' clears; (0.6.21) HOME + SELECT:
                                    * everything diced; (0.6.65) EDIT + SELECT: keep the diced sound?; (0.6.67) SEQ / LFO / FX + SELECT:
                                    * keep the diced sequence / LFO / effects?;
                                    * SAVE over a used slot; a pattern over the user's steps;
@@ -1455,7 +1455,7 @@ static int act_ready(void)
     if (cur_page()->graph == GR_MOTION) return !chain_busy() && motion_count(TSEL);
     if (cur_page()->graph == GR_EVENTS) return ev_act_ready();
     if (cur_page()->graph == GR_TOOLS)                  /* one case per column: CLEAR PAT, INIT, DELETE ROW, CLEAR SONG */
-        return !chain_busy() && (c == 0u ? !seq_is_empty(TSEL) || motion_count(TSEL) : c == 1u || c == 4u ? 1 :
+        return !chain_busy() && (c == 0u ? !seq_is_empty(TSEL) || motion_count(TSEL) : c == 1u || c >= 4u ? 1 :
                                  c == 2u ? ui.song_row < chain_config.count : chain_config.count != 0u);
     if (cur_page()->graph == GR_SONG)
         return song.playing || chain_busy() || chain_config.count;

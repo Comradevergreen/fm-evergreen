@@ -1351,6 +1351,27 @@ static int test_init_system(void)
         song.g[G_TUNE] = GP[G_TUNE].def; song.g[G_CLOCK] = GP[G_CLOCK].def;
         memset(macro_v, 0, sizeof macro_v); dx_tone = 0; memset(dx_mot, 0, sizeof dx_mot); pfx_lane[3] = 0;   /* (UNDO brought them) */
     }
+    {   /* (0.6.83) TOOLS 6 CPU TEST: the heaviest song on every live track (the last one the kit), UNDO: back */
+        uint32_t k, sig0, ok2, kit = 0, comps = 1;
+        trk[0].step[2] = (step_t){{60}, 1, ST_NOTE, 0, 100};
+        song.g[G_BPM] = 97;
+        sig0 = steps_sig(&trk[0]);
+        go_title("TOOLS"); tools_pick(6); press(B_OCTUP);
+        ok2 = ui.confirm == CF_CPU_TEST;
+        press(B_OCTUP);
+        ok2 &= !ui.confirm && msg_is("CPU TEST: PRESS PLAY") && song.g[G_BPM] == 160 && song.g[G_RTYPE] == 4;
+        for (k = 0; k < trk_live; k++) {
+            kit += drum_track(&trk[k]);
+            comps &= trk[k].step[0].comp != 0 && trk[k].p[P_SLEN] == 32;
+        }
+        ok2 &= kit == 1u && comps && trk[0].step[1].n == 4u && trk[0].step[1].comp2 != 0;
+        project_capture(&proj_scratch);
+        ok2 &= proj_pack(&proj_wire, &proj_scratch) != 0;   /* (storable) */
+        bad += check("TOOLS 6 CPU TEST: four-note chords, two components a step, the kit; storable", ok2);
+        ok2 = !undo_do() && steps_sig(&trk[0]) == sig0 && song.g[G_BPM] == 97;
+        bad += check("  UNDO after CPU TEST: the music back", ok2);
+        song.g[G_BPM] = GP[G_BPM].def;
+    }
     return bad;
 }
 static uint32_t oct_leds_seen(int all)            /* over 1 s: the OCT LED bits lit at some point (all: throughout) */
@@ -4340,7 +4361,33 @@ static int test_step_rec(void)
     key_down(7); frame(); key_up(7); frame();
     ok &= ui.cursor == 4u && !t->step[4].n && !t->step[4].hit && (t->step[0].n || t->step[1].n);
     bad += check("#133 PLAY with the track armed: live recording at the play head (the cursor and its step stay)", ok);
+    {   /* (0.6.83) SCL > CHORD TRIAD: live recording writes the key's whole chord, and the keys of its notes light */
+        uint32_t i, best = 0, kr = 7, lit;
+        t->p[P_VOICE] = V_POLY; t->p[P_CHRD] = CD_TRI;
+        for (i = 0; i < NSTEP; i++) step_clear(&t->step[i]);
+        key_down(kr); events_block(CTL); frame();
+        for (i = 0; i < NSTEP; i++) if (t->step[i].n > best) best = t->step[i].n;
+        lit = key_leds(0);
+        ok = best == 3u && kb_sn[kr] == 3u;
+        for (i = 0; i < 3u; i++) {                      /* (each chord note's key lit) */
+            uint32_t k2, any = 0;
+            for (k2 = 0; k2 < 27u; k2++) any |= kb_map(t, k2) == kb_snd[kr][i] && ((lit >> k2) & 1u);
+            ok &= any != 0u;
+        }
+        key_up(kr); events_block(CTL); frame();
+        bad += check("SCL > CHORD, live recording: the whole chord into the step; its notes' keys lit while it sounds", ok);
+    }
     stop_transport();
+    {   /* (0.6.83) and step recording (armed, stopped) */
+        uint32_t i;
+        for (i = 0; i < NSTEP; i++) step_clear(&t->step[i]);
+        cursor_set(2); frame();
+        key_down(7); events_block(CTL); frame(); key_up(7); events_block(CTL); frame();
+        ok = t->step[2].n == 3u && t->step[2].note[0] == kb_map(t, 7) && ui.cursor == 3u;
+        t->p[P_CHRD] = CD_OFF;
+        bad += check("SCL > CHORD, step recording: the key's chord (3 notes) into the cursor step, not its note alone", ok);
+    }
+    cursor_set(4); frame();
     press(B_REC);                                                     /* disarm: the keys only play again */
     memcpy(before, t->step, sizeof before);
     key_down(7); frame(); key_up(7); frame();
@@ -7683,6 +7730,7 @@ static int test_chord_glide(void)
     {   /* (0.6.82) a long slide: the next chord held over 14 TIEs, GLIDE 127: the voices glide over all of it, smooth */
         static int32_t gl_o[2 * CTL];
         int32_t p0 = -1, mid = -1, end = -1, tgt = 0;
+        memset(fg_set, 0, sizeof fg_set);              /* (no PLAYHEADS: their notes would retrigger the voices) */
         t->p[P_SLEN] = 16; t->p[P_GLIDE] = 127; t->p[P_SGATE] = 120;
         for (i = 2; i < 16u; i++) { memset(&t->step[i], 0, sizeof t->step[i]); t->step[i].time = ST_TIE; }
         t->step[1].n = 3;                              /* (D F A) */
