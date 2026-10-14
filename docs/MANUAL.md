@@ -557,6 +557,21 @@ MIDI, a project load), every melodic track follows it at once; drum tracks have 
   here. When it is not 0 the piano roll says **ALL TR** and its value, and PLAY says it too. 0 = off.
 - The RESO reverb and the SLICER's pitch steps follow the scale too.
 
+### CHORD (0.6.81)
+
+**SCL > CHORD** makes a key play a chord on the track (after the Omnichord and the Orchid):
+
+- **CHORD**: OFF; in the scale (every chord in key, nothing to think): **TRIAD**, **7TH**, **ADD9**, **SUS2**,
+  **SUS4**, built on the key's degree (a key outside the scale takes the scale note below; CHR: the major scale of
+  ROOT); shapes on any key: **MAJ**, **MIN**, **7**, **MAJ7**, **MIN7**, **POWER**.
+- **VOICING**: CLOSE (root position); **LEAD** (each chord takes the inversion nearest the last one: voice leading, the
+  Orchid's smoothness); OPEN (the second tone an octave up); +BASS (the root an octave down added).
+- **STRUM**: 0 all at once; up from there, the notes come in one after the other, low to high (up to ~63 ms apart), as
+  a harp.
+
+Letting the key go ends every note of its chord (those still to strum never come). The chord records into the step
+and the ARP arpeggiates it. A drum track, MONO, LEGATO and UNISON play the root alone. MIDI notes play as they come.
+
 ### ARP
 
 ARP: MODE, RATE, OCT (1–4), GATE. ARP 2: SWING, PROB, HOLD, ORDER (NOTE / PLAY). Modes: OFF, UP, DN, UPDN, RND, ORD,

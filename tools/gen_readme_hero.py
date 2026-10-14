@@ -70,7 +70,7 @@ for r, row in enumerate(strips):
         im.paste(shot(b).resize((216, 216), Image.LANCZOS), (x, y))
         d.text((x, y + 222), c, font=font('SemiBold', 18), fill=MID)
 y2 = y1 + 2 * 270 + 20
-cards = [("SONG IDEAS", "HOME + SELECT writes a whole song:\n16 genres, never the same twice."),
+cards = [("SONG IDEAS", "HOME + SELECT writes a whole song:\n21 genres, never the same twice."),
          ("ARRANGE", "Sections in a column, bars and scenes;\nEND plays x2..x8 or loops."),
          ("UNDO", "GLO + G4 takes the last big change\nback; again, forward."),
          ("TRACKS · LOAD", "4 or 6 tracks; ECO, LITE or FULL:\nyou choose how heavy it gets."),

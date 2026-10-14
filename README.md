@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.6.80).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.6.81).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 > ⚡ **New in 0.6.71: both cores (experimental).** The FM-1's chip has two processor cores and JIANT used one. Now the
 > second renders some of the synth tracks while the first renders the rest, so the same song leaves much more room
@@ -510,6 +510,26 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### v0.6.81
+- **CHORD is back, light (SCL > CHORD; after the Omnichord and the Orchid).** A key plays a chord: in the scale
+  (TRIAD 7TH ADD9 SUS2 SUS4, always in key) or a shape on any key (MAJ MIN 7 MAJ7 MIN7 POWER); VOICING CLOSE, **LEAD**
+  (each chord the inversion nearest the last: voice leading), OPEN, +BASS; **STRUM** the notes in one by one, low to
+  high, as a harp. It records into the step and feeds the ARP. Old projects: OFF.
+- **DICE ALL learned from records.** Post punk measured on Joy Division and Bauhaus: the kick on every beat, the hat on
+  the offbeat eighths, the bass repeating each note two to four eighths, one or two chords over four bars, major too,
+  open filters. **GOTHIC** slower and on one chord; a new genre, **DARKWAVE** (Boy Harsher: four on the floor, a low
+  bass hammering its root). And **EBM, GOTHIC, BREAKBEAT, IMPRESSION**; songs of two to four parts sequenced in
+  ARRANGE (PLAY plays the song); sevenths, ninths and suspended chords, ambient arps; leads always moving (filter
+  envelope, LFO, auto pan or chorus); a short cowbell, a low or middle kick; the master glued (DUCK, CLIP, PUNCH).
+- **No more clicks turning things** (found sweeping every parameter over a held chord): the delay's TIME, WIDE and
+  PITCH crossfade instead of jumping; the chorus DEPTH, its width and the delay MIX glide; the filter TYPE fades
+  (into and out of the COMB too); the COMB no longer crackles on a loud part (an overflow); FM6's ALG and PHASE's FB
+  smooth.
+- **DRUM-X IMAGE**: no clicks turning it, no bitcrusher-like grit through the kit's filter.
+- **ARRANGE survives power-off** (the power-on reset it, then saved the empty rows over it).
+- **The palette**: settings from Felucca (often GREY or MONO, a black and white screen) are set to JIANT once at the
+  first power-on; a palette picked after that stays.
 
 ### v0.6.80
 - **DICE ALL (HOME + SELECT): less cheesy, closer to the wave.** The generator wrote textbook pieces: a lead phrased
