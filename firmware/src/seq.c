@@ -908,9 +908,9 @@ static void keyboard_block(void)
  * pattern wraps by itself, not by a jump) and the passes since PLAY (1:2) */
 static uint8_t fl_cnt[NTRK][NSTEP], fl_pass[NTRK];
 static void fl_reset(uint32_t ti) { memset(fl_cnt[ti % NTRK], 0, NSTEP); }
-static int fl_ok(const track_t *t, const step_t *s)   /* it turns the track now (and counts it) */
+static int fl_ok(const track_t *t, uint32_t c, uint32_t a)   /* it turns the track now (and counts it) */
 {
-    uint32_t ti = (uint32_t)(t - trk) % NTRK, k = t->seq_idx % NSTEP, m = CP_TIMES(s->comp, s->carg);
+    uint32_t ti = (uint32_t)(t - trk) % NTRK, k = t->seq_idx % NSTEP, m = CP_TIMES(c, a);
     if (m == 3u) {                                  /* 1:2: once, every other pass */
         if (fl_pass[ti] & 1u)
             return 0;
@@ -961,24 +961,49 @@ static uint32_t trk_chance(const track_t *t, const step_t *s)
 {
     return step_chance(s) * (127u - (uint32_t)clamp(t->p[P_TCHAN], 0, 127)) / 127u;
 }
-/* (0.6.39) a TRIG component: this loop of the pattern is one it plays on (any other step: yes) */
-static int cp_trig_ok(const track_t *t, const step_t *s)
+/* (0.6.82) a component's WHEN: it plays this loop of the pattern */
+static int cw_on(const track_t *t, uint32_t w)
 {
-    const uint8_t *c;
-    if (s->comp != CP_TRIG)
-        return 1;
-    c = CP_TRIGS[s->carg % CP_NTRIG];
+    return w == CW_ALWAYS || (w == CW_ODD && !(t->loops & 1u)) || (w == CW_EVEN && (t->loops & 1u));
+}
+/* (0.6.82) the step's component of a type lo..hi that plays this loop: the first one's, else the second's; 0 none
+ * (*a: its arguments) */
+static uint32_t cp_get(const track_t *t, const step_t *s, uint32_t lo, uint32_t hi, uint8_t *a)
+{
+    if (s->comp >= lo && s->comp <= hi && cw_on(t, CW_OF(s, 0u))) {
+        if (a) *a = s->carg;
+        return s->comp;
+    }
+    if (s->comp2 >= lo && s->comp2 <= hi && cw_on(t, CW_OF(s, 1u))) {
+        if (a) *a = s->carg2;
+        return s->comp2;
+    }
+    return 0;
+}
+#define CP_HAS(t, s, c, a) cp_get(t, s, c, c, a)
+/* (0.6.39) a TRIG condition: this loop of the pattern is one it plays on */
+static int cp_trig_cond(const track_t *t, uint32_t a)
+{
+    const uint8_t *c = CP_TRIGS[a % CP_NTRIG];
     if (!c[0])
         return c[1] == 1u ? t->loops == 0u : t->loops != 0u;   /* FIRST, NOT FIRST */
     return t->loops % c[1] == c[0] - 1u;
 }
+/* every TRIG of the step that plays this loop lets it play (any other step: yes) */
+static int cp_trig_ok(const track_t *t, const step_t *s)
+{
+    if (s->comp == CP_TRIG && cw_on(t, CW_OF(s, 0u)) && !cp_trig_cond(t, s->carg))
+        return 0;
+    return !(s->comp2 == CP_TRIG && cw_on(t, CW_OF(s, 1u)) && !cp_trig_cond(t, s->carg2));
+}
 /* (0.6.42) FILL: the FX button held (ui_input.c sets it each pass) */
 static volatile uint8_t seq_fill;
-/* the step's one roll: its TRIG (FILL: FX held), then its chance (the track's scaling it) */
+/* the step's one roll: its TRIGs (FILL: FX held), then its chance (the track's scaling it). (0.6.82) These come
+ * first: a component that keeps the note silent this loop wins over the step's other one */
 static int step_rolls(const track_t *t, const step_t *s)
 {
     uint32_t c = trk_chance(t, s);
-    if (s->comp == CP_FILL && !seq_fill)
+    if (!seq_fill && CP_HAS(t, s, CP_FILL, 0))
         return 0;
     return cp_trig_ok(t, s) && (c >= 100u || rng() % 100u < c);
 }
@@ -1005,6 +1030,10 @@ static const step_t *comp_lane(track_t *t, const step_t *s)
     t->cvs = *s;
     t->cvs.comp = c->comp;
     t->cvs.carg = c->carg;
+    t->cvs.comp2 = c->comp2;                        /* (0.6.82) the second one, their WHENs, DIV and LEN */
+    t->cvs.carg2 = c->carg2;
+    t->cvs.cwhen = c->cwhen;
+    t->cvs.ctime = c->ctime;
     t->cv_on = 1;
     return &t->cvs;
 }
@@ -1015,20 +1044,31 @@ static const step_t *arp_owner(const track_t *t, const step_t *s)
         return 0;
     if (s->time == ST_TIE && t->arp_from)
         o = t->arp_from == CV_IDX ? &t->cva : &seq_steps(t)[(t->arp_from - 1u) % NSTEP];
-    return o->time == ST_NOTE && o->n && cp_arp(o) ? o : 0;
+    return o->time == ST_NOTE && o->n && cp_get(t, o, CP_ARPN, CP_ARPS, 0) ? o : 0;
 }
-/* the parts a step plays in its length: an ARP's RATE, else its RATCH */
-static uint32_t step_hits(const track_t *t, const step_t *s)
+/* the parts a step plays (*div: in how many equal parts of its length they fall, one each from the start): an ARP's
+ * RATE, else its ECHO (0.6.42: x2..x4; 0.6.82: .. x8; an ARP wins over it), else its RATCH. (0.6.82) DIV: ECHO's and
+ * RATCH's parts a step/2 .. /8 apart, as many as fit (0: the step shared out) */
+static uint32_t step_parts(const track_t *t, const step_t *s, uint32_t *div)
 {
     const step_t *o = arp_owner(t, s);
-    if (s->comp == CP_ECHO && s->time == ST_NOTE)
-        return 2u + s->carg % 3u;                       /* (0.6.42) ECHO x2..x4 */
-    return o ? CP_RATES[CP_RATE(o->carg) % CP_NRATE] : step_ratchet(s);
+    uint32_t h, d;
+    uint8_t a;
+    if (o) {
+        cp_get(t, o, CP_ARPN, CP_ARPS, &a);
+        return *div = CP_RATES[CP_RATE(a) % CP_NRATE];
+    }
+    h = s->time == ST_NOTE && CP_HAS(t, s, CP_ECHO, &a) ? 2u + a % 7u : step_ratchet(s);
+    d = CT_DIVS[CT_DIV(s) % CT_NDIV];
+    if (h < 2u || !d)
+        return *div = h;
+    *div = d;
+    return h < d ? h : d;
 }
 /* (0.6.42) OCT's octave for this loop (semitones) */
-static int32_t cp_oct(const track_t *t, const step_t *s)
+static int32_t cp_oct(const track_t *t, uint32_t a)
 {
-    switch (s->carg % 6u) {
+    switch (a % 6u) {
     case 0: return 12;
     case 1: return -12;
     case 2: return t->loops & 1u ? 12 : 0;
@@ -1037,20 +1077,25 @@ static int32_t cp_oct(const track_t *t, const step_t *s)
     default: return ((int32_t)(rng() % 3u) - 1) * 12;
     }
 }
-/* (0.6.39) an ARP component's next note: its notes (NOTES: the step's; SEQ: the pattern's, every one once; both
- * over RANGE octaves, low to high; SCALE: the scale's degrees up from the step's lowest note), the k-th in its ORDER */
-static uint32_t cp_arp_note(const track_t *t, const step_t *s, uint32_t k)
+/* (0.6.39) an ARP component's next note: its notes (NOTES: the step's, low to high; SEQ: the pattern's, 0.6.82: in the
+ * order the pattern plays them, its melody fast; both over RANGE octaves; SCALE: the scale's degrees up from the step's lowest note), the k-th in its ORDER */
+static uint32_t cp_arp_note(const track_t *t, const step_t *s, uint32_t c, uint32_t a, uint32_t k)
 {
     uint8_t base[16];
-    uint32_t nb = 0, n, i, j, m, o2, o = CP_ORD(s->carg), len = t->p[P_SLEN] ? (uint32_t)t->p[P_SLEN] : 1u;
-    if (s->comp == CP_ARPS) {
-        n = CP_DEGS[CP_RNG(s->carg)];
+    uint32_t nb = 0, n, i, j, m, o2, o = CP_ORD(a), len = t->p[P_SLEN] ? (uint32_t)t->p[P_SLEN] : 1u;
+    if (c == CP_ARPS) {
+        n = CP_DEGS[CP_RNG(a)];
     } else {
-        const step_t *src = s->comp == CP_ARPQ ? seq_steps(t) : s;
-        uint32_t cnt = s->comp == CP_ARPQ ? len : 1u;
+        const step_t *src = c == CP_ARPQ ? seq_steps(t) : s;
+        uint32_t cnt = c == CP_ARPQ ? len : 1u;
         for (m = 0; m < cnt; m++)
             for (i = 0; i < src[m].n && i < 4u && src[m].time == ST_NOTE; i++) {
                 uint8_t x = src[m].note[i];
+                if (c == CP_ARPQ) {                     /* (0.6.82) SEQ: the pattern's melody as it plays (a note */
+                    if (nb < sizeof base && (!nb || base[nb - 1u] != x))   /* again at once: one), not sorted */
+                        base[nb++] = x;
+                    continue;
+                }
                 for (j = 0; j < nb && base[j] < x; j++)
                     ;
                 if (j < nb && base[j] == x) continue;
@@ -1059,13 +1104,13 @@ static uint32_t cp_arp_note(const track_t *t, const step_t *s, uint32_t k)
                 base[j] = x; nb++;
             }
         if (!nb) return s->n ? s->note[0] : 60u;
-        n = nb * (CP_RNG(s->carg) + 1u);
+        n = nb * (CP_RNG(a) + 1u);
     }
     if (o == 1u) k = n - 1u - k % n;                    /* DOWN */
     else if (o == 2u && n > 1u) { k %= 2u * n - 2u; if (k >= n) k = 2u * n - 2u - k; }   /* UP-DN */
     else if (o == 3u) k = rng() % n;                    /* RND */
     else k %= n;                                        /* UP */
-    if (s->comp == CP_ARPS) {
+    if (c == CP_ARPS) {
         uint32_t lo = 127u;
         for (i = 0; i < s->n && i < 4u; i++) if (s->note[i] < lo) lo = s->note[i];
         return (uint32_t)clamp(scale_steps(t, (int32_t)lo, (int32_t)k), 0, 127);
@@ -1212,8 +1257,10 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
     uint32_t slide_in = t->seq_hold && t->seq_n && !(skip & SEQ_REP);
     uint32_t len = t->p[P_SLEN] ? (uint32_t)t->p[P_SLEN] : 1u;
     uint32_t next_tie = seq_steps(t)[seq_src(t, (t->seq_idx + 1u) % len)].time == ST_TIE;
-    uint32_t hits = step_hits(t, s);
+    uint32_t div, hits = step_parts(t, s, &div);
     const step_t *arp = arp_owner(t, s);            /* (0.6.39) an ARP component: one of its notes a part */
+    uint8_t ca = 0, aa = 0, ra = 0, oa = 0, ba = 0;
+    uint32_t ac = 0, rnd = 0, oct = 0, bend = 0;
     int cont = 0;                                   /* .. going on over a TIE */
     uint8_t nn[4 + NLANE], vv[4 + NLANE];           /* the notes it plays: its notes, then its hits */
     uint32_t m = 0, sk = 0;
@@ -1244,12 +1291,12 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
         }
         return;
     }
-    if (!(skip & SEQ_REP) && !cont && s->comp == CP_KILL)
+    if (!(skip & SEQ_REP) && !cont && CP_HAS(t, s, CP_KILL, 0))
         trk_fade_out(t);                            /* (0.6.42) KILL: what sounds goes (~3 ms), its notes after */
     if (!(skip & SEQ_REP) && !cont && (s->time == ST_REST || (!s->n && !s->hit)) && t->pulse_from) {
         const step_t *o = t->pulse_from == CV_IDX ? &t->cvp :   /* (0.6.42) PULSE: again on an empty step */
                           &seq_steps(t)[(t->pulse_from - 1u) % NSTEP];
-        if (o->comp == CP_PULSE && o->time == ST_NOTE && (o->n || o->hit) && ++t->pulse_k % (o->carg % 4u + 1u) == 0u) {
+        if (CP_HAS(t, o, CP_PULSE, &ca) && o->time == ST_NOTE && (o->n || o->hit) && ++t->pulse_k % (ca % 4u + 1u) == 0u) {
             s = o;
             cont = 2;
             vel = (s->flags & SF_ACCENT) ? 127u : (s->vel ? s->vel : 96u);
@@ -1257,14 +1304,15 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
     }
     if (!(skip & SEQ_REP) && !cont && s->time == ST_NOTE && (s->n || s->hit)) {
         uint32_t pi = (uint32_t)(s - seq_steps(t));    /* (0.6.42) PULSE from here; another note ends one */
-        t->pulse_from = (uint8_t)(s->comp == CP_PULSE && pi < NSTEP ? pi + 1u : 0u);
-        if (s == &t->cvs && s->comp == CP_PULSE) {      /* (0.6.47) C.LEN: the lane's step, kept */
+        uint32_t pul = CP_HAS(t, s, CP_PULSE, 0);
+        t->pulse_from = (uint8_t)(pul && pi < NSTEP ? pi + 1u : 0u);
+        if (s == &t->cvs && pul) {                      /* (0.6.47) C.LEN: the lane's step, kept */
             t->cvp = t->cvs;
             t->pulse_from = CV_IDX;
         }
         t->pulse_k = 0;
-        if (s->comp == CP_TONAL)
-            t->tonal = (int8_t)((int32_t)(s->carg % 15u) - 7);
+        if (CP_HAS(t, s, CP_TONAL, &ca))
+            t->tonal = (int8_t)((int32_t)(ca % 15u) - 7);
     }
     if (!(skip & SEQ_REP) && !cont) {
         t->arp_from = 0;                            /* (0.6.39) a step of its own: no arpeggio, or a new one */
@@ -1282,27 +1330,35 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
         seq_release(t);
         return;
     }
+    if (arp)                                        /* (0.6.82) the components on these notes, one a type: the */
+        ac = cp_get(t, arp, CP_ARPN, CP_ARPS, &aa); /* step's first, else its second */
+    rnd = CP_HAS(t, s, CP_RAND, &ra);
+    oct = CP_HAS(t, s, CP_OCT, &oa);
+    bend = CP_HAS(t, s, CP_BEND, &ba);
+    if (CT_LEN(s))                                  /* (0.6.82) LEN: the step's own gate, n/16 */
+        gate = period * CT_LEN(s) / 16u;
     if (hits > 1u) {                                /* RATCH: the gate of a part, no slide or tie out */
-        gate = step_samples(t, period, t->seq_idx) / hits * (uint32_t)t->p[P_SGATE] / 128u;
+        gate = step_samples(t, period, t->seq_idx) / div * (CT_LEN(s) ? CT_LEN(s) * 8u : (uint32_t)t->p[P_SGATE]) / 128u;
         if (!(skip & SEQ_REP))
             t->rat_left = (uint8_t)(hits - 1u);
-        if (s->comp == CP_ECHO) {                   /* (0.6.42) ECHO: each repeat softer */
+        if (!arp && CP_HAS(t, s, CP_ECHO, 0)) {     /* (0.6.42) ECHO: each repeat softer */
             uint32_t part = (skip & SEQ_REP) ? hits - 1u - t->rat_left : 0u;
             vel = vel * (hits - part) / hits;
             if (vel < 8u) vel = 8u;
         }
     }
     for (i = 0; i < (arp ? 1u : s->n) && i < 4u; i++) {
-        uint32_t x = arp ? cp_arp_note(t, arp, t->arp_k++) : s->note[i];
+        uint32_t x = arp ? cp_arp_note(t, arp, ac, aa, t->arp_k++) : s->note[i];
         x = (uint32_t)clamp((int32_t)x + up, 0, 127);
         if (!kit) {                                 /* (0.6.42) TONAL, RAND, OCT */
             if (t->tonal)
                 x = (uint32_t)clamp(scale_steps(t, (int32_t)x, t->tonal), 0, 127);
-            if (s->comp == CP_RAND) {
-                int32_t r = s->carg % 8u ? (int32_t)(s->carg % 8u) : 1;
+            if (rnd) {
+                int32_t r = ra % 8u ? (int32_t)(ra % 8u) : 1;
                 x = (uint32_t)clamp(scale_steps(t, (int32_t)x, (int32_t)(rng() % (uint32_t)(2 * r + 1)) - r), 0, 127);
-            } else if (s->comp == CP_OCT)
-                x = (uint32_t)clamp((int32_t)x + cp_oct(t, s), 0, 127);
+            }
+            if (oct)                                /* (0.6.82: with a RAND too) */
+                x = (uint32_t)clamp((int32_t)x + cp_oct(t, oa), 0, 127);
         }
         if (song.g[G_STRN] && !kit)                 /* (JIANT 0.4) STRN: up / down the scale, every sequence */
             x = (uint32_t)clamp(scale_steps(t, (int32_t)x, song.g[G_STRN]), 0, 127);
@@ -1343,9 +1399,9 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
         if (!((sk >> i) & 1u)) {
             uint32_t a0 = vage;
             seq_note_on(t, nn[i], vv[i]);
-            if (s->comp == CP_BEND && !kit && vage != a0) {   /* (0.6.42) BEND: its voice glides over the step */
+            if (bend && !kit && vage != a0) {   /* (0.6.42) BEND: its voice glides over the step */
                 uint32_t k2, ticks = step_samples(t, period, t->seq_idx) / CTL;
-                int32_t d = ((int32_t)(s->carg % 25u) - 12) * 16;
+                int32_t d = ((int32_t)(ba % 25u) - 12) * 16;
                 for (k2 = 0; k2 < NVOICE; k2++) {
                     voice_t *v = &t->v[k2];
                     if (v->age == vage && v->active) {
@@ -1378,12 +1434,12 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
 static __attribute__((noinline)) void seq_ratchet(track_t *t, uint32_t period)
 {
     const step_t *s = t->cv_on ? &t->cvs : &seq_steps(t)[seq_src(t, t->seq_idx)];   /* (0.6.47: C.LEN's) */
-    uint32_t hits = step_hits(t, s);
+    uint32_t div, hits = step_parts(t, s, &div);
     if (t->rat_left >= hits) {
         t->rat_left = 0;
         return;
     }
-    if (t->seq_pos < (hits - t->rat_left) * (step_samples(t, period, t->seq_idx) / hits))
+    if (t->seq_pos < (hits - t->rat_left) * (step_samples(t, period, t->seq_idx) / div))
         return;
     t->rat_left--;
     seq_step(t, s, period, SEQ_REP);
@@ -1463,6 +1519,7 @@ static void seq_tick(track_t *t, uint32_t n)
             const step_t *s = &seq_steps(t)[(t->pfx & PFX_RND) && !(rng() & 1u)   /* (JIANT) RANDOM held: half the */
                                             ? rng() % (len ? len : 1u) : seq_src(t, t->seq_idx)];   /* steps, any */
             uint32_t skip = SEQ_ROLLED, i, k;
+            uint8_t ja = 0;
             s = comp_lane(t, s);                        /* (0.6.47) C.LEN: the lane's component on it */
             /* the chance first (the one roll, as seq_step made it): a step that does not play applies no lock; the
              * automation and the locks before the notes, so a note-on reads them (eng_drum's KIT, ..) */
@@ -1481,9 +1538,9 @@ static void seq_tick(track_t *t, uint32_t n)
                 t->rskip_n = 0;
             }
             seq_step(t, s, period, skip);
-            if (skip != SEQ_MISS && s->comp == CP_JUMP && fl_ok(t, s))
-                t->jump_to = (uint8_t)(CP_JTO(s->carg) % NSTEP + 1u);   /* (0.6.42) then that step */
-            else if (skip != SEQ_MISS && s->comp == CP_REV && t->seq_idx > 0u && fl_ok(t, s))
+            if (skip != SEQ_MISS && CP_HAS(t, s, CP_JUMP, &ja) && fl_ok(t, CP_JUMP, ja))
+                t->jump_to = (uint8_t)(CP_JTO(ja) % NSTEP + 1u);   /* (0.6.42) then that step */
+            else if (skip != SEQ_MISS && CP_HAS(t, s, CP_REV, &ja) && t->seq_idx > 0u && fl_ok(t, CP_REV, ja))
                 t->rev = 1;                             /* (0.6.42) then backwards to step 1 */
         }
     }

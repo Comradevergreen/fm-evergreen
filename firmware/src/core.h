@@ -351,7 +351,18 @@ typedef struct {                 /* acid-style step: up to 4 notes (POLY), time,
     uint8_t acc;                 /* bit l: that hit is accented (velocity 127) */
     uint8_t probability;         /* 0 = legacy 100%; 1..100 = percent, 101 = silent */
     uint8_t comp, carg;          /* (JIANT 0.6.39) the step's component (CP_*, 0 none) and its arguments (seq.c) */
+    uint8_t comp2, carg2;        /* (0.6.82) a second component (SEQ > COMP 2), the same way */
+    uint8_t cwhen;               /* (0.6.82) WHEN each plays: bits 0-1 comp's, 2-3 comp2's (CW_*) */
+    uint8_t ctime;               /* (0.6.82) bits 0-2 DIV: RATCH's and ECHO's parts a step/2 .. /8 apart (0: the step
+                                  * shared out, as before); bits 3-6 LEN: a part's gate n/16 (0: the track's GATE) */
 } step_t;
+/* (0.6.82) WHEN a component plays: ALWAYS, on odd loops (1:2), on even loops (2:2), SKIP (kept, not played) */
+enum { CW_ALWAYS, CW_ODD, CW_EVEN, CW_SKIP };
+#define CW_OF(s, k) (((uint32_t)(s)->cwhen >> ((k) * 2u)) & 3u)
+#define CT_DIV(s) ((uint32_t)(s)->ctime & 7u)
+#define CT_LEN(s) (((uint32_t)(s)->ctime >> 3) & 15u)
+#define CT_NDIV 6u
+static const uint8_t CT_DIVS[CT_NDIV] = {0, 2, 3, 4, 6, 8};
 /* (JIANT 0.6.39) step components, OP-Z style (SEQ > COMP): one a step, on a NOTE step of a melodic track.
  * ARP NOTES / SEQ / SCALE: the step plays an arpeggio, RATE notes in its length, over the TIEs after it; its notes
  * (NOTES: the step's own, SEQ: every note of the track's pattern, both over RANGE octaves; SCALE: the scale up from
@@ -361,12 +372,12 @@ typedef struct {                 /* acid-style step: up to 4 notes (POLY), time,
 /* (0.6.42) RAND: the notes up / down the scale at random (carg 1..7 degrees); OCT: an octave (carg: +1, -1, +1 every
  * other loop, -1 every other loop, + / - by turns, at random); TONAL: the rest of the loop moved (carg 0..14: -7..+7
  * degrees); BEND: the notes glide over the step (carg 0..24: -12..+12 semitones); ECHO: repeats fading (carg 0..2:
- * x2..x4); PULSE: its notes again on the empty steps after it (carg 0..3: every 1..4); JUMP: then step carg + 1;
+ * x2..x4; 0.6.82: .. x8); PULSE: its notes again on the empty steps after it (carg 0..3: every 1..4); JUMP: then step carg + 1;
  * REV: back from here to step 1 (ping-pong); FILL: only while FX is held; KILL: what the track sounds cut first */
 enum { CP_NONE, CP_ARPN, CP_ARPQ, CP_ARPS, CP_TRIG, CP_RAND, CP_OCT, CP_TONAL, CP_BEND, CP_ECHO, CP_PULSE, CP_JUMP,
        CP_REV, CP_FILL, CP_KILL, CP_N };
 /* the range of carg each component's KNOB 3 turns (ARP: KNOB 3 / 4 their own) */
-static const uint8_t CP_AMAX[CP_N] = {0, 0, 0, 0, 11, 7, 5, 14, 24, 2, 3, 63, 0, 0, 0};
+static const uint8_t CP_AMAX[CP_N] = {0, 0, 0, 0, 11, 7, 5, 14, 24, 6, 3, 63, 0, 0, 0};
 static const uint8_t CP_ADEF[CP_N] = {0, 0, 0, 0, 0, 2, 0, 9, 7, 1, 0, 0, 0, 0, 0};
 static const uint8_t CP_AMIN[CP_N] = {0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 #define CP_ORD(a) ((uint32_t)(a) & 3u)            /* UP DOWN UP-DN RND */
@@ -384,6 +395,7 @@ static const uint8_t CP_DEGS[4] = {3, 5, 8, 15};
 static const uint8_t CP_TRIGS[CP_NTRIG][2] = {{1, 2}, {2, 2}, {1, 3}, {2, 3}, {3, 3}, {1, 4}, {2, 4}, {3, 4}, {4, 4},
                                               {1, 8}, {0, 1}, {0, 2}};   /* (a of b; {0, 1} FIRST, {0, 2} NOT FIRST) */
 static int cp_arp(const step_t *s) { return s->comp >= CP_ARPN && s->comp <= CP_ARPS; }
+static int cp_isarp(uint32_t c) { return c >= CP_ARPN && c <= CP_ARPS; }
 typedef struct {                 /* a step as formats 1..4 (projects to FUN4) stored it: no hits */
     uint8_t note[4];
     uint8_t n, time, flags, vel;

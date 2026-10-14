@@ -537,7 +537,7 @@ static const page_t PAGES[] = {
     {"ARP", FAM_ARP, SC_TRACK, GR_ARP, {P_AMODE, P_ARATE, P_AOCT, P_AGATE}},
     {"ARP 2", FAM_ARP, SC_TRACK, GR_NONE, {P_ASWING, P_APROB, P_AHOLD, P_AORDER}},
     /* (0.6.81) SEQ: STEP, PATTERN, SHIFT, PLAYHEADS first (the piano roll, its length and speed, its offsets, the
-     * extra playheads), then NOTE, COMP, AUTOMATION, AUTO LIST, MUTATE; PHRASES, SONG and CHANCE out of the cycle (ui.c
+     * extra playheads), then NOTE, COMP, COMP 2, WHEN, AUTOMATION, AUTO LIST, MUTATE; PHRASES, SONG and CHANCE out of the cycle (ui.c
      * page_visible) */
     {"STEP", FAM_SEQ, SC_STEP, GR_ROLL, {0, 1, 2, 3}},
     {"PATTERN", FAM_SEQ, SC_TRACK, GR_STEPS, {P_SLEN, P_SDIV, P_SSWING, P_SGATE}},
@@ -545,6 +545,8 @@ static const page_t PAGES[] = {
     {"PLAYHEADS", FAM_SEQ, SC_TRACK, GR_FUGUE, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (0.6.52) three more playheads (fugue.c; was FUGUE) */
     {"NOTE", FAM_SEQ, SC_STEP, GR_ROLL, {4, 5, 6, 7}},   /* (0.6.81) the piano roll's edits: FOCUS PITCH MOVE LEN */
     {"COMP", FAM_SEQ, SC_STEP, GR_COMP, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (0.6.39) STEP TYPE and its two values */
+    {"COMP 2", FAM_SEQ, SC_STEP, GR_COMP, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (0.6.82) the step's second component */
+    {"WHEN", FAM_SEQ, SC_STEP, GR_COMP, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (0.6.82) STEP, WHEN A / B, LEN (ui.c comp_slot) */
     {"PHRASES", FAM_SEQ, SC_GLOBAL, GR_PATS, {0xFF, 0xFF, 0xFF, 0xFF}},    /* pattern loader (ui.c pat_load); 0.6.37: hidden */
     {"MIXER", FAM_TRK, SC_TRK, GR_TRK, {0, 1, 2, 3}},   /* GLO button; LEVEL PAN REV MUTE */
     {"SONG", FAM_SEQ, SC_GLOBAL, GR_SONG, {0xFF, 0xFF, 0xFF, 0xFF}},

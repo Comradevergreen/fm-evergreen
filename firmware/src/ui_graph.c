@@ -143,16 +143,17 @@ static void graph_steps(const track_t *t, uint16_t c)
  * now framed), CHANCE as a bar, RATCH as its parts */
 static uint16_t comp_mark(const step_t *st)
 {
-    if (cp_arp(st)) return heat_col(200);
-    if (st->comp == CP_TRIG) return heat_col(90);
-    if (st->comp > CP_TRIG) return heat_col(20 + (uint32_t)(st->comp - CP_RAND) * 22u);   /* (0.6.42) the others */
+    uint32_t c = st->comp ? st->comp : st->comp2;      /* (0.6.82: the second, when it is the only one) */
+    if (cp_isarp(c)) return heat_col(200);
+    if (c == CP_TRIG) return heat_col(90);
+    if (c > CP_TRIG) return heat_col(20 + (c - CP_RAND) * 22u);   /* (0.6.42) the others */
     if (step_chance(st) < 100u) return T_MID;
     if (step_ratchet(st) > 1u) return T_THEME;
     return 0;
 }
 static void graph_comp(const track_t *t, uint16_t c)
 {
-    uint32_t i, len = (uint32_t)t->p[P_SLEN], v = comp_view();
+    uint32_t i, len = (uint32_t)t->p[P_SLEN], v = comp_view(), ct;
     const step_t *cs = &t->step[ui.cursor];
     int32_t y0 = 4, bh = 14, x, w;
     char b[32];
@@ -172,9 +173,30 @@ static void graph_comp(const track_t *t, uint16_t c)
         if ((mk = comp_mark(st)) != 0 && (!cl || i < cl)) cv_rect(x, y0 + bh + 3, 9, 3, mk);
         if (st->comp == CP_JUMP && CP_JTO(st->carg) / 16u == ui.bank)   /* (0.6.42) JUMP: a line to the step it names */
             cv_line(x + 4, y0 + bh + 4, bar_x(CP_JTO(st->carg)) + 4, y0 + bh + 4, mk);
+        if (st->comp && st->comp2)                      /* (0.6.82) two components: a second mark */
+            cv_rect(x, y0 + bh + 6, 9, 1, comp_mark(&(step_t){.comp = st->comp2}));
         if (i == ui.cursor) cv_rect(x, y0 + bh + 8, 9, 2, T_ACCENT);
         else if (song.playing && i == seq_src(t, t->seq_idx)) cv_rect(x, y0 + bh + 8, 9, 2, T_TEXT);
     }
+    if (comp_slot() == 2u) {                            /* (0.6.82) WHEN: the two, the loop now */
+        static const char *const WN[4] = {"ALWAYS", "ON 1:2", "ON 2:2", "SKIPPED"};
+        uint32_t k;
+        for (k = 0; k < 2u; k++) {
+            uint32_t c = k ? cs->comp2 : cs->comp;
+            str_cpy(b, k ? "B " : "A ", sizeof b);
+            str_cpy(b + 2, c ? COMP_NAMES[COMP_ARPN + c - CP_ARPN] : "-", 12);
+            if (c) { str_cpy(b + str_len(b), "  ", 3); str_cpy(b + str_len(b), WN[CW_OF(cs, k)], 9); }
+            cv_text(PANEL_X0 + 2, 40 + (int32_t)k * 16, &AF_S, b, c ? T_MID : T_DIM);
+        }
+        cv_text(PANEL_X0 + 2, 80, &AF_S, "A SILENCING ONE (TRIG, FILL) WINS", T_DIM);
+        if (song.playing) {
+            str_cpy(b, "LOOP ", sizeof b);
+            fmt_int(b + 5, (int32_t)t->loops + 1);
+            cv_text_r(228, 40, &AF_S, b, t->loops & 1u ? T_THEME : T_ACCENT, T_SURF);
+        }
+        return;
+    }
+    ct = comp_type(cs);
     str_cpy(b, v >= COMP_ARPN && v <= COMP_ARPS ? "ARP " : "", sizeof b);
     str_cpy(b + str_len(b), v ? COMP_NAMES[v] : "NO COMPONENT  K2: TYPE", sizeof b - 8u);
     cv_text(PANEL_X0 + 2, 36, &AF_S, b, v ? T_MID : T_DIM);
@@ -186,12 +208,13 @@ static void graph_comp(const track_t *t, uint16_t c)
     if (v >= COMP_ARPN && v <= COMP_ARPS) {             /* the ladder: one cycle (up to 16 notes), as it plays */
         step_t sh = *cs;
         uint32_t n, lo = 127u, hi = 0u, now = 0xFFu;
+        sh.carg = (uint8_t)comp_arg(cs);
         uint8_t nt[16];
         if (!cs->n) { cv_text(PANEL_X0 + 2, 60, &AF_S, "A STEP WITH NOTES PLAYS IT", T_DIM); return; }
         if (CP_ORD(sh.carg) == 3u) sh.carg = (uint8_t)(sh.carg & ~3u);   /* (RND: drawn UP, the order is the dice's) */
         n = CP_ORD(sh.carg) == 2u ? 2u * 16u : 16u;
         for (i = 0; i < 16u && i < n; i++) {
-            nt[i] = (uint8_t)cp_arp_note(t, &sh, i);
+            nt[i] = (uint8_t)cp_arp_note(t, &sh, ct, sh.carg, i);
             if (nt[i] < lo) lo = nt[i];
             if (nt[i] > hi) hi = nt[i];
         }
@@ -205,7 +228,7 @@ static void graph_comp(const track_t *t, uint16_t c)
                      i == now ? T_ACCENT : heat_col(60 + (uint32_t)(nt[i] - lo) * 150u / (hi > lo ? hi - lo : 1u)), T_SURF);
         }
     } else if (v == COMP_TRIG) {                        /* the loops: a of b filled, the loop now framed */
-        const uint8_t *cd = CP_TRIGS[cs->carg % CP_NTRIG];
+        const uint8_t *cd = CP_TRIGS[comp_arg(cs) % CP_NTRIG];
         uint32_t nb = cd[0] ? cd[1] : 4u, cur = song.playing ? (cd[0] ? t->loops % nb : (t->loops < 3u ? t->loops : 3u)) : 0xFFu;
         w = 24;
         for (i = 0; i < nb; i++) {
@@ -219,7 +242,7 @@ static void graph_comp(const track_t *t, uint16_t c)
             "THE NOTE AT RANDOM IN THE SCALE", "AN OCTAVE UP OR DOWN", "THE REST OF THE LOOP MOVED",
             "THE NOTE GLIDES OVER THE STEP", "REPEATS, EACH SOFTER", "AGAIN ON THE EMPTY STEPS AFTER",
             "THEN TO ANOTHER STEP", "THEN BACK TO STEP 1", "ONLY WHILE [FX] IS HELD", "CUTS WHAT THE TRACK SOUNDS"};
-        int32_t a = cs->carg, cx = PANEL_X0 + PANEL_W / 2;
+        int32_t a = (int32_t)comp_arg(cs), cx = PANEL_X0 + PANEL_W / 2;
         cv_text(PANEL_X0 + 2, 50, &AF_S, SAY[v - COMP_RAND], T_DIM);
         if (v == COMP_RAND || v == COMP_TONAL || v == COMP_OCT) {   /* the span it moves in, the note in the middle */
             int32_t r = v == COMP_RAND ? a * 4 : v == COMP_TONAL ? (a - 7) * 4 : (a % 6u == 1u || a % 6u == 3u ? -24 : 24);
@@ -231,11 +254,12 @@ static void graph_comp(const track_t *t, uint16_t c)
             int32_t d = (a - 12) * 2;
             cv_line_t(PANEL_X0 + 20, 82, PANEL_X0 + PANEL_W - 20, 82 - d, heat_col(200), 3);
         } else if (v == COMP_ECHO) {                    /* the repeats fading */
-            uint32_t h = 2u + (uint32_t)a % 3u;
-            w = (PANEL_W - 8) / (int32_t)h;
+            uint32_t h = 2u + (uint32_t)a % 7u, dv = CT_DIVS[CT_DIV(cs) % CT_NDIV];
+            if (dv && h > dv) h = dv;                    /* (0.6.82) DIV: as many as fit, that far apart */
+            w = (PANEL_W - 8) / (int32_t)(dv ? dv : h);
             for (i = 0; i < h; i++) {
                 int32_t hh = 34 * (int32_t)(h - i) / (int32_t)h;
-                cv_rrect(PANEL_X0 + 4 + (int32_t)i * w, 98 - hh, w - 6, hh, 3, heat_col(200 - i * 40u), T_SURF);
+                cv_rrect(PANEL_X0 + 4 + (int32_t)i * w, 98 - hh, w - 6, hh, 3, heat_col(200 - i * 160u / h), T_SURF);
             }
         }
     } else if (v == COMP_CHANCE) {
@@ -1321,9 +1345,11 @@ static uint32_t graph_signature(void)
         h = (h ^ ((uint32_t)t->p[P_CLEN] << 8 | (song.playing ? t->cpos : 0xFFu))) * 16777619u;   /* (0.6.47) C.LEN */
         for (i = ui.bank * 16u; i < ui.bank * 16u + 16u && i < NSTEP; i++)
             h = (h ^ ((uint32_t)t->step[i].comp << 8 | t->step[i].carg | (uint32_t)t->step[i].probability << 16 |
-                      (uint32_t)t->step[i].flags << 24)) * 16777619u;
+                      (uint32_t)t->step[i].flags << 24 | (uint32_t)t->step[i].comp2 << 4)) * 16777619u;
         h = (h ^ (comp_view() * 977u + cs->carg + (song.playing ? t->arp_k * 131u + t->loops * 7u + t->arp_from : 0u))) *
             16777619u;
+        h = (h ^ ((uint32_t)cs->carg2 | (uint32_t)cs->cwhen << 8 | (uint32_t)cs->ctime << 16 | comp_slot() << 24)) *
+            16777619u;                                  /* (0.6.82) COMP 2, WHEN */
     }
     if (pg->scope == SC_ENGINE && (ENGINES[t->eng_req % NENGINES] == &ENG_WHEEL || t->eng_req % NENGINES == ENGI_FM6 ||
                                    (FELUCCA_FM4 && t->eng_req % NENGINES == ENGI_DIGITAL)))

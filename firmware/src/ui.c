@@ -534,7 +534,26 @@ enum { COMP_OFF, COMP_CHANCE, COMP_RATCH, COMP_ARPN, COMP_ARPQ, COMP_ARPS, COMP_
        COMP_BEND, COMP_ECHO, COMP_PULSE, COMP_JUMP, COMP_REV, COMP_FILL, COMP_KILL, COMP_N };   /* (CP_* in order) */
 static const char *const COMP_NAMES[COMP_N] = {"OFF", "CHANCE", "RATCH", "NOTES", "SEQ", "SCALE", "TRIG", "RAND", "OCT",
                                                "TONAL", "BEND", "ECHO", "PULSE", "JUMP", "REV", "FILL", "KILL"};
-static uint32_t comp_view(void)                         /* the TYPE shown for the cursor step (read once a step) */
+/* (0.6.82) the COMP pages one after another: COMP (the step's first component), COMP 2 (its second), WHEN (theirs, and
+ * the step's LEN): which this is (0..2) */
+static uint32_t comp_slot(void)
+{
+    uint32_t i = ui.page, k = 0;
+    while (i > 0u && k < 2u && PAGES[i - 1u].graph == GR_COMP)
+        i--, k++;
+    return k;
+}
+static uint32_t comp_type(const step_t *s) { return comp_slot() == 1u ? s->comp2 : s->comp; }   /* (the page's) */
+static uint32_t comp_arg(const step_t *s) { return comp_slot() == 1u ? s->carg2 : s->carg; }
+static uint32_t comp_view1(void);
+static uint32_t comp_view(void)                         /* the TYPE shown for the cursor step: COMP 2's its second */
+{
+    const step_t *s = &TSEL->step[ui.cursor];
+    if (comp_slot() == 1u)
+        return s->comp2 ? COMP_ARPN + s->comp2 - CP_ARPN : COMP_OFF;
+    return comp_view1();
+}
+static uint32_t comp_view1(void)                        /* the first's, CHANCE and RATCH (read once a step) */
 {
     const step_t *s = &TSEL->step[ui.cursor];
     uint32_t at = (uint32_t)ui.cursor + 1u + (uint32_t)song.sel * 64u;
@@ -555,6 +574,7 @@ static void step_clear(step_t *st)
     st->vel = 0;
     st->hit = st->acc = 0;
     st->comp = st->carg = 0;
+    st->comp2 = st->carg2 = st->cwhen = st->ctime = 0;
     st->probability = 0;
 }
 

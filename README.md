@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.6.81).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.6.82).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 > ⚡ **New in 0.6.71: both cores (experimental).** The FM-1's chip has two processor cores and JIANT used one. Now the
 > second renders some of the synth tracks while the first renders the rest, so the same song leaves much more room
@@ -510,6 +510,25 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### v0.6.82
+- **Two step components on one step, and WHEN for every one (SEQ > COMP, COMP 2, WHEN).** COMP 2 gives a step a
+  second component; both play (an ECHO with an OCT: the repeats an octave up). One that keeps the note silent wins: a
+  TRIG or FILL in either place decides first whether the step plays. WHEN sets the loops each plays on: ALWAYS, 1:2,
+  2:2 or SKIP (kept but off).
+- **Division and duration**: RATCH and ECHO get a **DIV** (the step shared out, or the hits 1/2 … 1/8 of a step
+  apart), ECHO goes up to x8, and a step's **LEN** sets each note's (or each RATCH / ECHO / ARP part's) gate on its
+  own. ARP SEQ now plays the pattern's melody in its order (it was sorted like NOTES).
+- **Chord glide**: a POLY chord with SLD glides into the next one, each note to its partner; with **GLIDE** up on a
+  POLY track every chord glides by itself. Three into four: the new note fades in from the nearest; four into three:
+  the extra one glides on and fades out. It follows the voices actually sounding.
+- **Piano roll: SEQ > NOTE** focuses one note of a chord: PITCH moves it, MOVE moves it (or the whole step) along
+  the steps, LEN stretches it, EDIT deletes it; holding a step shows how far its length reaches.
+- **SEQ pages in a new order**: STEP, PATTERN, SHIFT, **PLAYHEADS** (was FUGUE), then NOTE, COMP, COMP 2, WHEN,
+  AUTOMATION, AUTO LIST, MUTATE.
+- **Fixes**: ANALOG MORPH sounds on every wave (SIN round to saw, PWM's width, SYNC / RING's ratio, SAW3's spread);
+  every LFO and ENV destination is heard on every engine; SCL TRANS moves the sequence too; FM6's ENV page (SUS did
+  nothing) moves the carriers' envelopes; AUTO PAN named on its page and the SLICER before MASTER in FX.
 
 ### v0.6.81
 - **CHORD is back, light (SCL > CHORD; after the Omnichord and the Orchid).** A key plays a chord: in the scale
