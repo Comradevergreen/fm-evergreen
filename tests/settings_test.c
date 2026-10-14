@@ -32,6 +32,10 @@ int main(void)
     original.panel = PANEL_DEFAULT; original.panel.enc[0] = 3;
     original.favorites.factory[8][0] = 1;
     original.favorites.user = 1u << 31; original.favorites.filter = 1;
+    p = original;                                 /* (JIANT 0.6.81) no mark yet: the palette set to JIANT once, marked */
+    assert(settings_import(&p, sizeof p) == 1 && settings.palette == UI_JIANT_INDEX &&
+           p.favorites.factory[15][23] == JIANT_PAL_SEEN);
+    original.favorites.factory[15][23] = JIANT_PAL_SEEN;   /* marked: the palette as saved (migrated) */
     p = original;
     assert(settings_import(&p, sizeof p) == 1); settings_init();
     assert(settings.palette == UI_GREY_INDEX && fx_lowcut && settings.zoom && panel.enc[0] == 3);

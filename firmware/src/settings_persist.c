@@ -5,7 +5,7 @@
  * palette: UI_PAL_TAG + index; an old id (below 20, earlier firmware) is migrated on import.
  * bold: no longer used (one font weight); kept as it was saved, unless it holds the HOLD setting (panel.c).
  * zoom: no longer used (the large readout); kept as it was saved, unless it holds the LEDS setting (panel.c).
- * favorites.factory[15][28..31]: CLICK / CLICK LEVEL / COUNT-IN (1.1), STYLE, MENU's flags, the layers seen (bytes no
+ * favorites.factory[15][23]: JIANT_PAL_SEEN (JIANT 0.6.81). favorites.factory[15][28..31]: CLICK / CLICK LEVEL / COUNT-IN (1.1), STYLE, MENU's flags, the layers seen (bytes no
  * engine uses; 0 in older settings = every one's default); [15][27]: SCREEN OFF (1.1.5; 0 = 30 MIN, the default).
  * MENU's flags (ui.c PREF_*) are append-only bits whose 0 is the default: BPM LOCK (16) is clear in every older setting
  * = unlocked, LARGE (32) = OFF, RESTORE LAST OFF (128, 1.2) = ON, read as saved (nothing to migrate, so importing twice changes nothing). */
@@ -16,6 +16,7 @@ typedef struct {
     struct { uint8_t factory[16][32]; uint32_t user, filter; } favorites;
 } persist_t;
 #define PERSIST_MAGIC 0x50455234u
+#define JIANT_PAL_SEEN 0x4Au                    /* favorites.factory[15][23]: the palette set to JIANT once */
 
 /* Normalize in place; 1 = current, 2 = migrated, 0 = invalid. */
 static int settings_import(persist_t *p, int n)
@@ -48,6 +49,13 @@ static int settings_import(persist_t *p, int n)
         p->favorites.factory[15][24] = 0;
     if (p->favorites.factory[15][27] > 7u)         /* SCREEN OFF (1.1.5, ui.c SCR_CODE): unknown = 0 (NEVER since 1.1.5.1) */
         p->favorites.factory[15][27] = 0;
+    if (p->favorites.factory[15][23] != JIANT_PAL_SEEN) {   /* (JIANT 0.6.81) settings from Felucca or an earlier JIANT:
+                                                         * its palette (often GREY or MONO: a black and white screen
+                                                         * after installing) set to JIANT once; a palette picked after
+                                                         * this is kept (the mark saved with it) */
+        p->palette = palette_to_stored(UI_JIANT_INDEX);
+        p->favorites.factory[15][23] = JIANT_PAL_SEEN;
+    }
     p->magic = PERSIST_MAGIC;
     p->palette = palette_to_stored(palette_from_stored(p->palette));
     settings.magic = SETTINGS_MAGIC;
