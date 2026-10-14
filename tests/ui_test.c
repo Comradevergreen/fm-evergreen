@@ -7659,6 +7659,22 @@ static int test_chord_glide(void)
     ok = nact == 3u && rel == 1u;
     bad += check("chord glide: 4 -> 3 notes, the one left goes to its nearest new note as it is released", ok);
     transport_req = 2; ui_input();
+    for (i = 0; i < 40u; i++) events_block(CTL);
+    for (i = 0; i < 3u; i++) t->step[i].flags = 0;    /* (0.6.81) no SLD: GLIDE on the POLY track glides by itself */
+    t->p[P_GLIDE] = 64; t->p[P_SGATE] = 60;            /* (a short GATE: held to the next chord all the same) */
+    transport_req = 1; ui_input();
+    for (i = 0; i < 8u; i++) events_block(CTL);
+    for (k = 0; k < NVOICE; k++) ages[k] = t->v[k].active && t->v[k].gate ? t->v[k].age : 0u;
+    while (t->seq_idx == 0u) events_block(CTL);
+    for (i = 0; i < 2u; i++) events_block(CTL);
+    {
+        uint32_t kept = 0;
+        for (k = 0; k < NVOICE; k++)
+            if (ages[k] && t->v[k].active && t->v[k].gate && t->v[k].age == ages[k]) kept++;
+        ok = kept == 3u;
+    }
+    bad += check("chord glide by itself: GLIDE on a POLY track, no SLD, a short GATE: the chord's voices go on into the next", ok);
+    transport_req = 2; ui_input();
     ui_power_on();
     return bad;
 }

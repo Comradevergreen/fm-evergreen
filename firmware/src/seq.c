@@ -1137,10 +1137,15 @@ static int32_t cg_near(int32_t x, const uint8_t *set, uint32_t n)   /* the note 
 static void chord_glide(track_t *t, const uint8_t *nn, const uint8_t *vv, uint32_t m, uint32_t sk, uint32_t ssamp)
 {
     uint8_t o[8], n[8], nv[8];
-    uint32_t a = t->seq_n < 8u ? t->seq_n : 8u, b = 0, i, j, k, ticks = ssamp * 3u / 4u / CTL, ti = trk_index(t) % NTRK;
+    uint32_t a = 0, b = 0, i, j, k, ti = trk_index(t) % NTRK;
+    uint32_t ticks = (t->p[P_GLIDE] > 0 ? ssamp * (uint32_t)t->p[P_GLIDE] / 127u : ssamp * 3u / 4u) / CTL;   /* (GLIDE:
+                                                         * that much of the step; SLD alone: three quarters) */
     int32_t tr = trk_trans(t);
     if (!ticks) ticks = 1;
-    for (i = 0; i < a; i++) o[i] = t->seq_notes[i];
+    for (i = 0; i < t->seq_n && a < 8u; i++)            /* (0.6.81) the old chord: its notes still sounding (a voice
+                                                         * taken by another note is not one) */
+        for (k = 0; k < NVOICE; k++)
+            if (t->v[k].active && t->v[k].gate && t->v[k].note == t->seq_notes[i]) { o[a++] = t->seq_notes[i]; break; }
     for (i = 0; i < m && b < 8u; i++)
         if (!((sk >> i) & 1u)) { n[b] = nn[i]; nv[b++] = vv[i]; }
     for (i = 1; i < a; i++) for (j = i; j > 0 && o[j] < o[j - 1]; j--) { uint8_t x = o[j]; o[j] = o[j - 1]; o[j - 1] = x; }
@@ -1189,6 +1194,17 @@ static void chord_glide(track_t *t, const uint8_t *nn, const uint8_t *vv, uint32
     t->slide_glide = 0;
 }
 
+/* (0.6.81) GLIDE on a POLY track: every chord glides into the next by itself (no SLD needed): its notes held to the next
+ * step when that one plays notes */
+static int chord_auto(const track_t *t, uint32_t len)
+{
+    const step_t *nx;
+    if (t->p[P_VOICE] != V_POLY || t->p[P_GLIDE] <= 0)
+        return 0;
+    nx = &seq_steps(t)[seq_src(t, (t->seq_idx + 1u) % len)];
+    return nx->time == ST_NOTE && nx->n;
+}
+
 static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint32_t period, uint32_t skip)
 {
     uint32_t i, j, gate = period * (uint32_t)t->p[P_SGATE] / 128u;
@@ -1223,7 +1239,8 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
     } else if (s->time == ST_TIE) {
         if (t->seq_n) {
             t->seq_off = gate + period / 2u;
-            t->seq_hold = (s->flags & SF_SLIDE) != 0 || next_tie;   /* chains hold at any GATE / swing */
+            t->seq_hold = (s->flags & SF_SLIDE) != 0 || next_tie || chord_auto(t, len);   /* chains hold at any GATE /
+                                                         * swing; (0.6.81) GLIDE on POLY: to the next chord */
         }
         return;
     }
@@ -1316,7 +1333,7 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
             if (!((sk >> i) & 1u))
                 t->seq_notes[t->seq_n++] = nn[i];
         t->seq_off = gate;
-        t->seq_hold = (s->flags & SF_SLIDE) != 0 || next_tie;
+        t->seq_hold = (s->flags & SF_SLIDE) != 0 || next_tie || chord_auto(t, len);
         return;
     }
     t->slide_glide = (uint8_t)slide_in;
@@ -1352,7 +1369,8 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
         if (!((sk >> i) & 1u))
             t->seq_notes[t->seq_n++] = nn[i];
     t->seq_off = gate;
-    t->seq_hold = hits == 1u && ((s->flags & SF_SLIDE) != 0 || next_tie);   /* next step a TIE: keep the notes to it */
+    t->seq_hold = hits == 1u && ((s->flags & SF_SLIDE) != 0 || next_tie ||   /* next step a TIE: keep the notes to it */
+                                 (!kit && !arp && chord_auto(t, len)));   /* (0.6.81) GLIDE on POLY: to the next chord */
 }
 
 /* RATCH: the next part of the playing step once the sequencer is that far into it (seq_step played the first).
