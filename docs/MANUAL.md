@@ -284,7 +284,7 @@ and heating up with its own audio. The selected track is drawn bigger, a muted o
 | NOTE | FOCUS | PITCH | MOVE | LEN |
 | COMP | STEP | TYPE | (its value) | (its value; RATCH / ECHO: DIV) |
 | COMP 2 | STEP | TYPE (the second component) | (its value) | (its value; ECHO: DIV) |
-| WHEN | STEP | A WHEN | B WHEN | LEN |
+| WHEN | STEP | A (WHEN) | B (WHEN) | LEN |
 | AUTOMATION | PLAY (ON/OFF) | EVENT (count) | LOCK (count) | CLEAR (action) |
 | AUTO LIST | ROW | STEP | PARAM | VALUE |
 | MUTATE | SOUND (every) | PATTERN (every) | AMOUNT | MODE |

@@ -2698,7 +2698,7 @@ static int test_presets_knob(void)
         }
     }
     bad += check("#92 PRESETS on STEP, COMP, PATTERN, SHIFT, CHANCE, AUTOMATION: the step cursor; the sound and the steps stay",
-                 cur_ok && n_cur == 7u);   /* (0.6.81: and NOTE) */
+                 cur_ok && n_cur == 9u);   /* (0.6.81: and NOTE; 0.6.82: COMP 2, WHEN) */
     bad += check("#94 PRESETS on USER, PROJECT, PHRASES, SONG: the selection (KNOB 1's); nothing loaded", sel_ok);
     bad += check("#94 PRESETS on TOOLS does nothing", tools_ok);
     bad += check("#94 PRESETS elsewhere (EDIT, ENV, LFO, FX, SCL, ARP, MIXER, GLOBAL, ...): the next sound, the steps stay",
@@ -6091,7 +6091,11 @@ static int test_seq_tools(void)
     press(B_SEQ); frames(320);
     ok &= str_eq(cur_page()->title, "NOTE");
     press(B_SEQ); frames(320);
-    ok &= cur_page()->graph == GR_COMP;
+    ok &= str_eq(cur_page()->title, "COMP");
+    press(B_SEQ); frames(320);
+    ok &= str_eq(cur_page()->title, "COMP 2");          /* (0.6.82) */
+    press(B_SEQ); frames(320);
+    ok &= str_eq(cur_page()->title, "WHEN");
     press(B_SEQ); frames(320);
     ok &= cur_page()->graph == GR_MOTION;
     press(B_SEQ); frames(320);

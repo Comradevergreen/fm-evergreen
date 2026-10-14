@@ -888,8 +888,7 @@ static void draw_columns(void)
             uint32_t k;
             for (k = 0; k < 2u; k++) {
                 uint32_t c = k ? cs->comp2 : cs->comp, w = CW_OF(cs, k);
-                draw_column(1u + k, k ? "B WHEN" : "A WHEN", WN[w], c ? COMP_NAMES[COMP_ARPN + c - CP_ARPN] : "NONE",
-                            c && w ? VAL(1u + k) : T_DIM, -1, ICON_PROB);
+                draw_column(1u + k, k ? "B" : "A", c ? WN[w] : "-", "", c && w ? VAL(1u + k) : T_DIM, -1, ICON_PROB);
             }
             if (CT_LEN(cs)) { fmt_int(val, (int32_t)CT_LEN(cs)); str_cpy(val + str_len(val), "/16", 4); }
             else str_cpy(val, "GATE", sizeof val);

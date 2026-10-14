@@ -291,7 +291,7 @@ a la derecha); apretá OCT+ para ejecutarla.
 | NOTE | FOCUS | PITCH | MOVE | LEN |
 | COMP | STEP | TYPE | (su valor) | (su valor; RATCH / ECHO: DIV) |
 | COMP 2 | STEP | TYPE (el segundo componente) | (su valor) | (su valor; ECHO: DIV) |
-| WHEN | STEP | A WHEN | B WHEN | LEN |
+| WHEN | STEP | A (WHEN) | B (WHEN) | LEN |
 | AUTOMATION | PLAY (ON/OFF) | EVENT (cantidad) | LOCK (cantidad) | CLEAR (acción) |
 | AUTO LIST | ROW | STEP | PARAM | VALUE |
 | MUTATE | SOUND (cada) | PATTERN (cada) | AMOUNT | MODE |
