@@ -761,6 +761,8 @@ static int proj_fg_used(const project_t *q)            /* (0.6.52) a FUGUE head 
 static uint32_t proj_packed_size(const project_t *q)
 {
     uint32_t n = 68u + sizeof q->chain + 4u + q->motion.count * sizeof q->motion.event[0] + 2u + G_SL_N, t, i;
+    if (q->g[G_DMOD] != GP[G_DMOD].def)                 /* (0.6.86) the delay's MOD's, when not the default */
+        n += 3u;
     for (i = 0; i < sizeof q->dx_snd; i++)              /* (0.6.48) the SENDs' block, when one is set */
         if (q->dx_snd[i]) { n += 2u + sizeof q->dx_snd; break; }
     for (i = 0; i < sizeof q->dx_lay; i++)              /* (0.6.49) the LAYERs' */
@@ -856,6 +858,10 @@ static int proj_pack(project_store_t *out, const project_t *q)
         b[pos++] = 'F'; b[pos++] = 'G';
         memcpy(b + pos, q->fugue, sizeof q->fugue);
         pos += sizeof q->fugue;
+    }
+    if (q->g[G_DMOD] != GP[G_DMOD].def) {               /* (0.6.86) the delay's MOD (biased), when not the default */
+        b[pos++] = 'D'; b[pos++] = 'M';
+        b[pos++] = (uint8_t)(clamp(q->g[G_DMOD], 0, 127) + 64);
     }
     memcpy(b + PROJC_PFX_OFF, q->pfx_lane, sizeof q->pfx_lane);
     b[PROJC_PFX_OFF + sizeof q->pfx_lane] = q->pfx_ltgt > 2u ? 0u : q->pfx_ltgt;
@@ -1054,7 +1060,10 @@ static int proj_unpack_c(project_t *q, const uint8_t *b)
             if ((f[0] & 15u) >= 10u || (f[0] >> 4) > 3u) f[0] = 0;
             if ((int8_t)f[1] < -14 || (int8_t)f[1] > 14) f[1] = 0;
         }
+        pos += 2u + sizeof q->fugue;
     }
+    if (pos + 3u <= room && b[pos] == 'D' && b[pos + 1u] == 'M')   /* (0.6.86) the delay's MOD (else its default) */
+        q->g[G_DMOD] = (int16_t)clamp((int32_t)b[pos + 2u] - 64, GP[G_DMOD].min, GP[G_DMOD].max);
     proj_new_tracks(q, nt);                             /* (a FUNC of fewer tracks: the rest at power-on) */
     for (t = nt; t < NTRK; t++)
         memcpy(q->fm6[t], FM6_INIT, FM6_PACKED);

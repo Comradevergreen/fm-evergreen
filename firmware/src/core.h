@@ -152,6 +152,7 @@ enum {                          /* global parameters */
     G_SLT1, G_SLT6 = G_SLT1 + 5, G_SLFX,    /* pattern, step, depth; which tracks go in (and FX: the delay, reverb and */
     G_SLPLEN, G_SLPQ,                       /* chorus returns); the repeats' pitch sequence: its length, CHR / SCL, */
     G_SLP0, G_SLP15 = G_SLP0 + 15,          /* its 16 steps (semitones) */
+    G_DMOD,                     /* (0.6.86) the delay's tape drift (WOW and FLUTTER) depth (project.c: its own block, 'DM') */
     G_COUNT
 };
 #define G_SL_N (G_SLP15 + 1 - G_SLMODE)     /* the SLICER's globals (stored together: project.c, song_chain.c) */

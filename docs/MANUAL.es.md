@@ -218,7 +218,7 @@ a la derecha); apretá OCT+ para ejecutarla.
 | SL BUS 2 | T5 | T6 | FX | — |
 | SL PITCH | STEP | PITCH | LEN | QUANT |
 | DLY | TIME | FEEDBK | TONE | MIX |
-| DLY 2 | WIDE | PITCH | SPRAY | — |
+| DLY 2 | WIDE | PITCH | SPRAY | MOD |
 | REVERB | TYPE | SIZE | DAMP (RESO: FOLLOW) | PRE (SHIMMER/CLOUD: AIR; RESO: PITCH) |
 | REVERB 2 | MOD | RATE | FILT | WIDE |
 | CHORUS | RATE | DEPTH | STEREO | — |
@@ -853,9 +853,17 @@ disponible mientras suena un tema (**STOP TO EDIT**). Guarda un solo paso, en RA
 ### Delay
 
 - **DLY**: **TIME** (divisiones sincronizadas 4BAR … 1/32, o tiempos libres de 5 ms a 1,48 s), **FEEDBK**, **TONE**
-  (por debajo del centro más oscuro, por encima más fino), **MIX**.
+  (por debajo del centro más oscuro, por encima más fino), **MIX**. FEEDBK (0.6.86) se comporta como el de un delay
+  analógico (una cinta, un PT2399): cada repetición un poco más oscura y más fina, con un leve vaivén (wow y flutter);
+  cerca de **100 %** los ecos siguen durante muchos segundos, y **pasado 100 %** se realimentan y se sostienen,
+  saturando suave en vez de recortar (bajalo para que se apaguen). Hasta 80 % es igual que antes. **TONE** es
+  resonante (0.6.86): del centro hacia abajo un pasabajos que barre de ~8 kHz a ~250 Hz, del centro hacia arriba un
+  corte de graves que barre de ~70 Hz a ~3 kHz, los dos con un pico en el corte: las repeticiones se angostan a una
+  banda en cada pasada (estilo dub) y elegís dónde se ubican.
 - **DLY 2**: **WIDE** (el eco derecho más tarde), y el delay **GRAIN**: **PITCH** (±12 semitonos por repetición) y
-  **SPRAY**. Con LOAD LITE o ECO el delay GRAIN suena como un delay común (la tarjeta dice LITE / ECO).
+  **SPRAY**. Con LOAD LITE o ECO el delay GRAIN suena como un delay común (la tarjeta dice LITE / ECO). **MOD**
+  (0.6.86): la deriva de la cinta, WOW lento y FLUTTER rápido sobre las repeticiones (0 nada, 20 por defecto, como una
+  cinta; hasta un chorus mareado); se guarda con el proyecto.
 
 ### Reverb (cinco modelos)
 
@@ -870,8 +878,8 @@ según el tipo:
 | **RESO** | Cuatro cuerdas afinadas a la escala del tema | **FOLLOW** (OFF / T1–T6: el acorde sigue la nota más grave que toca esa pista) | **PITCH** (el acorde 0–14 grados hacia arriba en la escala) |
 | **CLOUD** | Nube granular; SIZE al máximo la congela | DAMP | **AIR** |
 
-**REVERB 2**: **MOD** (profundidad de modulación), **RATE**, **FILT** (tono de entrada: más oscuro / más brillante),
-**WIDE**.
+**REVERB 2**: **MOD** (profundidad de modulación), **RATE**, **FILT** (tono de entrada: más oscuro / más brillante;
+0.6.86 resonante, una banda en el corte para tallar el lugar del espacio), **WIDE**.
 
 Con **LOAD LITE**, SHIMMER y CLOUD suenan como ROOM y RESO como SPRING; con **LOAD ECO** todas las reverbs suenan como
 SPRING. La configuración se conserva; la tarjeta TYPE muestra LITE o ECO debajo de su valor.
