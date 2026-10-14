@@ -919,7 +919,6 @@ static void dice_post(const uint32_t *role, const uint32_t *act, const dstyle_t 
  * Only into sections that are empty or that a DICE ALL wrote (dice_secs; a STORE of yours takes a section back, another
  * project clears it): a section of yours is never written over; then the piece stays one loop. 0, or the parts made */
 static void section_store(uint32_t s);                  /* (song_main.c) */
-static uint8_t dice_secs;                               /* the sections DICE ALL wrote (bit s) */
 static step_t dice_keep[3][NSTEP];                      /* the lead's, the arp's and the drums' steps, to put back */
 static void dice_put_back(const uint32_t *tk, const int16_t *mute)
 {
