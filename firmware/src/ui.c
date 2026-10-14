@@ -964,7 +964,9 @@ static void pat_load_ui(track_t *t, uint32_t n)
 static int param_kept(uint32_t i)
 {
     return i == P_LEVEL || i == P_PAN || i == P_MUTE || (i >= P_AMODE && i <= P_SGATE) ||
-           (i >= P_SLCR && i <= P_SLDEPTH) || i == P_SOFS || i == P_POFS;
+           (i >= P_SLCR && i <= P_SLDEPTH) || i == P_SOFS || i == P_POFS ||
+           (!FELUCCA_FM4 && (i == P_HVEL || i == P_HTIM || i == P_HGAT));   /* (0.6.87) HUMAN: the sequencer's, a sound
+                                                         * keeps it (FELUCCA_FM4: DIGITAL's OP SUS / LEVEL there) */
 }
 
 /* a retired preset kept as an alias (SAMPLE's, gone with it in JIANT): none now. -> the preset k stands for */

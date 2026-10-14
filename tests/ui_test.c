@@ -2719,7 +2719,7 @@ static int test_presets_knob(void)
         }
     }
     bad += check("#92 PRESETS on STEP, COMP, PATTERN, SHIFT, CHANCE, AUTOMATION: the step cursor; the sound and the steps stay",
-                 cur_ok && n_cur == 9u);   /* (0.6.81: and NOTE; 0.6.82: COMP 2, WHEN) */
+                 cur_ok && n_cur == 10u);   /* (0.6.81: and NOTE; 0.6.82: COMP 2, WHEN; 0.6.87: HUMAN) */
     bad += check("#94 PRESETS on USER, PROJECT, PHRASES, SONG: the selection (KNOB 1's); nothing loaded", sel_ok);
     bad += check("#94 PRESETS on TOOLS does nothing", tools_ok);
     bad += check("#94 PRESETS elsewhere (EDIT, ENV, LFO, FX, SCL, ARP, MIXER, GLOBAL, ...): the next sound, the steps stay",
@@ -6167,6 +6167,8 @@ static int test_seq_tools(void)
     press(B_SEQ); frames(320);
     ok &= str_eq(cur_page()->title, "STRETCH");         /* (0.6.85) */
     press(B_SEQ); frames(320);
+    ok &= str_eq(cur_page()->title, "HUMAN");           /* (0.6.87) */
+    press(B_SEQ); frames(320);
     ok &= str_eq(cur_page()->title, "COMP");
     press(B_SEQ); frames(320);
     ok &= str_eq(cur_page()->title, "COMP 2");          /* (0.6.82) */
@@ -6193,6 +6195,7 @@ static int test_seq_tools(void)
         t->step[3].time = ST_NOTE; t->step[3].n = 1; t->step[3].note[0] = 67; t->step[3].vel = 100;
         (void)motion_put(t, 3, P_FCUT, 20, 0);
         go_page(GR_SHAPE); frame();
+        shp_i = 7u; shp_r = 0u;                          /* (x2, x2: whatever an earlier test turned) */
         ok = str_eq(cur_page()->title, "STRETCH");
         turn(EN_K1, 1);                                  /* x2 -> x3 */
         ok &= ui.act == 1u && shp_k() == 3 && shp_len() == 12u;
@@ -7769,6 +7772,8 @@ static int test_chord_glide(void)
     t->step[1].note[3] = 72; t->step[1].vel = 100; t->step[1].flags = SF_SLIDE;
     t->step[2].time = ST_NOTE; t->step[2].n = 3; t->step[2].note[0] = 60; t->step[2].note[1] = 64; t->step[2].note[2] = 67;
     t->step[2].vel = 100;
+    for (k = 0; k < NVOICE; k++) t->v[k].active = 0;    /* (0.6.87: no tail of an earlier test's notes still releasing, */
+    memset(fg_set, 0, sizeof fg_set);                   /* nor the PLAYHEADS an earlier one left on: undo keeps them) */
     transport_req = 1; ui_input();
     for (i = 0; i < 8u; i++) events_block(CTL);
     for (k = 0; k < NVOICE; k++) ages[k] = t->v[k].active ? t->v[k].age : 0u;

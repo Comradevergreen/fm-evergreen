@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.6.86).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.6.87).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 > ⚡ **New in 0.6.71: both cores (experimental).** The FM-1's chip has two processor cores and JIANT used one. Now the
 > second renders some of the synth tracks while the first renders the rest, so the same song leaves much more room
@@ -510,6 +510,12 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### v0.6.87
+- **SEQ > HUMAN**: the sequencer plays like a person, each note a little different every time round (the steps
+  stay as written). **VEL** varies each note's velocity (up to ±38 at 100 %), **TIME** starts it a little late (up to
+  30 ms, never early; a chord stays together), **GATE** varies its length (up to ±40 %). 0 % (the default, and every
+  project before) plays exactly as written. Per track, kept when you change the sound, automatable.
 
 ### v0.6.86
 - **The delay feeds back like an analog one** (a tape, a PT2399). Its FEEDBK reached only 84 % and the loop clipped

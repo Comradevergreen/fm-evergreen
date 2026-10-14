@@ -290,6 +290,7 @@ a la derecha); apretá OCT+ para ejecutarla.
 | PLAYHEADS | HEAD | RATE | DIR | INTERVAL |
 | NOTE | FOCUS | PITCH | MOVE | LEN |
 | STRETCH | STRETCH (/8 … /2, x2 … x8) | REPEAT (x2 … x8, TO 64) | NUDGE (ya) | LEN (antes > después) |
+| HUMAN | VEL | TIME | GATE | — |
 | COMP | STEP | TYPE | (su valor) | (su valor; RATCH / ECHO: DIV) |
 | COMP 2 | STEP | TYPE (el segundo componente) | (su valor) | (su valor; ECHO: DIV) |
 | WHEN | STEP | A (WHEN) | B (WHEN) | LEN |
@@ -564,6 +565,12 @@ seleccionada se graban como **automatización**. MENU > AUDIO tiene el **CLICK**
     más notas (REC en vivo suma encima).
   - **KNOB 3 NUDGE**: toda la secuencia un paso a la derecha / izquierda en el momento, dando la vuelta dentro de LEN
     (como TOOLS A3 / B3).
+- **HUMAN** (0.6.87, después de STRETCH): la pista toca como una persona, cada nota un poco distinta en cada vuelta;
+  los pasos quedan como están escritos. **VEL**: la velocity de cada nota sube o baja al azar (hasta ±38 al 100 %).
+  **TIME**: cada paso entra un poco tarde al azar (hasta 30 ms, nunca más de un tercio del paso, nunca antes; las notas
+  de un acorde siguen juntas y un STRUM mantiene su separación). **GATE**: cada nota más larga o más corta (hasta
+  ±40 %). En 0 % toca exactamente lo escrito (el valor por defecto, y todo proyecto anterior). Se mantiene al cambiar
+  el sonido; se puede automatizar.
 - **AUTOMATION**: PLAY activa o desactiva la automatización de la pista, EVENT y LOCK cuentan los registros, CLEAR
   los borra (OCT+, con diálogo).
 - **AUTO LIST**: cada evento de automatización y cada lock en forma de lista. KNOB 1 la fila, 2 el paso, 3 el
