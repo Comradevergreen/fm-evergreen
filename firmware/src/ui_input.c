@@ -791,10 +791,28 @@ static void note_edit(uint32_t slot, int32_t steps)
     }
 }
 
+/* (0.6.88) SEQ > TIMING: KNOB 1 the step, KNOB 2 its OFFSET off the grid (-8 .. +7 sixteenths: early / late; a step
+ * with nothing to play keeps 0), KNOB 3 the track's REC Q (how much live recording snaps to the grid). EDIT: back on it */
+static void timing_edit(uint32_t slot, int32_t steps)
+{
+    step_t *st = &TSEL->step[ui.cursor];
+    if (slot == 0u) { cursor_set(ui.cursor + steps); return; }
+    if (slot == 1u) {
+        if (st->time != ST_NOTE || (!st->n && !st->hit)) { ui_message("NO NOTE HERE"); return; }
+        ST_MICRO_SET(st, clamp(ST_MICRO(st) + (steps > 0 ? 1 : -1), -8, 7));
+        return;
+    }
+    if (slot == 2u)
+        TSEL->p[P_HRQ] = (int16_t)clamp(TSEL->p[P_HRQ] + steps, 0, 127);
+}
 static void step_edit(uint32_t slot, int32_t steps)
 {
     step_t *st = &TSEL->step[ui.cursor];
     uint32_t i;
+    if (cur_page()->id[0] == 8u) {                      /* (0.6.88) SEQ > TIMING (a DRUM track's too) */
+        timing_edit(slot, steps);
+        return;
+    }
     if (drum_track(TSEL)) {
         grid_edit(slot, steps);
         return;
@@ -1401,7 +1419,8 @@ static void presets_turn(int32_t s)
     uint32_t g = pg->graph;
     if (ui.home || g == GR_BROWSE) {
         preset_step(s);
-    } else if (g == GR_ROLL && pg->id[0] == 4u) {      /* (0.6.81) SEQ > NOTE: PRESETS the step (its KNOB 1 is FOCUS) */
+    } else if (g == GR_ROLL && (pg->id[0] == 4u || pg->id[0] == 8u)) {   /* (0.6.81) SEQ > NOTE (KNOB 1 FOCUS), TIMING:
+                                                         * PRESETS the step */
         cursor_set(ui.cursor + s);
         ui.hot_col = 0;
         ui.hot_t = 40;
@@ -1663,6 +1682,11 @@ static int page_tap(uint32_t b)
         if (chain_busy()) { ui_message("STOP TO EDIT"); return 1; }
         if (held) {                                     /* a step held: its locks (the step stays) */
             lock_clear(held);
+            return 1;
+        }
+        if (cur_page()->id[0] == 8u) {                  /* (0.6.88) SEQ > TIMING: the step back on the grid */
+            ST_MICRO_SET(&TSEL->step[ui.cursor], 0);
+            ui_message("ON THE GRID");
             return 1;
         }
         if (cur_page()->id[0] == 4u && ui.pr_focus && TSEL->step[ui.cursor].time == ST_NOTE &&

@@ -119,6 +119,8 @@ enum {                          /* per-track parameters */
 #define P_HVEL P_FM1_SUS
 #define P_HTIM P_FM1_LEVEL
 #define P_HGAT P_FM2_SUS
+#define P_HRQ P_FM2_LEVEL              /* (0.6.88) SEQ > TIMING's REC Q: how much live recording snaps to the grid, 127 (every
+                                         * project before it) 100 %: on it; less: the notes keep that much of where they were */
 #define P_ELOOP P_ED_FX                /* (JIANT 0.4) ENV LOOP: OFF / ON (voice.c env_tick) */
 /* (JIANT 0.6.9) AUTO PAN (fx.c mix_part), in the slots of the old per-track SLICER (one on a bus since 0.6.3, its
  * slots stored, never read but by proj_sl_migrate). Laid so what old stores hold means OFF: DPTH where SLCR was (0, or
@@ -368,6 +370,11 @@ typedef struct {                 /* acid-style step: up to 4 notes (POLY), time,
 /* (0.6.82) WHEN a component plays: ALWAYS, on odd loops (1:2), on even loops (2:2), SKIP (kept, not played) */
 enum { CW_ALWAYS, CW_ODD, CW_EVEN, CW_SKIP };
 #define CW_OF(s, k) (((uint32_t)(s)->cwhen >> ((k) * 2u)) & 3u)
+/* (0.6.88) TIMING: the step's own place off the grid, -8 .. +7 sixteenths of a step (0 on it), in cwhen's bits 4-7
+ * (stored with it, project.c); recorded off the grid (REC Q) or set on SEQ > TIMING. seq.c: late by a queue, early by
+ * ending the step before it that much sooner */
+#define ST_MICRO(s) ((int32_t)(int8_t)(s)->cwhen >> 4)
+#define ST_MICRO_SET(s, m) ((s)->cwhen = (uint8_t)(((s)->cwhen & 15u) | (((uint32_t)(m) & 15u) << 4)))
 #define CT_DIV(s) ((uint32_t)(s)->ctime & 7u)
 #define CT_LEN(s) (((uint32_t)(s)->ctime >> 3) & 15u)
 #define CT_NDIV 6u
@@ -537,7 +544,9 @@ typedef struct track {
     uint16_t dbt;
     uint8_t ss_n, ss_i;          /* (0.6.84) STRUM on the sequencer's chords: the step's notes still to come in, in */
     uint8_t ss_nn[4 + NLANE], ss_vv[4 + NLANE];  /* order low to high (seq.c seq_step, seq_tick), ss_due samples to the next */
-    uint16_t ss_due, ss_gap;     /* (.. and the gap between them) */
+    uint32_t ss_due, ss_gap;     /* (.. and the gap between them; 0.6.88: 32 bits, a long TIMING) */
+    uint16_t ext;                /* (0.6.88) TIMING: samples the playing step began before its place (it is early) */
+    int8_t mic;                  /* .. the playing step's own TIMING (ST_MICRO), late: seq_step queues its notes */
     uint8_t pfx_half;            /* 1/2 TEMPO: the odd sample carried; pfx_rs: let go, back to the real place */
     uint8_t pfx_rs;
     uint16_t pfx_idx0;           /* .. where it was pressed (step, samples into it) and the samples since */

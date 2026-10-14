@@ -559,8 +559,10 @@ static void graph_roll(const track_t *t, uint16_t c)
             pr_bars(st, s == si ? x + 2 : x - 1, s == si ? 9 : 12, T_MID, 0, &y, s == si ? step_ratchet(st) : 1u);
             one.n = 1; one.note[0] = st->note[ui.pr_focus - 1u]; one.hit = 0;
             pr_bars(&one, s == si ? x + 2 : x - 1, s == si ? 9 : 12, T_ACCENT, 1, &yy, s == si ? step_ratchet(st) : 1u);
-        } else if (s == si)
-            pr_bars(st, x + 2, 9, col, (st->flags & SF_ACCENT) != 0u, &y, step_ratchet(st));
+        } else if (s == si) {                         /* (0.6.88: its TIMING off the grid, shown off it) */
+            int32_t mo = ST_MICRO(st) * PR_CW / 16;
+            pr_bars(st, x + 2 + mo < PR_X0 ? PR_X0 : x + 2 + mo, 9, col, (st->flags & SF_ACCENT) != 0u, &y, step_ratchet(st));
+        }
         else                                          /* a TIE: the bars on through the gap before */
             pr_bars(st, x - 1, 12, col, (st->flags & SF_ACCENT) != 0u, &y, 1u);
         if ((st->flags & SF_SLIDE) && step_ratchet(st) == 1u &&   /* (a ratcheted step never slides out) */

@@ -22,7 +22,7 @@ static int ev_id_ok(const track_t *t, uint32_t id)
 {
     const param_desc_t *d;
     if (id >= P_COUNT || !motion_param(id) || (id >= P_FM1_ATK && id <= P_FM4_LEVEL && id != P_TCHAN && id != P_MORPH && id != P_CLEN && id != P_DXIMG &&
-                                                              id != P_HVEL && id != P_HTIM && id != P_HGAT))
+                                                              id != P_HVEL && id != P_HTIM && id != P_HGAT && id != P_HRQ))
         return 0;
     if (id >= P_LN0 && id <= P_LN7)
         return drum_track(t);

@@ -848,9 +848,95 @@ static int human(void)
     return bad;
 }
 
+/* (0.6.88) TIMING: a step's own place off the grid. Late (+n/16): its notes n sixteenths of the step after its place;
+ * early (-n/16): before it (the step before ends sooner, the one after keeps its place: the loop's length as it was);
+ * recorded live with REC Q under 100 %: the step keeps where the note was played (sooner than the middle of a step:
+ * the next step, early); 100 %: on the grid; stored with the project */
+static int timing(void)
+{
+    int bad = 0, ok;
+    track_t *t;
+    uint32_t b, k, len, at[64], n, st = 0;
+    int32_t off[64];
+    for (k = 0; k < 2u; k++) {                          /* (k 0: steps 1 and 3 late +4 / early -4; k 1: all on the grid) */
+        ui_power_on();
+        t = &trk[0];
+        track_defaults_steps(t);
+        t->p[P_SLEN] = 4; t->p[P_SGATE] = 32; t->p[P_SSWING] = 0; song.g[G_SWING] = 0;
+        for (b = 0; b < 4u; b++) t->step[b] = (step_t){{(uint8_t)(60 + b)}, 1, ST_NOTE, 0, 100};
+        if (!k) { ST_MICRO_SET(&t->step[1], 4); ST_MICRO_SET(&t->step[3], -4); }
+        seq_start();
+        len = step_len(t, 0);
+        n = 0;
+        for (b = 0; b < 40u * len / CTL && n < 64u; b++) {
+            uint32_t v0 = vage;
+            seq_tick(t, CTL);
+            for (; v0 < vage && n < 64u; v0++, n++) at[n] = b * CTL;
+        }
+        for (b = 0; b < n; b++) off[b] = (int32_t)at[b] - (int32_t)(b * len);   /* (note b on the grid: step b) */
+        if (k) {
+            ok = n >= 32u;
+            for (b = 0; b < n; b++) ok &= off[b] > -(int32_t)CTL && off[b] < (int32_t)CTL;
+            bad += check("TIMING 0: every step on the grid", ok);
+        } else {
+            int32_t q = (int32_t)len / 4;
+            ok = n >= 32u;
+            for (b = 0; b < n; b++) {
+                int32_t want = b % 4u == 1u ? q : b % 4u == 3u ? -q : 0;
+                ok &= off[b] > want - 2 * (int32_t)CTL && off[b] < want + 2 * (int32_t)CTL;
+            }
+            if (!ok) for (b = 0; b < 8u; b++) printf("  timing: note %u at %d (step %u)\n", b, off[b], len);
+            bad += check("TIMING +4/16 and -4/16: the steps a quarter late / early, the rest on the grid, the loop's length kept", ok);
+        }
+    }
+    {   /* live recording: a note played 5/16 into step 2 and one 3/16 before step 4, REC Q 0 % and 100 % */
+        uint32_t pass;
+        for (pass = 0; pass < 2u; pass++) {
+            ui_power_on();
+            t = &trk[0];
+            track_defaults_steps(t);
+            for (b = 0; b < NSTEP; b++) step_clear(&t->step[b]);
+            t->p[P_SLEN] = 8; t->p[P_SSWING] = 0; song.g[G_SWING] = 0;
+            t->p[P_HRQ] = pass ? 127 : 0;
+            seq_start();
+            song.rec = 1;
+            len = step_len(t, 0);
+            for (b = 0; b < 8u * len / CTL; b++) {
+                uint32_t p0 = b * CTL, p1 = p0 + CTL;
+                seq_tick(t, CTL);
+                if (p0 <= len + 5u * len / 16u && p1 > len + 5u * len / 16u) { input_on(t, 64, 100); trk_note_off(t, 64); }
+                if (p0 <= 3u * len - 3u * len / 16u && p1 > 3u * len - 3u * len / 16u) { input_on(t, 67, 100); trk_note_off(t, 67); }
+            }
+            song.rec = 0;
+            if (pass)
+                ok = t->step[1].note[0] == 64 && ST_MICRO(&t->step[1]) == 0 && t->step[3].note[0] == 67 && ST_MICRO(&t->step[3]) == 0;
+            else {
+                printf("  timing: recorded %d/16 (step 2, %u) and %d/16 (step 4, %u)\n", ST_MICRO(&t->step[1]), t->step[1].note[0],
+                       ST_MICRO(&t->step[3]), t->step[3].note[0]);
+                ok = t->step[1].note[0] == 64 && ST_MICRO(&t->step[1]) >= 4 && ST_MICRO(&t->step[1]) <= 6 &&
+                     t->step[3].note[0] == 67 && ST_MICRO(&t->step[3]) >= -4 && ST_MICRO(&t->step[3]) <= -2;
+            }
+            bad += check(pass ? "  REC Q 100 %: recorded on the grid" : "  REC Q 0 %: recorded where played (+5/16 late, -3/16 early)", ok);
+        }
+    }
+    {   /* stored with the project */
+        project_t a, c;
+        project_store_t p;
+        ui_power_on();
+        trk[0].step[2] = (step_t){{62}, 1, ST_NOTE, 0, 100};
+        ST_MICRO_SET(&trk[0].step[2], -7);
+        trk[0].p[P_HRQ] = 40;
+        project_capture(&a);
+        ok = proj_pack(&p, &a) && proj_import(&c, &p, sizeof p) && ST_MICRO(&c.t[0].step[2]) == -7 && c.t[0].p[P_HRQ] == 40;
+        bad += check("  TIMING and REC Q kept with the project", ok);
+    }
+    (void)st;
+    return bad;
+}
+
 int main(void)
 {
-    int bad = play() + projects() + presets() + screens() + components() + components2() + components3() + human();
+    int bad = play() + projects() + presets() + screens() + components() + components2() + components3() + human() + timing();
     printf("%s\n", bad ? "RATCHET TEST FAILED" : "ratchet tests passed");
     return bad != 0;
 }

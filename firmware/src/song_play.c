@@ -25,6 +25,7 @@ static void sec_apply(void)
         fm6_pgen[i]++;
         t->seq_idx = (uint16_t)(t->p[P_SLEN] - 1);
         t->seq_pos = 0x7FFFFFFFu;
+        t->ext = 0;
         t->rh_n = t->rskip_n = 0;
         t->rat_left = 0;
     }
