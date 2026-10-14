@@ -67,20 +67,13 @@ static struct {
     uint32_t dl_now, dl_old, dl_xf;      /* (0.6.81) TIME's crossfade; DEPTH and MIX gliding (fx.c) */
     int32_t cd, dm;
 } rf;
-static int32_t ref_rd(uint32_t d, int32_t m)
-{
-    int32_t q = (int32_t)(d << 8) + m, a, b;
-    uint32_t i = rf.dly_w - (uint32_t)(q >> 8);
-    a = ref_dly[i & (DLY_LEN - 1u)];
-    b = ref_dly[(i - 1u) & (DLY_LEN - 1u)];
-    return a + (((b - a) * (q & 255)) >> 8);
-}
+static int32_t ref_rd(uint32_t d, int32_t m) { return dly_rd_of(ref_dly, rf.dly_w, d, m); }
 static void ref_buses(const int32_t *cho_in, const int32_t *dly_in, const int32_t *rev_in, int32_t *wet, uint32_t n)
 {
     uint32_t i, k, dl = delay_samples();
     int32_t fb = dly_fb(song.g[G_DFDBK]), tn = song.g[G_DCOLOR] - 64;   /* (JIANT 0.4 TONE, its low-pass half) */
-    int32_t col = tn < 0 ? 500 + (64 + tn) * (64 + tn) * 8 : 32767, hk = 340 + (tn > 0 ? tn * tn * 4 : 0), m0, dwm, mw;
-    if (col > 22000) col = 22000;                               /* (0.6.86: darker, thinner each pass; the drift) */
+    int32_t hk = 5, m0, dwm, mw;                                /* (0.6.89: the loop's DC block only; TONE 64 here) */
+    (void)tn;
     rf.wph += (uint32_t)(0.6 * 4294967296.0 / FS) * n;
     rf.fph += (uint32_t)(5.3 * 4294967296.0 / FS) * n;
     mw = ((osc_sine(rf.wph) * song.g[G_DMOD]) >> 12) + ((osc_sine(rf.fph) * song.g[G_DMOD]) >> 15);
@@ -110,9 +103,9 @@ static void ref_buses(const int32_t *cho_in, const int32_t *dly_in, const int32_
             x += ((xo - x) * (int32_t)rf.dl_xf) >> DXF_LOG2;
             rf.dl_xf--;
         }
-        rf.dly_lp += mulq15(x - rf.dly_lp, col);
-        rf.dly_hp += mulq15(rf.dly_lp - rf.dly_hp, hk);
-        ref_dly[rf.dly_w & (DLY_LEN - 1u)] = (int16_t)dly_sat((dly_in[i] >> 1) + mulq15(clamp(rf.dly_lp - rf.dly_hp, -32767, 32767), fb));
+        rf.dly_lp = x;
+        rf.dly_hp += (((x << 8) - rf.dly_hp) * hk + 16384) >> 15;
+        ref_dly[rf.dly_w & (DLY_LEN - 1u)] = (int16_t)dly_sat((dly_in[i] >> 1) + mulq15(clamp(x - ((rf.dly_hp + 128) >> 8), -32767, 32767), fb));
         rf.dly_w++;
         y += mulq15(x << 1, rf.dm);
         a = 0;
@@ -333,14 +326,16 @@ static void test_clear(void)
 
 /* (0.6.86) DLY FEEDBK as an analog delay's: 0..80 the gain it was; 100 a long tail (still there after 6 s); past it the
  * loop grows into itself and holds, bounded by its saturation (never a hard clip, never past full scale) */
-static double dly_tail(int32_t v, double *late, int32_t *pk)
+static double dly_tail_t(int32_t v, int32_t tone, double *late, int32_t *pk);
+static double dly_tail(int32_t v, double *late, int32_t *pk) { return dly_tail_t(v, 64, late, pk); }
+static double dly_tail_t(int32_t v, int32_t tone, double *late, int32_t *pk)
 {
     static int32_t c[CTL], d[CTL], r[CTL], w[CTL];
     double e1 = 0, e6 = 0;
     uint32_t b, i;
     memset(dly_buf, 0, sizeof dly_buf); fx.dly_lp = fx.dly_hp = 0; fx.primed = 0;
-    song.g[G_DTIME] = 2; song.g[G_DFDBK] = (int16_t)v; song.g[G_DCOLOR] = 64; song.g[G_DMIX] = 127; song.g[G_WIDTH] = 0;
-    song.g[G_DPIT] = 0; song.g[G_DSPRY] = 0;
+    song.g[G_DTIME] = 2; song.g[G_DFDBK] = (int16_t)v; song.g[G_DCOLOR] = (int16_t)tone; song.g[G_DMIX] = 127; song.g[G_WIDTH] = 0;
+    song.g[G_DPIT] = 0; song.g[G_DSPRY] = 0; song.g[G_DMOD] = 0; fx.dt1 = fx.dt2 = 0;
     *pk = 0;
     for (b = 0; b < 7u * FS / CTL; b++) {
         for (i = 0; i < CTL; i++) {
@@ -369,8 +364,36 @@ static void test_dly_feedback(void)
     dly_tail(120, &l120, &p120);
     printf("reverb:   (DLY tails, 6 s after 1 s: FEEDBK 60 %.1f dB, 100 %.1f dB, 120 %.1f dB; the line's peak 120: %d)\n",
            l60, l100, l120, p120);
-    check("DLY FEEDBK: 0..80 as before, 100 a long tail, 120 grows and holds, the loop saturating within full scale",
-          same && l60 < -40 && l100 > -20 && l100 < 0 && l120 > 0 && l120 < 8 && p120 <= 32767 && p120 > 16000);
+    check("DLY FEEDBK: 0..80 as before, 100 a long tail (never cut off), 120 grows and holds, saturating within full scale",
+          same && l60 < -40 && l100 > -4 && l100 < 0.5 && l120 > 0 && l120 < 8 && p120 <= 32767 && p120 > 16000);
+    {   /* (0.6.89) TONE in the middle: each repeat the very copy of what went in (a sine at half scale, FEEDBK 100: its
+         * repeats' peaks within 0.5 % over 2 s); TONE at either end, FEEDBK 100: the band at the cutoff grows, held */
+        static int32_t c[CTL], d[CTL], r[CTL], w[CTL];
+        uint32_t b, i, dl;
+        int32_t p1 = 0, p2 = 0;
+        double lo, hi;
+        memset(dly_buf, 0, sizeof dly_buf); fx.dly_lp = fx.dly_hp = 0; fx.primed = 0; fx.dt1 = fx.dt2 = 0;
+        song.g[G_DTIME] = 2; song.g[G_DFDBK] = 100; song.g[G_DCOLOR] = 64; song.g[G_DMIX] = 127; song.g[G_DMOD] = 0;
+        dl = delay_samples();
+        for (b = 0; b < 3u * FS / CTL; b++) {
+            for (i = 0; i < CTL; i++) {
+                uint32_t t = b * CTL + i;
+                c[i] = r[i] = 0;
+                d[i] = t < dl / 2u ? (int32_t)(30000 * sin(2 * M_PI * 440 * t / FS)) : 0;   /* (sent >> 1 into the line) */
+            }
+            fx_buses(c, d, r, w, CTL);
+            for (i = 0; i < CTL; i++) {
+                uint32_t t = b * CTL + i, k = t / dl, a2 = abs(dly_buf[(fx.dly_w - 1u) & (DLY_LEN - 1u)]);
+                if (k == 1u && a2 > (uint32_t)p1) p1 = (int32_t)a2;
+                if (t >= 2u * FS && a2 > (uint32_t)p2 && t % dl < dl / 2u) p2 = (int32_t)a2;
+            }
+        }
+        dly_tail_t(100, 0, &lo, &p60);
+        dly_tail_t(100, 127, &hi, &p60);
+        printf("reverb:   (DLY TONE 64: first repeat %d, after 2 s %d; FEEDBK 100 TONE 0: %+.1f dB, TONE 127: %+.1f dB)\n", p1, p2, lo, hi);
+        check("DLY TONE in the middle: the repeats copies (within 3 %); at either end the loop self-oscillates (FEEDBK 100)",
+              p1 > 14000 && abs(p2 - p1) * 33 <= p1 && lo > 0 && hi > 0);
+    }
 }
 
 static void test_switch(void)
