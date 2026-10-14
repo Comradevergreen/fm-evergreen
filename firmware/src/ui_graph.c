@@ -524,7 +524,14 @@ static void graph_roll(const track_t *t, uint16_t c)
             continue;                                 /* a REST, empty, or a TIE after one */
         st = &seq_steps(t)[s];
         col = s == ui.cursor || si == ui.cursor ? T_ACCENT : step_heat(st, 0, c);   /* (JIANT: as hot as it plays) */
-        if (s == si)
+        if (s == ui.cursor && ui.pr_focus && ui.pr_focus <= st->n && cur_page()->id[0] == 4u) {   /* (0.6.81) SEQ >
+                                                         * NOTE: the chord dimmed, the note in focus lit */
+            step_t one = *st;
+            int32_t yy = -10000;
+            pr_bars(st, s == si ? x + 2 : x - 1, s == si ? 9 : 12, T_MID, 0, &y, s == si ? step_ratchet(st) : 1u);
+            one.n = 1; one.note[0] = st->note[ui.pr_focus - 1u]; one.hit = 0;
+            pr_bars(&one, s == si ? x + 2 : x - 1, s == si ? 9 : 12, T_ACCENT, 1, &yy, s == si ? step_ratchet(st) : 1u);
+        } else if (s == si)
             pr_bars(st, x + 2, 9, col, (st->flags & SF_ACCENT) != 0u, &y, step_ratchet(st));
         else                                          /* a TIE: the bars on through the gap before */
             pr_bars(st, x - 1, 12, col, (st->flags & SF_ACCENT) != 0u, &y, 1u);
@@ -532,6 +539,21 @@ static void graph_roll(const track_t *t, uint16_t c)
             ns->time == ST_NOTE && ns->n && y >= PR_Y0 && y < ybot) {
             int32_t ny = clamp(pr_row_y(ns->note[0]), PR_Y0, ybot - PR_RH);
             cv_line(x + 10, y + 2, x + 14, ny + 2, T_TEXT);   /* the slide into the next note */
+        }
+    }
+    if (ui.entry_open && !ui.ent_arp && ui.ent_nn && ui.ent_len > 1u) {   /* (0.6.81) a chord held, KNOB 1 its length:
+                                                         * the length to be written, outlined from the cursor on */
+        uint32_t k, j;
+        for (k = 0; k < ui.ent_len && k < len; k++) {
+            uint32_t si = (ui.cursor + k) % len;
+            int32_t x;
+            if (si < base || si >= base + ncol) continue;
+            x = PR_X0 + (int32_t)(si - base) * PR_CW;
+            for (j = 0; j < ui.ent_nn; j++) {
+                int32_t y = pr_row_y(ui.ent_notes[j]);
+                if (y < PR_Y0 || y >= ybot) continue;
+                cv_frame(k ? x - 1 : x + 2, y, k ? 13 : 10, PR_RH, T_ACCENT);
+            }
         }
     }
     if (song.g[G_STRN]) {                             /* (0.6.45) ALL TR (SCL 2): the notes sound moved, shown */
@@ -1326,6 +1348,8 @@ static uint32_t graph_signature(void)
             pr_follow(t);
             h = (h ^ (proll.lo + 1u)) * 16777619u;
             h = (h ^ pr_held()) * 16777619u;
+            h = (h ^ (ui.pr_focus | (uint32_t)pg->id[0] << 4 | (ui.entry_open ? (uint32_t)ui.ent_len << 8 : 0u) |
+                      (uint32_t)ui.ent_nn << 16)) * 16777619u;   /* (0.6.81: NOTE's focus, the length being held) */
         }
     }
     return h;

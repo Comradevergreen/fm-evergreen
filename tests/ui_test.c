@@ -2698,7 +2698,7 @@ static int test_presets_knob(void)
         }
     }
     bad += check("#92 PRESETS on STEP, COMP, PATTERN, SHIFT, CHANCE, AUTOMATION: the step cursor; the sound and the steps stay",
-                 cur_ok && n_cur == 6u);
+                 cur_ok && n_cur == 7u);   /* (0.6.81: and NOTE) */
     bad += check("#94 PRESETS on USER, PROJECT, PHRASES, SONG: the selection (KNOB 1's); nothing loaded", sel_ok);
     bad += check("#94 PRESETS on TOOLS does nothing", tools_ok);
     bad += check("#94 PRESETS elsewhere (EDIT, ENV, LFO, FX, SCL, ARP, MIXER, GLOBAL, ...): the next sound, the steps stay",
@@ -6082,7 +6082,9 @@ static int test_seq_tools(void)
     ui_power_on();
     go_page(GR_ROLL); frame();
     press(B_SEQ); frames(320);
-    ok = cur_page()->graph == GR_COMP && msg_is("HOLD [SEQ] QUICK");   /* (0.6.39: STEP, COMP, PATTERN) */
+    ok = str_eq(cur_page()->title, "NOTE") && msg_is("HOLD [SEQ] QUICK");   /* (0.6.81: STEP, NOTE, COMP, PATTERN) */
+    press(B_SEQ); frames(320);
+    ok &= cur_page()->graph == GR_COMP;
     press(B_SEQ); frames(320);
     ok &= cur_page()->graph == GR_STEPS;
     press(B_SEQ); frames(320);
@@ -7568,6 +7570,46 @@ static int test_trans_seq(void)
     ui_power_on();
     return bad;
 }
+/* (0.6.81) SEQ > NOTE: FOCUS a note of the cursor's chord, PITCH it alone, MOVE it into the next step, LEN the chord's
+ * TIEs, EDIT deletes the note in focus (the chord stays); MOVE with the whole chord in focus takes its length along */
+static int test_note_page(void)
+{
+    int bad = 0, ok;
+    track_t *t;
+    ui_power_on();
+    t = &trk[0];
+    t->p[P_SLEN] = 16;
+    memset(t->step, 0, sizeof t->step);
+    { uint32_t i; for (i = 0; i < NSTEP; i++) t->step[i].time = ST_REST; }
+    t->step[0].time = ST_NOTE; t->step[0].n = 3; t->step[0].note[0] = 60; t->step[0].note[1] = 64; t->step[0].note[2] = 67;
+    t->step[0].vel = 100;
+    go_title("NOTE"); frame();
+    cursor_set(0);
+    turn(EN_K1, 1); turn(EN_K1, 1);                    /* FOCUS: note 2 (E4) */
+    ok = ui.pr_focus == 2u;
+    turn(EN_K2, 1);                                     /* PITCH: E4 -> F4, the others stay */
+    ok &= t->step[0].note[1] == 65u && t->step[0].note[0] == 60u && t->step[0].note[2] == 67u;
+    turn(EN_K3, 1);                                     /* MOVE: F4 into step 2 */
+    ok &= t->step[0].n == 2u && t->step[1].time == ST_NOTE && t->step[1].n == 1u && t->step[1].note[0] == 65u &&
+          ui.cursor == 1u;
+    bad += check("SEQ > NOTE: FOCUS one note of a chord, PITCH it alone, MOVE it into the next step", ok);
+    cursor_set(0);                                      /* the chord C4 G4: LEN 3, then MOVE it right (F4 changes places) */
+    turn(EN_K4, 1); turn(EN_K4, 1);
+    ok = t->step[0].time == ST_NOTE && t->step[1].time == ST_NOTE && t->step[2].time == ST_REST;   /* (blocked by F4) */
+    t->step[1].time = ST_REST; t->step[1].n = 0;
+    turn(EN_K4, 1); turn(EN_K4, 1);
+    ok &= t->step[1].time == ST_TIE && t->step[2].time == ST_TIE && t->step[3].time != ST_TIE;
+    turn(EN_K3, 1);                                     /* the chord and its TIEs a step right */
+    ok &= t->step[0].time == ST_REST && t->step[1].time == ST_NOTE && t->step[1].n == 2u && t->step[3].time == ST_TIE &&
+          ui.cursor == 1u;
+    bad += check("SEQ > NOTE: LEN adds TIEs over empty steps only; MOVE the chord takes its length along", ok);
+    turn(EN_K1, 1);                                     /* FOCUS note 1, EDIT: deleted, the chord's other note stays */
+    press(B_EDIT); frame();
+    ok = t->step[1].time == ST_NOTE && t->step[1].n == 1u && t->step[1].note[0] == 67u;
+    bad += check("SEQ > NOTE: EDIT deletes the note in focus, the rest of the chord stays", ok);
+    ui_power_on();
+    return bad;
+}
 static int test_midi_song_pc(void)
 {
     int bad = 0, ok;
@@ -8783,6 +8825,7 @@ int main(void)
     bad += test_midi_song_pc();
     bad += test_chord();
     bad += test_trans_seq();
+    bad += test_note_page();
     bad += test_fx_sections();
     bad += test_clear_ghosts();
     bad += test_dx_sound();

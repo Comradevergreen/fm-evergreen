@@ -1147,6 +1147,23 @@ static void draw_columns(void)
         draw_column(3, "ACC", ac ? "ON" : "--", "", ac ? VAL(3u) : T_DIM, -1, ICON_AUTO);
         return;
     }
+    if (cur_page()->scope == SC_STEP && cur_page()->id[0] == 4u) {   /* (0.6.81) SEQ > NOTE: FOCUS PITCH MOVE LEN */
+        const step_t *st = &seq_steps(TSEL)[ui.cursor];
+        uint32_t on = st->time == ST_NOTE && st->n, f = on && ui.pr_focus <= st->n ? ui.pr_focus : 0u, l = 1, len;
+        char fo[8], pn[8], sn[8], ln[8];
+        len = TSEL->p[P_SLEN] > 0 ? (uint32_t)TSEL->p[P_SLEN] : 1u;
+        while (on && l < len && seq_steps(TSEL)[(ui.cursor + l) % len].time == ST_TIE) l++;
+        if (!f) str_cpy(fo, on && st->n > 1u ? "CHORD" : "ALL", 8);
+        else { str_cpy(fo, "NOTE ", 8); fmt_int(fo + 5, (int32_t)f); }
+        if (on) note_name(pn, st->note[f ? f - 1u : 0u]); else str_cpy(pn, "--", 8);
+        fmt_int(sn, (int32_t)ui.cursor + 1);
+        fmt_int(ln, (int32_t)l);
+        draw_column(0, "FOCUS", fo, "", on ? VAL(0u) : T_DIM, -1, ICON_AUTO);
+        draw_column(1, "PITCH", pn, "", on ? VAL(1u) : T_DIM, -1, ICON_AUTO);
+        draw_column(2, "MOVE", sn, "<>", on ? VAL(2u) : T_DIM, -1, ICON_AUTO);
+        draw_column(3, "LEN", on ? ln : "--", on ? "ST" : "", on ? VAL(3u) : T_DIM, -1, ICON_AUTO);
+        return;
+    }
     if (cur_page()->scope == SC_STEP) {
         static const char *const TIME_N[3] = {"NOTE", "TIE", "REST"};
         const step_t *st = &seq_steps(TSEL)[ui.cursor];

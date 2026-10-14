@@ -667,12 +667,114 @@ static void lock_clear(uint64_t held)
     ui_message(n ? "LOCKS CLEARED" : "NO LOCKS");
 }
 
+/* (0.6.81) SEQ > NOTE, the piano roll's edits on the cursor's step: FOCUS the chord or one of its notes (lit), PITCH
+ * moves what is in focus up or down, MOVE moves it a step left or right (the chord with its length: it changes places
+ * with the step beside it; a note: into the step beside, a NOTE with room or an empty one), LEN the chord's length (its
+ * TIEs, over empty steps only). EDIT deletes what is in focus (page_tap) */
+static uint32_t note_len(const track_t *t, uint32_t c, uint32_t len)   /* the step and its TIEs after it */
+{
+    uint32_t l = 1;
+    while (l < len && t->step[(c + l) % len].time == ST_TIE)
+        l++;
+    return l;
+}
+static void note_drop(step_t *st, uint32_t j)           /* note j out of the step (empty: a REST, its TIEs nothing) */
+{
+    uint32_t i;
+    for (i = j; i + 1u < st->n; i++)
+        st->note[i] = st->note[i + 1u];
+    if (st->n) st->note[--st->n] = 0;
+    if (!st->n && !st->hit) st->time = ST_REST;
+}
+static void note_edit(uint32_t slot, int32_t steps)
+{
+    track_t *t = TSEL;
+    uint32_t len = t->p[P_SLEN] > 0 ? (uint32_t)t->p[P_SLEN] : 1u, c = ui.cursor, i;
+    step_t *st = &t->step[c];
+    uint32_t f = ui.pr_focus <= st->n ? ui.pr_focus : 0u;
+    if (st->time != ST_NOTE)
+        f = 0;
+    switch (slot) {
+    case 0:                                             /* FOCUS: ALL, 1 .. the chord's notes */
+        ui.pr_focus = (uint8_t)clamp((int32_t)f + (steps > 0 ? 1 : -1), 0, st->time == ST_NOTE ? (int32_t)st->n : 0);
+        break;
+    case 1:                                             /* PITCH */
+        if (st->time != ST_NOTE || !st->n) { ui_message("NO NOTE HERE"); break; }
+        for (i = 0; i < st->n; i++)
+            if (!f || i == f - 1u)
+                st->note[i] = (uint8_t)clamp(st->note[i] + steps, 1, 127);
+        last_note = st->note[f ? f - 1u : 0u];
+        break;
+    case 2: {                                           /* MOVE, a step a detent */
+        int32_t dir = steps > 0 ? 1 : -1;
+        if (st->time != ST_NOTE || !st->n) { ui_message("NO NOTE HERE"); break; }
+        if (!f) {                                       /* the chord and its TIEs change places with the step beside */
+            uint32_t l = note_len(t, c, len), k;
+            step_t blk[NSTEP], other;
+            if (l >= len) break;
+            for (k = 0; k < l; k++) blk[k] = t->step[(c + k) % len];
+            if (dir > 0) {
+                uint32_t nx = (c + l) % len, nl = note_len(t, nx, len);
+                if (t->step[nx].time == ST_NOTE && nl > 1u) { ui_message("BLOCKED: A LONG NOTE"); break; }
+                other = t->step[nx];
+                if (other.time == ST_TIE) { other.time = ST_REST; other.n = 0; }
+                t->step[c] = other;
+                for (k = 0; k < l; k++) t->step[(c + 1u + k) % len] = blk[k];
+                ui.cursor = (uint8_t)((c + 1u) % len);
+            } else {
+                uint32_t pv = (c + len - 1u) % len;
+                if (t->step[pv].time == ST_TIE) { ui_message("BLOCKED: A LONG NOTE"); break; }
+                other = t->step[pv];
+                for (k = 0; k < l; k++) t->step[(pv + k) % len] = blk[k];
+                t->step[(pv + l) % len] = other;
+                ui.cursor = (uint8_t)pv;
+            }
+        } else {                                        /* one note: into the step beside */
+            uint32_t to = (c + len + (uint32_t)dir) % len;
+            step_t *d = &t->step[to];
+            uint8_t n = st->note[f - 1u];
+            if (d->time == ST_TIE) { ui_message("BLOCKED: A LONG NOTE"); break; }
+            if (d->time == ST_NOTE && d->n >= 4u) { ui_message("BLOCKED: 4 NOTES THERE"); break; }
+            if (d->time != ST_NOTE) { memset(d, 0, sizeof *d); d->time = ST_NOTE; d->vel = st->vel; }
+            note_drop(st, f - 1u);
+            d->note[d->n++] = n;
+            ui.cursor = (uint8_t)to;
+            ui.pr_focus = d->n;
+        }
+        ui.bank = (uint8_t)(ui.cursor / 16u);
+        ui.entry_open = 0;
+        break;
+    }
+    default: {                                          /* LEN: the chord's TIEs */
+        uint32_t l = note_len(t, c, len);
+        if (st->time != ST_NOTE || !st->n) { ui_message("NO NOTE HERE"); break; }
+        if (steps > 0) {
+            uint32_t nx = (c + l) % len;
+            if (l >= len || l >= 16u) break;
+            if (t->step[nx].time == ST_NOTE && (t->step[nx].n || t->step[nx].hit)) { ui_message("BLOCKED: A NOTE AFTER"); break; }
+            memset(&t->step[nx], 0, sizeof t->step[nx]);
+            t->step[nx].time = ST_TIE;
+            t->step[nx].vel = st->vel;
+        } else if (l > 1u) {
+            step_t *e = &t->step[(c + l - 1u) % len];
+            memset(e, 0, sizeof *e);
+            e->time = ST_REST;
+        }
+        break;
+    }
+    }
+}
+
 static void step_edit(uint32_t slot, int32_t steps)
 {
     step_t *st = &TSEL->step[ui.cursor];
     uint32_t i;
     if (drum_track(TSEL)) {
         grid_edit(slot, steps);
+        return;
+    }
+    if (cur_page()->id[0] == 4u) {                      /* (0.6.81) SEQ > NOTE */
+        note_edit(slot, steps);
         return;
     }
     switch (slot) {
@@ -1201,6 +1303,10 @@ static void presets_turn(int32_t s)
     uint32_t g = pg->graph;
     if (ui.home || g == GR_BROWSE) {
         preset_step(s);
+    } else if (g == GR_ROLL && pg->id[0] == 4u) {      /* (0.6.81) SEQ > NOTE: PRESETS the step (its KNOB 1 is FOCUS) */
+        cursor_set(ui.cursor + s);
+        ui.hot_col = 0;
+        ui.hot_t = 40;
     } else if (g == GR_ROLL || g == GR_CHANCE || g == GR_COMP || g == GR_USER || g == GR_SLOTS || g == GR_PATS || g == GR_SONG ||
                g == GR_EVENTS || g == GR_TOOLS) {
         uint32_t c = g == GR_SLOTS ? 1u : 0u;             /* (0.6.12 PROJECT: the list is the sections, KNOB 2's) */
@@ -1459,6 +1565,13 @@ static int page_tap(uint32_t b)
         if (chain_busy()) { ui_message("STOP TO EDIT"); return 1; }
         if (held) {                                     /* a step held: its locks (the step stays) */
             lock_clear(held);
+            return 1;
+        }
+        if (cur_page()->id[0] == 4u && ui.pr_focus && TSEL->step[ui.cursor].time == ST_NOTE &&
+            ui.pr_focus <= TSEL->step[ui.cursor].n) {   /* (0.6.81) SEQ > NOTE: the note in focus alone */
+            note_drop(&TSEL->step[ui.cursor], ui.pr_focus - 1u);
+            ui.pr_focus = 0;
+            ui_message("NOTE DELETED");
             return 1;
         }
         step_clear(&TSEL->step[ui.cursor]);
