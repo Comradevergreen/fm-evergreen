@@ -404,7 +404,7 @@ static void seq_beat(uint32_t q)
     if (q == B(36, 0)) {
         trk[T_ARP].p[P_MSND] = 0; trk[T_ARP].p[P_MPAT] = 0;
         fg_set[T_LEAD][0] = (fg_set_t){7, FG_FWD, 4}; fg_set[T_LEAD][1] = (fg_set_t){3, FG_REV, -3};
-        page(T_LEAD, "FUGUE");
+        page(T_LEAD, "PLAYHEADS");
         caption(q, "EVOLUTION", "FUGUE", "three more playheads on a track|RATE · DIRECTION · INTERVAL in the scale", 0);
     }
     if (q == B(38, 0)) { fg_set[T_LEAD][2] = (fg_set_t){5, FG_PING, 7}; caption(q, "EVOLUTION", "CANONS FROM ONE LINE", "x2 forward a fifth up · 1/2 backwards|ping-pong an octave up", 0); }

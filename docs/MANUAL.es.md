@@ -545,7 +545,7 @@ seleccionada se graban como **automatización**. MENU > AUDIO tiene el **CLICK**
   hasta volver a apretarlo. La página muestra los próximos 32 compases de cada pista (naranja: SOUND, violeta:
   PATTERN); en HOME cada bichito tiene un anillo de puntos que se llena hasta su próximo cambio y se enciende entero
   cuando cambia.
-- **FUGUE** (SEQ, antes de SHIFT), a la Fugue Machine: tres **cabezales** más (2, 3 y 4) leen los mismos pasos que el
+- **PLAYHEADS** (SEQ, página 4; antes FUGUE), a la Fugue Machine: tres **cabezales** más (2, 3 y 4) leen los mismos pasos que el
   secuenciador de la pista. KNOB 1 **HEAD** elige uno, KNOB 2 **RATE** (OFF, 1/4, 1/3, 1/2, 2/3, x1, 3/2, x2, x3, x4 del
   de la pista), KNOB 3 **DIR** (FWD, REV, PING, RND), KNOB 4 **INTVL**, su intervalo en grados de la escala (−14 a +14; una
   pista de batería mantiene sus carriles). Un cabezal toca las notas de cada paso con su velocidad, acento y probabilidad
@@ -1156,7 +1156,7 @@ protección desvaneció): una foto de esa pantalla ayuda cuando reportás un pro
   - **KEYS** (por defecto): las teclas mandan sus notas, como siempre.
   - **CLOCK**: y además el clock (24 por negra) con **START / STOP**, mientras el tempo es el del FM-1 (CLOCK INT): una
     caja de ritmos o un DAW lo siguen. El clock corre también parado, así el que sigue conoce el tempo antes del PLAY.
-  - **ALL**: y además todas las notas que toca el FM-1: el secuenciador, el arpegiador, FUGUE y las repeticiones de
+  - **ALL**: y además todas las notas que toca el FM-1: el secuenciador, el arpegiador, PLAYHEADS y las repeticiones de
     los punch-in, con el OCT− / OCT+ y el RANDOM de los punch-in aplicados; cada nota tiene su note-off, y STOP, un
     pánico o un cambio del ajuste apagan lo que quede sonando. Grabá la música del FM-1 en un DAW como MIDI, o tocá
     otros sintes con él.

@@ -521,7 +521,7 @@ recorded into the pattern, quantized to its steps, overdubbing. Knob moves on th
   DRUM it flips hits, never the kick. **OCT−** here (or **GLO + A4**, FREEZE) stops every mutation until pressed again.
   The page shows each track's next 32 bars (orange: SOUND, violet: PATTERN); on HOME each being has a ring of dots
   filling up to its next change, all lit when it changes.
-- **FUGUE** (SEQ, before SHIFT), after the Fugue Machine: three more **playheads** (heads 2, 3, 4) read the same steps
+- **PLAYHEADS** (SEQ, page 4; it was FUGUE), after the Fugue Machine: three more **playheads** (heads 2, 3, 4) read the same steps
   as the track's sequencer. KNOB 1 **HEAD** picks one, KNOB 2 **RATE** (OFF, 1/4, 1/3, 1/2, 2/3, x1, 3/2, x2, x3, x4 of
   the track's), KNOB 3 **DIR** (FWD, REV, PING, RND), KNOB 4 **INTVL**, its interval in degrees of the scale (−14 to +14;
   a drum track keeps its lanes). A head plays each step's notes with the step's velocity, accent and chance and the
@@ -1093,7 +1093,7 @@ faded): a photo of that screen helps when you report a problem.
   - **KEYS** (the default): the keys send their notes, as before.
   - **CLOCK**: and the clock (24 a beat) with **START / STOP**, while the tempo is the FM-1's own (CLOCK INT): a drum
     machine or a DAW follows it. The clock runs while stopped too, so the follower knows the tempo before PLAY.
-  - **ALL**: and every note the FM-1 plays: the sequencer, the arp, FUGUE and the punch-in repeats, with the punch-ins'
+  - **ALL**: and every note the FM-1 plays: the sequencer, the arp, PLAYHEADS and the punch-in repeats, with the punch-ins'
     OCT− / OCT+ and RANDOM on them; each note gets its note-off, and STOP, a panic or a change of the setting end
     whatever is still on. Record the FM-1's music into a DAW as MIDI, or play other synths from it.
   - **OFF**: nothing.

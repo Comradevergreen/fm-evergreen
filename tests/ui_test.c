@@ -6081,22 +6081,23 @@ static int test_seq_tools(void)
     bad += check("  elsewhere (PHRASES, SONG, MIXER, HOME, ENV) SEQ held is a tap: no SONG, no map", ok);
     ui_power_on();
     go_page(GR_ROLL); frame();
+    press(B_SEQ); frames(320);                         /* (0.6.81: STEP, PATTERN, SHIFT, PLAYHEADS, NOTE, COMP, AUTOMATION,
+                                                        * AUTO LIST, MUTATE) */
+    ok = str_eq(cur_page()->title, "PATTERN") && msg_is("HOLD [SEQ] QUICK");
     press(B_SEQ); frames(320);
-    ok = str_eq(cur_page()->title, "NOTE") && msg_is("HOLD [SEQ] QUICK");   /* (0.6.81: STEP, NOTE, COMP, PATTERN) */
+    ok &= str_eq(cur_page()->title, "SHIFT");
+    press(B_SEQ); frames(320);
+    ok &= str_eq(cur_page()->title, "PLAYHEADS");
+    press(B_SEQ); frames(320);
+    ok &= str_eq(cur_page()->title, "NOTE");
     press(B_SEQ); frames(320);
     ok &= cur_page()->graph == GR_COMP;
     press(B_SEQ); frames(320);
-    ok &= cur_page()->graph == GR_STEPS;
-    press(B_SEQ); frames(320);
-    ok &= cur_page()->graph == GR_MOTION;             /* (0.6.37: PATTERN, AUTOMATION; PHRASES, CHANCE out, SHIFT last) */
+    ok &= cur_page()->graph == GR_MOTION;
     press(B_SEQ); frames(320);
     ok &= cur_page()->graph == GR_EVENTS;
     press(B_SEQ); frames(320);
-    ok &= cur_page()->graph == GR_MUTATE;              /* (0.6.43) */
-    press(B_SEQ); frames(320);
-    ok &= cur_page()->graph == GR_FUGUE;               /* (0.6.52) */
-    press(B_SEQ); frames(320);
-    ok &= str_eq(cur_page()->title, "SHIFT");
+    ok &= cur_page()->graph == GR_MUTATE;
     bad += check("  a tap on STEP: the next SEQ page, as always (the hint until the layer was opened)", ok);
     {   /* (0.6.37) SHIFT: OFFSET PITCH CHANCE, the last SEQ page; CHANCE 0 skips every step, 100 % (stored 0) none */
         char v[12]; const char *u; step_t st; track_t *t3 = &trk[0];

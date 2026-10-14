@@ -277,7 +277,7 @@ static void at_beat(uint32_t q)
     }
     if (q == B(28, 0)) {
         trk[T_BLIP].p[P_MPAT] = 0;
-        fg_set[T_LEAD][0] = (fg_set_t){3, FG_REV, -3}; page(T_LEAD, "FUGUE");
+        fg_set[T_LEAD][0] = (fg_set_t){3, FG_REV, -3}; page(T_LEAD, "PLAYHEADS");
         caption(q, "SEQUENCER", "FUGUE", "three more playheads on the lead|rate · direction · interval in the scale", 0,
                 "head 2 · 1/2 · REV · -3|counterpoint from one line");
     }

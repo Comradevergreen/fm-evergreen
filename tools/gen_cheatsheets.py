@@ -150,7 +150,7 @@ def controls():
         ('GLO', 'MIXER · GLOBAL · SYSTEM', 'MUTE · SOLO · LEVEL · TAP'),
         ('SAVE', 'PRESETS · USER · PROJECT · ARRANGE · TOOLS', 'SONG layer'),
         ('ARP', 'ARP · ARP 2', '—'),
-        ('SEQ', 'STEP · COMP · PATTERN · AUTOMATION · AUTO LIST · MUTATE · FUGUE · SHIFT', 'SEQ TOOLS'),
+        ('SEQ', 'STEP · PATTERN · SHIFT · PLAYHEADS · NOTE · COMP · AUTOMATION · AUTO LIST · MUTATE', 'SEQ TOOLS'),
         ('REC', '(transport)', 'CLEAR · CLICK'),
     ]
     t2 = ('<table class="pages"><tr><th>BUTTON</th><th>TAP: ITS PAGES, ONE PER TAP</th><th>HOLD</th></tr>' +
@@ -242,7 +242,7 @@ def controls():
                                 ('ARP 2', 'SWING PROB HOLD ORDER')]),
         ('SEQ', HEAT[4], [('STEP', 'STEP NOTE TIME FLAG'), ('STEP · DRUM', 'STEP LANE HIT ACC'), ('COMP', 'STEP TYPE VAL VAL'), ('PATTERN', 'LEN DIV SWING GATE'), 
                           ('AUTOMATION', 'PLAY EVENT LOCK CLEAR'), ('AUTO LIST', 'ROW STEP PARAM VALUE'),
-                          ('MUTATE', 'SOUND PATTERN AMOUNT MODE'), ('FUGUE', 'HEAD RATE DIR INTVL'), ('SHIFT', 'OFFSET PITCH CHANCE C.LEN')]),
+                          ('MUTATE', 'SOUND PATTERN AMOUNT MODE'), ('PLAYHEADS', 'HEAD RATE DIR INTVL'), ('NOTE', 'FOCUS PITCH MOVE LEN'), ('SHIFT', 'OFFSET PITCH CHANCE C.LEN')]),
         ('GLO · SAVE', HEAT[6], [('MIXER', 'LEVEL PAN REV MUTE'), ('GLOBAL', 'BPM SWING CLOCK TUNE'),
                                  ('SYSTEM', 'TRACKS LOAD ROUTE CPU'), ('PRESETS', 'No. ENG FAV LIST'),
                                  ('USER', 'SLOT LOAD ERASE SAVE'), ('PROJECT', 'PROJ SECT LOAD SAVE'), ('ARRANGE', 'ROW SECT BARS SCENE'),

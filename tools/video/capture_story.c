@@ -330,7 +330,7 @@ static void weird_beat(uint32_t q)
     if (q == B(15, 0)) {
         trk[T_BRASS].p[P_MPAT] = 0; trk[T_BRASS].p[P_MSND] = 0;
         fg_set[T_LEAD][0] = (fg_set_t){7, FG_FWD, 4}; fg_set[T_LEAD][1] = (fg_set_t){3, FG_REV, -3};
-        page(T_LEAD, "FUGUE");
+        page(T_LEAD, "PLAYHEADS");
         caption(q, "CABEZALES", "FUGUE", "tres cabezales más leyendo la misma melodía|otra velocidad, otra dirección", 0,
                 "x2 hacia adelante, una quinta arriba|1/2 hacia atrás|canon en la escala");
     }
