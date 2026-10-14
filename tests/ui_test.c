@@ -3576,11 +3576,11 @@ static int test_quick_layers(void)
         t1 = cur_page()->title;
         turn(EN_PRESET, 2); frame();                    /* two on */
         t3 = cur_page()->title;
-        ok = !ui.home && str_eq(t1, "FX") && str_eq(t3, "AUTOPAN") && msg_is("AUTOPAN");   /* (0.6.9: after DIST) */
+        ok = !ui.home && str_eq(t1, "FX") && str_eq(t3, "AUTO PAN") && msg_is("AUTO PAN");   /* (0.6.9: after DIST) */
         frames(600);                                    /* (held past HOLD: still no map) */
         ok &= !ui.layer;
         btn_up(B_FX); frames(4);
-        ok &= str_eq(cur_page()->title, "AUTOPAN") && !ui.layer;   /* (no tap: no next page) */
+        ok &= str_eq(cur_page()->title, "AUTO PAN") && !ui.layer;   /* (no tap: no next page) */
         btn_down(B_FX); frame(); turn(EN_PRESET, -1); frame(); btn_up(B_FX); frames(4);
         ok &= str_eq(cur_page()->title, "DIST");
         btn_down(B_FX); frame(); turn(EN_PRESET, -9); frame(); btn_up(B_FX); frames(4);
@@ -6646,19 +6646,20 @@ static int test_fx_sections(void)
     go_title("FX"); frame();
     press(B_FX); frames(600);
     ok = str_eq(cur_page()->title, "DIST");
-    press(B_FX); press(B_FX); frames(600);             /* two quick taps from DIST: SLICER */
-    ok &= str_eq(cur_page()->title, "SLICER");
-    press(B_FX); press(B_FX); frames(600);
+    press(B_FX); press(B_FX); frames(600);             /* two quick taps from DIST: DLY (0.6.81: the SLICER after CHORUS) */
     ok &= str_eq(cur_page()->title, "DLY");
     press(B_FX); frames(600);
     page_title(ti);
     ok &= str_eq(cur_page()->title, "DLY 2") && str_eq(ti, "DLY 2/2");
+    go_title("CHORUS"); frame();
+    press(B_FX); press(B_FX); frames(600);
+    ok &= str_eq(cur_page()->title, "SLICER");
     go_title("MASTER"); frame();
     press(B_FX); press(B_FX); frames(600);             /* (past MASTER: round to the first) */
     ok &= str_eq(cur_page()->title, "FX");
     page_title(ti);
     ok &= str_eq(ti, "FX 1/3");
-    bad += check("FX sections: tap next page, two quick taps next section (TRACK SLICER DELAY REVERB CHORUS MASTER), 'DLY 2/2'", ok);
+    bad += check("FX sections: tap next page, two quick taps next section (TRACK DELAY REVERB CHORUS SLICER MASTER), 'DLY 2/2'", ok);
     ui_power_on();
     return bad;
 }

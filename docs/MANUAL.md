@@ -164,8 +164,8 @@ and heating up with its own audio. The selected track is drawn bigger, a muted o
 - **Tap** a page button: its pages. Tap again: the next page of that family. From another family you return to the
   page you were last on.
 - **HOME** returns to the ecosystem.
-- **FX** is long, so it is split into sections: TRACK (FX, DIST, AUTOPAN), SLICER (SLICER, SL BUS, SL BUS 2, SL PITCH),
-  DELAY (DLY, DLY 2), REVERB (REVERB, REVERB 2), CHORUS, MASTER. **Two quick taps** on FX jump to the next section.
+- **FX** is long, so it is split into sections: TRACK (FX, DIST, AUTO PAN), DELAY (DLY, DLY 2), REVERB (REVERB, REVERB 2),
+  CHORUS, SLICER (SLICER, SL BUS, SL BUS 2, SL PITCH), MASTER. **Two quick taps** on FX jump to the next section.
 - **Turn SELECT** to scroll through the pages of the section you are in (EDIT's on an EDIT page, FX's on an FX page),
   one a detent, stopping at its first and last; the page's name shows over the footer for a moment. On HOME it opens
   DICE EVERYTHING?.
@@ -205,7 +205,7 @@ and heating up with its own audio. The selected track is drawn bigger, a muted o
 | --- | --- | --- | --- | --- |
 | FX | DIST | CHORUS (send) | DLY (send) | REV (send) |
 | DIST | DIST | TYPE | TONE | — |
-| AUTOPAN | DEPTH | RATE | SYNC | WAVE |
+| AUTO PAN | DEPTH | RATE | SYNC | WAVE |
 | SLICER | MODE | PAT | RATE | DEPTH |
 | SL BUS | T1 | T2 | T3 | T4 |
 | SL BUS 2 | T5 | T6 | FX | — |
@@ -723,7 +723,7 @@ The same idea for the other parts of the selected track, each heard at once unde
   automation stay.
 - **LFO + SELECT**: the track's LFO: a rate in the middle of the range, any wave and phase, a fade now and then, aimed
   mostly at the filter, a little at the shape, seldom at the pitch or the level.
-- **FX + SELECT**: the track's drive (half the time none), its chorus, delay and reverb sends, an AUTOPAN one time in
+- **FX + SELECT**: the track's drive (half the time none), its chorus, delay and reverb sends, an AUTO PAN one time in
   three, and the shared reverb's kind, size and damping and the delay's time and feedback (pitched one time in five).
 
 ### Macro dice
@@ -754,7 +754,7 @@ sounds picked with PRESETS, SEQ TOOLS actions, or ordinary knob turns. It is not
 
 - **FX**: DIST amount and the three sends (CHORUS, DLY, REV).
 - **DIST**: amount, **TYPE** (SOFT, HARD, FOLD, CRUSH, RECT), **TONE** (darker / brighter).
-- **AUTOPAN**: the track's pan swung left and right around its PAN. **DEPTH** (0 = off), **RATE**, **SYNC** (BEAT:
+- **AUTO PAN**: the track's pan swung left and right around its PAN. **DEPTH** (0 = off), **RATE**, **SYNC** (BEAT:
   RATE in divisions 4BAR … 1/32, locked to the bar; FREE: RATE in Hz), **WAVE** (SIN, TRI, SAW, SQR, S&H).
 - **FILTER**: see [4](#4-engines).
 

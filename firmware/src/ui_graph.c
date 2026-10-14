@@ -1039,7 +1039,9 @@ static void page_title(char *ti)
                 if (i == ui.page)
                     k = n;
             }
-        pt = PAGES[h].title;                            /* (the section's name: "DLY 2/2", "SLICER 4/4") */
+        pt = str_eq(PAGES[h].title, "FX") ? pg->title : PAGES[h].title;   /* (the section's name: "DLY 2/2", "SLICER
+                                                         * 4/4"; 0.6.81: TRACK's its pages' own, "AUTO PAN 3/3" was
+                                                         * "FX 3/3") */
     } else
     for (i = 0; i < NPAGES; i++)
         if (PAGES[i].fam == pg->fam && page_visible(i)) {
