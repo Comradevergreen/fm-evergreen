@@ -1403,6 +1403,7 @@ static uint32_t act_cols(void)                   /* the columns that are actions
     if (ui.home)
         return 0;
     if (pg->graph == GR_MOTION) return 8u;
+    if (pg->graph == GR_SHAPE) return 16u;      /* (0.6.85) STRETCH: KNOB 1 / 2 pick (ui.act), OCT+ does it (act_do) */
     if (pg->graph == GR_EVENTS) return 16u;     /* AUTO LIST: no knob is an action; OCT+ adds / toggles (ev_oct) */
     if (pg->graph == GR_TOOLS) return 15u;
     if (pg->graph == GR_SONG)
@@ -1419,6 +1420,24 @@ static uint32_t act_cols(void)                   /* the columns that are actions
 }
 
 /* the action OCT+ does: its column + 1, 0 = none picked yet (PATTERNS has LOAD only) */
+/* (0.6.85) SEQ > STRETCH's picks (ui_input.c shape_knob, act_do) */
+static uint8_t shp_i = 7u, shp_r = 0u;                  /* STRETCH: /8 .. /2 (0..6), x2 .. x8 (7..13); REPEAT: x2 .. x8, TO 64 */
+static int32_t shp_k(void) { return shp_i < 7u ? -(int32_t)(8u - shp_i) : (int32_t)shp_i - 5; }
+static uint32_t shp_len(void)                           /* the LEN the picked action would give */
+{
+    uint32_t len = (uint32_t)clamp(TSEL->p[P_SLEN], 1, NSTEP), k;
+    if (ui.act == 1u) {
+        int32_t m = shp_k();
+        return m > 0 ? (len * (uint32_t)m > NSTEP ? NSTEP : len * (uint32_t)m) : (len + (uint32_t)-m - 1u) / (uint32_t)-m;
+    }
+    if (ui.act == 2u) {
+        k = shp_r < 7u ? shp_r + 2u : 0u;
+        len = k ? len * k : (NSTEP / len) * len;
+        return len > NSTEP ? NSTEP : len;
+    }
+    return len;
+}
+
 static uint32_t act_col(void)
 {
     if (!ui.home && cur_page()->graph == GR_SONG) return 1u;
@@ -1432,6 +1451,7 @@ static const char *act_name(uint32_t c)          /* column c's action (the foote
     uint32_t id = cur_page()->id[c & 3u];
     if (cur_page()->graph == GR_MOTION) return "CLEAR";
     if (cur_page()->graph == GR_EVENTS) return ev_act_name();
+    if (cur_page()->graph == GR_SHAPE) return c ? "REPEAT" : "STRETCH";
     if (cur_page()->graph == GR_TOOLS) {
         static const char *const actions[] = {"CLEAR", "INIT", "DELETE", "CLEAR", "INIT"};
         return actions[c < 5u ? c : 4u];
@@ -1454,6 +1474,7 @@ static int act_ready(void)
         return 0;
     if (cur_page()->graph == GR_MOTION) return !chain_busy() && motion_count(TSEL);
     if (cur_page()->graph == GR_EVENTS) return ev_act_ready();
+    if (cur_page()->graph == GR_SHAPE) return !chain_busy() && c < 2u;
     if (cur_page()->graph == GR_TOOLS)                  /* one case per column: CLEAR PAT, INIT, DELETE ROW, CLEAR SONG */
         return !chain_busy() && (c == 0u ? !seq_is_empty(TSEL) || motion_count(TSEL) : c == 1u || c >= 4u ? 1 :
                                  c == 2u ? ui.song_row < chain_config.count : chain_config.count != 0u);

@@ -6165,6 +6165,8 @@ static int test_seq_tools(void)
     press(B_SEQ); frames(320);
     ok &= str_eq(cur_page()->title, "NOTE");
     press(B_SEQ); frames(320);
+    ok &= str_eq(cur_page()->title, "STRETCH");         /* (0.6.85) */
+    press(B_SEQ); frames(320);
     ok &= str_eq(cur_page()->title, "COMP");
     press(B_SEQ); frames(320);
     ok &= str_eq(cur_page()->title, "COMP 2");          /* (0.6.82) */
@@ -6177,6 +6179,65 @@ static int test_seq_tools(void)
     press(B_SEQ); frames(320);
     ok &= cur_page()->graph == GR_MUTATE;
     bad += check("  a tap on STEP: the next SEQ page, as always (the hint until the layer was opened)", ok);
+    {   /* (0.6.85) SEQ > STRETCH: x2 .. x8 / 2 .. / 8 (the notes spread, held ones held), REPEAT x2 .. x8 / TO 64, NUDGE */
+        track_t *t;
+        uint32_t i, ok2 = 1, ok3 = 1, ok4 = 1, ok5;
+        ui_power_on(); stop_transport();
+        song.sel = 0; t = &trk[0];
+        for (i = 0; i < NSTEP; i++) step_clear(&t->step[i]);
+        motion_clear(t);
+        t->p[P_SLEN] = 4;                                /* C D E G, the D held a step (N T) */
+        t->step[0].time = ST_NOTE; t->step[0].n = 1; t->step[0].note[0] = 60; t->step[0].vel = 100;
+        t->step[1].time = ST_NOTE; t->step[1].n = 1; t->step[1].note[0] = 62; t->step[1].vel = 100;
+        t->step[2].time = ST_TIE;
+        t->step[3].time = ST_NOTE; t->step[3].n = 1; t->step[3].note[0] = 67; t->step[3].vel = 100;
+        (void)motion_put(t, 3, P_FCUT, 20, 0);
+        go_page(GR_SHAPE); frame();
+        ok = str_eq(cur_page()->title, "STRETCH");
+        turn(EN_K1, 1);                                  /* x2 -> x3 */
+        ok &= ui.act == 1u && shp_k() == 3 && shp_len() == 12u;
+        press(B_OCTUP);
+        ok &= t->p[P_SLEN] == 12 && t->step[0].note[0] == 60 && t->step[3].note[0] == 62 && t->step[9].note[0] == 67;
+        for (i = 4; i < 9u; i++) ok2 &= t->step[i].time == ST_TIE;          /* the D held through its old TIE */
+        ok2 &= t->step[1].time == ST_REST && t->step[10].time == ST_REST;   /* the short ones stay short */
+        ok2 &= motion.count == 1u && MOTION_STEP(&motion.event[0]) == 9u;  /* the lock went with its step */
+        if (!(ok && ok2)) { printf("  len %d mc %u ms %u |", t->p[P_SLEN], motion.count, motion.count ? MOTION_STEP(&motion.event[0]) : 99u);
+            for (i = 0; i < 12u; i++) printf(" %u:%u", t->step[i].time, t->step[i].note[0]); printf("\n"); }
+        bad += check("STRETCH x3: LEN 4 > 12, each step three apart, a held note held, its lock along", ok && ok2);
+        ok = !undo_do() && t->p[P_SLEN] == 4 && t->step[3].note[0] == 67 && MOTION_STEP(&motion.event[0]) == 3u;
+        bad += check("  UNDO: the sequence back as it was", ok);
+        for (i = 0; i < 5u; i++) turn(EN_K1, -1);       /* x3 .. x2 /2 /3 /4 .. : back to /2 */
+        while (shp_k() != -2) turn(EN_K1, shp_k() < -2 ? 1 : -1);
+        t->p[P_SLEN] = 8;                               /* eight steps: C . D T E . G . */
+        t->step[4] = t->step[3]; t->step[4].note[0] = 64; t->step[3].time = ST_REST; t->step[6] = t->step[4]; t->step[6].note[0] = 67;
+        motion_clear(t);
+        press(B_OCTUP);
+        ok3 = t->p[P_SLEN] == 4 && t->step[0].note[0] == 60 && t->step[1].note[0] == 62 && t->step[2].note[0] == 64 &&
+              t->step[3].note[0] == 67 && t->step[4].time == ST_REST;
+        bad += check("STRETCH /2: LEN 8 > 4, the first note of each pair", ok3);
+        for (i = 4; i < NSTEP; i++) step_clear(&t->step[i]);
+        (void)motion_put(t, 1, P_FCUT, 30, 0);
+        turn(EN_K2, 1);                                 /* x2 -> x3 */
+        ok4 = ui.act == 2u && shp_len() == 12u;
+        press(B_OCTUP);
+        ok4 &= t->p[P_SLEN] == 12;
+        for (i = 4; i < 12u; i++) ok4 &= t->step[i].time == t->step[i % 4u].time && t->step[i].note[0] == t->step[i % 4u].note[0];
+        ok4 &= motion.count == 3u && t->step[12].time == ST_REST;
+        if (!ok4) printf("  rep len %d mc %u\n", t->p[P_SLEN], motion.count);
+        while (shp_r != 7u) turn(EN_K2, 1);             /* TO 64 */
+        press(B_OCTUP);
+        ok4 &= t->p[P_SLEN] == 60 && t->step[59].note[0] == t->step[11].note[0];   /* (whole copies of 12: 60) */
+        press(B_OCTUP);
+        ok4 &= t->p[P_SLEN] == 60;                      /* (no room for another 60) */
+        bad += check("REPEAT x3: 4 steps > 12, their locks copied; TO 64: whole copies (12 > 60), no room after", ok4);
+        t->p[P_SLEN] = 4;
+        ok5 = t->step[0].note[0] == 60;
+        turn(EN_K3, 1);
+        ok5 &= t->step[1].note[0] == 60 && t->step[0].note[0] == 67 && t->p[P_SLEN] == 4;
+        turn(EN_K3, -1);
+        ok5 &= t->step[0].note[0] == 60;
+        bad += check("NUDGE: KNOB 3 moves the sequence a step right / left at once", ok5);
+    }
     {   /* (0.6.37) SHIFT: OFFSET PITCH CHANCE, the last SEQ page; CHANCE 0 skips every step, 100 % (stored 0) none */
         char v[12]; const char *u; step_t st; track_t *t3 = &trk[0];
         ui_power_on(); go_title("SHIFT"); frame();
@@ -7973,6 +8034,7 @@ static int test_click_menu(void)
         int fds[2][2];
         uint8_t ld0 = ui_load;
         load_put(2u);                                   /* FULL */
+        rng_state = 0x1234567u;                         /* (0.6.85) the same diced song whatever ran before (a drum in it) */
         dice_all();
         set_engine_of(&trk[1], ENGI_FM6);
         set_engine_of(&trk[2], 0);
@@ -8018,6 +8080,7 @@ static int test_click_menu(void)
         }
         ok = h[0] && h[0] == h[1] && (used & 0xFFu) && ((used >> 8) & 1u) &&   /* parts on core 1, and sound */
              !((used >> 16) & 1u) && ((used >> 17) & 1u);   /* (0.6.73) the drums together, on core 1 too */
+        if (!ok) for (k = 0; k < NPART; k++) printf("  T%u engine %u mute %d len %d\n", k + 1u, trk[k].eng_req, trk[k].p[P_MUTE], trk[k].p[P_SLEN]);
         if (!ok) printf("  dual core: one %016llx two %016llx, parts on core 1 %llx\n", (unsigned long long)h[0],
                         (unsigned long long)h[1], (unsigned long long)used);
         load_put(ld0 <= 2u ? 2u - ld0 : 2u);
@@ -8034,6 +8097,7 @@ static int test_click_menu(void)
         for (lv = 0; lv < 4u; lv++) {
             menu_put(MI_MIDIOUT, lv); frame();
             ok = mo_lvl == lv;
+            rng_state = 0x1234567u + lv;                /* (0.6.85) the same diced songs whatever ran before */
             dice_all();
             if (lv == 2u)
                 n0 = 2800u * CTL / (beat_samples() / 24u);   /* clocks in the 2800 blocks (also stopped) */

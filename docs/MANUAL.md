@@ -282,6 +282,7 @@ and heating up with its own audio. The selected track is drawn bigger, a muted o
 | SHIFT | OFFSET | PITCH | CHANCE | C.LEN |
 | PLAYHEADS | HEAD | RATE | DIR | INTERVAL |
 | NOTE | FOCUS | PITCH | MOVE | LEN |
+| STRETCH | STRETCH (/8 … /2, x2 … x8) | REPEAT (x2 … x8, TO 64) | NUDGE (now) | LEN (before > after) |
 | COMP | STEP | TYPE | (its value) | (its value; RATCH / ECHO: DIV) |
 | COMP 2 | STEP | TYPE (the second component) | (its value) | (its value; ECHO: DIV) |
 | WHEN | STEP | A (WHEN) | B (WHEN) | LEN |
@@ -528,6 +529,16 @@ recorded into the pattern, quantized to its steps, overdubbing. Knob moves on th
   how much of it (127: all of it). A chord held over TIEs on slow steps (e.g. DIV 1/4 at 120 BPM: ten steps, 5 s)
   slides that slowly and smoothly; new notes fade in as they glide.
 - **PATTERN**: LEN (1–64), DIV, SWING, GATE.
+- **Moving a note or a chord** that came in early or late: **NOTE**, KNOB 1 FOCUS on the step, KNOB 3 **MOVE** moves
+  it sideways a step at a time (FOCUS ALL: the whole chord with its TIEs; one note focused: that note alone).
+- **STRETCH** (0.6.85, after NOTE): reshapes the whole sequence of the selected track. Turn a knob to pick, then
+  **OCT+** does it (SAVE held: UNDO brings it back). KNOB 4 shows the LEN before and after.
+  - **KNOB 1 STRETCH**: **x2 … x8** spreads the steps that many times apart (LEN 4 x4: 16), a held note held all the
+    way, short ones kept short; past 64 steps the end is cut. **/2 … /8** squeezes it: of each group of steps the first
+    one that plays stays (LEN 32 /2: 16). The automation and locks move with their steps.
+  - **KNOB 2 REPEAT**: copies steps 1..LEN after themselves, **x2 … x8** times or **TO 64** (as many whole copies as
+    fit), automation and locks too. Four notes become a 64-step bed to record more notes over (live REC overdubs).
+  - **KNOB 3 NUDGE**: the whole sequence one step right / left at once, round inside LEN (as TOOLS A3 / B3).
 - **AUTOMATION**: PLAY turns the track's automation on or off, EVENT and LOCK count the records, CLEAR erases them
   (OCT+, with a dialog).
 - **AUTO LIST**: every automation event and lock as a list. KNOB 1 the row, 2 the step, 3 the parameter, 4 the value.

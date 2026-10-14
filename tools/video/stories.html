@@ -13,7 +13,8 @@ const W = 1080, H = 1920, TAU = Math.PI * 2;
 const C = {line:'#efe6c8',cyan:'#3fe0e6',blue:'#3b30ff',red:'#ff3b2f',orange:'#ff7a1a',yellow:'#ffe14d',mag:'#ff3ea5',dim:'#9c94b4',void:'#050409'};
 const DISPLAY = 'Michroma', MONO = '"IBM Plex Mono"', BODY = '"Instrument Sans"', TERM = 'VT323';
 const cv = document.getElementById('c'), x = cv.getContext('2d');
-let D = null;
+let D = null, REEL = 0;   /* (REEL, film "story-reel": Instagram's reel UI covers the foot and the right edge: all
+                             * that matters inside x 60..900, y 230..1420; the cover a hook) */
 function rng(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
 /* ---------- the landing's protozoa, as it draws them ---------- */
 function organism(x,o,t){
@@ -118,7 +119,7 @@ async function rgbFrame(f, ctx, im){
 function easeIO(u){u=Math.min(1,Math.max(0,u));return u<.5?4*u*u*u:1-Math.pow(-2*u+2,3)/2;}
 /* where the specimen floats: big and drifting; small and aside during the list */
 function pose(t,A,listK,outK){
-  const big={cx:540,cy:1130+outK*260,sw:820-outK*300}, small=big;
+  const big=REEL?{cx:480,cy:870+outK*260,sw:520-outK*130}:D.keys?{cx:540,cy:1000+outK*240,sw:630-outK*200}:{cx:540,cy:1130+outK*260,sw:820-outK*300}, small=big;   /* (the keyboard under it: smaller) */
   const k=0;
   const cx=big.cx+(small.cx-big.cx)*k, cy=big.cy+(small.cy-big.cy)*k, sw=big.sw+(small.sw-big.sw)*k;
   const amp=1-k*.6;
@@ -206,7 +207,9 @@ function beings(f,t,A,P){
 
 /* ---------- the words: a caption and the specimen's data, drawn as the landing tags its protozoa ---------- */
 const ORGAN={RAREZAS:'organismo',DADOS:'mitosis',MUTACIÓN:'ADN',CABEZALES:'red nerviosa',AZAR:'núcleo','EN VIVO':'membrana',
-  'EL PROYECTO':'organismo','EN REDES':'colonia','QUÉ TIENE':'organelas'};
+  'EL PROYECTO':'organismo','EN REDES':'colonia','QUÉ TIENE':'organelas',
+  'VOLVIÓ':'armonía','ARMONÍA':'escala',VOICING:'inversión',STRUM:'cuerdas','GRABACIÓN':'memoria',GLIDE:'deriva',
+  "IT'S BACK":'harmony',HARMONY:'scale',RECORDING:'memory'};
 const GLYPH='▓▒░<>/\\|=+*#%01';
 function decode(s,p,f){let o='';const n=s.length;for(let i=0;i<n;i++){const q=p*n*1.3-i;o+=q>=1||s[i]===' '?s[i]:q>0?GLYPH[(f+i*7)%GLYPH.length]:'';}return o;}
 function fitFont(lines,size,wmax){for(;size>26;size-=2){x.font=`400 ${size}px ${DISPLAY}`;if(Math.max(...lines.map(l=>x.measureText(l).width+l.length))<=wmax)break;}return size;}
@@ -254,6 +257,14 @@ function datalines(sc,idx,f,t,A,P,y0){
 
 /* ---------- the cover, the quotes, the outro ---------- */
 function cover(t,A){
+  if(REEL&&D.keys){                                   /* the hook: what is new, from the first frame */
+    const X=56,Y=300,p=Math.min(1,t/.5);veil(X+420,Y+140,600,300);x.globalAlpha=p;
+    text('JIANT FM · '+D.version,X,Y-1,'500 24px "IBM Plex Mono"',C.cyan,3);
+    shadowed(()=>text('VOLVIÓ EL',X,Y+110,`400 96px ${DISPLAY}`,C.line,2));
+    x.save();x.shadowColor=`rgba(255,159,210,${.4+.5*A.low})`;x.shadowBlur=24;
+    text('CHORD MODE',X,Y+230,`400 96px ${DISPLAY}`,heatGrad(X,X+760,true),2);x.restore();
+    text('una tecla, un acorde · M-VAVE FM-1',X,Y+300,`400 36px ${BODY}`,'#d6cfe6');
+    x.globalAlpha=1;return;}
   const X=56,Y=330,p=Math.min(1,t/1.0);
   veil(X+480,Y+160,640,360);x.globalAlpha=p;
   x.fillStyle=C.cyan;x.beginPath();x.arc(X+18,Y-8,18,0,TAU);x.fill();x.textAlign='center';text('S',X+18,Y-1,'600 20px "IBM Plex Mono"',C.void);x.textAlign='left';
@@ -301,10 +312,37 @@ function hud(f,t,A){
   text('JIANT',62,180,'600 17px "IBM Plex Mono"',C.line,2);text('/ FM '+D.version,124,180,'500 17px "IBM Plex Mono"',C.dim,2);
   x.fillStyle=C.red;x.globalAlpha=(Math.floor(t/.6)%2)?1:.2;x.fillRect(370,168,9,9);x.globalAlpha=1;
   text('AUDIORREACTIVO',388,180,'500 17px "IBM Plex Mono"',C.line,2);
-  x.textAlign='right';const b=Math.floor(t/D.beat);text(`112 BPM · RE MENOR · ${String(Math.floor(b/4)+1).padStart(3,'0')}.${b%4+1}`,1018,180,'500 17px "IBM Plex Mono"',C.orange,2);x.textAlign='left';
+  x.textAlign='right';const b=Math.floor(t/D.beat);text(`${D.hud||'112 BPM · RE MENOR'} · ${String(Math.floor(b/4)+1).padStart(3,'0')}.${b%4+1}`,1018,180,'500 17px "IBM Plex Mono"',C.orange,2);x.textAlign='left';
   const X0=70,Y0=1600,bw=26;
-  for(let i=0;i<32;i++){const v=D.spec[f][i]||0;const hgt=2+v*26;x.fillStyle=heatGrad(X0,X0+32*(bw+3));x.globalAlpha=.25+.55*Math.min(1,v);
+  if(!D.keys)for(let i=0;i<32;i++){const v=D.spec[f][i]||0;const hgt=2+v*26;x.fillStyle=heatGrad(X0,X0+32*(bw+3));x.globalAlpha=.25+.55*Math.min(1,v);
     x.fillRect(X0+i*(bw+3),Y0-hgt-30,bw,hgt);}x.globalAlpha=1;
+}
+
+/* ---------- the keyboard (capture_chord.c): the FM-1's 27 keys from F3, lit as the firmware lights them ---------- */
+function keyboard(f,t,A,outK){
+  if(!D.keys)return;
+  const m=D.keys[f]||0, name=D.chords[f]||'', X0=60, Y0=REEL?1250:1440, WW=REEL?840:960, wk=WW/16, H1=REEL?130:150, H2=REEL?80:92;
+  const q=1-outK; if(q<=0)return;
+  x.globalAlpha=q;
+  veil(X0+WW/2,Y0+70,WW*.58,130);
+  /* key k: place and colour as on the panel (F3 G3 A3 B3 C4 ..: whites; the blacks between) */
+  const WHITE=[0,2,4,5,7,9,11], blacks=[];
+  let w=0;
+  for(let k=0;k<27;k++){const pc=(5+k)%12, isW=WHITE.includes(pc);
+    if(isW){const lit=(m>>>k)&1, kx=X0+w*wk;
+      x.fillStyle=lit?heatGrad(X0,X0+WW):'rgba(239,230,200,.10)';
+      if(lit){x.save();x.shadowColor='rgba(255,122,26,.9)';x.shadowBlur=26+20*A.low;}
+      x.fillRect(kx+3,Y0,wk-6,H1);if(lit)x.restore();
+      x.strokeStyle=lit?C.yellow:'rgba(239,230,200,.35)';x.lineWidth=1.5;x.strokeRect(kx+3,Y0,wk-6,H1);w++;}
+    else blacks.push([k,X0+w*wk]);}
+  for(const [k,bx] of blacks){const lit=(m>>>k)&1;
+    x.fillStyle=lit?C.mag:'rgba(5,4,9,.95)';
+    if(lit){x.save();x.shadowColor='rgba(255,62,165,.9)';x.shadowBlur=24;}
+    x.fillRect(bx-wk*.32,Y0,wk*.64,H2);if(lit)x.restore();
+    x.strokeStyle=lit?C.yellow:'rgba(239,230,200,.35)';x.lineWidth=1.2;x.strokeRect(bx-wk*.32,Y0,wk*.64,H2);}
+  if(name){x.textAlign='center';
+    shadowed(()=>text(name,X0+WW/2,Y0-26,`400 ${Math.round(64*(1+.04*A.low))}px ${DISPLAY}`,C.line,2));x.textAlign='left';}
+  x.globalAlpha=1;
 }
 
 /* ---------- a frame ---------- */
@@ -323,15 +361,17 @@ async function render(f){
   const P=pose(t,A,listK,outK);
   if(listK<1){x.globalAlpha=1-listK;specimen(f,t,A,P,cut);x.globalAlpha=1;}
   beings(f,t,A,P);
+  keyboard(f,t,A,outK);
   if(!sc)cover(t,A);
   else if(sc.kind===4)quote(sc,f,t,A);
   else if(!sc.title.length)outro(sc.t,f,t,A);
-  else{const y=caption(sc,si,f,t,A,P);datalines(sc,si,f,t,A,P,y);}
+  else{const y=caption(sc,si,f,t,A,P);if(!REEL)datalines(sc,si,f,t,A,P,y);}   /* (a reel: its caption covers the foot) */
   hud(f,t,A);
   finish(f);
   if(cut>0){x.fillStyle=`rgba(255,62,165,${cut*.07})`;x.fillRect(0,0,W,H);}
 }
 async function boot(film){
+  REEL=film==='story-reel'?1:0;
   D=await (await fetch('data.json')).json(); D.version=(await (await fetch('version')).text()).trim();
   await document.fonts.load('400 40px Michroma');await document.fonts.load('400 30px "Instrument Sans"');
   await document.fonts.load('600 20px "IBM Plex Mono"');await document.fonts.load('500 20px "IBM Plex Mono"');

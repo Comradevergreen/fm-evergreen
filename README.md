@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.6.84).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.6.85).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 > ⚡ **New in 0.6.71: both cores (experimental).** The FM-1's chip has two processor cores and JIANT used one. Now the
 > second renders some of the synth tracks while the first renders the rest, so the same song leaves much more room
@@ -510,6 +510,15 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### v0.6.85
+- **SEQ > STRETCH**, a new page after NOTE, to reshape a whole sequence (pick with a knob, OCT+ does it, UNDO
+  brings it back):
+  - **STRETCH x2 … x8 or /2 … /8**: the steps spread that many times apart (held notes held, short ones short) or
+    squeezed together; automation and locks move with their steps.
+  - **REPEAT x2 … x8 or TO 64**: clone a pattern of any length after itself, e.g. four notes into a 64-step bed for an
+    arpeggio to record more notes over.
+  - **NUDGE**: the whole sequence a step left or right at once (one note or chord: NOTE > MOVE, as before).
 
 ### v0.6.84
 - **CHORD records whole in step recording too.** Armed and stopped on STEP, a key now writes the chord it plays (it

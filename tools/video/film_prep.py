@@ -61,9 +61,17 @@ if (D / 'list.txt').exists():                           # (capture_promo.c: what
     for r in (D / 'list.txt').read_text().splitlines():
         ti, wo, t0 = r.split('\t')
         lst.append({'title': ti, 'words': wo, 't': float(t0)})
+keys, chords, hudline = None, None, None
+if (D / 'keys.txt').exists():                           # (capture_chord.c: each frame the key LEDs and the chord's name)
+    kr = [r.split('\t') for r in (D / 'keys.txt').read_text().splitlines()][:N]
+    keys = [int(r[0]) for r in kr]
+    chords = [r[1] if len(r) > 1 and r[1] != '-' else '' for r in kr]
+if (D / 'hud.txt').exists():
+    hudline = (D / 'hud.txt').read_text().strip()
 r2 = lambda x: [round(float(v), 3) for v in x]
 json.dump({'fps': FPS, 'n': N, 'list': lst, 'splash': splash, 'end': end, 'beat': beat, 'scenes': scenes,
            'rms': r2(rms), 'low': r2(low), 'mid': r2(mid), 'high': r2(high), 'kick': r2(kick), 'home': home.tolist(),
            'trk': [r2(pkn[f]) for f in range(N)], 'on': [r2(on[f]) for f in range(N)],
-           'spec': [r2(spec[f]) for f in range(N)]}, open(D / 'data.json', 'w'))
+           'spec': [r2(spec[f]) for f in range(N)], 'keys': keys, 'chords': chords, 'hud': hudline},
+          open(D / 'data.json', 'w'))
 print(D / 'data.json', N, 'frames,', int(kick.sum() > 0) and int((kick > 0).sum()), 'kicks,', int((on > 0).sum()), 'track onsets')

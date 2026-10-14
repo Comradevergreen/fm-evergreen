@@ -289,6 +289,7 @@ a la derecha); apretá OCT+ para ejecutarla.
 | SHIFT | OFFSET | PITCH | CHANCE | C.LEN |
 | PLAYHEADS | HEAD | RATE | DIR | INTERVAL |
 | NOTE | FOCUS | PITCH | MOVE | LEN |
+| STRETCH | STRETCH (/8 … /2, x2 … x8) | REPEAT (x2 … x8, TO 64) | NUDGE (ya) | LEN (antes > después) |
 | COMP | STEP | TYPE | (su valor) | (su valor; RATCH / ECHO: DIV) |
 | COMP 2 | STEP | TYPE (el segundo componente) | (su valor) | (su valor; ECHO: DIV) |
 | WHEN | STEP | A (WHEN) | B (WHEN) | LEN |
@@ -551,6 +552,18 @@ seleccionada se graban como **automatización**. MENU > AUDIO tiene el **CLICK**
   fija cuánto de ese tramo (127: todo). Un acorde sostenido con TIEs en pasos lentos (p. ej. DIV 1/4 a 120 BPM: diez
   pasos, 5 s) se desliza así de lento y suave; las notas nuevas aparecen a medida que se deslizan.
 - **PATTERN**: LEN (1–64), DIV, SWING, GATE.
+- **Mover una nota o un acorde** que entró antes o después: **NOTE**, KNOB 1 FOCUS en el paso, KNOB 3 **MOVE** lo
+  corre de a un paso a los costados (FOCUS ALL: el acorde entero con sus TIE; una nota enfocada: esa sola).
+- **STRETCH** (0.6.85, después de NOTE): cambia la forma de toda la secuencia de la pista elegida. Girá una perilla
+  para elegir y **OCT+** lo hace (SAVE sostenido: UNDO lo deshace). KNOB 4 muestra el LEN antes y después.
+  - **KNOB 1 STRETCH**: **x2 … x8** separa los pasos esa cantidad de veces (LEN 4 x4: 16); una nota sostenida sigue
+    sostenida y las cortas quedan cortas; pasados los 64 pasos se corta el final. **/2 … /8** la comprime: de cada
+    grupo de pasos queda el primero que suena (LEN 32 /2: 16). La automatización y los locks se mueven con sus pasos.
+  - **KNOB 2 REPEAT**: copia los pasos 1..LEN detrás de sí mismos, **x2 … x8** veces o **TO 64** (todas las copias
+    enteras que entren), con automatización y locks. Cuatro notas pasan a ser una base de 64 pasos sobre la que grabar
+    más notas (REC en vivo suma encima).
+  - **KNOB 3 NUDGE**: toda la secuencia un paso a la derecha / izquierda en el momento, dando la vuelta dentro de LEN
+    (como TOOLS A3 / B3).
 - **AUTOMATION**: PLAY activa o desactiva la automatización de la pista, EVENT y LOCK cuentan los registros, CLEAR
   los borra (OCT+, con diálogo).
 - **AUTO LIST**: cada evento de automatización y cada lock en forma de lista. KNOB 1 la fila, 2 el paso, 3 el
