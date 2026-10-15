@@ -227,7 +227,8 @@ static void graph_comp(const track_t *t, uint16_t c)
         static const char *const SAY[COMP_N - COMP_RAND] = {
             "THE NOTE AT RANDOM IN THE SCALE", "AN OCTAVE UP OR DOWN", "THE REST OF THE LOOP MOVED",
             "THE NOTE GLIDES OVER THE STEP", "REPEATS, EACH SOFTER", "AGAIN ON THE EMPTY STEPS AFTER",
-            "THEN TO ANOTHER STEP", "THEN BACK TO STEP 1", "ONLY WHILE [FX] IS HELD", "CUTS WHAT THE TRACK SOUNDS"};
+            "THEN TO ANOTHER STEP", "THEN BACK TO STEP 1", "ONLY WHILE [FX] IS HELD", "CUTS WHAT THE TRACK SOUNDS",
+            "A DEGREE FURTHER EVERY SO MANY LOOPS", "AN OCTAVE FURTHER EVERY SO MANY LOOPS"};
         int32_t a = (int32_t)comp_arg(cs), cx = PANEL_X0 + PANEL_W / 2;
         cv_text(PANEL_X0 + 2, 50, &AF_S, SAY[v - COMP_RAND], T_DIM);
         if (v == COMP_RAND || v == COMP_TONAL || v == COMP_OCT) {   /* the span it moves in, the note in the middle */
@@ -236,6 +237,15 @@ static void graph_comp(const track_t *t, uint16_t c)
             cv_rrect(cx - 10, 82 - hi, 20, hi - lo + 4, 3, T_RAISE, T_SURF);
             cv_rrect(cx - 10, 82, 20, 4, 1, heat_col(200), T_SURF);
             if (v != COMP_RAND) cv_rrect(cx - 10, 82 - r, 20, 4, 1, T_ACCENT, T_SURF);
+        } else if (v == COMP_WALK || v == COMP_CLIMB) { /* (0.6.98) the moves round the range, this loop's lit */
+            uint32_t g = CP_WRNG(a), m = CP_WMODE(a), rr = v == COMP_WALK ? CP_WDEGS[g] : g + 1u, n = m == 2u ? 2u * rr : rr + 1u, k;
+            uint32_t now = song.playing ? (t->loops / CP_WRATES[CP_WRATE(a) % CP_NWRATE]) % n : 0xFFFFu;
+            int32_t ww = (PANEL_W - 8) / (int32_t)(n > 16u ? 16u : n);
+            for (k = 0; k < n && k < 16u; k++) {
+                int32_t off = m == 0u ? (int32_t)k : m == 1u ? -(int32_t)k : m == 2u ? ((int32_t)k <= (int32_t)rr ? (int32_t)k : 2 * (int32_t)rr - (int32_t)k)
+                              : (int32_t)(((k * 2654435761u) ^ ((uint32_t)ui.cursor * 40503u)) % (rr + 1u)), hh = 4 + (off < 0 ? -off : off) * 28 / (int32_t)rr;
+                cv_rrect(PANEL_X0 + 4 + (int32_t)k * ww, m == 1u ? 68 : 98 - hh, ww - 3, hh, 2, k == now ? T_ACCENT : heat_col(200), T_SURF);
+            }
         } else if (v == COMP_BEND) {                    /* the glide */
             int32_t d = (a - 12) * 2;
             cv_line_t(PANEL_X0 + 20, 82, PANEL_X0 + PANEL_W - 20, 82 - d, heat_col(200), 3);

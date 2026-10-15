@@ -924,10 +924,20 @@ static void draw_columns(void)
             case COMP_ECHO: lb = "REPEAT"; val[0] = 'x'; fmt_int(val + 1, 2 + a % 7); break;
             case COMP_PULSE: lb = "EVERY"; fmt_int(val, 1 + a % 4); un = a ? "STEPS" : "STEP"; break;
             case COMP_JUMP: lb = "TO STEP"; fmt_int(val, (int32_t)CP_JTO(a) + 1); break;
+            case COMP_WALK: case COMP_CLIMB: {          /* (0.6.98) MODE and RANGE in one: the range as the unit */
+                static const char *const WM[4] = {"UP", "DOWN", "UP-DN", "RND"};
+                char u[8];
+                lb = "MODE"; str_cpy(val, WM[CP_WMODE(a)], sizeof val);
+                fmt_int(u, v == COMP_WALK ? (int32_t)CP_WDEGS[CP_WRNG(a)] : (int32_t)CP_WRNG(a) + 1);
+                str_cpy(u + str_len(u), v == COMP_WALK ? " DEG" : " OCT", 5);
+                draw_column(2, lb, val, u, VAL(2u), -1, ICON_ORDER);
+                lb = "";
+                break;
+            }
             default: break;
             }
             if (lb[0]) draw_column(2, lb, val, un, VAL(2u), -1, ICON_X_REPEAT);
-            else draw_column(2, "", "", "", T_THEME, -1, ICON_NONE);
+            else if (v != COMP_WALK && v != COMP_CLIMB) draw_column(2, "", "", "", T_THEME, -1, ICON_NONE);
         } else if (v != COMP_OFF) {                    /* (0.6.92) an ARP: ORDER and RANGE in one (the range as the label) */
             char lb[10];
             fmt_int(lb, v == COMP_ARPS ? CP_DEGS[CP_RNG(ca)] : (int32_t)CP_RNG(ca) + 1);
@@ -935,7 +945,11 @@ static void draw_columns(void)
             draw_column(2, lb, ORD[CP_ORD(ca)], "", VAL(2u), -1, ICON_ORDER);
         } else
             draw_column(2, "", "", "", T_THEME, -1, ICON_NONE);
-        if (v >= COMP_ARPN && v <= COMP_ARPS && comp_slot() == 0u) {   /* (0.6.92) RATE as a note value of the track's DIV */
+        if (v == COMP_WALK || v == COMP_CLIMB) {       /* (0.6.98) RATE: a move every so many loops */
+            uint32_t r = CP_WRATES[CP_WRATE(ca) % CP_NWRATE];
+            fmt_int(val, (int32_t)r);
+            draw_column(3, "EVERY", val, r == 1u ? "LOOP" : "LOOPS", VAL(3u), -1, ICON_RATE);
+        } else if (v >= COMP_ARPN && v <= COMP_ARPS && comp_slot() == 0u) {   /* (0.6.92) RATE as a note value of the track's DIV */
             rate_name(TSEL, CP_RATES[CP_RATE(ca) % CP_NRATE], val);
             draw_column(3, "RATE", val, "", VAL(3u), -1, ICON_RATE);
         } else if ((v == COMP_RATCH || v == COMP_ECHO) && comp_slot() == 0u) {   /* (0.6.82) the parts' spacing */

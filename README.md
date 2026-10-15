@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.6.97).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.6.98).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 > ⚡ **New in 0.6.85 – 0.6.92: a song generator you steer, a compact sequencer that breathes, a delay that feeds back.**
 > - **GEN (HOME + SELECT)**: a screen of three pages — GENRE (43 genres or RANDOM), SEED, ENERGY, FORM (loop, parts,
@@ -524,6 +524,14 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### v0.6.98
+- **WALK and CLIMB, evolving step components** (after the OP-Z's and OP-XY's): the step's notes move a degree of the
+  scale (WALK) or an octave (CLIMB) every so many loops (1 … 10, 12, 16), over a range (3, 5, 7, 12 degrees; 1 … 4
+  octaves), UP, DOWN, UP-DN or RND, then round again. They stack: a WALK on COMP with a CLIMB on COMP 2, a TONAL or an
+  OCT on top, an ARP walking with its chord. Four notes, two of these, and the pattern evolves for dozens of loops
+  before it comes back to itself. The COMP page draws the moves round the range, this loop's lit; GEN uses them on
+  leads and arps. Older projects are untouched (new component ids).
 
 ### v0.6.97
 - **GEN: the drums less alike.** A throw takes its closed hats, open hats, rim, cowbell and toms from pools of

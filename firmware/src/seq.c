@@ -1014,6 +1014,18 @@ static int cp_trig_cond(const track_t *t, uint32_t a)
         return c[1] == 1u ? t->loops == 0u : t->loops != 0u;   /* FIRST, NOT FIRST */
     return t->loops % c[1] == c[0] - 1u;
 }
+/* (0.6.98) WALK / CLIMB: the move this loop, in degrees (WALK) or octaves (CLIMB): the loops counted in RATEs, the
+ * count round the RANGE: UP 0 1 .. R 0 ..; DOWN 0 -1 .. -R; UP-DN 0 1 .. R .. 1 0 ..; RND a place of 0..R a move, by
+ * a hash of the move and the step (the same every time round, the pattern's own) */
+static int32_t cp_walk_off(const track_t *t, const step_t *s, uint32_t a, int climb)
+{
+    uint32_t k = t->loops / CP_WRATES[CP_WRATE(a) % CP_NWRATE], m = CP_WMODE(a), g = CP_WRNG(a);
+    int32_t r = climb ? (int32_t)g + 1 : (int32_t)CP_WDEGS[g];
+    if (m == 0u) return (int32_t)(k % ((uint32_t)r + 1u));
+    if (m == 1u) return -(int32_t)(k % ((uint32_t)r + 1u));
+    if (m == 2u) { int32_t p = (int32_t)(k % (2u * (uint32_t)r)); return p <= r ? p : 2 * r - p; }
+    { uint32_t h = (k * 2654435761u) ^ ((uint32_t)(s - seq_steps(t)) * 40503u); h ^= h >> 13; h *= 0x5BD1E995u; h ^= h >> 15; return (int32_t)(h % ((uint32_t)r + 1u)); }
+}
 /* every TRIG of the step that plays this loop lets it play (any other step: yes) */
 static int cp_trig_ok(const track_t *t, const step_t *s)
 {
@@ -1373,6 +1385,7 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
     const step_t *arp = arp_owner(t, s);            /* (0.6.39) an ARP component: one of its notes a part */
     uint8_t ca = 0, aa = 0, ra = 0, oa = 0, ba = 0;
     uint32_t ac = 0, rnd = 0, oct = 0, bend = 0;
+    int32_t walk = 0, climb = 0;                       /* (0.6.98) WALK / CLIMB: this loop's move */
     int cont = 0;                                   /* .. going on over a TIE */
     uint8_t nn[4 + NLANE], vv[4 + NLANE];           /* the notes it plays: its notes, then its hits */
     uint32_t m = 0, sk = 0, sk0, hdel = 0;
@@ -1447,6 +1460,11 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
     rnd = CP_HAS(t, s, CP_RAND, &ra);
     oct = CP_HAS(t, s, CP_OCT, &oa);
     bend = CP_HAS(t, s, CP_BEND, &ba);
+    {   /* (0.6.98) WALK and CLIMB: this loop's move, from the step's two components (both may walk / climb) */
+        uint8_t wa = 0, c2 = 0;
+        walk = CP_HAS(t, s, CP_WALK, &wa) ? cp_walk_off(t, s, wa, 0) : 0;
+        climb = CP_HAS(t, s, CP_CLIMB, &c2) ? cp_walk_off(t, s, c2, 1) * 12 : 0;
+    }
     if (CT_LEN(s))                                  /* (0.6.82) LEN: the step's own gate, n/16 */
         gate = period * CT_LEN(s) / 16u;
     if (hits > 1u) {                                /* RATCH: the gate of a part, no slide or tie out */
@@ -1462,7 +1480,11 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
     for (i = 0; i < (arp ? 1u : s->n) && i < 4u && !(kit && arp); i++) {
         uint32_t x = arp ? cp_arp_note(t, arp, ac, aa, t->arp_k++) : s->note[i];
         x = (uint32_t)clamp((int32_t)x + up, 0, 127);
-        if (!kit) {                                 /* (0.6.42) TONAL, RAND, OCT */
+        if (!kit) {                                 /* (0.6.42) TONAL, RAND, OCT; (0.6.98) WALK, CLIMB */
+            if (walk)
+                x = (uint32_t)clamp(scale_steps(t, (int32_t)x, walk), 0, 127);
+            if (climb)
+                x = (uint32_t)clamp((int32_t)x + climb, 0, 127);
             if (t->tonal)
                 x = (uint32_t)clamp(scale_steps(t, (int32_t)x, t->tonal), 0, 127);
             if (rnd) {

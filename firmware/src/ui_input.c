@@ -859,7 +859,8 @@ static void comp_knob(uint32_t slot, int32_t steps)
     uint8_t *cp = k == 1u ? &st->comp2 : &st->comp, *ap = k == 1u ? &st->carg2 : &st->carg;
     if (slot == 0u) { cursor_set(ui.cursor + steps); return; }
     if (chain_busy()) { ui_message("STOP TO EDIT"); return; }
-    if (slot == 3u && !((v >= COMP_ARPN && v <= COMP_ARPS && k == 0u) || ((v == COMP_RATCH || v == COMP_ECHO) && k == 0u))) {
+    if (slot == 3u && !((v >= COMP_ARPN && v <= COMP_ARPS && k == 0u) || ((v == COMP_RATCH || v == COMP_ECHO) && k == 0u) ||
+                        v == COMP_WALK || v == COMP_CLIMB)) {   /* (0.6.98: WALK / CLIMB's KNOB 4 is their RATE on both pages) */
         uint32_t i;                                     /* (0.6.92) EVERY: the step's components' loops, in the knob's order */
         for (i = 0; i < EV_N && EV_ORD[i] != ST_EVERY(st); i++) {}
         i = (uint32_t)clamp((int32_t)i + e, 0, EV_N - 1);
@@ -892,7 +893,12 @@ static void comp_knob(uint32_t slot, int32_t steps)
         *ap = (uint8_t)((*ap & 0xC0u) | (uint32_t)clamp((int32_t)CP_JTO(*ap) + steps, 0, 63));
     else if (v >= COMP_TRIG && slot == 2u && *cp > CP_ARPS && CP_AMAX[*cp])   /* TRIG .. PULSE: their value */
         *ap = (uint8_t)clamp((int32_t)*ap + d, CP_AMIN[*cp], CP_AMAX[*cp]);
-    else if (v >= COMP_ARPN && v <= COMP_ARPS && slot == 2u) {   /* (0.6.92) ORDER x RANGE: one list, a range after another */
+    else if ((v == COMP_WALK || v == COMP_CLIMB) && slot == 2u) {   /* (0.6.98) MODE x RANGE: one list, a range after another */
+        int32_t i = clamp((int32_t)(CP_WMODE(*ap) * 4u + CP_WRNG(*ap)) + d, 0, 15);
+        *ap = CP_WARG(CP_WRATE(*ap), (uint32_t)i / 4u, (uint32_t)i % 4u);
+    } else if ((v == COMP_WALK || v == COMP_CLIMB) && slot == 3u) {   /* .. RATE: the loops a move, 1 .. 16 */
+        *ap = CP_WARG((uint32_t)clamp((int32_t)CP_WRATE(*ap) + e, 0, (int32_t)CP_NWRATE - 1), CP_WMODE(*ap), CP_WRNG(*ap));
+    } else if (v >= COMP_ARPN && v <= COMP_ARPS && slot == 2u) {   /* (0.6.92) ORDER x RANGE: one list, a range after another */
         int32_t i = clamp((int32_t)(CP_ORD(*ap) * 4u + CP_RNG(*ap)) + d, 0, 15);
         *ap = CP_ARG((uint32_t)i / 4u, CP_RATE(*ap), (uint32_t)i % 4u);
     } else if (v >= COMP_ARPN && v <= COMP_ARPS && slot == 3u) {   /* (0.6.92) RATE: x1 x2 x3 x4 x6 x8 (in the track's time) */

@@ -402,11 +402,25 @@ static const uint8_t CT_DIVS[CT_NDIV] = {0, 2, 3, 4, 6, 8};
  * x2..x4; 0.6.82: .. x8); PULSE: its notes again on the empty steps after it (carg 0..3: every 1..4); JUMP: then step carg + 1;
  * REV: back from here to step 1 (ping-pong); FILL: only while FX is held; KILL: what the track sounds cut first */
 enum { CP_NONE, CP_ARPN, CP_ARPQ, CP_ARPS, CP_TRIG, CP_RAND, CP_OCT, CP_TONAL, CP_BEND, CP_ECHO, CP_PULSE, CP_JUMP,
-       CP_REV, CP_FILL, CP_KILL, CP_N };
-/* the range of carg each component's KNOB 3 turns (ARP: KNOB 3 / 4 their own) */
-static const uint8_t CP_AMAX[CP_N] = {0, 0, 0, 0, 11, 7, 5, 14, 24, 6, 3, 63, 0, 0, 0};
-static const uint8_t CP_ADEF[CP_N] = {0, 0, 0, 0, 0, 2, 0, 9, 7, 1, 0, 0, 0, 0, 0};
-static const uint8_t CP_AMIN[CP_N] = {0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+       CP_REV, CP_FILL, CP_KILL, CP_WALK, CP_CLIMB, CP_N };
+/* (0.6.98) WALK and CLIMB (after the OP-Z's and OP-XY's evolving components): the step's notes move one degree of the
+ * scale (WALK) or one octave (CLIMB) every RATE loops of the pattern, over a RANGE of moves, then round again: UP,
+ * DOWN, UP-DN (there and back) or RND (a random place a move, the same every time round). carg: bits 0-3 RATE
+ * (CP_WRATES: 1..10, 12, 16 loops a move), bits 4-5 MODE, bits 6-7 RANGE (WALK: 3 5 7 12 degrees; CLIMB: 1 2 3 4
+ * octaves). Both stack with each other and with the rest (TONAL, OCT, RAND, an ARP): four notes, two of these, and
+ * the pattern comes back to itself after RATE x RANGE loops, different every time round */
+#define CP_WRATE(a) ((uint32_t)(a) & 15u)
+#define CP_WMODE(a) (((uint32_t)(a) >> 4) & 3u)
+#define CP_WRNG(a) (((uint32_t)(a) >> 6) & 3u)
+#define CP_WARG(r, m, g) ((uint8_t)(((r) & 15u) | ((m) & 3u) << 4 | ((g) & 3u) << 6))
+#define CP_NWRATE 12u
+static const uint8_t CP_WRATES[CP_NWRATE] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 16};
+static const uint8_t CP_WDEGS[4] = {3, 5, 7, 12};
+/* the range of carg each component's KNOB 3 turns (ARP: KNOB 3 / 4 their own; WALK CLIMB: theirs) */
+static const uint8_t CP_AMAX[CP_N] = {0, 0, 0, 0, 11, 7, 5, 14, 24, 6, 3, 63, 0, 0, 0, 0, 0};
+static const uint8_t CP_ADEF[CP_N] = {0, 0, 0, 0, 0, 2, 0, 9, 7, 1, 0, 0, 0, 0, 0, 0x40, 0x00};
+static const uint8_t CP_AMIN[CP_N] = {0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+static int cp_iswalk(uint32_t c) { return c == CP_WALK || c == CP_CLIMB; }
 #define CP_ORD(a) ((uint32_t)(a) & 3u)            /* UP DOWN UP-DN RND */
 /* (0.6.62) JUMP: its step (bits 0-5) and TIMES (bits 6-7); REV: TIMES (bits 0-1). TIMES: ALWAYS, x1 (once a pass of
  * the pattern, then it plays on), x2, 1:2 (once, every other pass). 0, ALWAYS: as a JUMP / REV of before (seq.c fl_ok) */

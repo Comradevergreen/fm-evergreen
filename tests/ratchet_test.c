@@ -519,6 +519,38 @@ static int components2(void)
         ok &= n == 4u && nt[0] == 60u && nt[1] == 72u && nt[2] == 60u && nt[3] == 72u;
         bad += check("OCT: +1 every time; +1/2 every other loop", ok);
     }
+    {   /* (0.6.98) WALK UP 3 degrees every loop: 60 62 64 65 60 .. (C major); DOWN; UP-DN 3 every 2 loops: 60 60 62 62
+         * 64 64 65 65 64 64 62 62 60 ..; CLIMB UP 1 octave every loop: 60 72 60 72; RND: inside the range, the same
+         * each time round; WALK and CLIMB stacked (COMP, COMP 2) add up; a kit ignores them */
+        static const uint8_t P1[1] = {60};
+        t = pat(1, P1); t->step[0].comp = CP_WALK; t->step[0].carg = CP_WARG(0u, 0u, 0u);
+        n = run_steps(t, 9, nt, sizeof nt);
+        ok = n == 9u && nt[0] == 60u && nt[1] == 62u && nt[2] == 64u && nt[3] == 65u && nt[4] == 60u && nt[8] == 60u;
+        t = pat(1, P1); t->step[0].comp = CP_WALK; t->step[0].carg = CP_WARG(0u, 1u, 0u);
+        n = run_steps(t, 4, nt, sizeof nt);
+        ok &= n == 4u && nt[0] == 60u && nt[1] == 59u && nt[2] == 57u && nt[3] == 55u;
+        t = pat(1, P1); t->step[0].comp = CP_WALK; t->step[0].carg = CP_WARG(1u, 2u, 0u);
+        n = run_steps(t, 14, nt, sizeof nt);
+        ok &= n == 14u && nt[0] == 60u && nt[1] == 60u && nt[2] == 62u && nt[3] == 62u && nt[6] == 65u && nt[7] == 65u && nt[8] == 64u &&
+              nt[10] == 62u && nt[12] == 60u;
+        if (!ok) printf("  walk: %u %u %u %u %u %u %u %u %u %u %u %u %u %u\n", nt[0], nt[1], nt[2], nt[3], nt[4], nt[5], nt[6], nt[7], nt[8], nt[9], nt[10], nt[11], nt[12], nt[13]);
+        bad += check("WALK: UP 3 degrees a loop and round, DOWN, UP-DN 3 every 2 loops (there and back)", ok);
+        t = pat(1, P1); t->step[0].comp = CP_CLIMB; t->step[0].carg = CP_WARG(0u, 0u, 0u);
+        n = run_steps(t, 4, nt, sizeof nt);
+        ok = n == 4u && nt[0] == 60u && nt[1] == 72u && nt[2] == 60u && nt[3] == 72u;
+        t = pat(1, P1); t->step[0].comp = CP_WALK; t->step[0].carg = CP_WARG(0u, 3u, 1u);
+        n = run_steps(t, 12, nt, sizeof nt);
+        ok &= n == 12u;
+        for (i = 0; i < 12u; i++) ok &= nt[i] >= 60u && nt[i] <= 69u;
+        { uint32_t same = 1; for (i = 1; i < 12u; i++) same &= nt[i] == nt[0]; ok &= !same; }
+        if (!ok) printf("  climb / rnd: %u %u %u %u %u %u\n", nt[0], nt[1], nt[2], nt[3], nt[4], nt[5]);
+        t = pat(1, P1); t->step[0].comp = CP_WALK; t->step[0].carg = CP_WARG(0u, 0u, 0u);
+        t->step[0].comp2 = CP_CLIMB; t->step[0].carg2 = CP_WARG(1u, 0u, 0u);
+        n = run_steps(t, 4, nt, sizeof nt);
+        ok &= n == 4u && nt[0] == 60u && nt[1] == 62u && nt[2] == 76u && nt[3] == 77u;
+        if (!ok) printf("  stacked: %u %u %u %u\n", nt[0], nt[1], nt[2], nt[3]);
+        bad += check("CLIMB: an octave a loop and back; WALK RND inside its range, moving; WALK + CLIMB stacked add up", ok);
+    }
     {   /* (0.6.47) C.LEN 3 over LEN 4: step 1's OCT on the lane, so on plays 1, 4, 7 (steps 1 4 3 ..); C.LEN OFF as before */
         static const uint8_t P4[4] = {60, 62, 64, 65};
         t = pat(4, P4); t->step[0].comp = CP_OCT; t->step[0].carg = 0; t->p[P_CLEN] = 3;
