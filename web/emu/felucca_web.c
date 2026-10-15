@@ -65,7 +65,7 @@ static const int8_t FM1_KEYMAP[6][FM1_NCOL] = {      /* as hal/fm1_input.h: key 
     { 0,  1, 15, 14, 17, 16, 19, 18, 20, 21, 22},
     {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
 };
-static uint8_t fm1_led[FM1_NCOL], fm1_led_dim[FM1_NCOL], fm1_led_breath[FM1_NCOL], fm1_led_mid[FM1_NCOL];
+static uint8_t fm1_led[FM1_NCOL], fm1_led_dim[FM1_NCOL], fm1_led_breath[FM1_NCOL], fm1_led_mid[FM1_NCOL], fm1_led_hi[FM1_NCOL];
 static uint32_t web_dim_lo;
 static void fm1_led_dim_level(uint32_t lo) { web_dim_lo = lo; }
 /* the power-on LED sweep (hal/fm1_input.h fm1_led_anim_start, the picture hal/fm1_led_anim.h): its frame from the
@@ -80,6 +80,7 @@ static void fm1_led_anim_start(uint32_t glow)
     memset(fm1_led_dim, 0, sizeof fm1_led_dim);
     memset(fm1_led_breath, 0, sizeof fm1_led_breath);
     memset(fm1_led_mid, 0, sizeof fm1_led_mid);
+    memset(fm1_led_hi, 0, sizeof fm1_led_hi);
     web_anim_t0 = web_ticks;
     web_anim_glow = glow != 0u;
     web_anim_run = 1;

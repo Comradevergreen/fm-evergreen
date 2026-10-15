@@ -44,7 +44,7 @@
 /* ------------------------------------------------------------ HAL stubs --- */
 #define FM1_NCOL 11u
 static const int8_t FM1_KEYMAP[6][FM1_NCOL];
-static uint8_t fm1_led[FM1_NCOL], fm1_led_dim[FM1_NCOL], fm1_led_breath[FM1_NCOL], fm1_led_mid[FM1_NCOL];
+static uint8_t fm1_led[FM1_NCOL], fm1_led_dim[FM1_NCOL], fm1_led_breath[FM1_NCOL], fm1_led_mid[FM1_NCOL], fm1_led_hi[FM1_NCOL];
 static uint32_t host_dim_lo;                      /* hal/fm1_input.h: the glow MENU > LEDS asked for (1: DIM LO) */
 static void fm1_led_dim_level(uint32_t lo) { host_dim_lo = lo; }
 static int host_anim;                             /* hal/fm1_input.h: the power-on sweep running (it has the LEDs) */
@@ -5348,8 +5348,10 @@ static int test_step_leds(void)
                                        keys_dim == want_dim && keys_lit == (m == LEDS_INV && !drum ? 27u - kc : kc) &&
                                        (!glow || keys_lit + keys_dim >= 25u) &&
                                        ((fm1_led[LED_PLAY_GREEN >> 3] >> (LED_PLAY_GREEN & 7u)) & 1u) == run);
-                bad += check("  the mid level: the grid's beats in DIM HI / LO only, never a lit key",
-                             lit_keys(fm1_led_mid) == (glow && drum ? grid_beats() & ~keys : 0u) &&
+                bad += check("  the mid level: the grid's beats in DIM LO (DIM HI: a level above, its glow at the mid level), never a lit key",
+                             (m == LEDS_DIM ? lit_keys(fm1_led_hi) == (drum ? grid_beats() & ~keys : 0u) &&
+                                              lit_keys(fm1_led_mid) == (lit_keys(fm1_led_dim) & ~lit_keys(fm1_led))
+                                            : lit_keys(fm1_led_mid) == (glow && drum ? grid_beats() & ~keys : 0u) && !lit_keys(fm1_led_hi)) &&
                              !(lit_keys(fm1_led_mid) & lit_keys(fm1_led)));
                 if (run) {
                     transport_req = 2;
@@ -5384,10 +5386,14 @@ static int test_step_leds(void)
             beats = grid_beats();
             want = step_keys(1u << 0 | 1u << 8 | 1u << 12);   /* steps 1, 9, 13 (5 holds a hit: lit) */
             ok = beats == want && (keys & step_keys(1u << 4 | 1u << 2)) == step_keys(1u << 4 | 1u << 2) &&
-                 lit_keys(fm1_led_mid) == (glow ? want : 0u) && (lit_keys(fm1_led_dim) & want) == want &&
+                 (m == LEDS_DIM ? lit_keys(fm1_led_hi) == want && (lit_keys(fm1_led_mid) & want) == want &&   /* (0.6.96) DIM HI: the glow
+                                                         * at the mid level, the beats a level above */
+                                  lit_keys(fm1_led_mid) == (lit_keys(fm1_led_dim) & ~lit_keys(fm1_led))
+                                : lit_keys(fm1_led_mid) == (glow ? want : 0u) && !lit_keys(fm1_led_hi)) &&
+                 (lit_keys(fm1_led_dim) & want) == want &&
                  (glow || !(lit_keys(fm1_led_dim) & ~want)) && host_dim_lo == (m == LEDS_DIM_LO);
             snprintf(what, sizeof what, "DRUM grid beats, LEDS %s: steps 1 9 13 %s, the hits 3 5 lit", LEDS_NAME[m],
-                     glow ? "at the mid level over the glow" : "glow (nothing else does)");
+                     m == LEDS_DIM ? "a level above the glow (the glow at the mid level)" : glow ? "at the mid level over the glow" : "glow (nothing else does)");
             bad += check(what, ok);
             if (m != LEDS_DIM)
                 continue;
@@ -5682,8 +5688,8 @@ static int test_scale_leds(void)
     settings_leds = LEDS_DIM;
     ui_leds();
     ok = !menu_get(MI_SCLLED) && str_eq(MI_NAME[MI_SCLLED], "SCALE LEDS") && MI_TAB[MI_SCLLED] == MTAB_CONTROL &&
-         !scale_leds(&root) && lit_keys(fm1_led_dim) == ALL && !lit_keys(fm1_led_mid);
-    bad += check("#127 SCALE LEDS OFF (the default): every key glows as before", ok);
+         !scale_leds(&root) && lit_keys(fm1_led_dim) == ALL && !lit_keys(fm1_led_hi);
+    bad += check("#127 SCALE LEDS OFF (the default): every key glows as before (0.6.96: DIM HI's level above empty)", ok);
     menu_put(MI_SCLLED, menu_step(MI_SCLLED, 1));
     ok = menu_get(MI_SCLLED) == 1u && (ui_rec_prefs & 0x40u) && !(ui_prefs & ~PREF_ACCEL_OFF) && str_eq(menu_vname(MI_SCLLED, 1), "ON");
     sc = scale_leds(&root);
@@ -5691,22 +5697,24 @@ static int test_scale_leds(void)
                  ok && sc == white && root == C_KEYS);
     for (mi = 0; mi < LEDS_COUNT; mi++) {
         uint32_t m = MODES[mi], held = 1u << 1 | 1u << 7;   /* F#3 (out of the scale) and C4 (the root) held */
+        const uint8_t *up = m == LEDS_DIM ? fm1_led_hi : fm1_led_mid;   /* (0.6.96) the level above the glow: DIM HI's
+                                                         * fm1_led_hi (its glow at the mid level), the others' mid */
         char what[128];
         settings_leds = (uint8_t)m;
         fm1_in.notes = 0;
         ui_leds();
         if (m == LEDS_INV)
-            ok = lit_keys(fm1_led) == C_KEYS && lit_keys(fm1_led_mid) == (white & ~C_KEYS) &&
+            ok = lit_keys(fm1_led) == C_KEYS && lit_keys(up) == (white & ~C_KEYS) &&
                  lit_keys(fm1_led_dim) == (ALL & ~white);
         else
-            ok = !lit_keys(fm1_led) && lit_keys(fm1_led_dim) == white && lit_keys(fm1_led_mid) == C_KEYS;
+            ok = !lit_keys(fm1_led) && lit_keys(fm1_led_dim) == white && lit_keys(up) == C_KEYS;
         fm1_in.notes = held;
         ui_leds();
         if (m == LEDS_INV)
-            ok &= lit_keys(fm1_led) == (C_KEYS & ~held) && !(lit_keys(fm1_led_mid) & held) &&
-                  !(lit_keys(fm1_led_dim) & held) && lit_keys(fm1_led_mid) == (white & ~C_KEYS);
+            ok &= lit_keys(fm1_led) == (C_KEYS & ~held) && !(lit_keys(up) & held) &&
+                  !(lit_keys(fm1_led_dim) & held) && lit_keys(up) == (white & ~C_KEYS);
         else
-            ok &= lit_keys(fm1_led) == held && lit_keys(fm1_led_dim) == white && lit_keys(fm1_led_mid) == C_KEYS;
+            ok &= lit_keys(fm1_led) == held && lit_keys(fm1_led_dim) == white && lit_keys(up) == C_KEYS;
         snprintf(what, sizeof what, "#127 LEDS %s: %s; the keys held %s", LEDS_NAME[m],
                  m == LEDS_INV ? "root lit, the scale mid, the others glow" : "the scale glows, the root brighter",
                  m == LEDS_INV ? "dark" : "lit over it");
@@ -5732,7 +5740,7 @@ static int test_scale_leds(void)
     sc = scale_leds(&root);
     ok &= sc == white && root == (1u << 7 | 1u << 16 | 1u << 24);
     ui_leds();
-    ok &= lit_keys(fm1_led_dim) == white && lit_keys(fm1_led_mid) == root;
+    ok &= lit_keys(fm1_led_dim) == white && lit_keys(fm1_led_hi) == root;
     t->p[P_QUANT] = QN_OFF;
     t->p[P_SCALE] = 0;                                  /* CHR: every key, the C keys brighter */
     sc = scale_leds(&root);
@@ -5741,13 +5749,13 @@ static int test_scale_leds(void)
     t->p[P_SCALE] = 1;
     ui.layer = LAYER_SCL;                               /* a layer: its own map, no scale glow under it */
     ui_leds();
-    ok = !lit_keys(fm1_led_mid) && !lit_keys(fm1_led_dim);
+    ok = !lit_keys(fm1_led_hi) && !lit_keys(fm1_led_dim);
     ui.layer = 0;
     set_engine_of(t, ENGI_DRUM);
     t->engine = t->eng_req;
     sc = scale_leds(&root);
     ui_leds();
-    ok &= !sc && !root && lit_keys(fm1_led_dim) == ALL && !lit_keys(fm1_led_mid);
+    ok &= !sc && !root && lit_keys(fm1_led_dim) == ALL && !lit_keys(fm1_led_hi);
     open_family(FAM_SEQ);
     frame();
     for (k = 0; k < NPAGES && cur_page()->graph != GR_ROLL; k++) {
@@ -5756,7 +5764,7 @@ static int test_scale_leds(void)
     }
     ui_leds();
     ok &= grid_on() && lit_keys(fm1_led_dim) == grid_glow() &&
-          lit_keys(fm1_led_mid) == (grid_beats() & ~key_leds(0));
+          lit_keys(fm1_led_hi) == (grid_beats() & ~key_leds(0));
     bad += check("#127 a layer, a DRUM track (its keys as before) and the DRUM grid keep their own LEDs", ok);
     menu_put(MI_SCLLED, 0);
     ok = !(ui_rec_prefs & 0x40u) && !scale_leds(&root);
@@ -6228,7 +6236,26 @@ static int test_seq_tools(void)
         for (i = 0; i < 8u; i++) turn(EN_K2, -1);       /* OFF: the four back */
         ok4 &= t->p[P_SLEN] == 4 && motion.count == 1u;
         bad += check("REPEAT x3: 4 steps > 12, their locks copied; TO 64: whole copies (4 > 64); OFF: the base back", ok4);
+        {   /* (0.6.96) the other knob's result is the base: REPEAT x2 (4 > 8), then STRETCH x2 stretches the eight (> 16),
+             * STRETCH x1 back to the eight; REPEAT again then takes the stretched result as its base */
+            int ok6;
+            shp_r = 0u; shp_i = 7u;
+            turn(EN_K2, 1);                             /* x2: 8 */
+            ok6 = t->p[P_SLEN] == 8;
+            turn(EN_K1, 1);                             /* STRETCH x2 over the repeats: 16 */
+            ok6 &= t->p[P_SLEN] == 16 && t->step[8].note[0] == t->step[0].note[0];
+            if (!ok6) printf("  after stretch: len %d n8 %d n0 %d\n", t->p[P_SLEN], t->step[8].note[0], t->step[0].note[0]);
+            turn(EN_K1, -1);                            /* x1: the eight back (not the four) */
+            ok6 &= t->p[P_SLEN] == 8 && shp_r == 0u;
+            if (!ok6) printf("  after x1: len %d shp_r %u\n", t->p[P_SLEN], shp_r);
+            turn(EN_K1, 1); turn(EN_K2, 1);             /* x2 again (16), then REPEAT x2 from the sixteen: 32 */
+            ok6 &= t->p[P_SLEN] == 32 && t->step[16].time == t->step[0].time;
+            if (!ok6) printf("  stretch over repeat: len %d\n", t->p[P_SLEN]);
+            bad += check("STRETCH over REPEAT (0.6.96): the other knob's result is the base; the same knob keeps its own", ok6);
+        }
         t->p[P_SLEN] = 4;
+        for (i = 4; i < NSTEP; i++) step_clear(&t->step[i]);
+        motion_clear(t); shp_r = 0u; shp_i = 7u;
         ok5 = t->step[0].note[0] == 60;
         turn(EN_K3, 1);
         ok5 &= t->step[1].note[0] == 60 && t->step[0].note[0] == 67 && t->p[P_SLEN] == 4;

@@ -109,18 +109,28 @@ static int32_t menu_document(int32_t y, int draw)
 {
     uint32_t i;
     if (draw) {
-        cv_text(6, y + 2, &AF_L, "JIANT", T_THEME);
-        cv_text(6, y + 38, &AF_S, "Live firmware, based on Felucca", T_TEXT);
+        cv_text(6, y + 2, &AF_L, "JIANT FM", T_THEME);
+        cv_text(6, y + 38, &AF_S, "Firmware for the MVAVE FM-1", T_TEXT);
         cv_text(6, y + 58, &AF_M, FELUCCA_VERSION, T_THEME);
         cv_text_r(232, y + 61, &AF_S, __DATE__, T_MID, T_BG);
-        cv_text(6, y + 82, &AF_S, "(C) 2026 Leo Kuroshita", T_TEXT);
-        cv_text(6, y + 100, &AF_S, "H\xFCgelton Instruments", T_TEXT);
-        cv_text(6, y + 118, &AF_S, "GPL-3.0-only", T_TEXT);
+        cv_text(6, y + 82, &AF_S, "by Juan Jiant, Argentina", T_TEXT);   /* (0.6.96: the project's own) */
+        cv_text(6, y + 100, &AF_S, "Free, GPL-3.0-only, no warranty", T_TEXT);
+        cv_text(6, y + 118, &AF_S, "Based on Felucca (H\xFCgelton)", T_TEXT);
         cv_text(6, y + 138, &AF_S, "github.com", T_MID);
         cv_text(6, y + 156, &AF_S, "/juanjiant-bit", T_MID);
         cv_text(6, y + 174, &AF_S, "/JIANT", T_MID);
         draw_about_qr(158, y + 122);
     }
+    y = menu_text("THE PROJECT", y + 216, T_THEME, draw);
+    y = menu_text("Made in Argentina by Juan Jiant, visual artist and musician, a dad of two: an independent project, free for everyone.", y, T_TEXT, draw);
+    y = menu_text("Manual, emulator, installer, editor:", y + 4, T_TEXT, draw);
+    y = menu_text("juanjiant-bit.github.io/JIANT", y, T_MID, draw);
+    y = menu_text("Videos: youtube.com/@JUANJIANT", y, T_MID, draw);
+    y = menu_text("Support the work:", y + 4, T_TEXT, draw);
+    y = menu_text("ko-fi.com/juanjiant", y, T_MID, draw);
+    y = menu_text("cafecito.app/juanjiant (Argentina)", y, T_MID, draw);
+    y = menu_text("Based on Felucca by Leo Kuroshita, H\xFCgelton Instruments (C) 2026, GPL-3.0-only.", y + 4, T_TEXT, draw);
+    y -= 216;
     {   /* (0.6.17) the audio's load since power-on (voice.c load_diag): to tell what happened when it clicked */
         char b[40], n[12];
         y = menu_text("AUDIO LOAD", y + 216, T_THEME, draw);
@@ -148,6 +158,7 @@ static int32_t menu_document(int32_t y, int draw)
     y = menu_text("Fonts and icons: their licences travel with the source and the release files.", y, T_TEXT, draw);
     y = menu_text("NO WARRANTY", y, T_TEXT, draw);
     y = menu_text("Full notices in source:", y + 8, T_TEXT, draw);
+    y = menu_text("github.com/juanjiant-bit/JIANT", y, T_MID, draw);
     y = menu_text("github.com/hugelton/Felucca", y, T_MID, draw);
     return y + 4;
 }

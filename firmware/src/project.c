@@ -1797,6 +1797,13 @@ static void mutate_poll(void)
             break;
         }
     anc = mut.ok && proj_import(&proj_scratch, &mut_anchor, sizeof mut_anchor);
+    for (k = 0; k < NTRK && anc; k++)                   /* (0.6.96) another engine on an enabled track since the anchor
+                                                         * (a sound loaded, a piece thrown): the anchor is the music now */
+        if (((en >> k) & 1u) && proj_scratch.t[k].engine != trk[k].eng_req % NENGINES) {
+            mut_keep();
+            anc = mut.ok && proj_import(&proj_scratch, &mut_anchor, sizeof mut_anchor);
+            break;
+        }
     for (k = 0; k < NTRK; k++) {
         track_t *t = &trk[k];
         uint32_t s = mut_every(t, P_MSND), q = mut_every(t, P_MPAT), hit = 0;
