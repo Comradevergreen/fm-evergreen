@@ -379,8 +379,8 @@ function mockTables() {
     ok(ph.name === "-" && ph.presets.length === 0,
        "editor: engine 9 reserved (PHYS retired in TONIC), no presets");
     ok(dr.name === "DRUM" && dr.edit.map((d) => d.label).join() === "MORPH,TUNE,TONE,DECAY,NOISE,FM ENV,FOLD,DRIVE" &&
-       dr.presets.length === 1 && dr.presets.every((p) => p.pat === 12),
-       "editor: DRUM engine 10 (DRUM-X: MORPH TUNE TONE DECAY NOISE FM ENV FOLD DRIVE), one kit suggesting BEAT");
+       dr.presets.length === 9 && dr.presets.every((p) => p.pat === 12) && dr.presets[1].name === "909 CLUB",
+       "editor: DRUM engine 10 (DRUM-X: MORPH TUNE TONE DECAY NOISE FM ENV FOLD DRIVE), nine kits suggesting BEAT (0.7.2)");
   }
   const dj = DESC;
   if (!existsSync(dj)) { console.log("editor: mock tables == firmware (no build/host/desc.json)        skip"); return; }

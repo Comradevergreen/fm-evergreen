@@ -473,9 +473,26 @@ static int32_t drum_keys(const track_t *t, uint32_t k)
 }
 
 /* {MRPH, TUNE, TONE, DECY, NOIS, FM, FOLD, DRV}; the kit suggests the BEAT pattern (GM notes) */
-static const preset_t DRUM_PRESETS[] = {
+static const preset_t DRUM_PRESETS[] = {                /* (0.7.2) one a factory kit: drumx_voice.c DX_KITS, this order */
     {"DRUM-X", DRUM_KIT_E, {0, 100, 127, 100}, 0, 0, FX(0, 0, 0, 20), PAT(12)},   /* (core.h: SAMPLE PERC's too) */
+    {"909 CLUB", {60, 64, 76, 64, 64, 0, 0, 10}, {0, 100, 127, 100}, 0, 0, FX(0, 0, 0, 16), PAT(12)},
+    {"808 BOOM", {58, 60, 56, 76, 60, 0, 0, 0}, {0, 100, 127, 100}, 0, 0, FX(0, 0, 0, 24), PAT(12)},
+    {"LOFI DUST", {70, 64, 50, 54, 76, 0, 0, 20}, {0, 100, 127, 100}, 0, 0, FX(8, 0, 0, 18), PAT(12)},
+    {"INDUSTRIAL", {72, 66, 88, 70, 74, 20, 0, 40}, {0, 100, 127, 100}, 0, 0, FX(16, 0, 10, 30), PAT(12)},
+    {"ACOUSTIC", {56, 64, 58, 62, 64, 0, 0, 0}, {0, 100, 127, 100}, 0, 0, FX(0, 0, 0, 34), PAT(12)},
+    {"DUB ROOTS", {60, 60, 52, 70, 60, 0, 0, 0}, {0, 100, 127, 100}, 0, 0, FX(0, 0, 18, 36), PAT(12)},
+    {"TECHNO RAW", {66, 64, 80, 62, 66, 10, 0, 30}, {0, 100, 127, 100}, 0, 0, FX(10, 0, 0, 14), PAT(12)},
+    {"BREAKS", {62, 66, 72, 62, 70, 0, 0, 10}, {0, 100, 127, 100}, 0, 0, FX(4, 0, 0, 22), PAT(12)},
 };
+_Static_assert(sizeof DRUM_PRESETS / sizeof DRUM_PRESETS[0] == sizeof DX_KITS / sizeof DX_KITS[0], "a DRUM preset a kit");
+/* (0.7.2) a factory kit into the section's: the sounds, their LAYERs, their SENDs (the project saves them) */
+static void dx_kit_load(uint32_t k)
+{
+    const dx_kit_t *K = &DX_KITS[k % DX_NKIT];
+    memcpy(dx_kit, K->lane, sizeof dx_kit);
+    memcpy(dx_lay, K->lay, sizeof dx_lay);
+    memcpy(dx_snd, K->snd, sizeof dx_snd);
+}
 
 static const engine_t ENG_DRUM = {
     .name = "DRUM",

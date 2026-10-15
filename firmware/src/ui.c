@@ -1137,7 +1137,14 @@ static void set_engine_of(track_t *t, uint32_t ei)
     load_end(t);
 }
 
-static void apply_preset(uint32_t pi) { apply_preset_to(TSEL, pi); }
+static void apply_preset(uint32_t pi)                 /* the selected track's sound (browsing, the editor, PROGRAM CHANGE) */
+{
+    apply_preset_to(TSEL, pi);
+    if (TSEL->eng_req % NENGINES == ENGI_DRUM)        /* (0.7.2) DRUM: the preset is a factory kit, into the section's kit
+                                                       * (drumx_voice.c DX_KITS; a project load or an engine switch keeps the
+                                                       * section's kit: apply_preset_to alone) */
+        dx_kit_load(pi % ENG_DRUM.npresets);
+}
 static void set_engine(uint32_t ei) { set_engine_of(TSEL, ei); }
 /* (0.6.46) INIT SOUND, NEW PROJECT, (0.6.49) the power-on: the engine's own defaults (its EDIT values as the engine
  * declares them, not its first preset's colour; the envelope, VOICE and the filter envelope as a new track has them),
