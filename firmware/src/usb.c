@@ -1184,6 +1184,7 @@ static __attribute__((noinline)) void uac_tap8(uint32_t n)
     RING_PUBLISH();
     ua_w = w + n;
 }
+#define UAC_TAP8 1                 /* (audio.c: a build with fx.c but without usb.c, audio_test, has no stems tap) */
 #endif
 
 /* the next packet into d: 44 / 45 frames (+-1 to hold the ring's fill), from the ring or, until it is
