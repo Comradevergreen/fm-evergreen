@@ -165,8 +165,9 @@ and heating up with its own audio. The selected track is drawn bigger, a muted o
 - **Tap** a page button: its pages. Tap again: the next page of that family. From another family you return to the
   page you were last on.
 - **HOME** returns to the ecosystem.
-- **FX** is long, so it is split into sections: TRACK (FX, DIST, AUTO PAN), DELAY (DLY, DLY 2), REVERB (REVERB, REVERB 2),
-  CHORUS, SLICER (SLICER, SL BUS, SL BUS 2, SL PITCH), MASTER. **Two quick taps** on FX jump to the next section.
+- **FX** is long, so it is split into sections: MIX (FX, MASTER: the sends and the master, FX's first two pages since
+  0.7.6), TRACK (DIST, AUTO PAN), DELAY (DLY, DLY 2, DLY 3), REVERB (REVERB, REVERB 2), CHORUS, SLICER (SLICER, SL BUS,
+  SL BUS 2, SL PITCH), PUNCH. **Two quick taps** on FX jump to the next section.
 - **Turn SELECT** to scroll through the pages of the section you are in (EDIT's on an EDIT page, FX's on an FX page),
   one a detent, stopping at its first and last; the page's name shows over the footer for a moment. On HOME it opens
   GEN, the song generator.

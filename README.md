@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.7.5).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.7.6).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 > ⚡ **New in 0.6.85 – 0.6.92: a song generator you steer, a compact sequencer that breathes, a delay that feeds back.**
 > - **GEN (HOME + SELECT)**: a screen of three pages — GENRE (43 genres or RANDOM), SEED, ENERGY, FORM (loop, parts,
@@ -300,7 +300,7 @@ each layer; the complete manual is in **[docs/MANUAL.md](docs/MANUAL.md)** (en e
 ### 1. Getting around
 - Each page button (EDIT, ENV, LFO, FX, SEQ, SCL, ARP, GLO, SAVE) opens its first page; pressing it again moves to the
   next one. The title at the top tells you where you are. **HOME** takes you back to the ecosystem.
-- **FX in sections**: TRACK (FX, DIST, AUTOPAN), SLICER (4 pages), DELAY (2), REVERB (2), CHORUS, MASTER. A tap goes to
+- **FX in sections**: MIX (FX, MASTER), TRACK (DIST, AUTOPAN), DELAY (3), REVERB (2), CHORUS, SLICER (4 pages), PUNCH. A tap goes to
   the next page; **two quick taps** jump to the next section. The footer counts the page within its section (DLY 2/2).
 - **Jump to a page**: hold a page button (ENV, LFO, FX, SCL, EDIT, GLO, SAVE, ARP, SEQ) and turn **PRESETS**: its pages go by one by one, forwards or back, with the title on screen; let go and you stay there (no tap, no layer). A plain tap still steps to the next page.
 - **ALGORITHM** picks the track (T1–T6) from any page; track pages show the selected track.
@@ -524,6 +524,11 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### v0.7.6
+- **MASTER is FX's second page** (asked for: the master at hand). FX's sections are now MIX (FX, MASTER: the sends and
+  the master), TRACK (DIST, AUTO PAN), DELAY, REVERB, CHORUS, SLICER and PUNCH; a tap on FX goes from FX to MASTER, two
+  quick taps to the next section; the footer says "MASTER 2/2", "AUTO PAN 2/2". The web editor lists MASTER after FX.
 
 ### v0.7.5
 - **USB audio in (test version): MENU > SYSTEM > USB > IN+OUT.** The FM-1 is the computer's or the phone's USB audio

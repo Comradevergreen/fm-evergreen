@@ -7,7 +7,7 @@ import html, os
 
 R = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(R, 'docs', 'cheatsheet')
-VERSION = 'v0.7.5'
+VERSION = 'v0.7.6'
 
 HEAT = ['#22d3ee', '#3b82f6', '#8b5cf6', '#d946ef', '#ef4444', '#ff7a00', '#facc15', '#f4f1ea']
 
@@ -143,7 +143,7 @@ def controls():
     pb = [
         ('ENV', 'ENV · ENV DEST', '—'),
         ('LFO', 'LFO · LFO DEST · MOD · MSEQ · MSEQ 2', 'MACROS M1–M4 (stay latched)'),
-        ('FX', 'TRACK · SLICER · DELAY · REVERB · CHORUS · MASTER · PUNCH (two quick taps: next section)',
+        ('FX', 'FX · MASTER · TRACK · DELAY · REVERB · CHORUS · SLICER · PUNCH (two quick taps: next section)',
          'PUNCH-IN FX'),
         ('SCL', 'SCL · SCL 2 · CHORD', 'ROOT by key'),
         ('EDIT', 'EDIT 1 · EDIT 2 · FILTER · VOICE  (FM6: OPERATOR · OP ENV · OPERATOR 2; DRUM: KIT · KIT 2 · KIT 3 · X-MOD · FILTER · SOUND 1–4 · LEVELS 1–2 · STEREO)', 'INIT · RECALL · sound mutes'),

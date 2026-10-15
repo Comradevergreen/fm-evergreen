@@ -8,7 +8,7 @@
  *   cc -O2 -w -Ibuild/gen -Ifirmware/src -Itests -o build/video5/capture_update tools/video/capture_update.c -lm
  *   build/video5/capture_update build/video5/update */
 #define UI_TEST_NO_MAIN 1
-#define FELUCCA_VERSION "v0.7.5"
+#define FELUCCA_VERSION "v0.7.6"
 #define PF_MS 900u
 #define UI_NO_DRIFT 0
 #include "ui_test.c"

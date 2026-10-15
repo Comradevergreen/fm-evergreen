@@ -2961,7 +2961,7 @@ static int test_layer(void)
     bad += check("FX tap: nothing on press, the FX page when let go", ok && !ui.home && cur_page()->fam == FAM_FX);
     frames(320);                                       /* (not a double tap: #83) */
     press(B_FX);
-    bad += check("  a second tap: the next page of the family (DIST)", str_eq(cur_page()->title, "DIST"));
+    bad += check("  a second tap: the next page of the family (MASTER, 0.7.6)", str_eq(cur_page()->title, "MASTER"));
     ui_power_on();
     btn_down(B_FX);
     for (flash = 0, i = 0; i < 22u; i++) { frame(); flash |= ui.layer; }      /* 0.35 s */
@@ -3600,13 +3600,13 @@ static int test_quick_layers(void)
         t1 = cur_page()->title;
         turn(EN_PRESET, 2); frame();                    /* two on */
         t3 = cur_page()->title;
-        ok = !ui.home && str_eq(t1, "FX") && str_eq(t3, "AUTO PAN") && msg_is("AUTO PAN");   /* (0.6.9: after DIST) */
+        ok = !ui.home && str_eq(t1, "FX") && str_eq(t3, "DIST") && msg_is("DIST");   /* (0.7.6: FX, MASTER, DIST) */
         frames(600);                                    /* (held past HOLD: still no map) */
         ok &= !ui.layer;
         btn_up(B_FX); frames(4);
-        ok &= str_eq(cur_page()->title, "AUTO PAN") && !ui.layer;   /* (no tap: no next page) */
+        ok &= str_eq(cur_page()->title, "DIST") && !ui.layer;   /* (no tap: no next page) */
         btn_down(B_FX); frame(); turn(EN_PRESET, -1); frame(); btn_up(B_FX); frames(4);
-        ok &= str_eq(cur_page()->title, "DIST");
+        ok &= str_eq(cur_page()->title, "MASTER");
         btn_down(B_FX); frame(); turn(EN_PRESET, -9); frame(); btn_up(B_FX); frames(4);
         ok &= str_eq(cur_page()->title, "FX");          /* (no wrap: it stops at the first) */
         btn_down(B_ENV); frame(); turn(EN_PRESET, 1); frame(); turn(EN_PRESET, 1); frame(); btn_up(B_ENV); frames(4);
@@ -6815,8 +6815,14 @@ static int test_fx_sections(void)
     ui_power_on();
     go_title("FX"); frame();
     press(B_FX); frames(600);
-    ok = str_eq(cur_page()->title, "DIST");
-    press(B_FX); press(B_FX); frames(600);             /* two quick taps from DIST: DLY (0.6.81: the SLICER after CHORUS) */
+    page_title(ti);
+    ok = str_eq(cur_page()->title, "MASTER") && str_eq(ti, "MASTER 2/2");   /* (0.7.6) the master: FX's second page */
+    press(B_FX); press(B_FX); frames(600);             /* two quick taps from MASTER: the next section, DIST */
+    ok &= str_eq(cur_page()->title, "DIST");
+    press(B_FX); frames(600);
+    page_title(ti);
+    ok &= str_eq(cur_page()->title, "AUTO PAN") && str_eq(ti, "AUTO PAN 2/2");
+    press(B_FX); press(B_FX); frames(600);             /* two quick taps from AUTO PAN: DLY (0.6.81: the SLICER after CHORUS) */
     ok &= str_eq(cur_page()->title, "DLY");
     press(B_FX); frames(600);
     page_title(ti);
@@ -6824,12 +6830,12 @@ static int test_fx_sections(void)
     go_title("CHORUS"); frame();
     press(B_FX); press(B_FX); frames(600);
     ok &= str_eq(cur_page()->title, "SLICER");
-    go_title("MASTER"); frame();
-    press(B_FX); press(B_FX); frames(600);             /* (past MASTER: round to the first) */
+    go_title("PUNCH"); frame();
+    press(B_FX); press(B_FX); frames(600);             /* (past PUNCH, the last: round to the first) */
     ok &= str_eq(cur_page()->title, "FX");
     page_title(ti);
-    ok &= str_eq(ti, "FX 1/3");
-    bad += check("FX sections: tap next page, two quick taps next section (TRACK DELAY REVERB CHORUS SLICER MASTER), 'DLY 2/3'", ok);
+    ok &= str_eq(ti, "FX 1/2");
+    bad += check("FX sections: tap next page, two quick taps next section (MIX TRACK DELAY REVERB CHORUS SLICER PUNCH), 'DLY 2/3'", ok);
     ui_power_on();
     return bad;
 }

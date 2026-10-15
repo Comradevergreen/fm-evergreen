@@ -170,9 +170,9 @@ Los **diálogos** preguntan antes de cualquier cosa destructiva: **OCT− NO**, 
 - **Tocá** un botón de página: sus páginas. Tocalo de nuevo: la siguiente página de esa familia. Desde otra familia
   volvés a la página donde estuviste por última vez.
 - **HOME** vuelve al ecosistema.
-- **FX** es largo, así que está dividido en secciones: TRACK (FX, DIST, AUTO PAN), DELAY (DLY, DLY 2), REVERB
-  (REVERB, REVERB 2), CHORUS, SLICER (SLICER, SL BUS, SL BUS 2, SL PITCH), MASTER. **Dos toques rápidos** en FX saltan a la
-  siguiente sección.
+- **FX** es largo, así que está dividido en secciones: MIX (FX, MASTER: los envíos y el master, las dos primeras
+  páginas de FX desde 0.7.6), TRACK (DIST, AUTO PAN), DELAY (DLY, DLY 2, DLY 3), REVERB (REVERB, REVERB 2), CHORUS,
+  SLICER (SLICER, SL BUS, SL BUS 2, SL PITCH), PUNCH. **Dos toques rápidos** en FX saltan a la siguiente sección.
 - **Girá SELECT** para recorrer las páginas de la sección en la que estás (las de EDIT en una página EDIT, las de FX en
   una de FX), una por paso, frenando en la primera y la última; el nombre de la página aparece un momento sobre el pie.
   En HOME abre GEN, el generador de temas.
