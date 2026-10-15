@@ -6807,6 +6807,35 @@ static int test_clear_ghosts(void)
     return bad;
 }
 
+/* (0.7.6) SCL: KNOB 4 the global ALL TR where the track's TRANS was; SCL 2 (ALL TR alone) gone: SCL then CHORD */
+static int test_scl_alltr(void)
+{
+    int bad = 0, ok;
+    int16_t *vp = 0;
+    const param_desc_t *d;
+    track_t *t;
+    ui_power_on();
+    t = TSEL;
+    go_title("SCL"); frame();
+    d = page_desc(cur_page(), 3u, &vp);
+    ok = d == &GP[G_STRN] && vp == &song.g[G_STRN] && str_eq(d->label, "ALL TR");
+    song.g[G_STRN] = 0; t->p[P_TRANS] = 0;
+    song.rec = 1;                                      /* (recording: the global is no track lock) */
+    turn(EN_K4, 1); turn(EN_K4, 1); frame();
+    ok &= song.g[G_STRN] == 2 && t->p[P_TRANS] == 0;
+    song.rec = 0;
+    press(B_SCL); frame();
+    ok &= str_eq(cur_page()->title, "CHORD");          /* (no SCL 2 between) */
+    {
+        uint32_t i, n2 = 0;
+        for (i = 0; i < NPAGES; i++) n2 += str_eq(PAGES[i].title, "SCL 2");
+        ok &= n2 == 0u;
+    }
+    song.g[G_STRN] = 0;
+    bad += check("SCL: KNOB 4 is ALL TR (the global, TRANS untouched), SCL 2 gone: SCL then CHORD", ok);
+    ui_power_on();
+    return bad;
+}
 /* (0.6.24) FX in sections: a tap the next page, two quick taps the next section; the footer counts within it */
 static int test_fx_sections(void)
 {
@@ -9191,6 +9220,7 @@ int main(void)
     bad += test_note_page();
     bad += test_chord_glide();
     bad += test_fx_sections();
+    bad += test_scl_alltr();
     bad += test_clear_ghosts();
     bad += test_dx_sound();
     bad += test_clear_all();
