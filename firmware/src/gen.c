@@ -819,6 +819,23 @@ static void gen_kit(track_t *t)
         }
     }
     memcpy(dx_lay, DX_LAY_DEF, sizeof dx_lay);
+    {   /* (0.6.94) the snare a snare (it came out tonal): mostly noise, shorter, less of the pitch sweep, the noise's
+         * band a little brighter, and its own FEEDBK on top of the LAYER */
+        dx_lane_t *S = &dx_kit[DV_SNARE];
+        int32_t nz = grr(26, 40), dc = grr(10, 18), pm = grr(8, 14), cl = grr(4, 10);
+        S->a[DXP_NOISE] = (uint8_t)clamp(S->a[DXP_NOISE] + nz, 0, 127); S->b[DXP_NOISE] = (uint8_t)clamp(S->b[DXP_NOISE] + nz, 0, 127);
+        S->a[DXP_DECAY] = (uint8_t)clamp(S->a[DXP_DECAY] - dc, 0, 127); S->b[DXP_DECAY] = (uint8_t)clamp(S->b[DXP_DECAY] - dc, 0, 127);
+        S->a[DXP_PMOD] = (uint8_t)clamp(S->a[DXP_PMOD] - pm, 0, 127); S->b[DXP_PMOD] = (uint8_t)clamp(S->b[DXP_PMOD] - pm, 0, 127);
+        S->a[DXP_COLOR] = (uint8_t)clamp(S->a[DXP_COLOR] + cl, 0, 127); S->b[DXP_COLOR] = (uint8_t)clamp(S->b[DXP_COLOR] + cl, 0, 127);
+        dx_lay[DV_SNARE] = (uint8_t)(DX_LAY_L(DX_LAY_DEF[DV_SNARE]) | ((uint32_t)grr(3, 6) << 4));
+    }
+    for (l = DV_HATC; l <= DV_HATO; l++) {               /* (0.6.94) the hats: a band-pass high up, more noise in them */
+        dx_lane_t *H = &dx_kit[l];
+        int32_t nz = grr(18, 28), cl = grr(10, 18);
+        H->mode = (uint8_t)((H->mode & ~0x0Cu) | (DXF_BP << 2));
+        H->a[DXP_NOISE] = (uint8_t)clamp(H->a[DXP_NOISE] + nz, 0, 127); H->b[DXP_NOISE] = (uint8_t)clamp(H->b[DXP_NOISE] + nz, 0, 127);
+        H->a[DXP_COLOR] = (uint8_t)clamp(H->a[DXP_COLOR] + cl, 0, 127); H->b[DXP_COLOR] = (uint8_t)clamp(H->b[DXP_COLOR] + cl, 0, 127);
+    }
     t->p[P_E0] = (int16_t)grr(40, 88);                  /* MORPH */
     t->p[P_E2] = (int16_t)clamp(70 + k->tone, 0, 127);
     t->p[P_E3] = (int16_t)clamp(64 + k->decy, 0, 127);
