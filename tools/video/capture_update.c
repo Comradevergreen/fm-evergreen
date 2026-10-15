@@ -132,16 +132,26 @@ static void at_beat(uint32_t q)
         caption(q, "FX", "THE MATRIX REACHES|THE EFFECTS", "D.TIM D.FB D.TON D.MIX · R.SIZ R.DMP|C.RAT C.DEP: eight new destinations|the MOD SEQ sequences the delay time", 0,
                 "SLOT 1 · STEP → D.TIM +40|an LFO on R.SIZ breathes|every track adds its slot");
     }
-    /* ---- USB */
+    /* ---- USB: the stems, each part alone for a bar (the mutes: what a DAW gets on its own channel), the level */
     if (q == B(34, 0)) {
+        uint32_t k;
         trk[T_PAD_K].p[P_M1SRC] = 0; trk[T_PAD_K].p[P_M1DST] = 0; trk[T_PAD_K].p[P_M1AMT] = 0;
-        menu_open(MI_SERIAL);
-        caption(q, "USB", "STEMS OVER USB", "8 USB audio channels: 6 mono tracks + FX return|each track on its own channel in Ableton, Logic or Reaper|USB LEVEL −6…−24 dB: no clipping on your phone", 0,
-                "MENU > SYSTEM > USB: STEMS|channels 1–6 the tracks|7–8 delay, reverb and chorus");
+        menu_open(MI_SERIAL); menu_put(MI_SERIAL, 2u);
+        for (k = 0; k < NTRK; k++) mute(k, k != T_DRUM_K);
+        caption(q, "USB", "STEMS OVER USB", "MENU > SYSTEM > USB: STEMS, and the FM1 is an|8-channel USB audio interface: the 6 tracks mono + FX|each on its own channel in Ableton, Logic, Reaper, FL", 0,
+                "hear them alone: drums · bass · lead · pad|channels 1–6 the tracks, with LEVEL and MUTE|7–8 delay, reverb and chorus in stereo");
     }
-    if (q == B(35, 0)) menu_put(MI_SERIAL, 2u);
-    if (q == B(36, 2)) { menu_put(MI_USB, 3u); ui.menu_sel = MI_USB; ui.force = 1; }
+    if (q == B(35, 0)) { uint32_t k; for (k = 0; k < NTRK; k++) mute(k, k != T_BASS_K); }
+    if (q == B(36, 0)) { uint32_t k; for (k = 0; k < NTRK; k++) mute(k, k != T_LEAD_K); }
+    if (q == B(37, 0)) { uint32_t k; for (k = 0; k < NTRK; k++) mute(k, k != T_PAD_K); }
     if (q == B(38, 0)) {
+        uint32_t k;
+        for (k = 0; k < NTRK; k++) mute(k, 0);
+        menu_put(MI_USB, 3u); ui.menu_sel = MI_USB; ui.force = 1;
+        caption(q, "USB", "USB LEVEL", "MENU > AUDIO > USB LEVEL: −6 / −12 / −18 / −24 dB|USB fixed and attenuated, whatever the MASTER knob does|no clipping on a phone or a DAW input", 0,
+                "FIXED: full level, as before|the DAC keeps the knob");
+    }
+    if (q == B(39, 2)) {
         caption(q, "USB", "STEMS FROM|THE BROWSER", "load your backup into the web emulator|each track alone with its effects, plus the MIX|a ZIP of WAVs, faster than real time", 0,
                 "juanjiant-bit.github.io/JIANT|the whole song or the section|T1..T6 + MIX, 16 bit 44.1 kHz");
     }
@@ -168,9 +178,9 @@ static void at_beat(uint32_t q)
         item("FX PUNCH-IN", "LEN 1..64, RES, CLEAR, live recording", B(22, 0));
         item("WALK · CLIMB", "components that evolve every loop", B(26, 0));
         item("MATRIX → FX", "delay, reverb and chorus as destinations", B(30, 0));
-        item("STEMS OVER USB", "8 channels: 6 tracks + FX return", B(34, 0));
-        item("USB LEVEL", "−6 to −24 dB to record without clipping", B(36, 2));
-        item("WEB STEMS", "separate WAVs from a backup, in a ZIP", B(38, 0));
+        item("STEMS OVER USB", "an 8-channel USB audio interface: 6 tracks + FX", B(34, 0));
+        item("USB LEVEL", "−6 to −24 dB to record without clipping", B(38, 0));
+        item("WEB STEMS", "separate WAVs from a backup, in a ZIP", B(39, 2));
         item("FIXES", "CHORD, STRETCH, MUTATE, LEDs, MIDI CC", B(42, 0));
         item("IT IS ALL JIANT", "USB, credits and console with the name", B(46, 0));
         item("HOME CLOSES GEN", "and PLAY / STOP work on that page", B(9, 0));
