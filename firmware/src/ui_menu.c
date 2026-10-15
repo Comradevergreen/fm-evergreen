@@ -34,11 +34,9 @@ static void draw_about_qr(int32_t x, int32_t y)
 enum { MC_TEXT, MC_TITLE, MC_URL };
 typedef struct { const char *text; uint8_t kind; } menu_credit_t;
 static const menu_credit_t MENU_CREDITS[] = {
-    {"H\xFCgelton Instruments", MC_TITLE},  /* Felucca's own: above; these are ours too */
-    {"Leo Kuroshita", MC_TEXT},
+    {"SOUNDS + FONTS", MC_TITLE},
     {"CrispyZebra (PHASE waveforms), the DRUM voices, the Sample Pack: GPL-3.0", MC_TEXT},
     {"Fukiai icon font: MIT", MC_TEXT},
-    {"https://github.com/hugelton", MC_URL},
     {"", MC_TEXT},
     {"DUAL CORE", MC_TITLE},                 /* (JIANT 0.6.71) hal/fm1_multicore.h */
     {"Melodee (keremimo), fm1-x0x (Charles Vestal): GPL-3.0", MC_TEXT},
@@ -115,7 +113,7 @@ static int32_t menu_document(int32_t y, int draw)
         cv_text_r(232, y + 61, &AF_S, __DATE__, T_MID, T_BG);
         cv_text(6, y + 82, &AF_S, "by Juan Jiant, Argentina", T_TEXT);   /* (0.6.96: the project's own) */
         cv_text(6, y + 100, &AF_S, "Free, GPL-3.0-only, no warranty", T_TEXT);
-        cv_text(6, y + 118, &AF_S, "Based on Felucca (H\xFCgelton)", T_TEXT);
+        cv_text(6, y + 118, &AF_S, "Made in Argentina", T_TEXT);
         cv_text(6, y + 138, &AF_S, "github.com", T_MID);
         cv_text(6, y + 156, &AF_S, "/juanjiant-bit", T_MID);
         cv_text(6, y + 174, &AF_S, "/JIANT", T_MID);
@@ -129,7 +127,7 @@ static int32_t menu_document(int32_t y, int draw)
     y = menu_text("Support the work:", y + 4, T_TEXT, draw);
     y = menu_text("ko-fi.com/juanjiant", y, T_MID, draw);
     y = menu_text("cafecito.app/juanjiant (Argentina)", y, T_MID, draw);
-    y = menu_text("Based on Felucca by Leo Kuroshita, H\xFCgelton Instruments (C) 2026, GPL-3.0-only.", y + 4, T_TEXT, draw);
+    y = menu_text("Free software, GPL-3.0-only: the full notices and the sources it builds on travel with the source.", y + 4, T_TEXT, draw);
     y -= 216;
     {   /* (0.6.17) the audio's load since power-on (voice.c load_diag): to tell what happened when it clicked */
         char b[40], n[12];
@@ -159,7 +157,6 @@ static int32_t menu_document(int32_t y, int draw)
     y = menu_text("NO WARRANTY", y, T_TEXT, draw);
     y = menu_text("Full notices in source:", y + 8, T_TEXT, draw);
     y = menu_text("github.com/juanjiant-bit/JIANT", y, T_MID, draw);
-    y = menu_text("github.com/hugelton/Felucca", y, T_MID, draw);
     return y + 4;
 }
 static int32_t menu_scroll_max(void)

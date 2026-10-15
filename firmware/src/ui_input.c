@@ -2142,6 +2142,11 @@ static void ui_input_frame(void)
             for (k = 0; k < 4u; k++)
                 if ((s = panel_enc(EN_K1 + k)) != 0) gen_knob(k, s);
             if ((s = panel_enc(EN_SELECT)) != 0) gen_select(s);
+            if (home == BT_TAP) {                       /* (0.7.0) HOME: done (OCT- too) */
+                ui.confirm = 0;
+                ui.force = 1;
+                go_home();
+            }
             if ((pressed >> panel.btn[B_PLAY]) & 1u) {
                 if (song.playing || chain_busy() || seq_counting()) transport_req = 2;
                 else if (live.mode) chain_play_ui();

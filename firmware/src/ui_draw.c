@@ -1063,7 +1063,8 @@ static void draw_columns(void)
         else str_cpy(val, total ? "--" : "NONE", 8);   /* (0.6.25: an empty list said "--/0") */
         str_cpy(u, "/", 8);
         fmt_int(u + 1, (int32_t)total);
-        if (!total) u[0] = 0;
+        if (!total || (cur + 1u >= 100u && total >= 100u)) u[0] = 0;   /* (0.7.0) "147/155" is too wide for the card: the
+                                                         * number alone past 99 (every engine's presets counted) */
         draw_column(0, "No.", val, u, VAL(0u), -1, ICON_NONE);
         draw_column(1, "ENG", ENGINES[TSEL->eng_req]->name, "", VAL(1u), -1, engine_icon(ENGINES[TSEL->eng_req]->name));
         draw_column(2, "FAV", preset_favorite() ? "ON" : "OFF", "", VAL(2u), -1, ICON_X_STAR);
@@ -1285,7 +1286,7 @@ static void draw_columns(void)
 /* The power-on splash (main.c fm1_main, web/emu felucca_web.c; JIANT 0.5): the maker's signature ("Jiant FM1",
  * tools/gen_signature.py: 24 strokes, 214 points) written in the thermal colours, stroke by stroke as the hand went:
  * the line cold (cyan) where the pen started, hotter along its way (violet, red, orange) to yellow white where it
- * ended, the pen's tip a white point while it writes; under it, small, the version and "based on Felucca". Written over
+ * ended, the pen's tip a white point while it writes; under it, small, the version and "by Juan Jiant". Written over
  * SPL_WRITE ms (splash_write, main.c's splash loop; MENU > ANIM OFF: whole at once). Lines only, the canvas
  * redrawn a step (~700 short lines). In the saved palette (settings_init before it) */
 #include "ui_signature.h"
@@ -1293,7 +1294,7 @@ static void draw_columns(void)
 #define SPL_HOLD 900u                               /* .. then shown whole, before the UI (was 1100; 0.6.51: 500 -> 900) */
 #define SPL_SY 40                                   /* the signature's canvas on the screen (240 x SIG_H + 12) */
 #define SPL_TY 186                                  /* the two lines under it */
-static const char *const SPLASH_LINES[] = {FELUCCA_VERSION, "based on Felucca"};
+static const char *const SPLASH_LINES[] = {FELUCCA_VERSION, "by Juan Jiant"};
 static uint8_t spl_anim;                            /* main.c: 1 = the signature to be written (splash_write) */
 static int32_t sig_seg(uint32_t i)                  /* segment i -> i + 1's length, px (0: a stroke starts at i + 1) */
 {

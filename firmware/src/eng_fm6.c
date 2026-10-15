@@ -477,6 +477,15 @@ static const preset_t FM6_PRESETS[] = {
     {"MARIMBA", {0, 0, 0, 0, 0, 0, 0, 5}, {0, 0, 127, 0}, 0, 0, FX(0, 0, 25, 40), PAT(3)},
     {"ORGAN", {0, 0, 0, 0, 0, 0, 0, 6}, {0, 0, 127, 0}, 0, 0, FX(10, 40, 0, 30), PAT(6)},
     {"PLUCK", {0, 0, 0, 0, 0, 0, 0, 7}, {0, 0, 127, 0}, 0, 0, FX(0, 20, 35, 30), PAT(13)},
+    /* (0.7.0) the factory patches bent a little: an ice bell and a soft bell from BELL, DX keys from TINE EP, a pluck
+     * and wood from PLUCK and MARIMBA, strings from PAD, a hard bass */
+    {"ICE BELL", {0, 0, -20, 0, 0, 0, 45, 1}, {0, 0, 127, 0}, 0, 0, FX(0, 60, 30, 80), PAT(5)},
+    {"DX KEYS", {0, 0, 12, 0, 0, 0, 10, 0}, {0, 0, 127, 0}, 0, 0, FX(0, 40, 25, 40), PAT(6)},
+    {"FM PLUCK", {0, 0, 20, 0, -20, 0, 0, 7}, {0, 0, 127, 0}, 0, 0, FX(0, 20, 45, 35), PAT(3)},
+    {"SOFT BELL", {0, 0, -25, 0, 0, 0, 20, 1}, {0, 0, 127, 0}, 0, 0, FX(0, 20, 35, 75), PAT(7)},
+    {"FM STRINGS", {0, 0, -10, 0, 0, 0, 35, 4}, {0, 0, 127, 0}, 0, 0, FX(0, 55, 25, 65), PAT(5)},
+    {"HARD BASS", {0, 2, 25, 0, 0, 0, 0, 2}, {0, 0, 127, 0}, 0, 1, FX(15, 0, 10, 5), PAT(2)},
+    {"WOOD", {0, 0, -15, 0, 0, 0, 0, 5}, {0, 0, 127, 0}, 0, 0, FX(0, 10, 30, 45), PAT(3)},
 };
 
 static const engine_t ENG_FM6 = {

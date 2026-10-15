@@ -711,7 +711,7 @@ static void dice_sound(track_t *t, uint32_t role, const uint8_t *el)
                                         {"PLUCK", "FLOAT ARP", "SINE KEY", "TINE", "RESO", "BYTE TONE"},
                                         {"WIND", "RAIN", "WHISPER", "METAL", "BYTE BENT", "FLOAT FM"}};
     uint32_t e = el[rng() % 3u], tries, k, n, i, nm = 0, na = 0, en_ = dh.energy;
-    uint8_t m[24], any[24];
+    uint8_t m[32], any[32];
     const engine_t *en;
     for (tries = 0; tries < 6u && (e == t->eng_req || (e == ENGI_FM6 && dice_fm6 >= 2u)); tries++)
         e = el[rng() % 3u];                             /* (another engine than it had, when it can; FM6 twice at most) */

@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.6.99).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.7.0).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 > ⚡ **New in 0.6.85 – 0.6.92: a song generator you steer, a compact sequencer that breathes, a delay that feeds back.**
 > - **GEN (HOME + SELECT)**: a screen of three pages — GENRE (43 genres or RANDOM), SEED, ENERGY, FORM (loop, parts,
@@ -261,7 +261,7 @@ Turning fast sweeps the whole range; turning slowly is fine adjustment. Turn it 
 - **SELECT**: tempo on GLO's pages and the MIXER, the sound's dice on EDIT, everything diced on HOME (after YES).
 - **EDIT held**: INIT / RECALL instead of the voice selector. One-step **UNDO** with GLO held + G4 (SAVE held: OCT+ stores the
   section, OCT− recalls it). **No layer lock.**
-- **USB names**: still "Felucca" so the web editor connects.
+- **USB names**: "JIANT FM" (MIDI and audio), "JIANT Update" while updating; the web editor and the installer take the older "Felucca" too.
 
 </details>
 
@@ -524,6 +524,24 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### v0.7.0
+- **46 new factory presets**, a palette the song generator and the player share: ANALOG JUNO PAD, REESE, HOOVER, DUB
+  STAB, CELLO, ARP PLUCK, MOOG LEAD, DARK PAD, GLASS KEYS, ORGAN SQR; PHASE CZ PIANO, GLASS PAD, DIGI STAB, SYN BASS,
+  VOX PAD, HARP, PD LEAD, RING KEYS; LOFI CHIP PAD, GB ARP, TRI BASS, SOFT CHIP, SAW CHIP; VOICE OOH PAD, CHANT, TALK
+  BOX; WHEEL DUB ORGAN, SOFT KEYS, CHURCH, WAVE ORGAN, REED BASS; NOISE SEA, HISS PAD, CRACKLE, TAPE AIR; FM6 ICE
+  BELL, DX KEYS, FM PLUCK, SOFT BELL, FM STRINGS, HARD BASS, WOOD. Appended: every stored preset number stays.
+- **GEN: the sounds from that palette** (every recipe's words point at the new presets first: a pad is a JUNO PAD or a
+  GLASS PAD, a stab a DUB STAB or a DIGI STAB, a lead a MOOG LEAD or a PD LEAD, a texture the SEA or TAPE AIR ..), and
+  **melodies that hold together**: the line stays in its octave (a leap past a sixth takes the octave nearer the last
+  note), the motif follows the chord the nearer way (a fourth up is a fifth down, never an octave's worth of leap, and
+  less often), every phrase ends on a chord tone.
+- **GEN: HOME closes the screen** (OCT− still does).
+- **The device is JIANT everywhere it speaks**: USB MIDI and audio "JIANT FM" (the updater "JIANT Update"), the
+  editor's version string "JIANT v0.7.0", the splash, ABOUT, CREDITS, the console and the crash screen. The web
+  editor and the installer accept both names, so an older firmware still connects.
+- **Fix (a community report): browsing presets switched SCL > CHORD off.** A sound load now keeps CHORD, VOICING and
+  STRUM, and with them C.LEN, CHANCE and MUTATE: the sequencer's settings, not the sound's.
 
 ### v0.6.99
 - **FX > PUNCH: the punch-in effects' sequencer.** The lane that records them gets a page: **LEN** 1 … 64 steps, **RES**
