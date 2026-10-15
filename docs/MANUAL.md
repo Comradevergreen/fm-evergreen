@@ -1200,7 +1200,7 @@ closes it (settings are saved then).
 | AUDIO | CLICK LEVEL | LOW, MID, HIGH |
 | AUDIO | COUNT-IN | OFF, 1 BAR, 2 BARS |
 | AUDIO | TRACKS | **4** (default), 6 |
-| SYSTEM | USB | CONSOLE (the serial console with stereo USB audio, the default; was USB SERIAL ON), STEREO (audio + MIDI only, class 0; was OFF: helps macOS 13–15 see the USB audio input), STEMS (0.7.1: an 8-channel audio input, see "Stems" below) |
+| SYSTEM | USB | CONSOLE (the serial console with stereo USB audio, the default; was USB SERIAL ON), STEREO (audio + MIDI only, class 0; was OFF: helps macOS 13–15 see the USB audio input), STEMS (0.7.1: an 8-channel audio input, see "Stems" below), IN+OUT (0.7.5: stereo audio both ways, see "USB audio in" below) |
 | SYSTEM | RESTORE LAST | **OFF** (default: no autosave, power-on at zero), ON (the last session back at power-on) |
 | SYSTEM | LOAD | ECO, LITE, **FULL** (default) |
 | SYSTEM | CALIBRATION | OCT+ opens HARDWARE CALIBRATION (teach each button and knob) |
@@ -1262,6 +1262,24 @@ Two ways to get each track on its own, to post-process them one by one in a DAW:
   the DELAY, REVERB and CHORUS (the other tracks' sends left out), plus the whole MIX (the master as the FM-1 plays it),
   all the same length, 16-bit 44.1 kHz stereo, in one ZIP: T1.wav .. T6.wav and MIX.wav (a silent track is left out).
   Faster than real time, no USB limits, nothing on the device.
+
+### USB audio in (0.7.5, test version)
+
+**MENU > SYSTEM > USB > IN+OUT** makes the FM-1 a USB audio output of the computer or the phone as well as an input:
+the device re-enumerates (as with STEMS, the serial console is off), and the host now lists "JIANT FM" as a speaker,
+stereo, 16 bit, 44.1 kHz. Whatever the host plays to it comes into the **last track** (T6, or T4 with TRACKS 4) and is
+mixed like that track's sound:
+
+- its **LEVEL** sets the input's level, its **PAN** works as a balance, its **CHORUS, DELAY and REVERB** sends take the
+  input into the effects (from the left + right sum), **DUCK** ducks it, its **MUTE** and the mute layer silence it;
+- the track's own engine still plays (an empty pattern leaves the input alone); its DIST and filter are not on the input;
+- the recording side is the stereo master as with STEREO, with the input in it.
+
+Choose the FM-1 as the output in the host's sound settings (or in the DAW / the app), set 44.1 kHz, and play. The
+FM-1 follows the host's clock (it reads the audio a little faster or slower, ~3.6 ms behind); if the host stops
+sending, the input fades out and comes back when it resumes. Some hosts make a newly connected USB audio device the
+default output: that is why IN+OUT is a choice of its own, not on by default. Test version: tell us how it behaves
+with your computer or phone.
 
 ---
 

@@ -119,6 +119,32 @@ static struct {
     uint32_t fill_lo, fill_hi;                   /* range of fill_min since the stream started */
     uint32_t rate_sets;                          /* SET_CUR sampling frequency requests */
 } uac;
+/* (0.7.5) MENU > SYSTEM > USB IN+OUT: the FM-1 is the host's audio output too (UAC1, 2 ch 16 bit 44.1 kHz, EP4 OUT
+ * isochronous adaptive): TIMER5 takes each 1 ms packet into ui_ring (uin_rx), the audio ISR reads it at its own clock
+ * (uac_in_fill, a linear interpolation whose step follows the ring's fill: the host's 44,100 Hz against the I2S's
+ * ~44,117.6) into fx.c's uin_l / uin_r, which the last live track mixes in (its LEVEL, PAN, sends, MUTE) */
+#define UI_N 512u                /* ring, frames (L | R << 16); a power of two */
+#define UI_TARGET 160u           /* the fill the step steers to: ~3.6 ms (a render's 128 and a packet's 45 in hand) */
+#define UI_MAXF 46u              /* frames in the largest packet a host sends at 44.1 kHz (45, one spare) */
+#define UI_STEP_MAX 650          /* the step's range: +-1 % of 65536 (a host clock far off: the ring re-primes) */
+static uint32_t ui_ring[UI_N] __attribute__((section(".pool")));   /* (2 KiB) */
+static volatile uint32_t ui_w, ui_r;
+static uint32_t ep4rx[UI_MAXF + 2u] __attribute__((aligned(4)));
+static volatile uint8_t usb_duplex;                      /* the device presents the audio output too (usb_duplex_switch) */
+static struct {
+    volatile uint8_t alt;        /* the output's streaming setting: 1 = the host plays to us */
+    uint8_t go;                  /* the reader runs (primed: UI_TARGET frames were in hand) */
+    uint8_t e0_rx;               /* SET_CUR to EP4 OUT: its data stage pending (taken, ignored: one rate) */
+    volatile uint8_t gen;        /* stream starts and stops (TIMER5); the reader drops the ring on a new one */
+    uint8_t gen_seen;            /* (the reader's: only it moves ui_r) */
+    uint32_t ph;                 /* the reader's phase between ring frames (Q16) */
+    int32_t step;                /* frames a sample, Q16 (65536: the host's rate is ours) */
+    int32_t fs;                  /* the fill, smoothed (Q8 frames) */
+    int32_t g;                   /* the fade in / out, Q15 */
+    int32_t last_l, last_r;      /* the last frame read (an underrun fades from it) */
+    uint32_t pkts, frames, overruns, underruns, starts, bad;   /* bad: a packet not of whole frames / too long */
+} uin;
+#define USB_DUPLEX usb_duplex
 #if FELUCCA_UAC_48K
 #include "uac_fir.h"
 /* the resampler's input history: the last 32 frames, written twice so a window of UAC_FIR_N never wraps */
@@ -261,6 +287,23 @@ static void midi_out_event(uint32_t pkt)            /* from the audio ISR */
 #define UAC_MAXP8 (45u * 16u)
 #define D_AC8(a) D_AC_CH(a, 8, 0x00)
 #define D_AS8(s) D_AS_FMT(s, D_FMT8, UAC_MAXP8)
+/* (0.7.5) MENU > USB IN+OUT: the input as D_AC's, plus the host's output: input terminal 3 (USB streaming, L R) ->
+ * output terminal 4 (speaker), and its streaming interface (EP4 OUT isochronous adaptive, 44.1 kHz only) */
+#define UIN_MAXP (UI_MAXF * 4u)
+#define D_AC_DUP(a)                                                                                  \
+    9, 4, (a), 0, 0, 1, 1, 0, 0,                                                                     \
+    11, 0x24, 1, 0x00, 0x01, 53, 0, 3, (a) + 1, (a) + 2, (a) + 3,   /* AC header: MIDI, input, output */ \
+    12, 0x24, 2, 1, 0x03, 0x06, 0, 2, 0x03, 0x00, 0, 0,    /* input terminal 1: line, L R */            \
+    9, 0x24, 3, 2, 0x01, 0x01, 0, 1, 0,                    /* output terminal 2: USB streaming, from 1 */ \
+    12, 0x24, 2, 3, 0x01, 0x01, 0, 2, 0x03, 0x00, 0, 0,    /* input terminal 3: USB streaming, L R */   \
+    9, 0x24, 3, 4, 0x01, 0x03, 0, 3, 0,                    /* output terminal 4: speaker, from 3 */
+#define D_AS_OUT(s)                                                                                  \
+    9, 4, (s), 0, 0, 1, 2, 0, 0,                           /* the output's streaming, alt 0 */          \
+    9, 4, (s), 1, 1, 1, 2, 0, 0,                           /* alt 1: the host plays */                  \
+    7, 0x24, 1, 3, 1, 0x01, 0x00,                          /* AS general: terminal 3, PCM */            \
+    11, 0x24, 2, 1, 2, 2, 16, 1, 0x44, 0xAC, 0x00,         /* type I: 2 ch, 16 bit, 44100 */            \
+    9, 5, 0x04, 0x09, UIN_MAXP & 0xFF, UIN_MAXP >> 8, 1, 0, 0,   /* EP4 OUT isochronous adaptive, 1 ms */ \
+    7, 0x25, 1, 0x00, 0, 0, 0,                             /* CS endpoint: no controls */
 #else
 #define D_AC(a) 9, 4, (a), 0, 0, 1, 1, 0, 0, 9, 0x24, 1, 0x00, 0x01, 9, 0, 1, (a) + 1,
 #define D_AS(s)
@@ -282,6 +325,8 @@ static void midi_out_event(uint32_t pkt)            /* from the audio ISR */
 #if FELUCCA_UAC
 #define D_AUDIO8(a) D_AC8(a) D_MIDI((a) + 1) D_AS8((a) + 2)   /* (0.7.1) the stems: 8 channels */
 #define AUD_LEN8 (92 + 63 + FMT_LEN8)
+#define D_AUDIO_DUP(a) D_AC_DUP(a) D_MIDI((a) + 1) D_AS((a) + 2) D_AS_OUT((a) + 3)   /* (0.7.5) in + out */
+#define AUD_LEN_DUP (92 + 63 + FMT_LEN + 22 + 52)
 #endif
 #define D_CDC(c)                                                                                     \
     D_IAD((c), 2, 2, 2, 1),                                /* IAD: CDC ACM */                           \
@@ -315,8 +360,14 @@ static const uint8_t CFG_DESC_PLAIN8[] = {D_CFG(CFG_LEN_PLAIN8, AUD_NIF), D_AUDI
 typedef char cfg_plain8_len_ok[sizeof CFG_DESC_PLAIN8 == CFG_LEN_PLAIN8 ? 1 : -1];
 static volatile uint8_t usb_stems;                         /* the device presents the 8 channels (fx.c fx_stems feeds them) */
 #define USB_STEMS usb_stems
+/* (0.7.5) MENU > USB IN+OUT: the plain device with the audio output as well (bcdDevice + 0x80), no console */
+#define CFG_LEN_DUP (9 + AUD_LEN_DUP)
+static const uint8_t DEV_DESC_DUP[18] = {D_DEV_LO(0x0110, 0, 0, 0, BCD_LO(0) + 0x80)};
+static const uint8_t CFG_DESC_DUP[] = {D_CFG(CFG_LEN_DUP, AUD_NIF + 1), D_AUDIO_DUP(0)};
+typedef char cfg_dup_len_ok[sizeof CFG_DESC_DUP == CFG_LEN_DUP ? 1 : -1];
 #else
 #define USB_STEMS 0
+#define USB_DUPLEX 0
 #endif
 #if FELUCCA_CDC
 #define CFG_LEN (9 + 8 + AUD_LEN + CDC_LEN)
@@ -371,6 +422,7 @@ static int get_desc(uint32_t wvalue, const uint8_t **d, uint16_t *l)
     case 1:
 #if FELUCCA_UAC
         if (USB_STEMS) { *d = DEV_DESC_PLAIN8; *l = 18; return 1; }
+        if (USB_DUPLEX) { *d = DEV_DESC_DUP; *l = 18; return 1; }
 #endif
         *d = USB_CDC_ON ? DEV_DESC : DEV_DESC_PLAIN;
         *l = 18;
@@ -378,6 +430,7 @@ static int get_desc(uint32_t wvalue, const uint8_t **d, uint16_t *l)
     case 2:
 #if FELUCCA_UAC
         if (USB_STEMS) { *d = CFG_DESC_PLAIN8; *l = (uint16_t)sizeof CFG_DESC_PLAIN8; return 1; }
+        if (USB_DUPLEX) { *d = CFG_DESC_DUP; *l = (uint16_t)sizeof CFG_DESC_DUP; return 1; }
 #endif
         *d = USB_CDC_ON ? CFG_DESC : CFG_DESC_PLAIN;
         *l = (uint16_t)(USB_CDC_ON ? sizeof CFG_DESC : sizeof CFG_DESC_PLAIN);
@@ -462,6 +515,33 @@ static void uac_stream(uint32_t alt)                    /* SET_INTERFACE, config
     }
 }
 
+/* (0.7.5) MENU > USB IN+OUT: EP4 OUT's buffer, isochronous mode, a fresh toggle (configuration; out of line: the SIE
+ * writes' waits are not in the TIMER5 body) */
+static __attribute__((noinline)) void uin_ep_config(void)
+{
+    fm1_usb_ep4_rxbuf(ep4rx);
+    sie_wr(S_INDEX, 4);
+    sie_wr(S_RXMAXP, 0xFF);
+    sie_wr(S_RXCSR1, 0x90);
+    sie_wr(S_RXCSR2, 0x40);
+}
+/* (0.7.5) MENU > USB IN+OUT: the host starts (alt 1) or stops (alt 0) playing to us: the ring empties, the reader
+ * waits for UI_TARGET frames again (uac_in_fill) */
+static __attribute__((noinline)) void uin_stream(uint32_t alt)   /* (its SIE writes: out of the TIMER5 body) */
+{
+    uin.alt = 0;
+    RING_PUBLISH();
+    uin.gen++;                                          /* the reader drops what the ring holds (ui_r is its own) */
+    if (alt) {
+        uin.starts++;
+        sie_wr(S_INDEX, 4);
+        sie_wr(S_RXCSR1, 0x90);                         /* ClrDataTog + flush, as EP1 / EP3 (ep1_config) */
+        sie_wr(S_RXCSR2, 0x40);                         /* ISO */
+    }
+    RING_PUBLISH();
+    uin.alt = (uint8_t)(alt != 0u);
+}
+
 /* SET_CUR sampling frequency (any time: before or after SET_INTERFACE; a bus reset goes back to 44.1).
  * 48 kHz when built with it and asked for (the nearer of the two), else 44.1. A change restarts the
  * stream: silence packets until the next render primes the ring at the new rate. */
@@ -518,8 +598,11 @@ no_cdc:;
     sie_wr(S_INDEX, 4);
     sie_wr(S_TXMAXP, 0xFF);
     uac_ep4_reset();
+    if (USB_DUPLEX)                                     /* (0.7.5) EP4 OUT: the host's audio, isochronous */
+        uin_ep_config();
     fm1_usb_ep_enable(1u << 4);
     uac_stream(0);
+    uin_stream(0);
 #endif
 }
 
@@ -574,6 +657,7 @@ static void ep0_service(void)
 #endif
 #if FELUCCA_UAC
         uac.e0_rx = 0;
+        uin.e0_rx = 0;
 #endif
         return;
     }
@@ -585,6 +669,7 @@ static void ep0_service(void)
 #endif
 #if FELUCCA_UAC
         uac.e0_rx = 0;
+        uin.e0_rx = 0;
 #endif
     }
     if (usb.e0_tx) {
@@ -610,6 +695,10 @@ static void ep0_service(void)
         if (sie_rd(S_COUNT0) >= 3u)
             uac_rate_set(ep0buf[0] | (uint32_t)ep0buf[1] << 8 | (uint32_t)ep0buf[2] << 16);
         uac.e0_rx = 0;
+        goto ack;
+    }
+    if (uin.e0_rx) {                                    /* (0.7.5) SET_CUR to EP4 OUT: one rate, taken and ignored */
+        uin.e0_rx = 0;
         goto ack;
     }
 #endif
@@ -643,8 +732,10 @@ static void ep0_service(void)
         else
             sie_wr(S_INTRRX1E, 0);
 #if FELUCCA_UAC
-        if (usb.config != 1u)
+        if (usb.config != 1u) {
             uac_stream(0);
+            uin_stream(0);
+        }
         uac_rate_set(UAC_RATE);                         /* a new configuration starts at 44.1 */
 #endif
         goto ack;
@@ -663,15 +754,19 @@ static void ep0_service(void)
             uac_stream(wvalue);
             goto ack;
         }
+        if (USB_DUPLEX && s[4] == UAC_AS_IF + 1u && wvalue <= 1u && usb.config) {   /* (0.7.5) the output */
+            uin_stream(wvalue);
+            goto ack;
+        }
 #endif
         if (wvalue == 0)
             goto ack;
         goto stall;
     case 0x810A:
 #if FELUCCA_UAC
-        if (s[4] == UAC_AS_IF) {
+        if (s[4] == UAC_AS_IF || (USB_DUPLEX && s[4] == UAC_AS_IF + 1u)) {
             static uint8_t alt;
-            alt = uac.alt;
+            alt = s[4] == UAC_AS_IF ? uac.alt : uin.alt;
             e0_send(&alt, 1, wlength);
             return;
         }
@@ -681,7 +776,7 @@ static void ep0_service(void)
     case 0x0201: {                                      /* CLEAR_FEATURE(ENDPOINT_HALT): data toggle reset */
         uint32_t ep = s[4] & 0x0Fu, last = USB_CDC_ON ? 3u : 1u;
 #if FELUCCA_UAC
-        if (wvalue == 0 && s[4] == 0x84u)
+        if (wvalue == 0 && (s[4] == 0x84u || (USB_DUPLEX && s[4] == 0x04u)))
             goto ack;                                   /* isochronous: no halt, no toggle */
 #endif
         if (wvalue != 0 || ep > last)
@@ -723,10 +818,13 @@ static void ep0_service(void)
 #endif
 #if FELUCCA_UAC
     case 0x2201:                                        /* SET_CUR, endpoint: sampling frequency */
-        if (s[4] != 0x84u || s[3] != 1u)
+        if ((s[4] != 0x84u && !(USB_DUPLEX && s[4] == 0x04u)) || s[3] != 1u)
             goto stall;
         if (wlength) {
-            uac.e0_rx = 1;
+            if (s[4] == 0x04u)                          /* (0.7.5) the output: 44.1 only, the value ignored */
+                uin.e0_rx = 1;
+            else
+                uac.e0_rx = 1;
             sie_wr(S_INDEX, 0);
             sie_wr(S_CSR0, 0x40);                       /* the 3 bytes follow */
             return;
@@ -739,10 +837,10 @@ static void ep0_service(void)
 #if FELUCCA_UAC_48K
         static const uint8_t RATE48[3] = {48000u & 0xFF, (48000u >> 8) & 0xFF, 48000u >> 16};
 #endif
-        if (s[4] != 0x84u || s[3] != 1u)
+        if ((s[4] != 0x84u && !(USB_DUPLEX && s[4] == 0x04u)) || s[3] != 1u)   /* (0.7.5: the output, 44.1) */
             goto stall;
 #if FELUCCA_UAC_48K
-        if (s[1] == 0x83u || (s[1] == 0x81u && uac.r48)) {
+        if (s[4] == 0x84u && (s[1] == 0x83u || (s[1] == 0x81u && uac.r48))) {
             e0_send(RATE48, 3, wlength);
             return;
         }
@@ -1272,6 +1370,121 @@ static void uac_service(void)
     fm1_usb_ep4_send(ep4tx, n * 4u * UA_FW);
     sie_wr(S_TXCSR1, 0x01);                             /* TxPktRdy (and UnderRun cleared) */
 }
+
+/* (0.7.5) MENU > USB IN+OUT, TIMER5: a packet the host played to us (n bytes of L | R << 16 frames) into ui_ring;
+ * a full ring drops it (the reader has stopped: it re-primes) */
+static __attribute__((noinline)) void uin_take(const uint32_t *p, uint32_t n)   /* (not in the TIMER5 body: its copy loop) */
+{
+    uint32_t w = ui_w, i, f = n / 4u;
+    if ((n & 3u) || f > UI_MAXF) {
+        uin.bad++;
+        if (f > UI_MAXF)
+            f = UI_MAXF;
+    }
+    if (UI_N - (w - ui_r) < f) {
+        uin.overruns++;
+        return;
+    }
+    for (i = 0; i < f; i++)
+        ui_ring[(w + i) & (UI_N - 1u)] = p[i];
+    RING_PUBLISH();
+    ui_w = w + f;
+    uin.pkts++;
+    uin.frames += f;
+}
+static __attribute__((noinline)) void uin_rx(void)
+{
+    uint32_t csr, n;
+    sie_wr(S_INDEX, 4);
+    csr = sie_rd(S_RXCSR1) | (sie_rd(S_RXCSR2) << 8);
+    if (!(csr & 1u))                                    /* RxPktRdy */
+        return;
+    n = sie_rd(S_RXCOUNT1) | (sie_rd(S_RXCOUNT2) << 8);
+    if (n > sizeof ep4rx)
+        n = sizeof ep4rx;
+    fm1_usb_rx_sync();
+    uin_take(ep4rx, n);
+    csr = (csr & ~0x164u) | 0x10u;                      /* serviced, as EP1 / EP3 (ep1_rx); ISO kept */
+    sie_wr(S_RXCSR1, csr & 0xFFu);
+    sie_wr(S_RXCSR2, csr >> 8);
+}
+
+#ifdef UIN_SRC
+/* (0.7.5) the audio ISR, before the mix: n frames of the host's audio into fx.c's uin_l / uin_r (Q15), read at the
+ * I2S clock: a linear interpolation between ring frames, its step steered by the ring's fill (smoothed over ~0.4 s)
+ * toward UI_TARGET: the host's rate, whatever the clocks. Primed: UI_TARGET frames in hand; it fades in. Short of
+ * frames (the host stopped, a glitch): it fades out from the last frame and primes again. uin_on: this block holds it */
+static __attribute__((noinline)) void uac_in_fill(uint32_t n)
+{
+    uint32_t r = ui_r, fill = ui_w - r, i, need, ph = uin.ph;
+    int32_t step = uin.step, g = uin.g;
+    if (!uin.alt || !usb.config) {
+        uin.go = 0;
+        uin_on = 0;
+        return;
+    }
+    if (uin.gen_seen != uin.gen) {                      /* a new stream: nothing of the last one */
+        uin.gen_seen = uin.gen;
+        uin.go = 0;
+        RING_PUBLISH();
+        ui_r = r = ui_w;
+        fill = 0;
+    }
+    if (!uin.go) {
+        if (fill < UI_TARGET) {
+            uin_on = 0;
+            return;
+        }
+        uin.go = 1;
+        ph = 0;
+        step = 65536;
+        g = 0;
+        uin.fs = (int32_t)fill << 8;
+    }
+    need = (uint32_t)(((uint64_t)ph + (uint64_t)(uint32_t)step * n) >> 16) + 2u;
+    RING_PUBLISH();                                     /* the slots after the index */
+    if (fill < need) {                                  /* short: fade out from the last frame, prime again */
+        int32_t d = g / (int32_t)n + 1;
+        uin.underruns++;
+        uin.go = 0;
+        for (i = 0; i < n; i++) {
+            g = g > d ? g - d : 0;
+            uin_l[i] = (uin.last_l * g) >> 15;
+            uin_r[i] = (uin.last_r * g) >> 15;
+        }
+        uin.g = 0;
+        uin_on = 1;
+        return;
+    }
+    for (i = 0; i < n; i++) {
+        uint32_t a = ui_ring[r & (UI_N - 1u)], b = ui_ring[(r + 1u) & (UI_N - 1u)], f = ph & 0xFFFFu;
+        int32_t al = (int16_t)a, ar = (int16_t)(a >> 16), bl = (int16_t)b, br = (int16_t)(b >> 16);
+        int32_t l = al + (((bl - al) * (int32_t)f) >> 16), rr = ar + (((br - ar) * (int32_t)f) >> 16);
+        if (g < 32767)
+            g = g + 1024 < 32767 ? g + 1024 : 32767;    /* (a fade in over ~32 frames) */
+        uin_l[i] = (l * g) >> 15;
+        uin_r[i] = (rr * g) >> 15;
+        uin.last_l = l;
+        uin.last_r = rr;
+        ph += (uint32_t)step;
+        r += ph >> 16;
+        ph &= 0xFFFFu;
+    }
+    RING_PUBLISH();
+    ui_r = r;
+    fill = ui_w - r;
+    uin.fs += (((int32_t)fill << 8) - uin.fs) >> 7;     /* (a block a ~0.7 ms: ~90 ms; the packets' saw tooth averaged) */
+    {
+        int32_t e = (uin.fs >> 8) - (int32_t)UI_TARGET;   /* more in hand than wanted: read faster */
+        step = 65536 + (e > UI_STEP_MAX ? UI_STEP_MAX : e < -UI_STEP_MAX ? -UI_STEP_MAX : e);
+    }
+    uin.ph = ph;
+    uin.step = step;
+    uin.g = g;
+    uin_on = 1;
+}
+#define UAC_UIN 1                  /* (audio.c: a build with fx.c and usb.c reads the host's audio before the mix) */
+#endif
 #endif
 
 static void usb_poll(void)                              /* TIMER5 ISR, 2 kHz */
@@ -1339,6 +1552,8 @@ static void usb_poll(void)                              /* TIMER5 ISR, 2 kHz */
         uac.e0_rx = 0;
         uac_stream(0);
         uac_rate_set(UAC_RATE);
+        uin.e0_rx = 0;
+        uin_stream(0);
 #endif
         fm1_usb_ep0_buf(ep0buf);
         sie_wr(S_INTRUSBE, 0x07);
@@ -1365,6 +1580,8 @@ static void usb_poll(void)                              /* TIMER5 ISR, 2 kHz */
 #endif
 #if FELUCCA_UAC
     uac_service();
+    if (usb.config && uin.alt)                          /* (0.7.5) the host's audio: every poll (a 1 ms packet each */
+        uin_rx();                                       /* other poll: an isochronous one not taken is lost) */
 #endif
 }
 
@@ -1440,5 +1657,22 @@ static __attribute__((unused)) void usb_stems_switch(uint32_t on)
     usb.config = 0;
     uac.go = 0;                                         /* the ring restarts in the new frame size */
     usb_stems = (uint8_t)on;
+}
+/* (0.7.5) MENU > USB IN+OUT: re-enumerates with the audio output as well (on) or without it, as usb_stems_switch */
+static __attribute__((unused)) void usb_duplex_switch(uint32_t on)
+{
+    on = on != 0;
+    if (on == usb_duplex)
+        return;
+    if (usb.up) {
+        usb.up = 0;
+        RING_PUBLISH();
+        fm1_usb_off();
+    }
+    usb.config = 0;
+    uac.go = 0;
+    uin.alt = 0;
+    uin.gen++;
+    usb_duplex = (uint8_t)on;
 }
 #endif
