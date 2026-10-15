@@ -145,25 +145,11 @@ function specimen(f,t,A,P,cut){
   const g=x.createRadialGradient(P.cx,P.cy,S*.3,P.cx,P.cy,S*(.95+.2*A.rms));
   g.addColorStop(0,`rgba(90,60,255,${.08+.16*A.low})`);g.addColorStop(.7,`rgba(255,62,165,${.03+.07*A.mid})`);g.addColorStop(1,'rgba(0,0,0,0)');
   x.fillStyle=g;x.fillRect(P.cx-S*1.3,P.cy-S*1.3,S*2.6,S*2.6);
-  /* the cytoplasm between the membrane and the screen */
-  membranePath(P,t,A,46,0);x.fillStyle='rgba(8,6,16,.86)';x.fill();
-  x.strokeStyle=C.line;x.lineWidth=1.6;x.globalAlpha=P.fade;x.stroke();
-  membranePath(P,t,A,34,2);x.globalAlpha=.35*P.fade;x.lineWidth=1;x.stroke();x.globalAlpha=1;
-  /* cilia on the membrane, waving faster with the highs */
-  x.strokeStyle=C.line;x.lineWidth=1;x.globalAlpha=.75*P.fade;
-  const R=S/2+46;
-  for(let i=0;i<96;i++){const a=i/96*TAU, ca=Math.cos(a), sa=Math.sin(a);
-    const sq=Math.pow(Math.pow(Math.abs(ca),5)+Math.pow(Math.abs(sa),5),-1/5);
-    const w=1+.032*Math.sin(3*a+t*.9)+.02*Math.sin(7*a-t*1.4)+.012*Math.sin(11*a+t*2)+.04*A.kick*Math.sin(5*a)+.015*A.low;
-    const r=R*sq*w, aa=a+P.rot, px=P.cx+Math.cos(aa)*r, py=P.cy+Math.sin(aa)*r;
-    const wv=Math.sin(t*(5+4*A.high)+i*.6)*.5, L=10+8*A.mid;
-    const ex=Math.cos(aa+wv), ey=Math.sin(aa+wv);
-    x.beginPath();x.moveTo(px,py);x.lineTo(px+ex*L,py+ey*L);x.stroke();}
-  x.globalAlpha=1;
-  /* organelles drifting in the cytoplasm */
-  for(let i=0;i<10;i++){const a=i/10*TAU+t*.05*(i%2?1:-1), sq=1.08, r=(S/2+20)*sq;
-    const px=P.cx+Math.cos(a+P.rot)*r*(1+.03*Math.sin(t+i)), py=P.cy+Math.sin(a+P.rot)*r*(1+.03*Math.cos(t*.7+i));
-    x.strokeStyle=[C.mag,C.orange,C.cyan,C.yellow][i%4];x.lineWidth=1.2;x.beginPath();x.arc(px,py,3+2*(A.trk[i%6]||0)*3,0,TAU);x.stroke();}
+  /* a dark backing a little larger than the screen */
+  x.save();x.translate(P.cx,P.cy);x.rotate(P.rot);x.scale(P.sc,P.sc);
+  {const h=P.sw/2+14, rr=34;x.beginPath();x.moveTo(-h+rr,-h);x.arcTo(h,-h,h,h,rr);x.arcTo(h,h,-h,h,rr);x.arcTo(-h,h,-h,-h,rr);x.arcTo(-h,-h,h,-h,rr);x.closePath();
+   x.fillStyle='rgba(8,6,16,.92)';x.fill();x.strokeStyle=C.line;x.globalAlpha=.35*P.fade;x.lineWidth=1/P.sc;x.stroke();x.globalAlpha=1;}
+  x.restore();
   /* the screen, rounded, as the firmware drew it */
   x.save();x.translate(P.cx,P.cy);x.rotate(P.rot);x.scale(P.sc,P.sc);
   const h=P.sw/2, rr=26;
@@ -205,8 +191,8 @@ function beings(f,t,A,P){
 }
 
 /* ---------- the words: a caption and the specimen's data, drawn as the landing tags its protozoa ---------- */
-const ORGAN={JIANT:'organismo entero',GEN:'núcleo',SONIDOS:'citoplasma',SECUENCIA:'núcleo',FX:'red nerviosa',
-  USB:'membrana',DRUMS:'vacuola contráctil',NOVEDADES:'ocelo',MIDI:'cilios',FIX:'metabolismo'};
+const ORGAN={JIANT:'whole organism',GEN:'nucleus',SOUNDS:'cytoplasm',SEQUENCE:'nucleus',FX:'nervous net',
+  USB:'membrane',DRUMS:'contractile vacuole',NEWS:'eyespot',MIDI:'cilia',FIXES:'metabolism'};
 const GLYPH='▓▒░<>/\\|=+*#%01';
 function decode(s,p,f){let o='';const n=s.length;for(let i=0;i<n;i++){const q=p*n*1.3-i;o+=q>=1||s[i]===' '?s[i]:q>0?GLYPH[(f+i*7)%GLYPH.length]:'';}return o;}
 function fitFont(lines,size,wmax){for(;size>26;size-=2){x.font=`400 ${size}px ${DISPLAY}`;if(Math.max(...lines.map(l=>x.measureText(l).width+l.length))<=wmax)break;}return size;}
@@ -257,12 +243,12 @@ function cover(t,A){
   const X=64,Y=300,p=Math.min(1,t/1.2);
   veil(X+420,Y+180,640,420);x.globalAlpha=p;
   x.fillStyle=C.cyan;x.beginPath();x.arc(X+16,Y-8,16,0,TAU);x.fill();x.textAlign='center';text('S',X+16,Y-2,'600 17px "IBM Plex Mono"',C.void);x.textAlign='left';
-  text('FIRMWARE LIBRE PARA EL M-VAVE FM1',X+44,Y-1,'500 18px "IBM Plex Mono"',C.cyan,3);
+  text('FREE FIRMWARE FOR THE M-VAVE FM1',X+44,Y-1,'500 18px "IBM Plex Mono"',C.cyan,3);
   shadowed(()=>text('JIANT',X,Y+150,`400 150px ${DISPLAY}`,C.line,3));
   x.save();x.shadowColor=`rgba(255,159,210,${.4+.5*A.low})`;x.shadowBlur=24;text('FM',X,Y+300,`400 150px ${DISPLAY}`,heatGrad(X,X+380,true),3);x.restore();
-  text('NOVEDADES  ·  AYER  Y  HOY',X,Y+366,'500 22px "IBM Plex Mono"',C.line,6);
-  text(D.version+' · LA ÚLTIMA ACTUALIZACIÓN',X,Y+420,'600 22px "IBM Plex Mono"',C.yellow,3);
-  text('todo lo que ves en pantalla sigue al sonido',X,Y+460,`400 28px ${BODY}`,'#d6cfe6');
+  text('WHAT\'S NEW  ·  YESTERDAY  AND  TODAY',X,Y+366,'500 22px "IBM Plex Mono"',C.line,6);
+  text(D.version+' · THE LATEST UPDATE',X,Y+420,'600 22px "IBM Plex Mono"',C.yellow,3);
+  text('everything on screen follows the sound',X,Y+460,`400 28px ${BODY}`,'#d6cfe6');
   x.globalAlpha=1;
 }
 const thumbs=[];
@@ -274,7 +260,7 @@ function list(sc,f,t,A){
   const el=t-sc.t, cols=4, X0=60, Y0=170, cw=430, ch=150, gx=20, gy=14;
   x.globalAlpha=Math.min(1,el*3);
   shadowed(()=>text(decode(sc.title[0],el*1.5,f),X0,128,`400 46px ${DISPLAY}`,C.line,2));
-  text('JIANT FM '+D.version+' · libre y de código abierto · se instala desde el navegador',X0+2,158,'500 16px "IBM Plex Mono"',C.cyan,3);
+  text('JIANT FM '+D.version+' · free and open source · installs from the browser',X0+2,158,'500 16px "IBM Plex Mono"',C.cyan,3);
   x.globalAlpha=1;
   D.list.forEach((it,i)=>{
     const appear=(el-.8-i*D.beat*.9); if(appear<=0)return;
@@ -303,12 +289,12 @@ function outro(t0,f,t,A){
   veil(X+420,560,640,560);x.globalAlpha=q(0);
   x.fillStyle=C.cyan;x.beginPath();x.arc(X+16,Y-8,16,0,TAU);x.fill();x.textAlign='center';text('J',X+16,Y-2,'600 17px "IBM Plex Mono"',C.void);x.textAlign='left';
   text('JIANT · BUENOS AIRES',X+44,Y-1,'500 18px "IBM Plex Mono"',C.cyan,3);
-  shadowed(()=>text('GRACIAS A TODOS',X,Y+72,`400 58px ${DISPLAY}`,C.line,2));
+  shadowed(()=>text('THANK YOU ALL',X,Y+72,`400 58px ${DISPLAY}`,C.line,2));
   x.globalAlpha=q(.5);
-  ['Espero que disfruten estas mejoras.','Si les gusta mi trabajo, denme una mano:','así puedo seguir creciendo para ustedes.'].forEach((l,i)=>shadowed(()=>text(l,X,Y+130+i*42,`400 32px ${BODY}`,'#d6cfe6')));
+  ['I hope you enjoy these improvements.','If you like my work, give me a hand:','so I can keep growing for you.'].forEach((l,i)=>shadowed(()=>text(l,X,Y+130+i*42,`400 32px ${BODY}`,'#d6cfe6')));
   x.globalAlpha=q(1.2);
-  text('APOYÁ EL PROYECTO · GRACIAS A LOS PRIMEROS EN KO-FI',X,Y+300,'600 21px "IBM Plex Mono"',C.yellow,4);
-  [['K0F1','zone: global · usd','Ko-fi',C.mag,'ko-fi.com/juanjiant'],['CF4R','zone: AR · ars','Cafecito',C.orange,'cafecito.app/juanjiant']].forEach((c,i)=>{
+  text('SUPPORT THE PROJECT · THANKS TO THE FIRST ONES ON KO-FI',X,Y+300,'600 21px "IBM Plex Mono"',C.yellow,4);
+  [['K0F1','zone: global · usd','Ko-fi',C.mag,'ko-fi.com/juanjiant'],['CF4R','zone: AR · ARS','Cafecito',C.orange,'cafecito.app/juanjiant']].forEach((c,i)=>{
     const bx=X+i*400,by=Y+330+Math.sin(t*.7+i)*4,bw=380,bh=180,b=1+.03*A.low;
     brk(bx,by,bw,bh,C.yellow,22,'rgba(6,5,12,.9)');
     x.fillStyle=C.yellow;x.fillRect(bx+24,by+28,11,11);text(c[0],bx+44,by+39,'500 15px "IBM Plex Mono"',C.line,2);
@@ -316,23 +302,23 @@ function outro(t0,f,t,A){
     text(c[2],bx+24,by+104,`400 ${Math.round(46*b)}px ${DISPLAY}`,c[3]);
     text(c[4],bx+24,by+148,'600 21px "IBM Plex Mono"',C.yellow,1);});
   x.globalAlpha=q(1.8);
-  text('código: github.com/juanjiant-bit/JIANT',X,Y+570,'500 19px "IBM Plex Mono"',C.line,2);
-  text('instalá desde el navegador: juanjiant-bit.github.io/JIANT',X,Y+602,'500 19px "IBM Plex Mono"',C.dim,2);
+  text('code: github.com/juanjiant-bit/JIANT',X,Y+570,'500 19px "IBM Plex Mono"',C.line,2);
+  text('install from the browser: juanjiant-bit.github.io/JIANT',X,Y+602,'500 19px "IBM Plex Mono"',C.dim,2);
   x.globalAlpha=1;
 }
 
 /* ---------- the HUD ---------- */
 function hud(f,t,A){
   brk(60,30,1800,48,C.cyan,14,'rgba(6,5,12,.85)');
-  text('JIANT',84,61,'600 16px "IBM Plex Mono"',C.line,2);text('/ FM · NOVEDADES '+D.version.toUpperCase(),146,61,'500 16px "IBM Plex Mono"',C.dim,2);
+  text('JIANT',84,61,'600 16px "IBM Plex Mono"',C.line,2);text('/ FM · WHAT\'S NEW '+D.version.toUpperCase(),146,61,'500 16px "IBM Plex Mono"',C.dim,2);
   x.fillStyle=C.red;x.globalAlpha=(Math.floor(t/.6)%2)?1:.2;x.fillRect(760,49,9,9);x.globalAlpha=1;
-  text('AUDIO-REACTIVO · CADA PIXEL SIGUE AL SONIDO',780,61,'500 16px "IBM Plex Mono"',C.line,2);
+  text('AUDIO-REACTIVE · EVERY PIXEL FOLLOWS THE SOUND',780,61,'500 16px "IBM Plex Mono"',C.line,2);
   x.textAlign='right';const b=Math.floor(t/D.beat);text(`${Math.round(60/D.beat)} BPM · GEN · ${String(Math.floor(b/4)+1).padStart(3,'0')}.${b%4+1}`,1836,61,'500 16px "IBM Plex Mono"',C.orange,2);x.textAlign='left';
   /* vital signs: a thin spectrum along the bottom, the heat */
   const X0=60,Y0=1052,bw=12;
   for(let i=0;i<32;i++){const v=D.spec[f][i]||0;const hgt=3+v*34;x.fillStyle=heatGrad(X0,X0+32*(bw+3));x.globalAlpha=.35+.65*Math.min(1,v);
     x.fillRect(X0+i*(bw+3),Y0-hgt,bw,hgt);}x.globalAlpha=1;
-  text('SIGNOS VITALES · 40 Hz – 16 kHz',X0+500,Y0,'500 12px "IBM Plex Mono"',C.dim,2);
+  text('VITAL SIGNS · 40 Hz – 16 kHz',X0+500,Y0,'500 12px "IBM Plex Mono"',C.dim,2);
 }
 
 /* ---------- a frame ---------- */

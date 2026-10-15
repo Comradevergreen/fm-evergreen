@@ -80,29 +80,29 @@ static void at_beat(uint32_t q)
     /* ---- the words */
     if (q == B(2, 0)) {
         home(T_LEAD_K);
-        caption(q, "JIANT", "HOLA A TODOS", "Acá JIANT. Estuve trabajando mucho para que|puedan tener el instrumento más potente|que pueda caber en este pequeño sinte.|Leo todas sus propuestas, y gracias a los|primeros que empezaron a apoyar|el proyecto en Ko-fi.", 0, "");
+        caption(q, "JIANT", "HELLO EVERYONE", "JIANT here. I have been working hard so you|can have the most powerful instrument|that fits in this little synth.|I read all your suggestions, and thanks to|the first ones who started supporting|the project on Ko-fi.", 0, "");
     }
     /* ---- the generator: this very piece */
     if (q == B(8, 0)) {
         confirm_open(CF_DICE_ALL, song.sel); gen_open();
-        caption(q, "GEN", "GENERADOR|DE CANCIONES", "esta pieza la hizo el generador: POST PUNK|abre en RANDOM, PLAY y STOP funcionan ahí|HOME cierra la pantalla", 0,
-                "melodías que se quedan en su octava|frases que terminan en el acorde|fills y punch-in automatizados|presets y efectos por género");
+        caption(q, "GEN", "SONG|GENERATOR", "the generator made this piece: POST PUNK|opens on RANDOM, PLAY and STOP work there|HOME closes the page", 0,
+                "melodies that stay in their octave|phrases that end on the chord|automated fills and punch-in|presets and FX per genre");
     }
     if (q == B(9, 0) || q == B(10, 0)) enc_turn(EN_SELECT, 1);
     /* ---- the presets */
     if (q == B(12, 0)) {
         ui.confirm = 0; ui.force = 1;
         page(T_LEAD_K, "PRESETS");
-        caption(q, "SONIDOS", "46 PRESETS NUEVOS", "JUNO PAD · REESE · HOOVER · DUB STAB · CELLO|CZ PIANO · GLASS PAD · TALK BOX · DX KEYS · SEA|en todos los motores, una paleta coherente", 0,
-                "ANALOG 10 · PHASE 8 · LOFI 5|VOICE 3 · WHEEL 5 · NOISE 4 · FM6 7|recorré con PRESETS");
+        caption(q, "SOUNDS", "46 NEW PRESETS", "JUNO PAD · REESE · HOOVER · DUB STAB · CELLO|CZ PIANO · GLASS PAD · TALK BOX · DX KEYS · SEA|on every engine, one coherent palette", 0,
+                "ANALOG 10 · PHASE 8 · LOFI 5|VOICE 3 · WHEEL 5 · NOISE 4 · FM6 7|browse them with PRESETS");
     }
     if (q >= B(13, 0) && q < B(16, 0) && q % 2u == 0u) enc_turn(EN_PRESET, 1);
     /* ---- the kits */
     if (q == B(16, 0)) {
         page(T_DRUM_K, "PRESETS");
         apply_preset(1);                               /* 909 CLUB */
-        caption(q, "DRUMS", "9 KITS DE DRUM-X", "909 CLUB · 808 BOOM · LOFI DUST · INDUSTRIAL|ACOUSTIC · DUB ROOTS · TECHNO RAW · BREAKS|un preset carga el kit entero: 8 sonidos, LAYER, SEND", 0,
-                "909 CLUB: bombo con drive|INDUSTRIAL: FM y glitch|DUB ROOTS: caja mojada, rim al delay");
+        caption(q, "DRUMS", "9 DRUM-X KITS", "909 CLUB · 808 BOOM · LOFI DUST · INDUSTRIAL|ACOUSTIC · DUB ROOTS · TECHNO RAW · BREAKS|a preset loads the whole kit: 8 sounds, LAYER, SEND", 0,
+                "909 CLUB: kick with drive|INDUSTRIAL: FM and glitch|DUB ROOTS: wet snare, rim to the delay");
     }
     if (q == B(18, 0)) apply_preset(4);                /* INDUSTRIAL */
     if (q == B(20, 0)) apply_preset(6);                /* DUB ROOTS */
@@ -112,8 +112,8 @@ static void at_beat(uint32_t q)
         song.g[G_PFXLEN] = 16; song.g[G_PFXRES] = 1;
         for (i = 0; i < 16u; i++) pfx_lane_put(i, i % 8u == 6u || i % 8u == 7u ? 6u : i == 12u ? 2u : 0u);
         page(T_DRUM_K, "PUNCH");
-        caption(q, "FX", "PUNCH-IN|SECUENCIADO", "grabá tu performance de FX en tiempo real|LEN 1..64 pasos · RES 1/8 1/16 1/32 · CLEAR|el carril se repite con la canción", 0,
-                "REC + PLAY graba|FX sostenido + una tecla|STUTTER en 7 y 8, OCT+ en 13");
+        caption(q, "FX", "SEQUENCED|PUNCH-IN", "record your FX performance in real time|LEN 1..64 steps · RES 1/8 1/16 1/32 · CLEAR|the lane repeats with the song", 0,
+                "REC + PLAY records|hold FX + a key|STUTTER on 7 and 8, OCT+ on 13");
     }
     /* ---- WALK / CLIMB */
     if (q == B(26, 0)) {
@@ -121,59 +121,59 @@ static void at_beat(uint32_t q)
         for (i = 0; i < 16u; i++) pfx_lane_put(i, 0);
         trk[T_LEAD_K].step[0].comp = CP_WALK; trk[T_LEAD_K].step[0].carg = CP_WARG(0, 0, 1);
         page(T_LEAD_K, "COMP"); ui.cursor = 0; ui.bank = 0;
-        caption(q, "SECUENCIA", "WALK · CLIMB", "una nota sube un grado de la escala por vuelta|cada 1..16 vueltas · arriba, abajo, patrones|apilables: de 4 notas a un patrón complejo", 0,
-                "MODE UP · RANGE 5|EVERY 1 LOOP|como el OP-Z y el OP-XY");
+        caption(q, "SEQUENCE", "WALK · CLIMB", "a note climbs one scale degree per loop|every 1..16 loops · up, down, patterns|stackable: from 4 notes to a complex pattern", 0,
+                "MODE UP · RANGE 5|EVERY 1 LOOP|like the OP-Z and the OP-XY");
     }
     /* ---- the matrix on the FX buses */
     if (q == B(30, 0)) {
         trk[T_LEAD_K].step[0].comp = 0; trk[T_LEAD_K].step[0].carg = 0;
         trk[T_PAD_K].p[P_M1SRC] = MS_STEP; trk[T_PAD_K].p[P_M1DST] = MD_DTIME; trk[T_PAD_K].p[P_M1AMT] = 40;
         page(T_PAD_K, "MOD");
-        caption(q, "FX", "LA MATRIZ LLEGA|A LOS EFECTOS", "D.TIM D.FB D.TON D.MIX · R.SIZ R.DMP|C.RAT C.DEP: ocho destinos nuevos|la MOD SEQ secuencia el tiempo del delay", 0,
-                "SLOT 1 · STEP → D.TIM +40|un LFO sobre R.SIZ respira|cada pista suma su slot");
+        caption(q, "FX", "THE MATRIX REACHES|THE EFFECTS", "D.TIM D.FB D.TON D.MIX · R.SIZ R.DMP|C.RAT C.DEP: eight new destinations|the MOD SEQ sequences the delay time", 0,
+                "SLOT 1 · STEP → D.TIM +40|an LFO on R.SIZ breathes|every track adds its slot");
     }
     /* ---- USB */
     if (q == B(34, 0)) {
         trk[T_PAD_K].p[P_M1SRC] = 0; trk[T_PAD_K].p[P_M1DST] = 0; trk[T_PAD_K].p[P_M1AMT] = 0;
         menu_open(MI_SERIAL);
-        caption(q, "USB", "STEMS POR USB", "8 canales de audio USB: 6 pistas mono + retorno de FX|cada pista a su canal en Ableton, Logic o Reaper|USB LEVEL −6…−24 dB: sin saturar el celular", 0,
-                "MENU > SYSTEM > USB: STEMS|canales 1–6 las pistas|7–8 delay, reverb y chorus");
+        caption(q, "USB", "STEMS OVER USB", "8 USB audio channels: 6 mono tracks + FX return|each track on its own channel in Ableton, Logic or Reaper|USB LEVEL −6…−24 dB: no clipping on your phone", 0,
+                "MENU > SYSTEM > USB: STEMS|channels 1–6 the tracks|7–8 delay, reverb and chorus");
     }
     if (q == B(35, 0)) menu_put(MI_SERIAL, 2u);
     if (q == B(36, 2)) { menu_put(MI_USB, 3u); ui.menu_sel = MI_USB; ui.force = 1; }
     if (q == B(38, 0)) {
-        caption(q, "USB", "STEMS DESDE|EL NAVEGADOR", "cargá tu backup en el emulador web|cada pista sola con sus efectos, más el MIX|un ZIP de WAVs, más rápido que el tiempo real", 0,
-                "juanjiant-bit.github.io/JIANT|la canción entera o la sección|T1..T6 + MIX, 16 bit 44.1 kHz");
+        caption(q, "USB", "STEMS FROM|THE BROWSER", "load your backup into the web emulator|each track alone with its effects, plus the MIX|a ZIP of WAVs, faster than real time", 0,
+                "juanjiant-bit.github.io/JIANT|the whole song or the section|T1..T6 + MIX, 16 bit 44.1 kHz");
     }
     /* ---- the fixes and the names */
     if (q == B(42, 0)) {
         menu_put(MI_USB, 0u); menu_put(MI_SERIAL, 0u);
         ui.menu = 0; ui.force = 1;
         page(T_PAD_K, "CHORD");
-        caption(q, "FIX", "ARREGLOS", "CHORD ya no se apaga al cambiar presets|STRETCH estira también las repeticiones|MUTATE funciona con cualquier motor", 0,
-                "LED DIM HI más visible|MIDI CC 16–23 → K1–K8 · 102–105|el GEN sin parpadeo");
+        caption(q, "FIXES", "FIXES", "CHORD no longer resets when you change presets|STRETCH also stretches the repeats|MUTATE works with every engine", 0,
+                "LED DIM HI more visible|MIDI CC 16–23 → K1–K8 · 102–105|the GEN without flicker");
     }
     if (q == B(46, 0)) {
         home(T_LEAD_K);
-        caption(q, "JIANT", "TODO ES JIANT", "USB, créditos, splash, consola: JIANT FM|el editor y el instalador aceptan los dos nombres|ABOUT con la info del proyecto", 0,
+        caption(q, "JIANT", "IT IS ALL JIANT", "USB, credits, splash, console: JIANT FM|the editor and the installer take both names|ABOUT with the project info", 0,
                 "USB: JIANT FM|editor: JIANT v0.7.2|ko-fi · cafecito · youtube");
     }
     /* ---- the list, the outro */
     if (q == B(50, 0)) {
         home(T_DRUM_K);
-        caption(q, "NOVEDADES", "LO NUEVO DE AYER Y HOY", "", 3, "");
-        item("GENERADOR", "melodías coherentes, presets y FX por género", B(8, 0));
-        item("46 PRESETS", "pads, reeses, stabs, teclas, texturas", B(12, 0));
-        item("9 KITS DE DRUM-X", "909, 808, lo-fi, industrial, acústico, dub…", B(16, 0));
-        item("PUNCH-IN DE FX", "LEN 1..64, RES, CLEAR, grabación en vivo", B(22, 0));
-        item("WALK · CLIMB", "componentes que evolucionan cada vuelta", B(26, 0));
-        item("MATRIZ → FX", "delay, reverb y chorus como destinos", B(30, 0));
-        item("STEMS POR USB", "8 canales: 6 pistas + retorno de FX", B(34, 0));
-        item("USB LEVEL", "−6 a −24 dB para grabar sin saturar", B(36, 2));
-        item("STEMS WEB", "WAVs separados desde un backup, en ZIP", B(38, 0));
-        item("ARREGLOS", "CHORD, STRETCH, MUTATE, LEDs, MIDI CC", B(42, 0));
-        item("TODO ES JIANT", "USB, créditos y consola con el nombre", B(46, 0));
-        item("HOME CIERRA GEN", "y PLAY / STOP funcionan en la pantalla", B(9, 0));
+        caption(q, "NEWS", "NEW SINCE YESTERDAY", "", 3, "");
+        item("GENERATOR", "coherent melodies, presets and FX per genre", B(8, 0));
+        item("46 PRESETS", "pads, reeses, stabs, keys, textures", B(12, 0));
+        item("9 DRUM-X KITS", "909, 808, lo-fi, industrial, acoustic, dub…", B(16, 0));
+        item("FX PUNCH-IN", "LEN 1..64, RES, CLEAR, live recording", B(22, 0));
+        item("WALK · CLIMB", "components that evolve every loop", B(26, 0));
+        item("MATRIX → FX", "delay, reverb and chorus as destinations", B(30, 0));
+        item("STEMS OVER USB", "8 channels: 6 tracks + FX return", B(34, 0));
+        item("USB LEVEL", "−6 to −24 dB to record without clipping", B(36, 2));
+        item("WEB STEMS", "separate WAVs from a backup, in a ZIP", B(38, 0));
+        item("FIXES", "CHORD, STRETCH, MUTATE, LEDs, MIDI CC", B(42, 0));
+        item("IT IS ALL JIANT", "USB, credits and console with the name", B(46, 0));
+        item("HOME CLOSES GEN", "and PLAY / STOP work on that page", B(9, 0));
     }
     if (q == B(66, 0)) caption(q, "", "", "", 0, "");
     if (q == B(72, 0)) { mute(T_DRUM_K, 1); }
