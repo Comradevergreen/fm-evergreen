@@ -91,7 +91,7 @@ enum { BA_OFFBEAT, BA_OFFOCT, BA_BOUNCE, BA_DEEPWALK, BA_ROLL16, BA_OCTBNC, BA_D
        BA_WALK, BA_WALK2, BA_TWOFEEL, BA_BOOGIE, BA_COUNTRY, BA_SKA, BA_TUMBAO, BA_BOSSA, BA_ROCK8, BA_ROOT5,
        BA_PUNK16, BA_DUST, BA_MCCART, BA_HOOK, BA_MOTORIK, BA_ANGULAR, BA_INDIE, BA_ONEDROP, BA_ONEDROP2, BA_STEPPERS,
        BA_ROCKERS, BA_DUB, BA_BOOMBAP, BA_TRAP, BA_DNB, BA_JUNGLE, BA_WOBBLE, BA_PEDAL, BA_FIFTHS, BA_NEOARP,
-       BA_SUICIDE, BA_DARK8, BA_SEQ16, BA_ACID, BA_N };
+       BA_SUICIDE, BA_DARK8, BA_SEQ16, BA_ACID, BA_NITZER1, BA_NITZER2, BA_NITZER3, BA_RADIO, BA_N };
 typedef struct { const char *n, *f; uint8_t bars; } barch_t;
 static const barch_t BASS_ARCH[BA_N] = {
     [BA_OFFBEAT]  = {"..R...R...R...R.", 0, 1},
@@ -148,6 +148,13 @@ static const barch_t BASS_ARCH[BA_N] = {
     [BA_DARK8]    = {"R.R.R.R.R.R.R.R.", "a...a...a...a...", 1},
     [BA_SEQ16]    = {"R858R858R858R858", 0, 1},
     [BA_ACID]     = {0, 0, 1},                          /* (procedural: the 303's rules) */
+    /* (0.6.95) EBM after Nitzer Ebb: relentless sixteenths on the root, the octave and the minor third thrown in, a
+     * rest where the body hits, accents on the beat (Join in the Chant, Murderous, Let Your Body Learn) */
+    [BA_NITZER1]  = {"R.R8R.R8R.R3R8R8", "a...a...a...a...", 1},
+    [BA_NITZER2]  = {"RR8RRR8RRR8RRR3RRR8RRR8RRR8RR2R8", "a...a...a...a...a...a...a...a...", 2},
+    [BA_NITZER3]  = {"R.RR.R8.R.RR.R3.", "a.....a.a.....a.", 1},
+    /* (0.6.95) post rock after Radiohead: long roots, a walk up to the next chord at the phrase's end */
+    [BA_RADIO]    = {"R===============R=======5===7===", 0, 2},
 };
 enum { KM_DOUBLE, KM_ANSWER, KM_SUSTAIN, KM_INTERLOCK };   /* the bass against the kick */
 
@@ -159,7 +166,8 @@ static const int8_t QSTACK[Q_N][4] = {{0, 2, 4, 127}, {0, 2, 4, 6}, {0, 2, 6, 8}
 #define CQ_DOM 0x80u                                    /* the quality's bit 7: the third raised (a dominant in minor) */
 typedef struct { uint8_t n; int8_t deg[4]; uint8_t q[4]; } gprog_t;
 enum { PR_ONE, PR_I_VII, PR_I_VI, PR_I_IV, PR_I_V, PR_AEOL, PR_CYCLE, PR_POP, PR_AXIS, PR_50S, PR_JAZZ, PR_ANDAL,
-       PR_MINOR4, PR_I_II, PR_I_III, PR_PLAGAL, PR_IV_I, PR_DESC, PR_SUS, PR_NEOCL, PR_TRANCE, PR_DORIAN, PR_N };
+       PR_MINOR4, PR_I_II, PR_I_III, PR_PLAGAL, PR_IV_I, PR_DESC, PR_SUS, PR_NEOCL, PR_TRANCE, PR_DORIAN, PR_RADIO,
+       PR_PYRAMID, PR_N };
 static const gprog_t PROG[PR_N] = {
     [PR_ONE]    = {1, {0}, {Q_7}},
     [PR_I_VII]  = {2, {0, 6}, {Q_TRI, Q_TRI}},
@@ -183,6 +191,8 @@ static const gprog_t PROG[PR_N] = {
     [PR_NEOCL]  = {4, {0, 4, 5, 3}, {Q_7, Q_7, Q_7, Q_ADD9}},
     [PR_TRANCE] = {4, {0, 5, 6, 3}, {Q_TRI, Q_TRI, Q_TRI, Q_TRI}},
     [PR_DORIAN] = {2, {0, 3}, {Q_7, Q_7}},
+    [PR_RADIO]  = {4, {0, 5, 6, 3}, {Q_ADD9, Q_7, Q_SUS2, Q_ADD9}},   /* (0.6.95) i add9, VI7, VII sus2, iv add9 */
+    [PR_PYRAMID] = {4, {0, 2, 5, 4}, {Q_7, Q_TRI, Q_7, Q_SUS4}},
 };
 /* how the chords are voiced: PAD led to the nearest voicing in C3..G5 as written; PLAIN the same but triads whatever
  * the progression says; RICH sevenths and ninths added; SUS suspensions; QUART fourths; POWER root fifth octave;
@@ -229,7 +239,7 @@ typedef struct {
 } grecipe_t;
 enum { SR_SUB, SR_ACID, SR_REESE, SR_FMBASS, SR_ROCKBASS, SR_HOOK, SR_WOW, SR_PAD, SR_STRINGS, SR_CHOIR, SR_ORGAN,
        SR_EP, SR_STAB, SR_DUBCHORD, SR_PLUCK, SR_BELL, SR_LEAD, SR_VOXLEAD, SR_CHIP, SR_KEYS, SR_DRONE, SR_NOISE,
-       SR_TEXTURE, SR_HOOVER, SR_WALL, SR_GTR, SR_SINEKEY, SR_N };
+       SR_TEXTURE, SR_HOOVER, SR_WALL, SR_GTR, SR_SINEKEY, SR_EBMBASS, SR_N };
 static const grecipe_t RECIPE[SR_N] = {
     [SR_SUB]      = {{EG_A, EG_A, EG_LO}, {"SUB BASS", "SINE", "WAVE BASS"}, {0, 1}, {55, 75}, {90, 120}, {15, 35}, 0, {30, 48}, {0, 10}, {0, 10}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, 0, V_LEGATO},
     [SR_ACID]     = {{EG_A, EG_A, EG_PH}, {"ACID", "RESO", "SQR BASS"}, {0, 2}, {38, 60}, {0, 30}, {20, 40}, 0, {40, 64}, {55, 90}, {40, 62}, {0, 0}, {0, 0}, {12, 36}, {0, 0}, 30, V_LEGATO},
@@ -258,6 +268,38 @@ static const grecipe_t RECIPE[SR_N] = {
     [SR_WALL]     = {{EG_A, EG_A, EG_PH}, {"STRINGS", "PWM STR", "STRING"}, {30, 60}, {90, 100}, {110, 127}, {80, 110}, 0, {50, 70}, {0, 10}, {0, 10}, {6, 14}, {3, 9}, {30, 55}, {40, 70}, 0, V_POLY},
     [SR_GTR]      = {{EG_PH, EG_A, EG_FM}, {"BRASS", "PLUCK", "PLUCK"}, {2, 10}, {70, 90}, {60, 100}, {50, 80}, 2, {56, 80}, {15, 35}, {5, 20}, {0, 0}, {0, 0}, {5, 25}, {20, 40}, 0, V_POLY},
     [SR_SINEKEY]  = {{EG_A, EG_FM, EG_PH}, {"SINE KEY", "TINE EP", "ORGAN"}, {0, 4}, {70, 90}, {30, 60}, {50, 80}, 0, {60, 90}, {0, 15}, {0, 15}, {0, 0}, {0, 0}, {0, 0}, {0, 20}, 0, V_POLY},
+    /* (0.6.95) the EBM bass: a square, short and punchy, the filter's envelope on it, driven */
+    [SR_EBMBASS]  = {{EG_A, EG_A, EG_PH}, {"SQR BASS", "FAT BASS", "FB BASS"}, {0, 1}, {34, 50}, {10, 40}, {12, 25}, 0, {58, 80}, {15, 35}, {25, 45}, {0, 0}, {0, 0}, {18, 40}, {0, 0}, 0, V_LEGATO},
+};
+/* (0.6.95) a throw its own: the neighbours a throw may take instead (the drum map's family, the chords' play, a role's
+ * recipe), so two throws of a genre are not the same piece in another key */
+static const uint8_t DM_ALT[DM_NONE][2] = {
+    [DM_HOUSE] = {DM_DEEP, DM_TECHHOUSE}, [DM_DEEP] = {DM_HOUSE, DM_MICRO}, [DM_MICRO] = {DM_DEEP, DM_DUBTECH},
+    [DM_TECHHOUSE] = {DM_HOUSE, DM_TECHNO}, [DM_TECHNO] = {DM_DETROIT, DM_HYPNO}, [DM_DETROIT] = {DM_TECHNO, DM_HOUSE},
+    [DM_DUBTECH] = {DM_MICRO, DM_HYPNO}, [DM_HYPNO] = {DM_TECHNO, DM_DUBTECH}, [DM_HARD] = {DM_TECHNO, DM_EBM},
+    [DM_ELECTRO] = {DM_RBOX, DM_KLING}, [DM_EBM] = {DM_HARD, DM_DARKWAVE}, [DM_ITALO] = {DM_DISCO, DM_SYNTHPOP},
+    [DM_SYNTHPOP] = {DM_ITALO, DM_RBOX}, [DM_DARKWAVE] = {DM_POSTPUNK, DM_EBM}, [DM_POSTPUNK] = {DM_DARKWAVE, DM_INDIE},
+    [DM_TRIBAL] = {DM_POSTPUNK, DM_AFRO}, [DM_RBOX] = {DM_SYNTHPOP, DM_KLING}, [DM_KLING] = {DM_RBOX, DM_MOTORIK},
+    [DM_MOTORIK] = {DM_KLING, DM_INDIE}, [DM_INDIE] = {DM_MOTORIK, DM_SHOEGAZE}, [DM_SHOEGAZE] = {DM_INDIE, DM_SPARSE},
+    [DM_FUNK] = {DM_AFRO, DM_BOOMBAP}, [DM_DISCO] = {DM_ITALO, DM_HOUSE}, [DM_BOOMBAP] = {DM_FUNK, DM_TRAP},
+    [DM_TRAP] = {DM_BOOMBAP, DM_DUBSTEP}, [DM_UKG] = {DM_BREAKS, DM_HOUSE}, [DM_DUBSTEP] = {DM_TRAP, DM_DNB},
+    [DM_BREAKS] = {DM_UKG, DM_DNB}, [DM_DNB] = {DM_BREAKS, DM_DUBSTEP}, [DM_ONEDROP] = {DM_STEPPERS, DM_ROCKERS},
+    [DM_STEPPERS] = {DM_ONEDROP, DM_ROCKERS}, [DM_ROCKERS] = {DM_ONEDROP, DM_STEPPERS}, [DM_JAZZ] = {DM_BOSSA, DM_SPARSE},
+    [DM_BOSSA] = {DM_JAZZ, DM_AFRO}, [DM_AFRO] = {DM_FUNK, DM_TRIBAL}, [DM_SPARSE] = {DM_JAZZ, DM_IDM}, [DM_IDM] = {DM_SPARSE, DM_BREAKS},
+};
+static const uint8_t CS_ALT[CS_TRANCE + 1][2] = {
+    [CS_HOLD] = {CS_SWELL, CS_PULSE}, [CS_SWELL] = {CS_HOLD, CS_PULSE}, [CS_STAB] = {CS_PULSE, CS_DUB}, [CS_PULSE] = {CS_STAB, CS_HOLD},
+    [CS_DUB] = {CS_STAB, CS_SPARSE}, [CS_SKANK] = {CS_DUB, CS_STAB}, [CS_COMP] = {CS_STAB, CS_BROKEN}, [CS_POWER] = {CS_PULSE, CS_HOLD},
+    [CS_DRONE] = {CS_HOLD, CS_SWELL}, [CS_SPARSE] = {CS_HOLD, CS_DUB}, [CS_BROKEN] = {CS_COMP, CS_STAB}, [CS_TRANCE] = {CS_PULSE, CS_STAB},
+};
+static const uint8_t SR_ALT[SR_N][2] = {
+    [SR_SUB] = {SR_FMBASS, SR_REESE}, [SR_ACID] = {SR_SUB, SR_FMBASS}, [SR_REESE] = {SR_FMBASS, SR_SUB}, [SR_FMBASS] = {SR_SUB, SR_ROCKBASS},
+    [SR_ROCKBASS] = {SR_FMBASS, SR_HOOK}, [SR_HOOK] = {SR_ROCKBASS, SR_FMBASS}, [SR_WOW] = {SR_FMBASS, SR_REESE}, [SR_PAD] = {SR_STRINGS, SR_CHOIR},
+    [SR_STRINGS] = {SR_PAD, SR_ORGAN}, [SR_CHOIR] = {SR_PAD, SR_STRINGS}, [SR_ORGAN] = {SR_EP, SR_KEYS}, [SR_EP] = {SR_KEYS, SR_ORGAN},
+    [SR_STAB] = {SR_DUBCHORD, SR_HOOVER}, [SR_DUBCHORD] = {SR_STAB, SR_PAD}, [SR_PLUCK] = {SR_BELL, SR_KEYS}, [SR_BELL] = {SR_PLUCK, SR_SINEKEY},
+    [SR_LEAD] = {SR_VOXLEAD, SR_HOOVER}, [SR_VOXLEAD] = {SR_LEAD, SR_CHOIR}, [SR_CHIP] = {SR_PLUCK, SR_LEAD}, [SR_KEYS] = {SR_EP, SR_SINEKEY},
+    [SR_DRONE] = {SR_PAD, SR_TEXTURE}, [SR_NOISE] = {SR_TEXTURE, SR_DRONE}, [SR_TEXTURE] = {SR_NOISE, SR_DRONE}, [SR_HOOVER] = {SR_STAB, SR_LEAD},
+    [SR_WALL] = {SR_STRINGS, SR_PAD}, [SR_GTR] = {SR_PLUCK, SR_KEYS}, [SR_SINEKEY] = {SR_KEYS, SR_BELL}, [SR_EBMBASS] = {SR_ROCKBASS, SR_ACID},
 };
 /* the names the song generator never picks (the cheerful, the odd), whatever the role */
 static const char *const GEN_NEVER[] = {"ARCADE", "BYTEBEAT", "GOSPEL", "ROCK DRIVE", "METAL", "BYTE VAR", "FLOAT FM",
@@ -339,9 +381,9 @@ static const ggenre_t GENRE[] = {
      {BA_SYNTHW, BA_ITALO16, BA_ANGULAR}, 36, KM_DOUBLE, 40, {PR_I_VII, PR_ONE, PR_MINOR4}, 2, CS_STAB, VM_SUS,
      {AP_SEQ, AP_OCTAVES}, LD_MECH, AMT(90, 85, 40, 50, 45), {KIT_808, SR_FMBASS, SR_STAB, SR_CHIP, SR_LEAD}, SR_NOISE,
      1, 2, 35, 1, FM_PARTS, 0},
-    {"EBM", 112, 126, 0, {SC_PHRY, SC_MIN, SC_PHRY, SC_MIN}, DM_EBM, 100, KIT_INDUS, 0, HC_MACHINE, FL_NONE, 0,
-     {BA_EBM, BA_PUNK16, BA_SEQ16}, 33, KM_DOUBLE, 35, {PR_ONE, PR_I_IV, PR_I_VII}, 4, CS_STAB, VM_POWER,
-     {AP_SEQ, AP_PULSE}, LD_SPARSE, AMT(95, 100, 30, 25, 30), {KIT_INDUS, SR_ROCKBASS, SR_STAB, SR_PLUCK, SR_VOXLEAD}, SR_NOISE,
+    {"EBM", 118, 132, 0, {SC_PHRY, SC_MIN, SC_PHRY, SC_MIN}, DM_EBM, 100, KIT_INDUS, 0, HC_MACHINE, FL_NONE, 0,
+     {BA_NITZER1, BA_NITZER2, BA_NITZER3}, 33, KM_DOUBLE, 45, {PR_ONE, PR_I_VII, PR_I_II}, 4, CS_STAB, VM_POWER,
+     {AP_SEQ, AP_PULSE}, LD_SPARSE, AMT(95, 100, 30, 25, 30), {KIT_INDUS, SR_EBMBASS, SR_STAB, SR_PLUCK, SR_VOXLEAD}, SR_NOISE,
      1, 1, 25, 0, FM_PARTS, 0},
     {"ITALO", 114, 124, 0, {SC_MIN, SC_MIN, SC_MAJ, SC_DOR}, DM_ITALO, 100, KIT_808, 0, HC_MACHINE, FL_TOM, 0,
      {BA_ITALO, BA_ITALO16, BA_SYNTHW}, 36, KM_DOUBLE, 40, {PR_AEOL, PR_50S, PR_POP}, 1, CS_STAB, VM_PLAIN,
@@ -384,10 +426,10 @@ static const ggenre_t GENRE[] = {
      {BA_ROCK8, BA_PUMP8, BA_ROOT5}, 36, KM_DOUBLE, 90, {PR_POP, PR_I_IV, PR_I_II}, 2, CS_SWELL, VM_RICH,
      {AP_UPDOWN, AP_GLASS}, LD_SPARSE, AMT(75, 85, 100, 30, 40), {KIT_SOFT, SR_ROCKBASS, SR_WALL, SR_PLUCK, SR_VOXLEAD}, SR_DRONE,
      2, 0, 90, 0, FM_ARC, 40},
-    {"POST ROCK", 90, 125, 0, {SC_MAJ, SC_MIN, SC_LYD, SC_DOR}, DM_INDIE, 70, KIT_BREAKS, 2, HC_FLAT, FL_TOM, 1,
-     {BA_PUMP8, BA_FIFTHS, BA_NEOARP}, 36, KM_SUSTAIN, 100, {PR_I_IV, PR_I_II, PR_NEOCL}, 2, CS_SWELL, VM_RICH,
-     {AP_GLASS, AP_UPDOWN}, LD_TINTI, AMT(50, 70, 80, 70, 40), {KIT_BREAKS, SR_ROCKBASS, SR_GTR, SR_GTR, SR_LEAD}, SR_DRONE,
-     4, 0, 75, 0, FM_ARC, 40},
+    {"POST ROCK", 84, 118, 0, {SC_MIN, SC_MAJ, SC_DOR, SC_MIN}, DM_INDIE, 85, KIT_BREAKS, 2, HC_FLAT, FL_TOM, 1,
+     {BA_RADIO, BA_PUMP8, BA_FIFTHS}, 36, KM_SUSTAIN, 100, {PR_RADIO, PR_PYRAMID, PR_I_II}, 2, CS_SWELL, VM_PAD,
+     {AP_GLASS, AP_UPDOWN}, LD_MOTIF, AMT(60, 75, 80, 75, 45), {KIT_BREAKS, SR_ROCKBASS, SR_EP, SR_GTR, SR_VOXLEAD}, SR_STRINGS,
+     4, 0, 70, 0, FM_ARC, 45},   /* (0.6.95: after Radiohead: add9 / sus chords, a clean arpeggio, long roots) */
     /* ---- funk, disco, hip hop, UK */
     {"FUNK", 96, 112, 14, {SC_DOR, SC_MIX, SC_MPEN, SC_BLUE}, DM_FUNK, 100, KIT_BREAKS, 4, HC_FUNK, FL_LINEAR, 1,
      {BA_JAMERSON, BA_SLAP, BA_AROUND}, 33, KM_INTERLOCK, 40, {PR_DORIAN, PR_ONE, PR_I_IV}, 2, CS_COMP, VM_RICH,

@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.6.94).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.6.95).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 > ⚡ **New in 0.6.85 – 0.6.92: a song generator you steer, a compact sequencer that breathes, a delay that feeds back.**
 > - **GEN (HOME + SELECT)**: a screen of three pages — GENRE (43 genres or RANDOM), SEED, ENERGY, FORM (loop, parts,
@@ -524,6 +524,21 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### v0.6.95
+- **GEN: every throw its own.** A genre's throw may take a neighbour's drum map (the map's family: HOUSE takes DEEP's
+  or TECH HOUSE's, TECHNO DETROIT's or HYPNOTIC's ..), another chord play (stabs become pulses or dub chords ..) and a
+  role's neighbouring recipe (a pluck a bell, a pad strings ..), each about a third of the time, so two throws of a
+  genre are no longer the same piece in another key. The hats and the percussion thin with the DRUMS amount a hit at a
+  time.
+- **RANDOM throws mutants** half the time or so: the drums of one genre, the bass of another, the chords, arp, lead and
+  space from either, a tempo between the two, more components, and an arp or lead in another metre (12, 20, 24 or 28
+  steps against the 16). Named after both: **EBM+JAZZ 0421**.
+- **EBM after Nitzer Ebb**: three new bass archetypes (relentless sixteenths on the root, the octave and the minor
+  third, a rest where the body hits, accents on the beat), a square bass recipe, short and driven, 118–132 BPM.
+- **POST ROCK after Radiohead**: add9 / sus progressions (i add9, VI7, VII sus2, iv add9; i, III, VI, V sus4), long roots
+  walking up at the phrase's end, a clean arpeggio, an electric piano, a voice lead, strings behind.
+- A power chord voiced over the top of its range came down an octave (HARD TECHNO's pads).
 
 ### v0.6.94
 - **GEN: the snare a snare.** The generated kits' snare came out tonal (the FM oscillator's sweep over the noise):
