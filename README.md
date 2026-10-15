@@ -532,6 +532,7 @@ Every update is listed here, newest first. (Since 0.6.80 at the end of the page:
 - **SCL: KNOB 4 is ALL TR** (asked for), the global move of every sequence along the scale, where the track's TRANS was;
   SCL 2, which held ALL TR alone, is gone (SCL, then CHORD). TRANS stays a track parameter, kept in projects and on
   the web editor's SCL page, off the device's pages. ui_test: KNOB 4 turns ALL TR, TRANS untouched, no SCL 2.
+- The web installer's notice no longer says "a fork of Felucca"; the credits stay in its small print, in ABOUT and here.
 
 ### v0.7.5
 - **USB audio in (test version): MENU > SYSTEM > USB > IN+OUT.** The FM-1 is the computer's or the phone's USB audio
