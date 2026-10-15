@@ -212,6 +212,7 @@ and heating up with its own audio. The selected track is drawn bigger, a muted o
 | SL PITCH | STEP | PITCH | LEN | QUANT |
 | DLY | TIME | FEEDBK | TONE | MIX |
 | DLY 2 | WIDE | PITCH | SPRAY | MOD |
+| DLY 3 | TYPE (ANALOG / DIGITAL) | PING (OFF / ON) | — | — |
 | REVERB | TYPE | SIZE | DAMP (RESO: FOLLOW) | PRE (SHIMMER/CLOUD: AIR; RESO: PITCH) |
 | REVERB 2 | MOD | RATE | FILT | WIDE |
 | CHORUS | RATE | DEPTH | STEREO | — |
@@ -278,16 +279,16 @@ and heating up with its own audio. The selected track is drawn bigger, a muted o
 | --- | --- | --- | --- | --- |
 | STEP (melodic: piano roll) | STEP | NOTE | TIME (NOTE / TIE / REST) | FLAG (– / ACC / SLD / A+S) |
 | STEP (DRUM: grid) | STEP | LANE | HIT | ACC |
-| PATTERN | LEN | DIV | SWING | GATE |
-| SHIFT | OFFSET | PITCH | CHANCE | C.LEN |
-| PLAYHEADS | HEAD | RATE | DIR | INTERVAL |
 | NOTE | FOCUS | PITCH | MOVE | LEN |
-| STRETCH | STRETCH (/8 … /2, x2 … x8) | REPEAT (x2 … x8, TO 64) | NUDGE (now) | LEN (before > after) |
-| HUMAN | VEL | TIME | GATE | — |
 | TIMING | STEP | OFFSET (−8/16 … +7/16) | REC Q | — |
+| STRETCH | STRETCH (/8 … /2, x2 … x8) | REPEAT (x2 … x8, TO 64) | NUDGE (now) | LEN (before > after) |
 | COMP | STEP | TYPE | (its value) | (its value; RATCH / ECHO: DIV) |
 | COMP 2 | STEP | TYPE (the second component) | (its value) | (its value; ECHO: DIV) |
 | WHEN | STEP | A (WHEN) | B (WHEN) | LEN |
+| PATTERN | LEN | DIV | SWING | GATE |
+| SHIFT | OFFSET | PITCH | CHANCE | C.LEN |
+| HUMAN | VEL | TIME | GATE | — |
+| PLAYHEADS | HEAD | RATE | DIR | INTERVAL |
 | AUTOMATION | PLAY (ON/OFF) | EVENT (count) | LOCK (count) | CLEAR (action) |
 | AUTO LIST | ROW | STEP | PARAM | VALUE |
 | MUTATE | SOUND (every) | PATTERN (every) | AMOUNT | MODE |
@@ -533,7 +534,7 @@ recorded into the pattern, quantized to its steps, overdubbing. Knob moves on th
 - **PATTERN**: LEN (1–64), DIV, SWING, GATE.
 - **Moving a note or a chord** that came in early or late: **NOTE**, KNOB 1 FOCUS on the step, KNOB 3 **MOVE** moves
   it sideways a step at a time (FOCUS ALL: the whole chord with its TIEs; one note focused: that note alone).
-- **STRETCH** (0.6.85, after NOTE): reshapes the whole sequence of the selected track. Turn a knob to pick, then
+- **STRETCH** (0.6.85, after TIMING): reshapes the whole sequence of the selected track. Turn a knob to pick, then
   **OCT+** does it (SAVE held: UNDO brings it back). KNOB 4 shows the LEN before and after.
   - **KNOB 1 STRETCH**: **x2 … x8** spreads the steps that many times apart (LEN 4 x4: 16), a held note held all the
     way, short ones kept short; past 64 steps the end is cut. **/2 … /8** squeezes it: of each group of steps the first
@@ -541,13 +542,13 @@ recorded into the pattern, quantized to its steps, overdubbing. Knob moves on th
   - **KNOB 2 REPEAT**: copies steps 1..LEN after themselves, **x2 … x8** times or **TO 64** (as many whole copies as
     fit), automation and locks too. Four notes become a 64-step bed to record more notes over (live REC overdubs).
   - **KNOB 3 NUDGE**: the whole sequence one step right / left at once, round inside LEN (as TOOLS A3 / B3).
-- **TIMING** (0.6.88, after NOTE): each step's own place off the grid. KNOB 1 the step, KNOB 2 its **OFFSET** in
+- **TIMING** (0.6.88, right after NOTE): each step's own place off the grid. KNOB 1 the step, KNOB 2 its **OFFSET** in
   sixteenths of a step, from −8/16 (half a step early) to +7/16 (late); **EDIT** puts it back on the grid. KNOB 3
   **REC Q**, the track's recording quantize: 100 % (the default) live recording snaps to the grid; lower, the step keeps
   that much of where you played it (0 %: all of it), early or late. Early steps really sound early: the step before
   ends that much sooner and the grid is kept. The piano roll draws the notes where they play. A chord shares its
   step's offset; moving, stretching or repeating steps keeps it; saved with the project.
-- **HUMAN** (0.6.87, after STRETCH): the track plays like a person, each note a little different every time round;
+- **HUMAN** (0.6.87, after SHIFT): the track plays like a person, each note a little different every time round;
   the steps stay as written. **VEL**: each note's velocity up or down at random (up to ±38 at 100 %). **TIME**: each
   step starts a little late at random (up to 30 ms, never more than a third of the step, never early; a chord's notes
   stay together, a STRUM keeps its spacing). **GATE**: each note's length longer or shorter (up to ±40 %). 0 % plays
@@ -830,6 +831,10 @@ sounds picked with PRESETS, SEQ TOOLS actions, or ordinary knob turns. It is not
   **SPRAY**. With LOAD LITE or ECO the GRAIN delay plays as a plain delay (the card says LITE / ECO). **MOD**
   (0.6.86): the tape's drift, slow WOW and fast FLUTTER on the repeats (0, the default: none, exact copies; ~20 a
   tape's; up to a seasick chorus); the repeats stay bright while they drift (0.6.89); saved with the project.
+- **DLY 3** (0.6.90): **TYPE**: **ANALOG** (the default: the soft saturation, the resonant TONE, FEEDBK past 100 %
+  self-oscillating) or **DIGITAL** (clean repeats, TONE a plain filter, FEEDBK 100 % at most: past it the repeats
+  just hold, never grow). **PING**: **ON** sends the repeats left, right, left … across the stereo field, each one
+  FEEDBK softer (TIME up to 0.74 s; WIDE and the GRAIN delay out of it). Saved with the project.
 
 ### Reverb (five models)
 

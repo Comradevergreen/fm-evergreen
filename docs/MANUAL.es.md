@@ -219,6 +219,7 @@ a la derecha); apretá OCT+ para ejecutarla.
 | SL PITCH | STEP | PITCH | LEN | QUANT |
 | DLY | TIME | FEEDBK | TONE | MIX |
 | DLY 2 | WIDE | PITCH | SPRAY | MOD |
+| DLY 3 | TYPE (ANALOG / DIGITAL) | PING (OFF / ON) | — | — |
 | REVERB | TYPE | SIZE | DAMP (RESO: FOLLOW) | PRE (SHIMMER/CLOUD: AIR; RESO: PITCH) |
 | REVERB 2 | MOD | RATE | FILT | WIDE |
 | CHORUS | RATE | DEPTH | STEREO | — |
@@ -285,16 +286,16 @@ a la derecha); apretá OCT+ para ejecutarla.
 | --- | --- | --- | --- | --- |
 | STEP (melódica: piano roll) | STEP | NOTE | TIME (NOTE / TIE / REST) | FLAG (– / ACC / SLD / A+S) |
 | STEP (DRUM: grilla) | STEP | LANE | HIT | ACC |
-| PATTERN | LEN | DIV | SWING | GATE |
-| SHIFT | OFFSET | PITCH | CHANCE | C.LEN |
-| PLAYHEADS | HEAD | RATE | DIR | INTERVAL |
 | NOTE | FOCUS | PITCH | MOVE | LEN |
-| STRETCH | STRETCH (/8 … /2, x2 … x8) | REPEAT (x2 … x8, TO 64) | NUDGE (ya) | LEN (antes > después) |
-| HUMAN | VEL | TIME | GATE | — |
 | TIMING | STEP | OFFSET (−8/16 … +7/16) | REC Q | — |
+| STRETCH | STRETCH (/8 … /2, x2 … x8) | REPEAT (x2 … x8, TO 64) | NUDGE (ya) | LEN (antes > después) |
 | COMP | STEP | TYPE | (su valor) | (su valor; RATCH / ECHO: DIV) |
 | COMP 2 | STEP | TYPE (el segundo componente) | (su valor) | (su valor; ECHO: DIV) |
 | WHEN | STEP | A (WHEN) | B (WHEN) | LEN |
+| PATTERN | LEN | DIV | SWING | GATE |
+| SHIFT | OFFSET | PITCH | CHANCE | C.LEN |
+| HUMAN | VEL | TIME | GATE | — |
+| PLAYHEADS | HEAD | RATE | DIR | INTERVAL |
 | AUTOMATION | PLAY (ON/OFF) | EVENT (cantidad) | LOCK (cantidad) | CLEAR (acción) |
 | AUTO LIST | ROW | STEP | PARAM | VALUE |
 | MUTATE | SOUND (cada) | PATTERN (cada) | AMOUNT | MODE |
@@ -556,7 +557,7 @@ seleccionada se graban como **automatización**. MENU > AUDIO tiene el **CLICK**
 - **PATTERN**: LEN (1–64), DIV, SWING, GATE.
 - **Mover una nota o un acorde** que entró antes o después: **NOTE**, KNOB 1 FOCUS en el paso, KNOB 3 **MOVE** lo
   corre de a un paso a los costados (FOCUS ALL: el acorde entero con sus TIE; una nota enfocada: esa sola).
-- **STRETCH** (0.6.85, después de NOTE): cambia la forma de toda la secuencia de la pista elegida. Girá una perilla
+- **STRETCH** (0.6.85, después de TIMING): cambia la forma de toda la secuencia de la pista elegida. Girá una perilla
   para elegir y **OCT+** lo hace (SAVE sostenido: UNDO lo deshace). KNOB 4 muestra el LEN antes y después.
   - **KNOB 1 STRETCH**: **x2 … x8** separa los pasos esa cantidad de veces (LEN 4 x4: 16); una nota sostenida sigue
     sostenida y las cortas quedan cortas; pasados los 64 pasos se corta el final. **/2 … /8** la comprime: de cada
@@ -566,14 +567,14 @@ seleccionada se graban como **automatización**. MENU > AUDIO tiene el **CLICK**
     más notas (REC en vivo suma encima).
   - **KNOB 3 NUDGE**: toda la secuencia un paso a la derecha / izquierda en el momento, dando la vuelta dentro de LEN
     (como TOOLS A3 / B3).
-- **TIMING** (0.6.88, después de NOTE): el lugar propio de cada paso fuera de la grilla. KNOB 1 el paso, KNOB 2 su
+- **TIMING** (0.6.88, justo después de NOTE): el lugar propio de cada paso fuera de la grilla. KNOB 1 el paso, KNOB 2 su
   **OFFSET** en dieciseisavos de paso, de −8/16 (medio paso antes) a +7/16 (después); **EDIT** lo devuelve a la
   grilla. KNOB 3 **REC Q**, la cuantización de la grabación de la pista: en 100 % (por defecto) la grabación en vivo
   se ajusta a la grilla; más abajo, el paso guarda esa parte de dónde lo tocaste (0 %: todo), antes o después. Los
   pasos adelantados suenan realmente antes: el paso anterior termina antes y la grilla se mantiene. El piano roll
   dibuja las notas donde suenan. Un acorde comparte el offset de su paso; mover, estirar o repetir pasos lo conserva;
   se guarda con el proyecto.
-- **HUMAN** (0.6.87, después de STRETCH): la pista toca como una persona, cada nota un poco distinta en cada vuelta;
+- **HUMAN** (0.6.87, después de SHIFT): la pista toca como una persona, cada nota un poco distinta en cada vuelta;
   los pasos quedan como están escritos. **VEL**: la velocity de cada nota sube o baja al azar (hasta ±38 al 100 %).
   **TIME**: cada paso entra un poco tarde al azar (hasta 30 ms, nunca más de un tercio del paso, nunca antes; las notas
   de un acorde siguen juntas y un STRUM mantiene su separación). **GATE**: cada nota más larga o más corta (hasta
@@ -881,6 +882,10 @@ disponible mientras suena un tema (**STOP TO EDIT**). Guarda un solo paso, en RA
   (0.6.86): la deriva de la cinta, WOW lento y FLUTTER rápido sobre las repeticiones (0, por defecto: nada, copias
   exactas; ~20 como una cinta; hasta un chorus mareado); las repeticiones siguen brillantes mientras derivan (0.6.89);
   se guarda con el proyecto.
+- **DLY 3** (0.6.90): **TYPE**: **ANALOG** (por defecto: la saturación suave, el TONE resonante, FEEDBK pasado 100 %
+  autooscila) o **DIGITAL** (repeticiones limpias, TONE un filtro común, FEEDBK 100 % como máximo: pasado eso las
+  repeticiones se mantienen, nunca crecen). **PING**: **ON** manda las repeticiones izquierda, derecha, izquierda … por
+  el estéreo, cada una FEEDBK más suave (TIME hasta 0,74 s; sin WIDE ni el delay GRAIN). Se guarda con el proyecto.
 
 ### Reverb (cinco modelos)
 

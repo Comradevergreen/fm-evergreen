@@ -6155,27 +6155,17 @@ static int test_seq_tools(void)
     bad += check("  elsewhere (PHRASES, SONG, MIXER, HOME, ENV) SEQ held is a tap: no SONG, no map", ok);
     ui_power_on();
     go_page(GR_ROLL); frame();
-    press(B_SEQ); frames(320);                         /* (0.6.81: STEP, PATTERN, SHIFT, PLAYHEADS, NOTE, COMP, AUTOMATION,
-                                                        * AUTO LIST, MUTATE) */
-    ok = str_eq(cur_page()->title, "PATTERN") && msg_is("HOLD [SEQ] QUICK");
-    press(B_SEQ); frames(320);
-    ok &= str_eq(cur_page()->title, "SHIFT");
-    press(B_SEQ); frames(320);
-    ok &= str_eq(cur_page()->title, "PLAYHEADS");
-    press(B_SEQ); frames(320);
-    ok &= str_eq(cur_page()->title, "NOTE");
-    press(B_SEQ); frames(320);
-    ok &= str_eq(cur_page()->title, "TIMING");          /* (0.6.88) */
-    press(B_SEQ); frames(320);
-    ok &= str_eq(cur_page()->title, "STRETCH");         /* (0.6.85) */
-    press(B_SEQ); frames(320);
-    ok &= str_eq(cur_page()->title, "HUMAN");           /* (0.6.87) */
-    press(B_SEQ); frames(320);
-    ok &= str_eq(cur_page()->title, "COMP");
-    press(B_SEQ); frames(320);
-    ok &= str_eq(cur_page()->title, "COMP 2");          /* (0.6.82) */
-    press(B_SEQ); frames(320);
-    ok &= str_eq(cur_page()->title, "WHEN");
+    {   /* (0.6.90) the piano roll, its pages, then the track's */
+        static const char *const ORD[] = {"NOTE", "TIMING", "STRETCH", "COMP", "COMP 2", "WHEN", "PATTERN", "SHIFT", "HUMAN",
+                                          "PLAYHEADS"};
+        uint32_t q;
+        ok = 1;
+        for (q = 0; q < sizeof ORD / sizeof ORD[0]; q++) {
+            press(B_SEQ); frames(320);
+            ok &= str_eq(cur_page()->title, ORD[q]);
+            if (!q) ok &= msg_is("HOLD [SEQ] QUICK");
+        }
+    }
     press(B_SEQ); frames(320);
     ok &= cur_page()->graph == GR_MOTION;
     press(B_SEQ); frames(320);
@@ -6797,7 +6787,7 @@ static int test_fx_sections(void)
     ok &= str_eq(cur_page()->title, "DLY");
     press(B_FX); frames(600);
     page_title(ti);
-    ok &= str_eq(cur_page()->title, "DLY 2") && str_eq(ti, "DLY 2/2");
+    ok &= str_eq(cur_page()->title, "DLY 2") && str_eq(ti, "DLY 2/3");
     go_title("CHORUS"); frame();
     press(B_FX); press(B_FX); frames(600);
     ok &= str_eq(cur_page()->title, "SLICER");
@@ -6806,7 +6796,7 @@ static int test_fx_sections(void)
     ok &= str_eq(cur_page()->title, "FX");
     page_title(ti);
     ok &= str_eq(ti, "FX 1/3");
-    bad += check("FX sections: tap next page, two quick taps next section (TRACK DELAY REVERB CHORUS SLICER MASTER), 'DLY 2/2'", ok);
+    bad += check("FX sections: tap next page, two quick taps next section (TRACK DELAY REVERB CHORUS SLICER MASTER), 'DLY 2/3'", ok);
     ui_power_on();
     return bad;
 }

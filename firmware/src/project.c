@@ -763,6 +763,8 @@ static uint32_t proj_packed_size(const project_t *q)
     uint32_t n = 68u + sizeof q->chain + 4u + q->motion.count * sizeof q->motion.event[0] + 2u + G_SL_N, t, i;
     if (q->g[G_DMOD] != GP[G_DMOD].def)                 /* (0.6.86) the delay's MOD's, when not the default */
         n += 3u;
+    if (q->g[G_DTYPE] || q->g[G_DPING])                 /* (0.6.90) its TYPE and PING-PONG's */
+        n += 4u;
     for (i = 0; i < sizeof q->dx_snd; i++)              /* (0.6.48) the SENDs' block, when one is set */
         if (q->dx_snd[i]) { n += 2u + sizeof q->dx_snd; break; }
     for (i = 0; i < sizeof q->dx_lay; i++)              /* (0.6.49) the LAYERs' */
@@ -862,6 +864,10 @@ static int proj_pack(project_store_t *out, const project_t *q)
     if (q->g[G_DMOD] != GP[G_DMOD].def) {               /* (0.6.86) the delay's MOD (biased), when not the default */
         b[pos++] = 'D'; b[pos++] = 'M';
         b[pos++] = (uint8_t)(clamp(q->g[G_DMOD], 0, 127) + 64);
+    }
+    if (q->g[G_DTYPE] || q->g[G_DPING]) {               /* (0.6.90) the delay's TYPE, PING-PONG */
+        b[pos++] = 'D'; b[pos++] = 'T';
+        b[pos++] = (uint8_t)clamp(q->g[G_DTYPE], 0, 1); b[pos++] = (uint8_t)clamp(q->g[G_DPING], 0, 1);
     }
     memcpy(b + PROJC_PFX_OFF, q->pfx_lane, sizeof q->pfx_lane);
     b[PROJC_PFX_OFF + sizeof q->pfx_lane] = q->pfx_ltgt > 2u ? 0u : q->pfx_ltgt;
@@ -1062,8 +1068,14 @@ static int proj_unpack_c(project_t *q, const uint8_t *b)
         }
         pos += 2u + sizeof q->fugue;
     }
-    if (pos + 3u <= room && b[pos] == 'D' && b[pos + 1u] == 'M')   /* (0.6.86) the delay's MOD (else its default) */
+    if (pos + 3u <= room && b[pos] == 'D' && b[pos + 1u] == 'M') {   /* (0.6.86) the delay's MOD (else its default) */
         q->g[G_DMOD] = (int16_t)clamp((int32_t)b[pos + 2u] - 64, GP[G_DMOD].min, GP[G_DMOD].max);
+        pos += 3u;
+    }
+    if (pos + 4u <= room && b[pos] == 'D' && b[pos + 1u] == 'T') {   /* (0.6.90) its TYPE, PING-PONG (else ANALOG, OFF) */
+        q->g[G_DTYPE] = (int16_t)(b[pos + 2u] & 1u);
+        q->g[G_DPING] = (int16_t)(b[pos + 3u] & 1u);
+    }
     proj_new_tracks(q, nt);                             /* (a FUNC of fewer tracks: the rest at power-on) */
     for (t = nt; t < NTRK; t++)
         memcpy(q->fm6[t], FM6_INIT, FM6_PACKED);

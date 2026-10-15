@@ -394,6 +394,38 @@ static void test_dly_feedback(void)
         check("DLY TONE in the middle: the repeats copies (within 3 %); at either end the loop self-oscillates (FEEDBK 100)",
               p1 > 14000 && abs(p2 - p1) * 33 <= p1 && lo > 0 && hi > 0);
     }
+    {   /* (0.6.90) PING-PONG: a click's repeats left, right, left, right (each side's echoes TIME * 2 apart, the right's
+         * TIME later); DIGITAL: FEEDBK past 100 % holds (never grows), TONE at an end never self-oscillates */
+        static int32_t c[CTL], d[CTL], r[CTL], w[CTL];
+        uint32_t b, i, dl, k;
+        int32_t sl[8] = {0}, sr[8] = {0};
+        double g120, gt;
+        memset(dly_buf, 0, sizeof dly_buf); fx.dly_lp = fx.dly_hp = 0; fx.primed = 0; fx.dt1 = fx.dt2 = 0;
+        song.g[G_DTIME] = 2; song.g[G_DFDBK] = 90; song.g[G_DCOLOR] = 64; song.g[G_DMIX] = 127; song.g[G_DMOD] = 0;
+        song.g[G_DPING] = 1; song.g[G_DTYPE] = 0; song.g[G_WIDTH] = 0;
+        dl = delay_samples();
+        for (b = 0; b < 9u * dl / CTL; b++) {
+            for (i = 0; i < CTL; i++) { c[i] = r[i] = 0; d[i] = b * CTL + i < 64u ? 40000 : 0; fx_sl[i] = fx_sr[i] = 0; }
+            fx_buses(c, d, r, w, CTL);
+            for (i = 0; i < CTL; i++) {
+                uint32_t t = b * CTL + i;
+                int32_t L = w[i] + fx_sl[i], R = w[i] + fx_sr[i];
+                k = (t + dl / 2u) / dl;                 /* (repeat k, around k * TIME) */
+                if (k > 0u && k < 8u) { if (abs(L) > sl[k]) sl[k] = abs(L); if (abs(R) > sr[k]) sr[k] = abs(R); }
+            }
+        }
+        printf("reverb:   (PING-PONG repeats L/R:");
+        for (k = 1; k < 7u; k++) printf(" %d/%d", sl[k], sr[k]);
+        printf(")\n");
+        check("DLY PING-PONG: the repeats left, right, left, right, each softer",
+              sl[1] > 4 * sr[1] && sr[2] > 4 * sl[2] && sl[3] > 4 * sr[3] && sr[4] > 4 * sl[4] && sl[3] < sl[1] && sr[4] < sr[2]);
+        song.g[G_DPING] = 0; song.g[G_DTYPE] = 1;
+        dly_tail_t(120, 64, &g120, &p60);
+        dly_tail_t(100, 0, &gt, &p60);
+        printf("reverb:   (DIGITAL: FEEDBK 120 %+.1f dB over 5 s, TONE 0 FEEDBK 100 %+.1f dB)\n", g120, gt);
+        check("DLY DIGITAL: FEEDBK 100 % at most (held, never growing), TONE plain (no self-oscillation)", g120 < 0.5 && g120 > -3 && gt < 0);
+        song.g[G_DTYPE] = 0;
+    }
 }
 
 static void test_switch(void)
