@@ -203,6 +203,35 @@ int main(void)
             bad += gcheck("  after: the whole piece live (A), nothing muted", m == 0u && live.cur == 0);
         }
     }
+    /* ---- (0.6.97) the kit's space, the top end's variety, Hook's register, the lead's envelope */
+    {
+        uint32_t seeds, rows = 0, bs, lo = 127, hi = 0, i2, sus_lt = 0, leads = 0;
+        uint32_t seen[64]; uint32_t nseen = 0;
+        gen_reset();
+        for (seeds = 1; seeds <= 8u; seeds++) {         /* HOUSE: the closed hats' row over eight seeds */
+            uint32_t h = 2166136261u, d;
+            gen_with(1, seeds, 50, 0);
+            d = gs.trk_of[RL_DRUM];
+            for (i2 = 0; i2 < 16u; i2++) h = (h ^ (uint32_t)(trk[d].step[i2].time == ST_NOTE ? (trk[d].step[i2].hit >> 3) & 3u : 0u)) * 16777619u;
+            for (i2 = 0; i2 < nseen && seen[i2] != h; i2++) {}
+            if (i2 == nseen) seen[nseen++] = h;
+        }
+        rows = nseen;
+        bad += gcheck("HOUSE x 8 seeds: three hat rows at least (the pools)", rows >= 3u);
+        gen_with(1, 3, 50, 0);
+        bad += gcheck("the kit's snare and clap into the reverb (SEND bus 3, 6..63)", DXS_BUS(dx_snd[DV_SNARE]) == 3u && DXS_AMT(dx_snd[DV_SNARE]) >= 6 &&
+                      DXS_BUS(dx_snd[DV_CLAP]) == 3u);
+        for (seeds = 1; seeds <= 4u; seeds++) {         /* POST PUNK: the bass high on the neck, never below E2 nor above A3 */
+            gen_with(17, seeds, 50, 0);
+            bs = gs.trk_of[RL_BASS];
+            for (i2 = 0; i2 < dlen(&trk[bs]); i2++)
+                if (trk[bs].step[i2].time == ST_NOTE) { if (trk[bs].step[i2].note[0] < lo) lo = trk[bs].step[i2].note[0]; if (trk[bs].step[i2].note[0] > hi) hi = trk[bs].step[i2].note[0]; }
+            if (gs.act[RL_LEAD]) { leads++; sus_lt += trk[gs.trk_of[RL_LEAD]].p[P_SUS] < 95; }
+        }
+        if (lo < 40u || hi > 70u) printf("  post punk bass %u..%u\n", lo, hi);
+        bad += gcheck("POST PUNK x 4: the bass between E2 and A#4 (Hook's neck), its tempo 118..148", lo >= 40u && hi <= 70u && song.g[G_BPM] >= 118 && song.g[G_BPM] <= 148);
+        bad += gcheck("  the leads not all at full sustain", !leads || sus_lt > 0u);
+    }
     /* ---- (0.6.96) a new piece: MUTATE off on every track (a reroll kept the lanes), the anchor the piece */
     {
         uint32_t on = 0;
@@ -275,6 +304,12 @@ int main(void)
         fm1_ms += 1200u;
         held_turn(B_HOME, 1);
         bad += gcheck("HOME + SELECT: the GEN screen (ui.confirm CF_DICE_ALL), page 1, GENRE RANDOM (0.6.93)", ui.confirm == CF_DICE_ALL && gp.page == 0u && gp.genre == 0u);
+        frames(800);
+        press(B_PLAY); frames(4);
+        bad += gcheck("  (0.6.97) PLAY on the GEN screen: the transport runs, the screen stays", (song.playing || transport_req == 1) && ui.confirm == CF_DICE_ALL);
+        press(B_PLAY); frames(4);
+        bad += gcheck("  PLAY again: stopped, the screen stays", (!song.playing || transport_req == 2) && ui.confirm == CF_DICE_ALL);
+        frames(8);
         frames(800);                                    /* (the knobs quiet a moment after a button: ui_layer.c) */
         turn(EN_K1, 1); turn(EN_K3, 2);
         bad += gcheck("  KNOB 1 the genre (RANDOM -> HOUSE), KNOB 3 the energy (+10)", gp.genre == 1u && gp.energy == 60u);

@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.6.96).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.6.97).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 > ⚡ **New in 0.6.85 – 0.6.92: a song generator you steer, a compact sequencer that breathes, a delay that feeds back.**
 > - **GEN (HOME + SELECT)**: a screen of three pages — GENRE (43 genres or RANDOM), SEED, ENERGY, FORM (loop, parts,
@@ -524,6 +524,30 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### v0.6.97
+- **GEN: the drums less alike.** A throw takes its closed hats, open hats, rim, cowbell and toms from pools of
+  patterns (eighths, driven sixteenths, offbeats, shuffles, tresillos ..) now and then instead of the genre's map, swaps
+  the snare and the clap now and then, adds a kick on a weak step more often; FORM PARTS / SONG give **each section
+  its own fill** (roll, toms, hat roll, drop, linear, kick sixteenths).
+- **The kit's space**: the snare and the clap into the reverb (the kit's own SENDs, by how wet the genre is), the rim
+  into the delay and a touch of reverb on the open hat where the genre is wet; **MORPH automated** over the loop on the
+  drum track now and then (the kit's character drifting and back).
+- **Effects by genre**: the wet genres (dub, dub techno, shoegaze, ambient ..) get long delay tails with the tape's
+  wobble (FEEDBK 58–80, MOD 20–50); a **punch-in lane** in the SONG form: a stutter into the drop (1/8, then 1/16 on
+  the build's last beat), the synths an octave up on the break's last bar.
+- **Sounds**: leads no longer at full sustain (SUS 30–90, their decay in play), a late vibrato on half the leads, a
+  slow tremolo or pan on pads, arps panning on the beat; **more step components** (from COMPLEX 30 up: echoes,
+  octaves, bends, pulses, ratchets, some every other loop).
+- **Lead melodies** from a library of rhythmic cells that hold together (a long note and two short ones, a tresillo, a
+  pickup into the three, a dotted push ..) thinned by COMPLEX, instead of onsets drawn one by one.
+- **POST PUNK after Joy Division and New Order**: Hook's bass high on the neck (Transmission's eighths over root,
+  fifth, octave and seventh; Blue Monday's sequenced sixteenth octaves; Ceremony's run), Morris's drums (the kick
+  syncopated against flat sixteenth hats, or four on the floor with a clap, open hats and toms into the one),
+  Sumner's pulsed chords, an octave arp, strings and a choir behind, 118–148 BPM.
+- **PLAY on the GEN screen** runs and stops the transport: the piece heard without leaving the screen.
+- The memory map: the RAM code 4 KiB higher (the image grew past a call's reach from it), the user stack 4 KiB
+  shorter (19.75 KiB).
 
 ### v0.6.96
 - **MUTATE** (reported on r/MVaveFM1): a new piece from GEN or the dice turns MUTATE off on every track and makes the

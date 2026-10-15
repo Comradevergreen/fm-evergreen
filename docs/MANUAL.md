@@ -723,7 +723,8 @@ Hold **SAVE**:
 
 On **HOME**, turn **SELECT** (or hold HOME and turn SELECT, from any page). The **GENERATOR** screen opens: three
 pages of settings, **SELECT** turns the page, **KNOB 1–4** set the four values shown, **OCT+** makes the piece and
-**OCT−** closes the screen (the piece stays; **UNDO**, GLO + G4, brings back what was there before).
+**OCT−** closes the screen (the piece stays; **UNDO**, GLO + G4, brings back what was there before). **PLAY** runs and stops
+the transport without leaving the screen (0.6.97).
 
 | Page | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 |---|---|---|---|---|
