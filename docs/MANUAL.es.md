@@ -1257,7 +1257,7 @@ valor. HOME lo cierra (en ese momento se guarda la configuración).
 | DISPLAY | STYLE | FLAT, LINE |
 | DISPLAY | LARGE | OFF, ON (etiquetas y valores grandes) |
 | DISPLAY | ANIM | ON, OFF (los valores saltan directo; la firma de encendido aparece entera) |
-| DISPLAY | LEDS | OFF, DIM LO, **DIM HI** (por defecto), INV |
+| DISPLAY | LEDS | OFF, DIM LO, **DIM HI** (por defecto), INV — (0.7.3) los LEDs del brillo de reposo se turnan cuadro a cuadro, así el brillo ya no zumba por el parlante cuando la música para |
 | DISPLAY | SCREEN OFF | **NEVER** (por defecto), 5 MIN, 15 MIN, 30 MIN, 60 MIN |
 | CONTROL | HOLD | 0.3 s, **0.4 s** (por defecto), 0.5 s, 0.6 s — cuánto tarda un botón mantenido en abrir su capa |
 | CONTROL | KNOB ACCEL | **ON** (por defecto), OFF |
