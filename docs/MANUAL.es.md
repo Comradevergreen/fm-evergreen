@@ -170,9 +170,9 @@ Los **diálogos** preguntan antes de cualquier cosa destructiva: **OCT− NO**, 
 - **Tocá** un botón de página: sus páginas. Tocalo de nuevo: la siguiente página de esa familia. Desde otra familia
   volvés a la página donde estuviste por última vez.
 - **HOME** vuelve al ecosistema.
-- **FX** es largo, así que está dividido en secciones: TRACK (FX, DIST, AUTO PAN), DELAY (DLY, DLY 2), REVERB
-  (REVERB, REVERB 2), CHORUS, SLICER (SLICER, SL BUS, SL BUS 2, SL PITCH), MASTER. **Dos toques rápidos** en FX saltan a la
-  siguiente sección.
+- **FX** es largo, así que está dividido en secciones: MIX (FX, MASTER: los envíos y el master, las dos primeras
+  páginas de FX desde 0.7.6), TRACK (DIST, AUTO PAN), DELAY (DLY, DLY 2, DLY 3), REVERB (REVERB, REVERB 2), CHORUS,
+  SLICER (SLICER, SL BUS, SL BUS 2, SL PITCH), PUNCH. **Dos toques rápidos** en FX saltan a la siguiente sección.
 - **Girá SELECT** para recorrer las páginas de la sección en la que estás (las de EDIT en una página EDIT, las de FX en
   una de FX), una por paso, frenando en la primera y la última; el nombre de la página aparece un momento sobre el pie.
   En HOME abre GEN, el generador de temas.
@@ -230,8 +230,7 @@ a la derecha); apretá OCT+ para ejecutarla.
 
 | Página | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 | --- | --- | --- | --- | --- |
-| SCL | ROOT | SCALE | QUANT | TRANS |
-| SCL 2 | ALL TR | — | — | — |
+| SCL | ROOT | SCALE | QUANT | ALL TR (0.7.6; antes TRANS, y SCL 2 tenía solo ALL TR) |
 
 **EDIT** (por pista; qué páginas aparecen depende del motor)
 
@@ -656,7 +655,7 @@ tienen. Cada pista conserva su propio TRANS.
 - SCALE: CHR, MAJ, MIN, DOR, MIX, PEN, MPEN, HARM, PHRY, LYD, LOC, MEL, BLUES, WHOLE, DIMHW, DIMWH.
 - QUANT: OFF; SNAP (las teclas se ajustan a la escala); WHITE (las teclas blancas recorren la escala, las negras no
   suenan); SEQ (como SNAP, y además las notas del secuenciador se ajustan mientras suenan).
-- **SCL 2 > ALL TR** (antes se llamaba STRN) mueve todas las secuencias hacia arriba o hacia abajo por la escala (±14
+- **SCL > ALL TR**, KNOB 4 (0.7.6; hasta entonces en SCL 2; antes se llamaba STRN) mueve todas las secuencias hacia arriba o hacia abajo por la escala (±14
   grados), en todas las pistas a la vez. Es global y se guarda con el proyecto: si tus notas suenan más graves o más
   agudas de lo que muestra el piano roll, fijate acá. Cuando no está en 0 el piano roll muestra **ALL TR** y su valor, y
   al dar PLAY también lo avisa. 0 = apagado.

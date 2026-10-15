@@ -604,7 +604,7 @@ static void graph_roll(const track_t *t, uint16_t c)
             }
         }
     }
-    if (song.g[G_STRN]) {                             /* (0.6.45) ALL TR (SCL 2): the notes sound moved, shown */
+    if (song.g[G_STRN]) {                             /* (0.6.45) ALL TR (SCL KNOB 4, 0.7.6): the notes sound moved, shown */
         char b[16];
         str_cpy(b, "ALL TR ", sizeof b);
         b[7] = song.g[G_STRN] < 0 ? '-' : '+'; b[8] = 0;
@@ -1109,9 +1109,10 @@ static void page_title(char *ti)
                 if (i == ui.page)
                     k = n;
             }
-        pt = str_eq(PAGES[h].title, "FX") ? pg->title : PAGES[h].title;   /* (the section's name: "DLY 2/2", "SLICER
-                                                         * 4/4"; 0.6.81: TRACK's its pages' own, "AUTO PAN 3/3" was
-                                                         * "FX 3/3") */
+        pt = str_eq(PAGES[h].title, "FX") || str_eq(PAGES[h].title, "DIST") ? pg->title : PAGES[h].title;   /* (the
+                                                         * section's name: "DLY 2/2", "SLICER 4/4"; 0.6.81: TRACK's its
+                                                         * pages' own, "AUTO PAN 3/3" was "FX 3/3"; 0.7.6: MIX's too,
+                                                         * "MASTER 2/2") */
     } else
     for (i = 0; i < NPAGES; i++)
         if (PAGES[i].fam == pg->fam && page_visible(i)) {

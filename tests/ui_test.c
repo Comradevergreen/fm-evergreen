@@ -2961,7 +2961,7 @@ static int test_layer(void)
     bad += check("FX tap: nothing on press, the FX page when let go", ok && !ui.home && cur_page()->fam == FAM_FX);
     frames(320);                                       /* (not a double tap: #83) */
     press(B_FX);
-    bad += check("  a second tap: the next page of the family (DIST)", str_eq(cur_page()->title, "DIST"));
+    bad += check("  a second tap: the next page of the family (MASTER, 0.7.6)", str_eq(cur_page()->title, "MASTER"));
     ui_power_on();
     btn_down(B_FX);
     for (flash = 0, i = 0; i < 22u; i++) { frame(); flash |= ui.layer; }      /* 0.35 s */
@@ -3600,13 +3600,13 @@ static int test_quick_layers(void)
         t1 = cur_page()->title;
         turn(EN_PRESET, 2); frame();                    /* two on */
         t3 = cur_page()->title;
-        ok = !ui.home && str_eq(t1, "FX") && str_eq(t3, "AUTO PAN") && msg_is("AUTO PAN");   /* (0.6.9: after DIST) */
+        ok = !ui.home && str_eq(t1, "FX") && str_eq(t3, "DIST") && msg_is("DIST");   /* (0.7.6: FX, MASTER, DIST) */
         frames(600);                                    /* (held past HOLD: still no map) */
         ok &= !ui.layer;
         btn_up(B_FX); frames(4);
-        ok &= str_eq(cur_page()->title, "AUTO PAN") && !ui.layer;   /* (no tap: no next page) */
+        ok &= str_eq(cur_page()->title, "DIST") && !ui.layer;   /* (no tap: no next page) */
         btn_down(B_FX); frame(); turn(EN_PRESET, -1); frame(); btn_up(B_FX); frames(4);
-        ok &= str_eq(cur_page()->title, "DIST");
+        ok &= str_eq(cur_page()->title, "MASTER");
         btn_down(B_FX); frame(); turn(EN_PRESET, -9); frame(); btn_up(B_FX); frames(4);
         ok &= str_eq(cur_page()->title, "FX");          /* (no wrap: it stops at the first) */
         btn_down(B_ENV); frame(); turn(EN_PRESET, 1); frame(); turn(EN_PRESET, 1); frame(); btn_up(B_ENV); frames(4);
@@ -6807,6 +6807,35 @@ static int test_clear_ghosts(void)
     return bad;
 }
 
+/* (0.7.6) SCL: KNOB 4 the global ALL TR where the track's TRANS was; SCL 2 (ALL TR alone) gone: SCL then CHORD */
+static int test_scl_alltr(void)
+{
+    int bad = 0, ok;
+    int16_t *vp = 0;
+    const param_desc_t *d;
+    track_t *t;
+    ui_power_on();
+    t = TSEL;
+    go_title("SCL"); frame();
+    d = page_desc(cur_page(), 3u, &vp);
+    ok = d == &GP[G_STRN] && vp == &song.g[G_STRN] && str_eq(d->label, "ALL TR");
+    song.g[G_STRN] = 0; t->p[P_TRANS] = 0;
+    song.rec = 1;                                      /* (recording: the global is no track lock) */
+    turn(EN_K4, 1); turn(EN_K4, 1); frame();
+    ok &= song.g[G_STRN] == 2 && t->p[P_TRANS] == 0;
+    song.rec = 0;
+    press(B_SCL); frame();
+    ok &= str_eq(cur_page()->title, "CHORD");          /* (no SCL 2 between) */
+    {
+        uint32_t i, n2 = 0;
+        for (i = 0; i < NPAGES; i++) n2 += str_eq(PAGES[i].title, "SCL 2");
+        ok &= n2 == 0u;
+    }
+    song.g[G_STRN] = 0;
+    bad += check("SCL: KNOB 4 is ALL TR (the global, TRANS untouched), SCL 2 gone: SCL then CHORD", ok);
+    ui_power_on();
+    return bad;
+}
 /* (0.6.24) FX in sections: a tap the next page, two quick taps the next section; the footer counts within it */
 static int test_fx_sections(void)
 {
@@ -6815,8 +6844,14 @@ static int test_fx_sections(void)
     ui_power_on();
     go_title("FX"); frame();
     press(B_FX); frames(600);
-    ok = str_eq(cur_page()->title, "DIST");
-    press(B_FX); press(B_FX); frames(600);             /* two quick taps from DIST: DLY (0.6.81: the SLICER after CHORUS) */
+    page_title(ti);
+    ok = str_eq(cur_page()->title, "MASTER") && str_eq(ti, "MASTER 2/2");   /* (0.7.6) the master: FX's second page */
+    press(B_FX); press(B_FX); frames(600);             /* two quick taps from MASTER: the next section, DIST */
+    ok &= str_eq(cur_page()->title, "DIST");
+    press(B_FX); frames(600);
+    page_title(ti);
+    ok &= str_eq(cur_page()->title, "AUTO PAN") && str_eq(ti, "AUTO PAN 2/2");
+    press(B_FX); press(B_FX); frames(600);             /* two quick taps from AUTO PAN: DLY (0.6.81: the SLICER after CHORUS) */
     ok &= str_eq(cur_page()->title, "DLY");
     press(B_FX); frames(600);
     page_title(ti);
@@ -6824,12 +6859,12 @@ static int test_fx_sections(void)
     go_title("CHORUS"); frame();
     press(B_FX); press(B_FX); frames(600);
     ok &= str_eq(cur_page()->title, "SLICER");
-    go_title("MASTER"); frame();
-    press(B_FX); press(B_FX); frames(600);             /* (past MASTER: round to the first) */
+    go_title("PUNCH"); frame();
+    press(B_FX); press(B_FX); frames(600);             /* (past PUNCH, the last: round to the first) */
     ok &= str_eq(cur_page()->title, "FX");
     page_title(ti);
-    ok &= str_eq(ti, "FX 1/3");
-    bad += check("FX sections: tap next page, two quick taps next section (TRACK DELAY REVERB CHORUS SLICER MASTER), 'DLY 2/3'", ok);
+    ok &= str_eq(ti, "FX 1/2");
+    bad += check("FX sections: tap next page, two quick taps next section (MIX TRACK DELAY REVERB CHORUS SLICER PUNCH), 'DLY 2/3'", ok);
     ui_power_on();
     return bad;
 }
@@ -9185,6 +9220,7 @@ int main(void)
     bad += test_note_page();
     bad += test_chord_glide();
     bad += test_fx_sections();
+    bad += test_scl_alltr();
     bad += test_clear_ghosts();
     bad += test_dx_sound();
     bad += test_clear_all();

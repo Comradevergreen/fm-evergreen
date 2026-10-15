@@ -7,7 +7,7 @@ import html, os
 
 R = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(R, 'docs', 'cheatsheet')
-VERSION = 'v0.7.5'
+VERSION = 'v0.7.6'
 
 HEAT = ['#22d3ee', '#3b82f6', '#8b5cf6', '#d946ef', '#ef4444', '#ff7a00', '#facc15', '#f4f1ea']
 
@@ -143,9 +143,9 @@ def controls():
     pb = [
         ('ENV', 'ENV · ENV DEST', '—'),
         ('LFO', 'LFO · LFO DEST · MOD · MSEQ · MSEQ 2', 'MACROS M1–M4 (stay latched)'),
-        ('FX', 'TRACK · SLICER · DELAY · REVERB · CHORUS · MASTER · PUNCH (two quick taps: next section)',
+        ('FX', 'FX · MASTER · TRACK · DELAY · REVERB · CHORUS · SLICER · PUNCH (two quick taps: next section)',
          'PUNCH-IN FX'),
-        ('SCL', 'SCL · SCL 2 · CHORD', 'ROOT by key'),
+        ('SCL', 'SCL · CHORD', 'ROOT by key'),
         ('EDIT', 'EDIT 1 · EDIT 2 · FILTER · VOICE  (FM6: OPERATOR · OP ENV · OPERATOR 2; DRUM: KIT · KIT 2 · KIT 3 · X-MOD · FILTER · SOUND 1–4 · LEVELS 1–2 · STEREO)', 'INIT · RECALL · sound mutes'),
         ('GLO', 'MIXER · GLOBAL · SYSTEM', 'MUTE · SOLO · LEVEL · TAP'),
         ('SAVE', 'PRESETS · USER · PROJECT · ARRANGE · TOOLS', 'SONG layer'),
@@ -238,7 +238,7 @@ def controls():
                            ('LEVELS 2', 'HATOP TOM RIM BELL'), ('SOUND', 'SOUND SIDE PITCH PMOD'),
                            ('SOUND 2', 'SOUND DECAY NOISE COLOR'), ('SOUND 3', 'SOUND MODE PM.TYPE DRIVE'),
                            ('SOUND 4', 'SOUND LAYER FEEDBK SEND'), ('STEREO', 'IMAGE - - -')]),
-        ('SCL · ARP', HEAT[2], [('SCL', 'ROOT SCALE QUANT TRANS'), ('SCL 2', 'ALL TR - - -'), ('CHORD', 'CHORD VOICING STRUM -'), ('ARP', 'MODE RATE OCT GATE'),
+        ('SCL · ARP', HEAT[2], [('SCL', 'ROOT SCALE QUANT ALL TR'), ('CHORD', 'CHORD VOICING STRUM -'), ('ARP', 'MODE RATE OCT GATE'),
                                 ('ARP 2', 'SWING PROB HOLD ORDER')]),
         ('SEQ', HEAT[4], [('STEP', 'STEP NOTE TIME FLAG'), ('STEP · DRUM', 'STEP LANE HIT ACC'), ('PATTERN', 'LEN DIV SWING GATE'), ('NOTE', 'FOCUS PITCH MOVE MICRO'),
                           ('STRETCH', 'x/÷ REPEAT NUDGE ROTATE'), ('COMP', 'STEP TYPE VAL EVERY'), ('COMP 2', 'STEP TYPE VAL EVERY'), ('TRACK', 'PITCH CHANCE HUMAN REC Q'),
@@ -338,7 +338,7 @@ def sound():
                   '<h4>PATTERN · TRACK</h4>' + knobs('LEN', 'DIV', 'SWG', 'GATE') + knobs('PIT', 'CHN', 'HUM', 'RECQ')))
     b.append(card('SCALE · ARP', HEAT[0],
                   '<p><b>ROOT and SCALE</b> are every melodic track\'s: CHR MAJ MIN DOR MIX PEN MPEN HARM PHRY LYD LOC MEL '
-                  'BLUES WHOLE DIMHW DIMWH. QNT snaps keys or the sequence, TRN transposes, <b>ALL TR</b> (SCL 2) moves '
+                  'BLUES WHOLE DIMHW DIMWH. QNT snaps keys or the sequence, <b>ALL TR</b> (SCL KNOB 4) moves '
                   'every sequence along the scale. <b>CHORD</b>: a key plays a chord (TRIAD 7TH ADD9 SUS2 SUS4 in key, '
                   'MAJ MIN 7 MAJ7 MIN7 POWER), VOICING LEAD leads each to the next, STRUM as a harp.</p><h4>ARP MODES</h4><p class="dim">OFF UP DN UPDN RND ORD REPEAT DNUP '
                   'UP+8 CONV DIVG PINKY THUMB WALK CHORD <b style="color:#f4f1ea">TRNS</b> (the keys transpose the '

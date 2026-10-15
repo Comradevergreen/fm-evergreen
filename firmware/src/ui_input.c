@@ -1149,7 +1149,8 @@ static void edit_param(uint32_t slot, int32_t steps)
         settings_save();
         return;
     }
-    if (pg->scope != SC_GLOBAL) motion_capture(TSEL, (uint32_t)(vp - TSEL->p), *vp);
+    if (pg->scope != SC_GLOBAL && vp >= TSEL->p && vp < TSEL->p + P_COUNT)   /* (0.7.6: SCL's ALL TR is a global) */
+        motion_capture(TSEL, (uint32_t)(vp - TSEL->p), *vp);
 }
 
 /* OCT+ on an action page: the picked action. A load stays picked (browse and load again); the others
@@ -1859,7 +1860,7 @@ static void ui_input_frame(void)
             if (song.g[G_STRN] < 0) str_cpy(b + 7, "-", 2);
             fmt_int(b + str_len(b), song.g[G_STRN] < 0 ? -song.g[G_STRN] : song.g[G_STRN]);
             ui_say(b, " DEG");
-            str_cpy(ui.msg2, "SCL 2 > ALL TR: 0 = OFF", sizeof ui.msg2);
+            str_cpy(ui.msg2, "SCL > ALL TR: 0 = OFF", sizeof ui.msg2);   /* (0.7.6: SCL KNOB 4, was SCL 2) */
         }
         if (song.playing && !play0 && quiet)
             for (k = trk_live; k < NTRK; k++)
