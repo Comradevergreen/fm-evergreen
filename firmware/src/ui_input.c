@@ -1164,6 +1164,11 @@ static void act_do(void)
         confirm_open(CF_CLEAR_MOTION, song.sel);
         return;
     }
+    if (cur_page()->graph == GR_PUNCH) {                /* (0.6.99) the punch-in lane cleared (a dialog) */
+        if (chain_busy()) { ui_message("STOP TO EDIT"); return; }
+        confirm_open(CF_CLEAR_PFX, song.sel);
+        return;
+    }
     if (cur_page()->graph == GR_EVENTS) {
         ev_oct();
         return;
@@ -2035,6 +2040,8 @@ static void ui_input_frame(void)
                 if (!chain_busy()) { gen_press(); ui.confirm = CF_DICE_ALL; }
             } else if (kind == CF_LOAD_PAT) {
                 pat_load_ui(&trk[ui.confirm_trk % NTRK], pat_pick());
+            } else if (kind == CF_CLEAR_PFX) {         /* (0.6.99) FX > PUNCH > CLEAR */
+                if (!chain_busy()) { memset(pfx_lane, 0, sizeof pfx_lane); pfx_ltgt = 0; ui_message("PUNCH LANE CLEARED"); }
             } else if (kind == CF_CLEAR_MOTION) {
                 track_t *t = &trk[ui.confirm_trk % NTRK];
                 if (!chain_busy()) { load_begin(t, LOAD_PAT); motion_clear(t); load_end(t); ui_message("AUTOMATION CLEARED"); }

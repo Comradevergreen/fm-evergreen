@@ -862,6 +862,39 @@ static int test_pfx(void)
         for (ok = 1, st = 0; st < 64u; st++) ok &= !pfx_lane_at(st);
         bad += check("  stopped, FX + G5 clears the lane", ok);
     }
+    /* (0.6.99) FX > PUNCH: LEN 16 of 1/8: the lane 16 steps of two sixteenths; a press over sixteenths 12..15 lands on
+     * steps 6 and 7, and the second pass (sixteenths 32..) plays it there again (the lane wraps at 16 of 1/8 = 32
+     * sixteenths); stopped, CLEAR empties it and the defaults come back */
+    {
+        uint32_t s16, st, ok = 1, pit6 = 0, pit0 = 1;
+        song_setup();
+        memset(pfx_lane, 0, sizeof pfx_lane);
+        song.g[G_PFXLEN] = 16; song.g[G_PFXRES] = 0;
+        s16 = beat_samples() / 4u;
+        song.rec = 1;
+        pfx_tgt = 0;
+        transport_req = 1;
+        for (i = 0; i < 32u * s16; i += CTL) {
+            st = (i / s16) & 63u;
+            if (st == 12u && !(perf_held & PF_BIT(PF_OCTU))) perf_press(PF_OCTU, 1);
+            if (st == 16u && (perf_held & PF_BIT(PF_OCTU))) perf_press(PF_OCTU, 0);
+            mix_block(o, CTL);
+        }
+        song.rec = 0;
+        ok &= pfx_lane_at(6) == (uint32_t)(PF_OCTU - PF_OCTD + 1) && pfx_lane_at(7) == (uint32_t)(PF_OCTU - PF_OCTD + 1) &&
+              !pfx_lane_at(5) && !pfx_lane_at(8) && !pfx_lane_at(16);
+        for (i = 32u * s16; i < 64u * s16; i += CTL) {  /* the second pass of the 16 */
+            st = ((i - 32u * s16) / s16) & 63u;
+            mix_block(o, CTL);
+            if (st == 13u) pit6 = t1->pfx_pit == 192;
+            if (st == 2u) pit0 = t1->pfx_pit;
+        }
+        transport_req = 2;
+        mix_block(o, CTL);
+        if (!(ok && pit6 && !pit0)) printf("  punch LEN 16 of 1/8: lane %u %u %u, pit %u %u\n", pfx_lane_at(5), pfx_lane_at(6), pfx_lane_at(7), pit6, pit0);
+        bad += check("PUNCH LEN 16 RES 1/8: a press over sixteenths 12..15 on steps 6 7, played again on the lane's second pass", ok && pit6 && !pit0);
+        song.g[G_PFXLEN] = 64; song.g[G_PFXRES] = 1;
+    }
     return bad;
 }
 

@@ -124,6 +124,14 @@ static uint8_t pfx_rh, pfx_rs0, pfx_rst, pfx_rold;   /* recording the lane: a pr
                                                       * written and what it held before */
 /* the lane's step s: 0 none, else the effect (PF_OCTD + v - 1) */
 static uint32_t pfx_lane_at(uint32_t s) { return (pfx_lane[(s >> 1) & 31u] >> ((s & 1u) * 4u)) & 15u; }
+/* (0.6.99) FX > PUNCH: the lane's length in steps (1..64) and a step's samples (RES: 1/8, 1/16, 1/32 of the beat) */
+static uint32_t pfx_lane_len(void) { return (uint32_t)clamp(song.g[G_PFXLEN], 1, 64); }
+static uint32_t pfx_lane_step(uint32_t b) { return b / (song.g[G_PFXRES] <= 0 ? 2u : song.g[G_PFXRES] == 1 ? 4u : 8u); }
+static uint32_t pfx_lane_pos(void)                     /* the step the lane is on (the page's playhead) */
+{
+    uint32_t b = beat_samples(), s = b >= 4u ? pfx_lane_step(b) : 0u;
+    return s ? (pfx_lph / s) % pfx_lane_len() : 0u;
+}
 static void pfx_lane_put(uint32_t s, uint32_t v)
 {
     uint8_t *p = &pfx_lane[(s >> 1) & 31u];
@@ -146,17 +154,17 @@ static __attribute__((noinline)) void pfx_block(uint32_t n, uint32_t held)
             pfx_qon |= nw;
     }
     held = pfx_qon;
-    if (song.playing && b >= 4u) {                      /* the lane: record, or play */
-        uint32_t s16 = b / 4u, st = (pfx_lph / s16) & 63u, half = pfx_lph % s16 >= s16 / 2u;
+    if (song.playing && b >= 4u) {                      /* the lane: record, or play; (0.6.99) its LEN and RES */
+        uint32_t s16 = pfx_lane_step(b), len = pfx_lane_len(), st = (pfx_lph / s16) % len, half = pfx_lph % s16 >= s16 / 2u;
         uint32_t w = pfx_rec_ok() && (raw || pfx_clr) ? (raw ? (uint32_t)__builtin_ctz(raw) - PF_OCTD + 1u : 0u) : 16u;
         pfx_lph += n;
         if (w < 16u) {                                  /* recording, to the nearest step: a press in a step's second */
             if (!pfx_rh) {                              /* half starts at the next one */
                 pfx_rh = 1;
-                pfx_rs0 = (uint8_t)((st + half) & 63u);
+                pfx_rs0 = (uint8_t)((st + half) % len);
                 pfx_rst = 0xFF;
             }
-            if (st != ((pfx_rs0 - 1u) & 63u) || st == pfx_rs0) {
+            if (st != ((pfx_rs0 + len - 1u) % len) || st == pfx_rs0) {
                 if (st != pfx_rst) {                    /* (a step new to this press: what it held, kept) */
                     pfx_rst = (uint8_t)st;
                     pfx_rold = (uint8_t)pfx_lane_at(st);
