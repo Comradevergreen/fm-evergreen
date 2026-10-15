@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.6.93).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.6.94).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 > ⚡ **New in 0.6.85 – 0.6.92: a song generator you steer, a compact sequencer that breathes, a delay that feeds back.**
 > - **GEN (HOME + SELECT)**: a screen of three pages — GENRE (43 genres or RANDOM), SEED, ENERGY, FORM (loop, parts,
@@ -524,6 +524,13 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### v0.6.94
+- **GEN: the snare a snare.** The generated kits' snare came out tonal (the FM oscillator's sweep over the noise):
+  now mostly noise (NOISE +26..40 on both ends of the lane), shorter (DECAY −10..18), less pitch sweep, the noise's
+  band a little brighter, and its own FEEDBK (3..6) on top of the factory LAYER. Every genre's kit, over the genre's
+  offsets. **The hats** a band-pass high up (COLOR +10..18, the factory kit's high-pass replaced) with more noise in
+  them (NOISE +18..28).
 
 ### v0.6.93
 - **GEN opens on RANDOM** every time (a genre is that visit's choice), and the generator tuned against its own labels
