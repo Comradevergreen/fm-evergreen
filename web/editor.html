@@ -470,7 +470,7 @@ const parse = {
   [CMD.DESC](a) {
     const r = new Reader(a);
     const o = { scope: r.b(), id: r.b(), fmt: r.b(), min: r.v(), max: r.v(), def: r.v(), label: r.s(), unit: r.s(), names: [] };
-    if (o.fmt === F.ENUM) for (let i = 0; i <= o.max - o.min && i < 24; i++) o.names.push(r.s());
+    if (o.fmt === F.ENUM) for (let i = 0; i <= o.max - o.min && i < 32; i++) o.names.push(r.s());   /* (0.7.0: 32, was 24) */
     return o;
   },
   [CMD.STEP_GET](a) {
@@ -1992,7 +1992,7 @@ function makeMockDevice(opt = {}) {
         const d = desc(a[0], a[1]);
         if (!d) return null;
         b(a[0]); b(a[1]); b(d.fmt); v(d.min); v(d.max); v(d.def); s(d.label); s(d.unit || "");
-        if (d.fmt === F.ENUM && d.names) for (let i = 0; i <= d.max - d.min && i < 24; i++) s(d.names[i]);
+        if (d.fmt === F.ENUM && d.names) for (let i = 0; i <= d.max - d.min && i < 32; i++) s(d.names[i]);
         break;
       }
       case CMD.STEP_GET: case CMD.STEP_SET: {

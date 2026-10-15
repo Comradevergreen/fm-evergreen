@@ -47,13 +47,17 @@ static uint32_t ms_clock;        /* (JIANT) samples since PLAY on the transport'
 enum { MD_OFF, MD_PITCH, MD_CUT, MD_SHP, MD_AMP, MD_PAN, MD_DIST, MD_CHO, MD_DLY, MD_REV, MD_RATE, MD_VIB, MD_E1,
        MD_CLIP = MD_E1 + 8, MD_PNCH, MD_DTIME, MD_DFDBK, MD_DCOL, MD_DMIX, MD_RSIZE, MD_RDAMP, MD_CRATE, MD_CDEPTH, MD_N };
 /* (0.7.0) the FX buses' globals as destinations (a mod sequence on the delay time ..): once an audio block
- * macro_master sums every track's slots on them and fx.c reads the result through GFX(k) in place of song.g[]; until
- * the first block (the UI's graphs, host tests of a bus alone) GFX() is the stored value */
+ * macro_master sums every track's slots on them and fx.c reads the stored value plus that offset through GFX(k) in
+ * place of song.g[] (no slot on a bus: the stored value, live for the UI's graphs and the host tests of a bus alone) */
 static const uint8_t GFX_ID[8] = {G_DTIME, G_DFDBK, G_DCOLOR, G_DMIX, G_RSIZE, G_RDAMP, G_CRATE, G_CDEPTH};
 enum { GF_DTIME, GF_DFDBK, GF_DCOL, GF_DMIX, GF_RSIZE, GF_RDAMP, GF_CRATE, GF_CDEPTH };
-static volatile int16_t gfx_eff[8];
-static volatile uint8_t gfx_live;
-#define GFX(k) (gfx_live ? (int32_t)gfx_eff[k] : (int32_t)song.g[GFX_ID[k]])
+static volatile int16_t gfx_off[8];                      /* the matrix's offset on each (0: the stored value, as before) */
+static inline int32_t gfx_val(uint32_t k)
+{
+    int32_t o = gfx_off[k], v = song.g[GFX_ID[k]];
+    return o ? clamp(v + o, GP[GFX_ID[k]].min, GP[GFX_ID[k]].max) : v;
+}
+#define GFX(k) gfx_val(k)
 static uint8_t macro_v[4];       /* (JIANT) the macros M1..M4, 0..127: the project's (project.c), LFO held turns them */
 _Static_assert(NELEM(N_MSRC) == MS_N && NELEM(N_MDST) == MD_N, "N_MSRC / N_MDST == MS_* / MD_*");
 _Static_assert(P_M2SRC == P_M1SRC + 3 && P_M4AMT == P_M1SRC + 11 && P_M4AMT + 1 == P_FM1_ATK, "matrix slots: 3 ids each");
@@ -246,11 +250,8 @@ static __attribute__((noinline)) void macro_master(void)
     }
     clip_eff = (int16_t)clamp(song.g[G_CLIP] + off[0], 0, 100);
     pnch_eff = (int16_t)clamp(song.g[G_PUNCH] + off[1], 0, 100);
-    for (k = 0; k < 8u; k++) {
-        const param_desc_t *pd = &GP[GFX_ID[k]];
-        gfx_eff[k] = (int16_t)clamp(song.g[GFX_ID[k]] + off[MD_DTIME - MD_CLIP + k], pd->min, pd->max);
-    }
-    gfx_live = 1;
+    for (k = 0; k < 8u; k++)
+        gfx_off[k] = (int16_t)clamp(off[MD_DTIME - MD_CLIP + k], -32000, 32000);
 }
 
 /* after the part's block (when MOD.on): the stored values back */
