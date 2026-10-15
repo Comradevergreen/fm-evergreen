@@ -519,6 +519,14 @@ recorded into the pattern, quantized to its steps, overdubbing. Knob moves on th
     the first time (an intro), !FIRST every loop but the first (0.6.92; it was TIMES).
   - **FILL**: the step plays only while **FX** is held.
   - **KILL**: the step first cuts everything the track is sounding (long releases, held notes), then plays.
+  - **WALK** and **CLIMB** (0.6.98, after the OP-Z's and OP-XY's evolving components): the step's notes move one
+    degree of the scale (WALK) or one octave (CLIMB) **every so many loops** of the pattern (KNOB 4: 1 … 10, 12, 16
+    loops a move), over a **range** (WALK 3, 5, 7 or 12 degrees; CLIMB 1 … 4 octaves), then round again. KNOB 3 the
+    **MODE** and the range in one: **UP** (0, 1, 2 … range, 0 …), **DOWN**, **UP-DN** (there and back), **RND** (a
+    place of the range each move, the same every time round). They stack with each other and with the rest: a WALK on
+    COMP and a CLIMB on COMP 2 add up, a TONAL or an OCT on top still applies, an ARP walks with its chord. Four notes
+    with a WALK UP-DN 5 every 2 loops and a CLIMB UP 1 every 3 come back to themselves after 36 loops, different every
+    time round. A drum kit ignores them. The page draws the moves round the range, this loop's lit.
   - **Two on one step**: both play (an ECHO with an OCT: the repeats an octave up; a RAND with an OCT: both moves).
     One that keeps the note silent wins: a **TRIG** or **FILL** in either place decides whether the step plays at all,
     before anything else. Of two that do the same job, the first wins (an ARP over an ECHO, two ARPs: COMP's).

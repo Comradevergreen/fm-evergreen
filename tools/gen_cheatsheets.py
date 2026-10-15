@@ -7,7 +7,7 @@ import html, os
 
 R = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(R, 'docs', 'cheatsheet')
-VERSION = 'v0.6.97'
+VERSION = 'v0.6.98'
 
 HEAT = ['#22d3ee', '#3b82f6', '#8b5cf6', '#d946ef', '#ef4444', '#ff7a00', '#facc15', '#f4f1ea']
 
@@ -333,7 +333,7 @@ def sound():
     b.append('<div class="grid g3" style="margin-top:22px">')
     b.append(card('SEQUENCER', HEAT[4],
                   '<p>64 steps a track, up to 4 notes a step, piano roll and drum grid. <b>Hold a step + turn a knob</b>: '
-                  'a parameter lock. Step recording: hold a chord + KNOB 1 its length; + ARP: arpeggiated (K1 rate, K2 order, K3 oct). COMP / COMP 2: two components a step (CHANCE, RATCH, ARP NOTES / SEQ / SCALE, TRIG, RAND, OCT, TONAL, BEND, ECHO, PULSE, JUMP, REV, FILL, KILL); a TRIG or FILL wins; ARP: ORDER × range, RATE in note values (x1 1/32 1/32T 1/64 1/64T 1/128); RATCH / ECHO: DIV; EVERY (KNOB 4): the loops the step\'s components play on (ALWAYS 1:2 2:2 1:3 .. 4:4 1:8 FIRST !FIRST SKIP). TRACK: PITCH, CHANCE thins the whole track, HUMAN one amount (velocity, timing, gate, decay / release), REC Q. STRETCH / REPEAT act as the knob turns; ROTATE reads the sequence from another step; NOTE\'s MICRO moves a step off the grid. REC + knobs while playing: '
+                  'a parameter lock. Step recording: hold a chord + KNOB 1 its length; + ARP: arpeggiated (K1 rate, K2 order, K3 oct). COMP / COMP 2: two components a step (CHANCE, RATCH, ARP NOTES / SEQ / SCALE, TRIG, RAND, OCT, TONAL, BEND, ECHO, PULSE, JUMP, REV, FILL, KILL, WALK, CLIMB); a TRIG or FILL wins; WALK / CLIMB: a degree / an octave further every N loops (K4), UP DOWN UP-DN RND over a range (K3), stackable; ARP: ORDER × range, RATE in note values (x1 1/32 1/32T 1/64 1/64T 1/128); RATCH / ECHO: DIV; EVERY (KNOB 4): the loops the step\'s components play on (ALWAYS 1:2 2:2 1:3 .. 4:4 1:8 FIRST !FIRST SKIP). TRACK: PITCH, CHANCE thins the whole track, HUMAN one amount (velocity, timing, gate, decay / release), REC Q. STRETCH / REPEAT act as the knob turns; ROTATE reads the sequence from another step; NOTE\'s MICRO moves a step off the grid. REC + knobs while playing: '
                   'automation (64 records a section, MOTION page plays / clears them, AUTO LIST edits them).</p>'
                   '<h4>PATTERN · TRACK</h4>' + knobs('LEN', 'DIV', 'SWG', 'GATE') + knobs('PIT', 'CHN', 'HUM', 'RECQ')))
     b.append(card('SCALE · ARP', HEAT[0],

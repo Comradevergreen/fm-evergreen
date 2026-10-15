@@ -1093,13 +1093,17 @@ static void gen_post(void)
                     if (gch(60)) { s->comp = CP_ARPN; s->carg = CP_ARG(gr() % 3u, gch(50) ? 0u : 2u, 0u); }
                     else { s->comp = CP_ECHO; s->carg = (uint8_t)(gr() % 2u); }
                 } else if (r == RL_LEAD) {
-                    uint32_t c = gr() % 4u;
-                    s->comp = (uint8_t)(c == 0u ? CP_ECHO : c == 1u ? CP_OCT : c == 2u ? CP_BEND : CP_PULSE);
-                    s->carg = (uint8_t)(s->comp == CP_ECHO ? gr() % 2u : s->comp == CP_OCT ? 2u : s->comp == CP_BEND ? (gch(50) ? 2u : 10u) : 1u);
+                    uint32_t c = gr() % 5u;
+                    s->comp = (uint8_t)(c == 0u ? CP_ECHO : c == 1u ? CP_OCT : c == 2u ? CP_BEND : c == 3u ? CP_PULSE : CP_WALK);
+                    s->carg = (uint8_t)(s->comp == CP_ECHO ? gr() % 2u : s->comp == CP_OCT ? 2u : s->comp == CP_BEND ? (gch(50) ? 2u : 10u) :
+                                        s->comp == CP_WALK ? CP_WARG(1u + gr() % 3u, gch(60) ? 2u : 0u, gr() % 2u) : 1u);   /* (0.6.98: a walk
+                                                         * every 2..4 loops, there and back mostly, 3 or 5 degrees) */
                 } else {
-                    uint32_t c = gr() % 3u;
-                    s->comp = (uint8_t)(c == 0u ? CP_OCT : c == 1u ? CP_RAND : CP_ECHO);
-                    s->carg = (uint8_t)(s->comp == CP_RAND ? 1u + gr() % 2u : s->comp == CP_OCT ? 4u : 0u);
+                    uint32_t c = gr() % 4u;
+                    s->comp = (uint8_t)(c == 0u ? CP_OCT : c == 1u ? CP_RAND : c == 2u ? CP_ECHO : (gch(50) ? CP_WALK : CP_CLIMB));
+                    s->carg = (uint8_t)(s->comp == CP_RAND ? 1u + gr() % 2u : s->comp == CP_OCT ? 4u :
+                                        s->comp == CP_WALK ? CP_WARG(gr() % 4u, gr() % 4u, gr() % 2u) :
+                                        s->comp == CP_CLIMB ? CP_WARG(2u + gr() % 6u, gch(50) ? 2u : 0u, gr() % 2u) : 0u);
                     if (c == 2u && gs.energy > 60u && gch(50)) { s->comp = 0; step_set_ratchet(s, 2); }
                 }
                 if (s->comp && gch(40)) ST_EVERY_SET(s, gch(50) ? EV_1_2 : EV_2_2);   /* (every other loop) */

@@ -533,7 +533,7 @@ static void page_entered(void)
 static int step_on(const step_t *st) { return st->time == ST_NOTE && (st->n || st->hit); }
 
 enum { COMP_OFF, COMP_CHANCE, COMP_RATCH, COMP_ARPN, COMP_ARPQ, COMP_ARPS, COMP_TRIG, COMP_RAND, COMP_OCT, COMP_TONAL,
-       COMP_BEND, COMP_ECHO, COMP_PULSE, COMP_JUMP, COMP_REV, COMP_FILL, COMP_KILL, COMP_N };   /* (CP_* in order) */
+       COMP_BEND, COMP_ECHO, COMP_PULSE, COMP_JUMP, COMP_REV, COMP_FILL, COMP_KILL, COMP_WALK, COMP_CLIMB, COMP_N };   /* (CP_* in order) */
 static const char *const EV_NAMES[EV_N] = {"ALWAYS", "1:2", "2:2", "SKIP", "1:3", "2:3", "3:3", "1:4", "2:4", "3:4", "4:4",
                                            "1:8", "FIRST", "!FIRST"};   /* (0.6.92) EVERY */
 /* (0.6.92) a part of the step as a note value: n parts a step of the track's DIV (1/16: x2 1/32, x3 1/32T, x4 1/64 ..;
@@ -550,7 +550,7 @@ static void rate_name(const track_t *t, uint32_t n, char *b)
     b[0] = '1'; b[1] = '/'; fmt_int(b + 2, (int32_t)v); str_cpy(b + str_len(b), tr, 2);
 }
 static const char *const COMP_NAMES[COMP_N] = {"OFF", "CHANCE", "RATCH", "NOTES", "SEQ", "SCALE", "TRIG", "RAND", "OCT",
-                                               "TONAL", "BEND", "ECHO", "PULSE", "JUMP", "REV", "FILL", "KILL"};
+                                               "TONAL", "BEND", "ECHO", "PULSE", "JUMP", "REV", "FILL", "KILL", "WALK", "CLIMB"};
 /* (0.6.82) the COMP pages one after another: COMP (the step's first component), COMP 2 (its second), WHEN (theirs, and
  * the step's LEN): which this is (0..2) */
 static uint32_t comp_slot(void)
