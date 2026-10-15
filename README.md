@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.7.0).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.7.1).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 > ⚡ **New in 0.6.85 – 0.6.92: a song generator you steer, a compact sequencer that breathes, a delay that feeds back.**
 > - **GEN (HOME + SELECT)**: a screen of three pages — GENRE (43 genres or RANDOM), SEED, ENERGY, FORM (loop, parts,
@@ -524,6 +524,22 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### v0.7.1
+- **Stems over USB: MENU > SYSTEM > USB > STEMS.** The device re-enumerates as an 8-channel USB audio input (44.1 kHz,
+  16 bit): channels 1–6 the six tracks, each mono with its LEVEL, DIST, SLICER routing and mutes in (its PAN not: what it
+  adds to the mix, L + R halved), channels 7–8 the FX return in stereo (the DELAY, REVERB and CHORUS buses, the
+  SLICER's when it is on). All before the master (no leveler, limiter, clip or MASTER knob: the mix's own scale; USB
+  LEVEL −6 dB or more gives headroom). Record the eight in Ableton, Logic or Reaper and post-process each track. The
+  row replaces USB SERIAL: **CONSOLE** (the serial console with stereo audio, as ON was), **STEREO** (audio + MIDI only,
+  as OFF was), **STEMS**.
+- **Stems from the browser: the emulator page renders a backup's song as separate WAV tracks in a ZIP.** Back up the
+  FM-1 (the editor's or the installer's "Back up"), load the file on the emulator page (Stems), pick a song or the live
+  section with a bar count, and get T1..T6 and MIX, all the same length, 16-bit 44.1 kHz, each track alone with its own
+  share of the DELAY, REVERB and CHORUS (the others' sends left out), the song's rows once (a LOOP song once round).
+  Faster than real time, no USB limits, nothing on the device.
+- The USB audio ring moved into the pool (8 KiB: the stems need four times the stereo stream's); the RAM-code reach
+  margin 12 KiB (was 16: RAMTEXT has moved up twice already, each move off the user stack).
 
 ### v0.7.0
 - **46 new factory presets**, a palette the song generator and the player share: ANALOG JUNO PAD, REESE, HOOVER, DUB

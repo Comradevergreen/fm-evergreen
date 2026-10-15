@@ -1187,6 +1187,27 @@ static void events_block(uint32_t n);                    /* seq.c */
 static int32_t send_c[CTL], send_d[CTL], send_r[CTL];   /* (mix_l mix_r wet: above, clip_block) */
 /* (JIANT 0.6.71) what the second core's parts add, summed into the above after it is done (mix_block) */
 static struct { int32_t l[CTL], r[CTL], c[CTL], d[CTL], rv[CTL], sl[CTL], sr[CTL]; } c1_mix;
+/* (0.7.1) MENU > USB STEMS: USB audio as 8 channels, each part mono (its LEVEL, DIST and MUTE in, its PAN not: what it
+ * adds to the dry mix, L + R halved) and the FX return in stereo (the DELAY, REVERB and CHORUS buses, the SLICER's
+ * when it is on), all before the master (no leveler, limiter, clip or MASTER knob: the mix's own scale). The parts
+ * write stem_buf as they are mixed (one core or the other: a part is one core's), the return after the buses
+ * (usb.c uac_tap8). mix_skip: parts left out of the mix, a bit each (the browser build renders a part alone) */
+static int32_t stem_buf[NPART][CTL], stem_fx[2][CTL];
+static volatile uint8_t fx_stems, mix_skip;
+static __attribute__((noinline)) void stem_pre(int32_t *pre, const int32_t *ol, const int32_t *or_, uint32_t n)
+{
+    uint32_t i;
+    for (i = 0; i < n; i++)
+        pre[i] = ol[i] + or_[i];
+}
+static __attribute__((noinline)) void stem_post(uint32_t ti, const int32_t *pre, const int32_t *ol, const int32_t *or_, uint32_t n)
+{
+    uint32_t i;
+    for (i = 0; i < n; i++)
+        stem_buf[ti][i] = (ol[i] + or_[i] - pre[i]) >> 1;
+}
+#define UAC_STEMS() fx_stems
+#define UAC_STEMS_SRC 1
 /* a part's level (Q12) over the block from l0 to l1, ducked: its start << 8, its step a sample in *dl (a block is
  * CTL: no divide) */
 static __attribute__((noinline)) int32_t duck_ramp(int32_t l0, int32_t l1, int32_t *dl)
@@ -1337,6 +1358,9 @@ static inline __attribute__((always_inline)) void mix_part(track_t *t, uint32_t 
             or_ = c1 ? c1_mix.sr : sl_r;
         }
         xmax = 0x7FFFFFFF / ((xmax > r ? xmax : r) | 1);   /* sends: loud chords at a high LEVEL */
+        int32_t pre[CTL];
+        if (fx_stems)                                   /* (0.7.1) the part's stem: what it adds to the mix */
+            stem_pre(pre, ol, or_, n);
         if ((duck_g0 < 32767 || duck_g1 < 32767) && ENGINES[t->engine] != &ENG_DRUM)   /* DUCK: the kick's */
             lq = duck_ramp(l0 >> 8, mp_lvl[ti] >> 8, &dl);
         track_dist(t, b, n);
@@ -1345,6 +1369,11 @@ static inline __attribute__((always_inline)) void mix_part(track_t *t, uint32_t 
             pm0 = pf.mg[ti];
             perf_mute((uint32_t)(t - trk), b, n);       /* perform.c: a black key in the FX layer */
             pm1 = pf.mg[ti];
+        }
+        if ((mix_skip >> ti) & 1u) {                    /* (0.7.1) left out of the mix (rendered: its state runs) */
+            if (MOD.on)
+                mod_end(t);
+            return;
         }
         if (dx_xon && ENGINES[t->engine] == &ENG_DRUM)  /* (0.6.48) IMAGE, SENDs: from the same ramps as below */
         {
@@ -1366,6 +1395,8 @@ static inline __attribute__((always_inline)) void mix_part(track_t *t, uint32_t 
             or_[i] += (x * gr) >> 12;
         }
         t->peak = pk;
+        if (fx_stems)
+            stem_post(ti, pre, ol, or_, n);
     }
     if (MOD.on)
         mod_end(t);                                     /* the stored values back */
@@ -1410,6 +1441,15 @@ static __attribute__((noinline)) void dx_mot_block(uint32_t n)
     dx_mot_v = (w * dx_mot[XM_DPTH]) >> 16;             /* (+-DPTH / 2) */
 }
 
+static __attribute__((noinline)) void stem_fx_block(uint32_t n)   /* (0.7.1) the stems' FX return (fx_stems) */
+{
+    uint32_t i;
+    int so = slicer_on();
+    for (i = 0; i < n; i++) {
+        stem_fx[0][i] = wet[i] + fx_sl[i] + (so ? sl_l[i] : 0);
+        stem_fx[1][i] = wet[i] + fx_sr[i] + (so ? sl_r[i] : 0);
+    }
+}
 /* the master with the FX layer's effects between its level and master_out (perform.c) */
 static __attribute__((noinline)) void perf_master(int32_t *out, uint32_t n)
 {
@@ -1663,6 +1703,8 @@ static __attribute__((noinline)) void mix_block(int32_t *out, uint32_t n)   /* (
     int32_t mg = fx_usb_fixed ? MASTER_FULL : (int32_t)song.master_q12;   /* (USB LEVEL FIXED: MASTER after) */
     for (i = 0; i < n; i++)
         send_c[i] = send_d[i] = send_r[i] = mix_l[i] = mix_r[i] = sl_l[i] = sl_r[i] = 0;
+    if (fx_stems)                                       /* (0.7.1) a part not mixed this block: a silent stem */
+        memset(stem_buf, 0, sizeof stem_buf);
     pfx_rec_held = perf_kill ? 0u : perf_held & PF_MIDI;
     pfx_block(n, (perf_kill ? 0u : (perf_held | perf_latched) & PF_MIDI) | scene_pfx);
     events_block(n);
@@ -1724,6 +1766,8 @@ static __attribute__((noinline)) void mix_block(int32_t *out, uint32_t n)   /* (
             mix_l[i] += sl_l[i];
             mix_r[i] += sl_r[i];
         }
+    if (fx_stems)                                       /* (0.7.1) the FX return: the buses, the SLICER's when on */
+        stem_fx_block(n);
     if (clip_g)
         clip_block(n);
     lev_block(n);                                       /* (JIANT 0.5) the leveler: the loudness held */

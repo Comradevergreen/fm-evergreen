@@ -1967,7 +1967,7 @@ static int test_menu_tabs(void)
     settings.lowcut = 0; fx_lowcut = 0; menu_put(MI_COLOR, UI_GREY_INDEX);
     bad += check("MENU: OCT+ / OCT- step every value row up / down (COLOR wraps, the rest stop), the menu stays", ok);
     {   /* the ON / OFF rows: up (a knob right, OCT+) is ON, the switch's knob to the right, whichever bit it is */
-        static const uint8_t SW[] = {MI_LARGE, MI_ANIM, MI_ACCEL, MI_LATCH, MI_BPMLOCK, MI_SERIAL, MI_RESTORE};
+        static const uint8_t SW[] = {MI_LARGE, MI_ANIM, MI_ACCEL, MI_LATCH, MI_BPMLOCK, MI_RESTORE};
         ok = 1;
         for (i = 0; i < NELEM(SW); i++) {
             ui.menu_sel = SW[i];
@@ -1980,7 +1980,7 @@ static int test_menu_tabs(void)
         press(B_OCTUP); ok &= ui_style == ST_LINE;     /* (the others: up the second, LINE) */
         press(B_OCTDN); ok &= ui_style == ST_FLAT;
         ui_prefs = 0;
-        bad += check("MENU: on an ON / OFF row OCT+ / a knob right is ON, OCT- / left OFF (ANIM, USB SERIAL, RESTORE LAST too)", ok);
+        bad += check("MENU: on an ON / OFF row OCT+ / a knob right is ON, OCT- / left OFF (ANIM, RESTORE LAST too)", ok);
     }
     ui.menu_sel = MI_USB;
     press(B_HOME);
@@ -8285,22 +8285,35 @@ static int test_usb_serial(void)
     ui_power_on();
     usb.up = 0;                                          /* (no SIE here: usb_cdc_switch only flips the descriptors) */
     frame();
-    ok = usb_cdc_on && dev_class() == 0xEF && !(ui_prefs & PREF_SERIAL_OFF) && str_eq(MI_NAME[MI_SERIAL], "USB SERIAL") &&
-         str_eq(menu_flag(MI_SERIAL)->name[0], "ON") && str_eq(menu_flag(MI_SERIAL)->name[1], "OFF");
+    ok = usb_cdc_on && dev_class() == 0xEF && !(ui_prefs & PREF_SERIAL_OFF) && !usb_out && str_eq(MI_NAME[MI_SERIAL], "USB") &&
+         menu_n(MI_SERIAL) == 3u && str_eq(menu_vname(MI_SERIAL, 0), "CONSOLE") && str_eq(menu_vname(MI_SERIAL, 1), "STEREO") &&
+         str_eq(menu_vname(MI_SERIAL, 2), "STEMS");   /* (0.7.1: USB SERIAL ON / OFF became USB CONSOLE / STEREO / STEMS) */
     ok &= dev_is(DEV_DESC);
-    bad += check("#67 MENU > USB SERIAL: ON by default, the console presented (misc / IAD, as before)", ok);
+    bad += check("#67 MENU > USB: CONSOLE by default, the console presented (misc / IAD, as before)", ok);
     hold(B_HOME);
     ui.menu_sel = MI_SERIAL;
     ui.force = 1; ui_draw();
-    turn(EN_K1, -1);
-    ok = (ui_prefs & PREF_SERIAL_OFF) && usb_cdc_on;    /* left: OFF; applied when the menu closes */
-    turn(EN_K1, 1); ok &= !(ui_prefs & PREF_SERIAL_OFF);   /* right: ON (the switch's knob right) */
-    press(B_OCTDN); ok &= (ui_prefs & PREF_SERIAL_OFF) && ui.menu && usb_cdc_on;   /* OCT-: OFF */
+    turn(EN_K1, 1);
+    ok = (ui_prefs & PREF_SERIAL_OFF) && !usb_out && usb_cdc_on;   /* right: STEREO; applied when the menu closes */
+    turn(EN_K1, 1); ok &= (ui_prefs & PREF_SERIAL_OFF) && usb_out && !fx_stems;   /* right again: STEMS */
+    turn(EN_K1, -1); turn(EN_K1, -1); ok &= !(ui_prefs & PREF_SERIAL_OFF) && !usb_out;   /* left twice: CONSOLE */
+    press(B_OCTUP); ok &= (ui_prefs & PREF_SERIAL_OFF) && !usb_out && ui.menu && usb_cdc_on;   /* OCT+: STEREO */
     press(B_HOME);
     ok &= ui.menu == 0 && usb_cdc_on;                 /* (HOME acts as it is let go: closed this frame) */
     frame();
-    ok &= !ui.menu && !usb_cdc_on && !usb.config && plain_desc() && dev_class() == 0;
-    bad += check("  KNOB 1 left / OCT- OFF, right ON; the menu closed (HOME): audio + MIDI only, class 0", ok);
+    ok &= !ui.menu && !usb_cdc_on && !usb.config && plain_desc() && dev_class() == 0 && !fx_stems;
+    bad += check("  KNOB 1 right STEREO, again STEMS, left back; the menu closed (HOME) on STEREO: audio + MIDI only, class 0", ok);
+    hold(B_HOME);                                     /* STEMS: the parts' stems feed USB from the next block */
+    ui.menu_sel = MI_SERIAL;
+    ui.force = 1; ui_draw();
+    turn(EN_K1, 1);
+    press(B_HOME);
+    frame();
+    ok = !ui.menu && usb_out && fx_stems && !usb_cdc_on;
+    menu_put(MI_SERIAL, 1u);
+    frame();
+    ok &= !usb_out && !fx_stems;
+    bad += check("  STEMS closed: fx_stems on (the parts write stem_buf), STEREO again: off", ok);
     {
         persist_t p;
         settings_export(&p);

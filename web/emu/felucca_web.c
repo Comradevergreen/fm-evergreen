@@ -501,3 +501,82 @@ EXPORT uint32_t web_screen_draws(void) { return web_draws; }
 EXPORT uint32_t web_now_ms(void) { return fm1_ms; }
 EXPORT uint32_t web_playing(void) { return song.playing; }
 EXPORT uint32_t web_sample_rate(void) { return FS; }
+
+/* (0.7.1) stems from the browser (web/emu/stems.js): a backup file's objects into this device, as the editor's RESTORE
+ * writes them (editor_backup.c ed_bk_commit, not built here): the songs' sections and index into the flash, the user
+ * presets, the live music last into RAM; then a song or the live section rendered with parts left out of the mix (fx.c
+ * mix_skip: the part still runs, only its sound and sends are left out), each part alone in turn */
+EXPORT uint8_t *web_bk_buf(void) { return proj_wire_u.raw; }
+EXPORT uint32_t web_bk_max(void) { return (uint32_t)sizeof proj_wire_u.raw; }
+EXPORT uint32_t web_bk_put(uint32_t id, uint32_t len)   /* the bytes in web_bk_buf(): 0 = done, 1 unknown, 2 bad, 4 flash */
+{
+    uint8_t *raw = proj_wire_u.raw;
+    if (len > sizeof proj_wire_u.raw) return 2;
+    if (id == 0u || (id >= 40u && id < 40u + NSONG * 4u)) {   /* the live music; song s's section k (song 1: the slots) */
+        uint32_t s = (id - 40u) / 4u, k = (id - 40u) % 4u;
+        if (!len) return 0;
+        if (!proj_import(&proj_scratch, raw, (int)len)) return 2;
+        proj_bound(&proj_scratch);
+        if (id == 0u) return project_restore_runtime(&proj_scratch) ? 2u : 0u;
+        if (!proj_pack((project_store_t *)raw, &proj_scratch)) return 2;
+        if (!s)                                        /* song 1's sections live in RAM too (the slots) */
+            memcpy(&proj_slot[k], raw, sizeof proj_slot[0]);
+        return st_save(s ? OBJ_SONG1 + (s - 1u) * 4u + k : OBJ_PROJECT0 + k, raw, sizeof(project_store_t)) ? 4u : 0u;
+    }
+    if (id == 10u) {                                   /* the song index: the rows and scenes, into RAM too */
+        if (len != sizeof song_idx || ((const song_index_t *)raw)->magic != SONG_MAGIC) return 2;
+        memcpy(&song_idx, raw, sizeof song_idx);
+        song_idx.cur = 0;
+        chain_config = song_idx.rows[song_cur];        /* (the rows now, as editor_backup.c) */
+        return st_save(OBJ_SONGIDX, raw, len) ? 4u : 0u;
+    }
+    if (id == 6u || id == 7u) return !len ? 0u : st_save(OBJ_UPRESET0 + id - 6u, raw, len) ? 4u : 0u;   /* user presets */
+    if (id == 9u) {                                    /* their FM6 patches */
+        if (!len) return 0;
+        if (len != sizeof upf || !upf_valid((const upf_t *)raw)) return 2;
+        memcpy(&upf, raw, sizeof upf);
+        return upf_save() == 2 ? 4u : 0u;
+    }
+    return id == 1u || id == 8u || (id >= 2u && id <= 5u) ? 0u : 1u;   /* (settings, the retired bank, the current song's
+                                                         * sections: the songs' ids carry them) */
+}
+EXPORT uint32_t web_bk_len(uint32_t id)   /* the object as it is now, into web_bk_buf(): its length, 0 none */
+{
+    uint8_t *raw = proj_wire_u.raw;
+    if (id == 0u) {                                    /* the live music, packed as a section is stored */
+        project_capture(&proj_scratch);
+        return proj_pack((project_store_t *)raw, &proj_scratch) ? (uint32_t)sizeof(project_store_t) : 0u;
+    }
+    if (id == 10u) {                                   /* the index with this song's rows as they are now (song_flush) */
+        song_idx.rows[song_cur] = chain_config;
+        memcpy(raw, &song_idx, sizeof song_idx);
+        return (uint32_t)sizeof song_idx;
+    }
+    if (id >= 40u && id < 40u + NSONG * 4u) {
+        uint32_t s = (id - 40u) / 4u, k = (id - 40u) % 4u;
+        int n;
+        if (!s) {                                      /* song 1's sections: the RAM slots (as editor_backup.c ids 2..5) */
+            if (!project_used(k)) return 0;
+            memcpy(raw, &proj_slot[k], sizeof proj_slot[0]);
+            return (uint32_t)sizeof proj_slot[0];
+        }
+        n = st_load(OBJ_SONG1 + (s - 1u) * 4u + k, raw, (uint32_t)sizeof proj_wire_u.raw);
+        return n > 0 ? (uint32_t)n : 0u;
+    }
+    return 0;
+}
+EXPORT void web_mix_skip(uint32_t mask) { mix_skip = (uint8_t)mask; }
+EXPORT uint32_t web_song_select(uint32_t n) { return (uint32_t)song_switch(n, 1); }   /* 0 = done (stopped, n < 8) */
+EXPORT uint32_t web_song_cur(void) { return song_cur; }
+EXPORT uint32_t web_song_rows(void) { return chain_config.count; }
+EXPORT uint32_t web_song_bars(void)                    /* the rows' bars, once round (stems.js: a LOOP song's length) */
+{
+    uint32_t i, n = 0;
+    for (i = 0; i < chain_config.count && i < CHAIN_ROWS; i++) n += chain_config.row[i].bars ? chain_config.row[i].bars : 1u;
+    return n;
+}
+EXPORT uint32_t web_song_end(void) { return SONG_END(&chain_config); }   /* 0 once, 2..8 times, 255 round and round */
+EXPORT uint32_t web_song_play(void) { return chain_prepare(); }   /* 0 = the song starts (song_main.c's codes) */
+EXPORT void web_play(uint32_t on) { transport_req = (uint8_t)(on ? 1u : 2u); }
+EXPORT uint32_t web_beat_samples(void) { return beat_samples(); }
+EXPORT uint32_t web_trk_live(void) { return trk_live; }
