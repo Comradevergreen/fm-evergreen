@@ -543,7 +543,8 @@ recorded into the pattern, quantized to its steps, overdubbing. Knob moves on th
 - **STRETCH** (0.6.85, after NOTE): reshapes the whole sequence of the selected track **as the knob turns** (0.6.92;
   it used to wait for OCT+). Every turn works from the sequence as it was before the first one (its base), so x2 then
   x4 is x4, not x8, and back to the middle is back to where you started; the message says the LEN before and after
-  (LEN 4 > 16); **UNDO** (GLO + G4) brings it back; editing the result makes it the new base.
+  (LEN 4 > 16); **UNDO** (GLO + G4) brings it back; editing the result makes it the new base. The other knob takes the
+  result as its base (0.6.96): REPEAT x2 then STRETCH x2 stretches the repeats.
   - **KNOB 1 STRETCH**: **x2 … x8** spreads the steps that many times apart (LEN 4 x4: 16), a held note held all the
     way, short ones kept short; past 64 steps the end is cut. **/2 … /8** squeezes it: of each group of steps the first
     one that plays stays (LEN 32 /2: 16). **x1** in the middle: as it was. The automation and locks move with their
@@ -1213,7 +1214,9 @@ faded): a photo of that screen helps when you report a problem.
   external clock, TAP and GLO + PLAY restart are disabled.
 - **Controllers** (on the track the channel plays): CC5 glide, CC7 level, CC10 pan, CC71 resonance and CC74 cutoff (the
   engine's own, where it has them), CC72 release, CC73 attack, CC75 decay, CC91 reverb send, CC93 chorus send,
-  CC94 delay send. CC1 (mod wheel), CC11 (expression) and channel aftertouch are sources in the MOD matrix (MODW, EXPR,
+  CC94 delay send; **CC16–23** the engine's own eight values (EDIT 1 / EDIT 2's knobs, E1–E8, whatever the engine:
+  CC16 is KNOB 1 of EDIT 1), **CC102 / CC103** the post filter's cutoff / resonance, **CC104** drive, **CC105** sustain
+  (0.6.96). CC1 (mod wheel), CC11 (expression) and channel aftertouch are sources in the MOD matrix (MODW, EXPR,
   AT). Pitch bend, sustain (CC64), All Sound Off (CC120) and All Notes Off (CC123) work. A CC is recorded as automation
   like a knob move.
 - USB MIDI name: the device still presents itself as "Felucca", so the web editor connects.

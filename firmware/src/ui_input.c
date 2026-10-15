@@ -432,10 +432,13 @@ static void ui_leds(void)
     if (song.playing || (seq_counting() && cin_pos < click_beat_len() / 4u))   /* counting in: green on each beat */
         nl[LED_PLAY_GREEN >> 3] |= (uint8_t)(1u << (LED_PLAY_GREEN & 7u));
     fm1_led_dim_level(mode == LEDS_DIM_LO);
-    for (c = 0; c < FM1_NCOL; c++) {
+    for (c = 0; c < FM1_NCOL; c++) {                    /* (0.6.96) DIM HI: the idle glow at the mid level (the pulse
+                                                         * alone was too dim to find the keys: ~1/30 of lit; now ~15 %),
+                                                         * the beats and the scale's root a level above (fm1_led_hi) */
         fm1_led_dim[c] = nd[c];
         fm1_led_breath[c] = nb[c];
-        fm1_led_mid[c] = nm[c];
+        fm1_led_hi[c] = mode == LEDS_DIM ? nm[c] : 0u;
+        fm1_led_mid[c] = mode == LEDS_DIM ? (uint8_t)((nd[c] | nm[c]) & ~(nb[c] | nl[c])) : nm[c];
     }
     for (c = 0; c < FM1_NCOL; c++)
         fm1_led[c] = nl[c];
@@ -910,7 +913,9 @@ static void tl_shift(track_t *t, uint32_t len, uint32_t d);
 static uint32_t tl_stretch(track_t *t, int32_t k);
 static uint32_t tl_repeat(track_t *t, uint32_t k);
 static struct {
-    uint8_t valid, trk;
+    uint8_t valid, trk, which;                          /* which: the knob the base belongs to (0.6.96: the other knob
+                                                         * takes the result as its base, so REPEAT then STRETCH
+                                                         * stretches the repeats) */
     int16_t len;
     uint32_t sig;                                       /* the result's steps: another sig, the user edited: a new base */
     step_t step[NSTEP];
@@ -922,9 +927,10 @@ static void shape_apply(uint32_t which)
     uint32_t was, n, f;
     char m[24];
     if (chain_busy()) { ui_message("STOP TO EDIT"); return; }
-    if (!shp_base.valid || shp_base.trk != song.sel || shp_base.sig != steps_sig(t)) {   /* the base: as it is now */
+    if (!shp_base.valid || shp_base.trk != song.sel || shp_base.sig != steps_sig(t) || shp_base.which != which) {   /* the
+                                                         * base: as it is now (the other knob's result included) */
         undo_mark();
-        shp_base.valid = 1; shp_base.trk = (uint8_t)song.sel; shp_base.len = t->p[P_SLEN];
+        shp_base.valid = 1; shp_base.trk = (uint8_t)song.sel; shp_base.len = t->p[P_SLEN]; shp_base.which = (uint8_t)which;
         memcpy(shp_base.step, t->step, sizeof shp_base.step);
         f = motion_guard(); memcpy(&shp_base.mo, &motion, sizeof shp_base.mo); motion_unguard(f);
         if (which == 0u) shp_r = 0; else shp_i = 7;    /* (the other knob's pick starts over) */

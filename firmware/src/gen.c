@@ -1250,6 +1250,10 @@ static void gen_make(void)
     song.g[G_PUNCH] = (int16_t)(gs.act[RL_DRUM] ? grr(45, 85) : 0);
     rng_state = gq | 1u;
     macro_dice(3);
+    for (k = 0; k < NTRK; k++) trk[k].p[P_MSND] = trk[k].p[P_MPAT] = 0;   /* (0.6.96) a new piece: MUTATE off on every
+                                                         * track, its anchor the piece (a reroll kept the lanes and
+                                                         * orbited the old piece's sounds) */
+    mut_keep();
     gen_parts();
 }
 /* the piece made from the settings (UNDO brings back what was there); the message */
@@ -1310,10 +1314,12 @@ static uint32_t dice_print(void)                        /* a fingerprint of the 
 static const char *const GEN_LBL[3][4] = {{"GENRE", "SEED", "ENERGY", "FORM"}, {"DRUMS", "BASS", "CHORDS", "ARP"},
                                           {"LEAD", "COMPLEX", "SWING", "HUMAN"}};
 static const char *const GEN_FORM[3] = {"LOOP", "PARTS", "SONG"};
+static uint8_t gen_fresh;                               /* (0.6.96) the screen's first frame: the body cleared once */
 static void gen_open(void)
 {
     gp.open_ms = fm1_ms | 1u;
     gp.hot = 0xFF;
+    gen_fresh = 1;
     gp.genre = 0;                                       /* (0.6.93) opens on RANDOM: a genre is this visit's choice */
 }
 static void gen_amt_turn(uint8_t *v, int32_t s)         /* OFF, 10 .. 100, AUTO (above 100) */
@@ -1372,7 +1378,11 @@ static void draw_gen(void)
 {
     uint32_t k;
     char t[24], v[16];
-    lcd_fill(0, H_HEAD, 240, 240 - H_HEAD, T_BG);
+    if (gen_fresh || ui.head_sig != ~0u) {              /* (0.6.96) cleared once on entering, not on every knob: each
+                                                         * card and line paints its own band (it flickered) */
+        lcd_fill(0, H_HEAD, 240, 240 - H_HEAD, T_BG);
+        gen_fresh = 0;
+    }
     ui.head_sig = ~0u;
     str_cpy(t, "GENERATOR  1/3", sizeof t);
     t[11] = (char)('1' + gp.page);

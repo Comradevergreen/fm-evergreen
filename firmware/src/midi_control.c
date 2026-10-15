@@ -190,6 +190,10 @@ static int midi_track_held(uint32_t track)
 static const uint8_t MIDI_CC_MAP[][2] = {
     {5, P_GLIDE}, {7, P_LEVEL}, {10, P_PAN}, {71, MCC_RES}, {72, P_REL}, {73, P_ATK}, {74, MCC_CUT}, {75, P_DEC},
     {91, P_REV}, {93, P_CHOR}, {94, P_DLY},
+    /* (0.6.96) the engine's own eight values (EDIT 1 / EDIT 2's knobs, whatever the engine: CC16..23 = E1..E8), the
+     * post filter, drive and sustain (CC102..105) */
+    {16, P_E0}, {17, P_E1}, {18, P_E2}, {19, P_E3}, {20, P_E4}, {21, P_E5}, {22, P_E6}, {23, P_E7},
+    {102, P_FCUT}, {103, P_FRES}, {104, P_DIST}, {105, P_SUS},
 };
 /* per engine (ENGINES[] order): CC74's E index + 1 in the high nibble, CC71's in the low one, 0 = none */
 static const uint8_t MIDI_CC_ENG[NENGINES] = {

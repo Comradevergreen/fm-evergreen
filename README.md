@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.6.95).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.6.96).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 > ⚡ **New in 0.6.85 – 0.6.92: a song generator you steer, a compact sequencer that breathes, a delay that feeds back.**
 > - **GEN (HOME + SELECT)**: a screen of three pages — GENRE (43 genres or RANDOM), SEED, ENERGY, FORM (loop, parts,
@@ -524,6 +524,23 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### v0.6.96
+- **MUTATE** (reported on r/MVaveFM1): a new piece from GEN or the dice turns MUTATE off on every track and makes the
+  piece its anchor (a reroll kept the lanes, the drum track's above all, and ORBIT mutated around the previous piece's
+  sounds); a sound loaded onto a mutating track re-anchors too. The MUTATE page shows the selected track alone since
+  0.6.92 (it showed six with TRACKS 4).
+- **LEDS DIM HI brighter** (reported): the idle glow was the pulse alone (~1/30 of lit), too dim to find the keys;
+  now the glow plus a lit frame in eight (~15 %), the grid's beats and the scale's root a level above (~40 %). DIM LO
+  stays the darker one, OFF and INV as they were.
+- **STRETCH over REPEAT**: the other knob's result is the base now, so REPEAT x2 then STRETCH x2 stretches the
+  repeats (it went back to the sequence before the repeat); the same knob still works from its own base.
+- **ABOUT / CREDITS** opens on the project's own information (JIANT FM for the MVAVE FM-1, by Juan Jiant, Argentina:
+  the site, the videos, Ko-fi and Cafecito), Felucca's credits and licences below as before.
+- **GEN screen**: the body is cleared once on entering, not on every knob or page (it flickered).
+- **MIDI CC for the engine's knobs** (asked on YouTube): CC16–23 set the engine's eight values (EDIT 1 / EDIT 2's
+  knobs, E1–E8, whatever the engine), CC102 / CC103 the post filter's cutoff / resonance, CC104 DRIVE, CC105 SUSTAIN;
+  recorded as automation like a knob, as the rest of the map.
 
 ### v0.6.95
 - **GEN: every throw its own.** A genre's throw may take a neighbour's drum map (the map's family: HOUSE takes DEEP's

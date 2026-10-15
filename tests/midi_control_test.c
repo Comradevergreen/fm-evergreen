@@ -305,6 +305,10 @@ static int cc_map_test(void)
     bad += check("CC10 PAN: 0 left, 64 centre, 127 right", ok);
     queued(0xB0, 74, 127, 1); queued(0xB0, 71, 0, 1);
     bad += check("CC74 / CC71 on ANALOG: CUT / RES", trk[0].p[P_E4] == 127 && trk[0].p[P_E5] == 0);
+    queued(0xB0, 16, 127, 1); queued(0xB0, 23, 0, 1); queued(0xB1, 17, 127, 1); queued(0xB0, 102, 100, 1); queued(0xB0, 105, 20, 1);
+    bad += check("(0.6.96) CC16..23 the engine's E1..E8 on any engine (ANALOG E1 max, E8 min; FM6 E2 max), CC102 FCUT, CC105 SUS",
+                 trk[0].p[P_E0] == param_desc_of(0, P_E0)->max && trk[0].p[P_E7] == param_desc_of(0, P_E7)->min && trk[1].p[P_E1] == param_desc_of(ENGI_FM6, P_E1)->max &&
+                 trk[0].p[P_FCUT] == 100 && trk[0].p[P_SUS] == 20);
     queued(0xB1, 74, 64, 1); queued(0xB1, 74, 127, 1);
     bad += check("CC74 on FM6 (channel 2): MLVL, bipolar (127: +63)", trk[1].p[P_E2] == 63);
     memcpy(before, trk[1].p, sizeof before); queued(0xB1, 71, 99, 1);
@@ -326,7 +330,7 @@ static int cc_map_test(void)
     memcpy(before, trk[0].p, sizeof before);
     queued(0xB0, 121, 0, 1);
     bad += check("CC121 resets no mapped parameter (RP-015)", !memcmp(before, trk[0].p, sizeof before));
-    queued(0xB0, 20, 99, 1); queued(0xB0, 76, 99, 1); queued(0xB0, 95, 99, 1);
+    queued(0xB0, 30, 99, 1); queued(0xB0, 76, 99, 1); queued(0xB0, 95, 99, 1);   /* (0.6.96: 20 is E5 now) */
     bad += check("CCs outside the map change nothing", !memcmp(before, trk[0].p, sizeof before));
     memcpy(before, trk[2].p, sizeof before);
     queued(0xB6, 7, 5, 1); queued(0xB9, 74, 5, 2); queued(0xBF, 91, 5, 1);

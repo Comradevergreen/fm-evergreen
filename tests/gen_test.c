@@ -203,6 +203,16 @@ int main(void)
             bad += gcheck("  after: the whole piece live (A), nothing muted", m == 0u && live.cur == 0);
         }
     }
+    /* ---- (0.6.96) a new piece: MUTATE off on every track (a reroll kept the lanes), the anchor the piece */
+    {
+        uint32_t on = 0;
+        gen_reset();
+        gen_with(1, 5, 50, 0);
+        trk[3].p[P_MSND] = 3; trk[0].p[P_MPAT] = 2;
+        gen_go();
+        for (k = 0; k < NTRK; k++) on += trk[k].p[P_MSND] || trk[k].p[P_MPAT];
+        bad += gcheck("a new piece: MUTATE SOUND / PATTERN OFF on every track, the anchor kept", !on && mut.ok);
+    }
     /* ---- (0.6.95) a throw its own: HOUSE over twelve seeds takes more than one drum map and more than one chord
      * play; RANDOM over forty seeds throws mutants ("A+B") a third of the time or so, each playable and storable */
     {
