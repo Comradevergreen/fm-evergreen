@@ -15,17 +15,17 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.6.89).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.6.90).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
-> ⚡ **New in 0.6.85 – 0.6.89: a sequencer that breathes, a delay that feeds back.**
+> ⚡ **New in 0.6.85 – 0.6.90: a sequencer that breathes, a delay that feeds back.**
 > - **Off the grid**: **REC Q** keeps where you played each note (up to half a step early or late) and **SEQ > TIMING**
 >   moves any step by sixteenths; early notes really play early.
 > - **HUMAN**: velocity, timing and gate vary a little every loop, per track.
 > - **STRETCH · REPEAT**: stretch a sequence x2 … x8 or squeeze it, clone a pattern of any length up to 64 steps,
 >   NUDGE it a step.
-> - **An analog-style delay**: with TONE in the middle the repeats are copies of what went in; FEEDBK 100 % holds them
->   for a long time, past it they self-oscillate and saturate softly; resonant TONE (and FILT on the reverb); tape
->   **MOD** on DLY 2.
+> - **A delay to play**: ANALOG (FEEDBK past 100 % self-oscillates, saturating softly; resonant TONE) or DIGITAL
+>   (clean); **PING-PONG** across the stereo; with TONE in the middle the repeats are copies of what went in; tape
+>   **MOD**.
 > - Still on both cores (0.6.71, experimental): **MENU > ABOUT** says **CORES 2** or **CORES 1**.
 > [Details](#both-cores-dual-core).
 
@@ -514,6 +514,16 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### v0.6.90
+- **DLY 3 > TYPE: ANALOG or DIGITAL.** ANALOG is the delay as it was (soft saturation, resonant TONE, past 100 % it
+  self-oscillates); DIGITAL repeats clean, TONE a plain filter, FEEDBK 100 % at most (past it the repeats hold, never
+  grow).
+- **DLY 3 > PING: ping-pong.** The repeats go left, right, left … across the stereo field, each FEEDBK softer (one delay
+  line read twice: no extra memory; TIME up to 0.74 s).
+- **SEQ pages in a sensible order**: the piano roll (STEP) and the pages that edit it come one after another, NOTE,
+  TIMING, STRETCH, COMP, COMP 2, WHEN; then the track's, PATTERN, SHIFT, HUMAN, PLAYHEADS, AUTOMATION ...
+- DICE ALL: an accent left on a drum lane without its hit (it was never heard, but undo / redo lost it) no more.
 
 ### v0.6.89
 - **The delay, fixed and cleaner.** Long FEEDBK tails were cut off abruptly after a few seconds: the effects' noise

@@ -1016,9 +1016,10 @@ static inline __attribute__((always_inline)) void fx_buses(const int32_t *cho_in
     }                                                   /* (0.6.19: it opens over ~6 ms, fx_gate: at once, the
                                                          * residue in the lines stepped in: a tick on the next note) */
     int32_t fb = dly_fb(song.g[G_DFDBK]), tn = song.g[G_DCOLOR] - 64;   /* (JIANT 0.4) TONE: one knob, low-pass .. open .. low cut */
-    int32_t wm, dwm;                                    /* (0.6.89: TONE in the middle: each repeat the very copy) */
+    int32_t wm, dwm, dig = song.g[G_DTYPE] == 1;        /* (0.6.89: TONE in the middle: each repeat the very copy) */
     tone_t dtn, rtn;
-    int dton = tone_set(&dtn, tn > 63 ? 63 : tn, 113, 43, 18, 93, 2900, 1);   /* (0.6.89 half the level evened: the band
+    int dton = dig ? tone_set(&dtn, tn > 63 ? 63 : tn, 113, 43, 18, 93, 5793, 0)   /* (0.6.90) DIGITAL: TONE plain (Q 0.7) */
+                   : tone_set(&dtn, tn > 63 ? 63 : tn, 113, 43, 18, 93, 2900, 1);   /* (0.6.89 half the level evened: the band
                                                          * at the cutoff above unity, the extremes self-oscillate) */
     if (!dton) fx.dt1 = fx.dt2 = 0;   /* (8 kHz .. 250 Hz | 73 Hz .. 3 kHz, Q 1.4) */
     int32_t dmix = song.g[G_DMIX] * 258;
@@ -1026,10 +1027,17 @@ static inline __attribute__((always_inline)) void fx_buses(const int32_t *cho_in
     uint32_t cinc = LFO_INC[song.g[G_CRATE] & 127] / CTL;
     int32_t hk = 5, wd = song.g[G_WIDTH];             /* (the loop's DC block: ~1 Hz, 0.6.89); WIDTH */
     int32_t gr = !sys_load && (song.g[G_DPIT] || song.g[G_DSPRY]);   /* (JIANT) the GRAIN delay (LOAD LITE / ECO: plain) */
+    /* (0.6.90) PING-PONG (not with the GRAIN): the line read at TIME (left) and twice TIME (right, the loop's tap), the
+     * loop's gain squared, the right x FEEDBK: the repeats left, right, left .., each FEEDBK softer; TIME at most half
+     * the line (0.74 s); WIDE out of it */
+    int32_t png = song.g[G_DPING] == 1 && !gr, fb2 = (int32_t)(((int64_t)fb * fb) >> 15);
+    if (dig && fb > 32767) fb = 32767;                  /* (0.6.90) DIGITAL: 100 % at most, a repeat held for ever */
+    if (dig && fb2 > 32767) fb2 = 32767;
+    if (png && dl > (DLY_LEN - 4u) / 2u) dl = (DLY_LEN - 4u) / 2u;
     int32_t cho = sys_load != LOAD_ECO;                /* (0.6.30) LOAD ECO: no chorus */
     int32_t cs = song.g[G_CSTER], cw = 80 + wd / 2;    /* (0.6.9) the chorus's side: 0 as before, - to mono, + ~2x */
     cw = cs >= 0 ? cw + cs * 2 : (cw * (64 + cs)) >> 6;
-    uint32_t dr = dl + (wd ? div_samples(3) * (uint32_t)wd / 127u : 0u);   /* the right echo: up to 1/32 later */
+    uint32_t dr = dl + (wd && !png ? div_samples(3) * (uint32_t)wd / 127u : 0u);   /* the right echo: up to 1/32 later */
     if (dr >= DLY_LEN)
         dr = DLY_LEN - 1u;
     /* (0.6.81) a new read point (TIME, WIDE) or read (the GRAIN in or out): faded into over DXF_LEN samples from the
@@ -1100,7 +1108,14 @@ static inline __attribute__((always_inline)) void fx_buses(const int32_t *cho_in
             x += ((xo - x) * (int32_t)fx.dl_xf) >> DXF_LOG2;
             fx.dl_xf--;
         }
-        if (wd || fx.dr_xf || fx.dr_now != fx.dl_now) {   /* (JIANT) the right echo later (0.6.81: on until it has
+        if (png) {                                      /* (0.6.90) PING-PONG: the right, twice as far back */
+            xr = dly_rd(fx.dl_now * 2u, wm);
+            if (fx.dl_xf) {
+                int32_t xo = dly_rd(fx.dl_old * 2u, wm);
+                xr += ((xo - xr) * (int32_t)fx.dl_xf) >> DXF_LOG2;
+            }
+            wr = 2;
+        } else if (wd || fx.dr_xf || fx.dr_now != fx.dl_now) {   /* (JIANT) the right echo later (0.6.81: on until it has
                                                          * faded back onto the left's, WIDE to 0 stepped; read before
                                                          * the line is written, as the left: at WIDE 0, the same sample) */
             xr = dly_rd(fx.dr_now, wm);
@@ -1111,15 +1126,24 @@ static inline __attribute__((always_inline)) void fx_buses(const int32_t *cho_in
             }
             wr = 1;
         }
-        fx.dly_lp = x;                                  /* (0.6.89: no fixed low-pass in the loop) */
-        fx.dly_hp += (((x << 8) - fx.dly_hp) * hk + 16384) >> 15;   /* (the DC block's state 8 bits finer: rounded
-                                                         * coarse, it held a DC of up to 364 in the loop) */
+        fx.dly_lp = x;                                  /* (0.6.89: no fixed low-pass in the loop; the DC block's
+                                                         * state 8 bits finer below: rounded coarse, it held a DC of up
+                                                         * to 364 in the loop) */
         { int32_t ax = x < 0 ? -x : x; if (ax > fxg_dpk) fxg_dpk = ax; }   /* (the delay's own level: fx_gate) */
+        if (wr == 2) {                                  /* (PING-PONG: the loop from the right tap; its level, too) */
+            int32_t ax = xr < 0 ? -xr : xr; if (ax > fxg_dpk) fxg_dpk = ax;
+            fx.dly_hp += (((xr << 8) - fx.dly_hp) * hk + 16384) >> 15;
+        } else
+            fx.dly_hp += (((x << 8) - fx.dly_hp) * hk + 16384) >> 15;
         {
-            int32_t lf = x - ((fx.dly_hp + 128) >> 8);
+            int32_t lf = (wr == 2 ? xr : x) - ((fx.dly_hp + 128) >> 8), w;
             if (dton) lf = tone_run(&dtn, lf, &fx.dt1, &fx.dt2);
-            dly_buf[fx.dly_w & (DLY_LEN - 1u)] = (int16_t)dly_sat((dly_in[i] >> 1) + mulq15(clamp(lf, -32767, 32767), fb));
+            w = (dly_in[i] >> 1) + mulq15(clamp(lf, -32767, 32767), wr == 2 ? fb2 : fb);
+            dly_buf[fx.dly_w & (DLY_LEN - 1u)] = (int16_t)(dig ? clamp(w, -32767, 32767) : dly_sat(w));   /* (DIGITAL: clean, a clip
+                                                         * at full scale only) */
         }
+        if (wr == 2)
+            xr = mulq15(clamp(xr, -65535, 65535), fb > 32767 ? 32767 : fb);   /* (the right: one repeat later, FEEDBK softer) */
         if (wr) {                                       /* mid and side */
             side += mulq15(x - xr, fx.dm_cur);
             x = (x + xr) >> 1;

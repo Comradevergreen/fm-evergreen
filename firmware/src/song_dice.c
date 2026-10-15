@@ -318,7 +318,8 @@ static void dice_drums(track_t *t, const dstyle_t *st, uint32_t len)
         }
         if (i >= 16u && !fill && chance(8)) h ^= 1u << (chance(50) ? 6 : 7);   /* bar 2: a percussion moved */
         if (!h) continue;
-        s->time = ST_NOTE; s->hit = (uint8_t)h; s->acc = (uint8_t)a;
+        s->time = ST_NOTE; s->hit = (uint8_t)h; s->acc = (uint8_t)(a & h);   /* (0.6.90: an accent only on a hit: one
+                                                         * moved away or swapped left its accent, which a save dropped) */
         s->vel = (uint8_t)(st->drums == DS_KLING ? (a ? 112 : 100) : ghost && !a ? rr(62, 82) : rr(96, 110));   /* (a
                                                          * machine: the same every time) */
         if (fill && chance(40)) step_set_ratchet(s, 2);
