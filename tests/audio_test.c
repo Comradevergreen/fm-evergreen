@@ -182,6 +182,59 @@ static double usb_run(uint32_t fixed, uint32_t master, int dac_is_tap_scaled_ok[
     *dac_rms = dac / 300.0;
     return usb / 300.0;
 }
+
+/* (0.7.5) MENU > USB IN+OUT (fx.c uin_mix): the host's audio (uin_l / uin_r, as usb.c uac_in_fill leaves them) comes in
+ * on the last live track: into the dry mix with its LEVEL and PAN, its REVERB send from the sum, silenced by its MUTE
+ * or LEVEL 0, nothing when uin_on is clear */
+static void uin_run(int32_t level, int32_t pan, int mute, int32_t rev, int on, double *lr, double *rr, double *wr)
+{
+    int32_t out[2 * 32];
+    uint32_t b, i, t, ph = 0;
+    double l = 0, r = 0, w = 0;
+    fresh();
+    lim_env = LIM_T; lev_env = 0; lev_g = lev_cur = 32768; lev_dg = 0; dc_l = dc_r = dce_l = dce_r = 0;
+    song.master_q12 = 4096;
+    for (t = 0; t < NTRK; t++) trk[t].p[P_DIST] = trk[t].p[P_CHOR] = trk[t].p[P_DLY] = trk[t].p[P_REV] = 0;
+    t = trk_live - 1u;
+    trk[t].p[P_LEVEL] = (int16_t)level; trk[t].p[P_PAN] = (int16_t)pan; trk[t].p[P_MUTE] = (int16_t)mute; trk[t].p[P_REV] = (int16_t)rev;
+    for (b = 0; b < 400u; b++) {
+        for (i = 0; i < 32u; i++, ph++) {
+            uin_l[i] = (int32_t)(8000.0 * sin(2.0 * M_PI * 440.0 * ph / 44100.0));
+            uin_r[i] = uin_l[i];
+        }
+        uin_on = (uint8_t)on;
+        audio_block(out, 32);
+        if (b >= 100u) {
+            for (i = 0; i < 32u; i++) {
+                l += (double)(out[2u * i] >> OUT_SHIFT) * (out[2u * i] >> OUT_SHIFT);
+                r += (double)(out[2u * i + 1u] >> OUT_SHIFT) * (out[2u * i + 1u] >> OUT_SHIFT);
+                w += (double)wet[i] * wet[i];
+            }
+        }
+    }
+    uin_on = 0;
+    *lr = sqrt(l / 9600.0); *rr = sqrt(r / 9600.0); *wr = sqrt(w / 9600.0);
+}
+static void usb_in(void)
+{
+    double l, r, w, l0, r0, w0;
+    uin_run(100, 0, 0, 0, 1, &l, &r, &w);
+    printf("audio: USB IN on the last track: L %.0f R %.0f wet %.0f\n", l, r, w);
+    check("USB IN+OUT: the host's audio sounds through the last live track (both sides, centred), no send: no wet",
+          l > 500.0 && fabs(20.0 * log10(l / r)) < 0.1 && w == 0.0);
+    uin_run(100, 0, 0, 0, 0, &l0, &r0, &w0);
+    check("USB IN+OUT: nothing when no audio comes in (uin_on clear)", l0 < 1.0 && r0 < 1.0);
+    uin_run(100, 0, 1, 0, 1, &l0, &r0, &w0);
+    check("USB IN+OUT: the track's MUTE silences it", l0 < 1.0 && r0 < 1.0);
+    uin_run(0, 0, 0, 0, 1, &l0, &r0, &w0);             /* (twice: the master's DC block settles after the run before) */
+    uin_run(0, 0, 0, 0, 1, &l0, &r0, &w0);
+    check("USB IN+OUT: the track's LEVEL 0 silences it", l0 < 1.0 && r0 < 1.0);
+    uin_run(100, -64, 0, 0, 1, &l0, &r0, &w0);
+    check("USB IN+OUT: PAN full left: the right side out", l0 > 500.0 && r0 < l0 * 0.02);
+    uin_run(100, 0, 0, 127, 1, &l0, &r0, &w0);
+    printf("audio: USB IN with REVERB 127: wet %.0f\n", w0);
+    check("USB IN+OUT: the track's REVERB send takes it into the reverb", w0 > 100.0);
+}
 static void usb_level(void)
 {
     int ok_full, ok_quiet, ok_off, ok_fixed, ok_fixed0;
@@ -279,6 +332,7 @@ int main(void)
     usb_level();
     boot_keys();
     overload(); dma();
+    usb_in();                                          /* (last: its reverb tail would reach the tests after it) */
     printf(bad ? "audio: %d FAILED\n" : "audio: all passed\n", bad);
     return bad != 0;
 }

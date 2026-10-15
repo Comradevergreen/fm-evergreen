@@ -105,6 +105,9 @@ FM1_INLINE void fm1_usb_ep4_send(void *p, uint32_t n)
     FM1_USB_EP4_CNT = n;
     __asm__ volatile("csync" ::: "memory");
 }
+/* (0.7.5) EP4 OUT (the USB audio output of a host, MENU > USB IN+OUT): its receive DMA address (SDK usb_set_dma_raddr,
+ * ep 4); the count is read through the SIE (RXCOUNT, usb.c uin_rx) */
+FM1_INLINE void fm1_usb_ep4_rxbuf(void *p) { FM1_USB_EP4_RADR = (uint32_t)(uintptr_t)p; }
 FM1_INLINE void fm1_usb_rx_sync(void) { __asm__ volatile("ssync" ::: "memory"); }
 
 FM1_INLINE void fm1_usb_ep_enable(uint32_t eps) { FM1_USB_CON0 &= ~(eps << 19); }

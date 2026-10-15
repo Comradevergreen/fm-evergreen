@@ -30,6 +30,12 @@ static uint32_t scope_w;
 static void audio_block(int32_t *out, uint32_t n)       /* mix (fx.c), then Q15 -> 24 bit */
 {
     uint32_t i;
+#if FELUCCA_UAC && defined(UAC_UIN)
+    if (USB_DUPLEX)                                     /* (0.7.5) MENU > USB IN+OUT: the host's audio, for the mix */
+        uac_in_fill(n);
+    else
+        uin_on = 0;
+#endif
     mix_block(out, n);
 #if FELUCCA_UAC
 #ifdef UAC_TAP8

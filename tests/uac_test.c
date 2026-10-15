@@ -43,6 +43,10 @@ static uint8_t t_stems;
 #define UAC_STEMS() t_stems
 #define UAC_STEMS_SRC 1
 static int32_t stem_buf[6][HALF_FRAMES], stem_fx[2][HALF_FRAMES];
+/* (0.7.5) MENU > USB IN+OUT: fx.c's input block stood in for (usb.c uac_in_fill writes it) */
+static int32_t uin_l[64], uin_r[64];
+static volatile uint8_t uin_on;
+#define UIN_SRC 1
 #include "../firmware/src/usb.c"
 
 static int fails;
@@ -90,6 +94,145 @@ static void test_stems(void)
     t_stems = 0; usb_stems = 0;
     memset(&uac, 0, sizeof uac);
     ua_r = ua_w = 0;
+}
+
+/* (0.7.5) MENU > USB IN+OUT: the configuration with the host's audio output (four interfaces, the AC header's collection
+ * of three, terminals 3 -> 4, EP4 OUT isochronous adaptive 184 bytes, bcdDevice + 0x80); then the stream: packets of
+ * the host's 44.1 kHz (44 / 45 frames a ms) taken into the ring (uin_take, as TIMER5's uin_rx) against blocks of 32
+ * read at the I2S clock (uac_in_fill): fast (44,117.6 Hz, the FM-1's) and slow (44,060): primed, faded in, the fill
+ * held near UI_TARGET (no underrun or overrun once settled), a 1 kHz sine through it within -40 dB of a pure one at
+ * its real frequency; the host stopping (a fade out from the last frame, primed again when it comes back), alt 0 */
+static int32_t dup_smin, dup_smax;
+static double dup_run(double fd, uint32_t secs, uint32_t *under, uint32_t *over, int32_t *fmin, int32_t *fmax,
+                      double *snr, int32_t *jump, int gap)
+{
+    static uint32_t pk[UI_MAXF];
+    double th = 0, t = 0, tp = 0, tb = 0, f0 = 1000.0;
+    uint32_t acc = 0, blocks = 0, i, n0 = 0;
+    int32_t prev = 0;
+    double *ys = malloc(sizeof(double) * 44200u * secs), *ts = malloc(sizeof(double) * 44200u * secs);
+    uint32_t ny = 0;
+    memset(&uin, 0, sizeof uin);
+    ui_w = ui_r = 0;
+    usb.config = 1;
+    uin.alt = 1;
+    *fmin = 1 << 30; *fmax = 0; *jump = 0;
+    while (t < secs) {
+        if (tp <= tb) {                                 /* a host packet (1 ms: 44 or 45 frames of 44.1 kHz) */
+            uint32_t f = 44u;
+            acc += 100u;
+            if (acc >= 1000u) { acc -= 1000u; f = 45u; }
+            for (i = 0; i < f; i++, th += 1.0 / 44100.0) {
+                int16_t l = (int16_t)lrint(20000.0 * sin(2.0 * M_PI * f0 * th)), r = (int16_t)lrint(10000.0 * sin(2.0 * M_PI * f0 * th));
+                pk[i] = (uint32_t)(uint16_t)l | (uint32_t)(uint16_t)r << 16;
+            }
+            if (!(gap && tp > 3.0 && tp < 3.2))         /* (gap: the host silent for 200 ms at 3 s) */
+                uin_take(pk, f * 4u);
+            tp += 0.001;
+            t = tp;
+        } else {                                        /* a block of 32 at the I2S clock */
+            int32_t fill;
+            uac_in_fill(32u);
+            tb += 32.0 / fd;
+            t = tb;
+            blocks++;
+            fill = (int32_t)(ui_w - ui_r);
+            if (t > secs / 2.0 && uin_on) {
+                if (fill < *fmin) *fmin = fill;
+                if (fill > *fmax) *fmax = fill;
+                if (!n0) { n0 = 1; *under = uin.underruns; *over = uin.overruns; dup_smin = dup_smax = uin.step; }
+                if (uin.step < dup_smin) dup_smin = uin.step;
+                if (uin.step > dup_smax) dup_smax = uin.step;
+            }
+            for (i = 0; i < 32u && uin_on; i++) {
+                int32_t d = uin_l[i] - prev, a = d < 0 ? -d : d;
+                if (a > *jump) *jump = a;
+                prev = uin_l[i];
+                if (t > secs / 2.0) { ys[ny] = uin_l[i]; ts[ny] = tb - (32.0 - i) / fd; ny++; }
+            }
+        }
+    }
+    *under = uin.underruns - *under;
+    *over = uin.overruns - *over;
+    /* a fitted sine at 1 kHz of real time over each 1024 samples (~23 ms: the delay, which drifts by a frame or two
+     * over seconds as the step settles, is that window's own), the residuals against them, summed */
+    {
+        double e = 0, p = 0;
+        uint32_t w0;
+        for (w0 = 0; w0 + 1024u <= ny; w0 += 1024u) {
+            double scc = 0, sss = 0, ssc = 0, sxc = 0, sxs = 0, det, a, b;
+            for (i = w0; i < w0 + 1024u; i++) {
+                double c = cos(2 * M_PI * f0 * ts[i]), s2 = sin(2 * M_PI * f0 * ts[i]);
+                scc += c * c; sss += s2 * s2; ssc += s2 * c; sxc += ys[i] * c; sxs += ys[i] * s2;
+            }
+            det = scc * sss - ssc * ssc; a = (sxc * sss - sxs * ssc) / det; b = (sxs * scc - sxc * ssc) / det;
+            for (i = w0; i < w0 + 1024u; i++) {
+                double y = a * cos(2 * M_PI * f0 * ts[i]) + b * sin(2 * M_PI * f0 * ts[i]);
+                e += (ys[i] - y) * (ys[i] - y);
+                p += y * y;
+            }
+        }
+        *snr = 10.0 * log10(p / (e + 1e-9));
+    }
+    free(ys); free(ts);
+    return blocks;
+}
+static void test_duplex(void)
+{
+    const uint8_t *d; uint16_t l; uint32_t off, nif = 0, under, over;
+    int ac_ok = 0, it3 = 0, ot4 = 0, asg = 0, fmt = 0, ep = 0, cs_total = 0, in_ac = 0, ac_wt = 0;
+    int32_t fmin, fmax, jump;
+    double snr;
+    usb_duplex = 1;
+    get_desc(0x0200, &d, &l);
+    check("in+out: the configuration is the duplex one, its length as declared, 4 interfaces",
+          d == CFG_DESC_DUP && l == sizeof CFG_DESC_DUP && le16(d + 2) == l && d[4] == 4);
+    for (off = 0; off + 1u < l; off += d[off]) {
+        const uint8_t *p = d + off;
+        if (p[1] == 4) { nif += p[3] == 0; in_ac = p[5] == 1 && p[6] == 1; }
+        if (in_ac && p[1] == 0x24) {
+            cs_total += p[0];
+            if (p[2] == 1) { ac_ok = p[0] == 11 && p[7] == 3 && p[8] == 1 && p[9] == 2 && p[10] == 3; ac_wt = le16(p + 5); }
+            if (p[2] == 2 && p[3] == 3) it3 = le16(p + 4) == 0x0101 && p[7] == 2;
+            if (p[2] == 3 && p[3] == 4) ot4 = le16(p + 4) == 0x0301 && p[7] == 3;
+        }
+        if (p[1] == 0x24 && p[2] == 1 && p[0] == 7 && p[3] == 3) asg = 1;
+        if (p[1] == 0x24 && p[2] == 2 && p[0] == 11) fmt = p[4] == 2 && p[5] == 2 && p[6] == 16 && p[7] == 1 && p[8] == 0x44 && p[9] == 0xAC;
+        if (p[1] == 5 && p[2] == 0x04) ep = p[3] == 0x09 && le16(p + 4) == UI_MAXF * 4u && p[6] == 1;
+    }
+    check("in+out: AC header of 3 (MIDI, input, output), its total the class descriptors' sum", ac_ok && ac_wt == cs_total);
+    check("in+out: input terminal 3 USB streaming L R -> output terminal 4 speaker, AS general on 3", it3 && ot4 && asg);
+    check("in+out: type I 2 ch 16 bit 44100, EP4 OUT isochronous adaptive 184 bytes, 1 ms", fmt && ep && nif == 4u);
+    get_desc(0x0100, &d, &l);
+    check("in+out: the device descriptor's bcdDevice + 0x80", d == DEV_DESC_DUP && d[12] == (BCD_LO(0) + 0x80));
+    dup_run(44117.6, 12, &under, &over, &fmin, &fmax, &snr, &jump, 0);
+    printf("  fast clock: fill %d..%d (target %u), step %d..%d, SNR %.1f dB, largest step %d\n", fmin, fmax, UI_TARGET, dup_smin, dup_smax, snr, jump);
+    check("in+out: an I2S clock 0.04 % fast: settled, no underrun or overrun, the fill near the target, step < 65536",
+          !under && !over && fmin > 40 && fmax < (int32_t)UI_N - 64 && uin.step < 65536 && uin.step > 65536 - 100);
+    check("in+out: a 1 kHz sine through it within -40 dB of a pure 1 kHz (no click: steps < 4000)", snr > 40.0 && jump < 4000);
+    check("in+out: settled, the step steady within 0.01 % (no audible wow)", dup_smax - dup_smin <= 7);
+    dup_run(44060.0, 12, &under, &over, &fmin, &fmax, &snr, &jump, 0);
+    printf("  slow clock: fill %d..%d, step %d..%d, SNR %.1f dB\n", fmin, fmax, dup_smin, dup_smax, snr);
+    check("in+out: an I2S clock 0.09 % slow: settled, no glitch, step > 65536", !under && !over && fmin > 40 && uin.step > 65536 && snr > 40.0);
+    dup_run(44117.6, 6, &under, &over, &fmin, &fmax, &snr, &jump, 1);
+    printf("  host silent 200 ms: underruns %u, starts primed again %d, largest step %d\n", uin.underruns, uin.go, jump);
+    check("in+out: the host silent 200 ms: one underrun (a fade out, no click), primed again and clean after", uin.underruns == 1u && uin.go && jump < 4000);
+    {   /* a new stream (uin_stream: gen + 1) with the last one's frames still in the ring: dropped, primed afresh */
+        static uint32_t pk[UI_MAXF];
+        uint32_t k;
+        memset(pk, 0x11, sizeof pk);
+        for (k = 0; k < 6u; k++) uin_take(pk, 45u * 4u);
+        uin.gen++;
+        uac_in_fill(32u);
+        check("in+out: a new stream drops what the last one left in the ring (only the reader moves its index)", ui_r == ui_w && !uin_on && !uin.go);
+    }
+    uin.alt = 0;
+    uac_in_fill(32u);
+    check("in+out: alt 0: nothing in the mix", !uin_on && !uin.go);
+    usb_duplex = 0;
+    get_desc(0x0200, &d, &l);
+    check("in+out off: the configuration as before", d != CFG_DESC_DUP);
+    usb.config = 0;
 }
 static void test_descriptors(void)
 {
@@ -828,6 +971,7 @@ int main(void)
     printf("-- USB audio input, CDC %s\n", T_CDC ? "on" : "off");
     test_descriptors();
     test_stems();
+    test_duplex();
     test_ring();
     test_rate();
     test_resampler();

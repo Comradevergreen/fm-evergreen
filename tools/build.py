@@ -308,11 +308,30 @@ def check(img, syms, dis, rt):
         errors.append(f"pool headroom {POOL_END - pool_top} B < 8192 B")
     # (JIANT 0.6.78) the RAM code at the pool's top: a call reaches +-4 MiB (app.ld), so from the lowest RAM code
     # address the XIP image must end within 4 MiB; and the room left for RAM code
-    reach = sym("_rt_start") + 0x400000 - sym("_etext")
+    # (0.7.5) what must be in reach is what RAM code calls, not the whole image: the calls in .ram_text (none),
+    # .c1_text and .hot_text, from the disassembly (`call <rel> <name : addr>`); the sound code they call comes early
+    # in the image (the TU's order: engines, voice, fx before the UI), so the UI can grow past the old whole-image
+    # bound (the image's end in reach of the lowest RAM code: 12 KiB short by 0.7.5, after RAMTEXT moved up twice)
+    targets, sect = [], None
+    for ln in dis.splitlines():
+        mm = re.match(r"Disassembly of section (\S+):", ln)
+        if mm:
+            sect = mm.group(1)
+            continue
+        if sect in (".ram_text", ".c1_text", ".hot_text"):
+            mm = re.search(r"\bcall\b[^<]*<([\w.]+)\s*:\s*([0-9a-f]+)\s*>", ln)
+            if mm and int(mm.group(2), 16) >= APP_XIP:
+                targets.append((int(mm.group(2), 16), mm.group(1)))
+    far = max(targets) if targets else (APP_XIP, "-")
+    reach = sym("_rt_start") + 0x400000 - far[0]
     ramcode = sym("_hot_end") - sym("_rt_start")
-    notes.append(f"RAM code {ramcode} B of {RAMTEXT_END - sym('_rt_start')}; calls reach {reach} B past the image's end")
-    if reach < 12288:                              # (0.7.1: 12 KiB; was 16: RAMTEXT moved up twice already, each move 4 KiB
-        errors.append(f"RAM code reaches only {reach} B past the XIP image's end (< 12 KiB): move RAMTEXT up (app.ld)")   # off the user stack)
+    notes.append(f"RAM code {ramcode} B of {RAMTEXT_END - sym('_rt_start')}; {len(targets)} calls into the image, the farthest "
+                 f"{far[1]} with {reach} B of reach to spare (the image's end: {sym('_rt_start') + 0x400000 - sym('_etext')} B)")
+    if not targets and "call" in dis:
+        errors.append("no call from RAM code found in the disassembly: the reach check cannot read it")
+    if reach < 12288:                              # (12 KiB to spare beyond the farthest callee)
+        errors.append(f"RAM code's farthest call ({far[1]}) has only {reach} B of reach to spare (< 12 KiB): "
+                      "move RAMTEXT up (app.ld) or that code earlier in the image")
     if RAMTEXT_END - sym("_hot_end") < 2048:
         errors.append(f"RAM code headroom {RAMTEXT_END - sym('_hot_end')} B < 2048 B")
     return errors, notes

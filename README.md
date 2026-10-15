@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.7.4).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.7.5).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 > ⚡ **New in 0.6.85 – 0.6.92: a song generator you steer, a compact sequencer that breathes, a delay that feeds back.**
 > - **GEN (HOME + SELECT)**: a screen of three pages — GENRE (43 genres or RANDOM), SEED, ENERGY, FORM (loop, parts,
@@ -524,6 +524,22 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### v0.7.5
+- **USB audio in (test version): MENU > SYSTEM > USB > IN+OUT.** The FM-1 is the computer's or the phone's USB audio
+  output as well as its input (UAC1, stereo 16 bit 44.1 kHz on EP4 OUT, isochronous adaptive; the device re-enumerates,
+  bcdDevice + 0x80, no console). What the host plays comes into the last live track (T6, or T4 with TRACKS 4): into the
+  dry mix with its LEVEL and PAN (a balance), its CHORUS / DELAY / REVERB sends from the sum, ducked by DUCK, silenced by
+  its MUTE and the mute layer, on top of whatever the track's engine plays; the recording side is the stereo master
+  with the input in it. TIMER5 takes each 1 ms packet into a ring (2 KiB, in the pool); the audio ISR reads it at the
+  I2S clock through a linear interpolation whose step follows the ring's fill (the host's 44,100 Hz against the
+  FM-1's ~44,117.6: ~3.6 ms behind, steady within 0.01 %); a host that stops fades out and is primed again. Not on by
+  default: some hosts make a new USB audio device their default output.
+- Tests: uac_test (the duplex configuration as a host parses it; the ring against a fast and a slow I2S clock: no
+  glitch once settled, a 1 kHz sine at 65 dB, the step steady; a 200 ms gap: one fade out, primed again), audio_test
+  (the input through the last track: LEVEL, PAN, MUTE, LEVEL 0, the REVERB send), ui_test (the USB row's IN+OUT).
+- The build's RAM-code reach check (tools/build.py) measures the calls RAM code makes, not the whole image: the
+  farthest callee (master_out) has ~400 KB of reach to spare, where the image's end had 12 KB.
 
 ### v0.7.4
 - **The GEN screen (HOME + SELECT) no longer flickers on every knob or SELECT turn (reported).** The 0.6.96 fix cleared

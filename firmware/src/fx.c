@@ -1208,6 +1208,35 @@ static __attribute__((noinline)) void stem_post(uint32_t ti, const int32_t *pre,
 }
 #define UAC_STEMS() fx_stems
 #define UAC_STEMS_SRC 1
+/* (0.7.5) MENU > SYSTEM > USB IN+OUT: the host's audio, a block (usb.c uac_in_fill, the audio ISR before mix_block),
+ * stereo Q15; uin_on: this block holds it. The last live track takes it (mix_part, uin_mix): into the dry mix with
+ * its LEVEL and PAN (a balance), its CHORUS / DELAY / REVERB sends from the sum, ducked by DUCK, silenced by its MUTE
+ * and the mute layer; whatever the track's own engine plays as well (its DIST and filter are not on the input) */
+static int32_t uin_l[CTL], uin_r[CTL];
+static volatile uint8_t uin_on;
+#define UIN_SRC 1
+static __attribute__((noinline)) void uin_mix(int32_t *ol, int32_t *or_, int32_t *sc, int32_t *sd, int32_t *sr, uint32_t n,
+                                              int32_t lq, int32_t dl, int32_t gl, int32_t dgl, int32_t gr, int32_t dgr,
+                                              int32_t c, int32_t d, int32_t r, int32_t pm, int32_t *peak)
+{
+    uint32_t i;
+    int32_t pk = *peak;
+    for (i = 0; i < n; i++, lq += dl, gl += dgl, gr += dgr) {
+        int32_t g = ((lq >> 8) * (pm >> 3)) >> 12;     /* LEVEL (Q12) x the mute layer's gain (Q15 >> 3): Q12 */
+        int32_t xl = (uin_l[i] * g) >> 12, xr = (uin_r[i] * g) >> 12, m = (xl + xr) >> 1, a = m < 0 ? -m : m;
+        if (a > pk)
+            pk = a;
+        if (c)
+            sc[i] += mulq15(m, c);
+        if (d)
+            sd[i] += mulq15(m, d);
+        if (r)
+            sr[i] += mulq15(m, r);
+        ol[i] += (xl * gl) >> 12;                       /* PAN: a balance (the centre: both at 4096) */
+        or_[i] += (xr * gr) >> 12;
+    }
+    *peak = pk;
+}
 /* a part's level (Q12) over the block from l0 to l1, ducked: its start << 8, its step a sample in *dl (a block is
  * CTL: no divide) */
 static __attribute__((noinline)) int32_t duck_ramp(int32_t l0, int32_t l1, int32_t *dl)
@@ -1320,9 +1349,10 @@ static inline __attribute__((always_inline)) void mix_part(track_t *t, uint32_t 
         }
     }
     mod_begin(t);                                       /* the matrix's per-block values into t->p (mod.c) */
+    int uin = uin_on && (uint32_t)(t - trk) + 1u == trk_live;   /* (0.7.5) USB IN+OUT: the host's audio comes in here */
     if (track_render(t, b, n))
         t->tail = 16;                                   /* blocks of DIST state to run out after the last voice */
-    else if (!t->tail || !t->p[P_DIST] || !--t->tail) {
+    else if (!uin && (!t->tail || !t->p[P_DIST] || !--t->tail)) {
         mp_seen[(uint32_t)(t - trk) % NTRK] = 0;       /* (silent: the next sound at its LEVEL and PAN) */
         if (MOD.on)
             mod_end(t);
@@ -1375,6 +1405,7 @@ static inline __attribute__((always_inline)) void mix_part(track_t *t, uint32_t 
                 mod_end(t);
             return;
         }
+        int32_t lq0 = lq, gl0 = gl, gr0 = gr;           /* (0.7.5: uin_mix, the same ramps) */
         if (dx_xon && ENGINES[t->engine] == &ENG_DRUM)  /* (0.6.48) IMAGE, SENDs: from the same ramps as below */
         {
             int32_t *const sx[3] = {sc, sd, sr};
@@ -1394,6 +1425,8 @@ static inline __attribute__((always_inline)) void mix_part(track_t *t, uint32_t 
             ol[i] += (x * gl) >> 12;
             or_[i] += (x * gr) >> 12;
         }
+        if (uin && !t->p[P_MUTE] && !((trk_hush >> ti) & 1u))   /* (0.7.5) the host's audio, in its stem too */
+            uin_mix(ol, or_, sc, sd, sr, n, lq0, dl, gl0, dgl, gr0, dgr, c, d, r, pm1, &pk);
         t->peak = pk;
         if (fx_stems)
             stem_post(ti, pre, ol, or_, n);
