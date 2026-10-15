@@ -107,7 +107,8 @@ static int compact_project(void)
     project_save(1); motion_clear(t); t->p[P_FM1_LEVEL] = 127; step_set_chance(&t->step[3], 100);
     project_load(1);
     bad += check("actual project save/load restores motion, chance and operator settings", motion_count(t) == 1u &&
-        step_chance(&t->step[3]) == 25u && t->p[P_FM1_LEVEL] == 80);
+        step_chance(&t->step[3]) == 25u && (FELUCCA_FM4 ? t->p[P_FM1_LEVEL] == 80 : t->p[P_HVEL] == 80 && t->p[P_FM1_LEVEL] == 127));   /* (0.6.92:
+                                                         * HUMAN's TIME (that slot) folded into its one amount) */
     return bad;
 }
 /* a project of 89 parameters (before the chord keys, now P_SOFS / P_POFS; today's FUN9 frame): the engine's values at

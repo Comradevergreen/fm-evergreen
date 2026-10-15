@@ -87,7 +87,7 @@ The names below are the ones the firmware uses (the HARDWARE CALIBRATION screen 
 | --- | --- |
 | **SELECT** (encoder) | Alone: **scrolls through the pages of the section you are in** (EDIT's pages on an EDIT page, FX's on an FX page …), one a detent, no wrap; on **HOME** it opens **GEN**, the song generator (as HOME + SELECT). With a button held, that button's **dice**: **HOME** + SELECT **GEN**, **EDIT** + SELECT the sound, **SEQ** + SELECT the sequence, **LFO** + SELECT the LFO, **FX** + SELECT the effects. **GLO** + SELECT: the tempo. Any other page button + SELECT: its pages. |
 | **ALGORITHM** (encoder) | Selects the track from any page: T1–T4, or T1–T6 with TRACKS 6. In the MENU: switches tabs. |
-| **PRESETS** (encoder) | On HOME, PRESETS and the sound pages: browses sounds (every engine's factory presets, then your user presets). On step pages (STEP, COMP, PATTERN, AUTOMATION, SHIFT): moves the step cursor. On list pages (USER, PROJECT, ARRANGE, TOOLS, AUTO LIST): moves the selection. **Hold a page button and turn SELECT** (or PRESETS) to jump straight through that button's pages. |
+| **PRESETS** (encoder) | On HOME, PRESETS and the sound pages: browses sounds (every engine's factory presets, then your user presets). On step pages (STEP, COMP, PATTERN, AUTOMATION, TRACK): moves the step cursor; on NOTE, the focus. On list pages (USER, PROJECT, ARRANGE, TOOLS, AUTO LIST): moves the selection. **Hold a page button and turn SELECT** (or PRESETS) to jump straight through that button's pages. |
 | **KNOB 1–4** | The four cards (columns) on screen. With a layer held, the layer's own knobs. Turning fast sweeps the whole range, slowly fine-tunes (MENU > KNOB ACCEL turns this off). |
 | **MASTER** | The output volume. |
 
@@ -104,7 +104,7 @@ The names below are the ones the firmware uses (the HARDWARE CALIBRATION screen 
 | **GLO** | MIXER → GLOBAL → SYSTEM → MIXER. | **GLO** layer: mutes, solos, levels, tap tempo, UNDO. |
 | **SAVE** | SAVE pages (first press: USER). | **SAVE** layer: play/store sections live. |
 | **ARP** | ARP pages. | (no layer) |
-| **SEQ** | SEQ pages. | **SEQ TOOLS** layer (on STEP, PATTERN, AUTOMATION and SHIFT). |
+| **SEQ** | SEQ pages. | **SEQ TOOLS** layer (on STEP, NOTE, PATTERN, COMP, TRACK and AUTOMATION). |
 | **PLAY** | Start / stop. | — |
 | **REC** | Arms / disarms recording on the selected track. | **REC** layer: CLEAR, CLICK. |
 | **OCT− / OCT+** | Keyboard octave (−3 to +3; both together: back to 0). On action pages and in dialogs: **OCT−** = back / NO, **OCT+** = do it / YES. | — |
@@ -280,15 +280,12 @@ and heating up with its own audio. The selected track is drawn bigger, a muted o
 | --- | --- | --- | --- | --- |
 | STEP (melodic: piano roll) | STEP | NOTE | TIME (NOTE / TIE / REST) | FLAG (– / ACC / SLD / A+S) |
 | STEP (DRUM: grid) | STEP | LANE | HIT | ACC |
-| NOTE | FOCUS | PITCH | MOVE | LEN |
-| TIMING | STEP | OFFSET (−8/16 … +7/16) | REC Q | — |
-| STRETCH | STRETCH (/8 … /2, x2 … x8) | REPEAT (x2 … x8, TO 64) | NUDGE (now) | LEN (before > after) |
-| COMP | STEP | TYPE | (its value) | (its value; RATCH / ECHO: DIV) |
-| COMP 2 | STEP | TYPE (the second component) | (its value) | (its value; ECHO: DIV) |
-| WHEN | STEP | A (WHEN) | B (WHEN) | LEN |
 | PATTERN | LEN | DIV | SWING | GATE |
-| SHIFT | OFFSET | PITCH | CHANCE | C.LEN |
-| HUMAN | VEL | TIME | GATE | — |
+| NOTE | FOCUS | PITCH | MOVE | MICRO (−8/16 … +7/16) |
+| STRETCH | STRETCH (/8 … /2, x1, x2 … x8) | REPEAT (OFF, x2 … x8, TO 64) | NUDGE | ROTATE (−32 … +32) |
+| COMP | STEP | TYPE | (its value; ARP: ORDER × RANGE) | EVERY (ARP: RATE; RATCH / ECHO: DIV) |
+| COMP 2 | STEP | TYPE (the second component) | (its value) | EVERY |
+| TRACK | PITCH | CHANCE | HUMAN | REC Q |
 | PLAYHEADS | HEAD | RATE | DIR | INTERVAL |
 | AUTOMATION | PLAY (ON/OFF) | EVENT (count) | LOCK (count) | CLEAR (action) |
 | AUTO LIST | ROW | STEP | PARAM | VALUE |
@@ -328,13 +325,13 @@ and heating up with its own audio. The selected track is drawn bigger, a muted o
 | SELECT | tempo |
 | **Knobs** | LEVEL T1–T4 (with T5 or T6 selected: T3–T6) |
 
-**SCL** — any key sets the ROOT to its note name. Knobs: ROOT, SCALE, OFFSET, PITCH (the last two are SEQ > SHIFT's).
+**SCL** — any key sets the ROOT to its note name. Knobs: ROOT, SCALE, ROTATE, PITCH (the last two are SEQ > STRETCH's ROTATE and SEQ > TRACK's PITCH).
 
 **EDIT** — F3 **INIT** (the track's sound back to its engine's own defaults (a plain INIT, not a preset), dry: every effect send at 0; FM6 the init
 voice, OP1 alone at full level; on DRUM the factory DRUM-X kit too), G3 **RECALL** (the sound as the current section stored it; on DRUM with its kit). Both ask first and leave the
 steps alone. On a DRUM track, black keys 1–8 mute each DRUM-X sound (BD SD CP CH OH TM RS CB). Knobs: EDIT 1's four.
 
-**SEQ TOOLS** (only on STEP, PATTERN, AUTOMATION and SHIFT) — F3 CLEAR, G3 REVERSE, A3 / B3 SHIFT left / right,
+**SEQ TOOLS** (only on STEP, NOTE, PATTERN, COMP, TRACK and AUTOMATION) — F3 CLEAR, G3 REVERSE, A3 / B3 SHIFT left / right,
 C4 RANDOM, D4 COOK, E4 BEAT (DRUM), F4 CLR AUTO (the track's automation and locks; the steps stay). On a DRUM track the
 lane tools: G4 CLR, A4 REV, B4 FILL, C5 RND on the lane picked with black keys 1–8. **REC** (while SEQ is held): CLEAR
 ALL. Knobs: LEN, DIV, SWING, GATE. These tools have no undo.
@@ -493,16 +490,20 @@ recorded into the pattern, quantized to its steps, overdubbing. Knob moves on th
 ### Pattern pages
 
 - **COMP** (step components, OP-Z style): up to two per step (**COMP** the first, **COMP 2** the second, the same
-  way; 0.6.82). KNOB 1 picks the step, KNOB 2 its **TYPE**, KNOB 3 / 4 its values. The row on top marks every step that has one (orange ARP, violet TRIG, gray CHANCE, theme RATCH); below,
-  the step's component drawn (the arpeggio's ladder, the note playing lit; TRIG's loops).
+  way; 0.6.82). KNOB 1 picks the step, KNOB 2 its **TYPE**, KNOB 3 its value, KNOB 4 **EVERY** (0.6.92; on COMP an
+  ARP's RATE or a RATCH / ECHO's DIV sit there instead). The row on top marks every step that has one (orange ARP,
+  violet TRIG, gray CHANCE, theme RATCH); below, the step's component drawn (the arpeggio's ladder, the note playing
+  lit; TRIG's loops).
   - **CHANCE** (0–100 %) and **RATCH** (x1–x4): the step's own chance and ratchet (on COMP only). RATCH's KNOB 4 is
     its **DIV**: STEP shares the hits out over the step (as before); 1/2, 1/3, 1/4, 1/6, 1/8 put them that part of a
     step apart from its start, as many as fit (RATCH x3 at 1/8: three quick hits, then silence).
-  - **ARP NOTES / SEQ / SCALE**: the step plays an arpeggio, **RATE** notes in its length (x2 x3 x4 x6 x8), and goes
-    on over the TIEs after it (its division is RATE, its duration the step and its TIEs). NOTES: the step's notes,
-    low to high; SEQ: the pattern's melody, in the order the pattern plays it (0.6.82; it was sorted like NOTES);
-    both over 1–4 octaves. SCALE: the scale up from the step's lowest note, 3, 5, 8 or 15 degrees. KNOB 3 the **ORDER** (UP, DOWN,
-    UP-DN, RND), KNOB 4 **RATE** and range together.
+  - **ARP NOTES / SEQ / SCALE**: the step plays an arpeggio and goes on over the TIEs after it (its duration the step
+    and its TIEs). NOTES: the step's notes, low to high; SEQ: the pattern's melody, in the order the pattern plays it
+    (0.6.82; it was sorted like NOTES); both over 1–4 octaves. SCALE: the scale up from the step's lowest note, 3, 5,
+    8 or 15 degrees. KNOB 3 **ORDER** and range as one list (UP, DOWN, UP-DN, RND over 1 OCT, then over 2 OCT …; on
+    SCALE 3, 5, 8, 15 DEG). KNOB 4 **RATE** (0.6.92), the arpeggio's speed in musical time: **x1** one note a step
+    (the track's DIV, 1/16), **1/32** two a step, **1/32T** three, **1/64** four, **1/64T** six, **1/128** eight (the
+    card says the note value for the track's DIV; an odd DIV: xn). The old pages' x2 … x8 are the same values.
   - **TRIG**: the step plays only on some loops of the pattern: 1:2, 2:2, 1:3, 2:3, 3:3, 1:4 … 4:4, 1:8, FIRST, !1ST
     (every loop but the first).
   - **RAND**: the note moves up or down the scale at random, up to RANGE degrees (1–7).
@@ -514,74 +515,86 @@ recorded into the pattern, quantized to its steps, overdubbing. Knob moves on th
   - **PULSE**: the note plays again on the empty steps after it, EVERY 1–4 steps, until the next note.
   - **JUMP**: after this step the pattern goes on from TO STEP.
   - **REV**: from this step the pattern plays backwards to step 1, then forwards again (ping-pong).
-  - **TIMES** (KNOB 4, JUMP and REV): **ALWAYS** turns the pattern every time; **x1** once a pass, then the pattern plays
-    on past it to its end (a section played twice, then the rest); **x2** twice a pass; **1:2** once, every other pass.
-    A pass ends where the pattern wraps by itself.
+    JUMP and REV turn the pattern on the loops **EVERY** says (below): EVERY 1:2 jumps every other loop, FIRST only
+    the first time (an intro), !FIRST every loop but the first (0.6.92; it was TIMES).
   - **FILL**: the step plays only while **FX** is held.
   - **KILL**: the step first cuts everything the track is sounding (long releases, held notes), then plays.
   - **Two on one step**: both play (an ECHO with an OCT: the repeats an octave up; a RAND with an OCT: both moves).
     One that keeps the note silent wins: a **TRIG** or **FILL** in either place decides whether the step plays at all,
     before anything else. Of two that do the same job, the first wins (an ARP over an ECHO, two ARPs: COMP's).
-  - **WHEN** (its own page after COMP 2): KNOB 2 / 3 the loops the first (A) and second (B) component play on:
-    **ALWAYS**, **1:2** (the 1st, 3rd, … loop), **2:2** (the 2nd, 4th, …), **SKIP** (kept, but not played: an
-    on/off switch). KNOB 4 the step's **LEN**: GATE (the track's) or 1/16 … 15/16 of the note (or of each RATCH /
-    ECHO / ARP part) sounding.
+  - **EVERY** (0.6.92, KNOB 4 on COMP 2, and on COMP for every type but ARP, RATCH and ECHO): the loops of the pattern
+    the step's components play on — **ALWAYS**; **1:2** (the 1st, 3rd, … loop), **2:2** (the 2nd, 4th, …); **1:3**,
+    **2:3**, **3:3**; **1:4** … **4:4**; **1:8**; **FIRST** (the first loop only); **!FIRST** (every loop but the
+    first); **SKIP** at the end of the knob (kept, but not played: an on/off switch). One setting a step, for both of
+    its components, set from COMP 2's KNOB 4 whatever its TYPE (or COMP's, for the types without a knob of their own
+    there): an arpeggio that comes in every fourth bar is ARP on COMP (ORDER, RATE) and EVERY 4:4 on COMP 2. The
+    step's own note plays on every loop (a **TRIG** component decides that). It took WHEN's place (that page is gone),
+    with its A / B read as one.
   Projects keep them. **On a drum kit** (0.6.83) they work too: OCT, RAND, TONAL tune the hits (RAND and TONAL in
   the track's scale), BEND bends each hit over the step; ARP NOTES plays the step's sounds one after another, SEQ
   the pattern's sounds in the order they play, SCALE retriggers the step's hits each part a degree further up.
 - **A long chord slide** (0.6.83): the glide into a chord lasts as long as that chord, its TIEs included; GLIDE sets
   how much of it (127: all of it). A chord held over TIEs on slow steps (e.g. DIV 1/4 at 120 BPM: ten steps, 5 s)
   slides that slowly and smoothly; new notes fade in as they glide.
-- **PATTERN**: LEN (1–64), DIV, SWING, GATE.
+- **PATTERN** (the second SEQ page): LEN (1–64), DIV, SWING, GATE — the pattern's length, its step's note value, its
+  swing and the length of every note (a step's own length: STEP's TIE, or MICRO for its start).
 - **Moving a note or a chord** that came in early or late: **NOTE**, KNOB 1 FOCUS on the step, KNOB 3 **MOVE** moves
   it sideways a step at a time (FOCUS ALL: the whole chord with its TIEs; one note focused: that note alone).
-- **STRETCH** (0.6.85, after TIMING): reshapes the whole sequence of the selected track. Turn a knob to pick, then
-  **OCT+** does it (SAVE held: UNDO brings it back). KNOB 4 shows the LEN before and after.
+- **STRETCH** (0.6.85, after NOTE): reshapes the whole sequence of the selected track **as the knob turns** (0.6.92;
+  it used to wait for OCT+). Every turn works from the sequence as it was before the first one (its base), so x2 then
+  x4 is x4, not x8, and back to the middle is back to where you started; the message says the LEN before and after
+  (LEN 4 > 16); **UNDO** (GLO + G4) brings it back; editing the result makes it the new base.
   - **KNOB 1 STRETCH**: **x2 … x8** spreads the steps that many times apart (LEN 4 x4: 16), a held note held all the
     way, short ones kept short; past 64 steps the end is cut. **/2 … /8** squeezes it: of each group of steps the first
-    one that plays stays (LEN 32 /2: 16). The automation and locks move with their steps.
+    one that plays stays (LEN 32 /2: 16). **x1** in the middle: as it was. The automation and locks move with their
+    steps.
   - **KNOB 2 REPEAT**: copies steps 1..LEN after themselves, **x2 … x8** times or **TO 64** (as many whole copies as
-    fit), automation and locks too. Four notes become a 64-step bed to record more notes over (live REC overdubs).
-  - **KNOB 3 NUDGE**: the whole sequence one step right / left at once, round inside LEN (as TOOLS A3 / B3).
-- **TIMING** (0.6.88, right after NOTE): each step's own place off the grid. KNOB 1 the step, KNOB 2 its **OFFSET** in
-  sixteenths of a step, from −8/16 (half a step early) to +7/16 (late); **EDIT** puts it back on the grid. KNOB 3
-  **REC Q**, the track's recording quantize: 100 % (the default) live recording snaps to the grid; lower, the step keeps
-  that much of where you played it (0 %: all of it), early or late. Early steps really sound early: the step before
-  ends that much sooner and the grid is kept. The piano roll draws the notes where they play. A chord shares its
-  step's offset; moving, stretching or repeating steps keeps it; saved with the project.
-- **HUMAN** (0.6.87, after SHIFT): the track plays like a person, each note a little different every time round;
-  the steps stay as written. **VEL**: each note's velocity up or down at random (up to ±38 at 100 %). **TIME**: each
-  step starts a little late at random (up to 30 ms, never more than a third of the step, never early; a chord's notes
-  stay together, a STRUM keeps its spacing). **GATE**: each note's length longer or shorter (up to ±40 %). 0 % plays
-  exactly as written (the default, and every project before). Kept when you change the sound; automatable.
+    fit), automation and locks too; **OFF** at the left: as it was. Four notes become a 64-step bed to record more notes
+    over (live REC overdubs).
+  - **KNOB 3 NUDGE**: the whole sequence one step right / left, round inside LEN (as TOOLS A3 / B3).
+  - **KNOB 4 ROTATE** (−32 … +32; it was SHIFT's OFFSET): the sequence read from another step, without moving the
+    steps themselves — a live, automatable rotation (also on the SCL layer's KNOB 3).
+- **MICRO** (0.6.92, NOTE's KNOB 4; it was the TIMING page's OFFSET): the focused step's own place off the grid, in
+  sixteenths of a step, from −8/16 (half a step early) to +7/16 (late); **EDIT** puts it back on the grid. Early steps
+  really sound early: the step before ends that much sooner and the grid is kept. The piano roll draws the notes where
+  they play. A chord shares its step's offset; moving, stretching or repeating steps keeps it; saved with the project.
+  **REC Q** (TRACK's KNOB 4) is the recording quantize that writes it: 100 % (the default) live recording snaps to the
+  grid; lower, the step keeps that much of where you played it (0 %: all of it), early or late.
+- **TRACK** (0.6.92; it was SHIFT + HUMAN): the whole track's settings. **PITCH** (±24 semitones; not on drums).
+  **CHANCE**: the whole track's chance, 100 % plays every step as written, lower thins it out (each step's own chance,
+  from the dice or the editor, scaled). **HUMAN** (one amount, 0–100 %): the track plays like a person, each note a
+  little different every time round, the steps staying as written — its velocity up or down at random (up to ±50 at
+  100 %), its start a little late (up to 40 ms, never more than a third of the step, never early; a chord's notes stay
+  together, a STRUM keeps its spacing), its length longer or shorter (up to ±40 %), and its envelope's DECAY and
+  RELEASE a little longer or shorter (up to ±20). 0 % plays exactly as written (the default). Kept when you change the
+  sound; automatable. A project saved with the old VEL / TIME / GATE loads with the smallest of the three as its HUMAN.
+  **REC Q**: see MICRO. The old **C.LEN** (the components as a lane of their own length) is gone: components live on
+  their steps, EVERY says how often they play.
 - **AUTOMATION**: PLAY turns the track's automation on or off, EVENT and LOCK count the records, CLEAR erases them
-  (OCT+, with a dialog).
+  (OCT+, with a dialog). The automation is what you record by turning a knob while REC is on and the track plays (a
+  value that moves along the pattern), and the parameter locks (a value a step, see below): this page shows how many
+  of each the track holds and whether they play; the page's hint says so. AUTO LIST is where to see and edit each one.
 - **AUTO LIST**: every automation event and lock as a list. KNOB 1 the row, 2 the step, 3 the parameter, 4 the value.
 - **MUTATE**: the track changes by itself, in time with the clock, so a texture can evolve for minutes.
   **SOUND** and **PATTERN**: every OFF, 1, 2, 4, 8, 16 or 32 bars (the change lands on the bar's one). **AMOUNT**: how
-  much (turning one on sets 50 %). **MODE**: **ORBIT** varies around the anchor (the music as it was when MUTATE came
+  much (turning one on sets 50 %). The page (0.6.92) shows the selected track's next 32 bars as one strip, a mark on
+  each bar a change lands on (orange: SOUND, violet: PATTERN), the playhead on it, and a line saying what each knob
+  does. **MODE**: **ORBIT** varies around the anchor (the music as it was when MUTATE came
   on, when PLAY started, when you pressed **OCT+** here: KEEP, or when you last wrote or cleared steps), so it never
   loses itself, and a sequence you clear stays cleared; an empty pattern is never filled by MUTATE; **DRIFT** goes on from
   what it is now. SOUND changes the engine's values, the filter, its envelope, DEC, REL and the sends (never LEVEL, PAN
   or MUTE); PATTERN moves notes along the scale, flips accents, adds or takes a note off the beat (never on it); on
   DRUM it flips hits, never the kick. **OCT−** here (or **GLO + A4**, FREEZE) stops every mutation until pressed again.
-  The page shows each track's next 32 bars (orange: SOUND, violet: PATTERN); on HOME each being has a ring of dots
-  filling up to its next change, all lit when it changes.
-- **PLAYHEADS** (SEQ, page 4; it was FUGUE), after the Fugue Machine: three more **playheads** (heads 2, 3, 4) read the same steps
+  On HOME each being has a ring of dots filling up to its next change, all lit when it changes.
+- **PLAYHEADS** (SEQ, page 8; it was FUGUE), after the Fugue Machine: three more **playheads** (heads 2, 3, 4) read the same steps
   as the track's sequencer. KNOB 1 **HEAD** picks one, KNOB 2 **RATE** (OFF, 1/4, 1/3, 1/2, 2/3, x1, 3/2, x2, x3, x4 of
   the track's), KNOB 3 **DIR** (FWD, REV, PING, RND), KNOB 4 **INTVL**, its interval in degrees of the scale (−14 to +14;
   a drum track keeps its lanes). A head plays each step's notes with the step's velocity, accent and chance and the
   track's GATE (no components, locks or ratchets: those are the sequencer's): canons, counterpoint, patterns phasing
   against themselves. The page draws the steps, the sequencer's playhead and each head where it is. Saved with the
   section; the heads start and stop with the transport.
-- **SHIFT** (the last SEQ page): **OFFSET** (−32 to +32 steps), **PITCH** (±24 semitones; not on drums) and
-  **CHANCE**: the whole track's chance, 100 % plays every step as written, lower thins it out (each step's own chance,
-  from the dice or the editor, scaled). All three can be automated; OFFSET and PITCH are also on the SCL layer's
-  KNOB 3 / 4. **C.LEN** (KNOB 4): the step components as a lane of their own length. OFF: each step plays its own
-  component. 1–64: the components of steps 1..C.LEN are read in turn, one per step the track plays, so with C.LEN 3 over
-  a 4-step pattern each component lands one step earlier every loop (polymeter: the components drift over the notes).
-  The COMP page marks the lane and where it is; components past LEN still play when C.LEN reaches them.
-  On **+ ADD LOCK**, OCT+ adds a lock; on a record, OCT+ switches it between LOCK and AUTO; **EDIT** deletes it.
+- **AUTO LIST**: on **+ ADD LOCK**, OCT+ adds a lock; on a record, OCT+ switches it between LOCK and AUTO; **EDIT**
+  deletes it.
 
 ### Parameter locks
 
@@ -768,7 +781,7 @@ What a piece is made of:
   moves its parameters a little, shapes the envelope, the filter (type, cutoff, resonance, the envelope on it), a slow
   LFO, drive, chorus, glide, the voice mode. The **kit** is one of seven (909, 808, click, industrial, soft, dub,
   breaks) written over the factory DRUM-X kit, the drum track's TONE, DECAY, NOISE and DRIVE with it.
-- **Mix**: level, pan and sends by role and by how wet the genre is; **HUMAN** sets SEQ > HUMAN on every track by
+- **Mix**: level, pan and sends by role and by how wet the genre is; **HUMAN** sets SEQ > TRACK's HUMAN on every track by
   the role (hats and leads more, the kick none) scaled by how human the genre is (a band more than a machine);
   SWING the genre's unless set; DUCK, CLIP and PUNCH on the master; the delay's TYPE, PING-PONG and TIME and the
   reverb's type the genre's.

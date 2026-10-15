@@ -864,19 +864,20 @@ static void draw_columns(void)
                     used && song_idx.scene[song_cur][row].on ? VAL(3u) : T_DIM, -1, ICON_MIX);   /* (JIANT) */
         return;
     }
-    if (cur_page()->graph == GR_SHAPE) {               /* (0.6.85) STRETCH REPEAT NUDGE, the LEN after */
-        int32_t k = shp_k();
-        uint32_t len = (uint32_t)clamp(TSEL->p[P_SLEN], 1, NSTEP);
+    if (cur_page()->graph == GR_SHAPE) {               /* (0.6.85) STRETCH REPEAT NUDGE; (0.6.92) ROTATE, done on the turn */
+        int32_t k = shp_k(), r = (int32_t)shp_rep(), ofs = TSEL->p[P_SOFS];
         val[0] = k > 0 ? 'x' : '/';
         fmt_int(val + 1, k > 0 ? k : -k);
-        draw_column(0, "STRETCH", val, "", ui.act == 1u ? VAL(0u) : T_DIM, (int32_t)shp_i * 1000 / 13, ICON_X_REPEAT);
-        if (shp_r < 7u) { val[0] = 'x'; fmt_int(val + 1, (int32_t)shp_r + 2); }
+        draw_column(0, "STRETCH", val, "", k != 1 ? VAL(0u) : T_DIM, (int32_t)shp_i * 1000 / 14, ICON_X_REPEAT);
+        if (r == 1) str_cpy(val, "OFF", sizeof val);
+        else if (r) { val[0] = 'x'; fmt_int(val + 1, r); }
         else str_cpy(val, "TO 64", sizeof val);
-        draw_column(1, "REPEAT", val, "", ui.act == 2u ? VAL(1u) : T_DIM, (int32_t)shp_r * 1000 / 7, ICON_X_PATTERN);
+        draw_column(1, "REPEAT", val, "", r != 1 ? VAL(1u) : T_DIM, (int32_t)shp_r * 1000 / 8, ICON_X_PATTERN);
         draw_column(2, "NUDGE", "< >", "", VAL(2u), -1, ICON_ORDER);
-        fmt_int(val, (int32_t)len);
-        if (ui.act == 1u || ui.act == 2u) { str_cpy(val + str_len(val), ">", 2); fmt_int(val + str_len(val), (int32_t)shp_len()); }
-        draw_column(3, "LEN", val, "", VAL(3u), -1, ICON_AUTO);
+        val[0] = ofs > 0 ? '+' : 0;
+        fmt_int(val + (ofs > 0), ofs);
+        card_mot_of(&TSEL->p[P_SOFS]);
+        draw_column(3, "ROTATE", val, "ST", ofs ? VAL(3u) : T_DIM, (ofs + 32) * 1000 / 64, ICON_ORDER);
         return;
     }
     if (cur_page()->graph == GR_FUGUE) {               /* (0.6.52) HEAD RATE DIR INTERVAL */
@@ -895,21 +896,8 @@ static void draw_columns(void)
         const step_t *cs = &TSEL->step[ui.cursor];
         uint32_t v = comp_view(), ca = comp_arg(cs), ct = comp_type(cs);
         static const char *const ORD[4] = {"UP", "DOWN", "UP-DN", "RND"};
-        static const char *const DIVN[CT_NDIV] = {"STEP", "1/2", "1/3", "1/4", "1/6", "1/8"};
         fmt_int(val, (int32_t)ui.cursor + 1);
         draw_column(0, "STEP", val, "", VAL(0u), -1, ICON_AUTO);
-        if (comp_slot() == 2u) {                       /* (0.6.82) WHEN: each component's loops, the step's LEN */
-            static const char *const WN[4] = {"ALWAYS", "1:2", "2:2", "SKIP"};
-            uint32_t k;
-            for (k = 0; k < 2u; k++) {
-                uint32_t c = k ? cs->comp2 : cs->comp, w = CW_OF(cs, k);
-                draw_column(1u + k, k ? "B" : "A", c ? WN[w] : "-", "", c && w ? VAL(1u + k) : T_DIM, -1, ICON_PROB);
-            }
-            if (CT_LEN(cs)) { fmt_int(val, (int32_t)CT_LEN(cs)); str_cpy(val + str_len(val), "/16", 4); }
-            else str_cpy(val, "GATE", sizeof val);
-            draw_column(3, "LEN", val, "", CT_LEN(cs) ? VAL(3u) : T_DIM, -1, ICON_X_REPEAT);
-            return;
-        }
         draw_column(1, v >= COMP_ARPN && v <= COMP_ARPS ? "ARP" : "TYPE", COMP_NAMES[v], "", v ? VAL(1u) : T_DIM, -1,
                     v == COMP_CHANCE ? ICON_PROB : v == COMP_RATCH ? ICON_X_REPEAT : ICON_ARP);
         if (v == COMP_CHANCE) {
@@ -940,24 +928,24 @@ static void draw_columns(void)
             }
             if (lb[0]) draw_column(2, lb, val, un, VAL(2u), -1, ICON_X_REPEAT);
             else draw_column(2, "", "", "", T_THEME, -1, ICON_NONE);
-        } else if (v != COMP_OFF) {
-            draw_column(2, "ORDER", ORD[CP_ORD(ca)], "", VAL(2u), -1, ICON_ORDER);
+        } else if (v != COMP_OFF) {                    /* (0.6.92) an ARP: ORDER and RANGE in one (the range as the label) */
+            char lb[10];
+            fmt_int(lb, v == COMP_ARPS ? CP_DEGS[CP_RNG(ca)] : (int32_t)CP_RNG(ca) + 1);
+            str_cpy(lb + str_len(lb), v == COMP_ARPS ? " DEG" : " OCT", 5);
+            draw_column(2, lb, ORD[CP_ORD(ca)], "", VAL(2u), -1, ICON_ORDER);
         } else
             draw_column(2, "", "", "", T_THEME, -1, ICON_NONE);
-        if (v >= COMP_ARPN && v <= COMP_ARPS) {
-            uint32_t g = CP_RNG(ca);
-            char un[8];
-            val[0] = 'x'; fmt_int(val + 1, CP_RATES[CP_RATE(ca) % CP_NRATE]);
-            fmt_int(un, v == COMP_ARPS ? CP_DEGS[g] : (int32_t)g + 1);
-            str_cpy(un + str_len(un), v == COMP_ARPS ? " DEG" : " OCT", 5);
-            draw_column(3, "RATE", val, un, VAL(3u), -1, ICON_X_REPEAT);
-        } else if (v == COMP_JUMP || v == COMP_REV) {  /* (0.6.62) how often it turns the track */
-            static const char *const TIMES[4] = {"ALWAYS", "x1", "x2", "1:2"};
-            draw_column(3, "TIMES", TIMES[CP_TIMES(ct, ca)], "", CP_TIMES(ct, ca) ? VAL(3u) : T_DIM, -1, ICON_X_REPEAT);
-        } else if (v == COMP_RATCH || v == COMP_ECHO) {   /* (0.6.82) the parts' spacing */
-            draw_column(3, "DIV", DIVN[CT_DIV(cs) % CT_NDIV], "", CT_DIV(cs) ? VAL(3u) : T_DIM, -1, ICON_RATE);
-        } else
-            draw_column(3, "", "", "", T_THEME, -1, ICON_NONE);
+        if (v >= COMP_ARPN && v <= COMP_ARPS && comp_slot() == 0u) {   /* (0.6.92) RATE as a note value of the track's DIV */
+            rate_name(TSEL, CP_RATES[CP_RATE(ca) % CP_NRATE], val);
+            draw_column(3, "RATE", val, "", VAL(3u), -1, ICON_RATE);
+        } else if ((v == COMP_RATCH || v == COMP_ECHO) && comp_slot() == 0u) {   /* (0.6.82) the parts' spacing */
+            if (CT_DIV(cs)) rate_name(TSEL, CT_DIVS[CT_DIV(cs) % CT_NDIV], val); else str_cpy(val, "FIT", sizeof val);
+            draw_column(3, "RATE", val, "", CT_DIV(cs) ? VAL(3u) : T_DIM, -1, ICON_RATE);
+        } else {                                       /* (0.6.92) EVERY: the loops the step's components play on */
+            uint32_t ev = ST_EVERY(cs) % EV_N;
+            draw_column(3, "EVERY", EV_NAMES[ev], "", ev ? VAL(3u) : T_DIM, -1, ICON_PROB);
+        }
+        (void)ct;
         return;
     }
     if (cur_page()->graph == GR_CHANCE) {              /* STEP CHANCE RATCH: the cursor step's, of all of it */
@@ -1176,35 +1164,24 @@ static void draw_columns(void)
         draw_column(3, "ACC", ac ? "ON" : "--", "", ac ? VAL(3u) : T_DIM, -1, ICON_AUTO);
         return;
     }
-    if (cur_page()->scope == SC_STEP && cur_page()->id[0] == 8u) {   /* (0.6.88) SEQ > TIMING: STEP OFFSET REC Q */
+    if (cur_page()->scope == SC_STEP && cur_page()->id[0] == 4u) {   /* (0.6.81) SEQ > NOTE: FOCUS PITCH MOVE; (0.6.92) MICRO
+                                                         * (the step off the grid, 0.6.88's TIMING; on a kit: STEP and MICRO) */
         const step_t *st = &seq_steps(TSEL)[ui.cursor];
-        int32_t m = ST_MICRO(st), on = st->time == ST_NOTE && (st->n || st->hit), q = TSEL->p[P_HRQ];
-        char sn[8], mo[10], rq[8];
+        uint32_t kit = drum_track(TSEL), on = st->time == ST_NOTE && (kit ? st->hit != 0u : st->n != 0u);
+        uint32_t f = on && !kit && ui.pr_focus <= st->n ? ui.pr_focus : 0u;
+        int32_t m = ST_MICRO(st);
+        char fo[8], pn[8], sn[8], mo[10];
+        if (!f) str_cpy(fo, on && !kit && st->n > 1u ? "CHORD" : "ALL", 8);
+        else { str_cpy(fo, "NOTE ", 8); fmt_int(fo + 5, (int32_t)f); }
+        if (on && !kit) note_name(pn, st->note[f ? f - 1u : 0u]); else str_cpy(pn, "--", 8);
         fmt_int(sn, (int32_t)ui.cursor + 1);
         if (!m) str_cpy(mo, on ? "GRID" : "--", sizeof mo);
         else { mo[0] = m < 0 ? '-' : '+'; fmt_int(mo + 1, m < 0 ? -m : m); str_cpy(mo + str_len(mo), "/16", 4); }
-        fmt_int(rq, (q * 100 + 63) / 127);
-        draw_column(0, "STEP", sn, "", VAL(0u), -1, ICON_AUTO);
-        draw_column(1, "OFFSET", mo, "", on && m ? VAL(1u) : T_DIM, on ? (m + 8) * 1000 / 15 : -1, ICON_ORDER);
-        draw_column(2, "REC Q", rq, "%", q < 127 ? VAL(2u) : T_DIM, q * 1000 / 127, ICON_X_PATTERN);
-        draw_column(3, "", "", "", T_THEME, -1, ICON_NONE);
-        return;
-    }
-    if (cur_page()->scope == SC_STEP && cur_page()->id[0] == 4u) {   /* (0.6.81) SEQ > NOTE: FOCUS PITCH MOVE LEN */
-        const step_t *st = &seq_steps(TSEL)[ui.cursor];
-        uint32_t on = st->time == ST_NOTE && st->n, f = on && ui.pr_focus <= st->n ? ui.pr_focus : 0u, l = 1, len;
-        char fo[8], pn[8], sn[8], ln[8];
-        len = TSEL->p[P_SLEN] > 0 ? (uint32_t)TSEL->p[P_SLEN] : 1u;
-        while (on && l < len && seq_steps(TSEL)[(ui.cursor + l) % len].time == ST_TIE) l++;
-        if (!f) str_cpy(fo, on && st->n > 1u ? "CHORD" : "ALL", 8);
-        else { str_cpy(fo, "NOTE ", 8); fmt_int(fo + 5, (int32_t)f); }
-        if (on) note_name(pn, st->note[f ? f - 1u : 0u]); else str_cpy(pn, "--", 8);
-        fmt_int(sn, (int32_t)ui.cursor + 1);
-        fmt_int(ln, (int32_t)l);
-        draw_column(0, "FOCUS", fo, "", on ? VAL(0u) : T_DIM, -1, ICON_AUTO);
-        draw_column(1, "PITCH", pn, "", on ? VAL(1u) : T_DIM, -1, ICON_AUTO);
-        draw_column(2, "MOVE", sn, "<>", on ? VAL(2u) : T_DIM, -1, ICON_AUTO);
-        draw_column(3, "LEN", on ? ln : "--", on ? "ST" : "", on ? VAL(3u) : T_DIM, -1, ICON_AUTO);
+        if (kit) draw_column(0, "STEP", sn, "", VAL(0u), -1, ICON_AUTO);
+        else draw_column(0, "FOCUS", fo, "", on ? VAL(0u) : T_DIM, -1, ICON_AUTO);
+        draw_column(1, "PITCH", pn, "", on && !kit ? VAL(1u) : T_DIM, -1, ICON_AUTO);
+        draw_column(2, "MOVE", kit ? "--" : sn, kit ? "" : "<>", on && !kit ? VAL(2u) : T_DIM, -1, ICON_AUTO);
+        draw_column(3, "MICRO", mo, "", on && m ? VAL(3u) : T_DIM, on ? (m + 8) * 1000 / 15 : -1, ICON_ORDER);
         return;
     }
     if (cur_page()->scope == SC_STEP) {

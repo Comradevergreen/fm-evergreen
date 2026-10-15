@@ -793,32 +793,26 @@ static void note_edit(uint32_t slot, int32_t steps)
 
 /* (0.6.88) SEQ > TIMING: KNOB 1 the step, KNOB 2 its OFFSET off the grid (-8 .. +7 sixteenths: early / late; a step
  * with nothing to play keeps 0), KNOB 3 the track's REC Q (how much live recording snaps to the grid). EDIT: back on it */
-static void timing_edit(uint32_t slot, int32_t steps)
+/* (0.6.88) a step's own place off the grid, -8 .. +7 sixteenths of a step (0.6.92: SEQ > NOTE's KNOB 4, MICRO; a DRUM
+ * track's too) */
+static void micro_edit(int32_t steps)
 {
     step_t *st = &TSEL->step[ui.cursor];
-    if (slot == 0u) { cursor_set(ui.cursor + steps); return; }
-    if (slot == 1u) {
-        if (st->time != ST_NOTE || (!st->n && !st->hit)) { ui_message("NO NOTE HERE"); return; }
-        ST_MICRO_SET(st, clamp(ST_MICRO(st) + (steps > 0 ? 1 : -1), -8, 7));
-        return;
-    }
-    if (slot == 2u)
-        TSEL->p[P_HRQ] = (int16_t)clamp(TSEL->p[P_HRQ] + steps, 0, 127);
+    if (st->time != ST_NOTE || (!st->n && !st->hit)) { ui_message("NO NOTE HERE"); return; }
+    ST_MICRO_SET(st, clamp(ST_MICRO(st) + (steps > 0 ? 1 : -1), -8, 7));
 }
 static void step_edit(uint32_t slot, int32_t steps)
 {
     step_t *st = &TSEL->step[ui.cursor];
     uint32_t i;
-    if (cur_page()->id[0] == 8u) {                      /* (0.6.88) SEQ > TIMING (a DRUM track's too) */
-        timing_edit(slot, steps);
+    if (cur_page()->id[0] == 4u) {                      /* (0.6.81) SEQ > NOTE; (0.6.92) KNOB 4 MICRO, on a kit too */
+        if (slot == 3u) micro_edit(steps);
+        else if (drum_track(TSEL)) { if (slot == 0u) cursor_set(ui.cursor + steps); else ui_message("A KIT: STEP + MICRO"); }
+        else note_edit(slot, steps);
         return;
     }
     if (drum_track(TSEL)) {
         grid_edit(slot, steps);
-        return;
-    }
-    if (cur_page()->id[0] == 4u) {                      /* (0.6.81) SEQ > NOTE */
-        note_edit(slot, steps);
         return;
     }
     switch (slot) {
@@ -862,12 +856,11 @@ static void comp_knob(uint32_t slot, int32_t steps)
     uint8_t *cp = k == 1u ? &st->comp2 : &st->comp, *ap = k == 1u ? &st->carg2 : &st->carg;
     if (slot == 0u) { cursor_set(ui.cursor + steps); return; }
     if (chain_busy()) { ui_message("STOP TO EDIT"); return; }
-    if (k == 2u) {
-        if (slot <= 2u) {
-            uint32_t sh = (slot - 1u) * 2u, w = (uint32_t)clamp((int32_t)CW_OF(st, slot - 1u) + e, 0, 3);
-            st->cwhen = (uint8_t)((st->cwhen & ~(3u << sh)) | w << sh);
-        } else
-            st->ctime = (uint8_t)((st->ctime & 7u) | (uint32_t)clamp((int32_t)CT_LEN(st) + e, 0, 15) << 3);
+    if (slot == 3u && !((v >= COMP_ARPN && v <= COMP_ARPS && k == 0u) || ((v == COMP_RATCH || v == COMP_ECHO) && k == 0u))) {
+        uint32_t i;                                     /* (0.6.92) EVERY: the step's components' loops, in the knob's order */
+        for (i = 0; i < EV_N && EV_ORD[i] != ST_EVERY(st); i++) {}
+        i = (uint32_t)clamp((int32_t)i + e, 0, EV_N - 1);
+        ST_EVERY_SET(st, EV_ORD[i]);
         return;
     }
     if (slot == 1u) {
@@ -892,39 +885,78 @@ static void comp_knob(uint32_t slot, int32_t steps)
         step_set_chance(st, (uint32_t)clamp((int32_t)step_chance(st) + steps, 0, 100));
     else if (v == COMP_RATCH && slot == 2u)
         step_set_ratchet(st, (uint32_t)clamp((int32_t)step_ratchet(st) + d, 1, 4));
-    else if (*cp == CP_JUMP && slot == 2u)            /* (0.6.62) TO STEP (its TIMES kept) */
+    else if (*cp == CP_JUMP && slot == 2u)            /* (0.6.62) TO STEP (0.6.92: TIMES is EVERY, KNOB 4) */
         *ap = (uint8_t)((*ap & 0xC0u) | (uint32_t)clamp((int32_t)CP_JTO(*ap) + steps, 0, 63));
-    else if ((*cp == CP_JUMP || *cp == CP_REV) && slot == 3u) {   /* (0.6.62) TIMES */
-        uint32_t m = (uint32_t)clamp((int32_t)CP_TIMES(*cp, *ap) + e, 0, 3);
-        *ap = (uint8_t)(*cp == CP_JUMP ? (*ap & 63u) | m << 6 : m);
-    } else if (v >= COMP_TRIG && slot == 2u && *cp > CP_ARPS && CP_AMAX[*cp])   /* TRIG .. PULSE: their value */
+    else if (v >= COMP_TRIG && slot == 2u && *cp > CP_ARPS && CP_AMAX[*cp])   /* TRIG .. PULSE: their value */
         *ap = (uint8_t)clamp((int32_t)*ap + d, CP_AMIN[*cp], CP_AMAX[*cp]);
-    else if (v >= COMP_ARPN && v <= COMP_ARPS && slot == 2u)
-        *ap = CP_ARG((uint32_t)clamp((int32_t)CP_ORD(*ap) + d, 0, 3), CP_RATE(*ap), CP_RNG(*ap));
-    else if (v >= COMP_ARPN && v <= COMP_ARPS && slot == 3u) {   /* RATE x RANGE: one list, 1 range after another */
-        int32_t i = clamp((int32_t)(CP_RATE(*ap) % CP_NRATE * 4u + CP_RNG(*ap)) + d, 0, CP_NRATE * 4 - 1);
-        *ap = CP_ARG(CP_ORD(*ap), (uint32_t)i / 4u, (uint32_t)i % 4u);
+    else if (v >= COMP_ARPN && v <= COMP_ARPS && slot == 2u) {   /* (0.6.92) ORDER x RANGE: one list, a range after another */
+        int32_t i = clamp((int32_t)(CP_ORD(*ap) * 4u + CP_RNG(*ap)) + d, 0, 15);
+        *ap = CP_ARG((uint32_t)i / 4u, CP_RATE(*ap), (uint32_t)i % 4u);
+    } else if (v >= COMP_ARPN && v <= COMP_ARPS && slot == 3u) {   /* (0.6.92) RATE: x1 x2 x3 x4 x6 x8 (in the track's time) */
+        uint32_t i;
+        for (i = 0; i < CP_NRATE && CP_RATE_ORD[i] != CP_RATE(*ap) % CP_NRATE; i++) {}
+        i = (uint32_t)clamp((int32_t)i + e, 0, CP_NRATE - 1);
+        *ap = CP_ARG(CP_ORD(*ap), CP_RATE_ORD[i], CP_RNG(*ap));
     }
 }
-/* (0.6.85) SEQ > STRETCH: KNOB 1 STRETCH /8 .. /2, x2 .. x8; KNOB 2 REPEAT x2 .. x8, TO 64 (turning one picks it); OCT+
- * does the picked one to the selected track (UNDO: GLO + G4); KNOB 3 NUDGE: the whole sequence a step left / right now.
- * ui_tools.c tl_stretch, tl_repeat, tl_shift */
+/* (0.6.85) SEQ > STRETCH: KNOB 1 STRETCH /8 .. /2, x1, x2 .. x8; KNOB 2 REPEAT OFF, x2 .. x8, TO 64; (0.6.92) done as the
+ * knob turns, always from the sequence as it was before the first turn (its base: the steps, LEN and automation,
+ * kept while the result stays untouched; back to the middle = back to it; UNDO: GLO + G4); KNOB 3 NUDGE: the whole
+ * sequence a step left / right; KNOB 4 ROTATE: played from another step (P_SOFS). ui_tools.c tl_stretch, tl_repeat,
+ * tl_shift */
 static uint32_t tl_len(const track_t *t);
 static void tl_take(const track_t *t);
 static void tl_shift(track_t *t, uint32_t len, uint32_t d);
 static uint32_t tl_stretch(track_t *t, int32_t k);
 static uint32_t tl_repeat(track_t *t, uint32_t k);
+static struct {
+    uint8_t valid, trk;
+    int16_t len;
+    uint32_t sig;                                       /* the result's steps: another sig, the user edited: a new base */
+    step_t step[NSTEP];
+    motion_store_t mo;
+} shp_base;
+static void shape_apply(uint32_t which)
+{
+    track_t *t = TSEL;
+    uint32_t was, n, f;
+    char m[24];
+    if (chain_busy()) { ui_message("STOP TO EDIT"); return; }
+    if (!shp_base.valid || shp_base.trk != song.sel || shp_base.sig != steps_sig(t)) {   /* the base: as it is now */
+        undo_mark();
+        shp_base.valid = 1; shp_base.trk = (uint8_t)song.sel; shp_base.len = t->p[P_SLEN];
+        memcpy(shp_base.step, t->step, sizeof shp_base.step);
+        f = motion_guard(); memcpy(&shp_base.mo, &motion, sizeof shp_base.mo); motion_unguard(f);
+        if (which == 0u) shp_r = 0; else shp_i = 7;    /* (the other knob's pick starts over) */
+    } else {                                            /* back to the base, then the new pick (as the tools write:
+                                                         * straight into the steps, the automation with them) */
+        memcpy(t->step, shp_base.step, sizeof t->step);
+        t->p[P_SLEN] = shp_base.len;
+        f = motion_guard(); memcpy(&motion, &shp_base.mo, sizeof motion); RING_PUBLISH(); motion_unguard(f);
+    }
+    was = (uint32_t)clamp(shp_base.len, 1, NSTEP);
+    n = which == 0u ? (shp_k() == 1 ? was : tl_stretch(t, shp_k())) : (shp_rep() == 1u ? was : tl_repeat(t, shp_rep()));
+    shp_base.sig = steps_sig(t);
+    if (!n) { ui_message("LEN 64: NO ROOM"); return; }
+    str_cpy(m, "LEN ", sizeof m); fmt_int(m + 4, (int32_t)was); str_cpy(m + str_len(m), " > ", 4);
+    fmt_int(m + str_len(m), (int32_t)n);
+    if (which == 0u && shp_k() > 1 && was * (uint32_t)shp_k() > NSTEP) str_cpy(m + str_len(m), " CUT", 5);
+    ui_message(m);
+}
 static void shape_knob(uint32_t slot, int32_t steps)
 {
     int32_t d = steps > 0 ? 1 : -1;
-    if (slot == 0u) { shp_i = (uint8_t)clamp((int32_t)shp_i + d, 0, 13); ui.act = 1; }
-    else if (slot == 1u) { shp_r = (uint8_t)clamp((int32_t)shp_r + d, 0, 7); ui.act = 2; }
+    if (slot == 0u) { shp_i = (uint8_t)clamp((int32_t)shp_i + d, 0, 14); shape_apply(0); }
+    else if (slot == 1u) { shp_r = (uint8_t)clamp((int32_t)shp_r + d, 0, 8); shape_apply(1); }
     else if (slot == 2u) {
         track_t *t = TSEL;
         if (chain_busy()) { ui_message("STOP TO EDIT"); return; }
         tl_take(t);
         tl_shift(t, tl_len(t), d > 0 ? 1u : tl_len(t) - 1u);
         ui_message(d > 0 ? "NUDGED RIGHT" : "NUDGED LEFT");
+    } else {
+        TSEL->p[P_SOFS] = (int16_t)clamp(TSEL->p[P_SOFS] + steps, -32, 32);
+        motion_capture(TSEL, P_SOFS, TSEL->p[P_SOFS]);
     }
 }
 static void edit_param(uint32_t slot, int32_t steps)
@@ -1122,21 +1154,6 @@ static void act_do(void)
     }
     if (cur_page()->graph == GR_EVENTS) {
         ev_oct();
-        return;
-    }
-    if (cur_page()->graph == GR_SHAPE) {                  /* (0.6.85) STRETCH / REPEAT, the music before kept (UNDO) */
-        track_t *t = TSEL;
-        uint32_t n, was = (uint32_t)clamp(t->p[P_SLEN], 1, NSTEP);
-        char m[24];
-        if (chain_busy()) { ui_message("STOP TO EDIT"); return; }
-        if (c == 1u && was >= NSTEP) { ui_message("LEN 64: NO ROOM"); return; }
-        undo_mark();
-        n = c == 0u ? tl_stretch(t, shp_k()) : tl_repeat(t, shp_r < 7u ? shp_r + 2u : 0u);
-        if (!n) { ui_message(c == 1u ? "LEN 64: NO ROOM" : "NOTHING TO DO"); return; }
-        str_cpy(m, "LEN ", sizeof m); fmt_int(m + 4, (int32_t)was); str_cpy(m + str_len(m), " > ", 4);
-        fmt_int(m + str_len(m), (int32_t)n);
-        if (c == 0u && shp_k() > 0 && was * (uint32_t)shp_k() > NSTEP) str_cpy(m + str_len(m), " CUT", 5);
-        ui_message(m);
         return;
     }
     if (cur_page()->graph == GR_TOOLS) {
@@ -1419,8 +1436,7 @@ static void presets_turn(int32_t s)
     uint32_t g = pg->graph;
     if (ui.home || g == GR_BROWSE) {
         preset_step(s);
-    } else if (g == GR_ROLL && (pg->id[0] == 4u || pg->id[0] == 8u)) {   /* (0.6.81) SEQ > NOTE (KNOB 1 FOCUS), TIMING:
-                                                         * PRESETS the step */
+    } else if (g == GR_ROLL && pg->id[0] == 4u) {         /* (0.6.81) SEQ > NOTE (KNOB 1 FOCUS): PRESETS the step */
         cursor_set(ui.cursor + s);
         ui.hot_col = 0;
         ui.hot_t = 40;
@@ -1683,11 +1699,6 @@ static int page_tap(uint32_t b)
         if (chain_busy()) { ui_message("STOP TO EDIT"); return 1; }
         if (held) {                                     /* a step held: its locks (the step stays) */
             lock_clear(held);
-            return 1;
-        }
-        if (cur_page()->id[0] == 8u) {                  /* (0.6.88) SEQ > TIMING: the step back on the grid */
-            ST_MICRO_SET(&TSEL->step[ui.cursor], 0);
-            ui_message("ON THE GRID");
             return 1;
         }
         if (cur_page()->id[0] == 4u && ui.pr_focus && TSEL->step[ui.cursor].time == ST_NOTE &&

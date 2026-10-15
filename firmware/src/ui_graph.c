@@ -178,24 +178,6 @@ static void graph_comp(const track_t *t, uint16_t c)
         if (i == ui.cursor) cv_rect(x, y0 + bh + 8, 9, 2, T_ACCENT);
         else if (song.playing && i == seq_src(t, t->seq_idx)) cv_rect(x, y0 + bh + 8, 9, 2, T_TEXT);
     }
-    if (comp_slot() == 2u) {                            /* (0.6.82) WHEN: the two, the loop now */
-        static const char *const WN[4] = {"ALWAYS", "ON 1:2", "ON 2:2", "SKIPPED"};
-        uint32_t k;
-        for (k = 0; k < 2u; k++) {
-            uint32_t c = k ? cs->comp2 : cs->comp;
-            str_cpy(b, k ? "B " : "A ", sizeof b);
-            str_cpy(b + 2, c ? COMP_NAMES[COMP_ARPN + c - CP_ARPN] : "-", 12);
-            if (c) { str_cpy(b + str_len(b), "  ", 3); str_cpy(b + str_len(b), WN[CW_OF(cs, k)], 9); }
-            cv_text(PANEL_X0 + 2, 40 + (int32_t)k * 16, &AF_S, b, c ? T_MID : T_DIM);
-        }
-        cv_text(PANEL_X0 + 2, 80, &AF_S, "A SILENCING ONE (TRIG, FILL) WINS", T_DIM);
-        if (song.playing) {
-            str_cpy(b, "LOOP ", sizeof b);
-            fmt_int(b + 5, (int32_t)t->loops + 1);
-            cv_text_r(228, 40, &AF_S, b, t->loops & 1u ? T_THEME : T_ACCENT, T_SURF);
-        }
-        return;
-    }
     ct = comp_type(cs);
     str_cpy(b, v >= COMP_ARPN && v <= COMP_ARPS ? "ARP " : "", sizeof b);
     str_cpy(b + str_len(b), v ? COMP_NAMES[v] : "NO COMPONENT  K2: TYPE", sizeof b - 8u);
@@ -278,26 +260,33 @@ static void graph_comp(const track_t *t, uint16_t c)
 
 /* (0.6.43) SEQ > MUTATE: a row a track, the next 32 bars: SOUND's changes an orange mark on top, PATTERN's a violet one
  * under it; the bar now ACCENT; the selected track's row lit; ORBIT / DRIFT at the right; FROZEN over it all */
+/* (0.6.92) the selected track's next 32 bars: a mark where its SOUND changes (warm) and where its PATTERN does (cool),
+ * the bar now at the left; under it what it does (every project's steps written; ORBIT around the anchor OCT+ keeps,
+ * DRIFT on and on) and the two hands */
 static void graph_mutate(void)
 {
-    uint32_t k, b, now = song.playing ? bar_n : 0u;
-    for (k = 0; k < NTRK; k++) {
-        const track_t *t = &trk[k];
-        uint32_t s = MUT_BARS[(uint32_t)clamp(t->p[P_MSND], 0, 6)], q = MUT_BARS[(uint32_t)clamp(t->p[P_MPAT], 0, 6)];
-        int32_t y = 4 + (int32_t)k * 16, on = (s || q) && k < trk_live;
-        char nm[3] = {'T', (char)('1' + k), 0};
-        cv_text(PANEL_X0, y + 1, &AF_S, nm, k == song.sel ? T_THEME : on ? T_MID : T_DIM);
-        for (b = 0; b < 32u; b++) {
-            uint32_t bar = now + 1u + b;
-            int32_t x = PANEL_X0 + 22 + (int32_t)b * 5;
-            cv_rect(x, y + 6, 4, 1, T_RAISE);
-            if (on && s && bar % s == 0u) cv_rect(x, y + 1, 4, 4, mut_freeze ? T_DIM : heat_col(190));
-            if (on && q && bar % q == 0u) cv_rect(x, y + 8, 4, 4, mut_freeze ? T_DIM : heat_col(90));
-        }
-        if (on) cv_text_r(PANEL_X0 + PANEL_W, y + 1, &AF_S, t->p[P_MMODE] ? "DRIFT" : "ORBIT", T_DIM, T_SURF);
+    const track_t *t = TSEL;
+    uint32_t b, now = song.playing ? bar_n : 0u, k = song.sel;
+    uint32_t s = MUT_BARS[(uint32_t)clamp(t->p[P_MSND], 0, 6)], q = MUT_BARS[(uint32_t)clamp(t->p[P_MPAT], 0, 6)];
+    int on = (s || q) && k < trk_live;
+    char nm[12] = "TRACK 1";
+    nm[6] = (char)('1' + k);
+    cv_text(PANEL_X0, 4, &AF_S, nm, T_THEME);
+    cv_text_r(PANEL_X0 + PANEL_W, 4, &AF_S, !on ? "MUTATE OFF" : t->p[P_MMODE] ? "DRIFT: ON AND ON" : "ORBIT: AROUND THE ANCHOR",
+              on ? T_TEXT : T_DIM, T_SURF);
+    cv_text(PANEL_X0, 24, &AF_S, "SOUND", on && s ? heat_col(190) : T_DIM);
+    cv_text(PANEL_X0, 44, &AF_S, "PATTERN", on && q ? heat_col(90) : T_DIM);
+    for (b = 0; b < 32u; b++) {
+        uint32_t bar = now + 1u + b;
+        int32_t x = PANEL_X0 + 52 + (int32_t)b * 5;
+        cv_rect(x, 31, 4, 1, T_RAISE);
+        cv_rect(x, 51, 4, 1, T_RAISE);
+        if (on && s && bar % s == 0u) cv_rect(x, 24, 4, 8, mut_freeze ? T_DIM : heat_col(190));
+        if (on && q && bar % q == 0u) cv_rect(x, 44, 4, 8, mut_freeze ? T_DIM : heat_col(90));
     }
-    cv_rect(PANEL_X0 + 22, 2, 4, 96, ux_mix(T_SURF, T_ACCENT, 25));   /* (the next bar's column) */
-    if (mut_freeze) cv_text(PANEL_X0 + 70, 98, &AF_S, "FROZEN  [OCT-]", T_ACCENT);
+    cv_rect(PANEL_X0 + 52, 20, 4, 36, ux_mix(T_SURF, T_ACCENT, 25));   /* (the next bar's column) */
+    cv_text(PANEL_X0, 68, &AF_S, "EVERY N BARS, BY AMOUNT, ON THE BAR", T_MID);
+    cv_text(PANEL_X0, 84, &AF_S, mut_freeze ? "FROZEN  [OCT-] GOES ON" : "OCT+ KEEP   GLO+A4 FREEZE", mut_freeze ? T_ACCENT : T_DIM);
 }
 
 /* (0.6.45) EDIT > MORPH: a cycle of the wave as it morphs (from WAVE towards the next ones), heat coloured by its

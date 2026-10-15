@@ -2719,7 +2719,7 @@ static int test_presets_knob(void)
         }
     }
     bad += check("#92 PRESETS on STEP, COMP, PATTERN, SHIFT, CHANCE, AUTOMATION: the step cursor; the sound and the steps stay",
-                 cur_ok && n_cur == 11u);   /* (0.6.81: and NOTE; 0.6.82: COMP 2, WHEN; 0.6.87: HUMAN; 0.6.88: TIMING) */
+                 cur_ok && n_cur == 8u);    /* (0.6.92: STEP PATTERN NOTE COMP COMP 2 TRACK AUTOMATION, CHANCE) */
     bad += check("#94 PRESETS on USER, PROJECT, PHRASES, SONG: the selection (KNOB 1's); nothing loaded", sel_ok);
     bad += check("#94 PRESETS on TOOLS does nothing", tools_ok);
     bad += check("#94 PRESETS elsewhere (EDIT, ENV, LFO, FX, SCL, ARP, MIXER, GLOBAL, ...): the next sound, the steps stay",
@@ -4212,12 +4212,13 @@ static int test_shift_page(void)
     ui_power_on();
     t = TSEL;
     go_home(); frame();
-    go_title("SHIFT"); frame();
-    ok = str_eq(cur_page()->title, "SHIFT") && cur_page()->fam == FAM_SEQ && cur_page()->id[0] == P_SOFS &&
-         cur_page()->id[1] == P_POFS;
-    turn(EN_K1, 3); frame();
-    turn(EN_K2, -2); frame();
-    bad += check("SHIFT page: KNOB 1 OFS +3, KNOB 2 PIT -2", ok && t->p[P_SOFS] == 3 && t->p[P_POFS] == -2);
+    go_title("TRACK"); frame();                          /* (0.6.92: SHIFT's PITCH and CHANCE on TRACK, ROTATE on STRETCH) */
+    ok = str_eq(cur_page()->title, "TRACK") && cur_page()->fam == FAM_SEQ && cur_page()->id[0] == P_POFS &&
+         cur_page()->id[1] == P_TCHAN && cur_page()->id[2] == P_HVEL && cur_page()->id[3] == P_HRQ;
+    turn(EN_K1, -2); frame();
+    go_title("STRETCH"); frame();
+    turn(EN_K4, 3); frame();
+    bad += check("TRACK page: KNOB 1 PIT -2; STRETCH page: KNOB 4 ROTATE +3", ok && t->p[P_SOFS] == 3 && t->p[P_POFS] == -2);
     apply_preset_to(t, 1);
     bad += check("  a sound load keeps OFS and PIT (sequence settings)", t->p[P_SOFS] == 3 && t->p[P_POFS] == -2);
     ui_power_on();
@@ -6156,8 +6157,7 @@ static int test_seq_tools(void)
     ui_power_on();
     go_page(GR_ROLL); frame();
     {   /* (0.6.90) the piano roll, its pages, then the track's */
-        static const char *const ORD[] = {"NOTE", "TIMING", "STRETCH", "COMP", "COMP 2", "WHEN", "PATTERN", "SHIFT", "HUMAN",
-                                          "PLAYHEADS"};
+        static const char *const ORD[] = {"PATTERN", "NOTE", "STRETCH", "COMP", "COMP 2", "TRACK", "PLAYHEADS"};   /* (0.6.92) */
         uint32_t q;
         ok = 1;
         for (q = 0; q < sizeof ORD / sizeof ORD[0]; q++) {
@@ -6187,11 +6187,10 @@ static int test_seq_tools(void)
         t->step[3].time = ST_NOTE; t->step[3].n = 1; t->step[3].note[0] = 67; t->step[3].vel = 100;
         (void)motion_put(t, 3, P_FCUT, 20, 0);
         go_page(GR_SHAPE); frame();
-        shp_i = 7u; shp_r = 0u;                          /* (x2, x2: whatever an earlier test turned) */
+        shp_i = 7u; shp_r = 0u; shp_base.valid = 0;      /* (x1, OFF: whatever an earlier test turned) */
         ok = str_eq(cur_page()->title, "STRETCH");
-        turn(EN_K1, 1);                                  /* x2 -> x3 */
-        ok &= ui.act == 1u && shp_k() == 3 && shp_len() == 12u;
-        press(B_OCTUP);
+        turn(EN_K1, 1); turn(EN_K1, 1);                  /* x1 -> x2 -> x3, done as it turns (0.6.92), from the base */
+        ok &= shp_k() == 3 && !ui.act;
         ok &= t->p[P_SLEN] == 12 && t->step[0].note[0] == 60 && t->step[3].note[0] == 62 && t->step[9].note[0] == 67;
         for (i = 4; i < 9u; i++) ok2 &= t->step[i].time == ST_TIE;          /* the D held through its old TIE */
         ok2 &= t->step[1].time == ST_REST && t->step[10].time == ST_REST;   /* the short ones stay short */
@@ -6199,32 +6198,36 @@ static int test_seq_tools(void)
         if (!(ok && ok2)) { printf("  len %d mc %u ms %u |", t->p[P_SLEN], motion.count, motion.count ? MOTION_STEP(&motion.event[0]) : 99u);
             for (i = 0; i < 12u; i++) printf(" %u:%u", t->step[i].time, t->step[i].note[0]); printf("\n"); }
         bad += check("STRETCH x3: LEN 4 > 12, each step three apart, a held note held, its lock along", ok && ok2);
+        turn(EN_K1, -1); turn(EN_K1, -1);              /* back to x1: the base again */
+        ok = t->p[P_SLEN] == 4 && t->step[3].note[0] == 67 && motion.count == 1u && MOTION_STEP(&motion.event[0]) == 3u;
+        bad += check("  back to x1: the sequence as it was before (the base), its lock too", ok);
+        turn(EN_K1, 1);                                  /* x2 */
         ok = !undo_do() && t->p[P_SLEN] == 4 && t->step[3].note[0] == 67 && MOTION_STEP(&motion.event[0]) == 3u;
         bad += check("  UNDO: the sequence back as it was", ok);
-        for (i = 0; i < 5u; i++) turn(EN_K1, -1);       /* x3 .. x2 /2 /3 /4 .. : back to /2 */
-        while (shp_k() != -2) turn(EN_K1, shp_k() < -2 ? 1 : -1);
-        t->p[P_SLEN] = 8;                               /* eight steps: C . D T E . G . */
+        t->p[P_SLEN] = 8;                               /* eight steps: C . D T E . G . (edited: a new base) */
         t->step[4] = t->step[3]; t->step[4].note[0] = 64; t->step[3].time = ST_REST; t->step[6] = t->step[4]; t->step[6].note[0] = 67;
         motion_clear(t);
-        press(B_OCTUP);
+        shp_i = 7u;
+        turn(EN_K1, -1);                                /* /2 */
         ok3 = t->p[P_SLEN] == 4 && t->step[0].note[0] == 60 && t->step[1].note[0] == 62 && t->step[2].note[0] == 64 &&
               t->step[3].note[0] == 67 && t->step[4].time == ST_REST;
         bad += check("STRETCH /2: LEN 8 > 4, the first note of each pair", ok3);
+        turn(EN_K1, 1);                                 /* (x1: the eight back) */
+        t->p[P_SLEN] = 4;                               /* (edited: four steps, a lock) */
         for (i = 4; i < NSTEP; i++) step_clear(&t->step[i]);
+        motion_clear(t);
         (void)motion_put(t, 1, P_FCUT, 30, 0);
-        turn(EN_K2, 1);                                 /* x2 -> x3 */
-        ok4 = ui.act == 2u && shp_len() == 12u;
-        press(B_OCTUP);
-        ok4 &= t->p[P_SLEN] == 12;
+        shp_r = 0u;
+        turn(EN_K2, 1); turn(EN_K2, 1);                 /* OFF -> x2 -> x3 */
+        ok4 = shp_rep() == 3u && t->p[P_SLEN] == 12;
         for (i = 4; i < 12u; i++) ok4 &= t->step[i].time == t->step[i % 4u].time && t->step[i].note[0] == t->step[i % 4u].note[0];
         ok4 &= motion.count == 3u && t->step[12].time == ST_REST;
         if (!ok4) printf("  rep len %d mc %u\n", t->p[P_SLEN], motion.count);
-        while (shp_r != 7u) turn(EN_K2, 1);             /* TO 64 */
-        press(B_OCTUP);
-        ok4 &= t->p[P_SLEN] == 60 && t->step[59].note[0] == t->step[11].note[0];   /* (whole copies of 12: 60) */
-        press(B_OCTUP);
-        ok4 &= t->p[P_SLEN] == 60;                      /* (no room for another 60) */
-        bad += check("REPEAT x3: 4 steps > 12, their locks copied; TO 64: whole copies (12 > 60), no room after", ok4);
+        while (shp_r != 8u) turn(EN_K2, 1);             /* TO 64 (from the base of four) */
+        ok4 &= t->p[P_SLEN] == 64 && t->step[63].note[0] == t->step[3].note[0] && motion.count == 16u;
+        for (i = 0; i < 8u; i++) turn(EN_K2, -1);       /* OFF: the four back */
+        ok4 &= t->p[P_SLEN] == 4 && motion.count == 1u;
+        bad += check("REPEAT x3: 4 steps > 12, their locks copied; TO 64: whole copies (4 > 64); OFF: the base back", ok4);
         t->p[P_SLEN] = 4;
         ok5 = t->step[0].note[0] == 60;
         turn(EN_K3, 1);
@@ -6235,18 +6238,18 @@ static int test_seq_tools(void)
     }
     {   /* (0.6.37) SHIFT: OFFSET PITCH CHANCE, the last SEQ page; CHANCE 0 skips every step, 100 % (stored 0) none */
         char v[12]; const char *u; step_t st; track_t *t3 = &trk[0];
-        ui_power_on(); go_title("SHIFT"); frame();
-        ok = str_eq(cur_page()->title, "SHIFT") && cur_page()->id[2] == P_TCHAN;
+        ui_power_on(); go_title("TRACK"); frame();
+        ok = str_eq(cur_page()->title, "TRACK") && cur_page()->id[1] == P_TCHAN;
         param_format(track_desc(t3, P_TCHAN), t3->p[P_TCHAN], v, &u);
         ok &= str_eq(v, "100") && str_eq(track_desc(t3, P_TCHAN)->label, "CHANCE");
-        turn(EN_K3, -127);
+        turn(EN_K2, -127);
         param_format(track_desc(t3, P_TCHAN), t3->p[P_TCHAN], v, &u);
         memset(&st, 0, sizeof st);
         ok &= str_eq(v, "0") && trk_chance(t3, &st) == 0u;
-        turn(EN_K3, 127);
+        turn(EN_K2, 127);
         step_set_chance(&st, 40);
         ok &= t3->p[P_TCHAN] == 0 && trk_chance(t3, &st) == 40u;
-        bad += check("SHIFT > CHANCE: the track's chance (100 % as before, 0 % silent), K3", ok);
+        bad += check("TRACK > CHANCE: the track's chance (100 % as before, 0 % silent), K2", ok);
     }
 
     /* the whole sequence: REVERSE (a note's ties stay after it), SHIFT, CLEAR, locks, LEN, silent keys, undo */
@@ -6880,6 +6883,7 @@ static int test_dice_all(void)
         {   /* (0.6.27) 40 throws: never the same piece, the tempo moved every time (even from the same random state) */
             uint32_t h[40], n2, m, same = 0, bpm_same = 0;
             int16_t b0;
+            host_ticks = 5000000u;                      /* (0.6.92) the same 40 seeds whatever ran before (the seed mixes the ticks in) */
             for (n2 = 0; n2 < 40u; n2++) {
                 b0 = song.g[G_BPM];
                 if (n2 % 10u == 0u) rng_state = 0x1234567u;   /* (the same state again: the press time still differs) */
@@ -6889,7 +6893,8 @@ static int test_dice_all(void)
                 h[n2] = dice_print();
                 for (m = 0; m < n2; m++) same += h[m] == h[n2];
             }
-            bad += check("DICE ALL (0.6.27): 40 throws, none the same piece, the tempo moved nearly every time (0.6.91: from the seed)", !same && bpm_same <= 8u);
+            if (same || bpm_same > 14u) printf("  dice: same %u, tempo kept %u of 40\n", same, bpm_same);
+            bad += check("DICE ALL (0.6.27): 40 throws, none the same piece, the tempo moved most of the time (0.6.91: from the seed)", !same && bpm_same <= 14u);
         }
     }
     ui_power_on();
@@ -7730,11 +7735,13 @@ static int test_note_page(void)
     ok &= t->step[0].n == 2u && t->step[1].time == ST_NOTE && t->step[1].n == 1u && t->step[1].note[0] == 65u &&
           ui.cursor == 1u;
     bad += check("SEQ > NOTE: FOCUS one note of a chord, PITCH it alone, MOVE it into the next step", ok);
-    cursor_set(0);                                      /* the chord C4 G4: LEN 3, then MOVE it right (F4 changes places) */
-    turn(EN_K4, 1); turn(EN_K4, 1);
+    cursor_set(0);                                      /* the chord C4 G4: LEN 3, then MOVE it right (F4 changes places)
+                                                         * (0.6.92: KNOB 4 is MICRO; the chord's LEN is STEP's KNOB 4, note_edit's
+                                                         * third slot here) */
+    note_edit(3, 1); note_edit(3, 1);
     ok = t->step[0].time == ST_NOTE && t->step[1].time == ST_NOTE && t->step[2].time == ST_REST;   /* (blocked by F4) */
     t->step[1].time = ST_REST; t->step[1].n = 0;
-    turn(EN_K4, 1); turn(EN_K4, 1);
+    note_edit(3, 1); note_edit(3, 1);
     ok &= t->step[1].time == ST_TIE && t->step[2].time == ST_TIE && t->step[3].time != ST_TIE;
     turn(EN_K3, 1);                                     /* the chord and its TIEs a step right */
     ok &= t->step[0].time == ST_REST && t->step[1].time == ST_NOTE && t->step[1].n == 2u && t->step[3].time == ST_TIE &&
@@ -8033,10 +8040,21 @@ static int test_click_menu(void)
         int fds[2][2];
         uint8_t ld0 = ui_load;
         load_put(2u);                                   /* FULL */
-        rng_state = 0x1234567u;                         /* (0.6.85) the same diced song whatever ran before (a drum in it) */
-        dice_all();
+        {   /* (0.6.92) the same generated song whatever ran before (dice_all's seed mixes the ticks in): the
+             * generator's settings set here, seed 1, any genre (a drum in it) */
+            uint32_t q;
+            gp.genre = 0; gp.seed = 1; gp.energy = 50; gp.form = 0; gp.complex = 50; gp.swing = GA_AUTO; gp.human = 30;
+            for (q = 0; q < GP_N; q++) gp.amt[q] = GA_AUTO;
+            gen_go();
+        }
         set_engine_of(&trk[1], ENGI_FM6);
         set_engine_of(&trk[2], 0);
+        {   /* (0.6.92) T2 the dearest part whatever the generator wrote (four-note FM6 chords on every step): it takes
+             * core 0 first, so the DRUM parts get core 1 at some point (the split: the dearest unit to the lighter core) */
+            uint32_t i;
+            trk[1].p[P_VOICE] = V_POLY; trk[1].p[P_SUS] = 127; trk[1].p[P_SLEN] = 16; trk[1].p[P_MUTE] = 0;
+            for (i = 0; i < 16u; i++) trk[1].step[i] = (step_t){{48, 52, 55, 59}, 4, ST_NOTE, 0, 100};
+        }
         trk[2].p[P_FCUT] = 70; trk[2].p[P_FRES] = 60;  /* (voice.c tf_on) */
         trk[1].p[P_CHOR] = 60; trk[2].p[P_DLY] = 50; trk[0].p[P_REV] = 40;
         for (k = 0; k < NPART; k++)                     /* (0.6.73) the drums' IMAGE and their sounds' SENDs on */
