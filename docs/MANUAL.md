@@ -1186,7 +1186,7 @@ closes it (settings are saved then).
 | DISPLAY | STYLE | FLAT, LINE |
 | DISPLAY | LARGE | OFF, ON (big labels and values) |
 | DISPLAY | ANIM | ON, OFF (values snap; the power-on signature appears whole) |
-| DISPLAY | LEDS | OFF, DIM LO, **DIM HI** (default), INV |
+| DISPLAY | LEDS | OFF, DIM LO, **DIM HI** (default), INV — (0.7.3) the idle glow's LEDs take turns frame to frame, so the glow no longer hums through the speaker once the music stops |
 | DISPLAY | SCREEN OFF | **NEVER** (default), 5 MIN, 15 MIN, 30 MIN, 60 MIN |
 | CONTROL | HOLD | 0.3 s, **0.4 s** (default), 0.5 s, 0.6 s — how long until a held button opens its layer |
 | CONTROL | KNOB ACCEL | **ON** (default), OFF |

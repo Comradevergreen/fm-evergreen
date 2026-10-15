@@ -957,22 +957,27 @@ int main(void)
             for (f = 0; f < MF; f++) {
                 uint32_t a = on[f][6][1] * 2u >= lit, b = on[f][5][2] * 2u >= lit;
                 sum6 += on[f][6][1];
-                bad += a != b;                          /* in step on both columns */
+                bad += f && b != (on[f - 1u][6][1] * 2u >= lit);   /* (0.7.3) the columns take turns: column 5's mid
+                                                         * frame is the one after column 6's (never the same frame) */
+                bad += a && b;
                 if (a) {
                     nlit++;
                     if (last != ~0u && f - last != N) gap++;
                     last = f;
-                    bad += on[f][6][1] * 10u < lit * 9u || on[f][5][2] * 10u < lit * 9u;   /* as lit */
+                    bad += on[f][6][1] * 10u < lit * 9u;   /* as lit */
                 } else {
                     glow += on[f][6][1] > 0u && on[f][6][1] * 8u < lit;   /* the glow between */
-                    dark += on[f][5][2] == 0u;                            /* mid alone: dark between */
                 }
+                if (b)
+                    bad += on[f][5][2] * 10u < lit * 9u;   /* (mid alone, its own frame: as lit) */
+                else
+                    dark += on[f][5][2] == 0u;              /* mid alone: dark between */
                 for (c = 0; c < FM1_NCOL; c++)
                     for (r = 1; r < 5u; r++)
                         others += on[f][c][r] && !((c == 7u && r == 3u) || (c == 6u && r == 1u) || (c == 5u && r == 2u));
             }
             mean = (uint32_t)(sum6 * 1000u / ((uint64_t)lit * MF));
-            snprintf(what, sizeof what, "mid level %s: lit 1 frame in %u, evenly (every %u frames, ~%u Hz), the glow between, in step",
+            snprintf(what, sizeof what, "mid level %s: lit 1 frame in %u, evenly (every %u frames, ~%u Hz), the glow between, the columns in turn",
                      lo ? "LO" : "HI", (unsigned)N, (unsigned)N, (unsigned)(1000000u / (N * FM1_NCOL * FM1_LED_TICK_US)));
             check(what, !bad && !others && !latch_lit && nlit == MF / N && !gap && glow == MF - nlit && dark == MF - nlit);
             snprintf(what, sizeof what, "  its level %u.%u %% of lit (1/%u + the glow), above the glow, below a breath's peak",

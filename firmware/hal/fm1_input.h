@@ -73,12 +73,15 @@
  * breath starting from none starts at its peak (shown at once). An LED lit or in the glow does not breathe.
  * Cost: the level once a frame (11 bytes ORed, a few multiplies, an add), a multiply and one line write a pulse,
  * an AND / OR on the two lit writes.
- * A steady mid level (1.1, the DRUM grid's beats): fm1_led_mid[col] are lit as a lit LED on 1 frame in N, in step
+ * A steady mid level (1.1, the DRUM grid's beats): fm1_led_mid[col] are lit as a lit LED on 1 frame in N
  * (fm1__mid_ph, counted when column 0 comes round), and are dark in the others unless also in fm1_led_dim (the glow
  * then: the caller sets both, ui_input.c ui_leds). N = FM1_LED_MID_N (8: ~12.5 % + the glow ~3 %, a lit frame every
  * ~8.8 ms, ~114 Hz) or with DIM LO FM1_LED_MID_N_LO (12: ~8 % + ~1.6 %, ~76 Hz); fm1_led_dim_level sets it. No breath,
- * no sigma-delta: a fixed frame count, the same frames for every column. An LED lit does not need it; one breathing
- * and mid is lit on the mid frames as well.
+ * no sigma-delta: a fixed frame count. (0.7.3) The columns take turns: column c's mid frame is a frame after column
+ * c - 1's (fm1__mid_q), so one or two columns are on the mid level in any frame, never all eleven in one (with DIM HI
+ * every idle key and button is at the mid level: all of them lit in one frame of eight drew a current pulse at
+ * ~114 Hz, heard from the speaker once the music stopped). An LED lit does not need it; one breathing and mid is lit
+ * on the mid frames as well.
  * The power-on sweep (1.1, hal/fm1_led_anim.h: a light running over the keys, then the buttons): a level per LED,
  * 0..64 /64 of lit, as whole lit frames, each LED its own first order sigma-delta (lit when its sum passes 64: the
  * lit frames as evenly spread as can be, a dark run at most 64 / level frames, <= 16 (~18 ms, ~57 Hz) from the
@@ -419,9 +422,20 @@ static void fm1_led_dim_level(uint32_t lo)
     fm1__br_sel = lo != 0u;
     fm1__mid_n = (uint8_t)(lo ? FM1_LED_MID_N_LO : FM1_LED_MID_N);
 }
+/* (0.7.3) the mid level's phase of column c this frame: the frame count shifted a frame a column, so the mid frames
+ * of the columns are spread over the N frames (one or two columns lit a frame) instead of every column lit in the
+ * same frame: the LED current is near even frame to frame, no pulse at ~114 Hz (every idle LED lit in one frame
+ * of eight was heard from the speaker when the music stopped). Each LED is lit 1 frame in N as before */
+static inline uint32_t fm1__mid_q(uint32_t c)
+{
+    uint32_t q = (uint32_t)fm1__mid_ph + c;
+    if (q >= fm1__mid_n) q -= fm1__mid_n;
+    if (q >= fm1__mid_n) q -= fm1__mid_n;      /* (c < 2 N: two steps at most) */
+    return q;
+}
 /* column c's lit lines this frame: lit, a breath's lit frame (not dim), the mid level's lit frame */
 #define FM1__LIT(c) (fm1_led[c] | (fm1__br_lit ? fm1_led_breath[c] & ~fm1_led_dim[c] : 0u) | \
-                     (!fm1__mid_ph ? fm1_led_mid[c] : 0u) | (fm1__mid_ph % 3u == 0u ? fm1_led_hi[c] : 0u))
+                     (!fm1__mid_q(c) ? fm1_led_mid[c] : 0u) | (fm1__mid_q(c) % 3u == 0u ? fm1_led_hi[c] : 0u))
 #if FM1_LED_DIM_DIV > 1
 static uint8_t fm1__dim_ph;
 #endif

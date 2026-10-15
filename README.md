@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.7.2).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.7.3).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 > ⚡ **New in 0.6.85 – 0.6.92: a song generator you steer, a compact sequencer that breathes, a delay that feeds back.**
 > - **GEN (HOME + SELECT)**: a screen of three pages — GENRE (43 genres or RANDOM), SEED, ENERGY, FORM (loop, parts,
@@ -524,6 +524,14 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### v0.7.3
+- **The speaker's buzz once the music stops (reported): the LEDs' idle glow drew a current pulse.** Since 0.6.96 LEDS
+  DIM HI holds every idle key and button at the mid level, lit as a lit LED on one frame in eight; all of them in the
+  same frame was a current pulse at ~114 Hz on the supply, heard from the speaker whenever the music stopped (the
+  music masked it). The columns now take the mid level in turn, a frame apart (hal/fm1_input.h fm1__mid_q): one or
+  two columns lit in any frame, the current near even, each LED as bright as before. The DRUM grid's beats and the
+  scale's root, a level above (three frames in eight), take turns the same way. input_test checks the turns.
 
 ### v0.7.2
 - **Nine DRUM-X kits as DRUM presets**: DRUM-X (the factory kit), 909 CLUB (driven kick, bright snare and hats, the
