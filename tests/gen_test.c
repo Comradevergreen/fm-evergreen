@@ -203,15 +203,28 @@ int main(void)
             bad += gcheck("  after: the whole piece live (A), nothing muted", m == 0u && live.cur == 0);
         }
     }
+    /* ---- (0.6.93) the ARP amount is its density: a fifth of the steps at 20 %, most of them at 100 % */
+    {
+        uint32_t n20 = 0, n100 = 0, i, ar;
+        gen_reset();
+        gen_with(1, 5, 50, 0);                          /* HOUSE */
+        ar = gs.trk_of[RL_ARP];
+        gp.amt[GP_ARP] = 20; gen_go();
+        for (i = 0; i < dlen(&trk[ar]); i++) n20 += trk[ar].step[i].time == ST_NOTE;
+        gp.amt[GP_ARP] = 100; gen_go();
+        for (i = 0; i < dlen(&trk[ar]); i++) n100 += trk[ar].step[i].time == ST_NOTE;
+        if (n20 * 2u > dlen(&trk[ar]) || n100 < n20 * 2u) printf("  arp: %u notes at 20 %%, %u at 100 %% (LEN %u)\n", n20, n100, dlen(&trk[ar]));
+        bad += gcheck("ARP 20 %: eighths, under half the steps; 100 %: at least twice as many notes", ar < NTRK && n20 * 2u <= dlen(&trk[ar]) && n100 >= n20 * 2u);
+    }
     /* ---- the screen: HOME + SELECT opens GEN, the knobs set, SELECT pages, OCT+ makes, OCT- is done */
     {
         gen_reset();
-        gp.genre = 0; gp.energy = 50; gp.page = 0; gp.form = 0;
+        gp.genre = 7; gp.energy = 50; gp.page = 0; gp.form = 0;   /* (0.6.93) a genre left from before: the screen opens on RANDOM */
         for (k = 0; k < GP_N; k++) gp.amt[k] = GA_AUTO;
         go_home(); frames(16);
         fm1_ms += 1200u;
         held_turn(B_HOME, 1);
-        bad += gcheck("HOME + SELECT: the GEN screen (ui.confirm CF_DICE_ALL), page 1", ui.confirm == CF_DICE_ALL && gp.page == 0u);
+        bad += gcheck("HOME + SELECT: the GEN screen (ui.confirm CF_DICE_ALL), page 1, GENRE RANDOM (0.6.93)", ui.confirm == CF_DICE_ALL && gp.page == 0u && gp.genre == 0u);
         frames(800);                                    /* (the knobs quiet a moment after a button: ui_layer.c) */
         turn(EN_K1, 1); turn(EN_K3, 2);
         bad += gcheck("  KNOB 1 the genre (RANDOM -> HOUSE), KNOB 3 the energy (+10)", gp.genre == 1u && gp.energy == 60u);

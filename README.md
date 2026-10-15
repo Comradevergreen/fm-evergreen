@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.6.92).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.6.93).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 > ⚡ **New in 0.6.85 – 0.6.92: a song generator you steer, a compact sequencer that breathes, a delay that feeds back.**
 > - **GEN (HOME + SELECT)**: a screen of three pages — GENRE (43 genres or RANDOM), SEED, ENERGY, FORM (loop, parts,
@@ -524,6 +524,21 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### v0.6.93
+- **GEN opens on RANDOM** every time (a genre is that visit's choice), and the generator tuned against its own labels
+  (every genre dumped as text and read: tempo, sounds, drums, bass, chords, arp, lead):
+  - **ARP**: the amount is its density (20–95 % of the steps; under 35 % in eighths): no more sixteenths everywhere.
+  - **Chords**: stabs and comping present at the genre's amounts (the comp figure varied a bar, an anticipation of 3
+    or of the bar), POWER pushes every bar.
+  - **Sounds**: a recipe's words tried in order (a reese is FAT BASS before SAW LEAD), its cutoff and resonance set as
+    written (plucks were dull, square basses squelchy), no LOFI for leads, keys, strings or sine keys (chip sounds
+    only where the genre asks: electro, micro house, IDM), the texture track quieter (the noise drone half).
+  - **Drums**: ENERGY in the density and the velocities, the hats driven to sixteenths above 66 %, the open hats and
+    percussion thinned under 34 %; hat rolls in TRAP, DUBSTEP and UK GARAGE; the disco cowbell softer.
+  - **Lead**: SPARSE varied (a long note, or two short ones stepping into it, from the one or the third beat); the
+    HOOK and McCARTNEY basses back in the bass's octave.
+  - Harmonic minor out of TECHNO, ELECTRO, EBM, TRIBAL PUNK and DRUM & BASS.
 
 ### v0.6.92
 - **A compact sequencer: 11 SEQ pages instead of 15, the same powers** (an audit of every parameter: what each does,
