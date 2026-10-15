@@ -64,6 +64,9 @@ static uint32_t up_gen;                      /* bumped on every user bank change
 #define PREF_ACCEL_OFF 4u                      /* MENU > KNOB ACCEL OFF (#52; JIANT: ON by default, the bit now means OFF):
                                                 * fast turns of wide values x2..x16 */
 #define PREF_USB_FIXED 8u                      /* MENU > USB LEVEL FIXED: USB audio at the full level, MASTER after */
+#define usb_lvl (favorites.factory[15][22])   /* (0.7.0) MENU > USB LEVEL past FIXED: 0 FULL, 1..4 = -6 -12 -18 -24 dB
+                                                 * (with PREF_USB_FIXED; a byte no engine uses, 0 in older settings) */
+static const int16_t USB_GAIN[5] = {4096, 2048, 1024, 512, 256};   /* Q12: 0 -6 -12 -18 -24 dB */
 #define PREF_BPM_LOCK 16u                      /* MENU > BPM LOCK ON (#58): DICE ALL keeps the tempo; (0.6.67) SELECT
                                                 * alone never sets it (GLO + SELECT does) */
 #define PREF_LARGE 32u                         /* MENU > LARGE ON (#15, Discussion #80): big knob labels and values
@@ -983,8 +986,12 @@ static int param_kept(uint32_t i)
 {
     return i == P_LEVEL || i == P_PAN || i == P_MUTE || (i >= P_AMODE && i <= P_SGATE) ||
            (i >= P_SLCR && i <= P_SLDEPTH) || i == P_SOFS || i == P_POFS ||
-           (!FELUCCA_FM4 && (i == P_HVEL || i == P_HTIM || i == P_HGAT || i == P_HRQ));   /* (0.6.87) HUMAN: the sequencer's, a sound
+           (!FELUCCA_FM4 && (i == P_HVEL || i == P_HTIM || i == P_HGAT || i == P_HRQ)) ||   /* (0.6.87) HUMAN: the sequencer's, a sound
                                                          * keeps it (FELUCCA_FM4: DIGITAL's OP SUS / LEVEL there) */
+           (!FELUCCA_FM4 && (i == P_CHRD || i == P_CVOI || i == P_CSTR || i == P_CLEN || i == P_TCHAN ||
+                             i == P_MSND || i == P_MPAT || i == P_MAMT || i == P_MMODE));   /* (0.7.0) SCL > CHORD, C.LEN, CHANCE,
+                                                         * MUTATE: the sequencer's too (a community report: browsing
+                                                         * presets switched CHORD off) */
 }
 
 /* a retired preset kept as an alias (SAMPLE's, gone with it in JIANT): none now. -> the preset k stands for */
@@ -992,7 +999,7 @@ static uint32_t preset_orig(const engine_t *e, uint32_t k) { (void)e; return k; 
 /* the presets of engine e that browsing shows before preset k (k = npresets: all of them) */
 /* (0.5.1) browsing order: LOFI's BYTE presets, then FLOAT's (appended in 0.5.1: the stored numbers stay), then the
  * rest; every other engine in its own order. preset_nth: the preset shown n-th */
-static const uint8_t LOFI_ORDER[12] = {0, 1, 2, 8, 9, 10, 11, 3, 4, 5, 6, 7};
+static const uint8_t LOFI_ORDER[17] = {0, 1, 2, 8, 9, 10, 11, 3, 4, 5, 6, 7, 12, 13, 14, 15, 16};
 _Static_assert(sizeof LOFI_ORDER == NELEM(LOFI_PRESETS), "LOFI's browsing order: every preset once");
 static uint32_t preset_rank(const engine_t *e, uint32_t k)
 {

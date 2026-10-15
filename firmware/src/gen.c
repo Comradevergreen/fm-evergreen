@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * JIANT (0.6.91) the song generator, second version: HOME + SELECT opens GEN, a screen of three pages (GENRE SEED
- * ENERGY FORM; DRUMS BASS CHORDS ARP; LEAD COMPLEX SWING HUMAN), OCT+ makes the piece, OCT- is done. Included by
+ * ENERGY FORM; DRUMS BASS CHORDS ARP; LEAD COMPLEX SWING HUMAN), OCT+ makes the piece, HOME (or OCT-) is done. Included by
  * ui_input.c after song_dice.c (whose helpers it shares: the roles, dhold, euclid, dtonic, dname_has, dlevel ..).
  *
  * The piece is deterministic: a seed and the knobs make the same piece every time (the same settings and OCT+ again
@@ -585,11 +585,18 @@ static void gen_arp(track_t *t, uint32_t len)
 /* ---------------------------------------------------------------------------------------------------- lead --- */
 static const uint8_t TONAL_W[7] = {255, 96, 128, 64, 192, 96, 128};   /* Marbles' weights: the tonic, its fifth, third .. */
 static const uint8_t PROX_W[5] = {80, 255, 180, 90, 40};               /* |step| 0..4 of the scale */
+static int32_t gl_prev;                                  /* (0.7.0) the line's last note: the next stays in its octave */
 static int32_t glead_note(const track_t *t, int32_t deg)
 {
     int32_t n = gdeg(t, 55, deg);
     while (n > 79) n -= 12;
     while (n < 55) n += 12;
+    if (gl_prev) {                                      /* (0.7.0) a leap past a sixth (the motif moved with the chord,
+                                                         * the window's edge): the octave nearer the last note */
+        if (n - gl_prev > 9 && n - 12 >= 55) n -= 12;
+        else if (gl_prev - n > 9 && n + 12 <= 79) n += 12;
+    }
+    gl_prev = n;
     return n;
 }
 /* the next degree of a line: near the last, the key's weights, a chord tone on a strong step three times in four */
@@ -612,6 +619,7 @@ static void gen_lead(track_t *t, uint32_t len)
     uint32_t i, j, a = gs.amt[GP_LEAD], bars = len / 16u ? len / 16u : 1u, style = g->lead;
     int32_t n[1];
     gseed(GS_LEAD);
+    gl_prev = 0;
     if (style == LD_NONE) return;
     if (style == LD_OSTINATO) {
         int8_t cl[4];
@@ -707,8 +715,11 @@ static void gen_lead(track_t *t, uint32_t len)
         if (style == LD_HOOK) ans[k - 1u] = (int8_t)gnear_ct(ans[k - 1u], gchord_deg(16 < len ? 16 : 0));
         for (i = 0; i < bars; i++) {
             uint32_t ph = TPL[tpl][i % 4u], b0 = i * 16u, op = i % 4u == 3u ? op1 : op2, kk = k;
-            int32_t ch = gchord_deg(b0), shift = gch(70) ? ch - gchord_deg(0) : 0, endmv = 0;
+            int32_t ch = gchord_deg(b0), shift = gch(45) ? ch - gchord_deg(0) : 0, endmv = 0, half = (int32_t)gs.nsc / 2;
             const int8_t *dg = deg;
+            while (shift > half) shift -= (int32_t)gs.nsc;   /* (0.7.0) the motif follows the chord the nearer way: a
+                                                         * fourth up is a fifth down, never an octave's worth of leap */
+            while (shift < -half) shift += (int32_t)gs.nsc;
             if (ph == 3u) continue;                     /* (a bar of rest) */
             if (style == LD_HOOK && (i & 1u)) dg = ans;
             if (ph == 1u || ph == 2u) {                 /* the variation: one operator */
@@ -723,6 +734,7 @@ static void gen_lead(track_t *t, uint32_t len)
                 uint32_t pos = b0 + at[j], nxt = j + 1u < kk ? at[j + 1u] : 16u + at[0], gap = nxt - at[j];
                 if (pos >= len) break;
                 if (at[j] % 4u == 0u && gch(65)) dd = gnear_ct(dd, ch);
+                if (i % 4u == 3u && j == kk - 1u) dd = gnear_ct(dd, ch);   /* (0.7.0) the phrase ends on a chord tone */
                 if (gr() % 100u >= 55u + a / 2u && j && j != kk - 1u) continue;   /* (space with less amount) */
                 n[0] = glead_note(t, dd);
                 gnote(&t->step[pos], n, 1, at[j] % 4u == 0u ? 96 : 82, gch(8) ? SF_SLIDE : 0u);
@@ -764,7 +776,7 @@ static void gen_sound(track_t *t, uint32_t role, uint32_t ri)
     const grecipe_t *r = &RECIPE[ri];
     static const uint8_t EW[3] = {55, 30, 15};
     uint32_t e = r->eng[gpickw(EW, 3)], i, k, n, nm = 0, na = 0;
-    uint8_t m[24], any[24];
+    uint8_t m[32], any[32];
     const engine_t *en;
     if (e == ENGI_FM6 && gs.fm6 >= 2u) e = r->eng[0] == ENGI_FM6 ? EG_A : r->eng[0];
     gs.fm6 += e == ENGI_FM6;
@@ -1484,6 +1496,6 @@ static void draw_gen(void)
         str_cpy(t + 6, gp.last, sizeof t - 6);
         draw_text_box(0, 172, 240, &AF_S, t, T_MID, 1);
     }
-    draw_text_box(0, 190, 240, &AF_S, "OCT+ MAKE   OCT- DONE", T_TEXT, 1);
+    draw_text_box(0, 190, 240, &AF_S, "OCT+ MAKE   HOME DONE", T_TEXT, 1);
     draw_text_box(0, 206, 240, &AF_S, "SELECT: PAGE  KNOBS: SET", T_DIM, 1);
 }

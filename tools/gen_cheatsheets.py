@@ -7,7 +7,7 @@ import html, os
 
 R = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(R, 'docs', 'cheatsheet')
-VERSION = 'v0.6.99'
+VERSION = 'v0.7.0'
 
 HEAT = ['#22d3ee', '#3b82f6', '#8b5cf6', '#d946ef', '#ef4444', '#ff7a00', '#facc15', '#f4f1ea']
 
@@ -306,7 +306,7 @@ def sound():
                   '<b>8 voices</b> shared by the six tracks (MONO and LEGATO keep their note).</p>'))
     b.append(card('DICE', HEAT[5], '<p><b>EDIT + SELECT</b>: a random factory preset of the engine, every '
                   'parameter moved up to a quarter of its range. DRUM-X: both sides of every sound around the factory '
-                  'kit. Heard at once: OCT+ OK keeps it, OCT- CANCEL brings the sound back. SEQ / LFO / FX + SELECT: the sequence, the LFO, the effects, the same way. HOME + SELECT: <b>GEN</b>, the song generator: GENRE (43 or RANDOM) · SEED · ENERGY · FORM; DRUMS · BASS · CHORDS · ARP · LEAD amounts; COMPLEX · SWING · HUMAN. OCT+ makes the piece (again: a new seed), OCT- done. GLO + G4 undoes.</p>'))
+                  'kit. Heard at once: OCT+ OK keeps it, OCT- CANCEL brings the sound back. SEQ / LFO / FX + SELECT: the sequence, the LFO, the effects, the same way. HOME + SELECT: <b>GEN</b>, the song generator: GENRE (43 or RANDOM) · SEED · ENERGY · FORM; DRUMS · BASS · CHORDS · ARP · LEAD amounts; COMPLEX · SWING · HUMAN. OCT+ makes the piece (again: a new seed), HOME done. GLO + G4 undoes.</p>'))
     b.append('</div>')
 
     b.append(sec('MODULATION'))
@@ -321,8 +321,8 @@ def sound():
                   '<h4>SOURCES</h4><p>' + k('LFO', 'ENV', 'VEL', 'KEY', 'RAND', 'MODW', 'AT', 'EXPR', 'M1', 'M2', 'M3', 'M4',
                                              'STEP') + '</p>'
                   '<h4>DESTINATIONS</h4><p>' + k('PITCH', 'CUT', 'SHP', 'AMP', 'PAN', 'DIST', 'CHO', 'DLY', 'REV', 'RATE',
-                                                  'VIB', 'E1…E8', 'CLIP', 'PNCH') + '</p>'
-                  '<p style="margin-top:6px">E1…E8: the engine\'s own EDIT knobs. CLIP / PNCH: the master.</p>'))
+                                                  'VIB', 'E1…E8', 'CLIP', 'PNCH', 'D.TIM', 'D.FB', 'D.TON', 'D.MIX', 'R.SIZ', 'R.DMP', 'C.RAT', 'C.DEP') + '</p>'
+                  '<p style="margin-top:6px">E1…E8: the engine\'s own EDIT knobs. CLIP / PNCH: the master. D. R. C.: the DELAY, REVERB and CHORUS buses (a STEP source on D.TIM sequences the delay time).</p>'))
     b.append(card('MSEQ · MACROS', HEAT[1],
                   '<h4>MSEQ · A CV SEQUENCER PER TRACK</h4>' + knobs('STEP', 'LVL', 'LEN', 'SLEW') +
                   '<p style="margin-top:6px">16 levels, DIV on MSEQ 2, in time with the transport. Use it from MOD, '

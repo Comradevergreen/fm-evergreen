@@ -65,7 +65,6 @@ static const menu_flag_t MENU_FLAGS[] = {
     {MI_ANIM, PREF_ANIM_OFF, {"ON", "OFF"}},          /* #46: OFF, values snap (ui_draw.c roll_note, ui_graph.c pr_follow) */
     {MI_ACCEL, PREF_ACCEL_OFF, {"ON", "OFF"}},        /* #52: ui_input.c accel (JIANT: ON by default) */
     {MI_LATCH, PREF_LATCH, {"OFF", "ON"}},
-    {MI_USB, PREF_USB_FIXED, {"MASTER", "FIXED"}},     /* fx.c fx_usb_fixed: FIXED, USB at the full level */
     {MI_BPMLOCK, PREF_BPM_LOCK, {"OFF", "ON"}},        /* #58: ON, DICE ALL keeps the tempo (0.6.67: SELECT alone never sets it) */
     {MI_SERIAL, PREF_SERIAL_OFF, {"ON", "OFF"}},       /* #67: OFF, no serial console (usb_serial_apply) */
     {MI_RESTORE, PREF_RESTORE_ON, {"OFF", "ON"}},      /* 1.2, #130; JIANT 0.6.40: OFF (the default), no autosave, power-on as
@@ -78,6 +77,9 @@ static const menu_flag_t MENU_FLAGS[] = {
  * turned off from the firmware (no amp enable or mute line is known); the EQ reaches
  * the headphone / line out and USB audio too (one DAC, uac_tap reads the master) */
 static const char *const SPK_EQ[3] = {"FLAT", "LOWCUT", "BASS+"};
+/* (0.7.0) USB LEVEL: MASTER (USB follows the knob, the default), FIXED (full level, the knob after: #42), then fixed
+ * and attenuated (-6 .. -24 dB: a phone recording over USB clipped at the full level). ui.c usb_lvl, fx.c fx_usb_gain */
+static const char *const USBLVL_N[6] = {"MASTER", "FIXED", "-6 dB", "-12 dB", "-18 dB", "-24 dB"};
 static const char *const HOLD_N[4] = {"0.3 s", "0.4 s", "0.5 s", "0.6 s"};   /* (the editor's names; the menu draws its own) */
 /* 1.1 (Discussion #131): the metronome (click.c) and the count-in (seq.c); ui.c ui_rec_prefs holds them */
 static const char *const CLICK_N[3] = {"OFF", "REC", "ON"};          /* REC: while a track is armed and playing */
@@ -120,7 +122,7 @@ static const menu_flag_t *menu_flag(uint32_t row)
 static uint32_t menu_n(uint32_t row)
 {
     return row == MI_COLOR ? NPALETTES : row == MI_LOWCUT || (row >= MI_CLICK && row <= MI_COUNTIN) || row == MI_LOAD ? 3u :
-           row == MI_HOLD || row == MI_MIDIOUT ? 4u : row == MI_LEDS ? LEDS_COUNT : row == MI_SCROFF ? NELEM(SCROFF_N) : 2u;
+           row == MI_HOLD || row == MI_MIDIOUT ? 4u : row == MI_USB ? 6u : row == MI_LEDS ? LEDS_COUNT : row == MI_SCROFF ? NELEM(SCROFF_N) : 2u;
 }
 static uint32_t menu_get(uint32_t row)
 {
@@ -132,6 +134,7 @@ static uint32_t menu_get(uint32_t row)
     case MI_COLOR: return settings.palette % NPALETTES;
     case MI_STYLE: return ui_style == ST_LINE;
     case MI_LOWCUT: return settings.lowcut % 3u;
+    case MI_USB: return (ui_prefs & PREF_USB_FIXED) ? 1u + usb_lvl % 5u : 0u;
     case MI_HOLD: return settings_hold % 4u;
     case MI_SCROFF: return scr_get();
     case MI_CLICK: case MI_CLKLVL: case MI_COUNTIN: return rp_get(row - MI_CLICK);
@@ -153,6 +156,7 @@ static const char *menu_vname(uint32_t row, uint32_t v)
     case MI_COLOR: return UI_PALETTES[v % NPALETTES].name;
     case MI_STYLE: return STYLE_N[v & 1u];
     case MI_LOWCUT: return SPK_EQ[v % 3u];
+    case MI_USB: return USBLVL_N[v % 6u];
     case MI_HOLD: return HOLD_N[v & 3u];
     case MI_CLICK: return CLICK_N[v % 3u];
     case MI_CLKLVL: return CLKLVL_N[v % 3u];
@@ -186,6 +190,12 @@ static void menu_put(uint32_t row, uint32_t v)
         break;
     case MI_STYLE: ui_style = (uint8_t)(v ? ST_LINE : ST_FLAT); break;   /* (drawn so from the next frame) */
     case MI_LOWCUT: settings.lowcut = v; fx_lowcut = (uint8_t)v; break;
+    case MI_USB:                                   /* (at once; every frame too: ui_input) */
+        ui_prefs = (uint8_t)(v ? ui_prefs | PREF_USB_FIXED : ui_prefs & ~PREF_USB_FIXED);
+        usb_lvl = (uint8_t)(v ? (v - 1u) % 5u : 0u);
+        fx_usb_fixed = v != 0u;
+        fx_usb_gain = USB_GAIN[usb_lvl];
+        break;
     case MI_HOLD: settings_hold = (uint8_t)v; break;
     case MI_SCROFF: scr_put(v); break;                 /* (read every frame: ui.c scr_frame) */
     case MI_LEDS: settings_leds = LEDS_MENU[v]; break;

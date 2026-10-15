@@ -63,7 +63,7 @@ Guardá tus archivos WAV.
    apretá **OCT+**. Aparece una idea de tema completa: motores, sonidos, partes, escala, tempo y efectos. Apretá
    **PLAY**.
 2. ¿No te convence? Apretá **OCT+** otra vez: semilla nueva, pieza nueva. ¿Demasiado cargada? Girá **SELECT** a la
-   página 2 y bajá **DRUMS** o **ARP**, después OCT+: la misma pieza con eso cambiado. **OCT−** cierra la pantalla.
+   página 2 y bajá **DRUMS** o **ARP**, después OCT+: la misma pieza con eso cambiado. **HOME** (u OCT−) cierra la pantalla.
    Para volver a lo que había antes: mantené **GLO** y apretá **G4** (UNDO).
 3. ¿Te gusta? **Pará** (PLAY) y apretá **SAVE** dos veces para llegar a **SAVE > PROJECT** (la primera pulsación de
    SAVE abre USER, la segunda PROJECT). Girá **KNOB 4** a la derecha para que muestre **[OCT+]** y apretá **OCT+**.
@@ -770,7 +770,7 @@ Mantené **SAVE**:
 
 En **HOME**, girá **SELECT** (o mantené HOME y girá SELECT, desde cualquier página). Se abre la pantalla
 **GENERATOR**: tres páginas de ajustes, **SELECT** cambia de página, **KNOB 1–4** fijan los cuatro valores que se
-ven, **OCT+** arma la pieza y **OCT−** cierra la pantalla (la pieza queda; **UNDO**, GLO + G4, devuelve lo que había
+ven, **OCT+** arma la pieza y **HOME** (u OCT−) cierra la pantalla (la pieza queda; **UNDO**, GLO + G4, devuelve lo que había
 antes). **PLAY** arranca y para el transporte sin salir de la pantalla (0.6.97).
 
 | Página | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
@@ -983,7 +983,10 @@ ancho). Se oculta con LOAD ECO (la tarjeta de envío de chorus de una pista dice
 - **Matriz MOD**: 4 slots por pista (KNOB 1 elige el slot).
   - Fuentes: OFF, LFO, ENV, VEL, KEY, RAND, MODW (MIDI CC1), AT (aftertouch), EXPR (CC11), **M1–M4**, **STEP** (MSEQ).
   - Destinos: PITCH, CUT, SHP, AMP, PAN, DIST, CHO, DLY, REV, RATE (velocidad del LFO), VIB, **E1–E8** (las perillas
-    EDIT propias del motor, mostradas por nombre), **CLIP** y **PNCH** (el master).
+    EDIT propias del motor, mostradas por nombre), **CLIP** y **PNCH** (el master), y (0.7.0) los buses de FX: **D.TIM D.FB
+    D.TON D.MIX** (DELAY TIME, FDBK, TONE, MIX), **R.SIZ R.DMP** (REVERB SIZE, DAMP), **C.RAT C.DEP** (CHORUS RATE,
+    DEPTH). AMT 64 con la fuente a tope = todo el rango del parámetro; los slots de todas las pistas sobre el mismo bus se
+    suman. Una fuente STEP (la secuencia de modulación) sobre D.TIM secuencia el tiempo del delay.
 - **MSEQ**: un secuenciador de modulación de 16 pasos por pista, como un secuenciador de CV. KNOB 1 elige el paso,
   KNOB 2 fija su nivel, LEN y SLEW; DIV en MSEQ 2. Usalo desde MOD con SRC **STEP**.
 
@@ -1257,7 +1260,7 @@ valor. HOME lo cierra (en ese momento se guarda la configuración).
 | CONTROL | SCALE LEDS | OFF, ON — las teclas de la escala se iluminan, la tónica más brillante |
 | CONTROL | MIDI OUT | **KEYS**, CLOCK, ALL, OFF — qué sale por MIDI USB (ver [14](#14-midi-y-usb)) |
 | AUDIO | SPEAKER EQ | FLAT, LOWCUT, BASS+ (un EQ en el master para el parlante chico; también llega a las salidas y al USB) |
-| AUDIO | USB LEVEL | MASTER (el USB sigue a la perilla MASTER), FIXED (USB a nivel completo) |
+| AUDIO | USB LEVEL | MASTER (el USB sigue a la perilla MASTER), FIXED (USB a nivel completo), −6 / −12 / −18 / −24 dB (USB fijo y atenuado: para un celular o una computadora cuya entrada satura a nivel completo) |
 | AUDIO | CLICK | OFF, REC (mientras una pista está armada y sonando), ON |
 | AUDIO | CLICK LEVEL | LOW, MID, HIGH |
 | AUDIO | COUNT-IN | OFF, 1 BAR, 2 BARS |
@@ -1309,7 +1312,7 @@ protección desvaneció): una foto de esa pantalla ayuda cuando reportás un pro
   **CC104** drive, **CC105** sustain (0.6.96). CC1 (rueda de modulación), CC11 (expresión) y el aftertouch de canal son fuentes de
   la matriz MOD (MODW, EXPR, AT). Funcionan el pitch bend, el sustain (CC64), All Sound Off (CC120) y All Notes Off
   (CC123). Un CC se graba como automatización igual que un movimiento de perilla.
-- Nombre USB MIDI: el equipo se sigue presentando como "Felucca", así el editor web se conecta.
+- Nombre USB MIDI y audio: "JIANT FM" (0.7.0; "JIANT Update" mientras se instala un paquete). El editor web y el instalador aceptan también un equipo que todavía se llame "Felucca".
 
 ---
 

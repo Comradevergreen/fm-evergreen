@@ -62,7 +62,7 @@ files.
 1. On **HOME**, turn **SELECT**. The **GENERATOR** screen opens: pick a **GENRE** with KNOB 1 (or leave RANDOM) and
    press **OCT+**. A whole song idea appears: engines, sounds, parts, scale, tempo and effects. Press **PLAY**.
 2. Not your thing? Press **OCT+** again: a new seed, a new piece. Too busy? Turn **SELECT** to page 2 and lower
-   **DRUMS** or **ARP**, then OCT+: the same piece with that changed. **OCT−** closes the screen. To go back to what
+   **DRUMS** or **ARP**, then OCT+: the same piece with that changed. **HOME** (or OCT−) closes the screen. To go back to what
    was there before: hold **GLO** and press **G4** (UNDO).
 3. Like it? **Stop** (PLAY), then press **SAVE** twice to reach **SAVE > PROJECT** (the first SAVE press opens
    USER, the second PROJECT). Turn **KNOB 4** to the right so it shows **[OCT+]**, then press **OCT+**. Type a name with the keys (or keep
@@ -731,7 +731,7 @@ Hold **SAVE**:
 
 On **HOME**, turn **SELECT** (or hold HOME and turn SELECT, from any page). The **GENERATOR** screen opens: three
 pages of settings, **SELECT** turns the page, **KNOB 1–4** set the four values shown, **OCT+** makes the piece and
-**OCT−** closes the screen (the piece stays; **UNDO**, GLO + G4, brings back what was there before). **PLAY** runs and stops
+**HOME** (or OCT−) closes the screen (the piece stays; **UNDO**, GLO + G4, brings back what was there before). **PLAY** runs and stops
 the transport without leaving the screen (0.6.97).
 
 | Page | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
@@ -929,7 +929,10 @@ The settings stay; the TYPE card shows LITE or ECO under its value.
 - **MOD matrix**: 4 slots per track (KNOB 1 picks the slot).
   - Sources: OFF, LFO, ENV, VEL, KEY, RAND, MODW (MIDI CC1), AT (aftertouch), EXPR (CC11), **M1–M4**, **STEP** (MSEQ).
   - Destinations: PITCH, CUT, SHP, AMP, PAN, DIST, CHO, DLY, REV, RATE (LFO rate), VIB, **E1–E8** (the engine's own
-    EDIT knobs, shown by name), **CLIP** and **PNCH** (the master).
+    EDIT knobs, shown by name), **CLIP** and **PNCH** (the master), and (0.7.0) the FX buses: **D.TIM D.FB D.TON D.MIX**
+    (DELAY TIME, FDBK, TONE, MIX), **R.SIZ R.DMP** (REVERB SIZE, DAMP), **C.RAT C.DEP** (CHORUS RATE, DEPTH). AMT 64 at a
+    full source = the parameter's whole range; every track's slots on the same bus add. A STEP source (the mod
+    sequence) on D.TIM sequences the delay time.
 - **MSEQ**: a 16-step modulation sequencer per track, like a CV sequencer. KNOB 1 picks the step, KNOB 2 sets its
   level, LEN and SLEW; DIV on MSEQ 2. Use it from MOD with SRC **STEP**.
 
@@ -1186,7 +1189,7 @@ closes it (settings are saved then).
 | CONTROL | SCALE LEDS | OFF, ON — the keys of the scale glow, the root brighter |
 | CONTROL | MIDI OUT | **KEYS**, CLOCK, ALL, OFF — what goes out over USB MIDI (see [14](#14-midi-and-usb)) |
 | AUDIO | SPEAKER EQ | FLAT, LOWCUT, BASS+ (an EQ on the master for the small speaker; also reaches the outputs and USB) |
-| AUDIO | USB LEVEL | MASTER (USB follows the MASTER knob), FIXED (USB at full level) |
+| AUDIO | USB LEVEL | MASTER (USB follows the MASTER knob), FIXED (USB at full level), −6 / −12 / −18 / −24 dB (USB fixed and attenuated: for a phone or a computer whose input clips at the full level) |
 | AUDIO | CLICK | OFF, REC (while a track is armed and playing), ON |
 | AUDIO | CLICK LEVEL | LOW, MID, HIGH |
 | AUDIO | COUNT-IN | OFF, 1 BAR, 2 BARS |
@@ -1234,7 +1237,7 @@ faded): a photo of that screen helps when you report a problem.
   (0.6.96). CC1 (mod wheel), CC11 (expression) and channel aftertouch are sources in the MOD matrix (MODW, EXPR,
   AT). Pitch bend, sustain (CC64), All Sound Off (CC120) and All Notes Off (CC123) work. A CC is recorded as automation
   like a knob move.
-- USB MIDI name: the device still presents itself as "Felucca", so the web editor connects.
+- USB MIDI and audio name: "JIANT FM" (0.7.0; "JIANT Update" while a package installs). The web editor and the installer also accept a device still named "Felucca".
 
 ---
 

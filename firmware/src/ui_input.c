@@ -1835,6 +1835,7 @@ static void ui_input_frame(void)
             set_engine_of(&trk[k], ENGI_PHYS_TO);
     perf_latch_on = fx_latch & 1u;                      /* (MENU > FX LATCH; a settings load sets it too) */
     fx_usb_fixed = (ui_prefs & PREF_USB_FIXED) != 0u;   /* (MENU > USB LEVEL: fx.c, audio.c) */
+    fx_usb_gain = USB_GAIN[fx_usb_fixed ? usb_lvl % 5u : 0u];   /* (0.7.0) .. and its attenuation (usb.c uac_tap) */
     mo_lvl = (uint8_t)(midi_out_mode & 3u);             /* (0.6.72) MENU > MIDI OUT (seq.c) */
     midi_pc_poll();                                     /* (0.6.72) PROGRAM CHANGE in: the sounds it asked for */
     rp_apply();                                        /* (MENU > CLICK, CLICK LEVEL, COUNT-IN: click.c, seq.c) */
@@ -2142,6 +2143,11 @@ static void ui_input_frame(void)
             for (k = 0; k < 4u; k++)
                 if ((s = panel_enc(EN_K1 + k)) != 0) gen_knob(k, s);
             if ((s = panel_enc(EN_SELECT)) != 0) gen_select(s);
+            if (home == BT_TAP) {                       /* (0.7.0) HOME: done (OCT- too) */
+                ui.confirm = 0;
+                ui.force = 1;
+                go_home();
+            }
             if ((pressed >> panel.btn[B_PLAY]) & 1u) {
                 if (song.playing || chain_busy() || seq_counting()) transport_req = 2;
                 else if (live.mode) chain_play_ui();

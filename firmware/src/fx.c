@@ -251,6 +251,10 @@ static __attribute__((noinline)) void duck_block(void)
  * full MASTER level, USB audio takes that (audio.c uac_tap), and only then does MASTER scale what the DAC gets
  * (usb_fixed_dac). MASTER (0, the default): MASTER before master_out, as always (USB follows the knob) */
 static volatile uint8_t fx_usb_fixed;
+/* (0.7.0) MENU > USB LEVEL past FIXED: USB audio attenuated (-6 .. -24 dB, Q12) whatever the knob does, for a phone
+ * or a computer whose input clips at the full level (usb.c uac_tap reads it) */
+static volatile int32_t fx_usb_gain = 4096;
+#define UAC_GAIN() fx_usb_gain
 static const uint8_t REV_LITE[3][5] = {{0, 1, 2, 3, 4}, {0, 1, 0, 1, 0}, {1, 1, 1, 1, 1}};   /* (0.6.29) LOAD FULL, LITE, ECO
                                                          * (voice.c sys_load): each reverb's lighter kin */
 #define MASTER_FULL 4096                /* main.c: the MASTER knob's top, Q12 */
@@ -490,7 +494,7 @@ static inline int32_t dly_rd_of(const int16_t *buf, uint32_t w, uint32_t d, int3
 static inline int32_t dly_rd(uint32_t d, int32_t m) { return dly_rd_of(dly_buf, fx.dly_w, d, m); }
 static uint32_t delay_samples(void)
 {
-    uint32_t g = (uint32_t)song.g[G_DTIME];
+    uint32_t g = (uint32_t)GFX(GF_DTIME);
     uint32_t s = g < DT_FREE ? div_samples(g) : (uint32_t)DTIME_MS[(g - DT_FREE) % 48u] * 441u / 10u;   /* (JIANT 0.4: free) */
     return s < 16u ? 16u : s >= DLY_LEN ? DLY_LEN - 1u : s;
 }
@@ -498,14 +502,14 @@ static uint32_t delay_samples(void)
 /* (JIANT 0.5) the combs' feedback from SIZE: 0.76 .. 0.99, the top of the knob a long tail (was 0.957 at most) */
 static int32_t rev_size(void)
 {
-    int32_t g = song.g[G_RSIZE];
+    int32_t g = GFX(GF_RSIZE);
     return 25000 + g * 40 + g * g / 7;
 }
 /* ROOM (G_RTYPE 0): 4 damped combs + 2 allpasses (Freeverb-like, mono), added to out (WIDE: rev_room_mod) */
 static __attribute__((noinline)) void rev_room(const int32_t *rev_in, int32_t *out, uint32_t n)
 {
     uint32_t i, k;
-    int32_t size = rev_size(), damp = 32767 - song.g[G_RDAMP] * 200;
+    int32_t size = rev_size(), damp = 32767 - GFX(GF_RDAMP) * 200;
     for (i = 0; i < n; i++) {
         int32_t a = 0;
         int16_t *c = rev_comb;
@@ -541,7 +545,7 @@ static __attribute__((noinline)) void rev_room(const int32_t *rev_in, int32_t *o
 static __attribute__((noinline)) void rev_room_mod(const int32_t *rev_in, int32_t *out, uint32_t n, int32_t wd)
 {
     uint32_t i, k;
-    int32_t size = rev_size(), damp = 32767 - song.g[G_RDAMP] * 200, m1[4], dm[4];
+    int32_t size = rev_size(), damp = 32767 - GFX(GF_RDAMP) * 200, m1[4], dm[4];
     int32_t depth = song.g[G_RMOD] ? 64 + song.g[G_RMOD] * song.g[G_RMOD] * 4 : 0;   /* Q8 samples: 0.25 .. 252 (~5.7 ms) */
     fx.rm_ph += LFO_INC[song.g[G_RRATE] & 127];
     for (k = 0; k < 4u; k++) {
@@ -605,9 +609,9 @@ static __attribute__((noinline)) void sp_chain(int32_t *ap, uint32_t ns)
 /* SPRING (see the top), added to out */
 static __attribute__((noinline)) void rev_spring(const int32_t *rev_in, int32_t *out, uint32_t n)
 {
-    uint32_t i, k, s = (uint32_t)song.g[G_RSIZE];
+    uint32_t i, k, s = (uint32_t)GFX(GF_RSIZE);
     int32_t g = 19661 + (int32_t)s * 85 + (int32_t)(s * s) / 16;   /* the loop's gain: 0.6 .. 0.96 (0.5: was 0.93) */
-    int32_t kl = 26000 - song.g[G_RDAMP] * 160;         /* its low-pass: ~9 kHz .. ~1.3 kHz */
+    int32_t kl = 26000 - GFX(GF_RDAMP) * 160;         /* its low-pass: ~9 kHz .. ~1.3 kHz */
     int32_t len = (int32_t)(1323u + ((s * 1323u) >> 7)) << 8, L, L2, L3, f, w;
     int16_t *ln = rev_comb;
     int32_t *ap = rev_u.sp;
@@ -728,12 +732,12 @@ _Static_assert(sizeof rev_comb / 2u >= 4u * RS_LEN, "RESO in ROOM's buffers");
  * PITCH (G_RPRE 0..14) the chord that many steps of the scale up; FOLW (G_RDAMP 0..6) OFF / T1..T6: the chord built on
  * the lowest note that track sounds (held after it stops), so it moves with the sequence. The strings glide there */
 static uint32_t reso_pitch(void) { return song.g[G_RTYPE] == 3 ? (uint32_t)clamp(song.g[G_RPRE], 0, 14) : 0u; }
-static uint32_t reso_folw(void) { return song.g[G_RDAMP] >= 1 && song.g[G_RDAMP] <= 6 ? (uint32_t)song.g[G_RDAMP] : 0u; }
+static uint32_t reso_folw(void) { return GFX(GF_RDAMP) >= 1 && GFX(GF_RDAMP) <= 6 ? (uint32_t)GFX(GF_RDAMP) : 0u; }
 static __attribute__((noinline)) void rev_reso(const int32_t *rev_in, int32_t *out, uint32_t n)
 {
     const track_t *t = &trk[0];
     uint32_t i, k, per[4], mask, s, fol = reso_folw(), up = reso_pitch();
-    int32_t sz = song.g[G_RSIZE], dk = 32767 - 60 * 200, note[4], deg = 0, nn;
+    int32_t sz = GFX(GF_RSIZE), dk = 32767 - 60 * 200, note[4], deg = 0, nn;
     int32_t fb = sz <= 100 ? 26000 + sz * 52 : clamp(31200 + (sz - 100) * 58, 0, 32740);   /* (0.5.1: the top of SIZE
                                                          * rings on for tens of seconds: 0.9992 at 127, was 0.995) */
     for (k = 0; k < NTRK; k++)                           /* the song's scale: the first melodic track's (they share it) */
@@ -805,11 +809,11 @@ static uint32_t cl_rand(void) { fx.cl_rng = fx.cl_rng * 1664525u + 1013904223u; 
 static __attribute__((noinline)) void rev_cloud(const int32_t *rev_in, int32_t *out, uint32_t n)
 {
     static const uint32_t PITCH[4] = {65536u, 131072u, 32768u, 98184u};   /* x1, an octave up, down, a fifth up (Q16) */
-    uint32_t i, k, freeze = song.g[G_RSIZE] >= 127;
-    int32_t gap = 1700 - song.g[G_RRATE] * 11, dk = 32767 - song.g[G_RDAMP] * 220, wd = song.g[G_RWIDE], air = rev_air();
+    uint32_t i, k, freeze = GFX(GF_RSIZE) >= 127;
+    int32_t gap = 1700 - song.g[G_RRATE] * 11, dk = 32767 - GFX(GF_RDAMP) * 220, wd = song.g[G_RWIDE], air = rev_air();
     uint32_t ar = semi_q16(air);                         /* (0.6.12) AIR: the grains up / down, the tone with them */
     if (air < 0) dk = clamp(dk + air * 1100, 1500, 32767);
-    int32_t fb = 0, fg = song.g[G_RSIZE] * 110, g[CTL], t[CTL];   /* (0.6.14: the tail no more back into the line, was
+    int32_t fb = 0, fg = GFX(GF_RSIZE) * 110, g[CTL], t[CTL];   /* (0.6.14: the tail no more back into the line, was
                                                          * SIZE x24: past SIZE ~80 the loop rang on for ever, any share
                                                          * of it sustained; now it dies out: ~5 s at 110, at 126 a
                                                          * faint wash for long, nearly the FREEZE; Q15: the grains,
@@ -976,13 +980,13 @@ static void fx_gate(int32_t *wet, uint32_t n)
     fxg_dpk = 0;
     if (((fxg_quiet > FXG_QUIET && pk < FXG_FLOOR) || (!dly && fxg_quiet > FXG_QUIET2 && pk < FXG_FLOOR2) ||
          (!dly && fxg_quiet > FXG_QUIET3 && pk < FXG_FLOOR3)) &&
-        !(song.g[G_RTYPE] == 4 && song.g[G_RSIZE] >= 127))
+        !(song.g[G_RTYPE] == 4 && GFX(GF_RSIZE) >= 127))
         fxg_g = g0 > 1024 ? g0 - 1024 : 0;
     else if (g0 < 32767 && (g0 > 0 || fxg_quiet == 0u || dly))   /* (0.6.89: or the delay growing by itself) */   /* (0.6.19) closing and the residue swells again (a pitched
                                                          * delay's feedback): back up as it went down, ~25 ms (it
                                                          * snapped open: a click); */
         fxg_g = g0 < 32767 - (fxg_quiet ? 1024 : 4096) ? g0 + (fxg_quiet ? 1024 : 4096) : 32767;
-    else if (g0 == 0 && !(song.g[G_RTYPE] == 4 && song.g[G_RSIZE] >= 127))   /* .. closed: it stays closed until
+    else if (g0 == 0 && !(song.g[G_RTYPE] == 4 && GFX(GF_RSIZE) >= 127))   /* .. closed: it stays closed until
                                                          * something is sent (CLOUD's FREEZE: open) */
         fxg_g = 0;                                      /* (something sent: the branch above opens it) */
     else
@@ -1015,16 +1019,16 @@ static inline __attribute__((always_inline)) void fx_buses(const int32_t *cho_in
         fxg_quiet = any ? 0u : fxg_quiet < 0xFFFFFFu ? fxg_quiet + 1u : fxg_quiet;
     }                                                   /* (0.6.19: it opens over ~6 ms, fx_gate: at once, the
                                                          * residue in the lines stepped in: a tick on the next note) */
-    int32_t fb = dly_fb(song.g[G_DFDBK]), tn = song.g[G_DCOLOR] - 64;   /* (JIANT 0.4) TONE: one knob, low-pass .. open .. low cut */
+    int32_t fb = dly_fb(GFX(GF_DFDBK)), tn = GFX(GF_DCOL) - 64;   /* (JIANT 0.4) TONE: one knob, low-pass .. open .. low cut */
     int32_t wm, dwm, dig = song.g[G_DTYPE] == 1;        /* (0.6.89: TONE in the middle: each repeat the very copy) */
     tone_t dtn, rtn;
     int dton = dig ? tone_set(&dtn, tn > 63 ? 63 : tn, 113, 43, 18, 93, 5793, 0)   /* (0.6.90) DIGITAL: TONE plain (Q 0.7) */
                    : tone_set(&dtn, tn > 63 ? 63 : tn, 113, 43, 18, 93, 2900, 1);   /* (0.6.89 half the level evened: the band
                                                          * at the cutoff above unity, the extremes self-oscillate) */
     if (!dton) fx.dt1 = fx.dt2 = 0;   /* (8 kHz .. 250 Hz | 73 Hz .. 3 kHz, Q 1.4) */
-    int32_t dmix = song.g[G_DMIX] * 258;
-    int32_t cdepth = song.g[G_CDEPTH] * 6, rt;
-    uint32_t cinc = LFO_INC[song.g[G_CRATE] & 127] / CTL;
+    int32_t dmix = GFX(GF_DMIX) * 258;
+    int32_t cdepth = GFX(GF_CDEPTH) * 6, rt;
+    uint32_t cinc = LFO_INC[GFX(GF_CRATE) & 127] / CTL;
     int32_t hk = 5, wd = song.g[G_WIDTH];             /* (the loop's DC block: ~1 Hz, 0.6.89); WIDTH */
     int32_t gr = !sys_load && (song.g[G_DPIT] || song.g[G_DSPRY]);   /* (JIANT) the GRAIN delay (LOAD LITE / ECO: plain) */
     /* (0.6.90) PING-PONG (not with the GRAIN): the line read at TIME (left) and twice TIME (right, the loop's tap), the

@@ -328,13 +328,11 @@ static uint8_t usb_cdc_on = FELUCCA_CDC_DEFAULT != 0;      /* the console is pre
 #endif
 #define UAC_AS_IF (AUD_IF + 2u)
 static const uint8_t STR0[4] = {4, 3, 0x09, 0x04};
-static const uint8_t STR1[] = {42, 3, 'H', 0, 0xFC, 0, 'g', 0, 'e', 0, 'l', 0, 't', 0, 'o', 0, 'n', 0, ' ', 0, 'I', 0,
-                               'n', 0, 's', 0, 't', 0, 'r', 0, 'u', 0, 'm', 0, 'e', 0, 'n', 0, 't', 0, 's', 0};
+static const uint8_t STR1[] = {22, 3, 'J', 0, 'u', 0, 'a', 0, 'n', 0, ' ', 0, 'J', 0, 'i', 0, 'a', 0, 'n', 0, 't', 0};   /* (0.7.0) the names JIANT's; the editor and the installer match /jiant|felucca/ */
 #ifdef FELUCCA_LOADER
-static const uint8_t STR2[] = {30, 3, 'F', 0, 'e', 0, 'l', 0, 'u', 0, 'c', 0, 'c', 0, 'a', 0, ' ', 0, 'U', 0, 'p', 0,
-                               'd', 0, 'a', 0, 't', 0, 'e', 0};
+static const uint8_t STR2[] = {26, 3, 'J', 0, 'I', 0, 'A', 0, 'N', 0, 'T', 0, ' ', 0, 'U', 0, 'p', 0, 'd', 0, 'a', 0, 't', 0, 'e', 0};
 #else
-static const uint8_t STR2[] = {16, 3, 'F', 0, 'e', 0, 'l', 0, 'u', 0, 'c', 0, 'c', 0, 'a', 0};
+static const uint8_t STR2[] = {18, 3, 'J', 0, 'I', 0, 'A', 0, 'N', 0, 'T', 0, ' ', 0, 'F', 0, 'M', 0};
 #endif
 
 static int get_desc(uint32_t wvalue, const uint8_t **d, uint16_t *l)
@@ -1026,8 +1024,13 @@ static __attribute__((noinline)) void uac_render_start(void)   /* audio ISR, bef
         uac.fill_hi = fill;
 }
 
+static inline int32_t uac_clip(int32_t v) { return v > 32767 ? 32767 : v < -32768 ? -32768 : v; }
+#ifndef UAC_GAIN
+#define UAC_GAIN() 4096                /* (a build without fx.c: the host tests of USB alone) */
+#endif
 static inline int32_t uac_s16(int32_t v)
 {
+    v = (v * UAC_GAIN()) >> 12;                       /* (0.7.0) MENU > USB LEVEL -6 .. -24 dB (fx.c fx_usb_gain) */
     return v > 32767 ? 32767 : v < -32768 ? -32768 : v;
 }
 
@@ -1068,8 +1071,8 @@ static __attribute__((noinline)) void uac_tap48(const int32_t *out, uint32_t n)
                     ar += (int64_t)t * x[2u * RS_H];
                 }
             }
-            yl = uac_s16((int32_t)((al + (1 << (UAC_FIR_Q - 1))) >> UAC_FIR_Q));
-            yr = uac_s16((int32_t)((ar + (1 << (UAC_FIR_Q - 1))) >> UAC_FIR_Q));
+            yl = uac_clip((int32_t)((al + (1 << (UAC_FIR_Q - 1))) >> UAC_FIR_Q));
+            yr = uac_clip((int32_t)((ar + (1 << (UAC_FIR_Q - 1))) >> UAC_FIR_Q));
 #if FELUCCA_UAC_TONE
             {   /* bench: the triangles at 48 kHz (not resampled), one per output frame */
                 uint32_t t = rs.tone, q = t < 50u ? t : 100u - t, q2 = t < 50u ? 50u - t : t - 50u;

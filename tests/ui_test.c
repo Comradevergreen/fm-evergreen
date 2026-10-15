@@ -380,7 +380,7 @@ static int test_sound_loads(void)
                  preset_pat_hint() == 12 && ui.ppick == 12 && str_eq(PATTERNS[12].name, "ARP"));
     t->p[P_AMODE] = 2;
     before = *t;
-    for (i = 0; i < 10u; i++)                     /* several loads, into the next engine */
+    for (i = 0; i < ENGINES[0]->npresets; i++)   /* several loads, into the next engine */
         turn(EN_PRESET, 1);
     bad += check("browsing on, into another engine: the steps still untouched", t->eng_req != before.eng_req &&
                  !memcmp(t->step, before.step, sizeof t->step) && t->p[P_AMODE] == 2);
@@ -7599,7 +7599,7 @@ static int test_usb_level(void)
     int bad = 0, ok;
     ui_power_on();
     frame();
-    ok = !fx_usb_fixed && str_eq(MI_NAME[MI_USB], "USB LEVEL") && str_eq(menu_flag(MI_USB)->name[0], "MASTER");
+    ok = !fx_usb_fixed && str_eq(MI_NAME[MI_USB], "USB LEVEL") && str_eq(menu_vname(MI_USB, 0), "MASTER") && menu_n(MI_USB) == 6u;
     hold(B_HOME);
     ui.menu_sel = MI_USB;
     ui.force = 1; ui_draw();
@@ -7608,6 +7608,10 @@ static int test_usb_level(void)
     press(B_OCTUP); ok &= (ui_prefs & PREF_USB_FIXED) && fx_usb_fixed && ui.menu;
     press(B_OCTDN); ok &= !(ui_prefs & PREF_USB_FIXED) && !fx_usb_fixed && ui.menu;
     press(B_OCTUP);
+    ok &= fx_usb_gain == 4096;
+    turn(EN_K1, 1); ok &= fx_usb_fixed && usb_lvl == 1u && fx_usb_gain == 2048 && str_eq(menu_vname(MI_USB, menu_get(MI_USB)), "-6 dB");   /* (0.7.0) */
+    turn(EN_K1, 1); turn(EN_K1, 1); turn(EN_K1, 1); turn(EN_K1, 1); ok &= usb_lvl == 4u && fx_usb_gain == 256;   /* -24 dB, the end */
+    turn(EN_K1, -1); turn(EN_K1, -1); turn(EN_K1, -1); turn(EN_K1, -1); ok &= fx_usb_fixed && usb_lvl == 0u && fx_usb_gain == 4096;   /* FIXED again */
     press(B_HOME);
     ok &= !ui.menu && fx_usb_fixed;
     {
@@ -7621,7 +7625,7 @@ static int test_usb_level(void)
         frame();
         ok &= !fx_usb_fixed;
     }
-    bad += check("MENU > USB LEVEL: MASTER by default, KNOB 1 / OCT+ FIXED, left / OCT- MASTER, saved, the audio follows", ok);
+    bad += check("MENU > USB LEVEL: MASTER by default, KNOB 1 / OCT+ FIXED, left / OCT- MASTER, -6..-24 dB past FIXED, saved, the audio follows", ok);
     ui_prefs = 0;
     frame();
     return bad;
