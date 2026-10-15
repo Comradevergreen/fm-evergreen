@@ -15,7 +15,7 @@ enum { MI_COLOR, MI_STYLE, MI_LARGE, MI_ANIM, MI_LEDS, MI_SCROFF, MI_HOLD, MI_AC
 static const char *const MI_NAME[MI_COUNT] = {"COLOR", "STYLE", "LARGE", "ANIM", "LEDS", "SCREEN OFF", "HOLD", "KNOB ACCEL", "FX LATCH", "BPM LOCK",
                                               "SCALE LEDS", "MIDI OUT",
                                               "SPEAKER EQ", "USB LEVEL", "CLICK", "CLICK LEVEL", "COUNT-IN", "TRACKS",
-                                              "USB SERIAL",
+                                              "USB",
                                               "RESTORE LAST", "LOAD", "CALIBRATION", "INIT SYSTEM", "ABOUT"};
 /* 1.0.5: the MENU's tabs (ui_menu.c: ALGORITHM steps between them, PRESETS among one tab's rows; the editor gets a
  * row's tab after its MENU_DESC reply). A tab's rows follow each other in MI order (tests/ui_test.c checks it); at
@@ -66,7 +66,6 @@ static const menu_flag_t MENU_FLAGS[] = {
     {MI_ACCEL, PREF_ACCEL_OFF, {"ON", "OFF"}},        /* #52: ui_input.c accel (JIANT: ON by default) */
     {MI_LATCH, PREF_LATCH, {"OFF", "ON"}},
     {MI_BPMLOCK, PREF_BPM_LOCK, {"OFF", "ON"}},        /* #58: ON, DICE ALL keeps the tempo (0.6.67: SELECT alone never sets it) */
-    {MI_SERIAL, PREF_SERIAL_OFF, {"ON", "OFF"}},       /* #67: OFF, no serial console (usb_serial_apply) */
     {MI_RESTORE, PREF_RESTORE_ON, {"OFF", "ON"}},      /* 1.2, #130; JIANT 0.6.40: OFF (the default), no autosave, power-on as
                                                         * INIT SYSTEM; ON, the last session back (project.c) */
     {MI_SCLLED, PREF_SCALE_LEDS, {"OFF", "ON"}},      /* 1.2, Discussion #127: ON, the keys show the scale (ui_input.c) */
@@ -80,6 +79,10 @@ static const char *const SPK_EQ[3] = {"FLAT", "LOWCUT", "BASS+"};
 /* (0.7.0) USB LEVEL: MASTER (USB follows the knob, the default), FIXED (full level, the knob after: #42), then fixed
  * and attenuated (-6 .. -24 dB: a phone recording over USB clipped at the full level). ui.c usb_lvl, fx.c fx_usb_gain */
 static const char *const USBLVL_N[6] = {"MASTER", "FIXED", "-6 dB", "-12 dB", "-18 dB", "-24 dB"};
+/* (0.7.1) MENU > SYSTEM > USB (was USB SERIAL ON / OFF, #67): CONSOLE, the serial console with the stereo audio (the
+ * default, PREF_SERIAL_OFF clear: the descriptors as before); STEREO, audio + MIDI only (class 0: the old OFF); STEMS,
+ * audio as 8 channels (the six parts mono, the FX return L R; fx.c, usb.c), no console. ui.c usb_out */
+static const char *const USBOUT_N[3] = {"CONSOLE", "STEREO", "STEMS"};
 static const char *const HOLD_N[4] = {"0.3 s", "0.4 s", "0.5 s", "0.6 s"};   /* (the editor's names; the menu draws its own) */
 /* 1.1 (Discussion #131): the metronome (click.c) and the count-in (seq.c); ui.c ui_rec_prefs holds them */
 static const char *const CLICK_N[3] = {"OFF", "REC", "ON"};          /* REC: while a track is armed and playing */
@@ -102,12 +105,16 @@ static const char *const MIDIOUT_N[4] = {"KEYS", "CLOCK", "ALL", "OFF"};
 static uint32_t menu_serial_at;                        /* fm1_ms | 1 of the editor's change; 0 none */
 static void usb_serial_apply(void)
 {
-#if FELUCCA_CDC
     if (menu_serial_at && fm1_ms - menu_serial_at < 200u)
         return;
     menu_serial_at = 0;
-    usb_cdc_switch(FELUCCA_CDC_DEFAULT && !(ui_prefs & PREF_SERIAL_OFF));   /* (a FELUCCA_CDC_DEFAULT=0 build: off) */
+#if FELUCCA_CDC
+    usb_cdc_switch(FELUCCA_CDC_DEFAULT && !(ui_prefs & PREF_SERIAL_OFF) && !usb_out);   /* (a FELUCCA_CDC_DEFAULT=0 build: off) */
 #endif
+#if FELUCCA_UAC
+    usb_stems_switch(usb_out);                         /* (0.7.1) MENU > USB STEMS: the 8-channel device */
+#endif
+    fx_stems = (uint8_t)(usb_out != 0u);               /* (the parts write their stems from the next block) */
 }
 static const menu_flag_t *menu_flag(uint32_t row)
 {
@@ -122,7 +129,7 @@ static const menu_flag_t *menu_flag(uint32_t row)
 static uint32_t menu_n(uint32_t row)
 {
     return row == MI_COLOR ? NPALETTES : row == MI_LOWCUT || (row >= MI_CLICK && row <= MI_COUNTIN) || row == MI_LOAD ? 3u :
-           row == MI_HOLD || row == MI_MIDIOUT ? 4u : row == MI_USB ? 6u : row == MI_LEDS ? LEDS_COUNT : row == MI_SCROFF ? NELEM(SCROFF_N) : 2u;
+           row == MI_HOLD || row == MI_MIDIOUT ? 4u : row == MI_USB ? 6u : row == MI_SERIAL ? 3u : row == MI_LEDS ? LEDS_COUNT : row == MI_SCROFF ? NELEM(SCROFF_N) : 2u;
 }
 static uint32_t menu_get(uint32_t row)
 {
@@ -135,6 +142,7 @@ static uint32_t menu_get(uint32_t row)
     case MI_STYLE: return ui_style == ST_LINE;
     case MI_LOWCUT: return settings.lowcut % 3u;
     case MI_USB: return (ui_prefs & PREF_USB_FIXED) ? 1u + usb_lvl % 5u : 0u;
+    case MI_SERIAL: return usb_out ? 2u : (ui_prefs & PREF_SERIAL_OFF) ? 1u : 0u;
     case MI_HOLD: return settings_hold % 4u;
     case MI_SCROFF: return scr_get();
     case MI_CLICK: case MI_CLKLVL: case MI_COUNTIN: return rp_get(row - MI_CLICK);
@@ -157,6 +165,7 @@ static const char *menu_vname(uint32_t row, uint32_t v)
     case MI_STYLE: return STYLE_N[v & 1u];
     case MI_LOWCUT: return SPK_EQ[v % 3u];
     case MI_USB: return USBLVL_N[v % 6u];
+    case MI_SERIAL: return USBOUT_N[v % 3u];
     case MI_HOLD: return HOLD_N[v & 3u];
     case MI_CLICK: return CLICK_N[v % 3u];
     case MI_CLKLVL: return CLKLVL_N[v % 3u];
@@ -195,6 +204,10 @@ static void menu_put(uint32_t row, uint32_t v)
         usb_lvl = (uint8_t)(v ? (v - 1u) % 5u : 0u);
         fx_usb_fixed = v != 0u;
         fx_usb_gain = USB_GAIN[usb_lvl];
+        break;
+    case MI_SERIAL:                                /* (0.7.1) applied when the menu closes (usb_serial_apply) */
+        ui_prefs = (uint8_t)(v ? ui_prefs | PREF_SERIAL_OFF : ui_prefs & ~PREF_SERIAL_OFF);
+        usb_out = (uint8_t)(v == 2u);
         break;
     case MI_HOLD: settings_hold = (uint8_t)v; break;
     case MI_SCROFF: scr_put(v); break;                 /* (read every frame: ui.c scr_frame) */

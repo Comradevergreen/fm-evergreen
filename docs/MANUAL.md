@@ -1194,7 +1194,7 @@ closes it (settings are saved then).
 | AUDIO | CLICK LEVEL | LOW, MID, HIGH |
 | AUDIO | COUNT-IN | OFF, 1 BAR, 2 BARS |
 | AUDIO | TRACKS | **4** (default), 6 |
-| SYSTEM | USB SERIAL | ON, OFF (OFF helps macOS 13–15 see the USB audio input; USB-MIDI and the editor still work) |
+| SYSTEM | USB | CONSOLE (the serial console with stereo USB audio, the default; was USB SERIAL ON), STEREO (audio + MIDI only, class 0; was OFF: helps macOS 13–15 see the USB audio input), STEMS (0.7.1: an 8-channel audio input, see "Stems" below) |
 | SYSTEM | RESTORE LAST | **OFF** (default: no autosave, power-on at zero), ON (the last session back at power-on) |
 | SYSTEM | LOAD | ECO, LITE, **FULL** (default) |
 | SYSTEM | CALIBRATION | OCT+ opens HARDWARE CALIBRATION (teach each button and knob) |
@@ -1238,6 +1238,24 @@ faded): a photo of that screen helps when you report a problem.
   AT). Pitch bend, sustain (CC64), All Sound Off (CC120) and All Notes Off (CC123) work. A CC is recorded as automation
   like a knob move.
 - USB MIDI and audio name: "JIANT FM" (0.7.0; "JIANT Update" while a package installs). The web editor and the installer also accept a device still named "Felucca".
+
+### Stems (0.7.1)
+
+Two ways to get each track on its own, to post-process them one by one in a DAW:
+
+- **Over USB, live: MENU > SYSTEM > USB > STEMS.** The device re-enumerates as an 8-channel USB audio input at 44.1 kHz,
+  16 bit (set the DAW's input to the device, 8 channels): channels 1–6 are the six tracks, each mono with its LEVEL,
+  DIST, SLICER routing and mutes in and its PAN left out (what it adds to the mix, L + R halved); channels 7–8 are the
+  FX return in stereo (the DELAY, REVERB and CHORUS buses, the SLICER's when it is on). All before the master: no
+  leveler, limiter, CLIP or MASTER knob on them, so the sum of the eight is the mix as the buses hear it. USB LEVEL at
+  −6 dB or lower gives headroom. The serial console is off in this mode; USB-MIDI, the editor and the installer still
+  work. The speaker and the headphones play the master as always.
+- **From a backup, offline: the emulator page's "Stems".** Back up the FM-1 (the editor's or the installer's "Back up"),
+  open the emulator page, unfold "Stems", load the backup file, pick a song (its rows play once; a LOOP song once
+  round) or the live section with a bar count, and press Render. Each track is rendered alone with its own share of
+  the DELAY, REVERB and CHORUS (the other tracks' sends left out), plus the whole MIX (the master as the FM-1 plays it),
+  all the same length, 16-bit 44.1 kHz stereo, in one ZIP: T1.wav .. T6.wav and MIX.wav (a silent track is left out).
+  Faster than real time, no USB limits, nothing on the device.
 
 ---
 
@@ -1308,7 +1326,7 @@ Save music into that section, or change the row.
 **The keys feel inverted / a button does the wrong thing.** Run HARDWARE CALIBRATION: hold OCT− and OCT+ while powering
 on (or MENU > SYSTEM > CALIBRATION) and teach each button and knob. A piano key cancels.
 
-**USB audio input doesn't appear on macOS.** MENU > SYSTEM > USB SERIAL **OFF**.
+**USB audio input doesn't appear on macOS.** MENU > SYSTEM > USB **STEREO** (or STEMS).
 
 **SAVED (NO FLASH).** The flash chip wasn't detected; saves stay in RAM only. Power-cycle the device. If it persists,
 back up what you can with the editor and reinstall.

@@ -64,6 +64,8 @@ static uint32_t up_gen;                      /* bumped on every user bank change
 #define PREF_ACCEL_OFF 4u                      /* MENU > KNOB ACCEL OFF (#52; JIANT: ON by default, the bit now means OFF):
                                                 * fast turns of wide values x2..x16 */
 #define PREF_USB_FIXED 8u                      /* MENU > USB LEVEL FIXED: USB audio at the full level, MASTER after */
+#define usb_out (favorites.factory[15][21])   /* (0.7.1) MENU > USB STEMS: 1, USB audio as 8 channels (fx.c fx_stems, usb.c
+                                                 * usb_stems); 0 stereo (every older setting) */
 #define usb_lvl (favorites.factory[15][22])   /* (0.7.0) MENU > USB LEVEL past FIXED: 0 FULL, 1..4 = -6 -12 -18 -24 dB
                                                  * (with PREF_USB_FIXED; a byte no engine uses, 0 in older settings) */
 static const int16_t USB_GAIN[5] = {4096, 2048, 1024, 512, 256};   /* Q12: 0 -6 -12 -18 -24 dB */
