@@ -9,18 +9,19 @@ static const char *ROLEN[6] = {"DRUM", "BASS", "PAD", "LEAD", "ARP", "TEX"};
 static void nname(char *b, int n) { sprintf(b, "%s%d", NN[n % 12], n / 12 - 1); }
 int main(int argc, char **argv)
 {
-    uint32_t genre = argc > 1 ? (uint32_t)atoi(argv[1]) : 0, seed = argc > 2 ? (uint32_t)atoi(argv[2]) : 1;
-    uint32_t energy = argc > 3 ? (uint32_t)atoi(argv[3]) : 50, from = genre ? genre : 1, to = genre ? genre : NGENRE, g, k, i, l;
+    int rnd = argc > 1 && argv[1][0] == 'r';            /* "r": RANDOM over seeds 1..argv[2] (mutants among them) */
+    uint32_t genre = argc > 1 && !rnd ? (uint32_t)atoi(argv[1]) : 0, seed = argc > 2 ? (uint32_t)atoi(argv[2]) : 1;
+    uint32_t energy = argc > 3 ? (uint32_t)atoi(argv[3]) : 50, from = rnd ? 1 : genre ? genre : 1, to = rnd ? seed : genre ? genre : NGENRE, g, k, i, l;
     uint32_t steps = argc > 4 ? (uint32_t)atoi(argv[4]) : 32;
     ui_power_on(); go_home(); frames(4);
     ui_rec_prefs |= PREF_SIX >> 8; rp_apply();
     for (g = from; g <= to; g++) {
-        gp.genre = (uint8_t)g; gp.seed = (uint16_t)seed; gp.energy = (uint8_t)energy; gp.form = 0;
+        gp.genre = (uint8_t)(rnd ? 0 : g); gp.seed = (uint16_t)(rnd ? g : seed); gp.energy = (uint8_t)energy; gp.form = 0;
         for (k = 0; k < GP_N; k++) gp.amt[k] = GA_AUTO;
         gp.complex = 50; gp.swing = GA_AUTO; gp.human = 30;
         gen_go();
-        printf("\n=== %s  seed %u  bpm %d  key %s %s  swing %d  len %u  amt D%u B%u C%u A%u L%u  ba %u  prog %u  pads %u\n",
-               gs.g->name, seed, song.g[G_BPM], NN[gs.root % 12], N_SCALE[gs.scale], song.g[G_SWING], gs.len,
+        printf("\n=== %s%s  seed %u  bpm %d  key %s %s  swing %d  len %u  amt D%u B%u C%u A%u L%u  ba %u  prog %u  pads %u\n",
+               gs.g->name, gs.mutant ? " (MUTANT)" : "", rnd ? g : seed, song.g[G_BPM], NN[gs.root % 12], N_SCALE[gs.scale], song.g[G_SWING], gs.len,
                gs.amt[0], gs.amt[1], gs.amt[2], gs.amt[3], gs.amt[4], gs.ba, (unsigned)(gs.prog - PROG), gs.g->pads);
         for (k = 0; k < NTRK; k++) {
             track_t *t = &trk[k];

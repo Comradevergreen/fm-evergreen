@@ -765,7 +765,7 @@ antes).
 
 | Página | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 |---|---|---|---|---|
-| 1/3 | **GENRE**: RANDOM (la pantalla abre ahí) o uno de 43 | **SEED** 0000–9999 | **ENERGY** 0–100 % | **FORM**: LOOP, PARTS, SONG |
+| 1/3 | **GENRE**: RANDOM (la pantalla abre ahí; la mitad de sus tiradas son mutantes de dos géneros, con nombre A+B) o uno de 43 | **SEED** 0000–9999 | **ENERGY** 0–100 % | **FORM**: LOOP, PARTS, SONG |
 | 2/3 | **DRUMS** | **BASS** | **CHORDS** | **ARP** — cada uno OFF, 10–100 %, o **AUTO** (lo que pide el género) |
 | 3/3 | **LEAD** (igual) | **COMPLEX** 0–100 % | **SWING** AUTO o 0–100 % | **HUMAN** 0–100 % |
 

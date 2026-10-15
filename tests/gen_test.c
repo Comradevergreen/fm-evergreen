@@ -98,12 +98,12 @@ int main(void)
                         if (!in_scale(t, st->note[j])) notes_out++;
                         if (st->note[j] > 84u || st->note[j] < 20u) range_bad++;
                     }
-                    if (k == pd && st->n >= 3u && (st->note[0] < 46u || st->note[st->n - 1u] > 81u)) chords_bad++;
+                    if (k == pd && st->n >= 3u && (st->note[0] < 46u || st->note[st->n - 1u] > 81u)) { chords_bad++; printf("  chord range: %s seed %u step %u %u..%u\n", gs.g->name, s, i, st->note[0], st->note[st->n - 1u]); }
                 }
             }
             if (dr < NTRK && gs.act[RL_DRUM]) {         /* the kick anchored on the one where the genre has it */
-                const char *bd = DRUM_MAP[GENRE[g].drum][0];
-                if (bd[0] == 'X' && !(trk[dr].step[0].time == ST_NOTE && (trk[dr].step[0].hit & 1u))) kick_anchor_bad++;
+                const char *bd = DRUM_MAP[gs.g->drum][0];   /* (0.6.95: the map as this throw plays it) */
+                if (bd[0] == 'X' && !(trk[dr].step[0].time == ST_NOTE && (trk[dr].step[0].hit & 1u))) { kick_anchor_bad++; printf("  kick anchor: %s seed %u map %u\n", gs.g->name, s, gs.g->drum); }
             }
             if (bs < NTRK && gs.act[RL_BASS] && gs.ba != BA_ACID) {   /* the root at the chord changes */
                 const track_t *b = &trk[bs];
@@ -202,6 +202,31 @@ int main(void)
             for (k = 0; k < NTRK; k++) m += trk[k].p[P_MUTE] != 0;
             bad += gcheck("  after: the whole piece live (A), nothing muted", m == 0u && live.cur == 0);
         }
+    }
+    /* ---- (0.6.95) a throw its own: HOUSE over twelve seeds takes more than one drum map and more than one chord
+     * play; RANDOM over forty seeds throws mutants ("A+B") a third of the time or so, each playable and storable */
+    {
+        uint32_t seeds, maps = 0, plays = 0, mut = 0, bad_mut = 0;
+        uint8_t seen_m[64] = {0}, seen_p[16] = {0};
+        gen_reset();
+        for (seeds = 1; seeds <= 12u; seeds++) {
+            gen_with(1, seeds, 50, 0);
+            if (!seen_m[gs.g->drum]) { seen_m[gs.g->drum] = 1; maps++; }
+            if (!seen_p[gs.g->pads]) { seen_p[gs.g->pads] = 1; plays++; }
+        }
+        bad += gcheck("HOUSE x 12 seeds: two drum maps at least, two chord plays at least", maps >= 2u && plays >= 2u);
+        for (seeds = 1; seeds <= 40u; seeds++) {
+            gen_with(0, seeds, 50, 0);
+            if (gs.mutant) {
+                mut++;
+                if (!strchr(gs.g->name, '+') || gs.g->bpm_hi < gs.g->bpm_lo || strncmp(ui.msg, "GEN: ", 5)) bad_mut++;
+                project_capture(&proj_scratch);
+                if (!proj_pack(&proj_wire, &proj_scratch)) bad_mut++;
+                for (i = 0; i < 16u; i++) events_block(CTL);
+            }
+        }
+        if (mut < 8u || mut > 28u || bad_mut) printf("  mutants: %u of 40, %u bad\n", mut, bad_mut);
+        bad += gcheck("RANDOM x 40 seeds: 8..28 mutants, named A+B, a tempo range, storable, playing", mut >= 8u && mut <= 28u && !bad_mut);
     }
     /* ---- (0.6.94) the snare a snare: mostly noise, shorter than the factory kit's, its own FEEDBK */
     {

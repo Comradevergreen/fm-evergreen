@@ -726,7 +726,7 @@ pages of settings, **SELECT** turns the page, **KNOB 1–4** set the four values
 
 | Page | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 |---|---|---|---|---|
-| 1/3 | **GENRE**: RANDOM (the screen opens on it) or one of 43 | **SEED** 0000–9999 | **ENERGY** 0–100 % | **FORM**: LOOP, PARTS, SONG |
+| 1/3 | **GENRE**: RANDOM (the screen opens on it; half its throws are mutants of two genres, named A+B) or one of 43 | **SEED** 0000–9999 | **ENERGY** 0–100 % | **FORM**: LOOP, PARTS, SONG |
 | 2/3 | **DRUMS** | **BASS** | **CHORDS** | **ARP** — each OFF, 10–100 %, or **AUTO** (the genre's) |
 | 3/3 | **LEAD** (as above) | **COMPLEX** 0–100 % | **SWING** AUTO or 0–100 % | **HUMAN** 0–100 % |
 

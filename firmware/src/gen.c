@@ -69,7 +69,10 @@ static struct {
     uint32_t fm6, ba, vm;
     uint8_t role[NTRK], act[RL_N], trk_of[RL_N];
     uint32_t drum_fill;                                 /* the fill forced (a BUILD section) */
+    uint8_t mutant;                                     /* (0.6.95) RANDOM: a hybrid of two or three genres */
 } gs;
+static ggenre_t gmut;                                   /* (0.6.95) the genre as this throw plays it (its neighbours' parts) */
+static char gmut_name[20];
 
 static void gclear(step_t *s) { memset(s, 0, sizeof *s); s->time = ST_REST; }
 static int32_t gchord_deg(uint32_t step) { return gs.prog->deg[(step / gs.csteps) % gs.n]; }
@@ -141,6 +144,8 @@ static uint32_t gvoice(int32_t *n, uint32_t cnt, int32_t lo, int32_t hi, int32_t
     }
     if (bcost == 0x7FFFFFFF) for (j = 0; j < cnt; j++) best[j] = n[j];
     for (j = 1; j < cnt; j++) if (best[j] <= best[j - 1]) best[j] = best[j - 1] + (best[j] == best[j - 1] ? 12 : 0);
+    while (cnt && best[cnt - 1u] > hi && best[0] - 12 >= lo) for (j = 0; j < cnt; j++) best[j] -= 12;   /* (0.6.95: a power
+                                                         * chord's octave pushed over the top: the whole hand down) */
     for (j = 0; j < cnt; j++) { n[j] = best[j]; prev[j] = best[j]; }
     *np = cnt;
     return cnt;
@@ -231,6 +236,8 @@ static void gen_drums(track_t *t, uint32_t len)
             d = (int32_t)dens + OFF[l];
             lim = (uint32_t)clamp(d, 0, 255);
             if (lv <= 255u - lim) continue;
+            if (l >= 3u && lv < 230u && a < 100u && gr() % 100u >= 55u + a * 45u / 100u) continue;   /* (0.6.95) the hats
+                                                         * and the percussion thinned by the amount, a hit at a time */
             h |= 1u << l;
             if (lv >= 230u) acc |= 1u << l;
             else { lv_sum += lv; lv_n++; }
@@ -1044,10 +1051,47 @@ static void gen_make(void)
     gseed(GS_PICK);
     gs.gi = dice_force_style >= 0 ? (uint32_t)dice_force_style % NGENRE : gp.genre ? (gp.genre - 1u) % NGENRE : gr() % NGENRE;
     g = gs.g = &GENRE[gs.gi];
+    gmut = *g;
+    gs.mutant = 0;
+    if (!gp.genre && dice_force_style < 0 && gch(45)) {   /* (0.6.95) RANDOM: a mutant, the drums of one genre, the bass
+                                                         * of another, the rest from either; a name of its own: "EBM+JAZZ" */
+        const ggenre_t *b = &GENRE[gr() % NGENRE], *c = &GENRE[gr() % NGENRE];
+        uint32_t k2, n2 = 0;
+        gmut.drum = b->drum; gmut.kit = b->kit; gmut.ghosts = b->ghosts; gmut.hats = b->hats; gmut.fills = b->fills;
+        gmut.sd_micro = b->sd_micro; gmut.snd[GP_DRUMS] = b->snd[GP_DRUMS];
+        gmut.drum_pct = (uint8_t)(b->drum_pct > g->drum_pct ? b->drum_pct : g->drum_pct);
+        for (k2 = 0; k2 < 3u; k2++) gmut.bass[k2] = c->bass[k2];
+        gmut.bass_lo = c->bass_lo; gmut.kick_mode = c->kick_mode; gmut.bass_gate = c->bass_gate; gmut.snd[GP_BASS] = c->snd[GP_BASS];
+        if (gch(50)) {
+            for (k2 = 0; k2 < 3u; k2++) gmut.prog[k2] = b->prog[k2];
+            gmut.cbars = b->cbars; gmut.pads = b->pads; gmut.voicing = b->voicing; gmut.snd[GP_CHORDS] = b->snd[GP_CHORDS];
+        }
+        if (gch(50)) { gmut.arp[0] = c->arp[0]; gmut.arp[1] = c->arp[1]; gmut.snd[GP_ARP] = c->snd[GP_ARP]; }
+        if (gch(50)) { gmut.lead = b->lead; gmut.snd[GP_LEAD] = b->snd[GP_LEAD]; }
+        if (gch(50)) { gmut.rtype = b->rtype; gmut.dtime = b->dtime; gmut.wet = b->wet; gmut.dtype = b->dtype; }
+        gmut.scale[1] = b->scale[0]; gmut.scale[3] = c->scale[0];
+        gmut.tex = c->tex;
+        gmut.bpm_lo = (uint8_t)(((uint32_t)g->bpm_lo + b->bpm_lo) / 2u);
+        gmut.bpm_hi = (uint8_t)(((uint32_t)g->bpm_hi + b->bpm_hi) / 2u);
+        if (gmut.bpm_hi < gmut.bpm_lo + 4u) gmut.bpm_hi = (uint8_t)(gmut.bpm_lo + 4u);
+        gmut.swing = (uint8_t)(((uint32_t)g->swing + b->swing) / 2u);
+        for (k2 = 0; g->name[k2] && g->name[k2] != ' ' && k2 < 7u; k2++) gmut_name[n2++] = g->name[k2];   /* (the first words) */
+        gmut_name[n2++] = '+';
+        for (k2 = 0; b->name[k2] && b->name[k2] != ' ' && k2 < 6u; k2++) gmut_name[n2++] = b->name[k2];
+        gmut_name[n2] = 0;
+        gmut.name = gmut_name;
+        gs.mutant = 1;
+    }
+    /* (0.6.95) a throw its own: the drums from the map's family, the chords' play and a role's recipe from the neighbours */
+    if (gmut.drum < DM_NONE && gmut.drum != DM_IDM && gch(35)) gmut.drum = DM_ALT[gmut.drum][gr() % 2u];
+    if (gmut.pads <= CS_TRANCE && gch(35)) gmut.pads = CS_ALT[gmut.pads][gr() % 2u];
+    for (k = 1; k < GP_N; k++) if (gmut.snd[k] < SR_N && gch(30)) gmut.snd[k] = SR_ALT[gmut.snd[k]][gr() % 2u];
+    g = gs.g = &gmut;
     gs.root = (int16_t)grr(0, 11);
     gs.scale = (int16_t)g->scale[gr() % 4u];
     gs.energy = dice_force_energy >= 0 ? (uint32_t)dice_force_energy * 50u : gp.energy;
     gs.complex = gp.complex;
+    if (gs.mutant) gs.complex = gs.complex + 20u > 100u ? 100u : gs.complex + 20u;   /* (a mutant: more going on) */
     gs.human = (uint32_t)gp.human * (g->human + 30u) / 100u;
     gs.swing = gp.swing == GA_AUTO ? g->swing : gp.swing;
     for (k = 0; k < GP_N; k++) {
@@ -1140,6 +1184,10 @@ static void gen_make(void)
                 uint32_t len = gs.len;
                 if (gs.role[k] != r) continue;
                 if (r == RL_TEX && gs.complex > 60u && gch(40)) len = (uint32_t)grr(5, 7) * 2u + (gch(50) ? 1u : 0u);
+                if (gs.mutant && (r == RL_ARP || r == RL_LEAD) && gch(50)) {   /* (0.6.95) a mutant: a part in another metre */
+                    static const uint8_t ODD[4] = {12, 20, 24, 28};
+                    len = ODD[gr() % 4u];
+                }
                 load_begin(t, LOAD_PAT);
                 track_defaults_steps(t);
                 { uint32_t j; for (j = 0; j < NSTEP; j++) gclear(&t->step[j]); }   /* (no note left from before) */
