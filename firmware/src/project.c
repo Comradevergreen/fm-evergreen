@@ -1569,6 +1569,14 @@ static int project_restore_runtime(const project_t *input)
             const param_desc_t *d = param_desc_of(e, i);
             t->p[i] = (int16_t)param_fit(d, s->p[i]);
         }
+        if (!FELUCCA_FM4) {   /* (0.6.92) HUMAN is one amount (P_HVEL): a project of 0.6.87 .. 0.6.91 with VEL, TIME and
+                               * GATE apart keeps the largest of them (not DIGITAL's operator slots, FELUCCA_FM4) */
+            int16_t m = t->p[P_HVEL];
+            if (t->p[P_HTIM] < m) m = t->p[P_HTIM];
+            if (t->p[P_HGAT] < m) m = t->p[P_HGAT];
+            t->p[P_HVEL] = m;
+            t->p[P_HTIM] = t->p[P_HGAT] = 127;
+        }
         t->preset = (uint8_t)(ENGINES[e]->npresets ? (s->preset >= PROJ_DEF_KEEP ? 0u : s->preset) % ENGINES[e]->npresets : 0u);
         memcpy(t->step, s->step, sizeof t->step);
         proj_steps(t->step);

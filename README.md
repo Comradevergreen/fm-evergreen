@@ -15,18 +15,21 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.6.91).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.6.92).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
-> ⚡ **New in 0.6.85 – 0.6.91: a song generator you steer, a sequencer that breathes, a delay that feeds back.**
+> ⚡ **New in 0.6.85 – 0.6.92: a song generator you steer, a compact sequencer that breathes, a delay that feeds back.**
 > - **GEN (HOME + SELECT)**: a screen of three pages — GENRE (43 genres or RANDOM), SEED, ENERGY, FORM (loop, parts,
 >   a club song); how much DRUMS, BASS, CHORDS, ARP, LEAD; COMPLEX, SWING, HUMAN. OCT+ makes the piece (again: a new
 >   seed), the knobs re-make it with one part changed. Drums from priority maps, ~50 bass archetypes written against
 >   the kick, chords with a quality each, motifs in phrases, sounds by recipe.
-> - **Off the grid**: **REC Q** keeps where you played each note (up to half a step early or late) and **SEQ > TIMING**
+> - **A compact sequencer** (0.6.92): 11 SEQ pages instead of 15, the same powers. **EVERY** on each step says on
+>   which loops its components play (1:2 … 4:4, 1:8, FIRST, !FIRST, SKIP): an arpeggio every fourth bar, a jump only
+>   the first time. **ARP RATE** in note values (1/32, 1/32T, 1/64 …). **TRACK**: PITCH, CHANCE, one **HUMAN** amount
+>   (velocity, timing, gate, decay and release vary a little every loop) and REC Q.
+> - **Off the grid**: **REC Q** keeps where you played each note (up to half a step early or late) and **NOTE > MICRO**
 >   moves any step by sixteenths; early notes really play early.
-> - **HUMAN**: velocity, timing and gate vary a little every loop, per track.
-> - **STRETCH · REPEAT**: stretch a sequence x2 … x8 or squeeze it, clone a pattern of any length up to 64 steps,
->   NUDGE it a step.
+> - **STRETCH · REPEAT** act as the knob turns: stretch a sequence x2 … x8 or squeeze it, clone a pattern of any
+>   length up to 64 steps, NUDGE it a step, **ROTATE** where it is read from.
 > - **A delay to play**: ANALOG (FEEDBK past 100 % self-oscillates, saturating softly; resonant TONE) or DIGITAL
 >   (clean); **PING-PONG** across the stereo; with TONE in the middle the repeats are copies of what went in; tape
 >   **MOD**.
@@ -115,7 +118,7 @@ audio CPU budget, the signature shown at power-on is 428 bytes. An instrument th
 
 ![HOME, DICE ALL, ARRANGE, DRUM-X, PUNCH-IN FX and TRACKS · LOAD](docs/jiant-screens.png)
 
-*HOME with its six beings, the song in ARRANGE, SEQ > TIMING with the lead off the grid, STRETCH, the delay feeding
+*HOME with its six beings, the song in ARRANGE, the piano roll with the lead off the grid, STRETCH, the delay feeding
 back and the DRUM-X colony, exactly as the firmware draws them while a song plays (frames of the presentation song).*
 
 - **Thermal palette**: values, curves, steps, hits and notes are coloured by intensity (cyan → blue → violet → red →
@@ -271,7 +274,7 @@ Turning fast sweeps the whole range; turning slowly is fine adjustment. Turn it 
 | --- | --- | --- |
 | **FX** | F3 G3 A3 REPEAT 1/8, 1/16, 1/32; B3 LPF; C4 HPF. MIDI punch-ins: D4 OCT−, E4 OCT+, F4 1/2 TEMPO, G4 DEC−, A4 DEC+, B4 C5 STUTTER 1/8 · 1/16, D5 ATK+ (everything's attack up, drums included), E5 ARP (drums: a new fill on every press), F5 RANDOM (notes and steps). Everything comes in on the transport's next 1/16. Black keys 1–6: mute T1–T6; A#4 chooses which tracks the MIDI ones affect (all, synths, drums). **Automate**: with REC armed and playing (not in a song), the note effects D4–F5 you hold are recorded in the section's lane (64 steps of 1/16, one a step: the lowest held); repeats, filters, mutes and latched effects are not; G5 erases it where the playhead passes, or entirely with the transport stopped | FILTER, CRUSH, THROW, DEPTH |
 | **ARP TRNS** | With the ARP mode on TRNS, the keys (and incoming MIDI) transpose the track's sequence by their interval from C4, without playing notes; the transposition stays on release | — |
-| **SEQ > SHIFT** | OFFSET shifts the track's sequence from −32 to +32 steps (within LEN; live recording writes where you hear it) and PITCH transposes it ±24 semitones (not on kits). Both can be automated and are also on the SCL layer (KNOB 3 / 4) | OFFSET, PIT |
+| **SEQ > STRETCH · TRACK** | ROTATE (STRETCH, KNOB 4) reads the track's sequence from another step, −32 to +32 (within LEN; live recording writes where you hear it) and PITCH (TRACK, KNOB 1) transposes it ±24 semitones (not on kits). Both can be automated and are also on the SCL layer (KNOB 3 / 4) | ROTATE, PIT |
 | **REC + another button** | Hold REC and press FX, EDIT, ENV, LFO, SCL, ARP or GLO: clears that part's automation on the selected track (knob movements and per-step locks; stored values stay). FX: the punch-in lane too. GLO: levels and pan of the 6 tracks. The other way round (FX held then REC) arms recording, as always | — |
 | **SEQ + REC** | Hold SEQ and press REC: CLEAR ALL SEQUENCES? (OCT+ confirms): clears the steps and automation of the 6 tracks and the punch-in lane | — |
 | **LFO** | — (**MACRO** layer: below, where each macro goes) | M1, M2, M3, M4 |
@@ -395,7 +398,8 @@ makes the kick pull the rest down. The leveler is always on: no need to babysit 
 ### 7. Sequencing and modulation
 - **SEQ**: steps, piano roll, per-step locks, chance, ratchets. **REC** arms live recording; moving a knob while it
   plays records automation.
-- **SEQ > SHIFT**: OFFSET shifts the sequence in time, PITCH transposes it. **SCL**: ROOT and SCALE apply to every track
+- **SEQ > TRACK**: PITCH transposes the sequence, CHANCE thins it, HUMAN loosens it; STRETCH's ROTATE reads it from
+  another step. **SCL**: ROOT and SCALE apply to every track
   (and to the RESO reverb).
 - **LFO > MSEQ**: a 16-step modulation sequencer. KNOB 1 picks the step, KNOB 2 its level, LEN and SLEW its length and
   smoothness; send it to a destination from MOD (SRC STEP).
@@ -520,6 +524,31 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### v0.6.92
+- **A compact sequencer: 11 SEQ pages instead of 15, the same powers** (an audit of every parameter: what each does,
+  what was twice, what did nothing). The order: STEP, PATTERN, NOTE, STRETCH, COMP, COMP 2, TRACK, PLAYHEADS,
+  AUTOMATION, AUTO LIST, MUTATE.
+- **EVERY** (COMP and COMP 2, KNOB 4): one setting a step saying on which loops of the pattern its components play:
+  ALWAYS, 1:2, 2:2, 1:3, 2:3, 3:3, 1:4 … 4:4, 1:8, FIRST, !FIRST, SKIP. An arpeggio that comes in every fourth bar,
+  an echo on the odd loops, a JUMP only the first time (it is JUMP / REV's TIMES too). It replaces the WHEN page (its
+  A read as is; a step saved with a B other than ALWAYS reads as another EVERY: set it again) and the components' lane
+  C.LEN.
+- **ARP RATE in musical time** (COMP, KNOB 4): x1 (a note a step), 1/32, 1/32T, 1/64, 1/64T, 1/128 — the card says the
+  note value for the track's DIV. KNOB 3 ORDER and range as one list (UP … RND over 1 … 4 OCT; SCALE 3 … 15 DEG).
+- **TRACK** (it was SHIFT + HUMAN): PITCH, CHANCE, **HUMAN** and REC Q. HUMAN is one amount: each note's velocity
+  (±50 at 100 %), start (up to 40 ms late), length (±40 %) and its envelope's DECAY and RELEASE (±20) vary a little
+  every loop. Projects saved with VEL / TIME / GATE load with the smallest of the three. SHIFT's OFFSET is **ROTATE** on
+  the STRETCH page (and the SCL layer's KNOB 3).
+- **STRETCH and REPEAT act as the knob turns** (no OCT+), always from the sequence as it was before the first turn
+  (x2 then x4 is x4; back to the middle: back to it); the message says LEN before > after; UNDO as ever. KNOB 3 NUDGE,
+  KNOB 4 ROTATE.
+- **NOTE** gained **MICRO** (KNOB 4; the TIMING page's OFFSET): the focused step's place off the grid by sixteenths.
+  The TIMING page is gone; REC Q is on TRACK. The step's LEN is the TIE on STEP (the WHEN page's LEN is gone).
+- **AUTOMATION** and **MUTATE** say what they are: a hint line on entering, MUTATE's page the selected track's next
+  32 bars as one strip (SOUND / PATTERN marks, the playhead) and a line a knob.
+- GEN writes HUMAN as the one amount. The tests (`tests/ratchet_test.c`, `tests/ui_test.c`) cover EVERY, RATE, the
+  TRACK page, HUMAN's spread and STRETCH / REPEAT on the turn.
 
 ### v0.6.91
 - **GEN: the song generator, rewritten, with a screen (HOME + SELECT).** Three pages: **GENRE** (43: HOUSE, DEEP

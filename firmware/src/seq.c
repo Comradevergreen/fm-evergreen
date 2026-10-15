@@ -980,20 +980,26 @@ static uint32_t trk_chance(const track_t *t, const step_t *s)
 {
     return step_chance(s) * (127u - (uint32_t)clamp(t->p[P_TCHAN], 0, 127)) / 127u;
 }
-/* (0.6.82) a component's WHEN: it plays this loop of the pattern */
-static int cw_on(const track_t *t, uint32_t w)
+/* (0.6.92) the step's EVERY: its components play this loop of the pattern (ALWAYS; a of b loops; the first; not the
+ * first; never) */
+static int every_on(const track_t *t, const step_t *s)
 {
-    return w == CW_ALWAYS || (w == CW_ODD && !(t->loops & 1u)) || (w == CW_EVEN && (t->loops & 1u));
+    const uint8_t *e = EV_AB[ST_EVERY(s) % EV_N];
+    if (!e[0])
+        return e[1] == 0u || (e[1] == 1u ? t->loops == 0u : e[1] == 2u ? t->loops != 0u : 0);
+    return t->loops % e[1] == e[0] - 1u;
 }
 /* (0.6.82) the step's component of a type lo..hi that plays this loop: the first one's, else the second's; 0 none
  * (*a: its arguments) */
 static uint32_t cp_get(const track_t *t, const step_t *s, uint32_t lo, uint32_t hi, uint8_t *a)
 {
-    if (s->comp >= lo && s->comp <= hi && cw_on(t, CW_OF(s, 0u))) {
+    if (!every_on(t, s))
+        return 0;
+    if (s->comp >= lo && s->comp <= hi) {
         if (a) *a = s->carg;
         return s->comp;
     }
-    if (s->comp2 >= lo && s->comp2 <= hi && cw_on(t, CW_OF(s, 1u))) {
+    if (s->comp2 >= lo && s->comp2 <= hi) {
         if (a) *a = s->carg2;
         return s->comp2;
     }
@@ -1011,9 +1017,11 @@ static int cp_trig_cond(const track_t *t, uint32_t a)
 /* every TRIG of the step that plays this loop lets it play (any other step: yes) */
 static int cp_trig_ok(const track_t *t, const step_t *s)
 {
-    if (s->comp == CP_TRIG && cw_on(t, CW_OF(s, 0u)) && !cp_trig_cond(t, s->carg))
+    if (!every_on(t, s))
+        return 1;
+    if (s->comp == CP_TRIG && !cp_trig_cond(t, s->carg))
         return 0;
-    return !(s->comp2 == CP_TRIG && cw_on(t, CW_OF(s, 1u)) && !cp_trig_cond(t, s->carg2));
+    return !(s->comp2 == CP_TRIG && !cp_trig_cond(t, s->carg2));
 }
 /* (0.6.42) FILL: the FX button held (ui_input.c sets it each pass) */
 static volatile uint8_t seq_fill;
@@ -1342,8 +1350,9 @@ static int chord_auto(const track_t *t, uint32_t len)
     return nx->time == ST_NOTE && nx->n;
 }
 
-/* (0.6.87) HUMAN: SEQ > HUMAN's VEL / TIME / GATE amount (0..127; stored 127 - it: 127 none); its own random numbers
- * (never libc's rng: the UI's dice keep theirs) */
+/* (0.6.87) HUMAN: SEQ > TRACK's HUMAN amount (0..127; stored 127 - it in P_HVEL: 127 none; 0.6.92: one knob, it moves
+ * each note's velocity, start, gate, decay and release); its own random numbers (never libc's rng: the UI's dice keep
+ * theirs) */
 static uint32_t hum_rs = 0x2545F491u;
 static uint32_t hum_rnd(void) { hum_rs ^= hum_rs << 13; hum_rs ^= hum_rs >> 17; hum_rs ^= hum_rs << 5; return hum_rs; }
 static uint32_t hum_amt(const track_t *t, uint32_t id)
@@ -1352,7 +1361,7 @@ static uint32_t hum_amt(const track_t *t, uint32_t id)
     return 127u - (uint32_t)clamp(t->p[id], 0, 127);
 }
 static int32_t hum_pm(uint32_t r) { return (int32_t)(hum_rnd() % (2u * r + 1u)) - (int32_t)r; }   /* -r .. r */
-#define HUM_TMAX (FS * 30u / 1000u)                 /* TIME at 100 %: up to 30 ms late */
+#define HUM_TMAX (FS * 40u / 1000u)                 /* at 100 %: up to 40 ms late (0.6.92: was 30) */
 static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint32_t period, uint32_t skip)
 {
     uint32_t i, j, gate = period * (uint32_t)t->p[P_SGATE] / 128u;
@@ -1520,11 +1529,13 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
     if (!slide_in)
         seq_release(t);
     t->ss_n = t->ss_i = 0;
-    {   /* (0.6.87) HUMAN: each note's velocity up to +-38 at 100 %, the gate +-40 %, the step up to 30 ms late */
-        uint32_t hv = hum_amt(t, P_HVEL), hg = hum_amt(t, P_HGAT), ht = hum_amt(t, P_HTIM);
+    {   /* (0.6.87) HUMAN (0.6.92: one amount): each note's velocity up to +-50 at 100 %, the gate +-40 %, the step up to
+         * 40 ms late, its DEC and REL up to +-20 steps of their knobs (voice_start takes hum_env) */
+        uint32_t hv = hum_amt(t, P_HVEL), hg = hv, ht = hv;
+        t->hum_env = (int8_t)(hv ? hum_pm(hv * 20u / 127u) : 0);
         if (hv)
             for (i = 0; i < m; i++)
-                vv[i] = (uint8_t)clamp((int32_t)vv[i] + hum_pm(hv * 38u / 127u), 1, 127);
+                vv[i] = (uint8_t)clamp((int32_t)vv[i] + hum_pm(hv * 50u / 127u), 1, 127);
         if (hg && hits == 1u)
             gate = (uint32_t)clamp((int32_t)gate + (int32_t)gate / 100 * hum_pm(hg * 40u / 127u), 16, 0x7FFFFFFF);
         if (ht && hits == 1u && !bend && !slide_in) {   /* (late, never early: the step can't play before it starts) */

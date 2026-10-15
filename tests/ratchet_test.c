@@ -463,8 +463,8 @@ static int components(void)
     ok = str_eq(cur_page()->title, "COMP") && comp_view() == COMP_OFF;
     turn(EN_K2, 3);                                       /* OFF CHANCE RATCH NOTES */
     ok &= t->step[0].comp == CP_ARPN && t->step[0].carg == CP_ARG(0u, 2u, 0u);
-    turn(EN_K3, 1); turn(EN_K4, 1);                       /* DOWN; x4 over two octaves */
-    ok &= CP_ORD(t->step[0].carg) == 1u && CP_RATE(t->step[0].carg) == 2u && CP_RNG(t->step[0].carg) == 1u;
+    turn(EN_K3, 4); turn(EN_K3, 1); turn(EN_K4, 1);       /* (0.6.92) KNOB 3 ORDER x RANGE: DOWN over two octaves; KNOB 4 RATE x6 */
+    ok &= CP_ORD(t->step[0].carg) == 1u && CP_RATE(t->step[0].carg) == 3u && CP_RNG(t->step[0].carg) == 1u;
     turn(EN_K2, 2);                                       /* SCALE: the values kept */
     ok &= t->step[0].comp == CP_ARPS && CP_ORD(t->step[0].carg) == 1u;
     turn(EN_K2, 1); turn(EN_K3, 4); turn(EN_K3, 1);      /* TRIG 1:2 .. 2:4 (4 detents a pass at most) */
@@ -473,7 +473,7 @@ static int components(void)
     ok &= !t->step[0].comp && step_chance(&t->step[0]) == 60u && comp_view() == COMP_CHANCE;
     turn(EN_K1, 1); frame();
     ok &= ui.cursor == 1u && comp_view() == COMP_OFF;
-    bad += check("SEQ > COMP: TYPE, ORDER, RATE x RANGE, TRIG's condition, CHANCE takes the component away", ok);
+    bad += check("SEQ > COMP: TYPE, ORDER x RANGE, RATE, TRIG's condition, CHANCE takes the component away", ok);
     return bad;
 }
 
@@ -664,13 +664,13 @@ static int components2(void)
         turn(EN_K2, 4); turn(EN_K2, 2);                   /* .. JUMP */
         turn(EN_K3, 9);
         ok &= t->step[0].comp == CP_JUMP && t->step[0].carg == 9u;
-        turn(EN_K4, 1); frame();                          /* (0.6.62) TIMES x1, the step kept */
-        ok &= CP_TIMES(CP_JUMP, t->step[0].carg) == 1u && CP_JTO(t->step[0].carg) == 9u && strstr(ui.col[3], "x1") != 0;
+        turn(EN_K4, 1); frame();                          /* (0.6.92) EVERY 1:2, the step kept */
+        ok &= ST_EVERY(&t->step[0]) == EV_1_2 && CP_JTO(t->step[0].carg) == 9u && strstr(ui.col[3], "1:2") != 0;
         turn(EN_K3, -2);
-        ok &= CP_TIMES(CP_JUMP, t->step[0].carg) == 1u && CP_JTO(t->step[0].carg) == 7u;
+        ok &= ST_EVERY(&t->step[0]) == EV_1_2 && CP_JTO(t->step[0].carg) == 7u;
         turn(EN_K2, 3);                                   /* KILL */
         ok &= t->step[0].comp == CP_KILL && comp_view() == COMP_KILL;
-        bad += check("SEQ > COMP: RAND .. KILL on KNOB 2, JUMP's step on KNOB 3, its TIMES on KNOB 4", ok);
+        bad += check("SEQ > COMP: RAND .. KILL on KNOB 2, JUMP's step on KNOB 3, EVERY on KNOB 4", ok);
     }
     return bad;
 }
@@ -697,34 +697,34 @@ static int components3(void)
     project_store_t st;
     static const uint8_t P1[1] = {60};
     /* WHEN: OCT +1 on odd loops (1:2): 72 60 72 60; on even (2:2): 60 72 ..; SKIP: never */
-    t = pat(1, P1); t->step[0].comp = CP_OCT; t->step[0].carg = 0; t->step[0].cwhen = CW_ODD;
+    t = pat(1, P1); t->step[0].comp = CP_OCT; t->step[0].carg = 0; ST_EVERY_SET(&t->step[0], EV_1_2);
     n = run_steps(t, 4, nt, sizeof nt);
     ok = n == 4u && nt[0] == 72u && nt[1] == 60u && nt[2] == 72u && nt[3] == 60u;
-    t = pat(1, P1); t->step[0].comp = CP_OCT; t->step[0].carg = 0; t->step[0].cwhen = CW_EVEN;
+    t = pat(1, P1); t->step[0].comp = CP_OCT; t->step[0].carg = 0; ST_EVERY_SET(&t->step[0], EV_2_2);
     n = run_steps(t, 4, nt, sizeof nt);
     ok &= n == 4u && nt[0] == 60u && nt[1] == 72u && nt[2] == 60u && nt[3] == 72u;
-    t = pat(1, P1); t->step[0].comp = CP_OCT; t->step[0].carg = 0; t->step[0].cwhen = CW_SKIP;
+    t = pat(1, P1); t->step[0].comp = CP_OCT; t->step[0].carg = 0; ST_EVERY_SET(&t->step[0], EV_SKIP);
     n = run_steps(t, 3, nt, sizeof nt);
     ok &= n == 3u && nt[0] == 60u && nt[1] == 60u && nt[2] == 60u;
-    bad += check("WHEN: OCT on 1:2 loops, on 2:2 loops, SKIP never", ok);
+    bad += check("EVERY: OCT on 1:2 loops, on 2:2 loops, SKIP never", ok);
     /* two components: ECHO x2 and OCT +1: both, two notes a step an octave up; the second one's WHEN its own */
     t = pat(1, P1); t->step[0].comp = CP_ECHO; t->step[0].carg = 0; t->step[0].comp2 = CP_OCT; t->step[0].carg2 = 0;
     n = run_steps(t, 2, nt, sizeof nt);
     ok = n == 4u && nt[0] == 72u && nt[1] == 72u && nt[2] == 72u && nt[3] == 72u;
     t = pat(1, P1); t->step[0].comp = CP_ECHO; t->step[0].carg = 0; t->step[0].comp2 = CP_OCT; t->step[0].carg2 = 0;
-    t->step[0].cwhen = CW_EVEN << 2;
+    ST_EVERY_SET(&t->step[0], EV_2_2);                    /* (0.6.92: EVERY is the step's: both on the even loops) */
     n = run_steps(t, 2, nt, sizeof nt);
-    ok &= n == 4u && nt[0] == 60u && nt[1] == 60u && nt[2] == 72u && nt[3] == 72u;
-    bad += check("two components a step: ECHO x2 + OCT +1 together; the second's WHEN on its own", ok);
+    ok &= n == 3u && nt[0] == 60u && nt[1] == 72u && nt[2] == 72u;
+    bad += check("two components a step: ECHO x2 + OCT +1 together; EVERY 2:2 holds both back on the odd loops", ok);
     /* the one that silences wins: OCT and TRIG FIRST: the octave on the first loop, then nothing */
     t = pat(1, P1); t->step[0].comp = CP_OCT; t->step[0].carg = 0; t->step[0].comp2 = CP_TRIG; t->step[0].carg2 = 10;
     n = run_steps(t, 3, nt, sizeof nt);
     ok = n == 1u && nt[0] == 72u;
-    t->step[0].cwhen = CW_SKIP << 2;                      /* (the TRIG skipped: it plays) */
+    ST_EVERY_SET(&t->step[0], EV_SKIP);                   /* (both skipped: it plays, as written) */
     seq_start();
     n = run_steps(t, 3, nt, sizeof nt);
-    ok &= n == 3u;
-    bad += check("a TRIG beside an OCT: the TRIG keeps it silent (FIRST: one loop only); the TRIG SKIPped: every loop", ok);
+    ok &= n == 3u && nt[0] == 60u;
+    bad += check("a TRIG beside an OCT: the TRIG keeps it silent (FIRST: one loop only); EVERY SKIP: every loop, as written", ok);
     /* DIV: ECHO x3 a step/4 apart: the third at half the step (shared out: at two thirds); RATCH x4 at 1/2: two */
     nb = step_len(pat(1, P1), 0) / CTL;
     t = pat(1, P1); t->step[0].comp = CP_ECHO; t->step[0].carg = 1; t->step[0].ctime = 3;
@@ -779,7 +779,7 @@ static int components3(void)
         ok &= n == 4u && nt[0] == kick && nt[1] == snr && nt[2] == kick && nt[3] == snr;
         bad += check("on a drum kit: OCT tunes the hit, BEND bends it, ARP NOTES plays its sounds in turn", ok);
     }
-    /* SEQ > COMP 2 and WHEN: their knobs */
+    /* SEQ > COMP 2: its knobs; (0.6.92) KNOB 4 EVERY there, RATE (DIV) on COMP for an ECHO */
     ui_power_on();
     t = TSEL;
     t->step[0] = (step_t){{60, 64, 67}, 3, ST_NOTE, 0, 100};
@@ -790,14 +790,15 @@ static int components3(void)
     ok &= t->step[0].comp2 == CP_ARPN && !t->step[0].comp;
     turn(EN_K2, 4); turn(EN_K2, 4);                       /* .. ECHO */
     ok &= t->step[0].comp2 == CP_ECHO;
-    turn(EN_K4, 1); turn(EN_K4, 1); turn(EN_K4, 1);       /* DIV 1/4 */
-    ok &= CT_DIV(&t->step[0]) == 3u;
-    ui.page++; page_entered(); frame();
-    ok &= str_eq(cur_page()->title, "WHEN") && comp_slot() == 2u;
-    turn(EN_K3, 1); turn(EN_K3, 1);                       /* B 2:2 */
-    turn(EN_K4, 1); turn(EN_K4, 1); turn(EN_K4, 1); turn(EN_K4, 1);   /* LEN 4/16 */
-    ok &= CW_OF(&t->step[0], 1u) == CW_EVEN && CW_OF(&t->step[0], 0u) == CW_ALWAYS && CT_LEN(&t->step[0]) == 4u;
-    bad += check("SEQ > COMP 2: a second component (ECHO, DIV 1/4); WHEN: B on 2:2, LEN 4/16", ok);
+    turn(EN_K4, 1); turn(EN_K4, 1); turn(EN_K4, 1);       /* EVERY: 1:2 2:2 1:3 */
+    ok &= ST_EVERY(&t->step[0]) == EV_1_3 && strstr(ui.col[3], "1:3") != 0;
+    ui.page--; page_entered(); frame();
+    ok &= str_eq(cur_page()->title, "COMP") && comp_slot() == 0u;
+    turn(EN_K2, 4); turn(EN_K2, 4); turn(EN_K2, 3);       /* OFF .. ECHO on the first */
+    ok &= t->step[0].comp == CP_ECHO;
+    turn(EN_K4, 1); turn(EN_K4, 1); turn(EN_K4, 1);       /* RATE: a step/4 (DIV) */
+    ok &= CT_DIV(&t->step[0]) == 3u && strstr(ui.col[3], "1/64") != 0;
+    bad += check("SEQ > COMP 2: a second component (ECHO), EVERY 1:3 on KNOB 4; COMP: an ECHO's RATE 1/64 (a step/4 at 1/16)", ok);
     return bad;
 }
 
@@ -811,7 +812,7 @@ static int human(void)
     for (pass = 0; pass < 3u; pass++) {
         track_t *t = one_step(1, 0);
         uint32_t len = step_len(t, 0), b, n = 0, lo = 999999, hi = 0, vlo = 127, vhi = 0, cmax = len / 3u, early = 0;
-        uint32_t cap = FS * 30u / 1000u < cmax ? FS * 30u / 1000u : cmax, apart = 0, lo_b = 0;
+        uint32_t cap = FS * 40u / 1000u < cmax ? FS * 40u / 1000u : cmax, apart = 0, lo_b = 0;   /* (0.6.92: 40 ms) */
         if (pass == 2u) { t->p[P_VOICE] = V_POLY; t->step[0].n = 3; t->step[0].note[1] = 64; t->step[0].note[2] = 67; }
         t->p[P_HVEL] = pass ? 0 : 127;                  /* (100 %, 0 %) */
         t->p[P_HTIM] = pass ? 0 : 127;
@@ -839,9 +840,9 @@ static int human(void)
             bad += check("HUMAN 0 %: every note on its step, as written (velocity 100)", n >= 60u && hi == 0u && vlo == 100u && vhi == 100u);
         else if (pass == 1u) {
             printf("  human: start %u .. %u samples late (cap %u), velocity %u .. %u\n", lo, hi, cap, vlo, vhi);
-            bad += check("HUMAN 100 %: notes up to 30 ms late (a third of a step), never early; velocities spread +-38",
-                         n >= 60u && !early && hi > cap / 2u && hi <= cap + CTL && lo < cap / 3u && vlo >= 62u && vhi <= 127u &&
-                         vhi - vlo > 30u);
+            bad += check("HUMAN 100 %: notes up to 40 ms late (a third of a step), never early; velocities spread +-50",
+                         n >= 60u && !early && hi > cap / 2u && hi <= cap + CTL && lo < cap / 3u && vlo >= 50u && vhi <= 127u &&
+                         vhi - vlo > 40u);
         } else
             printf("  chord: n %u apart %u early %u\n", n, apart, early), bad += check("HUMAN 100 % on a chord: its notes together (one start), each its own velocity", n >= 180u && !apart && !early);
     }

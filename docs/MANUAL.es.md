@@ -88,7 +88,7 @@ Los nombres de abajo son los que usa el firmware (la pantalla HARDWARE CALIBRATI
 | --- | --- |
 | **SELECT** (encoder) | Solo: **recorre las páginas de la sección en la que estás** (las de EDIT en una página EDIT, las de FX en una de FX …), una por paso, sin dar la vuelta; en **HOME** abre **GEN**, el generador de temas (como HOME + SELECT). Con un botón mantenido, los **dados** de ese botón: **HOME** + SELECT **GEN**, **EDIT** + SELECT el sonido, **SEQ** + SELECT la secuencia, **LFO** + SELECT el LFO, **FX** + SELECT los efectos. **GLO** + SELECT: el tempo. Cualquier otro botón de página + SELECT: sus páginas. |
 | **ALGORITHM** (encoder) | Elige la pista desde cualquier página: T1–T4, o T1–T6 con TRACKS 6. En el MENU: cambia de pestaña. |
-| **PRESETS** (encoder) | En HOME, PRESETS y las páginas de sonido: recorre sonidos (los presets de fábrica de cada motor y después tus presets de usuario). En las páginas de pasos (STEP, COMP, PATTERN, AUTOMATION, SHIFT): mueve el cursor de paso. En las páginas de lista (USER, PROJECT, ARRANGE, TOOLS, AUTO LIST): mueve la selección. **Mantené un botón de página y girá SELECT** (o PRESETS) para saltar directo por las páginas de ese botón. |
+| **PRESETS** (encoder) | En HOME, PRESETS y las páginas de sonido: recorre sonidos (los presets de fábrica de cada motor y después tus presets de usuario). En las páginas de pasos (STEP, COMP, PATTERN, AUTOMATION, TRACK): mueve el cursor de paso; en NOTE, el foco. En las páginas de lista (USER, PROJECT, ARRANGE, TOOLS, AUTO LIST): mueve la selección. **Mantené un botón de página y girá SELECT** (o PRESETS) para saltar directo por las páginas de ese botón. |
 | **KNOB 1–4** | Las cuatro tarjetas (columnas) de la pantalla. Con una capa mantenida, las perillas propias de la capa. Girar rápido recorre todo el rango, despacio ajusta fino (MENU > KNOB ACCEL lo desactiva). |
 | **MASTER** | El volumen de salida. |
 
@@ -105,7 +105,7 @@ Los nombres de abajo son los que usa el firmware (la pantalla HARDWARE CALIBRATI
 | **GLO** | MIXER → GLOBAL → SYSTEM → MIXER. | Capa **GLO**: mutes, solos, niveles, tap tempo, UNDO. |
 | **SAVE** | Páginas SAVE (primera pulsación: USER). | Capa **SAVE**: tocar/guardar secciones en vivo. |
 | **ARP** | Páginas ARP. | (sin capa) |
-| **SEQ** | Páginas SEQ. | Capa **SEQ TOOLS** (en STEP, PATTERN, AUTOMATION y SHIFT). |
+| **SEQ** | Páginas SEQ. | Capa **SEQ TOOLS** (en STEP, NOTE, PATTERN, COMP, TRACK y AUTOMATION). |
 | **PLAY** | Arranca / para. | — |
 | **REC** | Arma / desarma la grabación en la pista seleccionada. | Capa **REC**: CLEAR, CLICK. |
 | **OCT− / OCT+** | Octava del teclado (−3 a +3; los dos juntos: vuelve a 0). En páginas de acción y en diálogos: **OCT−** = atrás / NO, **OCT+** = hacerlo / YES. | — |
@@ -287,15 +287,12 @@ a la derecha); apretá OCT+ para ejecutarla.
 | --- | --- | --- | --- | --- |
 | STEP (melódica: piano roll) | STEP | NOTE | TIME (NOTE / TIE / REST) | FLAG (– / ACC / SLD / A+S) |
 | STEP (DRUM: grilla) | STEP | LANE | HIT | ACC |
-| NOTE | FOCUS | PITCH | MOVE | LEN |
-| TIMING | STEP | OFFSET (−8/16 … +7/16) | REC Q | — |
-| STRETCH | STRETCH (/8 … /2, x2 … x8) | REPEAT (x2 … x8, TO 64) | NUDGE (ya) | LEN (antes > después) |
-| COMP | STEP | TYPE | (su valor) | (su valor; RATCH / ECHO: DIV) |
-| COMP 2 | STEP | TYPE (el segundo componente) | (su valor) | (su valor; ECHO: DIV) |
-| WHEN | STEP | A (WHEN) | B (WHEN) | LEN |
 | PATTERN | LEN | DIV | SWING | GATE |
-| SHIFT | OFFSET | PITCH | CHANCE | C.LEN |
-| HUMAN | VEL | TIME | GATE | — |
+| NOTE | FOCUS | PITCH | MOVE | MICRO (−8/16 … +7/16) |
+| STRETCH | STRETCH (/8 … /2, x1, x2 … x8) | REPEAT (OFF, x2 … x8, TO 64) | NUDGE | ROTATE (−32 … +32) |
+| COMP | STEP | TYPE | (su valor; ARP: ORDER × RANGE) | EVERY (ARP: RATE; RATCH / ECHO: DIV) |
+| COMP 2 | STEP | TYPE (el segundo componente) | (su valor) | EVERY |
+| TRACK | PITCH | CHANCE | HUMAN | REC Q |
 | PLAYHEADS | HEAD | RATE | DIR | INTERVAL |
 | AUTOMATION | PLAY (ON/OFF) | EVENT (cantidad) | LOCK (cantidad) | CLEAR (acción) |
 | AUTO LIST | ROW | STEP | PARAM | VALUE |
@@ -335,8 +332,8 @@ a la derecha); apretá OCT+ para ejecutarla.
 | SELECT | tempo |
 | **Perillas** | LEVEL T1–T4 (con T5 o T6 seleccionada: T3–T6) |
 
-**SCL** — cualquier tecla fija la ROOT (tónica) en el nombre de su nota. Perillas: ROOT, SCALE, OFFSET, PITCH (las dos
-últimas son las de SEQ > SHIFT).
+**SCL** — cualquier tecla fija la ROOT (tónica) en el nombre de su nota. Perillas: ROOT, SCALE, ROTATE, PITCH (las dos
+últimas son el ROTATE de SEQ > STRETCH y el PITCH de SEQ > TRACK).
 
 **EDIT** — F3 **INIT** (el sonido de la pista vuelve a los valores por defecto de su motor (un INIT limpio, no un preset), seco: todos los envíos a efectos
 en 0; en FM6 la voz init, solo OP1 a nivel máximo; en DRUM, también el kit
@@ -344,7 +341,7 @@ DRUM-X de fábrica), G3 **RECALL** (el sonido tal como lo guardó la sección ac
 preguntan antes y no tocan los pasos. En una pista DRUM, las teclas negras 1–8 mutean cada sonido de DRUM-X (BD SD CP
 CH OH TM RS CB). Perillas: las cuatro de EDIT 1.
 
-**SEQ TOOLS** (solo en STEP, PATTERN, AUTOMATION y SHIFT) — F3 CLEAR, G3 REVERSE, A3 / B3 SHIFT a la izquierda /
+**SEQ TOOLS** (solo en STEP, NOTE, PATTERN, COMP, TRACK y AUTOMATION) — F3 CLEAR, G3 REVERSE, A3 / B3 SHIFT a la izquierda /
 derecha, C4 RANDOM, D4 COOK, E4 BEAT (DRUM), F4 CLR AUTO (la automatización y los locks de la pista; los pasos quedan).
 En una pista DRUM, las herramientas de carril: G4 CLR, A4 REV, B4 FILL, C5 RND sobre el carril elegido con las teclas
 negras 1–8. **REC** (con SEQ mantenido): CLEAR ALL. Perillas: LEN, DIV, SWING, GATE. Estas herramientas no tienen
@@ -513,17 +510,21 @@ seleccionada se graban como **automatización**. MENU > AUDIO tiene el **CLICK**
 ### Páginas de patrón
 
 - **COMP** (step components, al estilo OP-Z): hasta dos por paso (**COMP** el primero, **COMP 2** el segundo, igual;
-  0.6.82). KNOB 1 elige el paso, KNOB 2 su **TYPE**, KNOB 3 / 4 sus valores. La fila de arriba marca cada paso que tiene uno (naranja ARP, violeta TRIG, gris CHANCE, color del tema
-  RATCH); abajo se dibuja el componente del paso (la escalera del arpegio con la nota que suena encendida; las vueltas
-  del TRIG).
+  0.6.82). KNOB 1 elige el paso, KNOB 2 su **TYPE**, KNOB 3 su valor, KNOB 4 **EVERY** (0.6.92; en COMP, el RATE de un
+  ARP o el DIV de RATCH / ECHO van ahí en su lugar). La fila de arriba marca cada paso que tiene uno (naranja ARP,
+  violeta TRIG, gris CHANCE, color del tema RATCH); abajo se dibuja el componente del paso (la escalera del arpegio con
+  la nota que suena encendida; las vueltas del TRIG).
   - **CHANCE** (0–100 %) y **RATCH** (x1–x4): la probabilidad y el ratchet propios del paso (solo en COMP). El KNOB 4
     de RATCH es su **DIV**: STEP reparte los golpes en el paso (como antes); 1/2, 1/3, 1/4, 1/6, 1/8 los separa esa
     fracción de paso desde el inicio, los que entren (RATCH x3 a 1/8: tres golpes rápidos y después silencio).
-  - **ARP NOTES / SEQ / SCALE**: el paso toca un arpegio, **RATE** notas en su duración (x2 x3 x4 x6 x8), y sigue sobre
-    los ties que vienen después (su división es RATE; su duración, el paso y sus ties). NOTES: las notas del paso, de
-    grave a agudo; SEQ: la melodía del patrón, en el orden en que la toca el patrón (0.6.82; antes se ordenaba como
-    NOTES); los dos sobre 1–4 octavas. SCALE: la escala hacia arriba desde la nota más grave del paso, 3, 5, 8 o 15 grados. KNOB 3 el
-    **ORDER** (UP, DOWN, UP-DN, RND), KNOB 4 **RATE** y rango juntos.
+  - **ARP NOTES / SEQ / SCALE**: el paso toca un arpegio y sigue sobre los ties que vienen después (su duración, el
+    paso y sus ties). NOTES: las notas del paso, de grave a agudo; SEQ: la melodía del patrón, en el orden en que la
+    toca el patrón (0.6.82; antes se ordenaba como NOTES); los dos sobre 1–4 octavas. SCALE: la escala hacia arriba
+    desde la nota más grave del paso, 3, 5, 8 o 15 grados. KNOB 3 **ORDER** y rango en una sola lista (UP, DOWN, UP-DN,
+    RND sobre 1 OCT, después sobre 2 OCT …; en SCALE 3, 5, 8, 15 DEG). KNOB 4 **RATE** (0.6.92), la velocidad del
+    arpegio en tiempo musical: **x1** una nota por paso (el DIV de la pista, 1/16), **1/32** dos por paso, **1/32T**
+    tres, **1/64** cuatro, **1/64T** seis, **1/128** ocho (la tarjeta dice la figura según el DIV de la pista; un DIV
+    raro: xn). Los x2 … x8 de antes son los mismos valores.
   - **TRIG**: el paso suena solo en algunas vueltas del patrón: 1:2, 2:2, 1:3, 2:3, 3:3, 1:4 … 4:4, 1:8, FIRST, !1ST
     (todas menos la primera).
   - **RAND**: la nota sube o baja por la escala al azar, hasta RANGE grados (1–7).
@@ -535,19 +536,22 @@ seleccionada se graban como **automatización**. MENU > AUDIO tiene el **CLICK**
   - **PULSE**: la nota vuelve a sonar en los pasos vacíos que siguen, cada 1–4 pasos (EVERY), hasta la próxima nota.
   - **JUMP**: después de este paso el patrón sigue desde TO STEP.
   - **REV**: desde este paso el patrón vuelve hacia atrás hasta el paso 1 y después sigue hacia adelante (ping-pong).
-  - **TIMES** (KNOB 4, en JUMP y REV): **ALWAYS** gira el patrón siempre; **x1** una vez por vuelta, y después el patrón
-    sigue de largo hasta su final (una parte que suena dos veces y después el resto); **x2** dos veces por vuelta;
-    **1:2** una vez, una vuelta sí y otra no. Una vuelta termina cuando el patrón vuelve solo al principio.
+    JUMP y REV giran el patrón en las vueltas que dice **EVERY** (abajo): EVERY 1:2 salta una vuelta sí y otra no,
+    FIRST solo la primera vez (una intro), !FIRST todas menos la primera (0.6.92; antes era TIMES).
   - **FILL**: el paso suena solo mientras mantenés **FX**.
   - **KILL**: el paso primero corta todo lo que suena en la pista (releases largos, notas sostenidas) y después toca.
   - **Dos en un paso**: suenan los dos (un ECHO con un OCT: las repeticiones una octava arriba; un RAND con un OCT:
     los dos movimientos). Gana el que deja la nota en silencio: un **TRIG** o un **FILL** en cualquiera de los dos
     lugares decide primero si el paso suena. De dos que hacen lo mismo gana el primero (un ARP sobre un ECHO, dos ARP:
     el de COMP).
-  - **WHEN** (su propia página después de COMP 2): KNOB 2 / 3 las vueltas en que suena el primer (A) y el segundo (B)
-    componente: **ALWAYS**, **1:2** (1ª, 3ª, … vuelta), **2:2** (2ª, 4ª, …), **SKIP** (se guarda pero no suena: un
-    interruptor). KNOB 4 el **LEN** del paso: GATE (el de la pista) o 1/16 … 15/16 de la nota (o de cada parte de
-    RATCH / ECHO / ARP) sonando.
+  - **EVERY** (0.6.92, KNOB 4 en COMP 2, y en COMP para todos los tipos menos ARP, RATCH y ECHO): en qué vueltas del
+    patrón suenan los componentes del paso — **ALWAYS**; **1:2** (1ª, 3ª, … vuelta), **2:2** (2ª, 4ª, …); **1:3**,
+    **2:3**, **3:3**; **1:4** … **4:4**; **1:8**; **FIRST** (solo la primera vuelta); **!FIRST** (todas menos la
+    primera); **SKIP** al final de la perilla (se guarda pero no suena: un interruptor). Un solo valor por paso, para
+    sus dos componentes, que se fija desde el KNOB 4 de COMP 2 sea cual sea su TYPE (o desde COMP, en los tipos que no
+    usan esa perilla): un arpegio que entra cada cuatro compases es ARP en COMP (ORDER, RATE) y EVERY 4:4 en COMP 2.
+    La nota propia del paso suena en todas las vueltas (eso lo decide un componente **TRIG**). Reemplaza a WHEN (esa
+    página ya no existe), con su A / B leídos como uno solo.
   Los proyectos los guardan. **En un kit de batería** (0.6.83) también funcionan: OCT, RAND y TONAL afinan los golpes
   (RAND y TONAL en la escala de la pista), BEND dobla cada golpe durante el paso; ARP NOTES toca los sonidos del paso
   uno tras otro, SEQ los sonidos del patrón en el orden en que suenan, SCALE re-dispara los golpes del paso, cada parte
@@ -555,63 +559,69 @@ seleccionada se graban como **automatización**. MENU > AUDIO tiene el **CLICK**
 - **Un slide de acordes largo** (0.6.83): el glide hacia un acorde dura lo que dura ese acorde, con sus TIEs; GLIDE
   fija cuánto de ese tramo (127: todo). Un acorde sostenido con TIEs en pasos lentos (p. ej. DIV 1/4 a 120 BPM: diez
   pasos, 5 s) se desliza así de lento y suave; las notas nuevas aparecen a medida que se deslizan.
-- **PATTERN**: LEN (1–64), DIV, SWING, GATE.
+- **PATTERN** (la segunda página SEQ): LEN (1–64), DIV, SWING, GATE — el largo del patrón, la figura de su paso, su
+  swing y la duración de todas las notas (la de un paso solo: el TIE de STEP, o MICRO para su entrada).
 - **Mover una nota o un acorde** que entró antes o después: **NOTE**, KNOB 1 FOCUS en el paso, KNOB 3 **MOVE** lo
   corre de a un paso a los costados (FOCUS ALL: el acorde entero con sus TIE; una nota enfocada: esa sola).
-- **STRETCH** (0.6.85, después de TIMING): cambia la forma de toda la secuencia de la pista elegida. Girá una perilla
-  para elegir y **OCT+** lo hace (SAVE sostenido: UNDO lo deshace). KNOB 4 muestra el LEN antes y después.
+- **STRETCH** (0.6.85, después de NOTE): cambia la forma de toda la secuencia de la pista elegida **mientras girás la
+  perilla** (0.6.92; antes esperaba OCT+). Cada giro parte de la secuencia como estaba antes del primero (su base), así
+  que x2 y después x4 es x4, no x8, y volver al medio es volver a donde empezaste; el cartel dice el LEN antes y
+  después (LEN 4 > 16); **UNDO** (GLO + G4) lo deshace; si editás el resultado, pasa a ser la nueva base.
   - **KNOB 1 STRETCH**: **x2 … x8** separa los pasos esa cantidad de veces (LEN 4 x4: 16); una nota sostenida sigue
     sostenida y las cortas quedan cortas; pasados los 64 pasos se corta el final. **/2 … /8** la comprime: de cada
-    grupo de pasos queda el primero que suena (LEN 32 /2: 16). La automatización y los locks se mueven con sus pasos.
+    grupo de pasos queda el primero que suena (LEN 32 /2: 16). **x1** en el medio: como estaba. La automatización y los
+    locks se mueven con sus pasos.
   - **KNOB 2 REPEAT**: copia los pasos 1..LEN detrás de sí mismos, **x2 … x8** veces o **TO 64** (todas las copias
-    enteras que entren), con automatización y locks. Cuatro notas pasan a ser una base de 64 pasos sobre la que grabar
-    más notas (REC en vivo suma encima).
-  - **KNOB 3 NUDGE**: toda la secuencia un paso a la derecha / izquierda en el momento, dando la vuelta dentro de LEN
-    (como TOOLS A3 / B3).
-- **TIMING** (0.6.88, justo después de NOTE): el lugar propio de cada paso fuera de la grilla. KNOB 1 el paso, KNOB 2 su
-  **OFFSET** en dieciseisavos de paso, de −8/16 (medio paso antes) a +7/16 (después); **EDIT** lo devuelve a la
-  grilla. KNOB 3 **REC Q**, la cuantización de la grabación de la pista: en 100 % (por defecto) la grabación en vivo
-  se ajusta a la grilla; más abajo, el paso guarda esa parte de dónde lo tocaste (0 %: todo), antes o después. Los
-  pasos adelantados suenan realmente antes: el paso anterior termina antes y la grilla se mantiene. El piano roll
+    enteras que entren), con automatización y locks; **OFF** a la izquierda: como estaba. Cuatro notas pasan a ser una
+    base de 64 pasos sobre la que grabar más notas (REC en vivo suma encima).
+  - **KNOB 3 NUDGE**: toda la secuencia un paso a la derecha / izquierda, dando la vuelta dentro de LEN (como TOOLS
+    A3 / B3).
+  - **KNOB 4 ROTATE** (−32 … +32; era el OFFSET de SHIFT): la secuencia leída desde otro paso, sin mover los pasos —
+    una rotación en vivo, automatizable (también en el KNOB 3 de la capa SCL).
+- **MICRO** (0.6.92, KNOB 4 de NOTE; era el OFFSET de la página TIMING): el lugar propio del paso enfocado fuera de la
+  grilla, en dieciseisavos de paso, de −8/16 (medio paso antes) a +7/16 (después); **EDIT** lo devuelve a la grilla.
+  Los pasos adelantados suenan realmente antes: el paso anterior termina antes y la grilla se mantiene. El piano roll
   dibuja las notas donde suenan. Un acorde comparte el offset de su paso; mover, estirar o repetir pasos lo conserva;
-  se guarda con el proyecto.
-- **HUMAN** (0.6.87, después de SHIFT): la pista toca como una persona, cada nota un poco distinta en cada vuelta;
-  los pasos quedan como están escritos. **VEL**: la velocity de cada nota sube o baja al azar (hasta ±38 al 100 %).
-  **TIME**: cada paso entra un poco tarde al azar (hasta 30 ms, nunca más de un tercio del paso, nunca antes; las notas
-  de un acorde siguen juntas y un STRUM mantiene su separación). **GATE**: cada nota más larga o más corta (hasta
-  ±40 %). En 0 % toca exactamente lo escrito (el valor por defecto, y todo proyecto anterior). Se mantiene al cambiar
-  el sonido; se puede automatizar.
+  se guarda con el proyecto. **REC Q** (KNOB 4 de TRACK) es la cuantización de grabación que lo escribe: en 100 % (por
+  defecto) la grabación en vivo se ajusta a la grilla; más abajo, el paso guarda esa parte de dónde lo tocaste (0 %:
+  todo), antes o después.
+- **TRACK** (0.6.92; era SHIFT + HUMAN): los ajustes de toda la pista. **PITCH** (±24 semitonos; no en baterías).
+  **CHANCE**: la probabilidad de toda la pista; 100 % toca cada paso como está escrito, menos lo va raleando (escala la
+  probabilidad propia de cada paso, la de los dados o el editor). **HUMAN** (una sola cantidad, 0–100 %): la pista
+  toca como una persona, cada nota un poco distinta en cada vuelta, con los pasos como están escritos — su velocity
+  sube o baja al azar (hasta ±50 al 100 %), entra un poco tarde (hasta 40 ms, nunca más de un tercio del paso, nunca
+  antes; las notas de un acorde siguen juntas y un STRUM mantiene su separación), dura más o menos (hasta ±40 %) y el
+  DECAY y el RELEASE de su envolvente se alargan o acortan un poco (hasta ±20). En 0 % toca exactamente lo escrito
+  (por defecto). Se mantiene al cambiar el sonido; se puede automatizar. Un proyecto guardado con los viejos VEL / TIME
+  / GATE carga con el menor de los tres como HUMAN. **REC Q**: ver MICRO. El viejo **C.LEN** (los componentes como un
+  carril con su propio largo) ya no existe: los componentes viven en sus pasos y EVERY dice cada cuánto suenan.
 - **AUTOMATION**: PLAY activa o desactiva la automatización de la pista, EVENT y LOCK cuentan los registros, CLEAR
-  los borra (OCT+, con diálogo).
+  los borra (OCT+, con diálogo). La automatización es lo que grabás girando una perilla con REC encendido mientras la
+  pista suena (un valor que se mueve a lo largo del patrón), más los parameter locks (un valor por paso, ver abajo):
+  esta página muestra cuántos de cada uno tiene la pista y si suenan; la pista de ayuda de la página lo dice. En AUTO
+  LIST se ven y se editan uno por uno.
 - **AUTO LIST**: cada evento de automatización y cada lock en forma de lista. KNOB 1 la fila, 2 el paso, 3 el
   parámetro, 4 el valor. En **+ ADD LOCK**, OCT+ agrega un lock; sobre un registro, OCT+ lo alterna entre LOCK y AUTO;
   **EDIT** lo borra.
 - **MUTATE**: la pista cambia sola, sincronizada con el clock, para que una textura evolucione durante minutos.
   **SOUND** y **PATTERN**: cada OFF, 1, 2, 4, 8, 16 o 32 compases (el cambio cae en el 1 del compás). **AMOUNT**:
-  cuánto (al activar uno queda en 50 %). **MODE**: **ORBIT** varía alrededor del ancla (la música como estaba al
+  cuánto (al activar uno queda en 50 %). La página (0.6.92) muestra los próximos 32 compases de la pista elegida como
+  una sola tira, una marca en cada compás donde cae un cambio (naranja: SOUND, violeta: PATTERN), el cabezal encima y
+  una línea que dice qué hace cada perilla. **MODE**: **ORBIT** varía alrededor del ancla (la música como estaba al
   activar MUTATE, al dar PLAY, cuando apretás **OCT+** acá: KEEP, o cuando escribiste o borraste pasos por última
   vez), así nunca pierde su identidad y una secuencia que borrás queda borrada; MUTATE nunca llena un patrón vacío; **DRIFT** sigue desde
   como está ahora. SOUND cambia los valores del motor, el filtro, su envolvente, DEC, REL y los envíos (nunca LEVEL, PAN
   ni MUTE); PATTERN mueve notas por la escala, cambia acentos, agrega o saca una nota fuera del tiempo (nunca en el
   tiempo); en DRUM cambia golpes, nunca el bombo. **OCT−** acá (o **GLO + A4**, FREEZE) frena todas las mutaciones
-  hasta volver a apretarlo. La página muestra los próximos 32 compases de cada pista (naranja: SOUND, violeta:
-  PATTERN); en HOME cada bichito tiene un anillo de puntos que se llena hasta su próximo cambio y se enciende entero
-  cuando cambia.
-- **PLAYHEADS** (SEQ, página 4; antes FUGUE), a la Fugue Machine: tres **cabezales** más (2, 3 y 4) leen los mismos pasos que el
+  hasta volver a apretarlo. En HOME cada bichito tiene un anillo de puntos que se llena hasta su próximo cambio y se
+  enciende entero cuando cambia.
+- **PLAYHEADS** (SEQ, página 8; antes FUGUE), a la Fugue Machine: tres **cabezales** más (2, 3 y 4) leen los mismos pasos que el
   secuenciador de la pista. KNOB 1 **HEAD** elige uno, KNOB 2 **RATE** (OFF, 1/4, 1/3, 1/2, 2/3, x1, 3/2, x2, x3, x4 del
   de la pista), KNOB 3 **DIR** (FWD, REV, PING, RND), KNOB 4 **INTVL**, su intervalo en grados de la escala (−14 a +14; una
   pista de batería mantiene sus carriles). Un cabezal toca las notas de cada paso con su velocidad, acento y probabilidad
   y el GATE de la pista (sin components, locks ni ratchets: esos son del secuenciador): cánones, contrapunto, patrones
   que se desfasan consigo mismos. La página dibuja los pasos, el cabezal del secuenciador y dónde va cada cabezal. Se
   guarda con la sección; los cabezales arrancan y paran con el transporte.
-- **SHIFT** (la última página SEQ): **OFFSET** (−32 a +32 pasos), **PITCH** (±24 semitonos; no en baterías) y
-  **CHANCE**: la probabilidad de toda la pista; 100 % toca cada paso como está escrito, menos lo va raleando (escala la
-  probabilidad propia de cada paso, la de los dados o el editor). Las tres se pueden automatizar; OFFSET y PITCH también
-  están en KNOB 3 / 4 de la capa SCL. **C.LEN** (KNOB 4): los step components como un carril con su propio largo. OFF:
-  cada paso toca su propio componente. 1–64: se leen por turno los componentes de los pasos 1..C.LEN, uno por cada paso
-  que toca la pista; con C.LEN 3 sobre un patrón de 4 pasos cada componente cae un paso antes en cada vuelta (polimetría:
-  los componentes se corren sobre las notas). La página COMP marca el carril y dónde va; los componentes más allá de LEN
-  igual suenan cuando C.LEN llega a ellos.
 
 ### Parameter locks
 
@@ -814,7 +824,7 @@ De qué está hecha una pieza:
   corte, resonancia, la envolvente sobre él), un LFO lento, saturación, chorus, glide, el modo de voz. El **kit** es
   uno de siete (909, 808, click, industrial, suave, dub, breaks) escrito sobre el kit DRUM-X de fábrica, con el TONE,
   DECAY, NOISE y DRIVE de la pista de batería.
-- **Mezcla**: nivel, paneo y envíos por rol y según la humedad del género; **HUMAN** fija SEQ > HUMAN en cada pista
+- **Mezcla**: nivel, paneo y envíos por rol y según la humedad del género; **HUMAN** fija el HUMAN de SEQ > TRACK en cada pista
   según el rol (hats y leads más, el bombo nada) escalado por qué tan humano es el género (una banda más que una
   máquina); SWING el del género salvo que lo fijes; DUCK, CLIP y PUNCH en el master; el TYPE, PING-PONG y TIME del
   delay y el tipo de reverb, los del género.

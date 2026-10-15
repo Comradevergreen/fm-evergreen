@@ -969,7 +969,7 @@ static void setup(int s)
     }
     case S_DLY: go_title("DLY"); break;
     case S_SCL: TSEL->p[P_SCALE] = 2; go_title("SCL"); break;
-    case S_SHIFT: TSEL->p[P_SOFS] = -3; TSEL->p[P_POFS] = 7; go_title("SHIFT"); break;
+    case S_SHIFT: TSEL->p[P_SOFS] = -3; TSEL->p[P_POFS] = 7; TSEL->p[P_HVEL] = 80; go_title("TRACK"); break;   /* (0.6.92: TRACK) */
     case S_ARP: go_title("ARP"); break;
     case S_VOICE: go_title("VOICE"); break;
     case S_GLOBAL: go_title("GLOBAL"); break;

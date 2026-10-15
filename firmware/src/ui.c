@@ -522,6 +522,8 @@ static void page_entered(void)
     if (!ui.home && lock_page_ok(ui.page))
         ui.plk_src = (uint8_t)(ui.page + 1u);
     song.seq_mode = !ui.home && pg->fam == FAM_SEQ;
+    if (!ui.home && pg->graph == GR_MOTION) ui_message("REC + PLAY, TURN A KNOB");   /* (0.6.92) how it is recorded */
+    if (!ui.home && pg->graph == GR_MUTATE) ui_message("OCT+ KEEP  GLO+A4 FREEZE");
     ui.entry_open = 0;
     ui.hot_t = 0;                                /* clear the previous page's emphasis */
     ui.act = pg->graph == GR_USER ? 4u : 0u;     /* the save screen is ready for OCT+ */
@@ -532,6 +534,21 @@ static int step_on(const step_t *st) { return st->time == ST_NOTE && (st->n || s
 
 enum { COMP_OFF, COMP_CHANCE, COMP_RATCH, COMP_ARPN, COMP_ARPQ, COMP_ARPS, COMP_TRIG, COMP_RAND, COMP_OCT, COMP_TONAL,
        COMP_BEND, COMP_ECHO, COMP_PULSE, COMP_JUMP, COMP_REV, COMP_FILL, COMP_KILL, COMP_N };   /* (CP_* in order) */
+static const char *const EV_NAMES[EV_N] = {"ALWAYS", "1:2", "2:2", "SKIP", "1:3", "2:3", "3:3", "1:4", "2:4", "3:4", "4:4",
+                                           "1:8", "FIRST", "!FIRST"};   /* (0.6.92) EVERY */
+/* (0.6.92) a part of the step as a note value: n parts a step of the track's DIV (1/16: x2 1/32, x3 1/32T, x4 1/64 ..;
+ * a triplet or a bar's DIV, or an odd count: "xn") */
+static void rate_name(const track_t *t, uint32_t n, char *b)
+{
+    static const uint8_t BASE[10] = {4, 8, 16, 32, 0, 0, 2, 1, 0, 0};   /* N_DIV: 1/4 1/8 1/16 1/32 8T 16T 1/2 1/1 2BAR 4BAR */
+    uint32_t d = (uint32_t)clamp(t->p[P_SDIV], 0, 9), base = BASE[d], v = 0;
+    const char *tr = "";
+    if (n == 1u && base) { str_cpy(b, N_DIV[d], 8); return; }
+    if (base && (n == 2u || n == 4u || n == 8u)) v = base * n;
+    else if (base && (n == 3u || n == 6u)) { v = base * n * 2u / 3u; tr = "T"; }
+    if (!v) { b[0] = 'x'; fmt_int(b + 1, (int32_t)n); return; }
+    b[0] = '1'; b[1] = '/'; fmt_int(b + 2, (int32_t)v); str_cpy(b + str_len(b), tr, 2);
+}
 static const char *const COMP_NAMES[COMP_N] = {"OFF", "CHANCE", "RATCH", "NOTES", "SEQ", "SCALE", "TRIG", "RAND", "OCT",
                                                "TONAL", "BEND", "ECHO", "PULSE", "JUMP", "REV", "FILL", "KILL"};
 /* (0.6.82) the COMP pages one after another: COMP (the step's first component), COMP 2 (its second), WHEN (theirs, and
@@ -1405,7 +1422,6 @@ static uint32_t act_cols(void)                   /* the columns that are actions
     if (ui.home)
         return 0;
     if (pg->graph == GR_MOTION) return 8u;
-    if (pg->graph == GR_SHAPE) return 16u;      /* (0.6.85) STRETCH: KNOB 1 / 2 pick (ui.act), OCT+ does it (act_do) */
     if (pg->graph == GR_EVENTS) return 16u;     /* AUTO LIST: no knob is an action; OCT+ adds / toggles (ev_oct) */
     if (pg->graph == GR_TOOLS) return 15u;
     if (pg->graph == GR_SONG)
@@ -1422,23 +1438,11 @@ static uint32_t act_cols(void)                   /* the columns that are actions
 }
 
 /* the action OCT+ does: its column + 1, 0 = none picked yet (PATTERNS has LOAD only) */
-/* (0.6.85) SEQ > STRETCH's picks (ui_input.c shape_knob, act_do) */
-static uint8_t shp_i = 7u, shp_r = 0u;                  /* STRETCH: /8 .. /2 (0..6), x2 .. x8 (7..13); REPEAT: x2 .. x8, TO 64 */
-static int32_t shp_k(void) { return shp_i < 7u ? -(int32_t)(8u - shp_i) : (int32_t)shp_i - 5; }
-static uint32_t shp_len(void)                           /* the LEN the picked action would give */
-{
-    uint32_t len = (uint32_t)clamp(TSEL->p[P_SLEN], 1, NSTEP), k;
-    if (ui.act == 1u) {
-        int32_t m = shp_k();
-        return m > 0 ? (len * (uint32_t)m > NSTEP ? NSTEP : len * (uint32_t)m) : (len + (uint32_t)-m - 1u) / (uint32_t)-m;
-    }
-    if (ui.act == 2u) {
-        k = shp_r < 7u ? shp_r + 2u : 0u;
-        len = k ? len * k : (NSTEP / len) * len;
-        return len > NSTEP ? NSTEP : len;
-    }
-    return len;
-}
+/* (0.6.85) SEQ > STRETCH's picks (ui_input.c shape_knob); (0.6.92) done as the knob turns, from a neutral middle:
+ * STRETCH /8 .. /2 (0..6), x1 (7: as it was), x2 .. x8 (8..14); REPEAT OFF (0), x2 .. x8 (1..7), TO 64 (8) */
+static uint8_t shp_i = 7u, shp_r = 0u;
+static int32_t shp_k(void) { return shp_i < 7u ? -(int32_t)(8u - shp_i) : shp_i == 7u ? 1 : (int32_t)shp_i - 6; }
+static uint32_t shp_rep(void) { return shp_r == 0u ? 1u : shp_r < 8u ? shp_r + 1u : 0u; }   /* 1 as it was, 2..8, 0 to 64 */
 
 static uint32_t act_col(void)
 {
@@ -1453,7 +1457,6 @@ static const char *act_name(uint32_t c)          /* column c's action (the foote
     uint32_t id = cur_page()->id[c & 3u];
     if (cur_page()->graph == GR_MOTION) return "CLEAR";
     if (cur_page()->graph == GR_EVENTS) return ev_act_name();
-    if (cur_page()->graph == GR_SHAPE) return c ? "REPEAT" : "STRETCH";
     if (cur_page()->graph == GR_TOOLS) {
         static const char *const actions[] = {"CLEAR", "INIT", "DELETE", "CLEAR", "INIT"};
         return actions[c < 5u ? c : 4u];
@@ -1476,7 +1479,6 @@ static int act_ready(void)
         return 0;
     if (cur_page()->graph == GR_MOTION) return !chain_busy() && motion_count(TSEL);
     if (cur_page()->graph == GR_EVENTS) return ev_act_ready();
-    if (cur_page()->graph == GR_SHAPE) return !chain_busy() && c < 2u;
     if (cur_page()->graph == GR_TOOLS)                  /* one case per column: CLEAR PAT, INIT, DELETE ROW, CLEAR SONG */
         return !chain_busy() && (c == 0u ? !seq_is_empty(TSEL) || motion_count(TSEL) : c == 1u || c >= 4u ? 1 :
                                  c == 2u ? ui.song_row < chain_config.count : chain_config.count != 0u);

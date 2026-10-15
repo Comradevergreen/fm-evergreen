@@ -176,12 +176,13 @@ async function editorMock() {
       "editor: a factory preset turns every matrix slot off");
   }
   {
-    /* SHIFT (core.h P_SOFS, P_POFS = 81, 82, just before P_E0 83; once the chord keys): the track's, a factory preset keeps them */
+    /* ROTATE and PITCH (core.h P_SOFS, P_POFS = 81, 82, just before P_E0 83; SHIFT's OFFSET and PITCH until 0.6.91, once the
+       chord keys): the track's, a factory preset keeps them */
     const c0 = E.parse[E.CMD.DESC](await rq(E.req.desc(0, 81)));
     const c1 = E.parse[E.CMD.DESC](await rq(E.req.desc(0, 82)));
-    ok(c0.label === "OFFSET" && c0.min === -32 && c0.max === 32 && c0.def === 0 &&
+    ok(c0.label === "ROTATE" && c0.min === -32 && c0.max === 32 && c0.def === 0 &&
        c1.label === "PITCH" && c1.min === -24 && c1.max === 24 && c1.def === 0,
-      "editor: SHIFT OFS PIT 81, 82 over DESC");
+      "editor: ROTATE PITCH 81, 82 over DESC");
     await rq(E.req.set(0, 81, 2));
     await rq(E.req.set(0, 82, 4));
     await rq(E.req.preset(0, 3));
@@ -700,7 +701,7 @@ async function editorLibrarian() {
   const ctx = { keys, engines: info.engines, firmware: info.version, pe0: info.pe0 };
   const pts = [cap, { ...bass, engineName: info.engines[bass.engine], tags: ["bass", "device"] }];
   const file = JSON.parse(JSON.stringify(E.libraryFile("library", pts, ctx)));
-  ok(file.format === "felucca-library" && file.version === 1 && file.pCount === 123 && file.paramLabels.length === 123 && file.paramLabels[81] === "OFFSET" && file.paramLabels[82].startsWith("PITCH#") &&
+  ok(file.format === "felucca-library" && file.version === 1 && file.pCount === 123 && file.paramLabels.length === 123 && file.paramLabels[81] === "ROTATE" && file.paramLabels[82].startsWith("PITCH#") &&
     file.paramLabels[83] === "KICK" && file.paramLabels[90] === "BELL" && file.engines.length === 14,
     "library file: versioned, with P_COUNT, labels and engines");
   const back = E.readLibraryFile(file, ctx);

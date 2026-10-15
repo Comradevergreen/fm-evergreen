@@ -7,7 +7,7 @@
  *   cc -O2 -w -Ibuild/gen -Ifirmware/src -Itests -o build/video6/capture_chord tools/video/capture_chord.c -lm
  *   build/video6/capture_chord build/video6/chord [en] */
 #define UI_TEST_NO_MAIN 1
-#define FELUCCA_VERSION "v0.6.91"
+#define FELUCCA_VERSION "v0.6.92"
 #define PF_MS 900u
 #define UI_NO_DRIFT 0
 #include "ui_test.c"

@@ -524,6 +524,7 @@ static void voice_start(track_t *t, voice_t *v, uint32_t note, uint32_t vel, int
     v->pitch16 = ((int32_t)note + trk_trans(t)) * 16 + t->pfx_rpit;   /* (pfx.c RANDOM: 0 but while it is held) */
     v->mvel = t->m_vel;                                 /* mod.c: the note's VEL and RAND */
     v->mrnd = t->m_rnd;
+    v->henv = t->hum_env;                               /* (0.6.92) HUMAN: this note's DEC / REL moved */
     t->m_vi = (uint8_t)(v - t->v);
     glide_set(t, v, glide);
     if (!sounding) {
@@ -849,13 +850,13 @@ static int32_t env_tick(track_t *t, voice_t *v)
         }
         break;
     case 2:
-        v->env += mulq16(sus - v->env, ENV_EXP[p[P_DEC] & 127]);
+        v->env += mulq16(sus - v->env, ENV_EXP[clamp(p[P_DEC] + v->henv, 0, 127)]);
         if (p[P_ELOOP] > 0 && v->gate && v->env - sus < (1 << 18))   /* (JIANT 0.4) LOOP: at the sustain (within
                                                          * 1/64), held: the attack again from here (an ADSR-shaped LFO) */
             v->stage = 1;
         break;
     case 3:
-        v->env -= mulq16(v->env, ENV_EXP[p[P_REL] & 127]);
+        v->env -= mulq16(v->env, ENV_EXP[clamp(p[P_REL] + v->henv, 0, 127)]);
         if (v->env < (1 << 12)) {
             v->env = 0;
             v->stage = 0;

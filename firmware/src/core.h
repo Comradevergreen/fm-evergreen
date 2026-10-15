@@ -285,6 +285,7 @@ typedef struct {
     uint32_t age;
     uint8_t mvel;                /* mod.c: the note-on velocity (before UNISON scaling) and RAND of the note */
     uint8_t gacc;                /* (0.6.82) the glide's fraction of a 1/16 st carried (gstep Q8) */
+    int8_t henv;                 /* (0.6.92) HUMAN: this note's DEC and REL moved (steps of the knobs; voice.c env_tick) */
     int16_t mrnd;
 } voice_t;
 
@@ -368,9 +369,18 @@ typedef struct {                 /* acid-style step: up to 4 notes (POLY), time,
     uint8_t ctime;               /* (0.6.82) bits 0-2 DIV: RATCH's and ECHO's parts a step/2 .. /8 apart (0: the step
                                   * shared out, as before); bits 3-6 LEN: a part's gate n/16 (0: the track's GATE) */
 } step_t;
-/* (0.6.82) WHEN a component plays: ALWAYS, on odd loops (1:2), on even loops (2:2), SKIP (kept, not played) */
-enum { CW_ALWAYS, CW_ODD, CW_EVEN, CW_SKIP };
-#define CW_OF(s, k) (((uint32_t)(s)->cwhen >> ((k) * 2u)) & 3u)
+/* (0.6.92) EVERY: on which loops of the pattern the step's components play (both of them; seq.c every_on), in cwhen's
+ * bits 0-3: ALWAYS, 1:2 (the odd loops), 2:2, SKIP (kept, never), 1:3 2:3 3:3, 1:4 2:4 3:4 4:4, 1:8, FIRST, NOT FIRST.
+ * (0.6.82 WHEN: bits 0-1 the first component's ALWAYS / 1:2 / 2:2 / SKIP, the same codes; bits 2-3 the second's, now
+ * read as the step's: a project that set WHEN B alone reads another EVERY) */
+enum { EV_ALWAYS, EV_1_2, EV_2_2, EV_SKIP, EV_1_3, EV_2_3, EV_3_3, EV_1_4, EV_2_4, EV_3_4, EV_4_4, EV_1_8, EV_FIRST,
+       EV_NOT1, EV_N };
+static const uint8_t EV_AB[EV_N][2] = {{0, 0}, {1, 2}, {2, 2}, {0, 3}, {1, 3}, {2, 3}, {3, 3}, {1, 4}, {2, 4}, {3, 4},
+                                       {4, 4}, {1, 8}, {0, 1}, {0, 2}};   /* a of b loops; {0,0} always, {0,3} never,
+                                                                          * {0,1} the first, {0,2} not the first */
+static const uint8_t EV_ORD[EV_N] = {0, 1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 3};   /* the knob's order, SKIP last */
+#define ST_EVERY(s) ((uint32_t)(s)->cwhen & 15u)
+#define ST_EVERY_SET(s, e) ((s)->cwhen = (uint8_t)(((s)->cwhen & 0xF0u) | ((uint32_t)(e) & 15u)))
 /* (0.6.88) TIMING: the step's own place off the grid, -8 .. +7 sixteenths of a step (0 on it), in cwhen's bits 4-7
  * (stored with it, project.c); recorded off the grid (REC Q) or set on SEQ > TIMING. seq.c: late by a queue, early by
  * ending the step before it that much sooner */
@@ -405,9 +415,10 @@ static const uint8_t CP_AMIN[CP_N] = {0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 
 #define CP_RATE(a) (((uint32_t)(a) >> 2) & 7u)    /* 0..4: x2 x3 x4 x6 x8 */
 #define CP_RNG(a) (((uint32_t)(a) >> 5) & 3u)     /* 0..3: 1..4 octaves (SCALE: 3 5 8 15 degrees) */
 #define CP_ARG(o, r, g) ((uint8_t)(((o) & 3u) | ((r) & 7u) << 2 | ((g) & 3u) << 5))
-#define CP_NRATE 5u
+#define CP_NRATE 6u                                 /* (0.6.92: x1, a note a step over the TIEs, as index 5) */
 #define CP_NTRIG 12u
-static const uint8_t CP_RATES[CP_NRATE] = {2, 3, 4, 6, 8};
+static const uint8_t CP_RATES[CP_NRATE] = {2, 3, 4, 6, 8, 1};
+static const uint8_t CP_RATE_ORD[CP_NRATE] = {5, 0, 1, 2, 3, 4};   /* the knob's order: x1 x2 x3 x4 x6 x8 */
 static const uint8_t CP_DEGS[4] = {3, 5, 8, 15};
 static const uint8_t CP_TRIGS[CP_NTRIG][2] = {{1, 2}, {2, 2}, {1, 3}, {2, 3}, {3, 3}, {1, 4}, {2, 4}, {3, 4}, {4, 4},
                                               {1, 8}, {0, 1}, {0, 2}};   /* (a of b; {0, 1} FIRST, {0, 2} NOT FIRST) */
@@ -548,6 +559,7 @@ typedef struct track {
     uint32_t ss_due, ss_gap;     /* (.. and the gap between them; 0.6.88: 32 bits, a long TIMING) */
     uint16_t ext;                /* (0.6.88) TIMING: samples the playing step began before its place (it is early) */
     int8_t mic;                  /* .. the playing step's own TIMING (ST_MICRO), late: seq_step queues its notes */
+    int8_t hum_env;              /* (0.6.92) HUMAN: the next notes' DEC / REL move (seq_step sets it, voice_start takes it) */
     uint8_t pfx_half;            /* 1/2 TEMPO: the odd sample carried; pfx_rs: let go, back to the real place */
     uint8_t pfx_rs;
     uint16_t pfx_idx0;           /* .. where it was pressed (step, samples into it) and the samples since */

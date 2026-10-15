@@ -801,10 +801,8 @@ static void gen_mix(track_t *t, uint32_t r)
                                   r == RL_PAD ? grr(0, 30) : r == RL_DRUM ? grr(0, 10) : 0) * (40 + wet) / 100, 0, 127);
     if (r == RL_LEAD && t->p[P_REV] < 25 && t->p[P_DLY] < 20) t->p[P_DLY] = (int16_t)grr(25, 55);
     t->p[P_SSWING] = 0;
-    t->p[P_HVEL] = (int16_t)(127 - clamp(HV[r] * hum / 60, 0, 127));
-    t->p[P_HTIM] = (int16_t)(127 - clamp(HT[r] * hum / 60, 0, 127));
-    t->p[P_HGAT] = (int16_t)(127 - clamp(HG[r] * hum / 60, 0, 127));
-    if (r == RL_DRUM) t->p[P_HGAT] = 127;
+    t->p[P_HVEL] = (int16_t)(127 - clamp((HV[r] + HT[r] + HG[r]) * hum / 150, 0, 127));   /* (0.6.92: one amount) */
+    t->p[P_HTIM] = t->p[P_HGAT] = 127;
 }
 
 /* ---------------------------------------------------------------------------------------- the form: parts --- */
@@ -1180,12 +1178,15 @@ static void gen_press(void)
     gen_go();
     gp.sig = gen_sig();
 }
-/* (the old name: tests, the films, the renders) a new throw */
+/* (the old name: tests, the films, the renders) a new throw: any genre, a new seed (the screen's settings otherwise) */
 static void dice_all(void)
 {
+    uint8_t g = gp.genre;
+    gp.genre = 0;
     gen_new_seed();
     gen_go();
     gp.sig = gen_sig();
+    gp.genre = g;
 }
 static uint32_t dice_print(void)                        /* a fingerprint of the piece (the tests) */
 {
