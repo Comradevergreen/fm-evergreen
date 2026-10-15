@@ -1629,6 +1629,7 @@ static void page_scroll(int32_t s)
 static void macro_dice(uint32_t mode);
 static int16_t sl_root = -1, sl_scale, sl_quant;      /* (scale_link: the song's scale) */
 #include "song_dice.c"                             /* (0.6.26) DICE ALL: a song-idea generator */
+#include "gen.c"                                   /* (0.6.91) GEN: the song generator and its screen (HOME + SELECT) */
 
 /* HOME / REC / SAVE: tap on release, hold 0.7 s fires once. t0 = press time | 1,
  * bit 1 = fired (or swallowed: then the release is no tap either) */
@@ -1875,7 +1876,7 @@ static void ui_input_frame(void)
                 ui.home_t0 |= 2u;
                 if (!pj_sel_ms || fm1_ms - pj_sel_ms > 400u) {
                     if (chain_busy()) ui_message("STOP TO EDIT");
-                    else confirm_open(CF_DICE_ALL, song.sel);
+                    else { confirm_open(CF_DICE_ALL, song.sel); gen_open(); }
                 }
             } else if (k) {
                 part_dice(k);
@@ -2006,8 +2007,9 @@ static void ui_input_frame(void)
                 up_ui(1u, ui.confirm_trk);
             } else if (dice_kind(kind)) {               /* (0.6.65) OK: the diced part stays */
                 ui_message(dk.msg);
-            } else if (kind == CF_DICE_ALL) {           /* (0.6.21) HOME + SELECT */
-                if (!chain_busy()) dice_all();
+            } else if (kind == CF_DICE_ALL) {           /* (0.6.21) HOME + SELECT; (0.6.91) GEN: the piece from the
+                                                         * screen's settings, the screen stays (OCT+ again: another) */
+                if (!chain_busy()) { gen_press(); ui.confirm = CF_DICE_ALL; }
             } else if (kind == CF_LOAD_PAT) {
                 pat_load_ui(&trk[ui.confirm_trk % NTRK], pat_pick());
             } else if (kind == CF_CLEAR_MOTION) {
@@ -2105,6 +2107,10 @@ static void ui_input_frame(void)
         } else if (dice_kind(ui.confirm) && panel_enc(EN_SELECT)) {   /* (0.6.65) SELECT again: another dice
                                                          * (once a turn burst) */
             part_dice(ui.confirm);
+        } else if (ui.confirm == CF_DICE_ALL) {         /* (0.6.91) GEN: KNOB 1..4 its settings, SELECT its pages */
+            for (k = 0; k < 4u; k++)
+                if ((s = panel_enc(EN_K1 + k)) != 0) gen_knob(k, s);
+            if ((s = panel_enc(EN_SELECT)) != 0) gen_select(s);
         }
         ui.pg_down = 0;
         enc_drop();
@@ -2234,7 +2240,7 @@ static void ui_input_frame(void)
         if (!ui.home) page_scroll(s);
         else if (!ui.confirm && (!hd_ms || fm1_ms - hd_ms > 400u)) {
             if (chain_busy()) ui_message("STOP TO EDIT");
-            else confirm_open(CF_DICE_ALL, song.sel);
+            else { confirm_open(CF_DICE_ALL, song.sel); gen_open(); }
         }
         if (ui.home) hd_ms = fm1_ms | 1u;
     }

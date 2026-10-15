@@ -59,10 +59,11 @@ files.
 
 ### Your first song (5 minutes)
 
-1. On **HOME**, turn **SELECT**. The screen asks **DICE EVERYTHING?** Press **OCT+** (YES). A whole song idea
-   appears: engines, sounds, parts, scale, tempo and effects. Press **PLAY**.
-2. Not your thing? Turn SELECT again and confirm. Every throw is new. To go back to the one before: hold **GLO** and
-   press **G4** (UNDO).
+1. On **HOME**, turn **SELECT**. The **GENERATOR** screen opens: pick a **GENRE** with KNOB 1 (or leave RANDOM) and
+   press **OCT+**. A whole song idea appears: engines, sounds, parts, scale, tempo and effects. Press **PLAY**.
+2. Not your thing? Press **OCT+** again: a new seed, a new piece. Too busy? Turn **SELECT** to page 2 and lower
+   **DRUMS** or **ARP**, then OCT+: the same piece with that changed. **OCT−** closes the screen. To go back to what
+   was there before: hold **GLO** and press **G4** (UNDO).
 3. Like it? **Stop** (PLAY), then press **SAVE** twice to reach **SAVE > PROJECT** (the first SAVE press opens
    USER, the second PROJECT). Turn **KNOB 4** to the right so it shows **[OCT+]**, then press **OCT+**. Type a name with the keys (or keep
    the one offered) and press **OCT+** again. The screen says **SAVED**.
@@ -84,7 +85,7 @@ The names below are the ones the firmware uses (the HARDWARE CALIBRATION screen 
 
 | Control | What it does |
 | --- | --- |
-| **SELECT** (encoder) | Alone: **scrolls through the pages of the section you are in** (EDIT's pages on an EDIT page, FX's on an FX page …), one a detent, no wrap; on **HOME** it opens **DICE EVERYTHING?** (as HOME + SELECT). With a button held, that button's **dice**: **HOME** + SELECT **DICE EVERYTHING?**, **EDIT** + SELECT the sound, **SEQ** + SELECT the sequence, **LFO** + SELECT the LFO, **FX** + SELECT the effects. **GLO** + SELECT: the tempo. Any other page button + SELECT: its pages. |
+| **SELECT** (encoder) | Alone: **scrolls through the pages of the section you are in** (EDIT's pages on an EDIT page, FX's on an FX page …), one a detent, no wrap; on **HOME** it opens **GEN**, the song generator (as HOME + SELECT). With a button held, that button's **dice**: **HOME** + SELECT **GEN**, **EDIT** + SELECT the sound, **SEQ** + SELECT the sequence, **LFO** + SELECT the LFO, **FX** + SELECT the effects. **GLO** + SELECT: the tempo. Any other page button + SELECT: its pages. |
 | **ALGORITHM** (encoder) | Selects the track from any page: T1–T4, or T1–T6 with TRACKS 6. In the MENU: switches tabs. |
 | **PRESETS** (encoder) | On HOME, PRESETS and the sound pages: browses sounds (every engine's factory presets, then your user presets). On step pages (STEP, COMP, PATTERN, AUTOMATION, SHIFT): moves the step cursor. On list pages (USER, PROJECT, ARRANGE, TOOLS, AUTO LIST): moves the selection. **Hold a page button and turn SELECT** (or PRESETS) to jump straight through that button's pages. |
 | **KNOB 1–4** | The four cards (columns) on screen. With a layer held, the layer's own knobs. Turning fast sweeps the whole range, slowly fine-tunes (MENU > KNOB ACCEL turns this off). |
@@ -168,7 +169,7 @@ and heating up with its own audio. The selected track is drawn bigger, a muted o
   CHORUS, SLICER (SLICER, SL BUS, SL BUS 2, SL PITCH), MASTER. **Two quick taps** on FX jump to the next section.
 - **Turn SELECT** to scroll through the pages of the section you are in (EDIT's on an EDIT page, FX's on an FX page),
   one a detent, stopping at its first and last; the page's name shows over the footer for a moment. On HOME it opens
-  DICE EVERYTHING?.
+  GEN, the song generator.
 - **Hold a page button and turn PRESETS** to go through its pages forwards or back (no wrap); let go and you stay
   there. ENV, SCL, ARP and SAVE do the same with SELECT; HOME, EDIT, SEQ, LFO and FX + SELECT are their dice, GLO +
   SELECT the tempo.
@@ -704,56 +705,84 @@ Hold **SAVE**:
 
 ## 8. Dice and UNDO
 
-### DICE ALL — the song-idea generator (HOME + SELECT)
+### GEN — the song generator (HOME + SELECT)
 
-On **HOME**, turn **SELECT** (or hold HOME and turn SELECT, from any page). The dialog **DICE EVERYTHING?** appears (with "UNDO AFTER: GLO + G4"). **OCT+ YES** /
-**OCT− NO**.
+On **HOME**, turn **SELECT** (or hold HOME and turn SELECT, from any page). The **GENERATOR** screen opens: three
+pages of settings, **SELECT** turns the page, **KNOB 1–4** set the four values shown, **OCT+** makes the piece and
+**OCT−** closes the screen (the piece stays; **UNDO**, GLO + G4, brings back what was there before).
 
-Each throw makes three choices, then guard rails keep the result musical:
+| Page | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
+|---|---|---|---|---|
+| 1/3 | **GENRE**: RANDOM or one of 43 | **SEED** 0000–9999 | **ENERGY** 0–100 % | **FORM**: LOOP, PARTS, SONG |
+| 2/3 | **DRUMS** | **BASS** | **CHORDS** | **ARP** — each OFF, 10–100 %, or **AUTO** (the genre's) |
+| 3/3 | **LEAD** (as above) | **COMPLEX** 0–100 % | **SWING** AUTO or 0–100 % | **HUMAN** 0–100 % |
 
-- **A genre** — the wave's four (two throws in five): **POST PUNK** (Joy Division: the bass singing the tune high,
-  power chords, a tight kit), **SYNTH POP** (New Order: a melodic bass, a sequencer, four on the floor and a
-  handclap), **MINIMAL SYNTH** (Suicide: a rockabilly bass ostinato over one organ chord, a cheap rhythm box) and
-  **MAN MACHINE** (Kraftwerk: a sequencer, a machine's tune repeated exactly, a dry electronic kit); the night's:
-  **DARK MINIMAL**, **DUB TECHNO**, **IDM**, **DARK IDM**, **DARK ELECTRO**, **ACID NIGHT**, **BROKEN**, **HYPNOTIC**,
-  **DEEP BREAKS**; and **SOUNDTRACK** (enveloping pads, no drums or a heartbeat), **HARD TECHNO** and **NEO CLASSICAL**
-  (Reich's pulses and phases, Glass's additive arps, Pärt's tintinnabuli; never drums). Each genre has its tempo range, scales, progressions, drum family (or none) and kits, bass
-  figure, how its chords move, how its lead and arp speak, the engines it likes per role and how wet its space is.
-- **An energy** — **SPACE** (two or three things sounding, long tails: minimalism, with cared-for timbres), **MID**,
-  or **FRANTIC** (everything, denser, ratchets). The screen shows SPACE or FRANTIC under the genre's name.
-- **An orchestration** — which roles play: the genre's order of importance cut by the energy. **The drums may not
-  play at all.** A role left out keeps its sound with an empty sequence, ready to play or record.
+The piece is **deterministic**: the same settings make the same piece every time, so a seed you like can be dialled
+back. **OCT+ with the settings unchanged throws a new seed** (another piece); turn a knob and press OCT+ and you get
+the **same piece with that one thing changed** — every part draws its random numbers from its own stream, so BASS
+turned leaves the drums and the lead as they were. The screen shows **LAST: HOUSE 0421** (the genre and the seed).
 
-The guard rails:
+The genres: HOUSE, DEEP HOUSE, MICRO HOUSE, TECH HOUSE, ACID HOUSE, TECHNO, DETROIT, DUB TECHNO, HARD TECHNO,
+HYPNOTIC, TRANCE, ELECTRO, EBM, ITALO, SYNTH POP, DARKWAVE, POST PUNK, TRIBAL PUNK, MINIMAL SYNTH, MAN MACHINE,
+MOTORIK, INDIE, SHOEGAZE, POST ROCK, FUNK, DISCO, BOOM BAP, TRAP, UK GARAGE, DUBSTEP, BREAKS, DRUM & BASS, DUB,
+STEPPERS, JAZZ, BOSSA, AFROBEAT, AMBIENT, NEO CLASSIC, IMPRESSION, SOUNDTRACK, IDM, BROKEN. Each one knows its tempo
+range, its scales and chord progressions, its drum map and kit, its bass archetypes and register, how its chords, arp
+and lead speak, which sound recipe each role takes, how human it plays and its space (reverb type, delay type and
+time, how wet).
 
-- **One harmony**, every part anchored on the same tonic; **chords always of four notes** (7ths, 9ths, fourths,
-  suspended, add9), voiced in a middle register and led to the nearest voicing.
-- **Deep basses** (from E1); **arps in the middle octaves** (C3–C5): up and down, Alberti, Glass groups, a Reich
-  pulse or a random walk.
-- **Coherent melodies**: a rhythmic motif of a few notes, its contour in steps (a leap is filled back by a step), its
-  strong beats on chord tones, developed over four bars (the motif, the motif moved to the next chord, the motif with
-  its end varied, then a cadence that lands and holds); or a hypnotic ostinato, a few long notes, or a tintinnabuli
-  line. **Space between notes**, more of it with less energy.
-- **High notes measured**: the lead stays under G5, high notes are played softer, and a part that sits high plays
-  quieter.
-- **Sounds**: a factory sound that fits the role (never a bass sound off the bass, never the bright ones: bells,
-  brass, marimbas, organs, chiptune), its envelope shaped for the role and the energy (pads that swell in SPACE,
-  plucked arps and basses), filtered by role with an **envelope on the filter**, a filter **TYPE** that changes (LP,
-  BP, COMB), a slow LFO of its own shape, a little drive on some basses and leads.
-- **Drums**: in the night's genres they almost always play; the DRUM-X kit is rolled around the factory kit (as SELECT
-  on a DRUM track does) and goes through a soft low-pass so the hats are not glassy.
-- **Space**: delay and reverb sends by role and scaled by how wet the genre and the energy are, now and then one track
-  soaked and another dry; the delay time, the GRAIN delay's pitch, the reverb type (ROOM, SPRING, RESO, CLOUD; never
-  SHIMMER), size, modulation and width change from throw to throw.
-- **A twist** in about one throw in five: one experiment — two copies of the arp drifting apart (Reich's phase), a
-  comb filter on the chords and arp, the grain delay pitched down, a lead in another metre, or a drone under
-  everything.
-- A **new tempo** in the genre's range (SPACE in its lower half, FRANTIC in its upper; always at least 3 BPM away),
-  unless MENU > **BPM LOCK** is on; new macro routes.
+What a piece is made of:
 
-It remembers your last 32 pieces and throws again if a new one would match one of them. It does not write automation or modulation routings (other than the
-macros' routes), but it replaces every track's steps, and with them that track's existing automation. Mutes are left
-as they are. The roles that play go on the first tracks, so with TRACKS 4 you hear the most important ones. The screen says **DICED:** and the style.
+- **Drums** from a **map of priorities** (after Mutable Instruments' Grids): every step of every lane has a level, a
+  hit where the level clears the density DRUMS sets, so ghosts go first as you turn it down and the kick's anchors
+  last. Then the snare's ghost notes on the best positions (the sixteenth before 2 and 4 first), the hats' accent cell
+  (house, funk, garage, machine), a small variation on the even bars (COMPLEX), the genre's **fill** on the phrase's
+  last bar (a snare roll, a tom run, the kick dropped, a hat roll, a linear funk fill, Blue Monday's sixteenth kicks,
+  a dub rim, a break before the one) and the snare laid back where the genre plays late (TIMING). ENERGY and the
+  amounts decide how much plays; the kick is never dropped from the one.
+- **Bass** from about fifty **archetypes written against the kick**: house offbeat and bounce, deep walking
+  sixteenths, techno rolling sixteenths and octave bounce, Detroit, EBM, italo, psy, UK garage, Jamerson, around the
+  kick, on the one, slap, Good Times, jazz walking and two-feel, boogie, country, ska, tumbao, bossa, rock eighths,
+  punk sixteenths, McCartney, Peter Hook, motorik, angular post punk, indie, one drop, steppers, rockers, dub,
+  boom bap, trap 808s, DnB, jungle, wobble, pedal, fifths, Suicide, Kraftwerk; and **acid** by the 303's rules
+  (accents on 3–5 steps, slides on 2–3, an octave jump after a slide, the accents varied over the bars). The root at
+  every chord change, approaches by a semitone into the next root, a pickup at the end of the fourth bar; the kick
+  **doubled**, **answered** (the bass stays off the kick's steps), **interlocked** (and a note right after it) or
+  sustained under it, as the genre does.
+- **Chords** from progressions with a **quality** a chord — sevenths, ninths, add9, sus2, sus4, sixths, fourths, power
+  chords, a dominant's raised third in minor — recoloured by the genre (plain triads, rich, suspended, quartal, power,
+  parallel), **voiced in C3..G5 and led to the nearest voicing** (or moved in parallel: techno, impressionism),
+  played held, swelling, stabbed on the offbeats, pulsed, dubbed through the delay, skanked, comped, pushed, as a
+  drone, sparse, broken (UK garage) or trance-gated.
+- **Arp**: an order over the voiced chord — up, up and down, down, Alberti, Glass's groups, a Reich pulse, a
+  sequencer, a walk, cycles of 3 or 5 against the bar (polymetric), a trance gate, octaves — in sixteenths or
+  eighths, with holes (ARP), in C3..C5.
+- **Lead**: a one-bar **motif** (its onsets drawn by the metre, its contour by the key's weights — the tonic, the
+  fifth, the third likelier — a leap filled back by a step, chord tones on the strong steps) in a four-bar **phrase**
+  (A A A A', A A' A A'', A rest A A', A A rest A'), varied by one operator a bar (the end moved, the last note
+  dropped, moved up a third or down a step, a passing note); or a hypnotic ostinato on an euclid, long notes, a
+  tintinnabuli line, a machine's figure, a two-bar hook (a call and its answer). Never a minor second or a tritone
+  against the bass; never above G5; high notes softer.
+- **Sounds** by **recipe** a role: sub, acid, Reese, FM bass, rock bass, Hook's chorused bass, wow bass; pad,
+  strings, choir, organ (WHEEL), electric piano, stab, dub chord, pluck, bell, lead, vox lead, chip, keys, drone,
+  noise, texture, hoover, a shoegaze wall, a tremolo guitar. A recipe picks an engine, a factory sound whose name fits,
+  moves its parameters a little, shapes the envelope, the filter (type, cutoff, resonance, the envelope on it), a slow
+  LFO, drive, chorus, glide, the voice mode. The **kit** is one of seven (909, 808, click, industrial, soft, dub,
+  breaks) written over the factory DRUM-X kit, the drum track's TONE, DECAY, NOISE and DRIVE with it.
+- **Mix**: level, pan and sends by role and by how wet the genre is; **HUMAN** sets SEQ > HUMAN on every track by
+  the role (hats and leads more, the kick none) scaled by how human the genre is (a band more than a machine);
+  SWING the genre's unless set; DUCK, CLIP and PUNCH on the master; the delay's TYPE, PING-PONG and TIME and the
+  reverb's type the genre's.
+- With **TRACKS 6** the sixth track is a **texture** (a drone, noise, a choir, an organ, strings) in long notes.
+- **FORM**: **LOOP** writes one loop (2 or 4 bars). **PARTS** also stores sections **A** (the piece), **B** (a break:
+  no drums, no bass) and **C** (a drop: the drums denser) and fills ARRANGE with A B A C (PLAY plays the song, as
+  0.6.81's DICE ALL did). **SONG** writes a club form: **A** the drop, **B** the intro (drums and bass), **C** the build
+  (the chords in, their filter opening over the loop, a roll at its end, the delay thrown on the last step) and **D**
+  the break (no drums, no bass, the chords wetter), in ARRANGE as B C A D C A with 16-bar rows (the drop 32). Ambient
+  and post-rock genres get an arc instead (thin, in, apex). Sections of yours (stored by you, not by GEN) are never
+  overwritten: then the piece stays one loop.
+
+Every piece replaces every track's steps, sounds, kit, mix and automation. Mutes are left as they are. The roles that
+play go on the first tracks (drums on the DRUM track), so with TRACKS 4 you hear the most important ones.
 
 ### Sound dice (EDIT + SELECT)
 

@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * (JIANT 0.6.80) DICE ALL heard: pieces from the generator (firmware/src/song_dice.c) on the host build of the tests,
  * the real engines playing each at its tempo, written as WAV files, to compare the generator before and after a
- * change by ear. Each argument is STYLE:ENERGY:SEED (the style's index in DSTYLE, the energy 0..2, any seed: the same
+ * change by ear. Each argument is STYLE:ENERGY:SEED (the genre's index in GENRE (gen_tables.c), the energy 0..2, any seed: the same
  * seed, the same throw); the files are DIR/NN_<style>_e<energy>.wav, SECONDS long each (default 20). (0.6.81) A throw
  * that made parts plays its song, as PLAY in SONG mode.
  *   cc -O1 -w -Ibuild/gen -Ifirmware/src -Itests -o build/dice_render tools/dice_render.c -lm
@@ -31,7 +31,7 @@ int main(int argc, char **argv)
         dice_force_style = (int8_t)st; dice_force_energy = (int8_t)en;
         dice_all();
         dice_force_style = dice_force_energy = -1;
-        str_cpy(name, DSTYLE[(uint32_t)st % NDSTYLE].name, sizeof name);
+        str_cpy(name, GENRE[(uint32_t)st % NGENRE].name, sizeof name);
         for (i = 0; name[i]; i++) if (name[i] == ' ') name[i] = '_';
         snprintf(path, sizeof path, "%s/%02d_%s_e%d_s%u.wav", dir, a - 2, name, en, seed);
         if (!(wav = fopen(path, "wb"))) { fprintf(stderr, "cannot write %s\n", path); return 1; }
@@ -56,7 +56,7 @@ int main(int argc, char **argv)
         transport_req = 2; ui_input();
         fclose(wav);
         if ((wav = fopen(path, "r+b"))) { wav_hdr(wav, nsamp); fclose(wav); }
-        printf("%s  %s energy %d, %d BPM\n", path, DSTYLE[(uint32_t)st % NDSTYLE].name, en, song.g[G_BPM]);
+        printf("%s  %s energy %d, %d BPM\n", path, GENRE[(uint32_t)st % NGENRE].name, en, song.g[G_BPM]);
     }
     return 0;
 }

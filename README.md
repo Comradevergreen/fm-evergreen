@@ -15,9 +15,13 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.6.90).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.6.91).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
-> ⚡ **New in 0.6.85 – 0.6.90: a sequencer that breathes, a delay that feeds back.**
+> ⚡ **New in 0.6.85 – 0.6.91: a song generator you steer, a sequencer that breathes, a delay that feeds back.**
+> - **GEN (HOME + SELECT)**: a screen of three pages — GENRE (43 genres or RANDOM), SEED, ENERGY, FORM (loop, parts,
+>   a club song); how much DRUMS, BASS, CHORDS, ARP, LEAD; COMPLEX, SWING, HUMAN. OCT+ makes the piece (again: a new
+>   seed), the knobs re-make it with one part changed. Drums from priority maps, ~50 bass archetypes written against
+>   the kick, chords with a quality each, motifs in phrases, sounds by recipe.
 > - **Off the grid**: **REC Q** keeps where you played each note (up to half a step early or late) and **SEQ > TIMING**
 >   moves any step by sixteenths; early notes really play early.
 > - **HUMAN**: velocity, timing and gate vary a little every loop, per track.
@@ -176,11 +180,13 @@ An 8-sound kit (BD SD CP CH OH TM RS CB) generated in real time, Microtonic styl
 ### Dice: the system invites you to move everything
 - **SELECT** changes the tempo on GLO's pages (GLOBAL, SYSTEM, MIXER) and with GLO held. On **EDIT** it **rolls the
   track's sound dice**: a synth loads one of its factory presets at random and moves each engine parameter up to a
-  quarter of its range; DRUM-X rolls the A and B sides of each sound around the factory kit. On **HOME** it asks
-  **DICE EVERYTHING?** (OCT+ yes, OCT− no) and then writes a new piece: a genre (the wave's, since 0.6.80: POST PUNK,
-  SYNTH POP, MINIMAL SYNTH, MAN MACHINE; the night's: DARK MINIMAL, DUB TECHNO, IDM, DARK IDM, DARK ELECTRO, ACID NIGHT,
-  BROKEN, HYPNOTIC, DEEP BREAKS; and SOUNDTRACK, HARD TECHNO, NEO CLASSICAL), an energy (SPACE, MID, FRANTIC) and which roles play (drums optional): its tempo, one scale for every engine and the effects, each
-  track a role, an engine, a sound and a part from one chord progression, silences included (see v0.6.26).
+  quarter of its range; DRUM-X rolls the A and B sides of each sound around the factory kit. On **HOME** it opens
+  **GEN**, the song generator (since 0.6.91): three pages of settings — a genre among 43 (house, techno, dub, UK garage,
+  funk, post punk, jazz, ambient …) or RANDOM, a seed, an energy, a form (a loop, parts, a club song); how much drums,
+  bass, chords, arp and lead; complexity, swing, how human. **OCT+** writes the piece from them (OCT+ again: a new
+  seed; a knob turned and OCT+: the same piece with that one thing changed), **OCT−** is done. Every piece has one
+  scale, drums from the genre's priority map, a bass archetype written against the kick, chords with a quality each
+  voiced and led, a motif in phrases, a sound recipe a role, the genre's kit and space (see v0.6.91).
 - **UNDO: GLO held + G4** takes back the last big change (DICE ALL, a sound diced, a clear, INIT, RECALL, a pattern or
   project loaded); pressing it again goes forward (redo). G4 breathes when there is something to undo.
 - **Macros M1–M4** (LFO held; they stay latched when released until you press LFO again): every session starts with
@@ -514,6 +520,42 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### v0.6.91
+- **GEN: the song generator, rewritten, with a screen (HOME + SELECT).** Three pages: **GENRE** (43: HOUSE, DEEP
+  HOUSE, MICRO HOUSE, TECH HOUSE, ACID HOUSE, TECHNO, DETROIT, DUB TECHNO, HARD TECHNO, HYPNOTIC, TRANCE, ELECTRO, EBM,
+  ITALO, SYNTH POP, DARKWAVE, POST PUNK, TRIBAL PUNK, MINIMAL SYNTH, MAN MACHINE, MOTORIK, INDIE, SHOEGAZE, POST ROCK,
+  FUNK, DISCO, BOOM BAP, TRAP, UK GARAGE, DUBSTEP, BREAKS, DRUM & BASS, DUB, STEPPERS, JAZZ, BOSSA, AFROBEAT, AMBIENT,
+  NEO CLASSIC, IMPRESSION, SOUNDTRACK, IDM, BROKEN; or RANDOM), **SEED** (0000..9999), **ENERGY**, **FORM** (LOOP,
+  PARTS: sections A B A C in ARRANGE, SONG: intro, build, drop, break); **DRUMS BASS CHORDS ARP** and **LEAD**
+  amounts (OFF .. 100 %, AUTO the genre's); **COMPLEX**, **SWING** (AUTO the genre's), **HUMAN**. **OCT+** makes the
+  piece; the same settings and OCT+ again throw a new seed; a knob turned and OCT+ re-make the same piece with that one
+  part changed (each part draws from its own stream). **OCT−** closes; **UNDO** (GLO + G4) as before.
+- How it writes: the **drums** from a map of priorities a genre (after Mutable Instruments' Grids: a hit where the
+  level clears the density, ghosts first to go, the kick's anchors last; the snare's ghosts on the best positions, the
+  hats' accent cell, a variation on the even bars, the genre's fill on the phrase's last bar — a roll, toms, the kick
+  dropped, a hat roll, a linear fill — and the snare laid back where the genre plays late); the **bass** from ~50
+  archetypes written against the kick (offbeat, bounce, deep walk, rolling sixteenths, Detroit, EBM, italo, psy, UKG,
+  Jamerson, around the kick, on the one, slap, Good Times, walking, two-feel, boogie, country, ska, tumbao, bossa,
+  rock eighths, punk sixteenths, McCartney, Hook, motorik, angular, indie, one drop, steppers, rockers, dub, boom bap,
+  trap, DnB, jungle, wobble, pedal, fifths, Suicide, Kraftwerk, acid by the 303's rules), the root at every chord
+  change, approaches by a semitone, the kick doubled, answered or interlocked; the **chords** from progressions with a
+  quality a chord (sevenths, ninths, add9, sus2, sus4, sixths, fourths, power; a dominant's raised third in minor),
+  voiced in C3..G5 and led to the nearest voicing (or moved in parallel), played held, stabbed, pulsed, dubbed,
+  skanked, comped, broken or trance-gated; the **arp** an order over the voiced chord (up, up-down, Alberti, Glass,
+  pulse, sequencer, walk, cycles of 3 and 5, a trance gate, octaves); the **lead** a one-bar motif (its onsets by the
+  metre, its contour by the key's weights, leaps filled, chord tones on the strong steps) in a four-bar phrase
+  (A A A A', A A' A A'', A R A R' ..) varied by one operator a bar, or an ostinato, long notes, a tintinnabuli line, a
+  machine's figure, a two-bar call and answer; the **sounds** by recipe a role (sub, acid, Reese, FM bass, rock bass,
+  Hook's chorused bass, pad, strings, choir, organ — WHEEL at last —, EP, stab, dub chord, pluck, bell, lead, vox,
+  chip, keys, drone, noise, texture, hoover, wall, tremolo guitar), the **kit** a kit (909, 808, click, industrial,
+  soft, dub, breaks), the **mix** by role, **HUMAN** and the snare's TIMING by how human the genre is, the reverb
+  and the delay (type, ping-pong, time) the genre's. The lead keeps off minor seconds and tritones against the bass.
+  With TRACKS 6 the sixth track is a texture (drone, noise, choir, organ). The old DICE ALL's genres are inside
+  (DARKWAVE, POST PUNK, EBM, MAN MACHINE, HYPNOTIC, SOUNDTRACK, IDM, BROKEN ..).
+- The tests: `tests/gen_test.c` measures every genre (one scale, the kick anchored, the bass's roots at the changes,
+  the lead's chord tones, every piece storable, the forms); `web/emu/gen_bench.mjs` renders every genre to WAV from
+  the browser build.
 
 ### v0.6.90
 - **DLY 3 > TYPE: ANALOG or DIGITAL.** ANALOG is the delay as it was (soft saturation, resonant TONE, past 100 % it

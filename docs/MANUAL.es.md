@@ -59,11 +59,12 @@ Guardá tus archivos WAV.
 
 ### Tu primer tema (5 minutos)
 
-1. En **HOME**, girá **SELECT**. La pantalla pregunta **DICE EVERYTHING?** (¿tirar todo a los dados?). Apretá
-   **OCT+** (YES). Aparece una idea de tema completa: motores, sonidos, partes, escala, tempo y efectos. Apretá
+1. En **HOME**, girá **SELECT**. Se abre la pantalla **GENERATOR**: elegí un **GENRE** con KNOB 1 (o dejá RANDOM) y
+   apretá **OCT+**. Aparece una idea de tema completa: motores, sonidos, partes, escala, tempo y efectos. Apretá
    **PLAY**.
-2. ¿No te convence? Girá SELECT de nuevo y confirmá. Cada tirada es nueva. Para volver a la anterior: mantené **GLO** y
-   apretá **G4** (UNDO).
+2. ¿No te convence? Apretá **OCT+** otra vez: semilla nueva, pieza nueva. ¿Demasiado cargada? Girá **SELECT** a la
+   página 2 y bajá **DRUMS** o **ARP**, después OCT+: la misma pieza con eso cambiado. **OCT−** cierra la pantalla.
+   Para volver a lo que había antes: mantené **GLO** y apretá **G4** (UNDO).
 3. ¿Te gusta? **Pará** (PLAY) y apretá **SAVE** dos veces para llegar a **SAVE > PROJECT** (la primera pulsación de
    SAVE abre USER, la segunda PROJECT). Girá **KNOB 4** a la derecha para que muestre **[OCT+]** y apretá **OCT+**.
    Escribí un nombre con las teclas (o dejá el que te ofrece) y apretá **OCT+** otra vez. La pantalla dice **SAVED**.
@@ -85,7 +86,7 @@ Los nombres de abajo son los que usa el firmware (la pantalla HARDWARE CALIBRATI
 
 | Control | Qué hace |
 | --- | --- |
-| **SELECT** (encoder) | Solo: **recorre las páginas de la sección en la que estás** (las de EDIT en una página EDIT, las de FX en una de FX …), una por paso, sin dar la vuelta; en **HOME** abre **DICE EVERYTHING?** (como HOME + SELECT). Con un botón mantenido, los **dados** de ese botón: **HOME** + SELECT **DICE EVERYTHING?**, **EDIT** + SELECT el sonido, **SEQ** + SELECT la secuencia, **LFO** + SELECT el LFO, **FX** + SELECT los efectos. **GLO** + SELECT: el tempo. Cualquier otro botón de página + SELECT: sus páginas. |
+| **SELECT** (encoder) | Solo: **recorre las páginas de la sección en la que estás** (las de EDIT en una página EDIT, las de FX en una de FX …), una por paso, sin dar la vuelta; en **HOME** abre **GEN**, el generador de temas (como HOME + SELECT). Con un botón mantenido, los **dados** de ese botón: **HOME** + SELECT **GEN**, **EDIT** + SELECT el sonido, **SEQ** + SELECT la secuencia, **LFO** + SELECT el LFO, **FX** + SELECT los efectos. **GLO** + SELECT: el tempo. Cualquier otro botón de página + SELECT: sus páginas. |
 | **ALGORITHM** (encoder) | Elige la pista desde cualquier página: T1–T4, o T1–T6 con TRACKS 6. En el MENU: cambia de pestaña. |
 | **PRESETS** (encoder) | En HOME, PRESETS y las páginas de sonido: recorre sonidos (los presets de fábrica de cada motor y después tus presets de usuario). En las páginas de pasos (STEP, COMP, PATTERN, AUTOMATION, SHIFT): mueve el cursor de paso. En las páginas de lista (USER, PROJECT, ARRANGE, TOOLS, AUTO LIST): mueve la selección. **Mantené un botón de página y girá SELECT** (o PRESETS) para saltar directo por las páginas de ese botón. |
 | **KNOB 1–4** | Las cuatro tarjetas (columnas) de la pantalla. Con una capa mantenida, las perillas propias de la capa. Girar rápido recorre todo el rango, despacio ajusta fino (MENU > KNOB ACCEL lo desactiva). |
@@ -174,7 +175,7 @@ Los **diálogos** preguntan antes de cualquier cosa destructiva: **OCT− NO**, 
   siguiente sección.
 - **Girá SELECT** para recorrer las páginas de la sección en la que estás (las de EDIT en una página EDIT, las de FX en
   una de FX), una por paso, frenando en la primera y la última; el nombre de la página aparece un momento sobre el pie.
-  En HOME abre DICE EVERYTHING?.
+  En HOME abre GEN, el generador de temas.
 - **Mantené un botón de página y girá PRESETS** para recorrer sus páginas hacia adelante o hacia atrás (sin dar la
   vuelta); soltá y te quedás ahí. ENV, SCL, ARP y SAVE hacen lo mismo con SELECT; HOME, EDIT, SEQ, LFO y FX + SELECT son
   sus dados, GLO + SELECT el tempo.
@@ -745,60 +746,90 @@ Mantené **SAVE**:
 
 ## 8. Dados y UNDO
 
-### DICE ALL — el generador de ideas de temas (HOME + SELECT)
+### GEN — el generador de temas (HOME + SELECT)
 
-En **HOME**, girá **SELECT** (o mantené HOME y girá SELECT, desde cualquier página). Aparece el diálogo **DICE EVERYTHING?** (con "UNDO AFTER: GLO + G4"). **OCT+ YES** /
-**OCT− NO**.
+En **HOME**, girá **SELECT** (o mantené HOME y girá SELECT, desde cualquier página). Se abre la pantalla
+**GENERATOR**: tres páginas de ajustes, **SELECT** cambia de página, **KNOB 1–4** fijan los cuatro valores que se
+ven, **OCT+** arma la pieza y **OCT−** cierra la pantalla (la pieza queda; **UNDO**, GLO + G4, devuelve lo que había
+antes).
 
-Cada tirada toma tres decisiones, y después unas barandas mantienen el resultado musical:
+| Página | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
+|---|---|---|---|---|
+| 1/3 | **GENRE**: RANDOM o uno de 43 | **SEED** 0000–9999 | **ENERGY** 0–100 % | **FORM**: LOOP, PARTS, SONG |
+| 2/3 | **DRUMS** | **BASS** | **CHORDS** | **ARP** — cada uno OFF, 10–100 %, o **AUTO** (lo que pide el género) |
+| 3/3 | **LEAD** (igual) | **COMPLEX** 0–100 % | **SWING** AUTO o 0–100 % | **HUMAN** 0–100 % |
 
-- **Un género**: los cuatro de la onda (dos tiradas de cada cinco): **POST PUNK** (Joy Division: el bajo canta la
-  melodía arriba, acordes de quinta, una batería seca), **SYNTH POP** (New Order: bajo melódico, secuenciador, bombo
-  en negras y palmas), **MINIMAL SYNTH** (Suicide: un ostinato rockabilly de bajo sobre un único acorde de órgano, una
-  caja de ritmos barata) y **MAN MACHINE** (Kraftwerk: secuenciador, una melodía de máquina que repite exacto, una
-  batería electrónica seca); los de la noche, **DARK MINIMAL**, **DUB TECHNO**, **IDM**, **DARK IDM**,
-  **DARK ELECTRO**, **ACID NIGHT**, **BROKEN**, **HYPNOTIC**, **DEEP BREAKS**; y **SOUNDTRACK** (pads envolventes, sin
-  batería o con un latido), **HARD TECHNO** y **NEO CLASSICAL** (los pulsos y desfasajes de Reich, los arpegios
-  aditivos de Glass, el tintinnabuli de Pärt; nunca batería). Cada género tiene su rango de tempo,
-  escalas, progresiones, familia de batería (o ninguna) y kits, figura de bajo, cómo se mueven sus acordes, cómo hablan
-  su lead y su arpegio, los motores que prefiere por rol y qué tan húmedo es su espacio.
-- **Una energía**: **SPACE** (dos o tres cosas sonando, colas largas: minimalismo, con timbres cuidados), **MID**, o
-  **FRANTIC** (todo, más denso, ratchets). La pantalla muestra SPACE o FRANTIC debajo del nombre del género.
-- **Una orquestación**: qué roles suenan, según el orden de importancia del género recortado por la energía. **La
-  batería puede no sonar.** Un rol que queda afuera conserva su sonido con la secuencia vacía, listo para tocar o
-  grabar.
+La pieza es **determinista**: los mismos ajustes dan siempre la misma pieza, así que una semilla que te gustó se
+puede volver a marcar. **OCT+ con los ajustes sin tocar tira una semilla nueva** (otra pieza); girá una perilla y
+apretá OCT+ y tenés **la misma pieza con esa sola cosa cambiada**: cada parte saca sus números al azar de su propio
+flujo, así que mover BASS deja la batería y el lead como estaban. La pantalla muestra **LAST: HOUSE 0421** (el género
+y la semilla).
 
-Las barandas:
+Los géneros: HOUSE, DEEP HOUSE, MICRO HOUSE, TECH HOUSE, ACID HOUSE, TECHNO, DETROIT, DUB TECHNO, HARD TECHNO,
+HYPNOTIC, TRANCE, ELECTRO, EBM, ITALO, SYNTH POP, DARKWAVE, POST PUNK, TRIBAL PUNK, MINIMAL SYNTH, MAN MACHINE,
+MOTORIK, INDIE, SHOEGAZE, POST ROCK, FUNK, DISCO, BOOM BAP, TRAP, UK GARAGE, DUBSTEP, BREAKS, DRUM & BASS, DUB,
+STEPPERS, JAZZ, BOSSA, AFROBEAT, AMBIENT, NEO CLASSIC, IMPRESSION, SOUNDTRACK, IDM, BROKEN. Cada uno sabe su rango de
+tempo, sus escalas y progresiones, su mapa de batería y su kit, sus arquetipos de bajo y su registro, cómo hablan sus
+acordes, su arpegio y su lead, qué receta de sonido toma cada rol, qué tan humano toca y su espacio (tipo de reverb,
+tipo y tiempo del delay, cuánta humedad).
 
-- **Una sola armonía**, todas las partes ancladas en la misma tónica; **acordes siempre de cuatro notas** (séptimas,
-  novenas, cuartas, suspendidos, add9), en registro medio y enlazados con la voz más cercana.
-- **Bajos profundos** (desde E1); **arpegios en las octavas medias** (C3–C5): arriba y abajo, Alberti, grupos de Glass,
-  un pulso de Reich o una caminata al azar.
-- **Melodías coherentes**: un motivo rítmico de pocas notas, con contorno por pasos (un salto se compensa volviendo por
-  paso), los tiempos fuertes en notas del acorde, desarrollado en cuatro compases (el motivo, el motivo movido al
-  acorde siguiente, el motivo con el final variado, y una cadencia que aterriza y se sostiene); o un ostinato
-  hipnótico, unas pocas notas largas, o una línea tintinnabuli. **Espacio entre notas**, más cuanto menos energía.
-- **Agudos medidos**: el lead queda por debajo de G5, las notas agudas suenan más suaves y una parte que va aguda suena
-  más baja.
-- **Sonidos**: un sonido de fábrica que corresponde al rol (nunca un sonido de bajo fuera del bajo, nunca los
-  brillantes: campanas, bronces, marimbas, órganos, chiptune), con la envolvente adaptada al rol y a la energía (pads
-  que crecen en SPACE, arpegios y bajos punteados), filtrado según el rol con **envolvente al filtro**, un **TYPE** de
-  filtro que cambia (LP, BP, COMB), un LFO lento de forma propia y un poco de saturación en algunos bajos y leads.
-- **Batería**: en los géneros de la noche casi siempre suena; el kit de DRUM-X se tira a los dados alrededor del kit de
-  fábrica (como hace SELECT en una pista DRUM) y pasa por un low-pass suave para que los hi-hats no suenen vidriosos.
-- **Espacio**: envíos de delay y reverb por rol, escalados según qué tan húmedos son el género y la energía, y a veces
-  una pista empapada y otra seca; el tiempo del delay, el pitch del GRAIN delay, el tipo de reverb (ROOM, SPRING, RESO,
-  CLOUD; nunca SHIMMER), su tamaño, modulación y ancho cambian en cada tirada.
-- **Un giro** en más o menos una de cada cinco tiradas: un experimento — dos copias del arpegio que se desfasan (el
-  phase de Reich), un filtro comb en los acordes y el arpegio, el grain delay hacia abajo, un lead en otro compás, o un
-  drone debajo de todo.
-- Un **tempo nuevo** dentro del rango del género (SPACE en su mitad baja, FRANTIC en la alta; siempre al menos 3 BPM de
-  diferencia), salvo con MENU > **BPM LOCK** activado; rutas de macro nuevas.
+De qué está hecha una pieza:
 
-Recuerda tus últimas 32 piezas y vuelve a tirar si una nueva coincidiera con alguna de ellas. No escribe automatización
-ni ruteos de modulación (aparte de las rutas de las macros), pero reemplaza los pasos de todas las pistas y, con ellos,
-la automatización que tuviera cada pista. Los mutes quedan como estaban. Los roles que suenan van en las primeras
-pistas, así que con TRACKS 4 escuchás los más importantes. La pantalla dice **DICED:** y el estilo.
+- **Batería** a partir de un **mapa de prioridades** (como el Grids de Mutable Instruments): cada paso de cada carril
+  tiene un nivel, y suena donde el nivel supera la densidad que fija DRUMS; al bajarla se van primero los ghosts y al
+  final las anclas del bombo. Después los ghost notes del redoblante en las mejores posiciones (primero la
+  semicorchea antes del 2 y del 4), la célula de acentos de los hats (house, funk, garage, máquina), una pequeña
+  variación en los compases pares (COMPLEX), el **fill** del género en el último compás de la frase (redoble, corrida
+  de toms, el bombo que se va, redoble de hats, fill lineal de funk, los bombos en semicorcheas de Blue Monday, un rim
+  de dub, un corte antes del uno) y el redoblante atrasado donde el género toca atrás (TIMING). ENERGY y las
+  cantidades deciden cuánto suena; el bombo nunca se cae del uno.
+- **Bajo** a partir de unos cincuenta **arquetipos escritos contra el bombo**: offbeat y bounce de house, walking de
+  semicorcheas deep, semicorcheas rodantes y rebote de octava de techno, Detroit, EBM, italo, psy, UK garage,
+  Jamerson, alrededor del bombo, on the one, slap, Good Times, walking y two-feel de jazz, boogie, country, ska,
+  tumbao, bossa, corcheas de rock, semicorcheas punk, McCartney, Peter Hook, motorik, post punk angular, indie, one
+  drop, steppers, rockers, dub, boom bap, 808 de trap, DnB, jungle, wobble, pedal, quintas, Suicide, Kraftwerk; y
+  **acid** con las reglas de la 303 (acentos en 3–5 pasos, slides en 2–3, un salto de octava después de un slide, los
+  acentos variando por compás). La raíz en cada cambio de acorde, aproximaciones por semitono a la raíz siguiente, un
+  pickup al final del cuarto compás; el bombo **doblado**, **respondido** (el bajo no pisa los pasos del bombo),
+  **entrelazado** (y una nota justo después) o sostenido debajo, según el género.
+- **Acordes** a partir de progresiones con una **calidad** por acorde — séptimas, novenas, add9, sus2, sus4, sextas,
+  cuartas, power chords, la tercera subida de la dominante en menor —, recoloreadas por el género (tríadas simples,
+  ricas, suspendidas, cuartales, power, paralelas), **voiceadas en C3..G5 y enlazadas a la voz más cercana** (o
+  movidas en paralelo: techno, impresionismo), tocadas sostenidas, creciendo, en stabs a contratiempo, pulsadas,
+  dubeadas por el delay, en skank, comping, con empuje, como drone, escasas, broken (UK garage) o con gate de trance.
+- **Arpegio**: un orden sobre el acorde voiceado — arriba, arriba y abajo, abajo, Alberti, los grupos de Glass, un
+  pulso de Reich, un secuenciador, una caminata, ciclos de 3 o 5 contra el compás (polimetría), un gate de trance,
+  octavas — en semicorcheas o corcheas, con huecos (ARP), en C3..C5.
+- **Lead**: un **motivo** de un compás (sus ataques sorteados por la métrica, su contorno por los pesos de la
+  tonalidad — la tónica, la quinta y la tercera más probables —, un salto compensado por un paso, notas del acorde en
+  los tiempos fuertes) en una **frase** de cuatro compases (A A A A', A A' A A'', A silencio A A', A A silencio A'),
+  variada por un operador por compás (el final movido, la última nota omitida, una tercera arriba o un paso abajo,
+  una nota de paso); o un ostinato hipnótico sobre un euclidiano, notas largas, una línea tintinnabuli, una figura de
+  máquina, un hook de dos compases (llamada y respuesta). Nunca una segunda menor ni un tritono contra el bajo; nunca
+  por encima de G5; los agudos más suaves.
+- **Sonidos** por **receta** según el rol: sub, acid, Reese, bajo FM, bajo de rock, el bajo con chorus de Hook, wow
+  bass; pad, cuerdas, coro, órgano (WHEEL), piano eléctrico, stab, acorde de dub, pluck, campana, lead, lead vocal,
+  chip, teclas, drone, ruido, textura, hoover, un muro shoegaze, una guitarra con trémolo. Una receta elige un motor,
+  un sonido de fábrica cuyo nombre encaja, mueve un poco sus parámetros, da forma a la envolvente, al filtro (tipo,
+  corte, resonancia, la envolvente sobre él), un LFO lento, saturación, chorus, glide, el modo de voz. El **kit** es
+  uno de siete (909, 808, click, industrial, suave, dub, breaks) escrito sobre el kit DRUM-X de fábrica, con el TONE,
+  DECAY, NOISE y DRIVE de la pista de batería.
+- **Mezcla**: nivel, paneo y envíos por rol y según la humedad del género; **HUMAN** fija SEQ > HUMAN en cada pista
+  según el rol (hats y leads más, el bombo nada) escalado por qué tan humano es el género (una banda más que una
+  máquina); SWING el del género salvo que lo fijes; DUCK, CLIP y PUNCH en el master; el TYPE, PING-PONG y TIME del
+  delay y el tipo de reverb, los del género.
+- Con **TRACKS 6** la sexta pista es una **textura** (un drone, ruido, un coro, un órgano, cuerdas) en notas largas.
+- **FORM**: **LOOP** escribe un loop (2 o 4 compases). **PARTS** además guarda las secciones **A** (la pieza), **B**
+  (un break: sin batería ni bajo) y **C** (un drop: la batería más densa) y llena ARRANGE con A B A C (PLAY toca el
+  tema, como hacía el DICE ALL de 0.6.81). **SONG** escribe una forma de club: **A** el drop, **B** la intro (batería y
+  bajo), **C** el build (entran los acordes, su filtro se abre a lo largo del loop, un redoble al final, el delay
+  lanzado en el último paso) y **D** el break (sin batería ni bajo, los acordes más húmedos), en ARRANGE como
+  B C A D C A con filas de 16 compases (el drop 32). Los géneros ambient y post-rock reciben un arco (fino, entra,
+  ápice). Las secciones tuyas (guardadas por vos, no por GEN) nunca se pisan: entonces la pieza queda en un loop.
+
+Cada pieza reemplaza los pasos, sonidos, kit, mezcla y automatización de todas las pistas. Los mutes quedan como
+estaban. Los roles que suenan van en las primeras pistas (la batería en la pista DRUM), así que con TRACKS 4 escuchás
+los más importantes.
 
 ### Dados de sonido (EDIT + SELECT)
 

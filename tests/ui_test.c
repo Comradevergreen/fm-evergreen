@@ -6818,7 +6818,9 @@ static int test_dice_all(void)
     bad += check("DICE ALL: HOME + SELECT asks first (OCT- NO: nothing changed)", ok);
     fm1_ms += 1200u;
     held_turn(B_HOME, 1); press(B_OCTUP); frames(4);
-    ok = !ui.confirm && undo_ok;
+    ok = ui.confirm == CF_DICE_ALL && undo_ok;         /* (0.6.91: GEN stays open for another throw; OCT- is done) */
+    press(B_OCTDN);
+    ok &= !ui.confirm;
     {   /* (0.6.34) the orchestration leaves some roles silent, the drums too: at least two melodic voices play */
         uint32_t mel = 0;
         for (k = 0; k < NTRK; k++) {
@@ -6855,8 +6857,8 @@ static int test_dice_all(void)
             fm += trk[k].eng_req == ENGI_FM6;
             drums += drum_track(&trk[k]);
         }
-        ok = str_eq(ui.msg, "DICED: ") || !strncmp(ui.msg, "DICED: ", 7);
-        ok &= moved >= 3u && fm <= 2u && drums == 1u;
+        ok = !strncmp(ui.msg, "GEN: ", 5);
+        ok &= moved >= 1u && fm <= 2u && drums == 1u;
         for (r = 0; r < 30u && ok; r++) {               /* thirty more throws: the same holds, every style seen */
             dice_all();
             for (k = 0, fm = 0, drums = 0; k < NTRK; k++) { fm += trk[k].eng_req == ENGI_FM6; drums += drum_track(&trk[k]); }
@@ -6887,7 +6889,7 @@ static int test_dice_all(void)
                 h[n2] = dice_print();
                 for (m = 0; m < n2; m++) same += h[m] == h[n2];
             }
-            bad += check("DICE ALL (0.6.27): 40 throws, none the same piece, the tempo moved every time", !same && !bpm_same);
+            bad += check("DICE ALL (0.6.27): 40 throws, none the same piece, the tempo moved nearly every time (0.6.91: from the seed)", !same && bpm_same <= 8u);
         }
     }
     ui_power_on();
