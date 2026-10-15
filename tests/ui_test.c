@@ -7594,6 +7594,42 @@ static int test_browse_no_pattern(void)
 }
 
 /* MENU > USB LEVEL: MASTER (the default, every older setting) / FIXED; the audio follows at once (audio_test: the levels) */
+/* (0.7.2) DRUM's presets are factory kits: browsing to 909 CLUB on a DRUM track loads its sounds, LAYERs and SENDs into
+ * the section's kit; an engine switch and INIT SOUND keep the section's kit (apply_preset_to alone); the DRUM-X preset
+ * browsed brings the factory kit back; the generator and a project load leave it to their own */
+static int test_drum_kits(void)
+{
+    int bad = 0, ok;
+    uint32_t i, k909 = 0;
+    ui_power_on();
+    go_home();
+    frame();
+    for (i = 0; i < ENG_DRUM.npresets; i++)
+        if (str_eq(ENG_DRUM.presets[i].name, "909 CLUB")) k909 = i;
+    set_engine(ENGI_DRUM);
+    ok = k909 == 1u && ENG_DRUM.npresets == 9u && DX_NKIT == 9u && TSEL->preset == 0 &&
+         dx_kit[DV_KICK].a[DXP_PMOD] == DX_KIT_DEF[DV_KICK].a[DXP_PMOD];
+    TSEL->preset = (uint8_t)(k909 - 1u);
+    turn(EN_PRESET, 1);                                 /* browsing (HOME): 909 CLUB */
+    ok &= TSEL->preset == k909 && !memcmp(dx_kit, DX_KITS[k909].lane, sizeof dx_kit) && !memcmp(dx_lay, DX_KITS[k909].lay, sizeof dx_lay) &&
+          !memcmp(dx_snd, DX_KITS[k909].snd, sizeof dx_snd) && dx_snd[DV_SNARE] == DX_KITS[k909].snd[DV_SNARE] &&
+          dx_kit[DV_KICK].a[DXP_PMOD] == DX_KIT_DEF[DV_KICK].a[DXP_PMOD] + 20 && (dx_kit[DV_KICK].mode & DX_DRIVE);
+    bad += check("DRUM presets: 909 CLUB browsed on a DRUM track loads its kit (sounds, LAYERs, SENDs: the kick driven, +20 PMOD)", ok);
+    set_engine(ENGI_ANALOG);
+    set_engine(ENGI_DRUM);                              /* an engine switch (preset 0 applied): the section's kit stays */
+    ok = TSEL->preset == 0 && !memcmp(dx_kit, DX_KITS[k909].lane, sizeof dx_kit);
+    init_sound_of(TSEL, ENGI_DRUM);                     /* INIT SOUND: the knobs, the kit as the section has it */
+    ok &= !memcmp(dx_kit, DX_KITS[k909].lane, sizeof dx_kit);
+    for (i = 1; i < ENG_DRUM.npresets; i++) {           /* every kit loads whole and differs from the factory one */
+        apply_preset(i);
+        ok &= TSEL->preset == i && !memcmp(dx_kit, DX_KITS[i].lane, sizeof dx_kit) && memcmp(dx_kit, DX_KIT_DEF, sizeof dx_kit) != 0 &&
+              dx_kit_ok(DX_KITS[i].lane);               /* (every value in range: the project would take it) */
+    }
+    apply_preset(0);
+    ok &= !memcmp(dx_kit, DX_KIT_DEF, sizeof dx_kit);
+    bad += check("  an engine switch and INIT SOUND keep the section's kit; the eight other kits each their own, DRUM-X browsed: the factory", ok);
+    return bad;
+}
 static int test_usb_level(void)
 {
     int bad = 0, ok;
@@ -9136,6 +9172,7 @@ int main(void)
     bad += test_scale_link();
     bad += test_organic();
     bad += test_usb_level();
+    bad += test_drum_kits();
     bad += test_click_menu();
     bad += test_usb_serial();
     bad += test_bpm_lock();

@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.7.1).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.7.2).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 > ⚡ **New in 0.6.85 – 0.6.92: a song generator you steer, a compact sequencer that breathes, a delay that feeds back.**
 > - **GEN (HOME + SELECT)**: a screen of three pages — GENRE (43 genres or RANDOM), SEED, ENERGY, FORM (loop, parts,
@@ -524,6 +524,17 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### v0.7.2
+- **Nine DRUM-X kits as DRUM presets**: DRUM-X (the factory kit), 909 CLUB (driven kick, bright snare and hats, the
+  snare and clap into the reverb), 808 BOOM (the long-decay kick and tom, the sine snare, soft hats, a metal cowbell),
+  LOFI DUST (dark, short, noisy, with layers and feedback on the snare and rim), INDUSTRIAL (FM kick driven, metal
+  snare, glitch rim and bell, delay on the tom and rim), ACOUSTIC (bell-toned snare and tom, soft hats, a little reverb
+  on everything), DUB ROOTS (deep kick, the snare and clap wet, the rim and bell into the delay), TECHNO RAW (FM kick,
+  hard snare, loud hats), BREAKS (snappy snare, band-passed hats). Browsing them on a DRUM track (PRESETS, the editor,
+  PROGRAM CHANGE) loads the whole kit into the section: the eight sounds' A and B, their LAYERs and SENDs, plus the
+  track's MORPH, TUNE, TONE, DECAY, NOISE, FM ENV and DRIVE. An engine switch, INIT SOUND, a project load and the
+  generator leave the section's kit as it is; browsing back to DRUM-X brings the factory kit.
 
 ### v0.7.1
 - **Stems over USB: MENU > SYSTEM > USB > STEMS.** The device re-enumerates as an 8-channel USB audio input (44.1 kHz,
