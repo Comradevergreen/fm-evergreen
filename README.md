@@ -537,6 +537,9 @@ Every update is listed here, newest first. (Since 0.6.80 at the end of the page:
   note), the motif follows the chord the nearer way (a fourth up is a fifth down, never an octave's worth of leap, and
   less often), every phrase ends on a chord tone.
 - **GEN: HOME closes the screen** (OCT− still does).
+- **The modulation matrix reaches the FX buses**: eight destinations after CLIP and PNCH, D.TIM D.FB D.TON D.MIX
+  (DELAY), R.SIZ R.DMP (REVERB), C.RAT C.DEP (CHORUS); AMT 64 at a full source = the whole range, every track's
+  slots add. A STEP source (the mod sequence) on D.TIM sequences the delay time; an LFO on R.SIZ breathes the room.
 - **MENU > AUDIO > USB LEVEL: −6 / −12 / −18 / −24 dB** after MASTER and FIXED: USB audio fixed and attenuated, for a
   phone or a computer whose input clips at the full level (the recordings came out distorted). The speaker and the
   headphones keep the MASTER knob.

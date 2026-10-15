@@ -1044,6 +1044,22 @@ static void test_env_loop(void)
     check("ENV LOOP: held, the envelope rises again and again (OFF: once); let go, it ends", r0 <= 1u && r1 >= 3u && e0 && e1);
 }
 
+/* (0.7.0) the FX buses' globals as destinations: DELAY TIME from the macro M1 (the buses read GFX(), modulated) */
+static void test_fx_dest(void)
+{
+    int32_t t0, t1, t2;
+    fresh(0, 0);
+    song.g[G_DTIME] = GP[G_DTIME].max / 2;       /* (mid-range: room both ways) */
+    macro_v[0] = 127;
+    trk[0].p[P_M1SRC] = MS_M1; trk[0].p[P_M1DST] = MD_DTIME; trk[0].p[P_M1AMT] = 63;
+    blocks(1); t1 = GFX(GF_DTIME);
+    trk[0].p[P_M1AMT] = -63; blocks(1); t2 = GFX(GF_DTIME);
+    trk[0].p[P_M1AMT] = 0; blocks(1); t0 = GFX(GF_DTIME);
+    check("matrix -> D.TIM: M1 full, AMT +63 raises DELAY TIME, -63 lowers it, 0 leaves it (the buses read it modulated)",
+          t0 == GP[G_DTIME].max / 2 && t1 > t0 && t2 < t0 && t1 <= GP[G_DTIME].max && t2 >= GP[G_DTIME].min);
+    trk[0].p[P_M1SRC] = 0; trk[0].p[P_M1DST] = 0;
+    macro_v[0] = 0;
+}
 static void test_jiant_fx(void)
 {
     uint64_t h[5], h0, h1;
@@ -1181,6 +1197,7 @@ int main(int argc, char **argv)
     test_midi();
     test_cost();
     test_jiant_fx();
+    test_fx_dest();
     test_env_loop();
     test_byte();
     test_float();

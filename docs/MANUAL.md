@@ -929,7 +929,10 @@ The settings stay; the TYPE card shows LITE or ECO under its value.
 - **MOD matrix**: 4 slots per track (KNOB 1 picks the slot).
   - Sources: OFF, LFO, ENV, VEL, KEY, RAND, MODW (MIDI CC1), AT (aftertouch), EXPR (CC11), **M1–M4**, **STEP** (MSEQ).
   - Destinations: PITCH, CUT, SHP, AMP, PAN, DIST, CHO, DLY, REV, RATE (LFO rate), VIB, **E1–E8** (the engine's own
-    EDIT knobs, shown by name), **CLIP** and **PNCH** (the master).
+    EDIT knobs, shown by name), **CLIP** and **PNCH** (the master), and (0.7.0) the FX buses: **D.TIM D.FB D.TON D.MIX**
+    (DELAY TIME, FDBK, TONE, MIX), **R.SIZ R.DMP** (REVERB SIZE, DAMP), **C.RAT C.DEP** (CHORUS RATE, DEPTH). AMT 64 at a
+    full source = the parameter's whole range; every track's slots on the same bus add. A STEP source (the mod
+    sequence) on D.TIM sequences the delay time.
 - **MSEQ**: a 16-step modulation sequencer per track, like a CV sequencer. KNOB 1 picks the step, KNOB 2 sets its
   level, LEN and SLEW; DIV on MSEQ 2. Use it from MOD with SRC **STEP**.
 

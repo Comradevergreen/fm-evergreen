@@ -321,8 +321,8 @@ def sound():
                   '<h4>SOURCES</h4><p>' + k('LFO', 'ENV', 'VEL', 'KEY', 'RAND', 'MODW', 'AT', 'EXPR', 'M1', 'M2', 'M3', 'M4',
                                              'STEP') + '</p>'
                   '<h4>DESTINATIONS</h4><p>' + k('PITCH', 'CUT', 'SHP', 'AMP', 'PAN', 'DIST', 'CHO', 'DLY', 'REV', 'RATE',
-                                                  'VIB', 'E1…E8', 'CLIP', 'PNCH') + '</p>'
-                  '<p style="margin-top:6px">E1…E8: the engine\'s own EDIT knobs. CLIP / PNCH: the master.</p>'))
+                                                  'VIB', 'E1…E8', 'CLIP', 'PNCH', 'D.TIM', 'D.FB', 'D.TON', 'D.MIX', 'R.SIZ', 'R.DMP', 'C.RAT', 'C.DEP') + '</p>'
+                  '<p style="margin-top:6px">E1…E8: the engine\'s own EDIT knobs. CLIP / PNCH: the master. D. R. C.: the DELAY, REVERB and CHORUS buses (a STEP source on D.TIM sequences the delay time).</p>'))
     b.append(card('MSEQ · MACROS', HEAT[1],
                   '<h4>MSEQ · A CV SEQUENCER PER TRACK</h4>' + knobs('STEP', 'LVL', 'LEN', 'SLEW') +
                   '<p style="margin-top:6px">16 levels, DIV on MSEQ 2, in time with the transport. Use it from MOD, '
