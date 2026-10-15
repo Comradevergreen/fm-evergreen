@@ -947,7 +947,13 @@ The settings stay; the TYPE card shows LITE or ECO under its value.
 
 ### Punch-in FX (hold FX)
 
-Effects that act while their key is held and go back exactly when you let go.
+Effects that act while their key is held and go back exactly when you let go. **FX > PUNCH** (0.6.99) is their
+sequencer: the lane that records them. **LEN** its length, 1 … 64 steps; **RES** the step, 1/8, 1/16 or 1/32 of a
+beat (64 steps of 1/16 are four bars, of 1/32 two, of 1/8 eight); KNOB 3 says what it is doing (REC while recording,
+PLAY while it plays, else how many steps hold an effect); **CLEAR** (KNOB 4, then OCT+) empties it. The page draws
+the lane's cells in the effects' colours with the playhead on them, the last effect's name and the tracks it acts
+on (ALL, SYN, DRM). To record: REC armed and playing (not in a song), hold FX and the effect's key; the steps it
+passes get it; **G5** held erases where the playhead passes. Saved with the section.
 
 - **On the audio**: REPEAT 1/8, 1/16, 1/32 (F3 G3 A3), LPF (B3), HPF (C4). REPEAT starts on the next 1/16 while
   playing. Below about 81 BPM, REPEAT 1/8 is too long for its buffer and is shown dimmed.

@@ -273,6 +273,25 @@ static void graph_comp(const track_t *t, uint16_t c)
 /* (0.6.92) the selected track's next 32 bars: a mark where its SOUND changes (warm) and where its PATTERN does (cool),
  * the bar now at the left; under it what it does (every project's steps written; ORBIT around the anchor OCT+ keeps,
  * DRIFT on and on) and the two hands */
+/* (0.6.99) FX > PUNCH: the punch-in lane as LEN cells (the effect's colour: octaves, tempo, decays, stutters, attack,
+ * arp, random), the playhead on it, the targets and a line on how it records */
+static void graph_punch(void)
+{
+    static const char *const EF[10] = {"OCT-", "OCT+", "1/2", "DEC-", "DEC+", "ST8", "ST16", "ATK", "ARP", "RND"};
+    static const char *const TG[3] = {"ALL", "SYN", "DRM"};
+    uint32_t len = pfx_lane_len(), i, pos = song.playing ? pfx_lane_pos() : 0xFFu, n = 0, last = 0;
+    int32_t w = (PANEL_W - 8) / (int32_t)(len > 32u ? 32u : len), rows = len > 32u ? 2 : 1, r;
+    for (r = 0; r < rows; r++)
+        for (i = (uint32_t)r * 32u; i < len && i < (uint32_t)(r + 1) * 32u; i++) {
+            uint32_t e = pfx_lane_at(i);
+            int32_t x = PANEL_X0 + 4 + (int32_t)(i % 32u) * w, y = 40 + r * 22;
+            if (e && e <= 10u) { n++; last = e; }
+            if (i == pos) cv_rrect(x - 2, y - 2, w + 2, 22, 3, T_ACCENT, T_SURF);   /* (the playhead: a frame) */
+            cv_rrect(x, y, w - 2, 18, 2, e && e <= 10u ? heat_col(40 + e * 20u) : i % 4u == 0u ? T_RAISE : T_SURF, i == pos ? T_ACCENT : T_SURF);
+        }
+    cv_text(PANEL_X0 + 2, 88, &AF_S, n ? EF[last - 1u] : "EMPTY", n ? heat_col(40 + last * 20u) : T_DIM);
+    cv_text_r(PANEL_X0 + PANEL_W - 2, 88, &AF_S, pfx_rec_ok() ? "RECORDING" : TG[pfx_ltgt % 3u], pfx_rec_ok() ? T_ACCENT : T_MID, T_SURF);
+}
 static void graph_mutate(void)
 {
     const track_t *t = TSEL;
@@ -2146,6 +2165,9 @@ static void draw_graph(void)
             break;
         case GR_MUTATE:
             graph_mutate();
+            break;
+        case GR_PUNCH:
+            graph_punch();
             break;
         case GR_MORPH:
             graph_morph(t);

@@ -765,6 +765,8 @@ static uint32_t proj_packed_size(const project_t *q)
         n += 3u;
     if (q->g[G_DTYPE] || q->g[G_DPING])                 /* (0.6.90) its TYPE and PING-PONG's */
         n += 4u;
+    if (q->g[G_PFXLEN] != 64 || q->g[G_PFXRES] != 1)    /* (0.6.99) the punch-in lane's LEN and RES, when not the default */
+        n += 4u;
     for (i = 0; i < sizeof q->dx_snd; i++)              /* (0.6.48) the SENDs' block, when one is set */
         if (q->dx_snd[i]) { n += 2u + sizeof q->dx_snd; break; }
     for (i = 0; i < sizeof q->dx_lay; i++)              /* (0.6.49) the LAYERs' */
@@ -868,6 +870,10 @@ static int proj_pack(project_store_t *out, const project_t *q)
     if (q->g[G_DTYPE] || q->g[G_DPING]) {               /* (0.6.90) the delay's TYPE, PING-PONG */
         b[pos++] = 'D'; b[pos++] = 'T';
         b[pos++] = (uint8_t)clamp(q->g[G_DTYPE], 0, 1); b[pos++] = (uint8_t)clamp(q->g[G_DPING], 0, 1);
+    }
+    if (q->g[G_PFXLEN] != 64 || q->g[G_PFXRES] != 1) {  /* (0.6.99) the punch-in lane's LEN (1..64) and RES */
+        b[pos++] = 'P'; b[pos++] = 'X';
+        b[pos++] = (uint8_t)clamp(q->g[G_PFXLEN], 1, 64); b[pos++] = (uint8_t)clamp(q->g[G_PFXRES], 0, 2);
     }
     memcpy(b + PROJC_PFX_OFF, q->pfx_lane, sizeof q->pfx_lane);
     b[PROJC_PFX_OFF + sizeof q->pfx_lane] = q->pfx_ltgt > 2u ? 0u : q->pfx_ltgt;
@@ -1075,6 +1081,12 @@ static int proj_unpack_c(project_t *q, const uint8_t *b)
     if (pos + 4u <= room && b[pos] == 'D' && b[pos + 1u] == 'T') {   /* (0.6.90) its TYPE, PING-PONG (else ANALOG, OFF) */
         q->g[G_DTYPE] = (int16_t)(b[pos + 2u] & 1u);
         q->g[G_DPING] = (int16_t)(b[pos + 3u] & 1u);
+        pos += 4u;
+    }
+    if (pos + 4u <= room && b[pos] == 'P' && b[pos + 1u] == 'X') {   /* (0.6.99) the punch-in lane's LEN, RES (else 64, 1/16) */
+        q->g[G_PFXLEN] = (int16_t)clamp(b[pos + 2u], 1, 64);
+        q->g[G_PFXRES] = (int16_t)(b[pos + 3u] > 2u ? 1u : b[pos + 3u]);
+        pos += 4u;
     }
     proj_new_tracks(q, nt);                             /* (a FUNC of fewer tracks: the rest at power-on) */
     for (t = nt; t < NTRK; t++)
