@@ -208,7 +208,7 @@ static void gen_drums_idm(track_t *t, uint32_t len)
 static void gen_drums(track_t *t, uint32_t len)
 {
     const ggenre_t *g = gs.g;
-    const char *const *map = DRUM_MAP[g->drum];
+    const char *map[8];
     static const int8_t OFF[8] = {40, 20, 20, 0, 0, -20, -20, -20};
     uint32_t a = gs.amt[GP_DRUMS], dens = (uint32_t)clamp(40 + (int32_t)a * 2 + ((int32_t)gs.energy - 50) / 2, 20, 255), i, l, bars = len / 16u ? len / 16u : 1u;
     /* (0.6.93) ENERGY: the density and the velocities with it, the hats sixteenths above 66, the percussion thinned under 34 */
@@ -217,6 +217,17 @@ static void gen_drums(track_t *t, uint32_t len)
     gseed(GS_DRUMS);
     memset(gs.kick, 0, sizeof gs.kick);
     memset(gs.snare, 0, sizeof gs.snare);
+    for (l = 0; l < 8u; l++) map[l] = DRUM_MAP[g->drum][l];
+    if (g->drum != DM_IDM && g->drum != DM_NONE && g->drum != DM_SPARSE) {   /* (0.6.97) a throw's own top end: the hats,
+                                                         * the open hats and the percussion from the pools now and then;
+                                                         * the snare and the clap swapped now and then */
+        if (gch(50)) map[3] = HAT_POOL[gr() % 8u];
+        if (gch(40)) map[4] = OH_POOL[gr() % 6u];
+        if (gch(35)) map[6] = RS_POOL[gr() % 6u];
+        if (gch(18)) map[7] = CB_POOL[gr() % 4u];
+        if (gch(30)) map[5] = TM_POOL[gr() % 4u];
+        if (map[1][0] && map[2][0] && gch(30)) { const char *x = map[1]; map[1] = map[2]; map[2] = x; }
+    }
     if (g->drum == DM_IDM) {
         gen_drums_idm(t, len);
         for (i = 0; i < len; i++) { gs.kick[i] = (uint8_t)(t->step[i].hit & 1u); gs.snare[i] = (uint8_t)((t->step[i].hit >> 1) & 1u); }
@@ -289,7 +300,7 @@ static void gen_drums(track_t *t, uint32_t len)
             uint32_t b = i / 16u, p = i % 16u;
             step_t *s = &t->step[i];
             if (!(b & 1u) || p % 2u == 0u) continue;
-            if (s->time != ST_NOTE && gch(gs.complex / 12u) && (p == 7u || p == 11u || p == 15u) && g->kick_mode != KM_ANSWER) {
+            if (s->time != ST_NOTE && gch(8 + gs.complex / 8u) && (p == 7u || p == 10u || p == 11u || p == 14u) && g->kick_mode != KM_ANSWER) {
                 gdrum_hit(t, i, 0, 80, 0);
             } else if (s->time == ST_NOTE && (s->hit & 0xC0u) && gch(gs.complex / 4u)) {
                 s->hit ^= (uint8_t)(s->hit & 0xC0u) ^ (uint8_t)(((s->hit & 0x40u) << 1) | ((s->hit & 0x80u) >> 1));
@@ -663,21 +674,25 @@ static void gen_lead(track_t *t, uint32_t len)
          * (a leap filled back), chord tones on strong steps; the phrase over four bars from a template, a variation
          * operator on the varied bars; HOOK: the second bar answers (the same rhythm, the contour turned, ending on a
          * chord tone) */
-        static const uint8_t WM[16] = {8, 1, 3, 1, 6, 1, 3, 2, 6, 1, 3, 1, 5, 1, 3, 2};
         static const uint8_t TPL[5][4] = {{0, 0, 0, 1}, {0, 1, 0, 2}, {0, 3, 0, 1}, {0, 0, 3, 1}, {0, 1, 3, 2}};   /* 0 M 1 V1 2 V2 3 rest */
+        /* (0.6.97) the motif's rhythm: a cell from a library of figures that hold together (a long note and two short
+         * ones, a tresillo, a pickup into the three, a dotted push ..), its onsets thinned to k by complexity */
+        static const char *const CELL[12] = {"x..x..x...x.....", "x.x.x...x.x.....", "x...x.x.x.......", "..x...x...x...x.",
+                                             "x..x.x..x..x.x..", "x.......x.x.x...", "x...x...x...x...", "x.x...x.x...x...",
+                                             "..x.x...x.x.....", "x..x..x..x..x...", "x.....x...x.x...", "x...x.x.......x."};
         uint8_t at[6], used[16] = {0};
         int8_t deg[6], ans[6];
-        uint32_t k = 2u + gs.complex / 35u + (a > 60u), tpl = gr() % 5u, op1 = gr() % 5u, op2 = gr() % 5u;
+        uint32_t k = 2u + gs.complex / 35u + (a > 60u), tpl = gr() % 5u, op1 = gr() % 5u, op2 = gr() % 5u, nc = 0;
         int32_t d = (int32_t)(gr() % 3u) * 2, prev_mv = 0;
+        const char *cell = CELL[gr() % 12u];
         if (k > 5u) k = 5u;
         if (style == LD_HOOK) tpl = 4;
-        for (j = 0; j < k; j++) {                       /* the onsets, weighted by the metre, sorted */
-            uint8_t w[16];
-            uint32_t p;
-            for (p = 0; p < 16u; p++) w[p] = (uint8_t)(used[p] || p > 13u ? 0u : WM[p]);
-            p = gpickw(w, 16);
-            used[p] = 1;
+        for (i = 0; i < 16u; i++) if (cell[i] == 'x') { used[i] = 1; nc++; }
+        while (nc > k) {                                /* (thinned: a weak onset dropped, never the first) */
+            uint32_t p = 1u + gr() % 15u;
+            if (used[p] && (p % 4u || gch(30))) { used[p] = 0; nc--; }
         }
+        k = nc;
         for (j = 0, i = 0; i < 16u; i++) if (used[i]) at[j++] = (uint8_t)i;
         for (j = 0; j < k; j++) {                       /* the contour */
             if (j) {
@@ -801,6 +816,16 @@ static void gen_sound(track_t *t, uint32_t role, uint32_t ri)
         t->p[P_LRATE] = (int16_t)grr(r->lfo_rate[0], r->lfo_rate[1]);
         t->p[P_LD_FLT] = (int16_t)grr(r->lfo[0], r->lfo[1]);
     }
+    if (role == RL_LEAD && gch(55)) {                   /* (0.6.97) a vibrato that comes in late, now and then a tremolo */
+        t->p[P_LWAVE] = 0; t->p[P_LRATE] = (int16_t)grr(52, 72); t->p[P_LFADE] = (int16_t)grr(40, 90);
+        t->p[P_LD_PIT] = (int16_t)grr(3, 9);
+        if (gch(30)) t->p[P_LD_AMP] = (int16_t)grr(10, 30);
+    } else if (role == RL_PAD && gch(35)) {             /* (a pad breathing: a slow tremolo or a slow pan) */
+        if (gch(50)) { t->p[P_LWAVE] = 0; t->p[P_LRATE] = (int16_t)grr(6, 18); t->p[P_LD_AMP] = (int16_t)grr(12, 30); }
+        else { t->p[P_APDEP] = (int16_t)grr(25, 55); t->p[P_APSYNC] = 1; t->p[P_APRATE] = (int16_t)grr(1, 3); }
+    } else if (role == RL_ARP && gch(40)) {             /* (an arp moving across the stereo on the beat) */
+        t->p[P_APDEP] = (int16_t)grr(30, 70); t->p[P_APSYNC] = 1; t->p[P_APRATE] = (int16_t)grr(3, 5);
+    }
     if (r->dist[1] && gch(70)) { t->p[P_DIST] = (int16_t)grr(r->dist[0], r->dist[1]); t->p[P_DTYPE] = (int16_t)(gch(70) ? 0 : 2); }
     else t->p[P_DIST] = 0;
     t->p[P_CHOR] = (int16_t)(r->chor[1] ? grr(r->chor[0], r->chor[1]) : 0);
@@ -835,6 +860,14 @@ static void gen_kit(track_t *t)
         S->a[DXP_PMOD] = (uint8_t)clamp(S->a[DXP_PMOD] - pm, 0, 127); S->b[DXP_PMOD] = (uint8_t)clamp(S->b[DXP_PMOD] - pm, 0, 127);
         S->a[DXP_COLOR] = (uint8_t)clamp(S->a[DXP_COLOR] + cl, 0, 127); S->b[DXP_COLOR] = (uint8_t)clamp(S->b[DXP_COLOR] + cl, 0, 127);
         dx_lay[DV_SNARE] = (uint8_t)(DX_LAY_L(DX_LAY_DEF[DV_SNARE]) | ((uint32_t)grr(3, 6) << 4));
+    }
+    {   /* (0.6.97) the snare and the clap into the reverb (the kit's space), the rim into the delay where the genre is
+         * wet (dub, dub techno ..): the kit's own SENDs (eng_drum.c dx_snd) */
+        int32_t wet = (int32_t)gs.g->wet, rv = clamp((18 + grr(0, 22)) * (40 + wet) / 100, 6, 63);
+        dx_snd[DV_SNARE] = (uint8_t)((3u << 6) | (uint32_t)rv);
+        dx_snd[DV_CLAP] = (uint8_t)((3u << 6) | (uint32_t)clamp(rv + grr(-6, 10), 6, 63));
+        dx_snd[DV_RIM] = (uint8_t)(wet >= 60 ? (2u << 6) | (uint32_t)grr(20, 45) : 0u);
+        dx_snd[DV_HATO] = (uint8_t)(wet >= 70 && gch(50) ? (3u << 6) | (uint32_t)grr(8, 20) : 0u);
     }
     for (l = DV_HATC; l <= DV_HATO; l++) {               /* (0.6.94) the hats: a band-pass high up, more noise in them */
         dx_lane_t *H = &dx_kit[l];
@@ -886,6 +919,7 @@ static void gen_parts(void)
     uint32_t dr = gs.trk_of[RL_DRUM], bs = gs.trk_of[RL_BASS], pd = gs.trk_of[RL_PAD], ld = gs.trk_of[RL_LEAD], ar = gs.trk_of[RL_ARP];
     uint32_t k, n = 0, rows = 0, bars = gp.form == 2u ? 16u : 8u, i;
     static const uint8_t ORD_CLUB[6] = {1, 2, 0, 3, 2, 0}, ORD_PARTS[4] = {0, 1, 0, 2}, ORD_ARC[4] = {1, 0, 2, 3};
+    static const uint8_t FILLS[6] = {FL_ROLL, FL_TOM, FL_HAT, FL_DROP, FL_LINEAR, FL_KICK16};   /* (0.6.97) a fill a section */
     const uint8_t *ord;
     uint32_t nord;
     if (form == FM_LOOP) return;
@@ -904,6 +938,18 @@ static void gen_parts(void)
         for (i = 0; i < NTRK; i++) trk[i].p[P_MUTE] = 0;
         if (dr < NTRK) { load_begin(&trk[dr], LOAD_PAT); memcpy(trk[dr].step, gen_keep[0], sizeof gen_keep[0]); motion_clear(&trk[dr]); load_end(&trk[dr]); }
         if (pd < NTRK) { load_begin(&trk[pd], LOAD_PAT); memcpy(trk[pd].step, gen_keep[1], sizeof gen_keep[1]); motion_clear(&trk[pd]); load_end(&trk[pd]); }
+        if (dr < NTRK && gs.act[RL_DRUM] && k != 2u) { /* (0.6.97) each section its own fill (the BUILD's below: a
+                                                         * roll); the phrase's last bar differs section to section */
+            track_t *t = &trk[dr];
+            uint32_t f0 = g->fills == FL_NONE ? FL_ROLL : g->fills;
+            load_begin(t, LOAD_PAT);
+            for (i = 0; i < NSTEP; i++) gclear(&t->step[i]);
+            gs.drum_fill = k == 1u ? f0 : FILLS[(gs.gi + k) % 6u];
+            gen_drums(t, dlen(t));
+            gs.drum_fill = 0;
+            load_end(t);
+            memcpy(gen_keep[0], trk[dr].step, sizeof gen_keep[0]);
+        }
         if (form == FM_CLUB) {
             if (k == 1u) {                              /* B INTRO: the drums and the bass */
                 if (pd < NTRK) trk[pd].p[P_MUTE] = 1;
@@ -921,6 +967,10 @@ static void gen_parts(void)
                     gs.drum_fill = 0;
                     load_end(t);
                 }
+                memset(pfx_lane, 0, sizeof pfx_lane);   /* (0.6.97) the punch-in lane: a stutter into the drop (1/8 on
+                                                         * the last beat, 1/16 on its last two sixteenths), every track */
+                pfx_ltgt = 0;
+                for (i = 60; i < 64u; i++) pfx_lane_put(i, i < 62u ? 6u : 7u);
                 if (pd < NTRK && gs.act[RL_PAD]) {
                     track_t *t = &trk[pd];
                     uint32_t id = t->eng_req == EG_A ? P_E4 : P_FCUT, base = (uint32_t)clamp(t->p[id], 0, 127), len = dlen(t), j;
@@ -929,7 +979,11 @@ static void gen_parts(void)
                     motion_set_event(t, len - 1u, P_DLY, (int16_t)clamp(t->p[P_DLY] + 50, 0, 127));
                     motion_set_event(t, 0, P_DLY, t->p[P_DLY]);
                 }
-            } else {                                    /* D BREAK: no drums, no bass; the chords wetter */
+            } else {                                    /* D BREAK: no drums, no bass; the chords wetter; (0.6.97) the
+                                                         * synths an octave up on the break's last bar */
+                memset(pfx_lane, 0, sizeof pfx_lane);
+                pfx_ltgt = 1;
+                for (i = 48; i < 64u; i++) pfx_lane_put(i, 2u);
                 if (dr < NTRK) trk[dr].p[P_MUTE] = 1;
                 if (bs < NTRK) trk[bs].p[P_MUTE] = 1;
                 if (pd < NTRK) motion_set_event(&trk[pd], 0, P_REV, (int16_t)clamp(trk[pd].p[P_REV] + 30, 0, 127));
@@ -1024,19 +1078,32 @@ static void gen_post(void)
             if ((i / 16u) % 4u == 3u && i % 16u >= 14u && t->step[i].time == ST_NOTE)
                 t->step[i].vel = (uint8_t)clamp((int32_t)t->step[i].vel * 60 / 100, 30, 127);
     }
-    if (gs.complex > 45u) {                             /* a step component or two: the lead echoed or an octave, the arp
-                                                         * jumping its octave, a chord arpeggiated */
+    if (gs.complex > 30u) {                             /* step components (0.6.97: more of them, some every other loop):
+                                                         * the lead echoed, an octave up or bent, the arp jumping its
+                                                         * octave, ratcheted or pulsed, a chord arpeggiated or echoed */
         for (k = 0; k < NTRK; k++) {
-            uint32_t r = gs.role[k], tries;
-            if (!gs.act[r] || r == RL_DRUM || r == RL_TEX || r == RL_BASS || !gch(45)) continue;
-            for (tries = 0; tries < 6u; tries++) {
+            uint32_t r = gs.role[k], tries, want = 1u + (gs.complex > 60u) + (gs.complex > 85u), got = 0;
+            if (!gs.act[r] || r == RL_DRUM || r == RL_TEX || r == RL_BASS || !gch(40 + gs.complex / 3u)) continue;
+            for (tries = 0; tries < 12u && got < want; tries++) {
                 uint32_t at = 1u + gr() % (dlen(&trk[k]) - 1u > 0u ? dlen(&trk[k]) - 1u : 1u);
                 step_t *s = &trk[k].step[at];
                 if (s->time != ST_NOTE || !s->n || s->comp) continue;
-                if (r == RL_PAD) { if (s->n < 2u) continue; s->comp = CP_ARPN; s->carg = CP_ARG(gr() % 3u, gch(50) ? 0u : 2u, 0u); }
-                else if (r == RL_LEAD) { s->comp = gch(60) ? CP_ECHO : CP_OCT; s->carg = (uint8_t)(s->comp == CP_ECHO ? gr() % 2u : 2u); }
-                else { s->comp = gch(50) ? CP_OCT : CP_RAND; s->carg = (uint8_t)(s->comp == CP_RAND ? 1u + gr() % 2u : 4u); }
-                break;
+                if (r == RL_PAD) {
+                    if (s->n < 2u) continue;
+                    if (gch(60)) { s->comp = CP_ARPN; s->carg = CP_ARG(gr() % 3u, gch(50) ? 0u : 2u, 0u); }
+                    else { s->comp = CP_ECHO; s->carg = (uint8_t)(gr() % 2u); }
+                } else if (r == RL_LEAD) {
+                    uint32_t c = gr() % 4u;
+                    s->comp = (uint8_t)(c == 0u ? CP_ECHO : c == 1u ? CP_OCT : c == 2u ? CP_BEND : CP_PULSE);
+                    s->carg = (uint8_t)(s->comp == CP_ECHO ? gr() % 2u : s->comp == CP_OCT ? 2u : s->comp == CP_BEND ? (gch(50) ? 2u : 10u) : 1u);
+                } else {
+                    uint32_t c = gr() % 3u;
+                    s->comp = (uint8_t)(c == 0u ? CP_OCT : c == 1u ? CP_RAND : CP_ECHO);
+                    s->carg = (uint8_t)(s->comp == CP_RAND ? 1u + gr() % 2u : s->comp == CP_OCT ? 4u : 0u);
+                    if (c == 2u && gs.energy > 60u && gch(50)) { s->comp = 0; step_set_ratchet(s, 2); }
+                }
+                if (s->comp && gch(40)) ST_EVERY_SET(s, gch(50) ? EV_1_2 : EV_2_2);   /* (every other loop) */
+                got++;
             }
         }
     }
@@ -1216,6 +1283,15 @@ static void gen_make(void)
     }
     gseed(GS_FORM);
     gen_post();
+    if (dr < NTRK && gs.act[RL_DRUM] && gch(45 + gs.complex / 4u)) {   /* (0.6.97) MORPH moving over the loop: the kit's
+                                                         * character drifting a little and back (the drum track's
+                                                         * automation) */
+        track_t *t = &trk[dr];
+        uint32_t len = dlen(t), j, n = len >= 32u ? 4u : 2u;
+        int32_t base = t->p[P_E0], sw = grr(14, 34) * (gch(50) ? 1 : -1);
+        for (j = 0; j < n; j++)
+            motion_set_event(t, j * len / n, P_E0, (int16_t)clamp(base + (j == 0u ? 0 : j == n / 2u ? sw : sw / 2), 0, 127));
+    }
     for (k = 0; k < NTRK; k++) pat_sig[k] = steps_sig(&trk[k]);
     /* the tempo (the genre's range, the energy in it; always moved), the swing, the space, the master */
     if (!(ui_prefs & PREF_BPM_LOCK)) {                  /* the genre's range, the energy's place in it (from the seed:
@@ -1225,12 +1301,14 @@ static void gen_make(void)
     }
     song.g[G_SWING] = (int16_t)clamp((int32_t)gs.swing, 0, 100);
     song.g[G_DTIME] = g->dtime;
-    song.g[G_DFDBK] = (int16_t)clamp(grr(30, 55) + (int32_t)wet / 3, 0, 95);
+    song.g[G_DFDBK] = (int16_t)clamp(wet >= 70u ? grr(58, 80) : grr(30, 55) + (int32_t)wet / 3, 0, 95);   /* (0.6.97: the wet
+                                                         * genres' long tails: dub, dub techno, shoegaze, ambient ..) */
     song.g[G_DMIX] = (int16_t)grr(70, 110);
     song.g[G_DCOLOR] = (int16_t)(g->dtype & 1u ? grr(50, 70) : grr(30, 52));
     song.g[G_DTYPE] = (int16_t)(g->dtype & 1u);
     song.g[G_DPING] = (int16_t)((g->dtype >> 1) & 1u);
-    song.g[G_DMOD] = (int16_t)(g->human >= 40u && gch(50) ? grr(10, 36) : 0);
+    song.g[G_DMOD] = (int16_t)(wet >= 70u ? grr(20, 50) : g->human >= 40u && gch(50) ? grr(10, 36) : 0);   /* (0.6.97: the
+                                                         * tape's wobble on the long tails) */
     song.g[G_DPIT] = 0; song.g[G_DSPRY] = 0;
     song.g[G_RTYPE] = g->rtype;
     song.g[G_RSIZE] = (int16_t)clamp(grr(40, 80) + (int32_t)wet / 2, 0, 127);

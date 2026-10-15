@@ -17,7 +17,7 @@ enum { GP_DRUMS, GP_BASS, GP_CHORDS, GP_ARP, GP_LEAD, GP_N };   /* the parts the
 enum { DM_HOUSE, DM_DEEP, DM_MICRO, DM_TECHHOUSE, DM_TECHNO, DM_DETROIT, DM_DUBTECH, DM_HYPNO, DM_HARD, DM_ELECTRO,
        DM_EBM, DM_ITALO, DM_SYNTHPOP, DM_DARKWAVE, DM_POSTPUNK, DM_TRIBAL, DM_RBOX, DM_KLING, DM_MOTORIK, DM_INDIE,
        DM_SHOEGAZE, DM_FUNK, DM_DISCO, DM_BOOMBAP, DM_TRAP, DM_UKG, DM_DUBSTEP, DM_BREAKS, DM_DNB, DM_ONEDROP,
-       DM_STEPPERS, DM_ROCKERS, DM_JAZZ, DM_BOSSA, DM_AFRO, DM_SPARSE, DM_IDM, DM_NONE };
+       DM_STEPPERS, DM_ROCKERS, DM_JAZZ, DM_BOSSA, DM_AFRO, DM_SPARSE, DM_IDM, DM_JOYDIV, DM_NEWORDER, DM_NONE };
 static const char *const DRUM_MAP[][8] = {
     [DM_HOUSE]     = {"X...8...X...8...", "", "....9.......9...", "7.3.7.3.7.3.7.3.", "..8...8...8...8.", "", ".......2......3.", ""},
     [DM_DEEP]      = {"X...8...X...8..2", "", "....7.......7...", ".37..37..37..37.", "..8...8...8...8.", "", "...2......4.....", ""},
@@ -56,8 +56,21 @@ static const char *const DRUM_MAP[][8] = {
     [DM_AFRO]      = {"X6......X6..4...", "....X...3...X.3.", "", "6.567.567.567.56", "......4.........", "......5.......5.", "", ".5..5.5..5..5.5."},
     [DM_SPARSE]    = {"7...............", "", "", "", "", "", "......3.....4...", "..........3....."},
     [DM_IDM]       = {"", "", "", "", "", "", "", ""},   /* (procedural: euclids against each other) */
+    /* (0.6.97) post punk after Joy Division (She's Lost Control: the kick syncopated against a flat sixteenth hat, the
+     * snare on 2 and 4, a tom at the bar's end) and New Order (Blue Monday, Ceremony: four on the floor with the
+     * snare and a clap, driven sixteenths, open hats off the beat, toms into the one) */
+    [DM_JOYDIV]    = {"X..X..X.X..X..X.", "....X.......X...", "", "7777777777777777", "", "..........4...5.", "", ""},
+    [DM_NEWORDER]  = {"X...X...X...X...", "....X.......X...", "....5.......5...", "7676767676767676", "..6...6...6...6.", "..............44", "", ""},
     [DM_NONE]      = {"", "", "", "", "", "", "", ""},
 };
+/* (0.6.97) a throw's own hats and percussion: a hat pattern, an open hat pattern and a percussion line from these pools
+ * now and then instead of the map's, so a genre's throws differ in their top end */
+static const char *const HAT_POOL[8] = {"7.7.7.7.7.7.7.7.", "7373737373737373", "..8...8...8...8.", "7.7.7.7.7.7.77.7",
+                                        "7.37.37.37.37.3.", "8.5.8.5.8.5.8.55", "7..7..7.7..7..7.", "6666666666666666"};
+static const char *const OH_POOL[6] = {"", "..7...7...7...7.", "......7.......7.", "..............7.", "..7.......7.....", "...7...7...7...7"};
+static const char *const RS_POOL[6] = {"", "...5......5.....", ".4....4.4....4..", "......5.....5...", "..5...5...5...5.", "...3..3....3..3."};
+static const char *const CB_POOL[4] = {"", "5..5..5...5.5...", "......4.......4.", "2.2.2.2.2.2.2.2."};
+static const char *const TM_POOL[4] = {"", "..............44", "......5.......5.", "..6..6....6..6.."};
 /* the snare's ghost positions, the best first (the sixteenth before 2 and 4, then the "a"s, the "e"s, the "&"s) */
 static const uint8_t GHOST_RANK[12] = {3, 7, 11, 15, 13, 5, 9, 1, 14, 6, 10, 2};
 /* the hats' accent cells (percent of the hit's velocity on the four sixteenths of a beat) */
@@ -91,7 +104,8 @@ enum { BA_OFFBEAT, BA_OFFOCT, BA_BOUNCE, BA_DEEPWALK, BA_ROLL16, BA_OCTBNC, BA_D
        BA_WALK, BA_WALK2, BA_TWOFEEL, BA_BOOGIE, BA_COUNTRY, BA_SKA, BA_TUMBAO, BA_BOSSA, BA_ROCK8, BA_ROOT5,
        BA_PUNK16, BA_DUST, BA_MCCART, BA_HOOK, BA_MOTORIK, BA_ANGULAR, BA_INDIE, BA_ONEDROP, BA_ONEDROP2, BA_STEPPERS,
        BA_ROCKERS, BA_DUB, BA_BOOMBAP, BA_TRAP, BA_DNB, BA_JUNGLE, BA_WOBBLE, BA_PEDAL, BA_FIFTHS, BA_NEOARP,
-       BA_SUICIDE, BA_DARK8, BA_SEQ16, BA_ACID, BA_NITZER1, BA_NITZER2, BA_NITZER3, BA_RADIO, BA_N };
+       BA_SUICIDE, BA_DARK8, BA_SEQ16, BA_ACID, BA_NITZER1, BA_NITZER2, BA_NITZER3, BA_RADIO, BA_HOOK2, BA_BLUEMON,
+       BA_CEREMONY, BA_N };
 typedef struct { const char *n, *f; uint8_t bars; } barch_t;
 static const barch_t BASS_ARCH[BA_N] = {
     [BA_OFFBEAT]  = {"..R...R...R...R.", 0, 1},
@@ -155,6 +169,11 @@ static const barch_t BASS_ARCH[BA_N] = {
     [BA_NITZER3]  = {"R.RR.R8.R.RR.R3.", "a.....a.a.....a.", 1},
     /* (0.6.95) post rock after Radiohead: long roots, a walk up to the next chord at the phrase's end */
     [BA_RADIO]    = {"R===============R=======5===7===", 0, 2},
+    /* (0.6.97) post punk after Peter Hook: the bass sings high on the neck, eighths over the root, fifth, octave and
+     * seventh (Transmission, Love Will Tear Us Apart), Blue Monday's sequenced sixteenth octaves, Ceremony's run */
+    [BA_HOOK2]    = {"R.5.8.7.R.5.8.5.R.5.8.7.8.7.5.3.", "a.......a.......a.......a.......", 2},
+    [BA_BLUEMON]  = {"R8R8R8R8R8R8R8R8R8R8R8R8R8R85858", "a...a...a...a...a...a...a...a...", 2},
+    [BA_CEREMONY] = {"R.R.R.3.5.5.5.3.R.R.R.3.5.5.7.8.", "a.......a.......a.......a.......", 2},
 };
 enum { KM_DOUBLE, KM_ANSWER, KM_SUSTAIN, KM_INTERLOCK };   /* the bass against the kick */
 
@@ -257,14 +276,14 @@ static const grecipe_t RECIPE[SR_N] = {
     [SR_DUBCHORD] = {{EG_A, EG_PH, EG_FM}, {"PWM STR", "SOFT PAD", "STRING"}, {0, 8}, {50, 70}, {20, 60}, {30, 50}, 2, {46, 66}, {25, 45}, {10, 30}, {0, 0}, {0, 0}, {0, 0}, {20, 50}, 0, V_POLY},
     [SR_PLUCK]    = {{EG_A, EG_FM, EG_PH}, {"PLUCK", "RESO", "SINE KEY"}, {0, 3}, {40, 66}, {0, 20}, {35, 60}, 0, {58, 86}, {20, 50}, {30, 55}, {0, 0}, {0, 0}, {0, 0}, {0, 20}, 0, V_POLY},
     [SR_BELL]     = {{EG_FM, EG_PH, EG_A}, {"BELL", "RING BELL", "MARIMBA"}, {0, 2}, {80, 100}, {0, 10}, {70, 100}, 0, {70, 100}, {0, 20}, {0, 10}, {0, 0}, {0, 0}, {0, 0}, {0, 20}, 0, V_POLY},
-    [SR_LEAD]     = {{EG_A, EG_PH, EG_FM}, {"SAW LEAD", "SYNC LEAD", "WIRE"}, {2, 20}, {60, 80}, {80, 110}, {40, 70}, 0, {56, 84}, {15, 40}, {15, 40}, {0, 14}, {6, 24}, {0, 25}, {0, 30}, 15, V_LEGATO},
-    [SR_VOXLEAD]  = {{EG_VO, EG_A, EG_FM}, {"VOX LEAD", "SAW LEAD", "BRASS"}, {4, 20}, {60, 80}, {90, 110}, {45, 70}, 0, {60, 90}, {10, 30}, {10, 25}, {0, 10}, {6, 20}, {0, 10}, {10, 35}, 20, V_LEGATO},
-    [SR_CHIP]     = {{EG_LO, EG_LO, EG_PH}, {"PULSE LD", "8BIT KEYS", "STEP LEAD"}, {0, 4}, {50, 70}, {60, 100}, {25, 50}, 0, {70, 110}, {10, 30}, {10, 30}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, 0, V_LEGATO},
+    [SR_LEAD]     = {{EG_A, EG_PH, EG_FM}, {"SAW LEAD", "SYNC LEAD", "WIRE"}, {2, 20}, {50, 85}, {30, 90}, {30, 70}, 0, {56, 84}, {15, 40}, {15, 40}, {0, 14}, {6, 24}, {0, 25}, {0, 30}, 15, V_LEGATO},
+    [SR_VOXLEAD]  = {{EG_VO, EG_A, EG_FM}, {"VOX LEAD", "SAW LEAD", "BRASS"}, {4, 20}, {55, 85}, {40, 95}, {35, 70}, 0, {60, 90}, {10, 30}, {10, 25}, {0, 10}, {6, 20}, {0, 10}, {10, 35}, 20, V_LEGATO},
+    [SR_CHIP]     = {{EG_LO, EG_LO, EG_PH}, {"PULSE LD", "8BIT KEYS", "STEP LEAD"}, {0, 4}, {45, 75}, {25, 80}, {20, 50}, 0, {70, 110}, {10, 30}, {10, 30}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, 0, V_LEGATO},
     [SR_KEYS]     = {{EG_A, EG_FM, EG_PH}, {"SINE KEY", "TINE EP", "ORGAN"}, {0, 4}, {65, 85}, {20, 50}, {45, 70}, 0, {60, 90}, {5, 20}, {5, 20}, {0, 0}, {0, 0}, {0, 0}, {10, 30}, 0, V_POLY},
     [SR_DRONE]    = {{EG_A, EG_FM, EG_PH}, {"WIND", "PAD", "STRING"}, {90, 120}, {90, 100}, {120, 127}, {100, 125}, 0, {36, 60}, {15, 35}, {0, 10}, {10, 24}, {2, 8}, {0, 0}, {30, 60}, 0, V_POLY},
     [SR_NOISE]    = {{EG_NO, EG_NO, EG_LO}, {"WIND", "RAIN", "WHISPER"}, {80, 120}, {90, 100}, {110, 127}, {80, 120}, 255, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, 0, V_POLY},
     [SR_TEXTURE]  = {{EG_LO, EG_VO, EG_NO}, {"FLOAT PAD", "WHISPER", "BYTE BENT"}, {70, 110}, {90, 100}, {110, 127}, {90, 120}, 2, {40, 70}, {20, 50}, {0, 10}, {10, 30}, {2, 10}, {0, 0}, {20, 50}, 0, V_POLY},
-    [SR_HOOVER]   = {{EG_A, EG_A, EG_PH}, {"RAVE", "PWM STR", "BRASS"}, {4, 12}, {70, 90}, {100, 115}, {40, 60}, 0, {60, 90}, {10, 25}, {10, 30}, {0, 0}, {0, 0}, {15, 35}, {40, 60}, 0, V_POLY},
+    [SR_HOOVER]   = {{EG_A, EG_A, EG_PH}, {"RAVE", "PWM STR", "BRASS"}, {4, 12}, {60, 90}, {60, 110}, {35, 60}, 0, {60, 90}, {10, 25}, {10, 30}, {0, 0}, {0, 0}, {15, 35}, {40, 60}, 0, V_POLY},
     [SR_WALL]     = {{EG_A, EG_A, EG_PH}, {"STRINGS", "PWM STR", "STRING"}, {30, 60}, {90, 100}, {110, 127}, {80, 110}, 0, {50, 70}, {0, 10}, {0, 10}, {6, 14}, {3, 9}, {30, 55}, {40, 70}, 0, V_POLY},
     [SR_GTR]      = {{EG_PH, EG_A, EG_FM}, {"BRASS", "PLUCK", "PLUCK"}, {2, 10}, {70, 90}, {60, 100}, {50, 80}, 2, {56, 80}, {15, 35}, {5, 20}, {0, 0}, {0, 0}, {5, 25}, {20, 40}, 0, V_POLY},
     [SR_SINEKEY]  = {{EG_A, EG_FM, EG_PH}, {"SINE KEY", "TINE EP", "ORGAN"}, {0, 4}, {70, 90}, {30, 60}, {50, 80}, 0, {60, 90}, {0, 15}, {0, 15}, {0, 0}, {0, 0}, {0, 0}, {0, 20}, 0, V_POLY},
@@ -278,7 +297,8 @@ static const uint8_t DM_ALT[DM_NONE][2] = {
     [DM_TECHHOUSE] = {DM_HOUSE, DM_TECHNO}, [DM_TECHNO] = {DM_DETROIT, DM_HYPNO}, [DM_DETROIT] = {DM_TECHNO, DM_HOUSE},
     [DM_DUBTECH] = {DM_MICRO, DM_HYPNO}, [DM_HYPNO] = {DM_TECHNO, DM_DUBTECH}, [DM_HARD] = {DM_TECHNO, DM_EBM},
     [DM_ELECTRO] = {DM_RBOX, DM_KLING}, [DM_EBM] = {DM_HARD, DM_DARKWAVE}, [DM_ITALO] = {DM_DISCO, DM_SYNTHPOP},
-    [DM_SYNTHPOP] = {DM_ITALO, DM_RBOX}, [DM_DARKWAVE] = {DM_POSTPUNK, DM_EBM}, [DM_POSTPUNK] = {DM_DARKWAVE, DM_INDIE},
+    [DM_SYNTHPOP] = {DM_ITALO, DM_RBOX}, [DM_DARKWAVE] = {DM_POSTPUNK, DM_EBM}, [DM_POSTPUNK] = {DM_JOYDIV, DM_NEWORDER},
+    [DM_JOYDIV] = {DM_POSTPUNK, DM_NEWORDER}, [DM_NEWORDER] = {DM_POSTPUNK, DM_JOYDIV},
     [DM_TRIBAL] = {DM_POSTPUNK, DM_AFRO}, [DM_RBOX] = {DM_SYNTHPOP, DM_KLING}, [DM_KLING] = {DM_RBOX, DM_MOTORIK},
     [DM_MOTORIK] = {DM_KLING, DM_INDIE}, [DM_INDIE] = {DM_MOTORIK, DM_SHOEGAZE}, [DM_SHOEGAZE] = {DM_INDIE, DM_SPARSE},
     [DM_FUNK] = {DM_AFRO, DM_BOOMBAP}, [DM_DISCO] = {DM_ITALO, DM_HOUSE}, [DM_BOOMBAP] = {DM_FUNK, DM_TRAP},
@@ -397,10 +417,11 @@ static const ggenre_t GENRE[] = {
      {BA_DARK8, BA_PUNK16, BA_OCTBNC}, 31, KM_DOUBLE, 40, {PR_ONE, PR_I_VI, PR_I_VII}, 4, CS_HOLD, VM_PLAIN,
      {AP_PULSE, AP_SEQ}, LD_SPARSE, AMT(90, 95, 60, 25, 40), {KIT_808, SR_ROCKBASS, SR_PAD, SR_PLUCK, SR_LEAD}, SR_TEXTURE,
      0, 1, 50, 0, FM_PARTS, 0},
-    {"POST PUNK", 118, 150, 0, {SC_MIN, SC_MAJ, SC_PHRY, SC_MIN}, DM_POSTPUNK, 100, KIT_SOFT, 1, HC_FLAT, FL_TOM, 1,
-     {BA_HOOK, BA_ANGULAR, BA_ROCK8}, 40, KM_DOUBLE, 75, {PR_ONE, PR_I_IV, PR_I_VI}, 4, CS_POWER, VM_POWER,
-     {AP_UPDOWN, AP_BROKEN}, LD_SPARSE, AMT(90, 100, 50, 15, 40), {KIT_SOFT, SR_HOOK, SR_GTR, SR_PLUCK, SR_LEAD}, SR_NOISE,
-     0, 1, 50, 0, FM_PARTS, 40},
+    {"POST PUNK", 118, 148, 0, {SC_MIN, SC_DOR, SC_MIN, SC_MAJ}, DM_POSTPUNK, 100, KIT_SOFT, 1, HC_FLAT, FL_TOM, 1,
+     {BA_HOOK2, BA_BLUEMON, BA_CEREMONY}, 40, KM_DOUBLE, 70, {PR_AEOL, PR_I_VI, PR_POP}, 2, CS_PULSE, VM_PLAIN,
+     {AP_OCTAVES, AP_UPDOWN}, LD_HOOK, AMT(95, 100, 55, 45, 50), {KIT_SOFT, SR_HOOK, SR_STRINGS, SR_PLUCK, SR_LEAD}, SR_CHOIR,
+     1, 2, 45, 0, FM_PARTS, 35},   /* (0.6.97: after Joy Division and New Order: Hook's bass, Morris's drums, Sumner's
+                                    * pulsed chords, a sequenced octave arp, strings and choir behind) */
     {"TRIBAL PUNK", 140, 165, 0, {SC_MIN, SC_PHRY, SC_MIN, SC_DOR}, DM_TRIBAL, 100, KIT_SOFT, 0, HC_FLAT, FL_TOM, 1,
      {BA_ANGULAR, BA_ROCK8, BA_HOOK}, 36, KM_SUSTAIN, 60, {PR_ONE, PR_I_VII, PR_I_VI}, 4, CS_POWER, VM_POWER,
      {AP_PULSE, AP_UP}, LD_OSTINATO, AMT(95, 95, 40, 10, 45), {KIT_SOFT, SR_ROCKBASS, SR_GTR, SR_PLUCK, SR_VOXLEAD}, SR_NOISE,

@@ -2124,10 +2124,16 @@ static void ui_input_frame(void)
         } else if (dice_kind(ui.confirm) && panel_enc(EN_SELECT)) {   /* (0.6.65) SELECT again: another dice
                                                          * (once a turn burst) */
             part_dice(ui.confirm);
-        } else if (ui.confirm == CF_DICE_ALL) {         /* (0.6.91) GEN: KNOB 1..4 its settings, SELECT its pages */
+        } else if (ui.confirm == CF_DICE_ALL) {         /* (0.6.91) GEN: KNOB 1..4 its settings, SELECT its pages;
+                                                         * (0.6.97) PLAY runs and stops the transport (the piece heard) */
             for (k = 0; k < 4u; k++)
                 if ((s = panel_enc(EN_K1 + k)) != 0) gen_knob(k, s);
             if ((s = panel_enc(EN_SELECT)) != 0) gen_select(s);
+            if ((pressed >> panel.btn[B_PLAY]) & 1u) {
+                if (song.playing || chain_busy() || seq_counting()) transport_req = 2;
+                else if (live.mode) chain_play_ui();
+                else transport_req = 1;
+            }
         }
         ui.pg_down = 0;
         enc_drop();
