@@ -1593,12 +1593,14 @@ static void confirm_text(char *a, char *b)
         break;
     }
 }
+static void draw_gen(void);                             /* (0.6.91) gen.c: the GEN screen */
 static void draw_confirm(void)
 {
     char a[24], b[24];
     const aafont_t *tf = &AF_M;
     int dk = ui.confirm >= CF_DICE_SOUND && ui.confirm <= CF_DICE_FX;
     const char *no = dk ? "CANCEL" : "NO", *yes = dk ? "OK" : "YES";
+    if (ui.confirm == CF_DICE_ALL) { draw_gen(); return; }
     confirm_text(a, b);
     lcd_fill(0, H_HEAD, 240, 240 - H_HEAD, T_BG);
     ui.head_sig = ~0u;

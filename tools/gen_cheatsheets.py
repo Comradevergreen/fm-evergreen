@@ -7,7 +7,7 @@ import html, os
 
 R = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(R, 'docs', 'cheatsheet')
-VERSION = 'v0.6.90'
+VERSION = 'v0.6.91'
 
 HEAT = ['#22d3ee', '#3b82f6', '#8b5cf6', '#d946ef', '#ef4444', '#ff7a00', '#facc15', '#f4f1ea']
 
@@ -126,7 +126,7 @@ def controls():
     b.append(sec('THE PANEL'))
     rows = [
         ('MASTER', 'Master volume.'),
-        ('SELECT', '<b>Scrolls the section\'s pages</b> (HOME: DICE EVERYTHING?). Held with a button, its <b>dice</b> (OK keeps, CANCEL back): HOME everything, '
+        ('SELECT', '<b>Scrolls the section\'s pages</b> (HOME: GEN, the song generator). Held with a button, its <b>dice</b> (OK keeps, CANCEL back): HOME everything, '
                    'EDIT the sound, SEQ the sequence, LFO the LFO, FX the effects. GLO + SELECT: the tempo.'),
         ('PRESETS', 'Browses the sounds (factory and user). On step, list and song pages: the cursor / the row. '
                     '<b>Hold a page button + PRESETS: jump through its pages.</b>'),
@@ -306,7 +306,7 @@ def sound():
                   '<b>8 voices</b> shared by the six tracks (MONO and LEGATO keep their note).</p>'))
     b.append(card('DICE', HEAT[5], '<p><b>EDIT + SELECT</b>: a random factory preset of the engine, every '
                   'parameter moved up to a quarter of its range. DRUM-X: both sides of every sound around the factory '
-                  'kit. Heard at once: OCT+ OK keeps it, OCT- CANCEL brings the sound back. SEQ / LFO / FX + SELECT: the sequence, the LFO, the effects, the same way. HOME + SELECT (after YES): a new piece: a genre, an energy (SPACE · MID · FRANTIC), its orchestration, every track a role. GLO + G4 undoes.</p>'))
+                  'kit. Heard at once: OCT+ OK keeps it, OCT- CANCEL brings the sound back. SEQ / LFO / FX + SELECT: the sequence, the LFO, the effects, the same way. HOME + SELECT: <b>GEN</b>, the song generator: GENRE (43 or RANDOM) · SEED · ENERGY · FORM; DRUMS · BASS · CHORDS · ARP · LEAD amounts; COMPLEX · SWING · HUMAN. OCT+ makes the piece (again: a new seed), OCT- done. GLO + G4 undoes.</p>'))
     b.append('</div>')
 
     b.append(sec('MODULATION'))
