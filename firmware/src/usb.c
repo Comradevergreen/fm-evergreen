@@ -515,9 +515,19 @@ static void uac_stream(uint32_t alt)                    /* SET_INTERFACE, config
     }
 }
 
+/* (0.7.5) MENU > USB IN+OUT: EP4 OUT's buffer, isochronous mode, a fresh toggle (configuration; out of line: the SIE
+ * writes' waits are not in the TIMER5 body) */
+static __attribute__((noinline)) void uin_ep_config(void)
+{
+    fm1_usb_ep4_rxbuf(ep4rx);
+    sie_wr(S_INDEX, 4);
+    sie_wr(S_RXMAXP, 0xFF);
+    sie_wr(S_RXCSR1, 0x90);
+    sie_wr(S_RXCSR2, 0x40);
+}
 /* (0.7.5) MENU > USB IN+OUT: the host starts (alt 1) or stops (alt 0) playing to us: the ring empties, the reader
  * waits for UI_TARGET frames again (uac_in_fill) */
-static void uin_stream(uint32_t alt)
+static __attribute__((noinline)) void uin_stream(uint32_t alt)   /* (its SIE writes: out of the TIMER5 body) */
 {
     uin.alt = 0;
     RING_PUBLISH();
@@ -588,13 +598,8 @@ no_cdc:;
     sie_wr(S_INDEX, 4);
     sie_wr(S_TXMAXP, 0xFF);
     uac_ep4_reset();
-    if (USB_DUPLEX) {                                   /* (0.7.5) EP4 OUT: the host's audio, isochronous */
-        fm1_usb_ep4_rxbuf(ep4rx);
-        sie_wr(S_INDEX, 4);
-        sie_wr(S_RXMAXP, 0xFF);
-        sie_wr(S_RXCSR1, 0x90);
-        sie_wr(S_RXCSR2, 0x40);
-    }
+    if (USB_DUPLEX)                                     /* (0.7.5) EP4 OUT: the host's audio, isochronous */
+        uin_ep_config();
     fm1_usb_ep_enable(1u << 4);
     uac_stream(0);
     uin_stream(0);
@@ -813,19 +818,13 @@ static void ep0_service(void)
 #endif
 #if FELUCCA_UAC
     case 0x2201:                                        /* SET_CUR, endpoint: sampling frequency */
-        if (USB_DUPLEX && s[4] == 0x04u && s[3] == 1u) {   /* (0.7.5) the output: 44.1 only, the value ignored */
-            if (wlength) {
-                uin.e0_rx = 1;
-                sie_wr(S_INDEX, 0);
-                sie_wr(S_CSR0, 0x40);
-                return;
-            }
-            goto ack;
-        }
-        if (s[4] != 0x84u || s[3] != 1u)
+        if ((s[4] != 0x84u && !(USB_DUPLEX && s[4] == 0x04u)) || s[3] != 1u)
             goto stall;
         if (wlength) {
-            uac.e0_rx = 1;
+            if (s[4] == 0x04u)                          /* (0.7.5) the output: 44.1 only, the value ignored */
+                uin.e0_rx = 1;
+            else
+                uac.e0_rx = 1;
             sie_wr(S_INDEX, 0);
             sie_wr(S_CSR0, 0x40);                       /* the 3 bytes follow */
             return;
@@ -838,14 +837,10 @@ static void ep0_service(void)
 #if FELUCCA_UAC_48K
         static const uint8_t RATE48[3] = {48000u & 0xFF, (48000u >> 8) & 0xFF, 48000u >> 16};
 #endif
-        if (USB_DUPLEX && s[4] == 0x04u && s[3] == 1u) {   /* (0.7.5) the output: 44.1 */
-            e0_send(RATE, 3, wlength);
-            return;
-        }
-        if (s[4] != 0x84u || s[3] != 1u)
+        if ((s[4] != 0x84u && !(USB_DUPLEX && s[4] == 0x04u)) || s[3] != 1u)   /* (0.7.5: the output, 44.1) */
             goto stall;
 #if FELUCCA_UAC_48K
-        if (s[1] == 0x83u || (s[1] == 0x81u && uac.r48)) {
+        if (s[4] == 0x84u && (s[1] == 0x83u || (s[1] == 0x81u && uac.r48))) {
             e0_send(RATE48, 3, wlength);
             return;
         }
@@ -1378,7 +1373,7 @@ static void uac_service(void)
 
 /* (0.7.5) MENU > USB IN+OUT, TIMER5: a packet the host played to us (n bytes of L | R << 16 frames) into ui_ring;
  * a full ring drops it (the reader has stopped: it re-primes) */
-static void uin_take(const uint32_t *p, uint32_t n)
+static __attribute__((noinline)) void uin_take(const uint32_t *p, uint32_t n)   /* (not in the TIMER5 body: its copy loop) */
 {
     uint32_t w = ui_w, i, f = n / 4u;
     if ((n & 3u) || f > UI_MAXF) {
@@ -1397,7 +1392,7 @@ static void uin_take(const uint32_t *p, uint32_t n)
     uin.pkts++;
     uin.frames += f;
 }
-static void uin_rx(void)
+static __attribute__((noinline)) void uin_rx(void)
 {
     uint32_t csr, n;
     sie_wr(S_INDEX, 4);
