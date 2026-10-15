@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.7.3).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.7.4).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 > ⚡ **New in 0.6.85 – 0.6.92: a song generator you steer, a compact sequencer that breathes, a delay that feeds back.**
 > - **GEN (HOME + SELECT)**: a screen of three pages — GENRE (43 genres or RANDOM), SEED, ENERGY, FORM (loop, parts,
@@ -524,6 +524,13 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### v0.7.4
+- **The GEN screen (HOME + SELECT) no longer flickers on every knob or SELECT turn (reported).** The 0.6.96 fix cleared
+  the screen's body only on entering, or so it meant: its test also cleared it whenever the header had been drawn since,
+  and the header is drawn after every frame, so every turn still blanked the body before the cards were repainted. It is
+  cleared on entering only now; a turn repaints its cards in place. ui_test counts the full-body clears while the knobs
+  and SELECT turn on GEN (none).
 
 ### v0.7.3
 - **The speaker's buzz once the music stops (reported): the LEDs' idle glow drew a current pulse.** Since 0.6.96 LEDS

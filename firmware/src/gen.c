@@ -1472,8 +1472,11 @@ static void draw_gen(void)
 {
     uint32_t k;
     char t[24], v[16];
-    if (gen_fresh || ui.head_sig != ~0u) {              /* (0.6.96) cleared once on entering, not on every knob: each
-                                                         * card and line paints its own band (it flickered) */
+    if (gen_fresh) {                                    /* (0.6.96) cleared once on entering, not on every knob: each
+                                                         * card and line paints its own band (it flickered). (0.7.4)
+                                                         * On entering only: the 0.6.96 test also cleared whenever the
+                                                         * header had been drawn since, which it is after every frame
+                                                         * (draw_head sets head_sig), so every knob still cleared it */
         lcd_fill(0, H_HEAD, 240, 240 - H_HEAD, T_BG);
         gen_fresh = 0;
     }

@@ -69,9 +69,12 @@ static void fm1_wdt_feed(void) { if (host_wdt_hook) host_wdt_hook(); }
 static void fm1_irq_off(void) {}
 static void fm1_irq_on(void) {}
 static uint16_t host_screen[240 * 240];
+static uint32_t host_big_fills;                    /* (0.7.4) fills of most of the body (a screen cleared: a flicker) */
 static void lcd_fill(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint16_t c)
 {
     uint32_t i, j;
+    if (w >= 200u && h >= 120u)
+        host_big_fills++;
 #ifdef UI_FILL_HOOK
     UI_FILL_HOOK(x, y, w, h);                     /* (tests/ui_render.c: what a fill covers is gone) */
 #endif
@@ -6847,7 +6850,18 @@ static int test_dice_all(void)
     ok &= !ui.confirm && steps_sig(&trk[0]) == sig0[0];
     bad += check("DICE ALL: HOME + SELECT asks first (OCT- NO: nothing changed)", ok);
     fm1_ms += 1200u;
-    held_turn(B_HOME, 1); press(B_OCTUP); frames(4);
+    held_turn(B_HOME, 1); frames(64);
+    {   /* (0.7.4) GEN's knobs and SELECT repaint their cards, never the whole body (it flickered on every turn) */
+        uint32_t f0 = host_big_fills, e0 = gp.energy, p0 = gp.page;
+        for (i = 0; i < 6u; i++) { turn(EN_K3, e0 >= 50u ? -1 : 1); frames(32); }
+        ok = gp.energy != e0 && host_big_fills == f0;
+        fm1_ms += 500u;                                 /* (past the SELECT turn that opened it) */
+        turn(EN_SELECT, 1); frames(32);
+        ok &= gp.page != p0 && host_big_fills == f0;
+        turn(EN_SELECT, -1); frames(32);
+        bad += check("GEN: a knob or SELECT repaints the cards, the body is never cleared (no flicker)", ok && ui.confirm == CF_DICE_ALL);
+    }
+    press(B_OCTUP); frames(4);
     ok = ui.confirm == CF_DICE_ALL && undo_ok;         /* (0.6.91: GEN stays open for another throw; OCT- is done) */
     press(B_OCTDN);
     ok &= !ui.confirm;
