@@ -64,6 +64,9 @@ static uint32_t up_gen;                      /* bumped on every user bank change
 #define PREF_ACCEL_OFF 4u                      /* MENU > KNOB ACCEL OFF (#52; JIANT: ON by default, the bit now means OFF):
                                                 * fast turns of wide values x2..x16 */
 #define PREF_USB_FIXED 8u                      /* MENU > USB LEVEL FIXED: USB audio at the full level, MASTER after */
+#define usb_lvl (favorites.factory[15][22])   /* (0.7.0) MENU > USB LEVEL past FIXED: 0 FULL, 1..4 = -6 -12 -18 -24 dB
+                                                 * (with PREF_USB_FIXED; a byte no engine uses, 0 in older settings) */
+static const int16_t USB_GAIN[5] = {4096, 2048, 1024, 512, 256};   /* Q12: 0 -6 -12 -18 -24 dB */
 #define PREF_BPM_LOCK 16u                      /* MENU > BPM LOCK ON (#58): DICE ALL keeps the tempo; (0.6.67) SELECT
                                                 * alone never sets it (GLO + SELECT does) */
 #define PREF_LARGE 32u                         /* MENU > LARGE ON (#15, Discussion #80): big knob labels and values

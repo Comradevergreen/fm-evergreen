@@ -1024,8 +1024,13 @@ static __attribute__((noinline)) void uac_render_start(void)   /* audio ISR, bef
         uac.fill_hi = fill;
 }
 
+static inline int32_t uac_clip(int32_t v) { return v > 32767 ? 32767 : v < -32768 ? -32768 : v; }
+#ifndef UAC_GAIN
+#define UAC_GAIN() 4096                /* (a build without fx.c: the host tests of USB alone) */
+#endif
 static inline int32_t uac_s16(int32_t v)
 {
+    v = (v * UAC_GAIN()) >> 12;                       /* (0.7.0) MENU > USB LEVEL -6 .. -24 dB (fx.c fx_usb_gain) */
     return v > 32767 ? 32767 : v < -32768 ? -32768 : v;
 }
 
@@ -1066,8 +1071,8 @@ static __attribute__((noinline)) void uac_tap48(const int32_t *out, uint32_t n)
                     ar += (int64_t)t * x[2u * RS_H];
                 }
             }
-            yl = uac_s16((int32_t)((al + (1 << (UAC_FIR_Q - 1))) >> UAC_FIR_Q));
-            yr = uac_s16((int32_t)((ar + (1 << (UAC_FIR_Q - 1))) >> UAC_FIR_Q));
+            yl = uac_clip((int32_t)((al + (1 << (UAC_FIR_Q - 1))) >> UAC_FIR_Q));
+            yr = uac_clip((int32_t)((ar + (1 << (UAC_FIR_Q - 1))) >> UAC_FIR_Q));
 #if FELUCCA_UAC_TONE
             {   /* bench: the triangles at 48 kHz (not resampled), one per output frame */
                 uint32_t t = rs.tone, q = t < 50u ? t : 100u - t, q2 = t < 50u ? 50u - t : t - 50u;

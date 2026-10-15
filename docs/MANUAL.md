@@ -1186,7 +1186,7 @@ closes it (settings are saved then).
 | CONTROL | SCALE LEDS | OFF, ON — the keys of the scale glow, the root brighter |
 | CONTROL | MIDI OUT | **KEYS**, CLOCK, ALL, OFF — what goes out over USB MIDI (see [14](#14-midi-and-usb)) |
 | AUDIO | SPEAKER EQ | FLAT, LOWCUT, BASS+ (an EQ on the master for the small speaker; also reaches the outputs and USB) |
-| AUDIO | USB LEVEL | MASTER (USB follows the MASTER knob), FIXED (USB at full level) |
+| AUDIO | USB LEVEL | MASTER (USB follows the MASTER knob), FIXED (USB at full level), −6 / −12 / −18 / −24 dB (USB fixed and attenuated: for a phone or a computer whose input clips at the full level) |
 | AUDIO | CLICK | OFF, REC (while a track is armed and playing), ON |
 | AUDIO | CLICK LEVEL | LOW, MID, HIGH |
 | AUDIO | COUNT-IN | OFF, 1 BAR, 2 BARS |

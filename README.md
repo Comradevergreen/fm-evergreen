@@ -537,6 +537,9 @@ Every update is listed here, newest first. (Since 0.6.80 at the end of the page:
   note), the motif follows the chord the nearer way (a fourth up is a fifth down, never an octave's worth of leap, and
   less often), every phrase ends on a chord tone.
 - **GEN: HOME closes the screen** (OCT− still does).
+- **MENU > AUDIO > USB LEVEL: −6 / −12 / −18 / −24 dB** after MASTER and FIXED: USB audio fixed and attenuated, for a
+  phone or a computer whose input clips at the full level (the recordings came out distorted). The speaker and the
+  headphones keep the MASTER knob.
 - **The device is JIANT everywhere it speaks**: USB MIDI and audio "JIANT FM" (the updater "JIANT Update"), the
   editor's version string "JIANT v0.7.0", the splash, ABOUT, CREDITS, the console and the crash screen. The web
   editor and the installer accept both names, so an older firmware still connects.

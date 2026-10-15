@@ -251,6 +251,10 @@ static __attribute__((noinline)) void duck_block(void)
  * full MASTER level, USB audio takes that (audio.c uac_tap), and only then does MASTER scale what the DAC gets
  * (usb_fixed_dac). MASTER (0, the default): MASTER before master_out, as always (USB follows the knob) */
 static volatile uint8_t fx_usb_fixed;
+/* (0.7.0) MENU > USB LEVEL past FIXED: USB audio attenuated (-6 .. -24 dB, Q12) whatever the knob does, for a phone
+ * or a computer whose input clips at the full level (usb.c uac_tap reads it) */
+static volatile int32_t fx_usb_gain = 4096;
+#define UAC_GAIN() fx_usb_gain
 static const uint8_t REV_LITE[3][5] = {{0, 1, 2, 3, 4}, {0, 1, 0, 1, 0}, {1, 1, 1, 1, 1}};   /* (0.6.29) LOAD FULL, LITE, ECO
                                                          * (voice.c sys_load): each reverb's lighter kin */
 #define MASTER_FULL 4096                /* main.c: the MASTER knob's top, Q12 */
