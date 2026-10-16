@@ -4,18 +4,30 @@
 // 44.1 kHz; can it open a USB microphone at the same time as the FM-1; can it play into the FM-1 (USB > IN+OUT); does
 // it see the FM-1's USB-MIDI. Everything it finds goes into a plain-text report to copy or share, and the 8-channel
 // test is saved as a WAV in Downloads/JIANT.
+// (0.2) Android's audio framework hands an 8-channel USB input on as two channels on some phones (an S23 Ultra: T1 T2,
+// the rest zero), so test 2 now counts the channels that carry sound, 2b tries the other ways of opening the input, and
+// 5 reads the FM-1's stream itself (usbiso.c: usbfs isochronous reads on the USB permission the user grants).
 package fm.jiant.probe;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.hardware.usb.UsbConstants;
+import android.hardware.usb.UsbDevice;
+import android.hardware.usb.UsbDeviceConnection;
+import android.hardware.usb.UsbEndpoint;
+import android.hardware.usb.UsbInterface;
+import android.hardware.usb.UsbManager;
 import android.media.AudioDeviceInfo;
 import android.media.AudioFormat;
 import android.media.AudioManager;
@@ -45,6 +57,8 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends Activity {
     private static final int RATE = 44100;
@@ -55,6 +69,10 @@ public class MainActivity extends Activity {
     private final Handler ui = new Handler(Looper.getMainLooper());
     private AudioManager am;
     private volatile boolean busy;
+
+    static { System.loadLibrary("jiantusb"); }
+    /** usbiso.c: isochronous IN reads on a usbfs descriptor; stats = packets, empty, errors, errno, largest, left */
+    private static native int isoRead(int fd, int ep, int maxp, byte[] out, int timeoutMs, int[] stats);
 
     @Override
     protected void onCreate(Bundle b) {
@@ -84,8 +102,10 @@ public class MainActivity extends Activity {
 
         root.addView(button("1 · DISPOSITIVOS", v -> run(this::listDevices)));
         root.addView(button("2 · GRABAR 10 s DE LOS 8 CANALES", v -> run(this::recordStems)));
+        root.addView(button("2b · ¿CUÁNTOS CANALES PASA ANDROID? (20 s)", v -> run(this::scanOpens)));
         root.addView(button("3 · FM-1 + MIC USB A LA VEZ (3 s)", v -> run(this::twoInputs)));
         root.addView(button("4 · ENVIAR EL MIC AL FM-1 (5 s, modo IN+OUT)", v -> run(this::sendMic)));
+        root.addView(button("5 · DRIVER PROPIO: 8 CANALES DIRECTO (10 s)", v -> run(this::directStems)));
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         Button copy = button("COPIAR INFORME", v -> copyReport());
@@ -105,7 +125,7 @@ public class MainActivity extends Activity {
         root.addView(sv, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1));
         setContentView(root);
 
-        say("JIANT Probe 0.1 · " + Build.MANUFACTURER + " " + Build.MODEL + " · Android " + Build.VERSION.RELEASE
+        say("JIANT Probe 0.2 · " + Build.MANUFACTURER + " " + Build.MODEL + " · Android " + Build.VERSION.RELEASE
             + " (API " + Build.VERSION.SDK_INT + ")");
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED)
             requestPermissions(new String[] {Manifest.permission.RECORD_AUDIO}, 1);
@@ -237,11 +257,15 @@ public class MainActivity extends Activity {
     // ------------------------------------------------------------------ 2 · eight channels
     /** opens an AudioRecord of n channels (index mask) on device d; null when Android refuses it */
     private AudioRecord open(AudioDeviceInfo d, int n, boolean indexMask) {
+        int src = "true".equals(am.getProperty(AudioManager.PROPERTY_SUPPORT_AUDIO_SOURCE_UNPROCESSED))
+                  ? MediaRecorder.AudioSource.UNPROCESSED : MediaRecorder.AudioSource.MIC;
+        return open(d, n, indexMask, src);
+    }
+
+    private AudioRecord open(AudioDeviceInfo d, int n, boolean indexMask, int src) {
         AudioFormat.Builder fb = new AudioFormat.Builder().setEncoding(AudioFormat.ENCODING_PCM_16BIT).setSampleRate(RATE);
         if (indexMask) fb.setChannelIndexMask((1 << n) - 1);
         else fb.setChannelMask(n == 1 ? AudioFormat.CHANNEL_IN_MONO : AudioFormat.CHANNEL_IN_STEREO);
-        int src = "true".equals(am.getProperty(AudioManager.PROPERTY_SUPPORT_AUDIO_SOURCE_UNPROCESSED))
-                  ? MediaRecorder.AudioSource.UNPROCESSED : MediaRecorder.AudioSource.MIC;
         try {
             AudioRecord r = new AudioRecord.Builder().setAudioSource(src).setAudioFormat(fb.build())
                                 .setBufferSizeInBytes(RATE / 4 * n * 2).build();
@@ -291,6 +315,18 @@ public class MainActivity extends Activity {
         r.stop();
         r.release();
         say(String.format(Locale.ROOT, "Leí %d frames en %.2f s (%d lecturas, %d cortas).", got / n, secs, reads, shorts));
+        int live = levels(all, got, n, true);
+        say("Canales con señal: " + live + " de " + n + ".");
+        String name = saveWav(all, got, n);
+        say(name != null ? "WAV guardado: Descargas/JIANT/" + name : "No pude guardar el WAV.");
+        say(live >= 6 ? "RESULTADO: este teléfono pasa " + live + " canales con sonido por la API normal."
+            : live > 0 ? "RESULTADO: Android abrió " + n + " canales pero solo " + live + " traen sonido (si sonaban más pistas,"
+                         + " Android pasa solo los primeros). Probá 2b y 5."
+            : "RESULTADO: no llegó sonido. ¿Sonaba el FM-1?");
+    }
+
+    /** per-channel peaks and rms of interleaved pcm (count samples, n channels); the channels that carry sound */
+    private int levels(short[] all, int got, int n, boolean print) {
         int live = 0;
         for (int c = 0; c < n; c++) {
             int pk = 0;
@@ -303,13 +339,53 @@ public class MainActivity extends Activity {
             double rms = Math.sqrt(e / Math.max(1, got / n));
             double db = pk > 0 ? 20 * Math.log10(pk / 32768.0) : -120;
             if (pk > 64) live++;
-            say(String.format(Locale.ROOT, "  canal %d: pico %6.1f dBFS  rms %7.1f%s", c + 1, db, rms, pk > 64 ? "" : "  (silencio)"));
+            if (print)
+                say(String.format(Locale.ROOT, "  canal %d: pico %6.1f dBFS  rms %7.1f%s%s", c + 1, db, rms,
+                                  pk > 64 ? "" : "  (silencio)", pk >= 32767 ? "  (¡satura!)" : ""));
         }
-        say("Canales con señal: " + live + " de " + n + ".");
-        String name = saveWav(all, got, n);
-        say(name != null ? "WAV guardado: Descargas/JIANT/" + name : "No pude guardar el WAV.");
-        say(n >= 8 ? "RESULTADO: este teléfono abre los 8 canales por la API normal. La app puede usar Oboe/AAudio."
-                   : "RESULTADO: Android dio solo " + n + " canales. La app necesita su propio driver USB para los 8.");
+        return live;
+    }
+
+    // ------------------------------------------------------------------ 2b · the ways of opening the input
+    private void scanOpens() {
+        say("\n== 2b · ¿CUÁNTOS CANALES PASA ANDROID?");
+        AudioDeviceInfo d = findUsbInput(true);
+        if (d == null) { say("No veo ninguna entrada USB. ¿El FM-1 está enchufado y en USB › STEMS?"); return; }
+        say("Dejá sonando las 6 pistas. Cada prueba graba 2 s.");
+        say("Máscaras índice que declara: " + hexes(d.getChannelIndexMasks()) + "  canales: " + Arrays.toString(d.getChannelCounts()));
+        int[] srcs = {MediaRecorder.AudioSource.UNPROCESSED, MediaRecorder.AudioSource.MIC, MediaRecorder.AudioSource.CAMCORDER,
+                      MediaRecorder.AudioSource.VOICE_RECOGNITION};
+        String[] names = {"UNPROCESSED", "MIC", "CAMCORDER", "VOICE_RECOG"};
+        int best = 0;
+        String bestHow = "";
+        for (int si = 0; si < srcs.length; si++)
+            for (int want : new int[] {8, 6}) {
+                AudioRecord r = open(d, want, true, srcs[si]);
+                if (r == null) { say(String.format(Locale.ROOT, "  %-11s %d ch: no abre", names[si], want)); continue; }
+                int n = r.getChannelCount();
+                short[] all = new short[RATE * 2 * n];
+                r.startRecording();
+                int got = 0;
+                long t0 = System.nanoTime();
+                while (got < all.length && System.nanoTime() - t0 < 5_000_000_000L) {
+                    int k = r.read(all, got, Math.min(RATE / 20 * n, all.length - got));
+                    if (k <= 0) break;
+                    got += k;
+                }
+                r.stop();
+                r.release();
+                int live = levels(all, got, n, false);
+                StringBuilder which = new StringBuilder();
+                for (int c = 0; c < n; c++) {
+                    int pk = 0;
+                    for (int i = c; i < got; i += n) pk = Math.max(pk, Math.abs(all[i]));
+                    which.append(pk > 64 ? (char) ('1' + c) : '·');
+                }
+                say(String.format(Locale.ROOT, "  %-11s %d ch: %d con sonido  [%s]", names[si], want, live, which));
+                if (live > best) { best = live; bestHow = names[si] + " " + want + " ch"; }
+            }
+        say(best >= 6 ? "RESULTADO: " + bestHow + " pasa " + best + " canales: la app puede usar la API normal así."
+                      : "RESULTADO: ninguna forma pasa más de " + best + " canales con sonido. Para los 8 hace falta el driver propio (5).");
     }
 
     private String saveWav(short[] pcm, int count, int ch) {
@@ -343,6 +419,105 @@ public class MainActivity extends Activity {
     private static void wr(byte[] h, int o, char a, char b, char c, char d) { h[o] = (byte) a; h[o + 1] = (byte) b; h[o + 2] = (byte) c; h[o + 3] = (byte) d; }
     private static void le16(byte[] h, int o, int v) { h[o] = (byte) v; h[o + 1] = (byte) (v >> 8); }
     private static void le32(byte[] h, int o, int v) { le16(h, o, v); le16(h, o + 2, v >> 16); }
+
+    // ------------------------------------------------------------------ 5 · our own driver
+    private static final String USB_PERM = "fm.jiant.probe.USB";
+
+    /** asks the user for the device (Android's dialog); true when granted */
+    private boolean permit(UsbManager um, UsbDevice dev) {
+        if (um.hasPermission(dev)) return true;
+        CountDownLatch done = new CountDownLatch(1);
+        BroadcastReceiver rx = new BroadcastReceiver() {
+            @Override public void onReceive(Context c, Intent i) { done.countDown(); }
+        };
+        IntentFilter f = new IntentFilter(USB_PERM);
+        if (Build.VERSION.SDK_INT >= 33) registerReceiver(rx, f, Context.RECEIVER_NOT_EXPORTED);
+        else registerReceiver(rx, f);
+        PendingIntent pi = PendingIntent.getBroadcast(this, 0, new Intent(USB_PERM).setPackage(getPackageName()),
+                                                      PendingIntent.FLAG_MUTABLE);
+        um.requestPermission(dev, pi);
+        say("Aceptá el permiso USB que muestra Android…");
+        try { done.await(60, TimeUnit.SECONDS); } catch (InterruptedException ignored) { }
+        unregisterReceiver(rx);
+        return um.hasPermission(dev);
+    }
+
+    private void directStems() {
+        say("\n== 5 · DRIVER PROPIO (8 CANALES DIRECTO)");
+        UsbManager um = (UsbManager) getSystemService(Context.USB_SERVICE);
+        UsbDevice dev = null;
+        UsbInterface on = null, off = null;
+        UsbEndpoint ep = null;
+        for (UsbDevice dv : um.getDeviceList().values()) {
+            for (int i = 0; i < dv.getInterfaceCount(); i++) {
+                UsbInterface it = dv.getInterface(i);
+                if (it.getInterfaceClass() != UsbConstants.USB_CLASS_AUDIO || it.getInterfaceSubclass() != 2) continue;
+                for (int e = 0; e < it.getEndpointCount(); e++) {
+                    UsbEndpoint x = it.getEndpoint(e);
+                    if (x.getType() == UsbConstants.USB_ENDPOINT_XFER_ISOC && x.getDirection() == UsbConstants.USB_DIR_IN
+                        && on == null) { on = it; ep = x; dev = dv; }
+                }
+            }
+            if (dev != null) {
+                for (int i = 0; i < dv.getInterfaceCount(); i++) {
+                    UsbInterface it = dv.getInterface(i);
+                    if (it.getId() == on.getId() && it.getAlternateSetting() == 0) off = it;
+                }
+                break;
+            }
+        }
+        if (dev == null) { say("No veo un dispositivo USB que grabe audio. ¿El FM-1 está enchufado y en USB › STEMS?"); return; }
+        say(String.format(Locale.ROOT, "Dispositivo: %s (%04x:%04x), interfaz %d alt %d, EP 0x%02x, paquete máx %d bytes",
+                          dev.getProductName(), dev.getVendorId(), dev.getProductId(), on.getId(), on.getAlternateSetting(),
+                          ep.getAddress(), ep.getMaxPacketSize()));
+        if (!permit(um, dev)) { say("RESULTADO: sin permiso USB no puedo leerlo."); return; }
+        UsbDeviceConnection conn = um.openDevice(dev);
+        if (conn == null) { say("RESULTADO: Android no me dejó abrir el dispositivo."); return; }
+        int ch = 0, sub = 2;
+        byte[] raw = conn.getRawDescriptors();           /* the format of our interface: type I, channels, bytes a sample */
+        int curIf = -1, curAlt = -1;
+        for (int i = 0; raw != null && i + 1 < raw.length && raw[i] > 0; i += raw[i] & 0xFF) {
+            int len = raw[i] & 0xFF, type = raw[i + 1] & 0xFF;
+            if (type == 4 && len >= 9) { curIf = raw[i + 2] & 0xFF; curAlt = raw[i + 3] & 0xFF; }
+            else if (type == 0x24 && len >= 8 && raw[i + 2] == 2 && curIf == on.getId() && curAlt == on.getAlternateSetting()) {
+                ch = raw[i + 4] & 0xFF;
+                sub = raw[i + 5] & 0xFF;
+            }
+        }
+        say("Formato: " + ch + " canales, " + (sub * 8) + " bit.");
+        if (ch == 0 || sub != 2) { say("RESULTADO: no entiendo el formato."); conn.close(); return; }
+        if (!conn.claimInterface(on, true)) { say("RESULTADO: no pude tomar la interfaz de audio."); conn.close(); return; }
+        try {
+            if (!conn.setInterface(on)) { say("RESULTADO: el FM-1 no aceptó arrancar el audio (SET_INTERFACE)."); return; }
+            conn.controlTransfer(0x22, 0x01, 0x0100, ep.getAddress(), new byte[] {0x44, (byte) 0xAC, 0x00}, 3, 500);
+            int secs = 10;
+            byte[] bytes = new byte[RATE * secs * ch * 2];
+            int[] st = new int[6];
+            say("Grabando " + secs + " s directo del FM-1…");
+            long t0 = System.nanoTime();
+            int got = isoRead(conn.getFileDescriptor(), ep.getAddress(), ep.getMaxPacketSize(), bytes, (secs + 5) * 1000, st);
+            double el = (System.nanoTime() - t0) / 1e9;
+            if (off != null) conn.setInterface(off);
+            if (got <= 0) { say("RESULTADO: no llegó nada (error " + (-got) + ", paquetes " + st[0] + ")."); return; }
+            int frames = got / (ch * 2);
+            say(String.format(Locale.ROOT, "Leí %d frames en %.2f s (%.0f frames/s). Paquetes %d, vacíos %d, con error %d, el más grande %d bytes%s.",
+                              frames, el, frames / el, st[0], st[1], st[2], st[4], st[3] != 0 ? ", errno " + st[3] : ""));
+            short[] all = new short[frames * ch];
+            for (int i = 0; i < all.length; i++) all[i] = (short) ((bytes[2 * i] & 0xFF) | (bytes[2 * i + 1] << 8));
+            int live = levels(all, all.length, ch, true);
+            say("Canales con señal: " + live + " de " + ch + ".");
+            String name = saveWav(all, all.length, ch);
+            say(name != null ? "WAV guardado: Descargas/JIANT/" + name : "No pude guardar el WAV.");
+            boolean steady = Math.abs(frames / el - RATE) < RATE * 0.02 && st[2] == 0;
+            say(live >= 6 && steady ? "RESULTADO: el driver propio lee los " + ch + " canales completos y estables. Es el camino para la app."
+                : live >= 6 ? "RESULTADO: llegan los " + ch + " canales, pero el flujo no fue parejo (mirá frames/s y errores)."
+                : "RESULTADO: llegaron " + live + " canales con sonido. ¿Sonaban las 6 pistas?");
+        } finally {
+            conn.releaseInterface(on);
+            conn.close();
+            say("(Si después el audio USB normal no anda, desenchufá y volvé a enchufar el FM-1.)");
+        }
+    }
 
     // ------------------------------------------------------------------ 3 · two USB inputs at once
     private void twoInputs() {

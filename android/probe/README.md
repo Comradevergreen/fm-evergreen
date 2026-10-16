@@ -10,6 +10,13 @@ Phase 0 of the stems app (the design: one Android screen that answers, on a give
    USB driver of its own.
 3. **The FM-1 and a USB microphone at once** (through a USB-C hub): whether Android opens two USB audio inputs together.
 4. **The phone's microphone into the FM-1** with the FM-1 in USB > IN+OUT: 5 s of the mic played to the USB output.
+5. **Our own driver** (0.2): Android's framework hands the FM-1's eight channels on as two on some phones (an S23
+   Ultra: T1 T2, the rest zero). This reads the stream itself, as the multichannel recorder apps do: asks for the
+   USB permission, claims the streaming interface and does isochronous reads through usbfs (`app/src/main/cpp/usbiso.c`),
+   10 s, with the per-channel levels, the frames a second and a WAV. Test **2b** tries the other ways of opening the
+   input (sources × 8/6 channels) and shows which channels carry sound.
+
+Every build signs with `app/probe-debug.keystore` (a debug key, public on purpose) so a new APK installs over the last.
 
 Everything goes into a plain-text report (COPY / SHARE). Built by GitHub Actions (.github/workflows/emulator.yml for
 the site, android.yml on the branches): `gradle -p android/probe assembleDebug`. No dependencies beyond the Android
