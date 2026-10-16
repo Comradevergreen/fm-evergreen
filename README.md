@@ -196,8 +196,10 @@ An 8-sound kit (BD SD CP CH OH TM RS CB) generated in real time, Microtonic styl
   funk, post punk, jazz, ambient …) or RANDOM, a seed, an energy, a form (a loop, parts, a club song); how much drums,
   bass, chords, arp and lead; complexity, swing, how human. **OCT+** writes the piece from them (OCT+ again: a new
   seed; a knob turned and OCT+: the same piece with that one thing changed), **OCT−** is done. Every piece has one
-  scale, drums from the genre's priority map, a bass archetype written against the kick, chords with a quality each
-  voiced and led, a motif in phrases, a sound recipe a role, the genre's kit and space (see v0.6.91).
+  key, written to the SCALE page (and the CHORD page set to its chords: the keys play along in key), drums from the
+  genre's priority map, a bass archetype written against the kick, a functional or modal progression with cadences
+  voiced and led voice by voice, a lead composed from a motif in periods and sentences, a sound recipe a role, the
+  genre's kit and space (see v0.6.91, v0.8.3).
 - **UNDO: GLO held + G4** takes back the last big change (DICE ALL, a sound diced, a clear, INIT, RECALL, a pattern or
   project loaded); pressing it again goes forward (redo). G4 breathes when there is something to undo.
 - **Macros M1–M4** (LFO held; they stay latched when released until you press LFO again): every session starts with
@@ -535,6 +537,39 @@ JIANT's modifications are distributed under the same license.
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
 
 ### v0.8.3
+- **GEN composes** (the owner: "the melodies too random, little musicality; use the CHORD and SCALE pages"). The
+  piece's key is now **a mode of seven written to the SCALE page** (ROOT, SCALE, QUANT SNAP unless another QUANT was
+  chosen) and the chord track's **CHORD page** set to its chords (TRIAD / 7TH / ADD9 / SUS2 / SUS4 as the progression is
+  coloured, VOICING LEAD): the keys play along in key. A genre's pentatonic or blues is its lead's palette over the
+  mode that holds it, so the chords stay real chords. **Harmony**: progressions as degrees of the mode, each loop ending
+  on its cadence chord (IV–I, bVII–i, V–i, bII–i, the Andalusian and Aeolian cadences, ii–V–I, I–vi–ii–V ..); a mode
+  that would turn one of its chords diminished never takes that progression; the minor key's dominant raised before
+  its tonic, jazz's turnaround, secondary dominants and mixture (IV–iv–I, bVII and bVI in major) only where the genre
+  colours. **Voicing**: voice by voice to the nearest inversion or spread (common tones held; 4.6 semitones of motion a
+  change, 5.5 before), drop 2 for washes and film, rootless 3-5-7-9 for jazz and deep house, no seconds below G3.
+  **Bass**: the root at every chord change (mid-bar ones too), the chord's own third, fifth and seventh, approaches that
+  always resolve, a walking bass's roots in the octave nearest its line. **Lead**: a one-bar motif developed by a
+  phrase template (period, sentence, A A B A', call and response, the techno hook), moved to each chord the voice-led
+  way, with retrograde, augmentation, truncation and ornament as variations; chord tones on beats 1 and 3, passing and
+  neighbour notes between, a leap past a fourth turned back by a step, never past an octave, the phrase closing on a
+  stable degree, no avoid note held, a borrowed chord's tones followed; no more random walks thrown on the lead or the
+  arp at playback. **Sections**: B on the predominant (the chords turned), and the pop genres' last section a whole
+  step up, a real modulation stored with its SCALE page.
+- **Measured** (tests/gen_test.c, every genre at 12 seeds; the same metrics on 0.8.2 over 860 pieces in brackets):
+  every note in the key but rule-based chromaticism (0 unexplained, [88]); lead beats on chord tones 90 % [64 %];
+  steps 60 % of the lead's moves [44 %], leaps past a fourth 10 % of them [26 %], turned back by a step 79 % [21 %],
+  none past an octave; phrases closing on a stable chord tone 80 % [32 %]; the bass on the root at every change
+  100 % [98 %].
+- **CHORD page in the scales of five, six or eight notes** (PEN MPEN BLUES WHOLE DIMHW DIMWH): every other note made
+  odd stacks (C minor pentatonic's triad on C was C F Bb); now each tone is the interval the chord asks for where the
+  scale has it, else the nearest it offers: triads, sus chords and sixths in the pentatonics, augmented in whole tone,
+  diminished and dominant sevenths in the diminished scales; every tone in the scale. The modes of seven as before.
+- **A section's key with a DRUM track selected**: the scale link kept the key before the song brought a section in its
+  own key; the first melodic track's key counts now.
+- **What it costs**: 9.5 KB of flash; RAM 1152 B less (.data + .bss 93940 B, was 95092: the generator's kept chord
+  steps are made again instead, the kick a bit mask); the pool unchanged. GEN runs in the main loop: a full piece 9 %
+  more instructions (LOOP), 20 % (PARTS), 22 % (SONG), against 0.8.2's (callgrind); the audio path untouched.
+  Project and backup formats unchanged.
 - **Two DRUM tracks, one kit, never overwritten by the other** (reported again by a tester): the section keeps one
   DRUM-X kit. Browsing presets already left another track's kit alone (0.8.1); now the sound dice (EDIT + SELECT) and
   INIT SOUND do too: a second DRUM track inits or dices its own sound and the screen says KIT OF T4 KEPT / INIT, KIT KEPT.

@@ -706,6 +706,10 @@ MIDI, a project load), every melodic track follows it at once; drum tracks have 
   once. It is global and saved with the project: if your notes sound lower or higher than the piano roll shows, look
   here. When it is not 0 the piano roll says **ALL TR** and its value, and PLAY says it too. 0 = off.
 - The RESO reverb and the SLICER's pitch steps follow the scale too.
+- (0.8.3) **A section keeps its key**: ROOT and SCALE are stored with each section, so a song can change key from one
+  section to the next (GEN's PARTS does it for pop genres: the last section a whole step up). When the song brings in a
+  section, the keys, CHORD, ALL TR and the RESO reverb follow its key, also with a DRUM track selected (then the first
+  melodic track's key counts; until 0.8.3 a DRUM track selected kept the key before).
 
 ### CHORD (0.6.81)
 
@@ -713,7 +717,15 @@ MIDI, a project load), every melodic track follows it at once; drum tracks have 
 
 - **CHORD**: OFF; in the scale (every chord in key, nothing to think): **TRIAD**, **7TH**, **ADD9**, **SUS2**,
   **SUS4**, built on the key's degree (a key outside the scale takes the scale note below; CHR: the major scale of
-  ROOT); shapes on any key: **MAJ**, **MIN**, **7**, **MAJ7**, **MIN7**, **POWER**.
+  ROOT); shapes on any key: **MAJ**, **MIN**, **7**, **MAJ7**, **MIN7**, **POWER**. In a mode of seven notes (MAJ MIN
+  DOR MIX HARM PHRY LYD LOC MEL) the chord is the mode's own on that degree (every other note of the scale). (0.8.3) In
+  the scales of five, six or eight notes (PEN, MPEN, BLUES, WHOLE, DIMHW, DIMWH) every other note made odd stacks (C
+  minor pentatonic's "triad" on C was C F Bb), so each tone is now the interval the chord asks for where the scale has
+  it, else the nearest one it offers: a major or minor third (none: the chord becomes a suspension), a perfect fifth
+  (else diminished over a minor third, augmented over a major one), a minor or major seventh (else a sixth), the ninth.
+  Every tone stays in the scale: a pentatonic key gives triads, sus4 / sus2 chords and sixths (C minor pentatonic: Cm,
+  Eb, Fsus4, Eb/G, Bbsus4; 7TH on F: F7sus4), whole tone augmented chords, the diminished scales diminished and
+  dominant sevenths.
 - **VOICING**: CLOSE (root position); **LEAD** (each chord takes the inversion nearest the last one: voice leading, the
   Orchid's smoothness); OPEN (the second tone an octave up); +BASS (the root an octave down added).
 - **STRUM**: 0 all at once; up from there, the notes come in one after the other, low to high (up to ~63 ms apart), as
@@ -844,29 +856,65 @@ What a piece is made of:
   last bar (a snare roll, a tom run, the kick dropped, a hat roll, a linear funk fill, Blue Monday's sixteenth kicks,
   a dub rim, a break before the one) and the snare laid back where the genre plays late (TIMING). ENERGY and the
   amounts decide how much plays; the kick is never dropped from the one.
+- **The key** (0.8.3): a mode of seven notes for every genre (its list: major, minor, dorian, mixolydian, phrygian,
+  lydian, harmonic and melodic minor), **written to the SCALE page** (ROOT, SCALE, and QUANT SNAP unless you chose
+  another QUANT) on every track, so the keys you play afterwards, the CHORD page, ALL TR and the RESO reverb are in the
+  piece's key. A genre that sings pentatonic or blues (deep house, funk, boom bap, D&B, afrobeat ..) gets the mode that
+  holds it (dorian or aeolian; major for the major pentatonic) and its **lead** keeps to the pentatonic notes: the
+  chords stay real chords and every note is still in the SCALE page's scale. The chord track's **CHORD page** is set
+  to the piece's chords (TRIAD, 7TH, ADD9, SUS2 or SUS4, as its progression is coloured), VOICING LEAD, a strum where
+  a guitar plays them; CHORD is off on the other tracks.
+- **Harmony** (0.8.3): each genre has a family (modal loops; seventh-chord loops; functional pop; colour washes; film;
+  jazz) and progressions written as degrees of the mode, each loop ending on the chord that leads back to its first
+  (IV–I, bVII–i, V–i, bII–i ..): i bVII, i iv7, i bII (phrygian), I V vi IV, vi IV I V, I vi IV V, i bVI bIII bVII,
+  the Andalusian i bVII bVI V, the Aeolian bVI bVII i, i7 bIIImaj7 bVII7 iv7, ii7 V7 Imaj7, Imaj7 vi7 ii7 V7, the
+  bossa's Imaj7 II7 ii7 V7, I bVII IV I .. A mode that would turn one of its chords diminished (dorian's vi, lydian's
+  #iv) never takes that progression: the genre's next one, else the mode's own loop. Then the cadences and colours the
+  genre allows: the minor key's **dominant raised before its tonic** (the leading tone: trance, italo, synth pop,
+  film, jazz), **jazz's turnaround** (ii–V in the last bar), a **secondary dominant** on the second half of the chord
+  before its target (V/vi, V/ii, V/IV: indie, disco, jazz, film; with COMPLEX), a major key's **IV going minor** before
+  I (mixture: synth pop, indie, shoegaze, film), the flat side borrowed in major (bVII, bVI: motorik, indie,
+  soundtrack). Harmonic rhythm by genre: a chord every bar, every two or four bars, or one chord for the whole loop.
+  Chords are triads, sevenths, ninths (never a b9), add9, sus2 / sus4 (a perfect fourth only), sixths, quartal stacks,
+  power chords, recoloured by the genre (plain, rich, suspended, quartal, power, parallel).
 - **Bass** from about fifty **archetypes written against the kick**: house offbeat and bounce, deep walking
   sixteenths, techno rolling sixteenths and octave bounce, Detroit, EBM, italo, psy, UK garage, Jamerson, around the
   kick, on the one, slap, Good Times, jazz walking and two-feel, boogie, country, ska, tumbao, bossa, rock eighths,
   punk sixteenths, McCartney, Peter Hook, motorik, angular post punk, indie, one drop, steppers, rockers, dub,
   boom bap, trap 808s, DnB, jungle, wobble, pedal, fifths, Suicide, Kraftwerk; and **acid** by the 303's rules
-  (accents on 3–5 steps, slides on 2–3, an octave jump after a slide, the accents varied over the bars). The root at
-  every chord change, approaches by a semitone into the next root, a pickup at the end of the fourth bar; the kick
+  (accents on 3–5 steps, slides on 2–3, an octave jump after a slide, the accents varied over the bars). **The root at
+  every chord change** (a chord that comes in mid-bar gets its root there), the archetype's third, fifth and seventh
+  the chord's own (a borrowed or raised chord's too), approaches by a semitone into the next root on a weak beat (they
+  always resolve: a thinner bass never leaves one hanging), a pickup at the end of the fourth bar; the kick
   **doubled**, **answered** (the bass stays off the kick's steps), **interlocked** (and a note right after it) or
   sustained under it, as the genre does.
-- **Chords** from progressions with a **quality** a chord — sevenths, ninths, add9, sus2, sus4, sixths, fourths, power
-  chords, a dominant's raised third in minor — recoloured by the genre (plain triads, rich, suspended, quartal, power,
-  parallel), **voiced in C3..G5 and led to the nearest voicing** (or moved in parallel: techno, impressionism),
-  played held, swelling, stabbed on the offbeats, pulsed, dubbed through the delay, skanked, comped, pushed, as a
-  drone, sparse, broken (UK garage) or trance-gated.
+- **Chords voiced** (0.8.3): of each chord's inversions and spreads, the one nearest the last chord, voice by voice
+  (common tones held, the least motion: about 4.6 semitones a change in all, against 5.5 before), in C3..G5, no second
+  below G3 and no close third at the very bottom; close in the hand for stabs and comping, **spread** (drop 2) for the
+  washes and film, **rootless** (3 5 7 9) where jazz and deep house have the bass on the root, moved in parallel for
+  techno and impressionism; played held, swelling, stabbed on the offbeats, pulsed, dubbed through the delay, skanked,
+  comped, pushed, as a drone, sparse, broken (UK garage) or trance-gated, each held to its own chord's end.
 - **Arp**: an order over the voiced chord — up, up and down, down, Alberti, Glass's groups, a Reich pulse, a
   sequencer, a walk, cycles of 3 or 5 against the bar (polymetric), a trance gate, octaves — in sixteenths or
-  eighths, with holes (ARP), in C3..C5.
-- **Lead**: a one-bar **motif** (its onsets drawn by the metre, its contour by the key's weights — the tonic, the
-  fifth, the third likelier — a leap filled back by a step, chord tones on the strong steps) in a four-bar **phrase**
-  (A A A A', A A' A A'', A rest A A', A A rest A'), varied by one operator a bar (the end moved, the last note
-  dropped, moved up a third or down a step, a passing note); or a hypnotic ostinato on an euclid, long notes, a
-  tintinnabuli line, a machine's figure, a two-bar hook (a call and its answer). Never a minor second or a tritone
-  against the bass; never above G5; high notes softer.
+  eighths, with holes (ARP), in D3..D5; each chord's figure from its first note; only the chord's tones.
+- **Lead** (0.8.3: composed, not walked): a one-bar **motif** — a rhythm cell (a long note and two short, a
+  tresillo, a pickup into three, a dotted push ..) and a contour of steps (a third now and then, a leap turned back by a
+  step, an arch, a fall, a rise or a wave) — developed over the four-bar **phrase** by a template: a **period**
+  (antecedent closing open on the 2nd or the 5th, consequent closing on the tonic), a **sentence** (the motif, its
+  sequence, a continuation climbing to the climax two thirds in, the cadence), **A A B A'**, **call and response** (the
+  answer the call's contour turned), the techno **hook** A A A A', or the dub's with a bar of space; one operator on a
+  varied bar (its last note left out, its end moved, a neighbour into its last note). The motif moves to each bar's
+  chord the voice-led way (its first note the chord tone a step from the last note; the same chord: the motif as it
+  was). The rules every lead keeps: **a chord tone on beats 1 and 3**, on 2 and 4 a chord tone or a passing note that
+  moves by steps, passing and neighbour notes between, **mostly steps** (60 % of its moves), never more than an octave,
+  a leap past a fourth followed by a step back, a range of about a tenth, the phrase **closing on a stable degree**
+  (the tonic, the third or the fifth on a chord tone) and held, no minor ninth or tritone over the chord's root, no
+  avoid note held (a fourth over a major third), a borrowed or raised chord's tones followed (the minor key's b7
+  becomes the leading tone over its V). Or: a hypnotic **ostinato** on an euclid (its cell's notes on the chord at the
+  beats), a machine's figure moved with the chord, **long notes** as a guide-tone line (each the chord tone a step or a
+  third on, a short figure stepping into it now and then), a **tintinnabuli** line (stepwise, a chord tone on each long
+  note, a passing note between). Never above A5 (B5 in a section lifted a step); high notes softer. Each lead, figure
+  and drum pattern is the genre's own for a seed (the same seed in two genres: two tunes).
 - **Sounds** by **recipe** a role: sub, acid, Reese, FM bass, rock bass, Hook's chorused bass, wow bass; pad,
   strings, choir, organ (WHEEL), electric piano, stab, dub chord, pluck, bell, lead, vox lead, chip, keys, drone,
   noise, texture, hoover, a shoegaze wall, a tremolo guitar. A recipe picks an engine, a factory sound whose name fits,
@@ -880,10 +928,15 @@ What a piece is made of:
 - With **TRACKS 6** the sixth track is a **texture** (a drone, noise, a choir, an organ, strings) in long notes.
 - **FORM**: **LOOP** writes one loop (2 or 4 bars). **PARTS** also stores sections **A** (the piece), **B** (a break:
   no drums, no bass) and **C** (a drop: the drums denser) and fills ARRANGE with A B A C (PLAY plays the song, as
-  0.6.81's DICE ALL did). **SONG** writes a club form: **A** the drop, **B** the intro (drums and bass), **C** the build
+  0.6.81's DICE ALL did). (0.8.3) The sections are one piece in one key: B starts the loop on its predominant (the
+  same chords turned: IV–I–V–vi for I–V–vi–IV; a one-chord loop goes to its subdominant and back), the motif and the
+  figures the same, moved onto those chords; in the pop genres (ITALO, SYNTH POP, INDIE, DISCO) **C is a whole step
+  up**, a real key change stored in the section with its SCALE page (pop's last chorus). The modal loops (techno, house
+  minimal, dub ..) keep their loop in every section. **SONG** writes a club form: **A** the drop, **B** the intro (drums and bass), **C** the build
   (the chords in, their filter opening over the loop, a roll at its end, the delay thrown on the last step) and **D**
-  the break (no drums, no bass, the chords wetter), in ARRANGE as B C A D C A with 16-bar rows (the drop 32). Ambient
-  and post-rock genres get an arc instead (thin, in, apex). Sections of yours (stored by you, not by GEN) are never
+  the break (no drums, no bass, the chords wetter; 0.8.3: on its predominant, but in the modal loops), in ARRANGE as
+  B C A D C A with 16-bar rows (the drop 32). Ambient and post-rock genres get an arc instead (thin, in, apex: on its
+  predominant). Sections of yours (stored by you, not by GEN) are never
   overwritten: then the piece stays one loop.
 
 Every piece replaces every track's steps, sounds, kit, mix and automation. Mutes are left as they are. The roles that

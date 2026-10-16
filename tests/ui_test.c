@@ -7892,6 +7892,43 @@ static int test_chord(void)
     for (i = 0; i < 80u; i++) events_block(CTL);
     ok &= chord_sounding(t, nn) == 0u;                  /* (the third never came) */
     bad += check("STRUM: the notes one after the other; let go before the last: everything ends, none comes later", ok);
+    {   /* (0.8.3) the scales of five, six and eight notes: every tone in the scale, chords that are chords (a pentatonic
+         * key's triad a triad or a suspension, a sixth for its seventh; whole tone augmented; diminished diminished) */
+        static const uint8_t SC[6] = {5, 6, 12, 13, 14, 15};   /* PEN MPEN BLUES WHOLE DIMHW DIMWH */
+        uint8_t out[KB_CH];
+        uint32_t s, r, m, note, bads = 0;
+        t->p[P_CVOI] = CV_CLOSE; t->p[P_CSTR] = 0;
+        for (s = 0; s < 6u; s++)
+            for (r = 0; r < 12u; r++)
+                for (m = CD_TRI; m <= CD_SUS4; m++)
+                    for (note = 48; note < 72u; note++) {
+                        uint32_t c, j, mask;
+                        t->p[P_SCALE] = SC[s]; t->p[P_ROOT] = (int16_t)r; t->p[P_CHRD] = (int16_t)m;
+                        mask = scale_mask(t);
+                        c = chord_build(t, note, out);
+                        if (c < 3u) bads++;
+                        for (j = 0; j < c; j++) {
+                            if (!((mask >> ((out[j] + 120u - r) % 12u)) & 1u)) bads++;
+                            if (j && out[j] <= out[j - 1]) bads++;
+                        }
+                    }
+        t->p[P_ROOT] = 0; t->p[P_CHRD] = CD_TRI;
+        t->p[P_SCALE] = 6; n = chord_build(t, 65, nn);  /* C minor pentatonic, F: F Bb C (sus4) */
+        ok = n == 3u && nn[1] - nn[0] == 5 && nn[2] - nn[0] == 7;
+        t->p[P_SCALE] = 5; n = chord_build(t, 62, nn);  /* C pentatonic, D: D G A */
+        ok &= n == 3u && nn[1] - nn[0] == 5 && nn[2] - nn[0] == 7;
+        n = chord_build(t, 57, nn);                     /* A: A C E (A minor) */
+        ok &= n == 3u && nn[1] - nn[0] == 3 && nn[2] - nn[0] == 7;
+        t->p[P_SCALE] = 13; n = chord_build(t, 60, nn); /* whole tone: C E G# */
+        ok &= n == 3u && nn[1] - nn[0] == 4 && nn[2] - nn[0] == 8;
+        t->p[P_SCALE] = 15; n = chord_build(t, 60, nn); /* diminished (whole-half): C Eb F# */
+        ok &= n == 3u && nn[1] - nn[0] == 3 && nn[2] - nn[0] == 6;
+        t->p[P_SCALE] = 6; t->p[P_CHRD] = CD_SEV; n = chord_build(t, 65, nn);   /* F7sus4: F Bb C Eb */
+        ok &= n == 4u && nn[3] - nn[0] == 10;
+        t->p[P_SCALE] = 2; t->p[P_CHRD] = CD_TRI;
+        if (bads) printf("  chord: %u tones off the scale or missing\n", bads);
+        bad += check("CHORD (0.8.3) in PEN MPEN BLUES WHOLE DIMHW DIMWH: every tone in the scale, real chords (sus, aug, dim)", ok && !bads);
+    }
     t->p[P_CSTR] = 0; t->p[P_VOICE] = V_MONO;
     key_down(k); events_block(CTL); n = chord_sounding(t, nn); key_up(k); events_block(CTL);
     bad += check("CHORD on a MONO track: the root alone", n == 1u);

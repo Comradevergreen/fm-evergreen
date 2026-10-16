@@ -1785,6 +1785,9 @@ static void scale_link(void)
 {
     const track_t *t = TSEL;
     uint32_t k;
+    for (k = 0; k < NTRK && drum_track(t); k++) t = &trk[k];   /* (0.8.3) a DRUM track selected: the first melodic
+                                                         * track's counts (a section the song brings in its own key:
+                                                         * its key, not the one before it) */
     if (!drum_track(t) && (t->p[P_ROOT] != sl_root || t->p[P_SCALE] != sl_scale || t->p[P_QUANT] != sl_quant)) {
         sl_root = t->p[P_ROOT];
         sl_scale = t->p[P_SCALE];
