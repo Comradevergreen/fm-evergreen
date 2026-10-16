@@ -73,6 +73,9 @@ public class MainActivity extends Activity {
     static { System.loadLibrary("jiantusb"); }
     /** usbiso.c: isochronous IN reads on a usbfs descriptor; stats = packets, empty, errors, errno, largest, left */
     private static native int isoRead(int fd, int ep, int maxp, byte[] out, int timeoutMs, int[] stats);
+    /** (0.4) usbiso.c: the stems in and the pushed mic out together (MENU > USB STEMS+IN) */
+    private static native int duplex(int fd, int ep, int maxp, int epOut, byte[] out, int timeoutMs, int[] stats);
+    private static native void pushMic(short[] pcm, int n);
 
     @Override
     protected void onCreate(Bundle b) {
@@ -107,6 +110,7 @@ public class MainActivity extends Activity {
         root.addView(button("4 · ENVIAR EL MIC AL FM-1 (5 s, modo IN+OUT)", v -> run(this::sendMic)));
         root.addView(button("5 · DRIVER PROPIO: 8 CANALES DIRECTO (10 s)", v -> run(this::directStems)));
         root.addView(button("6 · FM-1 DIRECTO + MIC DEL CELU (10 s)", v -> run(this::stemsAndMic)));
+        root.addView(button("7 · MIC AL FM-1 Y VUELTA + LATENCIA (STEMS+IN, 10 s)", v -> run(this::stemsIn)));
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         Button copy = button("COPIAR INFORME", v -> copyReport());
@@ -126,7 +130,7 @@ public class MainActivity extends Activity {
         root.addView(sv, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1));
         setContentView(root);
 
-        say("JIANT Probe 0.3 · " + Build.MANUFACTURER + " " + Build.MODEL + " · Android " + Build.VERSION.RELEASE
+        say("JIANT Probe 0.4 · " + Build.MANUFACTURER + " " + Build.MODEL + " · Android " + Build.VERSION.RELEASE
             + " (API " + Build.VERSION.SDK_INT + ")");
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED)
             requestPermissions(new String[] {Manifest.permission.RECORD_AUDIO}, 1);
@@ -555,6 +559,162 @@ public class MainActivity extends Activity {
         say(name != null ? "WAV del mic: Descargas/JIANT/" + name : "No pude guardar el WAV del mic.");
         say(live > 0 ? "RESULTADO: el mic del celu graba junto al FM-1: la app puede sumarlo como una pista más."
                      : "RESULTADO: el mic no trajo sonido mientras leía el FM-1.");
+    }
+
+    // ------------------------------------------------------------------ 7 · the mic through the FM-1 and back
+    /** the streaming interface (alt 1) with an isochronous endpoint going dir, its alt 0, the endpoint; null if none */
+    private static Object[] stream(UsbDevice dv, int dir) {
+        for (int i = 0; i < dv.getInterfaceCount(); i++) {
+            UsbInterface it = dv.getInterface(i);
+            if (it.getInterfaceClass() != UsbConstants.USB_CLASS_AUDIO || it.getInterfaceSubclass() != 2) continue;
+            for (int e = 0; e < it.getEndpointCount(); e++) {
+                UsbEndpoint x = it.getEndpoint(e);
+                if (x.getType() != UsbConstants.USB_ENDPOINT_XFER_ISOC || x.getDirection() != dir) continue;
+                UsbInterface off = null;
+                for (int j = 0; j < dv.getInterfaceCount(); j++)
+                    if (dv.getInterface(j).getId() == it.getId() && dv.getInterface(j).getAlternateSetting() == 0) off = dv.getInterface(j);
+                return new Object[] {it, off, x};
+            }
+        }
+        return null;
+    }
+
+    /** the lag (frames, 0..max) at which b best follows a, and the peak's share of the correlation (0..1) */
+    private static double[] lag(float[] a, float[] b, int max) {
+        int d = 4, n = Math.min(a.length, b.length) / d - max / d - 1;
+        if (n < 1000) return new double[] {-1, 0};
+        float[] x = new float[n + max / d + 1], y = new float[n + max / d + 1];
+        for (int i = 0; i < x.length; i++) {               /* 11 kHz, the slope: the onsets */
+            float sa = 0, sb = 0;
+            for (int k = 0; k < d; k++) { sa += a[i * d + k]; sb += b[i * d + k]; }
+            x[i] = sa; y[i] = sb;
+        }
+        for (int i = x.length - 1; i > 0; i--) { x[i] -= x[i - 1]; y[i] -= y[i - 1]; }
+        int best = 0;
+        double bv = -1e30, sum = 0;
+        double[] c = new double[max / d + 1];
+        for (int l = 0; l <= max / d; l++) {
+            double v = 0;
+            for (int i = 1; i < n; i++) v += x[i] * y[i + l];
+            c[l] = v;
+            sum += Math.abs(v);
+            if (v > bv) { bv = v; best = l; }
+        }
+        int fb = best * d;                                  /* then the full rate, +-d */
+        double fv = -1e30;
+        for (int l = Math.max(0, best * d - d); l <= best * d + d; l++) {
+            double v = 0;
+            for (int i = d; i + l < b.length && i < a.length - 1 && i < n * d; i++)
+                v += (a[i] - a[i - 1]) * (b[i + l] - b[i + l - 1]);
+            if (v > fv) { fv = v; fb = l; }
+        }
+        return new double[] {fb, sum > 0 ? bv / sum * (max / d + 1) / 8.0 : 0};
+    }
+
+    private void stemsIn() {
+        say("\n== 7 · MIC AL FM-1 Y VUELTA (STEMS+IN)");
+        say("Para medir la latencia: FM-1 en MENU › SYSTEM › USB › STEMS+IN (firmware 0.8.0), sin auriculares, el celu a"
+            + " unos 20 cm del parlante del FM-1 y un tema con batería sonando. El mic oye al FM-1 y la app mide cuánto tarda en volver."
+            + " Bajale el LEVEL a la última pista activa (o muteala) para que el mic no acople por el parlante.");
+        UsbManager um = (UsbManager) getSystemService(Context.USB_SERVICE);
+        UsbDevice dev = null;
+        Object[] in = null, out = null;
+        for (UsbDevice dv : um.getDeviceList().values()) {
+            in = stream(dv, UsbConstants.USB_DIR_IN);
+            out = stream(dv, UsbConstants.USB_DIR_OUT);
+            if (in != null) { dev = dv; break; }
+        }
+        if (dev == null) { say("No veo el FM-1 grabando por USB."); return; }
+        if (out == null) { say("RESULTADO: el FM-1 no tiene salida USB en este modo. Poné MENU › SYSTEM › USB › STEMS+IN y reenchufá."); return; }
+        UsbInterface inOn = (UsbInterface) in[0], inOff = (UsbInterface) in[1], outOn = (UsbInterface) out[0], outOff = (UsbInterface) out[1];
+        UsbEndpoint ep = (UsbEndpoint) in[2], epo = (UsbEndpoint) out[2];
+        if (!permit(um, dev)) { say("RESULTADO: sin permiso USB no puedo."); return; }
+        UsbDeviceConnection conn = um.openDevice(dev);
+        if (conn == null) { say("RESULTADO: Android no me dejó abrir el dispositivo."); return; }
+        int ch = ep.getMaxPacketSize() / (46 * 2);
+        say("Entrada: " + ch + " canales (paquete " + ep.getMaxPacketSize() + " bytes); salida: EP 0x" + Integer.toHexString(epo.getAddress()));
+        if (ch != 10) { say("RESULTADO: espero 10 canales (STEMS+IN). ¿El FM-1 tiene el firmware 0.8.0 y está en STEMS+IN?"); conn.close(); return; }
+        AudioDeviceInfo micDev = null;
+        for (AudioDeviceInfo d : am.getDevices(AudioManager.GET_DEVICES_INPUTS))
+            if (d.getType() == AudioDeviceInfo.TYPE_BUILTIN_MIC) { micDev = d; break; }
+        AudioRecord r = open(micDev, 1, false, MediaRecorder.AudioSource.UNPROCESSED);
+        if (r == null) r = open(micDev, 1, false, MediaRecorder.AudioSource.MIC);
+        if (r == null) { say("RESULTADO: no pude abrir el mic del celu."); conn.close(); return; }
+        final AudioRecord mic = r;
+        if (!conn.claimInterface(inOn, true) || !conn.claimInterface(outOn, true)) {
+            say("RESULTADO: no pude tomar las interfaces de audio."); mic.release(); conn.close(); return;
+        }
+        java.util.concurrent.atomic.AtomicBoolean stop = new java.util.concurrent.atomic.AtomicBoolean();
+        Thread t = new Thread(() -> {
+            short[] b = new short[128];
+            mic.startRecording();
+            while (!stop.get()) {
+                int k = mic.read(b, 0, b.length);
+                if (k <= 0) break;
+                pushMic(b, k);
+            }
+            mic.stop();
+        });
+        try {
+            if (!conn.setInterface(inOn) || !conn.setInterface(outOn)) { say("RESULTADO: el FM-1 no aceptó arrancar el audio."); return; }
+            int secs = 10;
+            byte[] bytes = new byte[RATE * secs * ch * 2];
+            int[] st = new int[9];
+            t.start();
+            say("Grabando " + secs + " s: el mic va al FM-1 (última pista activa) y vuelven los 10 canales…");
+            long t0 = System.nanoTime();
+            int got = duplex(conn.getFileDescriptor(), ep.getAddress(), ep.getMaxPacketSize(), epo.getAddress(), bytes, (secs + 5) * 1000, st);
+            double el = (System.nanoTime() - t0) / 1e9;
+            stop.set(true);
+            try { t.join(1000); } catch (InterruptedException ignored) { }
+            conn.setInterface(outOff);
+            conn.setInterface(inOff);
+            if (got <= 0) { say("RESULTADO: no llegó nada (error " + (-got) + ")."); return; }
+            int frames = got / (ch * 2);
+            say(String.format(Locale.ROOT, "Entrada: %d frames en %.2f s (%.0f/s), paquetes %d, vacíos %d, error %d.",
+                              frames, el, frames / el, st[0], st[1], st[2]));
+            say(String.format(Locale.ROOT, "Salida: %d frames enviados (%.0f/s), %d en silencio por falta de mic, %d de mic descartados%s.",
+                              st[6], st[6] / el, st[7], st[8], st[3] != 0 ? ", errno " + st[3] : ""));
+            short[] all = new short[frames * ch];
+            for (int i = 0; i < all.length; i++) all[i] = (short) ((bytes[2 * i] & 0xFF) | (bytes[2 * i + 1] << 8));
+            String[] names = {"T1", "T2", "T3", "T4", "T5", "T6", "FX L", "FX R", "MIC (mezclado)", "MIC (crudo)"};
+            for (int c = 0; c < ch; c++) {
+                int pk = 0;
+                for (int i = c; i < all.length; i += ch) pk = Math.max(pk, Math.abs(all[i]));
+                say(String.format(Locale.ROOT, "  %-15s pico %6.1f dBFS%s", names[c], pk > 0 ? 20 * Math.log10(pk / 32768.0) : -120,
+                                  pk > 64 ? "" : "  (silencio)"));
+            }
+            float[] mix = new float[frames], raw = new float[frames];
+            for (int i = 0; i < frames; i++) {
+                float m = 0;
+                for (int c = 0; c < 8; c++) m += all[i * ch + c];
+                mix[i] = m;
+                raw[i] = all[i * ch + 9];
+            }
+            double[] lg = lag(mix, raw, RATE / 5);
+            int L = (int) lg[0];
+            say(String.format(Locale.ROOT, "LATENCIA: el sonido del FM-1 vuelve por el mic %d frames después = %.1f ms (confianza %.1f; > 3 es clara).",
+                              L, L * 1000.0 / RATE, lg[1]));
+            String name = saveWav(all, all.length, ch);
+            say(name != null ? "WAV 10 canales: Descargas/JIANT/" + name : "No pude guardar el WAV.");
+            if (L > 0 && lg[1] > 3) {
+                short[] al = all.clone();                   /* the two mic channels moved earlier by the latency */
+                for (int i = 0; i < frames; i++)
+                    for (int c = 8; c < 10; c++) al[i * ch + c] = i + L < frames ? all[(i + L) * ch + c] : 0;
+                String n2 = saveWav(al, al.length, ch);
+                say(n2 != null ? "WAV alineado (el mic corrido " + L + " frames): Descargas/JIANT/" + n2 : "");
+            }
+            say(st[7] < RATE / 10 && st[2] == 0 && Math.abs(frames / el - RATE) < RATE * 0.02
+                ? "RESULTADO: ida y vuelta estable. Escuchá el WAV alineado: el mic tiene que caer justo con el tema."
+                : "RESULTADO: anduvo con cortes (mirá silencios y errores). Mandame el informe.");
+        } finally {
+            stop.set(true);
+            mic.release();
+            conn.releaseInterface(outOn);
+            conn.releaseInterface(inOn);
+            conn.close();
+            say("(Si después el audio USB normal no anda, desenchufá y volvé a enchufar el FM-1.)");
+        }
     }
 
     // ------------------------------------------------------------------ 3 · two USB inputs at once

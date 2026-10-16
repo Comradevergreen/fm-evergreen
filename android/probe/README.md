@@ -17,6 +17,11 @@ Phase 0 of the stems app (the design: one Android screen that answers, on a give
    input (sources × 8/6 channels) and shows which channels carry sound.
 6. **The stems and the phone's microphone together** (0.3): test 5 with the built-in mic recorded at the same time
    (a mono WAV beside the 8-channel one): the mic as one more track in the app.
+7. **The mic through the FM-1 and back** (0.4, firmware 0.8.0, MENU > SYSTEM > USB > STEMS+IN): the phone's mic goes
+   out to the FM-1 by our own driver (isochronous OUT, `usbiso.c` duplex) into the last live track, its sends and
+   FX; 10 channels come back (T1–T6, FX L R, the mic as mixed, the mic as it came). With the phone near the FM-1's
+   speaker the mic hears the FM-1: the lag between the stems and the raw mic is the whole latency, and a second WAV
+   has the mic channels moved earlier by it.
 
 Every build signs with `app/probe-debug.keystore` (a debug key, public on purpose) so a new APK installs over the last.
 
