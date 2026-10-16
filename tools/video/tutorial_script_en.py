@@ -133,7 +133,7 @@ SAY = [
     ('Jiant', 'Giant'), ('LFO', 'L F O'), ('FX', 'F X'), ('SCL', 'scale'), ('ENV', 'envelope'), ('GLO', 'G L O'),
     ('SEQ', 'seek'), ('DAW', 'D A W'), ('TRS', 'T R S'), ('G4', 'G four'), ('OCT plus', 'octave plus'),
     ('USB', 'U S B'), ('MOD', 'mod'), ('ALGORITHM', 'algorithm'), ('PRESETS', 'presets'), ('SELECT', 'select'),
-    ('LOFI', 'lo-fi'), ('DX7', 'D X seven'), ('MENU', 'menu'), ('Ko-fi', 'Ko-fi'), ('Cafecito', 'Cafesito'), ('909', 'nine oh nine'), ('808', 'eight oh eight'),
+    ('LOFI', 'lo-fi'), ('DX7', 'D X seven'), ('SMK', 'S M K'), ('A to D', 'A to D'), ('MENU', 'menu'), ('Ko-fi', 'Ko-fi'), ('Cafecito', 'Cafesito'), ('909', 'nine oh nine'), ('808', 'eight oh eight'),
 ]
 
 

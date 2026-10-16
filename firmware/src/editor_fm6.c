@@ -53,6 +53,7 @@ static int ed_fm6_handle(uint32_t cmd, const uint8_t *a, uint32_t n)
             uint8_t v[FP_SIZE + 1u];
             fm6_unpack(a + 2, v);                          /* (every value into its range) */
             fm6_set_patch(a[1], v);
+            fm6_neutral(a[1]);                             /* (JIANT 0.8.1) the voice as it came: no macros on it */
             fm6_adopt(a[1]);                               /* the track's own patch now: SLOT OWN (F n if it is that
                                                             * factory patch unchanged); fm6_poll keeps it */
             ui.force = 1;

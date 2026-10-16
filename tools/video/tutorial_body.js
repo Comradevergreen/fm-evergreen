@@ -604,6 +604,23 @@ Gr.app = (A, t, f) => {
   const cap = [['RECORD', 'every track, live, from the FM-1'], ['EDIT · EXPORT', 'trim, cut, mix · ZIP of stems or one file'], ['ITS OWN DRIVER', 'the FM-1\'s stream, read directly'], ['LIVE VISUALS', 'clouds, smoke, mitosis, the microscope']];
   cap.forEach((c, i) => { const on = i === A.cue; X.globalAlpha = on ? 1 : .3; T(c[0], px + pw + 60, GY + 90 + i * 120, 26, 600, on ? C.text : C.mid); T(c[1], px + pw + 60, GY + 122 + i * 120, 16, 500, on ? C.orange : C.dim); X.globalAlpha = 1; });
 };
+/* the lab film's COMING NEXT: the roadmap, one card a line, Ko-fi's early access last */
+Gr.next = (A, t, f) => {
+  const it = [['FX BUSES A–D', 'four assignable effect chains, routed per track'], ['STEMS APP', 'recording, editing and live visuals on Android'],
+    ['JIANT ON THE SMK', 'a port of the firmware: the same instrument, new hardware'], ['EARLY ACCESS', 'Ko-fi supporters play every new version first']];
+  it.forEach((c, i) => {
+    const on = A.cue === i + 1, seen = A.cue === 0 || A.cue > i, y = GY + 30 + i * 132, a = fade(A.ct, .3 + i * .25, .8 + i * .25);
+    X.globalAlpha = a * (on ? 1 : seen ? .55 : .25);
+    rr(GX, y, GW - 40, 108, 10, on ? (i === 3 ? C.orange : C.violet) : '#2b2833', on ? 'rgba(90,60,255,.07)' : null, on ? 2 : 1.5);
+    T(String(i + 1).padStart(2, '0'), GX + 30, y + 66, 30, 600, on ? C.orange : C.mid);
+    T(c[0], GX + 110, y + 50, 30, 600, on ? C.text : C.mid); T(c[1], GX + 110, y + 84, 17, 500, on ? C.orange : C.dim);
+    if (on) heatRule(GX + 110, y + 98, (GW - 260) * ease(A.lt / .8), 2);
+    if (i === 2) { const cx = GX + GW - 150, cy = y + 54, e = en(f, 0); sm[0] += (e - sm[0]) * .3; being(TRK[0][2], cx, cy, 26 * (1 + sm[0] * .4), sm[0], t); }
+  });
+  X.globalAlpha = A.cue === 4 ? fade(A.lt, .4, 1) : 0;
+  T('ko-fi.com/juanjiant', GX, GY + 600, 40, 600, C.orange); T('new versions here first', GX + 470, GY + 600, 20, 500, C.mid);
+  X.globalAlpha = 1;
+};
 /* the lab film's LIVE VISUALS: the WebGL visuals' frames (visuals_film.mjs) full screen, the style's name */
 let visImg = null, visF = -1;
 async function visuals(A, t, f) {

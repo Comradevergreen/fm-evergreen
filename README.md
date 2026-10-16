@@ -526,6 +526,13 @@ JIANT's modifications are distributed under the same license.
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
 
 ### v0.8.1
+- **Fix: DX7 voices from the web editor sounded distorted** (reported by a user: "digital distortion", fine on the
+  stock firmware). The FM6 macros (FB, MOD, RATIO, DETUNE ...) stayed on the track when a voice arrived, and JIANT's own
+  FM6 presets set them for their factory patch (HARD BASS: FB +2, MOD +25; DX KEYS: MOD +12): left on a DX7 voice they
+  drove its modulators into aliasing, 25 to 40 dB more noise on most of the ROM and Synprez banks. A voice sent from the
+  editor, or picked from a bank slot B1..B32, now plays as its file has it: the macros back to none (turn them from
+  there as before; the factory slots F1..F8 keep them). Measured against stock Felucca with 1056 DX7 voices through
+  the whole mix: the same sound. editor_test and fm6bank_test cover it.
 - **Fix: browsing one track's sounds could change another track's drums** (reported by a user, and seen here too: T4 on
   DRUM-X, T5 browsing PRESETS past the DRUM kits, T4's drums changed with every kit). A section has one DRUM-X kit,
   shared by every track on DRUM; a DRUM preset loads its kit into it, so passing the kits on T5 overwrote T4's. Now a

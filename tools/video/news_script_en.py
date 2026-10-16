@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # (JIANT 0.8.0) "In the lab": the film of what is being tested (stems over USB, the web editor, the voice through the
-# FM-1, the Android app), in English, drawn by tools/video/tutorial.html as the tutorial is (tutorial_voice.py ... en news).
+# FM-1, the Android app, the live visuals, what comes next), in English, drawn by tools/video/tutorial.html as the tutorial is (tutorial_voice.py ... en news).
 from tutorial_script_en import SAY, say  # noqa: F401  (the same names spelt out)
 
 META = dict(kicker='IN THE LAB', tagline='WHAT WE ARE TESTING · v0.8.0', intro3='IN THE LAB · TEST VERSIONS')
@@ -45,6 +45,14 @@ CHAPTERS = [
         ("Scan: a landscape of monitor lines, lifted by the sound.", 3),
         ("Orbits: beads of light, tracing the path of every track.", 4),
         ("And the microscope: the beings of the FM-1, alive under the lens, the focus breathing through the depth.", 5),
+    ]),
+    dict(id='next', k='06', title='COMING NEXT', g='next', lines=[
+        ("And what's coming next.", 0),
+        ("Assignable effect buses: four of them, A to D, so each track can choose its own chain of effects.", 1),
+        ("The stems app and its visuals, out of the lab and onto your phone.", 2),
+        ("And a big one: a port of JIANT to the SMK, the same instrument on new hardware.", 3),
+        ("Supporters on Ko-fi get every new version first, before it goes public. "
+         "Help me on Ko-fi, and you'll be the first to play them.", 4),
     ]),
     dict(id='outro', k='', title='THANK YOU', g='outro', lines=[
         ("That's what's cooking. If you want to test any of it, the links are in the description.", 0),

@@ -253,6 +253,7 @@ static void arrange(uint32_t bar, double t)
     else if (is(c, "editor")) { on[T_DRUM] = on[T_BASS] = on[T_ARP] = on[T_LEAD] = 1; pr = 1; }
     else if (is(c, "micin")) { on[T_DRUM] = on[T_BASS] = on[T_LEAD] = on[T_METAL] = 1; dr = D_DRIVE; big = 1; pr = 1; alt = 1; }
     else if (is(c, "app")) { on[T_DRUM] = on[T_BASS] = on[T_ARP] = on[T_LEAD] = on[T_METAL] = 1; dr = D_DRIVE; big = 1; }
+    else if (is(c, "next")) { on[T_DRUM] = on[T_BASS] = on[T_ARP] = on[T_LEAD] = 1; dr = D_GROOVE; big = cue_now >= 3; }
     else if (is(c, "visuals")) { on[T_DRUM] = on[T_BASS] = on[T_ARP] = on[T_LEAD] = on[T_METAL] = 1; dr = cue_now % 2 ? D_DRIVE : D_GROOVE; big = cue_now >= 3; pr = cue_now % 2; alt = cue_now >= 4; }
     if (!is(c, arr_ch) || pr != arr_pr || dr != arr_dr || big != arr_big || alt != arr_alt) {                /* (rewritten on a chapter's bar: the 4-bar phrase restarts) */
         if (pr != arr_pr) { pad(pr); arp(pr); }
@@ -370,7 +371,7 @@ static void act(const char *c, int cue)
         else if (cue == 1) { tut_menu_close(); page(T_METAL, "FX"); }
         else { tut_menu_close(); home(T_METAL); }
     } else if (is(c, "app")) home(cue % 2 ? T_LEAD : T_BASS);
-    else if (is(c, "visuals")) home(T_LEAD);
+    else if (is(c, "visuals") || is(c, "next")) home(T_LEAD);
     else if (is(c, "web")) home(T_BASS);
     else if (is(c, "outro")) home(T_LEAD);
 }

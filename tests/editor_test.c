@@ -392,6 +392,12 @@ static int fm6_patches(void)
                  trk[2].p[P_E7] == FM6_OWN && fm6_slot[2] == FM6_OWN);
     fm6_poll();
     bad += check("  .. the main loop keeps it", !memcmp(fm6_patch[2] + FP_NAME, "MY PATCH  ", 10));
+    trk[2].p[P_E1] = 2; trk[2].p[P_E2] = 25; trk[2].p[P_E6] = 30;   /* (a preset's macros: HARD BASS's FB, MOD; a DETUNE) */
+    a[0] = ED_FM6_TRACK; a[1] = 2; memcpy(a + 2, pk, FM6_PACKED);
+    request(ED_FM6_PUT, a, sizeof a);
+    bad += check("  .. (0.8.1) a voice PUT over a preset's macros plays as sent: ALG..DETUNE back to none",
+                 trk[2].p[P_E0] == 0 && trk[2].p[P_E1] == 0 && trk[2].p[P_E2] == 0 && trk[2].p[P_E3] == 0 &&
+                 trk[2].p[P_E4] == 0 && trk[2].p[P_E5] == 0 && trk[2].p[P_E6] == 0 && trk[2].p[P_E7] == FM6_OWN);
     a[1] = 2;
     n = request(ED_FM6_GET, a, 2);
     bad += check("FM6_GET track 3: as sent", host_wire[7] == 0 && !memcmp(host_wire + 8, pk, FM6_PACKED));
