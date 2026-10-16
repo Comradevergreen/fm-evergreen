@@ -452,7 +452,7 @@ Settings → Pages → Source: **GitHub Actions**, once).
    it straight over another custom firmware has bricked an FM-1. From official V15 or an earlier JIANT, install
    directly from the **[web installer](https://juanjiant-bit.github.io/JIANT/webapp/installer/)** (Chrome or Edge, the
    FM-1 connected by USB straight to the computer). It checks the FM-1 first and writes only over official V15 or JIANT. It offers the **approved** version only: every change merged into `main` goes first to the
-   [emulator](https://juanjiant-bit.github.io/JIANT/emu/) (and a preview installer for testing), is checked there, and only
+   [emulator](https://juanjiant-bit.github.io/JIANT/emu/), is checked there, and only
    then reaches this installer ([web/STABLE](web/STABLE.md)). Offline: `python3 tools/fm1_install.py build/felucca.fwsc`.
 3. **Since 0.6.71 JIANT uses both cores** ([details](#both-cores-dual-core)). If your FM-1 crashes, freezes or
    clicks more than before, hold **REC** while switching it on (one core) and tell us what MENU > ABOUT says.
