@@ -631,6 +631,11 @@ Every update is listed here, newest first. (Since 0.6.80 at the end of the page:
   A pluck through 1/4 at 120 BPM loses ~5.6 dB on the peak of every repeat after 1.5 s (FEEDBK 50 and 80; the same
   before and after this change). Giving every TIME the long delay's hold (fx.c fxg_hold) would fix it, but would
   change the golden renders with a delay send in their tails.
+- **A recorded note made longer or shorter** (a tester: only step recording set a length). SEQ > STEP's KNOB 3 (TIME)
+  is one range, REST ← TIE ← NOTE → 2 ST … 16 ST: right lengthens the note at the cursor (TIEs after it, a chord whole,
+  round past the pattern's end as it plays, up to 16 steps or LEN; the next note stops it: NEXT NOTE), left shortens
+  it, then TIE, REST; the card says 3 ST, LENTE's STEP LEN 3. DRUM tracks, locks, step recording and the project
+  format unchanged.
 
 ### v0.8.3
 - **GEN composes** (the owner: "the melodies too random, little musicality; use the CHORD and SCALE pages"). The

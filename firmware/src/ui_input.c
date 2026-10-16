@@ -699,12 +699,28 @@ static void lock_clear(uint64_t held)
 /* (0.6.81) SEQ > NOTE, the piano roll's edits on the cursor's step: FOCUS the chord or one of its notes (lit), PITCH
  * moves what is in focus up or down, MOVE moves it a step left or right (the chord with its length: it changes places
  * with the step beside it; a note: into the step beside, a NOTE with room or an empty one), LEN the chord's length (its
- * TIEs, over empty steps only). EDIT deletes what is in focus (page_tap) */
-static uint32_t note_len(const track_t *t, uint32_t c, uint32_t len)   /* the step and its TIEs after it */
+ * TIEs, over empty steps only; 0.8.4: STEP's KNOB 3, len_turn). EDIT deletes what is in focus (page_tap) */
+/* (0.8.4) a note's length d steps longer or shorter, its notes kept (a tester: no way to lengthen a recorded note but
+ * TIE by TIE): longer, the steps after it TIEs (over RESTs and empty steps; the next note stops it: NEXT NOTE), up to
+ * 16 steps or LEN, round past LEN's end as it plays (as step recording writes them); shorter, its last TIEs RESTs. Its
+ * length after */
+static uint32_t len_turn(track_t *t, uint32_t c, int32_t d)
 {
-    uint32_t l = 1;
-    while (l < len && t->step[(c + l) % len].time == ST_TIE)
-        l++;
+    uint32_t len = t->p[P_SLEN] > 0 ? (uint32_t)t->p[P_SLEN] : 1u, l = note_len(t, c, len), max = len < 16u ? len : 16u;
+    if (c >= len)
+        return 1;                                       /* (past LEN: nothing plays it) */
+    for (; d > 0 && l < max; d--, l++) {
+        step_t *nx = &t->step[(c + l) % len];
+        if (step_on(nx)) { ui_message("NEXT NOTE"); break; }
+        memset(nx, 0, sizeof *nx);
+        nx->time = ST_TIE;
+        nx->vel = t->step[c].vel;
+    }
+    for (; d < 0 && l > 1u; d++) {
+        step_t *e = &t->step[(c + --l) % len];
+        memset(e, 0, sizeof *e);
+        e->time = ST_REST;
+    }
     return l;
 }
 static void note_drop(step_t *st, uint32_t j)           /* note j out of the step (empty: a REST, its TIEs nothing) */
@@ -774,23 +790,10 @@ static void note_edit(uint32_t slot, int32_t steps)
         ui.entry_open = 0;
         break;
     }
-    default: {                                          /* LEN: the chord's TIEs */
-        uint32_t l = note_len(t, c, len);
+    default:                                            /* LEN: the chord's TIEs (0.8.4: STEP's KNOB 3 the same) */
         if (st->time != ST_NOTE || !st->n) { ui_message("NO NOTE HERE"); break; }
-        if (steps > 0) {
-            uint32_t nx = (c + l) % len;
-            if (l >= len || l >= 16u) break;
-            if (t->step[nx].time == ST_NOTE && (t->step[nx].n || t->step[nx].hit)) { ui_message("BLOCKED: A NOTE AFTER"); break; }
-            memset(&t->step[nx], 0, sizeof t->step[nx]);
-            t->step[nx].time = ST_TIE;
-            t->step[nx].vel = st->vel;
-        } else if (l > 1u) {
-            step_t *e = &t->step[(c + l - 1u) % len];
-            memset(e, 0, sizeof *e);
-            e->time = ST_REST;
-        }
+        len_turn(t, c, steps > 0 ? 1 : -1);
         break;
-    }
     }
 }
 
@@ -834,9 +837,19 @@ static void step_edit(uint32_t slot, int32_t steps)
         st->time = ST_NOTE;
         last_note = st->note[0];
         break;
-    case 2:
-        st->time = (uint8_t)clamp((int32_t)st->time + (steps > 0 ? 1 : -1), ST_NOTE, ST_REST);
+    case 2: {                                             /* TIME (0.8.4), one range: REST < TIE < NOTE < 2 ST .. 16 ST;
+                                                           * right a NOTE longer (len_turn), left shorter, then a TIE, a
+                                                           * REST (one detent at a time past NOTE: a fast turn stops there) */
+        uint32_t len = TSEL->p[P_SLEN] > 0 ? (uint32_t)TSEL->p[P_SLEN] : 1u;
+        if (st->time == ST_NOTE && (steps > 0 || note_len(TSEL, ui.cursor, len) > 1u)) {
+            if (!st->n && steps > 0) ui_message("NO NOTE HERE");   /* (an empty NOTE: nothing to hold) */
+            else len_turn(TSEL, ui.cursor, steps);
+        } else if (steps > 0)
+            st->time = (uint8_t)(st->time - 1u);          /* REST > TIE > NOTE (x1) */
+        else if (st->time < ST_REST)
+            st->time = (uint8_t)(st->time + 1u);          /* NOTE x1 > TIE > REST */
         break;
+    }
     default: {                                            /* FLAG: - / ACC / SLD / A+S */
         uint32_t f = (st->flags & SF_ACCENT ? 1u : 0u) | (st->flags & SF_SLIDE ? 2u : 0u);
         f = (uint32_t)clamp((int32_t)f + (steps > 0 ? 1 : -1), 0, 3);

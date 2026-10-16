@@ -292,7 +292,7 @@ it edits the piano roll, on STEP the step drawn large; the knobs are the same.
 | PATTERN | PLAYHEADS | HEAD | RATE | DIR | INTERVAL |
 | PATTERN | TRACK | PITCH | CHANCE | HUMAN | REC Q |
 | PATTERN | MUTATE | SOUND (every) | PATTERN (every) | AMOUNT | MODE |
-| BAR | STEP (melodic: piano roll) | STEP | NOTE | TIME (NOTE / TIE / REST) | FLAG (– / ACC / SLD / A+S) |
+| BAR | STEP (melodic: piano roll) | STEP | NOTE | TIME (REST ← TIE ← NOTE → 2 ST … 16 ST: the note's length in steps) | FLAG (– / ACC / SLD / A+S) |
 | BAR | STEP (DRUM: grid) | STEP | LANE | HIT | ACC |
 | BAR | NOTE | FOCUS | PITCH | MOVE | MICRO (−8/16 … +7/16) |
 | BAR | AUTOMATION | PLAY (ON/OFF) | EVENT (count) | LOCK (count) | CLEAR (action) |
@@ -564,7 +564,7 @@ under the one playing.
 | --- | --- | --- | --- |
 | **PATTERN** | The pattern's bars side by side, each with its sixteen steps small (a DRUM track: its lanes), the bar you edit framed, the playhead where it plays; under them **BAR n/m**. | PATTERN (LEN DIV SWING GATE) → STRETCH → PLAYHEADS → TRACK → MUTATE | the **bar** (no wrap; the cursor keeps its place in the bar) |
 | **BAR** | The bar's **piano roll**, as STEP always was (a DRUM track: the **grid**, with its keys). | STEP → NOTE → AUTOMATION → AUTO LIST | the **step cursor**; past the bar's end it moves into the next bar |
-| **STEP** | The cursor step drawn large: its notes highest first (the note in focus lit, MICRO moving them, RATCH splitting them; a TIE shows the notes it holds), and at the right its chips: ACC, SLIDE, MICRO, COMP, COMP 2, CHANCE. The set you are on lights its chip. Over it, the bar's sixteen steps small. | NOTE (FOCUS PITCH MOVE MICRO) → COMP → COMP 2 | the **step cursor** |
+| **STEP** | The cursor step drawn large: its notes highest first (the note in focus lit, MICRO moving them, RATCH splitting them; a TIE shows the notes it holds; a note longer than a step says **LEN n** at the top, set on BAR > STEP's KNOB 3), and at the right its chips: ACC, SLIDE, MICRO, COMP, COMP 2, CHANCE. The set you are on lights its chip. Over it, the bar's sixteen steps small. | NOTE (FOCUS PITCH MOVE MICRO) → COMP → COMP 2 | the **step cursor** |
 
 - **SEQ from another page** comes back to the level and set you last used **on that track** (each track remembers its
   own); at power-on it is BAR's STEP, the piano roll.
@@ -578,7 +578,15 @@ under the one playing.
 ### Writing steps
 
 - **SEQ > STEP** on a melodic track is a **piano roll**. KNOB 1 moves the step cursor, KNOB 2 transposes the step,
-  KNOB 3 sets NOTE / TIE / REST, KNOB 4 sets accent / slide. A step holds up to four notes.
+  KNOB 3 is **TIME**, KNOB 4 sets accent / slide. A step holds up to four notes.
+- **A note's length** (0.8.4): KNOB 3 (TIME) is one range, REST ← TIE ← NOTE → 2 ST → … → 16 ST. On a note,
+  turning right **lengthens** it: the steps after it become TIEs, one a detent (the card says **3 ST**, the roll draws
+  the longer bar); a chord keeps all its notes. Turning left **shortens** it (its last TIEs become RESTs) down to
+  NOTE, then the step itself becomes a TIE, then a REST, as before (a fast turn stops at NOTE first). It lengthens over
+  RESTs and empty steps only: the **next note stops it** (the screen says NEXT NOTE; turn that step to TIE or clear it
+  with EDIT to go on). At most 16 steps or LEN; near the end of the pattern it goes round to step 1, as the sequencer
+  plays it. So any note, recorded or written, can be made longer or shorter afterwards with no REC. (On a DRUM track
+  nothing changes: hits have no length.)
 - **Step recording**: on STEP, while **stopped**, press **REC** (the screen says KEYS WRITE STEPS). Play a note or a
   chord: it goes into the cursor step, and when you let go the cursor moves on. Not armed, the keys just play.
   - **Length**: while the keys are held, turn **KNOB 1**: the note or chord lasts that many steps (1–16, ties after it).

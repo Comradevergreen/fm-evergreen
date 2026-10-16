@@ -299,7 +299,7 @@ COMPÁS edita el piano roll, en PASO el paso dibujado grande; las perillas son l
 | PATRÓN | PLAYHEADS | HEAD | RATE | DIR | INTERVAL |
 | PATRÓN | TRACK | PITCH | CHANCE | HUMAN | REC Q |
 | PATRÓN | MUTATE | SOUND (cada) | PATTERN (cada) | AMOUNT | MODE |
-| COMPÁS | STEP (melódica: piano roll) | STEP | NOTE | TIME (NOTE / TIE / REST) | FLAG (– / ACC / SLD / A+S) |
+| COMPÁS | STEP (melódica: piano roll) | STEP | NOTE | TIME (REST ← TIE ← NOTE → 2 ST … 16 ST: la duración de la nota en pasos) | FLAG (– / ACC / SLD / A+S) |
 | COMPÁS | STEP (DRUM: grilla) | STEP | LANE | HIT | ACC |
 | COMPÁS | NOTE | FOCUS | PITCH | MOVE | MICRO (−8/16 … +7/16) |
 | COMPÁS | AUTOMATION | PLAY (ON/OFF) | EVENT (cantidad) | LOCK (cantidad) | CLEAR (acción) |
@@ -587,7 +587,7 @@ compases del patrón (hasta cuatro, con LEN 64), el que estás editando encendid
 | --- | --- | --- | --- |
 | **PATRÓN** | Los compases del patrón uno al lado del otro, cada uno con sus dieciséis pasos en chiquito (una pista DRUM: sus carriles), el compás que editás enmarcado, el cabezal donde suena; debajo, **BAR n/m**. | PATTERN (LEN DIV SWING GATE) → STRETCH → PLAYHEADS → TRACK → MUTATE | el **compás** (sin dar la vuelta; el cursor conserva su lugar dentro del compás) |
 | **COMPÁS** | El **piano roll** del compás, como siempre fue STEP (una pista DRUM: la **grilla**, con sus teclas). | STEP → NOTE → AUTOMATION → AUTO LIST | el **cursor de paso**; al pasarse del final del compás entra en el siguiente |
-| **PASO** | El paso del cursor dibujado grande: sus notas de la más aguda a la más grave (la nota en foco encendida, MICRO las corre, RATCH las parte; un TIE muestra las notas que sostiene), y a la derecha sus fichas: ACC, SLIDE, MICRO, COMP, COMP 2, CHANCE. El juego en el que estás enciende su ficha. Arriba, los dieciséis pasos del compás en chiquito. | NOTE (FOCUS PITCH MOVE MICRO) → COMP → COMP 2 | el **cursor de paso** |
+| **PASO** | El paso del cursor dibujado grande: sus notas de la más aguda a la más grave (la nota en foco encendida, MICRO las corre, RATCH las parte; un TIE muestra las notas que sostiene; una nota de más de un paso dice **LEN n** arriba, y se fija con el KNOB 3 de COMPÁS > STEP), y a la derecha sus fichas: ACC, SLIDE, MICRO, COMP, COMP 2, CHANCE. El juego en el que estás enciende su ficha. Arriba, los dieciséis pasos del compás en chiquito. | NOTE (FOCUS PITCH MOVE MICRO) → COMP → COMP 2 | el **cursor de paso** |
 
 - **SEQ desde otra página** vuelve al nivel y al juego que usaste por última vez **en esa pista** (cada pista recuerda
   el suyo); al encender es el STEP de COMPÁS, el piano roll.
@@ -602,7 +602,15 @@ compases del patrón (hasta cuatro, con LEN 64), el que estás editando encendid
 ### Escribir pasos
 
 - **SEQ > STEP** en una pista melódica es un **piano roll**. KNOB 1 mueve el cursor de paso, KNOB 2 transpone el paso,
-  KNOB 3 fija NOTE / TIE / REST, KNOB 4 fija acento / slide. Un paso guarda hasta cuatro notas.
+  KNOB 3 es **TIME**, KNOB 4 fija acento / slide. Un paso guarda hasta cuatro notas.
+- **La duración de una nota** (0.8.4): KNOB 3 (TIME) es un solo recorrido, REST ← TIE ← NOTE → 2 ST → … → 16 ST.
+  Sobre una nota, girar a la derecha la **alarga**: los pasos que siguen se vuelven TIEs, uno por paso de perilla (la
+  tarjeta dice **3 ST**, el piano roll dibuja la barra más larga); un acorde conserva todas sus notas. Girar a la
+  izquierda la **acorta** (sus últimos TIEs pasan a REST) hasta NOTE; después el paso mismo pasa a TIE y luego a REST,
+  como antes (un giro rápido se frena primero en NOTE). Solo se alarga sobre RESTs y pasos vacíos: **la nota siguiente
+  la frena** (la pantalla dice NEXT NOTE; pasá ese paso a TIE o borralo con EDIT para seguir). Hasta 16 pasos o LEN;
+  cerca del final del patrón da la vuelta al paso 1, como lo toca el secuenciador. Así cualquier nota, grabada o
+  escrita, se alarga o se acorta después, sin REC. (En una pista DRUM no cambia nada: los golpes no tienen duración.)
 - **Grabación por pasos**: en STEP, con el transporte **parado**, apretá **REC** (la pantalla dice KEYS WRITE STEPS).
   Tocá una nota o un acorde: entra en el paso del cursor y, cuando soltás, el cursor avanza. Sin armar, las teclas
   solo suenan.

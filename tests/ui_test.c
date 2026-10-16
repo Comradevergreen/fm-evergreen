@@ -8141,6 +8141,78 @@ static int test_note_page(void)
     ui_power_on();
     return bad;
 }
+/* (0.8.4) SEQ > STEP's KNOB 3, one range REST < TIE < NOTE < 2 ST .. 16 ST: right lengthens a recorded note (TIEs over
+ * the steps after it, the chord's notes kept), stopped by the next note (NEXT NOTE); left shortens it (its TIEs
+ * RESTs), a fast turn stops at NOTE, then TIE, REST; round past LEN's end as it plays; at most LEN and 16 steps */
+static int test_step_len(void)
+{
+    int bad = 0, ok;
+    track_t *t;
+    uint32_t i, k;
+    ui_power_on();
+    t = &trk[0];
+    t->p[P_SLEN] = 16;
+    for (i = 0; i < NSTEP; i++) { memset(&t->step[i], 0, sizeof t->step[i]); t->step[i].time = ST_REST; }
+    t->step[2] = (step_t){.note = {60, 64, 67}, .n = 3, .time = ST_NOTE, .vel = 100};
+    t->step[6] = (step_t){.note = {62}, .n = 1, .time = ST_NOTE, .vel = 90};
+    t->step[4].note[0] = 50; t->step[4].n = 1;          /* (a REST that kept its notes: lengthened over) */
+    go_title("STEP"); frame();
+    ok = !drum_track(t);
+    cursor_set(2);
+    turn(EN_K3, 1); turn(EN_K3, 1);
+    ok &= t->step[3].time == ST_TIE && t->step[4].time == ST_TIE && t->step[4].n == 0u && t->step[5].time == ST_REST &&
+          note_len(t, 2, 16) == 3u && t->step[3].vel == 100u;
+    ok &= t->step[2].time == ST_NOTE && t->step[2].n == 3u && t->step[2].note[0] == 60u && t->step[2].note[1] == 64u &&
+          t->step[2].note[2] == 67u;                    /* (the chord whole) */
+    bad += check("STEP KNOB 3: right lengthens a recorded chord (TIEs after it), its notes kept", ok);
+    turn(EN_K3, 1);
+    ui.msg[0] = 0;
+    turn(EN_K3, 1);                                     /* step 7 holds a note: stopped there */
+    ok = note_len(t, 2, 16) == 4u && t->step[6].time == ST_NOTE && t->step[6].note[0] == 62u && str_eq(ui.msg, "NEXT NOTE");
+    turn(EN_K3, 5);
+    ok &= note_len(t, 2, 16) == 4u && t->step[6].time == ST_NOTE && t->step[6].n == 1u;
+    bad += check("STEP KNOB 3: the next note stops the length (NEXT NOTE), never overwritten", ok);
+    turn(EN_K3, -1);
+    ok = note_len(t, 2, 16) == 3u && t->step[5].time == ST_REST;
+    turn(EN_K3, -8);                                    /* a fast turn: down to x1, not past it */
+    ok &= note_len(t, 2, 16) == 1u && t->step[3].time == ST_REST && t->step[4].time == ST_REST && t->step[2].time == ST_NOTE;
+    turn(EN_K3, -1);
+    ok &= t->step[2].time == ST_TIE;
+    turn(EN_K3, -1); turn(EN_K3, -1);
+    ok &= t->step[2].time == ST_REST;
+    turn(EN_K3, 1); turn(EN_K3, 1);
+    ok &= t->step[2].time == ST_NOTE && t->step[2].n == 3u && note_len(t, 2, 16) == 1u;   /* (back, its notes kept) */
+    turn(EN_K3, 1);
+    ok &= note_len(t, 2, 16) == 2u;
+    bad += check("STEP KNOB 3: left shortens (TIEs to RESTs), a fast turn stops at NOTE (1 step), then TIE, REST; back", ok);
+    t->step[14] = (step_t){.note = {57, 60}, .n = 2, .time = ST_NOTE, .vel = 80};
+    t->step[0].time = ST_NOTE;                          /* (an empty NOTE: lengthened over) */
+    cursor_set(14);
+    for (k = 0; k < 6u; k++) turn(EN_K3, 1);            /* 15, 0, 1 TIEs; step 2's chord stops it */
+    ok = t->step[15].time == ST_TIE && t->step[0].time == ST_TIE && t->step[1].time == ST_TIE &&
+         t->step[2].time == ST_NOTE && t->step[2].n == 3u && note_len(t, 14, 16) == 4u && t->step[14].n == 2u;
+    bad += check("STEP KNOB 3: the length goes round past LEN's end, as the sequencer plays it", ok);
+    for (i = 0; i < NSTEP; i++) { memset(&t->step[i], 0, sizeof t->step[i]); t->step[i].time = ST_REST; }
+    t->p[P_SLEN] = 4;
+    t->step[1] = (step_t){.note = {60}, .n = 1, .time = ST_NOTE, .vel = 100};
+    cursor_set(1);
+    for (k = 0; k < 8u; k++) turn(EN_K3, 1);
+    ok = note_len(t, 1, 4) == 4u && t->step[2].time == ST_TIE && t->step[3].time == ST_TIE && t->step[0].time == ST_TIE &&
+         t->step[1].time == ST_NOTE && t->step[4].time == ST_REST;
+    t->p[P_SLEN] = 32;
+    for (i = 0; i < NSTEP; i++) { memset(&t->step[i], 0, sizeof t->step[i]); t->step[i].time = ST_REST; }
+    t->step[0] = (step_t){.note = {60}, .n = 1, .time = ST_NOTE, .vel = 100};
+    cursor_set(0);
+    for (k = 0; k < 20u; k++) turn(EN_K3, 1);
+    ok &= note_len(t, 0, 32) == 16u && t->step[15].time == ST_TIE && t->step[16].time == ST_REST;
+    t->step[20].time = ST_NOTE;                         /* an empty NOTE: nothing to lengthen */
+    cursor_set(20);
+    turn(EN_K3, 1);
+    ok &= t->step[20].time == ST_NOTE && t->step[21].time == ST_REST;
+    bad += check("STEP KNOB 3: at most LEN (never over itself) and 16 steps; an empty NOTE stays", ok);
+    ui_power_on();
+    return bad;
+}
 /* (0.6.81) a POLY chord with SLD glides into the next: its voices go on (not struck again), their pitch moving to the
  * new notes low to high; 3 -> 4 notes: the extra one starts from the nearest old note and fades in; 4 -> 3: the one
  * left glides on, released */
@@ -9507,6 +9579,7 @@ int main(void)
     bad += test_chord();
     bad += test_trans_seq();
     bad += test_note_page();
+    bad += test_step_len();
     bad += test_chord_glide();
     bad += test_fx_sections();
     bad += test_scl_alltr();

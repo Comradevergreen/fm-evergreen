@@ -616,6 +616,15 @@ static void page_entered(void)
 }
 
 static int step_on(const step_t *st) { return st->time == ST_NOTE && (st->n || st->hit); }
+/* a note's length: step c and the TIEs after it, round past LEN's end as the sequencer plays them (0.8.4: here from
+ * ui_input.c, the TIME card and LENTE's STEP show it) */
+static uint32_t note_len(const track_t *t, uint32_t c, uint32_t len)
+{
+    uint32_t l = 1;
+    while (l < len && t->step[(c + l) % len].time == ST_TIE)
+        l++;
+    return l;
+}
 
 enum { COMP_OFF, COMP_CHANCE, COMP_RATCH, COMP_ARPN, COMP_ARPQ, COMP_ARPS, COMP_TRIG, COMP_RAND, COMP_OCT, COMP_TONAL,
        COMP_BEND, COMP_ECHO, COMP_PULSE, COMP_JUMP, COMP_REV, COMP_FILL, COMP_KILL, COMP_WALK, COMP_CLIMB, COMP_N };   /* (CP_* in order) */

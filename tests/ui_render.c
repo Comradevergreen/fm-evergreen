@@ -647,7 +647,7 @@ enum { S_HOME, S_HOME_IDLE, S_MESSAGE, S_MESSAGE_KEY, S_MESSAGE_NOFILE, S_PRESET
        S_GLO_PEEK, S_GLO_ACTIVE, S_GLO_EXT, S_SCL_PEEK, S_SCL_ACTIVE, S_EDIT_PEEK, S_EDIT_ACTIVE, S_EDIT_USER, S_EDIT_DRUM, S_LAYER_HINT, S_LAYER_LOCK, S_LAYER_LOCK_FX, S_LAYER_SONG, S_LAYER_SONG_CHAIN,
        S_SEQ_TOOLS, S_SEQ_TOOLS_DRUM, S_SEQ_TOOLS_SONG,
        S_LENTE_PAT, S_LENTE_PAT_DRUM, S_LENTE_STRETCH, S_LENTE_BAR, S_LENTE_BAR_DRUM, S_LENTE_STEP, S_LENTE_STEP_COMP,
-       S_LENTE_STEP_COMP2, S_LENTE_STEP_TIE, S_LENTE_STEP_REST, S_LENTE_STEP_DRUM,
+       S_LENTE_STEP_COMP2, S_LENTE_STEP_TIE, S_LENTE_STEP_REST, S_LENTE_STEP_DRUM, S_LENTE_BAR_LONG, S_LENTE_STEP_LONG,
        S_NAME_USER, S_NAME_TYPING, S_NAME_123, S_NAME_EMPTY, S_NAME_FULL, S_NAME_PLAYING, S_PROJECT_NAMED, S_SONG_NAMED,
        S_USER_FOOT,
        S_ROLL_EMPTY, S_ROLL_ACID, S_ROLL_CHORDS, S_ROLL_TIES, S_ROLL_LEN32, S_ROLL_HIGH, S_ROLL_LOW, S_ROLL_WIDE, S_ROLL_PLAYING,
@@ -667,7 +667,8 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "message", "mes
     "layer_edit_active", "layer_edit_user", "layer_edit_drum", "layer_hint", "layer_lock", "layer_lock_fx", "layer_song", "layer_song_chain",
     "layer_seq_tools", "layer_seq_tools_drum", "layer_seq_tools_song",
     "lente_pattern", "lente_pattern_drum", "lente_stretch", "lente_bar", "lente_bar_drum", "lente_step_note",
-    "lente_step_comp", "lente_step_comp2", "lente_step_tie", "lente_step_rest", "lente_step_drum",
+    "lente_step_comp", "lente_step_comp2", "lente_step_tie", "lente_step_rest", "lente_step_drum", "lente_bar_long",
+    "lente_step_long",
     "name_user", "name_typing", "name_123", "name_empty", "name_full", "name_playing", "project_named", "song_named",
     "user_foot",
     "roll_empty", "roll_acid", "roll_chords", "roll_ties", "roll_len32_p2", "roll_high", "roll_low", "roll_wide", "roll_playing",
@@ -1121,7 +1122,9 @@ static void setup(int s)
     case S_LENTE_STEP_COMP:
     case S_LENTE_STEP_COMP2:
     case S_LENTE_STEP_TIE:
-    case S_LENTE_STEP_REST: {
+    case S_LENTE_STEP_REST:
+    case S_LENTE_BAR_LONG:                              /* (0.8.4) a chord 16 steps long: TIME 16 ST, the big step's LEN 16 */
+    case S_LENTE_STEP_LONG: {
         static const uint8_t CH[3] = {60, 64, 69};
         track_t *t = TSEL;
         uint32_t i;
@@ -1138,11 +1141,15 @@ static void setup(int s)
         t->step[34].comp = CP_ARPN; t->step[34].comp2 = CP_ECHO;
         step_put(&t->step[35], ST_TIE, 0, 0, CH);
         step_put(&t->step[36], ST_REST, 0, 0, CH);
+        if (s == S_LENTE_BAR_LONG || s == S_LENTE_STEP_LONG) {
+            step_put(&t->step[40], ST_NOTE, 0, 3, CH);
+            for (i = 41; i < 56u; i++) step_put(&t->step[i], ST_TIE, 0, 0, CH);
+        }
         song.playing = 1; t->seq_idx = 21;
-        ui.lv = s == S_LENTE_PAT || s == S_LENTE_STRETCH ? LV_PAT : s == S_LENTE_BAR ? LV_BAR : LV_STEP;
-        go_title(s == S_LENTE_PAT ? "PATTERN" : s == S_LENTE_STRETCH ? "STRETCH" : s == S_LENTE_BAR ? "STEP" :
+        ui.lv = s == S_LENTE_PAT || s == S_LENTE_STRETCH ? LV_PAT : s == S_LENTE_BAR || s == S_LENTE_BAR_LONG ? LV_BAR : LV_STEP;
+        go_title(s == S_LENTE_PAT ? "PATTERN" : s == S_LENTE_STRETCH ? "STRETCH" : s == S_LENTE_BAR || s == S_LENTE_BAR_LONG ? "STEP" :
                  s == S_LENTE_STEP_COMP ? "COMP" : s == S_LENTE_STEP_COMP2 ? "COMP 2" : "NOTE");
-        cursor_set(s == S_LENTE_STEP_TIE ? 35 : s == S_LENTE_STEP_REST ? 36 : 34);
+        cursor_set(s == S_LENTE_STEP_TIE ? 35 : s == S_LENTE_STEP_REST ? 36 : s == S_LENTE_BAR_LONG || s == S_LENTE_STEP_LONG ? 40 : 34);
         ui.pr_focus = s == S_LENTE_STEP ? 2u : 0u;
         break;
     }
