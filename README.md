@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.7.9).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.8.0).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 > ⚡ **New in 0.6.85 – 0.6.92: a song generator you steer, a compact sequencer that breathes, a delay that feeds back.**
 > - **GEN (HOME + SELECT)**: a screen of three pages — GENRE (43 genres or RANDOM), SEED, ENERGY, FORM (loop, parts,
@@ -524,6 +524,24 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### v0.8.0
+- **USB STEMS+IN (test version): MENU > SYSTEM > USB > STEMS+IN** (asked for: record a voice through the FM-1 from the
+  phone, in time). The stems and IN+OUT's audio output together: the host's audio (the phone app's mic) comes into the
+  last live track as in IN+OUT (its LEVEL, PAN, MUTE, CHORUS / DELAY / REVERB sends, the FX) and 10 channels go back:
+  T1–T6, the FX return L R, then the input as the track mixed it, in a channel of its own (not in the track's stem: the
+  app moves it earlier by the latency, the track's own sound stays where it is), and the input as it came (the
+  reference the app measures the latency against). 16 bit 44.1 kHz, 920-byte packets (5 words a frame in the ring,
+  now 10 KiB), bcdDevice + 0xC0, no console. The input's sends go into the shared FX return, which cannot be moved:
+  its share of the reverb and the delays stays the latency late (~20–30 ms). The phone app reads and writes the USB
+  audio with its own driver: Android passes only some of a USB device's channels on to apps (an S23 Ultra: two of 8).
+- Tests: uac_test (the 10-channel configuration with the output as a host parses it; a block as five words a frame:
+  the stems, the input mixed, the input as it came, silent while none comes), audio_test (STEMS+IN: the input in its
+  own stem, the last track's without it; IN+OUT with the 8 stems as 0.7.5), ui_test (the USB row's STEMS+IN).
+- JIANT Probe (android/probe), the stems app's phase 0: test 2 counts the channels that carry sound; 2b tries the ways
+  of opening the input; 5 reads the FM-1 with its own driver (usbfs isochronous reads); 6 with the phone's mic beside
+  it; 7 sends the mic to the FM-1 in STEMS+IN and measures the latency (the phone near the speaker: the stems against
+  the raw mic). One debug key for every build: a new APK installs over the last.
 
 ### v0.7.9
 - **Lighter audio** (reported: clicks on 0.7.8). The FM-1's code measured again (tests/target_budget.py, the

@@ -8419,9 +8419,10 @@ static int test_usb_serial(void)
     usb.up = 0;                                          /* (no SIE here: usb_cdc_switch only flips the descriptors) */
     frame();
     ok = usb_cdc_on && dev_class() == 0xEF && !(ui_prefs & PREF_SERIAL_OFF) && !usb_out && str_eq(MI_NAME[MI_SERIAL], "USB") &&
-         menu_n(MI_SERIAL) == 4u && str_eq(menu_vname(MI_SERIAL, 0), "CONSOLE") && str_eq(menu_vname(MI_SERIAL, 1), "STEREO") &&
-         str_eq(menu_vname(MI_SERIAL, 2), "STEMS") && str_eq(menu_vname(MI_SERIAL, 3), "IN+OUT");   /* (0.7.1: USB SERIAL ON /
-                                                         * OFF became USB CONSOLE / STEREO / STEMS; 0.7.5: IN+OUT) */
+         menu_n(MI_SERIAL) == 5u && str_eq(menu_vname(MI_SERIAL, 0), "CONSOLE") && str_eq(menu_vname(MI_SERIAL, 1), "STEREO") &&
+         str_eq(menu_vname(MI_SERIAL, 2), "STEMS") && str_eq(menu_vname(MI_SERIAL, 3), "IN+OUT") &&
+         str_eq(menu_vname(MI_SERIAL, 4), "STEMS+IN");   /* (0.7.1: USB SERIAL ON / OFF became USB CONSOLE / STEREO /
+                                                         * STEMS; 0.7.5: IN+OUT; 0.8.0: STEMS+IN) */
     ok &= dev_is(DEV_DESC);
     bad += check("#67 MENU > USB: CONSOLE by default, the console presented (misc / IAD, as before)", ok);
     hold(B_HOME);
@@ -8460,6 +8461,18 @@ static int test_usb_serial(void)
     frame();
     ok &= !usb_out && !fx_stems;
     bad += check("  IN+OUT closed: the device with the audio output too (no console, no stems), STEREO again: off", ok);
+    hold(B_HOME);                                     /* (0.8.0) STEMS+IN: the stems (10 channels) and the output */
+    ui.menu_sel = MI_SERIAL;
+    ui.force = 1; ui_draw();
+    turn(EN_K1, 1); turn(EN_K1, 1); turn(EN_K1, 1);
+    ok = usb_out == 3u && menu_get(MI_SERIAL) == 4u;
+    press(B_HOME);
+    frame();
+    ok &= !ui.menu && usb_out == 3u && fx_stems == 2u && !usb_cdc_on;
+    menu_put(MI_SERIAL, 1u);
+    frame();
+    ok &= !usb_out && !fx_stems;
+    bad += check("  STEMS+IN closed: fx_stems 2 (the stems with the host's audio apart), no console; STEREO again: off", ok);
     {
         persist_t p;
         settings_export(&p);

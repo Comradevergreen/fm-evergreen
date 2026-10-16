@@ -1210,7 +1210,7 @@ closes it (settings are saved then).
 | AUDIO | CLICK LEVEL | LOW, MID, HIGH |
 | AUDIO | COUNT-IN | OFF, 1 BAR, 2 BARS |
 | AUDIO | TRACKS | **4** (default), 6 |
-| SYSTEM | USB | CONSOLE (the serial console with stereo USB audio, the default; was USB SERIAL ON), STEREO (audio + MIDI only, class 0; was OFF: helps macOS 13–15 see the USB audio input), STEMS (0.7.1: an 8-channel audio input, see "Stems" below), IN+OUT (0.7.5: stereo audio both ways, see "USB audio in" below) |
+| SYSTEM | USB | CONSOLE (the serial console with stereo USB audio, the default; was USB SERIAL ON), STEREO (audio + MIDI only, class 0; was OFF: helps macOS 13–15 see the USB audio input), STEMS (0.7.1: an 8-channel audio input, see "Stems" below), IN+OUT (0.7.5: stereo audio both ways, see "USB audio in" below), STEMS+IN (0.8.0: the stems with the audio output too, see "Stems with a voice" below) |
 | SYSTEM | RESTORE LAST | **OFF** (default: no autosave, power-on at zero), ON (the last session back at power-on) |
 | SYSTEM | LOAD | ECO, LITE, **FULL** (default) |
 | SYSTEM | CALIBRATION | OCT+ opens HARDWARE CALIBRATION (teach each button and knob) |
@@ -1290,6 +1290,18 @@ FM-1 follows the host's clock (it reads the audio a little faster or slower, ~3.
 sending, the input fades out and comes back when it resumes. Some hosts make a newly connected USB audio device the
 default output: that is why IN+OUT is a choice of its own, not on by default. Test version: tell us how it behaves
 with your computer or phone.
+
+### Stems with a voice (0.8.0, test version)
+
+**MENU > SYSTEM > USB > STEMS+IN** is STEMS and IN+OUT together, for the phone app: the phone's microphone goes out to
+the FM-1, comes into the **last track** as IN+OUT's input does (its LEVEL, PAN, MUTE and its CHORUS, DELAY and REVERB
+sends: your voice through that track's effects), and **10 channels** come back: T1–T6, the FX return L R, then **the
+voice as the track mixed it** and **the voice as it came**. The voice has a channel of its own (not in the track's
+stem), so the app can move it earlier by the round trip's latency and the voice lands in time with what you heard;
+the second voice channel is the reference the app measures that latency against. The voice's share of the FX return
+cannot be moved (it is mixed with every track's): its reverb and delays stay the latency late (~20–30 ms: in a
+reverb it sounds like pre-delay). The phone app reads and writes the FM-1 with its own USB driver (Android passes
+only some of a USB device's channels to apps). Test version: the app is JIANT Probe for now (its test 7).
 
 ---
 

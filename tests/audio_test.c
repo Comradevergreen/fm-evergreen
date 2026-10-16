@@ -234,6 +234,21 @@ static void usb_in(void)
     uin_run(100, 0, 0, 127, 1, &l0, &r0, &w0);
     printf("audio: USB IN with REVERB 127: wet %.0f\n", w0);
     check("USB IN+OUT: the track's REVERB send takes it into the reverb", w0 > 100.0);
+    {   /* (0.8.0) STEMS+IN (fx_stems 2): the host's audio in a stem of its own, not in the last track's; IN+OUT with
+         * the 8 stems (fx_stems 1): in the track's, as before */
+        double ms = 0, ts = 0;
+        uint32_t i, t = trk_live - 1u;
+        fx_stems = 2;
+        uin_run(100, 0, 0, 0, 1, &l0, &r0, &w0);
+        for (i = 0; i < 32u; i++) { ms += fabs((double)stem_buf[NPART][i]); ts += fabs((double)stem_buf[t][i]); }
+        check("USB STEMS+IN: the host's audio in its own stem, the last track's stem without it", ms > 32.0 * 1000.0 && ts < 32.0);
+        fx_stems = 1;
+        uin_run(100, 0, 0, 0, 1, &l0, &r0, &w0);
+        ms = ts = 0;
+        for (i = 0; i < 32u; i++) { ms += fabs((double)stem_buf[NPART][i]); ts += fabs((double)stem_buf[t][i]); }
+        check("USB IN+OUT with the 8 stems: the host's audio in the last track's stem (as 0.7.5)", ts > 32.0 * 1000.0 && ms == 0.0);
+        fx_stems = 0;
+    }
 }
 static void usb_level(void)
 {
