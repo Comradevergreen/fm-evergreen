@@ -1254,7 +1254,9 @@ static struct { int32_t l[CTL], r[CTL], c[CTL], d[CTL], rv[CTL], sl[CTL], sr[CTL
  * when it is on), all before the master (no leveler, limiter, clip or MASTER knob: the mix's own scale). The parts
  * write stem_buf as they are mixed (one core or the other: a part is one core's), the return after the buses
  * (usb.c uac_tap8). mix_skip: parts left out of the mix, a bit each (the browser build renders a part alone) */
-static int32_t stem_buf[NPART][CTL], stem_fx[2][CTL];
+/* (0.8.0) STEMS+IN (fx_stems 2): stem_buf[NPART] is the host's audio as the last live track mixed it, apart from the
+ * track's own stem (the host moves it by the latency; usb.c uac_tap8 sends it with the input as it came) */
+static int32_t stem_buf[NPART + 1][CTL], stem_fx[2][CTL];
 static volatile uint8_t fx_stems, mix_skip;
 static __attribute__((noinline)) void stem_pre(int32_t *pre, const int32_t *ol, const int32_t *or_, uint32_t n)
 {
@@ -1488,11 +1490,18 @@ static inline __attribute__((always_inline)) void mix_part(track_t *t, uint32_t 
             ol[i] += (x * gl) >> 12;
             or_[i] += (x * gr) >> 12;
         }
-        if (uin && !t->p[P_MUTE] && !((trk_hush >> ti) & 1u))   /* (0.7.5) the host's audio, in its stem too */
+        uint32_t st = ti;                               /* (0.8.0) the stem the last of the mix goes to */
+        if (uin && !t->p[P_MUTE] && !((trk_hush >> ti) & 1u)) {   /* (0.7.5) the host's audio, in its stem too */
+            if (fx_stems == 2u) {                       /* (0.8.0) STEMS+IN: in a stem of its own */
+                stem_post(ti, pre, ol, or_, n);
+                stem_pre(pre, ol, or_, n);
+                st = NPART;
+            }
             uin_mix(ol, or_, sc, sd, sr, n, lq0, dl, gl0, dgl, gr0, dgr, c, d, r, pm1, &pk);
+        }
         t->peak = pk;
         if (fx_stems)
-            stem_post(ti, pre, ol, or_, n);
+            stem_post(st, pre, ol, or_, n);
     }
     if (MOD.on)
         mod_end(t);                                     /* the stored values back */

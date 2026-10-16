@@ -43,7 +43,7 @@ static int settings_import(persist_t *p, int n)
                 b &= ~(3u << (2u * f));
         p->favorites.factory[15][28] = (uint8_t)b;
     }
-    if (p->favorites.factory[15][21] > 2u)         /* USB STEMS / IN+OUT (0.7.1, 0.7.5, ui.c usb_out): unknown = stereo */
+    if (p->favorites.factory[15][21] > 3u)         /* USB STEMS / IN+OUT / STEMS+IN (0.7.1, 0.7.5, 0.8.0, ui.c usb_out): unknown = stereo */
         p->favorites.factory[15][21] = 0;
     if (p->favorites.factory[15][22] > 4u)         /* USB LEVEL past FIXED (0.7.0, ui.c usb_lvl): unknown = FULL */
         p->favorites.factory[15][22] = 0;

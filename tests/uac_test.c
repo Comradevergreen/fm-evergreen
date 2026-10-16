@@ -42,9 +42,9 @@ static void fm1_delay_ms(uint32_t ms) { (void)ms; }
 static uint8_t t_stems;
 #define UAC_STEMS() t_stems
 #define UAC_STEMS_SRC 1
-static int32_t stem_buf[6][HALF_FRAMES], stem_fx[2][HALF_FRAMES];
+static int32_t stem_buf[7][HALF_FRAMES], stem_fx[2][HALF_FRAMES];   /* ((0.8.0) [6]: STEMS+IN's host audio) */
 /* (0.7.5) MENU > USB IN+OUT: fx.c's input block stood in for (usb.c uac_in_fill writes it) */
-static int32_t uin_l[64], uin_r[64];
+static int32_t uin_l[HALF_FRAMES > 64 ? HALF_FRAMES : 64], uin_r[HALF_FRAMES > 64 ? HALF_FRAMES : 64];
 static volatile uint8_t uin_on;
 #define UIN_SRC 1
 #include "../firmware/src/usb.c"
@@ -966,12 +966,76 @@ static void test_ring48(void)
     uac_rate_set(44100);
 }
 
+/* (0.8.0) MENU > USB STEMS+IN: both flags (the stems and the output): the 10-channel configuration with the output
+ * interface (five interfaces, bcdDevice + 0xC0), input terminal 10 channels, type I 10 ch, EP4 IN 920 bytes, EP4 OUT as
+ * IN+OUT's; five words a frame: the stems, then the host's audio as mixed and as it came (silence while none comes) */
+static void test_stems_in(void)
+{
+    const uint8_t *d; uint16_t l; uint32_t off, i, n, it_ok = 0, fmt_ok = 0, epi = 0, epo = 0, nif = 0, pk[UA_MAXF * UA_W];
+    t_stems = 2; usb_stems = 1; usb_duplex = 1;
+    get_desc(0x0200, &d, &l);
+    check("stems+in: the 10-channel configuration with the output, its length as declared, 4 interfaces",
+          d == CFG_DESC_STIN && l == sizeof CFG_DESC_STIN && le16(d + 2) == l && d[4] == 4);
+    for (off = 0; off + 1u < l; off += d[off]) {
+        const uint8_t *p = d + off;
+        if (p[1] == 4) nif += p[3] == 0;
+        if (p[1] == 0x24 && p[2] == 2 && p[0] == 12 && p[3] == 1) it_ok = p[7] == 10 && p[8] == 0 && p[9] == 0;
+        if (p[1] == 0x24 && p[2] == 2 && p[0] == 11 && p[4] == 10) fmt_ok = p[5] == 2 && p[6] == 16 && p[7] == 1 && p[8] == 0x44 && p[9] == 0xAC;
+        if (p[1] == 5 && p[2] == 0x84) epi = le16(p + 4) == 920 && p[3] == 0x05;
+        if (p[1] == 5 && p[2] == 0x04) epo = le16(p + 4) == UI_MAXF * 4u && p[3] == 0x09;
+    }
+    check("stems+in: input terminal 10 ch, type I 10 ch 16 bit 44100, EP4 IN 920 bytes, EP4 OUT adaptive, 4 interfaces",
+          it_ok && fmt_ok && epi && epo && nif == 4u);
+    get_desc(0x0100, &d, &l);
+    check("stems+in: the device descriptor's bcdDevice + 0xC0", d == DEV_DESC_STIN && d[12] == (BCD_LO(0) + 0xC0));
+    memset(&uac, 0, sizeof uac);
+    uac.feed = 1; uac.go = 1; uac.fill_min = UA_HI; ua_r = ua_w = 0;
+    for (i = 0; i < HALF_FRAMES; i++) {
+        uint32_t k;
+        for (k = 0; k < 7u; k++) stem_buf[k][i] = (int32_t)(k + 1u) * 1000 + (int32_t)i;
+        stem_fx[0][i] = -7000 - (int32_t)i; stem_fx[1][i] = 8000 + (int32_t)i;
+        uin_l[i] = 300 + (int32_t)i; uin_r[i] = 500 + (int32_t)i;
+    }
+    uin_on = 1;
+    uac_tap8(HALF_FRAMES);
+    n = uac_packet(pk);
+    check("stems+in: a block as 10 x 16-bit frames of five words: the stems, the host's audio mixed, as it came",
+          n >= 43u && n <= 46u && pk[0] == (1000u | 2000u << 16) && pk[3] == ((uint32_t)(uint16_t)-7000 | 8000u << 16) &&
+          pk[4] == (7000u | 400u << 16) && pk[5] == (1001u | 2001u << 16) && pk[9] == (7001u | 401u << 16));
+    uin_on = 0;
+    ua_r = ua_w = 0;
+    uac_tap8(HALF_FRAMES);
+    n = uac_packet(pk);
+    check("stems+in: no host audio this block: its raw channel silent", pk[4] == 7000u && pk[9] == 7001u);
+    {   /* the 409-frame ring (the 8-channel one's words, five a frame) round many times: every frame once, in order */
+        uint32_t b, seq = 0, want = 0, bad = 0, j;
+        memset(&uac, 0, sizeof uac);
+        uac.feed = 1; uac.go = 1; uac.fill_min = UA_HI; ua_r = ua_w = 0xFFFFFF00u;   /* (near the index's wrap too) */
+        for (b = 0; b < 60u; b++) {
+            for (i = 0; i < HALF_FRAMES; i++) stem_buf[0][i] = (int32_t)(seq++ & 0x7FFFu);
+            uac_tap8(HALF_FRAMES);
+            while (ua_w - ua_r > 60u) {
+                uac.fill_min = UA_HI;
+                n = uac_packet(pk);
+                for (j = 0; j < n; j++, want++) bad += (pk[j * 5u] & 0xFFFFu) != (want & 0x7FFFu);
+            }
+        }
+        check("stems+in: the 409-frame ring round 18 times: every frame once and in order", !bad && want > 7000u && !uac.overruns);
+    }
+    t_stems = 0; usb_stems = 0; usb_duplex = 0;
+    get_desc(0x0200, &d, &l);
+    check("stems+in off: the configuration as before", d != CFG_DESC_STIN && d != CFG_DESC_PLAIN8);
+    memset(&uac, 0, sizeof uac);
+    ua_r = ua_w = 0;
+}
+
 int main(void)
 {
     printf("-- USB audio input, CDC %s\n", T_CDC ? "on" : "off");
     test_descriptors();
     test_stems();
     test_duplex();
+    test_stems_in();
     test_ring();
     test_rate();
     test_resampler();

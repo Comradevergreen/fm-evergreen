@@ -8,8 +8,8 @@ android {
         applicationId "fm.jiant.probe"
         minSdk 29                      // (MediaStore.Downloads with no storage permission)
         targetSdk 34
-        versionCode 3
-        versionName "0.3"
+        versionCode 4
+        versionName "0.4"
     }
     signingConfigs {
         debug {                        // (one key for every build: a new APK installs over the last one)
