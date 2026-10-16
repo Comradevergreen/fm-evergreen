@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.7.6).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.7.7).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 > ⚡ **New in 0.6.85 – 0.6.92: a song generator you steer, a compact sequencer that breathes, a delay that feeds back.**
 > - **GEN (HOME + SELECT)**: a screen of three pages — GENRE (43 genres or RANDOM), SEED, ENERGY, FORM (loop, parts,
@@ -524,6 +524,14 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### v0.7.7
+- **The screen, polished** (asked for, from the HTML studies: "R.1 Pulido"). The values are set in Chakra Petch again
+  (SemiBold, the labels' family; IBM Plex Mono retired from the device) and drawn in white: only the knob just turned
+  lights orange, its bar with it, so the cards hold one colour. The bars are a hairline with the value on it, 2 px, in
+  grey; fine lines divide the four cards and one sits under the header; the step bars in the footer stand four under
+  each card. JIANT's palette only (the others as before); HOME's beings and every graph untouched. UI renders: 0 lint
+  findings, 0 alignment misses (the step bars declared under the cards).
 
 ### v0.7.6
 - **MASTER is FX's second page** (asked for: the master at hand). FX's sections are now MIX (FX, MASTER: the sends and

@@ -139,8 +139,10 @@ atajos de esa capa; en la grilla DRUM son pasos y carriles; en la pantalla NAME 
   (o la fila del tema mientras suena un tema), el **medidor de carga** (cinco barritas al lado de la batería: cuánto
   del tiempo de audio está ocupando el sonido ahora) y el ícono USB. Acá también aparecen los mensajes ("SAVED",
   "T1 CLEARED"...), a veces con una segunda línea.
-- **Tarjetas**: las cuatro columnas debajo del encabezado son KNOB 1–4. Un valor automatizado o con lock aparece
-  marcado; una tarjeta apagada significa "acá ahora no hay nada".
+- **Tarjetas**: las cuatro columnas debajo del encabezado son KNOB 1–4, separadas por líneas finas. Los valores van en
+  blanco; el que estás girando se enciende en naranja, con su barra, así es el único color en las tarjetas. Un valor
+  automatizado o con lock aparece marcado; una tarjeta apagada significa "acá ahora no hay nada". Las barras de pasos
+  de abajo quedan de a cuatro debajo de cada tarjeta.
 - **Nombre de página**: al cambiar de página (o de pista) a mano, el nombre de la página aparece un momento sobre el pie
   de la pantalla, con la pista y su motor a la derecha; en HOME el motor de la pista, y "T1 HOME" en chico. La barra de
   arriba, las tarjetas y el gráfico quedan a la vista.

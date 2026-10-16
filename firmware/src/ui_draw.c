@@ -387,6 +387,14 @@ static void draw_frame(void)
                  240u - (uint32_t)(CARD_X(i) + CARD_W), ch, T_BG);
     if (ux.style)                                       /* LINE: the dividers in the gaps */
         draw_rules(Y_LABEL, ch);
+    else if (settings.palette == UI_JIANT_INDEX) {      /* (0.7.7) JIANT: a rule under the header, fine dividers between */
+        lcd_fill(RULE_X0, (H_HEAD + Y_LABEL) / 2, RULE_W, 1, T_LINE);   /* the cards (four columns, read at a glance); */
+        GFX_HOOK_RULE(RULE_X0, (H_HEAD + Y_LABEL) / 2, RULE_W, 1);   /* LINE's quieter grey, not its DIM rules */
+        for (i = 0; i < 3u; i++) {
+            lcd_fill((uint32_t)(CARD_X(i) + CARD_W), Y_LABEL + 4, 1, ch - 8, T_LINE);
+            GFX_HOOK_RULE((uint32_t)(CARD_X(i) + CARD_W), Y_LABEL + 4, 1, ch - 8);
+        }
+    }
 }
 
 /* MOTION on the cards (#63: values that move on their own): the selected track's motion-driven parameters
@@ -415,15 +423,18 @@ static void card_mot_of(const int16_t *vp)
 #define LG_VB 49                                        /* the value's band: L capitals rows 49..69 */
 #define LG_UY 73                                        /* the unit's line (S capitals rows 76..84) */
 #define LG_GY 92                                        /* the gauge, 3 px */
-/* a card's gauge: JIANT (thermal) its value as heat, violet .. yellow; another palette its theme colour */
+/* a card's gauge: JIANT (0.7.7, the polish) a quiet grey, the knob just turned its accent (one colour on the cards);
+ * another palette its theme colour */
 static uint16_t gauge_col(int32_t ratio)
 {
-    return settings.palette == UI_JIANT_INDEX ? heat_col(clamp(ratio, 0, 1000) * 256 / 1000) : T_THEME;
+    (void)ratio;
+    return settings.palette == UI_JIANT_INDEX ? T_MID : T_THEME;
 }
-/* a card's value colour: JIANT its heat (lifted a fifth toward the text, so the cold end reads on the card); else vc */
+/* a card's value colour: JIANT (0.7.7) the text, so only the knob just turned (T_ACCENT) stands out; else vc */
 static uint16_t value_col(uint16_t vc, int32_t ratio)
 {
-    return settings.palette == UI_JIANT_INDEX && vc == T_THEME && ratio >= 0 ? ux_mix(gauge_col(ratio), T_TEXT, 20) : vc;
+    (void)ratio;
+    return settings.palette == UI_JIANT_INDEX && vc == T_THEME ? T_TEXT : vc;
 }
 static void draw_column_tall(uint32_t c, const char *label, const char *val, const char *unit, uint16_t vc, int32_t ratio,
                              uint32_t icon, int hot, int mot, int32_t kid)
@@ -627,8 +638,14 @@ static void draw_column(uint32_t c, const char *label, const char *val, const ch
         }
         if (!strip && ratio >= 0) {
             int32_t gw = COL_W - 10, fx = ratio * gw / 1000;
-            cv_rrect(5, 38, gw, 3, 1, ux.style ? T_LINE : T_BG, T_SURF);   /* (LINE: no card to cut it from) */
-            cv_rrect(5, 38, fx < 3 ? 3 : fx, 3, 1, hot ? T_ACCENT : vc == T_DIM ? T_DIM : gauge_col(ratio), T_BG);
+            uint16_t gc = hot ? T_ACCENT : vc == T_DIM ? T_DIM : gauge_col(ratio);
+            if (settings.palette == UI_JIANT_INDEX) {   /* (0.7.7) a hairline and the value on it, 2 px */
+                cv_rect(5, 39, gw, 1, T_LINE);
+                cv_rect(5, 38, fx < 2 ? 2 : fx, 2, gc);
+            } else {
+                cv_rrect(5, 38, gw, 3, 1, ux.style ? T_LINE : T_BG, T_SURF);   /* (LINE: no card to cut it from) */
+                cv_rrect(5, 38, fx < 3 ? 3 : fx, 3, 1, gc, T_BG);
+            }
         }
     }
     cv_oy = 0;
@@ -753,11 +770,17 @@ static void draw_foot(void)
             cv_key_hint(232 - kh_w(KC_KEYS, "STEPS"), 2, KC_KEYS, "STEPS", 1, T_BG);   /* the keys are the steps */
     } else {
         uint32_t i;
-        if ((ui.bank + 1u) * 16u <= (uint32_t)t->p[P_SLEN])
-            GFX_HOOK_ALIGN(0, 0, 240, 0, AL_H | AL_CELLS | AL_N(16), "footer step bars centred");
+        if ((ui.bank + 1u) * 16u <= (uint32_t)t->p[P_SLEN]) {
+            if (settings.palette == UI_JIANT_INDEX)   /* (0.7.7) four under each card: from card 1's value to card 4's */
+                GFX_HOOK_ALIGN(CARD_X(0) + 5, 0, CARD_X(3) + 5 + 48, 0, AL_H | AL_CELLS | AL_N(16), "footer step bars under the cards");
+            else
+                GFX_HOOK_ALIGN(0, 0, 240, 0, AL_H | AL_CELLS | AL_N(16), "footer step bars centred");
+        }
         for (i = 0; i < 16u; i++) {                   /* row 1: the cursor's bank, 16 bars in 4 groups */
             uint32_t si = ui.bank * 16u + i;
-            int32_t sx = bar_x(i);                    /* (as the PATTERN page's, centred: x 12 .. 228) */
+            int32_t sx = settings.palette == UI_JIANT_INDEX ? CARD_X(i / 4u) + 5 + (int32_t)(i % 4u) * 13 : bar_x(i);
+                                                      /* (as the PATTERN page's, centred: x 12 .. 228; JIANT 0.7.7: four
+                                                       * under each card, on its value's edge) */
             const step_t *st = &seq_steps(t)[si];
             if (si >= (uint32_t)t->p[P_SLEN])
                 continue;
