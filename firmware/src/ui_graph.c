@@ -1170,7 +1170,7 @@ static void bs_chip(uint32_t k, const char *lb, const char *v, int on, int act)
 static void graph_bigstep(const track_t *t, const page_t *pg, uint16_t c)
 {
     static const char *const TIME_N[3] = {"NOTE", "TIE", "REST"};
-    uint32_t len = (uint32_t)clamp(t->p[P_SLEN], 1, NSTEP), base = ui.bank * 16u, i, j, dr = drum_track(t);
+    uint32_t len = (uint32_t)clamp(t->p[P_SLEN], 1, NSTEP), base = ui.bank * 16u, i, j, dr = drum_track(t), nl;
     uint32_t ph = song.playing ? seq_src(t, t->seq_idx) : 0xFFFFu, src = pr_src(t, ui.cursor % NSTEP, len), cs = comp_slot();
     const step_t *st = &seq_steps(t)[ui.cursor % NSTEP], *sn = src < NSTEP ? &seq_steps(t)[src] : st;
     int note = pg->id[0] == 4u, tie = st->time == ST_TIE, acc;
@@ -1189,7 +1189,11 @@ static void graph_bigstep(const track_t *t, const page_t *pg, uint16_t c)
     str_cpy(b, "STEP ", sizeof b);
     fmt_int(b + 5, (int32_t)ui.cursor + 1);
     cv_text_on(PANEL_X0 + 6, BS_Y + 2, &AF_S, b, T_THEME, T_RAISE);
-    cv_text_r(PANEL_X0 + 102, BS_Y + 2, &AF_S, TIME_N[st->time % 3u], T_MID, T_RAISE);
+    nl = !dr && st->time == ST_NOTE && st->n ? note_len(t, ui.cursor % NSTEP, len) : 1u;   /* (0.8.4) a NOTE's length:
+                                                         * LEN 3 (BAR > STEP's KNOB 3 sets it) */
+    str_cpy(b, nl > 1u ? "LEN " : TIME_N[st->time % 3u], sizeof b);
+    if (nl > 1u) fmt_int(b + 4, (int32_t)nl);
+    cv_text_r(PANEL_X0 + 102, BS_Y + 2, &AF_S, b, nl > 1u ? T_TEXT : T_MID, T_RAISE);
     if (dr) {                                        /* a kit: the lanes it hits (their accents hot) */
         uint32_t k = 0, l;
         for (l = 0; l < NLANE; l++) {

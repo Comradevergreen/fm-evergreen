@@ -1287,13 +1287,16 @@ static void draw_columns(void)
         }
         {
             static const char *const FLAG_N[4] = {"-", "ACC", "SLD", "A+S"};
-            char sn[8], sl[8];
+            char sn[8], sl[8], tv[8];
+            uint32_t nl = st->time == ST_NOTE && st->n ? note_len(TSEL, ui.cursor, (uint32_t)clamp(TSEL->p[P_SLEN], 1, NSTEP)) : 1u;
             fmt_int(sn, (int32_t)ui.cursor + 1);
             str_cpy(sl, "/", 8);
             fmt_int(sl + 1, TSEL->p[P_SLEN]);
+            if (nl > 1u) fmt_int(tv, (int32_t)nl);            /* (0.8.4) a NOTE's length: 3 ST (NOTE: one step) */
+            else str_cpy(tv, TIME_N[st->time % 3u], sizeof tv);
             draw_column(0, "STEP", sn, sl, VAL(0u), -1, ICON_AUTO);
             draw_column(1, "NOTE", val, u, step_on(st) ? VAL(1u) : T_DIM, -1, ICON_AUTO);
-            draw_column(2, "TIME", TIME_N[st->time % 3u], "", VAL(2u), -1, ICON_AUTO);
+            draw_column(2, "TIME", tv, nl > 1u ? "ST" : "", VAL(2u), -1, ICON_AUTO);
             draw_column(3, "FLAG", FLAG_N[(st->flags & SF_ACCENT ? 1u : 0u) | (st->flags & SF_SLIDE ? 2u : 0u)], "",
                         VAL(3u), -1, ICON_AUTO);
         }

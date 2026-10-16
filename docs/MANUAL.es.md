@@ -299,7 +299,7 @@ COMPÁS edita el piano roll, en PASO el paso dibujado grande; las perillas son l
 | PATRÓN | PLAYHEADS | HEAD | RATE | DIR | INTERVAL |
 | PATRÓN | TRACK | PITCH | CHANCE | HUMAN | REC Q |
 | PATRÓN | MUTATE | SOUND (cada) | PATTERN (cada) | AMOUNT | MODE |
-| COMPÁS | STEP (melódica: piano roll) | STEP | NOTE | TIME (NOTE / TIE / REST) | FLAG (– / ACC / SLD / A+S) |
+| COMPÁS | STEP (melódica: piano roll) | STEP | NOTE | TIME (REST ← TIE ← NOTE → 2 ST … 16 ST: la duración de la nota en pasos) | FLAG (– / ACC / SLD / A+S) |
 | COMPÁS | STEP (DRUM: grilla) | STEP | LANE | HIT | ACC |
 | COMPÁS | NOTE | FOCUS | PITCH | MOVE | MICRO (−8/16 … +7/16) |
 | COMPÁS | AUTOMATION | PLAY (ON/OFF) | EVENT (cantidad) | LOCK (cantidad) | CLEAR (acción) |
@@ -587,7 +587,7 @@ compases del patrón (hasta cuatro, con LEN 64), el que estás editando encendid
 | --- | --- | --- | --- |
 | **PATRÓN** | Los compases del patrón uno al lado del otro, cada uno con sus dieciséis pasos en chiquito (una pista DRUM: sus carriles), el compás que editás enmarcado, el cabezal donde suena; debajo, **BAR n/m**. | PATTERN (LEN DIV SWING GATE) → STRETCH → PLAYHEADS → TRACK → MUTATE | el **compás** (sin dar la vuelta; el cursor conserva su lugar dentro del compás) |
 | **COMPÁS** | El **piano roll** del compás, como siempre fue STEP (una pista DRUM: la **grilla**, con sus teclas). | STEP → NOTE → AUTOMATION → AUTO LIST | el **cursor de paso**; al pasarse del final del compás entra en el siguiente |
-| **PASO** | El paso del cursor dibujado grande: sus notas de la más aguda a la más grave (la nota en foco encendida, MICRO las corre, RATCH las parte; un TIE muestra las notas que sostiene), y a la derecha sus fichas: ACC, SLIDE, MICRO, COMP, COMP 2, CHANCE. El juego en el que estás enciende su ficha. Arriba, los dieciséis pasos del compás en chiquito. | NOTE (FOCUS PITCH MOVE MICRO) → COMP → COMP 2 | el **cursor de paso** |
+| **PASO** | El paso del cursor dibujado grande: sus notas de la más aguda a la más grave (la nota en foco encendida, MICRO las corre, RATCH las parte; un TIE muestra las notas que sostiene; una nota de más de un paso dice **LEN n** arriba, y se fija con el KNOB 3 de COMPÁS > STEP), y a la derecha sus fichas: ACC, SLIDE, MICRO, COMP, COMP 2, CHANCE. El juego en el que estás enciende su ficha. Arriba, los dieciséis pasos del compás en chiquito. | NOTE (FOCUS PITCH MOVE MICRO) → COMP → COMP 2 | el **cursor de paso** |
 
 - **SEQ desde otra página** vuelve al nivel y al juego que usaste por última vez **en esa pista** (cada pista recuerda
   el suyo); al encender es el STEP de COMPÁS, el piano roll.
@@ -602,7 +602,15 @@ compases del patrón (hasta cuatro, con LEN 64), el que estás editando encendid
 ### Escribir pasos
 
 - **SEQ > STEP** en una pista melódica es un **piano roll**. KNOB 1 mueve el cursor de paso, KNOB 2 transpone el paso,
-  KNOB 3 fija NOTE / TIE / REST, KNOB 4 fija acento / slide. Un paso guarda hasta cuatro notas.
+  KNOB 3 es **TIME**, KNOB 4 fija acento / slide. Un paso guarda hasta cuatro notas.
+- **La duración de una nota** (0.8.4): KNOB 3 (TIME) es un solo recorrido, REST ← TIE ← NOTE → 2 ST → … → 16 ST.
+  Sobre una nota, girar a la derecha la **alarga**: los pasos que siguen se vuelven TIEs, uno por paso de perilla (la
+  tarjeta dice **3 ST**, el piano roll dibuja la barra más larga); un acorde conserva todas sus notas. Girar a la
+  izquierda la **acorta** (sus últimos TIEs pasan a REST) hasta NOTE; después el paso mismo pasa a TIE y luego a REST,
+  como antes (un giro rápido se frena primero en NOTE). Solo se alarga sobre RESTs y pasos vacíos: **la nota siguiente
+  la frena** (la pantalla dice NEXT NOTE; pasá ese paso a TIE o borralo con EDIT para seguir). Hasta 16 pasos o LEN;
+  cerca del final del patrón da la vuelta al paso 1, como lo toca el secuenciador. Así cualquier nota, grabada o
+  escrita, se alarga o se acorta después, sin REC. (En una pista DRUM no cambia nada: los golpes no tienen duración.)
 - **Grabación por pasos**: en STEP, con el transporte **parado**, apretá **REC** (la pantalla dice KEYS WRITE STEPS).
   Tocá una nota o un acorde: entra en el paso del cursor y, cuando soltás, el cursor avanza. Sin armar, las teclas
   solo suenan.
@@ -1099,7 +1107,7 @@ disponible mientras suena un tema (**STOP TO EDIT**). Guarda un solo paso, en RA
 
 ### Delay
 
-- **DLY**: **TIME** (divisiones sincronizadas 4BAR … 1/32, o tiempos libres de 5 ms a 1,48 s), **FEEDBK**, **TONE**
+- **DLY**: **TIME** (divisiones sincronizadas 4BAR … 1/32, o tiempos libres de 5 ms a 2,95 s), **FEEDBK**, **TONE**
   (por debajo del centro más oscuro, por encima más fino), **MIX**. FEEDBK se comporta como el de un delay analógico
   (una cinta, un PT2399; 0.6.86, 0.6.89): con **TONE al centro (50 %)** cada repetición es una copia de lo que entró;
   en **100 %** los ecos mantienen su volumen mucho tiempo (bajan muy de a poco y nunca se cortan), y **pasado 100 %**
@@ -1108,6 +1116,25 @@ disponible mientras suena un tema (**STOP TO EDIT**). Guarda un solo paso, en RA
   hacia arriba un corte de graves que barre de ~70 Hz a ~3 kHz, los dos con un pico en el corte: las repeticiones se
   oscurecen o afinan y se angostan a una banda en cada pasada (estilo dub), y en los extremos con FEEDBK alto el lazo
   autooscila en esa banda.
+- **Tiempos largos** (0.8.4): cada división suena con su largo real hasta **2,97 s**, el máximo (antes todo lo que
+  pasaba de 1,49 s se cortaba a 1,49 s: 1/2 por debajo de 81 BPM, 1/1 por debajo de 162 BPM, 2BAR, 4BAR). Para que
+  entren, la línea del delay corre a tres velocidades, que elige el TIME solo:
+
+  | TIME | Línea | Agudos de las repeticiones |
+  | --- | --- | --- |
+  | hasta 0,74 s | velocidad completa | todo el rango, como antes |
+  | 0,74 s – 1,49 s | media velocidad | planos hasta ~9,5 kHz, -3 dB en ~10,4 kHz |
+  | 1,49 s – 2,97 s | un cuarto | planos hasta ~4,7 kHz, -3 dB en ~5,2 kHz |
+
+  Así, cuanto más largo el tiempo, más oscura la cola, como en un delay de cinta o de BBD. Solo se pierden agudos:
+  no hay suciedad ni aliasing (lo que se repliega queda más de 70 dB abajo) ni ruido de más. La velocidad se aplica
+  una sola vez, así que las repeticiones no se oscurecen en cada pasada (eso lo hacen solo TONE y FEEDBK). MOD, el
+  delay GRAIN, PING, WIDE, TYPE y TONE funcionan igual en todas las velocidades. En las dos velocidades más lentas el
+  primer eco llega ~1 ms (media) o ~4 ms (un cuarto) tarde; las repeticiones siguen exactamente a TIME entre sí.
+  Cuando TIME cruza 0,74 s o 1,49 s (perilla, tempo, automatización, carga de proyecto o sección, reloj externo) el
+  delay se apaga en 3 ms y vuelve a empezar vacío. Queda un hueco corto: los ecos que había en la línea se pierden,
+  pero no hay clic. Un reloj que oscila alrededor de un límite no lo reinicia una y otra vez. Los ecos largos vuelven
+  a pleno volumen aunque no suene nada más.
 - **DLY 2**: **WIDE** (el eco derecho más tarde), y el delay **GRAIN**: **PITCH** (±12 semitonos por repetición) y
   **SPRAY**. Con LOAD LITE o ECO el delay GRAIN suena como un delay común (la tarjeta dice LITE / ECO). **MOD**
   (0.6.86): la deriva de la cinta, WOW lento y FLUTTER rápido sobre las repeticiones (0, por defecto: nada, copias
@@ -1116,7 +1143,7 @@ disponible mientras suena un tema (**STOP TO EDIT**). Guarda un solo paso, en RA
 - **DLY 3** (0.6.90): **TYPE**: **ANALOG** (por defecto: la saturación suave, el TONE resonante, FEEDBK pasado 100 %
   autooscila) o **DIGITAL** (repeticiones limpias, TONE un filtro común, FEEDBK 100 % como máximo: pasado eso las
   repeticiones se mantienen, nunca crecen). **PING**: **ON** manda las repeticiones izquierda, derecha, izquierda … por
-  el estéreo, cada una FEEDBK más suave (TIME hasta 0,74 s; sin WIDE ni el delay GRAIN). Se guarda con el proyecto.
+  el estéreo, cada una FEEDBK más suave (TIME hasta 1,49 s desde 0.8.4, el lado derecho al doble de TIME; sin WIDE ni el delay GRAIN). Se guarda con el proyecto.
 
 ### Reverb (cinco modelos)
 
@@ -1136,6 +1163,11 @@ según el tipo:
 
 Con **LOAD LITE**, SHIMMER y CLOUD suenan como ROOM y RESO como SPRING; con **LOAD ECO** todas las reverbs suenan como
 SPRING. La configuración se conserva; la tarjeta TYPE muestra LITE o ECO debajo de su valor.
+
+Cambiar el modelo (la perilla, la automatización o el motion, un proyecto o una sección de canción, MIDI, el editor, o
+LOAD pasando a LITE / ECO y de vuelta) corta la cola del modelo anterior con un fundido breve (menos de un milisegundo,
+sin clic) y el nuevo empieza en silencio. Desde 0.8.4, volver a **CLOUD** empieza con la nube vacía, también una
+congelada (antes retomaba la nube que había quedado).
 
 ### Chorus
 

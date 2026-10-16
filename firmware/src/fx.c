@@ -2,9 +2,16 @@
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments */
 /* Effects: per-track DIST insert, then sends into three
  * shared buses (chorus, tempo delay, reverb). Mono buses, stereo dry mix. */
-#define DLY_LEN 65536u           /* 1.49 s: 1/4 at 40 BPM fits */
+/* (0.8.4) the delay's line: DLY_LEN samples of int16 (params.c, the one constant of its size; a power of two). It runs
+ * at the full rate while TIME fits, at half or a quarter of it for times up to twice / four times as long (dly_lo):
+ * the longest at full rate (DLY_LEN - DLY_EDGE) / FS, the longest of all four times that */
 #define CHO_LEN 2048u
-static int16_t dly_buf[DLY_LEN] __attribute__((section(".pool")));
+static union {
+    int16_t s[DLY_LEN];
+    uint64_t d[DLY_LEN / 4u];            /* (cleared through it: a double word a store, dly_line_clear) */
+} dly_u __attribute__((section(".pool")));
+#define dly_buf (dly_u.s)
+_Static_assert((DLY_LEN & (DLY_LEN - 1u)) == 0u && DLY_LEN >= 16384u, "DLY_LEN: a power of two, whole 32 KB chunks");
 static int16_t cho_buf[CHO_LEN] __attribute__((section(".pool")));
 static const uint16_t REV_COMB[4] = {1116, 1188, 1277, 1356};
 static const uint16_t REV_AP[2] = {556, 441};
@@ -15,7 +22,21 @@ static union {                          /* ROOM's allpasses; SPRING's allpass ch
 } rev_u __attribute__((section(".pool")));
 #define rev_ap (rev_u.ap)
 #define RPRE_LEN 2048u                   /* (JIANT) the reverb's pre-delay line, at half rate (4 KB): up to 92 ms */
-static int16_t rpre_buf[RPRE_LEN] __attribute__((section(".pool")));
+#define SH_LEN 2048u                     /* (JIANT 0.5) SHIMMER's line (4 KB) */
+#define CL_LEN 16384u                    /* .. CLOUD's, half rate: ~0.74 s (32 KB) */
+/* (0.8.4) the models' own lines in one place (32 KB, was 40): the reverb runs one model at a time (a change fades the
+ * old one's block out, then the new one starts from silence: fx_buses), so CLOUD's line, SHIMMER's and the pre-delay
+ * (on ROOM and SPRING only) share it; rev_line_dirty says what a change must silence of it */
+static union {
+    int16_t cl[CL_LEN];                  /* CLOUD (4) */
+    int16_t sh[SH_LEN];                  /* SHIMMER (2) */
+    int16_t pre[RPRE_LEN];               /* the pre-delay (ROOM 0, SPRING 1) */
+    uint64_t d[CL_LEN / 4u];             /* (cleared through it: a double word a store) */
+} rev_x __attribute__((section(".pool")));
+#define rpre_buf (rev_x.pre)
+#define shim_buf (rev_x.sh)
+#define cloud_buf (rev_x.cl)
+_Static_assert(sizeof rev_x == CL_LEN * 2u && CL_LEN >= SH_LEN && CL_LEN >= RPRE_LEN, "the reverb models' lines");
 static int32_t rpre_out[CTL];                     /* .. the block out of it (the reverb's input) */
 static struct {
     uint32_t dly_w, cho_w, cho_ph;
@@ -29,6 +50,9 @@ static struct {
     uint16_t dl_xf, dr_xf;               /* .. the fades left (DXF_LEN .. 0 samples) */
     uint8_t gr_on, gr_old;               /* .. the GRAIN read now, and in the read faded from */
     uint8_t primed;                      /* .. set on the first block (no fade nor glide from 0 then) */
+    uint8_t dr_sh, dsw, dsw_to;          /* .. (0.8.4) the line's rate, FS >> dr_sh (0 full, 1 half, 2 a quarter); a change of
+                                         * it: 1 the delay fading out, 2 the line being cleared (fx_buses); the rate it goes to */
+    uint16_t dsw_n, din_g;               /* .. the fade's samples left / the chunk being cleared; the input's fade-in left */
     uint32_t dw_ph, df_ph;               /* .. (0.6.86) the tape's WOW and FLUTTER phases */
     int32_t dw_m;                        /* .. the read points' offset by them now (Q8 samples) */
     int32_t dt1, dt2, rt1, rt2;          /* .. (0.6.86) the resonant TONE (delay loop) and FILT (reverb input) filters */
@@ -440,21 +464,22 @@ static void dly_grain_adv(void)
             fx.gr_s[j] = (int32_t)GR_RATIO[clamp(song.g[G_DPIT], -12, 12) + 12] - 65536;
         }
 }
-static __attribute__((noinline)) int32_t dly_grain(uint32_t dl)
+static __attribute__((noinline)) int32_t dly_grain(uint32_t dl, uint32_t sh)   /* (0.8.4) sh: the line at FS >> sh */
 {
     int32_t x = 0;
-    uint32_t j;
+    uint32_t j, top = (DLY_LEN << sh) - (2u << sh) - GR_LEN * 2u;   /* (the farthest a grain starts, FS samples) */
     for (j = 0; j < 2u; j++) {
         int32_t s = fx.gr_s[j];
         uint32_t e = (GR_LEN * (uint32_t)(s < 0 ? -s : s)) >> 8;   /* the read point's sweep over a grain, Q8 */
         uint32_t ph = (fx.gr_ph + j * 32768u) & 0xFFFFu, d, di, gl = dl;
         int32_t a, b, w;
-        if (gl + fx.gr_sp[j] > DLY_LEN - 2u - GR_LEN * 2u)   /* (JIANT 0.5) a long TIME (1/1 and up: the whole line): */
-            gl = DLY_LEN - 2u - GR_LEN * 2u - fx.gr_sp[j];  /* room for the sweep, else the read point sat clamped (no pitch).
+        if (gl + fx.gr_sp[j] > top)                     /* (JIANT 0.5) a long TIME (the whole line): */
+            gl = top - fx.gr_sp[j];                     /* room for the sweep, else the read point sat clamped (no pitch).
                                                          * (0.6.19: each grain its own: grain 0's new spray moved grain 1's
                                                          * read point in the middle of its window: a click every grain) */
         d = ((gl + fx.gr_sp[j]) << 8) + ((e * ((s > 0 ? 65535u - ph : ph) >> 4)) >> 12);   /* Q8: up, the delay
                                                          * shrinks over the grain; down, it grows */
+        d >>= sh;                                       /* (FS samples -> the line's) */
         di = d >> 8;
         if (di > DLY_LEN - 2u)
             di = DLY_LEN - 2u;
@@ -525,9 +550,9 @@ static void dly_wow_adv(uint32_t n, int32_t *m0, int32_t *dm)   /* the block's d
 /* the line buf (written at w) d samples back, plus m (Q8): on a sample exact; between two (MOD's drift) a 4-point
  * Hermite (0.6.89: the linear one was a low-pass on every pass, the repeats dulled; as DaisySP's DelayLine ReadHermite,
  * MIT) */
-static inline int32_t dly_rd_of(const int16_t *buf, uint32_t w, uint32_t d, int32_t m)
+static inline int32_t dly_rd_q(const int16_t *buf, uint32_t w, int32_t q)   /* (q: Q8 samples back) */
 {
-    int32_t q = (int32_t)(d << 8) + m, f = q & 255, xm1, x0, x1, x2, c1, c2, c3;
+    int32_t f = q & 255, xm1, x0, x1, x2, c1, c2, c3;
     uint32_t i = w - (uint32_t)(q >> 8);
     x0 = buf[i & (DLY_LEN - 1u)];
     if (!f)
@@ -540,12 +565,23 @@ static inline int32_t dly_rd_of(const int16_t *buf, uint32_t w, uint32_t d, int3
     c3 = ((x2 - xm1) >> 1) + ((3 * (x0 - x1)) >> 1);
     return x0 + ((((((c3 * f) >> 8) + c2) * f >> 8) + c1) * f >> 8);
 }
+static inline int32_t dly_rd_of(const int16_t *buf, uint32_t w, uint32_t d, int32_t m)
+{
+    return dly_rd_q(buf, w, (int32_t)(d << 8) + m);
+}
 static inline int32_t dly_rd(uint32_t d, int32_t m) { return dly_rd_of(dly_buf, fx.dly_w, d, m); }
+/* (0.8.4) the farthest back a read may sit, in the line's own samples short of its length: MOD's drift (at 127 up to
+ * 4.46 samples further, dly_wow_adv), the Hermite's two older taps, one to spare. The read comes before the write, so
+ * DLY_LEN back is still the oldest sample; past it the read wrapped onto the newest (until 0.8.4 at the longest TIME:
+ * the input leaked into the wet, with the wow at its peak -32 dB at MOD 20, -28 at 42, -7.5 at 127: tests/delay_test.c) */
+#define DLY_EDGE 8u
+#define DLY_SPAN(sh) ((DLY_LEN - DLY_EDGE) << (sh))      /* the longest read at FS >> sh, FS samples */
+#define DLY_MAX DLY_SPAN(2u)                             /* .. of all (a quarter rate) */
 static uint32_t delay_samples(void)
 {
     uint32_t g = (uint32_t)GFX(GF_DTIME);
-    uint32_t s = g < DT_FREE ? div_samples(g) : (uint32_t)DTIME_MS[(g - DT_FREE) % 48u] * 441u / 10u;   /* (JIANT 0.4: free) */
-    return s < 16u ? 16u : s >= DLY_LEN ? DLY_LEN - 1u : s;
+    uint32_t s = g < DT_FREE ? div_samples(g) : (uint32_t)DTIME_MS[(g - DT_FREE) % NELEM(DTIME_MS)] * 441u / 10u;   /* (JIANT 0.4: free) */
+    return s < 16u ? 16u : s > DLY_MAX ? DLY_MAX : s;
 }
 
 /* (JIANT 0.5) the combs' feedback from SIZE: 0.76 .. 0.99, the top of the knob a long tail (was 0.957 at most) */
@@ -740,9 +776,7 @@ static __attribute__((noinline)) void rev_spring_side(uint32_t n, int32_t wd)
  *                (MOD: the more, the oftener) an octave up / down or a fifth up; RATE their density, DAMP the tone,
  *                WIDE them left and right. SIZE full: FREEZE (the line stops being written: the cloud holds) */
 static uint32_t scale_mask(const track_t *t);           /* seq.c */
-#define SH_LEN 2048u
-static int16_t shim_buf[SH_LEN] __attribute__((section(".pool")));
-static int32_t shim_fb[CTL];
+static int32_t shim_fb[CTL];                            /* (SHIMMER's line: rev_x, at the top) */
 /* (0.6.12) AIR (G_RPRE on SHIMMER and CLOUD, -24..24 st): the pitch moved, the tone with it. A semitone count as a
  * speed, Q16: 2^(st / 12) (-24 .. 36) */
 static uint32_t semi_q16(int32_t st)
@@ -856,9 +890,7 @@ static __attribute__((noinline)) void rev_reso(const int32_t *rev_in, int32_t *o
         out[i] += a;
     }
 }
-#define CL_LEN 16384u                                    /* half rate: ~0.74 s */
-#define CL_N 12u
-static int16_t cloud_buf[CL_LEN] __attribute__((section(".pool")));
+#define CL_N 12u                                         /* (its line, CL_LEN: rev_x, at the top) */
 static struct { uint32_t pos, inc; uint16_t len, age; int16_t pl, pr; } cl_g[CL_N];
 static uint32_t cl_rand(void) { fx.cl_rng = fx.cl_rng * 1664525u + 1013904223u; return fx.cl_rng >> 8; }
 /* CLOUD (G_RTYPE 4, JIANT 0.5, made wet in 0.5.1): a granular wash. The input and the cloud's own tail fed back
@@ -972,8 +1004,8 @@ static void rev_run(uint32_t ty, const int32_t *rev_in, int32_t *out, uint32_t n
     }
 }
 
-/* the reverb's buffers and states to silence (the model changed) */
-static void rev_clear(void)
+/* the reverb's buffers and states to silence (the model changed), but for the models' own lines (rev_x) */
+static void rev_state_clear(void)
 {
     uint32_t i;
     for (i = 0; i < sizeof rev_comb / 2u; i++)
@@ -983,14 +1015,41 @@ static void rev_clear(void)
     for (i = 0; i < 4u; i++)
         fx.comb_lp[i] = fx.rs_lp[i] = 0;
     fx.sp_lp = fx.sp_hp = fx.sp_he = 0;
-    for (i = 0; i < SH_LEN; i++)                        /* (JIANT 0.5) SHIMMER's line, CLOUD's grains */
-        shim_buf[i] = 0;
-    for (i = 0; i < CTL; i++)
+    for (i = 0; i < CTL; i++)                           /* (JIANT 0.5) SHIMMER's feedback, CLOUD's grains */
         shim_fb[i] = 0;
     sh_tlp = 0;
     for (i = 0; i < CL_N; i++)
         cl_g[i].len = 0;
     fx.cl_gl = fx.cl_gr = 0;
+    fx.cl_lp = fx.cl_half = 0;                          /* (0.8.4: CLOUD's tone and odd sample too; its tone's state
+                                                         * was kept, a residue back into the next CLOUD's line) */
+}
+/* (0.8.4) the first n samples of rev_x silenced (n a multiple of 16; four double words a pass: all of it, CLOUD's, in
+ * ~7000 instructions, once in a change's block; out of line: the hot RAM code calls it) */
+static __attribute__((noinline)) void rev_line_clear(uint32_t n)
+{
+    uint64_t *p = rev_x.d, *e = p + n / 4u;
+    for (; p < e; p += 4) {
+        p[0] = 0;
+        p[1] = 0;
+        p[2] = 0;
+        p[3] = 0;
+    }
+}
+/* (0.8.4) how much of rev_x a change from the model `from` to `to` silences: CLOUD reads all of it (what the others
+ * left there, its own line from before: it was kept until 0.8.4); SHIMMER its line (as it always was); leaving
+ * SHIMMER or CLOUD, the pre-delay's part, so that with any other model running it holds the pre-delay's own line or
+ * silence (RESO writes none of it: after CLOUD -> RESO -> ROOM the pre-delay finds nothing of CLOUD's); between
+ * ROOM, SPRING and RESO nothing, the pre-delay's line runs on as it always has */
+static uint32_t rev_line_dirty(uint32_t from, uint32_t to)
+{
+    return to == 4u ? CL_LEN : to == 2u ? SH_LEN : from == 2u || from == 4u ? RPRE_LEN : 0u;
+}
+/* every buffer and state of the reverb silenced (fx_trip, the tests) */
+static void rev_clear(void)
+{
+    rev_state_clear();
+    rev_line_clear(CL_LEN);
 }
 
 static int32_t part_buf[CTL];                            /* a part's block (mix_part); the fade of a model change */
@@ -1028,10 +1087,15 @@ static inline int32_t cho_ens(const int16_t *buf, uint32_t w, uint32_t ph, int32
 static uint32_t fxg_quiet;
 static int32_t fxg_dpk;                              /* (0.6.89) the delay line's peak this block (fx_buses) */
 static int32_t fxg_g = 32767;
+/* (0.8.4) TIME past the quiet's 1.5 s (blocks, else 0), FEEDBK not 0; the blocks since something was sent or a repeat
+ * over the floor went round the loop again: while that is within TIME, an echo is still to come back, the gate stays
+ * open (a long delay's repeats come back at their level, not faded in after the gap). TIME up to 1.5 s as before */
+static uint32_t fxg_hold, fxg_dact;
+static uint8_t fxg_fb;
 static void fx_gate(int32_t *wet, uint32_t n)
 {
     int32_t pk = 0, g0 = fxg_g, d;
-    uint32_t i;
+    uint32_t i, q;
     for (i = 0; i < n; i++) {
         int32_t a = wet[i] < 0 ? -wet[i] : wet[i];
         if (a > pk) pk = a;
@@ -1039,9 +1103,11 @@ static void fx_gate(int32_t *wet, uint32_t n)
     int dly = fxg_dpk >= FXG_FLOOR && !fx.gr_on;       /* (0.6.89) a plain delay's tail still there: only the first floor
                                                          * (its residue: the loop's DC block keeps it under it); the
                                                          * higher ones cut a long FEEDBK tail off at 4 or 8 s */
+    fxg_dact = !fxg_quiet || (dly && fxg_fb) ? 0u : fxg_dact < 0xFFFFFFu ? fxg_dact + 1u : fxg_dact;
+    q = fxg_hold && fxg_dact <= fxg_hold ? 0u : fxg_quiet;
     fxg_dpk = 0;
-    if (((fxg_quiet > FXG_QUIET && pk < FXG_FLOOR) || (!dly && fxg_quiet > FXG_QUIET2 && pk < FXG_FLOOR2) ||
-         (!dly && fxg_quiet > FXG_QUIET3 && pk < FXG_FLOOR3)) &&
+    if (((q > FXG_QUIET && pk < FXG_FLOOR) || (!dly && q > FXG_QUIET2 && pk < FXG_FLOOR2) ||
+         (!dly && q > FXG_QUIET3 && pk < FXG_FLOOR3)) &&
         !(song.g[G_RTYPE] == 4 && GFX(GF_RSIZE) >= 127))
         fxg_g = g0 > 1024 ? g0 - 1024 : 0;
     else if (g0 < 32767 && (g0 > 0 || fxg_quiet == 0u || dly))   /* (0.6.89: or the delay growing by itself) */   /* (0.6.19) closing and the residue swells again (a pitched
@@ -1058,6 +1124,250 @@ static void fx_gate(int32_t *wet, uint32_t n)
     d = (fxg_g - g0) / (int32_t)n;
     for (i = 0; i < n; i++, g0 += d)
         wet[i] = mulq15(wet[i], g0);
+}
+/* (0.8.4) the long delay, lighter: past what the line holds at the full rate, it runs at half the rate (up to twice
+ * as long), past that at a quarter (four times), as CLOUD's line and the reverb's pre-delay do at half rate. The input
+ * goes down through a half-band decimator (one stage a halving), the whole loop (the reads, MOD, the GRAIN, the
+ * feedback, TONE) runs at the line's rate, and its output comes back up through the same half-band as an
+ * interpolator: once each way, not every repeat, so the repeats stay copies of the first. The half-band: 55 taps,
+ * 14 distinct (the even ones 0, the middle 1/2; Parks-McClellan, pass band to 9.2 kHz): down and up again flat within
+ * 0.1 dB to 9.5 kHz at half rate (-1 dB 10 kHz, -3 dB 10.4 kHz), every alias and image of what is below 9.2 kHz
+ * under -70 dB (the stop band from 12.85 kHz); at a quarter rate the same again, half as high (4.7 / 5 / 5.2 kHz):
+ * the long ones darker, as a tape's or a BBD's. Its taps Q14, the odd ones summing to exactly 1/2 (DC through both
+ * ways exact: a held repeat stays held). Cost: 14 multiplies an output each way (symmetric pairs), the loop's own
+ * work / R. The first echo ~1.2 ms (half) / ~3.7 ms (quarter) late (the filters' delay), the repeats TIME apart
+ * exactly. A change of the rate (TIME, the tempo, PING across a boundary) fades the
+ * delay out over DSW_FADE samples, clears the line (a 32 KB chunk a block, as rev_line_clear) and starts it again
+ * with the input faded in: a gap, never a click */
+#define HB_N 14u                                         /* the taps' distinct values (offsets 1, 3 .. 27 from the middle) */
+#define HB_H (2u * HB_N)                                 /* the history: the even-offset samples (+ the middle's, odd) */
+static const int16_t HB_Q[HB_N] = {5194, -1675, 940, -607, 412, -283, 193, -129, 83, -51, 30, -16, 8, -3};   /* (sum 4096) */
+typedef struct { int32_t e[2u * HB_H], o[2u * HB_N]; uint8_t ep, op, ph; } hbd_t;   /* (each line twice: no wrap) */
+typedef struct { int32_t u[2u * HB_H]; uint8_t p; } hbi_t;
+static struct {
+    hbd_t d[2];                                          /* the decimator's stages: FS -> FS/2, FS/2 -> FS/4 */
+    hbi_t ix[2], ir[2];                                  /* the interpolator's (the left / mid echo, the right): [1] first */
+    int32_t ox[4], orr[4];                               /* the last step's output, R samples at FS */
+    uint8_t k;                                           /* .. the next of them */
+    uint8_t st;                                          /* .. the right echo apart (else ir idle: the left's copied) */
+} dlo __attribute__((section(".pool")));
+static int32_t dlo_x[CTL] __attribute__((section(".pool")));    /* dly_lo's block: the left / mid echo, */
+static int32_t dlo_xr[CTL] __attribute__((section(".pool")));   /* .. the right */
+#define DSW_LOG2 7u
+#define DSW_FADE (1u << DSW_LOG2)                        /* a rate change's fade out (and the input's in): 2.9 ms */
+#define DLY_CLR 16384u                                   /* .. the line cleared 32 KB a block */
+static inline int32_t hb_sum(const int32_t *h)           /* h[0] the newest: the pairs about the middle (lag 13.5) */
+{
+    int32_t a = 0;
+    uint32_t k;
+    for (k = 0; k < HB_N; k++)
+        a += HB_Q[k] * (h[HB_N - 1u - k] + h[HB_N + k]);
+    return a;
+}
+static inline int hb_dec(hbd_t *s, int32_t x, int32_t *y)   /* an FS sample in; every other one a sample out */
+{
+    if (s->ph) {                                         /* (odd: the middle tap's line) */
+        s->op = (uint8_t)(s->op ? s->op - 1u : HB_N - 1u);
+        s->o[s->op] = s->o[s->op + HB_N] = x;
+        s->ph = 0;
+        return 0;
+    }
+    s->ep = (uint8_t)(s->ep ? s->ep - 1u : HB_H - 1u);
+    s->e[s->ep] = s->e[s->ep + HB_H] = x;
+    s->ph = 1;
+    *y = (hb_sum(s->e + s->ep) + s->o[s->op + HB_N - 1u] * 8192 + 8192) >> 14;
+    return 1;
+}
+static inline void hb_int(hbi_t *s, int32_t u, int32_t *y0, int32_t *y1)   /* a sample in, two out (x2 the rate) */
+{
+    s->p = (uint8_t)(s->p ? s->p - 1u : HB_H - 1u);
+    s->u[s->p] = s->u[s->p + HB_H] = u;
+    *y0 = (hb_sum(s->u + s->p) + 4096) >> 13;
+    *y1 = s->u[s->p + HB_N - 1u];
+}
+static inline int32_t dly_rd_sh(uint32_t d, int32_t m, uint32_t sh)   /* d (+ m, Q8) FS samples back, the line at FS >> sh */
+{
+    return dly_rd_q(dly_buf, fx.dly_w, ((int32_t)(d << 8) + m) >> sh);
+}
+/* the rate a read need (FS samples) back takes: the lowest shift it fits; toward a higher rate only once it is 1/32 inside
+ * that one's reach (a tempo from an external clock wavering at a boundary: not a restart each beat) */
+static uint32_t dly_stage(uint32_t need, uint32_t cur)
+{
+    uint32_t s = need <= DLY_SPAN(0u) ? 0u : need <= DLY_SPAN(1u) ? 1u : 2u;
+    if (s == 0u && cur > 0u && need > DLY_SPAN(0u) - (DLY_SPAN(0u) >> 5))
+        s = 1u;
+    if (s == 1u && cur > 1u && need > DLY_SPAN(1u) - (DLY_SPAN(1u) >> 5))
+        s = 2u;
+    return s;
+}
+static void dly_lo_reset(void)
+{
+    memset(&dlo, 0, sizeof dlo);
+    fx.dly_hp = fx.dly_lp = fx.dt1 = fx.dt2 = 0;
+    fx.dl_xf = fx.dr_xf = 0;
+}
+static __attribute__((noinline)) void dly_line_clear(uint32_t from, uint32_t n)
+{
+    uint64_t *p = dly_u.d + from / 4u, *e = p + n / 4u;
+    for (; p < e; p += 4) {
+        p[0] = 0;
+        p[1] = 0;
+        p[2] = 0;
+        p[3] = 0;
+    }
+}
+typedef struct { int32_t fb, fb2, hk, dig, dton, png, wd; tone_t tn; } dlyk_t;   /* the block's settings (fx_buses) */
+/* the delay's block, when not plain at the full rate (fx_buses: dly_lo_on): into dx (the left / mid echo) and dxr (the
+ * right), FS; as the full-rate loop in fx_buses, step for step (at FS: the same arithmetic) */
+static __attribute__((noinline)) void dly_lo(const int32_t *dly_in, int32_t *dx, int32_t *dxr, uint32_t n,
+                                             const dlyk_t *k, int32_t wm, int32_t dwm)
+{
+    uint32_t i, j, sh = fx.dr_sh, r = 1u << sh;
+    if (fx.dsw == 2u) {                                  /* (the line being cleared: silence) */
+        for (i = 0; i < n; i++)
+            dx[i] = dxr[i] = 0;
+        return;
+    }
+    for (i = 0; i < n; i++) {
+        int32_t u = clamp(dly_in[i] >> 1, -65535, 65535), x, xr;
+        int ok = 1;
+        if (fx.dsw == 2u) {                              /* (faded out within this block) */
+            dx[i] = dxr[i] = 0;
+            continue;
+        }
+        wm += dwm;
+        if (fx.din_g) {                                  /* (a new line: the input faded in) */
+            u = (u * (int32_t)(DSW_FADE - fx.din_g)) >> DSW_LOG2;
+            fx.din_g--;
+        }
+        if (sh) {
+            ok = hb_dec(&dlo.d[0], u, &u);
+            if (ok && sh > 1u)
+                ok = hb_dec(&dlo.d[1], u, &u);
+        }
+        if (ok) {                                        /* a step of the loop, at the line's rate */
+            int32_t lf, w;
+            if (fx.gr_on || (fx.dl_xf && fx.gr_old))
+                for (j = 0; j < r; j++)
+                    dly_grain_adv();
+            x = fx.gr_on ? dly_grain(fx.dl_now, sh) : dly_rd_sh(fx.dl_now, wm, sh);
+            if (fx.dl_xf) {
+                int32_t xo = fx.gr_old ? dly_grain(fx.dl_old, sh) : dly_rd_sh(fx.dl_old, wm, sh);
+                x += ((xo - x) * (int32_t)fx.dl_xf) >> DXF_LOG2;
+                fx.dl_xf = (uint16_t)(fx.dl_xf - r);
+            }
+            xr = x;
+            if (k->png) {
+                xr = dly_rd_sh(fx.dl_now * 2u, wm, sh);
+                if (fx.dl_xf) {
+                    int32_t xo = dly_rd_sh(fx.dl_old * 2u, wm, sh);
+                    xr += ((xo - xr) * (int32_t)fx.dl_xf) >> DXF_LOG2;
+                }
+            } else if (k->wd || fx.dr_xf || fx.dr_now != fx.dl_now) {
+                xr = dly_rd_sh(fx.dr_now, wm, sh);
+                if (fx.dr_xf) {
+                    int32_t xo = dly_rd_sh(fx.dr_old, wm, sh);
+                    xr += ((xo - xr) * (int32_t)fx.dr_xf) >> DXF_LOG2;
+                    fx.dr_xf = (uint16_t)(fx.dr_xf - r);
+                }
+            }
+            fx.dly_lp = x;
+            { int32_t ax = x < 0 ? -x : x; if (ax > fxg_dpk) fxg_dpk = ax; }
+            if (k->png) {
+                int32_t ax = xr < 0 ? -xr : xr; if (ax > fxg_dpk) fxg_dpk = ax;
+            }
+            lf = k->png ? xr : x;
+            fx.dly_hp += (((lf << 8) - fx.dly_hp) * k->hk + 16384) >> 15;
+            lf -= (fx.dly_hp + 128) >> 8;
+            if (k->dton) lf = tone_run(&k->tn, lf, &fx.dt1, &fx.dt2);
+            w = u + mulq15(clamp(lf, -32767, 32767), k->png ? k->fb2 : k->fb);
+            dly_buf[fx.dly_w & (DLY_LEN - 1u)] = (int16_t)(k->dig ? clamp(w, -32767, 32767) : dly_sat(w));
+            fx.dly_w++;
+            if (k->png)
+                xr = mulq15(clamp(xr, -65535, 65535), k->fb > 32767 ? 32767 : k->fb);
+            if (!sh) {
+                dlo.ox[0] = x;
+                dlo.orr[0] = xr;
+            } else {                                     /* back up to FS */
+                x = clamp(x, -65535, 65535);
+                xr = clamp(xr, -65535, 65535);
+                int st = xr != x || k->png || k->wd || fx.dr_xf;   /* (the right its own: interpolated too; else
+                                                         * the left's, a third of the work saved) */
+                if (st && !dlo.st)                       /* (the right apart again: from the left's state) */
+                    memcpy(dlo.ir, dlo.ix, sizeof dlo.ir);
+                dlo.st = (uint8_t)st;
+                if (sh == 1u) {
+                    hb_int(&dlo.ix[0], x, &dlo.ox[0], &dlo.ox[1]);
+                    if (st) hb_int(&dlo.ir[0], xr, &dlo.orr[0], &dlo.orr[1]);
+                } else {
+                    int32_t a, b;
+                    hb_int(&dlo.ix[1], x, &a, &b);
+                    hb_int(&dlo.ix[0], a, &dlo.ox[0], &dlo.ox[1]);
+                    hb_int(&dlo.ix[0], b, &dlo.ox[2], &dlo.ox[3]);
+                    if (st) {
+                        hb_int(&dlo.ir[1], xr, &a, &b);
+                        hb_int(&dlo.ir[0], a, &dlo.orr[0], &dlo.orr[1]);
+                        hb_int(&dlo.ir[0], b, &dlo.orr[2], &dlo.orr[3]);
+                    }
+                }
+                if (!st)
+                    for (j = 0; j < r; j++)
+                        dlo.orr[j] = dlo.ox[j];
+            }
+            dlo.k = 0;
+        }
+        j = dlo.k < r ? dlo.k : r - 1u;
+        dlo.k++;
+        x = dlo.ox[j];
+        xr = dlo.orr[j];
+        if (fx.dsw == 1u) {                              /* (a rate change: the old line faded out) */
+            x = (x * (int32_t)fx.dsw_n) >> DSW_LOG2;
+            xr = (xr * (int32_t)fx.dsw_n) >> DSW_LOG2;
+            if (!--fx.dsw_n)
+                fx.dsw = 2;                              /* .. done: silence, the line cleared from the next block */
+        }
+        dx[i] = x;
+        dxr[i] = xr;
+    }
+}
+
+/* (0.8.4) once a block (fx_buses): the line's rate for the farthest read (PING-PONG: twice TIME; WIDE: the right
+ * echo's); a change of it fades the delay out (dly_lo), clears the line a chunk a block, then starts it again at the
+ * new rate. *dl, *dr: TIME and the right echo's, at most what the line holds now (MOD's drift and the taps inside it:
+ * DLY_EDGE). Returns whether the block is dly_lo's (not plain at the full rate) */
+static __attribute__((noinline)) int dly_rate(uint32_t *dl, uint32_t *dr, uint32_t dro, int png, int gr)
+{
+    uint32_t need = png ? *dl * 2u : *dl + dro, s, span;
+    int fresh = 0;
+    s = dly_stage(need, fx.primed ? fx.dr_sh : 0u);
+    if (!fx.primed) {
+        fx.dr_sh = (uint8_t)s;
+        fx.dsw = 0; fx.din_g = 0;
+        memset(&dlo, 0, sizeof dlo);
+    } else if (fx.dsw == 2u) {                          /* clearing: a chunk this block, the last one: the new rate */
+        dly_line_clear(fx.dsw_n * DLY_CLR, DLY_CLR);
+        if (++fx.dsw_n >= DLY_LEN / DLY_CLR) {
+            fx.dr_sh = fx.dsw_to;                       /* (the rate asked for when the change began: TIME back
+                                                         * meanwhile, hysteresis holds it there, no second gap) */
+            fx.dsw = 0; fx.din_g = DSW_FADE;
+            dly_lo_reset();
+            fresh = 1;
+        }
+    } else if (!fx.dsw && s != fx.dr_sh) {
+        fx.dsw = 1;
+        fx.dsw_n = DSW_FADE;
+        fx.dsw_to = (uint8_t)s;
+    }
+    span = DLY_SPAN(fx.dr_sh);
+    if (png && *dl > span / 2u) *dl = span / 2u;
+    if (*dl > span) *dl = span;
+    *dr = *dl + dro;
+    if (*dr > span) *dr = span;
+    if (fresh) {                                        /* (the new line: the read points where they are, no fade) */
+        fx.dl_now = *dl; fx.dr_now = *dr; fx.gr_on = (uint8_t)gr;
+    }
+    fxg_hold = *dl > FXG_QUIET * CTL ? *dl / CTL + 2u : 0u;
+    return fx.dr_sh || fx.dsw || fx.din_g;
 }
 /* (0.6.81) a value's step a sample from cur toward to: a quarter of the way over the block, one at least (never past) */
 static int32_t fx_glide(int32_t cur, int32_t to, uint32_t n)
@@ -1084,10 +1394,7 @@ static inline __attribute__((always_inline)) void fx_buses(const int32_t *cho_in
     int32_t fb = dly_fb(GFX(GF_DFDBK)), tn = GFX(GF_DCOL) - 64;   /* (JIANT 0.4) TONE: one knob, low-pass .. open .. low cut */
     int32_t wm, dwm, dig = song.g[G_DTYPE] == 1;        /* (0.6.89: TONE in the middle: each repeat the very copy) */
     tone_t dtn, rtn;
-    int dton = dig ? tone_set(&dtn, tn > 63 ? 63 : tn, 113, 43, 18, 93, 5793, 0)   /* (0.6.90) DIGITAL: TONE plain (Q 0.7) */
-                   : tone_set(&dtn, tn > 63 ? 63 : tn, 113, 43, 18, 93, 2900, 1);   /* (0.6.89 half the level evened: the band
-                                                         * at the cutoff above unity, the extremes self-oscillate) */
-    if (!dton) fx.dt1 = fx.dt2 = 0;   /* (8 kHz .. 250 Hz | 73 Hz .. 3 kHz, Q 1.4) */
+    int dton;
     int32_t dmix = GFX(GF_DMIX) * 258;
     int32_t cdepth = GFX(GF_CDEPTH) * 6, rt;
     uint32_t cinc = LFO_INC[GFX(GF_CRATE) & 127] / CTL;
@@ -1095,17 +1402,25 @@ static inline __attribute__((always_inline)) void fx_buses(const int32_t *cho_in
     int32_t gr = !sys_load && (song.g[G_DPIT] || song.g[G_DSPRY]);   /* (JIANT) the GRAIN delay (LOAD LITE / ECO: plain) */
     /* (0.6.90) PING-PONG (not with the GRAIN): the line read at TIME (left) and twice TIME (right, the loop's tap), the
      * loop's gain squared, the right x FEEDBK: the repeats left, right, left .., each FEEDBK softer; TIME at most half
-     * the line (0.74 s); WIDE out of it */
+     * the line (0.8.4: of its longest, at a quarter rate, dly_rate); WIDE out of it */
     int32_t png = song.g[G_DPING] == 1 && !gr, fb2 = (int32_t)(((int64_t)fb * fb) >> 15);
     if (dig && fb > 32767) fb = 32767;                  /* (0.6.90) DIGITAL: 100 % at most, a repeat held for ever */
     if (dig && fb2 > 32767) fb2 = 32767;
-    if (png && dl > (DLY_LEN - 4u) / 2u) dl = (DLY_LEN - 4u) / 2u;
     int32_t cho = sys_load != LOAD_ECO;                /* (0.6.30) LOAD ECO: no chorus */
     int32_t cs = song.g[G_CSTER], cw = 80 + wd / 2;    /* (0.6.9) the chorus's side: 0 as before, - to mono, + ~2x */
     cw = cs >= 0 ? cw + cs * 2 : (cw * (64 + cs)) >> 6;
-    uint32_t dr = dl + (wd && !png ? div_samples(3) * (uint32_t)wd / 127u : 0u);   /* the right echo: up to 1/32 later */
-    if (dr >= DLY_LEN)
-        dr = DLY_LEN - 1u;
+    uint32_t dro = wd && !png ? div_samples(3) * (uint32_t)wd / 127u : 0u, dr;   /* the right echo: up to 1/32 later */
+    int dly_lo_on = dly_rate(&dl, &dr, dro, png, gr);   /* (0.8.4) the line's rate; TIME within what it holds */
+    fxg_fb = fb > 0;
+    {   /* (0.8.4) TONE's filter at the line's rate: the same Hz an octave (14 of the table) up the table each halving */
+        int32_t to = 14 * (int32_t)fx.dr_sh;
+        dton = dig ? tone_set(&dtn, tn > 63 ? 63 : tn, 113 + to, 43 + to, 18 + to, 93 + to, 5793, 0)   /* (0.6.90) DIGITAL: TONE
+                                                         * plain (Q 0.7) */
+                   : tone_set(&dtn, tn > 63 ? 63 : tn, 113 + to, 43 + to, 18 + to, 93 + to, 2900, 1);   /* (0.6.89 half the level
+                                                         * evened: the band at the cutoff above unity, the extremes
+                                                         * self-oscillate) */
+    }
+    if (!dton) fx.dt1 = fx.dt2 = 0;   /* (8 kHz .. 250 Hz | 73 Hz .. 3 kHz, Q 1.4) */
     /* (0.6.81) a new read point (TIME, WIDE) or read (the GRAIN in or out): faded into over DXF_LEN samples from the
      * old one, the next change once that fade is done (each step of the knob jumped the read: a click) */
     if (!fx.primed) {
@@ -1135,8 +1450,10 @@ static inline __attribute__((always_inline)) void fx_buses(const int32_t *cho_in
         rev_in = rpre_out;
     } else
         fx.rt1 = fx.rt2 = 0;
-    if (song.g[G_RPRE] > 0 && song.g[G_RTYPE] <= 1) {   /* (JIANT) the reverb's pre-delay (in place; RESO: PITCH;
-                                                         * 0.6.12: SHIMMER, CLOUD: AIR) */
+    if (song.g[G_RPRE] > 0 && song.g[G_RTYPE] <= 1 && fx.rtype <= 1u) {   /* (JIANT) the reverb's pre-delay (in place;
+                                                         * RESO: PITCH; 0.6.12: SHIMMER, CLOUD: AIR). (0.8.4) Its line in
+                                                         * rev_x: not in a change's block from SHIMMER or CLOUD (their
+                                                         * line is there until the change clears it); else the same */
         uint32_t pd = (uint32_t)song.g[G_RPRE] * 20u;   /* (ms -> half-rate samples: 2000 at 100) */
         for (i = 0; i < n; i++) {                       /* half rate: two samples averaged in, read back between */
             uint32_t h = fx.rpre_w >> 1;
@@ -1149,6 +1466,13 @@ static inline __attribute__((always_inline)) void fx_buses(const int32_t *cho_in
             fx.rpre_w++;
         }
         rev_in = rpre_out;
+    }
+    if (dly_lo_on) {                                    /* (0.8.4) the delay at half / a quarter rate, or changing its
+                                                         * rate: its block first (dly_lo), the loop below takes it */
+        dlyk_t k;
+        k.fb = fb; k.fb2 = fb2; k.hk = hk << fx.dr_sh; k.dig = dig; k.dton = dton; k.png = png; k.wd = wd;
+        k.tn = dtn;
+        dly_lo(dly_in, dlo_x, dlo_xr, n, &k, wm, dwm);
     }
     for (i = 0; i < n; i++) {
         int32_t y = 0, x, side = 0, xr = 0, wr = 0;
@@ -1164,57 +1488,63 @@ static inline __attribute__((always_inline)) void fx_buses(const int32_t *cho_in
             side += sd;
         }
         fx.cho_w++;
-        /* delay with a low-passed (COLR) and low-cut (HPF) feedback */
-        if (fx.gr_on || (fx.dl_xf && fx.gr_old))
-            dly_grain_adv();
-        wm += dwm;
-        x = fx.gr_on ? dly_grain(fx.dl_now) : dly_rd(fx.dl_now, wm);
-        if (fx.dl_xf) {                                 /* (0.6.81) the old read point fading out */
-            int32_t xo = fx.gr_old ? dly_grain(fx.dl_old) : dly_rd(fx.dl_old, wm);
-            x += ((xo - x) * (int32_t)fx.dl_xf) >> DXF_LOG2;
-            fx.dl_xf--;
-        }
-        if (png) {                                      /* (0.6.90) PING-PONG: the right, twice as far back */
-            xr = dly_rd(fx.dl_now * 2u, wm);
-            if (fx.dl_xf) {
-                int32_t xo = dly_rd(fx.dl_old * 2u, wm);
-                xr += ((xo - xr) * (int32_t)fx.dl_xf) >> DXF_LOG2;
-            }
-            wr = 2;
-        } else if (wd || fx.dr_xf || fx.dr_now != fx.dl_now) {   /* (JIANT) the right echo later (0.6.81: on until it has
-                                                         * faded back onto the left's, WIDE to 0 stepped; read before
-                                                         * the line is written, as the left: at WIDE 0, the same sample) */
-            xr = dly_rd(fx.dr_now, wm);
-            if (fx.dr_xf) {
-                int32_t xo = dly_rd(fx.dr_old, wm);
-                xr += ((xo - xr) * (int32_t)fx.dr_xf) >> DXF_LOG2;
-                fx.dr_xf--;
-            }
+        if (dly_lo_on) {                                /* (0.8.4: dly_lo's, the right echo always there) */
+            x = dlo_x[i];
+            xr = dlo_xr[i];
             wr = 1;
+        } else {
+            /* delay with a low-passed (COLR) and low-cut (HPF) feedback */
+            if (fx.gr_on || (fx.dl_xf && fx.gr_old))
+                dly_grain_adv();
+            wm += dwm;
+            x = fx.gr_on ? dly_grain(fx.dl_now, 0u) : dly_rd(fx.dl_now, wm);
+            if (fx.dl_xf) {                                 /* (0.6.81) the old read point fading out */
+                int32_t xo = fx.gr_old ? dly_grain(fx.dl_old, 0u) : dly_rd(fx.dl_old, wm);
+                x += ((xo - x) * (int32_t)fx.dl_xf) >> DXF_LOG2;
+                fx.dl_xf--;
+            }
+            if (png) {                                      /* (0.6.90) PING-PONG: the right, twice as far back */
+                xr = dly_rd(fx.dl_now * 2u, wm);
+                if (fx.dl_xf) {
+                    int32_t xo = dly_rd(fx.dl_old * 2u, wm);
+                    xr += ((xo - xr) * (int32_t)fx.dl_xf) >> DXF_LOG2;
+                }
+                wr = 2;
+            } else if (wd || fx.dr_xf || fx.dr_now != fx.dl_now) {   /* (JIANT) the right echo later (0.6.81: on until it has
+                                                             * faded back onto the left's, WIDE to 0 stepped; read before
+                                                             * the line is written, as the left: at WIDE 0, the same sample) */
+                xr = dly_rd(fx.dr_now, wm);
+                if (fx.dr_xf) {
+                    int32_t xo = dly_rd(fx.dr_old, wm);
+                    xr += ((xo - xr) * (int32_t)fx.dr_xf) >> DXF_LOG2;
+                    fx.dr_xf--;
+                }
+                wr = 1;
+            }
+            fx.dly_lp = x;                                  /* (0.6.89: no fixed low-pass in the loop; the DC block's
+                                                             * state 8 bits finer below: rounded coarse, it held a DC of up
+                                                             * to 364 in the loop) */
+            { int32_t ax = x < 0 ? -x : x; if (ax > fxg_dpk) fxg_dpk = ax; }   /* (the delay's own level: fx_gate) */
+            if (wr == 2) {                                  /* (PING-PONG: the loop from the right tap; its level, too) */
+                int32_t ax = xr < 0 ? -xr : xr; if (ax > fxg_dpk) fxg_dpk = ax;
+                fx.dly_hp += (((xr << 8) - fx.dly_hp) * hk + 16384) >> 15;
+            } else
+                fx.dly_hp += (((x << 8) - fx.dly_hp) * hk + 16384) >> 15;
+            {
+                int32_t lf = (wr == 2 ? xr : x) - ((fx.dly_hp + 128) >> 8), w;
+                if (dton) lf = tone_run(&dtn, lf, &fx.dt1, &fx.dt2);
+                w = (dly_in[i] >> 1) + mulq15(clamp(lf, -32767, 32767), wr == 2 ? fb2 : fb);
+                dly_buf[fx.dly_w & (DLY_LEN - 1u)] = (int16_t)(dig ? clamp(w, -32767, 32767) : dly_sat(w));   /* (DIGITAL: clean, a clip
+                                                             * at full scale only) */
+            }
+            if (wr == 2)
+                xr = mulq15(clamp(xr, -65535, 65535), fb > 32767 ? 32767 : fb);   /* (the right: one repeat later, FEEDBK softer) */
+            fx.dly_w++;
         }
-        fx.dly_lp = x;                                  /* (0.6.89: no fixed low-pass in the loop; the DC block's
-                                                         * state 8 bits finer below: rounded coarse, it held a DC of up
-                                                         * to 364 in the loop) */
-        { int32_t ax = x < 0 ? -x : x; if (ax > fxg_dpk) fxg_dpk = ax; }   /* (the delay's own level: fx_gate) */
-        if (wr == 2) {                                  /* (PING-PONG: the loop from the right tap; its level, too) */
-            int32_t ax = xr < 0 ? -xr : xr; if (ax > fxg_dpk) fxg_dpk = ax;
-            fx.dly_hp += (((xr << 8) - fx.dly_hp) * hk + 16384) >> 15;
-        } else
-            fx.dly_hp += (((x << 8) - fx.dly_hp) * hk + 16384) >> 15;
-        {
-            int32_t lf = (wr == 2 ? xr : x) - ((fx.dly_hp + 128) >> 8), w;
-            if (dton) lf = tone_run(&dtn, lf, &fx.dt1, &fx.dt2);
-            w = (dly_in[i] >> 1) + mulq15(clamp(lf, -32767, 32767), wr == 2 ? fb2 : fb);
-            dly_buf[fx.dly_w & (DLY_LEN - 1u)] = (int16_t)(dig ? clamp(w, -32767, 32767) : dly_sat(w));   /* (DIGITAL: clean, a clip
-                                                         * at full scale only) */
-        }
-        if (wr == 2)
-            xr = mulq15(clamp(xr, -65535, 65535), fb > 32767 ? 32767 : fb);   /* (the right: one repeat later, FEEDBK softer) */
         if (wr) {                                       /* mid and side */
             side += mulq15(x - xr, fx.dm_cur);
             x = (x + xr) >> 1;
         }
-        fx.dly_w++;
         y += mulq15(x << 1, fx.dm_cur);
         wet[i] = y;
         if (side) {                                     /* (the side: left +, right -) */
@@ -1229,12 +1559,13 @@ static inline __attribute__((always_inline)) void fx_buses(const int32_t *cho_in
                                                          * all SPRING */
     if (rt != fx.rtype) {                               /* the model changed: the old one's block fades out, */
         int32_t *t = fx_tmp, g = 65536, d = 65536 / (int32_t)n;   /* its buffers are cleared, the new */
-        for (i = 0; i < n; i++)                                     /* one starts from silence */
-            t[i] = 0;
+        for (i = 0; i < n; i++)                                     /* one starts from silence (never two */
+            t[i] = 0;                                               /* at once: 0.8.4, their lines shared) */
         rev_run(fx.rtype, rev_in, t, n);
         for (i = 0; i < n; i++, g -= d)
             wet[i] += mulq16(t[i], (uint32_t)g);
-        rev_clear();
+        rev_state_clear();
+        rev_line_clear(rev_line_dirty(fx.rtype, rt));
         fx.rtype = (uint8_t)rt;
         fx_gate(wet, n);
         return;
@@ -1761,13 +2092,11 @@ static __attribute__((noinline)) void fx_trip(uint32_t c1, uint32_t n)
         fxq_c[i] = fxq_d[i] = fxq_r[i] = 0;
     for (i = 0; i < DLY_LEN; i++)
         dly_buf[i] = 0;
+    memset(&dlo, 0, sizeof dlo);                         /* (0.8.4: the delay's half-band filters; a rate change left) */
+    fx.dsw = 0; fx.din_g = 0;
     for (i = 0; i < CHO_LEN; i++)
         cho_buf[i] = 0;
-    for (i = 0; i < RPRE_LEN; i++)
-        rpre_buf[i] = 0;
-    for (i = 0; i < CL_LEN; i++)
-        cloud_buf[i] = 0;
-    rev_clear();
+    rev_clear();                                         /* (the pre-delay's line too: rev_x) */
     fx.dt1 = fx.dt2 = fx.rt1 = fx.rt2 = 0;
     fx.dly_lp = fx.dly_hp = fx.rf_lp = fx.rpre_s = fx.cl_lp = fx.cl_half = 0;
     fx_bad = 0;

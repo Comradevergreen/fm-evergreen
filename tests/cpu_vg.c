@@ -9,6 +9,7 @@
  *   eng/<ENGINE>   one part, 8 notes held (VOICE: 4), the engine's heaviest preset (hostsim.c's list)
  *   eng/ANIMAL.<MODE>  (0.8.3) ANIMAL's five sources at their heaviest: 8 notes, no gaps (GROUP HOLD), every option on
  *   rev/<TYPE>     a pad soaked in the reverb, each REVERB TYPE (ROOM SPRING SHIMR RESO CLOUD)
+ *   dly/<RATE>     (0.8.4) a pad into the delay, its line at the full rate, half, a quarter (fx.c dly_lo)
  *   mix/full       six parts: four ANALOG / FM6 chords, drums, every FX on
  *   seq/plain      the sequencer: six tracks of chords / hits on every step at 200 BPM
  *   seq/heavy      .. with two step components on each (ARP SEQ / ECHO x8, RAND / OCT), DIV, LEN, chord glides
@@ -142,6 +143,16 @@ int main(void)
         trk[0].p[P_REV] = 127;
         snprintf(name, sizeof name, "rev/%s", RT[i]);
         vg_section(name);
+    }
+    for (i = 0; i < 3u; i++) {                          /* (0.8.4) the delay's line at each rate (fx.c dly_lo): 634 ms
+                                                         * full, 1.03 s half, 2.13 s a quarter (DLY_LEN 32768) */
+        static const char *const DN[3] = {"dly/full", "dly/half", "dly/quarter"};
+        static const uint8_t DT[3] = {DT_FREE + 40, DT_FREE + 44, DT_FREE + 50};
+        vg_quiet();
+        song.g[G_DTIME] = DT[i]; song.g[G_DFDBK] = 70; song.g[G_DMOD] = 20;
+        vg_part(0, ENGI_ANALOG, 0, 4);
+        trk[0].p[P_DLY] = 127;
+        vg_section(DN[i]);
     }
     vg_quiet();
     for (i = 0; i < 4u; i++) {

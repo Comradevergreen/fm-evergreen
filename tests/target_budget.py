@@ -26,6 +26,7 @@ FUNCS = ["analog_render", "digital_render", "digital_render_legacy", "digital_re
          "mod_begin", "mod_voice", "mod_end",                 # the modulation matrix (mod.c), called when active
          "perf_begin", "perf_mute", "perf_pre", "perf_block", "perf_master",   # the FX layer (perform.c), when busy
          "rev_room", "rev_spring", "dist_amp", "dx_hands_step", "drw_dust",                # the reverb bus (fx.c): REVERB TYPE ROOM / SPRING
+         "dly_lo",                                          # (0.8.4) the delay at half / a quarter rate (fx.c)
          "animal_render"]                                   # (JIANT 0.8.3) ANIMAL (eng_animal.c): its five sources (one loop a voice)
 # built only with FELUCCA_FM4=1 (DIGITAL, src/eng_digital.c; not in the default build, so not in BUDGET): absent,
 # they are skipped; present, checked against these (their budget lines until the engine was retired in 1.0)

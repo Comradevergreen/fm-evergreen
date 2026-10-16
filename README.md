@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.8.3).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.8.4).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 > ⚡ **New in 0.6.85 – 0.6.92: a song generator you steer, a compact sequencer that breathes, a delay that feeds back.**
 > - **GEN (HOME + SELECT)**: a screen of three pages — GENRE (43 genres or RANDOM), SEED, ENERGY, FORM (loop, parts,
@@ -239,8 +239,9 @@ SONG REC. The song's END plays it once (STOP), x2..x8 or forever (LOOP).
 
 ### Effects and master
 - **DIST** per track with TYPE (SOFT, HARD, FOLD, CRUSH, RECT) and TONE; the **SLICER** on a bus: T1–T6 and the FX returns switched in (SL BUS), a pitch sequence for its repeats (SL PITCH).
-- **Delay**: synced or free TIME (5 ms to 1.48 s), a single TONE, **grain delay** with PITCH and SPRAY (at long times
-  too), stereo WIDTH.
+- **Delay**: synced or free TIME (5 ms to 2.95 s, every division its real length up to 2.97 s; past 0.74 s the line at
+  half rate, past 1.49 s a quarter: the long tails darker, as a tape's), a single TONE, **grain delay** with PITCH and
+  SPRAY (at long times too), stereo WIDTH.
 - **Reverb** with five models: ROOM, SPRING, **SHIMR** (shimmer, goes up an octave on every pass), **RESO** (four
   strings tuned to the song's scale) and **CLOUD** (a granular wash that blooms into a tail and can freeze); with pre-delay, modulation,
   filter and width; **chorus**, a three-voice stereo ensemble.
@@ -535,6 +536,106 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### v0.8.4
+- **RAM freed for what comes next** (the owner: room for assignable FX buses). The sound is the same (every golden
+  render bit for bit), projects and backups unchanged.
+- **The reverbs share their lines.** The five models never run at once: a TYPE change fades the old model's block out
+  and the new one starts from silence, never a crossfade of two. So CLOUD's line (32 KB), SHIMMER's (4 KB) and the
+  pre-delay of ROOM and SPRING (4 KB) now live in one 32 KB place: 8 KB of the pool back. A change silences what the
+  next model reads there: all of it going into CLOUD, SHIMMER's part going into SHIMMER, the pre-delay's part leaving
+  SHIMMER or CLOUD (also through RESO: CLOUD → RESO → ROOM finds nothing of CLOUD's). Between ROOM, SPRING and RESO the
+  pre-delay runs on as it always did. In the one block of a change from SHIMMER or CLOUD the pre-delay is skipped (its
+  line still holds theirs; that block only fed the model fading out, never heard). The change itself is as before: the
+  old tail cut with a 32-sample fade (0.73 ms), no click; it applies however TYPE changes (knob, automation / motion,
+  a project or song section, MIDI, the editor, LOAD LITE / ECO).
+- **Coming back to CLOUD starts an empty cloud**: its line used to be kept from the last time (a frozen cloud came
+  back after a trip to another TYPE or LOAD LITE), and its tone's state was not cleared on a change (a residue fed the
+  next cloud's line). Both silenced now, as the other models always were.
+- **Main RAM** (.data + .bss, the tightest region): the FM6 user-preset patches (3.7 KB, back in the pool where they
+  were before 0.6.53) and the project's serialized scratch (proj_wire, 3.8 KB) moved to the pool, the fonts' decode
+  tables (1.5 KB) to LOWBUF. All main-loop only: no interrupt reaches them (checked on the call graph from the audio
+  ISR, TIMER5 and the second core); every region is zeroed at boot alike.
+- **What it costs**: .data + .bss 93952 → 84832 B (13.5 KB free, was 4.3); the pool 311860 → 311236 B (spare 8640 →
+  9248 B; undoing the two moves would give 7.5 KB more there); LOWBUF 26514 → 28062 B of 28672; RAM code 21580 → 21640
+  B; flash +124 B. CPU: the target's render loops identical (tests/target_budget), callgrind +1 instruction a sample
+  (+0.05 %) on every section; a change into CLOUD clears 32 KB once, ~6000 instructions in that block (which runs no
+  new model). tests/reverb_test.c: every change between any two models and through a third, PRE on: no click, and
+  silence after (it fails, loud, without the clears).
+- **The long delay** (the owner: "it's important that it can have a long tail: resample the tail and make it
+  lighter"). Every TIME now plays its real length up to **2.97 s**. Before, everything past 1.49 s was cut to
+  1.49 s: 1/2 below 81 BPM, 1/1 below 162 BPM, 2BAR and 4BAR always. Now 1/1 at 120 BPM is 2 s, 1/2 at 60 BPM is 2 s,
+  and 2BAR fits from 162 BPM. Free times go on past 1.48 s: 1.67, 1.89, 2.13, 2.40, 2.71 and 2.95 s (appended, so a
+  project's TIME means what it did; a matrix slot on D.TIM keeps its depth). PING-PONG now reaches 1.49 s (was 0.74).
+  The delay's line now runs at three rates, chosen from TIME:
+
+  | TIME | the line | the repeats' top end |
+  | --- | --- | --- |
+  | up to 0.74 s | the full rate | full, as before |
+  | 0.74 – 1.49 s | half rate | flat to 9.5 kHz, -1 dB at 10 kHz, -3 dB at 10.35 kHz |
+  | 1.49 – 2.97 s | a quarter rate | flat to 4.75 kHz, -1 dB at 5 kHz, -3 dB at 5.15 kHz |
+
+  The input goes down through a half-band decimator (55 taps, 14 distinct values, Q14) and the output comes back up
+  through the same filter, the way CLOUD and the pre-delay already store their lines at half rate. The whole loop runs
+  at the line's rate: the reads, MOD, the GRAIN, FEEDBK, TONE (its filter moved up the table to the same Hz). So the
+  rate limits the band once, and the repeats do not get darker with each pass.
+  Measured (tests/delay_test.c, echoes of sines through DIGITAL):
+  - any alias or image landing in the pass band is under -75 dB;
+  - the images of a pass-band tone are -75 dB;
+  - the residue of a 1 kHz sine is -92 dBFS at half rate, -86 at a quarter and -93 at full rate; after 8 repeats all
+    three are at -78;
+  - DIGITAL FEEDBK 100 still holds its level (+0.05 dB after 4 repeats);
+  - the first echo is 1.2 ms (half) or 3.7 ms (quarter) late, and the repeats stay exactly TIME apart.
+
+  A tone between 9.5 and 12.85 kHz is in the filter's transition band and leaves a weaker image in that same band
+  (10 kHz: -26 dB, at 12.05 kHz). That is the half-band's nature, and it sits above the pass band. For
+  comparison, a tape echo or a BBD / PT2399 pedal loses its top end as the time grows too, typically more than this.
+- **A change of rate never clicks.** When TIME crosses 0.74 s or 1.49 s (the knob, the tempo, automation, a project or
+  section load, an external clock), the delay fades out over 2.9 ms. The line is then cleared, 32 KB a block as
+  rev_line_clear does, and starts again at the new rate with its input faded in. You hear a gap of about 6 ms plus the
+  echo time; the echoes that were in the line are dropped. Going back to the faster rate needs TIME 1/32 inside its
+  reach, so a clock wavering at a boundary restarts the line once, not every beat. Tests: TIME swept 634 ms → 2.95 s
+  and back, the tempo 120 → 60 → 120 → 40 → 200 → 70 at 1/2, and a jump from 1/8 to 4BAR and back, each while a sine
+  plays: the largest sample step stays within the echo's own; nothing of the old line is heard after a change.
+- **Long echoes come back at their level.** Before, the FX gate closed after 1.5 s with nothing sent, so a 2 s echo
+  came back faded in. For TIME past 1.5 s the gate now stays open while an echo is still due (a send, or a repeat
+  above the floor fed back, within TIME). Shorter times are as before.
+- **Fixed: the delay read past its end at the longest TIME with MOD on** (found in the RAM pass above). The wow's
+  offset and the Hermite's older taps wrapped round to the newest samples, so the sound being sent leaked into the
+  wet output. With the wow at its peak it measured -32 dB at MOD 20, -28 dB at MOD 42 and -7.5 dB at MOD 127 (the
+  read wraps; PING-PONG and WIDE too). Every read now stays DLY_EDGE (8 samples of the line) inside its end: MOD 127's
+  4.46 samples of drift, the two older taps and one to spare. tests/delay_test.c checks it at 1/1 at 120 BPM, at the
+  old 65535-sample cap, at each rate's own end and at the longest, plain, PING-PONG and WIDE: nothing comes out before
+  the echo. It fails on 0.8.4's first commit (seven cases).
+- **Memory: the line is half the size.** Its length is now one constant, DLY_LEN (params.c), set to 32768 samples
+  (64 KB, was 128 KB). With 65536 the rates would reach 1.49 / 2.97 / 5.94 s. Chosen as the plan said: the half rate
+  measures clean (above) and no golden render changed. All 149 renders are bit for bit as before, with either size
+  (none goes past 0.74 s). The cost of 64 KB is the band of 0.74 – 1.49 s: 9.5 kHz instead of the full range. That
+  includes 1/2 at 81 – 161 BPM (1 s at 120), 1/1 from 162 BPM up and the 0.8.3 free times 808 ms –
+  1.48 s. Above 1.49 s it is a quarter rate where 128 KB would give half: 1/1 at 120 BPM has a 4.75 kHz top end,
+  where 128 KB would give 9.5 kHz. And 2.97 s is the longest instead of 5.94 s.
+- **What it costs**:
+  - Pool: 311236 → 247584 B, spare 9248 → 72928 B, so 63.7 KB back. The half-band filters' states and the block
+    (1.9 KB) are in the pool too.
+  - .data + .bss: 84832 → 84848 B. RAM code: 21640 → 21676 B. Flash: +4216 B, mostly dly_lo, the loop at the slower
+    rates, kept out of the RAM copy.
+  - CPU at the full rate is the same: fx_run0's loop is not larger (tests/target_budget), and callgrind is ±1
+    instruction a sample on every old section.
+  - At the slower rates (callgrind, a pad into the delay, new sections dly/full, dly/half, dly/quarter): 1447, 1605
+    and 1649 instructions a sample, so half rate is +158 (~+2.7 % of the device at reverb_test's ratio) and a
+    quarter +202 (~+3.4 %). dly_lo's own target budget line is added. When the right echo is the left's (no WIDE,
+    PING), only one channel is interpolated.
+  - A rate change clears the line once, 32 KB a block for 2 blocks.
+- **Found, not changed** (for the owner to decide): the FX gate (0.6.14) also closes in the gaps between sparse
+  repeats once nothing has been sent for 1.5 s, at any TIME. Each later repeat then comes back faded in over ~23 ms.
+  A pluck through 1/4 at 120 BPM loses ~5.6 dB on the peak of every repeat after 1.5 s (FEEDBK 50 and 80; the same
+  before and after this change). Giving every TIME the long delay's hold (fx.c fxg_hold) would fix it, but would
+  change the golden renders with a delay send in their tails.
+- **A recorded note made longer or shorter** (a tester: only step recording set a length). SEQ > STEP's KNOB 3 (TIME)
+  is one range, REST ← TIE ← NOTE → 2 ST … 16 ST: right lengthens the note at the cursor (TIEs after it, a chord whole,
+  round past the pattern's end as it plays, up to 16 steps or LEN; the next note stops it: NEXT NOTE), left shortens
+  it, then TIE, REST; the card says 3 ST, LENTE's STEP LEN 3. DRUM tracks, locks, step recording and the project
+  format unchanged.
 
 ### v0.8.3
 - **GEN composes** (the owner: "the melodies too random, little musicality; use the CHORD and SCALE pages"). The

@@ -263,7 +263,9 @@ static __attribute__((noinline)) void macro_master(void)
                 off[d - MD_CLIP] += (v * 100) >> 15;
             else {                                      /* (0.7.0) an FX bus global: its whole range */
                 const param_desc_t *pd = &GP[GFX_ID[d - MD_DTIME]];
-                off[d - MD_CLIP] += (v * (pd->max - pd->min)) >> 15;
+                off[d - MD_CLIP] += (v * (d == MD_DTIME ? DT_FREE + 47 : pd->max - pd->min)) >> 15;   /* (0.8.4: TIME's
+                                                         * range as it was, its free times since appended: a slot's
+                                                         * depth the same) */
             }
         }
     }
