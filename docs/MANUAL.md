@@ -1037,7 +1037,7 @@ sounds picked with PRESETS, SEQ TOOLS actions, or ordinary knob turns. It is not
 
 ### Delay
 
-- **DLY**: **TIME** (synced divisions 4BAR … 1/32, or free times from 5 ms to 1.48 s), **FEEDBK**, **TONE** (below the
+- **DLY**: **TIME** (synced divisions 4BAR … 1/32, or free times from 5 ms to 2.95 s), **FEEDBK**, **TONE** (below the
   middle darker, above thinner), **MIX**. FEEDBK behaves like an analog delay's (a tape, a PT2399; 0.6.86, 0.6.89):
   with **TONE in the middle (50 %)** each repeat is a copy of what went in; at **100 %** the echoes hold their level
   for a long time (they fade very slowly and are never cut off), and **past 100 %** they grow into themselves and
@@ -1045,6 +1045,25 @@ sounds picked with PRESETS, SEQ TOOLS actions, or ordinary knob turns. It is not
   **TONE** is resonant: from the middle down a low-pass sweeping from ~8 kHz to ~250 Hz, from the middle up a low cut
   sweeping from ~70 Hz to ~3 kHz, both with a peak at the cutoff, so the repeats get darker or thinner and narrow to
   a band each pass (dub style), and at either end with FEEDBK high the loop self-oscillates at that band.
+- **Long times** (0.8.4): every division plays its real length up to **2.97 s**, the longest (before, anything past
+  1.49 s was cut to 1.49 s: 1/2 below 81 BPM, 1/1 below 162 BPM, 2BAR, 4BAR). To fit them the delay's line runs at
+  three rates, chosen by TIME on its own:
+
+  | TIME | Line | Top end of the repeats |
+  | --- | --- | --- |
+  | up to 0.74 s | full rate | full range, as before |
+  | 0.74 s – 1.49 s | half rate | flat to ~9.5 kHz, -3 dB at ~10.4 kHz |
+  | 1.49 s – 2.97 s | a quarter rate | flat to ~4.7 kHz, -3 dB at ~5.2 kHz |
+
+  So the longer the time, the darker the tail, like a tape or bucket-brigade delay. Only the top end is lost:
+  there is no grit or aliasing (anything folded back is more than 70 dB down) and no extra noise. The rate is
+  applied once, so the repeats do not get darker with each pass (only TONE and FEEDBK do that). MOD, the GRAIN delay,
+  PING, WIDE, TYPE and TONE work the same at every rate. On the two slower rates the first echo comes ~1 ms (half)
+  or ~4 ms (quarter) late; the repeats stay exactly TIME apart. When TIME crosses 0.74 s or 1.49 s (knob, tempo,
+  automation, a project or section load, an external clock) the delay fades out over 3 ms and starts again empty.
+  That leaves a short gap: the echoes already in the line are dropped, but there is no click. A clock that wavers
+  around a boundary does not restart it again and again. Long echoes come back at full level even when nothing else
+  is playing.
 - **DLY 2**: **WIDE** (the right echo later), and the **GRAIN** delay: **PITCH** (±12 semitones per repeat) and
   **SPRAY**. With LOAD LITE or ECO the GRAIN delay plays as a plain delay (the card says LITE / ECO). **MOD**
   (0.6.86): the tape's drift, slow WOW and fast FLUTTER on the repeats (0, the default: none, exact copies; ~20 a
@@ -1052,7 +1071,8 @@ sounds picked with PRESETS, SEQ TOOLS actions, or ordinary knob turns. It is not
 - **DLY 3** (0.6.90): **TYPE**: **ANALOG** (the default: the soft saturation, the resonant TONE, FEEDBK past 100 %
   self-oscillating) or **DIGITAL** (clean repeats, TONE a plain filter, FEEDBK 100 % at most: past it the repeats
   just hold, never grow). **PING**: **ON** sends the repeats left, right, left … across the stereo field, each one
-  FEEDBK softer (TIME up to 0.74 s; WIDE and the GRAIN delay out of it). Saved with the project.
+  FEEDBK softer (TIME up to 1.49 s since 0.8.4, the right side at twice TIME; WIDE and the GRAIN delay out of it).
+  Saved with the project.
 
 ### Reverb (five models)
 

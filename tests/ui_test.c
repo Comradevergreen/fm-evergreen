@@ -7638,21 +7638,25 @@ static int test_div_order(void)
         }
         ok &= seen == (d == &GP[G_DTIME] ? (1 << DT_FREE) - 1 : (1 << (d->max - d->min + 1)) - 1);
     }
-    {   /* (JIANT 0.4) TIME past the last division (1/32): the free times, 5 ms .. 1.48 s, each longer, the end holds */
-        int32_t v = 3, n;
+    {   /* (JIANT 0.4) TIME past the last division (1/32): the free times, 5 ms .. 1.48 s, each longer, the end holds;
+         * (0.8.4) past 1.48 s more, to the longest the delay's line holds (fx.c DLY_MAX), the ones before as they were */
+        int32_t v = 3, n, nf = (int32_t)NELEM(DTIME_MS);
         uint32_t prev = 0;
         int okf = 1;
-        for (n = 0; n < 48; n++) {
+        for (n = 0; n < nf; n++) {
             v = param_turn(&GP[G_DTIME], v, 1);
             okf &= v == DT_FREE + n && DTIME_MS[n] > prev;
             prev = DTIME_MS[n];
         }
         okf &= param_turn(&GP[G_DTIME], v, 1) == v && DTIME_MS[0] == 5u && DTIME_MS[47] == 1480u &&
-               str_eq(N_DTIME[DT_FREE], "5ms") && str_eq(N_DTIME[57], "1.48s");
+               str_eq(N_DTIME[DT_FREE], "5ms") && str_eq(N_DTIME[57], "1.48s") && nf > 48 &&
+               NELEM(N_DTIME) == (uint32_t)(DT_FREE + nf) && DTIME_MS[nf - 1] * 441u / 10u <= DLY_MAX;
         song.g[G_DTIME] = DT_FREE + 47;
         okf &= delay_samples() == 1480u * 441u / 10u;
+        song.g[G_DTIME] = (int16_t)(DT_FREE + nf - 1);
+        okf &= delay_samples() == DTIME_MS[nf - 1] * 441u / 10u;
         song.g[G_DTIME] = 1;
-        bad += check("delay TIME: past 1/32 the free times 5 ms .. 1.48 s, each longer; the delay that long", okf);
+        bad += check("delay TIME: past 1/32 the free times 5 ms .. 1.48 s and on to the line's longest, each longer; the delay that long", okf);
     }
     ok &= str_eq(N_DIV[2], "1/16") && str_eq(N_DIV[4], "8T") && str_eq(N_DIV[9], "4BAR") && TP[P_SDIV].def == 2;
     ok &= param_turn(&TP[P_SDIV], 2, 1) == 5 && param_turn(&TP[P_SDIV], 2, -1) == 4 &&   /* 1/16: right 16T, left 8T */

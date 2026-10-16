@@ -371,7 +371,7 @@ def sound():
                   'the effects. <b>SL PITCH</b>: the repeats\' 16-step pitch (±24 st, tape style, QNT SCL to the scale).</p>'))
     b.append(card('DELAY · CHORUS', HEAT[1], '<h4>DLY</h4>' + knobs('TIME', 'FDBK', 'TONE', 'MIX') +
                   '<h4>DLY 2</h4>' + knobs('WIDE', 'PITCH', 'SPRY', 'MOD') + '<h4>DLY 3</h4>' + knobs('TYPE', 'PING', '-', '-') +
-                  '<p style="margin-top:6px">Synced or free (5 ms – 1.48 s); PITCH / SPRY: a grain delay.</p>'
+                  '<p style="margin-top:6px">Synced or free (5 ms – 2.95 s; past 0.74 s darker); PITCH / SPRY: a grain delay.</p>'
                   '<h4>CHORUS</h4>' + knobs('RATE', 'DEPTH', 'STER', '-') +
                   '<p style="margin-top:6px">STER: 0 as always, down to mono, up to twice as wide.</p>'))
     b.append('</div>')
