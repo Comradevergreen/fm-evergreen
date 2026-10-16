@@ -137,8 +137,9 @@ layer's shortcuts; on the DRUM grid they are steps and lanes; on the NAME screen
 - **Header (top)**: play state, the metronome, the **BPM** (lit while it changes), the octave (or the song row
   while a song plays), the **load meter** (five small bars next to the battery: how much of the audio time the sound
   takes now) and the USB icon. Messages appear here too ("SAVED", "T1 CLEARED"...), sometimes with a second line.
-- **Cards**: the four columns under the header are KNOB 1–4. A value that is automated or locked is marked; a dim card
-  means "nothing here now".
+- **Cards**: the four columns under the header are KNOB 1–4, split by fine lines. The values are white; the one you
+  are turning lights orange, with its bar, so it is the only colour on the cards. A value that is automated or locked
+  is marked; a dim card means "nothing here now". The step bars at the bottom sit four under each card.
 - **Page name**: changing page (or track) by hand shows the page's name over the footer for a moment, with the track and
   its engine at the right; on HOME the track's engine, "T1 HOME" small. The header, the cards and the graph stay in sight.
 - **Granules**: a few dots drift behind the panel's graph, as on HOME (LOAD FULL with ANIM ON). They move only when the panel redraws anyway

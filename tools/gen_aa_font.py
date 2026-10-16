@@ -61,10 +61,10 @@ def preset(name):
         return [("S", v + "Medium.ttf", 12, (32, 126), EXTRAS, -0.055, PHASES),
                 ("M", v + "SemiBold.ttf", 15, (32, 126), EXTRAS, -0.05, PHASES),
                 ("L", v + "Bold.ttf", 28, (32, 32), [ord(c) for c in L_CHARS[1:]], 0.0, PHASES_L)]
-    if name == "jiant-lab":                    # JIANT 0.6.56: the landing's faces (SIL OFL 1.1, Google Fonts): IBM Plex
-        f = FONTS.parent / "assets" / "fonts"  # Mono for labels and values (its digits on the grid Chakra Petch had: 7 / 9
-        return [("S", str(f / "ChakraPetch-Medium.ttf"), 12, (32, 126), EXTRAS, -0.055, PHASES),     # px), Michroma for the
-                ("M", str(f / "IBMPlexMono-SemiBold.ttf"), 15, (32, 126), EXTRAS, 0.0, PHASES),   # big titles
+    if name == "jiant-lab":                    # JIANT 0.6.56: the landing's faces (SIL OFL 1.1, Google Fonts): Chakra Petch
+        f = FONTS.parent / "assets" / "fonts"  # for labels and (0.7.7, the polish) values again, Michroma for the big titles
+        return [("S", str(f / "ChakraPetch-Medium.ttf"), 12, (32, 126), EXTRAS, -0.055, PHASES),
+                ("M", str(f / "ChakraPetch-SemiBold.ttf"), 15, (32, 126), EXTRAS, -0.05, PHASES),
                 ("L", str(f / "Michroma-Regular.ttf"), 18, (32, 32), [ord(c) for c in L_CHARS[1:]], 0.0, PHASES_L)]
     if name == "inter-tight":
         v = str(FONTS.parent / "assets" / "fonts" / "InterTight[wght].ttf")   # SIL OFL 1.1, Google Fonts
