@@ -4822,9 +4822,9 @@ static int test_fm4_retired(void)
     }
     bad += check("PRESETS KNOB 2: the engines in order, DIGITAL skipped, back to the first",
                  seen == all && TSEL->eng_req == 0u && eng_step(0, 1) == ENGI_FM6 && eng_step(ENGI_FM6, 1) == 2u &&
-                 eng_step(ENGI_FM6, -1) == 0u && eng_step(0, -1) == ENGI_DRUM);
+                 eng_step(ENGI_FM6, -1) == 0u && eng_step(0, -1) == ENGI_ANIMAL && eng_step(ENGI_ANIMAL, -1) == ENGI_DRUM);
     {   /* the display order (engines.c ENGINE_ORDER): every engine one can pick once; the PRESETS list follows it */
-        static const char *const ORDER[] = {"ANALOG", "FM6", "PHASE", "LOFI", "VOICE", "WHEEL", "NOISE", "DRUM"};
+        static const char *const ORDER[] = {"ANALOG", "FM6", "PHASE", "LOFI", "VOICE", "WHEEL", "NOISE", "DRUM", "ANIMAL"};
         uint32_t last = 0xFFu, r = 0, n = 0;
         ok = NENG_SHOWN == NELEM(ORDER);
         for (i = 0; ok && i < NENG_SHOWN; i++)
@@ -4839,7 +4839,7 @@ static int test_fm4_retired(void)
             last = e;
             r++;
         }
-        bad += check("engines shown ANALOG FM6 PHASE ... NOISE DRUM (ENGINE_ORDER); PRESETS lists them so",
+        bad += check("engines shown ANALOG FM6 PHASE ... NOISE DRUM ANIMAL (ENGINE_ORDER); PRESETS lists them so",
                      ok && r == NENG_SHOWN);
     }
     /* a user preset stored with engine 1: kept as it is, it loads as FM6 with the converted patch */
@@ -8353,8 +8353,13 @@ static int test_click_menu(void)
             midi_enqueue(0x0Cu | 0xC1u << 8 | 9u << 16, 1u);   /* PROGRAM CHANGE 9 on channel 2 */
             mix_block(o, CTL); frame();
             ok = all > 9u && e < NENGINES && trk[1].eng_req == e && song.sel == sel0;
-            midi_enqueue(0x0Cu | 0xC1u << 8 | 127u << 16, 1u);   /* past the list: nothing */
+            midi_enqueue(0x0Cu | 0xC1u << 8 | 127u << 16, 1u);   /* the 128th (0.8.3: ANIMAL's), or past the list: nothing */
             mix_block(o, CTL); frame();
+            if (all > 127u) {
+                song.sel = 1;
+                e = preset_all_at(127u, &k);
+                song.sel = (uint8_t)sel0;
+            }
             ok &= trk[1].eng_req == e;
             bad += check("PROGRAM CHANGE n: the PRESETS list's n + 1-th sound into the channel's track, the selection kept", ok);
         }

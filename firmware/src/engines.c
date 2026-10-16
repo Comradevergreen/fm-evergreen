@@ -11,6 +11,7 @@
 #include "eng_drum.c"           /* DRUM: the 8-lane DRUM-X kit (drumx_voice.c) */
 #include "eng_noise.c"
 #include "eng_fm6.c"            /* FM6: 6-operator FM, msfa ported (fm6_core.c, Apache-2.0) */
+#include "eng_animal.c"         /* (JIANT 0.8.3) ANIMAL: animal calls (CMOS PULSE WHSTL WING GLOTT) */
 #include "fm4_convert.c"        /* DIGITAL's tables, and its sounds -> FM6 */
 #if FELUCCA_FM4
 #include "eng_digital.c"        /* DIGITAL: four-operator FM (retired; FELUCCA_FM4=1 builds it) */
@@ -61,6 +62,7 @@ static const engine_t *const ENGINES[NENGINES] = {
     &ENG_NOISE,                  /* 11 */
     &ENG_FM6,                    /* 12 (ENGI_FM6) */
     &ENG_GONE,                   /* 13: reserved (SLICE, retired in JIANT) */
+    &ENG_ANIMAL,                 /* 14 (ENGI_ANIMAL, JIANT 0.8.3) */
 };
 
 /* a track's engine number as an index (the audio paths: a compare, cheaper than % NENGINES; a bad number: 0) */
@@ -78,6 +80,8 @@ static const uint8_t ENGINE_ORDER[NENG_SHOWN] = {
     2, 3, 5, 7,                  /* PHASE LOFI VOICE WHEEL */
     11,                          /* NOISE */
     10,                          /* DRUM */
+    14,                          /* (0.8.3) ANIMAL: last, so every sound before it keeps its place in the PRESETS
+                                  * list (a PROGRAM CHANGE n loads its n + 1-th: 0..127) */
 };
 
 /* the engines one can pick (engine 1 only with FELUCCA_FM4), in ENGINE_ORDER: eng_ok(e), the n-th of them

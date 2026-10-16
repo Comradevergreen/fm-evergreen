@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.8.2).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.8.3).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 > ⚡ **New in 0.6.85 – 0.6.92: a song generator you steer, a compact sequencer that breathes, a delay that feeds back.**
 > - **GEN (HOME + SELECT)**: a screen of three pages — GENRE (43 genres or RANDOM), SEED, ENERGY, FORM (loop, parts,
@@ -53,7 +53,7 @@ Two printable sheets with everything on the device. Click an image to open it fu
 | Controls | Sound · FX · Mod |
 | --- | --- |
 | [![JIANT FM cheat sheet: controls](docs/cheatsheet-controls.png)](docs/cheatsheet-controls.png) | [![JIANT FM cheat sheet: sound, effects and modulation](docs/cheatsheet-sound.png)](docs/cheatsheet-sound.png) |
-| Every knob and button, the layers with their key maps (FX, GLO, SAVE, EDIT, LFO, SCL, SEQ, REC), the combos and every page's four knobs. **[PDF](docs/cheatsheet-controls.pdf)** | The eight engines' EDIT pages, FILTER, VOICE, ENV, LFO, the MOD matrix, MSEQ, macros, the sequencer, scales and ARP, songs, and every effect: DIST, the SLICER bus, delay, the five reverbs and the master. **[PDF](docs/cheatsheet-sound.pdf)** |
+| Every knob and button, the layers with their key maps (FX, GLO, SAVE, EDIT, LFO, SCL, SEQ, REC), the combos and every page's four knobs. **[PDF](docs/cheatsheet-controls.pdf)** | The nine engines' EDIT pages, FILTER, VOICE, ENV, LFO, the MOD matrix, MSEQ, macros, the sequencer, scales and ARP, songs, and every effect: DIST, the SLICER bus, delay, the five reverbs and the master. **[PDF](docs/cheatsheet-sound.pdf)** |
 
 ## The idea
 
@@ -145,7 +145,7 @@ back and the DRUM-X colony, exactly as the firmware draws them while a song play
   up whole).
 
 ### Engines
-Eight engines, all synthesis, no samples: **ANALOG, FM6, PHASE, LOFI, VOICE, WHEEL, NOISE and DRUM (DRUM-X)**.
+Nine engines, all synthesis, no samples: **ANALOG, FM6, PHASE, LOFI, VOICE, WHEEL, NOISE, DRUM (DRUM-X) and ANIMAL**.
 - **ANALOG**: two oscillators with **INT** (an interval of ±24 semitones: fifths, octaves) and DTN; besides SAW, SQR,
   TRI, SIN and PWM it has **SYNC**, **RING** and **SAW3** (three saws). Its filter is per voice.
 - **FM6**: Dexed's engine (imports .syx), with its algorithms drawn. Fully editable on the device (from Felucca 1.5):
@@ -164,6 +164,14 @@ Eight engines, all synthesis, no samples: **ANALOG, FM6, PHASE, LOFI, VOICE, WHE
   repeats a short stretch of the formula: the noise becomes a tone tuned to the note. **FLOAT** is a floatbeat
   generator: 32 formulas of `t` made of sines (rhythm, melody and timbre at once), in the key played.
 - **VOICE** (formants, after klattsch), **WHEEL** (drawbar organ) and **NOISE** (coloured and metallic noise).
+- **ANIMAL** (0.8.3): animal calls from physical models: a source that oscillates or strikes exciting a resonator,
+  with a call's rhythm on top. **CMOS** is the owner's 40106 / 4093 breadboard "bird machine" (Schmitt-trigger RC
+  oscillators: a slow one gates and sweeps a fast one, the exponential charge is the chirp's hook), **PULSE** an
+  escapement into a resonator (crickets, katydid, cicada, frogs, toad), **WHSTL** a Hopf oscillator whose tone is born
+  as the pressure crosses a threshold (canary, cardinal, dove, owl, peeper, bat), **WING** flight tones with drift and
+  Doppler fly-bys (mosquito, bee, fly), **GLOTT** a glottal pulse into two formants with subharmonics and chaos (wolf,
+  bark, roar, purr). GROUP makes chirps and trills, TEMP (°C) speeds insects up as warmth does (Dolbear's law); a note
+  is a call. 24 presets.
 - **FILTER on every engine** (EDIT > FILTER): **TYPE** LP, HP, BP or **COMB** (a comb tuned to the note you're
   playing; CUT moves it ±32 semitones and RES is how much it rings), **CUT** and **RES**. On ANALOG it's its per-voice
   filter, with DRV; on LOFI it's per voice too (its CUT and RES are the ones on this page); on the others it's a filter
@@ -525,6 +533,27 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### v0.8.3
+- **A new engine: ANIMAL** (engine 14, after DRUM in the lists), from the research report on bioacoustic synthesis:
+  four cheap primitives (a nonlinear oscillator, a pulse or relaxation generator, a resonator, a slow control layer)
+  make most of the fauna. **MODE** picks the source and every mode relabels the knobs: **CMOS** (the owner's 40106 /
+  4093 circuit: TOUCH COUPLE CAP · HYST RATE GROUP FM; at C5 it chirps at ~1.05 kHz with rising hooks, 2.4–4.5 a second,
+  or a trill of 8–10, as in his video), **PULSE** (crickets, cicadas, frogs: CLICK Q · DETUNE), **WHSTL** (a Hopf
+  oscillator: no tone below the pressure's threshold, a real onset above it; SWEEP's hooks narrow at fast trills),
+  **WING** (BUZZ DRIFT · DOPPLR) and **GLOTT** (MOUTH ROUGH · AIR: period doubling, then a logistic map once a cycle).
+  The call's rhythm is the same everywhere: RATE syllables a second, GROUP (HOLD, TRILL, 1+1 .. 32+32: syllables and
+  gaps), TEMP in °C scaling every rate (Dolbear). SIZE moves the animal up or down from the key. 24 presets: CMOS
+  BIRD, CMOS TRILL, CMOS MONKEY, CMOS BUG, CRICKET, TREE CRICKT, KATYDID, CICADA, TREEFROG, TOAD, BULLFROG, CANARY,
+  CARDINAL, DOVE, OWL, PEEPER, BAT, MOSQUITO, BEE, FLY, WOLF, DOG BARK, ROAR, PURR.
+- **What it costs**: no RAM (each voice's state fits the voice's own 44 bytes; .data + .bss unchanged at 95092 B, the
+  pool's spare unchanged), 7.6 KB of flash, no code in RAM. CPU with eight voices (callgrind, instructions a sample a
+  voice): CMOS 103, PULSE 92, WHSTL 86, WING 67, GLOTT 167, against ANALOG's 193 (the heaviest): all eight voices on
+  every mode. tests/animal_test.c checks the CMOS pitch (±2 cents), the video's chirps, the cricket's carrier and
+  rate, TEMP, the Hopf onset, no DC or clipping at any corner, the same samples twice; cpu_vg measures each mode.
+- **The lists**: ANIMAL comes after DRUM, so every sound keeps its place in PRESETS and its PROGRAM CHANGE number;
+  programs now end inside ANIMAL's presets (the user presets after them are picked on the device or the editor).
+  The web editor, the protocol notes, the cheat sheets and both manuals know it.
 
 ### v0.8.2
 - **SEQ: the piano roll stays** (a tester: "too many submenus, while they change you forget where you were"). The

@@ -37,3 +37,4 @@ drum_bus 104
 dist_amp 84
 dx_hands_step 36
 drw_dust 29
+animal_render 731

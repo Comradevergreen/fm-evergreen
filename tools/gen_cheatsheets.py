@@ -7,7 +7,7 @@ import html, os
 
 R = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(R, 'docs', 'cheatsheet')
-VERSION = 'v0.8.2'
+VERSION = 'v0.8.3'
 
 HEAT = ['#22d3ee', '#3b82f6', '#8b5cf6', '#d946ef', '#ef4444', '#ff7a00', '#facc15', '#f4f1ea']
 
@@ -289,13 +289,18 @@ def sound():
          '8 sounds BD SD CP CH OH TM RS CB, sides A / B: <b>MORPH</b> morphs the kit. The kit first: <b>KIT 3</b> BP FEEDBK, <b>X-MOD</b> RATE DEPTH SHAPE '
          'RAND. Then a sound (KNOB 1 the sound): SIDE PITCH PMOD · DECAY NOISE COLOR · MODE PM.TYPE DRIVE · <b>LAYER</b> (no note) FEEDBK '
          '<b>SEND</b> (CHO / DLY / REV). Last LEVELS and <b>STEREO</b> IMAGE (a knob through the kit\'s stereo placings).'),
+        ('ANIMAL', '#4ade80', 'MODE PRESS CHAOS SIZE', 'SWEEP RATE GROUP TEMP',
+         'Animal calls (0.8.3), MODE the source: <b>CMOS</b> the 40106 / 4093 bird circuit (TOUCH COUPLE CAP · HYST RATE '
+         'GROUP FM) · <b>PULSE</b> crickets, cicadas, frogs (CLICK Q · DETUNE) · <b>WHSTL</b> birds, a Hopf whistle · '
+         '<b>WING</b> mosquito, bee, fly (BUZZ DRIFT · DOPPLR) · <b>GLOTT</b> wolf, bark, roar, purr (MOUTH ROUGH · AIR). '
+         'GROUP: syllables + gaps; TEMP °C speeds a cricket up (Dolbear). A note is a call.'),
     ]
     t = '<table><tr><th>ENGINE</th><th>EDIT 1</th><th>EDIT 2</th><th>WHAT TO KNOW</th></tr>'
     for n, c, e1, e2, d in eng:
         t += (f'<tr><td class="n" style="--c:{c}">{e(n)}</td><td style="width:22%">{knobs(*e1.split())}</td>'
               f'<td style="width:22%">{knobs(*e2.split())}</td><td>{d}</td></tr>')
     t += '</table>'
-    b.append(card('EIGHT ENGINES, ALL SYNTHESIS', HEAT[7], t))
+    b.append(card('NINE ENGINES, ALL SYNTHESIS', HEAT[7], t))
     b.append('<div class="grid g3" style="margin-top:22px">')
     b.append(card('FILTER · EVERY ENGINE', HEAT[3], knobs('TYPE', 'CUT', 'RES', 'DRV') +
                   '<p style="margin-top:8px"><b>LP · HP · BP · COMB</b>. COMB rings tuned to the note: CUT moves it '
