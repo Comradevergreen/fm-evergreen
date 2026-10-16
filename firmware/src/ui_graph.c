@@ -265,38 +265,38 @@ static void graph_morph(const track_t *t)
     cv_text(PANEL_X0 + 2, 90, &AF_S, b, T_MID);
 }
 
-/* STEP page (a melodic track): a piano roll of the cursor's 16-step page. PR_ROWS semitone rows of PR_RH px,
- * the highest on top; on the left the C rows named (S, DIM) and a keyboard strip (white keys RAISE, black keys a
- * shorter DIM; a key held on the track: its row ACCENT). Rows in the track's scale (SCL ROOT / SCALE; CHR: the white
- * keys) are tinted LANE, a C row closes with a RAISE line; step lines GRID, every 4th RAISE. A note is a 9 x 3 bar in
- * its column (an accent: TEXT, the row's full height; the cursor step's notes: ACCENT), chords stacked, lane hits as
- * their notes (a RATCH step's bars in its 2..4 parts, 1 px apart); a TIE carries the bars of the note before through
- * its column; a REST is empty; a slide is a TEXT diagonal from the end of its bar into the next note (not from a
- * RATCH step: it never slides out). Notes outside
- * the view: a 1 px mark on the edge. The cursor: a TEXT column frame; the playhead: a 1 px ACCENT line. The view
- * (proll.lo, the bottom row) fits the notes of the page, else centres on the cursor's note, and follows in steps (a
- * third of the way per frame); graph_signature() holds it, so a page that does not change is not drawn again.
- * (0.8.5) LENTE's BAR: the pattern's bars small over it (bar_cells), the roll two rows shorter under them (pr_geom) */
-#define PR_ROWS ((int32_t)proll.rows)               /* semitones shown: 21 (1.75 octaves); under LENTE's bars 19 */
-#define PR_RH 5                                     /* px per row */
-#define PR_Y0 ((int32_t)proll.y0)                   /* the top row (canvas y): 9; under LENTE's bars 21 */
-#define PR_X0 35                                    /* the first step column */
-#define PR_CW 12                                    /* px per step */
-#define PR_KX 24                                    /* the keyboard strip, 9 px */
+/* (0.8.5) the piano roll of the cursor's bar, as the approved mock-up (LENTE's BAR, under the bars' strip): its 16
+ * steps as columns over the panel's width (x 4 .. 236, 14 or 15 px), PR_ROWS semitone rows of PR_RH px (4), the
+ * highest on top, on a BG area; rows in the track's scale (SCL ROOT / SCALE; CHR: the white keys) tinted LANE; step
+ * lines GRID, every 4th LINE. A note is a bar in its column, a px in from either side, PR_RH - 1 tall, as hot as it
+ * plays (an accent: the highlight; another palette: notes ACCENT, accents TEXT); chords stacked; lane hits as their
+ * notes; a RATCH step's bars in its 2..4 parts; a TIE carries the bars of the note before through its column; a REST
+ * is empty; a slide reaches 2 px into the next column. On SEQ > NOTE the note in focus is the accent (the chord, CHORD:
+ * all of it). A step with a component: a 3 px mark at the column's top (an arpeggio ACCENT, the others THEME). Notes
+ * outside the view: a 1 px mark on the edge. The cursor: a THEME frame round its column; the playhead: a 1 px ACCENT
+ * line at its column's left; a parameter lock: an ACCENT mark at the column's foot; a key held on the track: its row
+ * a 2 px ACCENT mark at the left. The view (proll.lo, the bottom row) fits the notes of the page, else centres on the
+ * cursor's note, and follows in steps (a third of the way per frame); graph_signature() holds it. (Until 0.8.4 a
+ * keyboard strip and the C rows' names at the left, 21 rows of 5 px, 12 px columns.) */
+#define PR_ROWS ((int32_t)proll.rows)               /* semitones shown: 30 (2.5 octaves) */
+#define PR_RH 4                                     /* px per row */
+#define PR_Y0 ((int32_t)proll.y0)                   /* the top row (canvas y): 20, under the bars' strip */
+#define PR_RX 4                                     /* the roll: x 4 .. 236 */
+#define PR_RW 232
+#define PR_CX(i) (PR_RX + (int32_t)(i) * PR_RW / 16)   /* column i's left */
+#define PR_CWI(i) (PR_CX((i) + 1) - PR_CX(i))          /* .. its width */
 static struct {
     uint8_t lo, trk, init, moving;                    /* lo: the note of the bottom row; moving: on its way */
-    uint8_t rows, y0;                                 /* (0.8.5) PR_ROWS, PR_Y0: pr_geom */
+    uint8_t rows, y0;                                 /* PR_ROWS, PR_Y0: pr_geom */
     uint32_t frame;
-} proll = {0, 0, 0, 0, 21, 9, 0};
+} proll = {0, 0, 0, 0, 30, 20, 0};
 static int lens_strip(void);
-static void pr_geom(void)                             /* (0.8.5) the roll's rows: LENTE's bars over it or not */
+static void pr_geom(void)                             /* the roll's rows: under the bars' strip (a layer's map: the panel) */
 {
     int s = lens_strip();
-    proll.rows = s ? 19u : 21u;
-    proll.y0 = s ? 21u : 9u;
+    proll.y0 = s ? 20u : 2u;
+    proll.rows = (uint8_t)(((int32_t)graph_h() - (int32_t)proll.y0 - (s ? 0 : 2)) / PR_RH);
 }
-static const uint8_t KEY_BLACK[12] = {0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0};
-
 static int32_t pr_note(const step_t *st, uint32_t j)   /* the step's note j (0..3), then its lane hits (-1: none) */
 {
     if (j < 4u)
@@ -374,12 +374,28 @@ static void pr_split(int32_t x, int32_t y, int32_t w, int32_t h, uint16_t c, uin
     for (k = 0; k < (int32_t)hits; k++)
         cv_rect(x + k * (pw + 1), y, pw, h, c);
 }
-/* (0.8.3) LENTE's bars; (0.8.5) drawn as the approved design has them (the HTML mock-up "LENTE"): a bar of the
- * pattern as a cell, its sixteen steps a small piano roll (the notes over the pattern's range, held through their
- * TIEs; a kit: its lanes' hits, the kick on top), its number at the top left; the bar edited a THEME-edged TINT cell,
- * its number THEME; the bar playing, its number ACCENT; a bar past LEN a dark hole. Two sizes: PATTERN's four big
- * cells (the playhead a line in its column) and BAR's strip over the roll (13 px, the number at the left) */
-static void pat_range(const track_t *t, int32_t *plo, int32_t *phi)   /* the pattern's notes, an octave at least */
+/* a note's colour in the lens's pictures, as the mock-up's: JIANT on the heat ramp, a note warm (115; a chord's a
+ * little warmer), an accent near white (243); another palette the notes ACCENT, an accent TEXT (the highlight) */
+static uint16_t lz_note(const step_t *st, int acc, uint16_t c)
+{
+    (void)c;
+    if (settings.palette == UI_JIANT_INDEX)
+        return heat_col(acc ? 243 : st->n > 1u ? 146 : 115);
+    return acc ? T_TEXT : T_ACCENT;
+}
+/* a step's component mark (3 x 3 at y): an arpeggio ACCENT, another THEME; none: nothing */
+static void lz_comp_mark(const step_t *st, int32_t x, int32_t y)
+{
+    uint32_t c = st->comp;
+    if (!c && !st->comp2)
+        return;
+    cv_rect(x - 1, y, 3, 3, c >= CP_ARPN && c <= CP_ARPN + 2u ? T_ACCENT : T_THEME);
+}
+/* (0.8.3) LENTE's bars; (0.8.5) drawn as the approved mock-up has them: a bar of the pattern as a cell (RAISE; the bar
+ * edited TINT), its sixteen steps as a tiny roll (each note-on step's first note a 2 px dash over the pattern's range;
+ * a kit: its lanes' hits, the kick on top), its number at the top left (DIM; the bar edited THEME, the bar playing
+ * ACCENT); a bar past LEN an empty dark cell. Two sizes: PATTERN's four big cells and BAR's strip (16 px) */
+static void pat_range(const track_t *t, int32_t *plo, int32_t *phi)   /* the pattern's notes, 30 semitones at least */
 {
     uint32_t len = (uint32_t)clamp(t->p[P_SLEN], 1, NSTEP), i, j;
     int32_t lo = 127, hi = -1;
@@ -391,90 +407,63 @@ static void pat_range(const track_t *t, int32_t *plo, int32_t *phi)   /* the pat
         }
     if (hi < lo)
         lo = hi = 60;
-    if (hi - lo < 12) {                              /* (one note alone sits in the middle) */
-        lo -= (12 - (hi - lo)) / 2;
-        hi = lo + 12;
+    if (hi - lo < 29) {                              /* (centred in the window) */
+        lo -= (29 - (hi - lo)) / 2;
+        hi = lo + 29;
     }
     *plo = lo;
     *phi = hi;
 }
 static void bar_cell(const track_t *t, uint32_t b, int32_t x, int32_t y, int32_t w, int32_t h, int32_t lo, int32_t hi,
-                     uint16_t c, uint32_t ph)
+                     uint16_t c)
 {
-    uint32_t len = (uint32_t)clamp(t->p[P_SLEN], 1, NSTEP), i, j, l, dr = drum_track(t);
-    int sel = b == ui.bank, big = h > 20;
-    int32_t nx, sw, top, nh;
+    uint32_t len = (uint32_t)clamp(t->p[P_SLEN], 1, NSTEP), i, l, dr = drum_track(t);
+    int sel = b == ui.bank;
+    int32_t sw = w - 4, top = y + (h > 20 ? 14 : 3), nh = h - (h > 20 ? 17 : 5);
     uint16_t bg = sel ? T_TINT : T_RAISE, nc;
     char s[2];
-    if (b * 16u >= len) {                            /* past LEN: a hole */
-        cv_rrect(x, y, w, h, 3, T_BG, T_SURF);
+    if (b * 16u >= len) {                            /* past LEN: a dark cell */
+        cv_rect(x, y, w, h, T_BG);
         return;
     }
-    if (sel) {
-        cv_rrect(x, y, w, h, 3, T_THEME, T_SURF);
-        cv_rrect(x + 1, y + 1, w - 2, h - 2, 2, T_TINT, T_THEME);
-    } else {
-        cv_rrect(x, y, w, h, 3, T_RAISE, T_SURF);
+    cv_rect(x, y, w, h, bg);
+    for (i = 0; i < 16u && b * 16u + i < len; i++) {
+        const step_t *st = &seq_steps(t)[b * 16u + i];
+        int32_t sx = x + 2 + (int32_t)i * sw / 16, mw = sw / 16 - 1 > 1 ? sw / 16 - 1 : 1;
+        if (!step_on(st))
+            continue;
+        if (dr) {
+            for (l = 0; l < NLANE; l++)
+                if ((step_lanes(st) >> l) & 1u)
+                    cv_rect(sx, top + (int32_t)l * nh / (int32_t)NLANE, mw, nh / (int32_t)NLANE > 2 ? 2 : 1,
+                            lz_note(st, (step_accents(st) >> l) & 1u, c));
+            continue;
+        }
+        cv_rect(sx, top + nh - 2 - ((int32_t)st->note[0] - lo) * (nh - 2) / (hi - lo), mw, 2,
+                lz_note(st, (st->flags & SF_ACCENT) != 0u, c));
     }
     s[0] = (char)('1' + b);
     s[1] = 0;
-    nc = song.playing && seq_src(t, t->seq_idx) / 16u == b ? T_ACCENT : sel ? T_THEME : T_MID;
-    if (big) {                                       /* the number on top, the steps under it */
-        cv_text_on(x + 4, y + 1, &AF_S, s, nc, bg);
-        sw = (w - 4) / 16;
-        nx = x + (w - 16 * sw) / 2;
-        top = y + 16;
-        nh = h - 20;
-    } else {                                         /* the number at the left, the steps after it */
-        GFX_HOOK_ALIGN(0, y, 0, y + h, AL_V, "LENTE bar strip number centred up/down");
-        cv_text_on(x + 3, y + CAP_IN(S, h), &AF_S, s, nc, bg);
-        nx = x + 11;
-        sw = (w - 13) / 16;
-        top = y + 3;
-        nh = h - 6;
-    }
-    if (sw < 1)
-        sw = 1;
-    for (i = 0; i < 16u && b * 16u + i < len; i++) {
-        uint32_t si = b * 16u + i, src = pr_src(t, si, len);
-        int32_t sx = nx + (int32_t)i * sw, mw = sw > 1 ? sw - 1 : 1;
-        const step_t *st;
-        if (si == ph)
-            cv_rect(sx, top - 2, 1, nh + 4, T_ACCENT);   /* (the playhead, as the roll's) */
-        if (src == NSTEP)
-            continue;
-        st = &seq_steps(t)[src];
-        if (src != si)                               /* (a TIE: its note held, into the next column) */
-            mw = sw;
-        if (dr) {
-            int32_t lh = nh / (int32_t)NLANE - 1;
-            for (l = 0; l < NLANE; l++)
-                if ((step_lanes(st) >> l) & 1u)
-                    cv_rect(sx, top + (int32_t)l * nh / (int32_t)NLANE, mw, lh < 1 ? 1 : lh,
-                            step_heat(st, (step_accents(st) >> l) & 1u, c));
-            continue;
-        }
-        for (j = 0; j < st->n && j < 4u; j++)
-            cv_rect(sx, top + nh - 2 - ((int32_t)st->note[j] - lo) * (nh - 2) / (hi - lo), mw, 2,
-                    step_heat(st, st->flags & SF_ACCENT, c));
-    }
+    nc = song.playing && seq_src(t, t->seq_idx) / 16u == b ? T_ACCENT : sel ? T_THEME : T_DIM;
+    GFX_HOOK_ALIGN(0, y, 0, y + (h > 20 ? 15 : h), AL_V | AL_PASS, "LENTE bar number at its cell's top");
+    cv_text_on(x + 3, y + (h > 20 ? 0 : CAP_IN(S, h)), &AF_S, s, nc, bg);
 }
-/* the bars side by side from x0 to x1 (4 px apart), y .. y + h */
-static void bar_cells(const track_t *t, int32_t x0, int32_t x1, int32_t y, int32_t h, uint16_t c, uint32_t ph)
+/* the bars side by side from x0 (4 cells over w, 2 px apart), y .. y + h */
+static void bar_cells(const track_t *t, int32_t x0, int32_t w, int32_t y, int32_t h, uint16_t c)
 {
-    int32_t lo, hi, w = (x1 - x0 - 12) / 4;
+    int32_t lo, hi, bw = w / 4;
     uint32_t b;
     pat_range(t, &lo, &hi);
     for (b = 0; b < 4u; b++)
-        bar_cell(t, b, x0 + (int32_t)b * (w + 4), y, w, h, lo, hi, c, ph);
+        bar_cell(t, b, x0 + (int32_t)b * bw + 1, y, bw - 2, h, lo, hi, c);
 }
-/* (0.8.5) BAR's strip over the roll and the grid (lens_strip): the bars small, 13 px at the panel's top */
-#define LS_Y 3
-#define LS_H 13
-static int lens_strip(void) { return !ui.home && lens_on() && lens_level() == LV_BAR; }
+/* (0.8.5) BAR's strip over the roll and the grid (lens_strip): the bars small, 16 px at the panel's top */
+#define LS_Y 0
+#define LS_H 16
+static int lens_strip(void) { return !ui.home && lz_on() && lens_level() == LV_BAR; }
 
 /* the bars of step s in column x (in its RATCH parts, hits; a TIE's carried bars: 1): a 1 px edge mark for a note
- * out of view; first: row y of the step's first note */
+ * out of view; first: row y of the step's first note; fc: the note in focus's colour (0: none) and its note */
 static void pr_bars(const step_t *st, int32_t x, int32_t w, uint16_t c, int acc_all, int32_t *first, uint32_t hits)
 {
     uint32_t j;
@@ -489,21 +478,20 @@ static void pr_bars(const step_t *st, int32_t x, int32_t w, uint16_t c, int acc_
         if (*first < -1000)
             *first = y;
         if (y < PR_Y0)
-            pr_split(x, PR_Y0, w, 1, c, hits);
+            pr_split(x, PR_Y0, w, 1, c ? c : lz_note(st, acc, ACC), hits);
         else if (y >= ybot)
-            pr_split(x, ybot - 1, w, 1, c, hits);
-        else if (acc)
-            pr_split(x, y, w, PR_RH, c == T_ACCENT ? c : T_TEXT, hits);
+            pr_split(x, ybot - 1, w, 1, c ? c : lz_note(st, acc, ACC), hits);
         else
-            pr_split(x, y + 1, w, PR_RH - 2, c, hits);
+            pr_split(x, y, w, PR_RH - 1, c ? c : lz_note(st, acc, ACC), hits);
     }
 }
 static void graph_roll(const track_t *t, uint16_t c)
 {
     uint32_t i, len = (uint32_t)t->p[P_SLEN], base = ui.bank * 16u, ncol, mask = scale_mask(t), held = pr_held();
     uint64_t locks = motion_lock_steps(trk_index(t));
-    int32_t r, ybot, gw, trw = 0;
-    char nb[8], tb[16];
+    int32_t r, ybot, trw = 0, note_pg = cur_page()->id[0] == 4u;
+    char tb[16];
+    (void)c;
     pr_geom();
     ybot = PR_Y0 + PR_ROWS * PR_RH;
     if (song.g[G_STRN]) {                             /* (0.6.45) ALL TR (SCL KNOB 4, 0.7.6): the notes sound moved, shown */
@@ -512,78 +500,66 @@ static void graph_roll(const track_t *t, uint16_t c)
         fmt_int(tb + 8, song.g[G_STRN] < 0 ? -song.g[G_STRN] : song.g[G_STRN]);
         trw = text_w(&AF_S, tb) + 6;
     }
-    if (lens_strip()) {                               /* (0.8.5) LENTE's BAR: the bars over the roll (ALL TR after them) */
-        bar_cells(t, PANEL_X0, PANEL_X0 + PANEL_W - trw, LS_Y, LS_H, c, 0xFFFFu);
+    if (lens_strip()) {                               /* LENTE's BAR: the bars over the roll (ALL TR after them) */
+        bar_cells(t, PR_RX, PR_RW - trw, LS_Y, LS_H, ACC);
         if (trw) {
             GFX_HOOK_ALIGN(0, LS_Y, 0, LS_Y + LS_H, AL_V, "ALL TR on the bars' line");
-            cv_text_r(PANEL_X0 + PANEL_W, LS_Y + CAP_IN(S, LS_H), &AF_S, tb, T_ACCENT, T_SURF);
+            cv_text_r(PR_RX + PR_RW, LS_Y + CAP_IN(S, LS_H), &AF_S, tb, T_ACCENT, T_SURF);
         }
-    } else if (trw) {
-        cv_text_r(PANEL_X0 + PANEL_W, 0, &AF_S, tb, T_ACCENT, T_SURF);
     }
     ncol = base < len ? (len - base < 16u ? len - base : 16u) : 0u;
-    gw = (int32_t)ncol * PR_CW + 1;
-    for (r = 0; r < PR_ROWS; r++) {                 /* rows: the lane, the key, the C names */
+    cv_rect(PR_RX, PR_Y0, PR_RW, ybot - PR_Y0, T_BG);
+    for (r = 0; r < PR_ROWS; r++) {                 /* rows: the scale's tinted */
         int32_t n = (int32_t)proll.lo + PR_ROWS - 1 - r, y = PR_Y0 + r * PR_RH;
         uint32_t pc = (uint32_t)n % 12u;
-        int in = mask == 0xFFFu ? !KEY_BLACK[pc] : (int)((mask >> ((uint32_t)(n - t->p[P_ROOT] + 120) % 12u)) & 1u);
+        static const uint8_t KB[12] = {0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0};
+        int in = mask == 0xFFFu ? !KB[pc] : (int)((mask >> ((uint32_t)(n - t->p[P_ROOT] + 120) % 12u)) & 1u);
         if (in)
-            cv_rect(PR_X0, y, gw, PR_RH, T_LANE);
+            cv_rect(PR_RX, y, PR_CX(ncol) - PR_RX, PR_RH, T_LANE);
+    }
+    for (i = 0; i < 16u; i++)                         /* step lines, the beats brighter */
+        cv_rect(PR_CX(i), PR_Y0, 1, ybot - PR_Y0, i % 4u ? T_GRID : T_LINE);
+    if (ncol < 16u)                                   /* past LEN: dark */
+        cv_rect(PR_CX(ncol), PR_Y0, PR_RX + PR_RW - PR_CX(ncol), ybot - PR_Y0, T_BG);
+    for (r = 0; r < PR_ROWS; r++)                     /* the keys held: their rows marked at the left */
         if ((held >> r) & 1u)
-            cv_rect(PR_KX, y, 9, PR_RH - 1, T_ACCENT);
-        else
-            cv_rect(PR_KX, y, KEY_BLACK[pc] ? 5 : 9, PR_RH - 1, KEY_BLACK[pc] ? T_DIM : T_RAISE);
-        if (pc == 0u) {
-            cv_rect(PR_X0, y + PR_RH - 1, gw, 1, T_RAISE);
-            note_name(nb, (uint32_t)n);
-            GFX_HOOK_ALIGN(0, y, 23, y + PR_RH, AL_V, "piano roll C label on its row");
-            GFX_HOOK_ALIGN(0, y, 23, y + PR_RH, AL_R | AL_PASS, "piano roll C labels' right edge");
-            {   /* its ink ends at x 23, a column before the keys (by the advance, C1's 1 ended 2 px short) */
-                int32_t b[4];
-                text_ink(&AF_S, nb, b);
-                cv_text_on(23 - b[2], y - 5, &AF_S, nb, T_DIM, T_SURF);   /* (the widest, "C-1", inside the panel) */
-            }
-        }
-    }
-    for (i = 0; i <= ncol; i++)                       /* step lines, the beats brighter */
-        cv_rect(PR_X0 + (int32_t)i * PR_CW, PR_Y0, 1, ybot - PR_Y0, i % 4u ? T_GRID : T_RAISE);
-    for (i = 0; i < ncol; i++) {
-        uint32_t si = base + i;
-        int32_t x = PR_X0 + (int32_t)i * PR_CW;
-        if (si == ui.cursor)
-            cv_frame(x, PR_Y0 - 2, PR_CW + 1, ybot - PR_Y0 + 4, T_TEXT);
-        if (song.playing && si == seq_src(t, t->seq_idx))
-            cv_rect(x + 6, PR_Y0, 1, ybot - PR_Y0, T_ACCENT);
-        if ((locks >> si) & 1u)                       /* a parameter lock: a mark under the step */
-            cv_rect(x + 3, ybot + 3, 7, 2, T_ACCENT);
-    }
+            cv_rect(PR_RX, PR_Y0 + r * PR_RH, 2, PR_RH - 1, T_ACCENT);
     for (i = 0; i < ncol; i++) {                      /* the notes */
         uint32_t si = base + i, s = pr_src(t, si, len), nx = (si + 1u) % len;
         const step_t *st, *ns = &seq_steps(t)[nx];
-        int32_t x = PR_X0 + (int32_t)i * PR_CW, y = -10000;
-        uint16_t col;
+        int32_t x = PR_CX(i), w = PR_CWI(i), y = -10000;
+        int slide;
         if (s == NSTEP)
             continue;                                 /* a REST, empty, or a TIE after one */
         st = &seq_steps(t)[s];
-        col = s == ui.cursor || si == ui.cursor ? T_ACCENT : step_heat(st, 0, c);   /* (JIANT: as hot as it plays) */
-        if (s == ui.cursor && ui.pr_focus && ui.pr_focus <= st->n && cur_page()->id[0] == 4u) {   /* (0.6.81) SEQ >
-                                                         * NOTE: the chord dimmed, the note in focus lit */
+        slide = (st->flags & SF_SLIDE) && step_ratchet(st) == 1u && ns->time == ST_NOTE && ns->n;
+        if (s == ui.cursor && note_pg && ui.pr_focus && ui.pr_focus <= st->n) {   /* (0.6.81) SEQ > NOTE: the note in
+                                                         * focus the accent */
             step_t one = *st;
             int32_t yy = -10000;
-            pr_bars(st, s == si ? x + 2 : x - 1, s == si ? 9 : 12, T_MID, 0, &y, s == si ? step_ratchet(st) : 1u);
+            pr_bars(st, s == si ? x + 1 : x - 1, s == si ? w - 2 : w + 1, 0, (st->flags & SF_ACCENT) != 0u, &y,
+                    s == si ? step_ratchet(st) : 1u);
             one.n = 1; one.note[0] = st->note[ui.pr_focus - 1u]; one.hit = 0;
-            pr_bars(&one, s == si ? x + 2 : x - 1, s == si ? 9 : 12, T_ACCENT, 1, &yy, s == si ? step_ratchet(st) : 1u);
+            pr_bars(&one, s == si ? x + 1 : x - 1, s == si ? w - 2 : w + 1, T_ACCENT, 0, &yy, s == si ? step_ratchet(st) : 1u);
         } else if (s == si) {                         /* (0.6.88: its TIMING off the grid, shown off it) */
-            int32_t mo = ST_MICRO(st) * PR_CW / 16;
-            pr_bars(st, x + 2 + mo < PR_X0 ? PR_X0 : x + 2 + mo, 9, col, (st->flags & SF_ACCENT) != 0u, &y, step_ratchet(st));
-        }
-        else                                          /* a TIE: the bars on through the gap before */
-            pr_bars(st, x - 1, 12, col, (st->flags & SF_ACCENT) != 0u, &y, 1u);
-        if ((st->flags & SF_SLIDE) && step_ratchet(st) == 1u &&   /* (a ratcheted step never slides out) */
-            ns->time == ST_NOTE && ns->n && y >= PR_Y0 && y < ybot) {
-            int32_t ny = clamp(pr_row_y(ns->note[0]), PR_Y0, ybot - PR_RH);
-            cv_line(x + 10, y + 2, x + 14, ny + 2, T_TEXT);   /* the slide into the next note */
-        }
+            int32_t mo = ST_MICRO(st) * w / 16;
+            pr_bars(st, x + 1 + mo < PR_RX ? PR_RX : x + 1 + mo, w - 2 + (slide ? 2 : 0),
+                    s == ui.cursor && note_pg ? T_ACCENT : 0, (st->flags & SF_ACCENT) != 0u, &y, step_ratchet(st));
+        } else                                        /* a TIE: the bars on through the gap before */
+            pr_bars(st, x - 1, w + (slide && (si + 1u) % len != nx ? 0 : 0), s == ui.cursor && note_pg ? T_ACCENT : 0,
+                    (st->flags & SF_ACCENT) != 0u, &y, 1u);
+        if (s == si)
+            lz_comp_mark(st, x + w / 2, PR_Y0 + 1);
+    }
+    for (i = 0; i < ncol; i++) {
+        uint32_t si = base + i;
+        int32_t x = PR_CX(i);
+        if (song.playing && si == seq_src(t, t->seq_idx))
+            cv_rect(x, PR_Y0, 1, ybot - PR_Y0, T_ACCENT);
+        if ((locks >> si) & 1u)                       /* a parameter lock: a mark at the column's foot */
+            cv_rect(x + 3, ybot - 3, PR_CWI(i) - 6, 2, T_ACCENT);
+        if (si == ui.cursor)                          /* the cursor: a THEME frame round its column */
+            cv_frame(x, PR_Y0, PR_CWI(i) + 1, ybot - PR_Y0, T_THEME);
     }
     if (ui.entry_open && !ui.ent_arp && ui.ent_nn && ui.ent_len > 1u) {   /* (0.6.81) a chord held, KNOB 1 its length:
                                                          * the length to be written, outlined from the cursor on */
@@ -592,11 +568,11 @@ static void graph_roll(const track_t *t, uint16_t c)
             uint32_t si = (ui.cursor + k) % len;
             int32_t x;
             if (si < base || si >= base + ncol) continue;
-            x = PR_X0 + (int32_t)(si - base) * PR_CW;
+            x = PR_CX(si - base);
             for (j = 0; j < ui.ent_nn; j++) {
                 int32_t y = pr_row_y(ui.ent_notes[j]);
                 if (y < PR_Y0 || y >= ybot) continue;
-                cv_frame(k ? x - 1 : x + 2, y, k ? 13 : 10, PR_RH, T_ACCENT);
+                cv_frame(k ? x - 1 : x + 1, y, k ? PR_CWI(si - base) + 1 : PR_CWI(si - base) - 1, PR_RH, T_ACCENT);
             }
         }
     }
@@ -604,25 +580,26 @@ static void graph_roll(const track_t *t, uint16_t c)
 /* SEQ > STEP on a DRUM track: the grid, 8 lanes x the 16 steps of the page shown. Lanes by their two-letter
  * names (BD SD CP CH OH TM RS CB; CG CL CY on the other kits). A hit is a rounded square (accented: the
  * accent; a RATCH step's: its 2..4 parts as bars), an empty step a dot (brighter on the beats and on the selected lane); the selected lane is
- * underlaid RAISE, the cursor framed in TEXT; a TEXT bar over the step playing */
+ * underlaid RAISE, the cursor framed in TEXT; a TEXT bar over the step playing. (0.8.5) LENTE's BAR: the bars' strip
+ * over it, the lanes 15 px under it */
 static void graph_grid(const track_t *t, uint16_t c)
 {
     uint32_t l, i, len = (uint32_t)t->p[P_SLEN], base = ui.bank * 16u;
     uint64_t locks = motion_lock_steps(trk_index(t));
-    int s = lens_strip();                             /* (0.8.5) LENTE's BAR: the bars over the grid, its lanes 12 px */
-    int32_t y0 = s ? 18 : 6, lp = s ? 12 : 14, hy = s ? 1 : 2;   /* (a lane's pitch; its hits' row in it) */
+    int s = lens_strip();
+    int32_t y0 = s ? 19 : 6, lp = s ? 15 : 14, hy = 2;   /* (a lane's pitch; its hits' row in it) */
     if (s)
-        bar_cells(t, PANEL_X0, PANEL_X0 + PANEL_W, LS_Y, LS_H, c, 0xFFFFu);
+        bar_cells(t, PR_RX, PR_RW, LS_Y, LS_H, c);
     for (i = 0; i < 16u && base + i < len; i++)     /* a parameter lock: a mark over the step (under the bars: under it) */
         if ((locks >> (base + i)) & 1u)
-            cv_rect(41 + (int32_t)i * 12, s ? y0 + 5 + 8 * lp : 1, 8, 2, T_ACCENT);
+            cv_rect(41 + (int32_t)i * 12, s ? y0 + 4 + 8 * lp - 1 : 1, 8, 2, T_ACCENT);
     for (l = 0; l < NLANE; l++) {
-        int32_t y = y0 + 4 + (int32_t)l * lp;
+        int32_t y = y0 + (int32_t)l * lp;
         int sel = l == ui.lane;
         uint16_t row = sel ? T_RAISE : T_SURF;
         if (sel) {
             GFX_HOOK_ALIGN(0, 0, 240, 0, AL_H | AL_CELLS, "drum lane fill centred");
-            cv_rrect(6, y, 228, lp, 3, T_RAISE, T_SURF);   /* (6 .. 234, as a list row; the hits 40 .. 230) */
+            cv_rect(6, y, 228, lp - 1, T_RAISE);        /* (6 .. 234, as a list row; the hits 40 .. 230) */
         }
         GFX_HOOK_ALIGN(0, y + hy, 0, y + hy + 10, AL_V, "drum lane label on its hits' line");
         cv_text_on(10, y + hy - 3, &AF_S, drum_lane_abbr(t, l), sel ? T_ACCENT : T_MID, row);   /* ink as the hits' rows */
@@ -631,17 +608,17 @@ static void graph_grid(const track_t *t, uint16_t c)
             uint32_t b = 1u << l;
             int32_t x = 40 + (int32_t)i * 12;
             if ((step_lanes(st) & b) && step_ratchet(st) > 1u)
-                pr_split(x, y + hy, 10, 10, step_heat(st, step_accents(st) & b, c), step_ratchet(st));
+                pr_split(x, y + hy, 10, 10, lz_note(st, step_accents(st) & b, c), step_ratchet(st));
             else if (step_lanes(st) & b)
-                cv_rrect(x, y + hy, 10, 10, 2, step_heat(st, step_accents(st) & b, c), row);
+                cv_rect(x, y + hy, 10, 10, lz_note(st, step_accents(st) & b, c));
             else
                 cv_rect(x + 4, y + hy + 4, 2, 2, i % 4u == 0u || sel ? T_MID : T_DIM);
             if (sel && base + i == ui.cursor)          /* the cursor: a 1 px frame */
-                cv_frame(x - 1, y + hy - 1, 12, 12, T_TEXT);
+                cv_frame(x - 1, y + hy - 1, 12, 12, T_THEME);
         }
     }
     if (song.playing && seq_src(t, t->seq_idx) < len && seq_src(t, t->seq_idx) / 16u == ui.bank)
-        cv_rect(40 + (int32_t)(seq_src(t, t->seq_idx) % 16u) * 12, y0 - 1, 10, 3, T_TEXT);
+        cv_rect(40 + (int32_t)(seq_src(t, t->seq_idx) % 16u) * 12, y0 - 2, 10, 2, T_ACCENT);
 }
 /* SCL: the 12 keys as rounded bars (black keys high, white keys low): in the scale THEME, the root the
  * accent, out of the scale RAISE */
@@ -1201,153 +1178,172 @@ static int bigstep_view(const page_t *pg)               /* .. its STEP level: th
     return pg == &PAGES[ui.page] && lens_on() && lens_level() == LV_STEP && (pg->graph == GR_ROLL || pg->graph == GR_COMP);
 }
 /* (0.8.3) LENTE's PATTERN; (0.8.5) as the mock-up: the pattern's bars side by side (up to four, LEN 64) as big cells
- * (the cursor's step under the bar edited); under them, PLAYHEADS: the whole pattern as one small piano roll (the
- * bars' lines RAISE, the notes as hot as they play) with the sequencer's playhead (ACCENT) and FUGUE's heads (a tick
- * each, as hot as its lane on the PLAYHEADS page); PRESETS' word at the right of its title */
-#define LB_Y 4
-#define LB_H 54
-#define LB_CAP 63                                    /* the title's line (a keycap's height) */
-#define LP_Y 80                                      /* the pattern's roll, to 118 */
-#define LP_H 38
+ * (2 .. 62); under them PLAYHEADS (S, DIM) and the whole pattern as one small roll (80 .. 140, a BG area: the scale's
+ * rows LANE, the step lines GRID and every 4th LINE, the notes as hot as they play, held through their TIEs, a
+ * component's mark on top, past LEN dark) with the sequencer's playhead (ACCENT) and FUGUE's heads (a tick each at the
+ * foot, as hot as its lane on the PLAYHEADS page) */
+#define LB_Y 2
+#define LB_H 60
+#define LP_TY 65                                     /* "PLAYHEADS" (capitals 68..76) */
+#define LP_Y 80                                      /* the pattern's roll, to 140 */
+#define LP_H 60
 static void graph_bars(const track_t *t, uint16_t c)
 {
-    uint32_t len = (uint32_t)clamp(t->p[P_SLEN], 1, NSTEP), i, j, k, l, dr = drum_track(t), ti = song.sel % NTRK;
-    uint32_t ph = song.playing ? seq_src(t, t->seq_idx) : 0xFFFFu;
-    int32_t lo, hi, w = (PANEL_W - 12) / 4, nh = LP_H - 6;
-    bar_cells(t, PANEL_X0, PANEL_X0 + PANEL_W, LB_Y, LB_H, c, ph);
+    uint32_t len = (uint32_t)clamp(t->p[P_SLEN], 1, NSTEP), n = len < 16u ? 16u : len, i, j, k, l, dr = drum_track(t);
+    uint32_t ph = song.playing ? seq_src(t, t->seq_idx) : 0xFFFFu, ti = song.sel % NTRK, mask = scale_mask(t);
+    int32_t lo, hi, rows, rh = 2;
+    bar_cells(t, PR_RX, PR_RW, LB_Y, LB_H, c);
+    GFX_HOOK_ALIGN(0, LP_TY + AF_S_CAP_Y, 0, LP_TY + AF_S_CAP_Y + AF_S_CAP_H, AL_V | AL_PASS, "PLAYHEADS title");
+    cv_text(6, LP_TY, &AF_S, "PLAYHEADS", T_DIM);
     pat_range(t, &lo, &hi);
-    {   /* the cursor, under its bar */
-        int32_t sw = (w - 4) / 16, x = PANEL_X0 + (int32_t)(ui.bank % 4u) * (w + 4) + (w - 16 * sw) / 2;
-        cv_rect(x + (int32_t)(ui.cursor % 16u) * sw, LB_Y + LB_H + 2, sw, 2, T_ACCENT);
-    }
-    GFX_HOOK_ALIGN(0, LB_CAP, 0, LB_CAP + KC_H, AL_V, "PATTERN lens title on its key hint's line");
-    cv_text(PANEL_X0 + 2, LB_CAP + CAP_IN(S, KC_H), &AF_S, "PLAYHEADS", T_MID);
-    cv_key_hint(PANEL_X0 + PANEL_W - 2 - kh_w(KC_PRESETS, "BAR"), LB_CAP, KC_PRESETS, "BAR", 1, T_SURF);
-    cv_rrect(PANEL_X0 - 2, LP_Y, PANEL_W + 4, LP_H, 3, T_BG, T_SURF);
-    for (i = 16u; i < len; i += 16u)                 /* the bars' lines */
-        cv_rect(PANEL_X0 + (int32_t)(i * PANEL_W / len), LP_Y + 1, 1, LP_H - 2, T_RAISE);
+    rows = LP_H / rh;
+    if (hi - lo + 1 < rows)
+        lo -= (rows - (hi - lo + 1)) / 2;
+    hi = lo + rows - 1;
+    cv_rect(PR_RX, LP_Y, PR_RW, LP_H, T_BG);
+    if (!dr)
+        for (k = 0; k < (uint32_t)rows; k++) {           /* the scale's rows */
+            int32_t nn = hi - (int32_t)k;
+            static const uint8_t KB[12] = {0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0};
+            int in = mask == 0xFFFu ? !KB[(uint32_t)(nn + 120) % 12u] : (int)((mask >> ((uint32_t)(nn - t->p[P_ROOT] + 120) % 12u)) & 1u);
+            if (in)
+                cv_rect(PR_RX, LP_Y + (int32_t)k * rh, PR_RW, rh, T_LANE);
+        }
+    for (i = 0; i <= n; i++)                         /* the step lines, the beats brighter */
+        cv_rect(PR_RX + (int32_t)(i * PR_RW / n) - (i == n), LP_Y, 1, LP_H, i % 4u ? T_GRID : T_LINE);
+    if (len < n)                                     /* past LEN: dark */
+        cv_rect(PR_RX + (int32_t)(len * PR_RW / n), LP_Y, PR_RW - (int32_t)(len * PR_RW / n), LP_H, T_BG);
     for (i = 0; i < len; i++) {
-        uint32_t src = pr_src(t, i, len);
-        int32_t x = PANEL_X0 + (int32_t)(i * PANEL_W / len), sw = PANEL_X0 + (int32_t)((i + 1u) * PANEL_W / len) - x;
-        const step_t *st;
-        if (src == NSTEP)
+        const step_t *st = &seq_steps(t)[i];
+        int32_t x = PR_RX + (int32_t)(i * PR_RW / n), sw, L = 1;
+        if (!step_on(st))
             continue;
-        st = &seq_steps(t)[src];
-        if (src == i && sw > 2)                      /* (a TIE: on into its column) */
-            sw--;
+        while (L < (int32_t)len - (int32_t)i && seq_steps(t)[i + (uint32_t)L].time == ST_TIE)
+            L++;
+        sw = PR_RX + (int32_t)((i + (uint32_t)L) * PR_RW / n) - x - 2;
+        if (sw < 1)
+            sw = 1;
         if (dr) {
             for (l = 0; l < NLANE; l++)
                 if ((step_lanes(st) >> l) & 1u)
-                    cv_rect(x, LP_Y + 3 + (int32_t)l * nh / (int32_t)NLANE, sw, nh / (int32_t)NLANE - 1,
-                            step_heat(st, (step_accents(st) >> l) & 1u, c));
+                    cv_rect(x + 1, LP_Y + 4 + (int32_t)l * (LP_H - 8) / (int32_t)NLANE, sw, 3,
+                            lz_note(st, (step_accents(st) >> l) & 1u, c));
             continue;
         }
-        for (j = 0; j < st->n && j < 4u; j++)
-            cv_rect(x, LP_Y + 3 + nh - 2 - ((int32_t)st->note[j] - lo) * (nh - 2) / (hi - lo), sw, 2,
-                    step_heat(st, st->flags & SF_ACCENT, c));
+        for (j = 0; j < st->n && j < 4u; j++) {
+            int32_t nn = clamp(st->note[j], lo, hi);
+            cv_rect(x + 1, LP_Y + (hi - nn) * rh, sw + ((st->flags & SF_SLIDE) ? 2 : 0), rh,
+                    lz_note(st, (st->flags & SF_ACCENT) != 0u, c));
+        }
+        lz_comp_mark(st, x + (int32_t)(PR_RW / n) / 2, LP_Y + 1);
     }
     if (ph < len)
-        cv_rect(PANEL_X0 + (int32_t)(ph * PANEL_W / len), LP_Y + 1, 1, LP_H - 2, T_ACCENT);
+        cv_rect(PR_RX + (int32_t)(ph * PR_RW / n), LP_Y, 1, LP_H, T_ACCENT);
     for (k = 0; k < FG_HEADS && song.playing; k++) {   /* FUGUE's heads */
         uint32_t hi2 = fg_head[ti][k].idx;
         if (!fg_set[ti][k].rate || hi2 >= len)
             continue;
-        cv_rect(PANEL_X0 + (int32_t)(hi2 * PANEL_W / len), LP_Y + LP_H - 8, 2, 6, heat_col(70u + k * 60u));
+        cv_rect(PR_RX + (int32_t)(hi2 * PR_RW / n + PR_RW / n / 2) - 1, LP_Y + LP_H - 6, 2, 6, heat_col(70u + k * 60u));
     }
 }
-/* (0.8.3) LENTE's STEP: the cursor step large; (0.8.5) as the mock-up: on top "STEP n" (M, THEME) and at the right
- * what it is (NOTE, TIE, REST; a note longer than a step: LEN n). At the left the step: its notes, highest first, each
- * a bar as hot as it plays (moved by its MICRO, in its RATCH's parts; NOTE's note in focus the accent, the rest of the
- * chord MID) with its name, spaced by their interval; a TIE the notes it holds, MID; a REST, an empty step: said; a
- * kit: the lanes it hits. At the right its chips: ACC, SLIDE, MICRO, COMP, COMP 2, CHANCE (a value set: TINT, lit;
- * what the set shown edits, NOTE's MICRO, COMP's, COMP 2's: THEME) */
-#define BS_CX 124                                    /* the chips' column */
-#define BS_CW 104
-#define BS_Y 22                                      /* the first chip, 16 px apart */
-#define BS_TY 3                                      /* the title's line */
-#define BS_NH 7                                      /* a note's bar */
-static void bs_chip(uint32_t k, const char *lb, const char *v, int on, int act)
+/* (0.8.3) LENTE's STEP: the cursor step large; (0.8.5) as the mock-up, on a BG area (4 .. 236): on top "STEP n" (S,
+ * THEME) and at the right what it is (NOTE, TIE, REST; a note longer than a step: LEN n, MID). At the left its notes as
+ * bars 70 px wide where their pitch puts them (2.6 px a semitone, C3 at the foot), each named at the right of it (S,
+ * TEXT): as hot as it plays (moved by its MICRO, in its RATCH's parts; NOTE's note in focus the accent); a TIE the notes
+ * it holds, MID; a REST, an empty step: said; a kit: the lanes it hits. At the right its chips (102 x 14, 17 px apart):
+ * ACC, SLD, MICRO n, COMP1 x, COMP2 x, CHANCE n% (a value set: TINT with TEXT; else RAISE with DIM) */
+#define BS_CX 130                                    /* the chips' column */
+#define BS_CW 102
+#define BS_Y 28                                      /* the first chip, 17 px apart */
+#define BS_TY 4                                      /* the title's line (capitals 7..15) */
+#define BS_NH 6                                      /* a note's bar */
+static void bs_chip(uint32_t k, const char *s, int on)
 {
-    int32_t y = BS_Y + (int32_t)k * 16;
-    uint16_t bg = act ? T_THEME : on ? T_TINT : T_RAISE;
-    cv_rrect(BS_CX, y, BS_CW, 14, 3, bg, T_SURF);
+    int32_t y = BS_Y + (int32_t)k * 17;
+    uint16_t bg = on ? T_TINT : T_RAISE, fg = on ? T_TEXT : T_DIM == T_RAISE ? T_MID : T_DIM;
+    cv_rect(BS_CX, y, BS_CW, 14, bg);
     GFX_HOOK_ALIGN(0, y, 0, y + 14, AL_V, "big step chip text centred up/down");
-    cv_text_on(BS_CX + 5, y + CAP_IN(S, 14), &AF_S, lb, act ? T_INK : on ? T_TEXT : T_MID, bg);
-    GFX_HOOK_ALIGN(0, y, 0, y + 14, AL_V, "big step chip text centred up/down");
-    cv_text_r(BS_CX + BS_CW - 5, y + CAP_IN(S, 14), &AF_S, v, act ? T_INK : on ? T_TEXT : T_MID, bg);
+    cv_text_on(BS_CX + 5, y + CAP_IN(S, 14), &AF_S, s, fg, bg);
 }
 static void graph_bigstep(const track_t *t, const page_t *pg, uint16_t c)
 {
     static const char *const TIME_N[3] = {"NOTE", "TIE", "REST"};
-    uint32_t len = (uint32_t)clamp(t->p[P_SLEN], 1, NSTEP), i, j, dr = drum_track(t), nl;
-    uint32_t src = pr_src(t, ui.cursor % NSTEP, len), cs = comp_slot();
+    uint32_t len = (uint32_t)clamp(t->p[P_SLEN], 1, NSTEP), i, dr = drum_track(t), nl;
+    uint32_t src = pr_src(t, ui.cursor % NSTEP, len);
     const step_t *st = &seq_steps(t)[ui.cursor % NSTEP], *sn = src < NSTEP ? &seq_steps(t)[src] : st;
     int note = pg->id[0] == 4u, tie = st->time == ST_TIE, acc;
-    int32_t m = ST_MICRO(st), ay = BS_Y, ah = 5 * 16 + 14;   /* (the step's area: the chips' height) */
-    char b[16];
+    int32_t m = ST_MICRO(st);
+    char b[20];
+    cv_rect(PR_RX, 0, PR_RW, LZ_GRAPH_H, T_BG);
     str_cpy(b, "STEP ", sizeof b);
     fmt_int(b + 5, (int32_t)ui.cursor + 1);
-    cv_text(PANEL_X0, BS_TY, &AF_M, b, T_THEME);
+    GFX_HOOK_ALIGN(0, BS_TY + AF_S_CAP_Y, 0, BS_TY + AF_S_CAP_Y + AF_S_CAP_H, AL_V | AL_PASS, "big step title");
+    cv_text_on(10, BS_TY, &AF_S, b, T_THEME, T_BG);
     nl = !dr && st->time == ST_NOTE && st->n ? note_len(t, ui.cursor % NSTEP, len) : 1u;   /* (0.8.4) a NOTE's length:
                                                          * LEN 3 (BAR > STEP's KNOB 3 sets it) */
     str_cpy(b, nl > 1u ? "LEN " : TIME_N[st->time % 3u], sizeof b);
     if (nl > 1u) fmt_int(b + 4, (int32_t)nl);
-    GFX_HOOK_ALIGN(0, BS_TY + AF_M_CAP_Y, 0, BS_TY + AF_M_CAP_Y + AF_M_CAP_H, AL_V, "big step kind on its title's line");
-    cv_text_r(PANEL_X0 + PANEL_W - 2, BS_TY + AF_M_CAP_Y + HALF_UP(AF_M_CAP_H - AF_S_CAP_H) - AF_S_CAP_Y, &AF_S, b,
-              nl > 1u ? T_TEXT : T_MID, T_SURF);
+    cv_text_r(230, BS_TY, &AF_S, b, nl > 1u ? T_TEXT : T_MID, T_BG);
     if (dr) {                                        /* a kit: the lanes it hits (their accents hot), two columns */
         uint32_t k = 0, l;
         for (l = 0; l < NLANE; l++) {
-            int32_t x = PANEL_X0 + 4 + (int32_t)(k / 4u) * 52, y = ay + 10 + (int32_t)(k % 4u) * 20;
+            int32_t x = 14 + (int32_t)(k / 4u) * 52, y = 40 + (int32_t)(k % 4u) * 20;
             if (!(((st->time == ST_NOTE ? step_lanes(st) : 0u) >> l) & 1u))
                 continue;
-            cv_rrect(x, y, 10, 10, 2, step_heat(st, (step_accents(st) >> l) & 1u, c), T_SURF);
+            cv_rect(x, y, 10, 10, lz_note(st, (step_accents(st) >> l) & 1u, c));
             GFX_HOOK_ALIGN(0, y, 0, y + 10, AL_V, "big step lane on its hit");
-            cv_text_on(x + 15, y + CAP_IN(S, 10), &AF_S, drum_lane_abbr(t, l), T_TEXT, T_SURF);
+            cv_text_on(x + 15, y + CAP_IN(S, 10), &AF_S, drum_lane_abbr(t, l), T_TEXT, T_BG);
             k++;
         }
         if (!k)
-            cv_text_in(PANEL_X0, ay + HALF_UP(ah) - 8, 108, &AF_S, st->time == ST_NOTE ? "NO HIT" : TIME_N[st->time % 3u],
-                       T_MID, T_SURF);
-    } else if ((tie && src < NSTEP) || (st->time == ST_NOTE && st->n)) {   /* the notes, highest first */
+            cv_text_in(4, 66, 120, &AF_S, st->time == ST_NOTE ? "NO HIT" : TIME_N[st->time % 3u], T_MID, T_BG);
+    } else if ((tie && src < NSTEP) || (st->time == ST_NOTE && st->n)) {   /* the notes where their pitch puts them */
+        uint32_t n = sn->n < 4u ? sn->n : 4u, f = note && !tie && ui.pr_focus <= n ? ui.pr_focus : 0u, j;
         uint8_t ord[4] = {0, 1, 2, 3};
-        uint32_t n = sn->n < 4u ? sn->n : 4u, f = note && !tie && ui.pr_focus <= n ? ui.pr_focus : 0u;
-        int32_t gy[4], y0, span;
-        for (i = 0; i < n; i++)
+        int32_t gy[4];
+        for (i = 0; i < n; i++)                      /* highest first */
             for (j = i + 1u; j < n; j++)
                 if (sn->note[ord[j]] > sn->note[ord[i]]) { uint8_t q = ord[i]; ord[i] = ord[j]; ord[j] = q; }
-        gy[0] = 0;                                   /* spaced by their interval (3 px a semitone), 14 .. 26 apart */
-        for (i = 1; i < n; i++)
-            gy[i] = gy[i - 1u] + clamp(((int32_t)sn->note[ord[i - 1u]] - (int32_t)sn->note[ord[i]]) * 3, 14, 26);
-        span = n ? gy[n - 1u] + BS_NH : 0;
-        y0 = ay + HALF_UP(ah - span);
+        for (i = 0; i < n; i++) {                    /* by pitch, 11 px apart at least (the names), inside 22 .. 128 */
+            gy[i] = 112 - ((int32_t)sn->note[ord[i]] - 48) * 13 / 5;
+            if (i && gy[i] < gy[i - 1u] + 11)
+                gy[i] = gy[i - 1u] + 11;
+        }
+        if (n && gy[n - 1u] > 128)
+            for (i = 0; i < n; i++) gy[i] -= gy[n - 1u] - 128;
+        if (n && gy[0] < 22)
+            for (i = n; i-- > 0;) gy[i] += 22 - gy[0];
         for (i = 0; i < n; i++) {
-            int32_t y = y0 + gy[i], x = PANEL_X0 + 4 + (tie ? 0 : m);
-            uint16_t col = tie ? T_MID : f ? (ord[i] + 1u == f ? T_ACCENT : T_MID) : step_heat(sn, sn->flags & SF_ACCENT, c);
-            pr_split(x, y, 64, BS_NH, col, tie ? 1u : step_ratchet(sn));
+            int32_t y = gy[i], x = 14 + (tie ? 0 : m);
+            uint16_t col = tie ? T_MID : f ? (ord[i] + 1u == f ? T_ACCENT : lz_note(sn, (sn->flags & SF_ACCENT) != 0u, c)) :
+                                              lz_note(sn, (sn->flags & SF_ACCENT) != 0u, c);
+            pr_split(x, y, 70, BS_NH, col, tie ? 1u : step_ratchet(sn));
             note_name(b, sn->note[ord[i]]);
             GFX_HOOK_ALIGN(0, y, 0, y + BS_NH, AL_V, "big step note name on its bar");
-            cv_text_on(PANEL_X0 + 80, y + CAP_IN(S, BS_NH), &AF_S, b, tie ? T_MID : T_TEXT, T_SURF);
+            cv_text_on(90, y + CAP_IN(S, BS_NH), &AF_S, b, tie ? T_MID : T_TEXT, T_BG);
         }
     } else {
-        cv_text_in(PANEL_X0, ay + HALF_UP(ah) - 8, 108, &AF_S, st->time == ST_NOTE ? "EMPTY" : TIME_N[st->time % 3u], T_MID,
-                   T_SURF);
+        cv_text_in(4, 66, 120, &AF_S, st->time == ST_NOTE ? "EMPTY" : TIME_N[st->time % 3u], T_MID, T_BG);
     }
     acc = dr ? step_accents(st) != 0u : (st->flags & SF_ACCENT) != 0u;
-    bs_chip(0, "ACC", acc ? "ON" : "--", acc, 0);
-    bs_chip(1, "SLIDE", !dr && (st->flags & SF_SLIDE) ? "ON" : "--", !dr && (st->flags & SF_SLIDE), 0);
-    if (!m) str_cpy(b, "GRID", sizeof b);
-    else { b[0] = m < 0 ? '-' : '+'; fmt_int(b + 1, m < 0 ? -m : m); str_cpy(b + str_len(b), "/16", 4); }
-    bs_chip(2, "MICRO", b, m != 0, note && !dr);       /* (a kit's NOTE: the grid's cards) */
-    if (st->comp) str_cpy(b, COMP_NAMES[(COMP_ARPN + st->comp - CP_ARPN) % COMP_N], sizeof b);
-    else if (step_ratchet(st) > 1u) { str_cpy(b, "RATCH x", sizeof b); b[7] = (char)('0' + step_ratchet(st)); b[8] = 0; }
-    else str_cpy(b, "--", sizeof b);
-    bs_chip(3, "COMP", b, st->comp || step_ratchet(st) > 1u, pg->graph == GR_COMP && cs == 0u);
-    bs_chip(4, "COMP 2", st->comp2 ? COMP_NAMES[(COMP_ARPN + st->comp2 - CP_ARPN) % COMP_N] : "--", st->comp2 != 0u,
-            pg->graph == GR_COMP && cs == 1u);
-    fmt_int(b, (int32_t)step_chance(st));
+    bs_chip(0, "ACC", acc);
+    bs_chip(1, "SLD", !dr && (st->flags & SF_SLIDE));
+    str_cpy(b, "MICRO ", sizeof b);
+    if (!m) str_cpy(b + 6, "0", 4);
+    else { b[6] = m < 0 ? '-' : '+'; fmt_int(b + 7, m < 0 ? -m : m); str_cpy(b + str_len(b), "/16", 4); }
+    bs_chip(2, b, m != 0);
+    str_cpy(b, "COMP1 ", sizeof b);
+    if (st->comp) str_cpy(b + 6, COMP_NAMES[(COMP_ARPN + st->comp - CP_ARPN) % COMP_N], 10);
+    else if (step_ratchet(st) > 1u) { str_cpy(b + 6, "RATCH x", 10); b[13] = (char)('0' + step_ratchet(st)); b[14] = 0; }
+    else str_cpy(b + 6, "-", 4);
+    bs_chip(3, b, st->comp || step_ratchet(st) > 1u);
+    str_cpy(b, "COMP2 ", sizeof b);
+    str_cpy(b + 6, st->comp2 ? COMP_NAMES[(COMP_ARPN + st->comp2 - CP_ARPN) % COMP_N] : "-", 10);
+    bs_chip(4, b, st->comp2 != 0u);
+    str_cpy(b, "CHANCE ", sizeof b);
+    fmt_int(b + 7, (int32_t)step_chance(st));
     str_cpy(b + str_len(b), "%", 4);
-    bs_chip(5, "CHANCE", b, step_chance(st) < 100u, 0);
+    bs_chip(5, b, step_chance(st) < 100u);
 }
 static void graph_fugue(const track_t *t);
 
@@ -1390,6 +1386,7 @@ static void graph_fugue(const track_t *t)
  * lost the sense of what a turn did): for PF_MS the header shows the page's name (M) and, smaller at the right, the
  * track and its engine; on HOME (a track picked there) the track's engine big and "HOME" small. Then the header comes
  * back (ui.force). (0.6.64) Over the footer instead, which says the same: the header (load, battery) stays */
+static void draw_crumbs(int32_t y, uint16_t fg, uint16_t last);   /* (ui_draw.c) */
 static void page_flash_draw(void)
 {
     static uint32_t drawn;
@@ -1417,9 +1414,14 @@ static void page_flash_draw(void)
         str_cpy(nm, pt && pt[0] != '-' ? pt : pg->title, sizeof nm);
         str_cpy(sub + 3, en, sizeof sub - 3u);
     }
-    {   /* (0.6.64) at the bottom: the footer says the same. (0.8.5) LENTE: its footer, one row (the level's tabs on
-         * top stay) */
-        int32_t fh = H_FOOT - (int32_t)lens_dy();
+    if (lz_on()) {                                   /* (0.8.5) a lens page: its breadcrumb lit (the tabs say the level) */
+        cv_begin(240, foot_h(), T_BG);
+        draw_crumbs(0, dim ? T_MID : T_TEXT, dim ? T_MID : T_TEXT);
+        cv_blit(0, foot_y());
+        return;
+    }
+    {   /* (0.6.64) at the bottom: the footer says the same */
+        int32_t fh = H_FOOT;
         cv_begin(240, (uint32_t)fh, T_BG);
         cv_bg = T_BG;
         cv_text(8, (fh - (int32_t)AF_M.h) / 2, &AF_M, nm, dim ? T_MID : T_TEXT);
@@ -2318,7 +2320,10 @@ static void draw_graph(void)
     }
     ui.graph_sig = sig;
     cv_begin(240, graph_h(), T_BG);
-    cv_rrect(3, 0, 234, graph_h(), 5, T_SURF, T_BG);   /* the panel (MENU > LARGE: the strip) */
+    if (lz_on())                                     /* (0.8.5) a lens page: the mock-up's panel, square, 4 .. 236 */
+        cv_rect(4, 0, 232, (int32_t)graph_h(), T_SURF);
+    else
+        cv_rrect(3, 0, 234, graph_h(), 5, T_SURF, T_BG);   /* the panel (MENU > LARGE: the strip) */
     cv_bg = T_SURF;                                  /* (text drawn with cv_text lands on it) */
     if (drift_on())
         graph_drift();

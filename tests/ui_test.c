@@ -2290,7 +2290,7 @@ static int32_t roll_ink_row(const uint16_t *s, int32_t x0, int32_t x1, int32_t y
     int32_t x, y, n = 0, sum = 0;
     for (y = y0; y < y1; y++)
         for (x = x0; x < x1; x++)
-            if (s[y * 240 + x] != swap16(T_SURF)) { n++; sum += y * 16; }
+            if (s[y * 240 + x] != swap16(CARD_BG)) { n++; sum += y * 16; }   /* (0.8.5: a card RAISE) */
     return n ? sum / n : -1;
 }
 static int roll_static_now(void)                  /* the screen is the static render (a forced redraw changes nothing) */
@@ -2373,14 +2373,14 @@ static int test_roll(void)
     frame(); frame();
     memcpy(roll_shot, host_screen, sizeof roll_shot);
     ui.force = 1; ui_draw();
-    {   /* the header's strip: from the metronome's ink to the lock's place (ui_draw.c draw_head) */
+    {   /* the header's strip: from the play state's ink to the lock's place (ui_draw.c draw_head) */
         head_geo_t g;
         int32_t x0, x1;
         head_geo(&g, "121");
         x0 = g.sx0; x1 = g.sx1;
         n = roll_diff(x0, 0, x1, H_HEAD, 1);
         ok &= n > 20u && roll_diff(x0, 0, x1, H_HEAD, 0) == roll_diff(STRIP(0), 1);   /* (+ the card's strip) */
-        ok &= roll_diff(g.bx, 0, g.bx + text_w(&AF_M, "12"), H_HEAD, 1) == 0;
+        ok &= roll_diff(g.bx, 0, g.bx + text_w(&AF_S, "12"), H_HEAD, 1) == 0;   /* (0.8.5: the BPM in S) */
         ok &= x0 < g.bx && x1 <= 140 && x1 - x0 <= 40;
     }
     ok &= roll_diff(CARD_X(0), Y_LABEL + ROLL_Y, CARD_X(0) + 5 + text_w(&AF_M, "12"), Y_LABEL + ROLL_Y + ROLL_H, 1) == 0;
@@ -4304,7 +4304,7 @@ static int test_shift_page(void)
 }
 
 /* the STEP page's piano roll (ui_graph.c graph_roll), read back from the screen: per column the rows whose centre
- * pixel (the bar's middle, x + 6) is a bar colour, against the notes the step sounds (its own; a TIE: the note
+ * pixel (the bar's middle: the column's, its row's second) is a bar colour, against the notes the step sounds (its own; a TIE: the note
  * before's; a REST: none) */
 static int pr_is_bar(uint32_t x, uint32_t y)
 {
@@ -4322,7 +4322,7 @@ static int pr_columns_match(const track_t *t, uint32_t *nbars)
             if (n >= 0 && rr >= 0 && rr < PR_ROWS) want |= 1u << rr;
         }
         for (r = 0; r < PR_ROWS; r++)
-            if (pr_is_bar((uint32_t)(PR_X0 + (int32_t)i * PR_CW + 6), graph_y() + PR_Y0 + r * PR_RH + 2u)) got |= 1u << r;
+            if (pr_is_bar((uint32_t)(PR_CX(i) + PR_CWI(i) / 2), graph_y() + PR_Y0 + r * PR_RH + 1u)) got |= 1u << r;
         if (got != want) {
             printf("ui:   roll column %u: rows %05x drawn, %05x wanted\n", base + i, got, want);
             ok = 0;
@@ -4557,8 +4557,8 @@ static int test_piano_roll(void)
     key_down(7); frames(200);                                         /* a key held: its row lit on the strip */
     {
         int32_t r = (int32_t)proll.lo + PR_ROWS - 1 - (int32_t)kb_snd[7][0];
-        uint16_t c = r >= 0 && r < PR_ROWS ? swap16(host_screen[(graph_y() + PR_Y0 + (uint32_t)r * PR_RH + 1u) * 240u + PR_KX + 7]) : 0;
-        bad += check("  a key held: its row on the keyboard strip is the accent", kb_on[7] && c == T_ACCENT);
+        uint16_t c = r >= 0 && r < PR_ROWS ? swap16(host_screen[(graph_y() + PR_Y0 + (uint32_t)r * PR_RH + 1u) * 240u + PR_RX + 1]) : 0;
+        bad += check("  a key held: its row marked at the roll's left in the accent", kb_on[7] && c == T_ACCENT);
     }
     key_up(7); frames(100);
     song.rec = 0;
@@ -6294,7 +6294,8 @@ static int test_lente(void)
     bad += check("  PRESETS: PATTERN the bar (no wrap; KNOB 1 still LEN); BAR and STEP the step, the bar following", ok);
     /* (0.8.5) the level's tabs on top: the cards, the panel and the footer under them; the footer one row */
     go_title("PATTERN"); ui.force = 1; frame();
-    ok = lens_level() == LV_PAT && card_y() == Y_LABEL + LT_DY && graph_y() == Y_GRAPH + LT_DY && foot_y() == Y_FOOT + LT_DY;
+    ok = lens_level() == LV_PAT && card_y() == LZ_CARD_Y && graph_y() == LZ_GRAPH_Y && foot_y() == LZ_FOOT_Y && card_h() == LZ_CARD_H &&
+         graph_h() == LZ_GRAPH_H;
     {
         uint16_t th = swap16(host_screen[(LT_Y + LT_H / 2) * 240 + LT_X(LV_PAT) + 2]);
         uint16_t tb = swap16(host_screen[(LT_Y + LT_H / 2) * 240 + LT_X(LV_BAR) + 2]);
@@ -8649,7 +8650,7 @@ static int test_click_menu(void)
     }
     bad += check("CLICK / CLICK LEVEL / COUNT-IN saved and read back; a stored 3 the default; older settings OFF / MID / OFF", ok);
 
-    /* the count-in from the UI */
+    /* the count-in from the UI (0.8.5: read at the cells' row 40, where the roll's lens page is one colour across) */
     ui_power_on();
     menu_put(MI_COUNTIN, 1u);
     go_page(GR_ROLL);
@@ -8662,7 +8663,7 @@ static int test_click_menu(void)
     ok &= seq_counting() && !song.playing && cin_left == 4u && live_rec_sel();
     frame();
     {
-        uint16_t now0 = px_at(16, CI_Y + 4), next0 = px_at(16 + 56, CI_Y + 4);
+        uint16_t now0 = px_at(16, CI_Y + 40), next0 = px_at(16 + 56, CI_Y + 40);
         ok &= now0 != next0;                            /* the first beat's cell lit, the next not */
         ui_leds();
         ok &= (fm1_led[8] & 2u) != 0u;                  /* PLAY's green: on the beat */
@@ -8671,7 +8672,7 @@ static int test_click_menu(void)
         ok &= !(fm1_led[8] & 2u);
         cin_beat();
         frame();
-        ok &= cin_left == 3u && px_at(16 + 56, CI_Y + 4) == now0 && px_at(16, CI_Y + 4) == next0;   /* the cell moved */
+        ok &= cin_left == 3u && px_at(16 + 56, CI_Y + 40) == now0 && px_at(16, CI_Y + 40) == next0;   /* the cell moved */
         ui_leds();
         ok &= (fm1_led[8] & 2u) != 0u;
     }
@@ -8680,14 +8681,14 @@ static int test_click_menu(void)
     ok = transport_req == 2u;
     events_block(CTL);
     frame();
-    ok &= !seq_counting() && !song.playing && (song.rec & 1u) && px_at(16, CI_Y + 4) == px_at(16 + 56, CI_Y + 4);
+    ok &= !seq_counting() && !song.playing && (song.rec & 1u) && px_at(16, CI_Y + 40) == px_at(16 + 56, CI_Y + 40);
     bad += check("PLAY while counting in stops it: nothing plays, still armed, the page back", ok);
     press(B_PLAY);
     events_block(CTL);
     ok = seq_counting() && cin_left == 4u;
     for (i = 0; i < 4u; i++) cin_beat();
     frame();
-    ok &= !seq_counting() && song.playing && trk[0].seq_idx == 0u && px_at(16, CI_Y + 4) == px_at(16 + 56, CI_Y + 4);
+    ok &= !seq_counting() && song.playing && trk[0].seq_idx == 0u && px_at(16, CI_Y + 40) == px_at(16 + 56, CI_Y + 40);
     bad += check("PLAY armed and stopped: the count-in again; at its end the sequencer plays from step 1, the page back", ok);
     press(B_PLAY);
     events_block(CTL);
@@ -8984,7 +8985,7 @@ static int lg_value_rows(uint32_t c)                    /* rows of card c's valu
     int32_t x, y, n = 0;
     for (y = Y_LABEL + 40; y < Y_LABEL + 76; y++)
         for (x = CARD_X(c); x < CARD_X(c) + CARD_W; x++)
-            if (lg_px(x, y) == T_THEME) { n++; break; }
+            if (lg_px(x, y) == T_TEXT) { n++; break; }   /* (0.8.5: a value TEXT in every palette) */
     return n;
 }
 static int test_large(void)
@@ -9156,13 +9157,14 @@ static int test_menu_prefs(void)
 }
 
 /* MENU > STYLE (ui_menu.c, gfx.c ST_*): FLAT by default; KNOB 1 right LINE, left FLAT (stops at the ends), OCT+
- * toggles; drawn so from the next frame (ux.style, the tokens: LINE has no SURF, a rule under the header); saved in a
+ * toggles; drawn so from the next frame (ux.style, the tokens: LINE has no SURF, a rule over the panel); saved in a
  * spare byte of the settings and read back; settings from before it, and an unknown value, read as FLAT; 2, the
  * retired PIXEL (1.0.1), as LINE (again on a second import: idempotent) */
 static int test_style(void)
 {
     int bad = 0, ok;
-    const uint32_t rule = 26u * 240u + 120u;           /* (the rule under the header: ui_draw.c draw_rules) */
+    const uint32_t rule = 74u * 240u + 120u;           /* (the rule over the panel: ui_draw.c draw_rules; 0.8.5: the header's
+                                                        * own rule at 22 in either style) */
     ui_power_on();
     frame();
     ok = ui_style == ST_FLAT && ux.style == ST_FLAT && ux.surf != ux.bg;
@@ -9214,13 +9216,14 @@ static int test_style(void)
     return bad;
 }
 
-/* the header (ui_draw.c draw_head, 1.2's three slots): its elements measured in the render (every pixel off BG; an
- * element is a run of inked columns, split at 2 empty columns and at the battery's cell), each one's ink centred on row
- * 12 (top + bottom + 1 within 1 px of H_HEAD); the track cushion's ink from x 4; the battery's in 214..236, nothing
- * between 208 and it; with the centre shown the BPM's ink within 2 px of x 120; a message / a label centred on x 120
- * (its ink between 40 and 205, within 3 px); GLO with the tempo turned: the label right of the BPM and its lock, no
- * battery. Every state of the header, FLAT and LINE, every palette */
-#define HEAD_EL 32
+/* the header (ui_draw.c draw_head; 0.8.5 the mock-up's line): its elements measured in the render (every pixel off BG
+ * above the rule at row 22; an element is a run of inked columns, split at 2 empty columns and at the battery's
+ * outline), each one's ink centred on row 11 (top + bottom + 1 within 1 px of 2 x HEAD_MID); the play state's ink from
+ * x 6; the battery's in 222..234, the load's in 200..218, nothing between 196 and it; the centre's words (no octave,
+ * song or message) within 4 px of x 120; a message / a label centred on x 120 (its ink between the BPM's marks and 205,
+ * within 3 px); GLO with the tempo turned: the label right of the BPM and its lock, no battery; the rule a LINE row
+ * across. Every state of the header, FLAT and LINE, every palette */
+#define HEAD_EL 40
 static int32_t hel[HEAD_EL][4], nhel;                  /* x0 x1 (last inked column) top bot */
 static int head_centres(const char *what, int print)
 {
@@ -9230,14 +9233,14 @@ static int head_centres(const char *what, int print)
     while (x < 240) {
         int32_t x0, x1, top = 99, bot = -1, gap = 0, y, ink;
         for (; x < 240; x++) {                        /* the next inked column */
-            for (y = 0, ink = 0; y < H_HEAD; y++) ink |= host_screen[(Y_HEAD + y) * 240 + x] != bg;
+            for (y = 0, ink = 0; y < HEAD_RULE_Y; y++) ink |= host_screen[(Y_HEAD + y) * 240 + x] != bg;
             if (ink) break;
         }
         if (x >= 240) break;
         x0 = x1 = x;
         for (; x < 240 && gap < 2; x++) {
-            if (x == HEAD_BAT_X && x != x0) break;     /* the battery's cell ends the element */
-            for (y = 0, ink = 0; y < H_HEAD; y++)
+            if (x == HEAD_BAT_X && x != x0) break;     /* the battery's outline ends the element */
+            for (y = 0, ink = 0; y < HEAD_RULE_Y; y++)
                 if (host_screen[(Y_HEAD + y) * 240 + x] != bg) {
                     ink = 1;
                     if (y < top) top = y;
@@ -9248,10 +9251,13 @@ static int head_centres(const char *what, int print)
         }
         x = x1 + 1;
         if (print) printf("    head %-10s x %3d..%3d ink rows %2d..%2d centre %4.1f (%+.1f)\n", what, x0, x1, top, bot,
-                          (top + bot + 1) / 2.0, (top + bot + 1) / 2.0 - H_HEAD / 2);
-        ok &= top + bot + 1 >= H_HEAD - 2 && top + bot + 1 <= H_HEAD + 2;
+                          (top + bot + 1) / 2.0, (top + bot + 1) / 2.0 - HEAD_MID);
+        ok &= (x1 - x0 < 3 && bot - top < 3) ||          /* (the centre's separator dot sits on its text's middle) */
+              (top + bot + 1 >= 2 * HEAD_MID - 2 && top + bot + 1 <= 2 * HEAD_MID + 2);
         if (nhel < HEAD_EL) { hel[nhel][0] = x0; hel[nhel][1] = x1; hel[nhel][2] = top; hel[nhel][3] = bot; nhel++; }
     }
+    for (x = 0; x < 240; x++)                          /* the rule */
+        ok &= host_screen[(Y_HEAD + HEAD_RULE_Y) * 240 + x] == swap16(T_LINE);
     return ok;
 }
 /* the elements inside columns a .. b as one span (x0 .. x1): 2 x its centre, 0 none */
@@ -9276,7 +9282,7 @@ static void head_state(uint32_t s)
 {
     song.playing = s == HS_PLAY_REC || s == HS_SONG || s == HS_BEAT2 || s == HS_OCT;
     song.rec = s == HS_PLAY_REC || s == HS_COUNTIN ? 1u << song.sel : s == HS_REC_OTHER ? 1u << ((song.sel + 1u) % NTRK) : 0u;
-    clk_pos = 0; clk_step = s == HS_BEAT2 ? 4u : 8u;    /* (the 2nd beat: the metronome mirrored; else the 3rd) */
+    clk_pos = 0; clk_step = s == HS_BEAT2 ? 4u : 8u;    /* (the 2nd beat; else the 3rd) */
     if (s == HS_SONG) { chain.running = 1; chain.row = 2; }
     if (s == HS_MSG) ui_message("SAVED 03 BASS");
     if (s == HS_MSG2) ui_say("LOADED ", "07 A VERY LONG PATTERN NAME");
@@ -9316,73 +9322,54 @@ static int test_head_centres(void)
                 memset(host_screen, 0, sizeof host_screen);
                 ui.force = 1; draw_head(); ui.force = 0;
                 ok &= head_centres(HS_NAME[s], pr);
-                okp = nhel > 0 && hel[0][0] == 4;      /* the track cushion first, its ink from x 4 */
-                if (s != HS_GLO_TURN) {                /* the battery last, in its cell; between 208 and it only the
-                                                        * load meter (JIANT 0.5: 3 px at 209) */
-                    okp &= head_span2(HEAD_BAT_X, 239, &a, &b) && a >= 214 && b <= 236;
-                    okp &= !head_span2(HEAD_GRP_R, HEAD_BAT_X - 6, &a, &b) && !head_span2(HEAD_BAT_X - 2, HEAD_BAT_X - 1, &a, &b);
+                okp = nhel > 0 && hel[0][0] == HEAD_TR_X;  /* the play state first, its ink from x 6 */
+                if (s != HS_GLO_TURN) {                /* the battery last, in its outline; the load before it */
+                    okp &= head_span2(HEAD_BAT_X, 239, &a, &b) && a >= 222 && b <= 234;
+                    okp &= head_span2(HEAD_LOAD_X, HEAD_BAT_X - 1, &a, &b) && a >= HEAD_LOAD_X && b <= 218;
+                    okp &= !head_span2(HEAD_GRP_R + 1, HEAD_LOAD_X - 1, &a, &b);
                 } else {                               /* GLO, the tempo turned: the BPM, its lock, the label after */
                     head_geo_t g;
                     head_geo(&g, "124");
                     okp &= head_span2(g.bx + g.b[2] + 20, 239, &a, &b) && a >= 142;
                 }
-                if (!msg) {                            /* the BPM's ink on x 120 (between the metronome and the lock) */
-                    head_geo_t g;
-                    head_geo(&g, s == HS_BPM90 ? "90" : "124");
-                    c2 = head_span2(g.mx1, g.bx + g.b[2] + HEAD_GAP - 1, &a, &b);
+                if (!msg && s != HS_OCT && s != HS_SONG && s != HS_GLO_TURN) {   /* the centre's words on x 120 */
+                    c2 = head_span2(56, HEAD_GRP_R, &a, &b);
                     okp &= c2 >= 236 && c2 <= 244;
-                } else {                               /* the message centred on x 120 */
-                    c2 = head_span2(40, 205, &a, &b);
-                    okp &= c2 >= 234 && c2 <= 246 && a >= 40 && b <= 205;
+                } else if (msg) {                      /* the message centred on x 120 */
+                    c2 = head_span2(song.rec ? 58 : 44, 205, &a, &b);
+                    okp &= c2 >= 234 && c2 <= 246 && b <= 205;
                 }
                 if (pr && !okp) printf("    head %s: misplaced\n", HS_NAME[s]);
                 place &= okp;
                 head_clear();
             }
     ui_style = ST_FLAT; style_apply();
-    bad += check("header: every element's ink centred on row 12 (+-1 px), every state, FLAT and LINE, every palette", ok);
-    bad += check("header: three slots: track at 4, BPM / message on x 120, octave to 208, battery 214..236 (GLO with "
-                 "the tempo turned: the label right of the BPM and its lock)", place);
+    bad += check("header: every element's ink centred on row 11 (+-1 px) over its LINE rule, every state, FLAT and LINE, every palette", ok);
+    bad += check("header: play state at 6, the centre / a message on x 120, octave to 196, load 200..218, battery 222..234 "
+                 "(GLO with the tempo turned: the label right of the BPM and its lock)", place);
     ui_power_on();
     return bad;
 }
 
-/* the header's metronome (ui_draw.c head_metro): it swings on the beats the click is on (seq.c click_beat_now): the
- * bar's 2nd and 4th beats mirrored, the 1st the accent's, the 3rd as stopped; a beat redraws its ink only (the rest
- * of the screen untouched, the header's signature kept) */
+/* (0.8.5) the header's beat: the mock-up's header has no metronome; a beat changes nothing in it (its signature kept,
+ * not a pixel redrawn) */
 static int test_head_metronome(void)
 {
-    static uint16_t shot[4][H_HEAD * 240], still[H_HEAD * 240];
-    head_geo_t g;
-    int bad = 0, ok = 1, only = 1, b;
-    int32_t x, y, w;
+    static uint16_t still[H_HEAD * 240];
+    int bad = 0, only = 1, b;
     ui_power_on();
     settings.palette = 0; palette_set(0);
     song.g[G_BPM] = 124; ui.roll_bpm = 124;
-    head_geo(&g, "124");
-    w = g.mx1 - g.mx0;
-    ui.force = 1; draw_head(); ui.force = 0;           /* stopped */
+    song.playing = 1; clk_pos = 0; clk_step = 0;
+    ui.force = 1; draw_head(); ui.force = 0;
     memcpy(still, host_screen, sizeof still);
-    song.playing = 1; clk_pos = 0;
     for (b = 0; b < 4; b++) {
-        uint32_t sig;
-        clk_step = (uint32_t)b * 4u + (b & 1u) * 2u;   /* (inside the beat: its 1st or 3rd 1/16) */
-        ui.force = 1; draw_head(); ui.force = 0;
-        memcpy(shot[b], host_screen, sizeof shot[b]);
-        sig = ui.head_sig;
-        clk_step = (uint32_t)((b + 1) % 4) * 4u;       /* the next beat: only the metronome's ink changes */
+        uint32_t sig = ui.head_sig;
+        clk_step = (uint32_t)b * 4u + 2u;
         draw_head();
-        only &= ui.head_sig == sig;
-        for (y = 0; y < H_HEAD; y++)
-            for (x = 0; x < 240; x++)
-                if (host_screen[y * 240 + x] != shot[b][y * 240 + x]) only &= x >= g.mx0 && x < g.mx1;
+        only &= ui.head_sig == sig && !memcmp(still, host_screen, sizeof still);
     }
-    for (b = 0; b < 4; b++)                            /* 1.1.5: no swing: every beat as stopped */
-        for (y = 0; y < H_HEAD; y++)
-            for (x = 0; x < w; x++)
-                ok &= shot[b][y * 240 + g.mx0 + x] == still[y * 240 + g.mx0 + x];
-    bad += check("header metronome: still on every beat, as stopped", ok);
-    bad += check("header metronome: a beat changes nothing in the header", only);
+    bad += check("header: a beat changes nothing in it (no metronome since 0.8.5)", only);
     song.playing = 0;
     ui_power_on();
     return bad;

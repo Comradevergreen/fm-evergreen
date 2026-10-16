@@ -166,9 +166,17 @@ static uint8_t sync_reload;                  /* engine / preset / project / user
 #define H_GRAPH 122
 #define Y_FOOT 202
 #define H_FOOT 38
-#define LT_Y 28                       /* (0.8.5) LENTE's level tabs, PATTERN BAR STEP, on top of the SEQ pages (ui_draw.c */
-#define LT_H 13                       /* draw_tabs); the cards, the panel and the footer's line move down LT_DY, the */
-#define LT_DY 16                      /* footer keeps its second row only (lens_dy) */
+/* (0.8.5) the lens pages (LENTE: SEQ, SAVE, FX) laid out as the approved mock-up: the header's rule at 22, the level
+ * tabs 26..38, the cards 42..79 (38 tall), the panel 84..223, the footer one line 225..239 (a breadcrumb) */
+#define LT_Y 26                       /* the level tabs (ui_draw.c draw_tabs): three, x 4 + 78 l, 76 wide */
+#define LT_H 13
+#define LZ_CARD_Y 42
+#define LZ_CARD_H 38
+#define LZ_GRAPH_Y 84
+#define LZ_GRAPH_H 140
+#define LZ_FOOT_Y 225
+#define LZ_FOOT_H 15
+#define HEAD_RULE_Y 22                /* (0.8.5) the header's rule (every page): a LINE row in the header's strip */
 /* MENU > LARGE (large_kind below): on the value pages the cards are tall (28..132) and the panel a strip
  * (136..198); elsewhere (lists, rolls, layers) the layout above, its card labels in M */
 #define LG_CARD_H 104
@@ -384,12 +392,14 @@ static const page_t *cur_page(void) { return page_over ? page_over : &PAGES[ui.p
  *            CHANCE) and the quick layers' maps: the layout as it is, the card labels in M;
  *   LK_OFF   LARGE off; the menu (its own LARGE: ui_menu.c), the dialogs and NAME keep their own layout in every case. */
 enum { LK_OFF, LK_LABEL, LK_TALL };
+static int lens_on(void);
+static uint32_t lz_on(void);
 static uint32_t large_kind(void)
 {
     uint32_t g;
     if (!(ui_prefs & PREF_LARGE))
         return LK_OFF;
-    if (ui.layer)
+    if (ui.layer || lz_on())                            /* (0.8.5: a lens page keeps the mock-up's cards, M labels) */
         return LK_LABEL;
     if (ui.home)
         return LK_TALL;
@@ -397,14 +407,14 @@ static uint32_t large_kind(void)
     return g == GR_BROWSE || g == GR_SLOTS || g == GR_USER || g == GR_PATS || g == GR_SONG || g == GR_ROLL ||
            g == GR_CHANCE || g == GR_COMP || g == GR_EVENTS ? LK_LABEL : LK_TALL;
 }
-/* the geometry of the page shown: the cards' height, the panel's top and height */
-static int lens_on(void);
-static uint32_t lens_dy(void) { return lens_on() && !ui.layer ? LT_DY : 0u; }   /* (0.8.5) LENTE: under its tabs */
-static uint32_t card_y(void) { return Y_LABEL + lens_dy(); }
-static uint32_t foot_y(void) { return Y_FOOT + lens_dy(); }
-static uint32_t card_h(void) { return large_kind() == LK_TALL ? LG_CARD_H : CARD_H; }
-static uint32_t graph_y(void) { return (large_kind() == LK_TALL ? LG_Y_GRAPH : Y_GRAPH) + lens_dy(); }
-static uint32_t graph_h(void) { return large_kind() == LK_TALL ? LG_H_GRAPH : H_GRAPH; }
+/* the geometry of the page shown: the cards' height, the panel's top and height. (0.8.5) A lens page (lz_on): the
+ * mock-up's (LZ_*), under its level tabs; a layer's map over it: the usual layout */
+static uint32_t card_y(void) { return lz_on() ? LZ_CARD_Y : Y_LABEL; }
+static uint32_t foot_y(void) { return lz_on() ? LZ_FOOT_Y : Y_FOOT; }
+static uint32_t foot_h(void) { return lz_on() ? LZ_FOOT_H : H_FOOT; }
+static uint32_t card_h(void) { return lz_on() ? LZ_CARD_H : large_kind() == LK_TALL ? LG_CARD_H : CARD_H; }
+static uint32_t graph_y(void) { return lz_on() ? LZ_GRAPH_Y : large_kind() == LK_TALL ? LG_Y_GRAPH : Y_GRAPH; }
+static uint32_t graph_h(void) { return lz_on() ? LZ_GRAPH_H : large_kind() == LK_TALL ? LG_H_GRAPH : H_GRAPH; }
 static int large_face_has(const char *s)                /* every glyph of s in the sparse L face */
 {
     for (; *s; s++)
@@ -527,6 +537,19 @@ static void lens_sync(void)
     ui.lv = PAGES[i].graph == GR_CHANCE ? LV_STEP : LV_PAT;
 }
 static int lens_on(void) { return !ui.home && !page_over && PAGES[ui.page].fam == FAM_SEQ; }
+/* (0.8.5) a lens page shown (SEQ's LENTE; SAVE's and FX's below): the mock-up's layout, its tabs and breadcrumb */
+static uint32_t lz_on(void) { return lens_on() && !ui.layer; }
+enum { LZ_SEQ, LZ_SAVE, LZ_FX };
+static uint32_t lz_fam(void) { return LZ_SEQ; }         /* which lens */
+static uint32_t lens_level(void);
+static uint32_t lz_level(void) { return lens_level(); } /* its level shown, 0..2 */
+static const char *lz_level_name(uint32_t l) { return LENS_NAME[l % LV_N]; }
+static const char *lz_crumb(void) { return "LENTE"; }   /* the breadcrumb's first word */
+static const char *lz_set_name(void)                    /* .. its last: the set shown */
+{
+    int32_t k = lens_k(lens_level(), ui.page);
+    return k >= 0 ? LENS_SET[lens_level()][k] : PAGES[ui.page].title;
+}
 static uint32_t lens_level(void)
 {
     lens_sync();

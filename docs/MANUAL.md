@@ -134,22 +134,31 @@ layer's shortcuts; on the DRUM grid they are steps and lanes; on the NAME screen
 
 ## 2. The screen
 
-- **Header (top)**: play state, the metronome, the **BPM** (lit while it changes), the octave (or the song row
-  while a song plays), the **load meter** (five small bars next to the battery: how much of the audio time the sound
-  takes now) and the USB icon. Messages appear here too ("SAVED", "T1 CLEARED"...), sometimes with a second line.
-- **Cards**: the four columns under the header are KNOB 1–4, split by fine lines. The values are white; the one you
-  are turning lights orange, with its bar, so it is the only colour on the cards. A value that is automated or locked
-  is marked; a dim card means "nothing here now". The step bars at the bottom sit four under each card.
+Since 0.8.5 every page wears the skin of the design the owner approved (the HTML mock-up "LENTE"):
+
+- **Header (top)**: one quiet line over a thin rule. At the left the play state (a grey square stopped, an orange
+  triangle playing, violet while counting in) and the **BPM** (violet; orange while it changes), then BPM LOCK's lock
+  and the REC dot (filled: the selected track armed; a ring: another track). In the middle what the page is of:
+  **T1 · ANALOG ACID** (the track, its engine and its sound); on the song's pages (SAVE, ARRANGE, TOOLS, GLOBAL)
+  **P1 NAME** (the project); on FX **T1** in orange. At the right the octave (**OCT +2**, or the song row while a song
+  plays), the **load meter** (five small bars, violet as the sound takes more of the audio time) and the battery
+  (violet when USB powers it). Messages appear in the middle ("SAVED", "T1 CLEARED"...), sometimes with a second line.
+- **Cards**: the four boxes under the header are KNOB 1–4: the name small and grey on top, the value under it in white,
+  and a thin violet bar under the value. The one you are turning lights orange, so it is the only colour on the cards.
+  A value that is automated or locked has its name in violet; a dim card means "nothing here now". An action armed
+  (SAVE, LOAD, ERASE, CLEAR...) is a violet-tinted card with its name violet and **OCT+** as its value. The cards have
+  no icons since 0.8.5.
 - **Page name**: changing page (or track) by hand shows the page's name over the footer for a moment, with the track and
-  its engine at the right; on HOME the track's engine, "T1 HOME" small. The header, the cards and the graph stay in sight.
+  its engine at the right; on HOME the track's engine, "T1 HOME" small (on a lens page its breadcrumb lights up instead).
+  The header, the cards and the graph stay in sight.
 - **Granules**: a few dots drift behind the panel's graph, as on HOME (LOAD FULL with ANIM ON). They move only when the panel redraws anyway
   (a knob, the LFO, the envelope), so they cost no CPU.
 - **Panel (middle)**: the page's graph — the engine's creature, an envelope, the LFO running, the step grid, a list...
-- **Footer**: the page name and its place in its family (e.g. **DLY 2/2**), or key hints. On the song pages
-  (PROJECT, ARRANGE, TOOLS, GLOBAL, SYSTEM) it shows the project and its name instead of the track's sound. On the SEQ
-  pages the footer is one line (the sound and the set you are on) and the lens's level tabs sit at the top instead
-  (0.8.5): **PATTERN · BAR · STEP** under the header, the level you are on filled violet, the cards and the panel under
-  them.
+- **Footer**: the step bars of the bar you edit (four under each card) or key hints, and under them a small grey
+  **breadcrumb**: the button and the page (e.g. **FX · DLY 2/2**, **ENV · ENV DEST 2/2**).
+- **The lens pages** (the sequencer since 0.8.3) are laid out as the mock-up: under the header three
+  **level tabs** (the one you are on filled violet), the cards under them, a taller panel, and the footer is the
+  breadcrumb alone, **LENTE · BAR · STEP** (the lens, the level, the set).
 
 **Colours** work like a thermal camera: cold (cyan, blue) is little, hot (orange, yellow, white) is a lot. Violet is
 what's selected, orange what's active.
@@ -559,15 +568,18 @@ The sequencer works like a lens (LENTE, 0.8.3). **SELECT** zooms between three l
 detent, without wrapping; each level shows its own picture and has its own sets of knobs, and a **SEQ** tap goes round
 the sets of the level you are on. The **level tabs at the top** (0.8.5; until 0.8.4 the footer's first row) always say
 where you are: three equal tabs **PATTERN · BAR · STEP** right under the header, the level you are on filled violet
-(another palette: its own selection colour), the cards under them. The pattern's bars (up to four, at LEN 64) are drawn
-in the panel on PATTERN and BAR: the bar you edit framed violet, the number of the bar playing orange, a bar past LEN
-dark.
+(another palette: its own selection colour), the cards under them, and the footer's breadcrumb says the set:
+**LENTE · BAR · STEP**. The pattern's bars (up to four, at LEN 64) are drawn in the panel on PATTERN and BAR as small
+cells: the bar you edit tinted violet with its number violet, the number of the bar playing orange, a bar past LEN dark.
 
 | Level | What the screen shows | SEQ tap goes round | PRESETS |
 | --- | --- | --- | --- |
-| **PATTERN** | The pattern's bars side by side as large thumbnails, each a small piano roll of its sixteen steps (a DRUM track: its lanes), the bar you edit framed, the playhead where it plays; under them **PLAYHEADS**: the whole pattern as one small roll with the playhead and PLAYHEADS' extra heads (a tick each), PRESETS' **BAR** hint at the right. | PATTERN (LEN DIV SWING GATE) → STRETCH → PLAYHEADS → TRACK → MUTATE | the **bar** (no wrap; the cursor keeps its place in the bar) |
-| **BAR** | A strip of the pattern's bars, small, on top (the one you edit framed), and under it the bar's **piano roll**, as STEP always was (a DRUM track: the **grid**, with its keys). | STEP → NOTE → AUTOMATION → AUTO LIST | the **step cursor**; past the bar's end it moves into the next bar |
-| **STEP** | The cursor step drawn large: **STEP n** on top with NOTE / TIE / REST at the right (a note longer than a step: **LEN n**, set on BAR > STEP's KNOB 3); at the left its notes highest first, spaced by their interval, each named (the note in focus lit, MICRO moving them, RATCH splitting them; a TIE shows the notes it holds), and at the right its chips: ACC, SLIDE, MICRO, COMP, COMP 2, CHANCE (a value set lit). The set you are on fills its chip. | NOTE (FOCUS PITCH MOVE MICRO) → COMP → COMP 2 | the **step cursor** |
+| **PATTERN** | The pattern's bars side by side as large thumbnails, each its sixteen steps as small dashes (a DRUM track: its lanes); under them **PLAYHEADS**: the whole pattern as one small roll (the scale's rows tinted, the beats' lines brighter, a step with a component marked on top, steps past LEN dark) with the playhead and PLAYHEADS' extra heads (a tick each at the foot). | PATTERN (LEN DIV SWING GATE) → STRETCH → PLAYHEADS → TRACK → MUTATE | the **bar** (no wrap; the cursor keeps its place in the bar) |
+| **BAR** | A strip of the pattern's bars, small, on top (the one you edit tinted), and under it the bar's **piano roll** across the whole width: 30 semitones, the scale's rows tinted, the cursor a violet frame round its column, the playhead an orange line, a step with a component a small mark on top, a parameter lock a mark at the foot, a key held on the track a mark at the left of its row (a DRUM track: the **grid**, with its keys). | STEP → NOTE → AUTOMATION → AUTO LIST | the **step cursor**; past the bar's end it moves into the next bar |
+| **STEP** | The cursor step drawn large: **STEP n** on top with NOTE / TIE / REST at the right (a note longer than a step: **LEN n**, set on BAR > STEP's KNOB 3); at the left its notes as bars where their pitch puts them, each named (the note in focus orange, MICRO moving them, RATCH splitting them; a TIE shows the notes it holds), and at the right its chips: **ACC, SLD, MICRO n, COMP1 x, COMP2 x, CHANCE n%** (a value set: a violet-tinted chip; nothing set: dim). | NOTE (FOCUS PITCH MOVE MICRO) → COMP → COMP 2 | the **step cursor** |
+
+The roll has no keyboard strip nor the C rows' names since 0.8.5 (the mock-up's): the STEP level names the notes, and
+the PITCH card says the note in focus.
 
 - **SEQ from another page** comes back to the level and set you last used **on that track** (each track remembers its
   own); at power-on it is BAR's STEP, the piano roll.

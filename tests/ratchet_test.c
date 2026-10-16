@@ -273,20 +273,15 @@ static uint32_t card_px(uint32_t k, uint16_t c)
 {
     uint32_t n = 0;
     int32_t x, y;
-    for (y = Y_LABEL; y < Y_LABEL + CARD_H; y++)
+    for (y = (int32_t)card_y(); y < (int32_t)(card_y() + card_h()); y++)   /* (0.8.5: the page's cards, a lens page's too) */
         for (x = CARD_X(k); x < CARD_X(k) + CARD_W; x++)
             n += swap16(host_screen[y * 240 + x]) == c;
     return n;
 }
-/* the slide line's pixels (TEXT) in the gap after step column i of the piano roll, between rows lo and hi */
-static uint32_t pr_slide_px(uint32_t i, int32_t lo, int32_t hi)
+/* (0.8.5) a slide: the bar of step column i reaches into the next column's first px (its row: note n) */
+static int pr_slide_reach(uint32_t i, int32_t n)
 {
-    uint32_t n = 0;
-    int32_t x, y, x0 = PR_X0 + (int32_t)i * PR_CW;
-    for (y = (int32_t)graph_y() + pr_row_y(hi); y <= (int32_t)graph_y() + pr_row_y(lo) + PR_RH; y++)
-        for (x = x0 + 11; x <= x0 + 13; x += 2)          /* (x0 + 12 the step line, x0 + 14 the next bars) */
-            n += swap16(host_screen[y * 240 + x]) == T_TEXT;
-    return n;
+    return pr_is_bar((uint32_t)PR_CX(i + 1u), graph_y() + (uint32_t)pr_row_y(n) + 1u);
 }
 
 static int screens(void)
@@ -313,12 +308,12 @@ static int screens(void)
             t->step[0] = kind[k];
             step_set_ratchet(&t->step[0], 2);
             memset(host_screen, 0, sizeof host_screen); ui.force = 1; ui_draw();
-            dim[k] = card_px(2, T_DIM); thm[k] = card_px(2, T_THEME);
+            dim[k] = card_px(2, T_DIM); thm[k] = card_px(2, T_TEXT);   /* (0.8.5: a value TEXT) */
         }
         t->step[0] = kind[3]; t->step[0].hit = 1u;   /* a NOTE step of lane hits only: it plays */
         step_set_ratchet(&t->step[0], 2);
         memset(host_screen, 0, sizeof host_screen); ui.force = 1; ui_draw();
-        ok = card_px(2, T_DIM) == dim[0] && card_px(2, T_THEME) == thm[0];
+        ok = card_px(2, T_DIM) == dim[0] && card_px(2, T_TEXT) == thm[0];
         for (k = 1; k < 4u; k++)
             ok &= dim[k] > dim[0] && thm[k] < thm[0];
         bad += check("  RATCH shows dimmed on a REST, a TIE or an empty step (a note or a hit: not)", ok);
@@ -333,18 +328,18 @@ static int screens(void)
     step_set_ratchet(&t->step[1], 2);
     go_page(GR_ROLL); ui.cursor = 8; ui.bank = 0;
     memset(host_screen, 0, sizeof host_screen); ui.force = 1; ui_draw();
-    y = graph_y() + (uint32_t)pr_row_y(60) + 2u;
-    x = PR_X0 + 1u * PR_CW;
-    ok = pr_is_bar(x + 3u, y) && pr_is_bar(x + 9u, y) && !pr_is_bar(x + 6u, y);
-    x = PR_X0 + 3u * PR_CW;
-    bad += check("  the piano roll draws an x2 step in two parts (x1 whole)", ok && pr_is_bar(x + 6u, y));
+    y = graph_y() + (uint32_t)pr_row_y(60) + 1u;
+    x = (uint32_t)PR_CX(1);                          /* (0.8.5: columns 14 / 15 px, the bar a px in: x2 at x + 1 .. 6, 8 .. 13) */
+    ok = pr_is_bar(x + 2u, y) && pr_is_bar(x + 10u, y) && !pr_is_bar(x + 7u, y);
+    x = (uint32_t)PR_CX(3);
+    bad += check("  the piano roll draws an x2 step in two parts (x1 whole)", ok && pr_is_bar(x + 7u, y));
     t->step[4] = (step_t){{64}, 1, ST_NOTE, 0, 100};   /* SLIDE into a note: the line, but not from x2 */
     t->step[3].flags = SF_SLIDE;
     t->step[1].flags |= SF_SLIDE;                     /* (x2 kept) */
     t->step[2] = t->step[4];
     memset(host_screen, 0, sizeof host_screen); ui.force = 1; ui_draw();
-    bad += check("  a slide line from an x1 SLIDE step, none from an x2 one", pr_slide_px(3, 60, 64) > 0u &&
-                 pr_slide_px(1, 60, 64) == 0u);
+    bad += check("  an x1 SLIDE step's bar reaches into the next column, an x2 one's not", pr_slide_reach(3, 60) &&
+                 !pr_slide_reach(1, 60));
     t->step[1].flags &= (uint8_t)~SF_SLIDE; t->step[3].flags = 0;
     t->step[2] = t->step[4] = (step_t){{0}, 0, ST_REST, 0, 0};
     set_engine_of(t, ENGI_DRUM);                     /* the grid: x3 in three bars */
@@ -353,7 +348,7 @@ static int screens(void)
     step_set_ratchet(&t->step[1], 3);
     ui.lane = 1;
     memset(host_screen, 0, sizeof host_screen); ui.force = 1; ui_draw();
-    y = graph_y() + 18u + 4u + 6u;                   /* lane 0's hits: y 23 .. 32 of the panel (0.8.5: under LENTE's bars) */
+    y = graph_y() + 19u + 2u + 5u;                   /* lane 0's hits: y 21 .. 30 of the panel (0.8.5: under LENTE's bars) */
     x = 40u + 12u;
     bad += check("  the DRUM grid draws an x3 hit in three parts", pr_is_bar(x, y) && !pr_is_bar(x + 2u, y) &&
                  pr_is_bar(x + 3u, y) && !pr_is_bar(x + 5u, y) && pr_is_bar(x + 6u, y));

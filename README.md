@@ -538,6 +538,25 @@ JIANT's modifications are distributed under the same license.
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
 
 ### v0.8.5
+- **The mock-up's skin on every page** (the owner: "I want it to be the same as the model you sent me"). Only the
+  drawing changed; every page, knob, key and function is where it was.
+  - **Header**: one quiet line over a thin rule, as the mock-up's: the play state (a grey square, an orange triangle)
+    and the BPM small at the left (then BPM LOCK's lock and the REC dot), **T1 · ANALOG ACID** in the middle (on the
+    song's pages **P1 NAME**, on FX **T1**), the octave / song row, five small load bars and an outlined battery at the
+    right. The track's big number, the play icon, the metronome and the big BPM are gone (the track is in the middle
+    words; the metronome stood still since 1.1.5).
+  - **Cards**: square RAISE boxes, the name small and grey on top, the value white, a thin violet bar under it; no
+    icons; an action armed (SAVE, LOAD, CLEAR...) a violet-tinted card saying **OCT+**.
+  - **Footer**: the engine and sound moved to the header; the footer's last line is a small grey breadcrumb,
+    **FX · DLY 2/3**, **LENTE · BAR · STEP**.
+- **The sequencer's lens as the mock-up, closer** (on top of the first pass below): its tabs 76 x 13 square at y 26,
+  the cards 38 tall at 42, the panel 84..223 (140 px: the canvas grew from 124 rows, +7.5 KB of POOL), the footer the
+  breadcrumb alone. BAR's roll across the whole width, 30 semitones of 4 px, the cursor a violet frame, components
+  marked on top, slides 2 px into the next step (the keyboard strip and the C names are gone: STEP names the notes);
+  PATTERN's cells and PLAYHEADS roll as the mock-up's (PRESETS' BAR hint gone); STEP's notes where their pitch puts
+  them and its chips as one line each, "MICRO +3/16", "COMP1 NOTES". The notes in the mock-up's colours (JIANT: warm,
+  an accent near white; another palette: notes in the accent, accents in the text colour). On a lens page the key
+  hints of AUTO LIST (OCT+ / EDIT / OCT-) are not shown: the cards say OCT+.
 - **The sequencer looks like the LENTE design that was approved** (the owner: "it looks nothing like what you showed
   me in the HTML"). Only the drawing changed: the levels, the sets, the knobs and the keys work as in 0.8.3 / 0.8.4.
 - **The level tabs at the top.** On every SEQ page, right under the header and over the cards: three equal tabs
