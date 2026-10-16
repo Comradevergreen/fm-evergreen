@@ -733,6 +733,7 @@ static int test_init_dry(void)
 }
 /* (0.6.48) DRUM-X IMAGE and the sounds' SENDs: IMAGE 0 and no SEND the part as mono as before; IMAGE puts each sound
  * on its side; a sound's SEND feeds its bus alone; the SENDs go with the project */
+static int16_t dximg_punch;                              /* (0.7.8) PUNCH for dximg_hit: the hit driven into the knee */
 static void dximg_hit(uint32_t note, int16_t img, int64_t *el, int64_t *er, int64_t *sr)
 {
     int32_t o[2u * CTL];
@@ -746,8 +747,9 @@ static void dximg_hit(uint32_t note, int16_t img, int64_t *el, int64_t *er, int6
     t->engine = t->eng_req;
     t->p[P_REV] = t->p[P_DLY] = t->p[P_CHOR] = t->p[P_DIST] = 0;
     t->p[P_DXIMG] = img;
+    song.g[G_PUNCH] = dximg_punch;
     for (b = 0; b < 40u; b++) mix_block(o, CTL);       /* (past the engine change's crossfade: voice.c XF_ENG) */
-    trk_note_on(t, note, 110);
+    trk_note_on(t, note, dximg_punch ? 127 : 110);
     *el = *er = *sr = 0;
     for (b = 0; b < 60u; b++) {
         mix_block(o, CTL);
@@ -782,6 +784,41 @@ static int test_dximg(void)
             ok &= dx_img_pan(l, img) >= -64 && dx_img_pan(l, img) <= 64 && (l != DV_KICK || (dx_img_pan(l, img) >= -16 &&
                   dx_img_pan(l, img) <= 16));
     bad += check("DRUM IMAGE: pans in range, the kick near the middle", ok);
+    {   /* (0.7.8) a sound hard to one side stays there through the kit's curve (DRV, the knee): what the other side gave
+         * up was taken raw out of the squashed sum, a loud hit over-taken (clicks, grit on that side) */
+        int16_t best = 0;
+        int32_t bp = 0, p;
+        int64_t far, near;
+        for (img = 1; img < 128; img++)
+            if ((p = dx_img_pan(DV_SNARE, img)) * p > bp * bp) bp = p, best = img;
+        dximg_punch = 100;
+        dximg_hit(38, best, &el, &er, &sr);
+        dximg_punch = 0;
+        far = bp > 0 ? el : er; near = bp > 0 ? er : el;
+        bad += check("DRUM IMAGE: a sound panned hard keeps the other side silent through the knee (0.7.8)",
+                     (bp == 64 || bp == -64) && near > 0 && far * 1000 < near);
+        printf("  (snare at %d, IMAGE %d: far side %.3g of the near)\n", (int)bp, (int)best, (double)far / (double)near);
+    }
+    {   /* (0.7.8) the two cores: the other core's part starting (voice.c track_render clears dx_xon) leaves this core's
+         * DRUM part's image and sides as they were (they were one set: the image on and off block by block, clicks) */
+        track_t *t = &trk[0];
+        uint32_t keep_cpu = mc_host_cpu;
+        set_engine_of(t, ENGI_DRUM); t->engine = t->eng_req;
+        t->p[P_DXIMG] = 60;
+        memset(dx_core, 0, sizeof dx_core);
+        mc_host_cpu = 0;
+        drum_side_begin(t, CTL);
+        drum_side_begin(t, CTL);                       /* (the pans slewed off the middle: the image on) */
+        dx_sl[3] = 1234;
+        mc_host_cpu = 1;
+        dx_xon = 0;                                    /* the other core: a part that is not DRUM */
+        dx_sl[3] = 0;
+        mc_host_cpu = 0;
+        bad += check("DRUM IMAGE: each core its own image and sides (the other core's part leaves them)",
+                     (dx_xon & 1u) && dx_sl[3] == 1234);
+        mc_host_cpu = keep_cpu;
+        memset(dx_core, 0, sizeof dx_core);
+    }
     memset(dx_snd, 0, sizeof dx_snd);
     dx_snd[DV_SNARE] = 3u << 6 | 63u;                   /* the snare alone to the REVERB */
     {
@@ -3483,10 +3520,10 @@ static int test_edit_cycle(void)
     (void)CYC_D;
 #endif
     {   /* #97: a DRUM track's lane levels on EDIT > LANES (KICK SNARE CLAP HATCL) and LANES 2 (HATOP TOM RIM BELL) */
-        static const char *const CYC_K[] = {"EDIT 1", "EDIT 2", "KIT 3", "X-MOD", "FILTER", "SOUND", "SOUND 2", "SOUND 3",
-                                            "SOUND 4", "LEVELS", "LEVELS 2", "STEREO", "VOICE", "EDIT 1"};
+        static const char *const CYC_K[] = {"EDIT 1", "EDIT 2", "KIT 3", "X-MOD", "STEREO", "FILTER", "SOUND", "SOUND 2",
+                                            "SOUND 3", "SOUND 4", "LEVELS", "LEVELS 2", "VOICE", "EDIT 1"};
         set_engine_of(TSEL, ENGI_DRUM);
-        bad += check("EDIT cycle (DRUM, 0.6.58): the kit's (KIT KIT 2 KIT 3 X-MOD FILTER), a sound's (SOUND 1..4), then the volumes and the stereo (LEVELS LEVELS 2 STEREO), VOICE",
+        bad += check("EDIT cycle (DRUM, 0.7.8): the kit's (KIT KIT 2 KIT 3 X-MOD STEREO FILTER), a sound's (SOUND 1..4), then the volumes (LEVELS LEVELS 2), VOICE",
                      engine_cycle(CYC_K, NELEM(CYC_K)));
         {   /* (0.6.58) KIT 3 turns BP and FEEDBK only; STEREO's KNOB 1 is IMAGE */
             uint8_t t0 = dx_tone;

@@ -1323,27 +1323,28 @@ static __attribute__((noinline)) void drum_mix(int32_t *ol, int32_t *or_, uint32
 {
     uint32_t i, b, on = dx_xon;
     int32_t dpm = (pm1 - pm0) / (int32_t)(n ? n : 1u), mute = pm0 != 32768 || pm1 != 32768;
+    int32_t *sl = dx_sl, *sr = dx_sr, (*sb)[CTL] = dx_sb;   /* (0.7.8: this core's) */
     if (n > CTL)
         n = CTL;
     if (mute)                                           /* (the FX layer's mute: on what is taken and sent too) */
         for (i = 0; i < n; i++) {
             uint32_t g = (uint32_t)(pm0 + dpm * (int32_t)i) << 1;
-            dx_sl[i] = mulq16(dx_sl[i], g);
-            dx_sr[i] = mulq16(dx_sr[i], g);
-            dx_sb[0][i] = mulq16(dx_sb[0][i], g);
-            dx_sb[1][i] = mulq16(dx_sb[1][i], g);
-            dx_sb[2][i] = mulq16(dx_sb[2][i], g);
+            sl[i] = mulq16(sl[i], g);
+            sr[i] = mulq16(sr[i], g);
+            sb[0][i] = mulq16(sb[0][i], g);
+            sb[1][i] = mulq16(sb[1][i], g);
+            sb[2][i] = mulq16(sb[2][i], g);
         }
     if (on & 1u) {                                      /* what each side gives up, at the part's LEVEL and PAN */
         int32_t q = lq, l = gl, r = gr;
         for (i = 0; i < n; i++, q += dl, l += dgl, r += dgr) {
-            ol[i] -= ((((dx_sl[i] >> 2) * (q >> 8)) >> 10) * l) >> 12;
-            or_[i] -= ((((dx_sr[i] >> 2) * (q >> 8)) >> 10) * r) >> 12;
+            ol[i] -= ((((sl[i] >> 2) * (q >> 8)) >> 10) * l) >> 12;
+            or_[i] -= ((((sr[i] >> 2) * (q >> 8)) >> 10) * r) >> 12;
         }
     }
     for (b = 0; b < 3u; b++)                            /* each bus its sounds' */
         if ((on >> (b + 1u)) & 1u) {
-            const int32_t *x = dx_sb[b];
+            const int32_t *x = sb[b];
             int32_t *d = sd[b], q = lq;
             for (i = 0; i < n; i++, q += dl)
                 d[i] += ((x[i] >> 2) * (q >> 8)) >> 10;

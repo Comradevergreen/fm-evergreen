@@ -248,13 +248,13 @@ a la derecha); apretá OCT+ para ejecutarla.
 | FILTER | TYPE | CUT | RES | DRIVE (ANALOG) / DIST (los demás) | todos los motores |
 | KIT 3 | BP | FEEDBK | — | — | DRUM (todo el kit) |
 | X-MOD | RATE | DEPTH | SHAPE | RAND | DRUM (todo el kit) |
+| STEREO | IMAGE | — | — | — | DRUM (todo el kit) |
 | SOUND | SOUND | SIDE | PITCH | PMOD | DRUM (un sonido) |
 | SOUND 2 | SOUND | DECAY | NOISE | COLOR | DRUM (un sonido) |
 | SOUND 3 | SOUND | MODE | PM.TYPE | DRIVE | DRUM (un sonido) |
 | SOUND 4 | SOUND | LAYER | FEEDBK | SEND | DRUM (un sonido) |
 | LEVELS | KICK | SNARE | CLAP | HATCL | DRUM |
 | LEVELS 2 | HATOP | TOM | RIM | BELL | DRUM |
-| STEREO | IMAGE | — | — | — | DRUM (todo el kit) |
 | VOICE | VOICE | GLIDE | MODE | PRIO | todos los motores |
 
 **GLO** (MIXER es por pista; GLOBAL y SYSTEM son globales)

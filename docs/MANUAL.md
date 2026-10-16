@@ -241,13 +241,13 @@ and heating up with its own audio. The selected track is drawn bigger, a muted o
 | FILTER | TYPE | CUT | RES | DRIVE (ANALOG) / DIST (others) | every engine |
 | KIT 3 | BP | FEEDBK | — | — | DRUM (the whole kit) |
 | X-MOD | RATE | DEPTH | SHAPE | RAND | DRUM (the whole kit) |
+| STEREO | IMAGE | — | — | — | DRUM (the whole kit) |
 | SOUND | SOUND | SIDE | PITCH | PMOD | DRUM (one sound) |
 | SOUND 2 | SOUND | DECAY | NOISE | COLOR | DRUM (one sound) |
 | SOUND 3 | SOUND | MODE | PM.TYPE | DRIVE | DRUM (one sound) |
 | SOUND 4 | SOUND | LAYER | FEEDBK | SEND | DRUM (one sound) |
 | LEVELS | KICK | SNARE | CLAP | HATCL | DRUM |
 | LEVELS 2 | HATOP | TOM | RIM | BELL | DRUM |
-| STEREO | IMAGE | — | — | — | DRUM (the whole kit) |
 | VOICE | VOICE | GLIDE | MODE | PRIO | every engine |
 
 **GLO** (MIXER is per track; GLOBAL and SYSTEM are global)
