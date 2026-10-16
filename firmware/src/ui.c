@@ -153,7 +153,8 @@ static uint8_t sync_reload;                  /* engine / preset / project / user
 #define VAL(c) ((c) == ui.hot_col && ui.hot_t ? T_ACCENT : T_THEME)   /* the knob just turned: accent */
 #define RATIO(d, v) ((d)->max > (d)->min ? ((int32_t)(v) - (d)->min) * 1000 / ((d)->max - (d)->min) : -1)
 /* layout: header 0..24, four cards 28..72 (57 px at x 3 + 59 c),
- * the panel 76..198 (a SURF area; the graphs live in it), footer 202..240; BG between them */
+ * the panel 76..198 (a SURF area; the graphs live in it), footer 202..240; BG between them. (0.8.5) The SEQ pages
+ * (LENTE): its level tabs 28..41, the cards 44..88, the panel 92..214, the footer's second row 218..240 */
 #define Y_HEAD 0
 #define H_HEAD 24
 #define Y_LABEL 28                    /* the cards */
@@ -165,7 +166,9 @@ static uint8_t sync_reload;                  /* engine / preset / project / user
 #define H_GRAPH 122
 #define Y_FOOT 202
 #define H_FOOT 38
-#define LF_ROW 17                     /* (0.8.3) the footer's first row (SEQ: LENTE's level and bars) */
+#define LT_Y 28                       /* (0.8.5) LENTE's level tabs, PATTERN BAR STEP, on top of the SEQ pages (ui_draw.c */
+#define LT_H 13                       /* draw_tabs); the cards, the panel and the footer's line move down LT_DY, the */
+#define LT_DY 16                      /* footer keeps its second row only (lens_dy) */
 /* MENU > LARGE (large_kind below): on the value pages the cards are tall (28..132) and the panel a strip
  * (136..198); elsewhere (lists, rolls, layers) the layout above, its card labels in M */
 #define LG_CARD_H 104
@@ -395,8 +398,12 @@ static uint32_t large_kind(void)
            g == GR_CHANCE || g == GR_COMP || g == GR_EVENTS ? LK_LABEL : LK_TALL;
 }
 /* the geometry of the page shown: the cards' height, the panel's top and height */
+static int lens_on(void);
+static uint32_t lens_dy(void) { return lens_on() && !ui.layer ? LT_DY : 0u; }   /* (0.8.5) LENTE: under its tabs */
+static uint32_t card_y(void) { return Y_LABEL + lens_dy(); }
+static uint32_t foot_y(void) { return Y_FOOT + lens_dy(); }
 static uint32_t card_h(void) { return large_kind() == LK_TALL ? LG_CARD_H : CARD_H; }
-static uint32_t graph_y(void) { return large_kind() == LK_TALL ? LG_Y_GRAPH : Y_GRAPH; }
+static uint32_t graph_y(void) { return (large_kind() == LK_TALL ? LG_Y_GRAPH : Y_GRAPH) + lens_dy(); }
 static uint32_t graph_h(void) { return large_kind() == LK_TALL ? LG_H_GRAPH : H_GRAPH; }
 static int large_face_has(const char *s)                /* every glyph of s in the sparse L face */
 {
@@ -472,7 +479,10 @@ static uint32_t page_first(uint32_t fam)
  * A SEQ tap: the level's next set (wrapping); from another family the level and set last used on that track
  * (lens_mem). Only the navigation and the panel changed: the pages, their cards and knobs are PAGES' as they were
  * (NOTE is in BAR and STEP: ui.lv says which one is shown). A page put by code (page_jump, a test, the editor) brings
- * its level with it (lens_sync); PHRASES / SONG (hidden) read as PATTERN, CHANCE (hidden) as STEP */
+ * its level with it (lens_sync); PHRASES / SONG (hidden) read as PATTERN, CHANCE (hidden) as STEP.
+ * (0.8.5) Drawn as the approved mock-up: the level as tabs on top (ui_draw.c draw_tabs; lens_dy moves the page down
+ * under them), the bars small over BAR's roll and grid (ui_graph.c bar_cells), PATTERN's bars large over the pattern
+ * as one roll with its playheads */
 enum { LV_PAT, LV_BAR, LV_STEP, LV_N };
 static const char *const LENS_NAME[LV_N] = {"PATTERN", "BAR", "STEP"};
 static const char *const LENS_SET[LV_N][5] = {{"PATTERN", "STRETCH", "PLAYHEADS", "TRACK", "MUTATE"},

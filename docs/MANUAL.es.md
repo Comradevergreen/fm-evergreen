@@ -152,9 +152,9 @@ atajos de esa capa; en la grilla DRUM son pasos y carriles; en la pantalla NAME 
   grilla de pasos, una lista...
 - **Pie**: el nombre de la página y su lugar dentro de su familia (p. ej. **DLY 2/2**), o ayudas de teclas. En las
   páginas del tema (PROJECT, ARRANGE, TOOLS, GLOBAL, SYSTEM) muestra el proyecto y su nombre en lugar del sonido de
-  la pista. En las páginas SEQ su primera fila es la lente (0.8.3): **PATTERN · BAR · STEP** con el nivel en el que
-  estás encendido, y a la derecha los compases del patrón, el que editás encendido; el nombre de la página aparece
-  entonces debajo, así esa fila queda siempre a la vista.
+  la pista. En las páginas SEQ el pie es una sola línea (el sonido y el juego en el que estás) y las pestañas de nivel
+  de la lente van arriba (0.8.5): **PATTERN · BAR · STEP** debajo del encabezado, el nivel en el que estás relleno de
+  violeta, las tarjetas y el panel debajo de ellas.
 
 Los **colores** funcionan como una cámara térmica: frío (cian, azul) es poco, caliente (naranja, amarillo, blanco) es
 mucho. Violeta es lo seleccionado, naranja lo activo.
@@ -580,14 +580,17 @@ patrones de distinto largo giran unos contra otros.
 El secuenciador funciona como una lente, como un microscopio (LENTE, 0.8.3). **SELECT** hace zoom entre tres niveles,
 **PATRÓN ↔ COMPÁS ↔ PASO** (en pantalla: PATTERN, BAR, STEP), uno por paso, sin dar la vuelta. Cada nivel muestra su
 propio dibujo y tiene sus propios juegos de perillas, y un toque de **SEQ** recorre los juegos del nivel en el que
-estás. La primera fila del pie dice siempre dónde estás: los tres niveles con el tuyo encendido, y a la derecha los
-compases del patrón (hasta cuatro, con LEN 64), el que estás editando encendido y una rayita debajo del que suena.
+estás. Las **pestañas de nivel de arriba** (0.8.5; hasta la 0.8.4, la primera fila del pie) dicen siempre dónde estás:
+tres pestañas iguales **PATTERN · BAR · STEP** justo debajo del encabezado, el nivel en el que estás relleno de violeta
+(otra paleta: su propio color de selección), las tarjetas debajo. Los compases del patrón (hasta cuatro, con LEN 64) se
+dibujan en el panel en PATRÓN y COMPÁS: el que editás enmarcado en violeta, el número del que suena en naranja, un
+compás más allá de LEN oscuro.
 
 | Nivel | Qué muestra la pantalla | Un toque de SEQ recorre | PRESETS |
 | --- | --- | --- | --- |
-| **PATRÓN** | Los compases del patrón uno al lado del otro, cada uno con sus dieciséis pasos en chiquito (una pista DRUM: sus carriles), el compás que editás enmarcado, el cabezal donde suena; debajo, **BAR n/m**. | PATTERN (LEN DIV SWING GATE) → STRETCH → PLAYHEADS → TRACK → MUTATE | el **compás** (sin dar la vuelta; el cursor conserva su lugar dentro del compás) |
-| **COMPÁS** | El **piano roll** del compás, como siempre fue STEP (una pista DRUM: la **grilla**, con sus teclas). | STEP → NOTE → AUTOMATION → AUTO LIST | el **cursor de paso**; al pasarse del final del compás entra en el siguiente |
-| **PASO** | El paso del cursor dibujado grande: sus notas de la más aguda a la más grave (la nota en foco encendida, MICRO las corre, RATCH las parte; un TIE muestra las notas que sostiene; una nota de más de un paso dice **LEN n** arriba, y se fija con el KNOB 3 de COMPÁS > STEP), y a la derecha sus fichas: ACC, SLIDE, MICRO, COMP, COMP 2, CHANCE. El juego en el que estás enciende su ficha. Arriba, los dieciséis pasos del compás en chiquito. | NOTE (FOCUS PITCH MOVE MICRO) → COMP → COMP 2 | el **cursor de paso** |
+| **PATRÓN** | Los compases del patrón uno al lado del otro en miniaturas grandes, cada una un piano roll chiquito de sus dieciséis pasos (una pista DRUM: sus carriles), el compás que editás enmarcado, el cabezal donde suena; debajo, **PLAYHEADS**: el patrón entero como un solo roll chiquito con el cabezal y los cabezales extra de PLAYHEADS (una marquita cada uno), y a la derecha la ayuda **PRESETS BAR**. | PATTERN (LEN DIV SWING GATE) → STRETCH → PLAYHEADS → TRACK → MUTATE | el **compás** (sin dar la vuelta; el cursor conserva su lugar dentro del compás) |
+| **COMPÁS** | Arriba una tira con los compases del patrón en chiquito (el que editás enmarcado), y debajo el **piano roll** del compás, como siempre fue STEP (una pista DRUM: la **grilla**, con sus teclas). | STEP → NOTE → AUTOMATION → AUTO LIST | el **cursor de paso**; al pasarse del final del compás entra en el siguiente |
+| **PASO** | El paso del cursor dibujado grande: arriba **STEP n** y a la derecha NOTE / TIE / REST (una nota de más de un paso: **LEN n**, que se fija con el KNOB 3 de COMPÁS > STEP); a la izquierda sus notas de la más aguda a la más grave, separadas según su intervalo, cada una con su nombre (la nota en foco encendida, MICRO las corre, RATCH las parte; un TIE muestra las notas que sostiene), y a la derecha sus fichas: ACC, SLIDE, MICRO, COMP, COMP 2, CHANCE (con un valor puesto, encendidas). El juego en el que estás rellena su ficha. | NOTE (FOCUS PITCH MOVE MICRO) → COMP → COMP 2 | el **cursor de paso** |
 
 - **SEQ desde otra página** vuelve al nivel y al juego que usaste por última vez **en esa pista** (cada pista recuerda
   el suyo); al encender es el STEP de COMPÁS, el piano roll.

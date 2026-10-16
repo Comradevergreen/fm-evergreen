@@ -4322,7 +4322,7 @@ static int pr_columns_match(const track_t *t, uint32_t *nbars)
             if (n >= 0 && rr >= 0 && rr < PR_ROWS) want |= 1u << rr;
         }
         for (r = 0; r < PR_ROWS; r++)
-            if (pr_is_bar((uint32_t)(PR_X0 + (int32_t)i * PR_CW + 6), Y_GRAPH + PR_Y0 + r * PR_RH + 2u)) got |= 1u << r;
+            if (pr_is_bar((uint32_t)(PR_X0 + (int32_t)i * PR_CW + 6), graph_y() + PR_Y0 + r * PR_RH + 2u)) got |= 1u << r;
         if (got != want) {
             printf("ui:   roll column %u: rows %05x drawn, %05x wanted\n", base + i, got, want);
             ok = 0;
@@ -4557,7 +4557,7 @@ static int test_piano_roll(void)
     key_down(7); frames(200);                                         /* a key held: its row lit on the strip */
     {
         int32_t r = (int32_t)proll.lo + PR_ROWS - 1 - (int32_t)kb_snd[7][0];
-        uint16_t c = r >= 0 && r < PR_ROWS ? swap16(host_screen[(Y_GRAPH + PR_Y0 + (uint32_t)r * PR_RH + 1u) * 240u + PR_KX + 7]) : 0;
+        uint16_t c = r >= 0 && r < PR_ROWS ? swap16(host_screen[(graph_y() + PR_Y0 + (uint32_t)r * PR_RH + 1u) * 240u + PR_KX + 7]) : 0;
         bad += check("  a key held: its row on the keyboard strip is the accent", kb_on[7] && c == T_ACCENT);
     }
     key_up(7); frames(100);
@@ -6292,15 +6292,21 @@ static int test_lente(void)
     turn(EN_PRESET, -1);
     ok &= ui.cursor == 15u && ui.bank == 0u;
     bad += check("  PRESETS: PATTERN the bar (no wrap; KNOB 1 still LEN); BAR and STEP the step, the bar following", ok);
-    /* the footer's first row: the level and the bars; the page's flash under it */
+    /* (0.8.5) the level's tabs on top: the cards, the panel and the footer under them; the footer one row */
     go_title("PATTERN"); ui.force = 1; frame();
-    sig = ui.foot_sig;
-    turn(EN_SELECT, 1); frame();
-    ok = ui.foot_sig != sig && lens_level() == LV_BAR;
-    pf_on = 1; draw_foot();                                                        /* (PF_MS 0 here: a flash held) */
-    sig = ui.foot_sig;
-    pf_on = 0; draw_foot();
-    ok &= sig != ui.foot_sig;
+    ok = lens_level() == LV_PAT && card_y() == Y_LABEL + LT_DY && graph_y() == Y_GRAPH + LT_DY && foot_y() == Y_FOOT + LT_DY;
+    {
+        uint16_t th = swap16(host_screen[(LT_Y + LT_H / 2) * 240 + LT_X(LV_PAT) + 2]);
+        uint16_t tb = swap16(host_screen[(LT_Y + LT_H / 2) * 240 + LT_X(LV_BAR) + 2]);
+        ok &= th == T_THEME && tb == T_RAISE;                                      /* PATTERN lit, BAR raised */
+        turn(EN_SELECT, 1); frame();
+        th = swap16(host_screen[(LT_Y + LT_H / 2) * 240 + LT_X(LV_PAT) + 2]);
+        tb = swap16(host_screen[(LT_Y + LT_H / 2) * 240 + LT_X(LV_BAR) + 2]);
+        ok &= lens_level() == LV_BAR && th == T_RAISE && tb == T_THEME;           /* SELECT: BAR lit */
+    }
+    go_home(); frame();
+    ok &= card_y() == Y_LABEL && graph_y() == Y_GRAPH && foot_y() == Y_FOOT;      /* (elsewhere as before) */
+    open_family(FAM_SEQ); frame();
     {
         char ti[20];
         page_title(ti);
@@ -6312,7 +6318,7 @@ static int test_lente(void)
         page_title(ti);
         ok &= str_eq(ti, "TRACK 4/5");
     }
-    bad += check("  the footer: the level and the bars (redrawn under the page's flash); STEP's sets as \"COMP 2/3\"", ok);
+    bad += check("  the level tabs on top (the one shown THEME), the page under them (elsewhere as before); STEP's sets as \"COMP 2/3\"", ok);
     /* the tools layer and the dice on every level */
     ok = 1;
     for (q = 0; q < 3u; q++) {

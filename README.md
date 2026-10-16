@@ -537,6 +537,28 @@ JIANT's modifications are distributed under the same license.
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
 
+### v0.8.5
+- **The sequencer looks like the LENTE design that was approved** (the owner: "it looks nothing like what you showed
+  me in the HTML"). Only the drawing changed: the levels, the sets, the knobs and the keys work as in 0.8.3 / 0.8.4.
+- **The level tabs at the top.** On every SEQ page, right under the header and over the cards: three equal tabs
+  **PATTERN · BAR · STEP**, the level you are on filled with the selection colour (violet in JIANT), the others raised.
+  The cards, the panel and the footer move down under them (the cards keep their size; MENU > LARGE's tall cards too);
+  the footer keeps one line, the sound and the set ("PATTERN 1/5", "NOTE 1/3"). The footer's old first row (the
+  levels and the bar numbers) is gone; on the DRUM grid, ACC held says ACCENT in that line.
+- **PATTERN**: the bars as large thumbnails side by side, each a small piano roll of its 16 steps (a kit: its lanes),
+  the bar you edit framed in the selection colour, the bar playing with its number in orange, bars past LEN dark; under
+  them **PLAYHEADS**, the whole pattern as one small roll with the playhead and PLAYHEADS' extra heads, PRESETS' BAR
+  hint at the right.
+- **BAR**: a strip of the bars, small, over the piano roll (the roll shows 19 semitones under it, was 21); the DRUM grid
+  gets the same strip, its lanes 12 px. ALL TR sits at the strip's right when it is set.
+- **STEP**: as the design: **STEP n** on top, NOTE / TIE / REST (or LEN n) at the right; the notes at the left spaced by
+  their interval with their names, the focused note in the accent; the six chips ACC, SLIDE, MICRO, COMP, COMP 2,
+  CHANCE at the right, a value set lit, the set you are on filled. The small bar over it is gone (the tabs and cards
+  say where you are).
+- Draw cost about the same (host, aligned builds: a full LENTE screen 98-103 us against 98-110 before; the roll's
+  panel +3 us for its strip); RAM and flash about unchanged. ui_test: the tabs, the geometry and the roll / grid read
+  back under the strip; ui_render: every LENTE screen in every palette, FLAT, LINE and LARGE, lint and alignment clean.
+
 ### v0.8.4
 - **RAM freed for what comes next** (the owner: room for assignable FX buses). The sound is the same (every golden
   render bit for bit), projects and backups unchanged.

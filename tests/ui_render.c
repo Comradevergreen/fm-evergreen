@@ -600,6 +600,7 @@ static void state(void)                          /* a playing song with steps on
     if (large_on) ui_prefs |= PREF_LARGE;
     song.playing = 1;
     song.g[G_BPM] = 124;
+    song.g[G_STRN] = 0;                           /* (lente_bar_long: ALL TR set) */
     clk_pos = 0; clk_step = 8; cin_total = cin_left = 0;   /* the bar's 3rd beat: the header's metronome at rest */
     for (i = 0; i < NTRK; i++) trk[i].seq_idx = 5;
     my_steps(&trk[1]);
@@ -1145,6 +1146,8 @@ static void setup(int s)
             step_put(&t->step[40], ST_NOTE, 0, 3, CH);
             for (i = 41; i < 56u; i++) step_put(&t->step[i], ST_TIE, 0, 0, CH);
         }
+        if (s == S_LENTE_BAR_LONG)                      /* (0.8.5) ALL TR at the right of the bars' strip */
+            song.g[G_STRN] = -12;
         song.playing = 1; t->seq_idx = 21;
         ui.lv = s == S_LENTE_PAT || s == S_LENTE_STRETCH ? LV_PAT : s == S_LENTE_BAR || s == S_LENTE_BAR_LONG ? LV_BAR : LV_STEP;
         go_title(s == S_LENTE_PAT ? "PATTERN" : s == S_LENTE_STRETCH ? "STRETCH" : s == S_LENTE_BAR || s == S_LENTE_BAR_LONG ? "STEP" :

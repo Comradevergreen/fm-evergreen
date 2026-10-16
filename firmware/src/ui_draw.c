@@ -366,10 +366,11 @@ static void lcd_rule(uint32_t x, uint32_t y, uint32_t w, uint32_t h)
 static void draw_rules(uint32_t y, uint32_t h)
 {
     uint32_t i;
-    if (y == Y_LABEL) {                                 /* (LARGE: the geometry of the page, ui.c card_h) */
+    if (y == card_y()) {                                /* (LARGE: the geometry of the page, ui.c card_h; 0.8.5: LENTE's,
+                                                         * its tabs between the first rule and the cards) */
         lcd_rule(RULE_X0, (H_HEAD + Y_LABEL) / 2, RULE_W, 1);
-        lcd_rule(RULE_X0, (Y_LABEL + card_h() + graph_y()) / 2, RULE_W, 1);
-        lcd_rule(RULE_X0, (graph_y() + graph_h() + Y_FOOT) / 2, RULE_W, 1);
+        lcd_rule(RULE_X0, (card_y() + card_h() + graph_y()) / 2, RULE_W, 1);
+        lcd_rule(RULE_X0, (graph_y() + graph_h() + foot_y()) / 2, RULE_W, 1);
     }
     for (i = 0; i < 3u; i++)
         lcd_rule((uint32_t)(CARD_X(i) + CARD_W), y, 1, h);
@@ -377,22 +378,23 @@ static void draw_rules(uint32_t y, uint32_t h)
 /* full redraw: the strips (header, cards, panel, footer) cover the rest; only the BG between them is filled */
 static void draw_frame(void)
 {
-    uint32_t i, ch = card_h(), gy = graph_y(), gh = graph_h();   /* (MENU > LARGE: tall cards, a strip) */
-    lcd_fill(0, H_HEAD, 240, Y_LABEL - H_HEAD, T_BG);
-    lcd_fill(0, Y_LABEL + ch, 240, gy - Y_LABEL - ch, T_BG);
-    lcd_fill(0, gy + gh, 240, Y_FOOT - gy - gh, T_BG);
-    lcd_fill(0, Y_LABEL, (uint32_t)CARD_X(0), ch, T_BG);
+    uint32_t i, ch = card_h(), gy = graph_y(), gh = graph_h(), cy = card_y(), fy = foot_y();   /* (MENU > LARGE: tall
+                                                         * cards, a strip; 0.8.5 LENTE: all under its tabs) */
+    lcd_fill(0, H_HEAD, 240, cy - H_HEAD, T_BG);
+    lcd_fill(0, cy + ch, 240, gy - cy - ch, T_BG);
+    lcd_fill(0, gy + gh, 240, fy - gy - gh, T_BG);
+    lcd_fill(0, cy, (uint32_t)CARD_X(0), ch, T_BG);
     for (i = 0; i < 4u; i++)                            /* right of each card */
-        lcd_fill((uint32_t)(CARD_X(i) + CARD_W), Y_LABEL, i < 3u ? (uint32_t)(CARD_X(i + 1u) - CARD_X(i) - CARD_W) :
+        lcd_fill((uint32_t)(CARD_X(i) + CARD_W), cy, i < 3u ? (uint32_t)(CARD_X(i + 1u) - CARD_X(i) - CARD_W) :
                  240u - (uint32_t)(CARD_X(i) + CARD_W), ch, T_BG);
     if (ux.style)                                       /* LINE: the dividers in the gaps */
-        draw_rules(Y_LABEL, ch);
+        draw_rules(cy, ch);
     else if (settings.palette == UI_JIANT_INDEX) {      /* (0.7.7) JIANT: a rule under the header, fine dividers between */
         lcd_fill(RULE_X0, (H_HEAD + Y_LABEL) / 2, RULE_W, 1, T_LINE);   /* the cards (four columns, read at a glance); */
         GFX_HOOK_RULE(RULE_X0, (H_HEAD + Y_LABEL) / 2, RULE_W, 1);   /* LINE's quieter grey, not its DIM rules */
         for (i = 0; i < 3u; i++) {
-            lcd_fill((uint32_t)(CARD_X(i) + CARD_W), Y_LABEL + 4, 1, ch - 8, T_LINE);
-            GFX_HOOK_RULE((uint32_t)(CARD_X(i) + CARD_W), Y_LABEL + 4, 1, ch - 8);
+            lcd_fill((uint32_t)(CARD_X(i) + CARD_W), cy + 4, 1, ch - 8, T_LINE);
+            GFX_HOOK_RULE((uint32_t)(CARD_X(i) + CARD_W), cy + 4, 1, ch - 8);
         }
     }
 }
@@ -454,7 +456,7 @@ static void draw_column_tall(uint32_t c, const char *label, const char *val, con
         cv_text_in(5, LG_MY + CAP_IN(M, LG_MH), mw, &AF_M, k, T_INK, fill);
     }
     if (!label[0] && !val[0]) {                         /* a knob that does nothing on this page */
-        cv_blit((uint32_t)CARD_X(c), Y_LABEL);
+        cv_blit((uint32_t)CARD_X(c), card_y());
         return;
     }
     if (FELUCCA_ICONS && ic != ICON_NONE && label[0] && (ic - ICON_TRK < NTRK || icon_cell(&isz, ic) >= 0)) {
@@ -507,7 +509,7 @@ static void draw_column_tall(uint32_t c, const char *label, const char *val, con
         cv_rrect(5, LG_GY, gw, 3, 1, ux.style ? T_LINE : T_BG, T_SURF);
         cv_rrect(5, LG_GY, fx < 3 ? 3 : fx, 3, 1, hot ? T_ACCENT : vc == T_DIM ? T_DIM : gauge_col(ratio), T_BG);
     }
-    cv_blit((uint32_t)CARD_X(c), Y_LABEL);
+    cv_blit((uint32_t)CARD_X(c), card_y());
 }
 
 /* one card = one knob: [icon] LABEL / value unit / gauge on a SURF card, redrawn only when it changed.
@@ -649,7 +651,7 @@ static void draw_column(uint32_t c, const char *label, const char *val, const ch
         }
     }
     cv_oy = 0;
-    cv_blit((uint32_t)CARD_X(c), Y_LABEL + (strip ? ROLL_Y : 0));
+    cv_blit((uint32_t)CARD_X(c), card_y() + (strip ? ROLL_Y : 0));
 }
 
 /* an action's column (act_cols): picked, the OCT+ keycap (accent while it would do something); else "--" */
@@ -696,39 +698,27 @@ static void sound_name(const track_t *t, char *b)
         str_cpy(b, e->presets[t->preset % e->npresets].name, 16);
 }
 
-/* (0.8.3) LENTE: the footer's first row on the SEQ pages: the three levels (the one shown a THEME pill, INK text),
- * then at the right the pattern's bars, the one edited lit, a TEXT line under the one playing (the DRUM grid with ACC
- * held: ACCENT there instead) */
-#define LF_CW 15                                         /* a bar's cell; 4 of them end at x 232 */
-#define LF_CX(b) (232 - 4 * LF_CW - 9 + (int32_t)(b) * (LF_CW + 3))
-static void lens_foot(const track_t *t)
+/* (0.8.3) LENTE's level, in the footer's first row; (0.8.5) on top, as the design the owner approved
+ * (the HTML mock-up "LENTE"): under the header and over the cards three equal tabs PATTERN BAR STEP, x 3 .. 234 as
+ * the cards, the level shown filled THEME with INK text, the others RAISE with MID text. Drawn when the level, the
+ * palette or the style changes (a full redraw too) */
+#define LT_W 75                                          /* (3 x 75 + 2 x 3 = 231: CARD_X(0) .. CARD_X(3) + CARD_W) */
+#define LT_X(l) (CARD_X(0) + (int32_t)(l) * (LT_W + 3))
+static void draw_tabs(void)
 {
-    uint32_t l, b, lv = lens_level(), len = (uint32_t)clamp(t->p[P_SLEN], 1, NSTEP), nb = (len + 15u) / 16u;
-    uint32_t pb = song.playing ? seq_src(t, t->seq_idx) / 16u : 0xFFu;
-    int32_t x = 8;
-    char d[2] = {0, 0};
-    for (l = 0; l < LV_N; l++) {
-        int32_t w = text_w(&AF_S, LENS_NAME[l]) + 10;
-        uint16_t bg = l == lv ? T_THEME : T_RAISE;
-        cv_rrect(x, 1, w, 13, 3, bg, T_BG);
-        GFX_HOOK_ALIGN(x, 1, x + w, 14, AL_HV, "footer lens level centred in its pill");
-        cv_text_in(x, 1 + CAP_IN(S, 13), w, &AF_S, LENS_NAME[l], l == lv ? T_INK : T_MID, bg);
-        x += w + 3;
-    }
-    if (grid_on() && black_held(GK_ACC)) {
-        cv_text_r(232, 2, &AF_S, "ACCENT", T_ACCENT, T_BG);
+    static uint32_t drawn;
+    uint32_t l, lv = lens_level(), sig = (lv + 1u) * 2654435761u + ux.gen * 977u + ux.style * 7u + 1u;
+    if (!ui.force && sig == drawn)
         return;
+    drawn = sig;
+    cv_begin(240, LT_H, T_BG);
+    for (l = 0; l < LV_N; l++) {
+        uint16_t bg = l == lv ? T_THEME : T_RAISE;
+        cv_rrect(LT_X(l), 0, LT_W, LT_H, 3, bg, T_BG);
+        GFX_HOOK_ALIGN(LT_X(l), 0, LT_X(l) + LT_W, LT_H, AL_HV, "LENTE tab name centred in its tab");
+        cv_text_in(LT_X(l), CAP_IN(S, LT_H), LT_W, &AF_S, LENS_NAME[l], l == lv ? T_INK : T_MID, bg);
     }
-    for (b = 0; b < nb && b < 4u; b++) {
-        int32_t cx = LF_CX(b);
-        uint16_t bg = b == ui.bank ? T_THEME : T_RAISE;
-        d[0] = (char)('1' + b);
-        cv_rrect(cx, 1, LF_CW, 13, 3, bg, T_BG);
-        GFX_HOOK_ALIGN(cx, 1, cx + LF_CW, 14, AL_HV, "footer lens bar number centred in its cell");
-        cv_text_in(cx, 1 + CAP_IN(S, 13), LF_CW, &AF_S, d, b == ui.bank ? T_INK : T_MID, bg);
-        if (b == pb)
-            cv_rect(cx, 15, LF_CW, 1, T_TEXT);
-    }
+    cv_blit(0, LT_Y);
 }
 static void draw_foot(void)
 {
@@ -738,7 +728,7 @@ static void draw_foot(void)
     const page_t *pg = cur_page();
     const engine_t *e = ENGINES[TSEL->eng_req % NENGINES];
     const char *ename = e->name;
-    int32_t x;
+    int32_t x, fo = (int32_t)lens_dy(), ry = 19 - fo;   /* (0.8.5) LENTE: its tabs on top, the footer its second row */
     int glob = !ui.home && (pg->graph == GR_SLOTS || pg->graph == GR_SONG || pg->graph == GR_TOOLS || pg->fam == FAM_GLO);
     char pj[12];
     sound_name(t, pn);
@@ -772,14 +762,13 @@ static void draw_foot(void)
     }
     if (grid_on())
         sig += 0x51EDu + (uint32_t)black_held(GK_ACC) * 977u;
-    if (lens_on())                                     /* (0.8.3) the level, the bar playing, the flash over row 2 */
-        sig += (lens_level() + 1u) * 104729u + (song.playing ? seq_src(t, t->seq_idx) / 16u + 1u : 0u) * 1299709u +
-               pf_on * 15485863u;
+    sig += (uint32_t)fo * 104729u;
     if (!ui.force && sig == ui.foot_sig)
         return;
     ui.foot_sig = sig;
-    cv_begin(240, pf_on && lens_on() ? LF_ROW : H_FOOT, T_BG);   /* (0.8.3: the page's flash under row 1) */
-    if (act_cols()) {                                 /* row 1: the OCT+ / OCT- hint in place of the steps */
+    cv_begin(240, (uint32_t)(H_FOOT - fo), T_BG);
+    if (act_cols()) {                                 /* row 1: the OCT+ / OCT- hint in place of the steps (LENTE's AUTO
+                                                       * LIST: in place of the names) */
         char ha[16], hb[16];
         khint_t kh[3];
         uint32_t rn = foot_rename();
@@ -793,10 +782,7 @@ static void draw_foot(void)
         } else {
             cv_key_row(8, 232, 2, kh, 2, act_ready() ? 3u : 2u, T_BG);
         }
-    } else if (lens_on()) {                           /* (0.8.3) row 1: LENTE's level and the bars (the DRUM grid's
-                                                       * pages: its bars; ACC held: ACCENT) */
-        lens_foot(t);
-    } else {
+    } else if (!fo) {
         uint32_t i;
         if ((ui.bank + 1u) * 16u <= (uint32_t)t->p[P_SLEN]) {
             if (settings.palette == UI_JIANT_INDEX)   /* (0.7.7) four under each card: from card 1's value to card 4's */
@@ -822,11 +808,16 @@ static void draw_foot(void)
                 cv_rect(sx, 14, 9, 2, T_TEXT);          /* the step sounding */
         }
     }
-    if (!(pf_on && lens_on()))
+    if (!(fo && act_cols()))
     {   /* row 2: engine icon + name, sound, page title at the right with its icon before it (MIXER, PHRASES, SONG,
-         * CHANCE, AUTOMATION); icons: their ink on the names' capitals */
-        uint32_t pi = ui.home ? ICON_NONE : page_icon(pg), ei = FELUCCA_ICONS ? (glob ? ICON_X_SONG : engine_icon(ename)) : ICON_NONE;
-        int32_t r = 232, tx, ex, need = text_w(&AF_S, pn), ew = text_w(&AF_S, ename);
+         * CHANCE, AUTOMATION); icons: their ink on the names' capitals. (0.8.5) LENTE: the DRUM grid with ACC held,
+         * ACCENT for the title (the first row's word before) */
+        int accw = fo && grid_on() && black_held(GK_ACC);
+        uint32_t pi = ui.home || accw ? ICON_NONE : page_icon(pg), ei = FELUCCA_ICONS ? (glob ? ICON_X_SONG : engine_icon(ename)) : ICON_NONE;
+        int32_t r = 232, tx, ex, need, ew = text_w(&AF_S, ename);
+        if (accw)
+            str_cpy(ti, "ACCENT", sizeof ti);
+        need = text_w(&AF_S, pn);
         ex = 8 + (FELUCCA_ICONS ? 12 + 5 : 0) + (ew < 80 ? ew : 80);   /* (where the engine's name ends) */
         tx = r - text_w(&AF_S, ti) - (pi != ICON_NONE ? 16 : 0);
         if (!ui.home && pg->graph == GR_MOTION && tx - 12 - (ex + 10) < need) {
@@ -836,20 +827,21 @@ static void draw_foot(void)
         x = 8;
         if (FELUCCA_ICONS) {
             if (ei != ICON_NONE)
-                GFX_HOOK_ALIGN(0, 19 + AF_S_CAP_Y, 0, 19 + AF_S_CAP_Y + AF_S_CAP_H, AL_V,
+                GFX_HOOK_ALIGN(0, ry + AF_S_CAP_Y, 0, ry + AF_S_CAP_Y + AF_S_CAP_H, AL_V,
                                "footer icons on the names' line");
-            x += cv_icon_in(x, 19 + AF_S_CAP_Y, 0, AF_S_CAP_H, 12, ei, T_MID, T_BG) + 5;
+            x += cv_icon_in(x, ry + AF_S_CAP_Y, 0, AF_S_CAP_H, 12, ei, T_MID, T_BG) + 5;
         }
-        x = cv_text_fit(x, 19, &AF_S, ename, T_THEME, T_BG, 80);
-        cv_free_text(x + 10, 19, &AF_S, pn, T_TEXT, T_BG, tx - 12 - (x + 10));
+        x = cv_text_fit(x, ry, &AF_S, ename, T_THEME, T_BG, 80);
+        cv_free_text(x + 10, ry, &AF_S, pn, T_TEXT, T_BG, tx - 12 - (x + 10));
         if (pi != ICON_NONE) {
-            GFX_HOOK_ALIGN(0, 19 + AF_S_CAP_Y, 0, 19 + AF_S_CAP_Y + AF_S_CAP_H, AL_V,
+            GFX_HOOK_ALIGN(0, ry + AF_S_CAP_Y, 0, ry + AF_S_CAP_Y + AF_S_CAP_H, AL_V,
                            "footer icons on the names' line");
-            cv_icon_in(tx, 19 + AF_S_CAP_Y, 0, AF_S_CAP_H, 12, pi, T_THEME, T_BG);
+            cv_icon_in(tx, ry + AF_S_CAP_Y, 0, AF_S_CAP_H, 12, pi, T_THEME, T_BG);
         }
-        cv_text_r(r, 19, &AF_S, ti, T_TEXT, T_BG);      /* (0.6.12: the page's name lit, not dim: where you are) */
+        cv_text_r(r, ry, &AF_S, ti, accw ? T_ACCENT : T_TEXT, T_BG);   /* (0.6.12: the page's name lit, not dim: where
+                                                         * you are) */
     }
-    cv_blit(0, Y_FOOT);
+    cv_blit(0, foot_y());
 }
 /* the EDIT layer's cards (ui_layer.c): ENG (the engine), No. (its sounds: KNOB 2's list), FAV, an empty card */
 static void engine_columns(void)
@@ -1806,8 +1798,9 @@ static void ui_draw_page(uint32_t counting)
                                                          * footer, which says the same: the header, the cards and
                                                          * the graph stay in sight */
         page_flash_draw();
-    if (!pf_on || lens_on())                            /* (its end: the footer back at once; (0.8.3) SEQ: its first
-                                                         * row, LENTE's level, stays drawn under the flash) */
+    if (!pf_on)                                         /* (its end: the footer back at once) */
         draw_foot();
+    if (lens_dy())                                      /* (0.8.5) LENTE: the level's tabs on top */
+        draw_tabs();
     ui.force = 0;
 }

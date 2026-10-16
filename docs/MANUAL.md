@@ -147,8 +147,9 @@ layer's shortcuts; on the DRUM grid they are steps and lanes; on the NAME screen
 - **Panel (middle)**: the page's graph — the engine's creature, an envelope, the LFO running, the step grid, a list...
 - **Footer**: the page name and its place in its family (e.g. **DLY 2/2**), or key hints. On the song pages
   (PROJECT, ARRANGE, TOOLS, GLOBAL, SYSTEM) it shows the project and its name instead of the track's sound. On the SEQ
-  pages its first row is the lens (0.8.3): **PATTERN · BAR · STEP** with the level you are on lit, and the pattern's
-  bars at the right, the one you edit lit; the page's name then shows under it, so that row stays in sight.
+  pages the footer is one line (the sound and the set you are on) and the lens's level tabs sit at the top instead
+  (0.8.5): **PATTERN · BAR · STEP** under the header, the level you are on filled violet, the cards and the panel under
+  them.
 
 **Colours** work like a thermal camera: cold (cyan, blue) is little, hot (orange, yellow, white) is a lot. Violet is
 what's selected, orange what's active.
@@ -556,15 +557,17 @@ of different lengths turn against each other.
 
 The sequencer works like a lens (LENTE, 0.8.3). **SELECT** zooms between three levels, **PATTERN ↔ BAR ↔ STEP**, one a
 detent, without wrapping; each level shows its own picture and has its own sets of knobs, and a **SEQ** tap goes round
-the sets of the level you are on. The first row of the footer always says where you are: the three levels with the one
-you are on lit, and at the right the pattern's bars (up to four, at LEN 64) with the bar you are editing lit and a line
-under the one playing.
+the sets of the level you are on. The **level tabs at the top** (0.8.5; until 0.8.4 the footer's first row) always say
+where you are: three equal tabs **PATTERN · BAR · STEP** right under the header, the level you are on filled violet
+(another palette: its own selection colour), the cards under them. The pattern's bars (up to four, at LEN 64) are drawn
+in the panel on PATTERN and BAR: the bar you edit framed violet, the number of the bar playing orange, a bar past LEN
+dark.
 
 | Level | What the screen shows | SEQ tap goes round | PRESETS |
 | --- | --- | --- | --- |
-| **PATTERN** | The pattern's bars side by side, each with its sixteen steps small (a DRUM track: its lanes), the bar you edit framed, the playhead where it plays; under them **BAR n/m**. | PATTERN (LEN DIV SWING GATE) → STRETCH → PLAYHEADS → TRACK → MUTATE | the **bar** (no wrap; the cursor keeps its place in the bar) |
-| **BAR** | The bar's **piano roll**, as STEP always was (a DRUM track: the **grid**, with its keys). | STEP → NOTE → AUTOMATION → AUTO LIST | the **step cursor**; past the bar's end it moves into the next bar |
-| **STEP** | The cursor step drawn large: its notes highest first (the note in focus lit, MICRO moving them, RATCH splitting them; a TIE shows the notes it holds; a note longer than a step says **LEN n** at the top, set on BAR > STEP's KNOB 3), and at the right its chips: ACC, SLIDE, MICRO, COMP, COMP 2, CHANCE. The set you are on lights its chip. Over it, the bar's sixteen steps small. | NOTE (FOCUS PITCH MOVE MICRO) → COMP → COMP 2 | the **step cursor** |
+| **PATTERN** | The pattern's bars side by side as large thumbnails, each a small piano roll of its sixteen steps (a DRUM track: its lanes), the bar you edit framed, the playhead where it plays; under them **PLAYHEADS**: the whole pattern as one small roll with the playhead and PLAYHEADS' extra heads (a tick each), PRESETS' **BAR** hint at the right. | PATTERN (LEN DIV SWING GATE) → STRETCH → PLAYHEADS → TRACK → MUTATE | the **bar** (no wrap; the cursor keeps its place in the bar) |
+| **BAR** | A strip of the pattern's bars, small, on top (the one you edit framed), and under it the bar's **piano roll**, as STEP always was (a DRUM track: the **grid**, with its keys). | STEP → NOTE → AUTOMATION → AUTO LIST | the **step cursor**; past the bar's end it moves into the next bar |
+| **STEP** | The cursor step drawn large: **STEP n** on top with NOTE / TIE / REST at the right (a note longer than a step: **LEN n**, set on BAR > STEP's KNOB 3); at the left its notes highest first, spaced by their interval, each named (the note in focus lit, MICRO moving them, RATCH splitting them; a TIE shows the notes it holds), and at the right its chips: ACC, SLIDE, MICRO, COMP, COMP 2, CHANCE (a value set lit). The set you are on fills its chip. | NOTE (FOCUS PITCH MOVE MICRO) → COMP → COMP 2 | the **step cursor** |
 
 - **SEQ from another page** comes back to the level and set you last used **on that track** (each track remembers its
   own); at power-on it is BAR's STEP, the piano roll.
