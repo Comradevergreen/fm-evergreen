@@ -3,6 +3,7 @@
 // directory (tools/video/capture_dark.c + film_prep.py), piped as JPEG to ffmpeg with the audio:
 //   NODE_PATH=$(npm root -g) node tools/video/film.mjs build/video5/feat feat out.mp4
 //   NODE_PATH=$(npm root -g) node tools/video/film.mjs build/video5/feat feat preview 100,400,900   -> preview-*.jpg
+//   film "tutorial": tools/video/tutorial.html (the tutorial, in Spanish: capture_tutorial.c, tutorial_voice.py; AUDIO= the mix)
 //   film "promo": tools/video/promo.html (the presentation film, tools/video/capture_promo.c); "update": update.html (the
 //   news of a release, in Spanish, tools/video/capture_update.c); "story": stories.html (1080 x 1920)
 // The fonts (the landing's: Michroma, IBM Plex Mono, Instrument Sans, VT323) come from build/video5/fonts.
@@ -33,20 +34,24 @@ await page.route("http://film/**", async r => {
   if (p === "/data.json") return r.fulfill({ path: path.join(dir, "data.json"), contentType: "application/json" });
   if (p === "/version") return r.fulfill({ body: ver, contentType: "text/plain" });
   if (p.startsWith("/fonts/")) return r.fulfill({ path: path.join(FONTS, path.basename(p)) });
-  return r.fulfill({ path: path.join(root, film === "promo" ? "tools/video/promo.html" : film === "update" ? "tools/video/update.html" : film === "plate" ? "tools/video/plate.html" : film.startsWith("story") ? "tools/video/stories.html" : "tools/video/film.html"), contentType: "text/html" });
+  if (p.startsWith("/afonts/")) return r.fulfill({ path: path.join(root, "assets/fonts", path.basename(p)) });   // (the tutorial: Chakra Petch)
+  if (p === "/timeline.json") return r.fulfill({ path: path.join(dir, "timeline.json"), contentType: "application/json" });
+  if (p.endsWith(".js")) return r.fulfill({ path: path.join(root, "tools/video", path.basename(p)), contentType: "text/javascript" });
+  return r.fulfill({ path: path.join(root, film === "promo" ? "tools/video/promo.html" : film === "update" ? "tools/video/update.html" : film === "plate" ? "tools/video/plate.html" : film === "tutorial" ? "tools/video/tutorial.html" : film.startsWith("story") ? "tools/video/stories.html" : "tools/video/film.html"), contentType: "text/html" });
 });
 await page.goto("http://film/film.html");
 const n = await page.evaluate(f => boot(f), film);
 if (out === "preview") {
-  const want = (list || "60").split(",").map(Number);
-  const last = Math.max(...want);
-  for (let f = Math.max(0, Math.min(...want) - 90); f <= last; f++) {      // (from a little before: the beings swim)
+  const want = (list || "60").split(",").map(Number), pre = +(process.env.PREVIEW_PRE || 90);
+  const todo = new Set();
+  for (const w of want) for (let f = Math.max(0, w - pre); f <= w; f++) todo.add(f);   // (from a little before: the beings swim)
+  for (const f of [...todo].sort((a, b) => a - b)) {
     const d = await page.evaluate(([f]) => frameJpeg(f, .9), [f]);
     if (want.includes(f)) fs.writeFileSync(path.join(dir, `preview-${String(f).padStart(5, "0")}.jpg`), Buffer.from(d.split(",")[1], "base64"));
   }
 } else {
   const ff = spawn("ffmpeg", ["-y", "-loglevel", "error", "-f", "image2pipe", "-framerate", "30", "-c:v", "mjpeg", "-i", "-",
-    "-i", path.join(dir, "audio.wav"), "-c:v", "libx264", "-preset", "medium", "-crf", "20", "-pix_fmt", "yuv420p",
+    "-i", process.env.AUDIO || path.join(dir, "audio.wav"), "-c:v", "libx264", "-preset", "medium", "-crf", "20", "-pix_fmt", "yuv420p",
     "-c:a", "aac", "-b:a", "256k", "-shortest", "-movflags", "+faststart", out], { stdio: ["pipe", "inherit", "inherit"] });
   const t0 = Date.now();
   for (let f = 0; f < n; f++) {
