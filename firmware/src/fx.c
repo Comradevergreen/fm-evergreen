@@ -118,6 +118,27 @@ static __attribute__((noinline)) int32_t dist_shape(track_t *t, uint32_t type, i
         return softclip(v + 2400) - softclip(2400);
     }
 }
+/* (0.7.9) DIST AMP's block: track_dist's chain with the cabinet's resonance after the low-pass: the cone's, f 2 sin(pi
+ * 1800 / 44100) (Q15 8400), damping 0.64, its band added at 0.6 */
+static __attribute__((noinline)) void dist_amp(track_t *t, int32_t *b, uint32_t n, int32_t g, int32_t d, int32_t k,
+                                               int32_t mk, int32_t full, int32_t w0, int32_t dw)
+{
+    int32_t hp = t->dist_hp, l1 = t->dist_lp1, l2 = t->dist_lp2, cl = t->dist_cab_l, cb = t->dist_cab_b, i;
+    for (i = 0; i < (int32_t)n; i++) {
+        int32_t x = b[i], y, h;
+        hp += (x - hp + 64) >> 7;
+        x = clamp(x - hp, -230000, 230000);
+        y = dist_shape(t, DT_AMP, x, g, d);
+        l1 += mulq15(y - l1, k);
+        l2 += mulq15(l1 - l2, k);
+        h = l2 - cl - mulq15(cb, 21000);
+        cb = clamp(cb + mulq15(h, 8400), -90000, 90000);   /* (x 21000 fits 32 bits) */
+        cl = clamp(cl + mulq15(cb, 8400), -90000, 90000);
+        y = mulq15(l2 + mulq15(cb, 19660), mk);
+        b[i] = full ? y : b[i] + ((((y - b[i]) >> 2) * (w0 + dw * (i + 1))) >> 10);
+    }
+    t->dist_hp = hp; t->dist_lp1 = l1; t->dist_lp2 = l2; t->dist_cab_l = cl; t->dist_cab_b = cb;
+}
 /* (JIANT 0.6.8, the crackles turning DIST up from 0) DST 1..8 blends the dry part into the drive (it was all drive
  * at 1: the low cut and the clip at once), the blend eased a block at a time and ramped across it; at 0 out of the
  * chain once the blend is down */
@@ -148,22 +169,25 @@ static void track_dist(track_t *t, int32_t *b, uint32_t n)
         if (!w0)
             t->dist_dc = t->dist_cab_l = t->dist_cab_b = 0;
     }
-    for (i = 0; i < (int32_t)n; i++) {
-        int32_t x = b[i], y;
-        t->dist_hp += (x - t->dist_hp + 64) >> 7;           /* ~55 Hz low cut: keep the bass out of the clipper */
-        x = clamp(x - t->dist_hp, -230000, 230000);         /* (x >> 2) * g fits 32 bits; the clip is flat out there */
-        y = type == DT_SOFT ? softclip((((x >> 2) * g) >> 10) + 2400) - b0 : dist_shape(t, type, x, g, d);
-        t->dist_lp1 += mulq15(y - t->dist_lp1, k);         /* two poles: tames the fizz */
-        t->dist_lp2 += mulq15(t->dist_lp1 - t->dist_lp2, k);
-        y = t->dist_lp2;
-        if (type == DT_AMP) {                           /* the cone's resonance: f 2 sin(pi 1800 / 44100) (Q15 8400), */
-            int32_t hp = y - t->dist_cab_l - mulq15(t->dist_cab_b, 21000);   /* damping 0.64; its band added at 0.6 */
-            t->dist_cab_b = clamp(t->dist_cab_b + mulq15(hp, 8400), -90000, 90000);   /* (x 21000 fits 32 bits) */
-            t->dist_cab_l = clamp(t->dist_cab_l + mulq15(t->dist_cab_b, 8400), -90000, 90000);
-            y += mulq15(t->dist_cab_b, 19660);
+    if (type == DT_AMP) {                               /* (0.7.9) AMP: its own loop, the cabinet in it */
+        dist_amp(t, b, n, g, d, k, mk, full, w0, dw);
+        return;
+    }
+    {                                                   /* (0.7.9) the state in registers through the block */
+        int32_t hp = t->dist_hp, l1 = t->dist_lp1, l2 = t->dist_lp2;
+        for (i = 0; i < (int32_t)n; i++) {
+            int32_t x = b[i], y;
+            hp += (x - hp + 64) >> 7;                   /* ~55 Hz low cut: keep the bass out of the clipper */
+            x = clamp(x - hp, -230000, 230000);         /* (x >> 2) * g fits 32 bits; the clip is flat out there */
+            y = type == DT_SOFT ? softclip((((x >> 2) * g) >> 10) + 2400) - b0 : dist_shape(t, type, x, g, d);
+            l1 += mulq15(y - l1, k);                    /* two poles: tames the fizz */
+            l2 += mulq15(l1 - l2, k);
+            y = mulq15(l2, mk);
+            b[i] = full ? y : b[i] + ((((y - b[i]) >> 2) * (w0 + dw * (i + 1))) >> 10);   /* (>> 2: fits 32 bits) */
         }
-        y = mulq15(y, mk);
-        b[i] = full ? y : b[i] + ((((y - b[i]) >> 2) * (w0 + dw * (i + 1))) >> 10);   /* (>> 2: fits 32 bits) */
+        t->dist_hp = hp;
+        t->dist_lp1 = l1;
+        t->dist_lp2 = l2;
     }
 }
 
@@ -533,33 +557,46 @@ static int32_t rev_size(void)
 /* ROOM (G_RTYPE 0): 4 damped combs + 2 allpasses (Freeverb-like, mono), added to out (WIDE: rev_room_mod) */
 static __attribute__((noinline)) void rev_room(const int32_t *rev_in, int32_t *out, uint32_t n)
 {
-    uint32_t i, k;
-    int32_t size = rev_size(), damp = 32767 - GFX(GF_RDAMP) * 200;
+    uint32_t i;
+    int32_t size = rev_size(), dk = GFX(GF_RDAMP) * 200;   /* (32767 - damp) */
+    /* (0.7.9) the combs' and allpasses' indices and low-passes in registers through the block (they were loaded and
+     * stored every sample); the same arithmetic, the same sound */
+    uint32_t i0 = fx.comb_i[0], i1 = fx.comb_i[1], i2 = fx.comb_i[2], i3 = fx.comb_i[3], a0 = fx.ap_i[0], a1 = fx.ap_i[1];
+    int32_t l0 = fx.comb_lp[0], l1 = fx.comb_lp[1], l2 = fx.comb_lp[2], l3 = fx.comb_lp[3];
+    int16_t *c0 = rev_comb, *c1 = c0 + REV_COMB[0], *c2 = c1 + REV_COMB[1], *c3 = c2 + REV_COMB[2];
+    int16_t *p0 = rev_ap, *p1 = p0 + REV_AP[0];
+#define RV_COMB(C, I, L, K)                                                                                        \
+    {                                                                                                              \
+        int32_t o = C[I];                                                                                          \
+        L = o + mulq15(L - o, dk);                                                                                 \
+        C[I] = (int16_t)clamp(in + mulq15(L, size), -32768, 32767);                                                \
+        if (++I >= REV_COMB[K])                                                                                    \
+            I = 0;                                                                                                 \
+        a += o;                                                                                                    \
+    }
+#define RV_AP(P, I, K)                                                                                             \
+    {                                                                                                              \
+        int32_t o = P[I], v = a + (o >> 1);                                                                        \
+        P[I] = (int16_t)clamp(v, -32768, 32767);                                                                   \
+        a = o - a;                                      /* Freeverb: out = buf - in (o - v is a notch comb) */     \
+        if (++I >= REV_AP[K])                                                                                      \
+            I = 0;                                                                                                 \
+    }
     for (i = 0; i < n; i++) {
-        int32_t a = 0;
-        int16_t *c = rev_comb;
-        int32_t in = mulq15(rev_in[i], 2580);           /* 1/8 at -4 dB: level as before the allpass fix */
-        for (k = 0; k < 4u; k++) {
-            int32_t o = c[fx.comb_i[k]];
-            fx.comb_lp[k] = o + mulq15(fx.comb_lp[k] - o, 32767 - damp);
-            c[fx.comb_i[k]] = (int16_t)clamp(in + mulq15(fx.comb_lp[k], size), -32768, 32767);
-            if (++fx.comb_i[k] >= REV_COMB[k])
-                fx.comb_i[k] = 0;
-            a += o;
-            c += REV_COMB[k];
-        }
-        c = rev_ap;
-        for (k = 0; k < 2u; k++) {
-            int32_t o = c[fx.ap_i[k]];
-            int32_t v = a + (o >> 1);
-            c[fx.ap_i[k]] = (int16_t)clamp(v, -32768, 32767);
-            a = o - a;                                  /* Freeverb: out = buf - in (o - v is a notch comb) */
-            if (++fx.ap_i[k] >= REV_AP[k])
-                fx.ap_i[k] = 0;
-            c += REV_AP[k];
-        }
+        int32_t a = 0, in = mulq15(rev_in[i], 2580);    /* 1/8 at -4 dB: level as before the allpass fix */
+        RV_COMB(c0, i0, l0, 0)
+        RV_COMB(c1, i1, l1, 1)
+        RV_COMB(c2, i2, l2, 2)
+        RV_COMB(c3, i3, l3, 3)
+        RV_AP(p0, a0, 0)
+        RV_AP(p1, a1, 1)
         out[i] += a;
     }
+#undef RV_COMB
+#undef RV_AP
+    fx.comb_i[0] = (uint16_t)i0; fx.comb_i[1] = (uint16_t)i1; fx.comb_i[2] = (uint16_t)i2; fx.comb_i[3] = (uint16_t)i3;
+    fx.ap_i[0] = (uint16_t)a0; fx.ap_i[1] = (uint16_t)a1;
+    fx.comb_lp[0] = l0; fx.comb_lp[1] = l1; fx.comb_lp[2] = l2; fx.comb_lp[3] = l3;
 }
 
 /* (JIANT) ROOM with its networks modulated (G_RMOD > 0): each comb read up to ~5.7 ms nearer (between samples, the

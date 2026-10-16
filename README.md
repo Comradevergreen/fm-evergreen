@@ -526,6 +526,14 @@ JIANT's modifications are distributed under the same license.
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
 
 ### v0.7.9
+- **Lighter audio** (reported: clicks on 0.7.8). The FM-1's code measured again (tests/target_budget.py, the
+  instructions in each audio loop; valgrind for the whole path): DIST no longer tests for AMP on every sample of the
+  other types (AMP has a loop of its own, dist_amp) and keeps its filter state in registers through the block; DRUM-X's
+  STEREO no longer divides on every sample (the kit's curve's gain every 4th, none where the curve is flat) and reads
+  its core's state once; DRIFT and the NOISE source have no divides; the ROOM reverb (also SHIMMER's) keeps its combs'
+  and allpasses' indices and filters in registers instead of memory: its loop on the FM-1 down 38 %, the same sound
+  sample for sample. The whole path is back at or under 0.7.6 on the host (song 3059 instructions a sample, was 3096);
+  drum_bus, dist_amp, dx_hands_step and drw_dust join the target budget.
 - **DRUM-X KIT 3 > HANDS** (asked for: several hands clapping at once): KNOB 3, OFF and 1..15. Each extra hand strikes the
   CLAP's noise again at a moment of its own (3 .. 45 ms after the hit, the dice thrown again on every hit: no tempo in
   it) and at a level of its own, then dies as the hit does: one running gain over the noise (dx_hands_gain), so the
