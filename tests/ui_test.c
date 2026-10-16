@@ -3849,6 +3849,18 @@ static int test_quick_layers(void)
     bad += check("  G3 RECALL (dialog, OCT+): the sound and the DRUM-X kit as the section stored them; the steps stay", ok);
     TSEL->p[P_E0] = 3;
     dx_kit[1].a[DXP_PITCH] = 99;
+    {   /* (0.8.3) another DRUM track keeps the section's one kit: INIT leaves it (the kit is checked alone below) */
+        uint32_t k, other = 0;
+        for (k = 0; k < NTRK; k++) if (&trk[k] != TSEL && trk[k].eng_req == ENGI_DRUM) { other = k + 1u; break; }
+        if (other) {
+            btn_down(B_EDIT); frame(); key_down(white(0)); frame(); key_up(white(0)); btn_up(B_EDIT); frame();
+            press(B_OCTUP);
+            bad += check("  F3 INIT with another DRUM track: the sound inits, the kit (theirs too) stays", msg_is("INIT, KIT KEPT") &&
+                         dx_kit[1].a[DXP_PITCH] == 99);
+            trk[other - 1u].eng_req = 0;                 /* (then alone: the factory kit, as before) */
+            TSEL->p[P_E0] = 3;
+        }
+    }
     btn_down(B_EDIT); frame(); key_down(white(0)); frame();
     ok = ui.confirm == CF_INIT_SOUND;
     frame();

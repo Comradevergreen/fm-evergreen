@@ -1483,6 +1483,13 @@ static int32_t dice_by(int32_t v, int32_t lo, int32_t hi, int32_t span)
 static void sound_dice_of(track_t *t, int quiet)
 {
     uint32_t e = t->eng_req % NENGINES, i, l;
+    if (e == ENGI_DRUM && drum_elsewhere(t)) {          /* (0.8.3, reported again) the section's one kit is another
+                                                         * track's: its drums stay as they are */
+        static char m[16] = "KIT OF T? KEPT";
+        m[8] = (char)('0' + drum_elsewhere(t));
+        ui_message(m);
+        return;
+    }
     if (e == ENGI_DRUM) {
         for (l = 0; l < 8u; l++) {
             const dx_lane_t *D = &DX_KIT_DEF[l];
@@ -2096,13 +2103,13 @@ static void ui_input_frame(void)
             } else if (kind == CF_INIT_SOUND) {         /* (DRUM: the factory DRUM-X kit too) */
                 if (!chain_busy()) {
                     init_sound_of(TSEL, TSEL->eng_req);
-                    if (drum_track(TSEL)) {
+                    if (drum_track(TSEL) && !drum_elsewhere(TSEL)) {   /* (0.8.3: not another track's kit) */
                         memcpy(dx_kit, DX_KIT_DEF, sizeof dx_kit);
                         memset(dx_mot, 0, sizeof dx_mot);   /* (0.5.1: X-MOD off) */
                         memset(dx_snd, 0, sizeof dx_snd);   /* (0.6.48: no SEND) */
                         memcpy(dx_lay, DX_LAY_DEF, sizeof dx_lay);   /* (0.6.49: the factory LAYERs) */
                     }
-                    ui_message("SOUND INIT");
+                    ui_message(drum_track(TSEL) && drum_elsewhere(TSEL) ? "INIT, KIT KEPT" : "SOUND INIT");
                 }
             } else if (kind == CF_RECALL_SOUND) {       /* the section's stored sound (ui_layer.c EDIT) */
                 if (!chain_busy()) {
