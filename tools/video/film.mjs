@@ -35,6 +35,7 @@ await page.route("http://film/**", async r => {
   if (p === "/version") return r.fulfill({ body: ver, contentType: "text/plain" });
   if (p.startsWith("/fonts/")) return r.fulfill({ path: path.join(FONTS, path.basename(p)) });
   if (p.startsWith("/afonts/")) return r.fulfill({ path: path.join(root, "assets/fonts", path.basename(p)) });   // (the tutorial: Chakra Petch)
+  if (p.startsWith("/vis/")) return r.fulfill({ path: path.join(dir, "vis", path.basename(p) + ".jpg"), contentType: "image/jpeg" });   // (the lab film: visuals_film.mjs)
   if (p === "/timeline.json") return r.fulfill({ path: path.join(dir, "timeline.json"), contentType: "application/json" });
   if (p.endsWith(".js")) return r.fulfill({ path: path.join(root, "tools/video", path.basename(p)), contentType: "text/javascript" });
   return r.fulfill({ path: path.join(root, film === "promo" ? "tools/video/promo.html" : film === "update" ? "tools/video/update.html" : film === "plate" ? "tools/video/plate.html" : film === "tutorial" ? "tools/video/tutorial.html" : film.startsWith("story") ? "tools/video/stories.html" : "tools/video/film.html"), contentType: "text/html" });

@@ -499,6 +499,123 @@ Gr.web = (A, t, f) => {
     ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'MIX'].forEach((s, i) => { const u = clamp((A.lt - i * 0.4) / 0.6, 0, 1); if (u <= 0) return; const y = zy - 80 + ease(u) * 120; X.globalAlpha = u < 1 ? 1 : .7; rr(zx + 14 + (i % 4) * 46, y + Math.floor(i / 4) * 10, 40, 26, 3, null, heat(40 + i * 30)); T(s, zx + 34 + (i % 4) * 46, y + 18 + Math.floor(i / 4) * 10, 11, 600, '#000', 'center'); X.globalAlpha = 1; });
   }
 };
+
+/* ---- the lab film (news_script_en.py): stems into a DAW, the web editor, the voice through the FM-1, the app */
+function win(x, y, w, h, title) { rr(x, y, w, h, 10, '#2b2833', '#07060a', 1.5); X.fillStyle = '#121017'; X.fillRect(x + 1, y + 1, w - 2, 30); [0, 1, 2].forEach((i) => { X.fillStyle = ['#ff5f57', '#febc2e', '#28c840'][i]; X.beginPath(); X.arc(x + 18 + i * 18, y + 16, 5, 0, TAU); X.fill(); }); T(title, x + 80, y + 21, 14, 500, C.dim); }
+function lane(x, y, w, h, k, f, lab, col) {
+  rr(x, y, w, h, 4, null, '#0d0c11'); T(lab, x + 10, y + h / 2 + 5, 14, 600, C.mid);
+  for (let i = 0; i < 120; i++) { const ff = Math.max(0, f - (119 - i) * 2), v = k < 6 ? en(ff, k) : clamp(D.rms[Math.min(ff, D.n - 1)] * .7, 0, 1); const a = v * (h / 2 - 4); X.fillStyle = col || heat(40 + v * 200); X.fillRect(x + 70 + i * (w - 80) / 120, y + h / 2 - a, Math.max(1, (w - 80) / 120 - 1), a * 2); }
+}
+Gr.stems = (A, t, f) => {
+  if (A.cue < 2) {
+    rr(GX, GY + 200, 150, 90, 10, C.text, '#07060a', 2); T('FM-1', GX + 75, GY + 255, 26, 600, C.text, 'center');
+    T('USB › STEMS', GX + 75, GY + 320, 15, 600, C.orange, 'center');
+    arrow(GX + 156, GY + 245, GX + 200, GY + 245, C.orange, 2, 9);
+    win(GX + 210, GY, GW - 210, 520, A.cue === 1 ? 'Ableton · Logic · Reaper · any DAW' : 'your DAW · 8 inputs');
+    const names = ['T1 DRUMS', 'T2 BASS', 'T3 PAD', 'T4 LEAD', 'T5 ARP', 'T6 METAL', 'FX L', 'FX R'];
+    names.forEach((n, i) => lane(GX + 220, GY + 42 + i * 59, GW - 230, 52, i, f, n.split(' ')[0], i >= 6 ? C.violet : null));
+  } else {
+    win(GX, GY, GW, 300, 'juanjiant-bit.github.io/JIANT · emulator');
+    T('BACKUP → STEMS', GX + 30, GY + 90, 28, 600, C.text); T('the same channels, rendered faster than real time', GX + 30, GY + 124, 17, 500, C.dim);
+    const p = clamp(A.lt / (A.ld * .8), 0, 1); rr(GX + 30, GY + 160, GW - 60, 12, 6, C.faint, null, 1); heatRule(GX + 30, GY + 160, (GW - 60) * p, 12, 0, p * .9);
+    T(p >= 1 ? 'RENDERED · STEMS.ZIP' : 'RENDERING ' + Math.round(p * 100) + ' %', GX + 30, GY + 210, 16, 600, p >= 1 ? C.orange : C.mid);
+    ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'MIX'].forEach((s2, i) => { const u = clamp((A.lt - i * .35) / .5, 0, 1); if (!u) return; X.globalAlpha = u; rr(GX + 30 + i * 118, GY + 360, 104, 130, 8, C.faint, '#07060a', 1.2); T(s2 + '.WAV', GX + 82 + i * 118, GY + 440, 15, 600, C.text, 'center'); X.globalAlpha = 1; });
+  }
+};
+Gr.editor = (A, t, f) => {
+  win(GX, GY, GW, 500, 'juanjiant-bit.github.io/JIANT/webapp/editor');
+  const tabs = ['SOUND', 'FM6 BANK', 'PRESETS', 'BACKUP', 'MENU'], act = A.cue === 1 ? 1 + (Math.floor(A.lt / 3) % 3) : 0;
+  tabs.forEach((n, i) => { rr(GX + 16, GY + 50 + i * 46, 150, 38, 5, i === act ? C.orange : C.faint, i === act ? 'rgba(255,122,0,.1)' : null, i === act ? 2 : 1); T(n, GX + 30, GY + 75 + i * 46, 14, 600, i === act ? C.text : C.mid); });
+  const mx = GX + 190, my = GY + 50;
+  if (act === 0) {
+    for (let i = 0; i < 8; i++) {
+      const x = mx + (i % 4) * 160 + 60, y = my + 70 + Math.floor(i / 4) * 190, v = .5 + .4 * Math.sin(t * (.4 + i * .13) + i);
+      X.lineWidth = 2.5; X.strokeStyle = i === Math.floor(t) % 8 ? C.orange : C.mid; X.beginPath(); X.arc(x, y, 40, Math.PI * .75, Math.PI * (.75 + 1.5 * v)); X.stroke();
+      X.strokeStyle = C.faint; X.lineWidth = 1; X.beginPath(); X.arc(x, y, 40, Math.PI * (.75 + 1.5 * v), Math.PI * 2.25); X.stroke();
+      T(['CUT', 'RES', 'ATK', 'REL', 'WAVE', 'DETUNE', 'MIX', 'NOISE'][i], x, y + 72, 14, 600, C.text, 'center'); T(String(Math.round(v * 127)), x, y + 8, 18, 600, C.text, 'center');
+    }
+  } else if (act === 1) {
+    for (let i = 0; i < 9; i++) { const on = Math.floor(A.lt * 2) % 9 === i; rr(mx, my + i * 46, GW - 220, 38, 4, on ? C.orange : C.faint, on ? 'rgba(255,122,0,.08)' : null, on ? 2 : 1); T('B' + (i + 1) + '  ' + ['E.PIANO 1', 'BRASS 1', 'STRINGS', 'MARIMBA', 'TUB BELLS', 'HARPSICH', 'BASS 1', 'FLUTE', 'CLAV'][i], mx + 14, my + 25 + i * 46, 15, 600, on ? C.text : C.mid); }
+    T('DX7 BANK → FM6', mx + GW - 400, my + 450, 15, 600, C.violet);
+  } else {
+    T(act === 2 ? 'USER PRESETS U01–U32' : 'FULL BACKUP', mx, my + 30, 22, 600, C.text);
+    const p = (A.lt % 4) / 4; rr(mx, my + 60, GW - 220, 12, 6, C.faint, null, 1); heatRule(mx, my + 60, (GW - 220) * p, 12, 0, p);
+    for (let i = 0; i < 8; i++) { const done = i < p * 8; rr(mx + (i % 4) * 150, my + 110 + Math.floor(i / 4) * 120, 136, 100, 6, done ? C.orange : C.faint, '#07060a', done ? 2 : 1); T((act === 2 ? 'U0' : 'PROJECT ') + (i + 1), mx + 68 + (i % 4) * 150, my + 165 + Math.floor(i / 4) * 120, 15, 600, done ? C.text : C.dim, 'center'); }
+  }
+  if (A.cue === 2) { const ph = (t * 1.5) % 1; T('USB MIDI · LIVE', GX + GW - 20, GY + 540, 18, 600, C.orange, 'right'); X.fillStyle = C.orange; X.beginPath(); X.arc(GX + GW - 230 - ph * 300, GY + 535, 5, 0, TAU); X.fill(); X.fillStyle = C.violet; X.beginPath(); X.arc(GX + GW - 530 + ph * 300, GY + 535, 5, 0, TAU); X.fill(); }
+};
+Gr.micin = (A, t, f) => {
+  if (A.cue < 3) {
+    const py = GY + 140; rr(GX, py, 90, 170, 14, C.violet, null, 2); T('MIC', GX + 45, py + 92, 16, 600, C.violet, 'center');
+    for (let k = 0; k < 3; k++) { const u = (t * 1.4 + k / 3) % 1; X.globalAlpha = 1 - u; X.strokeStyle = C.violet; X.lineWidth = 2; X.beginPath(); X.arc(GX + 45, py - 12, 14 + u * 34, Math.PI * 1.15, Math.PI * 1.85); X.stroke(); X.globalAlpha = 1; }
+    arrow(GX + 98, py + 85, GX + 150, py + 85, C.violet, 2, 9);
+    node(GX + 160, py + 50, 150, 70, 'T6', A.cue === 1, 'LEVEL · PAN');
+    ['CHORUS', 'DELAY', 'REVERB'].forEach((b, i) => { node(GX + 380, py - 60 + i * 95, 150, 56, b, A.cue === 1); X.globalAlpha = A.cue === 1 ? 1 : .4; arrow(GX + 314, py + 85, GX + 376, py - 32 + i * 95, C.mid, 1.2, 6); X.globalAlpha = 1; });
+    T('THE LAST TRACK\'S SENDS', GX + 455, py - 82, 13, 600, A.cue === 1 ? C.orange : C.dim, 'center');
+    if (A.cue >= 1) {
+      const lab = ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'FX L', 'FX R', 'VOICE', 'RAW'], bx0 = GX + 580, bw2 = (GW - 590) / 10;
+      for (let i = 0; i < 10; i++) {
+        const v = i < 6 ? en(f, i) : i < 8 ? clamp(D.rms[f] * .8, 0, 1) : clamp(.3 + .5 * Math.abs(Math.sin(t * 5.3) * Math.sin(t * 1.7)), 0, 1), lit = Math.round(v * 14);
+        for (let s2 = 0; s2 < 14; s2++) rr(bx0 + i * bw2 + 2, GY + 420 - s2 * 22, bw2 - 4, 16, 2, null, s2 < lit ? (i >= 8 ? C.violet : heat(30 + s2 * 15)) : '#151319');
+        X.save(); X.translate(bx0 + i * bw2 + bw2 / 2 + 4, GY + 448); X.rotate(-Math.PI / 4); T(lab[i], 0, 0, 12, 600, i >= 8 ? C.violet : C.mid, 'right'); X.restore();
+      }
+      T(A.cue === 2 ? '10 CHANNELS BACK' : 'YOUR VOICE, WITH THE FM-1\'S SPACE', GX, GY + 520, 22, 600, C.orange);
+    }
+  } else {
+    /* the latency: the voice lands late, the app moves it back */
+    const y1 = GY + 140, y2 = GY + 330, wv = GW - 120, u = ease(clamp((A.lt - 1.5) / 2, 0, 1)), lat = 70 * (1 - u);
+    T('BEAT', GX, y1 - 30, 16, 600, C.mid); T('VOICE', GX, y2 - 30, 16, 600, C.violet);
+    for (let i = 0; i < 4; i++) { X.fillStyle = heat(200); X.fillRect(GX + 100 + i * wv / 4, y1 - 50, 3, 100); }
+    for (let i = 0; i < 4; i++) { const x0 = GX + 100 + i * wv / 4 + lat; for (let j = 0; j < 60; j++) { const a = Math.exp(-j / 18) * 50 * Math.abs(Math.sin(j * .9 + i)); X.fillStyle = C.violet; X.fillRect(x0 + j * 2.2, y2 - a, 1.6, a * 2); } }
+    if (u < 1) arrow(GX + 100 + lat + 20, y2 + 80, GX + 100 + 10, y2 + 80, C.orange, 2, 9);
+    T(u < 1 ? '− ' + Math.round(24 * (1 - u)) + ' ms' : 'IN TIME', GX + 160, y2 + 120, 26, 600, u < 1 ? C.orange : C.text);
+    T('measured by the app, moved back when you stop recording', GX, GY + 520, 17, 500, C.dim);
+  }
+};
+Gr.app = (A, t, f) => {
+  const px = GX + 40, py = GY - 10, pw = 300, ph = 580;
+  rr(px, py, pw, ph, 36, '#2b2833', '#000', 2); rr(px + 14, py + 18, pw - 28, ph - 36, 24, null, '#040306');
+  X.save(); X.beginPath(); X.roundRect(px + 14, py + 18, pw - 28, ph - 36, 24); X.clip();
+  const sx0 = px + 30, sw = pw - 60;
+  if (A.cue === 0) {
+    T('REC', sx0, py + 60, 18, 600, C.red); if ((t * 2) % 1 < .6) { X.fillStyle = C.red; X.beginPath(); X.arc(sx0 + 52, py + 54, 7, 0, TAU); X.fill(); }
+    T('01:' + String(Math.floor(A.lt) % 60).padStart(2, '0'), sx0 + sw, py + 62, 22, 600, C.text, 'right');
+    for (let k = 0; k < 6; k++) { const e = en(f, k); sm[k] += (e - sm[k]) * .3; being(TRK[k][2], sx0 + 40 + (k % 3) * 80, py + 140 + Math.floor(k / 3) * 100, 22 * (1 + sm[k] * .4), sm[k], t + k); }
+    for (let i = 0; i < 8; i++) { const v = i < 6 ? en(f, i) : clamp(D.rms[f] * .8, 0, 1), lit = Math.round(v * 12); for (let s2 = 0; s2 < 12; s2++) rr(sx0 + i * sw / 8 + 2, py + 470 - s2 * 13, sw / 8 - 4, 9, 2, null, s2 < lit ? heat(30 + s2 * 18) : '#151319'); }
+    X.strokeStyle = C.red; X.lineWidth = 2; X.beginPath(); X.arc(px + pw / 2, py + 520, 22, 0, TAU); X.stroke(); X.fillStyle = C.red; X.beginPath(); X.arc(px + pw / 2, py + 520, 15, 0, TAU); X.fill();
+  } else if (A.cue === 1) {
+    T('EDIT', sx0, py + 60, 18, 600, C.text); T('BARS 9–40', sx0 + sw, py + 60, 13, 500, C.dim, 'right');
+    for (let k = 0; k < 7; k++) lane(sx0 - 60, py + 90 + k * 52, sw + 60, 44, k < 6 ? k : 6, f, '', k === 0 ? C.orange : null);
+    X.fillStyle = 'rgba(255,122,0,.15)'; X.fillRect(sx0 + 10, py + 90, 30, 52 * 7); X.fillStyle = C.orange; X.fillRect(sx0 + 40, py + 90, 2, 52 * 7);
+    rr(sx0, py + 480, sw, 40, 6, C.text, C.text); T('EXPORT · STEMS ZIP / MIX', px + pw / 2, py + 506, 13, 700, '#000', 'center');
+  } else if (A.cue === 2) {
+    T('USB', sx0, py + 60, 18, 600, C.text);
+    node(sx0, py + 100, sw, 80, 'ANDROID AUDIO', false, 'some channels only');
+    X.strokeStyle = C.red; X.lineWidth = 3; X.beginPath(); X.moveTo(sx0 + 20, py + 110); X.lineTo(sx0 + sw - 20, py + 170); X.stroke();
+    node(sx0, py + 220, sw, 80, 'OWN USB DRIVER', true, 'the FM-1\'s whole stream');
+    for (let i = 0; i < 10; i++) { const v = .3 + .6 * Math.abs(Math.sin(t * 3 + i)); rr(sx0 + i * sw / 10 + 2, py + 420 - v * 90, sw / 10 - 4, v * 90, 2, null, heat(40 + v * 200)); }
+  } else {
+    const g = X.createRadialGradient(px + pw / 2, py + ph / 2, 0, px + pw / 2, py + ph / 2, 260); g.addColorStop(0, `rgba(90,60,255,${.2 + D.rms[f] * .2})`); g.addColorStop(1, 'rgba(0,0,0,0)'); X.fillStyle = g; X.fillRect(px, py, pw, ph);
+    for (let i = 0; i < 260; i++) { const a = hash(i) * TAU + t * (.1 + hash(i + 9) * .3), r = 40 + hash(i + 3) * 120 * (1 + en(f, 0) * .5); X.fillStyle = heat(60 + hash(i + 5) * 190, .6); X.fillRect(px + pw / 2 + Math.cos(a) * r, py + ph / 2 + Math.sin(a) * r * 1.4, 2, 2); }
+    for (let k = 0; k < 3; k++) being(TRK[k * 2][2], px + pw / 2 + Math.cos(t * .3 + k * 2.1) * 70, py + ph / 2 + Math.sin(t * .3 + k * 2.1) * 120, 30 * (1 + en(f, k * 2) * .5), en(f, k * 2), t + k);
+  }
+  X.restore();
+  /* beside the phone: what this screen is */
+  const cap = [['RECORD', 'every track, live, from the FM-1'], ['EDIT · EXPORT', 'trim, cut, mix · ZIP of stems or one file'], ['ITS OWN DRIVER', 'the FM-1\'s stream, read directly'], ['LIVE VISUALS', 'clouds, smoke, mitosis, the microscope']];
+  cap.forEach((c, i) => { const on = i === A.cue; X.globalAlpha = on ? 1 : .3; T(c[0], px + pw + 60, GY + 90 + i * 120, 26, 600, on ? C.text : C.mid); T(c[1], px + pw + 60, GY + 122 + i * 120, 16, 500, on ? C.orange : C.dim); X.globalAlpha = 1; });
+};
+/* the lab film's LIVE VISUALS: the WebGL visuals' frames (visuals_film.mjs) full screen, the style's name */
+let visImg = null, visF = -1;
+async function visuals(A, t, f) {
+  if (visF !== f) { try { const r = await fetch('vis/' + f); if (r.ok) { visImg = await createImageBitmap(await r.blob()); visF = f; } } catch (e) {} }
+  const a = fade(A.ct, -0.6, 0.4) * (1 - fade(t, A.ch.end - 0.5, A.ch.end + 0.3));
+  X.globalAlpha = a; if (visImg) X.drawImage(visImg, 0, 0, W, H2); X.globalAlpha = 1;
+  const g = X.createLinearGradient(0, H2 - 300, 0, H2); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,.75)'); X.fillStyle = g; X.fillRect(0, H2 - 300, W, 300);
+  const names = ['NEBULA', 'SMOKE', 'MEMBRANE', 'SCAN', 'ORBITS', 'MICROSCOPE'];
+  X.globalAlpha = a; T(A.ch.k + ' / ' + String(TL.chapters.filter((c) => c.k).length).padStart(2, '0') + '  ·  ' + A.ch.title, GX, 120, 20, 600, C.mid);
+  X.globalAlpha = a * fade(A.lt, 0, .5); T(names[A.cue] || '', GX, 920, 64, 600, C.text, 'left', 6); heatRule(GX, 940, 300 * ease(A.lt / .8), 3);
+  X.globalAlpha = 1;
+}
 /* the intro and the outro: the ecosystem, the name */
 function eco(f, t, cx, cy, R, grow) {
   for (let k = 0; k < 6; k++) {
@@ -513,7 +630,7 @@ function intro(A, t, f) {
   const a0 = fade(t, 4.2, 5.4);
   X.globalAlpha = a0; T('JIANT', W / 2, 760, 130, 600, C.text, 'center', 24); heatRule(W / 2 - 300, 792, 600, 3);
   X.globalAlpha = fade(t, TL.chapters[0].lines[1].start, TL.chapters[0].lines[1].start + .6) * (A.ci === 0 ? 1 : 0);
-  T('6 PISTAS · 8 MOTORES · SECUENCIADOR · EFECTOS', W / 2, 846, 24, 500, C.mid, 'center', 3);
+  T(TL.meta && TL.meta.tagline ? TL.meta.tagline : '6 PISTAS · 8 MOTORES · SECUENCIADOR · EFECTOS', W / 2, 846, 24, 500, C.mid, 'center', 3);
   if (A.ci === 0 && A.cue >= 2) {
     X.globalAlpha = fade(A.lt, 0, .6) * (A.cue === 2 ? 1 : 1 - fade(A.lt, 0, .5));
     X.fillStyle = '#000'; X.fillRect(W / 2 - 420, 822, 840, 40);
@@ -521,7 +638,7 @@ function intro(A, t, f) {
     T('GRACIAS A QUIENES APOYAN EL PROYECTO', W / 2, 872, 24, 600, C.text, 'center');
     T('ko-fi.com/juanjiant', W / 2, 922, 32, 600, C.orange, 'center');
   }
-  if (A.ci === 0 && A.cue === 3) { X.globalAlpha = fade(A.lt, 0.2, .8); X.fillStyle = '#000'; X.fillRect(W / 2 - 420, 822, 840, 40); T('TUTORIAL · EL SISTEMA COMPLETO', W / 2, 900, 28, 600, C.violet, 'center', 4); }
+  if (A.ci === 0 && A.cue === 3) { X.globalAlpha = fade(A.lt, 0.2, .8); X.fillStyle = '#000'; X.fillRect(W / 2 - 420, 822, 840, 40); T(TL.meta && TL.meta.intro3 ? TL.meta.intro3 : 'TUTORIAL · EL SISTEMA COMPLETO', W / 2, 900, 28, 600, C.violet, 'center', 4); }
   X.globalAlpha = 1;
 }
 function outro(A, t, f) {
@@ -542,15 +659,16 @@ async function render(f) {
   const t = f / FPS, A = at(t);
   await rgbFrame(f);
   X.fillStyle = '#000'; X.fillRect(0, 0, W, H2);
-  const g = A.ch.g, full = g === 'intro' || g === 'outro';
-  if (g === 'intro') intro(A, t, f);
+  const g = A.ch.g, full = g === 'intro' || g === 'outro' || g === 'visuals';
+  if (g === 'visuals') await visuals(A, t, f);
+  else if (g === 'intro') intro(A, t, f);
   else if (g === 'outro') outro(A, t, f);
   else {
     const a = fade(A.ct, -0.3, 0.5) * (1 - fade(t, A.ch.end - 0.4, A.ch.end + 0.2) * (A.ci + 1 < TL.chapters.length && TL.chapters[A.ci + 1].g === 'outro' ? 1 : 0));
     screen(f, fade(A.ct + (A.ci === 1 ? 0 : 5), 0, 1));
     X.globalAlpha = a;
-    T(A.ch.k + ' / 15', GX, 150, 20, 600, heat(30 + A.ci * 13));
-    const tw = T(A.ch.title, GX, 222, 62, 600, C.text, 'left', 2);
+    T(A.ch.k + ' / ' + String(TL.chapters.filter((c) => c.k).length).padStart(2, '0'), GX, 150, 20, 600, heat(30 + A.ci * 13 * 15 / Math.max(4, TL.chapters.length - 2)));
+    const tw = T(A.ch.title, GX, 222, A.ch.title.length > 20 ? 46 : 62, 600, C.text, 'left', 2);
     heatRule(GX, 246, Math.min(tw, 860) * ease(A.ct / 1.0), 2);
     X.save(); X.translate(0, (1 - ease(A.ct / 0.6)) * 14);
     Gr[g](A, t, f);

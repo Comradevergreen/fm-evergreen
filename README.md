@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.8.0).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.8.1).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 > ⚡ **New in 0.6.85 – 0.6.92: a song generator you steer, a compact sequencer that breathes, a delay that feeds back.**
 > - **GEN (HOME + SELECT)**: a screen of three pages — GENRE (43 genres or RANDOM), SEED, ENERGY, FORM (loop, parts,
@@ -524,6 +524,14 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### v0.8.1
+- **Fix: browsing one track's sounds could change another track's drums** (reported by a user, and seen here too: T4 on
+  DRUM-X, T5 browsing PRESETS past the DRUM kits, T4's drums changed with every kit). A section has one DRUM-X kit,
+  shared by every track on DRUM; a DRUM preset loads its kit into it, so passing the kits on T5 overwrote T4's. Now a
+  kit preset loads the kit only on the track that has it to itself: while another live track plays DRUM-X, browsing,
+  the editor or a PROGRAM CHANGE on a different track leave the kit as it is and say "KIT OF T4 KEPT". On the drum
+  track itself the kits load as before. ui_test: T4's hand-edited kit survives T5 passing INDUSTRIAL; on T4 a kit loads.
 
 ### v0.8.0
 - **USB STEMS+IN (test version): MENU > SYSTEM > USB > STEMS+IN** (asked for: record a voice through the FM-1 from the

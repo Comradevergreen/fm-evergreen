@@ -8,7 +8,7 @@
  *   cc -O2 -w -Ibuild/gen -Ifirmware/src -Itests -o build/tut/capture_tutorial tools/video/capture_tutorial.c -lm
  *   build/tut/capture_tutorial build/tut */
 #define UI_TEST_NO_MAIN 1
-#define FELUCCA_VERSION "v0.8.0"
+#define FELUCCA_VERSION "v0.8.1"
 #define PF_MS 900u
 #define UI_NO_DRIFT 0
 #include "ui_test.c"
@@ -222,6 +222,7 @@ static void song_build(void)
 
 /* ---- the arrangement: what plays in each chapter, set on the bar */
 static const char *arr_ch = "";
+static int cue_now;                                    /* (the lab film's visuals: the arrangement turns with each line) */
 static int arr_pr = -1, arr_big = -1, arr_alt = -1;
 static const char *const *arr_dr;
 static void arrange(uint32_t bar, double t)
@@ -247,7 +248,13 @@ static void arrange(uint32_t bar, double t)
     else if (is(c, "usb")) { on[T_DRUM] = on[T_BASS] = on[T_LEAD] = on[T_METAL] = 1; }
     else if (is(c, "web")) { on[T_DRUM] = on[T_BASS] = on[T_METAL] = 1; dr = D_SPARSE; }
     else if (is(c, "outro")) { on[T_LEAD] = on[T_METAL] = 1; pr = 1; alt = 1; }
-    if (!is(c, arr_ch) || pr != arr_pr) {                /* (rewritten on a chapter's bar: the 4-bar phrase restarts) */
+    /* (the lab film, news_script_en.py) */
+    else if (is(c, "stems")) { on[T_DRUM] = on[T_BASS] = on[T_ARP] = on[T_METAL] = 1; }
+    else if (is(c, "editor")) { on[T_DRUM] = on[T_BASS] = on[T_ARP] = on[T_LEAD] = 1; pr = 1; }
+    else if (is(c, "micin")) { on[T_DRUM] = on[T_BASS] = on[T_LEAD] = on[T_METAL] = 1; dr = D_DRIVE; big = 1; pr = 1; alt = 1; }
+    else if (is(c, "app")) { on[T_DRUM] = on[T_BASS] = on[T_ARP] = on[T_LEAD] = on[T_METAL] = 1; dr = D_DRIVE; big = 1; }
+    else if (is(c, "visuals")) { on[T_DRUM] = on[T_BASS] = on[T_ARP] = on[T_LEAD] = on[T_METAL] = 1; dr = cue_now % 2 ? D_DRIVE : D_GROOVE; big = cue_now >= 3; pr = cue_now % 2; alt = cue_now >= 4; }
+    if (!is(c, arr_ch) || pr != arr_pr || dr != arr_dr || big != arr_big || alt != arr_alt) {                /* (rewritten on a chapter's bar: the 4-bar phrase restarts) */
         if (pr != arr_pr) { pad(pr); arp(pr); }
         if (pr != arr_pr || big != arr_big) bass(pr, big);
         if (alt != arr_alt) lead(alt);
@@ -292,7 +299,7 @@ static void act(const char *c, int cue)
 {
     let_go();
     perf_press(PF_R16, 0);
-    if (ui.menu && !is(c, "usb")) tut_menu_close();
+    if (ui.menu && !is(c, "usb") && !is(c, "stems") && !is(c, "micin")) tut_menu_close();
     if (ui.confirm && !is(c, "gen")) { ui.confirm = 0; ui.force = 1; }
     if (is(c, "intro")) home(cue % 2 ? T_LEAD : T_PAD);
     else if (is(c, "install")) home(T_DRUM);
@@ -352,7 +359,19 @@ static void act(const char *c, int cue)
         if (cue == 0) { menu_open(MI_SERIAL); menu_put(MI_SERIAL, 2u); }
         if (cue == 1) { menu_put(MI_SERIAL, 3u); ui.force = 1; }
         if (cue == 2) { menu_put(MI_SERIAL, 0u); ui.menu_sel = MI_MIDIOUT; ui.force = 1; }
-    } else if (is(c, "web")) home(T_BASS);
+    } else if (is(c, "stems")) {
+        if (cue == 0) { menu_open(MI_SERIAL); menu_put(MI_SERIAL, 2u); ui.force = 1; }
+        else { tut_menu_close(); home(T_DRUM); }
+    } else if (is(c, "editor")) {
+        static const char *const P[3] = {"EDIT 1", "OPERATOR", "PRESETS"};
+        page(cue == 1 ? T_ARP : T_LEAD, P[cue % 3]);
+    } else if (is(c, "micin")) {
+        if (cue == 0 || cue == 2) { menu_open(MI_SERIAL); menu_put(MI_SERIAL, 4u); ui.force = 1; }
+        else if (cue == 1) { tut_menu_close(); page(T_METAL, "FX"); }
+        else { tut_menu_close(); home(T_METAL); }
+    } else if (is(c, "app")) home(cue % 2 ? T_LEAD : T_BASS);
+    else if (is(c, "visuals")) home(T_LEAD);
+    else if (is(c, "web")) home(T_BASS);
     else if (is(c, "outro")) home(T_LEAD);
 }
 /* within a line: the knob being turned, the keys being played */
@@ -406,7 +425,7 @@ int main(int argc, char **argv)
         uint32_t want = (uint32_t)((uint64_t)(f + 1u) * FS / FPS), bar = (uint32_t)(t / (4.0 * BEAT_S));
         if (bar != bar_done) { bar_done = bar; arrange(bar, t); }
         while (pi < nplan && plan[pi].t <= t) {          /* a line begins: its action */
-            cur = plan[pi].ch; cue = plan[pi].cue; cue_t = plan[pi].t;
+            cur = plan[pi].ch; cue = plan[pi].cue; cue_t = plan[pi].t; cue_now = cue;
             if (t >= SPLASH_S) act(cur, cue);
             pi++;
         }

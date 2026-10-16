@@ -2,7 +2,8 @@
 # (JIANT 0.8.0) the tutorial film's voice-over: each line of tools/video/tutorial_script.py spoken (Kokoro, an ONNX
 # text-to-speech model, run locally: pip install kokoro-onnx soundfile; the model and voices from the kokoro-onnx
 # releases in $KOKORO, default ~/tts), laid end to end with pauses; the timeline the capture and the film follow.
-#   python3 tools/video/tutorial_voice.py build/tut [voice] [speed] [es|en]   (en: tutorial_script_en.py, an English voice)
+#   python3 tools/video/tutorial_voice.py build/tut [voice] [speed] [es|en] [tutorial|news]   (en: tutorial_script_en.py, an
+#   English voice; news: news_script_en.py, the lab film)
 #   -> build/tut/voice.wav (24 kHz mono), build/tut/timeline.json, build/tut/plan.txt (capture_tutorial.c's chapters)
 import json, os, sys
 from pathlib import Path
@@ -10,8 +11,10 @@ import numpy as np
 import soundfile as sf
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 LANG = sys.argv[4] if len(sys.argv) > 4 else 'es'
-if LANG == 'en': from tutorial_script_en import CHAPTERS, say
-else: from tutorial_script import CHAPTERS, say
+FILM = sys.argv[5] if len(sys.argv) > 5 else 'tutorial'   # (news: news_script_en.py, the lab film)
+import importlib
+M = importlib.import_module('news_script_en' if FILM == 'news' else 'tutorial_script_en' if LANG == 'en' else 'tutorial_script')
+CHAPTERS, say, META = M.CHAPTERS, M.say, getattr(M, 'META', {})
 from kokoro_onnx import Kokoro
 
 D = Path(sys.argv[1]); D.mkdir(parents=True, exist_ok=True)
@@ -41,7 +44,7 @@ for ci, c in enumerate(CHAPTERS):
 v = np.concatenate(out)
 v = v / (np.abs(v).max() + 1e-9) * 0.89
 sf.write(D / 'voice.wav', v, SR)
-json.dump(dict(end=round(t, 3), voice=VOICE, lang=LANG, chapters=chapters), open(D / 'timeline.json', 'w'), ensure_ascii=False, indent=1)
+json.dump(dict(end=round(t, 3), voice=VOICE, lang=LANG, meta=META, chapters=chapters), open(D / 'timeline.json', 'w'), ensure_ascii=False, indent=1)
 with open(D / 'plan.txt', 'w') as f:                    # capture_tutorial.c: "seconds chapter cue" a line
     f.write(f'{t:.3f} end 0\n')
     for ch in chapters:
