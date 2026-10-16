@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.8.3).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.8.4).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 > ⚡ **New in 0.6.85 – 0.6.92: a song generator you steer, a compact sequencer that breathes, a delay that feeds back.**
 > - **GEN (HOME + SELECT)**: a screen of three pages — GENRE (43 genres or RANDOM), SEED, ENERGY, FORM (loop, parts,
@@ -535,6 +535,37 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### v0.8.4
+- **RAM freed for what comes next** (the owner: room for assignable FX buses). The sound is the same (every golden
+  render bit for bit), projects and backups unchanged.
+- **The reverbs share their lines.** The five models never run at once: a TYPE change fades the old model's block out
+  and the new one starts from silence, never a crossfade of two. So CLOUD's line (32 KB), SHIMMER's (4 KB) and the
+  pre-delay of ROOM and SPRING (4 KB) now live in one 32 KB place: 8 KB of the pool back. A change silences what the
+  next model reads there: all of it going into CLOUD, SHIMMER's part going into SHIMMER, the pre-delay's part leaving
+  SHIMMER or CLOUD (also through RESO: CLOUD → RESO → ROOM finds nothing of CLOUD's). Between ROOM, SPRING and RESO the
+  pre-delay runs on as it always did. In the one block of a change from SHIMMER or CLOUD the pre-delay is skipped (its
+  line still holds theirs; that block only fed the model fading out, never heard). The change itself is as before: the
+  old tail cut with a 32-sample fade (0.73 ms), no click; it applies however TYPE changes (knob, automation / motion,
+  a project or song section, MIDI, the editor, LOAD LITE / ECO).
+- **Coming back to CLOUD starts an empty cloud**: its line used to be kept from the last time (a frozen cloud came
+  back after a trip to another TYPE or LOAD LITE), and its tone's state was not cleared on a change (a residue fed the
+  next cloud's line). Both silenced now, as the other models always were.
+- **Main RAM** (.data + .bss, the tightest region): the FM6 user-preset patches (3.7 KB, back in the pool where they
+  were before 0.6.53) and the project's serialized scratch (proj_wire, 3.8 KB) moved to the pool, the fonts' decode
+  tables (1.5 KB) to LOWBUF. All main-loop only: no interrupt reaches them (checked on the call graph from the audio
+  ISR, TIMER5 and the second core); every region is zeroed at boot alike.
+- **What it costs**: .data + .bss 93952 → 84832 B (13.5 KB free, was 4.3); the pool 311860 → 311236 B (spare 8640 →
+  9248 B; undoing the two moves would give 7.5 KB more there); LOWBUF 26514 → 28062 B of 28672; RAM code 21580 → 21640
+  B; flash +124 B. CPU: the target's render loops identical (tests/target_budget), callgrind +1 instruction a sample
+  (+0.05 %) on every section; a change into CLOUD clears 32 KB once, ~6000 instructions in that block (which runs no
+  new model). tests/reverb_test.c: every change between any two models and through a third, PRE on: no click, and
+  silence after (it fails, loud, without the clears).
+- **Found, not changed** (for the owner to decide): the delay line (int16 mono, 65536 samples, 1.49 s, all of it
+  reachable: 1/4 at 40 BPM, 1/2, 1/1, 2BAR, 4BAR are clamped to its end) is read past its end at the clamp when MOD is
+  on (the wow's offset and the Hermite's older taps wrap round to the newest samples): at TIME 1/1 and 120 BPM the
+  sound being sent leaks into the wet output while the wow leans back, ~-44 dB below the echo at MOD 20, ~-22 dB at
+  MOD 42. Clamping the read 8 samples (0.18 ms) shorter would fix it.
 
 ### v0.8.3
 - **GEN composes** (the owner: "the melodies too random, little musicality; use the CHORD and SCALE pages"). The

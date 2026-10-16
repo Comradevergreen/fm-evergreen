@@ -15,7 +15,9 @@
  *    sum of four tracks' largest sends) then silence: bounded, and the tail dies away (no limit cycle, no
  *    offset).
  * 5. level: SPRING's tail within 6 dB of ROOM's (RMS of the first 1.5 s after a noise burst, defaults).
- * 6. a model change while the bus rings: no click (the old one's block fades out), the new one starts silent.
+ * 6. a model change while the bus rings: no click (the old one's block fades out), the new one starts silent; (0.8.4)
+ *    every change between any two models and through a third, PRE on with ROOM and SPRING: the new one starts silent,
+ *    never playing what another left in the line they share (fx.c rev_x: CLOUD's, SHIMMER's, the pre-delay's).
  * 7. cost: host instructions per sample of the reverb alone (rev_room, rev_spring): SPRING at most ROOM + 80 % (0.6.83:
  *    was + 30 %; a Mac's clang measured + 72 % while the FM-1's own code has SPRING cheaper than ROOM, tests/
  *    target_budget.txt rev_spring 127 against rev_room 218: the host ratio is the compiler's, the device's is watched
@@ -467,6 +469,73 @@ static void test_switch(void)
     check("  and back to ROOM", fx.rtype == 0);
 }
 
+/* (0.8.4) the models' lines share rev_x (CLOUD's, SHIMMER's, the pre-delay's): every change between any two models (and
+ * through a third: CLOUD -> RESO -> ROOM, CLOUD -> ROOM -> CLOUD), PRE on with ROOM and SPRING, the old one ringing: no
+ * click (the old one's block fades out, as test_switch), and after it, the input stopped before, nothing at all: the new
+ * one starts from silence, never playing what another left in the shared line (nor CLOUD its own line from before) */
+static void switch_chain(const uint8_t *seq, uint32_t nseq)
+{
+    static int32_t c[CTL], d[CTL], r[CTL], w[CTL];
+    static const char *const NM[5] = {"ROOM", "SPRING", "SHIMMER", "RESO", "CLOUD"};
+    uint32_t b, i, k = 0, sw = (FS + FS / 5u) / CTL, ph = FS * 3u / 20u / CTL;   /* (the input 1 s; the first change 0.2 s
+                                                             * later, then one every 0.15 s) */
+    int32_t prev = 0, step = 0, own = 0, after = 0;
+    char what[200];
+    host_tracks_init();
+    rev_clear();
+    memset(dly_buf, 0, sizeof dly_buf);
+    memset(cho_buf, 0, sizeof cho_buf);
+    fx.dly_lp = fx.dly_hp = 0;
+    song.g[G_RSIZE] = 110; song.g[G_RDAMP] = 40; song.g[G_RMOD] = 40; song.g[G_RRATE] = 64; song.g[G_RWIDE] = 0;
+    song.g[G_RFILT] = 0;
+    song.g[G_RTYPE] = seq[0]; song.g[G_RPRE] = seq[0] <= 1u ? 60 : 0;
+    fx.rtype = seq[0];
+    for (b = 0; b < sw + nseq * ph; b++) {
+        if (b >= sw && (b - sw) % ph == 0u && ++k < nseq) {
+            song.g[G_RTYPE] = seq[k];
+            song.g[G_RPRE] = seq[k] <= 1u ? 60 : 0;
+        }
+        for (i = 0; i < CTL; i++) {
+            c[i] = d[i] = 0;
+            r[i] = b < FS / CTL ? (int32_t)(30000 * sin(2 * M_PI * 220 * (b * CTL + i) / FS)) + noise(6000) : 0;
+        }
+        fx_buses(c, d, r, w, CTL);
+        for (i = 0; i < CTL; i++) {
+            int32_t s = abs(w[i] - prev);
+            if (b >= sw - 4u && b <= sw + 4u)
+                step = s > step ? s : step;
+            else if (b > FS / CTL + 100u && b < sw - 4u)
+                own = s > own ? s : own;
+            if (b > sw)
+                after = abs(w[i]) > after ? abs(w[i]) : after;
+            prev = w[i];
+        }
+    }
+    snprintf(what, sizeof what, "  %s", NM[seq[0]]);
+    for (k = 1; k < nseq; k++)
+        snprintf(what + strlen(what), sizeof what - strlen(what), " -> %s", NM[seq[k]]);
+    snprintf(what + strlen(what), sizeof what - strlen(what), ": step %d (the tail's own %d), after %d", step, own, after);
+    check(what, step <= 2 * own + 64 && after == 0 && fx.rtype == seq[nseq - 1u]);
+}
+static void test_switch_all(void)
+{
+    static const uint8_t CH[4][3] = {{4, 3, 0}, {4, 0, 4}, {2, 1, 2}, {0, 4, 1}};
+    uint8_t s[2];
+    uint32_t a, b;
+    printf("reverb: (0.8.4) model changes through the shared line (rev_x):\n");
+    for (a = 0; a < 5u; a++)
+        for (b = 0; b < 5u; b++)
+            if (a != b) {
+                s[0] = (uint8_t)a; s[1] = (uint8_t)b;
+                switch_chain(s, 2);
+            }
+    for (a = 0; a < 4u; a++)
+        switch_chain(CH[a], 3);
+    song.g[G_RTYPE] = 0; song.g[G_RPRE] = 0; song.g[G_RMOD] = 0;
+    rev_clear();
+    fx.rtype = 0;
+}
+
 /* ---------------------------------------------------------------- cost --- */
 static double cost_of(int what)              /* 0 rev_room, 1 rev_spring, 2 fx_buses ROOM, 3 fx_buses SPRING */
 {
@@ -840,6 +909,7 @@ int main(int argc, char **argv)
     test_spring();
     test_clear();
     test_switch();
+    test_switch_all();
     test_dly_feedback();
     test_cost();
     test_jiant();

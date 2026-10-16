@@ -61,7 +61,8 @@ typedef struct {
 } upf_t;
 _Static_assert(sizeof(upf_t) == 3728u, "user preset FM6 patches layout (at most ST_PAYLOAD_MAX, 3840)");
 _Static_assert(sizeof(up_rec_t) == 192u && sizeof(((up_rec_t *)0)->name) == 12u, "upf_tag: the name at bytes 4..15");
-static upf_t upf;                                   /* (0.6.53: in .bss, was .pool) */
+static upf_t upf __attribute__((section(".pool")));   /* (0.6.53: in .bss, was .pool; 0.8.4: in the pool again, the
+                                                   * reverb's lines shared: main loop only) */
 
 static int upf_valid(const upf_t *u) { return u->magic == UPF_MAGIC && u->ver == 1u && u->nslot == UP_SLOTS; }
 

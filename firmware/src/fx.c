@@ -15,7 +15,21 @@ static union {                          /* ROOM's allpasses; SPRING's allpass ch
 } rev_u __attribute__((section(".pool")));
 #define rev_ap (rev_u.ap)
 #define RPRE_LEN 2048u                   /* (JIANT) the reverb's pre-delay line, at half rate (4 KB): up to 92 ms */
-static int16_t rpre_buf[RPRE_LEN] __attribute__((section(".pool")));
+#define SH_LEN 2048u                     /* (JIANT 0.5) SHIMMER's line (4 KB) */
+#define CL_LEN 16384u                    /* .. CLOUD's, half rate: ~0.74 s (32 KB) */
+/* (0.8.4) the models' own lines in one place (32 KB, was 40): the reverb runs one model at a time (a change fades the
+ * old one's block out, then the new one starts from silence: fx_buses), so CLOUD's line, SHIMMER's and the pre-delay
+ * (on ROOM and SPRING only) share it; rev_line_dirty says what a change must silence of it */
+static union {
+    int16_t cl[CL_LEN];                  /* CLOUD (4) */
+    int16_t sh[SH_LEN];                  /* SHIMMER (2) */
+    int16_t pre[RPRE_LEN];               /* the pre-delay (ROOM 0, SPRING 1) */
+    uint64_t d[CL_LEN / 4u];             /* (cleared through it: a double word a store) */
+} rev_x __attribute__((section(".pool")));
+#define rpre_buf (rev_x.pre)
+#define shim_buf (rev_x.sh)
+#define cloud_buf (rev_x.cl)
+_Static_assert(sizeof rev_x == CL_LEN * 2u && CL_LEN >= SH_LEN && CL_LEN >= RPRE_LEN, "the reverb models' lines");
 static int32_t rpre_out[CTL];                     /* .. the block out of it (the reverb's input) */
 static struct {
     uint32_t dly_w, cho_w, cho_ph;
@@ -740,9 +754,7 @@ static __attribute__((noinline)) void rev_spring_side(uint32_t n, int32_t wd)
  *                (MOD: the more, the oftener) an octave up / down or a fifth up; RATE their density, DAMP the tone,
  *                WIDE them left and right. SIZE full: FREEZE (the line stops being written: the cloud holds) */
 static uint32_t scale_mask(const track_t *t);           /* seq.c */
-#define SH_LEN 2048u
-static int16_t shim_buf[SH_LEN] __attribute__((section(".pool")));
-static int32_t shim_fb[CTL];
+static int32_t shim_fb[CTL];                            /* (SHIMMER's line: rev_x, at the top) */
 /* (0.6.12) AIR (G_RPRE on SHIMMER and CLOUD, -24..24 st): the pitch moved, the tone with it. A semitone count as a
  * speed, Q16: 2^(st / 12) (-24 .. 36) */
 static uint32_t semi_q16(int32_t st)
@@ -856,9 +868,7 @@ static __attribute__((noinline)) void rev_reso(const int32_t *rev_in, int32_t *o
         out[i] += a;
     }
 }
-#define CL_LEN 16384u                                    /* half rate: ~0.74 s */
-#define CL_N 12u
-static int16_t cloud_buf[CL_LEN] __attribute__((section(".pool")));
+#define CL_N 12u                                         /* (its line, CL_LEN: rev_x, at the top) */
 static struct { uint32_t pos, inc; uint16_t len, age; int16_t pl, pr; } cl_g[CL_N];
 static uint32_t cl_rand(void) { fx.cl_rng = fx.cl_rng * 1664525u + 1013904223u; return fx.cl_rng >> 8; }
 /* CLOUD (G_RTYPE 4, JIANT 0.5, made wet in 0.5.1): a granular wash. The input and the cloud's own tail fed back
@@ -972,8 +982,8 @@ static void rev_run(uint32_t ty, const int32_t *rev_in, int32_t *out, uint32_t n
     }
 }
 
-/* the reverb's buffers and states to silence (the model changed) */
-static void rev_clear(void)
+/* the reverb's buffers and states to silence (the model changed), but for the models' own lines (rev_x) */
+static void rev_state_clear(void)
 {
     uint32_t i;
     for (i = 0; i < sizeof rev_comb / 2u; i++)
@@ -983,14 +993,41 @@ static void rev_clear(void)
     for (i = 0; i < 4u; i++)
         fx.comb_lp[i] = fx.rs_lp[i] = 0;
     fx.sp_lp = fx.sp_hp = fx.sp_he = 0;
-    for (i = 0; i < SH_LEN; i++)                        /* (JIANT 0.5) SHIMMER's line, CLOUD's grains */
-        shim_buf[i] = 0;
-    for (i = 0; i < CTL; i++)
+    for (i = 0; i < CTL; i++)                           /* (JIANT 0.5) SHIMMER's feedback, CLOUD's grains */
         shim_fb[i] = 0;
     sh_tlp = 0;
     for (i = 0; i < CL_N; i++)
         cl_g[i].len = 0;
     fx.cl_gl = fx.cl_gr = 0;
+    fx.cl_lp = fx.cl_half = 0;                          /* (0.8.4: CLOUD's tone and odd sample too; its tone's state
+                                                         * was kept, a residue back into the next CLOUD's line) */
+}
+/* (0.8.4) the first n samples of rev_x silenced (n a multiple of 16; four double words a pass: all of it, CLOUD's, in
+ * ~7000 instructions, once in a change's block; out of line: the hot RAM code calls it) */
+static __attribute__((noinline)) void rev_line_clear(uint32_t n)
+{
+    uint64_t *p = rev_x.d, *e = p + n / 4u;
+    for (; p < e; p += 4) {
+        p[0] = 0;
+        p[1] = 0;
+        p[2] = 0;
+        p[3] = 0;
+    }
+}
+/* (0.8.4) how much of rev_x a change from the model `from` to `to` silences: CLOUD reads all of it (what the others
+ * left there, its own line from before: it was kept until 0.8.4); SHIMMER its line (as it always was); leaving
+ * SHIMMER or CLOUD, the pre-delay's part, so that with any other model running it holds the pre-delay's own line or
+ * silence (RESO writes none of it: after CLOUD -> RESO -> ROOM the pre-delay finds nothing of CLOUD's); between
+ * ROOM, SPRING and RESO nothing, the pre-delay's line runs on as it always has */
+static uint32_t rev_line_dirty(uint32_t from, uint32_t to)
+{
+    return to == 4u ? CL_LEN : to == 2u ? SH_LEN : from == 2u || from == 4u ? RPRE_LEN : 0u;
+}
+/* every buffer and state of the reverb silenced (fx_trip, the tests) */
+static void rev_clear(void)
+{
+    rev_state_clear();
+    rev_line_clear(CL_LEN);
 }
 
 static int32_t part_buf[CTL];                            /* a part's block (mix_part); the fade of a model change */
@@ -1135,8 +1172,10 @@ static inline __attribute__((always_inline)) void fx_buses(const int32_t *cho_in
         rev_in = rpre_out;
     } else
         fx.rt1 = fx.rt2 = 0;
-    if (song.g[G_RPRE] > 0 && song.g[G_RTYPE] <= 1) {   /* (JIANT) the reverb's pre-delay (in place; RESO: PITCH;
-                                                         * 0.6.12: SHIMMER, CLOUD: AIR) */
+    if (song.g[G_RPRE] > 0 && song.g[G_RTYPE] <= 1 && fx.rtype <= 1u) {   /* (JIANT) the reverb's pre-delay (in place;
+                                                         * RESO: PITCH; 0.6.12: SHIMMER, CLOUD: AIR). (0.8.4) Its line in
+                                                         * rev_x: not in a change's block from SHIMMER or CLOUD (their
+                                                         * line is there until the change clears it); else the same */
         uint32_t pd = (uint32_t)song.g[G_RPRE] * 20u;   /* (ms -> half-rate samples: 2000 at 100) */
         for (i = 0; i < n; i++) {                       /* half rate: two samples averaged in, read back between */
             uint32_t h = fx.rpre_w >> 1;
@@ -1229,12 +1268,13 @@ static inline __attribute__((always_inline)) void fx_buses(const int32_t *cho_in
                                                          * all SPRING */
     if (rt != fx.rtype) {                               /* the model changed: the old one's block fades out, */
         int32_t *t = fx_tmp, g = 65536, d = 65536 / (int32_t)n;   /* its buffers are cleared, the new */
-        for (i = 0; i < n; i++)                                     /* one starts from silence */
-            t[i] = 0;
+        for (i = 0; i < n; i++)                                     /* one starts from silence (never two */
+            t[i] = 0;                                               /* at once: 0.8.4, their lines shared) */
         rev_run(fx.rtype, rev_in, t, n);
         for (i = 0; i < n; i++, g -= d)
             wet[i] += mulq16(t[i], (uint32_t)g);
-        rev_clear();
+        rev_state_clear();
+        rev_line_clear(rev_line_dirty(fx.rtype, rt));
         fx.rtype = (uint8_t)rt;
         fx_gate(wet, n);
         return;
@@ -1763,11 +1803,7 @@ static __attribute__((noinline)) void fx_trip(uint32_t c1, uint32_t n)
         dly_buf[i] = 0;
     for (i = 0; i < CHO_LEN; i++)
         cho_buf[i] = 0;
-    for (i = 0; i < RPRE_LEN; i++)
-        rpre_buf[i] = 0;
-    for (i = 0; i < CL_LEN; i++)
-        cloud_buf[i] = 0;
-    rev_clear();
+    rev_clear();                                         /* (the pre-delay's line too: rev_x) */
     fx.dt1 = fx.dt2 = fx.rt1 = fx.rt2 = 0;
     fx.dly_lp = fx.dly_hp = fx.rf_lp = fx.rpre_s = fx.cl_lp = fx.cl_half = 0;
     fx_bad = 0;

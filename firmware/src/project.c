@@ -1285,7 +1285,7 @@ static uint32_t proj_obj(uint32_t slot)
 static union {                               /* serialized main-loop work; no retained expansion */
     project_store_t s;
     uint8_t raw[3840];                         /* (the staging of a backup object, up to a storage object: editor_backup.c) */
-} proj_wire_u;
+} proj_wire_u __attribute__((section(".pool")));   /* (0.8.4: in the pool, was .bss; main loop only) */
 #define proj_wire (proj_wire_u.s)
 static uint8_t proj_wire_gen;                /* +1 whenever proj_wire is rewritten (a backup's runtime copy lives there) */
 

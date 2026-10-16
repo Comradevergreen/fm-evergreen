@@ -1071,6 +1071,11 @@ sounds picked with PRESETS, SEQ TOOLS actions, or ordinary knob turns. It is not
 With **LOAD LITE**, SHIMMER and CLOUD play as ROOM and RESO as SPRING; with **LOAD ECO** every reverb plays as SPRING.
 The settings stay; the TYPE card shows LITE or ECO under its value.
 
+Changing the model (the knob, automation or motion, a project or song section, MIDI, the editor, or LOAD going LITE /
+ECO and back) cuts the old model's tail with a short fade (under a millisecond, no click) and the new one starts
+silent. Since 0.8.4 coming back to **CLOUD** starts an empty cloud, a frozen one too (it used to resume the cloud left
+from before).
+
 ### Chorus
 
 **CHORUS**: RATE, DEPTH, **STEREO** (0 as always, down to mono, up to about twice as wide). Hidden with LOAD ECO
