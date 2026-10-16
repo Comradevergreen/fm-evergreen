@@ -6215,8 +6215,8 @@ static int test_seq_tools(void)
     bad += check("  elsewhere (PHRASES, SONG, MIXER, HOME, ENV) SEQ held is a tap: no SONG, no map", ok);
     ui_power_on();
     go_page(GR_ROLL); frame();
-    {   /* (0.6.90) the piano roll, its pages, then the track's */
-        static const char *const ORD[] = {"PATTERN", "NOTE", "STRETCH", "COMP", "COMP 2", "TRACK", "PLAYHEADS"};   /* (0.6.92) */
+    {   /* (0.6.90) the piano roll, its pages, then the track's; (0.8.2) PLAYHEADS with the roll's, TRACK after */
+        static const char *const ORD[] = {"PATTERN", "NOTE", "STRETCH", "COMP", "COMP 2", "PLAYHEADS", "TRACK"};
         uint32_t q;
         ok = 1;
         for (q = 0; q < sizeof ORD / sizeof ORD[0]; q++) {
@@ -6232,6 +6232,23 @@ static int test_seq_tools(void)
     press(B_SEQ); frames(320);
     ok &= cur_page()->graph == GR_MUTATE;
     bad += check("  a tap on STEP: the next SEQ page, as always (the hint until the layer was opened)", ok);
+    {   /* (0.8.2) the roll stays: the pages that edit it keep it in the panel, the track's own keep their graphs */
+        uint32_t i, roll = 0, own = 0;
+        ok = 1;
+        for (i = 0; i < NPAGES; i++) {
+            if (PAGES[i].fam != FAM_SEQ || !page_visible(i)) continue;
+            if (roll_view(&PAGES[i])) roll++;
+            else own++;
+            if (str_eq(PAGES[i].title, "STEP") || str_eq(PAGES[i].title, "PATTERN") || str_eq(PAGES[i].title, "NOTE") ||
+                str_eq(PAGES[i].title, "STRETCH") || str_eq(PAGES[i].title, "COMP") || str_eq(PAGES[i].title, "COMP 2") ||
+                str_eq(PAGES[i].title, "PLAYHEADS"))
+                ok &= roll_view(&PAGES[i]);
+            else
+                ok &= !roll_view(&PAGES[i]);
+        }
+        bad += check("  (0.8.2) STEP PATTERN NOTE STRETCH COMP COMP 2 PLAYHEADS keep the roll; TRACK AUTOMATION AUTO LIST MUTATE their own",
+                     ok && roll == 7u && own == 4u);
+    }
     {   /* (0.6.85) SEQ > STRETCH: x2 .. x8 / 2 .. / 8 (the notes spread, held ones held), REPEAT x2 .. x8 / TO 64, NUDGE */
         track_t *t;
         uint32_t i, ok2 = 1, ok3 = 1, ok4 = 1, ok5;
