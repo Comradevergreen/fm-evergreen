@@ -106,6 +106,7 @@ public class MainActivity extends Activity {
         root.addView(button("3 · FM-1 + MIC USB A LA VEZ (3 s)", v -> run(this::twoInputs)));
         root.addView(button("4 · ENVIAR EL MIC AL FM-1 (5 s, modo IN+OUT)", v -> run(this::sendMic)));
         root.addView(button("5 · DRIVER PROPIO: 8 CANALES DIRECTO (10 s)", v -> run(this::directStems)));
+        root.addView(button("6 · FM-1 DIRECTO + MIC DEL CELU (10 s)", v -> run(this::stemsAndMic)));
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         Button copy = button("COPIAR INFORME", v -> copyReport());
@@ -125,7 +126,7 @@ public class MainActivity extends Activity {
         root.addView(sv, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1));
         setContentView(root);
 
-        say("JIANT Probe 0.2 · " + Build.MANUFACTURER + " " + Build.MODEL + " · Android " + Build.VERSION.RELEASE
+        say("JIANT Probe 0.3 · " + Build.MANUFACTURER + " " + Build.MODEL + " · Android " + Build.VERSION.RELEASE
             + " (API " + Build.VERSION.SDK_INT + ")");
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED)
             requestPermissions(new String[] {Manifest.permission.RECORD_AUDIO}, 1);
@@ -485,6 +486,7 @@ public class MainActivity extends Activity {
             }
         }
         say("Formato: " + ch + " canales, " + (sub * 8) + " bit.");
+        if (ch == 2) say("(2 canales: el FM-1 está en STEREO o IN+OUT. Para los stems: MENU › SYSTEM › USB › STEMS y reenchufá.)");
         if (ch == 0 || sub != 2) { say("RESULTADO: no entiendo el formato."); conn.close(); return; }
         if (!conn.claimInterface(on, true)) { say("RESULTADO: no pude tomar la interfaz de audio."); conn.close(); return; }
         try {
@@ -517,6 +519,42 @@ public class MainActivity extends Activity {
             conn.close();
             say("(Si después el audio USB normal no anda, desenchufá y volvé a enchufar el FM-1.)");
         }
+    }
+
+    // ------------------------------------------------------------------ 6 · the stems and the phone's mic together
+    private void stemsAndMic() {
+        say("\n== 6 · FM-1 DIRECTO + MIC DEL CELU");
+        AudioDeviceInfo mic = null;
+        for (AudioDeviceInfo d : am.getDevices(AudioManager.GET_DEVICES_INPUTS))
+            if (d.getType() == AudioDeviceInfo.TYPE_BUILTIN_MIC) { mic = d; break; }
+        AudioRecord r = open(mic, 1, false);
+        if (r == null) { say("RESULTADO: no pude abrir el mic del celu."); return; }
+        say("Mic: " + (mic == null ? "el de Android por defecto" : mic.getProductName()) + ". Hablá o aplaudí cerca del celu mientras suena el FM-1.");
+        short[] m = new short[RATE * 12];
+        int[] got = {0};
+        long[] first = {0};
+        Thread t = new Thread(() -> {
+            r.startRecording();
+            while (got[0] < m.length && !Thread.currentThread().isInterrupted()) {
+                int k = r.read(m, got[0], Math.min(RATE / 20, m.length - got[0]));
+                if (k <= 0) break;
+                if (got[0] == 0) first[0] = System.nanoTime();
+                got[0] += k;
+            }
+            r.stop();
+        });
+        t.start();
+        directStems();
+        t.interrupt();
+        try { t.join(2000); } catch (InterruptedException ignored) { }
+        r.release();
+        say("Mic del celu:");
+        int live = levels(m, got[0], 1, true);
+        say(String.format(Locale.ROOT, "  %.2f s de mic grabados a la vez.", got[0] / (double) RATE));
+        String name = saveWav(m, got[0], 1);
+        say(name != null ? "WAV del mic: Descargas/JIANT/" + name : "No pude guardar el WAV del mic.");
+        say(live > 0 ? "RESULTADO: el mic del celu graba junto al FM-1: la app puede sumarlo como una pista más."
+                     : "RESULTADO: el mic no trajo sonido mientras leía el FM-1.");
     }
 
     // ------------------------------------------------------------------ 3 · two USB inputs at once
