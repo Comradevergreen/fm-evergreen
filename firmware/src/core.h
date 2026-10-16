@@ -121,6 +121,11 @@ enum {                          /* per-track parameters */
 #define P_HGAT P_FM2_SUS
 #define P_HRQ P_FM2_LEVEL              /* (0.6.88) SEQ > TIMING's REC Q: how much live recording snaps to the grid, 127 (every
                                          * project before it) 100 %: on it; less: the notes keep that much of where they were */
+/* (JIANT 0.7.8) three more in DIGITAL's last slots; SUS and LEVEL slots hold 127 in every project and preset before them,
+ * so 127 is each one's "as before": DRIFT and DUST read 127 as 0 % (F_PCTINV, as HUMAN), R.DEPTH 127 as 100 % */
+#define P_DRIFT P_FM3_SUS              /* EDIT > MORPH KNOB 2: each voice's pitch (and filter) wandering slowly, its own way */
+#define P_WDUST P_FM3_LEVEL            /* WHEEL's EDIT > ROTOR: an old organ's crackle and hiss */
+#define P_WRDEP P_FM4_SUS              /* .. the rotor's depth (the Leslie's swirl), 100 % as before */
 #define P_ELOOP P_ED_FX                /* (JIANT 0.4) ENV LOOP: OFF / ON (voice.c env_tick) */
 /* (JIANT 0.6.9) AUTO PAN (fx.c mix_part), in the slots of the old per-track SLICER (one on a bus since 0.6.3, its
  * slots stored, never read but by proj_sl_migrate). Laid so what old stores hold means OFF: DPTH where SLCR was (0, or
@@ -546,6 +551,7 @@ typedef struct track {
     int32_t dist_hp, dist_lp1, dist_lp2;   /* DIST insert state (fx.c) */
     int32_t dist_dc, dist_hold;  /* (JIANT) RECT's DC; CRUSH's held sample */
     uint8_t dist_hc;             /* .. CRUSH's hold count */
+    int32_t dist_cab_l, dist_cab_b;   /* (JIANT 0.7.8) AMP's cabinet: its state-variable filter (low, band) */
     int32_t ms_v;                /* (JIANT) the modulation sequence's level now (mod.c MS_STEP, Q15, slewed) */
     uint8_t tail;                /* blocks to mix after the last voice (the DIST tail) */
     int16_t armp, aholdp;        /* P_AMODE / P_AHOLD as last seen by the ISR */

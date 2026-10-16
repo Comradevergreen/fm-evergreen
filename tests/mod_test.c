@@ -91,6 +91,8 @@ static void fresh(uint32_t e, uint32_t pi)        /* the boot state (no FX tails
     memset(ap_ph, 0, sizeof ap_ph); memset(ap_free, 0, sizeof ap_free); memset(ap_sh, 0, sizeof ap_sh);
     memset(trk, 0, sizeof trk);
     memset(mod_c, 0, sizeof mod_c);
+    memset(drw_t, 0, sizeof drw_t); memset(drw_v, 0, sizeof drw_v);   /* (0.7.8: WHEEL's rotors and DUST, DRIFT's clock: */
+    memset(drift_clk, 0, sizeof drift_clk); mns_clk = 0;               /* each phrase from the same start) */
     host_tracks_init();
     for (k = 0; k < NPART; k++)
         host_preset(&trk[k], k ? 0u : e, k ? 0u : pi);
@@ -623,6 +625,50 @@ static int demos(const char *dir)
     return n == 5u;
 }
 
+/* (JIANT 0.7.8) DRIFT, WHEEL's ROTOR DEPTH and DUST, the NOISE source: each one off as before (127 stored: the
+ * slots of the retired DIGITAL hold 127 in every project), on: its own sound */
+static uint64_t phrase_on(uint32_t e, uint32_t id, int32_t v)   /* in a fork()ed child: every state as it was */
+{
+    int fd[2];
+    uint64_t h = 0;
+    pid_t pid;
+    if (pipe(fd))
+        return 0;
+    fflush(stdout);
+    if (!(pid = fork())) {
+        fresh(e, 0);
+        if (id < P_COUNT)
+            trk[0].p[id] = (int16_t)v;
+        h = phrase();
+        if (write(fd[1], &h, sizeof h) != sizeof h)
+            _exit(1);
+        _exit(0);
+    }
+    close(fd[1]);
+    if (read(fd[0], &h, sizeof h) != sizeof h)
+        h = 0;
+    close(fd[0]);
+    waitpid(pid, 0, 0);
+    return h;
+}
+static void test_jiant_078(void)
+{
+    uint32_t ea = eng_by_name("ANALOG"), ew = eng_by_name("WHEEL");
+    uint64_t a0 = phrase_on(ea, P_COUNT, 0), w0 = phrase_on(ew, P_COUNT, 0), h;
+    check("0.7.8: DRIFT, ROTOR DEPTH, DUST at their stored defaults (127) bit-identical",
+          phrase_on(ea, P_DRIFT, 127) == a0 && phrase_on(ew, P_WRDEP, 127) == w0 && phrase_on(ew, P_WDUST, 127) == w0);
+    fresh(ea, 0);
+    check("0.7.8: a fresh track holds 127 in DRIFT's, DUST's and DEPTH's slots",
+          trk[0].p[P_DRIFT] == 127 && trk[0].p[P_WDUST] == 127 && trk[0].p[P_WRDEP] == 127);
+    check("0.7.8: ANALOG with DRIFT 100 % sounds its own", phrase_on(ea, P_DRIFT, 0) != a0);
+    check("0.7.8: WHEEL with ROTOR DEPTH 0 % sounds its own", phrase_on(ew, P_WRDEP, 0) != w0);
+    check("0.7.8: WHEEL with DUST 100 % sounds its own (its crackle and hiss)", phrase_on(ew, P_WDUST, 0) != w0);
+    fresh(ea, 0);
+    trk[0].p[P_M1SRC] = MS_NOISE; trk[0].p[P_M1DST] = MD_CUT; trk[0].p[P_M1AMT] = 40;
+    h = phrase();
+    check("0.7.8: the NOISE source moves the filter (its own sound)", h != a0 && MS_NOISE == 14 && MS_N == 15);
+}
+
 /* (JIANT) the new sound: DIST TYPE (each type its own sound, SOFT as before), the modulation sequence (STEP), the
  * buses' WIDTH (left and right apart), the delay's HPF, the reverb's MOD and pre-delay (each changes the sound) */
 static uint64_t phrase_lr(int32_t *diff)
@@ -1062,21 +1108,21 @@ static void test_fx_dest(void)
 }
 static void test_jiant_fx(void)
 {
-    uint64_t h[5], h0, h1;
+    uint64_t h[6], h0, h1;
     int32_t d0, d1;
     uint32_t k, ok = 1;
-    for (k = 0; k < 5u; k++) {
+    for (k = 0; k < 6u; k++) {
         fresh(0, 0);
         trk[0].p[P_DIST] = 90;
         trk[0].p[P_DTYPE] = (int16_t)k;
         h[k] = phrase();
     }
-    for (k = 1; k < 5u; k++)
+    for (k = 1; k < 6u; k++)
         ok &= h[k] != h[0] && h[k] != h[k - 1u];
-    check("DIST TYPE: SOFT HARD FOLD CRUSH RECT each sound their own (SOFT, the old drive: the goldens)", ok);
+    check("DIST TYPE: SOFT HARD FOLD CRUSH RECT AMP each sound their own (SOFT, the old drive: the goldens)", ok);
     {   /* their levels: each within 6 dB of SOFT at the same drive (CRUSH was 12 dB down) */
-        double rms[5];
-        for (k = 0; k < 5u; k++) {
+        double rms[6];
+        for (k = 0; k < 6u; k++) {
             uint32_t b, i;
             double e = 0;
             fresh(0, 0);
@@ -1091,9 +1137,9 @@ static void test_jiant_fx(void)
             rms[k] = e;
         }
         ok = 1;
-        for (k = 1; k < 5u; k++)
+        for (k = 1; k < 6u; k++)
             ok &= rms[k] > rms[0] / 4.0 && rms[k] < rms[0] * 4.0;
-        check("DIST TYPE: HARD FOLD CRUSH RECT within 6 dB of SOFT (CRUSH levelled)", ok);
+        check("DIST TYPE: HARD FOLD CRUSH RECT AMP within 6 dB of SOFT (CRUSH levelled)", ok);
     }
     fresh(0, 0);
     trk[0].p[P_DIST] = 90; trk[0].p[P_DTONE] = -60;
@@ -1197,6 +1243,7 @@ int main(int argc, char **argv)
     test_midi();
     test_cost();
     test_jiant_fx();
+    test_jiant_078();
     test_fx_dest();
     test_env_loop();
     test_byte();

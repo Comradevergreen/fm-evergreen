@@ -76,8 +76,15 @@ _Static_assert(sizeof rev_comb / 2u >= SP_LEN && sizeof rev_u.sp / 4u >= 4u * (S
 /* (JIANT) DIST TYPE (P_DTYPE): SOFT the biased tanh as before; HARD a hard clip; FOLD a triangle wavefolder (the drive
  * folds the wave back on itself: more partials as it rises); CRUSH fewer bits and a held sample (the drive takes both
  * down); RECT full-wave rectified (an octave up, fuzz), its DC taken out. Then the two-pole low-pass, TONE (P_DTONE)
- * moving it darker / brighter, and the make-up. DRIVE 0: out of the chain */
-enum { DT_SOFT, DT_HARD, DT_FOLD, DT_CRUSH, DT_RECT };
+ * moving it darker / brighter, and the make-up. DRIVE 0: out of the chain.
+ * (0.7.8) AMP, a guitar amp: two triode stages, each a biased tanh (the first leaning one way, the second the other:
+ * even and odd harmonics), a coupling high-pass between them (~110 Hz: the bias moves with the level, the amp's sag
+ * and bloom), the second stage's gain rising with the drive (clean .. crunch .. lead); then a cabinet: the two-pole
+ * low-pass at a speaker's corner (TONE moves it ~2.5 .. 6 kHz) and a resonance at ~1.8 kHz (a state-variable band
+ * added: the presence a 12" cone has). State: dist_dc (the coupling), dist_cab_l / _b (the cabinet) */
+enum { DT_SOFT, DT_HARD, DT_FOLD, DT_CRUSH, DT_RECT, DT_AMP };
+#define AMP_B1 7000                                     /* the stages' biases (Q15 into tanh) */
+#define AMP_B2 (-3500)
 static __attribute__((noinline)) int32_t dist_shape(track_t *t, uint32_t type, int32_t x, int32_t g, int32_t d)
 {
     int32_t v = ((x >> 2) * g) >> 10, a;
@@ -102,6 +109,11 @@ static __attribute__((noinline)) int32_t dist_shape(track_t *t, uint32_t type, i
         a = x < 0 ? -x : x;
         t->dist_dc += (a - t->dist_dc) >> 9;             /* (its mean: the DC the rectifier adds) */
         return softclip((((a - t->dist_dc) >> 2) * g) >> 10);
+    case DT_AMP:
+        a = softclip(clamp(v + (v >> 1), -400000, 400000) + AMP_B1) - softclip(AMP_B1);   /* stage 1: x1.5 the drive */
+        t->dist_dc += (a - t->dist_dc) >> 6;             /* the coupling capacitor: ~110 Hz high-pass */
+        a -= t->dist_dc;
+        return softclip(((a * (24 + d)) >> 4) + AMP_B2) - softclip(AMP_B2);   /* stage 2: x1.5 .. x8 */
     default:
         return softclip(v + 2400) - softclip(2400);
     }
@@ -128,8 +140,14 @@ static void track_dist(track_t *t, int32_t *b, uint32_t n)
     g = 4096 + d * d * 2;                                /* Q12: 1x .. ~9x, gentle at first */
     k = clamp(32000 - d * 95 + t->p[P_DTONE] * 300, 2500, 32767);   /* tone: transparent at low drive .. ~3 kHz, Q15 */
     mk = type == DT_HARD || type == DT_FOLD || type == DT_CRUSH ? 30000 - d * 60 : 30000 - d * 120;   /* make-up */
-    if (type > DT_RECT)
+    if (type > DT_AMP)
         type = DT_SOFT;
+    if (type == DT_AMP) {                               /* the cabinet's corner: ~4 kHz, TONE 2.5 .. 6 kHz; its make-up */
+        k = clamp(14500 + t->p[P_DTONE] * 90, 9000, 20000);
+        mk = 24000 - d * 70;
+        if (!w0)
+            t->dist_dc = t->dist_cab_l = t->dist_cab_b = 0;
+    }
     for (i = 0; i < (int32_t)n; i++) {
         int32_t x = b[i], y;
         t->dist_hp += (x - t->dist_hp + 64) >> 7;           /* ~55 Hz low cut: keep the bass out of the clipper */
@@ -137,7 +155,14 @@ static void track_dist(track_t *t, int32_t *b, uint32_t n)
         y = type == DT_SOFT ? softclip((((x >> 2) * g) >> 10) + 2400) - b0 : dist_shape(t, type, x, g, d);
         t->dist_lp1 += mulq15(y - t->dist_lp1, k);         /* two poles: tames the fizz */
         t->dist_lp2 += mulq15(t->dist_lp1 - t->dist_lp2, k);
-        y = mulq15(t->dist_lp2, mk);
+        y = t->dist_lp2;
+        if (type == DT_AMP) {                           /* the cone's resonance: f 2 sin(pi 1800 / 44100) (Q15 8400), */
+            int32_t hp = y - t->dist_cab_l - mulq15(t->dist_cab_b, 21000);   /* damping 0.64; its band added at 0.6 */
+            t->dist_cab_b = clamp(t->dist_cab_b + mulq15(hp, 8400), -90000, 90000);   /* (x 21000 fits 32 bits) */
+            t->dist_cab_l = clamp(t->dist_cab_l + mulq15(t->dist_cab_b, 8400), -90000, 90000);
+            y += mulq15(t->dist_cab_b, 19660);
+        }
+        y = mulq15(y, mk);
         b[i] = full ? y : b[i] + ((((y - b[i]) >> 2) * (w0 + dw * (i + 1))) >> 10);   /* (>> 2: fits 32 bits) */
     }
 }

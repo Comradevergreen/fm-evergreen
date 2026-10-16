@@ -887,6 +887,9 @@ static int32_t env_tick(track_t *t, voice_t *v)
     return v->env >> 9;
 }
 
+/* (JIANT 0.7.8) DRIFT: each voice its own slow value noise (mod.c drift_noise), on the track's blocks */
+static uint32_t drift_clk[NTRK];
+
 /* render one block of a part into out (cleared here); returns the voices rendered */
 /* Channel bend is live performance state, outside projects/presets. Q8 semitones. */
 static int32_t midi_bend_q8[NTRK], midi_bend_target[NTRK];
@@ -912,6 +915,7 @@ static uint32_t track_render(track_t *t, int32_t *out, uint32_t n)
     bend16 = bend >= 0 ? bend / 16 : -((-bend + 15) / 16);
     bend_fine = (bend - bend16 * 16) * 2367 / 2560;
     uint32_t nr = 0, fade = t->xf_on && t->xf, snap = fade && xf_snap_t == ti;
+    int32_t damt;
     int16_t pe_new[8], p_new[P_COUNT];
     for (i = 0; i < n; i++)
         out[i] = 0;
@@ -934,10 +938,12 @@ static uint32_t track_render(track_t *t, int32_t *out, uint32_t n)
         drum_side_begin(t, n);
     if (e->block)                                       /* the engine's per-part work (WHEEL: bars, rotor) */
         e->block(t);
+    damt = e == &ENG_DRUM ? 0 : 127 - clamp(p[P_DRIFT], 0, 127);   /* (0.7.8) DRIFT, 127 stored = 0 % */
+    drift_clk[ti]++;
     for (i = 0; i < NVOICE; i++) {
         voice_t *v = &t->v[i];
         vmod_t m;
-        int32_t env, pitch;
+        int32_t env, pitch, dfine, dcut, fsum;
         if (!v->active)
             continue;
         {
@@ -993,15 +999,21 @@ static uint32_t track_render(track_t *t, int32_t *out, uint32_t n)
         pitch = v->pitch_cur + t->pfx_pit + tune + bend16 + ((lfo * p[P_LD_PIT] * 3) >> 15) + ((m.envq15 * p[P_ED_PIT] * 3) >> 15);
         m.pitch16 = clamp(pitch, 0, 2047);
         m.inc = pitch_inc(m.pitch16);
-        m.fine = v->fine + tune_fine + bend_fine;
-        if (v->fine + tune_fine + bend_fine)             /* residual below 1/16 semitone */
-            m.inc += (uint32_t)((int32_t)(m.inc >> 12) * (v->fine + tune_fine + bend_fine));
-        m.cutoff = ((lfo * p[P_LD_FLT]) >> 7) + ((m.envq15 * p[P_ED_FLT]) >> 7);
+        dfine = dcut = 0;
+        if (damt) {                                     /* (0.7.8) DRIFT: up to ~27 ct, and the filter a little */
+            dfine = (drift_noise(ti * 8u + i * 1013u, drift_clk[ti], 820u + i * 37u) * damt) >> 16;
+            dcut = (drift_noise(ti * 8u + i * 1013u + 0x5bd1u, drift_clk[ti], 1300u + i * 53u) * damt) >> 12;
+        }
+        fsum = v->fine + tune_fine + bend_fine + dfine;
+        m.fine = fsum;
+        if (fsum)                                       /* residual below 1/16 semitone */
+            m.inc += (uint32_t)((int32_t)(m.inc >> 12) * fsum);
+        m.cutoff = ((lfo * p[P_LD_FLT]) >> 7) + ((m.envq15 * p[P_ED_FLT]) >> 7) + dcut;
         if (v->vel > 110)                               /* accent opens the filter with the env */
             m.cutoff += (m.envq15 * 24) >> 7;
         m.shape = (64 << 8) + ((lfo * p[P_LD_SHP]) >> 7) + ((m.envq15 * p[P_ED_SHP]) >> 7);
         if (MOD.on)                                     /* the modulation matrix (mod.c) */
-            mod_voice(t, v, &m, v->fine + tune_fine + bend_fine);
+            mod_voice(t, v, &m, fsum);
         e->render(t, v, out, n, &m);
         nr++;
     }

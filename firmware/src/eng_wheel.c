@@ -102,6 +102,8 @@ typedef struct {                 /* per part, once per block (wheel_block) */
     int32_t rwet;                /* rotary amount, Q15 (ramps on / off) */
     int32_t am[2];               /* this block's amplitude, Q15, per rotor */
     int32_t fm[2];               /* this block's pitch offset, Q16 of the increment, per rotor */
+    int32_t dust, dnz, dlp, dpop; /* (0.7.8) DUST: its amount 0..127, noise state, the hiss's low-pass, the pop decaying */
+    uint32_t dvi;                /* .. the voice that carries it (the part's first sounding one; NVOICE none) */
 } drw_trk_t;
 
 typedef struct {                 /* per voice */
@@ -132,7 +134,7 @@ static void wheel_block(track_t *t)
     drw_trk_t *T = &drw_t[drw_part(t)];
     const int16_t *p = t->p;
     uint32_t k, perc = (uint32_t)p[P_E4] % 7u, rot = (uint32_t)p[P_E7] % 3u;
-    int32_t s = 0, lv[DRW_NP];
+    int32_t s = 0, lv[DRW_NP], rdep = clamp(p[P_WRDEP], 0, 127);   /* (0.7.8) ROTOR > DEPTH: 127 = as before */
     uint32_t norm;
     for (k = 0; k < DRW_NP; k++) {
         lv[k] = perc && k == DRW_NP - 1u ? 0 : DRW_LV[drw_level(p, k)];   /* PERC on: the 1' bar is off */
@@ -163,11 +165,21 @@ static void wheel_block(track_t *t)
         T->rph[k] += (uint32_t)sp;
         sn = sine_i(T->rph[k]);
         c = sine_i(T->rph[k] + 0x40000000u);
-        dep = k ? 7000 : 13000;                         /* AM depth: low rotor 21 %, high 40 % */
+        dep = (k ? 7000 : 13000) * rdep / 127;          /* AM depth: low rotor 21 %, high 40 % (at DEPTH 100 %) */
         T->am[k] = 32767 - mulq15(dep, (32767 - c) >> 1);
         T->fm[k] = (sn * (sp >> (k ? 17 : 16))) >> 15;  /* Doppler: +-0.5 % fast (high), +-0.2 % (low) */
+        T->fm[k] = T->fm[k] * rdep / 127;
     }
     T->rwet += ((rot ? 32767 : 0) - T->rwet) >> 5;      /* ~25 ms in or out */
+    T->dust = 127 - clamp(p[P_WDUST], 0, 127);          /* (0.7.8) DUST, 127 stored = 0 %: on the first sounding voice */
+    T->dvi = NVOICE;
+    for (k = 0; k < NVOICE && T->dust; k++)
+        if (t->v[k].active) {
+            T->dvi = k;
+            break;
+        }
+    if (!T->dnz)
+        T->dnz = 0x2545F491;
     for (k = 0; k < 2u; k++) {
         T->am[k] = 32767 - mulq15(T->rwet, 32767 - T->am[k]);
         T->fm[k] = mulq15(T->fm[k], T->rwet);
@@ -256,6 +268,22 @@ static void wheel_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const
         }
         V->nz = nst;
         V->hp = hp;
+    }
+    if (T->dust && (uint32_t)(v - t->v) == T->dvi) {   /* (0.7.8) DUST: an old organ's crackle and hiss, once a part */
+        drw_trk_t *W = &drw_t[drw_part(t)];
+        int32_t nst = W->dnz, lp = W->dlp, pop = W->dpop, rate = W->dust * W->dust / 64;   /* up to ~170 pops a second */
+        for (i = 0; i < n; i++) {
+            uint32_t r = noise32(&nst);
+            int32_t z = (int32_t)(r >> 17) - 16384;
+            if ((int32_t)(r & 0xFFFFu) < rate)          /* a pop: a random click, gone in ~0.1 ms */
+                pop = (((int32_t)(r >> 18) - 8192) * W->dust) >> 6;
+            lp += (z - lp) >> 2;                        /* the hiss: noise under ~5 kHz, ~-30 dB at 100 % */
+            acc[i] += pop + ((lp * W->dust) >> 11);
+            pop = (pop * 3) >> 2;
+        }
+        W->dnz = nst;
+        W->dlp = lp;
+        W->dpop = pop;
     }
     if (T->dg || m->shape != (64 << 8)) {               /* overdrive; (0.6.81) LFO / ENV -> SHAPE drive it (SHAPE did
                                                          * nothing on the organ) */

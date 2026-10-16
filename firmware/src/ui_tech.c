@@ -62,6 +62,9 @@ static int32_t tk_dist_y(uint32_t type, int32_t x, int32_t g, int32_t d)
         return clamp(((x >> 2) * g) >> 10, -26000, 26000) * 32767 / 26000;
     }
     case DT_RECT: a = x < 0 ? -x : x; return softclip((((a - 65536) >> 2) * g) >> 10);
+    case DT_AMP:                                        /* (0.7.8) the two stages, without the coupling's drift */
+        a = softclip(clamp(v + (v >> 1), -400000, 400000) + AMP_B1) - softclip(AMP_B1);
+        return softclip(((a * (24 + d)) >> 4) + AMP_B2) - softclip(AMP_B2);
     default: return softclip(v + 2400) - softclip(2400);
     }
 }
@@ -69,7 +72,7 @@ static void tech_dist(const track_t *t)
 {
     int32_t d = t->p[P_DIST], g = 4096 + d * d * 2, i, py = 0, x0 = 22, y0 = TK_Y0, s = 100, cx = x0 + s / 2;
     int32_t cy = y0 + s / 2, en = bg_energy(), tone = t->p[P_DTONE];
-    uint32_t type = (uint32_t)t->p[P_DTYPE] > DT_RECT ? DT_SOFT : (uint32_t)t->p[P_DTYPE];
+    uint32_t type = (uint32_t)t->p[P_DTYPE] > DT_AMP ? DT_SOFT : (uint32_t)t->p[P_DTYPE];
     tk_axes(x0, y0, x0 + s, y0 + s);
     cv_rect(x0, cy, s, 1, T_LINE);
     cv_rect(cx, y0, 1, s, T_LINE);
