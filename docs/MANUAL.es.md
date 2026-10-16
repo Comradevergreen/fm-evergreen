@@ -86,9 +86,9 @@ Los nombres de abajo son los que usa el firmware (la pantalla HARDWARE CALIBRATI
 
 | Control | Qué hace |
 | --- | --- |
-| **SELECT** (encoder) | Solo: **recorre las páginas de la sección en la que estás** (las de EDIT en una página EDIT, las de FX en una de FX …), una por paso, sin dar la vuelta; en **HOME** abre **GEN**, el generador de temas (como HOME + SELECT). Con un botón mantenido, los **dados** de ese botón: **HOME** + SELECT **GEN**, **EDIT** + SELECT el sonido, **SEQ** + SELECT la secuencia, **LFO** + SELECT el LFO, **FX** + SELECT los efectos. **GLO** + SELECT: el tempo. Cualquier otro botón de página + SELECT: sus páginas. |
+| **SELECT** (encoder) | Solo: **recorre las páginas de la sección en la que estás** (las de EDIT en una página EDIT, las de FX en una de FX …), una por paso, sin dar la vuelta; en una página **SEQ** en cambio hace **zoom**: PATRÓN ↔ COMPÁS ↔ PASO (la lente del secuenciador, LENTE: ver [6](#cómo-moverse-lente)); en **HOME** abre **GEN**, el generador de temas (como HOME + SELECT). Con un botón mantenido, los **dados** de ese botón: **HOME** + SELECT **GEN**, **EDIT** + SELECT el sonido, **SEQ** + SELECT la secuencia, **LFO** + SELECT el LFO, **FX** + SELECT los efectos. **GLO** + SELECT: el tempo. Cualquier otro botón de página + SELECT: sus páginas. |
 | **ALGORITHM** (encoder) | Elige la pista desde cualquier página: T1–T4, o T1–T6 con TRACKS 6. En el MENU: cambia de pestaña. |
-| **PRESETS** (encoder) | En HOME, PRESETS y las páginas de sonido: recorre sonidos (los presets de fábrica de cada motor y después tus presets de usuario). En las páginas de pasos (STEP, COMP, PATTERN, AUTOMATION, TRACK): mueve el cursor de paso; en NOTE, el foco. En las páginas de lista (USER, PROJECT, ARRANGE, TOOLS, AUTO LIST): mueve la selección. **Mantené un botón de página y girá SELECT** (o PRESETS) para saltar directo por las páginas de ese botón. |
+| **PRESETS** (encoder) | En HOME, PRESETS y las páginas de sonido: recorre sonidos (los presets de fábrica de cada motor y después tus presets de usuario). En las páginas SEQ sigue al zoom: en **PATRÓN** (PATTERN, STRETCH, PLAYHEADS, TRACK, MUTATE) elige el **compás**; en **COMPÁS** y **PASO** (STEP, NOTE, COMP, COMP 2, AUTOMATION) mueve el **cursor de paso**, y al pasarse del compás entra solo en el siguiente. En las páginas de lista (USER, PROJECT, ARRANGE, TOOLS, AUTO LIST): mueve la selección. **Mantené un botón de página y girá SELECT** (o PRESETS) para saltar directo por las páginas de ese botón. |
 | **KNOB 1–4** | Las cuatro tarjetas (columnas) de la pantalla. Con una capa mantenida, las perillas propias de la capa. Girar rápido recorre todo el rango, despacio ajusta fino (MENU > KNOB ACCEL lo desactiva). |
 | **MASTER** | El volumen de salida. |
 
@@ -105,7 +105,7 @@ Los nombres de abajo son los que usa el firmware (la pantalla HARDWARE CALIBRATI
 | **GLO** | MIXER → GLOBAL → SYSTEM → MIXER. | Capa **GLO**: mutes, solos, niveles, tap tempo, UNDO. |
 | **SAVE** | Páginas SAVE (primera pulsación: USER). | Capa **SAVE**: tocar/guardar secciones en vivo. |
 | **ARP** | Páginas ARP. | (sin capa) |
-| **SEQ** | Páginas SEQ. | Capa **SEQ TOOLS** (en STEP, NOTE, PATTERN, COMP, TRACK y AUTOMATION). |
+| **SEQ** | Páginas SEQ: en una página SEQ, el siguiente juego de perillas del nivel de zoom en el que estás; desde otro lado, vuelve al nivel y al juego que usaste por última vez en esa pista. | Capa **SEQ TOOLS** (en todas las páginas SEQ). |
 | **PLAY** | Arranca / para. | — |
 | **REC** | Arma / desarma la grabación en la pista seleccionada. | Capa **REC**: CLEAR, CLICK. |
 | **OCT− / OCT+** | Octava del teclado (−3 a +3; los dos juntos: vuelve a 0). En páginas de acción y en diálogos: **OCT−** = atrás / NO, **OCT+** = hacerlo / YES. | — |
@@ -152,7 +152,9 @@ atajos de esa capa; en la grilla DRUM son pasos y carriles; en la pantalla NAME 
   grilla de pasos, una lista...
 - **Pie**: el nombre de la página y su lugar dentro de su familia (p. ej. **DLY 2/2**), o ayudas de teclas. En las
   páginas del tema (PROJECT, ARRANGE, TOOLS, GLOBAL, SYSTEM) muestra el proyecto y su nombre en lugar del sonido de
-  la pista.
+  la pista. En las páginas SEQ su primera fila es la lente (0.8.3): **PATTERN · BAR · STEP** con el nivel en el que
+  estás encendido, y a la derecha los compases del patrón, el que editás encendido; el nombre de la página aparece
+  entonces debajo, así esa fila queda siempre a la vista.
 
 Los **colores** funcionan como una cámara térmica: frío (cian, azul) es poco, caliente (naranja, amarillo, blanco) es
 mucho. Violeta es lo seleccionado, naranja lo activo.
@@ -178,6 +180,8 @@ Los **diálogos** preguntan antes de cualquier cosa destructiva: **OCT− NO**, 
 - **Girá SELECT** para recorrer las páginas de la sección en la que estás (las de EDIT en una página EDIT, las de FX en
   una de FX), una por paso, frenando en la primera y la última; el nombre de la página aparece un momento sobre el pie.
   En HOME abre GEN, el generador de temas.
+- **SEQ es una lente** (LENTE, 0.8.3): SELECT hace zoom entre el **PATRÓN** entero, un **COMPÁS** y un **PASO**, y un
+  toque de SEQ recorre los juegos de perillas del nivel en el que estás. Ver [6](#cómo-moverse-lente).
 - **Mantené un botón de página y girá PRESETS** para recorrer sus páginas hacia adelante o hacia atrás (sin dar la
   vuelta); soltá y te quedás ahí. ENV, SCL, ARP y SAVE hacen lo mismo con SELECT; HOME, EDIT, SEQ, LFO y FX + SELECT son
   sus dados, GLO + SELECT el tempo.
@@ -284,25 +288,28 @@ a la derecha); apretá OCT+ para ejecutarla.
 
 **SEQ** (por pista)
 
-Las primeras siete páginas editan el piano roll (en una pista DRUM, la grilla) y lo dejan en pantalla: pasar de STEP
-a PATTERN, NOTE, STRETCH, COMP, COMP 2 y PLAYHEADS cambia solo las cuatro tarjetas, y los segmentos sobre el roll
-muestran en cuál de las siete estás (COMP marca el componente de cada paso debajo; PLAYHEADS dibuja los cabezales donde
-suenan). TRACK, AUTOMATION, AUTO LIST y MUTATE vienen después, con sus propios gráficos (0.8.2).
+Las páginas SEQ están agrupadas en tres niveles de zoom (LENTE, 0.8.3; ver [6](#cómo-moverse-lente)): **SELECT** pasa
+de un nivel al siguiente, un toque de **SEQ** recorre los juegos del nivel en el que estás. NOTE está en dos niveles: en
+COMPÁS edita el piano roll, en PASO el paso dibujado grande; las perillas son las mismas.
 
-| Página | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
-| --- | --- | --- | --- | --- |
-| STEP (melódica: piano roll) | STEP | NOTE | TIME (NOTE / TIE / REST) | FLAG (– / ACC / SLD / A+S) |
-| STEP (DRUM: grilla) | STEP | LANE | HIT | ACC |
-| PATTERN | LEN | DIV | SWING | GATE |
-| NOTE | FOCUS | PITCH | MOVE | MICRO (−8/16 … +7/16) |
-| STRETCH | STRETCH (/8 … /2, x1, x2 … x8) | REPEAT (OFF, x2 … x8, TO 64) | NUDGE | ROTATE (−32 … +32) |
-| COMP | STEP | TYPE | (su valor; ARP: ORDER × RANGE) | EVERY (ARP: RATE; RATCH / ECHO: DIV) |
-| COMP 2 | STEP | TYPE (el segundo componente) | (su valor) | EVERY |
-| PLAYHEADS | HEAD | RATE | DIR | INTERVAL |
-| TRACK | PITCH | CHANCE | HUMAN | REC Q |
-| AUTOMATION | PLAY (ON/OFF) | EVENT (cantidad) | LOCK (cantidad) | CLEAR (acción) |
-| AUTO LIST | ROW | STEP | PARAM | VALUE |
-| MUTATE | SOUND (cada) | PATTERN (cada) | AMOUNT | MODE |
+| Nivel | Juego (toque de SEQ) | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
+| --- | --- | --- | --- | --- | --- |
+| PATRÓN | PATTERN | LEN | DIV | SWING | GATE |
+| PATRÓN | STRETCH | STRETCH (/8 … /2, x1, x2 … x8) | REPEAT (OFF, x2 … x8, TO 64) | NUDGE | ROTATE (−32 … +32) |
+| PATRÓN | PLAYHEADS | HEAD | RATE | DIR | INTERVAL |
+| PATRÓN | TRACK | PITCH | CHANCE | HUMAN | REC Q |
+| PATRÓN | MUTATE | SOUND (cada) | PATTERN (cada) | AMOUNT | MODE |
+| COMPÁS | STEP (melódica: piano roll) | STEP | NOTE | TIME (NOTE / TIE / REST) | FLAG (– / ACC / SLD / A+S) |
+| COMPÁS | STEP (DRUM: grilla) | STEP | LANE | HIT | ACC |
+| COMPÁS | NOTE | FOCUS | PITCH | MOVE | MICRO (−8/16 … +7/16) |
+| COMPÁS | AUTOMATION | PLAY (ON/OFF) | EVENT (cantidad) | LOCK (cantidad) | CLEAR (acción) |
+| COMPÁS | AUTO LIST | ROW | STEP | PARAM | VALUE |
+| PASO | NOTE | FOCUS | PITCH | MOVE | MICRO |
+| PASO | COMP | STEP | TYPE | (su valor; ARP: ORDER × RANGE) | EVERY (ARP: RATE; RATCH / ECHO: DIV) |
+| PASO | COMP 2 | STEP | TYPE (el segundo componente) | (su valor) | EVERY |
+
+PRESETS elige el compás en PATRÓN y mueve el cursor de paso en COMPÁS y PASO (en AUTO LIST, la fila). En pantalla los
+niveles se llaman como en el equipo: PATTERN, BAR y STEP.
 
 ### Las capas (mantené el botón)
 
@@ -347,7 +354,7 @@ DRUM-X de fábrica), G3 **RECALL** (el sonido tal como lo guardó la sección ac
 preguntan antes y no tocan los pasos. En una pista DRUM, las teclas negras 1–8 mutean cada sonido de DRUM-X (BD SD CP
 CH OH TM RS CB). Perillas: las cuatro de EDIT 1.
 
-**SEQ TOOLS** (solo en STEP, NOTE, PATTERN, COMP, TRACK y AUTOMATION) — F3 CLEAR, G3 REVERSE, A3 / B3 SHIFT a la izquierda /
+**SEQ TOOLS** (en todas las páginas SEQ, en cualquier nivel de zoom) — F3 CLEAR, G3 REVERSE, A3 / B3 SHIFT a la izquierda /
 derecha, C4 RANDOM, D4 COOK, E4 BEAT (DRUM), F4 CLR AUTO (la automatización y los locks de la pista; los pasos quedan).
 En una pista DRUM, las herramientas de carril: G4 CLR, A4 REV, B4 FILL, C5 RND sobre el carril elegido con las teclas
 negras 1–8. **REC** (con SEQ mantenido): CLEAR ALL. Perillas: LEN, DIV, SWING, GATE. Estas herramientas no tienen
@@ -376,7 +383,7 @@ borra. (LFO + SELECT tira el LFO de la pista, con KEEP / CANCEL: ver los dados.)
 
 ## 4. Motores
 
-Ocho motores, todos de síntesis, sin samples. Cualquier motor puede ir en cualquier pista. Elegilos con **PRESETS**
+Nueve motores, todos de síntesis, sin samples. Cualquier motor puede ir en cualquier pista. Elegilos con **PRESETS**
 (una sola lista con todos los motores) o con KNOB 2 (ENG) en SAVE > PRESETS. También figuran las cuatro perillas de
 HOME de cada pista.
 
@@ -395,6 +402,7 @@ click; las notas siguen.
 | **WHEEL** | REG, SUB, BODY, TOP | PERC, CLICK, DRIVE, ROTOR | REG, PERC, DRIVE, ROTOR |
 | **NOISE** | MODE, COLOR, FREQ, PEAK | TRK, DENSE, DRIFT, CRUSH | FREQ, PEAK, COLOR, REL |
 | **DRUM** (DRUM-X) | MORPH, TUNE, TONE, DECAY | NOISE, FM ENV, FOLD, DRIVE | MORPH, TUNE, TONE, DECAY |
+| **ANIMAL** (0.8.3) | MODE, PRESS, CHAOS, SIZE | SWEEP, RATE, GROUP, TEMP | PRESS, SWEEP, RATE, SIZE |
 
 - **ANALOG**: dos osciladores. WAVE: SAW, SQR, TRI, SIN, PWM, SYNC, RING, SAW3. **INT** fija el intervalo del
   oscilador 2 (±24 semitonos). Su filtro es por voz.
@@ -429,6 +437,73 @@ click; las notas siguen.
   suena).
 - **NOISE**: ruido coloreado y metálico. MODE: ANLG, DUST, LFSR, META (DUST es solo el crepitar: con DENS en 0 igual crepita suave). PEAK es su propia resonancia.
 - **DRUM**: DRUM-X, ver [5](#5-drum-x).
+- **ANIMAL**: cantos de animales con modelos físicos, ver [ANIMAL](#animal-083) más abajo.
+
+### ANIMAL (0.8.3)
+
+Cantos de animales hechos como los hacen los animales: **una fuente que se autooscila o golpea** (la siringe de un
+pájaro, la lima y el raspador de un grillo, el tímbalo de una cigarra, la laringe de una rana, un ala) **excita uno o
+dos resonadores** (el ala, el abdomen, el saco vocal, el tracto), con una capa lenta de **presión, tensión y ritmo**.
+**MODE** elige la fuente; cada modo lee las ocho perillas a su manera y la pantalla les cambia el nombre. La tecla fija
+la tensión (la altura, la portadora), la velocidad la presión; **una nota empieza un canto**, así que una secuencia de
+notas es una secuencia de cantos, afinada con el resto de la música.
+
+| MODE | EDIT 1 (KNOB 2..4) | EDIT 2 | Qué modela |
+| --- | --- | --- | --- |
+| **CMOS** | TOUCH, COUPLE, CAP | HYST, RATE, GROUP, FM | la "máquina de pájaros" con 40106 / 4093 (abajo) |
+| **PULSE** | CLICK, Q, SIZE | DETUNE, RATE, GROUP, TEMP | grillos, esperanzas, cigarras, ranas y sapos |
+| **WHSTL** | PRESS, CHAOS, SIZE | SWEEP, RATE, GROUP, TEMP | silbidos de pájaros (y un murciélago, transpuesto) |
+| **WING** | BUZZ, DRIFT, SIZE | DOPPLR, RATE, GROUP, TEMP | mosquito, abeja, mosca |
+| **GLOTT** | MOUTH, ROUGH, SIZE | SWEEP, RATE, GROUP, AIR | mamíferos: lobo, perro, rugido, ronroneo |
+
+**El ritmo del canto** (todos los modos menos CMOS): **RATE** es la tasa de sílabas (0,05–40 por segundo); **GROUP**
+cómo se agrupan: **HOLD** (una sílaba mientras dure la nota: un arrullo, un aullido, un zumbido), **TRILL** (sin pausas)
+o *n*+*m* (*n* sílabas y después *m* en silencio: 3+9 es el chirrido de tres del grillo de campo); **TEMP** (°C, 22 como
+está escrito) escala todas las tasas como lo hace la temperatura en insectos y ranas (ley de Dolbear: un grillo a 30 °C
+chirría unas 2,4 veces más rápido que a 14 °C). **SIZE** mueve todo el animal hacia arriba o abajo desde la tecla, un
+semitono por paso (64: como se toca; menos: más chico y más agudo; en GLOTT es el largo del tracto: todos los
+formantes juntos, sin tocar la altura). **SWEEP** es el gesto de altura de cada sílaba: un gancho exponencial desde
+abajo (+) o desde arriba (−) hacia la nota, hasta dos octavas; por encima de 16 sílabas por segundo se angosta, como el
+trino de un pájaro, que no puede ser a la vez tan rápido y tan ancho (Podos).
+
+- **CMOS**: el circuito de protoboard del dueño, un chip Schmitt 40106 / 4093, dos capacitores grandes, tres potes y una
+  punta que se toca con la mano ("una máquina de cantos de pájaros, monos y bichos"). Un oscilador RC rápido (una
+  octava sobre la tecla: C5 chirría a ~1,05 kHz, como en el video) carga y descarga su capacitor exponencialmente entre
+  dos umbrales; su onda cuadrada se limita en banda en el flanco exacto. Uno lento lo compuertea (la NAND del 4093) y
+  la tensión de su capacitor lo barre (la FM del 40106): la carga exponencial es el "gancho" que se oye al principio de
+  cada chirrido. **RATE** el lento (chirridos por segundo), **CAP** cuánto carga contra cuánto descarga (pitidos cortos
+  .. barridos largos), **HYST** su ventana de umbrales (la profundidad del gancho; + sube hacia la nota, − baja hacia
+  ella), **FM** 0 solo la compuerta (pitidos), 20 compuerta y barrido (el pájaro), 40 solo el barrido (una sirena),
+  **TOUCH** la mano en la punta (más rápido, menos regular), **COUPLE** un segundo oscilador rápido acoplado en los dos
+  sentidos (enganche, después caos: bichos), **GROUP** un tercero, muy lento, que agrupa los chirridos en frases y
+  acelera mientras carga (monos).
+- **PULSE**: un escape de reloj. Cada diente de la lima de un grillo (cada costilla del tímbalo de una cigarra, cada
+  pulso de la laringe de una rana) es un impulso hacia un resonador afinado a la tecla (el ala, el abdomen, el saco
+  vocal). **CLICK** 100 %: un pulso por ciclo de la resonancia, el tono puro del grillo de relojería; menos, un pulso
+  cada 2 .. 64 ciclos: clics que lo hacen sonar (el zumbido de una cigarra, el croar de una rana; en 1/2, los dos picos
+  a una octava de la rana arborícola). **Q**: de banda ancha (el raspado de una esperanza) a puro (un grillo).
+  **DETUNE**: los pulsos fuera de la resonancia (batidos, un canto "anómalo") y con jitter.
+- **WHSTL**: una siringe como **oscilador de Hopf**: el tono nace cuando la **PRESS**ión del saco aéreo cruza un umbral
+  y crece con ella (su nivel ~ la raíz de cuánto lo pasa: debajo del umbral no suena, sea cual sea la envolvente), así
+  que cada sílaba tiene un ataque real; la altura sube un poco con el nivel. **CHAOS**: ruido en la presión y en la
+  altura, y un segundo armónico.
+- **WING**: un pulso limitado en banda al ritmo del aleteo con una **DRIFT** lenta y aleatoria de altura; **BUZZ** lo
+  angosta (más brillante); cada sílaba es una pasada: más fuerte y brillante al acercarse, su altura corrida por
+  **DOPPLR** (más aguda al venir, más grave al irse). HOLD: un vuelo quieto.
+- **GLOTT**: un pulso glótico hacia dos formantes. **MOUTH** cerrada (u) a abierta (a), y de oscura a brillante;
+  **ROUGH** en dos mitades de lo que hacen los mamíferos: duplicación de período (un subarmónico, F0/2) hasta 50 %,
+  después un mapa logístico que mueve cada ciclo (caos determinista: un rugido); **AIR**: ruido de aliento. Un
+  ronroneo: tocá grave (C1–C2), ROUGH baja la altura a la mitad.
+
+**Presets** (24): CMOS BIRD, CMOS TRILL, CMOS MONKEY, CMOS BUG · CRICKET, TREE CRICKT, KATYDID, CICADA, TREEFROG, TOAD,
+BULLFROG · CANARY, CARDINAL, DOVE, OWL, PEEPER, BAT · MOSQUITO, BEE, FLY · WOLF, DOG BARK, ROAR, PURR. Están pensados
+para sonar bien alrededor de C5 (los de ranas y mamíferos una o dos octavas más abajo: BULLFROG y OWL C4, WOLF G4,
+ROAR C3, PURR C2).
+
+ANIMAL va último en la lista de PRESETS, después de DRUM, así que cada sonido anterior conserva su lugar (y su número
+de PROGRAM CHANGE). No usa RAM (el estado de cada voz entra en la voz), unos 7,6 KB de flash y, con ocho voces, como
+mucho ~85 % de la CPU del motor más pesado (GLOTT; CMOS, PULSE, WHSTL y WING alrededor de la mitad): las ocho voces en
+todos los modos.
 
 ### FILTER (todos los motores)
 
@@ -500,6 +575,30 @@ Un kit por sección, compartido por todas las pistas en DRUM: mientras otra pist
 Cada pista tiene su propio patrón de **64 pasos** con su propio largo (LEN), división (DIV), swing y gate, así que
 patrones de distinto largo giran unos contra otros.
 
+### Cómo moverse: LENTE
+
+El secuenciador funciona como una lente, como un microscopio (LENTE, 0.8.3). **SELECT** hace zoom entre tres niveles,
+**PATRÓN ↔ COMPÁS ↔ PASO** (en pantalla: PATTERN, BAR, STEP), uno por paso, sin dar la vuelta. Cada nivel muestra su
+propio dibujo y tiene sus propios juegos de perillas, y un toque de **SEQ** recorre los juegos del nivel en el que
+estás. La primera fila del pie dice siempre dónde estás: los tres niveles con el tuyo encendido, y a la derecha los
+compases del patrón (hasta cuatro, con LEN 64), el que estás editando encendido y una rayita debajo del que suena.
+
+| Nivel | Qué muestra la pantalla | Un toque de SEQ recorre | PRESETS |
+| --- | --- | --- | --- |
+| **PATRÓN** | Los compases del patrón uno al lado del otro, cada uno con sus dieciséis pasos en chiquito (una pista DRUM: sus carriles), el compás que editás enmarcado, el cabezal donde suena; debajo, **BAR n/m**. | PATTERN (LEN DIV SWING GATE) → STRETCH → PLAYHEADS → TRACK → MUTATE | el **compás** (sin dar la vuelta; el cursor conserva su lugar dentro del compás) |
+| **COMPÁS** | El **piano roll** del compás, como siempre fue STEP (una pista DRUM: la **grilla**, con sus teclas). | STEP → NOTE → AUTOMATION → AUTO LIST | el **cursor de paso**; al pasarse del final del compás entra en el siguiente |
+| **PASO** | El paso del cursor dibujado grande: sus notas de la más aguda a la más grave (la nota en foco encendida, MICRO las corre, RATCH las parte; un TIE muestra las notas que sostiene), y a la derecha sus fichas: ACC, SLIDE, MICRO, COMP, COMP 2, CHANCE. El juego en el que estás enciende su ficha. Arriba, los dieciséis pasos del compás en chiquito. | NOTE (FOCUS PITCH MOVE MICRO) → COMP → COMP 2 | el **cursor de paso** |
+
+- **SEQ desde otra página** vuelve al nivel y al juego que usaste por última vez **en esa pista** (cada pista recuerda
+  el suyo); al encender es el STEP de COMPÁS, el piano roll.
+- Ir a otro compás es un paso de PRESETS en PATRÓN (antes eran dieciséis pasos de KNOB 1); COMP 2 es SELECT + dos
+  toques (antes eran cinco).
+- Todo lo demás sigue donde estaba: **SEQ mantenido** abre SEQ TOOLS en cualquier nivel, **SEQ + SELECT** tira los
+  dados de la secuencia, **SEQ + REC** borra todo, un paso mantenido + una perilla es un lock (en el STEP de COMPÁS), la
+  grabación paso a paso funciona en STEP y NOTE, **EDIT** borra el paso. **SEQ mantenido + PRESETS** sigue recorriendo
+  todas las páginas SEQ de a una.
+- PHRASES (el cargador de patrones) cuenta como PATRÓN, CHANCE como PASO, cuando algo te lleva ahí.
+
 ### Escribir pasos
 
 - **SEQ > STEP** en una pista melódica es un **piano roll**. KNOB 1 mueve el cursor de paso, KNOB 2 transpone el paso,
@@ -530,9 +629,9 @@ seleccionada se graban como **automatización**. MENU > AUDIO tiene el **CLICK**
 
 - **COMP** (step components, al estilo OP-Z): hasta dos por paso (**COMP** el primero, **COMP 2** el segundo, igual;
   0.6.82). KNOB 1 elige el paso, KNOB 2 su **TYPE**, KNOB 3 su valor, KNOB 4 **EVERY** (0.6.92; en COMP, el RATE de un
-  ARP o el DIV de RATCH / ECHO van ahí en su lugar). La fila de arriba marca cada paso que tiene uno (naranja ARP,
-  violeta TRIG, gris CHANCE, color del tema RATCH); abajo se dibuja el componente del paso (la escalera del arpegio con
-  la nota que suena encendida; las vueltas del TRIG).
+  ARP o el DIV de RATCH / ECHO van ahí en su lugar). COMP y COMP 2 viven en el nivel PASO de LENTE: el
+  paso dibujado grande, con su ficha COMP o COMP 2 encendida y el tipo que tiene (0.8.3; el dibujo propio del
+  componente ya no está, sus valores están en las tarjetas).
   - **CHANCE** (0–100 %) y **RATCH** (x1–x4): la probabilidad y el ratchet propios del paso (solo en COMP). El KNOB 4
     de RATCH es su **DIV**: STEP reparte los golpes en el paso (como antes); 1/2, 1/3, 1/4, 1/6, 1/8 los separa esa
     fracción de paso desde el inicio, los que entren (RATCH x3 a 1/8: tres golpes rápidos y después silencio).
@@ -587,11 +686,11 @@ seleccionada se graban como **automatización**. MENU > AUDIO tiene el **CLICK**
 - **Un slide de acordes largo** (0.6.83): el glide hacia un acorde dura lo que dura ese acorde, con sus TIEs; GLIDE
   fija cuánto de ese tramo (127: todo). Un acorde sostenido con TIEs en pasos lentos (p. ej. DIV 1/4 a 120 BPM: diez
   pasos, 5 s) se desliza así de lento y suave; las notas nuevas aparecen a medida que se deslizan.
-- **PATTERN** (la segunda página SEQ): LEN (1–64), DIV, SWING, GATE — el largo del patrón, la figura de su paso, su
+- **PATTERN** (el nivel PATRÓN de LENTE, su primer juego): LEN (1–64), DIV, SWING, GATE — el largo del patrón, la figura de su paso, su
   swing y la duración de todas las notas (la de un paso solo: el TIE de STEP, o MICRO para su entrada).
 - **Mover una nota o un acorde** que entró antes o después: **NOTE**, KNOB 1 FOCUS en el paso, KNOB 3 **MOVE** lo
   corre de a un paso a los costados (FOCUS ALL: el acorde entero con sus TIE; una nota enfocada: esa sola).
-- **STRETCH** (0.6.85, después de NOTE): cambia la forma de toda la secuencia de la pista elegida **mientras girás la
+- **STRETCH** (0.6.85; nivel PATRÓN, después de PATTERN): cambia la forma de toda la secuencia de la pista elegida **mientras girás la
   perilla** (0.6.92; antes esperaba OCT+). Cada giro parte de la secuencia como estaba antes del primero (su base), así
   que x2 y después x4 es x4, no x8, y volver al medio es volver a donde empezaste; el cartel dice el LEN antes y
   después (LEN 4 > 16); **UNDO** (GLO + G4) lo deshace; si editás el resultado, pasa a ser la nueva base. La otra
@@ -644,7 +743,7 @@ seleccionada se graban como **automatización**. MENU > AUDIO tiene el **CLICK**
   tiempo); en DRUM cambia golpes, nunca el bombo. **OCT−** acá (o **GLO + A4**, FREEZE) frena todas las mutaciones
   hasta volver a apretarlo. En HOME cada bichito tiene un anillo de puntos que se llena hasta su próximo cambio y se
   enciende entero cuando cambia.
-- **PLAYHEADS** (SEQ, página 7, con el roll; antes FUGUE), a la Fugue Machine: tres **cabezales** más (2, 3 y 4) leen los mismos pasos que el
+- **PLAYHEADS** (nivel PATRÓN; antes FUGUE), a la Fugue Machine: tres **cabezales** más (2, 3 y 4) leen los mismos pasos que el
   secuenciador de la pista. KNOB 1 **HEAD** elige uno, KNOB 2 **RATE** (OFF, 1/4, 1/3, 1/2, 2/3, x1, 3/2, x2, x3, x4 del
   de la pista), KNOB 3 **DIR** (FWD, REV, PING, RND), KNOB 4 **INTVL**, su intervalo en grados de la escala (−14 a +14; una
   pista de batería mantiene sus carriles). Un cabezal toca las notas de cada paso con su velocidad, acento y probabilidad
@@ -654,7 +753,7 @@ seleccionada se graban como **automatización**. MENU > AUDIO tiene el **CLICK**
 
 ### Parameter locks
 
-En **SEQ > STEP**, **mantené un paso** (una tecla de la grilla, o la nota que estás entrando en el roll) y girá una
+En **SEQ > STEP** (el nivel COMPÁS de LENTE), **mantené un paso** (una tecla de la grilla, o la nota que estás entrando en el roll) y girá una
 perilla: ese paso recibe su propio valor del parámetro que esa perilla edita en la última página de sonido que
 visitaste. Tocá EDIT mientras mantenés el paso para borrar sus locks. Los eventos de automatización y los locks
 comparten **64 registros por sección** (todas las pistas juntas); cuando se acaban, la pantalla dice
@@ -674,6 +773,11 @@ tienen. Cada pista conserva su propio TRANS.
   agudas de lo que muestra el piano roll, fijate acá. Cuando no está en 0 el piano roll muestra **ALL TR** y su valor, y
   al dar PLAY también lo avisa. 0 = apagado.
 - La reverb RESO y los pasos de afinación del SLICER también siguen la escala.
+- (0.8.3) **Cada sección guarda su tonalidad**: ROOT y SCALE se guardan con cada sección, así que un tema puede cambiar
+  de tonalidad de una sección a otra (el PARTS de GEN lo hace en los géneros pop: la última sección un tono arriba).
+  Cuando el tema entra a una sección, las teclas, CHORD, ALL TR y la reverb RESO siguen su tonalidad, también con una
+  pista de batería seleccionada (entonces cuenta la de la primera pista melódica; hasta 0.8.3 una pista de batería
+  seleccionada se quedaba con la tonalidad anterior).
 
 ### CHORD (0.6.81)
 
@@ -681,7 +785,15 @@ tienen. Cada pista conserva su propio TRANS.
 
 - **CHORD**: OFF; en la escala (todos los acordes afinados, sin pensar): **TRIAD**, **7TH**, **ADD9**, **SUS2**,
   **SUS4**, armados sobre el grado de la tecla (una tecla fuera de la escala toma la nota de la escala de abajo; CHR: la
-  escala mayor de ROOT); formas en cualquier tecla: **MAJ**, **MIN**, **7**, **MAJ7**, **MIN7**, **POWER**.
+  escala mayor de ROOT); formas en cualquier tecla: **MAJ**, **MIN**, **7**, **MAJ7**, **MIN7**, **POWER**. En un modo
+  de siete notas (MAJ MIN DOR MIX HARM PHRY LYD LOC MEL) el acorde es el propio del modo en ese grado (una nota de la
+  escala sí, una no). (0.8.3) En las escalas de cinco, seis u ocho notas (PEN, MPEN, BLUES, WHOLE, DIMHW, DIMWH) saltear
+  notas armaba pilas raras (la "tríada" de C pentatónica menor sobre C era C F Bb), así que ahora cada nota es el
+  intervalo que pide el acorde donde la escala lo tiene, o si no el más cercano que ofrece: una tercera mayor o menor
+  (si no hay: el acorde queda suspendido), una quinta justa (si no, disminuida sobre tercera menor, aumentada sobre
+  mayor), una séptima menor o mayor (si no, una sexta), la novena. Todas las notas quedan en la escala: una tonalidad
+  pentatónica da tríadas, acordes sus4 / sus2 y sextas (C pentatónica menor: Cm, Eb, Fsus4, Eb/G, Bbsus4; 7TH sobre F:
+  F7sus4), la de tonos enteros acordes aumentados, las disminuidas acordes disminuidos y séptimas de dominante.
 - **VOICING**: CLOSE (posición fundamental); **LEAD** (cada acorde toma la inversión más cercana al anterior: el voice
   leading, la suavidad del Orchid); OPEN (la segunda nota una octava arriba); +BASS (suma la fundamental una octava
   abajo).
@@ -822,30 +934,72 @@ De qué está hecha una pieza:
   de toms, el bombo que se va, redoble de hats, fill lineal de funk, los bombos en semicorcheas de Blue Monday, un rim
   de dub, un corte antes del uno) y el redoblante atrasado donde el género toca atrás (TIMING). ENERGY y las
   cantidades deciden cuánto suena; el bombo nunca se cae del uno.
+- **La tonalidad** (0.8.3): un modo de siete notas para cada género (de su lista: mayor, menor, dórico, mixolidio,
+  frigio, lidio, menor armónica y melódica), **escrito en la página SCALE** (ROOT, SCALE, y QUANT SNAP salvo que hayas
+  elegido otro QUANT) en todas las pistas, así que las teclas que toques después, la página CHORD, ALL TR y la reverb
+  RESO están en la tonalidad de la pieza. Un género que canta en pentatónica o blues (deep house, funk, boom bap, D&B,
+  afrobeat ..) recibe el modo que la contiene (dórico o eólico; mayor para la pentatónica mayor) y su **lead** se queda
+  en las notas de la pentatónica: los acordes siguen siendo acordes de verdad y todas las notas siguen en la escala de
+  la página SCALE. La **página CHORD** de la pista de acordes queda con los acordes de la pieza (TRIAD, 7TH, ADD9, SUS2
+  o SUS4, según cómo esté coloreada su progresión), VOICING LEAD, un strum donde los toca una guitarra; CHORD queda
+  apagado en las demás pistas.
+- **Armonía** (0.8.3): cada género tiene una familia (loops modales; loops de séptimas; pop funcional; colores
+  lavados; cine; jazz) y progresiones escritas como grados del modo, cada loop terminando en el acorde que vuelve al
+  primero (IV–I, bVII–i, V–i, bII–i ..): i bVII, i iv7, i bII (frigio), I V vi IV, vi IV I V, I vi IV V, i bVI bIII
+  bVII, la andaluza i bVII bVI V, la eólica bVI bVII i, i7 bIIImaj7 bVII7 iv7, ii7 V7 Imaj7, Imaj7 vi7 ii7 V7, la de
+  bossa Imaj7 II7 ii7 V7, I bVII IV I .. Un modo que volvería disminuido uno de sus acordes (el vi del dórico, el #iv
+  del lidio) nunca toma esa progresión: la siguiente del género, si no el loop propio del modo. Después las cadencias y
+  colores que el género permite: la **dominante de la tonalidad menor subida antes de su tónica** (la sensible: trance,
+  italo, synth pop, cine, jazz), el **turnaround del jazz** (ii–V en el último compás), una **dominante secundaria** en
+  la segunda mitad del acorde anterior a su destino (V/vi, V/ii, V/IV: indie, disco, jazz, cine; con COMPLEX), el **IV
+  que se vuelve menor** antes del I en mayor (mixtura: synth pop, indie, shoegaze, cine), el lado bemol prestado en
+  mayor (bVII, bVI: motorik, indie, soundtrack). Ritmo armónico por género: un acorde por compás, cada dos o cuatro
+  compases, o un solo acorde para todo el loop. Los acordes son tríadas, séptimas, novenas (nunca una b9), add9, sus2 /
+  sus4 (solo con cuarta justa), sextas, pilas cuartales, power chords, recoloreados por el género (simples, ricos,
+  suspendidos, cuartales, power, paralelos).
 - **Bajo** a partir de unos cincuenta **arquetipos escritos contra el bombo**: offbeat y bounce de house, walking de
   semicorcheas deep, semicorcheas rodantes y rebote de octava de techno, Detroit, EBM, italo, psy, UK garage,
   Jamerson, alrededor del bombo, on the one, slap, Good Times, walking y two-feel de jazz, boogie, country, ska,
   tumbao, bossa, corcheas de rock, semicorcheas punk, McCartney, Peter Hook, motorik, post punk angular, indie, one
   drop, steppers, rockers, dub, boom bap, 808 de trap, DnB, jungle, wobble, pedal, quintas, Suicide, Kraftwerk; y
   **acid** con las reglas de la 303 (acentos en 3–5 pasos, slides en 2–3, un salto de octava después de un slide, los
-  acentos variando por compás). La raíz en cada cambio de acorde, aproximaciones por semitono a la raíz siguiente, un
-  pickup al final del cuarto compás; el bombo **doblado**, **respondido** (el bajo no pisa los pasos del bombo),
-  **entrelazado** (y una nota justo después) o sostenido debajo, según el género.
-- **Acordes** a partir de progresiones con una **calidad** por acorde — séptimas, novenas, add9, sus2, sus4, sextas,
-  cuartas, power chords, la tercera subida de la dominante en menor —, recoloreadas por el género (tríadas simples,
-  ricas, suspendidas, cuartales, power, paralelas), **voiceadas en C3..G5 y enlazadas a la voz más cercana** (o
-  movidas en paralelo: techno, impresionismo), tocadas sostenidas, creciendo, en stabs a contratiempo, pulsadas,
-  dubeadas por el delay, en skank, comping, con empuje, como drone, escasas, broken (UK garage) o con gate de trance.
+  acentos variando por compás). **La raíz en cada cambio de acorde** (un acorde que entra a mitad de compás tiene su raíz
+  ahí), la tercera, la quinta y la séptima del arquetipo las del acorde (también las de un acorde prestado o con la
+  sensible), aproximaciones por semitono a la raíz siguiente en un tiempo débil (siempre resuelven: un bajo más fino
+  nunca deja una colgada), un pickup al final del cuarto compás; el bombo **doblado**, **respondido** (el bajo no pisa
+  los pasos del bombo), **entrelazado** (y una nota justo después) o sostenido debajo, según el género.
+- **Acordes voiceados** (0.8.3): de las inversiones y aperturas de cada acorde, la más cercana al acorde anterior, voz
+  por voz (las notas comunes sostenidas, el menor movimiento: unos 4,6 semitonos por cambio en total, contra 5,5 antes),
+  en C3..G5, sin segundas debajo de G3 ni una tercera cerrada en el fondo; cerrados en la mano para stabs y comping,
+  **abiertos** (drop 2) para los colores lavados y el cine, **sin fundamental** (3 5 7 9) donde el jazz y el deep house
+  tienen el bajo en la raíz, movidos en paralelo para el techno y el impresionismo; tocados sostenidos, creciendo, en
+  stabs a contratiempo, pulsados, dubeados por el delay, en skank, comping, con empuje, como drone, escasos, broken (UK
+  garage) o con gate de trance, cada uno sostenido hasta el final de su acorde.
 - **Arpegio**: un orden sobre el acorde voiceado — arriba, arriba y abajo, abajo, Alberti, los grupos de Glass, un
   pulso de Reich, un secuenciador, una caminata, ciclos de 3 o 5 contra el compás (polimetría), un gate de trance,
-  octavas — en semicorcheas o corcheas, con huecos (ARP), en C3..C5.
-- **Lead**: un **motivo** de un compás (sus ataques sorteados por la métrica, su contorno por los pesos de la
-  tonalidad — la tónica, la quinta y la tercera más probables —, un salto compensado por un paso, notas del acorde en
-  los tiempos fuertes) en una **frase** de cuatro compases (A A A A', A A' A A'', A silencio A A', A A silencio A'),
-  variada por un operador por compás (el final movido, la última nota omitida, una tercera arriba o un paso abajo,
-  una nota de paso); o un ostinato hipnótico sobre un euclidiano, notas largas, una línea tintinnabuli, una figura de
-  máquina, un hook de dos compases (llamada y respuesta). Nunca una segunda menor ni un tritono contra el bajo; nunca
-  por encima de G5; los agudos más suaves.
+  octavas — en semicorcheas o corcheas, con huecos (ARP), en D3..D5; la figura de cada acorde desde su primera nota;
+  solo las notas del acorde.
+- **Lead** (0.8.3: compuesto, no caminado): un **motivo** de un compás — una célula rítmica (una nota larga y dos cortas,
+  un tresillo, un pickup al tres, un empuje con puntillo ..) y un contorno de pasos (una tercera de vez en cuando, un
+  salto devuelto por un paso, un arco, una caída, una subida o una onda) — desarrollado en la **frase** de cuatro
+  compases por una plantilla: un **período** (antecedente que cierra abierto en la 2.ª o la 5.ª, consecuente que cierra
+  en la tónica), una **oración** (el motivo, su secuencia, una continuación que sube al clímax a dos tercios, la
+  cadencia), **A A B A'**, **pregunta y respuesta** (la respuesta con el contorno de la pregunta dado vuelta), el **hook**
+  de techno A A A A', o la del dub con un compás de aire; un operador en un compás variado (su última nota omitida, su
+  final movido, una bordadura hacia su última nota). El motivo pasa al acorde de cada compás por conducción de voces
+  (su primera nota la nota del acorde a un paso de la última; el mismo acorde: el motivo como era). Las reglas de todo
+  lead: **una nota del acorde en los tiempos 1 y 3**, en el 2 y el 4 una nota del acorde o una de paso que se mueve por
+  pasos, notas de paso y bordaduras entre medio, **mayormente pasos** (el 60 % de sus movimientos), nunca más de una
+  octava, un salto mayor que una cuarta seguido de un paso de vuelta, un ámbito de una décima más o menos, la frase
+  **cerrando en un grado estable** (la tónica, la tercera o la quinta sobre una nota del acorde) y sostenida, ni novena
+  menor ni tritono sobre la raíz del acorde, ninguna nota a evitar sostenida (una cuarta sobre una tercera mayor), las
+  notas de un acorde prestado o con la sensible respetadas (la b7 de la tonalidad menor se vuelve sensible sobre su V).
+  O si no: un **ostinato** hipnótico sobre un euclidiano (las notas de su célula en el acorde en los tiempos), una figura
+  de máquina que se mueve con el acorde, **notas largas** como una línea de notas guía (cada una la nota del acorde a un
+  paso o una tercera, de vez en cuando una figura corta que entra por pasos), una línea **tintinnabuli** (por pasos, una
+  nota del acorde en cada nota larga, una de paso entre medio). Nunca por encima de A5 (B5 en una sección subida un
+  tono); los agudos más suaves. Cada lead, figura y patrón de batería es propio del género para una semilla (la misma
+  semilla en dos géneros: dos temas).
 - **Sonidos** por **receta** según el rol: sub, acid, Reese, bajo FM, bajo de rock, el bajo con chorus de Hook, wow
   bass; pad, cuerdas, coro, órgano (WHEEL), piano eléctrico, stab, acorde de dub, pluck, campana, lead, lead vocal,
   chip, teclas, drone, ruido, textura, hoover, un muro shoegaze, una guitarra con trémolo. Una receta elige un motor,
@@ -860,11 +1014,16 @@ De qué está hecha una pieza:
 - Con **TRACKS 6** la sexta pista es una **textura** (un drone, ruido, un coro, un órgano, cuerdas) en notas largas.
 - **FORM**: **LOOP** escribe un loop (2 o 4 compases). **PARTS** además guarda las secciones **A** (la pieza), **B**
   (un break: sin batería ni bajo) y **C** (un drop: la batería más densa) y llena ARRANGE con A B A C (PLAY toca el
-  tema, como hacía el DICE ALL de 0.6.81). **SONG** escribe una forma de club: **A** el drop, **B** la intro (batería y
+  tema, como hacía el DICE ALL de 0.6.81). (0.8.3) Las secciones son una misma pieza en una tonalidad: B empieza el
+  loop en su predominante (los mismos acordes rotados: IV–I–V–vi para I–V–vi–IV; un loop de un acorde va a su
+  subdominante y vuelve), el motivo y las figuras los mismos, llevados a esos acordes; en los géneros pop (ITALO, SYNTH
+  POP, INDIE, DISCO) **C está un tono arriba**, un cambio de tonalidad real guardado en la sección con su página SCALE (el
+  último estribillo del pop). Los loops modales (techno, house minimal, dub ..) conservan su loop en todas las secciones.
+  **SONG** escribe una forma de club: **A** el drop, **B** la intro (batería y
   bajo), **C** el build (entran los acordes, su filtro se abre a lo largo del loop, un redoble al final, el delay
-  lanzado en el último paso) y **D** el break (sin batería ni bajo, los acordes más húmedos), en ARRANGE como
-  B C A D C A con filas de 16 compases (el drop 32). Los géneros ambient y post-rock reciben un arco (fino, entra,
-  ápice). Las secciones tuyas (guardadas por vos, no por GEN) nunca se pisan: entonces la pieza queda en un loop.
+  lanzado en el último paso) y **D** el break (sin batería ni bajo, los acordes más húmedos; 0.8.3: en su predominante,
+  salvo en los loops modales), en ARRANGE como B C A D C A con filas de 16 compases (el drop 32). Los géneros ambient y
+  post-rock reciben un arco (fino, entra, ápice: en su predominante). Las secciones tuyas (guardadas por vos, no por GEN) nunca se pisan: entonces la pieza queda en un loop.
 
 Cada pieza reemplaza los pasos, sonidos, kit, mezcla y automatización de todas las pistas. Los mutes quedan como
 estaban. Los roles que suenan van en las primeras pistas (la batería en la pista DRUM), así que con TRACKS 4 escuchás
@@ -1316,7 +1475,9 @@ protección desvaneció): una foto de esa pantalla ayuda cuando reportás un pro
   - **OFF**: nada.
 - **PROGRAM CHANGE** (0.6.72): el programa *n* en el canal que toca una pista carga en esa pista el sonido número
   *n* + 1 de la lista de PRESETS (los presets de cada motor en su orden, después los presets de usuario); la pista
-  seleccionada no cambia.
+  seleccionada no cambia. Los programas llegan a los primeros 128 sonidos de la lista: desde 0.8.3 eso termina dentro
+  de los presets de ANIMAL (va último), así que los presets de usuario que vienen después se eligen en el equipo o
+  desde el editor.
 - **Secciones y proyectos** (0.6.80): el **canal 16** es el de la canción: su PROGRAM CHANGE nunca carga un sonido
   (con cualquier ROUTE). Los programas **0–3** saltan a la sección **A–D** del proyecto (sonando: en el compás
   siguiente, como las teclas de la capa de la canción; parado: en el momento; si está vacía, lo avisa); los programas

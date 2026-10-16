@@ -107,10 +107,11 @@ int main(void)
             }
             if (bs < NTRK && gs.act[RL_BASS] && gs.ba != BA_ACID) {   /* the root at the chord changes */
                 const track_t *b = &trk[bs];
-                uint32_t len = (uint32_t)b->p[P_SLEN], c;
-                for (c = 0; c * gs.csteps < len; c++) {
-                    uint32_t at = c * gs.csteps, j;
-                    int32_t root = gdeg(b, 24, gchord_deg(at)) % 12;
+                uint32_t len = (uint32_t)b->p[P_SLEN], at;
+                for (at = 0; at < len; at++) {
+                    uint32_t j;
+                    int32_t root = (int32_t)gchord_root_pc(at);
+                    if (!gchord_starts(at)) continue;
                     for (j = at; j < at + 4u && j < len; j++)
                         if (b->step[j].time == ST_NOTE) {
                             bass_changes++;
@@ -124,11 +125,9 @@ int main(void)
                 uint32_t len = (uint32_t)l->p[P_SLEN];
                 for (i = 0; i < len; i += 4u) {
                     const step_t *st = &l->step[i];
-                    int32_t n[4], c, j;
                     if (st->time != ST_NOTE) continue;
                     lead_strong++;
-                    c = (int32_t)gchord_notes(l, 36, gchord_deg(i), gchord_q(i), n);
-                    for (j = 0; j < c; j++) if ((n[j] - st->note[0]) % 12 == 0) { lead_ct++; break; }
+                    if ((gchord_pcs(i) >> (st->note[0] % 12u)) & 1u) lead_ct++;
                 }
             }
             project_capture(&proj_scratch);
@@ -145,6 +144,185 @@ int main(void)
     bad += gcheck("  the bass's first note at a chord change the root, 70 % at least (FiloBass: 68 %)", bass_root * 10u >= bass_changes * 7u);
     bad += gcheck("  the lead's strong steps on chord tones, 55 % at least", lead_ct * 100u >= lead_strong * 55u);
     bad += gcheck("  every piece storable, the automation inside its 64", !store_bad && !motion_bad);
+    /* ---- (0.8.3) the music: twelve seeds of every genre at varied ENERGY and COMPLEX, measured as a musician would
+     * listen: every note in the key the SCALE page shows, but the chromaticism the rules allow (a semitone approach off
+     * beats 1 and 3 that resolves, a borrowed / secondary / raised chord's own tones where the genre colours) and few
+     * of those; the SCALE page a mode of seven, QUANT on, the CHORD page on the chord track (an in-scale chord type,
+     * VOICING LEAD) and every chord it builds in the key; the lead's beats on chord tones, its motion mostly by steps,
+     * never past an octave, a leap past a fourth turned back by a step, its phrases closing on a stable degree, its
+     * first bar's rhythm coming back; the chords led closely; the bass on the root at every chord change */
+    {
+        uint32_t nn = 0, out_appr = 0, out_ct = 0, out_bad = 0, page_bad = 0, chord_bad = 0;
+        uint32_t ls = 0, lct = 0, liv = 0, lrep = 0, lstep = 0, loct = 0, l5 = 0, l5r = 0, lend = 0, lend_ok = 0, lbars = 0, lbars_r = 0;
+        uint32_t pmov = 0, pmot = 0, bch = 0, broot = 0;
+        for (g = 0; g < NGENRE; g++)
+            for (s = 0; s < 12u; s++) {
+                uint32_t pd;
+                gp.genre = (uint8_t)(g + 1u); gp.seed = (uint16_t)(2000u + 41u * s + g); gp.energy = (uint8_t)(15u + (s * 23u) % 80u); gp.form = 0;
+                for (k = 0; k < GP_N; k++) gp.amt[k] = GA_AUTO;
+                gp.complex = (uint8_t)(10u + (s * 31u) % 85u); gp.swing = GA_AUTO; gp.human = 30;
+                gen_go();
+                for (k = 0; k < NTRK; k++) {            /* the SCALE page */
+                    const track_t *t = &trk[k];
+                    uint32_t c = 0, b;
+                    for (b = 0; b < 12u; b++) c += (scale_mask(t) >> b) & 1u;
+                    if (t->p[P_ROOT] != gs.root || t->p[P_SCALE] != gs.scale || c != 7u || t->p[P_QUANT] == QN_OFF) page_bad++;
+                }
+                pd = gs.trk_of[RL_PAD];
+                if (pd < NTRK && gs.act[RL_PAD]) {      /* the CHORD page: an in-scale type, LEAD, every chord in the key */
+                    track_t *t = &trk[pd];
+                    uint8_t o[KB_CH];
+                    uint32_t key, c, j;
+                    if (t->p[P_CHRD] < CD_TRI || t->p[P_CHRD] > CD_SUS4 || t->p[P_CVOI] != CV_LEAD) page_bad++;
+                    for (key = 53; key < 80u; key++)
+                        for (c = chord_build(t, key, o), j = 0; j < c; j++) if (!in_scale(t, o[j])) chord_bad++;
+                }
+                for (k = 0; k < NTRK; k++) {
+                    const track_t *t = &trk[k];
+                    uint32_t r = gs.role[k], len = dlen(t);
+                    if (drum_track(t) || !gs.act[r]) continue;
+                    for (i = 0; i < len; i++) {         /* every note in the key, or chromatic by a rule */
+                        const step_t *st = &t->step[i];
+                        uint32_t j;
+                        if (st->time != ST_NOTE) continue;
+                        for (j = 0; j < st->n; j++) {
+                            int32_t n = st->note[j], nx = -1;
+                            uint32_t q;
+                            const gch_t *c = gchord(i);
+                            nn++;
+                            if (in_scale(t, n)) continue;
+                            for (q = 1; q <= len && nx < 0; q++) if (t->step[(i + q) % len].time == ST_NOTE) nx = t->step[(i + q) % len].note[0];
+                            if (c->alt && ((gchord_pcs(i) >> (uint32_t)(n % 12)) & 1u) &&
+                                (gs.hx & (HX_RAISE | HX_SEC | HX_BOR) || HXF(gs.hx) == HF_JAZZ)) out_ct++;
+                            else if (st->n == 1u && i % 8u && nx >= 0 && (nx - n == 1 || n - nx == 1)) out_appr++;
+                            else { out_bad++; if (out_bad < 6u) printf("  off the key: %s seed %u T%u step %u note %d\n", gs.g->name, gp.seed, k + 1u, i, n); }
+                        }
+                    }
+                    if (r == RL_LEAD) {
+                        int32_t prev = -1, piv = 0, last = -1;
+                        uint32_t pend = 0;
+                        uint16_t bar0 = 0;
+                        for (i = 0; i < len; i++) {
+                            const step_t *st = &t->step[i];
+                            int32_t n, iv, a2;
+                            if (st->time != ST_NOTE || !st->n) continue;
+                            n = st->note[0];
+                            if (i % 4u == 0u) { ls++; lct += (gchord_pcs(i) >> (uint32_t)(n % 12)) & 1u; }
+                            if (i < 16u) bar0 |= (uint16_t)(1u << i);
+                            if (prev >= 0) {
+                                iv = n - prev; a2 = iv < 0 ? -iv : iv;
+                                liv++; lrep += !a2; lstep += a2 && a2 <= 2; loct += a2 > 12;
+                                if (pend) { l5++; l5r += a2 && a2 <= 2 && (iv > 0) != (piv > 0); pend = 0; }
+                                if (a2 > 5) { pend = 1; piv = iv; }
+                            }
+                            prev = n; last = (int32_t)i;
+                        }
+                        if (last >= 0 && gs.g->lead != LD_OSTINATO && gs.g->lead != LD_MECH) {   /* (the phrase's close) */
+                            int32_t n = t->step[last].note[0], d = ((n - gs.root) % 12 + 12) % 12;
+                            lend++;
+                            lend_ok += ((gchord_pcs((uint32_t)last) >> (uint32_t)(n % 12)) & 1u) && (d == 0 || d == 3 || d == 4 || d == 7);
+                        }
+                        if (gs.g->lead == LD_MOTIF || gs.g->lead == LD_HOOK)
+                            for (i = 16; i + 16u <= len; i += 16u) {   /* (the motif's rhythm back: two onsets moved at most) */
+                                uint16_t bb = 0;
+                                uint32_t q, d = 0;
+                                for (q = 0; q < 16u; q++) if (t->step[i + q].time == ST_NOTE && t->step[i + q].n) bb |= (uint16_t)(1u << q);
+                                if (!bb) continue;
+                                for (q = 0; q < 16u; q++) d += ((bb ^ bar0) >> q) & 1u;
+                                lbars++; lbars_r += d <= 2u;
+                            }
+                    }
+                    if (r == RL_PAD && gs.vm != VM_PLANE) {   /* (the chords led: semitones moved, voice by voice) */
+                        int32_t pv[4];
+                        uint32_t pn = 0, c, j;
+                        for (i = 0; i < len; i++) {
+                            const step_t *st = &t->step[i];
+                            int same = 1, mv = 0;
+                            if (st->time != ST_NOTE || st->n < 2u) continue;
+                            c = st->n;
+                            for (j = 0; j < c && j < pn; j++) if (st->note[j] != pv[j]) same = 0;
+                            if (pn && (!same || c != pn)) {
+                                for (j = 0; j < c && j < pn; j++) mv += st->note[j] > pv[j] ? st->note[j] - pv[j] : pv[j] - st->note[j];
+                                pmov++; pmot += (uint32_t)mv;
+                            }
+                            for (j = 0; j < c; j++) pv[j] = st->note[j];
+                            pn = c;
+                        }
+                    }
+                    if (r == RL_BASS)                   /* (the root at each chord change, within its beat) */
+                        for (i = 0; i < len; i++) {
+                            uint32_t j;
+                            if (!gchord_starts(i)) continue;
+                            for (j = i; j < i + 4u && j < len; j++)
+                                if (t->step[j].time == ST_NOTE && t->step[j].n) {
+                                    bch++; broot += t->step[j].note[0] % 12u == gchord_root_pc(i);
+                                    break;
+                                }
+                        }
+                }
+            }
+        printf("gen: music: %u notes: %u approaches, %u borrowed/secondary/raised chord tones, %u off the rules\n", nn, out_appr, out_ct, out_bad);
+        printf("gen: music: lead beats on chord tones %u of %u, steps %u of %u moving intervals, %u past an octave, leaps back %u of %u\n",
+               lct, ls, lstep, liv - lrep, loct, l5r, l5);
+        printf("gen: music: phrases closing stable %u of %u, the motif's rhythm back in %u of %u bars, chords moved %u.%u semitones, bass roots %u of %u\n",
+               lend_ok, lend, lbars_r, lbars, pmov ? pmot / pmov : 0u, pmov ? pmot * 10u / pmov % 10u : 0u, broot, bch);
+        bad += gcheck("music: every note in the key but the rules' chromaticism (approaches < 2 %, coloured chords' tones < 3 %)",
+                      !out_bad && out_appr * 50u < nn && out_ct * 33u < nn);
+        bad += gcheck("  the SCALE page a mode of seven on every track, QUANT on; the CHORD page in-scale, LEAD, its chords in the key", !page_bad && !chord_bad);
+        bad += gcheck("  the lead's beats on chord tones (75 % at least)", lct * 100u >= ls * 75u);
+        bad += gcheck("  the lead moves mostly by steps (over half its moves), never past an octave", lstep * 2u > liv - lrep && !loct);
+        bad += gcheck("  a leap past a fourth turned back by a step (70 % at least)", l5r * 100u >= l5 * 70u);
+        bad += gcheck("  phrases close on a stable chord tone (70 %), the motif's rhythm comes back (70 % of its bars)",
+                      lend_ok * 100u >= lend * 70u && lbars_r * 100u >= lbars * 70u);
+        bad += gcheck("  the chords led closely (5.2 semitones a change at most, voice by voice); the bass's root at every change (95 %)",
+                      pmot * 10u <= pmov * 52u && broot * 100u >= bch * 95u);
+    }
+    /* ---- (0.8.3) the sections relate: a pop genre's B on its predominant (the chords turned), its last section a whole
+     * step up (a real modulation: the section's SCALE page moved with it, its notes in that key); a loop genre's
+     * sections in the one key */
+    {
+        static project_t pa, pb, pc;
+        uint32_t seeds, lift_ok = 0, rot_ok = 0, loop_ok = 0, keyc_bad = 0, n_c = 0;
+        for (seeds = 1; seeds <= 6u; seeds++) {
+            uint32_t bs, a0, b0;
+            gen_reset();
+            gen_with(15, seeds, 50, 1);                 /* SYNTH POP, PARTS: A B A C */
+            bs = gs.trk_of[RL_BASS];
+            if (!proj_import(&pa, &proj_slot[0], sizeof(project_store_t)) || !proj_import(&pb, &proj_slot[1], sizeof(project_store_t)) ||
+                !proj_import(&pc, &proj_slot[2], sizeof(project_store_t))) continue;
+            lift_ok += pc.t[bs].p[P_ROOT] == (pa.t[bs].p[P_ROOT] + 2) % 12 && pc.t[0].p[P_ROOT] == pc.t[bs].p[P_ROOT];
+            for (k = 0; k < NTRK; k++) {                /* C's notes in C's key */
+                track_t tt;
+                if (gs.role[k] == RL_DRUM) continue;
+                memcpy(tt.p, pc.t[k].p, sizeof tt.p);
+                memcpy(tt.step, pc.t[k].step, sizeof tt.step);
+                proj_steps(tt.step);
+                for (i = 0; i < NSTEP; i++) {
+                    uint32_t j;
+                    if (tt.step[i].time != ST_NOTE) continue;
+                    for (j = 0; j < tt.step[i].n; j++) { n_c++; keyc_bad += !in_scale(&tt, tt.step[i].note[j]); }
+                }
+            }
+            {   /* B: the chords turned (its first bass note another root than A's) */
+                step_t sa[NSTEP], sb[NSTEP];
+                memcpy(sa, pa.t[bs].step, sizeof sa); proj_steps(sa);
+                memcpy(sb, pb.t[bs].step, sizeof sb); proj_steps(sb);
+                for (i = 0, a0 = b0 = 0; i < NSTEP && (!a0 || !b0); i++) {
+                    if (!a0 && sa[i].time == ST_NOTE) a0 = sa[i].note[0] % 12u + 1u;
+                    if (!b0 && sb[i].time == ST_NOTE) b0 = sb[i].note[0] % 12u + 1u;
+                }
+                rot_ok += a0 && b0 && a0 != b0;
+            }
+            gen_reset();
+            gen_with(6, seeds, 50, 1);                  /* TECHNO: one key, the loop kept */
+            if (proj_import(&pa, &proj_slot[0], sizeof(project_store_t)) && proj_import(&pc, &proj_slot[2], sizeof(project_store_t)))
+                loop_ok += pa.t[gs.trk_of[RL_BASS]].p[P_ROOT] == pc.t[gs.trk_of[RL_BASS]].p[P_ROOT];
+        }
+        printf("gen: sections: SYNTH POP lifted %u of 6, its C notes off C's key %u of %u, B turned %u of 6; TECHNO one key %u of 6\n",
+               lift_ok, keyc_bad, n_c, rot_ok, loop_ok);
+        bad += gcheck("FORM PARTS (0.8.3): SYNTH POP's C a whole step up (its SCALE page with it), B on another chord; TECHNO's one key",
+                      lift_ok == 6u && keyc_bad * 33u < n_c && rot_ok >= 5u && loop_ok == 6u);
+    }
     /* ---- the DRUMS knob: the density grows with it, the kick stays */
     {
         uint32_t h0, h1, h2, k0, k2;

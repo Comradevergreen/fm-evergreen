@@ -5,16 +5,23 @@
  *
  * The piece is deterministic: a seed and the knobs make the same piece every time (the same settings and OCT+ again
  * throw a new seed). Each part (drums, bass, chords, arp, lead, sounds, form) draws from its own stream, so turning
- * one part's knob leaves the others as they were. What the tables know (gen_tables.c): the genre's tempo, scales and
+ * one part's knob leaves the others as they were. What the tables know (gen_tables.c): the genre's tempo, modes and
  * progressions, its drums as a map of priorities (a hit where the level clears the density: ghosts go first, anchors
- * last), its bass as one of ~50 archetypes written against the kick (the root at every chord change, approaches by a
- * semitone, the kick doubled, answered or interlocked), its chords with a quality each, voiced in C3..G5 and led to
- * the nearest voicing (or moved in parallel), its arp as an order over the voiced chord (polymetric cycles of 3 or 5),
- * its lead as a one-bar motif in a phrase (A A A A', A R A R' ..), varied by one operator a bar, its sounds as recipes
- * a role (a preset whose name fits, the envelope, the filter, a slow LFO, the sends), its kit, HUMAN by how human the
- * genre is, the snare laid back where the genre does. FORM: a loop, parts (A B A C in ARRANGE, as 0.6.81), or a club
- * song (intro, build with a filter opening and a roll, drop, break), each section the same piece with parts removed
- * or varied. UNDO (GLO + G4) brings back what was there. */
+ * last), its bass as one of ~50 archetypes written against the kick, its sounds as recipes a role, its kit, HUMAN by
+ * how human the genre is, the snare laid back where the genre does. FORM: a loop, parts (A B A C in ARRANGE, as
+ * 0.6.81), or a club song (intro, build with a filter opening and a roll, drop, break). UNDO (GLO + G4) brings back
+ * what was there.
+ * (0.8.3) Composed, not thrown: the key a mode of seven written to the SCALE page (QUANT SNAP) and the chord track's
+ * CHORD page set to the piece's chords, so the keys play along in key; the harmony a plan of chords over the loop
+ * (gplan: the genre's progression as degrees of the mode, a mode that would turn a chord diminished taking another;
+ * the minor key's dominant raised at its cadence, jazz's turnaround, secondary dominants and mixture where the genre
+ * colours, each a chord's alterations off the mode); every part reads the plan: the bass the chord's root at each change
+ * and its own third, fifth, seventh, approaches that resolve; the chords voiced voice by voice (gvoice: common tones
+ * held, the least motion, close, spread or rootless by the genre, no mud below G3); the arp the voiced chord; the lead
+ * composed (gen_lead: a motif developed by a phrase template, chord tones on the beats, steps, a leap turned back, a
+ * cadence on a stable degree, the borrowed chords' tones followed). The sections relate: B on the predominant, the pop
+ * genres' last section a whole step up (a real modulation, its SCALE page stored with it). Every pitched note is in the
+ * key but the rules' chromaticism (tests/gen_test.c measures it) */
 
 #include "gen_tables.c"
 
@@ -34,9 +41,11 @@ static struct {
 /* the generator's own random numbers: a stream a part, from the seed */
 static uint32_t gq = 1;
 static uint32_t gr(void) { gq ^= gq << 13; gq ^= gq >> 17; gq ^= gq << 5; return gq; }
+static uint32_t gseed_mix(uint32_t part);
 static void gseed(uint32_t part)
 {
-    gq = ((uint32_t)gp.seed + 1u) * 2654435761u ^ (part + 1u) * 0x9E3779B9u ^ 0x6D2B79F5u;
+    gq = ((uint32_t)gp.seed + 1u) * 2654435761u ^ (part + 1u) * 0x9E3779B9u ^ 0x6D2B79F5u ^
+         gseed_mix(part);                               /* (0.8.3: a genre's own motifs, figures and drums) */
     if (!gq) gq = 1;
     gr(); gr(); gr();
 }
@@ -51,19 +60,24 @@ static uint32_t gpickw(const uint8_t *w, uint32_t n)    /* an index by its weigh
     for (i = 0; i < n; i++) { if (r < w[i]) return i; r -= w[i]; }
     return n - 1u;
 }
-enum { GS_PICK, GS_DRUMS, GS_BASS, GS_CHORDS, GS_ARP, GS_LEAD, GS_SOUND, GS_FORM, GS_MIX, GS_TEX };
+enum { GS_PICK, GS_DRUMS, GS_BASS, GS_CHORDS, GS_ARP, GS_LEAD, GS_SOUND, GS_FORM, GS_MIX, GS_TEX, GS_PLAN };
 
 /* ------------------------------------------------------------------------------------------------ the piece --- */
+/* (0.8.3) a chord of the plan: its first step, its steps, its root's degree in the mode, its quality (QSTACK) and how
+ * its root, third, fifth and seventh move off the mode (bit pairs 0 2 4 6: 1 a semitone up, 2 down; 0 the mode's) */
+typedef struct { uint8_t at, len, deg, q, alt; } gch_t;
+#define GCH_N 8u
 static struct {
     const ggenre_t *g;
     uint32_t gi;
-    int16_t root, scale;
-    const gprog_t *prog;
-    uint8_t q[4];                                       /* the chords' qualities as voiced (the mode's) */
-    uint32_t n, csteps, len, nsc;                       /* chords, steps a chord, the loop, the scale's notes */
+    int16_t root, scale;                                /* the key, as the SCALE page has it (always a mode of seven) */
+    uint8_t sc[7];                                      /* (0.8.3) the mode: its degrees' semitones over the tonic */
+    uint8_t pal, hx;                                    /* the lead's degrees (bit d: degree d of the mode), the harmony */
+    uint8_t pdeg[4], pq[4], pn;                         /* the progression as chosen: degrees, qualities with their colour */
+    gch_t ch[GCH_N]; uint8_t nch;                       /* the plan: the chords over the loop */
+    uint32_t len, cst;                                  /* the loop, a chord's steps */
     uint32_t amt[GP_N], energy, complex, human, swing;
-    uint8_t kick[NSTEP];                                /* the kick's steps (the bass reads them) */
-    uint8_t snare[NSTEP];
+    uint64_t kick, snare;                               /* the kick's steps, the snare's (bit i; the bass reads them) */
     int32_t vo[4]; uint32_t nvo;                        /* the chord track's last voicing */
     int32_t avo[4]; uint32_t navo;                      /* the arp's */
     uint32_t fm6, ba, vm;
@@ -71,13 +85,12 @@ static struct {
     uint32_t drum_fill;                                 /* the fill forced (a BUILD section) */
     uint8_t mutant;                                     /* (0.6.95) RANDOM: a hybrid of two or three genres */
 } gs;
+#define GKICK(i) ((uint32_t)(gs.kick >> ((i) & 63u)) & 1u)
+static uint32_t gseed_mix(uint32_t part) { return part == GS_PICK ? 0u : (gs.gi + 1u) * 0x85EBCA6Bu; }
 static ggenre_t gmut;                                   /* (0.6.95) the genre as this throw plays it (its neighbours' parts) */
 static char gmut_name[20];
 
 static void gclear(step_t *s) { memset(s, 0, sizeof *s); s->time = ST_REST; }
-static int32_t gchord_deg(uint32_t step) { return gs.prog->deg[(step / gs.csteps) % gs.n]; }
-static uint32_t gchord_q(uint32_t step) { return gs.q[(step / gs.csteps) % gs.n]; }
-static uint32_t gchord_idx(uint32_t step) { return (step / gs.csteps) % gs.n; }
 
 static void gnote(step_t *s, const int32_t *n, uint32_t cnt, int32_t vel, uint32_t flags)
 {
@@ -93,80 +106,244 @@ static void gnote(step_t *s, const int32_t *n, uint32_t cnt, int32_t vel, uint32
     if (top > 74) vel -= (top - 74) * 2 < 30 ? (top - 74) * 2 : 30;   /* (high notes measured: softer) */
     s->vel = (uint8_t)clamp(vel, 30, 127);
 }
-/* the scale's note d steps from the tonic at or above lo (the degree d of the key) */
-static int32_t gdeg(const track_t *t, int32_t lo, int32_t d) { return scale_steps(t, dtonic(t, lo), d); }
-/* a chord's notes (cnt) from its root degree and quality, from the tonic at lo, in scale steps (the DOM flag: the
- * third raised to a leading tone when it is minor) */
-static uint32_t gchord_notes(const track_t *t, int32_t lo, int32_t deg, uint32_t q, int32_t *n)
+
+/* ---------------------------------------------------------------------------------- (0.8.3) the harmony --- */
+/* the mode's degree d (any integer: 7 the octave) from the tonic at or above lo; its pitch class */
+static int32_t gnd(int32_t lo, int32_t d)
 {
-    uint32_t j, cnt = 0, qq = q & 0x7Fu;
-    if (qq == Q_POWER) {
-        n[0] = gdeg(t, lo, deg); n[1] = n[0] + 7; n[2] = n[0] + 12;
-        return 3;
-    }
-    for (j = 0; j < 4u && QSTACK[qq][j] != 127; j++) n[cnt++] = gdeg(t, lo, deg + QSTACK[qq][j]);
-    if ((q & CQ_DOM) && cnt > 1u && n[1] - n[0] == 3) n[1]++;
-    return cnt;
+    int32_t o = d >= 0 ? d / 7 : -((6 - d) / 7);
+    return lo + ((gs.root - lo) % 12 + 12) % 12 + 12 * o + gs.sc[d - 7 * o];
 }
-/* voiced: inside [lo, hi], led to the nearest of the last voicing (prev, np), or in parallel (plane: the root at the
- * bottom, the register nearest the last). Sorted low to high, no unisons */
-static uint32_t gvoice(int32_t *n, uint32_t cnt, int32_t lo, int32_t hi, int32_t *prev, uint32_t *np, int plane)
+static uint32_t gpc(int32_t d) { return (uint32_t)(gs.root + gs.sc[((d % 7) + 7) % 7]) % 12u; }
+static int gminor(void) { return gs.sc[2] == 3u; }      /* the mode's third minor */
+static int gin_mode(int32_t n)
 {
-    int32_t best[4], c[4], bcost = 0x7FFFFFFF;
-    uint32_t j, i, inv, ninv = plane ? 1u : cnt;
-    for (j = 0; j < cnt; j++) {                         /* each into [lo, lo + 12) */
-        while (n[j] < lo) n[j] += 12;
-        while (n[j] >= lo + 12) n[j] -= 12;
+    uint32_t pc = (uint32_t)(n - gs.root + 120) % 12u, d;
+    for (d = 0; d < 7u; d++) if (gs.sc[d] == pc) return 1;
+    return 0;
+}
+/* a chord's stack step s (0 its root, 2 its third, 4 its fifth ..) as a note from the tonic at or above lo, coloured */
+static int32_t galt(const gch_t *c, int32_t s)
+{
+    uint32_t k = (uint32_t)(((s % 7) + 7) % 7), a;
+    if (k & 1u) return 0;                               /* (its 2nd, 4th, 6th: the mode's) */
+    a = (c->alt >> k) & 3u;
+    return a == 1u ? 1 : a == 2u ? -1 : 0;
+}
+static int32_t gtone(const gch_t *c, int32_t s, int32_t lo) { return gnd(lo, c->deg + s) + galt(c, s); }
+static int32_t giv(const gch_t *c, int32_t s) { return gtone(c, s, 12) - gtone(c, 0, 12); }   /* over its root */
+/* its pitch classes as a line takes them: the stack, the root and the fifth, the third (not a suspension's) */
+static uint32_t gpcm(const gch_t *c)
+{
+    uint32_t m = 0, j, q = c->q;
+    for (j = 0; j < 4u && QSTACK[q][j] != 127; j++) m |= 1u << ((uint32_t)gtone(c, QSTACK[q][j], 12) % 12u);
+    m |= 1u << ((uint32_t)gtone(c, 0, 12) % 12u) | 1u << ((uint32_t)gtone(c, 4, 12) % 12u);
+    if (q != Q_SUS2 && q != Q_SUS4) m |= 1u << ((uint32_t)gtone(c, 2, 12) % 12u);
+    return m;
+}
+static uint32_t gci(uint32_t step)                      /* the plan's chord at a step of any track's loop */
+{
+    uint32_t j = gs.nch ? gs.nch - 1u : 0u, s = gs.len ? step % gs.len : step;
+    while (j && gs.ch[j].at > s) j--;
+    return j;
+}
+static const gch_t *gchord(uint32_t step) { return &gs.ch[gci(step)]; }
+static const gch_t *gchord_next(uint32_t step) { return &gs.ch[gs.nch ? (gci(step) + 1u) % gs.nch : 0u]; }
+static int gchord_starts(uint32_t step) { return gs.len && gchord(step)->at == step % gs.len; }
+static uint32_t gchord_pcs(uint32_t step) { return gpcm(gchord(step)); }
+static uint32_t gchord_root_pc(uint32_t step) { return (uint32_t)gtone(gchord(step), 0, 12) % 12u; }
+/* a chord's colour (F_MAJ F_DOM F_PAR F_FLAT) as moves of its tones off the mode; 0: not a chord this mode can take */
+static int gcolour(gch_t *c, uint32_t f)
+{
+    static const uint8_t AEOL[7] = {0, 2, 3, 5, 7, 8, 10}, ION[7] = {0, 2, 4, 5, 7, 9, 11};
+    int32_t have[4], want[4];
+    uint32_t k;
+    const uint8_t *P = 0;
+    for (k = 0; k < 4u; k++) { uint32_t d = c->deg + 2u * k; have[k] = want[k] = gs.sc[d % 7u] + 12 * (int32_t)(d / 7u); }
+    if (f == F_MAJ || f == F_DOM) {
+        want[1] = have[0] + 4; want[2] = have[0] + 7;
+        if (f == F_DOM) want[3] = have[0] + 10;
+    } else if (f == F_PAR) P = gminor() ? ION : AEOL;   /* (the parallel mode: major's minor, minor's major) */
+    else if (f == F_FLAT && have[0] != AEOL[c->deg]) P = AEOL;   /* (the flat side's: the mode's own when it has it) */
+    for (k = 0; P && k < 4u; k++) { uint32_t d = c->deg + 2u * k; want[k] = P[d % 7u] + 12 * (int32_t)(d / 7u); }
+    if (P && f == F_FLAT) { want[1] = want[0] + 4; want[2] = want[0] + 7; }
+    c->alt = 0;
+    for (k = 0; k < 4u; k++) {
+        int32_t d = want[k] - have[k];
+        if (d > 1 || d < -1) return 0;
+        c->alt |= (uint8_t)((d > 0 ? 1u : d < 0 ? 2u : 0u) << (2u * k));
     }
-    for (i = 1; i < cnt; i++)                           /* low to high */
-        for (j = i; j > 0 && n[j] < n[j - 1]; j--) { int32_t x = n[j]; n[j] = n[j - 1]; n[j - 1] = x; }
-    for (inv = 0; inv < ninv; inv++) {
-        int32_t sh;
-        for (sh = -12; sh <= 12; sh += 12) {
-            int32_t cost = 0, top, bot;
-            for (j = 0; j < cnt; j++) c[j] = n[(j + inv) % cnt] + (j + inv >= cnt ? 12 : 0) + sh;
-            bot = c[0]; top = c[cnt - 1u];
-            if (bot < lo || top > hi) continue;
-            if (*np && !plane) {
-                for (j = 0; j < cnt; j++) {             /* each voice to the nearest old one */
-                    int32_t d = 127, k;
-                    for (k = 0; k < (int32_t)*np; k++) { int32_t e = c[j] - prev[k]; if (e < 0) e = -e; if (e < d) d = e; }
-                    cost += d;
+    return 1;
+}
+static int gtriad_ok(const gch_t *c)                    /* major or minor (diminished: ii and vii in jazz and film, m7b5) */
+{
+    int32_t t3 = giv(c, 2), t5 = giv(c, 4);
+    if (t5 == 7 && (t3 == 3 || t3 == 4)) return 1;
+    return t5 == 6 && t3 == 3 && (HXF(gs.hx) == HF_JAZZ || HXF(gs.hx) == HF_CINE) && (c->deg == 1u || c->deg == 6u);
+}
+/* the quality as this degree of the mode takes it: a natural ninth only (never b9), no 11 over a major third, a 6
+ * major, a fourth perfect, a fifth perfect; a coloured chord a triad or a seventh */
+static uint32_t gq_fix(const gch_t *c, uint32_t q)
+{
+    if (c->alt) return q == Q_TRI || q == Q_SUS2 || q == Q_SUS4 || q == Q_POWER || q == Q_ADD9 ? (q == Q_POWER ? q : Q_TRI) : Q_7;
+    if ((q == Q_7 || q == Q_9) && giv(c, 2) == 3 && giv(c, 6) == 11 && HXF(gs.hx) != HF_JAZZ && HXF(gs.hx) != HF_CINE)
+        q = giv(c, 8) == 14 ? Q_ADD9 : Q_TRI;          /* (a minor-major seventh: the spy's chord, jazz's and film's only) */
+    switch (q) {
+    case Q_9: case Q_R9: if (giv(c, 8) != 14) q = Q_7; break;
+    case Q_ADD9: if (giv(c, 8) != 14) q = Q_TRI; break;
+    case Q_11: q = giv(c, 2) == 4 || giv(c, 8) != 14 ? (giv(c, 8) == 14 ? Q_9 : Q_7) : q; break;
+    case Q_6: if (giv(c, 5) != 9) q = Q_7; break;
+    case Q_SUS4: if (giv(c, 3) != 5) q = giv(c, 1) == 2 ? Q_SUS2 : Q_TRI; break;
+    case Q_SUS2: if (giv(c, 1) != 2) q = giv(c, 3) == 5 ? Q_SUS4 : Q_TRI; break;
+    case Q_QUART: if (giv(c, 3) != 5 || giv(c, 6) != 10) q = giv(c, 3) == 5 ? Q_SUS4 : Q_TRI; break;
+    case Q_POWER: if (giv(c, 4) != 7) q = Q_TRI; break;
+    default: break;
+    }
+    return q;
+}
+/* a progression the mode and the genre take: every chord major or minor (ii and vii diminished in jazz and film), a
+ * secondary dominant only where the genre has them, a borrowed chord only where it borrows */
+static int gprog_ok(const gprog_t *p)
+{
+    uint32_t k;
+    for (k = 0; k < p->n; k++) {
+        gch_t c = {0, 0, (uint8_t)p->deg[k], 0, 0};
+        uint32_t f = QF(p->q[k]);
+        if (!gcolour(&c, f) || !gtriad_ok(&c)) return 0;
+        if (c.alt && (f == F_DOM ? !(gs.hx & HX_SEC) : f == F_MAJ ? !(gs.hx & HX_RAISE) : !(gs.hx & HX_BOR))) return 0;
+        if (HXF(gs.hx) == HF_JAZZ && c.deg == 4u && !c.alt && !gminor() && giv(&c, 6) != 10) return 0;   /* (jazz's V a
+                                                         * dominant: lydian's maj7 V is no ii-V) */
+    }
+    return 1;
+}
+/* chord j's second half another chord (the plan has room, the chord a bar at least, the new one a chord of the mode) */
+static int gsplit(uint32_t j, uint32_t deg, uint32_t q, uint32_t f)
+{
+    gch_t c;
+    uint32_t k, h;
+    if (gs.nch >= GCH_N || j >= gs.nch || gs.ch[j].len < 16u) return 0;
+    c.deg = (uint8_t)(deg % 7u);
+    if (!gcolour(&c, f) || !gtriad_ok(&c)) return 0;
+    c.q = (uint8_t)gq_fix(&c, q);
+    h = gs.ch[j].len / 2u;
+    c.at = (uint8_t)(gs.ch[j].at + h); c.len = (uint8_t)h;
+    gs.ch[j].len = (uint8_t)h;
+    for (k = gs.nch; k > j + 1u; k--) gs.ch[k] = gs.ch[k - 1u];
+    gs.ch[j + 1u] = c;
+    gs.nch++;
+    return 1;
+}
+/* the plan: the progression's chords over the loop from its chord rot, each gs.cst steps; then the cadences and the
+ * colours the genre takes (their own stream: the same plan every time for the same settings): the minor key's
+ * dominant raised before its tonic (the leading tone), jazz's turnaround (ii V in the last chord), a secondary dominant
+ * on the second half of the chord before its target, a major key's IV going minor before I */
+static void gplan(uint32_t rot)
+{
+    uint32_t j, n = gs.pn ? gs.pn : 1u, st = gs.cst ? gs.cst : 16u, at, fam = HXF(gs.hx), keep = gq;
+    gseed(GS_PLAN);
+    while (st > 8u && st * n > gs.len) st /= 2u;        /* (a section's two chords where A had one: half each) */
+    gs.nch = 0;
+    for (at = 0; at < gs.len && gs.nch < GCH_N; at += st) {
+        gch_t *c = &gs.ch[gs.nch];
+        uint32_t k = (gs.nch + rot) % n;
+        c->at = (uint8_t)at; c->len = (uint8_t)(at + st <= gs.len ? st : gs.len - at);
+        c->deg = gs.pdeg[k];
+        if (!gcolour(c, QF(gs.pq[k]))) c->alt = 0;
+        c->q = (uint8_t)gq_fix(c, QQ(gs.pq[k]));
+        gs.nch++;
+    }
+    if ((gs.hx & HX_RAISE || fam == HF_JAZZ) && gminor() && gs.sc[6] == 10u && gs.nch > 1u)
+        for (j = 0; j < gs.nch; j++) {
+            gch_t *c = &gs.ch[j];
+            if (c->deg != 4u || c->alt || gs.ch[(j + 1u) % gs.nch].deg != 0u) continue;
+            if (gcolour(c, F_MAJ)) c->q = (uint8_t)gq_fix(c, c->q == Q_TRI || c->q == Q_POWER ? c->q : Q_7);
+            else c->alt = 0;
+        }
+    if (fam == HF_JAZZ && gs.complex > 30u && gs.nch && gs.ch[gs.nch - 1u].deg == 0u && gs.ch[gs.nch - 1u].len >= 16u) {
+        gch_t *c = &gs.ch[gs.nch - 1u], keep = *c;
+        c->deg = 1; c->alt = 0;
+        if (gtriad_ok(c)) {
+            c->q = (uint8_t)gq_fix(c, Q_7);
+            if (!gsplit(gs.nch - 1u, 4, Q_7, gminor() ? F_MAJ : 0u)) *c = keep;
+        } else *c = keep;
+    }
+    if ((gs.hx & HX_SEC) && gs.complex > 45u && gch(fam == HF_JAZZ ? 70u : 45u))
+        for (j = 0; j + 1u < gs.nch; j++) {
+            const gch_t *x = &gs.ch[j + 1u];
+            uint32_t d = x->deg;
+            if (x->alt || !(d == 1u || d == 2u || d == 3u || d == 5u) || gs.ch[j].deg == (d + 4u) % 7u) continue;
+            if (gsplit(j, d + 4u, Q_7, F_DOM)) break;
+        }
+    if ((gs.hx & HX_BOR) && !gminor() && gs.complex > 45u && gch(40))
+        for (j = 0; j + 1u < gs.nch; j++)
+            if (gs.ch[j].deg == 3u && !gs.ch[j].alt && gs.ch[j + 1u].deg == 0u && gsplit(j, 3, Q_TRI, F_PAR)) break;
+    gq = keep;                                          /* (the caller's stream as it was) */
+}
+
+/* ---------------------------------------------------------------------------------------------- the voicing --- */
+enum { VO_CLOSE, VO_OPEN, VO_PLANE };
+/* (0.8.3) a chord voiced inside [lo, hi]: of its inversions and spreads, the one nearest the last voicing (the least
+ * motion, each voice to its nearest old one, the common tones held, the top voice steady); no second below G3, no close
+ * third at the very bottom; CLOSE keeps the hand inside a tenth, OPEN (washes, film) spreads it (drop 2: the second
+ * voice from the top an octave down; a triad's middle an octave up); PLANE the same shape moved, the root at the bottom
+ * (techno, impressionism). Sorted low to high, no unisons */
+static uint32_t gvoice(const gch_t *c, uint32_t q, int32_t lo, int32_t hi, int32_t *prev, uint32_t *np, uint32_t mode, int32_t *out)
+{
+    int32_t pc[4], best[4], cd[4], bcost = 0x7FFFFFFF;
+    uint32_t n = 0, j, r, v, k;
+    for (j = 0; j < 4u && QSTACK[q][j] != 127; j++) pc[n++] = gtone(c, QSTACK[q][j], 0);
+    if (!n) return 0;
+    for (r = 0; r < (mode == VO_PLANE ? 1u : n); r++) {
+        int32_t base[4], o;
+        for (j = 0; j < n; j++) base[j] = j + r < n ? pc[j + r] : pc[j + r - n] + 12;
+        for (o = -1; o <= 10; o++) {
+            int32_t sh = lo + (((base[0] - lo) % 12) + 12) % 12 + 12 * o - base[0];
+            if (base[0] + sh < lo || base[0] + sh >= lo + 24) continue;
+            for (v = 0; v < (mode == VO_PLANE ? 1u : 2u); v++) {
+                int32_t cost = 0, span;
+                for (j = 0; j < n; j++) cd[j] = base[j] + sh;
+                if (v) {                                /* (the spread) */
+                    if (n == 4u) cd[2] -= 12; else if (n == 3u) cd[1] += 12; else continue;
+                    for (j = 1; j < n; j++) for (k = j; k > 0 && cd[k] < cd[k - 1]; k--) { int32_t x = cd[k]; cd[k] = cd[k - 1]; cd[k - 1] = x; }
                 }
-            } else if (*np) {
-                cost = c[0] - prev[0]; if (cost < 0) cost = -cost;   /* (parallel: the bottom nearest) */
-            } else {
-                cost = (c[0] + top) / 2 - (lo + hi) / 2; if (cost < 0) cost = -cost;   /* (the first: in the middle) */
+                if (cd[0] < lo || cd[n - 1u] > hi) continue;
+                for (j = 1; j < n; j++) {
+                    if (cd[j] <= cd[j - 1]) break;
+                    if (cd[j - 1] < 55 && cd[j] - cd[j - 1] <= 2) break;   /* (no seconds below G3) */
+                }
+                if (j < n) continue;
+                if (cd[0] < 52 && n > 1u && cd[1] - cd[0] < 5) cost += 6;   /* (a close third at the bottom: mud) */
+                span = cd[n - 1u] - cd[0];
+                if (*np && mode == VO_PLANE) cost += cd[0] > prev[0] ? cd[0] - prev[0] : prev[0] - cd[0];
+                else if (*np) {                         /* (voice by voice, low to high; each to its nearest
+                                                         * old one when their numbers differ; a common tone held) */
+                    for (j = 0; j < n; j++) {
+                        int32_t d = 127, e, com = 0;
+                        for (k = 0; k < *np; k++) { e = cd[j] - prev[k]; if (e < 0) e = -e; if (e < d) d = e; com |= !e; }
+                        if (n == *np) { d = cd[j] - prev[j]; if (d < 0) d = -d; }
+                        cost += 2 * d - (com ? 3 : 0);
+                    }
+                } else {                                /* (the first: in the middle of the range) */
+                    int32_t m = (cd[0] + cd[n - 1u]) / 2 - (lo + hi) / 2 + 2;
+                    cost += m < 0 ? -m : m;
+                }
+                if (mode == VO_OPEN) cost += span < 12 ? 6 : 0;
+                else if (span > 16) cost += 10 + (span - 16) * 2;
+                if (cost < bcost) { bcost = cost; for (j = 0; j < n; j++) best[j] = cd[j]; }
             }
-            if (top - bot > 19) cost += 6;              /* (a tight hand) */
-            if (cost < bcost) { bcost = cost; for (j = 0; j < cnt; j++) best[j] = c[j]; }
         }
     }
-    if (bcost == 0x7FFFFFFF) for (j = 0; j < cnt; j++) best[j] = n[j];
-    for (j = 1; j < cnt; j++) if (best[j] <= best[j - 1]) best[j] = best[j - 1] + (best[j] == best[j - 1] ? 12 : 0);
-    while (cnt && best[cnt - 1u] > hi && best[0] - 12 >= lo) for (j = 0; j < cnt; j++) best[j] -= 12;   /* (0.6.95: a power
-                                                         * chord's octave pushed over the top: the whole hand down) */
-    for (j = 0; j < cnt; j++) { n[j] = best[j]; prev[j] = best[j]; }
-    *np = cnt;
-    return cnt;
+    if (bcost == 0x7FFFFFFF)                            /* (nothing fits: the root position from lo) */
+        for (j = 0; j < n; j++) best[j] = pc[j] + lo + (((pc[0] - lo) % 12) + 12) % 12 - pc[0];
+    for (j = 0; j < n; j++) { out[j] = best[j]; prev[j] = best[j]; }
+    *np = n;
+    return n;
 }
-/* the chord at step i, voiced for a track: cnt notes */
-static uint32_t gchord_at(const track_t *t, uint32_t i, int32_t lo, int32_t hi, int32_t *n, int32_t *prev, uint32_t *np)
+/* the voicing family of the genre's chords */
+static uint32_t gvo_mode(void)
 {
-    uint32_t cnt = gchord_notes(t, 36, gchord_deg(i), gchord_q(i), n);
-    return gvoice(n, cnt, lo, hi, prev, np, gs.vm == VM_PLANE);
-}
-static int gchord_tone(int32_t deg, int32_t cdeg)        /* a degree of the key on the chord (root, third, fifth, 7th) */
-{
-    int32_t d = ((deg - cdeg) % (int32_t)gs.nsc + (int32_t)gs.nsc) % (int32_t)gs.nsc;
-    return d == 0 || d == 2 || d == 4 || (d == 6 && gs.complex > 40u);
-}
-static int32_t gnear_ct(int32_t deg, int32_t cdeg)        /* the chord tone nearest a degree */
-{
-    int32_t best = deg, k;
-    for (k = -4; k <= 4; k++)
-        if (gchord_tone(deg + k, cdeg) && (k < 0 ? -k : k) < (best - deg < 0 ? deg - best : best - deg)) best = deg + k;
-    return gchord_tone(deg, cdeg) ? deg : best;
+    uint32_t f = HXF(gs.hx);
+    return gs.vm == VM_PLANE ? VO_PLANE : f == HF_COLOR || f == HF_CINE ? VO_OPEN : VO_CLOSE;
 }
 
 /* -------------------------------------------------------------------------------------------------- drums --- */
@@ -215,8 +392,7 @@ static void gen_drums(track_t *t, uint32_t len)
     uint32_t chaos = gs.complex * 40u / 100u, ng = (g->ghosts * a + 50u) / 100u + (gs.complex > 60u);
     const uint8_t *cell = HAT_CELL[g->hats];
     gseed(GS_DRUMS);
-    memset(gs.kick, 0, sizeof gs.kick);
-    memset(gs.snare, 0, sizeof gs.snare);
+    gs.kick = gs.snare = 0;
     for (l = 0; l < 8u; l++) map[l] = DRUM_MAP[g->drum][l];
     if (g->drum != DM_IDM && g->drum != DM_NONE && g->drum != DM_SPARSE) {   /* (0.6.97) a throw's own top end: the hats,
                                                          * the open hats and the percussion from the pools now and then;
@@ -230,7 +406,7 @@ static void gen_drums(track_t *t, uint32_t len)
     }
     if (g->drum == DM_IDM) {
         gen_drums_idm(t, len);
-        for (i = 0; i < len; i++) { gs.kick[i] = (uint8_t)(t->step[i].hit & 1u); gs.snare[i] = (uint8_t)((t->step[i].hit >> 1) & 1u); }
+        for (i = 0; i < len; i++) { gs.kick |= (uint64_t)(t->step[i].hit & 1u) << i; gs.snare |= (uint64_t)((t->step[i].hit >> 1) & 1u) << i; }
         return;
     }
     for (i = 0; i < len; i++) {
@@ -373,26 +549,45 @@ static void gen_drums(track_t *t, uint32_t len)
     for (i = 0; i < len; i++) {                         /* the snare laid back where the genre plays late; the kick's steps */
         step_t *s = &t->step[i];
         if (s->time != ST_NOTE) continue;
-        gs.kick[i] = (uint8_t)(s->hit & 1u);
-        gs.snare[i] = (uint8_t)((s->hit >> 1) & 1u);
+        gs.kick |= (uint64_t)(s->hit & 1u) << i;
+        gs.snare |= (uint64_t)((s->hit >> 1) & 1u) << i;
         if (g->sd_micro && gs.human && (s->hit & 2u) && !(s->hit & 1u)) ST_MICRO_SET(s, g->sd_micro);
         if (s->acc & ~s->hit) s->acc &= s->hit;
     }
 }
 
 /* --------------------------------------------------------------------------------------------------- bass --- */
-static int32_t gbass_root(const track_t *t, int32_t lo, int32_t deg)   /* a chord's root as the bass plays it */
+static int32_t gbass_root(int32_t lo, const gch_t *c)   /* a chord's root as the bass plays it: in [lo, lo + 12) */
 {
-    int32_t n = gdeg(t, lo, deg);
-    while (n > lo + 11) n -= 12;
+    int32_t n = gtone(c, 0, lo);
+    while (n >= lo + 12) n -= 12;
+    while (n < lo) n += 12;
     return n;
+}
+/* (0.8.3) an archetype's degree over the chord as the plan has it, from its root as played: '3' its third (a
+ * suspension's second or fourth), '5' its fifth, '7' its seventh, '2' '6' '9' the mode's steps over the root (a coloured
+ * chord: its root, fifth, octave: never a step against its own altered tones) */
+static int32_t gbass_tone(const gch_t *c, int32_t root, char ch)
+{
+    int32_t s;
+    switch (ch) {
+    case '3': s = c->q == Q_SUS2 ? 1 : c->q == Q_SUS4 ? 3 : 2; break;
+    case '5': s = 4; break;
+    case '7': s = 6; break;
+    case '2': s = c->alt ? 0 : 1; break;
+    case '6': s = c->alt ? 4 : 5; break;
+    case '9': s = c->alt ? 7 : 8; break;
+    default: s = 0; break;
+    }
+    return root + giv(c, s);
 }
 static void gen_acid(track_t *t, uint32_t len, int32_t lo)
 {
     static const uint8_t W[6] = {55, 15, 10, 10, 5, 5};   /* R 8 b7 5 b3 2 */
-    static const int8_t D[6] = {0, 0, 6, 4, 2, 1};
+    static const char D[6] = {'R', '8', '7', '5', '3', '2'};
     uint8_t pt[16], on[16];
     uint32_t i, b, bars = len / 16u ? len / 16u : 1u;
+    (void)t;
     for (i = 0; i < 16u; i++) {
         on[i] = (uint8_t)(i % 4u == 0u || gch(45 + gs.complex / 3u));
         pt[i] = (uint8_t)gpickw(W, 6);
@@ -407,50 +602,76 @@ static void gen_acid(track_t *t, uint32_t len, int32_t lo)
         }
         for (i = 0; i < 16u; i++) {
             uint32_t s = b * 16u + i;
-            int32_t n[1], cd;
+            const gch_t *c;
+            int32_t n[1], r;
             if (s >= len || !on[i]) continue;
-            cd = gchord_deg(s);
-            n[0] = gbass_root(t, lo, cd) + (pt[i] == 1u ? 12 : 0);
-            if (pt[i] >= 2u) n[0] = scale_steps(t, gbass_root(t, lo, cd), D[pt[i]]);
+            c = gchord(s);
+            r = gbass_root(lo, c);
+            n[0] = gchord_starts(s) ? r : pt[i] == 1u ? r + 12 : gbass_tone(c, r, D[pt[i]]);   /* (the root at a change) */
             gnote(&t->step[s], n, 1, acc[i] ? 112 : 90, (acc[i] ? SF_ACCENT : 0u) | (sl[i] ? SF_SLIDE : 0u));
         }
     }
+}
+static int32_t gbass_near(int32_t lo, const gch_t *c, int32_t ref)   /* (a walk's root: the octave nearest the line) */
+{
+    int32_t n = gbass_root(lo, c);
+    if (ref < 0) return n;
+    if (n + 12 - ref < ref - n && n + 12 <= lo + 24) n += 12;
+    if (ref - (n - 12) < n - ref && n - 12 >= lo - 3) n -= 12;
+    return n;
 }
 static void gen_bass(track_t *t, uint32_t len)
 {
     const ggenre_t *g = gs.g;
     const barch_t *a = &BASS_ARCH[gs.ba];
-    int32_t lo = g->bass_lo, prev = -1;
-    uint32_t i, alen = 16u * a->bars, held = 0;
+    int32_t lo = g->bass_lo, prev = -1, root0 = -1;
+    uint32_t i, alen = 16u * a->bars, held = 0, walk = gs.ba == BA_WALK || gs.ba == BA_WALK2 || gs.ba == BA_TWOFEEL;
     gseed(GS_BASS);
     if (gs.ba == BA_ACID) { gen_acid(t, len, lo); return; }
     for (i = 0; i < len; i++) {
         step_t *s = &t->step[i];
         char c = a->n[i % alen], f = a->f ? a->f[i % alen] : '.';
-        int32_t cd = gchord_deg(i), nd = gchord_deg(i + gs.csteps - i % gs.csteps), root, n[1], vel = 96;
-        uint32_t fl = 0;
+        const gch_t *cc = gchord(i), *nc = gchord_next(i);
+        int32_t root, n[1], vel = 96, same = nc == cc || (nc->deg == cc->deg && nc->alt == cc->alt);
+        uint32_t fl = 0, chg = gchord_starts(i);
+        if (chg && i % 16u && (c == '.' || c == '=') && !(GKICK(i) && g->kick_mode == KM_ANSWER)) c = 'R';   /* (a chord
+                                                         * that comes in mid-bar: its root there) */
         if (c == '.') { held = 0; continue; }
         if (c == '=') { if (held) dstep_tie(s); continue; }
-        if (gs.kick[i] && i % 16u && (g->kick_mode == KM_ANSWER || g->kick_mode == KM_INTERLOCK) && c != 'x' && c != 'r' &&
-            i % gs.csteps) { held = 0; continue; }     /* (the kick's step is the kick's) */
-        root = gbass_root(t, lo, cd);
+        if (GKICK(i) && i % 16u && (g->kick_mode == KM_ANSWER || g->kick_mode == KM_INTERLOCK) && c != 'x' && c != 'r' && !chg) {
+            held = 0; continue;                         /* (the kick's step is the kick's) */
+        }
+        root = walk ? gbass_near(lo, cc, chg ? prev : root0) : gbass_root(lo, cc);   /* (a walk: each chord's root in the
+                                                         * octave nearest the line, kept through its chord) */
+        if (chg || root0 < 0) root0 = root;
         switch (c) {
-        case '2': n[0] = scale_steps(t, root, 1); break;
-        case '3': n[0] = scale_steps(t, root, 2); break;
-        case '5': n[0] = scale_steps(t, root, 4); break;
-        case '6': n[0] = scale_steps(t, root, 5); break;
-        case '7': n[0] = scale_steps(t, root, 6); break;
-        case '9': n[0] = scale_steps(t, root, 8); break;
-        case 'L': n[0] = scale_steps(t, root, 4) - 12; break;
+        case '7':                                       /* (a seventh alone over a major one with a major seventh: its
+                                                         * sixth, the reggae's and the funk's note; in a run 6 7 8 it passes) */
+            n[0] = gbass_tone(cc, root, giv(cc, 6) == 11 && giv(cc, 2) == 4 && a->n[(i + alen - 1u) % alen] != '6' &&
+                                        a->n[(i + 1u) % alen] != '8' ? '6' : '7');
+            break;
+        case '2': case '3': case '5': case '6': case '9': n[0] = gbass_tone(cc, root, c); break;
+        case 'L': n[0] = gbass_tone(cc, root, '5') - 12; break;
         case '8': n[0] = root + 12; break;
-        case 'A': n[0] = nd == cd ? scale_steps(t, root, 4) : gbass_root(t, lo, nd) - 1; break;
-        case 'B': n[0] = nd == cd ? scale_steps(t, root, 4) : gbass_root(t, lo, nd) + 1; break;
-        case 'N': n[0] = gbass_root(t, lo, nd); break;
-        case 'S': { int32_t r2 = gbass_root(t, lo, nd); n[0] = nd == cd ? scale_steps(t, root, 1) : r2 > root ? scale_steps(t, r2, -1) : scale_steps(t, r2, 1); break; }
+        case 'A': case 'B': {                           /* (into the next root as it will sound: the loop's first note
+                                                         * when the loop closes) */
+            int32_t r2 = nc == &gs.ch[0] && t->step[0].time == ST_NOTE ? t->step[0].note[0] : walk ? gbass_near(lo, nc, prev) : gbass_root(lo, nc);
+            n[0] = same ? gbass_tone(cc, root, '5') : r2 + (c == 'A' ? -1 : 1);
+            break;
+        }
+        case 'N': n[0] = gbass_root(lo, nc); break;
+        case 'S': {                                     /* a step of the mode towards the next root */
+            int32_t r2 = gbass_root(lo, nc);
+            if (same) n[0] = gbass_tone(cc, root, '2');
+            else n[0] = r2 + (r2 > root ? gnd(0, nc->deg - 1) - gnd(0, nc->deg) : gnd(0, nc->deg + 1) - gnd(0, nc->deg));
+            break;
+        }
         default: n[0] = root; break;                    /* R r x */
         }
+        if (chg && c != 'x') n[0] = c == '8' ? root + 12 : root;   /* (0.8.3: the root at every change) */
         if (n[0] > lo + 26) n[0] -= 12;                /* (two octaves from the root's: the octave jumps live) */
         if (n[0] < lo - 7) n[0] += 12;
+        prev = n[0];
         if (c == 'r') vel = 70;
         if (c == 'x') vel = 42;
         if (f == 'g') vel = 50;
@@ -459,45 +680,72 @@ static void gen_bass(track_t *t, uint32_t len)
         if (gs.human) vel += grr(-(int32_t)gs.human / 10, (int32_t)gs.human / 10);
         gnote(s, n, 1, vel, fl);
         held = 1;
-        prev = n[0];
     }
-    (void)prev;
     if (g->kick_mode == KM_DOUBLE || g->kick_mode == KM_INTERLOCK) {   /* the kick doubled (DOUBLE: on its steps when the
                                                          * bass rests), interlocked (the step after it) */
         for (i = 0; i < len; i++) {
             uint32_t j = g->kick_mode == KM_DOUBLE ? i : i + 1u;
             int32_t n[1];
-            if (!gs.kick[i] || j >= len || t->step[j].time != ST_REST || dsounding(t, j) >= 0) continue;
+            if (!GKICK(i) || j >= len || t->step[j].time != ST_REST || dsounding(t, j) >= 0) continue;
             if (!gch(g->kick_mode == KM_DOUBLE ? 30 + gs.amt[GP_BASS] / 4u : 35)) continue;
-            n[0] = gbass_root(t, lo, gchord_deg(j));
+            n[0] = gbass_root(lo, gchord(j));
             gnote(&t->step[j], n, 1, g->kick_mode == KM_DOUBLE ? 92 : 72, 0);
         }
     }
     if (len >= 64u && gs.complex > 30u && a->bars < 4u) {   /* the fourth bar's pickup: an approach into the next root */
         uint32_t j = 62;
-        int32_t n[1], cd = gchord_deg(63), nd = gchord_deg(0);
+        const gch_t *cc = gchord(63), *nc = gchord(0);
+        int32_t n[1];
         if (t->step[j].time == ST_REST && t->step[j + 1u].time == ST_REST && gch(60)) {
-            n[0] = nd == cd ? scale_steps(t, gbass_root(t, lo, cd), 4) : gbass_root(t, lo, nd) - 1;
+            int32_t r = gbass_root(lo, cc);
+            n[0] = nc->deg == cc->deg && nc->alt == cc->alt ? gbass_tone(cc, r, '5') : gbass_root(lo, nc) - 1;
+            if (n[0] > lo + 26) n[0] -= 12;
             gnote(&t->step[j], n, 1, 84, 0);
         }
     }
-    if (gs.amt[GP_BASS] < 60u) {                        /* a thinner bass: the weak notes thinned */
+    if (gs.amt[GP_BASS] < 60u) {                        /* a thinner bass: the weak notes thinned (never the note an
+                                                         * approach resolves into) */
+        int32_t last = -1;
         for (i = 0; i < len; i++) {
             step_t *s = &t->step[i];
-            if (s->time == ST_NOTE && i % 4u && !(s->flags & SF_ACCENT) && gr() % 100u < (60u - gs.amt[GP_BASS])) {
+            int keep;
+            if (s->time != ST_NOTE) continue;
+            keep = last >= 0 && !gin_mode(last);
+            last = s->note[0];
+            if (!keep && i % 4u && !(s->flags & SF_ACCENT) && gin_mode(s->note[0]) && gr() % 100u < (60u - gs.amt[GP_BASS])) {
                 gclear(s);
                 if (i + 1u < len && t->step[i + 1u].time == ST_TIE) gclear(&t->step[i + 1u]);
             }
         }
     }
+    for (i = 0; i < len; i++) {                         /* (an approach left with nothing to go to: its chord's root) */
+        step_t *s = &t->step[i];
+        const step_t *x;
+        uint32_t j;
+        if (s->time != ST_NOTE || gin_mode(s->note[0])) continue;
+        for (j = 1; j < len && t->step[(i + j) % len].time != ST_NOTE; j++) {}
+        x = &t->step[(i + j) % len];
+        if (j < len && (x->note[0] - s->note[0] == 1 || s->note[0] - x->note[0] == 1)) continue;
+        if ((gpcm(gchord(i)) >> (s->note[0] % 12u)) & 1u) continue;
+        s->note[0] = (uint8_t)gbass_root(lo, gchord(i));
+    }
 }
 
 /* -------------------------------------------------------------------------------------------------- chords --- */
+/* the chord at step i voiced for a track (its own last voicing): the pads' rootless where jazz has the bass on the root */
+static uint32_t gchord_at(uint32_t i, int32_t lo, int32_t hi, int32_t *n, int32_t *prev, uint32_t *np, uint32_t mode, int rootless)
+{
+    const gch_t *c = gchord(i);
+    uint32_t q = c->q;
+    if (rootless && (q == Q_7 || q == Q_9) && !c->alt && giv(c, 8) == 14) q = Q_R9;
+    return gvoice(c, q, lo, hi, prev, np, mode, n);
+}
 static void gen_pads(track_t *t, uint32_t len)
 {
     const ggenre_t *g = gs.g;
-    uint32_t i, a = gs.amt[GP_CHORDS], last = 0xFFFFu, cnt = 0, style = g->pads;
+    uint32_t i, a = gs.amt[GP_CHORDS], last = 0xFFFFu, cnt = 0, style = g->pads, mode = gvo_mode(), fam = HXF(gs.hx);
     int32_t n[4];
+    int rootless = (fam == HF_JAZZ || (fam == HF_JAZZY && gs.vm == VM_RICH)) && gs.act[RL_BASS];
     uint8_t dub[16] = {0}, comp[16] = {0}, brk[16] = {0};
     gseed(GS_CHORDS);
     gs.nvo = 0;
@@ -512,11 +760,12 @@ static void gen_pads(track_t *t, uint32_t len)
     }
     for (i = 0; i < len; i++) {
         step_t *s = &t->step[i];
-        uint32_t pp = i % gs.csteps, p = i % 16u, b = i / 16u;
+        const gch_t *c = gchord(i);
+        uint32_t pp = i % gs.len - c->at, p = i % 16u, b = i / 16u, cl = c->len;
         int on = 0, vel = 80, hold = 0;
         switch (style) {
-        case CS_HOLD: on = pp == 0u; hold = (int)gs.csteps - 1; break;
-        case CS_SWELL: on = pp == 0u; hold = (int)gs.csteps - 1; vel = 72; break;
+        case CS_HOLD: on = pp == 0u; hold = (int)cl - 1; break;
+        case CS_SWELL: on = pp == 0u; hold = (int)cl - 1; vel = 72; break;
         case CS_STAB: on = (p % 4u == 2u && gch(40 + a / 2u)) || (pp == 0u && gch(50)); vel = p % 4u == 2u ? 84 : 92; break;
         case CS_PULSE: on = i % (gs.energy > 66u ? 2u : 4u) == 0u && !(p == 12u && gch(40)); hold = gch(40); vel = p % 4u ? 76 : 86; break;
         case CS_DUB: on = dub[p]; vel = p == 2u ? 92 : 78; break;
@@ -525,19 +774,20 @@ static void gen_pads(track_t *t, uint32_t len)
             hold = p == 14u || p == 7u; vel = p == 0u ? 84 : 80; break;   /* (0.6.93: the bar's figure, varied a bar) */
         case CS_POWER: on = p == 0u || (p == 8u && (b & 1u) && gch(60)); hold = p == 8u ? 5 : 7; vel = 96; break;   /* (0.6.93: a push every bar) */
         case CS_DRONE: on = i == 0u; hold = (int)len - 1; vel = 70; break;
-        case CS_SPARSE: on = pp == 0u && (i == 0u || gch(40 + a / 3u)); hold = (int)gs.csteps - 1; vel = 76; break;
+        case CS_SPARSE: on = pp == 0u && (i == 0u || gch(40 + a / 3u)); hold = (int)cl - 1; vel = 76; break;
         case CS_BROKEN: on = brk[p]; vel = p ? 80 : 92; break;
         default: on = ((0xDB6Du >> p) & 1u) && gch(70 + a / 4u); vel = p % 4u ? 78 : 96; break;   /* CS_TRANCE */
         }
         if (!on || !gch(style == CS_HOLD || style == CS_SWELL || style == CS_DRONE || style == CS_SPARSE ? 100 : 70 + a * 3u / 10u)) continue;
-        if (gchord_idx(i) != last || !cnt || style == CS_HOLD || style == CS_SWELL || style == CS_SPARSE) {
-            cnt = gchord_at(t, i, 48, 79, n, gs.vo, &gs.nvo);
-            last = gchord_idx(i);
+        if (gci(i) != last || !cnt || style == CS_HOLD || style == CS_SWELL || style == CS_SPARSE) {
+            cnt = gchord_at(i, 48, 79, n, gs.vo, &gs.nvo, mode, rootless);
+            last = gci(i);
         } else {
             uint32_t j;
             for (j = 0; j < gs.nvo; j++) n[j] = gs.vo[j];
             cnt = gs.nvo;
         }
+        if (hold > 0 && pp + (uint32_t)hold >= cl && style != CS_DRONE) hold = (int)(cl - pp) - 1;   /* (held to its chord's end) */
         if (gs.human) vel += grr(-(int32_t)gs.human / 12, (int32_t)gs.human / 12);
         gnote(s, n, cnt, vel, 0);
         if (hold > 0) dhold(t, i, (uint32_t)hold, len);
@@ -547,7 +797,7 @@ static void gen_pads(track_t *t, uint32_t len)
 /* ----------------------------------------------------------------------------------------------------- arp --- */
 static void gen_arp(track_t *t, uint32_t len)
 {
-    const garp_t *ap = &ARP[gs.g->arp[gr() % 2u]];
+    const garp_t *ap;
     uint32_t i, k = 0, idx = 0, a = gs.amt[GP_ARP], no = 0, last = 0xFFFFu, cnt = 0, rate;
     int32_t c[4], n[1];
     gseed(GS_ARP);
@@ -563,9 +813,10 @@ static void gen_arp(track_t *t, uint32_t len)
         idx = i / rate;
         if (!((ap->mask >> (idx % 16u)) & 1u)) { k++; continue; }
         if (gr() % 100u >= 20u + a * 3u / 4u) { k++; continue; }   /* (holes: space; 0.6.93: the amount is the density) */
-        if (gchord_idx(i) != last || !cnt) {
-            cnt = gchord_at(t, i, 48, 72, c, gs.avo, &gs.navo);
-            last = gchord_idx(i);
+        if (gci(i) != last || !cnt) {
+            cnt = gchord_at(i, 50, 74, c, gs.avo, &gs.navo, gvo_mode() == VO_PLANE ? VO_PLANE : VO_CLOSE, 0);
+            last = gci(i);
+            if (gchord_starts(i)) k = 0;                /* (0.8.3: each chord's figure from its start) */
         } else {
             for (j = 0; j < gs.navo; j++) c[j] = gs.avo[j];
             cnt = gs.navo;
@@ -575,7 +826,7 @@ static void gen_arp(track_t *t, uint32_t len)
         n[0] = c[j] + (o >= 4 ? 12 : 0);
         while (n[0] > 79) n[0] -= 12;
         while (n[0] < 48) n[0] += 12;
-        gnote(&t->step[i], n, 1, idx % 4u == 0u ? 92 : 78, 0);
+        gnote(&t->step[i], n, 1, idx % 4u == 0u || k % no == 0u ? 92 : 78, 0);
         if (gs.complex > 50u && gch(6)) step_set_ratchet(&t->step[i], 2);
         k++;
     }
@@ -583,118 +834,307 @@ static void gen_arp(track_t *t, uint32_t len)
 }
 
 /* ---------------------------------------------------------------------------------------------------- lead --- */
-static const uint8_t TONAL_W[7] = {255, 96, 128, 64, 192, 96, 128};   /* Marbles' weights: the tonic, its fifth, third .. */
-static const uint8_t PROX_W[5] = {80, 255, 180, 90, 40};               /* |step| 0..4 of the scale */
-static int32_t gl_prev;                                  /* (0.7.0) the line's last note: the next stays in its octave */
-static int32_t glead_note(const track_t *t, int32_t deg)
+/* (0.8.3) the lead composed: a line of notes as degrees of the mode (from the lead's tonic), written once polished.
+ * The rules every style keeps: a chord tone on the strong steps (the beats), the lead's degrees (the genre's
+ * pentatonic where it sings one), inside a tenth or so, a leap past a fourth followed by a step back, never more than
+ * an octave, the phrase ending on a stable degree where it cadences, the tones a borrowed or secondary chord moves
+ * followed (b7 to the leading tone over the minor key's V). MOTIF and HOOK: a one-bar motif (a rhythm cell and a
+ * contour of steps), developed over the phrase by a template (a period: antecedent ending open on the 2nd or 5th,
+ * consequent closing on the tonic; a sentence: the motif, its sequence, a continuation climbing to the climax two thirds
+ * in, the cadence; A A B A; call and response; the techno hook A A A A') and one operator a varied bar */
+#define GL_MAX 48u
+typedef struct { uint8_t at, len, vel, fl, lock; int8_t d, chrom; } gln_t;
+typedef struct { gln_t n[GL_MAX]; uint32_t k; int32_t tn, dlo, dhi; } gline_t;
+static int gl_ct(int32_t d, uint32_t at) { return (int)((gchord_pcs(at) >> gpc(d)) & 1u); }
+static int gl_pal(int32_t d) { return (int)((gs.pal >> (uint32_t)(((d % 7) + 7) % 7)) & 1u); }
+static int32_t gl_pitch(const gline_t *L, int32_t d) { return gnd(L->tn, d); }
+/* the chord tone at step at nearest degree d (the lead's degrees first, dir's side first on a tie), inside the window */
+static int32_t gl_near(const gline_t *L, int32_t d, uint32_t at, int dir)
 {
-    int32_t n = gdeg(t, 55, deg);
-    while (n > 79) n -= 12;
-    while (n < 55) n += 12;
-    if (gl_prev) {                                      /* (0.7.0) a leap past a sixth (the motif moved with the chord,
-                                                         * the window's edge): the octave nearer the last note */
-        if (n - gl_prev > 9 && n - 12 >= 55) n -= 12;
-        else if (gl_prev - n > 9 && n + 12 <= 79) n += 12;
+    int32_t k, best = d, bs = 99;
+    for (k = 0; k <= 4; k++) {
+        int32_t sgn, e;
+        for (sgn = 0; sgn < 2; sgn++) {
+            e = d + ((sgn == 0) == (dir >= 0) ? k : -k);
+            if (e < L->dlo || e > L->dhi || !gl_ct(e, at)) continue;
+            if (k * 2 + !gl_pal(e) < bs) { bs = k * 2 + !gl_pal(e); best = e; }
+        }
     }
-    gl_prev = n;
-    return n;
+    return best;
 }
-/* the next degree of a line: near the last, the key's weights, a chord tone on a strong step three times in four */
-static int32_t glead_next(int32_t prev, int32_t cdeg, int strong, int32_t lo, int32_t hi)
+static int32_t gl_fold(const gline_t *L, int32_t d)     /* into the window by octaves */
 {
-    uint8_t w[9];
-    int32_t k;
-    for (k = -4; k <= 4; k++) {
-        int32_t d = prev + k, cls = ((d % (int32_t)gs.nsc) + (int32_t)gs.nsc) % (int32_t)gs.nsc;
-        uint32_t ww = (uint32_t)PROX_W[k < 0 ? -k : k] * TONAL_W[cls % 7u] / 255u;
-        if (strong) ww = gchord_tone(d, cdeg) ? ww * 3u : ww / 3u;
-        if (d < lo || d > hi) ww = 0;
-        w[k + 4] = (uint8_t)(ww > 255u ? 255u : ww);
-    }
-    return prev + (int32_t)gpickw(w, 9) - 4;
+    while (d > L->dhi) d -= 7;
+    while (d < L->dlo) d += 7;
+    return d;
 }
+static void gl_add(gline_t *L, uint32_t at, int32_t d, uint32_t vel, uint32_t lock)
+{
+    gln_t *x;
+    if (L->k >= GL_MAX) return;
+    if (L->k && L->n[L->k - 1u].at >= at) return;       /* (in time order, one a step) */
+    x = &L->n[L->k++];
+    x->at = (uint8_t)at; x->d = (int8_t)gl_fold(L, d); x->vel = (uint8_t)vel; x->lock = (uint8_t)lock;
+    x->fl = 0; x->len = 0; x->chrom = 0;
+}
+/* the cadence: the last note of a phrase on the tonic (a full close: else the third, the fifth, the nearest chord tone)
+ * or open (a half close: the 2nd or the 5th, else the third), the octave nearest the note before */
+static int32_t gl_cad(const gline_t *L, int32_t d, uint32_t at, int full)
+{
+    static const int8_t FULL[3] = {0, 2, 4}, HALF[3] = {1, 4, 2};
+    const int8_t *T = full ? FULL : HALF;
+    int32_t k, best = 0x7FFF, bo = 99, ref = L->k ? L->n[L->k - 1u].d : d;   /* (reached from the line's last note:
+                                                         * the stable degree nearest it, the tonic first on a near tie) */
+    for (k = 0; k < 3; k++) {
+        int32_t e;
+        for (e = T[k] - 7; e <= T[k] + 14; e += 7) {
+            int32_t dd = (e - ref < 0 ? ref - e : e - ref) * 3 + (e - d < 0 ? d - e : e - d) + k * 2;
+            if (e >= L->dlo && e <= L->dhi && gl_ct(e, at) && dd < best) { best = dd; bo = e; }
+        }
+    }
+    return bo < 99 ? bo : gl_near(L, d, at, 0);
+}
+/* the line polished and written: the octave nearest the last note past a 9th; a leap past a fourth followed by a step
+ * back (a third where the strong step wants a chord tone); a borrowed or secondary chord's moved tones followed; each
+ * note held to the next (a breath before it, more of one at low energy); the slides now and then */
+static int gl_clash(int32_t d, uint32_t at)              /* a minor ninth or a tritone over the chord's root (the bass's) */
+{
+    uint32_t iv = (gpc(d) + 12u - gchord_root_pc(at)) % 12u;
+    return (iv == 1u || iv == 6u) && !gl_ct(d, at);
+}
+static void gl_write(track_t *t, gline_t *L, uint32_t len, uint32_t legato)
+{
+    uint32_t i;
+    for (i = 0; i < L->k; i++) {                        /* no minor ninth, no tritone over the root: a step aside, a
+                                                         * chord tone where one is a step away */
+        gln_t *x = &L->n[i];
+        int32_t dn = x->d - 1, up = x->d + 1;
+        int okd, oku;
+        if (!gl_clash(x->d, x->at)) continue;
+        okd = !gl_clash(dn, x->at) && dn >= L->dlo; oku = !gl_clash(up, x->at) && up <= L->dhi;
+        if (okd && (!oku || gl_ct(dn, x->at) || !gl_ct(up, x->at))) x->d = (int8_t)dn;
+        else if (oku) x->d = (int8_t)up;
+    }
+    for (i = 1; i + 1u < L->k; i++) {                   /* the weak notes between two others: passing and neighbour
+                                                         * tones (the smoothest of the note, a step up, a step down) */
+        gln_t *x = &L->n[i];
+        int32_t pv = gl_pitch(L, L->n[i - 1u].d), nv = gl_pitch(L, L->n[i + 1u].d), k, best = x->d, bc = 0x7FFF;
+        if (x->at % 8u == 0u || x->lock) continue;
+        {   /* (only where the line skips: a step in and a step out are left as they are) */
+            int32_t p0 = gl_pitch(L, x->d), a1 = p0 - pv, a2 = nv - p0;
+            if (a1 < 0) a1 = -a1;
+            if (a2 < 0) a2 = -a2;
+            if (a1 <= 2 && a2 <= 2 && (a1 || a2)) continue;
+        }
+        for (k = -1; k <= 1; k++) {
+            int32_t d = x->d + k, p = gl_pitch(L, d), c;
+            if (d < L->dlo || d > L->dhi || gl_clash(d, x->at)) continue;
+            c = (p > pv ? p - pv : pv - p) + (nv > p ? nv - p : p - nv) + (k ? 2 : 0) + (gl_pal(d) ? 0 : 4) +
+                (d == L->n[i - 1u].d ? 5 : 0) + (gl_ct(d, x->at) ? 0 : x->at % 4u ? 1 : 3);   /* (beats 2 and 4: a
+                                                         * passing note only where it makes the line move by steps) */
+            if (c < bc) { bc = c; best = d; }
+        }
+        x->d = (int8_t)best;
+    }
+    for (i = 0; i < L->k; i++) {                        /* no avoid note held a beat or more (the 4th over a major
+                                                         * third, b6 over the fifth, b9 over the root) */
+        gln_t *x = &L->n[i];
+        uint32_t nxt = i + 1u < L->k ? L->n[i + 1u].at : len, dur = x->len ? x->len : nxt - x->at;
+        const gch_t *c = gchord(x->at);
+        int sus3 = (c->q == Q_SUS2 || c->q == Q_SUS4) && gpc(x->d) == (uint32_t)gtone(c, 2, 12) % 12u;   /* (a suspension's
+                                                         * third: against its 4th) */
+        if (dur >= 4u && !x->lock && !gl_ct(x->d, x->at) && (sus3 || ((gchord_pcs(x->at) >> ((gpc(x->d) + 11u) % 12u)) & 1u)))
+            x->d = (int8_t)gl_near(L, x->d, x->at, i ? (L->n[i - 1u].d > x->d ? 1 : -1) : 0);   /* (a semitone over a chord
+                                                         * tone, held: down onto it, or the nearest) */
+    }
+    for (i = 1; i < L->k; i++) {                        /* never past an octave */
+        gln_t *x = &L->n[i], *p = &L->n[i - 1u];
+        int32_t iv = gl_pitch(L, x->d) - gl_pitch(L, p->d);
+        if (iv > 12 && x->d - 7 >= L->dlo - 2) x->d = (int8_t)(x->d - 7);
+        else if (iv < -12 && x->d + 7 <= L->dhi + 2) x->d = (int8_t)(x->d + 7);
+    }
+    for (i = 1; i + 1u < L->k; i++) {                   /* a leap past a fourth: the next note a step back (a third
+                                                         * where the strong step wants a chord tone) */
+        gln_t *x = &L->n[i], *p = &L->n[i - 1u], *nx = &L->n[i + 1u];
+        int32_t iv = gl_pitch(L, x->d) - gl_pitch(L, p->d), sg = iv > 0 ? 1 : -1, a = iv < 0 ? -iv : iv, nv, b;
+        if (a <= 5 || nx->lock) continue;
+        nv = gl_pitch(L, nx->d) - gl_pitch(L, x->d);
+        b = nv < 0 ? -nv : nv;
+        if (b && b <= 2 && (nv > 0) != (iv > 0)) continue;   /* (already back by a step) */
+        if ((nx->at % 16u || gl_ct(x->d - sg, nx->at)) && !gl_clash(x->d - sg, nx->at)) nx->d = (int8_t)(x->d - sg);   /* (on
+                                                         * beat 3 an appoggiatura too; on the bar's one a chord tone) */
+        else if (gl_ct(x->d - 2 * sg, nx->at)) nx->d = (int8_t)(x->d - 2 * sg);
+    }
+    for (i = 0; i < L->k; i++) {                        /* a coloured chord's moved tones: the line follows them */
+        gln_t *x = &L->n[i];
+        const gch_t *c = gchord(x->at);
+        uint32_t s;
+        if (!c->alt) continue;
+        for (s = 0; s <= 6u; s += 2u) {
+            int32_t al = galt(c, (int32_t)s);
+            uint32_t ap = (uint32_t)gtone(c, (int32_t)s, 12) % 12u;
+            if (al && (gpc(x->d) + 12u + (uint32_t)al) % 12u == ap && ((gpcm(c) >> ap) & 1u)) { x->chrom = (int8_t)al; break; }
+        }
+    }
+    for (i = 0; i < L->k; i++) {
+        gln_t *x = &L->n[i];
+        uint32_t nxt = i + 1u < L->k ? L->n[i + 1u].at : len + L->n[0].at, gap, h;
+        int32_t n[1];
+        if (x->at >= len) break;
+        n[0] = gl_pitch(L, x->d) + x->chrom;
+        gnote(&t->step[x->at], n, 1, x->vel, (x->fl & 1u) ? SF_SLIDE : 0u);
+        gap = nxt - x->at;
+        h = x->len ? x->len : gap > legato ? gap - legato : 0u;
+        if (h + x->at >= len) h = len - x->at - 1u;
+        if (h) dhold(t, x->at, h, len);
+    }
+}
+/* the motif's rhythm cells: figures that hold together (a long note and two short, a tresillo, a pickup into three, a
+ * dotted push ..) */
+static const char *const GL_CELL[12] = {"x..x..x...x.....", "x.x.x...x.x.....", "x...x.x.x.......", "..x...x...x...x.",
+                                        "x..x.x..x..x.x..", "x.......x.x.x...", "x...x...x...x...", "x.x...x.x...x...",
+                                        "..x.x...x.x.....", "x..x..x..x..x...", "x.....x...x.x...", "x...x.x.......x."};
+enum { LB_M, LB_V, LB_R, LB_C, LB_REST };               /* a bar of the phrase: the motif, varied, the answer, the
+                                                         * continuation, a rest */
 static void gen_lead(track_t *t, uint32_t len)
 {
     const ggenre_t *g = gs.g;
-    uint32_t i, j, a = gs.amt[GP_LEAD], bars = len / 16u ? len / 16u : 1u, style = g->lead;
-    int32_t n[1];
+    uint32_t i, j, a = gs.amt[GP_LEAD], bars = (len + 15u) / 16u, style = g->lead, fam = HXF(gs.hx), legato = gs.energy < 34u ? 4u : 2u;
+    gline_t L;
     gseed(GS_LEAD);
-    gl_prev = 0;
     if (style == LD_NONE) return;
-    if (style == LD_OSTINATO) {
+    L.k = 0;
+    L.tn = 55 + ((gs.root - 55) % 12 + 12) % 12;        /* the lead's tonic (degree 0): G3 .. F#4 */
+    {   /* its window, the same in every key: Bb3 .. E5 (a motif, a hook), lower for an ostinato and long notes, higher
+         * for Part's line */
+        int32_t lo = style == LD_OSTINATO ? 55 : style == LD_SPARSE ? 56 : style == LD_TINTI ? 60 : 58, hi = lo + 17;
+        if (style == LD_OSTINATO) hi = 72;
+        for (L.dlo = -7; gnd(L.tn, L.dlo) < lo; L.dlo++) {}
+        for (L.dhi = L.dlo; gnd(L.tn, L.dhi + 1) <= hi; L.dhi++) {}
+    }
+    if (style == LD_OSTINATO) {                         /* a cell of two to four notes (repeats welcome) on an euclid, the
+                                                         * chord's tones on the beats, its last note lifted on the third bar */
         int8_t cl[4];
-        uint32_t k = (uint32_t)grr(3, 4) + (gs.energy > 66u), rot = (uint32_t)grr(0, 3), nc = (uint32_t)grr(2, 4), q = 0;
-        int32_t d = 0;
-        for (j = 0; j < nc; j++) { cl[j] = (int8_t)d; d = glead_next(d, gchord_deg(0), 1, -3, 7); }
+        uint32_t k = (uint32_t)grr(3, 4) + (gs.energy > 66u), rot = (uint32_t)grr(0, 3), nc = (uint32_t)grr(2, 4), q = 0, bre = 0, keep = 0xFFFFu;
+        int32_t d = gl_near(&L, grr(0, 4), 0, 1);
+        for (j = 0; j < nc; j++) {
+            static const uint8_t W[5] = {25, 45, 20, 0, 10};   /* (a repeat, a step, a third, -, a fourth) */
+            uint32_t m = gpickw(W, 5);
+            if (j + 1u == nc && !m && cl[0] == d && (j < 2u || cl[1] == d)) m = 1;   /* (two notes at least) */
+            cl[j] = (int8_t)d;
+            d += (gch(50) ? 1 : -1) * (int32_t)m;
+            if (d < L.dlo + 1 || d > L.dhi - 2) d -= 2 * (d > L.dhi - 2 ? (int32_t)m : -(int32_t)m);   /* (inside, off the
+                                                         * window's edges: room for the chords' moves) */
+        }
+        for (j = 0; j < 16u; j++) if (j % 4u && gr() % 100u >= 50u + a / 2u) keep &= ~(1u << j);   /* (the same holes a bar) */
         for (i = 0; i < len; i++) {
             uint32_t b = i / 16u;
+            int32_t dd, sh = (int32_t)gchord(i)->deg - (int32_t)gchord(0)->deg;
+            if (i % 16u == 0u) bre = b % 4u == 3u && gch(50);   /* (the fourth bar: a breath, its second half) */
             if (!euclid(i % 16u, k, 16, rot)) continue;
-            if (b % 4u == 3u && gch(50)) continue;      /* (the fourth bar: a breath) */
-            if (gr() % 100u >= 50u + a / 2u) continue;
-            n[0] = glead_note(t, cl[q % nc] + (b % 4u == 2u && q % nc == nc - 1u ? 1 : 0) + gchord_deg(i) - gchord_deg(0));
-            gnote(&t->step[i], n, 1, q % nc == 0u ? 98 : 82, gch(12) ? SF_SLIDE : 0u);
+            if (bre && i % 16u >= 8u) continue;
+            if (!((keep >> (i % 16u)) & 1u)) continue;
+            while (sh > 3) sh -= 7;
+            while (sh < -3) sh += 7;
+            dd = cl[q % nc] + sh + (b % 4u == 2u && q % nc == nc - 1u ? 1 : 0);
+            if (i % 4u == 0u || !gl_pal(dd)) dd = gl_near(&L, dd, i, 0);
+            gl_add(&L, i, dd, q % nc == 0u ? 98 : 82, 0);
+            if (gch(12) && L.k) L.n[L.k - 1u].fl = 1;
             q++;
         }
+        gl_write(t, &L, len, 1);
         return;
     }
-    if (style == LD_MECH) {
-        static const int8_t MT[4][8] = {{0, 2, 4, 2, 0, 4, 7, 4}, {4, 4, 2, 0, 2, 2, 0, -1}, {0, 0, 4, 0, 5, 4, 2, 0}, {7, 4, 2, 4, 0, 2, 4, 0}};
+    if (style == LD_MECH) {                             /* a machine's figure on an euclid, moved with the chord */
+        static const int8_t MT[4][8] = {{0, 1, 2, 1, 0, 2, 4, 2}, {4, 4, 2, 1, 2, 2, 0, -1}, {0, 0, 4, 3, 2, 1, 2, 0}, {7, 6, 4, 4, 2, 4, 5, 4}};
         const int8_t *mt = MT[gr() % 4u];
         uint32_t k = (uint32_t)grr(4, 6) + (gs.energy > 66u), rot = (uint32_t)grr(0, 3), idx, q;
+        int32_t oo = 0, o, best = 99;
+        for (o = -7; o <= 7; o += 7) {                  /* (the figure's octave: the most of it inside the window) */
+            int32_t c = 0;
+            for (q = 0; q < 8u; q++) c += mt[q] + o < L.dlo || mt[q] + o > L.dhi;
+            if (c < best) { best = c; oo = o; }
+        }
         for (i = 0; i < len; i++) {
+            int32_t dd, sh;
             if (!euclid(i % 16u, k, 16, rot)) continue;
             for (q = 0, idx = 0; q < i % 16u; q++) idx += euclid(q, k, 16, rot);
-            n[0] = glead_note(t, mt[idx % 8u] + gchord_deg(i - i % 16u));
-            gnote(&t->step[i], n, 1, 92, 0);
+            sh = (int32_t)gchord(i - i % 16u)->deg - (int32_t)gchord(0)->deg;
+            while (sh > 3) sh -= 7;
+            while (sh < -3) sh += 7;
+            dd = mt[idx % 8u] + sh + oo;
+            if (i % 4u == 0u || !gl_pal(dd)) dd = gl_near(&L, dd, i, 0);
+            gl_add(&L, i, dd, 92, 0);
         }
+        gl_write(t, &L, len, 1);
         return;
     }
-    if (style == LD_SPARSE || style == LD_TINTI) {      /* long notes: one or two a bar (TINTI: a scale line); (0.6.93)
-                                                         * SPARSE: a long note, or a short figure of two or three into it,
-                                                         * from the bar's one or its third beat */
-        int32_t d = style == LD_TINTI ? grr(2, 5) : 2, dir = gch(50) ? -1 : 1;
-        uint32_t fig = style == LD_SPARSE && gch(55), off = style == LD_SPARSE && gch(40) ? 4u : 0u;
+    if (style == LD_SPARSE || style == LD_TINTI) {      /* long notes (SPARSE: a guide-tone line, each the chord tone
+                                                         * nearest the last, now and then a short figure stepping into it;
+                                                         * TINTI: Part's line, stepwise, a chord tone on each long note) */
+        int32_t d = gl_near(&L, style == LD_TINTI ? grr(2, 5) : 2, 0, 1), dir = gch(50) ? -1 : 1;
+        uint32_t fig = style == LD_SPARSE && gch(55), off = style == LD_SPARSE && gch(40) ? 4u : 0u, nlong = 0;
         for (i = 0; i < len; i += 8u) {
-            uint32_t b = i / 16u, at = i + off, hold;
+            uint32_t b = i / 16u, at = i + off, hold, last = i + 8u >= len;
             if (at >= len) break;
-            if (style == LD_SPARSE && ((i % 16u && gr() % 100u >= a) || (b % 2u == 1u && gch(40)))) continue;
-            if (style == LD_SPARSE) d = gnear_ct(glead_next(d, gchord_deg(at), 0, -2, 7), gchord_deg(at));
-            else { d += dir; if (d < -2 || d > 7) { dir = -dir; d += 2 * dir; } }
+            if (style == LD_SPARSE && ((i % 16u && gr() % 100u >= a) || (b % 2u == 1u && gch(40))) && !last) continue;
+            if (style == LD_SPARSE && nlong) {
+                int32_t e, k2;                          /* (moving on: the next chord tone that way, a step or a
+                                                         * third; the same note only now and then) */
+                if (d + 2 * dir < L.dlo || d + 2 * dir > L.dhi) dir = -dir;
+                for (k2 = 1, e = d; k2 <= 3; k2++) if (gl_ct(d + dir * k2, at)) { e = d + dir * k2; break; }
+                if (e == d || (gl_ct(d, at) && gch(15))) e = gl_near(&L, d, at, dir);
+                d = e;
+                if (gch(35)) dir = -dir;
+            } else if (style == LD_SPARSE) {
+                d = gl_near(&L, d, at, 1);              /* (the first: a chord tone near the third) */
+            } else if (i % 16u == 0u) {                 /* (TINTI: the bar's long note a chord tone a step or a third
+                                                         * on; its second a step on, passing) */
+                int32_t e = d + dir;
+                if (e < L.dlo + 1 || e > L.dhi - 1) { dir = -dir; e = d + dir; }
+                d = gl_ct(e, at) ? e : gl_ct(e + dir, at) ? e + dir : gl_near(&L, e, at, dir);
+            } else {
+                at = i + 2u;                            /* (off the beat: a passing note) */
+                d += dir;
+                if (d < L.dlo || d > L.dhi) { dir = -dir; d += 2 * dir; }
+            }
+            if (last) d = gl_cad(&L, d, at, 1);         /* (the loop closes on the tonic) */
             hold = style == LD_TINTI ? 6u : 12u - (gs.energy > 66u ? 4u : 0u) - off;
-            if (fig && gch(60)) {                       /* the figure: two short notes stepping into the long one */
+            if (fig && gch(60) && nlong) {              /* the figure: one or two short notes stepping into the long one */
                 uint32_t q, nf = (uint32_t)grr(1, 2);
-                int32_t dd = d - (int32_t)nf * (gch(50) ? 1 : -1);
-                for (q = 0; q < nf && at + q * 2u + 2u < len; q++) {
-                    n[0] = glead_note(t, dd + (int32_t)q * (dd < d ? 1 : -1));
-                    gnote(&t->step[at + q * 2u], n, 1, 76, 0);
-                }
+                int32_t s = gch(50) ? 1 : -1;
+                for (q = 0; q < nf && at + q * 2u + 2u < len; q++) gl_add(&L, at + q * 2u, d + s * (int32_t)(nf - q), 76, 0);
                 at += nf * 2u;
                 hold = hold > nf * 2u ? hold - nf * 2u : 2u;
             }
             if (at >= len) break;
-            n[0] = glead_note(t, d);
-            gnote(&t->step[at], n, 1, 84, 0);
-            dhold(t, at, hold, len);
+            gl_add(&L, at, d, 84, last);
+            if (L.k) L.n[L.k - 1u].len = (uint8_t)hold;
+            nlong++;
         }
+        gl_write(t, &L, len, 2);
         return;
     }
-    {   /* LD_MOTIF, LD_HOOK: a one-bar motif of k onsets (the strong steps likelier), its contour by the key's weights
-         * (a leap filled back), chord tones on strong steps; the phrase over four bars from a template, a variation
-         * operator on the varied bars; HOOK: the second bar answers (the same rhythm, the contour turned, ending on a
-         * chord tone) */
-        static const uint8_t TPL[5][4] = {{0, 0, 0, 1}, {0, 1, 0, 2}, {0, 3, 0, 1}, {0, 0, 3, 1}, {0, 1, 3, 2}};   /* 0 M 1 V1 2 V2 3 rest */
-        /* (0.6.97) the motif's rhythm: a cell from a library of figures that hold together (a long note and two short
-         * ones, a tresillo, a pickup into the three, a dotted push ..), its onsets thinned to k by complexity */
-        static const char *const CELL[12] = {"x..x..x...x.....", "x.x.x...x.x.....", "x...x.x.x.......", "..x...x...x...x.",
-                                             "x..x.x..x..x.x..", "x.......x.x.x...", "x...x...x...x...", "x.x...x.x...x...",
-                                             "..x.x...x.x.....", "x..x..x..x..x...", "x.....x...x.x...", "x...x.x.......x."};
-        uint8_t at[6], used[16] = {0};
-        int8_t deg[6], ans[6];
-        uint32_t k = 2u + gs.complex / 35u + (a > 60u), tpl = gr() % 5u, op1 = gr() % 5u, op2 = gr() % 5u, nc = 0;
-        int32_t d = (int32_t)(gr() % 3u) * 2, prev_mv = 0;
-        const char *cell = CELL[gr() % 12u];
-        if (k > 5u) k = 5u;
-        if (style == LD_HOOK) tpl = 4;
+    {   /* MOTIF, HOOK */
+        static const uint8_t TPL[6][4] = {{LB_M, LB_V, LB_M, LB_V},    /* a period: open, closed */
+                                          {LB_M, LB_M, LB_C, LB_V},    /* a sentence */
+                                          {LB_M, LB_M, LB_R, LB_V},    /* A A B A' */
+                                          {LB_M, LB_M, LB_M, LB_V},    /* the hook: A A A A' */
+                                          {LB_M, LB_R, LB_M, LB_R},    /* call and response */
+                                          {LB_M, LB_REST, LB_M, LB_V}};/* the dub's: space */
+        static const int8_t ARCH[6][4] = {{0, 0, 1, 0}, {0, 0, 2, 0}, {0, 0, 1, 0}, {0, 0, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 0}};
+        uint8_t at[8], used[16] = {0};
+        int8_t mo[8];
+        uint32_t k = 3u + gs.complex / 40u + (a > 60u), nc = 0, tpl, op = gr() % 5u, ct = gr() % 4u;   /* (op: the varied
+                                                         * bar's: 0 TRUNC, 1 RETRO, 2 END moved, 3 ORN, 4 AUG) */
+        int32_t anchor, d = 0, pv = 0, base0;
+        const char *cell = GL_CELL[gr() % 12u];
+        if (a < 35u && k > 3u) k--;
+        if (k > 6u) k = 6u;
+        tpl = style == LD_HOOK ? (gch(65) ? 4u : 2u) :
+              fam == HF_LOOP ? (gch(60) ? 3u : 5u) :
+              fam == HF_POP ? (gr() % 3u == 0u ? 1u : gch(50) ? 0u : 4u) :
+              fam == HF_JAZZ || fam == HF_JAZZY ? (gch(40) ? 1u : gch(50) ? 2u : 0u) : (gch(50) ? 0u : 1u);
         for (i = 0; i < 16u; i++) if (cell[i] == 'x') { used[i] = 1; nc++; }
         while (nc > k) {                                /* (thinned: a weak onset dropped, never the first) */
             uint32_t p = 1u + gr() % 15u;
@@ -702,50 +1142,106 @@ static void gen_lead(track_t *t, uint32_t len)
         }
         k = nc;
         for (j = 0, i = 0; i < 16u; i++) if (used[i]) at[j++] = (uint8_t)i;
-        for (j = 0; j < k; j++) {                       /* the contour */
+        for (j = 0; j < k; j++) {                       /* the contour: steps mostly, a leap turned back by a step, the
+                                                         * shape (an arch, falling, rising, a wave) leaning each move */
             if (j) {
-                int32_t nd = glead_next(d, gchord_deg(0), at[j] % 4u == 0u, -3, 8), mv = nd - d;
-                if (prev_mv >= 3 || prev_mv <= -3) mv = prev_mv > 0 ? -1 : 1;   /* (the leap filled) */
-                prev_mv = mv;
-                d += mv;
+                static const uint8_t W[4] = {8, 64, 22, 6};   /* (a repeat, a step, a third, a fourth or fifth) */
+                int32_t m = (int32_t)gpickw(W, 4), dir;
+                if (!m && !pv) m = 1;                   /* (never two repeats running) */
+                if (m == 3) m = gch(60) ? 3 : 4;
+                dir = ct == 0u ? (j <= k / 2u ? 1 : -1) : ct == 1u ? (gch(75) ? -1 : 1) : ct == 2u ? (gch(75) ? 1 : -1) : (j & 1u ? 1 : -1);
+                if (pv >= 3 || pv <= -3) { m = 1; dir = pv > 0 ? -1 : 1; }   /* (the leap filled) */
+                if (d + dir * m > 4 || d + dir * m < -3) dir = -dir;
+                pv = dir * m;
+                d += pv;
             }
-            deg[j] = (int8_t)d;
-            ans[j] = (int8_t)(deg[0] - (d - deg[0]));   /* (the answer: the contour turned) */
+            mo[j] = (int8_t)d;
         }
-        if (style == LD_HOOK) ans[k - 1u] = (int8_t)gnear_ct(ans[k - 1u], gchord_deg(16 < len ? 16 : 0));
+        {   /* the anchor: the first note a chord tone of the first chord, the motif centred in the window */
+            int32_t lo = 0, hi = 0;
+            for (j = 0; j < k; j++) { if (mo[j] < lo) lo = mo[j]; if (mo[j] > hi) hi = mo[j]; }
+            anchor = gl_near(&L, (L.dlo + L.dhi) / 2 - (lo + hi) / 2 - 1, at[0], 1);
+            if (anchor + hi > L.dhi) anchor -= 7;
+            if (anchor + lo < L.dlo) anchor += 7;
+            base0 = (int32_t)gchord(0)->deg;
+        }
         for (i = 0; i < bars; i++) {
-            uint32_t ph = TPL[tpl][i % 4u], b0 = i * 16u, op = i % 4u == 3u ? op1 : op2, kk = k;
-            int32_t ch = gchord_deg(b0), shift = gch(45) ? ch - gchord_deg(0) : 0, endmv = 0, half = (int32_t)gs.nsc / 2;
-            const int8_t *dg = deg;
-            while (shift > half) shift -= (int32_t)gs.nsc;   /* (0.7.0) the motif follows the chord the nearer way: a
-                                                         * fourth up is a fifth down, never an octave's worth of leap */
-            while (shift < -half) shift += (int32_t)gs.nsc;
-            if (ph == 3u) continue;                     /* (a bar of rest) */
-            if (style == LD_HOOK && (i & 1u)) dg = ans;
-            if (ph == 1u || ph == 2u) {                 /* the variation: one operator */
-                if (op == 0u) kk = k > 2u ? k - 1u : k;  /* TRUNC */
-                else if (op == 1u) endmv = gch(50) ? 1 : -1;   /* END moved */
-                else if (op == 2u) shift += 2;          /* TRANSP up a third */
-                else if (op == 3u) shift -= 1;          /* down a step */
-                /* 4: ORN, a passing note before the last */
+            uint32_t bt = bars == 1u ? LB_M : bars == 2u ? (i ? (tpl == 4u ? LB_R : LB_V) : LB_M) : TPL[tpl][i % 4u];
+            uint32_t b0 = i * 16u, last = i + 1u == bars, cad = last ? 2u : (bars >= 4u && i % 4u == 1u && (tpl == 0u || tpl == 4u)) ? 1u : 0u;
+            int32_t sh = (int32_t)gchord(b0)->deg - base0, arch = bars >= 4u ? ARCH[tpl][i % 4u] : 0, inv = bt == LB_R;
+            uint32_t kk = k, vop = bt == LB_V ? op : 99u;
+            const gch_t *bc0 = gchord(b0);
+            int lit = gch(25);
+            while (sh > 3) sh -= 7;
+            while (sh < -3) sh += 7;
+            if (bt == LB_REST) continue;
+            if (i && (bc0->deg == (uint32_t)base0 ? bt != LB_C : (!lit || bt == LB_C))) {   /* (0.8.3) the motif moved to this bar's
+                                                         * chord the voice-led way: its first note the chord tone a step
+                                                         * (or a common tone) from the line's last, a step higher into the
+                                                         * climax; on the first chord again: as it was */
+                int32_t first = anchor + mo[0] + arch, pd = L.k ? L.n[L.k - 1u].d : first, c = (L.dlo + L.dhi) / 2;
+                int32_t want = arch > 0 ? 2 : pd > c ? -1 : 1;
+                sh = gl_near(&L, pd + want, b0, want) - first;
+            } else if (i && bc0->deg == (uint32_t)base0) sh = 0;
+            if (bt == LB_C && !sh) sh = 1;              /* (the continuation: a sequence up) */
+            if (vop == 0u && kk > 2u) kk--;             /* TRUNC: its last note left out */
+            if (vop == 4u) {                            /* (AUG: the notes of its first half, two at least) */
+                uint32_t q;
+                for (q = 0; q < kk && at[q] < 8u; q++) {}
+                if (q >= 2u) kk = q; else vop = 99u;
+            }
+            {   /* the bar's octave: inside the window, its first note nearest the line's last (never a note folded alone) */
+                int32_t o, bo = 0, bc = 0x7FFF, pd = L.k ? L.n[L.k - 1u].d : anchor;
+                for (o = -7; o <= 7; o += 7) {
+                    int32_t cst = 0, e;
+                    for (j = 0; j < kk; j++) {
+                        e = anchor + (inv ? -mo[j] + 2 * mo[0] : mo[j]) + sh + arch + o;
+                        cst += (e < L.dlo || e > L.dhi) * 5;
+                    }
+                    e = anchor + mo[0] + sh + arch + o - pd;
+                    cst += 2 * (e < 0 ? -e : e);
+                    if (cst < bc) { bc = cst; bo = o; }
+                }
+                sh += bo;
             }
             for (j = 0; j < kk; j++) {
-                int32_t dd = dg[j] + shift + (j == kk - 1u ? endmv : 0);
-                uint32_t pos = b0 + at[j], nxt = j + 1u < kk ? at[j + 1u] : 16u + at[0], gap = nxt - at[j];
+                uint32_t pos = b0 + (vop == 4u ? at[j] * 2u : at[j]);   /* AUG: its first half's rhythm doubled */
+                int32_t mj = vop == 1u ? mo[kk - 1u - j] - mo[kk - 1u] + mo[0] : mo[j];   /* RETRO: its notes backwards
+                                                         * from its first (the rhythm kept) */
+                int32_t dd = anchor + (inv ? -mj + 2 * mo[0] : mj) + sh + arch;
+                if (vop == 4u && at[j] >= 8u) break;
+                int strong = at[j] % 8u == 0u || j == 0u, dir = j ? (mo[j] > mo[j - 1] ? 1 : -1) : 0;   /* (beats 1 and 3:
+                                                         * a chord tone; 2 and 4 one too, or a passing note, below) */
+                if (bt == LB_C && at[j] >= 8u) continue;
                 if (pos >= len) break;
-                if (at[j] % 4u == 0u && gch(65)) dd = gnear_ct(dd, ch);
-                if (i % 4u == 3u && j == kk - 1u) dd = gnear_ct(dd, ch);   /* (0.7.0) the phrase ends on a chord tone */
-                if (gr() % 100u >= 55u + a / 2u && j && j != kk - 1u) continue;   /* (space with less amount) */
-                n[0] = glead_note(t, dd);
-                gnote(&t->step[pos], n, 1, at[j] % 4u == 0u ? 96 : 82, gch(8) ? SF_SLIDE : 0u);
-                if ((ph == 1u || ph == 2u) && op == 4u && j == kk - 1u && at[j] && t->step[pos - 1u].time != ST_NOTE) {
-                    int32_t m[1] = {glead_note(t, dd - 1)};
-                    gnote(&t->step[pos - 1u], m, 1, 70, 0);
-                    continue;
+                if (vop == 2u && j + 1u == kk) dd += gch(50) ? 1 : -1;   /* END moved */
+                if (j && (mo[j] - mo[j - 1] >= 3 || mo[j - 1] - mo[j] >= 3)) dir = -dir;   /* (after a leap: the chord tone
+                                                         * on its near side, the leap never widened) */
+                if (strong && !gl_ct(dd, pos)) dd = gl_near(&L, dd, pos, inv ? -dir : dir);
+                else if (!gl_pal(dd)) dd = gl_near(&L, dd, pos, dir);
+                if (cad && j + 1u == kk) dd = gl_cad(&L, dd, pos, cad == 2u);
+                if (vop == 3u && j + 1u == kk && at[j] >= 2u && (!L.k || L.n[L.k - 1u].at + 1u < pos - 1u))
+                    gl_add(&L, pos - 1u, dd + (gch(50) ? 1 : -1), 70, 0);   /* ORN: a neighbour into the last note */
+                gl_add(&L, pos, dd, (strong ? 96u : 82u) + (arch > 0 ? 6u : 0u), cad && j + 1u == kk);
+                if (gch(8) && L.k) L.n[L.k - 1u].fl = 1;
+                if (cad == 2u && j + 1u == kk && L.k) {  /* (the close held, a breath after it) */
+                    uint32_t end = b0 + 14u < len ? b0 + 14u : len - 1u;
+                    L.n[L.k - 1u].len = (uint8_t)(end > pos ? end - pos : 0u);
                 }
-                if (gap > 2u + (gs.energy < 34u ? 2u : 0u)) dhold(t, pos, gap - 2u - (gs.energy < 34u ? 2u : 0u), len);
+            }
+            if (bt == LB_C) {                           /* the continuation: the motif's first half twice, the second a
+                                                         * step higher (the climax) */
+                for (j = 0; j < kk; j++) {
+                    uint32_t pos = b0 + 8u + at[j];
+                    int32_t dd = anchor + mo[j] + sh + arch + 1;
+                    if (at[j] >= 8u) break;
+                    if (pos >= len) break;
+                    if ((at[j] % 4u == 0u || j == 0u) && !gl_ct(dd, pos)) dd = gl_near(&L, dd, pos, 1);
+                    gl_add(&L, pos, dd, at[j] % 4u ? 84u : 98u, 0);
+                }
             }
         }
+        gl_write(t, &L, len, legato);
     }
 }
 
@@ -757,8 +1253,9 @@ static void gen_texture(track_t *t, uint32_t len)
                                                          * choir, strings: above the bass) */
     gseed(GS_TEX);
     for (i = 0; i < len; i += 16u) {
+        const gch_t *c = gchord(i);
         if (i && gch(45)) continue;
-        n[0] = gdeg(t, lo, gchord_deg(i) + (gch(30) ? 4 : 0));
+        n[0] = gtone(c, gch(30) ? 4 : 0, lo);
         gnote(&t->step[i], n, 1, 72, 0);
         dhold(t, i, gs.g->form == FM_ARC ? 63 : 15, len);
     }
@@ -921,7 +1418,70 @@ static void gen_mix(track_t *t, uint32_t r)
 }
 
 /* ---------------------------------------------------------------------------------------- the form: parts --- */
-static step_t gen_keep[2][NSTEP];
+static void gen_role(track_t *t, uint32_t k, uint32_t len)   /* a track's part as its role plays it */
+{
+    uint32_t r = gs.role[k];
+    if (!gs.act[r] || (r == RL_TEX && k != gs.trk_of[RL_TEX])) return;
+    switch (r) {
+    case RL_DRUM: gen_drums(t, len); break;
+    case RL_BASS: gen_bass(t, len); break;
+    case RL_PAD: gen_pads(t, len); break;
+    case RL_ARP: gen_arp(t, len); break;
+    case RL_LEAD: gen_lead(t, len); break;
+    default: gen_texture(t, len); break;
+    }
+}
+static void gen_post(void);
+/* (0.8.3) a section's harmony against A's: the loop started on its predominant (IV or VI, the same chords turned: B,
+ * the break; D, the club's break and the arc's apex), a one-chord loop going to its subdominant and back; the chords
+ * of the section's plan as rot says */
+static uint32_t gsec_rot(void)
+{
+    uint32_t k;
+    if (gs.pn == 1u) {
+        gch_t c = {0, 0, (uint8_t)(gs.sc[3] == 5u ? 3u : 1u), 0, 0};   /* (IV or iv; lydian: II) */
+        if (!gtriad_ok(&c)) return 0;
+        gs.pdeg[1] = gs.pdeg[0]; gs.pq[1] = gs.pq[0];
+        gs.pdeg[0] = c.deg; gs.pq[0] = QQ(gs.pq[1]);
+        gs.pn = 2;
+        return 0;
+    }
+    for (k = 1; k < gs.pn; k++) if ((gs.pdeg[k] == 3u || gs.pdeg[k] == 5u) && !QF(gs.pq[k])) return k;
+    return 1;
+}
+/* the pitched parts again over the section's plan (each from its own stream: the same motif, the same figures, on
+ * these chords), the polish after; lift: the whole of it moved up that many semitones, the SCALE page's ROOT with it
+ * (a real modulation, stored in the section: the song plays it in its key) */
+static void gen_pitched(uint32_t rot, int32_t lift)
+{
+    uint32_t k, i, j, dr = gs.trk_of[RL_DRUM];
+    gs.kick = gs.snare = 0;                             /* (the bass reads this section's kick) */
+    if (dr < NTRK && gs.act[RL_DRUM])
+        for (i = 0; i < dlen(&trk[dr]); i++)
+            if (trk[dr].step[i].time == ST_NOTE) { gs.kick |= (uint64_t)(trk[dr].step[i].hit & 1u) << i; gs.snare |= (uint64_t)((trk[dr].step[i].hit >> 1) & 1u) << i; }
+    gplan(rot);
+    for (k = 0; k < NTRK; k++) {
+        track_t *t = &trk[k];
+        if (k == dr) continue;
+        load_begin(t, LOAD_PAT);
+        for (j = 0; j < NSTEP; j++) gclear(&t->step[j]);
+        motion_clear(t);
+        gen_role(t, k, dlen(t));
+        load_end(t);
+    }
+    gseed(GS_FORM);
+    gen_post();
+    for (k = 0; k < NTRK; k++) {
+        track_t *t = &trk[k];
+        t->p[P_ROOT] = (int16_t)((gs.root + lift + 12) % 12);
+        if (k == dr || !lift) continue;
+        for (i = 0; i < NSTEP; i++)
+            for (j = 0; j < t->step[i].n && t->step[i].time == ST_NOTE; j++) t->step[i].note[j] = (uint8_t)clamp(t->step[i].note[j] + lift, 0, 127);
+        pat_sig[k] = steps_sig(t);
+    }
+}
+static step_t gen_keep[NSTEP];                          /* (the drums of the section before; 0.8.3: the chords are made
+                                                         * again, not kept) */
 static void section_store(uint32_t s);                  /* (song_main.c) */
 static int section_load(uint32_t s);
 static void gen_parts(void)
@@ -929,9 +1489,10 @@ static void gen_parts(void)
     const ggenre_t *g = gs.g;
     uint32_t form = gp.form == 0u ? FM_LOOP : gp.form == 2u ? (g->form == FM_ARC ? FM_ARC : FM_CLUB) : g->form == FM_LOOP ? FM_PARTS : g->form;
     uint32_t dr = gs.trk_of[RL_DRUM], bs = gs.trk_of[RL_BASS], pd = gs.trk_of[RL_PAD], ld = gs.trk_of[RL_LEAD], ar = gs.trk_of[RL_ARP];
-    uint32_t k, n = 0, rows = 0, bars = gp.form == 2u ? 16u : 8u, i;
+    uint32_t k, n = 0, rows = 0, bars = gp.form == 2u ? 16u : 8u, i, fam = HXF(gs.hx);
     static const uint8_t ORD_CLUB[6] = {1, 2, 0, 3, 2, 0}, ORD_PARTS[4] = {0, 1, 0, 2}, ORD_ARC[4] = {1, 0, 2, 3};
     static const uint8_t FILLS[6] = {FL_ROLL, FL_TOM, FL_HAT, FL_DROP, FL_LINEAR, FL_KICK16};   /* (0.6.97) a fill a section */
+    uint8_t pdeg[4], pq[4], pn = gs.pn;
     const uint8_t *ord;
     uint32_t nord;
     if (form == FM_LOOP) return;
@@ -942,26 +1503,38 @@ static void gen_parts(void)
     section_store(0);                                   /* A: the whole piece */
     if (live.cur != 0) return;
     dice_secs |= 1u;
-    if (dr < NTRK) memcpy(gen_keep[0], trk[dr].step, sizeof gen_keep[0]);
-    if (pd < NTRK) memcpy(gen_keep[1], trk[pd].step, sizeof gen_keep[1]);
+    memcpy(pdeg, gs.pdeg, sizeof pdeg); memcpy(pq, gs.pq, sizeof pq);
+    if (dr < NTRK) memcpy(gen_keep, trk[dr].step, sizeof gen_keep);
     n = form == FM_CLUB ? 4u : form == FM_ARC ? 4u : 3u;
     for (k = 1; k < n; k++) {
+        uint32_t rot = 0;
+        int32_t lift = 0;
         /* back to the whole piece, then this section's cut */
         for (i = 0; i < NTRK; i++) trk[i].p[P_MUTE] = 0;
-        if (dr < NTRK) { load_begin(&trk[dr], LOAD_PAT); memcpy(trk[dr].step, gen_keep[0], sizeof gen_keep[0]); motion_clear(&trk[dr]); load_end(&trk[dr]); }
-        if (pd < NTRK) { load_begin(&trk[pd], LOAD_PAT); memcpy(trk[pd].step, gen_keep[1], sizeof gen_keep[1]); motion_clear(&trk[pd]); load_end(&trk[pd]); }
-        if (dr < NTRK && gs.act[RL_DRUM] && k != 2u) { /* (0.6.97) each section its own fill (the BUILD's below: a
-                                                         * roll); the phrase's last bar differs section to section */
+        memcpy(gs.pdeg, pdeg, sizeof pdeg); memcpy(gs.pq, pq, sizeof pq); gs.pn = pn;
+        if (dr < NTRK) { load_begin(&trk[dr], LOAD_PAT); memcpy(trk[dr].step, gen_keep, sizeof gen_keep); motion_clear(&trk[dr]); load_end(&trk[dr]); }
+        if (dr < NTRK && gs.act[RL_DRUM]) {             /* (0.6.97) each section its own fill (the BUILD: a roll; the
+                                                         * drop and the apex denser); the phrase's last bar differs */
             track_t *t = &trk[dr];
-            uint32_t f0 = g->fills == FL_NONE ? FL_ROLL : g->fills;
+            uint32_t f0 = g->fills == FL_NONE ? FL_ROLL : g->fills, a0 = gs.amt[GP_DRUMS], c0 = gs.complex;
+            int dense = (form == FM_ARC && k == 3u) || (form == FM_PARTS && k == 2u);
             load_begin(t, LOAD_PAT);
             for (i = 0; i < NSTEP; i++) gclear(&t->step[i]);
-            gs.drum_fill = k == 1u ? f0 : FILLS[(gs.gi + k) % 6u];
+            gs.drum_fill = form == FM_CLUB && k == 2u ? FL_ROLL : dense ? 0u : k == 1u ? f0 : FILLS[(gs.gi + k) % 6u];
+            if (dense) {
+                gs.amt[GP_DRUMS] = a0 + (form == FM_ARC ? 30u : 25u) > 100u ? 100u : a0 + (form == FM_ARC ? 30u : 25u);
+                if (form == FM_PARTS) gs.complex = c0 + 20u > 100u ? 100u : c0 + 20u;
+            }
             gen_drums(t, dlen(t));
-            gs.drum_fill = 0;
+            gs.drum_fill = 0; gs.amt[GP_DRUMS] = a0; gs.complex = c0;
             load_end(t);
-            memcpy(gen_keep[0], trk[dr].step, sizeof gen_keep[0]);
+            if (!(form == FM_CLUB && k == 2u) && !dense) memcpy(gen_keep, trk[dr].step, sizeof gen_keep);
         }
+        /* (0.8.3) the section's harmony: the break and the apex on the predominant (not the modal loops: theirs keep
+         * the loop); PARTS' last section a whole step up where the genre lifts (pop's last chorus) */
+        if (fam != HF_LOOP && ((form == FM_PARTS && k == 1u) || (form != FM_PARTS && k == 3u))) rot = gsec_rot();
+        if (form == FM_PARTS && k == 2u && (gs.hx & HX_LIFT)) lift = 2;
+        gen_pitched(rot, lift);
         if (form == FM_CLUB) {
             if (k == 1u) {                              /* B INTRO: the drums and the bass */
                 if (pd < NTRK) trk[pd].p[P_MUTE] = 1;
@@ -970,15 +1543,6 @@ static void gen_parts(void)
             } else if (k == 2u) {                       /* C BUILD: the chords in, their filter opening over the loop, a
                                                          * roll at its end, the delay thrown on the last step */
                 if (ld < NTRK) trk[ld].p[P_MUTE] = 1;
-                if (dr < NTRK && gs.act[RL_DRUM]) {
-                    track_t *t = &trk[dr];
-                    load_begin(t, LOAD_PAT);
-                    for (i = 0; i < NSTEP; i++) gclear(&t->step[i]);
-                    gs.drum_fill = FL_ROLL;
-                    gen_drums(t, dlen(t));
-                    gs.drum_fill = 0;
-                    load_end(t);
-                }
                 memset(pfx_lane, 0, sizeof pfx_lane);   /* (0.6.97) the punch-in lane: a stutter into the drop (1/8 on
                                                          * the last beat, 1/16 on its last two sixteenths), every track */
                 pfx_ltgt = 0;
@@ -1007,38 +1571,18 @@ static void gen_parts(void)
                 if (ar < NTRK) trk[ar].p[P_MUTE] = 1;
             } else if (k == 2u) {                       /* C: the drums in, the lead out */
                 if (ld < NTRK) trk[ld].p[P_MUTE] = 1;
-            } else {                                    /* D: the apex, the drums denser */
-                if (dr < NTRK && gs.act[RL_DRUM]) {
-                    track_t *t = &trk[dr];
-                    uint32_t a0 = gs.amt[GP_DRUMS];
-                    load_begin(t, LOAD_PAT);
-                    for (i = 0; i < NSTEP; i++) gclear(&t->step[i]);
-                    gs.amt[GP_DRUMS] = a0 + 30u > 100u ? 100u : a0 + 30u;
-                    gen_drums(t, dlen(t));
-                    gs.amt[GP_DRUMS] = a0;
-                    load_end(t);
-                }
-            }
-        } else {                                        /* FM_PARTS: B a break (drums and bass out), C a drop (denser drums) */
-            if (k == 1u) {
-                if (dr < NTRK) trk[dr].p[P_MUTE] = 1;
-                if (bs < NTRK && (ld < NTRK || ar < NTRK || pd < NTRK)) trk[bs].p[P_MUTE] = 1;
-            } else if (dr < NTRK && gs.act[RL_DRUM]) {
-                track_t *t = &trk[dr];
-                uint32_t a0 = gs.amt[GP_DRUMS], c0 = gs.complex;
-                load_begin(t, LOAD_PAT);
-                for (i = 0; i < NSTEP; i++) gclear(&t->step[i]);
-                gs.amt[GP_DRUMS] = a0 + 25u > 100u ? 100u : a0 + 25u;
-                gs.complex = c0 + 20u > 100u ? 100u : c0 + 20u;
-                gen_drums(t, dlen(t));
-                gs.amt[GP_DRUMS] = a0; gs.complex = c0;
-                load_end(t);
-            }
+            }                                           /* D: the apex, the drums denser (above) */
+        } else if (k == 1u) {                           /* FM_PARTS: B a break (drums and bass out), C a drop (denser
+                                                         * drums, above) */
+            if (dr < NTRK) trk[dr].p[P_MUTE] = 1;
+            if (bs < NTRK && (ld < NTRK || ar < NTRK || pd < NTRK)) trk[bs].p[P_MUTE] = 1;
         }
         section_store(k);
         if (live.cur != (int8_t)k) { n = k; break; }
         dice_secs |= (uint8_t)(1u << k);
     }
+    memcpy(gs.pdeg, pdeg, sizeof pdeg); memcpy(gs.pq, pq, sizeof pq); gs.pn = pn;
+    gplan(0);                                           /* (A's plan: the music live is A) */
     section_load(0);                                    /* (the whole piece back, as A holds it) */
     live.cur = 0;
     if (n < 2u) return;
@@ -1061,27 +1605,14 @@ static void gen_parts(void)
 /* --------------------------------------------------------------------------------------------- the piece --- */
 static void gen_post(void)
 {
-    uint32_t dr = gs.trk_of[RL_DRUM], bs = gs.trk_of[RL_BASS], ld = gs.trk_of[RL_LEAD], i, k;
+    uint32_t dr = gs.trk_of[RL_DRUM], bs = gs.trk_of[RL_BASS], i, k;
     if (dr < NTRK && bs < NTRK && gs.act[RL_DRUM] && gs.act[RL_BASS] && gs.g->kick_mode == KM_SUSTAIN) {
         track_t *b = &trk[bs];                          /* the bass under the kick: softer there */
         for (i = 0; i < dlen(b); i++)
-            if (gs.kick[i] && dstarts(b, i) && i % 16u) b->step[i].vel = (uint8_t)clamp((int32_t)b->step[i].vel - 18, 40, 127);
+            if (GKICK(i) && dstarts(b, i) && i % 16u) b->step[i].vel = (uint8_t)clamp((int32_t)b->step[i].vel - 18, 40, 127);
     }
-    if (ld < NTRK && bs < NTRK && gs.act[RL_LEAD] && gs.act[RL_BASS]) {
-        track_t *l = &trk[ld], *b = &trk[bs];
-        uint32_t len = dlen(l);
-        for (i = 0; i < len; i++) {                     /* no minor second, no tritone against the bass */
-            step_t *s = &l->step[i];
-            int32_t bn = dsounding(b, i), iv, up, dn;
-            if (!dstarts(l, i) || bn < 0) continue;
-            iv = ((s->note[0] - bn) % 12 + 12) % 12;
-            if (iv != 1 && iv != 6) continue;
-            up = scale_steps(l, s->note[0], 1);
-            dn = scale_steps(l, s->note[0], -1);
-            iv = ((dn - bn) % 12 + 12) % 12;
-            s->note[0] = (uint8_t)(iv != 1 && iv != 6 ? dn : up <= 84 ? up : s->note[0]);
-        }
-    }
+    /* (0.8.3: the lead's clashes with the bass are avoided as it is written, against the chord's root: so turning
+     * BASS leaves the lead as it was) */
     for (k = 0; k < NTRK; k++) {                        /* the breath: each fourth bar's last two steps softer */
         track_t *t = &trk[k];
         uint32_t len = dlen(t);
@@ -1104,25 +1635,58 @@ static void gen_post(void)
                     if (s->n < 2u) continue;
                     if (gch(60)) { s->comp = CP_ARPN; s->carg = CP_ARG(gr() % 3u, gch(50) ? 0u : 2u, 0u); }
                     else { s->comp = CP_ECHO; s->carg = (uint8_t)(gr() % 2u); }
-                } else if (r == RL_LEAD) {
-                    uint32_t c = gr() % 5u;
-                    s->comp = (uint8_t)(c == 0u ? CP_ECHO : c == 1u ? CP_OCT : c == 2u ? CP_BEND : c == 3u ? CP_PULSE : CP_WALK);
-                    s->carg = (uint8_t)(s->comp == CP_ECHO ? gr() % 2u : s->comp == CP_OCT ? 2u : s->comp == CP_BEND ? (gch(50) ? 2u : 10u) :
-                                        s->comp == CP_WALK ? CP_WARG(1u + gr() % 3u, gch(60) ? 2u : 0u, gr() % 2u) : 1u);   /* (0.6.98: a walk
-                                                         * every 2..4 loops, there and back mostly, 3 or 5 degrees) */
-                } else {
-                    uint32_t c = gr() % 4u;
-                    s->comp = (uint8_t)(c == 0u ? CP_OCT : c == 1u ? CP_RAND : c == 2u ? CP_ECHO : (gch(50) ? CP_WALK : CP_CLIMB));
-                    s->carg = (uint8_t)(s->comp == CP_RAND ? 1u + gr() % 2u : s->comp == CP_OCT ? 4u :
-                                        s->comp == CP_WALK ? CP_WARG(gr() % 4u, gr() % 4u, gr() % 2u) :
-                                        s->comp == CP_CLIMB ? CP_WARG(2u + gr() % 6u, gch(50) ? 2u : 0u, gr() % 2u) : 0u);
-                    if (c == 2u && gs.energy > 60u && gch(50)) { s->comp = 0; step_set_ratchet(s, 2); }
+                } else if (r == RL_LEAD) {              /* (0.8.3: never a random walk or an octave thrown into the
+                                                         * line: its notes are composed) */
+                    uint32_t c = gr() % 3u;
+                    if (s->time != ST_NOTE || !gin_mode(s->note[0])) continue;
+                    s->comp = (uint8_t)(c == 0u ? CP_ECHO : c == 1u ? CP_BEND : CP_PULSE);
+                    s->carg = (uint8_t)(s->comp == CP_ECHO ? gr() % 2u : s->comp == CP_BEND ? (gch(50) ? 2u : 10u) : 1u);
+                } else {                                /* (the arp: its chord's tones; 0.8.3: no RAND, no WALK) */
+                    uint32_t c = gr() % 3u;
+                    s->comp = (uint8_t)(c == 0u ? CP_OCT : c == 1u ? CP_ECHO : CP_CLIMB);
+                    s->carg = (uint8_t)(s->comp == CP_OCT ? 4u : s->comp == CP_CLIMB ? CP_WARG(2u + gr() % 6u, gch(50) ? 2u : 0u, gr() % 2u) : 0u);
+                    if (c == 1u && gs.energy > 60u && gch(50)) { s->comp = 0; step_set_ratchet(s, 2); }
                 }
                 if (s->comp && gch(40)) ST_EVERY_SET(s, gch(50) ? EV_1_2 : EV_2_2);   /* (every other loop) */
                 got++;
             }
         }
     }
+}
+/* (0.8.3) the piece's key on the SCALE page, every track (the keys, CHORD, ALL TR and the RESO reverb with it), QUANT
+ * SNAP unless one is chosen (the keys play in the key); the CHORD page on the chord track as its chords are (TRIAD, 7TH,
+ * ADD9, SUS2, SUS4: the plan's commonest), VOICING LEAD, a strum where a guitar plays them; off on the other tracks */
+static uint32_t gchord_page(void)
+{
+    static const uint8_t CD[5] = {CD_TRI, CD_SEV, CD_ADD9, CD_SUS2, CD_SUS4};
+    uint8_t n[5] = {0};
+    uint32_t k, best = 0;
+    for (k = 0; k < gs.nch; k++) {
+        uint32_t q = gs.ch[k].q;
+        n[q == Q_7 || q == Q_9 || q == Q_11 || q == Q_6 || q == Q_R9 ? 1 : q == Q_ADD9 ? 2 : q == Q_SUS2 ? 3 :
+          q == Q_SUS4 || q == Q_QUART || q == Q_7NO5 ? 4 : 0]++;
+    }
+    for (k = 1; k < 5u; k++) if (n[k] > n[best]) best = k;
+    return CD[best];
+}
+static void gen_scale_page(void)
+{
+    uint32_t k, pd = gs.trk_of[RL_PAD];
+    int16_t qn = QN_OFF;
+    for (k = 0; k < NTRK; k++) if (!drum_track(&trk[k])) { qn = trk[k].p[P_QUANT]; break; }
+    if (qn == QN_OFF) qn = QN_SNAP;
+    for (k = 0; k < NTRK; k++) {
+        track_t *t = &trk[k];
+        t->p[P_ROOT] = gs.root; t->p[P_SCALE] = gs.scale; t->p[P_QUANT] = qn;
+        t->p[P_CHRD] = 0; t->p[P_CVOI] = CV_CLOSE; t->p[P_CSTR] = 0;
+        if (k == pd && gs.act[RL_PAD]) {
+            uint32_t ri = gs.g->snd[GP_CHORDS];
+            t->p[P_CHRD] = (int16_t)gchord_page();
+            t->p[P_CVOI] = CV_LEAD;
+            t->p[P_CSTR] = (int16_t)(ri == SR_GTR ? 24 : ri == SR_EP && HXF(gs.hx) == HF_JAZZ ? 6 : 0);
+        }
+    }
+    sl_root = gs.root; sl_scale = gs.scale; sl_quant = qn;
 }
 static int8_t dice_force_style = -1, dice_force_energy = -1;   /* (a film's script, the renders: this genre, this energy) */
 static void gen_make(void)
@@ -1148,6 +1712,7 @@ static void gen_make(void)
         if (gch(50)) {
             for (k2 = 0; k2 < 3u; k2++) gmut.prog[k2] = b->prog[k2];
             gmut.cbars = b->cbars; gmut.pads = b->pads; gmut.voicing = b->voicing; gmut.snd[GP_CHORDS] = b->snd[GP_CHORDS];
+            gmut.hx = b->hx;                            /* (0.8.3: the harmony with its progressions) */
         }
         if (gch(50)) { gmut.arp[0] = c->arp[0]; gmut.arp[1] = c->arp[1]; gmut.snd[GP_ARP] = c->snd[GP_ARP]; }
         if (gch(50)) { gmut.lead = b->lead; gmut.snd[GP_LEAD] = b->snd[GP_LEAD]; }
@@ -1171,7 +1736,19 @@ static void gen_make(void)
     for (k = 1; k < GP_N; k++) if (gmut.snd[k] < SR_N && gch(30)) gmut.snd[k] = SR_ALT[gmut.snd[k]][gr() % 2u];
     g = gs.g = &gmut;
     gs.root = (int16_t)grr(0, 11);
-    gs.scale = (int16_t)g->scale[gr() % 4u];
+    {   /* (0.8.3) the key: always a mode of seven, so the CHORD page, the chords, the arp and the lead stand on it; a
+         * genre's pentatonic or blues is its lead's palette over the mode that holds it (dorian where the genre is
+         * jazzy, aeolian else; major for the major pentatonic) */
+        uint32_t req = g->scale[gr() % 4u], m, d, c, cnt = 0;
+        gs.hx = g->hx; gs.pal = 0x7Fu;
+        if (req == SC_MPEN || req == SC_BLUE) { gs.pal = 0x5Du; req = HXF(g->hx) == HF_JAZZY ? SC_DOR : SC_MIN; }
+        else if (req == SC_PEN) { gs.pal = 0x37u; req = SC_MAJ; }
+        if (req < sizeof SCALE_MASK / sizeof SCALE_MASK[0]) for (c = 0; c < 12u; c++) cnt += (SCALE_MASK[req] >> c) & 1u;
+        if (cnt != 7u || req == 10u) req = SC_MIN;      /* (LOC, the symmetric scales: never a key of the generator) */
+        gs.scale = (int16_t)req;
+        m = SCALE_MASK[req];
+        for (d = 0, c = 0; c < 12u && d < 7u; c++) if ((m >> c) & 1u) gs.sc[d++] = (uint8_t)c;
+    }
     gs.energy = dice_force_energy >= 0 ? (uint32_t)dice_force_energy * 50u : gp.energy;
     gs.complex = gp.complex;
     if (gs.mutant) gs.complex = gs.complex + 20u > 100u ? 100u : gs.complex + 20u;   /* (a mutant: more going on) */
@@ -1183,36 +1760,43 @@ static void gen_make(void)
         gs.amt[k] = a;
     }
     pr = gr() % 3u;
-    gs.prog = &PROG[g->prog[pr]];
-    gs.n = gs.prog->n;
     gs.vm = g->voicing;
     if (gs.complex > 70u && gs.vm == VM_PLAIN && gch(40)) gs.vm = VM_RICH;
-    for (k = 0; k < gs.n; k++) {                        /* the qualities as the voicing mode wants them */
-        uint32_t q = gs.prog->q[k], qq = q & 0x7Fu;
-        switch (gs.vm) {
-        case VM_PLAIN: qq = Q_TRI; break;
-        case VM_RICH: if (qq == Q_TRI) qq = gch(50) ? Q_7 : gch(50) ? Q_ADD9 : Q_9; break;
-        case VM_SUS: qq = gch(50) ? Q_SUS4 : gch(50) ? Q_SUS2 : Q_7NO5; break;
-        case VM_QUART: qq = gch(70) ? Q_QUART : Q_SUS4; break;
-        case VM_POWER: qq = Q_POWER; break;
-        default: break;                                 /* PAD, PLANE: as written */
+    {   /* (0.8.3) the progression: the genre's one in three, its next one where this mode would make a chord of it
+         * diminished or borrow where the genre does not (gprog_ok), else the mode's own two-chord loop */
+        const gprog_t *p = 0;
+        uint32_t t;
+        for (t = 0; t < 3u && !p; t++) if (gprog_ok(&PROG[g->prog[(pr + t) % 3u]])) p = &PROG[g->prog[(pr + t) % 3u]];
+        if (!p) {
+            p = &PROG[gminor() ? (gs.sc[1] == 1u ? PR_PHRY : gs.sc[6] == 11u ? PR_I_IV : PR_I_VII) : gs.sc[3] == 6u ? PR_I_II : PR_I_IV];
+            if (!gprog_ok(p)) p = &PROG[PR_ONE];
         }
-        gs.q[k] = (uint8_t)(qq | (q & CQ_DOM));
+        gs.pn = p->n;
+        for (k = 0; k < gs.pn; k++) {                   /* the qualities as the voicing mode wants them (a coloured chord
+                                                         * keeps its own) */
+            uint32_t qq = QQ(p->q[k]), f = QF(p->q[k]);
+            switch (f ? (gs.vm == VM_POWER ? VM_POWER : VM_PAD) : gs.vm) {
+            case VM_PLAIN: qq = Q_TRI; break;
+            case VM_RICH: if (qq == Q_TRI) qq = gch(50) ? Q_7 : gch(50) ? Q_ADD9 : Q_9; break;
+            case VM_SUS: qq = gch(50) ? Q_SUS4 : gch(50) ? Q_SUS2 : Q_7NO5; break;
+            case VM_QUART: qq = gch(70) ? Q_QUART : Q_SUS4; break;
+            case VM_POWER: qq = Q_POWER; break;
+            default: break;                             /* PAD, PLANE: as written */
+            }
+            gs.pdeg[k] = (uint8_t)p->deg[k];
+            gs.pq[k] = (uint8_t)(qq | f);
+        }
     }
-    gs.csteps = 16u * g->cbars;
-    if (gs.csteps * gs.n > NSTEP) gs.csteps = NSTEP / gs.n;
-    steps = gs.csteps * gs.n;
+    gs.cst = 16u * g->cbars;
+    if (gs.cst * gs.pn > NSTEP) gs.cst = NSTEP / gs.pn;
+    steps = gs.cst * gs.pn;
     if (steps < 16u) steps = 16u;
     if (gs.complex > 50u && steps < 64u && gch(50)) steps = 64;   /* (four bars: fills, variations, a fourth-bar pickup) */
     gs.len = steps;
+    gplan(0);
     gs.ba = g->bass[gr() % 3u];
     if (gs.amt[GP_BASS] > 70u && gch(30)) gs.ba = g->bass[0];
     gs.fm6 = 0;
-    {   /* the scale's size (the degrees wrap at it) */
-        uint32_t m = SCALE_MASK[clamp(gs.scale, 0, (int32_t)(sizeof SCALE_MASK / sizeof SCALE_MASK[0]) - 1)], c = 0;
-        for (k = 0; k < 12u; k++) c += (m >> k) & 1u;
-        gs.nsc = c ? c : 7u;
-    }
     /* the orchestration: the drums (unless the genre or the knob leaves them out), then the melodic roles with an
      * amount, the most important first; the drums on the DRUM track (none: the fourth, or the last live) */
     {
@@ -1241,8 +1825,7 @@ static void gen_make(void)
         }
         gs.act[RL_TEX] = (uint8_t)(nlive > 5u && gs.trk_of[RL_TEX] < nlive && gs.amt[GP_CHORDS] > 0u);
     }
-    for (k = 0; k < NTRK; k++) { trk[k].p[P_ROOT] = gs.root; trk[k].p[P_SCALE] = gs.scale; }
-    sl_root = gs.root; sl_scale = gs.scale;
+    gen_scale_page();
     wet = (uint32_t)clamp((int32_t)g->wet + (gs.energy < 34 ? 20 : gs.energy > 66 ? -15 : 0), 0, 100);
     /* the sounds (their own stream), then the parts in the pipeline's order: drums, bass (reads the kick), chords,
      * arp (reads the voicing), lead (reads the bass) */
@@ -1253,8 +1836,8 @@ static void gen_make(void)
         if (r == RL_DRUM) gen_kit(t);
         else gen_sound(t, r, r == RL_BASS ? g->snd[GP_BASS] : r == RL_PAD ? g->snd[GP_CHORDS] : r == RL_LEAD ? g->snd[GP_LEAD] :
                              r == RL_ARP ? g->snd[GP_ARP] : g->tex);
-        t->p[P_ROOT] = gs.root; t->p[P_SCALE] = gs.scale;
     }
+    gen_scale_page();
     gseed(GS_MIX);
     for (k = 0; k < NTRK; k++) gen_mix(&trk[k], gs.role[k]);
     {
@@ -1275,16 +1858,7 @@ static void gen_make(void)
                 track_defaults_steps(t);
                 { uint32_t j; for (j = 0; j < NSTEP; j++) gclear(&t->step[j]); }   /* (no note left from before) */
                 motion_clear(t);
-                if (gs.act[r] && (r != RL_TEX || k == gs.trk_of[RL_TEX])) {
-                    switch (r) {
-                    case RL_DRUM: gen_drums(t, len); break;
-                    case RL_BASS: gen_bass(t, len); break;
-                    case RL_PAD: gen_pads(t, len); break;
-                    case RL_ARP: gen_arp(t, len); break;
-                    case RL_LEAD: gen_lead(t, len); break;
-                    default: gen_texture(t, len); break;
-                    }
-                }
+                gen_role(t, k, len);
                 t->p[P_SLEN] = (int16_t)len;
                 if (r == RL_BASS) t->p[P_SGATE] = (int16_t)clamp(g->bass_gate, 1, 127);
                 else if (r == RL_PAD) t->p[P_SGATE] = (int16_t)(g->pads == CS_STAB || g->pads == CS_DUB || g->pads == CS_SKANK || g->pads == CS_BROKEN ? grr(25, 45) :

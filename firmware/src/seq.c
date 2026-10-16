@@ -219,7 +219,10 @@ static uint16_t kb_sdue[27];                    /* (0.6.81) samples to the strum
 
 /* (JIANT 0.6.81) CHORD (SCL > CHORD; after the Omnichord and the Orchid, light): a key plays a chord on the track.
  * TRIAD 7TH ADD9 SUS2 SUS4 are built in the track's scale on the key (every tone in key; a key outside it takes the
- * scale note below; CHR: the major scale of ROOT), MAJ MIN 7 MAJ7 MIN7 POWER that shape on any key. VOICING CLOSE
+ * scale note below; CHR: the major scale of ROOT; 0.8.3: a scale of five, six or eight notes takes each tone as the
+ * interval the chord asks for where the scale has it, else the nearest it offers: sus chords and sixths in the
+ * pentatonics, augmented in whole tone, diminished in the diminished scales), MAJ MIN 7 MAJ7 MIN7 POWER that shape on
+ * any key. VOICING CLOSE
  * (root position), LEAD (each chord the inversion nearest the last one the track played: voice leading), OPEN (the
  * second tone an octave up), +BASS (the root an octave down added). STRUM: the notes one after the other, low to
  * high. The root alone on a kit and on MONO / LEGATO / UNISON. The keys only (MIDI notes play as they come); the
@@ -227,6 +230,15 @@ static uint16_t kb_sdue[27];                    /* (0.6.81) samples to the strum
 enum { CD_OFF, CD_TRI, CD_SEV, CD_ADD9, CD_SUS2, CD_SUS4, CD_MAJ, CD_MIN, CD_DOM7, CD_MAJ7, CD_MIN7, CD_POW };
 enum { CV_CLOSE, CV_LEAD, CV_OPEN, CV_BASS };
 static uint8_t chord_last[NTRK][KB_CH], chord_nlast[NTRK];   /* the last chord each track played (LEAD) */
+/* (0.8.3) the first of the intervals p (n of them) the scale (mask) has over a root rel semitones above ROOT; -1 none */
+static int32_t chord_pick(uint32_t mask, int32_t rel, const int8_t *p, uint32_t n)
+{
+    uint32_t i;
+    for (i = 0; i < n; i++)
+        if ((mask >> (uint32_t)((rel + p[i]) % 12)) & 1u)
+            return p[i];
+    return -1;
+}
 static uint32_t chord_build(const track_t *t, uint32_t root, uint8_t *out)
 {
     static const int8_t DIA[5][4] = {{0, 2, 4, -1}, {0, 2, 4, 6}, {0, 2, 4, 8}, {0, 1, 4, -1}, {0, 3, 4, -1}};
@@ -254,9 +266,32 @@ static uint32_t chord_build(const track_t *t, uint32_t root, uint8_t *out)
                 if (i == (uint32_t)((r - rt + 120) % 12)) at = c;
                 deg[c++] = i;
             }
-        for (i = 0; i < 4u && DIA[mode - CD_TRI][i] >= 0; i++) {
-            uint32_t k = at + (uint32_t)DIA[mode - CD_TRI][i];
-            nt[n++] = r + (int32_t)deg[k % c] + 12 * (int32_t)(k / c) - (int32_t)deg[at];
+        if (c == 7u) {                          /* a mode of seven: its own chord on the degree (diatonic) */
+            for (i = 0; i < 4u && DIA[mode - CD_TRI][i] >= 0; i++) {
+                uint32_t k = at + (uint32_t)DIA[mode - CD_TRI][i];
+                nt[n++] = r + (int32_t)deg[k % c] + 12 * (int32_t)(k / c) - (int32_t)deg[at];
+            }
+        } else {                                /* (0.8.3) five, six or eight notes (PEN MPEN BLUES WHOLE DIMHW DIMWH):
+                                                 * every other note of such a scale is a quartal or odd stack, so each
+                                                 * tone is the interval the chord asks for where the scale has it, else
+                                                 * the nearest it offers: a third major or minor (none: a suspension),
+                                                 * the fifth perfect (else diminished over a minor third, augmented over
+                                                 * a major), the seventh minor, major or sixth; pentatonic keys give
+                                                 * triads, sus chords and sixths, whole tone augmented, diminished
+                                                 * diminished and dominant sevenths: every tone in the scale */
+            static const int8_t T3[4] = {4, 3, 5, 2}, F5[3] = {7, 8, 6}, F5M[3] = {7, 6, 8}, S7[3] = {10, 11, 9}, S7D[2] = {9, 10},
+                                S9[2] = {14, 15}, S2[2] = {2, 1}, S4[2] = {5, 6};
+            int32_t rel = (r - rt + 120) % 12, th, fi, x;
+#define CPK(P) chord_pick(mask, rel, P, sizeof P)
+            th = mode == CD_SUS2 ? CPK(S2) : mode == CD_SUS4 ? CPK(S4) : -1;
+            if (th < 0) th = CPK(T3);
+            fi = th == 3 ? CPK(F5M) : CPK(F5);
+            nt[n++] = r;
+            if (th >= 0) nt[n++] = r + th;
+            if (fi >= 0) nt[n++] = r + fi;
+            if (mode == CD_SEV && (x = th == 3 && fi == 6 ? CPK(S7D) : CPK(S7)) >= 0) nt[n++] = r + x;
+            if (mode == CD_ADD9 && (x = CPK(S9)) >= 0) nt[n++] = r + x;
+#undef CPK
         }
     }
     if (vc == CV_OPEN && n > 2u)

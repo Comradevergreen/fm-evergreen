@@ -1442,8 +1442,9 @@ static void seq_entry(uint32_t pressed)
 }
 
 /* Discussions #92 / #94: the PRESETS knob by page (the menu, a dialog, NAME and the layers: ui_input before this).
- *   SEQ pages that show the steps (STEP and the DRUM grid, PATTERN, CHANCE, MOTION): the step cursor, as STEP's KNOB 1
- *     (a sound load there would drop the track's motion: never)
+ *   SEQ pages that show the steps (STEP and the DRUM grid, NOTE, COMP, COMP 2, CHANCE, MOTION): the step cursor, as
+ *     STEP's KNOB 1 (a sound load there would drop the track's motion: never); (0.8.3) LENTE's PATTERN level (PATTERN,
+ *     STRETCH, PLAYHEADS, TRACK, MUTATE): the bar, no wrap, the cursor at its place in it
  *   the list / action pages USER, PROJECT, PHRASES, SONG: the selection, as their KNOB 1; TOOLS: nothing
  *   HOME, PRESETS and every other page (EDIT, ENV, LFO, FX, SCL, ARP, MIXER, GLOBAL, ...): the selected track's
  *     sound, one list over every engine, then the used user presets (preset_step). A sound load keeps the steps
@@ -1454,6 +1455,11 @@ static void presets_turn(int32_t s)
     uint32_t g = pg->graph;
     if (ui.home || g == GR_BROWSE) {
         preset_step(s);
+    } else if (lens_on() && lens_level() == LV_PAT && lens_k(LV_PAT, ui.page) >= 0) {   /* (0.8.3) LENTE's PATTERN: the
+                                                         * bar (no wrap), the cursor at its place in it */
+        uint32_t len = (uint32_t)clamp(TSEL->p[P_SLEN], 1, NSTEP), nb = (len + 15u) / 16u;
+        uint32_t b = (uint32_t)clamp((int32_t)ui.bank + s, 0, (int32_t)nb - 1), at = b * 16u + ui.cursor % 16u;
+        cursor_set((int32_t)(at < len ? at : len - 1u));
     } else if (g == GR_ROLL && pg->id[0] == 4u) {         /* (0.6.81) SEQ > NOTE (KNOB 1 FOCUS): PRESETS the step */
         cursor_set(ui.cursor + s);
         ui.hot_col = 0;
@@ -1483,6 +1489,13 @@ static int32_t dice_by(int32_t v, int32_t lo, int32_t hi, int32_t span)
 static void sound_dice_of(track_t *t, int quiet)
 {
     uint32_t e = t->eng_req % NENGINES, i, l;
+    if (e == ENGI_DRUM && drum_elsewhere(t)) {          /* (0.8.3, reported again) the section's one kit is another
+                                                         * track's: its drums stay as they are */
+        static char m[16] = "KIT OF T? KEPT";
+        m[8] = (char)('0' + drum_elsewhere(t));
+        ui_message(m);
+        return;
+    }
     if (e == ENGI_DRUM) {
         for (l = 0; l < 8u; l++) {
             const dx_lane_t *D = &DX_KIT_DEF[l];
@@ -1638,6 +1651,10 @@ static void page_scroll(int32_t s)
     int32_t n = s > 0 ? s : -s;
     if (ui.home)
         return;
+    if (lens_on()) {                                    /* (0.8.3) SEQ: the lens's zoom, not its pages one by one */
+        lens_zoom(s);
+        return;
+    }
     f = cur_page()->fam == FAM_TRK ? FAM_GLO : cur_page()->fam;
     while (n--) {
         for (j = i; ; ) {
@@ -1778,6 +1795,9 @@ static void scale_link(void)
 {
     const track_t *t = TSEL;
     uint32_t k;
+    for (k = 0; k < NTRK && drum_track(t); k++) t = &trk[k];   /* (0.8.3) a DRUM track selected: the first melodic
+                                                         * track's counts (a section the song brings in its own key:
+                                                         * its key, not the one before it) */
     if (!drum_track(t) && (t->p[P_ROOT] != sl_root || t->p[P_SCALE] != sl_scale || t->p[P_QUANT] != sl_quant)) {
         sl_root = t->p[P_ROOT];
         sl_scale = t->p[P_SCALE];
@@ -2096,13 +2116,13 @@ static void ui_input_frame(void)
             } else if (kind == CF_INIT_SOUND) {         /* (DRUM: the factory DRUM-X kit too) */
                 if (!chain_busy()) {
                     init_sound_of(TSEL, TSEL->eng_req);
-                    if (drum_track(TSEL)) {
+                    if (drum_track(TSEL) && !drum_elsewhere(TSEL)) {   /* (0.8.3: not another track's kit) */
                         memcpy(dx_kit, DX_KIT_DEF, sizeof dx_kit);
                         memset(dx_mot, 0, sizeof dx_mot);   /* (0.5.1: X-MOD off) */
                         memset(dx_snd, 0, sizeof dx_snd);   /* (0.6.48: no SEND) */
                         memcpy(dx_lay, DX_LAY_DEF, sizeof dx_lay);   /* (0.6.49: the factory LAYERs) */
                     }
-                    ui_message("SOUND INIT");
+                    ui_message(drum_track(TSEL) && drum_elsewhere(TSEL) ? "INIT, KIT KEPT" : "SOUND INIT");
                 }
             } else if (kind == CF_RECALL_SOUND) {       /* the section's stored sound (ui_layer.c EDIT) */
                 if (!chain_busy()) {

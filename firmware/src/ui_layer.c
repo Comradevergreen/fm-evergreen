@@ -17,8 +17,8 @@
  *              project_recall_sound). Each asks first (the dialog closes the layer); the steps stay. KNOB 1..4 the
  *              EDIT page's four (the engine's first); on a DRUM track black keys 1..8 mute each DRUM-X sound
  *              (eng_drum.c DXM_LANE, saved with the section; lit = sounding)
- *   SEQ  SET   (1.2, on the SEQ pages that show the pattern: STEP / the DRUM grid, PATTERN, CHANCE, AUTOMATION; elsewhere
- *              SEQ held opens SONG as before) TOOLS: the white keys from F3 the sequence tools (ui_tools.c: CLEAR,
+ *   SEQ  SET   (1.2, on the SEQ pages that show the pattern; 0.8.3: every page of LENTE's three levels, not PHRASES and
+ *              SONG; elsewhere SEQ held is a tap) TOOLS: the white keys from F3 the sequence tools (ui_tools.c: CLEAR,
  *              REVERSE, SHIFT < >, RANDOM, COOK, CLR AUTO (0.6.8: the track's automation); on a DRUM track BEAT and the lane's CLEAR REVERSE FILL RANDOM), black
  *              keys 1..8 the lane (DRUM); KNOB 1..4 the PATTERN page's LEN DIV SWING GATE. No undo (TONIC: the song
  *              layer's RECALL)
@@ -98,13 +98,12 @@ static struct {
 static uint8_t fx_lock;
 static int layer_allowed(void) { return !ui.menu && !ui.confirm && !ui.uboot && !name_on(); }
 static uint32_t ly_bit(uint32_t l) { return 1u << panel.btn[LAYERS[l].btn]; }
-/* SEQ's layer is there on the SEQ pages that show the pattern only (elsewhere SEQ held opens SONG: ui_input) */
+/* SEQ's layer is there on the SEQ pages only (elsewhere SEQ held is a tap: ui_input) */
 static int tools_page(void)
 {
     const page_t *pg = &PAGES[ui.page];
-    return !ui.home && pg->fam == FAM_SEQ &&
-           (pg->graph == GR_ROLL || pg->graph == GR_STEPS || pg->graph == GR_CHANCE || pg->graph == GR_COMP ||
-            pg->graph == GR_MOTION);
+    return !ui.home && pg->fam == FAM_SEQ && pg->graph != GR_PATS && pg->graph != GR_SONG;   /* (0.8.3: every level
+                                                         * of LENTE's, STRETCH PLAYHEADS MUTATE AUTO LIST too) */
 }
 static int ly_avail(uint32_t l) { return l != LAYER_SEQ || tools_page(); }   /* (REC: on every page) */
 static uint32_t ly_down(uint32_t l) { return l && (fm1_in.buttons & ly_bit(l)) != 0u; }

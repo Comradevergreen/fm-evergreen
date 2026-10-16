@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.8.2).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.8.3).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 > ⚡ **New in 0.6.85 – 0.6.92: a song generator you steer, a compact sequencer that breathes, a delay that feeds back.**
 > - **GEN (HOME + SELECT)**: a screen of three pages — GENRE (43 genres or RANDOM), SEED, ENERGY, FORM (loop, parts,
@@ -53,7 +53,7 @@ Two printable sheets with everything on the device. Click an image to open it fu
 | Controls | Sound · FX · Mod |
 | --- | --- |
 | [![JIANT FM cheat sheet: controls](docs/cheatsheet-controls.png)](docs/cheatsheet-controls.png) | [![JIANT FM cheat sheet: sound, effects and modulation](docs/cheatsheet-sound.png)](docs/cheatsheet-sound.png) |
-| Every knob and button, the layers with their key maps (FX, GLO, SAVE, EDIT, LFO, SCL, SEQ, REC), the combos and every page's four knobs. **[PDF](docs/cheatsheet-controls.pdf)** | The eight engines' EDIT pages, FILTER, VOICE, ENV, LFO, the MOD matrix, MSEQ, macros, the sequencer, scales and ARP, songs, and every effect: DIST, the SLICER bus, delay, the five reverbs and the master. **[PDF](docs/cheatsheet-sound.pdf)** |
+| Every knob and button, the layers with their key maps (FX, GLO, SAVE, EDIT, LFO, SCL, SEQ, REC), the combos and every page's four knobs. **[PDF](docs/cheatsheet-controls.pdf)** | The nine engines' EDIT pages, FILTER, VOICE, ENV, LFO, the MOD matrix, MSEQ, macros, the sequencer, scales and ARP, songs, and every effect: DIST, the SLICER bus, delay, the five reverbs and the master. **[PDF](docs/cheatsheet-sound.pdf)** |
 
 ## The idea
 
@@ -145,7 +145,7 @@ back and the DRUM-X colony, exactly as the firmware draws them while a song play
   up whole).
 
 ### Engines
-Eight engines, all synthesis, no samples: **ANALOG, FM6, PHASE, LOFI, VOICE, WHEEL, NOISE and DRUM (DRUM-X)**.
+Nine engines, all synthesis, no samples: **ANALOG, FM6, PHASE, LOFI, VOICE, WHEEL, NOISE, DRUM (DRUM-X) and ANIMAL**.
 - **ANALOG**: two oscillators with **INT** (an interval of ±24 semitones: fifths, octaves) and DTN; besides SAW, SQR,
   TRI, SIN and PWM it has **SYNC**, **RING** and **SAW3** (three saws). Its filter is per voice.
 - **FM6**: Dexed's engine (imports .syx), with its algorithms drawn. Fully editable on the device (from Felucca 1.5):
@@ -164,6 +164,14 @@ Eight engines, all synthesis, no samples: **ANALOG, FM6, PHASE, LOFI, VOICE, WHE
   repeats a short stretch of the formula: the noise becomes a tone tuned to the note. **FLOAT** is a floatbeat
   generator: 32 formulas of `t` made of sines (rhythm, melody and timbre at once), in the key played.
 - **VOICE** (formants, after klattsch), **WHEEL** (drawbar organ) and **NOISE** (coloured and metallic noise).
+- **ANIMAL** (0.8.3): animal calls from physical models: a source that oscillates or strikes exciting a resonator,
+  with a call's rhythm on top. **CMOS** is the owner's 40106 / 4093 breadboard "bird machine" (Schmitt-trigger RC
+  oscillators: a slow one gates and sweeps a fast one, the exponential charge is the chirp's hook), **PULSE** an
+  escapement into a resonator (crickets, katydid, cicada, frogs, toad), **WHSTL** a Hopf oscillator whose tone is born
+  as the pressure crosses a threshold (canary, cardinal, dove, owl, peeper, bat), **WING** flight tones with drift and
+  Doppler fly-bys (mosquito, bee, fly), **GLOTT** a glottal pulse into two formants with subharmonics and chaos (wolf,
+  bark, roar, purr). GROUP makes chirps and trills, TEMP (°C) speeds insects up as warmth does (Dolbear's law); a note
+  is a call. 24 presets.
 - **FILTER on every engine** (EDIT > FILTER): **TYPE** LP, HP, BP or **COMB** (a comb tuned to the note you're
   playing; CUT moves it ±32 semitones and RES is how much it rings), **CUT** and **RES**. On ANALOG it's its per-voice
   filter, with DRV; on LOFI it's per voice too (its CUT and RES are the ones on this page); on the others it's a filter
@@ -188,8 +196,10 @@ An 8-sound kit (BD SD CP CH OH TM RS CB) generated in real time, Microtonic styl
   funk, post punk, jazz, ambient …) or RANDOM, a seed, an energy, a form (a loop, parts, a club song); how much drums,
   bass, chords, arp and lead; complexity, swing, how human. **OCT+** writes the piece from them (OCT+ again: a new
   seed; a knob turned and OCT+: the same piece with that one thing changed), **OCT−** is done. Every piece has one
-  scale, drums from the genre's priority map, a bass archetype written against the kick, chords with a quality each
-  voiced and led, a motif in phrases, a sound recipe a role, the genre's kit and space (see v0.6.91).
+  key, written to the SCALE page (and the CHORD page set to its chords: the keys play along in key), drums from the
+  genre's priority map, a bass archetype written against the kick, a functional or modal progression with cadences
+  voiced and led voice by voice, a lead composed from a motif in periods and sentences, a sound recipe a role, the
+  genre's kit and space (see v0.6.91, v0.8.3).
 - **UNDO: GLO held + G4** takes back the last big change (DICE ALL, a sound diced, a clear, INIT, RECALL, a pattern or
   project loaded); pressing it again goes forward (redo). G4 breathes when there is something to undo.
 - **Macros M1–M4** (LFO held; they stay latched when released until you press LFO again): every session starts with
@@ -525,6 +535,87 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### v0.8.3
+- **GEN composes** (the owner: "the melodies too random, little musicality; use the CHORD and SCALE pages"). The
+  piece's key is now **a mode of seven written to the SCALE page** (ROOT, SCALE, QUANT SNAP unless another QUANT was
+  chosen) and the chord track's **CHORD page** set to its chords (TRIAD / 7TH / ADD9 / SUS2 / SUS4 as the progression is
+  coloured, VOICING LEAD): the keys play along in key. A genre's pentatonic or blues is its lead's palette over the
+  mode that holds it, so the chords stay real chords. **Harmony**: progressions as degrees of the mode, each loop ending
+  on its cadence chord (IV–I, bVII–i, V–i, bII–i, the Andalusian and Aeolian cadences, ii–V–I, I–vi–ii–V ..); a mode
+  that would turn one of its chords diminished never takes that progression; the minor key's dominant raised before
+  its tonic, jazz's turnaround, secondary dominants and mixture (IV–iv–I, bVII and bVI in major) only where the genre
+  colours. **Voicing**: voice by voice to the nearest inversion or spread (common tones held; 4.6 semitones of motion a
+  change, 5.5 before), drop 2 for washes and film, rootless 3-5-7-9 for jazz and deep house, no seconds below G3.
+  **Bass**: the root at every chord change (mid-bar ones too), the chord's own third, fifth and seventh, approaches that
+  always resolve, a walking bass's roots in the octave nearest its line. **Lead**: a one-bar motif developed by a
+  phrase template (period, sentence, A A B A', call and response, the techno hook), moved to each chord the voice-led
+  way, with retrograde, augmentation, truncation and ornament as variations; chord tones on beats 1 and 3, passing and
+  neighbour notes between, a leap past a fourth turned back by a step, never past an octave, the phrase closing on a
+  stable degree, no avoid note held, a borrowed chord's tones followed; no more random walks thrown on the lead or the
+  arp at playback. **Sections**: B on the predominant (the chords turned), and the pop genres' last section a whole
+  step up, a real modulation stored with its SCALE page.
+- **Measured** (tests/gen_test.c, every genre at 12 seeds; the same metrics on 0.8.2 over 860 pieces in brackets):
+  every note in the key but rule-based chromaticism (0 unexplained, [88]); lead beats on chord tones 90 % [64 %];
+  steps 60 % of the lead's moves [44 %], leaps past a fourth 10 % of them [26 %], turned back by a step 79 % [21 %],
+  none past an octave; phrases closing on a stable chord tone 80 % [32 %]; the bass on the root at every change
+  100 % [98 %].
+- **CHORD page in the scales of five, six or eight notes** (PEN MPEN BLUES WHOLE DIMHW DIMWH): every other note made
+  odd stacks (C minor pentatonic's triad on C was C F Bb); now each tone is the interval the chord asks for where the
+  scale has it, else the nearest it offers: triads, sus chords and sixths in the pentatonics, augmented in whole tone,
+  diminished and dominant sevenths in the diminished scales; every tone in the scale. The modes of seven as before.
+- **A section's key with a DRUM track selected**: the scale link kept the key before the song brought a section in its
+  own key; the first melodic track's key counts now.
+- **What it costs**: 9.5 KB of flash; RAM 1152 B less (.data + .bss 93940 B, was 95092: the generator's kept chord
+  steps are made again instead, the kick a bit mask); the pool unchanged. GEN runs in the main loop: a full piece 9 %
+  more instructions (LOOP), 20 % (PARTS), 22 % (SONG), against 0.8.2's (callgrind); the audio path untouched.
+  Project and backup formats unchanged.
+- **LENTE: the sequencer as a lens** (a tester: reaching a sequencer function took many SEQ taps, eleven pages in a
+  chain, and the next bar sixteen KNOB 1 detents). On a SEQ page **SELECT zooms** between three levels, **PATTERN ↔
+  BAR ↔ STEP** (no wrap), and a **SEQ tap goes round the level's sets**: PATTERN shows the pattern's bars side by side
+  (up to four, each its sixteen steps small, the edited bar framed, the playhead) with PATTERN (LEN DIV SWING GATE),
+  STRETCH, PLAYHEADS, TRACK and MUTATE, and **PRESETS picks the bar**; BAR is the piano roll (a kit: the grid, its keys
+  as before) with STEP, NOTE, AUTOMATION and AUTO LIST, PRESETS the step; STEP draws the cursor step large (its notes,
+  the one in focus lit, MICRO and RATCH shown, a TIE's held notes; chips for ACC, SLIDE, MICRO, COMP, COMP 2, CHANCE,
+  the set's own lit) with NOTE, COMP and COMP 2. The footer's first row says where you are on every SEQ page: the three
+  levels, the one shown lit, and the bars, the edited one lit, a line under the one playing (the page's name flashes
+  under it). SEQ from another page comes back to the level and set last used on that track. COMP 2 is now SELECT + two
+  taps (was five), the next bar one PRESETS detent (was sixteen), MUTATE SELECT + four taps (was ten). Same edits as
+  before: the pages, their knobs, the editor protocol and the saved data are unchanged (LENTE groups the existing
+  pages); SEQ held is SEQ TOOLS on every SEQ page now, SEQ + SELECT the dice, SEQ + REC clear all, locks, step
+  recording and the hidden pages as they were. KNOB 1 stays LEN on PATTERN (the mock-up had the bar there: PRESETS
+  takes it, so nothing is lost). COMP's own picture (the ladder, TRIG's loops) gave way to the large step.
+  **What it costs**: no audio-path change; 12 B of RAM (.data + .bss 95092 → 95104 B; the level and a 16-bit memory a
+  track), the pool's spare unchanged (8640 B), RAM code unchanged (21580 B), 1088 B of flash (482712 → 483800 B);
+  drawing (ui_render, host): only on a change, as before (a frame that changes nothing: 0.35–0.8 µs, the signature);
+  the footer's pills add 4 texts to every SEQ page (STEP full redraw ~110 → ~115 µs); PATTERN's bars draw about as fast
+  as the roll did there (panel ~55 µs); STEP's large step and chips are the heaviest (46 texts, 10.9k glyph px against
+  the roll's 24 / 5.3k: a full redraw ~114 → ~150 µs, the panel ~59 → ~65–82 µs), still within the roll's league.
+  ui_test checks the zoom, the sets, the memory per track, PRESETS by level, the tools and the dice
+  on every level and the DRUM grid; ui_render draws the three levels (melodic and DRUM, a chord, a TIE, a REST) in every
+  palette, FLAT and LINE, LARGE: lint and alignment clean.
+- **Two DRUM tracks, one kit, never overwritten by the other** (reported again by a tester): the section keeps one
+  DRUM-X kit. Browsing presets already left another track's kit alone (0.8.1); now the sound dice (EDIT + SELECT) and
+  INIT SOUND do too: a second DRUM track inits or dices its own sound and the screen says KIT OF T4 KEPT / INIT, KIT KEPT.
+- **A new engine: ANIMAL** (engine 14, after DRUM in the lists), from the research report on bioacoustic synthesis:
+  four cheap primitives (a nonlinear oscillator, a pulse or relaxation generator, a resonator, a slow control layer)
+  make most of the fauna. **MODE** picks the source and every mode relabels the knobs: **CMOS** (the owner's 40106 /
+  4093 circuit: TOUCH COUPLE CAP · HYST RATE GROUP FM; at C5 it chirps at ~1.05 kHz with rising hooks, 2.4–4.5 a second,
+  or a trill of 8–10, as in his video), **PULSE** (crickets, cicadas, frogs: CLICK Q · DETUNE), **WHSTL** (a Hopf
+  oscillator: no tone below the pressure's threshold, a real onset above it; SWEEP's hooks narrow at fast trills),
+  **WING** (BUZZ DRIFT · DOPPLR) and **GLOTT** (MOUTH ROUGH · AIR: period doubling, then a logistic map once a cycle).
+  The call's rhythm is the same everywhere: RATE syllables a second, GROUP (HOLD, TRILL, 1+1 .. 32+32: syllables and
+  gaps), TEMP in °C scaling every rate (Dolbear). SIZE moves the animal up or down from the key. 24 presets: CMOS
+  BIRD, CMOS TRILL, CMOS MONKEY, CMOS BUG, CRICKET, TREE CRICKT, KATYDID, CICADA, TREEFROG, TOAD, BULLFROG, CANARY,
+  CARDINAL, DOVE, OWL, PEEPER, BAT, MOSQUITO, BEE, FLY, WOLF, DOG BARK, ROAR, PURR.
+- **What it costs**: no RAM (each voice's state fits the voice's own 44 bytes; .data + .bss unchanged at 95092 B, the
+  pool's spare unchanged), 7.6 KB of flash, no code in RAM. CPU with eight voices (callgrind, instructions a sample a
+  voice): CMOS 103, PULSE 92, WHSTL 86, WING 67, GLOTT 167, against ANALOG's 193 (the heaviest): all eight voices on
+  every mode. tests/animal_test.c checks the CMOS pitch (±2 cents), the video's chirps, the cricket's carrier and
+  rate, TEMP, the Hopf onset, no DC or clipping at any corner, the same samples twice; cpu_vg measures each mode.
+- **The lists**: ANIMAL comes after DRUM, so every sound keeps its place in PRESETS and its PROGRAM CHANGE number;
+  programs now end inside ANIMAL's presets (the user presets after them are picked on the device or the editor).
+  The web editor, the protocol notes, the cheat sheets and both manuals know it.
 
 ### v0.8.2
 - **SEQ: the piano roll stays** (a tester: "too many submenus, while they change you forget where you were"). The

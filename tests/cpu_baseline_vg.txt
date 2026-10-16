@@ -1,6 +1,12 @@
 # JIANT audio path CPU under valgrind (tests/cpu_vg.c, tests/cpu_vg.py): instructions per sample,
 # x86-64 gcc -O2. Exact counts; the check allows +8 %. Rewritten by BUDGET_UPDATE=1.
 eng/ANALOG 2293
+eng/ANIMAL 2179
+eng/ANIMAL.CMOS 1588
+eng/ANIMAL.GLOTT 2103
+eng/ANIMAL.PULSE 1503
+eng/ANIMAL.WHSTL 1451
+eng/ANIMAL.WING 1305
 eng/DRUM 1544
 eng/FM6 1690
 eng/LOFI 1872

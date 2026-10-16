@@ -696,6 +696,40 @@ static void sound_name(const track_t *t, char *b)
         str_cpy(b, e->presets[t->preset % e->npresets].name, 16);
 }
 
+/* (0.8.3) LENTE: the footer's first row on the SEQ pages: the three levels (the one shown a THEME pill, INK text),
+ * then at the right the pattern's bars, the one edited lit, a TEXT line under the one playing (the DRUM grid with ACC
+ * held: ACCENT there instead) */
+#define LF_CW 15                                         /* a bar's cell; 4 of them end at x 232 */
+#define LF_CX(b) (232 - 4 * LF_CW - 9 + (int32_t)(b) * (LF_CW + 3))
+static void lens_foot(const track_t *t)
+{
+    uint32_t l, b, lv = lens_level(), len = (uint32_t)clamp(t->p[P_SLEN], 1, NSTEP), nb = (len + 15u) / 16u;
+    uint32_t pb = song.playing ? seq_src(t, t->seq_idx) / 16u : 0xFFu;
+    int32_t x = 8;
+    char d[2] = {0, 0};
+    for (l = 0; l < LV_N; l++) {
+        int32_t w = text_w(&AF_S, LENS_NAME[l]) + 10;
+        uint16_t bg = l == lv ? T_THEME : T_RAISE;
+        cv_rrect(x, 1, w, 13, 3, bg, T_BG);
+        GFX_HOOK_ALIGN(x, 1, x + w, 14, AL_HV, "footer lens level centred in its pill");
+        cv_text_in(x, 1 + CAP_IN(S, 13), w, &AF_S, LENS_NAME[l], l == lv ? T_INK : T_MID, bg);
+        x += w + 3;
+    }
+    if (grid_on() && black_held(GK_ACC)) {
+        cv_text_r(232, 2, &AF_S, "ACCENT", T_ACCENT, T_BG);
+        return;
+    }
+    for (b = 0; b < nb && b < 4u; b++) {
+        int32_t cx = LF_CX(b);
+        uint16_t bg = b == ui.bank ? T_THEME : T_RAISE;
+        d[0] = (char)('1' + b);
+        cv_rrect(cx, 1, LF_CW, 13, 3, bg, T_BG);
+        GFX_HOOK_ALIGN(cx, 1, cx + LF_CW, 14, AL_HV, "footer lens bar number centred in its cell");
+        cv_text_in(cx, 1 + CAP_IN(S, 13), LF_CW, &AF_S, d, b == ui.bank ? T_INK : T_MID, bg);
+        if (b == pb)
+            cv_rect(cx, 15, LF_CW, 1, T_TEXT);
+    }
+}
 static void draw_foot(void)
 {
     char s[48], pn[16], ti[20];
@@ -738,10 +772,13 @@ static void draw_foot(void)
     }
     if (grid_on())
         sig += 0x51EDu + (uint32_t)black_held(GK_ACC) * 977u;
+    if (lens_on())                                     /* (0.8.3) the level, the bar playing, the flash over row 2 */
+        sig += (lens_level() + 1u) * 104729u + (song.playing ? seq_src(t, t->seq_idx) / 16u + 1u : 0u) * 1299709u +
+               pf_on * 15485863u;
     if (!ui.force && sig == ui.foot_sig)
         return;
     ui.foot_sig = sig;
-    cv_begin(240, H_FOOT, T_BG);
+    cv_begin(240, pf_on && lens_on() ? LF_ROW : H_FOOT, T_BG);   /* (0.8.3: the page's flash under row 1) */
     if (act_cols()) {                                 /* row 1: the OCT+ / OCT- hint in place of the steps */
         char ha[16], hb[16];
         khint_t kh[3];
@@ -756,18 +793,9 @@ static void draw_foot(void)
         } else {
             cv_key_row(8, 232, 2, kh, 2, act_ready() ? 3u : 2u, T_BG);
         }
-    } else if (grid_on()) {                           /* row 1: the page, and what the keys do */
-        char b[16];
-        uint32_t len = (uint32_t)t->p[P_SLEN];
-        str_cpy(b, "PAGE ", sizeof b);
-        fmt_int(b + 5, (int32_t)ui.bank + 1);
-        str_cpy(b + str_len(b), "/", 4);
-        fmt_int(b + str_len(b), (int32_t)((len + 15u) / 16u));
-        cv_text(8, 2, &AF_S, b, T_THEME);
-        if (black_held(GK_ACC))
-            cv_text_r(232, 2, &AF_S, "ACCENT", T_ACCENT, T_BG);
-        else
-            cv_key_hint(232 - kh_w(KC_KEYS, "STEPS"), 2, KC_KEYS, "STEPS", 1, T_BG);   /* the keys are the steps */
+    } else if (lens_on()) {                           /* (0.8.3) row 1: LENTE's level and the bars (the DRUM grid's
+                                                       * pages: its bars; ACC held: ACCENT) */
+        lens_foot(t);
     } else {
         uint32_t i;
         if ((ui.bank + 1u) * 16u <= (uint32_t)t->p[P_SLEN]) {
@@ -794,6 +822,7 @@ static void draw_foot(void)
                 cv_rect(sx, 14, 9, 2, T_TEXT);          /* the step sounding */
         }
     }
+    if (!(pf_on && lens_on()))
     {   /* row 2: engine icon + name, sound, page title at the right with its icon before it (MIXER, PHRASES, SONG,
          * CHANCE, AUTOMATION); icons: their ink on the names' capitals */
         uint32_t pi = ui.home ? ICON_NONE : page_icon(pg), ei = FELUCCA_ICONS ? (glob ? ICON_X_SONG : engine_icon(ename)) : ICON_NONE;
@@ -1774,7 +1803,8 @@ static void ui_draw_page(uint32_t counting)
                                                          * footer, which says the same: the header, the cards and
                                                          * the graph stay in sight */
         page_flash_draw();
-    if (!pf_on)                                         /* (its end: the footer back at once) */
+    if (!pf_on || lens_on())                            /* (its end: the footer back at once; (0.8.3) SEQ: its first
+                                                         * row, LENTE's level, stays drawn under the flash) */
         draw_foot();
     ui.force = 0;
 }

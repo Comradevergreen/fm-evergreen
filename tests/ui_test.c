@@ -2729,8 +2729,8 @@ static int test_chain(void)
  * 1; TOOLS: nothing; HOME, PRESETS and every other page: the next sound, the steps untouched, SAVE held undoes it */
 static int test_presets_knob(void)
 {
-    int bad = 0, cur_ok = 1, sel_ok = 1, snd_ok = 1, tools_ok = 1, grid_ok;
-    uint32_t i, n_snd = 0, n_cur = 0;
+    int bad = 0, cur_ok = 1, sel_ok = 1, snd_ok = 1, tools_ok = 1, grid_ok, bar_ok = 1;
+    uint32_t i, n_snd = 0, n_cur = 0, n_bar = 0;
     for (i = 0; i < NPAGES; i++) {
         track_t before;
         uint32_t g = PAGES[i].graph, uslot, ppick;
@@ -2749,7 +2749,10 @@ static int test_presets_knob(void)
             int same_snd = TSEL->preset == before.preset && TSEL->eng_req == before.eng_req &&
                            !memcmp(TSEL->p, before.p, sizeof before.p);
             int same_steps = !memcmp(TSEL->step, before.step, sizeof before.step);
-            if (PAGES[i].fam == FAM_SEQ && (g == GR_ROLL || g == GR_STEPS || g == GR_CHANCE || g == GR_COMP || g == GR_MOTION)) {
+            if (lens_k(LV_PAT, i) >= 0) {               /* (0.8.3) LENTE's PATTERN level: the bar (LEN 32: 2) */
+                bar_ok &= ui.cursor == 16u && ui.bank == 1u && same_snd && same_steps && ui.page == i;
+                n_bar++;
+            } else if (PAGES[i].fam == FAM_SEQ && (g == GR_ROLL || g == GR_STEPS || g == GR_CHANCE || g == GR_COMP || g == GR_MOTION)) {
                 cur_ok &= ui.cursor == 1u && same_snd && same_steps && ui.page == i;
                 n_cur++;
             } else if (g == GR_USER) {
@@ -2768,8 +2771,10 @@ static int test_presets_knob(void)
             }
         }
     }
-    bad += check("#92 PRESETS on STEP, COMP, PATTERN, SHIFT, CHANCE, AUTOMATION: the step cursor; the sound and the steps stay",
-                 cur_ok && n_cur == 8u);    /* (0.6.92: STEP PATTERN NOTE COMP COMP 2 TRACK AUTOMATION, CHANCE) */
+    bad += check("#92 PRESETS on STEP, NOTE, COMP, COMP 2, CHANCE, AUTOMATION: the step cursor; the sound and the steps stay",
+                 cur_ok && n_cur == 6u);    /* (0.6.92: STEP NOTE COMP COMP 2 AUTOMATION, CHANCE) */
+    bad += check("0.8.3 LENTE: PRESETS on PATTERN, STRETCH, PLAYHEADS, TRACK, MUTATE: the bar; the sound and the steps stay",
+                 bar_ok && n_bar == 5u);
     bad += check("#94 PRESETS on USER, PROJECT, PHRASES, SONG: the selection (KNOB 1's); nothing loaded", sel_ok);
     bad += check("#94 PRESETS on TOOLS does nothing", tools_ok);
     bad += check("#94 PRESETS elsewhere (EDIT, ENV, LFO, FX, SCL, ARP, MIXER, GLOBAL, ...): the next sound, the steps stay",
@@ -3849,6 +3854,18 @@ static int test_quick_layers(void)
     bad += check("  G3 RECALL (dialog, OCT+): the sound and the DRUM-X kit as the section stored them; the steps stay", ok);
     TSEL->p[P_E0] = 3;
     dx_kit[1].a[DXP_PITCH] = 99;
+    {   /* (0.8.3) another DRUM track keeps the section's one kit: INIT leaves it (the kit is checked alone below) */
+        uint32_t k, other = 0;
+        for (k = 0; k < NTRK; k++) if (&trk[k] != TSEL && trk[k].eng_req == ENGI_DRUM) { other = k + 1u; break; }
+        if (other) {
+            btn_down(B_EDIT); frame(); key_down(white(0)); frame(); key_up(white(0)); btn_up(B_EDIT); frame();
+            press(B_OCTUP);
+            bad += check("  F3 INIT with another DRUM track: the sound inits, the kit (theirs too) stays", msg_is("INIT, KIT KEPT") &&
+                         dx_kit[1].a[DXP_PITCH] == 99);
+            trk[other - 1u].eng_req = 0;                 /* (then alone: the factory kit, as before) */
+            TSEL->p[P_E0] = 3;
+        }
+    }
     btn_down(B_EDIT); frame(); key_down(white(0)); frame();
     ok = ui.confirm == CF_INIT_SOUND;
     frame();
@@ -4822,9 +4839,9 @@ static int test_fm4_retired(void)
     }
     bad += check("PRESETS KNOB 2: the engines in order, DIGITAL skipped, back to the first",
                  seen == all && TSEL->eng_req == 0u && eng_step(0, 1) == ENGI_FM6 && eng_step(ENGI_FM6, 1) == 2u &&
-                 eng_step(ENGI_FM6, -1) == 0u && eng_step(0, -1) == ENGI_DRUM);
+                 eng_step(ENGI_FM6, -1) == 0u && eng_step(0, -1) == ENGI_ANIMAL && eng_step(ENGI_ANIMAL, -1) == ENGI_DRUM);
     {   /* the display order (engines.c ENGINE_ORDER): every engine one can pick once; the PRESETS list follows it */
-        static const char *const ORDER[] = {"ANALOG", "FM6", "PHASE", "LOFI", "VOICE", "WHEEL", "NOISE", "DRUM"};
+        static const char *const ORDER[] = {"ANALOG", "FM6", "PHASE", "LOFI", "VOICE", "WHEEL", "NOISE", "DRUM", "ANIMAL"};
         uint32_t last = 0xFFu, r = 0, n = 0;
         ok = NENG_SHOWN == NELEM(ORDER);
         for (i = 0; ok && i < NENG_SHOWN; i++)
@@ -4839,7 +4856,7 @@ static int test_fm4_retired(void)
             last = e;
             r++;
         }
-        bad += check("engines shown ANALOG FM6 PHASE ... NOISE DRUM (ENGINE_ORDER); PRESETS lists them so",
+        bad += check("engines shown ANALOG FM6 PHASE ... NOISE DRUM ANIMAL (ENGINE_ORDER); PRESETS lists them so",
                      ok && r == NENG_SHOWN);
     }
     /* a user preset stored with engine 1: kept as it is, it loads as FM6 with the converted patch */
@@ -6179,17 +6196,171 @@ static void tl_drum(void)
     TSEL->p[P_SLEN] = 16;
 }
 
+/* (0.8.3) LENTE (ui.c lens_*): SELECT zooms PATTERN <-> BAR <-> STEP (no wrap), a SEQ tap the level's next set, the
+ * track's memory when SEQ comes back from elsewhere, PRESETS by level, the panel by level, NOTE in two levels, the
+ * tools layer and the dice on every level, the DRUM grid on BAR */
+static int test_lente(void)
+{
+    static const char *const PAT[] = {"PATTERN", "STRETCH", "PLAYHEADS", "TRACK", "MUTATE"};
+    static const char *const STP[] = {"NOTE", "COMP", "COMP 2"};
+    int bad = 0, ok;
+    uint32_t q, sig;
+    ui_power_on();
+    TSEL->p[P_SLEN] = 64;
+    open_family(FAM_SEQ); frame();
+    ok = str_eq(cur_page()->title, "STEP") && lens_level() == LV_BAR && roll_view(cur_page());
+    turn(EN_SELECT, -1); frames(32);
+    ok &= lens_level() == LV_PAT && str_eq(cur_page()->title, "PATTERN") && bars_view(cur_page());
+    turn(EN_SELECT, -1); frames(32);
+    ok &= lens_level() == LV_PAT && str_eq(cur_page()->title, "PATTERN");          /* (no wrap) */
+    turn(EN_SELECT, 1); frames(32);
+    ok &= lens_level() == LV_BAR && str_eq(cur_page()->title, "STEP");
+    turn(EN_SELECT, 1); frames(32);
+    ok &= lens_level() == LV_STEP && str_eq(cur_page()->title, "NOTE") && bigstep_view(cur_page()) && !roll_view(cur_page());
+    turn(EN_SELECT, 1); frames(32);
+    ok &= lens_level() == LV_STEP && str_eq(cur_page()->title, "NOTE");
+    turn(EN_SELECT, -2); frames(32);
+    ok &= lens_level() == LV_PAT;                                                  /* (two detents: two levels) */
+    bad += check("LENTE: SELECT zooms PATTERN <-> BAR <-> STEP, no wrap; SEQ enters at BAR's STEP", ok);
+    ok = 1;
+    for (q = 1; q <= 5u; q++) {                                                    /* PATTERN's sets, round */
+        press(B_SEQ); frames(32);
+        ok &= lens_level() == LV_PAT && str_eq(cur_page()->title, PAT[q % 5u]);
+        ok &= (str_eq(PAT[q % 5u], "PLAYHEADS") || str_eq(PAT[q % 5u], "MUTATE")) != bars_view(cur_page());
+    }
+    turn(EN_SELECT, 2); frames(32);
+    ok &= lens_level() == LV_STEP && str_eq(cur_page()->title, "NOTE");
+    for (q = 1; q <= 3u; q++) {                                                    /* STEP's sets, round */
+        press(B_SEQ); frames(32);
+        ok &= lens_level() == LV_STEP && str_eq(cur_page()->title, STP[q % 3u]) && bigstep_view(cur_page());
+    }
+    bad += check("  a SEQ tap: the level's next set (PATTERN: 5, STEP: 3), round again; the panel the level's", ok);
+    /* the memory: each level its set, the track the level */
+    press(B_SEQ); frames(32);                                                      /* STEP: COMP */
+    turn(EN_SELECT, -2); frames(32);
+    press(B_SEQ); frames(32);                                                      /* PATTERN: STRETCH */
+    turn(EN_SELECT, 2); frames(32);
+    ok = str_eq(cur_page()->title, "COMP") && lens_level() == LV_STEP;
+    turn(EN_SELECT, -2); frames(32);
+    ok &= str_eq(cur_page()->title, "STRETCH");
+    go_title("ENV"); frame();
+    open_family(FAM_SEQ); frame();
+    ok &= str_eq(cur_page()->title, "STRETCH") && lens_level() == LV_PAT;
+    turn(EN_SELECT, 1); frames(32);                                                /* BAR, as left: STEP */
+    ok &= str_eq(cur_page()->title, "STEP") && lens_level() == LV_BAR;
+    turn(EN_SELECT, 1); frames(32);
+    ok &= str_eq(cur_page()->title, "COMP");
+    track_select(1); frame();                                                     /* T2: its own, BAR's STEP */
+    go_home(); frame();
+    open_family(FAM_SEQ); frame();
+    ok &= str_eq(cur_page()->title, "STEP") && lens_level() == LV_BAR;
+    track_select(0); frame(); go_home(); frame();
+    open_family(FAM_SEQ); frame();
+    ok &= str_eq(cur_page()->title, "COMP") && lens_level() == LV_STEP;
+    bad += check("  memory: each level its set; SEQ from elsewhere: the level and set last used on that track", ok);
+    /* NOTE in two levels: the same page, the roll on BAR, the step on STEP; a page put by code brings its level */
+    go_title("NOTE"); frame();
+    ok = lens_level() == LV_STEP && bigstep_view(cur_page());                     /* (from STEP: stays STEP) */
+    go_title("TRACK"); frame();
+    ok &= lens_level() == LV_PAT;
+    go_title("NOTE"); frame();
+    ok &= lens_level() == LV_BAR && roll_view(cur_page());
+    go_page(GR_CHANCE); frame();
+    ok &= lens_level() == LV_STEP;
+    press(B_SEQ); frames(32);
+    ok &= str_eq(cur_page()->title, "NOTE") && lens_level() == LV_STEP;           /* (hidden CHANCE: the level's first) */
+    bad += check("  NOTE on BAR (the roll) and STEP (the step); a page put by code brings its level (CHANCE: STEP)", ok);
+    /* PRESETS: PATTERN the bar (no wrap, the cursor at its place), BAR and STEP the step (the bar following) */
+    go_title("PATTERN"); frame();
+    cursor_set(5);
+    turn(EN_PRESET, 1);
+    ok = ui.cursor == 21u && ui.bank == 1u && TSEL->p[P_SLEN] == 64;
+    turn(EN_PRESET, 5);
+    ok &= ui.cursor == 53u && ui.bank == 3u;
+    turn(EN_PRESET, -9);
+    ok &= ui.cursor == 5u && ui.bank == 0u;
+    turn(EN_K1, -1);                                                               /* KNOB 1: LEN, as always */
+    ok &= TSEL->p[P_SLEN] == 63;
+    TSEL->p[P_SLEN] = 32;
+    turn(EN_PRESET, 3);
+    ok &= ui.bank == 1u && ui.cursor == 21u;                                       /* (LEN 32: two bars) */
+    turn(EN_SELECT, 1); frames(32);
+    cursor_set(15);
+    turn(EN_PRESET, 1);
+    ok &= ui.cursor == 16u && ui.bank == 1u;                                       /* BAR: the step, into the next bar */
+    turn(EN_SELECT, 1); frames(32);
+    turn(EN_PRESET, -1);
+    ok &= ui.cursor == 15u && ui.bank == 0u;
+    bad += check("  PRESETS: PATTERN the bar (no wrap; KNOB 1 still LEN); BAR and STEP the step, the bar following", ok);
+    /* the footer's first row: the level and the bars; the page's flash under it */
+    go_title("PATTERN"); ui.force = 1; frame();
+    sig = ui.foot_sig;
+    turn(EN_SELECT, 1); frame();
+    ok = ui.foot_sig != sig && lens_level() == LV_BAR;
+    pf_on = 1; draw_foot();                                                        /* (PF_MS 0 here: a flash held) */
+    sig = ui.foot_sig;
+    pf_on = 0; draw_foot();
+    ok &= sig != ui.foot_sig;
+    {
+        char ti[20];
+        page_title(ti);
+        ok &= !strchr(ti, '/') && ti[0] == 'C';                                    /* (the roll: its scale, "C CHR") */
+        go_title("COMP"); frame();
+        page_title(ti);
+        ok &= str_eq(ti, "COMP 2/3");
+        go_title("TRACK"); frame();
+        page_title(ti);
+        ok &= str_eq(ti, "TRACK 4/5");
+    }
+    bad += check("  the footer: the level and the bars (redrawn under the page's flash); STEP's sets as \"COMP 2/3\"", ok);
+    /* the tools layer and the dice on every level */
+    ok = 1;
+    for (q = 0; q < 3u; q++) {
+        static const char *const T[3] = {"MUTATE", "AUTO LIST", "COMP 2"};
+        uint32_t pg;
+        ui_power_on();
+        go_title(T[q]); frame();
+        pg = ui.page;
+        btn_down(B_SEQ); frames(500);
+        ok &= ui.layer == LAYER_SEQ && ui.page == pg;
+        btn_up(B_SEQ); frame();
+        ok &= !ui.layer && ui.page == pg;
+        fm1_ms += 1200u;
+        sig = steps_sig(TSEL);
+        held_turn(B_SEQ, 1); frame();
+        ok &= ui.confirm == CF_DICE_SEQ && ui.page == pg;
+        press(B_OCTDN); frame();
+        ok &= !ui.confirm && steps_sig(TSEL) == sig && ui.page == pg;
+    }
+    bad += check("  SEQ held: the tools on every level (MUTATE, AUTO LIST, COMP 2); SEQ + SELECT: the dice, the page stays", ok);
+    /* the DRUM grid: BAR's STEP, its keys and footer; STEP: the step large, the grid's keys still its */
+    ui_power_on();
+    set_engine_of(TSEL, ENGI_DRUM); TSEL->engine = TSEL->eng_req;
+    track_defaults_steps(TSEL); TSEL->p[P_SLEN] = 32;
+    open_family(FAM_SEQ); frame();
+    ok = grid_on() && roll_view(cur_page()) && lens_level() == LV_BAR && song.grid == 1u;
+    frames(500);                                                                   /* (the dice's turn burst over) */
+    turn(EN_SELECT, -1); frames(32);
+    ok &= bars_view(cur_page());
+    turn(EN_PRESET, 1);
+    ok &= ui.bank == 1u;
+    turn(EN_SELECT, 2); frames(32);
+    ok &= bigstep_view(cur_page()) && lens_level() == LV_STEP;
+    bad += check("  DRUM: BAR is the grid (its keys); PATTERN its bars, PRESETS the bar; STEP the step large", ok);
+    return bad;
+}
+
 static int test_seq_tools(void)
 {
-    static const uint8_t PG[4] = {GR_ROLL, GR_STEPS, GR_CHANCE, GR_MOTION};
+    static const uint8_t PG[8] = {GR_ROLL, GR_STEPS, GR_CHANCE, GR_MOTION, GR_SHAPE, GR_FUGUE, GR_MUTATE, GR_COMP};
     static const uint8_t NOT[4] = {GR_PATS, GR_SONG, GR_TRK, 0};
     int bad = 0, ok, okc, flash;
     uint32_t i, k, a, b2, pg, seed;
     step_t ref[NSTEP], mid[NSTEP];
 
-    /* where it opens: the SEQ pages that show the pattern; elsewhere SEQ held is a tap (SONG: SAVE held, G5) */
+    /* where it opens: (0.8.3) every LENTE page; elsewhere SEQ held is a tap (SONG: SAVE held, G5) */
     ok = 1;
-    for (i = 0; i < 4u; i++) {
+    for (i = 0; i < 8u; i++) {
         ui_power_on();
         go_page(PG[i]); frame();
         pg = ui.page;
@@ -6198,7 +6369,7 @@ static int test_seq_tools(void)
         btn_up(B_SEQ); frame();
         ok &= !ui.layer && ui.page == pg && !ui.home;
     }
-    bad += check("SEQ TOOLS: SEQ held on STEP, PATTERN, CHANCE, AUTOMATION opens the map (no SONG, the page stays)", ok);
+    bad += check("SEQ TOOLS: SEQ held on every LENTE page (STEP .. COMP 2, CHANCE) opens the map (no SONG, the page stays)", ok);
     ok = 1;
     for (i = 0; i < 4u; i++) {
         ui_power_on();
@@ -6215,40 +6386,18 @@ static int test_seq_tools(void)
     bad += check("  elsewhere (PHRASES, SONG, MIXER, HOME, ENV) SEQ held is a tap: no SONG, no map", ok);
     ui_power_on();
     go_page(GR_ROLL); frame();
-    {   /* (0.6.90) the piano roll, its pages, then the track's; (0.8.2) PLAYHEADS with the roll's, TRACK after */
-        static const char *const ORD[] = {"PATTERN", "NOTE", "STRETCH", "COMP", "COMP 2", "PLAYHEADS", "TRACK"};
+    {   /* (0.8.3) LENTE: a tap on STEP, BAR's next set (STEP NOTE AUTOMATION AUTO LIST, round again) */
+        static const char *const ORD[] = {"NOTE", "AUTOMATION", "AUTO LIST", "STEP"};
         uint32_t q;
         ok = 1;
         for (q = 0; q < sizeof ORD / sizeof ORD[0]; q++) {
             press(B_SEQ); frames(320);
-            ok &= str_eq(cur_page()->title, ORD[q]);
+            ok &= str_eq(cur_page()->title, ORD[q]) && lens_level() == LV_BAR;
             if (!q) ok &= msg_is("HOLD [SEQ] QUICK");
         }
     }
-    press(B_SEQ); frames(320);
-    ok &= cur_page()->graph == GR_MOTION;
-    press(B_SEQ); frames(320);
-    ok &= cur_page()->graph == GR_EVENTS;
-    press(B_SEQ); frames(320);
-    ok &= cur_page()->graph == GR_MUTATE;
-    bad += check("  a tap on STEP: the next SEQ page, as always (the hint until the layer was opened)", ok);
-    {   /* (0.8.2) the roll stays: the pages that edit it keep it in the panel, the track's own keep their graphs */
-        uint32_t i, roll = 0, own = 0;
-        ok = 1;
-        for (i = 0; i < NPAGES; i++) {
-            if (PAGES[i].fam != FAM_SEQ || !page_visible(i)) continue;
-            if (roll_view(&PAGES[i])) roll++;
-            else own++;
-            if (str_eq(PAGES[i].title, "STEP") || str_eq(PAGES[i].title, "PATTERN") || str_eq(PAGES[i].title, "NOTE") ||
-                str_eq(PAGES[i].title, "STRETCH") || str_eq(PAGES[i].title, "COMP") || str_eq(PAGES[i].title, "COMP 2") ||
-                str_eq(PAGES[i].title, "PLAYHEADS"))
-                ok &= roll_view(&PAGES[i]);
-            else
-                ok &= !roll_view(&PAGES[i]);
-        }
-        bad += check("  (0.8.2) STEP PATTERN NOTE STRETCH COMP COMP 2 PLAYHEADS keep the roll; TRACK AUTOMATION AUTO LIST MUTATE their own",
-                     ok && roll == 7u && own == 4u);
-    }
+    bad += check("  a tap on STEP: LENTE's BAR, its next set (the hint until the layer was opened)", ok);
+    bad += test_lente();
     {   /* (0.6.85) SEQ > STRETCH: x2 .. x8 / 2 .. / 8 (the notes spread, held ones held), REPEAT x2 .. x8 / TO 64, NUDGE */
         track_t *t;
         uint32_t i, ok2 = 1, ok3 = 1, ok4 = 1, ok5;
@@ -7880,6 +8029,43 @@ static int test_chord(void)
     for (i = 0; i < 80u; i++) events_block(CTL);
     ok &= chord_sounding(t, nn) == 0u;                  /* (the third never came) */
     bad += check("STRUM: the notes one after the other; let go before the last: everything ends, none comes later", ok);
+    {   /* (0.8.3) the scales of five, six and eight notes: every tone in the scale, chords that are chords (a pentatonic
+         * key's triad a triad or a suspension, a sixth for its seventh; whole tone augmented; diminished diminished) */
+        static const uint8_t SC[6] = {5, 6, 12, 13, 14, 15};   /* PEN MPEN BLUES WHOLE DIMHW DIMWH */
+        uint8_t out[KB_CH];
+        uint32_t s, r, m, note, bads = 0;
+        t->p[P_CVOI] = CV_CLOSE; t->p[P_CSTR] = 0;
+        for (s = 0; s < 6u; s++)
+            for (r = 0; r < 12u; r++)
+                for (m = CD_TRI; m <= CD_SUS4; m++)
+                    for (note = 48; note < 72u; note++) {
+                        uint32_t c, j, mask;
+                        t->p[P_SCALE] = SC[s]; t->p[P_ROOT] = (int16_t)r; t->p[P_CHRD] = (int16_t)m;
+                        mask = scale_mask(t);
+                        c = chord_build(t, note, out);
+                        if (c < 3u) bads++;
+                        for (j = 0; j < c; j++) {
+                            if (!((mask >> ((out[j] + 120u - r) % 12u)) & 1u)) bads++;
+                            if (j && out[j] <= out[j - 1]) bads++;
+                        }
+                    }
+        t->p[P_ROOT] = 0; t->p[P_CHRD] = CD_TRI;
+        t->p[P_SCALE] = 6; n = chord_build(t, 65, nn);  /* C minor pentatonic, F: F Bb C (sus4) */
+        ok = n == 3u && nn[1] - nn[0] == 5 && nn[2] - nn[0] == 7;
+        t->p[P_SCALE] = 5; n = chord_build(t, 62, nn);  /* C pentatonic, D: D G A */
+        ok &= n == 3u && nn[1] - nn[0] == 5 && nn[2] - nn[0] == 7;
+        n = chord_build(t, 57, nn);                     /* A: A C E (A minor) */
+        ok &= n == 3u && nn[1] - nn[0] == 3 && nn[2] - nn[0] == 7;
+        t->p[P_SCALE] = 13; n = chord_build(t, 60, nn); /* whole tone: C E G# */
+        ok &= n == 3u && nn[1] - nn[0] == 4 && nn[2] - nn[0] == 8;
+        t->p[P_SCALE] = 15; n = chord_build(t, 60, nn); /* diminished (whole-half): C Eb F# */
+        ok &= n == 3u && nn[1] - nn[0] == 3 && nn[2] - nn[0] == 6;
+        t->p[P_SCALE] = 6; t->p[P_CHRD] = CD_SEV; n = chord_build(t, 65, nn);   /* F7sus4: F Bb C Eb */
+        ok &= n == 4u && nn[3] - nn[0] == 10;
+        t->p[P_SCALE] = 2; t->p[P_CHRD] = CD_TRI;
+        if (bads) printf("  chord: %u tones off the scale or missing\n", bads);
+        bad += check("CHORD (0.8.3) in PEN MPEN BLUES WHOLE DIMHW DIMWH: every tone in the scale, real chords (sus, aug, dim)", ok && !bads);
+    }
     t->p[P_CSTR] = 0; t->p[P_VOICE] = V_MONO;
     key_down(k); events_block(CTL); n = chord_sounding(t, nn); key_up(k); events_block(CTL);
     bad += check("CHORD on a MONO track: the root alone", n == 1u);
@@ -8353,8 +8539,13 @@ static int test_click_menu(void)
             midi_enqueue(0x0Cu | 0xC1u << 8 | 9u << 16, 1u);   /* PROGRAM CHANGE 9 on channel 2 */
             mix_block(o, CTL); frame();
             ok = all > 9u && e < NENGINES && trk[1].eng_req == e && song.sel == sel0;
-            midi_enqueue(0x0Cu | 0xC1u << 8 | 127u << 16, 1u);   /* past the list: nothing */
+            midi_enqueue(0x0Cu | 0xC1u << 8 | 127u << 16, 1u);   /* the 128th (0.8.3: ANIMAL's), or past the list: nothing */
             mix_block(o, CTL); frame();
+            if (all > 127u) {
+                song.sel = 1;
+                e = preset_all_at(127u, &k);
+                song.sel = (uint8_t)sel0;
+            }
             ok &= trk[1].eng_req == e;
             bad += check("PROGRAM CHANGE n: the PRESETS list's n + 1-th sound into the channel's track, the selection kept", ok);
         }

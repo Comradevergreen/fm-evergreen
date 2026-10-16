@@ -165,6 +165,7 @@ static uint8_t sync_reload;                  /* engine / preset / project / user
 #define H_GRAPH 122
 #define Y_FOOT 202
 #define H_FOOT 38
+#define LF_ROW 17                     /* (0.8.3) the footer's first row (SEQ: LENTE's level and bars) */
 /* MENU > LARGE (large_kind below): on the value pages the cards are tall (28..132) and the panel a strip
  * (136..198); elsewhere (lists, rolls, layers) the layout above, its card labels in M */
 #define LG_CARD_H 104
@@ -179,6 +180,8 @@ static struct {
     uint8_t cursor;              /* SEQ: step being edited (STEP page KNOB 1 moves it) */
     uint8_t entry_open;          /* SEQ: keys held since the first press of this entry */
     uint8_t pr_focus;            /* (0.6.81) SEQ > NOTE: the chord (0) or its note 1..4 (ui_input.c note_edit) */
+    uint8_t lv;                  /* (0.8.3) SEQ's LENTE: the level shown, LV_PAT LV_BAR LV_STEP (lens_sync) */
+    uint16_t lens_mem[NTRK];     /* .. per track: the level last used and each level's set (LM_*: SEQ comes back there) */
     uint8_t ent_len, ent_arp, ent_res, ent_ord, ent_oct, ent_nn;   /* (0.6.37) that entry while held (ui_input.c
                                   * seq_entry): KNOB 1 its LEN in steps; ARP pressed: arpeggiated, KNOB 1 the steps a
                                   * note (RES), 2 the ORDER, 3 the octaves; the keys' notes in order of pitch */
@@ -458,6 +461,77 @@ static uint32_t page_first(uint32_t fam)
     return 0;
 }
 
+/* (0.8.3) LENTE, SEQ's lens (a tester: eleven pages a SEQ tap at a time, sixteen KNOB 1 detents to the next bar).
+ * The SEQ pages grouped by the size of what they edit, three levels SELECT zooms through (no wrap):
+ *   PATTERN  the pattern's bars side by side (ui_graph.c graph_bars) and its sets: PATTERN (LEN DIV SWING GATE),
+ *            STRETCH, PLAYHEADS, TRACK, MUTATE; PRESETS the bar (ui_input.c presets_turn)
+ *   BAR      the bar's piano roll (a kit: the grid), as STEP always was: STEP, NOTE, AUTOMATION, AUTO LIST; PRESETS
+ *            the step cursor, the bar following it
+ *   STEP     the cursor step drawn large with all it holds (graph_bigstep): NOTE (FOCUS PITCH MOVE MICRO), COMP,
+ *            COMP 2; PRESETS the step
+ * A SEQ tap: the level's next set (wrapping); from another family the level and set last used on that track
+ * (lens_mem). Only the navigation and the panel changed: the pages, their cards and knobs are PAGES' as they were
+ * (NOTE is in BAR and STEP: ui.lv says which one is shown). A page put by code (page_jump, a test, the editor) brings
+ * its level with it (lens_sync); PHRASES / SONG (hidden) read as PATTERN, CHANCE (hidden) as STEP */
+enum { LV_PAT, LV_BAR, LV_STEP, LV_N };
+static const char *const LENS_NAME[LV_N] = {"PATTERN", "BAR", "STEP"};
+static const char *const LENS_SET[LV_N][5] = {{"PATTERN", "STRETCH", "PLAYHEADS", "TRACK", "MUTATE"},
+                                              {"STEP", "NOTE", "AUTOMATION", "AUTO LIST", ""},
+                                              {"NOTE", "COMP", "COMP 2", "", ""}};
+static const uint8_t LENS_N[LV_N] = {5, 4, 3};
+/* lens_mem: bits 0..1 the level ^ LV_BAR (0, power-on: BAR), then 3 bits a level its set */
+#define LM_LV(m) (((uint32_t)(m) & 3u) ^ LV_BAR)
+#define LM_K(m, l) (((uint32_t)(m) >> (2u + 3u * (l))) & 7u)
+static int32_t lens_k(uint32_t lv, uint32_t i)          /* page i's place among level lv's sets, -1 none */
+{
+    uint32_t k;
+    if (PAGES[i].fam != FAM_SEQ)
+        return -1;
+    for (k = 0; k < LENS_N[lv]; k++)
+        if (str_eq(PAGES[i].title, LENS_SET[lv][k]))
+            return (int32_t)k;
+    return -1;
+}
+static uint32_t lens_page(uint32_t lv, uint32_t k)      /* level lv's set k: its PAGES index */
+{
+    uint32_t i;
+    for (i = 0; i < NPAGES; i++)
+        if (PAGES[i].fam == FAM_SEQ && str_eq(PAGES[i].title, LENS_SET[lv][k % LENS_N[lv]]))
+            return i;
+    return 0;
+}
+/* the page shown is a SEQ page: ui.lv one of its levels (the one it was on, NOTE's two kept apart) */
+static void lens_sync(void)
+{
+    uint32_t i = ui.page, l;
+    if (ui.lv < LV_N && lens_k(ui.lv, i) >= 0)
+        return;
+    for (l = LV_BAR; ; l = (l + 1u) % LV_N) {           /* (BAR first: NOTE alone is the roll's) */
+        if (lens_k(l, i) >= 0) {
+            ui.lv = (uint8_t)l;
+            return;
+        }
+        if (l == LV_PAT)
+            break;
+    }
+    ui.lv = PAGES[i].graph == GR_CHANCE ? LV_STEP : LV_PAT;
+}
+static int lens_on(void) { return !ui.home && !page_over && PAGES[ui.page].fam == FAM_SEQ; }
+static uint32_t lens_level(void)
+{
+    lens_sync();
+    return ui.lv;
+}
+static void lens_save(void)                             /* the track's memory: this level and its set */
+{
+    uint32_t m = ui.lens_mem[song.sel % NTRK], lv = lens_level();
+    int32_t k = lens_k(lv, ui.page);
+    m = (m & ~3u) | (lv ^ LV_BAR);
+    if (k >= 0)
+        m = (m & ~(7u << (2u + 3u * lv))) | (uint32_t)k << (2u + 3u * lv);
+    ui.lens_mem[song.sel % NTRK] = (uint16_t)m;
+}
+
 /* transient message in the top bar, right of the transport and the BPM: a + b */
 static void ui_say(const char *a, const char *b)
 {
@@ -525,6 +599,8 @@ static void ev_enter(void);
 static void page_entered(void)
 {
     const page_t *pg = cur_page();
+    if (lens_on())                               /* (0.8.3) LENTE: the page's level, the track's memory of it */
+        lens_save();
     if (!ui.home && pg->graph == GR_EVENTS)      /* AUTO LIST: + ADD LOCK on the SEQ cursor's step */
         ev_enter();
     if (!ui.home && lock_page_ok(ui.page))
@@ -748,7 +824,21 @@ static void open_family(uint32_t fam)
         fx_from = !ui.home && cur_page()->fam == FAM_FX ? ui.page : 0xFFu;
         fx_ms = fm1_ms;
     }
-    if (!ui.home && cur_page()->fam == fam) {          /* same button again: next page */
+    if (fam == FAM_SEQ) {                              /* (0.8.3) LENTE: on a SEQ page the level's next set; from
+                                                         * elsewhere the level and set last used on the track */
+        uint32_t m = ui.lens_mem[song.sel % NTRK], lv;
+        int32_t k;
+        if (!ui.home && cur_page()->fam == FAM_SEQ) {
+            lv = lens_level();
+            k = lens_k(lv, ui.page);
+            k = (k + 1) % (int32_t)LENS_N[lv];          /* (CHANCE, PHRASES: -1, the level's first) */
+        } else {
+            lv = LM_LV(m) < LV_N ? LM_LV(m) : LV_BAR;
+            k = (int32_t)LM_K(m, lv);
+        }
+        ui.lv = (uint8_t)lv;
+        ui.page = (uint8_t)lens_page(lv, (uint32_t)k);
+    } else if (!ui.home && cur_page()->fam == fam) {   /* same button again: next page */
         uint32_t n, i = ui.page;
         for (n = 0; n < NPAGES; n++) {
             i = (i + 1u) % NPAGES;
@@ -766,6 +856,22 @@ static void open_family(uint32_t fam)
     }
     ui.fam_last[fam] = ui.page;
     ui.home = 0;
+    page_entered();
+    page_flash();
+}
+
+/* (0.8.3) LENTE: SELECT on a SEQ page, a level a detent (PATTERN <-> BAR <-> STEP, no wrap), at the set that level
+ * was left at on this track */
+static void lens_zoom(int32_t s)
+{
+    uint32_t lv = lens_level();
+    int32_t to = clamp((int32_t)lv + s, LV_PAT, LV_STEP);
+    if ((uint32_t)to == lv)
+        return;
+    lens_save();
+    ui.lv = (uint8_t)to;
+    ui.page = (uint8_t)lens_page((uint32_t)to, LM_K(ui.lens_mem[song.sel % NTRK], (uint32_t)to));
+    ui.fam_last[FAM_SEQ] = ui.page;
     page_entered();
     page_flash();
 }

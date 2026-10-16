@@ -129,6 +129,15 @@ h2{font:400 clamp(24px,3.4vw,36px)/1.2 var(--display);letter-spacing:.01em;margi
 .org h3{font:400 15px/1.35 var(--display);margin:2px 0 0;color:var(--line)}
 .org p{margin:0;font-size:14.5px}
 
+/* frequency in nature (frecuencia.html): one card */
+.nat{--bc:var(--yellow);--k:22px;padding:26px;text-decoration:none;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 24px;align-items:end;transition:transform .25s}
+.nat:hover{transform:translateY(-2px)}
+.nat .k{grid-column:1/-1;font:500 10px/1.4 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--yellow)}
+.nat h3{font:400 clamp(22px,3.4vw,36px)/1.15 var(--display);margin:0;background:var(--heat);-webkit-background-clip:text;background-clip:text;color:transparent}
+.nat p{margin:6px 0 0;max-width:62ch}
+.nat .go{font:13px/1.4 var(--mono);color:var(--yellow);white-space:nowrap}
+@media (max-width:600px){.nat{grid-template-columns:minmax(0,1fr)}}
+
 /* manual and cheat sheets */
 .docs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
 .doc{--bc:var(--cyan);padding:20px;text-decoration:none;display:flex;flex-direction:column;gap:6px;min-width:0;transition:transform .25s}
@@ -284,6 +293,14 @@ footer .tm{flex-basis:100%;letter-spacing:0}
     </div>
   </section>
 
+  <section id="nature">
+    <a class="nat brk" href="frecuencia.html">
+      <span class="k" data-i18n="nat_k">New page · frequency</span>
+      <div><h3 data-i18n="nat_h">Frequency in nature</h3><p data-i18n="nat_p">Matter is light, colour is frequency: a ladder from the solar cycle to gamma rays, and four sounding examples of how a synth already lives in it.</p></div>
+      <span class="go" data-i18n="nat_go">Climb the ladder →</span>
+    </a>
+  </section>
+
   <section id="docs">
     <div class="head plate">
       <p class="eyebrow" data-i18n="m_eb">Learn</p>
@@ -362,7 +379,7 @@ footer .tm{flex-basis:100%;letter-spacing:0}
 
   <footer>
     <span>JIANT FM · Juan Jiant · Buenos Aires</span>
-    <span><a href="https://github.com/juanjiant-bit/JIANT" target="_blank" rel="noopener">GitHub</a> · <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank" rel="noopener">GPL-3.0</a></span>
+    <span><a href="frecuencia.html" data-i18n="f_nat">Frequency in nature</a> · <a href="https://github.com/juanjiant-bit/JIANT" target="_blank" rel="noopener">GitHub</a> · <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank" rel="noopener">GPL-3.0</a></span>
     <span class="tm" data-i18n="tm">Built on Felucca by Hügelton Instruments. M-VAVE and FM-1 are trademarks of their respective owners; JIANT is not affiliated with or endorsed by them, nor with Hügelton Instruments.</span>
   </footer>
 </div>
@@ -503,6 +520,7 @@ const energy=(k,t)=>reduce?.35:Math.exp(-(((t/BEAT)*DIV[k%8]/4)%1)*5);
     q2:'¿Qué navegador necesito?',a2:'Chrome o Edge en una computadora, para el instalador y el editor: hablan con el FM-1 por USB. El emulador funciona también en otros navegadores y en celulares.',
     q3:'¿Pierdo mis sonidos o proyectos?',a3:'Hacé backup con el editor antes de instalar o cambiar de versión. El instalador también puede instalar versiones anteriores, pero un proyecto guardado por una versión más nueva puede no abrir bien en una más vieja.',
     q4:'El instalador no encuentra mi FM-1.',a4:'Usá un cable USB que pase datos (muchos solo cargan), conectalo directo a la compu sin hub, y cerrá otros programas que usen el FM-1 por MIDI.',
+    nat_k:'Página nueva · frecuencia',nat_h:'La frecuencia en la naturaleza',nat_p:'La materia es luz, el color es frecuencia: una escalera del ciclo solar a los rayos gamma, y cuatro ejemplos que suenan de cómo un sintetizador ya vive ahí.',nat_go:'Subir la escalera →',f_nat:'La frecuencia en la naturaleza',
     tm:'Hecho sobre Felucca de Hügelton Instruments. M-VAVE y FM-1 son marcas de sus respectivos dueños; JIANT no está afiliado ni avalado por ellos, ni por Hügelton Instruments.'};
   const ZH={live:'免费 · 开源 · GPL-3.0',kicker:'M-VAVE FM-1 的固件',down:'进入有机体',
     lede:'一款免费固件，把 FM-1 变成一件完整的乐器：六条音轨、八种合成引擎、深度音序器和效果器，全部装进这台小键盘里。在浏览器里几分钟就能装好，想回到官方固件随时都可以。',
@@ -530,6 +548,7 @@ const energy=(k,t)=>reduce?.35:Math.exp(-(((t/BEAT)*DIV[k%8]/4)%1)*5);
     q2:'需要什么浏览器？',a2:'安装器和编辑器需要电脑上的 Chrome 或 Edge：它们通过 USB 与 FM-1 通信。模拟器在其他浏览器和手机上也能运行。',
     q3:'会丢失我的音色或工程吗？',a3:'安装或更换版本前，请先用编辑器备份。安装器也能安装旧版本，但新版本保存的工程在旧版本里可能无法正常打开。',
     q4:'安装器找不到我的 FM-1。',a4:'请使用能传输数据的 USB 线（很多线只能充电），直接连到电脑不要经过集线器，并关闭其他通过 MIDI 使用 FM-1 的程序。',
+    nat_k:'新页面 · 频率',nat_h:'自然中的频率',nat_p:'物质是光，颜色是频率：一架从太阳周期到伽马射线的阶梯，以及四个会发声的例子，说明合成器早已身在其中。',nat_go:'登上阶梯 →',f_nat:'自然中的频率',
     tm:'基于 Hügelton Instruments 的 Felucca 开发。M-VAVE 和 FM-1 是其各自所有者的商标；JIANT 与它们以及 Hügelton Instruments 均无关联，也未获其认可。'};
   const JA={live:'無料 · オープンソース · GPL-3.0',kicker:'M-VAVE FM-1 のためのファームウェア',down:'有機体の中へ',
     lede:'FM-1 をひとつの完全な楽器に変える無料のファームウェア。6 トラック、8 つのシンセシスエンジン、奥深いシーケンサーとエフェクトが、この小さなキーボードに収まります。ブラウザから数分でインストールでき、いつでも公式ファームウェアに戻せます。',
@@ -557,6 +576,7 @@ const energy=(k,t)=>reduce?.35:Math.exp(-(((t/BEAT)*DIV[k%8]/4)%1)*5);
     q2:'どのブラウザが必要ですか？',a2:'インストーラーとエディターには、パソコンの Chrome か Edge が必要です（USB で FM-1 と通信します）。エミュレーターは他のブラウザやスマホでも動きます。',
     q3:'音色やプロジェクトは消えますか？',a3:'インストールやバージョン変更の前に、エディターでバックアップしてください。インストーラーは以前のバージョンも入れられますが、新しいバージョンで保存したプロジェクトは古いバージョンで正しく開けないことがあります。',
     q4:'インストーラーが FM-1 を見つけません。',a4:'データ通信できる USB ケーブルを使い（充電専用のケーブルが多いです）、ハブを通さずパソコンに直接つなぎ、MIDI で FM-1 を使う他のソフトを閉じてください。',
+    nat_k:'新しいページ · 周波数',nat_h:'自然の中の周波数',nat_p:'物質は光、色は周波数。太陽周期からガンマ線までのはしごと、シンセがすでにその中にいることを示す 4 つの鳴る例。',nat_go:'はしごを登る →',f_nat:'自然の中の周波数',
     tm:'Hügelton Instruments の Felucca をもとに作られています。M-VAVE と FM-1 は各所有者の商標です。JIANT はそれらおよび Hügelton Instruments とは無関係で、承認も受けていません。'};
   const EN={};document.querySelectorAll('[data-i18n]').forEach(el=>{EN[el.getAttribute('data-i18n')]=el.textContent;});
   const D={en:EN,es:ES,zh:ZH,ja:JA};

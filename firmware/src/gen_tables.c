@@ -178,41 +178,73 @@ static const barch_t BASS_ARCH[BA_N] = {
 enum { KM_DOUBLE, KM_ANSWER, KM_SUSTAIN, KM_INTERLOCK };   /* the bass against the kick */
 
 /* ------------------------------------------------------------------------------------------------- harmony --- */
-/* a chord's quality: its notes as steps of the scale from its root (a stack), POWER in semitones */
-enum { Q_TRI, Q_7, Q_9, Q_ADD9, Q_SUS2, Q_SUS4, Q_6, Q_QUART, Q_POWER, Q_11, Q_7NO5, Q_N };
+/* a chord's quality: its notes as steps of the scale from its root (a stack); R9 rootless (3 5 7 9: the bass has the
+ * root, jazz and deep house) */
+enum { Q_TRI, Q_7, Q_9, Q_ADD9, Q_SUS2, Q_SUS4, Q_6, Q_QUART, Q_POWER, Q_11, Q_7NO5, Q_R9, Q_N };
 static const int8_t QSTACK[Q_N][4] = {{0, 2, 4, 127}, {0, 2, 4, 6}, {0, 2, 6, 8}, {0, 2, 4, 8}, {0, 1, 4, 127}, {0, 3, 4, 127},
-                                      {0, 2, 4, 5}, {0, 3, 6, 9}, {0, 127, 127, 127}, {0, 2, 6, 10}, {0, 2, 6, 127}};
-#define CQ_DOM 0x80u                                    /* the quality's bit 7: the third raised (a dominant in minor) */
+                                      {0, 2, 4, 5}, {0, 3, 6, 9}, {0, 4, 7, 127}, {0, 2, 6, 10}, {0, 2, 6, 127}, {2, 4, 6, 8}};
+/* (0.8.3) a chord's colour beyond the mode, in the quality's high bits: F_MAJ a major triad on the degree (the minor
+ * key's dominant, its leading tone raised), F_DOM a dominant seventh on it (a secondary dominant: V/ii, V/V ..), F_PAR
+ * the parallel mode's chord on that degree (mixture: iv in major, IV in minor), F_FLAT the flat side's major chord
+ * (bIII bVI bVII: the mode's own when it has it, else borrowed). Every one of them is checked against the piece's mode
+ * and the genre's permissions (gen.c gplan_ok): a borrowed chord only where the genre borrows */
+#define F_MAJ 0x10u
+#define F_DOM 0x20u
+#define F_PAR 0x30u
+#define F_FLAT 0x40u
+#define QQ(q) ((q) & 0x0Fu)
+#define QF(q) ((q) & 0xF0u)
 typedef struct { uint8_t n; int8_t deg[4]; uint8_t q[4]; } gprog_t;
-enum { PR_ONE, PR_I_VII, PR_I_VI, PR_I_IV, PR_I_V, PR_AEOL, PR_CYCLE, PR_POP, PR_AXIS, PR_50S, PR_JAZZ, PR_ANDAL,
-       PR_MINOR4, PR_I_II, PR_I_III, PR_PLAGAL, PR_IV_I, PR_DESC, PR_SUS, PR_NEOCL, PR_TRANCE, PR_DORIAN, PR_RADIO,
-       PR_PYRAMID, PR_N };
+/* (0.8.3) the progressions as scale degrees of the piece's mode (0 its tonic): a loop of one to four chords, its last
+ * chord the one that leads back to the first (the loop's cadence: IV-I, bVII-i, V-i, bII-i ..). A mode where a chord
+ * would come out diminished (or augmented) does not take that progression (gen.c tries the genre's next one) */
+enum { PR_ONE, PR_I_VII, PR_I_VI, PR_I_IV, PR_I_V, PR_I_II, PR_I_III, PR_IV_I, PR_AEOL, PR_TRANCE, PR_MINOR4, PR_ANDAL,
+       PR_EPIC, PR_50S, PR_CYCLE, PR_DEEP4, PR_DEEPVI, PR_JAZZ, PR_TURN, PR_JAZZ2, PR_BOSSA, PR_POP, PR_AXIS, PR_PLAGAL,
+       PR_ROCK, PR_SECPOP, PR_BORROW, PR_MARIO, PR_SUS, PR_NEOCL, PR_RADIO, PR_PYRAMID, PR_PHRY, PR_N };
 static const gprog_t PROG[PR_N] = {
-    [PR_ONE]    = {1, {0}, {Q_7}},
-    [PR_I_VII]  = {2, {0, 6}, {Q_TRI, Q_TRI}},
-    [PR_I_VI]   = {2, {0, 5}, {Q_7, Q_7}},
-    [PR_I_IV]   = {2, {0, 3}, {Q_7, Q_7}},
-    [PR_I_V]    = {2, {0, 4}, {Q_TRI, Q_TRI}},
-    [PR_AEOL]   = {4, {0, 5, 2, 6}, {Q_TRI, Q_TRI, Q_TRI, Q_TRI}},
-    [PR_CYCLE]  = {4, {0, 3, 4, 0}, {Q_TRI, Q_TRI, Q_TRI, Q_TRI}},
-    [PR_POP]    = {4, {0, 4, 5, 3}, {Q_TRI, Q_TRI, Q_TRI, Q_TRI}},
-    [PR_AXIS]   = {4, {5, 3, 0, 4}, {Q_TRI, Q_TRI, Q_TRI, Q_TRI}},
-    [PR_50S]    = {4, {0, 5, 3, 4}, {Q_TRI, Q_TRI, Q_TRI, Q_TRI}},
-    [PR_JAZZ]   = {4, {1, 4, 0, 0}, {Q_7, Q_7, Q_9, Q_6}},
-    [PR_ANDAL]  = {4, {0, 6, 5, 4}, {Q_TRI, Q_TRI, Q_TRI, Q_TRI | CQ_DOM}},
-    [PR_MINOR4] = {4, {0, 3, 6, 2}, {Q_7, Q_7, Q_TRI, Q_TRI}},
-    [PR_I_II]   = {2, {0, 1}, {Q_9, Q_9}},
-    [PR_I_III]  = {2, {0, 2}, {Q_7, Q_7}},
-    [PR_PLAGAL] = {4, {0, 3, 0, 4}, {Q_7, Q_7, Q_7, Q_7NO5}},
-    [PR_IV_I]   = {2, {3, 0}, {Q_7, Q_7}},
-    [PR_DESC]   = {4, {0, 6, 5, 6}, {Q_TRI, Q_TRI, Q_TRI, Q_TRI}},
-    [PR_SUS]    = {2, {0, 4}, {Q_SUS4, Q_SUS2}},
-    [PR_NEOCL]  = {4, {0, 4, 5, 3}, {Q_7, Q_7, Q_7, Q_ADD9}},
-    [PR_TRANCE] = {4, {0, 5, 6, 3}, {Q_TRI, Q_TRI, Q_TRI, Q_TRI}},
-    [PR_DORIAN] = {2, {0, 3}, {Q_7, Q_7}},
-    [PR_RADIO]  = {4, {0, 5, 6, 3}, {Q_ADD9, Q_7, Q_SUS2, Q_ADD9}},   /* (0.6.95) i add9, VI7, VII sus2, iv add9 */
+    [PR_ONE]     = {1, {0}, {Q_7}},                                           /* i7 (a pedal) */
+    [PR_I_VII]   = {2, {0, 6}, {Q_TRI, Q_TRI | F_FLAT}},                      /* i bVII (I bVII: borrowed) */
+    [PR_I_VI]    = {2, {0, 5}, {Q_7, Q_7}},                                   /* i7 VImaj7 / I vi */
+    [PR_I_IV]    = {2, {0, 3}, {Q_7, Q_7}},                                   /* i7 iv7 / i7 IV7 (dorian) / Imaj7 IVmaj7 */
+    [PR_I_V]     = {2, {0, 4}, {Q_TRI, Q_TRI}},                               /* I V / i v */
+    [PR_I_II]    = {2, {0, 1}, {Q_9, Q_9}},                                   /* I II (lydian) / i ii (dorian) */
+    [PR_I_III]   = {2, {0, 2}, {Q_7, Q_7}},
+    [PR_IV_I]    = {2, {3, 0}, {Q_7, Q_7}},                                   /* iv7 i7 (Kerri Chandler's cell) */
+    [PR_AEOL]    = {4, {0, 5, 2, 6}, {Q_TRI, Q_TRI, Q_TRI, Q_TRI}},           /* i VI III VII */
+    [PR_TRANCE]  = {4, {0, 5, 6, 3}, {Q_TRI, Q_TRI, Q_TRI, Q_TRI}},           /* i VI VII iv */
+    [PR_MINOR4]  = {4, {0, 3, 6, 2}, {Q_7, Q_7, Q_TRI, Q_TRI}},               /* i iv VII III */
+    [PR_ANDAL]   = {4, {0, 6, 5, 4}, {Q_TRI, Q_TRI, Q_TRI, Q_TRI | F_MAJ}},   /* i VII VI V: the Andalusian cadence */
+    [PR_EPIC]    = {4, {5, 6, 0, 0}, {Q_TRI, Q_TRI, Q_TRI, Q_TRI}},           /* VI VII i i: the Aeolian cadence */
+    [PR_50S]     = {4, {0, 5, 3, 4}, {Q_TRI, Q_TRI, Q_TRI, Q_TRI}},           /* I vi IV V / i VI iv V */
+    [PR_CYCLE]   = {4, {0, 3, 4, 0}, {Q_TRI, Q_TRI, Q_TRI, Q_TRI}},           /* I IV V I / i iv V i */
+    [PR_DEEP4]   = {4, {0, 2, 6, 3}, {Q_7, Q_7, Q_7, Q_7}},                   /* i7 IIImaj7 VII7 iv7 */
+    [PR_DEEPVI]  = {4, {0, 5, 6, 0}, {Q_9, Q_7, Q_7, Q_9}},                   /* i9 VImaj7 VII7 i9 */
+    [PR_JAZZ]    = {4, {1, 4, 0, 0}, {Q_7, Q_7, Q_9, Q_6}},                   /* ii7 V7 Imaj9 I6 */
+    [PR_TURN]    = {4, {0, 5, 1, 4}, {Q_7, Q_7, Q_7, Q_7}},                   /* Imaj7 vi7 ii7 V7 */
+    [PR_JAZZ2]   = {4, {2, 5, 1, 4}, {Q_7, Q_7, Q_7, Q_7}},                   /* iii7 vi7 ii7 V7 */
+    [PR_BOSSA]   = {4, {0, 1, 1, 4}, {Q_7, Q_7 | F_DOM, Q_7, Q_7}},           /* Imaj7 II7 ii7 V7 (V/V) */
+    [PR_POP]     = {4, {0, 4, 5, 3}, {Q_TRI, Q_TRI, Q_TRI, Q_TRI}},           /* I V vi IV */
+    [PR_AXIS]    = {4, {5, 3, 0, 4}, {Q_TRI, Q_TRI, Q_TRI, Q_TRI}},           /* vi IV I V */
+    [PR_PLAGAL]  = {4, {0, 3, 0, 4}, {Q_7, Q_7, Q_7, Q_7NO5}},
+    [PR_ROCK]    = {4, {0, 6, 3, 0}, {Q_TRI, Q_TRI | F_FLAT, Q_TRI, Q_TRI}},  /* I bVII IV I */
+    [PR_SECPOP]  = {4, {0, 2, 5, 3}, {Q_TRI, Q_7 | F_DOM, Q_TRI, Q_TRI}},     /* I V/vi vi IV */
+    [PR_BORROW]  = {4, {0, 3, 3, 0}, {Q_TRI, Q_TRI, Q_TRI | F_PAR, Q_TRI}},   /* I IV iv I */
+    [PR_MARIO]   = {4, {0, 5, 6, 0}, {Q_TRI, Q_TRI | F_FLAT, Q_TRI | F_FLAT, Q_TRI}},   /* I bVI bVII I */
+    [PR_SUS]     = {2, {0, 4}, {Q_SUS4, Q_SUS2}},
+    [PR_NEOCL]   = {4, {0, 4, 5, 3}, {Q_7, Q_7, Q_7, Q_ADD9}},
+    [PR_RADIO]   = {4, {0, 5, 6, 3}, {Q_ADD9, Q_7, Q_SUS2, Q_ADD9}},          /* (0.6.95) i add9, VI7, VII sus2, iv add9 */
     [PR_PYRAMID] = {4, {0, 2, 5, 4}, {Q_7, Q_TRI, Q_7, Q_SUS4}},
+    [PR_PHRY]    = {2, {0, 1}, {Q_TRI, Q_TRI}},                               /* i bII (phrygian) */
 };
+/* (0.8.3) a genre's harmony: its family (how it composes) and what it may colour with */
+enum { HF_LOOP, HF_JAZZY, HF_POP, HF_COLOR, HF_CINE, HF_JAZZ };   /* modal loops; 7th loops; functional pop; colour
+                                                         * washes; film; jazz (ii-V, secondary dominants) */
+#define HX_RAISE 0x08u                                  /* the minor key's dominant major at the cadence (leading tone) */
+#define HX_SEC 0x10u                                    /* secondary dominants */
+#define HX_BOR 0x20u                                    /* borrowed chords (mixture, the flat side in major) */
+#define HX_LIFT 0x40u                                   /* FORM PARTS: the last section a whole step up (a real modulation) */
+#define HX_APPR 0x80u                                   /* the lead's chromatic approach notes (a semitone into a chord tone) */
+#define HXF(h) ((h) & 7u)
 /* how the chords are voiced: PAD led to the nearest voicing in C3..G5 as written; PLAIN the same but triads whatever
  * the progression says; RICH sevenths and ninths added; SUS suspensions; QUART fourths; POWER root fifth octave;
  * PLANE the same shape moved in parallel (techno, impressionism) */
@@ -330,10 +362,12 @@ enum { FM_LOOP, FM_PARTS, FM_CLUB, FM_ARC };            /* one loop; A B A C; in
 
 /* -------------------------------------------------------------------------------------------------- genres --- */
 #define SC_BLUE 12u                                     /* (the other scales: song_dice.c) */
+#define SC_PEN 5u
 typedef struct {
     const char *name;
     uint8_t bpm_lo, bpm_hi, swing;                      /* swing: G_SWING, 0..100 */
-    uint8_t scale[4];
+    uint8_t scale[4];                                   /* (0.8.3: a mode of seven is the key; PEN MPEN BLUES the lead's
+                                                         * pentatonic over the mode that holds it) */
     uint8_t drum, drum_pct, kit, ghosts, hats, fills;   /* the map, how often drums play, the kit, snare ghosts a bar
                                                          * at full amount, the hats' cell, the fill */
     int8_t  sd_micro;                                   /* the snare laid back (sixteenths of a step) */
@@ -347,189 +381,190 @@ typedef struct {
                                                          * ANALOG / DIGITAL, bit 1 PING-PONG */
     uint8_t form;
     uint8_t human;                                      /* 0 a machine .. 100 a band: HUMAN and TIMING */
+    uint8_t hx;                                         /* (0.8.3) the harmony: its family HF_ and its HX_ colours */
 } ggenre_t;
 #define AMT(d, b, c, a, l) {d, b, c, a, l}
 static const ggenre_t GENRE[] = {
     /* ---- the club: house */
     {"HOUSE", 122, 127, 8, {SC_MIN, SC_DOR, SC_MAJ, SC_MIN}, DM_HOUSE, 100, KIT_909, 0, HC_HOUSE, FL_ROLL, 0,
-     {BA_OFFBEAT, BA_BOUNCE, BA_OFFOCT}, 36, KM_ANSWER, 45, {PR_I_IV, PR_I_VI, PR_MINOR4}, 1, CS_STAB, VM_RICH,
+     {BA_OFFBEAT, BA_BOUNCE, BA_OFFOCT}, 36, KM_ANSWER, 45, {PR_I_IV, PR_I_VI, PR_DEEP4}, 1, CS_STAB, VM_RICH,
      {AP_BROKEN, AP_UP}, LD_HOOK, AMT(80, 70, 60, 30, 40), {KIT_909, SR_FMBASS, SR_STAB, SR_PLUCK, SR_KEYS}, SR_NOISE,
-     0, 1, 40, 0, FM_CLUB, 10},
-    {"DEEP HOUSE", 118, 124, 20, {SC_MIN, SC_DOR, SC_MIN, SC_MPEN}, DM_DEEP, 100, KIT_808, 0, HC_HOUSE, FL_DROP, 1,
-     {BA_DEEPWALK, BA_OFFBEAT, BA_UKG}, 36, KM_ANSWER, 50, {PR_I_IV, PR_JAZZ, PR_MINOR4}, 2, CS_DUB, VM_RICH,
+     0, 1, 40, 0, FM_CLUB, 10, HF_JAZZY},
+    {"DEEP HOUSE", 118, 124, 20, {SC_MIN, SC_DOR, SC_DOR, SC_MPEN}, DM_DEEP, 100, KIT_808, 0, HC_HOUSE, FL_DROP, 1,
+     {BA_DEEPWALK, BA_OFFBEAT, BA_UKG}, 36, KM_ANSWER, 50, {PR_I_IV, PR_JAZZ, PR_IV_I}, 2, CS_DUB, VM_RICH,
      {AP_BROKEN, AP_UPDOWN}, LD_SPARSE, AMT(70, 75, 70, 30, 30), {KIT_808, SR_SUB, SR_EP, SR_KEYS, SR_SINEKEY}, SR_TEXTURE,
-     0, 1, 55, 0, FM_CLUB, 20},
+     0, 1, 55, 0, FM_CLUB, 20, HF_JAZZY},
     {"MICRO HOUSE", 122, 128, 10, {SC_MIN, SC_DOR, SC_MIN, SC_PHRY}, DM_MICRO, 100, KIT_CLICK, 0, HC_FLAT, FL_DROP, 0,
      {BA_OFFBEAT, BA_DEEPWALK, BA_ROLL16}, 36, KM_ANSWER, 40, {PR_ONE, PR_I_VII, PR_I_IV}, 2, CS_SPARSE, VM_QUART,
      {AP_CYCLE3, AP_WALK}, LD_SPARSE, AMT(70, 65, 40, 45, 20), {KIT_CLICK, SR_FMBASS, SR_PLUCK, SR_PLUCK, SR_CHIP}, SR_TEXTURE,
-     0, 1, 45, 0, FM_CLUB, 0},
+     0, 1, 45, 0, FM_CLUB, 0, HF_LOOP},
     {"TECH HOUSE", 124, 128, 10, {SC_MIN, SC_PHRY, SC_DOR, SC_MIN}, DM_TECHHOUSE, 100, KIT_909, 0, HC_HOUSE, FL_ROLL, 0,
      {BA_OFFBEAT, BA_OFFOCT, BA_BOUNCE}, 36, KM_ANSWER, 40, {PR_ONE, PR_I_VII, PR_I_VI}, 2, CS_STAB, VM_SUS,
      {AP_BROKEN, AP_SEQ}, LD_SPARSE, AMT(85, 80, 40, 30, 25), {KIT_909, SR_FMBASS, SR_STAB, SR_PLUCK, SR_LEAD}, SR_NOISE,
-     0, 1, 35, 0, FM_CLUB, 0},
+     0, 1, 35, 0, FM_CLUB, 0, HF_LOOP},
     {"ACID HOUSE", 122, 130, 8, {SC_MIN, SC_PHRY, SC_DOR, SC_MIN}, DM_HOUSE, 100, KIT_909, 0, HC_HOUSE, FL_ROLL, 0,
      {BA_ACID, BA_ACID, BA_BOUNCE}, 36, KM_SUSTAIN, 60, {PR_ONE, PR_I_VII, PR_I_IV}, 2, CS_STAB, VM_SUS,
      {AP_UP, AP_SEQ}, LD_NONE, AMT(85, 90, 30, 20, 0), {KIT_909, SR_ACID, SR_STAB, SR_PLUCK, SR_LEAD}, SR_NOISE,
-     0, 1, 35, 0, FM_CLUB, 0},
+     0, 1, 35, 0, FM_CLUB, 0, HF_LOOP},
     /* ---- the club: techno */
     {"TECHNO", 128, 136, 4, {SC_MIN, SC_PHRY, SC_MIN, SC_MIN}, DM_TECHNO, 100, KIT_909, 0, HC_MACHINE, FL_DROP, 0,
-     {BA_ROLL16, BA_OCTBNC, BA_OFFBEAT}, 33, KM_SUSTAIN, 45, {PR_ONE, PR_ONE, PR_I_VII}, 4, CS_STAB, VM_PLANE,
+     {BA_ROLL16, BA_OCTBNC, BA_OFFBEAT}, 33, KM_SUSTAIN, 45, {PR_ONE, PR_PHRY, PR_I_VII}, 4, CS_STAB, VM_PLANE,
      {AP_PULSE, AP_SEQ}, LD_OSTINATO, AMT(90, 80, 35, 35, 25), {KIT_909, SR_REESE, SR_STAB, SR_PLUCK, SR_LEAD}, SR_NOISE,
-     0, 2, 35, 0, FM_CLUB, 0},
+     0, 2, 35, 0, FM_CLUB, 0, HF_LOOP},
     {"DETROIT", 124, 132, 8, {SC_MIN, SC_DOR, SC_MIN, SC_MAJ}, DM_DETROIT, 100, KIT_909, 0, HC_HOUSE, FL_ROLL, 0,
-     {BA_DETROIT, BA_OCTBNC, BA_SYNTHW}, 36, KM_SUSTAIN, 50, {PR_I_VI, PR_MINOR4, PR_I_IV}, 1, CS_STAB, VM_RICH,
+     {BA_DETROIT, BA_OCTBNC, BA_SYNTHW}, 36, KM_SUSTAIN, 50, {PR_I_VI, PR_MINOR4, PR_DEEPVI}, 1, CS_STAB, VM_RICH,
      {AP_UPDOWN, AP_BROKEN}, LD_MOTIF, AMT(85, 80, 60, 45, 45), {KIT_909, SR_FMBASS, SR_STRINGS, SR_PLUCK, SR_LEAD}, SR_PAD,
-     0, 1, 45, 0, FM_CLUB, 5},
+     0, 1, 45, 0, FM_CLUB, 5, HF_JAZZY},
     {"DUB TECHNO", 116, 124, 6, {SC_MIN, SC_DOR, SC_MIN, SC_MPEN}, DM_DUBTECH, 100, KIT_DUB, 0, HC_FLAT, FL_DUB, 0,
      {BA_DUB, BA_PEDAL, BA_OFFBEAT}, 31, KM_SUSTAIN, 70, {PR_ONE, PR_I_IV, PR_I_VI}, 4, CS_DUB, VM_RICH,
      {AP_PULSE, AP_CYCLE3}, LD_SPARSE, AMT(60, 60, 75, 20, 15), {KIT_DUB, SR_SUB, SR_DUBCHORD, SR_PLUCK, SR_SINEKEY}, SR_TEXTURE,
-     4, 4, 85, 0, FM_ARC, 0},
+     4, 4, 85, 0, FM_ARC, 0, HF_LOOP},
     {"HARD TECHNO", 138, 150, 0, {SC_PHRY, SC_MIN, SC_HARM, SC_PHRY}, DM_HARD, 100, KIT_INDUS, 0, HC_MACHINE, FL_DROP, 0,
-     {BA_ROLL16, BA_PSY, BA_OCTBNC}, 33, KM_SUSTAIN, 40, {PR_ONE, PR_I_VII, PR_ONE}, 4, CS_STAB, VM_POWER,
+     {BA_ROLL16, BA_PSY, BA_OCTBNC}, 33, KM_SUSTAIN, 40, {PR_ONE, PR_PHRY, PR_I_VII}, 4, CS_STAB, VM_POWER,
      {AP_PULSE, AP_OCTAVES}, LD_OSTINATO, AMT(100, 85, 30, 30, 25), {KIT_INDUS, SR_REESE, SR_STAB, SR_PLUCK, SR_HOOVER}, SR_NOISE,
-     1, 2, 25, 0, FM_CLUB, 0},
+     1, 2, 25, 0, FM_CLUB, 0, HF_LOOP},
     {"HYPNOTIC", 128, 134, 2, {SC_PHRY, SC_MIN, SC_DOR, SC_HARM}, DM_HYPNO, 100, KIT_CLICK, 0, HC_FLAT, FL_NONE, 0,
      {BA_ROLL16, BA_PSY, BA_OFFBEAT}, 33, KM_SUSTAIN, 40, {PR_ONE, PR_ONE, PR_I_II}, 4, CS_DUB, VM_PLANE,
      {AP_CYCLE5, AP_CYCLE3}, LD_OSTINATO, AMT(90, 80, 30, 50, 30), {KIT_CLICK, SR_FMBASS, SR_STAB, SR_PLUCK, SR_PLUCK}, SR_TEXTURE,
-     0, 4, 50, 0, FM_ARC, 0},
-    {"TRANCE", 134, 140, 0, {SC_MIN, SC_MIN, SC_HARM, SC_DOR}, DM_TECHHOUSE, 100, KIT_909, 0, HC_FLAT, FL_ROLL, 0,
-     {BA_PSY, BA_PUMP8, BA_OFFBEAT}, 36, KM_ANSWER, 45, {PR_TRANCE, PR_AEOL, PR_MINOR4}, 2, CS_TRANCE, VM_RICH,
+     0, 4, 50, 0, FM_ARC, 0, HF_LOOP},
+    {"TRANCE", 134, 140, 0, {SC_MIN, SC_MIN, SC_HARM, SC_MIN}, DM_TECHHOUSE, 100, KIT_909, 0, HC_FLAT, FL_ROLL, 0,
+     {BA_PSY, BA_PUMP8, BA_OFFBEAT}, 36, KM_ANSWER, 45, {PR_AEOL, PR_EPIC, PR_50S}, 2, CS_TRANCE, VM_RICH,
      {AP_TRANCE, AP_UP}, LD_MOTIF, AMT(85, 85, 70, 70, 50), {KIT_909, SR_REESE, SR_STRINGS, SR_PLUCK, SR_LEAD}, SR_NOISE,
-     2, 4, 55, 3, FM_CLUB, 0},
+     2, 4, 55, 3, FM_CLUB, 0, HF_POP | HX_RAISE},
     /* ---- electro, EBM, italo, synth pop, the wave */
     {"ELECTRO", 112, 128, 2, {SC_MIN, SC_PHRY, SC_MIN, SC_MPEN}, DM_ELECTRO, 100, KIT_808, 0, HC_MACHINE, FL_KICK16, 0,
      {BA_SYNTHW, BA_ITALO16, BA_ANGULAR}, 36, KM_DOUBLE, 40, {PR_I_VII, PR_ONE, PR_MINOR4}, 2, CS_STAB, VM_SUS,
      {AP_SEQ, AP_OCTAVES}, LD_MECH, AMT(90, 85, 40, 50, 45), {KIT_808, SR_FMBASS, SR_STAB, SR_CHIP, SR_LEAD}, SR_NOISE,
-     1, 2, 35, 1, FM_PARTS, 0},
+     1, 2, 35, 1, FM_PARTS, 0, HF_LOOP},
     {"EBM", 118, 132, 0, {SC_PHRY, SC_MIN, SC_PHRY, SC_MIN}, DM_EBM, 100, KIT_INDUS, 0, HC_MACHINE, FL_NONE, 0,
-     {BA_NITZER1, BA_NITZER2, BA_NITZER3}, 33, KM_DOUBLE, 45, {PR_ONE, PR_I_VII, PR_I_II}, 4, CS_STAB, VM_POWER,
+     {BA_NITZER1, BA_NITZER2, BA_NITZER3}, 33, KM_DOUBLE, 45, {PR_ONE, PR_I_VII, PR_PHRY}, 4, CS_STAB, VM_POWER,
      {AP_SEQ, AP_PULSE}, LD_SPARSE, AMT(95, 100, 30, 25, 30), {KIT_INDUS, SR_EBMBASS, SR_STAB, SR_PLUCK, SR_VOXLEAD}, SR_NOISE,
-     1, 1, 25, 0, FM_PARTS, 0},
-    {"ITALO", 114, 124, 0, {SC_MIN, SC_MIN, SC_MAJ, SC_DOR}, DM_ITALO, 100, KIT_808, 0, HC_MACHINE, FL_TOM, 0,
-     {BA_ITALO, BA_ITALO16, BA_SYNTHW}, 36, KM_DOUBLE, 40, {PR_AEOL, PR_50S, PR_POP}, 1, CS_STAB, VM_PLAIN,
+     1, 1, 25, 0, FM_PARTS, 0, HF_LOOP},
+    {"ITALO", 114, 124, 0, {SC_MIN, SC_MIN, SC_MAJ, SC_MIN}, DM_ITALO, 100, KIT_808, 0, HC_MACHINE, FL_TOM, 0,
+     {BA_ITALO, BA_ITALO16, BA_SYNTHW}, 36, KM_DOUBLE, 40, {PR_AEOL, PR_ANDAL, PR_POP}, 1, CS_STAB, VM_PLAIN,
      {AP_OCTAVES, AP_UP}, LD_HOOK, AMT(90, 90, 60, 60, 60), {KIT_808, SR_FMBASS, SR_STAB, SR_PLUCK, SR_LEAD}, SR_PAD,
-     0, 1, 40, 2, FM_PARTS, 0},
-    {"SYNTH POP", 112, 128, 0, {SC_MIN, SC_MAJ, SC_DOR, SC_MIN}, DM_SYNTHPOP, 100, KIT_808, 0, HC_MACHINE, FL_TOM, 0,
-     {BA_ITALO, BA_HOOK, BA_ROCK8}, 36, KM_DOUBLE, 50, {PR_AEOL, PR_POP, PR_AXIS}, 1, CS_HOLD, VM_PLAIN,
+     0, 1, 40, 2, FM_PARTS, 0, HF_POP | HX_RAISE | HX_LIFT},
+    {"SYNTH POP", 112, 128, 0, {SC_MIN, SC_MAJ, SC_MIN, SC_MAJ}, DM_SYNTHPOP, 100, KIT_808, 0, HC_MACHINE, FL_TOM, 0,
+     {BA_ITALO, BA_HOOK, BA_ROCK8}, 36, KM_DOUBLE, 50, {PR_AEOL, PR_POP, PR_50S}, 1, CS_HOLD, VM_PLAIN,
      {AP_SEQ, AP_UPDOWN}, LD_HOOK, AMT(85, 85, 65, 55, 60), {KIT_808, SR_FMBASS, SR_PAD, SR_PLUCK, SR_LEAD}, SR_STRINGS,
-     0, 1, 45, 2, FM_PARTS, 5},
+     0, 1, 45, 2, FM_PARTS, 5, HF_POP | HX_RAISE | HX_BOR | HX_LIFT},
     {"DARKWAVE", 124, 136, 0, {SC_MIN, SC_PHRY, SC_DOR, SC_MIN}, DM_DARKWAVE, 100, KIT_808, 0, HC_MACHINE, FL_NONE, 0,
-     {BA_DARK8, BA_PUNK16, BA_OCTBNC}, 31, KM_DOUBLE, 40, {PR_ONE, PR_I_VI, PR_I_VII}, 4, CS_HOLD, VM_PLAIN,
+     {BA_DARK8, BA_PUNK16, BA_OCTBNC}, 31, KM_DOUBLE, 40, {PR_I_VI, PR_EPIC, PR_I_VII}, 4, CS_HOLD, VM_PLAIN,
      {AP_PULSE, AP_SEQ}, LD_SPARSE, AMT(90, 95, 60, 25, 40), {KIT_808, SR_ROCKBASS, SR_PAD, SR_PLUCK, SR_LEAD}, SR_TEXTURE,
-     0, 1, 50, 0, FM_PARTS, 0},
+     0, 1, 50, 0, FM_PARTS, 0, HF_POP},
     {"POST PUNK", 118, 148, 0, {SC_MIN, SC_DOR, SC_MIN, SC_MAJ}, DM_POSTPUNK, 100, KIT_SOFT, 1, HC_FLAT, FL_TOM, 1,
-     {BA_HOOK2, BA_BLUEMON, BA_CEREMONY}, 40, KM_DOUBLE, 70, {PR_AEOL, PR_I_VI, PR_POP}, 2, CS_PULSE, VM_PLAIN,
+     {BA_HOOK2, BA_BLUEMON, BA_CEREMONY}, 40, KM_DOUBLE, 70, {PR_I_VI, PR_I_IV, PR_AEOL}, 2, CS_PULSE, VM_PLAIN,
      {AP_OCTAVES, AP_UPDOWN}, LD_HOOK, AMT(95, 100, 55, 45, 50), {KIT_SOFT, SR_HOOK, SR_STRINGS, SR_PLUCK, SR_LEAD}, SR_CHOIR,
-     1, 2, 45, 0, FM_PARTS, 35},   /* (0.6.97: after Joy Division and New Order: Hook's bass, Morris's drums, Sumner's
+     1, 2, 45, 0, FM_PARTS, 35, HF_POP},   /* (0.6.97: after Joy Division and New Order: Hook's bass, Morris's drums, Sumner's
                                     * pulsed chords, a sequenced octave arp, strings and choir behind) */
     {"TRIBAL PUNK", 140, 165, 0, {SC_MIN, SC_PHRY, SC_MIN, SC_DOR}, DM_TRIBAL, 100, KIT_SOFT, 0, HC_FLAT, FL_TOM, 1,
      {BA_ANGULAR, BA_ROCK8, BA_HOOK}, 36, KM_SUSTAIN, 60, {PR_ONE, PR_I_VII, PR_I_VI}, 4, CS_POWER, VM_POWER,
      {AP_PULSE, AP_UP}, LD_OSTINATO, AMT(95, 95, 40, 10, 45), {KIT_SOFT, SR_ROCKBASS, SR_GTR, SR_PLUCK, SR_VOXLEAD}, SR_NOISE,
-     0, 1, 55, 0, FM_PARTS, 40},
+     0, 1, 55, 0, FM_PARTS, 40, HF_LOOP},
     {"MINIMAL SYNTH", 104, 132, 0, {SC_MIN, SC_DOR, SC_MIN, SC_PHRY}, DM_RBOX, 100, KIT_SOFT, 0, HC_MACHINE, FL_NONE, 0,
      {BA_SUICIDE, BA_SEQ16, BA_DARK8}, 33, KM_DOUBLE, 40, {PR_ONE, PR_ONE, PR_I_IV}, 4, CS_DRONE, VM_POWER,
      {AP_PULSE, AP_SEQ}, LD_SPARSE, AMT(85, 95, 55, 20, 45), {KIT_SOFT, SR_ROCKBASS, SR_ORGAN, SR_CHIP, SR_VOXLEAD}, SR_NOISE,
-     1, 2, 50, 0, FM_LOOP, 0},
+     1, 2, 50, 0, FM_LOOP, 0, HF_LOOP},
     {"MAN MACHINE", 100, 124, 0, {SC_MIN, SC_MAJ, SC_DOR, SC_MIN}, DM_KLING, 100, KIT_CLICK, 0, HC_MACHINE, FL_NONE, 0,
      {BA_SEQ16, BA_SYNTHW, BA_MOTORIK}, 36, KM_DOUBLE, 45, {PR_ONE, PR_I_IV, PR_CYCLE}, 4, CS_HOLD, VM_PLAIN,
      {AP_SEQ, AP_OCTAVES}, LD_MECH, AMT(85, 90, 50, 60, 60), {KIT_CLICK, SR_FMBASS, SR_PAD, SR_PLUCK, SR_LEAD}, SR_VOXLEAD,
-     0, 0, 15, 1, FM_PARTS, 0},
+     0, 0, 15, 1, FM_PARTS, 0, HF_LOOP},
     /* ---- kraut, indie, shoegaze, post rock */
     {"MOTORIK", 118, 140, 0, {SC_MAJ, SC_MIX, SC_DOR, SC_MIN}, DM_MOTORIK, 100, KIT_SOFT, 0, HC_FLAT, FL_NONE, 0,
-     {BA_MOTORIK, BA_ROCK8, BA_PUMP8}, 33, KM_DOUBLE, 60, {PR_ONE, PR_I_IV, PR_I_V}, 4, CS_PULSE, VM_PLAIN,
+     {BA_MOTORIK, BA_ROCK8, BA_PUMP8}, 33, KM_DOUBLE, 60, {PR_ONE, PR_I_IV, PR_I_VII}, 4, CS_PULSE, VM_PLAIN,
      {AP_UPDOWN, AP_GLASS}, LD_TINTI, AMT(90, 95, 45, 50, 35), {KIT_SOFT, SR_ROCKBASS, SR_GTR, SR_PLUCK, SR_LEAD}, SR_DRONE,
-     0, 1, 45, 0, FM_ARC, 30},
+     0, 1, 45, 0, FM_ARC, 30, HF_LOOP | HX_BOR},
     {"INDIE", 110, 140, 0, {SC_MAJ, SC_MIN, SC_MIX, SC_MAJ}, DM_INDIE, 100, KIT_BREAKS, 1, HC_FLAT, FL_TOM, 1,
-     {BA_INDIE, BA_ROOT5, BA_MCCART}, 36, KM_DOUBLE, 70, {PR_POP, PR_AXIS, PR_50S}, 1, CS_POWER, VM_PLAIN,
+     {BA_INDIE, BA_ROOT5, BA_MCCART}, 36, KM_DOUBLE, 70, {PR_POP, PR_ROCK, PR_SECPOP}, 1, CS_POWER, VM_PLAIN,
      {AP_UPDOWN, AP_ALBERTI}, LD_HOOK, AMT(85, 90, 70, 20, 55), {KIT_BREAKS, SR_ROCKBASS, SR_GTR, SR_PLUCK, SR_KEYS}, SR_STRINGS,
-     0, 1, 45, 0, FM_PARTS, 50},
+     0, 1, 45, 0, FM_PARTS, 50, HF_POP | HX_SEC | HX_BOR | HX_LIFT},
     {"SHOEGAZE", 100, 130, 0, {SC_MAJ, SC_LYD, SC_MIX, SC_MIN}, DM_SHOEGAZE, 100, KIT_SOFT, 0, HC_FLAT, FL_ROLL, 1,
-     {BA_ROCK8, BA_PUMP8, BA_ROOT5}, 36, KM_DOUBLE, 90, {PR_POP, PR_I_IV, PR_I_II}, 2, CS_SWELL, VM_RICH,
+     {BA_ROCK8, BA_PUMP8, BA_ROOT5}, 36, KM_DOUBLE, 90, {PR_I_IV, PR_BORROW, PR_I_II}, 2, CS_SWELL, VM_RICH,
      {AP_UPDOWN, AP_GLASS}, LD_SPARSE, AMT(75, 85, 100, 30, 40), {KIT_SOFT, SR_ROCKBASS, SR_WALL, SR_PLUCK, SR_VOXLEAD}, SR_DRONE,
-     2, 0, 90, 0, FM_ARC, 40},
-    {"POST ROCK", 84, 118, 0, {SC_MIN, SC_MAJ, SC_DOR, SC_MIN}, DM_INDIE, 85, KIT_BREAKS, 2, HC_FLAT, FL_TOM, 1,
-     {BA_RADIO, BA_PUMP8, BA_FIFTHS}, 36, KM_SUSTAIN, 100, {PR_RADIO, PR_PYRAMID, PR_I_II}, 2, CS_SWELL, VM_PAD,
+     2, 0, 90, 0, FM_ARC, 40, HF_COLOR | HX_BOR},
+    {"POST ROCK", 84, 118, 0, {SC_MIN, SC_MAJ, SC_MIN, SC_MIN}, DM_INDIE, 85, KIT_BREAKS, 2, HC_FLAT, FL_TOM, 1,
+     {BA_RADIO, BA_PUMP8, BA_FIFTHS}, 36, KM_SUSTAIN, 100, {PR_RADIO, PR_EPIC, PR_PYRAMID}, 2, CS_SWELL, VM_PAD,
      {AP_GLASS, AP_UPDOWN}, LD_MOTIF, AMT(60, 75, 80, 75, 45), {KIT_BREAKS, SR_ROCKBASS, SR_EP, SR_GTR, SR_VOXLEAD}, SR_STRINGS,
-     4, 0, 70, 0, FM_ARC, 45},   /* (0.6.95: after Radiohead: add9 / sus chords, a clean arpeggio, long roots) */
+     4, 0, 70, 0, FM_ARC, 45, HF_COLOR},   /* (0.6.95: after Radiohead: add9 / sus chords, a clean arpeggio, long roots) */
     /* ---- funk, disco, hip hop, UK */
     {"FUNK", 96, 112, 14, {SC_DOR, SC_MIX, SC_MPEN, SC_BLUE}, DM_FUNK, 100, KIT_BREAKS, 4, HC_FUNK, FL_LINEAR, 1,
-     {BA_JAMERSON, BA_SLAP, BA_AROUND}, 33, KM_INTERLOCK, 40, {PR_DORIAN, PR_ONE, PR_I_IV}, 2, CS_COMP, VM_RICH,
+     {BA_JAMERSON, BA_SLAP, BA_AROUND}, 33, KM_INTERLOCK, 40, {PR_I_IV, PR_ONE, PR_IV_I}, 2, CS_COMP, VM_RICH,
      {AP_BROKEN, AP_WALK}, LD_HOOK, AMT(90, 100, 55, 20, 45), {KIT_BREAKS, SR_ROCKBASS, SR_EP, SR_PLUCK, SR_LEAD}, SR_ORGAN,
-     0, 1, 30, 0, FM_PARTS, 60},
+     0, 1, 30, 0, FM_PARTS, 60, HF_JAZZY | HX_APPR},
     {"DISCO", 114, 122, 8, {SC_MIN, SC_DOR, SC_MAJ, SC_MIN}, DM_DISCO, 100, KIT_BREAKS, 1, HC_HOUSE, FL_ROLL, 0,
-     {BA_ITALO, BA_GOODTIME, BA_BOUNCE}, 36, KM_DOUBLE, 40, {PR_DORIAN, PR_I_IV, PR_JAZZ}, 2, CS_COMP, VM_RICH,
+     {BA_ITALO, BA_GOODTIME, BA_BOUNCE}, 36, KM_DOUBLE, 40, {PR_I_IV, PR_TURN, PR_DEEP4}, 2, CS_COMP, VM_RICH,
      {AP_UP, AP_BROKEN}, LD_HOOK, AMT(90, 100, 65, 35, 45), {KIT_BREAKS, SR_ROCKBASS, SR_STRINGS, SR_PLUCK, SR_LEAD}, SR_STRINGS,
-     0, 1, 40, 0, FM_PARTS, 30},
+     0, 1, 40, 0, FM_PARTS, 30, HF_JAZZY | HX_RAISE | HX_SEC | HX_LIFT},
     {"BOOM BAP", 86, 96, 16, {SC_MIN, SC_DOR, SC_MPEN, SC_MIN}, DM_BOOMBAP, 100, KIT_SOFT, 1, HC_FUNK, FL_NONE, 2,
      {BA_BOOMBAP, BA_JUNGLE, BA_DUB}, 33, KM_DOUBLE, 65, {PR_I_IV, PR_MINOR4, PR_I_VI}, 2, CS_SPARSE, VM_RICH,
      {AP_BROKEN, AP_WALK}, LD_SPARSE, AMT(90, 85, 60, 20, 35), {KIT_SOFT, SR_SUB, SR_EP, SR_KEYS, SR_BELL}, SR_TEXTURE,
-     0, 1, 40, 0, FM_LOOP, 50},
+     0, 1, 40, 0, FM_LOOP, 50, HF_JAZZY},
     {"TRAP", 136, 146, 0, {SC_MIN, SC_PHRY, SC_HARM, SC_MIN}, DM_TRAP, 100, KIT_808, 0, HC_FLAT, FL_HAT, 0,
-     {BA_TRAP, BA_WOBBLE, BA_DUB}, 29, KM_SUSTAIN, 110, {PR_I_VI, PR_ONE, PR_MINOR4}, 2, CS_SPARSE, VM_RICH,
+     {BA_TRAP, BA_WOBBLE, BA_DUB}, 29, KM_SUSTAIN, 110, {PR_I_VI, PR_50S, PR_I_V}, 2, CS_SPARSE, VM_RICH,
      {AP_BROKEN, AP_UPDOWN}, LD_SPARSE, AMT(90, 100, 45, 40, 35), {KIT_808, SR_SUB, SR_PAD, SR_BELL, SR_BELL}, SR_CHOIR,
-     2, 1, 55, 0, FM_PARTS, 0},
+     2, 1, 55, 0, FM_PARTS, 0, HF_POP | HX_RAISE},
     {"UK GARAGE", 128, 134, 24, {SC_MIN, SC_DOR, SC_MIN, SC_MAJ}, DM_UKG, 100, KIT_909, 2, HC_GARAGE, FL_KICK16, 1,
-     {BA_UKG, BA_SPEEDG, BA_DEEPWALK}, 33, KM_INTERLOCK, 45, {PR_I_IV, PR_JAZZ, PR_MINOR4}, 1, CS_BROKEN, VM_RICH,
+     {BA_UKG, BA_SPEEDG, BA_DEEPWALK}, 33, KM_INTERLOCK, 45, {PR_I_IV, PR_JAZZ, PR_DEEP4}, 1, CS_BROKEN, VM_RICH,
      {AP_BROKEN, AP_SEQ}, LD_HOOK, AMT(90, 90, 60, 35, 45), {KIT_909, SR_REESE, SR_EP, SR_PLUCK, SR_VOXLEAD}, SR_TEXTURE,
-     0, 1, 40, 0, FM_CLUB, 10},
+     0, 1, 40, 0, FM_CLUB, 10, HF_JAZZY},
     {"DUBSTEP", 138, 142, 0, {SC_MIN, SC_PHRY, SC_HARM, SC_MIN}, DM_DUBSTEP, 100, KIT_808, 1, HC_FLAT, FL_BREAK, 0,
-     {BA_WOBBLE, BA_DUB, BA_TRAP}, 29, KM_SUSTAIN, 110, {PR_ONE, PR_I_VI, PR_MINOR4}, 2, CS_SPARSE, VM_SUS,
+     {BA_WOBBLE, BA_DUB, BA_TRAP}, 29, KM_SUSTAIN, 110, {PR_ONE, PR_I_VI, PR_PHRY}, 2, CS_SPARSE, VM_SUS,
      {AP_PULSE, AP_BROKEN}, LD_SPARSE, AMT(85, 100, 40, 20, 30), {KIT_808, SR_REESE, SR_PAD, SR_PLUCK, SR_BELL}, SR_NOISE,
-     2, 1, 55, 1, FM_CLUB, 0},
+     2, 1, 55, 1, FM_CLUB, 0, HF_LOOP},
     {"BREAKS", 126, 140, 6, {SC_MIN, SC_DOR, SC_PHRY, SC_MIN}, DM_BREAKS, 100, KIT_BREAKS, 3, HC_FUNK, FL_LINEAR, 1,
      {BA_ACID, BA_JUNGLE, BA_AROUND}, 33, KM_INTERLOCK, 50, {PR_ONE, PR_I_IV, PR_I_VI}, 2, CS_STAB, VM_RICH,
      {AP_UPDOWN, AP_BROKEN}, LD_OSTINATO, AMT(95, 90, 45, 30, 40), {KIT_BREAKS, SR_ACID, SR_STAB, SR_PLUCK, SR_LEAD}, SR_NOISE,
-     1, 1, 40, 0, FM_PARTS, 20},
+     1, 1, 40, 0, FM_PARTS, 20, HF_LOOP},
     {"DRUM & BASS", 170, 176, 0, {SC_MIN, SC_DOR, SC_MIN, SC_MPEN}, DM_DNB, 100, KIT_BREAKS, 2, HC_FLAT, FL_LINEAR, 0,
-     {BA_DNB, BA_JUNGLE, BA_WOBBLE}, 29, KM_DOUBLE, 90, {PR_ONE, PR_I_VI, PR_MINOR4}, 2, CS_SPARSE, VM_RICH,
+     {BA_DNB, BA_JUNGLE, BA_WOBBLE}, 29, KM_DOUBLE, 90, {PR_I_VI, PR_DEEP4, PR_ONE}, 2, CS_SPARSE, VM_RICH,
      {AP_BROKEN, AP_CYCLE3}, LD_SPARSE, AMT(95, 95, 50, 20, 30), {KIT_BREAKS, SR_REESE, SR_PAD, SR_PLUCK, SR_LEAD}, SR_NOISE,
-     2, 4, 50, 1, FM_CLUB, 0},
+     2, 4, 50, 1, FM_CLUB, 0, HF_JAZZY},
     /* ---- dub, reggae */
     {"DUB", 70, 80, 20, {SC_MIN, SC_MAJ, SC_DOR, SC_MIN}, DM_ONEDROP, 100, KIT_DUB, 1, HC_FLAT, FL_DUB, 1,
-     {BA_ONEDROP, BA_DUB, BA_ONEDROP2}, 33, KM_SUSTAIN, 50, {PR_I_IV, PR_I_VI, PR_ONE}, 2, CS_SKANK, VM_PLAIN,
+     {BA_ONEDROP, BA_DUB, BA_ONEDROP2}, 33, KM_SUSTAIN, 50, {PR_I_VII, PR_I_IV, PR_ONE}, 2, CS_SKANK, VM_PLAIN,
      {AP_PULSE, AP_BROKEN}, LD_SPARSE, AMT(80, 100, 60, 10, 25), {KIT_DUB, SR_SUB, SR_DUBCHORD, SR_ORGAN, SR_ORGAN}, SR_TEXTURE,
-     1, 4, 80, 0, FM_ARC, 40},
+     1, 4, 80, 0, FM_ARC, 40, HF_LOOP},
     {"STEPPERS", 76, 88, 16, {SC_MIN, SC_MIN, SC_DOR, SC_MAJ}, DM_STEPPERS, 100, KIT_DUB, 1, HC_FLAT, FL_DUB, 1,
      {BA_STEPPERS, BA_ROCKERS, BA_ONEDROP2}, 33, KM_DOUBLE, 45, {PR_I_VII, PR_I_IV, PR_ONE}, 2, CS_SKANK, VM_PLAIN,
      {AP_PULSE, AP_UP}, LD_SPARSE, AMT(90, 100, 65, 15, 30), {KIT_DUB, SR_SUB, SR_ORGAN, SR_ORGAN, SR_ORGAN}, SR_TEXTURE,
-     1, 4, 70, 0, FM_PARTS, 40},
+     1, 4, 70, 0, FM_PARTS, 40, HF_LOOP},
     /* ---- jazz, latin */
-    {"JAZZ", 110, 150, 40, {SC_MAJ, SC_DOR, SC_MIN, SC_MIX}, DM_JAZZ, 90, KIT_BREAKS, 2, HC_FLAT, FL_NONE, 1,
-     {BA_WALK, BA_WALK2, BA_TWOFEEL}, 33, KM_SUSTAIN, 95, {PR_JAZZ, PR_PLAGAL, PR_I_III}, 1, CS_COMP, VM_RICH,
+    {"JAZZ", 110, 150, 40, {SC_MAJ, SC_DOR, SC_MIN, SC_MAJ}, DM_JAZZ, 90, KIT_BREAKS, 2, HC_FLAT, FL_NONE, 1,
+     {BA_WALK, BA_WALK2, BA_TWOFEEL}, 33, KM_SUSTAIN, 95, {PR_JAZZ, PR_TURN, PR_JAZZ2}, 1, CS_COMP, VM_RICH,
      {AP_WALK, AP_UPDOWN}, LD_MOTIF, AMT(60, 95, 75, 20, 55), {KIT_BREAKS, SR_ROCKBASS, SR_EP, SR_EP, SR_VOXLEAD}, SR_ORGAN,
-     0, 1, 40, 0, FM_LOOP, 70},
+     0, 1, 40, 0, FM_LOOP, 70, HF_JAZZ | HX_RAISE | HX_SEC | HX_BOR | HX_APPR},
     {"BOSSA", 120, 136, 6, {SC_MAJ, SC_LYD, SC_DOR, SC_MIN}, DM_BOSSA, 100, KIT_SOFT, 0, HC_FLAT, FL_NONE, 0,
-     {BA_BOSSA, BA_TUMBAO, BA_TWOFEEL}, 33, KM_DOUBLE, 80, {PR_JAZZ, PR_I_II, PR_PLAGAL}, 2, CS_COMP, VM_RICH,
+     {BA_BOSSA, BA_TUMBAO, BA_TWOFEEL}, 33, KM_DOUBLE, 80, {PR_BOSSA, PR_I_II, PR_JAZZ}, 2, CS_COMP, VM_RICH,
      {AP_ALBERTI, AP_UPDOWN}, LD_MOTIF, AMT(75, 90, 70, 30, 50), {KIT_SOFT, SR_ROCKBASS, SR_GTR, SR_EP, SR_SINEKEY}, SR_STRINGS,
-     0, 1, 40, 0, FM_LOOP, 50},
+     0, 1, 40, 0, FM_LOOP, 50, HF_JAZZ | HX_RAISE | HX_SEC | HX_APPR},
     {"AFROBEAT", 112, 126, 10, {SC_DOR, SC_MIX, SC_MPEN, SC_MIN}, DM_AFRO, 100, KIT_BREAKS, 3, HC_FUNK, FL_LINEAR, 1,
-     {BA_AROUND, BA_SKA, BA_ANGULAR}, 33, KM_INTERLOCK, 45, {PR_DORIAN, PR_ONE, PR_I_IV}, 2, CS_COMP, VM_RICH,
+     {BA_AROUND, BA_SKA, BA_ANGULAR}, 33, KM_INTERLOCK, 45, {PR_I_IV, PR_ONE, PR_I_VII}, 2, CS_COMP, VM_RICH,
      {AP_BROKEN, AP_CYCLE3}, LD_HOOK, AMT(100, 100, 55, 40, 45), {KIT_BREAKS, SR_ROCKBASS, SR_ORGAN, SR_GTR, SR_LEAD}, SR_ORGAN,
-     0, 1, 30, 0, FM_ARC, 50},
+     0, 1, 30, 0, FM_ARC, 50, HF_JAZZY},
     /* ---- the night, the room */
     {"AMBIENT", 60, 90, 0, {SC_LYD, SC_MAJ, SC_MIN, SC_DOR}, DM_SPARSE, 25, KIT_SOFT, 0, HC_FLAT, FL_NONE, 0,
      {BA_PEDAL, BA_FIFTHS, BA_NEOARP}, 31, KM_SUSTAIN, 120, {PR_I_II, PR_I_IV, PR_SUS}, 4, CS_SWELL, VM_RICH,
      {AP_GLASS, AP_UPDOWN}, LD_TINTI, AMT(20, 50, 100, 40, 30), {KIT_SOFT, SR_SUB, SR_PAD, SR_BELL, SR_SINEKEY}, SR_DRONE,
-     4, 0, 95, 0, FM_ARC, 20},
+     4, 0, 95, 0, FM_ARC, 20, HF_COLOR},
     {"NEO CLASSIC", 70, 112, 0, {SC_MIN, SC_DOR, SC_MAJ, SC_MEL}, DM_NONE, 0, KIT_SOFT, 0, HC_FLAT, FL_NONE, 0,
-     {BA_NEOARP, BA_PEDAL, BA_FIFTHS}, 36, KM_SUSTAIN, 100, {PR_NEOCL, PR_CYCLE, PR_AEOL}, 1, CS_HOLD, VM_RICH,
+     {BA_NEOARP, BA_PEDAL, BA_FIFTHS}, 36, KM_SUSTAIN, 100, {PR_50S, PR_NEOCL, PR_CYCLE}, 1, CS_HOLD, VM_RICH,
      {AP_GLASS, AP_ALBERTI}, LD_TINTI, AMT(0, 60, 70, 90, 55), {KIT_SOFT, SR_SINEKEY, SR_STRINGS, SR_EP, SR_BELL}, SR_CHOIR,
-     0, 1, 70, 0, FM_ARC, 30},
-    {"IMPRESSION", 60, 92, 0, {SC_LYD, SC_MAJ, SC_LYD, SC_MPEN}, DM_SPARSE, 25, KIT_SOFT, 0, HC_FLAT, FL_NONE, 0,
+     0, 1, 70, 0, FM_ARC, 30, HF_CINE | HX_RAISE | HX_SEC | HX_BOR},
+    {"IMPRESSION", 60, 92, 0, {SC_LYD, SC_MAJ, SC_LYD, SC_PEN}, DM_SPARSE, 25, KIT_SOFT, 0, HC_FLAT, FL_NONE, 0,
      {BA_FIFTHS, BA_PEDAL, BA_NEOARP}, 36, KM_SUSTAIN, 110, {PR_I_II, PR_I_III, PR_SUS}, 2, CS_SWELL, VM_PLANE,
      {AP_UPDOWN, AP_GLASS}, LD_TINTI, AMT(15, 50, 85, 75, 40), {KIT_SOFT, SR_SINEKEY, SR_PAD, SR_EP, SR_BELL}, SR_CHOIR,
-     4, 0, 90, 0, FM_ARC, 30},
-    {"SOUNDTRACK", 64, 92, 0, {SC_MIN, SC_DOR, SC_MEL, SC_MPEN}, DM_SPARSE, 40, KIT_DUB, 0, HC_FLAT, FL_NONE, 0,
-     {BA_PEDAL, BA_FIFTHS, BA_DUB}, 29, KM_SUSTAIN, 120, {PR_MINOR4, PR_I_VI, PR_ANDAL}, 2, CS_SWELL, VM_RICH,
+     4, 0, 90, 0, FM_ARC, 30, HF_COLOR},
+    {"SOUNDTRACK", 64, 92, 0, {SC_MIN, SC_MIN, SC_MEL, SC_MPEN}, DM_SPARSE, 40, KIT_DUB, 0, HC_FLAT, FL_NONE, 0,
+     {BA_PEDAL, BA_FIFTHS, BA_DUB}, 29, KM_SUSTAIN, 120, {PR_50S, PR_ANDAL, PR_EPIC}, 2, CS_SWELL, VM_RICH,
      {AP_ALBERTI, AP_GLASS}, LD_SPARSE, AMT(30, 60, 100, 30, 35), {KIT_DUB, SR_SUB, SR_STRINGS, SR_BELL, SR_CHOIR}, SR_DRONE,
-     4, 0, 90, 0, FM_ARC, 20},
+     4, 0, 90, 0, FM_ARC, 20, HF_CINE | HX_RAISE | HX_BOR},
     {"IDM", 86, 140, 10, {SC_PHRY, SC_HARM, SC_MIN, SC_DOR}, DM_IDM, 100, KIT_CLICK, 2, HC_FLAT, FL_KICK16, 0,
      {BA_JUNGLE, BA_ANGULAR, BA_DUST}, 33, KM_INTERLOCK, 50, {PR_MINOR4, PR_I_VI, PR_I_II}, 2, CS_SPARSE, VM_QUART,
      {AP_WALK, AP_CYCLE5}, LD_MOTIF, AMT(85, 70, 50, 60, 45), {KIT_CLICK, SR_FMBASS, SR_EP, SR_BELL, SR_CHIP}, SR_TEXTURE,
-     4, 5, 60, 1, FM_PARTS, 10},
+     4, 5, 60, 1, FM_PARTS, 10, HF_LOOP},
     {"BROKEN", 80, 100, 14, {SC_DOR, SC_MIN, SC_MEL, SC_DOR}, DM_BREAKS, 90, KIT_SOFT, 3, HC_FUNK, FL_LINEAR, 2,
      {BA_AROUND, BA_DUST, BA_JUNGLE}, 33, KM_INTERLOCK, 55, {PR_I_IV, PR_JAZZ, PR_MINOR4}, 2, CS_COMP, VM_QUART,
      {AP_WALK, AP_BROKEN}, LD_MOTIF, AMT(80, 85, 60, 30, 45), {KIT_SOFT, SR_FMBASS, SR_EP, SR_KEYS, SR_VOXLEAD}, SR_TEXTURE,
-     4, 4, 65, 0, FM_PARTS, 50},
+     4, 4, 65, 0, FM_PARTS, 50, HF_JAZZY},
 };
 #define NGENRE (sizeof GENRE / sizeof GENRE[0])

@@ -156,6 +156,9 @@ static const icon_map_t ICON_MAP[] = {
     {"BUZZ", ICON_PULSE}, {"BREATH", ICON_NOISE}, {"Q", ICON_RESO}, {"RAND", ICON_PROB},
     {"FREQ", ICON_CUTOFF}, {"TRK", ICON_KEYTRACK}, {"DRIFT", ICON_SWEEP},   /* NOISE (COLR, DENS, CRSH: above) */
     {"MOD", ICON_MOD}, {"RATIO", ICON_RATIO}, {"MEG", ICON_DECAY}, {"VMOD", ICON_ACCENT}, 
+    {"PRESS", ICON_LEVEL}, {"CHAOS", ICON_PROB}, {"SWEEP", ICON_SWEEP}, {"GROUP", ICON_STEPS}, {"TEMP", ICON_TUNE},
+    {"TOUCH", ICON_ACCENT}, {"COUPLE", ICON_MOD}, {"CAP", ICON_PULSE}, {"HYST", ICON_SHAPE}, {"FM", ICON_MOD},
+    {"DOPPLR", ICON_SWEEP}, {"MOUTH", ICON_VOICE}, {"ROUGH", ICON_NOISE}, {"AIR", ICON_NOISE},   /* (0.8.3) ANIMAL */
                                                        /* FM6 (ALG, FB: above) */
     /* fixed columns drawn by ui_draw.c (STEP page, preset browser, SYSTEM) */
     {"NOTE", ICON_PITCH}, {"STEP", ICON_STEPS}, {"FLAG", ICON_ACCENT}, {"ACC", ICON_ACCENT}, {"LANE", ICON_DRUM}, {"HIT", ICON_GATE}, {"SLD", ICON_SLIDE}, {"USB", ICON_MIDI},
@@ -198,6 +201,8 @@ static uint32_t param_icon(const param_desc_t *d, int32_t v)
         return ICON_DIVISION;                 /* arp / SLICER / AUTO PAN on the tempo: a note division, not Hz */
     if (d->names == N_NOISE_MODE)
         return ICON_NOISE;                    /* NOISE's MODE is the source; its CLK the register clock */
+    if (d->names == N_ANIMAL_MODE)
+        return ICON_PHYS;                     /* (0.8.3) ANIMAL's MODE: the source model */
     if (d == &NOISE_CLK)
         return ICON_RATE;
     if (d == &GP[G_SLMODE])
@@ -244,6 +249,7 @@ static uint32_t engine_icon(const char *name)
         {"DRUM", ICON_DRUM},
         {"NOISE", ICON_NOISE},
         {"FM6", ICON_MOD},                    /* (symbol_modular: six operators patched; a glyph of its own wanted) */
+        {"ANIMAL", ICON_PHYS},                /* (0.8.3: a physical model, as PHYS was) */
     };
     uint32_t i;
     for (i = 0; i < sizeof M / sizeof M[0]; i++)
