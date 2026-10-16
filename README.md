@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.7.7).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.7.8).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 > ⚡ **New in 0.6.85 – 0.6.92: a song generator you steer, a compact sequencer that breathes, a delay that feeds back.**
 > - **GEN (HOME + SELECT)**: a screen of three pages — GENRE (43 genres or RANDOM), SEED, ENERGY, FORM (loop, parts,
@@ -524,6 +524,29 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### v0.7.8
+- **DIST TYPE AMP** (asked for: an amp emulator): two triode stages, each a biased tanh leaning its own way (even and
+  odd harmonics), a coupling high-pass between them (~110 Hz: the bias moves with the level, the sag and bloom), the
+  second stage's gain rising with DIST (clean, crunch, lead); then a cabinet: a two-pole low-pass at a speaker's
+  corner (TONE ~2.5 .. 6 kHz) and a state-variable resonance at ~1.8 kHz added (a 12" cone's presence). Its graph
+  draws the two stages' curve; the web editor lists it. mod_test: AMP sounds its own, within 6 dB of SOFT.
+- **DRIFT** (EDIT > MORPH, KNOB 2, on ANALOG PHASE LOFI): each voice's pitch (up to ~27 ct) and filter wander, a smooth
+  value noise of its own (a new point every ~0.6 .. 1 s, smoothstep between), no state per voice. 0 % off.
+- **WHEEL: EDIT > ROTOR**, DEPTH (the rotary speaker's AM and Doppler, 100 % as before) and DUST (an old organ's
+  crackle and hiss, once a part, on its first sounding voice).
+- **The matrix's NOISE source**: a smooth random wander per track (a new point every ~46 ms, eased), bipolar; on the
+  web editor too.
+- **DRUM-X STEREO fixed** (reported: grit like a downsampling and clicks on one side). Its sides (what each sound's
+  pan takes from one channel) and their "image on" flag were one set for both cores; the two cores render two parts at
+  once (0.6.71), so the other core's part cleared them mid-render: the image on and off block by block. Now a core
+  each (dx_core, as mod.c's mod_c). And the kit's curve (DRV, the knee) now scales the sides as it scales the sum, so
+  a loud hit's side is never over-taken. ui_test: a sound panned hard keeps the other side silent; the other core's
+  part leaves this core's image. **STEREO comes right after X-MOD** (the kit's pages first: KIT, KIT 2, KIT 3, X-MOD,
+  STEREO, FILTER; then SOUND 1-4; the volumes last: LEVELS, LEVELS 2).
+- The new parameters live in the retired DIGITAL's last slots (P_FM3_SUS, P_FM3_LEVEL, P_FM4_SUS): every project and
+  preset before them holds 127 there, which each reads as "as before" (DRIFT and DUST 0 %, DEPTH 100 %). mod_test:
+  at 127 each is bit-identical, at 0 % / 100 % each sounds its own.
 
 ### v0.7.7
 - **The screen, polished** (asked for, from the HTML studies: "R.1 Pulido"). The values are set in Chakra Petch again
