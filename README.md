@@ -570,6 +570,30 @@ Every update is listed here, newest first. (Since 0.6.80 at the end of the page:
   steps are made again instead, the kick a bit mask); the pool unchanged. GEN runs in the main loop: a full piece 9 %
   more instructions (LOOP), 20 % (PARTS), 22 % (SONG), against 0.8.2's (callgrind); the audio path untouched.
   Project and backup formats unchanged.
+- **LENTE: the sequencer as a lens** (a tester: reaching a sequencer function took many SEQ taps, eleven pages in a
+  chain, and the next bar sixteen KNOB 1 detents). On a SEQ page **SELECT zooms** between three levels, **PATTERN ↔
+  BAR ↔ STEP** (no wrap), and a **SEQ tap goes round the level's sets**: PATTERN shows the pattern's bars side by side
+  (up to four, each its sixteen steps small, the edited bar framed, the playhead) with PATTERN (LEN DIV SWING GATE),
+  STRETCH, PLAYHEADS, TRACK and MUTATE, and **PRESETS picks the bar**; BAR is the piano roll (a kit: the grid, its keys
+  as before) with STEP, NOTE, AUTOMATION and AUTO LIST, PRESETS the step; STEP draws the cursor step large (its notes,
+  the one in focus lit, MICRO and RATCH shown, a TIE's held notes; chips for ACC, SLIDE, MICRO, COMP, COMP 2, CHANCE,
+  the set's own lit) with NOTE, COMP and COMP 2. The footer's first row says where you are on every SEQ page: the three
+  levels, the one shown lit, and the bars, the edited one lit, a line under the one playing (the page's name flashes
+  under it). SEQ from another page comes back to the level and set last used on that track. COMP 2 is now SELECT + two
+  taps (was five), the next bar one PRESETS detent (was sixteen), MUTATE SELECT + four taps (was ten). Same edits as
+  before: the pages, their knobs, the editor protocol and the saved data are unchanged (LENTE groups the existing
+  pages); SEQ held is SEQ TOOLS on every SEQ page now, SEQ + SELECT the dice, SEQ + REC clear all, locks, step
+  recording and the hidden pages as they were. KNOB 1 stays LEN on PATTERN (the mock-up had the bar there: PRESETS
+  takes it, so nothing is lost). COMP's own picture (the ladder, TRIG's loops) gave way to the large step.
+  **What it costs**: no audio-path change; 12 B of RAM (.data + .bss 95092 → 95104 B; the level and a 16-bit memory a
+  track), the pool's spare unchanged (8640 B), RAM code unchanged (21580 B), 1088 B of flash (482712 → 483800 B);
+  drawing (ui_render, host): only on a change, as before (a frame that changes nothing: 0.35–0.8 µs, the signature);
+  the footer's pills add 4 texts to every SEQ page (STEP full redraw ~110 → ~115 µs); PATTERN's bars draw about as fast
+  as the roll did there (panel ~55 µs); STEP's large step and chips are the heaviest (46 texts, 10.9k glyph px against
+  the roll's 24 / 5.3k: a full redraw ~114 → ~150 µs, the panel ~59 → ~65–82 µs), still within the roll's league.
+  ui_test checks the zoom, the sets, the memory per track, PRESETS by level, the tools and the dice
+  on every level and the DRUM grid; ui_render draws the three levels (melodic and DRUM, a chord, a TIE, a REST) in every
+  palette, FLAT and LINE, LARGE: lint and alignment clean.
 - **Two DRUM tracks, one kit, never overwritten by the other** (reported again by a tester): the section keeps one
   DRUM-X kit. Browsing presets already left another track's kit alone (0.8.1); now the sound dice (EDIT + SELECT) and
   INIT SOUND do too: a second DRUM track inits or dices its own sound and the screen says KIT OF T4 KEPT / INIT, KIT KEPT.

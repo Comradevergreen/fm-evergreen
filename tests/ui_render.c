@@ -646,6 +646,8 @@ enum { S_HOME, S_HOME_IDLE, S_MESSAGE, S_MESSAGE_KEY, S_MESSAGE_NOFILE, S_PRESET
        S_FX_PEEK, S_FX_HELD, S_FX_WAIT, S_FX_HARM, S_MENU_HOLD, S_MENU_LEDS, S_MENU_END, S_MENU_SYSTEM, S_MENU_SLIDE, S_REVERB, S_REVERB_RESO,
        S_GLO_PEEK, S_GLO_ACTIVE, S_GLO_EXT, S_SCL_PEEK, S_SCL_ACTIVE, S_EDIT_PEEK, S_EDIT_ACTIVE, S_EDIT_USER, S_EDIT_DRUM, S_LAYER_HINT, S_LAYER_LOCK, S_LAYER_LOCK_FX, S_LAYER_SONG, S_LAYER_SONG_CHAIN,
        S_SEQ_TOOLS, S_SEQ_TOOLS_DRUM, S_SEQ_TOOLS_SONG,
+       S_LENTE_PAT, S_LENTE_PAT_DRUM, S_LENTE_STRETCH, S_LENTE_BAR, S_LENTE_BAR_DRUM, S_LENTE_STEP, S_LENTE_STEP_COMP,
+       S_LENTE_STEP_COMP2, S_LENTE_STEP_TIE, S_LENTE_STEP_REST, S_LENTE_STEP_DRUM,
        S_NAME_USER, S_NAME_TYPING, S_NAME_123, S_NAME_EMPTY, S_NAME_FULL, S_NAME_PLAYING, S_PROJECT_NAMED, S_SONG_NAMED,
        S_USER_FOOT,
        S_ROLL_EMPTY, S_ROLL_ACID, S_ROLL_CHORDS, S_ROLL_TIES, S_ROLL_LEN32, S_ROLL_HIGH, S_ROLL_LOW, S_ROLL_WIDE, S_ROLL_PLAYING,
@@ -664,6 +666,8 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "message", "mes
     "layer_glo_peek", "layer_glo_active", "layer_glo_ext", "layer_scl_peek", "layer_scl_active", "layer_edit_peek",
     "layer_edit_active", "layer_edit_user", "layer_edit_drum", "layer_hint", "layer_lock", "layer_lock_fx", "layer_song", "layer_song_chain",
     "layer_seq_tools", "layer_seq_tools_drum", "layer_seq_tools_song",
+    "lente_pattern", "lente_pattern_drum", "lente_stretch", "lente_bar", "lente_bar_drum", "lente_step_note",
+    "lente_step_comp", "lente_step_comp2", "lente_step_tie", "lente_step_rest", "lente_step_drum",
     "name_user", "name_typing", "name_123", "name_empty", "name_full", "name_playing", "project_named", "song_named",
     "user_foot",
     "roll_empty", "roll_acid", "roll_chords", "roll_ties", "roll_len32_p2", "roll_high", "roll_low", "roll_wide", "roll_playing",
@@ -1107,6 +1111,51 @@ static void setup(int s)
     case S_SEQ_TOOLS: go_page(GR_ROLL); ui.layer = LAYER_SEQ; break;
     case S_SEQ_TOOLS_DRUM: drum(0); go_page(GR_ROLL); ui.lane = 2; ui.layer = LAYER_SEQ; break;
     case S_SEQ_TOOLS_SONG: drum(1); go_page(GR_ROLL); ui.lane = 5; chain.running = 1; ui.layer = LAYER_SEQ; break;
+    /* (0.8.3) LENTE, SEQ's three levels: PATTERN (a LEN 64 line over four bars, the third edited, playing in the
+     * second; a kit's 32; STRETCH), BAR (the roll over LEN 64; the grid), STEP (a chord, its second note in focus,
+     * MICRO +3, an accent, an ARP, 60 %; COMP's and COMP 2's chips lit; a TIE holding it; a REST; a kit's hits) */
+    case S_LENTE_PAT:
+    case S_LENTE_STRETCH:
+    case S_LENTE_BAR:
+    case S_LENTE_STEP:
+    case S_LENTE_STEP_COMP:
+    case S_LENTE_STEP_COMP2:
+    case S_LENTE_STEP_TIE:
+    case S_LENTE_STEP_REST: {
+        static const uint8_t CH[3] = {60, 64, 69};
+        track_t *t = TSEL;
+        uint32_t i;
+        track_defaults_steps(t);
+        t->p[P_SLEN] = 64; t->p[P_VOICE] = V_POLY;
+        for (i = 0; i < 64u; i++) {
+            uint8_t n = (uint8_t)(48 + (i * 7u + i / 16u * 5u) % 24u);
+            if (i % 5u == 4u) step_put(&t->step[i], ST_TIE, 0, 0, &n);
+            else if (i % 7u == 6u) step_put(&t->step[i], ST_REST, 0, 0, &n);
+            else step_put(&t->step[i], ST_NOTE, i % 8u == 0u ? SF_ACCENT : 0u, 1, &n);
+        }
+        step_put(&t->step[34], ST_NOTE, SF_ACCENT | SF_SLIDE, 3, CH);
+        ST_MICRO_SET(&t->step[34], 3); step_set_chance(&t->step[34], 60);
+        t->step[34].comp = CP_ARPN; t->step[34].comp2 = CP_ECHO;
+        step_put(&t->step[35], ST_TIE, 0, 0, CH);
+        step_put(&t->step[36], ST_REST, 0, 0, CH);
+        song.playing = 1; t->seq_idx = 21;
+        ui.lv = s == S_LENTE_PAT || s == S_LENTE_STRETCH ? LV_PAT : s == S_LENTE_BAR ? LV_BAR : LV_STEP;
+        go_title(s == S_LENTE_PAT ? "PATTERN" : s == S_LENTE_STRETCH ? "STRETCH" : s == S_LENTE_BAR ? "STEP" :
+                 s == S_LENTE_STEP_COMP ? "COMP" : s == S_LENTE_STEP_COMP2 ? "COMP 2" : "NOTE");
+        cursor_set(s == S_LENTE_STEP_TIE ? 35 : s == S_LENTE_STEP_REST ? 36 : 34);
+        ui.pr_focus = s == S_LENTE_STEP ? 2u : 0u;
+        break;
+    }
+    case S_LENTE_PAT_DRUM:
+    case S_LENTE_BAR_DRUM:
+    case S_LENTE_STEP_DRUM:
+        drum(0); trk[3].p[P_SLEN] = 32;
+        memcpy(&trk[3].step[16], &trk[3].step[0], 16u * sizeof(step_t));
+        trk[3].step[20].hit |= 0x30u; trk[3].step[20].acc |= 0x10u;
+        ui.lv = s == S_LENTE_PAT_DRUM ? LV_PAT : s == S_LENTE_BAR_DRUM ? LV_BAR : LV_STEP;
+        go_title(s == S_LENTE_PAT_DRUM ? "PATTERN" : s == S_LENTE_BAR_DRUM ? "STEP" : "NOTE");
+        cursor_set(20); ui.lane = 4;
+        break;
     /* NAME (ui_name.c): USER SAVE prefilled; a letter cycling (RS: S, R next); 123 on a project; an empty project name
      * (the placeholder); 12 of the widest letters, the cursor past them; playing (OCT+ dim) */
     case S_NAME_USER: song.playing = 0; go_page(GR_USER); ui.uslot = 6; name_open(NK_USER_SAVE, 6); break;
@@ -1774,7 +1823,9 @@ int main(int argc, char **argv)
     al_off = 1;                                     /* (the alignment check is not timed) */
     /* draw cost: a full redraw of a screen (all strips), and HOME frame by frame (the scope, every other frame) */
     {
-        static const int COST[] = {S_HOME, S_PRESETS, S_STEP, S_ROLL_CHORDS, S_DRUM, S_MIXER, S_MENU, S_ABOUT_CREDITS, S_CONFIRM_PROJ};
+        static const int COST[] = {S_HOME, S_PRESETS, S_STEP, S_ROLL_CHORDS, S_DRUM, S_MIXER, S_MENU, S_ABOUT_CREDITS, S_CONFIRM_PROJ,
+                                   S_PATTERN, S_COMP, S_LENTE_PAT, S_LENTE_BAR, S_LENTE_STEP, S_LENTE_STEP_DRUM};   /* (0.8.3:
+                                                                         * LENTE's three levels) */
         enum { N = 200 };
         uint32_t i, k;
         fprintf(rep, "\ndraw cost on the host (cc -O1; only the ratios mean anything on the device):\n");
@@ -1801,8 +1852,8 @@ int main(int argc, char **argv)
                     (double)(clock() - c0) / CLOCKS_PER_SEC / (N * 4) * 1e6, (unsigned long long)(n_text / (N * 4)));
         }
         {   /* the STEP page's piano roll: its panel alone redrawn, and a frame that changes nothing (the signature only) */
-            static const int G[] = {S_ROLL_CHORDS, S_ROLL_PLAYING, S_DRUM};
-            for (k = 0; k < 3u; k++) {
+            static const int G[] = {S_ROLL_CHORDS, S_ROLL_PLAYING, S_DRUM, S_PATTERN, S_COMP, S_LENTE_PAT, S_LENTE_STEP};
+            for (k = 0; k < sizeof G / sizeof G[0]; k++) {
                 clock_t c0;
                 double tg, ti;
                 setup(G[k]); pal(1); draw(G[k]);

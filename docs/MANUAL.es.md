@@ -86,9 +86,9 @@ Los nombres de abajo son los que usa el firmware (la pantalla HARDWARE CALIBRATI
 
 | Control | Qué hace |
 | --- | --- |
-| **SELECT** (encoder) | Solo: **recorre las páginas de la sección en la que estás** (las de EDIT en una página EDIT, las de FX en una de FX …), una por paso, sin dar la vuelta; en **HOME** abre **GEN**, el generador de temas (como HOME + SELECT). Con un botón mantenido, los **dados** de ese botón: **HOME** + SELECT **GEN**, **EDIT** + SELECT el sonido, **SEQ** + SELECT la secuencia, **LFO** + SELECT el LFO, **FX** + SELECT los efectos. **GLO** + SELECT: el tempo. Cualquier otro botón de página + SELECT: sus páginas. |
+| **SELECT** (encoder) | Solo: **recorre las páginas de la sección en la que estás** (las de EDIT en una página EDIT, las de FX en una de FX …), una por paso, sin dar la vuelta; en una página **SEQ** en cambio hace **zoom**: PATRÓN ↔ COMPÁS ↔ PASO (la lente del secuenciador, LENTE: ver [6](#cómo-moverse-lente)); en **HOME** abre **GEN**, el generador de temas (como HOME + SELECT). Con un botón mantenido, los **dados** de ese botón: **HOME** + SELECT **GEN**, **EDIT** + SELECT el sonido, **SEQ** + SELECT la secuencia, **LFO** + SELECT el LFO, **FX** + SELECT los efectos. **GLO** + SELECT: el tempo. Cualquier otro botón de página + SELECT: sus páginas. |
 | **ALGORITHM** (encoder) | Elige la pista desde cualquier página: T1–T4, o T1–T6 con TRACKS 6. En el MENU: cambia de pestaña. |
-| **PRESETS** (encoder) | En HOME, PRESETS y las páginas de sonido: recorre sonidos (los presets de fábrica de cada motor y después tus presets de usuario). En las páginas de pasos (STEP, COMP, PATTERN, AUTOMATION, TRACK): mueve el cursor de paso; en NOTE, el foco. En las páginas de lista (USER, PROJECT, ARRANGE, TOOLS, AUTO LIST): mueve la selección. **Mantené un botón de página y girá SELECT** (o PRESETS) para saltar directo por las páginas de ese botón. |
+| **PRESETS** (encoder) | En HOME, PRESETS y las páginas de sonido: recorre sonidos (los presets de fábrica de cada motor y después tus presets de usuario). En las páginas SEQ sigue al zoom: en **PATRÓN** (PATTERN, STRETCH, PLAYHEADS, TRACK, MUTATE) elige el **compás**; en **COMPÁS** y **PASO** (STEP, NOTE, COMP, COMP 2, AUTOMATION) mueve el **cursor de paso**, y al pasarse del compás entra solo en el siguiente. En las páginas de lista (USER, PROJECT, ARRANGE, TOOLS, AUTO LIST): mueve la selección. **Mantené un botón de página y girá SELECT** (o PRESETS) para saltar directo por las páginas de ese botón. |
 | **KNOB 1–4** | Las cuatro tarjetas (columnas) de la pantalla. Con una capa mantenida, las perillas propias de la capa. Girar rápido recorre todo el rango, despacio ajusta fino (MENU > KNOB ACCEL lo desactiva). |
 | **MASTER** | El volumen de salida. |
 
@@ -105,7 +105,7 @@ Los nombres de abajo son los que usa el firmware (la pantalla HARDWARE CALIBRATI
 | **GLO** | MIXER → GLOBAL → SYSTEM → MIXER. | Capa **GLO**: mutes, solos, niveles, tap tempo, UNDO. |
 | **SAVE** | Páginas SAVE (primera pulsación: USER). | Capa **SAVE**: tocar/guardar secciones en vivo. |
 | **ARP** | Páginas ARP. | (sin capa) |
-| **SEQ** | Páginas SEQ. | Capa **SEQ TOOLS** (en STEP, NOTE, PATTERN, COMP, TRACK y AUTOMATION). |
+| **SEQ** | Páginas SEQ: en una página SEQ, el siguiente juego de perillas del nivel de zoom en el que estás; desde otro lado, vuelve al nivel y al juego que usaste por última vez en esa pista. | Capa **SEQ TOOLS** (en todas las páginas SEQ). |
 | **PLAY** | Arranca / para. | — |
 | **REC** | Arma / desarma la grabación en la pista seleccionada. | Capa **REC**: CLEAR, CLICK. |
 | **OCT− / OCT+** | Octava del teclado (−3 a +3; los dos juntos: vuelve a 0). En páginas de acción y en diálogos: **OCT−** = atrás / NO, **OCT+** = hacerlo / YES. | — |
@@ -152,7 +152,9 @@ atajos de esa capa; en la grilla DRUM son pasos y carriles; en la pantalla NAME 
   grilla de pasos, una lista...
 - **Pie**: el nombre de la página y su lugar dentro de su familia (p. ej. **DLY 2/2**), o ayudas de teclas. En las
   páginas del tema (PROJECT, ARRANGE, TOOLS, GLOBAL, SYSTEM) muestra el proyecto y su nombre en lugar del sonido de
-  la pista.
+  la pista. En las páginas SEQ su primera fila es la lente (0.8.3): **PATTERN · BAR · STEP** con el nivel en el que
+  estás encendido, y a la derecha los compases del patrón, el que editás encendido; el nombre de la página aparece
+  entonces debajo, así esa fila queda siempre a la vista.
 
 Los **colores** funcionan como una cámara térmica: frío (cian, azul) es poco, caliente (naranja, amarillo, blanco) es
 mucho. Violeta es lo seleccionado, naranja lo activo.
@@ -178,6 +180,8 @@ Los **diálogos** preguntan antes de cualquier cosa destructiva: **OCT− NO**, 
 - **Girá SELECT** para recorrer las páginas de la sección en la que estás (las de EDIT en una página EDIT, las de FX en
   una de FX), una por paso, frenando en la primera y la última; el nombre de la página aparece un momento sobre el pie.
   En HOME abre GEN, el generador de temas.
+- **SEQ es una lente** (LENTE, 0.8.3): SELECT hace zoom entre el **PATRÓN** entero, un **COMPÁS** y un **PASO**, y un
+  toque de SEQ recorre los juegos de perillas del nivel en el que estás. Ver [6](#cómo-moverse-lente).
 - **Mantené un botón de página y girá PRESETS** para recorrer sus páginas hacia adelante o hacia atrás (sin dar la
   vuelta); soltá y te quedás ahí. ENV, SCL, ARP y SAVE hacen lo mismo con SELECT; HOME, EDIT, SEQ, LFO y FX + SELECT son
   sus dados, GLO + SELECT el tempo.
@@ -284,25 +288,28 @@ a la derecha); apretá OCT+ para ejecutarla.
 
 **SEQ** (por pista)
 
-Las primeras siete páginas editan el piano roll (en una pista DRUM, la grilla) y lo dejan en pantalla: pasar de STEP
-a PATTERN, NOTE, STRETCH, COMP, COMP 2 y PLAYHEADS cambia solo las cuatro tarjetas, y los segmentos sobre el roll
-muestran en cuál de las siete estás (COMP marca el componente de cada paso debajo; PLAYHEADS dibuja los cabezales donde
-suenan). TRACK, AUTOMATION, AUTO LIST y MUTATE vienen después, con sus propios gráficos (0.8.2).
+Las páginas SEQ están agrupadas en tres niveles de zoom (LENTE, 0.8.3; ver [6](#cómo-moverse-lente)): **SELECT** pasa
+de un nivel al siguiente, un toque de **SEQ** recorre los juegos del nivel en el que estás. NOTE está en dos niveles: en
+COMPÁS edita el piano roll, en PASO el paso dibujado grande; las perillas son las mismas.
 
-| Página | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
-| --- | --- | --- | --- | --- |
-| STEP (melódica: piano roll) | STEP | NOTE | TIME (NOTE / TIE / REST) | FLAG (– / ACC / SLD / A+S) |
-| STEP (DRUM: grilla) | STEP | LANE | HIT | ACC |
-| PATTERN | LEN | DIV | SWING | GATE |
-| NOTE | FOCUS | PITCH | MOVE | MICRO (−8/16 … +7/16) |
-| STRETCH | STRETCH (/8 … /2, x1, x2 … x8) | REPEAT (OFF, x2 … x8, TO 64) | NUDGE | ROTATE (−32 … +32) |
-| COMP | STEP | TYPE | (su valor; ARP: ORDER × RANGE) | EVERY (ARP: RATE; RATCH / ECHO: DIV) |
-| COMP 2 | STEP | TYPE (el segundo componente) | (su valor) | EVERY |
-| PLAYHEADS | HEAD | RATE | DIR | INTERVAL |
-| TRACK | PITCH | CHANCE | HUMAN | REC Q |
-| AUTOMATION | PLAY (ON/OFF) | EVENT (cantidad) | LOCK (cantidad) | CLEAR (acción) |
-| AUTO LIST | ROW | STEP | PARAM | VALUE |
-| MUTATE | SOUND (cada) | PATTERN (cada) | AMOUNT | MODE |
+| Nivel | Juego (toque de SEQ) | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
+| --- | --- | --- | --- | --- | --- |
+| PATRÓN | PATTERN | LEN | DIV | SWING | GATE |
+| PATRÓN | STRETCH | STRETCH (/8 … /2, x1, x2 … x8) | REPEAT (OFF, x2 … x8, TO 64) | NUDGE | ROTATE (−32 … +32) |
+| PATRÓN | PLAYHEADS | HEAD | RATE | DIR | INTERVAL |
+| PATRÓN | TRACK | PITCH | CHANCE | HUMAN | REC Q |
+| PATRÓN | MUTATE | SOUND (cada) | PATTERN (cada) | AMOUNT | MODE |
+| COMPÁS | STEP (melódica: piano roll) | STEP | NOTE | TIME (NOTE / TIE / REST) | FLAG (– / ACC / SLD / A+S) |
+| COMPÁS | STEP (DRUM: grilla) | STEP | LANE | HIT | ACC |
+| COMPÁS | NOTE | FOCUS | PITCH | MOVE | MICRO (−8/16 … +7/16) |
+| COMPÁS | AUTOMATION | PLAY (ON/OFF) | EVENT (cantidad) | LOCK (cantidad) | CLEAR (acción) |
+| COMPÁS | AUTO LIST | ROW | STEP | PARAM | VALUE |
+| PASO | NOTE | FOCUS | PITCH | MOVE | MICRO |
+| PASO | COMP | STEP | TYPE | (su valor; ARP: ORDER × RANGE) | EVERY (ARP: RATE; RATCH / ECHO: DIV) |
+| PASO | COMP 2 | STEP | TYPE (el segundo componente) | (su valor) | EVERY |
+
+PRESETS elige el compás en PATRÓN y mueve el cursor de paso en COMPÁS y PASO (en AUTO LIST, la fila). En pantalla los
+niveles se llaman como en el equipo: PATTERN, BAR y STEP.
 
 ### Las capas (mantené el botón)
 
@@ -347,7 +354,7 @@ DRUM-X de fábrica), G3 **RECALL** (el sonido tal como lo guardó la sección ac
 preguntan antes y no tocan los pasos. En una pista DRUM, las teclas negras 1–8 mutean cada sonido de DRUM-X (BD SD CP
 CH OH TM RS CB). Perillas: las cuatro de EDIT 1.
 
-**SEQ TOOLS** (solo en STEP, NOTE, PATTERN, COMP, TRACK y AUTOMATION) — F3 CLEAR, G3 REVERSE, A3 / B3 SHIFT a la izquierda /
+**SEQ TOOLS** (en todas las páginas SEQ, en cualquier nivel de zoom) — F3 CLEAR, G3 REVERSE, A3 / B3 SHIFT a la izquierda /
 derecha, C4 RANDOM, D4 COOK, E4 BEAT (DRUM), F4 CLR AUTO (la automatización y los locks de la pista; los pasos quedan).
 En una pista DRUM, las herramientas de carril: G4 CLR, A4 REV, B4 FILL, C5 RND sobre el carril elegido con las teclas
 negras 1–8. **REC** (con SEQ mantenido): CLEAR ALL. Perillas: LEN, DIV, SWING, GATE. Estas herramientas no tienen
@@ -568,6 +575,30 @@ Un kit por sección, compartido por todas las pistas en DRUM: mientras otra pist
 Cada pista tiene su propio patrón de **64 pasos** con su propio largo (LEN), división (DIV), swing y gate, así que
 patrones de distinto largo giran unos contra otros.
 
+### Cómo moverse: LENTE
+
+El secuenciador funciona como una lente, como un microscopio (LENTE, 0.8.3). **SELECT** hace zoom entre tres niveles,
+**PATRÓN ↔ COMPÁS ↔ PASO** (en pantalla: PATTERN, BAR, STEP), uno por paso, sin dar la vuelta. Cada nivel muestra su
+propio dibujo y tiene sus propios juegos de perillas, y un toque de **SEQ** recorre los juegos del nivel en el que
+estás. La primera fila del pie dice siempre dónde estás: los tres niveles con el tuyo encendido, y a la derecha los
+compases del patrón (hasta cuatro, con LEN 64), el que estás editando encendido y una rayita debajo del que suena.
+
+| Nivel | Qué muestra la pantalla | Un toque de SEQ recorre | PRESETS |
+| --- | --- | --- | --- |
+| **PATRÓN** | Los compases del patrón uno al lado del otro, cada uno con sus dieciséis pasos en chiquito (una pista DRUM: sus carriles), el compás que editás enmarcado, el cabezal donde suena; debajo, **BAR n/m**. | PATTERN (LEN DIV SWING GATE) → STRETCH → PLAYHEADS → TRACK → MUTATE | el **compás** (sin dar la vuelta; el cursor conserva su lugar dentro del compás) |
+| **COMPÁS** | El **piano roll** del compás, como siempre fue STEP (una pista DRUM: la **grilla**, con sus teclas). | STEP → NOTE → AUTOMATION → AUTO LIST | el **cursor de paso**; al pasarse del final del compás entra en el siguiente |
+| **PASO** | El paso del cursor dibujado grande: sus notas de la más aguda a la más grave (la nota en foco encendida, MICRO las corre, RATCH las parte; un TIE muestra las notas que sostiene), y a la derecha sus fichas: ACC, SLIDE, MICRO, COMP, COMP 2, CHANCE. El juego en el que estás enciende su ficha. Arriba, los dieciséis pasos del compás en chiquito. | NOTE (FOCUS PITCH MOVE MICRO) → COMP → COMP 2 | el **cursor de paso** |
+
+- **SEQ desde otra página** vuelve al nivel y al juego que usaste por última vez **en esa pista** (cada pista recuerda
+  el suyo); al encender es el STEP de COMPÁS, el piano roll.
+- Ir a otro compás es un paso de PRESETS en PATRÓN (antes eran dieciséis pasos de KNOB 1); COMP 2 es SELECT + dos
+  toques (antes eran cinco).
+- Todo lo demás sigue donde estaba: **SEQ mantenido** abre SEQ TOOLS en cualquier nivel, **SEQ + SELECT** tira los
+  dados de la secuencia, **SEQ + REC** borra todo, un paso mantenido + una perilla es un lock (en el STEP de COMPÁS), la
+  grabación paso a paso funciona en STEP y NOTE, **EDIT** borra el paso. **SEQ mantenido + PRESETS** sigue recorriendo
+  todas las páginas SEQ de a una.
+- PHRASES (el cargador de patrones) cuenta como PATRÓN, CHANCE como PASO, cuando algo te lleva ahí.
+
 ### Escribir pasos
 
 - **SEQ > STEP** en una pista melódica es un **piano roll**. KNOB 1 mueve el cursor de paso, KNOB 2 transpone el paso,
@@ -598,9 +629,9 @@ seleccionada se graban como **automatización**. MENU > AUDIO tiene el **CLICK**
 
 - **COMP** (step components, al estilo OP-Z): hasta dos por paso (**COMP** el primero, **COMP 2** el segundo, igual;
   0.6.82). KNOB 1 elige el paso, KNOB 2 su **TYPE**, KNOB 3 su valor, KNOB 4 **EVERY** (0.6.92; en COMP, el RATE de un
-  ARP o el DIV de RATCH / ECHO van ahí en su lugar). La fila de arriba marca cada paso que tiene uno (naranja ARP,
-  violeta TRIG, gris CHANCE, color del tema RATCH); abajo se dibuja el componente del paso (la escalera del arpegio con
-  la nota que suena encendida; las vueltas del TRIG).
+  ARP o el DIV de RATCH / ECHO van ahí en su lugar). COMP y COMP 2 viven en el nivel PASO de LENTE: el
+  paso dibujado grande, con su ficha COMP o COMP 2 encendida y el tipo que tiene (0.8.3; el dibujo propio del
+  componente ya no está, sus valores están en las tarjetas).
   - **CHANCE** (0–100 %) y **RATCH** (x1–x4): la probabilidad y el ratchet propios del paso (solo en COMP). El KNOB 4
     de RATCH es su **DIV**: STEP reparte los golpes en el paso (como antes); 1/2, 1/3, 1/4, 1/6, 1/8 los separa esa
     fracción de paso desde el inicio, los que entren (RATCH x3 a 1/8: tres golpes rápidos y después silencio).
@@ -655,11 +686,11 @@ seleccionada se graban como **automatización**. MENU > AUDIO tiene el **CLICK**
 - **Un slide de acordes largo** (0.6.83): el glide hacia un acorde dura lo que dura ese acorde, con sus TIEs; GLIDE
   fija cuánto de ese tramo (127: todo). Un acorde sostenido con TIEs en pasos lentos (p. ej. DIV 1/4 a 120 BPM: diez
   pasos, 5 s) se desliza así de lento y suave; las notas nuevas aparecen a medida que se deslizan.
-- **PATTERN** (la segunda página SEQ): LEN (1–64), DIV, SWING, GATE — el largo del patrón, la figura de su paso, su
+- **PATTERN** (el nivel PATRÓN de LENTE, su primer juego): LEN (1–64), DIV, SWING, GATE — el largo del patrón, la figura de su paso, su
   swing y la duración de todas las notas (la de un paso solo: el TIE de STEP, o MICRO para su entrada).
 - **Mover una nota o un acorde** que entró antes o después: **NOTE**, KNOB 1 FOCUS en el paso, KNOB 3 **MOVE** lo
   corre de a un paso a los costados (FOCUS ALL: el acorde entero con sus TIE; una nota enfocada: esa sola).
-- **STRETCH** (0.6.85, después de NOTE): cambia la forma de toda la secuencia de la pista elegida **mientras girás la
+- **STRETCH** (0.6.85; nivel PATRÓN, después de PATTERN): cambia la forma de toda la secuencia de la pista elegida **mientras girás la
   perilla** (0.6.92; antes esperaba OCT+). Cada giro parte de la secuencia como estaba antes del primero (su base), así
   que x2 y después x4 es x4, no x8, y volver al medio es volver a donde empezaste; el cartel dice el LEN antes y
   después (LEN 4 > 16); **UNDO** (GLO + G4) lo deshace; si editás el resultado, pasa a ser la nueva base. La otra
@@ -712,7 +743,7 @@ seleccionada se graban como **automatización**. MENU > AUDIO tiene el **CLICK**
   tiempo); en DRUM cambia golpes, nunca el bombo. **OCT−** acá (o **GLO + A4**, FREEZE) frena todas las mutaciones
   hasta volver a apretarlo. En HOME cada bichito tiene un anillo de puntos que se llena hasta su próximo cambio y se
   enciende entero cuando cambia.
-- **PLAYHEADS** (SEQ, página 7, con el roll; antes FUGUE), a la Fugue Machine: tres **cabezales** más (2, 3 y 4) leen los mismos pasos que el
+- **PLAYHEADS** (nivel PATRÓN; antes FUGUE), a la Fugue Machine: tres **cabezales** más (2, 3 y 4) leen los mismos pasos que el
   secuenciador de la pista. KNOB 1 **HEAD** elige uno, KNOB 2 **RATE** (OFF, 1/4, 1/3, 1/2, 2/3, x1, 3/2, x2, x3, x4 del
   de la pista), KNOB 3 **DIR** (FWD, REV, PING, RND), KNOB 4 **INTVL**, su intervalo en grados de la escala (−14 a +14; una
   pista de batería mantiene sus carriles). Un cabezal toca las notas de cada paso con su velocidad, acento y probabilidad
@@ -722,7 +753,7 @@ seleccionada se graban como **automatización**. MENU > AUDIO tiene el **CLICK**
 
 ### Parameter locks
 
-En **SEQ > STEP**, **mantené un paso** (una tecla de la grilla, o la nota que estás entrando en el roll) y girá una
+En **SEQ > STEP** (el nivel COMPÁS de LENTE), **mantené un paso** (una tecla de la grilla, o la nota que estás entrando en el roll) y girá una
 perilla: ese paso recibe su propio valor del parámetro que esa perilla edita en la última página de sonido que
 visitaste. Tocá EDIT mientras mantenés el paso para borrar sus locks. Los eventos de automatización y los locks
 comparten **64 registros por sección** (todas las pistas juntas); cuando se acaban, la pantalla dice

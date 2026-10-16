@@ -85,9 +85,9 @@ The names below are the ones the firmware uses (the HARDWARE CALIBRATION screen 
 
 | Control | What it does |
 | --- | --- |
-| **SELECT** (encoder) | Alone: **scrolls through the pages of the section you are in** (EDIT's pages on an EDIT page, FX's on an FX page …), one a detent, no wrap; on **HOME** it opens **GEN**, the song generator (as HOME + SELECT). With a button held, that button's **dice**: **HOME** + SELECT **GEN**, **EDIT** + SELECT the sound, **SEQ** + SELECT the sequence, **LFO** + SELECT the LFO, **FX** + SELECT the effects. **GLO** + SELECT: the tempo. Any other page button + SELECT: its pages. |
+| **SELECT** (encoder) | Alone: **scrolls through the pages of the section you are in** (EDIT's pages on an EDIT page, FX's on an FX page …), one a detent, no wrap; on a **SEQ** page it **zooms** instead: PATTERN ↔ BAR ↔ STEP (the sequencer's lens, LENTE: see [6](#finding-your-way-lente)); on **HOME** it opens **GEN**, the song generator (as HOME + SELECT). With a button held, that button's **dice**: **HOME** + SELECT **GEN**, **EDIT** + SELECT the sound, **SEQ** + SELECT the sequence, **LFO** + SELECT the LFO, **FX** + SELECT the effects. **GLO** + SELECT: the tempo. Any other page button + SELECT: its pages. |
 | **ALGORITHM** (encoder) | Selects the track from any page: T1–T4, or T1–T6 with TRACKS 6. In the MENU: switches tabs. |
-| **PRESETS** (encoder) | On HOME, PRESETS and the sound pages: browses sounds (every engine's factory presets, then your user presets). On step pages (STEP, COMP, PATTERN, AUTOMATION, TRACK): moves the step cursor; on NOTE, the focus. On list pages (USER, PROJECT, ARRANGE, TOOLS, AUTO LIST): moves the selection. **Hold a page button and turn SELECT** (or PRESETS) to jump straight through that button's pages. |
+| **PRESETS** (encoder) | On HOME, PRESETS and the sound pages: browses sounds (every engine's factory presets, then your user presets). On the SEQ pages it follows the zoom: at **PATTERN** (PATTERN, STRETCH, PLAYHEADS, TRACK, MUTATE) it picks the **bar**; at **BAR** and **STEP** (STEP, NOTE, COMP, COMP 2, AUTOMATION) it moves the **step cursor**, crossing into the next bar by itself. On list pages (USER, PROJECT, ARRANGE, TOOLS, AUTO LIST): moves the selection. **Hold a page button and turn SELECT** (or PRESETS) to jump straight through that button's pages. |
 | **KNOB 1–4** | The four cards (columns) on screen. With a layer held, the layer's own knobs. Turning fast sweeps the whole range, slowly fine-tunes (MENU > KNOB ACCEL turns this off). |
 | **MASTER** | The output volume. |
 
@@ -104,7 +104,7 @@ The names below are the ones the firmware uses (the HARDWARE CALIBRATION screen 
 | **GLO** | MIXER → GLOBAL → SYSTEM → MIXER. | **GLO** layer: mutes, solos, levels, tap tempo, UNDO. |
 | **SAVE** | SAVE pages (first press: USER). | **SAVE** layer: play/store sections live. |
 | **ARP** | ARP pages. | (no layer) |
-| **SEQ** | SEQ pages. | **SEQ TOOLS** layer (on STEP, NOTE, PATTERN, COMP, TRACK and AUTOMATION). |
+| **SEQ** | SEQ pages: on a SEQ page, the next set of knobs of the zoom level you are on; from elsewhere, back to the level and set you last used on that track. | **SEQ TOOLS** layer (on every SEQ page). |
 | **PLAY** | Start / stop. | — |
 | **REC** | Arms / disarms recording on the selected track. | **REC** layer: CLEAR, CLICK. |
 | **OCT− / OCT+** | Keyboard octave (−3 to +3; both together: back to 0). On action pages and in dialogs: **OCT−** = back / NO, **OCT+** = do it / YES. | — |
@@ -146,7 +146,9 @@ layer's shortcuts; on the DRUM grid they are steps and lanes; on the NAME screen
   (a knob, the LFO, the envelope), so they cost no CPU.
 - **Panel (middle)**: the page's graph — the engine's creature, an envelope, the LFO running, the step grid, a list...
 - **Footer**: the page name and its place in its family (e.g. **DLY 2/2**), or key hints. On the song pages
-  (PROJECT, ARRANGE, TOOLS, GLOBAL, SYSTEM) it shows the project and its name instead of the track's sound.
+  (PROJECT, ARRANGE, TOOLS, GLOBAL, SYSTEM) it shows the project and its name instead of the track's sound. On the SEQ
+  pages its first row is the lens (0.8.3): **PATTERN · BAR · STEP** with the level you are on lit, and the pattern's
+  bars at the right, the one you edit lit; the page's name then shows under it, so that row stays in sight.
 
 **Colours** work like a thermal camera: cold (cyan, blue) is little, hot (orange, yellow, white) is a lot. Violet is
 what's selected, orange what's active.
@@ -172,6 +174,8 @@ and heating up with its own audio. The selected track is drawn bigger, a muted o
 - **Turn SELECT** to scroll through the pages of the section you are in (EDIT's on an EDIT page, FX's on an FX page),
   one a detent, stopping at its first and last; the page's name shows over the footer for a moment. On HOME it opens
   GEN, the song generator.
+- **SEQ is a lens** (LENTE, 0.8.3): SELECT zooms between the whole **PATTERN**, one **BAR** and one **STEP**, and a
+  SEQ tap goes round the sets of knobs of the level you are on. See [6](#finding-your-way-lente).
 - **Hold a page button and turn PRESETS** to go through its pages forwards or back (no wrap); let go and you stay
   there. ENV, SCL, ARP and SAVE do the same with SELECT; HOME, EDIT, SEQ, LFO and FX + SELECT are their dice, GLO +
   SELECT the tempo.
@@ -277,25 +281,27 @@ and heating up with its own audio. The selected track is drawn bigger, a muted o
 
 **SEQ** (per track)
 
-The first seven pages edit the piano roll (on a DRUM track, the grid), and keep it on the screen: going from STEP to
-PATTERN, NOTE, STRETCH, COMP, COMP 2 and PLAYHEADS changes only the four cards, and the segments over the roll show
-which of the seven you are on (COMP marks each step's component under it; PLAYHEADS draws the heads where they play).
-TRACK, AUTOMATION, AUTO LIST and MUTATE come after, with their own graphs (0.8.2).
+The SEQ pages are grouped in three zoom levels (LENTE, 0.8.3; see [6](#finding-your-way-lente)): **SELECT** zooms
+from one level to the next, a **SEQ** tap goes round the sets of the level you are on. NOTE is in two levels: on BAR
+it edits the piano roll, on STEP the step drawn large; the knobs are the same.
 
-| Page | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
-| --- | --- | --- | --- | --- |
-| STEP (melodic: piano roll) | STEP | NOTE | TIME (NOTE / TIE / REST) | FLAG (– / ACC / SLD / A+S) |
-| STEP (DRUM: grid) | STEP | LANE | HIT | ACC |
-| PATTERN | LEN | DIV | SWING | GATE |
-| NOTE | FOCUS | PITCH | MOVE | MICRO (−8/16 … +7/16) |
-| STRETCH | STRETCH (/8 … /2, x1, x2 … x8) | REPEAT (OFF, x2 … x8, TO 64) | NUDGE | ROTATE (−32 … +32) |
-| COMP | STEP | TYPE | (its value; ARP: ORDER × RANGE) | EVERY (ARP: RATE; RATCH / ECHO: DIV) |
-| COMP 2 | STEP | TYPE (the second component) | (its value) | EVERY |
-| PLAYHEADS | HEAD | RATE | DIR | INTERVAL |
-| TRACK | PITCH | CHANCE | HUMAN | REC Q |
-| AUTOMATION | PLAY (ON/OFF) | EVENT (count) | LOCK (count) | CLEAR (action) |
-| AUTO LIST | ROW | STEP | PARAM | VALUE |
-| MUTATE | SOUND (every) | PATTERN (every) | AMOUNT | MODE |
+| Level | Set (SEQ tap) | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
+| --- | --- | --- | --- | --- | --- |
+| PATTERN | PATTERN | LEN | DIV | SWING | GATE |
+| PATTERN | STRETCH | STRETCH (/8 … /2, x1, x2 … x8) | REPEAT (OFF, x2 … x8, TO 64) | NUDGE | ROTATE (−32 … +32) |
+| PATTERN | PLAYHEADS | HEAD | RATE | DIR | INTERVAL |
+| PATTERN | TRACK | PITCH | CHANCE | HUMAN | REC Q |
+| PATTERN | MUTATE | SOUND (every) | PATTERN (every) | AMOUNT | MODE |
+| BAR | STEP (melodic: piano roll) | STEP | NOTE | TIME (NOTE / TIE / REST) | FLAG (– / ACC / SLD / A+S) |
+| BAR | STEP (DRUM: grid) | STEP | LANE | HIT | ACC |
+| BAR | NOTE | FOCUS | PITCH | MOVE | MICRO (−8/16 … +7/16) |
+| BAR | AUTOMATION | PLAY (ON/OFF) | EVENT (count) | LOCK (count) | CLEAR (action) |
+| BAR | AUTO LIST | ROW | STEP | PARAM | VALUE |
+| STEP | NOTE | FOCUS | PITCH | MOVE | MICRO |
+| STEP | COMP | STEP | TYPE | (its value; ARP: ORDER × RANGE) | EVERY (ARP: RATE; RATCH / ECHO: DIV) |
+| STEP | COMP 2 | STEP | TYPE (the second component) | (its value) | EVERY |
+
+PRESETS picks the bar at PATTERN and moves the step cursor at BAR and STEP (on AUTO LIST, the row).
 
 ### The layers (hold the button)
 
@@ -337,7 +343,7 @@ TRACK, AUTOMATION, AUTO LIST and MUTATE come after, with their own graphs (0.8.2
 voice, OP1 alone at full level; on DRUM the factory DRUM-X kit too), G3 **RECALL** (the sound as the current section stored it; on DRUM with its kit). Both ask first and leave the
 steps alone. On a DRUM track, black keys 1–8 mute each DRUM-X sound (BD SD CP CH OH TM RS CB). Knobs: EDIT 1's four.
 
-**SEQ TOOLS** (only on STEP, NOTE, PATTERN, COMP, TRACK and AUTOMATION) — F3 CLEAR, G3 REVERSE, A3 / B3 SHIFT left / right,
+**SEQ TOOLS** (on every SEQ page, at any zoom level) — F3 CLEAR, G3 REVERSE, A3 / B3 SHIFT left / right,
 C4 RANDOM, D4 COOK, E4 BEAT (DRUM), F4 CLR AUTO (the track's automation and locks; the steps stay). On a DRUM track the
 lane tools: G4 CLR, A4 REV, B4 FILL, C5 RND on the lane picked with black keys 1–8. **REC** (while SEQ is held): CLEAR
 ALL. Knobs: LEN, DIV, SWING, GATE. These tools have no undo.
@@ -546,6 +552,29 @@ One kit per section, shared by every track on DRUM: while another track plays DR
 Each track has its own **64-step** pattern with its own length (LEN), division (DIV), swing and gate, so patterns
 of different lengths turn against each other.
 
+### Finding your way: LENTE
+
+The sequencer works like a lens (LENTE, 0.8.3). **SELECT** zooms between three levels, **PATTERN ↔ BAR ↔ STEP**, one a
+detent, without wrapping; each level shows its own picture and has its own sets of knobs, and a **SEQ** tap goes round
+the sets of the level you are on. The first row of the footer always says where you are: the three levels with the one
+you are on lit, and at the right the pattern's bars (up to four, at LEN 64) with the bar you are editing lit and a line
+under the one playing.
+
+| Level | What the screen shows | SEQ tap goes round | PRESETS |
+| --- | --- | --- | --- |
+| **PATTERN** | The pattern's bars side by side, each with its sixteen steps small (a DRUM track: its lanes), the bar you edit framed, the playhead where it plays; under them **BAR n/m**. | PATTERN (LEN DIV SWING GATE) → STRETCH → PLAYHEADS → TRACK → MUTATE | the **bar** (no wrap; the cursor keeps its place in the bar) |
+| **BAR** | The bar's **piano roll**, as STEP always was (a DRUM track: the **grid**, with its keys). | STEP → NOTE → AUTOMATION → AUTO LIST | the **step cursor**; past the bar's end it moves into the next bar |
+| **STEP** | The cursor step drawn large: its notes highest first (the note in focus lit, MICRO moving them, RATCH splitting them; a TIE shows the notes it holds), and at the right its chips: ACC, SLIDE, MICRO, COMP, COMP 2, CHANCE. The set you are on lights its chip. Over it, the bar's sixteen steps small. | NOTE (FOCUS PITCH MOVE MICRO) → COMP → COMP 2 | the **step cursor** |
+
+- **SEQ from another page** comes back to the level and set you last used **on that track** (each track remembers its
+  own); at power-on it is BAR's STEP, the piano roll.
+- Going to another bar is one PRESETS detent at PATTERN (it was sixteen KNOB 1 detents); COMP 2 is SELECT + two taps
+  (it was five).
+- Everything else is where it was: **SEQ held** opens SEQ TOOLS on every level, **SEQ + SELECT** dices the sequence,
+  **SEQ + REC** clears everything, a held step + a knob is a parameter lock (on BAR's STEP), step recording works on
+  STEP and NOTE, **EDIT** clears the step. **SEQ held + PRESETS** still walks through every SEQ page one by one.
+- PHRASES (the pattern loader) counts as PATTERN, CHANCE as STEP, when something takes you there.
+
 ### Writing steps
 
 - **SEQ > STEP** on a melodic track is a **piano roll**. KNOB 1 moves the step cursor, KNOB 2 transposes the step,
@@ -573,9 +602,9 @@ recorded into the pattern, quantized to its steps, overdubbing. Knob moves on th
 
 - **COMP** (step components, OP-Z style): up to two per step (**COMP** the first, **COMP 2** the second, the same
   way; 0.6.82). KNOB 1 picks the step, KNOB 2 its **TYPE**, KNOB 3 its value, KNOB 4 **EVERY** (0.6.92; on COMP an
-  ARP's RATE or a RATCH / ECHO's DIV sit there instead). The row on top marks every step that has one (orange ARP,
-  violet TRIG, gray CHANCE, theme RATCH); below, the step's component drawn (the arpeggio's ladder, the note playing
-  lit; TRIG's loops).
+  ARP's RATE or a RATCH / ECHO's DIV sit there instead). COMP and COMP 2 live at LENTE's STEP level: the step drawn
+  large, its COMP or COMP 2 chip lit with the type it holds (0.8.3; the component's own picture is gone, its values are
+  on the cards).
   - **CHANCE** (0–100 %) and **RATCH** (x1–x4): the step's own chance and ratchet (on COMP only). RATCH's KNOB 4 is
     its **DIV**: STEP shares the hits out over the step (as before); 1/2, 1/3, 1/4, 1/6, 1/8 put them that part of a
     step apart from its start, as many as fit (RATCH x3 at 1/8: three quick hits, then silence).
@@ -626,11 +655,11 @@ recorded into the pattern, quantized to its steps, overdubbing. Knob moves on th
 - **A long chord slide** (0.6.83): the glide into a chord lasts as long as that chord, its TIEs included; GLIDE sets
   how much of it (127: all of it). A chord held over TIEs on slow steps (e.g. DIV 1/4 at 120 BPM: ten steps, 5 s)
   slides that slowly and smoothly; new notes fade in as they glide.
-- **PATTERN** (the second SEQ page): LEN (1–64), DIV, SWING, GATE — the pattern's length, its step's note value, its
+- **PATTERN** (LENTE's PATTERN level, its first set): LEN (1–64), DIV, SWING, GATE — the pattern's length, its step's note value, its
   swing and the length of every note (a step's own length: STEP's TIE, or MICRO for its start).
 - **Moving a note or a chord** that came in early or late: **NOTE**, KNOB 1 FOCUS on the step, KNOB 3 **MOVE** moves
   it sideways a step at a time (FOCUS ALL: the whole chord with its TIEs; one note focused: that note alone).
-- **STRETCH** (0.6.85, after NOTE): reshapes the whole sequence of the selected track **as the knob turns** (0.6.92;
+- **STRETCH** (0.6.85; PATTERN level, after PATTERN): reshapes the whole sequence of the selected track **as the knob turns** (0.6.92;
   it used to wait for OCT+). Every turn works from the sequence as it was before the first one (its base), so x2 then
   x4 is x4, not x8, and back to the middle is back to where you started; the message says the LEN before and after
   (LEN 4 > 16); **UNDO** (GLO + G4) brings it back; editing the result makes it the new base. The other knob takes the
@@ -677,7 +706,7 @@ recorded into the pattern, quantized to its steps, overdubbing. Knob moves on th
   or MUTE); PATTERN moves notes along the scale, flips accents, adds or takes a note off the beat (never on it); on
   DRUM it flips hits, never the kick. **OCT−** here (or **GLO + A4**, FREEZE) stops every mutation until pressed again.
   On HOME each being has a ring of dots filling up to its next change, all lit when it changes.
-- **PLAYHEADS** (SEQ, page 7, with the roll; it was FUGUE), after the Fugue Machine: three more **playheads** (heads 2, 3, 4) read the same steps
+- **PLAYHEADS** (PATTERN level; it was FUGUE), after the Fugue Machine: three more **playheads** (heads 2, 3, 4) read the same steps
   as the track's sequencer. KNOB 1 **HEAD** picks one, KNOB 2 **RATE** (OFF, 1/4, 1/3, 1/2, 2/3, x1, 3/2, x2, x3, x4 of
   the track's), KNOB 3 **DIR** (FWD, REV, PING, RND), KNOB 4 **INTVL**, its interval in degrees of the scale (−14 to +14;
   a drum track keeps its lanes). A head plays each step's notes with the step's velocity, accent and chance and the
@@ -689,7 +718,7 @@ recorded into the pattern, quantized to its steps, overdubbing. Knob moves on th
 
 ### Parameter locks
 
-On **SEQ > STEP**, **hold a step** (a grid key, or the note being entered on the roll) and turn a knob: that step gets
+On **SEQ > STEP** (LENTE's BAR level), **hold a step** (a grid key, or the note being entered on the roll) and turn a knob: that step gets
 its own value of the parameter that knob edits on the sound page you visited last. Tap EDIT while holding the step to
 clear its locks. Automation events and locks share **64 records per section** (all tracks together); when they run out
 the screen says **AUTOMATION FULL**.
