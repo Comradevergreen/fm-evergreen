@@ -239,7 +239,7 @@ and heating up with its own audio. The selected track is drawn bigger, a muted o
 | OP ENV | OP | STAGE | RATE | LEVEL | FM6 |
 | OPERATOR 2 | OP | MODE | DTUN | VEL | FM6 |
 | FILTER | TYPE | CUT | RES | DRIVE (ANALOG) / DIST (others) | every engine |
-| KIT 3 | BP | FEEDBK | — | — | DRUM (the whole kit) |
+| KIT 3 | BP | FEEDBK | HANDS | — | DRUM (the whole kit) |
 | X-MOD | RATE | DEPTH | SHAPE | RAND | DRUM (the whole kit) |
 | STEREO | IMAGE | — | — | — | DRUM (the whole kit) |
 | SOUND | SOUND | SIDE | PITCH | PMOD | DRUM (one sound) |
@@ -439,7 +439,10 @@ DRUM-X is a synthesized kit of eight sounds, **BD SD CP CH OH TM RS CB**, genera
     in a few milliseconds: a beater, a click, a metal edge on the attack, the tail clean), **FOLD** (a wavefolder after
     the envelope: a bright attack, a clean tail), DRIVE.
   - **KIT 3**: **BP**, a band-pass on the metal sounds (the hats, the rim, the cowbell), OFF or 15 centres from about
-    1.5 to 9 kHz; **FEEDBK**, every sound's oscillator fed back into itself (OFF, 1–15: warm, growl, grit, noise).
+    1.5 to 9 kHz; **FEEDBK**, every sound's oscillator fed back into itself (OFF, 1–15: warm, growl, grit, noise);
+    **HANDS** (OFF, 1–15): more people clapping on the CLAP. Each extra hand strikes a few milliseconds after the first
+    (3 to 45 ms), at its own moment and level, thrown again on every hit: never in time with the tempo. OFF is the clap
+    as before; a few is a small group, 15 a crowd.
   - **X-MOD**: **RATE** (OFF, 4BAR … 1/32, in time), **DEPTH** (how far MORPH swings), **SHAPE** (SINE, TRI, SAW, RAMP,
     S&H), **RAND** (each hit gets its own MORPH and a little tune).
   - **FILTER**: the kit's.

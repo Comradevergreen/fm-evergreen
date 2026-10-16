@@ -939,7 +939,8 @@ static uint32_t track_render(track_t *t, int32_t *out, uint32_t n)
     if (e->block)                                       /* the engine's per-part work (WHEEL: bars, rotor) */
         e->block(t);
     damt = e == &ENG_DRUM ? 0 : 127 - clamp(p[P_DRIFT], 0, 127);   /* (0.7.8) DRIFT, 127 stored = 0 % */
-    drift_clk[ti]++;
+    if (damt)
+        drift_clk[ti]++;
     for (i = 0; i < NVOICE; i++) {
         voice_t *v = &t->v[i];
         vmod_t m;
@@ -1001,8 +1002,8 @@ static uint32_t track_render(track_t *t, int32_t *out, uint32_t n)
         m.inc = pitch_inc(m.pitch16);
         dfine = dcut = 0;
         if (damt) {                                     /* (0.7.8) DRIFT: up to ~27 ct, and the filter a little */
-            dfine = (drift_noise(ti * 8u + i * 1013u, drift_clk[ti], 820u + i * 37u) * damt) >> 16;
-            dcut = (drift_noise(ti * 8u + i * 1013u + 0x5bd1u, drift_clk[ti], 1300u + i * 53u) * damt) >> 12;
+            dfine = (drift_noise(ti * 8u + i * 1013u, drift_clk[ti] + i * 397u, 10u) * damt) >> 16;   /* (~0.74 s) */
+            dcut = (drift_noise(ti * 8u + i * 1013u + 0x5bd1u, drift_clk[ti] + i * 211u, 11u) * damt) >> 12;   /* (~1.5 s) */
         }
         fsum = v->fine + tune_fine + bend_fine + dfine;
         m.fine = fsum;

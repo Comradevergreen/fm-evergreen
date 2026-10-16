@@ -303,28 +303,29 @@ static __attribute__((noinline)) void drum_side_begin(const track_t *t, uint32_t
 {
     int32_t img = clamp(t->p[P_DXIMG], 0, 127), k = img ? dx_img_k(t) : 0;
     uint32_t l, i, on = 0;
+    dx_core_t *dc = &DXC;                                /* (0.7.9: this core's, read once) */
     int8_t *pc = dx_pcur[(uint32_t)(t - trk) % NTRK];
     for (l = 0; l < DV_NLANE; l++) {
         int32_t p = img ? dx_img_pan(l, img) * k >> 8 : 0, p0 = pc[l];
         p = p0 + clamp(p - p0, -DX_PSLEW, DX_PSLEW);
         pc[l] = (int8_t)p;
-        dx_lpan0[l] = (int8_t)p0;
-        dx_lpan[l] = (int8_t)p;
+        dc->lpan0[l] = (int8_t)p0;
+        dc->lpan[l] = (int8_t)p;
         if (p || p0)
             on |= 1u;
         if (DXS_BUS(dx_snd[l]) && DXS_AMT(dx_snd[l]))
             on |= 1u << DXS_BUS(dx_snd[l]);
     }
-    dx_xon = (uint8_t)on;
+    dc->xon = (uint8_t)on;
     if (n > CTL)
         n = CTL;
     if (on & 1u)
         for (i = 0; i < n; i++)
-            dx_sl[i] = dx_sr[i] = 0;
+            dc->sl[i] = dc->sr[i] = 0;
     for (l = 0; l < 3u; l++)
         if ((on >> (l + 1u)) & 1u)
             for (i = 0; i < n; i++)
-                dx_sb[l][i] = 0;
+                dc->sb[l][i] = 0;
 }
 /* lane l's sides and bus this block (drum_render's loop feeds them as it adds the hit to the part): 0 when none. (0.6.81)
  * g[0..3]: what it gives up of the left at the block's start and end, of the right at its start and end (a pan crossing
@@ -480,11 +481,11 @@ static __attribute__((noinline)) void drum_bus(const track_t *t, int32_t *out, u
             y = (softclip((clamp(s, -131071, 131071) * g) >> 12) * mk) >> 15;
         y = soft_knee(y, 24000);
         out[i] = y << 1;
-        if (side) {                                      /* (0.7.8) IMAGE: what each side gives up through the same
+        if (side && (g || y != s)) {                     /* (0.7.9: the curve flat here, nothing to scale) */                                      /* (0.7.8) IMAGE: what each side gives up through the same
                                                          * gain the curve gave the sum here (it was taken raw from the
                                                          * squashed sum: a loud hit's side over-taken, clicks and grit
                                                          * on the side it leaned to), so L and R are the curve's exactly */
-            if (s > 256 || s < -256)
+            if ((s > 256 || s < -256) && !(i & 3u))      /* (0.7.9: the gain every 4th sample: a divide's cost) */
                 k = clamp((y << 12) / s, 0, 16384);   /* (y within +-41000: y << 12 fits 32 bits) */
             sl[i] = ((sl[i] >> 2) * k) >> 10;
             sr[i] = ((sr[i] >> 2) * k) >> 10;

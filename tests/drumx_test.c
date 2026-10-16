@@ -317,6 +317,36 @@ int main(int argc, char **argv)
             dx_tone = 0;
             check("TONE (0.6.36): BP on the hats, rim and cowbell only; FEEDBK moves every sound, under full scale", okb && okf, 0);
         }
+        {   /* (0.7.9) KIT 3 > HANDS: more hands, more of the clap after its strike (each hand the noise struck again in
+             * its first ~50 ms, then dying as the hit), the strike itself as it was, under full scale; the kick untouched */
+            static int32_t r1[FS / 8];
+            double e[2] = {0, 0}, a0[2] = {0, 0};
+            int32_t pk2 = 0;
+            uint32_t h;
+            int other;
+            for (h = 0; h < 2u; h++) {
+                dx_hands = (uint8_t)(h ? 15 : 0);
+                strike(kitx(64, 64), DV_CLAP, FS / 8u);
+                for (i = 0; i < FS / 8u; i++) {
+                    double x = buf[i];
+                    if (i < FS / 1000u) a0[h] += x * x;            /* its first ms: the strike */
+                    else if (i < FS * 6u / 100u) e[h] += x * x;    /* 1 .. 60 ms: the hands */
+                    if (h && abs(buf[i]) > pk2) pk2 = abs(buf[i]);
+                }
+            }
+            dx_hands = 15; strike(kitx(64, 64), DV_KICK, FS / 8u); memcpy(r1, buf, sizeof r1);
+            dx_hands = 0; strike(kitx(64, 64), DV_KICK, FS / 8u);
+            {   /* (the kick: its energy the same, within 1 %: its noise is another each strike) */
+                double k0 = 0, k1 = 0;
+                for (i = 0; i < FS / 8u; i++) { k0 += (double)buf[i] * buf[i]; k1 += (double)r1[i] * r1[i]; }
+                other = k1 < k0 * 1.01 && k1 > k0 * 0.99;
+            }
+            printf("drumx:   (HANDS 15: 1 .. 60 ms x%.2f the energy of 0, its first ms x%.2f; peak %d)\n", e[1] / (e[0] + 1),
+                   a0[1] / (a0[0] + 1), pk2);
+            check("HANDS (0.7.9): 15 more clap after the strike (x2 the energy in 1 .. 60 ms), the strike as it was, under full "
+                  "scale; the kick untouched", e[1] > e[0] * 2.0 && a0[1] < a0[0] * 2.0 && pk2 < 32700 && other, 0);
+            dx_hands = 0;
+        }
     }
     {
         double e0, t0, e1, t1;

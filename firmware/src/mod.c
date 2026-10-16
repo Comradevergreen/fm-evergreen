@@ -97,11 +97,12 @@ static int16_t mod_rand(void)    /* RAND of a note-on: xorshift32, bipolar */
 
 static int32_t mod_key(uint32_t note) { return clamp(((int32_t)note - 60) * 512, -32767, 32767); }
 
-/* (JIANT 0.7.8) a smooth value noise, -32768..32767: a new random point every len steps of clk, eased between
+/* (JIANT 0.7.8) a smooth value noise, -32768..32767: a new random point every 2^lg steps of clk, eased between
  * (smoothstep); seed picks the stream. No state. DRIFT's per voice (voice.c), NOISE's per track (mod_tsrc) */
-static int32_t drift_noise(uint32_t seed, uint32_t clk, uint32_t len)
+static int32_t drift_noise(uint32_t seed, uint32_t clk, uint32_t lg)   /* (0.7.9: a point every 2^lg steps, no divide) */
 {
-    uint32_t k = clk / len, f = (clk % len) * 256u / len, a = (seed + k) * 2654435761u, b = (seed + k + 1u) * 2654435761u;
+    uint32_t k = clk >> lg, f = ((clk & ((1u << lg) - 1u)) << 8) >> lg, a = (seed + k) * 2654435761u,
+             b = (seed + k + 1u) * 2654435761u;
     int32_t ya, yb;
     a ^= a >> 15; a *= 2246822519u; a ^= a >> 13;
     b ^= b >> 15; b *= 2246822519u; b ^= b >> 13;
@@ -135,7 +136,7 @@ static int32_t mod_tsrc(const track_t *t, uint32_t s, int32_t lfo)
     case MS_STEP:
         return t->ms_v;
     case MS_NOISE:                                      /* (0.7.8) a random wander, a new point every ~46 ms, eased */
-        return drift_noise((uint32_t)(t - trk) * 7919u + 0x1234u, mns_clk, 64u);
+        return drift_noise((uint32_t)(t - trk) * 7919u + 0x1234u, mns_clk, 6u);
     default:
         return macro_v[(s - MS_M1) & 3u] * 258;
     }

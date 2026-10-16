@@ -31,5 +31,9 @@ perf_mute 21
 perf_pre 31
 perf_block 522
 perf_master 32
-rev_room 218
+rev_room 160
 rev_spring 127
+drum_bus 104
+dist_amp 84
+dx_hands_step 36
+drw_dust 29
