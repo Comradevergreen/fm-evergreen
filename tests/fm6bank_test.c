@@ -409,6 +409,16 @@ static int slot_test(void)
         ok &= fm6_slot[1] == FM6_OWN + 1u + k && trk[1].p[P_E7] == (int16_t)(FM6_OWN + 1u + k) && patch_is(1, a.v[k]);
     }
     bad += check("SLOT B1..B32 (9..40): each loads its voice's exact record into the track", ok);
+    slot_to(1, 2);                                       /* F3, its macros turned (a preset's), then a bank voice */
+    trk[1].p[P_E1] = 2; trk[1].p[P_E2] = 25; trk[1].p[P_E3] = 4;
+    slot_to(1, (int32_t)(FM6_OWN + 3u));
+    ok = patch_is(1, a.v[2]) && trk[1].p[P_E1] == 0 && trk[1].p[P_E2] == 0 && trk[1].p[P_E3] == 0;
+    trk[1].p[P_E2] = 10;                                 /* (turned on the bank voice: kept by the main loop) */
+    fm6_poll();
+    ok &= trk[1].p[P_E2] == 10;
+    slot_to(1, 4);
+    ok &= trk[1].p[P_E2] == 10;                          /* (a factory slot: the macros stay, as ever) */
+    bad += check("  .. (0.8.1) a bank voice plays as its file has it: the macros back to none; F n keeps them", ok);
     {
         char val[8];
         const char *u;

@@ -382,7 +382,8 @@ every engine) or with KNOB 2 (ENG) on SAVE > PRESETS. Each track's four HOME kno
   (±24 semitones). Its filter is per voice.
 - **FM6**: a six-operator FM engine (Dexed's msfa), 32 algorithms drawn on screen, four voices per track. The EDIT 1/2
   knobs are macros over the patch. **SLOT**: the factory patches F1–F8, OWN (an edited or imported patch) and B1–B32
-  (a 32-voice DX7 bank sent from the web editor; empty slots are skipped). **OPERATOR / OP ENV / OPERATOR 2** edit each
+  (a 32-voice DX7 bank sent from the web editor; empty slots are skipped). A voice from the editor or a B slot plays
+  as its file has it: the macros go back to none (0.8.1). **OPERATOR / OP ENV / OPERATOR 2** edit each
   of the six operators on the device (KNOB 1 picks the operator); editing makes the patch the track's own (SLOT OWN),
   saved with the project. A bank voice you pick is copied into the track, so projects keep it even if you send
   another bank later.
@@ -468,7 +469,7 @@ DRUM-X is a synthesized kit of eight sounds, **BD SD CP CH OH TM RS CB**, genera
 - **EDIT held + SELECT** rolls a new kit around the factory one. **EDIT held + F3 (INIT)** brings the factory kit
   back.
 
-The kit is saved with each section of a project (not with user presets — see [12](#12-saving-and-loading)).
+One kit per section, shared by every track on DRUM: while another track plays DRUM-X, browsing kit presets on a different track keeps that kit ("KIT OF T4 KEPT", 0.8.1); load kits on the drum track itself. The kit is saved with each section of a project (not with user presets — see [12](#12-saving-and-loading)).
 
 ---
 

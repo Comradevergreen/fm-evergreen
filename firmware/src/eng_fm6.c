@@ -206,6 +206,17 @@ static int fm6_load_slot(uint32_t tr, uint32_t s)
 /* track tr's patch was just put in as its own (a project, a user preset, the editor, a conversion): an FM6 track's
  * SLOT shows the factory patch it equals unchanged (F n; the SLOT it had first), else OWN; nothing reloads over it
  * (fm6_poll) */
+/* (JIANT 0.8.1, "DX7 sounds from the web editor have digital distortion") a voice from outside (the editor, a bank slot
+ * B1..B32) plays as its file has it: the macros ALG FB MOD RATIO MEG VMOD DETUNE back to none. A preset's macros are
+ * set for its factory patch (HARD BASS: FB +2, MOD +25) and left on a foreign voice they drove its modulators into
+ * aliasing noise: 25..40 dB more of it on most DX7 voices (the ROM and Synprez banks through the whole mix) */
+static void fm6_neutral(uint32_t tr)
+{
+    uint32_t k;
+    for (k = 0; k < 7u; k++)
+        trk[tr % NTRK].p[P_E0 + k] = 0;
+}
+
 static void fm6_adopt(uint32_t tr)
 {
     track_t *t = &trk[tr % NTRK];
@@ -295,6 +306,8 @@ static void fm6_poll(void)
         }
         if (fm6_load_slot(tr, (uint32_t)s))                  /* a bank slot without a voice: SLOT back */
             trk[tr].p[P_E7] = (int16_t)(fm6_slot[tr] <= FM6_OWN + FM6_NBANK ? fm6_slot[tr] : FM6_OWN);
+        else if (fm6_bank_slot(s) >= 0)
+            fm6_neutral(tr);                                 /* (a bank voice: as its file has it) */
     }
 }
 

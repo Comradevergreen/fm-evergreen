@@ -1141,13 +1141,31 @@ static void set_engine_of(track_t *t, uint32_t ei)
     load_end(t);
 }
 
+/* (0.8.1) another live track playing DRUM-X (1 + its index; 0 none): the section has one kit, theirs */
+static uint32_t drum_elsewhere(const track_t *t)
+{
+    uint32_t k;
+    for (k = 0; k < trk_live; k++)
+        if (&trk[k] != t && trk[k].eng_req % NENGINES == ENGI_DRUM)
+            return k + 1u;
+    return 0;
+}
 static void apply_preset(uint32_t pi)                 /* the selected track's sound (browsing, the editor, PROGRAM CHANGE) */
 {
     apply_preset_to(TSEL, pi);
-    if (TSEL->eng_req % NENGINES == ENGI_DRUM)        /* (0.7.2) DRUM: the preset is a factory kit, into the section's kit
+    if (TSEL->eng_req % NENGINES == ENGI_DRUM) {      /* (0.7.2) DRUM: the preset is a factory kit, into the section's kit
                                                        * (drumx_voice.c DX_KITS; a project load or an engine switch keeps the
                                                        * section's kit: apply_preset_to alone) */
-        dx_kit_load(pi % ENG_DRUM.npresets);
+        uint32_t o = drum_elsewhere(TSEL);
+        if (!o)
+            dx_kit_load(pi % ENG_DRUM.npresets);
+        else {                                         /* (0.8.1, reported: browsing T5's sounds past the kits changed T4's
+                                                        * drums) the kit is shared: another track's stays as it is */
+            static char m[16] = "KIT OF T? KEPT";
+            m[8] = (char)('0' + o);
+            ui_message(m);
+        }
+    }
 }
 static void set_engine(uint32_t ei) { set_engine_of(TSEL, ei); }
 /* (0.6.46) INIT SOUND, NEW PROJECT, (0.6.49) the power-on: the engine's own defaults (its EDIT values as the engine

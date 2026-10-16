@@ -7703,6 +7703,8 @@ static int test_drum_kits(void)
     frame();
     for (i = 0; i < ENG_DRUM.npresets; i++)
         if (str_eq(ENG_DRUM.presets[i].name, "909 CLUB")) k909 = i;
+    for (i = 0; i < NTRK; i++)                          /* (0.8.1: this track the only DRUM one: the kit is its to load) */
+        if (&trk[i] != TSEL && trk[i].eng_req == ENGI_DRUM) set_engine_of(&trk[i], ENGI_ANALOG);
     set_engine(ENGI_DRUM);
     ok = k909 == 1u && ENG_DRUM.npresets == 9u && DX_NKIT == 9u && TSEL->preset == 0 &&
          dx_kit[DV_KICK].a[DXP_PMOD] == DX_KIT_DEF[DV_KICK].a[DXP_PMOD];
@@ -7725,6 +7727,20 @@ static int test_drum_kits(void)
     apply_preset(0);
     ok &= !memcmp(dx_kit, DX_KIT_DEF, sizeof dx_kit);
     bad += check("  an engine switch and INIT SOUND keep the section's kit; the eight other kits each their own, DRUM-X browsed: the factory", ok);
+    {   /* (0.8.1, reported) T4 plays DRUM-X; browsing T5's sounds past the DRUM kits leaves T4's kit alone */
+        uint32_t t4 = 3u, t5 = 4u;
+        set_engine(ENGI_ANALOG);                       /* (the track above back to a synth: T4 the only drums) */
+        song.sel = (uint8_t)t4; set_engine(ENGI_DRUM); apply_preset(k909);
+        dx_kit[DV_SNARE].a[DXP_PMOD] = 7;              /* (T4's kit, edited by hand) */
+        song.sel = (uint8_t)t5; set_engine(ENGI_ANALOG); frame();
+        TSEL->eng_req = ENGI_DRUM; apply_preset(4u);    /* T5 passing INDUSTRIAL while browsing */
+        ok = dx_kit[DV_SNARE].a[DXP_PMOD] == 7 && !memcmp(dx_lay, DX_KITS[k909].lay, sizeof dx_lay) && str_eq(ui.msg, "KIT OF T4 KEPT");
+        set_engine(ENGI_ANALOG);
+        ok &= dx_kit[DV_SNARE].a[DXP_PMOD] == 7;
+        song.sel = (uint8_t)t4; apply_preset(4u);       /* on T4 itself: the kit is its own to change */
+        ok &= !memcmp(dx_kit, DX_KITS[4].lane, sizeof dx_kit);
+        bad += check("  T4 on DRUM-X: T5 browsing past the kits keeps T4's kit (KIT OF T4 KEPT); on T4 itself a kit loads", ok);
+    }
     return bad;
 }
 static int test_usb_level(void)
