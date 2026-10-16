@@ -1310,7 +1310,7 @@ only some of a USB device's channels to apps). Test version: the app is JIANT Pr
 
 All three run in the browser and update themselves with every change to the firmware.
 
-### Emulator — <https://juanjiant-bit.github.io/JIANT/>
+### Emulator — <https://juanjiant-bit.github.io/JIANT/emu/>
 
 The same code as the FM-1, with sound, in the browser. Play it with the mouse or the computer keyboard: **Z–'** and
 **Q–O** rows are the keys, **1** to **=** the buttons from FX to REC, **[ ]** OCT− / OCT+, **↑ ↓** SELECT, **← →**

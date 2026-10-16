@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# The browser emulator (web/emu) on GitHub Pages: the firmware's sources compiled to WebAssembly, on every push to
+# The site on GitHub Pages: the front page (web/landing) at the root and the browser emulator (web/emu) under emu/: the firmware's sources compiled to WebAssembly, on every push to
 # main. Needs Settings > Pages > Source: "GitHub Actions" once. The emulator needs only the generated headers; the
 # installer (webapp/installer) and the editor (webapp/editor) need the package, built with JieLi's toolchain (downloaded).
 # (JIANT 0.6.61) Two channels: the emulator and preview/webapp/installer are main as it is now (to check before anyone
@@ -101,9 +101,19 @@ jobs:
           gradle -p android/probe assembleDebug --no-daemon
           mkdir -p build/emu/app
           cp android/probe/app/build/outputs/apk/debug/app-debug.apk build/emu/app/jiant-probe.apk
+      # (JIANT 0.8.1) the site's front page (web/landing: what JIANT is, install / try / edit, what comes next) at the
+      # root, for people who just want to play; the emulator moves to emu/ (its links go up one level)
+      - name: the front page and the emulator under emu/
+        run: |
+          mkdir -p build/pages/emu
+          for f in index.html worklet.js stems.js fm1backup.js felucca.wasm fonts; do
+            if [ -e "build/emu/$f" ]; then mv "build/emu/$f" build/pages/emu/; fi
+          done
+          cp -r build/emu/. build/pages/
+          cp web/landing/index.html build/pages/index.html
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: build/emu
+          path: build/pages
   deploy:
     needs: build
     runs-on: ubuntu-24.04

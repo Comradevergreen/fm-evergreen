@@ -1389,7 +1389,7 @@ Probe (su prueba 7).
 
 Las tres funcionan en el navegador y se actualizan solas con cada cambio del firmware.
 
-### Emulador — <https://juanjiant-bit.github.io/JIANT/>
+### Emulador — <https://juanjiant-bit.github.io/JIANT/emu/>
 
 El mismo código que el FM-1, con sonido, en el navegador. Tocalo con el mouse o con el teclado de la computadora: las
 filas **Z–'** y **Q–O** son las teclas, **1** a **=** los botones de FX a REC, **[ ]** OCT− / OCT+, **↑ ↓** SELECT,

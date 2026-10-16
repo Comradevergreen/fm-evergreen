@@ -3,7 +3,7 @@
 **Bio-synthetic operating system for the M-VAVE FM-1** — synthesis, sequencing, mutation, performance.
 
 [![License: GPL-3.0-only](https://img.shields.io/badge/license-GPL--3.0--only-blue.svg)](LICENSE)
-[![Emulator](https://img.shields.io/badge/try%20it-in%20the%20browser-ff7a00.svg)](https://juanjiant-bit.github.io/JIANT/)
+[![Emulator](https://img.shields.io/badge/try%20it-in%20the%20browser-ff7a00.svg)](https://juanjiant-bit.github.io/JIANT/emu/)
 
 ![JIANT FM: the signature, the screens and what's new: song ideas, ARRANGE, undo, TRACKS and LOAD](docs/jiant-hero.png)
 
@@ -11,7 +11,7 @@ JIANT FM is an alternative firmware for the **M-VAVE FM-1**, made for playing li
 a computer. It is a fork of [Felucca](https://github.com/hugelton/Felucca) 1.1.5.1 by Hügelton Instruments (GPL-3.0)
 and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 
-**▶ [Try it in the browser](https://juanjiant-bit.github.io/JIANT/)** · **[Web installer](https://juanjiant-bit.github.io/JIANT/webapp/installer/)** · **[Web editor](https://juanjiant-bit.github.io/JIANT/webapp/editor/)**: the emulator runs the same code as
+**▶ [Try it in the browser](https://juanjiant-bit.github.io/JIANT/emu/)** · **[Web installer](https://juanjiant-bit.github.io/JIANT/webapp/installer/)** · **[Web editor](https://juanjiant-bit.github.io/JIANT/webapp/editor/)**: the emulator runs the same code as
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
@@ -437,8 +437,9 @@ web/emu/build.sh           # browser emulator: build/emu
 tests/run_tests.sh         # host, web editor and emulator tests
 ```
 
-Every change is tested in the emulator first. The published version
-([juanjiant-bit.github.io/JIANT](https://juanjiant-bit.github.io/JIANT/)) is built by
+Every change is tested in the emulator first. The published site
+([juanjiant-bit.github.io/JIANT](https://juanjiant-bit.github.io/JIANT/): the front page, web/landing, with the installer,
+the editor and the emulator under [emu/](https://juanjiant-bit.github.io/JIANT/emu/)) is built by
 [.github/workflows/emulator.yml](.github/workflows/emulator.yml) on every push to `main` (in the repository:
 Settings → Pages → Source: **GitHub Actions**, once).
 
@@ -451,7 +452,7 @@ Settings → Pages → Source: **GitHub Actions**, once).
    it straight over another custom firmware has bricked an FM-1. From official V15 or an earlier JIANT, install
    directly from the **[web installer](https://juanjiant-bit.github.io/JIANT/webapp/installer/)** (Chrome or Edge, the
    FM-1 connected by USB straight to the computer). It checks the FM-1 first and writes only over official V15 or JIANT. It offers the **approved** version only: every change merged into `main` goes first to the
-   [emulator](https://juanjiant-bit.github.io/JIANT/) (and a preview installer for testing), is checked there, and only
+   [emulator](https://juanjiant-bit.github.io/JIANT/emu/) (and a preview installer for testing), is checked there, and only
    then reaches this installer ([web/STABLE](web/STABLE.md)). Offline: `python3 tools/fm1_install.py build/felucca.fwsc`.
 3. **Since 0.6.71 JIANT uses both cores** ([details](#both-cores-dual-core)). If your FM-1 crashes, freezes or
    clicks more than before, hold **REC** while switching it on (one core) and tell us what MENU > ABOUT says.
