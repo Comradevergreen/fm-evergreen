@@ -1187,6 +1187,45 @@ static void graph_title(void)
 
 /* (0.6.52) SEQ > FUGUE: the steps (their notes as heat) with the sequencer's playhead, then a lane each for heads 2..4:
  * where it is, its RATE DIR INTERVAL; the head edited lit */
+/* (0.8.2, a tester: "too many submenus, while they change you forget where you were") SEQ's pages that edit the
+ * piano roll (STEP, PATTERN, NOTE, STRETCH, COMP, COMP 2, PLAYHEADS) keep the roll (a kit: the grid) in the panel;
+ * only the four cards change. TRACK, AUTOMATION, AUTO LIST and MUTATE, not tied to the roll, keep their own */
+static int roll_view(const page_t *pg)
+{
+    return pg->fam == FAM_SEQ && (pg->graph == GR_ROLL || pg->graph == GR_SHAPE || pg->graph == GR_COMP ||
+                                  pg->graph == GR_FUGUE || (pg->graph == GR_STEPS && pg->id[0] == P_SLEN));
+}
+static void graph_fugue(const track_t *t);
+/* over the roll: a segment per roll page, the one shown lit (where you are among them); COMP's components as marks
+ * under their steps; PLAYHEADS' heads as lines where they play */
+static void roll_overlay(const track_t *t, const page_t *pg)
+{
+    uint32_t i, n = 0, cur = 0, base = ui.bank * 16u, len = (uint32_t)clamp(t->p[P_SLEN], 1, NSTEP), dr = drum_track(t);
+    int32_t ybot = PR_Y0 + PR_ROWS * PR_RH;
+    for (i = 0; i < NPAGES; i++)
+        if (roll_view(&PAGES[i]) && page_visible(i)) {
+            if (&PAGES[i] == pg) cur = n;
+            n++;
+        }
+    for (i = 0; i < n; i++)
+        cv_rect(PANEL_X0 + 2 + (int32_t)i * 24, 5, 20, 2, i == cur ? T_ACCENT : T_RAISE);
+    if (pg->graph == GR_COMP && !dr)
+        for (i = 0; i < 16u && base + i < len; i++) {
+            uint16_t mk = comp_mark(&seq_steps(t)[base + i]);
+            if (mk) cv_rect(PR_X0 + (int32_t)i * PR_CW + 2, ybot + 3, 9, 3, mk);
+        }
+    if (pg->graph == GR_FUGUE && song.playing) {
+        uint32_t ti = song.sel % NTRK, k;
+        for (k = 0; k < FG_HEADS; k++) {
+            const fg_head_t *h = &fg_head[ti][k];
+            int32_t x;
+            if (!fg_set[ti][k].rate || h->idx < base || h->idx >= base + 16u || h->idx >= len) continue;
+            x = dr ? 45 + (int32_t)(h->idx - base) * 12 : PR_X0 + (int32_t)(h->idx - base) * PR_CW + 6;
+            cv_rect(x, dr ? 10 : PR_Y0, 1, dr ? 112 : ybot - PR_Y0, heat_col(70u + k * 60u));
+        }
+    }
+}
+
 static void graph_fugue(const track_t *t)
 {
     uint32_t len = (uint32_t)clamp(t->p[P_SLEN], 1, NSTEP), i, k, ti = song.sel % NTRK;
@@ -1271,7 +1310,8 @@ static int drift_on(void)
     uint32_t g = cur_page()->graph;
     if (UI_NO_DRIFT)
         return 0;
-    return !ui.home && !sys_load && !(ui_prefs & PREF_ANIM_OFF) && strip_kind() == SK_NONE && g != GR_ROLL && g != GR_SHAPE &&
+    return !ui.home && !sys_load && !(ui_prefs & PREF_ANIM_OFF) && strip_kind() == SK_NONE && !roll_view(cur_page()) &&
+           g != GR_ROLL && g != GR_SHAPE &&
            g != GR_STEPS && g != GR_CHANCE && g != GR_BROWSE && g != GR_USER && g != GR_SLOTS && g != GR_EVENTS &&
            g != GR_SONG && g != GR_TOOLS && g != GR_PATS;
 }
@@ -1386,16 +1426,16 @@ static uint32_t graph_signature(void)
         h ^= (fm6_pgen[(t - trk) % NTRK] + 1u) * 2246822519u;
     if (fop_page(pg->graph))                         /* (0.6.77) OPERATOR, OP ENV (track pages): the patch, the operator */
         h = (h ^ ((fm6_pgen[(t - trk) % NTRK] + 1u) * 2246822519u ^ (uint32_t)fop_op << 8 ^ fop_stg)) * 16777619u;
-    if (pg->graph == GR_STEPS || pg->graph == GR_ROLL || pg->graph == GR_CHANCE || pg->graph == GR_SHAPE) {
-        uint32_t ph = song.playing ? seq_src(t, t->seq_idx) : 0xFFFFu;
-        if (pg->graph != GR_STEPS && ph / 16u != ui.bank)
+    if (pg->graph == GR_STEPS || pg->graph == GR_ROLL || pg->graph == GR_CHANCE || pg->graph == GR_SHAPE || roll_view(pg)) {
+        uint32_t ph = song.playing ? seq_src(t, t->seq_idx) : 0xFFFFu, rl = roll_view(pg) || pg->graph == GR_CHANCE;
+        if (rl && ph / 16u != ui.bank)
             ph = 0xFFFFu;                            /* the roll shows the cursor's bank only */
         h ^= steps_hash(t) + ph * 31u + ui.cursor * 7919u + ui.lane * 104723u + ui.bank * 613u;
-        if (pg->graph != GR_STEPS) {                 /* the parameter locks' marks (the roll, the grid) */
+        if (rl) {                                    /* the parameter locks' marks (the roll, the grid) */
             uint64_t lk = motion_lock_steps(trk_index(t));
             h = (h ^ (uint32_t)lk ^ (uint32_t)(lk >> 32) * 2654435761u) * 16777619u;
         }
-        if (pg->graph != GR_STEPS && !drum_track(t)) {   /* the roll: its view and the keys held */
+        if (rl && !drum_track(t)) {                  /* the roll: its view and the keys held */
             pr_follow(t);
             h = (h ^ (proll.lo + 1u)) * 16777619u;
             h = (h ^ pr_held()) * 16777619u;
@@ -2150,6 +2190,14 @@ static void draw_graph(void)
     } else if (ui.home) {
         cv_oy = 0;
         graph_ecosys();                              /* (JIANT 0.5: the system's beings, was the scope) */
+    } else if (roll_view(pg) && pg->graph != GR_ROLL && pg->graph != GR_SHAPE) {   /* (0.8.2) PATTERN, COMP, COMP 2,
+                                                         * PLAYHEADS: the roll stays, their cards change */
+        cv_oy = 0;
+        if (drum_track(t))
+            graph_grid(t, c);
+        else
+            graph_roll(t, c);
+        roll_overlay(t, pg);
     } else {
         switch (pg->graph) {
         case GR_ADSR:
@@ -2191,6 +2239,7 @@ static void draw_graph(void)
                 graph_grid(t, c);
             else
                 graph_roll(t, c);
+            if (roll_view(pg)) roll_overlay(t, pg);
             break;
         case GR_SCALE:
             graph_scale(t, c);

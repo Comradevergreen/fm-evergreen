@@ -581,8 +581,10 @@ static const page_t PAGES[] = {
     {"STRETCH", FAM_SEQ, SC_TRACK, GR_SHAPE, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (0.6.85) STRETCH REPEAT NUDGE (0.6.92: on the turn) ROTATE */
     {"COMP", FAM_SEQ, SC_STEP, GR_COMP, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (0.6.39) STEP TYPE and its two values */
     {"COMP 2", FAM_SEQ, SC_STEP, GR_COMP, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (0.6.82) the step's second component, EVERY */
-    {"TRACK", FAM_SEQ, SC_TRACK, GR_STEPS, {P_POFS, P_TCHAN, P_HVEL, P_HRQ}},   /* (0.6.92) PITCH CHANCE HUMAN REC Q */
     {"PLAYHEADS", FAM_SEQ, SC_TRACK, GR_FUGUE, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (0.6.52) three more playheads (fugue.c; was FUGUE) */
+    /* (0.8.2) the pages above edit the piano roll and keep it in the panel (ui_graph.c roll_view); TRACK and the ones
+     * after are the track's own, with their own graphs */
+    {"TRACK", FAM_SEQ, SC_TRACK, GR_STEPS, {P_POFS, P_TCHAN, P_HVEL, P_HRQ}},   /* (0.6.92) PITCH CHANCE HUMAN REC Q */
     {"PHRASES", FAM_SEQ, SC_GLOBAL, GR_PATS, {0xFF, 0xFF, 0xFF, 0xFF}},    /* pattern loader (ui.c pat_load); 0.6.37: hidden */
     {"MIXER", FAM_TRK, SC_TRK, GR_TRK, {0, 1, 2, 3}},   /* GLO button; LEVEL PAN REV MUTE */
     {"SONG", FAM_SEQ, SC_GLOBAL, GR_SONG, {0xFF, 0xFF, 0xFF, 0xFF}},

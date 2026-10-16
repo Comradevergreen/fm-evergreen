@@ -277,6 +277,11 @@ and heating up with its own audio. The selected track is drawn bigger, a muted o
 
 **SEQ** (per track)
 
+The first seven pages edit the piano roll (on a DRUM track, the grid), and keep it on the screen: going from STEP to
+PATTERN, NOTE, STRETCH, COMP, COMP 2 and PLAYHEADS changes only the four cards, and the segments over the roll show
+which of the seven you are on (COMP marks each step's component under it; PLAYHEADS draws the heads where they play).
+TRACK, AUTOMATION, AUTO LIST and MUTATE come after, with their own graphs (0.8.2).
+
 | Page | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 | --- | --- | --- | --- | --- |
 | STEP (melodic: piano roll) | STEP | NOTE | TIME (NOTE / TIE / REST) | FLAG (– / ACC / SLD / A+S) |
@@ -286,8 +291,8 @@ and heating up with its own audio. The selected track is drawn bigger, a muted o
 | STRETCH | STRETCH (/8 … /2, x1, x2 … x8) | REPEAT (OFF, x2 … x8, TO 64) | NUDGE | ROTATE (−32 … +32) |
 | COMP | STEP | TYPE | (its value; ARP: ORDER × RANGE) | EVERY (ARP: RATE; RATCH / ECHO: DIV) |
 | COMP 2 | STEP | TYPE (the second component) | (its value) | EVERY |
-| TRACK | PITCH | CHANCE | HUMAN | REC Q |
 | PLAYHEADS | HEAD | RATE | DIR | INTERVAL |
+| TRACK | PITCH | CHANCE | HUMAN | REC Q |
 | AUTOMATION | PLAY (ON/OFF) | EVENT (count) | LOCK (count) | CLEAR (action) |
 | AUTO LIST | ROW | STEP | PARAM | VALUE |
 | MUTATE | SOUND (every) | PATTERN (every) | AMOUNT | MODE |
@@ -609,7 +614,7 @@ recorded into the pattern, quantized to its steps, overdubbing. Knob moves on th
   or MUTE); PATTERN moves notes along the scale, flips accents, adds or takes a note off the beat (never on it); on
   DRUM it flips hits, never the kick. **OCT−** here (or **GLO + A4**, FREEZE) stops every mutation until pressed again.
   On HOME each being has a ring of dots filling up to its next change, all lit when it changes.
-- **PLAYHEADS** (SEQ, page 8; it was FUGUE), after the Fugue Machine: three more **playheads** (heads 2, 3, 4) read the same steps
+- **PLAYHEADS** (SEQ, page 7, with the roll; it was FUGUE), after the Fugue Machine: three more **playheads** (heads 2, 3, 4) read the same steps
   as the track's sequencer. KNOB 1 **HEAD** picks one, KNOB 2 **RATE** (OFF, 1/4, 1/3, 1/2, 2/3, x1, 3/2, x2, x3, x4 of
   the track's), KNOB 3 **DIR** (FWD, REV, PING, RND), KNOB 4 **INTVL**, its interval in degrees of the scale (−14 to +14;
   a drum track keeps its lanes). A head plays each step's notes with the step's velocity, accent and chance and the

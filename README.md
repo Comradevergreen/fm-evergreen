@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.8.1).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.8.2).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 > ⚡ **New in 0.6.85 – 0.6.92: a song generator you steer, a compact sequencer that breathes, a delay that feeds back.**
 > - **GEN (HOME + SELECT)**: a screen of three pages — GENRE (43 genres or RANDOM), SEED, ENERGY, FORM (loop, parts,
@@ -525,6 +525,16 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### v0.8.2
+- **SEQ: the piano roll stays** (a tester: "too many submenus, while they change you forget where you were"). The
+  pages that edit the roll (STEP, PATTERN, NOTE, STRETCH, COMP, COMP 2, PLAYHEADS) keep it on the screen (a kit: the
+  grid); turning SELECT or tapping SEQ changes only the four cards, and a row of segments over the roll shows which of
+  the seven you are on. COMP marks each step's component under it, PLAYHEADS draws its heads where they play. TRACK
+  moves after PLAYHEADS, with AUTOMATION, AUTO LIST and MUTATE: the track's own pages, with their own graphs. ui_test
+  checks which pages keep the roll and the new order.
+- **The site's front page**: juanjiant-bit.github.io/JIANT now opens on a page for people who just want to play (try,
+  install, edit, what's inside, what comes next); the emulator moved to /emu/.
 
 ### v0.8.1
 - **Fix: DX7 voices from the web editor sounded distorted** (reported by a user: "digital distortion", fine on the

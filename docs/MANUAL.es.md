@@ -284,6 +284,11 @@ a la derecha); apretá OCT+ para ejecutarla.
 
 **SEQ** (por pista)
 
+Las primeras siete páginas editan el piano roll (en una pista DRUM, la grilla) y lo dejan en pantalla: pasar de STEP
+a PATTERN, NOTE, STRETCH, COMP, COMP 2 y PLAYHEADS cambia solo las cuatro tarjetas, y los segmentos sobre el roll
+muestran en cuál de las siete estás (COMP marca el componente de cada paso debajo; PLAYHEADS dibuja los cabezales donde
+suenan). TRACK, AUTOMATION, AUTO LIST y MUTATE vienen después, con sus propios gráficos (0.8.2).
+
 | Página | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 | --- | --- | --- | --- | --- |
 | STEP (melódica: piano roll) | STEP | NOTE | TIME (NOTE / TIE / REST) | FLAG (– / ACC / SLD / A+S) |
@@ -293,8 +298,8 @@ a la derecha); apretá OCT+ para ejecutarla.
 | STRETCH | STRETCH (/8 … /2, x1, x2 … x8) | REPEAT (OFF, x2 … x8, TO 64) | NUDGE | ROTATE (−32 … +32) |
 | COMP | STEP | TYPE | (su valor; ARP: ORDER × RANGE) | EVERY (ARP: RATE; RATCH / ECHO: DIV) |
 | COMP 2 | STEP | TYPE (el segundo componente) | (su valor) | EVERY |
-| TRACK | PITCH | CHANCE | HUMAN | REC Q |
 | PLAYHEADS | HEAD | RATE | DIR | INTERVAL |
+| TRACK | PITCH | CHANCE | HUMAN | REC Q |
 | AUTOMATION | PLAY (ON/OFF) | EVENT (cantidad) | LOCK (cantidad) | CLEAR (acción) |
 | AUTO LIST | ROW | STEP | PARAM | VALUE |
 | MUTATE | SOUND (cada) | PATTERN (cada) | AMOUNT | MODE |
@@ -639,7 +644,7 @@ seleccionada se graban como **automatización**. MENU > AUDIO tiene el **CLICK**
   tiempo); en DRUM cambia golpes, nunca el bombo. **OCT−** acá (o **GLO + A4**, FREEZE) frena todas las mutaciones
   hasta volver a apretarlo. En HOME cada bichito tiene un anillo de puntos que se llena hasta su próximo cambio y se
   enciende entero cuando cambia.
-- **PLAYHEADS** (SEQ, página 8; antes FUGUE), a la Fugue Machine: tres **cabezales** más (2, 3 y 4) leen los mismos pasos que el
+- **PLAYHEADS** (SEQ, página 7, con el roll; antes FUGUE), a la Fugue Machine: tres **cabezales** más (2, 3 y 4) leen los mismos pasos que el
   secuenciador de la pista. KNOB 1 **HEAD** elige uno, KNOB 2 **RATE** (OFF, 1/4, 1/3, 1/2, 2/3, x1, 3/2, x2, x3, x4 del
   de la pista), KNOB 3 **DIR** (FWD, REV, PING, RND), KNOB 4 **INTVL**, su intervalo en grados de la escala (−14 a +14; una
   pista de batería mantiene sus carriles). Un cabezal toca las notas de cada paso con su velocidad, acento y probabilidad
