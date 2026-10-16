@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.7.8).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.7.9).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 > ⚡ **New in 0.6.85 – 0.6.92: a song generator you steer, a compact sequencer that breathes, a delay that feeds back.**
 > - **GEN (HOME + SELECT)**: a screen of three pages — GENRE (43 genres or RANDOM), SEED, ENERGY, FORM (loop, parts,
@@ -524,6 +524,14 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### v0.7.9
+- **DRUM-X KIT 3 > HANDS** (asked for: several hands clapping at once): KNOB 3, OFF and 1..15. Each extra hand strikes the
+  CLAP's noise again at a moment of its own (3 .. 45 ms after the hit, the dice thrown again on every hit: no tempo in
+  it) and at a level of its own, then dies as the hit does: one running gain over the noise (dx_hands_gain), so the
+  cost is a few multiplies a sample on the clap alone. Kept with the project in the high nibble of the kit's byte 0
+  (beside the group mutes; 0 in every older project: off). drumx_test: OFF as before, 15 about x5 the energy in 1 .. 60
+  ms, the strike as it was, under full scale, the kick untouched; ui_test: KNOB 3 turns it, the project keeps it.
 
 ### v0.7.8
 - **DIST TYPE AMP** (asked for: an amp emulator): two triode stages, each a biased tanh leaning its own way (even and

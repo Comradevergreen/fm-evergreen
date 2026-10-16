@@ -841,6 +841,16 @@ static int test_dximg(void)
     bad += check("DRUM SEND: kept with the project (FUNC 'D' 'S')", ok);
     memset(dx_snd, 0, sizeof dx_snd);
     ui_power_on();
+    dx_hands = 9;                                       /* (0.7.8) KIT 3 > HANDS: in the kit's byte 0 beside the mutes */
+    dx_mute_set(DXG_HAT);
+    project_capture(&proj_scratch);
+    ok = proj_pack(&st, &proj_scratch);
+    dx_hands = 0; dx_mute_set(0);
+    ok &= proj_import(&proj_scratch, &st, sizeof st) && !project_restore_runtime(&proj_scratch);
+    ok &= dx_hands == 9u && (dx_mute & DXG_ALL) == DXG_HAT;
+    bad += check("DRUM HANDS: kept with the project, beside the group mutes (0.7.9)", ok);
+    dx_hands = 0; dx_mute_set(0);
+    ui_power_on();
     return bad;
 }
 /* (0.6.49) DRUM-X LAYER and each sound's FEEDBK: 0 runs the sound as before; LAYER moves it; kept with the project;
@@ -3525,17 +3535,18 @@ static int test_edit_cycle(void)
         set_engine_of(TSEL, ENGI_DRUM);
         bad += check("EDIT cycle (DRUM, 0.7.8): the kit's (KIT KIT 2 KIT 3 X-MOD STEREO FILTER), a sound's (SOUND 1..4), then the volumes (LEVELS LEVELS 2), VOICE",
                      engine_cycle(CYC_K, NELEM(CYC_K)));
-        {   /* (0.6.58) KIT 3 turns BP and FEEDBK only; STEREO's KNOB 1 is IMAGE */
-            uint8_t t0 = dx_tone;
+        {   /* (0.6.58) KIT 3 turns BP and FEEDBK, (0.7.8) KNOB 3 the CLAP's HANDS, never IMAGE; STEREO's KNOB 1 is IMAGE */
+            uint8_t t0 = dx_tone, h0 = dx_hands;
             int16_t i0 = TSEL->p[P_DXIMG];
             go_title("KIT 3"); frame();
             turn(EN_K3, 3); frame();
-            ok = TSEL->p[P_DXIMG] == i0 && dx_tone == t0;
+            ok = TSEL->p[P_DXIMG] == i0 && dx_tone == t0 && dx_hands > h0;
+            dx_hands = h0;
             go_title("STEREO"); frame();
             turn(EN_K1, 5); frame();
             ok &= TSEL->p[P_DXIMG] > i0 && dx_tone == t0;
             TSEL->p[P_DXIMG] = i0;
-            bad += check("KIT 3: KNOB 3 does nothing (IMAGE moved); STEREO: KNOB 1 turns IMAGE", ok);
+            bad += check("KIT 3: KNOB 3 turns HANDS (0.7.9), not IMAGE; STEREO: KNOB 1 turns IMAGE", ok);
         }
         go_title("LEVELS 2"); frame();
         ok = TSEL->p[P_LN5] == 127;

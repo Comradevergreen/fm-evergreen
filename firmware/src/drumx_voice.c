@@ -39,6 +39,8 @@ typedef struct {                                         /* a hit */
     int32_t b1, b2;                                      /* (0.6.36) TONE's band-pass state */
     uint32_t ph4;                                        /* (0.6.49) LAYER's oscillator phase */
     uint8_t live, trig, choke;
+    uint16_t hpos, hsum, hseed;                          /* (0.7.9) CLAP's HANDS: half-rate samples since the hit, the
+                                                          * hands come in so far (Q12, over the hit's own), this hit's dice */
 } dx_voice_t;
 
 /* the oscillator's modulator ratios (Q12), by wave */
@@ -123,6 +125,11 @@ static __attribute__((noinline)) void dx_layer(dx_voice_t *v, int32_t *y, uint32
  * low nibble BP, a band-pass on the metal sounds (the hats, the rim, the cowbell), 1..15 its centre ~1.5 .. 9 kHz;
  * high nibble FEEDBK, every sound's oscillator fed back into its own phase (1..15: warm, growl, grit, noise) */
 static uint8_t dx_tone;
+/* (JIANT 0.7.9) KIT 3 > HANDS, the kit's (project.c keeps it in the high nibble of the kit's reserved byte 0, the
+ * mute groups' low nibble: 0 in older projects, off): 1..15 more hands on the CLAP, each the hit's noise struck again
+ * at a moment of its own (~3 .. 45 ms after it, the dice thrown again each hit: no tempo in it) and at a level of its
+ * own, then dying as the hit does: a few people clapping, then a crowd. 0: the clap as it was */
+static uint8_t dx_hands;
 static dx_lane_t dx_kit[8];                              /* (defined below with the factory kit: the BP knows its lanes) */
 /* (JIANT 0.6.49) EDIT > LAYER, each sound's (the kit's: project.c keeps it, FUNC's 'D' 'L' block; 0 before it): low
  * nibble LAYER, a second oscillator (a triangle) at sqrt 2 of the pitch (the most out of tune with it there is) frequency-modulated
@@ -134,6 +141,28 @@ static uint8_t dx_lay[8] = DX_LAY_INIT;
 #define DX_LAY_FB(x) ((uint32_t)(x) >> 4)
 #define DX_TONE_BP(t) ((uint32_t)(t) & 15u)
 #define DX_TONE_FB(t) ((uint32_t)(t) >> 4)
+/* (0.7.9) CLAP's HANDS, once a half-rate block (~0.7 ms: each hand's onset on its block, its rise the block's ramp):
+ * the noise's gain at the block's start and end, gn and *g1 (Q23), times 1 + the hands in. Hand k strikes at its own
+ * moment (this hit's dice, v->hseed, 3 .. 45 ms), at its own level, then decays as the hit: in the sum it is the hit's
+ * envelope times its level over where that envelope was when it struck, so one sum carries them all (v->hsum, Q12) */
+static __attribute__((noinline)) int32_t dx_hands_step(dx_voice_t *v, uint32_t n, int32_t gn, int32_t *g1, int32_t en1)
+{
+    uint32_t k, nh = 1u + (uint32_t)dx_hands * 5u / 15u, span = 60u + (uint32_t)dx_hands * 60u, p0 = v->hpos;
+    int32_t s0 = v->hsum, s = s0, w = 8 + dx_hands;      /* (the hands louder as there are more of them) */
+    for (k = 0; k < nh && p0 < 1200u; k++) {             /* (all in by ~54 ms: then the sum alone) */
+        uint32_t h = ((uint32_t)v->hseed + k * 0x9E37u) * 2654435761u, on = 66u + (h >> 8) % span;
+        if (on >= p0 && on < p0 + n) {
+            int32_t f = (int32_t)((1u << 30) / (uint32_t)((en1 >> 12) | 1));   /* 1 / the envelope there, Q12 */
+            if (f > 16 << 12) f = 16 << 12;
+            s += (((int32_t)(1200u + ((h >> 20) & 2047u)) * w / 23) * f) >> 12;   /* its level, ~0.3 .. 0.8 */
+        }
+    }
+    s = clamp(s, 0, 12 << 12);
+    v->hsum = (uint16_t)(s > 65535 ? 65535 : s);
+    v->hpos = (uint16_t)(p0 + n < 65535u ? p0 + n : 65535u);
+    *g1 = (int32_t)(((int64_t)*g1 * (4096 + s)) >> 12);
+    return (int32_t)(((int64_t)gn * (4096 + s0)) >> 12);
+}
 static __attribute__((noinline)) void dx_run(const dx_lane_t *L, dx_voice_t *v, int32_t morph, int32_t tune16,
                                              int32_t dofs, int32_t cofs, int32_t nofs, int32_t warp, int32_t fm, int32_t *y,
                                              uint32_t n)
@@ -174,6 +203,8 @@ static __attribute__((noinline)) void dx_run(const dx_lane_t *L, dx_voice_t *v, 
         v->mo = 0;
         if (!v->rng)
             v->rng = 0x2545F491;
+        v->hpos = v->hsum = 0;
+        v->hseed = (uint16_t)(((uint32_t)v->rng * 2654435761u) >> 16);   /* (not drawn from the noise: OFF as it was) */
         v->inc = pitch_inc((uint32_t)clamp(p16 + depth, 0, 2047));
     }
     kb = v->choke ? dv_kb(1500u) : dv_kb(ta);            /* (a choked hit: gone in ~5 ms) */
@@ -199,7 +230,12 @@ static __attribute__((noinline)) void dx_run(const dx_lane_t *L, dx_voice_t *v, 
     ga = mulq15(og, v->ea >> 15) << 8;                   /* the oscillator's gain, Q23, stepped */
     dga = ((mulq15(og, ea1 >> 15) << 8) - ga) / (int32_t)n;
     gn = mulq15(ng, v->en >> 15) << 8;                   /* the noise's */
-    dgn = ((mulq15(ng, en1 >> 15) << 8) - gn) / (int32_t)n;
+    {
+        int32_t g1 = mulq15(ng, en1 >> 15) << 8;
+        if (ln == DV_CLAP && dx_hands && (v->hpos < 1200u || v->hsum))   /* (0.7.9) HANDS: more hands in the noise */
+            gn = dx_hands_step(v, n, gn, &g1, en1);
+        dgn = (g1 - gn) / (int32_t)n;
+    }
     inc = (int32_t)(v->inc >> 4) * 2;                    /* (>> 4: the step fits; x 2: half rate) */
     dinc = ((int32_t)(inc1 >> 4) * 2 - inc) / (int32_t)n;
     if (og) {                                            /* the oscillator */
@@ -280,6 +316,7 @@ static __attribute__((noinline)) void dx_run(const dx_lane_t *L, dx_voice_t *v, 
             ic2 = clamp(2 * v2 - ic2, -150000, 150000);                                                            \
             y[i] += mulq15(clamp((OUT) << 1, -32767, 32767), gn >> 8);                                            \
         }
+
         if (flt == DXF_LP)
             DX_NOISE(v2)
         else if (flt == DXF_BP)

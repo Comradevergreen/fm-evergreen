@@ -246,7 +246,7 @@ a la derecha); apretá OCT+ para ejecutarla.
 | OP ENV | OP | STAGE | RATE | LEVEL | FM6 |
 | OPERATOR 2 | OP | MODE | DTUN | VEL | FM6 |
 | FILTER | TYPE | CUT | RES | DRIVE (ANALOG) / DIST (los demás) | todos los motores |
-| KIT 3 | BP | FEEDBK | — | — | DRUM (todo el kit) |
+| KIT 3 | BP | FEEDBK | HANDS | — | DRUM (todo el kit) |
 | X-MOD | RATE | DEPTH | SHAPE | RAND | DRUM (todo el kit) |
 | STEREO | IMAGE | — | — | — | DRUM (todo el kit) |
 | SOUND | SOUND | SIDE | PITCH | PMOD | DRUM (un sonido) |
@@ -457,7 +457,9 @@ DRUM-X es un kit sintetizado de ocho sonidos, **BD SD CP CH OH TM RS CB**, gener
     wavefolder después de la envolvente: ataque brillante, cola limpia), DRIVE.
   - **KIT 3**: **BP**, un pasa-banda sobre los sonidos de metal (hi-hats, rim, cowbell), OFF o 15 centros de 1,5 a 9 kHz
     aprox.; **FEEDBK**, el oscilador de cada sonido realimentado sobre sí mismo (OFF, 1–15: cálido, gruñido, arena,
-    ruido).
+    ruido); **HANDS** (OFF, 1–15): más gente aplaudiendo en el CLAP. Cada mano extra golpea unos milisegundos después de
+    la primera (3 a 45 ms), en su propio momento y nivel, sorteados de nuevo en cada golpe: nunca a tempo. OFF es el clap
+    como antes; unas pocas, un grupo chico; 15, una multitud.
   - **X-MOD**: **RATE** (OFF, 4BAR … 1/32, a tempo), **DEPTH** (cuánto oscila MORPH), **SHAPE** (SINE, TRI, SAW, RAMP,
     S&H), **RAND** (cada golpe con su propio MORPH y un poco de afinación).
   - **FILTER**: el del kit.

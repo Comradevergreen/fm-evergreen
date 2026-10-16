@@ -126,6 +126,7 @@ typedef struct {
                                                 * sounds' DXM_LANE in the second) */
     uint8_t dx_mot[4];                         /* (0.5.1) the kit's X-MOD (eng_drum.c), in its reserved bytes 3..6 */
     uint8_t dx_tone;                           /* (0.6.36) the kit's TONE (drumx_voice.c: BP, FEEDBK), its byte 7 */
+    uint8_t dx_hands;                          /* (0.7.9) the kit's HANDS (drumx_voice.c), byte 0's high nibble (0 before) */
     uint8_t dx_snd[8];                         /* (0.6.48) its sounds' SENDs (eng_drum.c): FUNC's 'D' 'S' block, 0 before */
     uint8_t dx_lay[8];                         /* (0.6.49) its sounds' LAYER, FEEDBK (drumx_voice.c): 'D' 'L', 0 before */
     uint8_t fugue[NTRK][3][2];                 /* (0.6.52) SEQ > FUGUE's heads (fugue.c): RATE | DIR << 4, INTERVAL (int8);
@@ -548,6 +549,7 @@ static void proj_fm6_init(project_t *q)
     q->dx_mute = 0;
     memset(q->dx_mot, 0, sizeof q->dx_mot);
     q->dx_tone = 0;
+    q->dx_hands = 0;
     memset(q->dx_snd, 0, sizeof q->dx_snd);
     memcpy(q->dx_lay, DX_LAY_DEF, sizeof q->dx_lay);   /* (0.6.49: a new project: the factory kit's) */
     memset(q->fugue, 0, sizeof q->fugue);              /* (0.6.52: no FUGUE) */
@@ -883,7 +885,7 @@ static int proj_pack(project_store_t *out, const project_t *q)
     for (i = G_NSTORE; i < G_GX_END; i++)
         b[PROJC_GX_OFF + 1u + i - G_NSTORE] = (uint8_t)(clamp(q->g[i], -64, 127) + 64);
     memcpy(b + PROJC_DX_OFF, q->dx, sizeof q->dx);
-    b[PROJC_DX_OFF + sizeof q->dx] = q->dx_mute & DXG_ALL;
+    b[PROJC_DX_OFF + sizeof q->dx] = (uint8_t)((q->dx_mute & DXG_ALL) | (q->dx_hands & 15u) << 4);   /* (0.7.9: HANDS) */
     b[PROJC_DX_OFF + sizeof q->dx + 1u] = (uint8_t)(q->dx_mute >> 8);
     b[PROJC_DX_OFF + sizeof q->dx + 2u] = 4u;           /* (FUNB's marker 4: the values as today's) */
     memcpy(b + PROJC_DX_OFF + sizeof q->dx + 3u, q->dx_mot, sizeof q->dx_mot);
@@ -937,7 +939,7 @@ static int proj_pack_vb(project_store_t *out, const project_t *q)
     for (i = G_NSTORE; i < G_GX_END; i++)
         b[PROJ_GX_OFF + 1u + i - G_NSTORE] = (uint8_t)(clamp(q->g[i], -64, 127) + 64);
     memcpy(b + PROJ_DX_OFF, q->dx, sizeof q->dx);
-    b[PROJ_DX_OFF + sizeof q->dx] = q->dx_mute & DXG_ALL;
+    b[PROJ_DX_OFF + sizeof q->dx] = (uint8_t)((q->dx_mute & DXG_ALL) | (q->dx_hands & 15u) << 4);   /* (0.7.9: HANDS) */
     b[PROJ_DX_OFF + sizeof q->dx + 1u] = (uint8_t)(q->dx_mute >> 8);
     b[PROJ_DX_OFF + sizeof q->dx + 2u] = 4u;                    /* 1 SHIFT: OFS / PIT where the chord keys were; 2 DRUM's E5 FM;
                                                                  * 4 (0.5.4) LOFI BYTE / FLOAT's MOTN, GRIT / DCY;
@@ -1100,6 +1102,7 @@ static int proj_unpack_c(project_t *q, const uint8_t *b)
     q->dx_mute = (uint16_t)((b[PROJC_DX_OFF + sizeof q->dx] & DXG_ALL) | b[PROJC_DX_OFF + sizeof q->dx + 1u] << 8);
     memcpy(q->dx_mot, b + PROJC_DX_OFF + sizeof q->dx + 3u, sizeof q->dx_mot);
     q->dx_tone = b[PROJC_DX_OFF + sizeof q->dx + 7u];
+    q->dx_hands = b[PROJC_DX_OFF + sizeof q->dx] >> 4;   /* (0.7.9) */
     q->dx_mot[XM_RATE] = q->dx_mot[XM_RATE] > 8u ? 0u : q->dx_mot[XM_RATE];
     q->dx_mot[XM_DPTH] &= 127u;
     q->dx_mot[XM_SHPE] = q->dx_mot[XM_SHPE] > 4u ? 0u : q->dx_mot[XM_SHPE];
@@ -1198,6 +1201,7 @@ static int proj_unpack(project_t *q, const uint8_t *b, uint32_t st)
         q->dx_mute = (uint16_t)((b[end + sizeof q->dx] & DXG_ALL) | b[end + sizeof q->dx + 1u] << 8);
         memcpy(q->dx_mot, b + end + sizeof q->dx + 3u, sizeof q->dx_mot);
         q->dx_tone = b[end + sizeof q->dx + 7u];
+        q->dx_hands = b[end + sizeof q->dx] >> 4;      /* (0.7.9) */
         q->dx_mot[XM_RATE] = q->dx_mot[XM_RATE] > 8u ? 0u : q->dx_mot[XM_RATE];   /* (out of range: off) */
         q->dx_mot[XM_DPTH] &= 127u;
         q->dx_mot[XM_SHPE] = q->dx_mot[XM_SHPE] > 4u ? 0u : q->dx_mot[XM_SHPE];
@@ -1224,6 +1228,7 @@ static int proj_unpack(project_t *q, const uint8_t *b, uint32_t st)
         q->dx_mute = 0;
         memset(q->dx_mot, 0, sizeof q->dx_mot);
         q->dx_tone = 0;
+        q->dx_hands = 0;
     }
     memset(q->dx_snd, 0, sizeof q->dx_snd);            /* (0.6.48: none before FUNC's block) */
     memset(q->dx_lay, 0, sizeof q->dx_lay);            /* (0.6.49: none: the kit as it sounded) */
@@ -1358,6 +1363,7 @@ static void project_capture(project_t *p)
     p->dx_mute = dx_mute;
     memcpy(p->dx_mot, dx_mot, sizeof p->dx_mot);
     p->dx_tone = dx_tone;
+    p->dx_hands = dx_hands;                             /* (0.7.9) */
     memcpy(p->dx_snd, dx_snd, sizeof p->dx_snd);        /* (0.6.48) */
     memcpy(p->dx_lay, dx_lay, sizeof p->dx_lay);        /* (0.6.49) */
     {                                                   /* (0.6.52) FUGUE */
@@ -1513,6 +1519,7 @@ static void sound_put(project_t *p, uint32_t k)
         memcpy(dx_kit, dx_kit_ok(p->dx) ? p->dx : DX_KIT_DEF, sizeof dx_kit);
         memcpy(dx_mot, p->dx_mot, sizeof dx_mot);
         dx_tone = p->dx_tone;
+        dx_hands = p->dx_hands & 15u;
         memcpy(dx_snd, p->dx_snd, sizeof dx_snd);
         memcpy(dx_lay, p->dx_lay, sizeof dx_lay);
     }
@@ -1556,6 +1563,7 @@ static int project_restore_runtime(const project_t *input)
     dx_mute_set(p->dx_mute);
     memcpy(dx_mot, p->dx_mot, sizeof dx_mot);           /* (0.5.1: the kit's X-MOD) */
     dx_tone = p->dx_tone;                               /* (0.6.36: its TONE) */
+    dx_hands = p->dx_hands & 15u;                       /* (0.7.9: its HANDS) */
     memcpy(dx_snd, p->dx_snd, sizeof dx_snd);           /* (0.6.48: its SENDs) */
     memcpy(dx_lay, p->dx_lay, sizeof dx_lay);           /* (0.6.49: its LAYERs) */
     fg_load(p);                                         /* (0.6.52: its FUGUE) */
@@ -1652,6 +1660,7 @@ static void system_init(void)
     memcpy(dx_kit, DX_KIT_DEF, sizeof dx_kit);
     memset(dx_mot, 0, sizeof dx_mot);
     dx_tone = 0;
+    dx_hands = 0;
     memset(dx_snd, 0, sizeof dx_snd);
     memcpy(dx_lay, DX_LAY_DEF, sizeof dx_lay);
     memset(fg_set, 0, sizeof fg_set);                   /* (0.6.52) no FUGUE */
