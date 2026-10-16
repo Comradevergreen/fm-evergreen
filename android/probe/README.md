@@ -15,6 +15,8 @@ Phase 0 of the stems app (the design: one Android screen that answers, on a give
    USB permission, claims the streaming interface and does isochronous reads through usbfs (`app/src/main/cpp/usbiso.c`),
    10 s, with the per-channel levels, the frames a second and a WAV. Test **2b** tries the other ways of opening the
    input (sources × 8/6 channels) and shows which channels carry sound.
+6. **The stems and the phone's microphone together** (0.3): test 5 with the built-in mic recorded at the same time
+   (a mono WAV beside the 8-channel one): the mic as one more track in the app.
 
 Every build signs with `app/probe-debug.keystore` (a debug key, public on purpose) so a new APK installs over the last.
 
