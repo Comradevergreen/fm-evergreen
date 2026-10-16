@@ -85,6 +85,22 @@ jobs:
           python3 web/fetch_prev.py "https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}" build/prev || true
           python3 web/make_site.py "$PKG" "${SV:-dev}-$SH" build/site build/prev
           cp -r build/site/webapp build/site/firmware build/emu/
+      # (JIANT 0.7.9) the stems app's phase-0 probe (android/probe), next to the installer: app/jiant-probe.apk
+      - uses: actions/setup-java@v4
+        continue-on-error: true
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+        continue-on-error: true
+        with:
+          gradle-version: "8.9"
+      - name: the Android probe
+        continue-on-error: true
+        run: |
+          gradle -p android/probe assembleDebug --no-daemon
+          mkdir -p build/emu/app
+          cp android/probe/app/build/outputs/apk/debug/app-debug.apk build/emu/app/jiant-probe.apk
       - uses: actions/upload-pages-artifact@v3
         with:
           path: build/emu
