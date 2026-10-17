@@ -1202,7 +1202,11 @@ sus perillas son las de siempre, más una: **BUSES**.
 - **FX desde otra página** vuelve a la página FX que dejaste. SELECT desde EFFECT vuelve a BUSES (el módulo queda
   elegido), desde BUSES a TRACK en el juego en el que lo dejaste.
 - El pie dice **FX · BUSES** (la lente, el nivel); el encabezado muestra la pista, **T1**, en naranja.
-- Los dibujos siguen a los valores (un giro los redibuja); el nivel de MASTER se mueve con el sonido.
+- Los dibujos siguen a los valores (un giro los redibuja) y, mientras suena o reproduce, al sonido (0.8.5, FX en
+  vivo): los ecos se inflan con el nivel y un pulso corre por ellos, la cola de la reverb se infla y una línea la
+  recorre, las ondas del chorus corren a RATE, el slicer enmarca el paso que suena, el medidor de MASTER sigue la
+  salida, el cabezal de PUNCH recorre el carril, el nivel de DIST es un punto en su curva, el punto de AUTO PAN oscila.
+  Detenido y en silencio quedan quietos (los dibuja solo la pantalla; nada del tiempo del audio).
 
 ### Por pista
 

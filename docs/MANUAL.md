@@ -1137,7 +1137,11 @@ were, with one more: **BUSES**.
 - **FX from another page** comes back to the FX page you left. SELECT from EFFECT goes back to BUSES (the module
   stays picked), from BUSES to TRACK at the set you left it on.
 - The footer says **FX · BUSES** (the lens, the level); the header shows the track, **T1**, in orange.
-- The pictures follow the values (a turn redraws them); the MASTER level moves with the sound.
+- The pictures follow the values (a turn redraws them) and, while it plays or sounds, the sound (0.8.5, FX live): the
+  echoes swell with the level and a pulse runs along them, the reverb's tail swells and a line sweeps it, the chorus
+  waves run at RATE, the slicer frames the step playing, MASTER's meter follows the output, PUNCH's playhead walks the
+  lane, DIST's level is a dot on its curve, AUTO PAN's dot swings. Stopped and silent they hold still (drawn by the
+  screen alone; nothing of the audio's time).
 
 ### Per track
 

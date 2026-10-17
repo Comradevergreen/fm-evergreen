@@ -538,6 +538,10 @@ JIANT's modifications are distributed under the same license.
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
 
 ### v0.8.5
+- **FX's pictures live again**: while it plays or sounds, the echoes swell and a pulse runs along them, the reverb's
+  tail swells under a sweep, the chorus waves run at RATE, the slicer frames its step, MASTER's meter follows the
+  output, PUNCH's playhead walks the lane, DIST's level is a dot on its curve and AUTO PAN's dot swings (the panel
+  redrawn every other frame while it sounds, still when silent; host draw cost: DLY's panel 48.8 µs).
 - **No icons anywhere, as the mock-up**: the last ones (the header's NO FILE, BPM LOCK and SONG marks, MENU > LARGE's
   card icons, the calibration title, the stars, the song list's marks) are text or a few drawn pixels; the Fukiai icon
   font is no longer in the image (11.7 KB of flash back; FELUCCA_ICONS now 0 by default).

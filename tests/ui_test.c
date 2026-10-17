@@ -10102,6 +10102,38 @@ static int test_lz_dialogs(void)
     return bad;
 }
 
+/* FX live (ui_lzfx.c): while the song plays the EFFECT and TRACK pictures move (the echoes' pulse, the tail's sweep,
+ * the chorus running, DIST's level, AUTO PAN's dot); stopped and silent they hold still */
+static int fx_panel_moves(const char *title)
+{
+    static uint16_t a[240 * 140];
+    go_title(title); frame(); frames(1600);
+    memcpy(a, host_screen + LZ_GRAPH_Y * 240, sizeof a);
+    frames(96);
+    return memcmp(a, host_screen + LZ_GRAPH_Y * 240, sizeof a) != 0;
+}
+static int test_fx_live(void)
+{
+    int bad = 0, ok = 1;
+    static const char *const LIVE[] = {"DLY", "REVERB", "CHORUS", "AUTO PAN"};
+    uint32_t i;
+    ui_power_on();
+    TSEL->p[P_APDEP] = 100; song.g[G_CDEPTH] = 90;
+    song.playing = 1;
+    for (i = 0; i < NELEM(LIVE); i++) {
+        int m = fx_panel_moves(LIVE[i]);
+        if (!m) printf("  FX live: %s still\n", LIVE[i]);
+        ok &= m;
+    }
+    song.playing = 0;
+    for (i = 0; i < NTRK; i++) trk[i].peak = 0;
+    memset(scope_buf, 0, sizeof scope_buf);
+    ok &= !fx_panel_moves("DLY");
+    bad += check("0.8.5 FX live: DLY, REVERB, CHORUS, AUTO PAN move while it plays; stopped and silent they hold still", ok);
+    ui_power_on();
+    return bad;
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IONBF, 0);
@@ -10115,6 +10147,7 @@ int main(void)
     bad += test_lz_glo();
     bad += test_lz_layer();
     bad += test_lz_dialogs();
+    bad += test_fx_live();
     bad += test_sound_loads();
     bad += test_patterns();
     bad += test_init_system();
