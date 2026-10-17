@@ -566,6 +566,24 @@ Every update is listed here, newest first. (Since 0.6.80 at the end of the page:
   the header's messages. The dialogs (NOTICE, DICE) wear the skin too. Every key, knob and combo does what it did.
 - The sound is the same: no change in the audio path (golden renders, CPU baselines and target budgets unchanged).
   Image 568320 -> 572288 B (+3968; 9276 B of the slot free).
+- **A late half no longer loses the next one (a click every time, and audio missing over USB)**: the audio ISR
+  acknowledged a half buffer after rendering it, so a render that ran past its 2.9 ms cleared the next half's request
+  and that half was never rendered (the DAC played 2.9 ms of old audio again; USB got 128 frames fewer). The 0.8.7
+  field test's heavy song had ~15 of these a second, ~50 with USB audio on. Now the request is taken first and a late
+  render is followed at once by the next one, which catches up without a sound; a half is lost only past ~1.7 halves
+  (the console's new `audio_lost`).
+- **USB audio never drops a packet and keeps its time**: every 1 ms packet goes with the frames the clocks ask (47..49
+  at 48 kHz); a short ring repeats the last frame (no step, unlike silence) and the repeats are made up later, a frame
+  a packet, so a capture keeps the length and timing of the music (`uac_repeats_made_up`). Tested over minutes against
+  a simulated 48 kHz host at ±500 ppm, renders up to 131 % and overload bursts: no empty packet, every frame sent once.
+- **USB audio at 48 kHz costs the render almost nothing with CORES 2**: the 44.1 → 48 kHz resampler runs on the second
+  core after each half (while the first goes back to the screen), from RAM with its table in RAM (bit for bit the same
+  output); about 90 % less work on the first core by instruction count (~11 points of CPU before). With CORES 1 it stays
+  on the first core, ~20 % cheaper. Its table is stored as differences: the image ~2.9 KB smaller.
+- **The console's voice counters mean what they say**: `voices_given_up` counts each voice ended early once (one already
+  fading is not counted again), split into `voices_trimmed` (tails already under −50 dB the load budget took: inaudible,
+  most of them on a heavy song), `voices_stolen` (taken for a new note with all 8 busy) and `voices_shed` (the overload
+  guard). The sound is the same: every golden render and CPU baseline unchanged.
 
 ### v0.8.8
 - **HOME's beings roam free again, exactly as before 0.8.5**: no grid, no ring, no names. Each track's being swims by

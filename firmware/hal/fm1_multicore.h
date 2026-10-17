@@ -6,6 +6,7 @@
  *
  *   fm1_mc_start()   at boot, before fm1_guard_lock_top: core 1 out of hold into fm1_c1_entry (crt0.S); 1 = it answered
  *   fm1_mc_run(f,a)  core 0 (the audio ISR): hand it f(a); 1 = taken, fm1_mc_wait before touching what f works on
+ *   fm1_mc_done(j)   (0.8.9) job j (fm1_mc_box.job after its fm1_mc_run) is finished: a look, no wait
  *   fm1_mc_wait()    0 = done; -1 = it read a wrong job, faulted or did not finish: held for good, core 0 does the work
  *   fm1_mc_hold()    stop it for good (MENU > CORES 1, a fault)
  *
@@ -147,6 +148,12 @@ static inline int fm1_mc_run(void (*fn)(uint32_t), uint32_t arg)
     fm1_mc_box.job = job;
     FM1_C1_SYNC();
     return 1;
+}
+
+static inline int fm1_mc_done(uint32_t job)    /* (0.8.9) job (fm1_mc_box.job when it was handed over) finished */
+{
+    FM1_C1_SYNC();
+    return (int32_t)(fm1_mc_box.done - job) >= 0;
 }
 
 static inline int fm1_mc_wait(void)

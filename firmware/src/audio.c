@@ -22,7 +22,8 @@ struct felucca_dbg {
 } felucca_dbg __attribute__((section(".noinit")));
 static volatile uint32_t audio_halves, audio_max_us;
 static volatile uint32_t t5_nested_ticks;              /* TIMER4 ticks TIMER5 spent nested in this ISR (main.c) */
-static uint32_t audio_cpu_rem;                         /* keep the fractional IIR step: no low-load bias */
+static uint32_t audio_cpu_rem;
+static uint32_t audio_last_half = 2u, audio_lost;    /* (0.8.9) halves never rendered: a render past two halves (console) */                         /* keep the fractional IIR step: no low-load bias */
 #define SCOPE_N 512u
 static int16_t scope_buf[SCOPE_N];
 static uint32_t scope_w;
@@ -134,6 +135,10 @@ void fm1_alnk0_irq(void)                       /* via isr_alnk0 (hal/fm1_isr.S) 
     if (p & FM1_AUDIO_HALF) {
         uint32_t half = fm1_audio_free_half(), b, us;
         int32_t *o = &abuf[half * HALF_WORDS];
+        fm1_audio_ack_half();                           /* (0.8.9) first: a flip during a late render stays pending */
+        if (half == audio_last_half)                    /* and this ISR runs again at once for the other half (until */
+            audio_lost++;                               /* 0.8.8 the ack after the render cleared it: every late half */
+        audio_last_half = half;                         /* lost the next one, its stale audio played again and USB short) */
         if (shed_req) {
             shed_req = 0;
             shed_voice();
@@ -147,7 +152,9 @@ void fm1_alnk0_irq(void)                       /* via isr_alnk0 (hal/fm1_isr.S) 
 #endif
             audio_block(o + 2u * b, CTL);
         }
-        fm1_audio_ack_half();
+#if FELUCCA_UAC
+        uac_render_end();                               /* (0.8.9) the half's 48 kHz resampling: to core 1, off the render */
+#endif
         audio_halves++;
         us = shed_check(fm1_ticks() - t0);
         if (us > audio_max_us)
@@ -158,7 +165,8 @@ void fm1_alnk0_irq(void)                       /* via isr_alnk0 (hal/fm1_isr.S) 
             audio_cpu_rem = load % CPU_AVG;
         }
         if (fm1_audio_free_half() != half)
-            felucca_dbg.late++;                         /* the DMA moved on while we rendered */
+            felucca_dbg.late++;                         /* the DMA moved on while we rendered (0.8.9: caught up at
+                                                         * once, its half pending; a click only past ~1.7 halves) */
         {   /* (0.6.17) MENU > ABOUT's numbers (voice.c load_diag) */
             uint32_t pc = us * 100u / (HALF_FRAMES * 1000000u / FS);
             if (pc > load_diag.peak) load_diag.peak = pc;

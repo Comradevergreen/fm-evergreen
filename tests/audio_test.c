@@ -23,7 +23,9 @@ void isr_alnk0(void) {}
 static int32_t host_tap[2 * 64];
 static uint32_t host_tap_n;
 static void uac_tap(const int32_t *out, uint32_t n) { memcpy(host_tap, out, 8u * n); host_tap_n = n; }
-static void uac_render_start(void) {}
+static uint32_t host_acks_at_start;
+static void uac_render_start(void) { host_acks_at_start = host_acks; }   /* (just before the blocks) */
+static void uac_render_end(void) {}
 #include "../firmware/src/audio.c"
 enum { FM1_ADC_BATT = 3, FM1_ADC_MASTER = 4 };
 static int32_t host_pot = 1023;                        /* the MASTER pot as the ADC reads it (-1: timeout) */
@@ -47,6 +49,7 @@ static void fresh(void)
     memset(&felucca_dbg, 0, sizeof felucca_dbg);
     audio_cpu_rem = audio_halves = audio_max_us = 0;
     shed_req = 0; shed_count = 0; shed_over = 0;
+    audio_last_half = 2u; audio_lost = 0;
     load_tight = 0; tight_calm = 0; memset((void *)&load_diag, 0, sizeof load_diag);
     host_clock = host_us = host_half_reads = host_dma_advanced = host_acks = host_nest = 0;
     host_pending = FM1_AUDIO_HALF;
@@ -132,6 +135,14 @@ static void dma(void)
     host_half_reads = 0; host_dma_advanced = 1; host_us = 100;
     fm1_alnk0_irq();
     check("DMA advancing during a render is counted once", host_acks == 3u && felucca_dbg.late == 1u && !felucca_dbg.in_audio && !shed_req);
+    check("(0.8.9) the half is acknowledged before it renders: a flip during a late render stays pending",
+          host_acks_at_start == host_acks && host_acks_at_start == 3u);
+    {   /* the free half alternates: none lost; the same half twice in a row: the one between was never rendered */
+        uint32_t lost0 = audio_lost;
+        host_dma_advanced = 0;                         /* (free half 0 each time) */
+        fm1_alnk0_irq();
+        check("(0.8.9) the same free half twice in a row counts a lost half (audio_lost)", audio_lost == lost0 + 1u);
+    }
     fresh();
     expected = HALF_FRAMES * 1000000u / FS;            /* the half's deadline in us */
     host_us = expected * 90u / 100u; host_nest = expected * 30u / 100u;   /* the render 60 %, TIMER5 nested 30 % */

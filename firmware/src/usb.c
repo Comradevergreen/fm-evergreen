@@ -21,7 +21,9 @@
  * FELUCCA_UAC_48K=1 (the default with FELUCCA_UAC) offers 48 kHz too: the host picks the rate with
  * SET_CUR (UAC1 sampling frequency control, two discrete rates in the one alt setting). The engines stay
  * at 44.1 kHz; at 48 kHz uac_tap resamples (polyphase FIR 160 / 147, uac_fir.h) into the ring. 44.1 kHz,
- * the rate until a host asks for another, sends the samples as before, bit for bit. */
+ * the rate until a host asks for another, sends the samples as before, bit for bit. (0.8.9) With CORES 2 the
+ * second core resamples each half after the render (uac_render_end), off the first core's render; one core: each
+ * block in the ISR as before (uac_rs_run, in RAM either way). An underrun never drops or shortens a packet. */
 #include "../hal/fm1_usb.h"   /* registers; relative, so the loader and the host tests find it too */
 #ifndef FELUCCA_CDC
 #define FELUCCA_CDC 0
@@ -74,18 +76,22 @@ static struct {
  * 48..119 with no glitch; one render was once seen 29 frames under the floor: a packet (46) must
  * still be in hand then. */
 #define UA_N 512u                /* ring, frames (16-bit L | R << 16); a power of two */
-#define UA_PRIME 104u            /* silence ahead of the first rendered frame */
-#define UA_LO 80u                /* a render may start late: keep a packet and more in hand */
-#define UA_HI 128u
+/* (0.8.9) the band 0.7 ms higher: a render now catches up at once after a late one (audio.c), so the next one may
+ * start up to ~1 ms late (a render of 131 %) and the ring must hold a packet beyond that (was 80..128, prime 104) */
+#define UA_PRIME 136u            /* silence ahead of the first rendered frame */
+#define UA_LO 112u               /* a render may start late: keep a packet and more in hand */
+#define UA_HI 160u
 #define UAC_RATE 44100u
 #if FELUCCA_UAC_48K
-/* 48 kHz: the same times in 48 kHz frames (x 160 / 147); a render of HALF_FRAMES gives 139..140 frames */
-#define UA_PRIME48 113u
-#define UA_LO48 87u
-#define UA_HI48 139u
+/* 48 kHz: the same times in 48 kHz frames (x 160 / 147); a render of HALF_FRAMES gives 139..140 frames.
+ * (0.8.9) With CORES 2 the half is resampled on core 1 after the render (uac_render_end) and enters the ring when the
+ * next half starts: the fill measured then (before it) is the low point, the prime one half (UA_REND48) longer */
+#define UA_PRIME48 152u
+#define UA_LO48 128u
+#define UA_HI48 176u
 #define UA_REND48 ((HALF_FRAMES * 160u + 146u) / 147u)
 #define UA_MAXF 49u              /* frames in the largest packet: 48 + 1 */
-_Static_assert(UA_HI48 + UA_REND48 + UA_MAXF < UA_N, "the ring holds the band, a render and a packet (48 kHz)");
+_Static_assert(UA_PRIME48 + 2u * UA_REND48 + UA_MAXF < UA_N, "the ring holds the band, two renders and a packet (48 kHz)");
 #else
 #define UA_MAXF 46u              /* frames in the largest packet */
 #endif
@@ -123,6 +129,7 @@ static struct {
     uint32_t underruns, overruns, missed;        /* glitches: ring empty (repeat), ring full (drop), no packet ready */
     uint32_t stalls;                             /* the host stopped reading for > 20 ms (alt still 1) */
     uint32_t adj_up, adj_down;                   /* packets one frame longer / shorter than the pattern */
+    uint32_t owe, repaid;                        /* (0.8.9) frames an underrun repeated, not yet made up; made up */
     uint32_t fill_lo, fill_hi;                   /* range of fill_min since the stream started */
     uint32_t rate_sets;                          /* SET_CUR sampling frequency requests */
 } uac;
@@ -156,7 +163,7 @@ static struct {
 #include "uac_fir.h"
 /* the resampler's input history: the last 32 frames, written twice so a window of UAC_FIR_N never wraps */
 #define RS_H 32u
-_Static_assert(RS_H >= UAC_FIR_N && (RS_H & (RS_H - 1u)) == 0, "the history holds a window");
+_Static_assert(RS_H >= UAC_FIR_N && (RS_H & (RS_H - 1u)) == 0 && UAC_FIR_N % 4u == 0u, "the history holds a window");
 static struct {
     int16_t l[2u * RS_H], r[2u * RS_H];   /* r right after l (the FIR loop reads both from one pointer) */
     uint32_t w;                  /* input frames written */
@@ -165,6 +172,36 @@ static struct {
     uint32_t tone;
 #endif
 } rs;
+/* (0.8.9) all 160 phases in RAM (the pool, built from the 80 in the flash the first time the ring primes at 48 kHz):
+ * one forward loop, no flash reads (the table no longer pushes the render's code out of the cache), and core 1 can
+ * run it outside the audio ISR, with the flash off */
+static int32_t rs_tab[UAC_FIR_L][UAC_FIR_N] __attribute__((section(".pool")));   /* (15 KiB) */
+static uint32_t rs_in[HALF_FRAMES] __attribute__((section(".pool")));            /* a half (CORES 2) or a block, 16-bit L | R */
+static struct {
+    uint8_t c1;                  /* this stream resamples on core 1, a half at a time (chosen when it primes) */
+    volatile uint8_t busy;       /* a half handed to core 1, not yet in the ring */
+    uint32_t nin;                /* frames of this half in rs_in */
+    uint32_t n, w0, job;         /* the half handed over: its frames, its place in the ring, core 1's job number */
+    volatile uint32_t k;         /* core 1's: the frames it wrote */
+} rq;
+#if !defined(UAC_C1_LIVE) && FELUCCA_DUAL_CORE
+/* core 1 (hal/fm1_multicore.h): one job at a time; mix_block's first job of the next half queues behind this one and
+ * its wait covers it */
+#define UAC_C1_LIVE() (fm1_mc_on && !mc_off)
+#define UAC_C1_RUN(f) fm1_mc_run(f, 0)
+#define UAC_C1_JOB() fm1_mc_box.job
+#define UAC_C1_DONE(j) fm1_mc_done(j)
+#define UAC_C1_TEXT __attribute__((section(".c1_text"), noinline, used))
+#endif
+#ifndef UAC_C1_LIVE              /* one core (host builds, FELUCCA_DUAL_CORE=0): every block resampled at once */
+#define UAC_C1_LIVE() 0
+#define UAC_C1_RUN(f) 0
+#define UAC_C1_JOB() 0u
+#define UAC_C1_DONE(j) 1
+#endif
+#ifndef UAC_C1_TEXT
+#define UAC_C1_TEXT __attribute__((noinline))
+#endif
 #endif
 #endif
 
@@ -1143,10 +1180,42 @@ static void ep3_tx(void)                                /* <= 63 bytes per packe
 
 #if FELUCCA_UAC
 /* ---- the audio input: audio.c produces (render start, then each block), TIMER5 consumes ---- */
+#if FELUCCA_UAC_48K
+static void uac_collect(int wait);
+static void uac_rs_init(void)                           /* the resampler from silence; its table built once */
+{
+    uint32_t i, p;
+    for (i = 0; i < 2u * RS_H; i++)
+        rs.l[i] = rs.r[i] = 0;
+    rs.w = rs.ph = 0;
+    if (rs_tab[0][UAC_FIR_N / 2u - 1u])                 /* (the pool is zeroed at boot) */
+        return;
+    for (i = 0; i < UAC_FIR_N; i++) {                   /* each tap along the phases: its differences summed back */
+        int32_t x = UAC_FIR0[0][i], a = UAC_FIR0[1][i], b = UAC_FIR0[2][i];
+        for (p = 0; p < UAC_FIR_L / 2u; p++) {
+            rs_tab[p][i] = x;
+            rs_tab[UAC_FIR_L - 1u - p][UAC_FIR_N - 1u - i] = x;   /* (phase 159 - p: phase p backwards) */
+            x += a;
+            a += b;
+            if (p < UAC_FIR_L / 2u - 3u)
+                b += UAC_FIR3[i][p];
+        }
+    }
+}
+#endif
 static __attribute__((noinline)) void uac_render_start(void)   /* audio ISR, before a half buffer renders */
 {
     uint32_t fill;
     uac.feed = uac.alt && usb.config && uac.flowing;
+#if FELUCCA_UAC_48K
+    rq.nin = 0;
+    fill = ua_w - ua_r;                                 /* (CORES 2: the low point, before the last half comes in) */
+    uac_collect(0);
+    if (uac.ring48 && rq.c1 != UAC_C1_LIVE())           /* (core 1 given up mid-stream, or back) */
+        uac.go = 0;
+#else
+    fill = ua_w - ua_r;
+#endif
     if (!uac.feed) {
         uac.go = 0;                                     /* not read (yet / any more): prime when it is */
         return;
@@ -1154,13 +1223,16 @@ static __attribute__((noinline)) void uac_render_start(void)   /* audio ISR, bef
     if (!uac.go || uac.ring48 != uac.r48) {             /* (re)start: silence ahead, then this render */
         uint32_t r = ua_r, i, prime = UA_PRIME;
         uac.go = 0;
+        uac.owe = 0;
 #if FELUCCA_UAC_48K
+        if (rq.busy)                                    /* (a half still on core 1: prime when it is in) */
+            return;
         uac.ring48 = uac.r48;
+        rq.c1 = 0;
         if (uac.ring48) {                               /* the resampler starts from silence */
-            prime = UA_PRIME48;
-            for (i = 0; i < 2u * RS_H; i++)
-                rs.l[i] = rs.r[i] = 0;
-            rs.w = rs.ph = 0;
+            rq.c1 = (uint8_t)UAC_C1_LIVE();
+            prime = UA_PRIME48 + (rq.c1 ? UA_REND48 : 0u);
+            uac_rs_init();
         }
 #endif
         for (i = 0; i < prime * UA_FW; i++)
@@ -1172,7 +1244,6 @@ static __attribute__((noinline)) void uac_render_start(void)   /* audio ISR, bef
         uac.go = 1;
         return;
     }
-    fill = ua_w - ua_r;
     uac.fill_min = fill;
     if (fill < uac.fill_lo)
         uac.fill_lo = fill;
@@ -1191,44 +1262,43 @@ static inline int32_t uac_s16(int32_t v)
 }
 
 #if FELUCCA_UAC_48K
-/* 44.1 -> 48 kHz (x 160 / 147), one block: each input frame enters the history, then the 1 or 2 output
- * frames whose newest input it is: phase ph, the window of UAC_FIR_N frames ending at it, the taps of
- * phase ph (or of 159 - ph backwards: the prototype is symmetric), Q30 into 64-bit sums. */
-static __attribute__((noinline)) void uac_tap48(const int32_t *out, uint32_t n)
+#define UAC_CLIP(v) ((v) > 32767 ? 32767 : (v) < -32768 ? -32768 : (v))
+/* 44.1 -> 48 kHz (x 160 / 147): n input frames (16-bit L | R << 16) into the ring from frame w; each input frame enters
+ * the history, then the 1 or 2 output frames whose newest input it is: phase ph, the window of UAC_FIR_N frames ending
+ * at it, phase ph's taps (rs_tab), Q30 into 64-bit sums, four taps a pass. Returns the frames written. (0.8.9) In RAM
+ * and calling nothing: core 1 runs it outside the audio ISR (uac_rs_job), core 0 with one core; bit for bit the
+ * resampler of 0.7 .. 0.8.8 */
+static UAC_C1_TEXT uint32_t uac_rs_run(const uint32_t *in, uint32_t n, uint32_t w)
 {
-    uint32_t w = ua_w, i, j, k = 0, h = rs.w, ph = rs.ph;
-    if (UA_N - (w - ua_r) < n + n / 8u + 2u) {         /* nobody reads: drop the block (<= n * 160 / 147 + 1) */
-        uac.overruns++;
-        return;
-    }
+    uint32_t i, j, k = 0, h = rs.w, ph = rs.ph;
+    if (ph >= UAC_FIR_L)                                /* (core 1 may misread a word: never past the table) */
+        ph = 0;
     for (i = 0; i < n; i++) {
-        uint32_t s = h & (RS_H - 1u);
-        int16_t l = (int16_t)uac_s16(out[2u * i]), r = (int16_t)uac_s16(out[2u * i + 1u]);
-        rs.l[s] = rs.l[s + RS_H] = l;
-        rs.r[s] = rs.r[s + RS_H] = r;
+        uint32_t f = in[i], s = h & (RS_H - 1u);
+        rs.l[s] = rs.l[s + RS_H] = (int16_t)f;
+        rs.r[s] = rs.r[s + RS_H] = (int16_t)(f >> 16);
         h++;
         s = (h - UAC_FIR_N) & (RS_H - 1u);              /* the window: oldest .. this frame */
         do {
             const int16_t *x = &rs.l[s];                /* R: x[2 * RS_H] */
+            const int32_t *c = rs_tab[ph];
             int64_t al = 0, ar = 0;
             int32_t yl, yr;
-            if (ph < UAC_FIR_L / 2u) {
-                const int32_t *c = UAC_FIR[ph];
-                for (j = UAC_FIR_N; j; j--, x++) {
-                    int32_t t = *c++;
-                    al += (int64_t)t * x[0];
-                    ar += (int64_t)t * x[2u * RS_H];
-                }
-            } else {
-                const int32_t *c = &UAC_FIR[UAC_FIR_L - 1u - ph][UAC_FIR_N - 1u];
-                for (j = UAC_FIR_N; j; j--, x++) {
-                    int32_t t = *c--;
-                    al += (int64_t)t * x[0];
-                    ar += (int64_t)t * x[2u * RS_H];
-                }
+            for (j = UAC_FIR_N / 4u; j; j--, x += 4, c += 4) {
+                int32_t c0 = c[0], c1 = c[1], c2 = c[2], c3 = c[3];
+                al += (int64_t)c0 * x[0];
+                ar += (int64_t)c0 * x[2u * RS_H];
+                al += (int64_t)c1 * x[1];
+                ar += (int64_t)c1 * x[2u * RS_H + 1u];
+                al += (int64_t)c2 * x[2];
+                ar += (int64_t)c2 * x[2u * RS_H + 2u];
+                al += (int64_t)c3 * x[3];
+                ar += (int64_t)c3 * x[2u * RS_H + 3u];
             }
-            yl = uac_clip((int32_t)((al + (1 << (UAC_FIR_Q - 1))) >> UAC_FIR_Q));
-            yr = uac_clip((int32_t)((ar + (1 << (UAC_FIR_Q - 1))) >> UAC_FIR_Q));
+            yl = (int32_t)((al + (1 << (UAC_FIR_Q - 1))) >> UAC_FIR_Q);
+            yr = (int32_t)((ar + (1 << (UAC_FIR_Q - 1))) >> UAC_FIR_Q);
+            yl = UAC_CLIP(yl);
+            yr = UAC_CLIP(yr);
 #if FELUCCA_UAC_TONE
             {   /* bench: the triangles at 48 kHz (not resampled), one per output frame */
                 uint32_t t = rs.tone, q = t < 50u ? t : 100u - t, q2 = t < 50u ? 50u - t : t - 50u;
@@ -1244,15 +1314,90 @@ static __attribute__((noinline)) void uac_tap48(const int32_t *out, uint32_t n)
     }
     rs.w = h;
     rs.ph = ph;
-    RING_PUBLISH();
-    ua_w = w + k;
+    return k;
+}
+static UAC_C1_TEXT void uac_rs_job(uint32_t a)          /* core 1: the half core 0 handed over (uac_render_end) */
+{
+    uint32_t n = rq.n;
+    (void)a;
+    rq.k = uac_rs_run(rs_in, n <= HALF_FRAMES ? n : 0u, rq.w0);
+}
+/* core 1's half into the ring (its frames are written: only the index moves), if it is done. lost = 1 (a block of the
+ * next half: mix_block has waited for core 1's job, queued behind this one): not done is core 1 given up mid-job: the
+ * half dropped, the ring primed again */
+static void uac_collect(int lost)
+{
+    uint32_t k = rq.k;
+    if (!rq.busy)
+        return;
+    if (!UAC_C1_DONE(rq.job)) {
+        if (lost)
+            rq.busy = uac.go = 0;
+        return;
+    }
+    rq.busy = 0;
+    if (k <= UA_REND48 + 1u) {                          /* (a wrong word from core 1: the half dropped) */
+        RING_PUBLISH();
+        ua_w = rq.w0 + k;
+    }
+}
+/* the audio ISR, after each block: 16-bit frames, then (one core) resampled into the ring at once, or (CORES 2) kept
+ * for the half's end */
+static __attribute__((noinline)) void uac_tap48(const int32_t *out, uint32_t n)
+{
+    uint32_t i, *d;
+    if (rq.c1) {
+        uac_collect(1);                                 /* (done: mix_block waited for its job queued behind it) */
+        if (rq.nin + n > HALF_FRAMES)
+            return;
+        d = &rs_in[rq.nin];
+        rq.nin += n;
+    } else {
+        if (UA_N - (ua_w - ua_r) < n + n / 8u + 2u) {   /* nobody reads: drop the block (<= n * 160 / 147 + 1) */
+            uac.overruns++;
+            return;
+        }
+        d = rs_in;
+    }
+    for (i = 0; i < n; i++)
+        d[i] = (uint32_t)(uint16_t)uac_s16(out[2u * i]) | (uint32_t)(uint16_t)uac_s16(out[2u * i + 1u]) << 16;
+    if (!rq.c1) {
+        uint32_t w = ua_w, k = uac_rs_run(rs_in, n, w);
+        RING_PUBLISH();
+        ua_w = w + k;
+    }
 }
 #endif
+
+/* (0.8.9) the audio ISR, after the render: CORES 2 at 48 kHz, the half to core 1 (it resamples while core 0 goes back
+ * to the main loop; the next half takes it in); core 1 gone, here */
+static __attribute__((noinline)) void uac_render_end(void)
+{
+#if FELUCCA_UAC_48K
+    uint32_t n = rq.nin, w = ua_w;
+    rq.nin = 0;
+    if (!n || rq.busy || !uac.feed)
+        return;
+    if (UA_N - (w - ua_r) < n + n / 8u + 2u) {          /* nobody reads: drop the half */
+        uac.overruns++;
+        return;
+    }
+    rq.n = n;
+    rq.w0 = w;
+    RING_PUBLISH();
+    if (UAC_C1_LIVE() && UAC_C1_RUN(uac_rs_job)) {
+        rq.job = UAC_C1_JOB();
+        rq.busy = 1;
+    } else {
+        uac.go = 0;                                     /* (core 1 given up: one core from the next half) */
+    }
+#endif
+}
 
 static __attribute__((noinline)) void uac_tap(const int32_t *out, uint32_t n)   /* audio ISR: one block (Q15) */
 {
     uint32_t w = ua_w, i;
-    if (!uac.feed)
+    if (!uac.feed || !uac.go)                           /* ((0.8.9) not primed: a half on core 1 to wait for) */
         return;
 #if FELUCCA_UAC_48K
     if (uac.ring48) {
@@ -1347,6 +1492,12 @@ static uint32_t uac_packet(uint32_t *d)
     r = ua_r;
     fill = ua_w - r;
     RING_PUBLISH();                                     /* the slots after the index */
+    if (uac.owe && uac.fill_min >= lo && fill > n) {    /* (0.8.9) a frame an underrun repeated, made up: one */
+        r++;                                            /* frame of the ring skipped, so the stream keeps the */
+        fill--;                                         /* render's time and length (a packet still carries n) */
+        uac.owe--;
+        uac.repaid++;
+    }
     k = fill < n ? fill : n;
     {
         uint32_t fw = UA_FW, j;
@@ -1355,6 +1506,7 @@ static uint32_t uac_packet(uint32_t *d)
                 d[i * fw + j] = ua_ring[ua_slot(r + i) * fw + j];
         if (k < n) {
             uac.underruns++;
+            uac.owe += n - k;
             for (; i < n; i++)
                 for (j = 0; j < fw; j++)
                     d[i * fw + j] = k ? d[(k - 1u) * fw + j] : uac.last[j];

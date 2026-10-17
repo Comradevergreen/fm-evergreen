@@ -602,9 +602,11 @@ static void rs_reset(void)
 {
     memset(&uac, 0, sizeof uac);
     memset(&rs, 0, sizeof rs);
+    uac_rs_init();
     usb.config = 1;
     uac.feed = 1;
     uac.ring48 = uac.r48 = 1;
+    uac.go = 1;
     ua_w = ua_r = 0;
 }
 
@@ -663,6 +665,7 @@ static void fft(double *re, double *im, uint32_t n)
  * Hann-windowed through an FFT) and over the whole band (0..24 kHz) */
 #define NF 65536u
 static double fre[NF], fim[NF];
+static double spur_db;                                   /* (0.8.9) the largest residual bin in band, dB under the input */
 static void sine_fit(const int32_t *y, double f, double *amp, double *snr_band, double *snr_full)
 {
     double m[3][4], c[3], w2 = 0, pb = 0, pf = 0, ps;
@@ -694,8 +697,14 @@ static void sine_fit(const int32_t *y, double f, double *amp, double *snr_band, 
         w2 += w * w;
     }
     fft(fre, fim, NF);
-    for (k = 0; k <= kmax; k++)
-        pb += (k ? 2.0 : 1.0) * (fre[k] * fre[k] + fim[k] * fim[k]);
+    spur_db = 0;
+    for (k = 0; k <= kmax; k++) {
+        double p = fre[k] * fre[k] + fim[k] * fim[k];
+        pb += (k ? 2.0 : 1.0) * p;
+        if (k > 2u && p > spur_db)
+            spur_db = p;
+    }
+    spur_db = 10 * log10((spur_db + 1e-30) / pow(32767.0 * pow(10, -1 / 20.0) * NF / 4.0, 2));
     pb /= (double)NF * w2;
     pf /= NF;
     *amp = sqrt(c[0] * c[0] + c[1] * c[1]);
@@ -751,6 +760,37 @@ static double rnd_x(int64_t i, void *ctx)                 /* input frame i: nois
     return (double)((int16_t)(seed >> 16) / 2);
 }
 
+/* (0.8.9) the 0.7 .. 0.8.8 resampler (uac_tap48's loop: 80 phases, 80..159 read backwards; the table's 80 phases
+ * checked exactly above), the one the 160-phase RAM table and the four-tap loop must equal bit for bit */
+static int16_t old_l[64], old_r[64];
+static uint32_t old_w, old_ph;
+static uint32_t old_block(const int32_t *in, uint32_t n, int32_t *l, int32_t *r)
+{
+    uint32_t i, j, k = 0, h = old_w, ph = old_ph;
+    for (i = 0; i < n; i++) {
+        uint32_t s = h & 31u;
+        old_l[s] = old_l[s + 32u] = (int16_t)uac_s16(in[2u * i]);
+        old_r[s] = old_r[s + 32u] = (int16_t)uac_s16(in[2u * i + 1u]);
+        h++;
+        s = (h - UAC_FIR_N) & 31u;
+        do {
+            int64_t al = 0, ar = 0;
+            for (j = 0; j < UAC_FIR_N; j++) {
+                int32_t c = ph < UAC_FIR_L / 2u ? rs_tab[ph][j] : rs_tab[UAC_FIR_L - 1u - ph][UAC_FIR_N - 1u - j];
+                al += (int64_t)c * old_l[s + j];
+                ar += (int64_t)c * old_r[s + j];
+            }
+            l[k] = uac_clip((int32_t)((al + (1 << (UAC_FIR_Q - 1))) >> UAC_FIR_Q));
+            r[k++] = uac_clip((int32_t)((ar + (1 << (UAC_FIR_Q - 1))) >> UAC_FIR_Q));
+            ph += UAC_FIR_M;
+        } while (ph < UAC_FIR_L);
+        ph -= UAC_FIR_L;
+    }
+    old_w = h;
+    old_ph = ph;
+    return k;
+}
+
 static void test_resampler(void)
 {
     static const double FQ[] = {20, 100, 1000, 5000, 10000, 15000, 18000, 20000};
@@ -761,18 +801,26 @@ static void test_resampler(void)
     char s[160];
 
     proto_init();
-    /* the table: each phase sums to 1 << 30 and is the prototype computed here (oldest input first) */
-    for (i = 0; i < UAC_FIR_L / 2u; i++) {
-        int64_t t = 0;
-        for (k = 0; k < UAC_FIR_N; k++) {
-            double want = H[i + RL * (RN - 1u - k)] * (1 << 30);
-            t += UAC_FIR[i][k];
-            if (fabs(UAC_FIR[i][k] - want) > 2e-5 * (1 << 30))
-                tab_ok = 0;
+    /* the table (0.8.9: built in RAM from the flash's differences, all 160 phases): each phase sums to 1 << 30 and is
+     * the prototype computed here (oldest input first); phases 0..79 the generator's exactly (its checksum) */
+    rs_reset();
+    {
+        uint64_t chk = 0;
+        for (i = 0; i < UAC_FIR_L; i++) {
+            int64_t t = 0;
+            for (k = 0; k < UAC_FIR_N; k++) {
+                double want = H[i + RL * (RN - 1u - k)] * (1 << 30);
+                t += rs_tab[i][k];
+                if (fabs(rs_tab[i][k] - want) > 2e-5 * (1 << 30))
+                    tab_ok = 0;
+                if (i < UAC_FIR_L / 2u)
+                    chk += (uint64_t)(i * UAC_FIR_N + k + 1u) * (uint64_t)(int64_t)rs_tab[i][k];
+            }
+            sum_ok &= t == (int64_t)1 << 30;
         }
-        sum_ok &= t == (int64_t)1 << 30;
+        check("FIR table = sinc x Kaiser (24 x 160 taps, beta 9, 22 kHz); phases sum to 1.0", tab_ok && sum_ok);
+        check("  the RAM table from the flash's third differences: exactly the generator's (UAC_FIR_CHK)", chk == UAC_FIR_CHK);
     }
-    check("FIR table = sinc x Kaiser (24 x 160 taps, beta 9, 22 kHz); phases sum to 1.0", tab_ok && sum_ok);
 
     /* every frame against the double-precision resampler: noise (period 1000), +-1 LSB */
     rs_reset();
@@ -792,6 +840,25 @@ static void test_resampler(void)
     }
     snprintf(s, sizeof s, "1 s of noise: every frame = the double-precision resampler +-1 LSB (%u off)", bad);
     check(s, bad == 0);
+    {   /* (0.8.9) the same frames as 0.8.8's loop, bit for bit: noise at full scale and past it (the clip), 10 s */
+        uint32_t m, mo, j, nn, diff = 0, tot = 0;
+        int32_t l[40], r[40], ol[40], orr[40];
+        rs_reset();
+        memset(old_l, 0, sizeof old_l); memset(old_r, 0, sizeof old_r); old_w = old_ph = 0;
+        for (nn = 0; nn < 441000u; nn += 32u) {
+            for (i = 0; i < 64u; i++) {
+                seed = seed * 1664525u + 1013904223u;
+                blk[i] = (int32_t)(seed >> 15) - 65536;      /* +-2 x full scale: the clip too */
+            }
+            m = rs_block(blk, 32, l, r);
+            mo = old_block(blk, 32, ol, orr);
+            diff += m != mo;
+            for (j = 0; j < m && j < mo; j++, tot++)
+                diff += l[j] != ol[j] || r[j] != orr[j];
+        }
+        snprintf(s, sizeof s, "  bit for bit the 0.8.8 resampler (flash table, phases backwards): %u frames, %u differ", tot, diff);
+        check(s, diff == 0 && tot > 470000u);
+    }
     snprintf(s, sizeof s, "  frames out / in: %u / %u (160 / 147)", k, n);
     check(s, k == (160u * n - 1u) / 147u + 1u);          /* the outputs whose newest input frame is < n */
 
@@ -825,6 +892,22 @@ static void test_resampler(void)
     snprintf(s, sizeof s, "  flat 20 Hz .. 18 kHz within %+.3f .. %+.3f dB; SNR 100 Hz .. 15 kHz >= %.1f dB", gmin,
              gmax, worst);
     check(s, gmin > -0.2 && gmax < 0.05);
+    {   /* (0.8.9) THD and aliasing: the largest single spur in 20 Hz .. 20 kHz (harmonics, images folded back) under a
+         * -1 dBFS sine, at the bins of a 65536-point Hann FFT; and tones above 20 kHz, whose only content in band is
+         * their aliases */
+        static const double FS2[] = {1000, 6000, 15000, 19000, 20500, 21500, 22000};
+        double worst_s = -999;
+        for (i = 0; i < sizeof FS2 / sizeof FS2[0]; i++) {
+            sine_run(FS2[i], 0);
+            sine_fit(yl + SKIP, FS2[i], &amp, &sb, &sf);
+            if (spur_db > worst_s)
+                worst_s = spur_db;
+            snprintf(s, sizeof s, "  %5.0f Hz -1 dBFS: the largest spur in band %.1f dB under it", FS2[i], -spur_db);
+            check(s, spur_db < -95.0);
+        }
+        snprintf(s, sizeof s, "  THD + aliasing: no spur above %.1f dB of the tone (the 16-bit input's own quantisation spurs)", worst_s);
+        check(s, worst_s < -95.0);
+    }
 
     /* the cost: 10 s of stereo input through uac_tap (48 kHz) */
     {
