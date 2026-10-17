@@ -98,7 +98,7 @@ Los nombres de abajo son los que usa el firmware (la pantalla HARDWARE CALIBRATI
 | Botón | Toque | Mantener |
 | --- | --- | --- |
 | **HOME** | Vuelve a HOME (el ecosistema). | Unos 0,7 s: abre el **MENU**. |
-| **ENV** | Páginas ENV. | (sin capa) |
+| **ENV** | La lente de ENV (0.8.5): desde otra página, la última página ENV (al encender, ENV); en ENV el otro juego del nivel (ENV ↔ DEST, ENV ↔ ENV DEST). | (sin capa) |
 | **LFO** | Páginas LFO. | Capa **MACRO**: KNOB 1–4 son M1–M4. |
 | **FX** | La lente de FX (0.8.5): desde otra página la última página FX; en FX lo siguiente del nivel (TRACK: su juego; BUSES: abre el módulo; EFFECT: su página siguiente). | Capa de **FX punch-in**. |
 | **SCL** | Páginas SCL. | Capa **SCL**: las teclas fijan la tónica. |
@@ -216,6 +216,7 @@ recuerda su nivel y el juego de cada nivel; su botón desde otro lado te devuelv
 | Parte | Niveles (SELECT) | Juegos (toque) | PRESETS |
 | --- | --- | --- | --- |
 | **HOME** | **ECO** (los seis seres) · **BEING** (el ser de la pista, sus perillas como órganos) · **GEN** (el generador) | ECO: HOME / MACROS · BEING: HOME / ROUTES · GEN: GEN 1/3 → 2/3 → 3/3 (un toque de HOME cada uno) | los sonidos (GEN: el GENRE) |
+| **ENV** | **TRACKS** (las seis envolventes) · **ENV** (la de la pista) · **STAGE** (una etapa) | TRACKS: ENV / DEST · ENV: ENV / ENV DEST · STAGE | TRACKS, ENV: la pista · STAGE: la etapa |
 | **EDIT** | **SOUND** (EDIT 1 / EDIT 2; DRUM: el kit) · **TONE** (el filtro, las voces) · el detalle: **FOCUS** (un sinte), **OPERATOR** (FM6), **SOUND** (DRUM: un sonido) | SOUND: EDIT 1 · EDIT 2 (DRUM: KIT · KIT 2 · KIT 3) · TONE: FILTER · MORPH · RETRIG · ROTOR · VOICE · VOICE 2, las que tenga el motor (DRUM: X-MOD · FILTER · STEREO · LEVELS · LEVELS 2 · VOICE) · FOCUS · OPERATOR: OPERATOR · OP ENV · OPERATOR 2 · DRUM: SOUND 1–4 | SOUND, TONE: los sonidos · el detalle: lo de KNOB 1 (el parámetro, el operador, el sonido del kit) |
 
 - **ECO**: los seres de las seis pistas en una grilla, cada uno nadando en su celda con su sonido (un golpe lo
@@ -227,6 +228,11 @@ recuerda su nivel y el juego de cada nivel; su botón desde otro lado te devuelv
 - **BEING**: el ser de la pista grande, sus cuatro perillas de HOME como órganos en las esquinas (un medidor cada una,
   su valor, una vena hasta el cuerpo), el nombre del sonido debajo. **ROUTES**: M1–M4 a la izquierda con sus rutas
   dibujadas hasta donde van (**T2 CUT+62**).
+- **ENV** › **TRACKS**: las envolventes de las seis pistas como mosaicos (la seleccionada teñida, con su nivel actual
+  como punto; DEST: FILTER, PITCH y SHAPE como barras debajo de cada una); las perillas son de la pista seleccionada —
+  **PRESETS** (o ALGORITHM) elige la pista. **ENV**: la envolvente grande / las columnas de ENV DEST, como antes.
+  **STAGE** (nueva): KNOB 1 elige la etapa (ATK DEC SUS REL; también PRESETS), KNOB 2 la ajusta, KNOB 3 LOOP; la
+  envolvente entera con la etapa sombreada sobre la curva propia de la etapa, grande, y su tiempo.
 - **EDIT** › **SOUND**: el ser del motor a la izquierda (vivo con el sonido, el nombre de la página arriba, el del
   sonido abajo), el osciloscopio en un pozo y los ocho parámetros E como fichas a la derecha, encendidas las cuatro de
   la página. **TONE**: **FILTER** dibuja la respuesta de TYPE en CUT con su pico de RES (LP, HP, BP, COMB), CUT una
@@ -249,6 +255,7 @@ violeta, con el nombre violeta, y dice **OCT+**; apretá OCT+ para ejecutarla.
 | --- | --- | --- | --- | --- |
 | ENV | ATK | DEC | SUS | REL |
 | ENV DEST | FILTER | PITCH | SHAPE | LOOP |
+| STAGE (0.8.5) | STAGE (ATK DEC SUS REL) | su valor | LOOP | — |
 
 **LFO** (por pista)
 

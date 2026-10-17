@@ -629,6 +629,8 @@ static const page_t PAGES[] = {
                                                          * TP since Felucca, on no page until now) */
     {"FOCUS", FAM_EDIT, SC_TRACK, GR_FOCUS, {0xFF, 0xFF, 0xFF, 0xFF}},   /* EDIT's detail on a synth: PARAM (E1..E8), its
                                                          * VALUE, the MOD slot aimed at it: SRC AMT (ui_input.c focus_knob) */
+    {"STAGE", FAM_ENV, SC_TRACK, GR_STAGE, {0xFF, 0xFF, P_ELOOP, 0xFF}},   /* ENV's detail: STAGE (ATK DEC SUS REL), its
+                                                         * value, LOOP (ui_input.c stage_knob) */
 };
 #define NPAGES (sizeof(PAGES) / sizeof(PAGES[0]))
 static uint8_t mod_ui_slot;      /* the MOD page: the matrix slot (0..3) KNOB 2..4 edit */

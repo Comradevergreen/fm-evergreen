@@ -1416,6 +1416,13 @@ static uint32_t graph_signature(void)
         h ^= (mod_ui_slot + 1u) * 40503u;
     if (pg->graph == GR_FOCUS)                       /* (0.8.5) EDIT > FOCUS: the parameter */
         h ^= (ui.focus + 1u) * 2246822519u;
+    if (pg->graph == GR_STAGE)                       /* .. ENV > STAGE: the stage */
+        h ^= (ui.stage + 1u) * 3266489917u;
+    if (pd_on()) {                                   /* .. a lens of ui_lens.c: its level (ENV's TRACKS: every track live) */
+        h ^= (pd_level() + 1u) * 668265263u;
+        if (pd_cur() == PD_ENV && pd_level() == 0u)
+            h ^= ui.frame / 2u * 2654435761u;
+    }
     if ((pg->graph == GR_SLCR || pg->graph == GR_SLPIT) && song.g[G_SLMODE])   /* the SLICER's step playing */
         h ^= (sl.idx + 1u) * 2654435761u;
     if (pg->graph == GR_SLCR || pg->graph == GR_SLPIT)   /* (its globals: the page's knobs and the bus) */
@@ -2136,6 +2143,7 @@ static void graph_song(void)
 #include "ui_lzfx.c"                                /* (0.8.5) FX's lens: its levels' panels */
 #include "ui_lzhome.c"                              /* (0.8.5) HOME's lens: ECO, BEING, the critters */
 #include "ui_lzedit.c"                               /* (0.8.5) EDIT's lens panels */
+#include "ui_lzpage.c"                               /* (0.8.5) ENV's, LFO . MOD's, SCL . ARP's, GLO's */
 static void draw_graph(void)
 {
     const page_t *pg = cur_page();
@@ -2199,6 +2207,7 @@ static void draw_graph(void)
         cv_oy = 0;
         graph_fx_lz(t, pg);
     } else if (lz_on() && lz_fam() == LZ_EDIT && (cv_oy = 0, graph_edit_lz(t, pg))) {   /* (0.8.5) EDIT's (ui_lzedit.c) */
+    } else if (lz_on() && lz_fam() == LZ_ENV && (cv_oy = 0, graph_env_lz(t, pg))) {     /* .. ENV's (ui_lzpage.c) */
     } else {
         cv_oy = GOY;
         switch (pg->graph) {

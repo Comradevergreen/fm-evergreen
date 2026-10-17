@@ -91,7 +91,7 @@ static int32_t pd_k_in(uint32_t pd, uint32_t lv, uint32_t page)   /* the page's 
     return -1;
 }
 #define PD_LVGET(pd) ((uint32_t)(ui.pdlv[pd] ^ PD_DEF_LV[pd]) % 3u)   /* (0, power-on: the default) */
-#define PD_LIVE (1u << PD_EDIT)                                     /* the domains drawn as lenses (bit PD_*) */
+#define PD_LIVE (1u << PD_EDIT | 1u << PD_ENV)                                     /* the domains drawn as lenses (bit PD_*) */
 static int pd_on(void) { return !ui.home && !page_over && ((PD_LIVE >> pd_of_fam(PAGES[ui.page].fam)) & 1u); }
 static uint32_t pd_cur(void) { return pd_of_fam(PAGES[ui.page].fam); }
 /* the level shown: the one remembered when the page is in it (ENV is in TRACKS and in ENV), else the page's own */
@@ -154,11 +154,13 @@ static int pd_button(uint32_t fam)
     if (!here && fam != FAM_ARP && fam != FAM_GLO && fam != FAM_TRK) {   /* (from elsewhere: its last page, where it is) */
         uint32_t p = ui.fam_last[fam], m;
         int32_t k;
-        for (m = 0; p < NPAGES && m < 3u; m++)
-            if ((fam != FAM_SCL || m < 2u) && (k = pd_k_in(pd, m, p)) >= 0) {
-                pd_show(pd, m, (uint32_t)k);
+        for (m = 0; p < NPAGES && m < 3u; m++) {      /* (from the level it was left at: ENV is in TRACKS and ENV) */
+            uint32_t l = (lv + m) % 3u;
+            if ((fam != FAM_SCL || l < 2u) && (k = pd_k_in(pd, l, p)) >= 0) {
+                pd_show(pd, l, (uint32_t)k);
                 return 1;
             }
+        }
     }
     if (fam == FAM_SCL)
         lv = here ? (lv == 0u ? 1u : 0u) : lv == 2u ? 0u : lv;

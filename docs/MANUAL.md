@@ -97,7 +97,7 @@ The names below are the ones the firmware uses (the HARDWARE CALIBRATION screen 
 | Button | Tap | Hold |
 | --- | --- | --- |
 | **HOME** | Back to HOME (the ecosystem). | About 0.7 s: opens the **MENU**. |
-| **ENV** | ENV pages. | (no layer) |
+| **ENV** | ENV's lens (0.8.5): from another page the ENV page last shown (at power-on ENV); on ENV the level's other set (ENV ↔ DEST, ENV ↔ ENV DEST). | (no layer) |
 | **LFO** | LFO pages. | **MACRO** layer: KNOB 1–4 are M1–M4. |
 | **FX** | FX's lens (0.8.5): from another page the FX page last shown; on FX the level's next (TRACK: its set; BUSES: the module opens; EFFECT: its next page). | **Punch-in FX** layer. |
 | **SCL** | SCL pages. | **SCL** layer: keys set the root. |
@@ -213,6 +213,7 @@ level's set; its button from elsewhere brings you back there.
 | Part | Levels (SELECT) | Sets (tap) | PRESETS |
 | --- | --- | --- | --- |
 | **HOME** | **ECO** (the six beings) · **BEING** (the track's being, its knobs as organs) · **GEN** (the generator) | ECO: HOME / MACROS · BEING: HOME / ROUTES · GEN: GEN 1/3 → 2/3 → 3/3 (a HOME tap each) | the sounds (GEN: the GENRE) |
+| **ENV** | **TRACKS** (the six envelopes) · **ENV** (the track's) · **STAGE** (one stage) | TRACKS: ENV / DEST · ENV: ENV / ENV DEST · STAGE | TRACKS, ENV: the track · STAGE: the stage |
 | **EDIT** | **SOUND** (EDIT 1 / EDIT 2; DRUM: the kit) · **TONE** (the filter, the voices) · the detail: **FOCUS** (a synth), **OPERATOR** (FM6), **SOUND** (DRUM: one sound) | SOUND: EDIT 1 · EDIT 2 (DRUM: KIT · KIT 2 · KIT 3) · TONE: FILTER · MORPH · RETRIG · ROTOR · VOICE · VOICE 2, those the engine has (DRUM: X-MOD · FILTER · STEREO · LEVELS · LEVELS 2 · VOICE) · FOCUS · OPERATOR: OPERATOR · OP ENV · OPERATOR 2 · DRUM: SOUND 1–4 | SOUND, TONE: the sounds · the detail: KNOB 1's (the parameter, the operator, the kit's sound) |
 
 - **ECO**: the six tracks' beings on a grid, each swimming in its cell with its sound (a hit kicks it), its name under
@@ -223,6 +224,11 @@ level's set; its button from elsewhere brings you back there.
 - **BEING**: the track's being large, its four HOME knobs as organs at the corners (a gauge each, its value, a vein to
   the body), the sound's name under it. **ROUTES**: M1–M4 down the left with their routes drawn to where they go
   (**T2 CUT+62**).
+- **ENV** › **TRACKS**: the six tracks' envelopes as tiles (the selected one tinted with its level now a dot; DEST:
+  FILTER, PITCH and SHAPE as bars under each), the knobs the selected track's — **PRESETS** (or ALGORITHM) picks the
+  track. **ENV**: the envelope large / ENV DEST's columns, as before. **STAGE** (new): KNOB 1 picks the stage (ATK DEC
+  SUS REL; PRESETS too), KNOB 2 sets it, KNOB 3 LOOP; the whole envelope with the stage shaded over the stage's own
+  curve, large, and its time.
 - **EDIT** › **SOUND**: the engine's being on the left (alive with the sound, the page's name over it, the sound's
   under it), the scope in a well and all eight E parameters as chips on the right, the page's four lit. **TONE**:
   **FILTER** draws TYPE's response at CUT with its RES peak (LP, HP, BP, COMB), CUT a line, DRIVE / DIST a row of
@@ -243,6 +249,7 @@ level's set; its button from elsewhere brings you back there.
 | --- | --- | --- | --- | --- |
 | ENV | ATK | DEC | SUS | REL |
 | ENV DEST | FILTER | PITCH | SHAPE | LOOP |
+| STAGE (0.8.5) | STAGE (ATK DEC SUS REL) | its value | LOOP | — |
 
 **LFO** (per track)
 

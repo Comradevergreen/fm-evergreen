@@ -538,6 +538,10 @@ JIANT's modifications are distributed under the same license.
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
 
 ### v0.8.5
+- **ENV is a lens, as the approved mock-up**: **TRACKS · ENV · STAGE** (it opens on ENV). TRACKS: the six tracks'
+  envelopes as tiles, the selected one tinted with its level live (DEST: the three amounts under each), PRESETS picks
+  the track; ENV: the envelope / ENV DEST as before; STAGE, a new page: KNOB 1 the stage, KNOB 2 its value, KNOB 3 LOOP,
+  the stage shaded on the envelope over its own curve large.
 - **EDIT is a lens, as the approved mock-up**: **SOUND · TONE · the detail**, SELECT zooms, an EDIT tap goes round the
   level's sets. SOUND: the engine's being on the left (graph_being's, alive with the sound; WHEEL's and FM6's EDIT 1 / 2
   too, their old pictures gone), the scope in a well and the eight E parameters as chips; DRUM keeps its colony. TONE:

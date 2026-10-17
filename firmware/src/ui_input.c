@@ -1073,6 +1073,16 @@ static void edit_param(uint32_t slot, int32_t steps)
         focus_knob(slot, steps);
         return;
     }
+    if (pg->graph == GR_STAGE && slot < 2u) {             /* (0.8.5) ENV > STAGE: the stage, its value */
+        if (slot == 0u)
+            ui.stage = (uint8_t)clamp((int32_t)(ui.stage & 3u) + (steps > 0 ? 1 : -1), 0, 3);
+        else {
+            uint32_t id = P_ATK + (ui.stage & 3u);
+            TSEL->p[id] = (int16_t)param_turn(&TP[id], TSEL->p[id], accel(EN_K1 + 1u, steps, 127));
+            motion_capture(TSEL, id, TSEL->p[id]);
+        }
+        return;
+    }
     if (DX_KIT3(pg)) {                                    /* (0.6.54) KIT 3: BP, FEEDBK (0.6.58: IMAGE on STEREO) */
         dx_kit3_knob(slot, steps);
         return;
@@ -1541,6 +1551,13 @@ static int pd_presets(int32_t s)
             ui.hot_col = 0;
             ui.hot_t = 40;
         }
+        return 1;
+    }
+    if (pd == PD_ENV) {                                 /* ENV: TRACKS and ENV the track, STAGE the stage */
+        if (lv < 2u)
+            track_select((uint32_t)clamp((int32_t)song.sel + (s > 0 ? 1 : -1), 0, (int32_t)trk_live - 1));
+        else
+            edit_param(0, s);
         return 1;
     }
     return 0;
@@ -2458,7 +2475,7 @@ static void ui_input_frame(void)
         }
         if (ui.home || pg->scope == SC_STEP || pg->scope == SC_TRK || page_desc(pg, k, &hv) ||
             ((pg->graph == GR_USER || pg->graph == GR_MOD || pg->graph == GR_MSEQ || pg->graph == GR_PATS) && k == 0u)
-            || pg->graph == GR_SONG || pg->graph == GR_DXSND || pg->graph == GR_FOCUS) {   /* (not an empty column) */
+            || pg->graph == GR_SONG || pg->graph == GR_DXSND || pg->graph == GR_FOCUS || pg->graph == GR_STAGE) {   /* (not an empty column) */
             ui.hot_col = (uint8_t)k;
             ui.hot_t = 40;
         }

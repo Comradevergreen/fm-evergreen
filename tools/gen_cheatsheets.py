@@ -141,7 +141,7 @@ def controls():
     ]
     t = '<table>' + ''.join(f'<tr><td class="n">{e(n)}</td><td>{d}</td></tr>' for n, d in rows) + '</table>'
     pb = [
-        ('ENV', 'ENV · ENV DEST', '—'),
+        ('ENV', 'the zoom level\'s other set (SELECT zooms; PRESETS the track / the stage): TRACKS: ENV · DEST  |  ENV: ENV · ENV DEST  |  STAGE', '—'),
         ('LFO', 'LFO · LFO DEST · MOD · MSEQ · MSEQ 2', 'MACROS M1–M4 (stay latched)'),
         ('FX', 'the zoom level\'s next (SELECT zooms; PRESETS the module): TRACK: SENDS · DIST · AUTO PAN  |  BUSES: DLY MIX · REV SIZE · CHORUS DEPTH · SLICER DEPTH, FX opens the module  |  EFFECT: DELAY · REVERB · CHORUS · SLICER · MASTER · PUNCH, their pages',
          'PUNCH-IN FX'),
@@ -223,7 +223,7 @@ def controls():
 
     b.append(sec('EVERY PAGE · KNOB 1 – 4'))
     fams = [
-        ('ENV', HEAT[0], [('ENV', 'ATK DEC SUS REL'), ('ENV DEST', 'FILTER PITCH SHAPE LOOP')]),
+        ('ENV', HEAT[0], [('ENV', 'ATK DEC SUS REL'), ('ENV DEST', 'FILTER PITCH SHAPE LOOP'), ('STAGE', 'STAGE VALUE LOOP -')]),
         ('LFO', HEAT[1], [('LFO', 'RATE WAVE PHASE FADE'), ('LFO DEST', 'PITCH FILTER SHAPE AMP'), ('MOD', 'SLOT SRC DEST AMT'),
                           ('MSEQ', 'STEP LEVEL LEN SLEW'), ('MSEQ 2', 'DIV - - -')]),
         ('FX', HEAT[5], [('FX', 'DIST CHORUS DLY REV'), ('DIST', 'DIST TYPE TONE -'), ('AUTO PAN', 'DEPTH RATE SYNC WAVE'), ('SLICER', 'MODE PAT RATE DEPTH'),

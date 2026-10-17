@@ -2740,8 +2740,8 @@ static int test_chain(void)
  * SONG: the selection, as KNOB 1; TOOLS: nothing; HOME, PRESETS and every other page: the next sound, the steps untouched, SAVE held undoes it */
 static int test_presets_knob(void)
 {
-    int bad = 0, cur_ok = 1, sel_ok = 1, snd_ok = 1, tools_ok = 1, grid_ok, bar_ok = 1, fxm_ok = 1, det_ok = 1;
-    uint32_t i, n_snd = 0, n_cur = 0, n_bar = 0, n_det = 0;
+    int bad = 0, cur_ok = 1, sel_ok = 1, snd_ok = 1, tools_ok = 1, grid_ok, bar_ok = 1, fxm_ok = 1, det_ok = 1, env_ok = 1;
+    uint32_t i, n_snd = 0, n_cur = 0, n_bar = 0, n_det = 0, n_env = 0;
     for (i = 0; i < NPAGES; i++) {
         track_t before;
         uint32_t g = PAGES[i].graph, uslot, ppick, fxm0;
@@ -2780,6 +2780,10 @@ static int test_presets_knob(void)
                 tools_ok &= same_snd && same_steps && !ui.confirm;
             } else if (PAGES[i].fam == FAM_FX && fx_trk_k(i) < 0) {   /* (0.8.5) FX's lens, BUSES / EFFECT: the module */
                 fxm_ok &= same_snd && same_steps && fx_on() && ui.fxmod != fxm0;
+            } else if (pd_on() && pd_cur() == PD_ENV) {   /* (0.8.5) ENV: TRACKS, ENV the track; STAGE the stage */
+                env_ok &= !memcmp(trk[0].p, before.p, sizeof before.p) && !memcmp(trk[0].step, before.step, sizeof before.step) &&
+                          ui.page == i && (pd_level() < 2u ? song.sel == 1u : ui.stage == 1u);
+                n_env++;
             } else if (pd_on() && pd_cur() == PD_EDIT && pd_level() == 2u) {   /* (0.8.5) EDIT's detail: KNOB 1's */
                 det_ok &= TSEL->preset == before.preset && TSEL->eng_req == before.eng_req && same_steps && ui.page == i;
                 n_det++;
@@ -2798,6 +2802,8 @@ static int test_presets_knob(void)
     bad += check("0.8.5 FX's lens: PRESETS on BUSES and EFFECT the module; the sound and the steps stay", fxm_ok);
     bad += check("0.8.5 LENTE: PRESETS on EDIT's detail (FOCUS, OPERATOR, SOUND 1..4): KNOB 1's; the preset stays",
                  det_ok && n_det >= 1u);
+    bad += check("0.8.5 LENTE: PRESETS on ENV: TRACKS and ENV the track, STAGE the stage; the sound and the steps stay",
+                 env_ok && n_env >= 3u);
     bad += check("#94 PRESETS elsewhere (EDIT, ENV, LFO, FX, SCL, ARP, MIXER, GLOBAL, ...): the next sound, the steps stay",
                  snd_ok && n_snd >= 15u);
     ui_power_on();
@@ -2969,10 +2975,11 @@ static int test_product_ux(void)
         uint16_t graph[240 * H_GRAPH], columns[240 * (Y_SEP_END - Y_LABEL)];
         ui_power_on(); palette_set(p); settings.zoom = 1;
         open_family(FAM_ENV); frame();
-        memcpy(graph, host_screen + Y_GRAPH * 240, sizeof graph);
+        uint32_t gy = lz_on() ? LZ_GRAPH_Y : Y_GRAPH;   /* (0.8.5: ENV a lens, its panel under the cards' 38 px) */
+        memcpy(graph, host_screen + gy * 240, sizeof graph);
         memcpy(columns, host_screen + Y_LABEL * 240, sizeof columns);
         ui.hot_col = 1; ui.hot_t = 40; ui.force = 1; ui_draw();
-        ok &= !memcmp(graph, host_screen + Y_GRAPH * 240, sizeof graph);
+        ok &= !memcmp(graph, host_screen + gy * 240, sizeof graph);
         int changed = 0;
         for (uint32_t y = 0; y < Y_SEP_END - Y_LABEL; y++) for (uint32_t x = 0; x < 240; x++) {
             uint16_t old = columns[y * 240 + x], now = host_screen[(Y_LABEL + y) * 240 + x];
@@ -7352,6 +7359,10 @@ static int test_dice_all(void)
         {   /* (0.6.27) 40 throws: never the same piece, the tempo moved every time (even from the same random state) */
             uint32_t h[40], n2, m, same = 0, bpm_same = 0;
             int16_t b0;
+            gp.genre = 0; gp.energy = 50; gp.form = 1; gp.complex = 50; gp.swing = GA_AUTO; gp.human = 30;   /* (0.8.5: the
+                                                         * settings as at power-on, whatever the GEN tests left: the 40
+                                                         * throws the same whatever ran before, as 0.6.92 meant) */
+            for (n2 = 0; n2 < GP_N; n2++) gp.amt[n2] = GA_AUTO;
             host_ticks = 5000000u;                      /* (0.6.92) the same 40 seeds whatever ran before (the seed mixes the ticks in) */
             for (n2 = 0; n2 < 40u; n2++) {
                 b0 = song.g[G_BPM];
@@ -9020,7 +9031,7 @@ static int test_bpm_lock(void)
     turn(EN_SELECT, -5);
     ok &= str_eq(cur_page()->title, "EDIT 1");                        /* (no wrap: the lens's first level) */
     go_title("ENV DEST"); frame(); turn(EN_SELECT, 3);
-    ok &= str_eq(cur_page()->title, "ENV DEST") && !ui.home;          /* (the section's last: it stays, no LFO) */
+    ok &= str_eq(cur_page()->title, "STAGE") && !ui.home;             /* (0.8.5 LENTE: ENV -> STAGE, the last; no LFO) */
     bad += check("0.6.69: SELECT alone scrolls the section's pages (no wrap, never out of it); HOME: DICE ALL; never the tempo", ok);
     go_home(); frame();
 
@@ -9059,10 +9070,10 @@ static int test_bpm_lock(void)
         b0 = song.g[G_BPM]; fm1_ms += 1200u;
         turn(EN_SELECT, 1);                             /* (0.6.67) SELECT alone: a page on, no dice */
         for (j = 0; j < 8u; j++) moved += TSEL->p[P_E0 + j] != before[j];
-        ok = !moved && song.g[G_BPM] == b0 && str_eq(cur_page()->title, "ENV DEST") && !ui.confirm;
+        ok = !moved && song.g[G_BPM] == b0 && str_eq(cur_page()->title, "STAGE") && !ui.confirm;   /* (0.8.5: a zoom) */
         fm1_ms += 1200u;
         held_turn(B_EDIT, 1);                           /* EDIT held + SELECT: the sound's dice */
-        ok &= str_eq(cur_page()->title, "ENV DEST");    /* (no page: EDIT's tap swallowed) */
+        ok &= str_eq(cur_page()->title, "STAGE");       /* (no page: EDIT's tap swallowed) */
         for (j = 0; j < 8u; j++) moved += TSEL->p[P_E0 + j] != before[j];
         ok &= song.g[G_BPM] == b0 && ui.confirm == CF_DICE_SOUND && moved > 0u && undo_ok;   /* (0.6.65) heard, asked */
         {
@@ -9260,7 +9271,7 @@ static int test_large(void)
         q = p;
         ok &= settings_import(&q, (int)sizeof q) == 1 && !(ui_prefs & ~PREF_ACCEL_OFF);
         ui.force = 1; frame();
-        ok &= large_kind() == LK_OFF && lg_px(30, Y_SEP_END + 1) == T_BG;
+        ok &= large_kind() == LK_OFF && lg_px(30, lz_on() ? LZ_CARD_Y - 1 : Y_SEP_END + 1) == T_BG;   /* (0.8.5: a lens) */
         bad += check("#15 LARGE saved with the settings; settings from before it: OFF (idempotent)", ok);
     }
     ui_prefs = 0;
@@ -9859,6 +9870,52 @@ static int test_lz_edit(void)
     return bad;
 }
 
+/* ENV (ui_lens.c, ui_lzpage.c): TRACKS (ENV / DEST) . ENV (ENV / ENV DEST) . STAGE; it opens on ENV; PRESETS the track
+ * (TRACKS, ENV) or the stage (STAGE); STAGE's knobs: the stage, its value, LOOP */
+static int test_lz_env(void)
+{
+    int bad = 0, ok;
+    int16_t v;
+    char b[8];
+    ui_power_on(); frame();
+    press(B_ENV); frame();
+    ok = pd_on() && lz_fam() == LZ_ENV && pd_level() == 1u && str_eq(cur_page()->title, "ENV") && lz_tab_lit(1) &&
+         lz_crumb_is("LENTE \xB7 ENV \xB7 ENV") && crumb_count(b) && str_eq(b, "1/2");
+    frames(320); press(B_ENV); frame();
+    ok &= str_eq(cur_page()->title, "ENV DEST") && lz_crumb_is("LENTE \xB7 ENV \xB7 ENV DEST");
+    turn(EN_SELECT, -1); frame();
+    ok &= pd_level() == 0u && lz_tab_lit(0) && str_eq(cur_page()->title, "ENV") && lz_crumb_is("LENTE \xB7 TRACKS \xB7 ENV");
+    frames(320); press(B_ENV); frame();
+    ok &= str_eq(cur_page()->title, "ENV DEST") && lz_crumb_is("LENTE \xB7 TRACKS \xB7 DEST");
+    turn(EN_SELECT, 2); frame();
+    ok &= pd_level() == 2u && str_eq(cur_page()->title, "STAGE") && lz_tab_lit(2);
+    bad += check("0.8.5 LENTE ENV: opens on ENV; TRACKS (ENV / DEST) <-> ENV (ENV / ENV DEST) <-> STAGE; tabs, breadcrumb", ok);
+    turn(EN_SELECT, -2); frame();                                   /* TRACKS: PRESETS the track */
+    ok = pd_level() == 0u && song.sel == 0u;
+    turn(EN_PRESET, 1); frame();
+    ok &= song.sel == 1u && pd_level() == 0u && pd_on();
+    turn(EN_PRESET, -1); frame();
+    ok &= song.sel == 0u;
+    bad += check("0.8.5 LENTE ENV > TRACKS: PRESETS picks the track (the tiles), the level stays", ok);
+    go_title("STAGE"); frame();
+    ui.stage = 0;
+    turn(EN_K1, 1); frame();
+    ok = ui.stage == 1u && !strncmp(ui.col[1], "DEC|", 4);
+    v = TSEL->p[P_DEC];
+    turn(EN_K2, 3); frame();
+    ok &= TSEL->p[P_DEC] > v;
+    turn(EN_PRESET, 1); frame();
+    ok &= ui.stage == 2u;
+    v = TSEL->p[P_ELOOP];
+    turn(EN_K3, 1); frame();
+    ok &= TSEL->p[P_ELOOP] != v;
+    turn(EN_K1, 5); frame();
+    ok &= ui.stage == 3u;                                           /* (no wrap) */
+    bad += check("0.8.5 ENV > STAGE: KNOB 1 the stage (PRESETS too), 2 its value, 3 LOOP", ok);
+    ui_power_on();
+    return bad;
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IONBF, 0);
@@ -9866,6 +9923,7 @@ int main(void)
     bad += test_large_face();
     bad += test_lz_home();
     bad += test_lz_edit();
+    bad += test_lz_env();
     bad += test_sound_loads();
     bad += test_patterns();
     bad += test_init_system();

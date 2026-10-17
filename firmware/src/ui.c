@@ -202,6 +202,7 @@ static struct {
                                   * default) and each level's set */
     uint8_t hlv, hset[2];        /* .. HOME: ECO (0) or BEING (1), each one's set (HOME / MACROS, HOME / ROUTES) */
     uint8_t focus;               /* .. EDIT > FOCUS: the parameter (E1..E8: 0..7) */
+    uint8_t stage;               /* .. ENV > STAGE: the stage (ATK DEC SUS REL: 0..3) */
     uint8_t ent_len, ent_arp, ent_res, ent_ord, ent_oct, ent_nn;   /* (0.6.37) that entry while held (ui_input.c
                                   * seq_entry): KNOB 1 its LEN in steps; ARP pressed: arpeggiated, KNOB 1 the steps a
                                   * note (RES), 2 the ORDER, 3 the octaves; the keys' notes in order of pitch */

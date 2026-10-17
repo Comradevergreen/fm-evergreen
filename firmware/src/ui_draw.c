@@ -932,6 +932,18 @@ static void draw_columns(void)
         }
         return;
     }
+    if (cur_page()->graph == GR_STAGE) {               /* (0.8.5) ENV > STAGE: the stage, its value, LOOP */
+        uint32_t id = P_ATK + (ui.stage & 3u);
+        int16_t *vp = &TSEL->p[id];
+        draw_column(0, "STAGE", TP[id].label, "", VAL(0u), (int32_t)(ui.stage & 3u) * 1000 / 3, ICON_NONE);
+        param_format(&TP[id], *vp, val, &unit);
+        card_mot_of(vp);
+        draw_column(1, TP[id].label, val, unit, VAL(1u), RATIO(&TP[id], *vp), ICON_NONE);
+        param_format(&TP[P_ELOOP], TSEL->p[P_ELOOP], val, &unit);
+        draw_column(2, TP[P_ELOOP].label, val, unit, VAL(2u), RATIO(&TP[P_ELOOP], TSEL->p[P_ELOOP]), ICON_NONE);
+        draw_column(3, "", "", "", T_DIM, -1, ICON_NONE);
+        return;
+    }
     if (cur_page()->graph == GR_DXSND) {               /* EDIT > SOUND (ui_dx.c) */
         dx_cards(cur_page());
         return;
