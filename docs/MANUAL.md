@@ -101,7 +101,7 @@ The names below are the ones the firmware uses (the HARDWARE CALIBRATION screen 
 | **LFO** | LFO pages. | **MACRO** layer: KNOB 1–4 are M1–M4. |
 | **FX** | FX's lens (0.8.5): from another page the FX page last shown; on FX the level's next (TRACK: its set; BUSES: the module opens; EFFECT: its next page). | **Punch-in FX** layer. |
 | **SCL** | SCL pages. | **SCL** layer: keys set the root. |
-| **EDIT** | EDIT pages (on STEP: clears the step; on USER / PROJECT: rename). | **EDIT** layer: INIT, RECALL, DRUM-X sound mutes. |
+| **EDIT** | EDIT's lens (0.8.5): from another page the EDIT page last shown; on EDIT the level's next set (SOUND: EDIT 1 ↔ EDIT 2; TONE: FILTER → MORPH → … → VOICE 2; the detail: OPERATOR → OP ENV → OPERATOR 2, SOUND 1–4). On STEP: clears the step; on USER / PROJECT: rename. | **EDIT** layer: INIT, RECALL, DRUM-X sound mutes. |
 | **GLO** | MIXER → GLOBAL → SYSTEM → MIXER. | **GLO** layer: mutes, solos, levels, tap tempo, UNDO. |
 | **SAVE** | SAVE's lens (0.8.5): from another page SOUND (USER, SAVE ready); on SAVE the level's other set. | **SAVE** layer: play/store sections live. |
 | **ARP** | ARP pages. | (no layer) |
@@ -213,6 +213,7 @@ level's set; its button from elsewhere brings you back there.
 | Part | Levels (SELECT) | Sets (tap) | PRESETS |
 | --- | --- | --- | --- |
 | **HOME** | **ECO** (the six beings) · **BEING** (the track's being, its knobs as organs) · **GEN** (the generator) | ECO: HOME / MACROS · BEING: HOME / ROUTES · GEN: GEN 1/3 → 2/3 → 3/3 (a HOME tap each) | the sounds (GEN: the GENRE) |
+| **EDIT** | **SOUND** (EDIT 1 / EDIT 2; DRUM: the kit) · **TONE** (the filter, the voices) · the detail: **FOCUS** (a synth), **OPERATOR** (FM6), **SOUND** (DRUM: one sound) | SOUND: EDIT 1 · EDIT 2 (DRUM: KIT · KIT 2 · KIT 3) · TONE: FILTER · MORPH · RETRIG · ROTOR · VOICE · VOICE 2, those the engine has (DRUM: X-MOD · FILTER · STEREO · LEVELS · LEVELS 2 · VOICE) · FOCUS · OPERATOR: OPERATOR · OP ENV · OPERATOR 2 · DRUM: SOUND 1–4 | SOUND, TONE: the sounds · the detail: KNOB 1's (the parameter, the operator, the kit's sound) |
 
 - **ECO**: the six tracks' beings on a grid, each swimming in its cell with its sound (a hit kicks it), its name under
   it (**T1 ANALOG**; MUTE, OFF when asleep), the selected one larger in a violet ring. Around them **critters**: tiny
@@ -222,6 +223,13 @@ level's set; its button from elsewhere brings you back there.
 - **BEING**: the track's being large, its four HOME knobs as organs at the corners (a gauge each, its value, a vein to
   the body), the sound's name under it. **ROUTES**: M1–M4 down the left with their routes drawn to where they go
   (**T2 CUT+62**).
+- **EDIT** › **SOUND**: the engine's being on the left (alive with the sound, the page's name over it, the sound's
+  under it), the scope in a well and all eight E parameters as chips on the right, the page's four lit. **TONE**:
+  **FILTER** draws TYPE's response at CUT with its RES peak (LP, HP, BP, COMB), CUT a line, DRIVE / DIST a row of
+  cells; **VOICE** / **VOICE 2** the voices one a row as full as they sound, VOICE and PRIO (VOICE 2: ALLOC), GLIDE's
+  curve; the others keep their pictures. **FOCUS** (new): one E parameter large as a gauge — KNOB 1 picks it (E1–E8),
+  KNOB 2 sets it, KNOB 3 the **source** of the MOD slot aimed at it (turned up from OFF a free slot takes it, its DEST
+  that parameter; back to OFF frees it), KNOB 4 that slot's **AMT**; E1–E8 as tabs under it.
 - **GEN** is the generator (as HOME held + SELECT, from any page): a **HOME tap** turns its page, **PRESETS** the
   GENRE, **OCT+** makes the piece, **OCT−** closes it (to ECO), **SELECT** to the left goes back to BEING.
 
@@ -294,6 +302,8 @@ level's set; its button from elsewhere brings you back there.
 | LEVELS | KICK | SNARE | CLAP | HATCL | DRUM |
 | LEVELS 2 | HATOP | TOM | RIM | BELL | DRUM |
 | VOICE | VOICE | GLIDE | MODE | PRIO | every engine |
+| VOICE 2 (0.8.5) | ALLOC | DETUNE (UNI's spread) | — | — | every engine but DRUM |
+| FOCUS (0.8.5) | PARAM (E1–E8) | its value | SRC (the MOD slot on it) | AMT | the synths (not FM6, DRUM) |
 
 **GLO** (MIXER is per track; GLOBAL and SYSTEM are global)
 

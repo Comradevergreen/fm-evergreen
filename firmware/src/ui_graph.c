@@ -665,24 +665,6 @@ static uint32_t str_hash(uint32_t h, const char *s)
 
 
 
-/* WHEEL: the nine drawbars as rounded bars over RAISE slots (the bars of the knob just turned: the accent),
- * their footages under them */
-static void graph_wheel(const track_t *t, uint16_t c)
-{
-    uint32_t k;
-    static const char *const names[9] = {"16", "5.3", "8", "4", "2.7", "2", "1.6", "1.3", "1"};
-    for (k = 0; k < 9u; k++) {
-        int32_t x = 11 + (int32_t)k * 25, level = drw_level(t->p, k);
-        if (t->p[P_E4] && k == 8u) level = 0; /* DSP's percussion cancels the 1-foot bar. */
-        int hot = ui.hot_t && cur_page()->id[0] == P_E0 &&
-                  (ui.hot_col == 0u || ui.hot_col == (k < 2u ? 1u : k < 4u ? 2u : 3u));
-        cv_rrect(x + 7, 2, 4, 73, 2, T_RAISE, T_SURF);
-        if (level) cv_rrect(x + 3, 75 - level * 8, 12, level * 8, 3, hot ? T_ACCENT : c, T_SURF);
-        else cv_rrect(x + 3, 73, 12, 2, 1, hot ? T_ACCENT : T_DIM, T_SURF);
-        GFX_HOOK_ALIGN(x + 7, 0, x + 11, 0, AL_H, "wheel footage under its drawbar");
-        cv_text_in(x + 3, 82, 12, &AF_S, names[k], T_MID, T_SURF);   /* under the bar, by its ink */
-    }
-}
 /* The FM charts' parts: an operator box 21 x 17 (rows 23 px apart, columns 24), junction dots, Manhattan routes */
 #define FM_BH 17
 static void fm_dot(int32_t x, int32_t y, uint16_t c) { cv_rect(x - 1, y - 1, 3, 3, c); }
@@ -1432,6 +1414,8 @@ static uint32_t graph_signature(void)
     }
     if (pg->graph == GR_MOD)
         h ^= (mod_ui_slot + 1u) * 40503u;
+    if (pg->graph == GR_FOCUS)                       /* (0.8.5) EDIT > FOCUS: the parameter */
+        h ^= (ui.focus + 1u) * 2246822519u;
     if ((pg->graph == GR_SLCR || pg->graph == GR_SLPIT) && song.g[G_SLMODE])   /* the SLICER's step playing */
         h ^= (sl.idx + 1u) * 2654435761u;
     if (pg->graph == GR_SLCR || pg->graph == GR_SLPIT)   /* (its globals: the page's knobs and the bus) */
@@ -1988,11 +1972,17 @@ static void draw_tracks(void)
 }
 /* oscilloscope of the output, triggered on a rising zero crossing: a RAISE centre line, the trace 2 px (in silence
  * a flat line on it; MENU > SCREEN OFF keeps it from staying on the panel for hours) */
+static void scope_at(int32_t x0, int32_t pw, int32_t cy, int32_t a, uint16_t c);
 static void graph_scope(uint16_t c)
+{
+    scope_at(PANEL_X0, PANEL_W, (int32_t)cv_h / 2, cv_h == H_GRAPH ? 46 : (int32_t)cv_h / 2 - 6, c);   /* (LARGE: the strip) */
+}
+/* .. pw px wide from x0, about the line cy, +-a px (0.8.5: EDIT's SOUND, in its well) */
+static void scope_at(int32_t x0, int32_t pw, int32_t cy, int32_t a, uint16_t c)
 {
     static int16_t snap[SCOPE_N];
     uint32_t w = scope_w, i, trig = 0;
-    int32_t cy = (int32_t)cv_h / 2, py = cy, x, peak = 1500, a = cv_h == H_GRAPH ? 46 : cy - 6;   /* (LARGE: the strip) */
+    int32_t py = cy, x, peak = 1500;
     for (i = 0; i < SCOPE_N; i++) {
         snap[i] = scope_buf[(w + i) & (SCOPE_N - 1u)];
         if (snap[i] > peak)
@@ -2005,11 +1995,11 @@ static void graph_scope(uint16_t c)
             trig = i;
             break;
         }
-    cv_rect(PANEL_X0, cy, PANEL_W, 1, T_RAISE);
-    for (x = 0; x < PANEL_W; x++) {
+    cv_rect(x0, cy, pw, 1, T_RAISE);
+    for (x = 0; x < pw; x++) {
         int32_t y = cy - snap[trig + (uint32_t)x] * a / peak;    /* auto-scaled */
         if (x)                                                   /* JIANT: each stroke as hot as it is loud */
-            cv_line_t(PANEL_X0 - 1 + x, py, PANEL_X0 + x, y, settings.palette == UI_JIANT_INDEX ?
+            cv_line_t(x0 - 1 + x, py, x0 + x, y, settings.palette == UI_JIANT_INDEX ?
                       heat_col(40 + (y > cy ? y - cy : cy - y) * 216 / a) : c, 2);
         py = y;
     }
@@ -2145,6 +2135,7 @@ static void graph_song(void)
 #include "ui_lzsave.c"                              /* (0.8.5) SAVE's lens: its levels' panels */
 #include "ui_lzfx.c"                                /* (0.8.5) FX's lens: its levels' panels */
 #include "ui_lzhome.c"                              /* (0.8.5) HOME's lens: ECO, BEING, the critters */
+#include "ui_lzedit.c"                               /* (0.8.5) EDIT's lens panels */
 static void draw_graph(void)
 {
     const page_t *pg = cur_page();
@@ -2207,7 +2198,9 @@ static void draw_graph(void)
     } else if (lz_on() && lz_fam() == LZ_FX) {       /* (0.8.5) FX's lens */
         cv_oy = 0;
         graph_fx_lz(t, pg);
+    } else if (lz_on() && lz_fam() == LZ_EDIT && (cv_oy = 0, graph_edit_lz(t, pg))) {   /* (0.8.5) EDIT's (ui_lzedit.c) */
     } else {
+        cv_oy = GOY;
         switch (pg->graph) {
         case GR_ADSR:
             graph_adsr(t, c);
@@ -2277,9 +2270,8 @@ static void draw_graph(void)
             graph_colony(t, dx_ui_lane);
             break;
         default:
-            if (pg->scope == SC_ENGINE && ENGINES[t->eng_req % NENGINES] == &ENG_WHEEL) graph_wheel(t, c);
-            else if (pg->scope == SC_ENGINE && t->eng_req % NENGINES == ENGI_FM6) graph_fm6(t, c, 6u);   /* EDIT 1 and 2 */
-            else if (pg->scope == SC_ENGINE && t->eng_req % NENGINES == ENGI_DRUM) {
+            if (pg->scope == SC_ENGINE && t->eng_req % NENGINES == ENGI_DRUM) {   /* (0.8.5: WHEEL's and FM6's EDIT 1
+                                                      * and 2 their beings, as every synth's: EDIT's lens, SOUND) */
                 cv_oy = 0;
                 graph_colony(t, -1);
             }

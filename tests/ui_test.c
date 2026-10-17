@@ -2740,8 +2740,8 @@ static int test_chain(void)
  * SONG: the selection, as KNOB 1; TOOLS: nothing; HOME, PRESETS and every other page: the next sound, the steps untouched, SAVE held undoes it */
 static int test_presets_knob(void)
 {
-    int bad = 0, cur_ok = 1, sel_ok = 1, snd_ok = 1, tools_ok = 1, grid_ok, bar_ok = 1, fxm_ok = 1;
-    uint32_t i, n_snd = 0, n_cur = 0, n_bar = 0;
+    int bad = 0, cur_ok = 1, sel_ok = 1, snd_ok = 1, tools_ok = 1, grid_ok, bar_ok = 1, fxm_ok = 1, det_ok = 1;
+    uint32_t i, n_snd = 0, n_cur = 0, n_bar = 0, n_det = 0;
     for (i = 0; i < NPAGES; i++) {
         track_t before;
         uint32_t g = PAGES[i].graph, uslot, ppick, fxm0;
@@ -2780,6 +2780,9 @@ static int test_presets_knob(void)
                 tools_ok &= same_snd && same_steps && !ui.confirm;
             } else if (PAGES[i].fam == FAM_FX && fx_trk_k(i) < 0) {   /* (0.8.5) FX's lens, BUSES / EFFECT: the module */
                 fxm_ok &= same_snd && same_steps && fx_on() && ui.fxmod != fxm0;
+            } else if (pd_on() && pd_cur() == PD_EDIT && pd_level() == 2u) {   /* (0.8.5) EDIT's detail: KNOB 1's */
+                det_ok &= TSEL->preset == before.preset && TSEL->eng_req == before.eng_req && same_steps && ui.page == i;
+                n_det++;
             } else {
                 snd_ok &= !same_snd && same_steps && ui.page == i && !ui.home;
                 n_snd++;
@@ -2793,6 +2796,8 @@ static int test_presets_knob(void)
     bad += check("#94 PRESETS on USER, PROJECT, PHRASES, SONG: the selection (KNOB 1's); nothing loaded", sel_ok);
     bad += check("#94 PRESETS on TOOLS does nothing", tools_ok);
     bad += check("0.8.5 FX's lens: PRESETS on BUSES and EFFECT the module; the sound and the steps stay", fxm_ok);
+    bad += check("0.8.5 LENTE: PRESETS on EDIT's detail (FOCUS, OPERATOR, SOUND 1..4): KNOB 1's; the preset stays",
+                 det_ok && n_det >= 1u);
     bad += check("#94 PRESETS elsewhere (EDIT, ENV, LFO, FX, SCL, ARP, MIXER, GLOBAL, ...): the next sound, the steps stay",
                  snd_ok && n_snd >= 15u);
     ui_power_on();
@@ -2854,12 +2859,19 @@ static int test_product_ux(void)
     bad += check("REC cannot write borrowed patterns while SONG is armed", song.rec == 1 && msg_is("STOP TO RECORD"));
     ui_power_on(); open_family(FAM_EDIT);
     ok = 1;
-    for (i = 0; i < 8u; i++) { open_family(FAM_EDIT); ok &= page_visible(ui.page) && (cur_page()->graph == GR_MORPH ||
-                                                         !(cur_page()->id[0] >= P_FM1_ATK && cur_page()->id[0] <= P_FM4_LEVEL)); }
+    {   /* (0.8.5 LENTE) every set of every level of the EDIT lens */
+        uint8_t pg[PD_SETS];
+        uint32_t lv, k, n;
+        for (lv = 0; lv < 3u; lv++)
+            for (n = pd_sets(PD_EDIT, lv, pg, 0), k = 0; k < n; k++)
+                ok &= page_visible(pg[k]) && (PAGES[pg[k]].graph == GR_MORPH ||
+                                              !(PAGES[pg[k]].id[0] >= P_FM1_ATK && PAGES[pg[k]].id[0] <= P_FM4_LEVEL));
+    }
     bad += check("operator envelope pages are hidden on non-DIGITAL instruments", ok);
 #if FELUCCA_FM4
-    set_engine_of(TSEL, 1); open_family(FAM_EDIT); ok = 0;
-    for (i = 0; i < 12u; i++) { if (cur_page()->id[0] == P_FM1_ATK) ok = 1; open_family(FAM_EDIT); }
+    set_engine_of(TSEL, 1);                            /* (0.8.5 LENTE: in the detail level, OPS) */
+    ok = pd_find(PD_EDIT, "OP1 ENV") < NPAGES && pd_find(PD_EDIT, "OP4 ENV") < NPAGES && pd_find(PD_EDIT, "OP LEVEL") < NPAGES &&
+         pd_k_in(PD_EDIT, 2, pd_find(PD_EDIT, "OP1 ENV")) >= 0 && pd_k_in(PD_EDIT, 2, pd_find(PD_EDIT, "OP LEVEL")) >= 0;
     bad += check("DIGITAL exposes four envelopes and independent operator levels", ok);
     go_title("OP1 ENV"); turn(EN_K1, 4);
     bad += check("operator envelope K1 edits only OP1 attack", TSEL->p[P_FM1_ATK] == 4 && !TSEL->p[P_FM2_ATK]);
@@ -3507,27 +3519,40 @@ static int test_name(void)
 }
 
 /* the EDIT cycle (no ENGINE page: engines are the EDIT layer's) and its memory */
-static int engine_cycle(const char *const *want, uint32_t n)   /* EDIT tapped from HOME, then n - 1 times more */
+/* (0.8.5 LENTE) EDIT tapped from HOME, then tapped (a title) or SELECT a detent right (0) for each of want's; the page
+ * shown each time want's title. A tap goes round the level's sets, SELECT to the next level at the set it was left at */
+static int engine_cycle(const char *const *want, uint32_t n)
 {
-    uint32_t i;
+    uint32_t i, lv = 0;
     int ok = 1;
     frames(320);
     go_home(); frame();
+    press(B_EDIT);
+    frames(320);
+    ok &= str_eq(cur_page()->title, "EDIT 1") && pd_on() && pd_level() == 0u;
     for (i = 0; i < n; i++) {
-        press(B_EDIT);
-        frames(320);                                  /* (taps further apart than a double tap: #83 locks) */
-        ok &= str_eq(cur_page()->title, want[i]);
+        if (want[i]) {
+            press(B_EDIT);
+            frames(320);                              /* (taps further apart than a double tap: #83 locks) */
+            ok &= str_eq(cur_page()->title, want[i]);
+        } else {
+            turn(EN_SELECT, 1);
+            frames(2);
+            ok &= pd_on() && pd_level() == ++lv && str_eq(cur_page()->title, want[i + 1u]);   /* (the level's first) */
+            i++;
+        }
     }
     return ok;
 }
 static int test_edit_cycle(void)
 {
-    static const char *const CYC_A[] = {"EDIT 1", "EDIT 2", "MORPH", "FILTER", "VOICE", "EDIT 1"};   /* (JIANT 0.5: ANALOG's
-                                                         * FILTER; 0.6.45: MORPH) */
-    static const char *const CYC_F[] = {"EDIT 1", "EDIT 2", "OPERATOR", "OP ENV", "OPERATOR 2", "FILTER", "VOICE",
-                                        "EDIT 1"};   /* (the part's FILTER; 0.6.10: FM6's operator pages) */
-    static const char *const CYC_D[] = {"EDIT 1", "EDIT 2", "FILTER", "OP1 ENV", "OP2 ENV", "OP3 ENV", "OP4 ENV",
-                                        "OP LEVEL", "VOICE", "EDIT 1"};
+    /* (0.8.5 LENTE: SOUND . TONE . the detail; 0: SELECT a detent right, then the level's first) */
+    static const char *const CYC_A[] = {"EDIT 2", "EDIT 1", 0, "FILTER", "MORPH", "VOICE", "VOICE 2", "FILTER", 0,
+                                        "FOCUS", "FOCUS"};   /* (JIANT 0.5: ANALOG's FILTER; 0.6.45: MORPH) */
+    static const char *const CYC_F[] = {"EDIT 2", "EDIT 1", 0, "FILTER", "VOICE", "VOICE 2", "FILTER", 0, "OPERATOR",
+                                        "OP ENV", "OPERATOR 2", "OPERATOR"};   /* (the part's FILTER; 0.6.10: FM6's) */
+    static const char *const CYC_D[] = {"EDIT 2", "EDIT 1", 0, "FILTER", "VOICE", "VOICE 2", "FILTER", 0, "OP1 ENV",
+                                        "OP2 ENV", "OP3 ENV", "OP4 ENV", "OP LEVEL", "OP1 ENV"};
     int bad = 0, ok;
     uint32_t i;
     ui_power_on();
@@ -3539,22 +3564,23 @@ static int test_edit_cycle(void)
         ok &= !str_eq(PAGES[i].title, "ENGINE");
     bad += check("no ENGINE page (engines are the EDIT layer's)", ok);
     set_engine_of(TSEL, 0);
-    bad += check("EDIT cycle (ANALOG): EDIT 1 EDIT 2 MORPH FILTER VOICE EDIT 1", engine_cycle(CYC_A, NELEM(CYC_A)));
+    bad += check("0.8.5 EDIT lens (ANALOG): SOUND (EDIT 1 EDIT 2) . TONE (FILTER MORPH VOICE VOICE 2) . FOCUS",
+                 engine_cycle(CYC_A, NELEM(CYC_A)));
 #if FELUCCA_FM4
     set_engine_of(TSEL, 1);
-    bad += check("EDIT cycle (DIGITAL): EDIT 1 EDIT 2 FILTER OP1..OP4 ENV OP LEVEL VOICE EDIT 1",
+    bad += check("0.8.5 EDIT lens (DIGITAL): SOUND . TONE (FILTER VOICE VOICE 2) . OPS (OP1..OP4 ENV, OP LEVEL)",
                  engine_cycle(CYC_D, NELEM(CYC_D)));
 #else
     set_engine_of(TSEL, ENGI_DIGITAL);
-    bad += check("EDIT cycle (engine 1 asked for: FM6, DIGITAL retired): EDIT 1 EDIT 2 OPERATOR OP ENV OPERATOR 2 FILTER VOICE EDIT 1",
+    bad += check("0.8.5 EDIT lens (engine 1 asked for: FM6, DIGITAL retired): SOUND . TONE (FILTER VOICE VOICE 2) . OPERATOR (OPERATOR OP ENV OPERATOR 2)",
                  TSEL->eng_req == ENGI_FM6 && engine_cycle(CYC_F, NELEM(CYC_F)));
     (void)CYC_D;
 #endif
     {   /* #97: a DRUM track's lane levels on EDIT > LANES (KICK SNARE CLAP HATCL) and LANES 2 (HATOP TOM RIM BELL) */
-        static const char *const CYC_K[] = {"EDIT 1", "EDIT 2", "KIT 3", "X-MOD", "STEREO", "FILTER", "SOUND", "SOUND 2",
-                                            "SOUND 3", "SOUND 4", "LEVELS", "LEVELS 2", "VOICE", "EDIT 1"};
+        static const char *const CYC_K[] = {"EDIT 2", "KIT 3", "EDIT 1", 0, "X-MOD", "FILTER", "STEREO", "LEVELS",
+                                            "LEVELS 2", "VOICE", "X-MOD", 0, "SOUND", "SOUND 2", "SOUND 3", "SOUND 4", "SOUND"};
         set_engine_of(TSEL, ENGI_DRUM);
-        bad += check("EDIT cycle (DRUM, 0.7.8): the kit's (KIT KIT 2 KIT 3 X-MOD STEREO FILTER), a sound's (SOUND 1..4), then the volumes (LEVELS LEVELS 2), VOICE",
+        bad += check("0.8.5 EDIT lens (DRUM): SOUND (KIT KIT 2 KIT 3) . TONE (X-MOD FILTER STEREO LEVELS LEVELS 2 VOICE) . SOUND (SOUND 1..4)",
                      engine_cycle(CYC_K, NELEM(CYC_K)));
         {   /* (0.6.58) KIT 3 turns BP and FEEDBK, (0.7.8) KNOB 3 the CLAP's HANDS, never IMAGE; STEREO's KNOB 1 is IMAGE */
             uint8_t t0 = dx_tone, h0 = dx_hands;
@@ -6875,12 +6901,10 @@ static int test_dx_sound(void)
     ui_power_on();
     memcpy(dx_kit, DX_KIT_DEF, sizeof dx_kit);         /* (earlier tests may have turned SOUND's knobs) */
     set_engine_of(TSEL, ENGI_DRUM);
-    open_family(FAM_EDIT);
-    for (k = 0; k < 12u; k++) { seen |= cur_page()->graph == GR_DXSND; open_family(FAM_EDIT); }
+    for (k = 0; k < NPAGES; k++) seen |= PAGES[k].graph == GR_DXSND && page_visible(k);   /* (0.8.5: the lens's sets) */
     ok = seen;
     set_engine_of(TSEL, 0);
-    open_family(FAM_EDIT);
-    for (seen = 0, k = 0; k < 12u; k++) { seen |= cur_page()->graph == GR_DXSND; open_family(FAM_EDIT); }
+    for (seen = 0, k = 0; k < NPAGES; k++) seen |= PAGES[k].graph == GR_DXSND && page_visible(k);
     ok &= !seen;
     set_engine_of(TSEL, ENGI_DRUM);
     bad += check("EDIT > SOUND / SOUND 2: on a DRUM track only", ok);
@@ -8992,9 +9016,9 @@ static int test_bpm_lock(void)
     ok &= ui.home && ui.confirm == CF_DICE_ALL && song.g[G_BPM] == b0;   /* (0.6.69) HOME: DICE EVERYTHING? (GEN) */
     press(B_OCTDN); frame(); ok &= !ui.confirm;
     go_title("EDIT 1"); frame(); turn(EN_SELECT, 1);
-    ok &= str_eq(cur_page()->title, "EDIT 2");
+    ok &= str_eq(cur_page()->title, "FILTER") && pd_level() == 1u;    /* (0.8.5 LENTE: SOUND -> TONE) */
     turn(EN_SELECT, -5);
-    ok &= str_eq(cur_page()->title, "EDIT 1");                        /* (no wrap: the section's first) */
+    ok &= str_eq(cur_page()->title, "EDIT 1");                        /* (no wrap: the lens's first level) */
     go_title("ENV DEST"); frame(); turn(EN_SELECT, 3);
     ok &= str_eq(cur_page()->title, "ENV DEST") && !ui.home;          /* (the section's last: it stays, no LFO) */
     bad += check("0.6.69: SELECT alone scrolls the section's pages (no wrap, never out of it); HOME: DICE ALL; never the tempo", ok);
@@ -9773,12 +9797,75 @@ static int test_lz_home(void)
     return bad;
 }
 
+/* EDIT (ui_lens.c, ui_lzedit.c): SOUND . TONE . the detail (FOCUS / OPERATOR / SOUND), SELECT zooms (no wrap), an EDIT
+ * tap the level's next set, EDIT from elsewhere the page left; PRESETS the sounds on SOUND / TONE, KNOB 1's on the
+ * detail; FOCUS's knobs (PARAM, its value, SRC and AMT of the MOD slot aimed at it); VOICE 2 (ALLOC, DETUNE) */
+static int test_lz_edit(void)
+{
+    int bad = 0, ok;
+    int16_t v;
+    uint32_t pr;
+    char b[8];
+    ui_power_on(); set_engine_of(TSEL, 0); frame();
+    press(B_EDIT); frame();
+    ok = pd_on() && lz_fam() == LZ_EDIT && pd_level() == 0u && lz_tab_lit(0) && lz_crumb_is("LENTE \xB7 SOUND \xB7 EDIT 1 \xB7 OSC") &&
+         crumb_count(b) && str_eq(b, "1/2");
+    frames(320); press(B_EDIT); frame();
+    ok &= str_eq(cur_page()->title, "EDIT 2") && crumb_count(b) && str_eq(b, "2/2");
+    turn(EN_SELECT, 1); frame();
+    ok &= pd_level() == 1u && lz_tab_lit(1) && str_eq(cur_page()->title, "FILTER") && lz_crumb_is("LENTE \xB7 TONE \xB7 FILTER");
+    turn(EN_SELECT, 1); frame();
+    ok &= pd_level() == 2u && lz_tab_lit(2) && str_eq(cur_page()->title, "FOCUS") && lz_crumb_is("LENTE \xB7 FOCUS \xB7 FOCUS");
+    turn(EN_SELECT, 1); frame();
+    ok &= pd_level() == 2u;                                         /* (no wrap) */
+    turn(EN_SELECT, -2); frame();
+    ok &= pd_level() == 0u && str_eq(cur_page()->title, "EDIT 2");  /* (SOUND at the set it was left at) */
+    bad += check("0.8.5 LENTE EDIT: SOUND <-> TONE <-> FOCUS by SELECT (no wrap), an EDIT tap the level's next; tabs, breadcrumb", ok);
+    open_family(FAM_ENV); frame();
+    press(B_EDIT); frame();
+    ok = str_eq(cur_page()->title, "EDIT 2") && pd_level() == 0u;
+    pr = TSEL->preset;
+    turn(EN_PRESET, 1); frame();
+    ok &= TSEL->preset != pr || TSEL->eng_req != 0u;                /* (SOUND: the next sound) */
+    bad += check("0.8.5 LENTE EDIT: EDIT from elsewhere the page left; PRESETS on SOUND the next sound", ok);
+    ui_power_on(); set_engine_of(TSEL, 0); go_title("FOCUS"); frame();
+    ui.focus = 0;
+    turn(EN_K1, 4); frame();                                        /* PARAM: E5 (ANALOG's CUT) */
+    ok = focus_k() == 4u && str_eq(ui.col[1], "CUT|") == 0;
+    v = TSEL->p[P_E4];
+    turn(EN_K2, 5); frame();
+    ok &= TSEL->p[P_E4] > v;
+    turn(EN_K3, 1); frame();                                        /* SRC: a free slot takes CUT */
+    ok &= focus_slot(4) == 0 && TSEL->p[P_M1SRC] == 1 && TSEL->p[P_M1DST] == MD_E1 + 4;
+    turn(EN_K4, 3); frame();
+    ok &= TSEL->p[P_M1AMT] > 0;
+    turn(EN_PRESET, -1); frame();                                   /* PRESETS: KNOB 1's, the parameter */
+    ok &= focus_k() == 3u && TSEL->p[P_M1SRC] == 1;
+    turn(EN_PRESET, 1); turn(EN_K3, -1); frame();                   /* SRC back to OFF: the slot free */
+    ok &= focus_slot(4) < 0 && TSEL->p[P_M1SRC] == 0;
+    bad += check("0.8.5 EDIT > FOCUS: KNOB 1 the parameter, 2 its value, 3 the MOD source (a free slot), 4 its AMT; PRESETS KNOB 1's", ok);
+    ui_power_on(); set_engine_of(TSEL, 0); go_title("VOICE"); frame();
+    frames(320); press(B_EDIT); frame();
+    ok = str_eq(cur_page()->title, "VOICE 2") && str_eq(cur_page()->title, "VOICE 2");
+    v = TSEL->p[P_DETUNE];
+    turn(EN_K2, 3); frame();
+    ok &= TSEL->p[P_DETUNE] != v;
+    set_engine_of(TSEL, ENGI_DRUM); frame();
+    ok &= pd_find(PD_EDIT, "VOICE 2") == NPAGES && pd_find(PD_EDIT, "FOCUS") == NPAGES;
+    set_engine_of(TSEL, ENGI_FM6); frame();
+    ok &= pd_find(PD_EDIT, "FOCUS") == NPAGES && pd_find(PD_EDIT, "OPERATOR") < NPAGES;
+    bad += check("0.8.5 EDIT > TONE: VOICE 2 (ALLOC, DETUNE) after VOICE, not on DRUM; FOCUS on the synths only", ok);
+    ui_power_on();
+    return bad;
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IONBF, 0);
     int bad = 0;
     bad += test_large_face();
     bad += test_lz_home();
+    bad += test_lz_edit();
     bad += test_sound_loads();
     bad += test_patterns();
     bad += test_init_system();

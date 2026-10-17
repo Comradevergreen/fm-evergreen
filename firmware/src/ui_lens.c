@@ -91,7 +91,7 @@ static int32_t pd_k_in(uint32_t pd, uint32_t lv, uint32_t page)   /* the page's 
     return -1;
 }
 #define PD_LVGET(pd) ((uint32_t)(ui.pdlv[pd] ^ PD_DEF_LV[pd]) % 3u)   /* (0, power-on: the default) */
-#define PD_LIVE 0u                                      /* the domains drawn as lenses (bit PD_*) */
+#define PD_LIVE (1u << PD_EDIT)                                     /* the domains drawn as lenses (bit PD_*) */
 static int pd_on(void) { return !ui.home && !page_over && ((PD_LIVE >> pd_of_fam(PAGES[ui.page].fam)) & 1u); }
 static uint32_t pd_cur(void) { return pd_of_fam(PAGES[ui.page].fam); }
 /* the level shown: the one remembered when the page is in it (ENV is in TRACKS and in ENV), else the page's own */
@@ -151,6 +151,15 @@ static int pd_button(uint32_t fam)
     if (pd >= PD_N)
         return 0;
     lv = here ? pd_level() : PD_LVGET(pd);
+    if (!here && fam != FAM_ARP && fam != FAM_GLO && fam != FAM_TRK) {   /* (from elsewhere: its last page, where it is) */
+        uint32_t p = ui.fam_last[fam], m;
+        int32_t k;
+        for (m = 0; p < NPAGES && m < 3u; m++)
+            if ((fam != FAM_SCL || m < 2u) && (k = pd_k_in(pd, m, p)) >= 0) {
+                pd_show(pd, m, (uint32_t)k);
+                return 1;
+            }
+    }
     if (fam == FAM_SCL)
         lv = here ? (lv == 0u ? 1u : 0u) : lv == 2u ? 0u : lv;
     else if (fam == FAM_ARP) {
@@ -203,4 +212,27 @@ static void home_cycle(void)
     ui.hset[home_level() & 1u] ^= 1u;
     ui.force = 1;
     page_flash();
+}
+
+/* EDIT > FOCUS (a synth's detail): the parameter shown (E1..E8 that has a name: 0..7), the MOD slot aimed at it (its
+ * source set; -1 none) */
+static int focus_named(uint32_t k)
+{
+    const param_desc_t *d = track_desc(TSEL, P_E0 + (k & 7u));
+    return d && d->label && d->label[0] != '-' && d->max > d->min;
+}
+static uint32_t focus_k(void)
+{
+    uint32_t k = ui.focus & 7u, n;
+    for (n = 0; n < 8u && !focus_named(k); n++)
+        k = (k + 1u) & 7u;
+    return k;
+}
+static int32_t focus_slot(uint32_t k)
+{
+    uint32_t j;
+    for (j = 0; j < 4u; j++)
+        if (TSEL->p[P_M1SRC + 3u * j] && TSEL->p[P_M1DST + 3u * j] == (int16_t)(MD_E1 + k))
+            return (int32_t)j;
+    return -1;
 }

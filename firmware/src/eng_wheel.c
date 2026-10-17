@@ -121,7 +121,8 @@ static drw_vc_t drw_v[NPART][NVOICE];
 static uint32_t drw_part(const track_t *t) { return (uint32_t)(t - trk) % NPART; }
 
 /* the bar level 0..8 of partial k: the registration plus SUB / BODY / TOP */
-static int32_t drw_level(const int16_t *p, uint32_t k)
+static __attribute__((noinline)) int32_t drw_level(const int16_t *p, uint32_t k)   /* (0.8.5: noinline, as it was compiled while the
+                                                         * UI drew WHEEL's bars with it too: the target budget's codegen kept) */
 {
     int32_t d = DRW_REG[(uint32_t)p[P_E0] & 15u][k] - '0';
     d += k < 2u ? p[P_E1] : k < 4u ? p[P_E2] : p[P_E3];

@@ -538,6 +538,14 @@ JIANT's modifications are distributed under the same license.
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
 
 ### v0.8.5
+- **EDIT is a lens, as the approved mock-up**: **SOUND · TONE · the detail**, SELECT zooms, an EDIT tap goes round the
+  level's sets. SOUND: the engine's being on the left (graph_being's, alive with the sound; WHEEL's and FM6's EDIT 1 / 2
+  too, their old pictures gone), the scope in a well and the eight E parameters as chips; DRUM keeps its colony. TONE:
+  FILTER draws the response of TYPE at CUT with RES (was the scope), VOICE and the new **VOICE 2** page (ALLOC,
+  UNISON's DETUNE, both unreachable before) the voices one a row and GLIDE's curve; MORPH, RETRIG, ROTOR and the kit's
+  keep theirs. The detail: FM6's OPERATOR · OP ENV · OPERATOR 2, DRUM's SOUND 1–4, and on the other synths the new
+  **FOCUS**: one E parameter as a gauge, KNOB 3 / 4 the source and amount of the MOD slot aimed at it (a free slot
+  taken from OFF). PRESETS: the sounds on SOUND and TONE, KNOB 1's on the detail.
 - **HOME is a lens, as the approved mock-up** (LENTE everywhere): **ECO · BEING · GEN**, SELECT zooms. ECO: the six
   beings on a grid (the mock-up's places), each swimming in its cell with its sound, its name under it, the selected one
   in a violet ring; MACROS (a HOME tap): KNOB 1–4 are M1–M4, the routes counted, LATCH shown. BEING: the track's being

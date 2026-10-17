@@ -201,6 +201,7 @@ static struct {
     uint8_t pdlv[5], pdset[5][3];   /* (0.8.5) LENTE everywhere (ui_lens.c): EDIT ENV LFO SCL GLO, the level (^ its
                                   * default) and each level's set */
     uint8_t hlv, hset[2];        /* .. HOME: ECO (0) or BEING (1), each one's set (HOME / MACROS, HOME / ROUTES) */
+    uint8_t focus;               /* .. EDIT > FOCUS: the parameter (E1..E8: 0..7) */
     uint8_t ent_len, ent_arp, ent_res, ent_ord, ent_oct, ent_nn;   /* (0.6.37) that entry while held (ui_input.c
                                   * seq_entry): KNOB 1 its LEN in steps; ARP pressed: arpeggiated, KNOB 1 the steps a
                                   * note (RES), 2 the ORDER, 3 the octaves; the keys' notes in order of pitch */
@@ -467,6 +468,11 @@ static int page_visible(uint32_t i)
         return TSEL->eng_req % NENGINES == ENGI_DRUM;
     if (PAGES[i].scope == SC_TRACK && PAGES[i].id[0] >= P_LN0 && PAGES[i].id[0] <= P_LN7)
         return TSEL->eng_req % NENGINES == ENGI_DRUM;
+    if (PAGES[i].graph == GR_FOCUS)                     /* (0.8.5) FOCUS: a synth's (FM6: OPERATOR, DRUM: SOUND) */
+        return TSEL->eng_req % NENGINES != ENGI_DRUM && TSEL->eng_req % NENGINES != ENGI_FM6 &&
+               !(FELUCCA_FM4 && TSEL->eng_req % NENGINES == ENGI_DIGITAL);
+    if (PAGES[i].id[0] == P_ALLOC)                      /* (0.8.5) VOICE 2: not a kit's */
+        return TSEL->eng_req % NENGINES != ENGI_DRUM;
     if (PAGES[i].graph >= GR_FMOP && PAGES[i].graph <= GR_FMENV)   /* (0.6.10) OPERATOR, OP ENV, OPERATOR 2: FM6's */
         return TSEL->eng_req % NENGINES == ENGI_FM6;
     if (PAGES[i].fam == FAM_EDIT && PAGES[i].id[0] == P_WRDEP)   /* (0.7.8) ROTOR: WHEEL's */
@@ -1078,6 +1084,9 @@ static void open_family(uint32_t fam)
         fx_tap();
         return;
     }
+    if (((PD_LIVE >> pd_of_fam(fam)) & 1u) && pd_button(fam))   /* (0.8.5) LENTE (ui_lens.c): the level's next set, or
+                                                         * the level and set left */
+        return;
     if (fam == FAM_SEQ) {                              /* (0.8.3) LENTE: on a SEQ page the level's next set; from
                                                          * elsewhere the level and set last used on the track */
         uint32_t m = ui.lens_mem[song.sel % NTRK], lv;
@@ -1138,6 +1147,8 @@ static void lens_zoom(int32_t s)
 static void open_global(void)
 {
     uint32_t i;
+    if (((PD_LIVE >> PD_GLO) & 1u) && pd_button(FAM_GLO))   /* (0.8.5) LENTE: MIX -> GLOBAL -> SYSTEM, as before */
+        return;
     if (!ui.home && cur_page()->fam == FAM_TRK) {
         ui.page = (uint8_t)page_first(FAM_GLO);
     } else if (!ui.home && cur_page()->fam == FAM_GLO) {

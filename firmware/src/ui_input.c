@@ -984,6 +984,52 @@ static void shape_knob(uint32_t slot, int32_t steps)
         motion_capture(TSEL, P_SOFS, TSEL->p[P_SOFS]);
     }
 }
+/* (0.8.5) EDIT > FOCUS: KNOB 1 the parameter (E1..E8 with a name, no wrap), 2 its value, 3 the SRC of the MOD slot aimed
+ * at it (from OFF: a free slot takes it, its DEST E1..E8; back to OFF: the slot free again), 4 that slot's AMT */
+static void focus_knob(uint32_t slot, int32_t steps)
+{
+    uint32_t k = focus_k(), f = k, n;
+    int32_t j = focus_slot(k);
+    int16_t *p;
+    const param_desc_t *d;
+    if (slot == 0u) {                                   /* (a named one a detent) */
+        int32_t m = steps < 0 ? -steps : steps;
+        for (n = 0; n < 8u && m > 0; n++) {
+            if ((steps > 0 && f == 7u) || (steps < 0 && f == 0u))
+                break;
+            f = steps > 0 ? f + 1u : f - 1u;
+            if (focus_named(f)) {
+                ui.focus = (uint8_t)f;
+                m--;
+            }
+        }
+        return;
+    }
+    if (slot == 1u) {
+        d = track_desc(TSEL, P_E0 + k);
+        TSEL->p[P_E0 + k] = (int16_t)param_turn(d, TSEL->p[P_E0 + k], accel(EN_K1 + 1u, steps, d->fmt == F_ENUM ? 0 : d->max - d->min));
+        motion_capture(TSEL, P_E0 + k, TSEL->p[P_E0 + k]);
+        return;
+    }
+    if (slot == 2u && j < 0) {                          /* (no slot aims at it: a free one, turned up) */
+        uint32_t m;
+        if (steps <= 0)
+            return;
+        for (m = 0; m < 4u && TSEL->p[P_M1SRC + 3u * m]; m++)
+            ;
+        if (m == 4u) {
+            ui_message("MOD: 4 SLOTS USED");
+            return;
+        }
+        j = (int32_t)m;
+        TSEL->p[P_M1DST + 3u * m] = (int16_t)(MD_E1 + k);
+    }
+    if (j < 0)
+        return;
+    p = &TSEL->p[P_M1SRC + 3u * (uint32_t)j + (slot == 2u ? 0u : 2u)];
+    d = track_desc(TSEL, P_M1SRC + 3u * (uint32_t)j + (slot == 2u ? 0u : 2u));
+    *p = (int16_t)param_turn(d, *p, slot == 2u ? (steps > 0 ? 1 : -1) : accel(EN_K1 + 3u, steps, d->max - d->min));
+}
 static void edit_param(uint32_t slot, int32_t steps)
 {
     int16_t *vp;
@@ -1021,6 +1067,10 @@ static void edit_param(uint32_t slot, int32_t steps)
     }
     if (pg->graph == GR_DXSND) {                          /* EDIT > SOUND: the DRUM-X kit (ui_dx.c) */
         dx_knob(pg, slot, steps);
+        return;
+    }
+    if (pg->graph == GR_FOCUS) {                          /* (0.8.5) EDIT > FOCUS */
+        focus_knob(slot, steps);
         return;
     }
     if (DX_KIT3(pg)) {                                    /* (0.6.54) KIT 3: BP, FEEDBK (0.6.58: IMAGE on STEREO) */
@@ -1478,10 +1528,29 @@ static void seq_entry(uint32_t pressed)
  *   HOME, PRESETS and every other page (EDIT, ENV, LFO, FX, SCL, ARP, MIXER, GLOBAL, ...): the selected track's
  *     sound, one list over every engine, then the used user presets (preset_step). A sound load keeps the steps
  *     . Up to 1.0.3 it did that on HOME and PRESETS only */
+/* (0.8.5) PRESETS on a lens of ui_lens.c, by its level (the mock-up's): EDIT's SOUND and TONE the sounds, its detail
+ * KNOB 1's (the operator, the kit's sound, FOCUS's parameter); 1 = done here */
+static int pd_presets(int32_t s)
+{
+    uint32_t pd = pd_cur(), lv = pd_level();
+    if (pd == PD_EDIT) {
+        if (lv < 2u)
+            preset_step(s);
+        else {
+            edit_param(0, s);
+            ui.hot_col = 0;
+            ui.hot_t = 40;
+        }
+        return 1;
+    }
+    return 0;
+}
 static void presets_turn(int32_t s)
 {
     const page_t *pg = cur_page();
     uint32_t g = pg->graph;
+    if (pd_on() && pd_presets(s))
+        return;
     if (ui.home || g == GR_BROWSE) {
         preset_step(s);
     } else if (fx_on() && fx_level() != FXL_TRACK) {   /* (0.8.5) FX's lens, BUSES / EFFECT: the module */
@@ -1694,6 +1763,10 @@ static void page_scroll(int32_t s)
     }
     if (fx_on()) {                                      /* (0.8.5) FX's lens: TRACK <-> BUSES <-> EFFECT */
         fx_zoom(s);
+        return;
+    }
+    if (pd_on()) {                                      /* (0.8.5) LENTE everywhere (ui_lens.c): a level a detent */
+        pd_zoom(s);
         return;
     }
     f = cur_page()->fam == FAM_TRK ? FAM_GLO : cur_page()->fam;
@@ -2385,7 +2458,7 @@ static void ui_input_frame(void)
         }
         if (ui.home || pg->scope == SC_STEP || pg->scope == SC_TRK || page_desc(pg, k, &hv) ||
             ((pg->graph == GR_USER || pg->graph == GR_MOD || pg->graph == GR_MSEQ || pg->graph == GR_PATS) && k == 0u)
-            || pg->graph == GR_SONG || pg->graph == GR_DXSND) {   /* (not an empty column) */
+            || pg->graph == GR_SONG || pg->graph == GR_DXSND || pg->graph == GR_FOCUS) {   /* (not an empty column) */
             ui.hot_col = (uint8_t)k;
             ui.hot_t = 40;
         }
