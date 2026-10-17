@@ -1478,13 +1478,17 @@ static void lib_poll(void)                              /* (graph_signature, onc
     }
 }
 static void sound_name(const track_t *t, char *b);   /* (ui_draw.c) */
+static void gen_panel(void);                         /* (0.8.5) gen.c: GEN in HOME's lens */
+static uint32_t gen_draw_sig(void);
 static uint32_t graph_signature(void)
 {
     const page_t *pg = cur_page();
     const track_t *t = TSEL;
     uint32_t h = 2166136261u, i;
+    if (ui.confirm == CF_DICE_ALL)                   /* (0.8.5) GEN: its settings, its page */
+        return h ^ gen_draw_sig();
     if (ui.home)
-        return h ^ (ui.frame / 2u);                  /* scope: redraw every other frame */
+        return h ^ (ui.frame / 2u) ^ (home_level() * 7u + home_set()) * 104729u;   /* the beings: every other frame */
     h ^= (uint32_t)pg->graph * 131u + TSEL->eng_req + song.sel * 7777u + ui.page * 1291u;
     if (strip_kind() == SK_TITLE)                    /* MENU > LARGE: the page's title (its engine, its number) */
         return h ^ 0x5A17u;
@@ -2038,7 +2042,7 @@ static void track_strip(uint32_t c, uint32_t sel, uint32_t st, uint32_t mute, ui
     cv_rrect(5, TSS_MY, gw, 3, 1, T_RAISE, T_SURF);
     if (m)
         cv_rrect(5, TSS_MY, m < 3 ? 3 : m, 3, 1, T_MID, T_RAISE);
-    cv_blit((uint32_t)CARD_X(c - trk_base4()), LG_Y_GRAPH);
+    cv_blit((uint32_t)CARD_X(c - trk_base4()), graph_y());
 }
 /* (JIANT 0.6) the JIANT style's mixer: the six tracks side by side, 38 px each. The track's cushion (armed: a dot,
  * red recording), the sound's name (muted: MUTE), LEVEL as the thermal column with the meter brighter over it, its dB
@@ -2351,6 +2355,7 @@ static void graph_song(void)
 #include "ui_tech.c"                                /* (JIANT 0.5) the technical graphs (FX, DEST, VOICE, GLOBAL) */
 #include "ui_lzsave.c"                              /* (0.8.5) SAVE's lens: its levels' panels */
 #include "ui_lzfx.c"                                /* (0.8.5) FX's lens: its levels' panels */
+#include "ui_lzhome.c"                              /* (0.8.5) HOME's lens: ECO, BEING, the critters */
 static void draw_graph(void)
 {
     const page_t *pg = cur_page();
@@ -2394,9 +2399,13 @@ static void draw_graph(void)
         else if (k == SK_STEPS) graph_steps(t, c);
         else graph_title();
         graph_ht = 100;
+    } else if (ui.confirm == CF_DICE_ALL) {          /* (0.8.5) GEN, HOME's lens's last level (gen.c) */
+        cv_oy = 0;
+        gen_panel();
     } else if (ui.home) {
         cv_oy = 0;
-        graph_ecosys();                              /* (JIANT 0.5: the system's beings, was the scope) */
+        graph_home_lz();                             /* (0.8.5: HOME's lens, ECO / BEING; JIANT 0.5: the system's
+                                                      * beings, was the scope) */
     } else if (bars_view(pg)) {                      /* (0.8.3) LENTE's PATTERN: PATTERN STRETCH TRACK, the bars */
         cv_oy = 0;
         graph_bars(t, c);

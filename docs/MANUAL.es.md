@@ -59,12 +59,12 @@ Guardá tus archivos WAV.
 
 ### Tu primer tema (5 minutos)
 
-1. En **HOME**, girá **SELECT**. Se abre la pantalla **GENERATOR**: elegí un **GENRE** con KNOB 1 (o dejá RANDOM) y
-   apretá **OCT+**. Aparece una idea de tema completa: motores, sonidos, partes, escala, tempo y efectos. Apretá
-   **PLAY**.
-2. ¿No te convence? Apretá **OCT+** otra vez: semilla nueva, pieza nueva. ¿Demasiado cargada? Girá **SELECT** a la
-   página 2 y bajá **DRUMS** o **ARP**, después OCT+: la misma pieza con eso cambiado. **HOME** (u OCT−) cierra la pantalla.
-   Para volver a lo que había antes: mantené **GLO** y apretá **G4** (UNDO).
+1. En **HOME**, girá **SELECT** dos pasos a la derecha (ECO → BEING → **GEN**). Se abre el **GENERATOR**: elegí un
+   **GENRE** con KNOB 1 o PRESETS (o dejá RANDOM) y apretá **OCT+**. Aparece una idea de tema completa: motores,
+   sonidos, partes, escala, tempo y efectos. Apretá **PLAY**.
+2. ¿No te convence? Apretá **OCT+** otra vez: semilla nueva, pieza nueva. ¿Demasiado cargada? Tocá **HOME** para la
+   página 2 y bajá **DRUMS** o **ARP**, después OCT+: la misma pieza con eso cambiado. **OCT−** cierra la pantalla
+   (SELECT a la izquierda: vuelve a BEING). Para volver a lo que había antes: mantené **GLO** y apretá **G4** (UNDO).
 3. ¿Te gusta? **Pará** (PLAY), apretá **SAVE** (abre SONIDO, los sonidos de usuario) y girá **SELECT** un paso a la
    izquierda: **PROJECT**, las cuatro secciones del proyecto. Girá **KNOB 4** a la derecha para que su tarjeta diga
    **OCT+** y apretá **OCT+**. Escribí un nombre con las teclas (o dejá el que te ofrece) y apretá **OCT+** otra vez. La
@@ -87,7 +87,7 @@ Los nombres de abajo son los que usa el firmware (la pantalla HARDWARE CALIBRATI
 
 | Control | Qué hace |
 | --- | --- |
-| **SELECT** (encoder) | Solo: **recorre las páginas de la sección en la que estás** (las de EDIT en una página EDIT, las de FX en una de FX …), una por paso, sin dar la vuelta; en una página **SEQ** en cambio hace **zoom**: PATRÓN ↔ COMPÁS ↔ PASO (la lente del secuenciador, LENTE: ver [6](#cómo-moverse-lente)); en **HOME** abre **GEN**, el generador de temas (como HOME + SELECT). Con un botón mantenido, los **dados** de ese botón: **HOME** + SELECT **GEN**, **EDIT** + SELECT el sonido, **SEQ** + SELECT la secuencia, **LFO** + SELECT el LFO, **FX** + SELECT los efectos. **GLO** + SELECT: el tempo. Cualquier otro botón de página + SELECT: sus páginas. |
+| **SELECT** (encoder) | Solo: **recorre las páginas de la sección en la que estás** (las de EDIT en una página EDIT, las de FX en una de FX …), una por paso, sin dar la vuelta; en una página **SEQ** en cambio hace **zoom**: PATRÓN ↔ COMPÁS ↔ PASO (la lente del secuenciador, LENTE: ver [6](#cómo-moverse-lente)); en **HOME** hace zoom **ECO ↔ BEING ↔ GEN** (GEN: el generador de temas, como HOME + SELECT; ver [LENTE en todo](#lente-en-todo-085)). Con un botón mantenido, los **dados** de ese botón: **HOME** + SELECT **GEN**, **EDIT** + SELECT el sonido, **SEQ** + SELECT la secuencia, **LFO** + SELECT el LFO, **FX** + SELECT los efectos. **GLO** + SELECT: el tempo. Cualquier otro botón de página + SELECT: sus páginas. |
 | **ALGORITHM** (encoder) | Elige la pista desde cualquier página: T1–T4, o T1–T6 con TRACKS 6. En el MENU: cambia de pestaña. |
 | **PRESETS** (encoder) | En HOME, PRESETS y las páginas de sonido: recorre sonidos (los presets de fábrica de cada motor y después tus presets de usuario). En las páginas SEQ sigue al zoom: en **PATRÓN** (PATTERN, STRETCH, PLAYHEADS, TRACK, MUTATE) elige el **compás**; en **COMPÁS** y **PASO** (STEP, NOTE, COMP, COMP 2, AUTOMATION) mueve el **cursor de paso**, y al pasarse del compás entra solo en el siguiente. En las páginas de lista (USER, PROJECT, ARRANGE, TOOLS, AUTO LIST): mueve la selección. **Mantené un botón de página y girá SELECT** (o PRESETS) para saltar directo por las páginas de ese botón. |
 | **KNOB 1–4** | Las cuatro tarjetas (columnas) de la pantalla. Con una capa mantenida, las perillas propias de la capa. Girar rápido recorre todo el rango, despacio ajusta fino (MENU > KNOB ACCEL lo desactiva). |
@@ -172,7 +172,8 @@ Los **colores** funcionan como una cámara térmica: frío (cian, azul) es poco,
 mucho. Violeta es lo seleccionado, naranja lo activo.
 
 **HOME** es el ecosistema: una criatura por pista, su especie según su motor, su forma según sus cuatro perillas, que
-se hincha y se calienta con su propio audio. La pista seleccionada se dibuja más grande, una muteada se oscurece, una
+se hincha y se calienta con su propio audio (0.8.5: en una grilla de seis celdas, como la maqueta, con bichitos nadando
+entre ellas; ver [LENTE en todo](#lente-en-todo-085)). La pista seleccionada se dibuja más grande, una muteada se oscurece, una
 pista dormida (TRACKS 4) se dibuja como muteada. En el **MIXER**, las pistas dormidas aparecen en gris y dicen OFF.
 
 Los **diálogos** preguntan antes de cualquier cosa destructiva: **OCT− NO**, **OCT+ YES**.
@@ -185,12 +186,12 @@ Los **diálogos** preguntan antes de cualquier cosa destructiva: **OCT− NO**, 
 
 - **Tocá** un botón de página: sus páginas. Tocalo de nuevo: la siguiente página de esa familia. Desde otra familia
   volvés a la página donde estuviste por última vez.
-- **HOME** vuelve al ecosistema.
+- **HOME** vuelve al ecosistema; en HOME un toque cambia los dos juegos de su nivel (las perillas de HOME / las macros).
 - **FX es una lente** (0.8.5; hasta la 0.8.4 secciones y dos toques rápidos): SELECT hace zoom **TRACK ↔ BUSES ↔
   EFFECT** (pista, buses, efecto), un toque de FX va a lo siguiente del nivel; PRESETS elige el módulo en BUSES y
   EFFECT. Ver [9](#la-lente-de-fx-track--buses--effect).
 - **Girá SELECT** para recorrer las páginas de la sección en la que estás (las de EDIT en una página EDIT), una por paso, frenando en la primera y la última; el nombre de la página aparece un momento sobre el pie.
-  En HOME abre GEN, el generador de temas.
+  En HOME hace zoom ECO ↔ BEING ↔ GEN (GEN: el generador de temas).
 - **SEQ es una lente** (LENTE, 0.8.3): SELECT hace zoom entre el **PATRÓN** entero, un **COMPÁS** y un **PASO**, y un
   toque de SEQ recorre los juegos de perillas del nivel en el que estás. Ver [6](#cómo-moverse-lente).
 - **SAVE también es una lente** (0.8.5): SELECT hace zoom **LIBRARY ↔ PROJECT ↔ SOUND** (biblioteca, proyecto,
@@ -203,6 +204,30 @@ Los **diálogos** preguntan antes de cualquier cosa destructiva: **OCT− NO**, 
   tecla o girar una perilla la abre al instante. Soltá y volvés a donde estabas.
 - Algunas páginas solo aparecen cuando corresponden: las páginas de operadores de FM6 en una pista FM6, las de DRUM-X
   en una pista DRUM, RETRIG en LOFI BYTE/FLOAT, y con **LOAD ECO** se ocultan las páginas SLICER y CHORUS.
+
+### LENTE en todo (0.8.5)
+
+Todo el instrumento funciona como la lente del secuenciador (el diseño que aprobó el dueño, la maqueta HTML "LENTE"):
+**SELECT hace zoom entre tres niveles** (sin dar la vuelta), un nivel tiene uno o más **juegos** de perillas y el
+**toque de su botón los recorre**, las **pestañas de nivel** van debajo del encabezado (la del nivel en el que estás
+rellena de violeta), y el pie dice **LENTE · NIVEL · JUEGO** con el lugar del juego a la derecha (**1/2**). Cada parte
+recuerda su nivel y el juego de cada nivel; su botón desde otro lado te devuelve ahí.
+
+| Parte | Niveles (SELECT) | Juegos (toque) | PRESETS |
+| --- | --- | --- | --- |
+| **HOME** | **ECO** (los seis seres) · **BEING** (el ser de la pista, sus perillas como órganos) · **GEN** (el generador) | ECO: HOME / MACROS · BEING: HOME / ROUTES · GEN: GEN 1/3 → 2/3 → 3/3 (un toque de HOME cada uno) | los sonidos (GEN: el GENRE) |
+
+- **ECO**: los seres de las seis pistas en una grilla, cada uno nadando en su celda con su sonido (un golpe lo
+  empuja), su nombre debajo (**T1 ANALOG**; MUTE, OFF si duerme), el seleccionado más grande en un aro violeta.
+  Alrededor, **bichitos**: ciliados, esporas, células a la deriva, flagelados y diatomeas diminutos que deambulan, se
+  juntan alrededor de las pistas que suenan, se dispersan cuando un ser recibe un golpe y laten con la salida (los
+  dibuja solo la pantalla: nada del tiempo del sonido). **MACROS**: KNOB 1–4 son **M1–M4** (las macros, como LFO
+  mantenido), las rutas contadas arriba a la izquierda, LATCH a la derecha.
+- **BEING**: el ser de la pista grande, sus cuatro perillas de HOME como órganos en las esquinas (un medidor cada una,
+  su valor, una vena hasta el cuerpo), el nombre del sonido debajo. **ROUTES**: M1–M4 a la izquierda con sus rutas
+  dibujadas hasta donde van (**T2 CUT+62**).
+- **GEN** es el generador (como HOME mantenido + SELECT, desde cualquier página): un **toque de HOME** cambia la
+  página, **PRESETS** el GENRE, **OCT+** arma la pieza, **OCT−** lo cierra (a ECO), **SELECT** a la izquierda vuelve a BEING.
 
 ### Cada página y sus cuatro perillas
 
@@ -930,10 +955,14 @@ Mantené **SAVE**:
 
 ### GEN — el generador de temas (HOME + SELECT)
 
-En **HOME**, girá **SELECT** (o mantené HOME y girá SELECT, desde cualquier página). Se abre la pantalla
-**GENERATOR**: tres páginas de ajustes, **SELECT** cambia de página, **KNOB 1–4** fijan los cuatro valores que se
-ven, **OCT+** arma la pieza y **HOME** (u OCT−) cierra la pantalla (la pieza queda; **UNDO**, GLO + G4, devuelve lo que había
-antes). **PLAY** arranca y para el transporte sin salir de la pantalla (0.6.97).
+En **HOME**, girá **SELECT** dos pasos a la derecha (0.8.5: ECO → BEING → GEN, la lente de HOME), o mantené HOME y
+girá SELECT, desde cualquier página. El **GENERATOR** se abre como el último nivel de HOME: tres páginas de ajustes,
+un **toque de HOME** cambia de página (0.8.5; antes SELECT), **KNOB 1–4** fijan los cuatro valores que se ven
+(**PRESETS**: el GENRE), **OCT+** arma la pieza y **OCT−** cierra la pantalla (la pieza queda; **UNDO**, GLO + G4,
+devuelve lo que había antes); **SELECT** a la izquierda vuelve a BEING. El panel muestra las cinco partes como filas
+(las que pesan las perillas de la página, encendidas) con un adelanto de su densidad y su calor, las secciones de la
+FORM como fichas de colores, la última pieza y **OCT+ MAKE**. **PLAY** arranca y para el transporte sin salir de la
+pantalla (0.6.97).
 
 | Página | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 |---|---|---|---|---|

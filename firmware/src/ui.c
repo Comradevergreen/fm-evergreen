@@ -184,6 +184,7 @@ static uint8_t sync_reload;                  /* engine / preset / project / user
 #define LG_CARD_H 104
 #define LG_Y_GRAPH 136
 #define LG_H_GRAPH 62
+#define LZ_LG_Y_GRAPH 150                 /* (0.8.5) .. under a lens's tabs: the tall cards 42..146, the strip 150..212 */
 
 static struct {
     uint8_t home;
@@ -197,6 +198,9 @@ static struct {
     uint16_t lens_mem[NTRK];     /* .. per track: the level last used and each level's set (LM_*: SEQ comes back there) */
     uint8_t slv, smem;           /* (0.8.5) SAVE's lens: the level shown (SV_*), each level's set (ui.c save_go) */
     uint8_t fxmod, fxtrk;        /* (0.8.5) FX's lens: the module picked (BUSES, EFFECT), TRACK's set last shown */
+    uint8_t pdlv[5], pdset[5][3];   /* (0.8.5) LENTE everywhere (ui_lens.c): EDIT ENV LFO SCL GLO, the level (^ its
+                                  * default) and each level's set */
+    uint8_t hlv, hset[2];        /* .. HOME: ECO (0) or BEING (1), each one's set (HOME / MACROS, HOME / ROUTES) */
     uint8_t ent_len, ent_arp, ent_res, ent_ord, ent_oct, ent_nn;   /* (0.6.37) that entry while held (ui_input.c
                                   * seq_entry): KNOB 1 its LEN in steps; ARP pressed: arpeggiated, KNOB 1 the steps a
                                   * note (RES), 2 the ORDER, 3 the octaves; the keys' notes in order of pitch */
@@ -398,12 +402,14 @@ static const page_t *cur_page(void) { return page_over ? page_over : &PAGES[ui.p
 enum { LK_OFF, LK_LABEL, LK_TALL };
 static int lens_on(void);
 static uint32_t lz_on(void);
+static int lz_mock_cards(void);
 static uint32_t large_kind(void)
 {
     uint32_t g;
     if (!(ui_prefs & PREF_LARGE))
         return LK_OFF;
-    if (ui.layer || lz_on())                            /* (0.8.5: a lens page keeps the mock-up's cards, M labels) */
+    if (ui.layer || lz_mock_cards())                    /* (0.8.5: SEQ, SAVE, FX's lenses keep the mock-up's cards, M labels;
+                                                         * HOME and the other lenses: tall cards under their tabs) */
         return LK_LABEL;
     if (ui.home)
         return LK_TALL;
@@ -416,9 +422,9 @@ static uint32_t large_kind(void)
 static uint32_t card_y(void) { return lz_on() ? LZ_CARD_Y : Y_LABEL; }
 static uint32_t foot_y(void) { return lz_on() ? LZ_FOOT_Y : Y_FOOT; }
 static uint32_t foot_h(void) { return lz_on() ? LZ_FOOT_H : H_FOOT; }
-static uint32_t card_h(void) { return lz_on() ? LZ_CARD_H : large_kind() == LK_TALL ? LG_CARD_H : CARD_H; }
-static uint32_t graph_y(void) { return lz_on() ? LZ_GRAPH_Y : large_kind() == LK_TALL ? LG_Y_GRAPH : Y_GRAPH; }
-static uint32_t graph_h(void) { return lz_on() ? LZ_GRAPH_H : large_kind() == LK_TALL ? LG_H_GRAPH : H_GRAPH; }
+static uint32_t card_h(void) { return large_kind() == LK_TALL ? LG_CARD_H : lz_on() ? LZ_CARD_H : CARD_H; }
+static uint32_t graph_y(void) { return large_kind() == LK_TALL ? (lz_on() ? LZ_LG_Y_GRAPH : LG_Y_GRAPH) : lz_on() ? LZ_GRAPH_Y : Y_GRAPH; }
+static uint32_t graph_h(void) { return large_kind() == LK_TALL ? LG_H_GRAPH : lz_on() ? LZ_GRAPH_H : H_GRAPH; }
 static int large_face_has(const char *s)                /* every glyph of s in the sparse L face */
 {
     for (; *s; s++)
@@ -705,22 +711,69 @@ static void fx_pick(int32_t s)                          /* PRESETS on BUSES / EF
         fx_show(fx_page(FX_MHEAD[m]));
 }
 
-/* (0.8.5) a lens page shown (SEQ's LENTE, SAVE's, FX's): the mock-up's layout, its tabs and breadcrumb */
+/* (0.8.5) a lens page shown (SEQ's LENTE, SAVE's, FX's; ui_lens.c: HOME and the rest): the mock-up's layout, its tabs
+ * and breadcrumb */
 static int name_on(void);                               /* (ui_name.c: NAME keeps its own layout) */
-static uint32_t lz_on(void) { return (lens_on() || save_on() || fx_on()) && !ui.layer && !name_on(); }
-enum { LZ_SEQ, LZ_SAVE, LZ_FX };
-static uint32_t lz_fam(void) { return save_on() ? LZ_SAVE : fx_on() ? LZ_FX : LZ_SEQ; }   /* which lens */
-static uint32_t lens_level(void);
-static uint32_t lz_level(void) { return lz_fam() == LZ_SAVE ? save_level() : lz_fam() == LZ_FX ? fx_level() : lens_level(); }   /* its level, 0..2 */
-static const char *lz_level_name(uint32_t l) { return lz_fam() == LZ_SAVE ? SV_NAME[l % 3u] : lz_fam() == LZ_FX ? FXL_NAME[l % 3u] : LENS_NAME[l % LV_N]; }
-static const char *lz_crumb(void) { return lz_fam() == LZ_SAVE ? "SAVE" : lz_fam() == LZ_FX ? "FX" : "LENTE"; }   /* the breadcrumb's first word */
-static const char *lz_set_name(void)                    /* .. its last: the set shown ("": none, SAVE's as the mock-up) */
+#include "ui_lens.c"
+static int home_lz(void) { return (ui.home && !ui.menu && !ui.confirm) || ui.confirm == CF_DICE_ALL; }   /* (GEN: HOME's) */
+static uint32_t lz_on(void) { return (lens_on() || save_on() || fx_on() || pd_on() || home_lz()) && !ui.layer && !name_on(); }
+static uint32_t lz_fam(void)                            /* which lens */
 {
-    int32_t k;
-    if (lz_fam() != LZ_SEQ)
+    if (ui.confirm == CF_DICE_ALL || ui.home)
+        return LZ_HOME;
+    if (pd_on())
+        return LZ_EDIT + pd_cur();
+    return save_on() ? LZ_SAVE : fx_on() ? LZ_FX : LZ_SEQ;
+}
+static int lz_mock_cards(void) { return lz_on() && lz_fam() <= LZ_FX; }   /* (MENU > LARGE: their cards as they are) */
+static uint32_t lens_level(void);
+static uint32_t lz_level(void)                          /* its level, 0..2 */
+{
+    uint32_t f = lz_fam();
+    return f == LZ_SAVE ? save_level() : f == LZ_FX ? fx_level() : f == LZ_HOME ? home_level() : f >= LZ_EDIT ? pd_level() :
+           lens_level();
+}
+static const char *lz_level_name(uint32_t l)
+{
+    uint32_t f = lz_fam();
+    return f == LZ_SAVE ? SV_NAME[l % 3u] : f == LZ_FX ? FXL_NAME[l % 3u] : f == LZ_HOME ? HOME_LV[l % 3u] :
+           f >= LZ_EDIT ? pd_level_name(f - LZ_EDIT, l) : LENS_NAME[l % LV_N];
+}
+static const char *lz_crumb(void) { return lz_fam() == LZ_SAVE ? "SAVE" : lz_fam() == LZ_FX ? "FX" : "LENTE"; }   /* the breadcrumb's first word */
+/* .. its last: the set shown ("": none, SAVE's and FX's as their mock-ups); k / n its place (n 1: no count) */
+static __attribute__((noinline)) const char *lz_set(uint32_t *k, uint32_t *n)
+{
+    static char b[24];
+    static const char *const HSET[2][2] = {{"HOME", "MACROS"}, {"HOME", "ROUTES"}};
+    uint32_t f = lz_fam();
+    int32_t i;
+    *k = 0;
+    *n = 1;
+    if (f == LZ_HOME) {
+        if (ui.confirm == CF_DICE_ALL) {
+            str_cpy(b, "GEN 1/3", sizeof b);
+            b[4] = (char)('1' + gen_page());
+            *k = gen_page();
+            *n = 3;
+            return b;
+        }
+        *k = home_set();
+        *n = 2;
+        return HSET[home_level() & 1u][*k];
+    }
+    if (f >= LZ_EDIT) {
+        pd_set_name(b, k, n);
+        return b;
+    }
+    if (f != LZ_SEQ)
         return "";
-    k = lens_k(lens_level(), ui.page);
-    return k >= 0 ? LENS_SET[lens_level()][k] : PAGES[ui.page].title;
+    i = lens_k(lens_level(), ui.page);
+    return i >= 0 ? LENS_SET[lens_level()][i] : PAGES[ui.page].title;
+}
+static const char *lz_set_name(void)
+{
+    uint32_t k, n;
+    return lz_set(&k, &n);
 }
 static uint32_t lens_level(void)
 {

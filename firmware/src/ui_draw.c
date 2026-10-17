@@ -733,10 +733,10 @@ static void draw_tabs(void)
  * `last` (a flash: TEXT; the DRUM grid with ACC held: ACCENT, "ACCENT") */
 static const char *const FAM_CRUMB[FAM_COUNT] = {"HOME", "ENV", "LFO", "FX", "SCL", "EDIT", "GLO", "SAVE", "ARP", "SEQ",
                                                  "GLO"};
-static void foot_crumbs(char *b, uint32_t n)            /* b holds n (48) */
+static __attribute__((noinline)) void foot_crumbs(char *b, uint32_t n)   /* b holds n (48) */
 {
     char ti[20];
-    if (ui.home) {
+    if (!lz_on() && ui.home) {
         str_cpy(b, "HOME", n);
         return;
     }
@@ -759,8 +759,25 @@ static void foot_crumbs(char *b, uint32_t n)            /* b holds n (48) */
     str_cpy(b + str_len(b), ti, sizeof ti);
 }
 #define CRUMB_Y 4                                       /* (0.8.5) a lens footer's breadcrumb (AF_X): capitals rows 5..11 */
-static void draw_crumbs(int32_t y, uint16_t fg, uint16_t last)
+/* (0.8.5) the set's place at the footer's right, "1/2" (the domains of ui_lens.c with more than one set) */
+static int32_t crumb_count(char *b)
 {
+    uint32_t k, n;
+    b[0] = 0;
+    if (!lz_on() || lz_fam() < LZ_HOME)
+        return 0;
+    (void)lz_set(&k, &n);
+    if (n < 2u)
+        return 0;
+    fmt_int(b, (int32_t)k + 1);
+    str_cpy(b + str_len(b), "/", 2);
+    fmt_int(b + str_len(b), (int32_t)n);
+    return text_w(&AF_X, b);
+}
+static __attribute__((noinline)) void draw_crumbs(int32_t y, uint16_t fg, uint16_t last)
+{
+    char cnt[8];
+    int32_t cw = crumb_count(cnt), mx = cw ? 234 - cw - 8 : 234;
     char b[48];
     uint32_t i, k = 0;
     int32_t x;
@@ -775,8 +792,10 @@ static void draw_crumbs(int32_t y, uint16_t fg, uint16_t last)
         GFX_HOOK_ALIGN(0, y + AF_X_CAP_Y, 0, y + AF_X_CAP_Y + AF_X_CAP_H, AL_V, "footer breadcrumb on its line");
     else
         GFX_HOOK_ALIGN(0, y + AF_S_CAP_Y, 0, y + AF_S_CAP_Y + AF_S_CAP_H, AL_V, "footer breadcrumb on its line");
+    if (cw)
+        cv_text_r(234, y, f, cnt, fg, T_BG);
     if (last == fg || !k) {
-        cv_free_text(6, y, f, b, fg, T_BG, 228);
+        cv_free_text(6, y, f, b, fg, T_BG, mx - 6);
         return;
     }
     {
@@ -784,7 +803,7 @@ static void draw_crumbs(int32_t y, uint16_t fg, uint16_t last)
         b[k] = 0;
         x = cv_text_on(6, y, f, b, fg, T_BG);
         b[k] = c;
-        cv_free_text(x, y, f, b + k, last, T_BG, 234 - x);
+        cv_free_text(x, y, f, b + k, last, T_BG, mx - x);
     }
 }
 static void draw_foot(void)
@@ -874,6 +893,14 @@ static void draw_columns(void)
     char val[12];
     const char *unit;
     (void)motion_mask(song.sel, card_mot_mask);       /* (PLAY OFF: no scan) */
+    if (home_macros()) {                                /* (0.8.5) HOME's MACROS / ROUTES: M1..M4, 0..100 % */
+        static const char *const M[4] = {"M1", "M2", "M3", "M4"};
+        for (c = 0; c < 4u; c++) {
+            fmt_int(val, macro_v[c] * 100 / 127);
+            draw_column(c, M[c], val, "%", VAL(c), macro_v[c] * 1000 / 127, ICON_MIX);
+        }
+        return;
+    }
     if (ui.home) {
         for (c = 0; c < 4u; c++) {
             int16_t *vp;
@@ -1671,14 +1698,13 @@ static void confirm_text(char *a, char *b)
         break;
     }
 }
-static void draw_gen(void);                             /* (0.6.91) gen.c: the GEN screen */
+static void gen_cards(void);                            /* (0.8.5) gen.c: GEN in HOME's lens, its cards */
 static void draw_confirm(void)
 {
     char a[24], b[24];
     const aafont_t *tf = &AF_M;
     int dk = ui.confirm >= CF_DICE_SOUND && ui.confirm <= CF_DICE_FX;
     const char *no = dk ? "CANCEL" : "NO", *yes = dk ? "OK" : "YES";
-    if (ui.confirm == CF_DICE_ALL) { draw_gen(); return; }
     confirm_text(a, b);
     lcd_fill(0, H_HEAD, 240, 240 - H_HEAD, T_BG);
     ui.head_sig = ~0u;
@@ -1724,6 +1750,26 @@ static void style_apply(void)
     }
 }
 
+/* (0.8.5) the end of a lens screen drawn outside the page path (GEN): the second message, the timers, the footer and the
+ * tabs */
+static void lz_frame_end(void)
+{
+    if (ui.msg_t && !--ui.msg_t && ui.msg2[0]) {
+        str_cpy(ui.msg, ui.msg2, sizeof ui.msg);
+        ui.msg2[0] = 0;
+        ui.msg_t = 60;
+    }
+    if (ui.bpm_t)
+        ui.bpm_t--;
+    if (ui.hot_t)
+        ui.hot_t--;
+    if (pf_on)
+        page_flash_draw();
+    if (!pf_on)
+        draw_foot();
+    draw_tabs();
+    ui.force = 0;
+}
 static void ui_draw_page(uint32_t counting);
 static void ui_draw(void)
 {
@@ -1754,6 +1800,15 @@ static void ui_draw_page(uint32_t counting)
     if (counting && !ui.confirm && !name_on()) {        /* the count-in: over the page (and a layer) */
         draw_countin();
         draw_head();
+        return;
+    }
+    if (ui.confirm == CF_DICE_ALL) {                    /* (0.8.5) GEN: HOME's lens, its last level */
+        if (ui.force)
+            draw_frame();
+        draw_head();
+        gen_cards();
+        draw_graph();
+        lz_frame_end();
         return;
     }
     if (ui.confirm) {                                   /* the OCT- / OCT+ dialog */

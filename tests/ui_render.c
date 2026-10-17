@@ -657,6 +657,7 @@ enum { S_HOME, S_HOME_IDLE, S_MESSAGE, S_MESSAGE_KEY, S_MESSAGE_NOFILE, S_PRESET
        S_HEAD_BPM_LOCKED, S_HEAD_GLO_TURN, S_HEAD_DOWNBEAT, S_HEAD_BEAT_2,
        S_SAVE_LIB, S_SAVE_TOOLS, S_SAVE_PROJ, S_SAVE_ARR, S_SAVE_SOUND, S_SAVE_PRESETS,
        S_FXL_SENDS, S_FXL_DIST, S_FXL_PAN, S_FXL_BUSES, S_FXL_DELAY, S_FXL_DELAY2, S_FXL_REVERB, S_FXL_SLICER, S_FXL_MASTER,
+       S_HOME_MACROS, S_HOME_BEING, S_HOME_ROUTES, S_GEN_LEAD,
        S_MIXER_T4, S_HOME_T4, S_MOCK_HOME, S_MOCK_PRESETS, S_MOCK_SEQ, S_MOCK_DRUM, S_MOCK_MIXER, S_MOCK_DIALOG, S_MOCK_MENU, S_COUNT };
 static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "message", "message_key", "message_nofile", "presets", "presets_nofav", "user",
     "phrases", "project", "tools", "song_empty", "song", "step", "pattern", "chance", "comp", "comp_trig", "comp_echo", "mutate", "morph", "dx_image", "dx_send", "page_flash", "page_flash_home", "fugue", "motion", "drum",
@@ -681,6 +682,7 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "message", "mes
     "save_library", "save_tools", "save_project", "save_arrange", "save_sound", "save_presets",
     "fx_track_sends", "fx_track_dist", "fx_track_pan", "fx_buses", "fx_effect_delay", "fx_effect_delay2", "fx_effect_reverb",
     "fx_effect_slicer", "fx_effect_master",
+    "home_macros", "home_being", "home_routes", "gen_lead",
     "mixer_tracks4", "home_tracks4", "mock_home", "mock_presets", "mock_seq", "mock_drum", "mock_mixer", "mock_dialog", "mock_menu"};
 
 /* the scenes of the UI design screens: the state the UI-redesign
@@ -957,6 +959,18 @@ static void setup(int s)
     case S_MIXER_T4:                             /* (0.6.22) TRACKS 4: T5, T6 asleep, grey, OFF */
         go_page(GR_TRK); trk_live = 4; break;
     case S_HOME_T4: trk_live = 4; break;
+    case S_HOME_MACROS: case S_HOME_BEING: case S_HOME_ROUTES: {   /* (0.8.5) HOME's lens: MACROS, BEING, ROUTES */
+        uint32_t k;
+        ui.hlv = s != S_HOME_MACROS;
+        ui.hset[s == S_HOME_MACROS ? 0 : 1] = s != S_HOME_BEING;
+        for (k = 0; k < NTRK; k++) trk[k].peak = (int32_t)(1500u + k * 900u);
+        trk[1].p[P_M1SRC] = MS_M1; trk[1].p[P_M1DST] = MD_CUT; trk[1].p[P_M1AMT] = 40;
+        trk[3].p[P_M1SRC + 3] = MS_M1 + 2; trk[3].p[P_M1DST + 3] = MD_E1; trk[3].p[P_M1AMT + 3] = -20;
+        macro_v[0] = 40; macro_v[1] = 90; macro_v[2] = 20; macro_v[3] = 64;
+        if (s == S_HOME_BEING) { ui.hot_col = 2; ui.hot_t = 30; }
+        break;
+    }
+    case S_GEN_LEAD: ui.confirm = CF_DICE_ALL; gp.page = 2; gp.hot = 1; gp.form = 2; break;   /* (0.8.5) GEN 3/3, SONG */
     case S_MIXER_PAN:                            /* PAN just turned, the ends of each knob, OFF, armed while stopped */
         go_page(GR_TRK); song.playing = 0; song.sel = 1;
         trk[0].p[P_LEVEL] = 127; trk[1].p[P_LEVEL] = 0; trk[2].p[P_LEVEL] = 1; trk[3].p[P_LEVEL] = 104;

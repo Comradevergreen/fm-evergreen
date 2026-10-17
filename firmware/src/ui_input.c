@@ -2191,6 +2191,8 @@ static void ui_input_frame(void)
                 }
             }
         } else if (oct & 1u) {
+            if (ui.confirm == CF_DICE_ALL && ui.home)   /* (0.8.5) GEN closed on HOME: its ECO, as the mock-up */
+                ui.hlv = 0;
             if (dice_kind(ui.confirm))                  /* (0.6.65) CANCEL: the part before the dice */
                 ui_message(dk_back(ui.confirm, ui.confirm_trk) ? "CAN'T UNDO" :
                            ui.confirm == CF_DICE_SEQ ? "SEQ BACK" : ui.confirm == CF_DICE_LFO ? "LFO BACK" :
@@ -2204,12 +2206,16 @@ static void ui_input_frame(void)
                                                          * (0.6.97) PLAY runs and stops the transport (the piece heard) */
             for (k = 0; k < 4u; k++)
                 if ((s = panel_enc(EN_K1 + k)) != 0) gen_knob(k, s);
-            if ((s = panel_enc(EN_SELECT)) != 0) gen_select(s);
-            if (home == BT_TAP) {                       /* (0.7.0) HOME: done (OCT- too) */
+            if ((s = panel_enc(EN_SELECT)) != 0 && gen_zoom(s)) {   /* (0.8.5) LENTE: SELECT left, back to BEING */
                 ui.confirm = 0;
-                ui.force = 1;
+                ui.hlv = 1;
                 go_home();
             }
+            if ((s = panel_enc(EN_PRESET)) != 0)        /* (0.8.5) PRESETS: the GENRE */
+                gen_knob(0, s);
+            if (home == BT_TAP)                         /* (0.8.5) HOME: GEN 1/3 -> 2/3 -> 3/3 (0.7.0 .. 0.8.4: done; OCT-
+                                                         * closes it) */
+                gen_next();
             if ((pressed >> panel.btn[B_PLAY]) & 1u) {
                 if (song.playing || chain_busy() || seq_counting()) transport_req = 2;
                 else if (live.mode) chain_play_ui();
@@ -2224,7 +2230,9 @@ static void ui_input_frame(void)
         layer_tap(lytap);
     if (seq == BT_TAP || seq == BT_HOLD)                /* (SONG: SAVE held, G5) */
         open_family(FAM_SEQ);
-    if (home == BT_TAP)                                 /* HOME acts on release: a hold opens the menu */
+    if (home == BT_TAP && ui.home)                      /* (0.8.5) LENTE: on HOME, the level's other set (HOME / MACROS, */
+        home_cycle();                                   /* HOME / ROUTES) */
+    else if (home == BT_TAP)                            /* HOME acts on release: a hold opens the menu */
         go_home();
     cursor_fix();                                       /* LEN may have changed (knob, editor, load) */
     for (id = 0; id < 14u; id++) {
@@ -2340,13 +2348,19 @@ static void ui_input_frame(void)
         }
     } else if ((s = panel_enc(EN_SELECT)) != 0 && !lay && !ui.menu) {   /* (0.6.67) SELECT alone: the section's pages;
                                                          * (0.6.69) on HOME, as before: DICE EVERYTHING? (once a turn) */
-        static uint32_t hd_ms;
         if (!ui.home) page_scroll(s);
-        else if (!ui.confirm && (!hd_ms || fm1_ms - hd_ms > 400u)) {
-            if (chain_busy()) ui_message("STOP TO EDIT");
-            else { confirm_open(CF_DICE_ALL, song.sel); gen_open(); }
+        else if (!ui.confirm) {                         /* (0.8.5) LENTE: ECO <-> BEING <-> GEN (GEN: the generator) */
+            int32_t to = clamp((int32_t)(ui.hlv ? 1 : 0) + s, 0, 2);
+            if (to == 2) {
+                ui.hlv = 1;
+                if (chain_busy()) ui_message("STOP TO EDIT");
+                else { confirm_open(CF_DICE_ALL, song.sel); gen_open(); }
+            } else if ((uint32_t)to != (ui.hlv ? 1u : 0u)) {
+                ui.hlv = (uint8_t)to;
+                ui.force = 1;
+                page_flash();
+            }
         }
-        if (ui.home) hd_ms = fm1_ms | 1u;
     }
     for (k = 0; k < 4u && !kq; k++) {
         const page_t *pg = cur_page();
@@ -2375,7 +2389,9 @@ static void ui_input_frame(void)
             ui.hot_col = (uint8_t)k;
             ui.hot_t = 40;
         }
-        if (ui.home) {
+        if (home_macros()) {                            /* (0.8.5) HOME's MACROS / ROUTES: M1..M4 */
+            macro_v[k] = (uint8_t)clamp(macro_v[k] + accel(EN_K1 + k, s, 127), 0, 127);
+        } else if (ui.home) {
             int16_t *vp;
             const param_desc_t *d = home_param(k, &vp);
             *vp = (int16_t)param_turn(d, *vp, accel(EN_K1 + k, s, d->fmt == F_ENUM ? 0 : d->max - d->min));

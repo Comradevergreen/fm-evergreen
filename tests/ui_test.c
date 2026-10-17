@@ -6401,7 +6401,8 @@ static int test_lente(void)
         ok &= lens_level() == LV_BAR && th == T_RAISE && tb == T_THEME;           /* SELECT: BAR lit */
     }
     go_home(); frame();
-    ok &= card_y() == Y_LABEL && graph_y() == Y_GRAPH && foot_y() == Y_FOOT;      /* (elsewhere as before) */
+    ok &= card_y() == LZ_CARD_Y && graph_y() == LZ_GRAPH_Y && foot_y() == LZ_FOOT_Y;   /* (0.8.5: HOME a lens too, the same
+                                                         * geometry) */
     open_family(FAM_SEQ); frame();
     {
         char ti[20];
@@ -6414,7 +6415,7 @@ static int test_lente(void)
         page_title(ti);
         ok &= str_eq(ti, "TRACK 4/5");
     }
-    bad += check("  the level tabs on top (the one shown THEME), the page under them (elsewhere as before); STEP's sets as \"COMP 2/3\"", ok);
+    bad += check("  the level tabs on top (the one shown THEME), the page under them (HOME's lens alike); STEP's sets as \"COMP 2/3\"", ok);
     /* the tools layer and the dice on every level */
     ok = 1;
     for (q = 0; q < 3u; q++) {
@@ -7256,10 +7257,13 @@ static int test_dice_all(void)
         for (i = 0; i < 6u; i++) { turn(EN_K3, e0 >= 50u ? -1 : 1); frames(32); }
         ok = gp.energy != e0 && host_big_fills == f0;
         fm1_ms += 500u;                                 /* (past the SELECT turn that opened it) */
-        turn(EN_SELECT, 1); frames(32);
+        press(B_HOME); frames(32);                      /* (0.8.5 LENTE: a HOME tap, GEN's next page; SELECT zooms) */
         ok &= gp.page != p0 && host_big_fills == f0;
-        turn(EN_SELECT, -1); frames(32);
-        bad += check("GEN: a knob or SELECT repaints the cards, the body is never cleared (no flicker)", ok && ui.confirm == CF_DICE_ALL);
+        turn(EN_SELECT, 1); frames(32);                 /* (right: GEN is the last level) */
+        ok &= ui.confirm == CF_DICE_ALL && gp.page != p0;
+        press(B_HOME); press(B_HOME); frames(8);        /* (round: 1/3 again) */
+        ok &= gp.page == p0;
+        bad += check("GEN: a knob or a HOME tap (its page) repaints the cards, the body is never cleared (no flicker)", ok && ui.confirm == CF_DICE_ALL);
     }
     press(B_OCTUP); frames(4);
     ok = ui.confirm == CF_DICE_ALL && undo_ok;         /* (0.6.91: GEN stays open for another throw; OCT- is done) */
@@ -8983,7 +8987,9 @@ static int test_bpm_lock(void)
     turn(EN_SELECT, -1);
     ok &= str_eq(cur_page()->title, "GLOBAL");
     go_home(); frame(); turn(EN_SELECT, 1);
-    ok &= ui.home && ui.confirm == CF_DICE_ALL && song.g[G_BPM] == b0;   /* (0.6.69) HOME: DICE EVERYTHING? as before */
+    ok &= ui.home && !ui.confirm && home_level() == 1u;                /* (0.8.5 LENTE: ECO -> BEING -> GEN) */
+    turn(EN_SELECT, 1);
+    ok &= ui.home && ui.confirm == CF_DICE_ALL && song.g[G_BPM] == b0;   /* (0.6.69) HOME: DICE EVERYTHING? (GEN) */
     press(B_OCTDN); frame(); ok &= !ui.confirm;
     go_title("EDIT 1"); frame(); turn(EN_SELECT, 1);
     ok &= str_eq(cur_page()->title, "EDIT 2");
@@ -9149,7 +9155,8 @@ static int test_large(void)
     ui_power_on();
     song.playing = 0;
     frame();
-    ok = !(ui_prefs & PREF_LARGE) && large_kind() == LK_OFF && card_h() == CARD_H && graph_y() == Y_GRAPH;
+    ok = !(ui_prefs & PREF_LARGE) && large_kind() == LK_OFF && card_h() == LZ_CARD_H && graph_y() == LZ_GRAPH_Y;   /* (HOME's
+                                                         * lens) */
     ok &= MI_LARGE == MI_STYLE + 1u && str_eq(MI_NAME[MI_LARGE], "LARGE") && menu_flag(MI_LARGE) &&
           str_eq(menu_flag(MI_LARGE)->name[0], "OFF") && str_eq(menu_flag(MI_LARGE)->name[1], "ON");
     ui.force = 1; frame();
@@ -9165,16 +9172,19 @@ static int test_large(void)
     press(B_HOME);
     bad += check("#15 MENU > LARGE: OFF by default, under STYLE; KNOB 1 right / OCT+ ON, left / OCT- OFF", ok && !ui.menu);
 
-    /* HOME: tall cards (rows 28..132) and the strip (136..198); the footer as it was */
+    /* HOME (0.8.5: a lens): tall cards under its tabs (rows 42..146) and the strip (150..212); the footer as it was */
     frame();
-    ok = ui.home && large_kind() == LK_TALL && card_h() == LG_CARD_H && graph_y() == LG_Y_GRAPH && strip_kind() == SK_SCOPE;
-    ok &= lg_px(30, Y_SEP_END + 1) == T_SURF && off[(Y_SEP_END + 1) * 240 + 30] == swap16(T_BG);     /* a card where the gap was */
-    ok &= lg_px(30, LG_Y_GRAPH - 2) == T_BG && off[(LG_Y_GRAPH - 2) * 240 + 30] == swap16(T_SURF);   /* a gap in the panel */
-    ok &= lg_px(30, LG_Y_GRAPH + 1) == T_SURF;
+    ok = ui.home && large_kind() == LK_TALL && card_y() == LZ_CARD_Y && card_h() == LG_CARD_H && graph_y() == LZ_LG_Y_GRAPH &&
+         strip_kind() == SK_SCOPE;
+    ok &= lg_px(30, LZ_CARD_Y + LZ_CARD_H + 2) == T_SURF && off[(LZ_CARD_Y + LZ_CARD_H + 2) * 240 + 30] == swap16(T_BG);   /* a
+                                                         * card where the gap was */
+    ok &= lg_px(30, LZ_LG_Y_GRAPH - 2) == T_BG && off[(LZ_LG_Y_GRAPH - 2) * 240 + 30] == swap16(T_SURF);   /* a gap in the panel */
+    ok &= lg_px(30, LZ_LG_Y_GRAPH + 1) == T_SURF;
     for (c = 0; c < 4u; c++)                                      /* each column's K pill, over its knob */
-        ok &= lg_px(CARD_X(c) + 8, Y_LABEL + LG_MY + LG_MH / 2) == T_KEY;
-    ok &= !memcmp(off + Y_FOOT * 240, host_screen + Y_FOOT * 240, 240u * H_FOOT * sizeof *off);
-    bad += check("#15 LARGE ON: HOME's cards tall (a K1..K4 pill over each column), the scope a strip, the footer kept", ok);
+        ok &= lg_px(CARD_X(c) + 8, LZ_CARD_Y + LG_MY + LG_MH / 2) == T_KEY;
+    ok &= !memcmp(off + LZ_FOOT_Y * 240, host_screen + LZ_FOOT_Y * 240, 240u * LZ_FOOT_H * sizeof *off);
+    ok &= swap16(host_screen[(LT_Y + LT_H / 2) * 240 + LT_X(0) + 2]) == T_THEME;   /* (its tabs: ECO lit) */
+    bad += check("#15 LARGE ON: HOME's cards tall under its tabs (a K1..K4 pill over each column), the scope a strip, the footer kept", ok);
 
     /* the value in L: GLOBAL's BPM 124 stands about twice as tall as in M */
     go_title("GLOBAL"); frame();
@@ -9317,10 +9327,11 @@ static int test_menu_prefs(void)
 static int test_style(void)
 {
     int bad = 0, ok;
-    const uint32_t rule = 74u * 240u + 120u;           /* (the rule over the panel: ui_draw.c draw_rules; 0.8.5: the header's
-                                                        * own rule at 22 in either style) */
+    uint32_t rule;                                     /* (the rule over the panel: ui_draw.c draw_rules; 0.8.5: the header's
+                                                        * own rule at 22 in either style; HOME a lens: under its cards) */
     ui_power_on();
     frame();
+    rule = (card_y() + card_h() + graph_y()) / 2u * 240u + 120u;
     ok = ui_style == ST_FLAT && ux.style == ST_FLAT && ux.surf != ux.bg;
     ui.force = 1; frame();
     ok &= host_screen[rule] == swap16(T_BG);
@@ -9675,11 +9686,99 @@ static int test_organic(void)
     return bad;
 }
 
+/* ------------------------------------------------------------------------------------ (0.8.5) LENTE everywhere --- */
+/* the tab of level l lit (THEME), the others RAISE */
+static int lz_tab_lit(uint32_t l)
+{
+    uint32_t k;
+    int ok = 1;
+    for (k = 0; k < 3u; k++)
+        ok &= swap16(host_screen[(LT_Y + LT_H / 2) * 240 + LT_X(k) + 2]) == (k == l ? T_THEME : T_RAISE);
+    return ok;
+}
+static int lz_crumb_is(const char *s)
+{
+    char b[48];
+    foot_crumbs(b, sizeof b);
+    return str_eq(b, s);
+}
+/* HOME (ui_lens.c): ECO (HOME / MACROS) . BEING (HOME / ROUTES) . GEN; SELECT zooms, a HOME tap the level's other set
+ * (GEN: its next page), PRESETS on GEN the GENRE, OCT- closes GEN to ECO, SELECT left on GEN back to BEING; HOME from
+ * elsewhere the level and set it was left at; MACROS / ROUTES: KNOB 1..4 M1..M4 */
+static int test_lz_home(void)
+{
+    int bad = 0, ok;
+    uint32_t c, k;
+    char b[8];
+    ui_power_on(); frame();
+    ok = ui.home && lz_on() && lz_fam() == LZ_HOME && home_level() == 0u && !home_set() && lz_tab_lit(0) &&
+         lz_crumb_is("LENTE \xB7 ECO \xB7 HOME") && crumb_count(b) && str_eq(b, "1/2");
+    press(B_HOME); frame();                                         /* a HOME tap: MACROS */
+    ok &= ui.home && home_set() && home_macros() && lz_crumb_is("LENTE \xB7 ECO \xB7 MACROS") && crumb_count(b) && str_eq(b, "2/2");
+    k = macro_v[0];
+    turn(EN_K1, 3); frame();
+    ok &= macro_v[0] == (uint8_t)(k + 3u) && str_eq(ui.col[0], "M1|") == 0 && !strncmp(ui.col[0], "M1|", 3);
+    c = (uint32_t)TSEL->p[ENGINES[TSEL->eng_req]->knob[0]];
+    press(B_HOME); frame();                                         /* HOME again: the HOME knobs */
+    turn(EN_K1, 1); frame();
+    ok &= !home_set() && (uint32_t)TSEL->p[ENGINES[TSEL->eng_req]->knob[0]] != c && macro_v[0] == (uint8_t)(k + 3u);
+    bad += check("LENTE HOME: ECO's sets HOME / MACROS by a HOME tap; MACROS' knobs M1..M4; the breadcrumb and its count", ok);
+    turn(EN_SELECT, 1); frame();                                    /* BEING */
+    ok = ui.home && home_level() == 1u && lz_tab_lit(1) && lz_crumb_is("LENTE \xB7 BEING \xB7 HOME") && !ui.confirm;
+    press(B_HOME); frame();
+    ok &= home_set() && lz_crumb_is("LENTE \xB7 BEING \xB7 ROUTES") && home_macros();
+    turn(EN_SELECT, -1); frame();                                   /* back to ECO: at its set (HOME) */
+    ok &= home_level() == 0u && !home_set();
+    turn(EN_SELECT, -1); frame();                                   /* (no wrap) */
+    ok &= home_level() == 0u && ui.home && !ui.confirm;
+    turn(EN_SELECT, 1); frame();
+    ok &= home_level() == 1u && home_set();                         /* (BEING at ROUTES, as left) */
+    bad += check("LENTE HOME: SELECT ECO <-> BEING (no wrap), each level at its set; BEING's HOME / ROUTES", ok);
+    fm1_ms += 1000u;
+    turn(EN_SELECT, 1); frame();                                    /* GEN */
+    ok = ui.confirm == CF_DICE_ALL && home_level() == 2u && lz_on() && lz_tab_lit(2) && lz_crumb_is("LENTE \xB7 GEN \xB7 GEN 1/3");
+    k = gp.genre;
+    turn(EN_PRESET, 1); frame();
+    ok &= gp.genre == (k + 1u) % (NGENRE + 1u);                     /* PRESETS: the GENRE */
+    press(B_HOME); frame();
+    ok &= gen_page() == 1u && lz_crumb_is("LENTE \xB7 GEN \xB7 GEN 2/3") && crumb_count(b) && str_eq(b, "2/3");
+    fm1_ms += 1000u;
+    turn(EN_SELECT, -1); frame();                                   /* left: BEING */
+    ok &= !ui.confirm && ui.home && home_level() == 1u;
+    turn(EN_SELECT, 1); frame();
+    ok &= ui.confirm == CF_DICE_ALL;
+    press(B_OCTDN); frame();                                        /* OCT-: closed, ECO */
+    ok &= !ui.confirm && ui.home && home_level() == 0u;
+    bad += check("LENTE HOME: GEN the last level (SELECT right of BEING), PRESETS its GENRE, a HOME tap its page, SELECT left BEING, OCT- ECO", ok);
+    press(B_HOME); turn(EN_SELECT, 1); frame();                     /* ECO MACROS -> BEING */
+    open_family(FAM_ENV); frame();
+    ok = !ui.home;
+    press(B_HOME); frame();                                         /* HOME from elsewhere: where it was left */
+    ok &= ui.home && home_level() == 1u && home_set() == 1u;
+    {   /* the beings drawn: the ECO panel differs from frame to frame while the tracks sound (their life), the
+         * critters move */
+        static uint16_t a[240 * 140];
+        turn(EN_SELECT, -1); frame();
+        for (c = 0; c < NTRK; c++) trk[c].peak = 9000;
+        frames(64);
+        memcpy(a, host_screen + LZ_GRAPH_Y * 240, sizeof a);
+        for (c = 0; c < NTRK; c++) trk[c].peak = 9000;
+        frames(64);
+        ok &= memcmp(a, host_screen + LZ_GRAPH_Y * 240, sizeof a) != 0 && cr.init;
+    }
+    bad += check("LENTE HOME: HOME from elsewhere at the level and set left; the beings and critters live", ok);
+    gp.page = 0;                                                    /* (GEN's page is kept: the next tests' start) */
+    gp.genre = 0;
+    ui_power_on();
+    return bad;
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IONBF, 0);
     int bad = 0;
     bad += test_large_face();
+    bad += test_lz_home();
     bad += test_sound_loads();
     bad += test_patterns();
     bad += test_init_system();

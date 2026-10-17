@@ -2015,11 +2015,17 @@ static void gen_knob(uint32_t k, int32_t s)
     }
     ui.force = 1;
 }
-static void gen_select(int32_t s)
+static uint32_t gen_page(void) { return gp.page % 3u; }
+/* (0.8.5) LENTE: SELECT on GEN, the HOME lens's last level: left (after the turn that opened it) back to BEING (1) */
+static int gen_zoom(int32_t s)
 {
-    if (gp.open_ms && fm1_ms - gp.open_ms < 400u) { gp.open_ms = fm1_ms | 1u; return; }   /* (the turn that opened it) */
+    if (gp.open_ms && fm1_ms - gp.open_ms < 400u) { gp.open_ms = fm1_ms | 1u; return 0; }   /* (the turn that opened it) */
     gp.open_ms = 0;
-    gp.page = (uint8_t)((gp.page + 3u + (uint32_t)(s > 0 ? 1 : 2)) % 3u);
+    return s < 0;
+}
+static void gen_next(void)                              /* a HOME tap: the next page, round */
+{
+    gp.page = (uint8_t)((gp.page + 1u) % 3u);
     gp.hot = 0xFF;
     ui.force = 1;
 }
@@ -2042,37 +2048,68 @@ static void gen_value(uint32_t p, uint32_t k, char *b)
     b[0] = (char)('0' + v / 100u); b[1] = (char)('0' + v / 10u % 10u); b[2] = (char)('0' + v % 10u); b[3] = '%'; b[4] = 0;
     if (b[0] == '0') { b[0] = b[1]; b[1] = b[2]; b[2] = b[3]; b[3] = 0; if (b[0] == '0' && v < 10u) { b[0] = b[1]; b[1] = b[2]; b[2] = 0; } }
 }
-static void draw_gen(void)
+/* (0.8.5) GEN in HOME's lens (ui_lens.c, the mock-up's GEN level): its four settings on the cards, the panel the five
+ * parts as rows (the ones the page's knobs weigh lit), each a preview of its density (its amount) and heat (ENERGY)
+ * from the seed, the FORM's sections as chips, the last piece and OCT+ MAKE */
+static void gen_cards(void)
 {
     uint32_t k;
-    char t[24], v[16];
-    if (gen_fresh) {                                    /* (0.6.96) cleared once on entering, not on every knob: each
-                                                         * card and line paints its own band (it flickered). (0.7.4)
-                                                         * On entering only: the 0.6.96 test also cleared whenever the
-                                                         * header had been drawn since, which it is after every frame
-                                                         * (draw_head sets head_sig), so every knob still cleared it */
-        lcd_fill(0, H_HEAD, 240, 240 - H_HEAD, T_BG);
-        gen_fresh = 0;
-    }
-    ui.head_sig = ~0u;
-    str_cpy(t, "GENERATOR  1/3", sizeof t);
-    t[11] = (char)('1' + gp.page);
-    draw_text_box(0, 30, 240, &AF_M, t, T_THEME, 1);
+    char v[16];
     for (k = 0; k < 4u; k++) {
-        uint32_t y = 56u + k * 28u;
-        int hot = gp.hot == k;
-        cv_begin(208, 24, T_BG);
-        cv_rrect(0, 0, 208, 24, 6, hot ? T_RAISE : T_SURF, T_BG);
-        cv_text(10, 5, &AF_S, GEN_LBL[gp.page][k], T_MID);
-        gen_value(gp.page, k, v);
-        cv_text(198 - text_w(&AF_M, v), 3, &AF_M, v, hot ? T_ACCENT : T_TEXT);
-        cv_blit(16, y);
+        uint32_t p = gp.page % 3u, a;
+        int32_t r;
+        gen_value(p, k, v);
+        a = p == 1u ? gp.amt[k] : p == 2u && k == 0u ? gp.amt[GP_LEAD] : p == 2u && k == 2u ? gp.swing : 0u;
+        r = p == 0u ? (k == 0u ? (int32_t)gp.genre * 1000 / (int32_t)NGENRE : k == 1u ? gp.seed / 10 : k == 2u ? gp.energy * 10 :
+                       gp.form * 500) :
+            (p == 1u || (p == 2u && (k == 0u || k == 2u))) ? (a == GA_AUTO ? 1000 : (int32_t)a * 10) :
+            (int32_t)(k == 1u ? gp.complex : gp.human) * 10;
+        draw_column(k, GEN_LBL[p][k], v, "", VAL(k), r, ICON_NONE);
     }
-    if (gp.last[0]) {
-        str_cpy(t, "LAST: ", sizeof t);
-        str_cpy(t + 6, gp.last, sizeof t - 6);
-        draw_text_box(0, 172, 240, &AF_S, t, T_MID, 1);
+}
+static uint32_t gen_draw_sig(void)
+{
+    return gen_sig() * 31u + gp.page * 7u + str_hash(gp.hot * 977u, gp.last) + ux.gen;
+}
+static uint32_t gen_hash(uint32_t x) { x *= 2654435761u; x ^= x >> 15; x *= 2246822519u; x ^= x >> 13; return x % 1000u; }
+static void gen_panel(void)
+{
+    static const char *const ROLE[5] = {"DRUMS", "BASS", "CHORDS", "ARP", "LEAD"};
+    static const char FORM[3][7] = {"A", "ABAC", "BCADCA"};
+    uint32_t k, i, p = gp.page % 3u, n = (uint32_t)str_len(FORM[gp.form % 3u]);
+    int32_t bw = 228 / (int32_t)n;
+    char v[24];
+    for (k = 0; k < 5u; k++) {
+        int32_t y = 4 + (int32_t)k * 19, dn;
+        uint32_t a = gp.amt[k];
+        int on = (p == 1u && k < 4u) || (p == 2u && k == 4u);
+        uint16_t bg = on ? T_TINT : T_RAISE;               /* (the mock-up's selection: a tint) */
+        cv_rect(4, y, 232, 16, bg);
+        GFX_HOOK_ALIGN(0, y, 0, y + 16, AL_V, "GEN part name centred up/down");
+        cv_text_on(8, y + CAP_IN(X, 16), &AF_X, ROLE[k], on ? T_TEXT : T_MID, bg);
+        str_cpy(v, a == GA_AUTO ? "AUTO" : a ? "" : "OFF", sizeof v);
+        if (a && a != GA_AUTO) { fmt_int(v, (int32_t)a); str_cpy(v + str_len(v), "%", 2); }
+        GFX_HOOK_ALIGN(0, y, 0, y + 16, AL_V, "GEN part name centred up/down");
+        cv_text_r(232, y + CAP_IN(X, 16), &AF_X, v, T_DIM, bg);
+        dn = a == GA_AUTO ? 550 : (int32_t)a * 10;
+        for (i = 0; i < 32u; i++) {
+            uint32_t h = gen_hash(gp.seed * 13u + k * 101u + i + (i > 15u ? gp.complex * 3u / 100u : 0u)), vv = gen_hash(i * 7u + k);
+            if ((int32_t)h < dn * (k ? 8 : 10) / 10) {
+                int32_t x = 52 + (int32_t)i * 49 / 10, yy = y + 3 + (k == 1u || k == 4u ? (int32_t)(1000u - vv) * 8 / 1000 : 0);
+                cv_rect(x, yy, k == 2u ? 9 : 3, k == 2u ? 10 : 3, heat_col(64 + (int32_t)gp.energy * 154 / 100 + (int32_t)vv * 38 / 1000));
+            }
+        }
     }
-    draw_text_box(0, 190, 240, &AF_S, "OCT+ MAKE   HOME DONE", T_TEXT, 1);
-    draw_text_box(0, 206, 240, &AF_S, "SELECT: PAGE  KNOBS: SET", T_DIM, 1);
+    for (i = 0; i < n; i++) {                           /* the FORM's sections */
+        uint32_t sc = (uint32_t)(FORM[gp.form % 3u][i] - 'A');
+        char l[2] = {FORM[gp.form % 3u][i], 0};
+        int32_t x = 6 + (int32_t)i * bw;
+        cv_rect(x, 102, bw - 2, 14, sec_col(sc));
+        GFX_HOOK_ALIGN(x, 102, x + bw - 2, 116, AL_HV, "GEN section letter centred");
+        cv_text_in(x, 102 + CAP_IN(X, 14), bw - 2, &AF_X, l, T_INK, sec_col(sc));
+    }
+    str_cpy(v, "LAST: ", sizeof v);
+    str_cpy(v + 6, gp.last[0] ? gp.last : "-", sizeof v - 6);
+    cv_clip_text(6, 126, &AF_X, v, T_MID, T_SURF, 150);
+    cv_text_r(234, 126, &AF_X, "OCT+ MAKE", T_ACCENT, T_SURF);
 }

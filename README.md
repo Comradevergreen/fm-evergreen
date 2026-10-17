@@ -538,6 +538,15 @@ JIANT's modifications are distributed under the same license.
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
 
 ### v0.8.5
+- **HOME is a lens, as the approved mock-up** (LENTE everywhere): **ECO · BEING · GEN**, SELECT zooms. ECO: the six
+  beings on a grid (the mock-up's places), each swimming in its cell with its sound, its name under it, the selected one
+  in a violet ring; MACROS (a HOME tap): KNOB 1–4 are M1–M4, the routes counted, LATCH shown. BEING: the track's being
+  large with its four HOME knobs as organs at the corners / ROUTES: M1–M4 and where they go. GEN is the generator as the
+  last level (a HOME tap its page, PRESETS the GENRE, OCT− closes to ECO, SELECT left back to BEING; HOME held + SELECT
+  still opens it from anywhere). The beings are JIANT's own (the same species, isotherms, swelling, swimming and kicks
+  with each track's sound); new **critters** swim round them: 36 tiny ciliates, spores, drifting cells, flagellates and
+  diatoms that gather round the tracks that sound, scatter on a hit and pulse with the output (drawn by the screen
+  alone, nothing in the audio path). MENU > LARGE keeps its tall cards under the tabs (the scope a strip).
 - **A small crisp mono face, as the mock-up's labels.** The cards' names, the level tabs, the breadcrumb, the header's
   middle words and the lens panels' captions and chips (SEQ's STEP chips and notes, SAVE's tiles and slots, FX's tiles
   and captions) are set in a new 5 x 7 pixel font on a 6 px pitch (capitals 7 px, was 9 in the smallest antialiased

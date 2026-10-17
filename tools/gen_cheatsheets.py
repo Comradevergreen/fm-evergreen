@@ -126,7 +126,7 @@ def controls():
     b.append(sec('THE PANEL'))
     rows = [
         ('MASTER', 'Master volume.'),
-        ('SELECT', '<b>Scrolls the section\'s pages</b> (SEQ: <b>zooms</b> PATTERN · BAR · STEP; SAVE: LIBRARY · PROJECT · SOUND; FX: TRACK · BUSES · EFFECT; HOME: GEN, the song generator). Held with a button, its <b>dice</b> (OK keeps, CANCEL back): HOME everything, '
+        ('SELECT', '<b>Scrolls the section\'s pages</b> (SEQ: <b>zooms</b> PATTERN · BAR · STEP; SAVE: LIBRARY · PROJECT · SOUND; FX: TRACK · BUSES · EFFECT; HOME: ECO · BEING · GEN, GEN the song generator). Held with a button, its <b>dice</b> (OK keeps, CANCEL back): HOME everything, '
                    'EDIT the sound, SEQ the sequence, LFO the LFO, FX the effects. GLO + SELECT: the tempo.'),
         ('PRESETS', 'Browses the sounds (factory and user). On step, list and song pages: the cursor / the row; SEQ at PATTERN: the bar. '
                     '<b>Hold a page button + PRESETS: jump through its pages.</b>'),
@@ -136,7 +136,7 @@ def controls():
         ('OCT− · OCT+', 'The keyboard\'s octave (both together: back to 0). On action pages and dialogs: back / confirm.'),
         ('PLAY', 'Start / stop. GLO + PLAY: restart from the top.'),
         ('REC', 'Arms live recording on the selected track (notes and knob moves, overdub).'),
-        ('HOME', 'Tap: the ecosystem. <b>Hold: the MENU.</b>'),
+        ('HOME', 'Tap: the ecosystem (on HOME: its level\'s other set, HOME knobs / MACROS M1–M4; on GEN its next page). <b>Hold: the MENU.</b>'),
         ('KEYS', '27 keys play the selected track in its scale; with a layer held they become that layer\'s.'),
     ]
     t = '<table>' + ''.join(f'<tr><td class="n">{e(n)}</td><td>{d}</td></tr>' for n, d in rows) + '</table>'
@@ -313,7 +313,7 @@ def sound():
                   '<b>8 voices</b> shared by the six tracks (MONO and LEGATO keep their note).</p>'))
     b.append(card('DICE', HEAT[5], '<p><b>EDIT + SELECT</b>: a random factory preset of the engine, every '
                   'parameter moved up to a quarter of its range. DRUM-X: both sides of every sound around the factory '
-                  'kit. Heard at once: OCT+ OK keeps it, OCT- CANCEL brings the sound back. SEQ / LFO / FX + SELECT: the sequence, the LFO, the effects, the same way. HOME + SELECT: <b>GEN</b>, the song generator: GENRE (43 or RANDOM) · SEED · ENERGY · FORM; DRUMS · BASS · CHORDS · ARP · LEAD amounts; COMPLEX · SWING · HUMAN. OCT+ makes the piece (again: a new seed), HOME done. GLO + G4 undoes.</p>'))
+                  'kit. Heard at once: OCT+ OK keeps it, OCT- CANCEL brings the sound back. SEQ / LFO / FX + SELECT: the sequence, the LFO, the effects, the same way. HOME + SELECT (or SELECT twice on HOME): <b>GEN</b>, the song generator: GENRE (43 or RANDOM; PRESETS too) · SEED · ENERGY · FORM; DRUMS · BASS · CHORDS · ARP · LEAD amounts; COMPLEX · SWING · HUMAN (a HOME tap: the next page). OCT+ makes the piece (again: a new seed), OCT- done. GLO + G4 undoes.</p>'))
     b.append('</div>')
 
     b.append(sec('MODULATION'))
