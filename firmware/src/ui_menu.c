@@ -71,6 +71,10 @@ static const menu_credit_t MENU_CREDITS[] = {
     {"https://doi.org/10.1121/1.383940", MC_URL},
     {"Hillenbrand, Getty, Clark and Wheeler (1995)", MC_TEXT},
     {"https://doi.org/10.1121/1.411872", MC_URL},
+    {"", MC_TEXT},
+    {"CMU DICT", MC_TITLE},                  /* (JIANT 0.8.5) VOICE's English words (sing.c) */
+    {"Carnegie Mellon University / BSD-2-Clause", MC_TEXT},
+    {"https://github.com/cmusphinx/cmudict", MC_URL},
 };
 
 static int32_t menu_text(const char *s, int32_t y, uint16_t col, int draw)

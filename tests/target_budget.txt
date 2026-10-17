@@ -39,3 +39,5 @@ dx_hands_step 36
 drw_dust 29
 animal_render 731
 dly_lo 2949
+formant_word_render 326
+formant_block 296

@@ -9169,7 +9169,12 @@ static int test_large(void)
     frame();
     ok = ui.home && large_kind() == LK_TALL && card_h() == LG_CARD_H && graph_y() == LG_Y_GRAPH && strip_kind() == SK_SCOPE;
     ok &= lg_px(30, Y_SEP_END + 1) == T_SURF && off[(Y_SEP_END + 1) * 240 + 30] == swap16(T_BG);     /* a card where the gap was */
-    ok &= lg_px(30, LG_Y_GRAPH - 2) == T_BG && off[(LG_Y_GRAPH - 2) * 240 + 30] == swap16(T_SURF);   /* a gap in the panel */
+    {   /* a gap in the panel: the old panel's row read over 16 px, a mote of HOME's moving dust (ui_being.c) may sit on one */
+        uint32_t x, n = 0;
+        for (x = 24; x < 40u; x++)
+            n += off[(LG_Y_GRAPH - 2) * 240 + x] == swap16(T_SURF);
+        ok &= lg_px(30, LG_Y_GRAPH - 2) == T_BG && n >= 12u;
+    }
     ok &= lg_px(30, LG_Y_GRAPH + 1) == T_SURF;
     for (c = 0; c < 4u; c++)                                      /* each column's K pill, over its knob */
         ok &= lg_px(CARD_X(c) + 8, Y_LABEL + LG_MY + LG_MH / 2) == T_KEY;

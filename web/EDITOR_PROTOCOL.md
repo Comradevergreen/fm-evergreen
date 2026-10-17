@@ -911,3 +911,37 @@ the device's autosave took the transfer's flash between two requests, after 10 s
 - The editor's import (6-OP FM tab): a 32-voice file's voices, each packed as for a single voice (every value into
   its range); an empty slot of a shorter file is not written. Flash: the bank is at 0xE7000; a transfer is staged in
   the autosave's older sector first (0xE5000 / 0xE6000), which the next autosave writes over anyway.
+
+## VOICE words and LYRIC (39; JIANT 0.8.5)
+
+The VOICE engine (5) sings syllables, words and lyrics (`firmware/src/sing.c`). Its two settings are track parameters
+in other engines' slots, read on a VOICE track only (`DESC` gives DIGITAL's / DRUM's descriptors there; the device
+names them per engine):
+
+| id | label | values |
+| --- | --- | --- |
+| 61 | LANG | (`P_VLANG`, LOFI's RTRG slot) 0 OFF (VOICE as before, its vowels: bit for bit), 1 ES, 2 EN, 3 JA |
+| 74 | LYRIC | (`P_VLYR`, DRUM's IMAGE slot) 0 TEXT (the track's lyric, below; empty: W1), 1..16 W1..W16 (words the dice puts together from the language's bank, a seed each), 17..24 S1..S8 (scat) |
+
+With LANG on, the device relabels VOICE's EDIT values (`DESC` sends the engine's own, VOWEL ..): E1 POS (0 AUTO: each
+note the next syllable; 1..127: that syllable of the lyric at the next note, as it changes, so a lock or automation picks
+it), E2 THEME (0..127 in eight: LOVE NIGHT SEA SKY ANY ROAD DREAM FIRE; 64 ANY), E3 ARTIC (stored the other way: 0 =
+100 %, crisp consonants; 127 = 0 %, slurred), E4 SHIFT, E5 BUZZ, E6 BREATH, E7 Q as before, E8 LOOP (0..127 in five:
+FREE, 1, 2, 4, 8 pattern loops: the lyric from its start every so many loops of the pattern). A factory preset sets
+LANG and LYRIC (the word presets CANTOR ES .. WHISPER JA; every other preset 0, 0); user presets and projects store
+them with the sound.
+
+INFO advertises `59 01 63` (the last tag): LYRIC, a track's lyric of at most 63 bytes. Firmware without the tag answers
+nothing to 39.
+
+| cmd | Request args | Reply args |
+| --- | --- | --- |
+| 39 LYRIC | track (get), or track, ASCII bytes, 0 (set) | track, rc (0 ok, 1 longer than 63: cut), the lyric string |
+
+The lyric: printable ASCII (a byte outside 32..126 becomes a space), case ignored; words are letters (an apostrophe and
+"_" join: "mi_amor" sings as one word, two syllables), a "-" alone holds the vowel one more note (a melisma), anything
+else separates. Spanish is read by rules (the enye written "ny"), Japanese as romaji (Hepburn or kunrei), English
+through the device's dictionary (~2100 words; a word it lacks by rough letter rules). The editor turns accented letters
+into plain ones (stress is not marked in singing) and ñ into "ny" before sending. A set takes effect at once (RAM: no
+flash write, also while playing): the track's lyric starts over at its next note. Saved with the project (FUNC's
+`L` `Y` block per track that has one; a project without it loads with none) and in the backup's runtime object (id 0).

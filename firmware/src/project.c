@@ -82,6 +82,11 @@
  * as they are, the rest of its sound kept; proj_perc, on every import as proj_fm4). Its motion events on the
  * EDIT values are dropped (SAMPLE's meanings, not DRUM's).
  *
+ * (JIANT 0.8.5) VOICE's lyrics (sing.c lyr_txt): each track's that is not empty, in FUNC's block 'L' 'Y' after the
+ * others (track, length, its ASCII 32..126: 4 + length bytes; proj_packed_size counts it). A project without it (any
+ * before 0.8.5, any format) loads with no lyrics; firmware before 0.8.5 stops reading at the block (it reads the
+ * blocks it knows, in order, and this one comes last), so the rest of such a project loads there as before.
+ *
  * Built on the Mac too (tests/project_test.c, -DPROJ_HOST): the part above the #ifndef
  * PROJ_HOST needs core.h, params.c (TP) and engines.c. */
 #define PROJ_MAGIC 0x46554E43u                 /* "FUNC" (JIANT 0.6): six tracks, the steps packed (see proj_pack) */
@@ -133,6 +138,7 @@ typedef struct {
                                                 * FUNC's 'F' 'G' block, none before */
     uint8_t pfx_lane[32], pfx_ltgt;            /* the punch-in lane (pfx.c), in FUN9's spare bytes (PROJ_PFX_OFF) */
     uint8_t macro[4];                          /* the macros M1..M4 (mod.c macro_v), 0..127: after the lane's tracks */
+    char lyr[NTRK][LYR_LEN];                   /* (0.8.5) VOICE's lyrics (sing.c lyr_txt): FUNC's 'L' 'Y' blocks, "" before */
     char name[PROJ_NAME_LEN];                  /* the project's name: upper-case ASCII 32..126, 0-padded; "" = none */
     uint32_t sum;
 } project_t;
@@ -760,6 +766,13 @@ static int proj_fg_used(const project_t *q)            /* (0.6.52) a FUGUE head 
                 return 1;
     return 0;
 }
+static uint32_t proj_lyr_len(const char *s)            /* (0.8.5) a lyric's stored length: up to its 0, ASCII only */
+{
+    uint32_t n = 0;
+    while (n < LYR_LEN - 1u && s[n] >= 32 && s[n] <= 126)
+        n++;
+    return n;
+}
 static uint32_t proj_packed_size(const project_t *q)
 {
     uint32_t n = 68u + sizeof q->chain + 4u + q->motion.count * sizeof q->motion.event[0] + 2u + G_SL_N, t, i;
@@ -775,6 +788,9 @@ static uint32_t proj_packed_size(const project_t *q)
         if (q->dx_lay[i]) { n += 2u + sizeof q->dx_lay; break; }
     if (proj_fg_used(q))                                /* (0.6.52) FUGUE's */
         n += 2u + sizeof q->fugue;
+    for (t = 0; t < NTRK; t++)                          /* (0.8.5) the lyrics' */
+        if (proj_lyr_len(q->lyr[t]))
+            n += 4u + proj_lyr_len(q->lyr[t]);
     for (t = 0; t < NTRK; t++) {
         uint32_t e = q->t[t].engine < NENGINES ? q->t[t].engine : 0u;
         n += 3u + PROJC_PMAP + 8u + (proj_fm_kept(q, t) ? FM6_PACKED : 0u);
@@ -876,6 +892,14 @@ static int proj_pack(project_store_t *out, const project_t *q)
     if (q->g[G_PFXLEN] != 64 || q->g[G_PFXRES] != 1) {  /* (0.6.99) the punch-in lane's LEN (1..64) and RES */
         b[pos++] = 'P'; b[pos++] = 'X';
         b[pos++] = (uint8_t)clamp(q->g[G_PFXLEN], 1, 64); b[pos++] = (uint8_t)clamp(q->g[G_PFXRES], 0, 2);
+    }
+    for (t = 0; t < NTRK; t++) {                        /* (0.8.5) VOICE's lyrics, last: older firmware stops before */
+        uint32_t n = proj_lyr_len(q->lyr[t]);
+        if (!n)
+            continue;
+        b[pos++] = 'L'; b[pos++] = 'Y'; b[pos++] = (uint8_t)t; b[pos++] = (uint8_t)n;
+        memcpy(b + pos, q->lyr[t], n);
+        pos += n;
     }
     memcpy(b + PROJC_PFX_OFF, q->pfx_lane, sizeof q->pfx_lane);
     b[PROJC_PFX_OFF + sizeof q->pfx_lane] = q->pfx_ltgt > 2u ? 0u : q->pfx_ltgt;
@@ -1089,6 +1113,17 @@ static int proj_unpack_c(project_t *q, const uint8_t *b)
         q->g[G_PFXLEN] = (int16_t)clamp(b[pos + 2u], 1, 64);
         q->g[G_PFXRES] = (int16_t)(b[pos + 3u] > 2u ? 1u : b[pos + 3u]);
         pos += 4u;
+    }
+    while (pos + 4u <= room && b[pos] == 'L' && b[pos + 1u] == 'Y') {   /* (0.8.5) the lyrics (else none) */
+        uint32_t lt = b[pos + 2u], n = b[pos + 3u], k;
+        if (lt >= NTRK || !n || n >= LYR_LEN || pos + 4u + n > room) return 0;
+        for (k = 0; k < n; k++) {
+            uint8_t c = b[pos + 4u + k];
+            if (c < 32u || c > 126u) return 0;
+            q->lyr[lt][k] = (char)c;
+        }
+        q->lyr[lt][n] = 0;
+        pos += 4u + n;
     }
     proj_new_tracks(q, nt);                             /* (a FUNC of fewer tracks: the rest at power-on) */
     for (t = nt; t < NTRK; t++)
@@ -1377,6 +1412,8 @@ static void project_capture(project_t *p)
     memcpy(p->pfx_lane, pfx_lane, sizeof p->pfx_lane);
     p->pfx_ltgt = pfx_ltgt;
     memcpy(p->macro, macro_v, sizeof p->macro);
+    for (i = 0; i < NTRK; i++)                          /* (0.8.5) VOICE's lyrics */
+        memcpy(p->lyr[i], lyr_get(i), LYR_LEN);
     motion_unguard(f);
     memcpy(p->name, proj_name, str_len(proj_name));
     p->sum = proj_sum(p);
@@ -1571,6 +1608,12 @@ static int project_restore_runtime(const project_t *input)
     pfx_ltgt = p->pfx_ltgt > 2u ? 0u : p->pfx_ltgt;
     for (i = 0; i < 4u; i++)
         macro_v[i] = p->macro[i] & 127u;            /* (the macros: a load sets them; a section jump keeps them) */
+    for (k = 0; k < NTRK; k++) {                        /* (0.8.5) VOICE's lyrics (none: an older project) */
+        char ly[LYR_LEN];
+        memcpy(ly, p->lyr[k], LYR_LEN);
+        ly[proj_lyr_len(ly)] = 0;
+        lyr_set(k, ly);
+    }
                                                         /* (the rows are the song's, not a section's: kept) */
     motion = p->motion;
     memset(motion_active, 0, sizeof motion_active);
@@ -1657,6 +1700,7 @@ static void system_init(void)
     memset(song_idx.scene[song_cur], 0, sizeof song_idx.scene[song_cur]);
     memset(pfx_lane, 0, sizeof pfx_lane);
     for (i = 0; i < 4u; i++) macro_v[i] = 0;
+    for (i = 0; i < NTRK; i++) lyr_set(i, "");          /* (0.8.5) no lyrics */
     memcpy(dx_kit, DX_KIT_DEF, sizeof dx_kit);
     memset(dx_mot, 0, sizeof dx_mot);
     dx_tone = 0;
@@ -2055,6 +2099,7 @@ static uint32_t autosave_sig(void)
             h = as_mix(h, &song.g[i], sizeof song.g[i]);
     h = as_mix(h, &motion, sizeof motion);
     h = as_mix(h, &chain_config, sizeof chain_config);
+    h = as_mix(h, lyr_txt, sizeof lyr_txt);             /* (0.8.5) VOICE's lyrics */
     return as_mix(h, proj_name, sizeof proj_name);
 }
 

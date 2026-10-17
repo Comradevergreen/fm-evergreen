@@ -146,7 +146,7 @@ def controls():
         ('FX', 'the zoom level\'s next (SELECT zooms; PRESETS the module): TRACK: SENDS · DIST · AUTO PAN  |  BUSES: DLY MIX · REV SIZE · CHORUS DEPTH · SLICER DEPTH, FX opens the module  |  EFFECT: DELAY · REVERB · CHORUS · SLICER · MASTER · PUNCH, their pages',
          'PUNCH-IN FX'),
         ('SCL', 'SCL · CHORD', 'ROOT by key'),
-        ('EDIT', 'EDIT 1 · EDIT 2 · FILTER · VOICE  (FM6: OPERATOR · OP ENV · OPERATOR 2; DRUM: KIT · KIT 2 · KIT 3 · X-MOD · FILTER · SOUND 1–4 · LEVELS 1–2 · STEREO)', 'INIT · RECALL · sound mutes'),
+        ('EDIT', 'EDIT 1 · EDIT 2 · FILTER · VOICE  (VOICE: WORDS; FM6: OPERATOR · OP ENV · OPERATOR 2; DRUM: KIT · KIT 2 · KIT 3 · X-MOD · FILTER · SOUND 1–4 · LEVELS 1–2 · STEREO)', 'INIT · RECALL · sound mutes'),
         ('GLO', 'MIXER · GLOBAL · SYSTEM', 'MUTE · SOLO · LEVEL · TAP'),
         ('SAVE', 'the zoom level\'s two sets (SELECT zooms; from elsewhere SOUND\'s USER): LIBRARY: PROJECT · TOOLS  |  PROJECT: SECTIONS · ARRANGE  |  SOUND: USER · PRESETS', 'SONG layer'),
         ('ARP', 'ARP · ARP 2', '—'),
@@ -231,7 +231,7 @@ def controls():
                          ('DLY', 'TIME FEEDBK TONE MIX'), ('DLY 2', 'WIDE PITCH SPRAY MOD'), ('DLY 3', 'TYPE PING - -'),
                          ('REVERB', 'TYPE SIZE DAMP PRE/AIR'), ('REVERB 2', 'MOD RATE FILT WIDE'),
                          ('CHORUS', 'RATE DEPTH STEREO -'), ('MASTER', 'CLIP PUNCH DUCK REL'), ('PUNCH', 'LEN RES REC CLEAR')]),
-        ('EDIT', HEAT[3], [('EDIT 1', 'E1 E2 E3 E4'), ('EDIT 2', 'E5 E6 E7 E8'), ('RETRIG', 'RTRG - - -'), ('OPERATOR', 'OP RATIO FINE LEVEL'),
+        ('EDIT', HEAT[3], [('EDIT 1', 'E1 E2 E3 E4'), ('EDIT 2', 'E5 E6 E7 E8'), ('WORDS', 'LANG LYRIC POS (OCT+ TYPE)'), ('RETRIG', 'RTRG - - -'), ('OPERATOR', 'OP RATIO FINE LEVEL'),
                            ('OP ENV', 'OP STAGE RATE LEVEL'), ('OPERATOR 2', 'OP MODE DETUNE VEL'), ('FILTER', 'TYPE CUT RES DRIVE'),
                            ('VOICE', 'VOICE GLIDE MODE PRIO'), ('KIT 3', 'BP FEEDBK - -'),
                            ('X-MOD', 'RATE DEPTH SHAPE RAND'), ('LEVELS', 'KICK SNARE CLAP HATCL'),
@@ -284,7 +284,10 @@ def sound():
         ('LOFI', HEAT[0], 'CHIP WAVE DUTY CRUSH', '- VIB BEND MASK',
          'Chip: PLS TRI SAW NOIS WRAM. <b>BYTE</b>: ALGO VAR · MOTN GRIT BEND LOOP. <b>FLOAT</b> (floatbeat): '
          'ALGO VAR · MOTN FBK BEND LOOP; CHIP sets FULL / 4BIT / 1BIT.'),
-        ('VOICE', HEAT[6], 'VOWEL VOWEL2 TALK SHIFT', 'BUZZ BREATH Q RAND', 'Formant voice (after klattsch): vowels, talk, breath.'),
+        ('VOICE', HEAT[6], 'VOWEL VOWEL2 TALK SHIFT', 'BUZZ BREATH Q RAND',
+         'Formant voice (after klattsch): vowels, talk, breath. <b>WORDS</b> (0.8.5): LANG ES / EN / JA sings syllables, '
+         'a note each (POS THEME ARTIC SHIFT · BUZZ BREATH Q LOOP); LYRIC TEXT (OCT+ on WORDS types it, KNOB 3 dice; '
+         'the web editor sends it) or W1–16 words, S1–8 scat; "-" holds the vowel.'),
         ('WHEEL', HEAT[5], 'REG SUB BODY TOP', 'PERC CLICK DRIVE ROTOR', 'Drawbar organ: registrations, percussion, rotary.'),
         ('NOISE', HEAT[4], 'MODE COLOR FREQ PEAK', 'TRK DENSE DRIFT CRUSH', 'Coloured and metallic noise, tracked or free.'),
         ('DRUM-X', '#ff7a00', 'MORPH TUNE TONE DECAY', 'NOISE FM ENV FOLD DRIVE',

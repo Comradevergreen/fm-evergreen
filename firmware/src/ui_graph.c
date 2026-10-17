@@ -207,6 +207,82 @@ static void graph_dximg(const track_t *t)
     }
 }
 
+/* (0.8.5) VOICE's words (sing.c sing_view): what the track sings. The lyric's source (the language, TEXT / W n / S n,
+ * the theme) and the syllables sung; the word sounding, large; its syllable's phonemes, the one sounding lit; the
+ * lyric's text from the word on (TEXT); at the right the vowel chart (F2 across, high to low; F1 down: the tongue's
+ * place, as a sagittal head would show it) with the formants' dot, filled while voiced, ringed in noise; under it the
+ * voicing and the noise */
+static void sing_up(char *d, const char *s, uint32_t n)
+{
+    uint32_t i;
+    for (i = 0; s[i] && i + 1u < n; i++)
+        d[i] = (char)(s[i] >= 'a' && s[i] <= 'z' ? s[i] - 32 : s[i]);
+    d[i] = 0;
+}
+static void graph_sing(const track_t *t)
+{
+    static const uint8_t VREF[5] = {PH_A, PH_E, PH_I, PH_O, PH_U};
+    const sing_t *s = sing_view(t);
+    uint32_t lang = (uint32_t)clamp(t->p[P_VLANG], 0, LG_N - 1), lyr = (uint32_t)clamp(t->p[P_VLYR], 0, LYR_N - 1), k;
+    int32_t x, cx0 = 152, cy0 = 14, cw = 76, ch = 62, nv, nn;
+    char b[64];
+    if (!lang) {
+        cv_text_in(PANEL_X0, 40, PANEL_W, &AF_S, "LANG OFF: VOWELS", T_MID, T_SURF);
+        cv_text_in(PANEL_X0, 58, PANEL_W, &AF_S, "LANG ES EN JA: WORDS", T_DIM, T_SURF);
+        return;
+    }
+    str_cpy(b, N_LANG[lang], sizeof b);
+    str_cpy(b + str_len(b), "  ", 3);
+    str_cpy(b + str_len(b), lyr == 0u && !lyr_get((uint32_t)(t - trk))[0] ? "W1" : N_LYRIC[lyr], 8);
+    if (lyr <= LYR_NW && (lyr || !lyr_get((uint32_t)(t - trk))[0])) {
+        str_cpy(b + str_len(b), "  ", 3);
+        str_cpy(b + str_len(b), N_THEME[(uint32_t)clamp(t->p[P_E1], 0, 127) >> 4], 8);
+    }
+    cv_text_on(PANEL_X0, 0, &AF_S, b, T_MID, T_SURF);
+    fmt_int(b, s->nsy);
+    cv_text_r(cx0 - 6, 0, &AF_S, b, T_DIM, T_SURF);
+    sing_up(b, s->w[0] ? s->w : "-", sizeof b);          /* the word */
+    cv_free_text(PANEL_X0, 16, &AF_M, b, T_TEXT, T_SURF, cx0 - 8 - PANEL_X0);
+    for (k = 0, x = PANEL_X0; k < s->np && k < SY_N; k++) {   /* its syllable's phonemes */
+        int32_t w;
+        uint16_t f = k == s->i ? T_THEME : T_RAISE;
+        sing_up(b, PH_NAME[s->ph[k] % PH_COUNT], 4);
+        w = text_w(&AF_S, b) + 6;
+        if (x + w > cx0 - 8)
+            break;
+        cv_rect(x, 40, w, 14, f);                      /* (the mock's skin: square chips) */
+        cv_text_in(x, 40 + CAP_IN(S, 14), w, &AF_S, b, k == s->i ? T_INK : k < s->i ? T_DIM : T_TEXT, f);
+        x += w + 2;
+    }
+    if (!lyr && lyr_get((uint32_t)(t - trk))[0]) {       /* the text from the word on */
+        sing_up(b, lyr_get((uint32_t)(t - trk)) + (s->to < LYR_LEN ? s->to : 0u), sizeof b);
+        cv_free_text(PANEL_X0, 62, &AF_S, b, T_DIM, T_SURF, cx0 - 8 - PANEL_X0);
+    }
+    /* the vowel chart: F2 2500 .. 600 Hz across, F1 250 .. 850 Hz down */
+    cv_rect(cx0, cy0, cw, ch, T_RAISE);               /* (the mock's skin: a square frame) */
+    cv_rect(cx0 + 1, cy0 + 1, cw - 2, ch - 2, T_SURF);
+    for (k = 0; k < 5u; k++) {
+        const phon_t *P = &PHON[VREF[k]];
+        int32_t vx = cx0 + 3 + clamp((2500 - P->f2) * (cw - 14) / 1900, 0, cw - 14);
+        int32_t vy = cy0 + 2 + clamp(((int32_t)P->f1 - 250) * (ch - 16) / 600, 0, ch - 16);
+        sing_up(b, PH_NAME[VREF[k]], 4);
+        cv_text_on(vx, vy, &AF_S, b, T_DIM, T_SURF);
+    }
+    nv = s->gv * 100 / 32767;
+    nn = (s->ga > s->gf ? s->ga : s->gf) * 100 / 32767;
+    {
+        int32_t dx = cx0 + 6 + clamp((2500 - s->f[1]) * (cw - 14) / 1900, 0, cw - 14);
+        int32_t dy = cy0 + 8 + clamp((s->f[0] - 250) * (ch - 16) / 600, 0, ch - 16);
+        uint16_t dc = nv > 8 ? T_THEME : nn > 8 ? T_ACCENT : T_DIM;   /* (plain squares: no cell for the lint) */
+        cv_rect(dx - 3, dy - 2, 7, 5, dc);
+        cv_rect(dx - 2, dy - 3, 5, 7, dc);
+    }
+    cv_text_on(cx0, 80, &AF_S, "V", T_DIM, T_SURF);       /* the voicing, the noise */
+    cv_rect(cx0 + 10, 84, (cw - 10) * clamp(nv, 0, 100) / 100, 3, T_THEME);
+    cv_text_on(cx0, 94, &AF_S, "N", T_DIM, T_SURF);
+    cv_rect(cx0 + 10, 98, (cw - 10) * clamp(nn, 0, 100) / 100, 3, T_ACCENT);
+}
+
 static void graph_morph(const track_t *t)
 {
     const int16_t *p = t->p;
@@ -1546,6 +1622,14 @@ static uint32_t graph_signature(void)
             h = (h ^ ((uint32_t)fg_set[ti][k].rate | (uint32_t)fg_set[ti][k].dir << 4 | (uint32_t)(uint8_t)fg_set[ti][k].ivl << 8 |
                       (song.playing ? (uint32_t)fg_head[ti][k].idx << 16 : 0u))) * 16777619u;
     }
+    if (pg->graph == GR_LYRIC || (pg->scope == SC_ENGINE && ENGINES[t->eng_req % NENGINES] == &ENG_FORMANT &&
+                                  t->p[P_VLANG])) {   /* (0.8.5) the syllable, the phoneme, the formants, the gains */
+        const sing_t *s = sing_view(t);
+        h = (h ^ ((uint32_t)s->nsy << 16 | (uint32_t)s->i << 8 | (uint32_t)s->np)) * 16777619u;
+        h = (h ^ ((uint32_t)(s->f[0] >> 4) << 20 | (uint32_t)(s->f[1] >> 5) << 8 | (uint32_t)(s->gv >> 11) << 4 |
+                  (uint32_t)((s->ga | s->gf) >> 12))) * 16777619u;
+        h = (h ^ str_hash(lyr_gen[(t - trk) % NTRK], s->w)) * 16777619u;
+    }
     if (pg->graph == GR_DXIMG)                       /* (0.6.48) IMAGE and how wide it plays */
         h = (h ^ ((uint32_t)t->p[P_DXIMG] << 16 | (uint32_t)dx_img_k(t))) * 16777619u;
     if (pg->graph == GR_MORPH)                       /* (0.6.45) the wave, MORPH */
@@ -2505,7 +2589,14 @@ static void draw_graph(void)
             cv_oy = 0;
             graph_tools();
             break;
+        case GR_LYRIC:                               /* (0.8.5) EDIT > WORDS: what VOICE sings */
+            graph_sing(t);
+            break;
         default:
+            if (pg->scope == SC_ENGINE && ENGINES[t->eng_req % NENGINES] == &ENG_FORMANT && t->p[P_VLANG]) {
+                graph_sing(t);                       /* (0.8.5) VOICE singing: its words on its pages */
+                break;
+            }
             if (pg->scope == SC_ENGINE && ENGINES[t->eng_req % NENGINES] == &ENG_WHEEL) graph_wheel(t, c);
             else if (pg->scope == SC_ENGINE && t->eng_req % NENGINES == ENGI_FM6) graph_fm6(t, c, 6u);   /* EDIT 1 and 2 */
             else if (pg->scope == SC_ENGINE && t->eng_req % NENGINES == ENGI_DRUM) {
