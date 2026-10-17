@@ -10,7 +10,8 @@
  * How close that lands to the font's own spacing is tests/text_spacing_test.py's question. Every string below, in S M L, THEME on SURF and TEXT on BG, in every palette: the end pen and every
  * pixel must be identical (GREY expands its gray with G = 2 R, the gray rule; the prototype's G = 2 R + R / 16
  * differed by one green LSB there, and that is the only difference to the mock renders).
- * (0.9.0) Also: kerning for every pair of codes against a plain scan. */
+ * (0.9.0) Also: kerning for every pair of codes against a plain scan; every keycap (Huffman-coded) against its nibbles. */
+#define KC_REF 1
 #include <math.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -184,6 +185,26 @@ int main(void)
                 }
         printf("text: kerning, every pair of codes in S M L: %u pairs, %u differ %s\n", nz, bad_k, bad_k ? "FAIL" : "ok");
         bad_px += bad_k;
+    }
+    {                                                     /* (0.9.0) the keycaps, Huffman-coded: = their nibbles drawn */
+        static uint16_t a[W * H];
+        uint32_t bad_kc = 0;
+        for (uint32_t p = 0; p < NPALETTES; p++) {
+            palette_set(p);
+            for (uint32_t id = 0; id < KC_COUNT; id++)
+                for (uint32_t q = 0; q < 5u; q++) {            /* whole, cut left, right, top, bottom */
+                    static const int32_t QX[5] = {3, -9, W - 17, 50, 90}, QY[5] = {2, 2, 2, -6, H - 5};
+                    cv_begin(W, H, T_BG);
+                    cv_keycap(QX[q], QY[q], id, T_THEME, T_TEXT, T_BG);
+                    memcpy(a, cv_px, sizeof a);
+                    cv_begin(W, H, T_BG);
+                    cv_alpha(QX[q], QY[q], KC[id].w, KC_H, KC_REF_DATA + KC_REF_OFF[id], kc_ramp(T_BG, T_THEME, T_TEXT));
+                    for (uint32_t i = 0; i < W * H; i++) bad_kc += a[i] != cv_px[i];
+                }
+        }
+        printf("text: the %u keycaps in every palette against their nibbles: %u pixels differ %s\n", (unsigned)KC_COUNT,
+               bad_kc, bad_kc ? "FAIL" : "ok");
+        bad_px += bad_kc;
     }
     return bad_pen || bad_px ? 1 : 0;
 }

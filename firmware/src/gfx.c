@@ -411,10 +411,10 @@ static void cv_alpha(int32_t x, int32_t y, uint32_t w, uint32_t h, const uint8_t
 
 /* the same from a glyph's Huffman-coded bit stream (tools/gen_aa_font.py huff_pack): canonical codes, MSB
  * first; hc = the number of codes of each length 1..15, then the symbols in code order, each a value and
- * its repeat count ((count - 1) << 4 | value: runs of zeros and 15s). Codes of up to 8 bits come from a
- * 256-entry table made once per font in RAM (symbol | length << 8; 0 = a longer code: bit by bit). The
+ * its repeat count ((count - 1) << 4 | value: runs of zeros and 15s; 0.9.0, the keycaps: of any value). Codes of up
+ * to 8 bits come from a 256-entry table made once per font in RAM (symbol | length << 8; 0 = a longer code: bit by bit). The
  * stream is read in order, so rows outside the clip are decoded and dropped; a run spans rows */
-#define HC_FONTS 3                       /* the codes: the faces M and L (gen_aa_font.py HUFF), the icons (AI_HC) */
+#define HC_FONTS 4                       /* the codes: the faces M and L (gen_aa_font.py HUFF), the icons, the keycaps */
 static struct { const uint8_t *hc; uint16_t lut[256]; } hc_tab[HC_FONTS]
     __attribute__((section(".pool")));     /* (the drawing's, main loop only: 0.8.4 LOWBUF, was .bss; 0.8.5 the pool, LOWBUF full) */
 static const uint16_t *hc_lut(const uint8_t *hc)
@@ -846,7 +846,7 @@ static int32_t cv_keycap(int32_t x, int32_t y, uint32_t id, uint16_t fill, uint1
 {
     const kc_t *k = &KC[id < KC_COUNT ? id : 0u];
     const uint16_t *rv = kc_ramp(under, fill, ink);
-    cv_alpha(x, y, k->w, KC_H, KC_DATA + k->off, rv);
+    cv_alpha_hc(x, y, k->w, KC_H, KC_DATA + k->off, KC_HC, rv);   /* (0.9.0: Huffman-coded, 2.4 KB less) */
     if (x < 0 || x + k->w > (int32_t)cv_w || y + cv_oy < 0 || y + KC_H + cv_oy > (int32_t)cv_h)
         GFX_HOOK_TEXT(x, y + cv_oy, x + k->w, y + KC_H + cv_oy, k->label, 6u);      /* cut by the canvas */
     else

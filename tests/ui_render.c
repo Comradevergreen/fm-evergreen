@@ -33,6 +33,7 @@
  * each place can show). 0.5 px is the odd pixel left over (it goes left / up); 1 px or more is a finding.
  * OUTDIR/align.txt: per place, how often measured, the worst offsets and where.
  * Exit 1 on a finding, a GREY pixel off gray, a MONO one off neutral, or an alignment 1 px or more off. */
+#define KC_REF 1                 /* (0.9.0) ui_keycaps.h: the pills as nibbles too (al_keycaps; KC_DATA is Huffman-coded) */
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
@@ -1815,7 +1816,7 @@ static void al_keycaps(void)
         uint32_t i = 0;
         for (y = 0; y < KC_H; y++)
             for (x = 0; x < w; x++, i++)
-                if (((KC_DATA[k->off + (i >> 1)] >> ((i & 1u) ? 0 : 4)) & 15u) >= 6u) {
+                if (((KC_REF_DATA[KC_REF_OFF[id] + (i >> 1)] >> ((i & 1u) ? 0 : 4)) & 15u) >= 6u) {   /* (0.9.0: the nibbles) */
                     if (x < x0) x0 = x;
                     if (y < y0) y0 = y;
                     if (x + 1 > x1) x1 = x + 1;
