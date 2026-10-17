@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.8.4).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.8.5).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
 
 > ⚡ **New in 0.6.85 – 0.6.92: a song generator you steer, a compact sequencer that breathes, a delay that feeds back.**
 > - **GEN (HOME + SELECT)**: a screen of three pages — GENRE (43 genres or RANDOM), SEED, ENERGY, FORM (loop, parts,
@@ -164,6 +164,8 @@ Nine engines, all synthesis, no samples: **ANALOG, FM6, PHASE, LOFI, VOICE, WHEE
   repeats a short stretch of the formula: the noise becomes a tone tuned to the note. **FLOAT** is a floatbeat
   generator: 32 formulas of `t` made of sines (rhythm, melody and timbre at once), in the key played.
 - **VOICE** (formants, after klattsch), **WHEEL** (drawbar organ) and **NOISE** (coloured and metallic noise).
+  **VOICE sings words** (0.8.5): LANG ES / EN / JA, each note the next syllable of a lyric you type (on the device or
+  from the web editor) or of phrases the dice puts together from each language's word bank; POS and LOOP automate it.
 - **ANIMAL** (0.8.3): animal calls from physical models: a source that oscillates or strikes exciting a resonator,
   with a call's rhythm on top. **CMOS** is the owner's 40106 / 4093 breadboard "bird machine" (Schmitt-trigger RC
   oscillators: a slow one gates and sweeps a fast one, the exponential charge is the chirp's hook), **PULSE** an
@@ -536,6 +538,64 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### v0.8.5
+- **VOICE sings words** (the owner: "word generation with the Voice engine in several languages, Spanish, English and
+  maybe Japanese; a multilingual database, many words; phrases that literally sing lyrics, random or written by the
+  user; automatable"). EDIT > **WORDS** > **LANG** ES / EN / JA turns a VOICE track into a singer: **each note sings the
+  next syllable** of its lyric (a held note holds the vowel, a TIE holds it on, the release sings the syllable's last
+  consonants; legato glides from syllable to syllable, a choir sings it together). LANG OFF is VOICE as before, bit for
+  bit (the goldens are unchanged).
+- **The voice**: the same glottal source and Klatt cascade, now articulated. Every phoneme is a target the formants
+  glide to (6–23 ms, block rate), with three gains: voicing, aspiration (noise into the cascade: *h*, the aspiration
+  after *p t k*: ~45 ms in English, 20 in Japanese, 6 in Spanish) and frication (high-passed noise into the fourth
+  resonator, tuned to the consonant: *s* ~6 kHz, *sh* ~2.7 kHz, *f* broad and weak, the bursts). **Plosives** a closure
+  (silent, a voice bar for *b d g*; the formants at the place's locus), a burst, the vowel's transition;
+  **affricates** (*ch ts j*) a closure into their fricative; **nasals** (*m n ñ ng*, Japanese moraic *n*) and
+  **liquids** voiced with wide bandwidths; the Spanish tap a 22 ms dip, the trill three; glides *y w*. 46 phonemes:
+  the vowels of Spanish / Japanese (*a e i o u*, the Japanese unrounded *u*) and of English (*ih eh ae aa ao uh ah er
+  ax*, diphthongs as a vowel and its offglide). The release sings the coda at the note's level, not faded by the ADSR.
+- **Reading**: **Spanish** by rules (seseo, *ll y*, *rr*, *j ge gi*, *ch qu gu*, diphthongs and hiatus, the onset
+  clusters *pl br tr* ..; ñ written NY), **Japanese** romaji to morae (Hepburn and kunrei, a note a mora, moraic *n*,
+  doubled consonants as a stop, *ou* sung o-o), **English** through a dictionary of **2095 words** (the most common, from
+  the CMU Pronouncing Dictionary, BSD-2-Clause; syllabified by maximal onset at build time, `tools/gen_lyrics.py`) and
+  rough letter rules for a word it lacks. In a lyric, "-" holds the vowel one more note, "_" joins words (*mi_amor*).
+- **LYRIC**: **TEXT** (the track's own lyric, up to 63 characters) or **W1–W16**, the dice: phrases of real words from
+  the language's bank (**306 Spanish, 272 English, 169 Japanese words** in seven themes, THEME: LOVE NIGHT SEA SKY ROAD
+  DREAM FIRE or ANY), put together by templates (*mi luna brilla*, *in the cold night*, *kaze ga fuku*; a Spanish
+  adjective agrees with its noun), each phrase exactly as long as the pattern's notes, the same lyric for the same seed;
+  **S1–S8** scat (pseudo-words of the language's syllables). An empty TEXT sings W1.
+- **Automatable**: with LANG on the EDIT values read **POS THEME ARTIC SHIFT | BUZZ BREATH Q LOOP**. **POS** (AUTO, or
+  1–127) makes the next note sing that syllable when it changes: a lock on a step starts a line there, automation jumps;
+  **LOOP** FREE / 1 / 2 / 4 / 8 brings the lyric back to its start every so many pattern loops; **ARTIC** crisp ..
+  slurred consonants; **SHIFT** the voice's size. LYRIC (in DRUM's IMAGE slot) records as automation too.
+- **Writing the lyric**: on the device, EDIT > WORDS, **OCT+** (TYPE): the NAME screen for 63 characters (the field
+  scrolls with the cursor), **KNOB 3** throws the dice into it, OCT+ sets it (also while playing: no flash write). From
+  the web editor: a **Lyric** box on a VOICE track (LANG, LYRIC, the text; accents and ñ converted), protocol command
+  **39 LYRIC** (INFO tag `59 01 63`). Saved with the project: FUNC's optional `L` `Y` block per track (a project
+  without it loads with no lyric; firmware before 0.8.5 stops reading at it, so the rest loads there as before).
+- **The screen**: a singing VOICE's EDIT pages and WORDS show the language and source, the syllables sung, the word,
+  its syllable's phonemes (the one sounding lit), the text from there, and a vowel chart whose dot moves with F1 / F2
+  (with the voicing and noise levels): the articulation the UI reads (`sing_view`: the phoneme, its place of
+  articulation and lip rounding, the formants, the gains) is there for the sagittal CT head to come.
+- **Presets** (appended, every sound before keeps its number): CANTOR ES, CANTORA ES, SINGER EN, UTA JA, WORD CHOIR,
+  SCAT EN, ROBOT EN, WHISPER JA.
+- **What it costs** (0.8.4 → 0.8.5): flash image 498108 → 540824 B (+41.7 KB: the English dictionary 18.9 KB, the
+  word banks 7.4 KB, the code, phoneme table, UI and protocol ~15 KB; the app slot keeps 39.8 KB free); RAM .data+.bss
+  84848 → 85584 B (+736: the six singers' state, 104 B each); the lyrics (6 × 64 B) in the pool, the audio reads them
+  there as it reads the FX lines. LOWBUF is full after 0.8.4 and the project's scratch holds a copy of the lyrics
+  (+384 B), so the fonts' decode tables (1.5 KB) moved from LOWBUF to the pool: LOWBUF 28064 → 26900 B of 28672 (608 →
+  1772 B free), the pool 247584 → 249568 B (spare 72928 → 70944 B), RAM code +8 B. No state per voice. CPU (callgrind,
+  instructions a sample, 4 voices): VOICE's vowels 1611 → 1605, singing 1743 (ES) / 1726 (EN), against ANALOG's 2314
+  with eight voices; the heaviest section (song/cputest 3079) and every other unchanged. On the target VOICE's loop
+  (tests/target_budget) 312 → 315 with LANG OFF, 326 singing (ANALOG's 603).
+- **Tests**: tests/voice_test.c (40 Spanish words and 21 Japanese ones against their expected phonemes and
+  syllables, the English dictionary, every bank word's syllables, the generator's determinism and phrase lengths, the
+  vowels' F1 / F2, *s sh f* bands and levels, a plosive's closure and burst, no click at syllable changes, DC, clipping
+  at the corners, notes / ties / "-" / POS / LOOP with the sequencer, LANG OFF bit for bit), the lyrics' project round
+  trip and older projects without them (tests/project_test.c), LYRIC over the protocol and the editor's mock
+  (tests/editor_test.c, web/test_web.mjs), the WORDS and LYRIC screens linted (tests/ui_render.c), cpu_vg's
+  eng/VOICE.ES / .EN.
 
 ### v0.8.4
 - **RAM freed for what comes next** (the owner: room for assignable FX buses). The sound is the same (every golden

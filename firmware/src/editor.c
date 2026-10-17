@@ -17,6 +17,7 @@ enum { ED_INFO = 1, ED_GET, ED_SET, ED_DUMP, ED_DESC, ED_STEP_GET, ED_STEP_SET, 
        ED_TRACK, ED_TRACK_MIX, ED_TRACK_DUMP, ED_TRACK_STEP,                    /* v3: tracks */
        ED_TRACK_PARAM, ED_TRACK_CHANGED, ED_SONG,
        ED_UI_STATE, ED_UI_SET, ED_UI_PALETTES, ED_FAV_GET, ED_FAV_SET,
+       ED_LYRIC,                                                                /* (JIANT 0.8.5) VOICE's lyric */
        ED_MOTION = 64, ED_BACKUP_LIST, ED_BACKUP_GET, ED_BACKUP_PUT };                              /* v6: song chain */
 
 static uint8_t ed_out[600];
@@ -410,6 +411,7 @@ static void ed_handle(const uint8_t *f, uint32_t n)   /* f: the bytes between F0
         ed_b(0x4C); ed_b(1); ed_b(1);   /* 1.1 parameter locks: MOTION ops 5..7, the kinds after the records */
         ed_b(0x56); ed_b(1); ed_b(FM6_NBANK);   /* (JIANT 0.6.11, Felucca 1.4.1) FM6's voice bank: cmds 74..77, SLOT 9..40 */
         ed_b(0x4A); ed_b(1); ed_b(1);   /* (JIANT 0.6.62) 'J': this is JIANT (the web installer writes over it, web/index_pkg.html) */
+        ed_b(0x59); ed_b(1); ed_b(LYR_LEN - 1u);   /* (JIANT 0.8.5) 'Y': LYRIC (cmd 39), a track's lyric, at most 63 bytes */
         break;
     case ED_GET:
     case ED_SET:
@@ -713,6 +715,25 @@ static void ed_handle(const uint8_t *f, uint32_t n)   /* f: the bytes between F0
         ed_b(a[0]);
         ed_b(a[1]);
         ed_v(t->p[a[1]]);
+        break;
+    }
+    case ED_LYRIC: {                                       /* (0.8.5) track [, ASCII .. 0] -> track, rc, the lyric */
+        char b[LYR_LEN];
+        uint32_t k = 0, rc = 0;
+        if (!na || a[0] >= NTRK)
+            return;
+        if (na > 1u) {
+            for (i = 1; i < na && a[i] && k + 1u < LYR_LEN; i++)
+                b[k++] = (char)(a[i] >= 32u && a[i] <= 126u ? a[i] : ' ');
+            b[k] = 0;
+            if (i < na && a[i] && k + 1u >= LYR_LEN)
+                rc = 1;                                    /* (longer: cut at 63) */
+            lyr_set(a[0], b);
+            ui.force = 1;
+        }
+        ed_b(a[0]);
+        ed_b(rc);
+        ed_str(lyr_get(a[0]), LYR_LEN - 1u);
         break;
     }
     case ED_SONG: {

@@ -49,7 +49,7 @@ const E = vm.runInNewContext(proto + `
    mixer, parseNotes, parseHits, hitsText, gridFromSteps, LANE_NOTE, LANE_OF, readDevicePreferences, devicePresetRows, engineOrder, ENGINE_ORDER, aliasOf, fmtValue, FM6, enumShown, F,
    FM4, fromDigital, fromPerc, DRUM_KIT_E,
    MENU: typeof MENU === "undefined" ? null : MENU, MENU_TABS: typeof MENU_TABS === "undefined" ? null : MENU_TABS,
-   readDeviceMenu: typeof readDeviceMenu === "undefined" ? null : readDeviceMenu, fm6Bank, crc32 })`,
+   readDeviceMenu: typeof readDeviceMenu === "undefined" ? null : readDeviceMenu, fm6Bank, crc32, lyricText })`,
 { setTimeout, clearTimeout, setInterval, clearInterval, console });
 
 /* (JIANT 0.6.11, from Felucca 1.4.1's test) FM6's voice bank (cmds 74..77; the editor's fm6Bank) against the mock: INFO 56 01 32, a 32-voice .syx
@@ -125,6 +125,31 @@ async function editorFm6Bank() {
   [...old.access.inputs.values()][0].onmidimessage = (ev) => l2.receive(ev.data);
   const i2 = E.parse[C.INFO](await l2.request(E.req.info()));
   ok(i2.fm6Bank === 0 && i2.fm6.caps === 3, "FM6 bank: firmware before 0.6.11: no 56 tag (the editor offers no bank sending)");
+  l2.close(); old.stop();
+}
+
+/* (JIANT 0.8.5) VOICE's lyric (LYRIC, cmd 39) over the mock: INFO's 'Y' tag (the last), a track's lyric written and read
+   back (another track's apart), the editor's text made what the device takes (accents dropped, the enye as ny, at
+   most 63); a firmware without it: no tag */
+async function editorLyric() {
+  const m = E.makeMockDevice({ auto: false });
+  const link = new E.Link((d) => [...m.access.outputs.values()][0].send(d), { timeout: 200 });
+  [...m.access.inputs.values()][0].onmidimessage = (ev) => link.receive(ev.data);
+  const rq = (r) => link.request(r);
+  const info = E.parse[E.CMD.INFO](await rq(E.req.info()));
+  ok(info.lyric === 63, "editor: INFO 59 01 63, the lyric's length (0.8.5)");
+  let r = E.parse[E.CMD.LYRIC](await rq(E.req.lyric(3, "La canción del niño, ¿sí?")));
+  ok(r.track === 3 && r.rc === 0 && r.text === "La cancion del ninyo, si?", "editor: LYRIC set: accents dropped, the enye as ny");
+  r = E.parse[E.CMD.LYRIC](await rq(E.req.lyric(3)));
+  const r0 = E.parse[E.CMD.LYRIC](await rq(E.req.lyric(0)));
+  ok(r.text === "La cancion del ninyo, si?" && r0.text === "", "editor: LYRIC get: the track's own, another's apart");
+  ok(E.lyricText("x".repeat(80)).length === 63 && E.lyricText("さくら") === "   ", "editor: a lyric at most 63, non-ASCII as spaces");
+  link.close(); m.stop();
+  const old = E.makeMockDevice({ auto: false, noLyric: true });
+  const l2 = new E.Link((d) => [...old.access.outputs.values()][0].send(d), { timeout: 100 });
+  [...old.access.inputs.values()][0].onmidimessage = (ev) => l2.receive(ev.data);
+  const i2 = E.parse[E.CMD.INFO](await l2.request(E.req.info()));
+  ok(i2.lyric === 0, "editor: firmware before 0.8.5: no 59 tag (no lyric box)");
   l2.close(); old.stop();
 }
 
@@ -405,7 +430,8 @@ function mockTables() {
     cmp(`${fe.name} presets`, me.presets.map((p) => p.name), fe.presets.map((p) => p.name));
     fe.presets.forEach((p, k) => {
       const mp = me.presets[k];
-      if (mp) cmp(`${fe.name} ${p.name}`, { e: mp.e, env: mp.env, mono: mp.mono, pat: mp.pat }, { e: p.e, env: p.env, mono: p.mono, pat: p.pat });
+      if (mp) cmp(`${fe.name} ${p.name}`, { e: mp.e, env: mp.env, mono: mp.mono, pat: mp.pat, xp: mp.xp || 0 },
+        { e: p.e, env: p.env, mono: p.mono, pat: p.pat, xp: p.xp || 0 });   /* (0.8.5: xp, VOICE's LANG | LYRIC << 2) */
     });
   });
   cmp("PATTERNS", T.PATTERNS, fw.PATTERNS);
@@ -1511,6 +1537,7 @@ async function updater() {
 
 await editorMock();
 await editorFm6Bank();
+await editorLyric();
 await editorSamplePresets();
 mockTables();
 await editorLibrarian();

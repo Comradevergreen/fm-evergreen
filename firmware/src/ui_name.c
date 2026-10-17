@@ -18,9 +18,13 @@
  *                before the cursor; held: repeats, as the arrows do), D# ABC / 123.
  *   KNOB 1       the cursor; KNOB 2 the character at the cursor (SPACE A..Z 0..9 - . _ / # +; at the end: a new one).
  *   LEDs         every key that types or edits is lit; the key whose letters are being cycled blinks.
- * Spaces at either end are dropped when it is written; an empty name: USER the automatic one, PROJECT none. */
-enum { NK_NONE, NK_USER_SAVE, NK_USER_RENAME, NK_PROJ_SAVE, NK_PROJ_RENAME };
+ * Spaces at either end are dropped when it is written; an empty name: USER the automatic one, PROJECT none.
+ * (JIANT 0.8.5) LYRIC: EDIT > WORDS, OCT+ (a VOICE track): the track's lyric (sing.c lyr_txt), the same keys, at most
+ * 63 characters, the field a window of 12 that follows the cursor; KNOB 3 the dice (a phrase of the language's words
+ * in place of the text, another each turn); OCT+ sets it (playing too: it is no flash write), OCT- cancels. */
+enum { NK_NONE, NK_USER_SAVE, NK_USER_RENAME, NK_PROJ_SAVE, NK_PROJ_RENAME, NK_LYRIC };
 #define NM_LEN 12u
+#define NM_MAX (LYR_LEN - 1u)                          /* the buffer: a lyric's length */
 #define NM_TAP_MS 800u                                 /* multi-tap: the next letter within this */
 #define NM_REP_MS 450u                                 /* a held arrow / DELETE repeats after this, */
 #define NM_RATE_MS 90u                                 /* .. every this */
@@ -39,11 +43,13 @@ static struct {
     uint8_t rep;                                       /* the key (+ 1) of a held arrow / DELETE, 0 none */
     uint32_t t, rep_t;                                 /* fm1_ms of the last tap; of the next repeat */
     uint32_t sig;                                      /* drawn-state cache */
-    char s[NM_LEN + 1u];
+    uint8_t dice;                                      /* (LYRIC) the dice's next phrase */
+    char s[NM_MAX + 1u];
     char ph[NM_LEN + 1u];                              /* what an empty name saves as / shows ("PROJECT A") */
 } nm __attribute__((section(".pool")));                /* (zero-initialised; main loop only: off the audio code's .bss) */
 
 static int name_on(void) { return nm.kind != NK_NONE; }
+static uint32_t nm_len_max(void) { return nm.kind == NK_LYRIC ? NM_MAX : NM_LEN; }
 static void name_close(void)
 {
     if (nm.kind)
@@ -80,6 +86,13 @@ static void name_open(uint32_t kind, uint32_t slot)
     nm.slot = (uint8_t)slot;
     nm.num = nm.key = nm.rep = 0;
     b[0] = 0;
+    if (kind == NK_LYRIC) {                            /* (0.8.5) the track's lyric */
+        str_cpy(nm.ph, "TYPE A LYRIC", sizeof nm.ph);
+        str_cpy(nm.s, lyr_get(slot), sizeof nm.s);
+        nm.len = nm.cur = (uint8_t)str_len(nm.s);
+        ui.force = 1;
+        return;
+    }
     if (kind == NK_USER_SAVE || kind == NK_USER_RENAME) {
         uint32_t e = kind == NK_USER_RENAME ? up_engine(slot) : TSEL->eng_req;
         up_auto_name(nm.ph, e, slot);
@@ -125,8 +138,8 @@ static void nm_commit(void)                            /* the letter being cycle
 static int nm_insert(char c)                           /* at the cursor (it stays on it); 0 = full */
 {
     uint32_t i;
-    if (nm.len >= NM_LEN) {
-        ui_message("NAME FULL");
+    if (nm.len >= nm_len_max()) {
+        ui_message(nm.kind == NK_LYRIC ? "LYRIC FULL" : "NAME FULL");
         return 0;
     }
     for (i = nm.len; i > nm.cur; i--)
@@ -191,6 +204,13 @@ static void nm_knob(uint32_t k, int32_t s)             /* KNOB 1 the cursor, KNO
 {
     int32_t i, n = (int32_t)sizeof NM_SET - 1;
     nm_commit();
+    if (k == 2u) {                                     /* (LYRIC) KNOB 3: the dice */
+        nm.dice = (uint8_t)(nm.dice + (s > 0 ? 1 : -1));
+        lyr_dice(&trk[nm.slot % NTRK], (uint32_t)clamp(trk[nm.slot % NTRK].p[P_VLANG], 0, LG_N - 1), nm.dice, nm.s,
+                 sizeof nm.s);
+        nm.len = nm.cur = (uint8_t)str_len(nm.s);
+        return;
+    }
     if (k == 0u) {
         nm.cur = (uint8_t)clamp((int32_t)nm.cur + s, 0, nm.len);
         return;
@@ -206,7 +226,7 @@ static void nm_knob(uint32_t k, int32_t s)             /* KNOB 1 the cursor, KNO
 /* OCT+: the name (spaces at its ends dropped) is written; the screen stays while that is refused (playing) */
 static void name_ok(void)
 {
-    char b[NM_LEN + 1u];
+    char b[NM_MAX + 1u];
     uint32_t a = 0, z;
     nm_commit();
     for (z = nm.len; z && nm.s[z - 1u] == ' '; z--)
@@ -215,6 +235,12 @@ static void name_ok(void)
         a++;
     for (z -= a, b[z] = 0; z--;)
         b[z] = nm.s[a + z];
+    if (nm.kind == NK_LYRIC) {                         /* (0.8.5) RAM only: playing too */
+        lyr_set(nm.slot, b);
+        ui_message(b[0] ? "LYRIC SET" : "LYRIC CLEARED");
+        name_close();
+        return;
+    }
     if (transport_busy()) {
         ui_message("STOP TO SAVE");
         return;
@@ -263,7 +289,7 @@ static void name_input(uint32_t notes, uint32_t oct)
         nm_do(nm_black(nm.rep - 1u));
         nm.rep_t = fm1_ms + NM_RATE_MS;
     }
-    for (k = 0; k < 2u; k++)
+    for (k = 0; k < (nm.kind == NK_LYRIC ? 3u : 2u); k++)
         if ((s = panel_enc(EN_K1 + k)) != 0)
             nm_knob(k, s);
     enc_drop();                                        /* the other knobs do nothing here */
@@ -295,7 +321,11 @@ static uint32_t name_leds(void)
 static void nm_title(char *b)
 {
     str_cpy(b, nm.kind == NK_USER_SAVE || nm.kind == NK_PROJ_SAVE ? "SAVE " : "NAME ", 8);
-    if (nm.kind <= NK_USER_RENAME)
+    if (nm.kind == NK_LYRIC) {                         /* "LYRIC T1" */
+        str_cpy(b, "LYRIC T", 8);
+        b[7] = (char)('1' + nm.slot % NTRK);
+        b[8] = 0;
+    } else if (nm.kind <= NK_USER_RENAME)
         up_slot_label(b + 5, nm.slot);
     else
         str_cpy(b + 5, nm.ph, 12);                     /* "PROJECT A" */
@@ -303,28 +333,29 @@ static void nm_title(char *b)
 static void nm_draw_field(void)
 {
     char b[24];
-    uint32_t i, empty = nm.len == 0u;
+    uint32_t i, empty = nm.len == 0u, w0 = nm.cur > NM_LEN - 1u ? nm.cur - (NM_LEN - 1u) : 0u;   /* (a lyric: the window) */
     cv_begin(240, CARD_H, T_BG);
     cv_rrect(3, 0, 234, CARD_H, 4, T_SURF, T_BG);
     nm_title(b);
     cv_text_on(9, 2, &AF_S, b, T_MID, T_SURF);
     fmt_int(b, nm.len);
-    str_cpy(b + str_len(b), "/12", 4);
-    cv_text_r(231, 2, &AF_S, b, nm.len >= NM_LEN ? T_ACCENT : T_DIM, T_SURF);
+    str_cpy(b + str_len(b), nm.kind == NK_LYRIC ? "/63" : "/12", 4);
+    cv_text_r(231, 2, &AF_S, b, nm.len >= nm_len_max() ? T_ACCENT : T_DIM, T_SURF);
     for (i = 0; i < NM_LEN; i++) {
         int32_t x = NM_CX(i);
-        char c[2] = {empty ? nm.ph[i] : i < nm.len ? nm.s[i] : 0, 0};
+        uint32_t q = i + w0;
+        char c[2] = {empty ? nm.ph[i] : q < nm.len ? nm.s[q] : 0, 0};
         uint16_t bg = T_SURF, fg = empty ? T_DIM : T_TEXT;
-        if (i == nm.cur && nm.key) {                   /* the letter being cycled */
+        if (q == nm.cur && nm.key) {                   /* the letter being cycled */
             cv_rrect(x, 18, 18, 22, 3, T_THEME, T_SURF);
             bg = T_THEME;
             fg = T_INK;
-        } else if (i == nm.cur) {                      /* the cursor: a box */
+        } else if (q == nm.cur) {                      /* the cursor: a box */
             cv_rrect(x, 18, 18, 22, 4, T_ACCENT, T_SURF);
             cv_rrect(x + 2, 20, 14, 18, 2, T_SURF, T_ACCENT);
         }
-        if (!c[0] || (c[0] == ' ' && i >= nm.len)) {
-            if (i != nm.cur)
+        if (!c[0] || (c[0] == ' ' && q >= nm.len)) {
+            if (q != nm.cur)
                 cv_rrect(x + 4, 37, 10, 2, 1, T_RAISE, T_SURF);   /* an empty cell */
         } else if (c[0] == ' ') {
             cv_rect(x + 8, 28, 2, 2, bg == T_THEME ? T_INK : T_DIM);   /* a space */
@@ -333,7 +364,7 @@ static void nm_draw_field(void)
             cv_text_in(x, 18 + CAP_IN(M, 22), 18, &AF_M, c, fg, bg);   /* its ink across, the capitals' band up and down */
         }
     }
-    if (nm.cur >= NM_LEN)                              /* full, the cursor past the end: a bar */
+    if (nm.cur - w0 >= NM_LEN)                         /* full, the cursor past the end: a bar */
         cv_rrect(NM_CX(NM_LEN) + 1, 18, 3, 22, 1, T_ACCENT, T_SURF);
     cv_blit(0, Y_LABEL);
 }
@@ -391,12 +422,13 @@ static void nm_draw_panel(void)
 static void nm_draw_foot(void)
 {
     khint_t a[2], b[3];
-    int ok = !transport_busy();
-    a[0] = (khint_t){KC_OCTUP, nm.kind == NK_USER_SAVE || nm.kind == NK_PROJ_SAVE ? "SAVE" : "RENAME"};
+    int ok = !transport_busy() || nm.kind == NK_LYRIC;
+    a[0] = (khint_t){KC_OCTUP, nm.kind == NK_LYRIC ? "SET" : nm.kind == NK_USER_SAVE || nm.kind == NK_PROJ_SAVE ? "SAVE" :
+                                                                                                       "RENAME"};
     a[1] = (khint_t){KC_OCTDN, "CANCEL"};
     b[0] = (khint_t){KC_K1, "MOVE"};
     b[1] = (khint_t){KC_K2, "CHAR"};
-    b[2] = (khint_t){KC_KEYS, "TYPE"};
+    b[2] = nm.kind == NK_LYRIC ? (khint_t){KC_K3, "DICE"} : (khint_t){KC_KEYS, "TYPE"};
     cv_begin(240, H_FOOT, T_BG);
     cv_key_row(8, 232, 2, a, 2, ok ? 3u : 2u, T_BG);
     cv_key_row(8, 232, 21, b, 3, 7u, T_BG);

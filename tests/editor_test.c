@@ -145,23 +145,24 @@ static int preferences(void)
     int bad = 0;
     uint8_t a[4] = {0, 7, 0, 0};
     reset();
-    uint32_t n = request(ED_INFO, a, 0);
+    uint32_t n = request(ED_INFO, a, 0), n0 = n - 3u;   /* (0.8.5: the 'Y' tag last, LYRIC) */
     bad += check("INFO explicitly tags display capabilities after SONG without changing command 33",
         ED_SONG == 33 && ED_UI_STATE == 34 && ED_FAV_SET == 38 &&
-        host_wire[n - 37] == CHAIN_ROWS && host_wire[n - 36] == 0x55 &&
-        host_wire[n - 35] == 1 && host_wire[n - 34] == 9 &&
-        host_wire[n - 33] == 0x4d && host_wire[n - 32] == 1 &&
-        host_wire[n - 31] == MOTION_MAX && host_wire[n - 30] == 1 &&
-        host_wire[n - 29] == 0x42 && host_wire[n - 28] == 1 && host_wire[n - 27] == 3 &&
-        host_wire[n - 26] == 0x46 && host_wire[n - 25] == 1 && host_wire[n - 24] == FM6_NFACTORY &&
-        host_wire[n - 23] == 0 &&                        /* (no bank since 1.0.3) */
-        host_wire[n - 22] == 0x53 && host_wire[n - 21] == 1 && host_wire[n - 20] == 3 &&
-        host_wire[n - 19] == 0x50 && host_wire[n - 18] == 1 && host_wire[n - 17] == 3 &&   /* FM6 v2: no bank, preset patches */
-        host_wire[n - 16] == 0x4E && host_wire[n - 15] == 1 && host_wire[n - 14] == 21 &&   /* MENU settings: 21 items (0.6.72: MIDI OUT) */
-        host_wire[n - 13] == 0x52 && host_wire[n - 12] == 1 && host_wire[n - 11] == 4 &&   /* RATCH */
-        host_wire[n - 10] == 0x4C && host_wire[n - 9] == 1 && host_wire[n - 8] == 1 &&   /* 1.1 parameter locks */
-        host_wire[n - 7] == 0x56 && host_wire[n - 6] == 1 && host_wire[n - 5] == 32 &&   /* (0.6.11) FM6 voice bank */
-        host_wire[n - 4] == 0x4A && host_wire[n - 3] == 1 && host_wire[n - 2] == 1);   /* (0.6.62) JIANT: the installer */
+        host_wire[n0 - 37] == CHAIN_ROWS && host_wire[n0 - 36] == 0x55 &&
+        host_wire[n0 - 35] == 1 && host_wire[n0 - 34] == 9 &&
+        host_wire[n0 - 33] == 0x4d && host_wire[n0 - 32] == 1 &&
+        host_wire[n0 - 31] == MOTION_MAX && host_wire[n0 - 30] == 1 &&
+        host_wire[n0 - 29] == 0x42 && host_wire[n0 - 28] == 1 && host_wire[n0 - 27] == 3 &&
+        host_wire[n0 - 26] == 0x46 && host_wire[n0 - 25] == 1 && host_wire[n0 - 24] == FM6_NFACTORY &&
+        host_wire[n0 - 23] == 0 &&                        /* (no bank since 1.0.3) */
+        host_wire[n0 - 22] == 0x53 && host_wire[n0 - 21] == 1 && host_wire[n0 - 20] == 3 &&
+        host_wire[n0 - 19] == 0x50 && host_wire[n0 - 18] == 1 && host_wire[n0 - 17] == 3 &&   /* FM6 v2: no bank, preset patches */
+        host_wire[n0 - 16] == 0x4E && host_wire[n0 - 15] == 1 && host_wire[n0 - 14] == 21 &&   /* MENU settings: 21 items (0.6.72: MIDI OUT) */
+        host_wire[n0 - 13] == 0x52 && host_wire[n0 - 12] == 1 && host_wire[n0 - 11] == 4 &&   /* RATCH */
+        host_wire[n0 - 10] == 0x4C && host_wire[n0 - 9] == 1 && host_wire[n0 - 8] == 1 &&   /* 1.1 parameter locks */
+        host_wire[n0 - 7] == 0x56 && host_wire[n0 - 6] == 1 && host_wire[n0 - 5] == 32 &&   /* (0.6.11) FM6 voice bank */
+        host_wire[n0 - 4] == 0x4A && host_wire[n0 - 3] == 1 && host_wire[n0 - 2] == 1 &&   /* (0.6.62) JIANT: the installer */
+        host_wire[n - 4] == 0x59 && host_wire[n - 3] == 1 && host_wire[n - 2] == LYR_LEN - 1u);   /* (0.8.5) LYRIC, 63 */
     request(ED_UI_SET, a, 2);
     bad += check("UI_SET updates the actual palette and reports RAM-only saving",
         host_wire[5] == 3 && settings.palette == 7 && T_BG == UI_PALETTES[7].bg);
@@ -188,6 +189,42 @@ static int preferences(void)
     bad += check("UI_STATE rejects unexpected request bytes", request(ED_UI_STATE, a, 1) == 0);
     a[0] = 0; request(ED_SONG, a, 1);
     bad += check("SONG still responds through its original command", host_wire_n > 6 && host_wire[4] == 33 && host_wire[5] == 0);
+    return bad;
+}
+
+
+/* (0.8.5) LYRIC (39): a track's lyric, read and written; ASCII kept, control bytes as spaces, cut at 63 (rc 1); a
+ * project's capture / restore carries it (the runtime's FUNC 'L' 'Y' block) */
+static int lyric_protocol(void)
+{
+    int bad = 0;
+    uint8_t a[80];
+    uint32_t k, n;
+    static project_t q;
+    reset();
+    lyr_set(2, "");
+    a[0] = 2;
+    n = request(ED_LYRIC, a, 1);
+    bad += check("LYRIC get: track, rc 0, an empty lyric", n == 9u && host_wire[4] == ED_LYRIC && host_wire[5] == 2 &&
+                 host_wire[6] == 0 && host_wire[7] == 0);
+    memcpy(a + 1, "la noche\tes azul", 17); a[18] = 0;
+    request(ED_LYRIC, a, 19);
+    bad += check("LYRIC set: the device's lyric, a tab as a space, read back", host_wire[6] == 0 &&
+                 !strcmp(lyr_get(2), "la noche es azul") && !memcmp(host_wire + 7, "la noche es azul", 17));
+    for (k = 1; k < 71u; k++) a[k] = (uint8_t)('a' + k % 26u);
+    a[71] = 0;
+    request(ED_LYRIC, a, 72);
+    bad += check("LYRIC set of 70: cut at 63 (rc 1)", host_wire[6] == 1 && strlen(lyr_get(2)) == LYR_LEN - 1u);
+    a[0] = NTRK;
+    bad += check("LYRIC of a track past the last: no reply", request(ED_LYRIC, a, 1) == 0);
+    lyr_set(2, "sakura sakura");
+    lyr_set(0, "you are my sunshine");
+    project_capture(&q);
+    lyr_set(2, "");
+    lyr_set(0, "x");
+    project_restore_runtime(&q);
+    bad += check("a project's capture and restore carry the lyrics", !strcmp(lyr_get(2), "sakura sakura") &&
+                 !strcmp(lyr_get(0), "you are my sunshine") && !lyr_get(1)[0]);
     return bad;
 }
 
@@ -933,7 +970,8 @@ static int drum_kit_retired(void)
 int main(void)
 {
     int bad = preferences() + motion_locks() + framing() + uart_recovery() + steps() + stop_failures() + song_protocol() + malformed_saves() +
-              fm6_patches() + user_preset_roundtrip() + live_sync() + usb_burst() + menu_protocol() + drum_kit_retired();
+              fm6_patches() + user_preset_roundtrip() + live_sync() + usb_burst() + menu_protocol() + drum_kit_retired() +
+              lyric_protocol();
     printf("%s\n", bad ? "EDITOR TEST FAILED" : "editor test passed");
     return bad != 0;
 }

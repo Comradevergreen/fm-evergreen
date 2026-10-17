@@ -399,7 +399,7 @@ static void cv_alpha(int32_t x, int32_t y, uint32_t w, uint32_t h, const uint8_t
  * stream is read in order, so rows outside the clip are decoded and dropped; a run spans rows */
 #define HC_FONTS 3                       /* the codes: the faces M and L (gen_aa_font.py HUFF), the icons (AI_HC) */
 static struct { const uint8_t *hc; uint16_t lut[256]; } hc_tab[HC_FONTS]
-    __attribute__((section(".lowbuf")));   /* (0.8.4: below the RAM code, app.ld LOWBUF, was .bss; the drawing's, main loop only) */
+    __attribute__((section(".pool")));     /* (the drawing's, main loop only: 0.8.4 LOWBUF, was .bss; 0.8.5 the pool, LOWBUF full) */
 static const uint16_t *hc_lut(const uint8_t *hc)
 {
     uint32_t k, len, code = 0, sym = 15, i;

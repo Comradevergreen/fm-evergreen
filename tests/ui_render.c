@@ -630,6 +630,7 @@ static void drum(uint32_t kit)
     trk[3].p[P_SLEN] = 32;
 }
 static void eng(uint32_t e) { set_engine_of(TSEL, e); }
+#define ENGI_VOICE_UI 5u                         /* (0.8.5) VOICE (engines.c ENGINES[5]) */
 /* the FM engine of the FM screens: DIGITAL with FELUCCA_FM4, else FM6 (DIGITAL retired: its own screens, the OP ENV /
  * OP LEVEL pages and the algorithm charts, exist only there: fm4_screen) */
 #define E_FM (FELUCCA_FM4 ? ENGI_DIGITAL : ENGI_FM6)
@@ -650,6 +651,7 @@ enum { S_HOME, S_HOME_IDLE, S_MESSAGE, S_MESSAGE_KEY, S_MESSAGE_NOFILE, S_PRESET
        S_LENTE_STEP_COMP2, S_LENTE_STEP_TIE, S_LENTE_STEP_REST, S_LENTE_STEP_DRUM, S_LENTE_BAR_LONG, S_LENTE_STEP_LONG,
        S_NAME_USER, S_NAME_TYPING, S_NAME_123, S_NAME_EMPTY, S_NAME_FULL, S_NAME_PLAYING, S_PROJECT_NAMED, S_SONG_NAMED,
        S_USER_FOOT,
+       S_WORDS, S_WORDS_EN, S_WORDS_JA, S_WORDS_EDIT, S_WORDS_OFF, S_NAME_LYRIC, S_NAME_LYRIC_LONG,
        S_ROLL_EMPTY, S_ROLL_ACID, S_ROLL_CHORDS, S_ROLL_TIES, S_ROLL_LEN32, S_ROLL_HIGH, S_ROLL_LOW, S_ROLL_WIDE, S_ROLL_PLAYING,
        S_ROLL_LOCKS, S_ROLL_LOCK_HELD, S_DRUM_LOCKS, S_DRUM_LOCK_HELD, S_MOTION_LOCKS, S_AUTO_LIST, S_AUTO_LIST_ADD, S_AUTO_LIST_DRUM, S_REC_LAYER, S_REC_LAYER_SET, S_REC_LAYER_SONG, S_MACRO_LAYER, S_MSEQ, S_DIST_PAGE, S_DLY2, S_REVERB2, S_CHORUS, S_MASTER, S_LFO_DEST,
        S_COUNTIN, S_COUNTIN2, S_MENU_AUDIO, S_HEAD_PLAY_REC, S_HEAD_REC_OTHER, S_HEAD_BPM_TURN, S_HEAD_BPM_LOCK,
@@ -671,6 +673,7 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "message", "mes
     "lente_step_long",
     "name_user", "name_typing", "name_123", "name_empty", "name_full", "name_playing", "project_named", "song_named",
     "user_foot",
+    "words", "words_en", "words_ja", "words_edit", "words_off", "name_lyric", "name_lyric_long",
     "roll_empty", "roll_acid", "roll_chords", "roll_ties", "roll_len32_p2", "roll_high", "roll_low", "roll_wide", "roll_playing",
     "roll_locks", "roll_lock_held", "drum_locks", "drum_lock_held", "motion_locks", "auto_list", "auto_list_add", "auto_list_drum", "layer_rec", "layer_rec_set", "layer_rec_song", "layer_macro", "mseq", "dist", "dly2", "reverb2", "chorus", "master", "lfo_dest",
     "countin", "countin_2bars", "menu_audio", "head_play_rec", "head_rec_other", "head_bpm_turn", "head_bpm_lock",
@@ -1244,6 +1247,40 @@ static void setup(int s)
         break;
     }
     case S_USER_FOOT: song.playing = 0; up_store(3, "MY BASS"); ui.uslot = 3; go_page(GR_USER); break;   /* EDIT NAME lit */
+    /* (0.8.5) VOICE's words: EDIT > WORDS singing (TEXT, a consonant sounding; W3 in English; the dice in Japanese),
+     * EDIT 1 singing, WORDS with LANG OFF; the LYRIC typing screen (a short lyric; a long one, its window scrolled) */
+    case S_WORDS: case S_WORDS_EN: case S_WORDS_JA: case S_WORDS_EDIT: {
+        static const char *const W[4][2] = {{"corazon", "la noche es azul y el mar canta para ti"}, {"sunshine", ""},
+                                            {"sakura", ""}, {"strength", "construir estrellas"}};
+        static const uint8_t PH[4][4] = {{PH_S, PH_O, PH_N, 0}, {PH_SH, PH_AA, PH_IH, PH_N}, {PH_K, PH_UJ, 0, 0},
+                                         {PH_S, PH_T, PH_RA, PH_EH}};
+        uint32_t k = s - S_WORDS;
+        sing_t *g = &sing[song.sel];
+        eng(ENGI_VOICE_UI);
+        TSEL->p[P_VLANG] = (int16_t)(k == 1u ? LG_EN : k == 2u ? LG_JA : LG_ES);
+        TSEL->p[P_VLYR] = (int16_t)(k == 1u ? 3 : k == 2u ? 4 : 0);
+        TSEL->p[P_E1] = (int16_t)(k == 1u ? 8 : 64);
+        lyr_set(song.sel, W[k][1]);
+        memset(g, 0, sizeof *g);
+        str_cpy(g->w, W[k][0], sizeof g->w);
+        memcpy(g->ph, PH[k], 4); g->np = PH[k][3] ? 4u : PH[k][2] ? 3u : 2u; g->nu = 1; g->cd = 2; g->i = k == 3u ? 2u : 1u;
+        g->nsy = (uint16_t)(7u + k * 5u); g->to = k ? 0u : 13u;
+        g->f[0] = 520; g->f[1] = 950; g->f[2] = 2450; g->ff = 3300; g->fb = 250; g->bm = 16;
+        g->gv = k == 3u ? 2000 : 30000; g->gf = k == 3u ? 22000 : 0;
+        if (k == 3u) go_title("EDIT 1");
+        else go_page(GR_LYRIC);
+        break;
+    }
+    case S_WORDS_OFF: eng(ENGI_VOICE_UI); TSEL->p[P_VLANG] = 0; go_page(GR_LYRIC); break;
+    case S_NAME_LYRIC:
+        eng(ENGI_VOICE_UI); TSEL->p[P_VLANG] = LG_ES; lyr_set(song.sel, "LA NOCHE");
+        go_page(GR_LYRIC); name_open(NK_LYRIC, song.sel);
+        break;
+    case S_NAME_LYRIC_LONG:
+        eng(ENGI_VOICE_UI); TSEL->p[P_VLANG] = LG_JA; song.playing = 1;
+        lyr_set(song.sel, "SAKURA SAKURA YAYOI NO SORA WA MI WATASU KAGIRI KASUMI KA KUMO");
+        go_page(GR_LYRIC); name_open(NK_LYRIC, song.sel); nm.cur = 40; nm.key = 3; nm.tap = 1; nm.t = fm1_ms;
+        break;
     default: break;
     }
     if (s != S_FUGUE)

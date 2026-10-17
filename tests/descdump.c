@@ -98,6 +98,7 @@ int main(void)
                 v[i] = p->env[i];
             printf(",\"env\":");
             js_ints(v, 4);
+            printf(",\"xp\":%u", (unsigned)p->xp);   /* (0.8.5) VOICE: LANG | LYRIC << 2 */
             printf(",\"mono\":%d,\"pat\":%d}", p->mono, p->pat);
         }
         printf("]}");

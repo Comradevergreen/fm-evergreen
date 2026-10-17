@@ -183,6 +183,12 @@
     </div>
     <p class="dim" id="ctlhelp" data-t="ctlHelp"></p>
     <div class="groups" id="groups"></div>
+    <div class="group" id="lyricbox" hidden><h3 data-t="lyricT"></h3>
+      <p class="dim" data-t="lyricHelp"></p>
+      <p class="bar"><label><span data-t="lyricLang"></span> <select id="lyrlang"></select></label>
+        <label><span data-t="lyricSrc"></span> <select id="lyrsrc"></select></label></p>
+      <p class="bar"><input id="lyric" maxlength="63" size="56" autocomplete="off" spellcheck="false">
+        <button id="lyricsend" data-t="lyricSend"></button></p></div>
   </section>
 
   <section class="panel" id="p-fm6" data-tab="fm6" data-dev hidden>
@@ -339,7 +345,7 @@ const CMD = { INFO: 1, GET: 2, SET: 3, DUMP: 4, DESC: 5, STEP_GET: 6, STEP_SET: 
   WATCH: 22, CHANGED: 23, RELOAD: 24, PING: 25, STEP_CHANGED: 26,
   TRACK: 27, TRACK_MIX: 28, TRACK_DUMP: 29, TRACK_STEP: 30,
   TRACK_PARAM: 31, TRACK_CHANGED: 32, SONG: 33,
-  UI_STATE: 34, UI_SET: 35, UI_PALETTES: 36, FAV_GET: 37, FAV_SET: 38,
+  UI_STATE: 34, UI_SET: 35, UI_PALETTES: 36, FAV_GET: 37, FAV_SET: 38, LYRIC: 39,
   MOTION: 64, BACKUP_LIST: 65, BACKUP_GET: 66, BACKUP_PUT: 67,
   FM6_GET: 68, FM6_PUT: 69, FM6_LIST: 70, FM6_ERASE: 71,
   FM6B_BEGIN: 74, FM6B_WRITE: 75, FM6B_END: 76, FM6B_LIST: 77 };   /* (JIANT 0.6.11, Felucca 1.4.1) FM6's voice bank */
@@ -439,8 +445,12 @@ const parse = {
       if (trailer[r] === 0x4C && trailer[r + 1] === 1) r += 3;                            /* parameter locks (1.1) */
       if (trailer[r] === 0x56 && trailer[r + 1] === 1) o.fm6Bank = trailer[r + 2];          /* (0.6.11) the voice bank's size */
     }
+    /* (JIANT 0.8.5) 'Y' 1 n, the last tag: LYRIC (cmd 39), a track's lyric of at most n bytes; 0 = none */
+    const ty = trailer.length - 3;
+    o.lyric = ty >= 0 && trailer[ty] === 0x59 && trailer[ty + 1] === 1 ? trailer[ty + 2] : 0;
     return o;
   },
+  [CMD.LYRIC](a) { const r = new Reader(a); return { track: r.b(), rc: r.b(), text: r.s() }; },
   [CMD.UI_STATE](a) {
     const r = new Reader(a), o = { caps: r.b(), palette: r.b(), font: r.b(), monitor: r.b(), filter: r.b() };
     const u28 = () => r.b() | r.b() << 7 | r.b() << 14 | r.b() << 21;
@@ -572,6 +582,12 @@ const parse = {
   },
 };
 
+/* (JIANT 0.8.5) a lyric the device takes: printable ASCII, at most 63 characters; accents dropped (the device has none:
+   stress is not marked in singing), the enye as "ny" (as the device reads it: sing.c sy_es) */
+function lyricText(s) {
+  return String(s ?? "").replace(/[ñÑ]/g, (c) => (c === "ñ" ? "ny" : "NY")).normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[¿¡]/g, "").replace(/[^\x20-\x7E]/g, " ").slice(0, 63);
+}
 /* a name the device accepts: printable ASCII, 1..12 characters */
 function upName(s) { return String(s ?? "").replace(/[^\x20-\x7E]/g, "").trim().slice(0, UP.NAME_MAX) || "PATCH"; }
 
@@ -581,6 +597,7 @@ const req = {
   uiPalettes: () => [CMD.UI_PALETTES, []],
   favGet: (engine, start, count) => [CMD.FAV_GET, [engine, ...v14enc(start), count]],
   favSet: (engine, preset, on) => [CMD.FAV_SET, [engine, ...v14enc(preset), on ? 1 : 0]],
+  lyric: (track, text) => [CMD.LYRIC, text == null ? [track] : [track, ...strEnc(lyricText(text))]],   /* (0.8.5) */
   info: () => [CMD.INFO, []],
   get: (scope, id) => [CMD.GET, [scope, id]],
   set: (scope, id, v) => [CMD.SET, [scope, id, ...v14enc(v)]],
@@ -651,6 +668,7 @@ function replyMatches(cmd, args, a) {
     case CMD.UI_SET: return a[1] === args[0] && a[2] === args[1];
     case CMD.FAV_GET: case CMD.FAV_SET:
       return ![0, 3, 4].includes(a[0]) || (a[1] === args[0] && a[2] === args[1] && a[3] === args[2] && a[4] === args[3]);
+    case CMD.LYRIC: return a[0] === args[0];
     case CMD.GET: case CMD.SET: case CMD.DESC: return a[0] === args[0] && a[1] === args[1];
     case CMD.STEP_GET: case CMD.STEP_SET: case CMD.NAMES: return a[0] === args[0];
     case CMD.SONG: return a[0] === args[0];
@@ -1532,7 +1550,8 @@ function makeMockDevice(opt = {}) {
   ];
   const NONE = D("-", F.INT, 0, 0, 0);
   const RATIO = [".5", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "14", "16"];
-  const P = (name, e, env = [10, 70, 90, 60], mono = 0, pat = 0) => ({ name, e, env, mono, pat });
+  const P = (name, e, env = [10, 70, 90, 60], mono = 0, pat = 0, xp = 0) => ({ name, e, env, mono, pat, xp });   /* xp (0.8.5):
+     VOICE's LANG | LYRIC << 2 */
   const ENG = [
     { name: "ANALOG", titles: ["OSC", "FLT"], edit: [E("WAVE", ["SAW", "SQR", "TRI", "SIN", "PWM", "SYNC", "RING", "SAW3"], 0), D("DETUNE", F.INT, 0, 127, 10, null, "ct"), D("MIX", F.PCT, 0, 127, 64),
         D("NOISE", F.PCT, 0, 127, 0), D("CUT", F.CUTOFF, 0, 127, 90), D("RES", F.PCT, 0, 127, 30), D("DRIVE", F.PCT, 0, 127, 0), D("INT", F.SEMI, -24, 24, 0)],   /* (JIANT 0.4: INT, osc 2's interval, was KTR) */
@@ -1584,7 +1603,16 @@ function makeMockDevice(opt = {}) {
       presets: [P("CHOIR AAH", [0, 0, 0, 0, 40, 22, 60, 0], [85, 90, 115, 95], 0, 5), P("VOX LEAD", [32, 0, 0, 2, 90, 8, 72, 0], [6, 70, 105, 55], 1, 4),
         P("WOW BASS", [95, 0, 68, 0, 100, 0, 80, 0], [0, 70, 70, 30], 1, 8), P("WHISPER", [0, 95, 88, 3, 50, 120, 50, 0], [50, 90, 110, 90], 0, 5),
         P("OOH PAD", [80, 100, 50, 0, 55, 25, 55, 0], [70, 90, 115, 95], 0, 5), P("CHANT", [20, 60, 100, -12, 70, 15, 65, 10], [30, 90, 110, 80], 0, 5),
-        P("TALK BOX", [10, 110, 40, 0, 110, 4, 85, 0], [2, 65, 95, 40], 1, 4)] },
+        P("TALK BOX", [10, 110, 40, 0, 110, 4, 85, 0], [2, 65, 95, 40], 1, 4),
+        /* (0.8.5) WORDS (src/sing.c): LANG 1 ES 2 EN 3 JA, LYRIC 0 TEXT 1..16 W1..W16 17..24 S1..S8 (xp = LANG | LYRIC << 2) */
+        P("CANTOR ES", [0, 64, 0, 0, 80, 6, 72, 0], [4, 70, 112, 58], 1, 4, 1 | 1 << 2),
+        P("CANTORA ES", [0, 0, 0, 4, 70, 10, 74, 0], [6, 70, 112, 60], 1, 4, 1 | 2 << 2),
+        P("SINGER EN", [0, 64, 0, 0, 84, 6, 72, 0], [4, 70, 112, 58], 1, 4, 2 | 3 << 2),
+        P("UTA JA", [0, 48, 0, 5, 76, 8, 74, 0], [4, 70, 112, 56], 1, 4, 3 | 4 << 2),
+        P("WORD CHOIR", [0, 64, 16, 0, 45, 20, 62, 0], [60, 90, 115, 85], 0, 5, 1 | 5 << 2),
+        P("SCAT EN", [0, 64, 0, 0, 96, 4, 76, 0], [2, 60, 100, 50], 1, 4, 2 | 17 << 2),
+        P("ROBOT EN", [0, 64, 0, -3, 127, 0, 90, 0], [2, 65, 120, 56], 1, 4, 2 | 6 << 2),
+        P("WHISPER JA", [0, 64, 0, 3, 50, 120, 52, 0], [40, 90, 110, 80], 0, 5, 3 | 7 << 2)] },
     /* 6: reserved (TRIO, folded into ANALOG in JIANT 0.4: its sounds load as ANALOG's SYNC / RING / SAW3, core.h analog_from_trio) */
     { name: "-", titles: ["-", "-"], edit: [D("-", F.INT, 0, 127, 0), D("-", F.INT, 0, 127, 0), D("-", F.INT, 0, 127, 0),
         D("-", F.INT, 0, 127, 0), D("-", F.INT, 0, 127, 0), D("-", F.INT, 0, 127, 0), D("-", F.INT, 0, 127, 0), D("-", F.INT, 0, 127, 0)],
@@ -1731,6 +1759,8 @@ function makeMockDevice(opt = {}) {
     st.preset = pi;
     for (let i = 0; i < 8; i++) st.p[P_E0 + i] = pr.e[i];
     [1, 2, 3, 4].forEach((id, k) => { st.p[id] = pr.env[k]; });
+    if (e.name === "VOICE") { st.p[61] = (pr.xp || 0) & 3; st.p[74] = (pr.xp || 0) >> 2; }   /* (0.8.5) LANG, LYRIC (P_VLANG
+                                                     = P_FM1_ATK 61, P_VLYR = P_FM3_REL 74; ui.c apply_preset_to) */
     st.p[37] = pr.mono ? 2 : 0;
     st.p[33] = 0; st.p[34] = 24; st.p[35] = 28; st.p[36] = 36;
     for (let i = P_SLCR + 4; i < P_E0; i++) if (!trackOwn(i, P_E0)) st.p[i] = TP[i].def;   /* a factory preset turns the
@@ -1956,8 +1986,22 @@ function makeMockDevice(opt = {}) {
           if (st.uiCaps) { b(0x55); b(1); b(st.uiCaps); b(0x4d); b(1); b(64); b(1); if (!opt.noFm6) { b(0x46); b(1); b(FM6.FACTORY_PK.length); b(0); }
             if (syncCaps()) { b(0x53); b(1); b(syncCaps()); if (!opt.noFm6) { b(0x50); b(1); b(3); } if (ratchetOn()) { b(0x52); b(1); b(4); }
               if (!opt.noFm6 && !opt.noVbank && ratchetOn()) { b(0x56); b(1); b(32); } } }   /* (FM6 v2: no bank, preset patches; 0.6.11: the voice bank) */
+          if (st.uiCaps && !opt.noLyric) { b(0x59); b(1); b(63); }   /* (0.8.5) LYRIC, the last tag */
         }
         break;
+      case CMD.LYRIC: {                           /* (0.8.5) editor.c ED_LYRIC */
+        if (opt.noLyric || !a.length || a[0] >= NTRK) return null;
+        const tr = st.tracks[a[0]];
+        let rc = 0;
+        if (a.length > 1) {
+          let txt = "";
+          for (let i = 1; i < a.length && a[i]; i++) txt += String.fromCharCode(a[i] >= 32 && a[i] <= 126 ? a[i] : 32);
+          if (txt.length > 63) { txt = txt.slice(0, 63); rc = 1; }
+          tr.lyric = txt;
+        }
+        b(a[0]); b(rc); s(tr.lyric || "");
+        break;
+      }
       case CMD.GET: case CMD.SET: {
         if (a.length < 2) return null;
         const d = desc(a[0], a[1]);
@@ -2435,6 +2479,12 @@ const TEXT = {
     erase: "消去", remove: "外す",
     layout: "（ファームウェアのパラメーター数が想定と違うため、簡易表示にしています）",
     ctlHelp: "スライダーはクリックしてからホイールか矢印キーで微調整（Shift で 10 ずつ）、ダブルクリックで初期値。",
+    lyricT: "歌詞（VOICE WORDS）",
+    lyricHelp: "VOICE トラックの歌詞（63 文字まで）。EDIT > WORDS の LANG で言語（ES / EN / JA、日本語はローマ字）、LYRIC を TEXT に。音符ごとに次の音節を歌い、「-」は母音をもう一音のばす。",
+    lyricSend: "送信",
+    lyricLang: "LANG",
+    lyricSrc: "LYRIC",
+    lyricSent: "歌詞を送りました",
     live: "● リアルタイム", polling: "○ ポーリング（古いファームウェア）",
     library: "ライブラリ", libSearch: "名前・タグで検索", allEngines: "全エンジン", allTags: "全タグ",
     sortModified: "更新順", sortCreated: "作成順", sortName: "名前順", sortEngine: "エンジン順",
@@ -2532,6 +2582,12 @@ const TEXT = {
     erase: "Erase", remove: "Remove",
     layout: "(The firmware has a different parameter count; showing a plain list.)",
     ctlHelp: "Sliders: click, then fine-tune with the wheel or arrow keys (Shift: steps of 10); double-click resets.",
+    lyricT: "Lyric (VOICE WORDS)",
+    lyricHelp: "The VOICE track's lyric (up to 63 characters). EDIT > WORDS: LANG picks the language (ES / EN / JA, Japanese in romaji), LYRIC TEXT sings this. Each note sings the next syllable; a \"-\" holds the vowel one more note.",
+    lyricSend: "Send",
+    lyricLang: "LANG",
+    lyricSrc: "LYRIC",
+    lyricSent: "Lyric sent",
     live: "● Live", polling: "○ Polling (older firmware)",
     library: "Library", libSearch: "Search name or tag", allEngines: "All engines", allTags: "All tags",
     sortModified: "Recently changed", sortCreated: "Recently added", sortName: "Name", sortEngine: "Engine",
@@ -2936,9 +2992,40 @@ function renderSysinfo() {
   box.replaceChildren(...rows.map(([k, v]) => el("tr", {}, el("th", { text: t(k) }), el("td", { text: v }))));
 }
 
+/* (0.8.5) the VOICE track's lyric (LYRIC, cmd 39): shown for a VOICE track on a firmware that has it */
+function lyricShown() { return !!dev && !!dev.info && !!dev.info.lyric && !!dev.dump && dev.info.engines[dev.dump.engine] === "VOICE"; }
+async function lyricRead(d = dev) {
+  if (!lyricShown()) return;
+  const r = parse[CMD.LYRIC](await rq(req.lyric(d.sel || 0)));
+  if (document.activeElement !== $("lyric")) $("lyric").value = r.text;
+}
+$("lyricsend").addEventListener("click", () => {
+  if (!lyricShown()) return;
+  op(async () => {
+    const r = parse[CMD.LYRIC](await rq(req.lyric(dev.sel || 0, $("lyric").value)));
+    $("lyric").value = r.text;
+    sayK("lyricSent");
+  });
+});
+/* LANG (P_VLANG, id 61) and LYRIC (P_VLYR, id 74): VOICE's words, in other engines' slots (sing.c) */
+const LYR_LANG = ["OFF", "ES", "EN", "JA"];
+const LYR_SRC = ["TEXT", ...Array.from({ length: 16 }, (_, i) => `W${i + 1}`), ...Array.from({ length: 8 }, (_, i) => `S${i + 1}`)];
+const LYR_ID = { lang: 61, src: 74 };
+for (const [id, names, key] of [["lyrlang", LYR_LANG, "lang"], ["lyrsrc", LYR_SRC, "src"]]) {
+  $(id).replaceChildren(...names.map((n, i) => el("option", { value: i, text: n })));
+  $(id).addEventListener("change", () => {
+    if (!lyricShown()) return;
+    op(async () => { parse[CMD.SET](await rq(req.set(0, LYR_ID[key], +$(id).value))); dev.dump = await getDump(); refreshAll(); });
+  });
+}
 function updateBrowser() {
   const e = dev.dump.engine;
   const sel = $("engine");
+  $("lyricbox").hidden = !lyricShown();
+  if (lyricShown()) {
+    if (document.activeElement !== $("lyrlang")) $("lyrlang").value = String(Math.max(0, Math.min(3, dev.dump.p[LYR_ID.lang] | 0)));
+    if (document.activeElement !== $("lyrsrc")) $("lyrsrc").value = String(Math.max(0, Math.min(24, dev.dump.p[LYR_ID.src] | 0)));
+  }
   renderTrackbar();
   if (document.activeElement !== sel) sel.value = String(e);
   const ps = $("preset");
@@ -3121,6 +3208,7 @@ async function afterSoundChange(msg = "ready", d = dev) {
   refreshAll();
   await loadSteps(d);                                /* (a sound load keeps them; read anyway after a RELOAD) */
   if (hasTracks()) await readMixer(d);               /* the sound names and the selected strip */
+  await lyricRead(d);                                /* (0.8.5) a VOICE track's lyric */
   sayK(msg);
 }
 $("init").addEventListener("click", async () => {

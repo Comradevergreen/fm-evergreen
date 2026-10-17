@@ -1178,6 +1178,10 @@ static void act_do(void)
         confirm_open(CF_CLEAR_MOTION, song.sel);
         return;
     }
+    if (cur_page()->graph == GR_LYRIC) {                /* (0.8.5) WORDS: the lyric, typed (the NAME screen) */
+        name_open(NK_LYRIC, song.sel);
+        return;
+    }
     if (cur_page()->graph == GR_PUNCH) {                /* (0.6.99) the punch-in lane cleared (a dialog) */
         if (chain_busy()) { ui_message("STOP TO EDIT"); return; }
         confirm_open(CF_CLEAR_PFX, song.sel);

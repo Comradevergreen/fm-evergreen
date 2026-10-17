@@ -237,6 +237,7 @@ and heating up with its own audio. The selected track is drawn bigger, a muted o
 | --- | --- | --- | --- | --- | --- |
 | EDIT 1 | E1 | E2 | E3 | E4 | every engine (see [4](#4-engines)) |
 | EDIT 2 | E5 | E6 | E7 | E8 | every engine |
+| WORDS | LANG | LYRIC | POS | (OCT+ TYPE: the lyric) | VOICE (0.8.5, [words](#voice-words-and-lyrics-085)) |
 | RETRIG | RTRG | — | — | — | LOFI with WAVE on BYTE or FLOAT |
 | MORPH | MORPH | — | — | — | ANALOG (SAW..SIN), PHASE, LOFI (up to WRAM) |
 | OPERATOR | OP | RATIO / FIXED | FINE | LEVEL | FM6 |
@@ -414,7 +415,8 @@ every engine) or with KNOB 2 (ENG) on SAVE > PRESETS. Each track's four HOME kno
   page draws one cycle of the morphed wave and says which two waves it blends. KNOB 2 is **DRIFT** (0–100 %, 0 = off):
   each voice's pitch (up to about ±27 cents) and filter wander slowly, each in its own way, as old analog oscillators
   do. A chord comes alive; at high values it goes seasick.
-- **VOICE**: a formant voice (after klattsch): vowels, talk, breath.
+- **VOICE**: a formant voice (after klattsch): vowels, talk, breath. Since 0.8.5 it also sings words and lyrics in
+  Spanish, English and Japanese: see [VOICE: words and lyrics](#voice-words-and-lyrics-085).
 - **WHEEL**: a drawbar organ: registrations (REG), percussion (PERC: OFF, 2ND, 3RD, 2SOFT, 3SOFT, 2SLOW, 3SLOW),
   key click, drive, ROTOR (OFF, SLOW, FAST). EDIT > **ROTOR** (WHEEL only): **DEPTH** (how much the rotary speaker
   swirls: 100 % as before, 0 % a still speaker) and **DUST** (0–100 %: an old organ's crackle and hiss while it plays).
@@ -482,6 +484,67 @@ sound right around C5 (the frogs' and mammals' an octave or two lower: BULLFROG 
 ANIMAL comes last in the PRESETS list, after DRUM, so every sound before it keeps its place (and its PROGRAM CHANGE
 number). It costs no RAM (each voice's state fits the voice), about 7.6 KB of flash, and at most ~85 % of the heaviest
 engine's CPU with eight voices (GLOTT; CMOS, PULSE, WHSTL and WING about half): all eight voices on every mode.
+
+### VOICE: words and lyrics (0.8.5)
+
+VOICE sings: syllables, words and whole lyrics, in **Spanish**, **English** and **Japanese**. Turn it on with
+EDIT > **WORDS** > **LANG** (OFF, ES, EN, JA), or pick a word preset: **CANTOR ES**, **CANTORA ES**, **SINGER EN**,
+**UTA JA**, **WORD CHOIR**, **SCAT EN**, **ROBOT EN**, **WHISPER JA**. LANG OFF is the VOICE you know (its vowels),
+note for note as before.
+
+**How it sings.** Every note sings the next syllable of the lyric. Hold the note and the vowel holds; a TIE holds it
+on; at the release the syllable's last consonants sound (the *s* of "es", the *n* of "sun"). Legato notes glide from
+syllable to syllable, and a syllable whose end was not sung yet gets it quickly before the next one. With several
+voices every voice sings the same syllable: a choir. The lyric loops when it ends.
+
+**EDIT > WORDS** (VOICE tracks only): **LANG**, **LYRIC**, **POS**; **OCT+** (TYPE) opens the lyric's typing screen.
+
+| LYRIC | sings |
+| --- | --- |
+| **TEXT** | your lyric (empty: W1) |
+| **W1–W16** | the dice: phrases of real words from the language's bank (theme: THEME), each as long as the pattern's notes; a seed each, so W3 is always the same lyric |
+| **S1–S8** | scat: pseudo-words of the language's syllables (*la, ta, ri* · *doo, bop, yeah* · *ra, shi, n*) |
+
+With LANG on the EDIT pages read **POS THEME ARTIC SHIFT** | **BUZZ BREATH Q LOOP** (the screen relabels them):
+
+| Knob | Does |
+| --- | --- |
+| **POS** | AUTO: each note the next syllable. 1–127: the next note sings that syllable of the lyric, whenever POS changes: lock it on a step to start a line there, or automate it |
+| **THEME** | the dice's words (W): LOVE, NIGHT, SEA, SKY, ANY, ROAD, DREAM, FIRE |
+| **ARTIC** | the consonants: 100 % crisp (full closures, bursts, hiss) .. 0 % slurred (a mumble) |
+| **SHIFT** | every formant up or down (−: a bigger voice, +: smaller, female, a child) |
+| **BUZZ**, **BREATH**, **Q** | as for the vowels: brightness, air (127: a whisper), how sharp the formants are |
+| **LOOP** | FREE: on through the lyric. 1, 2, 4, 8: back to its start every so many loops of the pattern (a chorus) |
+
+**Writing a lyric.** On the device: EDIT > WORDS, **OCT+**. It is the NAME screen with room for 63 characters (the
+field scrolls with the cursor): the keys type phone-style, **KNOB 3** throws the dice (a phrase of the generator in the
+track's language and theme, to edit as you like), **OCT+** sets it (also while playing), **OCT−** cancels. From the
+computer: the web editor's Sound tab shows a **Lyric** box on a VOICE track (LANG, LYRIC and the text; it turns
+accents and ñ into what the device reads). Each track has its own lyric, saved with the project section.
+
+**Text rules.**
+- **Spanish** is read by rules, the way it is written: seseo (*z* and *ce ci* as *s*), *ll* and *y* as *y*, *rr* and
+  an initial *r* trilled, *j* and *ge gi* as the jota, *ch*, *qu*, *gu*; diphthongs as one syllable (*bien*, *cuidado*).
+  No accents needed; write **ñ as NY** (NINYO).
+- **Japanese** in romaji (Hepburn or kunrei), **one note a mora**: *sakura* 3, *konnichiwa* 5 (ko-n-ni-chi-wa),
+  *arigatou* 5 (a long *ou* sung o-o); a doubled consonant (*kitto*) is a short stop, not a note.
+- **English** comes from a dictionary of ~2100 common words (from the CMU Pronouncing Dictionary) with their
+  syllables; a word it lacks is read by rough letter rules, which work less well.
+- A **-** on its own holds the vowel one more note (a melisma: *A - MOR* is a, a, mor). **_** joins two words into one
+  (*MI_AMOR*: mia-mor, the Spanish *sinalefa*). Punctuation and digits only separate words.
+
+**The screen.** A singing VOICE's EDIT pages show the language and the source, the syllables sung, the word in large,
+its syllable's phonemes (the one sounding lit), your text from there on, and a vowel chart whose dot moves with the
+formants (F1 down, F2 across: where the tongue is), with the voicing and noise levels.
+
+**What to expect.** This is formant synthesis, like a vintage speech chip that sings: vowels, *s sh f*, *t k p*, *ch*,
+*m n l* and the glides come through in context; *b d g*, *v z* and the English *r* are approximations, and
+intelligibility drops at very short notes (a syllable's consonants take 40–100 ms before its vowel). Spanish and
+Japanese read best (their spelling is regular); English depends on the dictionary.
+
+**Cost.** No state per voice (the articulation is the track's); ~1 KB of RAM for the six lyrics and singers; ~42 KB
+of flash (the English dictionary is most of it); about +9 % CPU over VOICE's vowels, so four voices singing still cost
+well under ANALOG's eight.
 
 ### FILTER (every engine)
 
@@ -1296,6 +1359,9 @@ Opens when you save a section or a user preset, and when you press **EDIT** on S
 
 An empty name: a project section gets none, a user preset an automatic one.
 
+The same screen types a VOICE track's **lyric** (EDIT > WORDS, OCT+): up to 63 characters, the field scrolls with the
+cursor, **KNOB 3** throws the dice, and OCT+ sets it even while playing (it is not a flash write).
+
 ### User presets (SAVE > USER)
 
 32 slots for single sounds. **SAVE** opens straight on this page with SAVE already picked, so **SAVE, OCT+, OCT+**
@@ -1516,6 +1582,8 @@ Chrome or Edge, the FM-1 connected straight to the computer.
 Every parameter from the computer, over USB. Tabs: Sound, 6-OP FM, Sequencer, Tracks, Library, Projects, Settings.
 
 - **6-OP FM**: edit FM6 patches, import .syx, and **Send to the device's voice bank (B1–B32)**.
+- **Sound**, on a VOICE track (0.8.5): the **Lyric** box: LANG, LYRIC and the lyric's text, **Send** writes it to the
+  track (accents and ñ converted).
 - **Projects**: the project slots, and the **Complete backup**: **Save backup** and **Restore backup**.
 
 ### The complete backup

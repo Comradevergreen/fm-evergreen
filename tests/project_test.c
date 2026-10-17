@@ -911,6 +911,63 @@ int main(void)
         ok = proj_pack_vb(&gs, &f) && proj_import(&h, &gs, sizeof gs) && !memcmp(h.t, f.t, PROJ_LT * sizeof f.t[0]) &&
              h.t[4].engine == trk_def_engine(4u) && h.t[5].engine == trk_def_engine(5u) && h.t[5].step[0].time == ST_REST;
         bad += check("FUNB (0.5) -> six tracks: its four kept, T5 / T6 at their power-on sounds, empty", ok);
+        {   /* (JIANT 0.8.5) VOICE's lyrics: 'L' 'Y' blocks for the tracks that have one; none before */
+            static project_t l1, l2;
+            static project_store_t ls;
+            static const char *const LY[NTRK] = {"la noche es azul", "", "", "you are my sunshine - oh",
+                                                 "ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJK", "sakura"};
+            uint32_t hv, nl = 0;
+            int oky = 1;
+            ok = proj_import(&l2, &fs, sizeof fs);          /* the FUNC above: written without lyrics */
+            for (k = 0; k < NTRK; k++)
+                ok &= !l2.lyr[k][0];
+            bad += check("0.8.5: a project without lyrics (FUNC of before) loads with none", ok);
+            ok = proj_import(&l2, &gs, sizeof gs);
+            for (k = 0; k < NTRK; k++)
+                ok &= !l2.lyr[k][0];
+            bad += check("0.8.5: an older format (FUNB) loads with no lyrics", ok);
+            l1 = f;
+            for (k = 0; k < NTRK; k++) {
+                memset(l1.lyr[k], 0, LYR_LEN);
+                memcpy(l1.lyr[k], LY[k], strlen(LY[k]));
+                nl += LY[k][0] != 0;
+            }
+            l1.t[0].engine = 5; l1.t[0].p[P_VLANG] = LG_ES; l1.t[0].p[P_VLYR] = 0; l1.t[0].p[P_E0] = 3;
+            l1.sum = proj_sum(&l1);
+            ok = proj_pack(&ls, &l1) && proj_import(&l2, &ls, sizeof ls);
+            for (k = 0; k < NTRK; k++)
+                ok &= !memcmp(l2.lyr[k], l1.lyr[k], LYR_LEN);
+            ok &= !memcmp(l2.t, l1.t, sizeof l1.t) && l2.t[0].p[P_VLANG] == LG_ES && l2.t[0].p[P_E0] == 3;
+            bad += check("0.8.5: lyrics round trip (four tracks, 63 characters, \"-\"), LANG and POS with the sound", ok);
+            l2 = l1;
+            memset(l2.lyr, 0, sizeof l2.lyr);
+            ok = proj_packed_size(&l1) == proj_packed_size(&l2) + 4u * nl + (uint32_t)strlen(LY[0]) + (uint32_t)strlen(LY[3]) +
+                                          (uint32_t)strlen(LY[4]) + (uint32_t)strlen(LY[5]);
+            bad += check("0.8.5: the lyrics' blocks counted in the section's room (4 + length a track)", ok);
+            {   /* a lyric byte outside 32..126 (hash right): refused; a firmware of before stops at the block */
+                static project_store_t bs;
+                uint32_t p;
+                bs = ls;
+                for (p = 68u; p + 4u < PROJC_PFX_OFF && !(bs.raw[p] == 'L' && bs.raw[p + 1u] == 'Y' && bs.raw[p + 2u] == 0u); p++)
+                    ;
+                oky = p + 4u < PROJC_PFX_OFF && bs.raw[p + 3u] == strlen(LY[0]) && !memcmp(bs.raw + p + 4u, LY[0], strlen(LY[0]));
+                bs.raw[p + 5u] = 7;
+                hv = proj_hash(bs.raw, PROJ_STORE_SIZE - 4u);
+                memcpy(bs.raw + PROJ_STORE_SIZE - 4u, &hv, 4);
+                oky &= !proj_import(&l2, &bs, sizeof bs);
+                bad += check("0.8.5: the block in place (track, length, text); a control byte in it: refused", oky);
+            }
+            for (k = 0; k < NTRK; k++)                  /* lyrics on a full section: not packed, proj_full */
+                memset(l1.lyr[k], 'A', LYR_LEN - 1u);
+            for (k = 0; k < NTRK; k++)
+                for (i = 0; i < NSTEP; i++) {
+                    l1.t[k].step[i].time = ST_NOTE; l1.t[k].step[i].n = 2; l1.t[k].step[i].note[0] = 60; l1.t[k].step[i].vel = 90;
+                }
+            l1.sum = proj_sum(&l1);
+            ok = proj_packed_size(&l1) <= PROJC_PFX_OFF ? proj_pack(&ls, &l1) && proj_import(&l2, &ls, sizeof ls) :
+                                                       !proj_pack(&ls, &l1) && proj_full;
+            bad += check("0.8.5: long lyrics on a full section: packed whole, or SECTION FULL (never cut)", ok);
+        }
         {   /* (JIANT 0.6.3) the SLICER's bus: its globals round trip; a project of before it: from the tracks' SLICERs */
             static project_t s1, s2;
             s1 = f;

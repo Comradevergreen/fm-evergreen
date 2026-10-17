@@ -136,6 +136,16 @@ int main(void)
         snprintf(name, sizeof name, "eng/ANIMAL.%s", N_ANIMAL_MODE[i]);
         vg_section(name);
     }
+    for (i = 0; i < 2u; i++) {                          /* (0.8.5) VOICE singing words (sing.c): 4 voices, a lyric */
+        for (e = 0; e < NENGINES && ENGINES[e] != &ENG_FORMANT; e++)
+            ;
+        vg_quiet();
+        lyr_set(0, i ? "strength through the starlight" : "construir estrellas");
+        vg_part(0, e, vg_preset(e, i ? "SINGER EN" : "CANTOR ES"), 4);
+        trk[0].p[P_VLYR] = 0;
+        snprintf(name, sizeof name, "eng/VOICE.%s", i ? "EN" : "ES");
+        vg_section(name);
+    }
     for (i = 0; i < 5u; i++) {
         vg_quiet();
         song.g[G_RTYPE] = (int16_t)i;
