@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.8.7).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.8.8).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
   **The dice starts in EXPLORE** (0.8.6): HOME + SELECT opens GEN on a choice that follows no genre and breaks every
   rule (any tempo, odd metres and polyrhythm, exotic modes, any engine on any role, DRUM-X octaves, PLAYHEADS, MUTATE),
   each seed a very different piece, still in the key its SCALE and CHORD pages show. RANDOM and the 43 genres follow.
@@ -544,6 +544,15 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### v0.8.8
+- **HOME's beings roam free again, exactly as before 0.8.5**: no grid, no ring, no names. Each track's being swims by
+  itself over the whole panel under the cards (wandering, bouncing off the walls, a hit kicking it on, swelling and
+  heating with its sound), its MUTATE dots round it and its number under it; the selected track is the larger one, its
+  number in the theme's colour (as 0.8.4). The cytoplasm drifts behind them again; the critters swim among them. The
+  lens around it (tabs, cards, breadcrumb), BEING and GEN as in 0.8.7.
+- **DRUM-X's KIT 3 colony moves again**: its eight beings swell and shiver with each hit, as on KIT and KIT 2 (the
+  panel was redrawn only when a value changed). The sound is the same: every golden render and CPU baseline unchanged.
 
 ### v0.8.7
 - **The whole system is LENTE, as the approved HTML mock-up**: every part a lens of three levels that **SELECT** zooms

@@ -3,10 +3,12 @@
 /* (0.8.5) HOME's lens (ui_lens.c): the panels of ECO and BEING, drawn as the approved mock-up (lente_sistema.html,
  * HOME) in the lens's panel (240 x 140 at y 84). Included by ui_graph.c after ui_being.c. The beings are JIANT's own
  * (ui_being.c: the same genomes, isotherms, nuclei, the same swelling, exciting and swimming with each track's sound,
- * graph_ecosys's maths); the mock-up gave them their places and the chrome around them.
- *   ECO    the six tracks' beings on a 3 x 2 grid (the mock-up's places), each swimming in its cell (a hit kicks it),
- *          its name under it ("T1 ANALOG"; muted MUTE, asleep OFF), the selected one larger in a THEME ring; MACROS: the
- *          macros' routes counted at the top left, LATCH / HOLD LFO at the right. Around them the critters (below)
+ * graph_ecosys's maths); the mock-up gave the chrome around them.
+ *   ECO    (0.8.8: as 0.8.4's HOME again, graph_ecosys) the six tracks' beings swimming free over the whole panel, each
+ *          by itself (wandering, bouncing off the walls, a hit kicking it on, swelling with its sound), its MUTATE dots
+ *          round it and its number under it; the selected one larger, its number in the theme's colour (no ring, no
+ *          grid, no names). The cytoplasm's granules drift behind them, the critters (below) among them. MACROS: the
+ *          macros' routes counted at the top left, LATCH / HOLD LFO at the right
  *   BEING  the track's being large in the middle, its four HOME knobs as organs at the corners (a gauge each, its name
  *          and value, a vein to the body), the sound's name under it; ROUTES: the being small, M1..M4 down the left
  *          with their routes drawn to their destinations ("T1 CUT+40")
@@ -16,71 +18,86 @@
  * faster and pulse brighter with the output's level. CR_N of them, a few pixels each, stepped once a drawn frame from
  * what the UI already reads (the parts' peaks, the scope): nothing in the audio path. */
 #define ECO_N NTRK
-static const int16_t ECO_X[ECO_N] = {42, 120, 198, 42, 120, 198}, ECO_Y[ECO_N] = {34, 34, 34, 98, 98, 98};   /* (the cells'
-                                                         * centres: the mock-up's places less the panel's 84, 4 up) */
-#define ECO_LY 59                                       /* the names' line (AF_X capitals 60..66; second row + 64) */
+static const int16_t ECO_PX[ECO_N] = {44, 120, 196, 64, 146, 206}, ECO_PY[ECO_N] = {34, 28, 40, 84, 78, 86};   /* (where they
+                                                         * start, as 0.8.4's HOME) */
 static struct {
     int32_t en[ECO_N], pen[ECO_N];                      /* each track's level now (0..256, slewed), the frame before */
-    int32_t sx[ECO_N], sy[ECO_N], vx[ECO_N], vy[ECO_N];   /* the swim: offset from the cell's centre and speed, Q8 px */
+    int32_t sx[ECO_N], sy[ECO_N], vx[ECO_N], vy[ECO_N];   /* the swim: where it is in the panel and its speed, Q8 px */
+    int32_t r[ECO_N];                                   /* its radius now (Q4 px: swollen, pulsing) */
     uint32_t tm[ECO_N];                                 /* each being's time (it runs with its sound) */
     uint32_t f0;
     uint8_t init;
 } eco;
-/* the beings' life once a drawn frame (dt frames since the last): each track's level, its time, its swim in its cell */
+static int eco_off(uint32_t c) { return trk[c].p[P_MUTE] || c >= trk_live; }   /* (muted, or asleep: TRACKS 4) */
+static const genome_t *eco_genome(uint32_t c)
+{
+    uint32_t e = trk[c].eng_req % NENGINES;
+    return e == ENGI_DRUM ? &LANE_G_HOME : &GENOME[EGEN[e]];
+}
+/* track c's features: its genome, its HOME knobs, excited by its level k-fold (ui_being.c) */
+static void eco_feat(uint32_t c, bfeat_t *f, int32_t k)
+{
+    uint8_t ids[4];
+    uint32_t v, e = trk[c].eng_req % NENGINES;
+    for (v = 0; v < 4u; v++) ids[v] = (uint8_t)ENGINES[e]->knob[v];
+    bg_feat(&trk[c], eco_genome(c), ids, f);
+    bg_excite(f, eco.en[c], k);
+}
+/* (JIANT 0.5, as 0.8.4's HOME: graph_ecosys's life) the beings once a drawn frame (dt frames since the last): each
+ * track's level (the part's peak, slewed: a hit at once, a quick fall), its time, its size (it pulses, and swells up to
+ * ~2.2 x; the selected one larger), its swim over the whole panel (wandering, bouncing off the walls, a hit kicking it
+ * on up to ~7 x). Still with ANIM OFF */
 static uint32_t eco_step(void)
 {
     uint32_t c, k, dt = ui.frame - eco.f0;
+    int32_t bot = (int32_t)cv_h - 18;                   /* (the panel's floor, the number's line under it: 0.8.4's 104 of
+                                                         * 122, the lens's 140 its 122) */
     if (!eco.init) {
         eco.init = 1;
         for (c = 0; c < ECO_N; c++) {
-            eco.vx[c] = (c & 1u) ? 90 : -110;
-            eco.vy[c] = (c & 2u) ? 70 : -60;
+            eco.sx[c] = ECO_PX[c] << 8; eco.sy[c] = ECO_PY[c] << 8;
+            eco.vx[c] = (c & 1u) ? 90 : -110; eco.vy[c] = (c & 2u) ? 70 : -60;
         }
     }
     if (dt > 8u) dt = 8u;
-    if (ui_prefs & PREF_ANIM_OFF) dt = 0;               /* (ANIM OFF: still) */
+    if (ui_prefs & PREF_ANIM_OFF) dt = 0;
     eco.f0 = ui.frame;
     for (c = 0; c < ECO_N; c++) {
         track_t *t = &trk[c];
-        int32_t v = t->peak * 256 / 7000, sp, bx = 12 + (c == song.sel ? 0 : 2), by = 7;
+        int32_t v = t->peak * 256 / 7000, r = (c == song.sel ? 17 : 12) * 16, rad, sp;
         if (v > 256) v = 256;
         eco.pen[c] = eco.en[c];
         if (dt) {                                       /* (once a frame: a redraw in the same frame draws the same) */
             t->peak = 0;
-            eco.en[c] = v > eco.en[c] ? v : eco.en[c] + (v - eco.en[c]) / 4;   /* (a hit at once, a quick fall) */
+            eco.en[c] = v > eco.en[c] ? v : eco.en[c] + (v - eco.en[c]) / 4;
         }
         if (eco.en[c] > 2) eco.tm[c] += dt * (uint32_t)(200 + eco.en[c] * 5);
         else eco.tm[c] += dt * 60u;                     /* (silent: it still breathes, slowly) */
-        sp = 256 + eco.en[c] * 6;                       /* (it swims; a hit kicks it on, up to ~7 x) */
-        for (k = 0; k < dt; k++) {                      /* in its cell, bouncing off its walls, wandering */
+        r = r * (256 + eco.en[c] * 5 / 4 + (bg_sin(eco.tm[c] / 3u) >> 11)) / 256;
+        eco.r[c] = r;
+        rad = r >> 4;
+        sp = 256 + eco.en[c] * 6;
+        for (k = 0; k < dt; k++) {                      /* swimming in the panel, bouncing off its walls, wandering */
             eco.vx[c] += bg_sin(ui.frame * 211u + c * 16000u + k * 977u) >> 12;
             eco.vy[c] += bg_sin(ui.frame * 157u + c * 23000u + k * 613u) >> 12;
             eco.vx[c] = clamp(eco.vx[c], -140, 140);
             eco.vy[c] = clamp(eco.vy[c], -110, 110);
-            eco.sx[c] += (eco.vx[c] * sp >> 8) / 3;     /* (a cell is a third of the old pond: a third of the pace) */
-            eco.sy[c] += (eco.vy[c] * sp >> 8) / 3;
-            if (eco.sx[c] < -(bx << 8)) { eco.sx[c] = -(bx << 8); eco.vx[c] = -eco.vx[c]; }
-            if (eco.sx[c] > bx << 8) { eco.sx[c] = bx << 8; eco.vx[c] = -eco.vx[c]; }
-            if (eco.sy[c] < -(by << 8)) { eco.sy[c] = -(by << 8); eco.vy[c] = -eco.vy[c]; }
-            if (eco.sy[c] > by << 8) { eco.sy[c] = by << 8; eco.vy[c] = -eco.vy[c]; }
+            eco.sx[c] += eco.vx[c] * sp >> 8;
+            eco.sy[c] += eco.vy[c] * sp >> 8;
+            if (eco.sx[c] < (rad + 8) << 8) { eco.sx[c] = (rad + 8) << 8; eco.vx[c] = -eco.vx[c]; }
+            if (eco.sx[c] > (232 - rad) << 8) { eco.sx[c] = (232 - rad) << 8; eco.vx[c] = -eco.vx[c]; }
+            if (eco.sy[c] < (rad + 4) << 8) { eco.sy[c] = (rad + 4) << 8; eco.vy[c] = -eco.vy[c]; }
+            if (eco.sy[c] > (bot - rad) << 8) { eco.sy[c] = (bot - rad) << 8; eco.vy[c] = -eco.vy[c]; }
         }
     }
     return dt;
 }
-static int eco_off(uint32_t c) { return trk[c].p[P_MUTE] || c >= trk_live; }   /* (muted, or asleep: TRACKS 4) */
-/* track c's being at (cx, cy) Q4, base radius r px: its genome, its HOME knobs, excited by its level (ui_being.c) */
-static void eco_being(uint32_t c, int32_t cx, int32_t cy, int32_t r)
+/* track c's being at (cx, cy) Q4, radius rq Q4, as HOME draws it (the most excited); asleep a dim outline */
+static void eco_being(uint32_t c, int32_t cx, int32_t cy, int32_t rq)
 {
-    track_t *t = &trk[c];
-    uint32_t e = t->eng_req % NENGINES, v;
-    const genome_t *g = e == ENGI_DRUM ? &LANE_G_HOME : &GENOME[EGEN[e]];
-    int32_t rq = r * 16;
-    uint8_t ids[4];
+    const genome_t *g = eco_genome(c);
     bfeat_t f;
-    for (v = 0; v < 4u; v++) ids[v] = (uint8_t)ENGINES[e]->knob[v];
-    bg_feat(t, g, ids, &f);
-    bg_excite(&f, eco.en[c], 4);                        /* (HOME: the most excited) */
-    rq = rq * (256 + eco.en[c] * 5 / 4 + (bg_sin(eco.tm[c] / 3u) >> 11)) / 256;   /* (it pulses, and swells up to ~2.2 x) */
+    eco_feat(c, &f, 4);
     if (eco_off(c))
         bg_outline(g, &f, cx, cy, rq, 1, eco.tm[c], ux.mono || settings.palette == UI_BW_INDEX ? ux_gray(ux_luma(T_DIM) >> 3) : T_DIM);
     else
@@ -188,13 +205,6 @@ static void lz_arc(int32_t cx, int32_t cy, int32_t r, int32_t w, int32_t f, uint
 }
 
 /* ------------------------------------------------------------------------------------------------ the panels --- */
-static void eco_name(uint32_t c, char *b)               /* "T1 ANALOG", "T2 MUTE", "T5 OFF" */
-{
-    b[0] = 'T';
-    b[1] = (char)('1' + c);
-    b[2] = ' ';
-    str_cpy(b + 3, c >= trk_live ? "OFF" : trk[c].p[P_MUTE] ? "MUTE" : ENGINES[trk[c].eng_req % NENGINES]->name, 13);
-}
 static uint32_t routes_count(void)                      /* the MOD slots whose SRC is a macro, every track */
 {
     uint32_t i, k, n = 0;
@@ -205,36 +215,42 @@ static uint32_t routes_count(void)                      /* the MOD slots whose S
         }
     return n;
 }
+/* ECO: 0.8.4's HOME (graph_ecosys) in the lens's panel: the cytoplasm's granules drifting, the critters, the six beings
+ * swimming free over the whole panel, each with its MUTATE dots and its number under it (the selected one larger, its
+ * number in the theme's colour) */
 static void graph_eco(void)
 {
-    uint32_t c, dt = eco_step();
-    int32_t bx[ECO_N], by[ECO_N], E = bg_energy();
+    uint32_t c, k, dt = eco_step(), still = (ui_prefs & PREF_ANIM_OFF) != 0u;
+    int32_t bx[ECO_N], by[ECO_N], E = bg_energy(), bot = (int32_t)cv_h - 18;
     char b[16];
+    for (k = 0; k < 22u; k++) {                         /* the cytoplasm: granules drifting */
+        uint32_t h = k * 2654435761u;
+        int32_t gx = 10 + (int32_t)((h >> 8) % 220u + ui.frame * (1u + (h >> 28)) / 6u) % 220;
+        int32_t gy = 6 + (int32_t)(((h >> 16) % (uint32_t)(bot + 6)) + (still ? 0 : (uint32_t)(bg_sin((uint32_t)(ui.frame * 300u + h)) >> 13))) %
+                         (uint32_t)(bot + 6);
+        cv_rect(gx, gy, 1 + (int32_t)(h >> 31), 1 + (int32_t)(h >> 31), ux_mix(T_SURF, T_THEME, 22 + (int32_t)(h >> 29) * 4));
+    }
     for (c = 0; c < ECO_N; c++) {
-        bx[c] = (ECO_X[c] << 4) + (eco.sx[c] >> 4);
-        by[c] = (ECO_Y[c] << 4) + (eco.sy[c] >> 4);
+        bx[c] = eco.sx[c] >> 4;
+        by[c] = eco.sy[c] >> 4;
     }
     cr_step(dt, bx, by, ECO_N, E);
     cr_draw(bx, by, ECO_N, E);
     for (c = 0; c < ECO_N; c++) {
-        int sel = c == song.sel;
-        eco_being(c, bx[c], by[c], sel ? 14 : 11);
+        int32_t rad = eco.r[c] >> 4;
+        char num[2] = {(char)('1' + c), 0};
+        eco_being(c, bx[c], by[c], eco.r[c]);
         {   /* (0.6.43) MUTATE: a ring of 12 dots filling to its next change; a change: all lit */
             static const int8_t RX[12] = {0, 50, 87, 100, 87, 50, 0, -50, -87, -100, -87, -50};
             uint32_t pr = mut_progress(c), d, lit = pr == 0xFFFFu ? 0u : mut_flash[c] ? 12u : pr * 12u / 256u;
+            int32_t rr2 = (rad >> 4) + 6;
             for (d = 0; pr != 0xFFFFu && d < 12u; d++) {
-                int32_t dx = (bx[c] >> 4) + RX[d] * 22 / 100, dy = (by[c] >> 4) - RX[(d + 9u) % 12u] * 22 / 100;
+                int32_t dx = (eco.sx[c] >> 8) + RX[d] * rr2 / 100, dy = (eco.sy[c] >> 8) - RX[(d + 9u) % 12u] * rr2 / 100;
                 cv_rect(dx - 1, dy - 1, 2, 2, d < lit ? (mut_flash[c] ? T_ACCENT : heat_col(160)) : T_RAISE);
             }
         }
-        if (sel)                                        /* the selected one: a THEME ring round it */
-            og_ring(bx[c], by[c], 25 * 16, T_THEME);
-    }
-    for (c = 0; c < ECO_N; c++) {                       /* the names over everything */
-        int32_t y = ECO_LY + (int32_t)(c / 3u) * 64;
-        eco_name(c, b);
-        GFX_HOOK_ALIGN(ECO_X[c] - 39, 0, ECO_X[c] + 39, 0, AL_H, "ECO name centred under its cell");
-        cv_text_in(ECO_X[c] - 39, y, 78, &AF_X, b, c == song.sel ? T_THEME : eco_off(c) ? T_DIM : T_MID, T_SURF);
+        cv_text_in((eco.sx[c] >> 8) - 30, clamp((eco.sy[c] >> 8) + rad / 2 + 4, 4, bot), 60, &AF_S, num,
+                   c == song.sel ? T_THEME : eco_off(c) ? T_DIM : T_MID, T_SURF);
     }
     if (home_set()) {                                   /* MACROS: the routes, LATCH */
         fmt_int(b, (int32_t)routes_count());
@@ -279,7 +295,7 @@ static void graph_home_being(void)
         by = cy * 16;
         cr_step(dt, &bx, &by, 1, E);
         cr_draw(&bx, &by, 1, E);
-        eco_being(c, bx, by, 13);
+        eco_being(c, bx, by, (13 * 16) * (256 + eco.en[c] * 5 / 4 + (bg_sin(eco.tm[c] / 3u) >> 11)) / 256);
         for (m = 0; m < 4u; m++) {
             int32_t y = 16 + (int32_t)m * 34, n = 0;
             char mn[3] = {'M', (char)('1' + m), 0};
@@ -316,14 +332,9 @@ static void graph_home_being(void)
     for (k = 0; k < 4u; k++)
         organ(k, cx, cy);
     {   /* the being: graph_being's size, its HOME knobs, the track's own level */
-        track_t *t = &trk[c];
-        uint32_t e = t->eng_req % NENGINES, v;
-        const genome_t *g = e == ENGI_DRUM ? &LANE_G_HOME : &GENOME[EGEN[e]];
-        uint8_t ids[4];
+        const genome_t *g = eco_genome(c);
         bfeat_t f;
-        for (v = 0; v < 4u; v++) ids[v] = (uint8_t)ENGINES[e]->knob[v];
-        bg_feat(t, g, ids, &f);
-        bg_excite(&f, eco.en[c], 2);
+        eco_feat(c, &f, 2);
         if (eco_off(c))
             bg_outline(g, &f, bx, by, (30 * 16), 1, eco.tm[c], T_DIM);
         else

@@ -175,8 +175,8 @@ Los **colores** funcionan como una cámara térmica: frío (cian, azul) es poco,
 mucho. Violeta es lo seleccionado, naranja lo activo.
 
 **HOME** es el ecosistema: una criatura por pista, su especie según su motor, su forma según sus cuatro perillas, que
-se hincha y se calienta con su propio audio (0.8.5: en una grilla de seis celdas, como la maqueta, con bichitos nadando
-entre ellas; ver [LENTE en todo](#lente-en-todo-085)). La pista seleccionada se dibuja más grande, una muteada se oscurece, una
+se hincha y se calienta con su propio audio (0.8.8: nadando libres por toda la pantalla, solas, como antes de 0.8.5, con bichitos nadando
+entre ellas; ver [LENTE en todo](#lente-en-todo-085)). La pista seleccionada se dibuja más grande, su número en violeta, una muteada se oscurece, una
 pista dormida (TRACKS 4) se dibuja como muteada. En el **MIXER**, las pistas dormidas aparecen en gris y dicen OFF.
 
 Los **diálogos** preguntan antes de cualquier cosa destructiva: **OCT− NO**, **OCT+ YES**. (0.8.5, como la maqueta)
@@ -231,8 +231,8 @@ recuerda su nivel y el juego de cada nivel; su botón desde otro lado te devuelv
 | **ENV** | **TRACKS** (las seis envolventes) · **ENV** (la de la pista) · **STAGE** (una etapa) | TRACKS: ENV / DEST · ENV: ENV / ENV DEST · STAGE | TRACKS, ENV: la pista · STAGE: la etapa |
 | **EDIT** | **SOUND** (EDIT 1 / EDIT 2; DRUM: el kit) · **TONE** (el filtro, las voces) · el detalle: **FOCUS** (un sinte), **OPERATOR** (FM6), **SOUND** (DRUM: un sonido) | SOUND: EDIT 1 · EDIT 2 (DRUM: KIT · KIT 2 · KIT 3) · TONE: FILTER · MORPH · RETRIG · ROTOR · VOICE · VOICE 2, las que tenga el motor (DRUM: X-MOD · FILTER · STEREO · LEVELS · LEVELS 2 · VOICE) · FOCUS · OPERATOR: OPERATOR · OP ENV · OPERATOR 2 · DRUM: SOUND 1–4 | SOUND, TONE: los sonidos · el detalle: lo de KNOB 1 (el parámetro, el operador, el sonido del kit) |
 
-- **ECO**: los seres de las seis pistas en una grilla, cada uno nadando en su celda con su sonido (un golpe lo
-  empuja), su nombre debajo (**T1 ANALOG**; MUTE, OFF si duerme), el seleccionado más grande en un aro violeta.
+- **ECO**: los seres de las seis pistas nadando libres por todo el panel, solos (0.8.8: como antes de 0.8.5), cada
+  uno hinchándose con su sonido (un golpe lo empuja), su número debajo; el seleccionado más grande, su número violeta.
   Alrededor, **bichitos**: ciliados, esporas, células a la deriva, flagelados y diatomeas diminutos que deambulan, se
   juntan alrededor de las pistas que suenan, se dispersan cuando un ser recibe un golpe y laten con la salida (los
   dibuja solo la pantalla: nada del tiempo del sonido). **MACROS**: KNOB 1–4 son **M1–M4** (las macros, como LFO

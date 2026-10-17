@@ -170,8 +170,8 @@ Since 0.8.5 every page wears the skin of the design the owner approved (the HTML
 what's selected, orange what's active.
 
 **HOME** is the ecosystem: one creature per track, its species from its engine, its shape from its four knobs, swelling
-and heating up with its own audio (0.8.5: on a grid of six cells, as the mock-up, critters swimming among them; see
-[LENTE everywhere](#lente-everywhere-085)). The selected track is drawn bigger, a muted one goes dark, a track asleep
+and heating up with its own audio (0.8.8: swimming free over the whole screen by themselves, as before 0.8.5, critters swimming among them; see
+[LENTE everywhere](#lente-everywhere-085)). The selected track is drawn bigger, its number in violet, a muted one goes dark, a track asleep
 (TRACKS 4) is drawn as muted. On the **MIXER**, asleep tracks are greyed and say OFF.
 
 **Dialogs** ask before anything destructive: **OCT− NO**, **OCT+ YES**. (0.8.5, as the mock-up) They carry the
@@ -226,8 +226,8 @@ level's set; its button from elsewhere brings you back there.
 | **ENV** | **TRACKS** (the six envelopes) · **ENV** (the track's) · **STAGE** (one stage) | TRACKS: ENV / DEST · ENV: ENV / ENV DEST · STAGE | TRACKS, ENV: the track · STAGE: the stage |
 | **EDIT** | **SOUND** (EDIT 1 / EDIT 2; DRUM: the kit) · **TONE** (the filter, the voices) · the detail: **FOCUS** (a synth), **OPERATOR** (FM6), **SOUND** (DRUM: one sound) | SOUND: EDIT 1 · EDIT 2 (DRUM: KIT · KIT 2 · KIT 3) · TONE: FILTER · MORPH · RETRIG · ROTOR · VOICE · VOICE 2, those the engine has (DRUM: X-MOD · FILTER · STEREO · LEVELS · LEVELS 2 · VOICE) · FOCUS · OPERATOR: OPERATOR · OP ENV · OPERATOR 2 · DRUM: SOUND 1–4 | SOUND, TONE: the sounds · the detail: KNOB 1's (the parameter, the operator, the kit's sound) |
 
-- **ECO**: the six tracks' beings on a grid, each swimming in its cell with its sound (a hit kicks it), its name under
-  it (**T1 ANALOG**; MUTE, OFF when asleep), the selected one larger in a violet ring. Around them **critters**: tiny
+- **ECO**: the six tracks' beings swimming free over the whole panel by themselves (0.8.8: as before 0.8.5), each
+  swelling with its sound (a hit kicks it on), its number under it; the selected one larger, its number violet. Around them **critters**: tiny
   ciliates, spores, drifting cells, flagellates and diatoms that wander, gather round the tracks that sound, scatter
   when a being is hit and pulse with the output (drawn by the screen alone: nothing of the sound's time). **MACROS**:
   KNOB 1–4 are **M1–M4** (the macros, as LFO held), the routes counted at the top left, LATCH at the right.
