@@ -708,9 +708,9 @@ int main(void)
         frames(800);                                    /* (the knobs quiet a moment after a button: ui_layer.c) */
         turn(EN_K1, 1); turn(EN_K1, 1); turn(EN_K3, 2);
         bad += gcheck("  KNOB 1 the genre (EXPLORE -> RANDOM -> HOUSE), KNOB 3 the energy (+10)", gp.genre == 1u && gp.energy == 60u);
-        turn(EN_SELECT, 1);
+        press(B_HOME); frames(800);                     /* (0.8.5 LENTE: a HOME tap GEN's next page; SELECT left: BEING) */
         turn(EN_K1, -1); turn(EN_K2, 1);
-        bad += gcheck("  SELECT: page 2 (PARTS); DRUMS AUTO -> 100 %, BASS AUTO stays AUTO above 100", gp.page == 1u && gp.amt[GP_DRUMS] == 100u && gp.amt[GP_BASS] == GA_AUTO);
+        bad += gcheck("  a HOME tap: page 2 (PARTS); DRUMS AUTO -> 100 %, BASS AUTO stays AUTO above 100", gp.page == 1u && gp.amt[GP_DRUMS] == 100u && gp.amt[GP_BASS] == GA_AUTO);
         {
             uint32_t sig0 = steps_sig(&trk[0]), sig1;
             uint16_t seed0;

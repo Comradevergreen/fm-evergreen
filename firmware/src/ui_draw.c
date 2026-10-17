@@ -91,6 +91,7 @@ static void draw_battery(int32_t bx)
                                                          * (0.8.5) a lens page's card (38 tall): rows 14..30, the figures
                                                          * 17..27, the gauge at 33 */
 #define CARD_VY (ROLL_Y - 1)                            /* the value's line (M) */
+#define CARD_XY 4                                       /* (0.8.5) a lens card's label (AF_X): its line, capitals rows 5..11 */
 #define CARD_BG (ux.style ? T_SURF : T_RAISE)           /* (0.8.5, the mock-up) a card: RAISE (LINE: no fill) */
 static const uint8_t ROLL_EASE[17] = {0, 45, 84, 118, 147, 172, 193, 210, 223, 234, 242, 247, 251, 253, 254, 255, 255};
 
@@ -180,6 +181,7 @@ static int32_t roll_text(uint32_t k, int32_t x, int32_t y, const char *s, uint16
  * being changed (a SELECT turn: bpm_t) or in the GLO layer the BPM stays and the message goes right of it (over the
  * right slot). Every element's ink centred on row 11 (HEAD_MID; ui_test.c test_head_centres): S's capitals rows 7..15 */
 #define HEAD_SY (HEAD_MID - AF_S_CAP_H / 2 - AF_S_CAP_Y)
+#define HEAD_XY (HEAD_MID - AF_X_CAP_H / 2 - AF_X_CAP_Y)   /* (0.8.5) the centre's words in AF_X: capitals rows 8..14 */
 #define HEAD_MY CAP_IN(M, H_HEAD)                      /* (the menu's and the calibration's own headers: M) */
 #define HEAD_TR_X 6                                    /* the play state's ink: 6 .. 12 */
 #define HEAD_BPM_X 20                                  /* the BPM's pen */
@@ -219,6 +221,12 @@ static uint16_t head_title(char *b)
     const page_t *pg = cur_page();
     int glob = !ui.home && !ui.layer && (pg->graph == GR_SLOTS || pg->graph == GR_SONG || pg->graph == GR_TOOLS ||
                                          pg->fam == FAM_GLO || pg->fam == FAM_SAVE);
+    if (ui.menu) {                                      /* (0.8.5) the menu: "MENU . DISPLAY", "ABOUT / CREDITS" */
+        str_cpy(b, ui.menu == 2 ? "ABOUT / CREDITS" : "MENU \xB7 ", 40);
+        if (ui.menu == 1)
+            str_cpy(b + str_len(b), MTAB_NAME[MI_TAB[ui.menu_sel % MI_COUNT]], 16);
+        return T_MID;
+    }
     b[0] = 'T';
     b[1] = (char)('1' + song.sel % NTRK);
     b[2] = 0;
@@ -276,11 +284,13 @@ static void head_msg(int32_t x, int32_t maxw)
 {
     const char *m = ui.msg_t ? ui.msg : layer_head();
     int icon = m[0] == MSG_NOFILE[0];
-    int32_t lw = 0, iw = icon ? 16 + KH_GAP : 0;
+    int32_t lw = 0, iw = icon ? text_w(&AF_S, "!") + KH_GAP : 0;
     if (x < 0)
         x = 120 - HALF_UP(iw + head_hint_w(m + icon, maxw - lw - iw) + lw);
-    if (icon)
-        x += cv_icon_mid(x, HEAD_MID, 16, ICON_X_NOFILE, T_ACCENT, T_BG) + KH_GAP;
+    if (icon) {                                       /* (0.8.5: no icons; "!" in the accent) */
+        GFX_HOOK_ALIGN(0, 0, 0, HEAD_RULE_Y, AL_V, "header text on its middle");
+        x = cv_text(x, HEAD_SY, &AF_S, "!", T_ACCENT) + KH_GAP;
+    }
     (void)cv_free_hint(x, HEAD_SY, m + icon, T_TEXT, T_BG, maxw - lw - iw);   /* (may start with a keycap) */
 }
 /* the octave, or the song row while a song plays, its right end at HEAD_GRP_R; its left end */
@@ -291,7 +301,9 @@ static int32_t head_group(void)
     if (chain.running) {
         fmt_int(b, (int32_t)chain.row + 1);
         x0 = x = HEAD_GRP_R - (12 + 3 + text_w(&AF_S, b));
-        x += cv_icon_mid(x, HEAD_MID, 12, ICON_X_SONG, T_MID, T_BG) + 3;   /* SONG: the disc */
+        cv_rrect(x + 1, HEAD_MID - 5, 10, 10, -5, T_MID, T_BG);   /* SONG: the disc (drawn, 0.8.5) */
+        cv_rect(x + 5, HEAD_MID - 1, 2, 2, T_BG);
+        x += 12 + 3;
     } else {
         str_cpy(b, song.octave > 0 ? "+" : "", sizeof b);
         fmt_int(b + str_len(b), song.octave);
@@ -345,10 +357,12 @@ static void draw_head(void)
     roll_text(ROLL_BPM, g.bx, HEAD_SY, b, ui.bpm_t ? T_ACCENT : T_THEME);
     lx = g.bx + g.b[2];                                /* the right end of the BPM's ink (and what follows it) */
     if (ui_prefs & PREF_BPM_LOCK) {                    /* BPM LOCK ON (#58): the lock right of the BPM */
-        int32_t ib[4];
-        icon_ink(12, ICON_X_LOCK, ib);
-        cv_icon_mid(lx + HEAD_GAP - ib[0], HEAD_MID, 12, ICON_X_LOCK, T_MID, T_BG);
-        lx += HEAD_GAP + ib[2] - ib[0];
+        int32_t x = lx + HEAD_GAP;                     /* (0.8.5: drawn) a shackle over a body, 8 x 10 */
+        cv_rect(x + 2, HEAD_MID - 5, 4, 1, T_MID);
+        cv_rect(x + 1, HEAD_MID - 4, 1, 3, T_MID);
+        cv_rect(x + 6, HEAD_MID - 4, 1, 3, T_MID);
+        cv_rect(x, HEAD_MID - 1, 8, 6, T_MID);
+        lx += HEAD_GAP + 8;
     }
     if (song.rec) {                                    /* REC: its dot (x + 3 .. x + 11 of its cell) */
         draw_rec_mark(lx + HEAD_GAP - 3, T_BG);
@@ -357,11 +371,11 @@ static void draw_head(void)
     if (!msg && (chain.running || song.octave))
         r = head_group() - 6;
     if (!msg) {                                        /* the centre's words on x 120, between the BPM and the right */
-        int32_t w = text_w(&AF_S, ttl), x = 120 - HALF_UP(w), l = lx + 8;
+        int32_t w = text_w(&AF_X, ttl), x = 120 - HALF_UP(w), l = lx + 8;
         if (x + w > r) x = r - w;
         if (x < l) x = l;
         GFX_HOOK_ALIGN(0, 0, 0, HEAD_RULE_Y, AL_V, "header text on its middle");
-        cv_free_text(x, HEAD_SY, &AF_S, ttl, tc, T_BG, r - x);
+        cv_free_text(x, HEAD_XY, &AF_X, ttl, tc, T_BG, r - x);   /* (0.8.5: AF_X, the mock-up's small mono) */
     } else if (centre) {                               /* right of the BPM, over the right slot */
         int32_t x = lx + 9 > 142 ? lx + 9 : 142;
         head_msg(x, 236 - x);
@@ -475,9 +489,10 @@ static void draw_column_tall(uint32_t c, const char *label, const char *val, con
         cv_blit((uint32_t)CARD_X(c), card_y());
         return;
     }
-    if (FELUCCA_ICONS && ic != ICON_NONE && label[0] && (ic - ICON_TRK < NTRK || icon_cell(&isz, ic) >= 0)) {
+    (void)ic; (void)isz;
+    if (mot && label[0]) {                              /* (0.8.5: no icons) MOTION: a dot on the pill's line */
         GFX_HOOK_ALIGN(0, LG_MY, 0, LG_MY + LG_MH, AL_V, "large card icon on its pill's line");
-        cv_icon_in(COL_W - 5 - 16, LG_MY, 16, LG_MH, 16, ic, mot ? (hot ? T_ACCENT : T_THEME) : lc, T_SURF);
+        cv_rrect(COL_W - 5 - 12, LG_MY + HALF_UP(LG_MH - 8), 8, 8, -4, hot ? T_ACCENT : T_THEME, T_SURF);
     }
     if (label[0]) {
         if ((lw = ink_w(lf, label)) > COL_W - 6) {      /* M too wide: S, on the same capitals' middle */
@@ -536,9 +551,17 @@ static void draw_column_tall(uint32_t c, const char *label, const char *val, con
  * the motion icon in place of its own, in the theme colour; a long label moves it left, up to the card's edge;
  * a label with no room for it at all (or FELUCCA_ICONS=0): the label in the theme colour.
  * vc: the value's colour (T_THEME, T_DIM inactive, T_ACCENT the knob just turned) */
+/* (0.8.5) a held layer's cards as drawn (ui_layer.c: its KNOBS level draws them as gauges) */
+static struct { int16_t r; char l[12], v[16]; } ly_card[4];
 static void draw_column(uint32_t c, const char *label, const char *val, const char *unit, uint16_t vc,
                         int32_t ratio, uint32_t icon)
 {
+    if (ui.layer && c < 4u) {
+        ly_card[c].r = (int16_t)ratio;
+        str_cpy(ly_card[c].l, label, sizeof ly_card[c].l);
+        str_cpy(ly_card[c].v, val, sizeof ly_card[c].v);
+        str_cpy(ly_card[c].v + str_len(ly_card[c].v), unit, sizeof ly_card[c].v - str_len(ly_card[c].v));
+    }
     char key[56];
     int hot = c == ui.hot_col && ui.hot_t, named = fmt_named, mot = card_mot_next && label[0], strip, snap;
     int arm = card_arm_next, free = card_free_next;
@@ -619,9 +642,10 @@ static void draw_column(uint32_t c, const char *label, const char *val, const ch
             /* the label (S, MID) at the top left, its capitals rows 4..12; MENU > LARGE on a list / graph page, a lens
              * page or a layer (LK_LABEL): in M where it fits the card (capitals rows 4..14), else in S. A parameter
              * MOTION drives, an armed action: THEME */
-            const aafont_t *lf = kind == LK_LABEL && 5 + text_w(&AF_M, label) <= COL_W - 2 ? &AF_M : &AF_S;
-            int32_t ly = lf == &AF_M ? 0 : 1;
-            int32_t cy = ly + (lf == &AF_M ? AF_M_CAP_Y : AF_S_CAP_Y), chh = lf == &AF_M ? AF_M_CAP_H : AF_S_CAP_H;
+            const aafont_t *lf = kind == LK_LABEL && 5 + text_w(&AF_M, label) <= COL_W - 2 ? &AF_M : lz_on() ? &AF_X : &AF_S;
+            int32_t ly = lf == &AF_M ? 0 : lf == &AF_X ? CARD_XY : 1;   /* (0.8.5 a lens card: AF_X, capitals rows 5..11) */
+            int32_t cy = ly + (lf == &AF_M ? AF_M_CAP_Y : lf == &AF_X ? AF_X_CAP_Y : AF_S_CAP_Y);
+            int32_t chh = lf == &AF_M ? AF_M_CAP_H : lf == &AF_X ? AF_X_CAP_H : AF_S_CAP_H;
             if (hot && T_ACCENT == T_MID) {             /* MONO: no colour tells the hot knob: its label inverted, */
                 int32_t b[4], w;                        /* the chip 2 px round its ink */
                 text_ink(lf, label, b);
@@ -721,7 +745,7 @@ static void draw_tabs(void)
         uint16_t bg = l == lv ? T_THEME : T_RAISE;
         cv_rect(LT_X(l), 0, LT_W, LT_H, bg);
         GFX_HOOK_ALIGN(LT_X(l), 0, LT_X(l) + LT_W, LT_H, AL_HV, "LENTE tab name centred in its tab");
-        cv_text_in(LT_X(l), CAP_IN(S, LT_H), LT_W, &AF_S, lz_level_name(l), l == lv ? T_INK : T_MID, bg);
+        cv_text_in(LT_X(l), CAP_IN(X, LT_H), LT_W, &AF_X, lz_level_name(l), l == lv ? T_INK : T_MID, bg);
     }
     cv_blit(0, LT_Y);
 }
@@ -730,10 +754,10 @@ static void draw_tabs(void)
  * `last` (a flash: TEXT; the DRUM grid with ACC held: ACCENT, "ACCENT") */
 static const char *const FAM_CRUMB[FAM_COUNT] = {"HOME", "ENV", "LFO", "FX", "SCL", "EDIT", "GLO", "SAVE", "ARP", "SEQ",
                                                  "GLO"};
-static void foot_crumbs(char *b, uint32_t n)            /* b holds n (48) */
+static __attribute__((noinline)) void foot_crumbs(char *b, uint32_t n)   /* b holds n (48) */
 {
     char ti[20];
-    if (ui.home) {
+    if (!lz_on() && ui.home) {
         str_cpy(b, "HOME", n);
         return;
     }
@@ -755,28 +779,52 @@ static void foot_crumbs(char *b, uint32_t n)            /* b holds n (48) */
     str_cpy(b + str_len(b), " \xB7 ", 4);
     str_cpy(b + str_len(b), ti, sizeof ti);
 }
-static void draw_crumbs(int32_t y, uint16_t fg, uint16_t last)
+#define CRUMB_Y 4                                       /* (0.8.5) a lens footer's breadcrumb (AF_X): capitals rows 5..11 */
+/* (0.8.5) the set's place at the footer's right, "1/2" (the domains of ui_lens.c with more than one set) */
+static int32_t crumb_count(char *b)
 {
+    uint32_t k, n;
+    b[0] = 0;
+    if (!lz_on() || lz_fam() < LZ_HOME)
+        return 0;
+    (void)lz_set(&k, &n);
+    if (n < 2u)
+        return 0;
+    fmt_int(b, (int32_t)k + 1);
+    str_cpy(b + str_len(b), "/", 2);
+    fmt_int(b + str_len(b), (int32_t)n);
+    return text_w(&AF_X, b);
+}
+static __attribute__((noinline)) void draw_crumbs(int32_t y, uint16_t fg, uint16_t last)
+{
+    char cnt[8];
+    int32_t cw = crumb_count(cnt), mx = cw ? 234 - cw - 8 : 234;
     char b[48];
     uint32_t i, k = 0;
     int32_t x;
+    const aafont_t *f = lz_on() ? &AF_X : &AF_S;        /* (0.8.5: a lens page, the mock-up's small mono) */
     foot_crumbs(b, sizeof b);
     for (i = 0; b[i]; i++)                              /* (the last part: after the last dot) */
         if ((uint8_t)b[i] == 0xB7u)
             k = i + 2u;
     if (k > str_len(b))
         k = 0;
-    GFX_HOOK_ALIGN(0, y + AF_S_CAP_Y, 0, y + AF_S_CAP_Y + AF_S_CAP_H, AL_V, "footer breadcrumb on its line");
+    if (f == &AF_X)
+        GFX_HOOK_ALIGN(0, y + AF_X_CAP_Y, 0, y + AF_X_CAP_Y + AF_X_CAP_H, AL_V, "footer breadcrumb on its line");
+    else
+        GFX_HOOK_ALIGN(0, y + AF_S_CAP_Y, 0, y + AF_S_CAP_Y + AF_S_CAP_H, AL_V, "footer breadcrumb on its line");
+    if (cw)
+        cv_text_r(234, y, f, cnt, fg, T_BG);
     if (last == fg || !k) {
-        cv_free_text(6, y, &AF_S, b, fg, T_BG, 228);
+        cv_free_text(6, y, f, b, fg, T_BG, mx - 6);
         return;
     }
     {
         char c = b[k];
         b[k] = 0;
-        x = cv_text_on(6, y, &AF_S, b, fg, T_BG);
+        x = cv_text_on(6, y, f, b, fg, T_BG);
         b[k] = c;
-        cv_free_text(x, y, &AF_S, b + k, last, T_BG, 234 - x);
+        cv_free_text(x, y, f, b + k, last, T_BG, mx - x);
     }
 }
 static void draw_foot(void)
@@ -785,7 +833,7 @@ static void draw_foot(void)
     const track_t *t = TSEL;
     uint32_t sig;
     int lz = (int)lz_on(), accw = grid_on() && black_held(GK_ACC);
-    int32_t ry = lz ? 0 : 19;                            /* the breadcrumb's line (a lens page: the footer is it) */
+    int32_t ry = lz ? CRUMB_Y : 19;                      /* the breadcrumb's line (a lens page: the footer is it) */
     foot_crumbs(s, sizeof s);
     if (ui.home)
         str_cpy(ti, "HOME", sizeof ti);
@@ -866,6 +914,14 @@ static void draw_columns(void)
     char val[12];
     const char *unit;
     (void)motion_mask(song.sel, card_mot_mask);       /* (PLAY OFF: no scan) */
+    if (home_macros()) {                                /* (0.8.5) HOME's MACROS / ROUTES: M1..M4, 0..100 % */
+        static const char *const M[4] = {"M1", "M2", "M3", "M4"};
+        for (c = 0; c < 4u; c++) {
+            fmt_int(val, macro_v[c] * 100 / 127);
+            draw_column(c, M[c], val, "%", VAL(c), macro_v[c] * 1000 / 127, ICON_MIX);
+        }
+        return;
+    }
     if (ui.home) {
         for (c = 0; c < 4u; c++) {
             int16_t *vp;
@@ -874,6 +930,39 @@ static void draw_columns(void)
             card_mot_of(vp);
             draw_column(c, d->label, val, unit, VAL(c), RATIO(d, enum_rank(d, *vp)), param_icon(d, *vp));
         }
+        return;
+    }
+    if (cur_page()->graph == GR_FOCUS) {               /* (0.8.5) EDIT > FOCUS: PARAM, its value, SRC, AMT */
+        uint32_t k = focus_k();
+        int32_t j = focus_slot(k);
+        int16_t *vp = &TSEL->p[P_E0 + k];
+        const param_desc_t *d = track_desc(TSEL, P_E0 + k);
+        param_format(d, *vp, val, &unit);
+        draw_column(0, "PARAM", d->label, "", VAL(0u), (int32_t)k * 1000 / 7, ICON_NONE);
+        card_mot_of(vp);
+        draw_column(1, d->label, val, unit, VAL(1u), RATIO(d, enum_rank(d, *vp)), ICON_NONE);
+        draw_column(2, "SRC", j < 0 ? "OFF" : N_MSRC[clamp(TSEL->p[P_M1SRC + 3u * (uint32_t)j], 0, MS_N - 1)], "",
+                    j < 0 ? T_DIM : VAL(2u), -1, ICON_NONE);
+        if (j < 0)
+            draw_column(3, "AMT", "--", "", T_DIM, -1, ICON_NONE);
+        else {
+            const param_desc_t *da = track_desc(TSEL, P_M1AMT + 3u * (uint32_t)j);
+            int16_t a = TSEL->p[P_M1AMT + 3u * (uint32_t)j];
+            param_format(da, a, val, &unit);
+            draw_column(3, "AMT", val, unit, a ? VAL(3u) : T_DIM, RATIO(da, a), ICON_NONE);
+        }
+        return;
+    }
+    if (cur_page()->graph == GR_STAGE) {               /* (0.8.5) ENV > STAGE: the stage, its value, LOOP */
+        uint32_t id = P_ATK + (ui.stage & 3u);
+        int16_t *vp = &TSEL->p[id];
+        draw_column(0, "STAGE", TP[id].label, "", VAL(0u), (int32_t)(ui.stage & 3u) * 1000 / 3, ICON_NONE);
+        param_format(&TP[id], *vp, val, &unit);
+        card_mot_of(vp);
+        draw_column(1, TP[id].label, val, unit, VAL(1u), RATIO(&TP[id], *vp), ICON_NONE);
+        param_format(&TP[P_ELOOP], TSEL->p[P_ELOOP], val, &unit);
+        draw_column(2, TP[P_ELOOP].label, val, unit, VAL(2u), RATIO(&TP[P_ELOOP], TSEL->p[P_ELOOP]), ICON_NONE);
+        draw_column(3, "", "", "", T_DIM, -1, ICON_NONE);
         return;
     }
     if (cur_page()->graph == GR_DXSND) {               /* EDIT > SOUND (ui_dx.c) */
@@ -1664,45 +1753,90 @@ static void confirm_text(char *a, char *b)
         break;
     }
 }
-static void draw_gen(void);                             /* (0.6.91) gen.c: the GEN screen */
+static void gen_cards(void);                            /* (0.8.5) gen.c: GEN in HOME's lens, its cards */
+/* (0.8.5) the dialogs as the approved mock-up (NOTICE . DICE . NAME): their tabs under the header, the breadcrumb at the
+ * foot. NOTICE (the OCT- / OCT+ questions): a RAISE card under a THEME rule, "?" in the accent, the question, the detail,
+ * two buttons (OCT- NO, OCT+ YES in the accent, underlined). DICE (KEEP DICED ...?): the part's cards, BEFORE and NOW
+ * side by side (dice_panel, ui_input.c), the question in a strip with its two buttons. No icons */
+static void dice_panel(void);                            /* (ui_input.c: what the dice had, what it has) */
+static void dlg_tabs(uint32_t lv)
+{
+    static const char *const DN[3] = {"NOTICE", "DICE", "NAME"};
+    uint32_t l;
+    cv_begin(240, LT_H, T_BG);
+    for (l = 0; l < 3u; l++) {
+        uint16_t bg = l == lv ? T_THEME : T_RAISE;
+        cv_rect(LT_X(l), 0, LT_W, LT_H, bg);
+        GFX_HOOK_ALIGN(LT_X(l), 0, LT_X(l) + LT_W, LT_H, AL_HV, "LENTE tab name centred in its tab");
+        cv_text_in(LT_X(l), CAP_IN(X, LT_H), LT_W, &AF_X, DN[l], l == lv ? T_INK : T_MID, bg);
+    }
+    cv_blit(0, LT_Y);
+}
+static void dlg_crumb(const char *a, const char *b)     /* "LENTE . NOTICE . CONFIRM" */
+{
+    char s[40];
+    str_cpy(s, "LENTE \xB7 ", sizeof s);
+    str_cpy(s + str_len(s), a, sizeof s - str_len(s));
+    str_cpy(s + str_len(s), " \xB7 ", sizeof s - str_len(s));
+    str_cpy(s + str_len(s), b, sizeof s - str_len(s));
+    cv_begin(240, LZ_FOOT_H, T_BG);
+    cv_text(6, CRUMB_Y, &AF_X, s, T_DIM);
+    cv_blit(0, LZ_FOOT_Y);
+}
+static void dlg_button(int32_t x, int32_t y, int32_t w, const char *k, const char *a, int yes)
+{
+    cv_rect(x, y, w, 34, T_SURF);
+    cv_text(x + 6, y + 5 - AF_X_CAP_Y, &AF_X, k, T_DIM);
+    cv_text(x + 6, y + 16 - AF_M_CAP_Y, &AF_M, a, yes ? T_ACCENT : T_TEXT);
+    if (yes)
+        cv_rect(x + 6, y + 30, w - 12, 2, T_ACCENT);
+}
 static void draw_confirm(void)
 {
     char a[24], b[24];
     const aafont_t *tf = &AF_M;
     int dk = ui.confirm >= CF_DICE_SOUND && ui.confirm <= CF_DICE_FX;
-    const char *no = dk ? "CANCEL" : "NO", *yes = dk ? "OK" : "YES";
-    if (ui.confirm == CF_DICE_ALL) { draw_gen(); return; }
     confirm_text(a, b);
     lcd_fill(0, H_HEAD, 240, 240 - H_HEAD, T_BG);
     ui.head_sig = ~0u;
-    cv_begin(DLG_W, DLG_H, T_BG);                     /* a SURF card: warning, the question, the detail, two buttons */
-    if (ux.style)                                     /* LINE: no card, a 1 px rule round it */
-        cv_rrect(0, 0, DLG_W, DLG_H, 8, T_RULE, T_BG);
-    cv_rrect(!!ux.style, !!ux.style, DLG_W - 2 * !!ux.style, DLG_H - 2 * !!ux.style, 8 - !!ux.style, T_SURF,
-             ux.style ? T_RULE : T_BG);
-    GFX_HOOK_ALIGN(0, 0, DLG_W, 0, AL_H, "dialog icon centred");
-    cv_icon_in(0, 12, DLG_W, 0, 16, ui.confirm == CF_CLEAR_MOTION ? ICON_X_MOTION_DEL : ICON_X_WARN, T_ACCENT, T_SURF);
-    if (text_w(tf, a) > DLG_W - 16)
+    dlg_tabs(dk ? 1u : 0u);
+    if (dk) {                                         /* DICE: the part, BEFORE / NOW, the question in a strip */
+        static const char *const PART[4] = {"SOUND", "SEQ", "LFO", "FX"};
+        uint32_t pk = (uint32_t)(ui.confirm - CF_DICE_SOUND) & 3u;
+        dice_panel();
+        cv_begin(240, 30, T_BG);
+        cv_rect(4, 0, 232, 30, T_RAISE);
+        cv_rect(4, 0, 232, 2, T_THEME);
+        cv_text(10, 7 - AF_S_CAP_Y, &AF_S, a, T_TEXT);
+        cv_text(10, 20 - AF_X_CAP_Y, &AF_X, b, T_DIM);
+        cv_rect(148, 4, 40, 23, T_SURF);
+        cv_text_in(148, 7 - AF_X_CAP_Y, 40, &AF_X, "OCT-", T_DIM, T_SURF);
+        cv_text_in(148, 17 - AF_X_CAP_Y, 40, &AF_X, "CANCEL", T_MID, T_SURF);
+        cv_rect(192, 4, 40, 23, T_SURF);
+        cv_text_in(192, 7 - AF_X_CAP_Y, 40, &AF_X, "OCT+", T_DIM, T_SURF);
+        cv_text_in(192, 17 - AF_X_CAP_Y, 40, &AF_X, "OK", T_ACCENT, T_SURF);
+        cv_blit(0, 194);
+        dlg_crumb("DICE", drum_track(TSEL) && pk == 0u ? "KIT" : PART[pk]);
+        return;
+    }
+    cv_begin(212, 140, T_BG);                         /* NOTICE: the card */
+    cv_rect(0, 0, 212, 140, T_RAISE);
+    cv_rect(0, 0, 212, 2, T_THEME);
+    cv_text(12, 12 - AF_M_CAP_Y, &AF_M, "?", T_ACCENT);
+    if (text_w(tf, a) > 196)
         tf = &AF_S;
-    GFX_HOOK_ALIGN(0, 0, DLG_W, 0, AL_H, "dialog question centred");
-    cv_text_in(0, 34, DLG_W, tf, a, T_TEXT, T_SURF);
+    GFX_HOOK_ALIGN(0, 0, 212, 0, AL_H, "dialog question centred");
+    cv_text_in(0, 36, 212, tf, a, T_TEXT, T_RAISE);
     if (b[0]) {
         char f[32];
-        text_fit(f, sizeof f, b, &AF_S, DLG_W - 16);    /* a name: free text */
-        GFX_HOOK_ALIGN(0, 0, DLG_W, 0, AL_H, "dialog detail centred");
-        cv_text_flags(ink_in(&AF_S, f, DLG_W), 56, &AF_S, f, T_MID, T_SURF, 8u | (f[str_len(f) - 1u] == ELLIPSIS));
+        text_fit(f, sizeof f, b, &AF_S, 196);          /* a name: free text */
+        GFX_HOOK_ALIGN(0, 0, 212, 0, AL_H, "dialog detail centred");
+        cv_text_flags(ink_in(&AF_S, f, 212), 60, &AF_S, f, T_MID, T_RAISE, 8u | (f[str_len(f) - 1u] == ELLIPSIS));
     }
-    cv_rrect(10, 80, 90, 26, 6, T_RAISE, T_SURF);     /* OCT-: NO */
-    GFX_HOOK_ALIGN(10, 80, 100, 106, AL_HV | AL_N(2), "dialog button NO");
-    cv_key_hint(10 + HALF_UP(90 - kh_ink(KC_OCTDN, no)), 80 + HALF_UP(26 - KC_H), KC_OCTDN, no, 1, T_RAISE);   /* (ink centred) */
-    cv_rrect(108, 80, 90, 26, 6, T_THEME, T_SURF);    /* OCT+: YES (on the THEME fill: an INK keycap, THEME label) */
-    {
-        int32_t x = 108 + HALF_UP(90 - kh_ink(KC_OCTUP, yes));
-        GFX_HOOK_ALIGN(108, 80, 198, 106, AL_HV | AL_N(2), "dialog button YES");
-        x = cv_keycap(x, 80 + HALF_UP(26 - KC_H), KC_OCTUP, T_INK, T_THEME, T_THEME);
-        cv_text_on(x + KH_GAP, 80 + HALF_UP(26 - KC_H) - 1, &AF_S, yes, T_INK, T_THEME);
-    }
-    cv_blit(DLG_X, DLG_Y);
+    dlg_button(12, 92, 90, "OCT -", ui.confirm == CF_DICE_ALL ? "CANCEL" : "NO", 0);
+    dlg_button(110, 92, 90, "OCT +", "YES", 1);
+    cv_blit(14, 66);
+    dlg_crumb("NOTICE", "CONFIRM");
 }
 
 /* the stored STYLE (ui_style: the menu, a settings import, a restore) into gfx.c's copy: the tokens again, all redrawn */
@@ -1717,6 +1851,26 @@ static void style_apply(void)
     }
 }
 
+/* (0.8.5) the end of a lens screen drawn outside the page path (GEN): the second message, the timers, the footer and the
+ * tabs */
+static void lz_frame_end(void)
+{
+    if (ui.msg_t && !--ui.msg_t && ui.msg2[0]) {
+        str_cpy(ui.msg, ui.msg2, sizeof ui.msg);
+        ui.msg2[0] = 0;
+        ui.msg_t = 60;
+    }
+    if (ui.bpm_t)
+        ui.bpm_t--;
+    if (ui.hot_t)
+        ui.hot_t--;
+    if (pf_on)
+        page_flash_draw();
+    if (!pf_on)
+        draw_foot();
+    draw_tabs();
+    ui.force = 0;
+}
 static void ui_draw_page(uint32_t counting);
 static void ui_draw(void)
 {
@@ -1747,6 +1901,15 @@ static void ui_draw_page(uint32_t counting)
     if (counting && !ui.confirm && !name_on()) {        /* the count-in: over the page (and a layer) */
         draw_countin();
         draw_head();
+        return;
+    }
+    if (ui.confirm == CF_DICE_ALL) {                    /* (0.8.5) GEN: HOME's lens, its last level */
+        if (ui.force)
+            draw_frame();
+        draw_head();
+        gen_cards();
+        draw_graph();
+        lz_frame_end();
         return;
     }
     if (ui.confirm) {                                   /* the OCT- / OCT+ dialog */

@@ -174,7 +174,10 @@ static void bg_excite(bfeat_t *f, int32_t en, int32_t k)
     f->fray = clamp(f->fray + en * k / 6, 0, 256);
 }
 /* the page's being: its engine's genome, its four knobs by what they are */
-static void graph_being(const track_t *t)
+static void graph_being_at(const track_t *t, int32_t cx, int32_t cy, int32_t r);
+static void graph_being(const track_t *t) { graph_being_at(t, 120 * 16, 61 * 16, 36 * 16); }
+/* .. at (cx, cy), radius r (Q4: the EDIT lens's SOUND draws it on the left) */
+static void graph_being_at(const track_t *t, int32_t cx, int32_t cy, int32_t r)
 {
     static uint32_t tm, f0;                              /* its time runs with the sound: in silence it rests */
     const genome_t *g = &GENOME[EGEN[t->eng_req % NENGINES]];
@@ -186,7 +189,7 @@ static void graph_being(const track_t *t)
     bg_excite(&f, en, 2);
     if (en > 2) tm += (ui.frame - f0) * (uint32_t)(160 + en * 3);
     f0 = ui.frame;
-    being_lines(g, &f, 120 * 16, 61 * 16, (36 * 16) * (256 + en / 3) / 256, en, tm);
+    being_lines(g, &f, cx, cy, r * (256 + en / 3) / 256, en, tm);
 }
 
 /* (JIANT 0.5) HOME: the system as an ecosystem. A being per track (its engine's genome, its HOME knobs by what they

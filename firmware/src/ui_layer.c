@@ -824,40 +824,16 @@ static void lcell(int32_t x, int32_t y, int32_t h, const char *note, uint32_t ic
     fill = lc_box(x, y, lc_w, h, fill);
     if (note)
         cv_text_on(x + 5, y + 3, &AF_S, note, idle ? T_MID : ink, fill);
-    if (h > 30 && lc_w == LF_W) {
-        GFX_HOOK_ALIGN(x, 0, x + lc_w, 0, AL_H, "FX cell icon centred across");
-        cv_icon_on(x + (lc_w - 24) / 2, y + h - 25, 24, icon, ink, fill);   /* (its ink: rows 3 .. 20 of 24) */
-        if (name)
-            cv_text_r(x + lc_w - 5, y + 3, &AF_S, name, ink, fill);
-    } else if (h > 30) {                                   /* the icon's cell over the name, 6 px between, centred */
-        int32_t t = y + HALF_UP(h - (16 + 6 + AF_S_CAP_H));
-        GFX_HOOK_ALIGN(0, y, 0, y + h, AL_V | AL_N(2), "layer cell icon + name centred up/down");
-        GFX_HOOK_ALIGN(x, 0, x + lc_w, 0, AL_H | AL_PASS, "layer cell icon / name centred across");
-        cv_icon_in(x, t, lc_w, 0, 16, icon, ink, fill);
-        GFX_HOOK_ALIGN(x, 0, x + lc_w, 0, AL_H | AL_PASS, "layer cell icon / name centred across");
-        cv_text_in(x, t + 22 - AF_S_CAP_Y, lc_w, &AF_S, name, ink, fill);
-    } else if (name && h > 24) {                           /* the same, 12 px, 2 px between (the icon at a side) */
-        int32_t t = y + HALF_UP(h - (12 + 2 + AF_S_CAP_H));
-        GFX_HOOK_ALIGN(0, y, 0, y + h, AL_V | AL_N(2), "layer cell icon + name centred up/down");
-        cv_icon_on(note ? x + lc_w - 17 : x + 5, t, 12, icon, ink, fill);
-        GFX_HOOK_ALIGN(x, 0, x + lc_w, 0, AL_H | AL_PASS, "layer cell icon / name centred across");
-        cv_text_in(x, t + 14 - AF_S_CAP_Y, lc_w, &AF_S, name, ink, fill);
-    } else if (name) {                                     /* a key's row: the icon and the name on its middle */
-        if (!note && icon < ICON_COUNT) {                  /* (the EDIT layer: the engine's icon instead of the key) */
-            GFX_HOOK_ALIGN(0, y, 0, y + h, AL_V, "layer key cell icon / name centred up/down");
-            cv_icon_in(x + 3, y, 0, h, 12, icon, ink, fill);
-            GFX_HOOK_ALIGN(0, y, 0, y + h, AL_V, "layer key cell icon / name centred up/down");
-            cv_text_r(x + lc_w - 3, y + CAP_IN(S, h), &AF_S, name, ink, fill);
-        } else {
-            GFX_HOOK_ALIGN(0, y, 0, y + h, AL_V, "layer key cell icon / name centred up/down");
-            cv_text_r(x + lc_w - 5, y + CAP_IN(S, h), &AF_S, name, ink, fill);
-        }
-    } else {
-        GFX_HOOK_ALIGN(0, y, 0, y + h, AL_V, "layer key cell icon / name centred up/down");
-        if (icon != ICON_NONE)                          /* (JIANT 0.6: a narrow cell, G6_W, the track's alone) */
-            cv_icon_in(x + lc_w - 31, y, 0, h, 12, icon, ink, fill);
-        GFX_HOOK_ALIGN(0, y, 0, y + h, AL_V, "layer key cell icon / name centred up/down");
-        cv_icon_in(x + lc_w - (lc_w < LC_W ? 14 : 17), y, 0, h, 12, icon2, ink, fill);
+    (void)icon;
+    if (h > 24 && name) {                                  /* (0.8.5, the mock-up: no icons) the name centred, low */
+        GFX_HOOK_ALIGN(x, 0, x + lc_w, 0, AL_H, "layer cell name centred across");
+        cv_text_in(x, y + h - 3 - AF_S_CAP_H - AF_S_CAP_Y, lc_w, &AF_S, name, ink, fill);
+    } else if (name) {                                     /* a key's row: the name on its middle, right */
+        GFX_HOOK_ALIGN(0, y, 0, y + h, AL_V, "layer key cell name centred up/down");
+        cv_text_r(x + lc_w - (note ? 5 : 3), y + CAP_IN(S, h), &AF_S, name, ink, fill);
+    } else if (icon2 - ICON_TRK < NTRK) {                  /* (JIANT 0.6: a narrow cell, G6_W, the track's cushion) */
+        GFX_HOOK_ALIGN(0, y, 0, y + h, AL_V, "layer key cell name centred up/down");
+        cv_trk(x + lc_w - (lc_w < LC_W ? 14 : 17), y + HALF_UP(h - 12), 12, icon2 - ICON_TRK, ink, fill);
     }
     if (tri) {
         int32_t j;
@@ -1055,8 +1031,6 @@ static void layer_rec(void)
         GFX_HOOK_ALIGN(0, y, 0, y + LR_H, AL_V, "rec layer key cell on its middle");
         cv_text_on(x + 5, y + CAP_IN(S, LR_H), &AF_S, n, fill == T_RAISE || fill == T_SURF ? T_MID : ink, fill);
         GFX_HOOK_ALIGN(0, y, 0, y + LR_H, AL_V, "rec layer key cell on its middle");
-        cv_icon_in(x + 15, y, 0, LR_H, 12, r ? RL_ICON[r - 1u] : ICON_CLEAR, ink, fill);
-        GFX_HOOK_ALIGN(0, y, 0, y + LR_H, AL_V, "rec layer key cell on its middle");
         cv_text_r(x + LR_KW - 5, y + CAP_IN(S, LR_H), &AF_S, r ? RL_LABEL[r - 1u] : "CLEAR", ink, fill);
         if (r == 0u) {                                   /* "T2 SEQUENCE" / "T2 EMPTY" (a song playing: why not) */
             int32_t w = 234 - vx;
@@ -1186,6 +1160,58 @@ static void layer_cards(uint32_t l)
     }
 }
 
+/* (0.8.5) a layer as a lens, as the approved mock-up (MAP . KNOBS . STATE; ALGORITHM while it is held): MAP the keys'
+ * map (the cells, no icons), KNOBS the four cards as gauges, STATE the key hints (the footer's until 0.8.4) and what is
+ * on. The header "[FX] HELD"; the breadcrumb "LENTE . MAP . FX" */
+static const khint_t *layer_foot(uint32_t l)
+{
+    return l == LAYER_FX && perf_latch_on ? FX_LATCH_FOOT : l == LAYER_MACRO && !layer_open() ? MAC_LATCH_FOOT : LAYERS[l].foot;
+}
+static void layer_knobs(uint32_t l)
+{
+    uint32_t c;
+    (void)l;
+    for (c = 0; c < 4u; c++) {
+        int32_t cx = CARD_X(c) + 28;
+        if (!ly_card[c].l[0])
+            continue;
+        lz_arc(cx, 44, 22, 3, ly_card[c].r < 0 ? 0 : ly_card[c].r, T_RAISE, ly_card[c].r < 0 ? T_LINE : T_THEME);
+        GFX_HOOK_ALIGN(cx - 26, 0, cx + 26, 0, AL_H, "layer KNOBS gauge's words centred");
+        cv_text_in(cx - 26, 36 - AF_X_CAP_Y, 52, &AF_X, ly_card[c].l, T_MID, T_SURF);
+        cv_text_in(cx - 26, 48 - AF_X_CAP_Y, 52, &AF_X, ly_card[c].v, T_TEXT, T_SURF);
+    }
+    cv_text_in(4, 96 - AF_X_CAP_Y, 232, &AF_X, LAYERS[l].head, T_DIM, T_SURF);
+}
+static void layer_state(uint32_t l)
+{
+    const khint_t *ft = layer_foot(l);
+    uint32_t k, e, n = 0;
+    const char *h = layer_head();
+    cv_text(10, 6 - AF_X_CAP_Y, &AF_X, h && h[0] ? h : LAYERS[l].head, T_THEME);
+    for (k = 0; k < 3u; k++)                            /* the hints, a row each */
+        if (ft[k].act)
+            cv_key_hint(10, 14 + (int32_t)k * 20, ft[k].key, ft[k].act, 1, T_SURF);
+    if (l == LAYER_FX) {                                /* the effects held or latched */
+        uint32_t held = perf_kill ? 0u : perf_held | perf_latched;
+        for (e = 0; e < PF_M1 && n < 10u; e++)
+            if ((held >> e) & 1u) {
+                int32_t x = 10 + (int32_t)(n % 5u) * 44, y = 80 + (int32_t)(n / 5u) * 18;
+                cv_rect(x, y, 42, 16, T_THEME);
+                cv_text_in(x, y + 4 - AF_X_CAP_Y, 42, &AF_X, PF_NAME[e], T_INK, T_THEME);
+                n++;
+            }
+    } else
+        for (k = 0; k < 4u; k++)                        /* the four, as text */
+            if (ly_card[k].l[0]) {
+                int32_t x = 10 + (int32_t)(k & 1u) * 112, y = 80 + (int32_t)(k >> 1) * 18;
+                cv_rect(x, y, 108, 16, T_RAISE);
+                cv_clip_text(x + 4, y + 4 - AF_X_CAP_Y, &AF_X, ly_card[k].l, T_MID, T_RAISE, 56);
+                cv_text_r(x + 104, y + 4 - AF_X_CAP_Y, &AF_X, ly_card[k].v, T_TEXT, T_RAISE);
+                n++;
+            }
+    if (!n)
+        cv_text(10, 84 - AF_X_CAP_Y, &AF_X, "NOTHING ON", T_DIM);
+}
 static void draw_layer(void)
 {
     uint32_t l = ui.layer % LAYER_N, sig = l * 7919u + ux.gen * 977u;
@@ -1212,12 +1238,18 @@ static void draw_layer(void)
     else
         sig += snd_id() * 31u + (uint32_t)chain_busy() * 3u + (uint32_t)(project_recall_slot() + 1) * 5u + dx_mute * 7919u +
                (uint32_t)drum_track(TSEL) * 11u + up_gen * 101u;
+    sig += ui.lylv * 0x9E3779B1u + (ui.lylv == 1u ? str_hash(7u, ly_card[0].v) + str_hash(9u, ly_card[1].v) * 3u +
+                                     str_hash(11u, ly_card[2].v) * 5u + str_hash(13u, ly_card[3].v) * 7u : 0u);
     if (ui.force || sig != ui.layer_sig) {
         ui.layer_sig = sig;
-        cv_begin(240, H_GRAPH, T_BG);
-        cv_rrect(3, 0, 234, H_GRAPH, 5, T_SURF, T_BG);
+        cv_begin(240, graph_h(), T_BG);
+        cv_rect(4, 0, 232, (int32_t)graph_h(), T_SURF);   /* (0.8.5: the lens's panel) */
         cv_bg = T_SURF;
-        if (l == LAYER_FX)
+        if (ui.lylv % 3u == 1u)                         /* KNOBS: the four as gauges */
+            layer_knobs(l);
+        else if (ui.lylv % 3u == 2u)                    /* STATE: what the keys, knobs and buttons do, what is on */
+            layer_state(l);
+        else if (l == LAYER_FX)
             layer_fx();
         else if (l == LAYER_GLO)
             layer_glo();
@@ -1233,14 +1265,8 @@ static void draw_layer(void)
             layer_macro();
         else
             layer_edit();
-        cv_blit(0, Y_GRAPH);
+        cv_blit(0, graph_y());
     }
-    if (ui.force) {                                     /* the footer: what the keys, knobs and buttons do */
-        cv_begin(240, H_FOOT, T_BG);
-        const khint_t *ft = l == LAYER_FX && perf_latch_on ? FX_LATCH_FOOT :
-                            l == LAYER_MACRO && !layer_open() ? MAC_LATCH_FOOT : LAYERS[l].foot;
-        cv_key_row(8, 232, 9, ft, ft[2].act ? 3u : 2u, 7u, T_BG);
-        cv_blit(0, Y_FOOT);
-        ui.foot_sig = 0;
-    }
+    draw_tabs();                                        /* (0.8.5: MAP . KNOBS . STATE, the breadcrumb) */
+    draw_foot();
 }

@@ -7,7 +7,7 @@ import html, os
 
 R = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(R, 'docs', 'cheatsheet')
-VERSION = 'v0.8.6'
+VERSION = 'v0.8.7'
 
 HEAT = ['#22d3ee', '#3b82f6', '#8b5cf6', '#d946ef', '#ef4444', '#ff7a00', '#facc15', '#f4f1ea']
 
@@ -126,30 +126,30 @@ def controls():
     b.append(sec('THE PANEL'))
     rows = [
         ('MASTER', 'Master volume.'),
-        ('SELECT', '<b>Scrolls the section\'s pages</b> (SEQ: <b>zooms</b> PATTERN · BAR · STEP; SAVE: LIBRARY · PROJECT · SOUND; FX: TRACK · BUSES · EFFECT; HOME: GEN, the song generator). Held with a button, its <b>dice</b> (OK keeps, CANCEL back): HOME everything, '
+        ('SELECT', '<b>Zooms the lens</b> you are in, a level a detent (SEQ PATTERN · BAR · STEP; HOME ECO · BEING · GEN, GEN the song generator; EDIT SOUND · TONE · FOCUS; ENV TRACKS · ENV · STAGE; LFO MOD · LFO · MSEQ; SCL KEY · CHORD · ARP; GLO MIX · GLOBAL · SYSTEM; SAVE; FX; MENU MENU · TAB · ROW; a held layer: ALGORITHM MAP · KNOBS · STATE). Held with a button, its <b>dice</b> (OK keeps, CANCEL back): HOME everything, '
                    'EDIT the sound, SEQ the sequence, LFO the LFO, FX the effects. GLO + SELECT: the tempo.'),
         ('PRESETS', 'Browses the sounds (factory and user). On step, list and song pages: the cursor / the row; SEQ at PATTERN: the bar. '
                     '<b>Hold a page button + PRESETS: jump through its pages.</b>'),
-        ('ALGORITHM', 'Selects the track from any page: T1–T4, or T1–T6 with TRACKS 6.'),
+        ('ALGORITHM', 'Selects the track from any page: T1–T4, or T1–T6 with TRACKS 6. A layer held: MAP · KNOBS · STATE.'),
         ('KNOB 1–4', 'The four columns on screen. Fast sweeps the whole range, slow fine-tunes. With a layer held: '
                      'the layer\'s.'),
         ('OCT− · OCT+', 'The keyboard\'s octave (both together: back to 0); on DRUM the kit stays put: +1/+2/+3 ratchet x2/x4/x8, −1 SHORT, −2 GHOST, −3 FLAM, each sound its own (grid KNOB 3 HIT). On action pages and dialogs: back / confirm.'),
         ('PLAY', 'Start / stop. GLO + PLAY: restart from the top.'),
         ('REC', 'Arms live recording on the selected track (notes and knob moves, overdub).'),
-        ('HOME', 'Tap: the ecosystem. <b>Hold: the MENU.</b>'),
+        ('HOME', 'Tap: the ecosystem (on HOME: its level\'s other set, HOME knobs / MACROS M1–M4; on GEN its next page). <b>Hold: the MENU.</b>'),
         ('KEYS', '27 keys play the selected track in its scale; with a layer held they become that layer\'s.'),
     ]
     t = '<table>' + ''.join(f'<tr><td class="n">{e(n)}</td><td>{d}</td></tr>' for n, d in rows) + '</table>'
     pb = [
-        ('ENV', 'ENV · ENV DEST', '—'),
-        ('LFO', 'LFO · LFO DEST · MOD · MSEQ · MSEQ 2', 'MACROS M1–M4 (stay latched)'),
+        ('ENV', 'the zoom level\'s other set (SELECT zooms; PRESETS the track / the stage): TRACKS: ENV · DEST  |  ENV: ENV · ENV DEST  |  STAGE', '—'),
+        ('LFO', 'the zoom level\'s next (SELECT zooms; PRESETS the slot / track / step): MOD  |  LFO: LFO · LFO DEST  |  MSEQ: MSEQ · MSEQ 2', 'MACROS M1–M4 (stay latched)'),
         ('FX', 'the zoom level\'s next (SELECT zooms; PRESETS the module): TRACK: SENDS · DIST · AUTO PAN  |  BUSES: DLY MIX · REV SIZE · CHORUS DEPTH · SLICER DEPTH, FX opens the module  |  EFFECT: DELAY · REVERB · CHORUS · SLICER · MASTER · PUNCH, their pages',
          'PUNCH-IN FX'),
-        ('SCL', 'SCL · CHORD', 'ROOT by key'),
-        ('EDIT', 'EDIT 1 · EDIT 2 · FILTER · VOICE  (VOICE: WORDS; FM6: OPERATOR · OP ENV · OPERATOR 2; DRUM: KIT · KIT 2 · KIT 3 · X-MOD · FILTER · SOUND 1–4 · LEVELS 1–2 · STEREO)', 'INIT · RECALL · sound mutes'),
-        ('GLO', 'MIXER · GLOBAL · SYSTEM', 'MUTE · SOLO · LEVEL · TAP'),
+        ('SCL', 'KEY ↔ CHORD (SELECT zooms KEY · CHORD · ARP; PRESETS: ROOT / the track)', 'ROOT by key'),
+        ('EDIT', 'the zoom level\'s next (SELECT zooms): SOUND: EDIT 1 · EDIT 2 (DRUM: KIT · KIT 2 · KIT 3)  |  TONE: FILTER · MORPH · RETRIG · ROTOR · VOICE · VOICE 2 · WORDS (VOICE) (DRUM: X-MOD · FILTER · STEREO · LEVELS 1–2 · VOICE)  |  FOCUS (FM6: OPERATOR · OP ENV · OPERATOR 2; DRUM: SOUND 1–4)', 'INIT · RECALL · sound mutes'),
+        ('GLO', 'MIXER · SENDS · GLOBAL · SYSTEM (SELECT zooms MIX · GLOBAL · SYSTEM)', 'MUTE · SOLO · LEVEL · TAP'),
         ('SAVE', 'the zoom level\'s two sets (SELECT zooms; from elsewhere SOUND\'s USER): LIBRARY: PROJECT · TOOLS  |  PROJECT: SECTIONS · ARRANGE  |  SOUND: USER · PRESETS', 'SONG layer'),
-        ('ARP', 'ARP · ARP 2', '—'),
+        ('ARP', 'the ARP level: ARP · ARP 2', '—'),
         ('SEQ', 'the zoom level\'s sets (SELECT zooms): PATTERN: PATTERN · STRETCH · PLAYHEADS · TRACK · MUTATE  |  BAR: STEP · NOTE · AUTOMATION · AUTO LIST  |  STEP: NOTE · COMP · COMP 2', 'SEQ TOOLS'),
         ('REC', '(transport)', 'CLEAR · CLICK'),
     ]
@@ -223,7 +223,7 @@ def controls():
 
     b.append(sec('EVERY PAGE · KNOB 1 – 4'))
     fams = [
-        ('ENV', HEAT[0], [('ENV', 'ATK DEC SUS REL'), ('ENV DEST', 'FILTER PITCH SHAPE LOOP')]),
+        ('ENV', HEAT[0], [('ENV', 'ATK DEC SUS REL'), ('ENV DEST', 'FILTER PITCH SHAPE LOOP'), ('STAGE', 'STAGE VALUE LOOP -')]),
         ('LFO', HEAT[1], [('LFO', 'RATE WAVE PHASE FADE'), ('LFO DEST', 'PITCH FILTER SHAPE AMP'), ('MOD', 'SLOT SRC DEST AMT'),
                           ('MSEQ', 'STEP LEVEL LEN SLEW'), ('MSEQ 2', 'DIV - - -')]),
         ('FX', HEAT[5], [('FX', 'DIST CHORUS DLY REV'), ('DIST', 'DIST TYPE TONE -'), ('AUTO PAN', 'DEPTH RATE SYNC WAVE'), ('SLICER', 'MODE PAT RATE DEPTH'),
@@ -233,7 +233,7 @@ def controls():
                          ('CHORUS', 'RATE DEPTH STEREO -'), ('MASTER', 'CLIP PUNCH DUCK REL'), ('PUNCH', 'LEN RES REC CLEAR')]),
         ('EDIT', HEAT[3], [('EDIT 1', 'E1 E2 E3 E4'), ('EDIT 2', 'E5 E6 E7 E8'), ('WORDS', 'LANG LYRIC POS (OCT+ TYPE)'), ('RETRIG', 'RTRG - - -'), ('OPERATOR', 'OP RATIO FINE LEVEL'),
                            ('OP ENV', 'OP STAGE RATE LEVEL'), ('OPERATOR 2', 'OP MODE DETUNE VEL'), ('FILTER', 'TYPE CUT RES DRIVE'),
-                           ('VOICE', 'VOICE GLIDE MODE PRIO'), ('KIT 3', 'BP FEEDBK - -'),
+                           ('VOICE', 'VOICE GLIDE MODE PRIO'), ('VOICE 2', 'ALLOC DETUNE - -'), ('FOCUS', 'PARAM VALUE SRC AMT'), ('KIT 3', 'BP FEEDBK HANDS -'),
                            ('X-MOD', 'RATE DEPTH SHAPE RAND'), ('LEVELS', 'KICK SNARE CLAP HATCL'),
                            ('LEVELS 2', 'HATOP TOM RIM BELL'), ('SOUND', 'SOUND SIDE PITCH PMOD'),
                            ('SOUND 2', 'SOUND DECAY NOISE COLOR'), ('SOUND 3', 'SOUND MODE PM.TYPE DRIVE'),
@@ -316,7 +316,7 @@ def sound():
                   '<b>8 voices</b> shared by the six tracks (MONO and LEGATO keep their note).</p>'))
     b.append(card('DICE', HEAT[5], '<p><b>EDIT + SELECT</b>: a random factory preset of the engine, every '
                   'parameter moved up to a quarter of its range. DRUM-X: both sides of every sound around the factory '
-                  'kit. Heard at once: OCT+ OK keeps it, OCT- CANCEL brings the sound back. SEQ / LFO / FX + SELECT: the sequence, the LFO, the effects, the same way. HOME + SELECT: <b>GEN</b>, the song generator: GENRE (<b>EXPLORE</b>, where it opens: no genre, every rule broken; RANDOM; 43 genres) · SEED · ENERGY · FORM; DRUMS · BASS · CHORDS · ARP · LEAD amounts; COMPLEX · SWING · HUMAN. OCT+ makes the piece (again: a new seed), HOME done. GLO + G4 undoes.</p>'))
+                  'kit. Heard at once: OCT+ OK keeps it, OCT- CANCEL brings the sound back. SEQ / LFO / FX + SELECT: the sequence, the LFO, the effects, the same way. HOME + SELECT (or SELECT twice on HOME): <b>GEN</b>, the song generator: GENRE (<b>EXPLORE</b>, where it opens: no genre, every rule broken; RANDOM; 43 genres; PRESETS too) · SEED · ENERGY · FORM; DRUMS · BASS · CHORDS · ARP · LEAD amounts; COMPLEX · SWING · HUMAN (a HOME tap: the next page). OCT+ makes the piece (again: a new seed), OCT- done. GLO + G4 undoes.</p>'))
     b.append('</div>')
 
     b.append(sec('MODULATION'))

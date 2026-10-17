@@ -59,12 +59,13 @@ Guardá tus archivos WAV.
 
 ### Tu primer tema (5 minutos)
 
-1. En **HOME**, girá **SELECT**. Se abre la pantalla **GENERATOR** en **EXPLORE** (ningún género, todas las reglas
-   rotas): apretá **OCT+** así, o antes elegí RANDOM o uno de los 43 géneros con KNOB 1. Aparece una idea de tema completa: motores, sonidos, partes, escala, tempo y efectos. Apretá
+1. En **HOME**, girá **SELECT** dos pasos a la derecha (ECO → BEING → **GEN**). Se abre el **GENERATOR** en
+   **EXPLORE** (ningún género, todas las reglas rotas): apretá **OCT+** así, o antes elegí RANDOM o uno de los 43 géneros
+   con KNOB 1 o PRESETS. Aparece una idea de tema completa: motores, sonidos, partes, escala, tempo y efectos. Apretá
    **PLAY**.
-2. ¿No te convence? Apretá **OCT+** otra vez: semilla nueva, pieza nueva. ¿Demasiado cargada? Girá **SELECT** a la
-   página 2 y bajá **DRUMS** o **ARP**, después OCT+: la misma pieza con eso cambiado. **HOME** (u OCT−) cierra la pantalla.
-   Para volver a lo que había antes: mantené **GLO** y apretá **G4** (UNDO).
+2. ¿No te convence? Apretá **OCT+** otra vez: semilla nueva, pieza nueva. ¿Demasiado cargada? Tocá **HOME** para la
+   página 2 y bajá **DRUMS** o **ARP**, después OCT+: la misma pieza con eso cambiado. **OCT−** cierra la pantalla
+   (SELECT a la izquierda: vuelve a BEING). Para volver a lo que había antes: mantené **GLO** y apretá **G4** (UNDO).
 3. ¿Te gusta? **Pará** (PLAY), apretá **SAVE** (abre SONIDO, los sonidos de usuario) y girá **SELECT** un paso a la
    izquierda: **PROJECT**, las cuatro secciones del proyecto. Girá **KNOB 4** a la derecha para que su tarjeta diga
    **OCT+** y apretá **OCT+**. Escribí un nombre con las teclas (o dejá el que te ofrece) y apretá **OCT+** otra vez. La
@@ -87,8 +88,8 @@ Los nombres de abajo son los que usa el firmware (la pantalla HARDWARE CALIBRATI
 
 | Control | Qué hace |
 | --- | --- |
-| **SELECT** (encoder) | Solo: **recorre las páginas de la sección en la que estás** (las de EDIT en una página EDIT, las de FX en una de FX …), una por paso, sin dar la vuelta; en una página **SEQ** en cambio hace **zoom**: PATRÓN ↔ COMPÁS ↔ PASO (la lente del secuenciador, LENTE: ver [6](#cómo-moverse-lente)); en **HOME** abre **GEN**, el generador de temas (como HOME + SELECT). Con un botón mantenido, los **dados** de ese botón: **HOME** + SELECT **GEN**, **EDIT** + SELECT el sonido, **SEQ** + SELECT la secuencia, **LFO** + SELECT el LFO, **FX** + SELECT los efectos. **GLO** + SELECT: el tempo. Cualquier otro botón de página + SELECT: sus páginas. |
-| **ALGORITHM** (encoder) | Elige la pista desde cualquier página: T1–T4, o T1–T6 con TRACKS 6. En el MENU: cambia de pestaña. |
+| **SELECT** (encoder) | Solo: **hace zoom en la lente en la que estás** (0.8.5: cada parte es una), un nivel por paso, sin dar la vuelta: **SEQ** PATRÓN ↔ COMPÁS ↔ PASO (ver [6](#cómo-moverse-lente)), **HOME** ECO ↔ BEING ↔ GEN (GEN: el generador de temas, como HOME + SELECT), **EDIT** SOUND ↔ TONE ↔ el detalle, **ENV** TRACKS ↔ ENV ↔ STAGE, **LFO** MOD ↔ LFO ↔ MSEQ, **SCL / ARP** KEY ↔ CHORD ↔ ARP, **GLO** MIX ↔ GLOBAL ↔ SYSTEM, **SAVE** y **FX** las suyas, el **MENU** MENU ↔ TAB ↔ ROW (ver [LENTE en todo](#lente-en-todo-085)). Con un botón mantenido, los **dados** de ese botón: **HOME** + SELECT **GEN**, **EDIT** + SELECT el sonido, **SEQ** + SELECT la secuencia, **LFO** + SELECT el LFO, **FX** + SELECT los efectos. **GLO** + SELECT: el tempo. Cualquier otro botón de página + SELECT: sus páginas. |
+| **ALGORITHM** (encoder) | Elige la pista desde cualquier página: T1–T4, o T1–T6 con TRACKS 6. En el MENU: cambia de pestaña. Con una capa mantenida (0.8.5): su lente, MAP ↔ KNOBS ↔ STATE. |
 | **PRESETS** (encoder) | En HOME, PRESETS y las páginas de sonido: recorre sonidos (los presets de fábrica de cada motor y después tus presets de usuario). En las páginas SEQ sigue al zoom: en **PATRÓN** (PATTERN, STRETCH, PLAYHEADS, TRACK, MUTATE) elige el **compás**; en **COMPÁS** y **PASO** (STEP, NOTE, COMP, COMP 2, AUTOMATION) mueve el **cursor de paso**, y al pasarse del compás entra solo en el siguiente. En las páginas de lista (USER, PROJECT, ARRANGE, TOOLS, AUTO LIST): mueve la selección. **Mantené un botón de página y girá SELECT** (o PRESETS) para saltar directo por las páginas de ese botón. |
 | **KNOB 1–4** | Las cuatro tarjetas (columnas) de la pantalla. Con una capa mantenida, las perillas propias de la capa. Girar rápido recorre todo el rango, despacio ajusta fino (MENU > KNOB ACCEL lo desactiva). |
 | **MASTER** | El volumen de salida. |
@@ -98,14 +99,14 @@ Los nombres de abajo son los que usa el firmware (la pantalla HARDWARE CALIBRATI
 | Botón | Toque | Mantener |
 | --- | --- | --- |
 | **HOME** | Vuelve a HOME (el ecosistema). | Unos 0,7 s: abre el **MENU**. |
-| **ENV** | Páginas ENV. | (sin capa) |
-| **LFO** | Páginas LFO. | Capa **MACRO**: KNOB 1–4 son M1–M4. |
+| **ENV** | La lente de ENV (0.8.5): desde otra página, la última página ENV (al encender, ENV); en ENV el otro juego del nivel (ENV ↔ DEST, ENV ↔ ENV DEST). | (sin capa) |
+| **LFO** | La lente LFO · MOD (0.8.5): desde otra página, la última página mostrada (al encender, LFO); en ella el juego siguiente del nivel (LFO ↔ LFO DEST, MSEQ ↔ MSEQ 2). | Capa **MACRO**: KNOB 1–4 son M1–M4. |
 | **FX** | La lente de FX (0.8.5): desde otra página la última página FX; en FX lo siguiente del nivel (TRACK: su juego; BUSES: abre el módulo; EFFECT: su página siguiente). | Capa de **FX punch-in**. |
-| **SCL** | Páginas SCL. | Capa **SCL**: las teclas fijan la tónica. |
-| **EDIT** | Páginas EDIT (en STEP: borra el paso; en USER / PROJECT: renombrar). | Capa **EDIT**: INIT, RECALL, mutes de los sonidos de DRUM-X. |
-| **GLO** | MIXER → GLOBAL → SYSTEM → MIXER. | Capa **GLO**: mutes, solos, niveles, tap tempo, UNDO. |
+| **SCL** | La lente SCL · ARP (0.8.5): **KEY ↔ CHORD** (desde otro lado, la última mostrada). | Capa **SCL**: las teclas fijan la tónica. |
+| **EDIT** | La lente de EDIT (0.8.5): desde otra página, la última página EDIT; en EDIT el juego siguiente del nivel (SOUND: EDIT 1 ↔ EDIT 2; TONE: FILTER → MORPH → … → VOICE 2; el detalle: OPERATOR → OP ENV → OPERATOR 2, SOUND 1–4). En STEP: borra el paso; en USER / PROJECT: renombrar. | Capa **EDIT**: INIT, RECALL, mutes de los sonidos de DRUM-X. |
+| **GLO** | La lente GLO (0.8.5): MIXER → SENDS → GLOBAL → SYSTEM → MIXER (desde otro lado, MIXER). | Capa **GLO**: mutes, solos, niveles, tap tempo, UNDO. |
 | **SAVE** | La lente de SAVE (0.8.5): desde otra página SONIDO (USER, SAVE listo); en SAVE el otro juego del nivel. | Capa **SAVE**: tocar/guardar secciones en vivo. |
-| **ARP** | Páginas ARP. | (sin capa) |
+| **ARP** | El nivel **ARP** de la lente SCL · ARP; en él ARP ↔ ARP 2. | (sin capa) |
 | **SEQ** | Páginas SEQ: en una página SEQ, el siguiente juego de perillas del nivel de zoom en el que estás; desde otro lado, vuelve al nivel y al juego que usaste por última vez en esa pista. | Capa **SEQ TOOLS** (en todas las páginas SEQ). |
 | **PLAY** | Arranca / para. | — |
 | **REC** | Arma / desarma la grabación en la pista seleccionada. | Capa **REC**: CLEAR, CLICK. |
@@ -150,7 +151,9 @@ Desde la 0.8.5 todas las páginas llevan la piel del diseño que aprobó el due�
   blanco y una barra violeta fina debajo del valor. La que estás girando se enciende en naranja, así es el único color
   en las tarjetas. Un valor automatizado o con lock tiene el nombre en violeta; una tarjeta apagada significa "acá
   ahora no hay nada". Una acción armada (SAVE, LOAD, ERASE, CLEAR...) es una tarjeta teñida de violeta, con el nombre
-  violeta y **OCT+** como valor. Desde la 0.8.5 las tarjetas no llevan íconos.
+  violeta y **OCT+** como valor. Desde la 0.8.5 las tarjetas no llevan íconos, ni nada más (las tarjetas de MENU > LARGE:
+  un punto violeta para un valor que se mueve solo; el encabezado: "!" antes de un mensaje NO FILE, un candado y un
+  disco dibujados).
 - **Nombre de página**: al cambiar de página (o de pista) a mano, el nombre de la página aparece un momento sobre el pie
   de la pantalla, con la pista y su motor a la derecha; en HOME el motor de la pista, y "T1 HOME" en chico (en una
   página de lente se enciende su miga de pan). La barra de arriba, las tarjetas y el gráfico quedan a la vista.
@@ -164,14 +167,25 @@ Desde la 0.8.5 todas las páginas llevan la piel del diseño que aprobó el due�
   encabezado tres **pestañas de nivel** (la del nivel en el que estás rellena de violeta), las tarjetas debajo, un
   panel más alto, y el pie es solo la miga de pan, **LENTE · BAR · STEP** (la lente, el nivel, el juego).
 
+- **Las letras chicas** (desde la 0.8.5): los nombres de las tarjetas, las pestañas de nivel, la miga de pan, las
+  palabras del medio del encabezado y los rótulos y fichas chicas de los paneles van en una letra de píxeles de 5 x 7,
+  nítida, las mayúsculas mono chicas de la maqueta; los valores siguen en la letra redondeada más grande.
+
 Los **colores** funcionan como una cámara térmica: frío (cian, azul) es poco, caliente (naranja, amarillo, blanco) es
 mucho. Violeta es lo seleccionado, naranja lo activo.
 
 **HOME** es el ecosistema: una criatura por pista, su especie según su motor, su forma según sus cuatro perillas, que
-se hincha y se calienta con su propio audio. La pista seleccionada se dibuja más grande, una muteada se oscurece, una
+se hincha y se calienta con su propio audio (0.8.5: en una grilla de seis celdas, como la maqueta, con bichitos nadando
+entre ellas; ver [LENTE en todo](#lente-en-todo-085)). La pista seleccionada se dibuja más grande, una muteada se oscurece, una
 pista dormida (TRACKS 4) se dibuja como muteada. En el **MIXER**, las pistas dormidas aparecen en gris y dicen OFF.
 
-Los **diálogos** preguntan antes de cualquier cosa destructiva: **OCT− NO**, **OCT+ YES**.
+Los **diálogos** preguntan antes de cualquier cosa destructiva: **OCT− NO**, **OCT+ YES**. (0.8.5, como la maqueta)
+Llevan las pestañas **NOTICE · DICE · NAME**: una pregunta es una tarjeta bajo una regla violeta con sus dos botones
+(YES en el acento); el dado de una parte (EDIT, SEQ, LFO, FX + SELECT) muestra **BEFORE** y **NOW** lado a lado (el
+ser del sonido antes y ahora, los pasos, los valores del LFO o de los efectos) sobre una franja **KEEP DICED …? ·
+SELECT: DICE AGAIN · OCT− CANCEL · OCT+ OK**; un mensaje en una página con lente aparece también en su panel, como
+aviso (el encabezado también lo dice; no sobre los seres de HOME); NAME tiene sus tarjetas CURSOR, CHAR, LEN y OCT+
+SAVE / WRITE sobre el nombre, las letras de las teclas y las funciones de las teclas negras.
 
 ---
 
@@ -181,12 +195,12 @@ Los **diálogos** preguntan antes de cualquier cosa destructiva: **OCT− NO**, 
 
 - **Tocá** un botón de página: sus páginas. Tocalo de nuevo: la siguiente página de esa familia. Desde otra familia
   volvés a la página donde estuviste por última vez.
-- **HOME** vuelve al ecosistema.
+- **HOME** vuelve al ecosistema; en HOME un toque cambia los dos juegos de su nivel (las perillas de HOME / las macros).
 - **FX es una lente** (0.8.5; hasta la 0.8.4 secciones y dos toques rápidos): SELECT hace zoom **TRACK ↔ BUSES ↔
   EFFECT** (pista, buses, efecto), un toque de FX va a lo siguiente del nivel; PRESETS elige el módulo en BUSES y
   EFFECT. Ver [9](#la-lente-de-fx-track--buses--effect).
-- **Girá SELECT** para recorrer las páginas de la sección en la que estás (las de EDIT en una página EDIT), una por paso, frenando en la primera y la última; el nombre de la página aparece un momento sobre el pie.
-  En HOME abre GEN, el generador de temas.
+- **Girá SELECT** para hacer zoom en la lente en la que estás (0.8.5: cada parte es una; hasta 0.8.4 recorría las páginas de la sección), un nivel por paso, frenando en el primero y el último; la lente de una capa mantenida va con **ALGORITHM** (SELECT sigue con sus combinaciones).
+  En HOME hace zoom ECO ↔ BEING ↔ GEN (GEN: el generador de temas).
 - **SEQ es una lente** (LENTE, 0.8.3): SELECT hace zoom entre el **PATRÓN** entero, un **COMPÁS** y un **PASO**, y un
   toque de SEQ recorre los juegos de perillas del nivel en el que estás. Ver [6](#cómo-moverse-lente).
 - **SAVE también es una lente** (0.8.5): SELECT hace zoom **LIBRARY ↔ PROJECT ↔ SOUND** (biblioteca, proyecto,
@@ -200,6 +214,63 @@ Los **diálogos** preguntan antes de cualquier cosa destructiva: **OCT− NO**, 
 - Algunas páginas solo aparecen cuando corresponden: las páginas de operadores de FM6 en una pista FM6, las de DRUM-X
   en una pista DRUM, RETRIG en LOFI BYTE/FLOAT, y con **LOAD ECO** se ocultan las páginas SLICER y CHORUS.
 
+### LENTE en todo (0.8.5)
+
+Todo el instrumento funciona como la lente del secuenciador (el diseño que aprobó el dueño, la maqueta HTML "LENTE"):
+**SELECT hace zoom entre tres niveles** (sin dar la vuelta), un nivel tiene uno o más **juegos** de perillas y el
+**toque de su botón los recorre**, las **pestañas de nivel** van debajo del encabezado (la del nivel en el que estás
+rellena de violeta), y el pie dice **LENTE · NIVEL · JUEGO** con el lugar del juego a la derecha (**1/2**). Cada parte
+recuerda su nivel y el juego de cada nivel; su botón desde otro lado te devuelve ahí.
+
+| Parte | Niveles (SELECT) | Juegos (toque) | PRESETS |
+| --- | --- | --- | --- |
+| **HOME** | **ECO** (los seis seres) · **BEING** (el ser de la pista, sus perillas como órganos) · **GEN** (el generador) | ECO: HOME / MACROS · BEING: HOME / ROUTES · GEN: GEN 1/3 → 2/3 → 3/3 (un toque de HOME cada uno) | los sonidos (GEN: el GENRE) |
+| **GLO** | **MIX** · **GLOBAL** · **SYSTEM** | MIX: MIXER / SENDS (un toque de GLO sigue al nivel siguiente, en ronda) | los sonidos |
+| **SCL · ARP** | **KEY** · **CHORD** · **ARP** | KEY · CHORD · ARP: ARP / ARP 2 (SCL alterna KEY ↔ CHORD, ARP va a ARP) | KEY: ROOT · CHORD, ARP: la pista |
+| **LFO** | **MOD** (la matriz como red) · **LFO** · **MSEQ** (abre en LFO) | MOD · LFO: LFO / LFO DEST · MSEQ: MSEQ / MSEQ 2 | MOD: el slot · LFO: la pista · MSEQ: el paso |
+| **ENV** | **TRACKS** (las seis envolventes) · **ENV** (la de la pista) · **STAGE** (una etapa) | TRACKS: ENV / DEST · ENV: ENV / ENV DEST · STAGE | TRACKS, ENV: la pista · STAGE: la etapa |
+| **EDIT** | **SOUND** (EDIT 1 / EDIT 2; DRUM: el kit) · **TONE** (el filtro, las voces) · el detalle: **FOCUS** (un sinte), **OPERATOR** (FM6), **SOUND** (DRUM: un sonido) | SOUND: EDIT 1 · EDIT 2 (DRUM: KIT · KIT 2 · KIT 3) · TONE: FILTER · MORPH · RETRIG · ROTOR · VOICE · VOICE 2, las que tenga el motor (DRUM: X-MOD · FILTER · STEREO · LEVELS · LEVELS 2 · VOICE) · FOCUS · OPERATOR: OPERATOR · OP ENV · OPERATOR 2 · DRUM: SOUND 1–4 | SOUND, TONE: los sonidos · el detalle: lo de KNOB 1 (el parámetro, el operador, el sonido del kit) |
+
+- **ECO**: los seres de las seis pistas en una grilla, cada uno nadando en su celda con su sonido (un golpe lo
+  empuja), su nombre debajo (**T1 ANALOG**; MUTE, OFF si duerme), el seleccionado más grande en un aro violeta.
+  Alrededor, **bichitos**: ciliados, esporas, células a la deriva, flagelados y diatomeas diminutos que deambulan, se
+  juntan alrededor de las pistas que suenan, se dispersan cuando un ser recibe un golpe y laten con la salida (los
+  dibuja solo la pantalla: nada del tiempo del sonido). **MACROS**: KNOB 1–4 son **M1–M4** (las macros, como LFO
+  mantenido), las rutas contadas arriba a la izquierda, LATCH a la derecha.
+- **BEING**: el ser de la pista grande, sus cuatro perillas de HOME como órganos en las esquinas (un medidor cada una,
+  su valor, una vena hasta el cuerpo), el nombre del sonido debajo. **ROUTES**: M1–M4 a la izquierda con sus rutas
+  dibujadas hasta donde van (**T2 CUT+62**).
+- **ENV** › **TRACKS**: las envolventes de las seis pistas como mosaicos (la seleccionada teñida, con su nivel actual
+  como punto; DEST: FILTER, PITCH y SHAPE como barras debajo de cada una); las perillas son de la pista seleccionada —
+  **PRESETS** (o ALGORITHM) elige la pista. **ENV**: la envolvente grande / las columnas de ENV DEST, como antes.
+  **STAGE** (nueva): KNOB 1 elige la etapa (ATK DEC SUS REL; también PRESETS), KNOB 2 la ajusta, KNOB 3 LOOP; la
+  envolvente entera con la etapa sombreada sobre la curva propia de la etapa, grande, y su tiempo.
+- **GLO** › **MIX**: las seis pistas como tiras (MIXER: LEVEL con el vúmetro, PAN, REV; **SENDS**, nueva: DIST,
+  CHORUS, DLY y REV de cada pista como cuatro barras, las perillas de la pista seleccionada). **GLOBAL**: el compás de
+  semicorcheas, como antes. **SYSTEM**: las pistas que suenan como fichas, los tres ajustes de LOAD (encendido el
+  elegido), la ruta MIDI, la carga de CPU de los últimos segundos como una línea.
+- **SCL · ARP** › **KEY**: las doce notas en un círculo (C arriba), las de la escala encendidas y unidas, ROOT en el
+  acento con el nombre de la escala en el medio, QUANT y ALL TR a la derecha, la escala en un teclado debajo; PRESETS
+  fija ROOT. **CHORD**: el acorde que toca ahora cada grado de la tonalidad (I–VII, como lo tocaría una tecla: una nota
+  si CHORD está en OFF o la voz no es POLY). **ARP** / **ARP 2**: "MODE · RATE · OCT" y el patrón que toca sobre una
+  tríada (GATE el largo de las celdas, SWING los contratiempos tarde, PROB algunas fuera); en OFF lo dice. PRESETS en
+  CHORD y ARP: la pista.
+- **LFO · MOD** › **MOD**: la matriz como red — las fuentes a la izquierda (encendidas las que lee un slot), una curva
+  de la fuente de cada slot a su caja **D1–D4** a la derecha (DEST, AMT como barra), el slot elegido con KNOB 1
+  enmarcado con un pulso que corre por su curva; PRESETS elige el slot. **LFO**: la onda bajo "RATE · WAVE" / **LFO
+  DEST**: el LFO chico a la izquierda, los cuatro montos como filas encendidas por lo que el LFO manda ahora; PRESETS la
+  pista. **MSEQ** / **MSEQ 2**: los dieciséis pasos bajo su leyenda; PRESETS el paso.
+- **EDIT** › **SOUND**: el ser del motor a la izquierda (vivo con el sonido, el nombre de la página arriba, el del
+  sonido abajo), el osciloscopio en un pozo y los ocho parámetros E como fichas a la derecha, encendidas las cuatro de
+  la página. **TONE**: **FILTER** dibuja la respuesta de TYPE en CUT con su pico de RES (LP, HP, BP, COMB), CUT una
+  línea, DRIVE / DIST una fila de celdas; **VOICE** / **VOICE 2** las voces una por fila, tan llenas como suenan,
+  VOICE y PRIO (VOICE 2: ALLOC), la curva de GLIDE; las demás conservan su dibujo. **FOCUS** (nueva): un parámetro E
+  grande como medidor — KNOB 1 lo elige (E1–E8), KNOB 2 lo ajusta, KNOB 3 la **fuente** del slot de MOD que apunta a
+  él (subida desde OFF la toma un slot libre, con ese parámetro como DEST; de vuelta a OFF lo libera), KNOB 4 el
+  **AMT** de ese slot; E1–E8 como pestañas abajo.
+- **GEN** es el generador (como HOME mantenido + SELECT, desde cualquier página): un **toque de HOME** cambia la
+  página, **PRESETS** el GENRE, **OCT+** arma la pieza, **OCT−** lo cierra (a ECO), **SELECT** a la izquierda vuelve a BEING.
+
 ### Cada página y sus cuatro perillas
 
 "—" significa una tarjeta vacía. Una tarjeta de "acción" elegida (girá la perilla a la derecha) queda teñida de
@@ -211,6 +282,7 @@ violeta, con el nombre violeta, y dice **OCT+**; apretá OCT+ para ejecutarla.
 | --- | --- | --- | --- | --- |
 | ENV | ATK | DEC | SUS | REL |
 | ENV DEST | FILTER | PITCH | SHAPE | LOOP |
+| STAGE (0.8.5) | STAGE (ATK DEC SUS REL) | su valor | LOOP | — |
 
 **LFO** (por pista)
 
@@ -271,12 +343,15 @@ violeta, con el nombre violeta, y dice **OCT+**; apretá OCT+ para ejecutarla.
 | LEVELS | KICK | SNARE | CLAP | HATCL | DRUM |
 | LEVELS 2 | HATOP | TOM | RIM | BELL | DRUM |
 | VOICE | VOICE | GLIDE | MODE | PRIO | todos los motores |
+| VOICE 2 (0.8.5) | ALLOC | DETUNE (la apertura de UNI) | — | — | todos menos DRUM |
+| FOCUS (0.8.5) | PARAM (E1–E8) | su valor | SRC (el slot de MOD sobre él) | AMT | los sintes (no FM6, DRUM) |
 
 **GLO** (MIXER es por pista; GLOBAL y SYSTEM son globales)
 
 | Página | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 | --- | --- | --- | --- | --- |
 | MIXER | LEVEL | PAN | REV | MUTE (derecha ON, izquierda OFF) |
+| SENDS (0.8.5) | DIST | CHORUS | DLY | REV (los de la pista seleccionada, como FX > SENDS) |
 | GLOBAL | BPM | SWING | CLOCK | TUNE |
 | SYSTEM | TRACKS | LOAD | ROUTE | CPU (%) |
 
@@ -323,6 +398,12 @@ PRESETS elige el compás en PATRÓN y mueve el cursor de paso en COMPÁS y PASO 
 niveles se llaman como en el equipo: PATTERN, BAR y STEP.
 
 ### Las capas (mantené el botón)
+
+(0.8.5) Una capa mantenida también es una lente, como la maqueta: **girá ALGORITHM mientras mantenés el botón** para
+ir **MAP · KNOBS · STATE** (recuerda el nivel; SELECT conserva sus combinaciones: GLO + SELECT el tempo, los dados).
+**MAP**: el mapa de las teclas, una celda por tecla con su nombre (sin íconos); **KNOBS**: las cuatro tarjetas como
+medidores; **STATE**: lo que hacen las teclas, perillas y botones (las ayudas del pie hasta 0.8.4) y lo que está
+activo (FX: los efectos mantenidos). El pie es la miga de pan, **LENTE · MAP · FX**.
 
 **FX — efectos punch-in** (detalles en [11](#11-tocar-en-vivo))
 
@@ -1033,10 +1114,14 @@ Mantené **SAVE**:
 
 ### GEN — el generador de temas (HOME + SELECT)
 
-En **HOME**, girá **SELECT** (o mantené HOME y girá SELECT, desde cualquier página). Se abre la pantalla
-**GENERATOR**: tres páginas de ajustes, **SELECT** cambia de página, **KNOB 1–4** fijan los cuatro valores que se
-ven, **OCT+** arma la pieza y **HOME** (u OCT−) cierra la pantalla (la pieza queda; **UNDO**, GLO + G4, devuelve lo que había
-antes). **PLAY** arranca y para el transporte sin salir de la pantalla (0.6.97).
+En **HOME**, girá **SELECT** dos pasos a la derecha (0.8.5: ECO → BEING → GEN, la lente de HOME), o mantené HOME y
+girá SELECT, desde cualquier página. El **GENERATOR** se abre como el último nivel de HOME: tres páginas de ajustes,
+un **toque de HOME** cambia de página (0.8.5; antes SELECT), **KNOB 1–4** fijan los cuatro valores que se ven
+(**PRESETS**: el GENRE), **OCT+** arma la pieza y **OCT−** cierra la pantalla (la pieza queda; **UNDO**, GLO + G4,
+devuelve lo que había antes); **SELECT** a la izquierda vuelve a BEING. El panel muestra las cinco partes como filas
+(las que pesan las perillas de la página, encendidas) con un adelanto de su densidad y su calor, las secciones de la
+FORM como fichas de colores, la última pieza y **OCT+ MAKE**. **PLAY** arranca y para el transporte sin salir de la
+pantalla (0.6.97).
 
 | Página | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 |---|---|---|---|---|
@@ -1252,7 +1337,11 @@ sus perillas son las de siempre, más una: **BUSES**.
 - **FX desde otra página** vuelve a la página FX que dejaste. SELECT desde EFFECT vuelve a BUSES (el módulo queda
   elegido), desde BUSES a TRACK en el juego en el que lo dejaste.
 - El pie dice **FX · BUSES** (la lente, el nivel); el encabezado muestra la pista, **T1**, en naranja.
-- Los dibujos siguen a los valores (un giro los redibuja); el nivel de MASTER se mueve con el sonido.
+- Los dibujos siguen a los valores (un giro los redibuja) y, mientras suena o reproduce, al sonido (0.8.5, FX en
+  vivo): los ecos se inflan con el nivel y un pulso corre por ellos, la cola de la reverb se infla y una línea la
+  recorre, las ondas del chorus corren a RATE, el slicer enmarca el paso que suena, el medidor de MASTER sigue la
+  salida, el cabezal de PUNCH recorre el carril, el nivel de DIST es un punto en su curva, el punto de AUTO PAN oscila.
+  Detenido y en silencio quedan quietos (los dibuja solo la pantalla; nada del tiempo del audio).
 
 ### Por pista
 
@@ -1648,6 +1737,12 @@ la pista seleccionada.
 (±50).
 
 ### El MENU (mantené HOME)
+
+(0.8.5) Es una lente, como la maqueta: **SELECT** hace zoom **MENU · TAB · ROW** (abre en TAB). **MENU**: las cuatro
+pestañas como mosaicos con sus filas y valores (PRESETS elige la pestaña); **TAB**: las filas de la pestaña, las cuatro
+de la fila elegida como tarjetas (ROWS 1–4 / ROWS 5–6) con el número de su perilla; **ROW**: los valores de la fila
+elegida como fichas (COLOR: los colores de cada paleta), las tarjetas TAB, ROW y su valor. El encabezado dice MENU ·
+DISPLAY. ALGORITHM, PRESETS, cualquier perilla y OCT+ / OCT− como antes.
 
 **ALGORITHM** cambia de pestaña, **PRESETS** se mueve entre filas, **cualquier perilla** u **OCT+ / OCT−** cambia el
 valor. HOME lo cierra (en ese momento se guarda la configuración).

@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.8.6).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.8.7).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
   **The dice starts in EXPLORE** (0.8.6): HOME + SELECT opens GEN on a choice that follows no genre and breaks every
   rule (any tempo, odd metres and polyrhythm, exotic modes, any engine on any role, DRUM-X octaves, PLAYHEADS, MUTATE),
   each seed a very different piece, still in the key its SCALE and CHORD pages show. RANDOM and the 43 genres follow.
@@ -544,6 +544,82 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### v0.8.7
+- **The whole system is LENTE, as the approved HTML mock-up**: every part a lens of three levels that **SELECT** zooms
+  (no wrap), a button's tap going round the level's sets, the levels as three tabs on top and "LENTE · LEVEL · SET k/n" at
+  the foot. On top of SEQ, SAVE and FX (0.8.5) now HOME, EDIT, ENV, LFO · MOD, SCL · ARP, GLO, the MENU, the held
+  layers and the dialogs. Every page, knob and parameter is still there (ui_test checks that every page an engine shows
+  sits in a level of its lens). The sound is the same: every golden render and CPU baseline unchanged.
+- **FX's pictures live again**: while it plays or sounds, the echoes swell and a pulse runs along them, the reverb's
+  tail swells under a sweep, the chorus waves run at RATE, the slicer frames its step, MASTER's meter follows the
+  output, PUNCH's playhead walks the lane, DIST's level is a dot on its curve and AUTO PAN's dot swings (the panel
+  redrawn every other frame while it sounds, still when silent; host draw cost: DLY's panel 48.8 µs).
+- **No icons anywhere, as the mock-up**: the last ones (the header's NO FILE, BPM LOCK and SONG marks, MENU > LARGE's
+  card icons, the calibration title, the stars, the song list's marks) are text or a few drawn pixels; the Fukiai icon
+  font is no longer in the image (11.7 KB of flash back; FELUCCA_ICONS now 0 by default).
+- **The dialogs as the approved mock-up**: tabs NOTICE · DICE · NAME. A question is a card under a violet rule with
+  OCT− NO / OCT+ YES (no warning icon); a part's dice shows BEFORE and NOW side by side (the being then and now, the
+  steps, the values) over a KEEP DICED …? strip, SELECT still re-rolling; a message on a lens page is also a toast in
+  its panel; NAME has the CURSOR, CHAR, LEN, OCT+ cards over the name and its keys.
+- **The held layers are lenses, as the approved mock-up**: ALGORITHM while the button is held goes **MAP · KNOBS ·
+  STATE** (SELECT keeps the layers' combos, so ALGORITHM is the one that was free). MAP: the keys' cells with their
+  names (no icons); KNOBS: the four cards as gauges; STATE: the key hints (were the footer) and what is on. The footer
+  is the breadcrumb.
+- **The MENU is a lens, as the approved mock-up**: SELECT zooms **MENU · TAB · ROW** (it opens at TAB). MENU: the four
+  tabs as tiles with their rows and values; TAB: the rows, the selected row's four as cards (ROWS 1–4 / 5–6); ROW: the
+  row's values as chips (COLOR: each palette's colours). The header says MENU · DISPLAY; ALGORITHM, PRESETS, the knobs
+  and OCT± as before; ABOUT as before. The tab icons, the switches and the sliding bar are gone.
+- **GLO is a lens, as the approved mock-up**: **MIX · GLOBAL · SYSTEM**; a GLO tap goes MIXER → SENDS → GLOBAL →
+  SYSTEM → MIXER. SENDS is new: each track's DIST, CHORUS, DLY and REV as bars, the knobs the selected track's (as FX >
+  SENDS). SYSTEM draws the tracks that play, LOAD's three settings, MIDI's route and the CPU load as a line (was the
+  scope).
+- **SCL · ARP is a lens, as the approved mock-up**: **KEY · CHORD · ARP** (SCL taps KEY ↔ CHORD, ARP goes to ARP and
+  taps ARP ↔ ARP 2). KEY: the notes round a circle with the scale joined, ROOT large, a keyboard under it (was twelve
+  bars); CHORD: the chord every degree plays now (chord_build's, as a key would); ARP: the pattern it plays over a triad
+  (was the scope; OFF: "ARP OFF"). PRESETS: ROOT on KEY, the track on CHORD and ARP.
+- **LFO · MOD is a lens, as the approved mock-up**: **MOD · LFO · MSEQ** (it opens on LFO). MOD: the matrix as a net,
+  the sources down the left, each slot's curve to its box D1–D4 (DEST, AMT), the slot picked framed with a pulse running
+  along it (was a list); LFO under its rate and wave / LFO DEST: the LFO small and the four amounts as rows lit live;
+  MSEQ / MSEQ 2 under their captions. PRESETS: the slot, the track, the step.
+- **ENV is a lens, as the approved mock-up**: **TRACKS · ENV · STAGE** (it opens on ENV). TRACKS: the six tracks'
+  envelopes as tiles, the selected one tinted with its level live (DEST: the three amounts under each), PRESETS picks
+  the track; ENV: the envelope / ENV DEST as before; STAGE, a new page: KNOB 1 the stage, KNOB 2 its value, KNOB 3 LOOP,
+  the stage shaded on the envelope over its own curve large.
+- **EDIT is a lens, as the approved mock-up**: **SOUND · TONE · the detail**, SELECT zooms, an EDIT tap goes round the
+  level's sets. SOUND: the engine's being on the left (graph_being's, alive with the sound; WHEEL's and FM6's EDIT 1 / 2
+  too, their old pictures gone), the scope in a well and the eight E parameters as chips; DRUM keeps its colony. TONE:
+  FILTER draws the response of TYPE at CUT with RES (was the scope), VOICE and the new **VOICE 2** page (ALLOC,
+  UNISON's DETUNE, both unreachable before) the voices one a row and GLIDE's curve; MORPH, RETRIG, ROTOR and the kit's
+  keep theirs. The detail: FM6's OPERATOR · OP ENV · OPERATOR 2, DRUM's SOUND 1–4, and on the other synths the new
+  **FOCUS**: one E parameter as a gauge, KNOB 3 / 4 the source and amount of the MOD slot aimed at it (a free slot
+  taken from OFF). PRESETS: the sounds on SOUND and TONE, KNOB 1's on the detail.
+- **HOME is a lens, as the approved mock-up** (LENTE everywhere): **ECO · BEING · GEN**, SELECT zooms. ECO: the six
+  beings on a grid (the mock-up's places), each swimming in its cell with its sound, its name under it, the selected one
+  in a violet ring; MACROS (a HOME tap): KNOB 1–4 are M1–M4, the routes counted, LATCH shown. BEING: the track's being
+  large with its four HOME knobs as organs at the corners / ROUTES: M1–M4 and where they go. GEN is the generator as the
+  last level (a HOME tap its page, PRESETS the GENRE, OCT− closes to ECO, SELECT left back to BEING; HOME held + SELECT
+  still opens it from anywhere). The beings are JIANT's own (the same species, isotherms, swelling, swimming and kicks
+  with each track's sound); new **critters** swim round them: 36 tiny ciliates, spores, drifting cells, flagellates and
+  diatoms that gather round the tracks that sound, scatter on a hit and pulse with the output (drawn by the screen
+  alone, nothing in the audio path). MENU > LARGE keeps its tall cards under the tabs (the scope a strip).
+- **A small crisp mono face, as the mock-up's labels.** The cards' names, the level tabs, the breadcrumb, the header's
+  middle words and the lens panels' captions and chips (SEQ's STEP chips and notes, SAVE's tiles and slots, FX's tiles
+  and captions) are set in a new 5 x 7 pixel font on a 6 px pitch (capitals 7 px, was 9 in the smallest antialiased
+  face), one bit a pixel, capitals, lower case (the units "ms", "Hz" as the mock-up writes them), figures and
+  punctuation (tools/gen_px_font.py: 94 glyphs, 1127 B of flash); the values keep their face. Names that did not fit now do ("DEEP", "WOBB" in the slots, cut without an ellipsis as the
+  mock-up cuts them).
+- **With 0.8.5 / 0.8.6 in the lenses**: VOICE's **WORDS** is a set of EDIT's **TONE** level on a VOICE track (FILTER ·
+  MORPH · RETRIG · ROTOR · VOICE · VOICE 2 · WORDS), its picture under the lens's tabs and cards; the LYRIC typing screen
+  is the NAME dialog (CURSOR · CHAR · LEN n/63 · OCT+ SET, the field's window following the cursor, "LENTE · LYRIC · K3
+  DICE · OCT- CANCEL" at the foot). The DRUM grid's HIT card names its sound's mode (x2 x4 x8 SHORT GHOST FLAM), OCT on
+  a DRUM track still names the octave, COMP's TOUCH and ECHO EVEN read as before. HOME's **GEN** level opens on
+  **EXPLORE** (GENRE: EXPLORE, RANDOM, then the 43 genres; PRESETS too).
+- **What 0.8.7 costs** (0.8.6 → 0.8.7): flash image 561072 → 567968 B (+6.9 KB: the lenses' code and pictures, the
+  5 x 7 face 1.1 KB, against the icon font's 11.7 KB and the replaced panels' 7.7 KB taken out); the app slot (581564 B)
+  keeps 13596 B free. RAM .data+.bss 88960 B of 98304 (+620: each lens's level and sets, the critters); LOWBUF 18232 B of
+  28672 and the pool 268412 B (spare 52096 B) unchanged; RAM code 22112 B of 24576. No audio code changed (WHEEL's
+  drw_level kept out of line, as its cost was measured): every golden render and CPU baseline as before.
 
 ### v0.8.6
 - **The dice always starts in EXPLORE** (the owner: "el dice siempre empieza en modo EXPLORE, que es un modo que no

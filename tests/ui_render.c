@@ -659,7 +659,10 @@ enum { S_HOME, S_HOME_IDLE, S_MESSAGE, S_MESSAGE_KEY, S_MESSAGE_NOFILE, S_PRESET
        S_HEAD_BPM_LOCKED, S_HEAD_GLO_TURN, S_HEAD_DOWNBEAT, S_HEAD_BEAT_2,
        S_SAVE_LIB, S_SAVE_TOOLS, S_SAVE_PROJ, S_SAVE_ARR, S_SAVE_SOUND, S_SAVE_PRESETS,
        S_FXL_SENDS, S_FXL_DIST, S_FXL_PAN, S_FXL_BUSES, S_FXL_DELAY, S_FXL_DELAY2, S_FXL_REVERB, S_FXL_SLICER, S_FXL_MASTER,
-       S_DRUM_X4, S_DRUM_GHOST, S_DRUM_OCT_UP, S_DRUM_OCT_DN, S_COMP_TOUCH, S_COMP_EVEN,
+       S_HOME_MACROS, S_HOME_BEING, S_HOME_ROUTES, S_GEN_LEAD,
+       S_ED_FILTER, S_ED_FILTER_BP, S_ED_VOICE2, S_ED_FOCUS, S_ED_FOCUS_MOD, S_ED_OPERATOR,
+       S_ENV_TRACKS, S_ENV_TRACKS_DEST, S_ENV_STAGE, S_ENV_STAGE_SUS, S_MSEQ2, S_KEY_CHORD, S_KEY_CHORD_OFF, S_KEY_ARP, S_KEY_ARP2, S_GLO_SENDS, S_MENU_ROW, S_MENU_ROW_LEDS, S_LY_FX_KNOBS, S_LY_FX_STATE, S_LY_GLO_STATE, S_DLG_DICE_SOUND, S_DLG_DICE_SEQ, S_DLG_DICE_FX,
+       S_DRUM_X4, S_DRUM_GHOST, S_DRUM_OCT_UP, S_DRUM_OCT_DN, S_COMP_TOUCH, S_COMP_EVEN, S_GEN_EXPLORE,
        S_MIXER_T4, S_HOME_T4, S_MOCK_HOME, S_MOCK_PRESETS, S_MOCK_SEQ, S_MOCK_DRUM, S_MOCK_MIXER, S_MOCK_DIALOG, S_MOCK_MENU, S_COUNT };
 static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "message", "message_key", "message_nofile", "presets", "presets_nofav", "user",
     "phrases", "project", "tools", "song_empty", "song", "step", "pattern", "chance", "comp", "comp_trig", "comp_echo", "mutate", "morph", "dx_image", "dx_send", "page_flash", "page_flash_home", "fugue", "motion", "drum",
@@ -685,7 +688,10 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "message", "mes
     "save_library", "save_tools", "save_project", "save_arrange", "save_sound", "save_presets",
     "fx_track_sends", "fx_track_dist", "fx_track_pan", "fx_buses", "fx_effect_delay", "fx_effect_delay2", "fx_effect_reverb",
     "fx_effect_slicer", "fx_effect_master",
-    "drum_hit_x4", "drum_hit_ghost", "drum_oct_x8", "drum_oct_flam", "comp_touch", "comp_echo_even",
+    "home_macros", "home_being", "home_routes", "gen_lead",
+    "ed_filter", "ed_filter_bp", "ed_voice2", "ed_focus", "ed_focus_mod", "ed_operator",
+    "env_tracks", "env_tracks_dest", "env_stage", "env_stage_sus", "mseq2", "key_chord", "key_chord_off", "key_arp", "key_arp2", "glo_sends", "menu_row", "menu_row_leds", "ly_fx_knobs", "ly_fx_state", "ly_glo_state", "dlg_dice_sound", "dlg_dice_seq", "dlg_dice_fx",
+    "drum_hit_x4", "drum_hit_ghost", "drum_oct_x8", "drum_oct_flam", "comp_touch", "comp_echo_even", "gen_explore",
     "mixer_tracks4", "home_tracks4", "mock_home", "mock_presets", "mock_seq", "mock_drum", "mock_mixer", "mock_dialog", "mock_menu"};
 
 /* the scenes of the UI design screens: the state the UI-redesign
@@ -962,6 +968,66 @@ static void setup(int s)
     case S_MIXER_T4:                             /* (0.6.22) TRACKS 4: T5, T6 asleep, grey, OFF */
         go_page(GR_TRK); trk_live = 4; break;
     case S_HOME_T4: trk_live = 4; break;
+    case S_HOME_MACROS: case S_HOME_BEING: case S_HOME_ROUTES: {   /* (0.8.5) HOME's lens: MACROS, BEING, ROUTES */
+        uint32_t k;
+        ui.hlv = s != S_HOME_MACROS;
+        ui.hset[s == S_HOME_MACROS ? 0 : 1] = s != S_HOME_BEING;
+        for (k = 0; k < NTRK; k++) trk[k].peak = (int32_t)(1500u + k * 900u);
+        trk[1].p[P_M1SRC] = MS_M1; trk[1].p[P_M1DST] = MD_CUT; trk[1].p[P_M1AMT] = 40;
+        trk[3].p[P_M1SRC + 3] = MS_M1 + 2; trk[3].p[P_M1DST + 3] = MD_E1; trk[3].p[P_M1AMT + 3] = -20;
+        macro_v[0] = 40; macro_v[1] = 90; macro_v[2] = 20; macro_v[3] = 64;
+        if (s == S_HOME_BEING) { ui.hot_col = 2; ui.hot_t = 30; }
+        break;
+    }
+    case S_ED_FILTER: go_title("FILTER"); TSEL->p[P_E5] = 90; break;   /* (0.8.5) EDIT's lens: TONE, FILTER (ANALOG) */
+    case S_ED_FILTER_BP: eng(7); go_title("FILTER"); TSEL->p[P_FTYPE] = 2; TSEL->p[P_DIST] = 60; ui.hot_col = 1; ui.hot_t = 30; break;
+    case S_ED_VOICE2: go_title("VOICE 2"); TSEL->p[P_VOICE] = 3; trk[0].v[0].stage = 2; trk[0].v[0].env = 9u << 20; break;
+    case S_ED_FOCUS: case S_ED_FOCUS_MOD:              /* .. FOCUS: CUT, (MOD) M2 moving it */
+        go_title("FOCUS"); ui.focus = 4;
+        if (s == S_ED_FOCUS_MOD) { TSEL->p[P_M2SRC] = 1; TSEL->p[P_M2DST] = MD_E1 + 4; TSEL->p[P_M2AMT] = 40; }
+        break;
+    case S_ENV_TRACKS: case S_ENV_TRACKS_DEST:          /* (0.8.5) ENV's lens: TRACKS (ENV / DEST), T2 sounding */
+        song.sel = 1; go_title(s == S_ENV_TRACKS ? "ENV" : "ENV DEST"); ui.pdlv[PD_ENV] = 1;   /* (TRACKS: 0 ^ 1) */
+        trk[1].v[0].stage = 2; trk[1].v[0].env = 10u << 20; trk[2].p[P_ED_FLT] = 60; trk[2].p[P_ED_PIT] = -40;
+        trk[1].p[P_ED_SHP] = 90; trk[3].p[P_MUTE] = 1;
+        break;
+    case S_ENV_STAGE: case S_ENV_STAGE_SUS:
+        go_title("STAGE"); ui.stage = s == S_ENV_STAGE ? 1 : 2; ui.hot_col = 1; ui.hot_t = 30; break;
+    case S_MSEQ2: go_title("MSEQ 2"); break;
+    case S_DLG_DICE_SOUND: case S_DLG_DICE_SEQ: case S_DLG_DICE_FX: {   /* (0.8.5) the DICE dialog: BEFORE / NOW */
+        uint32_t k = s == S_DLG_DICE_SOUND ? CF_DICE_SOUND : s == S_DLG_DICE_SEQ ? CF_DICE_SEQ : CF_DICE_FX;
+        go_title("EDIT 1"); song.playing = 0;
+        dk_keep(k); dk_vis_take();
+        if (k == CF_DICE_SOUND) { TSEL->p[ENGINES[TSEL->eng_req]->knob[0]] = 100; TSEL->p[ENGINES[TSEL->eng_req]->knob[2]] = 5; }
+        else if (k == CF_DICE_SEQ) for (uint32_t i = 0; i < 16u; i += 3u) { TSEL->step[i].time = ST_NOTE; TSEL->step[i].n = 1; TSEL->step[i].note[0] = (uint8_t)(48 + i); }
+        else { TSEL->p[P_DIST] = 90; TSEL->p[P_CHOR] = 60; }
+        ui.confirm = k; ui.confirm_trk = song.sel;
+        break;
+    }
+    case S_LY_FX_KNOBS: case S_LY_FX_STATE:            /* (0.8.5) a layer's lens: FX's KNOBS, STATE */
+        go_home(); ui.layer = LAYER_FX; ui.lylv = s == S_LY_FX_KNOBS ? 1 : 2;
+        perf_held = perf_act = PF_BIT(PF_R16) | PF_BIT(PF_LPF) | PF_BIT(PF_M1 + 1);
+        perf_k[0] = -40; perf_k[1] = 25; perf_k[3] = 30;
+        break;
+    case S_LY_GLO_STATE: go_home(); ui.layer = LAYER_GLO; ui.lylv = 2; break;
+    case S_MENU_ROW: case S_MENU_ROW_LEDS:             /* (0.8.5) the menu's lens, ROW: COLOR's palettes, LEDS's names */
+        ui.menu = 1; ui.mlv = 2; ui.menu_sel = s == S_MENU_ROW ? MI_COLOR : MI_LEDS; break;
+    case S_GLO_SENDS:                                  /* (0.8.5) GLO's lens: MIX > SENDS */
+        trk[0].p[P_DIST] = 30; trk[1].p[P_CHOR] = 90; trk[2].p[P_DLY] = 60; trk[3].p[P_REV] = 127; trk[4].p[P_MUTE] = 1;
+        go_title("SENDS"); ui.hot_col = 2; ui.hot_t = 30;
+        break;
+    case S_KEY_CHORD: TSEL->p[P_CHRD] = 2; TSEL->p[P_CVOI] = 1; TSEL->p[P_ROOT] = 9; TSEL->p[P_SCALE] = 2; go_title("CHORD"); break;
+    case S_KEY_CHORD_OFF: go_title("CHORD"); break;
+    case S_KEY_ARP: case S_KEY_ARP2:                   /* (0.8.5) SCL . ARP's lens: ARP on (UPDN, 2 octaves), ARP 2 */
+        TSEL->p[P_AMODE] = 3; TSEL->p[P_AOCT] = 2; TSEL->p[P_ASWING] = 40; TSEL->p[P_APROB] = 100;
+        go_title(s == S_KEY_ARP ? "ARP" : "ARP 2");
+        break;           /* (0.8.5) LFO . MOD's lens: MSEQ 2 */
+    case S_ED_OPERATOR: eng(ENGI_FM6); go_title("OPERATOR"); break;
+    case S_GEN_EXPLORE:                                 /* (0.8.6) GEN 1/3 on EXPLORE, where it opens, after a piece */
+        ui.confirm = CF_DICE_ALL; gp.page = 0; gp.hot = 0; gp.genre = GEN_EXPLORE; gp.seed = 421;
+        str_cpy(gp.last, "EXPLORE 0421", sizeof gp.last);
+        break;
+    case S_GEN_LEAD: ui.confirm = CF_DICE_ALL; gp.page = 2; gp.hot = 1; gp.form = 2; break;   /* (0.8.5) GEN 3/3, SONG */
     case S_MIXER_PAN:                            /* PAN just turned, the ends of each knob, OFF, armed while stopped */
         go_page(GR_TRK); song.playing = 0; song.sel = 1;
         trk[0].p[P_LEVEL] = 127; trk[1].p[P_LEVEL] = 0; trk[2].p[P_LEVEL] = 1; trk[3].p[P_LEVEL] = 104;
@@ -1401,8 +1467,7 @@ static void draw(int s)
         return;
     }
     ui.force = 1;
-    mt.frame = ui.frame + 7u;                         /* (the MENU's tabs settled, as when it opens) */
-    if (s == S_MENU_SLIDE) mt.pos = 0, mt.frame = ui.frame;   /* (one step of the slide from DISPLAY) */
+    if (ui.menu == 1 && !ui.mlv && s != S_MENU_SLIDE) ui.mlv = 1;   /* (0.8.5: the lens at TAB, as it opens; S_MENU_SLIDE: MENU) */
     ui_draw();
 }
 
@@ -1656,13 +1721,13 @@ static void align_sweeps(void)
                 settings_leds = (uint8_t)(k % LEDS_COUNT); ui.force = 1;   /* (every LEDS name) */
                 draw_menu();
             }
-        cur_name = st ? "sweep LINE: menu tabs sliding" : "sweep FLAT: menu tabs sliding";
-        for (i = 0; i < MI_COUNT; i++)                  /* every tab, from every place of the bar, S and M */
-            for (k = 0; k <= (MTAB_COUNT - 1u) * 16u; k++) {
-                ui.menu_sel = (uint8_t)i; ui_prefs = k & 1u ? PREF_LARGE : 0u;
-                mt.pos = (int16_t)(k * 4u); mt.frame = ui.frame - 1u; ui.force = 1;
+        cur_name = st ? "sweep LINE: menu levels" : "sweep FLAT: menu levels";
+        for (i = 0; i < MI_COUNT; i++)                  /* (0.8.5) every row on each level of the lens, S and LARGE */
+            for (k = 0; k < 6u; k++) {
+                ui.menu_sel = (uint8_t)i; ui_prefs = k & 1u ? PREF_LARGE : 0u; ui.mlv = (uint8_t)(k / 2u); ui.force = 1;
                 draw_menu();
             }
+        ui.mlv = 1;
         ui.menu = 0; ui_prefs = 0; ui_rec_prefs = 0; settings_hold = 0; settings.lowcut = 0; settings_leds = 0;
         cur_name = st ? "sweep LINE: REC layer values" : "sweep FLAT: REC layer values";
         ui.home = 1; ui.layer = LAYER_REC;              /* (the map and the cards: every value of the three, each track) */
@@ -1929,7 +1994,7 @@ int main(int argc, char **argv)
             char name[32];
             snprintf(name, sizeof name, "FM6 ALG %u", a);
             cur_name = name;
-            state(); pal(UI_GREY_INDEX); eng(ENGI_FM6); TSEL->p[P_E0] = (int16_t)a; go_title("EDIT 1");
+            state(); pal(UI_GREY_INDEX); eng(ENGI_FM6); TSEL->p[P_E0] = (int16_t)a; go_title("OPERATOR");   /* (0.8.5) */
             draw(-1);
             lint();
             mono_check();
@@ -1943,7 +2008,9 @@ int main(int argc, char **argv)
     {
         static const int COST[] = {S_HOME, S_PRESETS, S_STEP, S_ROLL_CHORDS, S_DRUM, S_MIXER, S_MENU, S_ABOUT_CREDITS, S_CONFIRM_PROJ,
                                    S_PATTERN, S_COMP, S_LENTE_PAT, S_LENTE_BAR, S_LENTE_STEP, S_LENTE_STEP_DRUM,
-                                   S_SAVE_LIB, S_SAVE_PROJ, S_SAVE_SOUND, S_FXL_SENDS, S_FXL_BUSES, S_FXL_REVERB};   /* (0.8.3:
+                                   S_SAVE_LIB, S_SAVE_PROJ, S_SAVE_SOUND, S_FXL_SENDS, S_FXL_BUSES, S_FXL_REVERB,
+                                   S_HOME_BEING, S_EDIT_ANALOG, S_ED_FILTER, S_ED_FOCUS, S_ENV_TRACKS, S_MOD, S_KEY_CHORD,
+                                   S_SYSTEM, S_MENU_ROW, S_LY_FX_KNOBS, S_DLG_DICE_SOUND};   /* (0.8.5: the lenses everywhere) */   /* (0.8.3:
                                                                          * LENTE's three levels) */
         enum { N = 200 };
         uint32_t i, k;
@@ -1972,7 +2039,8 @@ int main(int argc, char **argv)
         }
         {   /* the STEP page's piano roll: its panel alone redrawn, and a frame that changes nothing (the signature only) */
             static const int G[] = {S_ROLL_CHORDS, S_ROLL_PLAYING, S_DRUM, S_PATTERN, S_COMP, S_LENTE_PAT, S_LENTE_STEP,
-                                    S_SAVE_LIB, S_SAVE_SOUND, S_FXL_BUSES, S_FXL_REVERB};
+                                    S_SAVE_LIB, S_SAVE_SOUND, S_FXL_BUSES, S_FXL_REVERB, S_FXL_DELAY, S_EDIT_ANALOG,
+                                    S_ENV_TRACKS, S_MOD, S_SYSTEM};
             for (k = 0; k < sizeof G / sizeof G[0]; k++) {
                 clock_t c0;
                 double tg, ti;

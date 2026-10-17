@@ -19,10 +19,12 @@ typedef struct {
     const uint8_t *ex;                  /* codes of the extra glyphs */
     uint8_t psh;                        /* log2 of the phases per glyph: g[i << psh] .. g[(i << psh) + phases - 1] */
     const uint8_t *hc;                  /* data's Huffman code (cv_alpha_hc), 0 = 2 px per byte (cv_alpha) */
+    uint8_t bits;                       /* (0.8.5) 1: data is 1 bit a pixel, no ramp (AF_X: cv_bits) */
 } aafont_t;
 typedef struct { const char *name; uint16_t bg, surf, text, theme, accent; } ui_pal_t;
 typedef struct { uint16_t off; uint8_t w; const char *label; } kc_t;
 #include "ui_fonts.h"                   /* AF_S 12 px / 400, AF_M 15 px / 500, AF_L 28 px / 600 */
+#include "ui_font_x.h"                  /* (0.8.5) AF_X: the 5 x 7 mono pixel face (tools/gen_px_font.py) */
 #include "ui_palettes.h"
 #include "ui_keycaps.h"                 /* KC_*: the keycaps / badges (tools/gen_aa_keycaps.py), KNOB_* arcs */
 #define ELLIPSIS '\x85'                 /* the ellipsis glyph of AF_S and AF_M */
@@ -472,6 +474,25 @@ static void cv_alpha_hc(int32_t x, int32_t y, uint32_t w, uint32_t h, const uint
     GFX_HOOK_PIXELS(w * h);
 }
 
+/* (0.8.5) w x h pixels of one bit each, MSB first, rows back to back, at canvas (x, y): AF_X's glyphs, crisp (the ink
+ * colour alone: rv[15]) */
+static void cv_bits(int32_t x, int32_t y, uint32_t w, uint32_t h, const uint8_t *d, const uint16_t *rv)
+{
+    uint32_t k = 0, gx, gy;
+    uint16_t c = rv[15];
+    y += cv_oy;
+    for (gy = 0; gy < h; gy++) {
+        int32_t py = y + (int32_t)gy;
+        uint16_t *row = py < cv_cy0 || py >= cv_cy1 ? 0 : cv_px + (uint32_t)py * cv_w;
+        for (gx = 0; gx < w; gx++, k++) {
+            int32_t px = x + (int32_t)gx;
+            if (row && ((d[k >> 3] >> (7u - (k & 7u))) & 1u) && (uint32_t)px < cv_w)
+                row[px] = c;
+        }
+    }
+    GFX_HOOK_PIXELS(w * h);
+}
+
 /* ------------------------------------------------------------- text --- */
 /* the glyph number of ch in f, -1 = not in the face */
 static int32_t glyph_at(const aafont_t *f, uint32_t ch)
@@ -556,6 +577,8 @@ static int32_t text_run(int32_t x, int32_t y, const aafont_t *f, const char *s, 
             int32_t gx = x + (pos >> 4) + g->bx, gy = y + g->by;
             if (!rv)
                 ;                                    /* (text_ink: measured only) */
+            else if (f->bits)
+                cv_bits(gx, gy, g->bw, g->bh, f->data + g->off, rv);
             else if (f->hc)
                 cv_alpha_hc(gx, gy, g->bw, g->bh, f->data + g->off, f->hc, rv);
             else
@@ -679,6 +702,23 @@ static int32_t cv_free_text(int32_t x, int32_t y, const aafont_t *f, const char 
     char b[48];
     int cut = text_fit(b, sizeof b, s, f, maxw);
     return cv_text_flags(x, y, f, b, fg, bg, cut ? 9u : 8u);
+}
+/* (0.8.5) free text cut to maxw without an ellipsis, as the mock-up's chips cut a name ("WOBBL"): its first characters */
+static int32_t cv_clip_text(int32_t x, int32_t y, const aafont_t *f, const char *s, uint16_t fg, uint16_t bg, int32_t maxw)
+{
+    char b[48];
+    uint32_t k = 0;
+    while (s[k] && k + 1u < sizeof b) {
+        b[k] = s[k];
+        b[k + 1u] = 0;
+        if (text_w(f, b) > maxw)
+            break;
+        k++;
+    }
+    while (k && b[k - 1u] == ' ')
+        k--;
+    b[k] = 0;
+    return cv_text_flags(x, y, f, b, fg, bg, 8u);
 }
 
 /* ---------------------------------------------------------- keycaps --- */

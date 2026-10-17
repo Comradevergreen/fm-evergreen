@@ -12,28 +12,38 @@
  * 16 steps (the pattern's open ones lit, the step playing framed), MASTER the output now as a bar over CLIP, the
  * DUCK's curve, PUNCH the lane's steps, SL PITCH its 16 pitches from the middle, the sends four bars, DIST its transfer
  * curve in a box with TYPE and TONE, AUTO PAN the swing's span with its dot; heat colours (JIANT's thermal ramp; another
- * palette: its theme toward its accent) */
+ * palette: its theme toward its accent).
+ * (0.8.5, FX live) While it sounds (playing, or the output above silence: bg_energy) they move with it: the echoes
+ * swell with the level and a pulse runs along them, the tail swells and a line sweeps it, the chorus lines run at
+ * RATE, the slicer's step playing is framed, MASTER's meter follows the output, PUNCH's playhead walks the lane, DIST's
+ * level is a dot on its curve, AUTO PAN's dot swings at RATE. Drawn on the panel's redraws only (every other frame
+ * while it sounds: graph_signature); nothing of the audio path */
 #define FXG_H(v) heat_col((int32_t)(v))                 /* (0..256) */
+static int32_t fxg_en(void) { return song.playing || bg_energy() > 2 ? 32 + bg_energy() : 0; }   /* 0: still */
 static void fxg_label(int32_t x, int32_t y, const char *s, uint16_t c, int right)
 {
-    if (right)
-        cv_text_r(x, y, &AF_S, s, c, cv_bg);
+    if (right)                                          /* (AF_X 3 rows down: S's capitals' middle) */
+        cv_text_r(x, y + 3, &AF_X, s, c, cv_bg);
     else
-        cv_text(x, y, &AF_S, s, c);
+        cv_text(x, y + 3, &AF_X, s, c);
 }
 static void fxg_delay(int32_t x, int32_t y, int32_t w, int32_t h)
 {
     char b[24];
     const char *u;
-    int32_t i, a = 1000, mix = song.g[G_DMIX], fb = song.g[G_DFDBK];
+    int32_t i, a = 1000, mix = song.g[G_DMIX], fb = song.g[G_DFDBK], en = fxg_en();
     int32_t tr = RATIO(&GP[G_DTIME], enum_rank(&GP[G_DTIME], song.g[G_DTIME])), step = w * (500 + tr) / 10000;
+    int32_t pulse = en && step > 0 ? (int32_t)(ui.frame * 2u % (uint32_t)(9 * step)) : -99;   /* (the echo running) */
     cv_rect(x, y + h - 1, w, 1, T_LINE);
     for (i = 0; i < 9 && a > 8; i++) {
         int32_t px = x + 6 + i * step, bh = (h - 14) * 9 / 10 * a / 1000 * (mix * 7 / 10 + 38) / 127;
+        int hit = pulse >= i * step && pulse < (i + 1) * step;
         if (px + 4 > x + w)
             break;
+        if (en)
+            bh = bh * (176 + clamp(en, 0, 288) * 80 / 288) / 256;
         if (bh > 0)
-            cv_rect(px, y + h - 1 - bh, 4, bh, FXG_H(64 + a * 179 / 1000));
+            cv_rect(px, y + h - 1 - bh, 4, bh, hit ? FXG_H(240) : FXG_H(64 + a * 179 / 1000));
         if (song.g[G_DPING] && w > 120) {
             b[0] = i & 1 ? 'R' : 'L';
             b[1] = 0;
@@ -41,6 +51,8 @@ static void fxg_delay(int32_t x, int32_t y, int32_t w, int32_t h)
         }
         a = a * (fb > 127 ? 127 : fb) / 127;
     }
+    if (pulse >= 0 && x + 6 + pulse + 2 <= x + w)     /* (the pulse itself, on the line) */
+        cv_rect(x + 6 + pulse, y + h - 3, 3, 2, T_TEXT);
     param_format(&GP[G_DTIME], song.g[G_DTIME], b, &u);
     if (w > 120) {
         str_cpy(b + str_len(b), " \xB7 ", 4);
@@ -52,15 +64,17 @@ static void fxg_delay(int32_t x, int32_t y, int32_t w, int32_t h)
 static void fxg_reverb(int32_t x, int32_t y, int32_t w, int32_t h)
 {
     int32_t i, sz = song.g[G_RSIZE], ty = song.g[G_RTYPE], e = 1000, k = 1000 - (5000 - sz * 4300 / 127) / (w ? w : 1);
-    int32_t top = y + 12, hh = h - 12;
+    int32_t top = y + 12, hh = h - 12, en = fxg_en(), sweep = en && w > 0 ? (int32_t)(ui.frame * 3u % (uint32_t)w) : -1;
     char b[16];
     for (i = 0; i < w; i++) {                        /* the decay, a column each: its height the envelope */
         int32_t env = i < w / 25 + 1 ? e * i / (w / 25 + 1) : e, n = 1000, ch;
         if (ty == 4) n = 500 + (bg_sin((uint32_t)(i * 65536 / (w ? w : 1) * 6)) >> 6) * 500 / 512;
         else if (ty == 1) n = 700 + (bg_sin((uint32_t)(i * 65536 / (w ? w : 1) * 14)) >> 6) * 300 / 512;
         ch = hh * 9 / 10 * env / 1000 * n / 1000;
+        if (en)                                         /* (the tail swells with the output) */
+            ch = ch * (168 + clamp(en, 0, 288) * 88 / 288) / 256;
         if (ch > 0)
-            cv_rect(x + i, top + hh - ch, 1, ch, FXG_H(218 - i * 180 / (w ? w : 1)));
+            cv_rect(x + i, top + hh - ch, 1, ch, i == sweep ? T_TEXT : FXG_H(218 - i * 180 / (w ? w : 1)));
         e = e * k / 1000;
     }
     fxg_label(x, y, N_RTYPE[clamp(ty, 0, 4)], T_MID, 0);
@@ -74,12 +88,13 @@ static void fxg_reverb(int32_t x, int32_t y, int32_t w, int32_t h)
 static void fxg_chorus(int32_t x, int32_t y, int32_t w, int32_t h)
 {
     int32_t k, i, dep = song.g[G_CDEPTH], st = song.g[G_CSTER], mid = y + 8 + (h - 8) / 2;
+    uint32_t ph = fxg_en() ? ui.frame * (uint32_t)(song.g[G_CRATE] + 8) * 48u : 0u;   /* (running at RATE while it sounds) */
     char b[16];
     for (k = 0; k < 3; k++) {
         int32_t py = 0;
         for (i = 0; i <= w; i++) {
             int32_t amp = (h - 8) * 35 / 100 * dep / 127 * (10 + 2 * k) / 10 * (128 + st) / 128;
-            int32_t yy = mid + (bg_sin((uint32_t)(i * 65536 / (w ? w : 1) * 2) + (uint32_t)k * 21000u) * amp >> 15);
+            int32_t yy = mid + (bg_sin((uint32_t)(i * 65536 / (w ? w : 1) * 2) + (uint32_t)k * 21000u + ph) * amp >> 15);
             yy = clamp(yy, y + 9, y + h - 1);
             if (i)
                 cv_line(x + i - 1, py, x + i, yy, FXG_H(77 + k * 64));
@@ -114,7 +129,7 @@ static void fxg_slicer(int32_t x, int32_t y, int32_t w, int32_t h)
         str_cpy(b + str_len(b), " \xB7 ", 4);
         str_cpy(b + str_len(b), r, 8);
     }
-    lw = text_w(&AF_S, b);
+    lw = text_w(&AF_X, b);
     fxg_label(x, y, b, T_MID, 0);
     if (w > 120) {                                   /* the tracks in it, FX */
         uint32_t n = 0;
@@ -124,8 +139,8 @@ static void fxg_slicer(int32_t x, int32_t y, int32_t w, int32_t h)
         if (!n) str_cpy(b, "NONE ", sizeof b);
         if (song.g[G_SLFX]) str_cpy(b + str_len(b), "+FX", 4);
         {   /* (at the right, clear of the mode's words: ellipsised when it must) */
-            int32_t rw = text_w(&AF_S, b), l = x + lw + 14, rx = x + w - rw < l ? l : x + w - rw;
-            cv_free_text(rx, y, &AF_S, b, T_DIM, cv_bg, x + w - rx);
+            int32_t rw = text_w(&AF_X, b), l = x + lw + 14, rx = x + w - rw < l ? l : x + w - rw;
+            cv_free_text(rx, y + 3, &AF_X, b, T_DIM, cv_bg, x + w - rx);
         }
     }
 }
@@ -165,8 +180,8 @@ static void fxg_punch(int32_t x, int32_t y, int32_t w, int32_t h)
     cw = w / steps;
     if (cw < 1) cw = 1;
     for (i = 0; i < steps && i * cw < w; i++) {
-        int on = pfx_lane_at((uint32_t)i) != 0u;
-        cv_rect(x + i * cw, y + 14, cw > 2 ? cw - 1 : 1, h - 20, on ? FXG_H(179) : T_RAISE);
+        int on = pfx_lane_at((uint32_t)i) != 0u, at = song.playing && (uint32_t)i == pfx_lane_pos();   /* (the playhead) */
+        cv_rect(x + i * cw, y + 14, cw > 2 ? cw - 1 : 1, h - 20, at ? T_TEXT : on ? FXG_H(179) : T_RAISE);
     }
     str_cpy(b, "LANE ", sizeof b);
     fmt_int(b + 5, song.g[G_PFXLEN]);
@@ -199,7 +214,7 @@ static void fxg_sends(const track_t *t, int32_t x, int32_t y, int32_t w, int32_t
         if (fh > 0)
             cv_rect(bx, y + h - 10 - fh, bw, fh, FXG_H(51 + v * 205 / 127));
         GFX_HOOK_ALIGN(bx, 0, bx + bw, 0, AL_H, "FX send name centred under its bar");
-        cv_text_in(bx, y + h - 9, bw, &AF_S, N[i], T_DIM, T_SURF);
+        cv_text_in(bx, y + h - 6, bw, &AF_X, N[i], T_DIM, T_SURF);
     }
 }
 static void fxg_dist(const track_t *t, int32_t x, int32_t y, int32_t w, int32_t h)
@@ -216,6 +231,11 @@ static void fxg_dist(const track_t *t, int32_t x, int32_t y, int32_t w, int32_t 
             cv_line_t(x + i - 1, py, x + i, yy, FXG_H(102 + d), 2);
         py = yy;
     }
+    if (fxg_en() && s > 20) {                           /* the level now, a dot on the curve */
+        int32_t xx = clamp(bg_energy(), 0, 256) * 131072 / 256, px = x + s / 2 + xx * (s / 2) / 131072;
+        int32_t yy = clamp(cy - tk_dist_y(type, xx, d ? g : 4096, d) * (s / 2 - 1) * 9 / 10 / 32767, y + 3, y + s - 4);
+        cv_rect(clamp(px, x + 3, x + s - 4) - 1, yy - 1, 3, 3, T_TEXT);
+    }
     fxg_label(x + s + 8, y + 1, N_DTYPE[type], T_MID, 0);
     str_cpy(b, "TONE ", sizeof b);
     fmt_int(b + 5, t->p[P_DTONE]);
@@ -227,11 +247,15 @@ static void fxg_pan(const track_t *t, int32_t x, int32_t y, int32_t w, int32_t h
     char b[24];
     const char *u;
     cv_rect(cx, y + 10, 1, h - 10, T_LINE);
-    fxg_label(x, mid - 4 - AF_S_CAP_Y, "L", T_DIM, 0);
-    fxg_label(x + w, mid - 4 - AF_S_CAP_Y, "R", T_DIM, 1);
+    fxg_label(x, mid - 6 - AF_X_CAP_Y, "L", T_DIM, 0);
+    fxg_label(x + w, mid - 6 - AF_X_CAP_Y, "R", T_DIM, 1);
     if (sw > 0)
         cv_rect(cx - sw, mid, 2 * sw + 1, 1, T_MID);
-    cv_rrect(cx - 4, mid - 4, 9, 9, 4, FXG_H(205), T_SURF);
+    {   /* the dot: at the middle, or swinging at RATE while it sounds (a sine over the span: the picture's, not the
+         * audio's own phase) */
+        int32_t dx = fxg_en() && sw > 0 ? bg_sin(ui.frame * (uint32_t)(t->p[P_APRATE] + 6) * 96u) * sw >> 15 : 0;
+        cv_rrect(cx + dx - 4, mid - 4, 9, 9, 4, FXG_H(205), T_SURF);
+    }
     {   /* WAVE . RATE as AUTO PAN's cards say them (its RATE by SYNC: page_desc) */
         int16_t *vp;
         const param_desc_t *dw = page_desc(cur_page(), 3, &vp), *dr;
@@ -267,7 +291,7 @@ static void fx_dots(uint32_t n, uint32_t k, const char *a, const char *b)
     str_cpy(s + str_len(s), " \xB7 ", 4);
     str_cpy(s + str_len(s), b, 16);
     GFX_HOOK_ALIGN(0, 3, 0, 12, AL_V | AL_PASS, "FX lens set name");
-    cv_text_r(234, 0, &AF_S, s, T_DIM, T_SURF);
+    cv_text_r(234, 3, &AF_X, s, T_DIM, T_SURF);
 }
 static void graph_fx_lz(const track_t *t, const page_t *pg)
 {
@@ -291,11 +315,11 @@ static void graph_fx_lz(const track_t *t, const page_t *pg)
                 cv_frame(x, y, 76, 68, T_THEME);
             cv_bg = bg;
             GFX_HOOK_ALIGN(0, y + 3, 0, y + 12, AL_V | AL_PASS, "FX module name");
-            cv_text_on(x + 4, y, &AF_S, FX_MOD[m], sel ? T_THEME : T_MID, bg);
+            cv_text_on(x + 4, y + 3, &AF_X, FX_MOD[m], sel ? T_THEME : T_MID, bg);
             if (ok)
                 fxg_mod(m, x + 4, y + 14, 68, 50);
             else
-                cv_text_on(x + 4, y + 30, &AF_S, "ECO", T_DIM, bg);
+                cv_text_on(x + 4, y + 33, &AF_X, "ECO", T_DIM, bg);
             cv_bg = T_SURF;
         }
     } else {

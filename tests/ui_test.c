@@ -1915,6 +1915,8 @@ static int test_display_preferences(void)
  * page in S and LARGE; ALGORITHM between the tabs (wraps, back at a tab's last row), PRESETS within one (wraps), any of
  * KNOB 1..4 and OCT+ / OCT- change a value, OCT+ opens CALIBRATION and ABOUT, HOME closes (OCT- not); reopened at the
  * same tab and row; the tabs slide with ANIM ON (only their strip drawn again), snap with ANIM OFF */
+static int lz_tab_lit(uint32_t l);                 /* (0.8.5: below, with the lenses' tests) */
+static int lz_crumb_is(const char *s);
 static void wdt_ms(void) { fm1_ms++; }
 static void wdt_key(void) { fm1_ms++; if (fm1_ms % 50u == 0u) fm1_in.notes = 1u; }   /* a key pressed after a moment */
 static int test_menu_tabs(void)
@@ -1927,27 +1929,13 @@ static int test_menu_tabs(void)
         ok &= n >= 1u && n <= MTAB_ROWS && f < MI_COUNT;
         for (i = 0; i < MI_COUNT; i++)                  /* its rows in one run */
             ok &= (MI_TAB[i] == t) == (i >= f && i < f + n);
-        ui.menu_sel = (uint8_t)f;
-        ui_prefs = 0;
-        ok &= mr_y(n) - mr_gap() + MP_PAD <= MK_Y - 6;
-        ui_prefs = PREF_LARGE;
-        ok &= mr_y(n) - mr_gap() + MP_PAD <= MK_Y - 6;
+        ok &= 15 + (int32_t)n * 20 <= LZ_GRAPH_H;      /* (0.8.5 the lens: TAB's rows in the panel) */
+        for (i = f; i < f + n; i++)                     /* .. ROW's chips, every value */
+            ok &= i >= MI_VALUES || 16 + (int32_t)((menu_n(i) + 2u) / 3u) * 20 <= LZ_GRAPH_H;
     }
-    ok &= MP_Y + MP_PAD + (int32_t)MTAB_ROWS * 25 - 1 + MP_PAD <= MK_Y - 6;   /* (room for MTAB_ROWS: 24 px rows 1 px apart) */
     for (i = 0; i < MI_COUNT; i++) ok &= MI_TAB[i] < MTAB_COUNT;
-    {   /* the tab bar: MT_GAP between every two tabs at every place of the slide, inside MT_X0..MT_X1 (S and LARGE) */
-        int32_t a[MTAB_COUNT], x[MTAB_COUNT], w[MTAB_COUNT], p;
-        for (n = 0; n < 2u; n++)
-            for (p = 0; p <= (int32_t)(MTAB_COUNT - 1u) * MT_ONE; p++) {
-                ui_prefs = n ? PREF_LARGE : 0u;
-                mt.pos = (int16_t)p;
-                mt_layout(a, x, w);
-                ok &= x[0] >= MT_X0 && x[MTAB_COUNT - 1u] + w[MTAB_COUNT - 1u] <= MT_X1;
-                for (t = 1; t < MTAB_COUNT; t++) ok &= x[t] - (x[t - 1u] + w[t - 1u]) == MT_GAP;
-            }
-    }
     ui_prefs = 0;
-    bad += check("MENU tabs: DISPLAY CONTROL AUDIO SYSTEM (6 6 6 6 rows), 1..6 each in a run, fit the page; tab gaps constant (S, LARGE)",
+    bad += check("MENU tabs: DISPLAY CONTROL AUDIO SYSTEM (6 6 6 6 rows), 1..6 each in a run, their rows and values fit the lens's panel",
                  ok && MTAB_COUNT == 4u && str_eq(MTAB_NAME[0], "DISPLAY") && mtab_rows(MTAB_DISPLAY) == 6u &&
                  mtab_rows(MTAB_CONTROL) == 6u && mtab_rows(MTAB_AUDIO) == 6u && mtab_rows(MTAB_SYSTEM) == 6u);   /* (0.6.58: INIT SYSTEM;
                                                                          * 0.6.72: MIDI OUT in CONTROL) */
@@ -2098,24 +2086,29 @@ static int test_menu_tabs(void)
     menu_close();
     bad += check("MENU: HOME closes ABOUT too; reopened at the tabs; a value row breathes OCT- / OCT+ where they can go", ok);
 
-    /* the slide: ANIM ON, a few frames from DISPLAY to CONTROL drawing only the tab strip; ANIM OFF, at once */
+    /* (0.8.5) the lens: it opens at TAB; SELECT zooms MENU <-> TAB <-> ROW (no wrap), the tabs and the breadcrumb follow;
+     * PRESETS on MENU the tab, on TAB and ROW the row; any knob the selected row's value on every level */
     ui_power_on();
     hold(B_HOME);
     frame();
-    turn(EN_ALGO, 1);
-    ok = mt.pos > 0 && mt.pos < MT_ONE;                 /* (a step on the way) */
-    host_blit_rows = 0; frame();
-    ok &= host_blit_rows == (uint32_t)(MP_Y - H_HEAD);  /* (only the strip) */
-    for (i = 0; i < 8u && mt.pos != MT_ONE; i++) frame();
-    ok &= mt.pos == MT_ONE && i <= 6u;
-    host_blit_rows = 0; frame();
-    ok &= host_blit_rows == 0u;                         /* (settled: nothing drawn) */
-    ui_prefs |= PREF_ANIM_OFF;
-    turn(EN_ALGO, 1);
-    ok &= mt.pos == 2 * MT_ONE;
-    ui_prefs &= ~PREF_ANIM_OFF;
+    ok = ui.menu == 1 && ui.mlv == 1u && lz_on() && lz_fam() == LZ_MENU && lz_tab_lit(1) && lz_crumb_is("LENTE \xB7 TAB \xB7 ROWS 1-4");
+    turn(EN_SELECT, -1); frame();
+    ok &= ui.mlv == 0u && lz_tab_lit(0) && lz_crumb_is("LENTE \xB7 MENU \xB7 TABS");
+    turn(EN_SELECT, -1); frame();
+    ok &= ui.mlv == 0u && ui.menu == 1;
+    turn(EN_PRESET, 1); frame();
+    ok &= menu_tab() == MTAB_CONTROL;
+    turn(EN_SELECT, 2); frame();
+    ok &= ui.mlv == 2u && lz_tab_lit(2) && lz_crumb_is("LENTE \xB7 ROW \xB7 ROW");
+    turn(EN_PRESET, 1); turn(EN_PRESET, 1); frame();
+    ok &= ui.menu_sel == MI_LATCH;
+    turn(EN_K3, 1); frame();
+    ok &= (fx_latch & 1u) != 0u;
+    turn(EN_K3, -1); frame();
+    turn(EN_SELECT, -1); turn(EN_PRESET, 1); turn(EN_PRESET, 1); turn(EN_PRESET, 1); frame();
+    ok &= ui.mlv == 1u && ui.menu_sel == MI_SCLLED + 1u && lz_crumb_is("LENTE \xB7 TAB \xB7 ROWS 5-6");
     menu_close();
-    bad += check("MENU tabs slide with ANIM ON (their strip only, settled within 6 frames), snap with ANIM OFF", ok);
+    bad += check("0.8.5 MENU as a lens: opens at TAB; SELECT MENU <-> TAB <-> ROW; PRESETS the tab on MENU, the row elsewhere; any knob the value", ok);
     return bad;
 }
 
@@ -2302,7 +2295,7 @@ static int roll_static_now(void)                  /* the screen is the static re
     ui_draw();
     return roll_diff(0, 0, 0, 0, 0) == 0;
 }
-#define STRIP(c) CARD_X(c), Y_LABEL + ROLL_Y, CARD_X(c) + COL_W, Y_LABEL + ROLL_Y + ROLL_H
+#define STRIP(c) CARD_X(c), (int32_t)card_y() + ROLL_Y, CARD_X(c) + COL_W, (int32_t)card_y() + ROLL_Y + ROLL_H   /* (0.8.5: a lens page's cards) */
 static int test_roll(void)
 {
     int bad = 0, ok;
@@ -2385,25 +2378,25 @@ static int test_roll(void)
         ok &= roll_diff(g.bx, 0, g.bx + text_w(&AF_S, "12"), H_HEAD, 1) == 0;   /* (0.8.5: the BPM in S) */
         ok &= x0 < g.bx && x1 <= 140 && x1 - x0 <= 40;
     }
-    ok &= roll_diff(CARD_X(0), Y_LABEL + ROLL_Y, CARD_X(0) + 5 + text_w(&AF_M, "12"), Y_LABEL + ROLL_Y + ROLL_H, 1) == 0;
+    ok &= roll_diff(CARD_X(0), (int32_t)card_y() + ROLL_Y, CARD_X(0) + 5 + text_w(&AF_M, "12"), (int32_t)card_y() + ROLL_Y + ROLL_H, 1) == 0;
     /* TUNE 10 -> 11 on a card: the 1 stays */
     ui_power_on(); song.g[G_TUNE] = 10; roll_settle();
     turn(EN_K4, 1); frame(); frame();
     memcpy(roll_shot, host_screen, sizeof roll_shot);
     ui.force = 1; ui_draw();
     ok &= song.g[G_TUNE] == 11 && roll_diff(STRIP(3), 1) > 20u && roll_diff(STRIP(3), 0) == 0;
-    ok &= roll_diff(CARD_X(3), Y_LABEL + ROLL_Y, CARD_X(3) + 5 + text_w(&AF_M, "1"), Y_LABEL + ROLL_Y + ROLL_H, 1) == 0;
+    ok &= roll_diff(CARD_X(3), (int32_t)card_y() + ROLL_Y, CARD_X(3) + 5 + text_w(&AF_M, "1"), (int32_t)card_y() + ROLL_Y + ROLL_H, 1) == 0;
     bad += check("roll: header BPM 120 -> 121 and a card 10 -> 11: only the strip changes, unchanged digits stay put", ok);
 
     /* the direction: 5 -> 6 and -5 -> -6 at frame 4: the new digit comes from below (up) / above (down) */
     ui_power_on(); song.g[G_TUNE] = 5; roll_settle();
-    st = roll_ink_row(host_screen, CARD_X(3) + 5, CARD_X(3) + 16, Y_LABEL + ROLL_Y, Y_LABEL + ROLL_Y + ROLL_H);
+    st = roll_ink_row(host_screen, CARD_X(3) + 5, CARD_X(3) + 16, (int32_t)card_y() + ROLL_Y, (int32_t)card_y() + ROLL_Y + ROLL_H);
     turn(EN_K4, 1); frame(); frame(); frame();
-    up = roll_ink_row(host_screen, CARD_X(3) + 5, CARD_X(3) + 16, Y_LABEL + ROLL_Y, Y_LABEL + ROLL_Y + ROLL_H);
+    up = roll_ink_row(host_screen, CARD_X(3) + 5, CARD_X(3) + 16, (int32_t)card_y() + ROLL_Y, (int32_t)card_y() + ROLL_Y + ROLL_H);
     ok = ui.roll[3].dir == 1;
     ui_power_on(); song.g[G_TUNE] = 7; roll_settle();
     turn(EN_K4, -1); frame(); frame(); frame();
-    down = roll_ink_row(host_screen, CARD_X(3) + 5, CARD_X(3) + 16, Y_LABEL + ROLL_Y, Y_LABEL + ROLL_Y + ROLL_H);
+    down = roll_ink_row(host_screen, CARD_X(3) + 5, CARD_X(3) + 16, (int32_t)card_y() + ROLL_Y, (int32_t)card_y() + ROLL_Y + ROLL_H);
     ok &= ui.roll[3].dir == -1 && st > 0 && up > st + 16 && down < st - 16;
     ui_power_on(); song.g[G_TUNE] = -5; roll_settle();
     turn(EN_K4, -1);
@@ -2740,11 +2733,11 @@ static int test_chain(void)
  * SONG: the selection, as KNOB 1; TOOLS: nothing; HOME, PRESETS and every other page: the next sound, the steps untouched, SAVE held undoes it */
 static int test_presets_knob(void)
 {
-    int bad = 0, cur_ok = 1, sel_ok = 1, snd_ok = 1, tools_ok = 1, grid_ok, bar_ok = 1, fxm_ok = 1;
-    uint32_t i, n_snd = 0, n_cur = 0, n_bar = 0;
+    int bad = 0, cur_ok = 1, sel_ok = 1, snd_ok = 1, tools_ok = 1, grid_ok, bar_ok = 1, fxm_ok = 1, det_ok = 1, env_ok = 1, mod_ok = 1, key_ok = 1;
+    uint32_t i, n_snd = 0, n_cur = 0, n_bar = 0, n_det = 0, n_env = 0, n_mod = 0, n_key = 0;
     for (i = 0; i < NPAGES; i++) {
         track_t before;
-        uint32_t g = PAGES[i].graph, uslot, ppick, fxm0;
+        uint32_t g = PAGES[i].graph, uslot, ppick, fxm0, ms0, ms1;
         int16_t slot;
         ui_power_on();
         song.sel = 0;
@@ -2756,6 +2749,7 @@ static int test_presets_knob(void)
         before = *TSEL;
         uslot = ui.uslot; ppick = pat_pick(); slot = song.g[G_SLOT];
         if (PAGES[i].fam == FAM_FX && ui.fxmod == FX_NMOD - 1u) ui.fxmod = 0;   /* (the module can go right) */
+        ms_ui_step = 0; mod_ui_slot = 0; ms0 = 0; ms1 = 0;   /* (0.8.5: MSEQ's step, MOD's slot from the first) */
         fxm0 = ui.fxmod;
         turn(EN_PRESET, 1);
         {
@@ -2780,6 +2774,22 @@ static int test_presets_knob(void)
                 tools_ok &= same_snd && same_steps && !ui.confirm;
             } else if (PAGES[i].fam == FAM_FX && fx_trk_k(i) < 0) {   /* (0.8.5) FX's lens, BUSES / EFFECT: the module */
                 fxm_ok &= same_snd && same_steps && fx_on() && ui.fxmod != fxm0;
+            } else if (pd_on() && pd_cur() == PD_KEY) {   /* (0.8.5) SCL . ARP: KEY the ROOT, CHORD and ARP the track */
+                key_ok &= !memcmp(trk[0].step, before.step, sizeof before.step) && ui.page == i &&
+                          (pd_level() == 0u ? trk[0].p[P_ROOT] == before.p[P_ROOT] + 1 && song.sel == 0u :
+                           song.sel == 1u && !memcmp(trk[0].p, before.p, sizeof before.p));
+                n_key++;
+            } else if (pd_on() && pd_cur() == PD_MOD) {   /* (0.8.5) LFO . MOD: MOD the slot, LFO the track, MSEQ the step */
+                mod_ok &= !memcmp(trk[0].p, before.p, sizeof before.p) && !memcmp(trk[0].step, before.step, sizeof before.step) &&
+                          ui.page == i && (pd_level() == 1u ? song.sel == 1u : pd_level() == 2u ? ms_ui_step == ms0 + 1u : mod_ui_slot == ms1 + 1u);
+                n_mod++;
+            } else if (pd_on() && pd_cur() == PD_ENV) {   /* (0.8.5) ENV: TRACKS, ENV the track; STAGE the stage */
+                env_ok &= !memcmp(trk[0].p, before.p, sizeof before.p) && !memcmp(trk[0].step, before.step, sizeof before.step) &&
+                          ui.page == i && (pd_level() < 2u ? song.sel == 1u : ui.stage == 1u);
+                n_env++;
+            } else if (pd_on() && pd_cur() == PD_EDIT && pd_level() == 2u) {   /* (0.8.5) EDIT's detail: KNOB 1's */
+                det_ok &= TSEL->preset == before.preset && TSEL->eng_req == before.eng_req && same_steps && ui.page == i;
+                n_det++;
             } else {
                 snd_ok &= !same_snd && same_steps && ui.page == i && !ui.home;
                 n_snd++;
@@ -2793,8 +2803,15 @@ static int test_presets_knob(void)
     bad += check("#94 PRESETS on USER, PROJECT, PHRASES, SONG: the selection (KNOB 1's); nothing loaded", sel_ok);
     bad += check("#94 PRESETS on TOOLS does nothing", tools_ok);
     bad += check("0.8.5 FX's lens: PRESETS on BUSES and EFFECT the module; the sound and the steps stay", fxm_ok);
+    bad += check("0.8.5 LENTE: PRESETS on EDIT's detail (FOCUS, OPERATOR, SOUND 1..4): KNOB 1's; the preset stays",
+                 det_ok && n_det >= 1u);
+    bad += check("0.8.5 LENTE: PRESETS on ENV: TRACKS and ENV the track, STAGE the stage; the sound and the steps stay",
+                 env_ok && n_env >= 3u);
+    bad += check("0.8.5 LENTE: PRESETS on LFO . MOD: MOD the slot, LFO the track, MSEQ the step; the sound and the steps stay",
+                 mod_ok && n_mod >= 4u);
+    bad += check("0.8.5 LENTE: PRESETS on SCL . ARP: KEY the ROOT, CHORD and ARP the track; the steps stay", key_ok && n_key >= 4u);
     bad += check("#94 PRESETS elsewhere (EDIT, ENV, LFO, FX, SCL, ARP, MIXER, GLOBAL, ...): the next sound, the steps stay",
-                 snd_ok && n_snd >= 15u);
+                 snd_ok && n_snd >= 9u);   /* (0.8.5: fewer, 15 until the lenses gave PRESETS their own on ENV, LFO, SCL) */
     ui_power_on();
     set_engine_of(TSEL, ENGI_DRUM);
     TSEL->engine = TSEL->eng_req;
@@ -2843,10 +2860,11 @@ static int test_product_ux(void)
     turn(EN_K3, 1);
     bad += check("MIXER K3 edits reverb, never sequence length", TSEL->p[P_SLEN] == len && TSEL->p[P_REV] == send + 1);
     frames(320);                                       /* (taps further apart than a double tap: #83) */
-    press(B_GLO); frames(320); ok = cur_page()->fam == FAM_GLO && str_eq(cur_page()->title, "GLOBAL");
+    press(B_GLO); frames(320); ok = str_eq(cur_page()->title, "SENDS");   /* (0.8.5 LENTE: MIX's second set) */
+    press(B_GLO); frames(320); ok &= cur_page()->fam == FAM_GLO && str_eq(cur_page()->title, "GLOBAL");
     press(B_GLO); frames(320); ok &= str_eq(cur_page()->title, "SYSTEM");
-    press(B_GLO); ok &= cur_page()->graph == GR_TRK;
-    bad += check("GLO cycles MIXER > GLOBAL > SYSTEM > MIXER", ok);
+    press(B_GLO); ok &= cur_page()->graph == GR_TRK && str_eq(cur_page()->title, "MIXER");
+    bad += check("GLO cycles MIXER > SENDS (0.8.5) > GLOBAL > SYSTEM > MIXER", ok);
     go_home(); hold(B_SEQ);
     bad += check("long SEQ off the SEQ pages is a tap (no SONG: SAVE held, G5)", cur_page()->graph != GR_SONG);
     go_page(GR_SONG);
@@ -2854,12 +2872,19 @@ static int test_product_ux(void)
     bad += check("REC cannot write borrowed patterns while SONG is armed", song.rec == 1 && msg_is("STOP TO RECORD"));
     ui_power_on(); open_family(FAM_EDIT);
     ok = 1;
-    for (i = 0; i < 8u; i++) { open_family(FAM_EDIT); ok &= page_visible(ui.page) && (cur_page()->graph == GR_MORPH ||
-                                                         !(cur_page()->id[0] >= P_FM1_ATK && cur_page()->id[0] <= P_FM4_LEVEL)); }
+    {   /* (0.8.5 LENTE) every set of every level of the EDIT lens */
+        uint8_t pg[PD_SETS];
+        uint32_t lv, k, n;
+        for (lv = 0; lv < 3u; lv++)
+            for (n = pd_sets(PD_EDIT, lv, pg, 0), k = 0; k < n; k++)
+                ok &= page_visible(pg[k]) && (PAGES[pg[k]].graph == GR_MORPH ||
+                                              !(PAGES[pg[k]].id[0] >= P_FM1_ATK && PAGES[pg[k]].id[0] <= P_FM4_LEVEL));
+    }
     bad += check("operator envelope pages are hidden on non-DIGITAL instruments", ok);
 #if FELUCCA_FM4
-    set_engine_of(TSEL, 1); open_family(FAM_EDIT); ok = 0;
-    for (i = 0; i < 12u; i++) { if (cur_page()->id[0] == P_FM1_ATK) ok = 1; open_family(FAM_EDIT); }
+    set_engine_of(TSEL, 1);                            /* (0.8.5 LENTE: in the detail level, OPS) */
+    ok = pd_find(PD_EDIT, "OP1 ENV") < NPAGES && pd_find(PD_EDIT, "OP4 ENV") < NPAGES && pd_find(PD_EDIT, "OP LEVEL") < NPAGES &&
+         pd_k_in(PD_EDIT, 2, pd_find(PD_EDIT, "OP1 ENV")) >= 0 && pd_k_in(PD_EDIT, 2, pd_find(PD_EDIT, "OP LEVEL")) >= 0;
     bad += check("DIGITAL exposes four envelopes and independent operator levels", ok);
     go_title("OP1 ENV"); turn(EN_K1, 4);
     bad += check("operator envelope K1 edits only OP1 attack", TSEL->p[P_FM1_ATK] == 4 && !TSEL->p[P_FM2_ATK]);
@@ -2957,10 +2982,11 @@ static int test_product_ux(void)
         uint16_t graph[240 * H_GRAPH], columns[240 * (Y_SEP_END - Y_LABEL)];
         ui_power_on(); palette_set(p); settings.zoom = 1;
         open_family(FAM_ENV); frame();
-        memcpy(graph, host_screen + Y_GRAPH * 240, sizeof graph);
+        uint32_t gy = lz_on() ? LZ_GRAPH_Y : Y_GRAPH;   /* (0.8.5: ENV a lens, its panel under the cards' 38 px) */
+        memcpy(graph, host_screen + gy * 240, sizeof graph);
         memcpy(columns, host_screen + Y_LABEL * 240, sizeof columns);
         ui.hot_col = 1; ui.hot_t = 40; ui.force = 1; ui_draw();
-        ok &= !memcmp(graph, host_screen + Y_GRAPH * 240, sizeof graph);
+        ok &= !memcmp(graph, host_screen + gy * 240, sizeof graph);
         int changed = 0;
         for (uint32_t y = 0; y < Y_SEP_END - Y_LABEL; y++) for (uint32_t x = 0; x < 240; x++) {
             uint16_t old = columns[y * 240 + x], now = host_screen[(Y_LABEL + y) * 240 + x];
@@ -3507,27 +3533,40 @@ static int test_name(void)
 }
 
 /* the EDIT cycle (no ENGINE page: engines are the EDIT layer's) and its memory */
-static int engine_cycle(const char *const *want, uint32_t n)   /* EDIT tapped from HOME, then n - 1 times more */
+/* (0.8.5 LENTE) EDIT tapped from HOME, then tapped (a title) or SELECT a detent right (0) for each of want's; the page
+ * shown each time want's title. A tap goes round the level's sets, SELECT to the next level at the set it was left at */
+static int engine_cycle(const char *const *want, uint32_t n)
 {
-    uint32_t i;
+    uint32_t i, lv = 0;
     int ok = 1;
     frames(320);
     go_home(); frame();
+    press(B_EDIT);
+    frames(320);
+    ok &= str_eq(cur_page()->title, "EDIT 1") && pd_on() && pd_level() == 0u;
     for (i = 0; i < n; i++) {
-        press(B_EDIT);
-        frames(320);                                  /* (taps further apart than a double tap: #83 locks) */
-        ok &= str_eq(cur_page()->title, want[i]);
+        if (want[i]) {
+            press(B_EDIT);
+            frames(320);                              /* (taps further apart than a double tap: #83 locks) */
+            ok &= str_eq(cur_page()->title, want[i]);
+        } else {
+            turn(EN_SELECT, 1);
+            frames(2);
+            ok &= pd_on() && pd_level() == ++lv && str_eq(cur_page()->title, want[i + 1u]);   /* (the level's first) */
+            i++;
+        }
     }
     return ok;
 }
 static int test_edit_cycle(void)
 {
-    static const char *const CYC_A[] = {"EDIT 1", "EDIT 2", "MORPH", "FILTER", "VOICE", "EDIT 1"};   /* (JIANT 0.5: ANALOG's
-                                                         * FILTER; 0.6.45: MORPH) */
-    static const char *const CYC_F[] = {"EDIT 1", "EDIT 2", "OPERATOR", "OP ENV", "OPERATOR 2", "FILTER", "VOICE",
-                                        "EDIT 1"};   /* (the part's FILTER; 0.6.10: FM6's operator pages) */
-    static const char *const CYC_D[] = {"EDIT 1", "EDIT 2", "FILTER", "OP1 ENV", "OP2 ENV", "OP3 ENV", "OP4 ENV",
-                                        "OP LEVEL", "VOICE", "EDIT 1"};
+    /* (0.8.5 LENTE: SOUND . TONE . the detail; 0: SELECT a detent right, then the level's first) */
+    static const char *const CYC_A[] = {"EDIT 2", "EDIT 1", 0, "FILTER", "MORPH", "VOICE", "VOICE 2", "FILTER", 0,
+                                        "FOCUS", "FOCUS"};   /* (JIANT 0.5: ANALOG's FILTER; 0.6.45: MORPH) */
+    static const char *const CYC_F[] = {"EDIT 2", "EDIT 1", 0, "FILTER", "VOICE", "VOICE 2", "FILTER", 0, "OPERATOR",
+                                        "OP ENV", "OPERATOR 2", "OPERATOR"};   /* (the part's FILTER; 0.6.10: FM6's) */
+    static const char *const CYC_D[] = {"EDIT 2", "EDIT 1", 0, "FILTER", "VOICE", "VOICE 2", "FILTER", 0, "OP1 ENV",
+                                        "OP2 ENV", "OP3 ENV", "OP4 ENV", "OP LEVEL", "OP1 ENV"};
     int bad = 0, ok;
     uint32_t i;
     ui_power_on();
@@ -3539,22 +3578,23 @@ static int test_edit_cycle(void)
         ok &= !str_eq(PAGES[i].title, "ENGINE");
     bad += check("no ENGINE page (engines are the EDIT layer's)", ok);
     set_engine_of(TSEL, 0);
-    bad += check("EDIT cycle (ANALOG): EDIT 1 EDIT 2 MORPH FILTER VOICE EDIT 1", engine_cycle(CYC_A, NELEM(CYC_A)));
+    bad += check("0.8.5 EDIT lens (ANALOG): SOUND (EDIT 1 EDIT 2) . TONE (FILTER MORPH VOICE VOICE 2) . FOCUS",
+                 engine_cycle(CYC_A, NELEM(CYC_A)));
 #if FELUCCA_FM4
     set_engine_of(TSEL, 1);
-    bad += check("EDIT cycle (DIGITAL): EDIT 1 EDIT 2 FILTER OP1..OP4 ENV OP LEVEL VOICE EDIT 1",
+    bad += check("0.8.5 EDIT lens (DIGITAL): SOUND . TONE (FILTER VOICE VOICE 2) . OPS (OP1..OP4 ENV, OP LEVEL)",
                  engine_cycle(CYC_D, NELEM(CYC_D)));
 #else
     set_engine_of(TSEL, ENGI_DIGITAL);
-    bad += check("EDIT cycle (engine 1 asked for: FM6, DIGITAL retired): EDIT 1 EDIT 2 OPERATOR OP ENV OPERATOR 2 FILTER VOICE EDIT 1",
+    bad += check("0.8.5 EDIT lens (engine 1 asked for: FM6, DIGITAL retired): SOUND . TONE (FILTER VOICE VOICE 2) . OPERATOR (OPERATOR OP ENV OPERATOR 2)",
                  TSEL->eng_req == ENGI_FM6 && engine_cycle(CYC_F, NELEM(CYC_F)));
     (void)CYC_D;
 #endif
     {   /* #97: a DRUM track's lane levels on EDIT > LANES (KICK SNARE CLAP HATCL) and LANES 2 (HATOP TOM RIM BELL) */
-        static const char *const CYC_K[] = {"EDIT 1", "EDIT 2", "KIT 3", "X-MOD", "STEREO", "FILTER", "SOUND", "SOUND 2",
-                                            "SOUND 3", "SOUND 4", "LEVELS", "LEVELS 2", "VOICE", "EDIT 1"};
+        static const char *const CYC_K[] = {"EDIT 2", "KIT 3", "EDIT 1", 0, "X-MOD", "FILTER", "STEREO", "LEVELS",
+                                            "LEVELS 2", "VOICE", "X-MOD", 0, "SOUND", "SOUND 2", "SOUND 3", "SOUND 4", "SOUND"};
         set_engine_of(TSEL, ENGI_DRUM);
-        bad += check("EDIT cycle (DRUM, 0.7.8): the kit's (KIT KIT 2 KIT 3 X-MOD STEREO FILTER), a sound's (SOUND 1..4), then the volumes (LEVELS LEVELS 2), VOICE",
+        bad += check("0.8.5 EDIT lens (DRUM): SOUND (KIT KIT 2 KIT 3) . TONE (X-MOD FILTER STEREO LEVELS LEVELS 2 VOICE) . SOUND (SOUND 1..4)",
                      engine_cycle(CYC_K, NELEM(CYC_K)));
         {   /* (0.6.58) KIT 3 turns BP and FEEDBK, (0.7.8) KNOB 3 the CLAP's HANDS, never IMAGE; STEREO's KNOB 1 is IMAGE */
             uint8_t t0 = dx_tone, h0 = dx_hands;
@@ -4619,10 +4659,11 @@ static int test_bughunt_ui2(void)
          * MUTE: the sound's name); (0.6.80) in the six columns, with any COLOR (here not JIANT FM's) */
         uint32_t k, a[4][4], ok = 1;
         for (k = 0; k < 4u; k++) {
-            int32_t X = T6_X(0), Y = Y_GRAPH;
+            int32_t X = T6_X(0), Y;
             ui_power_on();
             settings.palette = 1; palette_set(1);
             go_page(GR_TRK); frame(); frame();
+            Y = lz_on() ? (int32_t)graph_y() + 9 : Y_GRAPH;            /* (0.8.5: GLO's lens, under its cards) */
             turn(EN_K1 + k, 1);                                       /* (K4 right: MUTE on, its badge shown) */
             ui.force = 1; frame();
             a[k][0] = accent_in(X + 17, Y + 44, X + 37, Y + 57);      /* LEVEL's dB */
@@ -6286,11 +6327,11 @@ static int test_save_lens(void)
     ok &= name_on() && !lz_on();
     press(B_OCTDN); frame();
     ok &= !name_on() && lz_on();
-    btn_down(B_GLO); frames(800);                                            /* a layer's map: the usual layout */
-    ok &= ui.layer && !lz_on() && card_y() == Y_LABEL;
+    btn_down(B_GLO); frames(800);                                            /* (0.8.5) a layer: its own lens */
+    ok &= ui.layer && lz_on() && lz_fam() == LZ_LAYER && card_y() == LZ_CARD_Y;
     btn_up(B_GLO); frame(); frame();
     ok &= !ui.layer && lz_on() && card_y() == LZ_CARD_Y;
-    bad += check("SAVE lens: a layer's map and the NAME screen keep their own layout", ok);
+    bad += check("SAVE lens: the NAME screen keeps its own layout, a layer's map is its own lens (0.8.5)", ok);
     ui_power_on();
     return bad;
 }
@@ -6401,7 +6442,8 @@ static int test_lente(void)
         ok &= lens_level() == LV_BAR && th == T_RAISE && tb == T_THEME;           /* SELECT: BAR lit */
     }
     go_home(); frame();
-    ok &= card_y() == Y_LABEL && graph_y() == Y_GRAPH && foot_y() == Y_FOOT;      /* (elsewhere as before) */
+    ok &= card_y() == LZ_CARD_Y && graph_y() == LZ_GRAPH_Y && foot_y() == LZ_FOOT_Y;   /* (0.8.5: HOME a lens too, the same
+                                                         * geometry) */
     open_family(FAM_SEQ); frame();
     {
         char ti[20];
@@ -6414,7 +6456,7 @@ static int test_lente(void)
         page_title(ti);
         ok &= str_eq(ti, "TRACK 4/5");
     }
-    bad += check("  the level tabs on top (the one shown THEME), the page under them (elsewhere as before); STEP's sets as \"COMP 2/3\"", ok);
+    bad += check("  the level tabs on top (the one shown THEME), the page under them (HOME's lens alike); STEP's sets as \"COMP 2/3\"", ok);
     /* the tools layer and the dice on every level */
     ok = 1;
     for (q = 0; q < 3u; q++) {
@@ -6874,12 +6916,10 @@ static int test_dx_sound(void)
     ui_power_on();
     memcpy(dx_kit, DX_KIT_DEF, sizeof dx_kit);         /* (earlier tests may have turned SOUND's knobs) */
     set_engine_of(TSEL, ENGI_DRUM);
-    open_family(FAM_EDIT);
-    for (k = 0; k < 12u; k++) { seen |= cur_page()->graph == GR_DXSND; open_family(FAM_EDIT); }
+    for (k = 0; k < NPAGES; k++) seen |= PAGES[k].graph == GR_DXSND && page_visible(k);   /* (0.8.5: the lens's sets) */
     ok = seen;
     set_engine_of(TSEL, 0);
-    open_family(FAM_EDIT);
-    for (seen = 0, k = 0; k < 12u; k++) { seen |= cur_page()->graph == GR_DXSND; open_family(FAM_EDIT); }
+    for (seen = 0, k = 0; k < NPAGES; k++) seen |= PAGES[k].graph == GR_DXSND && page_visible(k);
     ok &= !seen;
     set_engine_of(TSEL, ENGI_DRUM);
     bad += check("EDIT > SOUND / SOUND 2: on a DRUM track only", ok);
@@ -7256,10 +7296,13 @@ static int test_dice_all(void)
         for (i = 0; i < 6u; i++) { turn(EN_K3, e0 >= 50u ? -1 : 1); frames(32); }
         ok = gp.energy != e0 && host_big_fills == f0;
         fm1_ms += 500u;                                 /* (past the SELECT turn that opened it) */
-        turn(EN_SELECT, 1); frames(32);
+        press(B_HOME); frames(32);                      /* (0.8.5 LENTE: a HOME tap, GEN's next page; SELECT zooms) */
         ok &= gp.page != p0 && host_big_fills == f0;
-        turn(EN_SELECT, -1); frames(32);
-        bad += check("GEN: a knob or SELECT repaints the cards, the body is never cleared (no flicker)", ok && ui.confirm == CF_DICE_ALL);
+        turn(EN_SELECT, 1); frames(32);                 /* (right: GEN is the last level) */
+        ok &= ui.confirm == CF_DICE_ALL && gp.page != p0;
+        press(B_HOME); press(B_HOME); frames(8);        /* (round: 1/3 again) */
+        ok &= gp.page == p0;
+        bad += check("GEN: a knob or a HOME tap (its page) repaints the cards, the body is never cleared (no flicker)", ok && ui.confirm == CF_DICE_ALL);
     }
     press(B_OCTUP); frames(4);
     ok = ui.confirm == CF_DICE_ALL && undo_ok;         /* (0.6.91: GEN stays open for another throw; OCT- is done) */
@@ -7324,6 +7367,10 @@ static int test_dice_all(void)
         {   /* (0.6.27) 40 throws: never the same piece, the tempo moved every time (even from the same random state) */
             uint32_t h[40], n2, m, same = 0, bpm_same = 0;
             int16_t b0;
+            gp.genre = 0; gp.energy = 50; gp.form = 1; gp.complex = 50; gp.swing = GA_AUTO; gp.human = 30;   /* (0.8.5: the
+                                                         * settings as at power-on, whatever the GEN tests left: the 40
+                                                         * throws the same whatever ran before, as 0.6.92 meant) */
+            for (n2 = 0; n2 < GP_N; n2++) gp.amt[n2] = GA_AUTO;
             host_ticks = 5000000u;                      /* (0.6.92) the same 40 seeds whatever ran before (the seed mixes the ticks in) */
             for (n2 = 0; n2 < 40u; n2++) {
                 b0 = song.g[G_BPM];
@@ -8983,14 +9030,16 @@ static int test_bpm_lock(void)
     turn(EN_SELECT, -1);
     ok &= str_eq(cur_page()->title, "GLOBAL");
     go_home(); frame(); turn(EN_SELECT, 1);
-    ok &= ui.home && ui.confirm == CF_DICE_ALL && song.g[G_BPM] == b0;   /* (0.6.69) HOME: DICE EVERYTHING? as before */
+    ok &= ui.home && !ui.confirm && home_level() == 1u;                /* (0.8.5 LENTE: ECO -> BEING -> GEN) */
+    turn(EN_SELECT, 1);
+    ok &= ui.home && ui.confirm == CF_DICE_ALL && song.g[G_BPM] == b0;   /* (0.6.69) HOME: DICE EVERYTHING? (GEN) */
     press(B_OCTDN); frame(); ok &= !ui.confirm;
     go_title("EDIT 1"); frame(); turn(EN_SELECT, 1);
-    ok &= str_eq(cur_page()->title, "EDIT 2");
+    ok &= str_eq(cur_page()->title, "FILTER") && pd_level() == 1u;    /* (0.8.5 LENTE: SOUND -> TONE) */
     turn(EN_SELECT, -5);
-    ok &= str_eq(cur_page()->title, "EDIT 1");                        /* (no wrap: the section's first) */
+    ok &= str_eq(cur_page()->title, "EDIT 1");                        /* (no wrap: the lens's first level) */
     go_title("ENV DEST"); frame(); turn(EN_SELECT, 3);
-    ok &= str_eq(cur_page()->title, "ENV DEST") && !ui.home;          /* (the section's last: it stays, no LFO) */
+    ok &= str_eq(cur_page()->title, "STAGE") && !ui.home;             /* (0.8.5 LENTE: ENV -> STAGE, the last; no LFO) */
     bad += check("0.6.69: SELECT alone scrolls the section's pages (no wrap, never out of it); HOME: DICE ALL; never the tempo", ok);
     go_home(); frame();
 
@@ -9029,10 +9078,10 @@ static int test_bpm_lock(void)
         b0 = song.g[G_BPM]; fm1_ms += 1200u;
         turn(EN_SELECT, 1);                             /* (0.6.67) SELECT alone: a page on, no dice */
         for (j = 0; j < 8u; j++) moved += TSEL->p[P_E0 + j] != before[j];
-        ok = !moved && song.g[G_BPM] == b0 && str_eq(cur_page()->title, "ENV DEST") && !ui.confirm;
+        ok = !moved && song.g[G_BPM] == b0 && str_eq(cur_page()->title, "STAGE") && !ui.confirm;   /* (0.8.5: a zoom) */
         fm1_ms += 1200u;
         held_turn(B_EDIT, 1);                           /* EDIT held + SELECT: the sound's dice */
-        ok &= str_eq(cur_page()->title, "ENV DEST");    /* (no page: EDIT's tap swallowed) */
+        ok &= str_eq(cur_page()->title, "STAGE");       /* (no page: EDIT's tap swallowed) */
         for (j = 0; j < 8u; j++) moved += TSEL->p[P_E0 + j] != before[j];
         ok &= song.g[G_BPM] == b0 && ui.confirm == CF_DICE_SOUND && moved > 0u && undo_ok;   /* (0.6.65) heard, asked */
         {
@@ -9065,7 +9114,7 @@ static int test_bpm_lock(void)
     {   /* (0.6.67) the MIXER: SELECT the next of GLO's pages, the tempo kept */
         go_title("MIXER"); frame(); fm1_ms += 1200u;
         b0 = song.g[G_BPM];
-        turn(EN_SELECT, -1);
+        turn(EN_SELECT, 1);                             /* (0.8.5 LENTE: MIX -> GLOBAL, a zoom) */
         ok = song.g[G_BPM] == b0 && cur_page()->fam == FAM_GLO && !ui.confirm;
         bad += check("0.6.69: SELECT on the MIXER goes through GLO's pages", ok);
     }
@@ -9149,7 +9198,8 @@ static int test_large(void)
     ui_power_on();
     song.playing = 0;
     frame();
-    ok = !(ui_prefs & PREF_LARGE) && large_kind() == LK_OFF && card_h() == CARD_H && graph_y() == Y_GRAPH;
+    ok = !(ui_prefs & PREF_LARGE) && large_kind() == LK_OFF && card_h() == LZ_CARD_H && graph_y() == LZ_GRAPH_Y;   /* (HOME's
+                                                         * lens) */
     ok &= MI_LARGE == MI_STYLE + 1u && str_eq(MI_NAME[MI_LARGE], "LARGE") && menu_flag(MI_LARGE) &&
           str_eq(menu_flag(MI_LARGE)->name[0], "OFF") && str_eq(menu_flag(MI_LARGE)->name[1], "ON");
     ui.force = 1; frame();
@@ -9165,21 +9215,25 @@ static int test_large(void)
     press(B_HOME);
     bad += check("#15 MENU > LARGE: OFF by default, under STYLE; KNOB 1 right / OCT+ ON, left / OCT- OFF", ok && !ui.menu);
 
-    /* HOME: tall cards (rows 28..132) and the strip (136..198); the footer as it was */
+    /* HOME (0.8.5: a lens): tall cards under its tabs (rows 42..146) and the strip (150..212); the footer as it was */
     frame();
-    ok = ui.home && large_kind() == LK_TALL && card_h() == LG_CARD_H && graph_y() == LG_Y_GRAPH && strip_kind() == SK_SCOPE;
-    ok &= lg_px(30, Y_SEP_END + 1) == T_SURF && off[(Y_SEP_END + 1) * 240 + 30] == swap16(T_BG);     /* a card where the gap was */
-    {   /* a gap in the panel: the old panel's row read over 16 px, a mote of HOME's moving dust (ui_being.c) may sit on one */
+    ok = ui.home && large_kind() == LK_TALL && card_y() == LZ_CARD_Y && card_h() == LG_CARD_H && graph_y() == LZ_LG_Y_GRAPH &&
+         strip_kind() == SK_SCOPE;
+    ok &= lg_px(30, LZ_CARD_Y + LZ_CARD_H + 2) == T_SURF && off[(LZ_CARD_Y + LZ_CARD_H + 2) * 240 + 30] == swap16(T_BG);   /* a
+                                                         * card where the gap was */
+    {   /* a gap in the panel: the old panel's row read across it (8 .. 231), at least half of it SURF: HOME's moving
+         * dust (ui_being.c) and, since 0.8.5's lens, the critters round the beings sit on that row here and there */
         uint32_t x, n = 0;
-        for (x = 24; x < 40u; x++)
-            n += off[(LG_Y_GRAPH - 2) * 240 + x] == swap16(T_SURF);
-        ok &= lg_px(30, LG_Y_GRAPH - 2) == T_BG && n >= 12u;
+        for (x = 8; x < 232u; x++)
+            n += off[(LZ_LG_Y_GRAPH - 2) * 240 + x] == swap16(T_SURF);
+        ok &= lg_px(30, LZ_LG_Y_GRAPH - 2) == T_BG && n >= 112u;
     }
-    ok &= lg_px(30, LG_Y_GRAPH + 1) == T_SURF;
+    ok &= lg_px(30, LZ_LG_Y_GRAPH + 1) == T_SURF;
     for (c = 0; c < 4u; c++)                                      /* each column's K pill, over its knob */
-        ok &= lg_px(CARD_X(c) + 8, Y_LABEL + LG_MY + LG_MH / 2) == T_KEY;
-    ok &= !memcmp(off + Y_FOOT * 240, host_screen + Y_FOOT * 240, 240u * H_FOOT * sizeof *off);
-    bad += check("#15 LARGE ON: HOME's cards tall (a K1..K4 pill over each column), the scope a strip, the footer kept", ok);
+        ok &= lg_px(CARD_X(c) + 8, LZ_CARD_Y + LG_MY + LG_MH / 2) == T_KEY;
+    ok &= !memcmp(off + LZ_FOOT_Y * 240, host_screen + LZ_FOOT_Y * 240, 240u * LZ_FOOT_H * sizeof *off);
+    ok &= swap16(host_screen[(LT_Y + LT_H / 2) * 240 + LT_X(0) + 2]) == T_THEME;   /* (its tabs: ECO lit) */
+    bad += check("#15 LARGE ON: HOME's cards tall under its tabs (a K1..K4 pill over each column), the scope a strip, the footer kept", ok);
 
     /* the value in L: GLOBAL's BPM 124 stands about twice as tall as in M */
     go_title("GLOBAL"); frame();
@@ -9210,12 +9264,12 @@ static int test_large(void)
     go_page(GR_ROLL); frame();
     ok &= large_kind() == LK_LABEL;
     go_page(GR_TRK); frame();
-    ok &= large_kind() == LK_TALL && strip_kind() == SK_TRK && lg_px(CARD_X(0) + 8, LG_Y_GRAPH + 56) == T_SURF;
+    ok &= large_kind() == LK_TALL && strip_kind() == SK_TRK && lg_px(CARD_X(0) + 8, (int32_t)graph_y() + 56) == T_SURF;   /* (0.8.5: graph_y, a lens's) */
     go_title("ENV"); frame();
     btn_down(B_GLO); frames(800);
-    ok &= ui.layer && large_kind() == LK_LABEL && card_h() == CARD_H;
+    ok &= ui.layer && large_kind() == LK_LABEL && card_h() == LZ_CARD_H;   /* (0.8.5: the layer's lens) */
     btn_up(B_GLO); frame(); frame();
-    ok &= !ui.layer && large_kind() == LK_TALL && lg_px(30, LG_Y_GRAPH - 2) == T_BG;
+    ok &= !ui.layer && large_kind() == LK_TALL && lg_px(30, (int32_t)graph_y() - 2) == T_BG;
     bad += check("#15 LARGE: PRESETS and the roll keep the layout (labels in M), the layers too; MIXER tall, its tracks in the strip", ok);
 
     {   /* saved with the settings; settings from before it: OFF (and so again: idempotent) */
@@ -9231,7 +9285,7 @@ static int test_large(void)
         q = p;
         ok &= settings_import(&q, (int)sizeof q) == 1 && !(ui_prefs & ~PREF_ACCEL_OFF);
         ui.force = 1; frame();
-        ok &= large_kind() == LK_OFF && lg_px(30, Y_SEP_END + 1) == T_BG;
+        ok &= large_kind() == LK_OFF && lg_px(30, lz_on() ? LZ_CARD_Y - 1 : Y_SEP_END + 1) == T_BG;   /* (0.8.5: a lens) */
         bad += check("#15 LARGE saved with the settings; settings from before it: OFF (idempotent)", ok);
     }
     ui_prefs = 0;
@@ -9322,10 +9376,11 @@ static int test_menu_prefs(void)
 static int test_style(void)
 {
     int bad = 0, ok;
-    const uint32_t rule = 74u * 240u + 120u;           /* (the rule over the panel: ui_draw.c draw_rules; 0.8.5: the header's
-                                                        * own rule at 22 in either style) */
+    uint32_t rule;                                     /* (the rule over the panel: ui_draw.c draw_rules; 0.8.5: the header's
+                                                        * own rule at 22 in either style; HOME a lens: under its cards) */
     ui_power_on();
     frame();
+    rule = (card_y() + card_h() + graph_y()) / 2u * 240u + 120u;
     ok = ui_style == ST_FLAT && ux.style == ST_FLAT && ux.surf != ux.bg;
     ui.force = 1; frame();
     ok &= host_screen[rule] == swap16(T_BG);
@@ -9680,11 +9735,454 @@ static int test_organic(void)
     return bad;
 }
 
+/* ------------------------------------------------------------------------------------ (0.8.5) LENTE everywhere --- */
+/* the tab of level l lit (THEME), the others RAISE */
+static int lz_tab_lit(uint32_t l)
+{
+    uint32_t k;
+    int ok = 1;
+    for (k = 0; k < 3u; k++)
+        ok &= swap16(host_screen[(LT_Y + LT_H / 2) * 240 + LT_X(k) + 2]) == (k == l ? T_THEME : T_RAISE);
+    return ok;
+}
+static int lz_crumb_is(const char *s)
+{
+    char b[48];
+    foot_crumbs(b, sizeof b);
+    return str_eq(b, s);
+}
+/* HOME (ui_lens.c): ECO (HOME / MACROS) . BEING (HOME / ROUTES) . GEN; SELECT zooms, a HOME tap the level's other set
+ * (GEN: its next page), PRESETS on GEN the GENRE, OCT- closes GEN to ECO, SELECT left on GEN back to BEING; HOME from
+ * elsewhere the level and set it was left at; MACROS / ROUTES: KNOB 1..4 M1..M4 */
+static int test_lz_home(void)
+{
+    int bad = 0, ok;
+    uint32_t c, k;
+    char b[8];
+    ui_power_on(); frame();
+    ok = ui.home && lz_on() && lz_fam() == LZ_HOME && home_level() == 0u && !home_set() && lz_tab_lit(0) &&
+         lz_crumb_is("LENTE \xB7 ECO \xB7 HOME") && crumb_count(b) && str_eq(b, "1/2");
+    press(B_HOME); frame();                                         /* a HOME tap: MACROS */
+    ok &= ui.home && home_set() && home_macros() && lz_crumb_is("LENTE \xB7 ECO \xB7 MACROS") && crumb_count(b) && str_eq(b, "2/2");
+    k = macro_v[0];
+    turn(EN_K1, 3); frame();
+    ok &= macro_v[0] == (uint8_t)(k + 3u) && str_eq(ui.col[0], "M1|") == 0 && !strncmp(ui.col[0], "M1|", 3);
+    c = (uint32_t)TSEL->p[ENGINES[TSEL->eng_req]->knob[0]];
+    press(B_HOME); frame();                                         /* HOME again: the HOME knobs */
+    turn(EN_K1, 1); frame();
+    ok &= !home_set() && (uint32_t)TSEL->p[ENGINES[TSEL->eng_req]->knob[0]] != c && macro_v[0] == (uint8_t)(k + 3u);
+    bad += check("LENTE HOME: ECO's sets HOME / MACROS by a HOME tap; MACROS' knobs M1..M4; the breadcrumb and its count", ok);
+    turn(EN_SELECT, 1); frame();                                    /* BEING */
+    ok = ui.home && home_level() == 1u && lz_tab_lit(1) && lz_crumb_is("LENTE \xB7 BEING \xB7 HOME") && !ui.confirm;
+    press(B_HOME); frame();
+    ok &= home_set() && lz_crumb_is("LENTE \xB7 BEING \xB7 ROUTES") && home_macros();
+    turn(EN_SELECT, -1); frame();                                   /* back to ECO: at its set (HOME) */
+    ok &= home_level() == 0u && !home_set();
+    turn(EN_SELECT, -1); frame();                                   /* (no wrap) */
+    ok &= home_level() == 0u && ui.home && !ui.confirm;
+    turn(EN_SELECT, 1); frame();
+    ok &= home_level() == 1u && home_set();                         /* (BEING at ROUTES, as left) */
+    bad += check("LENTE HOME: SELECT ECO <-> BEING (no wrap), each level at its set; BEING's HOME / ROUTES", ok);
+    fm1_ms += 1000u;
+    turn(EN_SELECT, 1); frame();                                    /* GEN */
+    ok = ui.confirm == CF_DICE_ALL && home_level() == 2u && lz_on() && lz_tab_lit(2) && lz_crumb_is("LENTE \xB7 GEN \xB7 GEN 1/3");
+    k = gp.genre;
+    turn(EN_PRESET, 1); frame();
+    ok &= gp.genre == (k == GEN_EXPLORE ? 0u : k == NGENRE ? GEN_EXPLORE : k + 1u);   /* PRESETS: the GENRE, KNOB 1's order
+                                                         * (0.8.6: EXPLORE, RANDOM, the genres) */
+    press(B_HOME); frame();
+    ok &= gen_page() == 1u && lz_crumb_is("LENTE \xB7 GEN \xB7 GEN 2/3") && crumb_count(b) && str_eq(b, "2/3");
+    fm1_ms += 1000u;
+    turn(EN_SELECT, -1); frame();                                   /* left: BEING */
+    ok &= !ui.confirm && ui.home && home_level() == 1u;
+    turn(EN_SELECT, 1); frame();
+    ok &= ui.confirm == CF_DICE_ALL;
+    press(B_OCTDN); frame();                                        /* OCT-: closed, ECO */
+    ok &= !ui.confirm && ui.home && home_level() == 0u;
+    bad += check("LENTE HOME: GEN the last level (SELECT right of BEING), PRESETS its GENRE, a HOME tap its page, SELECT left BEING, OCT- ECO", ok);
+    press(B_HOME); turn(EN_SELECT, 1); frame();                     /* ECO MACROS -> BEING */
+    open_family(FAM_ENV); frame();
+    ok = !ui.home;
+    press(B_HOME); frame();                                         /* HOME from elsewhere: where it was left */
+    ok &= ui.home && home_level() == 1u && home_set() == 1u;
+    {   /* the beings drawn: the ECO panel differs from frame to frame while the tracks sound (their life), the
+         * critters move */
+        static uint16_t a[240 * 140];
+        turn(EN_SELECT, -1); frame();
+        for (c = 0; c < NTRK; c++) trk[c].peak = 9000;
+        frames(64);
+        memcpy(a, host_screen + LZ_GRAPH_Y * 240, sizeof a);
+        for (c = 0; c < NTRK; c++) trk[c].peak = 9000;
+        frames(64);
+        ok &= memcmp(a, host_screen + LZ_GRAPH_Y * 240, sizeof a) != 0 && cr.init;
+    }
+    bad += check("LENTE HOME: HOME from elsewhere at the level and set left; the beings and critters live", ok);
+    gp.page = 0;                                                    /* (GEN's page is kept: the next tests' start) */
+    gp.genre = 0;
+    ui_power_on();
+    return bad;
+}
+
+/* EDIT (ui_lens.c, ui_lzedit.c): SOUND . TONE . the detail (FOCUS / OPERATOR / SOUND), SELECT zooms (no wrap), an EDIT
+ * tap the level's next set, EDIT from elsewhere the page left; PRESETS the sounds on SOUND / TONE, KNOB 1's on the
+ * detail; FOCUS's knobs (PARAM, its value, SRC and AMT of the MOD slot aimed at it); VOICE 2 (ALLOC, DETUNE) */
+static int test_lz_edit(void)
+{
+    int bad = 0, ok;
+    int16_t v;
+    uint32_t pr;
+    char b[8];
+    ui_power_on(); set_engine_of(TSEL, 0); frame();
+    press(B_EDIT); frame();
+    ok = pd_on() && lz_fam() == LZ_EDIT && pd_level() == 0u && lz_tab_lit(0) && lz_crumb_is("LENTE \xB7 SOUND \xB7 EDIT 1 \xB7 OSC") &&
+         crumb_count(b) && str_eq(b, "1/2");
+    frames(320); press(B_EDIT); frame();
+    ok &= str_eq(cur_page()->title, "EDIT 2") && crumb_count(b) && str_eq(b, "2/2");
+    turn(EN_SELECT, 1); frame();
+    ok &= pd_level() == 1u && lz_tab_lit(1) && str_eq(cur_page()->title, "FILTER") && lz_crumb_is("LENTE \xB7 TONE \xB7 FILTER");
+    turn(EN_SELECT, 1); frame();
+    ok &= pd_level() == 2u && lz_tab_lit(2) && str_eq(cur_page()->title, "FOCUS") && lz_crumb_is("LENTE \xB7 FOCUS \xB7 FOCUS");
+    turn(EN_SELECT, 1); frame();
+    ok &= pd_level() == 2u;                                         /* (no wrap) */
+    turn(EN_SELECT, -2); frame();
+    ok &= pd_level() == 0u && str_eq(cur_page()->title, "EDIT 2");  /* (SOUND at the set it was left at) */
+    bad += check("0.8.5 LENTE EDIT: SOUND <-> TONE <-> FOCUS by SELECT (no wrap), an EDIT tap the level's next; tabs, breadcrumb", ok);
+    open_family(FAM_ENV); frame();
+    press(B_EDIT); frame();
+    ok = str_eq(cur_page()->title, "EDIT 2") && pd_level() == 0u;
+    pr = TSEL->preset;
+    turn(EN_PRESET, 1); frame();
+    ok &= TSEL->preset != pr || TSEL->eng_req != 0u;                /* (SOUND: the next sound) */
+    bad += check("0.8.5 LENTE EDIT: EDIT from elsewhere the page left; PRESETS on SOUND the next sound", ok);
+    ui_power_on(); set_engine_of(TSEL, 0); go_title("FOCUS"); frame();
+    ui.focus = 0;
+    turn(EN_K1, 4); frame();                                        /* PARAM: E5 (ANALOG's CUT) */
+    ok = focus_k() == 4u && str_eq(ui.col[1], "CUT|") == 0;
+    v = TSEL->p[P_E4];
+    turn(EN_K2, 5); frame();
+    ok &= TSEL->p[P_E4] > v;
+    turn(EN_K3, 1); frame();                                        /* SRC: a free slot takes CUT */
+    ok &= focus_slot(4) == 0 && TSEL->p[P_M1SRC] == 1 && TSEL->p[P_M1DST] == MD_E1 + 4;
+    turn(EN_K4, 3); frame();
+    ok &= TSEL->p[P_M1AMT] > 0;
+    turn(EN_PRESET, -1); frame();                                   /* PRESETS: KNOB 1's, the parameter */
+    ok &= focus_k() == 3u && TSEL->p[P_M1SRC] == 1;
+    turn(EN_PRESET, 1); turn(EN_K3, -1); frame();                   /* SRC back to OFF: the slot free */
+    ok &= focus_slot(4) < 0 && TSEL->p[P_M1SRC] == 0;
+    bad += check("0.8.5 EDIT > FOCUS: KNOB 1 the parameter, 2 its value, 3 the MOD source (a free slot), 4 its AMT; PRESETS KNOB 1's", ok);
+    ui_power_on(); set_engine_of(TSEL, 0); go_title("VOICE"); frame();
+    frames(320); press(B_EDIT); frame();
+    ok = str_eq(cur_page()->title, "VOICE 2") && str_eq(cur_page()->title, "VOICE 2");
+    v = TSEL->p[P_DETUNE];
+    turn(EN_K2, 3); frame();
+    ok &= TSEL->p[P_DETUNE] != v;
+    set_engine_of(TSEL, ENGI_DRUM); frame();
+    ok &= pd_find(PD_EDIT, "VOICE 2") == NPAGES && pd_find(PD_EDIT, "FOCUS") == NPAGES;
+    set_engine_of(TSEL, ENGI_FM6); frame();
+    ok &= pd_find(PD_EDIT, "FOCUS") == NPAGES && pd_find(PD_EDIT, "OPERATOR") < NPAGES;
+    bad += check("0.8.5 EDIT > TONE: VOICE 2 (ALLOC, DETUNE) after VOICE, not on DRUM; FOCUS on the synths only", ok);
+    ui_power_on();
+    return bad;
+}
+
+/* ENV (ui_lens.c, ui_lzpage.c): TRACKS (ENV / DEST) . ENV (ENV / ENV DEST) . STAGE; it opens on ENV; PRESETS the track
+ * (TRACKS, ENV) or the stage (STAGE); STAGE's knobs: the stage, its value, LOOP */
+static int test_lz_env(void)
+{
+    int bad = 0, ok;
+    int16_t v;
+    char b[8];
+    ui_power_on(); frame();
+    press(B_ENV); frame();
+    ok = pd_on() && lz_fam() == LZ_ENV && pd_level() == 1u && str_eq(cur_page()->title, "ENV") && lz_tab_lit(1) &&
+         lz_crumb_is("LENTE \xB7 ENV \xB7 ENV") && crumb_count(b) && str_eq(b, "1/2");
+    frames(320); press(B_ENV); frame();
+    ok &= str_eq(cur_page()->title, "ENV DEST") && lz_crumb_is("LENTE \xB7 ENV \xB7 ENV DEST");
+    turn(EN_SELECT, -1); frame();
+    ok &= pd_level() == 0u && lz_tab_lit(0) && str_eq(cur_page()->title, "ENV") && lz_crumb_is("LENTE \xB7 TRACKS \xB7 ENV");
+    frames(320); press(B_ENV); frame();
+    ok &= str_eq(cur_page()->title, "ENV DEST") && lz_crumb_is("LENTE \xB7 TRACKS \xB7 DEST");
+    turn(EN_SELECT, 2); frame();
+    ok &= pd_level() == 2u && str_eq(cur_page()->title, "STAGE") && lz_tab_lit(2);
+    bad += check("0.8.5 LENTE ENV: opens on ENV; TRACKS (ENV / DEST) <-> ENV (ENV / ENV DEST) <-> STAGE; tabs, breadcrumb", ok);
+    turn(EN_SELECT, -2); frame();                                   /* TRACKS: PRESETS the track */
+    ok = pd_level() == 0u && song.sel == 0u;
+    turn(EN_PRESET, 1); frame();
+    ok &= song.sel == 1u && pd_level() == 0u && pd_on();
+    turn(EN_PRESET, -1); frame();
+    ok &= song.sel == 0u;
+    bad += check("0.8.5 LENTE ENV > TRACKS: PRESETS picks the track (the tiles), the level stays", ok);
+    go_title("STAGE"); frame();
+    ui.stage = 0;
+    turn(EN_K1, 1); frame();
+    ok = ui.stage == 1u && !strncmp(ui.col[1], "DEC|", 4);
+    v = TSEL->p[P_DEC];
+    turn(EN_K2, 3); frame();
+    ok &= TSEL->p[P_DEC] > v;
+    turn(EN_PRESET, 1); frame();
+    ok &= ui.stage == 2u;
+    v = TSEL->p[P_ELOOP];
+    turn(EN_K3, 1); frame();
+    ok &= TSEL->p[P_ELOOP] != v;
+    turn(EN_K1, 5); frame();
+    ok &= ui.stage == 3u;                                           /* (no wrap) */
+    bad += check("0.8.5 ENV > STAGE: KNOB 1 the stage (PRESETS too), 2 its value, 3 LOOP", ok);
+    ui_power_on();
+    return bad;
+}
+
+/* LFO . MOD (ui_lens.c, ui_lzpage.c): MOD . LFO (LFO / LFO DEST) . MSEQ (MSEQ / MSEQ 2); it opens on LFO; PRESETS the
+ * slot, the track, the step; MOD's net pulses (the panel changes from frame to frame) */
+static int test_lz_mod(void)
+{
+    int bad = 0, ok;
+    char b[8];
+    ui_power_on(); frame();
+    press(B_LFO); frame();
+    ok = pd_on() && lz_fam() == LZ_MOD && pd_level() == 1u && str_eq(cur_page()->title, "LFO") && lz_tab_lit(1) &&
+         lz_crumb_is("LENTE \xB7 LFO \xB7 LFO") && crumb_count(b) && str_eq(b, "1/2");
+    frames(320); press(B_LFO); frame();
+    ok &= str_eq(cur_page()->title, "LFO DEST");
+    turn(EN_SELECT, 1); frame();
+    ok &= pd_level() == 2u && str_eq(cur_page()->title, "MSEQ") && lz_crumb_is("LENTE \xB7 MSEQ \xB7 MSEQ");
+    frames(320); press(B_LFO); frame();
+    ok &= str_eq(cur_page()->title, "MSEQ 2") && lz_crumb_is("LENTE \xB7 MSEQ \xB7 MSEQ 2");
+    turn(EN_SELECT, -2); frame();
+    ok &= pd_level() == 0u && str_eq(cur_page()->title, "MOD") && lz_tab_lit(0) && lz_crumb_is("LENTE \xB7 MOD \xB7 MOD");
+    bad += check("0.8.5 LENTE LFO . MOD: opens on LFO; MOD <-> LFO (LFO / LFO DEST) <-> MSEQ (MSEQ / MSEQ 2); tabs, breadcrumb", ok);
+    mod_ui_slot = 0;
+    TSEL->p[P_M1SRC] = 1; TSEL->p[P_M1DST] = 2; TSEL->p[P_M1AMT] = 40;
+    turn(EN_PRESET, 1); frame();
+    ok = mod_ui_slot == 1u;
+    turn(EN_PRESET, -1); frame();
+    ok &= mod_ui_slot == 0u;
+    {
+        static uint16_t a[240 * 140];
+        frames(1600);                                               /* (any toast gone) */
+        memcpy(a, host_screen + LZ_GRAPH_Y * 240, sizeof a);
+        frames(160);
+        ok &= memcmp(a, host_screen + LZ_GRAPH_Y * 240, sizeof a) != 0;   /* (the pulse along slot 1's curve) */
+    }
+    bad += check("0.8.5 LFO . MOD > MOD: PRESETS the slot; the net's pulse runs", ok);
+    ui_power_on();
+    return bad;
+}
+
+/* SCL . ARP (ui_lens.c, ui_lzpage.c): KEY . CHORD . ARP (ARP / ARP 2); SCL taps KEY <-> CHORD, ARP goes to ARP and taps
+ * ARP <-> ARP 2; PRESETS: KEY the ROOT, CHORD and ARP the track */
+static int test_lz_key(void)
+{
+    int bad = 0, ok;
+    int16_t r;
+    char b[8];
+    ui_power_on(); frame();
+    press(B_SCL); frame();
+    ok = pd_on() && lz_fam() == LZ_KEY && pd_level() == 0u && str_eq(cur_page()->title, "SCL") && lz_tab_lit(0) &&
+         lz_crumb_is("LENTE \xB7 KEY \xB7 SCL");
+    frames(320); press(B_SCL); frame();
+    ok &= pd_level() == 1u && str_eq(cur_page()->title, "CHORD") && lz_tab_lit(1) && lz_crumb_is("LENTE \xB7 CHORD \xB7 CHORD");
+    frames(320); press(B_SCL); frame();
+    ok &= pd_level() == 0u && str_eq(cur_page()->title, "SCL");
+    frames(320); press(B_ARP); frame();
+    ok &= pd_level() == 2u && str_eq(cur_page()->title, "ARP") && lz_tab_lit(2) && crumb_count(b) && str_eq(b, "1/2");
+    frames(320); press(B_ARP); frame();
+    ok &= str_eq(cur_page()->title, "ARP 2") && lz_crumb_is("LENTE \xB7 ARP \xB7 ARP 2");
+    turn(EN_SELECT, -1); frame();
+    ok &= pd_level() == 1u && str_eq(cur_page()->title, "CHORD");
+    bad += check("0.8.5 LENTE SCL . ARP: SCL taps KEY <-> CHORD, ARP the ARP level (ARP <-> ARP 2), SELECT zooms; tabs, breadcrumb", ok);
+    turn(EN_PRESET, 1); frame();
+    ok = song.sel == 1u && str_eq(cur_page()->title, "CHORD");
+    turn(EN_SELECT, -1); frame();
+    r = TSEL->p[P_ROOT];
+    turn(EN_PRESET, 1); frame();
+    ok &= pd_level() == 0u && TSEL->p[P_ROOT] == r + 1;
+    bad += check("0.8.5 LENTE SCL . ARP: PRESETS on CHORD the track, on KEY the ROOT", ok);
+    ui_power_on();
+    return bad;
+}
+
+/* GLO (ui_lens.c, ui_lzpage.c): MIX (MIXER / SENDS) . GLOBAL . SYSTEM; a GLO tap MIXER -> SENDS -> GLOBAL -> SYSTEM ->
+ * MIXER, from elsewhere MIX; SENDS's knobs the track's sends; SYSTEM's CPU line runs */
+static int test_lz_glo(void)
+{
+    int bad = 0, ok;
+    int16_t v;
+    ui_power_on(); frame();
+    press(B_GLO); frame();
+    ok = pd_on() && lz_fam() == LZ_GLO && pd_level() == 0u && str_eq(cur_page()->title, "MIXER") && lz_tab_lit(0) &&
+         lz_crumb_is("LENTE \xB7 MIX \xB7 MIXER");
+    frames(320); press(B_GLO); frame();
+    ok &= str_eq(cur_page()->title, "SENDS") && lz_crumb_is("LENTE \xB7 MIX \xB7 SENDS");
+    v = TSEL->p[P_DLY];
+    turn(EN_K3, 4); frame();
+    ok &= TSEL->p[P_DLY] > v;
+    frames(320); press(B_GLO); frame();
+    ok &= pd_level() == 1u && str_eq(cur_page()->title, "GLOBAL") && lz_tab_lit(1);
+    frames(320); press(B_GLO); frame();
+    ok &= pd_level() == 2u && str_eq(cur_page()->title, "SYSTEM") && lz_tab_lit(2) && lz_crumb_is("LENTE \xB7 SYSTEM \xB7 SYSTEM");
+    frames(320); press(B_GLO); frame();
+    ok &= pd_level() == 0u && str_eq(cur_page()->title, "MIXER");
+    turn(EN_SELECT, 2); frame();
+    ok &= pd_level() == 2u && str_eq(cur_page()->title, "SYSTEM");
+    open_family(FAM_ENV); frame();
+    press(B_GLO); frame();
+    ok &= str_eq(cur_page()->title, "MIXER");
+    bad += check("0.8.5 LENTE GLO: MIXER -> SENDS (the track's sends) -> GLOBAL -> SYSTEM -> MIXER by GLO, SELECT zooms; from elsewhere MIX", ok);
+    ui_power_on();
+    return bad;
+}
+
+/* a held layer (ui_layer.c) as a lens: MAP . KNOBS . STATE by ALGORITHM while it is held (no wrap; the track stays),
+ * the tabs and the breadcrumb; SELECT still the layer's combos (GLO: the tempo) */
+static int test_lz_layer(void)
+{
+    int bad = 0, ok;
+    int16_t b0;
+    ui_power_on(); frame();
+    btn_down(B_GLO); frames(800);
+    ok = ui.layer == LAYER_GLO && lz_on() && lz_fam() == LZ_LAYER && ui.lylv == 0u && lz_tab_lit(0) &&
+         lz_crumb_is("LENTE \xB7 MAP \xB7 GLO");
+    turn(EN_ALGO, 1); frame();
+    ok &= ui.lylv == 1u && lz_tab_lit(1) && song.sel == 0u && lz_crumb_is("LENTE \xB7 KNOBS \xB7 GLO");
+    turn(EN_ALGO, 1); frame();
+    ok &= ui.lylv == 2u && lz_tab_lit(2);
+    turn(EN_ALGO, 1); frame();
+    ok &= ui.lylv == 2u && song.sel == 0u;                          /* (no wrap) */
+    b0 = song.g[G_BPM];
+    turn(EN_SELECT, 2); frame();
+    ok &= song.g[G_BPM] != b0;                                      /* (GLO + SELECT: the tempo, as before) */
+    btn_up(B_GLO); frame(); frame();
+    ok &= !ui.layer && !lz_on() == !lz_on();
+    turn(EN_ALGO, 1); frame();
+    ok &= song.sel == 1u;                                           /* (let go: ALGORITHM the track again) */
+    turn(EN_ALGO, -1); frame();
+    btn_down(B_GLO); frames(800);
+    ok &= ui.lylv == 2u && lz_tab_lit(2);                           /* (remembered) */
+    btn_up(B_GLO); frame(); frame();
+    ui.lylv = 0;
+    bad += check("0.8.5 LENTE layers: MAP <-> KNOBS <-> STATE by ALGORITHM while held (remembered); SELECT keeps its combos", ok);
+    ui_power_on();
+    return bad;
+}
+
+/* the dialogs as the mock-up (ui_draw.c draw_confirm, dice_panel, ui_name.c): NOTICE / DICE / NAME tabs, a NOTICE
+ * card, DICE's BEFORE / NOW with SELECT still re-rolling, a lens page's toast in its panel, NAME's tabs */
+static int dlg_tab_lit(uint32_t l)
+{
+    uint32_t k;
+    int ok = 1;
+    for (k = 0; k < 3u; k++)
+        ok &= swap16(host_screen[(LT_Y + LT_H / 2) * 240 + LT_X(k) + 2]) == (k == l ? T_THEME : T_RAISE);
+    return ok;
+}
+static int test_lz_dialogs(void)
+{
+    int bad = 0, ok;
+    int16_t e0;
+    uint32_t y, x, acc = 0;
+    ui_power_on(); go_title("ENV"); frame();
+    confirm_open(CF_CLEAR_TRK, 2); ui.force = 1; frame();
+    ok = dlg_tab_lit(0) && swap16(host_screen[67 * 240 + 120]) == T_THEME;   /* (the card's THEME rule) */
+    press(B_OCTDN); frame();
+    ok &= !ui.confirm;
+    bad += check("0.8.5 dialogs: a question under the NOTICE tab, a card with its THEME rule; OCT- NO", ok);
+    ui_power_on(); go_title("EDIT 1"); frame(); fm1_ms += 1200u;
+    held_turn(B_EDIT, 1);
+    ok = ui.confirm == CF_DICE_SOUND && dlg_tab_lit(1);
+    e0 = TSEL->p[P_E0];
+    fm1_ms += 1200u; turn(EN_SELECT, 1); fm1_ms += 1200u; turn(EN_SELECT, 1); frame();
+    ok &= ui.confirm == CF_DICE_SOUND && dlg_tab_lit(1);
+    (void)e0;
+    press(B_OCTUP); frame();
+    ok &= !ui.confirm;
+    bad += check("0.8.5 dialogs: EDIT + SELECT opens DICE (its tab), SELECT re-rolls inside it, OCT+ keeps", ok);
+    ui_power_on(); go_title("ENV"); frames(1600);
+    ui_message("SAVED"); frame();
+    for (y = LZ_GRAPH_Y; y < LZ_GRAPH_Y + LZ_GRAPH_H; y++)
+        for (x = 0; x < 240; x++) acc += swap16(host_screen[y * 240 + x]) == T_ACCENT;
+    ok = acc > 40u;
+    frames(1600);
+    for (acc = 0, y = LZ_GRAPH_Y; y < LZ_GRAPH_Y + LZ_GRAPH_H; y++)
+        for (x = 0; x < 240; x++) acc += swap16(host_screen[y * 240 + x]) == T_ACCENT && x > 60 && x < 180;
+    bad += check("0.8.5 dialogs: a message on a lens page is a toast in its panel too (gone with it)", ok);
+    ui_power_on();
+    return bad;
+}
+
+/* FX live (ui_lzfx.c): while the song plays the EFFECT and TRACK pictures move (the echoes' pulse, the tail's sweep,
+ * the chorus running, DIST's level, AUTO PAN's dot); stopped and silent they hold still */
+static int fx_panel_moves(const char *title)
+{
+    static uint16_t a[240 * 140];
+    go_title(title); frame(); frames(1600);
+    memcpy(a, host_screen + LZ_GRAPH_Y * 240, sizeof a);
+    frames(96);
+    return memcmp(a, host_screen + LZ_GRAPH_Y * 240, sizeof a) != 0;
+}
+static int test_fx_live(void)
+{
+    int bad = 0, ok = 1;
+    static const char *const LIVE[] = {"DLY", "REVERB", "CHORUS", "AUTO PAN"};
+    uint32_t i;
+    ui_power_on();
+    TSEL->p[P_APDEP] = 100; song.g[G_CDEPTH] = 90;
+    song.playing = 1;
+    for (i = 0; i < NELEM(LIVE); i++) {
+        int m = fx_panel_moves(LIVE[i]);
+        if (!m) printf("  FX live: %s still\n", LIVE[i]);
+        ok &= m;
+    }
+    song.playing = 0;
+    for (i = 0; i < NTRK; i++) trk[i].peak = 0;
+    memset(scope_buf, 0, sizeof scope_buf);
+    ok &= !fx_panel_moves("DLY");
+    bad += check("0.8.5 FX live: DLY, REVERB, CHORUS, AUTO PAN move while it plays; stopped and silent they hold still", ok);
+    ui_power_on();
+    return bad;
+}
+
+/* every page of the five page lenses (EDIT, ENV, LFO . MOD, SCL . ARP, GLO) that an engine shows is in one of its
+ * levels' sets (so SELECT and the button reach it), for every engine */
+static int test_lz_reach(void)
+{
+    int bad = 0, ok = 1;
+    uint32_t e, i, lv, k, n;
+    uint8_t pg[PD_SETS];
+    for (e = 0; e < NENGINES; e++) {
+        if (!eng_ok(e))
+            continue;
+        ui_power_on(); set_engine_of(TSEL, e);
+        for (i = 0; i < NPAGES; i++) {
+            uint32_t pd = pd_of_fam(PAGES[i].fam), found = 0;
+            if (pd >= PD_N || !page_visible(i))
+                continue;
+            for (lv = 0; lv < 3u; lv++)
+                for (n = pd_sets(pd, lv, pg, 0), k = 0; k < n; k++)
+                    found |= pg[k] == i;
+            if (!found) printf("  %s: %s in no level\n", ENGINES[e]->name, PAGES[i].title);
+            ok &= found != 0u;
+        }
+    }
+    bad += check("0.8.5 LENTE: every page an engine shows in EDIT, ENV, LFO . MOD, SCL . ARP, GLO is in a level's sets", ok);
+    ui_power_on();
+    return bad;
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IONBF, 0);
     int bad = 0;
     bad += test_large_face();
+    bad += test_lz_home();
+    bad += test_lz_edit();
+    bad += test_lz_env();
+    bad += test_lz_mod();
+    bad += test_lz_key();
+    bad += test_lz_glo();
+    bad += test_lz_layer();
+    bad += test_lz_dialogs();
+    bad += test_fx_live();
+    bad += test_lz_reach();
     bad += test_sound_loads();
     bad += test_patterns();
     bad += test_init_system();
