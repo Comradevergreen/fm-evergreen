@@ -2147,6 +2147,7 @@ static void ui_input_frame(void)
                     undo_mark();
                     if (song.playing) transport_req = 2;
                     system_init();
+                    gp.genre = GEN_EXPLORE;             /* (0.8.6) GEN's GENRE as at power-on: EXPLORE */
                     ui_message("NEW PROJECT");
                 }
             } else if (kind == CF_CLEAR_ALL) {          /* SEQ + REC: every track's steps and automation, the lane */

@@ -446,10 +446,11 @@ EXPORT uint8_t *web_anim_levels(void)
 }
 
 /* (0.6.91) the song generator from the page or a bench (web/emu/gen_bench.mjs): a genre (0 RANDOM, 1 + the genre's
- * index), a seed 0..9999, an energy 0..100, a form (0 LOOP, 1 PARTS, 2 SONG); the piece's name after */
+ * index, 0.8.6: web_gen_count() + 1 EXPLORE), a seed 0..9999, an energy 0..100, a form (0 LOOP, 1 PARTS, 2 SONG); the
+ * piece's name after */
 EXPORT void web_gen(uint32_t genre, uint32_t seed, uint32_t energy, uint32_t form)
 {
-    gp.genre = (uint8_t)(genre % (NGENRE + 1u));
+    gp.genre = (uint8_t)(genre % (NGENRE + 2u));
     gp.seed = (uint16_t)(seed % 10000u);
     gp.energy = (uint8_t)(energy > 100u ? 100u : energy);
     gp.form = (uint8_t)(form % 3u);

@@ -5,7 +5,8 @@
  * drums on one track with the kick anchored (four-on-the-floor genres: step 1), its density growing with DRUMS;
  * the bass's first note at a chord change the root (most of the time: FiloBass' 68 %); the lead's strong steps on chord
  * tones more often than not; chords of three or four, voiced in C3..G5, led closely; a storable project; a form in
- * ARRANGE when asked; the parts' knobs only touching their own part.
+ * ARRANGE when asked; the parts' knobs only touching their own part. (0.8.6) EXPLORE, the default: no genre, every
+ * rule broken, every piece still playing in its key, very different from the next.
  *   cc -O1 -w -Ibuild/gen -Ifirmware/src -Itests -o build/host/gen_test tests/gen_test.c -lm */
 #define UI_TEST_NO_MAIN 1
 #include "ui_test.c"
@@ -46,6 +47,36 @@ static uint32_t hits_of(const track_t *t, uint32_t lane)
     for (i = 0; i < (uint32_t)t->p[P_SLEN]; i++) c += t->step[i].time == ST_NOTE && ((t->step[i].hit >> lane) & 1u);
     return c;
 }
+/* (0.8.6) the piece heard for a while: its RMS and peak (the output before the DAC's clamp), the blocks at full scale,
+ * the most voices sounding at once over the synth parts */
+static void gx_listen(uint32_t blocks, double *rms, int32_t *peak, uint32_t *clip, uint32_t *vmax)
+{
+    uint32_t b, i, p;
+    double acc = 0;
+    int32_t pk = 0;
+    uint32_t cl = 0, vm = 0;
+    song.master_q12 = 4096;
+    transport_req = 1;
+    for (b = 0; b < blocks; b++) {
+        int32_t o[2 * CTL];
+        uint32_t nv = 0;
+        if (b % 32u == 0u) { ui_input(); song_poll(); host_ticks += 20000u; fm1_ms += 20u; }
+        memset(o, 0, sizeof o);
+        mix_block(o, CTL);
+        for (i = 0; i < 2u * CTL; i++) {
+            int32_t v = o[i] < 0 ? -o[i] : o[i];
+            if (v > pk) pk = v;
+            cl += v >= 32767;
+            acc += (double)o[i] * (double)o[i];
+        }
+        for (p = 0; p < NPART; p++)                     /* (as voice.c voices_busy counts them: not the fading) */
+            for (i = 0; i < NVOICE; i++) nv += trk[p].v[i].active && trk[p].v[i].stage != 4u;
+        if (nv > vm) vm = nv;
+    }
+    transport_req = 2;
+    { int32_t o[2 * CTL]; ui_input(); mix_block(o, CTL); }
+    *rms = sqrt(acc / (double)(blocks * 2u * CTL)); *peak = pk; *clip = cl; *vmax = vm;
+}
 static uint32_t hits_all(const track_t *t)
 {
     uint32_t i, c = 0, l;
@@ -60,6 +91,7 @@ int main(void)
     uint32_t g, s, k, i;
     uint32_t notes_out = 0, notes_all = 0, chords_bad = 0, lead_strong = 0, lead_ct = 0, bass_changes = 0, bass_root = 0;
     uint32_t drums_many = 0, pieces = 0, kick_anchor_bad = 0, store_bad = 0, range_bad = 0, motion_bad = 0;
+    uint32_t genre0 = gp.genre;                         /* (0.8.6: the power-on's GENRE, before any test turns it) */
     gen_reset();
     /* ---- deterministic: the same settings twice, the same piece; another seed, another piece */
     {
@@ -473,15 +505,200 @@ int main(void)
         if (n20 * 2u > dlen(&trk[ar]) || n100 < n20 * 2u) printf("  arp: %u notes at 20 %%, %u at 100 %% (LEN %u)\n", n20, n100, dlen(&trk[ar]));
         bad += gcheck("ARP 20 %: eighths, under half the steps; 100 %: at least twice as many notes", ar < NTRK && n20 * 2u <= dlen(&trk[ar]) && n100 >= n20 * 2u);
     }
+    /* ---- (0.8.6) EXPLORE, the dice's default: at power-on, on NEW PROJECT, where the screen opens; sixty seeds, each
+     * a piece that plays (two melodic parts at least, sound at a safe level, the voice and engine budgets), its SCALE and
+     * CHORD pages the key it plays in (every note in it but the coloured chords' and the approaches), storable; and
+     * very different from the next: the tempos, the keys, the loops' lengths and DIVs, the drum maps, the engines
+     * (ANIMAL and VOICE among them), the components, PLAYHEADS. A genre's piece the same before and after one */
+    {
+        static const uint32_t SEEDS = 60u;
+        uint32_t sd, nmel_bad = 0, page_bad = 0, chord_bad = 0, key_bad = 0, key_col = 0, key_appr = 0, nn = 0;
+        uint32_t store_bad = 0, budget_bad = 0, quiet = 0, loud = 0, odd = 0, poly = 0, divs = 0, comps = 0, lms = 0, heads = 0, words = 0;
+        uint32_t nbpm = 0, nsc = 0, nlen = 0, ndm = 0, neng = 0, same = 0, bpm_lo = 999, bpm_hi = 0, name_bad = 0;
+        uint8_t seen_bpm[256] = {0}, seen_sc[16] = {0}, seen_len[NSTEP + 1] = {0}, seen_dm[64] = {0}, seen_eng[NENGINES] = {0};
+        uint32_t sig[60];
+        double rms_min = 1e9;
+        int32_t peak_max = 0;
+        uint32_t vmax_all = 0;
+        uint32_t vref = 0;
+        bad += gcheck("EXPLORE (0.8.6): GENRE EXPLORE at power-on", genre0 == GEN_EXPLORE);
+        gen_reset();
+        for (g = 0; g < 3u * NGENRE; g++) {             /* (the voices the genres' pieces reach at once, the budget's
+                                                         * own overshoot included: the reference) */
+            double rms;
+            int32_t peak;
+            uint32_t clip, vmax;
+            gen_with(g % NGENRE + 1u, g * 31u + 5u, 20u + (g / NGENRE) * 30u, 0);
+            gx_listen(1200u, &rms, &peak, &clip, &vmax);
+            if (vmax > vref) vref = vmax;
+        }
+        for (sd = 0; sd < SEEDS; sd++) {
+            uint32_t mel = 0, fm = 0, an = 0, vo = 0, dk = 0, l0 = 0, lens_differ = 0, clip, vmax, kk;
+            double rms;
+            int32_t peak;
+            uint32_t h = 2166136261u;
+            if (sd % 12u == 0u) gen_reset();
+            gp.genre = (uint8_t)GEN_EXPLORE; gp.seed = (uint16_t)(sd * 163u + 7u); gp.energy = (uint8_t)(10u + (sd * 37u) % 85u);
+            gp.form = 0;
+            for (k = 0; k < GP_N; k++) gp.amt[k] = GA_AUTO;
+            gp.complex = (uint8_t)((sd * 29u) % 100u); gp.swing = GA_AUTO; gp.human = 30;
+            gen_go();
+            if (strncmp(ui.msg, "GEN: EXPLORE ", 13) || strcmp(gs.g->name, "EXPLORE")) name_bad++;
+            for (k = 0; k < NTRK; k++) {
+                const track_t *t = &trk[k];
+                uint32_t r = gs.role[k], len = dlen(t), on = 0, c = 0, b;
+                if (drum_track(t)) { dk++; if (gs.act[RL_DRUM]) for (i = 0; i < len; i++) lms += step_lm_any(&t->step[i]) != 0; continue; }
+                fm += t->eng_req == ENGI_FM6; an += t->eng_req == ENGI_ANIMAL; vo += t->eng_req == EG_VO;
+                if (!seen_eng[t->eng_req % NENGINES]) { seen_eng[t->eng_req % NENGINES] = 1; neng++; }
+                words += t->eng_req == EG_VO && t->p[P_VLANG] > 0;
+                for (b = 0; b < 12u; b++) c += (scale_mask(t) >> b) & 1u;
+                if (t->p[P_ROOT] != gs.root || t->p[P_SCALE] != gs.scale || c != 7u || t->p[P_QUANT] == QN_OFF) page_bad++;
+                if (!gs.act[r] || (r == RL_TEX && k != gs.trk_of[RL_TEX])) continue;
+                if (!l0) l0 = len; else if (len != l0) lens_differ = 1;
+                if (!seen_len[len]) { seen_len[len] = 1; nlen++; }
+                odd += len % 4u != 0u;
+                divs += t->p[P_SDIV] != 2;
+                for (i = 0; i < len; i++) {
+                    const step_t *st = &t->step[i];
+                    uint32_t j;
+                    if (st->time != ST_NOTE) continue;
+                    on++;
+                    comps += st->comp != 0;
+                    for (j = 0; j < st->n; j++) {
+                        int32_t n = st->note[j], nx = -1;
+                        uint32_t q;
+                        nn++;
+                        if (n < 20 || n > 96) { key_bad++; printf("  EXPLORE out of range: seed %u T%u step %u note %d\n", gp.seed, k + 1u, i, n); }
+                        if (in_scale(t, n)) continue;
+                        for (q = 1; q <= len && nx < 0; q++) if (t->step[(i + q) % len].time == ST_NOTE) nx = t->step[(i + q) % len].note[0];
+                        if (gchord(i)->alt && ((gchord_pcs(i) >> (uint32_t)(n % 12)) & 1u)) key_col++;
+                        else if (st->n == 1u && nx >= 0 && (nx - n == 1 || n - nx == 1)) key_appr++;
+                        else { key_bad++; if (key_bad < 6u) printf("  EXPLORE off the key: seed %u T%u step %u note %d\n", gp.seed, k + 1u, i, n); }
+                    }
+                }
+                mel += on > 0u;
+                for (kk = 0; kk < FG_HEADS; kk++) heads += fg_set[k][kk].rate != 0;
+            }
+            poly += lens_differ;
+            if (mel < 2u) { nmel_bad++; printf("  EXPLORE seed %u: %u melodic parts playing\n", gp.seed, mel); }
+            if (fm > 2u || an > 2u || vo > 2u || dk > 1u) budget_bad++;
+            {   /* the CHORD page: an in-scale type on the chord track, its chords in the key */
+                uint32_t pd = gs.trk_of[RL_PAD];
+                if (pd < NTRK && gs.act[RL_PAD]) {
+                    track_t *t = &trk[pd];
+                    uint8_t o[KB_CH];
+                    uint32_t key, c, j;
+                    if (t->p[P_CHRD] < CD_TRI || t->p[P_CHRD] > CD_SUS4 || t->p[P_CVOI] != CV_LEAD) page_bad++;
+                    for (key = 53; key < 80u; key++)
+                        for (c = chord_build(t, key, o), j = 0; j < c; j++) if (!in_scale(t, o[j])) chord_bad++;
+                }
+            }
+            if (!seen_bpm[song.g[G_BPM] & 255]) { seen_bpm[song.g[G_BPM] & 255] = 1; nbpm++; }
+            if ((uint32_t)song.g[G_BPM] < bpm_lo) bpm_lo = (uint32_t)song.g[G_BPM];
+            if ((uint32_t)song.g[G_BPM] > bpm_hi) bpm_hi = (uint32_t)song.g[G_BPM];
+            if (!seen_sc[gs.scale & 15]) { seen_sc[gs.scale & 15] = 1; nsc++; }
+            if (!seen_dm[gs.g->drum & 63]) { seen_dm[gs.g->drum & 63] = 1; ndm++; }
+            project_capture(&proj_scratch);
+            if (!proj_pack(&proj_wire, &proj_scratch) || motion.count > MOTION_MAX) store_bad++;
+            h = all_sig();
+            for (i = 0; i < sd; i++) same += sig[i] == h;
+            sig[sd] = h;
+            gx_listen(sd < 20u ? 2400u : 800u, &rms, &peak, &clip, &vmax);   /* (~1.6 s, then ~0.5 s) */
+            if (rms < rms_min) rms_min = rms;
+            if (peak > peak_max) peak_max = peak;
+            if (vmax > vmax_all) vmax_all = vmax;
+            if (rms < 150.0) { quiet++; printf("  EXPLORE seed %u: RMS %.0f\n", gp.seed, rms); }
+            if (clip * 100u > 800u * 2u * CTL) { loud++; printf("  EXPLORE seed %u: %u samples at full scale\n", gp.seed, clip); }
+        }
+        printf("gen: EXPLORE x %u: %u tempos (%u..%u BPM), %u keys, %u loop lengths (%u odd), %u drum maps, %u engines, polyrhythm in %u,\n"
+               "gen:   %u DIVs off 1/16, %u components, %u DRUM-X octave steps, %u playheads, %u singing VOICEs; %u notes: %u coloured, %u approaches;\n"
+               "gen:   RMS %.0f at least, peak %d, %u voices at most (the genres: %u)\n",
+               SEEDS, nbpm, bpm_lo, bpm_hi, nsc, nlen, odd, ndm, neng, poly, divs, comps, lms, heads, words, nn, key_col, key_appr, rms_min,
+               peak_max, vmax_all, vref);
+        bad += gcheck("  60 seeds: each named EXPLORE nnnn, each another piece (no two the same)", !name_bad && !same);
+        bad += gcheck("  each plays: two melodic parts at least, sound (RMS), never stuck at full scale", !nmel_bad && !quiet && !loud);
+        bad += gcheck("  the budgets: FM6 / ANIMAL / VOICE on two tracks at most, one DRUM track, no more voices than a genre's",
+                      !budget_bad && vmax_all <= vref);
+        bad += gcheck("  the SCALE page its key on every track (a mode of seven, QUANT on); the CHORD page in-scale, its chords in the key",
+                      !page_bad && !chord_bad);
+        bad += gcheck("  every note in the key but the coloured chords' tones and the approaches (< 12 %), in range",
+                      !key_bad && (key_col + key_appr) * 100u < nn * 12u);
+        bad += gcheck("  varied: 20 tempos from under 90 to over 150 BPM, 6 keys, 12 loop lengths (odd ones), 12 drum maps",
+                      nbpm >= 20u && bpm_lo < 90u && bpm_hi > 150u && nsc >= 6u && nlen >= 12u && odd > 0u && ndm >= 12u);
+        bad += gcheck("  the rules broken: polyrhythm (a third of the pieces), DIVs, components, DRUM-X octaves, PLAYHEADS",
+                      poly * 3u >= SEEDS && divs && comps && lms && heads);
+        bad += gcheck("  any engine: six at least, ANIMAL and VOICE among them, VOICE singing words",
+                      neng >= 6u && seen_eng[ENGI_ANIMAL] && seen_eng[EG_VO] && words);
+        bad += gcheck("  every piece storable, the automation inside its 64", !store_bad);
+    }
+    {   /* EXPLORE deterministic; its FORMs; a genre's piece the same before and after it (DIV 1/16, no PLAYHEADS) */
+        uint32_t h1, h2, h3, h4, divs = 0, fg = 0, sec_bad = 0, f;
+        static project_t ps;
+        gen_reset();
+        gen_with(GEN_EXPLORE, 77, 50, 0); h1 = all_sig();
+        gen_with(GEN_EXPLORE, 77, 50, 0); h2 = all_sig();
+        bad += gcheck("EXPLORE deterministic: the same seed twice the same piece", h1 == h2);
+        gen_reset();
+        gen_with(1, 421, 50, 0); h3 = all_sig();
+        for (f = 0; f < 6u; f++) gen_with(GEN_EXPLORE, 300u + f, 50, f % 3u);
+        gen_with(1, 421, 50, 0); h4 = all_sig();
+        for (k = 0; k < NTRK; k++) { divs += trk[k].p[P_SDIV] != 2; for (i = 0; i < FG_HEADS; i++) fg += fg_set[k][i].rate != 0; }
+        bad += gcheck("  HOUSE 0421 the same piece before and after six EXPLORE pieces (DIV 1/16, no PLAYHEADS)", h3 == h4 && !divs && !fg);
+        for (f = 1; f <= 12u; f++) {                    /* PARTS and SONG: each section in its own key, playing, storable */
+            uint32_t s2;
+            gen_reset();
+            gen_with(GEN_EXPLORE, 900u + f, 60, 1u + f % 2u);
+            if (!live.mode || chain_config.count < 2u) { sec_bad++; continue; }
+            for (s2 = 0; s2 < 4u; s2++) {
+                if (!((dice_secs >> s2) & 1u)) continue;
+                if (!proj_import(&ps, &proj_slot[s2], sizeof(project_store_t))) { sec_bad++; continue; }
+                for (k = 0; k < NTRK; k++) {
+                    track_t tt;
+                    uint32_t j;
+                    if (gs.role[k] == RL_DRUM) continue;
+                    memcpy(tt.p, ps.t[k].p, sizeof tt.p);
+                    memcpy(tt.step, ps.t[k].step, sizeof tt.step);
+                    proj_steps(tt.step);
+                    if (tt.p[P_SCALE] != gs.scale) sec_bad++;
+                    for (i = 0; i < NSTEP; i++) {
+                        if (tt.step[i].time != ST_NOTE) continue;
+                        for (j = 0; j < tt.step[i].n; j++) if (tt.step[i].note[j] < 12u || tt.step[i].note[j] > 108u) sec_bad++;
+                    }
+                }
+            }
+            for (i = 0; i < 16u; i++) events_block(CTL);
+        }
+        bad += gcheck("  EXPLORE PARTS / SONG x 12: sections stored, ARRANGE filled, each on the piece's SCALE", !sec_bad);
+    }
+    {   /* NEW PROJECT (SAVE > TOOLS 5): GENRE back to EXPLORE */
+        gen_reset();
+        gp.genre = 5;
+        go_title("TOOLS"); tools_pick(5); press(B_OCTUP); press(B_OCTUP);
+        bad += gcheck("NEW PROJECT: GENRE back to EXPLORE", gp.genre == GEN_EXPLORE && msg_is("NEW PROJECT"));
+    }
     /* ---- the screen: HOME + SELECT opens GEN, the knobs set, SELECT pages, OCT+ makes, OCT- is done */
     {
         gen_reset();
-        gp.genre = 7; gp.energy = 50; gp.page = 0; gp.form = 0;   /* (0.6.93) a genre left from before: the screen opens on RANDOM */
+        gp.genre = 7; gp.energy = 50; gp.page = 0; gp.form = 0;   /* (0.6.93) a genre left from before: the screen opens
+                                                         * on RANDOM; (0.8.6) on EXPLORE */
         for (k = 0; k < GP_N; k++) gp.amt[k] = GA_AUTO;
         go_home(); frames(16);
         fm1_ms += 1200u;
         held_turn(B_HOME, 1);
-        bad += gcheck("HOME + SELECT: the GEN screen (ui.confirm CF_DICE_ALL), page 1, GENRE RANDOM (0.6.93)", ui.confirm == CF_DICE_ALL && gp.page == 0u && gp.genre == 0u);
+        bad += gcheck("HOME + SELECT: the GEN screen (ui.confirm CF_DICE_ALL), page 1, GENRE EXPLORE (0.8.6)", ui.confirm == CF_DICE_ALL && gp.page == 0u && gp.genre == GEN_EXPLORE);
+        {   /* (0.8.6) the knob's order: EXPLORE first, RANDOM, the genres; back from EXPLORE the last genre */
+            char v[16];
+            uint8_t g0 = gp.genre;
+            int ok = 1;
+            gen_value(0, 0, v); ok &= !strcmp(v, "EXPLORE");
+            gen_knob(0, 1); gen_value(0, 0, v); ok &= gp.genre == 0u && !strcmp(v, "RANDOM");
+            gen_knob(0, 1); gen_value(0, 0, v); ok &= gp.genre == 1u && !strcmp(v, "HOUSE");
+            gen_knob(0, -1); gen_knob(0, -1); ok &= gp.genre == GEN_EXPLORE;
+            gen_knob(0, -1); gen_value(0, 0, v); ok &= gp.genre == NGENRE && !strcmp(v, GENRE[NGENRE - 1u].name);
+            gen_knob(0, 1); ok &= gp.genre == GEN_EXPLORE;
+            gp.genre = g0; gp.hot = 0xFF;
+            bad += gcheck("  GENRE's order: EXPLORE, RANDOM, HOUSE .. (back from EXPLORE: the last genre)", ok);
+        }
         frames(800);
         press(B_PLAY); frames(4);
         bad += gcheck("  (0.6.97) PLAY on the GEN screen: the transport runs, the screen stays", (song.playing || transport_req == 1) && ui.confirm == CF_DICE_ALL);
@@ -489,8 +706,8 @@ int main(void)
         bad += gcheck("  PLAY again: stopped, the screen stays", (!song.playing || transport_req == 2) && ui.confirm == CF_DICE_ALL);
         frames(8);
         frames(800);                                    /* (the knobs quiet a moment after a button: ui_layer.c) */
-        turn(EN_K1, 1); turn(EN_K3, 2);
-        bad += gcheck("  KNOB 1 the genre (RANDOM -> HOUSE), KNOB 3 the energy (+10)", gp.genre == 1u && gp.energy == 60u);
+        turn(EN_K1, 1); turn(EN_K1, 1); turn(EN_K3, 2);
+        bad += gcheck("  KNOB 1 the genre (EXPLORE -> RANDOM -> HOUSE), KNOB 3 the energy (+10)", gp.genre == 1u && gp.energy == 60u);
         turn(EN_SELECT, 1);
         turn(EN_K1, -1); turn(EN_K2, 1);
         bad += gcheck("  SELECT: page 2 (PARTS); DRUMS AUTO -> 100 %, BASS AUTO stays AUTO above 100", gp.page == 1u && gp.amt[GP_DRUMS] == 100u && gp.amt[GP_BASS] == GA_AUTO);

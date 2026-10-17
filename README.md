@@ -15,7 +15,10 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.8.5).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.8.6).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+  **The dice starts in EXPLORE** (0.8.6): HOME + SELECT opens GEN on a choice that follows no genre and breaks every
+  rule (any tempo, odd metres and polyrhythm, exotic modes, any engine on any role, DRUM-X octaves, PLAYHEADS, MUTATE),
+  each seed a very different piece, still in the key its SCALE and CHORD pages show. RANDOM and the 43 genres follow.
   **DRUM-X octaves** (0.8.5): the kit stays on its keys at every OCT; above the centre it ratchets in time (x2, x4, x8),
   below it plays SHORT, GHOST or FLAM, each sound its own on each step, and live recording keeps exactly what you
   played. MIDI drum notes outside 35–81 now trigger these variations: see the changelog before installing.
@@ -541,6 +544,60 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### v0.8.6
+- **The dice always starts in EXPLORE** (the owner: "el dice siempre empieza en modo EXPLORE, que es un modo que no
+  sigue ningún género y rompe todas las reglas"). GEN's **GENRE** now reads **EXPLORE**, **RANDOM**, then the 43
+  genres; the screen opens on EXPLORE every time (at power-on, after NEW PROJECT, on every HOME + SELECT), so OCT+
+  straight away throws an EXPLORE piece (**LAST: EXPLORE 0421**). RANDOM (with its A+B mutants) and every genre are
+  as they were, bit for bit: the same settings make the same piece as in 0.8.5 (tests/gen_test.c's metrics unchanged,
+  a fingerprint of 792 pieces over every genre, RANDOM, the three FORMs identical).
+- **What EXPLORE throws**, field by field from everything the generator knows, its own stream a seed: a tempo from 56
+  to 200 BPM; any of the 39 drum maps (the procedural IDM's too) and the 8 kits, each sound pulled far from the kit's;
+  any three of the ~60 bass archetypes against any kick rule; any chord play, voicing, arp and lead; a role's sound
+  from a wider pool (a plucked or chip bass, a bell or organ lead, a choir or noise texture); any reverb, delay time
+  and type, how wet, how human, any FORM.
+- **Its key**: a mode of seven from the SCALE page, the exotic ones likeliest (phrygian, lydian, harmonic and melodic
+  minor, and **locrian**, which no genre takes: its diminished tonic chord is never in the plan), the lead's degrees
+  all seven, a pentatonic, a hexatonic or a gapped set. **Its harmony**: one to four chords on any degrees in any
+  order (non-functional moves: a chord a major or minor triad of the mode, any quality: triad, 7, 9, add9, sus, 6,
+  quartal, power, 11), now and then a borrowed, secondary or flat-side chord where its thrown harmony takes them (the
+  out-of-key notes), any family (loop, jazzy, pop, colour, film, jazz) with its cadences; FORM PARTS' last section
+  moves anywhere (a semitone, a minor third, a fourth, a tritone, down), not a whole step up.
+- **Its time**: a chord 8 to 48 steps, the loop 8 to 64 (3/4, 5/4, 7/8 ..); **each track its own LEN** (5 to 60 steps
+  against the loop's: polyrhythm, in nine pieces of ten) **and DIV** (1/8, 1/32, 8T, 16T, 1/4), a track's own swing,
+  drum hits off the grid (TIMING) and on chance.
+- **Its sounds**: **any engine on any role**, ANIMAL and VOICE included (a VOICE sings words seven times in ten: ES,
+  EN or JA, a W phrase or S scat), within the genres' budgets: FM6 on two tracks at most, ANIMAL and VOICE two each,
+  NOISE never the bass, the lead or the arp; the DRUM-X **octaves per sound** on the steps (x2 x4 x8, x8 a hat's or the rim's
+  only, SHORT, GHOST, FLAM); wide pans, glides, vibratos, the distortion's types, detune.
+- **Its motion**: step components scattered on every melodic part, the bass too (RAND, OCT, BEND, ECHO / EVEN, PULSE,
+  WALK, CLIMB, ARP, TONAL, JUMP, REV; some every other loop or the first only), **PLAYHEADS** (a head on a track or
+  two: 1/4 .. x2 or x3, any direction, -7 .. +7 degrees; a 1/32 track's never past x1), **MUTATE** on a track or two
+  (SOUND or PATTERN every 2 .. 16 bars, ORBIT mostly); the grain delay's pitch (±5, 7, 12) and spray, ping-pong, the
+  feedback held under 86 %.
+- **What it keeps**: it always plays (two melodic parts at least; LEAD never NONE), at the genres' levels; the SCALE
+  page (ROOT, SCALE, QUANT SNAP) and the chord track's CHORD page say the key and the chords it plays; every note is
+  in that key but the coloured chords' own tones and the bass's approaches. The same seed is the same piece. After an
+  EXPLORE piece a genre's piece puts DIV back to 1/16 and PLAYHEADS off (the only settings EXPLORE writes that a
+  genre's piece does not).
+- **Compatibility**: GEN's settings are not stored (no project or settings field holds the genre), and the value keeps
+  its meaning: 0 RANDOM, 1 + a genre's index, EXPLORE after them (44); only the knob shows EXPLORE first. The web
+  emulator's `web_gen(genre, ..)` takes 44 for EXPLORE, every other number as before; `dice_all` (the tests, the films,
+  the renders) still throws RANDOM. Projects saved from an EXPLORE piece are ordinary projects (DIV, PLAYHEADS, MUTATE,
+  lane modes, components: the formats of 0.8.5).
+- **Tests** (tests/gen_test.c): GENRE EXPLORE at power-on, after NEW PROJECT and where the screen opens; the knob's
+  order (EXPLORE, RANDOM, HOUSE .., back from EXPLORE the last genre); 60 EXPLORE seeds at varied ENERGY and COMPLEX,
+  each heard (RMS, never stuck at full scale, no more voices at once than the genres' pieces reach), each with two
+  melodic parts, the budgets, its SCALE and CHORD pages on its key, every note in it but the colours and approaches,
+  storable; varied (46 tempos from 60 to 191 BPM, 9 keys, 29 loop lengths, 29 drum maps, 8 engines, polyrhythm in 54
+  of 60, DIVs, components, DRUM-X octaves, playheads, singing VOICEs); deterministic; PARTS and SONG sections on the
+  piece's SCALE; HOUSE 0421 identical before and after six EXPLORE pieces. FELUCCA_VERSION is v0.8.6.
+- **What 0.8.6 costs**: flash image 555928 → 561072 B (+5144 B: the tables 0.4 KB, the throw and the parts' extras in
+  gen.c), the app slot (581564 B) keeps 20492 B free. RAM .data+.bss 88340 B of 98304 (unchanged: EXPLORE's state is 5
+  bytes in the padding), the pool 268412 B (spare 52096 B), RAM code 22084 B: unchanged. No audio path changed: the CPU
+  baselines (tests/cpu_baseline_vg.txt, tests/target_budget.txt) are untouched; the worst case stays the shared voice
+  budget's (8 voices, the overload guard), which EXPLORE's pieces never pass more than the genres' do.
 
 ### v0.8.5
 - **VOICE sings words** (the owner: "word generation with the Voice engine in several languages, Spanish, English and

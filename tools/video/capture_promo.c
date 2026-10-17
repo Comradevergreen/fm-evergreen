@@ -9,7 +9,7 @@
  *   cc -O2 -w -Ibuild/gen -Ifirmware/src -Itests -o build/video5/capture_promo tools/video/capture_promo.c -lm
  *   build/video5/capture_promo build/video5/promo */
 #define UI_TEST_NO_MAIN 1
-#define FELUCCA_VERSION "v0.8.5"
+#define FELUCCA_VERSION "v0.8.6"
 #define PF_MS 900u
 #define UI_NO_DRIFT 0
 #include "ui_test.c"

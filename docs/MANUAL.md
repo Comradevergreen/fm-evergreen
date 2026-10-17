@@ -59,8 +59,8 @@ files.
 
 ### Your first song (5 minutes)
 
-1. On **HOME**, turn **SELECT**. The **GENERATOR** screen opens: pick a **GENRE** with KNOB 1 (or leave RANDOM) and
-   press **OCT+**. A whole song idea appears: engines, sounds, parts, scale, tempo and effects. Press **PLAY**.
+1. On **HOME**, turn **SELECT**. The **GENERATOR** screen opens on **EXPLORE** (no genre, every rule broken): press
+   **OCT+** as it is, or pick RANDOM or one of the 43 genres with KNOB 1 first. A whole song idea appears: engines, sounds, parts, scale, tempo and effects. Press **PLAY**.
 2. Not your thing? Press **OCT+** again: a new seed, a new piece. Too busy? Turn **SELECT** to page 2 and lower
    **DRUMS** or **ARP**, then OCT+: the same piece with that changed. **HOME** (or OCT−) closes the screen. To go back to what
    was there before: hold **GLO** and press **G4** (UNDO).
@@ -989,7 +989,7 @@ the transport without leaving the screen (0.6.97).
 
 | Page | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 |---|---|---|---|---|
-| 1/3 | **GENRE**: RANDOM (the screen opens on it; half its throws are mutants of two genres, named A+B) or one of 43 | **SEED** 0000–9999 | **ENERGY** 0–100 % | **FORM**: LOOP, PARTS, SONG |
+| 1/3 | **GENRE**: **EXPLORE** (the screen always opens on it: no genre, every rule broken, below), RANDOM (half its throws are mutants of two genres, named A+B) or one of 43, in that order | **SEED** 0000–9999 | **ENERGY** 0–100 % | **FORM**: LOOP, PARTS, SONG |
 | 2/3 | **DRUMS** | **BASS** | **CHORDS** | **ARP** — each OFF, 10–100 %, or **AUTO** (the genre's) |
 | 3/3 | **LEAD** (as above) | **COMPLEX** 0–100 % | **SWING** AUTO or 0–100 % | **HUMAN** 0–100 % |
 
@@ -1005,6 +1005,30 @@ STEPPERS, JAZZ, BOSSA, AFROBEAT, AMBIENT, NEO CLASSIC, IMPRESSION, SOUNDTRACK, I
 range, its scales and chord progressions, its drum map and kit, its bass archetypes and register, how its chords, arp
 and lead speak, which sound recipe each role takes, how human it plays and its space (reverb type, delay type and
 time, how wet).
+
+**EXPLORE** (0.8.6), the first choice and where the screen always opens (at power-on, after NEW PROJECT, every time
+you open GEN), follows **no genre** and breaks their rules on purpose, so every seed is a very different piece
+(**LAST: EXPLORE 0421**):
+- **Tempo** anywhere from 56 to 200 BPM; **any drum map** (the procedural IDM's too) and kit, its sounds pulled far
+  from the kit's; any three bass archetypes against any kick rule; any chord play, voicing, arp and lead; a role may
+  take another role's kind of sound (a plucked bass, a bell lead, an organ texture).
+- **The key**: a mode of seven from the SCALE page, the exotic ones likeliest (phrygian, lydian, harmonic and melodic
+  minor, **locrian**), the lead on a pentatonic, hexatonic or gapped set over it. **Harmony**: one to four chords on
+  any degrees in any order (non-functional moves), any quality, now and then a borrowed, secondary or flat-side chord
+  (the out-of-key notes), a family and colours thrown too; a PARTS song's last section may move anywhere (a semitone,
+  a tritone ..), not just a whole step up.
+- **Time**: a chord 8 to 48 steps, the loop 8 to 64 (odd metres: 3/4, 5/4, 7/8 ..); **each track its own LEN and
+  DIV** (1/8, 1/32, 8T, 16T: polyrhythm), a track's own swing, drum hits off the grid.
+- **Sound**: **any engine on any role**, ANIMAL and VOICE included (VOICE singing words in ES / EN / JA, a phrase or
+  scat), FM6, ANIMAL and VOICE on two tracks at most; DRUM-X's octaves per sound on the steps (x2 x4 x8, SHORT, GHOST,
+  FLAM); wide pans, glides, vibratos, distortion types.
+- **Motion**: step components scattered (RAND, OCT, BEND, ECHO, PULSE, WALK, CLIMB, ARP, TONAL, JUMP, REV, some every
+  other loop), **PLAYHEADS** on a track or two, **MUTATE** on a track or two; the delay's grain pitch and spray,
+  ping-pong, any reverb.
+- What it keeps: it always plays (two melodic parts at least, the genres' levels, the shared voice budget, the delay
+  short of self-oscillation), the **SCALE page** and the **CHORD page** say the key and the chords it plays, and every
+  note is in that key but the coloured chords' own tones and the approaches. The same seed is the same piece; the
+  genres' pieces are exactly as before. After an EXPLORE piece a genre's piece sets DIV back to 1/16 and PLAYHEADS off.
 
 What a piece is made of:
 

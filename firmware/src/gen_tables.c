@@ -568,3 +568,45 @@ static const ggenre_t GENRE[] = {
      4, 4, 65, 0, FM_PARTS, 50, HF_JAZZY},
 };
 #define NGENRE (sizeof GENRE / sizeof GENRE[0])
+
+/* ------------------------------------------------------------------------------------------- (0.8.6) EXPLORE --- */
+/* GENRE's first choice and the dice's default: no genre's template, every one of its rules thrown (gen.c gx_genre).
+ * gp.genre keeps its values (0 RANDOM, 1 + a genre's index) and EXPLORE comes after them, so every number that names a
+ * genre (the web emulator's web_gen, the tests, the tools) still names it; the knob shows it first (gen_knob) */
+#define GEN_EXPLORE ((uint32_t)NGENRE + 1u)
+#define GEN_NPOS ((uint32_t)NGENRE + 2u)                /* the knob's places: EXPLORE, RANDOM, the genres */
+/* its keys: the SCALE page's modes of seven, the exotic ones likeliest (LOC too: its tonic chord a diminished one the
+ * plan never takes, the other six degrees do) */
+static const uint8_t GX_SCALE[9] = {SC_MAJ, SC_MIN, SC_DOR, SC_MIX, SC_HARM, SC_PHRY, SC_LYD, 10u /* LOC */, SC_MEL};
+static const uint8_t GX_SCALE_W[9] = {4, 4, 8, 8, 13, 14, 14, 8, 13};
+/* the lead's degrees over the mode: all seven, the pentatonics, hexatonics, a gapped one, an odd five */
+static const uint8_t GX_PAL[8] = {0x7Fu, 0x5Du, 0x37u, 0x6Fu, 0x3Bu, 0x77u, 0x2Du, 0x5Bu};
+/* the recipes a role may take (beyond its usual ones: a plucked bass, a bell lead, an organ texture ..) */
+static const uint8_t GX_BASS[11] = {SR_SUB, SR_ACID, SR_REESE, SR_FMBASS, SR_ROCKBASS, SR_HOOK, SR_WOW, SR_EBMBASS, SR_PLUCK, SR_CHIP, SR_GTR};
+static const uint8_t GX_PADS[13] = {SR_PAD, SR_STRINGS, SR_CHOIR, SR_ORGAN, SR_EP, SR_STAB, SR_DUBCHORD, SR_HOOVER, SR_WALL, SR_GTR, SR_KEYS, SR_BELL, SR_DRONE};
+static const uint8_t GX_ARPS[8] = {SR_PLUCK, SR_BELL, SR_CHIP, SR_KEYS, SR_SINEKEY, SR_EP, SR_GTR, SR_STAB};
+static const uint8_t GX_LEADS[8] = {SR_LEAD, SR_VOXLEAD, SR_CHIP, SR_HOOVER, SR_BELL, SR_PLUCK, SR_WOW, SR_ORGAN};
+static const uint8_t GX_TEX[8] = {SR_NOISE, SR_TEXTURE, SR_DRONE, SR_CHOIR, SR_PAD, SR_ORGAN, SR_BELL, SR_STRINGS};
+/* any engine on any role (the weights a role, RL_BASS .. RL_TEX; NOISE never a bass, a lead or an arp: unpitched) */
+#define GX_NENG 8u
+static const uint8_t GX_ENG[GX_NENG] = {EG_A, EG_FM, EG_PH, EG_LO, EG_VO, EG_WH, EG_NO, ENGI_ANIMAL};
+static const uint8_t GX_ENG_W[RL_N][GX_NENG] = {
+    {0},
+    {20, 14, 14, 12, 8, 8, 0, 8},                       /* bass */
+    {14, 12, 12, 8, 14, 12, 4, 8},                      /* chords */
+    {14, 10, 12, 12, 16, 6, 0, 16},                     /* lead */
+    {12, 14, 14, 14, 8, 8, 0, 14},                      /* arp */
+    {8, 6, 8, 8, 14, 8, 20, 16},                        /* texture */
+};
+/* a track's own loop (polyrhythm: odd and irregular lengths against the piece's) and its DIV (N_DIV: 0 1/4, 1 1/8,
+ * 2 1/16, 3 1/32, 4 8T, 5 16T); how often a role keeps the piece's loop, a role's DIV weights */
+static const uint8_t GX_LEN[24] = {5, 6, 7, 9, 10, 11, 12, 13, 14, 15, 18, 20, 21, 24, 27, 28, 30, 36, 40, 44, 48, 52, 56, 60};
+static const uint8_t GX_KEEP[RL_N] = {60, 70, 80, 45, 45, 50};
+static const uint8_t GX_DIV_W[RL_N][6] = {{0, 8, 80, 0, 0, 12}, {0, 15, 70, 0, 5, 10}, {5, 25, 60, 0, 10, 0},
+                                         {0, 20, 55, 0, 10, 15}, {0, 15, 50, 15, 0, 20}, {20, 30, 50, 0, 0, 0}};
+/* the step components it scatters (gen.c gx_comps): their weights on a melodic track */
+static const uint8_t GX_COMP[12] = {CP_RAND, CP_OCT, CP_BEND, CP_ECHO, CP_PULSE, CP_WALK, CP_CLIMB, CP_ARPQ, CP_ARPN,
+                                    CP_TONAL, CP_JUMP, CP_REV};
+static const uint8_t GX_COMP_W[12] = {14, 12, 8, 12, 8, 12, 6, 8, 6, 6, 4, 4};
+/* a DRUM-X sound's own way on a step (LM_X2 .. LM_FLAM) */
+static const uint8_t GX_LM_W[LM_N] = {0, 30, 14, 4, 20, 22, 10};
