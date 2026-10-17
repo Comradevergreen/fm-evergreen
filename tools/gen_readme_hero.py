@@ -1,20 +1,18 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
 # (JIANT 0.5; 0.6.30: from the presentation video's footage) the README's images, docs/jiant-hero.png and
-# docs/jiant-screens.png, from the FM-1 screens the video's capture recorded (tools/video/capture.c -> screen.rgb,
-# 30 fps, its song at 125 BPM): every screen alive, as the firmware drew it while the song played. (0.6.89) The newer
-# pages from tools/video/capture_shots.c (the same song): shots.rgb, shots.txt.
-#   cc -O2 -w -Ibuild/gen -Ifirmware/src -Itests -o build/video/capture tools/video/capture.c -lm
-#   build/video/capture build/video
-#   cc -O2 -w -Ibuild/gen -Ifirmware/src -Itests -o build/video/capture_shots tools/video/capture_shots.c -lm
-#   build/video/capture_shots build/video
-#   python3 tools/gen_readme_hero.py build/video docs        (needs PIL, numpy)
+# docs/jiant-screens.png. (0.9.2) From the firmware's own renders in the default skin, COLORS on the JIANT palette
+# (tests/ui_render.c -> build/ui_new/JIANT/<screen>.png; BOTTOM_JIANT/ and HUD_JIANT/ for the other two skins), so the
+# README shows the screens as the firmware draws them now (the tabs, the cards in their knobs' colours, the breadcrumb):
+#   python3 -c "import sys; sys.path.insert(0, 'tools'); import build; build.generate()"
+#   mkdir -p build/ui_new/ppm && cc -O1 -w -DFELUCCA_VERSION=\"v0.9.2\" -Ibuild/gen -Ifirmware/src -Itests \
+#       -o build/ui_render tests/ui_render.c -lm && build/ui_render build/ui_new && python3 tests/ui_render.py build/ui_new
+#   python3 tools/gen_readme_hero.py build/ui_new docs        (needs PIL; tests/run_tests.sh makes build/ui_new too)
 import re, sys
 from pathlib import Path
-import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 R = Path(__file__).resolve().parents[1]
-V = Path(sys.argv[1] if len(sys.argv) > 1 else R / 'build/video')
+U = Path(sys.argv[1] if len(sys.argv) > 1 else R / 'build/ui_new')
 OUT = Path(sys.argv[2] if len(sys.argv) > 2 else R / 'docs')
 VERSION = re.search(r'FELUCCA_VERSION "(v[^"]+)"', (R / 'firmware/src/felucca.c').read_text()).group(1)
 F = R / 'assets/fonts'
@@ -25,18 +23,10 @@ def heat(v):
     return tuple(int(H[k][j] + (H[k + 1][j] - H[k][j]) * f) for j in range(3))
 BG, TXT, MID, DIM = (0, 0, 0), (244, 241, 234), (160, 154, 150), (80, 76, 84)
 
-SCR = np.memmap(V / 'screen.rgb', dtype=np.uint8, mode='r').reshape(-1, 240, 240, 3)
-BEAT = 60 / 125
-# (0.6.89) the newer pages, from tools/video/capture_shots.c: shots.rgb, their names in shots.txt
-SHOTS = np.fromfile(V / 'shots.rgb', dtype=np.uint8).reshape(-1, 240, 240, 3)
-SHOT_N = [l for l in (V / 'shots.txt').read_text().split('\n') if l]
-def shot(beat):                                      # the screen at that beat of the film, or a newer page by its name
-    if isinstance(beat, str):
-        return Image.fromarray(np.array(SHOTS[SHOT_N.index(beat)]))
-    return Image.fromarray(np.array(SCR[int(beat * BEAT * 30)]))
-# the film's beats (capture.c's script, 0.6.37)
-HOME, ANALOG, DRUMX, DICE, ARRANGE, LOAD = 232, 34.5, 18.5, 193.5, 186.5, 205.5
-MIXER, RESO, SLICER, PUNCH, FM6, MSEQ, MASTER, DIST, TOOLS, SCALE = 178, 122.5, 146.5, 155, 50.5, 98.5, 162, 138.5, 222.5, 209.5
+
+def shot(name, skin='JIANT'):                         # a screen as the firmware draws it (240 x 240)
+    return Image.open(U / skin / f'{name}.png').convert('RGB')
+
 
 def signature(d, ox, oy, sc, width):
     src = (R / 'firmware/src/ui_signature.h').read_text()
@@ -50,10 +40,12 @@ def signature(d, ox, oy, sc, width):
     for a, b, acc in segs:
         d.line([(ox + a[0] * sc, oy + a[1] * sc), (ox + b[0] * sc, oy + b[1] * sc)], fill=heat(0.08 + 0.86 * acc / L), width=width)
 
+
 def framed(im, img, x, y, s, resample=Image.NEAREST):
     d = ImageDraw.Draw(im)
-    d.rectangle([x - 3, y - 3, x + 240 * s + 2, y + 240 * s + 2], outline=(40, 34, 48), width=2)
+    d.rounded_rectangle([x - 4, y - 4, x + 240 * s + 3, y + 240 * s + 3], 10, outline=(40, 34, 48), width=2)
     im.paste(img.resize((int(240 * s), int(240 * s)), resample), (x, y))
+
 
 # ---- the hero
 W, Hh = 1600, 1900
@@ -66,29 +58,31 @@ for i in range(W - 140):
     d.line([(70 + i, 330), (70 + i, 335)], fill=heat(i / (W - 140)))
 cap = font('SemiBold', 22)
 y0 = 370
-big = [(HOME, 'HOME · six living tracks'), (DICE, 'DICE ALL · a new song idea'), (ARRANGE, 'ARRANGE · the song in a column')]
+big = [('home', 'HOME · six living tracks'), ('gen_explore', 'GEN · EXPLORE, a new song idea'),
+       ('save_arrange', 'ARRANGE · the song in sections')]
 for i, (b, c) in enumerate(big):
     x = 70 + i * 500; framed(im, shot(b), x, y0, 2); d.text((x, y0 + 492), c, font=cap, fill=heat(0.15 + 0.3 * i))
-strips = [[('TIMING', 'TIMING · OFF THE GRID'), ('HUMAN', 'HUMAN'), ('STRETCH', 'STRETCH · REPEAT'), ('CHORD', 'CHORD MODE'),
-           ('DLY', 'DELAY · FEEDBACK'), ('DLY 2', 'DELAY · MOD')],
-          [(ANALOG, 'ACID ANALOG'), (DRUMX, 'DRUM-X'), (FM6, 'FM6 OPERATORS'), (RESO, 'RESO REVERB'), (PUNCH, 'PUNCH-IN FX'),
-           (MIXER, 'MIXER · 6')]]
+strips = [[('lente_step_note', 'NOTE · MICRO in 64ths'), ('seq_bar', 'SEQ › BAR · PLAYHEADS'), ('key_chord', 'CHORD'),
+           ('fx_buses', 'FX › BUSES'), ('mixer', 'MIXER · DJ FILTER'), ('layer_glo_active', 'GLO held · MAP')],
+          [('edit_analog', 'ACID ANALOG'), ('drumx', 'DRUM-X'), ('words', 'VOICE · WORDS'), ('ed_operator', 'FM6 OPERATOR'),
+           ('reverb_reso', 'RESO REVERB'), (('home', 'HUD_JIANT'), 'HUD skin')]]
 y1 = y0 + 545
 for r, row in enumerate(strips):
     for i, (b, c) in enumerate(row):
         x = 70 + i * 245; y = y1 + r * 270
-        im.paste(shot(b).resize((216, 216), Image.LANCZOS), (x, y))
+        img = shot(*b) if isinstance(b, tuple) else shot(b)
+        im.paste(img.resize((216, 216), Image.LANCZOS), (x, y))
         d.text((x, y + 222), c, font=font('SemiBold', 18), fill=MID)
 y2 = y1 + 2 * 270 + 20
-cards = [("OFF THE GRID", "REC Q keeps where you played;\nTIMING moves a step by 1/16."),
-         ("HUMAN", "Velocity, timing and gate breathe\na little differently every loop."),
-         ("STRETCH · REPEAT", "x2..x8 or squeezed; clone a pattern\nof any length up to 64 steps."),
-         ("ANALOG DELAY", "Feedback past 100 % self-oscillates;\nresonant TONE, tape MOD."),
-         ("CHORD MODE", "One key, a whole chord; recorded\nwhole, strummed, lit on the keys."),
-         ("SONG IDEAS", "HOME + SELECT writes a whole song:\n21 genres, never the same twice."),
-         ("ARRANGE", "Sections in a column, bars and scenes;\nEND plays x2..x8 or loops."),
-         ("DRUM-X", "Synthesized drums: morph from A to B,\nFOLD, FM ENV, TONE: no samples."),
-         ("FIVE REVERBS", "ROOM, SPRING, SHIMMER, RESO tuned\nto the scale and a granular CLOUD.")]
+cards = [("SIX RULES", "SELECT walks a section's pages;\nits button jumps group to group."),
+         ("THREE SKINS", "COLORS, BOTTOM and HUD: each knob\nits colour, tabs and a breadcrumb."),
+         ("EXPLORE", "HOME + SELECT writes a whole song;\nEXPLORE breaks every rule, 43 genres."),
+         ("VOICE SINGS", "Words in ES, EN and JA: each note\nthe next syllable of your lyric."),
+         ("ANIMAL", "Birds, crickets, frogs, wolves:\ncalls from physical models."),
+         ("DRUM-X OCTAVES", "Above: ratchets x2..x8. Below:\nSHORT, GHOST, FLAM, per sound."),
+         ("OFF THE GRID", "REC keeps where you played, to\na 64th of a step; MICRO edits it."),
+         ("DJ FILTER", "One knob on the whole mix:\nlow-pass left, high-pass right."),
+         ("USB STEMS", "Every track to the computer, or to\nthe phone with the JIANT Stems app.")]
 ft, fd = font('SemiBold', 27), font('Medium', 20)
 for i, (t, txt) in enumerate(cards):
     cx = 70 + (i % 3) * 500; cy = y2 + (i // 3) * 125
@@ -97,14 +91,14 @@ for i, (t, txt) in enumerate(cards):
     d.multiline_text((cx + 22, cy + 38), txt, font=fd, fill=MID, spacing=6)
 d.text((70, Hh - 50), "GPL-3.0  ·  fork of Felucca (Hügelton Instruments)  ·  song mode from SLOOP  ·  juanjiant-bit.github.io/JIANT",
        font=font('Medium', 20), fill=DIM)
-im.save(OUT / 'jiant-hero.png'); print(OUT / 'jiant-hero.png', im.size)
+im.save(OUT / 'jiant-hero.png', optimize=True); print(OUT / 'jiant-hero.png', im.size)
 
 # ---- the screens: six of them, 2x, as a grid
-sc = [(HOME, 'HOME'), (ARRANGE, 'ARRANGE'), ('TIMING', 'TIMING · OFF THE GRID'), ('STRETCH', 'STRETCH · REPEAT'),
-      ('DLY', 'DELAY · FEEDBACK'), (DRUMX, 'DRUM-X')]
+sc = [('home', 'HOME · ECO'), ('save_arrange', 'SAVE › ARRANGE'), ('lente_step_note', 'SEQ › NOTE · OFF THE GRID'),
+      ('fx_effect_delay', 'FX › DELAY'), ('drumx', 'EDIT › KIT · DRUM-X'), ('words', 'EDIT › WORDS · VOICE')]
 g = Image.new('RGB', (3 * 520 + 40, 2 * 560 + 30), BG); d = ImageDraw.Draw(g)
 for i, (b, c) in enumerate(sc):
     x = 40 + (i % 3) * 520; y = 30 + (i // 3) * 560
     framed(g, shot(b), x, y, 2)
     d.text((x, y + 492), c, font=font('SemiBold', 24), fill=heat(0.1 + 0.16 * i))
-g.save(OUT / 'jiant-screens.png'); print(OUT / 'jiant-screens.png', g.size)
+g.save(OUT / 'jiant-screens.png', optimize=True); print(OUT / 'jiant-screens.png', g.size)

@@ -218,6 +218,14 @@ SAVE / WRITE sobre el nombre, las letras de las teclas y las funciones de las te
 
 ## 3. Páginas y capas
 
+[![El mapa de navegación: cada sección, sus grupos y sus páginas en el orden de la cadena, las seis reglas, las capas y las combinaciones](navigation-map.es.png)](navigation-map.es.svg)
+
+*Todo el sinte en una página: el botón de cada sección, sus grupos (las pestañas de la pantalla) y sus páginas en el
+orden en que las recorre SELECT (el número de cada punto es la n del n/N del pie; en naranja, la página al encender;
+punteada, una página que solo tienen algunos motores o LOADs), con las seis reglas, las capas y las combinaciones.
+Hacé clic para abrir el SVG, con zoom ([in English](navigation-map.svg)). Se genera desde las tablas de cadenas del
+firmware (`tools/gen_nav_map.py`).*
+
 ### Cómo funciona la navegación: seis reglas (0.9.2)
 
 Desde la 0.9.2 todas las secciones se manejan igual (el diseño que aprobó el dueño, la maqueta "navegación"): lo

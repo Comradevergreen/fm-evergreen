@@ -5,45 +5,72 @@
 [![License: GPL-3.0-only](https://img.shields.io/badge/license-GPL--3.0--only-blue.svg)](LICENSE)
 [![Emulator](https://img.shields.io/badge/try%20it-in%20the%20browser-ff7a00.svg)](https://juanjiant-bit.github.io/JIANT/emu/)
 
-![JIANT FM: the signature, the screens and what's new: song ideas, ARRANGE, undo, TRACKS and LOAD](docs/jiant-hero.png)
+![JIANT FM: the signature, the screens in the COLORS skin and what's new through 0.9.2: six navigation rules, three skins, EXPLORE, VOICE words, ANIMAL, DRUM-X octaves, REC in 64ths, the DJ FILTER and USB stems](docs/jiant-hero.png)
 
 JIANT FM is an alternative firmware for the **M-VAVE FM-1**, made for playing live and building whole songs without
 a computer. It is a fork of [Felucca](https://github.com/hugelton/Felucca) 1.1.5.1 by Hügelton Instruments (GPL-3.0)
 and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 
-**▶ [Try it in the browser](https://juanjiant-bit.github.io/JIANT/emu/)** · **[Web installer](https://juanjiant-bit.github.io/JIANT/webapp/installer/)** · **[Web editor](https://juanjiant-bit.github.io/JIANT/webapp/editor/)**: the emulator runs the same code as
+**▶ [Try it in the browser](https://juanjiant-bit.github.io/JIANT/emu/)** · **[Web installer](https://juanjiant-bit.github.io/JIANT/webapp/installer/)** · **[Web editor](https://juanjiant-bit.github.io/JIANT/webapp/editor/)** · **[JIANT Stems for Android](https://juanjiant-bit.github.io/JIANT/app/jiant-stems.apk)**: the emulator runs the same code as
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.9.2).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
-  **The dice starts in EXPLORE** (0.8.6): HOME + SELECT opens GEN on a choice that follows no genre and breaks every
-  rule (any tempo, odd metres and polyrhythm, exotic modes, any engine on any role, DRUM-X octaves, PLAYHEADS, MUTATE),
-  each seed a very different piece, still in the key its SCALE and CHORD pages show. RANDOM and the 43 genres follow.
-  **DRUM-X octaves** (0.8.5): the kit stays on its keys at every OCT; above the centre it ratchets in time (x2, x4, x8),
-  below it plays SHORT, GHOST or FLAM, each sound its own on each step, and live recording keeps exactly what you
-  played. MIDI drum notes outside 35–81 now trigger these variations: see the changelog before installing.
+> **Status: in development (v0.9.2).** It builds and passes every test (Felucca's and its own). Back up the flash before installing it.
+  **0.9.2 is driven by six rules** (see [Navigation](#navigation)): SELECT walks a section's pages as one chain, the
+  section's button jumps group to group, PRESETS always loads presets, KNOB 1 picks, a button held is its layer, and
+  the tabs and the footer say where you are. Every page, knob and function is where it was; only the way between them
+  changed.
 
-> ⚡ **New in 0.6.85 – 0.6.92: a song generator you steer, a compact sequencer that breathes, a delay that feeds back.**
-> - **GEN (HOME + SELECT)**: a screen of three pages — GENRE (43 genres or RANDOM), SEED, ENERGY, FORM (loop, parts,
->   a club song); how much DRUMS, BASS, CHORDS, ARP, LEAD; COMPLEX, SWING, HUMAN. OCT+ makes the piece (again: a new
->   seed), the knobs re-make it with one part changed. Drums from priority maps, ~50 bass archetypes written against
->   the kick, chords with a quality each, motifs in phrases, sounds by recipe.
-> - **A compact sequencer** (0.6.92): 11 SEQ pages instead of 15, the same powers. **EVERY** on each step says on
->   which loops its components play (1:2 … 4:4, 1:8, FIRST, !FIRST, SKIP): an arpeggio every fourth bar, a jump only
->   the first time. **ARP RATE** in note values (1/32, 1/32T, 1/64 …). **TRACK**: PITCH, CHANCE, one **HUMAN** amount
->   (velocity, timing, gate, decay and release vary a little every loop) and REC Q.
-> - **Off the grid**: **REC Q** keeps where you played each note (up to half a step early or late) and **NOTE > MICRO**
->   moves any step by sixteenths; early notes really play early.
-> - **STRETCH · REPEAT** act as the knob turns: stretch a sequence x2 … x8 or squeeze it, clone a pattern of any
->   length up to 64 steps, NUDGE it a step, **ROTATE** where it is read from.
-> - **A delay to play**: ANALOG (FEEDBK past 100 % self-oscillates, saturating softly; resonant TONE) or DIGITAL
->   (clean); **PING-PONG** across the stereo; with TONE in the middle the repeats are copies of what went in; tape
->   **MOD**.
-> - Still on both cores (0.6.71, experimental): **MENU > ABOUT** says **CORES 2** or **CORES 1**.
-> [Details](#both-cores-dual-core).
+> ⚡ **New in 0.8.3 – 0.9.2: a new look, nine engines, finer timing and a map you can learn in a minute.**
+> - **Flat navigation** (0.9.2): one chain of pages per section, the groups as tabs on top (a dot a page), the
+>   breadcrumb **SECTION · GROUP · page n/N** at the foot; SCL and ARP two sections; GEN three HOME pages. Clearing a
+>   step is **SEQ + G5**, renaming **SAVE + C5**: EDIT is always EDIT.
+> - **Three skins, MENU > DISPLAY > SKIN** (0.8.9; HUD faster in 0.9.0): **COLORS** (the default: rounded cards, each
+>   knob its colour, violet, yellow, blue, red), **BOTTOM** (the picture edge to edge, a slim knob row) and **HUD**
+>   (HOME's beings under everything). The **LENTE** look (0.8.5): tabs, cards and a breadcrumb in a crisp 5 × 7 pixel
+>   face, values in Inter Tight. **Held layers** show the keyboard itself: MAP, KNOBS and STATE (ALGORITHM while held).
+> - **VOICE sings words** (0.8.5): ES, EN or JA, each note the next syllable of a lyric you type (or the dice's).
+>   **ANIMAL** (0.8.3), the ninth engine: birds, insects, frogs and beasts from physical models.
+> - **DRUM-X in every octave** (0.8.5): the kit stays on its keys; above the centre it ratchets (x2, x4, x8), below it
+>   plays SHORT, GHOST or FLAM, each sound its own on each step, recorded as you played.
+> - **The dice starts in EXPLORE** (0.8.6): HOME + SELECT opens GEN on a choice that follows no genre and breaks every
+>   rule (odd metres, exotic modes, any engine on any role, PLAYHEADS, MUTATE); RANDOM and 43 genres follow.
+> - **A DJ FILTER on the master** (0.9.1, GLO › MIXER KNOB 4): low-pass to the left, high-pass to the right, out of
+>   the chain in the middle; automatable, saved with the project. **REC off the grid in 64ths** of a step (0.9.1):
+>   SEQ › NOTE's MICRO, −32/64 … +31/64.
+> - **USB audio that keeps its time** (0.8.9): no lost half buffers (the clicks under load), no dropped packets, the
+>   48 kHz resampler on the second core. **Stems**: every track to the computer (MENU > SYSTEM > USB > STEMS), or to the
+>   phone with the **[JIANT Stems](android/README.md)** app (record, line up your voice, export a ZIP or a mix;
+>   [APK](https://juanjiant-bit.github.io/JIANT/app/jiant-stems.apk)).
+> - Every version's details: the **[Changelog](#changelog)**.
 
 > 🫶 If you resonate with my work, consider supporting me on **[Ko-fi](https://ko-fi.com/juanjiant)** (in Argentina:
 > **[Cafecito](https://cafecito.app/juanjiant)**). Thanks for all the good energy, hope you enjoy this little beast ✨🎹
+
+## Navigation
+
+Ten buttons, ten sections, and the same six rules in every one of them (0.9.2). The map shows every section, its
+groups (the tabs on the screen) and its pages in the order SELECT walks them, with the held layers and the combos.
+Click it to open it full size ([SVG](docs/navigation-map.svg), zoomable · [en español](docs/navigation-map.es.svg)).
+
+[![JIANT FM navigation map: every section, its groups and its pages in chain order, the six rules, the held layers and the combos](docs/navigation-map.png)](docs/navigation-map.svg)
+
+1. **SELECT walks the pages**: one chain per section, a page a detent, stopping at the first and the last.
+2. **The section's button: in, or on**: from elsewhere, the page you left there; inside, the first page of the next
+   group (round). FX › DLY 2 → REVERB; EDIT › FILTER → FOCUS.
+3. **PRESETS loads presets**: the track's sounds everywhere, the patterns in SEQ, the genre in GEN; never a page, a
+   track or a module.
+4. **KNOB 1 picks**: the step, the bar, the slot, the stage, the operator, the kit's sound. The track is always
+   **ALGORITHM**'s.
+5. **Hold = the layer**: a button held puts its shortcuts on the keys and knobs (SEQ + G5 CLR STEP, SAVE + C5 NAME,
+   GLO + G4 UNDO …). Held + SELECT: **HOME** GEN, **EDIT / SEQ / LFO / FX** their dice, **GLO** the tempo,
+   **ENV / SCL / ARP / SAVE** walk their chain.
+6. **The screen says where**: on top the section's groups as tabs (a dot a page), at the foot
+   **SECTION · GROUP · page** and **n/N**: **FX · DELAY · DLY 2  6/16**.
+
+The whole chapter: [the manual, § 3](docs/MANUAL.md#3-pages-and-layers) ·
+[el manual, § 3](docs/MANUAL.es.md#3-páginas-y-capas). The map is generated from the firmware's own chain tables
+(`firmware/src/ui_lens.c`) by `tools/gen_nav_map.py`.
 
 ## Manual
 
@@ -78,7 +105,7 @@ voice is, the distortion draws its transfer curve, the delay its echoes, the rev
 you to play; the technical lets you understand what you did.
 
 The second idea is that **randomness is an invitation, not an accident**. Every session starts with macros rolled
-towards what your sounds have; SELECT on HOME dices the whole piece, on EDIT the sound; macro dice only land on what is playing.
+towards what your sounds have; HOME + SELECT writes a whole piece, EDIT + SELECT dices the sound; macro dice only land on what is playing.
 The system pushes you to move things and always leaves you near something that works: the dice start from factory
 presets and vary around them, never from nothing.
 
@@ -122,16 +149,20 @@ audio CPU budget, the signature shown at power-on is 428 bytes. An instrument th
 
 ### A living screen
 
-![HOME, DICE ALL, ARRANGE, DRUM-X, PUNCH-IN FX and TRACKS · LOAD](docs/jiant-screens.png)
+![HOME, ARRANGE, SEQ › NOTE off the grid, FX › DELAY, the DRUM-X kit and VOICE's WORDS in the COLORS skin](docs/jiant-screens.png)
 
-*HOME with its six beings, the song in ARRANGE, the piano roll with the lead off the grid, STRETCH, the delay feeding
-back and the DRUM-X colony, exactly as the firmware draws them while a song plays (frames of the presentation song).*
+*HOME with its six beings, the song in ARRANGE, SEQ › NOTE with a note 13/64 late, the delay, the DRUM-X colony and
+VOICE singing its lyric, in the COLORS skin, exactly as the firmware draws them (the renders of `tests/ui_render.c`).*
 
 - **Thermal palette**: values, curves, steps, hits and notes are coloured by intensity (cyan → blue → violet → red →
-  orange → yellow → white). Selection is violet and active is orange. Fonts, the landing page's: values in
-  [IBM Plex Mono](https://github.com/IBM/plex), page names in [Michroma](https://github.com/googlefonts/Michroma-font),
-  labels in [Chakra Petch](https://github.com/m4rc1e/Chakra-Petch). No boxes: the cards and panels are their text and
-  graphs on black.
+  orange → yellow → white). Selection is violet and active is orange; in the COLORS skin each knob has its colour on
+  its card (KNOB 1 violet, 2 yellow, 3 blue, 4 red on JIANT).
+- **Skins** (MENU > DISPLAY > SKIN, 0.8.9): **COLORS** (the default: near-black rounded cards on top, a rounded
+  panel), **BOTTOM** (no cards: the picture the screen's width, a slim knob row at the foot) and **HUD** (HOME's
+  beings swim under everything, the words float over them). Every skin wears the **LENTE** layout (0.8.5): the
+  section's groups as tabs on top (a dot a page), the breadcrumb **SECTION · GROUP · page n/N** at the foot. Values
+  in [Inter Tight](https://github.com/rsms/inter-tight) SemiBold, names, tabs and the breadcrumb in a crisp 5 × 7
+  pixel face, small captions in [Chakra Petch](https://github.com/m4rc1e/Chakra-Petch).
 - **HOME, the ecosystem**: one being per track (its species from its engine, its shape from its four knobs). Each one
   heats up, swells and moves with its own audio; the selected track is drawn bigger; muted ones go dark; in silence
   they all stay still.
@@ -191,17 +222,25 @@ An 8-sound kit (BD SD CP CH OH TM RS CB) generated in real time, Microtonic styl
 - **FOLD** runs each sound's oscillator through a wavefolder after its envelope: the hit starts bright and the tail
   returns to the clean wave. **FM** changes the timbre with harmonic FM in 8 bands; plus TUNE, TONE, DECAY, NOISE and
   DRV.
-- **EDIT > SOUND 3** (per sound): **PMOD** picks how the pitch moves (DECAY, LONG like the 808, random NOISE, SINE),
-  **DRV** saturates the oscillator for dense kicks, and **WAVE** changes the waveform.
+- **EDIT > SOUND 1–4** (one sound each, KNOB 1 picks it): SIDE, PITCH, PMOD; DECAY, NOISE, COLOR; **MODE**,
+  **PM.TYPE** (how the pitch moves: DECAY, LONG like the 808, NOISE, SINE), DRIVE; **LAYER**, **FEEDBK** and a
+  per-hit **SEND**.
+- **The kit in every octave** (0.8.5): the keys play the kit on the same keys at every OCT; above the centre a key
+  **ratchets** in time (x2, x4, x8), below it plays **SHORT**, **GHOST** or **FLAM**, each sound its own on each step,
+  and live recording keeps exactly what you played. MIDI drum notes outside 35–81 trigger the same variations.
 - **Group mutes** (KICK, SNARE, HAT, PERC) with GLO held and **per-sound mutes** with EDIT held.
 - **EDIT > X-MOD** (0.5.1): a tempo-synced LFO on MORPH and RAND, which gives every hit its own MORPH and tune.
+- Nine kits as the DRUM engine's presets (DRUM-X, 909 CLUB, 808 BOOM, LOFI DUST …); EDIT + SELECT rolls a new kit.
 
 ### Dice: the system invites you to move everything
-- **SELECT** changes the tempo on GLO's pages (GLOBAL, SYSTEM, MIXER) and with GLO held. On **EDIT** it **rolls the
+- A button held + **SELECT** rolls that part's dice (0.9.2: SELECT alone walks the pages). **EDIT + SELECT rolls the
   track's sound dice**: a synth loads one of its factory presets at random and moves each engine parameter up to a
-  quarter of its range; DRUM-X rolls the A and B sides of each sound around the factory kit. On **HOME** it opens
-  **GEN**, the song generator (since 0.6.91): three pages of settings — a genre among 43 (house, techno, dub, UK garage,
-  funk, post punk, jazz, ambient …) or RANDOM, a seed, an energy, a form (a loop, parts, a club song); how much drums,
+  quarter of its range; DRUM-X rolls the A and B sides of each sound around the factory kit. **SEQ / LFO / FX +
+  SELECT** dice the sequence, the LFO, the effects, each shown **BEFORE** and **NOW** to keep or cancel; **GLO +
+  SELECT** is the tempo. **HOME + SELECT** opens
+  **GEN**, the song generator (since 0.6.91; HOME's last three pages since 0.9.2): it opens on **EXPLORE** (0.8.6: no
+  genre, every rule broken: odd metres, exotic modes, any engine on any role), then RANDOM or a genre among 43 (house,
+  techno, dub, UK garage, funk, post punk, jazz, ambient …), a seed, an energy, a form (a loop, parts, a club song); how much drums,
   bass, chords, arp and lead; complexity, swing, how human. **OCT+** writes the piece from them (OCT+ again: a new
   seed; a knob turned and OCT+: the same piece with that one thing changed), **OCT−** is done. Every piece has one
   key, written to the SCALE page (and the CHORD page set to its chords: the keys play along in key), drums from the
@@ -211,8 +250,8 @@ An 8-sound kit (BD SD CP CH OH TM RS CB) generated in real time, Microtonic styl
 - **UNDO: GLO held + G4** takes back the last big change (DICE ALL, a sound diced, a clear, INIT, RECALL, a pattern or
   project loaded); pressing it again goes forward (redo). G4 breathes when there is something to undo.
 - **Macros M1–M4** (LFO held; they stay latched when released until you press LFO again): every session starts with
-  two random routes per track towards what its sound has. With the macros open, **SELECT** rolls new routes, only on
-  the tracks that are playing; F3 too, G3 clears them. They can be assigned by hand in MOD (SRC M1…M4) and are saved
+  two random routes per track towards what its sound has. With the macros open, **F3** rolls new routes, only on
+  the tracks that are playing; G3 clears them (LFO + SELECT rolls the track's LFO). They can be assigned by hand in MOD (SRC M1…M4) and are saved
   with the project.
 
 ### Punch-in FX: effects you play and record
@@ -228,7 +267,11 @@ With FX held the keys become effects that act while held; on release everything 
 ### Sequencing
 - 64 steps per track, piano roll, drum grid, parameter locks, chance, ratchets, slide and knob automation; live
   recording with overdub, metronome and count-in.
-- **SHIFT**: shifts the sequence in steps (OFFSET) and in pitch (PITCH), automatable.
+- **SEQ's chain** (0.9.2): PATTERN (PATTERN, STRETCH, PLAYHEADS), TRACK (TRACK, MUTATE), BAR (BAR, STEP, NOTE), STEP
+  (COMP, COMP 2), AUTO (AUTOMATION, AUTO LIST); KNOB 1 the bar on BAR, all 64 steps on STEP; PRESETS loads a pattern.
+- **Off the grid in 64ths** (0.9.1): live recording with REC Q under 100 % keeps where you played, to a 64th of a
+  step; **SEQ › NOTE**'s MICRO edits it (−32/64 … +31/64), and playback honours it to the sample.
+- **ROTATE** (STRETCH, KNOB 4) and **PITCH** (TRACK, KNOB 1) shift the sequence in steps and in pitch, automatable.
 - **One scale for everything**: ROOT, SCALE and QUANT are the song's, the same on every melodic track (no track keeps
   a scale of its own, whatever loads it); **STRN** moves all sequences through the
   scale degrees. **ARP TRNS**: the keys transpose the sequence.
@@ -256,12 +299,22 @@ SONG REC. The song's END plays it once (STOP), x2..x8 or forever (LOOP).
 - **Master**: **CLIP** (saturation with level compensation: adds character, not volume), **PUNCH** (drives the drums into saturation: denser, fatter body),
   **DUCK** (the kick pulls the rest down) and an **always-on leveler** (a slow 2:1 rider with automatic make-up, from
   −9 to +6 dB: it follows the song, not each hit) before the limiter and the soft clip: quiet patches and heavy CLIP play at a consistent volume.
+- **DJ FILTER** (0.9.1, GLO › MIXER KNOB 4): one bipolar knob on the whole mix, before CLIP and the leveler: a
+  low-pass sweeping down to the left, a high-pass sweeping up to the right, out of the chain (bit for bit, no CPU) in
+  the middle. Automatable and saved with the project.
 
 ### Knob acceleration
 Turning fast sweeps the whole range; turning slowly is fine adjustment. Turn it off in MENU > KNOB ACCEL.
 
 ### Connections and storage
-- USB: class-compliant MIDI and audio (the master reaches the computer); TRS MIDI; internal, USB or TRS clock.
+- USB: class-compliant MIDI and audio (the master reaches the computer); TRS MIDI; internal, USB or TRS clock. Since
+  0.8.9 the USB audio keeps its time: no half buffer lost under load (the clicks), no packet dropped, the 48 kHz
+  resampler on the second core.
+- **Stems** (MENU > SYSTEM > USB): **STEMS** sends every track on its own channel (8: T1–T6, FX L R), **STEMS+IN** adds
+  your voice through the FM-1. On the phone, the **JIANT Stems** app records them, lines the voice up by the measured
+  latency and exports a ZIP or a mix ([android/README.md](android/README.md),
+  [APK](https://juanjiant-bit.github.io/JIANT/app/jiant-stems.apk), Android 10+). The emulator page renders a backup's
+  song as stems too.
 - 32 named user presets; the project autosaves 10 s after the last change while stopped (not at power-off).
 - **Web editor** for every parameter: FM6 patches, grid, mix and full backup (all 8 songs with their sections, rows
   and scenes).
@@ -269,15 +322,16 @@ Turning fast sweeps the whole range; turning slowly is fine adjustment. Turn it 
 <details>
 <summary><b>What changed from Felucca 1.1.5.1</b></summary>
 
-- **New interface**: thermal palette, Chakra Petch font, beings, HOME ecosystem, live technical graphs and a
-  power-on signature.
+- **New interface**: thermal palette, three skins (COLORS, BOTTOM, HUD), the LENTE layout (tabs, cards, breadcrumb),
+  beings, HOME ecosystem, live technical graphs and a power-on signature; navigation by six rules (0.9.2).
 - **DRUM** is DRUM-X; Felucca's kits were retired. **CHORD** was retired (its parameters are SHIFT). **PHYS** and
   **TRIO** were retired (TRIO lives inside ANALOG; a PHYS sound plays as ANALOG's first preset).
 - **No samples**: user samples and the SAMPLE, SLICE and GRAIN engines are gone, to make room for DRUM-X, the effects,
   the punch-ins and the songs. A sound from those engines loads as ANALOG.
 - **8 songs**: song 1 is the usual 4 projects, so whatever you saved with Felucca shows up there.
 - **FX layer**: REVERSE, TAPE STOP, FREEZE and the harmonizer are gone; the MIDI punch-ins came in.
-- **SELECT**: tempo on GLO's pages and the MIXER, the sound's dice on EDIT, everything diced on HOME (after YES).
+- **SELECT**: walks the section's pages; with a button held: HOME GEN, EDIT / SEQ / LFO / FX their dice, GLO the
+  tempo, ENV / SCL / ARP / SAVE their chain.
 - **EDIT held**: INIT / RECALL instead of the voice selector. One-step **UNDO** with GLO held + G4 (SAVE held: OCT+ stores the
   section, OCT− recalls it). **No layer lock.**
 - **USB names**: "JIANT FM" (MIDI and audio), "JIANT Update" while updating; the web editor and the installer take the older "Felucca" too.
@@ -301,7 +355,7 @@ Turning fast sweeps the whole range; turning slowly is fine adjustment. Turn it 
 | **SEQ + REC** | Hold SEQ and press REC: CLEAR ALL SEQUENCES? (OCT+ confirms): clears the steps and automation of the 6 tracks and the punch-in lane | — |
 | **LFO** | — (**MACRO** layer: below, where each macro goes) | M1, M2, M3, M4 |
 | **GLO** | Black keys 1–6 mute T1–T6 (latched); 7–10 DRUM group mutes: KICK, SNARE, HAT, PERC; F3–D4 solo T1–T6 while held; E4 unmutes everything; F4 tap tempo; G4 **UNDO** the last big change (again: redo) | T1–T4 level (with T5 or T6 selected: T3–T6) |
-| **SCL** | Any key picks the root | ROOT, SCALE, OFFSET, PITCH |
+| **SCL** | Any key picks the root | ROOT, SCALE, ROTATE, PITCH |
 | **EDIT** | F3 **INIT**: the track's sound goes back to factory (on DRUM, the DRUM-X kit too). G3 **RECALL**: back to the sound saved in the section (on DRUM, with its kit). Both ask for confirmation and leave the steps alone. On a DRUM track, black keys 1–8 mute each DRUM-X sound. The engine and sounds are picked in PRESETS | The engine's first 4 EDIT knobs |
 | **SEQ** | On the SEQ pages: SEQ TOOLS; G5 CLR STEP (the cursor step; AUTO LIST: deletes the record) | LEN, DIV, SWING, GATE |
 | **REC** | F3 CLEAR the track, G3 CLICK | CLICK |
@@ -357,8 +411,9 @@ each layer; the complete manual is in **[docs/MANUAL.md](docs/MANUAL.md)** (en e
    RES and CUT near the centre turns any sound metallic, tuned to the note.
 3. **ENV** and **LFO** have their DEST pages: each column sends to a destination (FLT also moves the FILTER page's
    filter). **ENV LOOP** turns the envelope into an LFO while the note is held.
-4. **Out of ideas?** **SELECT** on EDIT rolls the sound's dice: it loads a random factory preset of the engine and
-   moves its parameters. On HOME it dices the whole piece. Roll until something clicks; GLO + G4 undoes the last one.
+4. **Out of ideas?** **EDIT + SELECT** rolls the sound's dice: it loads a random factory preset of the engine and
+   moves its parameters (SELECT again: another roll; OCT+ keeps it, OCT− cancels). **HOME + SELECT** opens GEN, which
+   writes a whole piece. Roll until something clicks; GLO + G4 undoes the last one.
 5. **EDIT held**: F3 INIT puts the sound back to factory, G3 RECALL to the one you saved in the section.
 
 **LOFI BYTE** (LOFI with WAVE on BYTE): ALGO picks one of 32 bytebeat formulas and **VAR** mutates it (0–15 as
@@ -382,15 +437,16 @@ locks it into a short window. CHIP sets the resolution: FULL is smooth, 4BIT and
   picks which). SOUND 3 has **PMOD**
   (how the pitch falls: DECAY, 808-style LONG, NOISE, SINE), DRV and WAVE.
 - Mutes: **GLO held** + black keys 7–10 (KICK, SNARE, HAT, PERC); **EDIT held** + black keys 1–8 (each sound).
-- SELECT on a DRUM track rolls a new kit around the factory one.
+- EDIT + SELECT on a DRUM track rolls a new kit around the factory one.
+- **OCT** on a DRUM track changes how the keys play (0.8.5): +1..+3 ratchets x2, x4, x8; −1..−3 SHORT, GHOST, FLAM.
 - **EDIT > X-MOD** moves the kit by itself: **RATE** (OFF, 4 bars … 1/32, in time with the tempo), **DEPTH** (how far
   it swings MORPH), **SHAPE** (SINE, TRI, SAW, RAMP, S&H) and **RAND** (each hit gets its own MORPH and up to a
   semitone of tune: no two hits alike, great on hats and percussion). INIT turns it off.
 
 ### 5. Macros (M1–M4)
 - **Hold LFO**: the knobs become M1–M4. Release LFO and they stay **latched** until you press LFO again.
-- Every session starts with random routes. With the macros open, **SELECT** rolls new routes only on the tracks that
-  are playing; **F3** too, **G3** clears them.
+- Every session starts with random routes. With the macros open, **F3** rolls new routes only on the tracks that
+  are playing; **G3** clears them.
 - To pick them by hand: LFO > **MOD**, SRC M1…M4 to any destination. They're saved with the project.
 
 ### 6. Effects
@@ -444,8 +500,10 @@ makes the kick pull the rest down. The leveler is always on: no need to babysit 
 
 ### 9. Saving
 - **Sound presets**: SAVE > **USER**: KNOB 1 picks the slot (32), KNOB 4 SAVE stores the track's sound, KNOB 2 LOAD
-  loads it, KNOB 3 ERASE deletes it. EDIT names it.
-- **Project**: SAVE > PROJECT: KNOB 1 the project (1–8), KNOB 2 the section A–D, LOAD, SAVE; SAVE > ARRANGE chains the sections into the song. The project autosaves 10 s after your last change while stopped
+  loads it, KNOB 3 ERASE deletes it. **SAVE + C5** names it (0.9.2).
+- **Project**: SAVE > **SECTIONS**: KNOB 1 the section A–D, LOAD, SAVE; SAVE > **PROJECTS**: KNOB 1 the project (1–8),
+  KNOB 2 its section, LOAD, SAVE; SAVE > ARRANGE chains the sections into the song. SAVE from another section comes
+  back with SAVE armed on USER and SECTIONS: **SAVE, OCT+, OCT+** stores. The project autosaves 10 s after your last change while stopped
   (at most once a minute; never at power-off: stop and wait a moment before switching off). MENU > RESTORE LAST OFF
   turns it off. The full story, with what is saved where: **[the manual, chapter 12](docs/MANUAL.md)**.
 - **Backup**: the web editor (USB) downloads and restores everything: songs, sections, scenes and presets.
@@ -503,6 +561,7 @@ These design notes are in Spanish.
 | [docs/TONIC-SONG-PLAN.md](docs/TONIC-SONG-PLAN.md) | Song mode plan |
 | [docs/TONIC-DRUMX.md](docs/TONIC-DRUMX.md) | DRUM-X: the voice, the per-section kit and the phases |
 | [docs/TONIC-UI.md](docs/TONIC-UI.md) | The JIANT FM interface: screen map, format, flash measurements |
+| [Navigation map](docs/navigation-map.svg) ([ES](docs/navigation-map.es.svg)) | Every section, group and page in chain order, the six rules, the layers and the combos (made by `tools/gen_nav_map.py` from `firmware/src/ui_lens.c`; `--check` says whether it is up to date) |
 | [Cheat sheets](#cheat-sheets) | Controls and sound reference (PNG and PDF; made by `tools/gen_cheatsheets.py` + `tools/render_cheatsheets.mjs`) |
 | [BUILDING.md](BUILDING.md) | Toolchain, build, emulator and tests |
 | [web/EDITOR_PROTOCOL.md](web/EDITOR_PROTOCOL.md) | The editor's SysEx protocol |
@@ -519,7 +578,7 @@ These design notes are in Spanish.
   the song mode is based on.
 - Fonts: [Chakra Petch](https://github.com/m4rc1e/Chakra-Petch) ([SIL OFL 1.1](LICENSES/OFL-ChakraPetch.txt)), the
   labels; since 0.6.56 [IBM Plex Mono](https://github.com/IBM/plex) ([SIL OFL 1.1](LICENSES/OFL-IBMPlexMono.txt)), the values,
-  and [Michroma](https://github.com/googlefonts/Michroma-font) ([SIL OFL 1.1](LICENSES/OFL-Michroma.txt)), the big titles; up to 0.4, [Inter Tight](https://github.com/rsms/inter-tight) ([SIL OFL 1.1](LICENSES/OFL-InterTight.txt));
+  and [Michroma](https://github.com/googlefonts/Michroma-font) ([SIL OFL 1.1](LICENSES/OFL-Michroma.txt)), the big titles; [Inter Tight](https://github.com/rsms/inter-tight) ([SIL OFL 1.1](LICENSES/OFL-InterTight.txt)), up to 0.4 and again since 0.8.9 the values (and the navigation map's text);
   in the emulator, [DotGothic16](https://github.com/fontworks-fonts/DotGothic16) ([SIL OFL 1.1](LICENSES/OFL-DotGothic16.txt)).
 - VOICE: after [klattsch](https://github.com/tgies/klattsch) by Tony Gies (MIT); formant data from Klatt (1980) and
   Hillenbrand et al. (1995).
