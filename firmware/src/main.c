@@ -118,6 +118,7 @@ static void felucca_init(void)
         chain_defaults(&chain_config);
     for (i = 0; i < G_COUNT; i++)
         song.g[i] = GP[i].def;
+    sing_init();                              /* (0.9.0) VOICE's English generator words, resolved once (sing.c) */
     load_depth++;                             /* (the power-on loads: one outer load) */
     fm6_init();                               /* every track's FM6 patch: the init voice */
     for (i = 0; i < NTRK; i++) {

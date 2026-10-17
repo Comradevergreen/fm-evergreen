@@ -17,6 +17,9 @@ work unchanged. Line 9 px: the capitals rows 1 .. 7, a descender row 8 (, ; g j 
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import aa_raster as ar  # noqa: E402
+
 PITCH = 6            # advance, px
 H, ASC, CAP_Y = 9, 8, 1
 G = {
@@ -156,18 +159,16 @@ def main():
     for i in range(0, len(data), 24):
         lines.append("    " + ", ".join(str(b) for b in data[i:i + 24]) + ",")
     lines.append("};")
-    lines.append(f"static const aag_t AF_X_G[{len(tab)}] = {{")
-    for t in tab:
-        lines.append("    {%d, %d, %d, %d, %d, %d}," % t)
-    lines.append("};")
+    gtext, gsize = ar.glyph_tables("X", tab, 1)     # (0.9.0: packed, as the other faces')
+    lines.append(gtext)
     lines.append(f"static const uint8_t AF_X_EX[{len(ex)}] = {{{', '.join(str(c) for c in ex)}}};")
-    lines.append(f"static const aafont_t AF_X = {{{H}, {ASC}, 32, 122, {len(ex)}, 0, AF_X_G, AF_X_DATA, 0, 0, AF_X_EX, 0, 0, 1}};")
+    lines.append(f"static const aafont_t AF_X = {{{H}, {ASC}, 32, 122, {len(ex)}, 0, AF_X_GH, AF_X_GP, AF_X_DATA, 0, 0, AF_X_EX, 0, 0, 1}};")
     lines.append(f"#define AF_X_CAP_Y {CAP_Y}   /* the ink of H: rows {CAP_Y} .. {CAP_Y + 6} of the line */")
     lines.append("#define AF_X_CAP_H 7")
     lines.append(f"#define AF_X_PITCH {PITCH}")
     out.write_text("\n".join(lines) + "\n")
-    size = len(data) + len(tab) * 8 + len(ex)
-    print(f"face X: 5x7 pixel mono, {len(tab)} glyphs, data {len(data)} B + table {len(tab) * 8} B = {size} B -> {out}")
+    size = len(data) + gsize + len(ex)
+    print(f"face X: 5x7 pixel mono, {len(tab)} glyphs, data {len(data)} B + table {gsize} B = {size} B -> {out}")
 
 
 if __name__ == "__main__":

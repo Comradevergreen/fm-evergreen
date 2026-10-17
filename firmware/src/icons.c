@@ -23,7 +23,7 @@ static int32_t cv_trk(int32_t x, int32_t y, uint32_t size, uint32_t k, uint16_t 
 {
     const aafont_t *f = size > 16u ? &AF_M : &AF_S;
     char s[2] = {(char)('1' + k), 0};
-    const aag_t *g = &f->g[glyph(f, (uint8_t)s[0])];
+    const aag_t gv = ag(f, glyph(f, (uint8_t)s[0])), *g = &gv;
     int32_t in = size > 16u ? 2 : 0, w = (int32_t)size - 2 * in;
     int32_t nud = k == 0u ? 1 : 0;   /* the 1's ink centred looks right of centre (its flag): nudged left 1 px (2 looked left) */
     cv_rrect(x + in, y + in, w, w, -(w / 4), fill, under);

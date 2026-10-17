@@ -8,16 +8,18 @@
  * each glyph is rasterised at 1 << psh horizontal phases (S M 4, L 2: drawn at a pen of +0, +1/4 .. px);
  * cv_text takes the phase that puts it within a phase step of its true place. Blending uses a 16-entry
  * ramp per (ink, background) pair, cached, so a pixel costs a nibble read and a store. Colours come from the theme tokens. */
-typedef struct { uint16_t off, adv; int8_t bx; uint8_t by, bw, bh; } aag_t;
+typedef struct { uint16_t off, adv; int8_t bx; uint8_t by, bw, bh; } aag_t;   /* a glyph at a phase (ag) */
+typedef struct { uint16_t off, adv; } aagh_t;   /* (0.9.0) a glyph: its phases' lowest data offset, the advance */
 typedef struct {
     uint8_t h, asc, first, last, nex;   /* line height, baseline; ASCII range; extras */
-    uint16_t nk;                        /* kerning pairs */
-    const aag_t *g;
+    uint16_t nk;                        /* kerning: the glyphs ki covers (0: none) */
+    const aagh_t *gh;                   /* (0.9.0) the glyph table, packed (tools/aa_raster.py glyph_tables): a glyph's */
+    const uint32_t *gp;                 /* .. and each phase's off - gh.off | bx + 1 << 10 | by << 13 | bw << 19 | bh << 26 */
     const uint8_t *data;
-    const uint16_t *kkey;               /* a << 8 | b, sorted */
-    const int8_t *kd;                   /* 1/16 px */
+    const uint16_t *ki;                 /* (0.9.0) glyph a's pairs: kp[2 ki[a] .. 2 ki[a + 1] - 1] */
+    const uint8_t *kp;                  /* .. each b (sorted) and the delta (int8, 1/16 px) */
     const uint8_t *ex;                  /* codes of the extra glyphs */
-    uint8_t psh;                        /* log2 of the phases per glyph: g[i << psh] .. g[(i << psh) + phases - 1] */
+    uint8_t psh;                        /* log2 of the phases per glyph: entries i << psh .. (i << psh) + phases - 1 */
     const uint8_t *hc;                  /* data's Huffman code (cv_alpha_hc), 0 = 2 px per byte (cv_alpha) */
     uint8_t bits;                       /* (0.8.5) 1: data is 1 bit a pixel, no ramp (AF_X: cv_bits) */
 } aafont_t;
@@ -549,10 +551,10 @@ static void cv_alpha(int32_t x, int32_t y, uint32_t w, uint32_t h, const uint8_t
 
 /* the same from a glyph's Huffman-coded bit stream (tools/gen_aa_font.py huff_pack): canonical codes, MSB
  * first; hc = the number of codes of each length 1..15, then the symbols in code order, each a value and
- * its repeat count ((count - 1) << 4 | value: runs of zeros and 15s). Codes of up to 8 bits come from a
- * 256-entry table made once per font in RAM (symbol | length << 8; 0 = a longer code: bit by bit). The
+ * its repeat count ((count - 1) << 4 | value: runs of zeros and 15s; 0.9.0, the keycaps: of any value). Codes of up
+ * to 8 bits come from a 256-entry table made once per font in RAM (symbol | length << 8; 0 = a longer code: bit by bit). The
  * stream is read in order, so rows outside the clip are decoded and dropped; a run spans rows */
-#define HC_FONTS 3                       /* the codes: the faces M and L (gen_aa_font.py HUFF), the icons (AI_HC) */
+#define HC_FONTS 4                       /* the codes: the faces M and L (gen_aa_font.py HUFF), the icons, the keycaps */
 static struct { const uint8_t *hc; uint16_t lut[256]; } hc_tab[HC_FONTS]
     __attribute__((section(".pool")));     /* (the drawing's, main loop only: 0.8.4 LOWBUF, was .bss; 0.8.5 the pool, LOWBUF full) */
 static const uint16_t *hc_lut(const uint8_t *hc)
@@ -671,15 +673,34 @@ static uint32_t glyph(const aafont_t *f, uint32_t ch)
         k = 0;
     return (uint32_t)k << f->psh;
 }
+/* table entry i (glyph i >> psh at phase i & (phases - 1)), unpacked */
+static aag_t ag(const aafont_t *f, uint32_t i)
+{
+    const aagh_t *h = &f->gh[i >> f->psh];
+    uint32_t v = f->gp[i];
+    aag_t g;
+    g.off = (uint16_t)(h->off + (v & 1023u));
+    g.adv = h->adv;
+    g.bx = (int8_t)((int32_t)((v >> 10) & 7u) - 1);
+    g.by = (uint8_t)((v >> 13) & 63u);
+    g.bw = (uint8_t)((v >> 19) & 127u);
+    g.bh = (uint8_t)(v >> 26);
+    return g;
+}
 
 static int32_t kern(const aafont_t *f, uint32_t a, uint32_t b)       /* 1/16 px */
 {
-    uint32_t key = (a << 8) | b, lo = 0, hi = f->nk;
-    while (lo < hi) {
-        uint32_t m = (lo + hi) / 2u;
-        if (f->kkey[m] == key)
-            return f->kd[m];
-        if (f->kkey[m] < key)
+    int32_t ga = glyph_at(f, a);
+    uint32_t lo, hi;
+    if (ga < 0 || (uint32_t)ga >= f->nk)
+        return 0;
+    lo = f->ki[ga];
+    hi = f->ki[ga + 1];
+    while (lo < hi) {                                /* (a's pairs, by b) */
+        uint32_t m = (lo + hi) / 2u, c = f->kp[2u * m];
+        if (c == b)
+            return (int8_t)f->kp[2u * m + 1u];
+        if (c < b)
             lo = m + 1u;
         else
             hi = m;
@@ -697,7 +718,7 @@ static int32_t text_w(const aafont_t *f, const char *s)
         uint32_t c = fold(f, (uint8_t)*s);
         if (prev)
             pen += kern(f, prev, c);
-        pen += f->g[glyph(f, c)].adv;
+        pen += f->gh[glyph(f, c) >> f->psh].adv;
         prev = c;
     }
     return (pen + 8) >> 4;
@@ -709,22 +730,24 @@ static int32_t text_run(int32_t x, int32_t y, const aafont_t *f, const char *s, 
     const int32_t step = 16 >> f->psh;
     uint32_t prev = 0;
     for (; *s; s++) {
-        uint32_t c = fold(f, (uint8_t)*s);
-        const aag_t *g;
+        uint32_t c = fold(f, (uint8_t)*s), gi;
+        aag_t gv;
+        const aag_t *g = &gv;
         int32_t pos, d0, d1;
         if (prev)
             pen += kern(f, prev, c);
-        g = &f->g[glyph(f, c)];
-        if (f->psh && g[1].off != g->off) {
+        gi = glyph(f, c);
+        if (f->psh && (f->gp[gi + 1u] & 1023u) != (f->gp[gi] & 1023u)) {   /* (phase 1's bitmap is not phase 0's) */
             pos = pen - (pen & (step - 1));          /* the phase position at or left of the pen */
             d0 = pos - pen - err;                    /* .. and the one right of it: which keeps the gap truer */
             d1 = d0 + step;
             if ((d0 < 0 ? -d0 : d0) > (d1 < 0 ? -d1 : d1))
                 pos += step;
-            g += ((uint32_t)pos >> (4u - f->psh)) & ((1u << f->psh) - 1u);
+            gi += ((uint32_t)pos >> (4u - f->psh)) & ((1u << f->psh) - 1u);
         } else {
             pos = (pen + 8) & ~15;                   /* one phase (figures, ., blanks): the rounded pen */
         }
+        gv = ag(f, gi);
         err = pos - pen;
         if (g->bw) {
             int32_t gx = x + (pos >> 4) + g->bx, gy = y + g->by;
@@ -893,7 +916,7 @@ static int32_t cv_text_up(int32_t x, int32_t y, const aafont_t *f, const char *s
     GFX_HOOK_INK(fg, bg);
     (void)bg;
     for (; *s; s++) {
-        const aag_t *g = &f->g[glyph(f, fold(f, (uint8_t)*s))];
+        const aag_t gv = ag(f, glyph(f, fold(f, (uint8_t)*s))), *g = &gv;
         uint32_t r, q, k = 0;
         int32_t adv = (g->adv + 8) >> 4;
         if (pen + adv - 1 > maxh)
@@ -962,7 +985,7 @@ static int32_t cv_keycap(int32_t x, int32_t y, uint32_t id, uint16_t fill, uint1
 {
     const kc_t *k = &KC[id < KC_COUNT ? id : 0u];
     const uint16_t *rv = kc_ramp(under, fill, ink);
-    cv_alpha(x, y, k->w, KC_H, KC_DATA + k->off, rv);
+    cv_alpha_hc(x, y, k->w, KC_H, KC_DATA + k->off, KC_HC, rv);   /* (0.9.0: Huffman-coded, 2.4 KB less) */
     if (x < 0 || x + k->w > (int32_t)cv_w || y + cv_oy < 0 || y + KC_H + cv_oy > (int32_t)cv_h)
         GFX_HOOK_TEXT(x, y + cv_oy, x + k->w, y + KC_H + cv_oy, k->label, 6u);      /* cut by the canvas */
     else

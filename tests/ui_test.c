@@ -145,6 +145,8 @@ static int check(const char *what, int ok)
 static void ui_power_on(void)
 {
     uint32_t i;
+    if (!lyb_ok)
+        sing_init();                              /* (0.9.0: as felucca_init, VOICE's English generator words) */
     memset(trk, 0, sizeof trk);
     memset(&song, 0, sizeof song);
     memset(&chain, 0, sizeof chain);

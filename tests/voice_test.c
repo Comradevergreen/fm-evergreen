@@ -15,6 +15,7 @@
  * 5. cost: host ns per sample and voice, vowels against words (the counts: tests/cpu_vg.c eng/VOICE.*).
  * 6. demos into DEMODIR: Spanish, English, Japanese phrases on a melody, the dice's lyrics, every word preset. */
 #define main hostsim_main
+#define LY_EN_REF 1              /* (0.9.0) felucca_lyrics.h: the dictionary's words as text too (the lookup's check) */
 #include "hostsim.c"
 #undef main
 
@@ -117,6 +118,103 @@ static void demo_wav(const char *dir, const char *name, int32_t pi, const char *
     fseek(w, 0, SEEK_SET);
     wav_hdr(w, frames);
     fclose(w);
+}
+
+/* (0.9.0) the English words resolved in the main loop (sing.c lyb_*, lyc[]): each entry what sy_word gives; and a
+ * VOICE EN track sings the same with them as without (TEXT, W, S), sample for sample */
+static int entry_is(const uint8_t *e, const char *txt, uint32_t len)
+{
+    uint8_t buf[SW_MAX];
+    char w[20], nw[24];
+    uint32_t ns = 0, n = sy_word(LG_EN, nw, sy_wkey(txt, len, w, nw), buf, &ns);
+    return e[0] == n && e[1] == ns && !memcmp(e + 2, buf, n);
+}
+static uint32_t render_en(uint32_t lyr, const char *text, int cached, int32_t *out, uint32_t max)
+{
+    static const nt_t NT[] = {{60, 2}, {62, 2}, {64, 1}, {65, 1}, {67, 4}, {65, 2}, {64, 2}, {62, 1}, {60, 3}, {0, 1},
+                              {57, 2}, {59, 2}, {60, 4}, {62, 1}, {64, 1}, {67, 2}, {64, 2}, {60, 4}};
+    static int32_t o[2 * CTL];
+    uint32_t k, i, n = 0, eighth = FS * 60u / 100u / 2u, nn = sizeof NT / sizeof NT[0];
+    memset(trk, 0, sizeof trk);
+    memset(sing, 0, sizeof sing);
+    formant_nz = 0x2545F491;                             /* (the breath's noise: from its start, a render repeats) */
+    host_tracks_init();
+    host_preset(&trk[0], eng_voice(), (uint32_t)preset_of("SINGER EN"));
+    trk[0].p[P_CHOR] = trk[0].p[P_DLY] = trk[0].p[P_REV] = 0;   /* (dry: the FX lines carry nothing over) */
+    trk[0].p[P_VLANG] = LG_EN;
+    lyr_set(0, text);
+    trk[0].p[P_VLYR] = (int16_t)lyr;
+    lyb_ok = (uint8_t)cached;
+    if (!cached)
+        lyc[0].seq |= 1u;                                /* (as while it is written: not read) */
+    for (k = 0; k < 3u * nn; k++) {
+        uint32_t len = NT[k % nn].len * eighth, note = NT[k % nn].note;
+        if (note)
+            trk_note_on(&trk[0], note, 100);
+        for (i = 0; i < len; i += CTL) {
+            uint32_t j;
+            if (note && i + CTL >= len - len / 8u && i < len - len / 8u)
+                trk_note_off(&trk[0], note);
+            track_render(&trk[0], o, CTL);              /* (the part alone, as vrender: no buses carried over) */
+            for (j = 0; j < CTL && n < max; j++)
+                out[n++] = o[j];
+        }
+    }
+    lyc[0].seq &= ~1u;
+    lyb_ok = 1;
+    return n;
+}
+static void check_cache(void)
+{
+    static const char *const TX[] = {
+        "Love me tender, love me sweet; never let me go", "strength through the starlight - - oh",
+        "don't stop believing hold_on to that feeling", "zorblat QUIXOTIC antidisestablishmentarianism xyz",
+        "a b c d e f g h i j k l m n o p q r s t u v w x y z a b c d e f", "the the the the the the the the the the the the",
+        "", "---", "it's a beautiful day in the neighbourhood isn't it"};
+    static const char *const LT[] = {"TEXT", "W1", "W7", "W16", "S1", "S5"};
+    static const uint8_t LV[] = {0, 1, 7, 16, LYR_NW + 1u, LYR_NW + 5u};
+    static int32_t a[FS * 40], b[FS * 40];
+    uint32_t k, bad_b = 0, miss = 0, used = 0, ntok = 0, bad_t = 0, nocache = 0;
+    sing_init();
+    for (k = 0; k < LYB_N; k++) {
+        const char *q = k < LYB_SCAT ? ly_word(&LY_BANK[1], k) : k < LYB_N - 1u ? SCAT_EN[k - LYB_SCAT] : VOCABLE[1];
+        if (!lyb_at[k]) miss++;
+        else {
+            bad_b += !entry_is(&lyb_ph[lyb_at[k] - 1u], q, 64u);
+            used = lyb_at[k] + 1u + lyb_ph[lyb_at[k] - 1u];   /* (the last entry's end) */
+        }
+    }
+    printf("voice:   the generator's English words resolved at boot: %u of %u, %u B of %u, %u differ, %u missing\n",
+           (unsigned)(LYB_N - miss), (unsigned)LYB_N, used, (unsigned)LYB_PH, bad_b, miss);
+    check("English words resolved off the ISR (sing_init): every word the generator sings, each as sy_word reads it",
+          !bad_b && !miss && lyb_ok);
+    for (k = 0; k < sizeof TX / sizeof TX[0]; k++) {
+        uint32_t p = 0, s0, s1, mel;
+        lyr_set(0, TX[k]);
+        while (sy_tok(lyr_txt[0], p, &s0, &s1, &mel)) {
+            if (!mel) {
+                ntok++;
+                if (!lyc[0].at[s0] || lyc[0].ph[lyc[0].at[s0] - 1u] != s1) nocache++;
+                else bad_t += !entry_is(&lyc[0].ph[lyc[0].at[s0]], &lyr_txt[0][s0], s1 - s0);
+            }
+            p = s1;
+        }
+    }
+    printf("voice:   TEXT lyrics' words resolved with the text: %u words, %u differ, %u left to the lookup (past %u B)\n",
+           ntok, bad_t, nocache, (unsigned)LYC_N);
+    check("English words resolved off the ISR (lyr_set): every TEXT word as sy_word reads it", !bad_t && ntok > 60u);
+    for (k = 0, bad_b = 0; k < sizeof LV; k++) {
+        const char *text = LV[k] ? "" : TX[k % 3u];
+        uint32_t na = render_en(LV[k], text, 1, a, sizeof a / sizeof a[0]);
+        uint32_t nb = render_en(LV[k], text, 0, b, sizeof b / sizeof b[0]), j, nz = 0;
+        for (j = 0; j < na; j++) nz += a[j] != 0;
+        if (na != nb || memcmp(a, b, na * sizeof a[0]) || nz < na / 4u) {
+            for (j = 0; j < na && a[j] == b[j]; j++) ;
+            printf("voice:   %s: the cached words sing otherwise (%u %u samples, %u sounding, first at %u)\n", LT[k], na, nb, nz, j);
+            bad_b++;
+        }
+    }
+    check("VOICE EN with the words resolved off the ISR: TEXT W1 W7 W16 S1 S5 sample for sample as with the lookup", !bad_b);
 }
 
 /* ------------------------------------------------------------------------------------------ the checks --- */
@@ -289,25 +387,56 @@ static void check_reading(void)
         if (strcmp(b, EN[k][1])) { printf("voice:   EN %-12s %s (want %s)\n", EN[k][0], b, EN[k][1]); ok = 0; }
     }
     check("English through the dictionary (CMU, syllabified): love my time beautiful water strong the don't", ok);
-    {   /* every dictionary word found, with at least a syllable; an unknown word by the letter rules */
-        uint32_t e = 0, nw = 0, ns, len;
-        char w[24];
+    {   /* every dictionary word found, with at least a syllable; an unknown word by the letter rules.
+         * (0.9.0: the dictionary Huffman-coded) each word's phonemes exactly gen_lyrics.py's (LY_EN_REF_*: the words as
+         * text); every word cut short, one letter more and one changed at its end: not found unless itself a word */
+        uint32_t nw, len, bad = 0, miss = 0, probes = 0;
+        uint8_t ph[SW_MAX];
+        char w[32];
         ok = 1;
-        while (e < sizeof LY_EN_DICT && nw < 3000u) {
-            uint32_t pre = LY_EN_DICT[e++], wl = pre;
-            while (e < sizeof LY_EN_DICT && LY_EN_DICT[e] >= 'a' && LY_EN_DICT[e] <= 'z')
-                w[wl++] = (char)LY_EN_DICT[e++];
-            while (e < sizeof LY_EN_DICT && LY_EN_DICT[e] >= 0x80u)
-                e++;
-            w[wl] = 0;
-            nw++;
-            ok &= sy_en_find(w, wl, &len) != 0 && len > 0;
+        for (nw = 0; nw < LY_EN_N; nw++) {
+            const char *rw = LY_EN_REF_W[nw], *rp = LY_EN_REF_PH[nw];
+            uint32_t wl = (uint32_t)strlen(rw), i, v;
+            len = sy_en_find(rw, wl, ph);
+            ok &= len > 0;
+            if (len != strlen(rp))
+                bad++;
+            else
+                for (i = 0; i < len; i++)
+                    bad += ph[i] != ((uint8_t)rp[i] & 0x7Fu);
+            for (v = 0; v < 79u; v++) {                          /* the near misses: one less, one more, last / first changed */
+                uint32_t n2 = wl, lo = 0, hi = LY_EN_N, found = 0;
+                memcpy(w, rw, wl);
+                if (v == 0u) {
+                    if (wl < 2u) continue;
+                    n2 = wl - 1u;
+                } else if (v <= 26u) {
+                    w[wl] = (char)('a' + v - 1u);
+                    n2 = wl + 1u;
+                } else if (v <= 52u) {
+                    if (w[wl - 1u] == (char)('a' + v - 27u)) continue;
+                    w[wl - 1u] = (char)('a' + v - 27u);
+                } else {
+                    if (w[0] == (char)('a' + v - 53u)) continue;
+                    w[0] = (char)('a' + v - 53u);
+                }
+                w[n2] = 0;
+                while (lo < hi) {                                /* (the reference words are sorted) */
+                    uint32_t mid = (lo + hi) / 2u;
+                    int c = strcmp(LY_EN_REF_W[mid], w);
+                    if (!c) { found = 1; break; }
+                    if (c < 0) lo = mid + 1u; else hi = mid;
+                }
+                probes++;
+                miss += (sy_en_find(w, n2, ph) != 0) != found;
+            }
         }
-        ok &= nw == LY_EN_N;
+        ok &= !bad && !miss;
         g2p_str(LG_EN, "zorblat", b, sizeof b);
-        ok &= sy_en_find("zorblat", 7, &len) == 0 && !strcmp(b, "|z aa r |b l ae t");
-        (void)ns;
-        snprintf(what, sizeof what, "English dictionary: all %u words found; a word it lacks by letter rules (zorblat: %s)",
+        ok &= sy_en_find("zorblat", 7, ph) == 0 && !strcmp(b, "|z aa r |b l ae t");
+        printf("voice:   dictionary: %u words' phonemes against gen_lyrics.py's, %u differ; %u near misses, %u wrong\n",
+               (unsigned)LY_EN_N, bad, probes, miss);
+        snprintf(what, sizeof what, "English dictionary: all %u words found, exact; a word it lacks by letter rules (zorblat: %s)",
                  (unsigned)LY_EN_N, b);
         check(what, ok);
     }
@@ -320,7 +449,7 @@ static void check_reading(void)
             for (k = 0; k < nwds; k++) {
                 uint8_t ph[SW_MAX];
                 char nw2[24];
-                const char *w = bk->txt + bk->off[k];
+                const char *w = ly_word(bk, k);
                 (void)sy_word(l, nw2, sy_norm(w, (uint32_t)strlen(w), nw2, sizeof nw2), ph, &n);
                 tot++;
                 if (n != (bk->meta[k] & 15u)) {
@@ -414,7 +543,7 @@ static void check_generator(void)
                     n = (uint32_t)(q - p);
                     if (!n) break;
                     for (w = 0; w < nwds && !found; w++) {
-                        const char *t = bk->txt + bk->off[w];
+                        const char *t = ly_word(bk, w);
                         found = strlen(t) == n && (!strncmp(t, p, n) ||
                                                    (l == LG_ES && !strncmp(t, p, n - 1u) && t[n - 1u] == 'o' && p[n - 1u] == 'a'));
                     }
@@ -799,6 +928,7 @@ int main(int argc, char **argv)
     check_cost();
     if (argc > 1)
         demos(argv[1]);
+    check_cache();                                       /* (0.9.0; after the demos: they render as before) */
     printf("voice: %s\n", bad ? "FAILED" : "all checks ok");
     return bad != 0;
 }

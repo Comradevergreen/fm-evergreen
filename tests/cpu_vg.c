@@ -13,7 +13,9 @@
  *   mix/full       six parts: four ANALOG / FM6 chords, drums, every FX on
  *   seq/plain      the sequencer: six tracks of chords / hits on every step at 200 BPM
  *   seq/heavy      .. with two step components on each (ARP SEQ / ECHO x8, RAND / OCT), DIV, LEN, chord glides
- *   song/cputest   SAVE > TOOLS 6 CPU TEST's song (song_dice.c cpu_test_song), playing: what the device is measured on */
+ *   song/cputest   SAVE > TOOLS 6 CPU TEST's song (song_dice.c cpu_test_song), playing: what the device is measured on
+ *   peak/VOICE.EN6 (0.9.0, last) six VOICE EN tracks starting a word in one block: that block's instructions, the worst
+ *                  of 24 rounds (cpu_vg.py: not per sample) */
 #define UI_TEST_NO_MAIN
 #include "ui_test.c"
 #include <valgrind/callgrind.h>
@@ -180,5 +182,41 @@ int main(void)
     cpu_test_song();
     transport_req = 1; ui_input();
     vg_section("song/cputest");
+    {   /* (0.9.0) peak/VOICE.EN6: six VOICE EN tracks starting a word in the same block (TEXT of one-syllable words on
+         * three, W1 W9 S3 on the others), 24 times: the instructions of that one block, the worst of them */
+        static const char *const TX[3] = {"love me now we go home", "strength through the night", "stay and fly so high"};
+        static const uint8_t LY[3] = {1, 9, LYR_NW + 3u};
+        uint32_t r, k, b, live = trk_live;
+        for (e = 0; e < NENGINES && ENGINES[e] != &ENG_FORMANT; e++)
+            ;
+        vg_quiet();
+        trk_live = NTRK;                            /* (TRACKS 6: all six parts play) */
+        for (k = 0; k < 6u; k++) {
+            if (k < 3u)
+                lyr_set(k, TX[k]);
+            vg_part(k, e, vg_preset(e, "SINGER EN"), 0);
+            trk[k].p[P_VLANG] = LG_EN;
+            trk[k].p[P_VLYR] = (int16_t)(k < 3u ? 0 : LY[k - 3u]);
+        }
+        for (r = 0; r < 24u; r++) {
+            for (k = 0; k < 6u; k++)
+                trk_note_on(&trk[k], 48 + 2 * k + r % 5u, 100);
+            CALLGRIND_ZERO_STATS;
+            CALLGRIND_START_INSTRUMENTATION;
+            mix_block(vo, CTL);                     /* (the block that starts the words: sing_block's sy_next) */
+            snprintf(name, sizeof name, "peak/VOICE.EN6.r%02u", r);
+            CALLGRIND_DUMP_STATS_AT(name);
+            CALLGRIND_STOP_INSTRUMENTATION;
+            for (b = 0; b < 40u; b++)
+                mix_block(vo, CTL);
+            for (k = 0; k < 6u; k++)
+                trk_note_off(&trk[k], 48 + 2 * k + r % 5u);
+            for (b = 0; b < 12u; b++)
+                mix_block(vo, CTL);
+        }
+        for (k = 0; k < 6u; k++)                    /* (a self-check: each track sang its 24 syllables) */
+            if (sing[k].nsy < 24u) { printf("cpu_vg: peak/VOICE.EN6: track %u sang %u syllables\n", k, sing[k].nsy); return 1; }
+        trk_live = live;                            /* (the sections after as they were) */
+    }
     return 0;
 }

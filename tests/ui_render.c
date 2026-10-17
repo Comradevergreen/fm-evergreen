@@ -33,6 +33,7 @@
  * each place can show). 0.5 px is the odd pixel left over (it goes left / up); 1 px or more is a finding.
  * OUTDIR/align.txt: per place, how often measured, the worst offsets and where.
  * Exit 1 on a finding, a GREY pixel off gray, a MONO one off neutral, or an alignment 1 px or more off. */
+#define KC_REF 1                 /* (0.9.0) ui_keycaps.h: the pills as nibbles too (al_keycaps; KC_DATA is Huffman-coded) */
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
@@ -163,7 +164,7 @@ static void al_flush(void)                      /* a canvas blitted or begun: de
 static int32_t icon_cell(uint32_t *size, uint32_t id);
 static void hk_icon(int32_t x, int32_t y, uint32_t size, uint32_t id);   /* (after the icons: their cells' nibbles) */
 #define GFX_HOOK_ALIGN(x0, y0, x1, y1, mode, tag) hk_align(x0, (y0) + cv_oy, x1, (y1) + cv_oy, mode, tag)
-#define GFX_HOOK_PEN(y, f) (al_n ? (al_cy0 = (y) + cv_oy + (f)->g[glyph((f), 'H')].by, al_cy1 = al_cy0 + (f)->g[glyph((f), 'H')].bh) : 0)
+#define GFX_HOOK_PEN(y, f) (al_n ? (al_cy0 = (y) + cv_oy + ag((f), glyph((f), 'H')).by, al_cy1 = al_cy0 + ag((f), glyph((f), 'H')).bh) : 0)
 #define GFX_HOOK_ITEM(x0, y0, x1, y1) al_item(x0, (y0) + cv_oy, x1, (y1) + cv_oy, 1, "cushion")
 #define GFX_HOOK_ICON(x, y, size, id) hk_icon(x, (y) + cv_oy, size, id)
 static char splash_seen[96];                    /* the splash scene: its texts as drawn, '|' between (draw) */
@@ -1815,7 +1816,7 @@ static void al_keycaps(void)
         uint32_t i = 0;
         for (y = 0; y < KC_H; y++)
             for (x = 0; x < w; x++, i++)
-                if (((KC_DATA[k->off + (i >> 1)] >> ((i & 1u) ? 0 : 4)) & 15u) >= 6u) {
+                if (((KC_REF_DATA[KC_REF_OFF[id] + (i >> 1)] >> ((i & 1u) ? 0 : 4)) & 15u) >= 6u) {   /* (0.9.0: the nibbles) */
                     if (x < x0) x0 = x;
                     if (y < y0) y0 = y;
                     if (x + 1 > x1) x1 = x + 1;

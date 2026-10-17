@@ -19,10 +19,12 @@ Output (a C header; the glyph / font types live in the renderer, firmware/src/gf
                 a run of 1..16 zeros or 15s, or one value 1..14 (huff_pack; about 28 % less than 2 px per byte)
   AF_<N>_HC     the code: the number of codes of each length 1..15, then the symbols in code order
                 ((count - 1) << 4 | value)
-  AF_<N>_G      aag_t {off, adv (1/16 px), bx, by, bw, bh} per glyph and phase (PHASES of S M, PHASES_L of L:
+  AF_<N>_GH / _GP  {off, adv (1/16 px), bx, by, bw, bh} per glyph and phase (PHASES of S M, PHASES_L of L:
                 the glyph drawn at a pen of +0, +1/phases .. px, next to each other), ASCII 32..126, then the
-                extras (Latin-1 by their code; the ellipsis U+2026 as code 0x85, as in Windows-1252)
-  AF_<N>_KERN / _KD  kerning pairs (key = a<<8|b, sorted) and their deltas in 1/16 px (GPOS of the weight)
+                extras (Latin-1 by their code; the ellipsis U+2026 as code 0x85, as in Windows-1252); (0.9.0) packed
+                (aa_raster.glyph_tables): GH a glyph's lowest offset and its advance, GP each phase's rest in 32 bits
+  AF_<N>_KI / _KP    kerning pairs (GPOS of the weight) by the first glyph's number g (0.9.0): KP[2 KI[g] ..
+                2 KI[g + 1] - 1] its pairs, each the second character's code (sorted) and the delta in 1/16 px (int8)
   AF_<N>        aafont_t (its last field: log2 of the phases)
 Prints the byte cost of every face.
 """
@@ -98,12 +100,13 @@ def parse_face(s):
 HC_MAXLEN = 15
 
 
-def huff_symbols(v):
-    """a glyph's alpha values -> symbols (count - 1) << 4 | value: runs of 1..16 zeros or 15s, single others"""
+def huff_symbols(v, runs=(0, 15)):
+    """a glyph's alpha values -> symbols (count - 1) << 4 | value: runs of 1..16 zeros or 15s (the values in runs), single
+    others"""
     out, i = [], 0
     while i < len(v):
         j = i + 1
-        if v[i] in (0, 15):
+        if v[i] in runs:
             while j < len(v) and v[j] == v[i] and j - i < 16:
                 j += 1
         out.append((j - i - 1) << 4 | v[i])
@@ -129,9 +132,9 @@ def huff_lengths(count):
     return length
 
 
-def huff_pack(glyph_values):
+def huff_pack(glyph_values, runs=(0, 15)):
     """[alpha values per glyph] -> (hc table bytes, [bytes per glyph]): canonical Huffman, MSB first"""
-    syms = [huff_symbols(v) for v in glyph_values]
+    syms = [huff_symbols(v, runs) for v in glyph_values]
     count = {}
     for g in syms:
         for s in g:
@@ -221,6 +224,14 @@ def emit(face, tracking, gamma, kern_min):
     deltas = [d for (a, b), d in kern if ord(a) < 256 and ord(b) < 256]
     order = sorted(range(len(keys)), key=lambda i: keys[i])
     keys, deltas = [keys[i] for i in order], [deltas[i] for i in order]
+    # (0.9.0) the pairs by the first glyph's number: KI where its pairs start, KP each pair's second character and
+    # delta (2 B a pair less than a << 8 | b, and the search runs over that glyph's own pairs only)
+    gi = {CODE.get(ord(c), ord(c)): i for i, c in enumerate(chars)}
+    pairs = sorted((gi[k >> 8], k & 255, d) for k, d in zip(keys, deltas))
+    assert all(-128 <= d < 128 for d in deltas) and len(pairs) < 65536
+    nki = pairs[-1][0] + 1 if pairs else 0
+    ki = [sum(1 for p in pairs if p[0] < g) for g in range(nki + 1)]
+    kp = [v for _, b, d in pairs for v in (b, d & 255)]
     psh = phases.bit_length() - 1
     lines.append(f"/* {name}: {os.path.basename(font.split('#')[0])} {px}px, h {r['h']}, baseline {r['asc']}, "
                  f"{len(chars)} glyphs x {phases} phases, {len(data)} B data"
@@ -228,23 +239,21 @@ def emit(face, tracking, gamma, kern_min):
     lines.append(ar.c_array(f"AF_{name}_DATA", "uint8_t", list(data), 24, "0x{:02x}"))
     if hc:
         lines.append(ar.c_array(f"AF_{name}_HC", "uint8_t", hc, 24))
-    lines.append(f"static const aag_t AF_{name}_G[{len(table)}] = {{")
-    for off, adv, bx, by, bw, bh in table:
-        lines.append(f"    {{{off}, {adv}, {bx}, {by}, {bw}, {bh}}},")
-    lines.append("};")
+    gtext, gsize = ar.glyph_tables(name, table, phases)
+    lines.append(gtext)
     if keys:
-        lines.append(ar.c_array(f"AF_{name}_KERN", "uint16_t", keys, 12))
-        lines.append(ar.c_array(f"AF_{name}_KD", "int8_t", deltas, 24))
+        lines.append(ar.c_array(f"AF_{name}_KI", "uint16_t", ki, 12))
+        lines.append(ar.c_array(f"AF_{name}_KP", "uint8_t", kp, 24))
     ex = ", ".join(str(CODE.get(c, c)) for c in extras) or "0"
     lines.append(f"static const uint8_t AF_{name}_EX[{max(1, len(extras))}] = {{{ex}}};")
-    lines.append(f"static const aafont_t AF_{name} = {{{r['h']}, {r['asc']}, {first}, {last}, {len(extras)}, {len(keys)}, "
-                 f"AF_{name}_G, AF_{name}_DATA, {'AF_%s_KERN' % name if keys else '0'}, "
-                 f"{'AF_%s_KD' % name if keys else '0'}, AF_{name}_EX, {psh}, {'AF_%s_HC' % name if hc else '0'}}};")
+    lines.append(f"static const aafont_t AF_{name} = {{{r['h']}, {r['asc']}, {first}, {last}, {len(extras)}, {nki}, "
+                 f"AF_{name}_GH, AF_{name}_GP, AF_{name}_DATA, {'AF_%s_KI' % name if keys else '0'}, "
+                 f"{'AF_%s_KP' % name if keys else '0'}, AF_{name}_EX, {psh}, {'AF_%s_HC' % name if hc else '0'}}};")
     if "H" in chars:                                  # the capitals' band (gfx.c CAP_IN: centring text by it)
         cap = table[chars.index("H") * phases]
         lines.append(f"#define AF_{name}_CAP_Y {cap[3]}   /* the ink of H: rows {cap[3]} .. {cap[3] + cap[5] - 1} of the line */")
         lines.append(f"#define AF_{name}_CAP_H {cap[5]}")
-    cost = {"data": len(data) + len(hc), "glyph_table": 8 * len(table), "kern": 3 * len(keys), "extras": len(extras),
+    cost = {"data": len(data) + len(hc), "glyph_table": gsize, "kern": len(kp) + 2 * len(ki), "extras": len(extras),
             "glyphs": len(chars), "phases": phases, "pairs": len(keys), "h": r["h"], "asc": r["asc"], "px": px,
             "font": os.path.basename(font.split("#")[0]), "adv_digit": r["glyphs"]["0"][0] / 16}
     cost["total"] = cost["data"] + cost["glyph_table"] + cost["kern"] + cost["extras"]
