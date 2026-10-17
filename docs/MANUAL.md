@@ -64,13 +64,13 @@ files.
 2. Not your thing? Press **OCT+** again: a new seed, a new piece. Too busy? Turn **SELECT** to page 2 and lower
    **DRUMS** or **ARP**, then OCT+: the same piece with that changed. **HOME** (or OCT−) closes the screen. To go back to what
    was there before: hold **GLO** and press **G4** (UNDO).
-3. Like it? **Stop** (PLAY), then press **SAVE** twice to reach **SAVE > PROJECT** (the first SAVE press opens
-   USER, the second PROJECT). Turn **KNOB 4** to the right so it shows **[OCT+]**, then press **OCT+**. Type a name with the keys (or keep
-   the one offered) and press **OCT+** again. The screen says **SAVED**.
-4. Make a variation (change some steps, mute a track) and save it into section **B**: on SAVE > PROJECT turn
-   **KNOB 2** to **B**, then KNOB 4 and OCT+ as before.
-5. Press **SAVE** again to reach **ARRANGE**. Turn **KNOB 2** on the **+ ADD** row to add a row, set its section
-   with KNOB 2 and its length with **KNOB 3** (bars). Add a row for A, one for B. Press **PLAY**: the song plays the
+3. Like it? **Stop** (PLAY), then press **SAVE** (it opens SOUND, the user sounds) and turn **SELECT** one detent to
+   the left: **PROJECT**, the project's four sections. Turn **KNOB 4** to the right so its card says **OCT+**, then press
+   **OCT+**. Type a name with the keys (or keep the one offered) and press **OCT+** again. The screen says **SAVED**.
+4. Make a variation (change some steps, mute a track) and save it into section **B**: on PROJECT turn **KNOB 1** to
+   **B**, then KNOB 4 and OCT+ as before.
+5. Press **SAVE** to switch PROJECT to **ARRANGE** (the song's rows). Press **OCT+** to add a row, set its section with
+   **KNOB 2** and its length with **KNOB 3** (bars). Add a row for A, one for B. Press **PLAY**: the song plays the
    rows in order.
 
 That's the whole loop: **make music → save it into a section → chain sections in ARRANGE**.
@@ -102,7 +102,7 @@ The names below are the ones the firmware uses (the HARDWARE CALIBRATION screen 
 | **SCL** | SCL pages. | **SCL** layer: keys set the root. |
 | **EDIT** | EDIT pages (on STEP: clears the step; on USER / PROJECT: rename). | **EDIT** layer: INIT, RECALL, DRUM-X sound mutes. |
 | **GLO** | MIXER → GLOBAL → SYSTEM → MIXER. | **GLO** layer: mutes, solos, levels, tap tempo, UNDO. |
-| **SAVE** | SAVE pages (first press: USER). | **SAVE** layer: play/store sections live. |
+| **SAVE** | SAVE's lens (0.8.5): from another page SOUND (USER, SAVE ready); on SAVE the level's other set. | **SAVE** layer: play/store sections live. |
 | **ARP** | ARP pages. | (no layer) |
 | **SEQ** | SEQ pages: on a SEQ page, the next set of knobs of the zoom level you are on; from elsewhere, back to the level and set you last used on that track. | **SEQ TOOLS** layer (on every SEQ page). |
 | **PLAY** | Start / stop. | — |
@@ -186,6 +186,8 @@ and heating up with its own audio. The selected track is drawn bigger, a muted o
   GEN, the song generator.
 - **SEQ is a lens** (LENTE, 0.8.3): SELECT zooms between the whole **PATTERN**, one **BAR** and one **STEP**, and a
   SEQ tap goes round the sets of knobs of the level you are on. See [6](#finding-your-way-lente).
+- **SAVE is a lens too** (0.8.5): SELECT zooms **LIBRARY ↔ PROJECT ↔ SOUND** and a SAVE tap switches the level's two
+  sets. See [12](#saves-lens-library--project--sound).
 - **Hold a page button and turn PRESETS** to go through its pages forwards or back (no wrap); let go and you stay
   there. ENV, SCL, ARP and SAVE do the same with SELECT; HOME, EDIT, SEQ, LFO and FX + SELECT are their dice, GLO +
   SELECT the tempo.
@@ -197,7 +199,7 @@ and heating up with its own audio. The selected track is drawn bigger, a muted o
 
 ### Every page and its four knobs
 
-"—" means an empty card. "Action" cards show **[OCT+]** when picked (turn the knob right); press OCT+ to do it.
+"—" means an empty card. An "action" card, picked (turn the knob right), is tinted violet with its name violet and says **OCT+**; press OCT+ to do it.
 
 **ENV** (per track)
 
@@ -278,8 +280,8 @@ and heating up with its own audio. The selected track is drawn bigger, a muted o
 | --- | --- | --- | --- | --- |
 | PRESETS | No. (the sound) | ENG (the engine) | FAV (mark a favourite) | LIST (ALL / FAV) |
 | USER | SLOT (U01–U32) | LOAD (action) | ERASE (action) | SAVE (action) |
-| PROJECT | PROJ (1–8) | SECT (A–D) | LOAD (action) | SAVE (action) |
-| ARRANGE | ROW | SECT (on END: STOP / x2–x8 / LOOP) | BARS | SCENE |
+| PROJECT | PROJECT (1–8; on SAVE's PROJECT level: SECT A–D) | SECT (A–D; on PROJECT: the section's NAME) | LOAD (action) | SAVE (action) |
+| ARRANGE | ROW ("2/6") | SECT (on END: STOP / x2–x8 / LOOP) | BARS | SCENE |
 | TOOLS | any knob or PRESETS picks from the list: CLEAR SEQ, INIT SOUND, DELETE ROW, CLEAR SONG, NEW PROJECT, CPU TEST | | | |
 
 **ARP** (per track)
@@ -826,19 +828,20 @@ That's 32 sections in total (8 × 4).
 
 ### The ARRANGE page (SAVE > ARRANGE)
 
-The song as a column of rows. Each row shows its section chip (A–D, each in its own colour), its bars as blocks that
-fill as they play, its bar count and a dot if it has a scene. A row pointing to a section with nothing stored says
-**EMPTY**. Below the rows: **+ ADD** (with how many of the 16 rows are used) and **END**. On the right, the whole song as
-one strip with the play head, and the total bars.
+ARRANGE is the second set of SAVE's PROJECT level (0.8.5): on top the project's four sections large (stored: in their
+colour, the one playing says **NOW**), then **ARRANGE**: the song's rows as chips (**A16**: the section and its bars, in
+the section's colour; a scene: a white dot; the row you are on lit and framed), and under them the whole song as one
+strip (its rows by their length, a white line where it plays) with its length and its END (**120 BARS · LOOP**).
 
 | Knob | On a row | On + ADD | On END |
 | --- | --- | --- | --- |
 | KNOB 1 (or PRESETS) | choose the row | | |
 | KNOB 2 | its section A–D; turned left past A: **DELETE SONG ROW?** | adds a row (same section as the row above, 1 bar) | **STOP**, **x2 … x8**, **LOOP** |
+| OCT+ | adds a row after the last (its section and bars), and selects it (0.8.5) | | |
 | KNOB 3 | its bars (1–64) | adds a row | |
 | KNOB 4 | right: store a **scene** (SCENE STORED); left: clear it | | |
 
-- **PLAY** (or OCT+) on ARRANGE plays the song from the top; again: stop.
+- **PLAY** on ARRANGE plays the song from the top; again: stop. (Until 0.8.4 OCT+ did too; now it adds a row.)
 - When the song ends (or you stop it), the music you had before pressing PLAY comes back (SONG END).
 - END: **STOP** plays the song once, **x2–x8** that many times, **LOOP** forever.
 - If a row points to an empty section the song won't start: the screen says **PATTERN A EMPTY** (or B, C, D).
@@ -1250,14 +1253,34 @@ This is the chapter to read carefully. JIANT keeps several kinds of data in diff
 - After a crash, a hang or a failed start, the autosave is not restored (the music that was playing could be what
   crashed).
 
+### SAVE's lens: LIBRARY · PROJECT · SOUND
+
+Since 0.8.5 SAVE works like the sequencer's lens and is drawn as the design that was approved: three level tabs at
+the top, **LIBRARY · PROJECT · SOUND**. **SELECT** zooms between them (no wrap), a **SAVE** tap switches the level's
+two sets, and each level comes back at the set you left it on. The pages, their knobs, OCT+, the dialogs and the NAME
+screen are the ones they always were.
+
+| Level | What the screen shows | SAVE tap switches | Knobs |
+| --- | --- | --- | --- |
+| **LIBRARY** | The eight projects as tiles: the number, the name (its section A's), the four sections A–D as chips (stored: in the section's colour; empty: dark). The project open tinted and framed violet, its section picked framed white. | **PROJECT** ↔ **TOOLS** (the six tools as a list) | PROJECT, SECT, LOAD, SAVE (PRESETS: the project) / the tool |
+| **PROJECT** | The project's four sections large, ARRANGE's rows as chips, the song as a strip (see [7](#7-arrange-songs-sections-and-scenes)). | **SECTIONS** ↔ **ARRANGE** | SECT, NAME (shown; EDIT renames), LOAD, SAVE / ROW, SECT, BARS, SCENE (OCT+ adds a row) |
+| **SOUND** | The track's being (its engine's creature, alive with its sound), the track and its sound under it; at the right the 32 user slots (a stored one: its engine's creature small and its name) or the factory sounds. | **USER** ↔ **PRESETS** | SLOT, LOAD, ERASE, SAVE / No., ENG, FAV, LIST |
+
+- **SAVE from another page** opens SOUND's USER with SAVE ready: SAVE, OCT+, OCT+ stores the sound, as before.
+- The other projects' tiles are read from the flash a project a frame (the headers only: no loading, nothing the
+  audio notices) and kept until a project is saved, loaded or renamed.
+- The footer says **SAVE · LIBRARY** (the lens, the level). The OCT+ / EDIT / OCT− hints are not drawn on the lens's
+  pages: the armed card says OCT+.
+
 ### To save a project section
 
 1. **Stop** the transport (saving needs it stopped: otherwise **STOP TO SAVE**).
-2. Press **SAVE** until you reach **PROJECT** (SAVE opens USER first, then PROJECT).
-3. **KNOB 1**: the project (1–8). Turning it does **not** change the music you're playing — it only chooses where to
-   save. (It switches projects, so do this stopped.)
-4. **KNOB 2** (or PRESETS): the section A–D. The list shows each section's name (or USED / --), **NOW** on the one
-   the music came from, and the bars it plays in the arrangement.
+2. Press **SAVE** (SOUND opens), then turn **SELECT** left: **PROJECT** (one detent) or **LIBRARY** (two).
+3. On **LIBRARY**, **KNOB 1** (or PRESETS): the project (1–8), its tile framed; **KNOB 2** its section. Turning KNOB 1
+   does **not** change the music you're playing — it only chooses where to save. (It switches projects, so do this
+   stopped.)
+4. On **PROJECT**, **KNOB 1** (or PRESETS): the section A–D, drawn large with its name (or USED / EMPTY) and **NOW** on
+   the one the music came from; KNOB 2's card shows its name.
 5. **KNOB 4** to the right: SAVE is picked ([OCT+]). Press **OCT+**.
 6. If the section already holds something: **OVERWRITE PROJECT A?** (with its name). OCT+ YES.
 7. The **NAME** screen opens with a name ready. Edit it or not, then **OCT+** writes. **OCT−** cancels and writes
@@ -1268,7 +1291,7 @@ A section stores the music **including the tempo and global effects**. The **pro
 
 ### To load a section
 
-1. SAVE > PROJECT, **KNOB 1** the project, **KNOB 2** the section.
+1. SAVE's LIBRARY: **KNOB 1** the project, **KNOB 2** the section (or PROJECT: **KNOB 1** the section).
 2. **KNOB 3** to the right (LOAD), press **OCT+**. The screen says **LOADED**.
 
 LOAD **stops playback** and replaces the music: sounds, steps, automation, the kit, the punch-in lane, the macros,
@@ -1285,12 +1308,12 @@ when you stop**. If you power off before stopping, it's lost — so stop before 
 
 - **A section to another letter**: LOAD it, then SAVE it into the other letter.
 - **A section to another project**: LOAD it, turn KNOB 1 to the other project (the music stays), SAVE into a letter.
-- **"Save as" a new project**: with your music playing, stop, go to SAVE > PROJECT, turn KNOB 1 to an empty project
+- **"Save as" a new project**: with your music playing, stop, go to SAVE's LIBRARY, turn KNOB 1 to an empty project
   and SAVE into A.
 
 ### Switching projects
 
-- On **SAVE > PROJECT, KNOB 1** changes project but **keeps the music** (to store it there or load one of its sections).
+- On **SAVE's LIBRARY, KNOB 1** changes project but **keeps the music** (to store it there or load one of its sections).
 - With the **SAVE layer's KNOB 1** (hold SAVE, turn, let go) the project changes **and its section A becomes the
   music** (if it has one). The previous music is replaced and **UNDO cannot bring it back** — save it first.
 - Both need the transport stopped (**STOP TO CHANGE PROJECT** / **STOP TO CHANGE SONG**). Sections stored with the

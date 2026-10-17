@@ -1456,6 +1456,27 @@ static void graph_drift(void)
         cv_rect(gx, gy, 1 + (int32_t)(h >> 31), 1 + (int32_t)(h >> 31), ux_mix(T_SURF, T_THEME, 18 + (int32_t)(h >> 29) * 3));
     }
 }
+/* (0.8.5) SAVE > LIBRARY's picture of the other projects (ui_lzsave.c) */
+static struct {
+    uint32_t gen;                                       /* lib_gen() when the scan began */
+    uint8_t next;                                       /* the next project to scan (NSONG: done) */
+    uint8_t mask[NSONG];                                /* sections stored, a bit each */
+    char name[NSONG][13u];
+} lib = {0xFFFFFFFFu, 0, {0}, {{0}}};
+static void lib_poll(void)                              /* (graph_signature, once a frame) */
+{
+    if (lib.gen != lib_gen()) {
+        lib.gen = lib_gen();
+        lib.next = 0;
+    }
+    if (lib.next < NSONG) {
+#if FELUCCA_FLASH
+        lib.mask[lib.next] = (uint8_t)lib_scan(lib.next, lib.name[lib.next]);
+#endif
+        lib.next++;
+    }
+}
+static void sound_name(const track_t *t, char *b);   /* (ui_draw.c) */
 static uint32_t graph_signature(void)
 {
     const page_t *pg = cur_page();
@@ -1557,6 +1578,23 @@ static uint32_t graph_signature(void)
         h ^= (fm6_pgen[(t - trk) % NTRK] + 1u) * 2246822519u;
     if (fop_page(pg->graph))                         /* (0.6.77) OPERATOR, OP ENV (track pages): the patch, the operator */
         h = (h ^ ((fm6_pgen[(t - trk) % NTRK] + 1u) * 2246822519u ^ (uint32_t)fop_op << 8 ^ fop_stg)) * 16777619u;
+    if (save_on()) {                                 /* (0.8.5) SAVE's lens: the level, the library's scan, the being */
+        lib_poll();
+        h = (h ^ (save_level() + 1u) * 2654435761u ^ lib.next * 40503u ^ lib.gen) * 16777619u;
+        if (pg->graph == GR_USER || pg->graph == GR_BROWSE)
+            h ^= bg_energy() > 2 ? ui.frame * 2654435761u : 0u;   /* (the being moves with the sound) */
+        if (pg->graph == GR_SONG) {                  /* (ARRANGE: as SLOTS', the rows and where the song is) */
+            for (i = 0; i < 4u; i++) h ^= (uint32_t)graph_project_used(i) << (20u + i);
+            h += graph_pname_sig + (uint32_t)(live.cur + 1) * 40503u;
+        }
+        if (pg->graph == GR_SLOTS) {
+            h ^= SONG_END(&chain_config) * 2246822519u + ui.song_row * 7919u;
+            h ^= chain.running ? (chain.row + 1u) * 104729u + chain.remaining * 1299709u : 0u;
+            for (i = 0; i < CHAIN_ROWS; i++) h = (h ^ (uint32_t)song_idx.scene[song_cur][i].on * (i + 1u)) * 16777619u;
+        }
+        if (pg->graph == GR_BROWSE)
+            h ^= favorites.filter * 977u + preset_favorite() * 31u;
+    }
     if (lens_on()) {                                 /* (0.8.3) LENTE: the level; its STEP, the cursor step's every byte */
         h = (h ^ (lens_level() + 1u) * 2654435761u) * 16777619u;
         h = (h ^ (song.playing ? seq_src(t, t->seq_idx) / 16u + 1u : 0u) * 40503u) * 16777619u;   /* (0.8.5) the bar
@@ -2197,7 +2235,8 @@ static void graph_mseq(const track_t *t, uint16_t c)
  * the bars in all. KNOB 1 the row, 2 its section (on END: STOP / x2 .. / LOOP), 3 its bars, 4 its scene */
 static uint16_t sec_col(uint32_t s)
 {
-    static const uint8_t HJ[4] = {60, 115, 175, 230}, HO[4] = {120, 160, 200, 240};
+    static const uint8_t HJ[4] = {0, 85, 171, 213}, HO[4] = {120, 160, 200, 240};   /* (0.8.5: JIANT the mock-up's cyan
+                                                         * violet orange yellow; was 60 115 175 230) */
     return heat_col(settings.palette == UI_JIANT_INDEX ? HJ[s & 3u] : HO[s & 3u]);
 }
 static void song_chip(int32_t x, int32_t y, uint32_t s, int saved, int sel, uint16_t bg)
@@ -2295,6 +2334,7 @@ static void graph_song(void)
     }
 }
 #include "ui_tech.c"                                /* (JIANT 0.5) the technical graphs (FX, DEST, VOICE, GLOBAL) */
+#include "ui_lzsave.c"                              /* (0.8.5) SAVE's lens: its levels' panels */
 static void draw_graph(void)
 {
     const page_t *pg = cur_page();
@@ -2347,6 +2387,9 @@ static void draw_graph(void)
     } else if (bigstep_view(pg)) {                   /* .. its STEP: NOTE COMP COMP 2, the step large */
         cv_oy = 0;
         graph_bigstep(t, pg, c);
+    } else if (lz_on() && lz_fam() == LZ_SAVE) {     /* (0.8.5) SAVE's lens */
+        cv_oy = 0;
+        graph_save_lz(pg);
     } else {
         switch (pg->graph) {
         case GR_ADSR:

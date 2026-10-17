@@ -19,6 +19,8 @@ static const uint8_t MUT_BARS[7] = {0, 1, 2, 4, 8, 16, 32};   /* .. SOUND / PATT
 static int undo_do(void);                       /* .. back (and again: forward) */
 static uint8_t undo_ok;
 static int project_used(uint32_t slot);
+static uint32_t lib_scan(uint32_t n, char *b);           /* (0.8.5) project.c: SAVE > LIBRARY's tiles */
+static uint32_t lib_gen(void);
 static int project_recall_sound(uint32_t slot, uint32_t k);
 static int undo_sound(uint32_t k);                 /* (0.6.65) project.c: the sound dice's CANCEL */
 static int project_recall_slot(void);
@@ -193,6 +195,7 @@ static struct {
     uint8_t pr_focus;            /* (0.6.81) SEQ > NOTE: the chord (0) or its note 1..4 (ui_input.c note_edit) */
     uint8_t lv;                  /* (0.8.3) SEQ's LENTE: the level shown, LV_PAT LV_BAR LV_STEP (lens_sync) */
     uint16_t lens_mem[NTRK];     /* .. per track: the level last used and each level's set (LM_*: SEQ comes back there) */
+    uint8_t slv, smem;           /* (0.8.5) SAVE's lens: the level shown (SV_*), each level's set (ui.c save_go) */
     uint8_t ent_len, ent_arp, ent_res, ent_ord, ent_oct, ent_nn;   /* (0.6.37) that entry while held (ui_input.c
                                   * seq_entry): KNOB 1 its LEN in steps; ARP pressed: arpeggiated, KNOB 1 the steps a
                                   * note (RES), 2 the ORDER, 3 the octaves; the keys' notes in order of pitch */
@@ -537,17 +540,82 @@ static void lens_sync(void)
     ui.lv = PAGES[i].graph == GR_CHANCE ? LV_STEP : LV_PAT;
 }
 static int lens_on(void) { return !ui.home && !page_over && PAGES[ui.page].fam == FAM_SEQ; }
-/* (0.8.5) a lens page shown (SEQ's LENTE; SAVE's and FX's below): the mock-up's layout, its tabs and breadcrumb */
-static uint32_t lz_on(void) { return lens_on() && !ui.layer; }
-enum { LZ_SEQ, LZ_SAVE, LZ_FX };
-static uint32_t lz_fam(void) { return LZ_SEQ; }         /* which lens */
-static uint32_t lens_level(void);
-static uint32_t lz_level(void) { return lens_level(); } /* its level shown, 0..2 */
-static const char *lz_level_name(uint32_t l) { return LENS_NAME[l % LV_N]; }
-static const char *lz_crumb(void) { return "LENTE"; }   /* the breadcrumb's first word */
-static const char *lz_set_name(void)                    /* .. its last: the set shown */
+/* (0.8.5) SAVE's lens, as the approved mock-up (SAVE "LENTE"): SELECT zooms LIBRARY <-> PROJECT <-> SOUND (no wrap),
+ * a SAVE tap toggles the level's two sets; the pages, their knobs and OCT+ as they were:
+ *   LIBRARY  the eight projects as tiles with their sections A..D: PROJECT (PROJECT SECT LOAD SAVE) / TOOLS (the list)
+ *   PROJECT  the project's four sections large, its arrangement as chips, the song as a strip: SECTIONS (the PROJECT
+ *            page, KNOB 1 the section, KNOB 2 its name shown, LOAD SAVE) / ARRANGE (ROW SECT BARS SCENE; OCT+ adds a
+ *            row, PLAY plays the song)
+ *   SOUND    the track's being and the 32 user slots: USER (SLOT LOAD ERASE SAVE) / PRESETS (the factory sounds)
+ * SAVE from another page: SOUND's USER, its SAVE armed (SAVE, OCT+, OCT+ as before). ui.slv: the level shown (the
+ * PROJECT page is on two); ui.smem: each level's set (bit l) */
+enum { SV_LIB, SV_PROJ, SV_SOUND };
+static const char *const SV_NAME[3] = {"LIBRARY", "PROJECT", "SOUND"};
+static const char *const SV_SET[3][2] = {{"PROJECT", "TOOLS"}, {"PROJECT", "ARRANGE"}, {"USER", "PRESETS"}};
+static int save_on(void) { return !ui.home && !page_over && PAGES[ui.page].fam == FAM_SAVE; }
+static int32_t save_k(uint32_t lv, uint32_t i)          /* page i's set in level lv, -1 none */
 {
-    int32_t k = lens_k(lens_level(), ui.page);
+    uint32_t k;
+    for (k = 0; k < 2u; k++)
+        if (PAGES[i].fam == FAM_SAVE && str_eq(PAGES[i].title, SV_SET[lv % 3u][k]))
+            return (int32_t)k;
+    return -1;
+}
+static uint32_t save_page(uint32_t lv, uint32_t k)
+{
+    uint32_t i;
+    for (i = 0; i < NPAGES; i++)
+        if (PAGES[i].fam == FAM_SAVE && str_eq(PAGES[i].title, SV_SET[lv % 3u][k & 1u]))
+            return i;
+    return 0;
+}
+static uint32_t save_level(void)                        /* the level shown (a page put by code brings its own) */
+{
+    uint32_t l;
+    if (ui.slv < 3u && save_k(ui.slv, ui.page) >= 0)
+        return ui.slv;
+    for (l = SV_LIB; l <= SV_SOUND; l++)
+        if (save_k(l, ui.page) >= 0) {
+            ui.slv = (uint8_t)l;
+            break;
+        }
+    return ui.slv;
+}
+static void page_entered(void);
+static void page_flash(void);
+static void save_go(uint32_t lv, uint32_t k)            /* level lv's set k shown, remembered */
+{
+    ui.slv = (uint8_t)lv;
+    ui.smem = (uint8_t)((ui.smem & ~(1u << lv)) | (k & 1u) << lv);
+    ui.page = (uint8_t)save_page(lv, k);
+    ui.fam_last[FAM_SAVE] = ui.page;
+    ui.home = 0;
+    page_entered();
+    page_flash();
+}
+static void save_zoom(int32_t s)                        /* SELECT: a level a detent, at its set */
+{
+    uint32_t lv = save_level();
+    int32_t to = clamp((int32_t)lv + s, SV_LIB, SV_SOUND);
+    if ((uint32_t)to != lv)
+        save_go((uint32_t)to, (ui.smem >> to) & 1u);
+}
+
+/* (0.8.5) a lens page shown (SEQ's LENTE, SAVE's): the mock-up's layout, its tabs and breadcrumb */
+static int name_on(void);                               /* (ui_name.c: NAME keeps its own layout) */
+static uint32_t lz_on(void) { return (lens_on() || save_on()) && !ui.layer && !name_on(); }
+enum { LZ_SEQ, LZ_SAVE, LZ_FX };
+static uint32_t lz_fam(void) { return save_on() ? LZ_SAVE : LZ_SEQ; }   /* which lens */
+static uint32_t lens_level(void);
+static uint32_t lz_level(void) { return lz_fam() == LZ_SAVE ? save_level() : lens_level(); }   /* its level, 0..2 */
+static const char *lz_level_name(uint32_t l) { return lz_fam() == LZ_SAVE ? SV_NAME[l % 3u] : LENS_NAME[l % LV_N]; }
+static const char *lz_crumb(void) { return lz_fam() == LZ_SAVE ? "SAVE" : "LENTE"; }   /* the breadcrumb's first word */
+static const char *lz_set_name(void)                    /* .. its last: the set shown ("": none, SAVE's as the mock-up) */
+{
+    int32_t k;
+    if (lz_fam() == LZ_SAVE)
+        return "";
+    k = lens_k(lens_level(), ui.page);
     return k >= 0 ? LENS_SET[lens_level()][k] : PAGES[ui.page].title;
 }
 static uint32_t lens_level(void)
@@ -880,6 +948,14 @@ static void open_family(uint32_t fam)
         }
         ui.lv = (uint8_t)lv;
         ui.page = (uint8_t)lens_page(lv, (uint32_t)k);
+    } else if (fam == FAM_SAVE) {                      /* (0.8.5) SAVE's lens: on its page the level's other set;
+                                                         * from elsewhere SOUND's USER (the sound save, ready) */
+        if (save_on()) {
+            uint32_t lv = save_level();
+            save_go(lv, (uint32_t)save_k(lv, ui.page) ^ 1u);
+        } else
+            save_go(SV_SOUND, 0);
+        return;
     } else if (!ui.home && cur_page()->fam == fam) {   /* same button again: next page */
         uint32_t n, i = ui.page;
         for (n = 0; n < NPAGES; n++) {
@@ -887,11 +963,6 @@ static void open_family(uint32_t fam)
             if (PAGES[i].fam == fam && page_visible(i)) break;
         }
         ui.page = (uint8_t)i;
-    } else if (fam == FAM_SAVE) {
-        uint32_t i;
-        for (i = 0; i < NPAGES; i++)
-            if (PAGES[i].graph == GR_USER) break;
-        ui.page = (uint8_t)i;                         /* SAVE enters the sound save screen directly */
     } else {
         ui.page = ui.fam_last[fam] && PAGES[ui.fam_last[fam]].fam == fam && page_visible(ui.fam_last[fam]) ? ui.fam_last[fam]
                                                                           : (uint8_t)page_first(fam);
@@ -1612,7 +1683,7 @@ static uint32_t act_cols(void)                   /* the columns that are actions
     if (pg->graph == GR_EVENTS) return 16u;     /* AUTO LIST: no knob is an action; OCT+ adds / toggles (ev_oct) */
     if (pg->graph == GR_TOOLS) return 15u;
     if (pg->graph == GR_SONG)
-        return 1u;                               /* PLAY / STOP (also the PLAY button) */
+        return 1u;                               /* (0.8.5) ADD a row (PLAY: the song) */
     if (pg->graph == GR_PATS)
         return 2u;                               /* LOAD */
     if (pg->graph == GR_USER)
@@ -1648,8 +1719,8 @@ static const char *act_name(uint32_t c)          /* column c's action (the foote
         static const char *const actions[] = {"CLEAR", "INIT", "DELETE", "CLEAR", "INIT"};
         return actions[c < 5u ? c : 4u];
     }
-    if (cur_page()->graph == GR_SONG)
-        return song.playing || chain_busy() ? "STOP" : "PLAY";
+    if (cur_page()->graph == GR_SONG)                   /* (0.8.5) SAVE's lens: OCT+ adds a row (PLAY plays) */
+        return "ADD";
     if (cur_page()->graph == GR_PATS)
         return "LOAD";
     if (cur_page()->graph == GR_USER)
@@ -1670,7 +1741,7 @@ static int act_ready(void)
         return !chain_busy() && (c == 0u ? !seq_is_empty(TSEL) || motion_count(TSEL) : c == 1u || c >= 4u ? 1 :
                                  c == 2u ? ui.song_row < chain_config.count : chain_config.count != 0u);
     if (cur_page()->graph == GR_SONG)
-        return song.playing || chain_busy() || chain_config.count;
+        return !chain_busy() && chain_config.count < CHAIN_ROWS;
     if (cur_page()->graph == GR_PATS)
         return pat_last[s] != pat_pick() + 1u || steps_sig(TSEL) != pat_sig[s];
     if (cur_page()->graph == GR_USER)

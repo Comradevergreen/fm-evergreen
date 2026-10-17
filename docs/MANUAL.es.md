@@ -65,13 +65,14 @@ Guardá tus archivos WAV.
 2. ¿No te convence? Apretá **OCT+** otra vez: semilla nueva, pieza nueva. ¿Demasiado cargada? Girá **SELECT** a la
    página 2 y bajá **DRUMS** o **ARP**, después OCT+: la misma pieza con eso cambiado. **HOME** (u OCT−) cierra la pantalla.
    Para volver a lo que había antes: mantené **GLO** y apretá **G4** (UNDO).
-3. ¿Te gusta? **Pará** (PLAY) y apretá **SAVE** dos veces para llegar a **SAVE > PROJECT** (la primera pulsación de
-   SAVE abre USER, la segunda PROJECT). Girá **KNOB 4** a la derecha para que muestre **[OCT+]** y apretá **OCT+**.
-   Escribí un nombre con las teclas (o dejá el que te ofrece) y apretá **OCT+** otra vez. La pantalla dice **SAVED**.
-4. Hacé una variación (cambiá algunos pasos, muteá una pista) y guardala en la sección **B**: en SAVE > PROJECT girá
-   **KNOB 2** hasta **B** y después KNOB 4 y OCT+ como antes.
-5. Apretá **SAVE** otra vez para llegar a **ARRANGE**. Girá **KNOB 2** sobre la fila **+ ADD** para agregar una fila,
-   elegí su sección con KNOB 2 y su largo con **KNOB 3** (compases). Agregá una fila para A y otra para B. Apretá
+3. ¿Te gusta? **Pará** (PLAY), apretá **SAVE** (abre SONIDO, los sonidos de usuario) y girá **SELECT** un paso a la
+   izquierda: **PROJECT**, las cuatro secciones del proyecto. Girá **KNOB 4** a la derecha para que su tarjeta diga
+   **OCT+** y apretá **OCT+**. Escribí un nombre con las teclas (o dejá el que te ofrece) y apretá **OCT+** otra vez. La
+   pantalla dice **SAVED**.
+4. Hacé una variación (cambiá algunos pasos, muteá una pista) y guardala en la sección **B**: en PROJECT girá
+   **KNOB 1** hasta **B** y después KNOB 4 y OCT+ como antes.
+5. Apretá **SAVE** para pasar de PROJECT a **ARRANGE** (las filas del tema). Apretá **OCT+** para agregar una fila,
+   elegí su sección con **KNOB 2** y su largo con **KNOB 3** (compases). Agregá una fila para A y otra para B. Apretá
    **PLAY**: el tema reproduce las filas en orden.
 
 Ese es todo el ciclo: **hacer música → guardarla en una sección → encadenar secciones en ARRANGE**.
@@ -103,7 +104,7 @@ Los nombres de abajo son los que usa el firmware (la pantalla HARDWARE CALIBRATI
 | **SCL** | Páginas SCL. | Capa **SCL**: las teclas fijan la tónica. |
 | **EDIT** | Páginas EDIT (en STEP: borra el paso; en USER / PROJECT: renombrar). | Capa **EDIT**: INIT, RECALL, mutes de los sonidos de DRUM-X. |
 | **GLO** | MIXER → GLOBAL → SYSTEM → MIXER. | Capa **GLO**: mutes, solos, niveles, tap tempo, UNDO. |
-| **SAVE** | Páginas SAVE (primera pulsación: USER). | Capa **SAVE**: tocar/guardar secciones en vivo. |
+| **SAVE** | La lente de SAVE (0.8.5): desde otra página SONIDO (USER, SAVE listo); en SAVE el otro juego del nivel. | Capa **SAVE**: tocar/guardar secciones en vivo. |
 | **ARP** | Páginas ARP. | (sin capa) |
 | **SEQ** | Páginas SEQ: en una página SEQ, el siguiente juego de perillas del nivel de zoom en el que estás; desde otro lado, vuelve al nivel y al juego que usaste por última vez en esa pista. | Capa **SEQ TOOLS** (en todas las páginas SEQ). |
 | **PLAY** | Arranca / para. | — |
@@ -189,6 +190,8 @@ Los **diálogos** preguntan antes de cualquier cosa destructiva: **OCT− NO**, 
   En HOME abre GEN, el generador de temas.
 - **SEQ es una lente** (LENTE, 0.8.3): SELECT hace zoom entre el **PATRÓN** entero, un **COMPÁS** y un **PASO**, y un
   toque de SEQ recorre los juegos de perillas del nivel en el que estás. Ver [6](#cómo-moverse-lente).
+- **SAVE también es una lente** (0.8.5): SELECT hace zoom **LIBRARY ↔ PROJECT ↔ SOUND** (biblioteca, proyecto,
+  sonido) y un toque de SAVE cambia entre los dos juegos del nivel. Ver [12](#la-lente-de-save-library--project--sound).
 - **Mantené un botón de página y girá PRESETS** para recorrer sus páginas hacia adelante o hacia atrás (sin dar la
   vuelta); soltá y te quedás ahí. ENV, SCL, ARP y SAVE hacen lo mismo con SELECT; HOME, EDIT, SEQ, LFO y FX + SELECT son
   sus dados, GLO + SELECT el tempo.
@@ -200,8 +203,8 @@ Los **diálogos** preguntan antes de cualquier cosa destructiva: **OCT− NO**, 
 
 ### Cada página y sus cuatro perillas
 
-"—" significa una tarjeta vacía. Las tarjetas de "acción" muestran **[OCT+]** cuando están elegidas (girá la perilla
-a la derecha); apretá OCT+ para ejecutarla.
+"—" significa una tarjeta vacía. Una tarjeta de "acción" elegida (girá la perilla a la derecha) queda teñida de
+violeta, con el nombre violeta, y dice **OCT+**; apretá OCT+ para ejecutarla.
 
 **ENV** (por pista)
 
@@ -282,8 +285,8 @@ a la derecha); apretá OCT+ para ejecutarla.
 | --- | --- | --- | --- | --- |
 | PRESETS | No. (el sonido) | ENG (el motor) | FAV (marcar como favorito) | LIST (ALL / FAV) |
 | USER | SLOT (U01–U32) | LOAD (acción) | ERASE (acción) | SAVE (acción) |
-| PROJECT | PROJ (1–8) | SECT (A–D) | LOAD (acción) | SAVE (acción) |
-| ARRANGE | ROW | SECT (en END: STOP / x2–x8 / LOOP) | BARS | SCENE |
+| PROJECT | PROJECT (1–8; en el nivel PROJECT de SAVE: SECT A–D) | SECT (A–D; en PROJECT: el NAME de la sección) | LOAD (acción) | SAVE (acción) |
+| ARRANGE | ROW ("2/6") | SECT (en END: STOP / x2–x8 / LOOP) | BARS | SCENE |
 | TOOLS | cualquier perilla o PRESETS elige de la lista: CLEAR SEQ, INIT SOUND, DELETE ROW, CLEAR SONG, NEW PROJECT, CPU TEST | | | |
 
 **ARP** (por pista)
@@ -868,19 +871,21 @@ Son 32 secciones en total (8 × 4).
 
 ### La página ARRANGE (SAVE > ARRANGE)
 
-El tema como una columna de filas. Cada fila muestra el chip de su sección (A–D, cada una con su color), sus compases
-como bloques que se llenan a medida que suenan, su cantidad de compases y un punto si tiene escena. Una fila que apunta
-a una sección sin nada guardado dice **EMPTY**. Debajo de las filas: **+ ADD** (con cuántas de las 16 filas están en
-uso) y **END**. A la derecha, todo el tema como una sola tira con el cabezal de reproducción, y el total de compases.
+ARRANGE es el segundo juego del nivel PROJECT de SAVE (0.8.5): arriba las cuatro secciones del proyecto en grande
+(guardadas: en su color, la que suena dice **NOW**), después **ARRANGE**: las filas del tema como fichas (**A16**: la
+sección y sus compases, en el color de la sección; una escena: un punto blanco; la fila en la que estás encendida y
+enmarcada), y debajo todo el tema como una sola tira (sus filas según su largo, una línea blanca donde suena) con su
+largo y su END (**120 BARS · LOOP**).
 
 | Perilla | Sobre una fila | Sobre + ADD | Sobre END |
 | --- | --- | --- | --- |
 | KNOB 1 (o PRESETS) | elige la fila | | |
 | KNOB 2 | su sección A–D; girada a la izquierda más allá de A: **DELETE SONG ROW?** | agrega una fila (misma sección que la fila de arriba, 1 compás) | **STOP**, **x2 … x8**, **LOOP** |
+| OCT+ | agrega una fila después de la última (su sección y sus compases) y la elige (0.8.5) | | |
 | KNOB 3 | sus compases (1–64) | agrega una fila | |
 | KNOB 4 | derecha: guarda una **escena** (SCENE STORED); izquierda: la borra | | |
 
-- **PLAY** (u OCT+) en ARRANGE reproduce el tema desde el principio; otra vez: para.
+- **PLAY** en ARRANGE reproduce el tema desde el principio; otra vez: para. (Hasta la 0.8.4 OCT+ también; ahora agrega una fila.)
 - Cuando el tema termina (o lo parás), vuelve la música que tenías antes de apretar PLAY (SONG END).
 - END: **STOP** reproduce el tema una vez, **x2–x8** esa cantidad de veces, **LOOP** para siempre.
 - Si una fila apunta a una sección vacía, el tema no arranca: la pantalla dice **PATTERN A EMPTY** (o B, C, D).
@@ -1324,14 +1329,34 @@ distintas.
 - Después de un crash, un cuelgue o un arranque fallido, el autoguardado no se restaura (la música que estaba sonando
   podría ser lo que causó el crash).
 
+### La lente de SAVE: LIBRARY · PROJECT · SOUND
+
+Desde la 0.8.5 SAVE funciona como la lente del secuenciador y se dibuja como el diseño aprobado: tres pestañas de
+nivel arriba, **LIBRARY · PROJECT · SOUND** (biblioteca, proyecto, sonido). **SELECT** hace zoom entre ellas (sin dar la
+vuelta), un toque de **SAVE** cambia entre los dos juegos del nivel, y cada nivel vuelve al juego en el que lo
+dejaste. Las páginas, sus perillas, OCT+, los diálogos y la pantalla NAME son los de siempre.
+
+| Nivel | Qué muestra la pantalla | Un toque de SAVE cambia | Perillas |
+| --- | --- | --- | --- |
+| **LIBRARY** | Los ocho proyectos como fichas: el número, el nombre (el de su sección A), sus cuatro secciones A–D como chips (guardadas: en el color de la sección; vacías: oscuras). El proyecto abierto teñido y enmarcado en violeta, su sección elegida enmarcada en blanco. | **PROJECT** ↔ **TOOLS** (las seis herramientas en lista) | PROJECT, SECT, LOAD, SAVE (PRESETS: el proyecto) / la herramienta |
+| **PROJECT** | Las cuatro secciones del proyecto en grande, las filas de ARRANGE como fichas, el tema como una tira (ver [7](#7-arrange-canciones-secciones-y-escenas)). | **SECTIONS** ↔ **ARRANGE** | SECT, NAME (se muestra; EDIT lo renombra), LOAD, SAVE / ROW, SECT, BARS, SCENE (OCT+ agrega una fila) |
+| **SOUND** | El ser de la pista (la criatura de su motor, viva con su sonido), la pista y su sonido debajo; a la derecha los 32 lugares de usuario (uno guardado: la criatura de su motor en chiquito y su nombre) o los sonidos de fábrica. | **USER** ↔ **PRESETS** | SLOT, LOAD, ERASE, SAVE / No., ENG, FAV, LIST |
+
+- **SAVE desde otra página** abre USER de SOUND con SAVE listo: SAVE, OCT+, OCT+ guarda el sonido, como antes.
+- Las fichas de los otros proyectos se leen de la flash de a un proyecto por cuadro (solo los encabezados: no se carga
+  nada, el audio no lo nota) y se guardan hasta que se guarda, carga o renombra un proyecto.
+- El pie dice **SAVE · LIBRARY** (la lente, el nivel). Las ayudas OCT+ / EDIT / OCT− no se dibujan en las páginas de
+  la lente: la tarjeta armada dice OCT+.
+
 ### Para guardar una sección de un proyecto
 
 1. **Pará** el transporte (guardar necesita el transporte parado: si no, **STOP TO SAVE**).
-2. Apretá **SAVE** hasta llegar a **PROJECT** (SAVE abre primero USER y después PROJECT).
-3. **KNOB 1**: el proyecto (1–8). Girarla **no** cambia la música que estás tocando — solo elige dónde guardar.
-   (Cambia de proyecto, así que hacelo con el transporte parado.)
-4. **KNOB 2** (o PRESETS): la sección A–D. La lista muestra el nombre de cada sección (o USED / --), **NOW** en la
-   sección de la que vino la música, y los compases que suena en el arreglo.
+2. Apretá **SAVE** (se abre SOUND) y girá **SELECT** a la izquierda: **PROJECT** (un paso) o **LIBRARY** (dos).
+3. En **LIBRARY**, **KNOB 1** (o PRESETS): el proyecto (1–8), su ficha enmarcada; **KNOB 2** su sección. Girar KNOB 1
+   **no** cambia la música que estás tocando — solo elige dónde guardar. (Cambia de proyecto, así que hacelo con el
+   transporte parado.)
+4. En **PROJECT**, **KNOB 1** (o PRESETS): la sección A–D, dibujada en grande con su nombre (o USED / EMPTY) y **NOW**
+   en la sección de la que vino la música; la tarjeta de KNOB 2 muestra su nombre.
 5. **KNOB 4** a la derecha: SAVE queda elegido ([OCT+]). Apretá **OCT+**.
 6. Si la sección ya tiene algo: **OVERWRITE PROJECT A?** (con su nombre). OCT+ YES.
 7. Se abre la pantalla **NAME** con un nombre listo. Editalo o no, y después **OCT+** escribe. **OCT−** cancela y no
@@ -1343,7 +1368,7 @@ de su sección A.
 
 ### Para cargar una sección
 
-1. SAVE > PROJECT, **KNOB 1** el proyecto, **KNOB 2** la sección.
+1. En LIBRARY de SAVE: **KNOB 1** el proyecto, **KNOB 2** la sección (o en PROJECT: **KNOB 1** la sección).
 2. **KNOB 3** a la derecha (LOAD), apretá **OCT+**. La pantalla dice **LOADED**.
 
 LOAD **detiene la reproducción** y reemplaza la música: sonidos, pasos, automatización, el kit, el carril de punch-in,
@@ -1361,12 +1386,12 @@ instante y pasa a la flash cuando parás**. Si apagás antes de parar, se pierde
 - **Una sección a otra letra**: cargala (LOAD) y después guardala (SAVE) en la otra letra.
 - **Una sección a otro proyecto**: cargala, girá KNOB 1 hasta el otro proyecto (la música se queda) y guardá en una
   letra.
-- **"Guardar como" un proyecto nuevo**: con tu música sonando, pará, andá a SAVE > PROJECT, girá KNOB 1 hasta un
+- **"Guardar como" un proyecto nuevo**: con tu música sonando, pará, andá a LIBRARY de SAVE, girá KNOB 1 hasta un
   proyecto vacío y guardá en A.
 
 ### Cambiar de proyecto
 
-- En **SAVE > PROJECT, KNOB 1** cambia de proyecto pero **conserva la música** (para guardarla ahí o cargar una de
+- En **LIBRARY de SAVE, KNOB 1** cambia de proyecto pero **conserva la música** (para guardarla ahí o cargar una de
   sus secciones).
 - Con **KNOB 1 de la capa SAVE** (mantené SAVE, girá, soltá) cambia el proyecto **y su sección A pasa a ser la
   música** (si tiene una). La música anterior se reemplaza y **UNDO no la puede traer de vuelta** — guardala antes.

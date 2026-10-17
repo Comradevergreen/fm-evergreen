@@ -538,6 +538,15 @@ JIANT's modifications are distributed under the same license.
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
 
 ### v0.8.5
+- **SAVE is a lens, as the approved mock-up** (SAVE "LENTE"): three level tabs, **LIBRARY · PROJECT · SOUND**,
+  SELECT zooms (no wrap), a SAVE tap switches the level's two sets. LIBRARY: the eight projects as tiles with their
+  sections A–D as coloured chips (the other projects read from their flash headers, a project a frame, no loading) /
+  TOOLS as a list. PROJECT: the four sections large, the arrangement as chips ("A16", scenes dotted), the song as a
+  strip with its length and END / ARRANGE (ROW SECT BARS SCENE; **OCT+ adds a row** after the last, PLAY plays the
+  song as before). SOUND: the track's being (its engine's creature, alive with its sound) and the 32 user slots with
+  small creatures / the factory sounds. Every page, knob, dialog and the NAME screen as before; SAVE from another
+  page still opens the sound save ready (SAVE, OCT+, OCT+). On the PROJECT level KNOB 1 is the section and KNOB 2
+  shows its name. The sections' colours on JIANT are the mock-up's: A cyan, B violet, C orange, D yellow.
 - **The mock-up's skin on every page** (the owner: "I want it to be the same as the model you sent me"). Only the
   drawing changed; every page, knob, key and function is where it was.
   - **Header**: one quiet line over a thin rule, as the mock-up's: the play state (a grey square, an orange triangle)

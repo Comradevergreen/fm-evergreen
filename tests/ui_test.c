@@ -1263,8 +1263,10 @@ static int test_save(void)
         bad += check("..OCT+ again stores the edited sound with that name (SAVE, OCT+, OCT+)",
                      !name_on() && up_used(0) && up_value(up_rec(0), P_E0) == 5 && ui.act == 0u && str_eq(nmb, au));
     }
-    press(B_SAVE);
-    bad += check("SAVE again still cycles to PROJECT", cur_page()->graph == GR_SLOTS);
+    press(B_SAVE);                                        /* (0.8.5) SAVE's lens: a tap the level's other set */
+    bad += check("SAVE again: SOUND's other set, PRESETS", cur_page()->graph == GR_BROWSE && save_level() == SV_SOUND);
+    turn(EN_SELECT, -1);
+    bad += check("SELECT left: PROJECT (SECTIONS: the PROJECT page)", cur_page()->graph == GR_SLOTS && save_level() == SV_PROJ);
     go_home();
     press(B_SAVE);
     bad += check("SAVE from HOME returns directly to USER, even after visiting PROJECT",
@@ -2691,8 +2693,8 @@ static int test_chain(void)
     host_pressed |= fm1_in.buttons; frame();
     fm1_in.buttons = 0; frame();
     bad += check("SONG OCT chord does not start playback or leave the page", !transport_req && !ui.home);
-    press(B_OCTUP);
-    bad += check("SONG OCT+ on release starts, pending start blocks SAVE", chain.armed && transport_req == 1);
+    press(B_PLAY);                                      /* (0.8.5: OCT+ adds a row on ARRANGE; PLAY plays the song) */
+    bad += check("SONG PLAY starts, pending start blocks SAVE", chain.armed && transport_req == 1);
     project_save(3);
     bad += check("SONG pending start cannot write a project", msg_is("STOP TO SAVE") && !project_used(3));
     press(B_PLAY); events_block(32);
@@ -2700,6 +2702,15 @@ static int test_chain(void)
     uint32_t old_count = chain_config.count;
     turn(EN_K4, 30);
     bad += check("SONG unused K4 cannot accidentally add or clear rows", chain_config.count == old_count);
+    {   /* (0.8.5) SAVE > PROJECT's ARRANGE: OCT+ adds a row after the last (its section and bars), selected */
+        chain_config.row[old_count - 1u] = (chain_row_t){2, 5};
+        ui.song_row = 0;
+        press(B_OCTUP);
+        ok = chain_config.count == old_count + 1u && ui.song_row == old_count && chain_config.row[old_count].slot == 2u &&
+             chain_config.row[old_count].bars == 5u && !song_idx.scene[song_cur][old_count].on && !transport_req;
+        bad += check("SONG (ARRANGE) OCT+ adds a row after the last, its section and bars, selected; nothing plays", ok);
+        chain_config.count = old_count;
+    }
     ui.song_row = (uint8_t)chain_config.count;          /* (0.6.22: + ADD; past it the END row) */
     for (k = chain_config.count; k < CHAIN_ROWS; k++) { turn(EN_K2, 1); turn(EN_K1, 1); }
     bad += check("SONG: + ADD, then END the last row (full: END right after row 16)", ui.song_row == CHAIN_ROWS);
@@ -2725,8 +2736,8 @@ static int test_chain(void)
 /* Product controls are exercised through the actual button/encoder handlers
  * and canvas, including all pages, both fonts and every shipped palette. */
 /* Discussions #92 / #94: the PRESETS knob on every page. SEQ's step pages (STEP, the DRUM grid, PATTERN, CHANCE,
- * AUTOMATION): the step cursor, the sound and the steps untouched; USER, PROJECT, PHRASES, SONG: the selection, as KNOB
- * 1; TOOLS: nothing; HOME, PRESETS and every other page: the next sound, the steps untouched, SAVE held undoes it */
+ * AUTOMATION): the step cursor, the sound and the steps untouched; USER, PROJECT (0.8.5 LIBRARY: the project), PHRASES,
+ * SONG: the selection, as KNOB 1; TOOLS: nothing; HOME, PRESETS and every other page: the next sound, the steps untouched, SAVE held undoes it */
 static int test_presets_knob(void)
 {
     int bad = 0, cur_ok = 1, sel_ok = 1, snd_ok = 1, tools_ok = 1, grid_ok, bar_ok = 1;
@@ -2757,8 +2768,8 @@ static int test_presets_knob(void)
                 n_cur++;
             } else if (g == GR_USER) {
                 sel_ok &= ui.uslot == uslot + 1u && same_snd && same_steps;
-            } else if (g == GR_SLOTS) {
-                sel_ok &= song.g[G_SLOT] == slot + 1 && same_snd && same_steps;
+            } else if (g == GR_SLOTS) {                 /* (0.8.5) SAVE > LIBRARY: KNOB 1's, the project (the music kept) */
+                sel_ok &= song_cur == 1u && song.g[G_SLOT] == slot && same_snd && same_steps;
             } else if (g == GR_PATS) {
                 sel_ok &= pat_pick() == ppick + 1u && same_snd && same_steps;
             } else if (g == GR_SONG || g == GR_EVENTS) {   /* (AUTO LIST: its row) */
@@ -6199,6 +6210,85 @@ static void tl_drum(void)
 /* (0.8.3) LENTE (ui.c lens_*): SELECT zooms PATTERN <-> BAR <-> STEP (no wrap), a SEQ tap the level's next set, the
  * track's memory when SEQ comes back from elsewhere, PRESETS by level, the panel by level, NOTE in two levels, the
  * tools layer and the dice on every level, the DRUM grid on BAR */
+/* (0.8.5) SAVE's lens (ui.c save_*): SAVE from another page SOUND's USER with SAVE armed; a SAVE tap the level's other
+ * set; SELECT zooms LIBRARY <-> PROJECT <-> SOUND (no wrap), each level back at its set; every SAVE page reached; the
+ * mock-up's layout (tabs, cards, panel, breadcrumb) on each, the level's tab THEME; LIBRARY's KNOB 1 / PRESETS the
+ * project; a layer's map or NAME over it: the usual layout */
+static int test_save_lens(void)
+{
+    int bad = 0, ok, seen[5] = {0, 0, 0, 0, 0};
+    uint32_t i;
+    static const uint8_t G5[5] = {GR_BROWSE, GR_USER, GR_SLOTS, GR_SONG, GR_TOOLS};
+    ui_power_on();
+    go_home(); frame();
+    press(B_SAVE); frame();
+    ok = save_on() && save_level() == SV_SOUND && cur_page()->graph == GR_USER && ui.act == 4u && lz_on() &&
+         card_y() == LZ_CARD_Y && graph_y() == LZ_GRAPH_Y && foot_y() == LZ_FOOT_Y;
+    ok &= swap16(host_screen[(LT_Y + LT_H / 2) * 240 + LT_X(SV_SOUND) + 2]) == T_THEME &&
+          swap16(host_screen[(LT_Y + LT_H / 2) * 240 + LT_X(SV_LIB) + 2]) == T_RAISE;
+    bad += check("SAVE lens: SAVE from HOME: SOUND's USER, SAVE armed; the mock-up's layout, SOUND's tab lit", ok);
+    press(B_SAVE); frame();
+    ok = cur_page()->graph == GR_BROWSE && save_level() == SV_SOUND;
+    press(B_SAVE); frame();
+    ok &= cur_page()->graph == GR_USER;
+    bad += check("SAVE lens: a SAVE tap toggles the level's sets (USER <-> PRESETS)", ok);
+    turn(EN_SELECT, -1); frame();
+    ok = save_level() == SV_PROJ && cur_page()->graph == GR_SLOTS;
+    press(B_SAVE); frame();
+    ok &= save_level() == SV_PROJ && cur_page()->graph == GR_SONG;
+    turn(EN_SELECT, -1); frame();
+    ok &= save_level() == SV_LIB && cur_page()->graph == GR_SLOTS;
+    ok &= swap16(host_screen[(LT_Y + LT_H / 2) * 240 + LT_X(SV_LIB) + 2]) == T_THEME;
+    press(B_SAVE); frame();
+    ok &= save_level() == SV_LIB && cur_page()->graph == GR_TOOLS;
+    turn(EN_SELECT, -1); frame();
+    ok &= save_level() == SV_LIB && cur_page()->graph == GR_TOOLS;          /* (no wrap) */
+    turn(EN_SELECT, 1); frame();
+    ok &= save_level() == SV_PROJ && cur_page()->graph == GR_SONG;          /* (back at its set: ARRANGE) */
+    turn(EN_SELECT, 1); frame();
+    ok &= save_level() == SV_SOUND && cur_page()->graph == GR_USER;
+    turn(EN_SELECT, 1); frame();
+    ok &= save_level() == SV_SOUND && cur_page()->graph == GR_USER;         /* (no wrap) */
+    bad += check("SAVE lens: SELECT zooms LIBRARY <-> PROJECT <-> SOUND, no wrap, each level at the set it was left on", ok);
+    for (i = 0; i < 3u; i++) {                                               /* every SAVE page from the lens */
+        uint32_t k, l = i;
+        for (k = 0; k < 2u; k++) {
+            uint32_t j;
+            ui_power_on(); go_home(); frame();
+            press(B_SAVE); frame();
+            for (j = SV_SOUND; j > l; j--) turn(EN_SELECT, -1);
+            if (k) press(B_SAVE);
+            frame();
+            for (j = 0; j < 5u; j++) seen[j] |= cur_page()->graph == G5[j];
+        }
+    }
+    bad += check("SAVE lens: every SAVE page reached (PRESETS USER PROJECT ARRANGE TOOLS)", seen[0] && seen[1] && seen[2] &&
+                 seen[3] && seen[4]);
+    ui_power_on(); go_title("PROJECT"); frame();                             /* LIBRARY: KNOB 1 / PRESETS the project */
+    ok = save_level() == SV_LIB;
+    turn(EN_PRESET, 1); frame();
+    ok &= song_cur == 1u;
+    turn(EN_K1, -1); frame();
+    ok &= song_cur == 0u;
+    {
+        char b[48];
+        foot_crumbs(b, sizeof b);
+        ok &= str_eq(b, "SAVE \xB7 LIBRARY");
+    }
+    bad += check("SAVE lens: LIBRARY's KNOB 1 / PRESETS the project; the breadcrumb SAVE . LIBRARY", ok);
+    ok = 1;
+    turn(EN_K4, 1); press(B_OCTUP); frame();                                 /* SAVE: the NAME screen, its own layout */
+    ok &= name_on() && !lz_on();
+    press(B_OCTDN); frame();
+    ok &= !name_on() && lz_on();
+    btn_down(B_GLO); frames(800);                                            /* a layer's map: the usual layout */
+    ok &= ui.layer && !lz_on() && card_y() == Y_LABEL;
+    btn_up(B_GLO); frame(); frame();
+    ok &= !ui.layer && lz_on() && card_y() == LZ_CARD_Y;
+    bad += check("SAVE lens: a layer's map and the NAME screen keep their own layout", ok);
+    ui_power_on();
+    return bad;
+}
 static int test_lente(void)
 {
     static const char *const PAT[] = {"PATTERN", "STRETCH", "PLAYHEADS", "TRACK", "MUTATE"};
@@ -6405,6 +6495,7 @@ static int test_seq_tools(void)
     }
     bad += check("  a tap on STEP: LENTE's BAR, its next set (the hint until the layer was opened)", ok);
     bad += test_lente();
+    bad += test_save_lens();
     {   /* (0.6.85) SEQ > STRETCH: x2 .. x8 / 2 .. / 8 (the notes spread, held ones held), REPEAT x2 .. x8 / TO 64, NUDGE */
         track_t *t;
         uint32_t i, ok2 = 1, ok3 = 1, ok4 = 1, ok5;
@@ -7256,15 +7347,24 @@ static int test_project_page(void)
     ok = song_cur == 1 && trk[0].step[0].note[0] == 80 && live.cur < 0 && !chain_config.count && msg_is("PROJECT 2");
     bad += check("  KNOB 1: project 2 in (its sections, its song), the music kept", ok);
     song.g[G_SLOT] = 1;
+    turn(EN_K2, 1); frame();                            /* LIBRARY: KNOB 2 the section */
+    ok = song.g[G_SLOT] == 2 && save_level() == SV_LIB;
+    turn(EN_SELECT, 1); frame();                        /* (0.8.5) PROJECT's SECTIONS: KNOB 1 / PRESETS the section */
+    ok &= save_level() == SV_PROJ && cur_page()->graph == GR_SLOTS;
     turn(EN_PRESET, 1); frame();
-    ok = song.g[G_SLOT] == 2;
-    turn(EN_K2, 1); frame();
     ok &= song.g[G_SLOT] == 3;
-    bad += check("  KNOB 2 / PRESETS: the section (C)", ok);
+    turn(EN_K1, 1); frame();
+    ok &= song.g[G_SLOT] == 4 && song_cur == 1;
+    turn(EN_K2, 1); frame();                            /* (KNOB 2: the section's name, shown) */
+    ok &= song.g[G_SLOT] == 4 && song_cur == 1;
+    turn(EN_K1, -1); frame();
+    ok &= song.g[G_SLOT] == 3;
+    bad += check("  LIBRARY's KNOB 2, PROJECT's KNOB 1 / PRESETS: the section (C); PROJECT's KNOB 2 nothing", ok);
     turn(EN_K4, 1); press(B_OCTUP); frame();            /* SAVE into project 2's C: the NAME screen, then OK */
     for (k = 0; k < 8u && name_on(); k++) { press(B_OCTUP); frame(); }
     ok = project_used(2) && live.cur == 2;
     bad += check("  SAVE: the music into project 2's section C (the music's section: NOW)", ok);
+    turn(EN_SELECT, -1); frame();                       /* (back to LIBRARY: KNOB 1 the project) */
     turn(EN_K1, -1); frame();
     ok = song_cur == 0 && (!FELUCCA_FLASH || project_used(0)) && !project_used(2) && chain_config.count == 2 &&
          trk[0].step[0].note[0] == 80;                  /* (no flash here: the sections were RAM only) */
@@ -9047,7 +9147,8 @@ static int test_large(void)
 
     /* per page type: lists and rolls keep the layout, the layers too; MIXER's tracks in the strip */
     go_page(GR_BROWSE); frame();
-    ok = large_kind() == LK_LABEL && card_h() == CARD_H && graph_y() == Y_GRAPH && graph_h() == H_GRAPH;
+    ok = large_kind() == LK_LABEL && card_h() == LZ_CARD_H && graph_y() == LZ_GRAPH_Y && graph_h() == LZ_GRAPH_H;   /* (0.8.5:
+                                                         * SAVE's lens, the mock-up's layout) */
     go_page(GR_ROLL); frame();
     ok &= large_kind() == LK_LABEL;
     go_page(GR_TRK); frame();

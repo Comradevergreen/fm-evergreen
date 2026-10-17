@@ -1929,6 +1929,43 @@ static void persist_boot(void)                    /* before settings_init / pane
 
 static int project_used(uint32_t slot) { return proj_import(&proj_scratch, &proj_slot[slot & 3u], sizeof(project_store_t)); }
 
+/* (0.8.5) SAVE > LIBRARY: project n's sections stored (a bit each) and its section A's name (b, PROJ_NAME_LEN + 1),
+ * from the flash: the newer valid header of each section's two copies, and the name's 12 bytes of section A's
+ * payload (today's 3840-byte store; an older one: no name). No payload read, no CRC: a picture, not a load (reads of a
+ * few bytes in st_read's short IRQ-off windows; the UI asks for one project a frame). The project open: its RAM copy */
+static uint32_t lib_scan(uint32_t n, char *b)
+{
+    uint32_t k, m = 0;
+    b[0] = 0;
+    if (n == song_cur) {
+        for (k = 0; k < 4u; k++)
+            m |= (uint32_t)project_used(k) << k;
+        if (m & 1u)
+            (void)project_name(0, b);
+        return m;
+    }
+#if FELUCCA_FLASH
+    if (!flash_ok || n >= NSONG)
+        return 0;
+    for (k = 0; k < 4u; k++) {
+        uint32_t obj = n ? OBJ_SONG1 + (n - 1u) * 4u + k : OBJ_PROJECT0 + k;
+        st_hdr_t ha, hb;
+        int va = st_head(obj, 0, &ha) == 0, vb = st_head(obj, 1, &hb) == 0, c;
+        if (!va && !vb)
+            continue;
+        m |= 1u << k;
+        c = vb && (!va || (hb.seq != ha.seq && hb.seq - ha.seq < 0x80000000u));
+        if (!k && (c ? hb.len : ha.len) == PROJ_STORE_SIZE) {
+            uint8_t nm[PROJ_NAME_LEN];
+            if (!st_read(st_sector(obj, (uint32_t)c) + ST_PAYLOAD_OFF + PROJ_NAME_OFF, nm, sizeof nm))
+                (void)proj_name_get(b, nm);
+        }
+    }
+#endif
+    return m;
+}
+static uint32_t lib_gen(void) { return proj_wire_gen + song_cur * 977u; }   /* (a project written, loaded, renamed; another open) */
+
 #include "song_main.c"                          /* the song: the main loop's part (song_chain.c) */
 
 static void settings_poll(void)

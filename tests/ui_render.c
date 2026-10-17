@@ -655,6 +655,7 @@ enum { S_HOME, S_HOME_IDLE, S_MESSAGE, S_MESSAGE_KEY, S_MESSAGE_NOFILE, S_PRESET
        S_ROLL_LOCKS, S_ROLL_LOCK_HELD, S_DRUM_LOCKS, S_DRUM_LOCK_HELD, S_MOTION_LOCKS, S_AUTO_LIST, S_AUTO_LIST_ADD, S_AUTO_LIST_DRUM, S_REC_LAYER, S_REC_LAYER_SET, S_REC_LAYER_SONG, S_MACRO_LAYER, S_MSEQ, S_DIST_PAGE, S_DLY2, S_REVERB2, S_CHORUS, S_MASTER, S_LFO_DEST,
        S_COUNTIN, S_COUNTIN2, S_MENU_AUDIO, S_HEAD_PLAY_REC, S_HEAD_REC_OTHER, S_HEAD_BPM_TURN, S_HEAD_BPM_LOCK,
        S_HEAD_BPM_LOCKED, S_HEAD_GLO_TURN, S_HEAD_DOWNBEAT, S_HEAD_BEAT_2,
+       S_SAVE_LIB, S_SAVE_TOOLS, S_SAVE_PROJ, S_SAVE_ARR, S_SAVE_SOUND, S_SAVE_PRESETS,
        S_MIXER_T4, S_HOME_T4, S_MOCK_HOME, S_MOCK_PRESETS, S_MOCK_SEQ, S_MOCK_DRUM, S_MOCK_MIXER, S_MOCK_DIALOG, S_MOCK_MENU, S_COUNT };
 static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "message", "message_key", "message_nofile", "presets", "presets_nofav", "user",
     "phrases", "project", "tools", "song_empty", "song", "step", "pattern", "chance", "comp", "comp_trig", "comp_echo", "mutate", "morph", "dx_image", "dx_send", "page_flash", "page_flash_home", "fugue", "motion", "drum",
@@ -676,6 +677,7 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "message", "mes
     "roll_locks", "roll_lock_held", "drum_locks", "drum_lock_held", "motion_locks", "auto_list", "auto_list_add", "auto_list_drum", "layer_rec", "layer_rec_set", "layer_rec_song", "layer_macro", "mseq", "dist", "dly2", "reverb2", "chorus", "master", "lfo_dest",
     "countin", "countin_2bars", "menu_audio", "head_play_rec", "head_rec_other", "head_bpm_turn", "head_bpm_lock",
     "head_bpm_locked", "head_glo_turn", "head_downbeat", "head_beat_2",
+    "save_library", "save_tools", "save_project", "save_arrange", "save_sound", "save_presets",
     "mixer_tracks4", "home_tracks4", "mock_home", "mock_presets", "mock_seq", "mock_drum", "mock_mixer", "mock_dialog", "mock_menu"};
 
 /* the scenes of the UI design screens: the state the UI-redesign
@@ -1247,6 +1249,35 @@ static void setup(int s)
         break;
     }
     case S_USER_FOOT: song.playing = 0; up_store(3, "MY BASS"); ui.uslot = 3; go_page(GR_USER); break;   /* EDIT NAME lit */
+    /* (0.8.5) SAVE's lens as the mock-up's data: projects NOCHE LARGA (A B C), ACID 03, DUB KIT, BOSQUE, TRANCE A; the
+     * song B16 C16 A32 D8 C16 A32 (scenes on 2 and 4, END LOOP); seven user sounds */
+    case S_SAVE_LIB: case S_SAVE_TOOLS: case S_SAVE_PROJ: case S_SAVE_ARR: case S_SAVE_SOUND: case S_SAVE_PRESETS: {
+        static const char *const PN[NSONG] = {"", "ACID 03", "DUB KIT", "", "BOSQUE", "", "TRANCE A", ""};
+        static const uint8_t PM[NSONG] = {0, 3, 1, 0, 15, 0, 5, 0};
+        static const chain_row_t AR[6] = {{1, 16}, {2, 16}, {0, 32}, {3, 8}, {2, 16}, {0, 32}};
+        static const char *const UN[7] = {"DEEP SUB", "GLASS", "PAD NUBE", "WOBBLE", "BIRDCALL", "KEYS 2", "GRIT"};
+        static const uint8_t UK[7] = {0, 1, 2, 4, 6, 9, 13}, UE[7] = {ENGI_ANALOG, ENGI_FM6, 2, ENGI_ANALOG, ENGI_ANIMAL, ENGI_FM6, 3};
+        uint32_t k, e0 = TSEL->eng_req;
+        song.playing = 0;
+        project_save_as(0, "NOCHE LARGA"); project_save_as(1, "NOCHE B"); project_save_as(2, "NOCHE C");
+        for (k = 0; k < NSONG; k++) { str_cpy(lib.name[k], PN[k], sizeof lib.name[k]); lib.mask[k] = PM[k]; }
+        chain_config.count = 6;
+        for (k = 0; k < 6u; k++) chain_config.row[k] = AR[k];
+        SONG_END(&chain_config) = SONG_FOREVER;
+        song_idx.scene[song_cur][1].on = 1; song_idx.scene[song_cur][3].on = 1;
+        live.cur = 0; song.g[G_SLOT] = 2;
+        for (k = 0; k < 7u; k++) { eng(UE[k]); up_store(UK[k], UN[k]); }
+        eng(e0);
+        ui.uslot = 0; ui.song_row = 0; ui.msg_t = 0; ui.frame += 7u;   /* (the sections' cache read again) */
+        if (s == S_SAVE_LIB) { ui.slv = SV_LIB; go_page(GR_SLOTS); ui.act = 4; }
+        else if (s == S_SAVE_TOOLS) { ui.slv = SV_LIB; go_page(GR_TOOLS); ui.act = 1; }
+        else if (s == S_SAVE_PROJ) { ui.slv = SV_PROJ; go_page(GR_SLOTS); ui.slv = SV_PROJ; ui.act = 4; }
+        else if (s == S_SAVE_ARR) { ui.slv = SV_PROJ; go_page(GR_SONG); }
+        else if (s == S_SAVE_SOUND) { ui.slv = SV_SOUND; go_page(GR_USER); }
+        else { ui.slv = SV_SOUND; go_page(GR_BROWSE); }
+        ui.msg_t = 0;
+        break;
+    }
     default: break;
     }
     if (s != S_FUGUE)
@@ -1834,7 +1865,8 @@ int main(int argc, char **argv)
     /* draw cost: a full redraw of a screen (all strips), and HOME frame by frame (the scope, every other frame) */
     {
         static const int COST[] = {S_HOME, S_PRESETS, S_STEP, S_ROLL_CHORDS, S_DRUM, S_MIXER, S_MENU, S_ABOUT_CREDITS, S_CONFIRM_PROJ,
-                                   S_PATTERN, S_COMP, S_LENTE_PAT, S_LENTE_BAR, S_LENTE_STEP, S_LENTE_STEP_DRUM};   /* (0.8.3:
+                                   S_PATTERN, S_COMP, S_LENTE_PAT, S_LENTE_BAR, S_LENTE_STEP, S_LENTE_STEP_DRUM,
+                                   S_SAVE_LIB, S_SAVE_PROJ, S_SAVE_SOUND};   /* (0.8.3:
                                                                          * LENTE's three levels) */
         enum { N = 200 };
         uint32_t i, k;
@@ -1862,7 +1894,8 @@ int main(int argc, char **argv)
                     (double)(clock() - c0) / CLOCKS_PER_SEC / (N * 4) * 1e6, (unsigned long long)(n_text / (N * 4)));
         }
         {   /* the STEP page's piano roll: its panel alone redrawn, and a frame that changes nothing (the signature only) */
-            static const int G[] = {S_ROLL_CHORDS, S_ROLL_PLAYING, S_DRUM, S_PATTERN, S_COMP, S_LENTE_PAT, S_LENTE_STEP};
+            static const int G[] = {S_ROLL_CHORDS, S_ROLL_PLAYING, S_DRUM, S_PATTERN, S_COMP, S_LENTE_PAT, S_LENTE_STEP,
+                                    S_SAVE_LIB, S_SAVE_SOUND};
             for (k = 0; k < sizeof G / sizeof G[0]; k++) {
                 clock_t c0;
                 double tg, ti;

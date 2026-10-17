@@ -1109,6 +1109,13 @@ static void edit_param(uint32_t slot, int32_t steps)
                                                          * past the first: none picked) */
         return;
     }
+    if (pg->graph == GR_SLOTS && save_on() && save_level() == SV_PROJ) {   /* (0.8.5) SAVE > PROJECT's SECTIONS: KNOB 1
+                                                         * the section, KNOB 2 its name (shown; EDIT renames it) */
+        if (slot == 1u)
+            return;
+        if (slot == 0u)
+            slot = 1u;
+    }
     if ((act_cols() >> slot) & 1u) {                      /* an action's knob picks it (right) or drops it (left); */
         if (pg->graph != GR_PATS)                         /* OCT+ does it (act_do) */
             ui.act = steps > 0 ? (uint8_t)(slot + 1u) : ui.act == slot + 1u ? 0u : ui.act;
@@ -1197,9 +1204,18 @@ static void act_do(void)
                      c == 5u ? CF_CPU_TEST : CF_CLEAR_SONG, c == 2u ? ui.song_row : song.sel);
         return;
     }
-    if (cur_page()->graph == GR_SONG) {
-        if (song.playing || chain_busy() || seq_counting()) transport_req = 2;
-        else chain_play_ui();
+    if (cur_page()->graph == GR_SONG) {                 /* (0.8.5) SAVE > PROJECT's ARRANGE: OCT+ adds a row after the
+                                                         * last (its section and bars), the new one selected; PLAY plays */
+        chain_row_t *r;
+        if (chain_busy()) { ui_message("STOP TO EDIT"); return; }
+        if (chain_config.count >= CHAIN_ROWS) { ui_message("16 ROWS"); return; }
+        r = &chain_config.row[chain_config.count];
+        r->slot = chain_config.count ? chain_config.row[chain_config.count - 1u].slot : 0u;
+        r->bars = chain_config.count ? chain_config.row[chain_config.count - 1u].bars : 4u;
+        memset(&song_idx.scene[song_cur][chain_config.count], 0, sizeof song_idx.scene[0][0]);   /* (no scene yet) */
+        ui.song_row = chain_config.count++;
+        song_idx_touch();
+        ui_message("ROW ADDED");
         return;
     }
     if (cur_page()->graph == GR_PATS) {
@@ -1479,7 +1495,9 @@ static void presets_turn(int32_t s)
         ui.hot_t = 40;
     } else if (g == GR_ROLL || g == GR_CHANCE || g == GR_COMP || g == GR_USER || g == GR_SLOTS || g == GR_PATS || g == GR_SONG ||
                g == GR_EVENTS || g == GR_TOOLS) {
-        uint32_t c = g == GR_SLOTS ? 1u : 0u;             /* (0.6.12 PROJECT: the list is the sections, KNOB 2's) */
+        uint32_t c = g == GR_SLOTS && !save_on() ? 1u : 0u;   /* (0.6.12 PROJECT: the list is the sections, KNOB 2's;
+                                                         * 0.8.5 SAVE's lens: KNOB 1's, the project on LIBRARY, the
+                                                         * section on PROJECT) */
         edit_param(c, s);                                 /* KNOB 1's (STEP: STOP TO EDIT while a song plays) */
         ui.hot_col = (uint8_t)c;
         ui.hot_t = 40;
@@ -1666,6 +1684,10 @@ static void page_scroll(int32_t s)
         return;
     if (lens_on()) {                                    /* (0.8.3) SEQ: the lens's zoom, not its pages one by one */
         lens_zoom(s);
+        return;
+    }
+    if (save_on()) {                                    /* (0.8.5) SAVE's lens: LIBRARY <-> PROJECT <-> SOUND */
+        save_zoom(s);
         return;
     }
     f = cur_page()->fam == FAM_TRK ? FAM_GLO : cur_page()->fam;

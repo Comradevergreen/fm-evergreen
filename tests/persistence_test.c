@@ -484,6 +484,19 @@ static int songs_test(void)
     song_index_boot();
     ok &= song_cur == 0 && chain_config.count == 2u && chain_config.row[1].bars == 8u;
     bad += check("songs: a first boot takes song 1's rows from its section A", ok);
+    {   /* (0.8.5) SAVE > LIBRARY's picture (project.c lib_scan): another project's sections from their headers, its
+         * section A's name from its bytes; the open one from RAM; an empty one nothing */
+        char b[16];
+        uint32_t m1, m2, m0;
+        ok = song_select(1) == 0 && project_save_as(0, "ACID 03") == 0 && project_save_as(2, "") == 0 && song_select(0) == 0;
+        m1 = lib_scan(1, b);
+        ok &= m1 == 5u && str_eq(b, "ACID 03");
+        m2 = lib_scan(2, b);
+        ok &= m2 == 0u && !b[0];
+        m0 = lib_scan(0, b);
+        ok &= (m0 & 1u) != 0u;
+        bad += check("songs: the library's scan: project 2's sections A and C and A's name, project 3 empty", ok);
+    }
     return bad;
 }
 

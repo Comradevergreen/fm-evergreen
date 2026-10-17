@@ -7,7 +7,7 @@ import html, os
 
 R = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(R, 'docs', 'cheatsheet')
-VERSION = 'v0.8.4'
+VERSION = 'v0.8.5'
 
 HEAT = ['#22d3ee', '#3b82f6', '#8b5cf6', '#d946ef', '#ef4444', '#ff7a00', '#facc15', '#f4f1ea']
 
@@ -126,7 +126,7 @@ def controls():
     b.append(sec('THE PANEL'))
     rows = [
         ('MASTER', 'Master volume.'),
-        ('SELECT', '<b>Scrolls the section\'s pages</b> (SEQ: <b>zooms</b> PATTERN · BAR · STEP; HOME: GEN, the song generator). Held with a button, its <b>dice</b> (OK keeps, CANCEL back): HOME everything, '
+        ('SELECT', '<b>Scrolls the section\'s pages</b> (SEQ: <b>zooms</b> PATTERN · BAR · STEP; SAVE: LIBRARY · PROJECT · SOUND; HOME: GEN, the song generator). Held with a button, its <b>dice</b> (OK keeps, CANCEL back): HOME everything, '
                    'EDIT the sound, SEQ the sequence, LFO the LFO, FX the effects. GLO + SELECT: the tempo.'),
         ('PRESETS', 'Browses the sounds (factory and user). On step, list and song pages: the cursor / the row; SEQ at PATTERN: the bar. '
                     '<b>Hold a page button + PRESETS: jump through its pages.</b>'),
@@ -148,7 +148,7 @@ def controls():
         ('SCL', 'SCL · CHORD', 'ROOT by key'),
         ('EDIT', 'EDIT 1 · EDIT 2 · FILTER · VOICE  (FM6: OPERATOR · OP ENV · OPERATOR 2; DRUM: KIT · KIT 2 · KIT 3 · X-MOD · FILTER · SOUND 1–4 · LEVELS 1–2 · STEREO)', 'INIT · RECALL · sound mutes'),
         ('GLO', 'MIXER · GLOBAL · SYSTEM', 'MUTE · SOLO · LEVEL · TAP'),
-        ('SAVE', 'PRESETS · USER · PROJECT · ARRANGE · TOOLS', 'SONG layer'),
+        ('SAVE', 'the zoom level\'s two sets (SELECT zooms; from elsewhere SOUND\'s USER): LIBRARY: PROJECT · TOOLS  |  PROJECT: SECTIONS · ARRANGE  |  SOUND: USER · PRESETS', 'SONG layer'),
         ('ARP', 'ARP · ARP 2', '—'),
         ('SEQ', 'the zoom level\'s sets (SELECT zooms): PATTERN: PATTERN · STRETCH · PLAYHEADS · TRACK · MUTATE  |  BAR: STEP · NOTE · AUTOMATION · AUTO LIST  |  STEP: NOTE · COMP · COMP 2', 'SEQ TOOLS'),
         ('REC', '(transport)', 'CLEAR · CLICK'),
@@ -247,7 +247,7 @@ def controls():
                           ('COMP', 'STEP TYPE VAL EVERY'), ('COMP 2', 'STEP TYPE VAL EVERY')]),
         ('GLO · SAVE', HEAT[6], [('MIXER', 'LEVEL PAN REV MUTE'), ('GLOBAL', 'BPM SWING CLOCK TUNE'),
                                  ('SYSTEM', 'TRACKS LOAD ROUTE CPU'), ('PRESETS', 'No. ENG FAV LIST'),
-                                 ('USER', 'SLOT LOAD ERASE SAVE'), ('PROJECT', 'PROJ SECT LOAD SAVE'), ('ARRANGE', 'ROW SECT BARS SCENE'),
+                                 ('USER', 'SLOT LOAD ERASE SAVE'), ('PROJECT', 'PROJECT SECT LOAD SAVE (PROJECT level: SECT NAME LOAD SAVE)'), ('ARRANGE', 'ROW SECT BARS SCENE (OCT+ adds a row)'),
                                  ('TOOLS', 'CLEAR SEQ · INIT SOUND · DEL ROW · CLEAR SONG · NEW PROJECT · CPU TEST: K1 picks, OCT+')]),
     ]
 
@@ -351,7 +351,7 @@ def sound():
                   'UP+8 CONV DIVG PINKY THUMB WALK CHORD <b style="color:#f4f1ea">TRNS</b> (the keys transpose the '
                   'sequence)</p>'))
     b.append(card('SONGS', HEAT[6],
-                  '<p><b>8 projects × 4 sections (A–D)</b>, a song of up to 16 rows by bars (SAVE › ARRANGE; END: STOP, x2–x8, LOOP), SLOOP style. '
+                  '<p><b>8 projects × 4 sections (A–D)</b>, a song of up to 16 rows by bars (SAVE › PROJECT › ARRANGE, OCT+ adds a row, PLAY plays; END: STOP, x2–x8, LOOP), SLOOP style. '
                   'Each row can hold a <b>scene</b>: mutes, DRUM-X group mutes, macros and MIDI punch-ins. SAVE held '
                   'plays sections live on the next bar, stores them, records the song (SONG REC). Each section keeps its '
                   'sounds, steps, motion, kit and its SLICER.</p>'))
