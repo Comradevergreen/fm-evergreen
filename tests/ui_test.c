@@ -10134,6 +10134,33 @@ static int test_fx_live(void)
     return bad;
 }
 
+/* every page of the five page lenses (EDIT, ENV, LFO . MOD, SCL . ARP, GLO) that an engine shows is in one of its
+ * levels' sets (so SELECT and the button reach it), for every engine */
+static int test_lz_reach(void)
+{
+    int bad = 0, ok = 1;
+    uint32_t e, i, lv, k, n;
+    uint8_t pg[PD_SETS];
+    for (e = 0; e < NENGINES; e++) {
+        if (!eng_ok(e))
+            continue;
+        ui_power_on(); set_engine_of(TSEL, e);
+        for (i = 0; i < NPAGES; i++) {
+            uint32_t pd = pd_of_fam(PAGES[i].fam), found = 0;
+            if (pd >= PD_N || !page_visible(i))
+                continue;
+            for (lv = 0; lv < 3u; lv++)
+                for (n = pd_sets(pd, lv, pg, 0), k = 0; k < n; k++)
+                    found |= pg[k] == i;
+            if (!found) printf("  %s: %s in no level\n", ENGINES[e]->name, PAGES[i].title);
+            ok &= found != 0u;
+        }
+    }
+    bad += check("0.8.5 LENTE: every page an engine shows in EDIT, ENV, LFO . MOD, SCL . ARP, GLO is in a level's sets", ok);
+    ui_power_on();
+    return bad;
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IONBF, 0);
@@ -10148,6 +10175,7 @@ int main(void)
     bad += test_lz_layer();
     bad += test_lz_dialogs();
     bad += test_fx_live();
+    bad += test_lz_reach();
     bad += test_sound_loads();
     bad += test_patterns();
     bad += test_init_system();

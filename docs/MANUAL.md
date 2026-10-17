@@ -86,8 +86,8 @@ The names below are the ones the firmware uses (the HARDWARE CALIBRATION screen 
 
 | Control | What it does |
 | --- | --- |
-| **SELECT** (encoder) | Alone: **scrolls through the pages of the section you are in** (EDIT's pages on an EDIT page, FX's on an FX page …), one a detent, no wrap; on a **SEQ** page it **zooms** instead: PATTERN ↔ BAR ↔ STEP (the sequencer's lens, LENTE: see [6](#finding-your-way-lente)); on **HOME** it zooms **ECO ↔ BEING ↔ GEN** (GEN: the song generator, as HOME + SELECT; see [LENTE everywhere](#lente-everywhere-085)). With a button held, that button's **dice**: **HOME** + SELECT **GEN**, **EDIT** + SELECT the sound, **SEQ** + SELECT the sequence, **LFO** + SELECT the LFO, **FX** + SELECT the effects. **GLO** + SELECT: the tempo. Any other page button + SELECT: its pages. |
-| **ALGORITHM** (encoder) | Selects the track from any page: T1–T4, or T1–T6 with TRACKS 6. In the MENU: switches tabs. |
+| **SELECT** (encoder) | Alone: **zooms the lens you are in** (0.8.5: every part is one), a level a detent, no wrap: **SEQ** PATTERN ↔ BAR ↔ STEP (see [6](#finding-your-way-lente)), **HOME** ECO ↔ BEING ↔ GEN (GEN: the song generator, as HOME + SELECT), **EDIT** SOUND ↔ TONE ↔ the detail, **ENV** TRACKS ↔ ENV ↔ STAGE, **LFO** MOD ↔ LFO ↔ MSEQ, **SCL / ARP** KEY ↔ CHORD ↔ ARP, **GLO** MIX ↔ GLOBAL ↔ SYSTEM, **SAVE** and **FX** theirs, the **MENU** MENU ↔ TAB ↔ ROW (see [LENTE everywhere](#lente-everywhere-085)). With a button held, that button's **dice**: **HOME** + SELECT **GEN**, **EDIT** + SELECT the sound, **SEQ** + SELECT the sequence, **LFO** + SELECT the LFO, **FX** + SELECT the effects. **GLO** + SELECT: the tempo. Any other page button + SELECT: its pages. |
+| **ALGORITHM** (encoder) | Selects the track from any page: T1–T4, or T1–T6 with TRACKS 6. In the MENU: switches tabs. With a layer held (0.8.5): its lens, MAP ↔ KNOBS ↔ STATE. |
 | **PRESETS** (encoder) | On HOME, PRESETS and the sound pages: browses sounds (every engine's factory presets, then your user presets). On the SEQ pages it follows the zoom: at **PATTERN** (PATTERN, STRETCH, PLAYHEADS, TRACK, MUTATE) it picks the **bar**; at **BAR** and **STEP** (STEP, NOTE, COMP, COMP 2, AUTOMATION) it moves the **step cursor**, crossing into the next bar by itself. On list pages (USER, PROJECT, ARRANGE, TOOLS, AUTO LIST): moves the selection. **Hold a page button and turn SELECT** (or PRESETS) to jump straight through that button's pages. |
 | **KNOB 1–4** | The four cards (columns) on screen. With a layer held, the layer's own knobs. Turning fast sweeps the whole range, slowly fine-tunes (MENU > KNOB ACCEL turns this off). |
 | **MASTER** | The output volume. |
@@ -193,9 +193,9 @@ keys' functions.
 - **HOME** returns to the ecosystem; on HOME a tap switches its level's two sets (HOME's knobs / the macros).
 - **FX is a lens** (0.8.5; until 0.8.4 sections and two quick taps): SELECT zooms **TRACK ↔ BUSES ↔ EFFECT**, an FX tap
   goes to the level's next; PRESETS picks the module on BUSES and EFFECT. See [9](#fxs-lens-track--buses--effect).
-- **Turn SELECT** to scroll through the pages of the section you are in (EDIT's on an EDIT page),
-  one a detent, stopping at its first and last; the page's name shows over the footer for a moment. On HOME it zooms
-  ECO ↔ BEING ↔ GEN (GEN: the song generator).
+- **Turn SELECT** to zoom the lens you are in (0.8.5: every part is one; until 0.8.4 it scrolled the section's pages),
+  a level a detent, stopping at the first and the last; a held layer's lens goes with **ALGORITHM** instead (SELECT
+  stays its combos). On HOME it zooms ECO ↔ BEING ↔ GEN (GEN: the song generator).
 - **SEQ is a lens** (LENTE, 0.8.3): SELECT zooms between the whole **PATTERN**, one **BAR** and one **STEP**, and a
   SEQ tap goes round the sets of knobs of the level you are on. See [6](#finding-your-way-lente).
 - **SAVE is a lens too** (0.8.5): SELECT zooms **LIBRARY ↔ PROJECT ↔ SOUND** and a SAVE tap switches the level's two

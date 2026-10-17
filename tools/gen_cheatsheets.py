@@ -126,11 +126,11 @@ def controls():
     b.append(sec('THE PANEL'))
     rows = [
         ('MASTER', 'Master volume.'),
-        ('SELECT', '<b>Scrolls the section\'s pages</b> (SEQ: <b>zooms</b> PATTERN · BAR · STEP; SAVE: LIBRARY · PROJECT · SOUND; FX: TRACK · BUSES · EFFECT; HOME: ECO · BEING · GEN, GEN the song generator). Held with a button, its <b>dice</b> (OK keeps, CANCEL back): HOME everything, '
+        ('SELECT', '<b>Zooms the lens</b> you are in, a level a detent (SEQ PATTERN · BAR · STEP; HOME ECO · BEING · GEN, GEN the song generator; EDIT SOUND · TONE · FOCUS; ENV TRACKS · ENV · STAGE; LFO MOD · LFO · MSEQ; SCL KEY · CHORD · ARP; GLO MIX · GLOBAL · SYSTEM; SAVE; FX; MENU MENU · TAB · ROW; a held layer: ALGORITHM MAP · KNOBS · STATE). Held with a button, its <b>dice</b> (OK keeps, CANCEL back): HOME everything, '
                    'EDIT the sound, SEQ the sequence, LFO the LFO, FX the effects. GLO + SELECT: the tempo.'),
         ('PRESETS', 'Browses the sounds (factory and user). On step, list and song pages: the cursor / the row; SEQ at PATTERN: the bar. '
                     '<b>Hold a page button + PRESETS: jump through its pages.</b>'),
-        ('ALGORITHM', 'Selects the track from any page: T1–T4, or T1–T6 with TRACKS 6.'),
+        ('ALGORITHM', 'Selects the track from any page: T1–T4, or T1–T6 with TRACKS 6. A layer held: MAP · KNOBS · STATE.'),
         ('KNOB 1–4', 'The four columns on screen. Fast sweeps the whole range, slow fine-tunes. With a layer held: '
                      'the layer\'s.'),
         ('OCT− · OCT+', 'The keyboard\'s octave (both together: back to 0). On action pages and dialogs: back / confirm.'),
