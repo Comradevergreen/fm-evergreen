@@ -7,7 +7,7 @@ import html, os
 
 R = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(R, 'docs', 'cheatsheet')
-VERSION = 'v0.9.2'
+VERSION = 'v0.9.4'
 
 HEAT = ['#22d3ee', '#3b82f6', '#8b5cf6', '#d946ef', '#ef4444', '#ff7a00', '#facc15', '#f4f1ea']
 
@@ -309,18 +309,21 @@ def sound():
         ('VOICE', HEAT[6], 'VOWEL VOWEL2 TALK SHIFT', 'BUZZ BREATH Q RAND',
          'Formant voice (after klattsch): vowels, talk, breath. <b>WORDS</b> (0.8.5): LANG ES / EN / JA sings syllables, '
          'a note each (POS THEME ARTIC SHIFT · BUZZ BREATH Q LOOP); LYRIC TEXT (OCT+ on WORDS types it, KNOB 3 dice; '
-         'the web editor sends it) or W1–16 words, S1–8 scat; "-" holds the vowel.'),
+         'the web editor sends it) or W1–16 words, S1–8 scat; "-" holds the vowel. <b>Its picture</b> (0.9.4): a CT head '
+         'whose tongue, jaw, lips and velum sing the phoneme.'),
         ('WHEEL', HEAT[5], 'REG SUB BODY TOP', 'PERC CLICK DRIVE ROTOR', 'Drawbar organ: registrations, percussion, rotary.'),
         ('NOISE', HEAT[4], 'MODE COLOR FREQ PEAK', 'TRK DENSE DRIFT CRUSH', 'Coloured and metallic noise, tracked or free.'),
         ('DRUM-X', '#ff7a00', 'MORPH TUNE TONE DECAY', 'NOISE FM ENV FOLD DRIVE',
          '8 sounds BD SD CP CH OH TM RS CB, sides A / B: <b>MORPH</b> morphs the kit. The kit first: <b>KIT 3</b> BP FEEDBK, <b>X-MOD</b> RATE DEPTH SHAPE '
          'RAND. Then a sound (KNOB 1 the sound): SIDE PITCH PMOD · DECAY NOISE COLOR · MODE PM.TYPE DRIVE · <b>LAYER</b> (no note) FEEDBK '
-         '<b>SEND</b> (CHO / DLY / REV). Last LEVELS and <b>STEREO</b> IMAGE (a knob through the kit\'s stereo placings).'),
+         '<b>SEND</b> (CHO / DLY / REV). Last LEVELS and <b>STEREO</b> IMAGE (a knob through the kit\'s stereo placings). '
+         'KIT, SOUND 1–4 and HOME › BEING draw the kit as little beings that squash and shout on each hit (0.9.4).'),
         ('ANIMAL', '#4ade80', 'MODE PRESS CHAOS SIZE', 'SWEEP RATE GROUP TEMP',
          'Animal calls (0.8.3), MODE the source: <b>CMOS</b> the 40106 / 4093 bird circuit (TOUCH COUPLE CAP · HYST RATE '
          'GROUP FM) · <b>PULSE</b> crickets, cicadas, frogs (CLICK Q · DETUNE) · <b>WHSTL</b> birds, a Hopf whistle · '
          '<b>WING</b> mosquito, bee, fly (BUZZ DRIFT · DOPPLR) · <b>GLOTT</b> wolf, bark, roar, purr (MOUTH ROUGH · AIR). '
-         'GROUP: syllables + gaps; TEMP °C speeds a cricket up (Dolbear). A note is a call.'),
+         'GROUP: syllables + gaps; TEMP °C speeds a cricket up (Dolbear). A note is a call. <b>Its picture</b> (0.9.4): '
+         'bird ↔ insect ↔ mammal by MODE, leaned by SIZE.'),
     ]
     t = '<table><tr><th>ENGINE</th><th>EDIT 1</th><th>EDIT 2</th><th>WHAT TO KNOW</th></tr>'
     for n, c, e1, e2, d in eng:

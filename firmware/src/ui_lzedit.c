@@ -40,7 +40,8 @@ static void graph_sound_lz(const track_t *t)
     /* (0.8.9, the skins' mock-up) the being large on the left (its tendrils kept on its side), the page's name over it, the
      * sound's under it; on the right the scope in a tile (COLORS) or bare (BOTTOM, HUD), the page's four parameters as
      * chips in their knobs' colours (the knob turning: its label TEXT), the other page's names under them */
-    graph_being_at(t, 60 * 16, 68 * 16, 22 * 16);
+    if (!vx_draw(t, 60, 68, 22, -1))                    /* (0.9.4: VOICE ANIMAL their own: ui_engvis.c) */
+        graph_being_at(t, 60 * 16, 68 * 16, 22 * 16);
     cv_rect(0, 0, 4, (int32_t)cv_h, T_BG);
     cv_rect(116, 0, 60, (int32_t)cv_h, T_SURF);
     cv_halo = (uint8_t)bare;                            /* (0.9.0) BOTTOM, HUD: no panel, the being's spikes reach the words:

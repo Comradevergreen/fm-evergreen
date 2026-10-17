@@ -78,6 +78,7 @@ static uint16_t step_heat(const step_t *st, int acc, uint16_t c)
     return heat_col(acc ? 236 : 40 + v * 160 / 127);
 }
 #include "ui_being.c"                                /* (JIANT 0.5) the beings: the engine pages' creatures */
+#include "ui_engvis.c"                               /* (0.9.4) VOICE's head, ANIMAL's creature, DRUM-X's kit */
 
 /* Matches voice.c: attack is linear, decay and release are exponential
  * (env += (target - env) * k each tick, ~99 % after the set time). Time
@@ -2392,7 +2393,10 @@ static void draw_graph(void)
             break;
         case GR_DXSND:                               /* EDIT > SOUND: the kit's lanes, the sound edited singled out */
             cv_oy = 0;
-            graph_colony(t, dx_ui_lane);
+            if (pg->title[0] == 'S')                 /* (0.9.4) SOUND 1..4: the drum kit, the sound edited lit (ui_engvis.c) */
+                vx_kit_page(t, (int32_t)(dx_ui_lane & 7u));
+            else
+                graph_colony(t, dx_ui_lane);
             break;
         case GR_LYRIC:                               /* (0.8.5) EDIT > WORDS: what VOICE sings */
             graph_sing(t);
@@ -2405,7 +2409,10 @@ static void draw_graph(void)
             if (pg->scope == SC_ENGINE && t->eng_req % NENGINES == ENGI_DRUM) {   /* (0.8.5: WHEEL's and FM6's EDIT 1
                                                       * and 2 their beings, as every synth's: EDIT's lens, SOUND) */
                 cv_oy = 0;
-                graph_colony(t, -1);
+                if (pg->id[0] == P_E0)               /* (0.9.4) KIT: the kit's beings (ui_engvis.c); KIT 2 the colony */
+                    vx_kit_page(t, -1);
+                else
+                    graph_colony(t, -1);
             }
 #if FELUCCA_FM4
             else if ((pg->scope == SC_ENGINE || pg->id[0] == P_FM1_LEVEL) && t->eng_req % NENGINES == ENGI_DIGITAL)

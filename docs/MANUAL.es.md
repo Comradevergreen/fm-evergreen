@@ -301,7 +301,8 @@ nivel PROJECT) y **PROJECTS** (el nivel LIBRARY); EDIT 1 / EDIT 2 del kit DRUM s
   dibuja solo la pantalla: nada del tiempo del sonido). **MACROS**: KNOB 1–4 son **M1–M4** (las macros, como LFO
   mantenido), las rutas contadas arriba a la izquierda, LATCH a la derecha.
 - **BEING**: el ser de la pista grande, sus cuatro perillas de HOME como órganos en las esquinas (un medidor cada una,
-  su valor, una vena hasta el cuerpo), el nombre del sonido debajo. **ROUTES**: M1–M4 a la izquierda con sus rutas
+  su valor, una vena hasta el cuerpo), el nombre del sonido debajo. (0.9.4) Una pista VOICE muestra ahí su **cabeza**, una ANIMAL su
+  **criatura**, una DRUM-X su **batería de bichitos** (ver [sus dibujos](#tres-motores-dibujan-su-propia-criatura-094)). **ROUTES**: M1–M4 a la izquierda con sus rutas
   dibujadas hasta donde van (**T2 CUT+62**).
 - **ENV** › **TRACKS** / **TRACKS DEST**: las envolventes de las seis pistas como mosaicos (la seleccionada teñida, con su nivel actual
   como punto; DEST: FILTER, PITCH y SHAPE como barras debajo de cada una); las perillas son de la pista seleccionada —
@@ -322,7 +323,7 @@ nivel PROJECT) y **PROJECTS** (el nivel LIBRARY); EDIT 1 / EDIT 2 del kit DRUM s
   enmarcado con un pulso que corre por su curva. **LFO**: la onda bajo "RATE · WAVE" / **LFO
   DEST**: el LFO chico a la izquierda, los cuatro montos como filas encendidas por lo que el LFO manda ahora.
   **MSEQ** / **MSEQ 2**: los dieciséis pasos bajo su leyenda; KNOB 1 el paso.
-- **EDIT** › **SOUND**: el ser del motor a la izquierda (vivo con el sonido, el nombre de la página arriba, el del
+- **EDIT** › **SOUND**: el ser del motor a la izquierda (0.9.4: la cabeza de VOICE, la criatura de ANIMAL; vivo con el sonido, el nombre de la página arriba, el del
   sonido abajo), el osciloscopio en un pozo y los ocho parámetros E como fichas a la derecha, encendidas las cuatro de
   la página. **TONE**: **FILTER** dibuja la respuesta de TYPE en CUT con su pico de RES (LP, HP, BP, COMB), CUT una
   línea, DRIVE / DIST una fila de celdas; **VOICE** / **VOICE 2** las voces una por fila, tan llenas como suenan,
@@ -730,6 +731,46 @@ el japonés se leen mejor (su ortografía es regular); el inglés depende del di
 **Costo.** Nada de estado por voz (la articulación es de la pista); ~1 KB de RAM para las seis letras y cantantes;
 ~42 KB de flash (casi todo es el diccionario inglés); alrededor de +9 % de CPU sobre las vocales de VOICE, así que
 cuatro voces cantando siguen costando bastante menos que las ocho de ANALOG.
+
+### Tres motores dibujan su propia criatura (0.9.4)
+
+Donde cada motor muestra su ser (EDIT › SOUND a la izquierda, HOME › BEING grande), tres motores dibujan algo propio,
+con el mismo dibujo de líneas térmico (cuanto más fría la línea, menos densa o más callada; el blanco es lo más
+caliente), que se mueve solo mientras la pista suena y queda quieto en silencio:
+
+- **VOICE: una tomografía de una cabeza** de perfil, la cara a la izquierda: la piel, las dos tablas del cráneo (el
+  hueso al rojo blanco), el cerebro con sus pliegues y el cuerpo calloso, el cerebelo, la columna, la cavidad nasal y
+  sus cornetes, el paladar, el velo, la lengua, la mandíbula, los labios, la faringe, la laringe y la tráquea. **El
+  tracto vocal canta lo que se oye**: la lengua sube y baja con el F1 de la vocal y va adelante y atrás con el F2, la
+  mandíbula se abre con el F1, los labios se redondean en o, u, w y sh y se cierran en p, b, m, el labio de abajo toca
+  los dientes en f y v, la punta, la lámina o el dorso de la lengua van al punto de cada consonante (t d n l r en los
+  alvéolos, k g ng en el velo ..) con una marca caliente donde se cierra el tracto, el velo baja en m, n y ng (los
+  cornetes se calientan con el aire por la nariz), las cuerdas vocales vibran y los anillos de la tráquea laten con la
+  sonoridad, sale un chorro de turbulencia de la constricción en s, sh, f, x y las explosiones, y sube aliento en la
+  glotis con la h y BREATH. Con WORDS sigue la sílaba que canta (el fonema, sus formantes y ganancias); sin WORDS,
+  VOWEL → VOWEL2 en TALK y BREATH. Una línea de escaneo baja despacio por la cabeza mientras suena.
+- **ANIMAL: una criatura entre pájaro, bicho y mamífero.** Su contorno, patas, ala, antenas y ojo son los mismos puntos
+  en los tres animales, mezclados: MODE elige el animal (CMOS y WHSTL un pájaro, PULSE y WING un insecto, GLOTT un
+  mamífero) y la criatura **se metamorfosea** hacia él en medio segundo; **SIZE** la inclina por la línea insecto –
+  pájaro – mamífero (más allá de los tamaños de los presets: PULSE subido se vuelve pájaro, GLOTT bajado un pájaro
+  murciélago) y CHAOS la revuelve. Con cada llamada: se abre el pico o la boca y se hincha la garganta (siringe,
+  laringe), salen arcos de canto, las alas del insecto vibran (PULSE: estridulando, frotando la pata; WING: aleteando
+  borrosas) y laten los segmentos del abdomen, respiran las costillas del mamífero.
+- **DRUM-X: la batería como bichitos ("BICHOS")**, en **EDIT › KIT** (la primera página de KIT: arriba a la derecha
+  el nombre del último sonido que sonó), en **EDIT › SOUND 1–4** (encendido y nombrado el sonido que se edita) y en
+  **HOME › BEING**; KIT 2, KIT 3 y X-MOD conservan la colonia (un ser por sonido en dos filas). Cada tambor es un ser
+  chiquito con ojos y boca, parados como una batería: el **bombo** grande en el medio (su núcleo naranja caliente), el
+  **redoblante** chato en su soporte, los **toms** con patitas (el de piso con patas más largas), el **hi-hat** dos
+  conchas en su pie (juntas en CH, la de arriba se levanta con la boca abierta en OH), el **crash** en un tallo largo y
+  el **cencerro** una cabecita sobre el bombo (los dos BELL), el **clap** dos bichitos que se chocan, el **aro** (RS)
+  una chispa en el borde del redoblante. Con cada golpe el ser de ese tambor **se aplasta, cierra los ojos y grita**
+  (abre la boca), tan fuerte como suena el golpe (la envolvente de su carril: la velocidad, el acento) y se recupera
+  a medida que el sonido decae (DECAY); un **GHOST** se aplasta poco, un **FLAM** dos veces (su golpe por venir, una
+  sombra bajo el tambor), un **ratchet** (x2 x4 x8) una y otra vez.
+
+Cuestan más o menos lo que cuesta dibujar un ser (en el host: el panel de EDIT ~113 µs contra ~122 µs del ser de
+ANALOG; la pantalla de KIT entera con los bichos ~167 µs, como la de EDIT de ANALOG) y ~10 KB de flash los tres, 160
+bytes de RAM; nada en el sonido.
 
 ### FILTER (todos los motores)
 

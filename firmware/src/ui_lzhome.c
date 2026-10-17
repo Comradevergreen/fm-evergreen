@@ -355,7 +355,9 @@ static void graph_home_being(void)
         const genome_t *g = eco_genome(c);
         bfeat_t f;
         eco_feat(c, &f, 2);
-        if (eco_off(c))
+        if (vx_draw(&trk[c], cx, cy, 30, eco_off(c) ? 0 : eco.en[c]))
+            ;                                       /* (0.9.4: VOICE's head, ANIMAL's creature, DRUM-X's kit: ui_engvis.c) */
+        else if (eco_off(c))
             bg_outline(g, &f, bx, by, (30 * 16), 1, eco.tm[c], T_DIM);
         else
             being_lines(g, &f, bx, by, (30 * 16) * (256 + eco.en[c] / 3) / 256, eco.en[c], eco.tm[c] + c * 20000u);

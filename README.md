@@ -15,7 +15,10 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.9.3).** It builds and passes every test (Felucca's and its own). Back up the flash before installing it.
+> **Status: in development (v0.9.4).** It builds and passes every test (Felucca's and its own). Back up the flash before installing it.
+  **Three engines draw their own creature** (0.9.4): VOICE a CT scan of a singing head (the tongue, jaw, lips and velum
+  move with the phoneme sung), ANIMAL a creature that metamorphoses between bird, insect and mammal, DRUM-X its kit as
+  little beings that squash, shut their eyes and shout with every hit.
   **MUTATE can go back** (0.9.3): turning MUTATE off asks to return the track to its anchor; SEQ + D5 REVERT, GLO + B4 REVERT ALL, undoable.
   **0.9.2 is driven by six rules** (see [Navigation](#navigation)): SELECT walks a section's pages as one chain, the
   section's button jumps group to group, PRESETS always loads presets, KNOB 1 picks, a button held is its layer, and
@@ -177,7 +180,8 @@ VOICE singing its lyric, in the COLORS skin, exactly as the firmware draws them 
   knobs read as what they are: **CUT** grows spines (more harmonics, spikier), **RES** makes the membrane vibrate,
   **DTN/SPRD** splits two nuclei, **NOIS/RAND/CRSH** frays the edge, **WAVE** changes the lobes.
 - **DRUM-X, the colony**: one being per kit sound, each with its own shape (round kick, spiky snare, fringed hats,
-  clustered clap, star-shaped cowbell) that swells and heats up when it hits.
+  clustered clap, star-shaped cowbell) that swells and heats up when it hits (KIT 2, KIT 3, X-MOD); on KIT, SOUND 1–4
+  and HOME (0.9.4) **the kit as little beings** with eyes and mouths that squash and shout with every hit.
 - **Live technical graphs**: LFO (the wave runs at its rate, with playhead and current value), ENV (a dot travels the
   curve with the sounding voice), DIST (transfer curve by TYPE and TONE response), DLY and DLY 2 (the echoes, L and
   R), REVERB and REVERB 2 (the impulse response, stereo, drawn per model), CHORUS (the three modulated lines), AUTOPAN (the swing across the stereo field), MASTER
@@ -619,6 +623,43 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### v0.9.4
+- **Three engines draw their own creature**, long promised, where every engine shows its being (EDIT › SOUND on the
+  left, HOME › BEING large), in the beings' thermal line art; each moves only while its track sounds:
+  - **VOICE: a sagittal CT of a head** (skin, the skull's two tables, the folded brain, the cerebellum, the spine, the
+    nasal cavity, the palate, the velum, the tongue, the mandible, the lips, the pharynx, the larynx, the trachea). The
+    vocal tract follows the synthesis: the tongue's height from F1 and its front / back from F2, the jaw open with F1,
+    the lips rounded (o u w sh) or closed (p b m), the lower lip on the teeth (f v), the tongue's tip, blade or body on
+    the consonant's place with a hot mark where it closes, the velum down for m n ng, the vocal folds and the trachea's
+    rings pulsing with the voicing, turbulence out of the constriction (s sh f x, the bursts) and at the glottis (h,
+    BREATH); WORDS: the phoneme sung (sing.c), without: VOWEL → VOWEL2 over TALK. A scan line sweeps down as it sounds.
+  - **ANIMAL: a bird, an insect and a mammal in one**: the same points in the three, mixed; MODE sets the animal (CMOS
+    WHSTL bird, PULSE WING insect, GLOTT mammal) and the creature glides to it (~0.6 s); SIZE leans it along insect –
+    bird – mammal past the presets' sizes, CHAOS stirs it. The call opens the beak / jaw, swells the throat and sends
+    song arcs out; an insect's wings buzz (PULSE stridulating, WING flapping) and its abdomen pulses; a mammal breathes.
+  - **DRUM-X: the kit as little beings ("BICHOS")** on EDIT › KIT (the sound last struck named at the top right),
+    EDIT › SOUND 1–4 (the sound edited lit and named) and HOME › BEING; KIT 2, KIT 3 and X-MOD keep the colony. Each
+    drum a small being with eyes and a mouth, standing as a kit: the kick large in the middle, the snare flat on its
+    stand, the toms on little legs, the hi-hat two shells (CH together, OH the top one lifted, its mouth open), the
+    crash on a long stem and the cowbell a small head (BELL), the clap two little ones clapping, the rim (RS) a spark.
+    A hit squashes its being, shuts its eyes and opens its mouth in a shout, as hard as the hit (the lane's own
+    envelope: velocity, accent) and springing back with the sound's DECAY; a GHOST a small squash, a FLAM two (its hit
+    to come a shadow), a ratchet repeated squashes. In the JIANT palette in the thermal ramp of the mock-up it was
+    picked from (blue and violet outlines, the kick's core orange, a cyan floor).
+  - Cost: ~10.5 KB of flash for the three (image 559884 B of 581564, 0.9.3's 549132 B), 160 B of the pool (vxs: no
+    global of the RAM region moves; spare 12512 B), .data + .bss unchanged; drawn about as cheaply as a being (host:
+    EDIT's panel 120 µs with the head, the kit's beings on SOUND 115 µs against ANALOG's being 101 µs;
+    whole screens: KIT 167 µs, HOME › BEING with the kit 188 µs, ANALOG's EDIT 167 µs). Read-only: the
+    singer's state (sing_view), each voice's level (env_out) and the kit's lanes (age, envelope, TOUCH, FLAM), as the
+    UI already read them.
+  - Tests: ui_render draws them (VOICE a e i u s m k t f, the vowels without WORDS, silent, HOME; ANIMAL as bird, CMOS,
+    insect, WING, mammal, half insect / bird, half bird / mammal, HOME; DRUM-X's beings on KIT each sound struck alone
+    (BD SD CP CH OH TM RS CB), a GHOST, a FLAM, a ratchet, silent, and on SOUND 1–4 struck, ghosted, muted, HOME) in
+    every palette, COLORS / BOTTOM / HUD and LARGE, lint and alignment clean, and times them; ui_test: each moves while
+    it plays and holds still in silence (EDIT, KIT and HOME), MODE turned in silence metamorphoses the bird into a
+    mammal and SIZE leans it back, KIT and SOUND 1–4 draw the kit's beings while KIT 2 / KIT 3 / X-MOD keep the
+    colony, each of a ratchet's hits squashes again. No audio change: goldens, cpu_vg and the target budgets as 0.9.3.
 
 ### v0.9.3
 - **MUTATE can go back** (asked in a YouTube comment: "after the mutation, can I return to the sound I had before?

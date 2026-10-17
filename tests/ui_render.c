@@ -665,6 +665,11 @@ enum { S_HOME, S_HOME_IDLE, S_MESSAGE, S_MESSAGE_KEY, S_MESSAGE_NOFILE, S_PRESET
        S_ED_FILTER, S_ED_FILTER_BP, S_ED_VOICE2, S_ED_FOCUS, S_ED_FOCUS_MOD, S_ED_OPERATOR,
        S_ENV_TRACKS, S_ENV_TRACKS_DEST, S_ENV_STAGE, S_ENV_STAGE_SUS, S_MSEQ2, S_KEY_CHORD, S_KEY_CHORD_OFF, S_KEY_ARP, S_KEY_ARP2, S_GLO_SENDS, S_MENU_ROW, S_MENU_ROW_LEDS, S_LY_FX_KNOBS, S_LY_FX_STATE, S_LY_GLO_STATE, S_DLG_DICE_SOUND, S_DLG_DICE_SEQ, S_DLG_DICE_FX, S_DLG_MUT_BACK,
        S_DRUM_X4, S_DRUM_GHOST, S_DRUM_OCT_UP, S_DRUM_OCT_DN, S_COMP_TOUCH, S_COMP_EVEN, S_GEN_EXPLORE,
+       S_VX_HEAD_A, S_VX_HEAD_I, S_VX_HEAD_U, S_VX_HEAD_S, S_VX_HEAD_M, S_VX_HEAD_K, S_VX_HEAD_T, S_VX_HEAD_F, S_VX_HEAD_VOWEL,
+       S_VX_HEAD_HOME, S_VX_HEAD_QUIET, S_VX_BIRD, S_VX_CMOS, S_VX_INSECT, S_VX_WING, S_VX_MAMMAL, S_VX_MORPH_IB, S_VX_MORPH_BM,
+       S_VX_ANIMAL_HOME, S_VX_KIT, S_VX_KIT_HITS, S_VX_KIT_GHOST, S_VX_KIT_HOME, S_VX_KIT_MUTED,
+       S_VX_BUG_BD, S_VX_BUG_SD, S_VX_BUG_CP, S_VX_BUG_CH, S_VX_BUG_OH, S_VX_BUG_TM, S_VX_BUG_RS, S_VX_BUG_CB, S_VX_BUG_GHOST,
+       S_VX_BUG_FLAM, S_VX_BUG_RATCH, S_VX_BUG_QUIET,
        S_MIXER_T4, S_HOME_T4, S_MOCK_HOME, S_MOCK_PRESETS, S_MOCK_SEQ, S_MOCK_DRUM, S_MOCK_MIXER, S_MOCK_DIALOG, S_MOCK_MENU, S_COUNT };
 static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "message", "message_key", "message_nofile", "presets", "presets_nofav", "user",
     "phrases", "project", "tools", "song_empty", "song", "step", "pattern", "chance", "comp", "comp_trig", "comp_echo", "mutate", "morph", "dx_image", "dx_send", "page_flash", "page_flash_home", "fugue", "motion", "drum",
@@ -694,6 +699,11 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "message", "mes
     "ed_filter", "ed_filter_bp", "ed_voice2", "ed_focus", "ed_focus_mod", "ed_operator",
     "env_tracks", "env_tracks_dest", "env_stage", "env_stage_sus", "mseq2", "key_chord", "key_chord_off", "key_arp", "key_arp2", "glo_sends", "menu_row", "menu_row_leds", "ly_fx_knobs", "ly_fx_state", "ly_glo_state", "dlg_dice_sound", "dlg_dice_seq", "dlg_dice_fx", "dlg_mut_back",
     "drum_hit_x4", "drum_hit_ghost", "drum_oct_x8", "drum_oct_flam", "comp_touch", "comp_echo_even", "gen_explore",
+    "vx_head_a", "vx_head_i", "vx_head_u", "vx_head_s", "vx_head_m", "vx_head_k", "vx_head_t", "vx_head_f", "vx_head_vowel",
+    "vx_head_home", "vx_head_quiet", "vx_bird", "vx_cmos", "vx_insect", "vx_wing", "vx_mammal", "vx_morph_insect_bird", "vx_morph_bird_mammal",
+    "vx_animal_home", "vx_kit", "vx_kit_hits", "vx_kit_ghost", "vx_kit_home", "vx_kit_muted",
+    "vx_bug_bd", "vx_bug_sd", "vx_bug_cp", "vx_bug_ch", "vx_bug_oh", "vx_bug_tm", "vx_bug_rs", "vx_bug_cb", "vx_bug_ghost",
+    "vx_bug_flam", "vx_bug_ratchet", "vx_bug_quiet",
     "mixer_tracks4", "home_tracks4", "mock_home", "mock_presets", "mock_seq", "mock_drum", "mock_mixer", "mock_dialog", "mock_menu"};
 
 /* the scenes of the UI design screens: the state the UI-redesign
@@ -848,6 +858,92 @@ static void nav_scene(uint32_t sec, const char *nm)
         exit(2);
     }
     pf_on = 0;
+}
+/* (0.9.4) the engines' own creatures (ui_engvis.c): a phoneme sung on VOICE's head (the articulation as sing.c holds it,
+ * the track sounding), an ANIMAL calling, a DRUM-X kit struck (the real engines run a few blocks) */
+static void vx_run(uint32_t blocks)
+{
+    int32_t o[2 * CTL];
+    uint32_t b, i;
+    for (b = 0; b < blocks; b++) {
+        events_block(CTL);
+        mix_block(o, CTL);
+        for (i = 1; i < CTL; i += 2u)
+            scope_buf[scope_w++ & (SCOPE_N - 1u)] = (int16_t)clamp(o[2u * i], -32768, 32767);
+    }
+}
+static void vx_phon(uint32_t ph, int32_t peak)
+{
+    sing_t *g = &sing[song.sel];
+    const phon_t *P = &PHON[ph];
+    eng(ENGI_VOICE_UI);
+    TSEL->p[P_VLANG] = LG_ES;
+    memset(g, 0, sizeof *g);
+    g->lang = LG_ES; g->live = 1; g->np = 1; g->nu = 0; g->cd = 1; g->i = 0; g->ph[0] = (uint8_t)ph; g->st = 1;
+    g->f[0] = (int16_t)(P->f1 ? P->f1 : 500); g->f[1] = (int16_t)(P->f1 ? P->f2 : 1500); g->f[2] = (int16_t)(P->f1 ? P->f3 : 2500);
+    g->gv = (int16_t)(P->av << 7); g->gf = (int16_t)(P->af << 7); g->ga = (int16_t)(P->cls == PC_ASP ? 14000 : 0);
+    str_cpy(g->w, "voz", sizeof g->w);
+    TSEL->peak = peak;
+    vxs.init = 0;
+    memset(vxs.fr, 0xFF, sizeof vxs.fr);   /* (its level read afresh at the first frame drawn) */
+    go_title("EDIT 1");
+}
+static void vx_animal_scene(const char *pre, int32_t size)
+{
+    uint32_t e = ENGI_ANIMAL, k;
+    eng(e);
+    for (k = 0; k < ENGINES[e]->npresets; k++)
+        if (!strcmp(ENGINES[e]->presets[k].name, pre)) apply_preset_to(TSEL, k);
+    if (size >= 0) TSEL->p[P_E3] = (int16_t)size;
+    TSEL->engine = TSEL->eng_req;
+    vxs.w[1] = 0;
+    memset(vxs.fr, 0xFF, sizeof vxs.fr);
+    song.playing = 0;
+    song.master_q12 = 4096;
+    for (k = 0; k < NTRK; k++) if (k != song.sel) trk[k].p[P_MUTE] = 1;
+    vx_run(40);                                   /* (the engine switched: its fade done) */
+    trk_note_on(TSEL, 72, 120);
+    vx_run(size == -2 ? 40 : 120);
+    TSEL->peak = 7000;
+    go_title("EDIT 1");
+}
+static void vx_kit_scene(uint32_t lanes, uint32_t dm)
+{
+    static const uint8_t N[8] = {36, 38, 39, 42, 46, 45, 37, 49};
+    uint32_t k;
+    eng(ENGI_DRUM);
+    TSEL->engine = TSEL->eng_req;
+    song.playing = 0;
+    song.master_q12 = 4096;
+    for (k = 0; k < NTRK; k++) if (k != song.sel) trk[k].p[P_MUTE] = 1;
+    vx_run(40);
+    {                                             /* (the kit silent: no hit of an earlier screen ringing on) */
+        drum_lane_t *K = drum_kit_of(TSEL);
+        for (k = 0; K && k < 8u; k++) { K[k].x.live = 0; K[k].age = 255; K[k].fl = 0; }
+        vxs.last = 0;
+    }
+    vx_kit(TSEL, 0, 0, 256, -1, -1);              /* (the lanes' ages seen once: the hits below are new) */
+    for (k = 0; k < 8u; k++)
+        if (lanes >> k & 1u) { dx_in_tch = (uint8_t)dm; trk_note_on(TSEL, N[k], k == 1u ? 127 : 100); }
+    dx_in_tch = 0;
+    vx_run(6);
+    memset(vxs.fr, 0xFF, sizeof vxs.fr);
+}
+/* (0.9.4) EDIT > KIT's beings: lane l struck n times (dm: its TOUCH, 2 GHOST 3 FLAM), each hit seen by a frame drawn
+ * before the next (a ratchet's squashes); n 0: the kit silent */
+static void vx_bug_scene(uint32_t l, uint32_t dm, uint32_t n)
+{
+    static const uint8_t N[8] = {36, 38, 39, 42, 46, 45, 37, 56};
+    uint32_t k;
+    vx_kit_scene(0, 0);
+    for (k = 0; k < n; k++) {
+        if (k) { vx_kit(TSEL, 0, 0, 256, -1, -1); fm1_ms += 40u; }
+        dx_in_tch = (uint8_t)dm;
+        trk_note_on(TSEL, N[l & 7u], 110);
+        dx_in_tch = 0;
+        vx_run(dm == 3u ? 2 : 6);                       /* (a FLAM: its grace hit, the hit to come) */
+    }
+    go_title("EDIT 1");
 }
 static void setup(int s)
 {
@@ -1412,6 +1508,40 @@ static void setup(int s)
         else go_page(GR_LYRIC);
         break;
     }
+    case S_VX_HEAD_A: vx_phon(PH_A, 7000); break;
+    case S_VX_HEAD_I: vx_phon(PH_I, 6000); break;
+    case S_VX_HEAD_U: vx_phon(PH_U, 6000); break;
+    case S_VX_HEAD_S: vx_phon(PH_S, 5000); break;
+    case S_VX_HEAD_M: vx_phon(PH_M, 4000); break;
+    case S_VX_HEAD_K: vx_phon(PH_K, 5000); break;
+    case S_VX_HEAD_T: vx_phon(PH_T, 5000); break;
+    case S_VX_HEAD_F: vx_phon(PH_F, 4000); ui.hot_col = 2; ui.hot_t = 30; break;
+    case S_VX_HEAD_VOWEL:                               /* LANG OFF: VOWEL -> VOWEL2 (O, rounded) */
+        eng(ENGI_VOICE_UI); TSEL->p[P_VLANG] = 0; TSEL->p[P_E0] = 100; TSEL->p[P_E5] = 90; TSEL->peak = 6000; vxs.init = 0;
+        memset(vxs.fr, 0xFF, sizeof vxs.fr);
+        go_title("EDIT 2");
+        break;
+    case S_VX_HEAD_HOME: vx_phon(PH_E, 6000); ui.home = 1; ui.hlv = 1; ui.hset[1] = 0; break;
+    case S_VX_HEAD_QUIET: vx_phon(PH_SIL, 0); break;
+    case S_VX_BIRD: vx_animal_scene("CANARY", -1); break;
+    case S_VX_CMOS: vx_animal_scene("CMOS BIRD", -1); break;
+    case S_VX_INSECT: vx_animal_scene("CRICKET", -1); break;
+    case S_VX_WING: vx_animal_scene("BEE", -1); break;
+    case S_VX_MAMMAL: vx_animal_scene("WOLF", -1); break;
+    case S_VX_MORPH_IB: vx_animal_scene("CRICKET", 127); go_title("EDIT 2"); break;
+    case S_VX_MORPH_BM: vx_animal_scene("DOG BARK", 4); break;
+    case S_VX_ANIMAL_HOME: vx_animal_scene("OWL", -1); ui.home = 1; ui.hlv = 1; ui.hset[1] = 0; break;
+    case S_VX_KIT: vx_kit_scene(0x03u, 0); dx_ui_lane = 1; dx_ui_seen = last_note; go_title("SOUND"); break;
+    case S_VX_KIT_HITS: vx_kit_scene(0xBCu, 0); dx_ui_lane = 4; dx_ui_seen = last_note; go_title("SOUND 2"); break;
+    case S_VX_KIT_GHOST: vx_kit_scene(0x22u, 2); dx_ui_lane = 5; dx_ui_seen = last_note; go_title("SOUND 3"); break;
+    case S_VX_KIT_HOME: vx_kit_scene(0x8Bu, 0); ui.home = 1; ui.hlv = 1; ui.hset[1] = 0; break;
+    case S_VX_BUG_BD: case S_VX_BUG_SD: case S_VX_BUG_CP: case S_VX_BUG_CH: case S_VX_BUG_OH: case S_VX_BUG_TM:
+    case S_VX_BUG_RS: case S_VX_BUG_CB: vx_bug_scene((uint32_t)(s - S_VX_BUG_BD), 0, 1); break;
+    case S_VX_BUG_GHOST: vx_bug_scene(1, 2, 1); break;
+    case S_VX_BUG_FLAM: vx_bug_scene(1, 3, 1); break;
+    case S_VX_BUG_RATCH: vx_bug_scene(3, 0, 3); break;
+    case S_VX_BUG_QUIET: vx_bug_scene(0, 0, 0); break;
+    case S_VX_KIT_MUTED: dx_mute_set(DXG_HAT | DXM_LANE(7)); vx_kit_scene(0x01u, 0); dx_ui_lane = 7; dx_ui_seen = last_note; go_title("SOUND 4"); break;
     case S_WORDS_OFF: eng(ENGI_VOICE_UI); TSEL->p[P_VLANG] = 0; go_page(GR_LYRIC); break;
     case S_NAME_LYRIC:
         eng(ENGI_VOICE_UI); TSEL->p[P_VLANG] = LG_ES; lyr_set(song.sel, "LA NOCHE");
@@ -2092,7 +2222,8 @@ int main(int argc, char **argv)
                                    S_PATTERN, S_COMP, S_LENTE_PAT, S_LENTE_BAR, S_LENTE_STEP, S_LENTE_STEP_DRUM,
                                    S_SAVE_LIB, S_SAVE_PROJ, S_SAVE_SOUND, S_FXL_SENDS, S_FXL_BUSES, S_FXL_REVERB,
                                    S_HOME_BEING, S_EDIT_ANALOG, S_ED_FILTER, S_ED_FOCUS, S_ENV_TRACKS, S_MOD, S_KEY_CHORD,
-                                   S_SYSTEM, S_MENU_ROW, S_LY_FX_KNOBS, S_DLG_DICE_SOUND};   /* (0.8.5: the lenses everywhere) */   /* (0.8.3:
+                                   S_SYSTEM, S_MENU_ROW, S_LY_FX_KNOBS, S_DLG_DICE_SOUND, S_EDIT_SAMPLE, S_VX_HEAD_S, S_VX_BIRD,
+                                   S_VX_MAMMAL, S_VX_KIT_HITS, S_VX_HEAD_HOME, S_VX_KIT_HOME, S_VX_BUG_SD};   /* (0.9.4: the creatures against a being) */   /* (0.8.5: the lenses everywhere) */   /* (0.8.3:
                                                                          * LENTE's three levels) */
         enum { N = 200 };
         uint32_t i, k;
@@ -2122,7 +2253,7 @@ int main(int argc, char **argv)
         {   /* the STEP page's piano roll: its panel alone redrawn, and a frame that changes nothing (the signature only) */
             static const int G[] = {S_ROLL_CHORDS, S_ROLL_PLAYING, S_DRUM, S_PATTERN, S_COMP, S_LENTE_PAT, S_LENTE_STEP,
                                     S_SAVE_LIB, S_SAVE_SOUND, S_FXL_BUSES, S_FXL_REVERB, S_FXL_DELAY, S_EDIT_ANALOG,
-                                    S_ENV_TRACKS, S_MOD, S_SYSTEM};
+                                    S_ENV_TRACKS, S_MOD, S_SYSTEM, S_VX_HEAD_S, S_VX_INSECT, S_VX_KIT_HITS, S_DX_SOUND};
             for (k = 0; k < sizeof G / sizeof G[0]; k++) {
                 clock_t c0;
                 double tg, ti;
@@ -2141,7 +2272,7 @@ int main(int argc, char **argv)
         roll_cost();
         {   /* (0.8.9) SKIN: HOME, EDIT, SEQ's BAR, FX's BUSES redrawn whole in each skin (us, texts, LCD px sent), and HOME frame
              * by frame (HUD: every strip each frame, on the beings) */
-            static const int SC[] = {S_HOME, S_EDIT_ANALOG, S_LENTE_BAR, S_FXL_BUSES};
+            static const int SC[] = {S_HOME, S_EDIT_ANALOG, S_LENTE_BAR, S_FXL_BUSES, S_VX_HEAD_S, S_VX_WING, S_VX_KIT_HOME};
             static const char *const SK_N[SKIN_N] = {"COLORS", "BOTTOM", "HUD"};
             uint32_t sk;
             fprintf(rep, "  SKIN (full redraw us / texts / LCD px; HOME a frame without force):\n");

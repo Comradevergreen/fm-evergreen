@@ -291,7 +291,8 @@ the bars with KNOB 1 the bar and KNOB 2 LEN.
   when a being is hit and pulse with the output (drawn by the screen alone: nothing of the sound's time). **MACROS**:
   KNOB 1–4 are **M1–M4** (the macros, as LFO held), the routes counted at the top left, LATCH at the right.
 - **BEING**: the track's being large, its four HOME knobs as organs at the corners (a gauge each, its value, a vein to
-  the body), the sound's name under it. **ROUTES**: M1–M4 down the left with their routes drawn to where they go
+  the body), the sound's name under it. (0.9.4) A VOICE track shows its **head**, an ANIMAL track its **creature**, a DRUM-X track
+  its **kit of little beings** there (see [their pictures](#three-engines-draw-their-own-creature-094)). **ROUTES**: M1–M4 down the left with their routes drawn to where they go
   (**T2 CUT+62**).
 - **ENV** › **TRACKS** / **TRACKS DEST**: the six tracks' envelopes as tiles (the selected one tinted with its level now a dot; DEST:
   FILTER, PITCH and SHAPE as bars under each), the knobs the selected track's — **ALGORITHM** picks the
@@ -312,7 +313,7 @@ the bars with KNOB 1 the bar and KNOB 2 LEN.
   running along its curve. **LFO**: the wave under "RATE · WAVE" / **LFO DEST**: the LFO small
   on the left, the four amounts as rows lit by what the LFO sends now. **MSEQ** / **MSEQ 2**: the
   sixteen steps under their caption; KNOB 1 the step.
-- **EDIT** › **SOUND**: the engine's being on the left (alive with the sound, the page's name over it, the sound's
+- **EDIT** › **SOUND**: the engine's being on the left (0.9.4: VOICE's head, ANIMAL's creature; alive with the sound, the page's name over it, the sound's
   under it), the scope in a well and all eight E parameters as chips on the right, the page's four lit. **TONE**:
   **FILTER** draws TYPE's response at CUT with its RES peak (LP, HP, BP, COMB), CUT a line, DRIVE / DIST a row of
   cells; **VOICE** / **VOICE 2** the voices one a row as full as they sound, VOICE and PRIO (VOICE 2: ALLOC), GLIDE's
@@ -700,6 +701,45 @@ Japanese read best (their spelling is regular); English depends on the dictionar
 **Cost.** No state per voice (the articulation is the track's); ~1 KB of RAM for the six lyrics and singers; ~42 KB
 of flash (the English dictionary is most of it); about +9 % CPU over VOICE's vowels, so four voices singing still cost
 well under ANALOG's eight.
+
+### Three engines draw their own creature (0.9.4)
+
+Where every engine shows its being (EDIT › SOUND on the left, HOME › BEING large), three engines draw something of their
+own, in the same thermal line art (the colder the line, the less dense or quieter; white is hottest), moving only
+while the track sounds and resting in silence:
+
+- **VOICE: a CT scan of a head**, in profile, the face to the left: the skin, the skull's two tables (bone white
+  hot), the folded brain and the corpus callosum, the cerebellum, the spine, the nasal cavity and its turbinates, the
+  palate, the velum, the tongue, the mandible, the lips, the pharynx, the larynx and the trachea. **The vocal tract
+  sings what you hear**: the tongue rises and falls with the vowel's F1 and moves forward and back with F2, the jaw
+  opens with F1, the lips round for o, u, w and sh and close for p, b, m, the lower lip touches the teeth for f and v,
+  the tongue's tip, blade or body goes to the place of each consonant (t d n l r at the ridge, k g ng on the velum ..)
+  with a hot mark where the tract closes, the velum drops for m, n and ng (the turbinates warm with the air through
+  the nose), the vocal folds shake and the trachea's rings pulse with the voicing, a jet of turbulence comes out of
+  the constriction for s, sh, f, x and the bursts, and breath rises at the glottis for h and BREATH. With WORDS on it
+  follows the syllable being sung (the phoneme, its formants and gains); without, VOWEL → VOWEL2 over TALK and BREATH.
+  A scan line runs slowly down the head as it sounds.
+- **ANIMAL: a creature between a bird, an insect and a mammal.** Its outline, legs, wing, antennae and eye are the same
+  points in the three animals, mixed: MODE sets the animal (CMOS and WHSTL a bird, PULSE and WING an insect, GLOTT a
+  mammal) and the creature **metamorphoses** to it in about half a second; **SIZE** leans it along insect – bird –
+  mammal (well past the presets' sizes: PULSE turned up grows into a bird, GLOTT turned down into a bat-like bird),
+  and CHAOS stirs it. With each call: the beak or jaw opens and the throat (syrinx, larynx) swells, song arcs leave the
+  mouth, an insect's wings buzz (PULSE: stridulating, its hind leg rubbing; WING: flapping in a blur) and its abdomen's
+  segments pulse, a mammal's ribs breathe.
+- **DRUM-X: the kit as little beings ("BICHOS")**, on **EDIT › KIT** (the first KIT page: the sound last struck named
+  at the top right), on **EDIT › SOUND 1–4** (the sound being edited lit and named) and on **HOME › BEING**; KIT 2,
+  KIT 3 and X-MOD keep the colony (a being per sound in two rows). Each drum is a small being with eyes and a mouth,
+  standing as a kit does: the **kick** large in the middle (its core hot orange), the **snare** flat on its stand, the
+  **toms** on little legs (the floor tom on longer ones), the **hi-hat** two shells on a stand (together on CH, the top
+  one lifting with its mouth open on OH), the **crash** on a long stem and the **cowbell** a small head over the kick
+  (both BELL), the **clap** two little ones that clap together, the **rim** (RS) a spark on the snare's edge. On each
+  hit the drum's being **squashes, shuts its eyes and shouts** (its mouth opens), as hard as the hit sounds (the lane's
+  own envelope: the velocity, the accent) and springing back as the sound decays (DECAY); a **GHOST** squashes a
+  little, a **FLAM** twice (its hit to come a shadow under the drum), a **ratchet** (x2 x4 x8) over and over.
+
+They cost about what a being costs to draw (host: the EDIT panel ~113 µs against ~122 µs for ANALOG's being; the
+whole KIT screen with the kit's beings ~167 µs, as ANALOG's EDIT screen) and ~10 KB of flash for the three, 160 bytes
+of RAM; nothing in the sound.
 
 ### FILTER (every engine)
 

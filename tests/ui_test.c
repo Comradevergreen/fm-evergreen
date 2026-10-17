@@ -10542,6 +10542,138 @@ static int test_fx_live(void)
     return bad;
 }
 
+/* ---------------------------------------------------------------------------- 0.9.4 the engines' creatures --- */
+/* (0.9.4, ui_engvis.c) VOICE's head (WORDS on and off), ANIMAL's creature, DRUM-X's kit on EDIT's SOUND / SOUND 1..4 and
+ * HOME's BEING: drawn instead of the being (their own state read that frame), moving while the track sounds, still once
+ * it is silent; ANIMAL's MODE turned in silence: the creature changes (a glide), then holds still */
+static uint16_t vxt_a[240 * 140];
+static void vxt_run(uint32_t ms, int audio)               /* frames of 16 ms, the audio between them */
+{
+    uint32_t i, n = 0;
+    int32_t o[2 * CTL];
+    for (i = 0; i < ms / 16u; i++) {
+        uint32_t want = (uint32_t)((uint64_t)(i + 1u) * 16u * FS / 1000u), k;
+        while (audio && n < want) {
+            events_block(CTL);
+            mix_block(o, CTL);
+            for (k = 1; k < CTL; k += 2u)
+                scope_buf[scope_w++ & (SCOPE_N - 1u)] = (int16_t)clamp(o[2u * k], -32768, 32767);
+            n += CTL;
+        }
+        frame();
+    }
+}
+static int vxt_same(void) { return !memcmp(vxt_a, host_screen + LZ_GRAPH_Y * 240, sizeof vxt_a); }
+static void vxt_snap(void) { memcpy(vxt_a, host_screen + LZ_GRAPH_Y * 240, sizeof vxt_a); }
+/* track 1 as engine e preset pre, a note every beat (DRUM: a beat), on page (0: HOME's BEING): moves while it plays
+ * (*mv), still when silent (*st: the panel; HOME, whose critters swim on: the creature's time and level); k the
+ * creature's slot in vxs (it ran) */
+static void vxt_case(uint32_t e, const char *pre, const char *page, uint32_t k, int *mv, int *st)
+{
+    uint32_t i, j;
+    ui_power_on();
+    song.master_q12 = 4096;
+    for (i = 1; i < NTRK; i++) trk[i].p[P_MUTE] = 1;
+    song.sel = 0;
+    set_engine_of(TSEL, e);
+    for (i = 0; i < ENGINES[e]->npresets; i++)
+        if (str_eq(ENGINES[e]->presets[i].name, pre)) apply_preset_to(TSEL, i);
+    track_defaults_steps(TSEL);
+    TSEL->p[P_SLEN] = 16;
+    for (i = 0; i < 16u; i++) {
+        step_t *st = &TSEL->step[i];
+        memset(st, 0, sizeof *st);
+        st->time = ST_NOTE; st->vel = 110;
+        if (e == ENGI_DRUM) st->hit = (uint8_t)(1u | (i & 1u ? 8u : 0u) | (i % 8u == 4u ? 2u : 0u) | (i == 14u ? 16u : 0u));
+        else if (i % 4u == 0u) { st->n = 1; st->note[0] = (uint8_t)(60 + (i & 7u)); } else st->time = ST_TIE;
+    }
+    vxt_run(160, 1);                                    /* (the engine's switch faded) */
+    if (page) go_title(page); else { ui.home = 1; ui.hlv = 1; ui.hset[1] = 0; }
+    transport_req = 1;
+    vxt_run(1500, 1);
+    j = vxs.fr[k];
+    vxt_snap();
+    vxt_run(160, 1);
+    *mv = !vxt_same() && vxs.fr[k] != j;
+    seq_stop();
+    song.playing = 0;
+    trk_all_off(TSEL);
+    vxt_run(2500, 1);                                   /* (the tails rung out, the level fallen) */
+    for (i = 0; i < NTRK; i++) trk[i].peak = 0;
+    memset(scope_buf, 0, sizeof scope_buf);
+    vxt_run(600, 1);
+    vxt_snap();
+    j = vxs.tm[k];
+    vxt_run(600, 1);
+    *st = page ? vxt_same() : vxs.tm[k] == j && !vxs.en[k];   /* (HOME: its critters live on; the creature holds) */
+}
+static int test_engvis(void)
+{
+    static const struct { uint32_t e; const char *pre, *page; uint8_t k; const char *what; } C[] = {
+        {5, "CANTOR ES", "EDIT 1", 0, "VOICE WORDS, EDIT"}, {5, "TALK BOX", "EDIT 2", 0, "VOICE vowels, EDIT"},
+        {5, "SINGER EN", 0, 0, "VOICE, HOME BEING"}, {ENGI_ANIMAL, "CANARY", "EDIT 1", 1, "ANIMAL bird, EDIT"},
+        {ENGI_ANIMAL, "CRICKET", "EDIT 2", 1, "ANIMAL insect, EDIT"}, {ENGI_ANIMAL, "DOG BARK", 0, 1, "ANIMAL mammal, HOME BEING"},
+        {ENGI_DRUM, "DRUM-X", "SOUND", 2, "DRUM-X kit, EDIT SOUND"}, {ENGI_DRUM, "DRUM-X", "EDIT 1", 2, "DRUM-X kit, EDIT KIT"},
+        {ENGI_DRUM, "DRUM-X", 0, 2, "DRUM-X kit, HOME BEING"}};
+    int bad = 0, ok = 1, mv, st;
+    uint32_t c;
+    for (c = 0; c < NELEM(C); c++) {
+        vxt_case(C[c].e, C[c].pre, C[c].page, C[c].k, &mv, &st);
+        if (!mv || !st) printf("  %s: %s\n", C[c].what, !mv ? "still while it plays" : "moving in silence");
+        ok &= mv && st;
+    }
+    bad += check("0.9.4 VOICE's head, ANIMAL's creature, DRUM-X's kit (EDIT, HOME): move with the sound, still in silence", ok);
+    {   /* MODE turned in silence: the creature glides to the mammal, then holds */
+        int32_t m0, m1;
+        int changed;
+        vxt_case(ENGI_ANIMAL, "CANARY", "EDIT 1", 1, &mv, &st);
+        m0 = vxs.w[0];
+        vxt_snap();
+        TSEL->p[P_E0] = AN_GLOTT;
+        vxt_run(64, 0);
+        changed = !vxt_same();
+        vxt_run(1500, 0);
+        m1 = vxs.w[0];
+        vxt_snap();
+        vxt_run(400, 0);
+        ok = changed && m0 < 160 && m1 > 230 && vxt_same();
+        bad += check("0.9.4 ANIMAL: MODE WHSTL -> GLOTT turns the bird into a mammal (a glide), then it holds still", ok);
+        TSEL->p[P_E3] = 0;                              /* SIZE all the way down: a mammal leaning back to the bird */
+        vxt_run(1500, 0);
+        bad += check("0.9.4 ANIMAL: SIZE leans GLOTT's mammal towards the bird", vxs.w[0] < m1 - 40);
+    }
+    {   /* DRUM-X: KIT's beings (EDIT 1) and SOUND 1..4; KIT 2, KIT 3, X-MOD keep the colony; a hit squashes its being, a
+         * ratchet's hits each */
+        static const char *const PG[] = {"EDIT 1", "SOUND", "SOUND 4", "EDIT 2", "KIT 3", "X-MOD"};
+        uint32_t k, h0, n = 0;
+        int ran[6];
+        vxt_case(ENGI_DRUM, "DRUM-X", "EDIT 1", 2, &mv, &st);
+        for (k = 0; k < NELEM(PG); k++) {
+            uint32_t f0;
+            go_title(PG[k]);
+            vxt_run(48, 0);
+            f0 = vxs.fr[2];
+            vxt_run(48, 0);
+            ran[k] = vxs.fr[2] != f0;
+        }
+        ok = ran[0] && ran[1] && ran[2] && !ran[3] && !ran[4] && !ran[5];
+        bad += check("0.9.4 DRUM-X: KIT and SOUND 1..4 draw the kit's beings, KIT 2 / KIT 3 / X-MOD the colony", ok);
+        go_title("EDIT 1");
+        vxt_run(48, 0);
+        h0 = vxs.hitm[3];
+        for (k = 0; k < 3u; k++) {                      /* (a ratchet: three hits, a frame or two apart) */
+            uint32_t h = vxs.hitm[3];
+            trk_note_on(TSEL, 42, 110);
+            vxt_run(48, 1);
+            n += vxs.hitm[3] != h && vxs.last == 3u;
+        }
+        bad += check("0.9.4 DRUM-X: each of a ratchet's hits squashes the hi-hat's being again (the sound last struck: CH)",
+                     n == 3u && vxs.hitm[3] != h0);
+    }
+    ui_power_on();
+    return bad;
+}
+
 /* ------------------------------------------------------------------------------------- 0.9.2 navigation --- */
 /* (0.9.2) every page and parameter reachable, by the panel: for every engine (and LOFI BYTE, LOAD ECO), every section's
  * button from HOME and SELECT walked through its whole chain; what was visited (the page, the level it is drawn as) */
@@ -10904,6 +11036,7 @@ int main(void)
     bad += test_lz_layer();
     bad += test_lz_dialogs();
     bad += test_fx_live();
+    bad += test_engvis();
     bad += test_lz_reach();
     bad += test_nav_tasks();
     bad += test_nav_rules();
