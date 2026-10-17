@@ -6,7 +6,8 @@
  * here, by its label. FELUCCA_ICONS=0 turns the parameter icons off (labels get their full width back). */
 #include "ui_icons.h"
 #ifndef FELUCCA_ICONS
-#define FELUCCA_ICONS 1
+#define FELUCCA_ICONS 0                                 /* (0.8.5: off, the mock-up has none; 1: the parameter icons'
+                                                         * table and names back, nothing draws them) */
 #endif
 #define ICON_CELL 12
 

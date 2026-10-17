@@ -284,11 +284,13 @@ static void head_msg(int32_t x, int32_t maxw)
 {
     const char *m = ui.msg_t ? ui.msg : layer_head();
     int icon = m[0] == MSG_NOFILE[0];
-    int32_t lw = 0, iw = icon ? 16 + KH_GAP : 0;
+    int32_t lw = 0, iw = icon ? text_w(&AF_S, "!") + KH_GAP : 0;
     if (x < 0)
         x = 120 - HALF_UP(iw + head_hint_w(m + icon, maxw - lw - iw) + lw);
-    if (icon)
-        x += cv_icon_mid(x, HEAD_MID, 16, ICON_X_NOFILE, T_ACCENT, T_BG) + KH_GAP;
+    if (icon) {                                       /* (0.8.5: no icons; "!" in the accent) */
+        GFX_HOOK_ALIGN(0, 0, 0, HEAD_RULE_Y, AL_V, "header text on its middle");
+        x = cv_text(x, HEAD_SY, &AF_S, "!", T_ACCENT) + KH_GAP;
+    }
     (void)cv_free_hint(x, HEAD_SY, m + icon, T_TEXT, T_BG, maxw - lw - iw);   /* (may start with a keycap) */
 }
 /* the octave, or the song row while a song plays, its right end at HEAD_GRP_R; its left end */
@@ -299,7 +301,9 @@ static int32_t head_group(void)
     if (chain.running) {
         fmt_int(b, (int32_t)chain.row + 1);
         x0 = x = HEAD_GRP_R - (12 + 3 + text_w(&AF_S, b));
-        x += cv_icon_mid(x, HEAD_MID, 12, ICON_X_SONG, T_MID, T_BG) + 3;   /* SONG: the disc */
+        cv_rrect(x + 1, HEAD_MID - 5, 10, 10, -5, T_MID, T_BG);   /* SONG: the disc (drawn, 0.8.5) */
+        cv_rect(x + 5, HEAD_MID - 1, 2, 2, T_BG);
+        x += 12 + 3;
     } else {
         str_cpy(b, song.octave > 0 ? "+" : "", sizeof b);
         fmt_int(b + str_len(b), song.octave);
@@ -353,10 +357,12 @@ static void draw_head(void)
     roll_text(ROLL_BPM, g.bx, HEAD_SY, b, ui.bpm_t ? T_ACCENT : T_THEME);
     lx = g.bx + g.b[2];                                /* the right end of the BPM's ink (and what follows it) */
     if (ui_prefs & PREF_BPM_LOCK) {                    /* BPM LOCK ON (#58): the lock right of the BPM */
-        int32_t ib[4];
-        icon_ink(12, ICON_X_LOCK, ib);
-        cv_icon_mid(lx + HEAD_GAP - ib[0], HEAD_MID, 12, ICON_X_LOCK, T_MID, T_BG);
-        lx += HEAD_GAP + ib[2] - ib[0];
+        int32_t x = lx + HEAD_GAP;                     /* (0.8.5: drawn) a shackle over a body, 8 x 10 */
+        cv_rect(x + 2, HEAD_MID - 5, 4, 1, T_MID);
+        cv_rect(x + 1, HEAD_MID - 4, 1, 3, T_MID);
+        cv_rect(x + 6, HEAD_MID - 4, 1, 3, T_MID);
+        cv_rect(x, HEAD_MID - 1, 8, 6, T_MID);
+        lx += HEAD_GAP + 8;
     }
     if (song.rec) {                                    /* REC: its dot (x + 3 .. x + 11 of its cell) */
         draw_rec_mark(lx + HEAD_GAP - 3, T_BG);
@@ -483,9 +489,10 @@ static void draw_column_tall(uint32_t c, const char *label, const char *val, con
         cv_blit((uint32_t)CARD_X(c), card_y());
         return;
     }
-    if (FELUCCA_ICONS && ic != ICON_NONE && label[0] && (ic - ICON_TRK < NTRK || icon_cell(&isz, ic) >= 0)) {
+    (void)ic; (void)isz;
+    if (mot && label[0]) {                              /* (0.8.5: no icons) MOTION: a dot on the pill's line */
         GFX_HOOK_ALIGN(0, LG_MY, 0, LG_MY + LG_MH, AL_V, "large card icon on its pill's line");
-        cv_icon_in(COL_W - 5 - 16, LG_MY, 16, LG_MH, 16, ic, mot ? (hot ? T_ACCENT : T_THEME) : lc, T_SURF);
+        cv_rrect(COL_W - 5 - 12, LG_MY + HALF_UP(LG_MH - 8), 8, 8, -4, hot ? T_ACCENT : T_THEME, T_SURF);
     }
     if (label[0]) {
         if ((lw = ink_w(lf, label)) > COL_W - 6) {      /* M too wide: S, on the same capitals' middle */

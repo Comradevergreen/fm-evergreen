@@ -538,6 +538,9 @@ JIANT's modifications are distributed under the same license.
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
 
 ### v0.8.5
+- **No icons anywhere, as the mock-up**: the last ones (the header's NO FILE, BPM LOCK and SONG marks, MENU > LARGE's
+  card icons, the calibration title, the stars, the song list's marks) are text or a few drawn pixels; the Fukiai icon
+  font is no longer in the image (11.7 KB of flash back; FELUCCA_ICONS now 0 by default).
 - **The dialogs as the approved mock-up**: tabs NOTICE · DICE · NAME. A question is a card under a violet rule with
   OCT− NO / OCT+ YES (no warning icon); a part's dice shows BEFORE and NOW side by side (the being then and now, the
   steps, the values) over a KEEP DICED …? strip, SELECT still re-rolling; a message on a lens page is also a toast in

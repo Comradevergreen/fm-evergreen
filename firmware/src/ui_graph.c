@@ -615,7 +615,6 @@ static void graph_scale(const track_t *t, uint16_t c)
     }
 }
 static void panel_note(const char *a, const char *b, const char *c);
-static void panel_alert(uint32_t id, const char *a);
 
 static uint32_t steps_hash(const track_t *t)
 {
@@ -1586,22 +1585,6 @@ static void panel_note(const char *a, const char *b, const char *c)
     if (b) note_line(60, b, T_MID);
     if (c) note_line(82, c, T_DIM);
 }
-/* the same title led by an icon (16 px, the accent's: the header message's, ui_draw.c draw_head) in the middle of
- * the panel: the title's capitals centred up and down in it, the icon's ink on them; across, the pair centred by
- * its ink */
-#define PA_GAP 6                                        /* icon ink -> title ink (setup_title's) */
-static void panel_alert(uint32_t id, const char *a)
-{
-    int32_t bi[4], bt[4], x, y = CAP_IN(M, (int32_t)graph_h());
-    icon_ink(16, id, bi);
-    text_ink(&AF_M, a, bt);
-    x = HALF_UP(240 - (bi[2] - bi[0] + PA_GAP + bt[2] - bt[0])) - bi[0];
-    GFX_HOOK_ALIGN(0, 0, 240, 0, AL_H | AL_N(2), "panel alert centred");
-    GFX_HOOK_ALIGN(0, y + AF_M_CAP_Y, 0, y + AF_M_CAP_Y + AF_M_CAP_H, AL_V | AL_PASS, "panel alert icon on its title's line");
-    cv_icon_in(x, y + AF_M_CAP_Y, 0, AF_M_CAP_H, 16, id, T_ACCENT, T_SURF);
-    GFX_HOOK_ALIGN(0, 0, 0, (int32_t)graph_h(), AL_V | AL_PASS, "panel alert title in the panel's middle");
-    cv_text_on(x + bi[2] + PA_GAP - bt[0], y, &AF_M, a, T_TEXT, T_SURF);
-}
 
 /* the EDIT layer (ui_layer.c): the sound loaded, as the browser's selected row: "03" (its place in KNOB 2's list,
  * the engine's sounds) or "U07", the name, the star of a favourite */
@@ -1623,7 +1606,7 @@ static void engine_sound_row(int32_t y)
     list_row(y, 1, tag, T_DIM, nm, T_TEXT, fav ? 212 : 232);
     if (fav) {
         GFX_HOOK_ALIGN(0, y, 0, y + 16, AL_V, "list row star centred up/down");
-        cv_icon_in(214, y, 0, 16, 12, ICON_X_STAR, T_INK, T_THEME);
+        cv_text_on(216, y + CAP_IN(S, 16), &AF_S, "*", T_INK, T_THEME);   /* (0.8.5: a star, no icon) */
     }
     (void)total;
 }
@@ -1779,7 +1762,7 @@ static void track_strip(uint32_t c, uint32_t sel, uint32_t st, uint32_t mute, ui
     uint16_t vc = mute ? T_DIM : T_THEME;
     cv_begin(CARD_W, LG_H_GRAPH, T_BG);
     cv_rrect(0, 0, CARD_W, LG_H_GRAPH, 5, T_SURF, T_BG);
-    cv_icon_on(4, 4, 16, trk_icon(c, sel), sel ? T_ACCENT : T_MID, T_SURF);
+    cv_trk(4, 4, 16, c, sel ? T_ACCENT : T_MID, T_SURF);
     if (st)
         GFX_HOOK_ALIGN(0, 4, 0, 20, AL_V, "mixer badge on the cushion's line");
     if (st == 1u || st == 2u)
@@ -1813,7 +1796,7 @@ static void track_col6(uint32_t c, uint32_t sel, uint32_t st, uint32_t mute, uin
     uint16_t lc = hot == 1u ? T_ACCENT : lvl ? (mute ? T_DIM : T_TEXT) : T_DIM;
     cv_begin(T6_W, H_GRAPH, T_BG);
     cv_rrect(0, 0, T6_W, H_GRAPH, 5, T_SURF, T_BG);
-    cv_icon_on(4, 5, 16, trk_icon(c, sel), sel ? T_ACCENT : mute ? T_DIM : T_MID, T_SURF);
+    cv_trk(4, 5, 16, c, sel ? T_ACCENT : mute ? T_DIM : T_MID, T_SURF);
     if (st == 1u || st == 2u)                        /* armed: a dot (recording: red) */
         cv_rrect(T6_W - 11, 10, 6, 6, 3, st == 1u ? T_REC : T_ACCENT, T_SURF);
     if (mute == 2u)                                  /* asleep (TRACKS 4) */
@@ -1913,7 +1896,7 @@ static void draw_tracks(void)
         }
         cv_begin(CARD_W, H_GRAPH, T_BG);
         cv_rrect(0, 0, CARD_W, H_GRAPH, 5, T_SURF, T_BG);
-        cv_icon_on(4, 5, 16, trk_icon(c, sel), sel ? T_ACCENT : T_MID, T_SURF);
+        cv_trk(4, 5, 16, c, sel ? T_ACCENT : T_MID, T_SURF);
         if (st)
             GFX_HOOK_ALIGN(0, 5, 0, 21, AL_V, "mixer badge on the cushion's line");
         if (st == 1u || st == 2u)                    /* REC (recording) / ARM (armed, stopped) */
@@ -2061,7 +2044,7 @@ static void graph_song(void)
         if (sel) cv_rrect(5, y, 182, 16, 4, T_THEME, T_SURF);
         if (i == end) {                                  /* the song's END */
             uint32_t e = SONG_END(&chain_config);
-            cv_icon_on(9, y + 2, 12, ICON_LOOP, sel ? T_INK : T_MID, bg);
+            cv_text(9, y + 2, &AF_S, "L", sel ? T_INK : T_MID);   /* (0.8.5: the loop, no icon) */
             cv_text_on(28, y + 1, &AF_S, "END", sel ? T_INK : T_MID, bg);
             if (e == SONG_FOREVER) str_cpy(b, "LOOP", sizeof b);
             else if (e >= 2u) { b[0] = 'x'; fmt_int(b + 1, (int32_t)e); }
@@ -2080,7 +2063,7 @@ static void graph_song(void)
             cv_text_on(110, y + 1, &AF_S, b, dim, bg);
             continue;
         }
-        if (play) cv_icon_on(8, y + 2, 12, ICON_X_RIGHT, sel ? T_INK : T_ACCENT, bg);
+        if (play) cv_text(8, y + 2, &AF_S, ">", sel ? T_INK : T_ACCENT);
         else { fmt_int(b, (int32_t)i + 1); cv_text_on(9, y + 1, &AF_S, b, sel ? T_INK : T_MID, bg); }
         {
             const chain_row_t *r = &chain_config.row[i];

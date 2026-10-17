@@ -241,7 +241,7 @@ static void graph_lz_presets(void)
         cv_free_text(94, y + CAP_IN(X, 14), &AF_X, nm, sel ? T_TEXT : T_MID, bg, 84);
         if (favorite_has(e, k)) {
             GFX_HOOK_ALIGN(0, y, 0, y + 14, AL_V, "sound preset star centred up/down");
-            cv_icon_in(180, y, 0, 14, 12, ICON_X_STAR, T_ACCENT, bg);
+            cv_text_on(182, y + CAP_IN(S, 14), &AF_S, "*", T_ACCENT, bg);   /* (a favourite; 0.8.5 no icons) */
         }
         GFX_HOOK_ALIGN(0, y, 0, y + 14, AL_V, "sound preset row centred up/down");
         cv_text_r(232, y + CAP_IN(X, 14), &AF_X, eng_abbr(en), T_DIM, bg);

@@ -148,7 +148,8 @@ Since 0.8.5 every page wears the skin of the design the owner approved (the HTML
   and a thin violet bar under the value. The one you are turning lights orange, so it is the only colour on the cards.
   A value that is automated or locked has its name in violet; a dim card means "nothing here now". An action armed
   (SAVE, LOAD, ERASE, CLEAR...) is a violet-tinted card with its name violet and **OCT+** as its value. The cards have
-  no icons since 0.8.5.
+  no icons since 0.8.5, and nothing else does (MENU > LARGE's cards: a violet dot for a value that moves on its own;
+  the header: "!" before a NO FILE message, a drawn lock and song disc).
 - **Page name**: changing page (or track) by hand shows the page's name over the footer for a moment, with the track and
   its engine at the right; on HOME the track's engine, "T1 HOME" small (on a lens page its breadcrumb lights up instead).
   The header, the cards and the graph stay in sight.

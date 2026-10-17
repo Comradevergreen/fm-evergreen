@@ -150,7 +150,9 @@ Desde la 0.8.5 todas las páginas llevan la piel del diseño que aprobó el due�
   blanco y una barra violeta fina debajo del valor. La que estás girando se enciende en naranja, así es el único color
   en las tarjetas. Un valor automatizado o con lock tiene el nombre en violeta; una tarjeta apagada significa "acá
   ahora no hay nada". Una acción armada (SAVE, LOAD, ERASE, CLEAR...) es una tarjeta teñida de violeta, con el nombre
-  violeta y **OCT+** como valor. Desde la 0.8.5 las tarjetas no llevan íconos.
+  violeta y **OCT+** como valor. Desde la 0.8.5 las tarjetas no llevan íconos, ni nada más (las tarjetas de MENU > LARGE:
+  un punto violeta para un valor que se mueve solo; el encabezado: "!" antes de un mensaje NO FILE, un candado y un
+  disco dibujados).
 - **Nombre de página**: al cambiar de página (o de pista) a mano, el nombre de la página aparece un momento sobre el pie
   de la pantalla, con la pista y su motor a la derecha; en HOME el motor de la pista, y "T1 HOME" en chico (en una
   página de lente se enciende su miga de pan). La barra de arriba, las tarjetas y el gráfico quedan a la vista.
