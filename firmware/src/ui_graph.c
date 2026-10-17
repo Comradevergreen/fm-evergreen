@@ -142,25 +142,6 @@ static void graph_steps(const track_t *t, uint16_t c)
 /* (0.6.92) the selected track's next 32 bars: a mark where its SOUND changes (warm) and where its PATTERN does (cool),
  * the bar now at the left; under it what it does (every project's steps written; ORBIT around the anchor OCT+ keeps,
  * DRIFT on and on) and the two hands */
-/* (0.6.99) FX > PUNCH: the punch-in lane as LEN cells (the effect's colour: octaves, tempo, decays, stutters, attack,
- * arp, random), the playhead on it, the targets and a line on how it records */
-static void graph_punch(void)
-{
-    static const char *const EF[10] = {"OCT-", "OCT+", "1/2", "DEC-", "DEC+", "ST8", "ST16", "ATK", "ARP", "RND"};
-    static const char *const TG[3] = {"ALL", "SYN", "DRM"};
-    uint32_t len = pfx_lane_len(), i, pos = song.playing ? pfx_lane_pos() : 0xFFu, n = 0, last = 0;
-    int32_t w = (PANEL_W - 8) / (int32_t)(len > 32u ? 32u : len), rows = len > 32u ? 2 : 1, r;
-    for (r = 0; r < rows; r++)
-        for (i = (uint32_t)r * 32u; i < len && i < (uint32_t)(r + 1) * 32u; i++) {
-            uint32_t e = pfx_lane_at(i);
-            int32_t x = PANEL_X0 + 4 + (int32_t)(i % 32u) * w, y = 40 + r * 22;
-            if (e && e <= 10u) { n++; last = e; }
-            if (i == pos) cv_rrect(x - 2, y - 2, w + 2, 22, 3, T_ACCENT, T_SURF);   /* (the playhead: a frame) */
-            cv_rrect(x, y, w - 2, 18, 2, e && e <= 10u ? heat_col(40 + e * 20u) : i % 4u == 0u ? T_RAISE : T_SURF, i == pos ? T_ACCENT : T_SURF);
-        }
-    cv_text(PANEL_X0 + 2, 88, &AF_S, n ? EF[last - 1u] : "EMPTY", n ? heat_col(40 + last * 20u) : T_DIM);
-    cv_text_r(PANEL_X0 + PANEL_W - 2, 88, &AF_S, pfx_rec_ok() ? "RECORDING" : TG[pfx_ltgt % 3u], pfx_rec_ok() ? T_ACCENT : T_MID, T_SURF);
-}
 static void graph_mutate(void)
 {
     const track_t *t = TSEL;
@@ -635,73 +616,6 @@ static void graph_scale(const track_t *t, uint16_t c)
 }
 static void panel_note(const char *a, const char *b, const char *c);
 static void panel_alert(uint32_t id, const char *a);
-/* the four sends as faders under their cards: a RAISE slot, the THEME fill from the bottom, a cap */
-static void graph_fx(const track_t *t, uint16_t c)
-{
-    uint32_t i;
-    for (i = 0; i < 4u; i++) {
-        int32_t h = t->p[P_DIST + i] * 76 / 127, x = CARD_X(i) + 26;
-        uint16_t hc = settings.palette == UI_JIANT_INDEX ? heat_col(t->p[P_DIST + i] * 256 / 127) : c;   /* (JIANT: heat) */
-        cv_rrect(x, 6, 4, 82, 2, T_RAISE, T_SURF);
-        if (h > 3)
-            cv_rrect(x, 88 - h, 4, h, 2, hc, T_RAISE);
-        cv_rrect(x - 4, 85 - h, 12, 6, 3, hc, T_SURF);
-    }
-}
-/* SLICER and SL BUS pages (JIANT 0.6.3: one, on a bus): the pattern's 16 steps, a 'x' step a full bar; a '.' step: GATE
- * a bar as high as it stays open (DEPTH), STUT hatched (it repeats the last 'x'); the step playing underlined. Under
- * them what goes in: T1..T6 and FX, lit ON. Grey when OFF */
-static void graph_slicer(uint16_t c)
-{
-    uint32_t i, pat = sl_pattern(), mode = (uint32_t)song.g[G_SLMODE], cur = sl.idx;
-    int32_t open = 52 - song.g[G_SLDEP] * 52 / 127;     /* px a closed GATE step keeps */
-    uint16_t col = mode == SL_OFF ? T_DIM : c;
-    for (i = 0; i < 16u; i++) {
-        int32_t x = bar_x(i), y;
-        if ((pat >> i) & 1u) {
-            cv_rrect(x, 8, 9, 54, 2, mode == SL_OFF ? T_RAISE : col, T_SURF);
-        } else if (mode == SL_STUT) {
-            for (y = 8; y < 62; y += 4)
-                cv_rect(x, y, 9, 1, col);
-        } else {
-            cv_rrect(x, 59, 9, 3, 1, T_RAISE, T_SURF);
-            if (open > 3)
-                cv_rrect(x, 62 - open, 9, open, 2, T_RAISE, T_SURF);
-        }
-        if (mode != SL_OFF && i == cur)
-            cv_rect(x, 65, 9, 2, T_ACCENT);
-    }
-    for (i = 0; i < NTRK + 1u; i++) {                   /* T1..T6, FX: in or not */
-        int32_t x = 8 + 32 * (int32_t)i, on = song.g[G_SLT1 + i] != 0;
-        uint16_t fill = on ? (mode == SL_OFF ? T_MID : c) : T_RAISE, ink = on ? T_INK : T_DIM;
-        char b[3] = {(char)('1' + i), 0, 0};
-        if (i == NTRK) { b[0] = 'F'; b[1] = 'X'; }
-        cv_rrect(x, 74, 26, 16, 4, fill, T_SURF);
-        GFX_HOOK_ALIGN(x, 74, x + 26, 90, AL_HV, "SLICER bus chip label centred");
-        cv_text_in(x, 74 + CAP_IN(S, 16), 26, &AF_S, b, ink, fill);
-    }
-}
-/* SL PITCH (JIANT 0.6.3): the repeats' 16 pitch steps as bars from the middle (+-24 semitones), past LEN dim, the one
- * KNOB 2 edits underlined, the one playing (STUT running) lit */
-static void graph_slpitch(uint16_t c)
-{
-    uint32_t i, len = (uint32_t)clamp(song.g[G_SLPLEN], 1, 16), now = song.g[G_SLMODE] == SL_STUT ? sl.idx % len : 0xFFu;
-    int32_t y0 = 46, hmax = 38;
-    cv_rect(10, y0, 220, 1, T_RAISE);
-    for (i = 0; i < 16u; i++) {
-        int32_t x = bar_x(i), v = song.g[G_SLP0 + i], h = v * hmax / 24;
-        uint16_t col = i >= len ? T_RAISE : i == now ? T_ACCENT : settings.palette == UI_JIANT_INDEX ?
-                       heat_col(128 + v * 5) : c;
-        if (h > 0)
-            cv_rrect(x, y0 - h, 9, h, 2, col, T_SURF);
-        else if (h < 0)
-            cv_rrect(x, y0 + 1, 9, -h, 2, col, T_SURF);
-        else
-            cv_rect(x, y0 - 1, 9, 3, col);
-        if (i == sl_ui_step)
-            cv_rect(x, y0 + hmax + 6, 9, 2, T_TEXT);
-    }
-}
 /* MOD page: the four slots as rows "1 LFO > CUT +50%", the one KNOB 2..4 edit selected, slots that do
  * nothing (SRC, DST or AMT at 0) dim */
 static void graph_mod(const track_t *t, uint16_t c)
@@ -1722,46 +1636,6 @@ static void panel_alert(uint32_t id, const char *a)
     cv_text_on(x + bi[2] + PA_GAP - bt[0], y, &AF_M, a, T_TEXT, T_SURF);
 }
 
-/* preset browser: the global list (every engine), the current one selected; tag DIM, name TEXT,
- * favourites starred (the accent), the selected row's suggested pattern at its right */
-static void graph_browse(void)
-{
-    uint32_t total, cur = preset_pos(&total), e, k;
-    int32_t row;
-    if (!total) {
-        panel_note("NO FAVORITES", "LIST ALL TO ADD SOUNDS", 0);
-        return;
-    }
-    for (row = -3; row <= 3; row++) {
-        int32_t y = LIST_Y(row + 3), x1 = 212;
-        char tag[6], nm[13], pt[4], pn[13];
-        uint32_t index = preset_visible(cur, total, (uint32_t)(row + 3));
-        int sel = index == cur;
-        int32_t hint = sel ? preset_pat_hint() : -1;    /* the suggested pattern */
-        if (index >= total) continue;
-        e = preset_at(index, &k);
-        if (e == NENGINES) {                             /* user preset: "U07" and its name */
-            up_slot_label(tag, k);
-            up_name(k, nm);
-        } else {
-            str_cpy(tag, eng_abbr(ENGINES[e]->name), sizeof tag);
-            str_cpy(nm, ENGINES[e]->presets[k].name, sizeof nm);
-        }
-        if (hint >= 0) {
-            pat_label((uint32_t)hint, pt, pn);
-            x1 = 206 - text_w(&AF_S, pt) - 6;
-        }
-        list_row(y, sel, tag, T_DIM, nm, T_TEXT, x1);
-        if (hint >= 0) {
-            GFX_HOOK_ALIGN(0, y, 0, y + 16, AL_V, "list row text centred up/down");
-            cv_text_r(206, y + CAP_IN(S, 16), &AF_S, pt, T_INK, T_THEME);
-        }
-        if (favorite_has(e, k)) {
-            GFX_HOOK_ALIGN(0, y, 0, y + 16, AL_V, "list row star centred up/down");
-            cv_icon_in(214, y, 0, 16, 12, ICON_X_STAR, sel ? T_INK : T_ACCENT, sel ? T_THEME : T_SURF);
-        }
-    }
-}
 /* the EDIT layer (ui_layer.c): the sound loaded, as the browser's selected row: "03" (its place in KNOB 2's list,
  * the engine's sounds) or "U07", the name, the star of a favourite */
 static void engine_sound_row(int32_t y)
@@ -1785,22 +1659,6 @@ static void engine_sound_row(int32_t y)
         cv_icon_in(214, y, 0, 16, 12, ICON_X_STAR, T_INK, T_THEME);
     }
     (void)total;
-}
-/* user preset slots around the selected one: "U07  NAME" / EMPTY */
-static void graph_user(void)
-{
-    int32_t row, first = clamp((int32_t)ui.uslot - 3, 0, UP_SLOTS - 7);
-    for (row = 0; row < 7; row++) {
-        uint32_t k = (uint32_t)(first + row);
-        char tag[4], nm[13];
-        int used = up_used(k);
-        up_slot_label(tag, k);
-        if (used)
-            up_name(k, nm);
-        else
-            str_cpy(nm, "--", sizeof nm);
-        list_row(LIST_Y(row), k == ui.uslot, tag, T_MID, nm, used ? T_TEXT : T_DIM, 232);
-    }
 }
 /* SEQ > PATTERNS: the pattern list around the one picked ("03  MELODY", "U07  MY BASS") */
 static void graph_pats(void)
@@ -1859,75 +1717,6 @@ static void graph_events(void)
             cv_text_r(226, y + CAP_IN(S, 16), &AF_S, b, sel ? T_INK : T_TEXT, bg);
         }
     }
-}
-/* (0.6.12) SAVE > TOOLS: a list of what it can do (on what: the track, the song's row), the one picked (KNOB 1 or
- * PRESETS, 0.6.25: was a knob each) filled; OCT+ does it (a dialog first) */
-static void graph_tools(void)
-{
-    static const char *const WHAT[6] = {"CLEAR SEQ", "INIT SOUND", "DELETE ROW", "CLEAR SONG", "NEW PROJECT", "CPU TEST"};
-    static const char *const ON[6] = {"STEPS + AUTO", "ENGINE DEFAULT", "", "ALL ROWS", "EVERYTHING", "HEAVY SONG"};
-    uint32_t c;
-    char b[24];
-    for (c = 0; c < 6u; c++) {
-        int32_t y = LIST_Y(c);
-        int sel = ui.act == c + 1u;
-        uint16_t bg = sel ? T_THEME : T_SURF;
-        b[0] = (char)('1' + c); b[1] = 0;               /* (0.6.25: a list, KNOB 1 / PRESETS: was a knob each) */
-        list_row(y, sel, b, T_MID, WHAT[c], T_TEXT, 150);
-        if (c == 2u) {                                   /* (the row SONG has picked) */
-            str_cpy(b, "ROW ", sizeof b);
-            fmt_int(b + 4, (int32_t)ui.song_row + 1);
-            cv_text_r(226, y + CAP_IN(S, 16), &AF_S, b, sel ? T_INK : T_DIM, bg);
-        } else {
-            cv_text_r(226, y + CAP_IN(S, 16), &AF_S, ON[c], sel ? T_INK : T_DIM, bg);
-        }
-    }
-    note_line(LIST_Y(6), ui.act ? "[OCT+] DO IT" : "TURN [K1] TO PICK", ui.act ? T_ACCENT : T_DIM);
-}
-/* (0.6.12) SAVE > PROJECT: the project (one of NSONG: a song of storage.c) and its four sections. A title line
- * (PROJECT n, the section the music came from or went to), the sections A-D (name, USED or --; the one picked filled;
- * the music's: NOW; the bars each plays in the project's song), then the song (ARRANGE) in a line: A4 > B8 > .. */
-static void graph_slots(void)
-{
-    uint32_t i, r, bars[4] = {0, 0, 0, 0};
-    char b[40];
-    for (r = 0; r < chain_config.count && r < CHAIN_ROWS; r++)
-        bars[chain_config.row[r].slot & 3u] += chain_config.row[r].bars;
-    str_cpy(b, "PROJECT ", sizeof b);
-    fmt_int(b + 8, (int32_t)song_cur + 1);
-    cv_text_on(14, LIST_Y(0) + CAP_IN(S, 16), &AF_S, b, T_ACCENT, T_SURF);
-    str_cpy(b, "OF ", sizeof b);
-    fmt_int(b + 3, (int32_t)NSONG);
-    cv_text_r(226, LIST_Y(0) + CAP_IN(S, 16), &AF_S, b, T_DIM, T_SURF);
-    for (i = 0; i < 4u; i++) {
-        int32_t y = LIST_Y(i + 1u);
-        int sel = (int32_t)i + 1 == song.g[G_SLOT], used = graph_project_used(i), now = live.cur == (int8_t)i;
-        const char *n = graph_project_name(i);
-        uint16_t bg = sel ? T_THEME : T_SURF;
-        b[0] = (char)('A' + i);
-        b[1] = 0;
-        list_row(y, sel, b, now ? T_ACCENT : T_MID, !used ? "--" : n[0] ? n : "USED", used ? T_TEXT : T_DIM, 150);
-        if (bars[i]) {                               /* (its bars in the song) */
-            fmt_int(b, (int32_t)bars[i]);
-            str_cpy(b + str_len(b), " BAR", 8);
-            cv_text_r(now ? 190 : 226, y + CAP_IN(S, 16), &AF_S, b, sel ? T_INK : T_DIM, bg);
-        }
-        if (now) cv_text_r(226, y + CAP_IN(S, 16), &AF_S, "NOW", sel ? T_INK : T_ACCENT, bg);
-    }
-    if (!chain_config.count)
-        str_cpy(b, "NO SONG YET: SAVE > ARRANGE", sizeof b);
-    else {
-        uint32_t n = 0;
-        for (r = 0; r < chain_config.count && n + 6u < sizeof b; r++) {
-            if (r) { b[n++] = '>'; }
-            b[n++] = (char)('A' + (chain_config.row[r].slot & 3u));
-            fmt_int(b + n, chain_config.row[r].bars);
-            n = str_len(b);
-        }
-        if (r < chain_config.count) { b[n++] = '.'; b[n++] = '.'; }
-        b[n] = 0;
-    }
-    cv_free_text(14, LIST_Y(5) + 2 + CAP_IN(S, 16), &AF_S, b, chain_config.count ? T_THEME : T_DIM, T_SURF, 226 - 14);
 }
 /* MIXER page: four SURF columns, one under each card: the track number on its cushion (in the accent:
  * the selected track) with a REC / ARM / MUTE badge (P_MUTE, KNOB 1), the sound's short name (a MUTE badge
@@ -2432,9 +2221,6 @@ static void draw_graph(void)
         case GR_MUTATE:
             graph_mutate();
             break;
-        case GR_PUNCH:
-            graph_punch();
-            break;
         case GR_MORPH:
             graph_morph(t);
             break;
@@ -2460,30 +2246,9 @@ static void draw_graph(void)
         case GR_SCALE:
             graph_scale(t, c);
             break;
-        case GR_FX:
-            graph_fx(t, c);
-            break;
-        case GR_SLCR:
-            graph_slicer(c);
-            break;
-        case GR_SLPIT:
-            graph_slpitch(c);
-            break;
         case GR_MOD:
             cv_oy = 0;
             graph_mod(t, c);
-            break;
-        case GR_BROWSE:
-            cv_oy = 0;
-            graph_browse();
-            break;
-        case GR_SLOTS:
-            cv_oy = 0;
-            graph_slots();
-            break;
-        case GR_USER:
-            cv_oy = 0;
-            graph_user();
             break;
         case GR_MSEQ:
             graph_mseq(t, c);
@@ -2510,10 +2275,6 @@ static void draw_graph(void)
         case GR_DXSND:                               /* EDIT > SOUND: the kit's lanes, the sound edited singled out */
             cv_oy = 0;
             graph_colony(t, dx_ui_lane);
-            break;
-        case GR_TOOLS:                               /* (0.6.12) what each knob does, the one picked filled */
-            cv_oy = 0;
-            graph_tools();
             break;
         default:
             if (pg->scope == SC_ENGINE && ENGINES[t->eng_req % NENGINES] == &ENG_WHEEL) graph_wheel(t, c);
