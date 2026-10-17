@@ -659,7 +659,7 @@ enum { S_HOME, S_HOME_IDLE, S_MESSAGE, S_MESSAGE_KEY, S_MESSAGE_NOFILE, S_PRESET
        S_FXL_SENDS, S_FXL_DIST, S_FXL_PAN, S_FXL_BUSES, S_FXL_DELAY, S_FXL_DELAY2, S_FXL_REVERB, S_FXL_SLICER, S_FXL_MASTER,
        S_HOME_MACROS, S_HOME_BEING, S_HOME_ROUTES, S_GEN_LEAD,
        S_ED_FILTER, S_ED_FILTER_BP, S_ED_VOICE2, S_ED_FOCUS, S_ED_FOCUS_MOD, S_ED_OPERATOR,
-       S_ENV_TRACKS, S_ENV_TRACKS_DEST, S_ENV_STAGE, S_ENV_STAGE_SUS, S_MSEQ2, S_KEY_CHORD, S_KEY_CHORD_OFF, S_KEY_ARP, S_KEY_ARP2, S_GLO_SENDS,
+       S_ENV_TRACKS, S_ENV_TRACKS_DEST, S_ENV_STAGE, S_ENV_STAGE_SUS, S_MSEQ2, S_KEY_CHORD, S_KEY_CHORD_OFF, S_KEY_ARP, S_KEY_ARP2, S_GLO_SENDS, S_MENU_ROW, S_MENU_ROW_LEDS,
        S_MIXER_T4, S_HOME_T4, S_MOCK_HOME, S_MOCK_PRESETS, S_MOCK_SEQ, S_MOCK_DRUM, S_MOCK_MIXER, S_MOCK_DIALOG, S_MOCK_MENU, S_COUNT };
 static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "message", "message_key", "message_nofile", "presets", "presets_nofav", "user",
     "phrases", "project", "tools", "song_empty", "song", "step", "pattern", "chance", "comp", "comp_trig", "comp_echo", "mutate", "morph", "dx_image", "dx_send", "page_flash", "page_flash_home", "fugue", "motion", "drum",
@@ -686,7 +686,7 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "message", "mes
     "fx_effect_slicer", "fx_effect_master",
     "home_macros", "home_being", "home_routes", "gen_lead",
     "ed_filter", "ed_filter_bp", "ed_voice2", "ed_focus", "ed_focus_mod", "ed_operator",
-    "env_tracks", "env_tracks_dest", "env_stage", "env_stage_sus", "mseq2", "key_chord", "key_chord_off", "key_arp", "key_arp2", "glo_sends",
+    "env_tracks", "env_tracks_dest", "env_stage", "env_stage_sus", "mseq2", "key_chord", "key_chord_off", "key_arp", "key_arp2", "glo_sends", "menu_row", "menu_row_leds",
     "mixer_tracks4", "home_tracks4", "mock_home", "mock_presets", "mock_seq", "mock_drum", "mock_mixer", "mock_dialog", "mock_menu"};
 
 /* the scenes of the UI design screens: the state the UI-redesign
@@ -989,6 +989,8 @@ static void setup(int s)
     case S_ENV_STAGE: case S_ENV_STAGE_SUS:
         go_title("STAGE"); ui.stage = s == S_ENV_STAGE ? 1 : 2; ui.hot_col = 1; ui.hot_t = 30; break;
     case S_MSEQ2: go_title("MSEQ 2"); break;
+    case S_MENU_ROW: case S_MENU_ROW_LEDS:             /* (0.8.5) the menu's lens, ROW: COLOR's palettes, LEDS's names */
+        ui.menu = 1; ui.mlv = 2; ui.menu_sel = s == S_MENU_ROW ? MI_COLOR : MI_LEDS; break;
     case S_GLO_SENDS:                                  /* (0.8.5) GLO's lens: MIX > SENDS */
         trk[0].p[P_DIST] = 30; trk[1].p[P_CHOR] = 90; trk[2].p[P_DLY] = 60; trk[3].p[P_REV] = 127; trk[4].p[P_MUTE] = 1;
         go_title("SENDS"); ui.hot_col = 2; ui.hot_t = 30;
@@ -1387,8 +1389,7 @@ static void draw(int s)
         return;
     }
     ui.force = 1;
-    mt.frame = ui.frame + 7u;                         /* (the MENU's tabs settled, as when it opens) */
-    if (s == S_MENU_SLIDE) mt.pos = 0, mt.frame = ui.frame;   /* (one step of the slide from DISPLAY) */
+    if (ui.menu == 1 && !ui.mlv && s != S_MENU_SLIDE) ui.mlv = 1;   /* (0.8.5: the lens at TAB, as it opens; S_MENU_SLIDE: MENU) */
     ui_draw();
 }
 
@@ -1642,13 +1643,13 @@ static void align_sweeps(void)
                 settings_leds = (uint8_t)(k % LEDS_COUNT); ui.force = 1;   /* (every LEDS name) */
                 draw_menu();
             }
-        cur_name = st ? "sweep LINE: menu tabs sliding" : "sweep FLAT: menu tabs sliding";
-        for (i = 0; i < MI_COUNT; i++)                  /* every tab, from every place of the bar, S and M */
-            for (k = 0; k <= (MTAB_COUNT - 1u) * 16u; k++) {
-                ui.menu_sel = (uint8_t)i; ui_prefs = k & 1u ? PREF_LARGE : 0u;
-                mt.pos = (int16_t)(k * 4u); mt.frame = ui.frame - 1u; ui.force = 1;
+        cur_name = st ? "sweep LINE: menu levels" : "sweep FLAT: menu levels";
+        for (i = 0; i < MI_COUNT; i++)                  /* (0.8.5) every row on each level of the lens, S and LARGE */
+            for (k = 0; k < 6u; k++) {
+                ui.menu_sel = (uint8_t)i; ui_prefs = k & 1u ? PREF_LARGE : 0u; ui.mlv = (uint8_t)(k / 2u); ui.force = 1;
                 draw_menu();
             }
+        ui.mlv = 1;
         ui.menu = 0; ui_prefs = 0; ui_rec_prefs = 0; settings_hold = 0; settings.lowcut = 0; settings_leds = 0;
         cur_name = st ? "sweep LINE: REC layer values" : "sweep FLAT: REC layer values";
         ui.home = 1; ui.layer = LAYER_REC;              /* (the map and the cards: every value of the three, each track) */

@@ -538,6 +538,10 @@ JIANT's modifications are distributed under the same license.
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
 
 ### v0.8.5
+- **The MENU is a lens, as the approved mock-up**: SELECT zooms **MENU · TAB · ROW** (it opens at TAB). MENU: the four
+  tabs as tiles with their rows and values; TAB: the rows, the selected row's four as cards (ROWS 1–4 / 5–6); ROW: the
+  row's values as chips (COLOR: each palette's colours). The header says MENU · DISPLAY; ALGORITHM, PRESETS, the knobs
+  and OCT± as before; ABOUT as before. The tab icons, the switches and the sliding bar are gone.
 - **GLO is a lens, as the approved mock-up**: **MIX · GLOBAL · SYSTEM**; a GLO tap goes MIXER → SENDS → GLOBAL →
   SYSTEM → MIXER. SENDS is new: each track's DIST, CHORUS, DLY and REV as bars, the knobs the selected track's (as FX >
   SENDS). SYSTEM draws the tracks that play, LOAD's three settings, MIDI's route and the CPU load as a line (was the

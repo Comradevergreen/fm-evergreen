@@ -1581,6 +1581,12 @@ la pista seleccionada.
 
 ### El MENU (mantené HOME)
 
+(0.8.5) Es una lente, como la maqueta: **SELECT** hace zoom **MENU · TAB · ROW** (abre en TAB). **MENU**: las cuatro
+pestañas como mosaicos con sus filas y valores (PRESETS elige la pestaña); **TAB**: las filas de la pestaña, las cuatro
+de la fila elegida como tarjetas (ROWS 1–4 / ROWS 5–6) con el número de su perilla; **ROW**: los valores de la fila
+elegida como fichas (COLOR: los colores de cada paleta), las tarjetas TAB, ROW y su valor. El encabezado dice MENU ·
+DISPLAY. ALGORITHM, PRESETS, cualquier perilla y OCT+ / OCT− como antes.
+
 **ALGORITHM** cambia de pestaña, **PRESETS** se mueve entre filas, **cualquier perilla** u **OCT+ / OCT−** cambia el
 valor. HOME lo cierra (en ese momento se guarda la configuración).
 

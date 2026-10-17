@@ -1494,7 +1494,10 @@ track.
 ### The MENU (hold HOME)
 
 **ALGORITHM** switches tabs, **PRESETS** moves between rows, **any knob** or **OCT+ / OCT−** changes the value. HOME
-closes it (settings are saved then).
+closes it (settings are saved then). (0.8.5) It is a lens, as the mock-up: **SELECT** zooms **MENU · TAB · ROW** (it
+opens at TAB). **MENU**: the four tabs as tiles with their rows and values (PRESETS picks the tab); **TAB**: the tab's
+rows, the selected row's four as cards (ROWS 1–4 / ROWS 5–6) with their knob's number; **ROW**: the selected row's
+values as chips (COLOR: each palette's colours), the cards TAB, ROW and its value. The header says MENU · DISPLAY.
 
 | Tab | Row | Values |
 | --- | --- | --- |

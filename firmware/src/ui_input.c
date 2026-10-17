@@ -2160,6 +2160,7 @@ static void ui_input_frame(void)
             menu_close();
         } else {
             ui.menu = 1;                                /* (at the tab and row it was left at) */
+            ui.mlv = 1;                                 /* (0.8.5: the lens at TAB, its rows) */
             ui.confirm = 0;                             /* (a clear dialog is cancelled, NAME too) */
             name_close();
             ui.force = 1;

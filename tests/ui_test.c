@@ -1915,6 +1915,8 @@ static int test_display_preferences(void)
  * page in S and LARGE; ALGORITHM between the tabs (wraps, back at a tab's last row), PRESETS within one (wraps), any of
  * KNOB 1..4 and OCT+ / OCT- change a value, OCT+ opens CALIBRATION and ABOUT, HOME closes (OCT- not); reopened at the
  * same tab and row; the tabs slide with ANIM ON (only their strip drawn again), snap with ANIM OFF */
+static int lz_tab_lit(uint32_t l);                 /* (0.8.5: below, with the lenses' tests) */
+static int lz_crumb_is(const char *s);
 static void wdt_ms(void) { fm1_ms++; }
 static void wdt_key(void) { fm1_ms++; if (fm1_ms % 50u == 0u) fm1_in.notes = 1u; }   /* a key pressed after a moment */
 static int test_menu_tabs(void)
@@ -1927,27 +1929,13 @@ static int test_menu_tabs(void)
         ok &= n >= 1u && n <= MTAB_ROWS && f < MI_COUNT;
         for (i = 0; i < MI_COUNT; i++)                  /* its rows in one run */
             ok &= (MI_TAB[i] == t) == (i >= f && i < f + n);
-        ui.menu_sel = (uint8_t)f;
-        ui_prefs = 0;
-        ok &= mr_y(n) - mr_gap() + MP_PAD <= MK_Y - 6;
-        ui_prefs = PREF_LARGE;
-        ok &= mr_y(n) - mr_gap() + MP_PAD <= MK_Y - 6;
+        ok &= 15 + (int32_t)n * 20 <= LZ_GRAPH_H;      /* (0.8.5 the lens: TAB's rows in the panel) */
+        for (i = f; i < f + n; i++)                     /* .. ROW's chips, every value */
+            ok &= i >= MI_VALUES || 16 + (int32_t)((menu_n(i) + 2u) / 3u) * 20 <= LZ_GRAPH_H;
     }
-    ok &= MP_Y + MP_PAD + (int32_t)MTAB_ROWS * 25 - 1 + MP_PAD <= MK_Y - 6;   /* (room for MTAB_ROWS: 24 px rows 1 px apart) */
     for (i = 0; i < MI_COUNT; i++) ok &= MI_TAB[i] < MTAB_COUNT;
-    {   /* the tab bar: MT_GAP between every two tabs at every place of the slide, inside MT_X0..MT_X1 (S and LARGE) */
-        int32_t a[MTAB_COUNT], x[MTAB_COUNT], w[MTAB_COUNT], p;
-        for (n = 0; n < 2u; n++)
-            for (p = 0; p <= (int32_t)(MTAB_COUNT - 1u) * MT_ONE; p++) {
-                ui_prefs = n ? PREF_LARGE : 0u;
-                mt.pos = (int16_t)p;
-                mt_layout(a, x, w);
-                ok &= x[0] >= MT_X0 && x[MTAB_COUNT - 1u] + w[MTAB_COUNT - 1u] <= MT_X1;
-                for (t = 1; t < MTAB_COUNT; t++) ok &= x[t] - (x[t - 1u] + w[t - 1u]) == MT_GAP;
-            }
-    }
     ui_prefs = 0;
-    bad += check("MENU tabs: DISPLAY CONTROL AUDIO SYSTEM (6 6 6 6 rows), 1..6 each in a run, fit the page; tab gaps constant (S, LARGE)",
+    bad += check("MENU tabs: DISPLAY CONTROL AUDIO SYSTEM (6 6 6 6 rows), 1..6 each in a run, their rows and values fit the lens's panel",
                  ok && MTAB_COUNT == 4u && str_eq(MTAB_NAME[0], "DISPLAY") && mtab_rows(MTAB_DISPLAY) == 6u &&
                  mtab_rows(MTAB_CONTROL) == 6u && mtab_rows(MTAB_AUDIO) == 6u && mtab_rows(MTAB_SYSTEM) == 6u);   /* (0.6.58: INIT SYSTEM;
                                                                          * 0.6.72: MIDI OUT in CONTROL) */
@@ -2098,24 +2086,29 @@ static int test_menu_tabs(void)
     menu_close();
     bad += check("MENU: HOME closes ABOUT too; reopened at the tabs; a value row breathes OCT- / OCT+ where they can go", ok);
 
-    /* the slide: ANIM ON, a few frames from DISPLAY to CONTROL drawing only the tab strip; ANIM OFF, at once */
+    /* (0.8.5) the lens: it opens at TAB; SELECT zooms MENU <-> TAB <-> ROW (no wrap), the tabs and the breadcrumb follow;
+     * PRESETS on MENU the tab, on TAB and ROW the row; any knob the selected row's value on every level */
     ui_power_on();
     hold(B_HOME);
     frame();
-    turn(EN_ALGO, 1);
-    ok = mt.pos > 0 && mt.pos < MT_ONE;                 /* (a step on the way) */
-    host_blit_rows = 0; frame();
-    ok &= host_blit_rows == (uint32_t)(MP_Y - H_HEAD);  /* (only the strip) */
-    for (i = 0; i < 8u && mt.pos != MT_ONE; i++) frame();
-    ok &= mt.pos == MT_ONE && i <= 6u;
-    host_blit_rows = 0; frame();
-    ok &= host_blit_rows == 0u;                         /* (settled: nothing drawn) */
-    ui_prefs |= PREF_ANIM_OFF;
-    turn(EN_ALGO, 1);
-    ok &= mt.pos == 2 * MT_ONE;
-    ui_prefs &= ~PREF_ANIM_OFF;
+    ok = ui.menu == 1 && ui.mlv == 1u && lz_on() && lz_fam() == LZ_MENU && lz_tab_lit(1) && lz_crumb_is("LENTE \xB7 TAB \xB7 ROWS 1-4");
+    turn(EN_SELECT, -1); frame();
+    ok &= ui.mlv == 0u && lz_tab_lit(0) && lz_crumb_is("LENTE \xB7 MENU \xB7 TABS");
+    turn(EN_SELECT, -1); frame();
+    ok &= ui.mlv == 0u && ui.menu == 1;
+    turn(EN_PRESET, 1); frame();
+    ok &= menu_tab() == MTAB_CONTROL;
+    turn(EN_SELECT, 2); frame();
+    ok &= ui.mlv == 2u && lz_tab_lit(2) && lz_crumb_is("LENTE \xB7 ROW \xB7 ROW");
+    turn(EN_PRESET, 1); turn(EN_PRESET, 1); frame();
+    ok &= ui.menu_sel == MI_LATCH;
+    turn(EN_K3, 1); frame();
+    ok &= (fx_latch & 1u) != 0u;
+    turn(EN_K3, -1); frame();
+    turn(EN_SELECT, -1); turn(EN_PRESET, 1); turn(EN_PRESET, 1); turn(EN_PRESET, 1); frame();
+    ok &= ui.mlv == 1u && ui.menu_sel == MI_SCLLED + 1u && lz_crumb_is("LENTE \xB7 TAB \xB7 ROWS 5-6");
     menu_close();
-    bad += check("MENU tabs slide with ANIM ON (their strip only, settled within 6 frames), snap with ANIM OFF", ok);
+    bad += check("0.8.5 MENU as a lens: opens at TAB; SELECT MENU <-> TAB <-> ROW; PRESETS the tab on MENU, the row elsewhere; any knob the value", ok);
     return bad;
 }
 
