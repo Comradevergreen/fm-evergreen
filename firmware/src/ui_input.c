@@ -1557,7 +1557,7 @@ static int pd_presets(int32_t s)
         else {
             edit_param(0, s);
             ui.hot_col = 0;
-            ui.hot_t = 40;
+            ui.hot_t = 40, ui.knob_ms = fm1_ms;
         }
         return 1;
     }
@@ -1604,7 +1604,7 @@ static void presets_turn(int32_t s)
     } else if (g == GR_ROLL && pg->id[0] == 4u) {         /* (0.6.81) SEQ > NOTE (KNOB 1 FOCUS): PRESETS the step */
         cursor_set(ui.cursor + s);
         ui.hot_col = 0;
-        ui.hot_t = 40;
+        ui.hot_t = 40, ui.knob_ms = fm1_ms;
     } else if (g == GR_ROLL || g == GR_CHANCE || g == GR_COMP || g == GR_USER || g == GR_SLOTS || g == GR_PATS || g == GR_SONG ||
                g == GR_EVENTS || g == GR_TOOLS) {
         uint32_t c = g == GR_SLOTS && !save_on() ? 1u : 0u;   /* (0.6.12 PROJECT: the list is the sections, KNOB 2's;
@@ -1612,7 +1612,7 @@ static void presets_turn(int32_t s)
                                                          * section on PROJECT) */
         edit_param(c, s);                                 /* KNOB 1's (STEP: STOP TO EDIT while a song plays) */
         ui.hot_col = (uint8_t)c;
-        ui.hot_t = 40;
+        ui.hot_t = 40, ui.knob_ms = fm1_ms;
     } else if (pg->fam == FAM_SEQ && (g == GR_STEPS || g == GR_MOTION)) {
         cursor_set(ui.cursor + s);                        /* (PATTERN draws it; MOTION: STEP shows it) */
     } else if (g != GR_TOOLS) {
@@ -1756,6 +1756,14 @@ static void dice_panel(void)
     dice_side(1, 124);
     cv_rect(0, 0, 4, 148, T_BG);
     cv_rect(236, 0, 4, 148, T_BG);
+    {   /* (0.8.9 COLORS: the panel's corners rounded, as the lens's) */
+        int32_t j, i;
+        for (j = 0; j < 4; j++)
+            for (i = 0; i < 4 - j - (j == 0); i++) {
+                cv_pset(4 + i, j, T_BG); cv_pset(235 - i, j, T_BG);
+                cv_pset(4 + i, 147 - j, T_BG); cv_pset(235 - i, 147 - j, T_BG);
+            }
+    }
     cv_blit(0, LZ_CARD_Y);
 }
 static void dk_keep(uint32_t kind)
@@ -2231,7 +2239,7 @@ static void ui_input_frame(void)
         if (ks[k]) {
             layer_knob(k, ks[k]);
             ui.hot_col = (uint8_t)k;
-            ui.hot_t = 40;
+            ui.hot_t = 40, ui.knob_ms = fm1_ms;
         }
     song.grid = (uint8_t)keys_mode();                 /* (the menu, a dialog: the keys play again; NAME: silent) */
     if (home == BT_TAP && ui.menu) {                    /* HOME (pressed, or held) closes the menu, from ABOUT too; */
@@ -2572,14 +2580,14 @@ static void ui_input_frame(void)
         if ((held = lock_held()) != 0u) {               /* a step held on STEP: KNOB k locks (parameter locks) */
             lock_turn(k, s, held);
             ui.hot_col = (uint8_t)k;
-            ui.hot_t = 40;
+            ui.hot_t = 40, ui.knob_ms = fm1_ms;
             continue;
         }
         if (ui.home || pg->scope == SC_STEP || pg->scope == SC_TRK || page_desc(pg, k, &hv) ||
             ((pg->graph == GR_USER || pg->graph == GR_MOD || pg->graph == GR_MSEQ || pg->graph == GR_PATS) && k == 0u)
             || pg->graph == GR_SONG || pg->graph == GR_DXSND || pg->graph == GR_FOCUS || pg->graph == GR_STAGE) {   /* (not an empty column) */
             ui.hot_col = (uint8_t)k;
-            ui.hot_t = 40;
+            ui.hot_t = 40, ui.knob_ms = fm1_ms;
         }
         if (home_macros()) {                            /* (0.8.5) HOME's MACROS / ROUTES: M1..M4 */
             macro_v[k] = (uint8_t)clamp(macro_v[k] + accel(EN_K1 + k, s, 127), 0, 127);

@@ -62,9 +62,11 @@ def preset(name):
                 ("M", v + "SemiBold.ttf", 15, (32, 126), EXTRAS, -0.05, PHASES),
                 ("L", v + "Bold.ttf", 28, (32, 32), [ord(c) for c in L_CHARS[1:]], 0.0, PHASES_L)]
     if name == "jiant-lab":                    # JIANT 0.6.56: the landing's faces (SIL OFL 1.1, Google Fonts): Chakra Petch
-        f = FONTS.parent / "assets" / "fonts"  # for labels and (0.7.7, the polish) values again, Michroma for the big titles
+        f = FONTS.parent / "assets" / "fonts"  # for labels and (0.7.7, the polish) values again, Michroma for the big titles;
+        # (0.8.9, the skins' mock-up "Sans 0.6") the values and the header's BPM in a rounded sans again, as the 0.6 had
+        # them: Inter Tight SemiBold
         return [("S", str(f / "ChakraPetch-Medium.ttf"), 12, (32, 126), EXTRAS, -0.055, PHASES),
-                ("M", str(f / "ChakraPetch-SemiBold.ttf"), 15, (32, 126), EXTRAS, -0.05, PHASES),
+                ("M", str(f / "InterTight[wght].ttf") + "@600", 15, (32, 126), EXTRAS, 0.0, PHASES),
                 ("L", str(f / "Michroma-Regular.ttf"), 18, (32, 32), [ord(c) for c in L_CHARS[1:]], 0.0, PHASES_L)]
     if name == "inter-tight":
         v = str(FONTS.parent / "assets" / "fonts" / "InterTight[wght].ttf")   # SIL OFL 1.1, Google Fonts

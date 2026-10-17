@@ -138,9 +138,9 @@ int main(int argc, char **argv)
     palette_set(6);
     cv_begin(3, 1, T_BG); cv_text(0, 0, &probe, "A", T_THEME);
     assert(swap16(cv_px[1]) != green);
-    /* fonts: Chakra Petch (JIANT 0.5) S 12 px; (0.6.56) M IBM Plex Mono 15 px on Chakra Petch's line (raised 1 px), L Michroma
+    /* fonts: Chakra Petch (JIANT 0.5) S 12 px; (0.8.9) M Inter Tight SemiBold 15 px (the values, as the 0.6), L Michroma
      * 18 px; tabular digits; the ellipsis; L has capitals only */
-    assert(AF_S.h == 16 && AF_S.asc == 12 && AF_M.h == 20 && AF_M.asc == 15 && AF_L.h == 26 && AF_L.asc == 21);
+    assert(AF_S.h == 16 && AF_S.asc == 12 && AF_M.h == 19 && AF_M.asc == 15 && AF_L.h == 26 && AF_L.asc == 21);
     assert(text_w(&AF_M, "0000") == text_w(&AF_M, "1111") && text_w(&AF_S, "1.25") == text_w(&AF_S, "8.75"));
     assert(glyph(&AF_S, (uint8_t)ELLIPSIS) != glyph(&AF_S, '?') && glyph(&AF_M, (uint8_t)ELLIPSIS) != glyph(&AF_M, '?'));
     assert(text_w(&AF_L, "abc") == text_w(&AF_L, "ABC"));

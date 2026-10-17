@@ -157,7 +157,7 @@ static int preferences(void)
         host_wire[n0 - 23] == 0 &&                        /* (no bank since 1.0.3) */
         host_wire[n0 - 22] == 0x53 && host_wire[n0 - 21] == 1 && host_wire[n0 - 20] == 3 &&
         host_wire[n0 - 19] == 0x50 && host_wire[n0 - 18] == 1 && host_wire[n0 - 17] == 3 &&   /* FM6 v2: no bank, preset patches */
-        host_wire[n0 - 16] == 0x4E && host_wire[n0 - 15] == 1 && host_wire[n0 - 14] == 21 &&   /* MENU settings: 21 items (0.6.72: MIDI OUT) */
+        host_wire[n0 - 16] == 0x4E && host_wire[n0 - 15] == 1 && host_wire[n0 - 14] == 22 &&   /* MENU settings: 22 items (0.6.72: MIDI OUT; 0.8.9 SKIN) */
         host_wire[n0 - 13] == 0x52 && host_wire[n0 - 12] == 1 && host_wire[n0 - 11] == 4 &&   /* RATCH */
         host_wire[n0 - 10] == 0x4C && host_wire[n0 - 9] == 1 && host_wire[n0 - 8] == 1 &&   /* 1.1 parameter locks */
         host_wire[n0 - 7] == 0x56 && host_wire[n0 - 6] == 1 && host_wire[n0 - 5] == 32 &&   /* (0.6.11) FM6 voice bank */
@@ -840,13 +840,15 @@ static int menu_protocol(void)
         bad += check("MENU_DESC: the tab comes after every byte of the 1.0.4 reply (older editors ignore it)", ok);
     }
     ok = 1;
-    for (i = 0; i < 21u; i++) {
+    for (i = 0; i < 22u; i++) {
         menu_desc(i, &it);
         ok &= strcmp(it.name, "CALIBRATION") && strcmp(it.name, "ABOUT");
+        if (i == 20u) ok &= !strcmp(it.name, "MIDI OUT") && it.id == 20;   /* (0.6.72) */
     }
-    ok &= !strcmp(it.name, "MIDI OUT") && it.id == 20;   /* (0.6.72) */
-    n = menu_desc(21, &it);
-    ok &= n == 2u && it.index == 21 && it.id == 127;
+    ok &= !strcmp(it.name, "SKIN") && it.id == 21 && it.tab == 0 && it.value == 0 && it.max == 2 &&   /* (0.8.9) DISPLAY */
+          !strcmp(it.names[0], "COLORS") && !strcmp(it.names[1], "BOTTOM") && !strcmp(it.names[2], "HUD");
+    n = menu_desc(22, &it);
+    ok &= n == 2u && it.index == 22 && it.id == 127;
     n = menu_desc(127, &it);
     bad += check("MENU_DESC: no CALIBRATION / ABOUT; an index past the list answers index, 127 (no item)",
                  ok && n == 2u && it.index == 127 && it.id == 127);
@@ -898,6 +900,8 @@ static int menu_protocol(void)
     ok &= menu_set(5, 8191) == 3 && ed_rv(host_wire + 7) == 3 && settings_hold == 3u;
     ok &= menu_set(2, 7) == 3 && ed_rv(host_wire + 7) == 1 && (ui_prefs & PREF_LARGE);
     ok &= menu_set(14, 9) == 3 && ed_rv(host_wire + 7) == 2 && cin_bars == 2u;
+    ok &= menu_set(21, 2) == 3 && ed_rv(host_wire + 7) == 2 && ui_skin == SKIN_HUD;   /* (0.8.9) SKIN HUD */
+    ok &= menu_set(21, 0) == 3 && ui_skin == SKIN_COLORS;
     ok &= menu_set(12, -1) == 3 && ed_rv(host_wire + 7) == 0 && click_mode == CLICK_OFF;
     bad += check("MENU_SET: out-of-range values clamped, the reply says the value the device took", ok);
 
@@ -906,7 +910,7 @@ static int menu_protocol(void)
         static uint8_t fav0[sizeof favorites], set0[sizeof settings];
         uint8_t hold0 = settings_hold, leds0 = settings_leds;
         memcpy(fav0, &favorites, sizeof favorites); memcpy(set0, &settings, sizeof settings);
-        ok = menu_set(21, 1) == 1 && host_wire[6] == 21 && ed_rv(host_wire + 7) == 1;
+        ok = menu_set(22, 1) == 1 && host_wire[6] == 22 && ed_rv(host_wire + 7) == 1;
         ok &= menu_set(126, -3) == 1 && host_wire[6] == 126 && ed_rv(host_wire + 7) == -3;
         ok &= menu_set(127, 0) == 1 && host_wire[6] == 127;
         ok &= !memcmp(fav0, &favorites, sizeof favorites) && !memcmp(set0, &settings, sizeof settings) &&

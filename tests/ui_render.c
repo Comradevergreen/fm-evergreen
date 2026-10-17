@@ -1988,6 +1988,40 @@ int main(int argc, char **argv)
         for (s = 0; s < lg_nsmall; s++) fprintf(rep, " '%s'", lg_small[s]);
         fprintf(rep, "\n");
     }
+    {   /* (0.8.9) MENU > DISPLAY > SKIN BOTTOM and HUD (ui.c lz_low, hud_home): every screen in every palette in FLAT, in
+         * LINE and with MENU > LARGE ON (COLORS' layout, the skin's tabs and colours), linted (GREY: gray, MONO: neutral); FLAT
+         * as OUTDIR/ppm/<SKIN>_<PALETTE>_<screen>.ppm for JIANT PAPER GREY MONO (ui_render.py: sheet_<SKIN>_<PALETTE>.png) */
+        static const char *const SK_N[SKIN_N] = {"COLORS", "BOTTOM", "HUD"}, *const ST_N[3] = {"", "-LINE", "-LARGE"};
+        uint32_t sk, st, n0 = nfind, nlow = 0, nhud = 0;
+        for (sk = SKIN_BOTTOM; sk <= SKIN_HUD; sk++)
+            for (st = 0; st < 3u; st++)
+                for (p = 0; p < NPALETTES; p++)
+                    for (s = 0; s < S_COUNT; s++) {
+                        char name[64], tag[24];
+                        if (!FELUCCA_FM4 && (s == S_OP_ENV || (s >= S_ALG1 && s <= S_OP_LEVEL)))
+                            continue;
+                        snprintf(tag, sizeof tag, "%s%s_%s", SK_N[sk], ST_N[st], UI_PALETTES[p].name);
+                        snprintf(name, sizeof name, "%s/%s", tag, S_NAME[s]);
+                        cur_name = name;
+                        setup((int)s);
+                        if (st == 2u) ui_prefs |= PREF_LARGE;
+                        pal(p);
+                        ui_skin = (uint8_t)sk;
+                        ui_style = (uint8_t)(st == 1u); style_apply();
+                        draw((int)s);
+                        if (ux.skin != sk) { fprintf(stderr, "ui_render: %s drawn in skin %u\n", name, ux.skin); return 1; }
+                        nlow += (uint32_t)lz_low();
+                        nhud += (uint32_t)hud_home();
+                        lint();
+                        mono_check();
+                        if (!st && (p == UI_JIANT_INDEX || p == UI_GREY_INDEX || p == UI_BW_INDEX || !strcmp(UI_PALETTES[p].name, "PAPER")))
+                            write_ppm(out, tag, S_NAME[s]);
+                    }
+        ui_skin = SKIN_COLORS; ui_style = ST_FLAT; style_apply();
+        if (nlow < 1000u || nhud < 20u) { fprintf(stderr, "ui_render: SKIN drew %u screens low, %u HUD HOMEs only\n", nlow, nhud); return 1; }
+        fprintf(rep, "SKIN BOTTOM and HUD (FLAT, LINE, LARGE, every palette): %u lint findings; %u screens with the knob row, %u HUD "
+                "HOMEs\n", nfind - n0, nlow, nhud);
+    }
     {   /* every FM6 chart (the lint above, fmp_check, runs on each), in GREY: gray */
         uint32_t a, c0 = fmp_charts;
         for (a = 1; a <= 32u; a++) {
@@ -2057,6 +2091,36 @@ int main(int argc, char **argv)
             }
         }
         roll_cost();
+        {   /* (0.8.9) SKIN: HOME, EDIT, SEQ's BAR, FX's BUSES redrawn whole in each skin (us, texts, LCD px sent), and HOME frame
+             * by frame (HUD: every strip each frame, on the beings) */
+            static const int SC[] = {S_HOME, S_EDIT_ANALOG, S_LENTE_BAR, S_FXL_BUSES};
+            static const char *const SK_N[SKIN_N] = {"COLORS", "BOTTOM", "HUD"};
+            uint32_t sk;
+            fprintf(rep, "  SKIN (full redraw us / texts / LCD px; HOME a frame without force):\n");
+            for (sk = 0; sk < SKIN_N; sk++) {
+                fprintf(rep, "  %-7s", SK_N[sk]);
+                for (k = 0; k < sizeof SC / sizeof SC[0]; k++) {
+                    clock_t c0;
+                    setup(SC[k]); ui_skin = (uint8_t)sk; pal(UI_JIANT_INDEX); style_apply();
+                    draw(SC[k]);
+                    px_visited = n_text = blit_px = 0;
+                    c0 = clock();
+                    for (i = 0; i < N; i++) draw(SC[k]);
+                    fprintf(rep, "  %s %.1f / %llu / %llu", S_NAME[SC[k]], (double)(clock() - c0) / CLOCKS_PER_SEC / N * 1e6,
+                            (unsigned long long)(n_text / N), (unsigned long long)(blit_px / N));
+                }
+                {
+                    clock_t c0;
+                    setup(S_HOME); ui_skin = (uint8_t)sk; pal(UI_JIANT_INDEX); style_apply(); draw(S_HOME);
+                    blit_px = 0;
+                    c0 = clock();
+                    for (i = 0; i < N * 4; i++) { ui_draw(); nscr = npend = 0; }
+                    fprintf(rep, "  HOME frame %.1f us, %llu LCD px\n", (double)(clock() - c0) / CLOCKS_PER_SEC / (N * 4) * 1e6,
+                            (unsigned long long)(blit_px / (N * 4)));
+                }
+            }
+            ui_skin = SKIN_COLORS; style_apply();
+        }
         {   /* MENU > LARGE: the same full redraws, tall cards and the strip */
             static const int LC[] = {S_HOME, S_EDIT_ANALOG, S_ENV, S_LFO, S_MIXER, S_FX, S_PATTERN};
             fprintf(rep, "  MENU > LARGE:\n");

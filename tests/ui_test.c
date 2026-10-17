@@ -1929,21 +1929,22 @@ static int test_menu_tabs(void)
         ok &= n >= 1u && n <= MTAB_ROWS && f < MI_COUNT;
         for (i = 0; i < MI_COUNT; i++)                  /* its rows in one run */
             ok &= (MI_TAB[i] == t) == (i >= f && i < f + n);
-        ok &= 15 + (int32_t)n * 20 <= LZ_GRAPH_H;      /* (0.8.5 the lens: TAB's rows in the panel) */
+        ok &= 14 + (int32_t)n * (n > 6u ? 17 : 20) <= LZ_GRAPH_H;   /* (0.8.5 the lens: TAB's rows in the panel; 0.8.9 seven:
+                                                         * 17 apart) */
         for (i = f; i < f + n; i++)                     /* .. ROW's chips, every value */
             ok &= i >= MI_VALUES || 16 + (int32_t)((menu_n(i) + 2u) / 3u) * 20 <= LZ_GRAPH_H;
     }
     for (i = 0; i < MI_COUNT; i++) ok &= MI_TAB[i] < MTAB_COUNT;
     ui_prefs = 0;
-    bad += check("MENU tabs: DISPLAY CONTROL AUDIO SYSTEM (6 6 6 6 rows), 1..6 each in a run, their rows and values fit the lens's panel",
-                 ok && MTAB_COUNT == 4u && str_eq(MTAB_NAME[0], "DISPLAY") && mtab_rows(MTAB_DISPLAY) == 6u &&
+    bad += check("MENU tabs: DISPLAY CONTROL AUDIO SYSTEM (7 6 6 6 rows: 0.8.9 SKIN), 1..7 each in a run, their rows and values fit the lens's panel",
+                 ok && MTAB_COUNT == 4u && str_eq(MTAB_NAME[0], "DISPLAY") && mtab_rows(MTAB_DISPLAY) == 7u &&
                  mtab_rows(MTAB_CONTROL) == 6u && mtab_rows(MTAB_AUDIO) == 6u && mtab_rows(MTAB_SYSTEM) == 6u);   /* (0.6.58: INIT SYSTEM;
                                                                          * 0.6.72: MIDI OUT in CONTROL) */
 
     ui_power_on();
     hold(B_HOME);
     ok = ui.menu == 1 && ui.menu_sel == MI_COLOR && menu_tab() == MTAB_DISPLAY;
-    for (i = 0; i < 5u; i++) turn(EN_PRESET, 1);
+    for (i = 0; i < 6u; i++) turn(EN_PRESET, 1);
     ok &= ui.menu_sel == MI_SCROFF;
     turn(EN_PRESET, 1); ok &= ui.menu_sel == MI_COLOR;  /* (wraps within the tab) */
     turn(EN_PRESET, -1); ok &= ui.menu_sel == MI_SCROFF;
@@ -2375,7 +2376,7 @@ static int test_roll(void)
         x0 = g.sx0; x1 = g.sx1;
         n = roll_diff(x0, 0, x1, H_HEAD, 1);
         ok &= n > 20u && roll_diff(x0, 0, x1, H_HEAD, 0) == roll_diff(STRIP(0), 1);   /* (+ the card's strip) */
-        ok &= roll_diff(g.bx, 0, g.bx + text_w(&AF_S, "12"), H_HEAD, 1) == 0;   /* (0.8.5: the BPM in S) */
+        ok &= roll_diff(g.bx, 0, g.bx + text_w(&AF_M, "12"), H_HEAD, 1) == 0;   /* (0.8.5: the BPM in S; 0.8.9 in M) */
         ok &= x0 < g.bx && x1 <= 140 && x1 - x0 <= 40;
     }
     ok &= roll_diff(CARD_X(0), (int32_t)card_y() + ROLL_Y, CARD_X(0) + 5 + text_w(&AF_M, "12"), (int32_t)card_y() + ROLL_Y + ROLL_H, 1) == 0;
@@ -2990,7 +2991,8 @@ static int test_product_ux(void)
         int changed = 0;
         for (uint32_t y = 0; y < Y_SEP_END - Y_LABEL; y++) for (uint32_t x = 0; x < 240; x++) {
             uint16_t old = columns[y * 240 + x], now = host_screen[(Y_LABEL + y) * 240 + x];
-            if (x >= 64 && x < 119) changed |= old != now;
+            if (x >= (uint32_t)CARD_X(1) && x < (uint32_t)(CARD_X(1) + CARD_W)) changed |= old != now;   /* (0.8.9 COLORS: the
+                                                         * card framed in its knob's colour, edge to edge) */
             else ok &= old == now;
         }
         ok &= changed;
@@ -5760,7 +5762,7 @@ static int test_screen_off(void)
     ui_power_on();                                    /* in the MENU: OCT+ / a knob step it */
     menu_put(MI_SCROFF, 3u);
     hold(B_HOME);
-    for (i = 0; i < 5u; i++) turn(EN_PRESET, 1);
+    for (i = 0; i < 6u; i++) turn(EN_PRESET, 1);   /* (0.8.9: SKIN a row more) */
     ok = ui.menu == 1 && ui.menu_sel == MI_SCROFF;
     press(B_OCTUP); ok &= scr_get() == 4u;
     press(B_OCTUP); ok &= scr_get() == 4u;           /* (stops at the end) */
@@ -9293,6 +9295,145 @@ static int test_large(void)
     return bad;
 }
 
+/* (0.8.9) MENU > DISPLAY > SKIN (the approved mock-up opciones_skin.html): COLORS by default (and in every older setting),
+ * KNOB 1 / OCT+- steps COLORS BOTTOM HUD (stopping at the ends), saved with the settings (unknown: COLORS); each skin's
+ * geometry (BOTTOM / HUD: the knob row at the foot, the panel the screen's width; HUD's HOME the beings full screen; MENU >
+ * LARGE: COLORS' layout), every page of the lenses drawn in each (COLORS: the cards on top; BOTTOM, HUD: the knob row
+ * inked), HUD's knob row fading while the knobs rest and back on a turn */
+static int skin_ink(int32_t y0, int32_t y1)            /* pixels off BG in rows y0 .. y1 - 1 */
+{
+    int32_t x, y, n = 0;
+    for (y = y0; y < y1; y++)
+        for (x = 0; x < 240; x++)
+            n += lg_px(x, y) != T_BG;
+    return n;
+}
+static int test_skin(void)
+{
+    int bad = 0, ok;
+    uint32_t sk, i, npg = 0;
+    ui_power_on();
+    frame();
+    ok = ui_skin == SKIN_COLORS && ux.skin == SKIN_COLORS && MI_SKIN == MI_COLOR + 1u && str_eq(MI_NAME[MI_SKIN], "SKIN") &&
+         MI_TAB[MI_SKIN] == MTAB_DISPLAY && menu_n(MI_SKIN) == 3u && str_eq(menu_vname(MI_SKIN, 0), "COLORS") &&
+         str_eq(menu_vname(MI_SKIN, 1), "BOTTOM") && str_eq(menu_vname(MI_SKIN, 2), "HUD");
+    hold(B_HOME); ui.menu_sel = MI_SKIN;
+    ok &= ui.menu == 1u;
+    turn(EN_K1, 1); ok &= ui_skin == SKIN_BOTTOM;
+    turn(EN_K1, 1); ok &= ui_skin == SKIN_HUD && ux.skin == SKIN_HUD;
+    turn(EN_K1, 1); ok &= ui_skin == SKIN_HUD;                    /* (stops at the end) */
+    press(B_OCTDN); ok &= ui_skin == SKIN_BOTTOM;
+    press(B_OCTDN); ok &= ui_skin == SKIN_COLORS && ux.skin == SKIN_COLORS;
+    press(B_OCTDN); ok &= ui_skin == SKIN_COLORS;
+    press(B_OCTUP); ok &= ui_skin == SKIN_BOTTOM && ux.skin == SKIN_BOTTOM && ux.surf == ux.bg;
+    ok &= ui_style == ST_FLAT && (ui_prefs & ~PREF_ACCEL_OFF) == 0u;   /* (no other setting moved) */
+    press(B_HOME);
+    bad += check("SKIN: COLORS by default, under COLOR in DISPLAY; KNOB 1 / OCT+- COLORS BOTTOM HUD, stopping at the ends", ok && !ui.menu);
+    {   /* saved with the settings (byte 20 of engine 15); unknown and older settings: COLORS (idempotent) */
+        persist_t p, q;
+        ui_skin = SKIN_HUD; frame();
+        settings_export(&p);
+        ui_skin = SKIN_COLORS;
+        ok = settings_import(&p, (int)sizeof p) == 1 && ui_skin == SKIN_HUD && p.favorites.factory[15][20] == SKIN_HUD;
+        frame();
+        ok &= ux.skin == SKIN_HUD;
+        p.favorites.factory[15][20] = 7;
+        ok &= settings_import(&p, (int)sizeof p) == 1 && ui_skin == SKIN_COLORS && !p.favorites.factory[15][20];
+        q = p;
+        ok &= settings_import(&q, (int)sizeof q) == 1 && ui_skin == SKIN_COLORS && !memcmp(&p, &q, sizeof p);
+        ui_skin = SKIN_BOTTOM;
+        settings_export(&p);
+        memset(&p.favorites, 0, sizeof p.favorites);
+        p.magic = 0x50455233u;                                    /* (PER3: settings from before) */
+        ok &= settings_import(&p, (int)(sizeof p - sizeof p.favorites)) == 2 && ui_skin == SKIN_COLORS;
+        ui_skin = 9; frame();                                     /* (a live unknown byte: COLORS) */
+        ok &= ui_skin == SKIN_COLORS && ux.skin == SKIN_COLORS;
+        bad += check("SKIN saved with the settings and read back; older settings and unknown values: COLORS (idempotent)", ok);
+    }
+    ui_power_on(); frame();                                       /* the geometry: HOME (ECO) */
+    ok = card_y() == LZ_CARD_Y && graph_y() == LZ_GRAPH_Y && !lz_low() && !hud_home();
+    ok &= lg_px(CARD_X(0) + COL_W / 2, LZ_CARD_Y + 1) == T_RAISE && lg_px(LT_X(0) + LT_W / 2, LT_Y + 1) == T_THEME;
+    ui_skin = SKIN_BOTTOM; frame();
+    ok &= lz_low() && !hud_home() && card_y() == LB_CARD_Y && card_h() == LB_CARD_H && graph_y() == LB_GRAPH_Y &&
+          graph_h() == LB_GRAPH_H && skin_ink(LZ_CARD_Y, LZ_CARD_Y + LZ_CARD_H) > 0 && skin_ink(LB_CARD_Y, LB_CARD_Y + LB_CARD_H) > 100;
+    ok &= lg_px(LT_X(0) + LT_W / 2 + 30, LT_Y + 1) == T_BG;       /* (the tabs words: no fill) */
+    ui_skin = SKIN_HUD; frame();
+    ok &= lz_low() && hud_home() && graph_y() == LB_GRAPH_Y - 1u && foot_y() == LZ_FOOT_Y - 1u;
+    ui_prefs |= PREF_LARGE; frame();
+    ok &= !lz_low() && !hud_home() && large_kind() == LK_TALL && card_y() == LZ_CARD_Y;   /* (LARGE: COLORS' layout) */
+    ui_prefs &= ~PREF_LARGE; frame();
+    bad += check("SKIN geometry: COLORS cards on top; BOTTOM the knob row 191..223, the panel 42..189; HUD's HOME full screen; LARGE: COLORS'", ok);
+    {   /* HUD's HOME: the beings swim the whole screen, under the header, the tabs and the knobs (their outlines drawn) */
+        uint32_t top = 0, low = 0, k;
+        ui_power_on(); ui_skin = SKIN_HUD; song.playing = 1; frame();
+        for (k = 0; k < 400u; k++) {
+            uint32_t c;
+            frame();
+            for (c = 0; c < ECO_N; c++) {
+                top |= (eco.sy[c] >> 8) < LB_GRAPH_Y;
+                low |= (eco.sy[c] >> 8) > LB_CARD_Y;
+            }
+        }
+        ok = hud_home() && top && low && ui.graph_sig != 0u;
+        bad += check("SKIN HUD: HOME's beings over the whole screen (above the tabs' line, under the knob row), every strip on them", ok);
+    }
+    {   /* HUD: the knob row whole for 3 s after a turn, then faded to 22 %, whole again at a turn */
+        uint16_t lit, faded, back;
+        ui_power_on(); ui_skin = SKIN_HUD; frame();
+        go_title("ENV"); frame();
+        turn(EN_K1, 1); frame();
+        lit = (uint16_t)skin_ink(LB_CARD_Y, LB_CARD_Y + LB_CARD_H);
+        ok = hud_fade() == 100u;
+        frames(4000);
+        ok &= hud_fade() == 22u;
+        faded = (uint16_t)skin_ink(LB_CARD_Y, LB_CARD_Y + LB_CARD_H);
+        {
+            uint32_t x, y, maxl = 0;                              /* (its brightest pixel well under the text's) */
+            for (y = LB_CARD_Y; y < LB_CARD_Y + LB_CARD_H; y++)
+                for (x = 0; x < 240; x++)
+                    if (ux_luma(lg_px((int32_t)x, (int32_t)y)) > maxl) maxl = ux_luma(lg_px((int32_t)x, (int32_t)y));
+            ok &= maxl < ux_luma(T_TEXT) / 2u;
+        }
+        turn(EN_K2, 1); frame();
+        back = (uint16_t)skin_ink(LB_CARD_Y, LB_CARD_Y + LB_CARD_H);
+        ok &= hud_fade() == 100u && lit > 100u && faded > 0u && back > 100u;
+        bad += check("SKIN HUD: the knob row fades to 22 % 3 s after the last turn, whole again at a turn", ok);
+    }
+    for (sk = 0; sk < SKIN_N; sk++) {                             /* every lens page in each skin */
+        int okp = 1;
+        for (i = 0; i < NPAGES; i++) {
+            ui_power_on(); ui_skin = (uint8_t)sk;
+            ui.home = 0; ui.page = (uint8_t)i; page_entered();
+            if (!page_visible(i)) continue;
+            ui.force = 1; frame();
+            if (!lz_on() || ui.home) continue;
+            npg += !sk;
+            if (sk == SKIN_COLORS)
+                okp &= card_y() == LZ_CARD_Y && lg_px(CARD_X(0) + COL_W / 2, LZ_CARD_Y + 1) != T_BG;
+            else
+                okp &= lz_low() && card_y() == LB_CARD_Y && skin_ink(LB_CARD_Y, LB_CARD_Y + LB_CARD_H) > 0;
+            if (!okp) { printf("  skin %u: %s\n", sk, PAGES[i].title); break; }
+        }
+        ok = okp;
+        for (i = 0; i < 3u; i++) {                                /* HOME's levels: ECO, BEING, GEN */
+            ui_power_on(); ui_skin = (uint8_t)sk; frame();
+            if (i == 1u) turn(EN_SELECT, 1);
+            if (i == 2u) { turn(EN_SELECT, 1); turn(EN_SELECT, 1); }
+            frames(100);
+            ok &= lz_on() && lz_fam() == LZ_HOME && lz_level() == i && hud_home() == (sk == SKIN_HUD && !i) &&
+                  skin_ink(LZ_FOOT_Y, 240) > 0;
+        }
+        hold(B_HOME); frame();                                    /* the menu */
+        ok &= ui.menu == 1u && lz_low() == (sk != SKIN_COLORS);
+        press(B_HOME);
+        bad += check(sk == SKIN_COLORS ? "SKIN COLORS: every page of the lenses, HOME's three levels and the menu drawn" :
+                     sk == SKIN_BOTTOM ? "SKIN BOTTOM: every page of the lenses, HOME's three levels and the menu drawn" :
+                     "SKIN HUD: every page of the lenses, HOME's three levels and the menu drawn", ok && npg > 40u);
+    }
+    ui_power_on(); frame();
+    return bad;
+}
+
 /* MENU (1.0.5: in tabs): every row reachable with ALGORITHM and PRESETS, each tab its own page; #46 MENU > ANIM: ON by
  * default (and in every older setting), OFF snaps the rolling digits, the piano roll and the menu's tabs */
 static int test_menu_prefs(void)
@@ -9536,7 +9677,8 @@ static int test_head_centres(void)
                 memset(host_screen, 0, sizeof host_screen);
                 ui.force = 1; draw_head(); ui.force = 0;
                 ok &= head_centres(HS_NAME[s], pr);
-                okp = nhel > 0 && hel[0][0] == HEAD_TR_X;  /* the play state first, its ink from x 6 */
+                okp = nhel > 1 && hel[0][0] == HEAD_TK_X && hel[1][0] == HEAD_TR_X;   /* (0.8.9) the track's box first (4),
+                                                         * the play state then, its ink from x 22 */
                 if (s != HS_GLO_TURN) {                /* the battery last, in its outline; the load before it */
                     okp &= head_span2(HEAD_BAT_X, 239, &a, &b) && a >= 222 && b <= 234;
                     okp &= head_span2(HEAD_LOAD_X, HEAD_BAT_X - 1, &a, &b) && a >= HEAD_LOAD_X && b <= 218;
@@ -9547,10 +9689,12 @@ static int test_head_centres(void)
                     okp &= head_span2(g.bx + g.b[2] + 20, 239, &a, &b) && a >= 142;
                 }
                 if (!msg && s != HS_OCT && s != HS_SONG && s != HS_GLO_TURN) {   /* the centre's words on x 120 */
-                    c2 = head_span2(56, HEAD_GRP_R, &a, &b);
-                    okp &= c2 >= 236 && c2 <= 244;
+                    int pushed = song.rec || (ui_prefs & PREF_BPM_LOCK);   /* (0.8.9: the BPM in M, REC / the lock after it:
+                                                         * the words as near x 120 as they fit, never into the load) */
+                    c2 = head_span2(pushed ? 80 : 70, HEAD_GRP_R, &a, &b);
+                    okp &= pushed ? c2 >= 236 && b < HEAD_LOAD_X : c2 >= 236 && c2 <= 244;
                 } else if (msg) {                      /* the message centred on x 120 */
-                    c2 = head_span2(song.rec ? 58 : 44, 205, &a, &b);
+                    c2 = head_span2(song.rec ? 80 : 66, 205, &a, &b);
                     okp &= c2 >= 234 && c2 <= 246 && b <= 205;
                 }
                 if (pr && !okp) printf("    head %s: misplaced\n", HS_NAME[s]);
@@ -9559,7 +9703,7 @@ static int test_head_centres(void)
             }
     ui_style = ST_FLAT; style_apply();
     bad += check("header: every element's ink centred on row 11 (+-1 px) over its LINE rule, every state, FLAT and LINE, every palette", ok);
-    bad += check("header: play state at 6, the centre / a message on x 120, octave to 196, load 200..218, battery 222..234 "
+    bad += check("header: the track's box at 4, play state at 22, the centre / a message on x 120, octave to 196, load 200..218, battery 222..234 "
                  "(GLO with the tempo turned: the label right of the BPM and its lock)", place);
     ui_power_on();
     return bad;
@@ -10252,6 +10396,7 @@ int main(void)
     bad += test_usb_serial();
     bad += test_bpm_lock();
     bad += test_large();
+    bad += test_skin();
     bad += test_browse_no_pattern();
     bad += test_name();
     bad += test_edit_cycle();

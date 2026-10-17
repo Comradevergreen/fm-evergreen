@@ -86,13 +86,16 @@ static void draw_battery(int32_t bx)
 #define ROLL_FRAMES 9u
 #define ROLL_SNAP 3u                                    /* frames (~45 ms) */
 #define ROLL_BPM 4u                                     /* ui.roll[]: the four cards, then the header BPM */
-#define ROLL_Y (lz_on() ? 14 : 18)                       /* a card's value strip: rows 18..34, its figures (21..31) in the middle, */
+#define ROLL_Y (lz_low() ? 11 : lz_on() ? 14 : 18)        /* a card's value strip: rows 18..34, its figures (21..31) in the middle, */
 #define ROLL_H 17                                       /* the label (MONO's chip: to row 17) above it, the gauge (39) below;
                                                          * (0.8.5) a lens page's card (38 tall): rows 14..30, the figures
-                                                         * 17..27, the gauge at 33 */
+                                                         * 17..27, the gauge at 33; 0.8.9 SKIN BOTTOM / HUD's
+                                                         * knob row (33 tall): rows 11..27, the figures 14..24, the
+                                                         * label 4..10, the gauge 28..29) */
 #define CARD_VY (ROLL_Y - 1)                            /* the value's line (M) */
 #define CARD_XY 4                                       /* (0.8.5) a lens card's label (AF_X): its line, capitals rows 5..11 */
-#define CARD_BG (ux.style ? T_SURF : T_RAISE)           /* (0.8.5, the mock-up) a card: RAISE (LINE: no fill) */
+#define CARD_BG (ux.style || lz_low() ? T_SURF : T_RAISE)   /* (0.8.5, the mock-up) a card: RAISE (LINE: no fill; 0.8.9 BOTTOM,
+                                                         * HUD: none, the knob row on the background) */
 static const uint8_t ROLL_EASE[17] = {0, 45, 84, 118, 147, 172, 193, 210, 223, 234, 242, 247, 251, 253, 254, 255, 255};
 
 static int roll_digit(char c) { return c >= '0' && c <= '9'; }
@@ -130,7 +133,7 @@ static void roll_note(uint32_t k, const char *a, const char *b, int snap)
  * later per place from the right), clipped to the strip. The roll's last frame clears it: the static text. */
 static int32_t roll_text(uint32_t k, int32_t x, int32_t y, const char *s, uint16_t fg)
 {
-    const aafont_t *f = k < ROLL_BPM ? &AF_M : &AF_S;      /* (0.8.5: the header's BPM in S, as the mock-up) */
+    const aafont_t *f = &AF_M;                         /* (0.8.5: the header's BPM in S; 0.8.9, the skins' mock-up: in M) */
     uint32_t e = (uint8_t)(ui.frame - ui.roll[k].t0) + 1u, i, p = 0;
     const char *a = ui.roll[k].from;
     int32_t cy = k < ROLL_BPM ? ROLL_Y : 0, h = k < ROLL_BPM ? ROLL_H : HEAD_RULE_Y;   /* (above the header's rule) */
@@ -170,8 +173,9 @@ static int32_t roll_text(uint32_t k, int32_t x, int32_t y, const char *s, uint16
 }
 
 /* the header (y 0..24). (0.8.5) The approved mock-up's skin: one quiet line over a LINE rule at row 22,
- *   left    the play state (x 6: stopped a MID square, playing an ACCENT triangle, counting in THEME) and the BPM in S
- *           (THEME; the knob turning it: the accent) from x 20, then BPM LOCK's lock and the REC mark (a dot: filled the
+ *   left    (0.8.9, the skins' mock-up: the 0.6 colours) the selected track's number in an ACCENT box (4..16), the play
+ *           state (x 22: stopped a MID square, playing a THEME triangle, counting in the accent) and the BPM large, in M
+ *           (THEME; the knob turning it: the accent) from x 35, then BPM LOCK's lock and the REC mark (a dot: filled the
  *           selected track armed, a ring another)
  *   centre  what the page is of, centred on x 120 (MID): "T1 . ANALOG ACID" (the track, its engine and sound), on the
  *           song's pages (SAVE, ARRANGE, TOOLS, GLOBAL) "P1 NAME" (the project), on FX "T1" (the accent)
@@ -183,8 +187,10 @@ static int32_t roll_text(uint32_t k, int32_t x, int32_t y, const char *s, uint16
 #define HEAD_SY (HEAD_MID - AF_S_CAP_H / 2 - AF_S_CAP_Y)
 #define HEAD_XY (HEAD_MID - AF_X_CAP_H / 2 - AF_X_CAP_Y)   /* (0.8.5) the centre's words in AF_X: capitals rows 8..14 */
 #define HEAD_MY CAP_IN(M, H_HEAD)                      /* (the menu's and the calibration's own headers: M) */
-#define HEAD_TR_X 6                                    /* the play state's ink: 6 .. 12 */
-#define HEAD_BPM_X 20                                  /* the BPM's pen */
+#define HEAD_BMY (HEAD_MID - AF_M_CAP_H / 2 - AF_M_CAP_Y)   /* (0.8.9) the BPM in M: capitals rows 6..16 */
+#define HEAD_TK_X 4                                    /* (0.8.9) the track's box: 4 .. 16, rows 5 .. 17 */
+#define HEAD_TR_X 22                                   /* the play state's ink: 22 .. 29 */
+#define HEAD_BPM_X 35                                  /* the BPM's pen */
 #define HEAD_BAT_X 222                                 /* the battery's outline: 222 .. 234 */
 #define HEAD_GRP_R 196                                 /* the octave / song row ends here */
 #define HEAD_MSG_W 158                                 /* a message centred on x 120: 41..199 */
@@ -197,22 +203,23 @@ static void head_geo(head_geo_t *g, const char *bpm)
     char z[8] = "0000000";
     z[str_len(bpm) < 7u ? str_len(bpm) : 7u] = 0;
     g->bx = HEAD_BPM_X;
-    text_ink(&AF_S, z, g->b);
+    text_ink(&AF_M, z, g->b);
     g->mx0 = HEAD_TR_X;
-    g->mx1 = HEAD_TR_X + 7;
+    g->mx1 = HEAD_TR_X + 8;
     g->sx0 = g->mx1 + 1;
     g->sx1 = g->bx + g->b[2] + 2;
 }
 static void head_transport(void)
 {
-    int32_t r;
-    uint16_t c = song.playing ? T_ACCENT : seq_counting() ? T_THEME : T_MID;
+    int32_t r, k;
+    uint16_t c = seq_counting() ? T_ACCENT : song.playing ? T_THEME : T_MID;
     if (!song.playing && !seq_counting()) {
-        cv_rect(HEAD_TR_X, HEAD_MID - 3, 7, 7, c);
+        cv_rect(HEAD_TR_X, HEAD_MID - 4, 8, 9, c);
         return;
     }
-    for (r = 0; r < 7; r++)                            /* a triangle, 7 x 7, pointing right */
-        cv_rect(HEAD_TR_X, HEAD_MID - 3 + r, 7 - 2 * (r < 3 ? 3 - r : r - 3), 1, c);
+    for (k = cv_halo; k >= 0; k--)                      /* (0.8.9) a triangle, 8 x 11, pointing right (HUD: its outline) */
+        for (r = 0; r < 11; r++)
+            cv_rect(HEAD_TR_X + k, HEAD_MID - 5 + r + k, 1 + (5 - (r < 5 ? 5 - r : r - 5)) * 7 / 5, 1, k ? T_BG : c);
 }
 static void sound_name(const track_t *t, char *b);
 /* the centre's words (b holds 40) and their colour */
@@ -251,47 +258,23 @@ static uint16_t head_title(char *b)
         b[str_len(b)] = ' ';
     return T_MID;
 }
-/* the width cv_free_hint(x, .., s, .., maxw) draws (its word, keycap and the ellipsised rest) */
-static int32_t head_hint_w(const char *s, int32_t maxw)
-{
-    uint32_t n, i;
-    int32_t id = kc_tag(s, &n), w = 0;
-    char b[48];
-    for (i = 0; id < 0 && i < 7u && s[i] && s[i] != ' '; i++)
-        ;
-    if (id < 0 && i && s[i] == ' ' && (id = kc_tag(s + i + 1u, &n)) >= 0) {
-        char wd[8] = {0};
-        uint32_t j;
-        for (j = 0; j < i; j++)
-            wd[j] = s[j];
-        w = text_w(&AF_S, wd) + KH_GAP;
-        s += i + 1u;
-    }
-    if (id >= 0 && kc_w((uint32_t)id) + KH_GAP < maxw - w) {
-        w += kc_w((uint32_t)id) + KH_GAP;
-        s += n;
-        while (*s == ' ')
-            s++;
-        if (!*s)
-            return w - KH_GAP;
-    }
-    text_fit(b, sizeof b, s, &AF_S, maxw - w);
-    return w + text_w(&AF_S, b);
-}
 /* a message / a layer's label at x, or centred on x 120 (x < 0), at most maxw px with its
  * icon (ui.c MSG_NOFILE: the accent's) */
 static void head_msg(int32_t x, int32_t maxw)
 {
     const char *m = ui.msg_t ? ui.msg : layer_head();
     int icon = m[0] == MSG_NOFILE[0];
-    int32_t lw = 0, iw = icon ? text_w(&AF_S, "!") + KH_GAP : 0;
+    int32_t iw = icon ? text_w(&AF_X, "!") + KH_GAP : 0;
+    /* (0.8.9) a message or a layer's name ("[GLO] SET", "HOLD [GLO] QUICK") in plain words, AF_X as the header's centre
+     * (was S with a keycap, Felucca's): a message TEXT, a layer THEME */
     if (x < 0)
-        x = 120 - HALF_UP(iw + head_hint_w(m + icon, maxw - lw - iw) + lw);
+        x = 120 - HALF_UP(iw + (text_w(&AF_X, m + icon) < maxw - iw ? text_w(&AF_X, m + icon) : maxw - iw));
     if (icon) {                                       /* (0.8.5: no icons; "!" in the accent) */
         GFX_HOOK_ALIGN(0, 0, 0, HEAD_RULE_Y, AL_V, "header text on its middle");
-        x = cv_text(x, HEAD_SY, &AF_S, "!", T_ACCENT) + KH_GAP;
+        x = cv_text(x, HEAD_XY, &AF_X, "!", T_ACCENT) + KH_GAP;
     }
-    (void)cv_free_hint(x, HEAD_SY, m + icon, T_TEXT, T_BG, maxw - lw - iw);   /* (may start with a keycap) */
+    GFX_HOOK_ALIGN(0, 0, 0, HEAD_RULE_Y, AL_V, "header text on its middle");
+    cv_free_text(x, HEAD_XY, &AF_X, m + icon, ui.msg_t ? T_TEXT : T_THEME, T_BG, maxw - iw);
 }
 /* the octave, or the song row while a song plays, its right end at HEAD_GRP_R; its left end */
 static int32_t head_group(void)
@@ -343,18 +326,28 @@ static void draw_head(void)
     if (!ui.force && sig == ui.head_sig) {
         if (ui.roll[ROLL_BPM].from[0]) {               /* rolling: the BPM's strip only (the rule under it again) */
             cv_begin((uint32_t)(g.sx1 - g.sx0), H_HEAD, T_BG);
-            roll_text(ROLL_BPM, g.bx - g.sx0, HEAD_SY, b, ui.bpm_t ? T_ACCENT : T_THEME);
-            cv_rect(0, HEAD_RULE_Y, g.sx1 - g.sx0, 1, T_LINE);
+            roll_text(ROLL_BPM, g.bx - g.sx0, HEAD_BMY, b, ui.bpm_t ? T_ACCENT : T_THEME);
+            if (ux.skin != SKIN_HUD)
+                cv_rect(0, HEAD_RULE_Y, g.sx1 - g.sx0, 1, T_LINE);
             cv_blit((uint32_t)g.sx0, Y_HEAD);
         }
         return;
     }
     ui.head_sig = sig;
-    cv_begin(240, H_HEAD, T_BG);
+    lz_begin(240, H_HEAD, 0, Y_HEAD);
+    if (!ui.menu) {                                     /* (0.8.9) the track's box, as the 0.6 had it */
+        char n[2] = {(char)('1' + song.sel % NTRK), 0};
+        uint8_t h = cv_halo;
+        cv_rrect(HEAD_TK_X, HEAD_MID - 6, 13, 13, 3, T_ACCENT, T_BG);
+        cv_halo = 0;
+        GFX_HOOK_ALIGN(HEAD_TK_X, HEAD_MID - 6, HEAD_TK_X + 13, HEAD_MID + 7, AL_HV, "header track number in its box");
+        cv_text_in(HEAD_TK_X, HEAD_XY, 13, &AF_X, n, T_INK, T_ACCENT);
+        cv_halo = h;
+    }
     head_transport();
     if (!ui.roll[ROLL_BPM].from[0])
         GFX_HOOK_ALIGN(0, 0, 0, HEAD_RULE_Y, AL_V, "header text on its middle");
-    roll_text(ROLL_BPM, g.bx, HEAD_SY, b, ui.bpm_t ? T_ACCENT : T_THEME);
+    roll_text(ROLL_BPM, g.bx, HEAD_BMY, b, ui.bpm_t ? T_ACCENT : T_THEME);
     lx = g.bx + g.b[2];                                /* the right end of the BPM's ink (and what follows it) */
     if (ui_prefs & PREF_BPM_LOCK) {                    /* BPM LOCK ON (#58): the lock right of the BPM */
         int32_t x = lx + HEAD_GAP;                     /* (0.8.5: drawn) a shackle over a body, 8 x 10 */
@@ -386,9 +379,11 @@ static void draw_head(void)
         draw_battery(HEAD_BAT_X);
         draw_load(HEAD_LOAD_X);
     }
-    cv_rect(0, HEAD_RULE_Y, 240, 1, T_LINE);           /* the rule */
-    GFX_HOOK_RULE(0, HEAD_RULE_Y, 240, 1);
-    cv_blit(0, Y_HEAD);
+    if (ux.skin != SKIN_HUD) {                          /* the rule (0.8.9 HUD: none, the words float) */
+        cv_rect(0, HEAD_RULE_Y, 240, 1, T_LINE);
+        GFX_HOOK_RULE(0, HEAD_RULE_Y, 240, 1);
+    }
+    lz_blit(0, Y_HEAD);
 }
 /* LINE: 1 px dividers in the BG gaps between the strips, not around them: under the header, above and
  * below the panel, and between the four columns over rows y .. y + h (the cards; the mixer's strips too) */
@@ -402,7 +397,10 @@ static void lcd_rule(uint32_t x, uint32_t y, uint32_t w, uint32_t h)
 static void draw_rules(uint32_t y, uint32_t h)
 {
     uint32_t i;
-    if (y == card_y()) {                                /* (LARGE: the geometry of the page, ui.c card_h; 0.8.5: a lens
+    if (y == card_y() && lz_low()) {                    /* (0.8.9) BOTTOM, HUD: over the panel and under it */
+        lcd_rule(RULE_X0, (LT_Y + LB_TAB_H + graph_y()) / 2, RULE_W, 1);
+        lcd_rule(RULE_X0, (graph_y() + graph_h() + card_y()) / 2, RULE_W, 1);
+    } else if (y == card_y()) {                         /* (LARGE: the geometry of the page, ui.c card_h; 0.8.5: a lens
                                                          * page's; the header draws its own rule) */
         lcd_rule(RULE_X0, (card_y() + card_h() + graph_y()) / 2, RULE_W, 1);
         lcd_rule(RULE_X0, (graph_y() + graph_h() + foot_y()) / 2, RULE_W, 1);
@@ -416,9 +414,17 @@ static void draw_frame(void)
 {
     uint32_t i, ch = card_h(), gy = graph_y(), gh = graph_h(), cy = card_y(), fy = foot_y();   /* (MENU > LARGE: tall
                                                          * cards, a strip; 0.8.5 a lens page: the mock-up's) */
-    lcd_fill(0, H_HEAD, 240, cy - H_HEAD, T_BG);
-    lcd_fill(0, cy + ch, 240, gy - cy - ch, T_BG);
-    lcd_fill(0, gy + gh, 240, fy - gy - gh, T_BG);
+    if (hud_home())                                     /* (0.8.9) HUD's HOME: its strips cover the screen */
+        return;
+    if (cy > gy) {                                      /* (0.8.9) BOTTOM, HUD: the panel, then the knobs' row */
+        lcd_fill(0, H_HEAD, 240, gy - H_HEAD, T_BG);
+        lcd_fill(0, gy + gh, 240, cy - gy - gh, T_BG);
+        lcd_fill(0, cy + ch, 240, fy - cy - ch, T_BG);
+    } else {
+        lcd_fill(0, H_HEAD, 240, cy - H_HEAD, T_BG);
+        lcd_fill(0, cy + ch, 240, gy - cy - ch, T_BG);
+        lcd_fill(0, gy + gh, 240, fy - gy - gh, T_BG);
+    }
     lcd_fill(0, cy, (uint32_t)CARD_X(0), ch, T_BG);
     for (i = 0; i < 4u; i++)                            /* right of each card */
         lcd_fill((uint32_t)(CARD_X(i) + CARD_W), cy, i < 3u ? (uint32_t)(CARD_X(i + 1u) - CARD_X(i) - CARD_W) :
@@ -552,6 +558,37 @@ static void draw_column_tall(uint32_t c, const char *label, const char *val, con
  * a label with no room for it at all (or FELUCCA_ICONS=0): the label in the theme colour.
  * vc: the value's colour (T_THEME, T_DIM inactive, T_ACCENT the knob just turned) */
 /* (0.8.5) a held layer's cards as drawn (ui_layer.c: its KNOBS level draws them as gauges) */
+/* (0.8.9, the skins' mock-up: the 0.6 cards' marks) a 7 x 7 mark before a card's label, by the label (a row a byte, bit 6
+ * the left column); none for the others (or a label too long to sit after one) */
+static const uint8_t CARD_ICO[14][7] = {
+    {0x70, 0x08, 0x04, 0x04, 0x02, 0x02, 0x01}, {0x08, 0x14, 0x14, 0x62, 0x02, 0x01, 0x01},   /* cut res */
+    {0x08, 0x14, 0x23, 0x20, 0x40, 0x40, 0x40}, {0x70, 0x08, 0x04, 0x04, 0x02, 0x01, 0x01},   /* atk rel */
+    {0x04, 0x0C, 0x14, 0x24, 0x44, 0x04, 0x04}, {0x41, 0x22, 0x14, 0x08, 0x14, 0x22, 0x41},   /* wave detune */
+    {0x22, 0x22, 0x72, 0x27, 0x22, 0x22, 0x22}, {0x20, 0x2A, 0x6B, 0x7F, 0x5D, 0x09, 0x08},   /* mix noise */
+    {0x7F, 0x41, 0x5D, 0x5D, 0x41, 0x7F, 0x00}, {0x0C, 0x0A, 0x09, 0x08, 0x38, 0x78, 0x30},   /* step note */
+    {0x7F, 0x08, 0x08, 0x08, 0x08, 0x08, 0x08}, {0x08, 0x1C, 0x3E, 0x08, 0x08, 0x08, 0x08},   /* type accent */
+    {0x77, 0x41, 0x41, 0x00, 0x41, 0x41, 0x77}, {0x08, 0x08, 0x08, 0x49, 0x2A, 0x1C, 0x08}};  /* size depth */
+static const struct { char l[7]; uint8_t i; } CARD_ICO_OF[] = {
+    {"CUT", 0}, {"FREQ", 0}, {"RES", 1}, {"PEAK", 1}, {"Q", 1}, {"ATK", 2}, {"REL", 3}, {"DEC", 3}, {"DECAY", 3},
+    {"WAVE", 4}, {"WAVE2", 4}, {"SHAPE", 4}, {"DETUNE", 5}, {"MIX", 6}, {"LEVEL", 6}, {"NOISE", 7}, {"CRUSH", 7},
+    {"STEP", 8}, {"LEN", 8}, {"NOTE", 9}, {"PITCH", 9}, {"TUNE", 9}, {"ROOT", 9}, {"TYPE", 10}, {"MODE", 10},
+    {"TIME", 10}, {"ACCENT", 11}, {"FLAG", 11}, {"SIZE", 12}, {"DEPTH", 13}, {"AMT", 13}};
+static int32_t card_ico(const char *label)            /* its mark, -1 none */
+{
+    uint32_t k;
+    for (k = 0; k < NELEM(CARD_ICO_OF); k++)
+        if (str_eq(CARD_ICO_OF[k].l, label))
+            return CARD_ICO_OF[k].i;
+    return -1;
+}
+static void card_ico_draw(int32_t x, int32_t y, uint32_t i, uint16_t c)
+{
+    uint32_t r, b;
+    for (r = 0; r < 7u; r++)
+        for (b = 0; b < 7u; b++)
+            if ((CARD_ICO[i][r] >> (6u - b)) & 1u)
+                cv_pset(x + (int32_t)b, y + (int32_t)r, c);
+}
 static struct { int16_t r; char l[12], v[16]; } ly_card[4];
 static void draw_column(uint32_t c, const char *label, const char *val, const char *unit, uint16_t vc,
                         int32_t ratio, uint32_t icon)
@@ -568,11 +605,25 @@ static void draw_column(uint32_t c, const char *label, const char *val, const ch
     uint32_t kind = large_kind();                       /* MENU > LARGE: tall (draw_column_tall), or the label in M */
     uint8_t sig;
     uint16_t lc = hot ? T_ACCENT : arm || mot ? T_THEME : T_MID, cb = arm ? T_TINT : CARD_BG;
-    int32_t x, lx = 5, uw, room = COL_W - 8, ch = (int32_t)card_h(), ry = ROLL_Y;
+    int low = lz_low(), hud = hud_home();
+    uint32_t fd = hud_fade();                           /* (0.8.9) HUD: the row faded while the knobs rest */
+    int32_t ox = hud ? CARD_X(c) - (int32_t)c * 60 : 0, cw = hud ? 60 : COL_W;   /* (HUD's HOME: the row whole, 4 x 60) */
+    int32_t x, lx = 5 + ox, uw, room = COL_W - 8, ch = (int32_t)card_h(), ry = ROLL_Y;
     const aafont_t *vf = &AF_M;
     uint32_t n, kn;
     int32_t kid = kc_tag(val, &kn);
+    /* (0.8.9, the skins: the 0.6 colours) a lens card's value and gauge in its knob's colour (the knob turned: its card
+     * framed in it, COLORS; its label TEXT, BOTTOM / HUD); the label TEXT on COLORS' cards, MID in the knob row */
+    if (lz_on() && kind != LK_TALL) {
+        if (kid < 0 && (vc == T_THEME || vc == T_ACCENT))
+            vc = T_K(c);
+        lc = arm || mot ? T_THEME : low && !hot ? T_MID : T_TEXT;
+    }
     vc = value_col(vc, ratio);
+    if (fd < 100u) {
+        vc = ux_mix(T_BG, vc, (int32_t)fd);
+        lc = ux_mix(T_BG, lc, (int32_t)fd);
+    }
     fmt_named = 0;                                      /* (params.c: a name, for this card only) */
     card_mot_next = 0;                                  /* (the same: MOTION, this card only) */
     card_arm_next = card_free_next = 0;
@@ -601,7 +652,8 @@ static void draw_column(uint32_t c, const char *label, const char *val, const ch
         key[n + 9] = (char)('A' + ((gc >> 8) & 15u));
         key[n + 10] = (char)('A' + (gc >> 12));
     }
-    key[n + 11] = 0;
+    key[n + 11] = (char)('A' + fd / 13u + 8u * (uint32_t)low);
+    key[n + 12] = 0;
     uw = unit[0] ? text_w(&AF_S, unit) + 3 : 0;
     if (text_w(vf, val) + uw > room)
         vf = &AF_S;
@@ -609,12 +661,17 @@ static void draw_column(uint32_t c, const char *label, const char *val, const ch
     snap = ui.force || sig != ui.roll[c].sig;           /* what the value is of: label, unit, track, engine, palette */
     if (kind == LK_TALL)
         ui.roll[c].from[0] = 0;                         /* (a tall card: no rolling digits) */
-    strip = !snap && str_eq(key, ui.col[c]);
+    strip = !snap && !hud && str_eq(key, ui.col[c]);
     if (strip && !ui.roll[c].from[0])
         return;
     if (strip) {                                        /* rolling: the value strip only */
         cv_begin(COL_W, ROLL_H, cb);
         cv_oy = -ry;
+        if (lz_on() && !low && hot && vc != T_DIM) {    /* (0.8.9 COLORS: the hot card's frame, its sides) */
+            uint16_t fc = ux_mix(cb, T_K(c), 70);
+            cv_rect(0, ry, 1, ROLL_H, fc);
+            cv_rect(COL_W - 1, ry, 1, ROLL_H, fc);
+        }
     } else {
         char ov[16];                                    /* the value drawn before (in the cache key) */
         const char *k = ui.col[c];
@@ -634,8 +691,19 @@ static void draw_column(uint32_t c, const char *label, const char *val, const ch
             draw_column_tall(c, label, val, unit, vc, ratio, icon, hot, mot, kid);
             return;
         }
-        cv_begin(COL_W, (uint32_t)ch, T_BG);
-        cv_rect(0, 0, COL_W, ch, cb);                   /* (0.8.5, the mock-up: a square box) */
+        if (low)                                        /* (0.8.9) BOTTOM, HUD: no box (HUD's HOME: on the beings) */
+            lz_begin((uint32_t)cw, (uint32_t)ch, hud ? c * 60u : (uint32_t)CARD_X(c), card_y());
+        else {
+            cv_begin(COL_W, (uint32_t)ch, T_BG);
+            if (!lz_on())
+                cv_rect(0, 0, COL_W, ch, cb);           /* (0.8.5, the mock-up: a square box) */
+            else if (hot && vc != T_DIM) {              /* (0.8.9) COLORS: a rounded card, the knob turned framed in its colour */
+                uint16_t fc = ux_mix(cb, T_K(c), 70);
+                cv_rrect(0, 0, COL_W, ch, 5, fc, T_BG);
+                cv_rrect(1, 1, COL_W - 2, ch - 2, 4, cb, fc);
+            } else
+                cv_rrect(0, 0, COL_W, ch, 5, cb, T_BG);
+        }
     }
     if (label[0] || val[0]) {
         if (!strip && label[0]) {
@@ -643,9 +711,11 @@ static void draw_column(uint32_t c, const char *label, const char *val, const ch
              * page or a layer (LK_LABEL): in M where it fits the card (capitals rows 4..14), else in S. A parameter
              * MOTION drives, an armed action: THEME */
             const aafont_t *lf = kind == LK_LABEL && 5 + text_w(&AF_M, label) <= COL_W - 2 ? &AF_M : lz_on() ? &AF_X : &AF_S;
-            int32_t ly = lf == &AF_M ? 0 : lf == &AF_X ? CARD_XY : 1;   /* (0.8.5 a lens card: AF_X, capitals rows 5..11) */
+            int32_t ly = lf == &AF_M ? 0 : lf == &AF_X ? CARD_XY - low : 1;   /* (0.8.5 a lens card: AF_X, capitals rows 5..11;
+                                                         * 0.8.9 the knob row: 4..10) */
             int32_t cy = ly + (lf == &AF_M ? AF_M_CAP_Y : lf == &AF_X ? AF_X_CAP_Y : AF_S_CAP_Y);
-            int32_t chh = lf == &AF_M ? AF_M_CAP_H : lf == &AF_X ? AF_X_CAP_H : AF_S_CAP_H;
+            int32_t chh = lf == &AF_M ? AF_M_CAP_H - 1 : lf == &AF_X ? AF_X_CAP_H : AF_S_CAP_H;   /* (0.8.9 M: Inter Tight's
+                                                         * figures reach a row higher: the chip a row shorter) */
             if (hot && T_ACCENT == T_MID) {             /* MONO: no colour tells the hot knob: its label inverted, */
                 int32_t b[4], w;                        /* the chip 2 px round its ink */
                 text_ink(lf, label, b);
@@ -653,33 +723,56 @@ static void draw_column(uint32_t c, const char *label, const char *val, const ch
                 if (w > COL_W + 1 - lx - b[0]) w = COL_W + 1 - lx - b[0];
                 cv_rrect(lx + b[0] - 2, cy - 2, w, chh + 4, 2, T_ACCENT, cb);
                 GFX_HOOK_ALIGN(lx + b[0] - 2, cy - 2, lx + b[0] - 2 + w, cy + chh + 2, AL_HV, "card label chip (MONO hot)");
-                cv_text_fit(lx, ly, lf, label, T_INK, T_ACCENT, COL_W - 2 - lx);
-            } else
-                cv_text_fit(lx, ly, lf, label, lc, cb, COL_W - 2 - lx);
+                cv_text_fit(lx, ly, lf, label, T_INK, T_ACCENT, COL_W - 2 - 5);
+            } else {
+                int32_t ic = lf == &AF_X && lz_on() && kind != LK_TALL ? card_ico(label) : -1;
+                if (ic >= 0 && 10 + text_w(lf, label) <= COL_W - 2 - 5) {   /* (0.8.9) its mark, then the label */
+                    if (cv_halo)
+                        card_ico_draw(lx + 1, cy + 1, (uint32_t)ic, T_BG);
+                    card_ico_draw(lx, cy, (uint32_t)ic, low ? (hot ? vc : lc) : lc);
+                    cv_text_fit(lx + 10, ly, lf, label, lc, cb, COL_W - 2 - 15);
+                } else
+                    cv_text_fit(lx, ly, lf, label, lc, cb, COL_W - 2 - 5);
+            }
         }
         if (kid >= 0)                                   /* "[OCT+]": the keycap (accent: it would act; DIM: it would not) */
-            x = cv_keycap(5, ry + 2, (uint32_t)kid, vc == T_ACCENT || vc == T_DIM ? vc : T_KEY, T_INK, cb);
+            x = cv_keycap(5 + ox, ry + 2, (uint32_t)kid, vc == T_ACCENT || vc == T_DIM ? vc : T_KEY, T_INK, cb);
         else if (vf == &AF_M) {
             if (!ui.roll[c].from[0] && val[0])
-                GFX_HOOK_ALIGN(0, ry, COL_W, ry + ROLL_H, AL_V, "card value in its roll window");
-            x = roll_text(c, 5, ry - 1, val, vc);
+                GFX_HOOK_ALIGN(0, ry, cw, ry + ROLL_H, AL_V, "card value in its roll window");
+            x = roll_text(c, 5 + ox, ry - 1, val, vc);
         } else if (free)                                /* (a name: ellipsised where it must be) */
-            x = cv_free_text(5, ry + 2, vf, val, vc, cb, room - uw);
+            x = cv_free_text(5 + ox, ry + 2, vf, val, vc, cb, room - uw);
         else
-            x = cv_text_fit(5, ry + 2, vf, val, vc, cb, room - uw);
+            x = cv_text_fit(5 + ox, ry + 2, vf, val, vc, cb, room - uw);
         if (unit[0]) {
             GFX_HOOK_ALIGN(0, 0, 0, vf == &AF_M ? ry - 1 + AF_M.asc : ry + 2 + AF_S.asc, AL_B, "card unit on its value's baseline");
-            cv_text_on(x + 3, ry + 2, &AF_S, unit, T_MID, cb);     /* on the value's baseline (S) */
+            cv_text_on(x + 3, ry + 2, &AF_S, unit, fd < 100u ? ux_mix(T_BG, T_MID, (int32_t)fd) : T_MID, cb);   /* on the value's
+                                                         * baseline (S) */
         }
         if (!strip && ratio >= 0) {                     /* the gauge: a 2 px LINE track, the value THEME on it */
             int32_t gw = COL_W - 10, fx = ratio * gw / 1000;
-            uint16_t gc = hot ? T_ACCENT : vc == T_DIM ? T_DIM : gauge_col(ratio);
-            cv_rect(5, ch - 5, gw, 2, T_LINE);
-            cv_rect(5, ch - 5, fx < 2 ? 2 : fx, 2, gc);
+            uint16_t gc = hot && !lz_on() ? T_ACCENT : vc == T_DIM ? T_DIM : lz_on() ? vc : gauge_col(ratio);
+            uint16_t tc = fd < 100u ? ux_mix(T_BG, T_LINE, (int32_t)fd) : T_LINE;
+            if (low) {                                  /* (0.8.9) BOTTOM, HUD: a hairline, the value 2 px on it */
+                if (cv_halo)
+                    cv_rect(4 + ox, ch - 6, gw + 2, 4, T_BG);
+                cv_rect(5 + ox, ch - 4, gw, 1, tc);
+                cv_rect(5 + ox, ch - 5, fx < 2 ? 2 : fx, 2, gc);
+            } else if (lz_on() && kind != LK_TALL) {   /* COLORS: 3 px, rounded, as the 0.6's */
+                cv_rrect(5, ch - 6, gw, 3, 1, T_LINE, cb);
+                cv_rrect(5, ch - 6, fx < 3 ? 3 : fx, 3, 1, gc, T_LINE);
+            } else {
+                cv_rect(5, ch - 5, gw, 2, T_LINE);
+                cv_rect(5, ch - 5, fx < 2 ? 2 : fx, 2, gc);
+            }
         }
     }
     cv_oy = 0;
-    cv_blit((uint32_t)CARD_X(c), card_y() + (strip ? (uint32_t)ry : 0u));
+    if (low && !strip)
+        lz_blit(hud ? c * 60u : (uint32_t)CARD_X(c), card_y());
+    else
+        cv_blit((uint32_t)CARD_X(c), card_y() + (strip ? (uint32_t)ry : 0u));
 }
 
 /* an action's column (act_cols): picked, the OCT+ keycap (accent while it would do something); else "--" */
@@ -733,21 +826,51 @@ static void sound_name(const track_t *t, char *b)
  * palette or the style changes (a full redraw too) */
 #define LT_W 76
 #define LT_X(l) (4 + (int32_t)(l) * 78)
+/* (0.8.9) the skins' (the mock-up opciones_skin.html): COLORS the tabs rounded (r 4), as the 0.6's step keys; BOTTOM and
+ * HUD three words centred on x 40 + 80 l (capitals rows 28..34), the level shown THEME, the others MID, BOTTOM a THEME pill
+ * under it (12 x 3, rows 37..39), HUD a THEME line under the word (row 38; on HOME outlined, over the beings) */
+static void tabs_paint(uint32_t lv, const char *const *nm3)   /* the three tabs (nm3: their names; 0: the lens's) */
+{
+    uint32_t l;
+    int low = lz_low() || (ux.skin && ui.confirm && !(ui_prefs & PREF_LARGE)), hud = hud_home();
+    int32_t y = hud ? H_HEAD : LT_Y, h = hud ? (int32_t)graph_y() - H_HEAD : low ? LB_TAB_H : LT_H, o = LT_Y - y;
+    lz_begin(240, (uint32_t)h, 0, (uint32_t)y);
+    for (l = 0; l < LV_N; l++) {
+        const char *nm = nm3 ? nm3[l] : lz_level_name(l);
+        if (low) {
+            int32_t cx = 40 + 80 * (int32_t)l, w = text_w(&AF_X, nm);
+            GFX_HOOK_ALIGN(cx - 38, 0, cx + 38, 0, AL_H, "LENTE tab word centred on its third");
+            cv_text_in(cx - 38, o + 2 - AF_X_CAP_Y, 76, &AF_X, nm, l == lv ? T_THEME : T_MID, T_BG);
+            if (l != lv)
+                continue;
+            if (ux.skin == SKIN_BOTTOM)
+                cv_rrect(cx - 6, o + 11, 12, 3, -1, T_THEME, T_BG);
+            else {
+                int32_t x0 = cx - 38 + HALF_UP(76 - (w - 1));   /* (the word's ink) */
+                if (cv_halo)
+                    cv_rect(x0 - 1, o + 11, w + 1, 3, T_BG);
+                cv_rect(x0, o + 12, w - 1, 1, T_THEME);
+            }
+            continue;
+        }
+        {
+            uint16_t bg = l == lv ? T_THEME : T_RAISE;
+            cv_rrect(LT_X(l), 0, LT_W, LT_H, 4, bg, T_BG);
+            GFX_HOOK_ALIGN(LT_X(l), 0, LT_X(l) + LT_W, LT_H, AL_HV, "LENTE tab name centred in its tab");
+            cv_text_in(LT_X(l), CAP_IN(X, LT_H), LT_W, &AF_X, nm, l == lv ? T_INK : T_MID, bg);
+        }
+    }
+    lz_blit(0, (uint32_t)y);
+}
 static void draw_tabs(void)
 {
     static uint32_t drawn;
-    uint32_t l, lv = lz_level(), sig = (lv + 1u) * 2654435761u + ux.gen * 977u + ux.style * 7u + lz_fam() * 131u + 1u;
+    uint32_t lv = lz_level(), sig = (lv + 1u) * 2654435761u + ux.gen * 977u + ux.style * 7u + lz_fam() * 131u + 1u +
+                  (uint32_t)hud_home() * 31u;
     if (!ui.force && sig == drawn)
         return;
     drawn = sig;
-    cv_begin(240, LT_H, T_BG);
-    for (l = 0; l < LV_N; l++) {
-        uint16_t bg = l == lv ? T_THEME : T_RAISE;
-        cv_rect(LT_X(l), 0, LT_W, LT_H, bg);
-        GFX_HOOK_ALIGN(LT_X(l), 0, LT_X(l) + LT_W, LT_H, AL_HV, "LENTE tab name centred in its tab");
-        cv_text_in(LT_X(l), CAP_IN(X, LT_H), LT_W, &AF_X, lz_level_name(l), l == lv ? T_INK : T_MID, bg);
-    }
-    cv_blit(0, LT_Y);
+    tabs_paint(lv, 0);
 }
 /* (0.8.5) the footer's breadcrumb, as the mock-up's: small, DIM, from x 6, its parts apart by " . " ("LENTE . BAR .
  * STEP": the lens, the level, the set; elsewhere the family and the page, "ENV . ENV DEST 2/2"); the last part in
@@ -814,7 +937,36 @@ static __attribute__((noinline)) void draw_crumbs(int32_t y, uint16_t fg, uint16
     else
         GFX_HOOK_ALIGN(0, y + AF_S_CAP_Y, 0, y + AF_S_CAP_Y + AF_S_CAP_H, AL_V, "footer breadcrumb on its line");
     if (cw)
-        cv_text_r(234, y, f, cnt, fg, T_BG);
+        cv_text_r(234, y, f, cnt, f == &AF_X ? T_TEXT : fg, T_BG);   /* (0.8.9, the skins' mock-up: the count TEXT) */
+    if (f == &AF_X && k) {                              /* (0.8.9) "LENTE" DIM, the level THEME, the set TEXT (as `last` if
+                                                         * that is not DIM) */
+        uint32_t j = 0;
+        char c;
+        for (i = 0; b[i] && i + 2u < k && !j; i++)      /* (the end of the first part) */
+            if ((uint8_t)b[i] == 0xB7u)
+                j = i + 2u;
+        if (j && j < k) {
+            uint32_t d = j;                             /* (the level's end: the second dot) */
+            while ((uint8_t)b[d] != 0xB7u)
+                d++;
+            c = b[j];
+            b[j] = 0;
+            x = cv_text_on(6, y, f, b, fg, T_BG);
+            b[j] = c;
+            c = b[d];                                   /* (the level, then the dot before the set) */
+            b[d] = 0;
+            x = cv_text_on(x, y, f, b + j, T_THEME, T_BG);
+            b[d] = c;
+            c = b[d + 2u];
+            b[d + 2u] = 0;
+            x = cv_text_on(x, y, f, b + d, fg, T_BG);
+            b[d + 2u] = c;
+            cv_free_text(x, y, f, b + d + 2u, last == fg ? T_TEXT : last, T_BG, mx - x);
+            return;
+        }
+        if (last == fg)                                 /* (two parts, "FX . BUSES": the level THEME) */
+            last = T_THEME;
+    }
     if (last == fg || !k) {
         cv_free_text(6, y, f, b, fg, T_BG, mx - 6);
         return;
@@ -833,7 +985,7 @@ static void draw_foot(void)
     const track_t *t = TSEL;
     uint32_t sig;
     int lz = (int)lz_on(), accw = grid_on() && black_held(GK_ACC);
-    int32_t ry = lz ? CRUMB_Y : 19;                      /* the breadcrumb's line (a lens page: the footer is it) */
+    int32_t ry = lz ? CRUMB_Y + LZ_FOOT_Y - (int32_t)foot_y() : 19;   /* the breadcrumb's line (a lens page: the footer is it) */
     foot_crumbs(s, sizeof s);
     if (ui.home)
         str_cpy(ti, "HOME", sizeof ti);
@@ -853,7 +1005,7 @@ static void draw_foot(void)
     if (!ui.force && sig == ui.foot_sig)
         return;
     ui.foot_sig = sig;
-    cv_begin(240, foot_h(), T_BG);
+    lz_begin(240, foot_h(), 0, foot_y());
     if (lz) {
         ;                                             /* (0.8.5) a lens page: the breadcrumb alone, as the mock-up */
     } else if (act_cols()) {                          /* row 1: the OCT+ / OCT- hint in place of the steps */
@@ -892,7 +1044,7 @@ static void draw_foot(void)
     }
     draw_crumbs(ry, T_DIM, accw ? T_ACCENT : T_DIM);   /* (0.8.5) row 2: the breadcrumb (the track's engine and sound:
                                                          * the header's centre) */
-    cv_blit(0, foot_y());
+    lz_blit(0, foot_y());
 }
 /* the EDIT layer's cards (ui_layer.c): ENG (the engine), No. (its sounds: KNOB 2's list), FAV, an empty card */
 static void engine_columns(void)
@@ -1762,34 +1914,37 @@ static void dice_panel(void);                            /* (ui_input.c: what th
 static void dlg_tabs(uint32_t lv)
 {
     static const char *const DN[3] = {"NOTICE", "DICE", "NAME"};
-    uint32_t l;
-    cv_begin(240, LT_H, T_BG);
-    for (l = 0; l < 3u; l++) {
-        uint16_t bg = l == lv ? T_THEME : T_RAISE;
-        cv_rect(LT_X(l), 0, LT_W, LT_H, bg);
-        GFX_HOOK_ALIGN(LT_X(l), 0, LT_X(l) + LT_W, LT_H, AL_HV, "LENTE tab name centred in its tab");
-        cv_text_in(LT_X(l), CAP_IN(X, LT_H), LT_W, &AF_X, DN[l], l == lv ? T_INK : T_MID, bg);
-    }
-    cv_blit(0, LT_Y);
+    tabs_paint(lv, DN);                                 /* (0.8.9: in the skin's tabs) */
 }
-static void dlg_crumb(const char *a, const char *b)     /* "LENTE . NOTICE . CONFIRM" */
+static void dlg_crumb(const char *a, const char *b)     /* "LENTE . NOTICE . CONFIRM" (0.8.9: the level THEME, the set TEXT) */
 {
-    char s[40];
-    str_cpy(s, "LENTE \xB7 ", sizeof s);
-    str_cpy(s + str_len(s), a, sizeof s - str_len(s));
-    str_cpy(s + str_len(s), " \xB7 ", sizeof s - str_len(s));
-    str_cpy(s + str_len(s), b, sizeof s - str_len(s));
+    int32_t x;
     cv_begin(240, LZ_FOOT_H, T_BG);
-    cv_text(6, CRUMB_Y, &AF_X, s, T_DIM);
+    x = cv_text(6, CRUMB_Y, &AF_X, "LENTE \xB7 ", T_DIM);
+    x = cv_text(x, CRUMB_Y, &AF_X, a, T_THEME);
+    x = cv_text(x, CRUMB_Y, &AF_X, " \xB7 ", T_DIM);
+    cv_text(x, CRUMB_Y, &AF_X, b, T_TEXT);
     cv_blit(0, LZ_FOOT_Y);
 }
-static void dlg_button(int32_t x, int32_t y, int32_t w, const char *k, const char *a, int yes)
+/* (0.8.9) a dialog's card: COLORS rounded, its top THEME; BOTTOM / HUD none (a THEME line over it) */
+static uint16_t dlg_card(int32_t x, int32_t y, int32_t w, int32_t h, uint16_t under)
 {
-    cv_rect(x, y, w, 34, T_SURF);
-    cv_text(x + 6, y + 5 - AF_X_CAP_Y, &AF_X, k, T_DIM);
-    cv_text(x + 6, y + 16 - AF_M_CAP_Y, &AF_M, a, yes ? T_ACCENT : T_TEXT);
-    if (yes)
-        cv_rect(x + 6, y + 30, w - 12, 2, T_ACCENT);
+    if (ux.skin) {
+        cv_rect(x, y, w, 1, T_THEME);
+        return under;
+    }
+    cv_rrect(x, y, w, h, 5, T_RAISE, under);
+    cv_rect(x + 4, y, w - 8, 2, T_THEME);
+    return T_RAISE;
+}
+static void dlg_button(int32_t x, int32_t y, int32_t w, const char *k, const char *a, int yes, uint16_t under)
+{
+    uint16_t bg = ux.skin ? under : T_SURF;
+    if (!ux.skin)
+        cv_rrect(x, y, w, 34, 4, T_SURF, under);
+    cv_text_on(x + 6, y + 5 - AF_X_CAP_Y, &AF_X, k, T_DIM, bg);
+    cv_text_on(x + 6, y + 16 - AF_M_CAP_Y, &AF_M, a, yes ? T_ACCENT : T_TEXT, bg);
+    cv_rect(x + 6, y + 30, w - 12, yes ? 2 : 1, yes ? T_ACCENT : T_LINE);
 }
 static void draw_confirm(void)
 {
@@ -1804,48 +1959,56 @@ static void draw_confirm(void)
         static const char *const PART[4] = {"SOUND", "SEQ", "LFO", "FX"};
         uint32_t pk = (uint32_t)(ui.confirm - CF_DICE_SOUND) & 3u;
         dice_panel();
+        uint16_t cb, kb;
         cv_begin(240, 30, T_BG);
-        cv_rect(4, 0, 232, 30, T_RAISE);
-        cv_rect(4, 0, 232, 2, T_THEME);
-        cv_text(10, 7 - AF_S_CAP_Y, &AF_S, a, T_TEXT);
-        cv_text(10, 20 - AF_X_CAP_Y, &AF_X, b, T_DIM);
-        cv_rect(148, 4, 40, 23, T_SURF);
-        cv_text_in(148, 7 - AF_X_CAP_Y, 40, &AF_X, "OCT-", T_DIM, T_SURF);
-        cv_text_in(148, 17 - AF_X_CAP_Y, 40, &AF_X, "CANCEL", T_MID, T_SURF);
-        cv_rect(192, 4, 40, 23, T_SURF);
-        cv_text_in(192, 7 - AF_X_CAP_Y, 40, &AF_X, "OCT+", T_DIM, T_SURF);
-        cv_text_in(192, 17 - AF_X_CAP_Y, 40, &AF_X, "OK", T_ACCENT, T_SURF);
+        cb = dlg_card(4, 0, 232, 30, T_BG);
+        kb = ux.skin ? cb : T_SURF;
+        cv_text_on(10, 7 - AF_S_CAP_Y, &AF_S, a, T_TEXT, cb);
+        cv_text_on(10, 20 - AF_X_CAP_Y, &AF_X, b, T_DIM, cb);
+        if (!ux.skin) {
+            cv_rrect(148, 4, 40, 23, 3, T_SURF, cb);
+            cv_rrect(192, 4, 40, 23, 3, T_SURF, cb);
+        }
+        cv_text_in(148, 7 - AF_X_CAP_Y, 40, &AF_X, "OCT-", T_DIM, kb);
+        cv_text_in(148, 17 - AF_X_CAP_Y, 40, &AF_X, "CANCEL", T_MID, kb);
+        cv_text_in(192, 7 - AF_X_CAP_Y, 40, &AF_X, "OCT+", T_DIM, kb);
+        cv_text_in(192, 17 - AF_X_CAP_Y, 40, &AF_X, "OK", T_ACCENT, kb);
         cv_blit(0, 194);
         dlg_crumb("DICE", drum_track(TSEL) && pk == 0u ? "KIT" : PART[pk]);
         return;
     }
     cv_begin(212, 140, T_BG);                         /* NOTICE: the card */
-    cv_rect(0, 0, 212, 140, T_RAISE);
-    cv_rect(0, 0, 212, 2, T_THEME);
-    cv_text(12, 12 - AF_M_CAP_Y, &AF_M, "?", T_ACCENT);
+    {
+    uint16_t cb = dlg_card(0, 0, 212, 140, T_BG);
+    cv_text_on(12, 12 - AF_M_CAP_Y, &AF_M, "?", T_ACCENT, cb);
     if (text_w(tf, a) > 196)
         tf = &AF_S;
     GFX_HOOK_ALIGN(0, 0, 212, 0, AL_H, "dialog question centred");
-    cv_text_in(0, 36, 212, tf, a, T_TEXT, T_RAISE);
+    cv_text_in(0, 36, 212, tf, a, T_TEXT, cb);
     if (b[0]) {
         char f[32];
         text_fit(f, sizeof f, b, &AF_S, 196);          /* a name: free text */
         GFX_HOOK_ALIGN(0, 0, 212, 0, AL_H, "dialog detail centred");
-        cv_text_flags(ink_in(&AF_S, f, 212), 60, &AF_S, f, T_MID, T_RAISE, 8u | (f[str_len(f) - 1u] == ELLIPSIS));
+        cv_text_flags(ink_in(&AF_S, f, 212), 60, &AF_S, f, T_MID, cb, 8u | (f[str_len(f) - 1u] == ELLIPSIS));
     }
-    dlg_button(12, 92, 90, "OCT -", ui.confirm == CF_DICE_ALL ? "CANCEL" : "NO", 0);
-    dlg_button(110, 92, 90, "OCT +", "YES", 1);
+    dlg_button(12, 92, 90, "OCT -", ui.confirm == CF_DICE_ALL ? "CANCEL" : "NO", 0, cb);
+    dlg_button(110, 92, 90, "OCT +", "YES", 1, cb);
+    }
     cv_blit(14, 66);
     dlg_crumb("NOTICE", "CONFIRM");
 }
 
-/* the stored STYLE (ui_style: the menu, a settings import, a restore) into gfx.c's copy: the tokens again, all redrawn */
+/* the stored STYLE (ui_style: the menu, a settings import, a restore) and SKIN (0.8.9, ui_skin) into gfx.c's copies: the
+ * tokens again, all redrawn */
 static void style_apply(void)
 {
     if (ui_style > ST_LINE)                             /* 2, the retired PIXEL: LINE; unknown: FLAT */
         ui_style = ui_style == 2u ? ST_LINE : ST_FLAT;
-    if (ux.style != ui_style) {
+    if (ui_skin >= SKIN_N)                              /* (0.8.9) SKIN: unknown, COLORS */
+        ui_skin = SKIN_COLORS;
+    if (ux.style != ui_style || ux.skin != ui_skin) {
         ux.style = ui_style;
+        ux.skin = ui_skin;
         palette_set(settings.palette);
         ui.force = 1;
     }
@@ -1888,6 +2051,7 @@ static void ui_draw(void)
 }
 static void ui_draw_page(uint32_t counting)
 {
+    int skip = 0;
     if (ui.uboot) {
         draw_uboot();
         draw_head();
@@ -1956,14 +2120,28 @@ static void ui_draw_page(uint32_t counting)
         page_entered();
     }
     cursor_fix();
-    if (ui.force)
+    {   /* (0.8.9) SKIN HUD's HOME: every strip on the beings, so all of them each frame (LOAD LITE / ECO: every 50 / 70 ms,
+         * as the panel's own pace) */
+        static uint8_t was __attribute__((section(".pool")));
+        static uint32_t hud_ms __attribute__((section(".pool")));
+        uint8_t h = (uint8_t)hud_home();
+        if (h != was)
+            ui.force = 1, was = h;
+        if (h && sys_load && !ui.force && fm1_ms - hud_ms < (sys_load == LOAD_ECO ? 70u : 50u))
+            skip = 1;
+        else if (h)
+            hud_ms = fm1_ms, ui.force = 1;
+    }
+    if (ui.force && !skip)
         draw_frame();
     felucca_dbg.stage = 3;
-    draw_head();
-    felucca_dbg.stage = 4;
-    draw_columns();
-    felucca_dbg.stage = 5;
-    draw_graph();
+    if (!skip) {
+        draw_head();
+        felucca_dbg.stage = 4;
+        draw_columns();
+        felucca_dbg.stage = 5;
+        draw_graph();
+    }
     if (ui.msg_t && !--ui.msg_t && ui.msg2[0]) {     /* the second message (ui_notices) */
         str_cpy(ui.msg, ui.msg2, sizeof ui.msg);
         ui.msg2[0] = 0;
@@ -1974,6 +2152,10 @@ static void ui_draw_page(uint32_t counting)
     if (ui.hot_t)
         ui.hot_t--;
     felucca_dbg.stage = 6;
+    if (skip) {
+        ui.force = 0;
+        return;
+    }
     if (pf_on)                                          /* (0.6.61) the page's name for a moment; (0.6.64) over the
                                                          * footer, which says the same: the header, the cards and
                                                          * the graph stay in sight */

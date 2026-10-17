@@ -21,6 +21,7 @@ static const uint8_t ED_MENU[][2] = {
     {MI_TRACKS, 18},                                   /* (JIANT 0.6.18) TRACKS 4 / 6, a row of AUDIO */
     {MI_LOAD, 19},                                     /* (JIANT 0.6.30) LOAD ECO / LITE / FULL, a row of SYSTEM */
     {MI_MIDIOUT, 20},                                  /* (JIANT 0.6.72) MIDI OUT KEYS / CLOCK / ALL / OFF, CONTROL */
+    {MI_SKIN, 21},                                     /* (JIANT 0.8.9) SKIN COLORS / BOTTOM / HUD, a row of DISPLAY */
 };
 #define ED_MENU_N NELEM(ED_MENU)
 

@@ -47,10 +47,14 @@ static void eco_feat(uint32_t c, bfeat_t *f, int32_t k)
  * track's level (the part's peak, slewed: a hit at once, a quick fall), its time, its size (it pulses, and swells up to
  * ~2.2 x; the selected one larger), its swim over the whole panel (wandering, bouncing off the walls, a hit kicking it
  * on up to ~7 x). Still with ANIM OFF */
+/* (0.8.9) the beings' water: the panel (COLORS 232 x 140, BOTTOM 240 x 148), HUD's HOME the whole screen; its floor, the
+ * numbers' line under it (HUD: the numbers only in the middle, the floor near the screen's foot) */
+static int32_t eco_h(void) { return hud_home() ? 240 : (int32_t)graph_h(); }
+static int32_t eco_bot(void) { return eco_h() - (hud_home() ? 6 : 18); }
 static uint32_t eco_step(void)
 {
     uint32_t c, k, dt = ui.frame - eco.f0;
-    int32_t bot = (int32_t)cv_h - 18;                   /* (the panel's floor, the number's line under it: 0.8.4's 104 of
+    int32_t bot = eco_bot();                            /* (the panel's floor, the number's line under it: 0.8.4's 104 of
                                                          * 122, the lens's 140 its 122) */
     if (!eco.init) {
         eco.init = 1;
@@ -131,7 +135,7 @@ static void cr_step(uint32_t dt, const int32_t *bx, const int32_t *by, uint32_t 
         for (i = 0; i < CR_N; i++) {
             r = r * 1664525u + 1013904223u;
             cr.x[i] = (int16_t)((8u + (r >> 8) % 224u) * 16u);
-            cr.y[i] = (int16_t)((4u + (r >> 20) % 132u) * 16u);
+            cr.y[i] = (int16_t)((4u + (r >> 20) % (uint32_t)(eco_h() - 8)) * 16u);
             cr.ph[i] = (uint8_t)r;
         }
         cr.init = 1;
@@ -158,18 +162,21 @@ static void cr_step(uint32_t dt, const int32_t *bx, const int32_t *by, uint32_t 
             cr.vx[i] = (int16_t)clamp((cr.vx[i] * 15 >> 4) + ax, -vmax, vmax);
             cr.vy[i] = (int16_t)clamp((cr.vy[i] * 15 >> 4) + ay, -vmax, vmax);
             cr.x[i] = (int16_t)clamp(cr.x[i] + cr.vx[i], 6 * 16, 234 * 16);   /* (the panel's walls: they slide along) */
-            cr.y[i] = (int16_t)clamp(cr.y[i] + cr.vy[i], 3 * 16, 137 * 16);
+            cr.y[i] = (int16_t)clamp(cr.y[i] + cr.vy[i], 3 * 16, (eco_h() - 3) * 16);
             cr.ph[i] = (uint8_t)(cr.ph[i] + 9u + (i % CR_KINDS) * 3u + (uint32_t)E / 32u);
         }
 }
 /* the critters drawn: a sprite each (its phase), warm near a sounding being, the others the theme's tint, all brighter
  * with the output (E); the flagellates face their way */
+static int32_t cr_x0 __attribute__((section(".pool")));   /* (0.8.9) HUD: the strip's left on the screen */
 static void cr_draw(const int32_t *bx, const int32_t *by, uint32_t nb, int32_t E)
 {
     uint32_t i, c, b;
     int grey = settings.palette == UI_GREY_INDEX || settings.palette == UI_BW_INDEX;
     for (i = 0; i < CR_N; i++) {
         int32_t x = (cr.x[i] >> 4) - 2, y = (cr.y[i] >> 4) - 2, near = 0, flip = i % CR_KINDS == CR_FLAG && cr.vx[i] < 0;
+        if (y + 5 + cv_oy < 0 || y + cv_oy >= (int32_t)cv_h || x + 5 < cr_x0 || x >= cr_x0 + (int32_t)cv_w)
+            continue;                                   /* (off the strip) */
         uint32_t spr = CR_SPR[i % CR_KINDS][(cr.ph[i] >> 6) & 3u];
         uint16_t col;
         for (c = 0; c < nb; c++) {
@@ -182,7 +189,7 @@ static void cr_draw(const int32_t *bx, const int32_t *by, uint32_t nb, int32_t E
             col = ux_gray(ux_luma(col) >> 3);
         for (b = 0; b < 25u; b++)
             if ((spr >> b) & 1u)
-                cv_pset(x + (flip ? 4 - (int32_t)(b % 5u) : (int32_t)(b % 5u)), y + (int32_t)(b / 5u), col);
+                cv_pset(x - cr_x0 + (flip ? 4 - (int32_t)(b % 5u) : (int32_t)(b % 5u)), y + (int32_t)(b / 5u), col);
     }
 }
 
@@ -217,48 +224,60 @@ static uint32_t routes_count(void)                      /* the MOD slots whose S
 }
 /* ECO: 0.8.4's HOME (graph_ecosys) in the lens's panel: the cytoplasm's granules drifting, the critters, the six beings
  * swimming free over the whole panel, each with its MUTATE dots and its number under it (the selected one larger, its
- * number in the theme's colour) */
-static void graph_eco(void)
+ * number in the theme's colour). (0.8.9) Drawn into the canvas as the water's x0, y0 .. (eco_draw); SKIN HUD's HOME: the
+ * water is the screen, every strip draws the part of it under it (eco_backdrop; a being off the strip skipped), the
+ * numbers and the MACROS words in the middle strip only (words), clear of the floating ones */
+static void eco_draw(int32_t x0, int32_t y0, int words)
 {
     uint32_t c, k, dt = eco_step(), still = (ui_prefs & PREF_ANIM_OFF) != 0u;
-    int32_t bx[ECO_N], by[ECO_N], E = bg_energy(), bot = (int32_t)cv_h - 18;
+    int32_t bx[ECO_N], by[ECO_N], E = bg_energy(), bot = eco_bot(), hud = hud_home();
     char b[16];
+    cv_oy = -y0;
     for (k = 0; k < 22u; k++) {                         /* the cytoplasm: granules drifting */
         uint32_t h = k * 2654435761u;
         int32_t gx = 10 + (int32_t)((h >> 8) % 220u + ui.frame * (1u + (h >> 28)) / 6u) % 220;
         int32_t gy = 6 + (int32_t)(((h >> 16) % (uint32_t)(bot + 6)) + (still ? 0 : (uint32_t)(bg_sin((uint32_t)(ui.frame * 300u + h)) >> 13))) %
                          (uint32_t)(bot + 6);
-        cv_rect(gx, gy, 1 + (int32_t)(h >> 31), 1 + (int32_t)(h >> 31), ux_mix(T_SURF, T_THEME, 22 + (int32_t)(h >> 29) * 4));
+        cv_rect(gx - x0, gy, 1 + (int32_t)(h >> 31), 1 + (int32_t)(h >> 31), ux_mix(T_SURF, T_THEME, 22 + (int32_t)(h >> 29) * 4));
     }
     for (c = 0; c < ECO_N; c++) {
         bx[c] = eco.sx[c] >> 4;
         by[c] = eco.sy[c] >> 4;
     }
     cr_step(dt, bx, by, ECO_N, E);
+    cr_x0 = x0;
     cr_draw(bx, by, ECO_N, E);
+    cr_x0 = 0;
     for (c = 0; c < ECO_N; c++) {
-        int32_t rad = eco.r[c] >> 4;
+        int32_t rad = eco.r[c] >> 4, px = eco.sx[c] >> 8, py = eco.sy[c] >> 8, ny, reach = (rad >> 4) * 3 + 8;
         char num[2] = {(char)('1' + c), 0};
-        eco_being(c, bx[c], by[c], eco.r[c]);
+        if (py + reach < y0 || py - reach > y0 + (int32_t)cv_h || px + reach < x0 || px - reach > x0 + (int32_t)cv_w)
+            continue;                                   /* (off the strip) */
+        eco_being(c, bx[c] - x0 * 16, by[c], eco.r[c]);
         {   /* (0.6.43) MUTATE: a ring of 12 dots filling to its next change; a change: all lit */
             static const int8_t RX[12] = {0, 50, 87, 100, 87, 50, 0, -50, -87, -100, -87, -50};
             uint32_t pr = mut_progress(c), d, lit = pr == 0xFFFFu ? 0u : mut_flash[c] ? 12u : pr * 12u / 256u;
             int32_t rr2 = (rad >> 4) + 6;
             for (d = 0; pr != 0xFFFFu && d < 12u; d++) {
-                int32_t dx = (eco.sx[c] >> 8) + RX[d] * rr2 / 100, dy = (eco.sy[c] >> 8) - RX[(d + 9u) % 12u] * rr2 / 100;
-                cv_rect(dx - 1, dy - 1, 2, 2, d < lit ? (mut_flash[c] ? T_ACCENT : heat_col(160)) : T_RAISE);
+                int32_t dx = px + RX[d] * rr2 / 100, dy = py - RX[(d + 9u) % 12u] * rr2 / 100;
+                cv_rect(dx - 1 - x0, dy - 1, 2, 2, d < lit ? (mut_flash[c] ? T_ACCENT : heat_col(160)) : T_RAISE);
             }
         }
-        cv_text_in((eco.sx[c] >> 8) - 30, clamp((eco.sy[c] >> 8) + rad / 2 + 4, 4, bot), 60, &AF_S, num,
-                   c == song.sel ? T_THEME : eco_off(c) ? T_DIM : T_MID, T_SURF);
+        ny = clamp(py + rad / 2 + 4, 4, bot);
+        if (words && (!hud || (ny >= (int32_t)graph_y() + (home_set() ? 12 : 2) && ny + 14 <= (int32_t)(graph_y() + graph_h()))))
+            cv_text_in(px - 30 - x0, ny, 60, &AF_S, num, c == song.sel ? T_THEME : eco_off(c) ? T_DIM : T_MID, T_SURF);
     }
-    if (home_set()) {                                   /* MACROS: the routes, LATCH */
+    if (words && home_set()) {                          /* MACROS: the routes, LATCH */
+        int32_t y = hud ? (int32_t)graph_y() + 3 : 2;
         fmt_int(b, (int32_t)routes_count());
         str_cpy(b + str_len(b), " ROUTES", 8);
-        cv_text(6, 2, &AF_X, b, T_DIM);
-        cv_text_r(234, 2, &AF_X, mac_latch ? "LATCH" : "HOLD LFO", mac_latch ? T_ACCENT : T_DIM, T_SURF);
+        cv_text(6, y, &AF_X, b, T_DIM);
+        cv_text_r(234, y, &AF_X, mac_latch ? "LATCH" : "HOLD LFO", mac_latch ? T_ACCENT : T_DIM, T_SURF);
     }
+    cv_oy = 0;
 }
+static void graph_eco(void) { eco_draw(0, 0, 1); }
+static void eco_backdrop(int32_t x0, int32_t y0, int words) { eco_draw(x0, y0, words); }
 /* BEING: the track's being large, its HOME knobs as organs at the corners */
 static const int16_t ORG_X[4] = {30, 210, 30, 210}, ORG_Y[4] = {28, 28, 116, 116};
 static void organ(uint32_t k, int32_t cx, int32_t cy)

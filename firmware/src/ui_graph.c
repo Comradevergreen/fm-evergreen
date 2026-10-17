@@ -10,6 +10,52 @@
 #define PANEL_X0 10                                  /* the graphs' inner area: x 10..230 */
 #define PANEL_W 220
 #define GOY 11                                       /* graphs drawn on a 100 px scale sit at y 11..111 */
+/* (0.8.9) SKIN HUD's HOME (ui.c hud_home): every strip begins on the beings (ui_lzhome.c eco_backdrop: the strip at screen
+ * x, y), its words outlined (gfx.c cv_halo); elsewhere a strip cleared to BG */
+static void eco_backdrop(int32_t x0, int32_t y0, int words);
+static void lz_begin(uint32_t w, uint32_t h, uint32_t x, uint32_t y)
+{
+    cv_begin(w, h, T_BG);
+    if (hud_home()) {
+        eco_backdrop((int32_t)x, (int32_t)y, 0);
+        cv_halo = 1;
+    }
+}
+static void lz_blit(uint32_t x, uint32_t y)
+{
+    cv_halo = 0;
+    cv_blit(x, y);
+}
+/* (0.8.9) HUD: the knob row while KNOB 1..4 rest: whole for 3 s after a turn, then down to 22 % in 0.6 s (steps of 13 %);
+ * every other case 100 */
+static uint32_t hud_fade(void)
+{
+    uint32_t el = fm1_ms - ui.knob_ms;
+    if (ux.skin != SKIN_HUD || !lz_low() || el < 3000u)
+        return 100u;
+    return el >= 3600u ? 22u : 100u - (el - 3000u) * 78u / 600u / 13u * 13u;
+}
+
+/* (0.8.9) a tile in a lens's panel (FX's modules, the menu's tabs, ENV's tracks, MOD's slots): COLORS a rounded RAISE box
+ * (r 4), the one picked framed in fc (the mock-up's card and its stroke); BOTTOM and HUD none (the words on the background;
+ * the one picked: its name underlined, lz_uline). What lies under its words: lz_tile_bg */
+static uint16_t lz_tile_bg(void) { return ux.skin ? T_SURF : T_RAISE; }
+static void lz_tile(int32_t x, int32_t y, int32_t w, int32_t h, int sel, uint16_t fc)
+{
+    if (ux.skin)
+        return;
+    if (sel) {
+        cv_rrect(x, y, w, h, 4, fc, cv_bg);
+        cv_rrect(x + 1, y + 1, w - 2, h - 2, 3, T_RAISE, fc);
+    } else
+        cv_rrect(x, y, w, h, 4, T_RAISE, cv_bg);
+}
+static void lz_uline(int32_t x, int32_t y, const aafont_t *f, const char *s, uint16_t c)   /* BOTTOM, HUD: under a name */
+{
+    if (ux.skin)
+        cv_rect(x, y, text_w(f, s) - 1, 1, c);
+}
+
 /* the height ADSR and LFO are drawn on: 100 px, or (MENU > LARGE's strip: draw_graph) the strip's ~ 56 */
 static int32_t graph_ht = 100;
 #include "ui_organic.c"                              /* JIANT FM's organic line art (drawn by code) */
@@ -483,13 +529,19 @@ static void bar_cell(const track_t *t, uint32_t b, int32_t x, int32_t y, int32_t
     uint32_t len = (uint32_t)clamp(t->p[P_SLEN], 1, NSTEP), i, l, dr = drum_track(t);
     int sel = b == ui.bank;
     int32_t sw = w - 4, top = y + (h > 20 ? 14 : 3), nh = h - (h > 20 ? 17 : 5);
-    uint16_t bg = sel ? T_TINT : T_RAISE, nc;
+    uint16_t bg = ux.skin ? T_SURF : T_RAISE, nc;
     char s[2];
     if (b * 16u >= len) {                            /* past LEN: a dark cell */
         cv_rect(x, y, w, h, T_BG);
         return;
     }
-    cv_rect(x, y, w, h, bg);
+    if (ux.skin)                                     /* (0.8.9) BOTTOM, HUD: bare, a line under it (the bar edited THEME) */
+        cv_rect(x, y + h - 1, w, 1, sel ? T_THEME : T_LINE);
+    else if (sel) {                                  /* COLORS: a rounded card, the bar edited framed THEME */
+        cv_rrect(x, y, w, h, 3, T_THEME, cv_bg);
+        cv_rrect(x + 1, y + 1, w - 2, h - 2, 2, T_RAISE, T_THEME);
+    } else
+        cv_rrect(x, y, w, h, 3, T_RAISE, cv_bg);
     for (i = 0; i < 16u && b * 16u + i < len; i++) {
         const step_t *st = &seq_steps(t)[b * 16u + i];
         int32_t sx = x + 2 + (int32_t)i * sw / 16, mw = sw / 16 - 1 > 1 ? sw / 16 - 1 : 1;
@@ -507,7 +559,7 @@ static void bar_cell(const track_t *t, uint32_t b, int32_t x, int32_t y, int32_t
     }
     s[0] = (char)('1' + b);
     s[1] = 0;
-    nc = song.playing && seq_src(t, t->seq_idx) / 16u == b ? T_ACCENT : sel ? T_THEME : T_DIM;
+    nc = song.playing && seq_src(t, t->seq_idx) / 16u == b ? T_ACCENT : sel ? T_THEME : T_MID;
     GFX_HOOK_ALIGN(0, y, 0, y + (h > 20 ? 15 : h), AL_V | AL_PASS, "LENTE bar number at its cell's top");
     cv_text_on(x + 3, y + (h > 20 ? 3 : CAP_IN(X, h)), &AF_X, s, nc, bg);
 }
@@ -577,11 +629,12 @@ static void graph_roll(const track_t *t, uint16_t c)
         uint32_t pc = (uint32_t)n % 12u;
         static const uint8_t KB[12] = {0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0};
         int in = mask == 0xFFFu ? !KB[pc] : (int)((mask >> ((uint32_t)(n - t->p[P_ROOT] + 120) % 12u)) & 1u);
-        if (in)
+        if (in && !ux.skin)                          /* ((0.8.9) BOTTOM, HUD: no rows, the beats only) */
             cv_rect(PR_RX, y, PR_CX(ncol) - PR_RX, PR_RH, T_LANE);
     }
     for (i = 0; i < 16u; i++)                         /* step lines, the beats brighter */
-        cv_rect(PR_CX(i), PR_Y0, 1, ybot - PR_Y0, i % 4u ? T_GRID : T_LINE);
+        if (!ux.skin || !(i % 4u))
+            cv_rect(PR_CX(i), PR_Y0, 1, ybot - PR_Y0, i % 4u ? T_GRID : T_LINE);
     if (ncol < 16u)                                   /* past LEN: dark */
         cv_rect(PR_CX(ncol), PR_Y0, PR_RX + PR_RW - PR_CX(ncol), ybot - PR_Y0, T_BG);
     for (r = 0; r < PR_ROWS; r++)                     /* the keys held: their rows marked at the left */
@@ -621,8 +674,9 @@ static void graph_roll(const track_t *t, uint16_t c)
             cv_rect(x, PR_Y0, 1, ybot - PR_Y0, T_ACCENT);
         if ((locks >> si) & 1u)                       /* a parameter lock: a mark at the column's foot */
             cv_rect(x + 3, ybot - 3, PR_CWI(i) - 6, 2, T_ACCENT);
-        if (si == ui.cursor)                          /* the cursor: a THEME frame round its column */
-            cv_frame(x, PR_Y0, PR_CWI(i) + 1, ybot - PR_Y0, T_THEME);
+        if (si == ui.cursor)                          /* the cursor: a frame round its column (0.8.9, the skins' mock-up:
+                                                       * TEXT) */
+            cv_frame(x, PR_Y0, PR_CWI(i) + 1, ybot - PR_Y0, T_TEXT);
     }
     if (ui.entry_open && !ui.ent_arp && ui.ent_nn && ui.ent_len > 1u) {   /* (0.6.81) a chord held, KNOB 1 its length:
                                                          * the length to be written, outlined from the cursor on */
@@ -1062,7 +1116,9 @@ static void page_title(char *ti)
  * .. orange .. yellow .. white (other palettes: their surface toward their accent and text) */
 static uint16_t heat_col(int32_t v)
 {
-    static const uint16_t H[7] = {0x069Fu, 0x59FFu, 0xB19Cu, 0xF146u, 0xFBC0u, 0xFEA0u, 0xFFFFu};
+    static const uint16_t H[7] = {0x3955u, 0x82DFu, 0xFA09u, 0xFBA3u, 0xFDEBu, 0xFF99u, 0xFFFFu};   /* (0.8.9, the skins' mock-up: the 0.6's
+                                                         * ramp, indigo violet red orange amber cream white; was cyan blue violet
+                                                         * red orange yellow white) */
     int32_t k;
     v = clamp(v, 0, 256);
     if (settings.palette != UI_JIANT_INDEX)
@@ -1366,9 +1422,9 @@ static void page_flash_draw(void)
         str_cpy(sub + 3, en, sizeof sub - 3u);
     }
     if (lz_on()) {                                   /* (0.8.5) a lens page: its breadcrumb lit (the tabs say the level) */
-        cv_begin(240, foot_h(), T_BG);
-        draw_crumbs(CRUMB_Y, dim ? T_MID : T_TEXT, dim ? T_MID : T_TEXT);
-        cv_blit(0, foot_y());
+        lz_begin(240, foot_h(), 0, foot_y());
+        draw_crumbs(CRUMB_Y + LZ_FOOT_Y - (int32_t)foot_y(), dim ? T_MID : T_TEXT, dim ? T_MID : T_TEXT);
+        lz_blit(0, foot_y());
         return;
     }
     {   /* (0.6.64) at the bottom: the footer says the same */
@@ -2236,8 +2292,15 @@ static void draw_graph(void)
     }
     ui.graph_sig = sig;
     cv_begin(240, graph_h(), T_BG);
-    if (lz_on())                                     /* (0.8.5) a lens page: the mock-up's panel, square, 4 .. 236 */
-        cv_rect(4, 0, 232, (int32_t)graph_h(), T_SURF);
+    if (hud_home()) {                                /* (0.8.9) HUD's HOME: the middle of the screen's water, its numbers */
+        eco_backdrop(0, (int32_t)graph_y(), 1);
+        cv_blit(0, graph_y());
+        return;
+    }
+    if (lz_low())                                    /* (0.8.9) BOTTOM, HUD: no panel, the picture on the background */
+        ;
+    else if (lz_on())                                /* (0.8.5) a lens page: the mock-up's panel, 4 .. 236 (0.8.9 COLORS: */
+        cv_rrect(4, 0, 232, (int32_t)graph_h(), 6, T_SURF, T_BG);   /* rounded, as the 0.6's) */
     else
         cv_rrect(3, 0, 234, graph_h(), 5, T_SURF, T_BG);   /* the panel (MENU > LARGE: the strip) */
     cv_bg = T_SURF;                                  /* (text drawn with cv_text lands on it) */

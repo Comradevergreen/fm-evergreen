@@ -69,7 +69,8 @@ typedef struct { uint16_t off; uint8_t w; const char *label; } kc_t;
 #define AL_CELLS 32u                               /* the next cells (cv_rrect), not ink: a row of keys, a fill */
 #define AL_N(n) ((uint32_t)(n) << 8)
 
-#define CV_MAX (240u * 140u)      /* the graph strip: 240 x 140 (0.8.5: a lens page's panel; was 124) */
+#define CV_MAX (240u * 150u)      /* the graph strip: 240 x 150 (0.8.5: a lens page's panel, 140; was 124; 0.8.9 HUD's HOME:
+                                   * its middle, 150) */
 static uint16_t cv_px[CV_MAX] __attribute__((section(".pool")));
 static uint32_t cv_w, cv_h;
 static uint16_t cv_bg;           /* what cv_begin cleared the canvas to */
@@ -77,6 +78,8 @@ static uint8_t cv_scroll;        /* 1: drawing a scrolled view (its text may run
 static int32_t cv_oy;            /* y offset for graph drawing */
 static int16_t cv_cy0, cv_cy1;   /* text clip: canvas rows cv_cy0 .. cv_cy1 - 1 (cv_begin: the whole canvas) */
 static uint8_t cv_flip;          /* cv_alpha_hc: the cell mirrored left <-> right (the header's metronome, ui_draw.c) */
+static uint8_t cv_halo __attribute__((section(".pool")));   /* (0.8.9) SKIN HUD: text drawn with a 1 px BG outline under it
+                                 * (cv_text_flags), over a picture (the pool: the audio's data stays where it was) */
 
 #define RGB(r, g, b) ((uint16_t)((((r) >> 3) << 11) | (((g) >> 2) << 5) | ((b) >> 3)))
 
@@ -85,9 +88,11 @@ static uint8_t cv_flip;          /* cv_alpha_hc: the cell mirrored left <-> righ
 static struct {
     uint16_t bg, surf, text, theme, accent;
     uint16_t mid, dim, line, sel, tint, ink, rec, raise, key, lane, grid;
+    uint16_t k[4];               /* (0.8.9) KNOB 1..4's colours (tools/gen_ui_palettes.py KNOBS): the skins' cards, as 0.6 */
     uint8_t light, mono;
     uint8_t chamfer;             /* (JIANT 0.5) the JIANT palette: corners cut on the diagonal (cv_rrect), not rounded */
     uint8_t style;               /* MENU > STYLE (ui.c style_apply): ST_FLAT, ST_LINE */
+    uint8_t skin;                /* (0.8.9) MENU > SKIN (ui_draw.c style_apply): SKIN_COLORS, SKIN_BOTTOM, SKIN_HUD */
     uint32_t gen;                /* bumped by palette_set (the text ramps follow) */
 } ux;
 /* STYLE: FLAT, the filled SURF cards and panels; LINE, no SURF (it is BG) and 1 px T_RULE dividers between the
@@ -95,6 +100,14 @@ static struct {
  * Selections, accents, keys and gauges keep their fills in every style */
 #define ST_FLAT 0u
 #define ST_LINE 1u
+/* (0.8.9) SKIN (the approved mock-up opciones_skin.html): COLORS, the lens's cards and panel in the 0.6 colours; BOTTOM, the
+ * knobs a slim row at the foot and the middle free (no panel, no boxes: SURF is BG); HUD, the picture full screen and the
+ * words floating over it */
+#define SKIN_COLORS 0u
+#define SKIN_BOTTOM 1u
+#define SKIN_HUD 2u
+#define SKIN_N 3u
+#define T_K(c) ux.k[(c) & 3u]    /* KNOB c's colour */
 #define T_RULE ux.dim            /* LINE: the dividers (DIM: visible on NIGHT, GREY, MONO and PAPER, quieter than labels) */
 #define T_BG ux.bg               /* background */
 #define T_SURF ux.surf           /* dialogs, menu rows, mixer strips */
@@ -138,17 +151,20 @@ static uint32_t ux_luma(uint16_t c)        /* 0..255 */
 static void palette_set(uint32_t i)
 {
     const ui_pal_t *p = &UI_PALETTES[i % NPALETTES];
+    uint32_t k;
     i %= NPALETTES;
     ux.mono = i == UI_GREY_INDEX;
     ux.chamfer = i == UI_JIANT_INDEX;
-    ux.bg = p->bg; ux.surf = ux.style ? p->bg : p->surf; ux.text = p->text; ux.theme = p->theme; ux.accent = p->accent;
+    ux.bg = p->bg; ux.surf = ux.style || ux.skin ? p->bg : p->surf; ux.text = p->text; ux.theme = p->theme; ux.accent = p->accent;
     ux.mid = ux_mix(p->bg, p->text, UI_MID_PCT);
     ux.dim = ux_mix(p->bg, p->text, UI_DIM_PCT);
     ux.line = ux_mix(p->bg, p->text, UI_LINE_PCT);
     ux.sel = ux_mix(p->bg, p->theme, UI_SEL_PCT);
     ux.tint = ux_mix(p->bg, p->theme, UI_TINT_PCT);
     ux.ink = p->bg;
-    ux.raise = ux_mix(p->surf, p->text, UI_RAISE_PCT);
+    ux.raise = ux_mix(p->surf, p->text, UI_RAISE_OF[i]);
+    for (k = 0; k < 4u; k++)
+        ux.k[k] = UI_KNOBS[i][k];
     ux.key = ux_mix(p->bg, p->text, UI_KEY_PCT);
     ux.lane = ux_mix(ux.surf, p->theme, 10);
     ux.grid = ux_mix(ux.surf, p->text, 6);
@@ -291,7 +307,7 @@ static uint32_t rr_cov(int32_t r, int32_t i, int32_t j)
  * behind it): the flat look's cards, panels, rows, bars and buttons */
 static void cv_rrect(int32_t x, int32_t y, int32_t w, int32_t h, int32_t r, uint16_t c, uint16_t under)
 {
-    int32_t i, j, cut = ux.chamfer && r > 0;      /* (JIANT 0.5: a -r cushion, a switch, stays round) */
+    int32_t i, j;
     GFX_HOOK_CELL(x, y + cv_oy, x + w, y + h + cv_oy);   /* (the lint: what is drawn on it stays inside it) */
     if (r < 0) r = -r;                           /* (-r: rounded in every style: a keycap-like cushion) */
     else if (ux.style == ST_LINE) r = 0;         /* LINE: square cursors, selections and fills (FLAT: rounded) */
@@ -301,11 +317,8 @@ static void cv_rrect(int32_t x, int32_t y, int32_t w, int32_t h, int32_t r, uint
         cv_rect(x, y, w, h, c);
         return;
     }
-    if (cut && c == T_SURF) {                    /* (JIANT 0.6.60) all black: a card, the panel, a row, a dialog are
-                                                  * their text and graphs on the dark, no box drawn (SURF is black) */
-        cv_rect(x, y, w, h, c);
-        return;
-    }                                            /* (a lit one, the chosen row or a button: rounded, as elsewhere) */
+    /* ((JIANT 0.6.60 .. 0.8.8) JIANT's SURF was black: its boxes square; 0.8.9 the 0.6 colours, a near-black SURF:
+     * rounded, as the mock-up) */
     cv_rect(x + r, y, w - 2 * r, h, c);
     cv_rect(x, y + r, r, h - 2 * r, c);
     cv_rect(x + w - r, y + r, r, h - 2 * r, c);
@@ -609,7 +622,17 @@ static int32_t text_run(int32_t x, int32_t y, const aafont_t *f, const char *s, 
 static int32_t cv_text_flags(int32_t x, int32_t y, const aafont_t *f, const char *s, uint16_t fg, uint16_t bg,
                              uint32_t flags)
 {
-    int32_t b[4], pen = text_run(x, y, f, s, ramp(fg, bg), b);
+    int32_t b[4], pen;
+    if (cv_halo) {                                   /* (0.8.9) the outline: the ink, solid BG, at 4 neighbours + the corner */
+        static const int8_t HX[5] = {1, 1, 0, -1, 0}, HY[5] = {1, 0, 1, 0, -1};
+        static uint16_t hv[16] __attribute__((section(".pool")));
+        uint32_t k;
+        for (k = 0; k < 16u; k++)
+            hv[k] = swap16(ux.bg);
+        for (k = 0; k < 5u; k++)
+            text_run(x + HX[k], y + HY[k], f, s, hv, b);
+    }
+    pen = text_run(x, y, f, s, ramp(fg, bg), b);
     if (GFX_HOOKS && b[2] > b[0]) {
         int32_t y0 = b[1], y1 = b[3];
         if (b[0] < 0 || b[2] > (int32_t)cv_w || y0 + cv_oy < cv_cy0 || y1 + cv_oy > cv_cy1)
@@ -719,6 +742,40 @@ static int32_t cv_clip_text(int32_t x, int32_t y, const aafont_t *f, const char 
         k--;
     b[k] = 0;
     return cv_text_flags(x, y, f, b, fg, bg, 8u);
+}
+
+/* (0.8.9) a 1-bit face's s turned a quarter left (reading upwards, as the mock-up's keys name themselves): its line's top
+ * at column x, its first character's foot at row y; maxh: at most this many rows (the rest dropped). Returns the rows used */
+static int32_t cv_text_up(int32_t x, int32_t y, const aafont_t *f, const char *s, uint16_t fg, uint16_t bg, int32_t maxh)
+{
+    int32_t pen = 0, x0 = 0x7FFF, y0 = 0x7FFF, x1 = -0x7FFF, y1 = -0x7FFF;
+    uint16_t c = swap16(fg);
+    const char *s0 = s;
+    GFX_HOOK_INK(fg, bg);
+    (void)bg;
+    for (; *s; s++) {
+        const aag_t *g = &f->g[glyph(f, fold(f, (uint8_t)*s))];
+        uint32_t r, q, k = 0;
+        int32_t adv = (g->adv + 8) >> 4;
+        if (pen + adv - 1 > maxh)
+            break;
+        for (r = 0; r < g->bh; r++)
+            for (q = 0; q < g->bw; q++, k++)
+                if ((f->data[g->off + (k >> 3)] >> (7u - (k & 7u))) & 1u) {
+                    int32_t px = x + g->by + (int32_t)r, py = y - (pen + g->bx + (int32_t)q) + cv_oy;
+                    if ((uint32_t)px < cv_w && py >= cv_cy0 && py < cv_cy1)
+                        cv_px[(uint32_t)py * cv_w + (uint32_t)px] = c;
+                    if (px < x0) x0 = px;
+                    if (px + 1 > x1) x1 = px + 1;
+                    if (py < y0) y0 = py;
+                    if (py + 1 > y1) y1 = py + 1;
+                }
+        pen += adv;
+    }
+    if (GFX_HOOKS && x1 > x0)
+        GFX_HOOK_TEXT(x0, y0, x1, y1, s0, 0u);
+    (void)x0; (void)y0; (void)x1; (void)y1; (void)s0;
+    return pen;
 }
 
 /* ---------------------------------------------------------- keycaps --- */
@@ -842,34 +899,6 @@ static int32_t kc_tag(const char *s, uint32_t *len)
         }
     }
     return -1;
-}
-/* free text (S) that may start with a keycap, "[SAVE] HOLD TO UNDO", or have one after its first word,
- * "HOLD [GLO] QUICK": the word, the keycap, then the rest, cut to maxw */
-static int32_t cv_free_hint(int32_t x, int32_t y, const char *s, uint16_t fg, uint16_t bg, int32_t maxw)
-{
-    uint32_t n, i;
-    int32_t id = kc_tag(s, &n), x0 = x;
-    for (i = 0; id < 0 && i < 7u && s[i] && s[i] != ' '; i++)
-        ;
-    if (id < 0 && i && s[i] == ' ' && (id = kc_tag(s + i + 1u, &n)) >= 0) {
-        char w[8] = {0};
-        uint32_t j;
-        for (j = 0; j < i; j++)
-            w[j] = s[j];
-        GFX_HOOK_ALIGN(0, y + 1, 0, y + 1 + KC_H, AL_V | AL_PASS, "free hint words on the keycap's line");
-        x = cv_text_on(x, y, &AF_S, w, fg, bg) + KH_GAP;
-        s += i + 1u;
-    }
-    if (id >= 0 && kc_w((uint32_t)id) + KH_GAP < maxw - (x - x0)) {
-        x = cv_keycap(x, y + 1, (uint32_t)id, T_KEY, T_INK, bg) + KH_GAP;
-        s += n;
-        while (*s == ' ')
-            s++;
-        if (!*s)
-            return x - KH_GAP;
-        GFX_HOOK_ALIGN(0, y + 1, 0, y + 1 + KC_H, AL_V | AL_PASS, "free hint words on the keycap's line");
-    }
-    return cv_free_text(x, y, &AF_S, s, fg, bg, maxw - (x - x0));
 }
 
 /* one-shot: a line of text in a box of colour bg, blitted (align: 0 left, 1 centre, 2 right) */

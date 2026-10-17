@@ -181,7 +181,11 @@ static void fxg_punch(int32_t x, int32_t y, int32_t w, int32_t h)
     if (cw < 1) cw = 1;
     for (i = 0; i < steps && i * cw < w; i++) {
         int on = pfx_lane_at((uint32_t)i) != 0u, at = song.playing && (uint32_t)i == pfx_lane_pos();   /* (the playhead) */
-        cv_rect(x + i * cw, y + 14, cw > 2 ? cw - 1 : 1, h - 20, at ? T_TEXT : on ? FXG_H(179) : T_RAISE);
+        if (on || at)                                   /* (0.8.9, the skins' mock-up: the open steps as lines, an empty one a
+                                                         * tick at the foot) */
+            cv_rect(x + i * cw, y + 14, cw > 2 ? cw - 1 : 1, h - 20, at ? T_TEXT : FXG_H(179));
+        else
+            cv_rect(x + i * cw, y + h - 7, cw > 2 ? cw - 1 : 1, 1, T_LINE);
     }
     str_cpy(b, "LANE ", sizeof b);
     fmt_int(b + 5, song.g[G_PFXLEN]);
@@ -309,13 +313,14 @@ static void graph_fx_lz(const track_t *t, const page_t *pg)
         for (m = 0; m < FX_NMOD; m++) {
             int32_t x = 4 + (int32_t)(m % 3u) * 78, y = (int32_t)(m / 3u) * 72;
             int sel = m == ui.fxmod, ok = fx_mod_ok(m);
-            uint16_t bg = sel ? T_TINT : T_RAISE;
-            cv_rect(x, y, 76, 68, bg);
-            if (sel)
-                cv_frame(x, y, 76, 68, T_THEME);
+            uint16_t bg = lz_tile_bg();                 /* (0.8.9, the skins: COLORS a rounded card, the one picked framed
+                                                         * THEME; BOTTOM, HUD bare, its name underlined) */
+            lz_tile(x, y, 76, 68, sel, T_THEME);
             cv_bg = bg;
             GFX_HOOK_ALIGN(0, y + 3, 0, y + 12, AL_V | AL_PASS, "FX module name");
-            cv_text_on(x + 4, y + 3, &AF_X, FX_MOD[m], sel ? T_THEME : T_MID, bg);
+            cv_text_on(x + 4, y + 3, &AF_X, FX_MOD[m], sel ? T_THEME : ux.skin ? T_MID : T_TEXT, bg);
+            if (sel)
+                lz_uline(x + 4, y + 12, &AF_X, FX_MOD[m], T_THEME);
             if (ok)
                 fxg_mod(m, x + 4, y + 14, 68, 50);
             else

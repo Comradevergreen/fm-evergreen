@@ -147,6 +147,10 @@ static void rp_put(uint32_t f, uint32_t v)
  * 0 in older ones = FLAT; 2, the retired PIXEL (1.0.1), reads as LINE; anything else unknown as FLAT (settings_persist.c). gfx.c draws from its copy, ux.style
  * (ui_draw.c style_apply) */
 #define ui_style (favorites.factory[15][29])
+/* (0.8.9) MENU > DISPLAY > SKIN (ui_menu.c): SKIN_COLORS SKIN_BOTTOM SKIN_HUD (gfx.c) in a byte no engine uses (engine 15,
+ * byte 20), saved with the settings; 0 in older ones = COLORS, unknown = COLORS (settings_persist.c). gfx.c draws from its
+ * copy, ux.skin (ui_draw.c style_apply) */
+#define ui_skin (favorites.factory[15][20])
 static void draw_rules(uint32_t y, uint32_t h);       /* (ui_draw.c) */
 
 static uint8_t sync_reload;                  /* engine / preset / project / user preset loaded: editor RELOAD push */
@@ -185,6 +189,15 @@ static uint8_t sync_reload;                  /* engine / preset / project / user
 #define LG_Y_GRAPH 136
 #define LG_H_GRAPH 62
 #define LZ_LG_Y_GRAPH 150                 /* (0.8.5) .. under a lens's tabs: the tall cards 42..146, the strip 150..212 */
+/* (0.8.9) SKIN BOTTOM and HUD (the mock-up's options 3 and 4): the tabs words (26..39), the panel the screen's width and no
+ * box (42..189), the knobs a slim row over the breadcrumb (191..223: label, value, a hairline gauge). HUD's HOME (hud_home):
+ * the beings over the whole screen, every strip drawn on them (head 0..23, tabs 24..40, the panel 41..190, the knobs
+ * 191..223, the breadcrumb 224..239). MENU > LARGE ON keeps COLORS' layout (its tall cards on top) in every skin */
+#define LB_TAB_H 14
+#define LB_GRAPH_Y 42
+#define LB_GRAPH_H 148
+#define LB_CARD_Y 191
+#define LB_CARD_H 33
 
 static struct {
     uint8_t home;
@@ -257,6 +270,7 @@ static struct {
         uint8_t sig;             /* a card: what its value is of (label, unit, track, engine, palette) */
     } roll[5];
     int16_t roll_bpm;            /* the BPM last drawn */
+    uint32_t knob_ms;            /* (0.8.9) when KNOB 1..4 last turned (SKIN HUD: the knob row fades while they rest) */
 } ui;
 
 enum { CF_NONE, CF_CLEAR_SEQ, CF_CLEAR_TRK, CF_OVR_PROJ, CF_OVR_USER, CF_LOAD_PAT,
@@ -406,6 +420,7 @@ static const page_t *cur_page(void) { return page_over ? page_over : &PAGES[ui.p
 enum { LK_OFF, LK_LABEL, LK_TALL };
 static int lens_on(void);
 static uint32_t lz_on(void);
+static uint32_t lz_fam(void);
 static int lz_mock_cards(void);
 static int name_on(void);                       /* (ui_name.c) */
 static uint32_t large_kind(void)
@@ -425,12 +440,23 @@ static uint32_t large_kind(void)
 }
 /* the geometry of the page shown: the cards' height, the panel's top and height. (0.8.5) A lens page (lz_on): the
  * mock-up's (LZ_*), under its level tabs; a layer's map over it: the usual layout */
-static uint32_t card_y(void) { return lz_on() ? LZ_CARD_Y : Y_LABEL; }
-static uint32_t foot_y(void) { return lz_on() ? LZ_FOOT_Y : Y_FOOT; }
-static uint32_t foot_h(void) { return lz_on() ? LZ_FOOT_H : H_FOOT; }
-static uint32_t card_h(void) { return large_kind() == LK_TALL ? LG_CARD_H : lz_on() ? LZ_CARD_H : CARD_H; }
-static uint32_t graph_y(void) { return large_kind() == LK_TALL ? (lz_on() ? LZ_LG_Y_GRAPH : LG_Y_GRAPH) : lz_on() ? LZ_GRAPH_Y : Y_GRAPH; }
-static uint32_t graph_h(void) { return large_kind() == LK_TALL ? LG_H_GRAPH : lz_on() ? LZ_GRAPH_H : H_GRAPH; }
+/* (0.8.9) a lens page in SKIN BOTTOM / HUD's layout (LARGE: COLORS'); HUD's HOME (ECO): the beings full screen */
+static int lz_low(void) { return ux.skin && lz_on() && !(ui_prefs & PREF_LARGE); }
+static int hud_home(void);
+static uint32_t card_y(void) { return lz_low() ? LB_CARD_Y : lz_on() ? LZ_CARD_Y : Y_LABEL; }
+static uint32_t foot_y(void) { return hud_home() ? LZ_FOOT_Y - 1u : lz_on() ? LZ_FOOT_Y : Y_FOOT; }
+static uint32_t foot_h(void) { return hud_home() ? LZ_FOOT_H + 1u : lz_on() ? LZ_FOOT_H : H_FOOT; }
+static uint32_t card_h(void) { return large_kind() == LK_TALL ? LG_CARD_H : lz_low() ? LB_CARD_H : lz_on() ? LZ_CARD_H : CARD_H; }
+static uint32_t graph_y(void)
+{
+    return large_kind() == LK_TALL ? (lz_on() ? LZ_LG_Y_GRAPH : LG_Y_GRAPH) : hud_home() ? LB_GRAPH_Y - 1u : lz_low() ? LB_GRAPH_Y :
+           lz_on() ? LZ_GRAPH_Y : Y_GRAPH;
+}
+static uint32_t graph_h(void)
+{
+    return large_kind() == LK_TALL ? LG_H_GRAPH : hud_home() ? LB_CARD_Y - LB_GRAPH_Y + 1u : lz_low() ? LB_GRAPH_H :
+           lz_on() ? LZ_GRAPH_H : H_GRAPH;
+}
 static int large_face_has(const char *s)                /* every glyph of s in the sparse L face */
 {
     for (; *s; s++)
@@ -742,7 +768,8 @@ static uint32_t lz_fam(void)                            /* which lens */
         return LZ_EDIT + pd_cur();
     return save_on() ? LZ_SAVE : fx_on() ? LZ_FX : LZ_SEQ;
 }
-static int lz_mock_cards(void) { return lz_on() && lz_fam() <= LZ_FX; }   /* (MENU > LARGE: their cards as they are) */
+static int lz_mock_cards(void) { return lz_on() && lz_fam() <= LZ_FX; }
+static int hud_home(void) { return ux.skin == SKIN_HUD && lz_low() && lz_fam() == LZ_HOME && home_level() == 0u; }   /* (MENU > LARGE: their cards as they are) */
 static uint32_t lens_level(void);
 static uint32_t lz_level(void)                          /* its level, 0..2 */
 {
