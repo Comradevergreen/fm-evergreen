@@ -1023,6 +1023,19 @@ seleccionada se graban como **automatización**. MENU > AUDIO tiene el **CLICK**
   tiempo); en DRUM cambia golpes, nunca el bombo. **OCT−** acá (o **GLO + A4**, FREEZE) frena todas las mutaciones
   hasta volver a apretarlo. En HOME cada bichito tiene un anillo de puntos que se llena hasta su próximo cambio y se
   enciende entero cuando cambia.
+  **Volver atrás** (0.9.3): MUTATE guarda su ancla, así que una pista puede volver a ella. Si apagás SOUND y PATTERN de
+  una pista (los dos en OFF) después de que MUTATE la cambió, un aviso (NOTICE) pregunta **BACK TO BEFORE MUTATE?**:
+  **OCT+** (BACK) devuelve el sonido y los pasos de la pista como los tiene el ancla, **OCT−** (KEEP) la deja como está
+  (si nada cambió, no pregunta). En cualquier momento **SEQ + D5** (**REVERT**, en todas las páginas de SEQ) hace lo
+  mismo con la pista elegida, y **GLO + B4** (**REVERT ALL**, al lado de FREEZE) con todas las pistas que suenan. En
+  esta página OCT+ y OCT− siguen siendo KEEP y FREEZE, por eso volver es una tecla de capa (regla 5). Vuelve solo lo
+  que MUTATE cambia: los valores del motor, el filtro, su envolvente, DEC, REL, los envíos y los pasos (notas, acentos,
+  golpes); LEVEL, PAN, MUTE, los ajustes del patrón (LEN, DIV …) y las otras pistas quedan (una pista que cambió de
+  motor desde entonces: solo sus pasos). El ancla es el punto de arriba (MUTATE encendido, PLAY, KEEP, pasos escritos),
+  también en DRIFT: después de un DRIFT largo, REVERT vuelve hasta ese punto, no un cambio atrás; apretá KEEP para que
+  la música de ahora sea el punto al que volver. Un REVERT se deshace con **GLO + G4** (UNDO). Después de cargar un
+  proyecto o una sección, o de NEW PROJECT, el ancla es de otra música: REVERT dice **NO ANCHOR** hasta que MUTATE tome
+  una nueva.
 - **PLAYHEADS** (grupo PATTERN; antes FUGUE), a la Fugue Machine: tres **cabezales** más (2, 3 y 4) leen los mismos pasos que el
   secuenciador de la pista. KNOB 1 **HEAD** elige uno, KNOB 2 **RATE** (OFF, 1/4, 1/3, 1/2, 2/3, x1, 3/2, x2, x3, x4 del
   de la pista), KNOB 3 **DIR** (FWD, REV, PING, RND), KNOB 4 **INTVL**, su intervalo en grados de la escala (−14 a +14; una

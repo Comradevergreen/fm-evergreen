@@ -185,7 +185,7 @@ def controls():
             'F5': 'RAND', 'G5': 'ERASE'}
     fx_b = {'F#3': 'M1', 'G#3': 'M2', 'A#3': 'M3', 'C#4': 'M4', 'D#4': 'M5', 'F#4': 'M6', 'A#4': 'TGT'}
     glo_w = {'F3': 'SOLO 1', 'G3': 'SOLO 2', 'A3': 'SOLO 3', 'B3': 'SOLO 4', 'C4': 'SOLO 5', 'D4': 'SOLO 6',
-             'E4': 'ALL', 'F4': 'TAP', 'G4': 'UNDO'}
+             'E4': 'ALL', 'F4': 'TAP', 'G4': 'UNDO', 'A4': 'FRZ', 'B4': 'RVRT ALL'}
     glo_b = {'F#3': 'M1', 'G#3': 'M2', 'A#3': 'M3', 'C#4': 'M4', 'D#4': 'M5', 'F#4': 'M6', 'G#4': 'KICK',
              'A#4': 'SNR', 'C#5': 'HAT', 'D#5': 'PERC'}
     sv_w = {'F3': 'PLAY A', 'G3': 'PLAY B', 'A3': 'PLAY C', 'B3': 'PLAY D', 'C4': 'STORE A', 'D4': 'STORE B',
@@ -200,7 +200,7 @@ def controls():
                   'erases it.</p><h4>KNOBS</h4>' + knobs('FILTER', 'CRUSH', 'THROW', 'DEPTH')))
     b.append(card('GLO · MIX', HEAT[1], keyboard(glo_w, glo_b) +
                   '<p>Black 1–6 mute T1–T6 (latched), 7–10 the DRUM-X groups. White: solo while held, E4 unmutes all, '
-                  'F4 tap tempo, G4 <b>UNDO</b> the last big change (again: redo), A4 <b>FREEZE</b> MUTATE. SELECT: the tempo. PLAY: restart.</p><h4>KNOBS</h4>' +
+                  'F4 tap tempo, G4 <b>UNDO</b> the last big change (again: redo), A4 <b>FREEZE</b> MUTATE, B4 <b>REVERT ALL</b> (every track back to MUTATE\'s anchor). SELECT: the tempo. PLAY: restart.</p><h4>KNOBS</h4>' +
                   knobs('LEVEL T1', 'LEVEL T2', 'LEVEL T3', 'LEVEL T4') +
                   '<p class="dim" style="margin-top:4px">T5 or T6 selected: the knobs are T3–T6.</p>'))
     b.append(card('SAVE · SONG', HEAT[6], keyboard(sv_w, {}) +
@@ -216,7 +216,7 @@ def controls():
                                   'G3 clears them (only tracks that sound). LFO + SELECT: the track\'s LFO diced.', ('M1', 'M2', 'M3', 'M4')),
         ('SCL · SCALE', HEAT[0], 'Any key sets the ROOT. ROOT and SCALE are every melodic track\'s (and RESO\'s).',
          ('ROOT', 'SCL', 'OFS', 'PIT')),
-        ('SEQ · TOOLS', HEAT[4], 'On the SEQ pages: F3 CLEAR · G3 REVERSE · A3 B3 SHIFT · C4 RANDOM · D4 COOK · E4 BEAT · F4 CLR AUTO (the automation) · G5 CLR STEP (AUTO LIST: the record).',
+        ('SEQ · TOOLS', HEAT[4], 'On the SEQ pages: F3 CLEAR · G3 REVERSE · A3 B3 SHIFT · C4 RANDOM · D4 COOK · E4 BEAT · F4 CLR AUTO (the automation) · G5 CLR STEP (AUTO LIST: the record) · D5 REVERT (the track back to MUTATE\'s anchor; GLO + G4 undoes).',
          ('LEN', 'DIV', 'SWING', 'GATE')),
         ('REC · RECORD', '#ef4444', 'F3 CLEAR the track (at once; GLO + G4 undoes it), G3 the metronome CLICK.', ('CLICK', '-', '-', '-')),
     ]

@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.9.2).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.9.3).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
   **The dice starts in EXPLORE** (0.8.6): HOME + SELECT opens GEN on a choice that follows no genre and breaks every
   rule (any tempo, odd metres and polyrhythm, exotic modes, any engine on any role, DRUM-X octaves, PLAYHEADS, MUTATE),
   each seed a very different piece, still in the key its SCALE and CHORD pages show. RANDOM and the 43 genres follow.
@@ -553,6 +553,26 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### v0.9.3
+- **MUTATE can go back** (asked in a YouTube comment: "after the mutation, can I return to the sound I had before?
+  The synth just keeps the changes"). MUTATE always kept its anchor (the music when it came on, PLAY started, KEEP or
+  steps were written); now the track can return to it:
+  - Turn a track's SOUND and PATTERN both **OFF** after MUTATE changed it and the NOTICE asks **BACK TO BEFORE
+    MUTATE?**: **OCT+** BACK puts the track's sound and steps back exactly as the anchor holds them, **OCT−** KEEP leaves
+    it as it is. Nothing changed: no question.
+  - **SEQ + D5 REVERT** (the SEQ layer, every SEQ page) brings the selected track back at any time; **GLO + B4 REVERT
+    ALL** (next to A4 FREEZE) every track that plays. The MUTATE page's OCT+ / OCT− stay KEEP / FREEZE (rule 5: the
+    rest is a layer key); the page and its entry hint name both keys.
+  - Only what MUTATE changes: the engine's values, the filter, its envelope, DEC, REL, the sends and the steps; never
+    LEVEL, PAN, MUTE, the pattern's settings or the other tracks (a track on another engine since: its steps). With
+    DRIFT the anchor is still the starting (or KEEP) point. **GLO + G4 UNDO** undoes a revert (again: redo). After a
+    load or NEW PROJECT the anchor is the other music's: **NO ANCHOR**.
+  - Tests: ui_test mutates four bars, turns MUTATE off (the NOTICE; OCT+ the anchor byte for byte, LEVEL and the other
+    track kept; OCT− keeps), UNDO and redo of the revert, SEQ + D5, GLO + B4 on two tracks, no question when nothing
+    changed, NO ANCHOR after NEW PROJECT; ui_render: the NOTICE in COLORS, BOTTOM and HUD, lint and alignment clean.
+  - No audio change (goldens, cpu_vg, target budgets as 0.9.2): main loop only, the anchor already in the pool; RAM
+    +16 B, image +1456 B (549132 B of 581564). Cheat sheet: GLO's A4 FRZ and B4 REVERT ALL, SEQ TOOLS' D5.
 
 ### v0.9.2
 - **Navigation: six rules, the same in every section** (the approved mock-up "navegación": "beautiful but hard to

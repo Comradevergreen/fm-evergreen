@@ -404,6 +404,7 @@ static void rec_key(uint32_t p)
 #define SK_PAGE 15u
 #define SK_NAME 11u                                     /* (0.9.2) C5: NAME, the slot's rename (EDIT's until 0.9.1) */
 #define TL_STEP 15u                                     /* (0.9.2) SEQ's G5: CLR STEP (ui_input.c seq_clr_step) */
+#define TL_MREV 12u                                     /* (0.9.3) SEQ's D5: REVERT, the track back to MUTATE's anchor */
 static void song_key(uint32_t p)
 {
     uint32_t k;
@@ -528,6 +529,7 @@ static void session_dice(uint32_t seed)
 #define GLO_TAP 7u
 #define GLO_UNDO 8u                                     /* (0.6.21) G4: UNDO the last big change (project.c undo_do) */
 #define GLO_FRZ 9u                                      /* (0.6.43) A4: MUTATE frozen / free (project.c mutate_poll) */
+#define GLO_RVA 10u                                     /* (0.9.3) B4: REVERT ALL, every track back to MUTATE's anchor */
 static void layer_key(uint32_t l, uint32_t k)
 {
     uint32_t p = key_place(k), i;
@@ -548,6 +550,8 @@ static void layer_key(uint32_t l, uint32_t k)
         } else if (p == GLO_FRZ) {
             mut_freeze = (uint8_t)!mut_freeze;
             ui_message(mut_freeze ? "MUTATE FROZEN" : "MUTATE FREE");
+        } else if (p == GLO_RVA) {
+            mut_revert_ui(1);
         } else if (p == GLO_UNDO) {
             if (chain_busy())
                 ui_message("STOP TO EDIT");
@@ -580,6 +584,8 @@ static void layer_key(uint32_t l, uint32_t k)
     } else if (l == LAYER_SEQ) {
         if (!key_black(k) && p == TL_STEP)
             seq_clr_step();                             /* (0.9.2) G5: CLR STEP (AUTO LIST: the record) */
+        else if (!key_black(k) && p == TL_MREV)
+            mut_revert_ui(0);                           /* (0.9.3) D5: REVERT (project.c) */
         else if (!key_black(k))
             tools_key(p);
         else if (p < NLANE && drum_track(TSEL))
@@ -719,8 +725,8 @@ static uint32_t layer_leds(uint32_t *br)
             on = b ? (p < NTRK && glo_sounding(p)) || (p >= NTRK && p < NTRK + 4u && !((dx_mute >> (p - NTRK)) & 1u))
                    : p < NTRK && ((lys.solo >> k) & 1u);      /* (a group sounding: lit) */
             can = !b && ((p < NTRK && p < trk_live) || p == GLO_ALL || (p == GLO_TAP && !song.g[G_CLOCK]) ||
-                         (p == GLO_UNDO && undo_ok) || p == GLO_FRZ);   /* (the keys that do something breathe: not an
-                                                         * asleep track's) */
+                         (p == GLO_UNDO && undo_ok) || p == GLO_FRZ || (p == GLO_RVA && mut_back_ok()));
+                                                        /* (the keys that do something breathe: not an asleep track's) */
             on |= !b && p == GLO_FRZ && mut_freeze;      /* (0.6.43: FREEZE on: lit) */
         } else if (l == LAYER_SCL) {                    /* the root lit, the scale's notes breathe */
             e = (k + 5u + 12u - root) % 12u;
@@ -732,8 +738,8 @@ static uint32_t layer_leds(uint32_t *br)
             on = !dx_lane_muted(p);
         } else if (l == LAYER_SEQ) {                    /* the tools breathe (not while a song plays); DRUM: the lane */
             on = b && p < NLANE && drum_track(TSEL) && p == ui.lane;   /* lit, the other lanes breathe */
-            can = b ? p < NLANE && drum_track(TSEL) : tl_cell(TSEL, p) && !chain_busy() &&
-                  (p != TL_CAUTO || motion_count(TSEL));   /* (CLR AUTO: automation to clear) */
+            can = b ? p < NLANE && drum_track(TSEL) : p == TL_MREV ? mut_back_ok() : tl_cell(TSEL, p) && !chain_busy() &&
+                  (p != TL_CAUTO || motion_count(TSEL));   /* (CLR AUTO: automation to clear; REVERT: an anchor) */
         } else if (l == LAYER_SAVE && !b) {             /* the section playing lit, the saved ones and the */
             on = (p < SK_STORE && live.cur == (int8_t)p) || (p == SK_REC && live.srec) ||   /* actions breathe */
                  (p == SK_MODE && live.mode);
@@ -845,9 +851,10 @@ static uint32_t ly_keyname(uint32_t l, int blk, uint32_t p, char *nm)
             nm[6] = (char)('1' + p);
             return (perf_solo >> p) & 1u ? LS_HELD : p >= trk_live ? LS_DIM : LS_OFF;
         }
-        str_cpy(nm, p == GLO_ALL ? "UNMUTE" : p == GLO_TAP ? "TAP" : p == GLO_UNDO ? "UNDO" : p == GLO_FRZ ? "FREEZE" : "", 12);
+        str_cpy(nm, p == GLO_ALL ? "UNMUTE" : p == GLO_TAP ? "TAP" : p == GLO_UNDO ? "UNDO" : p == GLO_FRZ ? "FREEZE" :
+                    p == GLO_RVA ? "REVERT ALL" : "", 12);
         return p == GLO_TAP && song.g[G_CLOCK] ? LS_DIM : p == GLO_UNDO && !undo_ok ? LS_DIM : p == GLO_FRZ && mut_freeze ? LS_HELD :
-               LS_OFF;
+               p == GLO_RVA && !mut_back_ok() ? LS_DIM : LS_OFF;
     }
     if (l == LAYER_SCL) {                               /* every key its note: the root lit, the scale's plain, the rest dim */
         static const uint8_t WN[16] = {5, 7, 9, 11, 0, 2, 4, 5, 7, 9, 11, 0, 2, 4, 5, 7};
@@ -878,6 +885,10 @@ static uint32_t ly_keyname(uint32_t l, int blk, uint32_t p, char *nm)
                 return p == ui.lane % NLANE ? LS_SEL : LS_OFF;
             }
             return LS_OFF;
+        }
+        if (p == TL_MREV) {                             /* (0.9.3) D5 */
+            str_cpy(nm, "REVERT", 12);
+            return mut_back_ok() ? LS_OFF : LS_DIM;
         }
         if (p == TL_STEP) {                             /* (0.9.2) G5 */
             str_cpy(nm, cur_page()->graph == GR_EVENTS ? "DEL REC" : "CLR STEP", 12);

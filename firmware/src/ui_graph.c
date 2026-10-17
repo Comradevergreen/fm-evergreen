@@ -215,6 +215,7 @@ static void graph_mutate(void)
     cv_rect(PANEL_X0 + 52, 20, 4, 36, ux_mix(T_SURF, T_ACCENT, 25));   /* (the next bar's column) */
     cv_text(PANEL_X0, 68, &AF_S, "EVERY N BARS, BY AMOUNT, ON THE BAR", T_MID);
     cv_text(PANEL_X0, 84, &AF_S, mut_freeze ? "FROZEN  [OCT-] GOES ON" : "OCT+ KEEP   GLO+A4 FREEZE", mut_freeze ? T_ACCENT : T_DIM);
+    cv_text(PANEL_X0, 100, &AF_S, mut_back_ok() ? "SEQ+D5 REVERT   GLO+B4 ALL" : "REVERT: NO ANCHOR", T_DIM);   /* (0.9.3) */
 }
 
 /* (0.6.45) EDIT > MORPH: a cycle of the wave as it morphs (from WAVE towards the next ones), heat coloured by its
@@ -1587,7 +1588,7 @@ static uint32_t graph_signature(void)
         h = (h ^ ((uint32_t)t->p[P_MORPH] << 16 | (uint32_t)t->p[P_E0] << 8 | (uint32_t)t->p[P_E1] |
                   (uint32_t)t->p[P_E2] << 24)) * 16777619u;
     if (pg->graph == GR_MUTATE) {                    /* (0.6.43) the bar, the settings, FREEZE */
-        h = (h ^ (song.playing ? bar_n : 0u) * 2654435761u ^ mut_freeze * 977u) * 16777619u;
+        h = (h ^ (song.playing ? bar_n : 0u) * 2654435761u ^ mut_freeze * 977u ^ (uint32_t)mut_back_ok() * 131u) * 16777619u;
         for (i = 0; i < NTRK; i++)
             h = (h ^ ((uint32_t)trk[i].p[P_MSND] | (uint32_t)trk[i].p[P_MPAT] << 4 | (uint32_t)trk[i].p[P_MMODE] << 8)) * 16777619u;
     }

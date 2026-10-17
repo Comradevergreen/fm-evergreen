@@ -1643,6 +1643,116 @@ static void clr_step(void)
     frame();
     frame();
 }
+/* (0.9.3) MUTATE can go back: turned OFF after mutating, BACK TO BEFORE MUTATE? (OCT+ the anchor's sound and steps
+ * exactly, OCT- as it is; none when nothing changed), SEQ + D5 REVERT, GLO + B4 REVERT ALL, UNDO of a revert, NO ANCHOR
+ * after a load; LEVEL PAN MUTE, the pattern's settings and the other tracks never */
+typedef struct { step_t st[NSTEP]; int16_t v[15]; } mut_snap_t;
+static void mut_snap(uint32_t k, mut_snap_t *m)
+{
+    uint32_t i, id;
+    memset(m, 0, sizeof *m);
+    memcpy(m->st, trk[k].step, sizeof m->st);
+    for (i = 0; i < 15u; i++)
+        if ((id = mut_sid(i, trk[k].eng_req % NENGINES)) < P_COUNT) m->v[i] = trk[k].p[id];
+}
+static int mut_same(uint32_t k, const mut_snap_t *a) { mut_snap_t b; mut_snap(k, &b); return !memcmp(&b, a, sizeof b); }
+static void mut_melody(track_t *t, uint32_t base)
+{
+    uint32_t i;
+    for (i = 0; i < NSTEP; i++) step_clear(&t->step[i]);
+    for (i = 0; i < 16u; i++)
+        if (i % 3u != 2u) { t->step[i].n = 1; t->step[i].note[0] = (uint8_t)(base + i % 7u); t->step[i].time = ST_NOTE; t->step[i].vel = 100; }
+    t->p[P_SLEN] = 16;
+}
+static void mut_run(uint32_t k, uint32_t bars)        /* MUTATE on track k (SOUND and PATTERN every bar, all of it) */
+{
+    trk[k].p[P_MSND] = 1; trk[k].p[P_MPAT] = 1; trk[k].p[P_MAMT] = 127;
+    mutate_poll();
+    mut_bars(bars);
+}
+static void mut_off(uint32_t k) { trk[k].p[P_MSND] = trk[k].p[P_MPAT] = 0; mutate_poll(); frame(); }
+static int test_mutate_back(void)
+{
+    int bad = 0, ok;
+    mut_snap_t a0, a1, m0, o0;
+    track_t *t, *u;
+    int16_t lvl, lv1;
+    ui_power_on();
+    t = &trk[0]; u = &trk[1];
+    mut_freeze = 0;
+    mut_melody(t, 60); mut_melody(u, 48);
+    {
+        const param_desc_t *pd = track_desc(t, P_E0);
+        t->p[P_E0] = (int16_t)(pd->min + (pd->max - pd->min) / 3); t->p[P_FCUT] = 70;
+    }
+    press(B_PLAY);
+    mutate_poll();
+    mut_snap(0, &a0);
+    mut_run(0, 4);
+    mut_snap(1, &o0);
+    ok = !mut_same(0, &a0) && memcmp(t->step, a0.st, sizeof a0.st) != 0;
+    bad += check("0.9.3 MUTATE BACK: four bars of SOUND and PATTERN changed the track", ok);
+    lvl = t->p[P_LEVEL] = (int16_t)(t->p[P_LEVEL] > 60 ? 40 : 90);   /* (LEVEL moved since: it stays) */
+    mut_off(0);
+    bad += check("0.9.3 MUTATE BACK: turned OFF after mutating: the NOTICE, BACK TO BEFORE MUTATE? on T1",
+                 ui.confirm == CF_MUT_BACK && ui.confirm_trk == 0u);
+    {
+        char qa[24], qb[24];
+        confirm_text(qa, qb);
+        bad += check("0.9.3 MUTATE BACK: its words", !strcmp(qa, "BACK TO BEFORE MUTATE?") && !strcmp(qb, "T1: SOUND AND PATTERN"));
+    }
+    mut_snap(0, &m0);
+    press(B_OCTUP);
+    ok = !ui.confirm && mut_same(0, &a0) && t->p[P_LEVEL] == lvl && mut_same(1, &o0);
+    bad += check("0.9.3 MUTATE BACK: OCT+ the anchor's sound and steps byte for byte, LEVEL and T2 as they were", ok);
+    ly_white(B_GLO, 8u);                                  /* GLO + G4: UNDO the revert */
+    stop_transport();
+    bad += check("0.9.3 MUTATE BACK: UNDO (GLO + G4) brings the mutated track back", mut_same(0, &m0) && t->p[P_LEVEL] == lvl);
+    ly_white(B_GLO, 8u);                                  /* (again: redo, the anchor) */
+    bad += check("0.9.3 MUTATE BACK: UNDO again: back at the anchor", mut_same(0, &a0));
+    /* OCT- keeps */
+    press(B_PLAY);
+    mut_run(0, 3);
+    mut_snap(0, &m0);
+    mut_off(0);
+    ok = ui.confirm == CF_MUT_BACK;
+    press(B_OCTDN);
+    ok &= !ui.confirm && mut_same(0, &m0);
+    bad += check("0.9.3 MUTATE BACK: OCT- keeps the mutated track as it is", ok);
+    /* SEQ + D5 REVERT, at any time, from the MUTATE page; then UNDO */
+    song.sel = 0;
+    go_page(GR_MUTATE);
+    ly_white(B_SEQ, 12u);
+    ok = mut_same(0, &a0) && t->p[P_LEVEL] == lvl;
+    ly_white(B_GLO, 8u);
+    stop_transport();
+    ok &= mut_same(0, &m0);
+    bad += check("0.9.3 MUTATE REVERT (SEQ + D5): the selected track to the anchor; UNDO: as it was", ok);
+    /* no question when nothing mutated (turned on and off, stopped) */
+    t->p[P_MSND] = 1; mutate_poll(); mut_snap(0, &a1);
+    mut_off(0);
+    bad += check("0.9.3 MUTATE BACK: on and OFF with nothing changed: no question", !ui.confirm && mut_same(0, &a1));
+    /* GLO + B4 REVERT ALL: every track from the anchor, the levels kept */
+    press(B_PLAY);
+    mut_melody(u, 50);
+    mutate_poll(); mut_snap(0, &a0); mut_snap(1, &a1);
+    lv1 = u->p[P_LEVEL];
+    u->p[P_MSND] = 1; u->p[P_MPAT] = 1; u->p[P_MAMT] = 127;
+    mut_run(0, 4);
+    ok = !mut_same(0, &a0) && !mut_same(1, &a1);
+    ly_white(B_GLO, 10u);
+    ok &= mut_same(0, &a0) && mut_same(1, &a1) && u->p[P_LEVEL] == lv1 && t->p[P_LEVEL] == lvl;
+    bad += check("0.9.3 MUTATE REVERT ALL (GLO + B4): both mutating tracks to the anchor, their levels kept", ok);
+    mut_off(0); mut_off(1);
+    bad += check("0.9.3 MUTATE BACK: OFF after a REVERT ALL: nothing to ask", !ui.confirm);
+    /* a project loaded (NEW PROJECT): the anchor is another music's: NO ANCHOR */
+    stop_transport();
+    system_init();
+    mutate_poll();
+    ly_white(B_SEQ, 12u);
+    bad += check("0.9.3 MUTATE REVERT: after NEW PROJECT, NO ANCHOR", !strcmp(ui.msg, "NO ANCHOR") && !ui.confirm);
+    return bad;
+}
 static uint32_t lane_steps(const track_t *t, uint32_t l)   /* bit i: lane l strikes at step i (0..31) */
 {
     uint32_t i, m = 0;
@@ -10802,6 +10912,7 @@ int main(void)
     bad += test_init_system();
     bad += test_transitions();
     bad += test_mutate();
+    bad += test_mutate_back();
     bad += test_morph();
     bad += test_morph_click();
     bad += test_lfo_sync();

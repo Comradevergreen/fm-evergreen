@@ -13,6 +13,10 @@ static void undo_mark(void);                    /* (0.6.21) project.c: the music
 static void system_init(void);                  /* (0.6.40) project.c: INIT SYSTEM */
 static uint32_t mut_progress(uint32_t k);       /* (0.6.43) project.c: MUTATE's next, 0..256 (0xFFFF: off) */
 static void mut_keep(void);                     /* .. the music now the anchor */
+static void mut_forget(void);                   /* (0.9.3) .. another music now: no going back to the anchor */
+static int mut_revert(uint32_t mask);           /* .. those tracks back to the anchor (0: done, 1: NO ANCHOR) */
+static void mut_revert_ui(int all);             /* .. REVERT (SEQ + D5) / REVERT ALL (GLO + B4), UNDO first */
+static int mut_back_ok(void);                   /* .. an anchor to go back to */
 static uint8_t mut_flash[NTRK];                 /* .. a mutation just now: frames left of its flash (HOME) */
 static uint8_t mut_freeze;                      /* .. GLO + A4: no mutation until again */
 static const uint8_t MUT_BARS[7] = {0, 1, 2, 4, 8, 16, 32};   /* .. SOUND / PATTERN every (OFF, bars) */
@@ -274,11 +278,11 @@ static struct {
 enum { CF_NONE, CF_CLEAR_SEQ, CF_CLEAR_TRK, CF_OVR_PROJ, CF_OVR_USER, CF_LOAD_PAT,
        CF_DEL_ROW, CF_CLEAR_SONG, CF_INIT_SOUND, CF_CLEAR_MOTION, CF_ERASE_USER, CF_CLEAR_PFX,
        CF_RECALL_SOUND, CF_CLEAR_ALL, CF_DICE_ALL, CF_INIT_SYS, CF_DICE_SOUND, CF_DICE_SEQ, CF_DICE_LFO,
-       CF_DICE_FX, CF_CPU_TEST };   /* ui.confirm: TOOLS' clears; (0.6.21) HOME + SELECT:
+       CF_DICE_FX, CF_CPU_TEST, CF_MUT_BACK };   /* ui.confirm: TOOLS' clears; (0.6.21) HOME + SELECT:
                                    * everything diced; (0.6.65) EDIT + SELECT: keep the diced sound?; (0.6.67) SEQ / LFO / FX + SELECT:
                                    * keep the diced sequence / LFO / effects?;
                                    * SAVE over a used slot; a pattern over the user's steps;
-                                   * USER ERASE */
+                                   * USER ERASE; (0.9.3) MUTATE turned OFF: BACK TO BEFORE MUTATE? */
 
 /* MENU > DISPLAY > SCREEN OFF (1.1.5): after a while with no input on the panel the screen goes dark (the backlight
  * stays on: lcd.c lcd_power)
@@ -701,7 +705,10 @@ static void page_entered(void)
     song.seq_mode = !ui.home && pg->fam == FAM_SEQ;
     if (!ui.home && pg->graph == GR_MOTION) ui_message("REC + PLAY, TURN A KNOB");   /* (0.6.92) how it is recorded */
     if (!ui.home && pg->graph == GR_PUNCH) ui_message("REC + PLAY, HOLD FX + A KEY");   /* (0.6.99) the lane's recording */
-    if (!ui.home && pg->graph == GR_MUTATE) ui_message("OCT+ KEEP  GLO+A4 FREEZE");
+    if (!ui.home && pg->graph == GR_MUTATE) {
+        ui_message("OCT+ KEEP  GLO+A4 FREEZE");
+        str_cpy(ui.msg2, "SEQ+D5 REVERT  GLO+B4 ALL", sizeof ui.msg2);   /* (0.9.3) back to the anchor */
+    }
     ui.entry_open = 0;
     ui.hot_t = 0;                                /* clear the previous page's emphasis */
     ui.act = pg->graph == GR_USER ? 4u : 0u;     /* the save screen is ready for OCT+ */

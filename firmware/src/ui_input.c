@@ -2213,6 +2213,10 @@ static void ui_input_frame(void)
                     ui.song_row = 0;
                     ui_message("SONG CLEARED");
                 }
+            } else if (kind == CF_MUT_BACK) {           /* (0.9.3) MUTATE OFF: the track as the anchor (UNDO: marked above) */
+                char mb[24] = "T1 BACK TO ANCHOR";
+                mb[1] = (char)('1' + ui.confirm_trk % NTRK);
+                ui_message(mut_revert(1u << (ui.confirm_trk % NTRK)) ? "NO ANCHOR" : mb);
             } else if (kind == CF_CPU_TEST) {           /* (0.6.83) SAVE > TOOLS 6: the heaviest song (UNDO: back) */
                 if (!chain_busy()) {
                     cpu_test_song();
@@ -2280,6 +2284,8 @@ static void ui_input_frame(void)
                 ui_message(dk_back(ui.confirm, ui.confirm_trk) ? "CAN'T UNDO" :
                            ui.confirm == CF_DICE_SEQ ? "SEQ BACK" : ui.confirm == CF_DICE_LFO ? "LFO BACK" :
                            ui.confirm == CF_DICE_FX ? "FX BACK" : "SOUND BACK");
+            else if (ui.confirm == CF_MUT_BACK)         /* (0.9.3) as it is (SEQ + D5 REVERT: later still) */
+                ui_message("KEPT AS IT IS");
             ui.confirm = 0;
             ui.force = 1;
         } else if (dice_kind(ui.confirm) && panel_enc(EN_SELECT)) {   /* (0.6.65) SELECT again: another dice

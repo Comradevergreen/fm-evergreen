@@ -979,6 +979,18 @@ recorded into the pattern, quantized to its steps, overdubbing. Knob moves on th
   or MUTE); PATTERN moves notes along the scale, flips accents, adds or takes a note off the beat (never on it); on
   DRUM it flips hits, never the kick. **OCT−** here (or **GLO + A4**, FREEZE) stops every mutation until pressed again.
   On HOME each being has a ring of dots filling up to its next change, all lit when it changes.
+  **Going back** (0.9.3): MUTATE keeps its anchor, so a track can return to it. Turn a track's SOUND and PATTERN both
+  OFF after MUTATE has changed it and a NOTICE asks **BACK TO BEFORE MUTATE?**: **OCT+** (BACK) puts the track's sound
+  and steps back as the anchor holds them, **OCT−** (KEEP) leaves it as it is (if nothing changed, nothing is asked).
+  At any time **SEQ + D5** (**REVERT**, on every SEQ page) does the same for the selected track, and **GLO + B4**
+  (**REVERT ALL**, next to FREEZE) for every track that plays. OCT+ and OCT− stay KEEP and FREEZE on this page, so
+  going back is a layer key (rule 5). Only what MUTATE changes comes back: the engine's values, the filter, its
+  envelope, DEC, REL, the sends and the steps (notes, accents, hits); LEVEL, PAN, MUTE, the pattern's settings (LEN,
+  DIV …) and the other tracks stay (a track on another engine since: its steps only). The anchor is the point described
+  above (MUTATE on, PLAY, KEEP, steps written), in DRIFT too: after a long DRIFT, REVERT goes all the way back to that
+  point, not one change back; press KEEP to make the music now the point to return to. A revert is undone with
+  **GLO + G4** (UNDO). After a project or section load, or NEW PROJECT, the anchor belongs to other music: REVERT says
+  **NO ANCHOR** until MUTATE takes a new one.
 - **PLAYHEADS** (the PATTERN group; it was FUGUE), after the Fugue Machine: three more **playheads** (heads 2, 3, 4) read the same steps
   as the track's sequencer. KNOB 1 **HEAD** picks one, KNOB 2 **RATE** (OFF, 1/4, 1/3, 1/2, 2/3, x1, 3/2, x2, x3, x4 of
   the track's), KNOB 3 **DIR** (FWD, REV, PING, RND), KNOB 4 **INTVL**, its interval in degrees of the scale (−14 to +14;
