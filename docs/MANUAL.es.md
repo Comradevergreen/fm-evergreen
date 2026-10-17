@@ -100,7 +100,7 @@ Los nombres de abajo son los que usa el firmware (la pantalla HARDWARE CALIBRATI
 | **HOME** | Vuelve a HOME (el ecosistema). | Unos 0,7 s: abre el **MENU**. |
 | **ENV** | Páginas ENV. | (sin capa) |
 | **LFO** | Páginas LFO. | Capa **MACRO**: KNOB 1–4 son M1–M4. |
-| **FX** | Páginas FX (dos toques rápidos: la siguiente sección de FX). | Capa de **FX punch-in**. |
+| **FX** | La lente de FX (0.8.5): desde otra página la última página FX; en FX lo siguiente del nivel (TRACK: su juego; BUSES: abre el módulo; EFFECT: su página siguiente). | Capa de **FX punch-in**. |
 | **SCL** | Páginas SCL. | Capa **SCL**: las teclas fijan la tónica. |
 | **EDIT** | Páginas EDIT (en STEP: borra el paso; en USER / PROJECT: renombrar). | Capa **EDIT**: INIT, RECALL, mutes de los sonidos de DRUM-X. |
 | **GLO** | MIXER → GLOBAL → SYSTEM → MIXER. | Capa **GLO**: mutes, solos, niveles, tap tempo, UNDO. |
@@ -159,8 +159,8 @@ Desde la 0.8.5 todas las páginas llevan la piel del diseño que aprobó el due�
 - **Panel (al medio)**: el gráfico de la página — la criatura del motor, una envolvente, el LFO en movimiento, la
   grilla de pasos, una lista...
 - **Pie**: las barras de pasos del compás que editás (de a cuatro debajo de cada tarjeta) o ayudas de teclas, y debajo
-  una **miga de pan** chica y gris: el botón y la página (p. ej. **FX · DLY 2/2**, **ENV · ENV DEST 2/2**).
-- **Las páginas de lente** (el secuenciador desde la 0.8.3) van armadas como la maqueta: debajo del
+  una **miga de pan** chica y gris: el botón y la página (p. ej. **ARP · ARP 2/2**, **ENV · ENV DEST 2/2**).
+- **Las páginas de lente** (el secuenciador desde la 0.8.3, SAVE y FX desde la 0.8.5) van armadas como la maqueta: debajo del
   encabezado tres **pestañas de nivel** (la del nivel en el que estás rellena de violeta), las tarjetas debajo, un
   panel más alto, y el pie es solo la miga de pan, **LENTE · BAR · STEP** (la lente, el nivel, el juego).
 
@@ -182,11 +182,10 @@ Los **diálogos** preguntan antes de cualquier cosa destructiva: **OCT− NO**, 
 - **Tocá** un botón de página: sus páginas. Tocalo de nuevo: la siguiente página de esa familia. Desde otra familia
   volvés a la página donde estuviste por última vez.
 - **HOME** vuelve al ecosistema.
-- **FX** es largo, así que está dividido en secciones: MIX (FX, MASTER: los envíos y el master, las dos primeras
-  páginas de FX desde 0.7.6), TRACK (DIST, AUTO PAN), DELAY (DLY, DLY 2, DLY 3), REVERB (REVERB, REVERB 2), CHORUS,
-  SLICER (SLICER, SL BUS, SL BUS 2, SL PITCH), PUNCH. **Dos toques rápidos** en FX saltan a la siguiente sección.
-- **Girá SELECT** para recorrer las páginas de la sección en la que estás (las de EDIT en una página EDIT, las de FX en
-  una de FX), una por paso, frenando en la primera y la última; el nombre de la página aparece un momento sobre el pie.
+- **FX es una lente** (0.8.5; hasta la 0.8.4 secciones y dos toques rápidos): SELECT hace zoom **TRACK ↔ BUSES ↔
+  EFFECT** (pista, buses, efecto), un toque de FX va a lo siguiente del nivel; PRESETS elige el módulo en BUSES y
+  EFFECT. Ver [9](#la-lente-de-fx-track--buses--effect).
+- **Girá SELECT** para recorrer las páginas de la sección en la que estás (las de EDIT en una página EDIT), una por paso, frenando en la primera y la última; el nombre de la página aparece un momento sobre el pie.
   En HOME abre GEN, el generador de temas.
 - **SEQ es una lente** (LENTE, 0.8.3): SELECT hace zoom entre el **PATRÓN** entero, un **COMPÁS** y un **PASO**, y un
   toque de SEQ recorre los juegos de perillas del nivel en el que estás. Ver [6](#cómo-moverse-lente).
@@ -230,6 +229,7 @@ violeta, con el nombre violeta, y dice **OCT+**; apretá OCT+ para ejecutarla.
 | FX | DIST | CHORUS (envío) | DLY (envío) | REV (envío) |
 | DIST | DIST | TYPE | TONE | — |
 | AUTO PAN | DEPTH | RATE | SYNC | WAVE |
+| BUSES (0.8.5) | MIX (del delay) | SIZE (de la reverb) | DEPTH (del chorus) | DEPTH (del SLICER) |
 | SLICER | MODE | PAT | RATE | DEPTH |
 | SL BUS | T1 | T2 | T3 | T4 |
 | SL BUS 2 | T5 | T6 | FX | — |
@@ -1102,6 +1102,23 @@ disponible mientras suena un tema (**STOP TO EDIT**). Guarda un solo paso, en RA
 ---
 
 ## 9. Efectos y master
+
+### La lente de FX: TRACK · BUSES · EFFECT
+
+Desde la 0.8.5 FX funciona como la lente del secuenciador y se dibuja como el diseño aprobado: tres pestañas de nivel,
+**TRACK · BUSES · EFFECT** (pista, buses, efecto); **SELECT** hace zoom entre ellas (sin dar la vuelta). Las páginas y
+sus perillas son las de siempre, más una: **BUSES**.
+
+| Nivel | Qué muestra la pantalla | Un toque de FX | PRESETS |
+| --- | --- | --- | --- |
+| **TRACK** | El juego de la pista: su lugar en puntitos y "DIST · T1" arriba, su dibujo (los cuatro envíos como barras, la curva de DIST con TYPE y TONE, el vaivén de AUTO PAN con WAVE y RATE) y la curva de DIST en chiquito debajo. | **SENDS** (la página FX: DIST CHORUS DLY REV) → **DIST** → **AUTO PAN** → SENDS | el sonido (como en todos lados) |
+| **BUSES** | Los seis módulos como fichas, cada uno con su dibujo en chiquito: **DELAY** (sus ecos), **REVERB** (su caída), **CHORUS** (tres ondas), **SLICER** (sus 16 pasos, el que suena enmarcado), **MASTER** (la salida ahora, la curva del duck), **PUNCH** (el carril). El módulo elegido teñido y enmarcado en violeta; con LOAD ECO CHORUS y SLICER quedan oscuros ("ECO") y se saltean. Perillas: **DLY MIX, REV SIZE, CHORUS DEPTH, SLICER DEPTH**. | abre el módulo elegido (EFFECT) | el módulo (sin dar la vuelta) |
+| **EFFECT** | El módulo elegido en grande: sus páginas en puntitos, "DELAY · DLY 2" a la derecha, su dibujo. | su página siguiente, en ronda (DLY → DLY 2 → DLY 3 → DLY; REVERB → REVERB 2; SLICER → SL BUS → SL BUS 2 → SL PITCH) | el módulo siguiente, en su primera página |
+
+- **FX desde otra página** vuelve a la página FX que dejaste. SELECT desde EFFECT vuelve a BUSES (el módulo queda
+  elegido), desde BUSES a TRACK en el juego en el que lo dejaste.
+- El pie dice **FX · BUSES** (la lente, el nivel); el encabezado muestra la pista, **T1**, en naranja.
+- Los dibujos siguen a los valores (un giro los redibuja); el nivel de MASTER se mueve con el sonido.
 
 ### Por pista
 

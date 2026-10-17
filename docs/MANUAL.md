@@ -98,7 +98,7 @@ The names below are the ones the firmware uses (the HARDWARE CALIBRATION screen 
 | **HOME** | Back to HOME (the ecosystem). | About 0.7 s: opens the **MENU**. |
 | **ENV** | ENV pages. | (no layer) |
 | **LFO** | LFO pages. | **MACRO** layer: KNOB 1–4 are M1–M4. |
-| **FX** | FX pages (two quick taps: next FX section). | **Punch-in FX** layer. |
+| **FX** | FX's lens (0.8.5): from another page the FX page last shown; on FX the level's next (TRACK: its set; BUSES: the module opens; EFFECT: its next page). | **Punch-in FX** layer. |
 | **SCL** | SCL pages. | **SCL** layer: keys set the root. |
 | **EDIT** | EDIT pages (on STEP: clears the step; on USER / PROJECT: rename). | **EDIT** layer: INIT, RECALL, DRUM-X sound mutes. |
 | **GLO** | MIXER → GLOBAL → SYSTEM → MIXER. | **GLO** layer: mutes, solos, levels, tap tempo, UNDO. |
@@ -155,8 +155,8 @@ Since 0.8.5 every page wears the skin of the design the owner approved (the HTML
   (a knob, the LFO, the envelope), so they cost no CPU.
 - **Panel (middle)**: the page's graph — the engine's creature, an envelope, the LFO running, the step grid, a list...
 - **Footer**: the step bars of the bar you edit (four under each card) or key hints, and under them a small grey
-  **breadcrumb**: the button and the page (e.g. **FX · DLY 2/2**, **ENV · ENV DEST 2/2**).
-- **The lens pages** (the sequencer since 0.8.3) are laid out as the mock-up: under the header three
+  **breadcrumb**: the button and the page (e.g. **ARP · ARP 2/2**, **ENV · ENV DEST 2/2**).
+- **The lens pages** (the sequencer since 0.8.3, SAVE and FX since 0.8.5) are laid out as the mock-up: under the header three
   **level tabs** (the one you are on filled violet), the cards under them, a taller panel, and the footer is the
   breadcrumb alone, **LENTE · BAR · STEP** (the lens, the level, the set).
 
@@ -178,10 +178,9 @@ and heating up with its own audio. The selected track is drawn bigger, a muted o
 - **Tap** a page button: its pages. Tap again: the next page of that family. From another family you return to the
   page you were last on.
 - **HOME** returns to the ecosystem.
-- **FX** is long, so it is split into sections: MIX (FX, MASTER: the sends and the master, FX's first two pages since
-  0.7.6), TRACK (DIST, AUTO PAN), DELAY (DLY, DLY 2, DLY 3), REVERB (REVERB, REVERB 2), CHORUS, SLICER (SLICER, SL BUS,
-  SL BUS 2, SL PITCH), PUNCH. **Two quick taps** on FX jump to the next section.
-- **Turn SELECT** to scroll through the pages of the section you are in (EDIT's on an EDIT page, FX's on an FX page),
+- **FX is a lens** (0.8.5; until 0.8.4 sections and two quick taps): SELECT zooms **TRACK ↔ BUSES ↔ EFFECT**, an FX tap
+  goes to the level's next; PRESETS picks the module on BUSES and EFFECT. See [9](#fxs-lens-track--buses--effect).
+- **Turn SELECT** to scroll through the pages of the section you are in (EDIT's on an EDIT page),
   one a detent, stopping at its first and last; the page's name shows over the footer for a moment. On HOME it opens
   GEN, the song generator.
 - **SEQ is a lens** (LENTE, 0.8.3): SELECT zooms between the whole **PATTERN**, one **BAR** and one **STEP**, and a
@@ -225,6 +224,7 @@ and heating up with its own audio. The selected track is drawn bigger, a muted o
 | FX | DIST | CHORUS (send) | DLY (send) | REV (send) |
 | DIST | DIST | TYPE | TONE | — |
 | AUTO PAN | DEPTH | RATE | SYNC | WAVE |
+| BUSES (0.8.5) | MIX (the delay's) | SIZE (the reverb's) | DEPTH (the chorus') | DEPTH (the SLICER's) |
 | SLICER | MODE | PAT | RATE | DEPTH |
 | SL BUS | T1 | T2 | T3 | T4 |
 | SL BUS 2 | T5 | T6 | FX | — |
@@ -1041,6 +1041,23 @@ sounds picked with PRESETS, SEQ TOOLS actions, or ordinary knob turns. It is not
 ---
 
 ## 9. Effects and master
+
+### FX's lens: TRACK · BUSES · EFFECT
+
+Since 0.8.5 FX works like the sequencer's lens and is drawn as the design that was approved: three level tabs,
+**TRACK · BUSES · EFFECT**; **SELECT** zooms between them (no wrap). The pages and their knobs are the ones they always
+were, with one more: **BUSES**.
+
+| Level | What the screen shows | FX tap | PRESETS |
+| --- | --- | --- | --- |
+| **TRACK** | The track's set: its place as dots and "DIST · T1" at the top, its picture (the four sends as bars, DIST's curve with TYPE and TONE, AUTO PAN's swing with WAVE and RATE) and DIST's curve small under it. | **SENDS** (the FX page: DIST CHORUS DLY REV) → **DIST** → **AUTO PAN** → SENDS | the sound (as everywhere) |
+| **BUSES** | The six modules as tiles, each its picture small: **DELAY** (its echoes), **REVERB** (its decay), **CHORUS** (three waves), **SLICER** (its 16 steps, the one playing framed), **MASTER** (the output now, the duck's curve), **PUNCH** (the lane). The module picked tinted and framed violet; with LOAD ECO CHORUS and SLICER are dark ("ECO") and skipped. Knobs: **DLY MIX, REV SIZE, CHORUS DEPTH, SLICER DEPTH**. | opens the module picked (EFFECT) | the module (no wrap) |
+| **EFFECT** | The module picked large: its pages as dots, "DELAY · DLY 2" at the right, its picture. | its next page, round (DLY → DLY 2 → DLY 3 → DLY; REVERB → REVERB 2; SLICER → SL BUS → SL BUS 2 → SL PITCH) | the next module, at its first page |
+
+- **FX from another page** comes back to the FX page you left. SELECT from EFFECT goes back to BUSES (the module
+  stays picked), from BUSES to TRACK at the set you left it on.
+- The footer says **FX · BUSES** (the lens, the level); the header shows the track, **T1**, in orange.
+- The pictures follow the values (a turn redraws them); the MASTER level moves with the sound.
 
 ### Per track
 

@@ -1487,7 +1487,8 @@ static uint32_t graph_signature(void)
     h ^= (uint32_t)pg->graph * 131u + TSEL->eng_req + song.sel * 7777u + ui.page * 1291u;
     if (strip_kind() == SK_TITLE)                    /* MENU > LARGE: the page's title (its engine, its number) */
         return h ^ 0x5A17u;
-    if (pg->graph == GR_NONE || pg->graph == GR_ARP || pg->graph == GR_MOTION) h ^= ui.frame / 2u;
+    if ((pg->graph == GR_NONE && !fx_on()) || pg->graph == GR_ARP || pg->graph == GR_MOTION) h ^= ui.frame / 2u;   /* (0.8.5:
+                                                         * FX's lens pictures change with their values only) */
     if (pg->graph == GR_LFO)                         /* (JIANT 0.5) the LFO runs: its phase, its level */
         h ^= (t->lfo_ph >> 23) * 2654435761u ^ (uint32_t)(t->lfo_val * t->lfo_fade >> 22);
     if (pg->graph == GR_ADSR)                        /* the envelope's dot: every voice's stage and level */
@@ -1594,6 +1595,19 @@ static uint32_t graph_signature(void)
         }
         if (pg->graph == GR_BROWSE)
             h ^= favorites.filter * 977u + preset_favorite() * 31u;
+    }
+    if (fx_on()) {                                   /* (0.8.5) FX's lens: the level, the module, the buses' values, the
+                                                         * slicer's step, the output (MASTER), the punch lane */
+        h = (h ^ (fx_level() + 1u) * 2654435761u ^ ui.fxmod * 40503u ^ ui.fxtrk * 977u) * 16777619u;
+        for (i = 0; i < G_COUNT; i++)
+            h = (h ^ (uint32_t)song.g[i]) * 16777619u;
+        if (fx_level() == FXL_BUSES || (fx_level() == FXL_EFFECT && fx_mod_of(ui.page) == 3u))   /* (the SLICER drawn) */
+            h ^= (song.playing && song.g[G_SLMODE] ? sl.idx + 1u : 0u) * 2654435761u;
+        h ^= sl_ui_step * 7919u + (uint32_t)pfx_rec_ok() * 31u;
+        if (fx_level() == FXL_BUSES || fx_mod_of(ui.page) == 4u)
+            h ^= (uint32_t)(bg_energy() / 16) * 104729u;   /* (MASTER's level bar: 16 steps, not every frame) */
+        for (i = 0; i < 32u; i++)
+            h = (h ^ pfx_lane[i]) * 16777619u;
     }
     if (lens_on()) {                                 /* (0.8.3) LENTE: the level; its STEP, the cursor step's every byte */
         h = (h ^ (lens_level() + 1u) * 2654435761u) * 16777619u;
@@ -2335,6 +2349,7 @@ static void graph_song(void)
 }
 #include "ui_tech.c"                                /* (JIANT 0.5) the technical graphs (FX, DEST, VOICE, GLOBAL) */
 #include "ui_lzsave.c"                              /* (0.8.5) SAVE's lens: its levels' panels */
+#include "ui_lzfx.c"                                /* (0.8.5) FX's lens: its levels' panels */
 static void draw_graph(void)
 {
     const page_t *pg = cur_page();
@@ -2390,6 +2405,9 @@ static void draw_graph(void)
     } else if (lz_on() && lz_fam() == LZ_SAVE) {     /* (0.8.5) SAVE's lens */
         cv_oy = 0;
         graph_save_lz(pg);
+    } else if (lz_on() && lz_fam() == LZ_FX) {       /* (0.8.5) FX's lens */
+        cv_oy = 0;
+        graph_fx_lz(t, pg);
     } else {
         switch (pg->graph) {
         case GR_ADSR:

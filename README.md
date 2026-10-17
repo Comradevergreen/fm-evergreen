@@ -538,6 +538,13 @@ JIANT's modifications are distributed under the same license.
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
 
 ### v0.8.5
+- **FX is a lens, as the approved mock-up** (FX "LENTE"): **TRACK · BUSES · EFFECT**, SELECT zooms. TRACK: an FX tap
+  goes round SENDS · DIST · AUTO PAN, each with its picture (the sends as bars, DIST's curve, AUTO PAN's swing) and
+  DIST's curve small under it. BUSES (a new page): the six modules DELAY REVERB CHORUS SLICER MASTER PUNCH as tiles
+  with small pictures, the knobs DLY MIX · REV SIZE · CHORUS DEPTH · SLICER DEPTH, PRESETS picks the module, FX opens
+  it. EFFECT: the module large, an FX tap its pages round (DLY → DLY 2 → DLY 3), PRESETS the next module. Every FX
+  page and parameter where it was; the two quick taps (the next section) are gone with the sections. The pictures
+  redraw when their values change (the old FX graphs redrew every other frame).
 - **SAVE is a lens, as the approved mock-up** (SAVE "LENTE"): three level tabs, **LIBRARY · PROJECT · SOUND**,
   SELECT zooms (no wrap), a SAVE tap switches the level's two sets. LIBRARY: the eight projects as tiles with their
   sections A–D as coloured chips (the other projects read from their flash headers, a project a frame, no loading) /

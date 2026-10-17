@@ -126,7 +126,7 @@ def controls():
     b.append(sec('THE PANEL'))
     rows = [
         ('MASTER', 'Master volume.'),
-        ('SELECT', '<b>Scrolls the section\'s pages</b> (SEQ: <b>zooms</b> PATTERN · BAR · STEP; SAVE: LIBRARY · PROJECT · SOUND; HOME: GEN, the song generator). Held with a button, its <b>dice</b> (OK keeps, CANCEL back): HOME everything, '
+        ('SELECT', '<b>Scrolls the section\'s pages</b> (SEQ: <b>zooms</b> PATTERN · BAR · STEP; SAVE: LIBRARY · PROJECT · SOUND; FX: TRACK · BUSES · EFFECT; HOME: GEN, the song generator). Held with a button, its <b>dice</b> (OK keeps, CANCEL back): HOME everything, '
                    'EDIT the sound, SEQ the sequence, LFO the LFO, FX the effects. GLO + SELECT: the tempo.'),
         ('PRESETS', 'Browses the sounds (factory and user). On step, list and song pages: the cursor / the row; SEQ at PATTERN: the bar. '
                     '<b>Hold a page button + PRESETS: jump through its pages.</b>'),
@@ -143,7 +143,7 @@ def controls():
     pb = [
         ('ENV', 'ENV · ENV DEST', '—'),
         ('LFO', 'LFO · LFO DEST · MOD · MSEQ · MSEQ 2', 'MACROS M1–M4 (stay latched)'),
-        ('FX', 'FX · MASTER · TRACK · DELAY · REVERB · CHORUS · SLICER · PUNCH (two quick taps: next section)',
+        ('FX', 'the zoom level\'s next (SELECT zooms; PRESETS the module): TRACK: SENDS · DIST · AUTO PAN  |  BUSES: DLY MIX · REV SIZE · CHORUS DEPTH · SLICER DEPTH, FX opens the module  |  EFFECT: DELAY · REVERB · CHORUS · SLICER · MASTER · PUNCH, their pages',
          'PUNCH-IN FX'),
         ('SCL', 'SCL · CHORD', 'ROOT by key'),
         ('EDIT', 'EDIT 1 · EDIT 2 · FILTER · VOICE  (FM6: OPERATOR · OP ENV · OPERATOR 2; DRUM: KIT · KIT 2 · KIT 3 · X-MOD · FILTER · SOUND 1–4 · LEVELS 1–2 · STEREO)', 'INIT · RECALL · sound mutes'),

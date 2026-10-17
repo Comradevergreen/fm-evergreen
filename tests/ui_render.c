@@ -656,6 +656,7 @@ enum { S_HOME, S_HOME_IDLE, S_MESSAGE, S_MESSAGE_KEY, S_MESSAGE_NOFILE, S_PRESET
        S_COUNTIN, S_COUNTIN2, S_MENU_AUDIO, S_HEAD_PLAY_REC, S_HEAD_REC_OTHER, S_HEAD_BPM_TURN, S_HEAD_BPM_LOCK,
        S_HEAD_BPM_LOCKED, S_HEAD_GLO_TURN, S_HEAD_DOWNBEAT, S_HEAD_BEAT_2,
        S_SAVE_LIB, S_SAVE_TOOLS, S_SAVE_PROJ, S_SAVE_ARR, S_SAVE_SOUND, S_SAVE_PRESETS,
+       S_FXL_SENDS, S_FXL_DIST, S_FXL_PAN, S_FXL_BUSES, S_FXL_DELAY, S_FXL_DELAY2, S_FXL_REVERB, S_FXL_SLICER, S_FXL_MASTER,
        S_MIXER_T4, S_HOME_T4, S_MOCK_HOME, S_MOCK_PRESETS, S_MOCK_SEQ, S_MOCK_DRUM, S_MOCK_MIXER, S_MOCK_DIALOG, S_MOCK_MENU, S_COUNT };
 static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "message", "message_key", "message_nofile", "presets", "presets_nofav", "user",
     "phrases", "project", "tools", "song_empty", "song", "step", "pattern", "chance", "comp", "comp_trig", "comp_echo", "mutate", "morph", "dx_image", "dx_send", "page_flash", "page_flash_home", "fugue", "motion", "drum",
@@ -678,6 +679,8 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "message", "mes
     "countin", "countin_2bars", "menu_audio", "head_play_rec", "head_rec_other", "head_bpm_turn", "head_bpm_lock",
     "head_bpm_locked", "head_glo_turn", "head_downbeat", "head_beat_2",
     "save_library", "save_tools", "save_project", "save_arrange", "save_sound", "save_presets",
+    "fx_track_sends", "fx_track_dist", "fx_track_pan", "fx_buses", "fx_effect_delay", "fx_effect_delay2", "fx_effect_reverb",
+    "fx_effect_slicer", "fx_effect_master",
     "mixer_tracks4", "home_tracks4", "mock_home", "mock_presets", "mock_seq", "mock_drum", "mock_mixer", "mock_dialog", "mock_menu"};
 
 /* the scenes of the UI design screens: the state the UI-redesign
@@ -1249,6 +1252,22 @@ static void setup(int s)
         break;
     }
     case S_USER_FOOT: song.playing = 0; up_store(3, "MY BASS"); ui.uslot = 3; go_page(GR_USER); break;   /* EDIT NAME lit */
+    /* (0.8.5) FX's lens as the mock-up's values: T1's sends DIST 0 CHORUS 0 DLY 0 REV 10 (sends: 30 60 40 50 to show
+     * them), DIST SOFT, AUTO PAN 40 SIN; DLY 1/8 FDBK 70 MIX 50, REVERB ROOM SIZE 70, CHORUS DEPTH 64, SLICER GATE PAT 3
+     * DEPTH 90, CLIP 30 PUNCH 40 DUCK 20 REL 60 */
+    case S_FXL_SENDS: case S_FXL_DIST: case S_FXL_PAN: case S_FXL_BUSES: case S_FXL_DELAY: case S_FXL_DELAY2:
+    case S_FXL_REVERB: case S_FXL_SLICER: case S_FXL_MASTER: {
+        static const char *const T[] = {"FX", "DIST", "AUTO PAN", "BUSES", "DLY", "DLY 2", "REVERB", "SLICER", "MASTER"};
+        TSEL->p[P_DIST] = 30; TSEL->p[P_CHOR] = 60; TSEL->p[P_DLY] = 40; TSEL->p[P_REV] = 50;
+        TSEL->p[P_DTYPE] = 0; TSEL->p[P_APDEP] = 40; TSEL->p[P_APWAVE] = 0;
+        song.g[G_DFDBK] = 70; song.g[G_DMIX] = 50; song.g[G_RTYPE] = 0; song.g[G_RSIZE] = 70; song.g[G_CDEPTH] = 64;
+        song.g[G_SLMODE] = SL_GATE; song.g[G_SLPAT] = 3; song.g[G_SLDEP] = 90;
+        song.g[G_CLIP] = 30; song.g[G_PUNCH] = 40; song.g[G_DUCK] = 20; song.g[G_DREL] = 60;
+        ui.fxmod = s == S_FXL_REVERB || s == S_FXL_BUSES ? 1u : s == S_FXL_SLICER ? 3u : s == S_FXL_MASTER ? 4u : 0u;
+        go_title(T[s - S_FXL_SENDS]);
+        ui.msg_t = 0;
+        break;
+    }
     /* (0.8.5) SAVE's lens as the mock-up's data: projects NOCHE LARGA (A B C), ACID 03, DUB KIT, BOSQUE, TRANCE A; the
      * song B16 C16 A32 D8 C16 A32 (scenes on 2 and 4, END LOOP); seven user sounds */
     case S_SAVE_LIB: case S_SAVE_TOOLS: case S_SAVE_PROJ: case S_SAVE_ARR: case S_SAVE_SOUND: case S_SAVE_PRESETS: {
@@ -1866,7 +1885,7 @@ int main(int argc, char **argv)
     {
         static const int COST[] = {S_HOME, S_PRESETS, S_STEP, S_ROLL_CHORDS, S_DRUM, S_MIXER, S_MENU, S_ABOUT_CREDITS, S_CONFIRM_PROJ,
                                    S_PATTERN, S_COMP, S_LENTE_PAT, S_LENTE_BAR, S_LENTE_STEP, S_LENTE_STEP_DRUM,
-                                   S_SAVE_LIB, S_SAVE_PROJ, S_SAVE_SOUND};   /* (0.8.3:
+                                   S_SAVE_LIB, S_SAVE_PROJ, S_SAVE_SOUND, S_FXL_SENDS, S_FXL_BUSES, S_FXL_REVERB};   /* (0.8.3:
                                                                          * LENTE's three levels) */
         enum { N = 200 };
         uint32_t i, k;
@@ -1895,7 +1914,7 @@ int main(int argc, char **argv)
         }
         {   /* the STEP page's piano roll: its panel alone redrawn, and a frame that changes nothing (the signature only) */
             static const int G[] = {S_ROLL_CHORDS, S_ROLL_PLAYING, S_DRUM, S_PATTERN, S_COMP, S_LENTE_PAT, S_LENTE_STEP,
-                                    S_SAVE_LIB, S_SAVE_SOUND};
+                                    S_SAVE_LIB, S_SAVE_SOUND, S_FXL_BUSES, S_FXL_REVERB};
             for (k = 0; k < sizeof G / sizeof G[0]; k++) {
                 clock_t c0;
                 double tg, ti;

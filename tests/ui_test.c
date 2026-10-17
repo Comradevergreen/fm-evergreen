@@ -2740,11 +2740,11 @@ static int test_chain(void)
  * SONG: the selection, as KNOB 1; TOOLS: nothing; HOME, PRESETS and every other page: the next sound, the steps untouched, SAVE held undoes it */
 static int test_presets_knob(void)
 {
-    int bad = 0, cur_ok = 1, sel_ok = 1, snd_ok = 1, tools_ok = 1, grid_ok, bar_ok = 1;
+    int bad = 0, cur_ok = 1, sel_ok = 1, snd_ok = 1, tools_ok = 1, grid_ok, bar_ok = 1, fxm_ok = 1;
     uint32_t i, n_snd = 0, n_cur = 0, n_bar = 0;
     for (i = 0; i < NPAGES; i++) {
         track_t before;
-        uint32_t g = PAGES[i].graph, uslot, ppick;
+        uint32_t g = PAGES[i].graph, uslot, ppick, fxm0;
         int16_t slot;
         ui_power_on();
         song.sel = 0;
@@ -2755,6 +2755,8 @@ static int test_presets_knob(void)
         frame();
         before = *TSEL;
         uslot = ui.uslot; ppick = pat_pick(); slot = song.g[G_SLOT];
+        if (PAGES[i].fam == FAM_FX && ui.fxmod == FX_NMOD - 1u) ui.fxmod = 0;   /* (the module can go right) */
+        fxm0 = ui.fxmod;
         turn(EN_PRESET, 1);
         {
             int same_snd = TSEL->preset == before.preset && TSEL->eng_req == before.eng_req &&
@@ -2776,6 +2778,8 @@ static int test_presets_knob(void)
                 sel_ok &= same_snd && same_steps && ui.page == i;
             } else if (g == GR_TOOLS) {
                 tools_ok &= same_snd && same_steps && !ui.confirm;
+            } else if (PAGES[i].fam == FAM_FX && fx_trk_k(i) < 0) {   /* (0.8.5) FX's lens, BUSES / EFFECT: the module */
+                fxm_ok &= same_snd && same_steps && fx_on() && ui.fxmod != fxm0;
             } else {
                 snd_ok &= !same_snd && same_steps && ui.page == i && !ui.home;
                 n_snd++;
@@ -2788,6 +2792,7 @@ static int test_presets_knob(void)
                  bar_ok && n_bar == 5u);
     bad += check("#94 PRESETS on USER, PROJECT, PHRASES, SONG: the selection (KNOB 1's); nothing loaded", sel_ok);
     bad += check("#94 PRESETS on TOOLS does nothing", tools_ok);
+    bad += check("0.8.5 FX's lens: PRESETS on BUSES and EFFECT the module; the sound and the steps stay", fxm_ok);
     bad += check("#94 PRESETS elsewhere (EDIT, ENV, LFO, FX, SCL, ARP, MIXER, GLOBAL, ...): the next sound, the steps stay",
                  snd_ok && n_snd >= 15u);
     ui_power_on();
@@ -3024,7 +3029,7 @@ static int test_layer(void)
     bad += check("FX tap: nothing on press, the FX page when let go", ok && !ui.home && cur_page()->fam == FAM_FX);
     frames(320);                                       /* (not a double tap: #83) */
     press(B_FX);
-    bad += check("  a second tap: the next page of the family (MASTER, 0.7.6)", str_eq(cur_page()->title, "MASTER"));
+    bad += check("  a second tap: the level's next set (0.8.5 FX's lens: SENDS -> DIST)", str_eq(cur_page()->title, "DIST"));
     ui_power_on();
     btn_down(B_FX);
     for (flash = 0, i = 0; i < 22u; i++) { frame(); flash |= ui.layer; }      /* 0.35 s */
@@ -7148,35 +7153,83 @@ static int test_scl_alltr(void)
     ui_power_on();
     return bad;
 }
-/* (0.6.24) FX in sections: a tap the next page, two quick taps the next section; the footer counts within it */
+/* (0.8.5) FX as a lens (ui.c fx_*; until 0.8.4 sections, a tap the next page, two quick taps the next section):
+ * TRACK's FX tap SENDS -> DIST -> AUTO PAN -> SENDS; SELECT TRACK <-> BUSES <-> EFFECT (no wrap); on BUSES PRESETS the
+ * module (DELAY REVERB CHORUS SLICER MASTER PUNCH, no wrap), FX opens it at its first page; EFFECT's FX tap its pages
+ * round (DLY -> DLY 2 -> DLY 3 -> DLY), PRESETS the next module; every FX page reached; BUSES' four knobs the buses'
+ * DLY MIX, REV SIZE, CHORUS DEPTH, SLICER DEPTH; the tabs; LOAD ECO: CHORUS and SLICER skipped; FX from elsewhere the
+ * FX page last shown */
 static int test_fx_sections(void)
 {
-    int bad = 0, ok;
-    char ti[20];
+    int bad = 0, ok, seen = 1;
+    uint32_t i, m;
     ui_power_on();
     go_title("FX"); frame();
-    press(B_FX); frames(600);
-    page_title(ti);
-    ok = str_eq(cur_page()->title, "MASTER") && str_eq(ti, "MASTER 2/2");   /* (0.7.6) the master: FX's second page */
-    press(B_FX); press(B_FX); frames(600);             /* two quick taps from MASTER: the next section, DIST */
-    ok &= str_eq(cur_page()->title, "DIST");
-    press(B_FX); frames(600);
-    page_title(ti);
-    ok &= str_eq(cur_page()->title, "AUTO PAN") && str_eq(ti, "AUTO PAN 2/2");
-    press(B_FX); press(B_FX); frames(600);             /* two quick taps from AUTO PAN: DLY (0.6.81: the SLICER after CHORUS) */
-    ok &= str_eq(cur_page()->title, "DLY");
-    press(B_FX); frames(600);
-    page_title(ti);
-    ok &= str_eq(cur_page()->title, "DLY 2") && str_eq(ti, "DLY 2/3");
-    go_title("CHORUS"); frame();
-    press(B_FX); press(B_FX); frames(600);
-    ok &= str_eq(cur_page()->title, "SLICER");
-    go_title("PUNCH"); frame();
-    press(B_FX); press(B_FX); frames(600);             /* (past PUNCH, the last: round to the first) */
-    ok &= str_eq(cur_page()->title, "FX");
-    page_title(ti);
-    ok &= str_eq(ti, "FX 1/2");
-    bad += check("FX sections: tap next page, two quick taps next section (MIX TRACK DELAY REVERB CHORUS SLICER PUNCH), 'DLY 2/3'", ok);
+    ok = fx_on() && fx_level() == FXL_TRACK && lz_on() && card_y() == LZ_CARD_Y;
+    press(B_FX); frame(); ok &= str_eq(cur_page()->title, "DIST");
+    press(B_FX); frame(); ok &= str_eq(cur_page()->title, "AUTO PAN");
+    press(B_FX); frame(); ok &= str_eq(cur_page()->title, "FX");
+    bad += check("FX lens: TRACK's FX tap goes round SENDS -> DIST -> AUTO PAN", ok);
+    press(B_FX); frame();                                          /* (DIST) */
+    turn(EN_SELECT, 1); frame();
+    ok = fx_level() == FXL_BUSES && cur_page()->graph == GR_BUSES && ui.fxmod == 0u;
+    ok &= swap16(host_screen[(LT_Y + LT_H / 2) * 240 + LT_X(FXL_BUSES) + 2]) == T_THEME;
+    ok &= cur_page()->id[0] == G_DMIX && cur_page()->id[1] == G_RSIZE && cur_page()->id[2] == G_CDEPTH && cur_page()->id[3] == G_SLDEP;
+    song.g[G_RSIZE] = 50; turn(EN_K2, 3); frame();
+    ok &= song.g[G_RSIZE] > 50;
+    turn(EN_PRESET, 1); frame(); ok &= ui.fxmod == 1u && fx_level() == FXL_BUSES;
+    turn(EN_PRESET, -5); frame(); ok &= ui.fxmod == 0u;           /* (no wrap) */
+    press(B_FX); frame();
+    ok &= fx_level() == FXL_EFFECT && str_eq(cur_page()->title, "DLY");
+    bad += check("FX lens: SELECT right BUSES (DLY MIX, REV SIZE, CHORUS DEPTH, SLICER DEPTH), PRESETS the module, FX opens it", ok);
+    press(B_FX); frame(); ok = str_eq(cur_page()->title, "DLY 2");
+    press(B_FX); frame(); ok &= str_eq(cur_page()->title, "DLY 3");
+    press(B_FX); frame(); ok &= str_eq(cur_page()->title, "DLY");
+    turn(EN_PRESET, 1); frame(); ok &= str_eq(cur_page()->title, "REVERB") && ui.fxmod == 1u;
+    turn(EN_SELECT, 1); frame(); ok &= str_eq(cur_page()->title, "REVERB");          /* (no wrap) */
+    turn(EN_SELECT, -1); frame(); ok &= fx_level() == FXL_BUSES && ui.fxmod == 1u;
+    turn(EN_SELECT, -1); frame(); ok &= str_eq(cur_page()->title, "DIST");           /* (TRACK at its set) */
+    turn(EN_SELECT, -1); frame(); ok &= str_eq(cur_page()->title, "DIST");
+    bad += check("FX lens: EFFECT's FX tap its pages round, PRESETS the next module; SELECT back to BUSES, TRACK at its set; no wrap", ok);
+    for (i = 0; i < NPAGES; i++) {                                 /* every FX page from the lens */
+        uint32_t j, n, found = 0;
+        if (PAGES[i].fam != FAM_FX) continue;
+        for (m = 0; m < 4u && !found; m++) {                       /* TRACK, then each module */
+            ui_power_on(); go_title("FX"); frame();
+            if (m == 0u) {
+                for (n = 0; n < 3u && !found; n++) { found = ui.page == i; if (!found) { press(B_FX); frame(); } }
+                continue;
+            }
+            turn(EN_SELECT, 1); frame();
+            if (PAGES[i].graph == GR_BUSES) { found = ui.page == i; continue; }
+            for (j = 0; j < FX_NMOD && !found; j++) {
+                uint32_t q;
+                ui.fxmod = 0;
+                for (q = 0; q < j; q++) turn(EN_PRESET, 1);
+                press(B_FX); frame();
+                for (n = 0; n < 4u && !found; n++) { found = ui.page == i; if (!found) { press(B_FX); frame(); } }
+                turn(EN_SELECT, -1); frame();
+            }
+        }
+        if (!found) { printf("  FX page %s not reached\n", PAGES[i].title); seen = 0; }
+    }
+    bad += check("FX lens: every FX page reached (TRACK's three, BUSES, the six modules' pages)", seen);
+    ui_power_on(); go_title("DLY"); frame();
+    press(B_FX); frame();                                          /* (DLY 2, by the lens) */
+    go_home(); frame();
+    press(B_FX); frame();
+    ok = str_eq(cur_page()->title, "DLY 2") && fx_level() == FXL_EFFECT;
+    if (!ok) printf("  dbg fx last %s\n", cur_page()->title);
+    {
+        char b[48];
+        foot_crumbs(b, sizeof b);
+        ok &= str_eq(b, "FX \xB7 EFFECT");
+    }
+    load_put(0); frame();                                          /* LOAD ECO: no CHORUS, no SLICER */
+    go_title("BUSES"); ui.fxmod = 1; frame();
+    turn(EN_PRESET, 1); frame(); ok &= ui.fxmod == 4u;              /* (REVERB -> MASTER: CHORUS, SLICER skipped) */
+    load_put(2); frame();
+    bad += check("FX lens: FX from elsewhere the page last shown; the breadcrumb FX . EFFECT; LOAD ECO skips CHORUS and SLICER", ok);
     ui_power_on();
     return bad;
 }

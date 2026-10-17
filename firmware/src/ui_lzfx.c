@@ -94,7 +94,7 @@ static void fxg_chorus(int32_t x, int32_t y, int32_t w, int32_t h)
 static void fxg_slicer(int32_t x, int32_t y, int32_t w, int32_t h)
 {
     uint32_t i, pat = sl_pattern(), mode = (uint32_t)song.g[G_SLMODE], play = mode && song.playing ? sl.idx % 16u : 99u;
-    int32_t cw = w / 16, x0 = x + (w - 16 * cw) / 2;
+    int32_t cw = w / 16, x0 = x + (w - 16 * cw) / 2, lw;
     char b[32];
     const char *u;
     for (i = 0; i < 16u; i++) {
@@ -114,6 +114,7 @@ static void fxg_slicer(int32_t x, int32_t y, int32_t w, int32_t h)
         str_cpy(b + str_len(b), " \xB7 ", 4);
         str_cpy(b + str_len(b), r, 8);
     }
+    lw = text_w(&AF_S, b);
     fxg_label(x, y, b, T_MID, 0);
     if (w > 120) {                                   /* the tracks in it, FX */
         uint32_t n = 0;
@@ -122,7 +123,10 @@ static void fxg_slicer(int32_t x, int32_t y, int32_t w, int32_t h)
         b[n] = 0;
         if (!n) str_cpy(b, "NONE ", sizeof b);
         if (song.g[G_SLFX]) str_cpy(b + str_len(b), "+FX", 4);
-        fxg_label(x + w, y, b, T_DIM, 1);
+        {   /* (at the right, clear of the mode's words: ellipsised when it must) */
+            int32_t rw = text_w(&AF_S, b), l = x + lw + 14, rx = x + w - rw < l ? l : x + w - rw;
+            cv_free_text(rx, y, &AF_S, b, T_DIM, cv_bg, x + w - rx);
+        }
     }
 }
 static void fxg_master(int32_t x, int32_t y, int32_t w, int32_t h)
@@ -228,11 +232,14 @@ static void fxg_pan(const track_t *t, int32_t x, int32_t y, int32_t w, int32_t h
     if (sw > 0)
         cv_rect(cx - sw, mid, 2 * sw + 1, 1, T_MID);
     cv_rrect(cx - 4, mid - 4, 9, 9, 4, FXG_H(205), T_SURF);
-    param_format(&TP[P_APWAVE], t->p[P_APWAVE], b, &u);
-    str_cpy(b + str_len(b), " \xB7 ", 4);
-    {
+    {   /* WAVE . RATE as AUTO PAN's cards say them (its RATE by SYNC: page_desc) */
+        int16_t *vp;
+        const param_desc_t *dw = page_desc(cur_page(), 3, &vp), *dr;
         char r[10];
-        param_format(&TP[P_APRATE], t->p[P_APRATE], r, &u);
+        param_format(dw ? dw : track_desc(t, P_APWAVE), t->p[P_APWAVE], b, &u);
+        str_cpy(b + str_len(b), " \xB7 ", 4);
+        dr = page_desc(cur_page(), 1, &vp);
+        param_format(dr ? dr : track_desc(t, P_APRATE), dr && vp ? *vp : t->p[P_APRATE], r, &u);
         str_cpy(b + str_len(b), r, 10);
     }
     fxg_label(x + 12, y, b, T_MID, 0);

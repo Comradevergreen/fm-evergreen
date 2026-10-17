@@ -1484,6 +1484,8 @@ static void presets_turn(int32_t s)
     uint32_t g = pg->graph;
     if (ui.home || g == GR_BROWSE) {
         preset_step(s);
+    } else if (fx_on() && fx_level() != FXL_TRACK) {   /* (0.8.5) FX's lens, BUSES / EFFECT: the module */
+        fx_pick(s);
     } else if (lens_on() && lens_level() == LV_PAT && lens_k(LV_PAT, ui.page) >= 0) {   /* (0.8.3) LENTE's PATTERN: the
                                                          * bar (no wrap), the cursor at its place in it */
         uint32_t len = (uint32_t)clamp(TSEL->p[P_SLEN], 1, NSTEP), nb = (len + 15u) / 16u;
@@ -1688,6 +1690,10 @@ static void page_scroll(int32_t s)
     }
     if (save_on()) {                                    /* (0.8.5) SAVE's lens: LIBRARY <-> PROJECT <-> SOUND */
         save_zoom(s);
+        return;
+    }
+    if (fx_on()) {                                      /* (0.8.5) FX's lens: TRACK <-> BUSES <-> EFFECT */
+        fx_zoom(s);
         return;
     }
     f = cur_page()->fam == FAM_TRK ? FAM_GLO : cur_page()->fam;

@@ -196,6 +196,7 @@ static struct {
     uint8_t lv;                  /* (0.8.3) SEQ's LENTE: the level shown, LV_PAT LV_BAR LV_STEP (lens_sync) */
     uint16_t lens_mem[NTRK];     /* .. per track: the level last used and each level's set (LM_*: SEQ comes back there) */
     uint8_t slv, smem;           /* (0.8.5) SAVE's lens: the level shown (SV_*), each level's set (ui.c save_go) */
+    uint8_t fxmod, fxtrk;        /* (0.8.5) FX's lens: the module picked (BUSES, EFFECT), TRACK's set last shown */
     uint8_t ent_len, ent_arp, ent_res, ent_ord, ent_oct, ent_nn;   /* (0.6.37) that entry while held (ui_input.c
                                   * seq_entry): KNOB 1 its LEN in steps; ARP pressed: arpeggiated, KNOB 1 the steps a
                                   * note (RES), 2 the ORDER, 3 the octaves; the keys' notes in order of pitch */
@@ -601,19 +602,122 @@ static void save_zoom(int32_t s)                        /* SELECT: a level a det
         save_go((uint32_t)to, (ui.smem >> to) & 1u);
 }
 
-/* (0.8.5) a lens page shown (SEQ's LENTE, SAVE's): the mock-up's layout, its tabs and breadcrumb */
+/* (0.8.5) FX's lens, as the approved mock-up (FX "LENTE"): SELECT zooms TRACK <-> BUSES <-> EFFECT (no wrap); the
+ * pages, their knobs as they were, and BUSES (DLY MIX, REV SIZE, CHORUS DEPTH, SLICER DEPTH):
+ *   TRACK   the track's: an FX tap goes round SENDS (the FX page) -> DIST -> AUTO PAN
+ *   BUSES   the six modules (DELAY REVERB CHORUS SLICER MASTER PUNCH) as tiles; PRESETS picks one, FX (or SELECT right)
+ *           opens it
+ *   EFFECT  the module picked large with its pages, an FX tap the next one (DLY -> DLY 2 -> DLY 3 -> DLY); PRESETS
+ *           the next module
+ * FX from another page: the FX page last shown. The level is the page's (BUSES its own); ui.fxmod the module, ui.fxtrk
+ * TRACK's set to come back to */
+enum { FXL_TRACK, FXL_BUSES, FXL_EFFECT };
+#define FX_NMOD 6u
+static const char *const FXL_NAME[3] = {"TRACK", "BUSES", "EFFECT"};
+static const char *const FX_TRK[3] = {"FX", "DIST", "AUTO PAN"};
+static const char *const FX_MOD[FX_NMOD] = {"DELAY", "REVERB", "CHORUS", "SLICER", "MASTER", "PUNCH"};
+static const char *const FX_MHEAD[FX_NMOD] = {"DLY", "REVERB", "CHORUS", "SLICER", "MASTER", "PUNCH"};   /* its first page */
+static const uint8_t FX_MN[FX_NMOD] = {3, 2, 1, 4, 1, 1};   /* its pages, one after another in PAGES */
+static int page_visible(uint32_t i);
+static int fx_on(void) { return !ui.home && !page_over && PAGES[ui.page].fam == FAM_FX; }
+static uint32_t fx_page(const char *title)
+{
+    uint32_t i;
+    for (i = 0; i < NPAGES; i++)
+        if (PAGES[i].fam == FAM_FX && str_eq(PAGES[i].title, title))
+            return i;
+    return 0;
+}
+static int32_t fx_trk_k(uint32_t i)                     /* page i's place among TRACK's sets, -1 none */
+{
+    uint32_t k;
+    for (k = 0; k < 3u; k++)
+        if (PAGES[i].fam == FAM_FX && str_eq(PAGES[i].title, FX_TRK[k]))
+            return (int32_t)k;
+    return -1;
+}
+static uint32_t fx_mod_of(uint32_t i)                   /* an EFFECT page's module (another page: ui.fxmod) */
+{
+    uint32_t m, f;
+    for (m = 0; m < FX_NMOD; m++) {
+        f = fx_page(FX_MHEAD[m]);
+        if (i >= f && i < f + FX_MN[m])
+            return m;
+    }
+    return ui.fxmod % FX_NMOD;
+}
+static uint32_t fx_mod_k(uint32_t i) { return i - fx_page(FX_MHEAD[fx_mod_of(i)]); }   /* .. its place in it */
+static uint32_t fx_mod_n(uint32_t m) { return FX_MN[m % FX_NMOD]; }
+static int fx_mod_ok(uint32_t m) { return page_visible(fx_page(FX_MHEAD[m % FX_NMOD])); }   /* (LOAD ECO: no CHORUS, SLICER) */
+static uint32_t fx_level(void)
+{
+    if (fx_trk_k(ui.page) >= 0)
+        return FXL_TRACK;
+    return PAGES[ui.page].graph == GR_BUSES ? FXL_BUSES : FXL_EFFECT;
+}
+static void fx_show(uint32_t i)
+{
+    ui.page = (uint8_t)i;
+    ui.fam_last[FAM_FX] = ui.page;
+    ui.home = 0;
+    if (fx_trk_k(i) >= 0)
+        ui.fxtrk = (uint8_t)fx_trk_k(i);
+    else if (PAGES[i].graph != GR_BUSES)
+        ui.fxmod = (uint8_t)fx_mod_of(i);
+    page_entered();
+    page_flash();
+}
+static void fx_zoom(int32_t s)                          /* SELECT: a level a detent (EFFECT: the module picked) */
+{
+    uint32_t lv = fx_level();
+    int32_t to = clamp((int32_t)lv + s, FXL_TRACK, FXL_EFFECT);
+    if ((uint32_t)to == lv || (to == FXL_EFFECT && !fx_mod_ok(ui.fxmod)))
+        return;
+    fx_show(to == FXL_TRACK ? fx_page(FX_TRK[ui.fxtrk % 3u]) : to == FXL_BUSES ? fx_page("BUSES") : fx_page(FX_MHEAD[ui.fxmod % FX_NMOD]));
+}
+static void fx_tap(void)                                /* an FX tap on an FX page: the level's next */
+{
+    uint32_t lv = fx_level();
+    if (lv == FXL_TRACK)
+        fx_show(fx_page(FX_TRK[(uint32_t)(fx_trk_k(ui.page) + 1) % 3u]));
+    else if (lv == FXL_BUSES) {
+        if (fx_mod_ok(ui.fxmod))
+            fx_show(fx_page(FX_MHEAD[ui.fxmod % FX_NMOD]));
+    } else {
+        uint32_t m = fx_mod_of(ui.page), f = fx_page(FX_MHEAD[m]), k = fx_mod_k(ui.page), n;
+        for (n = 0; n < FX_MN[m]; n++) {               /* (a page LOAD ECO hides: skipped) */
+            k = (k + 1u) % FX_MN[m];
+            if (page_visible(f + k)) break;
+        }
+        fx_show(f + k);
+    }
+}
+static void fx_pick(int32_t s)                          /* PRESETS on BUSES / EFFECT: the module (no wrap; ECO's skipped) */
+{
+    int32_t m = (int32_t)(ui.fxmod % FX_NMOD);
+    do
+        m += s > 0 ? 1 : -1;
+    while (m >= 0 && m < (int32_t)FX_NMOD && !fx_mod_ok((uint32_t)m));
+    if (m < 0 || m >= (int32_t)FX_NMOD)
+        return;
+    ui.fxmod = (uint8_t)m;
+    if (fx_level() == FXL_EFFECT)
+        fx_show(fx_page(FX_MHEAD[m]));
+}
+
+/* (0.8.5) a lens page shown (SEQ's LENTE, SAVE's, FX's): the mock-up's layout, its tabs and breadcrumb */
 static int name_on(void);                               /* (ui_name.c: NAME keeps its own layout) */
-static uint32_t lz_on(void) { return (lens_on() || save_on()) && !ui.layer && !name_on(); }
+static uint32_t lz_on(void) { return (lens_on() || save_on() || fx_on()) && !ui.layer && !name_on(); }
 enum { LZ_SEQ, LZ_SAVE, LZ_FX };
-static uint32_t lz_fam(void) { return save_on() ? LZ_SAVE : LZ_SEQ; }   /* which lens */
+static uint32_t lz_fam(void) { return save_on() ? LZ_SAVE : fx_on() ? LZ_FX : LZ_SEQ; }   /* which lens */
 static uint32_t lens_level(void);
-static uint32_t lz_level(void) { return lz_fam() == LZ_SAVE ? save_level() : lens_level(); }   /* its level, 0..2 */
-static const char *lz_level_name(uint32_t l) { return lz_fam() == LZ_SAVE ? SV_NAME[l % 3u] : LENS_NAME[l % LV_N]; }
-static const char *lz_crumb(void) { return lz_fam() == LZ_SAVE ? "SAVE" : "LENTE"; }   /* the breadcrumb's first word */
+static uint32_t lz_level(void) { return lz_fam() == LZ_SAVE ? save_level() : lz_fam() == LZ_FX ? fx_level() : lens_level(); }   /* its level, 0..2 */
+static const char *lz_level_name(uint32_t l) { return lz_fam() == LZ_SAVE ? SV_NAME[l % 3u] : lz_fam() == LZ_FX ? FXL_NAME[l % 3u] : LENS_NAME[l % LV_N]; }
+static const char *lz_crumb(void) { return lz_fam() == LZ_SAVE ? "SAVE" : lz_fam() == LZ_FX ? "FX" : "LENTE"; }   /* the breadcrumb's first word */
 static const char *lz_set_name(void)                    /* .. its last: the set shown ("": none, SAVE's as the mock-up) */
 {
     int32_t k;
-    if (lz_fam() == LZ_SAVE)
+    if (lz_fam() != LZ_SEQ)
         return "";
     k = lens_k(lens_level(), ui.page);
     return k >= 0 ? LENS_SET[lens_level()][k] : PAGES[ui.page].title;
@@ -898,6 +1002,7 @@ static int fx_head(uint32_t i)
 {
     const char *t = PAGES[i].title;
     return PAGES[i].fam == FAM_FX && (str_eq(t, "FX") || str_eq(t, "DIST") || str_eq(t, "SLICER") || str_eq(t, "DLY") ||
+                                      str_eq(t, "BUSES") ||
                                       str_eq(t, "REVERB") || str_eq(t, "CHORUS") || str_eq(t, "PUNCH"));
 }
 /* (JIANT 0.6.51) a page (or the track) changed by hand: its name in the header (0.6.61), (0.6.64) the footer, for PF_MS, so the
@@ -915,24 +1020,10 @@ static void page_flash(void)
 }
 static void open_family(uint32_t fam)
 {
-    static uint32_t fx_ms, fx_from = 0xFFu;
-    if (fam == FAM_FX && !ui.home && cur_page()->fam == FAM_FX && fx_from < NPAGES && fm1_ms - fx_ms < 350u) {
-        uint32_t n, i = fx_from;                        /* the second of two quick taps: the section after the one the
-                                                         * first tap left */
-        for (n = 0; n < NPAGES; n++) {
-            i = (i + 1u) % NPAGES;
-            if (fx_head(i) && page_visible(i)) break;
-        }
-        fx_from = 0xFFu;
-        ui.page = (uint8_t)i;
-        ui.fam_last[fam] = ui.page;
-        page_entered();
-        page_flash();
+    if (fam == FAM_FX && fx_on()) {                    /* (0.8.5) FX's lens: on its page the level's next (until 0.8.4
+                                                         * the next page, two quick taps the next section) */
+        fx_tap();
         return;
-    }
-    if (fam == FAM_FX) {
-        fx_from = !ui.home && cur_page()->fam == FAM_FX ? ui.page : 0xFFu;
-        fx_ms = fm1_ms;
     }
     if (fam == FAM_SEQ) {                              /* (0.8.3) LENTE: on a SEQ page the level's next set; from
                                                          * elsewhere the level and set last used on the track */
