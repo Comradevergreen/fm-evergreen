@@ -344,6 +344,7 @@ else
 fi
 
 run "installer CLI (fm1_install.py) against a simulated FM-1" python3 tests/install_test.py
+run "navigation map (docs/navigation-map*.svg) matches the firmware's chains" python3 tools/gen_nav_map.py --check
 
 if command -v node >/dev/null 2>&1; then
     run "web pages: editor protocol, package builder, update protocol" node web/test_web.mjs

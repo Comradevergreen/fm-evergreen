@@ -212,6 +212,13 @@ keys' functions.
 
 ## 3. Pages and layers
 
+[![The navigation map: every section, its groups and its pages in chain order, the six rules, the held layers and the combos](navigation-map.png)](navigation-map.svg)
+
+*The whole synth on one page: each section's button, its groups (the tabs on the screen) and its pages in the order
+SELECT walks them (the number in each dot is the page's n of the footer's n/N; orange, the page at power-on; dashed,
+a page only some engines or LOADs have), with the six rules, the held layers and the combos. Click it for the zoomable
+SVG ([en español](navigation-map.es.svg)). It is generated from the firmware's chain tables (`tools/gen_nav_map.py`).*
+
 ### How navigation works: six rules (0.9.2)
 
 Since 0.9.2 every section is driven the same way (the design the owner approved, the mock-up "navegación"): learn it
