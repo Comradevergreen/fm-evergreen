@@ -389,6 +389,12 @@ niveles se llaman como en el equipo: PATTERN, BAR y STEP.
 
 ### Las capas (mantené el botón)
 
+(0.8.5) Una capa mantenida también es una lente, como la maqueta: **girá ALGORITHM mientras mantenés el botón** para
+ir **MAP · KNOBS · STATE** (recuerda el nivel; SELECT conserva sus combinaciones: GLO + SELECT el tempo, los dados).
+**MAP**: el mapa de las teclas, una celda por tecla con su nombre (sin íconos); **KNOBS**: las cuatro tarjetas como
+medidores; **STATE**: lo que hacen las teclas, perillas y botones (las ayudas del pie hasta 0.8.4) y lo que está
+activo (FX: los efectos mantenidos). El pie es la miga de pan, **LENTE · MAP · FX**.
+
 **FX — efectos punch-in** (detalles en [11](#11-tocar-en-vivo))
 
 | Teclas | Efecto |

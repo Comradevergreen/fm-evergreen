@@ -381,6 +381,12 @@ PRESETS picks the bar at PATTERN and moves the step cursor at BAR and STEP (on A
 
 ### The layers (hold the button)
 
+(0.8.5) A held layer is a lens too, as the mock-up: **turn ALGORITHM while you hold the button** to go **MAP ·
+KNOBS · STATE** (it remembers the level; SELECT keeps its combos: GLO + SELECT the tempo, the dice). **MAP**: the keys'
+map, a cell per key with its name (the icons are gone); **KNOBS**: the four cards as gauges; **STATE**: what the keys,
+knobs and buttons do (the footer's hints until 0.8.4) and what is on (FX: the effects held). The footer is the
+breadcrumb, **LENTE · MAP · FX**.
+
 **FX — punch-in effects** (details in [11](#11-performance))
 
 | Keys | Effect |

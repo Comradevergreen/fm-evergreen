@@ -220,6 +220,7 @@ static struct {
     uint8_t menu_sel;            /* MENU: the row (menu_items.c MI_*; its tab MI_TAB), kept while the device runs */
     uint8_t menu_row[4];         /* MENU: the row last picked in each tab, from its first (ALGORITHM comes back to it) */
     uint8_t mlv;                 /* (0.8.5) MENU's lens: 0 MENU, 1 TAB, 2 ROW */
+    uint8_t lylv;                /* (0.8.5) a held layer's lens: 0 MAP, 1 KNOBS, 2 STATE (ALGORITHM while held) */
     uint16_t menu_scroll;        /* continuous ABOUT + CREDITS position, pixels */
     uint32_t menu_sig, home_t0;  /* HOME press time (btn_hold) */
     uint8_t force;               /* full redraw pending */
@@ -724,11 +725,13 @@ static void fx_pick(int32_t s)                          /* PRESETS on BUSES / EF
 static int name_on(void);                               /* (ui_name.c: NAME keeps its own layout) */
 #include "ui_lens.c"
 static int home_lz(void) { return (ui.home && !ui.menu && !ui.confirm) || ui.confirm == CF_DICE_ALL; }   /* (GEN: HOME's) */
-static uint32_t lz_on(void) { return ((lens_on() || save_on() || fx_on() || pd_on() || home_lz()) && !ui.layer && !name_on()) || ui.menu == 1u; }
+static uint32_t lz_on(void) { return ((lens_on() || save_on() || fx_on() || pd_on() || home_lz()) && !ui.layer && !name_on()) || ui.menu == 1u || (ui.layer && !ui.menu); }
 static uint32_t lz_fam(void)                            /* which lens */
 {
     if (ui.menu == 1u)                                  /* (0.8.5) MENU . TAB . ROW (ui_menu.c) */
         return LZ_MENU;
+    if (ui.layer)                                       /* .. a layer held: MAP . KNOBS . STATE (ui_layer.c) */
+        return LZ_LAYER;
     if (ui.confirm == CF_DICE_ALL || ui.home)
         return LZ_HOME;
     if (pd_on())
@@ -740,14 +743,14 @@ static uint32_t lens_level(void);
 static uint32_t lz_level(void)                          /* its level, 0..2 */
 {
     uint32_t f = lz_fam();
-    return f == LZ_MENU ? ui.mlv % 3u : f == LZ_SAVE ? save_level() : f == LZ_FX ? fx_level() : f == LZ_HOME ? home_level() :
+    return f == LZ_MENU ? ui.mlv % 3u : f == LZ_LAYER ? ui.lylv % 3u : f == LZ_SAVE ? save_level() : f == LZ_FX ? fx_level() : f == LZ_HOME ? home_level() :
            f >= LZ_EDIT ? pd_level() : lens_level();
 }
 static const char *lz_level_name(uint32_t l)
 {
     uint32_t f = lz_fam();
-    static const char *const MLV[3] = {"MENU", "TAB", "ROW"};
-    return f == LZ_MENU ? MLV[l % 3u] : f == LZ_SAVE ? SV_NAME[l % 3u] : f == LZ_FX ? FXL_NAME[l % 3u] :
+    static const char *const MLV[3] = {"MENU", "TAB", "ROW"}, *const LLV[3] = {"MAP", "KNOBS", "STATE"};
+    return f == LZ_MENU ? MLV[l % 3u] : f == LZ_LAYER ? LLV[l % 3u] : f == LZ_SAVE ? SV_NAME[l % 3u] : f == LZ_FX ? FXL_NAME[l % 3u] :
            f == LZ_HOME ? HOME_LV[l % 3u] : f >= LZ_EDIT ? pd_level_name(f - LZ_EDIT, l) : LENS_NAME[l % LV_N];
 }
 static const char *lz_crumb(void) { return lz_fam() == LZ_SAVE ? "SAVE" : lz_fam() == LZ_FX ? "FX" : "LENTE"; }   /* the breadcrumb's first word */
@@ -775,6 +778,10 @@ static __attribute__((noinline)) const char *lz_set(uint32_t *k, uint32_t *n)
     }
     if (f == LZ_MENU)                                   /* MENU: TABS; TAB: ROWS 1-4 / ROWS 5-6; ROW: ROW */
         return menu_crumb_set(k, n);
+    if (f == LZ_LAYER) {                                /* the layer: its button's name */
+        static const char *const LN[LAYER_N] = {"", "FX", "GLO", "SCL", "EDIT", "SEQ", "REC", "SAVE", "LFO"};
+        return LN[ui.layer % LAYER_N];
+    }
     if (f >= LZ_EDIT) {
         pd_set_name(b, k, n);
         return b;

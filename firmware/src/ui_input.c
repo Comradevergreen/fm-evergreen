@@ -2125,7 +2125,15 @@ static void ui_input_frame(void)
             if ((ks[k] = panel_enc(EN_K1 + k)) != 0)
                 combo = 1;
         panel_enc(EN_PRESET);                           /* (a stray turn would load another sound) */
-        panel_enc(EN_ALGO);                             /* (another track: OCT- puts back the layer's track only) */
+        {   /* (0.8.5) ALGORITHM: the layer's lens, MAP <-> KNOBS <-> STATE (no wrap; was dropped: another track there,
+             * OCT- put back the layer's track only) */
+            int32_t a = panel_enc(EN_ALGO);
+            if (a && ui.layer) {
+                ui.lylv = (uint8_t)clamp((int32_t)ui.lylv + a, 0, 2);
+                ui.force = 1;
+                combo = 1;
+            }
+        }
         if (glo && (sel = panel_enc(EN_SELECT)) != 0)   /* GLO + SELECT: the tempo, a combo (OCT- puts it back) */
             combo = 1;
     } else if (fx_lock_on) {                            /* (0.6.44) the FX layer locked open: KNOB 1..4 its macros */

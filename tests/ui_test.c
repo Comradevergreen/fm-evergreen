@@ -6327,11 +6327,11 @@ static int test_save_lens(void)
     ok &= name_on() && !lz_on();
     press(B_OCTDN); frame();
     ok &= !name_on() && lz_on();
-    btn_down(B_GLO); frames(800);                                            /* a layer's map: the usual layout */
-    ok &= ui.layer && !lz_on() && card_y() == Y_LABEL;
+    btn_down(B_GLO); frames(800);                                            /* (0.8.5) a layer: its own lens */
+    ok &= ui.layer && lz_on() && lz_fam() == LZ_LAYER && card_y() == LZ_CARD_Y;
     btn_up(B_GLO); frame(); frame();
     ok &= !ui.layer && lz_on() && card_y() == LZ_CARD_Y;
-    bad += check("SAVE lens: a layer's map and the NAME screen keep their own layout", ok);
+    bad += check("SAVE lens: the NAME screen keeps its own layout, a layer's map is its own lens (0.8.5)", ok);
     ui_power_on();
     return bad;
 }
@@ -9261,7 +9261,7 @@ static int test_large(void)
     ok &= large_kind() == LK_TALL && strip_kind() == SK_TRK && lg_px(CARD_X(0) + 8, (int32_t)graph_y() + 56) == T_SURF;   /* (0.8.5: graph_y, a lens's) */
     go_title("ENV"); frame();
     btn_down(B_GLO); frames(800);
-    ok &= ui.layer && large_kind() == LK_LABEL && card_h() == CARD_H;
+    ok &= ui.layer && large_kind() == LK_LABEL && card_h() == LZ_CARD_H;   /* (0.8.5: the layer's lens) */
     btn_up(B_GLO); frame(); frame();
     ok &= !ui.layer && large_kind() == LK_TALL && lg_px(30, (int32_t)graph_y() - 2) == T_BG;
     bad += check("#15 LARGE: PRESETS and the roll keep the layout (labels in M), the layers too; MIXER tall, its tracks in the strip", ok);
@@ -10025,6 +10025,39 @@ static int test_lz_glo(void)
     return bad;
 }
 
+/* a held layer (ui_layer.c) as a lens: MAP . KNOBS . STATE by ALGORITHM while it is held (no wrap; the track stays),
+ * the tabs and the breadcrumb; SELECT still the layer's combos (GLO: the tempo) */
+static int test_lz_layer(void)
+{
+    int bad = 0, ok;
+    int16_t b0;
+    ui_power_on(); frame();
+    btn_down(B_GLO); frames(800);
+    ok = ui.layer == LAYER_GLO && lz_on() && lz_fam() == LZ_LAYER && ui.lylv == 0u && lz_tab_lit(0) &&
+         lz_crumb_is("LENTE \xB7 MAP \xB7 GLO");
+    turn(EN_ALGO, 1); frame();
+    ok &= ui.lylv == 1u && lz_tab_lit(1) && song.sel == 0u && lz_crumb_is("LENTE \xB7 KNOBS \xB7 GLO");
+    turn(EN_ALGO, 1); frame();
+    ok &= ui.lylv == 2u && lz_tab_lit(2);
+    turn(EN_ALGO, 1); frame();
+    ok &= ui.lylv == 2u && song.sel == 0u;                          /* (no wrap) */
+    b0 = song.g[G_BPM];
+    turn(EN_SELECT, 2); frame();
+    ok &= song.g[G_BPM] != b0;                                      /* (GLO + SELECT: the tempo, as before) */
+    btn_up(B_GLO); frame(); frame();
+    ok &= !ui.layer && !lz_on() == !lz_on();
+    turn(EN_ALGO, 1); frame();
+    ok &= song.sel == 1u;                                           /* (let go: ALGORITHM the track again) */
+    turn(EN_ALGO, -1); frame();
+    btn_down(B_GLO); frames(800);
+    ok &= ui.lylv == 2u && lz_tab_lit(2);                           /* (remembered) */
+    btn_up(B_GLO); frame(); frame();
+    ui.lylv = 0;
+    bad += check("0.8.5 LENTE layers: MAP <-> KNOBS <-> STATE by ALGORITHM while held (remembered); SELECT keeps its combos", ok);
+    ui_power_on();
+    return bad;
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IONBF, 0);
@@ -10036,6 +10069,7 @@ int main(void)
     bad += test_lz_mod();
     bad += test_lz_key();
     bad += test_lz_glo();
+    bad += test_lz_layer();
     bad += test_sound_loads();
     bad += test_patterns();
     bad += test_init_system();

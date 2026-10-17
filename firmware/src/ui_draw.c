@@ -544,9 +544,17 @@ static void draw_column_tall(uint32_t c, const char *label, const char *val, con
  * the motion icon in place of its own, in the theme colour; a long label moves it left, up to the card's edge;
  * a label with no room for it at all (or FELUCCA_ICONS=0): the label in the theme colour.
  * vc: the value's colour (T_THEME, T_DIM inactive, T_ACCENT the knob just turned) */
+/* (0.8.5) a held layer's cards as drawn (ui_layer.c: its KNOBS level draws them as gauges) */
+static struct { int16_t r; char l[12], v[16]; } ly_card[4];
 static void draw_column(uint32_t c, const char *label, const char *val, const char *unit, uint16_t vc,
                         int32_t ratio, uint32_t icon)
 {
+    if (ui.layer && c < 4u) {
+        ly_card[c].r = (int16_t)ratio;
+        str_cpy(ly_card[c].l, label, sizeof ly_card[c].l);
+        str_cpy(ly_card[c].v, val, sizeof ly_card[c].v);
+        str_cpy(ly_card[c].v + str_len(ly_card[c].v), unit, sizeof ly_card[c].v - str_len(ly_card[c].v));
+    }
     char key[56];
     int hot = c == ui.hot_col && ui.hot_t, named = fmt_named, mot = card_mot_next && label[0], strip, snap;
     int arm = card_arm_next, free = card_free_next;
