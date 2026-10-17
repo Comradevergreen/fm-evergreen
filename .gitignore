@@ -5,3 +5,6 @@ __pycache__/
 android/probe/.gradle/
 android/probe/build/
 android/probe/app/build/
+android/stems/.gradle/
+android/stems/.kotlin/
+android/stems/local.properties
