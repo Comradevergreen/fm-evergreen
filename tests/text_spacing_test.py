@@ -48,8 +48,12 @@ def parse(path):
              re.findall(r"\{(-?\d+, -?\d+, -?\d+, -?\d+, -?\d+, -?\d+)\}",
                         re.search(r"AF_%s_G\[\d+\] = \{(.*?)\n\};" % name, t, re.S).group(1))]
         kern = {}
-        if f[8] != "0":
-            kern = dict(zip(arr("KERN"), arr("KD")))
+        if f[8] != "0":                  # (0.9.0) KI / KP: the pairs by the first glyph's number
+            ki, kp, ex, n = arr("KI"), arr("KP"), arr("EX"), int(f[3]) - int(f[2]) + 1
+            for a in range(len(ki) - 1):
+                code = int(f[2]) + a if a < n else ex[a - n]
+                for m in range(ki[a], ki[a + 1]):
+                    kern[code << 8 | kp[2 * m]] = kp[2 * m + 1] - 256 * (kp[2 * m + 1] > 127)
         faces[name] = {"h": int(f[0]), "asc": int(f[1]), "first": int(f[2]), "last": int(f[3]), "nex": int(f[4]),
                        "g": g, "data": bytes(arr("DATA")), "kern": kern, "ex": arr("EX")[:int(f[4])],
                        "psh": int(f[11]) if len(f) > 11 else 0,

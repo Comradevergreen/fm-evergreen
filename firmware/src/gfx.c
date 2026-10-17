@@ -11,11 +11,11 @@
 typedef struct { uint16_t off, adv; int8_t bx; uint8_t by, bw, bh; } aag_t;
 typedef struct {
     uint8_t h, asc, first, last, nex;   /* line height, baseline; ASCII range; extras */
-    uint16_t nk;                        /* kerning pairs */
+    uint16_t nk;                        /* kerning: the glyphs ki covers (0: none) */
     const aag_t *g;
     const uint8_t *data;
-    const uint16_t *kkey;               /* a << 8 | b, sorted */
-    const int8_t *kd;                   /* 1/16 px */
+    const uint16_t *ki;                 /* (0.9.0) glyph a's pairs: kp[2 ki[a] .. 2 ki[a + 1] - 1] */
+    const uint8_t *kp;                  /* .. each b (sorted) and the delta (int8, 1/16 px) */
     const uint8_t *ex;                  /* codes of the extra glyphs */
     uint8_t psh;                        /* log2 of the phases per glyph: g[i << psh] .. g[(i << psh) + phases - 1] */
     const uint8_t *hc;                  /* data's Huffman code (cv_alpha_hc), 0 = 2 px per byte (cv_alpha) */
@@ -534,12 +534,17 @@ static uint32_t glyph(const aafont_t *f, uint32_t ch)
 
 static int32_t kern(const aafont_t *f, uint32_t a, uint32_t b)       /* 1/16 px */
 {
-    uint32_t key = (a << 8) | b, lo = 0, hi = f->nk;
-    while (lo < hi) {
-        uint32_t m = (lo + hi) / 2u;
-        if (f->kkey[m] == key)
-            return f->kd[m];
-        if (f->kkey[m] < key)
+    int32_t ga = glyph_at(f, a);
+    uint32_t lo, hi;
+    if (ga < 0 || (uint32_t)ga >= f->nk)
+        return 0;
+    lo = f->ki[ga];
+    hi = f->ki[ga + 1];
+    while (lo < hi) {                                /* (a's pairs, by b) */
+        uint32_t m = (lo + hi) / 2u, c = f->kp[2u * m];
+        if (c == b)
+            return (int8_t)f->kp[2u * m + 1u];
+        if (c < b)
             lo = m + 1u;
         else
             hi = m;

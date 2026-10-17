@@ -71,14 +71,12 @@ static uint32_t ref_gi(const aafont_t *f, uint32_t ch)      /* the glyph's numbe
     if (k < 0) k = ref_at(f, '?');
     return k < 0 ? 0u : (uint32_t)k;                        /* a sparse face (L) without '?': its first glyph */
 }
-static int32_t ref_kern(const aafont_t *f, uint32_t a, uint32_t b)
+static int32_t ref_kern(const aafont_t *f, uint32_t a, uint32_t b)   /* (0.9.0: the pairs by a's glyph) */
 {
-    uint32_t key = (a << 8) | b, lo = 0, hi = f->nk;
-    while (lo < hi) {
-        uint32_t m = (lo + hi) / 2u;
-        if (f->kkey[m] == key) return f->kd[m];
-        if (f->kkey[m] < key) lo = m + 1u; else hi = m;
-    }
+    int32_t ga = ref_at(f, a);
+    if (ga < 0 || (uint32_t)ga >= f->nk) return 0;
+    for (uint32_t m = f->ki[ga]; m < f->ki[ga + 1]; m++)
+        if (f->kp[2u * m] == b) return (int8_t)f->kp[2u * m + 1u];
     return 0;
 }
 /* a glyph's alpha values: 2 px per byte, or (f->hc) the Huffman bit stream of tools/gen_aa_font.py, decoded
@@ -162,5 +160,17 @@ int main(void)
     }
     printf("text: %u strings x fonts x palettes against the mock renderer: %u end pens and %u pixels differ %s\n",
            n, bad_pen, bad_px, bad_pen || bad_px ? "FAIL" : "ok");
+    {                                                     /* (0.9.0) every pair of codes: gfx.c's search = the scan */
+        uint32_t bad_k = 0, nz = 0;
+        for (uint32_t f = 0; f < 3u; f++)
+            for (uint32_t a = 0; a < 256u; a++)
+                for (uint32_t b = 0; b < 256u; b++) {
+                    int32_t r = ref_kern(F[f], a, b);
+                    bad_k += kern(F[f], a, b) != r;
+                    nz += r != 0;
+                }
+        printf("text: kerning, every pair of codes in S M L: %u pairs, %u differ %s\n", nz, bad_k, bad_k ? "FAIL" : "ok");
+        bad_px += bad_k;
+    }
     return bad_pen || bad_px ? 1 : 0;
 }
