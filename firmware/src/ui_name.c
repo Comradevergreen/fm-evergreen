@@ -336,7 +336,10 @@ static void nm_title(char *b)
 static void nm_card(uint32_t c, const char *l, const char *v, uint16_t vc)
 {
     cv_begin(CARD_W, LZ_CARD_H, T_BG);
-    cv_rect(0, 0, CARD_W, LZ_CARD_H, T_RAISE);
+    if (!ux.skin)                                      /* (0.9.0) BOTTOM, HUD: no box, as their dialogs' (NOTICE, DICE) */
+        cv_rect(0, 0, CARD_W, LZ_CARD_H, T_RAISE);
+    else
+        cv_rect(0, LZ_CARD_H - 1, CARD_W, 1, c == 3u ? T_ACCENT : T_LINE);
     cv_text(4, CARD_XY - AF_X_CAP_Y + 1, &AF_X, l, T_MID);
     cv_text(4, 17 - AF_M_CAP_Y, &AF_M, v, vc);
     cv_blit((uint32_t)CARD_X(c), LZ_CARD_Y);
@@ -370,12 +373,14 @@ static void nm_draw_panel(void)
         int32_t x = NM_CX(i);
         uint32_t q = i + w0;
         char c[2] = {empty ? nm.ph[i] : q < nm.len ? nm.s[q] : 0, 0};
-        uint16_t bg = T_RAISE, fg = empty ? T_DIM : T_TEXT;
+        uint16_t bg = ux.skin ? T_SURF : T_RAISE, fg = empty ? T_DIM : T_TEXT;   /* (0.9.0 BOTTOM, HUD: no box, a line) */
         if (q == nm.cur && nm.key) {                   /* the letter being cycled */
             bg = T_THEME;
             fg = T_INK;
         }
         cv_rect(x, 16, 17, 24, bg);
+        if (ux.skin && bg == T_SURF)
+            cv_rect(x + 1, 39, 15, 1, T_LINE);
         if (q == nm.cur && !nm.key)                    /* the cursor: a bar under its cell */
             cv_rect(x + 2, 36, 13, 2, T_ACCENT);
         if (c[0] && c[0] != ' ') {
@@ -392,7 +397,7 @@ static void nm_draw_panel(void)
             int32_t x = 10 + 14 * (int32_t)i;
             char c[2] = {g[i], 0};
             int typed = i == nm.tap, next = i == (nm.tap + 1u) % n;
-            uint16_t f = typed ? T_THEME : T_RAISE;
+            uint16_t f = typed ? T_THEME : ux.skin ? T_SURF : T_RAISE;
             cv_rect(x, 45, 12, 12, f);
             cv_text_in(x, 47 - AF_X_CAP_Y, 12, &AF_X, c, typed ? T_INK : next ? T_ACCENT : T_TEXT, f);
         }
@@ -403,7 +408,7 @@ static void nm_draw_panel(void)
     for (i = 0; i < 16u; i++) {                        /* the white keys: the left octave, then the right one */
         int32_t x = 9 + 28 * (int32_t)(i % 8u), y = i < 8u ? 62 : 84;
         int act = nm.key == i + 1u;
-        uint16_t f = act ? T_THEME : T_RAISE;
+        uint16_t f = act ? T_THEME : ux.skin ? T_SURF : T_RAISE;   /* (0.9.0 BOTTOM, HUD: the picked one filled, the rest bare) */
         cv_rect(x, y, 26, 19, f);
         GFX_HOOK_ALIGN(x, y, x + 26, y + 19, AL_HV, "name white key letters centred");
         cv_text_in(x, y + CAP_IN(X, 19), 26, &AF_X, nm_group(i), act ? T_INK : T_TEXT, f);
@@ -434,7 +439,12 @@ static void name_draw(void)
     uint32_t sig = fnv(fnv(2166136261u, st, sizeof st), nm.s, sizeof nm.s) + ux.gen * 7919u +
                    (uint32_t)transport_busy() * 104729u;
     if (ui.force) {
-        lcd_fill(0, H_HEAD, 240, 240 - H_HEAD, T_BG);   /* (0.8.5: the lens's layout, the dialogs' tabs) */
+        const int16_t R[7][4] = {{0, LT_Y, 240, (int16_t)DLG_TAB_H}, {CARD_X(0), LZ_CARD_Y, CARD_W, LZ_CARD_H},
+                                 {CARD_X(1), LZ_CARD_Y, CARD_W, LZ_CARD_H}, {CARD_X(2), LZ_CARD_Y, CARD_W, LZ_CARD_H},
+                                 {CARD_X(3), LZ_CARD_Y, CARD_W, LZ_CARD_H}, {0, LZ_GRAPH_Y, 240, LZ_GRAPH_H},
+                                 {0, LZ_FOOT_Y, 240, LZ_FOOT_H}};
+        fill_around(R, 7);                             /* (0.8.5: the lens's layout, the dialogs' tabs; 0.9.0: round its
+                                                        * strips, not under them too) */
         dlg_tabs(2u);
         nm.sig = ~sig;
     }

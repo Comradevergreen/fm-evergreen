@@ -287,6 +287,7 @@ static void layer_tap(uint32_t l)
         ui_say("HOLD [", KC[LY_KC[l]].label);
         str_cpy(ui.msg + str_len(ui.msg), "] QUICK", sizeof ui.msg - str_len(ui.msg));
         ui.msg_t = 90;                                  /* ~1.5 s */
+        ui.hint_pg = (uint8_t)(ui.home ? 255u : ui.page + 1u);   /* (0.9.0: this page's only) */
     }
 }
 

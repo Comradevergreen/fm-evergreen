@@ -94,6 +94,18 @@ static void lcd_blit(uint32_t x, uint32_t y, uint32_t w, uint32_t h, const uint1
     lcd_window(x, y, x + w - 1u, y + h - 1u);
     lcd_data(px, w * h * 2u);
 }
+/* (0.9.0) a w x h part of a wider buffer (stride px a row): one window, a transfer a row (as lcd_fill: the panel keeps
+ * writing on through CS going high between them); gfx.c cv_blit_cells */
+#define LCD_HAS_STRIDE 1
+static void lcd_blit_stride(uint32_t x, uint32_t y, uint32_t w, uint32_t h, const uint16_t *px, uint32_t stride)
+{
+    uint32_t r;
+    if (!w || !h)
+        return;
+    lcd_window(x, y, x + w - 1u, y + h - 1u);
+    for (r = 0; r < h; r++)
+        lcd_data(px + r * stride, w * 2u);
+}
 
 /* ST7789V init: reset, then 16-bit colour, scan direction and IPS inversion;
  * voltage and gamma stay at the defaults. Format: cmd, n, n data bytes;

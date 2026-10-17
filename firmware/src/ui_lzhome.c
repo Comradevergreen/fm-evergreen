@@ -265,14 +265,15 @@ static void eco_draw(int32_t x0, int32_t y0, int words)
         }
         ny = clamp(py + rad / 2 + 4, 4, bot);
         if (words && (!hud || (ny >= (int32_t)graph_y() + (home_set() ? 12 : 2) && ny + 14 <= (int32_t)(graph_y() + graph_h()))))
-            cv_text_in(px - 30 - x0, ny, 60, &AF_S, num, c == song.sel ? T_THEME : eco_off(c) ? T_DIM : T_MID, T_SURF);
+            cv_text_in(px - 30 - x0, ny, 60, &AF_S, num, c == song.sel ? T_THEME : eco_off(c) ? T_DIM : hud ? T_TEXT : T_MID,
+                       T_SURF);                         /* (0.9.0 HUD: TEXT, over the beings) */
     }
     if (words && home_set()) {                          /* MACROS: the routes, LATCH */
         int32_t y = hud ? (int32_t)graph_y() + 3 : 2;
         fmt_int(b, (int32_t)routes_count());
         str_cpy(b + str_len(b), " ROUTES", 8);
-        cv_text(6, y, &AF_X, b, T_DIM);
-        cv_text_r(234, y, &AF_X, mac_latch ? "LATCH" : "HOLD LFO", mac_latch ? T_ACCENT : T_DIM, T_SURF);
+        cv_text(6, y, &AF_X, b, hud ? T_TEXT : T_DIM);
+        cv_text_r(234, y, &AF_X, mac_latch ? "LATCH" : "HOLD LFO", mac_latch ? T_ACCENT : hud ? T_TEXT : T_DIM, T_SURF);
     }
     cv_oy = 0;
 }

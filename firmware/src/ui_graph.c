@@ -24,14 +24,17 @@ static void lz_begin(uint32_t w, uint32_t h, uint32_t x, uint32_t y)
 static void lz_blit(uint32_t x, uint32_t y)
 {
     cv_halo = 0;
-    cv_blit(x, y);
+    if (hud_home())                                  /* (0.9.0) what changed only (gfx.c) */
+        cv_blit_cells(x, y);
+    else
+        cv_blit(x, y);
 }
-/* (0.8.9) HUD: the knob row while KNOB 1..4 rest: whole for 3 s after a turn, then down to 22 % in 0.6 s (steps of 13 %);
- * every other case 100 */
+/* (0.8.9) HUD: the knob row while KNOB 1..4 rest: whole for 3 s after a turn (0.9.0: or the page, level or set shown
+ * changing), then down to 22 % in 0.6 s (steps of 13 %); every other case 100 (0.9.0: every page but HUD's HOME) */
 static uint32_t hud_fade(void)
 {
     uint32_t el = fm1_ms - ui.knob_ms;
-    if (ux.skin != SKIN_HUD || !lz_low() || el < 3000u)
+    if (!hud_home() || el < 3000u)                   /* (0.9.0: HUD's HOME only, over the beings) */
         return 100u;
     return el >= 3600u ? 22u : 100u - (el - 3000u) * 78u / 600u / 13u * 13u;
 }
@@ -1493,8 +1496,9 @@ static uint32_t graph_signature(void)
     uint32_t h = 2166136261u, i;
     if (lz_on() && ui.msg_t && !ui.layer && !ui.home)   /* (0.8.5) the toast over the panel */
         h = str_hash(h ^ 0x70A57u, ui.msg);
-    if (ui.confirm == CF_DICE_ALL)                   /* (0.8.5) GEN: its settings, its page */
-        return h ^ gen_draw_sig();
+    if (ui.confirm == CF_DICE_ALL)                   /* (0.8.5) GEN: its settings, its page (0.9.0: MENU > LARGE's strip is
+                                                      * HOME's scope there: live) */
+        return h ^ gen_draw_sig() ^ (strip_kind() == SK_SCOPE ? ui.frame / 2u * 2654435761u : 0u);
     if (ui.home)
         return h ^ (ui.frame / 2u) ^ (home_level() * 7u + home_set()) * 104729u;   /* the beings: every other frame */
     h ^= (uint32_t)pg->graph * 131u + TSEL->eng_req + song.sel * 7777u + ui.page * 1291u;
@@ -1808,6 +1812,7 @@ static void graph_events(void)
 static struct {
     uint32_t col[NTRK];                              /* (the cards: JIANT's six columns, else the four from trk_base4) */
     uint8_t meter[NTRK];
+    uint32_t frame;                                  /* (0.9.0) ui.frame of the meters' last step */
 } ts;
 
 static int32_t meter_px(int32_t a)                   /* |sample| (Q15) -> px: 60 dB over the slot */
@@ -1985,9 +1990,13 @@ static void draw_tracks(void)
         lcd_fill(0, graph_y(), 240, graph_h(), T_BG);
         if (ux.style && !six)                        /* LINE: the strips divided as the cards above (four) */
             draw_rules(graph_y(), graph_h());
-        for (c = 0; c < NTRK; c++)
-            ts.meter[c] = 0;
+        if (ui.frame - ts.frame > 1u)                /* (0.9.0) a redraw while they fall (a toast, a knob's page)
+                                                      * keeps them falling: only meters left long ago start at 0
+                                                      * (they jumped to 0 and the panel kept the old segments lit) */
+            for (c = 0; c < NTRK; c++)
+                ts.meter[c] = 0;
     }
+    ts.frame = ui.frame;
     for (c = b4; c < b4 + n; c++) {                  /* (JIANT 0.6: the six, or four of them) */
         track_t *t = &trk[c];
         uint32_t sel = c == song.sel, lvl = trk_level(c), mute = t->p[P_MUTE] != 0;
@@ -2269,8 +2278,9 @@ static void draw_graph(void)
     ui.graph_sig = sig;
     cv_begin(240, graph_h(), T_BG);
     if (hud_home()) {                                /* (0.8.9) HUD's HOME: the middle of the screen's water, its numbers */
+        cv_halo = 1;                                 /* (0.9.0) its words outlined too (M3) */
         eco_backdrop(0, (int32_t)graph_y(), 1);
-        cv_blit(0, graph_y());
+        lz_blit(0, graph_y());
         return;
     }
     if (lz_low())                                    /* (0.8.9) BOTTOM, HUD: no panel, the picture on the background */

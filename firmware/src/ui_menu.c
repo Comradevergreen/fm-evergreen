@@ -345,8 +345,18 @@ static void draw_menu(void)
         cv_blit(0, H_HEAD + MENU_DOC_H);
         return;
     }
-    if (ui.force)
-        lcd_fill(0, H_HEAD, 240, 240 - H_HEAD, T_BG);
+    if (ui.force) {                                    /* (0.9.0) round its tabs, cards, panel and footer, not under them */
+        int16_t R[7][4] = {{0, LT_Y, 240, (int16_t)(lz_low() ? LB_TAB_H : LT_H)}, {0, LZ_GRAPH_Y, 240, LZ_GRAPH_H},
+                           {0, (int16_t)foot_y(), 240, (int16_t)foot_h()}};
+        uint32_t c;
+        for (c = 0; c < 4u; c++) {
+            R[3u + c][0] = (int16_t)CARD_X(c);
+            R[3u + c][1] = (int16_t)card_y();
+            R[3u + c][2] = CARD_W;
+            R[3u + c][3] = (int16_t)card_h();
+        }
+        fill_around((const int16_t (*)[4])R, 7);
+    }
     draw_tabs();
     menu_cards();
     cv_begin(240, LZ_GRAPH_H, T_BG);

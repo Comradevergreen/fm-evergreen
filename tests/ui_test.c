@@ -118,6 +118,10 @@ static struct { uint32_t stage; } felucca_dbg;
 #ifndef PF_MS                                            /* (0.6.58) no page name drawn: the tests read the screen */
 #define PF_MS 0u                                         /* (ui_render.c sets the real one: it shows it) */
 #endif
+static uint64_t ui_sent_px;                              /* (0.9.0) pixels sent to the panel (gfx.c GFX_HOOK_SENT) */
+#ifndef GFX_HOOK_SENT
+#define GFX_HOOK_SENT(n) (ui_sent_px += (n))
+#endif
 #include "../firmware/src/gfx.c"
 #include "../firmware/src/panel.c"
 #include "../firmware/src/ui.c"
@@ -9377,27 +9381,141 @@ static int test_skin(void)
         ok = hud_home() && top && low && ui.graph_sig != 0u;
         bad += check("SKIN HUD: HOME's beings over the whole screen (above the tabs' line, under the knob row), every strip on them", ok);
     }
-    {   /* HUD: the knob row whole for 3 s after a turn, then faded to 22 %, whole again at a turn */
+    {   /* HUD: the knob row whole for 3 s after a turn, then faded to 22 %, whole again at a turn (0.9.0: HOME's only) */
         uint16_t lit, faded, back;
-        ui_power_on(); ui_skin = SKIN_HUD; frame();
-        go_title("ENV"); frame();
+        uint32_t c;
+        ui_power_on(); ui_skin = SKIN_HUD;
+        for (c = 0; c < NTRK; c++) trk[c].p[P_MUTE] = 1;          /* (HOME: the beings asleep, dim outlines under the row) */
+        frame();
         turn(EN_K1, 1); frame();
         lit = (uint16_t)skin_ink(LB_CARD_Y, LB_CARD_Y + LB_CARD_H);
         ok = hud_fade() == 100u;
         frames(4000);
         ok &= hud_fade() == 22u;
         faded = (uint16_t)skin_ink(LB_CARD_Y, LB_CARD_Y + LB_CARD_H);
-        {
-            uint32_t x, y, maxl = 0;                              /* (its brightest pixel well under the text's) */
+        {   /* (no pixel as bright as the text's left: the faint dim outlines of the asleep beings stay under it) */
+            uint32_t x, y, nb = 0;
             for (y = LB_CARD_Y; y < LB_CARD_Y + LB_CARD_H; y++)
                 for (x = 0; x < 240; x++)
-                    if (ux_luma(lg_px((int32_t)x, (int32_t)y)) > maxl) maxl = ux_luma(lg_px((int32_t)x, (int32_t)y));
-            ok &= maxl < ux_luma(T_TEXT) / 2u;
+                    nb += ux_luma(lg_px((int32_t)x, (int32_t)y)) > ux_luma(T_TEXT) * 3u / 4u;
+            ok &= nb == 0u;
         }
         turn(EN_K2, 1); frame();
         back = (uint16_t)skin_ink(LB_CARD_Y, LB_CARD_Y + LB_CARD_H);
         ok &= hud_fade() == 100u && lit > 100u && faded > 0u && back > 100u;
+        for (c = 0; c < NTRK; c++) trk[c].p[P_MUTE] = 0;
         bad += check("SKIN HUD: the knob row fades to 22 % 3 s after the last turn, whole again at a turn", ok);
+    }
+    {   /* (0.9.0, the HUD audit's M1) the fade on HUD's HOME only; whole again on a page, level or set change */
+        ui_power_on(); ui_skin = SKIN_HUD; frame();
+        go_title("ENV"); frame();
+        frames(4000);
+        ok = hud_fade() == 100u;                                  /* (a lens page: never faded) */
+        go_home(); frame();
+        ok &= hud_home() && hud_fade() == 100u;                   /* (HOME entered: whole) */
+        frames(4000);
+        ok &= hud_fade() == 22u;
+        press(B_HOME); frame();                                   /* (its set: MACROS) */
+        ok &= hud_home() && home_set() && hud_fade() == 100u;
+        frames(4000);
+        ok &= hud_fade() == 22u;
+        turn(EN_SELECT, 1); frames(200); turn(EN_SELECT, -1); frame();   /* (BEING and back: its level) */
+        ok &= hud_home() && hud_fade() == 100u;
+        bad += check("SKIN HUD: the knob row fades on HOME only, whole again on a new page, level or set (M1)", ok);
+    }
+    {   /* (0.9.0, H1) the count-in and UPDATE MODE's countdown over HUD's HOME: their header on BG, no beings */
+        uint32_t x, y, clean = 1;
+        ui_power_on(); ui_skin = SKIN_HUD; song.playing = 1; frames(2000);
+        ok = hud_home();
+        cin_left = cin_total = 4u; frame(); frame();
+        ok &= !hud_home();
+        for (y = 20; y < H_HEAD; y++)
+            for (x = 0; x < 240; x++) clean &= lg_px((int32_t)x, (int32_t)y) == T_BG;
+        cin_left = cin_total = 0; frames(100);
+        ok &= hud_home() && clean;
+        ui.uboot = 3; ui.force = 1; frame(); frame();
+        ok &= !hud_home();
+        for (y = 20; y < H_HEAD; y++)
+            for (x = 0; x < 240; x++) clean &= lg_px((int32_t)x, (int32_t)y) == T_BG;
+        ui.uboot = 0; ui.force = 1; frame();
+        ok &= hud_home() && clean;
+        song.playing = 0;
+        bad += check("SKIN HUD: the count-in and UPDATE MODE over HOME: not HUD's HOME, their header on BG (H1)", ok);
+    }
+    {   /* (0.9.0, H2) HUD's HOME sends what changed only (gfx.c cv_blit_cells): the panel always equals a full redraw of the
+         * same state, and a frame sends a fraction of the screen */
+        static uint16_t lazy[240 * 240];
+        uint32_t n, f, i, same = 1;
+        uint64_t sent = 0;
+        ui_power_on(); ui_skin = SKIN_HUD; song.playing = 1; frame();
+        for (n = 0; n < 4u; n++) {
+            for (f = 0; f < 45u; f++) {
+                uint64_t s0 = ui_sent_px;
+                if (n == 2u && f == 10u) turn(EN_K2, 1);          /* (a knob: the row lit, its value) */
+                if (n == 3u && f == 20u) ui_message("SAVED");     /* (a toast in the header, still up) */
+                frame();
+                sent += ui_sent_px - s0;
+            }
+            memcpy(lazy, host_screen, sizeof lazy);
+            for (i = 0; i < 240u * 240u; i++) host_screen[i] = 0xA5A5u;
+            ui.force = 1;
+            ui_draw_page(0);                                       /* (the same frame again, whole: nothing moves) */
+            {
+                uint32_t nd = 0, x0 = 240, y0 = 240, x1 = 0, y1 = 0;
+                for (i = 0; i < 240u * 240u; i++)
+                    if (lazy[i] != host_screen[i]) {
+                        nd++;
+                        if (i % 240u < x0) x0 = i % 240u;
+                        if (i / 240u < y0) y0 = i / 240u;
+                        if (i % 240u > x1) x1 = i % 240u;
+                        if (i / 240u > y1) y1 = i / 240u;
+                    }
+                if (nd) printf("  pass %u: %u px differ, %u,%u .. %u,%u\n", n, nd, x0, y0, x1, y1);
+                same &= !nd;
+            }
+        }
+        ok = hud_home() && same && sent / 180u < 30000u;
+        printf("ui:   (HUD's HOME: %llu px a frame sent on average, of 57600)\n", (unsigned long long)(sent / 180u));
+        song.playing = 0; ui.msg_t = 0;
+        bad += check("SKIN HUD: HOME sends only the cells that changed; the panel equals a full redraw after N frames (H2)", ok);
+    }
+    {   /* (0.9.0, L6) NAME follows the skin as NOTICE and DICE do: BOTTOM / HUD no boxes, their tabs */
+        ui_power_on(); ui_skin = SKIN_COLORS; frame();
+        name_open(NK_USER_SAVE, 6); ui.force = 1; frame();
+        ok = name_on() && lg_px(CARD_X(0) + COL_W / 2, LZ_CARD_Y + 1) == T_RAISE && lg_px(LT_X(1) + 2, LT_Y + LT_H / 2) == T_RAISE;
+        press(B_OCTDN); frame();
+        for (sk = SKIN_BOTTOM; sk < SKIN_N; sk++) {
+            ui_power_on(); ui_skin = (uint8_t)sk; frame();
+            name_open(NK_USER_SAVE, 6); ui.force = 1; frame();
+            ok &= name_on() && lg_px(CARD_X(0) + COL_W / 2, LZ_CARD_Y + 1) == T_BG && lg_px(LT_X(1) + 2, LT_Y + LT_H / 2) == T_BG &&
+                  lg_px(NM_CX(5) + 1, LZ_GRAPH_Y + 18) == T_BG;
+            press(B_OCTDN); frame();
+            ok &= !name_on();
+        }
+        bad += check("SKIN: NAME follows it (BOTTOM, HUD: no boxes, the skin's tabs), as NOTICE and DICE (L6)", ok);
+    }
+    {   /* (0.9.0, L8) a message longer than ui.msg: an ellipsis at its end, never cut silently; the long ones whole */
+        char want[64];
+        ui_power_on(); frame();
+        ui_say("LOADED ", "07 A VERY LONG PATTERN NAME THAT GOES ON AND ON");
+        ok = str_len(ui.msg) == sizeof ui.msg - 1u && (uint8_t)ui.msg[sizeof ui.msg - 2u] == (uint8_t)ELLIPSIS;
+        ui_message("OCT+ KEEP  GLO+A4 FREEZE");                   /* (MUTATE's: was cut to "...A4 FREEZ") */
+        ok &= str_eq(ui.msg, "OCT+ KEEP  GLO+A4 FREEZE");
+        str_cpy(want, "HOLD [", sizeof want);
+        str_cpy(want + str_len(want), "SAVE] QUICK", sizeof want - str_len(want));
+        ui_say(want, "");
+        ok &= str_eq(ui.msg, want);
+        frames(100);
+        bad += check("ui.msg: 40 bytes, a longer message ellipsised at its end (MUTATE's whole) (L8)", ok);
+    }
+    {   /* (0.9.0) a layer's hint ("HOLD [EDIT] QUICK") on its page only: gone when the page changes */
+        ui_power_on(); frame();
+        layer_seen = 0;
+        press(B_EDIT); frame();
+        ok = ui.msg_t && ui.hint_pg && str_eq(ui.msg, "HOLD [EDIT] QUICK");
+        go_title("ENV"); frame();
+        ok &= !ui.msg_t && !ui.hint_pg;
+        bad += check("a layer's hint goes when the page changes (not carried onto the next page)", ok);
     }
     for (sk = 0; sk < SKIN_N; sk++) {                             /* every lens page in each skin */
         int okp = 1;

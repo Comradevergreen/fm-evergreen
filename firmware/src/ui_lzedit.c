@@ -43,9 +43,12 @@ static void graph_sound_lz(const track_t *t)
     graph_being_at(t, 60 * 16, 68 * 16, 22 * 16);
     cv_rect(0, 0, 4, (int32_t)cv_h, T_BG);
     cv_rect(116, 0, 60, (int32_t)cv_h, T_SURF);
+    cv_halo = (uint8_t)bare;                            /* (0.9.0) BOTTOM, HUD: no panel, the being's spikes reach the words:
+                                                         * outlined, as HUD's */
     ed_cap(10, 6, e->page_title[two] && e->page_title[two][0] != '-' ? e->page_title[two] : e->name, T_THEME);
     sound_name(t, b);
-    cv_clip_text(10, 128 - AF_X_CAP_Y, &AF_X, b[0] ? b : e->name, T_MID, T_SURF, 104);
+    cv_clip_text(10, 128 - AF_X_CAP_Y, &AF_X, b[0] ? b : e->name, bare ? T_TEXT : T_MID, T_SURF, 104);
+    cv_halo = 0;
     lz_tile(x, ty, w, 58, 0, T_THEME);
     GFX_HOOK_ALIGN(0, ty + 4, 0, ty + 11, AL_V | AL_PASS, "EDIT scope title");
     cv_text_on(x + (bare ? 0 : 4), ty + 4 - AF_X_CAP_Y, &AF_X, "SCOPE", bare ? T_MID : T_TEXT, tb);

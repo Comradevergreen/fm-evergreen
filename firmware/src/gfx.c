@@ -37,6 +37,9 @@ typedef struct { uint16_t off; uint8_t w; const char *label; } kc_t;
 #define GFX_HOOK_BEGIN() ((void)0)
 #define GFX_HOOK_PIXELS(n) ((void)0)
 #endif
+#ifndef GFX_HOOK_SENT
+#define GFX_HOOK_SENT(n) ((void)0)                   /* (0.9.0) pixels sent to the panel (the harness's LCD cost) */
+#endif
 #ifndef GFX_HOOKS
 #define GFX_HOOKS 1
 #endif
@@ -71,7 +74,7 @@ typedef struct { uint16_t off; uint8_t w; const char *label; } kc_t;
 
 #define CV_MAX (240u * 150u)      /* the graph strip: 240 x 150 (0.8.5: a lens page's panel, 140; was 124; 0.8.9 HUD's HOME:
                                    * its middle, 150) */
-static uint16_t cv_px[CV_MAX] __attribute__((section(".pool")));
+static uint16_t cv_px[CV_MAX] __attribute__((section(".pool"), aligned(4)));
 static uint32_t cv_w, cv_h;
 static uint16_t cv_bg;           /* what cv_begin cleared the canvas to */
 static uint8_t cv_scroll;        /* 1: drawing a scrolled view (its text may run past the canvas) */
@@ -80,6 +83,12 @@ static int16_t cv_cy0, cv_cy1;   /* text clip: canvas rows cv_cy0 .. cv_cy1 - 1 
 static uint8_t cv_flip;          /* cv_alpha_hc: the cell mirrored left <-> right (the header's metronome, ui_draw.c) */
 static uint8_t cv_halo __attribute__((section(".pool")));   /* (0.8.9) SKIN HUD: text drawn with a 1 px BG outline under it
                                  * (cv_text_flags), over a picture (the pool: the audio's data stays where it was) */
+
+/* (0.9.0) the outline's offsets: every pixel within 2 px (dx^2 + dy^2 <= 5), as the 2 px halo of HUD's words over the beings
+ * (the 0.8.9 1 px one left them hard to read on a busy picture) */
+#define HALO_N 20u
+static const int8_t HALO_X[HALO_N] = {-1, 0, 1, -2, -1, 0, 1, 2, -2, -1, 1, 2, -2, -1, 0, 1, 2, -1, 0, 1};
+static const int8_t HALO_Y[HALO_N] = {-2, -2, -2, -1, -1, -1, -1, -1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2};
 
 #define RGB(r, g, b) ((uint16_t)((((r) >> 3) << 11) | (((g) >> 2) << 5) | ((b) >> 3)))
 
@@ -208,9 +217,12 @@ static void cv_begin(uint32_t w, uint32_t h, uint16_t bg)
         cv_px[i] = s;
 }
 
+static uint8_t dc_stale;          /* (0.9.0) a strip went to the panel outside cv_blit_cells: the cells' hashes are stale */
 static void cv_blit(uint32_t x, uint32_t y)
 {
     GFX_HOOK_BLIT(x, y, 0u);
+    GFX_HOOK_SENT(cv_w * cv_h);
+    dc_stale = 1;
     lcd_blit(x, y, cv_w, cv_h, cv_px);
 }
 
@@ -218,8 +230,111 @@ static void cv_blit(uint32_t x, uint32_t y)
 static void cv_blit_from(uint32_t x, uint32_t y, uint32_t r0)
 {
     GFX_HOOK_BLIT(x, y, r0);
-    if (r0 < cv_h)
+    dc_stale = 1;
+    if (r0 < cv_h) {
+        GFX_HOOK_SENT(cv_w * (cv_h - r0));
         lcd_blit(x, y + r0, cv_w, cv_h - r0, cv_px + r0 * cv_w);
+    }
+}
+
+/* (0.9.0) SKIN HUD's HOME (ui_draw.c ui_draw_page): every strip is drawn whole each frame, the beings swimming under all of
+ * them, but only what changed goes to the panel (at 12 MHz the whole screen took ~77 ms, the UI ~12 frames a second). Each
+ * strip is cut in 8 x 4 cells, a hash of each kept; the runs of cells whose hash changed are sent (cv_blit_cells), a row
+ * of them a window. A frame drawn in full (dc_frame(1): ui.force, a page change, a wake, a blit outside the cells) sends
+ * them all. Exact by construction: a cell goes out when any of its pixels changed (a 32-bit hash: a change missed about once
+ * in 4e9 changed cells, until that cell changes again) */
+#ifndef DC_CW
+#define DC_CW 8u                        /* a cell: 8 x 4 (8 x 8 sent ~15 % more, 4 x 4 wants twice the hashes) */
+#define DC_CH 4u
+#endif
+#define DC_MAX 1920u                    /* cells: HUD's HOME has 1878 (header 180, tabs 150, the panel 1140, the knobs 4 x 72,
+                                         * the footer 120): 7.5 kB of the pool */
+#define DC_STRIPS 10u
+static uint32_t dc_hash[DC_MAX] __attribute__((section(".pool")));
+static struct { int16_t x, y, w, h; uint16_t base, n; } dc_st[DC_STRIPS] __attribute__((section(".pool")));
+static uint8_t dc_n __attribute__((section(".pool")));
+static uint8_t dc_all __attribute__((section(".pool")));
+#ifndef LCD_HAS_STRIDE
+static void lcd_blit_stride(uint32_t x, uint32_t y, uint32_t w, uint32_t h, const uint16_t *px, uint32_t stride)
+{
+    uint32_t r;
+    for (r = 0; r < h; r++)
+        lcd_blit(x, y + r, w, 1u, px + r * stride);
+}
+#endif
+static void dc_frame(int all)           /* a frame of cells begins; all: every cell sent (the strips found again) */
+{
+    dc_all = (uint8_t)(all || dc_stale);
+    dc_stale = 0;
+    if (dc_all)
+        dc_n = 0;
+}
+static void dc_send(uint32_t x, uint32_t y, uint32_t sx, uint32_t sy, uint32_t w, uint32_t h)
+{
+    GFX_HOOK_SENT(w * h);
+    if (w == cv_w)
+        lcd_blit(x + sx, y + sy, w, h, cv_px + sy * cv_w);
+    else
+        lcd_blit_stride(x + sx, y + sy, w, h, cv_px + sy * cv_w + sx, cv_w);
+}
+static uint32_t dc_cell(uint32_t cx, uint32_t cy)     /* the hash of canvas cell cx, cy */
+{
+    uint32_t x0 = cx * DC_CW, y0 = cy * DC_CH, w = cv_w - x0 < DC_CW ? cv_w - x0 : DC_CW;
+    uint32_t h = cv_h - y0 < DC_CH ? cv_h - y0 : DC_CH, r, k, hs = 2166136261u;
+    for (r = 0; r < h; r++) {
+        const uint16_t *p = cv_px + (y0 + r) * cv_w + x0;
+        for (k = 0; k < w; k++)
+            hs = (hs ^ p[k]) * 16777619u;
+    }
+    return hs;
+}
+static void cv_blit_cells(uint32_t x, uint32_t y)
+{
+    uint32_t i, ncx = (cv_w + DC_CW - 1u) / DC_CW, ncy = (cv_h + DC_CH - 1u) / DC_CH, cx, cy, base;
+    uint32_t *hp;
+    GFX_HOOK_BLIT(x, y, 0u);                            /* (the screen shows the whole strip after it) */
+    for (i = 0; i < dc_n; i++)
+        if (dc_st[i].x == (int16_t)x && dc_st[i].y == (int16_t)y && dc_st[i].w == (int16_t)cv_w && dc_st[i].h == (int16_t)cv_h)
+            break;
+    if (i == dc_n) {                                    /* a strip not seen since the last full frame: its cells, all sent */
+        base = dc_n ? dc_st[dc_n - 1u].base + dc_st[dc_n - 1u].n : 0u;
+        if (dc_n == DC_STRIPS || base + ncx * ncy > DC_MAX) {
+            GFX_HOOK_SENT(cv_w * cv_h);
+            dc_stale = 1;                               /* (no room: sent whole, the next frame all) */
+            lcd_blit(x, y, cv_w, cv_h, cv_px);
+            return;
+        }
+        dc_st[i].x = (int16_t)x; dc_st[i].y = (int16_t)y; dc_st[i].w = (int16_t)cv_w; dc_st[i].h = (int16_t)cv_h;
+        dc_st[i].base = (uint16_t)base;
+        dc_st[i].n = (uint16_t)(ncx * ncy);
+        dc_n++;
+    } else if (!dc_all) {
+        hp = dc_hash + dc_st[i].base;
+        for (cy = 0; cy < ncy; cy++) {                  /* each row of cells: its runs of changed cells, a window each */
+            uint32_t y0 = cy * DC_CH, h = cv_h - y0 < DC_CH ? cv_h - y0 : DC_CH, run = 0xFFFFu;
+            for (cx = 0; cx <= ncx; cx++) {
+                uint32_t ch = 0;
+                if (cx < ncx) {
+                    uint32_t hs = dc_cell(cx, cy);
+                    ch = hp[cy * ncx + cx] != hs;
+                    hp[cy * ncx + cx] = hs;
+                }
+                if (ch && run == 0xFFFFu)
+                    run = cx;
+                else if (!ch && run != 0xFFFFu) {
+                    uint32_t e = cx * DC_CW < cv_w ? cx * DC_CW : cv_w;
+                    dc_send(x, y, run * DC_CW, y0, e - run * DC_CW, h);
+                    run = 0xFFFFu;
+                }
+            }
+        }
+        return;
+    }
+    hp = dc_hash + dc_st[i].base;                       /* every cell: hashed, the strip sent whole */
+    for (cy = 0; cy < ncy; cy++)
+        for (cx = 0; cx < ncx; cx++)
+            hp[cy * ncx + cx] = dc_cell(cx, cy);
+    dc_send(x, y, 0u, 0u, cv_w, cv_h);
 }
 
 static inline void cv_pset(int32_t x, int32_t y, uint16_t c)
@@ -324,12 +439,37 @@ static void cv_rrect(int32_t x, int32_t y, int32_t w, int32_t h, int32_t r, uint
     cv_rect(x + w - r, y + r, r, h - 2 * r, c);
     for (j = 0; j < r; j++)
         for (i = 0; i < r; i++) {
-            uint32_t a = rr_cov(r, i, j);
+            uint32_t a = rr_cov(r, i, j), q;
             uint16_t px = a >= 16u ? c : a == 0u ? under : ux_mix(under, c, (int32_t)(a * 100u / 16u));
+            if (cv_halo && under == ux.bg && a < 16u) {   /* (0.9.0) over HUD's picture: the corners on what is there */
+                for (q = 0; q < 4u; q++) {
+                    int32_t px_ = q & 1u ? x + w - 1 - i : x + i, py = (q & 2u ? y + h - 1 - j : y + j) + cv_oy;
+                    if ((uint32_t)px_ < cv_w && (uint32_t)py < cv_h && a) {
+                        uint16_t *d = &cv_px[(uint32_t)py * cv_w + (uint32_t)px_];
+                        *d = swap16(ux_mix(swap16(*d), c, (int32_t)(a * 100u / 16u)));
+                    }
+                }
+                continue;
+            }
             cv_pset(x + i, y + j, px);
             cv_pset(x + w - 1 - i, y + j, px);
             cv_pset(x + i, y + h - 1 - j, px);
             cv_pset(x + w - 1 - i, y + h - 1 - j, px);
+        }
+}
+/* (0.9.0) a few canvas pixels kept and put back (HUD's picture through a ring's or a disc's hole, ui_draw.c) */
+static void cv_keep(int32_t x, int32_t y, int32_t w, int32_t h, uint16_t *buf, int put)
+{
+    int32_t i, j;
+    for (j = 0; j < h; j++)
+        for (i = 0; i < w; i++) {
+            int32_t px = x + i, py = y + j + cv_oy;
+            if ((uint32_t)px < cv_w && (uint32_t)py < cv_h) {
+                if (put)
+                    cv_px[(uint32_t)py * cv_w + (uint32_t)px] = buf[j * w + i];
+                else
+                    buf[j * w + i] = cv_px[(uint32_t)py * cv_w + (uint32_t)px];
+            }
         }
 }
 
@@ -623,14 +763,13 @@ static int32_t cv_text_flags(int32_t x, int32_t y, const aafont_t *f, const char
                              uint32_t flags)
 {
     int32_t b[4], pen;
-    if (cv_halo) {                                   /* (0.8.9) the outline: the ink, solid BG, at 4 neighbours + the corner */
-        static const int8_t HX[5] = {1, 1, 0, -1, 0}, HY[5] = {1, 0, 1, 0, -1};
+    if (cv_halo) {                                   /* (0.8.9) the outline: the ink, solid BG, round it (0.9.0: 2 px) */
         static uint16_t hv[16] __attribute__((section(".pool")));
         uint32_t k;
         for (k = 0; k < 16u; k++)
             hv[k] = swap16(ux.bg);
-        for (k = 0; k < 5u; k++)
-            text_run(x + HX[k], y + HY[k], f, s, hv, b);
+        for (k = 0; k < HALO_N; k++)
+            text_run(x + HALO_X[k], y + HALO_Y[k], f, s, hv, b);
     }
     pen = text_run(x, y, f, s, ramp(fg, bg), b);
     if (GFX_HOOKS && b[2] > b[0]) {

@@ -256,8 +256,10 @@ static struct {
     uint8_t layer;               /* the layer whose map is shown (LAYER_*), 0 = none */
     uint16_t pg_down;            /* page buttons down (panel ids) that act when let go */
     uint32_t layer_sig;          /* drawn-state cache of the map */
-    char msg[24];
-    char msg2[24];               /* a second message, shown when the first is over */
+    char msg[40];                /* (0.9.0: 40, was 24 and cut the long ones silently; longer: ellipsised, ui_say) */
+    char msg2[40];               /* a second message, shown when the first is over */
+    uint8_t hint_pg;             /* (0.9.0) the page (+ 1, HOME 255) a layer's hint ("HOLD [EDIT] QUICK") was given on: gone
+                                  * on another (ui_draw_page) */
     uint32_t enc_t[NE];
     /* drawn-state cache */
     char col[4][56];   /* (0.6.10: was 32, a key up to 51 lost its colour / gauge / icon tail) */
@@ -769,7 +771,12 @@ static uint32_t lz_fam(void)                            /* which lens */
     return save_on() ? LZ_SAVE : fx_on() ? LZ_FX : LZ_SEQ;
 }
 static int lz_mock_cards(void) { return lz_on() && lz_fam() <= LZ_FX; }
-static int hud_home(void) { return ux.skin == SKIN_HUD && lz_low() && lz_fam() == LZ_HOME && home_level() == 0u; }   /* (MENU > LARGE: their cards as they are) */
+/* (MENU > LARGE: their cards as they are; 0.9.0: not under the count-in or UPDATE MODE's countdown, which cover the page:
+ * their header on BG, as every other page's) */
+static int hud_home(void)
+{
+    return ux.skin == SKIN_HUD && !ui.uboot && !seq_counting() && lz_low() && lz_fam() == LZ_HOME && home_level() == 0u;
+}
 static uint32_t lens_level(void);
 static uint32_t lz_level(void)                          /* its level, 0..2 */
 {
@@ -849,8 +856,11 @@ static void ui_say(const char *a, const char *b)
     str_cpy(ui.msg, a, sizeof ui.msg);
     n = str_len(ui.msg);
     str_cpy(ui.msg + n, b, sizeof ui.msg - n);
+    if (str_len(a) + str_len(b) >= sizeof ui.msg)       /* (0.9.0) too long for it: the end an ellipsis, never cut silently */
+        ui.msg[sizeof ui.msg - 2u] = ELLIPSIS;
     ui.msg_t = 40;
     ui.msg2[0] = 0;
+    ui.hint_pg = 0;
 }
 
 static void ui_message(const char *s) { ui_say(s, ""); }
@@ -909,6 +919,7 @@ static void ev_enter(void);
 static void page_entered(void)
 {
     const page_t *pg = cur_page();
+    ui.knob_ms = fm1_ms;                         /* (0.9.0) HUD: the knob row whole again on a new page */
     if (lens_on())                               /* (0.8.3) LENTE: the page's level, the track's memory of it */
         lens_save();
     if (!ui.home && pg->graph == GR_EVENTS)      /* AUTO LIST: + ADD LOCK on the SEQ cursor's step */
