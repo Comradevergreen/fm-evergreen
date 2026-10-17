@@ -19,9 +19,10 @@ Output (a C header; the glyph / font types live in the renderer, firmware/src/gf
                 a run of 1..16 zeros or 15s, or one value 1..14 (huff_pack; about 28 % less than 2 px per byte)
   AF_<N>_HC     the code: the number of codes of each length 1..15, then the symbols in code order
                 ((count - 1) << 4 | value)
-  AF_<N>_G      aag_t {off, adv (1/16 px), bx, by, bw, bh} per glyph and phase (PHASES of S M, PHASES_L of L:
+  AF_<N>_GH / _GP  {off, adv (1/16 px), bx, by, bw, bh} per glyph and phase (PHASES of S M, PHASES_L of L:
                 the glyph drawn at a pen of +0, +1/phases .. px, next to each other), ASCII 32..126, then the
-                extras (Latin-1 by their code; the ellipsis U+2026 as code 0x85, as in Windows-1252)
+                extras (Latin-1 by their code; the ellipsis U+2026 as code 0x85, as in Windows-1252); (0.9.0) packed
+                (aa_raster.glyph_tables): GH a glyph's lowest offset and its advance, GP each phase's rest in 32 bits
   AF_<N>_KI / _KP    kerning pairs (GPOS of the weight) by the first glyph's number g (0.9.0): KP[2 KI[g] ..
                 2 KI[g + 1] - 1] its pairs, each the second character's code (sorted) and the delta in 1/16 px (int8)
   AF_<N>        aafont_t (its last field: log2 of the phases)
@@ -237,23 +238,21 @@ def emit(face, tracking, gamma, kern_min):
     lines.append(ar.c_array(f"AF_{name}_DATA", "uint8_t", list(data), 24, "0x{:02x}"))
     if hc:
         lines.append(ar.c_array(f"AF_{name}_HC", "uint8_t", hc, 24))
-    lines.append(f"static const aag_t AF_{name}_G[{len(table)}] = {{")
-    for off, adv, bx, by, bw, bh in table:
-        lines.append(f"    {{{off}, {adv}, {bx}, {by}, {bw}, {bh}}},")
-    lines.append("};")
+    gtext, gsize = ar.glyph_tables(name, table, phases)
+    lines.append(gtext)
     if keys:
         lines.append(ar.c_array(f"AF_{name}_KI", "uint16_t", ki, 12))
         lines.append(ar.c_array(f"AF_{name}_KP", "uint8_t", kp, 24))
     ex = ", ".join(str(CODE.get(c, c)) for c in extras) or "0"
     lines.append(f"static const uint8_t AF_{name}_EX[{max(1, len(extras))}] = {{{ex}}};")
     lines.append(f"static const aafont_t AF_{name} = {{{r['h']}, {r['asc']}, {first}, {last}, {len(extras)}, {nki}, "
-                 f"AF_{name}_G, AF_{name}_DATA, {'AF_%s_KI' % name if keys else '0'}, "
+                 f"AF_{name}_GH, AF_{name}_GP, AF_{name}_DATA, {'AF_%s_KI' % name if keys else '0'}, "
                  f"{'AF_%s_KP' % name if keys else '0'}, AF_{name}_EX, {psh}, {'AF_%s_HC' % name if hc else '0'}}};")
     if "H" in chars:                                  # the capitals' band (gfx.c CAP_IN: centring text by it)
         cap = table[chars.index("H") * phases]
         lines.append(f"#define AF_{name}_CAP_Y {cap[3]}   /* the ink of H: rows {cap[3]} .. {cap[3] + cap[5] - 1} of the line */")
         lines.append(f"#define AF_{name}_CAP_H {cap[5]}")
-    cost = {"data": len(data) + len(hc), "glyph_table": 8 * len(table), "kern": len(kp) + 2 * len(ki), "extras": len(extras),
+    cost = {"data": len(data) + len(hc), "glyph_table": gsize, "kern": len(kp) + 2 * len(ki), "extras": len(extras),
             "glyphs": len(chars), "phases": phases, "pairs": len(keys), "h": r["h"], "asc": r["asc"], "px": px,
             "font": os.path.basename(font.split("#")[0]), "adv_digit": r["glyphs"]["0"][0] / 16}
     cost["total"] = cost["data"] + cost["glyph_table"] + cost["kern"] + cost["extras"]

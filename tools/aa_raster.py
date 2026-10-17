@@ -172,6 +172,30 @@ def raster_icon(spec, px, codepoint, gamma=1.0):
     return pack([alpha4(v, gamma) for v in img.tobytes()]), img.getbbox() is not None
 
 
+def glyph_tables(name, table, phases):
+    """(0.9.0) a face's glyph table as src/gfx.c reads it (ag): table [(off, adv, bx, by, bw, bh)], phases entries a
+    glyph -> (C text, bytes). AF_<N>_GH aagh_t {off, adv} a glyph (its phases' lowest data offset, the advance in 1/16
+    px, the same in every phase); AF_<N>_GP uint32_t a glyph and phase: off - GH.off | (bx + 1) << 10 | by << 13 |
+    bw << 19 | bh << 26 (12 B a glyph of 4 phases less than an 8-byte entry each)"""
+    gh, gp = [], []
+    for i in range(0, len(table), phases):
+        es = table[i:i + phases]
+        off0, adv = min(e[0] for e in es), es[0][1]
+        assert all(e[1] == adv for e in es), f"{name}: a glyph's phases advance alike"
+        gh.append((off0, adv))
+        for off, _, bx, by, bw, bh in es:
+            assert 0 <= off - off0 < 1024 and -1 <= bx <= 6 and 0 <= by < 64 and 0 <= bw < 128 and 0 <= bh < 64, \
+                f"{name}: a glyph entry out of the packed table's range: {(off, adv, bx, by, bw, bh)}"
+            gp.append((off - off0) | (bx + 1) << 10 | by << 13 | bw << 19 | bh << 26)
+    assert max(o for o, _ in gh) < 65536 and max(a for _, a in gh) < 65536
+    lines = [f"static const aagh_t AF_{name}_GH[{len(gh)}] = {{"]
+    for k in range(0, len(gh), 8):
+        lines.append("    " + " ".join("{%d, %d}," % e for e in gh[k:k + 8]))
+    lines.append("};")
+    lines.append(c_array(f"AF_{name}_GP", "uint32_t", gp, 8, "0x{:08x}"))
+    return "\n".join(lines), 4 * len(gh) + 4 * len(gp)
+
+
 def c_array(name, ctype, values, per_line=16, fmt="{}"):
     lines = [f"static const {ctype} {name}[{len(values)}] = {{"]
     for i in range(0, len(values), per_line):

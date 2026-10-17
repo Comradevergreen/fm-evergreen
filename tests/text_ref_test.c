@@ -9,7 +9,8 @@
  * phase (figures, .) at the rounded pen as before; restated here too.
  * How close that lands to the font's own spacing is tests/text_spacing_test.py's question. Every string below, in S M L, THEME on SURF and TEXT on BG, in every palette: the end pen and every
  * pixel must be identical (GREY expands its gray with G = 2 R, the gray rule; the prototype's G = 2 R + R / 16
- * differed by one green LSB there, and that is the only difference to the mock renders). */
+ * differed by one green LSB there, and that is the only difference to the mock renders).
+ * (0.9.0) Also: kerning for every pair of codes against a plain scan. */
 #include <math.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -71,6 +72,15 @@ static uint32_t ref_gi(const aafont_t *f, uint32_t ch)      /* the glyph's numbe
     if (k < 0) k = ref_at(f, '?');
     return k < 0 ? 0u : (uint32_t)k;                        /* a sparse face (L) without '?': its first glyph */
 }
+/* (0.9.0) glyph gi's entry at phase ph from the packed table: gh {lowest offset, advance} a glyph, gp a glyph and
+ * phase: offset - gh's (10 bits), bx + 1 (3), by (6), bw (7), bh (6) */
+static aag_t ref_entry(const aafont_t *f, uint32_t gi, uint32_t ph)
+{
+    uint32_t v = f->gp[(gi << f->psh) + ph];
+    aag_t g = {(uint16_t)(f->gh[gi].off + v % 1024u), f->gh[gi].adv, (int8_t)((int)(v / 1024u % 8u) - 1),
+               (uint8_t)(v / 8192u % 64u), (uint8_t)(v / 524288u % 128u), (uint8_t)(v / 67108864u)};
+    return g;
+}
 static int32_t ref_kern(const aafont_t *f, uint32_t a, uint32_t b)   /* (0.9.0: the pairs by a's glyph) */
 {
     int32_t ga = ref_at(f, a);
@@ -111,16 +121,19 @@ static int32_t ref_text(int32_t x, int32_t y, const aafont_t *f, const char *s, 
     ref_ramp(fg, bg);
     for (; *s; s++) {
         uint32_t c = (uint8_t)*s, k = 0;
+        aag_t gt[2];
         const aag_t *g;
         int32_t lo, hi, pos;
         if (c >= 'a' && c <= 'z' && f->last < 'a') c -= 32u;
         if (prev) pen += ref_kern(f, prev, c);
-        g = &f->g[ref_gi(f, c) * (uint32_t)n];
-        if (n > 1 && g[1].off != g[0].off) {
+        gt[0] = ref_entry(f, ref_gi(f, c), 0);
+        gt[1] = n > 1 ? ref_entry(f, ref_gi(f, c), 1) : gt[0];
+        g = &gt[0];
+        if (n > 1 && gt[1].off != gt[0].off) {
             lo = step * (int32_t)floor((double)pen / step);       /* the phase positions around the pen */
             hi = lo + step;
             pos = fabs((double)(lo - pen - err)) <= fabs((double)(hi - pen - err)) ? lo : hi;
-            g += ((pos / step) % n + n) % n;
+            gt[0] = ref_entry(f, ref_gi(f, c), (uint32_t)(((pos / step) % n + n) % n));
         } else {
             pos = 16 * (int32_t)floor((pen + 8) / 16.0);           /* one phase: the rounded pen */
         }

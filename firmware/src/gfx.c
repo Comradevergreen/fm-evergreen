@@ -8,16 +8,18 @@
  * each glyph is rasterised at 1 << psh horizontal phases (S M 4, L 2: drawn at a pen of +0, +1/4 .. px);
  * cv_text takes the phase that puts it within a phase step of its true place. Blending uses a 16-entry
  * ramp per (ink, background) pair, cached, so a pixel costs a nibble read and a store. Colours come from the theme tokens. */
-typedef struct { uint16_t off, adv; int8_t bx; uint8_t by, bw, bh; } aag_t;
+typedef struct { uint16_t off, adv; int8_t bx; uint8_t by, bw, bh; } aag_t;   /* a glyph at a phase (ag) */
+typedef struct { uint16_t off, adv; } aagh_t;   /* (0.9.0) a glyph: its phases' lowest data offset, the advance */
 typedef struct {
     uint8_t h, asc, first, last, nex;   /* line height, baseline; ASCII range; extras */
     uint16_t nk;                        /* kerning: the glyphs ki covers (0: none) */
-    const aag_t *g;
+    const aagh_t *gh;                   /* (0.9.0) the glyph table, packed (tools/aa_raster.py glyph_tables): a glyph's */
+    const uint32_t *gp;                 /* .. and each phase's off - gh.off | bx + 1 << 10 | by << 13 | bw << 19 | bh << 26 */
     const uint8_t *data;
     const uint16_t *ki;                 /* (0.9.0) glyph a's pairs: kp[2 ki[a] .. 2 ki[a + 1] - 1] */
     const uint8_t *kp;                  /* .. each b (sorted) and the delta (int8, 1/16 px) */
     const uint8_t *ex;                  /* codes of the extra glyphs */
-    uint8_t psh;                        /* log2 of the phases per glyph: g[i << psh] .. g[(i << psh) + phases - 1] */
+    uint8_t psh;                        /* log2 of the phases per glyph: entries i << psh .. (i << psh) + phases - 1 */
     const uint8_t *hc;                  /* data's Huffman code (cv_alpha_hc), 0 = 2 px per byte (cv_alpha) */
     uint8_t bits;                       /* (0.8.5) 1: data is 1 bit a pixel, no ramp (AF_X: cv_bits) */
 } aafont_t;
@@ -531,6 +533,20 @@ static uint32_t glyph(const aafont_t *f, uint32_t ch)
         k = 0;
     return (uint32_t)k << f->psh;
 }
+/* table entry i (glyph i >> psh at phase i & (phases - 1)), unpacked */
+static aag_t ag(const aafont_t *f, uint32_t i)
+{
+    const aagh_t *h = &f->gh[i >> f->psh];
+    uint32_t v = f->gp[i];
+    aag_t g;
+    g.off = (uint16_t)(h->off + (v & 1023u));
+    g.adv = h->adv;
+    g.bx = (int8_t)((int32_t)((v >> 10) & 7u) - 1);
+    g.by = (uint8_t)((v >> 13) & 63u);
+    g.bw = (uint8_t)((v >> 19) & 127u);
+    g.bh = (uint8_t)(v >> 26);
+    return g;
+}
 
 static int32_t kern(const aafont_t *f, uint32_t a, uint32_t b)       /* 1/16 px */
 {
@@ -562,7 +578,7 @@ static int32_t text_w(const aafont_t *f, const char *s)
         uint32_t c = fold(f, (uint8_t)*s);
         if (prev)
             pen += kern(f, prev, c);
-        pen += f->g[glyph(f, c)].adv;
+        pen += f->gh[glyph(f, c) >> f->psh].adv;
         prev = c;
     }
     return (pen + 8) >> 4;
@@ -574,22 +590,24 @@ static int32_t text_run(int32_t x, int32_t y, const aafont_t *f, const char *s, 
     const int32_t step = 16 >> f->psh;
     uint32_t prev = 0;
     for (; *s; s++) {
-        uint32_t c = fold(f, (uint8_t)*s);
-        const aag_t *g;
+        uint32_t c = fold(f, (uint8_t)*s), gi;
+        aag_t gv;
+        const aag_t *g = &gv;
         int32_t pos, d0, d1;
         if (prev)
             pen += kern(f, prev, c);
-        g = &f->g[glyph(f, c)];
-        if (f->psh && g[1].off != g->off) {
+        gi = glyph(f, c);
+        if (f->psh && (f->gp[gi + 1u] & 1023u) != (f->gp[gi] & 1023u)) {   /* (phase 1's bitmap is not phase 0's) */
             pos = pen - (pen & (step - 1));          /* the phase position at or left of the pen */
             d0 = pos - pen - err;                    /* .. and the one right of it: which keeps the gap truer */
             d1 = d0 + step;
             if ((d0 < 0 ? -d0 : d0) > (d1 < 0 ? -d1 : d1))
                 pos += step;
-            g += ((uint32_t)pos >> (4u - f->psh)) & ((1u << f->psh) - 1u);
+            gi += ((uint32_t)pos >> (4u - f->psh)) & ((1u << f->psh) - 1u);
         } else {
             pos = (pen + 8) & ~15;                   /* one phase (figures, ., blanks): the rounded pen */
         }
+        gv = ag(f, gi);
         err = pos - pen;
         if (g->bw) {
             int32_t gx = x + (pos >> 4) + g->bx, gy = y + g->by;
@@ -759,7 +777,7 @@ static int32_t cv_text_up(int32_t x, int32_t y, const aafont_t *f, const char *s
     GFX_HOOK_INK(fg, bg);
     (void)bg;
     for (; *s; s++) {
-        const aag_t *g = &f->g[glyph(f, fold(f, (uint8_t)*s))];
+        const aag_t gv = ag(f, glyph(f, fold(f, (uint8_t)*s))), *g = &gv;
         uint32_t r, q, k = 0;
         int32_t adv = (g->adv + 8) >> 4;
         if (pen + adv - 1 > maxh)

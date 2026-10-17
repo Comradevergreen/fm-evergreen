@@ -44,20 +44,22 @@ def parse(path):
         name, f = m.group(1), [x.strip() for x in m.group(2).split(",")]
         arr = lambda n: [int(v, 0) for v in re.search(r"AF_%s_%s\[\d+\] = \{([^}]*)\}" % (name, n), t)
                          .group(1).replace("\n", " ").split(",") if v.strip()]
-        g = [tuple(int(v) for v in e.split(",")) for e in
-             re.findall(r"\{(-?\d+, -?\d+, -?\d+, -?\d+, -?\d+, -?\d+)\}",
-                        re.search(r"AF_%s_G\[\d+\] = \{(.*?)\n\};" % name, t, re.S).group(1))]
+        gh = [tuple(int(v) for v in e.split(",")) for e in            # (0.9.0) the packed glyph table
+              re.findall(r"\{(\d+, \d+)\}", re.search(r"AF_%s_GH\[\d+\] = \{(.*?)\n\};" % name, t, re.S).group(1))]
+        ph = 1 << (int(f[12]) if len(f) > 12 else 0)
+        g = [(gh[i // ph][0] + (v & 1023), gh[i // ph][1], ((v >> 10) & 7) - 1, (v >> 13) & 63, (v >> 19) & 127, v >> 26)
+             for i, v in enumerate(arr("GP"))]
         kern = {}
-        if f[8] != "0":                  # (0.9.0) KI / KP: the pairs by the first glyph's number
+        if f[9] != "0":                  # (0.9.0) KI / KP: the pairs by the first glyph's number
             ki, kp, ex, n = arr("KI"), arr("KP"), arr("EX"), int(f[3]) - int(f[2]) + 1
             for a in range(len(ki) - 1):
                 code = int(f[2]) + a if a < n else ex[a - n]
-                for m in range(ki[a], ki[a + 1]):
-                    kern[code << 8 | kp[2 * m]] = kp[2 * m + 1] - 256 * (kp[2 * m + 1] > 127)
+                for j in range(ki[a], ki[a + 1]):
+                    kern[code << 8 | kp[2 * j]] = kp[2 * j + 1] - 256 * (kp[2 * j + 1] > 127)
         faces[name] = {"h": int(f[0]), "asc": int(f[1]), "first": int(f[2]), "last": int(f[3]), "nex": int(f[4]),
                        "g": g, "data": bytes(arr("DATA")), "kern": kern, "ex": arr("EX")[:int(f[4])],
-                       "psh": int(f[11]) if len(f) > 11 else 0,
-                       "hc": arr("HC") if len(f) > 12 and f[12] != "0" else None}
+                       "psh": int(f[12]) if len(f) > 12 else 0,
+                       "hc": arr("HC") if len(f) > 13 and f[13] != "0" else None}
     return faces
 
 
