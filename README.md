@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.9.1).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.9.2).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
   **The dice starts in EXPLORE** (0.8.6): HOME + SELECT opens GEN on a choice that follows no genre and breaks every
   rule (any tempo, odd metres and polyrhythm, exotic modes, any engine on any role, DRUM-X octaves, PLAYHEADS, MUTATE),
   each seed a very different piece, still in the key its SCALE and CHORD pages show. RANDOM and the 43 genres follow.
@@ -286,7 +286,10 @@ Turning fast sweeps the whole range; turning slowly is fine adjustment. Turn it 
 
 ## Controls
 
-- Pressing a page button opens its page; pressing it again, the next one. HOME goes back to the main screen.
+- (0.9.2) Six rules, the same in every section: **SELECT** walks the section's pages; its **button** brings you back
+  to the page last shown there, or, already inside, to the next group; **PRESETS** always loads presets (sounds; SEQ:
+  patterns; GEN: the genre); **KNOB 1** picks (the step, the bar, the slot); **held** is the layer; the tabs and the
+  footer say where you are (**FX · DELAY · DLY 2  6/16**).
 - **Holding** a button opens its quick layer: keys and knobs change function while it is held.
 
 | Hold | Keys | Knobs |
@@ -300,14 +303,14 @@ Turning fast sweeps the whole range; turning slowly is fine adjustment. Turn it 
 | **GLO** | Black keys 1–6 mute T1–T6 (latched); 7–10 DRUM group mutes: KICK, SNARE, HAT, PERC; F3–D4 solo T1–T6 while held; E4 unmutes everything; F4 tap tempo; G4 **UNDO** the last big change (again: redo) | T1–T4 level (with T5 or T6 selected: T3–T6) |
 | **SCL** | Any key picks the root | ROOT, SCALE, OFFSET, PITCH |
 | **EDIT** | F3 **INIT**: the track's sound goes back to factory (on DRUM, the DRUM-X kit too). G3 **RECALL**: back to the sound saved in the section (on DRUM, with its kit). Both ask for confirmation and leave the steps alone. On a DRUM track, black keys 1–8 mute each DRUM-X sound. The engine and sounds are picked in PRESETS | The engine's first 4 EDIT knobs |
-| **SEQ** | On the SEQ pages: SEQ TOOLS | LEN, DIV, SWING, GATE |
+| **SEQ** | On the SEQ pages: SEQ TOOLS; G5 CLR STEP (the cursor step; AUTO LIST: deletes the record) | LEN, DIV, SWING, GATE |
 | **REC** | F3 CLEAR the track, G3 CLICK | CLICK |
 | **HOME** | Tap: HOME; held ~0.7 s: MENU | — |
-| **SAVE** | Song layer (on SAVE > ARRANGE, KNOB 4 = SCENE): F3–B3 play A–D on the next bar (stopped: at once; several in one hold: quick chain), C4–F4 store into A–D, D5 LOOP / SONG, E5 SONG REC, G5 ARRANGE; OCT+ stores the playing section, OCT− recalls it | KNOB 1: project 1–8 (on release, stopped: loads its section A, replacing the music, no UNDO) |
+| **SAVE** | Song layer (on SAVE > ARRANGE, KNOB 4 = SCENE): F3–B3 play A–D on the next bar (stopped: at once; several in one hold: quick chain), C4–F4 store into A–D, D5 LOOP / SONG, E5 SONG REC, G5 ARRANGE, C5 NAME (renames on USER, SECTIONS, PROJECTS); OCT+ stores the playing section, OCT− recalls it | KNOB 1: project 1–8 (on release, stopped: loads its section A, replacing the music, no UNDO) |
 
-Others: **PLAY** starts and stops; **REC** arms the selected track; **SELECT** changes the tempo on GLO's pages, rolls
-the sound's dice on EDIT and dices everything on HOME (after YES); **ALGORITHM** picks the track on every page; **PRESETS** changes the
-sound; **OCT− / OCT+** the octave (on action pages and dialogs: back / confirm); GLO + PLAY restarts from the
+Others: **PLAY** starts and stops; **REC** arms the selected track; **SELECT** walks the section's pages (held with
+a button: HOME GEN, EDIT / SEQ / LFO / FX their dice, GLO the tempo, ENV / SCL / ARP / SAVE their pages);
+**ALGORITHM** picks the track on every page; **PRESETS** loads the sound (SEQ: a pattern); **OCT− / OCT+** the octave (on action pages and dialogs: back / confirm); GLO + PLAY restarts from the
 beginning.
 
 ## User manual
@@ -317,11 +320,15 @@ each layer; the complete manual is in **[docs/MANUAL.md](docs/MANUAL.md)** (en e
 **[docs/MANUAL.es.md](docs/MANUAL.es.md)**).
 
 ### 1. Getting around
-- Each page button (EDIT, ENV, LFO, FX, SEQ, SCL, ARP, GLO, SAVE) opens its first page; pressing it again moves to the
-  next one. The title at the top tells you where you are. **HOME** takes you back to the ecosystem.
-- **FX in sections**: MIX (FX, MASTER), TRACK (DIST, AUTOPAN), DELAY (3), REVERB (2), CHORUS, SLICER (4 pages), PUNCH. A tap goes to
-  the next page; **two quick taps** jump to the next section. The footer counts the page within its section (DLY 2/2).
-- **Jump to a page**: hold a page button (ENV, LFO, FX, SCL, EDIT, GLO, SAVE, ARP, SEQ) and turn **PRESETS**: its pages go by one by one, forwards or back, with the title on screen; let go and you stay there (no tap, no layer). A plain tap still steps to the next page.
+- (0.9.2) Each section is one chain of pages in groups. **SELECT** walks the pages (a page a detent, stopping at the
+  ends); the section's button brings you back to the page you left there and, inside, jumps to the next group's first
+  page (round). The tabs on top are the groups (a dot a page), the footer **SECTION · GROUP · page n/N**. **HOME**
+  takes you to the ecosystem (ECO → BEING → GEN).
+- **FX in one chain**: TRACK (SENDS, DIST, AUTO PAN), BUSES, DELAY (3), REVERB (2), CHORUS, SLICER (4 pages), MASTER,
+  PUNCH: SELECT walks all 16, an FX tap jumps to the next module.
+- **PRESETS** always loads presets: the track's sounds, on the SEQ pages a pattern, on GEN the genre.
+- **Jump through a section** from anywhere: hold ENV, SCL, ARP or SAVE and turn **SELECT** (HOME + SELECT opens GEN,
+  EDIT / SEQ / LFO / FX + SELECT roll their dice, GLO + SELECT the tempo).
 - **ALGORITHM** picks the track (T1–T6) from any page; track pages show the selected track.
 - The four knobs drive the four columns on screen. Turning fast sweeps the whole range, slowly fine-tunes.
 - **Holding** a button opens its layer (FX, GLO, SCL, LFO, EDIT, SAVE…): release it and you're back where you were.
@@ -546,6 +553,39 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### v0.9.2
+- **Navigation: six rules, the same in every section** (the approved mock-up "navegación": "beautiful but hard to
+  navigate"). Every page, knob, picture and function is where it was; only the way between them changed.
+  1. **SELECT walks the section's pages** as one chain, a page a detent, stopping at the first and last (no levels, no
+     zoom). FX: SENDS → DIST → AUTO PAN → BUSES → DLY → DLY 2 → DLY 3 → REVERB → … → PUNCH, 16 pages.
+  2. **The section's button**: from elsewhere the page last shown there; already inside, the first page of the next
+     group (round). FX › DLY 2 → REVERB; EDIT › FILTER → FOCUS.
+  3. **PRESETS always loads presets**: the sounds everywhere (FX, ENV, SAVE included), on SEQ the patterns (the PHRASES
+     loader, hidden since 0.6.37, OCT+ loads), on GEN the genre; nothing in the MENU. It no longer picks the bar, the
+     step, the track, the module, the slot or the row.
+  4. **KNOB 1 picks**: a new **SEQ › BAR** page (KNOB 1 the bar, KNOB 2 LEN; the bars' picture), STEP's KNOB 1 walks
+     all 64 steps; the track is always ALGORITHM's.
+  5. **Held = the layer**; held + SELECT kept: HOME GEN, EDIT / SEQ / LFO / FX the dice, GLO the tempo, ENV / SCL /
+     ARP / SAVE their chain. Held + PRESETS (pages) is gone.
+  6. **The screen says where**: the tabs on top are the section's groups (the one shown lit, a dot a page), the footer
+     **SECTION · GROUP · page** and **n/N** of the chain, in COLORS, BOTTOM and HUD, every palette.
+  - **SCL and ARP** are two sections (KEY · CHORD / ARP · ARP 2). **GEN** is three ordinary HOME pages (GEN 1–3, the
+    last group: the buttons work there, OCT+ makes, OCT− back to ECO), no longer modal. **SAVE** comes back to the page
+    last shown, USER and SECTIONS with SAVE armed when entered from outside (SAVE, OCT+, OCT+ as before). ENV's
+    six-envelope views are pages of their own (TRACKS, TRACKS DEST); NOTE appears once; FX's module picker is gone
+    (BUSES is a page between TRACK and DELAY). The **MENU**: SELECT walks every row across the tabs, ALGORITHM jumps
+    tabs, ABOUT scrolls with SELECT.
+  - **EDIT is always EDIT**: clearing the step is the SEQ layer's new **G5 CLR STEP** (AUTO LIST: DEL REC, the
+    record; NOTE with a note in focus: that note), and TIME turned to REST clears it too; renaming is the SAVE layer's
+    new **C5 NAME** (USER, SECTIONS, PROJECTS). A step held + EDIT still clears its locks.
+  - Inside: one table of chains (`ui_lens.c`) drives SELECT, the buttons, the tabs, the footer and the page titles;
+    each section remembers its page (EDIT one per kind of track); the pages keep the pictures 0.8.5's lenses drew.
+    Tests: ui_test's navigation tests rewritten for the chains, plus a reach test (every 0.9.1 page and its knobs reached
+    by SELECT and the buttons, on every kind of track and LOAD) and the mock-up's 14 tasks, each in the number of
+    actions the mock-up's PROPOSED column says (73 in all); ui_render: SEQ › BAR added, lint and alignment clean.
+  - No audio change (goldens, cpu_vg, target budgets as 0.9.1); RAM 0 B; image −768 B (547676 B of 581564).
+  - The web emulator and editor show no navigation hints of their own (only key maps): unchanged.
 
 ### v0.9.1
 - **A DJ FILTER on the master** (GLO › MIXER KNOB 4, where the track's MUTE was): one bipolar knob on the whole mix,

@@ -7,7 +7,7 @@ import html, os
 
 R = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(R, 'docs', 'cheatsheet')
-VERSION = 'v0.9.1'
+VERSION = 'v0.9.2'
 
 HEAT = ['#22d3ee', '#3b82f6', '#8b5cf6', '#d946ef', '#ef4444', '#ff7a00', '#facc15', '#f4f1ea']
 
@@ -123,42 +123,61 @@ def sec(t):
 # ------------------------------------------------------------------------------------------------ 1. CONTROLS ---
 def controls():
     b = []
+    b.append(sec('NAVIGATION · SIX RULES'))
+    rules = [
+        ('1', 'SELECT WALKS THE PAGES', 'Every page of the section in one chain, a page a detent, stopping at both ends. '
+         'No levels, no zoom.', 'FX: SENDS → DIST → AUTO PAN → BUSES → DLY → DLY 2 → … → PUNCH'),
+        ('2', 'THE BUTTON: IN, OR ON', 'From another section: the page you were last on there. Already inside: the '
+         'first page of the next group (round).', 'FX › DLY 2: FX → REVERB · EDIT › FILTER: EDIT → FOCUS'),
+        ('3', 'PRESETS LOADS PRESETS', 'Always: the track\'s sounds; SEQ the patterns (PHRASES, OCT+ loads); GEN the '
+         'genre. Never a page, a track or a module.', 'FX › DLY: PRESETS ▶ the next sound'),
+        ('4', 'KNOB 1 PICKS', 'The step, the bar, the slot, the stage, the operator, the kit\'s sound, the row. The track: '
+         'always ALGORITHM.', 'SEQ › STEP: K1 = all 64 steps · SEQ › BAR: K1 = the bar'),
+        ('5', 'HOLD = THE LAYER', 'Held + SELECT: HOME GEN · EDIT SEQ LFO FX their dice · GLO the tempo · ENV SCL ARP '
+         'SAVE their chain.', 'SEQ + G5 CLR STEP · SAVE + C5 NAME'),
+        ('6', 'THE SCREEN SAYS WHERE', 'Tabs on top: the section\'s groups, the one shown lit, a dot a page. Footer: '
+         'SECTION · GROUP · page and n/N.', 'FX · DELAY · DLY 2   6/16'),
+    ]
+    b.append('<div class="grid g3">' + ''.join(
+        card(f'{n} · {t}', HEAT[int(n) + 1], f'<p>{e(d)}</p><p class="dim">{e(x)}</p>') for n, t, d, x in rules) + '</div>')
     b.append(sec('THE PANEL'))
     rows = [
         ('MASTER', 'Master volume.'),
-        ('SELECT', '<b>Zooms the lens</b> you are in, a level a detent (SEQ PATTERN · BAR · STEP; HOME ECO · BEING · GEN, GEN the song generator; EDIT SOUND · TONE · FOCUS; ENV TRACKS · ENV · STAGE; LFO MOD · LFO · MSEQ; SCL KEY · CHORD · ARP; GLO MIX · GLOBAL · SYSTEM; SAVE; FX; MENU MENU · TAB · ROW; a held layer: ALGORITHM MAP · KNOBS · STATE). Held with a button, its <b>dice</b> (OK keeps, CANCEL back): HOME everything, '
-                   'EDIT the sound, SEQ the sequence, LFO the LFO, FX the effects. GLO + SELECT: the tempo.'),
-        ('PRESETS', 'Browses the sounds (factory and user). On step, list and song pages: the cursor / the row; SEQ at PATTERN: the bar. '
-                    '<b>Hold a page button + PRESETS: jump through its pages.</b>'),
-        ('ALGORITHM', 'Selects the track from any page: T1–T4, or T1–T6 with TRACKS 6. A layer held: MAP · KNOBS · STATE.'),
-        ('KNOB 1–4', 'The four columns on screen. Fast sweeps the whole range, slow fine-tunes. With a layer held: '
+        ('SELECT', '<b>Walks the section\'s pages</b>, a page a detent, stopping at the ends (the MENU: every row). Held with a button: '
+                   'HOME <b>GEN</b>; EDIT · SEQ · LFO · FX their <b>dice</b> (OK keeps, CANCEL back); GLO the tempo; ENV · SCL · ARP · SAVE their chain.'),
+        ('PRESETS', '<b>Always presets</b>: the sounds (factory and user) on every page; SEQ: the patterns (PHRASES); GEN: the genre. '
+                    'Nothing in the MENU or with a button held.'),
+        ('ALGORITHM', 'Selects the track from any page: T1–T4, or T1–T6 with TRACKS 6. MENU: the tabs. A layer held: MAP · KNOBS · STATE.'),
+        ('KNOB 1–4', 'The four columns on screen; KNOB 1 picks (step, bar, slot, row). Fast sweeps the whole range, slow fine-tunes. With a layer held: '
                      'the layer\'s.'),
         ('OCT− · OCT+', 'The keyboard\'s octave (both together: back to 0); on DRUM the kit stays put: +1/+2/+3 ratchet x2/x4/x8, −1 SHORT, −2 GHOST, −3 FLAM, each sound its own (grid KNOB 3 HIT). On action pages and dialogs: back / confirm.'),
         ('PLAY', 'Start / stop. GLO + PLAY: restart from the top.'),
         ('REC', 'Arms live recording on the selected track (notes and knob moves, overdub).'),
-        ('HOME', 'Tap: the ecosystem (on HOME: its level\'s other set, HOME knobs / MACROS M1–M4; on GEN its next page). <b>Hold: the MENU.</b>'),
+        ('HOME', 'Tap: HOME (on HOME the next group: ECO · BEING · GEN). <b>Hold: the MENU.</b>'),
         ('KEYS', '27 keys play the selected track in its scale; with a layer held they become that layer\'s.'),
     ]
     t = '<table>' + ''.join(f'<tr><td class="n">{e(n)}</td><td>{d}</td></tr>' for n, d in rows) + '</table>'
     pb = [
-        ('ENV', 'the zoom level\'s other set (SELECT zooms; PRESETS the track / the stage): TRACKS: ENV · DEST  |  ENV: ENV · ENV DEST  |  STAGE', '—'),
-        ('LFO', 'the zoom level\'s next (SELECT zooms; PRESETS the slot / track / step): MOD  |  LFO: LFO · LFO DEST  |  MSEQ: MSEQ · MSEQ 2', 'MACROS M1–M4 (stay latched)'),
-        ('FX', 'the zoom level\'s next (SELECT zooms; PRESETS the module): TRACK: SENDS · DIST · AUTO PAN  |  BUSES: DLY MIX · REV SIZE · CHORUS DEPTH · SLICER DEPTH, FX opens the module  |  EFFECT: DELAY · REVERB · CHORUS · SLICER · MASTER · PUNCH, their pages',
+        ('HOME', 'ECO: ECO · MACROS  |  BEING: BEING · ROUTES  |  GEN: GEN 1 · GEN 2 · GEN 3', 'MENU'),
+        ('EDIT', 'SOUND: EDIT 1 · EDIT 2  |  TONE: FILTER · MORPH · RETRIG · ROTOR · VOICE · VOICE 2 · WORDS  |  FOCUS (FM6: … OPERATOR: OPERATOR · OP ENV · OPERATOR 2; DRUM: KIT: KIT · KIT 2 · KIT 3  |  SOUND: SOUND 1–4  |  LEVELS 1–2  |  TONE: X-MOD · FILTER · STEREO · VOICE)', 'INIT · RECALL · sound mutes'),
+        ('SEQ', 'PATTERN: PATTERN · STRETCH · PLAYHEADS  |  TRACK: TRACK · MUTATE  |  BAR: BAR · STEP · NOTE  |  STEP: COMP · COMP 2  |  AUTO: AUTOMATION · AUTO LIST', 'SEQ TOOLS'),
+        ('FX', 'TRACK: SENDS · DIST · AUTO PAN  |  BUSES  |  DELAY: DLY 1–3  |  REVERB 1–2  |  CHORUS  |  SLICER: SLICER · SL BUS 1–2 · SL PITCH  |  MASTER  |  PUNCH',
          'PUNCH-IN FX'),
-        ('SCL', 'KEY ↔ CHORD (SELECT zooms KEY · CHORD · ARP; PRESETS: ROOT / the track)', 'ROOT by key'),
-        ('EDIT', 'the zoom level\'s next (SELECT zooms): SOUND: EDIT 1 · EDIT 2 (DRUM: KIT · KIT 2 · KIT 3)  |  TONE: FILTER · MORPH · RETRIG · ROTOR · VOICE · VOICE 2 · WORDS (VOICE) (DRUM: X-MOD · FILTER · STEREO · LEVELS 1–2 · VOICE)  |  FOCUS (FM6: OPERATOR · OP ENV · OPERATOR 2; DRUM: SOUND 1–4)', 'INIT · RECALL · sound mutes'),
-        ('GLO', 'MIXER · SENDS · GLOBAL · SYSTEM (SELECT zooms MIX · GLOBAL · SYSTEM)', 'MUTE · SOLO · LEVEL · TAP'),
-        ('SAVE', 'the zoom level\'s two sets (SELECT zooms; from elsewhere SOUND\'s USER): LIBRARY: PROJECT · TOOLS  |  PROJECT: SECTIONS · ARRANGE  |  SOUND: USER · PRESETS', 'SONG layer'),
-        ('ARP', 'the ARP level: ARP · ARP 2', '—'),
-        ('SEQ', 'the zoom level\'s sets (SELECT zooms): PATTERN: PATTERN · STRETCH · PLAYHEADS · TRACK · MUTATE  |  BAR: STEP · NOTE · AUTOMATION · AUTO LIST  |  STEP: NOTE · COMP · COMP 2', 'SEQ TOOLS'),
+        ('GLO', 'MIX: MIXER · SENDS  |  GLOBAL  |  SYSTEM', 'MUTE · SOLO · LEVEL · TAP'),
+        ('ENV', 'TRACKS: TRACKS · TRACKS DEST  |  ENV: ENV · ENV DEST  |  STAGE', '—'),
+        ('LFO', 'MOD  |  LFO: LFO · LFO DEST  |  MSEQ: MSEQ · MSEQ 2', 'MACROS M1–M4 (stay latched)'),
+        ('SCL', 'KEY  |  CHORD', 'ROOT by key'),
+        ('ARP', 'ARP: ARP · ARP 2', '—'),
+        ('SAVE', 'SOUND: USER · PRESETS  |  PROJECT: SECTIONS · ARRANGE  |  LIBRARY: PROJECTS · TOOLS (from outside, USER / SECTIONS come armed)', 'SONG layer · C5 NAME'),
         ('REC', '(transport)', 'CLEAR · CLICK'),
     ]
-    t2 = ('<table class="pages"><tr><th>BUTTON</th><th>TAP: ITS PAGES, ONE PER TAP</th><th>HOLD</th></tr>' +
+    t2 = ('<table class="pages"><tr><th>BUTTON</th><th>GROUPS (A TAP: THE NEXT) · PAGES (SELECT)</th><th>HOLD</th></tr>' +
           ''.join(f'<tr><td class="n">{e(n)}</td><td>{e(p)}</td><td class="dim">{e(h)}</td></tr>' for n, p, h in pb) +
           '</table>')
     b.append('<div class="grid g2">' + card('KNOBS AND TRANSPORT', HEAT[0], t) +
-             card('PAGE BUTTONS', HEAT[2], t2 + '<p style="margin-top:10px">' + k('BUTTON', cls='v') + ' + ' +
-                  k('PRESETS', cls='v') + ' jumps through its pages (no wrap). ' + k('SELECT', cls='v') + ' alone scrolls the section\'s pages.</p>') + '</div>')
+             card('SECTIONS', HEAT[2], t2 + '<p style="margin-top:10px">' + k('BUTTON', cls='v') +
+                  ' from elsewhere: the page last shown; inside: the next group. ' + k('SELECT', cls='v') +
+                  ' walks every page of the section.</p>') + '</div>')
 
     b.append(sec('LAYERS · HOLD A BUTTON'))
     fx_w = {'F3': 'REP 1/8', 'G3': 'REP 1/16', 'A3': 'REP 1/32', 'B3': 'LPF', 'C4': 'HPF', 'D4': 'OCT−', 'E4': 'OCT+',
@@ -170,7 +189,7 @@ def controls():
     glo_b = {'F#3': 'M1', 'G#3': 'M2', 'A#3': 'M3', 'C#4': 'M4', 'D#4': 'M5', 'F#4': 'M6', 'G#4': 'KICK',
              'A#4': 'SNR', 'C#5': 'HAT', 'D#5': 'PERC'}
     sv_w = {'F3': 'PLAY A', 'G3': 'PLAY B', 'A3': 'PLAY C', 'B3': 'PLAY D', 'C4': 'STORE A', 'D4': 'STORE B',
-            'E4': 'STORE C', 'F4': 'STORE D', 'D5': 'LOOP/ SONG', 'E5': 'SONG REC', 'G5': 'SONG'}
+            'E4': 'STORE C', 'F4': 'STORE D', 'C5': 'NAME', 'D5': 'LOOP/ SONG', 'E5': 'SONG REC', 'G5': 'SONG'}
     ed_w = {'F3': 'INIT', 'G3': 'RECALL'}
     ed_b = {'F#3': 'BD', 'G#3': 'SD', 'A#3': 'CP', 'C#4': 'CH', 'D#4': 'OH', 'F#4': 'TM', 'G#4': 'RS', 'A#4': 'CB'}
     b.append('<div class="grid g2">')
@@ -186,7 +205,7 @@ def controls():
                   '<p class="dim" style="margin-top:4px">T5 or T6 selected: the knobs are T3–T6.</p>'))
     b.append(card('SAVE · SONG', HEAT[6], keyboard(sv_w, {}) +
                   '<p>PLAY A–D on the next bar (several in one hold: a quick chain), STORE the section into A–D. '
-                  'OCT+ stores the playing section, OCT− recalls it. On the SONG page KNOB 4 stores a scene.</p>'
+                  'OCT+ stores the playing section, OCT− recalls it. C5 renames (USER, SECTIONS, PROJECTS). On the SONG page KNOB 4 stores a scene.</p>'
                   '<h4>KNOBS</h4>' + knobs('SONG 1–8', '-', '-', '-')))
     b.append(card('EDIT · SOUND', HEAT[3], keyboard(ed_w, ed_b) +
                   '<p>INIT: the factory sound (DRUM: the kit too). RECALL: the sound stored in the section. On a DRUM '
@@ -197,7 +216,7 @@ def controls():
                                   'G3 clears them (only tracks that sound). LFO + SELECT: the track\'s LFO diced.', ('M1', 'M2', 'M3', 'M4')),
         ('SCL · SCALE', HEAT[0], 'Any key sets the ROOT. ROOT and SCALE are every melodic track\'s (and RESO\'s).',
          ('ROOT', 'SCL', 'OFS', 'PIT')),
-        ('SEQ · TOOLS', HEAT[4], 'On the SEQ pages: F3 CLEAR · G3 REVERSE · A3 B3 SHIFT · C4 RANDOM · D4 COOK · E4 BEAT · F4 CLR AUTO (the automation).',
+        ('SEQ · TOOLS', HEAT[4], 'On the SEQ pages: F3 CLEAR · G3 REVERSE · A3 B3 SHIFT · C4 RANDOM · D4 COOK · E4 BEAT · F4 CLR AUTO (the automation) · G5 CLR STEP (AUTO LIST: the record).',
          ('LEN', 'DIV', 'SWING', 'GATE')),
         ('REC · RECORD', '#ef4444', 'F3 CLEAR the track (at once; GLO + G4 undoes it), G3 the metronome CLICK.', ('CLICK', '-', '-', '-')),
     ]
@@ -206,8 +225,11 @@ def controls():
 
     b.append(sec('COMBOS'))
     combos = [
-        (k('HOME · EDIT · SEQ · LFO · FX', cls='v') + ' + ' + k('SELECT', cls='v'), 'Their dice: everything · sound · sequence · LFO · effects (KEEP? OK / CANCEL).'),
-        (k('PAGE BUTTON', cls='v') + ' + ' + k('PRESETS', cls='v'), 'Jump through that button\'s pages.'),
+        (k('HOME', cls='v') + ' + ' + k('SELECT', cls='v'), 'GEN, the song generator (HOME\'s last pages).'),
+        (k('EDIT · SEQ · LFO · FX', cls='v') + ' + ' + k('SELECT', cls='v'), 'Their dice: sound · sequence · LFO · effects (KEEP? OK / CANCEL).'),
+        (k('ENV · SCL · ARP · SAVE', cls='v') + ' + ' + k('SELECT', cls='v'), 'Into that section and along its chain.'),
+        (k('SEQ') + ' + ' + k('G5'), 'CLR STEP: the cursor step and its locks (AUTO LIST: deletes the record).'),
+        (k('SAVE') + ' + ' + k('C5'), 'NAME: rename the slot, the section, the project.'),
         (k('REC') + ' + ' + k('FX') + k('EDIT') + k('ENV') + k('LFO') + k('SCL') + k('ARP') + k('GLO'),
          'Clear that part\'s automation on the selected track (FX: the punch-in lane too).'),
         (k('SEQ') + ' + ' + k('REC'), 'CLEAR ALL SEQUENCES? (OCT+ confirms).'),
@@ -242,12 +264,12 @@ def controls():
                                 ('ARP 2', 'SWING PROB HOLD ORDER')]),
         ('SEQ', HEAT[4], [('PATTERN', 'LEN DIV SWING GATE'), ('STRETCH', 'x/÷ REPEAT NUDGE ROTATE'), ('PLAYHEADS', 'HEAD RATE DIR INTVL'),
                           ('TRACK', 'PITCH CHANCE HUMAN REC Q'), ('MUTATE', 'SOUND PATTERN AMOUNT MODE'),
-                          ('STEP', 'STEP NOTE TIME FLAG'), ('STEP · DRUM', 'STEP LANE HIT ACC'), ('NOTE', 'FOCUS PITCH MOVE MICRO'),
+                          ('BAR', 'BAR LEN - -'), ('STEP', 'STEP NOTE TIME FLAG'), ('STEP · DRUM', 'STEP LANE HIT ACC'), ('NOTE', 'FOCUS PITCH MOVE MICRO'),
                           ('AUTOMATION', 'PLAY EVENT LOCK CLEAR'), ('AUTO LIST', 'ROW STEP PARAM VALUE'),
                           ('COMP', 'STEP TYPE VAL EVERY'), ('COMP 2', 'STEP TYPE VAL EVERY')]),
         ('GLO · SAVE', HEAT[6], [('MIXER', 'LEVEL PAN REV DJ FILT'), ('GLOBAL', 'BPM SWING CLOCK TUNE'),
                                  ('SYSTEM', 'TRACKS LOAD ROUTE CPU'), ('PRESETS', 'No. ENG FAV LIST'),
-                                 ('USER', 'SLOT LOAD ERASE SAVE'), ('PROJECT', 'PROJECT SECT LOAD SAVE (PROJECT level: SECT NAME LOAD SAVE)'), ('ARRANGE', 'ROW SECT BARS SCENE (OCT+ adds a row)'),
+                                 ('USER', 'SLOT LOAD ERASE SAVE'), ('PROJECTS', 'PROJECT SECT LOAD SAVE'), ('SECTIONS', 'SECT NAME LOAD SAVE'), ('ARRANGE', 'ROW SECT BARS SCENE (OCT+ adds a row)'),
                                  ('TOOLS', 'CLEAR SEQ · INIT SOUND · DEL ROW · CLEAR SONG · NEW PROJECT · CPU TEST: K1 picks, OCT+')]),
     ]
 
@@ -316,7 +338,7 @@ def sound():
                   '<b>8 voices</b> shared by the six tracks (MONO and LEGATO keep their note).</p>'))
     b.append(card('DICE', HEAT[5], '<p><b>EDIT + SELECT</b>: a random factory preset of the engine, every '
                   'parameter moved up to a quarter of its range. DRUM-X: both sides of every sound around the factory '
-                  'kit. Heard at once: OCT+ OK keeps it, OCT- CANCEL brings the sound back. SEQ / LFO / FX + SELECT: the sequence, the LFO, the effects, the same way. HOME + SELECT (or SELECT twice on HOME): <b>GEN</b>, the song generator: GENRE (<b>EXPLORE</b>, where it opens: no genre, every rule broken; RANDOM; 43 genres; PRESETS too) · SEED · ENERGY · FORM; DRUMS · BASS · CHORDS · ARP · LEAD amounts; COMPLEX · SWING · HUMAN (a HOME tap: the next page). OCT+ makes the piece (again: a new seed), OCT- done. GLO + G4 undoes.</p>'))
+                  'kit. Heard at once: OCT+ OK keeps it, OCT- CANCEL brings the sound back. SEQ / LFO / FX + SELECT: the sequence, the LFO, the effects, the same way. HOME + SELECT (or HOME twice on HOME): <b>GEN</b>, the song generator, HOME\'s last three pages: GENRE (<b>EXPLORE</b>, where it opens: no genre, every rule broken; RANDOM; 43 genres; PRESETS too) · SEED · ENERGY · FORM; DRUMS · BASS · CHORDS · ARP · LEAD amounts; COMPLEX · SWING · HUMAN (SELECT: the next page). OCT+ makes the piece (again: a new seed), OCT- back to ECO. GLO + G4 undoes.</p>'))
     b.append('</div>')
 
     b.append(sec('MODULATION'))
@@ -342,7 +364,7 @@ def sound():
     b.append('</div>')
     b.append('<div class="grid g3" style="margin-top:22px">')
     b.append(card('SEQUENCER', HEAT[4],
-                  '<p>64 steps a track, up to 4 notes a step, piano roll and drum grid. <b>LENTE</b>: SELECT zooms PATTERN (the bars; PRESETS the bar) · BAR (the roll / grid) · STEP (one step large, its chips); SEQ taps round the level\'s sets and comes back to the track\'s last. <b>Hold a step + turn a knob</b>: '
+                  '<p>64 steps a track, up to 4 notes a step, piano roll and drum grid. One chain, five groups: PATTERN · TRACK · BAR (BAR: K1 the bar; STEP: the roll / grid, K1 all 64 steps; NOTE) · STEP (COMP: one step large, its chips) · AUTO; SELECT walks, SEQ jumps to the next group, PRESETS loads a pattern. <b>Hold a step + turn a knob</b>: '
                   'a parameter lock. Step recording: hold a chord + KNOB 1 its length; + ARP: arpeggiated (K1 rate, K2 order, K3 oct). COMP / COMP 2: two components a step (CHANCE, RATCH, ARP NOTES / SEQ / SCALE, TRIG, RAND, OCT, TONAL, BEND, ECHO, PULSE, JUMP, REV, FILL, KILL, WALK, CLIMB, TOUCH: a kit\'s SHORT / GHOST / FLAM); a TRIG or FILL wins; WALK / CLIMB: a degree / an octave further every N loops (K4), UP DOWN UP-DN RND over a range (K3), stackable; ARP: ORDER × range, RATE in note values (x1 1/32 1/32T 1/64 1/64T 1/128); RATCH / ECHO: DIV; EVERY (KNOB 4): the loops the step\'s components play on (ALWAYS 1:2 2:2 1:3 .. 4:4 1:8 FIRST !FIRST SKIP). TRACK: PITCH, CHANCE thins the whole track, HUMAN one amount (velocity, timing, gate, decay / release), REC Q. STRETCH / REPEAT act as the knob turns; ROTATE reads the sequence from another step; NOTE\'s MICRO moves a step off the grid in 64ths (±32/64; REC Q 0 % records where you played, to the 64th). REC + knobs while playing: '
                   'automation (64 records a section, MOTION page plays / clears them, AUTO LIST edits them).</p>'
                   '<h4>PATTERN · TRACK</h4>' + knobs('LEN', 'DIV', 'SWG', 'GATE') + knobs('PIT', 'CHN', 'HUM', 'RECQ')))
