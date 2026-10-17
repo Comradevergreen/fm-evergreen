@@ -564,7 +564,8 @@ static void page_go(int32_t d)
     cursor_set((int32_t)(b * 16u + ui.cursor % 16u < len ? b * 16u + ui.cursor % 16u : len - 1u));
 }
 
-/* the grid's knobs: 1 STEP (the cursor), 2 LANE, 3 HIT and 4 ACC of the lane at the cursor (right on, left off) */
+/* the grid's knobs: 1 STEP (the cursor), 2 LANE, 3 HIT and 4 ACC of the lane at the cursor (right on, left off; 0.8.5:
+ * HIT on along its modes, ui.c GRID_HIT) */
 static void grid_edit(uint32_t slot, int32_t steps)
 {
     if (slot == 0u)
@@ -572,7 +573,8 @@ static void grid_edit(uint32_t slot, int32_t steps)
     else if (slot == 1u)
         ui.lane = (uint8_t)clamp((int32_t)ui.lane + (steps > 0 ? 1 : -1), 0, NLANE - 1);
     else if (slot == 2u)
-        grid_hit(TSEL, ui.cursor, ui.lane, steps > 0);
+        grid_hit_set(TSEL, ui.cursor, ui.lane,
+                     (uint32_t)clamp((int32_t)grid_hit_of(&TSEL->step[ui.cursor], ui.lane) + (steps > 0 ? 1 : -1), 0, LM_N));
     else
         grid_acc(TSEL, ui.cursor, ui.lane, steps > 0);
 }
@@ -904,8 +906,10 @@ static void comp_knob(uint32_t slot, int32_t steps)
         step_set_ratchet(st, (uint32_t)clamp((int32_t)step_ratchet(st) + d, 1, 4));
     else if (*cp == CP_JUMP && slot == 2u)            /* (0.6.62) TO STEP (0.6.92: TIMES is EVERY, KNOB 4) */
         *ap = (uint8_t)((*ap & 0xC0u) | (uint32_t)clamp((int32_t)CP_JTO(*ap) + steps, 0, 63));
-    else if (v >= COMP_TRIG && slot == 2u && *cp > CP_ARPS && CP_AMAX[*cp])   /* TRIG .. PULSE: their value */
-        *ap = (uint8_t)clamp((int32_t)*ap + d, CP_AMIN[*cp], CP_AMAX[*cp]);
+    else if (v >= COMP_TRIG && slot == 2u && *cp > CP_ARPS && CP_AMAX[*cp])   /* TRIG .. PULSE: their value (0.8.5: ECHO's
+                                                                              * EVEN kept) */
+        *ap = (uint8_t)((*cp == CP_ECHO ? *ap & CP_ECHO_EVEN : 0u) |
+                        (uint32_t)clamp((int32_t)(*cp == CP_ECHO ? *ap & ~CP_ECHO_EVEN : *ap) + d, CP_AMIN[*cp], CP_AMAX[*cp]));
     else if ((v == COMP_WALK || v == COMP_CLIMB) && slot == 2u) {   /* (0.6.98) MODE x RANGE: one list, a range after another */
         int32_t i = clamp((int32_t)(CP_WMODE(*ap) * 4u + CP_WRNG(*ap)) + d, 0, 15);
         *ap = CP_WARG(CP_WRATE(*ap), (uint32_t)i / 4u, (uint32_t)i % 4u);
@@ -2282,6 +2286,8 @@ static void ui_input_frame(void)
                 song.octave = 0;
             else
                 song.octave += b == B_OCTDN ? (song.octave > -3 ? -1 : 0) : (song.octave < 3 ? 1 : 0);
+            if (drum_track(TSEL) && !song.grid)         /* (0.8.5) the kit's octaves: what this one does */
+                ui_message(drum_oct_name(song.octave));
             break;
         }
         default:                                        /* page buttons (GLO SCL ENV LFO EDIT ARP): when let go */

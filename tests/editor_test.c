@@ -145,7 +145,7 @@ static int preferences(void)
     int bad = 0;
     uint8_t a[4] = {0, 7, 0, 0};
     reset();
-    uint32_t n = request(ED_INFO, a, 0), n0 = n - 3u;   /* (0.8.5: the 'Y' tag last, LYRIC) */
+    uint32_t n = request(ED_INFO, a, 0), n0 = n - 6u;   /* (0.8.5: the 'O' tag, the DRUM lane modes, then 'Y' last, LYRIC) */
     bad += check("INFO explicitly tags display capabilities after SONG without changing command 33",
         ED_SONG == 33 && ED_UI_STATE == 34 && ED_FAV_SET == 38 &&
         host_wire[n0 - 37] == CHAIN_ROWS && host_wire[n0 - 36] == 0x55 &&
@@ -162,6 +162,7 @@ static int preferences(void)
         host_wire[n0 - 10] == 0x4C && host_wire[n0 - 9] == 1 && host_wire[n0 - 8] == 1 &&   /* 1.1 parameter locks */
         host_wire[n0 - 7] == 0x56 && host_wire[n0 - 6] == 1 && host_wire[n0 - 5] == 32 &&   /* (0.6.11) FM6 voice bank */
         host_wire[n0 - 4] == 0x4A && host_wire[n0 - 3] == 1 && host_wire[n0 - 2] == 1 &&   /* (0.6.62) JIANT: the installer */
+        host_wire[n - 7] == 0x4F && host_wire[n - 6] == 1 && host_wire[n - 5] == LM_N &&   /* (0.8.5) DRUM lane modes */
         host_wire[n - 4] == 0x59 && host_wire[n - 3] == 1 && host_wire[n - 2] == LYR_LEN - 1u);   /* (0.8.5) LYRIC, 63 */
     request(ED_UI_SET, a, 2);
     bad += check("UI_SET updates the actual palette and reports RAM-only saving",
@@ -351,6 +352,28 @@ static int steps(void)
     a[14] = 1; n = request(ED_TRACK_STEP, a, 15);
     bad += check("TRACK_STEP sets the ratchet of any track (x4, then back to x1)",
                  ok && n == 21u && step_ratchet(&trk[1].step[2]) == 1u && !(trk[1].step[2].flags & SF_RATCH));
+    /* (0.8.5, INFO 4F 01 07) the lanes' modes: 8 bytes after the ratchet, in a reply only when asked for */
+    memcpy(a, (const uint8_t[]){0, 0, 0, 0, 0, 0, ST_NOTE, 0, 100, 0x09, 0, 0, 100, 1, 0, 0, 0, 2, 0, 0, 0, 0}, 22);
+    n = request(ED_STEP_SET, a, 22);
+    ok = n == 28u && step_lmode(&TSEL->step[0], DV_HATC) == LM_X4 && host_wire[n - 9 + DV_HATC] == LM_X4 &&
+         TSEL->step[0].hit == 0x09 && step_ratchet(&TSEL->step[0]) == 1u;
+    n = request(ED_STEP_SET, a, 14);
+    ok &= n == 20u && step_lmode(&TSEL->step[0], DV_HATC) == LM_X4;
+    a[1] = 1; n = request(ED_STEP_GET, a, 2);
+    ok &= n == 28u && host_wire[n - 9 + DV_HATC] == LM_X4;
+    n = request(ED_STEP_GET, a, 1);
+    ok &= n == 20u;
+    bad += check("STEP_SET / STEP_GET the lanes' modes (8 after the ratchet); without them kept, replies as before", ok);
+    before = TSEL->step[0];
+    memcpy(a, (const uint8_t[]){0, 0, 0, 0, 0, 0, ST_NOTE, 0, 100, 0x09, 0, 0, 100, 1, 0, 0, 0, 7, 0, 0, 0, 0}, 22);
+    bad += check("STEP_SET refuses a lane mode past 6 and leaves the step",
+                 !request(ED_STEP_SET, a, 22) && !memcmp(&before, &TSEL->step[0], sizeof before));
+    memcpy(a, (const uint8_t[]){3, 5, 0, 0, 0, 0, 0, ST_NOTE, 0, 100, 1, 0, 0, 100, 1, 6, 0, 0, 0, 0, 0, 0, 0}, 23);
+    n = request(ED_TRACK_STEP, a, 23);
+    ok = n == 29u && step_lmode(&trk[3].step[5], DV_KICK) == LM_FLAM;
+    a[2] = 1; n = request(ED_TRACK_STEP, a, 3);
+    bad += check("TRACK_STEP the lanes' modes of any track (FLAM on the kick; a read with 1 replies them)",
+                 ok && n == 29u && host_wire[n - 9 + DV_KICK] == LM_FLAM);
     return bad;
 }
 

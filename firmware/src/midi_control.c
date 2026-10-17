@@ -90,14 +90,22 @@ static void midi_release(uint32_t ch, uint32_t note)
         if (!--midi_ch[ch].owned[id - 1u])
             midi_ch[ch].targets &= (uint8_t)~(1u << (id - 1u));
     }
-    if (id && !midi_local_held(&trk[id - 1u], note))
+    if (id && drum_track(&trk[id - 1u]) && drum_oct_of(note)) {   /* (0.8.5) a band of the kit's octaves */
+        dxo_off(&trk[id - 1u], DXO_MIDI + (ch << 7) + note);
+        if (!midi_local_held(&trk[id - 1u], drum_oct_base(note)))
+            input_off(&trk[id - 1u], drum_oct_base(note));
+    } else if (id && !midi_local_held(&trk[id - 1u], note))
         input_off(&trk[id - 1u], note);           /* input_off also checks other MIDI owners */
 }
 
 /* a MIDI note-on (ch, note) of track t. A note another key or MIDI note holds already sounds: not started again */
 static void midi_play(track_t *t, uint32_t ch, uint32_t note, uint32_t vel)
 {
-    (void)ch;
+    if (drum_track(t) && drum_oct_of(note)) {          /* (0.8.5) the kit in another octave: its sound, ratcheted /
+                                                         * damped (seq.c dxo_on) */
+        dxo_on(t, drum_oct_base(note), drum_oct_of(note), vel, DXO_MIDI + (ch << 7) + note);
+        return;
+    }
     if (!midi_note_held(t, note) && !midi_local_held(t, note))
         input_on(t, note, vel);
 }
@@ -159,6 +167,8 @@ static void midi_silence_track(uint32_t track)
     track_t *t = &trk[track];
     uint32_t i;
     trk_all_off(t);
+    if (track < NPART)
+        dxo_n[track] = 0;                     /* (0.8.5) a held ratchet stops */
     t->nheld = t->arp_phys = t->rh_n = 0;
     arp_forget(t);
     t->seq_n = t->seq_hold = t->slide_glide = 0;

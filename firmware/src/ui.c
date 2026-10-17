@@ -836,7 +836,7 @@ static uint32_t note_len(const track_t *t, uint32_t c, uint32_t len)
 }
 
 enum { COMP_OFF, COMP_CHANCE, COMP_RATCH, COMP_ARPN, COMP_ARPQ, COMP_ARPS, COMP_TRIG, COMP_RAND, COMP_OCT, COMP_TONAL,
-       COMP_BEND, COMP_ECHO, COMP_PULSE, COMP_JUMP, COMP_REV, COMP_FILL, COMP_KILL, COMP_WALK, COMP_CLIMB, COMP_N };   /* (CP_* in order) */
+       COMP_BEND, COMP_ECHO, COMP_PULSE, COMP_JUMP, COMP_REV, COMP_FILL, COMP_KILL, COMP_WALK, COMP_CLIMB, COMP_TOUCH, COMP_N };   /* (CP_* in order) */
 static const char *const EV_NAMES[EV_N] = {"ALWAYS", "1:2", "2:2", "SKIP", "1:3", "2:3", "3:3", "1:4", "2:4", "3:4", "4:4",
                                            "1:8", "FIRST", "!FIRST"};   /* (0.6.92) EVERY */
 /* (0.6.92) a part of the step as a note value: n parts a step of the track's DIV (1/16: x2 1/32, x3 1/32T, x4 1/64 ..;
@@ -853,7 +853,8 @@ static void rate_name(const track_t *t, uint32_t n, char *b)
     b[0] = '1'; b[1] = '/'; fmt_int(b + 2, (int32_t)v); str_cpy(b + str_len(b), tr, 2);
 }
 static const char *const COMP_NAMES[COMP_N] = {"OFF", "CHANCE", "RATCH", "NOTES", "SEQ", "SCALE", "TRIG", "RAND", "OCT",
-                                               "TONAL", "BEND", "ECHO", "PULSE", "JUMP", "REV", "FILL", "KILL", "WALK", "CLIMB"};
+                                               "TONAL", "BEND", "ECHO", "PULSE", "JUMP", "REV", "FILL", "KILL", "WALK", "CLIMB",
+                                               "TOUCH"};
 /* (0.6.82) the COMP pages one after another: COMP (the step's first component), COMP 2 (its second), WHEN (theirs, and
  * the step's LEN): which this is (0..2) */
 static uint32_t comp_slot(void)
@@ -896,6 +897,7 @@ static void step_clear(step_t *st)
     st->comp = st->carg = 0;
     st->comp2 = st->carg2 = st->cwhen = st->ctime = 0;
     st->probability = 0;
+    st->lm[0] = st->lm[1] = st->lm[2] = 0;                /* (0.8.5) */
 }
 
 /* ------------------------------------------------------- the DRUM grid --- */
@@ -952,9 +954,25 @@ static void grid_hit(track_t *t, uint32_t i, uint32_t l, uint32_t on)
     } else {
         s->hit &= (uint8_t)~b;
         s->acc &= (uint8_t)~b;
+        step_set_lmode(s, l % NLANE, LM_NONE);         /* (0.8.5) its mode goes with it */
         if (!s->n && !s->hit)
             step_clear(s);
     }
+}
+/* (0.8.5) the grid's HIT of lane l at step i as one list: --, ON, then its modes x2 x4 x8 SHORT GHOST FLAM (0..7) */
+static const char *const GRID_HIT[LM_N + 1] = {"--", "ON", "x2", "x4", "x8", "SHORT", "GHOST", "FLAM"};
+static uint32_t grid_hit_of(const step_t *s, uint32_t l)
+{
+    return (step_lanes(s) >> (l % NLANE)) & 1u ? 1u + step_lmode(s, l) : 0u;
+}
+static void grid_hit_set(track_t *t, uint32_t i, uint32_t l, uint32_t v)
+{
+    if (!v) {
+        grid_hit(t, i, l, 0);
+        return;
+    }
+    grid_hit(t, i, l, 1);
+    step_set_lmode(&t->step[i % NSTEP], l, v - 1u);
 }
 
 /* the accent of lane l at step i (on 1, off 0, toggled 2); an accent on an empty lane adds the hit */
@@ -1204,6 +1222,7 @@ static void load_pat16(track_t *t, const uint8_t *note, const uint8_t *flags)
         s->vel = n ? 96 : 0;
         s->hit = s->acc = 0;
         s->probability = 0;
+        s->lm[0] = s->lm[1] = s->lm[2] = 0;             /* (0.8.5) */
         if (drum_track(t))                           /* a DRUM track: the lanes' notes as its grid */
             step_to_grid(s);
     }

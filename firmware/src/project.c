@@ -276,6 +276,7 @@ static void proj_trk_from(proj_trk_t *d, const int16_t *p, uint32_t np, uint8_t 
         s->flags = step[k].flags & 3u;          /* accent, slide: x1 (no RATCH then) */
         s->vel = step[k].vel;
         s->hit = s->acc = 0;
+        s->lm[0] = s->lm[1] = s->lm[2] = 0;
     }
 }
 
@@ -734,7 +735,7 @@ static uint8_t proj_full;                               /* the last proj_pack fa
 static int proj_step_empty(const step_t *s)
 {
     return !s->n && s->time == ST_REST && !s->flags && !s->vel && !s->hit && !s->acc && !s->probability && !s->comp &&
-           !s->comp2 && !s->cwhen && !s->ctime;
+           !s->comp2 && !s->cwhen && !s->ctime && !step_lm_any(s);
 }
 static uint32_t proj_step_x(const step_t *s, uint32_t *nn)   /* its x byte (0: none), *nn the notes stored */
 {
@@ -744,12 +745,14 @@ static uint32_t proj_step_x(const step_t *s, uint32_t *nn)   /* its x byte (0: n
     *nn = all ? 4u : s->n;
     return (s->hit || s->acc ? 1u : 0u) | (s->probability ? 2u : 0u) | (r & 2u ? 4u : 0u) | (all ? 8u : 0u) |
            (s->comp ? 16u : 0u) |                       /* (0.6.39) a component: two bytes, its type and arguments */
-           (s->comp2 || s->cwhen || s->ctime ? 32u : 0u);   /* (0.6.82) the second, WHEN, DIV / LEN: four more */
+           (s->comp2 || s->cwhen || s->ctime ? 32u : 0u) |   /* (0.6.82) the second, WHEN, DIV / LEN: four more */
+           (step_lm_any(s) ? 64u : 0u);                 /* (0.8.5) the lanes' modes: three more (firmware before refuses) */
 }
 static uint32_t proj_step_size(const step_t *s)
 {
     uint32_t nn, x = proj_step_x(s, &nn);
-    return 2u + nn + (x ? 1u + (x & 1u ? 2u : 0u) + (x & 2u ? 1u : 0u) + (x & 16u ? 2u : 0u) + (x & 32u ? 4u : 0u) : 0u);
+    return 2u + nn + (x ? 1u + (x & 1u ? 2u : 0u) + (x & 2u ? 1u : 0u) + (x & 16u ? 2u : 0u) + (x & 32u ? 4u : 0u) +
+                          (x & 64u ? 3u : 0u) : 0u);
 }
 static int proj_fm_kept(const project_t *q, uint32_t t)
 {
@@ -853,6 +856,7 @@ static int proj_pack(project_store_t *out, const project_t *q)
             if (x & 2u) b[pos++] = s->probability;
             if (x & 16u) { b[pos++] = s->comp; b[pos++] = s->carg; }
             if (x & 32u) { b[pos++] = s->comp2; b[pos++] = s->carg2; b[pos++] = s->cwhen; b[pos++] = s->ctime; }
+            if (x & 64u) { b[pos++] = s->lm[0]; b[pos++] = s->lm[1]; b[pos++] = s->lm[2]; }
         }
     }
     memcpy(b + pos, &q->chain, sizeof q->chain); pos += sizeof q->chain;
@@ -1036,7 +1040,7 @@ static int proj_unpack_c(project_t *q, const uint8_t *b)
             if (meta & 128u) {
                 if (pos + 1u > room) return 0;
                 x = b[pos++];
-                if (!x || (x & ~63u)) return 0;
+                if (!x || (x & ~127u)) return 0;
                 if (x & 8u) nn = 4u;
             }
             if (pos + nn + 1u > room) return 0;
@@ -1061,6 +1065,14 @@ static int proj_unpack_c(project_t *q, const uint8_t *b)
                 if (pos + 4u > room || (s->comp2 = b[pos++]) >= CP_N) return 0;
                 s->carg2 = b[pos++]; s->cwhen = b[pos++]; s->ctime = b[pos++];
                 if (CT_DIV(s) >= CT_NDIV || s->ctime > 127u) return 0;
+            }
+            s->lm[0] = s->lm[1] = s->lm[2] = 0;
+            if (x & 64u) {                              /* (0.8.5) the lanes' modes (a 7: none) */
+                uint32_t l;
+                if (pos + 3u > room) return 0;
+                s->lm[0] = b[pos++]; s->lm[1] = b[pos++]; s->lm[2] = b[pos++];
+                for (l = 0; l < NLANE; l++)
+                    step_set_lmode(s, l, step_lmode(s, l));
             }
             r |= (x >> 1) & 2u;
             step_set_ratchet(s, r + 1u);
@@ -1302,7 +1314,8 @@ static void proj_legacy_drums(track_t *t)
         t->p[P_DIST + i] = (int16_t)(pr->fx[i] ? pr->fx[i] - 1 : FX_DEF[i]);
 }
 
-static project_t proj_scratch __attribute__((section(".lowbuf")));   /* (0.6.78: below the RAM code, app.ld) */   /* decoded main-loop work, never audio ISR (0.6: pool) */
+static project_t proj_scratch __attribute__((section(".pool")));   /* (0.8.5: the pool again, LOWBUF full with the steps'
+                                                         * lane modes; 0.6.78 .. 0.8.4 LOWBUF) */   /* decoded main-loop work, never audio ISR (0.6: pool) */
 static char proj_name[PROJ_NAME_LEN + 1u]    /* the name of the music as it is now (loaded, saved, the editor's */
     __attribute__((section(".pool")));       /* runtime restore); "" = none. A save takes it unless one is given */
 #define PROJ_NO_SLOT 0xFFu

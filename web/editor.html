@@ -403,6 +403,10 @@ function readHits(r, o) {
   if (o.chance > 100) throw new Error("Invalid step chance");
   o.ratchet = r.i < r.a.length ? r.b() : 1;       /* RATCH (INFO 52 01): the step's hits 1..4; older firmware: 1 */
   if (o.ratchet < 1 || o.ratchet > 4) throw new Error("Invalid step ratchet");
+  if (r.i + 8 <= r.a.length) {                    /* (0.8.5, INFO 4F 01 07) each DRUM lane's mode 0..6; older firmware: none */
+    o.lanes = [];
+    for (let l = 0; l < 8; l++) { const m = r.b(); if (m > 6) throw new Error("Invalid step lane mode"); o.lanes.push(m); }
+  }
   return o;
 }
 
@@ -434,6 +438,7 @@ const parse = {
     o.syncCaps = 0;                               /* live sync: bit 0 WATCH while on keeps pending pushes, bit 1 no RELOAD */
     o.ratchet = 0;                                /* a step's ratchet (STEP_SET's byte after the chance), 0 = none */
     o.fm6Bank = 0;                                /* (JIANT 0.6.11) FM6's voice bank: its voices (cmds 74..77), 0 = none */
+    o.laneModes = 0;                              /* (JIANT 0.8.5) a step's DRUM lane modes (7: none x2 x4 x8 SHORT GHOST FLAM) */
     for (const p of [8, 11]) if (o.motionMax && trailer[p] === 0x46 && trailer[p + 1] === 1) {   /* for the editor's */
       o.fm6 = { factory: trailer[p + 2], bank: trailer[p + 3], caps: 0 };                         /* PRESET / G_ENGSEL */
       if (trailer[p + 4] === 0x53 && trailer[p + 5] === 1) o.syncCaps = trailer[p + 6] & 3;
@@ -444,6 +449,8 @@ const parse = {
       if (o.syncCaps && trailer[r] === 0x52 && trailer[r + 1] === 1) { o.ratchet = trailer[r + 2]; r += 3; }   /* RATCH: max hits */
       if (trailer[r] === 0x4C && trailer[r + 1] === 1) r += 3;                            /* parameter locks (1.1) */
       if (trailer[r] === 0x56 && trailer[r + 1] === 1) o.fm6Bank = trailer[r + 2];          /* (0.6.11) the voice bank's size */
+      for (let k = r; k + 2 < trailer.length; k += 3)                                    /* (0.8.5) 'O': the steps' lane modes */
+        if (trailer[k] === 0x4F && trailer[k + 1] === 1) { o.laneModes = trailer[k + 2]; break; }
     }
     /* (JIANT 0.8.5) 'Y' 1 n, the last tag: LYRIC (cmd 39), a track's lyric of at most n bytes; 0 = none */
     const ty = trailer.length - 3;
@@ -603,14 +610,16 @@ const req = {
   set: (scope, id, v) => [CMD.SET, [scope, id, ...v14enc(v)]],
   dump: () => [CMD.DUMP, []],
   desc: (scope, id) => [CMD.DESC, [scope, id]],
-  stepGet: (i) => [CMD.STEP_GET, [i]],
+  stepGet: (i, lanes) => [CMD.STEP_GET, lanes ? [i, 1] : [i]],   /* (0.8.5: lanes, INFO 4F 01: the lanes' modes too) */
   stepSet: (i, st) => {
     const n = Math.max(0, Math.min(4, st.n | 0));
     const notes = [0, 1, 2, 3].map((k) => (st.notes[k] | 0) & 0x7F);
     return [CMD.STEP_SET, [i, n, ...notes, Math.max(0, Math.min(2, st.time | 0)), st.flags & 3, (st.vel | 0) & 0x7F,
       ...(st.hit == null && st.chance == null ? [] : hitsEnc(st.hit | 0, st.acc | 0)),
       ...(st.chance == null ? [] : [Math.max(0, Math.min(100, st.chance | 0))]),
-      ...(st.chance == null || st.ratchet == null ? [] : [Math.max(1, Math.min(4, st.ratchet | 0))])]];   /* (only after the chance) */
+      ...(st.chance == null || st.ratchet == null ? [] : [Math.max(1, Math.min(4, st.ratchet | 0))]),   /* (only after the chance) */
+      ...(st.chance == null || st.ratchet == null || !st.lanes ? [] :   /* (0.8.5) the lanes' modes: only after the ratchet, */
+        Array.from({ length: 8 }, (_, l) => Math.max(0, Math.min(6, st.lanes[l] | 0))))]];   /* read from a device that has them */
   },
   preset: (e, p) => [CMD.PRESET, [e & 0x7F, p & 0x7F]],
   project: (op, slot) => { if (![0, 1, 2].includes(op)) throw new Error("bad PROJECT op"); return [CMD.PROJECT, [op, slot & 3]]; },   /* 0 load, 1 save, 2 query */
@@ -642,7 +651,7 @@ const req = {
   track: (sel) => [CMD.TRACK, sel == null ? [] : [sel & 0x7F]],
   trackMix: (tr, level, mute) => [CMD.TRACK_MIX, level == null ? [tr & 0x7F] : [tr & 0x7F, ...v14enc(level), mute ? 1 : 0]],
   trackDump: (tr) => [CMD.TRACK_DUMP, [tr & 0x7F]],
-  trackStep: (tr, i, st) => [CMD.TRACK_STEP, st ? [tr & 0x7F, ...req.stepSet(i, st)[1]] : [tr & 0x7F, i & 0x7F]],
+  trackStep: (tr, i, st, lanes) => [CMD.TRACK_STEP, st ? [tr & 0x7F, ...req.stepSet(i, st)[1]] : lanes ? [tr & 0x7F, i & 0x7F, 1] : [tr & 0x7F, i & 0x7F]],
   /* v4: get (v == null) or set parameter id (P_*) of track tr, clamped as SET */
   trackParam: (tr, id, v) => [CMD.TRACK_PARAM, v == null ? [tr & 0x7F, id & 0x7F] : [tr & 0x7F, id & 0x7F, ...v14enc(v)]],
   /* FM6 patches (firmware with info.fm6) */
@@ -1815,12 +1824,15 @@ function makeMockDevice(opt = {}) {
       : { engine: st.engine, name, p: st.p.slice(), pattern: patternFromSteps(st.step), grid: null, fm6 };
   };
   const ratchetOn = () => !!syncCaps() && !opt.noRatchet;   /* (INFO 52 01 04, after the sync tag) */
-  const stepOut = (x, b) => { b(x.n); x.notes.forEach(b); b(x.time); b(x.flags); b(x.vel); hitsEnc(x.hit, x.acc).forEach(b); if (!opt.legacy && !opt.v3 && !opt.v5) b(x.chance ?? 100); if (ratchetOn()) b(x.ratchet ?? 1); };
+  const lanesOn = () => ratchetOn() && !opt.noLanes;   /* (0.8.5, INFO 4F 01 07, after the voice bank) */
+  const stepOut = (x, b, lanes) => { b(x.n); x.notes.forEach(b); b(x.time); b(x.flags); b(x.vel); hitsEnc(x.hit, x.acc).forEach(b); if (!opt.legacy && !opt.v3 && !opt.v5) b(x.chance ?? 100); if (ratchetOn()) b(x.ratchet ?? 1);
+    if (lanes && lanesOn()) for (let l = 0; l < 8; l++) b(x.lanes ? x.lanes[l] : 0); };   /* (0.8.5: asked for, editor.c) */
   function stepIn(x, a) {                         /* editor.c ed_step_put: n, 4 notes, time, flags, vel [, hits (3) [, chance [, ratchet]]] */
     x.n = Math.min(4, a[0]); x.notes = a.slice(1, 5); x.time = Math.min(2, a[5]); x.flags = a[6] & 3; x.vel = a[7];
     if (a.length >= 11) { x.hit = a[8] | (a[10] & 1) << 7; x.acc = (a[9] | (a[10] & 2) << 6) & x.hit; }
     if (a.length >= 12) x.chance = Math.min(100, a[11]);
     if (a.length >= 13 && ratchetOn()) x.ratchet = Math.max(1, Math.min(4, a[12]));
+    if (a.length >= 21 && lanesOn()) x.lanes = a.slice(13, 21).map((m) => (m > 6 ? 0 : m));
   }
   /* a few user presets to start with, each with its preset's suggested pattern stored (as UP_STORE would) */
   [[0, 0, 0, "MY LEAD"], [1, FM6_E, 1, "GLASS BELL"], [2, 2, 3, "PHASE RESO"], [5, 3, 2, "8BIT ARP"]].forEach(([slot, e, p, name]) => {
@@ -1985,7 +1997,8 @@ function makeMockDevice(opt = {}) {
           b(16);
           if (st.uiCaps) { b(0x55); b(1); b(st.uiCaps); b(0x4d); b(1); b(64); b(1); if (!opt.noFm6) { b(0x46); b(1); b(FM6.FACTORY_PK.length); b(0); }
             if (syncCaps()) { b(0x53); b(1); b(syncCaps()); if (!opt.noFm6) { b(0x50); b(1); b(3); } if (ratchetOn()) { b(0x52); b(1); b(4); }
-              if (!opt.noFm6 && !opt.noVbank && ratchetOn()) { b(0x56); b(1); b(32); } } }   /* (FM6 v2: no bank, preset patches; 0.6.11: the voice bank) */
+              if (!opt.noFm6 && !opt.noVbank && ratchetOn()) { b(0x56); b(1); b(32); }
+              if (lanesOn()) { b(0x4F); b(1); b(7); } } }   /* (FM6 v2: no bank, preset patches; 0.6.11: the voice bank; 0.8.5: the lanes' modes) */
           if (st.uiCaps && !opt.noLyric) { b(0x59); b(1); b(63); }   /* (0.8.5) LYRIC, the last tag */
         }
         break;
@@ -2050,7 +2063,7 @@ function makeMockDevice(opt = {}) {
         if (a.length < 2 || a[0] >= NTRK || a[1] >= NSTEP) return null;
         const x = st.tracks[a[0]].step[a[1]];
         if (a.length >= 10) stepIn(x, a.slice(2));
-        b(a[0]); b(a[1]); stepOut(x, b);
+        b(a[0]); b(a[1]); stepOut(x, b, a.length === 23 || (a.length === 3 && a[2] === 1));
         break;
       }
       case CMD.DESC: {
@@ -2065,7 +2078,7 @@ function makeMockDevice(opt = {}) {
         if (a.length < 1 || a[0] >= NSTEP) return null;
         const x = st.step[a[0]];
         if (cmd === CMD.STEP_SET && a.length >= 9) stepIn(x, a.slice(1));
-        b(a[0]); stepOut(x, b);
+        b(a[0]); stepOut(x, b, a.length === 22 || (cmd === CMD.STEP_GET && a.length === 2 && a[1] === 1));
         break;
       }
       case CMD.FM6B_BEGIN: case CMD.FM6B_WRITE: case CMD.FM6B_END: case CMD.FM6B_LIST: {   /* (0.6.11) fm6_vbank.c */
@@ -2873,7 +2886,7 @@ async function sessionRequest(d, r, opt) {
 const rq = (r, opt) => sessionRequest(dev, r, opt);
 async function getDesc(scope, id, d = dev) { return parse[CMD.DESC](await sessionRequest(d, req.desc(scope, id))); }
 async function getDump(d = dev) { const reply = await sessionRequest(d, req.dump()); lastDump = Date.now(); return parse[CMD.DUMP](reply, d.info); }
-async function getStep(i, d = dev) { return parse[CMD.STEP_GET](await sessionRequest(d, req.stepGet(i))); }
+async function getStep(i, d = dev) { return parse[CMD.STEP_GET](await sessionRequest(d, req.stepGet(i, !!(d && d.info && d.info.laneModes)))); }
 
 /* the whole connect sequence */
 async function load(d) {

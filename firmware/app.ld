@@ -6,8 +6,9 @@
  * busy: the flash driver), .c1_text (the second core's loop), .hot_text (core 0's hottest audio code). A call reaches
  * +-4 MiB (pi32v2 imm23 x 2, no long calls in this compiler): RAM code there reaches the whole XIP image (build.py
  * checks the margin); at 0x01C00000 it reached none of it.
- * LOWBUF 0x01C00000..0x01C07000 (0.6.78; 0.6.82: 4 KiB more, the steps grew): main-loop buffers (undo, the project
- * scratch, the song section's stage; 0.8.4: the fonts' decode tables, in the pool since 0.8.5), zeroed at boot; 0x01C07000..0x01C08000 stays for RAM-run debug.
+ * LOWBUF 0x01C00000..0x01C07000 (0.6.78; 0.6.82: 4 KiB more, the steps grew): main-loop buffers (undo, the song
+ * section's stage; the project scratch until 0.8.4 and the fonts' decode tables in 0.8.4, both in the pool since
+ * 0.8.5), zeroed at boot; 0x01C07000..0x01C08000 stays for RAM-run debug.
  * RAM  : .data/.bss (96 KiB)
  * POOL : big zero-initialised buffers (FX lines, canvases), section .pool
  * STACKS with 256-byte guard bands; NOINIT survives resets and UBOOT entry.

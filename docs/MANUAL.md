@@ -107,7 +107,7 @@ The names below are the ones the firmware uses (the HARDWARE CALIBRATION screen 
 | **SEQ** | SEQ pages: on a SEQ page, the next set of knobs of the zoom level you are on; from elsewhere, back to the level and set you last used on that track. | **SEQ TOOLS** layer (on every SEQ page). |
 | **PLAY** | Start / stop. | — |
 | **REC** | Arms / disarms recording on the selected track. | **REC** layer: CLEAR, CLICK. |
-| **OCT− / OCT+** | Keyboard octave (−3 to +3; both together: back to 0). On action pages and in dialogs: **OCT−** = back / NO, **OCT+** = do it / YES. | — |
+| **OCT− / OCT+** | Keyboard octave (−3 to +3; both together: back to 0; on a DRUM track the kit stays on its keys: ratchets above, SHORT / GHOST / FLAM below, see [5](#5-drum-x)). On action pages and in dialogs: **OCT−** = back / NO, **OCT+** = do it / YES. | — |
 
 ### The keys
 
@@ -618,6 +618,42 @@ DRUM-X is a synthesized kit of eight sounds, **BD SD CP CH OH TM RS CB**, genera
 - **EDIT held + SELECT** rolls a new kit around the factory one. **EDIT held + F3 (INIT)** brings the factory kit
   back.
 
+### The kit in every octave (0.8.5)
+
+The keys play the kit on the same keys at **every OCT** (C the kick, D the snare, F# the closed hat …); OCT now
+changes **how** they play, not which sound. The screen says it when you press OCT on a DRUM track:
+
+| OCT | What a key does | Recorded (REC) as the hit and its sound's mode |
+|---|---|---|
+| **+3** | **RATCHET x8**: the hit eight times a step while held | **x8** |
+| **+2** | **RATCHET x4** | **x4** |
+| **+1** | **RATCHET x2** | **x2** |
+| **0** | the kit as it always was | none (**ON**) |
+| **−1** | **SHORT**: half the decay | **SHORT** |
+| **−2** | **GHOST**: short, softer (~45 %), darker: a ghost note | **GHOST** |
+| **−3** | **FLAM**: a soft grace hit, then the hit ~20 ms later (whatever the tempo) | **FLAM** |
+
+- The ratchets are **in time**: playing, the hits fall on the step's RATCH grid (each step's start, then every step/n,
+  swing included); stopped, every step/n of the track's DIV from the press. Letting go stops them.
+- **Each sound has its own mode on each step** (0.8.5): a hi-hat roll recorded onto a step that has a kick ratchets
+  the hi-hat only, a ghost snare leaves the kick as it is. The mode applies to that sound's hit and to its notes on the
+  step (a low tom on TM); the last hit you record on a sound sets it.
+- **Live recording keeps what you played**: the step you hit gets the hit and its sound's mode; hold a ratchet over
+  several steps and every step it is held into is written too (and plays from the sequencer, so the next pass sounds
+  exactly as you heard it). Let go before the middle of the last one and that step is put back, as with a held synth
+  note.
+- **See and edit it** on SEQ > STEP (the DRUM grid): KNOB 2 picks the sound, **KNOB 3 HIT** goes **--, ON, x2, x4, x8,
+  SHORT, GHOST, FLAM** for it on the cursor step (left back to -- takes the hit and its mode away). The step's own
+  RATCH, ECHO and TOUCH (SEQ > COMP) still work on the whole step, as before.
+- **MIDI** (0.8.5): notes 35–81 still play the GM drum map exactly as before. The notes around it, which used to play
+  their octave of 36–47 plain, are now these octaves, by pitch class: **23–34 SHORT, 11–22 GHOST, 0–10 FLAM, 82–93
+  x2, 94–105 x4, 106–127 x8** (84 the kick x2, 24 the kick SHORT, 90 the closed hat x2). The keys send those notes to
+  MIDI OUT. **A song or MIDI setup that sent drum notes below 35 or above 81** (a kick on 24, say) will now hear these
+  variations: move them into 35–81 (36–47 for the kit's own) to keep the old sound. Notes stored in the steps play as
+  before, whatever their number.
+- With the ARP on, the keys feed the arp plain (no ratchet or TOUCH). The DRUM grid's lane keys are always the centre
+  octave.
+
 One kit per section, shared by every track on DRUM: while another track plays DRUM-X, browsing kit presets on a different track keeps that kit ("KIT OF T4 KEPT", 0.8.1); load kits on the drum track itself. The kit is saved with each section of a project (not with user presets — see [12](#12-saving-and-loading)).
 
 ---
@@ -718,6 +754,11 @@ recorded into the pattern, quantized to its steps, overdubbing. Knob moves on th
     the first time (an intro), !FIRST every loop but the first (0.6.92; it was TIMES).
   - **FILL**: the step plays only while **FX** is held.
   - **KILL**: the step first cuts everything the track is sounding (long releases, held notes), then plays.
+  - **TOUCH** (0.8.5, a DRUM track): how all its hits are struck, KNOB 3 **SHORT** (half the decay), **GHOST** (short,
+    softer, darker), **FLAM** (a soft grace hit ~20 ms before); one sound alone: its mode on the grid (see
+    [5](#5-drum-x)). On other engines it does nothing.
+  - ECHO's **EVEN** (0.8.5): an ECHO that keeps every repeat at the step's level (a ratchet past RATCH's x4, set from
+    the editor or a 0.8.5 development build); the card shows "x8 EVEN", KNOB 3 keeps it.
   - **WALK** and **CLIMB** (0.6.98, after the OP-Z's and OP-XY's evolving components): the step's notes move one
     degree of the scale (WALK) or one octave (CLIMB) **every so many loops** of the pattern (KNOB 4: 1 … 10, 12, 16
     loops a move), over a **range** (WALK 3, 5, 7 or 12 degrees; CLIMB 1 … 4 octaves), then round again. KNOB 3 the

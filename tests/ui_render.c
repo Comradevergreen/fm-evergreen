@@ -659,6 +659,7 @@ enum { S_HOME, S_HOME_IDLE, S_MESSAGE, S_MESSAGE_KEY, S_MESSAGE_NOFILE, S_PRESET
        S_HEAD_BPM_LOCKED, S_HEAD_GLO_TURN, S_HEAD_DOWNBEAT, S_HEAD_BEAT_2,
        S_SAVE_LIB, S_SAVE_TOOLS, S_SAVE_PROJ, S_SAVE_ARR, S_SAVE_SOUND, S_SAVE_PRESETS,
        S_FXL_SENDS, S_FXL_DIST, S_FXL_PAN, S_FXL_BUSES, S_FXL_DELAY, S_FXL_DELAY2, S_FXL_REVERB, S_FXL_SLICER, S_FXL_MASTER,
+       S_DRUM_X4, S_DRUM_GHOST, S_DRUM_OCT_UP, S_DRUM_OCT_DN, S_COMP_TOUCH, S_COMP_EVEN,
        S_MIXER_T4, S_HOME_T4, S_MOCK_HOME, S_MOCK_PRESETS, S_MOCK_SEQ, S_MOCK_DRUM, S_MOCK_MIXER, S_MOCK_DIALOG, S_MOCK_MENU, S_COUNT };
 static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "message", "message_key", "message_nofile", "presets", "presets_nofav", "user",
     "phrases", "project", "tools", "song_empty", "song", "step", "pattern", "chance", "comp", "comp_trig", "comp_echo", "mutate", "morph", "dx_image", "dx_send", "page_flash", "page_flash_home", "fugue", "motion", "drum",
@@ -684,6 +685,7 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "message", "mes
     "save_library", "save_tools", "save_project", "save_arrange", "save_sound", "save_presets",
     "fx_track_sends", "fx_track_dist", "fx_track_pan", "fx_buses", "fx_effect_delay", "fx_effect_delay2", "fx_effect_reverb",
     "fx_effect_slicer", "fx_effect_master",
+    "drum_hit_x4", "drum_hit_ghost", "drum_oct_x8", "drum_oct_flam", "comp_touch", "comp_echo_even",
     "mixer_tracks4", "home_tracks4", "mock_home", "mock_presets", "mock_seq", "mock_drum", "mock_mixer", "mock_dialog", "mock_menu"};
 
 /* the scenes of the UI design screens: the state the UI-redesign
@@ -1333,6 +1335,25 @@ static void setup(int s)
         eng(ENGI_VOICE_UI); TSEL->p[P_VLANG] = LG_JA; song.playing = 1;
         lyr_set(song.sel, "SAKURA SAKURA YAYOI NO SORA WA MI WATASU KAGIRI KASUMI KA KUMO");
         go_page(GR_LYRIC); name_open(NK_LYRIC, song.sel); nm.cur = 40; nm.key = 3; nm.tap = 1; nm.t = fm1_ms;
+        break;
+    /* (0.8.5) DRUM-X octaves: the grid's HIT as its modes (the hat on step 3 x4; the snare on step 5 GHOST, the hat
+     * beside it FLAM); OCT on a DRUM track names the octave (+3 RATCHET x8, -3 FLAM); COMP's TOUCH and ECHO EVEN */
+    case S_DRUM_X4: case S_DRUM_GHOST:
+        drum(0); go_page(GR_ROLL); trk[3].seq_idx = 9;
+        step_set_lmode(&trk[3].step[2], 3, LM_X4); step_set_lmode(&trk[3].step[4], 1, LM_GHOST);
+        step_set_lmode(&trk[3].step[4], 3, LM_FLAM);
+        if (s == S_DRUM_X4) { ui.cursor = 2; ui.lane = 3; } else { ui.cursor = 4; ui.lane = 1; }
+        break;
+    case S_DRUM_OCT_UP: case S_DRUM_OCT_DN:
+        drum(0); go_page(GR_ROLL); ui.cursor = 4; ui.lane = 1;
+        song.octave = s == S_DRUM_OCT_UP ? 3 : -3;
+        ui_message(drum_oct_name(song.octave));
+        break;
+    case S_COMP_TOUCH: case S_COMP_EVEN:
+        drum(0);
+        trk[3].step[0].comp = s == S_COMP_TOUCH ? CP_TOUCH : CP_ECHO;
+        trk[3].step[0].carg = s == S_COMP_TOUCH ? 1u : (uint8_t)(2u | CP_ECHO_EVEN);
+        go_page(GR_COMP); ui.cursor = 0;
         break;
     default: break;
     }

@@ -16,6 +16,9 @@ the FM-1, with sound, and is played with your computer keyboard or the mouse. Th
 editor update themselves with every change merged into `main`.
 
 > **Status: in development (v0.8.5).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+  **DRUM-X octaves** (0.8.5): the kit stays on its keys at every OCT; above the centre it ratchets in time (x2, x4, x8),
+  below it plays SHORT, GHOST or FLAM, each sound its own on each step, and live recording keeps exactly what you
+  played. MIDI drum notes outside 35–81 now trigger these variations: see the changelog before installing.
 
 > ⚡ **New in 0.6.85 – 0.6.92: a song generator you steer, a compact sequencer that breathes, a delay that feeds back.**
 > - **GEN (HOME + SELECT)**: a screen of three pages — GENRE (43 genres or RANDOM), SEED, ENERGY, FORM (loop, parts,
@@ -582,17 +585,6 @@ Every update is listed here, newest first. (Since 0.6.80 at the end of the page:
   **EDIT · WORDS**; the LYRIC typing screen is the NAME screen's.
 - **Presets** (appended, every sound before keeps its number): CANTOR ES, CANTORA ES, SINGER EN, UTA JA, WORD CHOIR,
   SCAT EN, ROBOT EN, WHISPER JA.
-- **What 0.8.5 costs** (0.8.4 → 0.8.5, the words and the mock-up's skin and lenses together): flash image 498108 →
-  552440 B (+54.3 KB; the words +41.7 KB of it: the English dictionary 18.9 KB, the word banks 7.4 KB, the code,
-  phoneme table, UI and protocol ~15 KB; the skin and the three lenses the rest); the app slot (581564 B) keeps 29124 B
-  free. RAM .data+.bss 84848 → 85732 B of 98304 (+884: the six singers' state, 104 B each, and the lenses' state); the
-  lyrics (6 × 64 B) in the pool, the audio reads them there as it reads the FX lines. LOWBUF was full after 0.8.4 and
-  the project's scratch holds a copy of the lyrics (+384 B), so the fonts' decode tables (1.5 KB) moved from LOWBUF to
-  the pool: LOWBUF 28064 → 26900 B of 28672 (608 → 1772 B free). The pool 247584 → 257248 B (the lens panel's canvas
-  +7.5 KB, the decode tables, the lyrics; spare 72928 → 63264 B). No state per voice. CPU (callgrind, instructions a
-  sample, 4 voices): VOICE's vowels 1592 → 1605, singing 1743 (ES) / 1726 (EN), against ANALOG's 2314 with eight
-  voices; the heaviest section song/cputest 3046 → 3079 (+1.1 %). On the target VOICE's loop (tests/target_budget)
-  312 → 315 with LANG OFF, 326 singing (ANALOG's 603).
 - **Tests**: tests/voice_test.c (40 Spanish words and 21 Japanese ones against their expected phonemes and
   syllables, the English dictionary, every bank word's syllables, the generator's determinism and phrase lengths, the
   vowels' F1 / F2, *s sh f* bands and levels, a plosive's closure and burst, no click at syllable changes, DC, clipping
@@ -600,6 +592,52 @@ Every update is listed here, newest first. (Since 0.6.80 at the end of the page:
   trip and older projects without them (tests/project_test.c), LYRIC over the protocol and the editor's mock
   (tests/editor_test.c, web/test_web.mjs), the WORDS and LYRIC screens linted (tests/ui_render.c), cpu_vg's
   eng/VOICE.ES / .EN.
+- **DRUM-X octaves** (the owner: "in the centre octave the DRUM-X as it is now; going up the octaves the same sounds in
+  ratchet with the step components that exist, an octave up half the ratchet time and so on; going down something
+  else"). On a DRUM track the keys keep the kit on the same keys at every OCT (C the kick, D the snare …); OCT now says
+  **how** they play, and the screen names it: **+1 RATCHET x2, +2 x4, +3 x8** (in time while held: playing on the step's
+  RATCH grid, swing included, stopped every step/n from the press); **−1 SHORT** (half the decay), **−2 GHOST** (short,
+  ~45 % of the level, darker: a ghost note), **−3 FLAM** (a soft grace hit, the hit ~20 ms later whatever the tempo).
+  OCT 0 is the kit as it was, bit for bit (every golden render unchanged).
+- **Per sound** (the owner chose it): every step holds a **mode for each of the 8 sounds** (none, x2, x4, x8, SHORT,
+  GHOST, FLAM), on that sound's hit and its notes only. A hi-hat roll recorded onto a step with a kick ratchets the
+  hi-hat alone; a ghost snare leaves the kick as it is. On the DRUM grid (SEQ > STEP) **KNOB 3 HIT** of the selected
+  sound goes --, ON, x2, x4, x8, SHORT, GHOST, FLAM. The step's own RATCH / ECHO / TOUCH (SEQ > COMP; ECHO's new
+  **EVEN** keeps its repeats at one level, TOUCH a whole step's SHORT / GHOST / FLAM) work on the whole step as before.
+- **Recorded as played** ("y que se graben así en record en la secuencia"): live REC writes the hit and its sound's mode,
+  so the pass after sounds as you heard it (tested to the block); a ratchet held over several steps writes each of them
+  (an early release in the last one puts it back, as a held note's TIE). The last hit recorded on a sound sets it.
+- **MIDI**: 35–81 play the GM drum map exactly as before. The notes around it, which played their octave of 36–47 plain,
+  are now the octaves' bands by pitch class: 23–34 SHORT, 11–22 GHOST, 0–10 FLAM, 82–93 x2, 94–105 x4, 106–127 x8 (MIDI
+  OUT sends the keys' notes the same way). **A song or setup that sent drum notes below 35 or above 81 sounds different
+  now**: move them into 35–81 to keep the old sound. Notes stored in steps play as before, whatever their number; the
+  keys with OCT moved no longer reach GM 56–81 (MIDI still does).
+- **Projects**: the same FUNC format; a step with lane modes sets bit 6 of its extension byte and adds 3 bytes (3 bits
+  a sound). Every 0.8.4 project loads unchanged (no modes) and saves byte for byte as before until a mode is set.
+  Firmware before 0.8.5 refuses a project holding a lane mode or a TOUCH (back up first) and plays an ECHO EVEN as an
+  ordinary, fading ECHO. User presets' patterns have no room for the modes. The editor protocol: INFO `4F 01 07`, 8
+  mode bytes after a step's ratchet (written with them, read with STEP_GET's flag 1); every older reply unchanged.
+- Tests: tests/drumx_oct_test.c (centre bit for bit, the ratchets stopped and playing on the grid, SHORT / GHOST / FLAM
+  measured, live REC played back as heard both ways, per sound: kick plain + hat x4 + snare GHOST on one step, recorded
+  and played back; the grid's HIT list; MIDI bands and MIDI REC; FUNC round trip, a 0.8.4-style step packed as before,
+  an older FUNB project with none; the OCT message, COMP); editor_test and web/test_web.mjs: the lane modes over the
+  protocol and the installer's notice. The installer (preview and official) shows a notice (EN / JA / ES) whenever
+  0.8.5 is the version picked and asks to confirm a backup; the landing page does not. FELUCCA_VERSION is v0.8.5.
+  tests/ui_render.c: the grid's HIT x4 / GHOST, the OCT messages (RATCHET x8, FLAM), COMP's TOUCH and ECHO EVEN in
+  the mock-up's skin, every palette, linted.
+- **What 0.8.5 costs** (0.8.4 → 0.8.5: the words, the DRUM-X octaves, the mock-up's skin and lenses together): flash
+  image 498108 → 555928 B (+57.8 KB: the words +41.7 KB of it, the English dictionary 18.9 KB, the word banks 7.4 KB,
+  their code, phoneme table, UI and protocol ~15 KB; the octaves +1.2 KB; the skin and the three lenses the rest); the
+  app slot (581564 B) keeps 25636 B free. A step is 3 bytes longer (17 → 20 B, the lanes' modes, every copy): RAM
+  .data+.bss 84848 → 88340 B of 98304 (the tracks' 408 steps +1224, the dice / shape / GEN copies +576, the held
+  ratchets; the six singers' state, 104 B each; the lenses' state). LOWBUF was full after 0.8.4: the project's scratch
+  (now with the lyrics, +384 B) and the fonts' decode tables (1.5 KB) moved from LOWBUF to the pool, the section stage
+  grew in it (+1152): LOWBUF 28064 → 18232 B of 28672 (10440 B free). The pool 247584 → 268412 B (the project scratch,
+  the lens panel's canvas +7.5 KB, the decode tables, the lyrics; spare 72928 → 52096 B); RAM code 21676 → 22084 B. No
+  state per voice. CPU (callgrind, instructions a sample): the heaviest section song/cputest 3079 → 3081; eng/DRUM
+  1579 → 1582 (a table look-up a hit, a byte test a block when nothing is held or ratchets); VOICE's vowels 1606,
+  singing 1744 (ES) / 1727 (EN), against ANALOG's 2314 with eight voices. On the target VOICE's loop
+  (tests/target_budget) 312 → 315 with LANG OFF, 326 singing (ANALOG's 603); drum_render 33 and dx_run 419 unchanged.
 - **FX is a lens, as the approved mock-up** (FX "LENTE"): **TRACK · BUSES · EFFECT**, SELECT zooms. TRACK: an FX tap
   goes round SENDS · DIST · AUTO PAN, each with its picture (the sends as bars, DIST's curve, AUTO PAN's swing) and
   DIST's curve small under it. BUSES (a new page): the six modules DELAY REVERB CHORUS SLICER MASTER PUNCH as tiles

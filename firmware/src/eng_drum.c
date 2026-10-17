@@ -7,7 +7,7 @@
  * Before Felucca 1.0 this engine was PHYS's MODEL DRUM; those sounds load as it (drum_from_phys in core.h).
  *
  * Keys and notes: the keys play the General MIDI drum map with the kick on the first C (C KICK, C# RIM,
- * D SNARE, D# CLAP, F# HAT CL, A# HAT OP, F G A B C D TOMS, C# CYM, G# BELL; OCT -/+ move it), and a note
+ * D SNARE, D# CLAP, F# HAT CL, A# HAT OP, F G A B C D TOMS, C# CYM, G# BELL; at every OCT: above it ratcheted, below it damped, 0.8.5), and a note
  * plays its GM drum on its lane (35..81: kicks, snares, toms, hats, cymbals and bells on BELL, congas on TOM, claves
  * on RIM, each at its pitch from the lane's; other notes as their octave of 36..47), so GM patterns and MIDI parts
  * play as drums.
@@ -39,6 +39,8 @@ typedef struct {
     uint8_t age;                 /* blocks since the hit (255: and more): PUNCH's shape */
     int8_t rm, rt;               /* (0.5.1) X-MOD RAND: this hit's MORPH offset, its tune (1/16 semitones) */
     int16_t bc, bd, bs;          /* (0.6.82) a step's BEND on the hit: now, where to, a block's step (1/16 semitones) */
+    uint8_t dm, fl, fv;          /* (0.8.5) its TOUCH 0..3 (DXO_*: SHORT GHOST FLAM, 0 as the kit has it); FLAM: blocks
+                                  * to the hit itself (0 none), its velocity */
 } drum_lane_t;
 /* (JIANT 0.5.1) X-MOD (EDIT > X-MOD on a DRUM track): the kit's own modulator, saved with the kit (project.c, in its
  * reserved bytes): RATE (OFF, 4BAR 2BAR 1BAR 1/2 1/4 1/8 1/16 1/32: a tempo-synced LFO), DPTH (how far it moves
@@ -92,6 +94,49 @@ static const int8_t DRUM_GM[47][2] = {
     {DV_RIM, -7}, {DV_TOM, 12}, {DV_TOM, 8}, {DV_BELL, 12}, {DV_BELL, 12},                            /* 77 */
 };
 static uint32_t drum_gm_ix(uint32_t note) { return (note >= 35u && note <= 81u ? note : 36u + (note + 120u - 36u) % 12u) - 35u; }
+
+/* (JIANT 0.8.5) the octaves of the kit. OCT 0, where the keys play the GM map (key 7 the kick, 36), is the kit as it
+ * always was. The other octaves play the same sounds on the same keys (drum_keys: OCT no longer moves the notes).
+ * Above, ratcheted in time while held (seq.c dxo_tick): x2 at OCT +1, x4 at +2, x8 at +3; recorded as the hit and the
+ * step's RATCH x2 / x4, at +3 its ECHO x8 EVEN (core.h CP_ECHO_EVEN: the eight at one level). Below, each hit with a
+ * TOUCH (drum_lane_t.dm; the step's TOUCH component, core.h CP_TOUCH, when recorded): OCT -1 SHORT (half the decay),
+ * -2 GHOST (short, darker, at ~45 % of its level: a ghost note), -3 FLAM (a soft grace hit, then the hit itself
+ * DXO_FLAM later, ~20 ms whatever the tempo). MIDI keeps the GM map on 35..81, as ever; the notes around it, which
+ * played their octave of 36..47 plain, are those octaves' bands: 23..34 -1, 11..22 -2, 0..10 -3, 82..93 +1, 94..105
+ * +2, 106..127 +3, each by its pitch class (84 the kick x2, 24 the kick SHORT). dx_in_tch: a live hit's TOUCH,
+ * track_t.dtch: a step's */
+static const uint8_t DXO_RAT[4] = {1, 2, 4, 8};          /* OCT 0 +1 +2 +3: hits a step */
+static const int8_t DXO_DEC[4] = {0, -14, -14, 0};       /* TOUCH 0..3: on DECAY (14: half the decay time, dx_tau) */
+static const int8_t DXO_TON[4] = {0, 0, -24, 0};         /* .. on TONE (COLOR: the lane's filter, its drive) */
+static const uint8_t DXO_VEL[4] = {128, 128, 58, 58};    /* .. on the velocity, /128 (FLAM: its grace hit's) */
+#define DXO_FLAM ((FS * 20u / 1000u + CTL / 2u) / CTL)   /* FLAM: blocks from the grace hit to the hit (~20 ms) */
+static uint8_t dx_in_tch, dx_in_rat;                     /* the live note's TOUCH / RATCH (seq.c dxo_on; 0 none) */
+static int32_t drum_oct_of(uint32_t note)                /* a MIDI note's octave of the kit */
+{
+    if (note >= 35u && note <= 81u)
+        return 0;
+    if (note < 35u)
+        return -(int32_t)((35u - note + 11u) / 12u);
+    return note >= 106u ? 3 : note >= 94u ? 2 : 1;
+}
+static uint32_t drum_oct_base(uint32_t note) { return 36u + (note + 120u - 36u) % 12u; }   /* .. its sound (36..47) */
+/* the MIDI note of key note at octave o (MIDI OUT): its band's note of the same pitch class (DRUM_GM's 48..55 are
+ * their pitch class there) */
+static uint32_t drum_oct_note(uint32_t note, int32_t o)
+{
+    int32_t lo, hi, n;
+    if (!o)
+        return note;
+    lo = o > 0 ? 82 + 12 * (o > 3 ? 2 : o - 1) : o == -1 ? 23 : o == -2 ? 11 : 0;
+    hi = o > 2 ? 127 : o == -3 ? 10 : lo + 11;
+    n = lo + (((int32_t)drum_oct_base(note) - lo) % 12 + 12) % 12;
+    return (uint32_t)(n > hi ? n - 12 >= 0 ? n - 12 : 11 : n);
+}
+static const char *drum_oct_name(int32_t o)              /* what OCT does on a DRUM track (ui_input.c) */
+{
+    static const char *const N[7] = {"FLAM", "GHOST", "SHORT", "DRUM-X KIT", "RATCHET x2", "RATCHET x4", "RATCHET x8"};
+    return N[clamp(o, -3, 3) + 3];
+}
 
 /* ----------------------------------------------------- the grid's lanes --- */
 /* A step's lane hits (step_t.hit / acc, the DRUM grid: SEQ > STEP on a DRUM track) play these GM notes, on any
@@ -204,6 +249,14 @@ static void drum_note_on(track_t *t, voice_t *v)
     L->bd = t->dbend;
     L->bs = (int16_t)(t->dbend ? ((t->dbend < 0 ? -t->dbend : t->dbend) + t->dbt) / (t->dbt ? t->dbt : 1u) : 0);
     L->owner = (uint8_t)(i + 1u);                        /* (its last voice, if another, ends: drum_amp) */
+    L->dm = (uint8_t)((dx_in_tch ? dx_in_tch : t->dtch) & 3u);   /* (0.8.5) TOUCH: a key below the kit's octave, a step */
+    L->fl = 0;
+    if (L->dm) {
+        L->fv = v->vel;
+        v->vel = (uint8_t)((v->vel * DXO_VEL[L->dm] + 64u) >> 7 ? (v->vel * DXO_VEL[L->dm] + 64u) >> 7 : 1u);
+        if (L->dm == 3u)
+            L->fl = (uint8_t)(DXO_FLAM + 1u);            /* (FLAM: the grace hit now, the hit DXO_FLAM blocks on, drum_render) */
+    }
     v->s[0] = (int32_t)lane;
     v->env_out = v->vel * 258;                           /* the hit starts at its level (no ramp from 0) */
     v->env = 1 << 24;                                    /* the ADSR held at full from here, not from drum_amp:
@@ -235,7 +288,7 @@ static int32_t drum_amp(track_t *t, voice_t *v, int32_t adsr)
         return 0;
     if (v->stage == 4u)                                  /* (0.6.74) given up: env_tick's fade, not held at full */
         return adsr;
-    if (!L || (!L->x.live && !L->x.trig)) {
+    if (!L || (!L->x.live && !L->x.trig && !L->fl)) {   /* (0.8.5: a FLAM's hit to come keeps it) */
         v->active = v->gate = 0;
         v->stage = 0;
         v->env = 0;
@@ -390,6 +443,7 @@ static void drum_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const 
         uint32_t g0 = L->mg;
         if (!g0) {
             L->x.live = L->x.trig = 0;                   /* (drum_amp ends the voice) */
+            L->fl = 0;
             L->x.hl = 0;                                 /* (0.6.19: the next hit starts its upsampling from 0) */
             return;
         }
@@ -397,6 +451,15 @@ static void drum_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const 
         ml.amp0 = m->amp0 * (int32_t)g0 / (int32_t)DXG_FADE;
         ml.amp1 = m->amp1 * (int32_t)(g0 - 1u) / (int32_t)DXG_FADE;
         m = &ml;
+    }
+    if (L->fl == 2u)                                     /* (0.8.5) FLAM: its velocity back a block before the hit
+                                                          * (voice.c takes the level before the render) */
+        v->vel = L->fv;
+    if (L->fl && !--L->fl) {                             /* .. the hit itself */
+        dx_trigger(&L->x);
+        L->age = 0;
+        if (((uint32_t)v->s[0] & (DV_NLANE - 1u)) == DV_HATC)
+            dx_choke(&drum_kit_of(t)[DV_HATO].x);
     }
     if (lv < 127) {                                      /* the lane's LEVEL (square law) on the block's amplitude
                                                           * ramp, not per sample; 100 %: the ramp as it was */
@@ -419,7 +482,7 @@ static void drum_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const 
     }
     dx_run(&dx_kit[(uint32_t)v->s[0] & (DV_NLANE - 1u)], &L->x, p[P_E0] + dx_mot_v + L->rm + lfo_shp,
            L->st * 16 + L->rt + L->bc + (p[P_E1] - 64) * 3 + t->pfx_pit + lfo_pit,
-           p[P_E3] - 64, p[P_E2] - 64, p[P_E4] - 64, p[P_E6], p[P_E5], y, n);
+           p[P_E3] - 64 + DXO_DEC[L->dm & 3u], p[P_E2] - 64 + DXO_TON[L->dm & 3u], p[P_E4] - 64, p[P_E6], p[P_E5], y, n);
     {                                                    /* PUNCH: the boost before the knee (driven into it, as
                                                           * Drum Buss), the tail's cut on the amplitude ramp */
         int32_t pu = pnch_eff;
@@ -493,11 +556,11 @@ static __attribute__((noinline)) void drum_bus(const track_t *t, int32_t *out, u
     }
 }
 
-/* the GM drum map, the first C (key 7) is the kick (C2, 36) */
+/* the GM drum map, the first C (key 7) is the kick (C2, 36), at every OCT (0.8.5: the octaves, above) */
 static int32_t drum_keys(const track_t *t, uint32_t k)
 {
     (void)t;
-    return clamp(29 + 12 * song.octave + (int32_t)k, 0, 127);
+    return clamp(29 + (int32_t)k, 0, 127);                /* (0.8.5: every octave; OCT ratchets / damps, seq.c dxo_on) */
 }
 
 /* {MRPH, TUNE, TONE, DECY, NOIS, FM, FOLD, DRV}; the kit suggests the BEAT pattern (GM notes) */
