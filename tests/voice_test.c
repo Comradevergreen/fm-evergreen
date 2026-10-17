@@ -120,6 +120,103 @@ static void demo_wav(const char *dir, const char *name, int32_t pi, const char *
     fclose(w);
 }
 
+/* (0.9.0) the English words resolved in the main loop (sing.c lyb_*, lyc[]): each entry what sy_word gives; and a
+ * VOICE EN track sings the same with them as without (TEXT, W, S), sample for sample */
+static int entry_is(const uint8_t *e, const char *txt, uint32_t len)
+{
+    uint8_t buf[SW_MAX];
+    char w[20], nw[24];
+    uint32_t ns = 0, n = sy_word(LG_EN, nw, sy_wkey(txt, len, w, nw), buf, &ns);
+    return e[0] == n && e[1] == ns && !memcmp(e + 2, buf, n);
+}
+static uint32_t render_en(uint32_t lyr, const char *text, int cached, int32_t *out, uint32_t max)
+{
+    static const nt_t NT[] = {{60, 2}, {62, 2}, {64, 1}, {65, 1}, {67, 4}, {65, 2}, {64, 2}, {62, 1}, {60, 3}, {0, 1},
+                              {57, 2}, {59, 2}, {60, 4}, {62, 1}, {64, 1}, {67, 2}, {64, 2}, {60, 4}};
+    static int32_t o[2 * CTL];
+    uint32_t k, i, n = 0, eighth = FS * 60u / 100u / 2u, nn = sizeof NT / sizeof NT[0];
+    memset(trk, 0, sizeof trk);
+    memset(sing, 0, sizeof sing);
+    formant_nz = 0x2545F491;                             /* (the breath's noise: from its start, a render repeats) */
+    host_tracks_init();
+    host_preset(&trk[0], eng_voice(), (uint32_t)preset_of("SINGER EN"));
+    trk[0].p[P_CHOR] = trk[0].p[P_DLY] = trk[0].p[P_REV] = 0;   /* (dry: the FX lines carry nothing over) */
+    trk[0].p[P_VLANG] = LG_EN;
+    lyr_set(0, text);
+    trk[0].p[P_VLYR] = (int16_t)lyr;
+    lyb_ok = (uint8_t)cached;
+    if (!cached)
+        lyc[0].seq |= 1u;                                /* (as while it is written: not read) */
+    for (k = 0; k < 3u * nn; k++) {
+        uint32_t len = NT[k % nn].len * eighth, note = NT[k % nn].note;
+        if (note)
+            trk_note_on(&trk[0], note, 100);
+        for (i = 0; i < len; i += CTL) {
+            uint32_t j;
+            if (note && i + CTL >= len - len / 8u && i < len - len / 8u)
+                trk_note_off(&trk[0], note);
+            track_render(&trk[0], o, CTL);              /* (the part alone, as vrender: no buses carried over) */
+            for (j = 0; j < CTL && n < max; j++)
+                out[n++] = o[j];
+        }
+    }
+    lyc[0].seq &= ~1u;
+    lyb_ok = 1;
+    return n;
+}
+static void check_cache(void)
+{
+    static const char *const TX[] = {
+        "Love me tender, love me sweet; never let me go", "strength through the starlight - - oh",
+        "don't stop believing hold_on to that feeling", "zorblat QUIXOTIC antidisestablishmentarianism xyz",
+        "a b c d e f g h i j k l m n o p q r s t u v w x y z a b c d e f", "the the the the the the the the the the the the",
+        "", "---", "it's a beautiful day in the neighbourhood isn't it"};
+    static const char *const LT[] = {"TEXT", "W1", "W7", "W16", "S1", "S5"};
+    static const uint8_t LV[] = {0, 1, 7, 16, LYR_NW + 1u, LYR_NW + 5u};
+    static int32_t a[FS * 40], b[FS * 40];
+    uint32_t k, bad_b = 0, miss = 0, used = 0, ntok = 0, bad_t = 0, nocache = 0;
+    sing_init();
+    for (k = 0; k < LYB_N; k++) {
+        const char *q = k < LYB_SCAT ? ly_word(&LY_BANK[1], k) : k < LYB_N - 1u ? SCAT_EN[k - LYB_SCAT] : VOCABLE[1];
+        if (!lyb_at[k]) miss++;
+        else {
+            bad_b += !entry_is(&lyb_ph[lyb_at[k] - 1u], q, 64u);
+            used = lyb_at[k] + 1u + lyb_ph[lyb_at[k] - 1u];   /* (the last entry's end) */
+        }
+    }
+    printf("voice:   the generator's English words resolved at boot: %u of %u, %u B of %u, %u differ, %u missing\n",
+           (unsigned)(LYB_N - miss), (unsigned)LYB_N, used, (unsigned)LYB_PH, bad_b, miss);
+    check("English words resolved off the ISR (sing_init): every word the generator sings, each as sy_word reads it",
+          !bad_b && !miss && lyb_ok);
+    for (k = 0; k < sizeof TX / sizeof TX[0]; k++) {
+        uint32_t p = 0, s0, s1, mel;
+        lyr_set(0, TX[k]);
+        while (sy_tok(lyr_txt[0], p, &s0, &s1, &mel)) {
+            if (!mel) {
+                ntok++;
+                if (!lyc[0].at[s0] || lyc[0].ph[lyc[0].at[s0] - 1u] != s1) nocache++;
+                else bad_t += !entry_is(&lyc[0].ph[lyc[0].at[s0]], &lyr_txt[0][s0], s1 - s0);
+            }
+            p = s1;
+        }
+    }
+    printf("voice:   TEXT lyrics' words resolved with the text: %u words, %u differ, %u left to the lookup (past %u B)\n",
+           ntok, bad_t, nocache, (unsigned)LYC_N);
+    check("English words resolved off the ISR (lyr_set): every TEXT word as sy_word reads it", !bad_t && ntok > 60u);
+    for (k = 0, bad_b = 0; k < sizeof LV; k++) {
+        const char *text = LV[k] ? "" : TX[k % 3u];
+        uint32_t na = render_en(LV[k], text, 1, a, sizeof a / sizeof a[0]);
+        uint32_t nb = render_en(LV[k], text, 0, b, sizeof b / sizeof b[0]), j, nz = 0;
+        for (j = 0; j < na; j++) nz += a[j] != 0;
+        if (na != nb || memcmp(a, b, na * sizeof a[0]) || nz < na / 4u) {
+            for (j = 0; j < na && a[j] == b[j]; j++) ;
+            printf("voice:   %s: the cached words sing otherwise (%u %u samples, %u sounding, first at %u)\n", LT[k], na, nb, nz, j);
+            bad_b++;
+        }
+    }
+    check("VOICE EN with the words resolved off the ISR: TEXT W1 W7 W16 S1 S5 sample for sample as with the lookup", !bad_b);
+}
+
 /* ------------------------------------------------------------------------------------------ the checks --- */
 #define NFFT 4096
 static void fft(double *re, double *im, uint32_t n)
@@ -831,6 +928,7 @@ int main(int argc, char **argv)
     check_cost();
     if (argc > 1)
         demos(argv[1]);
+    check_cache();                                       /* (0.9.0; after the demos: they render as before) */
     printf("voice: %s\n", bad ? "FAILED" : "all checks ok");
     return bad != 0;
 }

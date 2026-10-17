@@ -632,12 +632,133 @@ static uint32_t sy_norm(const char *s, uint32_t n, char *d, uint32_t max)
     return m;
 }
 
-/* GEN: the next word into s->w (W: the bank; S: scat) */
-static void sy_gen_word(const track_t *t, sing_t *s, uint32_t lang, uint32_t lyr)
+/* (0.9.0) English words resolved in the main loop, so the audio ISR does not search the dictionary (Huffman-coded:
+ * ~3x the old lookup's instructions) when a word starts. sy_word's result (n phonemes, ns syllables, the bytes) for:
+ *   lyb_*  every word the generator can sing in English (the bank's LY_EN_NW, SCAT_EN, the vocable), built once at
+ *          boot (sing_init) and never written again (lyb_ok published last);
+ *   lyc[]  each track's TEXT lyric's words, built with it (lyr_set, the main loop): ph[at[p] - 1] the entry of the
+ *          word at p, [its end, n, ns, the bytes]. seq is odd while it is written (a seqlock: core 1 sings too).
+ * A word not there (a cache not ready, a lyric past LYC_N bytes, its text changing) is looked up as before: the same
+ * result, the cost of 0.9.0's search (only then). sy_take reads the word's phonemes kept in sing_w (a track's: in the
+ * pool, so sing[] and the RAM region keep their layout, and the audio code its code). */
+#define LYB_NONE 0xFFFFu
+#define LYB_SCAT LY_EN_NW                                /* SCAT_EN's from here, then the vocable */
+#define LYB_N (LY_EN_NW + NELEM(SCAT_EN) + 1u)
+#define LYB_PH 1856u                                     /* (2 + n a word: tests/voice_test.c checks they all fit) */
+#define LYC_N 192u
+static const char *const VOCABLE[3] = {"la", "oh", "ra"};   /* ES EN JA: what is sung when no word fits */
+static uint16_t lyb_at[LYB_N] __attribute__((section(".pool")));   /* 1 + the word's entry in lyb_ph, 0 none */
+static uint8_t lyb_ph[LYB_PH] __attribute__((section(".pool")));
+static uint8_t lyb_ok __attribute__((section(".pool")));   /* (the pool: the RAM region's small globals as they were) */
+typedef struct {
+    uint32_t seq;
+    uint8_t at[LYR_LEN];
+    uint8_t ph[LYC_N];
+} lyc_t;
+static lyc_t lyc[NTRK] __attribute__((section(".pool")));
+typedef struct {
+    uint8_t wok, wlang, wn, wnsy;   /* wph holds the word's (sing_t.w's) phonemes in wlang: n, ns, then them */
+    uint8_t wph[SW_MAX];
+} sw_t;
+_Static_assert(__builtin_offsetof(sw_t, wph) == __builtin_offsetof(sw_t, wn) + 2u, "sw_t wn wnsy wph: an entry");
+static sw_t sing_w[NTRK] __attribute__((section(".pool")));
+
+/* text (at most n characters) as s->w takes it (19 and the 0), then for sy_word: its letters, lower case */
+static uint32_t sy_wkey(const char *txt, uint32_t n, char *w, char *nw)
+{
+    uint32_t i, m = 0;
+    for (i = 0; i < n && txt[i] && m + 1u < 20u; i++)
+        w[m++] = txt[i];
+    w[m] = 0;
+    return sy_norm(w, 20u, nw, 24u);
+}
+/* the entry (n, ns, the bytes) of English word w into e (room: max): its size, 0 = it does not fit */
+static uint32_t sy_entry(const char *txt, uint32_t len, uint8_t *e, uint32_t max)
+{
+    uint8_t buf[SW_MAX];
+    char w[20], nw[24];
+    uint32_t ns = 0, n = sy_word(LG_EN, nw, sy_wkey(txt, len, w, nw), buf, &ns), i;
+    if (2u + n > max)
+        return 0;
+    e[0] = (uint8_t)n;
+    e[1] = (uint8_t)ns;
+    for (i = 0; i < n; i++)
+        e[2u + i] = buf[i];
+    return 2u + n;
+}
+/* (the main loop, at boot) the generator's English words */
+static void sing_init(void)
+{
+    uint32_t k, o = 0;
+    lyb_ok = 0;
+    for (k = 0; k < LYB_N; k++) {
+        const char *q = k < LYB_SCAT ? ly_word(&LY_BANK[1], k) : k < LYB_N - 1u ? SCAT_EN[k - LYB_SCAT] : VOCABLE[1];
+        uint32_t m = sy_entry(q, 64u, &lyb_ph[o], LYB_PH - o);
+        lyb_at[k] = (uint16_t)(m ? o + 1u : 0u);
+        o += m;
+    }
+    RING_PUBLISH();
+    lyb_ok = 1;
+}
+/* the next TEXT token at or after p in txt: its start (*a, *b its end, *mel "-"), 0 = none at or after p */
+static __attribute__((noinline)) int sy_tok(const char *txt, uint32_t p, uint32_t *a, uint32_t *b, uint32_t *mel)
+{
+    uint32_t q;
+    while (p < LYR_LEN && txt[p] && !(txt[p] == '-' || txt[p] == '_' || txt[p] == '\'' ||
+                                     (txt[p] >= 'a' && txt[p] <= 'z') || (txt[p] >= 'A' && txt[p] <= 'Z')))
+        p++;
+    if (!(p < LYR_LEN && txt[p]))
+        return 0;
+    q = p;
+    *mel = txt[p] == '-';
+    if (*mel)
+        q = p + 1u;
+    else
+        while (q < LYR_LEN && (txt[q] == '_' || txt[q] == '\'' || (txt[q] >= 'a' && txt[q] <= 'z') ||
+                               (txt[q] >= 'A' && txt[q] <= 'Z')))
+            q++;
+    *a = p;
+    *b = q;
+    return 1;
+}
+/* (the main loop: lyr_set) track k's lyric's English words, from its text */
+static void lyc_build(uint32_t k)
+{
+    lyc_t *c = &lyc[k];
+    const char *txt = lyr_txt[k];
+    uint32_t p = 0, a, b, mel, o = 0;
+    for (a = 0; a < LYR_LEN; a++)
+        c->at[a] = 0;
+    while (p < LYR_LEN && sy_tok(txt, p, &a, &b, &mel)) {
+        if (!mel && o + 1u < LYC_N) {
+            uint32_t m = sy_entry(&txt[a], b - a, &c->ph[o + 1u], LYC_N - o - 1u);
+            if (m) {
+                c->ph[o] = (uint8_t)b;
+                c->at[a] = (uint8_t)(o + 1u);
+                o += 1u + m;
+            }
+        }
+        p = b;
+    }
+}
+/* entry e (n, ns, the bytes) into out: n */
+static __attribute__((noinline)) uint32_t sy_take_entry(const uint8_t *e, uint8_t *out, uint32_t *ns)
+{
+    uint32_t n = e[0], i;
+    *ns = e[1];
+    for (i = 0; i < n; i++)
+        out[i] = e[2u + i];
+    return n;
+}
+
+/* GEN: the next word into s->w (W: the bank; S: scat); (0.9.0) returns its place in the English cache (lyb_*), else
+ * LYB_NONE */
+static uint32_t sy_gen_word(const track_t *t, sing_t *s, uint32_t lang, uint32_t lyr)
 {
     uint32_t theme = (uint32_t)clamp(t->p[P_E1], 0, 127) >> 4, tries, pcat = 0;
     int32_t j = -1;
     const ly_bank_t *b = &LY_BANK[(lang - 1u) % 3u];
+    uint32_t src = LYB_NONE;
     if (!s->prem) {                                      /* a new phrase */
         s->prem = (uint8_t)sy_phrase_len(t);
         s->rng = ((lyr * 0x9E3779B1u) ^ (lang * 0x85EBCA77u) ^ (theme * 0xC2B2AE3Du) ^ (s->phr * 0x27D4EB2Fu)) | 1u;
@@ -652,14 +773,17 @@ static void sy_gen_word(const track_t *t, sing_t *s, uint32_t lang, uint32_t lyr
         uint32_t ns = lang == LG_EN ? 1u : 1u + sy_rnd(&s->rng) % 3u, k, m = 0;
         if (ns > s->prem) ns = s->prem;
         for (k = 0; k < ns; k++) {
-            const char *q = L[sy_rnd(&s->rng) % nl];
+            uint32_t r = sy_rnd(&s->rng) % nl;
+            const char *q = L[r];
             if (!k && q[0] == 'n' && !q[1]) q = "na";    /* (no word starts with the moraic n) */
+            if (lang == LG_EN && ns == 1u)
+                src = LYB_SCAT + r;
             while (*q && m + 1u < sizeof s->w)
                 s->w[m++] = *q++;
         }
         s->w[m] = 0;
         s->prem = (uint8_t)(s->prem - ns);
-        return;
+        return src;
     }
     for (tries = 0; tries < 10u && j < 0; tries++) {
         const char *const *T = lang == LG_ES ? TPL_ES : lang == LG_EN ? TPL_EN : TPL_JA;
@@ -691,12 +815,13 @@ static void sy_gen_word(const track_t *t, sing_t *s, uint32_t lang, uint32_t lyr
         for (tries = 0; tries < 6u && j < 0; tries++)
             j = ly_pick(lang, (sy_rnd(&s->rng) % 7u + 5u) % 8u, tries & 1u, s->prem, 1, &s->rng);
     if (j < 0) {                                         /* a vocable */
-        const char *v = lang == LG_ES ? "la" : lang == LG_EN ? "oh" : "ra";
+        const char *v = lang == LG_ES ? VOCABLE[0] : lang == LG_EN ? VOCABLE[1] : VOCABLE[2];
+        src = LYB_N - 1u;
         s->w[0] = v[0];
         s->w[1] = v[1];
         s->w[2] = 0;
         s->prem--;
-        return;
+        return src;
     }
     {
         const char *q = ly_word(b, j);
@@ -710,40 +835,31 @@ static void sy_gen_word(const track_t *t, sing_t *s, uint32_t lang, uint32_t lyr
             s->w[m - 1u] = 'a';                          /* the adjective after a feminine noun */
         s->prem = (uint8_t)(s->prem - clamp(b->meta[j] & 15u, 1, s->prem));
     }
+    return (uint32_t)j;                                  /* (English: the bank's word j, as it is) */
 }
 
 /* the next word (or "-") of the lyric into s: its text, its syllables; 0 = none */
 static int sy_word_next(const track_t *t, sing_t *s, uint32_t lang, uint32_t lyr)
 {
-    uint8_t buf[SW_MAX];
-    uint32_t ns = 0, tries;
+    uint32_t ns = 0, n = 0, tries, ti = (uint32_t)(t - trk) % NTRK;
     char nw[24];
-    const char *txt = lyr_txt[(uint32_t)(t - trk) % NTRK];
+    const char *txt = lyr_txt[ti];
+    const lyc_t *c = &lyc[ti];
+    sw_t *sw = &sing_w[ti];
+    sw->wok = 0;
     for (tries = 0; tries < 48u; tries++) {
+        const uint8_t *e = 0;
+        uint32_t seq = *(const volatile uint32_t *)&c->seq, p = 0, q = 0, mel = 0;
+        RING_PUBLISH();
         s->mel = 0;
         if (!lyr && txt[0]) {                            /* TEXT: its next token */
-            uint32_t p = (uint32_t)s->to + s->tl, q, wrap = 0;
-            for (;;) {
-                while (p < LYR_LEN && txt[p] && !(txt[p] == '-' || txt[p] == '_' || txt[p] == '\'' ||
-                                                 (txt[p] >= 'a' && txt[p] <= 'z') || (txt[p] >= 'A' && txt[p] <= 'Z')))
-                    p++;
-                if (p < LYR_LEN && txt[p])
-                    break;
-                if (wrap++)
-                    return 0;                            /* (no word in the whole text) */
-                p = 0;
-            }
-            q = p;
-            if (txt[p] == '-') {
-                q = p + 1u;
-                s->mel = 1;
-            } else
-                while (q < LYR_LEN && (txt[q] == '_' || txt[q] == '\'' || (txt[q] >= 'a' && txt[q] <= 'z') ||
-                                       (txt[q] >= 'A' && txt[q] <= 'Z')))
-                    q++;
+            if (!sy_tok(txt, (uint32_t)s->to + s->tl, &p, &q, &mel) && !sy_tok(txt, 0, &p, &q, &mel))
+                return 0;                                /* (no word in the whole text) */
+            s->mel = (uint8_t)mel;
             s->to = (uint8_t)p;
             s->tl = (uint8_t)(q - p);
             if (s->mel) {
+                sw->wok = 0;
                 s->wns = 1;
                 s->wsy = 0;
                 s->w[0] = '-';
@@ -756,10 +872,25 @@ static int sy_word_next(const track_t *t, sing_t *s, uint32_t lang, uint32_t lyr
                     s->w[m++] = txt[i];
                 s->w[m] = 0;
             }
+            if (lang == LG_EN && !(seq & 1u) && c->at[p] && c->ph[c->at[p] - 1u] == q)
+                e = &c->ph[c->at[p]];                    /* (its words resolved with the text: lyr_set) */
         } else {
-            sy_gen_word(t, s, lang, lyr ? lyr : 1u);
+            uint32_t src = sy_gen_word(t, s, lang, lyr ? lyr : 1u);
+            if (lang == LG_EN && src < LYB_N && lyb_ok && lyb_at[src])
+                e = &lyb_ph[lyb_at[src] - 1u];           /* (the generator's: sing_init) */
         }
-        (void)sy_word(lang, nw, sy_norm(s->w, sizeof s->w, nw, sizeof nw), buf, &ns);
+        if (e) {
+            n = sy_take_entry(e, sw->wph, &ns);
+            RING_PUBLISH();
+            if (!lyr && txt[0] && *(const volatile uint32_t *)&c->seq != seq)
+                e = 0;                                   /* (the text changed meanwhile: as before) */
+        }
+        if (!e)
+            n = sy_word(lang, nw, sy_norm(s->w, sizeof s->w, nw, sizeof nw), sw->wph, &ns);
+        sw->wn = (uint8_t)n;
+        sw->wnsy = (uint8_t)ns;
+        sw->wlang = (uint8_t)lang;
+        sw->wok = 1;
         if (ns) {
             s->wns = (uint8_t)ns;
             s->wsy = 0;
@@ -770,11 +901,15 @@ static int sy_word_next(const track_t *t, sing_t *s, uint32_t lang, uint32_t lyr
 }
 
 /* syllable k of word s->w -> ph (its phonemes), *nu its nucleus, *cd its coda's start; the count */
-static uint32_t sy_take(uint32_t lang, const sing_t *s, uint32_t k, uint8_t *ph, uint32_t *nu, uint32_t *cd)
+static uint32_t sy_take(uint32_t lang, const sing_t *s, const sw_t *sw, uint32_t k, uint8_t *ph, uint32_t *nu, uint32_t *cd)
 {
     uint8_t buf[SW_MAX];
     char nw[24];
-    uint32_t ns, n = sy_word(lang, nw, sy_norm(s->w, sizeof s->w, nw, sizeof nw), buf, &ns), i = 0, a, m = 0, v;
+    uint32_t ns, n, i = 0, a, m = 0, v;
+    if (sw->wok && sw->wlang == lang)                    /* (0.9.0) the word's, as sy_word_next resolved it */
+        n = sy_take_entry(&sw->wn, buf, &ns);            /* (wn, wnsy, wph: an entry's layout) */
+    else
+        n = sy_word(lang, nw, sy_norm(s->w, sizeof s->w, nw, sizeof nw), buf, &ns);
     for (a = 0; a < n; a++)                              /* the k-th syllable's first phoneme */
         if ((buf[a] & SYB) && !k--)
             break;
@@ -902,7 +1037,7 @@ static void sy_next(const track_t *t, sing_t *s, uint32_t lang, uint32_t lyr)
         }
         return;
     }
-    n = sy_take(lang, s, s->wsy, ph + nc, &nu, &cd);
+    n = sy_take(lang, s, &sing_w[(uint32_t)(t - trk) % NTRK], s->wsy, ph + nc, &nu, &cd);
     s->wsy++;
     s->nsy++;
     for (k = 0; k < nc + n && k < SY_N; k++)
@@ -1105,8 +1240,13 @@ static void lyr_set(uint32_t k, const char *s)
     for (; i < LYR_LEN; i++)
         b[i] = 0;
     k %= NTRK;
+    lyc[k].seq++;                                        /* (odd: the audio does not read the cache meanwhile) */
+    RING_PUBLISH();
     for (i = 0; i < LYR_LEN; i++)
         lyr_txt[k][i] = b[i];
+    lyc_build(k);                                        /* (0.9.0) its English words resolved */
+    RING_PUBLISH();
+    lyc[k].seq++;
     lyr_gen[k]++;
 }
 static const char *lyr_get(uint32_t k) { return lyr_txt[k % NTRK]; }
