@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.8.8).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.8.9).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
   **The dice starts in EXPLORE** (0.8.6): HOME + SELECT opens GEN on a choice that follows no genre and breaks every
   rule (any tempo, odd metres and polyrhythm, exotic modes, any engine on any role, DRUM-X octaves, PLAYHEADS, MUTATE),
   each seed a very different piece, still in the key its SCALE and CHORD pages show. RANDOM and the 43 genres follow.
@@ -329,8 +329,10 @@ each layer; the complete manual is in **[docs/MANUAL.md](docs/MANUAL.md)** (en e
 ### 2. Reading the screen
 - **HOME**: each being is a track. Its species tells the engine, its shape comes from its four knobs, and it swells
   and heats up with its own audio. The biggest one is the selected track; a dark one is muted.
-- **Colours**: cold (cyan, blue) is little, hot (orange, yellow, white) is a lot. Violet is what's selected, orange
-  what's active.
+- **Colours**: cold (indigo, violet) is little, hot (red, orange, cream, white) is a lot. Violet is what's selected,
+  orange what's active; each knob has its own colour on its card (violet, yellow, blue, red on JIANT).
+- **Skin** (MENU > DISPLAY > SKIN, 0.8.9): **COLORS** the cards on top in the 0.6 colours, **BOTTOM** the knobs a slim
+  row at the foot and the middle free, **HUD** HOME's beings over the whole screen under floating words.
 - **Load meter** (top right, next to the battery): five small bars showing how much of the audio time the sound is
   using right now. The firmware's RAM is reserved entirely at boot and doesn't change, so this is what's worth
   watching: with all five lit (red, yellow) you're close to the limit and should cut voices, the CLOUD reverb or heavy
@@ -544,6 +546,26 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### v0.8.9
+- **Three skins, MENU > DISPLAY > SKIN** (the approved mock-up "skin aireado", options 1, 3 and 4), every page and
+  palette, FLAT and LINE:
+  - **COLORS** (the default; older settings load as it): the LENTE layout in the **0.6 colours**: black, near-black
+    rounded cards with a small mark, **each knob its colour** on its value and bar (violet, yellow, blue, red on JIANT;
+    four per palette), the knob you turn framed in its colour, the level tab filled violet, the track's number in an
+    orange box with a violet ▶ and a big violet BPM, a near-black rounded panel, the beings in the 0.6 heat.
+  - **BOTTOM**: the tabs three words, no cards, no panel box: the middle of the screen is the picture, edge to edge, the
+    four knobs a slim row over the breadcrumb.
+  - **HUD**: on HOME the beings swim under everything, over the whole screen; the header, tabs, knobs and breadcrumb
+    float over them as outlined words; the knob row fades to a fifth a few seconds after the last turn.
+  Values are in a rounded sans again (Inter Tight SemiBold), as in 0.6. MENU > LARGE keeps its tall cards on top in
+  every skin.
+- **The held layers look like JIANT, not like Felucca**: MAP is the keyboard itself (F3–G5, every key named upright
+  by what it does, held keys lit, the value violet, muted tracks pale), KNOBS the four as gauges in their colours with the
+  layer's key words, STATE what is on as chips; the header names the layer in words ("[GLO] SET", no keycap), and so do
+  the header's messages. The dialogs (NOTICE, DICE) wear the skin too. Every key, knob and combo does what it did.
+- The sound is the same: no change in the audio path (golden renders, CPU baselines and target budgets unchanged).
+  Image 568320 -> 572288 B (+3968; 9276 B of the slot free).
 
 ### v0.8.8
 - **HOME's beings roam free again, exactly as before 0.8.5**: no grid, no ring, no names. Each track's being swims by

@@ -135,6 +135,27 @@ layer's shortcuts; on the DRUM grid they are steps and lanes; on the NAME screen
 
 ## 2. The screen
 
+### Skins: COLORS, BOTTOM, HUD (0.8.9)
+
+**MENU > DISPLAY > SKIN** picks how the lenses are dressed (the approved mock-up "skin aireado", options 1, 3 and 4);
+every page, every palette, FLAT and LINE:
+
+- **COLORS** (the default; older settings load as it): the LENTE layout in the **0.6 colours**. Black, near-black
+  rounded cards with a small mark and the knob's name, **each knob its colour** on its value and its bar (KNOB 1
+  violet, 2 yellow, 3 blue, 4 red on JIANT; every palette has its own four), the knob you turn framed in its colour; the
+  level tab filled violet; the selected track's number in an orange box, a violet ▶ and a big violet BPM in the header;
+  a near-black rounded panel; the beings in the 0.6 heat (violet spikes, red and orange rings, cream nuclei).
+- **BOTTOM**: the tabs are three words (the level's underlined by a small pill), no cards and no panel box: the middle
+  of the screen is the picture, the screen's width (HOME's beings get the most room), and the four knobs are a slim row
+  over the breadcrumb (mark and name, the value in its colour, a hairline bar).
+- **HUD**: as BOTTOM, but on HOME the beings swim **under everything, over the whole screen**: the header, the tabs,
+  the knobs and the breadcrumb float over them as words with a thin dark outline. The knob row fades to a fifth a few
+  seconds after you last turned a knob, and comes back at the next turn. The level's word is underlined.
+
+Values (cards, the header's BPM) are set in a rounded sans again (Inter Tight SemiBold), as in 0.6; names, tabs and the
+breadcrumb stay in the 5 x 7 pixel letters. **MENU > LARGE** keeps its big cards on top in every skin (the skin keeps
+its tabs and colours), so LARGE reads the same whatever the skin.
+
 Since 0.8.5 every page wears the skin of the design the owner approved (the HTML mock-up "LENTE"):
 
 - **Header (top)**: one quiet line over a thin rule. At the left the play state (a grey square stopped, an orange
@@ -166,7 +187,7 @@ Since 0.8.5 every page wears the skin of the design the owner approved (the HTML
   the panels' small captions and chips are set in a crisp 5 x 7 pixel face, the mock-up's small mono capitals; values
   stay in the larger rounded face.
 
-**Colours** work like a thermal camera: cold (cyan, blue) is little, hot (orange, yellow, white) is a lot. Violet is
+**Colours** work like a thermal camera: cold (indigo, violet) is little, hot (red, orange, cream, white) is a lot (0.8.9: the 0.6 ramp). Violet is
 what's selected, orange what's active.
 
 **HOME** is the ecosystem: one creature per track, its species from its engine, its shape from its four knobs, swelling
@@ -390,10 +411,14 @@ PRESETS picks the bar at PATTERN and moves the step cursor at BAR and STEP (on A
 ### The layers (hold the button)
 
 (0.8.5) A held layer is a lens too, as the mock-up: **turn ALGORITHM while you hold the button** to go **MAP ·
-KNOBS · STATE** (it remembers the level; SELECT keeps its combos: GLO + SELECT the tempo, the dice). **MAP**: the keys'
-map, a cell per key with its name (the icons are gone); **KNOBS**: the four cards as gauges; **STATE**: what the keys,
-knobs and buttons do (the footer's hints until 0.8.4) and what is on (FX: the effects held). The footer is the
-breadcrumb, **LENTE · MAP · FX**.
+KNOBS · STATE** (it remembers the level; SELECT keeps its combos: GLO + SELECT the tempo, the dice). (0.8.9, in the
+skins) **MAP** is the keyboard itself, F3 to G5: every key that does something is named upright on it (light on the
+white keys, tinted on the black ones), the one held lit orange, the value now violet, a muted track pale, what cannot be
+pressed now dim, and each white key's note under it; **KNOBS**: the four as gauges in their knobs' colours, the layer's
+key words under them (e.g. **PLAY RESTART · GLO DONE**); **STATE**: what is on, as chips (FX: the lock, the tracks, the
+latch, the effects held; GLO: each track ON / MUTE, the drum groups, UNDO, MUTATE; LFO: the latch and each macro's
+routes; REC, SAVE, SCL, EDIT, SEQ theirs). The header names the layer in words, **[GLO] SET**. The footer is the
+breadcrumb, **LENTE · MAP · FX**. The keys and knobs do exactly what they did.
 
 **FX — punch-in effects** (details in [11](#11-performance))
 
@@ -1644,12 +1669,13 @@ track.
 **ALGORITHM** switches tabs, **PRESETS** moves between rows, **any knob** or **OCT+ / OCT−** changes the value. HOME
 closes it (settings are saved then). (0.8.5) It is a lens, as the mock-up: **SELECT** zooms **MENU · TAB · ROW** (it
 opens at TAB). **MENU**: the four tabs as tiles with their rows and values (PRESETS picks the tab); **TAB**: the tab's
-rows, the selected row's four as cards (ROWS 1–4 / ROWS 5–6) with their knob's number; **ROW**: the selected row's
+rows, the selected row's four as cards (ROWS 1–4 / ROWS 5–6; DISPLAY: ROWS 5–7) with their knob's number; **ROW**: the selected row's
 values as chips (COLOR: each palette's colours), the cards TAB, ROW and its value. The header says MENU · DISPLAY.
 
 | Tab | Row | Values |
 | --- | --- | --- |
 | DISPLAY | COLOR | GREY, GREEN, AMBER, ICE, VIOLET, ROSE, PAPER, HI-CON, NIGHT, MONO, **JIANT** (default) |
+| DISPLAY | SKIN | **COLORS** (default), BOTTOM, HUD — (0.8.9) see [Skins](#skins-colors-bottom-hud-089) |
 | DISPLAY | STYLE | FLAT, LINE |
 | DISPLAY | LARGE | OFF, ON (big labels and values) |
 | DISPLAY | ANIM | ON, OFF (values snap; the power-on signature appears whole) |

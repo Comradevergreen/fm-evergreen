@@ -137,6 +137,29 @@ atajos de esa capa; en la grilla DRUM son pasos y carriles; en la pantalla NAME 
 
 ## 2. La pantalla
 
+### Pieles: COLORS, BOTTOM, HUD (0.8.9)
+
+**MENU > DISPLAY > SKIN** elige cómo se visten las lentes (la maqueta aprobada "skin aireado", opciones 1, 3 y 4); en
+todas las páginas, todas las paletas, FLAT y LINE:
+
+- **COLORS** (la de fábrica; los ajustes viejos cargan con ella): la estructura LENTE con los **colores de la 0.6**.
+  Negro, cartas casi negras redondeadas con una marquita y el nombre de la perilla, **cada perilla con su color** en el
+  valor y en la barra (KNOB 1 violeta, 2 amarillo, 3 azul, 4 rojo en JIANT; cada paleta tiene sus cuatro), la carta de
+  la perilla que girás enmarcada en su color; la pestaña del nivel rellena de violeta; el número de la pista en una
+  cajita naranja, un ▶ violeta y el BPM grande en violeta en el encabezado; un panel casi negro redondeado; los seres con
+  el calor de la 0.6 (púas violetas, anillos rojo y naranja, núcleos crema).
+- **BOTTOM**: las pestañas son tres palabras (la del nivel con una pastillita debajo), sin cartas ni caja de panel: el
+  medio de la pantalla es el dibujo, de borde a borde (los seres de HOME tienen todo el lugar), y las cuatro perillas
+  son una fila fina sobre la miga de pan (marca y nombre, el valor en su color, una barra finita).
+- **HUD**: como BOTTOM, pero en HOME los seres nadan **debajo de todo, por la pantalla entera**: el encabezado, las
+  pestañas, las perillas y la miga flotan encima como texto con un borde oscuro finito. La fila de perillas se apaga a
+  un quinto unos segundos después de la última vuelta de perilla y vuelve con la siguiente. La palabra del nivel va
+  subrayada.
+
+Los valores (cartas, el BPM del encabezado) vuelven a una sans redondeada (Inter Tight SemiBold), como en la 0.6; los
+nombres, las pestañas y la miga siguen con las letras de píxel de 5 x 7. **MENU > LARGE** deja sus cartas grandes arriba
+en todas las pieles (la piel conserva sus pestañas y sus colores), así LARGE se lee igual en cualquiera.
+
 Desde la 0.8.5 todas las páginas llevan la piel del diseño que aprobó el dueño (la maqueta HTML "LENTE"):
 
 - **Encabezado (arriba)**: una sola línea tranquila sobre una regla fina. A la izquierda el estado de reproducción (un
@@ -171,7 +194,7 @@ Desde la 0.8.5 todas las páginas llevan la piel del diseño que aprobó el due�
   palabras del medio del encabezado y los rótulos y fichas chicas de los paneles van en una letra de píxeles de 5 x 7,
   nítida, las mayúsculas mono chicas de la maqueta; los valores siguen en la letra redondeada más grande.
 
-Los **colores** funcionan como una cámara térmica: frío (cian, azul) es poco, caliente (naranja, amarillo, blanco) es
+Los **colores** funcionan como una cámara térmica: frío (índigo, violeta) es poco, caliente (rojo, naranja, crema, blanco; 0.8.9: la escala de la 0.6) es
 mucho. Violeta es lo seleccionado, naranja lo activo.
 
 **HOME** es el ecosistema: una criatura por pista, su especie según su motor, su forma según sus cuatro perillas, que
@@ -401,9 +424,14 @@ niveles se llaman como en el equipo: PATTERN, BAR y STEP.
 
 (0.8.5) Una capa mantenida también es una lente, como la maqueta: **girá ALGORITHM mientras mantenés el botón** para
 ir **MAP · KNOBS · STATE** (recuerda el nivel; SELECT conserva sus combinaciones: GLO + SELECT el tempo, los dados).
-**MAP**: el mapa de las teclas, una celda por tecla con su nombre (sin íconos); **KNOBS**: las cuatro tarjetas como
-medidores; **STATE**: lo que hacen las teclas, perillas y botones (las ayudas del pie hasta 0.8.4) y lo que está
-activo (FX: los efectos mantenidos). El pie es la miga de pan, **LENTE · MAP · FX**.
+(0.8.9, en las pieles) **MAP** es el teclado mismo, de F3 a G5: cada tecla que hace algo lleva su nombre parado encima
+(clara en las blancas, teñida en las negras), la mantenida encendida en naranja, el valor actual en violeta, una pista
+muteada pálida, lo que ahora no se puede apagado, y la nota de cada blanca debajo; **KNOBS**: las cuatro como medidores
+en el color de su perilla, con las palabras de las teclas de la capa debajo (p. ej. **PLAY RESTART · GLO DONE**);
+**STATE**: lo que está activo, como fichas (FX: el bloqueo, las pistas, el latch, los efectos mantenidos; GLO: cada
+pista ON / MUTE, los grupos de batería, UNDO, MUTATE; LFO: el latch y las rutas de cada macro; REC, SAVE, SCL, EDIT y
+SEQ las suyas). El encabezado nombra la capa en palabras, **[GLO] SET**. El pie es la miga de pan, **LENTE · MAP ·
+FX**. Las teclas y las perillas hacen exactamente lo mismo que antes.
 
 **FX — efectos punch-in** (detalles en [11](#11-tocar-en-vivo))
 
@@ -1740,7 +1768,7 @@ la pista seleccionada.
 
 (0.8.5) Es una lente, como la maqueta: **SELECT** hace zoom **MENU · TAB · ROW** (abre en TAB). **MENU**: las cuatro
 pestañas como mosaicos con sus filas y valores (PRESETS elige la pestaña); **TAB**: las filas de la pestaña, las cuatro
-de la fila elegida como tarjetas (ROWS 1–4 / ROWS 5–6) con el número de su perilla; **ROW**: los valores de la fila
+de la fila elegida como tarjetas (ROWS 1–4 / ROWS 5–6; DISPLAY: ROWS 5–7) con el número de su perilla; **ROW**: los valores de la fila
 elegida como fichas (COLOR: los colores de cada paleta), las tarjetas TAB, ROW y su valor. El encabezado dice MENU ·
 DISPLAY. ALGORITHM, PRESETS, cualquier perilla y OCT+ / OCT− como antes.
 
@@ -1750,6 +1778,7 @@ valor. HOME lo cierra (en ese momento se guarda la configuración).
 | Pestaña | Fila | Valores |
 | --- | --- | --- |
 | DISPLAY | COLOR | GREY, GREEN, AMBER, ICE, VIOLET, ROSE, PAPER, HI-CON, NIGHT, MONO, **JIANT** (por defecto) |
+| DISPLAY | SKIN | **COLORS** (de fábrica), BOTTOM, HUD — (0.8.9) ver [Pieles](#pieles-colors-bottom-hud-089) |
 | DISPLAY | STYLE | FLAT, LINE |
 | DISPLAY | LARGE | OFF, ON (etiquetas y valores grandes) |
 | DISPLAY | ANIM | ON, OFF (los valores saltan directo; la firma de encendido aparece entera) |
