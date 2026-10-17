@@ -1736,30 +1736,6 @@ static void panel_note(const char *a, const char *b, const char *c)
     if (c) note_line(82, c, T_DIM);
 }
 
-/* the EDIT layer (ui_layer.c): the sound loaded, as the browser's selected row: "03" (its place in KNOB 2's list,
- * the engine's sounds) or "U07", the name, the star of a favourite */
-static void engine_sound_row(int32_t y)
-{
-    const engine_t *e = ENGINES[TSEL->eng_req % NENGINES];
-    uint32_t total, cur = eng_list_pos(&total), u = user_of(TSEL);
-    char tag[6], nm[13];
-    int fav = preset_favorite();
-    if (u < UP_SLOTS) {
-        up_slot_label(tag, u);
-        up_name(u, nm);
-    } else {
-        tag[0] = (char)('0' + (cur + 1u) / 10u % 10u);
-        tag[1] = (char)('0' + (cur + 1u) % 10u);
-        tag[2] = 0;
-        str_cpy(nm, e->npresets ? e->presets[TSEL->preset % e->npresets].name : "", sizeof nm);
-    }
-    list_row(y, 1, tag, T_DIM, nm, T_TEXT, fav ? 212 : 232);
-    if (fav) {
-        GFX_HOOK_ALIGN(0, y, 0, y + 16, AL_V, "list row star centred up/down");
-        cv_text_on(216, y + CAP_IN(S, 16), &AF_S, "*", T_INK, T_THEME);   /* (0.8.5: a star, no icon) */
-    }
-    (void)total;
-}
 /* SEQ > PATTERNS: the pattern list around the one picked ("03  MELODY", "U07  MY BASS") */
 static void graph_pats(void)
 {
