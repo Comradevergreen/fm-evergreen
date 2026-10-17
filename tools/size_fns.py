@@ -22,7 +22,13 @@ SIZE_FILES = ["ui.c", "favorites.c", "menu_items.c", "icons.c", "ui_graph.c", "u
               "editor.c", "editor_preferences.c", "editor_backup.c", "editor_menu.c", "console.c",
               "usb.c", "midi_uart.c", "midi_control.c", "midi_clock.c", "seq.c", "song_chain.c", "motion.c",
               "panel.c", "lcd.c", "gfx.c", "ota.c", "ota_hw.c", "up_fm6.c", "params.c", "editor_fm6.c",
-              "ui_layer.c", "ui_name.c", "ui_events.c", "song_main.c", "main.c", "libc.c", "storage_hw.c", "engines.c", "fm4_convert.c"]
+              "ui_layer.c", "ui_name.c", "ui_events.c", "song_main.c", "main.c", "libc.c", "storage_hw.c", "engines.c", "fm4_convert.c",
+              # (0.9.0) the files the ones above include, missed until now (-16.7 KB): GEN, DICE, the lenses, the line
+              # art, the beings, the tech graphs, the tools, the FM6 bank and VOICE's words (its sound side, reached
+              # from the audio ISR through ENG[]'s hooks, keeps -Os: isr_reach follows globals)
+              "gen.c", "gen_tables.c", "song_dice.c", "ui_lens.c", "ui_organic.c", "ui_fm6op.c", "ui_being.c",
+              "ui_tech.c", "ui_lzsave.c", "ui_lzfx.c", "ui_lzhome.c", "ui_lzedit.c", "ui_lzpage.c", "ui_dx.c",
+              "ui_tools.c", "fm6_vbank.c", "sing.c"]
 ISR_ROOTS = ("fm1_alnk0_irq", "fm1_timer5_irq")      # hal/fm1_isr.S: the audio ISR, the key / LED scan (+ USB poll)
 DEF = re.compile(r"^(?:static|void|int|uint\w*|int\w*|const)\b[^;=(]*?\b([A-Za-z_]\w*)\s*\(", re.M)
 IR_DEF = re.compile(r"^(define [^\n]*?@\"?([\w.]+)\"?\([^\n]*\)(?: unnamed_addr| local_unnamed_addr)?)( #\d+[^\n]*\{)$",
@@ -33,6 +39,7 @@ def definitions(text):
     """names of the functions text defines (a signature at column 0 whose ')' is followed by '{')"""
     names = []
     text = re.sub(r"/\*.*?\*/|//[^\n]*", " ", text, flags=re.S)        # comments (none hold code)
+    text = re.sub(r"\b__attribute__\s*\(\((?:[^()]|\([^()]*\))*\)\)", " ", text)   # (0.9.0) before the name too
     for m in DEF.finditer(text):
         i, depth = m.end() - 1, 0
         while i < len(text):
@@ -55,12 +62,18 @@ def size_names():
 
 IR_BODY = re.compile(r"^define [^\n]*?@\"?([\w.]+)\"?\((.*?)^\}", re.M | re.S)
 IR_REF = re.compile(r"@\"?([\w.]+)\"?")
+IR_GLOBAL = re.compile(r"^@\"?([\w.]+)\"? = [^\n]*", re.M)
 
 
 def isr_reach(ir):
     """the functions an interrupt can run: ISR_ROOTS and, transitively, every function their bodies call or
-    name (a pointer taken there counts as called), from the unoptimised IR (before inlining: a superset)"""
+    name (a pointer taken there counts as called), from the unoptimised IR (before inlining: a superset).
+    (0.9.0) A global they name counts as its initialiser: a function in a table they read (an engine's hooks:
+    ENG[].block -> formant_block -> sing_block) is reached too"""
     body = {m.group(1): m.group(2) for m in IR_BODY.finditer(ir)}
+    fns = set(body)
+    for m in IR_GLOBAL.finditer(ir):
+        body.setdefault(m.group(1), m.group(0))
     seen, todo = set(), [r for r in ISR_ROOTS if r in body]
     while todo:
         f = todo.pop()
@@ -68,7 +81,7 @@ def isr_reach(ir):
             continue
         seen.add(f)
         todo += [g for g in IR_REF.findall(body[f]) if g in body and g not in seen]
-    return seen
+    return {f for f in seen if f in fns}
 
 
 def main(src, dst):
