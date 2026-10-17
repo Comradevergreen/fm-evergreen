@@ -91,7 +91,7 @@ static int32_t pd_k_in(uint32_t pd, uint32_t lv, uint32_t page)   /* the page's 
     return -1;
 }
 #define PD_LVGET(pd) ((uint32_t)(ui.pdlv[pd] ^ PD_DEF_LV[pd]) % 3u)   /* (0, power-on: the default) */
-#define PD_LIVE (1u << PD_EDIT | 1u << PD_ENV | 1u << PD_MOD | 1u << PD_KEY)                                     /* the domains drawn as lenses (bit PD_*) */
+#define PD_LIVE (1u << PD_EDIT | 1u << PD_ENV | 1u << PD_MOD | 1u << PD_KEY | 1u << PD_GLO)                                     /* the domains drawn as lenses (bit PD_*) */
 static int pd_on(void) { return !ui.home && !page_over && ((PD_LIVE >> pd_of_fam(PAGES[ui.page].fam)) & 1u); }
 static uint32_t pd_cur(void) { return pd_of_fam(PAGES[ui.page].fam); }
 /* the level shown: the one remembered when the page is in it (ENV is in TRACKS and in ENV), else the page's own */
@@ -143,7 +143,7 @@ static void pd_cycle(void)                              /* a tap on its page: th
     pd_show(pd, lv, (uint32_t)(k + 1));
 }
 /* a domain's button (open_family): on its pages the level's next set (SCL: KEY <-> CHORD; ARP: the ARP level, then its
- * sets; GLO: the next level round); from elsewhere the level and set it was left at (GLO: MIX; SCL: KEY or CHORD; ARP:
+ * sets; GLO: the next set, then the next level round); from elsewhere the level and set it was left at (GLO: MIX; SCL: KEY or CHORD; ARP:
  * ARP). 1: done */
 static int pd_button(uint32_t fam)
 {
@@ -170,8 +170,16 @@ static int pd_button(uint32_t fam)
             return 1;
         }
         lv = 2u;
-    } else if (fam == FAM_GLO || fam == FAM_TRK)
+    } else if (fam == FAM_GLO || fam == FAM_TRK) {   /* (GLO: MIXER -> SENDS -> GLOBAL -> SYSTEM -> MIXER) */
+        uint8_t pg[PD_SETS];
+        int32_t k = pd_k_in(pd, lv, ui.page);
+        if (here && k >= 0 && (uint32_t)k + 1u < pd_sets(pd, lv, pg, 0)) {
+            pd_show(pd, lv, (uint32_t)k + 1u);
+            return 1;
+        }
         lv = here ? (lv + 1u) % 3u : 0u;
+        ui.pdset[pd][lv] = 0;
+    }
     else if (here) {
         pd_cycle();
         return 1;

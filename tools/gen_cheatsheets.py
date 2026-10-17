@@ -147,7 +147,7 @@ def controls():
          'PUNCH-IN FX'),
         ('SCL', 'KEY ↔ CHORD (SELECT zooms KEY · CHORD · ARP; PRESETS: ROOT / the track)', 'ROOT by key'),
         ('EDIT', 'the zoom level\'s next (SELECT zooms): SOUND: EDIT 1 · EDIT 2 (DRUM: KIT · KIT 2 · KIT 3)  |  TONE: FILTER · MORPH · RETRIG · ROTOR · VOICE · VOICE 2 (DRUM: X-MOD · FILTER · STEREO · LEVELS 1–2 · VOICE)  |  FOCUS (FM6: OPERATOR · OP ENV · OPERATOR 2; DRUM: SOUND 1–4)', 'INIT · RECALL · sound mutes'),
-        ('GLO', 'MIXER · GLOBAL · SYSTEM', 'MUTE · SOLO · LEVEL · TAP'),
+        ('GLO', 'MIXER · SENDS · GLOBAL · SYSTEM (SELECT zooms MIX · GLOBAL · SYSTEM)', 'MUTE · SOLO · LEVEL · TAP'),
         ('SAVE', 'the zoom level\'s two sets (SELECT zooms; from elsewhere SOUND\'s USER): LIBRARY: PROJECT · TOOLS  |  PROJECT: SECTIONS · ARRANGE  |  SOUND: USER · PRESETS', 'SONG layer'),
         ('ARP', 'the ARP level: ARP · ARP 2', '—'),
         ('SEQ', 'the zoom level\'s sets (SELECT zooms): PATTERN: PATTERN · STRETCH · PLAYHEADS · TRACK · MUTATE  |  BAR: STEP · NOTE · AUTOMATION · AUTO LIST  |  STEP: NOTE · COMP · COMP 2', 'SEQ TOOLS'),

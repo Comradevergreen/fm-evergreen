@@ -1828,6 +1828,19 @@ static void track_col6(uint32_t c, uint32_t sel, uint32_t st, uint32_t mute, uin
             sn[--n] = 0;
         cv_text_on(4, 22, &AF_S, sn, mute ? T_ACCENT : sel ? T_TEXT : T_MID, T_SURF);
     }
+    if (cur_page()->id[0] == P_DIST) {               /* (0.8.5) GLO > MIX > SENDS: DIST CHORUS DLY REV as bars */
+        static const char *const SN[4] = {"D", "C", "D", "R"};
+        for (k = 0; k < 4; k++) {
+            int32_t v = trk[c].p[P_DIST + (uint32_t)k] * 60 / 127;   /* (P_DIST P_CHOR P_DLY P_REV: in a row) */
+            cv_rect(4 + k * 8, 38, 6, 62, T_RAISE);
+            if (v)
+                cv_rect(4 + k * 8, 100 - v, 6, v, mute ? T_DIM : sel && hot == (uint32_t)k + 1u ? T_ACCENT :
+                        settings.palette == UI_JIANT_INDEX ? heat_col(60 + v * 3) : T_THEME);
+            cv_text(4 + k * 8, 106 - AF_X_CAP_Y, &AF_X, SN[k], T_DIM);
+        }
+        cv_blit((uint32_t)T6_X(c), lz_on() ? graph_y() + 9u : Y_GRAPH);
+        return;
+    }
     for (k = 0; k < 14; k++) {                       /* LEVEL: cold at the bottom, hot at the top */
         int32_t sy = 95 - k * 4;
         uint16_t sc = heat_col(20 + k * 220 / 13);
@@ -1850,7 +1863,7 @@ static void track_col6(uint32_t c, uint32_t sel, uint32_t st, uint32_t mute, uin
     cv_rect(4, 113, pw, 3, T_RAISE);                 /* the REV send */
     if (rv)
         cv_rect(4, 113, rv * pw / 127 + 1, 3, mute ? T_DIM : hot == 3u ? T_ACCENT : heat_col(40 + rv * 3 / 2));
-    cv_blit((uint32_t)T6_X(c), Y_GRAPH);
+    cv_blit((uint32_t)T6_X(c), lz_on() ? graph_y() + 9u : Y_GRAPH);   /* (0.8.5: GLO's lens, the panel under the cards) */
 }
 static void draw_tracks(void)
 {
@@ -1883,7 +1896,8 @@ static void draw_tracks(void)
         ts.meter[c] = (uint8_t)(m < 0 ? 0 : m);
         sig = str_hash(1u + sel + st * 2u + (mute && arm) * 16u + hot * 32u, b) + lvl * 7919u +
               ts.meter[c] * 131u + (uint32_t)(pan + 128) * 104729u + (uint32_t)rv * 1299709u + mute * 3u + sk * 0x9E37u + c * 0x51u +
-              six * 0x3C6Fu;
+              six * 0x3C6Fu + (cur_page()->id[0] == P_DIST ? 0x7F4Au + (uint32_t)t->p[P_DIST] * 3u + (uint32_t)t->p[P_CHOR] * 389u +
+                                (uint32_t)t->p[P_DLY] * 6151u + (uint32_t)t->p[P_REV] * 98317u : 0u);   /* (SENDS) */
         if (!ui.force && sig == ts.col[c - b4])
             continue;
         ts.col[c - b4] = sig;
@@ -2184,6 +2198,9 @@ static void draw_graph(void)
     } else if (lz_on() && lz_fam() == LZ_ENV && (cv_oy = 0, graph_env_lz(t, pg))) {     /* .. ENV's (ui_lzpage.c) */
     } else if (lz_on() && lz_fam() == LZ_MOD && (cv_oy = 0, graph_mod_lz(t, pg))) {     /* .. LFO . MOD's */
     } else if (lz_on() && lz_fam() == LZ_KEY && (cv_oy = 0, graph_key_lz(t, pg))) {     /* .. SCL . ARP's */
+    } else if (lz_on() && lz_fam() == LZ_GLO && pg->id[0] == G_TRKS) {               /* .. GLO's SYSTEM */
+        cv_oy = 0;
+        graph_system();
     } else {
         cv_oy = GOY;
         switch (pg->graph) {

@@ -2867,10 +2867,11 @@ static int test_product_ux(void)
     turn(EN_K3, 1);
     bad += check("MIXER K3 edits reverb, never sequence length", TSEL->p[P_SLEN] == len && TSEL->p[P_REV] == send + 1);
     frames(320);                                       /* (taps further apart than a double tap: #83) */
-    press(B_GLO); frames(320); ok = cur_page()->fam == FAM_GLO && str_eq(cur_page()->title, "GLOBAL");
+    press(B_GLO); frames(320); ok = str_eq(cur_page()->title, "SENDS");   /* (0.8.5 LENTE: MIX's second set) */
+    press(B_GLO); frames(320); ok &= cur_page()->fam == FAM_GLO && str_eq(cur_page()->title, "GLOBAL");
     press(B_GLO); frames(320); ok &= str_eq(cur_page()->title, "SYSTEM");
-    press(B_GLO); ok &= cur_page()->graph == GR_TRK;
-    bad += check("GLO cycles MIXER > GLOBAL > SYSTEM > MIXER", ok);
+    press(B_GLO); ok &= cur_page()->graph == GR_TRK && str_eq(cur_page()->title, "MIXER");
+    bad += check("GLO cycles MIXER > SENDS (0.8.5) > GLOBAL > SYSTEM > MIXER", ok);
     go_home(); hold(B_SEQ);
     bad += check("long SEQ off the SEQ pages is a tap (no SONG: SAVE held, G5)", cur_page()->graph != GR_SONG);
     go_page(GR_SONG);
@@ -9120,7 +9121,7 @@ static int test_bpm_lock(void)
     {   /* (0.6.67) the MIXER: SELECT the next of GLO's pages, the tempo kept */
         go_title("MIXER"); frame(); fm1_ms += 1200u;
         b0 = song.g[G_BPM];
-        turn(EN_SELECT, -1);
+        turn(EN_SELECT, 1);                             /* (0.8.5 LENTE: MIX -> GLOBAL, a zoom) */
         ok = song.g[G_BPM] == b0 && cur_page()->fam == FAM_GLO && !ui.confirm;
         bad += check("0.6.69: SELECT on the MIXER goes through GLO's pages", ok);
     }
@@ -10000,6 +10001,37 @@ static int test_lz_key(void)
     return bad;
 }
 
+/* GLO (ui_lens.c, ui_lzpage.c): MIX (MIXER / SENDS) . GLOBAL . SYSTEM; a GLO tap MIXER -> SENDS -> GLOBAL -> SYSTEM ->
+ * MIXER, from elsewhere MIX; SENDS's knobs the track's sends; SYSTEM's CPU line runs */
+static int test_lz_glo(void)
+{
+    int bad = 0, ok;
+    int16_t v;
+    ui_power_on(); frame();
+    press(B_GLO); frame();
+    ok = pd_on() && lz_fam() == LZ_GLO && pd_level() == 0u && str_eq(cur_page()->title, "MIXER") && lz_tab_lit(0) &&
+         lz_crumb_is("LENTE \xB7 MIX \xB7 MIXER");
+    frames(320); press(B_GLO); frame();
+    ok &= str_eq(cur_page()->title, "SENDS") && lz_crumb_is("LENTE \xB7 MIX \xB7 SENDS");
+    v = TSEL->p[P_DLY];
+    turn(EN_K3, 4); frame();
+    ok &= TSEL->p[P_DLY] > v;
+    frames(320); press(B_GLO); frame();
+    ok &= pd_level() == 1u && str_eq(cur_page()->title, "GLOBAL") && lz_tab_lit(1);
+    frames(320); press(B_GLO); frame();
+    ok &= pd_level() == 2u && str_eq(cur_page()->title, "SYSTEM") && lz_tab_lit(2) && lz_crumb_is("LENTE \xB7 SYSTEM \xB7 SYSTEM");
+    frames(320); press(B_GLO); frame();
+    ok &= pd_level() == 0u && str_eq(cur_page()->title, "MIXER");
+    turn(EN_SELECT, 2); frame();
+    ok &= pd_level() == 2u && str_eq(cur_page()->title, "SYSTEM");
+    open_family(FAM_ENV); frame();
+    press(B_GLO); frame();
+    ok &= str_eq(cur_page()->title, "MIXER");
+    bad += check("0.8.5 LENTE GLO: MIXER -> SENDS (the track's sends) -> GLOBAL -> SYSTEM -> MIXER by GLO, SELECT zooms; from elsewhere MIX", ok);
+    ui_power_on();
+    return bad;
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IONBF, 0);
@@ -10010,6 +10042,7 @@ int main(void)
     bad += test_lz_env();
     bad += test_lz_mod();
     bad += test_lz_key();
+    bad += test_lz_glo();
     bad += test_sound_loads();
     bad += test_patterns();
     bad += test_init_system();
