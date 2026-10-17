@@ -376,7 +376,26 @@ typedef struct {                 /* acid-style step: up to 4 notes (POLY), time,
     uint8_t cwhen;               /* (0.6.82) WHEN each plays: bits 0-1 comp's, 2-3 comp2's (CW_*) */
     uint8_t ctime;               /* (0.6.82) bits 0-2 DIV: RATCH's and ECHO's parts a step/2 .. /8 apart (0: the step
                                   * shared out, as before); bits 3-6 LEN: a part's gate n/16 (0: the track's GATE) */
+    uint8_t lm[3];               /* (0.8.5) each drum lane's own way of playing on this step (a DRUM track: its hit and
+                                  * its notes on the lane): 3 bits a lane, lane l at bits 3l..3l+2 of the 24, LM_* */
 } step_t;
+/* (0.8.5) a lane's mode (eng_drum.c, the DRUM-X octaves): its hit ratcheted x2 / x4 / x8 over the step, or struck SHORT,
+ * GHOST, FLAM; that lane only. 0: as ever (every step before 0.8.5) */
+enum { LM_NONE, LM_X2, LM_X4, LM_X8, LM_SHORT, LM_GHOST, LM_FLAM, LM_N };
+static uint32_t step_lmode(const step_t *s, uint32_t l)
+{
+    uint32_t v = (uint32_t)s->lm[0] | (uint32_t)s->lm[1] << 8 | (uint32_t)s->lm[2] << 16, m = (v >> (3u * (l & 7u))) & 7u;
+    return m < LM_N ? m : LM_NONE;
+}
+static void step_set_lmode(step_t *s, uint32_t l, uint32_t m)
+{
+    uint32_t v = (uint32_t)s->lm[0] | (uint32_t)s->lm[1] << 8 | (uint32_t)s->lm[2] << 16, sh = 3u * (l & 7u);
+    v = (v & ~(7u << sh)) | ((m < LM_N ? m : 0u) << sh);
+    s->lm[0] = (uint8_t)v; s->lm[1] = (uint8_t)(v >> 8); s->lm[2] = (uint8_t)(v >> 16);
+}
+static int step_lm_any(const step_t *s) { return s->lm[0] | s->lm[1] | s->lm[2]; }
+static uint32_t lm_hits(uint32_t m) { return m == LM_X2 ? 2u : m == LM_X4 ? 4u : m == LM_X8 ? 8u : 1u; }   /* a step */
+static uint32_t lm_touch(uint32_t m) { return m >= LM_SHORT && m <= LM_FLAM ? m - LM_SHORT + 1u : 0u; }   /* TOUCH 1..3 */
 /* (0.6.92) EVERY: on which loops of the pattern the step's components play (both of them; seq.c every_on), in cwhen's
  * bits 0-3: ALWAYS, 1:2 (the odd loops), 2:2, SKIP (kept, never), 1:3 2:3 3:3, 1:4 2:4 3:4 4:4, 1:8, FIRST, NOT FIRST.
  * (0.6.82 WHEN: bits 0-1 the first component's ALWAYS / 1:2 / 2:2 / SKIP, the same codes; bits 2-3 the second's, now
@@ -586,6 +605,7 @@ typedef struct track {
     uint8_t ss_nn[4 + NLANE], ss_vv[4 + NLANE];  /* order low to high (seq.c seq_step, seq_tick), ss_due samples to the next */
     uint8_t dtch, ss_tch;        /* (0.8.5) a step's TOUCH (1..3, 0 none) on the sequencer's next drum hits; .. on the
                                   * queued ones (HUMAN TIME: seq_tick) */
+    uint8_t lr_on;               /* (0.8.5) the playing step has a lane ratcheting (seq.c seq_lane_rat) */
     uint32_t ss_due, ss_gap;     /* (.. and the gap between them; 0.6.88: 32 bits, a long TIMING) */
     uint16_t ext;                /* (0.6.88) TIMING: samples the playing step began before its place (it is early) */
     int8_t mic;                  /* .. the playing step's own TIMING (ST_MICRO), late: seq_step queues its notes */

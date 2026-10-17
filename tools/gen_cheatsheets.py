@@ -7,7 +7,7 @@ import html, os
 
 R = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(R, 'docs', 'cheatsheet')
-VERSION = 'v0.8.4'
+VERSION = 'v0.8.5'
 
 HEAT = ['#22d3ee', '#3b82f6', '#8b5cf6', '#d946ef', '#ef4444', '#ff7a00', '#facc15', '#f4f1ea']
 
@@ -133,7 +133,7 @@ def controls():
         ('ALGORITHM', 'Selects the track from any page: T1–T4, or T1–T6 with TRACKS 6.'),
         ('KNOB 1–4', 'The four columns on screen. Fast sweeps the whole range, slow fine-tunes. With a layer held: '
                      'the layer\'s.'),
-        ('OCT− · OCT+', 'The keyboard\'s octave (both together: back to 0); on DRUM the kit stays put: +1/+2/+3 ratchet x2/x4/x8, −1 SHORT, −2 GHOST, −3 FLAM. On action pages and dialogs: back / confirm.'),
+        ('OCT− · OCT+', 'The keyboard\'s octave (both together: back to 0); on DRUM the kit stays put: +1/+2/+3 ratchet x2/x4/x8, −1 SHORT, −2 GHOST, −3 FLAM, each sound its own (grid KNOB 3 HIT). On action pages and dialogs: back / confirm.'),
         ('PLAY', 'Start / stop. GLO + PLAY: restart from the top.'),
         ('REC', 'Arms live recording on the selected track (notes and knob moves, overdub).'),
         ('HOME', 'Tap: the ecosystem. <b>Hold: the MENU.</b>'),

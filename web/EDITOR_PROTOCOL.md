@@ -35,6 +35,9 @@ ends with the item's tab on the device (index and name), after the bytes 1.0.4 s
 **Ratchet (1.0.5, INFO `52 01 04`):** a step gets a ratchet byte (its hits, 1..4) after its chance: one more byte at
 the end of the step replies, and an optional last byte of a step write (see "Ratchet" below). Nothing else changed.
 
+**DRUM lane modes (JIANT 0.8.5, INFO `4F 01 07`):** a step gets 8 more bytes after its ratchet, each DRUM lane's mode
+0..6 (see "DRUM lane modes" below). Nothing else changed.
+
 **Parameter locks (1.1, INFO `4C 01 01`):** a motion record can be a lock: its value sounds on its step only and
 goes back after it. `MOTION` (64) gets ops 5..7 (set a lock, clear a step's locks, the query with the kinds); the
 query and ops 1..4 reply byte for byte as before (see "Parameter locks" below). A lock takes no new bytes in a
@@ -208,13 +211,13 @@ at 1..3 and hides 6 5 8: what it sets still plays the right kit, and the device 
 
 | cmd | Request args | Reply args |
 | --- | --- | --- |
-| 1 INFO | — | version string, NENGINES, P_COUNT, G_COUNT, NSTEP, P_E0, then NENGINES engine-name strings, then (v3) NTRK (6 since JIANT 0.6, 4 before), then (v6) CHAIN_ROWS (16), then the tagged blocks `55 01 uiCaps`, `4D 01 64 01`, `42 01 3`, `46 01 nfactory nbank`, `53 01 3`, (1.0.3) `50 01 3` and (1.0.4) `4E 01 count` (MENU settings; 12, 1.1: 15, 1.2: 17, 1.1.5: 18) and (1.0.5) `52 01 4` (ratchet) and (1.1) `4C 01 1` (parameter locks) and (JIANT 0.6.11) `56 01 32` (FM6's voice bank) (below); older firmware ends earlier |
+| 1 INFO | — | version string, NENGINES, P_COUNT, G_COUNT, NSTEP, P_E0, then NENGINES engine-name strings, then (v3) NTRK (6 since JIANT 0.6, 4 before), then (v6) CHAIN_ROWS (16), then the tagged blocks `55 01 uiCaps`, `4D 01 64 01`, `42 01 3`, `46 01 nfactory nbank`, `53 01 3`, (1.0.3) `50 01 3` and (1.0.4) `4E 01 count` (MENU settings; 12, 1.1: 15, 1.2: 17, 1.1.5: 18) and (1.0.5) `52 01 4` (ratchet) and (1.1) `4C 01 1` (parameter locks) and (JIANT 0.6.11) `56 01 32` (FM6's voice bank) and (JIANT 0.6.62) `4A 01 1` (JIANT) and (JIANT 0.8.5) `4F 01 7` (DRUM lane modes) (below); older firmware ends earlier |
 | 2 GET | scope, id | scope, id, v14 |
 | 3 SET | scope, id, v14 | scope, id, v14 (the value after clamping). Setting global `G_ENGSEL` (id from DESC label "ENG") changes the engine: its defaults, then its first preset (as on the device) |
 | 4 DUMP | — | engine, preset, then P_COUNT × v14 (the selected track), then G_COUNT × v14 (globals) |
 | 5 DESC | scope, id | scope, id, fmt, min v14, max v14, def v14, label string, unit string, then for an enum (fmt 8) one name string per value (at most 32 since 0.7.0; 24 before it, 16 before the matrix) |
-| 6 STEP_GET | index 0..NSTEP−1 | index, n (0..4 notes), note0..note3, time (0 NOTE, 1 TIE, 2 REST), flags (1 accent, 2 slide), vel, then (v5) hits (3 bytes, below), then (v7) chance 0..100, then (`52 01`) ratchet 1..4 |
-| 7 STEP_SET | index, n, note0..3, time, flags, vel [, hits (3 bytes, v5) [, chance 0..100 (v7) [, ratchet 1..4]]] | same as STEP_GET (after the write). Without the hits the step keeps its own; without the chance or the ratchet it keeps its own. The chance can only follow the hits, the ratchet the chance |
+| 6 STEP_GET | index 0..NSTEP−1 | index, n (0..4 notes), note0..note3, time (0 NOTE, 1 TIE, 2 REST), flags (1 accent, 2 slide), vel, then (v5) hits (3 bytes, below), then (v7) chance 0..100, then (`52 01`) ratchet 1..4, then (`4F 01`) 8 lane modes 0..6 |
+| 7 STEP_SET | index, n, note0..3, time, flags, vel [, hits (3 bytes, v5) [, chance 0..100 (v7) [, ratchet 1..4 [, 8 lane modes 0..6 (`4F 01`)]]]] | same as STEP_GET (after the write). Without the hits the step keeps its own; without the chance, the ratchet or the lane modes it keeps its own. The chance can only follow the hits, the ratchet the chance, the lane modes the ratchet |
 | 8 PRESET | engine, preset | engine, preset (applies the preset's sound to the selected track and sends; the steps and the track's own parameters stay, see "Sound loads and undo"). For another track, select it with `TRACK` first |
 | 9 PROJECT | op (0 load, 1 save, 2 query), slot 0..3 | op, slot, used (1/0). Save writes flash: allow ~2 s; it stops the transport first (see "Saves while playing") |
 | 10 NAMES | engine | engine, count, count preset-name strings, then the two edit-page titles |
@@ -236,7 +239,7 @@ at 1..3 and hides 6 5 8: what it sets still plays the right kit, and the device 
 | 27 TRACK | — (query), or track (select it) | selected track, NTRK, then per track: engine byte, preset, level v14, mute (0/1), armed (0/1, live recording) |
 | 28 TRACK_MIX | track (get), or track, level v14 (0..127), mute (set) | track, level v14, mute: the track's `P_LEVEL` and `P_MUTE` |
 | 29 TRACK_DUMP | track | track, engine byte, preset, P_COUNT × v14 (that track's parameters; no globals) |
-| 30 TRACK_STEP | track, index (get), or track, index, n, note0..3, time, flags, vel [, hits (v5) [, chance (v7) [, ratchet]]] (set) | track, index, n, note0..3, time, flags, vel, then (v5) hits, then (v7) chance, then (`52 01`) ratchet |
+| 30 TRACK_STEP | track, index (get), or track, index, n, note0..3, time, flags, vel [, hits (v5) [, chance (v7) [, ratchet [, 8 lane modes]]]] (set) | track, index, n, note0..3, time, flags, vel, then (v5) hits, then (v7) chance, then (`52 01`) ratchet, then (`4F 01`) 8 lane modes |
 
 | cmd (v4) | Request args | Reply args |
 | --- | --- | --- |
@@ -606,6 +609,22 @@ ratchet byte (read every step as 1).
   the chance byte its bit 1; 0 in every older project, which load x1), so also in backups and song rows. Firmware
   before the ratchet refuses a project that holds one. A user preset's note pattern keeps it in its flags (8 | 16);
   a drum grid record has no room for it and loads x1.
+
+## DRUM lane modes
+
+INFO advertises `4F 01 7` at the end of its tags (JIANT 0.8.5): each step holds a mode for each of the 8 DRUM lanes
+(BD SD CP CH OH TM RS CB), 0 none, 1 x2, 2 x4, 3 x8 (that lane's hit and its notes ratcheted over the step), 4 SHORT,
+5 GHOST, 6 FLAM (how it is struck). That lane only: the rest of the step plays as it is. Firmware without the tag has
+none (read every lane as 0).
+
+- `STEP_GET` / `STEP_SET` / `TRACK_STEP`: 8 bytes after the ratchet, lane 0 first. A write without them (an older
+  editor) keeps the step's; a write with them must carry the chance and the ratchet before. An editor that does not
+  know them reads the 13 bytes it knows and ignores the rest.
+- On the device: what the keys record at OCT ≠ 0 on a DRUM track (and MIDI notes outside 35..81); SEQ > STEP's grid,
+  KNOB 3 HIT of the selected lane: --, ON, x2, x4, x8, SHORT, GHOST, FLAM.
+- Saved in projects (FUNC: bit 6 of a step's extension byte, then 3 bytes, 3 bits a lane; every older project has
+  none), so in backups and song rows too. Firmware before 0.8.5 refuses a project that holds one (an extension bit it
+  does not know). User presets' patterns have no room for them.
 
 ## Parameter locks
 

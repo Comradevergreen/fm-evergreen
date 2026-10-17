@@ -688,6 +688,7 @@ static void step_clear(step_t *st)
     st->comp = st->carg = 0;
     st->comp2 = st->carg2 = st->cwhen = st->ctime = 0;
     st->probability = 0;
+    st->lm[0] = st->lm[1] = st->lm[2] = 0;                /* (0.8.5) */
 }
 
 /* ------------------------------------------------------- the DRUM grid --- */
@@ -744,9 +745,25 @@ static void grid_hit(track_t *t, uint32_t i, uint32_t l, uint32_t on)
     } else {
         s->hit &= (uint8_t)~b;
         s->acc &= (uint8_t)~b;
+        step_set_lmode(s, l % NLANE, LM_NONE);         /* (0.8.5) its mode goes with it */
         if (!s->n && !s->hit)
             step_clear(s);
     }
+}
+/* (0.8.5) the grid's HIT of lane l at step i as one list: --, ON, then its modes x2 x4 x8 SHORT GHOST FLAM (0..7) */
+static const char *const GRID_HIT[LM_N + 1] = {"--", "ON", "x2", "x4", "x8", "SHORT", "GHOST", "FLAM"};
+static uint32_t grid_hit_of(const step_t *s, uint32_t l)
+{
+    return (step_lanes(s) >> (l % NLANE)) & 1u ? 1u + step_lmode(s, l) : 0u;
+}
+static void grid_hit_set(track_t *t, uint32_t i, uint32_t l, uint32_t v)
+{
+    if (!v) {
+        grid_hit(t, i, l, 0);
+        return;
+    }
+    grid_hit(t, i, l, 1);
+    step_set_lmode(&t->step[i % NSTEP], l, v - 1u);
 }
 
 /* the accent of lane l at step i (on 1, off 0, toggled 2); an accent on an empty lane adds the hit */
@@ -1006,6 +1023,7 @@ static void load_pat16(track_t *t, const uint8_t *note, const uint8_t *flags)
         s->vel = n ? 96 : 0;
         s->hit = s->acc = 0;
         s->probability = 0;
+        s->lm[0] = s->lm[1] = s->lm[2] = 0;             /* (0.8.5) */
         if (drum_track(t))                           /* a DRUM track: the lanes' notes as its grid */
             step_to_grid(s);
     }

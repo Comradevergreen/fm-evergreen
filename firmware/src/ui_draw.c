@@ -1240,7 +1240,7 @@ static void draw_columns(void)
         fmt_int(sl + 1, TSEL->p[P_SLEN]);
         draw_column(0, "STEP", sn, sl, VAL(0u), -1, ICON_AUTO);
         draw_column(1, "LANE", drum_lane_name(TSEL, ui.lane), "", VAL(1u), -1, ICON_AUTO);
-        draw_column(2, "HIT", on ? "ON" : "--", "", on ? VAL(2u) : T_DIM, -1, ICON_AUTO);
+        draw_column(2, "HIT", GRID_HIT[grid_hit_of(st, ui.lane)], "", on ? VAL(2u) : T_DIM, -1, ICON_AUTO);   /* (0.8.5: its mode) */
         draw_column(3, "ACC", ac ? "ON" : "--", "", ac ? VAL(3u) : T_DIM, -1, ICON_AUTO);
         return;
     }

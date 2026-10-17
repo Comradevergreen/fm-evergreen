@@ -41,10 +41,12 @@ function installerCheck() {
   /* (0.8.5) the release notice: before 0.8.5 is written, on the preview installer only, in every language it has */
   const ns = html.slice(html.indexOf("function releaseNotice"), html.indexOf("const noticeOf"));
   const releaseNotice = vm.runInNewContext(`(${ns.trim()})`);
-  ok(releaseNotice("v0.8.5-abc1234-preview", "v0.8.5-abc1234-preview") === "n085", "installer: 0.8.5 on the preview: the notice");
-  ok(releaseNotice("v0.8.5-abc1234", "v0.7.4-0123abc") === "", "installer: the public installer: never");
-  ok(releaseNotice("v0.8.4-abc1234-preview", "v0.8.4-abc1234-preview") === "" &&
-     releaseNotice("v0.8.50-abc-preview", "v0.8.50-abc-preview") === "", "installer: another version: none");
+  ok(releaseNotice("v0.8.5-abc1234-preview") === "n085" && releaseNotice("v0.8.5-abc1234") === "n085",
+     "installer: 0.8.5 picked, preview or the official one: the notice");
+  ok(releaseNotice("v0.8.4-abc1234-preview") === "" && releaseNotice("v0.7.4-0123abc") === "" &&
+     releaseNotice("v0.8.50-abc") === "", "installer: another version: none");
+  const land = readFileSync(join(HERE, "landing", "index.html"), "utf8");
+  ok(!/n085|DRUM-X octave/i.test(land), "installer: the landing page has no notice");
   for (const k of ["n085Title", "n085What", "n085Risk", "n085Keep", "n085Confirm"])
     ok((html.match(new RegExp(`\\b${k}: "`, "g")) || []).length === 2, `installer: ${k} in English and Japanese`);
   ok(/<div lang="es"[^>]*>[\s\S]*Aviso antes de instalar 0\.8\.5[\s\S]*backup completo/.test(html), "installer: the notice in Spanish");
@@ -852,6 +854,33 @@ async function editorRatchet() {
   o.done();
 }
 
+/* (0.8.5) the DRUM-X octaves per sound: a step's 8 lane modes (0..6) after its ratchet, INFO 4F 01 07; read, written
+ * back whole (TRACK_STEP too); an older firmware's replies have none and nothing is sent */
+async function editorLanes() {
+  const C = E.CMD;
+  const { rq, done } = attachMock({});
+  const info = E.parse[C.INFO](await rq(E.req.info()));
+  const L = [0, 0, 0, 2, 0, 5, 0, 0];               /* the closed hat x4, the tom GHOST */
+  let s = E.parse[C.STEP_SET](await rq(E.req.stepSet(5, { n: 0, notes: [0, 0, 0, 0], time: 0, flags: 0, vel: 100, hit: 0x29,
+    acc: 0, chance: 100, ratchet: 1, lanes: L })));
+  ok(info.laneModes === 7 && JSON.stringify(s.lanes) === JSON.stringify(L) && s.ratchet === 1, "lanes: INFO 4F 01 07, STEP_SET the lanes' modes");
+  const back = E.req.stepSet(5, s)[1];
+  ok(back.length === 22 && JSON.stringify(back.slice(14)) === JSON.stringify(L), "lanes: a step read is written back whole (22 bytes)");
+  s = E.parse[C.STEP_SET](await rq(E.req.stepSet(5, { n: 0, notes: [0, 0, 0, 0], time: 0, flags: 0, vel: 90, hit: 0x29, acc: 0, chance: 100, ratchet: 1 })));
+  ok(s.lanes === undefined && JSON.stringify(E.parse[C.STEP_GET](await rq(E.req.stepGet(5, true))).lanes) === JSON.stringify(L),
+     "lanes: a STEP_SET without them (an older editor) keeps the step's, its reply as before");
+  const w = E.parse[C.TRACK_STEP](await rq(E.req.trackStep(3, 7, { n: 0, notes: [0, 0, 0, 0], time: 0, flags: 0, vel: 90, hit: 1,
+    acc: 0, chance: 100, ratchet: 1, lanes: [3, 0, 0, 0, 0, 0, 0, 0] })));
+  ok(w.lanes[0] === 3 && E.parse[C.TRACK_STEP](await rq(E.req.trackStep(3, 7, null, true))).lanes[0] === 3 &&
+     E.parse[C.TRACK_STEP](await rq(E.req.trackStep(3, 7))).lanes === undefined, "lanes: TRACK_STEP the kick x8 on track 4 (asked for)");
+  ok(E.parse[C.STEP_GET](await rq(E.req.stepGet(5, true))).lanes[3] === 2 && E.parse[C.STEP_GET](await rq(E.req.stepGet(5))).lanes === undefined,
+     "lanes: STEP_GET 1 replies them, STEP_GET as before replies as before");
+  ok(E.parse[C.STEP_GET]([1, 1, 60, 0, 0, 0, 0, 0, 96, 0, 0, 0, 100, 1]).lanes === undefined &&
+     E.req.stepSet(1, E.parse[C.STEP_GET]([1, 1, 60, 0, 0, 0, 0, 0, 96, 0, 0, 0, 100, 1]))[1].length === 14,
+     "lanes: an older firmware's step has none, none sent back");
+  done();
+}
+
 async function editorLive() {
   const C = E.CMD;
   const { m, link, rq, sent, ev, done } = attachMock({ watchMs: 250 });
@@ -1526,6 +1555,7 @@ mockTables();
 await editorLibrarian();
 await editorGrid();
 await editorRatchet();
+await editorLanes();
 await editorLive();
 await preferenceReplies();
 await editorTracks();

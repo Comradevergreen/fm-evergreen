@@ -17,8 +17,8 @@ editor update themselves with every change merged into `main`.
 
 > **Status: in development (v0.8.5).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
   **DRUM-X octaves** (0.8.5): the kit stays on its keys at every OCT; above the centre it ratchets in time (x2, x4, x8),
-  below it plays SHORT, GHOST or FLAM, and live recording keeps exactly what you played. MIDI drum notes outside 35–81
-  now trigger these variations: see the changelog before installing.
+  below it plays SHORT, GHOST or FLAM, each sound its own on each step, and live recording keeps exactly what you
+  played. MIDI drum notes outside 35–81 now trigger these variations: see the changelog before installing.
 
 > ⚡ **New in 0.6.85 – 0.6.92: a song generator you steer, a compact sequencer that breathes, a delay that feeds back.**
 > - **GEN (HOME + SELECT)**: a screen of three pages — GENRE (43 genres or RANDOM), SEED, ENERGY, FORM (loop, parts,
@@ -548,28 +548,36 @@ Every update is listed here, newest first. (Since 0.6.80 at the end of the page:
   RATCH grid, swing included, stopped every step/n from the press); **−1 SHORT** (half the decay), **−2 GHOST** (short,
   ~45 % of the level, darker: a ghost note), **−3 FLAM** (a soft grace hit, the hit ~20 ms later whatever the tempo).
   OCT 0 is the kit as it was, bit for bit (every golden render unchanged).
-- **Recorded as played** ("y que se graben así en record en la secuencia"): live REC writes the hit and the step's own
-  components, so the pass after sounds as you heard it (tested to the block): **RATCH x2 / x4**, **ECHO x8 EVEN** for
-  x8 (RATCH stops at x4; ECHO's new **EVEN** keeps every repeat at one level), and the new component **TOUCH** (SHORT /
-  GHOST / FLAM) below. A ratchet held over several steps writes each of them (an early release in the last one puts
-  it back, as a held note's TIE). They show and edit on SEQ > COMP like any step. They are the step's: a kick already
-  on the step ratchets along; a centre-octave hit leaves a step's RATCH / TOUCH alone.
+- **Per sound** (the owner chose it): every step holds a **mode for each of the 8 sounds** (none, x2, x4, x8, SHORT,
+  GHOST, FLAM), on that sound's hit and its notes only. A hi-hat roll recorded onto a step with a kick ratchets the
+  hi-hat alone; a ghost snare leaves the kick as it is. On the DRUM grid (SEQ > STEP) **KNOB 3 HIT** of the selected
+  sound goes --, ON, x2, x4, x8, SHORT, GHOST, FLAM. The step's own RATCH / ECHO / TOUCH (SEQ > COMP; ECHO's new
+  **EVEN** keeps its repeats at one level, TOUCH a whole step's SHORT / GHOST / FLAM) work on the whole step as before.
+- **Recorded as played** ("y que se graben así en record en la secuencia"): live REC writes the hit and its sound's mode,
+  so the pass after sounds as you heard it (tested to the block); a ratchet held over several steps writes each of them
+  (an early release in the last one puts it back, as a held note's TIE). The last hit recorded on a sound sets it.
 - **MIDI**: 35–81 play the GM drum map exactly as before. The notes around it, which played their octave of 36–47 plain,
   are now the octaves' bands by pitch class: 23–34 SHORT, 11–22 GHOST, 0–10 FLAM, 82–93 x2, 94–105 x4, 106–127 x8 (MIDI
   OUT sends the keys' notes the same way). **A song or setup that sent drum notes below 35 or above 81 sounds different
   now**: move them into 35–81 to keep the old sound. Notes stored in steps play as before, whatever their number; the
   keys with OCT moved no longer reach GM 56–81 (MIDI still does).
-- **Projects**: no new format. TOUCH is a component (the comp byte), EVEN bit 7 of ECHO's argument. Firmware before 0.8.5
-  refuses a project holding a TOUCH (as it would any component it does not know: back up first) and plays an ECHO
-  EVEN as an ordinary, fading ECHO.
-- **Cost**: CPU callgrind every entry within 0.3 % of 0.8.4 (song/cputest 3079 → 3082, eng/DRUM 1579 → 1581: a table
-  look-up a hit, a byte test a block when nothing is held); target loops unchanged (drum_render 33, dx_run 419). Flash
-  image 498108 → 498260 B; .data+.bss 84848 → 85600 B (the held ratchets, 4 a track, and their recording; three bytes a
-  lane); RAM code 21676 → 21768 B; LOWBUF and the pool unchanged (28064 B, 247584 B).
+- **Projects**: the same FUNC format; a step with lane modes sets bit 6 of its extension byte and adds 3 bytes (3 bits
+  a sound). Every 0.8.4 project loads unchanged (no modes) and saves byte for byte as before until a mode is set.
+  Firmware before 0.8.5 refuses a project holding a lane mode or a TOUCH (back up first) and plays an ECHO EVEN as an
+  ordinary, fading ECHO. User presets' patterns have no room for the modes. The editor protocol: INFO `4F 01 07`, 8
+  mode bytes after a step's ratchet (written with them, read with STEP_GET's flag 1); every older reply unchanged.
+- **Cost**: CPU callgrind every entry within 0.3 % of 0.8.4 (song/cputest 3079 → 3081, eng/DRUM 1579 → 1582: a table
+  look-up a hit, a byte test a block when nothing is held or ratchets); target loops unchanged (drum_render 33, dx_run
+  419). A step is 3 bytes longer (17 → 20 B, every copy): .data+.bss 84848 → 87456 B (the tracks' 408 steps +1224, the
+  dice / shape / GEN copies +576, the held ratchets and three bytes a lane); the project scratch moved LOWBUF → pool
+  (LOWBUF 28064 → 19780 B, the section stage +1152 in it; pool 247584 → 258364 B, spare 62144); flash image 498108 →
+  499320 B; RAM code 21676 → 21964 B.
 - Tests: tests/drumx_oct_test.c (centre bit for bit, the ratchets stopped and playing on the grid, SHORT / GHOST / FLAM
-  measured, live REC played back as heard both ways, MIDI bands and MIDI REC, a project round trip, the OCT message, COMP);
-  web/test_web.mjs: the installer's 0.8.5 notice. The preview installer shows a notice (EN / JA / ES) before writing
-  0.8.5 and asks to confirm a backup; the public one (web/STABLE) does not.
+  measured, live REC played back as heard both ways, per sound: kick plain + hat x4 + snare GHOST on one step, recorded
+  and played back; the grid's HIT list; MIDI bands and MIDI REC; FUNC round trip, a 0.8.4-style step packed as before,
+  an older FUNB project with none; the OCT message, COMP); editor_test and web/test_web.mjs: the lane modes over the
+  protocol and the installer's notice. The installer (preview and official) shows a notice (EN / JA / ES) whenever
+  0.8.5 is the version picked and asks to confirm a backup; the landing page does not. FELUCCA_VERSION is v0.8.5.
 
 ### v0.8.4
 - **RAM freed for what comes next** (the owner: room for assignable FX buses). The sound is the same (every golden

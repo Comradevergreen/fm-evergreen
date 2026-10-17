@@ -148,20 +148,21 @@ static int preferences(void)
     uint32_t n = request(ED_INFO, a, 0);
     bad += check("INFO explicitly tags display capabilities after SONG without changing command 33",
         ED_SONG == 33 && ED_UI_STATE == 34 && ED_FAV_SET == 38 &&
-        host_wire[n - 37] == CHAIN_ROWS && host_wire[n - 36] == 0x55 &&
-        host_wire[n - 35] == 1 && host_wire[n - 34] == 9 &&
-        host_wire[n - 33] == 0x4d && host_wire[n - 32] == 1 &&
-        host_wire[n - 31] == MOTION_MAX && host_wire[n - 30] == 1 &&
-        host_wire[n - 29] == 0x42 && host_wire[n - 28] == 1 && host_wire[n - 27] == 3 &&
-        host_wire[n - 26] == 0x46 && host_wire[n - 25] == 1 && host_wire[n - 24] == FM6_NFACTORY &&
-        host_wire[n - 23] == 0 &&                        /* (no bank since 1.0.3) */
-        host_wire[n - 22] == 0x53 && host_wire[n - 21] == 1 && host_wire[n - 20] == 3 &&
-        host_wire[n - 19] == 0x50 && host_wire[n - 18] == 1 && host_wire[n - 17] == 3 &&   /* FM6 v2: no bank, preset patches */
-        host_wire[n - 16] == 0x4E && host_wire[n - 15] == 1 && host_wire[n - 14] == 21 &&   /* MENU settings: 21 items (0.6.72: MIDI OUT) */
-        host_wire[n - 13] == 0x52 && host_wire[n - 12] == 1 && host_wire[n - 11] == 4 &&   /* RATCH */
-        host_wire[n - 10] == 0x4C && host_wire[n - 9] == 1 && host_wire[n - 8] == 1 &&   /* 1.1 parameter locks */
-        host_wire[n - 7] == 0x56 && host_wire[n - 6] == 1 && host_wire[n - 5] == 32 &&   /* (0.6.11) FM6 voice bank */
-        host_wire[n - 4] == 0x4A && host_wire[n - 3] == 1 && host_wire[n - 2] == 1);   /* (0.6.62) JIANT: the installer */
+        host_wire[n - 40] == CHAIN_ROWS && host_wire[n - 39] == 0x55 &&
+        host_wire[n - 38] == 1 && host_wire[n - 37] == 9 &&
+        host_wire[n - 36] == 0x4d && host_wire[n - 35] == 1 &&
+        host_wire[n - 34] == MOTION_MAX && host_wire[n - 33] == 1 &&
+        host_wire[n - 32] == 0x42 && host_wire[n - 31] == 1 && host_wire[n - 30] == 3 &&
+        host_wire[n - 29] == 0x46 && host_wire[n - 28] == 1 && host_wire[n - 27] == FM6_NFACTORY &&
+        host_wire[n - 26] == 0 &&                        /* (no bank since 1.0.3) */
+        host_wire[n - 25] == 0x53 && host_wire[n - 24] == 1 && host_wire[n - 23] == 3 &&
+        host_wire[n - 22] == 0x50 && host_wire[n - 21] == 1 && host_wire[n - 20] == 3 &&   /* FM6 v2: no bank, preset patches */
+        host_wire[n - 19] == 0x4E && host_wire[n - 18] == 1 && host_wire[n - 17] == 21 &&   /* MENU settings: 21 items (0.6.72: MIDI OUT) */
+        host_wire[n - 16] == 0x52 && host_wire[n - 15] == 1 && host_wire[n - 14] == 4 &&   /* RATCH */
+        host_wire[n - 13] == 0x4C && host_wire[n - 12] == 1 && host_wire[n - 11] == 1 &&   /* 1.1 parameter locks */
+        host_wire[n - 10] == 0x56 && host_wire[n - 9] == 1 && host_wire[n - 8] == 32 &&   /* (0.6.11) FM6 voice bank */
+        host_wire[n - 7] == 0x4A && host_wire[n - 6] == 1 && host_wire[n - 5] == 1 &&   /* (0.6.62) JIANT: the installer */
+        host_wire[n - 4] == 0x4F && host_wire[n - 3] == 1 && host_wire[n - 2] == LM_N);   /* (0.8.5) DRUM lane modes */
     request(ED_UI_SET, a, 2);
     bad += check("UI_SET updates the actual palette and reports RAM-only saving",
         host_wire[5] == 3 && settings.palette == 7 && T_BG == UI_PALETTES[7].bg);
@@ -314,6 +315,28 @@ static int steps(void)
     a[14] = 1; n = request(ED_TRACK_STEP, a, 15);
     bad += check("TRACK_STEP sets the ratchet of any track (x4, then back to x1)",
                  ok && n == 21u && step_ratchet(&trk[1].step[2]) == 1u && !(trk[1].step[2].flags & SF_RATCH));
+    /* (0.8.5, INFO 4F 01 07) the lanes' modes: 8 bytes after the ratchet, in a reply only when asked for */
+    memcpy(a, (const uint8_t[]){0, 0, 0, 0, 0, 0, ST_NOTE, 0, 100, 0x09, 0, 0, 100, 1, 0, 0, 0, 2, 0, 0, 0, 0}, 22);
+    n = request(ED_STEP_SET, a, 22);
+    ok = n == 28u && step_lmode(&TSEL->step[0], DV_HATC) == LM_X4 && host_wire[n - 9 + DV_HATC] == LM_X4 &&
+         TSEL->step[0].hit == 0x09 && step_ratchet(&TSEL->step[0]) == 1u;
+    n = request(ED_STEP_SET, a, 14);
+    ok &= n == 20u && step_lmode(&TSEL->step[0], DV_HATC) == LM_X4;
+    a[1] = 1; n = request(ED_STEP_GET, a, 2);
+    ok &= n == 28u && host_wire[n - 9 + DV_HATC] == LM_X4;
+    n = request(ED_STEP_GET, a, 1);
+    ok &= n == 20u;
+    bad += check("STEP_SET / STEP_GET the lanes' modes (8 after the ratchet); without them kept, replies as before", ok);
+    before = TSEL->step[0];
+    memcpy(a, (const uint8_t[]){0, 0, 0, 0, 0, 0, ST_NOTE, 0, 100, 0x09, 0, 0, 100, 1, 0, 0, 0, 7, 0, 0, 0, 0}, 22);
+    bad += check("STEP_SET refuses a lane mode past 6 and leaves the step",
+                 !request(ED_STEP_SET, a, 22) && !memcmp(&before, &TSEL->step[0], sizeof before));
+    memcpy(a, (const uint8_t[]){3, 5, 0, 0, 0, 0, 0, ST_NOTE, 0, 100, 1, 0, 0, 100, 1, 6, 0, 0, 0, 0, 0, 0, 0}, 23);
+    n = request(ED_TRACK_STEP, a, 23);
+    ok = n == 29u && step_lmode(&trk[3].step[5], DV_KICK) == LM_FLAM;
+    a[2] = 1; n = request(ED_TRACK_STEP, a, 3);
+    bad += check("TRACK_STEP the lanes' modes of any track (FLAM on the kick; a read with 1 replies them)",
+                 ok && n == 29u && host_wire[n - 9 + DV_KICK] == LM_FLAM);
     return bad;
 }
 

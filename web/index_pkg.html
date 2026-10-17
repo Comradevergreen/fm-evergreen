@@ -46,15 +46,15 @@
   </div>
   <p class="small"><label><span data-t="verLabel"></span> <select id="ver" style="font:inherit"></select></label>
     <br><span data-t="verOld"></span></p>
-  <!-- (0.8.5) the release's notice: the preview installer only, before 0.8.5 is written (releaseNotice) -->
+  <!-- (0.8.5) the release's notice, before 0.8.5 is written (releaseNotice) -->
   <div id="notice" hidden style="border:2px solid #ec6e50;padding:12px 14px;margin:0 0 16px">
     <p style="margin:0 0 8px;font-weight:600" data-t="n085Title"></p>
     <p class="small" style="margin:0 0 8px" data-t="n085What"></p>
     <p class="small" style="margin:0 0 8px" data-t="n085Risk"></p>
     <p class="small" style="margin:0 0 8px" data-t="n085Keep"></p>
     <div lang="es" style="border-top:1px solid var(--dim);padding-top:8px">
-      <p style="margin:0 0 8px;font-weight:600">Aviso antes de instalar 0.8.5 (versión de prueba)</p>
-      <p class="small" style="margin:0 0 8px">Nuevo en 0.8.5, las octavas de DRUM-X: en la octava central (OCT 0) el kit suena como siempre. Una octava más arriba los mismos sonidos suenan en ratchet a tempo (+1 x2, +2 x4, +3 x8); más abajo, con otro toque: −1 SHORT (la mitad del decay), −2 GHOST (corto, más suave y oscuro: notas fantasma), −3 FLAM (un golpe suave ~20 ms antes del golpe).</p>
+      <p style="margin:0 0 8px;font-weight:600">Aviso antes de instalar 0.8.5</p>
+      <p class="small" style="margin:0 0 8px">Nuevo en 0.8.5, las octavas de DRUM-X: en la octava central (OCT 0) el kit suena como siempre. Una octava más arriba los mismos sonidos suenan en ratchet a tempo (+1 x2, +2 x4, +3 x8); más abajo, con otro toque: −1 SHORT (la mitad del decay), −2 GHOST (corto, más suave y oscuro: notas fantasma), −3 FLAM (un golpe suave ~20 ms antes del golpe). Cada sonido del kit lleva su propia variación: un hi-hat en ratchet no repite el bombo del mismo paso.</p>
       <p class="small" style="margin:0 0 8px">Puede cambiar canciones existentes: las notas MIDI fuera del mapa GM (35–81) que hoy una pista DRUM toca como su octava (por ejemplo 24, o 84 y más) ahora suenan como esas variantes; las teclas con OCT movido ya no cambian de sonido sino que hacen ratchet / SHORT / GHOST / FLAM. Las notas guardadas en los pasos suenan igual que antes.</p>
       <p class="small" style="margin:0">Para conservar el sonido de antes, mové esas notas a la octava central (36–47, o el mapa GM 35–81) en tu DAW o secuenciador. Antes de instalar, guardá un backup completo de tus proyectos con el editor (Backup) o con «Volver al V15 oficial» abajo.</p>
     </div>
@@ -127,8 +127,8 @@ const TEXT = {
     badpkg: "インストールするファイルが壊れています。ページを再読み込みしてください。",
     leave: "書き込み中です。ページを閉じないでください。",
     license: "GPL-3.0、無保証。ソース:",
-    n085Title: "0.8.5 をインストールする前に（プレビュー版）",
-    n085What: "0.8.5 の新機能 DRUM-X のオクターブ: 中央のオクターブ (OCT 0) ではキットはこれまでどおり鳴ります。上のオクターブでは同じ音がテンポに合わせたラチェットに（+1 x2、+2 x4、+3 x8）、下では別のタッチに: −1 SHORT（ディケイ半分）、−2 GHOST（短く、弱く、暗く: ゴーストノート）、−3 FLAM（約 20 ms 前に弱い装飾音）。",
+    n085Title: "0.8.5 をインストールする前に",
+    n085What: "0.8.5 の新機能 DRUM-X のオクターブ: 中央のオクターブ (OCT 0) ではキットはこれまでどおり鳴ります。上のオクターブでは同じ音がテンポに合わせたラチェットに（+1 x2、+2 x4、+3 x8）、下では別のタッチに: −1 SHORT（ディケイ半分）、−2 GHOST（短く、弱く、暗く: ゴーストノート）、−3 FLAM（約 20 ms 前に弱い装飾音）。キットの音ごとに別々: ハイハットのラチェットは同じステップのキックを繰り返しません。",
     n085Risk: "既存の曲の鳴り方が変わることがあります: DRUM トラックに GM マップ (35–81) の外の MIDI ノート（例えば 24 や 84 以上）を送る設定では、これまでそのオクターブとして鳴っていた音が、これらのバリエーションで鳴ります。OCT を動かした鍵盤は音が変わる代わりにラチェット / SHORT / GHOST / FLAM になります。ステップに保存されたノートはこれまでどおり鳴ります。",
     n085Keep: "以前の音を保つには、それらのノートを DAW やシーケンサーで中央のオクターブ (36–47、または GM マップ 35–81) に移してください。インストールの前に、エディターのバックアップ（または下の「公式 V15 に戻す」）でプロジェクトの完全バックアップを保存してください。",
     n085Confirm: "0.8.5 では DRUM-X のオクターブが加わり、中央以外のオクターブのドラムノートはラチェット / SHORT / GHOST / FLAM で鳴ります（既存の曲が変わることがあります）。プロジェクトのバックアップは保存しましたか？ OK でインストールします。",
@@ -173,8 +173,8 @@ const TEXT = {
     badpkg: "The file to install is damaged. Reload the page.",
     leave: "Writing. Do not close the page.",
     license: "GPL-3.0, no warranty. Source:",
-    n085Title: "Before you install 0.8.5 (preview)",
-    n085What: "New in 0.8.5, DRUM-X octaves: in the centre octave (OCT 0) the kit plays as it always did. In the octaves above, the same sounds ratchet in time (+1 x2, +2 x4, +3 x8); below, they play with another touch: −1 SHORT (half the decay), −2 GHOST (short, softer, darker: ghost notes), −3 FLAM (a soft grace hit ~20 ms before the hit).",
+    n085Title: "Before you install 0.8.5",
+    n085What: "New in 0.8.5, DRUM-X octaves: in the centre octave (OCT 0) the kit plays as it always did. In the octaves above, the same sounds ratchet in time (+1 x2, +2 x4, +3 x8); below, they play with another touch: −1 SHORT (half the decay), −2 GHOST (short, softer, darker: ghost notes), −3 FLAM (a soft grace hit ~20 ms before the hit). Each sound of the kit keeps its own: a hi-hat ratchet does not repeat the kick on the same step.",
     n085Risk: "Existing songs may sound different: MIDI notes outside the GM map (35–81) sent to a DRUM track, which played as their octave until now (for example 24, or 84 and up), now trigger those variations; keys with OCT moved no longer change the sound, they ratchet / play SHORT / GHOST / FLAM. Notes stored in the steps play as before.",
     n085Keep: "To keep the old sound, move those notes to the centre octave (36–47, or the GM map 35–81) in your DAW or sequencer. Before installing, save a complete backup of your projects with the editor (Backup) or with Return to official V15 below.",
     n085Confirm: "0.8.5 adds the DRUM-X octaves: drum notes outside the centre octave now play as ratchets / SHORT / GHOST / FLAM (existing songs may change). Have you saved a backup of your projects? OK installs it.",
@@ -225,12 +225,12 @@ async function loadVersion(i) {
     $("go").disabled = writing;
   } catch (e) { if (epoch === loadEpoch) sayK("loadfail", e.message); }
 }
-/* (0.8.5) a release's notice before it is written: 0.8.5 (the DRUM-X octaves change how some drum notes sound), on the
- * preview installer only (its version ends -preview, make_site.py; the public one, web/STABLE's, never shows it) */
-function releaseNotice(version, site) {
-  return /-preview$/.test(String(site)) && /^v?0\.8\.5(?![0-9])/.test(String(version)) ? "n085" : "";
+/* (0.8.5) a release's notice before it is written: 0.8.5 (the DRUM-X octaves change how some drum notes sound), on
+ * either installer (the preview's and web/STABLE's) whenever the version picked is 0.8.5; never on the landing page */
+function releaseNotice(version) {
+  return /^v?0\.8\.5(?![0-9])/.test(String(version)) ? "n085" : "";
 }
-const noticeOf = () => releaseNotice((versions[+$("ver").value] || versions[0]).version, meta.version);
+const noticeOf = () => releaseNotice((versions[+$("ver").value] || versions[0]).version);
 const showNotice = () => { $("notice").hidden = !noticeOf(); };
 fillVersions();
 showNotice();

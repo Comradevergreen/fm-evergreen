@@ -564,7 +564,8 @@ static void page_go(int32_t d)
     cursor_set((int32_t)(b * 16u + ui.cursor % 16u < len ? b * 16u + ui.cursor % 16u : len - 1u));
 }
 
-/* the grid's knobs: 1 STEP (the cursor), 2 LANE, 3 HIT and 4 ACC of the lane at the cursor (right on, left off) */
+/* the grid's knobs: 1 STEP (the cursor), 2 LANE, 3 HIT and 4 ACC of the lane at the cursor (right on, left off; 0.8.5:
+ * HIT on along its modes, ui.c GRID_HIT) */
 static void grid_edit(uint32_t slot, int32_t steps)
 {
     if (slot == 0u)
@@ -572,7 +573,8 @@ static void grid_edit(uint32_t slot, int32_t steps)
     else if (slot == 1u)
         ui.lane = (uint8_t)clamp((int32_t)ui.lane + (steps > 0 ? 1 : -1), 0, NLANE - 1);
     else if (slot == 2u)
-        grid_hit(TSEL, ui.cursor, ui.lane, steps > 0);
+        grid_hit_set(TSEL, ui.cursor, ui.lane,
+                     (uint32_t)clamp((int32_t)grid_hit_of(&TSEL->step[ui.cursor], ui.lane) + (steps > 0 ? 1 : -1), 0, LM_N));
     else
         grid_acc(TSEL, ui.cursor, ui.lane, steps > 0);
 }

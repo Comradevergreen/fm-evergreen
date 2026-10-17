@@ -260,9 +260,14 @@ static void ed_step_put(step_t *st, const uint8_t *a, uint32_t na)
     }
     if (na >= 12u) step_set_chance(st, a[11] <= 100u ? a[11] : 100u);
     if (na >= 13u) step_set_ratchet(st, a[12]);
+    if (na >= 21u)                                        /* (0.8.5, INFO 4F 01 07) each lane's mode, 0..6 (core.h LM_*) */
+        for (i = 0; i < NLANE; i++)
+            step_set_lmode(st, i, a[13 + i] < LM_N ? a[13 + i] : LM_NONE);
     ui.force = 1;
 }
-static void ed_step_reply(const step_t *st)              /* the same 13 bytes */
+static void ed_step_reply(const step_t *st, int lanes)   /* the same 13 bytes; (0.8.5) then the 8 lanes' modes, when the
+                                                         * request asked for them (a write with them, a read with its
+                                                         * flag 1): every reply of before as it was */
 {
     uint32_t i;
     ed_b(st->n);
@@ -276,6 +281,8 @@ static void ed_step_reply(const step_t *st)              /* the same 13 bytes */
     ed_b((uint32_t)(st->hit >> 7) | (uint32_t)(st->acc >> 7) << 1);
     ed_b(step_chance(st));
     ed_b(step_ratchet(st));
+    for (i = 0; lanes && i < NLANE; i++)
+        ed_b(step_lmode(st, i));
 }
 
 /* a flash write from the editor while the transport runs: stop it first (the erase silences the audio and
@@ -313,6 +320,13 @@ static void ed_motion_reply(uint32_t k, uint32_t rc, uint32_t kinds)
         if (MOTION_TRK(&motion.event[i]) == k)
             ed_b((motion.event[i].param & MOTION_LOCK) != 0u);
 }
+static int ed_lm_ok(const uint8_t *a)                  /* (0.8.5) eight lane modes, each 0..6 */
+{
+    uint32_t i;
+    for (i = 0; i < NLANE; i++)
+        if (a[i] >= LM_N) return 0;
+    return 1;
+}
 static int ed_args_ok(uint32_t cmd, const uint8_t *a, uint32_t n)
 {
     switch (cmd) {
@@ -324,21 +338,25 @@ static int ed_args_ok(uint32_t cmd, const uint8_t *a, uint32_t n)
         return n == 2u || (cmd == ED_TRACK_PARAM && n == 4u);
     case ED_SET:
         return n == 4u;
-    case ED_STEP_GET: case ED_NAMES:
+    case ED_STEP_GET:
+        return n == 1u || (n == 2u && a[1] == 1u);         /* (0.8.5: 1, the lanes' modes too) */
+    case ED_NAMES:
     case ED_UP_GET: case ED_UP_LOAD: case ED_UP_ERASE: case ED_WATCH: case ED_TRACK_DUMP: case ED_MENU_DESC:
         return n == 1u;
     case ED_MENU_SET:
         return n == 3u;
     case ED_STEP_SET:
         return n == 9u || n == 12u || (n == 13u && a[12] <= 100u) ||               /* notes only, or the complete grid extension, */
-               (n == 14u && a[12] <= 100u && a[13] >= 1u && a[13] <= 4u);       /* its chance, its ratchet */
+               (n == 14u && a[12] <= 100u && a[13] >= 1u && a[13] <= 4u) ||     /* its chance, its ratchet, */
+               (n == 22u && a[12] <= 100u && a[13] >= 1u && a[13] <= 4u && ed_lm_ok(a + 14));   /* (0.8.5) the lanes' modes */
     case ED_TRACK:
         return n <= 1u;
     case ED_TRACK_MIX:
         return n == 1u || n == 4u;
     case ED_TRACK_STEP:
-        return n == 2u || n == 10u || n == 13u || (n == 14u && a[13] <= 100u) ||
-               (n == 15u && a[13] <= 100u && a[14] >= 1u && a[14] <= 4u);
+        return n == 2u || (n == 3u && a[2] == 1u) || n == 10u || n == 13u || (n == 14u && a[13] <= 100u) ||
+               (n == 15u && a[13] <= 100u && a[14] >= 1u && a[14] <= 4u) ||
+               (n == 23u && a[13] <= 100u && a[14] >= 1u && a[14] <= 4u && ed_lm_ok(a + 15));
     case ED_MOTION:
         return (n == 1u || (n == 2u && (a[1] == 2u || a[1] == 7u)) || (n == 3u && a[1] == 1u && a[2] <= 1u) ||
                 (n == 6u && (a[1] == 3u || a[1] == 5u)) || (n == 4u && a[1] == 4u) || (n == 3u && a[1] == 6u)) &&
@@ -410,6 +428,7 @@ static void ed_handle(const uint8_t *f, uint32_t n)   /* f: the bytes between F0
         ed_b(0x4C); ed_b(1); ed_b(1);   /* 1.1 parameter locks: MOTION ops 5..7, the kinds after the records */
         ed_b(0x56); ed_b(1); ed_b(FM6_NBANK);   /* (JIANT 0.6.11, Felucca 1.4.1) FM6's voice bank: cmds 74..77, SLOT 9..40 */
         ed_b(0x4A); ed_b(1); ed_b(1);   /* (JIANT 0.6.62) 'J': this is JIANT (the web installer writes over it, web/index_pkg.html) */
+        ed_b(0x4F); ed_b(1); ed_b(LM_N);   /* (0.8.5) 'O': the DRUM-X octaves, a step's lane modes 0..6 after its ratchet */
         break;
     case ED_GET:
     case ED_SET:
@@ -470,7 +489,7 @@ static void ed_handle(const uint8_t *f, uint32_t n)   /* f: the bytes between F0
         }
         ed_w.st[a[0]] = ed_step_sig(&seq_steps(TSEL)[a[0]]);
         ed_b(a[0]);
-        ed_step_reply(&seq_steps(TSEL)[a[0]]);
+        ed_step_reply(&seq_steps(TSEL)[a[0]], na == 22u || (cmd == ED_STEP_GET && na == 2u));
         break;
     }
     case ED_PRESET: {                                      /* engine, preset */
@@ -694,7 +713,7 @@ static void ed_handle(const uint8_t *f, uint32_t n)   /* f: the bytes between F0
             ed_w.st[a[1]] = ed_step_sig(&seq_steps(&trk[a[0]])[a[1]]);
         ed_b(a[0]);
         ed_b(a[1]);
-        ed_step_reply(&seq_steps(&trk[a[0]])[a[1]]);
+        ed_step_reply(&seq_steps(&trk[a[0]])[a[1]], na == 23u || na == 3u);
         break;
     }
     case ED_TRACK_PARAM: {                                 /* track, id [, v14] -> track, id, v14 */
