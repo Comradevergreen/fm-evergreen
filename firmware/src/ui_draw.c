@@ -973,7 +973,8 @@ static void draw_columns(void)
             case COMP_OCT: lb = "MODE"; str_cpy(val, OCTN[a % 6], sizeof val); un = "OCT"; break;
             case COMP_TONAL: lb = "SHIFT"; a -= 7; val[0] = a < 0 ? '-' : '+'; fmt_int(val + 1, a < 0 ? -a : a); un = "DEG"; break;
             case COMP_BEND: lb = "BEND"; a -= 12; val[0] = a < 0 ? '-' : '+'; fmt_int(val + 1, a < 0 ? -a : a); un = "ST"; break;
-            case COMP_ECHO: lb = "REPEAT"; val[0] = 'x'; fmt_int(val + 1, 2 + a % 7); break;
+            case COMP_ECHO: lb = "REPEAT"; val[0] = 'x'; fmt_int(val + 1, 2 + (a & 127) % 7); un = a & 128 ? "EVEN" : ""; break;
+            case COMP_TOUCH: { static const char *const TN[3] = {"SHORT", "GHOST", "FLAM"}; lb = "HIT"; str_cpy(val, TN[a % 3], sizeof val); break; }   /* (0.8.5) */
             case COMP_PULSE: lb = "EVERY"; fmt_int(val, 1 + a % 4); un = a ? "STEPS" : "STEP"; break;
             case COMP_JUMP: lb = "TO STEP"; fmt_int(val, (int32_t)CP_JTO(a) + 1); break;
             case COMP_WALK: case COMP_CLIMB: {          /* (0.6.98) MODE and RANGE in one: the range as the unit */

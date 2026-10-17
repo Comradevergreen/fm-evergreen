@@ -410,7 +410,12 @@ static const uint8_t CT_DIVS[CT_NDIV] = {0, 2, 3, 4, 6, 8};
  * x2..x4; 0.6.82: .. x8); PULSE: its notes again on the empty steps after it (carg 0..3: every 1..4); JUMP: then step carg + 1;
  * REV: back from here to step 1 (ping-pong); FILL: only while FX is held; KILL: what the track sounds cut first */
 enum { CP_NONE, CP_ARPN, CP_ARPQ, CP_ARPS, CP_TRIG, CP_RAND, CP_OCT, CP_TONAL, CP_BEND, CP_ECHO, CP_PULSE, CP_JUMP,
-       CP_REV, CP_FILL, CP_KILL, CP_WALK, CP_CLIMB, CP_N };
+       CP_REV, CP_FILL, CP_KILL, CP_WALK, CP_CLIMB, CP_TOUCH, CP_N };
+/* (0.8.5) TOUCH: on a DRUM track how the step's hits are struck (carg 0..2: SHORT, half the decay; GHOST, short, darker
+ * and softer; FLAM, a soft grace hit ~20 ms before the hit; eng_drum.c DXO_*): what a hit played in the octaves below
+ * the kit's records (OCT -1 .. -3, MIDI below 35: seq.c dxo_on). Other engines: nothing. ECHO's carg bit 7, EVEN
+ * (0.8.5): its repeats all at the step's level, a ratchet past RATCH's x4 (OCT +3 on a kit records x8 so) */
+#define CP_ECHO_EVEN 0x80u
 /* (0.6.98) WALK and CLIMB (after the OP-Z's and OP-XY's evolving components): the step's notes move one degree of the
  * scale (WALK) or one octave (CLIMB) every RATE loops of the pattern, over a RANGE of moves, then round again: UP,
  * DOWN, UP-DN (there and back) or RND (a random place a move, the same every time round). carg: bits 0-3 RATE
@@ -425,9 +430,9 @@ enum { CP_NONE, CP_ARPN, CP_ARPQ, CP_ARPS, CP_TRIG, CP_RAND, CP_OCT, CP_TONAL, C
 static const uint8_t CP_WRATES[CP_NWRATE] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 16};
 static const uint8_t CP_WDEGS[4] = {3, 5, 7, 12};
 /* the range of carg each component's KNOB 3 turns (ARP: KNOB 3 / 4 their own; WALK CLIMB: theirs) */
-static const uint8_t CP_AMAX[CP_N] = {0, 0, 0, 0, 11, 7, 5, 14, 24, 6, 3, 63, 0, 0, 0, 0, 0};
-static const uint8_t CP_ADEF[CP_N] = {0, 0, 0, 0, 0, 2, 0, 9, 7, 1, 0, 0, 0, 0, 0, 0x40, 0x00};
-static const uint8_t CP_AMIN[CP_N] = {0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+static const uint8_t CP_AMAX[CP_N] = {0, 0, 0, 0, 11, 7, 5, 14, 24, 6, 3, 63, 0, 0, 0, 0, 0, 2};
+static const uint8_t CP_ADEF[CP_N] = {0, 0, 0, 0, 0, 2, 0, 9, 7, 1, 0, 0, 0, 0, 0, 0x40, 0x00, 0};
+static const uint8_t CP_AMIN[CP_N] = {0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 static int cp_iswalk(uint32_t c) { return c == CP_WALK || c == CP_CLIMB; }
 #define CP_ORD(a) ((uint32_t)(a) & 3u)            /* UP DOWN UP-DN RND */
 /* (0.6.62) JUMP: its step (bits 0-5) and TIMES (bits 6-7); REV: TIMES (bits 0-1). TIMES: ALWAYS, x1 (once a pass of
@@ -579,6 +584,8 @@ typedef struct track {
     uint16_t dbt;
     uint8_t ss_n, ss_i;          /* (0.6.84) STRUM on the sequencer's chords: the step's notes still to come in, in */
     uint8_t ss_nn[4 + NLANE], ss_vv[4 + NLANE];  /* order low to high (seq.c seq_step, seq_tick), ss_due samples to the next */
+    uint8_t dtch, ss_tch;        /* (0.8.5) a step's TOUCH (1..3, 0 none) on the sequencer's next drum hits; .. on the
+                                  * queued ones (HUMAN TIME: seq_tick) */
     uint32_t ss_due, ss_gap;     /* (.. and the gap between them; 0.6.88: 32 bits, a long TIMING) */
     uint16_t ext;                /* (0.6.88) TIMING: samples the playing step began before its place (it is early) */
     int8_t mic;                  /* .. the playing step's own TIMING (ST_MICRO), late: seq_step queues its notes */

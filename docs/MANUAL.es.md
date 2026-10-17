@@ -108,7 +108,7 @@ Los nombres de abajo son los que usa el firmware (la pantalla HARDWARE CALIBRATI
 | **SEQ** | Páginas SEQ: en una página SEQ, el siguiente juego de perillas del nivel de zoom en el que estás; desde otro lado, vuelve al nivel y al juego que usaste por última vez en esa pista. | Capa **SEQ TOOLS** (en todas las páginas SEQ). |
 | **PLAY** | Arranca / para. | — |
 | **REC** | Arma / desarma la grabación en la pista seleccionada. | Capa **REC**: CLEAR, CLICK. |
-| **OCT− / OCT+** | Octava del teclado (−3 a +3; los dos juntos: vuelve a 0). En páginas de acción y en diálogos: **OCT−** = atrás / NO, **OCT+** = hacerlo / YES. | — |
+| **OCT− / OCT+** | Octava del teclado (−3 a +3; los dos juntos: vuelve a 0; en una pista DRUM el kit queda en sus teclas: ratchets arriba, SHORT / GHOST / FLAM abajo, ver [5](#5-drum-x)). En páginas de acción y en diálogos: **OCT−** = atrás / NO, **OCT+** = hacerlo / YES. | — |
 
 ### Las teclas
 
@@ -566,6 +566,39 @@ DRUM-X es un kit sintetizado de ocho sonidos, **BD SD CP CH OH TM RS CB**, gener
 - **EDIT mantenido + SELECT** tira un kit nuevo alrededor del de fábrica. **EDIT mantenido + F3 (INIT)** trae de
   vuelta el kit de fábrica.
 
+### El kit en cada octava (0.8.5)
+
+Las teclas tocan el kit en las mismas teclas en **cualquier OCT** (C el bombo, D la caja, F# el hi-hat cerrado …); OCT
+ahora cambia **cómo** suenan, no qué sonido. La pantalla lo dice cuando apretás OCT en una pista DRUM:
+
+| OCT | Qué hace una tecla | Se graba (REC) como |
+|---|---|---|
+| **+3** | **RATCHET x8**: el golpe ocho veces por paso mientras la mantenés | el golpe + el **ECHO x8 EVEN** del paso (todas al mismo nivel) |
+| **+2** | **RATCHET x4** | el golpe + el **RATCH x4** del paso |
+| **+1** | **RATCHET x2** | el golpe + el **RATCH x2** del paso |
+| **0** | el kit como siempre | el golpe |
+| **−1** | **SHORT**: la mitad del decay | el golpe + el **TOUCH SHORT** del paso |
+| **−2** | **GHOST**: corto, más suave (~45 %), más oscuro: una nota fantasma | el golpe + **TOUCH GHOST** |
+| **−3** | **FLAM**: un golpe de adorno suave y el golpe ~20 ms después (sea cual sea el tempo) | el golpe + **TOUCH FLAM** |
+
+- Los ratchets van **a tempo**: con PLAY caen en la grilla del RATCH del paso (el comienzo de cada paso y cada paso/n,
+  con swing); parado, cada paso/n del DIV de la pista desde que tocás. Al soltar se detienen.
+- **La grabación en vivo guarda lo que tocaste**: el paso donde cae el golpe recibe el golpe y el RATCH (o ECHO x8 EVEN, o
+  TOUCH); si mantenés un ratchet varios pasos, cada paso en el que sigue apretado también se escribe (y lo toca el
+  secuenciador, así la vuelta siguiente suena exactamente como lo escuchaste). Si soltás antes de la mitad del último,
+  ese paso vuelve a como estaba, igual que con una nota sostenida de un sinte. Se ven y se editan como cualquier paso:
+  SEQ > COMP muestra RATCH / ECHO / **TOUCH** (KNOB 3: SHORT, GHOST, FLAM); la página CHANCE el RATCH.
+- RATCH, ECHO y TOUCH son **del paso**: todo lo que hay en ese paso suena con ellos. Grabar un ratchet en un paso que ya
+  tiene un bombo hace ratchet también del bombo; un golpe de la octava central deja el RATCH / TOUCH del paso como está.
+- **MIDI** (0.8.5): las notas 35–81 siguen tocando el mapa GM de batería exactamente como antes. Las notas alrededor,
+  que antes sonaban como su octava de 36–47 sin más, ahora son estas octavas, por clase de altura: **23–34 SHORT, 11–22
+  GHOST, 0–10 FLAM, 82–93 x2, 94–105 x4, 106–127 x8** (84 el bombo x2, 24 el bombo SHORT, 90 el hi-hat cerrado x2). Las
+  teclas mandan esas notas por MIDI OUT. **Una canción o un setup MIDI que mandaba notas de batería debajo de 35 o arriba
+  de 81** (un bombo en 24, por ejemplo) ahora va a escuchar estas variaciones: movelas a 35–81 (36–47 para las del kit)
+  para conservar el sonido de antes. Las notas guardadas en los pasos suenan como antes, sea cual sea su número.
+- Con el ARP prendido las teclas alimentan el arpegio sin cambios (sin ratchet ni TOUCH). Las teclas de carril de la
+  grilla DRUM son siempre la octava central.
+
 Un kit por sección, compartido por todas las pistas en DRUM: mientras otra pista toca DRUM-X, recorrer kits en una pista distinta deja ese kit como está ("KIT OF T4 KEPT", 0.8.1); cargá los kits en la pista de batería. El kit se guarda con cada sección de un proyecto (no con los presets de usuario — ver [12](#12-guardar-y-cargar)).
 
 ---
@@ -666,6 +699,11 @@ seleccionada se graban como **automatización**. MENU > AUDIO tiene el **CLICK**
     FIRST solo la primera vez (una intro), !FIRST todas menos la primera (0.6.92; antes era TIMES).
   - **FILL**: el paso suena solo mientras mantenés **FX**.
   - **KILL**: el paso primero corta todo lo que suena en la pista (releases largos, notas sostenidas) y después toca.
+  - **TOUCH** (0.8.5, una pista DRUM): cómo se golpean sus sonidos, KNOB 3 **SHORT** (la mitad del decay), **GHOST**
+    (corto, más suave, más oscuro), **FLAM** (un golpe de adorno suave ~20 ms antes). Lo que graban OCT −1 / −2 / −3
+    (ver [5](#5-drum-x)). En otros motores no hace nada.
+  - **EVEN** del ECHO (0.8.5): un ECHO grabado desde OCT +3 en un kit mantiene cada repetición al nivel del paso (un
+    ratchet más allá del x4 de RATCH); la tarjeta muestra "x8 EVEN", KNOB 3 lo conserva.
   - **WALK** y **CLIMB** (0.6.98, a la manera de los componentes evolutivos del OP-Z y el OP-XY): las notas del paso se
     mueven un grado de la escala (WALK) o una octava (CLIMB) **cada tantas vueltas** del patrón (KNOB 4: 1 … 10, 12,
     16 vueltas por movimiento), dentro de un **rango** (WALK 3, 5, 7 o 12 grados; CLIMB 1 … 4 octavas), y vuelven a

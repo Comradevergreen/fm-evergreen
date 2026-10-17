@@ -38,6 +38,16 @@ function installerCheck() {
   ok(isJiantInfo(info("FELUCCA v0.6.40", 6, [0x56, 1, 32])), "installer: an older JIANT (six tracks, v0.x) too");
   ok(!isJiantInfo(info("FELUCCA 1.5.1", 4, [0x56, 1, 32])), "installer: Felucca 1.x (four tracks) is not");
   ok(!isJiantInfo(info("BAUDGIRL 2.0", 4, [])), "installer: another firmware is not");
+  /* (0.8.5) the release notice: before 0.8.5 is written, on the preview installer only, in every language it has */
+  const ns = html.slice(html.indexOf("function releaseNotice"), html.indexOf("const noticeOf"));
+  const releaseNotice = vm.runInNewContext(`(${ns.trim()})`);
+  ok(releaseNotice("v0.8.5-abc1234-preview", "v0.8.5-abc1234-preview") === "n085", "installer: 0.8.5 on the preview: the notice");
+  ok(releaseNotice("v0.8.5-abc1234", "v0.7.4-0123abc") === "", "installer: the public installer: never");
+  ok(releaseNotice("v0.8.4-abc1234-preview", "v0.8.4-abc1234-preview") === "" &&
+     releaseNotice("v0.8.50-abc-preview", "v0.8.50-abc-preview") === "", "installer: another version: none");
+  for (const k of ["n085Title", "n085What", "n085Risk", "n085Keep", "n085Confirm"])
+    ok((html.match(new RegExp(`\\b${k}: "`, "g")) || []).length === 2, `installer: ${k} in English and Japanese`);
+  ok(/<div lang="es"[^>]*>[\s\S]*Aviso antes de instalar 0\.8\.5[\s\S]*backup completo/.test(html), "installer: the notice in Spanish");
 }
 
 /* ------------------------------------------------------------ editor protocol --- */

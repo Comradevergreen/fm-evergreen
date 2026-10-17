@@ -15,7 +15,10 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.8.4).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.8.5).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+  **DRUM-X octaves** (0.8.5): the kit stays on its keys at every OCT; above the centre it ratchets in time (x2, x4, x8),
+  below it plays SHORT, GHOST or FLAM, and live recording keeps exactly what you played. MIDI drum notes outside 35–81
+  now trigger these variations: see the changelog before installing.
 
 > ⚡ **New in 0.6.85 – 0.6.92: a song generator you steer, a compact sequencer that breathes, a delay that feeds back.**
 > - **GEN (HOME + SELECT)**: a screen of three pages — GENRE (43 genres or RANDOM), SEED, ENERGY, FORM (loop, parts,
@@ -536,6 +539,37 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### v0.8.5
+- **DRUM-X octaves** (the owner: "in the centre octave the DRUM-X as it is now; going up the octaves the same sounds in
+  ratchet with the step components that exist, an octave up half the ratchet time and so on; going down something
+  else"). On a DRUM track the keys keep the kit on the same keys at every OCT (C the kick, D the snare …); OCT now says
+  **how** they play, and the screen names it: **+1 RATCHET x2, +2 x4, +3 x8** (in time while held: playing on the step's
+  RATCH grid, swing included, stopped every step/n from the press); **−1 SHORT** (half the decay), **−2 GHOST** (short,
+  ~45 % of the level, darker: a ghost note), **−3 FLAM** (a soft grace hit, the hit ~20 ms later whatever the tempo).
+  OCT 0 is the kit as it was, bit for bit (every golden render unchanged).
+- **Recorded as played** ("y que se graben así en record en la secuencia"): live REC writes the hit and the step's own
+  components, so the pass after sounds as you heard it (tested to the block): **RATCH x2 / x4**, **ECHO x8 EVEN** for
+  x8 (RATCH stops at x4; ECHO's new **EVEN** keeps every repeat at one level), and the new component **TOUCH** (SHORT /
+  GHOST / FLAM) below. A ratchet held over several steps writes each of them (an early release in the last one puts
+  it back, as a held note's TIE). They show and edit on SEQ > COMP like any step. They are the step's: a kick already
+  on the step ratchets along; a centre-octave hit leaves a step's RATCH / TOUCH alone.
+- **MIDI**: 35–81 play the GM drum map exactly as before. The notes around it, which played their octave of 36–47 plain,
+  are now the octaves' bands by pitch class: 23–34 SHORT, 11–22 GHOST, 0–10 FLAM, 82–93 x2, 94–105 x4, 106–127 x8 (MIDI
+  OUT sends the keys' notes the same way). **A song or setup that sent drum notes below 35 or above 81 sounds different
+  now**: move them into 35–81 to keep the old sound. Notes stored in steps play as before, whatever their number; the
+  keys with OCT moved no longer reach GM 56–81 (MIDI still does).
+- **Projects**: no new format. TOUCH is a component (the comp byte), EVEN bit 7 of ECHO's argument. Firmware before 0.8.5
+  refuses a project holding a TOUCH (as it would any component it does not know: back up first) and plays an ECHO
+  EVEN as an ordinary, fading ECHO.
+- **Cost**: CPU callgrind every entry within 0.3 % of 0.8.4 (song/cputest 3079 → 3082, eng/DRUM 1579 → 1581: a table
+  look-up a hit, a byte test a block when nothing is held); target loops unchanged (drum_render 33, dx_run 419). Flash
+  image 498108 → 498260 B; .data+.bss 84848 → 85600 B (the held ratchets, 4 a track, and their recording; three bytes a
+  lane); RAM code 21676 → 21768 B; LOWBUF and the pool unchanged (28064 B, 247584 B).
+- Tests: tests/drumx_oct_test.c (centre bit for bit, the ratchets stopped and playing on the grid, SHORT / GHOST / FLAM
+  measured, live REC played back as heard both ways, MIDI bands and MIDI REC, a project round trip, the OCT message, COMP);
+  web/test_web.mjs: the installer's 0.8.5 notice. The preview installer shows a notice (EN / JA / ES) before writing
+  0.8.5 and asks to confirm a backup; the public one (web/STABLE) does not.
 
 ### v0.8.4
 - **RAM freed for what comes next** (the owner: room for assignable FX buses). The sound is the same (every golden
