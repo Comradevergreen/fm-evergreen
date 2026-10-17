@@ -44,6 +44,10 @@ the end of the step replies, and an optional last byte of a step write (see "Rat
 of id 127 (past every track parameter; automation only: op 5, a lock, is refused with 1), listed by the query as any
 other. Firmware before 0.9.1 shows global 17 as `NAME`.
 
+**MICRO in 64ths (JIANT 0.9.1):** a step's place off the grid is -32..+31 64ths of a step (was -8..+7 sixteenths).
+The step bytes of `STEP_GET` / `STEP_SET` / `TRACK_STEP` do not carry it (as before): a write keeps the step's MICRO,
+and the flags byte stays accent | slide. Backups and projects carry it (FUNC block `M` `F`).
+
 **Parameter locks (1.1, INFO `4C 01 01`):** a motion record can be a lock: its value sounds on its step only and
 goes back after it. `MOTION` (64) gets ops 5..7 (set a lock, clear a step's locks, the query with the kinds); the
 query and ops 1..4 reply byte for byte as before (see "Parameter locks" below). A lock takes no new bytes in a

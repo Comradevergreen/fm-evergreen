@@ -1590,12 +1590,13 @@ static void draw_columns(void)
         if (on && !kit) note_name(pn, st->note[f ? f - 1u : 0u]); else str_cpy(pn, "--", 8);
         fmt_int(sn, (int32_t)ui.cursor + 1);
         if (!m) str_cpy(mo, on ? "GRID" : "--", sizeof mo);
-        else { mo[0] = m < 0 ? '-' : '+'; fmt_int(mo + 1, m < 0 ? -m : m); str_cpy(mo + str_len(mo), "/16", 4); }
+        else { mo[0] = m < 0 ? '-' : '+'; fmt_int(mo + 1, m < 0 ? -m : m); str_cpy(mo + str_len(mo), "/64", 4); }   /* (0.9.1) */
         if (kit) draw_column(0, "STEP", sn, "", VAL(0u), -1, ICON_AUTO);
         else draw_column(0, "FOCUS", fo, "", on ? VAL(0u) : T_DIM, -1, ICON_AUTO);
         draw_column(1, "PITCH", pn, "", on && !kit ? VAL(1u) : T_DIM, -1, ICON_AUTO);
         draw_column(2, "MOVE", kit ? "--" : sn, kit ? "" : "<>", on && !kit ? VAL(2u) : T_DIM, -1, ICON_AUTO);
-        draw_column(3, "MICRO", mo, "", on && m ? VAL(3u) : T_DIM, on ? (m + 8) * 1000 / 15 : -1, ICON_ORDER);
+        draw_column(3, "MICRO", mo, "", on && m ? VAL(3u) : T_DIM, on ? (m - MICRO_MIN) * 1000 / (MICRO_MAX - MICRO_MIN) : -1,
+                    ICON_ORDER);
         return;
     }
     if (cur_page()->scope == SC_STEP) {

@@ -410,7 +410,7 @@ COMPÁS edita el piano roll, en PASO el paso dibujado grande; las perillas son l
 | PATRÓN | MUTATE | SOUND (cada) | PATTERN (cada) | AMOUNT | MODE |
 | COMPÁS | STEP (melódica: piano roll) | STEP | NOTE | TIME (REST ← TIE ← NOTE → 2 ST … 16 ST: la duración de la nota en pasos) | FLAG (– / ACC / SLD / A+S) |
 | COMPÁS | STEP (DRUM: grilla) | STEP | LANE | HIT | ACC |
-| COMPÁS | NOTE | FOCUS | PITCH | MOVE | MICRO (−8/16 … +7/16) |
+| COMPÁS | NOTE | FOCUS | PITCH | MOVE | MICRO (−32/64 … +31/64; 0.9.1) |
 | COMPÁS | AUTOMATION | PLAY (ON/OFF) | EVENT (cantidad) | LOCK (cantidad) | CLEAR (acción) |
 | COMPÁS | AUTO LIST | ROW | STEP | PARAM | VALUE |
 | PASO | NOTE | FOCUS | PITCH | MOVE | MICRO |
@@ -948,12 +948,17 @@ seleccionada se graban como **automatización**. MENU > AUDIO tiene el **CLICK**
   - **KNOB 4 ROTATE** (−32 … +32; era el OFFSET de SHIFT): la secuencia leída desde otro paso, sin mover los pasos —
     una rotación en vivo, automatizable (también en el KNOB 3 de la capa SCL).
 - **MICRO** (0.6.92, KNOB 4 de NOTE; era el OFFSET de la página TIMING): el lugar propio del paso enfocado fuera de la
-  grilla, en dieciseisavos de paso, de −8/16 (medio paso antes) a +7/16 (después); **EDIT** lo devuelve a la grilla.
-  Los pasos adelantados suenan realmente antes: el paso anterior termina antes y la grilla se mantiene. El piano roll
-  dibuja las notas donde suenan. Un acorde comparte el offset de su paso; mover, estirar o repetir pasos lo conserva;
-  se guarda con el proyecto. **REC Q** (KNOB 4 de TRACK) es la cuantización de grabación que lo escribe: en 100 % (por
-  defecto) la grabación en vivo se ajusta a la grilla; más abajo, el paso guarda esa parte de dónde lo tocaste (0 %:
-  todo), antes o después.
+  grilla, en **64avos de paso** (0.9.1; antes dieciseisavos), de −32/64 (medio paso antes) a +31/64 (después): un 64avo
+  de un paso de 1/16 son unos 2 ms a 120 BPM. Un 64avo por paso de perilla (girada más rápido, más: aceleración); la
+  tarjeta muestra **+5/64**; **EDIT** lo devuelve a la grilla. Los pasos adelantados suenan realmente antes: el paso
+  anterior termina antes y la grilla se mantiene. El piano roll dibuja las notas donde suenan. Un acorde comparte el
+  offset de su paso; mover, estirar o repetir pasos lo conserva; se guarda con el proyecto. **REC Q** (KNOB 4 de TRACK)
+  es la cuantización de grabación que lo escribe: en 100 % (por defecto) la grabación en vivo se ajusta a la grilla; más
+  abajo, el paso guarda esa parte de dónde lo tocaste (0 %: todo, al 64avo más cercano), antes o después; 50 %: a mitad
+  de camino de la grilla.
+  Los proyectos anteriores a 0.9.1 suenan exactamente como antes (cada dieciseisavo son 4/64). Un proyecto guardado con
+  64avos carga igual en un firmware anterior, que toca cada paso en el dieciseisavo en o antes de sus 64avos (hasta 3/64
+  antes).
 - **TRACK** (0.6.92; era SHIFT + HUMAN): los ajustes de toda la pista. **PITCH** (±24 semitonos; no en baterías).
   **CHANCE**: la probabilidad de toda la pista; 100 % toca cada paso como está escrito, menos lo va raleando (escala la
   probabilidad propia de cada paso, la de los dados o el editor). **HUMAN** (una sola cantidad, 0–100 %): la pista

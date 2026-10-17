@@ -876,8 +876,9 @@ static int human(void)
     return bad;
 }
 
-/* (0.6.88) TIMING: a step's own place off the grid. Late (+n/16): its notes n sixteenths of the step after its place;
- * early (-n/16): before it (the step before ends sooner, the one after keeps its place: the loop's length as it was);
+/* (0.6.88) TIMING: a step's own place off the grid. Late (+n/64; 0.9.1, sixteenths before): its notes n 64ths of the step
+ * after its place; early (-n/64): before it (the step before ends sooner, the one after keeps its place: the loop's
+ * length as it was);
  * recorded live with REC Q under 100 %: the step keeps where the note was played (sooner than the middle of a step:
  * the next step, early); 100 %: on the grid; stored with the project */
 static int timing(void)
@@ -892,7 +893,7 @@ static int timing(void)
         track_defaults_steps(t);
         t->p[P_SLEN] = 4; t->p[P_SGATE] = 32; t->p[P_SSWING] = 0; song.g[G_SWING] = 0;
         for (b = 0; b < 4u; b++) t->step[b] = (step_t){{(uint8_t)(60 + b)}, 1, ST_NOTE, 0, 100};
-        if (!k) { ST_MICRO_SET(&t->step[1], 4); ST_MICRO_SET(&t->step[3], -4); }
+        if (!k) { ST_MICRO_SET(&t->step[1], 16); ST_MICRO_SET(&t->step[3], -16); }   /* (0.9.1: 64ths, +4/16 -4/16) */
         seq_start();
         len = step_len(t, 0);
         n = 0;
@@ -914,7 +915,7 @@ static int timing(void)
                 ok &= off[b] > want - 2 * (int32_t)CTL && off[b] < want + 2 * (int32_t)CTL;
             }
             if (!ok) for (b = 0; b < 8u; b++) printf("  timing: note %u at %d (step %u)\n", b, off[b], len);
-            bad += check("TIMING +4/16 and -4/16: the steps a quarter late / early, the rest on the grid, the loop's length kept", ok);
+            bad += check("TIMING +16/64 and -16/64: the steps a quarter late / early, the rest on the grid, the loop's length kept", ok);
         }
     }
     {   /* live recording: a note played 5/16 into step 2 and one 3/16 before step 4, REC Q 0 % and 100 % */
@@ -939,12 +940,13 @@ static int timing(void)
             if (pass)
                 ok = t->step[1].note[0] == 64 && ST_MICRO(&t->step[1]) == 0 && t->step[3].note[0] == 67 && ST_MICRO(&t->step[3]) == 0;
             else {
-                printf("  timing: recorded %d/16 (step 2, %u) and %d/16 (step 4, %u)\n", ST_MICRO(&t->step[1]), t->step[1].note[0],
+                printf("  timing: recorded %d/64 (step 2, %u) and %d/64 (step 4, %u)\n", ST_MICRO(&t->step[1]), t->step[1].note[0],
                        ST_MICRO(&t->step[3]), t->step[3].note[0]);
-                ok = t->step[1].note[0] == 64 && ST_MICRO(&t->step[1]) >= 4 && ST_MICRO(&t->step[1]) <= 6 &&
-                     t->step[3].note[0] == 67 && ST_MICRO(&t->step[3]) >= -4 && ST_MICRO(&t->step[3]) <= -2;
+                ok = t->step[1].note[0] == 64 && ST_MICRO(&t->step[1]) >= 19 && ST_MICRO(&t->step[1]) <= 21 &&   /* (0.9.1: 64ths,
+                                                         * within one of 20 and -12 now, the block's sample apart) */
+                     t->step[3].note[0] == 67 && ST_MICRO(&t->step[3]) >= -13 && ST_MICRO(&t->step[3]) <= -11;
             }
-            bad += check(pass ? "  REC Q 100 %: recorded on the grid" : "  REC Q 0 %: recorded where played (+5/16 late, -3/16 early)", ok);
+            bad += check(pass ? "  REC Q 100 %: recorded on the grid" : "  REC Q 0 %: recorded where played (+20/64 late, -12/64 early)", ok);
         }
     }
     {   /* stored with the project */
@@ -952,10 +954,10 @@ static int timing(void)
         project_store_t p;
         ui_power_on();
         trk[0].step[2] = (step_t){{62}, 1, ST_NOTE, 0, 100};
-        ST_MICRO_SET(&trk[0].step[2], -7);
+        ST_MICRO_SET(&trk[0].step[2], -27);             /* (0.9.1: 64ths, -7/16 and a 64th more) */
         trk[0].p[P_HRQ] = 40;
         project_capture(&a);
-        ok = proj_pack(&p, &a) && proj_import(&c, &p, sizeof p) && ST_MICRO(&c.t[0].step[2]) == -7 && c.t[0].p[P_HRQ] == 40;
+        ok = proj_pack(&p, &a) && proj_import(&c, &p, sizeof p) && ST_MICRO(&c.t[0].step[2]) == -27 && c.t[0].p[P_HRQ] == 40;
         bad += check("  TIMING and REC Q kept with the project", ok);
     }
     (void)st;

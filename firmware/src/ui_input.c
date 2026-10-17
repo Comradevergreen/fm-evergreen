@@ -806,13 +806,13 @@ static void note_edit(uint32_t slot, int32_t steps)
 
 /* (0.6.88) SEQ > TIMING: KNOB 1 the step, KNOB 2 its OFFSET off the grid (-8 .. +7 sixteenths: early / late; a step
  * with nothing to play keeps 0), KNOB 3 the track's REC Q (how much live recording snaps to the grid). EDIT: back on it */
-/* (0.6.88) a step's own place off the grid, -8 .. +7 sixteenths of a step (0.6.92: SEQ > NOTE's KNOB 4, MICRO; a DRUM
- * track's too) */
+/* (0.6.88) a step's own place off the grid (0.6.92: SEQ > NOTE's KNOB 4, MICRO; a DRUM track's too); (0.9.1) -32 .. +31
+ * 64ths of a step, a detent each (faster turned: knob acceleration) */
 static void micro_edit(int32_t steps)
 {
     step_t *st = &TSEL->step[ui.cursor];
     if (st->time != ST_NOTE || (!st->n && !st->hit)) { ui_message("NO NOTE HERE"); return; }
-    ST_MICRO_SET(st, clamp(ST_MICRO(st) + (steps > 0 ? 1 : -1), -8, 7));
+    ST_MICRO_SET(st, clamp(ST_MICRO(st) + accel(EN_K4, steps, MICRO_MAX - MICRO_MIN), MICRO_MIN, MICRO_MAX));
 }
 static void step_edit(uint32_t slot, int32_t steps)
 {

@@ -661,7 +661,7 @@ static void graph_roll(const track_t *t, uint16_t c)
             one.n = 1; one.note[0] = st->note[ui.pr_focus - 1u]; one.hit = 0;
             pr_bars(&one, s == si ? x + 1 : x - 1, s == si ? w - 2 : w + 1, T_ACCENT, 0, &yy, s == si ? step_ratchet(st) : 1u);
         } else if (s == si) {                         /* (0.6.88: its TIMING off the grid, shown off it) */
-            int32_t mo = ST_MICRO(st) * w / 16;
+            int32_t mo = ST_MICRO(st) * w / 64;     /* (0.9.1: 64ths) */
             pr_bars(st, x + 1 + mo < PR_RX ? PR_RX : x + 1 + mo, w - 2 + (slide ? 2 : 0),
                     s == ui.cursor && note_pg ? T_ACCENT : 0, (st->flags & SF_ACCENT) != 0u, &y, step_ratchet(st));
         } else                                        /* a TIE: the bars on through the gap before */
@@ -763,6 +763,7 @@ static uint32_t steps_hash(const track_t *t)
         h = (h ^ (st->note[0] + st->n * 128u + st->time * 1024u + st->flags * 4096u + st->note[1] * 65536u)) *
             16777619u;
         h = (h ^ (st->hit | (uint32_t)st->acc << 8 | (uint32_t)st->note[2] << 16 | (uint32_t)st->note[3] << 24)) * 16777619u;
+        h = (h ^ ((uint32_t)st->cwhen >> 4)) * 16777619u;   /* (0.9.1: MICRO's sixteenth; its 64ths are in the flags) */
     }
     return h;
 }
@@ -1323,7 +1324,7 @@ static void graph_bigstep(const track_t *t, const page_t *pg, uint16_t c)
         if (n && gy[0] < 22)
             for (i = n; i-- > 0;) gy[i] += 22 - gy[0];
         for (i = 0; i < n; i++) {
-            int32_t y = gy[i], x = 14 + (tie ? 0 : m);
+            int32_t y = gy[i], x = 14 + (tie ? 0 : m / 4);   /* (0.9.1: MICRO in 64ths; as far as before) */
             uint16_t col = tie ? T_MID : f ? (ord[i] + 1u == f ? T_ACCENT : lz_note(sn, (sn->flags & SF_ACCENT) != 0u, c)) :
                                               lz_note(sn, (sn->flags & SF_ACCENT) != 0u, c);
             pr_split(x, y, 70, BS_NH, col, tie ? 1u : step_ratchet(sn));
@@ -1339,7 +1340,7 @@ static void graph_bigstep(const track_t *t, const page_t *pg, uint16_t c)
     bs_chip(1, "SLD", !dr && (st->flags & SF_SLIDE));
     str_cpy(b, "MICRO ", sizeof b);
     if (!m) str_cpy(b + 6, "0", 4);
-    else { b[6] = m < 0 ? '-' : '+'; fmt_int(b + 7, m < 0 ? -m : m); str_cpy(b + str_len(b), "/16", 4); }
+    else { b[6] = m < 0 ? '-' : '+'; fmt_int(b + 7, m < 0 ? -m : m); str_cpy(b + str_len(b), "/64", 4); }   /* (0.9.1) */
     bs_chip(2, b, m != 0);
     str_cpy(b, "COMP1 ", sizeof b);
     if (st->comp) str_cpy(b + 6, COMP_NAMES[(COMP_ARPN + st->comp - CP_ARPN) % COMP_N], 10);

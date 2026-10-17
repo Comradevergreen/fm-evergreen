@@ -1217,7 +1217,7 @@ static void setup(int s)
             else step_put(&t->step[i], ST_NOTE, i % 8u == 0u ? SF_ACCENT : 0u, 1, &n);
         }
         step_put(&t->step[34], ST_NOTE, SF_ACCENT | SF_SLIDE, 3, CH);
-        ST_MICRO_SET(&t->step[34], 3); step_set_chance(&t->step[34], 60);
+        ST_MICRO_SET(&t->step[34], 13); step_set_chance(&t->step[34], 60);   /* (0.9.1: +13/64) */
         t->step[34].comp = CP_ARPN; t->step[34].comp2 = CP_ECHO;
         step_put(&t->step[35], ST_TIE, 0, 0, CH);
         step_put(&t->step[36], ST_REST, 0, 0, CH);
@@ -1526,6 +1526,22 @@ static void sweep_columns(void)
                     if (v - d->min > 300) v = d->max - 1;      /* wide ranges: the ends */
                 }
                 *vp = (int16_t)v0;
+            }
+            if (PAGES[i].scope == SC_STEP && PAGES[i].id[0] == 4u && !e) {   /* (0.9.1) NOTE's MICRO: every 64th, the card and
+                                                         * the big step (its chip, the notes moved) */
+                int32_t v;
+                step_t *st = &TSEL->step[ui.cursor];
+                step_t keep = *st;
+                st->time = ST_NOTE; st->n = 2; st->note[0] = 60; st->note[1] = 64; st->vel = 100;
+                for (v = MICRO_MIN; v <= MICRO_MAX; v++) {
+                    ST_MICRO_SET(st, v);
+                    nscr = npend = 0;
+                    ui.force = 1;
+                    draw(-1);
+                    lint();
+                    nsweep++;
+                }
+                *st = keep;
             }
             if (PAGES[i].scope == SC_TRK && !e) {        /* (0.9.1) MIXER's KNOB 4: every DJ FILTER value */
                 int32_t v;

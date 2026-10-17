@@ -114,6 +114,10 @@
 #                   mix bit for bit as 0.9.0 rendered it (never run); the low-pass / high-pass responses (pass band, 12 dB an
 #                   octave, the peak, the ends, stereo); no click crossing the middle, jumping sides, swept, automated; its
 #                   automation recorded, played, stopped, saved apart ('M' 'G') and loaded; an old project loads it centred.
+# MICRO (tests/micro_test.c, 0.9.1): a step's MICRO in 64ths (core.h ST_MICRO): every value, a project of before played
+#                   sample for sample and saved byte for byte as 0.9.0 did; live recording at REC Q 0 % within 1/64 of a step
+#                   of where played (72 / 120 / 174 BPM, 1/8 1/16 1/32 16T, swing) and played back there; REC Q 50 % half way;
+#                   the block 'M' 'F' saved and loaded, without it the sixteenth below; SEQ > NOTE's knob in 64ths.
 # ROBUST (tests/robust_test.c): damaged or crafted stored data and editor requests: engine numbers past the last
 #                   refused, a retained older
 #                   RAM project bounded, user preset patterns inside their fields, malformed requests never stop PLAY.
@@ -192,6 +196,8 @@ if [ -f build/gen/felucca_tables.h ]; then
     run "motion, whole-step chance, FUN7 migration, song restore, ARP repeat and the 1.2 ARP modes" "$OUT/motion_test"
     $CC -O1 -w -Ibuild/gen -Ifirmware/src -Itests -o "$OUT/djf_test" tests/djf_test.c -lm
     run "DJ FILTER (0.9.1): centred bit for bit 0.9.0, LP / HP response, no click crossing the middle, automation, old projects" "$OUT/djf_test"
+    $CC -O1 -w -Ibuild/gen -Ifirmware/src -Itests -o "$OUT/micro_test" tests/micro_test.c -lm
+    run "MICRO in 64ths (0.9.1): recorded within 1/64 of a step at any tempo / division, played there, REC Q 50 %, old projects, 'M' 'F'" "$OUT/micro_test"
     $CC -O1 -w -Ibuild/gen -Ifirmware/src -Itests -o "$OUT/gen_test" tests/gen_test.c -lm
     run "GEN (0.6.91): the song generator, every genre: deterministic, one scale, the kick anchored, the bass's roots, chord tones, forms, the screen" "$OUT/gen_test"
     $CC -O1 -w -Ibuild/gen -Ifirmware/src -o "$OUT/ratchet_test" tests/ratchet_test.c -lm

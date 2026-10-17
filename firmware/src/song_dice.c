@@ -226,11 +226,11 @@ static void dstep_note(step_t *s, const int32_t *n, uint32_t cnt, uint32_t vel, 
         if (j < cnt && n[j] > top) top = n[j];
     }
     s->time = ST_NOTE;
-    s->flags = (uint8_t)flags;
+    s->flags = (uint8_t)(flags | (s->flags & SF_MFINE));   /* (0.9.1: MICRO's 64ths stay with its sixteenth) */
     if (top > 74) vel -= (uint32_t)((top - 74) * 2 < 30 ? (top - 74) * 2 : 30);   /* (high notes measured: softer) */
     s->vel = (uint8_t)clamp((int32_t)vel + rr(-6, 6), 40, 127);   /* (a human's hand: never twice the same) */
 }
-static void dstep_tie(step_t *s) { s->n = 0; s->time = ST_TIE; s->flags = 0; s->vel = 0; }
+static void dstep_tie(step_t *s) { s->n = 0; s->time = ST_TIE; s->flags &= SF_MFINE; s->vel = 0; }
 /* holds the note of step i over the next k steps (as far as the loop goes and the next note) */
 static void dhold(track_t *t, uint32_t i, uint32_t k, uint32_t len)
 {

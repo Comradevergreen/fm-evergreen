@@ -786,11 +786,33 @@ static uint32_t proj_djf_events(const motion_store_t *m)
         n += MOTION_ID(&m->event[i]) == MOT_DJF;
     return n;
 }
+/* (0.9.1) MICRO's fine part (core.h SF_MFINE: the 64ths above the sixteenth cwhen holds): FUNC's block 'M' 'F' after the
+ * others, a byte of the tracks it holds (bit t), then each of them: 64 steps x 2 bits (step i at byte i / 4, bits 2 (i %
+ * 4)); only when a step has one. Firmware before 0.9.1 stops at the block: it plays such a step at the sixteenth below
+ * (up to 3/64 of a step sooner), everything else as here; a project without the block: every MICRO its sixteenths x 4 */
+static uint32_t proj_mf_tracks(const project_t *q)
+{
+    uint32_t t, i, m = 0;
+    for (t = 0; t < NTRK; t++)
+        for (i = 0; i < NSTEP; i++)
+            if (q->t[t].step[i].flags & SF_MFINE)
+                m |= 1u << t;
+    return m;
+}
+static uint32_t proj_bits(uint32_t m)
+{
+    uint32_t n = 0;
+    for (; m; m >>= 1)
+        n += m & 1u;
+    return n;
+}
 static uint32_t proj_packed_size(const project_t *q)
 {
     uint32_t n = 68u + sizeof q->chain + 4u + q->motion.count * sizeof q->motion.event[0] + 2u + G_SL_N, t, i;
     if (proj_djf_events(&q->motion))                    /* (0.9.1) the DJ FILTER's records: their block's head */
         n += 3u;
+    if (proj_mf_tracks(q))                              /* (0.9.1) MICRO's 64ths: their block */
+        n += 3u + 16u * proj_bits(proj_mf_tracks(q));
     if (q->g[G_DMOD] != GP[G_DMOD].def)                 /* (0.6.86) the delay's MOD's, when not the default */
         n += 3u;
     if (q->g[G_DTYPE] || q->g[G_DPING])                 /* (0.6.90) its TYPE and PING-PONG's */
@@ -828,7 +850,7 @@ static int proj_pack(project_store_t *out, const project_t *q)
             if (q->t[t].p[i] < -64 || q->t[t].p[i] > 127) return 0;
         for (i = 0; i < NSTEP; i++) {
             const step_t *s = &q->t[t].step[i];
-            if (s->n > 4u || s->time > ST_REST || (s->flags & ~(3u | SF_RATCH)) || s->probability > 101u ||
+            if (s->n > 4u || s->time > ST_REST || (s->flags & ~(3u | SF_RATCH | SF_MFINE)) || s->probability > 101u ||
                 s->comp >= CP_N || s->comp2 >= CP_N || CT_DIV(s) >= CT_NDIV || s->ctime > 127u) return 0;
         }
     }
@@ -933,6 +955,17 @@ static int proj_pack(project_store_t *out, const project_t *q)
                 memcpy(b + pos, &q->motion.event[i], sizeof q->motion.event[0]);
                 pos += sizeof q->motion.event[0];
             }
+    }
+    if (proj_mf_tracks(q)) {                            /* (0.9.1) MICRO's 64ths, last */
+        uint32_t m = proj_mf_tracks(q);
+        b[pos++] = 'M'; b[pos++] = 'F'; b[pos++] = (uint8_t)m;
+        for (t = 0; t < NTRK; t++) {
+            if (!((m >> t) & 1u))
+                continue;
+            for (i = 0; i < NSTEP; i++)
+                b[pos + i / 4u] |= (uint8_t)(((q->t[t].step[i].flags & SF_MFINE) >> SF_MFINE_SH) << (2u * (i & 3u)));
+            pos += 16u;
+        }
     }
     memcpy(b + PROJC_PFX_OFF, q->pfx_lane, sizeof q->pfx_lane);
     b[PROJC_PFX_OFF + sizeof q->pfx_lane] = q->pfx_ltgt > 2u ? 0u : q->pfx_ltgt;
@@ -1176,6 +1209,20 @@ static int proj_unpack_c(project_t *q, const uint8_t *b)
         if (!motion_valid(&q->motion)) return 0;
         pos += 3u + n * sizeof q->motion.event[0];
     }
+    if (pos + 3u <= room && b[pos] == 'M' && b[pos + 1u] == 'F') {   /* (0.9.1) MICRO's 64ths (else none: x 4 exactly) */
+        uint32_t m = b[pos + 2u];
+        if (!m || (m >> nt) || pos + 3u + 16u * proj_bits(m) > room) return 0;
+        pos += 3u;
+        for (t = 0; t < nt; t++) {
+            if (!((m >> t) & 1u))
+                continue;
+            for (i = 0; i < NSTEP; i++) {
+                step_t *s = &q->t[t].step[i];
+                s->flags = (uint8_t)((s->flags & ~SF_MFINE) | ((b[pos + i / 4u] >> (2u * (i & 3u))) & 3u) << SF_MFINE_SH);
+            }
+            pos += 16u;
+        }
+    }
     proj_new_tracks(q, nt);                             /* (a FUNC of fewer tracks: the rest at power-on) */
     for (t = nt; t < NTRK; t++)
         memcpy(q->fm6[t], FM6_INIT, FM6_PACKED);
@@ -1395,7 +1442,7 @@ static void proj_bound(project_t *q)
         proj_steps(q->t[t].step);
         for (i = 0; i < NSTEP; i++) {
             step_t *s = &q->t[t].step[i];
-            s->flags &= 3u | SF_RATCH;
+            s->flags &= 3u | SF_RATCH | SF_MFINE;
             s->vel &= 127u;
             if (s->probability > 101u) s->probability = 0;
         }

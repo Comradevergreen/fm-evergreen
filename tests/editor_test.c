@@ -346,6 +346,15 @@ static int steps(void)
         ok &= !request(ED_STEP_SET, a, 14) && !memcmp(&before, &TSEL->step[0], sizeof before);
     }
     bad += check("STEP_SET refuses a ratchet outside 1..4 and leaves the step", ok);
+    {   /* (0.9.1) MICRO in 64ths (its fine part in the flags' bits 5-6): a STEP_SET (a new note, the accent) keeps it, and
+         * the reply's flags byte is accent | slide only, as before */
+        ST_MICRO_SET(&TSEL->step[0], -13);
+        memcpy(a, (const uint8_t[]){0, 1, 62, 0, 0, 0, ST_NOTE, SF_ACCENT, 100, 0, 0, 0, 80, 3}, 14);
+        n = request(ED_STEP_SET, a, 14);
+        bad += check("(0.9.1) STEP_SET keeps the step's MICRO (-13/64); the reply's flags accent | slide only",
+                     n == 20u && ST_MICRO(&TSEL->step[0]) == -13 && TSEL->step[0].note[0] == 62 && host_wire[12] == SF_ACCENT);
+        ST_MICRO_SET(&TSEL->step[0], 0);
+    }
     memcpy(a, (const uint8_t[]){1, 2, 1, 64, 0, 0, 0, ST_NOTE, 0, 99, 0, 0, 0, 100, 4}, 15);
     n = request(ED_TRACK_STEP, a, 15);
     ok = n == 21u && step_ratchet(&trk[1].step[2]) == 4u && host_wire[n - 2] == 4;

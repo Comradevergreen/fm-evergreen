@@ -370,6 +370,8 @@ enum { ST_NOTE, ST_TIE, ST_REST };
 #define SF_SLIDE 2u
 #define SF_RATCH_SH 3u                   /* RATCH: the hits of a NOTE step - 1 (0..3: x1..x4, seq.c seq_ratchet); */
 #define SF_RATCH (3u << SF_RATCH_SH)     /* bits 3..4, so a user preset's pattern (flag 4 = tie) carries it too */
+#define SF_MFINE_SH 5u                   /* (0.9.1) MICRO's fine part: the 64ths under its sixteenth (ST_MICRO), bits 5..6 */
+#define SF_MFINE (3u << SF_MFINE_SH)
 #define NLANE 8                  /* drum lanes of a step (the DRUM engine's: eng_drum.c DRUM_LANE_NOTE) */
 typedef struct {                 /* acid-style step: up to 4 notes (POLY), time, accent, slide; drum hits */
     uint8_t note[4];
@@ -417,11 +419,24 @@ static const uint8_t EV_AB[EV_N][2] = {{0, 0}, {1, 2}, {2, 2}, {0, 3}, {1, 3}, {
 static const uint8_t EV_ORD[EV_N] = {0, 1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 3};   /* the knob's order, SKIP last */
 #define ST_EVERY(s) ((uint32_t)(s)->cwhen & 15u)
 #define ST_EVERY_SET(s, e) ((s)->cwhen = (uint8_t)(((s)->cwhen & 0xF0u) | ((uint32_t)(e) & 15u)))
-/* (0.6.88) TIMING: the step's own place off the grid, -8 .. +7 sixteenths of a step (0 on it), in cwhen's bits 4-7
- * (stored with it, project.c); recorded off the grid (REC Q) or set on SEQ > TIMING. seq.c: late by a queue, early by
- * ending the step before it that much sooner */
-#define ST_MICRO(s) ((int32_t)(int8_t)(s)->cwhen >> 4)
-#define ST_MICRO_SET(s, m) ((s)->cwhen = (uint8_t)(((s)->cwhen & 15u) | (((uint32_t)(m) & 15u) << 4)))
+/* (0.6.88) TIMING: the step's own place off the grid (0 on it); recorded off the grid (REC Q) or set on SEQ > NOTE's
+ * MICRO. seq.c: late by a queue, early by ending the step before it that much sooner. (0.9.1) -32 .. +31 64ths of a
+ * step (~2 ms a 64th of a 1/16 at 120 BPM; was -8 .. +7 sixteenths): the sixteenth below it in cwhen's bits 4-7 as
+ * always (stored with it, project.c; what firmware before 0.9.1 plays), the 64ths above that (0..3) in flags' bits 5-6
+ * (SF_MFINE: FUNC's block 'M' 'F'). A step of before: its sixteenths x 4, exactly */
+#define MICRO_MIN (-32)
+#define MICRO_MAX 31
+static inline int32_t st_micro(const step_t *s)
+{
+    return ((int32_t)(int8_t)s->cwhen >> 4) * 4 + (int32_t)((s->flags & SF_MFINE) >> SF_MFINE_SH);
+}
+static inline void st_micro_set(step_t *s, int32_t m)   /* m: MICRO_MIN .. MICRO_MAX */
+{
+    s->cwhen = (uint8_t)((s->cwhen & 15u) | (((uint32_t)m >> 2) & 15u) << 4);
+    s->flags = (uint8_t)((s->flags & ~SF_MFINE) | ((uint32_t)m & 3u) << SF_MFINE_SH);
+}
+#define ST_MICRO(s) st_micro(s)
+#define ST_MICRO_SET(s, m) st_micro_set((s), (m))
 #define CT_DIV(s) ((uint32_t)(s)->ctime & 7u)
 #define CT_LEN(s) (((uint32_t)(s)->ctime >> 3) & 15u)
 #define CT_NDIV 6u

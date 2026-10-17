@@ -106,7 +106,7 @@ static void gnote(step_t *s, const int32_t *n, uint32_t cnt, int32_t vel, uint32
         if (j < cnt && n[j] > top) top = n[j];
     }
     s->time = ST_NOTE;
-    s->flags = (uint8_t)flags;
+    s->flags = (uint8_t)(flags | (s->flags & SF_MFINE));   /* (0.9.1: MICRO's 64ths stay with its sixteenth) */
     if (top > 74) vel -= (top - 74) * 2 < 30 ? (top - 74) * 2 : 30;   /* (high notes measured: softer) */
     s->vel = (uint8_t)clamp(vel, 30, 127);
 }
@@ -385,7 +385,7 @@ static void gx_drums(track_t *t, uint32_t len)
             if (m == LM_X8 && l != 3u && l != 6u) m = LM_X4;
             step_set_lmode(s, l, m);
         }
-        if (!s->acc && gch(12)) ST_MICRO_SET(s, grr(-4, 4));
+        if (!s->acc && gch(12)) ST_MICRO_SET(s, grr(-4, 4) * 4);   /* (sixteenths: 0.9.1's MICRO is in 64ths) */
         if (!(s->hit & 1u) && gch(8)) step_set_chance(s, (uint32_t)grr(40, 85));
     }
 }
@@ -576,7 +576,7 @@ static void gen_drums(track_t *t, uint32_t len)
         if (s->time != ST_NOTE) continue;
         gs.kick |= (uint64_t)(s->hit & 1u) << i;
         gs.snare |= (uint64_t)((s->hit >> 1) & 1u) << i;
-        if (g->sd_micro && gs.human && (s->hit & 2u) && !(s->hit & 1u)) ST_MICRO_SET(s, g->sd_micro);
+        if (g->sd_micro && gs.human && (s->hit & 2u) && !(s->hit & 1u)) ST_MICRO_SET(s, g->sd_micro * 4);   /* (16ths) */
         if (s->acc & ~s->hit) s->acc &= s->hit;
     }
     if (gx.on) gx_drums(t, len);

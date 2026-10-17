@@ -642,8 +642,9 @@ static void rec_note(track_t *t, uint32_t note, uint32_t vel)
     s = &t->step[seq_src(t, idx)];
     if (t->seq_pos < 0x7FFFFFFFu && t->p[P_HRQ] < 127) {   /* (0.6.88) REC Q under 100 %: where it was played, kept */
         int32_t off = next ? gp - (int32_t)sl : gp, l = (int32_t)(next ? step_samples(t, period, idx) : sl);
-        mic = (off * 16 + (off < 0 ? -l / 2 : l / 2)) / (l ? l : 1);   /* (sixteenths of the step, rounded) */
-        mic = clamp(mic * (127 - clamp(t->p[P_HRQ], 0, 127)) / 127, -8, 7);
+        int32_t q = 127 - clamp(t->p[P_HRQ], 0, 127);
+        mic = (off * 64 + (off < 0 ? -l / 2 : l / 2)) / (l ? l : 1);   /* (0.9.1: 64ths of the step, rounded; was 16ths) */
+        mic = clamp((mic * q + (mic < 0 ? -63 : 63)) / 127, MICRO_MIN, MICRO_MAX);   /* (REC Q's share of it, rounded) */
     }
     if (drum_track(t)) {                            /* DRUM: into the grid, no holds (hits) */
         rec_drum(t, s, note, vel, mic);
@@ -716,7 +717,7 @@ static void rec_hold(track_t *t, uint32_t idx, uint32_t len)
         s->note[k] = 0;
     s->n = 0;
     s->time = ST_TIE;
-    s->flags = 0;
+    s->flags &= SF_MFINE;                           /* (0.9.1: MICRO kept whole, as its sixteenth in cwhen) */
     s->vel = 0;
     s->hit = s->acc = 0;
     s->lm[0] = s->lm[1] = s->lm[2] = 0;
@@ -1291,7 +1292,7 @@ static uint32_t seq_early(const track_t *t, uint32_t period, uint32_t len)
     if (s->time != ST_NOTE || (!s->n && !s->hit))       /* (nothing to play there: never early) */
         return 0;
     m = ST_MICRO(s);
-    return m < 0 ? (uint32_t)-m * step_samples(t, period, ni) / 16u : 0u;
+    return m < 0 ? (uint32_t)-m * step_samples(t, period, ni) / 64u : 0u;   /* (0.9.1: 64ths) */
 }
 static const step_t *comp_lane(track_t *t, const step_t *s)
 {
@@ -1792,7 +1793,7 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
             hdel = d < cap ? d : cap;
         }
         if (t->mic > 0 && hits == 1u && !bend && !slide_in && !(skip & SEQ_REP))   /* (0.6.88) TIMING late: on top */
-            hdel += (uint32_t)t->mic * step_samples(t, period, t->seq_idx) / 16u;
+            hdel += (uint32_t)t->mic * step_samples(t, period, t->seq_idx) / 64u;   /* (0.9.1: 64ths) */
     }
     sk0 = sk;                                       /* (the notes the step sounds, strummed or not: seq_notes) */
     if (!kit && !arp && m > 1u && t->p[P_CSTR] > 0 && t->p[P_VOICE] == V_POLY) {   /* (0.6.84) STRUM: the chord in

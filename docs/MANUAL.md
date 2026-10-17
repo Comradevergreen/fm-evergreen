@@ -400,7 +400,7 @@ it edits the piano roll, on STEP the step drawn large; the knobs are the same.
 | PATTERN | MUTATE | SOUND (every) | PATTERN (every) | AMOUNT | MODE |
 | BAR | STEP (melodic: piano roll) | STEP | NOTE | TIME (REST ← TIE ← NOTE → 2 ST … 16 ST: the note's length in steps) | FLAG (– / ACC / SLD / A+S) |
 | BAR | STEP (DRUM: grid) | STEP | LANE | HIT | ACC |
-| BAR | NOTE | FOCUS | PITCH | MOVE | MICRO (−8/16 … +7/16) |
+| BAR | NOTE | FOCUS | PITCH | MOVE | MICRO (−32/64 … +31/64; 0.9.1) |
 | BAR | AUTOMATION | PLAY (ON/OFF) | EVENT (count) | LOCK (count) | CLEAR (action) |
 | BAR | AUTO LIST | ROW | STEP | PARAM | VALUE |
 | STEP | NOTE | FOCUS | PITCH | MOVE | MICRO |
@@ -907,11 +907,16 @@ recorded into the pattern, quantized to its steps, overdubbing. Knob moves on th
   - **KNOB 4 ROTATE** (−32 … +32; it was SHIFT's OFFSET): the sequence read from another step, without moving the
     steps themselves — a live, automatable rotation (also on the SCL layer's KNOB 3).
 - **MICRO** (0.6.92, NOTE's KNOB 4; it was the TIMING page's OFFSET): the focused step's own place off the grid, in
-  sixteenths of a step, from −8/16 (half a step early) to +7/16 (late); **EDIT** puts it back on the grid. Early steps
-  really sound early: the step before ends that much sooner and the grid is kept. The piano roll draws the notes where
-  they play. A chord shares its step's offset; moving, stretching or repeating steps keeps it; saved with the project.
+  **64ths of a step** (0.9.1; it was sixteenths), from −32/64 (half a step early) to +31/64 (late): a 64th of a 1/16
+  step is about 2 ms at 120 BPM. A 64th a detent (turned faster, more: knob acceleration); the card shows **+5/64**;
+  **EDIT** puts it back on the grid. Early steps really sound early: the step before ends that much sooner and the grid
+  is kept. The piano roll draws the notes where they play. A chord shares its step's offset; moving, stretching or
+  repeating steps keeps it; saved with the project.
   **REC Q** (TRACK's KNOB 4) is the recording quantize that writes it: 100 % (the default) live recording snaps to the
-  grid; lower, the step keeps that much of where you played it (0 %: all of it), early or late.
+  grid; lower, the step keeps that much of where you played it (0 %: all of it, to the nearest 64th), early or late;
+  50 % half way to the grid.
+  Projects from before 0.9.1 play exactly as they did (their sixteenths are 4/64 each). A project saved with 64ths
+  still loads on older firmware, which plays each step at the sixteenth at or before its 64ths (up to 3/64 sooner).
 - **TRACK** (0.6.92; it was SHIFT + HUMAN): the whole track's settings. **PITCH** (±24 semitones; not on drums).
   **CHANCE**: the whole track's chance, 100 % plays every step as written, lower thins it out (each step's own chance,
   from the dice or the editor, scaled). **HUMAN** (one amount, 0–100 %): the track plays like a person, each note a

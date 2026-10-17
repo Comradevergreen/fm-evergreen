@@ -567,6 +567,20 @@ Every update is listed here, newest first. (Since 0.6.80 at the end of the page:
     on the FM-1 (target budget `djf_block` 200), the CPU TEST song +1.7 % on the host (`song/cputest.djf`). RAM +52 B
     (main RAM, in a section of its own so the ISR's other statics keep their places and their code), image +2.9 KB (547880 B of 581564).
   - The web editor: its DJ FILTER page, the global's name, automation rows named.
+- **REC off the grid, 4 x finer: MICRO in 64ths of a step** (was sixteenths): -32/64 .. +31/64, ~2 ms a 64th of a 1/16
+  at 120 BPM. Live recording with REC Q under 100 % writes it (REC Q 0 %: where you played, to the nearest 64th: within
+  1/64 of a step at any tempo and division, swung or not; 50 %: half way to the grid); playback honours it to the sample
+  (a late step's notes queued, an early one's step before ending sooner); the piano roll and the big step draw it;
+  SEQ › NOTE's KNOB 4 edits it a 64th a detent and shows **+5/64**.
+  - **No RAM, no hot struct moved**: the 64ths are two free bits of the step's flags (bits 5-6), the sixteenth stays in
+    `cwhen` as always, so `step_t` is still 20 bytes (its 6 x 64 in `trk[]`, the project scratch, the section stage,
+    the tools' and GEN's copies: 0 B more).
+  - **Projects**: an older project plays exactly as before (its sixteenths x 4: the same samples, the same bytes when
+    saved again); the 64ths go in a block of their own after the others ('M' 'F', only when a step has some), so
+    firmware before 0.9.1 still loads a newer project and plays each step at the sixteenth at or before it (up to 3/64
+    sooner). The editor's STEP_SET keeps a step's MICRO; backups carry it.
+  - Cost: no audio change for anything recorded before (goldens, cpu_vg, target budgets as 0.9.0); image +564 B
+    (548444 B of 581564), RAM 0 B.
 
 ### v0.9.0
 The HUD skin, fixed (every finding of the HUD audit), and a faster screen there.
