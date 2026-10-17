@@ -21,6 +21,8 @@ static int32_t accel(uint32_t role, int32_t s, int32_t range);
 static int ev_id_ok(const track_t *t, uint32_t id)
 {
     const param_desc_t *d;
+    if (id == MOT_DJF)                                  /* (0.9.1) the DJ FILTER's records: listed (GLO > MIXER records them) */
+        return 1;
     if (id >= P_COUNT || !motion_param(id) || (id >= P_FM1_ATK && id <= P_FM4_LEVEL && id != P_TCHAN && id != P_MORPH && id != P_CLEN && id != P_DXIMG &&
                                                               id != P_HVEL && id != P_HTIM && id != P_HGAT && id != P_HRQ))
         return 0;
@@ -197,8 +199,10 @@ static void ev_oct(void)
     {
         const motion_event_t e = motion.event[idx[r]];
         uint32_t lock = !(e.param & MOTION_LOCK);
-        (void)motion_put(t, MOTION_STEP(&e), MOTION_ID(&e), MOTION_VAL(&e), lock ? MOTION_LOCK : 0u);
-        ui_message(lock ? "NOW A LOCK" : "NOW AUTOMATION");
+        if (motion_put(t, MOTION_STEP(&e), MOTION_ID(&e), MOTION_VAL(&e), lock ? MOTION_LOCK : 0u))
+            ui_message("AUTOMATION ONLY");              /* (0.9.1: the DJ FILTER's, no lock) */
+        else
+            ui_message(lock ? "NOW A LOCK" : "NOW AUTOMATION");
     }
 }
 

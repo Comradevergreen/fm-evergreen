@@ -110,6 +110,10 @@
 # FM6 BANK (tests/fm6bank_test.c, JIANT 0.6.11 from Felucca 1.4.1): the voice bank (src/fm6_vbank.c) and its editor
 #                   commands against simulated NOR: write / read back, its sectors only, a power cut at any byte or erase
 #                   (the old bank or the new one), a wrong CRC, SLOT B1..B32, the SLOT values stored before as before.
+# DJ FILTER (tests/djf_test.c, 0.9.1): the master DJ FILTER (src/fx.c djf_block, GLO > MIXER KNOB 4): centred, a sequenced
+#                   mix bit for bit as 0.9.0 rendered it (never run); the low-pass / high-pass responses (pass band, 12 dB an
+#                   octave, the peak, the ends, stereo); no click crossing the middle, jumping sides, swept, automated; its
+#                   automation recorded, played, stopped, saved apart ('M' 'G') and loaded; an old project loads it centred.
 # ROBUST (tests/robust_test.c): damaged or crafted stored data and editor requests: engine numbers past the last
 #                   refused, a retained older
 #                   RAM project bounded, user preset patterns inside their fields, malformed requests never stop PLAY.
@@ -186,6 +190,8 @@ if [ -f build/gen/felucca_tables.h ]; then
     run "project formats (FUN1..FUN5 -> FUN6, the grid and song chain; DIGITAL tracks -> FM6, SAMPLE PERC -> DRUM)" "$OUT/project_test"
     $CC -O1 -w -Ibuild/gen -Ifirmware/src -o "$OUT/motion_test" tests/motion_test.c -lm
     run "motion, whole-step chance, FUN7 migration, song restore, ARP repeat and the 1.2 ARP modes" "$OUT/motion_test"
+    $CC -O1 -w -Ibuild/gen -Ifirmware/src -Itests -o "$OUT/djf_test" tests/djf_test.c -lm
+    run "DJ FILTER (0.9.1): centred bit for bit 0.9.0, LP / HP response, no click crossing the middle, automation, old projects" "$OUT/djf_test"
     $CC -O1 -w -Ibuild/gen -Ifirmware/src -Itests -o "$OUT/gen_test" tests/gen_test.c -lm
     run "GEN (0.6.91): the song generator, every genre: deterministic, one scale, the kick anchored, the bass's roots, chord tones, forms, the screen" "$OUT/gen_test"
     $CC -O1 -w -Ibuild/gen -Ifirmware/src -o "$OUT/ratchet_test" tests/ratchet_test.c -lm

@@ -38,6 +38,12 @@ the end of the step replies, and an optional last byte of a step write (see "Rat
 **DRUM lane modes (JIANT 0.8.5, INFO `4F 01 07`):** a step gets 8 more bytes after its ratchet, each DRUM lane's mode
 0..6 (see "DRUM lane modes" below). Nothing else changed.
 
+**DJ FILTER (JIANT 0.9.1):** global 17 (was `NAME`, `--`, 0..0, never set) is the master DJ FILTER, `DJ FILT`, -64..63
+(0 out of the chain, below a low-pass, above a high-pass; GLO > MIXER KNOB 4 on the device). G_COUNT is unchanged; a
+`SET` of it while the selected track records is recorded as the knob is. Its automation records are `MOTION` records
+of id 127 (past every track parameter; automation only: op 5, a lock, is refused with 1), listed by the query as any
+other. Firmware before 0.9.1 shows global 17 as `NAME`.
+
 **Parameter locks (1.1, INFO `4C 01 01`):** a motion record can be a lock: its value sounds on its step only and
 goes back after it. `MOTION` (64) gets ops 5..7 (set a lock, clear a step's locks, the query with the kinds); the
 query and ops 1..4 reply byte for byte as before (see "Parameter locks" below). A lock takes no new bytes in a

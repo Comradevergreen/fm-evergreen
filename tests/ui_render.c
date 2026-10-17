@@ -965,6 +965,7 @@ static void setup(int s)
         trk[0].p[P_LEVEL] = 100; trk[1].p[P_LEVEL] = 84; trk[2].p[P_LEVEL] = 64; trk[3].p[P_LEVEL] = 110;
         trk[0].p[P_PAN] = -20; trk[1].p[P_PAN] = 24; trk[3].p[P_PAN] = -4; trk[1].p[P_REV] = 80;
         trk[2].p[P_MUTE] = 1; trk[3].p[P_MUTE] = 1; song.rec = 2u | 8u; trk[0].peak = 9000;
+        song.g[G_DJF] = -24;                     /* (0.9.1) KNOB 4: the DJ FILTER, a low-pass */
         break;
     case S_MIXER_T4:                             /* (0.6.22) TRACKS 4: T5, T6 asleep, grey, OFF */
         go_page(GR_TRK); trk_live = 4; break;
@@ -1035,6 +1036,7 @@ static void setup(int s)
         trk[0].p[P_PAN] = -64; trk[1].p[P_PAN] = 63; trk[2].p[P_PAN] = 0; trk[3].p[P_PAN] = 1;
         trk[0].p[P_REV] = 127; trk[2].p[P_REV] = 1; trk[3].p[P_MUTE] = 1;
         song.rec = 1u | 8u; ui.hot_col = 3; ui.hot_t = 30;
+        song.g[G_DJF] = 63;                      /* (0.9.1) the DJ FILTER just turned: the high-pass's end */
         break;
     case S_ENV: go_title("ENV"); ui.hot_col = 2; ui.hot_t = 30; break;
     case S_ENVDEST: go_title("ENV DEST"); break;
@@ -1524,6 +1526,18 @@ static void sweep_columns(void)
                     if (v - d->min > 300) v = d->max - 1;      /* wide ranges: the ends */
                 }
                 *vp = (int16_t)v0;
+            }
+            if (PAGES[i].scope == SC_TRK && !e) {        /* (0.9.1) MIXER's KNOB 4: every DJ FILTER value */
+                int32_t v;
+                for (v = -64; v <= 63; v++) {
+                    song.g[G_DJF] = (int16_t)v;
+                    nscr = npend = 0;
+                    ui.force = 1;
+                    draw_columns();
+                    lint();
+                    nsweep++;
+                }
+                song.g[G_DJF] = 0;
             }
             draw(-1);                                    /* the whole page */
             lint();

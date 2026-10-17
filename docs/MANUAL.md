@@ -363,7 +363,7 @@ level's set; its button from elsewhere brings you back there.
 
 | Page | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 | --- | --- | --- | --- | --- |
-| MIXER | LEVEL | PAN | REV | MUTE (right ON, left OFF) |
+| MIXER | LEVEL | PAN | REV | DJ FILT (0.9.1: the master DJ FILTER; was MUTE, now on the GLO layer) |
 | SENDS (0.8.5) | DIST | CHORUS | DLY | REV (the selected track's, as FX > SENDS) |
 | GLOBAL | BPM | SWING | CLOCK | TUNE |
 | SYSTEM | TRACKS | LOAD | ROUTE | CPU (%) |
@@ -1388,6 +1388,23 @@ from before).
 - **PUNCH**: fattens the DRUM tracks.
 - **DUCK**: the kick pulls the rest down; **REL** is its release.
 
+### DJ FILTER (0.9.1, GLO › MIXER KNOB 4)
+
+One knob on the whole mix, just before CLIP and the leveler. **In the middle (OFF) it is out of the chain**: nothing
+is processed and the sound is exactly as without it. Turned left it is a **low-pass** sweeping down (darker: from
+~15 kHz a detent off the middle to ~70 Hz at the end); turned right a **high-pass** sweeping up (thinner: from ~30 Hz
+to ~6 kHz). The sweep follows the ear (each detent the same musical step), with a mild resonance that grows a little
+toward the ends. The card shows the cutoff and the side (**1.2k LP**, **400 HP**, **OFF**) and a small response
+curve where the bar would be.
+- It glides: the cutoff follows the knob in ~6 ms, no zipper; going into the chain, out of it and from one side to the
+  other it crossfades (~6 ms), so crossing the middle never clicks. Turning the knob, it stops once in the middle.
+- **Automation**: armed and playing, turning it records it on the selected track (SEQ › AUTOMATION, AUTO LIST shows
+  **DJ FILT** rows; automation only, no lock); a stop or the loop's restart brings back where the knob was. The editor
+  can set and record it too.
+- Saved with the project (in the place a never-used global had: every older project loads with it OFF). Firmware
+  before 0.9.1 loads a newer project without its DJ FILTER and its automation.
+- Cost: nothing in the middle; on, about 200 instructions a sample on the FM-1 (the CPU TEST song +1.7 % on the host).
+
 ---
 
 ## 10. Modulation and macros
@@ -1458,7 +1475,8 @@ OFF). Latched effects are not recorded into the lane.
 
 - **GLO held**: black keys 1–6 mute T1–T6 (latched, saved with the project and in scenes); F3–D4 solo while held;
   black keys 7–10 mute the DRUM-X groups; E4 unmutes everything.
-- **MIXER** KNOB 4: MUTE of the selected track.
+- (0.9.1) MIXER's KNOB 4 is the DJ FILTER now: a track is muted from the GLO layer (above), as before; the MIXER still
+  shows the MUTE badge on a muted track.
 - **EDIT held** on a DRUM track: black keys 1–8 mute each DRUM-X sound.
 - **FX held**: black keys 1–6 mute while held.
 

@@ -610,6 +610,50 @@ static void card_ico_draw(int32_t x, int32_t y, uint32_t i, uint16_t c)
                 cv_pset(x + (int32_t)b, y + (int32_t)r, c);
 }
 static struct { int16_t r; char l[12], v[16]; } ly_card[4];
+/* (0.9.1) GLO > MIXER KNOB 4, the DJ FILTER (fx.c djf_block): its value as "OFF", or the cutoff ("800", "1.2k", "12k")
+ * with its side for unit ("LP" / "HP"); its card draws the response (djf_curve) where the gauge would be */
+#define DJF_NOCURVE 0x7FFF
+static int16_t card_curve_next __attribute__((section(".bss.djf")));   /* the next draw_column's card: the curve of G_DJF
+                                                         * value card_curve_next - 256 (0: none; its own section: fx.c djf) */
+static void djf_format(int32_t v, char *val, const char **unit)
+{
+    int32_t c = djf_cut(v), i = c >> 8, h;
+    if (!v) {
+        str_cpy(val, "OFF", 8);
+        *unit = "";
+        return;
+    }
+    h = CUTOFF_HZ[i] + (i < 127 ? ((CUTOFF_HZ[i + 1] - CUTOFF_HZ[i]) * (c & 255)) >> 8 : 0);
+    if (h < 1000)
+        fmt_int(val, h);
+    else if (h < 10000)
+        fmt_fix(val, h / 100, 1);
+    else
+        fmt_int(val, h / 1000);
+    if (h >= 1000)
+        str_cpy(val + str_len(val), "k", 2);
+    *unit = v < 0 ? "LP" : "HP";
+}
+/* the response of G_DJF value v drawn w px wide from (x, y): rows rows (5 or 6), 0 dB on the second (the bump above it),
+ * 12 dB / oct (2 px an octave of CUTOFF_HZ's scale) down to the last row; flat at 0 dB when off. The unity line under it
+ * in tc; outlined (BOTTOM, HUD: cv_halo) on BG round the band */
+static void djf_curve(int32_t x, int32_t y, int32_t w, int32_t rows, int32_t v, uint16_t vc, uint16_t tc)
+{
+    int32_t c = v ? djf_cut(v) : 0, py = y + 1, i;
+    int32_t bump = v && djf_k(c, v > 0) < (DJF_KMAX + DJF_KMIN) / 2;   /* (Q past ~0.9: the peak a row up) */
+    if (cv_halo)
+        cv_rect(x - 1, y - 1, w + 2, rows + 2, T_BG);
+    cv_rect(x, y + 1, w, 1, tc);
+    for (i = 0; i < w; i++) {
+        int32_t f = i * (127 << 8) / (w - 1), d = (v < 0 ? f - c : c - f) / 256, cy;   /* (octaves below / above: 14 idx) */
+        cy = !v || d < -3 ? y + 1 : d > 0 ? y + 1 + clamp(d / 7, 0, rows - 2) : y + 1 - (bump && d >= -3);
+        if (i)
+            cv_rect(x + i, cy < py ? cy : py, 1, (cy < py ? py - cy : cy - py) + 1, vc);
+        else
+            cv_rect(x, cy, 1, 1, vc);
+        py = cy;
+    }
+}
 static void draw_column(uint32_t c, const char *label, const char *val, const char *unit, uint16_t vc,
                         int32_t ratio, uint32_t icon)
 {
@@ -622,6 +666,8 @@ static void draw_column(uint32_t c, const char *label, const char *val, const ch
     char key[56];
     int hot = c == ui.hot_col && ui.hot_t, named = fmt_named, mot = card_mot_next && label[0], strip, snap;
     int arm = card_arm_next, free = card_free_next;
+    int32_t curve = card_curve_next ? card_curve_next - 256 : DJF_NOCURVE;
+    card_curve_next = 0;
     uint32_t kind = large_kind();                       /* MENU > LARGE: tall (draw_column_tall), or the label in M */
     uint8_t sig;
     uint16_t lc = hot ? T_ACCENT : arm || mot ? T_THEME : T_MID, cb = arm ? T_TINT : CARD_BG;
@@ -673,7 +719,8 @@ static void draw_column(uint32_t c, const char *label, const char *val, const ch
         key[n + 10] = (char)('A' + (gc >> 12));
     }
     key[n + 11] = (char)('A' + fd / 13u + 8u * (uint32_t)low);
-    key[n + 12] = 0;
+    key[n + 12] = (char)(curve == DJF_NOCURVE ? '#' : 0x80 | ((curve + 64) & 127));   /* (0.9.1) the DJ FILTER's curve */
+    key[n + 13] = 0;
     uw = unit[0] ? text_w(&AF_S, unit) + 3 : 0;
     if (text_w(vf, val) + uw > room)
         vf = &AF_S;
@@ -776,7 +823,13 @@ static void draw_column(uint32_t c, const char *label, const char *val, const ch
             cv_text_on(x + 3, ry + 2, &AF_S, unit, fd < 100u ? ux_mix(T_BG, uc, (int32_t)fd) : uc, cb);   /* on the value's
                                                          * baseline (S) */
         }
-        if (!strip && ratio >= 0) {                     /* the gauge: a 2 px LINE track, the value THEME on it */
+        if (!strip && curve != DJF_NOCURVE && kind != LK_TALL) {   /* (0.9.1) the DJ FILTER: its response (BOTTOM, HUD:
+                                                         * 5 rows, under the value's strip) */
+            uint16_t gc = hot && !lz_on() ? T_ACCENT : vc == T_DIM ? T_DIM : lz_on() ? vc : gauge_col(ratio);
+            uint16_t tc = fd < 100u ? ux_mix(T_BG, T_LINE, (int32_t)fd) : T_LINE;
+            djf_curve(5 + ox, low ? ch - 5 : ch - 8, COL_W - 10, low ? 5 : 6, curve,
+                      curve ? gc : fd < 100u ? ux_mix(T_BG, T_MID, (int32_t)fd) : T_MID, tc);
+        } else if (!strip && ratio >= 0) {              /* the gauge: a 2 px LINE track, the value THEME on it */
             int32_t gw = COL_W - 10, fx = ratio * gw / 1000;
             uint16_t gc = hot && !lz_on() ? T_ACCENT : vc == T_DIM ? T_DIM : lz_on() ? vc : gauge_col(ratio);
             uint16_t tc = fd < 100u ? ux_mix(T_BG, T_LINE, (int32_t)fd) : T_LINE;
@@ -1323,7 +1376,7 @@ static void draw_columns(void)
         draw_column(0, "ROW", val, "", VAL(0u), -1, ICON_AUTO);
         fmt_int(val, (int32_t)step + 1);
         draw_column(1, "STEP", val, "", r < n || step < (uint32_t)t->p[P_SLEN] ? VAL(1u) : T_DIM, -1, ICON_AUTO);
-        if (id >= P_COUNT || !ev_id_ok(t, id)) {
+        if ((id >= P_COUNT && id != MOT_DJF) || !ev_id_ok(t, id)) {
             draw_column(2, "PARAM", "--", "", T_DIM, -1, ICON_AUTO);
             draw_column(3, "VALUE", "--", "", T_DIM, -1, ICON_AUTO);
             return;
@@ -1363,7 +1416,7 @@ static void draw_columns(void)
         for (c = 0; c < 4u; c++) draw_act_column(c, labels[c], VAL(c), icons[c]);
         return;
     }
-    if (cur_page()->scope == SC_TRK) {                 /* LEVEL PAN REV MUTE of the selected track */
+    if (cur_page()->scope == SC_TRK) {                 /* LEVEL PAN REV of the selected track, the DJ FILTER */
         const track_t *t = TSEL;
         uint32_t lvl = trk_level(song.sel);
         param_format(&TP[P_LEVEL], (int32_t)lvl, val, &unit);   /* (0: OFF) */
@@ -1375,7 +1428,10 @@ static void draw_columns(void)
         param_format(&TP[P_REV], t->p[P_REV], val, &unit);
         card_mot_of(&TSEL->p[P_REV]);
         draw_column(2, "REV", val, unit, VAL(2u), RATIO(&TP[P_REV], t->p[P_REV]), ICON_AUTO);
-        draw_column(3, "MUTE", t->p[P_MUTE] ? "ON" : "OFF", "", t->p[P_MUTE] ? T_ACCENT : VAL(3u), -1, ICON_AUTO);
+        djf_format(song.g[G_DJF], val, &unit);          /* (0.9.1) KNOB 4: the master DJ FILTER (was the track's MUTE) */
+        card_mot_next = (uint8_t)motion_djf_any();
+        card_curve_next = (int16_t)(song.g[G_DJF] + 256);
+        draw_column(3, "DJ FILT", val, unit, VAL(3u), RATIO(&GP[G_DJF], song.g[G_DJF]), ICON_AUTO);
         return;
     }
     if (cur_page()->graph == GR_BROWSE) {

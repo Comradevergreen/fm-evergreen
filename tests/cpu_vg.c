@@ -14,6 +14,7 @@
  *   seq/plain      the sequencer: six tracks of chords / hits on every step at 200 BPM
  *   seq/heavy      .. with two step components on each (ARP SEQ / ECHO x8, RAND / OCT), DIV, LEN, chord glides
  *   song/cputest   SAVE > TOOLS 6 CPU TEST's song (song_dice.c cpu_test_song), playing: what the device is measured on
+ *   song/cputest.djf  (0.9.1) .. with the master DJ FILTER on (GLO > MIXER KNOB 4 at -24, a low-pass): its cost on top
  *   peak/VOICE.EN6 (0.9.0, last) six VOICE EN tracks starting a word in one block: that block's instructions, the worst
  *                  of 24 rounds (cpu_vg.py: not per sample) */
 #define UI_TEST_NO_MAIN
@@ -182,6 +183,9 @@ int main(void)
     cpu_test_song();
     transport_req = 1; ui_input();
     vg_section("song/cputest");
+    song.g[G_DJF] = -24;                                /* (0.9.1) the same song through the DJ FILTER (a low-pass, ~1.4 kHz) */
+    vg_section("song/cputest.djf");
+    song.g[G_DJF] = 0;
     {   /* (0.9.0) peak/VOICE.EN6: six VOICE EN tracks starting a word in the same block (TEXT of one-syllable words on
          * three, W1 W9 S3 on the others), 24 times: the instructions of that one block, the worst of them */
         static const char *const TX[3] = {"love me now we go home", "strength through the night", "stay and fly so high"};

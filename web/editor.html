@@ -1536,7 +1536,7 @@ function makeMockDevice(opt = {}) {
        times past the divisions; TONE: COLR + HPF in one) */
     D("SIZE", F.PCT, 0, 127, 90), D("DAMP", F.PCT, 0, 127, 60), D("RATE", F.LFOHZ, 0, 127, 40), D("DEPTH", F.PCT, 0, 127, 60),
     E("MIDI", ["USB", "TRS"], 0), D("REL", F.PCT, 0, 100, 30),   /* G_DREL (was SYNC): DUCK's release */ E("ROUTE", ["CH1-6", "SEL"], 0), D("CPU", F.INT, 0, 0, 0),
-    D("SLOT", F.INT, 1, 4, 1), E("NAME", NDASH, 0), E("LOAD", NGO, 0), E("SAVE", NGO, 0),
+    D("SLOT", F.INT, 1, 4, 1), D("DJ FILT", F.BIPCT, -64, 63, 0), E("LOAD", NGO, 0), E("SAVE", NGO, 0),   /* (0.9.1) G_DJF 17 (was NAME, "--"): the master DJ FILTER */
     E("ENG", ["ANALOG", "-", "PHASE", "LOFI", "-", "VOICE", "-", "WHEEL",
       "-", "-", "DRUM", "NOISE", "FM6", "-", "ANIMAL"], 0), D("CLIP", F.PCT, 0, 100, 0),   /* G_CLIP (was SET); 0.8.3 ANIMAL */
     E("CLRSQ", NGO, 0), E("INIT", NGO, 0),
@@ -2774,7 +2774,7 @@ const LAYOUT = (pe0) => [
     ...[0, 1, 2, 3].map((k) => [`OP${k + 1}`, 0, [61 + 5 * k, 62 + 5 * k, 63 + 5 * k, 64 + 5 * k]]),
     ["OP LVL", 0, [65, 70, 75, 80]]] }] : []),
   { t: "VOICE", pages: [["LEVEL", 0, [0]], ["VOICE", 0, [37, 38, 41, 42]]] },   /* (JIANT 0.4: no VOICE 2: PAN on MIXER, MUTE there and GLO) */
-  { t: "FX", pages: [["FX", 0, [33, 34, 35, 36]], ["MASTER", 1, [21, 25, 26, 13]], ...(pe0 >= 112 ? [["DIST", 0, [33, 91, 92]]] : []), ...(dev && dev.info && dev.info.gcount >= 66 ? [["AUTO PAN", 0, [45, 46, 48, 47]], ["SLICER", 1, [37, 38, 39, 40]], ["SL BUS", 1, [41, 42, 43, 44]],
+  { t: "FX", pages: [["FX", 0, [33, 34, 35, 36]], ["MASTER", 1, [21, 25, 26, 13]], ...(dev && dev.gdesc && dev.gdesc[17] && dev.gdesc[17].label === "DJ FILT" ? [["DJ FILTER", 1, [17]]] : []),   /* (0.9.1, as the device names it) */ ...(pe0 >= 112 ? [["DIST", 0, [33, 91, 92]]] : []), ...(dev && dev.info && dev.info.gcount >= 66 ? [["AUTO PAN", 0, [45, 46, 48, 47]], ["SLICER", 1, [37, 38, 39, 40]], ["SL BUS", 1, [41, 42, 43, 44]],
       ["SL BUS 2", 1, [45, 46, 47]], ["SL PITCH", 1, [48, 49]], ...[0, 1, 2, 3].map((k) => [`PITCH ${4 * k + 1}-${4 * k + 4}`, 1,
       [50 + 4 * k, 51 + 4 * k, 52 + 4 * k, 53 + 4 * k]])] : [["SLICER", 0, [45, 46, 47, 48]]]),   /* (0.6.3: one, on a bus) */
     ["DLY", 1, [4, 5, 6, 7]], ...(pe0 >= 112 ? [["DLY 2", 1, [28, 34, 35, ...(dev && dev.info && dev.info.gcount >= 67 ? [66] : [])]],
@@ -3362,7 +3362,7 @@ function renderMotion() {
   if (rows.contains(document.activeElement)) return;
   rows.replaceChildren(el("tr", {}, ...["motionStep", "motionParam", "motionValue"].map(k => el("th", {text:t(k)})), el("th")),
     ...m.events.map(e => {
-      const desc = d.pdesc[e.param], label = desc?.label || `P${e.param}`;
+      const desc = e.param === 127 ? d.gdesc[17] : d.pdesc[e.param], label = desc?.label || `P${e.param}`;   /* (0.9.1: 127 the DJ FILTER's) */
       const value = el("input", {type:"number",min:desc?.min ?? -8192,max:desc?.max ?? 8191,value:e.value,"aria-label":`${e.step + 1} ${label}`});
       value.addEventListener("change", () => op(async () => {
         assertSession(d);

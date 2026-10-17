@@ -1552,13 +1552,15 @@ static int test_tracks(void)
                  trk[0].preset != before.preset && !memcmp(trk[0].step, before.step, sizeof before.step) &&
                  trk[0].p[P_LEVEL] == before.p[P_LEVEL] && cur_page()->graph == GR_TRK);
     turn(EN_K4, 1);
-    bad += check("MIXER KNOB 4 right: MUTE ON (the selected track stays)", trk[0].p[P_MUTE] == 1 && song.sel == 0);
+    bad += check("(0.9.1) MIXER KNOB 4 right: the DJ FILTER a high-pass (MUTE stays: the GLO layer's, below)",
+                 song.g[G_DJF] == 1 && trk[0].p[P_MUTE] == 0 && song.sel == 0);
     turn(EN_K1, -3);
-    bad += check("KNOB 1 changes LEVEL only (MUTE stays)", trk[0].p[P_MUTE] == 1 && trk[0].p[P_LEVEL] == before.p[P_LEVEL] - 3);
+    bad += check("KNOB 1 changes LEVEL only", song.g[G_DJF] == 1 && trk[0].p[P_LEVEL] == before.p[P_LEVEL] - 3);
     turn(EN_K2, 2);
     bad += check("KNOB 2 changes PAN", trk[0].p[P_PAN] == before.p[P_PAN] + 2);
-    turn(EN_K4, -1);
-    bad += check("MIXER KNOB 4 left: MUTE OFF", trk[0].p[P_MUTE] == 0);
+    turn(EN_K4, -3);
+    bad += check("KNOB 4 left across the middle: it stops there once (OFF; djf_test.c: on from there)",
+                 song.g[G_DJF] == 0 && trk[0].p[P_MUTE] == 0);
     turn(EN_ALGO, 1);
     bad += check("ALGORITHM selects the track", song.sel == 1);
     {   /* (0.6.55) TRACKS 4: ALGORITHM stops at T4, T5 / T6 are not offered; TRACKS 6 reaches T6; back to 4 from T6: T4 */
@@ -4663,8 +4665,9 @@ static int test_bughunt_ui2(void)
                            : "dead FX held from a dialog: no map, the key plays a note, no effect", ok);
         }
     }
-    {   /* 3. MIXER: the knob just turned is the one drawn in the accent (K1 LEVEL's dB, K2 PAN's middle, K3 REV, K4
-         * MUTE: the sound's name); (0.6.80) in the six columns, with any COLOR (here not JIANT FM's) */
+    {   /* 3. MIXER: the knob just turned is the one drawn in the accent (K1 LEVEL's dB, K2 PAN's middle, K3 REV; (0.9.1) K4
+         * the DJ FILTER: on its card, nothing in the columns, the name not muted); (0.6.80) in the six columns, with any
+         * COLOR (here not JIANT FM's) */
         uint32_t k, a[4][4], ok = 1;
         for (k = 0; k < 4u; k++) {
             int32_t X = T6_X(0), Y;
@@ -4672,19 +4675,21 @@ static int test_bughunt_ui2(void)
             settings.palette = 1; palette_set(1);
             go_page(GR_TRK); frame(); frame();
             Y = lz_on() ? (int32_t)graph_y() + 9 : Y_GRAPH;            /* (0.8.5: GLO's lens, under its cards) */
-            turn(EN_K1 + k, 1);                                       /* (K4 right: MUTE on, its badge shown) */
+            turn(EN_K1 + k, 1);                                       /* (K4 right: the DJ FILTER, a high-pass) */
             ui.force = 1; frame();
             a[k][0] = accent_in(X + 17, Y + 44, X + 37, Y + 57);      /* LEVEL's dB */
             a[k][1] = accent_in(X + 4, Y + 100, X + 37, Y + 110);     /* PAN */
             a[k][2] = accent_in(X + 4, Y + 112, X + 37, Y + 117);     /* REV */
-            a[k][3] = accent_in(X + 4, Y + 22, X + 37, Y + 37);       /* MUTE: the name */
+            a[k][3] = accent_in(X + 4, Y + 22, X + 37, Y + 37);       /* the name (in the accent: muted) */
+            if (k == 3u)
+                ok &= song.g[G_DJF] == 1 && !trk[0].p[P_MUTE];
         }
         for (k = 0; k < 4u; k++) {
             uint32_t j;
             for (j = 0; j < 4u; j++)
-                ok &= j == k ? a[k][j] > 0u : a[k][j] == 0u;
+                ok &= j == k && k < 3u ? a[k][j] > 0u : a[k][j] == 0u;
         }
-        bad += check("MIXER (six columns, any COLOR): K1..K4 light LEVEL / PAN / REV / MUTE, nothing else", ok);
+        bad += check("MIXER (six columns, any COLOR): K1..K3 light LEVEL / PAN / REV, K4 (the DJ FILTER) none of them", ok);
     }
     {   /* 4. renaming the slot the music came from renames the music: the next SAVE prefills the new name */
         char pn[16];
@@ -9371,7 +9376,14 @@ static int test_skin(void)
     bad += check("SKIN geometry: COLORS cards on top; BOTTOM the knob row 191..223, the panel 42..189; HUD's HOME full screen; LARGE: COLORS'", ok);
     {   /* HUD's HOME: the beings swim the whole screen, under the header, the tabs and the knobs (their outlines drawn) */
         uint32_t top = 0, low = 0, k;
-        ui_power_on(); ui_skin = SKIN_HUD; song.playing = 1; frame();
+        ui_power_on(); ui_skin = SKIN_HUD; song.playing = 1;
+        eco.init = 0; frame();                                    /* (0.9.1) from their power-on places, one sent under the
+                                                                   * knob row and one over the tabs' line: they stay there
+                                                                   * (HUD's floor and ceiling the screen's), whatever the
+                                                                   * tests before left (their swim had been carried from them:
+                                                                   * a track muted on the MIXER then moved them lower) */
+        eco.sy[0] = (LB_CARD_Y + 20) << 8; eco.vy[0] = 30;
+        eco.sy[1] = (LB_GRAPH_Y - 20) << 8; eco.vy[1] = -30;
         for (k = 0; k < 400u; k++) {
             uint32_t c;
             frame();

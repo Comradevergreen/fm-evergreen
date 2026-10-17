@@ -475,17 +475,22 @@ static int32_t accel(uint32_t role, int32_t s, int32_t range)
     return s * (int32_t)m;
 }
 
-/* MIXER page: KNOB 1 LEVEL, 2 PAN, 3 REV send, 4 MUTE of the selected track (right = ON, left = OFF: the
- * track itself is ALGORITHM's, on every page). Pattern length stays on SEQ. */
+/* MIXER page: KNOB 1 LEVEL, 2 PAN, 3 REV send of the selected track (the track itself is ALGORITHM's, on every page),
+ * (0.9.1) KNOB 4 the master DJ FILTER (G_DJF: was the track's MUTE, which the GLO layer's black keys latch, as before).
+ * Pattern length stays on SEQ. */
 static void tracks_edit(uint32_t slot, int32_t steps)
 {
     track_t *t = TSEL;
     int16_t *vp;
     const param_desc_t *d;
     switch (slot) {
-    case 3:
-        t->p[P_MUTE] = (int16_t)(steps > 0);
+    case 3: {                                           /* (no acceleration across the middle: it stops there once) */
+        int32_t v = song.g[G_DJF], to = clamp(v + accel(EN_K4, steps, 127), -64, 63);
+        if ((v < 0 && to > 0) || (v > 0 && to < 0))
+            to = 0;
+        motion_djf_set(t, (int16_t)to);
         return;
+    }
     case 0:
         vp = &t->p[P_LEVEL];
         d = &TP[P_LEVEL];

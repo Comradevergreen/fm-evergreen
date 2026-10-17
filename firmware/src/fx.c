@@ -243,6 +243,112 @@ static __attribute__((noinline)) void clip_block(uint32_t n)
         wet[i] = 0;
     }
 }
+/* (0.9.1) the master DJ FILTER (G_DJF, GLO > MIXER KNOB 4): one bipolar knob on the whole mix, just before CLIP and the
+ * leveler. 0: out of the chain, not run at all (the mix bit for bit as without it). Below 0 a low-pass sweeping down
+ * (darker), above 0 a high-pass sweeping up (thinner): a trapezoidal SVF (A. Simper's, as dsp.c tsvf) in 64-bit products,
+ * its coefficients Q28 and the mix 16 x finer in its states (tsvf's Q13 left a -31 dB floor of highs through the low-pass
+ * at its far end: its integrators' steps too coarse), stereo, the cutoff on CUTOFF_HZ's log scale (LP ~15 kHz at -1 ..
+ * ~70 Hz at -64; HP ~32 Hz at +1 .. ~6 kHz at +63), a mild resonance (Q 0.72 near the middle, 1.1 at the ends). The
+ * cutoff glides (~6 ms) and the coefficients ramp sample by sample (no zipper); out of the chain and back, and from one
+ * side to the other, a ~5.8 ms crossfade with the dry mix (no click crossing the middle) */
+#define DJF_LO 17                                       /* the low-pass's far end (CUTOFF_HZ index: ~70 Hz) */
+#define DJF_HI 107                                      /* the high-pass's (~6 kHz) */
+#define DJF_KMAX 5689                                   /* damping (Q12) near the middle: Q 0.72 */
+#define DJF_KMIN 3724                                   /* .. at the ends: Q 1.1 */
+#define DJF_XB 8                                        /* blocks of a crossfade (8 x CTL = 256 samples) */
+#define DJF_SL 4                                        /* the mix << 4 in the states */
+#define DJF_MAX (1 << 28)                               /* (the states' bound: far past any mix, never an overflow) */
+/* v (-64..63, not 0) -> its cutoff (CUTOFF_HZ index, Q8) */
+static int32_t djf_cut(int32_t v)
+{
+    return v < 0 ? (127 << 8) - ((127 - DJF_LO) << 8) * -v / 64 : ((DJF_HI << 8) * v) / 63;
+}
+/* the damping at cutoff c (Q8) of side hp: more resonant toward the far end */
+static int32_t djf_k(int32_t c, int hp)
+{
+    int32_t e = hp ? c * 256 / (DJF_HI << 8) : ((127 << 8) - c) * 256 / ((127 - DJF_LO) << 8);
+    return DJF_KMAX - (DJF_KMAX - DJF_KMIN) * clamp(e, 0, 256) / 256;
+}
+/* the coefficients at cutoff c (Q8 of CUTOFF_HZ's index) and damping k (Q12): a[0..2] Q28 */
+static void djf_coef(int32_t *a, int32_t c, int32_t k)
+{
+    int32_t i = c >> 8;
+    int64_t g = (int64_t)SVF_G[i] << 16, den;           /* tan(pi fc / FS), Q28, between the table's points */
+    if (i < 127)
+        g += (((int64_t)(SVF_G[i + 1] - SVF_G[i]) << 16) * (c & 255)) >> 8;
+    den = (1 << 28) + ((g * (g + ((int64_t)k << 16))) >> 28);   /* (< 2^32 up to 16 kHz: 8.8 x 2^28) */
+    a[0] = (int32_t)(((uint64_t)1 << 56) / (uint32_t)den);
+    a[1] = (int32_t)((a[0] * g) >> 28);
+    a[2] = (int32_t)((a[1] * g) >> 28);
+}
+static struct {
+    int32_t ic[4];                                      /* the states: L ic1 ic2, R ic1 ic2 (the mix << DJF_SL) */
+    int32_t a[3], k;                                    /* the coefficients playing (Q28), the damping (Q12) */
+    int32_t cut, w;                                     /* the cutoff gliding (Q8), the filter's share (Q12, 0: dry) */
+    int8_t mode;                                        /* -1 LP, 1 HP in the chain; 0 out */
+} djf __attribute__((section(".bss.djf")));             /* (its own section: the merged statics the ISR reads keep their
+                                                         * places, and its code with them) */
+static __attribute__((noinline)) void djf_block(uint32_t n)
+{
+    int32_t v = song.g[G_DJF], dm = v < 0 ? -1 : v > 0 ? 1 : 0, w0, w1, dw, k, c[3], d[3];
+    uint32_t i;
+    if (!djf.mode) {                                    /* in: at its cutoff, the states as the mix (no step) */
+        djf.mode = (int8_t)dm;
+        djf.cut = djf_cut(v);
+        djf.k = djf_k(djf.cut, dm > 0);
+        djf_coef(djf.a, djf.cut, djf.k);
+        djf.ic[0] = djf.ic[2] = 0;
+        djf.ic[1] = clamp(mix_l[0] + wet[0], -DJF_MAX >> DJF_SL, DJF_MAX >> DJF_SL) << DJF_SL;
+        djf.ic[3] = clamp(mix_r[0] + wet[0], -DJF_MAX >> DJF_SL, DJF_MAX >> DJF_SL) << DJF_SL;
+        djf.w = 0;
+    }
+    w0 = djf.w;
+    if (dm == djf.mode) {                               /* its side: the filter in, the cutoff toward the knob's */
+        int32_t e = djf_cut(v) - djf.cut;
+        djf.cut += e / 8 ? e / 8 : e;                   /* (an eighth a block: ~6 ms) */
+        w1 = w0 + 4096 / DJF_XB > 4096 ? 4096 : w0 + 4096 / DJF_XB;
+    } else {                                            /* the middle, or the other side: out first (then in, there) */
+        w1 = w0 - 4096 / DJF_XB < 0 ? 0 : w0 - 4096 / DJF_XB;
+    }
+    k = djf_k(djf.cut, djf.mode > 0);
+    djf_coef(c, djf.cut, k);
+    for (i = 0; i < 3u; i++)                            /* (ramped across the block: a step a sample) */
+        d[i] = (c[i] - djf.a[i]) / (int32_t)n;
+    dw = (w1 - w0) / (int32_t)n;
+    {
+        int32_t a1 = djf.a[0], a2 = djf.a[1], a3 = djf.a[2], w = w0, l1 = djf.ic[0], l2 = djf.ic[1], r1 = djf.ic[2];
+        int32_t r2 = djf.ic[3], kq = djf.k << 8, dk = ((k - djf.k) << 8) / (int32_t)n, hp = djf.mode > 0;
+        for (i = 0; i < n; i++) {
+            int32_t xl = mix_l[i] + wet[i], xr = mix_r[i] + wet[i], v1, v2, v3, yl, yr;
+            int32_t sl = clamp(xl, -DJF_MAX >> DJF_SL, DJF_MAX >> DJF_SL) << DJF_SL;
+            int32_t sr = clamp(xr, -DJF_MAX >> DJF_SL, DJF_MAX >> DJF_SL) << DJF_SL;
+            a1 += d[0]; a2 += d[1]; a3 += d[2]; w += dw; kq += dk;
+            v3 = sl - l2;
+            v1 = (int32_t)(((int64_t)a1 * l1 + (int64_t)a2 * v3) >> 28);
+            v2 = l2 + (int32_t)(((int64_t)a2 * l1 + (int64_t)a3 * v3) >> 28);
+            l1 = clamp(2 * v1 - l1, -DJF_MAX, DJF_MAX);
+            l2 = clamp(2 * v2 - l2, -DJF_MAX, DJF_MAX);
+            yl = hp ? sl - v2 - (int32_t)(((int64_t)kq * v1) >> 20) : v2;
+            v3 = sr - r2;
+            v1 = (int32_t)(((int64_t)a1 * r1 + (int64_t)a2 * v3) >> 28);
+            v2 = r2 + (int32_t)(((int64_t)a2 * r1 + (int64_t)a3 * v3) >> 28);
+            r1 = clamp(2 * v1 - r1, -DJF_MAX, DJF_MAX);
+            r2 = clamp(2 * v2 - r2, -DJF_MAX, DJF_MAX);
+            yr = hp ? sr - v2 - (int32_t)(((int64_t)kq * v1) >> 20) : v2;
+            /* the dry mix exact, plus the filter's difference by its share */
+            mix_l[i] = xl + (int32_t)(((int64_t)(clamp(yl, -DJF_MAX, DJF_MAX) - sl) * w) >> (12 + DJF_SL));
+            mix_r[i] = xr + (int32_t)(((int64_t)(clamp(yr, -DJF_MAX, DJF_MAX) - sr) * w) >> (12 + DJF_SL));
+            wet[i] = 0;
+        }
+        djf.ic[0] = l1; djf.ic[1] = l2; djf.ic[2] = r1; djf.ic[3] = r2;
+    }
+    for (i = 0; i < 3u; i++)
+        djf.a[i] = c[i];
+    djf.k = k;
+    djf.w = w1;
+    if (!w1 && dm != djf.mode)
+        djf.mode = 0;                                   /* out (the next block: in on the other side, or not at all) */
+}
 static __attribute__((noinline)) void master_begin(void)
 {
     int32_t a = clip_eff;
@@ -2202,6 +2308,8 @@ static __attribute__((noinline)) void mix_block(int32_t *out, uint32_t n)   /* (
         }
     if (fx_stems)                                       /* (0.7.1) the FX return: the buses, the SLICER's when on */
         stem_fx_block(n);
+    if (song.g[G_DJF] || djf.mode)                      /* (0.9.1) the DJ FILTER; centred and out: not run */
+        djf_block(n);
     if (clip_g)
         clip_block(n);
     lev_block(n);                                       /* (JIANT 0.5) the leveler: the loudness held */

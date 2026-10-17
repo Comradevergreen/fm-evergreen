@@ -776,9 +776,21 @@ static uint32_t proj_lyr_len(const char *s)            /* (0.8.5) a lyric's stor
         n++;
     return n;
 }
+/* (0.9.1) the DJ FILTER's records (core.h MOT_DJF) among m's: FUNC keeps them apart, in a block after the others ('M' 'G':
+ * their count, then the records), so firmware before 0.9.1, which refuses a record it does not know, loads the project
+ * without them */
+static uint32_t proj_djf_events(const motion_store_t *m)
+{
+    uint32_t i, n = 0;
+    for (i = 0; i < m->count && i < MOTION_MAX; i++)
+        n += MOTION_ID(&m->event[i]) == MOT_DJF;
+    return n;
+}
 static uint32_t proj_packed_size(const project_t *q)
 {
     uint32_t n = 68u + sizeof q->chain + 4u + q->motion.count * sizeof q->motion.event[0] + 2u + G_SL_N, t, i;
+    if (proj_djf_events(&q->motion))                    /* (0.9.1) the DJ FILTER's records: their block's head */
+        n += 3u;
     if (q->g[G_DMOD] != GP[G_DMOD].def)                 /* (0.6.86) the delay's MOD's, when not the default */
         n += 3u;
     if (q->g[G_DTYPE] || q->g[G_DPING])                 /* (0.6.90) its TYPE and PING-PONG's */
@@ -806,7 +818,7 @@ static uint32_t proj_packed_size(const project_t *q)
 }
 static int proj_pack(project_store_t *out, const project_t *q)
 {
-    uint8_t *b = out->raw; uint32_t pos = 68u, t, i; uint32_t magic = PROJ_MAGIC, size = PROJ_STORE_SIZE, sum, mlen;
+    uint8_t *b = out->raw; uint32_t pos = 68u, t, i; uint32_t magic = PROJ_MAGIC, size = PROJ_STORE_SIZE, sum;
     proj_full = 0;
     for (t = 0; t < NTRK; t++) {                        /* the values first: out untouched when one is wrong */
         if (q->t[t].engine >= NENGINES) return 0;
@@ -860,9 +872,17 @@ static int proj_pack(project_store_t *out, const project_t *q)
         }
     }
     memcpy(b + pos, &q->chain, sizeof q->chain); pos += sizeof q->chain;
-    mlen = 4u + q->motion.count * sizeof q->motion.event[0];
-    memcpy(b + pos, &q->motion, mlen);
-    pos += mlen;
+    {   /* the motion: its head (the count without the DJ FILTER's records), the others in order */
+        uint32_t nd = proj_djf_events(&q->motion);
+        memcpy(b + pos, &q->motion, 4u);
+        b[pos] = (uint8_t)(q->motion.count - nd);
+        pos += 4u;
+        for (i = 0; i < q->motion.count; i++)
+            if (MOTION_ID(&q->motion.event[i]) != MOT_DJF) {
+                memcpy(b + pos, &q->motion.event[i], sizeof q->motion.event[0]);
+                pos += sizeof q->motion.event[0];
+            }
+    }
     b[pos++] = 'S'; b[pos++] = 'L';                     /* (0.6.3) the SLICER's globals (biased bytes) */
     for (i = 0; i < G_SL_N; i++)
         b[pos++] = (uint8_t)(clamp(q->g[G_SLMODE + i], -64, 127) + 64);
@@ -904,6 +924,15 @@ static int proj_pack(project_store_t *out, const project_t *q)
         b[pos++] = 'L'; b[pos++] = 'Y'; b[pos++] = (uint8_t)t; b[pos++] = (uint8_t)n;
         memcpy(b + pos, q->lyr[t], n);
         pos += n;
+    }
+    if (proj_djf_events(&q->motion)) {                  /* (0.9.1) the DJ FILTER's records, after the lyrics: firmware
+                                                         * before stops reading at the block, the rest loads */
+        b[pos++] = 'M'; b[pos++] = 'G'; b[pos++] = (uint8_t)proj_djf_events(&q->motion);
+        for (i = 0; i < q->motion.count; i++)
+            if (MOTION_ID(&q->motion.event[i]) == MOT_DJF) {
+                memcpy(b + pos, &q->motion.event[i], sizeof q->motion.event[0]);
+                pos += sizeof q->motion.event[0];
+            }
     }
     memcpy(b + PROJC_PFX_OFF, q->pfx_lane, sizeof q->pfx_lane);
     b[PROJC_PFX_OFF + sizeof q->pfx_lane] = q->pfx_ltgt > 2u ? 0u : q->pfx_ltgt;
@@ -1136,6 +1165,16 @@ static int proj_unpack_c(project_t *q, const uint8_t *b)
         }
         q->lyr[lt][n] = 0;
         pos += 4u + n;
+    }
+    if (pos + 3u <= room && b[pos] == 'M' && b[pos + 1u] == 'G') {   /* (0.9.1) the DJ FILTER's records (else none) */
+        uint32_t n = b[pos + 2u], k;
+        if (!n || q->motion.count + n > MOTION_MAX || pos + 3u + n * sizeof q->motion.event[0] > room) return 0;
+        memcpy(q->motion.event + q->motion.count, b + pos + 3u, n * sizeof q->motion.event[0]);
+        for (k = 0; k < n; k++)
+            if (MOTION_ID(&q->motion.event[q->motion.count + k]) != MOT_DJF) return 0;
+        q->motion.count = (uint8_t)(q->motion.count + n);
+        if (!motion_valid(&q->motion)) return 0;
+        pos += 3u + n * sizeof q->motion.event[0];
     }
     proj_new_tracks(q, nt);                             /* (a FUNC of fewer tracks: the rest at power-on) */
     for (t = nt; t < NTRK; t++)
@@ -1395,6 +1434,7 @@ static void project_capture(project_t *p)
     p->size = sizeof *p;
     for (i = 0; i < G_COUNT; i++)
         p->g[i] = song.g[i];
+    p->g[G_DJF] = motion_djf_value();                   /* (0.9.1) the knob's, not what its automation set */
     p->sel = song.sel;
     p->parts = NPART;
     p->phys = PROJ_PHYS;
@@ -2108,8 +2148,10 @@ static uint32_t autosave_sig(void)
         h = as_mix(h, fm6_patch[i], sizeof fm6_patch[i]);
     }
     for (i = 0; i < G_COUNT; i++)
-        if (i != G_SLOT && i != G_NAME && i != G_LOAD && i != G_SAVE)
-            h = as_mix(h, &song.g[i], sizeof song.g[i]);
+        if (i != G_SLOT && i != G_LOAD && i != G_SAVE) {
+            int16_t v = i == G_DJF ? motion_djf_value() : song.g[i];   /* (0.9.1: the knob's, not its records') */
+            h = as_mix(h, &v, sizeof v);
+        }
     h = as_mix(h, &motion, sizeof motion);
     h = as_mix(h, &chain_config, sizeof chain_config);
     h = as_mix(h, lyr_txt, sizeof lyr_txt);             /* (0.8.5) VOICE's lyrics */

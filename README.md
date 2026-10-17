@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.9.0).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.9.1).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
   **The dice starts in EXPLORE** (0.8.6): HOME + SELECT opens GEN on a choice that follows no genre and breaks every
   rule (any tempo, odd metres and polyrhythm, exotic modes, any engine on any role, DRUM-X octaves, PLAYHEADS, MUTATE),
   each seed a very different piece, still in the key its SCALE and CHORD pages show. RANDOM and the 43 genres follow.
@@ -546,6 +546,27 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### v0.9.1
+- **A DJ FILTER on the master** (GLO › MIXER KNOB 4, where the track's MUTE was): one bipolar knob on the whole mix,
+  just before CLIP and the leveler. **In the middle it is out of the chain** (not run at all: the sound bit for bit as
+  0.9.0's, the CPU too); left a **low-pass** sweeping down (~15 kHz .. ~70 Hz), right a **high-pass** sweeping up
+  (~30 Hz .. ~6 kHz), on a musical (log) scale, with a mild resonance (Q 0.72, 1.1 toward the ends). The cutoff glides
+  and the coefficients ramp every sample (no zipper); into and out of the chain, and from one side to the other, a
+  ~6 ms crossfade: no click crossing the middle, and turning the knob it stops there once. Stereo, a trapezoidal SVF in
+  64-bit products (the 32-bit one left a -31 dB floor of highs through the closed low-pass). The card shows the cutoff
+  and the side (**1.2k LP**, **OFF**) and a small response curve.
+  - **Automatable**: armed and playing, the knob records into the selected track's automation (AUTO LIST: DJ FILT rows;
+    automation, no lock); a stop or the loop's restart brings the knob's value back; the editor can set and record it.
+  - **Saved with the project** in the place of a global that was never used (G_NAME, always 0): every older project
+    loads with it OFF. Its automation goes in a block of its own after the others, so firmware before 0.9.1 still loads
+    a newer project (without the filter).
+  - **Mutes**: a track is muted from the GLO layer (hold GLO, black keys 1–6, latched), as before; the MIXER still shows
+    the MUTE badge. KNOB 4 was the only knob for it; nothing else muted only there.
+  - Cost: none centred (every golden render, CPU baseline and target budget unchanged); on, ~200 instructions a sample
+    on the FM-1 (target budget `djf_block` 200), the CPU TEST song +1.7 % on the host (`song/cputest.djf`). RAM +52 B
+    (main RAM, in a section of its own so the ISR's other statics keep their places and their code), image +2.9 KB (547880 B of 581564).
+  - The web editor: its DJ FILTER page, the global's name, automation rows named.
 
 ### v0.9.0
 The HUD skin, fixed (every finding of the HUD audit), and a faster screen there.

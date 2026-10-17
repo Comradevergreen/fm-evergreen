@@ -146,7 +146,9 @@ enum {                          /* global parameters */
     G_DTIME, G_DFDBK, G_DCOLOR, G_DMIX,
     G_RSIZE, G_RDAMP, G_CRATE, G_CDEPTH,
     G_MIDI, G_DREL, G_ROUTE, G_INFO,   /* G_DREL (JIANT): DUCK's release; was G_SYNC, a placeholder ("--", 0..0) */   /* G_ROUTE: MIDI IN, 0 CH1-4 (channels 1..4 -> parts 1..4, 5..16 ignored), 1 SEL (seq.c) */
-    G_SLOT, G_NAME, G_LOAD, G_SAVE,
+    G_SLOT, G_DJF, G_LOAD, G_SAVE,  /* G_DJF (0.9.1): GLO > MIXER KNOB 4, the master DJ FILTER (fx.c djf_block), -64 .. 63:
+                                 * 0 out of the chain, below a low-pass sweeping down, above a high-pass sweeping up. Was
+                                 * G_NAME, a placeholder ("--", 0..0, never set): every project before holds 0 there */
     G_ENGSEL, G_CLIP,           /* no page: the editor switches the engine with a SET of G_ENGSEL. G_CLIP (JIANT):
                                  * the master clipper; was G_ENGGO, unused (0..0) */
     G_CLRSEQ, G_INITSND,
@@ -505,6 +507,11 @@ static void step_set_ratchet(step_t *s, uint32_t hits)
 #define MOTION_STEP(e) ((uint32_t)(e)->place & 63u)
 #define MOTION_PLACE(e) (MOTION_TRK(e) << 6 | MOTION_STEP(e))   /* track << 6 | step */
 #define MOTION_VAL(e) ((int16_t)((e)->value ^ (int32_t)(MOTION_HI(e) << 12)))
+/* (0.9.1) MOT_DJF: a record whose id is past every P_* is the master DJ FILTER's (G_DJF), automation only (no lock):
+ * recorded on the selected track (GLO > MIXER KNOB 4), it sets song.g[G_DJF] at its step and the value holds as any
+ * event's; a stop or the loop's restart puts back the knob's (motion.c). Stored in FUNC's block 'M' 'G' (project.c) */
+#define MOT_DJF 127u
+_Static_assert(P_COUNT < MOT_DJF, "MOT_DJF past every track parameter");
 typedef struct { uint8_t place, param; int16_t value; } motion_event_t;
 typedef struct { uint8_t count, on, rsv[2]; motion_event_t event[MOTION_MAX]; } motion_store_t;
 static void motion_at(motion_event_t *e, uint32_t place, int16_t v)   /* place: track << 6 | step; v: the value */
