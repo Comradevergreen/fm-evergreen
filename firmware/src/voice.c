@@ -362,14 +362,19 @@ static uint32_t voice_victim(const track_t *self, int soft, track_t **pp)
     return best;
 }
 
-static uint32_t voice_kills;                            /* voices given up (budget, overload): console, hostsim */
+/* (0.8.9) console status: voices_given_up counts events, one per voice faded out early, whatever asked (a voice
+ * already fading is not counted again); voice_trims the share of them the load budget took: a released tail already
+ * under -50 dB (inaudible, one per note while LOAD is tight); the overload guard's are audio.c shed_count; the rest
+ * were taken for a new note with the budget of voices full (voices_stolen) */
+static uint32_t voice_kills, voice_trims;               /* voices given up (budget, overload): console, hostsim */
 static void voice_kill(voice_t *v)                      /* fade out over ~6 ms (env_tick stage 4; 0.6.74, was a block) */
 {
     v->gate = 0;
-    if (v->stage != 4u)
+    if (v->stage != 4u) {
         v->kfade = 0;                                   /* (0.6.74: the fade from its start) */
+        voice_kills++;
+    }
     v->stage = 4;
-    voice_kills++;
 }
 
 /* (0.6.18) the load budget takes only a tail that is nearly gone: the oldest released voice under -50 dB (any part; 0.6.19, was -30).
@@ -397,8 +402,10 @@ static int voice_room(track_t *t, int soft)
     track_t *vp = 0;
     uint32_t k;
     if (voices_busy() < voice_cap()) {
-        if (load_tight && (k = quiet_tail(&vp)) < NVOICE)
+        if (load_tight && (k = quiet_tail(&vp)) < NVOICE) {
             voice_kill(&vp->v[k]);                      /* (the load budget: a dying tail makes the room) */
+            voice_trims++;
+        }
         return 1;
     }
     k = voice_victim(t, soft, &vp);
@@ -440,11 +447,13 @@ static voice_t *voice_alloc(track_t *t, uint32_t note)
     }
     if (nfree && (voices_busy() >= voice_cap() || load_tight)) {   /* (0.6.16: the load budget too; 0.6.18: a dying tail) */
         track_t *vp = 0;
-        uint32_t k = voices_busy() >= voice_cap() ? voice_victim(t, 0, &vp) : quiet_tail(&vp);
+        uint32_t full = voices_busy() >= voice_cap(), k = full ? voice_victim(t, 0, &vp) : quiet_tail(&vp);
         if (k < np && vp == t)
             return &t->v[k];                            /* our own: restart it in place (no click) */
-        if (k < NVOICE)
+        if (k < NVOICE) {
             voice_kill(&vp->v[k]);
+            voice_trims += !full;                       /* (the load budget's quiet tail, not a steal) */
+        }
     }
     if (t->p[P_ALLOC] || t->p[P_GLIDE]) {
         for (i = 0; i < np; i++) {

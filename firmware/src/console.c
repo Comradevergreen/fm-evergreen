@@ -177,7 +177,8 @@ static void con_uac(void)                              /* USB audio input: strea
     con_kv("uac_starts", (int32_t)uac.starts);
     con_kv("uac_pkts", (int32_t)p);
     con_kv("uac_rate_hz", p ? (int32_t)base * 1000 + (int32_t)(uac.frames - base * p) * 1000 / (int32_t)p : 0);   /* < 5 h */
-    con_kv("uac_underruns", (int32_t)uac.underruns);
+    con_kv("uac_underruns", (int32_t)uac.underruns);   /* (packets short of frames: the last one repeated, never dropped) */
+    con_kv("uac_repeats_made_up", (int32_t)uac.repaid); /* (0.8.9) repeated frames skipped later: the stream in time */
     con_kv("uac_overruns", (int32_t)uac.overruns);
     con_kv("uac_missed", (int32_t)uac.missed);
     con_kv("uac_stalls", (int32_t)uac.stalls);
@@ -186,6 +187,9 @@ static void con_uac(void)                              /* USB audio input: strea
     con_kv("uac_fill", (int32_t)uac.fill_min);
     con_kv("uac_fill_lo", uac.fill_lo == 0xFFFFFFFFu ? -1 : (int32_t)uac.fill_lo);
     con_kv("uac_fill_hi", (int32_t)uac.fill_hi);
+#if FELUCCA_UAC_48K
+    con_kv("uac_core1", rq.c1);                         /* (0.8.9) 48 kHz resampled on the second core */
+#endif
 }
 #endif
 
@@ -200,7 +204,10 @@ static void con_status(void)
     con_kv("audio_max_us", (int32_t)felucca_dbg.max_us);
     con_kv("audio_late", (int32_t)felucca_dbg.late);
     con_kv("voices_shed", (int32_t)shed_count);
-    con_kv("voices_given_up", (int32_t)voice_kills);
+    con_kv("audio_lost", (int32_t)audio_lost);         /* (0.8.9) halves never rendered (a click each): a render > ~2 halves */
+    con_kv("voices_given_up", (int32_t)voice_kills);    /* (0.8.9) events, one a voice: the three below */
+    con_kv("voices_trimmed", (int32_t)voice_trims);     /* the load budget: a tail already under -50 dB, inaudible */
+    con_kv("voices_stolen", (int32_t)(voice_kills - voice_trims - shed_count));   /* for a new note, the 8 all busy */
     con_puts("cpu2 ");                                  /* (0.6.72) the second core (fx.c mc_status) */
     con_puts(mc_status());
     con_puts("\r\n");

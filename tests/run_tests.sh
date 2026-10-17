@@ -67,8 +67,12 @@
 # USB audio (tests/uac_test.c): the UAC1 descriptors as a host parses them (with and without CDC; 44100 and
 #                   48000 Hz), the ring and packetiser: 44.1 frames per packet, every frame in order (bit for bit),
 #                   underrun / overrun, restart; SET_CUR; the 44.1 -> 48 kHz resampler (every frame against a
-#                   double-precision one, response, SNR, cost); the stream at 48 kHz (47..49 frames per packet,
-#                   fast and slow I2S clocks, switching rates mid-stream).
+#                   double-precision one and bit for bit 0.8.8's, response, SNR, THD / aliasing spurs, cost); the stream
+#                   at 48 kHz (47..49 frames per packet, fast and slow I2S clocks, switching rates mid-stream).
+# USB audio scheduler (tests/uac_sched_test.c, 0.8.9): minutes of the stream against a simulated FM-1 (the audio ISR's
+#                   order, renders as a heavy song's with late halves, starvation bursts, IRQs off) and host (48 kHz,
+#                   +-500 ppm): every IN token finds a packet of n +- 1 frames, every rendered frame sent once (exact), no
+#                   drift, underruns repeated and made up; one core and CORES 2 (core 1 resampling the half).
 # web (web/test_web.mjs): the editor protocol against its mock device, whose tables must equal the
 #                   firmware's (tests/descdump.c -> build/host/desc.json; the MENU settings: tests/editor_test.c -> build/host/menu.json),
 #                   the package builder, the updater.
@@ -143,6 +147,10 @@ $CC -O2 -DT_CDC=1 -DHALF_FRAMES=$HALF -o "$OUT/uac_test" tests/uac_test.c -lm
 run "USB audio input: descriptors (with CDC), ring and packets, 44.1 -> 48 kHz resampler, 48 kHz stream" "$OUT/uac_test"
 $CC -O2 -DT_CDC=0 -DHALF_FRAMES=$HALF -o "$OUT/uac_test_nocdc" tests/uac_test.c -lm
 run "USB audio input: descriptors (without CDC), ring and packets, resampler, 48 kHz stream" "$OUT/uac_test_nocdc"
+$CC -O2 -DT_C1=0 -DHALF_FRAMES=$HALF -o "$OUT/uac_sched_test" tests/uac_sched_test.c -lm
+run "USB audio scheduler: 3 min at +-500 ppm, late renders, starvation, IRQs off (one core)" "$OUT/uac_sched_test"
+$CC -O2 -DT_C1=1 -DHALF_FRAMES=$HALF -o "$OUT/uac_sched_test_c1" tests/uac_sched_test.c -lm
+run "USB audio scheduler: the same, CORES 2 (core 1 resamples each half at 48 kHz)" "$OUT/uac_sched_test_c1"
 # USB descriptor layouts (#67): CDC UAC LAYOUT CDC-presented 48K; layout 0 and the console left out = 1.0's bytes
 # (+ the 48 kHz rate with 48K = 1, the default; 48K = 0: byte for byte)
 for v in 1.1.0.1.1 1.1.1.1.1 1.1.2.1.1 1.1.3.1.1 1.1.0.0.1 1.1.2.0.1 0.1.0.1.1 1.1.0.1.0 1.1.0.0.0 1.1.2.1.0 0.1.0.1.0 \
