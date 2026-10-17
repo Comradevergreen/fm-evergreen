@@ -145,11 +145,11 @@ def controls():
         ('LFO', 'the zoom level\'s next (SELECT zooms; PRESETS the slot / track / step): MOD  |  LFO: LFO · LFO DEST  |  MSEQ: MSEQ · MSEQ 2', 'MACROS M1–M4 (stay latched)'),
         ('FX', 'the zoom level\'s next (SELECT zooms; PRESETS the module): TRACK: SENDS · DIST · AUTO PAN  |  BUSES: DLY MIX · REV SIZE · CHORUS DEPTH · SLICER DEPTH, FX opens the module  |  EFFECT: DELAY · REVERB · CHORUS · SLICER · MASTER · PUNCH, their pages',
          'PUNCH-IN FX'),
-        ('SCL', 'SCL · CHORD', 'ROOT by key'),
+        ('SCL', 'KEY ↔ CHORD (SELECT zooms KEY · CHORD · ARP; PRESETS: ROOT / the track)', 'ROOT by key'),
         ('EDIT', 'the zoom level\'s next (SELECT zooms): SOUND: EDIT 1 · EDIT 2 (DRUM: KIT · KIT 2 · KIT 3)  |  TONE: FILTER · MORPH · RETRIG · ROTOR · VOICE · VOICE 2 (DRUM: X-MOD · FILTER · STEREO · LEVELS 1–2 · VOICE)  |  FOCUS (FM6: OPERATOR · OP ENV · OPERATOR 2; DRUM: SOUND 1–4)', 'INIT · RECALL · sound mutes'),
         ('GLO', 'MIXER · GLOBAL · SYSTEM', 'MUTE · SOLO · LEVEL · TAP'),
         ('SAVE', 'the zoom level\'s two sets (SELECT zooms; from elsewhere SOUND\'s USER): LIBRARY: PROJECT · TOOLS  |  PROJECT: SECTIONS · ARRANGE  |  SOUND: USER · PRESETS', 'SONG layer'),
-        ('ARP', 'ARP · ARP 2', '—'),
+        ('ARP', 'the ARP level: ARP · ARP 2', '—'),
         ('SEQ', 'the zoom level\'s sets (SELECT zooms): PATTERN: PATTERN · STRETCH · PLAYHEADS · TRACK · MUTATE  |  BAR: STEP · NOTE · AUTOMATION · AUTO LIST  |  STEP: NOTE · COMP · COMP 2', 'SEQ TOOLS'),
         ('REC', '(transport)', 'CLEAR · CLICK'),
     ]

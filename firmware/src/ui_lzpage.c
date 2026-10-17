@@ -224,3 +224,136 @@ static int graph_mod_lz(const track_t *t, const page_t *pg)
         return 0;
     return 1;
 }
+
+/* SCL . ARP  KEY: the twelve notes round a circle (C on top), the scale's lit and joined, ROOT in the accent, its name
+ *            and the scale's in the middle; QUANT and ALL TR at the right; the scale on a keyboard under it. CHORD: the
+ *            chord each degree of the key plays now (chord_build, as a key would), I..VII. ARP / ARP 2: "MODE . RATE .
+ *            OCT" and the pattern it plays over a triad (OFF: "ARP OFF") */
+static void key_val(int32_t x, int32_t y, const page_t *pg, uint32_t k)   /* a knob's label over its value */
+{
+    int16_t *vp;
+    const param_desc_t *d = page_desc(pg, k, &vp);
+    const char *u = "";
+    char b[16];
+    if (!d)
+        return;
+    param_format(d, *vp, b, &u);
+    str_cpy(b + str_len(b), u, 16 - str_len(b));
+    ed_cap(x, y, d->label, T_DIM);
+    cv_text(x, y + 10 - AF_M_CAP_Y, &AF_M, b, T_TEXT);
+}
+static void graph_key(const track_t *t, const page_t *pg)
+{
+    static const char *const NN[12] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
+    static const uint8_t BLK[12] = {0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0};
+    uint32_t mask = scale_mask(t), i, rt = (uint32_t)clamp(t->p[P_ROOT], 0, 11), first = 12u, prev = 12u;
+    int32_t px[12], py[12];
+    const char *u = "";
+    char b[16];
+    for (i = 0; i < 12u; i++) {
+        uint32_t a = (uint32_t)(i * 0x10000u / 12u) + 0xC000u;   /* (C on top, clockwise) */
+        px[i] = 62 + (og_cos(a) * 42 >> 15);
+        py[i] = 58 + (og_sin(a) * 42 >> 15);
+    }
+    for (i = 0; i < 12u; i++) {                         /* the scale joined */
+        uint32_t n = (rt + i) % 12u;
+        if (!(mask >> i & 1u))
+            continue;
+        if (prev < 12u)
+            og_line(px[prev] * 16, py[prev] * 16, px[n] * 16, py[n] * 16, T_THEME);
+        else
+            first = n;
+        prev = n;
+    }
+    if (first < 12u && prev != first)
+        og_line(px[prev] * 16, py[prev] * 16, px[first] * 16, py[first] * 16, T_THEME);
+    for (i = 0; i < 12u; i++) {
+        uint32_t deg = (i + 12u - rt) % 12u, in = mask >> deg & 1u;
+        uint16_t c = deg == 0u ? T_ACCENT : in ? T_THEME : T_RAISE;
+        og_node(px[i] * 16, py[i] * 16, in ? 7 : 4, c);
+        if (in)
+            cv_text_in(px[i] - 7, py[i] - 3 - AF_X_CAP_Y, 14, &AF_X, NN[i], T_INK, c);
+    }
+    cv_text_in(42, 48 - AF_M_CAP_Y, 40, &AF_M, NN[rt], T_TEXT, T_SURF);
+    param_format(&TP[P_SCALE], t->p[P_SCALE], b, &u);
+    cv_text_in(32, 66 - AF_X_CAP_Y, 60, &AF_X, b, T_MID, T_SURF);
+    key_val(130, 10, pg, 2);
+    key_val(130, 48, pg, 3);
+    for (i = 0; i < 24u; i++) {                         /* two octaves from C */
+        uint32_t deg = (i + 24u - rt) % 12u;
+        cv_rect(8 + (int32_t)i * 9, BLK[i % 12u] ? 112 : 122, 8, BLK[i % 12u] ? 10 : 12,
+                deg == 0u ? T_ACCENT : mask >> deg & 1u ? T_THEME : BLK[i % 12u] ? T_LINE : T_RAISE);
+    }
+}
+static void graph_chord(const track_t *t)
+{
+    static const char *const RN[7] = {"I", "II", "III", "IV", "V", "VI", "VII"};
+    uint32_t mask = scale_mask(t), deg[12], c = 0, i, d, rt = (uint32_t)clamp(t->p[P_ROOT], 0, 11);
+    const char *u = "";
+    char b[32], v[12];
+    for (i = 0; i < 12u; i++)
+        if (mask >> i & 1u && c < 7u)
+            deg[c++] = i;
+    if (t->p[P_CHRD]) {
+        param_format(&CHORD_DESC[0], t->p[P_CHRD], b, &u);
+        str_cpy(b + str_len(b), " \xB7 ", 32 - str_len(b));
+        param_format(&CHORD_DESC[1], t->p[P_CVOI], v, &u);
+        str_cpy(b + str_len(b), v, 32 - str_len(b));
+    } else
+        str_cpy(b, "CHORD OFF \xB7 ONE NOTE A KEY", 32);
+    ed_cap(10, 6, b, T_TEXT);
+    for (d = 0; d < c; d++) {
+        uint8_t nt[8];
+        int32_t x = 14 + (int32_t)d * 31;
+        uint32_t n = chord_build(t, 48u + rt + deg[d], nt), k;
+        cv_rect(x - 2, 18, 27, 100, d == 0u ? T_TINT : T_SURF);
+        for (k = 0; k < n && k < 8u; k++)
+            cv_rect(x, 112 - clamp((int32_t)nt[k] - 48, 0, 31) * 3, 23, 3, k == 0u ? T_ACCENT : T_THEME);
+        cv_text_in(x - 2, 125 - AF_X_CAP_Y, 27, &AF_X, RN[d], d == 0u ? T_THEME : T_DIM, T_SURF);
+    }
+}
+static void graph_arp(const track_t *t)
+{
+    static const uint8_t TRI[3] = {0, 4, 7};
+    const char *u = "";
+    char b[40], v[12];
+    uint32_t i, md = (uint32_t)t->p[P_AMODE], oc = (uint32_t)clamp(t->p[P_AOCT], 1, 4), n = 3u * oc;
+    param_format(&TP[P_AMODE], t->p[P_AMODE], b, &u);
+    str_cpy(b + str_len(b), " \xB7 ", 40 - str_len(b));
+    param_format(&TP[P_ARATE], t->p[P_ARATE], v, &u);
+    str_cpy(b + str_len(b), v, 40 - str_len(b));
+    str_cpy(b + str_len(b), " \xB7 OCT ", 40 - str_len(b));
+    fmt_int(b + str_len(b), (int32_t)oc);
+    ed_cap(10, 6, b, T_TEXT);
+    param_format(&TP[P_AORDER], t->p[P_AORDER], b, &u);
+    cv_text_r(228, 6 - AF_X_CAP_Y, &AF_X, b, T_DIM, T_SURF);
+    if (!md) {
+        cv_text_in(4, 56 - AF_M_CAP_Y, 232, &AF_M, "ARP OFF", T_MID, T_SURF);
+        cv_text_in(4, 76 - AF_X_CAP_Y, 232, &AF_X, "KEYS PLAY STRAIGHT", T_DIM, T_SURF);
+        return;
+    }
+    for (i = 0; i < 16u; i++) {                         /* the pattern over a triad, OCT octaves */
+        uint32_t pp = n > 1u ? 2u * n - 2u : 1u, j = i % pp;
+        uint32_t k = md == 2u ? n - 1u - i % n : md == 3u ? (j < n ? j : pp - j) : md == 4u ? (i * 2654435761u >> 16) % n :
+                     md == 6u ? i / 2u % n : i % n;
+        int32_t semi = TRI[k % 3u] + 12 * (int32_t)(k / 3u), x = 10 + (int32_t)i * 14 + (i & 1u ? t->p[P_ASWING] * 6 / 127 : 0);
+        int32_t w = 2 + t->p[P_AGATE] * 10 / 127, y = 118 - semi * 2;
+        uint32_t on = (i * 40503u >> 8) % 100u < (uint32_t)t->p[P_APROB] * 100u / 127u;
+        cv_rect(x, y, w, 4, on ? (settings.palette == UI_JIANT_INDEX ? heat_col(80 + semi * 4) : T_THEME) : T_RAISE);
+    }
+    cv_rect(10, 124, 220, 1, T_RAISE);
+}
+/* the lens's panel for SCL . ARP's page pg (1), else 0 */
+static int graph_key_lz(const track_t *t, const page_t *pg)
+{
+    if (pg->graph == GR_SCALE)
+        graph_key(t, pg);
+    else if (pg->id[0] == P_CHRD)
+        graph_chord(t);
+    else if (pg->fam == FAM_ARP)
+        graph_arp(t);
+    else
+        return 0;
+    return 1;
+}
+

@@ -538,6 +538,10 @@ JIANT's modifications are distributed under the same license.
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
 
 ### v0.8.5
+- **SCL · ARP is a lens, as the approved mock-up**: **KEY · CHORD · ARP** (SCL taps KEY ↔ CHORD, ARP goes to ARP and
+  taps ARP ↔ ARP 2). KEY: the notes round a circle with the scale joined, ROOT large, a keyboard under it (was twelve
+  bars); CHORD: the chord every degree plays now (chord_build's, as a key would); ARP: the pattern it plays over a triad
+  (was the scope; OFF: "ARP OFF"). PRESETS: ROOT on KEY, the track on CHORD and ARP.
 - **LFO · MOD is a lens, as the approved mock-up**: **MOD · LFO · MSEQ** (it opens on LFO). MOD: the matrix as a net,
   the sources down the left, each slot's curve to its box D1–D4 (DEST, AMT), the slot picked framed with a pulse running
   along it (was a list); LFO under its rate and wave / LFO DEST: the LFO small and the four amounts as rows lit live;

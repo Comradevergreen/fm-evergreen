@@ -2302,7 +2302,7 @@ static int roll_static_now(void)                  /* the screen is the static re
     ui_draw();
     return roll_diff(0, 0, 0, 0, 0) == 0;
 }
-#define STRIP(c) CARD_X(c), Y_LABEL + ROLL_Y, CARD_X(c) + COL_W, Y_LABEL + ROLL_Y + ROLL_H
+#define STRIP(c) CARD_X(c), (int32_t)card_y() + ROLL_Y, CARD_X(c) + COL_W, (int32_t)card_y() + ROLL_Y + ROLL_H   /* (0.8.5: a lens page's cards) */
 static int test_roll(void)
 {
     int bad = 0, ok;
@@ -2385,25 +2385,25 @@ static int test_roll(void)
         ok &= roll_diff(g.bx, 0, g.bx + text_w(&AF_S, "12"), H_HEAD, 1) == 0;   /* (0.8.5: the BPM in S) */
         ok &= x0 < g.bx && x1 <= 140 && x1 - x0 <= 40;
     }
-    ok &= roll_diff(CARD_X(0), Y_LABEL + ROLL_Y, CARD_X(0) + 5 + text_w(&AF_M, "12"), Y_LABEL + ROLL_Y + ROLL_H, 1) == 0;
+    ok &= roll_diff(CARD_X(0), (int32_t)card_y() + ROLL_Y, CARD_X(0) + 5 + text_w(&AF_M, "12"), (int32_t)card_y() + ROLL_Y + ROLL_H, 1) == 0;
     /* TUNE 10 -> 11 on a card: the 1 stays */
     ui_power_on(); song.g[G_TUNE] = 10; roll_settle();
     turn(EN_K4, 1); frame(); frame();
     memcpy(roll_shot, host_screen, sizeof roll_shot);
     ui.force = 1; ui_draw();
     ok &= song.g[G_TUNE] == 11 && roll_diff(STRIP(3), 1) > 20u && roll_diff(STRIP(3), 0) == 0;
-    ok &= roll_diff(CARD_X(3), Y_LABEL + ROLL_Y, CARD_X(3) + 5 + text_w(&AF_M, "1"), Y_LABEL + ROLL_Y + ROLL_H, 1) == 0;
+    ok &= roll_diff(CARD_X(3), (int32_t)card_y() + ROLL_Y, CARD_X(3) + 5 + text_w(&AF_M, "1"), (int32_t)card_y() + ROLL_Y + ROLL_H, 1) == 0;
     bad += check("roll: header BPM 120 -> 121 and a card 10 -> 11: only the strip changes, unchanged digits stay put", ok);
 
     /* the direction: 5 -> 6 and -5 -> -6 at frame 4: the new digit comes from below (up) / above (down) */
     ui_power_on(); song.g[G_TUNE] = 5; roll_settle();
-    st = roll_ink_row(host_screen, CARD_X(3) + 5, CARD_X(3) + 16, Y_LABEL + ROLL_Y, Y_LABEL + ROLL_Y + ROLL_H);
+    st = roll_ink_row(host_screen, CARD_X(3) + 5, CARD_X(3) + 16, (int32_t)card_y() + ROLL_Y, (int32_t)card_y() + ROLL_Y + ROLL_H);
     turn(EN_K4, 1); frame(); frame(); frame();
-    up = roll_ink_row(host_screen, CARD_X(3) + 5, CARD_X(3) + 16, Y_LABEL + ROLL_Y, Y_LABEL + ROLL_Y + ROLL_H);
+    up = roll_ink_row(host_screen, CARD_X(3) + 5, CARD_X(3) + 16, (int32_t)card_y() + ROLL_Y, (int32_t)card_y() + ROLL_Y + ROLL_H);
     ok = ui.roll[3].dir == 1;
     ui_power_on(); song.g[G_TUNE] = 7; roll_settle();
     turn(EN_K4, -1); frame(); frame(); frame();
-    down = roll_ink_row(host_screen, CARD_X(3) + 5, CARD_X(3) + 16, Y_LABEL + ROLL_Y, Y_LABEL + ROLL_Y + ROLL_H);
+    down = roll_ink_row(host_screen, CARD_X(3) + 5, CARD_X(3) + 16, (int32_t)card_y() + ROLL_Y, (int32_t)card_y() + ROLL_Y + ROLL_H);
     ok &= ui.roll[3].dir == -1 && st > 0 && up > st + 16 && down < st - 16;
     ui_power_on(); song.g[G_TUNE] = -5; roll_settle();
     turn(EN_K4, -1);
@@ -2740,8 +2740,8 @@ static int test_chain(void)
  * SONG: the selection, as KNOB 1; TOOLS: nothing; HOME, PRESETS and every other page: the next sound, the steps untouched, SAVE held undoes it */
 static int test_presets_knob(void)
 {
-    int bad = 0, cur_ok = 1, sel_ok = 1, snd_ok = 1, tools_ok = 1, grid_ok, bar_ok = 1, fxm_ok = 1, det_ok = 1, env_ok = 1, mod_ok = 1;
-    uint32_t i, n_snd = 0, n_cur = 0, n_bar = 0, n_det = 0, n_env = 0, n_mod = 0;
+    int bad = 0, cur_ok = 1, sel_ok = 1, snd_ok = 1, tools_ok = 1, grid_ok, bar_ok = 1, fxm_ok = 1, det_ok = 1, env_ok = 1, mod_ok = 1, key_ok = 1;
+    uint32_t i, n_snd = 0, n_cur = 0, n_bar = 0, n_det = 0, n_env = 0, n_mod = 0, n_key = 0;
     for (i = 0; i < NPAGES; i++) {
         track_t before;
         uint32_t g = PAGES[i].graph, uslot, ppick, fxm0, ms0, ms1;
@@ -2781,6 +2781,11 @@ static int test_presets_knob(void)
                 tools_ok &= same_snd && same_steps && !ui.confirm;
             } else if (PAGES[i].fam == FAM_FX && fx_trk_k(i) < 0) {   /* (0.8.5) FX's lens, BUSES / EFFECT: the module */
                 fxm_ok &= same_snd && same_steps && fx_on() && ui.fxmod != fxm0;
+            } else if (pd_on() && pd_cur() == PD_KEY) {   /* (0.8.5) SCL . ARP: KEY the ROOT, CHORD and ARP the track */
+                key_ok &= !memcmp(trk[0].step, before.step, sizeof before.step) && ui.page == i &&
+                          (pd_level() == 0u ? trk[0].p[P_ROOT] == before.p[P_ROOT] + 1 && song.sel == 0u :
+                           song.sel == 1u && !memcmp(trk[0].p, before.p, sizeof before.p));
+                n_key++;
             } else if (pd_on() && pd_cur() == PD_MOD) {   /* (0.8.5) LFO . MOD: MOD the slot, LFO the track, MSEQ the step */
                 mod_ok &= !memcmp(trk[0].p, before.p, sizeof before.p) && !memcmp(trk[0].step, before.step, sizeof before.step) &&
                           ui.page == i && (pd_level() == 1u ? song.sel == 1u : pd_level() == 2u ? ms_ui_step == ms0 + 1u : mod_ui_slot == ms1 + 1u);
@@ -2811,8 +2816,9 @@ static int test_presets_knob(void)
                  env_ok && n_env >= 3u);
     bad += check("0.8.5 LENTE: PRESETS on LFO . MOD: MOD the slot, LFO the track, MSEQ the step; the sound and the steps stay",
                  mod_ok && n_mod >= 4u);
+    bad += check("0.8.5 LENTE: PRESETS on SCL . ARP: KEY the ROOT, CHORD and ARP the track; the steps stay", key_ok && n_key >= 4u);
     bad += check("#94 PRESETS elsewhere (EDIT, ENV, LFO, FX, SCL, ARP, MIXER, GLOBAL, ...): the next sound, the steps stay",
-                 snd_ok && n_snd >= 15u);
+                 snd_ok && n_snd >= 9u);   /* (0.8.5: fewer, 15 until the lenses gave PRESETS their own on ENV, LFO, SCL) */
     ui_power_on();
     set_engine_of(TSEL, ENGI_DRUM);
     TSEL->engine = TSEL->eng_req;
@@ -4659,10 +4665,11 @@ static int test_bughunt_ui2(void)
          * MUTE: the sound's name); (0.6.80) in the six columns, with any COLOR (here not JIANT FM's) */
         uint32_t k, a[4][4], ok = 1;
         for (k = 0; k < 4u; k++) {
-            int32_t X = T6_X(0), Y = Y_GRAPH;
+            int32_t X = T6_X(0), Y;
             ui_power_on();
             settings.palette = 1; palette_set(1);
             go_page(GR_TRK); frame(); frame();
+            Y = lz_on() ? (int32_t)graph_y() + 9 : Y_GRAPH;            /* (0.8.5: GLO's lens, under its cards) */
             turn(EN_K1 + k, 1);                                       /* (K4 right: MUTE on, its badge shown) */
             ui.force = 1; frame();
             a[k][0] = accent_in(X + 17, Y + 44, X + 37, Y + 57);      /* LEVEL's dB */
@@ -9257,12 +9264,12 @@ static int test_large(void)
     go_page(GR_ROLL); frame();
     ok &= large_kind() == LK_LABEL;
     go_page(GR_TRK); frame();
-    ok &= large_kind() == LK_TALL && strip_kind() == SK_TRK && lg_px(CARD_X(0) + 8, LG_Y_GRAPH + 56) == T_SURF;
+    ok &= large_kind() == LK_TALL && strip_kind() == SK_TRK && lg_px(CARD_X(0) + 8, (int32_t)graph_y() + 56) == T_SURF;   /* (0.8.5: graph_y, a lens's) */
     go_title("ENV"); frame();
     btn_down(B_GLO); frames(800);
     ok &= ui.layer && large_kind() == LK_LABEL && card_h() == CARD_H;
     btn_up(B_GLO); frame(); frame();
-    ok &= !ui.layer && large_kind() == LK_TALL && lg_px(30, LG_Y_GRAPH - 2) == T_BG;
+    ok &= !ui.layer && large_kind() == LK_TALL && lg_px(30, (int32_t)graph_y() - 2) == T_BG;
     bad += check("#15 LARGE: PRESETS and the roll keep the layout (labels in M), the layers too; MIXER tall, its tracks in the strip", ok);
 
     {   /* saved with the settings; settings from before it: OFF (and so again: idempotent) */
@@ -9960,6 +9967,39 @@ static int test_lz_mod(void)
     return bad;
 }
 
+/* SCL . ARP (ui_lens.c, ui_lzpage.c): KEY . CHORD . ARP (ARP / ARP 2); SCL taps KEY <-> CHORD, ARP goes to ARP and taps
+ * ARP <-> ARP 2; PRESETS: KEY the ROOT, CHORD and ARP the track */
+static int test_lz_key(void)
+{
+    int bad = 0, ok;
+    int16_t r;
+    char b[8];
+    ui_power_on(); frame();
+    press(B_SCL); frame();
+    ok = pd_on() && lz_fam() == LZ_KEY && pd_level() == 0u && str_eq(cur_page()->title, "SCL") && lz_tab_lit(0) &&
+         lz_crumb_is("LENTE \xB7 KEY \xB7 SCL");
+    frames(320); press(B_SCL); frame();
+    ok &= pd_level() == 1u && str_eq(cur_page()->title, "CHORD") && lz_tab_lit(1) && lz_crumb_is("LENTE \xB7 CHORD \xB7 CHORD");
+    frames(320); press(B_SCL); frame();
+    ok &= pd_level() == 0u && str_eq(cur_page()->title, "SCL");
+    frames(320); press(B_ARP); frame();
+    ok &= pd_level() == 2u && str_eq(cur_page()->title, "ARP") && lz_tab_lit(2) && crumb_count(b) && str_eq(b, "1/2");
+    frames(320); press(B_ARP); frame();
+    ok &= str_eq(cur_page()->title, "ARP 2") && lz_crumb_is("LENTE \xB7 ARP \xB7 ARP 2");
+    turn(EN_SELECT, -1); frame();
+    ok &= pd_level() == 1u && str_eq(cur_page()->title, "CHORD");
+    bad += check("0.8.5 LENTE SCL . ARP: SCL taps KEY <-> CHORD, ARP the ARP level (ARP <-> ARP 2), SELECT zooms; tabs, breadcrumb", ok);
+    turn(EN_PRESET, 1); frame();
+    ok = song.sel == 1u && str_eq(cur_page()->title, "CHORD");
+    turn(EN_SELECT, -1); frame();
+    r = TSEL->p[P_ROOT];
+    turn(EN_PRESET, 1); frame();
+    ok &= pd_level() == 0u && TSEL->p[P_ROOT] == r + 1;
+    bad += check("0.8.5 LENTE SCL . ARP: PRESETS on CHORD the track, on KEY the ROOT", ok);
+    ui_power_on();
+    return bad;
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IONBF, 0);
@@ -9969,6 +10009,7 @@ int main(void)
     bad += test_lz_edit();
     bad += test_lz_env();
     bad += test_lz_mod();
+    bad += test_lz_key();
     bad += test_sound_loads();
     bad += test_patterns();
     bad += test_init_system();

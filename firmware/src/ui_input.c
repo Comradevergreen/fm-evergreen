@@ -1553,6 +1553,13 @@ static int pd_presets(int32_t s)
         }
         return 1;
     }
+    if (pd == PD_KEY) {                                 /* SCL . ARP: KEY the ROOT, CHORD and ARP the track */
+        if (lv == 0u)
+            edit_param(0, s);
+        else
+            track_select((uint32_t)clamp((int32_t)song.sel + (s > 0 ? 1 : -1), 0, (int32_t)trk_live - 1));
+        return 1;
+    }
     if (pd == PD_MOD) {                                 /* LFO . MOD: MOD the slot, LFO the track, MSEQ the step */
         if (lv == 1u)
             track_select((uint32_t)clamp((int32_t)song.sel + (s > 0 ? 1 : -1), 0, (int32_t)trk_live - 1));

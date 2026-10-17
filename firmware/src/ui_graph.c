@@ -2183,6 +2183,7 @@ static void draw_graph(void)
     } else if (lz_on() && lz_fam() == LZ_EDIT && (cv_oy = 0, graph_edit_lz(t, pg))) {   /* (0.8.5) EDIT's (ui_lzedit.c) */
     } else if (lz_on() && lz_fam() == LZ_ENV && (cv_oy = 0, graph_env_lz(t, pg))) {     /* .. ENV's (ui_lzpage.c) */
     } else if (lz_on() && lz_fam() == LZ_MOD && (cv_oy = 0, graph_mod_lz(t, pg))) {     /* .. LFO . MOD's */
+    } else if (lz_on() && lz_fam() == LZ_KEY && (cv_oy = 0, graph_key_lz(t, pg))) {     /* .. SCL . ARP's */
     } else {
         cv_oy = GOY;
         switch (pg->graph) {

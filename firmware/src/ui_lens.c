@@ -91,7 +91,7 @@ static int32_t pd_k_in(uint32_t pd, uint32_t lv, uint32_t page)   /* the page's 
     return -1;
 }
 #define PD_LVGET(pd) ((uint32_t)(ui.pdlv[pd] ^ PD_DEF_LV[pd]) % 3u)   /* (0, power-on: the default) */
-#define PD_LIVE (1u << PD_EDIT | 1u << PD_ENV | 1u << PD_MOD)                                     /* the domains drawn as lenses (bit PD_*) */
+#define PD_LIVE (1u << PD_EDIT | 1u << PD_ENV | 1u << PD_MOD | 1u << PD_KEY)                                     /* the domains drawn as lenses (bit PD_*) */
 static int pd_on(void) { return !ui.home && !page_over && ((PD_LIVE >> pd_of_fam(PAGES[ui.page].fam)) & 1u); }
 static uint32_t pd_cur(void) { return pd_of_fam(PAGES[ui.page].fam); }
 /* the level shown: the one remembered when the page is in it (ENV is in TRACKS and in ENV), else the page's own */

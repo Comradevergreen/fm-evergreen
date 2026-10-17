@@ -101,11 +101,11 @@ Los nombres de abajo son los que usa el firmware (la pantalla HARDWARE CALIBRATI
 | **ENV** | La lente de ENV (0.8.5): desde otra página, la última página ENV (al encender, ENV); en ENV el otro juego del nivel (ENV ↔ DEST, ENV ↔ ENV DEST). | (sin capa) |
 | **LFO** | La lente LFO · MOD (0.8.5): desde otra página, la última página mostrada (al encender, LFO); en ella el juego siguiente del nivel (LFO ↔ LFO DEST, MSEQ ↔ MSEQ 2). | Capa **MACRO**: KNOB 1–4 son M1–M4. |
 | **FX** | La lente de FX (0.8.5): desde otra página la última página FX; en FX lo siguiente del nivel (TRACK: su juego; BUSES: abre el módulo; EFFECT: su página siguiente). | Capa de **FX punch-in**. |
-| **SCL** | Páginas SCL. | Capa **SCL**: las teclas fijan la tónica. |
+| **SCL** | La lente SCL · ARP (0.8.5): **KEY ↔ CHORD** (desde otro lado, la última mostrada). | Capa **SCL**: las teclas fijan la tónica. |
 | **EDIT** | La lente de EDIT (0.8.5): desde otra página, la última página EDIT; en EDIT el juego siguiente del nivel (SOUND: EDIT 1 ↔ EDIT 2; TONE: FILTER → MORPH → … → VOICE 2; el detalle: OPERATOR → OP ENV → OPERATOR 2, SOUND 1–4). En STEP: borra el paso; en USER / PROJECT: renombrar. | Capa **EDIT**: INIT, RECALL, mutes de los sonidos de DRUM-X. |
 | **GLO** | MIXER → GLOBAL → SYSTEM → MIXER. | Capa **GLO**: mutes, solos, niveles, tap tempo, UNDO. |
 | **SAVE** | La lente de SAVE (0.8.5): desde otra página SONIDO (USER, SAVE listo); en SAVE el otro juego del nivel. | Capa **SAVE**: tocar/guardar secciones en vivo. |
-| **ARP** | Páginas ARP. | (sin capa) |
+| **ARP** | El nivel **ARP** de la lente SCL · ARP; en él ARP ↔ ARP 2. | (sin capa) |
 | **SEQ** | Páginas SEQ: en una página SEQ, el siguiente juego de perillas del nivel de zoom en el que estás; desde otro lado, vuelve al nivel y al juego que usaste por última vez en esa pista. | Capa **SEQ TOOLS** (en todas las páginas SEQ). |
 | **PLAY** | Arranca / para. | — |
 | **REC** | Arma / desarma la grabación en la pista seleccionada. | Capa **REC**: CLEAR, CLICK. |
@@ -216,6 +216,7 @@ recuerda su nivel y el juego de cada nivel; su botón desde otro lado te devuelv
 | Parte | Niveles (SELECT) | Juegos (toque) | PRESETS |
 | --- | --- | --- | --- |
 | **HOME** | **ECO** (los seis seres) · **BEING** (el ser de la pista, sus perillas como órganos) · **GEN** (el generador) | ECO: HOME / MACROS · BEING: HOME / ROUTES · GEN: GEN 1/3 → 2/3 → 3/3 (un toque de HOME cada uno) | los sonidos (GEN: el GENRE) |
+| **SCL · ARP** | **KEY** · **CHORD** · **ARP** | KEY · CHORD · ARP: ARP / ARP 2 (SCL alterna KEY ↔ CHORD, ARP va a ARP) | KEY: ROOT · CHORD, ARP: la pista |
 | **LFO** | **MOD** (la matriz como red) · **LFO** · **MSEQ** (abre en LFO) | MOD · LFO: LFO / LFO DEST · MSEQ: MSEQ / MSEQ 2 | MOD: el slot · LFO: la pista · MSEQ: el paso |
 | **ENV** | **TRACKS** (las seis envolventes) · **ENV** (la de la pista) · **STAGE** (una etapa) | TRACKS: ENV / DEST · ENV: ENV / ENV DEST · STAGE | TRACKS, ENV: la pista · STAGE: la etapa |
 | **EDIT** | **SOUND** (EDIT 1 / EDIT 2; DRUM: el kit) · **TONE** (el filtro, las voces) · el detalle: **FOCUS** (un sinte), **OPERATOR** (FM6), **SOUND** (DRUM: un sonido) | SOUND: EDIT 1 · EDIT 2 (DRUM: KIT · KIT 2 · KIT 3) · TONE: FILTER · MORPH · RETRIG · ROTOR · VOICE · VOICE 2, las que tenga el motor (DRUM: X-MOD · FILTER · STEREO · LEVELS · LEVELS 2 · VOICE) · FOCUS · OPERATOR: OPERATOR · OP ENV · OPERATOR 2 · DRUM: SOUND 1–4 | SOUND, TONE: los sonidos · el detalle: lo de KNOB 1 (el parámetro, el operador, el sonido del kit) |
@@ -234,6 +235,12 @@ recuerda su nivel y el juego de cada nivel; su botón desde otro lado te devuelv
   **PRESETS** (o ALGORITHM) elige la pista. **ENV**: la envolvente grande / las columnas de ENV DEST, como antes.
   **STAGE** (nueva): KNOB 1 elige la etapa (ATK DEC SUS REL; también PRESETS), KNOB 2 la ajusta, KNOB 3 LOOP; la
   envolvente entera con la etapa sombreada sobre la curva propia de la etapa, grande, y su tiempo.
+- **SCL · ARP** › **KEY**: las doce notas en un círculo (C arriba), las de la escala encendidas y unidas, ROOT en el
+  acento con el nombre de la escala en el medio, QUANT y ALL TR a la derecha, la escala en un teclado debajo; PRESETS
+  fija ROOT. **CHORD**: el acorde que toca ahora cada grado de la tonalidad (I–VII, como lo tocaría una tecla: una nota
+  si CHORD está en OFF o la voz no es POLY). **ARP** / **ARP 2**: "MODE · RATE · OCT" y el patrón que toca sobre una
+  tríada (GATE el largo de las celdas, SWING los contratiempos tarde, PROB algunas fuera); en OFF lo dice. PRESETS en
+  CHORD y ARP: la pista.
 - **LFO · MOD** › **MOD**: la matriz como red — las fuentes a la izquierda (encendidas las que lee un slot), una curva
   de la fuente de cada slot a su caja **D1–D4** a la derecha (DEST, AMT como barra), el slot elegido con KNOB 1
   enmarcado con un pulso que corre por su curva; PRESETS elige el slot. **LFO**: la onda bajo "RATE · WAVE" / **LFO
