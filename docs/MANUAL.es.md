@@ -152,9 +152,9 @@ todas las páginas, todas las paletas, FLAT y LINE:
   medio de la pantalla es el dibujo, de borde a borde (los seres de HOME tienen todo el lugar), y las cuatro perillas
   son una fila fina sobre la miga de pan (marca y nombre, el valor en su color, una barra finita).
 - **HUD**: como BOTTOM, pero en HOME los seres nadan **debajo de todo, por la pantalla entera**: el encabezado, las
-  pestañas, las perillas y la miga flotan encima como texto con un borde oscuro finito. La fila de perillas se apaga a
-  un quinto unos segundos después de la última vuelta de perilla y vuelve con la siguiente. La palabra del nivel va
-  subrayada.
+  pestañas, las perillas y la miga flotan encima como texto claro con un borde oscuro de 2 px (0.9.0). Ahí la fila de
+  perillas se apaga a un quinto unos segundos después de la última vuelta de perilla y vuelve con la siguiente o al
+  cambiar de página, nivel o set; en las demás páginas queda encendida. La palabra del nivel va subrayada.
 
 Los valores (cartas, el BPM del encabezado) vuelven a una sans redondeada (Inter Tight SemiBold), como en la 0.6; los
 nombres, las pestañas y la miga siguen con las letras de píxel de 5 x 7. **MENU > LARGE** deja sus cartas grandes arriba

@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.8.9).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
+> **Status: in development (v0.9.0).** It builds and passes every test (Felucca's and its own), Back up the flash before installing it.
   **The dice starts in EXPLORE** (0.8.6): HOME + SELECT opens GEN on a choice that follows no genre and breaks every
   rule (any tempo, odd metres and polyrhythm, exotic modes, any engine on any role, DRUM-X octaves, PLAYHEADS, MUTATE),
   each seed a very different piece, still in the key its SCALE and CHORD pages show. RANDOM and the 43 genres follow.
@@ -546,6 +546,32 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### v0.9.0
+The HUD skin, fixed (every finding of the HUD audit), and a faster screen there.
+- **HUD's HOME is about 2.5 times faster**: the beings swim under every strip, so the whole screen was sent every
+  frame (~77 ms at the panel's 12 MHz: the UI ran at ~12 frames a second, the keys, knobs and LEDs with it). Now each
+  strip is still drawn whole but only the 8 x 4 cells that changed go to the panel: ~22,500 px a frame instead of
+  57,600 (~30 ms), exactly the same picture (the beings move as before).
+- **No frozen beings behind the header** during the count-in or UPDATE MODE's countdown from HUD's HOME: their header
+  is on the background, as on every other page.
+- **The knob row fades on HUD's HOME only**, and comes back whole when the page, the level or the set changes (it was
+  already dim on arriving at a page). Faded, it no longer cuts dark holes and a band into the beings; the bar's outline
+  is 1 px round the line and the bar.
+- **Easier to read over the beings**: a 2 px outline (was 1 px) and the grey captions (labels, units, OCT, the
+  tabs, the breadcrumb, the beings' numbers, ROUTES) in the text colour. The header's unlit load bars are outlines, the
+  track box's and the REC dot's corners, the REC ring's and the song disc's holes show the beings, not black.
+- EDIT > SOUND in BOTTOM / HUD: the page's name and the sound's name outlined over the being's spikes.
+- **NAME wears the skin** (BOTTOM / HUD: the skin's tabs, no boxes), as NOTICE and DICE.
+- MONO's inverted label chip and MENU > LARGE's card labels kept their bottom rows while a value rolls; LARGE's GEN
+  scope moves again; the MIXER's meters fall as drawn after any redraw (no segments left lit); messages hold 39
+  characters (were cut silently at 23: MUTATE's "...A4 FREEZ") and longer ones end in "…"; a layer's hint ("HOLD [EDIT]
+  QUICK") no longer follows you onto the next page.
+- Opening a dialog, NAME or the MENU, and the count-in's first frame, fill only round what they draw (was the whole
+  screen and then the strips over it); the count-in sends its four cells a beat, not the screen.
+- The panel's SPI clock stays 12 MHz (20 MHz is within the ST7789's write spec, but not tried on the FM-1's wiring).
+- No change in the audio path (golden renders, CPU baselines and target budgets unchanged). Image 569528 -> 572252 B
+  (+2724; 9312 B of the 581564 B slot free); the pool +7808 B (the cells' hashes), 23552 B spare.
 
 ### v0.8.9
 - **Three skins, MENU > DISPLAY > SKIN** (the approved mock-up "skin aireado", options 1, 3 and 4), every page and

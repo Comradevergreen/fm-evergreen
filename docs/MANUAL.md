@@ -149,8 +149,9 @@ every page, every palette, FLAT and LINE:
   of the screen is the picture, the screen's width (HOME's beings get the most room), and the four knobs are a slim row
   over the breadcrumb (mark and name, the value in its colour, a hairline bar).
 - **HUD**: as BOTTOM, but on HOME the beings swim **under everything, over the whole screen**: the header, the tabs,
-  the knobs and the breadcrumb float over them as words with a thin dark outline. The knob row fades to a fifth a few
-  seconds after you last turned a knob, and comes back at the next turn. The level's word is underlined.
+  the knobs and the breadcrumb float over them as light words with a 2 px dark outline (0.9.0). There the knob row
+  fades to a fifth a few seconds after you last turned a knob, and comes back at the next turn or when you change page,
+  level or set; on every other page it stays lit. The level's word is underlined.
 
 Values (cards, the header's BPM) are set in a rounded sans again (Inter Tight SemiBold), as in 0.6; names, tabs and the
 breadcrumb stay in the 5 x 7 pixel letters. **MENU > LARGE** keeps its big cards on top in every skin (the skin keeps
