@@ -15,6 +15,7 @@
  * 5. cost: host ns per sample and voice, vowels against words (the counts: tests/cpu_vg.c eng/VOICE.*).
  * 6. demos into DEMODIR: Spanish, English, Japanese phrases on a melody, the dice's lyrics, every word preset. */
 #define main hostsim_main
+#define LY_EN_REF 1              /* (0.9.0) felucca_lyrics.h: the dictionary's words as text too (the lookup's check) */
 #include "hostsim.c"
 #undef main
 
@@ -289,25 +290,56 @@ static void check_reading(void)
         if (strcmp(b, EN[k][1])) { printf("voice:   EN %-12s %s (want %s)\n", EN[k][0], b, EN[k][1]); ok = 0; }
     }
     check("English through the dictionary (CMU, syllabified): love my time beautiful water strong the don't", ok);
-    {   /* every dictionary word found, with at least a syllable; an unknown word by the letter rules */
-        uint32_t e = 0, nw = 0, ns, len;
-        char w[24];
+    {   /* every dictionary word found, with at least a syllable; an unknown word by the letter rules.
+         * (0.9.0: the dictionary Huffman-coded) each word's phonemes exactly gen_lyrics.py's (LY_EN_REF_*: the words as
+         * text); every word cut short, one letter more and one changed at its end: not found unless itself a word */
+        uint32_t nw, len, bad = 0, miss = 0, probes = 0;
+        uint8_t ph[SW_MAX];
+        char w[32];
         ok = 1;
-        while (e < sizeof LY_EN_DICT && nw < 3000u) {
-            uint32_t pre = LY_EN_DICT[e++], wl = pre;
-            while (e < sizeof LY_EN_DICT && LY_EN_DICT[e] >= 'a' && LY_EN_DICT[e] <= 'z')
-                w[wl++] = (char)LY_EN_DICT[e++];
-            while (e < sizeof LY_EN_DICT && LY_EN_DICT[e] >= 0x80u)
-                e++;
-            w[wl] = 0;
-            nw++;
-            ok &= sy_en_find(w, wl, &len) != 0 && len > 0;
+        for (nw = 0; nw < LY_EN_N; nw++) {
+            const char *rw = LY_EN_REF_W[nw], *rp = LY_EN_REF_PH[nw];
+            uint32_t wl = (uint32_t)strlen(rw), i, v;
+            len = sy_en_find(rw, wl, ph);
+            ok &= len > 0;
+            if (len != strlen(rp))
+                bad++;
+            else
+                for (i = 0; i < len; i++)
+                    bad += ph[i] != ((uint8_t)rp[i] & 0x7Fu);
+            for (v = 0; v < 79u; v++) {                          /* the near misses: one less, one more, last / first changed */
+                uint32_t n2 = wl, lo = 0, hi = LY_EN_N, found = 0;
+                memcpy(w, rw, wl);
+                if (v == 0u) {
+                    if (wl < 2u) continue;
+                    n2 = wl - 1u;
+                } else if (v <= 26u) {
+                    w[wl] = (char)('a' + v - 1u);
+                    n2 = wl + 1u;
+                } else if (v <= 52u) {
+                    if (w[wl - 1u] == (char)('a' + v - 27u)) continue;
+                    w[wl - 1u] = (char)('a' + v - 27u);
+                } else {
+                    if (w[0] == (char)('a' + v - 53u)) continue;
+                    w[0] = (char)('a' + v - 53u);
+                }
+                w[n2] = 0;
+                while (lo < hi) {                                /* (the reference words are sorted) */
+                    uint32_t mid = (lo + hi) / 2u;
+                    int c = strcmp(LY_EN_REF_W[mid], w);
+                    if (!c) { found = 1; break; }
+                    if (c < 0) lo = mid + 1u; else hi = mid;
+                }
+                probes++;
+                miss += (sy_en_find(w, n2, ph) != 0) != found;
+            }
         }
-        ok &= nw == LY_EN_N;
+        ok &= !bad && !miss;
         g2p_str(LG_EN, "zorblat", b, sizeof b);
-        ok &= sy_en_find("zorblat", 7, &len) == 0 && !strcmp(b, "|z aa r |b l ae t");
-        (void)ns;
-        snprintf(what, sizeof what, "English dictionary: all %u words found; a word it lacks by letter rules (zorblat: %s)",
+        ok &= sy_en_find("zorblat", 7, ph) == 0 && !strcmp(b, "|z aa r |b l ae t");
+        printf("voice:   dictionary: %u words' phonemes against gen_lyrics.py's, %u differ; %u near misses, %u wrong\n",
+               (unsigned)LY_EN_N, bad, probes, miss);
+        snprintf(what, sizeof what, "English dictionary: all %u words found, exact; a word it lacks by letter rules (zorblat: %s)",
                  (unsigned)LY_EN_N, b);
         check(what, ok);
     }
@@ -320,7 +352,7 @@ static void check_reading(void)
             for (k = 0; k < nwds; k++) {
                 uint8_t ph[SW_MAX];
                 char nw2[24];
-                const char *w = bk->txt + bk->off[k];
+                const char *w = ly_word(bk, k);
                 (void)sy_word(l, nw2, sy_norm(w, (uint32_t)strlen(w), nw2, sizeof nw2), ph, &n);
                 tot++;
                 if (n != (bk->meta[k] & 15u)) {
@@ -414,7 +446,7 @@ static void check_generator(void)
                     n = (uint32_t)(q - p);
                     if (!n) break;
                     for (w = 0; w < nwds && !found; w++) {
-                        const char *t = bk->txt + bk->off[w];
+                        const char *t = ly_word(bk, w);
                         found = strlen(t) == n && (!strncmp(t, p, n) ||
                                                    (l == LG_ES && !strncmp(t, p, n - 1u) && t[n - 1u] == 'o' && p[n - 1u] == 'a'));
                     }

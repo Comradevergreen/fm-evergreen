@@ -334,17 +334,68 @@ static uint32_t sy_ja(const char *w, uint32_t n, uint8_t *out, uint32_t *ns)
     return m;
 }
 
-/* English: the dictionary (front-coded: a byte < 0x20 the letters shared with the word before, then the rest, then the
- * phonemes, 0x80 | SYB | code; each 16th word whole, LY_EN_IDX its place). 0: not there; else its phoneme bytes */
-static const uint8_t *sy_en_find(const char *key, uint32_t kn, uint32_t *len)
+/* English: the dictionary (tools/gen_lyrics.py en_dict_pack; 0.9.0: Huffman-coded, 4.4 KB less than as bytes): a word
+ * is the count of letters shared with the word before (code P), the rest of its letters (code L: 0 .. 25 a .. z) and
+ * LY_END, its phonemes (code H: SYB | code) and LY_END; each LY_EN_BLK-th word whole, from a byte, LY_EN_IDX its place.
+ * A code: hc the codes of each length 1 .. 15, then the symbols in code order (canonical); lut the next k bits ->
+ * length << 8 | symbol (0: a longer code, read from hc). The reader keeps the next n bits in acc (MSB first), at least
+ * 25 after each symbol (a code is at most 15), reading up to 4 bytes ahead (the dictionary ends with 4 to spare) */
+typedef struct { const uint8_t *hc; const uint16_t *lut; uint32_t k; } ly_code_t;
+static const ly_code_t LY_CP = {LY_EN_HCP, LY_EN_LUTP, LY_EN_KP}, LY_CL = {LY_EN_HCL, LY_EN_LUTL, LY_EN_KL},
+                       LY_CH = {LY_EN_HCH, LY_EN_LUTH, LY_EN_KH};
+typedef struct { const uint8_t *p; uint32_t acc, n; } ly_rd_t;
+static inline __attribute__((always_inline)) void ly_fill(ly_rd_t *r)
 {
-    uint32_t lo = 0, hi = (uint32_t)NELEM(LY_EN_IDX), blk, e, n = 0;
+    while (r->n <= 24u) {
+        r->acc |= (uint32_t)*r->p++ << (24u - r->n);
+        r->n += 8u;
+    }
+}
+static void ly_at(ly_rd_t *r, uint32_t blk)              /* at block blk's first word */
+{
+    r->p = &LY_EN_DICT[LY_EN_IDX[blk]];
+    r->acc = r->n = 0;
+    ly_fill(r);
+}
+static __attribute__((noinline)) uint32_t ly_sym(ly_rd_t *r, const ly_code_t *c)
+{
+    uint32_t e = c->lut[r->acc >> (32u - c->k)];
+    if (!e) {                                            /* a code longer than k bits */
+        uint32_t first = 0, idx = 0, n;
+        for (n = 1; n < 15u; n++) {
+            uint32_t code = r->acc >> (32u - n), cnt = c->hc[n - 1u];
+            if (code - first < cnt)
+                break;
+            idx += cnt;
+            first = (first + cnt) << 1;
+        }
+        e = n << 8 | c->hc[15u + idx + (r->acc >> (32u - n)) - first];
+    }
+    r->acc <<= e >> 8;
+    r->n -= e >> 8;
+    ly_fill(r);
+    return e & 255u;
+}
+/* key's phonemes (SYB | code) into out (SW_MAX; the rest dropped): how many, 0 = not there */
+static uint32_t sy_en_find(const char *key, uint32_t kn, uint8_t *out)
+{
+    uint32_t lo = 0, hi = (uint32_t)NELEM(LY_EN_IDX), n;
+    ly_rd_t r;
     char w[24];
+    if (kn && key[0] >= 'a' && key[0] <= 'z') {          /* the blocks from the one before the key's letter's first */
+        lo = LY_EN_LET[key[0] - 'a'];
+        hi = LY_EN_LET[key[0] - 'a' + 1];
+        lo -= lo > 0u;
+    }
     while (hi - lo > 1u) {                               /* the last block whose first word is <= the key */
-        uint32_t mid = (lo + hi) / 2u, p = LY_EN_IDX[mid] + 1u, i = 0;
+        uint32_t mid = (lo + hi) / 2u, i = 0, s;
         int c = 0;
+        ly_at(&r, mid);
+        (void)ly_sym(&r, &LY_CP);                        /* (0: a block's first word is whole) */
         while (!c) {
-            int a = i < kn ? key[i] : 0, b = LY_EN_DICT[p + i] >= 'a' && LY_EN_DICT[p + i] <= 'z' ? LY_EN_DICT[p + i] : 0;
+            int a = i < kn ? key[i] : 0, b;
+            s = ly_sym(&r, &LY_CL);
+            b = s == LY_END ? 0 : 'a' + (int)s;
             c = a - b;
             if (!a || !b)
                 break;
@@ -353,27 +404,25 @@ static const uint8_t *sy_en_find(const char *key, uint32_t kn, uint32_t *len)
         if (c >= 0) lo = mid;
         else hi = mid;
     }
-    blk = lo;
-    e = LY_EN_IDX[blk];
-    for (n = 0; n < 16u && e < sizeof LY_EN_DICT; n++) {
-        uint32_t pre = LY_EN_DICT[e++], wl = pre, p0;
-        while (e < sizeof LY_EN_DICT && LY_EN_DICT[e] >= 'a' && LY_EN_DICT[e] <= 'z') {
-            if (wl < sizeof w) w[wl] = (char)LY_EN_DICT[e];
+    ly_at(&r, lo);
+    for (n = 0; n < LY_EN_BLK && lo * LY_EN_BLK + n < LY_EN_N; n++) {
+        uint32_t wl = ly_sym(&r, &LY_CP), s, m = 0;
+        while ((s = ly_sym(&r, &LY_CL)) != LY_END) {
+            if (wl < sizeof w) w[wl] = (char)('a' + s);
             wl++;
-            e++;
         }
-        p0 = e;
-        while (e < sizeof LY_EN_DICT && LY_EN_DICT[e] >= 0x80u)
-            e++;
         if (wl == kn && wl <= sizeof w) {
             uint32_t i;
             for (i = 0; i < kn && w[i] == key[i]; i++)
                 ;
             if (i == kn) {
-                *len = e - p0;
-                return &LY_EN_DICT[p0];
+                while ((s = ly_sym(&r, &LY_CH)) != LY_END)
+                    if (m < SW_MAX) out[m++] = (uint8_t)s;
+                return m;
             }
         }
+        while (ly_sym(&r, &LY_CH) != LY_END)             /* (the phonemes of a word that is not it) */
+            ;
     }
     return 0;
 }
@@ -458,14 +507,11 @@ static uint32_t sy_word(uint32_t lang, const char *w, uint32_t n, uint8_t *out, 
     if (lang == LG_JA)
         return sy_ja(w, n, out, ns);
     if (lang == LG_EN) {
-        uint32_t len, i;
-        const uint8_t *d = sy_en_find(w, n, &len);
-        if (d) {
-            for (i = 0; i < len && i < SW_MAX; i++) {
-                out[i] = d[i] & 0x7Fu;
+        uint32_t len = sy_en_find(w, n, out), i;
+        if (len) {
+            for (i = 0; i < len; i++)
                 *ns += (out[i] & SYB) != 0u;
-            }
-            return i;
+            return len;
         }
         m = sy_en_rules(w, n, tc, tk);
     } else {
@@ -499,11 +545,19 @@ static uint32_t sy_rnd(uint32_t *r)
     return x;
 }
 typedef struct {
-    const char *txt;
-    const uint16_t *off;
+    const char *txt;             /* the words, each ended by a 0 */
+    const uint16_t *off;         /* (0.9.0) each 16th word's place in txt (ly_word) */
     const uint8_t *meta;
     const uint16_t (*grp)[6][2];
 } ly_bank_t;
+static const char *ly_word(const ly_bank_t *b, uint32_t j)   /* word j of the bank */
+{
+    const char *q = b->txt + b->off[j >> 4];
+    for (j &= 15u; j; j--)
+        while (*q++)
+            ;
+    return q;
+}
 static const ly_bank_t LY_BANK[3] = {
     {LY_ES_TXT, LY_ES_OFF, LY_ES_META, LY_ES_GRP},
     {LY_EN_TXT, LY_EN_OFF, LY_EN_META, LY_EN_GRP},
@@ -645,7 +699,7 @@ static void sy_gen_word(const track_t *t, sing_t *s, uint32_t lang, uint32_t lyr
         return;
     }
     {
-        const char *q = b->txt + b->off[j];
+        const char *q = ly_word(b, j);
         uint32_t m = 0;
         while (q[m] && m + 1u < sizeof s->w) {
             s->w[m] = q[m];
