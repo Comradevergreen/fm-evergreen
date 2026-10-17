@@ -1553,6 +1553,15 @@ static int pd_presets(int32_t s)
         }
         return 1;
     }
+    if (pd == PD_MOD) {                                 /* LFO . MOD: MOD the slot, LFO the track, MSEQ the step */
+        if (lv == 1u)
+            track_select((uint32_t)clamp((int32_t)song.sel + (s > 0 ? 1 : -1), 0, (int32_t)trk_live - 1));
+        else if (lv == 2u)
+            ms_ui_step = (uint8_t)clamp((int32_t)ms_ui_step + s, 0, 15);
+        else
+            edit_param(0, s);
+        return 1;
+    }
     if (pd == PD_ENV) {                                 /* ENV: TRACKS and ENV the track, STAGE the stage */
         if (lv < 2u)
             track_select((uint32_t)clamp((int32_t)song.sel + (s > 0 ? 1 : -1), 0, (int32_t)trk_live - 1));

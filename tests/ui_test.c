@@ -2740,11 +2740,11 @@ static int test_chain(void)
  * SONG: the selection, as KNOB 1; TOOLS: nothing; HOME, PRESETS and every other page: the next sound, the steps untouched, SAVE held undoes it */
 static int test_presets_knob(void)
 {
-    int bad = 0, cur_ok = 1, sel_ok = 1, snd_ok = 1, tools_ok = 1, grid_ok, bar_ok = 1, fxm_ok = 1, det_ok = 1, env_ok = 1;
-    uint32_t i, n_snd = 0, n_cur = 0, n_bar = 0, n_det = 0, n_env = 0;
+    int bad = 0, cur_ok = 1, sel_ok = 1, snd_ok = 1, tools_ok = 1, grid_ok, bar_ok = 1, fxm_ok = 1, det_ok = 1, env_ok = 1, mod_ok = 1;
+    uint32_t i, n_snd = 0, n_cur = 0, n_bar = 0, n_det = 0, n_env = 0, n_mod = 0;
     for (i = 0; i < NPAGES; i++) {
         track_t before;
-        uint32_t g = PAGES[i].graph, uslot, ppick, fxm0;
+        uint32_t g = PAGES[i].graph, uslot, ppick, fxm0, ms0, ms1;
         int16_t slot;
         ui_power_on();
         song.sel = 0;
@@ -2756,6 +2756,7 @@ static int test_presets_knob(void)
         before = *TSEL;
         uslot = ui.uslot; ppick = pat_pick(); slot = song.g[G_SLOT];
         if (PAGES[i].fam == FAM_FX && ui.fxmod == FX_NMOD - 1u) ui.fxmod = 0;   /* (the module can go right) */
+        ms_ui_step = 0; mod_ui_slot = 0; ms0 = 0; ms1 = 0;   /* (0.8.5: MSEQ's step, MOD's slot from the first) */
         fxm0 = ui.fxmod;
         turn(EN_PRESET, 1);
         {
@@ -2780,6 +2781,10 @@ static int test_presets_knob(void)
                 tools_ok &= same_snd && same_steps && !ui.confirm;
             } else if (PAGES[i].fam == FAM_FX && fx_trk_k(i) < 0) {   /* (0.8.5) FX's lens, BUSES / EFFECT: the module */
                 fxm_ok &= same_snd && same_steps && fx_on() && ui.fxmod != fxm0;
+            } else if (pd_on() && pd_cur() == PD_MOD) {   /* (0.8.5) LFO . MOD: MOD the slot, LFO the track, MSEQ the step */
+                mod_ok &= !memcmp(trk[0].p, before.p, sizeof before.p) && !memcmp(trk[0].step, before.step, sizeof before.step) &&
+                          ui.page == i && (pd_level() == 1u ? song.sel == 1u : pd_level() == 2u ? ms_ui_step == ms0 + 1u : mod_ui_slot == ms1 + 1u);
+                n_mod++;
             } else if (pd_on() && pd_cur() == PD_ENV) {   /* (0.8.5) ENV: TRACKS, ENV the track; STAGE the stage */
                 env_ok &= !memcmp(trk[0].p, before.p, sizeof before.p) && !memcmp(trk[0].step, before.step, sizeof before.step) &&
                           ui.page == i && (pd_level() < 2u ? song.sel == 1u : ui.stage == 1u);
@@ -2804,6 +2809,8 @@ static int test_presets_knob(void)
                  det_ok && n_det >= 1u);
     bad += check("0.8.5 LENTE: PRESETS on ENV: TRACKS and ENV the track, STAGE the stage; the sound and the steps stay",
                  env_ok && n_env >= 3u);
+    bad += check("0.8.5 LENTE: PRESETS on LFO . MOD: MOD the slot, LFO the track, MSEQ the step; the sound and the steps stay",
+                 mod_ok && n_mod >= 4u);
     bad += check("#94 PRESETS elsewhere (EDIT, ENV, LFO, FX, SCL, ARP, MIXER, GLOBAL, ...): the next sound, the steps stay",
                  snd_ok && n_snd >= 15u);
     ui_power_on();
@@ -9916,6 +9923,43 @@ static int test_lz_env(void)
     return bad;
 }
 
+/* LFO . MOD (ui_lens.c, ui_lzpage.c): MOD . LFO (LFO / LFO DEST) . MSEQ (MSEQ / MSEQ 2); it opens on LFO; PRESETS the
+ * slot, the track, the step; MOD's net pulses (the panel changes from frame to frame) */
+static int test_lz_mod(void)
+{
+    int bad = 0, ok;
+    char b[8];
+    ui_power_on(); frame();
+    press(B_LFO); frame();
+    ok = pd_on() && lz_fam() == LZ_MOD && pd_level() == 1u && str_eq(cur_page()->title, "LFO") && lz_tab_lit(1) &&
+         lz_crumb_is("LENTE \xB7 LFO \xB7 LFO") && crumb_count(b) && str_eq(b, "1/2");
+    frames(320); press(B_LFO); frame();
+    ok &= str_eq(cur_page()->title, "LFO DEST");
+    turn(EN_SELECT, 1); frame();
+    ok &= pd_level() == 2u && str_eq(cur_page()->title, "MSEQ") && lz_crumb_is("LENTE \xB7 MSEQ \xB7 MSEQ");
+    frames(320); press(B_LFO); frame();
+    ok &= str_eq(cur_page()->title, "MSEQ 2") && lz_crumb_is("LENTE \xB7 MSEQ \xB7 MSEQ 2");
+    turn(EN_SELECT, -2); frame();
+    ok &= pd_level() == 0u && str_eq(cur_page()->title, "MOD") && lz_tab_lit(0) && lz_crumb_is("LENTE \xB7 MOD \xB7 MOD");
+    bad += check("0.8.5 LENTE LFO . MOD: opens on LFO; MOD <-> LFO (LFO / LFO DEST) <-> MSEQ (MSEQ / MSEQ 2); tabs, breadcrumb", ok);
+    mod_ui_slot = 0;
+    TSEL->p[P_M1SRC] = 1; TSEL->p[P_M1DST] = 2; TSEL->p[P_M1AMT] = 40;
+    turn(EN_PRESET, 1); frame();
+    ok = mod_ui_slot == 1u;
+    turn(EN_PRESET, -1); frame();
+    ok &= mod_ui_slot == 0u;
+    {
+        static uint16_t a[240 * 140];
+        frames(48);
+        memcpy(a, host_screen + LZ_GRAPH_Y * 240, sizeof a);
+        frames(160);
+        ok &= memcmp(a, host_screen + LZ_GRAPH_Y * 240, sizeof a) != 0;   /* (the pulse along slot 1's curve) */
+    }
+    bad += check("0.8.5 LFO . MOD > MOD: PRESETS the slot; the net's pulse runs", ok);
+    ui_power_on();
+    return bad;
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IONBF, 0);
@@ -9924,6 +9968,7 @@ int main(void)
     bad += test_lz_home();
     bad += test_lz_edit();
     bad += test_lz_env();
+    bad += test_lz_mod();
     bad += test_sound_loads();
     bad += test_patterns();
     bad += test_init_system();

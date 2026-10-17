@@ -538,6 +538,10 @@ JIANT's modifications are distributed under the same license.
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
 
 ### v0.8.5
+- **LFO · MOD is a lens, as the approved mock-up**: **MOD · LFO · MSEQ** (it opens on LFO). MOD: the matrix as a net,
+  the sources down the left, each slot's curve to its box D1–D4 (DEST, AMT), the slot picked framed with a pulse running
+  along it (was a list); LFO under its rate and wave / LFO DEST: the LFO small and the four amounts as rows lit live;
+  MSEQ / MSEQ 2 under their captions. PRESETS: the slot, the track, the step.
 - **ENV is a lens, as the approved mock-up**: **TRACKS · ENV · STAGE** (it opens on ENV). TRACKS: the six tracks'
   envelopes as tiles, the selected one tinted with its level live (DEST: the three amounts under each), PRESETS picks
   the track; ENV: the envelope / ENV DEST as before; STAGE, a new page: KNOB 1 the stage, KNOB 2 its value, KNOB 3 LOOP,

@@ -98,7 +98,7 @@ The names below are the ones the firmware uses (the HARDWARE CALIBRATION screen 
 | --- | --- | --- |
 | **HOME** | Back to HOME (the ecosystem). | About 0.7 s: opens the **MENU**. |
 | **ENV** | ENV's lens (0.8.5): from another page the ENV page last shown (at power-on ENV); on ENV the level's other set (ENV ↔ DEST, ENV ↔ ENV DEST). | (no layer) |
-| **LFO** | LFO pages. | **MACRO** layer: KNOB 1–4 are M1–M4. |
+| **LFO** | The LFO · MOD lens (0.8.5): from another page the page last shown (at power-on LFO); on it the level's next set (LFO ↔ LFO DEST, MSEQ ↔ MSEQ 2). | **MACRO** layer: KNOB 1–4 are M1–M4. |
 | **FX** | FX's lens (0.8.5): from another page the FX page last shown; on FX the level's next (TRACK: its set; BUSES: the module opens; EFFECT: its next page). | **Punch-in FX** layer. |
 | **SCL** | SCL pages. | **SCL** layer: keys set the root. |
 | **EDIT** | EDIT's lens (0.8.5): from another page the EDIT page last shown; on EDIT the level's next set (SOUND: EDIT 1 ↔ EDIT 2; TONE: FILTER → MORPH → … → VOICE 2; the detail: OPERATOR → OP ENV → OPERATOR 2, SOUND 1–4). On STEP: clears the step; on USER / PROJECT: rename. | **EDIT** layer: INIT, RECALL, DRUM-X sound mutes. |
@@ -213,6 +213,7 @@ level's set; its button from elsewhere brings you back there.
 | Part | Levels (SELECT) | Sets (tap) | PRESETS |
 | --- | --- | --- | --- |
 | **HOME** | **ECO** (the six beings) · **BEING** (the track's being, its knobs as organs) · **GEN** (the generator) | ECO: HOME / MACROS · BEING: HOME / ROUTES · GEN: GEN 1/3 → 2/3 → 3/3 (a HOME tap each) | the sounds (GEN: the GENRE) |
+| **LFO** | **MOD** (the matrix as a net) · **LFO** · **MSEQ** (it opens on LFO) | MOD · LFO: LFO / LFO DEST · MSEQ: MSEQ / MSEQ 2 | MOD: the slot · LFO: the track · MSEQ: the step |
 | **ENV** | **TRACKS** (the six envelopes) · **ENV** (the track's) · **STAGE** (one stage) | TRACKS: ENV / DEST · ENV: ENV / ENV DEST · STAGE | TRACKS, ENV: the track · STAGE: the stage |
 | **EDIT** | **SOUND** (EDIT 1 / EDIT 2; DRUM: the kit) · **TONE** (the filter, the voices) · the detail: **FOCUS** (a synth), **OPERATOR** (FM6), **SOUND** (DRUM: one sound) | SOUND: EDIT 1 · EDIT 2 (DRUM: KIT · KIT 2 · KIT 3) · TONE: FILTER · MORPH · RETRIG · ROTOR · VOICE · VOICE 2, those the engine has (DRUM: X-MOD · FILTER · STEREO · LEVELS · LEVELS 2 · VOICE) · FOCUS · OPERATOR: OPERATOR · OP ENV · OPERATOR 2 · DRUM: SOUND 1–4 | SOUND, TONE: the sounds · the detail: KNOB 1's (the parameter, the operator, the kit's sound) |
 
@@ -229,6 +230,11 @@ level's set; its button from elsewhere brings you back there.
   track. **ENV**: the envelope large / ENV DEST's columns, as before. **STAGE** (new): KNOB 1 picks the stage (ATK DEC
   SUS REL; PRESETS too), KNOB 2 sets it, KNOB 3 LOOP; the whole envelope with the stage shaded over the stage's own
   curve, large, and its time.
+- **LFO · MOD** › **MOD**: the matrix as a net — the sources down the left (those a slot reads lit), a curve from each
+  slot's source to its box **D1–D4** on the right (DEST, AMT as a bar), the slot KNOB 1 picked framed with a pulse
+  running along its curve; PRESETS picks the slot. **LFO**: the wave under "RATE · WAVE" / **LFO DEST**: the LFO small
+  on the left, the four amounts as rows lit by what the LFO sends now; PRESETS the track. **MSEQ** / **MSEQ 2**: the
+  sixteen steps under their caption; PRESETS the step.
 - **EDIT** › **SOUND**: the engine's being on the left (alive with the sound, the page's name over it, the sound's
   under it), the scope in a well and all eight E parameters as chips on the right, the page's four lit. **TONE**:
   **FILTER** draws TYPE's response at CUT with its RES peak (LP, HP, BP, COMB), CUT a line, DRIVE / DIST a row of

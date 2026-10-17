@@ -99,7 +99,7 @@ Los nombres de abajo son los que usa el firmware (la pantalla HARDWARE CALIBRATI
 | --- | --- | --- |
 | **HOME** | Vuelve a HOME (el ecosistema). | Unos 0,7 s: abre el **MENU**. |
 | **ENV** | La lente de ENV (0.8.5): desde otra página, la última página ENV (al encender, ENV); en ENV el otro juego del nivel (ENV ↔ DEST, ENV ↔ ENV DEST). | (sin capa) |
-| **LFO** | Páginas LFO. | Capa **MACRO**: KNOB 1–4 son M1–M4. |
+| **LFO** | La lente LFO · MOD (0.8.5): desde otra página, la última página mostrada (al encender, LFO); en ella el juego siguiente del nivel (LFO ↔ LFO DEST, MSEQ ↔ MSEQ 2). | Capa **MACRO**: KNOB 1–4 son M1–M4. |
 | **FX** | La lente de FX (0.8.5): desde otra página la última página FX; en FX lo siguiente del nivel (TRACK: su juego; BUSES: abre el módulo; EFFECT: su página siguiente). | Capa de **FX punch-in**. |
 | **SCL** | Páginas SCL. | Capa **SCL**: las teclas fijan la tónica. |
 | **EDIT** | La lente de EDIT (0.8.5): desde otra página, la última página EDIT; en EDIT el juego siguiente del nivel (SOUND: EDIT 1 ↔ EDIT 2; TONE: FILTER → MORPH → … → VOICE 2; el detalle: OPERATOR → OP ENV → OPERATOR 2, SOUND 1–4). En STEP: borra el paso; en USER / PROJECT: renombrar. | Capa **EDIT**: INIT, RECALL, mutes de los sonidos de DRUM-X. |
@@ -216,6 +216,7 @@ recuerda su nivel y el juego de cada nivel; su botón desde otro lado te devuelv
 | Parte | Niveles (SELECT) | Juegos (toque) | PRESETS |
 | --- | --- | --- | --- |
 | **HOME** | **ECO** (los seis seres) · **BEING** (el ser de la pista, sus perillas como órganos) · **GEN** (el generador) | ECO: HOME / MACROS · BEING: HOME / ROUTES · GEN: GEN 1/3 → 2/3 → 3/3 (un toque de HOME cada uno) | los sonidos (GEN: el GENRE) |
+| **LFO** | **MOD** (la matriz como red) · **LFO** · **MSEQ** (abre en LFO) | MOD · LFO: LFO / LFO DEST · MSEQ: MSEQ / MSEQ 2 | MOD: el slot · LFO: la pista · MSEQ: el paso |
 | **ENV** | **TRACKS** (las seis envolventes) · **ENV** (la de la pista) · **STAGE** (una etapa) | TRACKS: ENV / DEST · ENV: ENV / ENV DEST · STAGE | TRACKS, ENV: la pista · STAGE: la etapa |
 | **EDIT** | **SOUND** (EDIT 1 / EDIT 2; DRUM: el kit) · **TONE** (el filtro, las voces) · el detalle: **FOCUS** (un sinte), **OPERATOR** (FM6), **SOUND** (DRUM: un sonido) | SOUND: EDIT 1 · EDIT 2 (DRUM: KIT · KIT 2 · KIT 3) · TONE: FILTER · MORPH · RETRIG · ROTOR · VOICE · VOICE 2, las que tenga el motor (DRUM: X-MOD · FILTER · STEREO · LEVELS · LEVELS 2 · VOICE) · FOCUS · OPERATOR: OPERATOR · OP ENV · OPERATOR 2 · DRUM: SOUND 1–4 | SOUND, TONE: los sonidos · el detalle: lo de KNOB 1 (el parámetro, el operador, el sonido del kit) |
 
@@ -233,6 +234,11 @@ recuerda su nivel y el juego de cada nivel; su botón desde otro lado te devuelv
   **PRESETS** (o ALGORITHM) elige la pista. **ENV**: la envolvente grande / las columnas de ENV DEST, como antes.
   **STAGE** (nueva): KNOB 1 elige la etapa (ATK DEC SUS REL; también PRESETS), KNOB 2 la ajusta, KNOB 3 LOOP; la
   envolvente entera con la etapa sombreada sobre la curva propia de la etapa, grande, y su tiempo.
+- **LFO · MOD** › **MOD**: la matriz como red — las fuentes a la izquierda (encendidas las que lee un slot), una curva
+  de la fuente de cada slot a su caja **D1–D4** a la derecha (DEST, AMT como barra), el slot elegido con KNOB 1
+  enmarcado con un pulso que corre por su curva; PRESETS elige el slot. **LFO**: la onda bajo "RATE · WAVE" / **LFO
+  DEST**: el LFO chico a la izquierda, los cuatro montos como filas encendidas por lo que el LFO manda ahora; PRESETS la
+  pista. **MSEQ** / **MSEQ 2**: los dieciséis pasos bajo su leyenda; PRESETS el paso.
 - **EDIT** › **SOUND**: el ser del motor a la izquierda (vivo con el sonido, el nombre de la página arriba, el del
   sonido abajo), el osciloscopio en un pozo y los ocho parámetros E como fichas a la derecha, encendidas las cuatro de
   la página. **TONE**: **FILTER** dibuja la respuesta de TYPE en CUT con su pico de RES (LP, HP, BP, COMB), CUT una

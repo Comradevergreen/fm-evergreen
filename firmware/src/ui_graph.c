@@ -616,33 +616,6 @@ static void graph_scale(const track_t *t, uint16_t c)
 }
 static void panel_note(const char *a, const char *b, const char *c);
 static void panel_alert(uint32_t id, const char *a);
-/* MOD page: the four slots as rows "1 LFO > CUT +50%", the one KNOB 2..4 edit selected, slots that do
- * nothing (SRC, DST or AMT at 0) dim */
-static void graph_mod(const track_t *t, uint16_t c)
-{
-    uint32_t k;
-    for (k = 0; k < NMSLOT; k++) {
-        const int16_t *p = &t->p[P_M1SRC + 3u * k];
-        int32_t y = 14 + (int32_t)k * 24, on = p[0] && p[1] && p[2], sel = k == mod_ui_slot;
-        uint16_t bg = sel ? T_THEME : T_SURF, col = sel ? T_INK : on ? c : T_DIM;
-        char b[8];
-        const char *unit;
-        if (sel)
-            cv_rrect(6, y, 228, 17, 4, T_THEME, T_SURF);
-        b[0] = (char)('1' + k);
-        b[1] = 0;
-        GFX_HOOK_ALIGN(0, y, 0, y + 17, AL_V, "mod row text centred up/down");
-        cv_text_on(14, y + 1, &AF_S, b, sel ? T_INK : T_MID, bg);
-        GFX_HOOK_ALIGN(0, y, 0, y + 17, AL_V, "mod row text centred up/down");
-        cv_text_on(34, y + 1, &AF_S, N_MSRC[clamp(p[0], 0, MS_N - 1)], col, bg);
-        cv_line(78, y + 8, 92, y + 8, col);              /* an arrow */
-        cv_line(88, y + 4, 92, y + 8, col);
-        cv_line(88, y + 12, 92, y + 8, col);
-        cv_text_on(102, y + 1, &AF_S, mod_dst_name(t, p[1]), col, bg);
-        param_format(&TP[P_M1AMT], p[2], b, &unit);
-        cv_text_on(cv_text_on(170, y + 1, &AF_S, b, col, bg) + 2, y + 1, &AF_S, unit, sel ? T_INK : T_DIM, bg);
-    }
-}
 
 static uint32_t steps_hash(const track_t *t)
 {
@@ -1420,7 +1393,8 @@ static uint32_t graph_signature(void)
         h ^= (ui.stage + 1u) * 3266489917u;
     if (pd_on()) {                                   /* .. a lens of ui_lens.c: its level (ENV's TRACKS: every track live) */
         h ^= (pd_level() + 1u) * 668265263u;
-        if (pd_cur() == PD_ENV && pd_level() == 0u)
+        if ((pd_cur() == PD_ENV && pd_level() == 0u) || (pd_cur() == PD_MOD && pg->graph != GR_MSEQ))   /* (MOD's pulse,
+                                                         * LFO DEST's LFO) */
             h ^= ui.frame / 2u * 2654435761u;
     }
     if ((pg->graph == GR_SLCR || pg->graph == GR_SLPIT) && song.g[G_SLMODE])   /* the SLICER's step playing */
@@ -2208,6 +2182,7 @@ static void draw_graph(void)
         graph_fx_lz(t, pg);
     } else if (lz_on() && lz_fam() == LZ_EDIT && (cv_oy = 0, graph_edit_lz(t, pg))) {   /* (0.8.5) EDIT's (ui_lzedit.c) */
     } else if (lz_on() && lz_fam() == LZ_ENV && (cv_oy = 0, graph_env_lz(t, pg))) {     /* .. ENV's (ui_lzpage.c) */
+    } else if (lz_on() && lz_fam() == LZ_MOD && (cv_oy = 0, graph_mod_lz(t, pg))) {     /* .. LFO . MOD's */
     } else {
         cv_oy = GOY;
         switch (pg->graph) {
@@ -2247,10 +2222,6 @@ static void draw_graph(void)
             break;
         case GR_SCALE:
             graph_scale(t, c);
-            break;
-        case GR_MOD:
-            cv_oy = 0;
-            graph_mod(t, c);
             break;
         case GR_MSEQ:
             graph_mseq(t, c);

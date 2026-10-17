@@ -142,7 +142,7 @@ def controls():
     t = '<table>' + ''.join(f'<tr><td class="n">{e(n)}</td><td>{d}</td></tr>' for n, d in rows) + '</table>'
     pb = [
         ('ENV', 'the zoom level\'s other set (SELECT zooms; PRESETS the track / the stage): TRACKS: ENV · DEST  |  ENV: ENV · ENV DEST  |  STAGE', '—'),
-        ('LFO', 'LFO · LFO DEST · MOD · MSEQ · MSEQ 2', 'MACROS M1–M4 (stay latched)'),
+        ('LFO', 'the zoom level\'s next (SELECT zooms; PRESETS the slot / track / step): MOD  |  LFO: LFO · LFO DEST  |  MSEQ: MSEQ · MSEQ 2', 'MACROS M1–M4 (stay latched)'),
         ('FX', 'the zoom level\'s next (SELECT zooms; PRESETS the module): TRACK: SENDS · DIST · AUTO PAN  |  BUSES: DLY MIX · REV SIZE · CHORUS DEPTH · SLICER DEPTH, FX opens the module  |  EFFECT: DELAY · REVERB · CHORUS · SLICER · MASTER · PUNCH, their pages',
          'PUNCH-IN FX'),
         ('SCL', 'SCL · CHORD', 'ROOT by key'),
