@@ -1685,6 +1685,71 @@ static int32_t dk_frac(const param_desc_t *d, int32_t a, int32_t b)   /* a value
     int32_t span = d->max - d->min;
     return dk_rr(d->min + span * a / 100, d->min + span * b / 100);
 }
+/* (0.8.5) the DICE dialog's BEFORE: the sound's being as it was (its HOME knobs' features; the steps, LFO and FX before
+ * are dk's) */
+static struct { const genome_t *g; bfeat_t f; uint8_t roll; } dkv;
+static const genome_t *dk_genome(const track_t *t)
+{
+    uint32_t e = t->eng_req % NENGINES;
+    return e == ENGI_DRUM ? &LANE_G_HOME : &GENOME[EGEN[e]];
+}
+static void dk_feat(const track_t *t, bfeat_t *f)
+{
+    uint8_t ids[4];
+    uint32_t v;
+    for (v = 0; v < 4u; v++) ids[v] = (uint8_t)ENGINES[t->eng_req % NENGINES]->knob[v];
+    bg_feat(t, dk_genome(t), ids, f);
+}
+static void dk_vis_take(void)
+{
+    dkv.g = dk_genome(TSEL);
+    dk_feat(TSEL, &dkv.f);
+    dkv.roll = 0;
+}
+static void dice_side(uint32_t now, int32_t x0)          /* one half of the panel: BEFORE (0) or NOW */
+{
+    const track_t *t = TSEL;
+    uint32_t i, kind = ui.confirm;
+    cv_text_in(x0, 6 - AF_X_CAP_Y, 112, &AF_X, now ? "NOW" : "BEFORE", T_DIM, T_SURF);
+    if (kind == CF_DICE_SOUND) {
+        bfeat_t f;
+        if (!dkv.g)                                     /* (opened without a dice: as it is) */
+            dk_vis_take();
+        if (now)
+            dk_feat(t, &f);
+        being_lines(now ? dk_genome(t) : dkv.g, now ? &f : &dkv.f, (x0 + 56) * 16, 66 * 16, 14 * 16, 0, 0);
+    } else if (kind == CF_DICE_SEQ) {                   /* the first 16 steps' notes as dots */
+        const step_t *st = now ? t->step : dk.step;
+        for (i = 0; i < 16u; i++)
+            if (step_on(&st[i]))
+                cv_rect(x0 + 4 + (int32_t)i * 7, 96 - clamp((int32_t)st[i].note[0] - 36, 0, 40) * 2, 5, 3,
+                        now ? T_ACCENT : T_MID);
+    } else {                                            /* LFO / FX: their four first values as bars */
+        const uint8_t *ids = kind == CF_DICE_LFO ? DK_LFO : DK_FXT;
+        for (i = 0; i < 4u; i++) {
+            int16_t v = now ? t->p[ids[i]] : dk.v[i];
+            const param_desc_t *d = track_desc(t, ids[i]);
+            int32_t w = d ? clamp(RATIO(d, enum_rank(d, v)), 0, 1000) * 96 / 1000 : 0;
+            cv_text(x0 + 8, 20 + (int32_t)i * 20 - AF_X_CAP_Y, &AF_X, d ? d->label : "", T_DIM);
+            cv_rect(x0 + 8, 29 + (int32_t)i * 20, 96, 3, T_LINE);
+            cv_rect(x0 + 8, 29 + (int32_t)i * 20, w ? w : 1, 3, now ? T_ACCENT : T_MID);
+        }
+    }
+}
+static void dice_panel(void)
+{
+    cv_begin(240, 148, T_BG);
+    cv_rect(4, 0, 232, 148, T_SURF);
+    cv_bg = T_SURF;
+    cv_rect(119, 8, 1, 132, T_LINE);
+    dice_side(0, 4);
+    cv_rect(117, 0, 6, 148, T_SURF);                    /* (BEFORE's tendrils kept on its side) */
+    cv_rect(119, 8, 1, 132, T_LINE);
+    dice_side(1, 124);
+    cv_rect(0, 0, 4, 148, T_BG);
+    cv_rect(236, 0, 4, 148, T_BG);
+    cv_blit(0, LZ_CARD_Y);
+}
 static void dk_keep(uint32_t kind)
 {
     track_t *t = TSEL;
@@ -1769,6 +1834,7 @@ static void part_dice(uint32_t kind)
     if (ui.confirm != kind) {
         undo_mark();
         dk_keep(kind);
+        dk_vis_take();
         confirm_open(kind, song.sel);
     }
     dk.msg = kind == CF_DICE_SEQ ? dice_seq(TSEL) : kind == CF_DICE_LFO ? "LFO DICED" : kind == CF_DICE_FX ? "FX DICED" :

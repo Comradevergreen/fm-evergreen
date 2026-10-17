@@ -538,6 +538,10 @@ JIANT's modifications are distributed under the same license.
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
 
 ### v0.8.5
+- **The dialogs as the approved mock-up**: tabs NOTICE · DICE · NAME. A question is a card under a violet rule with
+  OCT− NO / OCT+ YES (no warning icon); a part's dice shows BEFORE and NOW side by side (the being then and now, the
+  steps, the values) over a KEEP DICED …? strip, SELECT still re-rolling; a message on a lens page is also a toast in
+  its panel; NAME has the CURSOR, CHAR, LEN, OCT+ cards over the name and its keys.
 - **The held layers are lenses, as the approved mock-up**: ALGORITHM while the button is held goes **MAP · KNOBS ·
   STATE** (SELECT keeps the layers' combos, so ALGORITHM is the one that was free). MAP: the keys' cells with their
   names (no icons); KNOBS: the four cards as gauges; STATE: the key hints (were the footer) and what is on. The footer

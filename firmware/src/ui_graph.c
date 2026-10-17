@@ -1354,6 +1354,8 @@ static uint32_t graph_signature(void)
     const page_t *pg = cur_page();
     const track_t *t = TSEL;
     uint32_t h = 2166136261u, i;
+    if (lz_on() && ui.msg_t && !ui.layer && !ui.home)   /* (0.8.5) the toast over the panel */
+        h = str_hash(h ^ 0x70A57u, ui.msg);
     if (ui.confirm == CF_DICE_ALL)                   /* (0.8.5) GEN: its settings, its page */
         return h ^ gen_draw_sig();
     if (ui.home)
@@ -2165,7 +2167,9 @@ static void draw_graph(void)
     if (drift_on())
         graph_drift();
     cv_oy = GOY;                                     /* graphs on a 100 px scale */
-    if (strip_kind() != SK_NONE) {                   /* MENU > LARGE: the strip */
+    if (lz_on() && ui.msg_t && ui.msg[0] && !ui.layer && !ui.home) {   /* (0.8.5) a toast: the panel holds it alone (below; HOME: its beings stay, the header says it) */
+        cv_oy = 0;
+    } else if (strip_kind() != SK_NONE) {            /* MENU > LARGE: the strip */
         uint32_t k = strip_kind();
         cv_oy = k == SK_ADSR || k == SK_LFO ? 3 : 0;
         graph_ht = LG_H_GRAPH - 6;
@@ -2287,5 +2291,14 @@ static void draw_graph(void)
         }
     }
     cv_oy = 0;
+    if (lz_on() && ui.msg_t && ui.msg[0] && !ui.layer && !ui.home) {   /* (0.8.5) NOTICE . TOAST: the message over the panel too */
+        int32_t w = clamp(text_w(&AF_S, ui.msg) + 24, 60, 224), x = 120 - w / 2, y = (int32_t)graph_h() / 2 - 12;
+        char f[40];
+        cv_rect(x, y, w, 24, T_ACCENT);
+        cv_rect(x + 1, y + 1, w - 2, 22, T_BG);
+        text_fit(f, sizeof f, ui.msg, &AF_S, w - 12);
+        GFX_HOOK_ALIGN(x, y, x + w, y + 24, AL_HV, "toast message centred in its box");
+        cv_text_flags(ink_in(&AF_S, f, w) + x, y + CAP_IN(S, 24), &AF_S, f, T_ACCENT, T_BG, 8u | (f[str_len(f) - 1u] == ELLIPSIS));
+    }
     cv_blit(0, graph_y());
 }

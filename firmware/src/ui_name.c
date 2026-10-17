@@ -300,107 +300,98 @@ static void nm_title(char *b)
     else
         str_cpy(b + 5, nm.ph, 12);                     /* "PROJECT A" */
 }
+/* (0.8.5) as the mock-up: the dialogs' tabs (NAME lit), four cards (CURSOR, CHAR, LEN, OCT+ SAVE / RENAME), the panel:
+ * "SAVE U07" over the 12 cells, the hint (the cycling key's letters) and ABC / 123, the white keys as two rows of 8,
+ * the black keys' five functions; the breadcrumb at the foot (OCT- CANCEL). No icons */
+static void nm_card(uint32_t c, const char *l, const char *v, uint16_t vc)
+{
+    cv_begin(CARD_W, LZ_CARD_H, T_BG);
+    cv_rect(0, 0, CARD_W, LZ_CARD_H, T_RAISE);
+    cv_text(4, CARD_XY - AF_X_CAP_Y + 1, &AF_X, l, T_MID);
+    cv_text(4, 17 - AF_M_CAP_Y, &AF_M, v, vc);
+    cv_blit((uint32_t)CARD_X(c), LZ_CARD_Y);
+}
 static void nm_draw_field(void)
 {
-    char b[24];
-    uint32_t i, empty = nm.len == 0u;
-    cv_begin(240, CARD_H, T_BG);
-    cv_rrect(3, 0, 234, CARD_H, 4, T_SURF, T_BG);
-    nm_title(b);
-    cv_text_on(9, 2, &AF_S, b, T_MID, T_SURF);
+    char b[24], c[2] = {0, 0};
+    fmt_int(b, (int32_t)nm.cur + 1);
+    nm_card(0, "CURSOR", b, T_TEXT);
+    c[0] = nm.cur < nm.len ? nm.s[nm.cur] : ' ';
+    nm_card(1, "CHAR", c[0] == ' ' ? "_" : c, T_TEXT);
     fmt_int(b, nm.len);
-    str_cpy(b + str_len(b), "/12", 4);
-    cv_text_r(231, 2, &AF_S, b, nm.len >= NM_LEN ? T_ACCENT : T_DIM, T_SURF);
-    for (i = 0; i < NM_LEN; i++) {
-        int32_t x = NM_CX(i);
-        char c[2] = {empty ? nm.ph[i] : i < nm.len ? nm.s[i] : 0, 0};
-        uint16_t bg = T_SURF, fg = empty ? T_DIM : T_TEXT;
-        if (i == nm.cur && nm.key) {                   /* the letter being cycled */
-            cv_rrect(x, 18, 18, 22, 3, T_THEME, T_SURF);
-            bg = T_THEME;
-            fg = T_INK;
-        } else if (i == nm.cur) {                      /* the cursor: a box */
-            cv_rrect(x, 18, 18, 22, 4, T_ACCENT, T_SURF);
-            cv_rrect(x + 2, 20, 14, 18, 2, T_SURF, T_ACCENT);
-        }
-        if (!c[0] || (c[0] == ' ' && i >= nm.len)) {
-            if (i != nm.cur)
-                cv_rrect(x + 4, 37, 10, 2, 1, T_RAISE, T_SURF);   /* an empty cell */
-        } else if (c[0] == ' ') {
-            cv_rect(x + 8, 28, 2, 2, bg == T_THEME ? T_INK : T_DIM);   /* a space */
-        } else {
-            GFX_HOOK_ALIGN(x, 18, x + 18, 40, AL_HV, "name field letter in its cell");
-            cv_text_in(x, 18 + CAP_IN(M, 22), 18, &AF_M, c, fg, bg);   /* its ink across, the capitals' band up and down */
-        }
-    }
-    if (nm.cur >= NM_LEN)                              /* full, the cursor past the end: a bar */
-        cv_rrect(NM_CX(NM_LEN) + 1, 18, 3, 22, 1, T_ACCENT, T_SURF);
-    cv_blit(0, Y_LABEL);
+    nm_card(2, "LEN", b, nm.len >= NM_LEN ? T_ACCENT : T_TEXT);
+    nm_card(3, "OCT +", nm.kind == NK_USER_SAVE || nm.kind == NK_PROJ_SAVE ? "SAVE" : "WRITE", T_ACCENT);   /* (WRITE: the new name) */
 }
 static void nm_draw_panel(void)
 {
     static const char *const FN[5] = {"F#", "G#", "A#", "C#", "D#"};
-    uint32_t i;
-    cv_begin(240, H_GRAPH, T_BG);
-    cv_rrect(3, 0, 234, H_GRAPH, 5, T_SURF, T_BG);
+    uint32_t i, empty = nm.len == 0u;
+    char b[24];
+    cv_begin(240, LZ_GRAPH_H, T_BG);
+    cv_rect(4, 0, 232, LZ_GRAPH_H, T_SURF);
     cv_bg = T_SURF;
+    nm_title(b);
+    cv_text(10, 6 - AF_X_CAP_Y, &AF_X, b, T_THEME);
+    cv_text_r(230, 6 - AF_X_CAP_Y, &AF_X, nm.num ? "123" : "ABC", T_ACCENT, T_SURF);
+    for (i = 0; i < NM_LEN; i++) {                     /* the name: 12 cells */
+        int32_t x = NM_CX(i);
+        char c[2] = {empty ? nm.ph[i] : i < nm.len ? nm.s[i] : 0, 0};
+        uint16_t bg = T_RAISE, fg = empty ? T_DIM : T_TEXT;
+        if (i == nm.cur && nm.key) {                   /* the letter being cycled */
+            bg = T_THEME;
+            fg = T_INK;
+        }
+        cv_rect(x, 16, 17, 24, bg);
+        if (i == nm.cur && !nm.key)                    /* the cursor: a bar under its cell */
+            cv_rect(x + 2, 36, 13, 2, T_ACCENT);
+        if (c[0] && c[0] != ' ') {
+            GFX_HOOK_ALIGN(x, 16, x + 17, 40, AL_HV, "name field letter in its cell");
+            cv_text_in(x, 16 + CAP_IN(M, 24), 17, &AF_M, c, fg, bg);
+        }
+    }
+    if (nm.cur >= NM_LEN)                              /* full, the cursor past the end: a bar */
+        cv_rect(NM_CX(NM_LEN) - 1, 16, 2, 24, T_ACCENT);
     if (nm.key) {                                      /* the cycling key's characters: typed THEME, next ACCENT */
         const char *g = nm_group(nm.key - 1u);
         uint32_t n = str_len(g);
         for (i = 0; i < n; i++) {
-            int32_t x = 10 + 26 * (int32_t)i;
+            int32_t x = 10 + 14 * (int32_t)i;
             char c[2] = {g[i], 0};
             int typed = i == nm.tap, next = i == (nm.tap + 1u) % n;
             uint16_t f = typed ? T_THEME : T_RAISE;
-            cv_rrect(x, 4, 22, 22, 4, f, T_SURF);
-            GFX_HOOK_ALIGN(x, 4, x + 22, 26, AL_HV, "name cycling letter in its cell");
-            cv_text_in(x, 4 + CAP_IN(M, 22), 22, &AF_M, c, typed ? T_INK : next ? T_ACCENT : T_TEXT, f);
+            cv_rect(x, 45, 12, 12, f);
+            cv_text_in(x, 47 - AF_X_CAP_Y, 12, &AF_X, c, typed ? T_INK : next ? T_ACCENT : T_TEXT, f);
         }
-        cv_text_on(14 + 26 * (int32_t)n, 8, &AF_S, "TAP AGAIN: NEXT", T_MID, T_SURF);
-    } else {
-        cv_text_on(10, 8, &AF_S, nm.num ? "ONE TAP, ONE CHARACTER" : "TAP AGAIN: NEXT LETTER", T_MID, T_SURF);
-    }
-    cv_text_r(230, 8, &AF_S, nm.num ? "123" : "ABC", T_THEME, T_SURF);
-    GFX_HOOK_ALIGN(3, 0, 237, 0, AL_H | AL_CELLS | AL_N(8), "name keys' row in the panel");
+        cv_text(14 + 14 * (int32_t)n, 48 - AF_X_CAP_Y, &AF_X, "TAP AGAIN: NEXT", T_MID);
+    } else
+        cv_text(10, 48 - AF_X_CAP_Y, &AF_X, nm.num ? "ONE TAP, ONE CHARACTER" : "TAP AGAIN: NEXT LETTER", T_MID);
+    GFX_HOOK_ALIGN(4, 0, 236, 0, AL_H | AL_CELLS | AL_N(8), "name keys' row in the panel");
     for (i = 0; i < 16u; i++) {                        /* the white keys: the left octave, then the right one */
-        int32_t x = 9 + 28 * (int32_t)(i % 8u), y = i < 8u ? 31 : 54;   /* (x 9 .. 231: centred) */
+        int32_t x = 9 + 28 * (int32_t)(i % 8u), y = i < 8u ? 62 : 84;
         int act = nm.key == i + 1u;
         uint16_t f = act ? T_THEME : T_RAISE;
-        const char *g = nm_group(i);
-        cv_rrect(x, y, 26, 20, 4, f, T_SURF);
-        GFX_HOOK_ALIGN(x, y, x + 26, y + 20, AL_HV, "name white key letters centred");
-        cv_text_in(x, y + CAP_IN(S, 20), 26, &AF_S, g, act ? T_INK : T_TEXT, f);
+        cv_rect(x, y, 26, 19, f);
+        GFX_HOOK_ALIGN(x, y, x + 26, y + 19, AL_HV, "name white key letters centred");
+        cv_text_in(x, y + CAP_IN(X, 19), 26, &AF_X, nm_group(i), act ? T_INK : T_TEXT, f);
     }
     for (i = 0; i < 5u; i++) {                         /* the black keys, by name */
-        int32_t x = 9 + 45 * (int32_t)i, y = 80;
+        int32_t x = 9 + 45 * (int32_t)i, y = 108;
         if (!i)
-            GFX_HOOK_ALIGN(3, 0, 237, 0, AL_H | AL_CELLS | AL_N(5), "name keys' row in the panel");
-        cv_rrect(x, y, 42, 36, 4, T_KEY, T_SURF);
-        GFX_HOOK_ALIGN(0, y, 0, y + 36, AL_V | AL_N(2), "name black key name + use centred up/down");
+            GFX_HOOK_ALIGN(4, 0, 236, 0, AL_H | AL_CELLS | AL_N(5), "name keys' row in the panel");
+        cv_rect(x, y, 42, 28, T_KEY);
         GFX_HOOK_ALIGN(x, 0, x + 42, 0, AL_H | AL_PASS, "name black key name / use centred across");
-        cv_text_in(x, y + 2, 42, &AF_S, FN[i], T_INK, T_KEY);
+        cv_text_in(x, y + 4 - AF_X_CAP_Y, 42, &AF_X, FN[i], T_INK, T_KEY);
         GFX_HOOK_ALIGN(x, 0, x + 42, 0, AL_H | AL_PASS, "name black key name / use centred across");
-        if (i == NB_LEFT || i == NB_RIGHT)
-            cv_icon_in(x, y + 20, 42, 0, 12, i == NB_LEFT ? ICON_X_LEFT : ICON_X_RIGHT, T_INK, T_KEY);
-        else
-            cv_text_in(x, y + 18, 42, &AF_S, i == NB_SPACE ? "SPACE" : i == NB_DEL ? "DEL" : nm.num ? "ABC" : "123",
-                      T_INK, T_KEY);
+        cv_text_in(x, y + 16 - AF_X_CAP_Y, 42, &AF_X, i == NB_LEFT ? "<" : i == NB_RIGHT ? ">" : i == NB_SPACE ? "SPACE" :
+                   i == NB_DEL ? "DEL" : nm.num ? "ABC" : "123", T_INK, T_KEY);
     }
-    cv_blit(0, Y_GRAPH);
+    cv_blit(0, LZ_GRAPH_Y);
 }
 static void nm_draw_foot(void)
 {
-    khint_t a[2], b[3];
-    int ok = !transport_busy();
-    a[0] = (khint_t){KC_OCTUP, nm.kind == NK_USER_SAVE || nm.kind == NK_PROJ_SAVE ? "SAVE" : "RENAME"};
-    a[1] = (khint_t){KC_OCTDN, "CANCEL"};
-    b[0] = (khint_t){KC_K1, "MOVE"};
-    b[1] = (khint_t){KC_K2, "CHAR"};
-    b[2] = (khint_t){KC_KEYS, "TYPE"};
-    cv_begin(240, H_FOOT, T_BG);
-    cv_key_row(8, 232, 2, a, 2, ok ? 3u : 2u, T_BG);
-    cv_key_row(8, 232, 21, b, 3, 7u, T_BG);
-    cv_blit(0, Y_FOOT);
+    cv_begin(240, LZ_FOOT_H, T_BG);
+    cv_text(6, CRUMB_Y, &AF_X, transport_busy() ? "LENTE \xB7 NAME \xB7 STOP TO SAVE" : "LENTE \xB7 NAME \xB7 OCT- CANCEL", T_DIM);
+    cv_blit(0, LZ_FOOT_Y);
 }
 static void name_draw(void)
 {
@@ -408,7 +399,8 @@ static void name_draw(void)
     uint32_t sig = fnv(fnv(2166136261u, st, sizeof st), nm.s, sizeof nm.s) + ux.gen * 7919u +
                    (uint32_t)transport_busy() * 104729u;
     if (ui.force) {
-        draw_frame();
+        lcd_fill(0, H_HEAD, 240, 240 - H_HEAD, T_BG);   /* (0.8.5: the lens's layout, the dialogs' tabs) */
+        dlg_tabs(2u);
         nm.sig = ~sig;
     }
     draw_head();

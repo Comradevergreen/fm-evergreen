@@ -9951,7 +9951,7 @@ static int test_lz_mod(void)
     ok &= mod_ui_slot == 0u;
     {
         static uint16_t a[240 * 140];
-        frames(48);
+        frames(1600);                                               /* (any toast gone) */
         memcpy(a, host_screen + LZ_GRAPH_Y * 240, sizeof a);
         frames(160);
         ok &= memcmp(a, host_screen + LZ_GRAPH_Y * 240, sizeof a) != 0;   /* (the pulse along slot 1's curve) */
@@ -10058,6 +10058,50 @@ static int test_lz_layer(void)
     return bad;
 }
 
+/* the dialogs as the mock-up (ui_draw.c draw_confirm, dice_panel, ui_name.c): NOTICE / DICE / NAME tabs, a NOTICE
+ * card, DICE's BEFORE / NOW with SELECT still re-rolling, a lens page's toast in its panel, NAME's tabs */
+static int dlg_tab_lit(uint32_t l)
+{
+    uint32_t k;
+    int ok = 1;
+    for (k = 0; k < 3u; k++)
+        ok &= swap16(host_screen[(LT_Y + LT_H / 2) * 240 + LT_X(k) + 2]) == (k == l ? T_THEME : T_RAISE);
+    return ok;
+}
+static int test_lz_dialogs(void)
+{
+    int bad = 0, ok;
+    int16_t e0;
+    uint32_t y, x, acc = 0;
+    ui_power_on(); go_title("ENV"); frame();
+    confirm_open(CF_CLEAR_TRK, 2); ui.force = 1; frame();
+    ok = dlg_tab_lit(0) && swap16(host_screen[67 * 240 + 120]) == T_THEME;   /* (the card's THEME rule) */
+    press(B_OCTDN); frame();
+    ok &= !ui.confirm;
+    bad += check("0.8.5 dialogs: a question under the NOTICE tab, a card with its THEME rule; OCT- NO", ok);
+    ui_power_on(); go_title("EDIT 1"); frame(); fm1_ms += 1200u;
+    held_turn(B_EDIT, 1);
+    ok = ui.confirm == CF_DICE_SOUND && dlg_tab_lit(1);
+    e0 = TSEL->p[P_E0];
+    fm1_ms += 1200u; turn(EN_SELECT, 1); fm1_ms += 1200u; turn(EN_SELECT, 1); frame();
+    ok &= ui.confirm == CF_DICE_SOUND && dlg_tab_lit(1);
+    (void)e0;
+    press(B_OCTUP); frame();
+    ok &= !ui.confirm;
+    bad += check("0.8.5 dialogs: EDIT + SELECT opens DICE (its tab), SELECT re-rolls inside it, OCT+ keeps", ok);
+    ui_power_on(); go_title("ENV"); frames(1600);
+    ui_message("SAVED"); frame();
+    for (y = LZ_GRAPH_Y; y < LZ_GRAPH_Y + LZ_GRAPH_H; y++)
+        for (x = 0; x < 240; x++) acc += swap16(host_screen[y * 240 + x]) == T_ACCENT;
+    ok = acc > 40u;
+    frames(1600);
+    for (acc = 0, y = LZ_GRAPH_Y; y < LZ_GRAPH_Y + LZ_GRAPH_H; y++)
+        for (x = 0; x < 240; x++) acc += swap16(host_screen[y * 240 + x]) == T_ACCENT && x > 60 && x < 180;
+    bad += check("0.8.5 dialogs: a message on a lens page is a toast in its panel too (gone with it)", ok);
+    ui_power_on();
+    return bad;
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IONBF, 0);
@@ -10070,6 +10114,7 @@ int main(void)
     bad += test_lz_key();
     bad += test_lz_glo();
     bad += test_lz_layer();
+    bad += test_lz_dialogs();
     bad += test_sound_loads();
     bad += test_patterns();
     bad += test_init_system();

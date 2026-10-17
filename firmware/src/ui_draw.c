@@ -1746,43 +1746,89 @@ static void confirm_text(char *a, char *b)
     }
 }
 static void gen_cards(void);                            /* (0.8.5) gen.c: GEN in HOME's lens, its cards */
+/* (0.8.5) the dialogs as the approved mock-up (NOTICE . DICE . NAME): their tabs under the header, the breadcrumb at the
+ * foot. NOTICE (the OCT- / OCT+ questions): a RAISE card under a THEME rule, "?" in the accent, the question, the detail,
+ * two buttons (OCT- NO, OCT+ YES in the accent, underlined). DICE (KEEP DICED ...?): the part's cards, BEFORE and NOW
+ * side by side (dice_panel, ui_input.c), the question in a strip with its two buttons. No icons */
+static void dice_panel(void);                            /* (ui_input.c: what the dice had, what it has) */
+static void dlg_tabs(uint32_t lv)
+{
+    static const char *const DN[3] = {"NOTICE", "DICE", "NAME"};
+    uint32_t l;
+    cv_begin(240, LT_H, T_BG);
+    for (l = 0; l < 3u; l++) {
+        uint16_t bg = l == lv ? T_THEME : T_RAISE;
+        cv_rect(LT_X(l), 0, LT_W, LT_H, bg);
+        GFX_HOOK_ALIGN(LT_X(l), 0, LT_X(l) + LT_W, LT_H, AL_HV, "LENTE tab name centred in its tab");
+        cv_text_in(LT_X(l), CAP_IN(X, LT_H), LT_W, &AF_X, DN[l], l == lv ? T_INK : T_MID, bg);
+    }
+    cv_blit(0, LT_Y);
+}
+static void dlg_crumb(const char *a, const char *b)     /* "LENTE . NOTICE . CONFIRM" */
+{
+    char s[40];
+    str_cpy(s, "LENTE \xB7 ", sizeof s);
+    str_cpy(s + str_len(s), a, sizeof s - str_len(s));
+    str_cpy(s + str_len(s), " \xB7 ", sizeof s - str_len(s));
+    str_cpy(s + str_len(s), b, sizeof s - str_len(s));
+    cv_begin(240, LZ_FOOT_H, T_BG);
+    cv_text(6, CRUMB_Y, &AF_X, s, T_DIM);
+    cv_blit(0, LZ_FOOT_Y);
+}
+static void dlg_button(int32_t x, int32_t y, int32_t w, const char *k, const char *a, int yes)
+{
+    cv_rect(x, y, w, 34, T_SURF);
+    cv_text(x + 6, y + 5 - AF_X_CAP_Y, &AF_X, k, T_DIM);
+    cv_text(x + 6, y + 16 - AF_M_CAP_Y, &AF_M, a, yes ? T_ACCENT : T_TEXT);
+    if (yes)
+        cv_rect(x + 6, y + 30, w - 12, 2, T_ACCENT);
+}
 static void draw_confirm(void)
 {
     char a[24], b[24];
     const aafont_t *tf = &AF_M;
     int dk = ui.confirm >= CF_DICE_SOUND && ui.confirm <= CF_DICE_FX;
-    const char *no = dk ? "CANCEL" : "NO", *yes = dk ? "OK" : "YES";
     confirm_text(a, b);
     lcd_fill(0, H_HEAD, 240, 240 - H_HEAD, T_BG);
     ui.head_sig = ~0u;
-    cv_begin(DLG_W, DLG_H, T_BG);                     /* a SURF card: warning, the question, the detail, two buttons */
-    if (ux.style)                                     /* LINE: no card, a 1 px rule round it */
-        cv_rrect(0, 0, DLG_W, DLG_H, 8, T_RULE, T_BG);
-    cv_rrect(!!ux.style, !!ux.style, DLG_W - 2 * !!ux.style, DLG_H - 2 * !!ux.style, 8 - !!ux.style, T_SURF,
-             ux.style ? T_RULE : T_BG);
-    GFX_HOOK_ALIGN(0, 0, DLG_W, 0, AL_H, "dialog icon centred");
-    cv_icon_in(0, 12, DLG_W, 0, 16, ui.confirm == CF_CLEAR_MOTION ? ICON_X_MOTION_DEL : ICON_X_WARN, T_ACCENT, T_SURF);
-    if (text_w(tf, a) > DLG_W - 16)
+    dlg_tabs(dk ? 1u : 0u);
+    if (dk) {                                         /* DICE: the part, BEFORE / NOW, the question in a strip */
+        static const char *const PART[4] = {"SOUND", "SEQ", "LFO", "FX"};
+        uint32_t pk = (uint32_t)(ui.confirm - CF_DICE_SOUND) & 3u;
+        dice_panel();
+        cv_begin(240, 30, T_BG);
+        cv_rect(4, 0, 232, 30, T_RAISE);
+        cv_rect(4, 0, 232, 2, T_THEME);
+        cv_text(10, 7 - AF_S_CAP_Y, &AF_S, a, T_TEXT);
+        cv_text(10, 20 - AF_X_CAP_Y, &AF_X, b, T_DIM);
+        cv_rect(148, 4, 40, 23, T_SURF);
+        cv_text_in(148, 7 - AF_X_CAP_Y, 40, &AF_X, "OCT-", T_DIM, T_SURF);
+        cv_text_in(148, 17 - AF_X_CAP_Y, 40, &AF_X, "CANCEL", T_MID, T_SURF);
+        cv_rect(192, 4, 40, 23, T_SURF);
+        cv_text_in(192, 7 - AF_X_CAP_Y, 40, &AF_X, "OCT+", T_DIM, T_SURF);
+        cv_text_in(192, 17 - AF_X_CAP_Y, 40, &AF_X, "OK", T_ACCENT, T_SURF);
+        cv_blit(0, 194);
+        dlg_crumb("DICE", drum_track(TSEL) && pk == 0u ? "KIT" : PART[pk]);
+        return;
+    }
+    cv_begin(212, 140, T_BG);                         /* NOTICE: the card */
+    cv_rect(0, 0, 212, 140, T_RAISE);
+    cv_rect(0, 0, 212, 2, T_THEME);
+    cv_text(12, 12 - AF_M_CAP_Y, &AF_M, "?", T_ACCENT);
+    if (text_w(tf, a) > 196)
         tf = &AF_S;
-    GFX_HOOK_ALIGN(0, 0, DLG_W, 0, AL_H, "dialog question centred");
-    cv_text_in(0, 34, DLG_W, tf, a, T_TEXT, T_SURF);
+    GFX_HOOK_ALIGN(0, 0, 212, 0, AL_H, "dialog question centred");
+    cv_text_in(0, 36, 212, tf, a, T_TEXT, T_RAISE);
     if (b[0]) {
         char f[32];
-        text_fit(f, sizeof f, b, &AF_S, DLG_W - 16);    /* a name: free text */
-        GFX_HOOK_ALIGN(0, 0, DLG_W, 0, AL_H, "dialog detail centred");
-        cv_text_flags(ink_in(&AF_S, f, DLG_W), 56, &AF_S, f, T_MID, T_SURF, 8u | (f[str_len(f) - 1u] == ELLIPSIS));
+        text_fit(f, sizeof f, b, &AF_S, 196);          /* a name: free text */
+        GFX_HOOK_ALIGN(0, 0, 212, 0, AL_H, "dialog detail centred");
+        cv_text_flags(ink_in(&AF_S, f, 212), 60, &AF_S, f, T_MID, T_RAISE, 8u | (f[str_len(f) - 1u] == ELLIPSIS));
     }
-    cv_rrect(10, 80, 90, 26, 6, T_RAISE, T_SURF);     /* OCT-: NO */
-    GFX_HOOK_ALIGN(10, 80, 100, 106, AL_HV | AL_N(2), "dialog button NO");
-    cv_key_hint(10 + HALF_UP(90 - kh_ink(KC_OCTDN, no)), 80 + HALF_UP(26 - KC_H), KC_OCTDN, no, 1, T_RAISE);   /* (ink centred) */
-    cv_rrect(108, 80, 90, 26, 6, T_THEME, T_SURF);    /* OCT+: YES (on the THEME fill: an INK keycap, THEME label) */
-    {
-        int32_t x = 108 + HALF_UP(90 - kh_ink(KC_OCTUP, yes));
-        GFX_HOOK_ALIGN(108, 80, 198, 106, AL_HV | AL_N(2), "dialog button YES");
-        x = cv_keycap(x, 80 + HALF_UP(26 - KC_H), KC_OCTUP, T_INK, T_THEME, T_THEME);
-        cv_text_on(x + KH_GAP, 80 + HALF_UP(26 - KC_H) - 1, &AF_S, yes, T_INK, T_THEME);
-    }
-    cv_blit(DLG_X, DLG_Y);
+    dlg_button(12, 92, 90, "OCT -", ui.confirm == CF_DICE_ALL ? "CANCEL" : "NO", 0);
+    dlg_button(110, 92, 90, "OCT +", "YES", 1);
+    cv_blit(14, 66);
+    dlg_crumb("NOTICE", "CONFIRM");
 }
 
 /* the stored STYLE (ui_style: the menu, a settings import, a restore) into gfx.c's copy: the tokens again, all redrawn */

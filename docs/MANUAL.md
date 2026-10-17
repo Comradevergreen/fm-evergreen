@@ -173,7 +173,13 @@ and heating up with its own audio (0.8.5: on a grid of six cells, as the mock-up
 [LENTE everywhere](#lente-everywhere-085)). The selected track is drawn bigger, a muted one goes dark, a track asleep
 (TRACKS 4) is drawn as muted. On the **MIXER**, asleep tracks are greyed and say OFF.
 
-**Dialogs** ask before anything destructive: **OCT− NO**, **OCT+ YES**.
+**Dialogs** ask before anything destructive: **OCT− NO**, **OCT+ YES**. (0.8.5, as the mock-up) They carry the
+tabs **NOTICE · DICE · NAME**: a question is a card under a violet rule with its two buttons (YES in the accent); a
+part's dice (EDIT, SEQ, LFO, FX + SELECT) shows **BEFORE** and **NOW** side by side (the sound's being then and now,
+the steps, the LFO's or the effects' values) over a strip **KEEP DICED …? · SELECT: DICE AGAIN · OCT− CANCEL ·
+OCT+ OK**; a message on a lens page shows in its panel too, as a toast (the header says it as well; not over HOME's
+beings); NAME has its cards CURSOR, CHAR, LEN and OCT+ SAVE / WRITE over the name, the keys' letters and the black
+keys' functions.
 
 ---
 

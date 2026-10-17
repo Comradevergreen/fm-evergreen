@@ -176,7 +176,13 @@ se hincha y se calienta con su propio audio (0.8.5: en una grilla de seis celdas
 entre ellas; ver [LENTE en todo](#lente-en-todo-085)). La pista seleccionada se dibuja más grande, una muteada se oscurece, una
 pista dormida (TRACKS 4) se dibuja como muteada. En el **MIXER**, las pistas dormidas aparecen en gris y dicen OFF.
 
-Los **diálogos** preguntan antes de cualquier cosa destructiva: **OCT− NO**, **OCT+ YES**.
+Los **diálogos** preguntan antes de cualquier cosa destructiva: **OCT− NO**, **OCT+ YES**. (0.8.5, como la maqueta)
+Llevan las pestañas **NOTICE · DICE · NAME**: una pregunta es una tarjeta bajo una regla violeta con sus dos botones
+(YES en el acento); el dado de una parte (EDIT, SEQ, LFO, FX + SELECT) muestra **BEFORE** y **NOW** lado a lado (el
+ser del sonido antes y ahora, los pasos, los valores del LFO o de los efectos) sobre una franja **KEEP DICED …? ·
+SELECT: DICE AGAIN · OCT− CANCEL · OCT+ OK**; un mensaje en una página con lente aparece también en su panel, como
+aviso (el encabezado también lo dice; no sobre los seres de HOME); NAME tiene sus tarjetas CURSOR, CHAR, LEN y OCT+
+SAVE / WRITE sobre el nombre, las letras de las teclas y las funciones de las teclas negras.
 
 ---
 
