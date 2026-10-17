@@ -36,14 +36,14 @@ static void graph_lib(void)
             cv_frame(x, y, 56, 66, T_THEME);
         fmt_int(b, (int32_t)i + 1);
         GFX_HOOK_ALIGN(0, y + 3, 0, y + 12, AL_V | AL_PASS, "library tile number");
-        cv_text_on(x + 4, y, &AF_S, b, cur ? T_THEME : T_DIM, bg);
+        cv_text_on(x + 4, y + 3, &AF_X, b, cur ? T_THEME : T_DIM, bg);
         if (cur)
             str_cpy(nm, graph_project_used(0) ? graph_project_name(0) : "", sizeof nm);
         else
             str_cpy(nm, lib.name[i], sizeof nm);
         if (!nm[0] && (cur ? graph_project_used(0) : (lib.mask[i] & 1u)))
             str_cpy(nm, "USED", sizeof nm);
-        cv_free_text(x + 4, y + 11, &AF_S, nm[0] ? nm : "--", nm[0] ? T_TEXT : T_DIM, bg, 50);
+        cv_clip_text(x + 4, y + 14, &AF_X, nm[0] ? nm : "--", nm[0] ? T_TEXT : T_DIM, bg, 50);
         for (j = 0; j < 4u; j++) {
             int32_t sx = x + 4 + (int32_t)(j % 2u) * 25, sy = y + 28 + (int32_t)(j / 2u) * 18;
             int used = cur ? graph_project_used(j) : (int)((lib.mask[i] >> j) & 1u);
@@ -51,7 +51,7 @@ static void graph_lib(void)
             char l[2] = {(char)('A' + j), 0};
             cv_rect(sx, sy, 23, 15, c);
             GFX_HOOK_ALIGN(sx, sy, sx + 23, sy + 15, AL_HV, "library section chip letter centred");
-            cv_text_in(sx, sy + CAP_IN(S, 15), 23, &AF_S, l, used ? T_INK : T_DIM, c);
+            cv_text_in(sx, sy + CAP_IN(X, 15), 23, &AF_X, l, used ? T_INK : T_DIM, c);
             if (cur && (int32_t)j + 1 == song.g[G_SLOT])
                 cv_frame(sx - 1, sy - 1, 25, 17, T_TEXT);
         }
@@ -75,7 +75,7 @@ static void graph_lz_tools(void)
             fmt_int(b + 4, (int32_t)ui.song_row + 1);
         }
         GFX_HOOK_ALIGN(0, y, 0, y + 21, AL_V, "tools row text centred up/down");
-        cv_text_r(230, y + CAP_IN(S, 21), &AF_S, c == 2u ? b : ON[c], sel ? T_MID : T_DIM, bg);
+        cv_text_r(230, y + CAP_IN(X, 21), &AF_X, c == 2u ? b : ON[c], sel ? T_MID : T_DIM, bg);
     }
 }
 /* PROJECT: the sections, the arrangement's chips, the song's strip (ar: ARRANGE, its rows picked) */
@@ -92,16 +92,16 @@ static void graph_proj(int ar)
         cv_rect(x, 2, 56, 49, c);
         GFX_HOOK_ALIGN(0, 8, 0, 19, AL_V | AL_PASS, "project section letter");
         cv_text_on(x + 6, 4, &AF_M, b, ink, c);
-        cv_free_text(x + 6, 22, &AF_S, !used ? "EMPTY" : nm[0] ? nm : "USED", ink, c, 47);
+        cv_free_text(x + 6, 25, &AF_X, !used ? "EMPTY" : nm[0] ? nm : "USED", ink, c, 47);
         if (live.cur == (int8_t)i && used)
-            cv_text_r(x + 52, 35, &AF_S, "NOW", ink, c);
+            cv_text_r(x + 52, 38, &AF_X, "NOW", ink, c);
         if (pick) {                                      /* (2 px, round it) */
             cv_frame(x - 2, 0, 60, 53, T_TEXT);
             cv_frame(x - 1, 1, 58, 51, T_TEXT);
         }
     }
     GFX_HOOK_ALIGN(0, 58, 0, 67, AL_V | AL_PASS, "project arrange title");
-    cv_text(6, 55, &AF_S, "ARRANGE", ar ? T_THEME : T_DIM);
+    cv_text(6, 58, &AF_X, "ARRANGE", ar ? T_THEME : T_DIM);
     for (i = 0; i < n && i < CHAIN_ROWS; i++) {
         const chain_row_t *r = &chain_config.row[i];
         int32_t x = 4 + (int32_t)(i % 8u) * 293 / 10, y = 72 + (int32_t)(i / 8u) * 22;
@@ -111,7 +111,7 @@ static void graph_proj(int ar)
         fmt_int(b + 1, r->bars);
         cv_rect(x, y, 27, 20, c);
         GFX_HOOK_ALIGN(x, y, x + 27, y + 20, AL_HV, "arrange chip centred");
-        cv_text_in(x, y + CAP_IN(S, 20), 27, &AF_S, b, used ? T_INK : T_DIM, c);
+        cv_text_in(x, y + CAP_IN(X, 20), 27, &AF_X, b, used ? T_INK : T_DIM, c);
         if (pick)
             cv_frame(x - 1, y - 1, 29, 22, T_TEXT);
         if (song_idx.scene[song_cur][i].on)              /* a scene: a dot */
@@ -141,7 +141,7 @@ static void graph_proj(int ar)
     else if (end >= 2u) { uint32_t k = str_len(b); b[k] = 'x'; fmt_int(b + k + 1u, (int32_t)end); }
     else str_cpy(b + str_len(b), "STOP", 6);
     GFX_HOOK_ALIGN(0, 128, 0, 137, AL_V | AL_PASS, "project song length");
-    cv_text_r(236, 125, &AF_S, n ? b : "NO ROWS: OCT+ ADDS ONE", ar && ui.song_row >= song_end_row() ? T_THEME : T_DIM,
+    cv_text_r(236, 128, &AF_X, n ? b : "NO ROWS: OCT+ ADDS ONE", ar && ui.song_row >= song_end_row() ? T_THEME : T_DIM,
               T_SURF);
 }
 /* a being small at (cx, cy) radius r (px): engine e's species, its outline in heat c; 24 vertices (bg_outline's form,
@@ -183,9 +183,9 @@ static void lz_track_being(void)
     being_lines(g, &f, 42 * 16, 40 * 16, (8 * 16) * (256 + en / 3) / 256, en, tm);   /* (its spikes inside 4 .. 82) */
     b[0] = 'T'; b[1] = (char)('1' + song.sel % NTRK); b[2] = 0;
     GFX_HOOK_ALIGN(4, 0, 82, 0, AL_H | AL_PASS, "sound track centred");
-    cv_text_in(4, 82, 78, &AF_S, b, T_THEME, T_SURF);
+    cv_text_in(4, 85, 78, &AF_X, b, T_THEME, T_SURF);
     sound_name(t, b);
-    cv_free_text(42 - HALF_UP(text_w(&AF_S, b) < 76 ? text_w(&AF_S, b) : 76), 96, &AF_S, b, T_TEXT, T_SURF, 76);
+    cv_free_text(42 - HALF_UP(text_w(&AF_X, b) < 76 ? text_w(&AF_X, b) : 76), 99, &AF_X, b, T_TEXT, T_SURF, 76);
 }
 static void graph_sound(void)
 {
@@ -200,11 +200,11 @@ static void graph_sound(void)
         if (used) {
             lz_mini_being(up_engine(k), x + 5, y + 7, 3, bg_col(150));
             up_name(k, b);
-            cv_free_text(x + 10, y + CAP_IN(S, 15), &AF_S, b, T_TEXT, bg, 24);
+            cv_clip_text(x + 10, y + CAP_IN(X, 15), &AF_X, b, T_TEXT, bg, 24);
         } else {
             up_slot_label(b, k);
             GFX_HOOK_ALIGN(x, y, x + 35, y + 15, AL_HV, "sound slot label centred");
-            cv_text_in(x, y + CAP_IN(S, 15), 35, &AF_S, b, T_DIM, bg);
+            cv_text_in(x, y + CAP_IN(X, 15), 35, &AF_X, b, T_DIM, bg);
         }
         if (sel)
             cv_frame(x, y, 35, 15, T_THEME);
@@ -215,7 +215,7 @@ static void graph_lz_presets(void)
     uint32_t total, cur = preset_pos(&total), e, k, i, first;
     lz_track_being();
     if (!total) {
-        cv_text_in(88, 60, 148, &AF_S, "NO FAVORITES", T_MID, T_SURF);
+        cv_text_in(88, 63, 148, &AF_X, "NO FAVORITES", T_MID, T_SURF);
         return;
     }
     first = cur < 4u ? 0u : cur - 4u;
@@ -238,13 +238,13 @@ static void graph_lz_presets(void)
         if (sel)
             cv_rect(88, y, 148, 14, bg);
         GFX_HOOK_ALIGN(0, y, 0, y + 14, AL_V, "sound preset row centred up/down");
-        cv_free_text(94, y + CAP_IN(S, 14), &AF_S, nm, sel ? T_TEXT : T_MID, bg, 84);
+        cv_free_text(94, y + CAP_IN(X, 14), &AF_X, nm, sel ? T_TEXT : T_MID, bg, 84);
         if (favorite_has(e, k)) {
             GFX_HOOK_ALIGN(0, y, 0, y + 14, AL_V, "sound preset star centred up/down");
             cv_icon_in(180, y, 0, 14, 12, ICON_X_STAR, T_ACCENT, bg);
         }
         GFX_HOOK_ALIGN(0, y, 0, y + 14, AL_V, "sound preset row centred up/down");
-        cv_text_r(232, y + CAP_IN(S, 14), &AF_S, eng_abbr(en), T_DIM, bg);
+        cv_text_r(232, y + CAP_IN(X, 14), &AF_X, eng_abbr(en), T_DIM, bg);
     }
 }
 /* the lens's panel for the SAVE page shown */

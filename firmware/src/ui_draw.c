@@ -91,6 +91,7 @@ static void draw_battery(int32_t bx)
                                                          * (0.8.5) a lens page's card (38 tall): rows 14..30, the figures
                                                          * 17..27, the gauge at 33 */
 #define CARD_VY (ROLL_Y - 1)                            /* the value's line (M) */
+#define CARD_XY 4                                       /* (0.8.5) a lens card's label (AF_X): its line, capitals rows 5..11 */
 #define CARD_BG (ux.style ? T_SURF : T_RAISE)           /* (0.8.5, the mock-up) a card: RAISE (LINE: no fill) */
 static const uint8_t ROLL_EASE[17] = {0, 45, 84, 118, 147, 172, 193, 210, 223, 234, 242, 247, 251, 253, 254, 255, 255};
 
@@ -180,6 +181,7 @@ static int32_t roll_text(uint32_t k, int32_t x, int32_t y, const char *s, uint16
  * being changed (a SELECT turn: bpm_t) or in the GLO layer the BPM stays and the message goes right of it (over the
  * right slot). Every element's ink centred on row 11 (HEAD_MID; ui_test.c test_head_centres): S's capitals rows 7..15 */
 #define HEAD_SY (HEAD_MID - AF_S_CAP_H / 2 - AF_S_CAP_Y)
+#define HEAD_XY (HEAD_MID - AF_X_CAP_H / 2 - AF_X_CAP_Y)   /* (0.8.5) the centre's words in AF_X: capitals rows 8..14 */
 #define HEAD_MY CAP_IN(M, H_HEAD)                      /* (the menu's and the calibration's own headers: M) */
 #define HEAD_TR_X 6                                    /* the play state's ink: 6 .. 12 */
 #define HEAD_BPM_X 20                                  /* the BPM's pen */
@@ -357,11 +359,11 @@ static void draw_head(void)
     if (!msg && (chain.running || song.octave))
         r = head_group() - 6;
     if (!msg) {                                        /* the centre's words on x 120, between the BPM and the right */
-        int32_t w = text_w(&AF_S, ttl), x = 120 - HALF_UP(w), l = lx + 8;
+        int32_t w = text_w(&AF_X, ttl), x = 120 - HALF_UP(w), l = lx + 8;
         if (x + w > r) x = r - w;
         if (x < l) x = l;
         GFX_HOOK_ALIGN(0, 0, 0, HEAD_RULE_Y, AL_V, "header text on its middle");
-        cv_free_text(x, HEAD_SY, &AF_S, ttl, tc, T_BG, r - x);
+        cv_free_text(x, HEAD_XY, &AF_X, ttl, tc, T_BG, r - x);   /* (0.8.5: AF_X, the mock-up's small mono) */
     } else if (centre) {                               /* right of the BPM, over the right slot */
         int32_t x = lx + 9 > 142 ? lx + 9 : 142;
         head_msg(x, 236 - x);
@@ -619,9 +621,10 @@ static void draw_column(uint32_t c, const char *label, const char *val, const ch
             /* the label (S, MID) at the top left, its capitals rows 4..12; MENU > LARGE on a list / graph page, a lens
              * page or a layer (LK_LABEL): in M where it fits the card (capitals rows 4..14), else in S. A parameter
              * MOTION drives, an armed action: THEME */
-            const aafont_t *lf = kind == LK_LABEL && 5 + text_w(&AF_M, label) <= COL_W - 2 ? &AF_M : &AF_S;
-            int32_t ly = lf == &AF_M ? 0 : 1;
-            int32_t cy = ly + (lf == &AF_M ? AF_M_CAP_Y : AF_S_CAP_Y), chh = lf == &AF_M ? AF_M_CAP_H : AF_S_CAP_H;
+            const aafont_t *lf = kind == LK_LABEL && 5 + text_w(&AF_M, label) <= COL_W - 2 ? &AF_M : lz_on() ? &AF_X : &AF_S;
+            int32_t ly = lf == &AF_M ? 0 : lf == &AF_X ? CARD_XY : 1;   /* (0.8.5 a lens card: AF_X, capitals rows 5..11) */
+            int32_t cy = ly + (lf == &AF_M ? AF_M_CAP_Y : lf == &AF_X ? AF_X_CAP_Y : AF_S_CAP_Y);
+            int32_t chh = lf == &AF_M ? AF_M_CAP_H : lf == &AF_X ? AF_X_CAP_H : AF_S_CAP_H;
             if (hot && T_ACCENT == T_MID) {             /* MONO: no colour tells the hot knob: its label inverted, */
                 int32_t b[4], w;                        /* the chip 2 px round its ink */
                 text_ink(lf, label, b);
@@ -721,7 +724,7 @@ static void draw_tabs(void)
         uint16_t bg = l == lv ? T_THEME : T_RAISE;
         cv_rect(LT_X(l), 0, LT_W, LT_H, bg);
         GFX_HOOK_ALIGN(LT_X(l), 0, LT_X(l) + LT_W, LT_H, AL_HV, "LENTE tab name centred in its tab");
-        cv_text_in(LT_X(l), CAP_IN(S, LT_H), LT_W, &AF_S, lz_level_name(l), l == lv ? T_INK : T_MID, bg);
+        cv_text_in(LT_X(l), CAP_IN(X, LT_H), LT_W, &AF_X, lz_level_name(l), l == lv ? T_INK : T_MID, bg);
     }
     cv_blit(0, LT_Y);
 }
@@ -755,28 +758,33 @@ static void foot_crumbs(char *b, uint32_t n)            /* b holds n (48) */
     str_cpy(b + str_len(b), " \xB7 ", 4);
     str_cpy(b + str_len(b), ti, sizeof ti);
 }
+#define CRUMB_Y 4                                       /* (0.8.5) a lens footer's breadcrumb (AF_X): capitals rows 5..11 */
 static void draw_crumbs(int32_t y, uint16_t fg, uint16_t last)
 {
     char b[48];
     uint32_t i, k = 0;
     int32_t x;
+    const aafont_t *f = lz_on() ? &AF_X : &AF_S;        /* (0.8.5: a lens page, the mock-up's small mono) */
     foot_crumbs(b, sizeof b);
     for (i = 0; b[i]; i++)                              /* (the last part: after the last dot) */
         if ((uint8_t)b[i] == 0xB7u)
             k = i + 2u;
     if (k > str_len(b))
         k = 0;
-    GFX_HOOK_ALIGN(0, y + AF_S_CAP_Y, 0, y + AF_S_CAP_Y + AF_S_CAP_H, AL_V, "footer breadcrumb on its line");
+    if (f == &AF_X)
+        GFX_HOOK_ALIGN(0, y + AF_X_CAP_Y, 0, y + AF_X_CAP_Y + AF_X_CAP_H, AL_V, "footer breadcrumb on its line");
+    else
+        GFX_HOOK_ALIGN(0, y + AF_S_CAP_Y, 0, y + AF_S_CAP_Y + AF_S_CAP_H, AL_V, "footer breadcrumb on its line");
     if (last == fg || !k) {
-        cv_free_text(6, y, &AF_S, b, fg, T_BG, 228);
+        cv_free_text(6, y, f, b, fg, T_BG, 228);
         return;
     }
     {
         char c = b[k];
         b[k] = 0;
-        x = cv_text_on(6, y, &AF_S, b, fg, T_BG);
+        x = cv_text_on(6, y, f, b, fg, T_BG);
         b[k] = c;
-        cv_free_text(x, y, &AF_S, b + k, last, T_BG, 234 - x);
+        cv_free_text(x, y, f, b + k, last, T_BG, 234 - x);
     }
 }
 static void draw_foot(void)
@@ -785,7 +793,7 @@ static void draw_foot(void)
     const track_t *t = TSEL;
     uint32_t sig;
     int lz = (int)lz_on(), accw = grid_on() && black_held(GK_ACC);
-    int32_t ry = lz ? 0 : 19;                            /* the breadcrumb's line (a lens page: the footer is it) */
+    int32_t ry = lz ? CRUMB_Y : 19;                      /* the breadcrumb's line (a lens page: the footer is it) */
     foot_crumbs(s, sizeof s);
     if (ui.home)
         str_cpy(ti, "HOME", sizeof ti);

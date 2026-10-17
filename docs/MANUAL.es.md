@@ -164,6 +164,10 @@ Desde la 0.8.5 todas las páginas llevan la piel del diseño que aprobó el due�
   encabezado tres **pestañas de nivel** (la del nivel en el que estás rellena de violeta), las tarjetas debajo, un
   panel más alto, y el pie es solo la miga de pan, **LENTE · BAR · STEP** (la lente, el nivel, el juego).
 
+- **Las letras chicas** (desde la 0.8.5): los nombres de las tarjetas, las pestañas de nivel, la miga de pan, las
+  palabras del medio del encabezado y los rótulos y fichas chicas de los paneles van en una letra de píxeles de 5 x 7,
+  nítida, las mayúsculas mono chicas de la maqueta; los valores siguen en la letra redondeada más grande.
+
 Los **colores** funcionan como una cámara térmica: frío (cian, azul) es poco, caliente (naranja, amarillo, blanco) es
 mucho. Violeta es lo seleccionado, naranja lo activo.
 

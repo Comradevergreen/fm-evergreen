@@ -160,6 +160,10 @@ Since 0.8.5 every page wears the skin of the design the owner approved (the HTML
   **level tabs** (the one you are on filled violet), the cards under them, a taller panel, and the footer is the
   breadcrumb alone, **LENTE · BAR · STEP** (the lens, the level, the set).
 
+- **The small letters** (since 0.8.5): the cards' names, the level tabs, the breadcrumb, the header's middle words and
+  the panels' small captions and chips are set in a crisp 5 x 7 pixel face, the mock-up's small mono capitals; values
+  stay in the larger rounded face.
+
 **Colours** work like a thermal camera: cold (cyan, blue) is little, hot (orange, yellow, white) is a lot. Violet is
 what's selected, orange what's active.
 

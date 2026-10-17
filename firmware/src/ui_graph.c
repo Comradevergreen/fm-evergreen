@@ -446,7 +446,7 @@ static void bar_cell(const track_t *t, uint32_t b, int32_t x, int32_t y, int32_t
     s[1] = 0;
     nc = song.playing && seq_src(t, t->seq_idx) / 16u == b ? T_ACCENT : sel ? T_THEME : T_DIM;
     GFX_HOOK_ALIGN(0, y, 0, y + (h > 20 ? 15 : h), AL_V | AL_PASS, "LENTE bar number at its cell's top");
-    cv_text_on(x + 3, y + (h > 20 ? 0 : CAP_IN(S, h)), &AF_S, s, nc, bg);
+    cv_text_on(x + 3, y + (h > 20 ? 3 : CAP_IN(X, h)), &AF_X, s, nc, bg);
 }
 /* the bars side by side from x0 (4 cells over w, 2 px apart), y .. y + h */
 static void bar_cells(const track_t *t, int32_t x0, int32_t w, int32_t y, int32_t h, uint16_t c)
@@ -1193,8 +1193,8 @@ static void graph_bars(const track_t *t, uint16_t c)
     uint32_t ph = song.playing ? seq_src(t, t->seq_idx) : 0xFFFFu, ti = song.sel % NTRK, mask = scale_mask(t);
     int32_t lo, hi, rows, rh = 2;
     bar_cells(t, PR_RX, PR_RW, LB_Y, LB_H, c);
-    GFX_HOOK_ALIGN(0, LP_TY + AF_S_CAP_Y, 0, LP_TY + AF_S_CAP_Y + AF_S_CAP_H, AL_V | AL_PASS, "PLAYHEADS title");
-    cv_text(6, LP_TY, &AF_S, "PLAYHEADS", T_DIM);
+    GFX_HOOK_ALIGN(0, LP_TY + 3 + AF_X_CAP_Y, 0, LP_TY + 3 + AF_X_CAP_Y + AF_X_CAP_H, AL_V | AL_PASS, "PLAYHEADS title");
+    cv_text(6, LP_TY + 3, &AF_X, "PLAYHEADS", T_DIM);
     pat_range(t, &lo, &hi);
     rows = LP_H / rh;
     if (hi - lo + 1 < rows)
@@ -1263,7 +1263,7 @@ static void bs_chip(uint32_t k, const char *s, int on)
     uint16_t bg = on ? T_TINT : T_RAISE, fg = on ? T_TEXT : T_DIM == T_RAISE ? T_MID : T_DIM;
     cv_rect(BS_CX, y, BS_CW, 14, bg);
     GFX_HOOK_ALIGN(0, y, 0, y + 14, AL_V, "big step chip text centred up/down");
-    cv_text_on(BS_CX + 5, y + CAP_IN(S, 14), &AF_S, s, fg, bg);
+    cv_text_on(BS_CX + 5, y + CAP_IN(X, 14), &AF_X, s, fg, bg);
 }
 static void graph_bigstep(const track_t *t, const page_t *pg, uint16_t c)
 {
@@ -1277,13 +1277,13 @@ static void graph_bigstep(const track_t *t, const page_t *pg, uint16_t c)
     cv_rect(PR_RX, 0, PR_RW, LZ_GRAPH_H, T_BG);
     str_cpy(b, "STEP ", sizeof b);
     fmt_int(b + 5, (int32_t)ui.cursor + 1);
-    GFX_HOOK_ALIGN(0, BS_TY + AF_S_CAP_Y, 0, BS_TY + AF_S_CAP_Y + AF_S_CAP_H, AL_V | AL_PASS, "big step title");
-    cv_text_on(10, BS_TY, &AF_S, b, T_THEME, T_BG);
+    GFX_HOOK_ALIGN(0, BS_TY + 3 + AF_X_CAP_Y, 0, BS_TY + 3 + AF_X_CAP_Y + AF_X_CAP_H, AL_V | AL_PASS, "big step title");
+    cv_text_on(10, BS_TY + 3, &AF_X, b, T_THEME, T_BG);
     nl = !dr && st->time == ST_NOTE && st->n ? note_len(t, ui.cursor % NSTEP, len) : 1u;   /* (0.8.4) a NOTE's length:
                                                          * LEN 3 (BAR > STEP's KNOB 3 sets it) */
     str_cpy(b, nl > 1u ? "LEN " : TIME_N[st->time % 3u], sizeof b);
     if (nl > 1u) fmt_int(b + 4, (int32_t)nl);
-    cv_text_r(230, BS_TY, &AF_S, b, nl > 1u ? T_TEXT : T_MID, T_BG);
+    cv_text_r(230, BS_TY + 3, &AF_X, b, nl > 1u ? T_TEXT : T_MID, T_BG);
     if (dr) {                                        /* a kit: the lanes it hits (their accents hot), two columns */
         uint32_t k = 0, l;
         for (l = 0; l < NLANE; l++) {
@@ -1292,11 +1292,11 @@ static void graph_bigstep(const track_t *t, const page_t *pg, uint16_t c)
                 continue;
             cv_rect(x, y, 10, 10, lz_note(st, (step_accents(st) >> l) & 1u, c));
             GFX_HOOK_ALIGN(0, y, 0, y + 10, AL_V, "big step lane on its hit");
-            cv_text_on(x + 15, y + CAP_IN(S, 10), &AF_S, drum_lane_abbr(t, l), T_TEXT, T_BG);
+            cv_text_on(x + 15, y + CAP_IN(X, 10), &AF_X, drum_lane_abbr(t, l), T_TEXT, T_BG);
             k++;
         }
         if (!k)
-            cv_text_in(4, 66, 120, &AF_S, st->time == ST_NOTE ? "NO HIT" : TIME_N[st->time % 3u], T_MID, T_BG);
+            cv_text_in(4, 69, 120, &AF_X, st->time == ST_NOTE ? "NO HIT" : TIME_N[st->time % 3u], T_MID, T_BG);
     } else if ((tie && src < NSTEP) || (st->time == ST_NOTE && st->n)) {   /* the notes where their pitch puts them */
         uint32_t n = sn->n < 4u ? sn->n : 4u, f = note && !tie && ui.pr_focus <= n ? ui.pr_focus : 0u, j;
         uint8_t ord[4] = {0, 1, 2, 3};
@@ -1320,10 +1320,10 @@ static void graph_bigstep(const track_t *t, const page_t *pg, uint16_t c)
             pr_split(x, y, 70, BS_NH, col, tie ? 1u : step_ratchet(sn));
             note_name(b, sn->note[ord[i]]);
             GFX_HOOK_ALIGN(0, y, 0, y + BS_NH, AL_V, "big step note name on its bar");
-            cv_text_on(90, y + CAP_IN(S, BS_NH), &AF_S, b, tie ? T_MID : T_TEXT, T_BG);
+            cv_text_on(90, y + CAP_IN(X, BS_NH), &AF_X, b, tie ? T_MID : T_TEXT, T_BG);
         }
     } else {
-        cv_text_in(4, 66, 120, &AF_S, st->time == ST_NOTE ? "EMPTY" : TIME_N[st->time % 3u], T_MID, T_BG);
+        cv_text_in(4, 69, 120, &AF_X, st->time == ST_NOTE ? "EMPTY" : TIME_N[st->time % 3u], T_MID, T_BG);
     }
     acc = dr ? step_accents(st) != 0u : (st->flags & SF_ACCENT) != 0u;
     bs_chip(0, "ACC", acc);
@@ -1387,6 +1387,7 @@ static void graph_fugue(const track_t *t)
  * track and its engine; on HOME (a track picked there) the track's engine big and "HOME" small. Then the header comes
  * back (ui.force). (0.6.64) Over the footer instead, which says the same: the header (load, battery) stays */
 static void draw_crumbs(int32_t y, uint16_t fg, uint16_t last);   /* (ui_draw.c) */
+#define CRUMB_Y 4                                    /* (ui_draw.c: a lens footer's breadcrumb line) */
 static void page_flash_draw(void)
 {
     static uint32_t drawn;
@@ -1416,7 +1417,7 @@ static void page_flash_draw(void)
     }
     if (lz_on()) {                                   /* (0.8.5) a lens page: its breadcrumb lit (the tabs say the level) */
         cv_begin(240, foot_h(), T_BG);
-        draw_crumbs(0, dim ? T_MID : T_TEXT, dim ? T_MID : T_TEXT);
+        draw_crumbs(CRUMB_Y, dim ? T_MID : T_TEXT, dim ? T_MID : T_TEXT);
         cv_blit(0, foot_y());
         return;
     }

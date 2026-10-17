@@ -16,10 +16,10 @@
 #define FXG_H(v) heat_col((int32_t)(v))                 /* (0..256) */
 static void fxg_label(int32_t x, int32_t y, const char *s, uint16_t c, int right)
 {
-    if (right)
-        cv_text_r(x, y, &AF_S, s, c, cv_bg);
+    if (right)                                          /* (AF_X 3 rows down: S's capitals' middle) */
+        cv_text_r(x, y + 3, &AF_X, s, c, cv_bg);
     else
-        cv_text(x, y, &AF_S, s, c);
+        cv_text(x, y + 3, &AF_X, s, c);
 }
 static void fxg_delay(int32_t x, int32_t y, int32_t w, int32_t h)
 {
@@ -114,7 +114,7 @@ static void fxg_slicer(int32_t x, int32_t y, int32_t w, int32_t h)
         str_cpy(b + str_len(b), " \xB7 ", 4);
         str_cpy(b + str_len(b), r, 8);
     }
-    lw = text_w(&AF_S, b);
+    lw = text_w(&AF_X, b);
     fxg_label(x, y, b, T_MID, 0);
     if (w > 120) {                                   /* the tracks in it, FX */
         uint32_t n = 0;
@@ -124,8 +124,8 @@ static void fxg_slicer(int32_t x, int32_t y, int32_t w, int32_t h)
         if (!n) str_cpy(b, "NONE ", sizeof b);
         if (song.g[G_SLFX]) str_cpy(b + str_len(b), "+FX", 4);
         {   /* (at the right, clear of the mode's words: ellipsised when it must) */
-            int32_t rw = text_w(&AF_S, b), l = x + lw + 14, rx = x + w - rw < l ? l : x + w - rw;
-            cv_free_text(rx, y, &AF_S, b, T_DIM, cv_bg, x + w - rx);
+            int32_t rw = text_w(&AF_X, b), l = x + lw + 14, rx = x + w - rw < l ? l : x + w - rw;
+            cv_free_text(rx, y + 3, &AF_X, b, T_DIM, cv_bg, x + w - rx);
         }
     }
 }
@@ -199,7 +199,7 @@ static void fxg_sends(const track_t *t, int32_t x, int32_t y, int32_t w, int32_t
         if (fh > 0)
             cv_rect(bx, y + h - 10 - fh, bw, fh, FXG_H(51 + v * 205 / 127));
         GFX_HOOK_ALIGN(bx, 0, bx + bw, 0, AL_H, "FX send name centred under its bar");
-        cv_text_in(bx, y + h - 9, bw, &AF_S, N[i], T_DIM, T_SURF);
+        cv_text_in(bx, y + h - 6, bw, &AF_X, N[i], T_DIM, T_SURF);
     }
 }
 static void fxg_dist(const track_t *t, int32_t x, int32_t y, int32_t w, int32_t h)
@@ -227,8 +227,8 @@ static void fxg_pan(const track_t *t, int32_t x, int32_t y, int32_t w, int32_t h
     char b[24];
     const char *u;
     cv_rect(cx, y + 10, 1, h - 10, T_LINE);
-    fxg_label(x, mid - 4 - AF_S_CAP_Y, "L", T_DIM, 0);
-    fxg_label(x + w, mid - 4 - AF_S_CAP_Y, "R", T_DIM, 1);
+    fxg_label(x, mid - 6 - AF_X_CAP_Y, "L", T_DIM, 0);
+    fxg_label(x + w, mid - 6 - AF_X_CAP_Y, "R", T_DIM, 1);
     if (sw > 0)
         cv_rect(cx - sw, mid, 2 * sw + 1, 1, T_MID);
     cv_rrect(cx - 4, mid - 4, 9, 9, 4, FXG_H(205), T_SURF);
@@ -267,7 +267,7 @@ static void fx_dots(uint32_t n, uint32_t k, const char *a, const char *b)
     str_cpy(s + str_len(s), " \xB7 ", 4);
     str_cpy(s + str_len(s), b, 16);
     GFX_HOOK_ALIGN(0, 3, 0, 12, AL_V | AL_PASS, "FX lens set name");
-    cv_text_r(234, 0, &AF_S, s, T_DIM, T_SURF);
+    cv_text_r(234, 3, &AF_X, s, T_DIM, T_SURF);
 }
 static void graph_fx_lz(const track_t *t, const page_t *pg)
 {
@@ -291,11 +291,11 @@ static void graph_fx_lz(const track_t *t, const page_t *pg)
                 cv_frame(x, y, 76, 68, T_THEME);
             cv_bg = bg;
             GFX_HOOK_ALIGN(0, y + 3, 0, y + 12, AL_V | AL_PASS, "FX module name");
-            cv_text_on(x + 4, y, &AF_S, FX_MOD[m], sel ? T_THEME : T_MID, bg);
+            cv_text_on(x + 4, y + 3, &AF_X, FX_MOD[m], sel ? T_THEME : T_MID, bg);
             if (ok)
                 fxg_mod(m, x + 4, y + 14, 68, 50);
             else
-                cv_text_on(x + 4, y + 30, &AF_S, "ECO", T_DIM, bg);
+                cv_text_on(x + 4, y + 33, &AF_X, "ECO", T_DIM, bg);
             cv_bg = T_SURF;
         }
     } else {

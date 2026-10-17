@@ -538,6 +538,12 @@ JIANT's modifications are distributed under the same license.
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
 
 ### v0.8.5
+- **A small crisp mono face, as the mock-up's labels.** The cards' names, the level tabs, the breadcrumb, the header's
+  middle words and the lens panels' captions and chips (SEQ's STEP chips and notes, SAVE's tiles and slots, FX's tiles
+  and captions) are set in a new 5 x 7 pixel font on a 6 px pitch (capitals 7 px, was 9 in the smallest antialiased
+  face), one bit a pixel, capitals, lower case (the units "ms", "Hz" as the mock-up writes them), figures and
+  punctuation (tools/gen_px_font.py: 94 glyphs, 1127 B of flash); the values keep their face. Names that did not fit now do ("DEEP", "WOBB" in the slots, cut without an ellipsis as the
+  mock-up cuts them).
 - **FX is a lens, as the approved mock-up** (FX "LENTE"): **TRACK · BUSES · EFFECT**, SELECT zooms. TRACK: an FX tap
   goes round SENDS · DIST · AUTO PAN, each with its picture (the sends as bars, DIST's curve, AUTO PAN's swing) and
   DIST's curve small under it. BUSES (a new page): the six modules DELAY REVERB CHORUS SLICER MASTER PUNCH as tiles
