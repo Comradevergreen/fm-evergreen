@@ -96,7 +96,7 @@ static struct {
 /* (0.6.44) FX LATCH: FX held open and let go locks its layer open, as the macros latch: its keys, knobs and map stay
  * until FX is pressed again (or another layer is held over it, for as long as it is) */
 static uint8_t fx_lock;
-static int layer_allowed(void) { return !ui.menu && !ui.confirm && !ui.uboot && !name_on(); }
+static int layer_allowed(void) { return !ui.menu && !dlg_on() && !ui.uboot && !name_on(); }   /* (GEN: a page) */
 static uint32_t ly_bit(uint32_t l) { return 1u << panel.btn[LAYERS[l].btn]; }
 /* SEQ's layer is there on the SEQ pages only (elsewhere SEQ held is a tap: ui_input) */
 static int tools_page(void)
@@ -402,6 +402,8 @@ static void rec_key(uint32_t p)
 #define SK_MODE 12u
 #define SK_REC 13u
 #define SK_PAGE 15u
+#define SK_NAME 11u                                     /* (0.9.2) C5: NAME, the slot's rename (EDIT's until 0.9.1) */
+#define TL_STEP 15u                                     /* (0.9.2) SEQ's G5: CLR STEP (ui_input.c seq_clr_step) */
 static void song_key(uint32_t p)
 {
     uint32_t k;
@@ -425,6 +427,11 @@ static void song_key(uint32_t p)
         ui_message(live.mode ? "PLAY: THE SONG" : "PLAY: THE LOOP");
     } else if (p == SK_REC) {
         song_rec_toggle();
+    } else if (p == SK_NAME) {                          /* (0.9.2) SAVE + C5: USER's slot, PROJECT's project or section */
+        if (!ui.home && (cur_page()->graph == GR_USER || cur_page()->graph == GR_SLOTS))
+            name_rename();
+        else
+            ui_message("NAME: ON USER OR PROJECT");
     } else if (p == SK_PAGE) {
         for (k = 0; k < NPAGES && PAGES[k].graph != GR_SONG; k++)
             ;
@@ -571,7 +578,9 @@ static void layer_key(uint32_t l, uint32_t k)
         if (!key_black(k) && p < 1u + RL_N)
             rec_key(p);
     } else if (l == LAYER_SEQ) {
-        if (!key_black(k))
+        if (!key_black(k) && p == TL_STEP)
+            seq_clr_step();                             /* (0.9.2) G5: CLR STEP (AUTO LIST: the record) */
+        else if (!key_black(k))
             tools_key(p);
         else if (p < NLANE && drum_track(TSEL))
             ui.lane = (uint8_t)p;                       /* (black keys 1..8: the lane, as on the grid) */
@@ -619,7 +628,8 @@ static void layer_knob(uint32_t k, int32_t s)
         if (k < RL_N)
             rec_set(k, (uint32_t)clamp((int32_t)rp_get(RL_F[k]) + s, 0, 2));
     } else if (l) {                                     /* the page's knobs, wherever the page is */
-        uint8_t h = ui.home, pg = ui.page;
+        uint8_t h = ui.home, pg = ui.page, nm[sizeof ui.nmem];
+        memcpy(nm, ui.nmem, sizeof nm);                 /* (the sections' memories: not this borrowed page's) */
         ui.home = 0;
         ui.page = (uint8_t)page_first(LAYERS[l].fam);
         page_over = ly_page(l);
@@ -627,6 +637,7 @@ static void layer_knob(uint32_t k, int32_t s)
         page_over = 0;
         ui.home = h;
         ui.page = pg;
+        memcpy(ui.nmem, nm, sizeof nm);
     }
 }
 
@@ -868,6 +879,10 @@ static uint32_t ly_keyname(uint32_t l, int blk, uint32_t p, char *nm)
             }
             return LS_OFF;
         }
+        if (p == TL_STEP) {                             /* (0.9.2) G5 */
+            str_cpy(nm, cur_page()->graph == GR_EVENTS ? "DEL REC" : "CLR STEP", 12);
+            return busy;
+        }
         if (!tl_cell(TSEL, p))
             return LS_OFF;
         str_cpy(nm, TL_NAME[p], 12);
@@ -898,7 +913,10 @@ static uint32_t ly_keyname(uint32_t l, int blk, uint32_t p, char *nm)
             nm[6] = (char)('A' + p - SK_STORE);
             return (live.dirty >> (p - SK_STORE)) & 1u ? LS_WAIT : LS_OFF;
         }
-        str_cpy(nm, p == SK_MODE ? (live.mode ? "SONG" : "LOOP") : p == SK_REC ? "SONG REC" : p == SK_PAGE ? "ARRANGE" : "", 12);
+        str_cpy(nm, p == SK_MODE ? (live.mode ? "SONG" : "LOOP") : p == SK_REC ? "SONG REC" : p == SK_PAGE ? "ARRANGE" :
+                    p == SK_NAME ? "NAME" : "", 12);
+        if (p == SK_NAME)
+            return !ui.home && (cur_page()->graph == GR_USER || cur_page()->graph == GR_SLOTS) ? LS_OFF : LS_DIM;
         return p == SK_MODE && live.mode ? LS_SEL : p == SK_REC ? (live.srec == 2u ? LS_HELD : live.srec ? LS_WAIT : LS_OFF) : LS_OFF;
     }
     if (l == LAYER_MACRO && !blk && p < 2u) {            /* F3 DICE, G3 CLEAR */
@@ -991,7 +1009,8 @@ static void layer_cards(uint32_t l)
                 draw_column(c, "", "", "", T_THEME, -1, ICON_NONE);
         }
     } else {                                            /* the page's four (SCL: LY_SCL) */
-        uint8_t h = ui.home, pg = ui.page;
+        uint8_t h = ui.home, pg = ui.page, nm[sizeof ui.nmem];
+        memcpy(nm, ui.nmem, sizeof nm);
         ui.home = 0;
         ui.page = (uint8_t)page_first(LAYERS[l].fam);
         page_over = ly_page(l);
@@ -999,6 +1018,7 @@ static void layer_cards(uint32_t l)
         page_over = 0;
         ui.home = h;
         ui.page = pg;
+        memcpy(ui.nmem, nm, sizeof nm);
     }
 }
 

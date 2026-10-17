@@ -35,9 +35,8 @@ static struct {
     uint8_t complex, swing, human;                      /* 0..100 (swing: GA_AUTO the genre's) */
     uint8_t page, hot;                                  /* the GEN screen's page, its last knob */
     uint32_t sig;                                       /* the settings of the last piece made (OCT+ again: a new seed) */
-    uint32_t open_ms;                                   /* when the screen opened (SELECT still turning: no page) */
     char last[20];                                      /* the last piece: "HOUSE 0421" */
-} gp = {GEN_EXPLORE, 1, 50, 1, {GA_AUTO, GA_AUTO, GA_AUTO, GA_AUTO, GA_AUTO}, 50, GA_AUTO, 30, 0, 0, 0, 0, ""};
+} gp = {GEN_EXPLORE, 1, 50, 1, {GA_AUTO, GA_AUTO, GA_AUTO, GA_AUTO, GA_AUTO}, 50, GA_AUTO, 30, 0, 0, 0, ""};
 
 /* the generator's own random numbers: a stream a part, from the seed */
 static uint32_t gq = 1;
@@ -2252,7 +2251,6 @@ static const char *const GEN_FORM[3] = {"LOOP", "PARTS", "SONG"};
 static uint8_t gen_fresh;                               /* (0.6.96) the screen's first frame: the body cleared once */
 static void gen_open(void)
 {
-    gp.open_ms = fm1_ms | 1u;
     gp.hot = 0xFF;
     gen_fresh = 1;
     gp.genre = GEN_EXPLORE;                             /* (0.6.93) opens on RANDOM: a genre is this visit's choice;
@@ -2288,17 +2286,11 @@ static void gen_knob(uint32_t k, int32_t s)
     ui.force = 1;
 }
 static uint32_t gen_page(void) { return gp.page % 3u; }
-/* (0.8.5) LENTE: SELECT on GEN, the HOME lens's last level: left (after the turn that opened it) back to BEING (1) */
-static int gen_zoom(int32_t s)
+static void gen_page_put(uint32_t p)                     /* (0.9.2) GEN 1..3: HOME's pages (ui_lens.c nav_go) */
 {
-    if (gp.open_ms && fm1_ms - gp.open_ms < 400u) { gp.open_ms = fm1_ms | 1u; return 0; }   /* (the turn that opened it) */
-    gp.open_ms = 0;
-    return s < 0;
-}
-static void gen_next(void)                              /* a HOME tap: the next page, round */
-{
-    gp.page = (uint8_t)((gp.page + 1u) % 3u);
-    gp.hot = 0xFF;
+    if (gp.page != p % 3u)
+        gp.hot = 0xFF;
+    gp.page = (uint8_t)(p % 3u);
     ui.force = 1;
 }
 static void gen_value(uint32_t p, uint32_t k, char *b)

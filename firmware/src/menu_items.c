@@ -38,7 +38,6 @@ static const uint8_t MI_TAB[MI_COUNT] = {
                                                                              * 0.6.30), CALIBRATION, INIT SYSTEM (0.6.58) */
     MTAB_SYSTEM,                                                            /* ABOUT */
 };
-typedef char mtab_fits_ui[sizeof ui.menu_row >= MTAB_COUNT ? 1 : -1];   /* (ui.c: the row last picked per tab) */
 static uint32_t mtab_first(uint32_t t)                 /* a tab's first row */
 {
     uint32_t i = 0;

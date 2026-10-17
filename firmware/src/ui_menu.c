@@ -181,14 +181,6 @@ static int32_t menu_scroll_max(void)
 static int menu_large(void) { return (ui_prefs & PREF_LARGE) != 0u; }
 static uint32_t menu_tab(void) { return MI_TAB[ui.menu_sel % MI_COUNT]; }
 static uint32_t menu_set(void) { return (ui.menu_sel - mtab_first(menu_tab())) / 4u; }   /* ROWS 1-4: 0, 5-6: 1 */
-static const char *menu_crumb_set(uint32_t *k, uint32_t *n)   /* the breadcrumb's set (ui.c lz_set) */
-{
-    if (ui.mlv != 1u)
-        return ui.mlv ? "ROW" : "TABS";
-    *k = menu_set();
-    *n = (mtab_rows(menu_tab()) + 3u) / 4u;
-    return *k ? mtab_rows(menu_tab()) > 6u ? "ROWS 5-7" : "ROWS 5-6" : "ROWS 1-4";   /* (0.8.9: DISPLAY's seven) */
-}
 static void menu_val(uint32_t row, char *b)          /* the row's value as it reads ("0.4 s"; OCT+ rows: "OPEN") */
 {
     str_cpy(b, row >= MI_VALUES ? "OPEN" : row == MI_HOLD ? HOLD_N[settings_hold % 4u] : menu_vname(row, menu_get(row)), 16);
@@ -256,7 +248,7 @@ static void menu_panel(void)
     }
     if (ui.mlv == 1u) {                                /* TAB: its rows */
         cv_text(10, 6 - AF_X_CAP_Y, &AF_X, MTAB_NAME[t], T_THEME);
-        cv_text_r(228, 6 - AF_X_CAP_Y, &AF_X, "ALGO: TAB \xB7 PRESETS: ROW", T_DIM, T_SURF);
+        cv_text_r(228, 6 - AF_X_CAP_Y, &AF_X, "ALGO: TAB \xB7 SELECT: ROW", T_DIM, T_SURF);
         for (r = 0; r < n; r++) {               /* (0.8.9: seven rows fit, 17 apart) */
             uint32_t row = f + r, in = r / 4u == menu_set();
             int32_t y = 14 + (int32_t)r * (n > 6u ? 17 : 20), h = n > 6u ? 16 : 18;
@@ -339,7 +331,7 @@ static void draw_menu(void)
         }
         cv_begin(240, 240 - (H_HEAD + MENU_DOC_H), T_BG);
         {
-            static const khint_t KH[2] = {{KC_PRESETS, "SCROLL"}, {KC_OCTDN, "BACK"}};
+            static const khint_t KH[2] = {{KC_SELECT, "SCROLL"}, {KC_OCTDN, "BACK"}};
             cv_key_row(8, 232, 4, KH, 2, 3u, T_BG);
         }
         cv_blit(0, H_HEAD + MENU_DOC_H);
@@ -381,43 +373,31 @@ static void menu_close(void)
     go_home();
 }
 
-/* menu: ALGORITHM steps between the tabs, PRESETS between the rows of one (both wrap; a tab comes back at the row
- * last picked in it), any of KNOB 1..4 or OCT+ / OCT- change a value (menu_items.c menu_step), OCT+ opens CALIBRATION /
- * ABOUT (OCT- nothing there); OCT- in ABOUT goes back to the tabs. HOME closes it, from ABOUT too (ui_input.c) */
-static void menu_move(int32_t s)                       /* PRESETS: the next / previous row of the tab */
+/* (0.9.2) the menu: SELECT walks every row, tab after tab (DISPLAY CONTROL AUDIO SYSTEM, no wrap), ALGORITHM jumps to
+ * the next / previous tab's first row (no wrap), PRESETS does nothing (rule 3: no presets here), any of KNOB 1..4 or
+ * OCT+ / OCT- change a value (menu_items.c menu_step), OCT+ opens CALIBRATION / ABOUT (OCT- nothing there); in ABOUT
+ * SELECT scrolls, OCT- goes back. HOME closes it, from ABOUT too (ui_input.c). (Until 0.9.1: SELECT zoomed MENU . TAB .
+ * ROW, PRESETS the row, ALGORITHM the tab round.) */
+static void menu_tab_go(int32_t s)                     /* ALGORITHM: the next / previous tab, its first row */
 {
-    uint32_t t = menu_tab(), f = mtab_first(t), n = mtab_rows(t), k = (ui.menu_sel - f + (s > 0 ? 1u : n - 1u)) % n;
-    ui.menu_sel = (uint8_t)(f + k);
-    ui.menu_row[t] = (uint8_t)k;
-}
-static void menu_tab_go(int32_t s)                     /* ALGORITHM: the next / previous tab, at its last row */
-{
-    uint32_t t = menu_tab(), k;
-    ui.menu_row[t] = (uint8_t)(ui.menu_sel - mtab_first(t));
-    t = (t + (s > 0 ? 1u : MTAB_COUNT - 1u)) % MTAB_COUNT;
-    k = ui.menu_row[t] < mtab_rows(t) ? ui.menu_row[t] : 0u;
-    ui.menu_sel = (uint8_t)(mtab_first(t) + k);
+    int32_t t = clamp((int32_t)menu_tab() + s, 0, MTAB_COUNT - 1);   /* (a tab a detent) */
+    ui.menu_sel = (uint8_t)mtab_first((uint32_t)t);
 }
 static void menu_input(uint32_t oct)                  /* oct: ui_input.c oct_taps */
 {
     int32_t s;
     uint32_t k, up = (oct >> 1) & 1u, dn = oct & 1u;
-    if (ui.menu >= 2) {                                /* ABOUT: PRESETS scrolls (bounded), OCT- back to the tabs */
+    if (ui.menu >= 2) {                                /* ABOUT: SELECT scrolls (bounded), OCT- back to the tabs */
         if (dn)
             ui.menu = 1, ui.force = 1;
-        else if ((s = panel_enc(EN_PRESET)) != 0)
+        else if ((s = panel_enc(EN_SELECT)) != 0)
             ui.menu_scroll = (uint16_t)clamp((int32_t)ui.menu_scroll + clamp(s, -128, 128) * 18, 0, menu_scroll_max());
         enc_drop();
         return;
     }
-    if ((s = panel_enc(EN_SELECT)) != 0)                /* (0.8.5) SELECT: MENU <-> TAB <-> ROW */
-        ui.mlv = (uint8_t)clamp((int32_t)ui.mlv + s, 0, 2);
-    if ((s = panel_enc(EN_PRESET)) != 0) {
-        if (ui.mlv == 0u)                               /* (MENU: the tab) */
-            menu_tab_go(s);
-        else
-            menu_move(s);
-    }
+    if ((s = panel_enc(EN_SELECT)) != 0)                /* (0.9.2) SELECT: every row, one a detent */
+        ui.menu_sel = (uint8_t)clamp((int32_t)ui.menu_sel + s, 0, MI_COUNT - 1);
+    ui.mlv = 1;                                         /* (the tab's rows) */
     if ((s = panel_enc(EN_ALGO)) != 0)
         menu_tab_go(s);
     for (s = 0, k = 0; k < 4u; k++)                    /* KNOB 1..4, any of them */

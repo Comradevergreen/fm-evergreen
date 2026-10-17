@@ -40,11 +40,11 @@ static const uint8_t FAM_BTN[FAM_COUNT] = {B_HOME, B_ENV, B_LFO, B_FX, B_SCL, B_
 
 static uint32_t cur_fam(void) { return ui.home ? FAM_HOME : cur_page()->fam; }
 
-/* (JIANT 0.6.6) a page button held + PRESETS: that family's pages one by one, forwards / back (GLO: the mixer and the
- * global pages), the page shown at once with its title; the button let go stays there (its tap, its layer: not now) */
+/* (0.9.2) a section's button held + SELECT (ui_lens.c nav_jump, the dice, the tempo): the button let go stays there (its
+ * tap, its layer: not now) */
 static uint8_t ly_used;                                  /* the held layer's knobs or keys used: PRESETS stays its */
 static int song_open(uint32_t n);                         /* (song_main.c: SAVE > PROJECT's KNOB 1) */
-static uint8_t pj_btn = 0xFFu;                           /* the button a page jump was made with: no layer while held */
+static uint8_t pj_btn = 0xFFu;                           /* the button a SELECT combo was made with: no layer while held */
 static uint32_t held_family(void)
 {
     uint32_t f;
@@ -52,42 +52,6 @@ static uint32_t held_family(void)
         if (f != FAM_TRK && (fm1_in.buttons >> panel.btn[FAM_BTN[f]]) & 1u)
             return f;
     return FAM_COUNT;
-}
-static int page_in(uint32_t i, uint32_t fam)
-{
-    return (PAGES[i].fam == fam || (fam == FAM_GLO && PAGES[i].fam == FAM_TRK)) && page_visible(i);
-}
-static void page_jump(uint32_t fam, int32_t s)
-{
-    uint32_t b = FAM_BTN[fam], i = ui.page, j;
-    if (ui.home || !page_in(ui.page, fam)) {          /* (from elsewhere: the family's first page, then the turns) */
-        for (i = 0; i < NPAGES && !page_in(i, fam); i++)
-            ;
-        if (i == NPAGES)
-            return;
-        s += s > 0 ? -1 : 1;
-    }
-    while (s) {                                         /* (no wrap: its first and last pages are where it stops) */
-        for (j = i; ; ) {
-            j = s > 0 ? j + 1u : j - 1u;
-            if (j >= NPAGES || page_in(j, fam))
-                break;
-        }
-        if (j >= NPAGES)
-            break;
-        i = j;
-        s += s > 0 ? -1 : 1;
-    }
-    ui.page = (uint8_t)i;
-    ui.fam_last[PAGES[i].fam] = ui.page;
-    ui.home = 0;
-    page_entered();
-    page_flash();                                       /* (0.6.51) */
-    ui_message(PAGES[i].title);
-    ui.pg_down &= (uint16_t)~(1u << panel.btn[b]);     /* (the button let go: no next page) */
-    if (b == B_SEQ) ui.seq_t0 |= 2u;
-    if (b == B_SAVE) ui.save_t0 |= 2u;
-    pj_btn = (uint8_t)b;                                /* (its layer off until it is let go: pj_hold) */
 }
 /* (0.6.67) a button whose SELECT combo was used: no next page when let go, no tap, its layer shut until let go */
 static void btn_used(uint32_t b)
@@ -853,8 +817,14 @@ static void step_edit(uint32_t slot, int32_t steps)
             else len_turn(TSEL, ui.cursor, steps);
         } else if (steps > 0)
             st->time = (uint8_t)(st->time - 1u);          /* REST > TIE > NOTE (x1) */
-        else if (st->time < ST_REST)
+        else if (st->time < ST_REST) {
             st->time = (uint8_t)(st->time + 1u);          /* NOTE x1 > TIE > REST */
+            if (st->time == ST_REST) {                    /* (0.9.2) a REST clears the step (its notes, locks: EDIT's
+                                                         * clear until 0.9.1; SEQ + G5 too) */
+                step_clear(st);
+                (void)motion_clear_locks(TSEL, ui.cursor);
+            }
+        }
         break;
     }
     default: {                                            /* FLAG: - / ACC / SLD / A+S */
@@ -1045,6 +1015,13 @@ static void edit_param(uint32_t slot, int32_t steps)
     const page_t *pg = cur_page();
     const param_desc_t *d;
     int32_t v;
+    if (BAR_PAGE(pg) && slot == 0u) {                    /* (0.9.2) SEQ > BAR: KNOB 1 the bar (no wrap), the cursor at its
+                                                         * place in it */
+        uint32_t len = (uint32_t)clamp(TSEL->p[P_SLEN], 1, NSTEP), nb = (len + 15u) / 16u;
+        uint32_t b = (uint32_t)clamp((int32_t)ui.bank + steps, 0, (int32_t)nb - 1), at = b * 16u + ui.cursor % 16u;
+        cursor_set((int32_t)(at < len ? at : len - 1u));
+        return;
+    }
     if (pg->graph == GR_COMP) {
         comp_knob(slot, steps);
         return;
@@ -1543,86 +1520,32 @@ static void seq_entry(uint32_t pressed)
         ent_commit();                                   /* (let go: LEN / the arpeggio written, the cursor on) */
 }
 
-/* Discussions #92 / #94: the PRESETS knob by page (the menu, a dialog, NAME and the layers: ui_input before this).
- *   SEQ pages that show the steps (STEP and the DRUM grid, NOTE, COMP, COMP 2, CHANCE, MOTION): the step cursor, as
- *     STEP's KNOB 1 (a sound load there would drop the track's motion: never); (0.8.3) LENTE's PATTERN level (PATTERN,
- *     STRETCH, PLAYHEADS, TRACK, MUTATE): the bar, no wrap, the cursor at its place in it
- *   the list / action pages USER, PROJECT, PHRASES, SONG: the selection, as their KNOB 1; TOOLS: nothing
- *   HOME, PRESETS and every other page (EDIT, ENV, LFO, FX, SCL, ARP, MIXER, GLOBAL, ...): the selected track's
- *     sound, one list over every engine, then the used user presets (preset_step). A sound load keeps the steps
- *     . Up to 1.0.3 it did that on HOME and PRESETS only */
-/* (0.8.5) PRESETS on a lens of ui_lens.c, by its level (the mock-up's): EDIT's SOUND and TONE the sounds, its detail
- * KNOB 1's (the operator, the kit's sound, FOCUS's parameter); 1 = done here */
-static int pd_presets(int32_t s)
+/* (0.9.2, rule 3) PRESETS loads presets, on every page (the menu, a dialog, NAME and the layers: ui_input before this;
+ * GEN: its GENRE, there): the selected track's sound, one list over every engine, then the used user presets
+ * (preset_step; a sound load keeps the steps); in SEQ the patterns: the PHRASES loader over the page (KNOB 1 the pattern
+ * too, OCT+ LOAD, OCT- back to the page), each detent the next one. Never a page, a track, a module, a step or a row
+ * (until 0.9.1 it was the bar, the step, the row, the module, the track, ROOT ..: KNOB 1's now, rule 4) */
+static uint32_t phrases_page(void)
 {
-    uint32_t pd = pd_cur(), lv = pd_level();
-    if (pd == PD_EDIT) {
-        if (lv < 2u)
-            preset_step(s);
-        else {
-            edit_param(0, s);
-            ui.hot_col = 0;
-            ui.hot_t = 40, ui.knob_ms = fm1_ms;
-        }
-        return 1;
-    }
-    if (pd == PD_KEY) {                                 /* SCL . ARP: KEY the ROOT, CHORD and ARP the track */
-        if (lv == 0u)
-            edit_param(0, s);
-        else
-            track_select((uint32_t)clamp((int32_t)song.sel + (s > 0 ? 1 : -1), 0, (int32_t)trk_live - 1));
-        return 1;
-    }
-    if (pd == PD_MOD) {                                 /* LFO . MOD: MOD the slot, LFO the track, MSEQ the step */
-        if (lv == 1u)
-            track_select((uint32_t)clamp((int32_t)song.sel + (s > 0 ? 1 : -1), 0, (int32_t)trk_live - 1));
-        else if (lv == 2u)
-            ms_ui_step = (uint8_t)clamp((int32_t)ms_ui_step + s, 0, 15);
-        else
-            edit_param(0, s);
-        return 1;
-    }
-    if (pd == PD_ENV) {                                 /* ENV: TRACKS and ENV the track, STAGE the stage */
-        if (lv < 2u)
-            track_select((uint32_t)clamp((int32_t)song.sel + (s > 0 ? 1 : -1), 0, (int32_t)trk_live - 1));
-        else
-            edit_param(0, s);
-        return 1;
-    }
-    return 0;
+    uint32_t i;
+    for (i = 0; i < NPAGES && PAGES[i].graph != GR_PATS; i++) {}
+    return i;
 }
 static void presets_turn(int32_t s)
 {
-    const page_t *pg = cur_page();
-    uint32_t g = pg->graph;
-    if (pd_on() && pd_presets(s))
-        return;
-    if (ui.home || g == GR_BROWSE) {
-        preset_step(s);
-    } else if (fx_on() && fx_level() != FXL_TRACK) {   /* (0.8.5) FX's lens, BUSES / EFFECT: the module */
-        fx_pick(s);
-    } else if (lens_on() && lens_level() == LV_PAT && lens_k(LV_PAT, ui.page) >= 0) {   /* (0.8.3) LENTE's PATTERN: the
-                                                         * bar (no wrap), the cursor at its place in it */
-        uint32_t len = (uint32_t)clamp(TSEL->p[P_SLEN], 1, NSTEP), nb = (len + 15u) / 16u;
-        uint32_t b = (uint32_t)clamp((int32_t)ui.bank + s, 0, (int32_t)nb - 1), at = b * 16u + ui.cursor % 16u;
-        cursor_set((int32_t)(at < len ? at : len - 1u));
-    } else if (g == GR_ROLL && pg->id[0] == 4u) {         /* (0.6.81) SEQ > NOTE (KNOB 1 FOCUS): PRESETS the step */
-        cursor_set(ui.cursor + s);
+    if (!ui.home && PAGES[ui.page].fam == FAM_SEQ) {
+        uint32_t i = phrases_page();
+        ui.ppick = (uint8_t)clamp((int32_t)pat_pick() + s, 0, (int32_t)pat_count() - 1);
+        if (ui.page != i) {                             /* (the entry stays: SELECT, SEQ and OCT- go on from there) */
+            ui.page = (uint8_t)i;
+            page_entered();
+            page_flash();
+        }
         ui.hot_col = 0;
         ui.hot_t = 40, ui.knob_ms = fm1_ms;
-    } else if (g == GR_ROLL || g == GR_CHANCE || g == GR_COMP || g == GR_USER || g == GR_SLOTS || g == GR_PATS || g == GR_SONG ||
-               g == GR_EVENTS || g == GR_TOOLS) {
-        uint32_t c = g == GR_SLOTS && !save_on() ? 1u : 0u;   /* (0.6.12 PROJECT: the list is the sections, KNOB 2's;
-                                                         * 0.8.5 SAVE's lens: KNOB 1's, the project on LIBRARY, the
-                                                         * section on PROJECT) */
-        edit_param(c, s);                                 /* KNOB 1's (STEP: STOP TO EDIT while a song plays) */
-        ui.hot_col = (uint8_t)c;
-        ui.hot_t = 40, ui.knob_ms = fm1_ms;
-    } else if (pg->fam == FAM_SEQ && (g == GR_STEPS || g == GR_MOTION)) {
-        cursor_set(ui.cursor + s);                        /* (PATTERN draws it; MOTION: STEP shows it) */
-    } else if (g != GR_TOOLS) {
-        preset_step(s);
+        return;
     }
+    preset_step(s);
 }
 
 /* (JIANT 0.5) SELECT off HOME: the selected track's sound diced. DRUM-X: both patches (A, B) of every sound, each
@@ -1865,46 +1788,6 @@ static void part_dice(uint32_t kind)
     else if (kind == CF_DICE_FX) fx_dice(TSEL);
 }
 static int dice_kind(uint32_t c) { return c == CF_DICE_SOUND || c == CF_DICE_SEQ || c == CF_DICE_LFO || c == CF_DICE_FX; }
-/* (0.6.67) SELECT alone: the pages, one a detent. (0.6.69) Only the section's (the button's) pages, as its taps go,
- * no wrap (its first and last pages are where it stops); on HOME (no pages) the caller dices everything */
-static void page_scroll(int32_t s)
-{
-    uint32_t i = ui.page, j, f;
-    int32_t n = s > 0 ? s : -s;
-    if (ui.home)
-        return;
-    if (lens_on()) {                                    /* (0.8.3) SEQ: the lens's zoom, not its pages one by one */
-        lens_zoom(s);
-        return;
-    }
-    if (save_on()) {                                    /* (0.8.5) SAVE's lens: LIBRARY <-> PROJECT <-> SOUND */
-        save_zoom(s);
-        return;
-    }
-    if (fx_on()) {                                      /* (0.8.5) FX's lens: TRACK <-> BUSES <-> EFFECT */
-        fx_zoom(s);
-        return;
-    }
-    if (pd_on()) {                                      /* (0.8.5) LENTE everywhere (ui_lens.c): a level a detent */
-        pd_zoom(s);
-        return;
-    }
-    f = cur_page()->fam == FAM_TRK ? FAM_GLO : cur_page()->fam;
-    while (n--) {
-        for (j = i; ; ) {
-            j = s > 0 ? j + 1u : j - 1u;
-            if (j >= NPAGES || page_in(j, f)) break;
-        }
-        if (j >= NPAGES) break;
-        i = j;
-    }
-    if (i == ui.page) return;
-    ui.page = (uint8_t)i;
-    ui.fam_last[PAGES[i].fam] = ui.page;
-    page_entered();
-    page_flash();
-}
-
 /* (0.6.21) HOME + SELECT (after the dialog): everything diced into a new piece. One scale for the song (ROOT, a
  * musical SCALE: never CHR / WHOLE / DIM; the RESO reverb and the SLICER follow it), each melodic track an engine, a
  * sound (dice of a factory preset) and a sequence in that scale by its role (T1 the bass; the others a lead, a pad or an
@@ -1954,41 +1837,15 @@ static void layer_oct_open(uint32_t pressed);
 static int layer_allowed(void);
 static uint32_t ly_bit(uint32_t l);
 
-/* a page button let go (they act on release; a layer's own button: layer_gesture). 1: it acted (EDIT on STEP, USER,
- * PROJECT) instead of opening a page */
+/* a page button let go (they act on release; a layer's own button: layer_gesture): its section (rule 2; 0.9.2: EDIT is
+ * always EDIT: a step's clear and AUTO LIST's delete are SEQ + G5, a slot's rename SAVE + C5, ui_layer.c). 1: it acted
+ * (a step held on STEP + EDIT: its locks go, the step stays) instead of opening a page */
 static int page_tap(uint32_t b)
 {
     uint32_t f;
-    if (b == B_GLO) {
-        open_global();                                  /* MIXER -> GLOBAL -> SYSTEM -> MIXER */
-        return 0;
-    }
-    if (b == B_EDIT && song.seq_mode && !ui.home && cur_page()->graph == GR_ROLL) {   /* STEP: EDIT clears the step */
-        uint64_t held = lock_held();
-        if (chain_busy()) { ui_message("STOP TO EDIT"); return 1; }
-        if (held) {                                     /* a step held: its locks (the step stays) */
-            lock_clear(held);
-            return 1;
-        }
-        if (cur_page()->id[0] == 4u && ui.pr_focus && TSEL->step[ui.cursor].time == ST_NOTE &&
-            ui.pr_focus <= TSEL->step[ui.cursor].n) {   /* (0.6.81) SEQ > NOTE: the note in focus alone */
-            note_drop(&TSEL->step[ui.cursor], ui.pr_focus - 1u);
-            ui.pr_focus = 0;
-            ui_message("NOTE DELETED");
-            return 1;
-        }
-        step_clear(&TSEL->step[ui.cursor]);
-        (void)motion_clear_locks(TSEL, ui.cursor);
-        cursor_set(ui.cursor + 1);
-        ui_message("STEP CLEARED");
-        return 1;
-    }
-    if (b == B_EDIT && !ui.home && cur_page()->graph == GR_EVENTS) {   /* AUTO LIST: EDIT deletes the row's record */
-        ev_delete();
-        return 1;
-    }
-    if (b == B_EDIT && !ui.home && (cur_page()->graph == GR_USER || cur_page()->graph == GR_SLOTS)) {
-        name_rename();                                  /* SAVE > USER / PROJECT: EDIT renames the slot */
+    if (b == B_EDIT && song.seq_mode && !ui.home && cur_page()->graph == GR_ROLL && lock_held()) {
+        if (chain_busy()) ui_message("STOP TO EDIT");
+        else lock_clear(lock_held());
         return 1;
     }
     for (f = FAM_HOME + 1u; f < FAM_COUNT; f++)
@@ -1997,6 +1854,33 @@ static int page_tap(uint32_t b)
             return 0;
         }
     return 0;
+}
+/* (0.9.2) SEQ + G5, CLR STEP (EDIT's until 0.9.1): on AUTO LIST the row's record goes; elsewhere in SEQ the cursor step
+ * is cleared, its locks with it, and the cursor goes on to the next (NOTE with a note in focus: that note alone) */
+static void seq_clr_step(void)
+{
+    const page_t *pg = cur_page();
+    if (ui.home || pg->fam != FAM_SEQ)
+        return;
+    if (chain_busy()) {
+        ui_message("STOP TO EDIT");
+        return;
+    }
+    if (pg->graph == GR_EVENTS) {
+        ev_delete();
+        return;
+    }
+    if (pg->graph == GR_ROLL && pg->id[0] == 4u && ui.pr_focus && TSEL->step[ui.cursor].time == ST_NOTE &&
+        ui.pr_focus <= TSEL->step[ui.cursor].n) {       /* (0.6.81) SEQ > NOTE: the note in focus alone */
+        note_drop(&TSEL->step[ui.cursor], ui.pr_focus - 1u);
+        ui.pr_focus = 0;
+        ui_message("NOTE DELETED");
+        return;
+    }
+    step_clear(&TSEL->step[ui.cursor]);
+    (void)motion_clear_locks(TSEL, ui.cursor);
+    cursor_set(ui.cursor + 1);
+    ui_message("STEP CLEARED");
 }
 
 /* a track whose sound's sample is missing (engines.c snd_missing: an empty user slot, a built-in set this build lacks;
@@ -2134,7 +2018,7 @@ static void ui_input_frame(void)
         return;                                         /* (before the buttons' timers: no tap or hold after it) */
     home = btn_hold(&ui.home_t0, B_HOME, now, 1);
     rec = btn_hold(&ui.rec_t0, B_REC, now, 0);          /* (a tap; held, the REC layer: ui_layer.c) */
-    seq = btn_hold(&ui.seq_t0, B_SEQ, now, !ui.menu && !ui.confirm);
+    seq = btn_hold(&ui.seq_t0, B_SEQ, now, !ui.menu && !dlg_on());
     save = btn_hold(&ui.save_t0, B_SAVE, now, 0);       /* (a tap; held, the song layer: ui_layer.c) */
     layer_arm(pressed, now);
     if (((pressed >> panel.btn[B_REC]) & 1u) && ui.ly == LAYER_REC)
@@ -2145,33 +2029,33 @@ static void ui_input_frame(void)
     oct = oct_taps(pressed, ui.menu || ui.confirm || act_cols() || name_on() || layer_set_open());
     oct = layer_oct(pressed, oct);                      /* (a SET layer's OCT-: put back) */
     layer_masks();                                      /* seq.c: keys pressed with a layer's button are its own */
-    {   /* (0.6.6) a page button held + PRESETS: its pages (page_jump); not in the menu, a dialog, NAME. (0.6.67) A
-         * button held + SELECT: its dice (HOME everything, EDIT the sound, SEQ the sequence, LFO the LFO, FX the
-         * effects; GLO + SELECT the tempo), the other buttons their pages; the button's tap and layer swallowed, and
-         * the turn's last detents for a moment after it is let go (no page scrolled by them) */
+    {   /* (0.6.67) a button held + SELECT (rule 5): its dice (HOME the generator, GEN; EDIT the sound, SEQ the sequence,
+         * LFO the LFO, FX the effects; GLO + SELECT the tempo), ENV SCL ARP SAVE their chain (nav_jump); the button's tap
+         * and layer swallowed, and the turn's last detents for a moment after it is let go (no page moved by them). Not in
+         * the menu, a dialog, NAME. (0.9.2) A button held + PRESETS: nothing (rule 3; until 0.9.1 its pages) */
         static uint32_t pj_sel_ms;
         uint32_t f = held_family(), hb = (fm1_in.buttons >> panel.btn[B_HOME]) & 1u;
         int32_t ps;
-        if (!ui.menu && !ui.confirm && !name_on() && (f != FAM_COUNT || hb) && f != FAM_GLO &&
+        if (!ui.menu && !dlg_on() && !name_on() && (f != FAM_COUNT || hb) && f != FAM_GLO &&
             (ps = panel_enc(EN_SELECT)) != 0) {
             uint32_t k = f == FAM_EDIT ? CF_DICE_SOUND : f == FAM_SEQ ? CF_DICE_SEQ : f == FAM_LFO ? CF_DICE_LFO :
                          f == FAM_FX ? CF_DICE_FX : 0u;
-            if (f == FAM_COUNT) {                       /* HOME held: the whole piece (the dialog first) */
+            if (f == FAM_COUNT) {                       /* HOME held: GEN, HOME's generator */
                 ui.home_t0 |= 2u;
-                if (!pj_sel_ms || fm1_ms - pj_sel_ms > 400u) {
-                    if (chain_busy()) ui_message("STOP TO EDIT");
-                    else { confirm_open(CF_DICE_ALL, song.sel); gen_open(); }
-                }
+                if (!pj_sel_ms || fm1_ms - pj_sel_ms > 400u)
+                    nav_go(SEC_HOME, 4u + gen_page(), 1);
             } else if (k) {
                 part_dice(k);
                 btn_used(FAM_BTN[f]);
             } else {
-                page_jump(f, ps);
+                nav_jump(sec_of_fam(f), ps);
+                btn_used(FAM_BTN[f]);
             }
             pj_sel_ms = fm1_ms | 1u;
-        } else if (f != FAM_COUNT && !ui.menu && !ui.confirm && !name_on() && !ly_used &&
-                   (ps = panel_enc(EN_PRESET)) != 0) {   /* (a layer already used: PRESETS stays its, dropped) */
-            page_jump(f, ps);
+        } else if (f != FAM_COUNT && !ui.menu && !dlg_on() && !name_on() && !ly_used && panel_enc(EN_PRESET) != 0) {
+            btn_used(FAM_BTN[f]);                       /* (0.9.2, rule 3) a button held + PRESETS: nothing (until 0.9.1
+                                                         * its pages); no tap after, no map while held. (A layer already
+                                                         * used: PRESETS stays its, dropped) */
         } else if (pj_sel_ms && fm1_ms - pj_sel_ms < 400u) {
             if (panel_enc(EN_SELECT))
                 pj_sel_ms = fm1_ms | 1u;                /* (dropped: still the paging turn) */
@@ -2262,7 +2146,7 @@ static void ui_input_frame(void)
             song.seq_mode = 0;
         }
     }
-    if (rec == BT_TAP && !ui.menu && !ui.confirm && !name_on())   /* REC pressed in another layer (REC alone: */
+    if (rec == BT_TAP && !ui.menu && !dlg_on() && !name_on())   /* REC pressed in another layer (REC alone: */
         rec_tap();                                      /* its layer's tap); nothing in the menu, a dialog or NAME */
     if (ui.menu) {                                      /* SAVE / REC taps do nothing here (HOME: above) */
         if (ui.save_t0)
@@ -2282,9 +2166,10 @@ static void ui_input_frame(void)
         name_input(notes, oct);
         return;
     }
-    if (save == BT_TAP && !ui.confirm)                  /* SAVE let go (not its layer's: that tap is layer_tap's) */
+    if (save == BT_TAP && !dlg_on())                    /* SAVE let go (not its layer's: that tap is layer_tap's) */
         open_family(FAM_SAVE);
-    if (ui.confirm) {                                   /* OCT- cancels, OCT+ does it; nothing else reacts */
+    if (dlg_on()) {                                     /* OCT- cancels, OCT+ does it; nothing else reacts (GEN: a page,
+                                                         * below) */
         if (oct & 2u) {
             uint32_t kind = ui.confirm;
             ui.confirm = 0;
@@ -2300,9 +2185,6 @@ static void ui_input_frame(void)
                 up_ui(1u, ui.confirm_trk);
             } else if (dice_kind(kind)) {               /* (0.6.65) OK: the diced part stays */
                 ui_message(dk.msg);
-            } else if (kind == CF_DICE_ALL) {           /* (0.6.21) HOME + SELECT; (0.6.91) GEN: the piece from the
-                                                         * screen's settings, the screen stays (OCT+ again: another) */
-                if (!chain_busy()) { gen_press(); ui.confirm = CF_DICE_ALL; }
             } else if (kind == CF_LOAD_PAT) {
                 pat_load_ui(&trk[ui.confirm_trk % NTRK], pat_pick());
             } else if (kind == CF_CLEAR_PFX) {         /* (0.6.99) FX > PUNCH > CLEAR */
@@ -2394,8 +2276,6 @@ static void ui_input_frame(void)
                 }
             }
         } else if (oct & 1u) {
-            if (ui.confirm == CF_DICE_ALL && ui.home)   /* (0.8.5) GEN closed on HOME: its ECO, as the mock-up */
-                ui.hlv = 0;
             if (dice_kind(ui.confirm))                  /* (0.6.65) CANCEL: the part before the dice */
                 ui_message(dk_back(ui.confirm, ui.confirm_trk) ? "CAN'T UNDO" :
                            ui.confirm == CF_DICE_SEQ ? "SEQ BACK" : ui.confirm == CF_DICE_LFO ? "LFO BACK" :
@@ -2405,25 +2285,6 @@ static void ui_input_frame(void)
         } else if (dice_kind(ui.confirm) && panel_enc(EN_SELECT)) {   /* (0.6.65) SELECT again: another dice
                                                          * (once a turn burst) */
             part_dice(ui.confirm);
-        } else if (ui.confirm == CF_DICE_ALL) {         /* (0.6.91) GEN: KNOB 1..4 its settings, SELECT its pages;
-                                                         * (0.6.97) PLAY runs and stops the transport (the piece heard) */
-            for (k = 0; k < 4u; k++)
-                if ((s = panel_enc(EN_K1 + k)) != 0) gen_knob(k, s);
-            if ((s = panel_enc(EN_SELECT)) != 0 && gen_zoom(s)) {   /* (0.8.5) LENTE: SELECT left, back to BEING */
-                ui.confirm = 0;
-                ui.hlv = 1;
-                go_home();
-            }
-            if ((s = panel_enc(EN_PRESET)) != 0)        /* (0.8.5) PRESETS: the GENRE */
-                gen_knob(0, s);
-            if (home == BT_TAP)                         /* (0.8.5) HOME: GEN 1/3 -> 2/3 -> 3/3 (0.7.0 .. 0.8.4: done; OCT-
-                                                         * closes it) */
-                gen_next();
-            if ((pressed >> panel.btn[B_PLAY]) & 1u) {
-                if (song.playing || chain_busy() || seq_counting()) transport_req = 2;
-                else if (live.mode) chain_play_ui();
-                else transport_req = 1;
-            }
         }
         ui.pg_down = 0;
         enc_drop();
@@ -2433,10 +2294,8 @@ static void ui_input_frame(void)
         layer_tap(lytap);
     if (seq == BT_TAP || seq == BT_HOLD)                /* (SONG: SAVE held, G5) */
         open_family(FAM_SEQ);
-    if (home == BT_TAP && ui.home)                      /* (0.8.5) LENTE: on HOME, the level's other set (HOME / MACROS, */
-        home_cycle();                                   /* HOME / ROUTES) */
-    else if (home == BT_TAP)                            /* HOME acts on release: a hold opens the menu */
-        go_home();
+    if (home == BT_TAP)                                 /* HOME acts on release (a hold opens the menu): rule 2, HOME's */
+        nav_button(SEC_HOME);                           /* page last shown; on HOME the next group (ECO BEING GEN) */
     cursor_fix();                                       /* LEN may have changed (knob, editor, load) */
     for (id = 0; id < 14u; id++) {
         if (!((pressed >> id) & 1u))
@@ -2478,7 +2337,7 @@ static void ui_input_frame(void)
         case B_OCTDN:
         case B_OCTUP: {
             uint32_t both = (1u << panel.btn[B_OCTDN]) | (1u << panel.btn[B_OCTUP]);
-            if (act_cols() || layer_set_open())         /* action pages: enter / back (below); SET layers: OCT- */
+            if (act_cols() || layer_set_open() || gen_on())   /* action pages: enter / back (below); SET layers: OCT-; GEN */
                 break;
             if (!ui.home && !ui.menu && !ui.confirm && cur_page()->graph == GR_MUTATE) {   /* (0.6.43) KEEP, FREEZE */
                 if (b == B_OCTUP) { mut_keep(); ui_message("ANCHOR: THE MUSIC NOW"); }
@@ -2513,10 +2372,16 @@ static void ui_input_frame(void)
     for (id = 0; b; id++, b >>= 1)
         if (b & 1u)
             page_tap(panel_btn_of(id));
-    if (act_cols() && (oct & 2u)) {                     /* action pages: OCT+ does the picked action, */
+    if (gen_on() && (oct & 2u)) {                       /* (0.9.2) GEN, HOME's pages: OCT+ the piece (the screen stays, */
+        if (!chain_busy()) gen_press();                 /* OCT+ again: another), OCT- back to ECO */
+    } else if (gen_on() && (oct & 1u)) {
+        nav_go(SEC_HOME, 0, 0);
+    } else if (act_cols() && (oct & 2u)) {              /* action pages: OCT+ does the picked action, */
         act_do();
-    } else if (act_cols() && (oct & 1u)) {              /* OCT- drops it, or (none picked) goes HOME */
-        if (cur_page()->graph != GR_PATS && ui.act)
+    } else if (act_cols() && (oct & 1u)) {              /* OCT- drops it, or (none picked) goes HOME; PHRASES: back to */
+        if (cur_page()->graph == GR_PATS && !ui.home)   /* the SEQ page it was opened on */
+            nav_go(SEC_SEQ, nav_cur(), 0);
+        else if (ui.act)
             ui.act = 0;
         else
             go_home();
@@ -2541,8 +2406,12 @@ static void ui_input_frame(void)
      * pass runs, so one landing after the layer's read went to the page as well: KNOB 1..4 edited the layer's control
      * and the page under it (HOME's sound, motion recorded), PRESETS could load a sound. They stay for the next pass */
     kq |= lay;
-    if (!lay && (s = panel_enc(EN_PRESET)) != 0)
-        presets_turn(s);
+    if (!lay && (s = panel_enc(EN_PRESET)) != 0) {
+        if (gen_on())
+            gen_knob(0, s);                             /* (GEN: its GENRE, the generator's preset) */
+        else
+            presets_turn(s);
+    }
     if (!lay && (s = panel_enc(EN_ALGO)) != 0)     /* ALGORITHM: the selected track, on every page. (0.6.55) Only
                                                     * the tracks that play: TRACKS 4 stops at T4 (T5 / T6 asleep) */
         track_select((uint32_t)clamp((int32_t)song.sel + (s > 0 ? 1 : -1), 0, (int32_t)trk_live - 1));
@@ -2551,21 +2420,9 @@ static void ui_input_frame(void)
             song.g[G_BPM] = (int16_t)clamp(song.g[G_BPM] + accel(EN_SELECT, sel, 200), GP[G_BPM].min, GP[G_BPM].max);
             ui.bpm_t = 40;                              /* the header's BPM lights up; no message over the header */
         }
-    } else if ((s = panel_enc(EN_SELECT)) != 0 && !lay && !ui.menu) {   /* (0.6.67) SELECT alone: the section's pages;
-                                                         * (0.6.69) on HOME, as before: DICE EVERYTHING? (once a turn) */
-        if (!ui.home) page_scroll(s);
-        else if (!ui.confirm) {                         /* (0.8.5) LENTE: ECO <-> BEING <-> GEN (GEN: the generator) */
-            int32_t to = clamp((int32_t)(ui.hlv ? 1 : 0) + s, 0, 2);
-            if (to == 2) {
-                ui.hlv = 1;
-                if (chain_busy()) ui_message("STOP TO EDIT");
-                else { confirm_open(CF_DICE_ALL, song.sel); gen_open(); }
-            } else if ((uint32_t)to != (ui.hlv ? 1u : 0u)) {
-                ui.hlv = (uint8_t)to;
-                ui.force = 1;
-                page_flash();
-            }
-        }
+    } else if ((s = panel_enc(EN_SELECT)) != 0 && !lay && !ui.menu) {   /* (0.9.2, rule 1) SELECT alone: the section's
+                                                        * chain, a page a detent (HOME's: ECO MACROS BEING ROUTES GEN 1..3) */
+        nav_select(s);
     }
     for (k = 0; k < 4u && !kq; k++) {
         const page_t *pg = cur_page();
@@ -2573,6 +2430,10 @@ static void ui_input_frame(void)
         uint64_t held;
         if ((s = panel_enc(EN_K1 + k)) == 0)
             continue;
+        if (gen_on()) {                                 /* GEN: its settings */
+            gen_knob(k, s);
+            continue;
+        }
         if (mac_latch && !ui.menu && !ui.confirm) {     /* (JIANT 0.4) the MACRO layer latched: M1..M4 */
             macro_v[k] = (uint8_t)clamp(macro_v[k] + accel(EN_K1 + k, s, 127), 0, 127);
             continue;
@@ -2589,7 +2450,8 @@ static void ui_input_frame(void)
             continue;
         }
         if (ui.home || pg->scope == SC_STEP || pg->scope == SC_TRK || page_desc(pg, k, &hv) ||
-            ((pg->graph == GR_USER || pg->graph == GR_MOD || pg->graph == GR_MSEQ || pg->graph == GR_PATS) && k == 0u)
+            ((pg->graph == GR_USER || pg->graph == GR_MOD || pg->graph == GR_MSEQ || pg->graph == GR_PATS || BAR_PAGE(pg)) &&
+             k == 0u)
             || pg->graph == GR_SONG || pg->graph == GR_DXSND || pg->graph == GR_FOCUS || pg->graph == GR_STAGE) {   /* (not an empty column) */
             ui.hot_col = (uint8_t)k;
             ui.hot_t = 40, ui.knob_ms = fm1_ms;

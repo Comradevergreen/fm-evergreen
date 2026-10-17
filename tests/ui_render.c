@@ -651,6 +651,7 @@ enum { S_HOME, S_HOME_IDLE, S_MESSAGE, S_MESSAGE_KEY, S_MESSAGE_NOFILE, S_PRESET
        S_SEQ_TOOLS, S_SEQ_TOOLS_DRUM, S_SEQ_TOOLS_SONG,
        S_LENTE_PAT, S_LENTE_PAT_DRUM, S_LENTE_STRETCH, S_LENTE_BAR, S_LENTE_BAR_DRUM, S_LENTE_STEP, S_LENTE_STEP_COMP,
        S_LENTE_STEP_COMP2, S_LENTE_STEP_TIE, S_LENTE_STEP_REST, S_LENTE_STEP_DRUM, S_LENTE_BAR_LONG, S_LENTE_STEP_LONG,
+       S_SEQ_BAR, S_SEQ_BAR_DRUM,
        S_NAME_USER, S_NAME_TYPING, S_NAME_123, S_NAME_EMPTY, S_NAME_FULL, S_NAME_PLAYING, S_PROJECT_NAMED, S_SONG_NAMED,
        S_USER_FOOT,
        S_WORDS, S_WORDS_EN, S_WORDS_JA, S_WORDS_EDIT, S_WORDS_OFF, S_NAME_LYRIC, S_NAME_LYRIC_LONG,
@@ -678,7 +679,7 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "message", "mes
     "layer_seq_tools", "layer_seq_tools_drum", "layer_seq_tools_song",
     "lente_pattern", "lente_pattern_drum", "lente_stretch", "lente_bar", "lente_bar_drum", "lente_step_note",
     "lente_step_comp", "lente_step_comp2", "lente_step_tie", "lente_step_rest", "lente_step_drum", "lente_bar_long",
-    "lente_step_long",
+    "lente_step_long", "seq_bar", "seq_bar_drum",
     "name_user", "name_typing", "name_123", "name_empty", "name_full", "name_playing", "project_named", "song_named",
     "user_foot",
     "words", "words_en", "words_ja", "words_edit", "words_off", "name_lyric", "name_lyric_long",
@@ -839,6 +840,15 @@ static void roll_scene(int s)
     ui.bank = (uint8_t)(ui.cursor / 16u);
 }
 
+/* (0.9.2) a section's page by its name in the chain (ui_lens.c nav_put), as a scene: no page flash over the footer */
+static void nav_scene(uint32_t sec, const char *nm)
+{
+    if (!nav_put(sec, nm)) {
+        fprintf(stderr, "nav_scene: no page \"%s\"\n", nm);
+        exit(2);
+    }
+    pf_on = 0;
+}
 static void setup(int s)
 {
     memset(kb_on, 0, sizeof kb_on);               /* no key held (roll_playing holds one) */
@@ -989,7 +999,7 @@ static void setup(int s)
         if (s == S_ED_FOCUS_MOD) { TSEL->p[P_M2SRC] = 1; TSEL->p[P_M2DST] = MD_E1 + 4; TSEL->p[P_M2AMT] = 40; }
         break;
     case S_ENV_TRACKS: case S_ENV_TRACKS_DEST:          /* (0.8.5) ENV's lens: TRACKS (ENV / DEST), T2 sounding */
-        song.sel = 1; go_title(s == S_ENV_TRACKS ? "ENV" : "ENV DEST"); ui.pdlv[PD_ENV] = 1;   /* (TRACKS: 0 ^ 1) */
+        song.sel = 1; nav_scene(SEC_ENV, s == S_ENV_TRACKS ? "TRACKS" : "TRACKS DEST");
         trk[1].v[0].stage = 2; trk[1].v[0].env = 10u << 20; trk[2].p[P_ED_FLT] = 60; trk[2].p[P_ED_PIT] = -40;
         trk[1].p[P_ED_SHP] = 90; trk[3].p[P_MUTE] = 1;
         break;
@@ -1204,7 +1214,8 @@ static void setup(int s)
     case S_LENTE_STEP_TIE:
     case S_LENTE_STEP_REST:
     case S_LENTE_BAR_LONG:                              /* (0.8.4) a chord 16 steps long: TIME 16 ST, the big step's LEN 16 */
-    case S_LENTE_STEP_LONG: {
+    case S_LENTE_STEP_LONG:
+    case S_SEQ_BAR: {                                   /* (0.9.2) SEQ > BAR: KNOB 1 the bar (3/4 here), KNOB 2 LEN */
         static const uint8_t CH[3] = {60, 64, 69};
         track_t *t = TSEL;
         uint32_t i;
@@ -1228,9 +1239,9 @@ static void setup(int s)
         if (s == S_LENTE_BAR_LONG)                      /* (0.8.5) ALL TR at the right of the bars' strip */
             song.g[G_STRN] = -12;
         song.playing = 1; t->seq_idx = 21;
-        ui.lv = s == S_LENTE_PAT || s == S_LENTE_STRETCH ? LV_PAT : s == S_LENTE_BAR || s == S_LENTE_BAR_LONG ? LV_BAR : LV_STEP;
-        go_title(s == S_LENTE_PAT ? "PATTERN" : s == S_LENTE_STRETCH ? "STRETCH" : s == S_LENTE_BAR || s == S_LENTE_BAR_LONG ? "STEP" :
-                 s == S_LENTE_STEP_COMP ? "COMP" : s == S_LENTE_STEP_COMP2 ? "COMP 2" : "NOTE");
+        nav_scene(SEC_SEQ, s == S_LENTE_PAT ? "PATTERN" : s == S_LENTE_STRETCH ? "STRETCH" : s == S_LENTE_BAR || s == S_LENTE_BAR_LONG ?
+                  "STEP" : s == S_LENTE_STEP_COMP2 ? "COMP 2" : s == S_LENTE_STEP ? "NOTE" : s == S_SEQ_BAR ? "BAR" : "COMP");   /* (0.9.2: NOTE the roll; the
+                                                         * step large on COMP: TIE, REST, LONG there) */
         cursor_set(s == S_LENTE_STEP_TIE ? 35 : s == S_LENTE_STEP_REST ? 36 : s == S_LENTE_BAR_LONG || s == S_LENTE_STEP_LONG ? 40 : 34);
         ui.pr_focus = s == S_LENTE_STEP ? 2u : 0u;
         break;
@@ -1238,11 +1249,11 @@ static void setup(int s)
     case S_LENTE_PAT_DRUM:
     case S_LENTE_BAR_DRUM:
     case S_LENTE_STEP_DRUM:
+    case S_SEQ_BAR_DRUM:
         drum(0); trk[3].p[P_SLEN] = 32;
         memcpy(&trk[3].step[16], &trk[3].step[0], 16u * sizeof(step_t));
         trk[3].step[20].hit |= 0x30u; trk[3].step[20].acc |= 0x10u;
-        ui.lv = s == S_LENTE_PAT_DRUM ? LV_PAT : s == S_LENTE_BAR_DRUM ? LV_BAR : LV_STEP;
-        go_title(s == S_LENTE_PAT_DRUM ? "PATTERN" : s == S_LENTE_BAR_DRUM ? "STEP" : "NOTE");
+        nav_scene(SEC_SEQ, s == S_LENTE_PAT_DRUM ? "PATTERN" : s == S_LENTE_BAR_DRUM ? "STEP" : s == S_SEQ_BAR_DRUM ? "BAR" : "COMP");
         cursor_set(20); ui.lane = 4;
         break;
     /* NAME (ui_name.c): USER SAVE prefilled; a letter cycling (RS: S, R next); 123 on a project; an empty project name
@@ -1362,12 +1373,12 @@ static void setup(int s)
         for (k = 0; k < 7u; k++) { eng(UE[k]); up_store(UK[k], UN[k]); }
         eng(e0);
         ui.uslot = 0; ui.song_row = 0; ui.msg_t = 0; ui.frame += 7u;   /* (the sections' cache read again) */
-        if (s == S_SAVE_LIB) { ui.slv = SV_LIB; go_page(GR_SLOTS); ui.act = 4; }
-        else if (s == S_SAVE_TOOLS) { ui.slv = SV_LIB; go_page(GR_TOOLS); ui.act = 1; }
-        else if (s == S_SAVE_PROJ) { ui.slv = SV_PROJ; go_page(GR_SLOTS); ui.slv = SV_PROJ; ui.act = 4; }
-        else if (s == S_SAVE_ARR) { ui.slv = SV_PROJ; go_page(GR_SONG); }
-        else if (s == S_SAVE_SOUND) { ui.slv = SV_SOUND; go_page(GR_USER); }
-        else { ui.slv = SV_SOUND; go_page(GR_BROWSE); }
+        if (s == S_SAVE_LIB) { nav_scene(SEC_SAVE, "PROJECTS"); ui.act = 4; }
+        else if (s == S_SAVE_TOOLS) { nav_scene(SEC_SAVE, "TOOLS"); ui.act = 1; }
+        else if (s == S_SAVE_PROJ) { nav_scene(SEC_SAVE, "SECTIONS"); ui.act = 4; }
+        else if (s == S_SAVE_ARR) nav_scene(SEC_SAVE, "ARRANGE");
+        else if (s == S_SAVE_SOUND) { nav_scene(SEC_SAVE, "USER"); ui.act = 4; }
+        else nav_scene(SEC_SAVE, "PRESETS");
         ui.msg_t = 0;
         break;
     }

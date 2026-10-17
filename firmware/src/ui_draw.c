@@ -873,23 +873,6 @@ static void foot_hint(char *a, char *b)
     str_cpy(b, ui.act && cur_page()->graph != GR_PATS ? "OCT- CANCEL" : "OCT- BACK", 16);
 }
 
-/* SAVE > USER / PROJECT: EDIT renames the selected slot (ui_name.c); SEQ > AUTO LIST: EDIT deletes the row's
- * record (ui_events.c); 0 = not such a page, 1 an empty slot (+ ADD LOCK), 2 used */
-static uint32_t foot_rename(void)
-{
-    uint32_t g = ui.home ? GR_NONE : cur_page()->graph;
-    if (g == GR_EVENTS) {
-        uint8_t idx[MOTION_MAX];
-        uint32_t n = ev_rows(idx);
-        return 1u + (ev_row(n) < n);
-    }
-    if (g == GR_USER)
-        return 1u + (uint32_t)up_used(ui.uslot);
-    if (g == GR_SLOTS)
-        return 1u + (uint32_t)graph_project_used((uint32_t)song.g[G_SLOT] - 1u);
-    return 0;
-}
-
 /* the sound's name on the track: a user preset or the engine's preset (b holds 16) */
 static void sound_name(const track_t *t, char *b)
 {
@@ -901,98 +884,177 @@ static void sound_name(const track_t *t, char *b)
         str_cpy(b, e->presets[t->preset % e->npresets].name, 16);
 }
 
-/* (0.8.3) LENTE's level, in the footer's first row; (0.8.5) on top, as the design the owner approved
- * (the HTML mock-up "LENTE"): under the header's rule three equal tabs (SEQ: PATTERN BAR STEP), 76 x 13 at x 4 + 78 l,
- * y 26, square, the level shown filled THEME with INK text, the others RAISE with MID text. Drawn when the level, the
- * palette or the style changes (a full redraw too) */
+/* (0.9.2, rule 6) the tabs on top, as the approved mock-up (navegacion.html): the section's groups (the menu's tabs, a
+ * layer's MAP KNOBS STATE, a dialog's three), the one shown lit, under each name a dot a page (the page shown: its dot
+ * marked). COLORS: n rounded tabs (r 4) in a row, x 4 .. 236, 2 apart (three: 76 wide at x 4 + 78 l, as 0.8.5's), y 26,
+ * 13 tall; the group shown THEME with INK text, the others RAISE with MID; the name (its short form where it does not
+ * fit) centred, capitals rows 29..35; the dots on row 37, 2 x 1, 4 apart (INK on the lit tab, the others a mix; DIM on the
+ * rest). BOTTOM and HUD (the mock-up opciones_skin.html): the names centred in n equal slots (capitals rows 28..34), the
+ * one shown THEME, the others MID; the dots on row 38 (DIM, the group shown MID), the page's BOTTOM a THEME pill (5 x 3,
+ * rows 37..39), HUD a THEME dash (4 x 1); HUD's HOME outlined, over the beings. Drawn when what it shows changes */
 #define LT_W 76
 #define LT_X(l) (4 + (int32_t)(l) * 78)
-/* (0.8.9) the skins' (the mock-up opciones_skin.html): COLORS the tabs rounded (r 4), as the 0.6's step keys; BOTTOM and
- * HUD three words centred on x 40 + 80 l (capitals rows 28..34), the level shown THEME, the others MID, BOTTOM a THEME pill
- * under it (12 x 3, rows 37..39), HUD a THEME line under the word (row 38; on HOME outlined, over the beings) */
-static void tabs_paint(uint32_t lv, const char *const *nm3)   /* the three tabs (nm3: their names; 0: the lens's) */
+#define TAB_X(i, n) (4 + (int32_t)(i) * 234 / (int32_t)(n))   /* tab i of n (COLORS): from here, TAB_X(i + 1) - 2 wide */
+static void tabs_paint(uint32_t n, uint32_t lv, const char *const *nm, const char *const *tab, const uint8_t *cnt, uint32_t at)
 {
-    uint32_t l;
-    int low = lz_low() || (ux.skin && (ui.confirm || name_on()) && !(ui_prefs & PREF_LARGE)), hud = hud_home();   /* (0.9.0:
+    uint32_t l, d;
+    int low = lz_low() || (ux.skin && (dlg_on() || name_on()) && !(ui_prefs & PREF_LARGE)), hud = hud_home();   /* (0.9.0:
                                                          * NAME too, as the dialogs) */
     int32_t y = hud ? H_HEAD : LT_Y, h = hud ? (int32_t)graph_y() - H_HEAD : low ? LB_TAB_H : LT_H, o = LT_Y - y;
     lz_begin(240, (uint32_t)h, 0, (uint32_t)y);
-    for (l = 0; l < LV_N; l++) {
-        const char *nm = nm3 ? nm3[l] : lz_level_name(l);
+    for (l = 0; l < n; l++) {
+        int32_t x = low ? (int32_t)(l * 240u / n) + 2 : TAB_X(l, n), w = low ? (int32_t)((l + 1u) * 240u / n) - 2 - x :
+                    TAB_X(l + 1u, n) - 2 - x, nd = cnt ? cnt[l] : 0, dx = x + HALF_UP(w - (nd * 4 - 2)), dy;
+        const char *s = nm[l];
+        if (tab && tab[l] && text_w(&AF_X, s) > w - 4)
+            s = tab[l];
         if (low) {
-            int32_t cx = 40 + 80 * (int32_t)l, w = text_w(&AF_X, nm);
-            GFX_HOOK_ALIGN(cx - 38, 0, cx + 38, 0, AL_H, "LENTE tab word centred on its third");
-            cv_text_in(cx - 38, o + 2 - AF_X_CAP_Y, 76, &AF_X, nm, l == lv ? T_THEME : hud_cap(T_MID), T_BG);
-            if (l != lv)
-                continue;
-            if (ux.skin == SKIN_BOTTOM)
-                cv_rrect(cx - 6, o + 11, 12, 3, -1, T_THEME, T_BG);
-            else {
-                int32_t x0 = cx - 38 + HALF_UP(76 - (w - 1));   /* (the word's ink) */
-                if (cv_halo)
-                    cv_rect(x0 - 1, o + 11, w + 1, 3, T_BG);
-                cv_rect(x0, o + 12, w - 1, 1, T_THEME);
+            GFX_HOOK_ALIGN(x, 0, x + w, 0, AL_H, "group tab word centred on its slot");
+            cv_text_in(x, o + 2 - AF_X_CAP_Y, w, &AF_X, s, l == lv ? T_THEME : hud_cap(T_MID), T_BG);
+            dy = o + 12;
+            if (cv_halo && nd)
+                cv_rect(dx - 1, dy - 1, nd * 4, 3, T_BG);
+            for (d = 0; d < (uint32_t)nd; d++) {
+                int32_t px = dx + (int32_t)d * 4;
+                if (l == lv && d == at) {
+                    if (ux.skin == SKIN_BOTTOM)
+                        cv_rrect(px - 1, dy - 1, 5, 3, -1, T_THEME, T_BG);
+                    else
+                        cv_rect(px - 1, dy, 4, 1, T_THEME);
+                } else
+                    cv_rect(px, dy, 2, 1, l == lv ? hud_cap(T_MID) : T_DIM);
             }
             continue;
         }
         {
             uint16_t bg = l == lv ? T_THEME : T_RAISE;
-            cv_rrect(LT_X(l), 0, LT_W, LT_H, 4, bg, T_BG);
-            GFX_HOOK_ALIGN(LT_X(l), 0, LT_X(l) + LT_W, LT_H, AL_HV, "LENTE tab name centred in its tab");
-            cv_text_in(LT_X(l), CAP_IN(X, LT_H), LT_W, &AF_X, nm, l == lv ? T_INK : T_MID, bg);
+            cv_rrect(x, 0, w, LT_H, 4, bg, T_BG);
+            GFX_HOOK_ALIGN(x, 0, x + w, LT_H, AL_HV, "group tab name centred in its tab");
+            cv_text_in(x, CAP_IN(X, LT_H), w, &AF_X, s, l == lv ? T_INK : T_MID, bg);
+            for (d = 0; d < (uint32_t)nd; d++)
+                cv_rect(dx + (int32_t)d * 4, LT_H - 2, 2, 1, l != lv ? T_DIM : d == at ? T_INK : ux_mix(T_THEME, T_INK, 40));
         }
     }
     lz_blit(0, (uint32_t)y);
 }
+/* what the tabs show (lz_on): the groups' names (short forms), each one's pages, the one lit, its page; how many */
+static uint32_t tabs_now(const char **nm, const char **tab, uint8_t *cnt, uint32_t *lv, uint32_t *at)
+{
+    uint32_t f = lz_fam(), n, k, i, m;
+    uint8_t gi[8];
+    if (f == LZ_MENU) {                                 /* the menu: its four tabs, a dot a row */
+        for (k = 0; k < MTAB_COUNT; k++) {
+            nm[k] = MTAB_NAME[k];
+            tab[k] = 0;
+            cnt[k] = (uint8_t)mtab_rows(k);
+        }
+        *lv = menu_tab();
+        *at = ui.menu_sel - mtab_first(*lv);
+        return MTAB_COUNT;
+    }
+    if (f == LZ_LAYER) {                                /* a layer: its views (ALGORITHM), no dots */
+        static const char *const LLV[3] = {"MAP", "KNOBS", "STATE"};
+        for (k = 0; k < 3u; k++) {
+            nm[k] = LLV[k];
+            tab[k] = 0;
+            cnt[k] = 0;
+        }
+        *lv = ui.lylv % 3u;
+        *at = 0;
+        return 3;
+    }
+    n = nav_groups(cnt, gi, lv, at, &i, &m);
+    for (k = 0; k < n; k++) {
+        nm[k] = nav_group_name(gi[k]);
+        tab[k] = nav_group_tab(gi[k]);
+    }
+    return n;
+}
 static void draw_tabs(void)
 {
     static uint32_t drawn;
-    uint32_t lv = lz_level(), sig = (lv + 1u) * 2654435761u + ux.gen * 977u + ux.style * 7u + lz_fam() * 131u + 1u +
-                  (uint32_t)hud_home() * 31u;
+    const char *nm[8], *tab[8];
+    uint8_t cnt[8];
+    uint32_t lv, at, n = tabs_now(nm, tab, cnt, &lv, &at), k,
+             sig = (lv + 1u) * 2654435761u + at * 40503u + ux.gen * 977u + ux.style * 7u + lz_fam() * 131u + 1u +
+                   (uint32_t)hud_home() * 31u + n * 7919u;
+    for (k = 0; k < n; k++)
+        sig = (sig ^ str_hash(cnt[k], nm[k])) * 16777619u;
     if (!ui.force && sig == drawn)
         return;
     drawn = sig;
-    tabs_paint(lv, 0);
+    tabs_paint(n, lv, nm, tab, cnt, at);
 }
-/* (0.8.5) the footer's breadcrumb, as the mock-up's: small, DIM, from x 6, its parts apart by " . " ("LENTE . BAR .
- * STEP": the lens, the level, the set; elsewhere the family and the page, "ENV . ENV DEST 2/2"); the last part in
- * `last` (a flash: TEXT; the DRUM grid with ACC held: ACCENT, "ACCENT") */
+/* (0.9.2, rule 6) the footer's breadcrumb, as the mock-up's: small, DIM, from x 6, its parts apart by " . ": SECTION .
+ * GROUP . page ("FX . DELAY . DLY 2"; the menu "MENU . DISPLAY . COLOR", a layer "FX . MAP"), the group THEME, the page
+ * TEXT (`last`: a flash TEXT; the DRUM grid with ACC held: ACCENT, "ACCENT"); its place n/N in the chain at the right */
 static const char *const FAM_CRUMB[FAM_COUNT] = {"HOME", "ENV", "LFO", "FX", "SCL", "EDIT", "GLO", "SAVE", "ARP", "SEQ",
                                                  "GLO"};
 static __attribute__((noinline)) void foot_crumbs(char *b, uint32_t n)   /* b holds n (48) */
 {
-    char ti[20];
+    char ti[24];
+    uint32_t f;
     if (!lz_on() && ui.home) {
         str_cpy(b, "HOME", n);
         return;
     }
-    if (lz_on()) {
-        str_cpy(b, lz_crumb(), n);
+    if (!lz_on()) {
+        page_title(ti);
+        str_cpy(b, FAM_CRUMB[cur_page()->fam % FAM_COUNT], n);
         str_cpy(b + str_len(b), " \xB7 ", 4);
-        str_cpy(b + str_len(b), lz_level_name(lz_level()), 12);
-        if (!lz_set_name()[0])                          /* (SAVE's, FX's: the lens and the level, as the mock-up) */
-            return;
-        str_cpy(b + str_len(b), " \xB7 ", 4);
-        if (grid_on() && black_held(GK_ACC))
-            str_cpy(b + str_len(b), "ACCENT", 8);
-        else
-            str_cpy(b + str_len(b), lz_set_name(), 16);
+        str_cpy(b + str_len(b), ti, 20);
         return;
     }
-    page_title(ti);
-    str_cpy(b, FAM_CRUMB[cur_page()->fam % FAM_COUNT], n);
-    str_cpy(b + str_len(b), " \xB7 ", 4);
-    str_cpy(b + str_len(b), ti, sizeof ti);
+    f = lz_fam();
+    if (f == LZ_MENU) {
+        str_cpy(b, "MENU \xB7 ", n);
+        str_cpy(b + str_len(b), MTAB_NAME[menu_tab()], 12);
+        str_cpy(b + str_len(b), " \xB7 ", 4);
+        str_cpy(b + str_len(b), MI_NAME[ui.menu_sel % MI_COUNT], 16);
+        return;
+    }
+    if (f == LZ_LAYER) {
+        static const char *const LN[LAYER_N] = {"", "FX", "GLO", "SCL", "EDIT", "SEQ", "REC", "SAVE", "LFO"};
+        static const char *const LLV[3] = {"MAP", "KNOBS", "STATE"};
+        str_cpy(b, LN[ui.layer % LAYER_N], n);
+        str_cpy(b + str_len(b), " \xB7 ", 4);
+        str_cpy(b + str_len(b), LLV[ui.lylv % 3u], 8);
+        return;
+    }
+    {
+        uint8_t cnt[8], gi[8];
+        uint32_t g, p, i, m;
+        (void)nav_groups(cnt, gi, &g, &p, &i, &m);
+        str_cpy(b, SEC_NAME[nav_sec()], n);
+        str_cpy(b + str_len(b), " \xB7 ", 4);
+        str_cpy(b + str_len(b), nav_group_name(gi[g]), 12);
+        str_cpy(b + str_len(b), " \xB7 ", 4);
+        if (grid_on() && black_held(GK_ACC))
+            str_cpy(ti, "ACCENT", sizeof ti);
+        else
+            str_cpy(ti, nav_page_name(), sizeof ti);
+        str_cpy(b + str_len(b), ti, n - str_len(b));
+    }
 }
 #define CRUMB_Y 4                                       /* (0.8.5) a lens footer's breadcrumb (AF_X): capitals rows 5..11 */
-/* (0.8.5) the set's place at the footer's right, "1/2" (the domains of ui_lens.c with more than one set) */
+/* the page's place in its chain at the footer's right, "6/16" (the menu: the row among all; a layer: its view) */
 static int32_t crumb_count(char *b)
 {
     uint32_t k, n;
     b[0] = 0;
-    if (!lz_on() || lz_fam() < LZ_HOME)
+    if (!lz_on())
         return 0;
-    (void)lz_set(&k, &n);
+    if (lz_fam() == LZ_MENU) {
+        k = ui.menu_sel % MI_COUNT;
+        n = MI_COUNT;
+    } else if (lz_fam() == LZ_LAYER) {
+        k = ui.lylv % 3u;
+        n = 3;
+    } else {
+        uint8_t cnt[8], gi[8];
+        uint32_t g, p;
+        (void)nav_groups(cnt, gi, &g, &p, &k, &n);
+    }
     if (n < 2u)
         return 0;
     fmt_int(b, (int32_t)k + 1);
@@ -1081,7 +1143,7 @@ static void draw_foot(void)
     if (act_cols() && !lz) {                           /* the hint, and whether OCT+ would act */
         char ha[16], hb[16];
         foot_hint(ha, hb);
-        sig += str_hash(str_hash(act_ready() ? 7u : 3u, ha), hb) + foot_rename() * 7717u;
+        sig += str_hash(str_hash(act_ready() ? 7u : 3u, ha), hb);
     }
     sig += (uint32_t)accw * 977u;
     if (!ui.force && sig == ui.foot_sig)
@@ -1092,18 +1154,11 @@ static void draw_foot(void)
         ;                                             /* (0.8.5) a lens page: the breadcrumb alone, as the mock-up */
     } else if (act_cols()) {                          /* row 1: the OCT+ / OCT- hint in place of the steps */
         char ha[16], hb[16];
-        khint_t kh[3];
-        uint32_t rn = foot_rename();
+        khint_t kh[2];
         foot_hint(ha, hb);                            /* "OCT+ LOAD", "OCT- BACK": keycaps and their words */
         kh[0] = (khint_t){KC_OCTUP, ha + 5};
         kh[1] = (khint_t){KC_OCTDN, hb + 5};
-        if (rn) {                                     /* USER / PROJECT: "EDIT NAME" between them */
-            kh[2] = kh[1];
-            kh[1] = (khint_t){KC_EDIT, cur_page()->graph == GR_EVENTS ? "DELETE" : "NAME"};
-            cv_key_row(8, 232, 2, kh, 3, (act_ready() ? 1u : 0u) | (rn == 2u ? 2u : 0u) | 4u, T_BG);
-        } else {
-            cv_key_row(8, 232, 2, kh, 2, act_ready() ? 3u : 2u, T_BG);
-        }
+        cv_key_row(8, 232, 2, kh, 2, act_ready() ? 3u : 2u, T_BG);
     } else {
         uint32_t i;
         if ((ui.bank + 1u) * 16u <= (uint32_t)t->p[P_SLEN])
@@ -1641,6 +1696,14 @@ static void draw_columns(void)
     for (c = 0; c < 4u; c++) {
         int16_t *vp;
         const param_desc_t *d = page_desc(cur_page(), c, &vp);
+        if (c == 0u && BAR_PAGE(cur_page())) {          /* (0.9.2) SEQ > BAR: KNOB 1 the bar ("2/4") */
+            uint32_t nb = ((uint32_t)clamp(TSEL->p[P_SLEN], 1, NSTEP) + 15u) / 16u;
+            char u[4] = "/1";
+            fmt_int(val, (int32_t)ui.bank + 1);
+            u[1] = (char)('0' + nb);
+            draw_column(0, "BAR", val, u, VAL(0u), nb > 1u ? (int32_t)ui.bank * 1000 / (int32_t)(nb - 1u) : 0, ICON_X_PATTERN);
+            continue;
+        }
         if (!d || !d->label || d->label[0] == '-') {
             draw_column(c, "", "", "", T_THEME, -1, ICON_AUTO);
             continue;
@@ -2041,13 +2104,15 @@ static void fill_around(const int16_t (*r)[4], uint32_t n)
 static void dlg_tabs(uint32_t lv)
 {
     static const char *const DN[3] = {"NOTICE", "DICE", "NAME"};
-    tabs_paint(lv, DN);                                 /* (0.8.9: in the skin's tabs) */
+    tabs_paint(3, lv, DN, 0, 0, 0);                     /* (0.8.9: in the skin's tabs) */
 }
-static void dlg_crumb(const char *a, const char *b)     /* "LENTE . NOTICE . CONFIRM" (0.8.9: the level THEME, the set TEXT) */
+static void dlg_crumb(const char *a, const char *b)     /* "SAVE . NOTICE . CONFIRM": the section, the dialog's kind THEME,
+                                                         * what it asks TEXT (0.9.2: was "LENTE") */
 {
     int32_t x;
     cv_begin(240, LZ_FOOT_H, T_BG);
-    x = cv_text(6, CRUMB_Y, &AF_X, "LENTE \xB7 ", T_DIM);
+    x = cv_text(6, CRUMB_Y, &AF_X, SEC_NAME[nav_sec()], T_DIM);
+    x = cv_text(x, CRUMB_Y, &AF_X, " \xB7 ", T_DIM);
     x = cv_text(x, CRUMB_Y, &AF_X, a, T_THEME);
     x = cv_text(x, CRUMB_Y, &AF_X, " \xB7 ", T_DIM);
     cv_text(x, CRUMB_Y, &AF_X, b, T_TEXT);
@@ -2199,21 +2264,12 @@ static void ui_draw_page(uint32_t counting)
         ui.force = 0;
         return;
     }
-    if (counting && !ui.confirm && !name_on()) {        /* the count-in: over the page (and a layer) */
+    if (counting && !dlg_on() && !name_on()) {          /* the count-in: over the page (and a layer) */
         draw_countin();
         draw_head();
         return;
     }
-    if (ui.confirm == CF_DICE_ALL) {                    /* (0.8.5) GEN: HOME's lens, its last level */
-        if (ui.force)
-            draw_frame();
-        draw_head();
-        gen_cards();
-        draw_graph();
-        lz_frame_end();
-        return;
-    }
-    if (ui.confirm) {                                   /* the OCT- / OCT+ dialog */
+    if (dlg_on()) {                                     /* the OCT- / OCT+ dialog */
         if (ui.force) {
             draw_confirm();
             ui.force = 0;
@@ -2249,6 +2305,16 @@ static void ui_draw_page(uint32_t counting)
         if (ui.bpm_t)
             ui.bpm_t--;
         ui.force = 0;
+        return;
+    }
+    if (ui.confirm == CF_DICE_ALL) {                    /* (0.8.5) GEN: HOME's lens, its last level (0.9.2: under
+                                                         * a layer's map, a page as the others) */
+        if (ui.force)
+            draw_frame();
+        draw_head();
+        gen_cards();
+        draw_graph();
+        lz_frame_end();
         return;
     }
     if (!ui.home && !page_visible(ui.page)) {          /* an OP page of a track that is not DIGITAL (without

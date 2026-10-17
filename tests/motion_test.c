@@ -707,8 +707,8 @@ static int lock_ui(void)
     bad += check("  let go: the note and the lock on step 1, the cursor on", ui.cursor == 1u && t->step[0].n == 1u &&
         motion_lock_count(t) == 1u && motion_lock_steps(0) == 1u);
     cursor_set(0);
-    press(B_EDIT);
-    bad += check("  [EDIT] alone clears the step and its locks", !t->step[0].n && !motion_lock_count(t));
+    clr_step(); frames(400);                             /* (0.9.2: SEQ + G5; [EDIT] alone until 0.9.1) */
+    bad += check("  0.9.2 SEQ + G5 (was [EDIT] alone) clears the step and its locks", !t->step[0].n && !motion_lock_count(t));
     song.playing = 1; chain.running = 1;
     lk_down(kn); turn(EN_K3, 1); lk_up(kn);
     bad += check("  a song playing: STOP TO EDIT, no lock", !motion_lock_count(t));
@@ -803,8 +803,8 @@ static int auto_list(void)
     press(B_OCTUP);
     bad += check("  OCT+ on + ADD LOCK where one is: ALREADY LISTED, that row selected", motion_count(t) == 2u &&
         str_eq(ui.msg, "ALREADY LISTED") && ev_row(2u) == 0u);
-    press(B_EDIT);
-    bad += check("  EDIT: the row's record goes", motion_count(t) == 1u && !motion_lock_get(t, 2, ui.ev_id, &v) &&
+    clr_step();                                          /* (0.9.2: SEQ + G5, DEL REC; EDIT until 0.9.1) */
+    bad += check("  0.9.2 SEQ + G5 (was EDIT): the row's record goes", motion_count(t) == 1u && !motion_lock_get(t, 2, ui.ev_id, &v) &&
         str_eq(ui.msg, "DELETED"));
     frames(2000);
     turn(EN_K1, -5);

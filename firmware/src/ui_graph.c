@@ -1076,33 +1076,28 @@ static void page_title(char *ti)
     const track_t *t = TSEL;
     const engine_t *e = ENGINES[t->eng_req % NENGINES];
     uint32_t i, n = 0, k = 0;
+    char nb[24];
     const char *pt = pg->scope == SC_ENGINE ? e->page_title[pg->id[0] != P_E0] : 0;   /* EDIT: the engine's */
-    if (pg->fam == FAM_FX && !page_over) {              /* (0.6.24) FX: the page within its section */
-        uint32_t h = ui.page;
-        while (h > 0u && !fx_head(h))
-            h--;
-        for (i = h; i < NPAGES && PAGES[i].fam == FAM_FX && (i == h || !fx_head(i)); i++)
-            if (page_visible(i)) {
+    str_cpy(nb, pg->title, sizeof nb);
+    if (!page_over && !ui.home) {                       /* (0.9.2) the page within its group ("ENV DEST 2/2", FX: the
+                                                         * effect's name, "DELAY 2/3") */
+        uint8_t cnt[8], gi[8];
+        uint32_t g, m;
+        (void)nav_groups(cnt, gi, &g, &k, &i, &m);
+        n = cnt[g];
+        k++;
+        if (pg->fam == FAM_FX && fx_level() == FXL_EFFECT)
+            str_cpy(nb, nav_group_name(gi[g]), sizeof nb);
+        else
+            str_cpy(nb, nav_page_name(), sizeof nb);
+    } else
+        for (i = 0; i < NPAGES; i++)
+            if (PAGES[i].fam == pg->fam && page_visible(i)) {
                 n++;
                 if (i == ui.page)
                     k = n;
             }
-        pt = str_eq(PAGES[h].title, "FX") || str_eq(PAGES[h].title, "DIST") ? pg->title : PAGES[h].title;   /* (the
-                                                         * section's name: "DLY 2/2", "SLICER 4/4"; 0.6.81: TRACK's its
-                                                         * pages' own, "AUTO PAN 3/3" was "FX 3/3"; 0.7.6: MIX's too,
-                                                         * "MASTER 2/2") */
-    } else if (pg->fam == FAM_SEQ && lens_on() && lens_k(lens_level(), ui.page) >= 0) {   /* (0.8.3) LENTE: the set
-                                                         * within its level ("NOTE 2/3") */
-        n = LENS_N[lens_level()];
-        k = (uint32_t)lens_k(lens_level(), ui.page) + 1u;
-    } else
-    for (i = 0; i < NPAGES; i++)
-        if (PAGES[i].fam == pg->fam && page_visible(i)) {
-            n++;
-            if (i == ui.page)
-                k = n;
-        }
-    str_cpy(ti, pt ? pt : grid_on() && roll_view(pg) ? "GRID" : pg->title, 12);
+    str_cpy(ti, pt ? pt : grid_on() && roll_view(pg) ? "GRID" : nb, 12);
     if (n > 1) {
         str_cpy(ti + str_len(ti), " ", 4);
         fmt_int(ti + str_len(ti), (int32_t)k);
@@ -1638,7 +1633,7 @@ static uint32_t graph_signature(void)
     }
     if (fx_on()) {                                   /* (0.8.5) FX's lens: the level, the module, the buses' values, the
                                                          * slicer's step, the output (MASTER), the punch lane */
-        h = (h ^ (fx_level() + 1u) * 2654435761u ^ ui.fxmod * 40503u ^ ui.fxtrk * 977u) * 16777619u;
+        h = (h ^ (fx_level() + 1u) * 2654435761u ^ ui.fxmod * 40503u) * 16777619u;
         for (i = 0; i < G_COUNT; i++)
             h = (h ^ (uint32_t)song.g[i]) * 16777619u;
         if (fx_level() == FXL_BUSES || (fx_level() == FXL_EFFECT && fx_mod_of(ui.page) == 3u))   /* (the SLICER drawn) */
