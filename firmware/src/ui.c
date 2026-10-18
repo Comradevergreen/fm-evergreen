@@ -162,6 +162,10 @@ static void rp_put(uint32_t f, uint32_t v)
  * byte 20), saved with the settings; 0 in older ones = COLORS, unknown = COLORS (settings_persist.c). gfx.c draws from its
  * copy, ux.skin (ui_draw.c style_apply) */
 #define ui_skin (favorites.factory[15][20])
+/* (0.9.7) MENU > DISPLAY > SCOPE (ui_lzedit.c graph_sound_lz): 1 ON, an engine's EDIT pages as before (the creature on the left,
+ * the SCOPE card, the chips); 0 OFF (the default: new settings and older ones, which never held it), the creature on the
+ * whole panel, centred, the page's and the sound's names in its corners. A byte no engine uses (engine 15) */
+#define ui_scope (favorites.factory[15][19])
 static void draw_rules(uint32_t y, uint32_t h);       /* (ui_draw.c) */
 
 static uint8_t sync_reload;                  /* engine / preset / project / user preset loaded: editor RELOAD push */

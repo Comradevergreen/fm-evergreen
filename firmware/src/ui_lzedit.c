@@ -11,9 +11,6 @@
  *   FOCUS   the parameter as a gauge, its value large, the MOD slot that moves it ("M1 -> +63%"); E1..E8 as tabs
  * The others (MORPH, RETRIG, ROTOR, the kit's, the operators') keep their panels. */
 #define ED_CH 17                                        /* a chip's height (two lines of AF_X) */
-#ifndef VX_FULL_HOOK
-#define VX_FULL_HOOK 0                                  /* (0.9.6) ui_render.c: an engine's creature on the whole panel */
-#endif
 /* a chip: the stripe, the label, the value (on: the page's) */
 static void ed_chip(int32_t x, int32_t y, int32_t w, const param_desc_t *d, int16_t v, int on)
 {
@@ -43,11 +40,15 @@ static void graph_sound_lz(const track_t *t)
     /* (0.8.9, the skins' mock-up) the being large on the left (its tendrils kept on its side), the page's name over it, the
      * sound's under it; on the right the scope in a tile (COLORS) or bare (BOTTOM, HUD), the page's four parameters as
      * chips in their knobs' colours (the knob turning: its label TEXT), the other page's names under them */
-    if (VX_FULL_HOOK && vx_draw(t, 4, 2, 232, 136, -1)) {   /* (0.9.6) the creature on the whole panel (host tests: the
-                                                         * layout to come): the page's name and the sound's in its corners */
+    if (!ui_scope && vx_draw(t, 4, 2, 232, (int32_t)cv_h - 4, -1)) {   /* (0.9.7) MENU > DISPLAY > SCOPE
+                                                         * OFF (the default): the creature on the whole panel, centred, no
+                                                         * SCOPE card and no chips (the knobs' cards say them); the page's name
+                                                         * and the sound's small in its corners (BOTTOM, HUD, AIR: outlined) */
+        cv_halo = (uint8_t)bare;
         ed_cap(10, 6, e->page_title[two] && e->page_title[two][0] != '-' ? e->page_title[two] : e->name, T_THEME);
         sound_name(t, b);
-        cv_clip_text(10, 128 - AF_X_CAP_Y, &AF_X, b[0] ? b : e->name, T_MID, T_SURF, 104);
+        cv_clip_text(10, (int32_t)cv_h - 12 - AF_X_CAP_Y, &AF_X, b[0] ? b : e->name, bare ? T_TEXT : T_MID, T_SURF, 104);
+        cv_halo = 0;
         return;
     }
     if (!vx_draw(t, 8, 14, 108, 112, -1))              /* (0.9.4 / 0.9.6: the engines' own creatures: ui_engvis.c) */

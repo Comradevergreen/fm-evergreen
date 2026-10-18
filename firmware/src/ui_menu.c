@@ -237,7 +237,7 @@ static void menu_panel(void)
                 lz_uline(x + 5, y + 12, &AF_X, MTAB_NAME[k], T_THEME);
             for (r = 0; r < mtab_rows(k); r++) {
                 uint32_t row = mtab_first(k) + r;
-                int32_t ry = y + 15 + (int32_t)r * 8;
+                int32_t ry = y + 15 + (int32_t)r * (mtab_rows(k) > 7u ? 7 : 8);   /* (0.9.7: DISPLAY's eight 7 apart) */
                 uint16_t bg = lz_tile_bg();
                 menu_val(row, v);
                 cv_clip_text(x + 5, ry - AF_X_CAP_Y, &AF_X, menu_short(row), T_DIM, bg, 64);
@@ -249,9 +249,9 @@ static void menu_panel(void)
     if (ui.mlv == 1u) {                                /* TAB: its rows */
         cv_text(10, 6 - AF_X_CAP_Y, &AF_X, MTAB_NAME[t], T_THEME);
         cv_text_r(228, 6 - AF_X_CAP_Y, &AF_X, "ALGO: TAB \xB7 SELECT: ROW", T_DIM, T_SURF);
-        for (r = 0; r < n; r++) {               /* (0.8.9: seven rows fit, 17 apart) */
+        for (r = 0; r < n; r++) {               /* (0.8.9: seven rows fit, 17 apart; 0.9.7: eight, 15) */
             uint32_t row = f + r, in = r / 4u == menu_set();
-            int32_t y = 14 + (int32_t)r * (n > 6u ? 17 : 20), h = n > 6u ? 16 : 18;
+            int32_t y = 14 + (int32_t)r * (n > 7u ? 15 : n > 6u ? 17 : 20), h = n > 7u ? 14 : n > 6u ? 16 : 18;
             uint16_t bg = in ? T_TINT : T_RAISE;
             cv_rect(8, y, 224, h, bg);
             if (row == ui.menu_sel)

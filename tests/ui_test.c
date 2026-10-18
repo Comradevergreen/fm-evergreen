@@ -2112,22 +2112,23 @@ static int test_menu_tabs(void)
         ok &= n >= 1u && n <= MTAB_ROWS && f < MI_COUNT;
         for (i = 0; i < MI_COUNT; i++)                  /* its rows in one run */
             ok &= (MI_TAB[i] == t) == (i >= f && i < f + n);
-        ok &= 14 + (int32_t)n * (n > 6u ? 17 : 20) <= LZ_GRAPH_H;   /* (0.8.5 the lens: TAB's rows in the panel; 0.8.9 seven:
-                                                         * 17 apart) */
+        ok &= 14 + (int32_t)n * (n > 7u ? 15 : n > 6u ? 17 : 20) <= LZ_GRAPH_H;   /* (0.8.5 the lens: TAB's rows in the panel;
+                                                         * 0.8.9 seven: 17 apart; 0.9.7 eight: 15) */
         for (i = f; i < f + n; i++)                     /* .. ROW's chips, every value */
             ok &= i >= MI_VALUES || 16 + (int32_t)((menu_n(i) + 2u) / 3u) * 20 <= LZ_GRAPH_H;
     }
     for (i = 0; i < MI_COUNT; i++) ok &= MI_TAB[i] < MTAB_COUNT;
     ui_prefs = 0;
-    bad += check("MENU tabs: DISPLAY CONTROL AUDIO SYSTEM (7 6 6 6 rows: 0.8.9 SKIN), 1..7 each in a run, their rows and values fit the lens's panel",
-                 ok && MTAB_COUNT == 4u && str_eq(MTAB_NAME[0], "DISPLAY") && mtab_rows(MTAB_DISPLAY) == 7u &&
+    bad += check("MENU tabs: DISPLAY CONTROL AUDIO SYSTEM (8 6 6 6 rows: 0.8.9 SKIN, 0.9.7 SCOPE), 1..8 each in a run, their rows and values fit the lens's panel",
+                 ok && MTAB_COUNT == 4u && str_eq(MTAB_NAME[0], "DISPLAY") && mtab_rows(MTAB_DISPLAY) == 8u &&
                  mtab_rows(MTAB_CONTROL) == 6u && mtab_rows(MTAB_AUDIO) == 6u && mtab_rows(MTAB_SYSTEM) == 6u);   /* (0.6.58: INIT SYSTEM;
                                                                          * 0.6.72: MIDI OUT in CONTROL) */
 
     ui_power_on();
     hold(B_HOME);
     ok = ui.menu == 1 && ui.menu_sel == MI_COLOR && menu_tab() == MTAB_DISPLAY;
-    for (i = 0; i < 6u; i++) turn(EN_SELECT, 1);     /* (0.9.2: SELECT every row, tab after tab; was PRESETS in a tab, round) */
+    for (i = 0; i < 7u; i++) turn(EN_SELECT, 1);     /* (0.9.2: SELECT every row, tab after tab; was PRESETS in a tab, round;
+                                                     * 0.9.7: SCOPE a row more) */
     ok &= ui.menu_sel == MI_SCROFF;
     turn(EN_SELECT, 1); ok &= ui.menu_sel == MI_HOLD && menu_tab() == MTAB_CONTROL;   /* (into the next tab) */
     turn(EN_SELECT, -1); ok &= ui.menu_sel == MI_SCROFF;
@@ -2280,9 +2281,9 @@ static int test_menu_tabs(void)
     hold(B_HOME);
     frame();
     ok = ui.menu == 1 && ui.mlv == 1u && lz_on() && lz_fam() == LZ_MENU && lz_tabs() == 4u && lz_tab_lit(0) &&
-         lz_crumb_is("MENU \xB7 DISPLAY \xB7 COLOR") && lz_count_is("1/25");
+         lz_crumb_is("MENU \xB7 DISPLAY \xB7 COLOR") && lz_count_is("1/26");
     turn(EN_SELECT, 1); frame();
-    ok &= ui.mlv == 1u && lz_tab_lit(0) && lz_crumb_is("MENU \xB7 DISPLAY \xB7 SKIN") && lz_count_is("2/25");
+    ok &= ui.mlv == 1u && lz_tab_lit(0) && lz_crumb_is("MENU \xB7 DISPLAY \xB7 SKIN") && lz_count_is("2/26");
     turn(EN_ALGO, 1); frame();
     ok &= menu_tab() == MTAB_CONTROL && lz_tab_lit(1) && lz_crumb_is("MENU \xB7 CONTROL \xB7 HOLD");
     turn(EN_SELECT, 2); frame();
@@ -2291,7 +2292,7 @@ static int test_menu_tabs(void)
     ok &= (fx_latch & 1u) != 0u;
     turn(EN_K3, -1); frame();
     menu_close();
-    bad += check("0.9.2 MENU: four tabs (the row's lit), MENU . TAB . ROW and n/25; ALGORITHM the tab, any knob the value", ok && MI_COUNT == 25u);
+    bad += check("0.9.2 MENU: four tabs (the row's lit), MENU . TAB . ROW and n/26 (0.9.7: SCOPE); ALGORITHM the tab, any knob the value", ok && MI_COUNT == 26u);
     return bad;
 }
 
@@ -5931,7 +5932,7 @@ static int test_screen_off(void)
     ui_power_on();                                    /* in the MENU: OCT+ / a knob step it */
     menu_put(MI_SCROFF, 3u);
     hold(B_HOME);
-    for (i = 0; i < 6u; i++) turn(EN_SELECT, 1);   /* (0.8.9: SKIN a row more; 0.9.2: SELECT, was PRESETS) */
+    for (i = 0; i < 7u; i++) turn(EN_SELECT, 1);   /* (0.8.9: SKIN a row more; 0.9.2: SELECT, was PRESETS; 0.9.7: SCOPE) */
     ok = ui.menu == 1 && ui.menu_sel == MI_SCROFF;
     press(B_OCTUP); ok &= scr_get() == 4u;
     press(B_OCTUP); ok &= scr_get() == 4u;           /* (stops at the end) */
@@ -9693,6 +9694,92 @@ static int test_skin(void)
     return bad;
 }
 
+/* (0.9.7) MENU > DISPLAY > SCOPE (ui.c ui_scope, ui_lzedit.c graph_sound_lz): OFF by default (new settings and older ones),
+ * a synth's EDIT pages the creature on the whole panel (no SCOPE card, no chips); ON as before (the creature on the left,
+ * the SCOPE card, the chips); saved with the settings; every engine with a creature, every skin */
+static uint32_t sc_count(int32_t x0, int32_t y0, int32_t x1, int32_t y1, uint16_t c, int eq)
+{
+    int32_t x, y;
+    uint32_t n = 0;
+    for (y = y0; y < y1; y++)
+        for (x = x0; x < x1; x++)
+            n += (lg_px(x, y) == c) == eq;
+    return n;
+}
+static uint32_t sc_rows(int32_t y0, int32_t y1, uint16_t c)   /* rows of x 122..228 at least 90 px of c (a tile, a chip) */
+{
+    int32_t y;
+    uint32_t n = 0;
+    for (y = y0; y < y1; y++)
+        n += sc_count(122, y, 228, y + 1, c, 1) >= 90u;
+    return n;
+}
+static int test_scope(void)
+{
+    int bad = 0, ok;
+    uint32_t e, sk, nseen = 0;
+    ui_power_on(); frame();
+    ok = ui_scope == 0u && MI_SCOPE == MI_SKIN + 1u && str_eq(MI_NAME[MI_SCOPE], "SCOPE") && MI_TAB[MI_SCOPE] == MTAB_DISPLAY &&
+         menu_n(MI_SCOPE) == 2u && str_eq(menu_vname(MI_SCOPE, 0), "OFF") && str_eq(menu_vname(MI_SCOPE, 1), "ON") &&
+         menu_get(MI_SCOPE) == 0u;
+    hold(B_HOME); ui.menu_sel = MI_SCOPE;
+    turn(EN_K1, 1); ok &= ui_scope == 1u && menu_get(MI_SCOPE) == 1u;
+    turn(EN_K1, 1); ok &= ui_scope == 1u;                         /* (stops at the end) */
+    press(B_OCTDN); ok &= ui_scope == 0u;
+    press(B_OCTUP); ok &= ui_scope == 1u;
+    press(B_HOME); ok &= !ui.menu;
+    bad += check("SCOPE: OFF by default, a row of DISPLAY under SKIN; KNOB 1 / OCT+- OFF ON, stopping at the ends", ok);
+    {   /* saved with the settings (byte 19 of engine 15); older settings (0) and unknown values: OFF; new settings: OFF */
+        persist_t p, q;
+        ui_scope = 1u;
+        settings_export(&p);
+        ui_scope = 0u;
+        ok = settings_import(&p, (int)sizeof p) == 1 && ui_scope == 1u && p.favorites.factory[15][19] == 1u;
+        p.favorites.factory[15][19] = 0;
+        ok &= settings_import(&p, (int)sizeof p) == 1 && ui_scope == 0u;
+        p.favorites.factory[15][19] = 9;
+        ok &= settings_import(&p, (int)sizeof p) == 1 && ui_scope == 0u && !p.favorites.factory[15][19];
+        q = p;
+        ok &= settings_import(&q, (int)sizeof q) == 1 && !memcmp(&p, &q, sizeof p);
+        settings_export(&p);
+        memset(&p.favorites, 0, sizeof p.favorites);
+        p.magic = 0x50455233u;                                    /* (PER3: settings from before) */
+        ui_scope = 1u;
+        ok &= settings_import(&p, (int)(sizeof p - sizeof p.favorites)) == 2 && ui_scope == 0u;
+        ui_scope = 1u;
+        settings_fresh();
+        ok &= ui_scope == 1u;                                     /* (settings_fresh leaves it: a new FM-1's byte is 0, OFF) */
+        bad += check("SCOPE saved with the settings and read back; older settings, unknown values: OFF (idempotent)", ok);
+    }
+    for (sk = 0; sk < SKIN_N; sk++)                               /* the EDIT pages of every engine with a creature */
+        for (e = 0; e < NENGINES; e++) {
+            uint32_t on_tile, on_mid, off_tile, off_mid, gy, chips;
+            if (!eng_ok(e) || e == ENGI_DRUM || e == ENGI_FM6 || eng_gone(e))
+                continue;
+            ui_power_on(); ui_skin = (uint8_t)sk; set_engine_of(TSEL, e); TSEL->engine = TSEL->eng_req;
+            go_title("EDIT 1"); ui.force = 1; frame(); frame();
+            if (trk_engp(TSEL) == &ENG_FORMANT && TSEL->p[P_VLANG])
+                continue;
+            gy = graph_y();
+            ui_scope = 1u; ui.force = 1; frame();
+            on_tile = sc_rows((int32_t)gy + 2, (int32_t)gy + 60, T_RAISE);   /* (COLORS: the SCOPE card) */
+            chips = sc_rows((int32_t)gy + 63, (int32_t)gy + 115, T_RAISE);   /* (.. the chips) */
+            on_mid = sc_count(117, (int32_t)gy + 20, 121, (int32_t)gy + 120, T_SURF, 0);   /* (the gap left of the card: clear) */
+            ui_scope = 0u; ui.force = 1; frame();
+            off_tile = sc_rows((int32_t)gy + 2, (int32_t)gy + 115, T_RAISE);   /* (no card, no chips) */
+            off_mid = sc_count(117, (int32_t)gy + 20, 121, (int32_t)gy + 120, T_SURF, 0);   /* (the creature across the middle) */
+            ok = on_mid == 0u && off_mid > 0u && off_tile == 0u && (ux.skin || (on_tile > 40u && chips >= 20u));
+            if (!ok) printf("  %s skin %u: on card %u chips %u mid %u, off card %u mid %u\n", ENGINES[e]->name, sk, on_tile, chips, on_mid,
+                            off_tile, off_mid);
+            nseen += ok;
+            bad += ok ? 0 : 1;
+        }
+    bad += check("SCOPE: ON the creature left of the SCOPE card and the chips; OFF on the whole panel, no card, no chips (every engine, every skin)",
+                 nseen >= 4u * 7u);
+    ui_power_on(); frame();
+    return bad;
+}
+
 /* MENU (1.0.5: in tabs): every row reachable with ALGORITHM and PRESETS, each tab its own page; #46 MENU > ANIM: ON by
  * default (and in every older setting), OFF snaps the rolling digits, the piano roll and the menu's tabs */
 static int test_menu_prefs(void)
@@ -11331,6 +11418,7 @@ int main(void)
     bad += test_bpm_lock();
     bad += test_large();
     bad += test_skin();
+    bad += test_scope();
     bad += test_browse_no_pattern();
     bad += test_name();
     bad += test_edit_cycle();
