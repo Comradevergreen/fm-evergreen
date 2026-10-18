@@ -98,6 +98,16 @@ static uint16_t vx_col(int32_t h)
     while (k < 6u && h > VK_HP[k + 1u]) k++;
     return ux_mix(VK_HC[k], VK_HC[k + 1u], (h - VK_HP[k]) * 100 / (VK_HP[k + 1u] - VK_HP[k]));
 }
+/* (0.9.7) HOME's beings (ui_lzhome.c, variant A): the same ramp on JIANT, every other palette as the beings (bg_col) */
+static uint16_t vk_heat(int32_t h)
+{
+    uint32_t k = 0;
+    h = clamp(h, 0, 255);
+    if (settings.palette != UI_JIANT_INDEX)
+        return bg_col(h);
+    while (k < 6u && h > VK_HP[k + 1u]) k++;
+    return ux_mix(VK_HC[k], VK_HC[k + 1u], (h - VK_HP[k]) * 100 / (VK_HP[k + 1u] - VK_HP[k]));
+}
 static void vx_line(const vxf_t *f, int32_t x0, int32_t y0, int32_t x1, int32_t y1, int32_t h)
 {
     int32_t X0 = f->cx + ((x0 * f->s) >> 8), Y0 = f->cy + ((y0 * f->s) >> 8);

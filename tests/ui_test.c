@@ -9309,7 +9309,7 @@ static int test_large(void)
     ok &= lg_px(30, LZ_CARD_Y + LZ_CARD_H + 2) == T_SURF && off[(LZ_CARD_Y + LZ_CARD_H + 2) * 240 + 30] == swap16(T_BG);   /* a
                                                          * card where the gap was */
     {   /* a gap in the panel: the old panel's row read across it (8 .. 231), at least half of it SURF: HOME's moving
-         * dust (ui_being.c) and, since 0.8.5's lens, the critters round the beings sit on that row here and there */
+         * dust (ui_being.c) and the beings sit on that row here and there */
         uint32_t x, n = 0;
         for (x = 8; x < 232u; x++)
             n += off[(LZ_LG_Y_GRAPH - 2) * 240 + x] == swap16(T_SURF);
@@ -9713,6 +9713,117 @@ static uint32_t sc_rows(int32_t y0, int32_t y1, uint16_t c)   /* rows of x 122..
     for (y = y0; y < y1; y++)
         n += sc_count(122, y, 228, y + 1, c, 1) >= 90u;
     return n;
+}
+/* (0.9.7) HOME variant A: the face (eco_face) drawn alone on a canvas: the rows its pixels span, the top one */
+static void ha_face(int32_t e, uint32_t fl, uint32_t *rows, int32_t *top)
+{
+    uint32_t x, y, n = 0;
+    cv_begin(64, 64, T_SURF);
+    cv_oy = 0;
+    eco_face(32 * 16, 32 * 16, 17 * 16, 159, e, fl);
+    *top = -1;
+    for (y = 0; y < 64u; y++) {
+        int any = 0;
+        for (x = 0; x < 64u; x++)
+            any |= cv_px[y * 64u + x] != swap16(T_SURF);
+        if (any && *top < 0) *top = (int32_t)y;
+        n += (uint32_t)any;
+    }
+    *rows = n;
+}
+static uint32_t ha_eye_rows(uint32_t fl)                /* .. the rows of its eyes' colour (vk_heat(248); asleep: dim) */
+{
+    uint32_t x, y, n = 0;
+    uint16_t c = swap16((fl & EF_SLEEP) ? T_DIM : vk_heat(248));
+    cv_begin(64, 64, T_SURF);
+    cv_oy = 0;
+    eco_face(32 * 16, 32 * 16, 17 * 16, 159, 0, fl);
+    for (y = 0; y < 64u; y++) {
+        int any = 0;
+        for (x = 0; x < 64u; x++)
+            any |= cv_px[y * 64u + x] == c;
+        n += (uint32_t)any;
+    }
+    return n;
+}
+/* .. ECO's panel (COLORS: the graph's rows) at frame f, the animation held: its pixels not SURF away from every being (2 r +
+ * 14 px round it: its isotherms, face, number) */
+static uint32_t ha_loose(void)
+{
+    uint32_t x, y, c, n = 0;
+    for (y = graph_y() + 2u; y + 2u < graph_y() + graph_h(); y++)
+        for (x = 8; x < 232u; x++) {
+            int near = 0;
+            for (c = 0; c < ECO_N; c++) {
+                int32_t dx = (int32_t)x - (eco.sx[c] >> 8), dy = (int32_t)y - (int32_t)graph_y() - (eco.sy[c] >> 8);
+                int32_t rr = 2 * (eco.r[c] >> 4) + 14;
+                near |= dx * dx + dy * dy < rr * rr;
+            }
+            n += !near && lg_px((int32_t)x, (int32_t)y) != T_SURF;
+        }
+    return n;
+}
+static void ha_eco_at(uint32_t f) { ui.frame = f - 1u; ui.force = 1; frame(); }
+static int test_home_a(void)
+{
+    int bad = 0, ok;
+    uint32_t r0, r1, c, sk;
+    int32_t t0, t1;
+    ui_power_on();
+    ha_face(0, 0, &r0, &t0);
+    ha_face(256, 0, &r1, &t1);
+    ok = r1 >= r0 + 3u && t1 == t0;                              /* (the mouth opens with the level, the eyes stay) */
+    ha_face(0, EF_UP, &r1, &t1);
+    ok &= t1 < t0;                                                /* (MUTATE: it looks up) */
+    ok &= ha_eye_rows(0) == 2u && ha_eye_rows(EF_SHUT) == 1u && ha_eye_rows(EF_SLEEP) >= 1u;
+    bad += check("0.9.7 HOME A: the face: its mouth opens with the level, its eyes shut on a hit (one row), it looks up on MUTATE", ok);
+    {   /* the face as HOME runs it: a hit shuts the eyes 0.1 s, a mutation landed looks up, muted asleep */
+        ui_power_on(); ui.home = 1; ui.hlv = 0; ui.hset[0] = 0;
+        for (c = 0; c < NTRK; c++) trk[c].p[P_MUTE] = 0;
+        frames(320);
+        ok = eco_fc.init && !(eco_fc.fl[0] & (EF_SHUT | EF_UP));
+        for (c = 0; c < 4u && eco.en[0] < 200; c++) { trk[0].peak = 9000; frame(); }   /* (the panel: every other frame) */
+        ok &= (eco_fc.fl[0] & EF_SHUT) && eco.en[0] > 77 && !(eco_fc.fl[1] & EF_SHUT);
+        for (c = 0; c < 12u; c++) { trk[0].peak = 9000; frame(); }
+        ok &= !(eco_fc.fl[0] & EF_SHUT);                          /* (0.1 s on: open again, the level held) */
+        mut_flash[2] = 12; frame(); frame();
+        ok &= (eco_fc.fl[2] & EF_UP) && !(eco_fc.fl[3] & EF_UP);
+        mut_flash[2] = 0; frame(); frame();
+        ok &= !(eco_fc.fl[2] & EF_UP);
+        bad += check("0.9.7 HOME A: a hit shuts its eyes 0.1 s (only its), a mutation landed: it looks up (only it)", ok);
+    }
+    for (sk = 0; sk < SKIN_N; sk++) {   /* no critters, no ring of MUTATE dots: MUTATE on draws nothing until one lands */
+        static uint16_t a[240 * 240];
+        ui_power_on(); ui_skin = (uint8_t)sk; ui.home = 1; ui.hlv = 0; ui.hset[0] = 0;
+        frames(320);
+        ui_prefs = PREF_ANIM_OFF;
+        for (c = 0; c < NTRK; c++) { trk[c].p[P_MSND] = 0; trk[c].p[P_MPAT] = 0; }
+        ha_eco_at(5000); ha_eco_at(5000);
+        memcpy(a, host_screen, sizeof a);
+        ha_eco_at(5000);
+        ok = !memcmp(a, host_screen, sizeof a);                   /* (control: the same frame, the same picture) */
+        for (c = 0; c < NTRK; c++) trk[c].p[P_MSND] = 1;          /* MUTATE SOUND every bar on every track */
+        ha_eco_at(5000);
+        {
+            uint32_t y, d = 0;
+            for (y = graph_y(); y < graph_y() + graph_h(); y++)
+                d += memcmp(a + y * 240u, host_screen + y * 240u, 480u) != 0;
+            ok &= d == 0u;
+        }
+        mut_flash[0] = 12;                                        /* .. one lands: its ring, its number white */
+        ha_eco_at(5000);
+        ok &= memcmp(a, host_screen, sizeof a) != 0;
+        mut_flash[0] = 0;
+        if (sk == SKIN_COLORS)
+            ok &= ha_loose() <= 22u * 4u;                         /* (away from the beings the granules only: 22, 4 px at most) */
+        bad += check(sk == SKIN_COLORS ? "0.9.7 HOME A (COLORS): no critters, no MUTATE ring until a mutation lands" :
+                     sk == SKIN_BOTTOM ? "0.9.7 HOME A (BOTTOM): no MUTATE ring until a mutation lands" :
+                     sk == SKIN_HUD ? "0.9.7 HOME A (HUD): no MUTATE ring until a mutation lands" :
+                     "0.9.7 HOME A (AIR): no MUTATE ring until a mutation lands", ok);
+    }
+    ui_prefs = 0;
+    ui_power_on();
+    return bad;
 }
 static int test_scope(void)
 {
@@ -10321,8 +10432,7 @@ static int test_lz_home(void)
     ok = !ui.home;
     press(B_HOME); frame();                                         /* HOME from elsewhere: where it was left */
     ok &= ui.home && home_level() == 1u && home_set() == 0u;
-    {   /* the beings drawn: the ECO panel differs from frame to frame while the tracks sound (their life), the
-         * critters move */
+    {   /* the beings drawn: the ECO panel differs from frame to frame while the tracks sound (their life, their faces) */
         static uint16_t a[240 * 140];
         turn(EN_SELECT, -2); frame();
         for (c = 0; c < NTRK; c++) trk[c].peak = 9000;
@@ -10330,9 +10440,9 @@ static int test_lz_home(void)
         memcpy(a, host_screen + LZ_GRAPH_Y * 240, sizeof a);
         for (c = 0; c < NTRK; c++) trk[c].peak = 9000;
         frames(64);
-        ok &= memcmp(a, host_screen + LZ_GRAPH_Y * 240, sizeof a) != 0 && cr.init;
+        ok &= memcmp(a, host_screen + LZ_GRAPH_Y * 240, sizeof a) != 0 && eco_fc.init;
     }
-    bad += check("0.9.2 HOME: HOME from elsewhere the page left (rule 2); the beings and critters live", ok);
+    bad += check("0.9.2 HOME: HOME from elsewhere the page left (rule 2); the beings live", ok);
     gp.page = 0;                                                    /* (GEN's page is kept: the next tests' start) */
     gp.genre = 0;
     ui_power_on();
@@ -10863,7 +10973,7 @@ static void vxt_run(uint32_t ms, int audio)               /* frames of 16 ms, th
 static int vxt_same(void) { return !memcmp(vxt_a, host_screen + LZ_GRAPH_Y * 240, sizeof vxt_a); }
 static void vxt_snap(void) { memcpy(vxt_a, host_screen + LZ_GRAPH_Y * 240, sizeof vxt_a); }
 /* track 1 as engine e preset pre, a note every beat (DRUM: a beat), on page (0: HOME's BEING): moves while it plays
- * (*mv), still when silent (*st: the panel; HOME, whose critters swim on: the creature's time and level); k the
+ * (*mv), still when silent (*st: the panel; HOME, whose beings swim on: the creature's time and level); k the
  * creature's slot in vxs (it ran) */
 static void vxt_case(uint32_t e, const char *pre, const char *page, uint32_t k, int *mv, int *st)
 {
@@ -10902,7 +11012,7 @@ static void vxt_case(uint32_t e, const char *pre, const char *page, uint32_t k, 
     vxt_snap();
     j = vxs.tm[k];
     vxt_run(600, 1);
-    *st = page ? vxt_same() : vxs.tm[k] == j && !vxs.en[k];   /* (HOME: its critters live on; the creature holds) */
+    *st = page ? vxt_same() : vxs.tm[k] == j && !vxs.en[k];   /* (HOME: its beings swim on; the creature holds) */
 }
 static int test_engvis(void)
 {
@@ -11419,6 +11529,7 @@ int main(void)
     bad += test_large();
     bad += test_skin();
     bad += test_scope();
+    bad += test_home_a();
     bad += test_browse_no_pattern();
     bad += test_name();
     bad += test_edit_cycle();
