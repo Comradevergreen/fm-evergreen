@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.9.9).** It builds and passes every test (Felucca's and its own). Back up the flash before installing it.
+> **Status: in development (v0.9.10).** It builds and passes every test (Felucca's and its own). Back up the flash before installing it.
   **DRUM-X, VOICE and ANIMAL first** (0.9.9): the FM-1 powers on with T1 DRUM-X, T2 VOICE singing words, T3 ANIMAL's
   bird, T4 LOFI's bytebeat, T5 ANALOG's bass and T6 FM6's electric piano, and PRESETS lists the engines in that order.
   **A new skin, AIR** (0.9.7, the default of new settings): HUD's light look on every page with the knob row on top,
@@ -648,21 +648,7 @@ JIANT's modifications are distributed under the same license.
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
 
-### v0.9.10 (draft)
-- **STEMS+IN (and STEMS) without the rhythmic glitch.** Over USB, STEMS+IN lost whole blocks of 32 frames in bursts, a
-  few times a second, in every channel at once (STEMS too, more rarely): the next USB packet was queued too late. A
-  10-channel packet is on the wire for ~0.65 ms of each 1 ms frame and the FM-1 looked for the moment it had gone only
-  every 0.5 ms; whenever that check drifted into the short gap before the host's next request, the request found nothing,
-  the FM-1's ring overflowed and blocks were dropped. The packet is now queued within 0.1 ms of the last one leaving
-  (checked on every 10 kHz tick; idle, the check is a few instructions, and nothing changes in the audio render). The
-  stereo modes were not affected. A take recorded before cannot be repaired: record it again. (tests/stems_usb_test.c
-  now models the bus time and the drift, and shows 0.9.9's timing losing up to half the frames in STEMS+IN.)
-- **MENU › SYSTEM › USB takes on the first try.** A mode change (CONSOLE, STEREO, STEMS, IN+OUT, STEMS+IN) dropped the
-  FM-1 off the bus for only ~25 ms, too short for some phones and hubs to see it go: they kept the old mode, and
-  STEMS took several switches to appear. It now stays off 0.5 s before attaching with the new descriptors (each mode
-  already has its own bcdDevice); the console off and the stems on in one change still drop it once.
-
-### v0.9.9
+### v0.9.10
 - **VOICE draws its vocal tract alive** (the mock-up's variant C, "Tracto vivo"), in place of 0.9.4's CT head: framed
   close (~80 × 62 units: the mouth and the neck; the crown off the panel), the head's outline a faint ghost and the
   vocal tract a glowing tube of two walls from the lips over the palate and the velum down to the glottis, the trachea
@@ -676,6 +662,32 @@ Every update is listed here, newest first. (Since 0.6.80 at the end of the page:
   EDIT's left panel 598 k → 204 k, HOME's BEING 598 k → 236 k. The CT's tables, the scan line and the spine, brain and
   turbinate code are gone; flash +816 B (image 562748 → 563564 B: the tube's resampling, pulses and waves), .data+.bss
   and RAM code unchanged, the pool's spare 10816 → 10784 B (the nod, the pulses and the waves in vxs).
+- **LOFI becomes a chip** (the mock-up's V1 "DIP"): CHIP flattens the caterpillar into a DIP chip seen from above,
+  gliding there in ~0.6 s (8BIT / FULL the organism, 4BIT and STEP half way, 4B/2 nearly, 1BIT the chip: the legs its
+  pins, the rings the die's pads, the head folded into the notch, the wave as two traces on the die), and every other
+  knob deforms it in its own way (CRUSH a stutter, MASK torn bands, FEEDBK echoes, LOOP the tail curling, DIST spikes,
+  the filter's type its body, RES ringing contours...; see v0.9.6 below). UI only: the audio is bit for bit as before
+  (two read-only accessors in eng_lofi.c), cpu_vg song/cputest 3079; draw +5 % (+15–21 % with HP and RES at the top);
+  flash +5456 B.
+- **STEMS+IN (and STEMS) without the rhythmic glitch.** Over USB, STEMS+IN lost whole blocks of 32 frames in bursts, a
+  few times a second, in every channel at once (STEMS too, more rarely): the next USB packet was queued too late. A
+  10-channel packet is on the wire for ~0.65 ms of each 1 ms frame and the FM-1 looked for the moment it had gone only
+  every 0.5 ms; whenever that check drifted into the short gap before the host's next request, the request found nothing,
+  the FM-1's ring overflowed and blocks were dropped. The packet is now queued within 0.1 ms of the last one leaving
+  (checked on every 10 kHz tick; idle, the check is a few instructions, and nothing changes in the audio render). The
+  stereo modes were not affected. A take recorded before cannot be repaired: record it again. The JIANT Stems app
+  (1.2) shows the take's USB gaps on its record page, so a clean take reads USB OK all the way. (tests/stems_usb_test.c
+  now models the bus time and the drift, and shows 0.9.9's timing losing up to half the frames in STEMS+IN.)
+- **MENU › SYSTEM › USB takes on the first try.** A mode change (CONSOLE, STEREO, STEMS, IN+OUT, STEMS+IN) dropped the
+  FM-1 off the bus for only ~25 ms, too short for some phones and hubs to see it go: they kept the old mode, and
+  STEMS took several switches to appear. It now stays off 0.5 s before attaching with the new descriptors (each mode
+  already has its own bcdDevice); the console off and the stems on in one change still drop it once.
+
+- Memory: image **568940 B** of 581564 (0.9.9: 563020; 12624 B free); .data + .bss **79556 B**, pool spare
+  **10784 B**, RAM code **22460 B**. cpu_vg song/cputest 3079 as 0.9.9; the golden renders unchanged; the TIMER5 tick
+  ~1 % longer while a USB audio packet is queued (within its budget).
+
+### v0.9.9
 - **DRUM-X, VOICE and ANIMAL first: the tracks at power-on.** The FM-1 (and MENU › SYSTEM › INIT SYSTEM, SAVE › TOOLS
   › NEW PROJECT) starts with **T1 DRUM-X** (the factory kit), **T2 VOICE SINGER EN** (it sings English words),
   **T3 ANIMAL CMOS BIRD**, **T4 LOFI BYTEBEAT** (the bytebeat organism), **T5 ANALOG FAT BASS** and **T6 FM6 TINE EP**,
