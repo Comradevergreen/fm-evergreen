@@ -212,10 +212,12 @@ around it, still moving.
 
 **Messages** (0.9.5): a message on a lens page shows as a small pill near the foot of the panel, over the page, which
 keeps drawing and moving behind it (the header says it as well; not over HOME's beings or a layer's map); nothing goes
-dark. A page's **hint** (MUTATE's "OCT+ KEEP  GLO+A4 FREEZE", MOTION's and PUNCH's "REC + PLAY ...", a button's
-"HOLD [EDIT] QUICK") comes only once you stay on the page for about 0.8 s, never while SELECT walks past it, and each
-one at most twice in all (counted with the settings, so not again after a reboot); a button's never again once you have
-held it for its layer. SAVE › TOOLS › INIT SYSTEM starts them over.
+dark. The pill keeps clear of the page's own words: where the foot is written (AUTO LIST's rows, MUTATE's lines) it
+sits in the nearest free rows, and on a page with no free rows it is left out and the header alone says it. A page's
+**hint** (MUTATE's "OCT+ KEEP  GLO+A4 FREEZE", MOTION's and PUNCH's "REC + PLAY ...") comes only once you stay on the
+page for about 0.8 s, never while SELECT walks past it, and each one at most twice in all (counted with the settings,
+so not again after a reboot). SAVE › TOOLS › INIT SYSTEM starts them over. Tapping a layer button says nothing (the
+"HOLD [X] QUICK" hints are gone): hold it and its layer shows itself.
 
 ---
 

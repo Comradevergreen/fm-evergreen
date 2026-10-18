@@ -488,8 +488,9 @@ static void contain(int32_t x, int32_t y)
         }
     }
 }
-/* (0.9.5) an overlay drawn over its canvas (ui_graph.c toast_pill): the texts and cells under it so far are hidden by it,
- * on purpose (the page goes on under a toast) */
+/* (0.9.5) an overlay drawn over its canvas (ui_graph.c toast_pill): the cells under it are hidden by it, on purpose (the
+ * page's graph goes on under a toast); a text of the page under it is a finding (the pill keeps clear of the page's
+ * words: gfx.c cv_txt, MUTATE's lines, AUTO LIST's rows, MOTION's, PUNCH's; none clear: no pill) */
 static void hk_overlay(int32_t x0, int32_t y0, int32_t x1, int32_t y1)
 {
     uint32_t i, k = 0;
@@ -497,6 +498,10 @@ static void hk_overlay(int32_t x0, int32_t y0, int32_t x1, int32_t y1)
     for (i = 0; i < npend; i++)
         if (!(pend[i].x0 < x1 && x0 < pend[i].x1 && pend[i].y0 < y1 && y0 < pend[i].y1))
             pend[k++] = pend[i];
+        else {
+            rbox_t o = {(int16_t)x0, (int16_t)y0, (int16_t)x1, (int16_t)y1, 0, "toast pill"};
+            finding("page text under the toast pill", &pend[i], &o);
+        }
     npend = k;
     for (i = k = 0; i < ncells; i++)
         if (!(cells[i][0] < x1 && x0 < cells[i][2] && cells[i][1] < y1 && y0 < cells[i][3]))
@@ -725,7 +730,9 @@ enum { S_HOME, S_HOME_IDLE, S_MESSAGE, S_MESSAGE_KEY, S_MESSAGE_NOFILE, S_PRESET
        S_VX_ANIMAL_HOME, S_VX_KIT, S_VX_KIT_HITS, S_VX_KIT_GHOST, S_VX_KIT_HOME, S_VX_KIT_MUTED,
        S_VX_BUG_BD, S_VX_BUG_SD, S_VX_BUG_CP, S_VX_BUG_CH, S_VX_BUG_OH, S_VX_BUG_TM, S_VX_BUG_RS, S_VX_BUG_CB, S_VX_BUG_GHOST,
        S_VX_BUG_FLAM, S_VX_BUG_RATCH, S_VX_BUG_QUIET,
-       S_MIXER_T4, S_HOME_T4, S_MOCK_HOME, S_MOCK_PRESETS, S_MOCK_SEQ, S_MOCK_DRUM, S_MOCK_MIXER, S_MOCK_DIALOG, S_MOCK_MENU, S_COUNT };
+       S_MIXER_T4, S_HOME_T4, S_MOCK_HOME, S_MOCK_PRESETS, S_MOCK_SEQ, S_MOCK_DRUM, S_MOCK_MIXER, S_MOCK_DIALOG, S_MOCK_MENU,
+       S_TOAST_ENV, S_TOAST_MUTATE, S_TOAST_MUTATE_HINT, S_TOAST_MOTION, S_TOAST_MOTION_LOCKS, S_TOAST_PUNCH, S_TOAST_AUTO_LIST,
+       S_TOAST_AUTO_LIST_DRUM, S_TOAST_PATTERN, S_COUNT };
 static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "message", "message_key", "message_nofile", "presets", "presets_nofav", "user",
     "phrases", "project", "tools", "song_empty", "song", "step", "pattern", "chance", "comp", "comp_trig", "comp_echo", "mutate", "morph", "dx_image", "dx_send", "page_flash", "page_flash_home", "fugue", "motion", "drum",
     "drum_hand", "drum_cym", "mixer", "mixer_pan", "env", "env_dest", "lfo", "mod", "fx", "slicer", "slbus", "slpitch", "dly", "scl", "shift", "arp",
@@ -759,7 +766,9 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "message", "mes
     "vx_animal_home", "vx_kit", "vx_kit_hits", "vx_kit_ghost", "vx_kit_home", "vx_kit_muted",
     "vx_bug_bd", "vx_bug_sd", "vx_bug_cp", "vx_bug_ch", "vx_bug_oh", "vx_bug_tm", "vx_bug_rs", "vx_bug_cb", "vx_bug_ghost",
     "vx_bug_flam", "vx_bug_ratchet", "vx_bug_quiet",
-    "mixer_tracks4", "home_tracks4", "mock_home", "mock_presets", "mock_seq", "mock_drum", "mock_mixer", "mock_dialog", "mock_menu"};
+    "mixer_tracks4", "home_tracks4", "mock_home", "mock_presets", "mock_seq", "mock_drum", "mock_mixer", "mock_dialog", "mock_menu",
+    "toast_env", "toast_mutate", "toast_mutate_hint", "toast_motion", "toast_motion_locks", "toast_punch", "toast_auto_list",
+    "toast_auto_list_drum", "toast_pattern"};
 
 /* the scenes of the UI design screens: the state the UI-redesign
  * prototype drew them from (its setup(): two pattern tracks, the drum pattern on track 4, a synthetic scope),
@@ -1005,6 +1014,20 @@ static void setup(int s)
     memset(kb_on, 0, sizeof kb_on);               /* no key held (roll_playing holds one) */
     live.req = live.cur = -1; live.mode = live.srec = live.dirty = 0; lys.nqc = 0;   /* (the song layer: off) */
     trk_live = NTRK;                              /* (the six awake but on *_tracks4) */
+    if (s >= S_TOAST_ENV) {                       /* (0.9.5) a toast over a page with words to its foot: the pill keeps clear
+                                                   * of them (or is not drawn: the header says it), never over one (hk_overlay) */
+        static const uint16_t BASE[] = {S_ENV, S_MUTATE, S_MUTATE, S_MOTION, S_MOTION_LOCKS, S_COUNT, S_AUTO_LIST,
+                                       S_AUTO_LIST_DRUM, S_PATTERN};
+        int b = BASE[s - S_TOAST_ENV];
+        if (b == S_COUNT) { setup(S_HOME); go_page(GR_PUNCH); }
+        else setup(b);
+        if (s == S_TOAST_MUTATE_HINT) {           /* (MUTATE's hint, dwelt on: ui_layer.c hint_tick) */
+            ui_message("OCT+ KEEP  GLO+A4 FREEZE");
+            str_cpy(ui.msg2, "SEQ+D5 REVERT  GLO+B4 ALL", sizeof ui.msg2);
+        } else
+            ui_message("SAVED A LONG MESSAGE");
+        return;
+    }
     if (s >= S_MOCK_HOME) {
         mock_state(s);
         return;

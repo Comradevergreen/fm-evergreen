@@ -278,7 +278,7 @@ static void head_msg(int32_t x, int32_t maxw)
     const char *m = ui.msg_t ? ui.msg : layer_head();
     int icon = m[0] == MSG_NOFILE[0];
     int32_t iw = icon ? text_w(&AF_X, "!") + KH_GAP : 0;
-    /* (0.8.9) a message or a layer's name ("[GLO] SET", "HOLD [GLO] QUICK") in plain words, AF_X as the header's centre
+    /* (0.8.9) a message or a layer's name ("[GLO] SET", "[FX] LATCH") in plain words, AF_X as the header's centre
      * (was S with a keycap, Felucca's): a message TEXT, a layer THEME */
     if (x < 0)
         x = 120 - HALF_UP(iw + (text_w(&AF_X, m + icon) < maxw - iw ? text_w(&AF_X, m + icon) : maxw - iw));

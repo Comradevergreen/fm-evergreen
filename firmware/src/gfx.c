@@ -86,6 +86,11 @@ static uint8_t cv_scroll;        /* 1: drawing a scrolled view (its text may run
 static int32_t cv_oy;            /* y offset for graph drawing */
 static int16_t cv_cy0, cv_cy1;   /* text clip: canvas rows cv_cy0 .. cv_cy1 - 1 (cv_begin: the whole canvas) */
 static uint8_t cv_flip;          /* cv_alpha_hc: the cell mirrored left <-> right (the header's metronome, ui_draw.c) */
+/* (0.9.5) the texts drawn on the canvas since cv_begin (their ink boxes, canvas rows: x0 y0 x1 y1), so an overlay (ui_graph.c
+ * toast_pill) can keep clear of them; past CV_NTXT the last one grows to take the rest in */
+#define CV_NTXT 32u
+static int16_t cv_txt[CV_NTXT][4] __attribute__((section(".pool")));
+static uint8_t cv_ntxt __attribute__((section(".pool")));
 static uint8_t cv_halo __attribute__((section(".pool")));   /* (0.8.9) SKIN HUD: text drawn with a 1 px BG outline under it
                                  * (cv_text_flags), over a picture (the pool: the audio's data stays where it was) */
 
@@ -217,6 +222,7 @@ static void cv_begin(uint32_t w, uint32_t h, uint16_t bg)
     cv_cy0 = 0;
     cv_cy1 = (int16_t)h;
     cv_bg = bg;
+    cv_ntxt = 0;
     n = w * h;
     for (i = 0; i < n; i++)
         cv_px[i] = s;
@@ -829,19 +835,43 @@ static int32_t text_run(int32_t x, int32_t y, const aafont_t *f, const char *s, 
                 cv_alpha(gx, gy, g->bw, g->bh, f->data + g->off, rv);
             if (gx < x0) x0 = gx;
             if (gx + g->bw > x1) x1 = gx + g->bw;
-            if (GFX_HOOKS && gy < y0) y0 = gy;       /* (the rows: for the host's lint only) */
-            if (GFX_HOOKS && gy + g->bh > y1) y1 = gy + g->bh;
+            if (gy < y0) y0 = gy;                    /* (the rows: the host's lint, cv_txt_note) */
+            if (gy + g->bh > y1) y1 = gy + g->bh;
         }
         pen += g->adv;
         prev = c;
     }
     bb[0] = x0;
+    bb[1] = y0;
     bb[2] = x1;
-    if (GFX_HOOKS) {
-        bb[1] = y0;
-        bb[3] = y1;
-    }
+    bb[3] = y1;
     return pen;
+}
+/* (0.9.5) a text's ink box on the canvas (its rows with cv_oy), kept for an overlay to keep clear of (cv_txt) */
+static void cv_txt_note(int32_t x0, int32_t y0, int32_t x1, int32_t y1)
+{
+    int16_t *t;
+    if (x1 <= x0 || y1 <= y0)
+        return;
+    if (cv_ntxt < CV_NTXT) {
+        t = cv_txt[cv_ntxt++];
+        t[0] = (int16_t)x0; t[1] = (int16_t)y0; t[2] = (int16_t)x1; t[3] = (int16_t)y1;
+        return;
+    }
+    t = cv_txt[CV_NTXT - 1u];                       /* (full: the last box takes this one in) */
+    if (x0 < t[0]) t[0] = (int16_t)x0;
+    if (y0 < t[1]) t[1] = (int16_t)y0;
+    if (x1 > t[2]) t[2] = (int16_t)x1;
+    if (y1 > t[3]) t[3] = (int16_t)y1;
+}
+/* any text noted on the canvas touching x0 .. x1 - 1, y0 .. y1 - 1 */
+static int cv_txt_in(int32_t x0, int32_t y0, int32_t x1, int32_t y1)
+{
+    uint32_t i;
+    for (i = 0; i < cv_ntxt; i++)
+        if (cv_txt[i][0] < x1 && x0 < cv_txt[i][2] && cv_txt[i][1] < y1 && y0 < cv_txt[i][3])
+            return 1;
+    return 0;
 }
 /* y = top of the line box (the baseline is y + f->asc); returns the pen x at the end.
  * fg on bg: bg is what lies under the text (the canvas, a card, a selection).
@@ -863,6 +893,7 @@ static int32_t cv_text_flags(int32_t x, int32_t y, const aafont_t *f, const char
             text_run(x + HALO_X[k], y + HALO_Y[k], f, s, hv, b);
     }
     pen = text_run(x, y, f, s, ramp(fg, bg), b);
+    cv_txt_note(b[0], b[1] + cv_oy, b[2], b[3] + cv_oy);
     if (GFX_HOOKS && b[2] > b[0]) {
         int32_t y0 = b[1], y1 = b[3];
         if (b[0] < 0 || b[2] > (int32_t)cv_w || y0 + cv_oy < cv_cy0 || y1 + cv_oy > cv_cy1)
@@ -1002,6 +1033,7 @@ static int32_t cv_text_up(int32_t x, int32_t y, const aafont_t *f, const char *s
                 }
         pen += adv;
     }
+    cv_txt_note(x0, y0, x1, y1);
     if (GFX_HOOKS && x1 > x0)
         GFX_HOOK_TEXT(x0, y0, x1, y1, s0, 0u);
     (void)x0; (void)y0; (void)x1; (void)y1; (void)s0;

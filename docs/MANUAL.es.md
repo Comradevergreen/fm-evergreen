@@ -218,11 +218,13 @@ propio recuadro, sus pestañas y su ruta: la página sigue a la vista alrededor,
 
 **Mensajes** (0.9.5): un mensaje en una página con lente aparece como una pequeña píldora cerca del pie del panel, sobre
 la página, que sigue dibujándose y moviéndose detrás (el encabezado también lo dice; no sobre los seres de HOME ni el
-mapa de una capa); nada se oscurece. La **ayuda** de una página (la de MUTATE "OCT+ KEEP  GLO+A4 FREEZE", la de MOTION
-y PUNCH "REC + PLAY ...", la de un botón "HOLD [EDIT] QUICK") aparece solo si te quedás en la página unos 0,8 s, nunca
-mientras SELECT pasa por ella, y cada una como mucho dos veces en total (se cuentan con los ajustes: tampoco vuelven
-tras reiniciar); la de un botón nunca más una vez que lo mantuviste para su capa. SAVE › TOOLS › INIT SYSTEM las
-reinicia.
+mapa de una capa); nada se oscurece. La píldora no tapa el texto de la página: si el pie está escrito (las filas de
+AUTO LIST, las líneas de MUTATE) se pone en las filas libres más cercanas, y en una página sin filas libres no aparece y
+lo dice solo el encabezado. La **ayuda** de una página (la de MUTATE "OCT+ KEEP  GLO+A4 FREEZE", la de MOTION y PUNCH
+"REC + PLAY ...") aparece solo si te quedás en la página unos 0,8 s, nunca mientras SELECT pasa por ella, y cada una
+como mucho dos veces en total (se cuentan con los ajustes: tampoco vuelven tras reiniciar). SAVE › TOOLS › INIT SYSTEM
+las reinicia. Tocar un botón de capa no dice nada (ya no están las ayudas "HOLD [X] QUICK"): mantenelo y su capa se
+muestra sola.
 
 ---
 

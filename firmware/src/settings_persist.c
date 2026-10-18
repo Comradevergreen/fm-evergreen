@@ -5,7 +5,7 @@
  * palette: UI_PAL_TAG + index; an old id (below 20, earlier firmware) is migrated on import.
  * bold: no longer used (one font weight); kept as it was saved, unless it holds the HOLD setting (panel.c).
  * zoom: no longer used (the large readout); kept as it was saved, unless it holds the LEDS setting (panel.c).
- * favorites.factory[15][23]: JIANT_PAL_SEEN (JIANT 0.6.81). [15][20]: SKIN (JIANT 0.8.9; 0 = COLORS). favorites.factory[15][28..31]: CLICK / CLICK LEVEL / COUNT-IN (1.1), STYLE, MENU's flags, the layers seen (bytes no
+ * favorites.factory[15][23]: JIANT_PAL_SEEN (JIANT 0.6.81). [15][20]: SKIN (JIANT 0.8.9; 0 = COLORS). favorites.factory[15][28..31]: CLICK / CLICK LEVEL / COUNT-IN (1.1), STYLE, MENU's flags, [31] the layers seen (0.9.5: unused, kept as saved) (bytes no
  * engine uses; 0 in older settings = every one's default); [15][27]: SCREEN OFF (1.1.5; 0 = 30 MIN, the default).
  * [15][0..12] (0.9.5): how many times each teaching hint has been given (ui.c hint_given; 0 in older settings = not yet).
  * MENU's flags (ui.c PREF_*) are append-only bits whose 0 is the default: BPM LOCK (16) is clear in every older setting

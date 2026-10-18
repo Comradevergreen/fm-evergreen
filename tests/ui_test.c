@@ -272,6 +272,24 @@ static uint8_t stored_note(uint32_t slot, uint32_t track, uint32_t step)
     return proj_import(&p, &proj_slot[slot], sizeof proj_slot[slot]) ? p.t[track].step[step].note[0] : 0;
 }
 static int msg_is(const char *s) { return ui.msg_t && str_eq(ui.msg, s); }
+/* (0.9.5) the layer buttons' "HOLD [X] QUICK" hint (gone): anything of it said */
+static int layer_hint_said(void)
+{
+    uint32_t i, n = str_len(ui.msg);
+    if (!ui.msg_t)
+        return 0;
+    for (i = 0; i + 5u <= n; i++)
+        if (!memcmp(ui.msg + i, "QUICK", 5) || (i + 6u <= n && !memcmp(ui.msg + i, "HOLD [", 6)))
+            return 1;
+    return 0;
+}
+/* frames, true when a layer hint was said in any of them */
+static int frames_layer_hint(uint32_t n)
+{
+    int said = 0;
+    while (n--) { frame(); said |= layer_hint_said(); }
+    return said;
+}
 static void my_steps(track_t *t)                  /* "recorded" steps */
 {
     uint32_t i;
@@ -3804,7 +3822,6 @@ static int test_quick_layers(void)
 {
     static const uint8_t LB[3] = {B_GLO, B_SCL, B_EDIT};
     static const uint8_t LL[3] = {LAYER_GLO, LAYER_SCL, LAYER_EDIT};
-    static const char *const HINT[3] = {"HOLD [GLO] QUICK", "HOLD [SCL] QUICK", "HOLD [EDIT] QUICK"};
     int bad = 0, ok, flash, hint;
     uint32_t i, k, a, b2, mo;
     track_t before;
@@ -3817,18 +3834,17 @@ static int test_quick_layers(void)
         btn_up(LB[i]); frame();
         ok &= !flash && !ui.home && (LB[i] == B_GLO ? cur_page()->graph == GR_TRK :
                                      LB[i] == B_SCL ? cur_page()->fam == FAM_SCL : str_eq(cur_page()->title, "EDIT 1"));
-        frames(HINT_DWELL_MS + 64u);                    /* (0.9.5: the hint once the page has been dwelt on) */
-        hint &= msg_is(HINT[i]);
+        hint &= !frames_layer_hint(HINT_DWELL_MS + 64u);   /* (0.9.5: no layer hint, dwelt on or not) */
         go_home(); frame();
         btn_down(LB[i]); frames(368);
         ok &= !ui.layer;
         frames(64);
-        ok &= ui.layer == LL[i] && ((layer_seen >> LL[i]) & 1u);
+        ok &= ui.layer == LL[i];
         btn_up(LB[i]); frame();
         ok &= ui.home && !ui.layer;
         ui.msg_t = 0;
-        press(LB[i]); frames(HINT_DWELL_MS + 64u);
-        hint &= !msg_is(HINT[i]);
+        press(LB[i]);
+        hint &= !frames_layer_hint(HINT_DWELL_MS + 64u);
         go_home(); frame();
         btn_down(LB[i]); key_down(white(9)); frame();
         ok &= ui.layer == LL[i] && !gates();
@@ -3836,15 +3852,7 @@ static int test_quick_layers(void)
         ok &= ui.home && !ui.layer;
     }
     bad += check("GLO SCL EDIT: a tap opens the page, held past HOLD the map (no page), a key: the map at once", ok);
-    bad += check("  after a tap \"HOLD [BTN] QUICK\" until the layer has been opened once", hint);
-    {
-        persist_t p = {0};
-        p.magic = PERSIST_MAGIC; p.panel = panel;
-        layer_seen = 0x1Cu;
-        settings_export(&p); layer_seen = 0;
-        bad += check("  the seen bits are kept with the settings (a spare favorites byte)",
-                     settings_import(&p, sizeof p) && layer_seen == 0x1Cu);
-    }
+    bad += check("  0.9.5 after a tap no \"HOLD [BTN] QUICK\" hint (the page dwelt on, the layer opened or not)", hint);
 
     {   /* (JIANT 0.6) how full the music is for a section: said once, 1.5 s after the last change */
         uint32_t k2, i2, p0;
@@ -4284,17 +4292,15 @@ static int test_bughunt_ui(void)
     bad += check("SET layers: the OCT LEDs dark; after: the octave; FX: the octave", ok);
     /* 9: no layer hint over NAME (0.9.2: SAVE + C5 renames on USER / PROJECT; EDIT tapped there until 0.9.1) */
     ui_power_on();
-    layer_seen = 0;
     up_ui(2, 0);
     go_page(GR_USER); ui.uslot = 0; frame();
     ui.msg_t = 0;
     name_key();
-    ok = name_on() && !msg_is("HOLD [SAVE] QUICK") && !msg_is("HOLD [EDIT] QUICK");
+    ok = name_on() && !frames_layer_hint(HINT_DWELL_MS + 64u);
     ui_power_on();
-    layer_seen = 0;
-    press(B_EDIT); frames(HINT_DWELL_MS + 64u);         /* (0.9.5: once dwelt on) */
-    bad += check("0.9.2 SAVE + C5 = RENAME on USER: no layer hint over NAME (an EDIT tap elsewhere: the hint as before)",
-                 ok && msg_is("HOLD [EDIT] QUICK"));
+    press(B_EDIT);
+    bad += check("0.9.2 SAVE + C5 = RENAME on USER: no layer hint over NAME (0.9.5: nor after an EDIT tap elsewhere)",
+                 ok && !frames_layer_hint(HINT_DWELL_MS + 64u));
     return bad;
 }
 
@@ -6639,10 +6645,10 @@ static int test_seq_tools(void)
         for (q = 0; q < sizeof ORD / sizeof ORD[0]; q++) {
             press(B_SEQ); frames(320);
             ok &= str_eq(cur_page()->title, ORD[q]);
-            if (!q) { frames(HINT_DWELL_MS); ok &= msg_is("HOLD [SEQ] QUICK"); }   /* (0.9.5: once dwelt on) */
+            if (!q) ok &= !frames_layer_hint(HINT_DWELL_MS);   /* (0.9.5: no layer hint, dwelt on) */
         }
     }
-    bad += check("  0.9.2 a tap on STEP: the next group's first, round (the hint until the layer was opened; was BAR's next set)", ok);
+    bad += check("  0.9.2 a tap on STEP: the next group's first, round (0.9.5: no layer hint; was BAR's next set)", ok);
     bad += test_lente();
     bad += test_save_lens();
     {   /* (0.6.85) SEQ > STRETCH: x2 .. x8 / 2 .. / 8 (the notes spread, held ones held), REPEAT x2 .. x8 / TO 64, NUDGE */
@@ -9582,21 +9588,22 @@ static int test_skin(void)
         ok = str_len(ui.msg) == sizeof ui.msg - 1u && (uint8_t)ui.msg[sizeof ui.msg - 2u] == (uint8_t)ELLIPSIS;
         ui_message("OCT+ KEEP  GLO+A4 FREEZE");                   /* (MUTATE's: was cut to "...A4 FREEZ") */
         ok &= str_eq(ui.msg, "OCT+ KEEP  GLO+A4 FREEZE");
-        str_cpy(want, "HOLD [", sizeof want);
-        str_cpy(want + str_len(want), "SAVE] QUICK", sizeof want - str_len(want));
+        str_cpy(want, "SEQ+D5 ", sizeof want);
+        str_cpy(want + str_len(want), "REVERT", sizeof want - str_len(want));
         ui_say(want, "");
         ok &= str_eq(ui.msg, want);
         frames(100);
         bad += check("ui.msg: 40 bytes, a longer message ellipsised at its end (MUTATE's whole) (L8)", ok);
     }
-    {   /* (0.9.0) a layer's hint ("HOLD [EDIT] QUICK") on its page only: gone when the page changes */
+    {   /* (0.9.0) a page's hint (MUTATE's) on its page only: gone when the page changes (0.9.5: the layers' gone) */
         ui_power_on(); frame();
-        layer_seen = 0;
-        press(B_EDIT); frames(HINT_DWELL_MS + 64u);    /* (0.9.5: once dwelt on) */
-        ok = ui.msg_t && ui.hint_pg && str_eq(ui.msg, "HOLD [EDIT] QUICK");
+        press(B_EDIT);
+        ok = !frames_layer_hint(HINT_DWELL_MS + 64u) && !ui.hint_pg;
+        go_title("TRACK"); frames(160); turn(EN_SELECT, 1); frames(HINT_DWELL_MS + 64u);
+        ok &= str_eq(cur_page()->title, "MUTATE") && ui.msg_t && ui.hint_pg && msg_is("OCT+ KEEP  GLO+A4 FREEZE");
         go_title("ENV"); frame();
         ok &= !ui.msg_t && !ui.hint_pg;
-        bad += check("a layer's hint goes when the page changes (not carried onto the next page)", ok);
+        bad += check("a page's hint goes when the page changes (not carried onto the next page); no layer hint after EDIT", ok);
     }
     for (sk = 0; sk < SKIN_N; sk++) {                             /* every lens page in each skin */
         int okp = 1;
@@ -10511,11 +10518,12 @@ static int test_lz_dialogs(void)
  * NOTICE leaves the page round its box; a page's hint only once dwelt on, never while SELECT walks past, at most HINT_MAX
  * times a power-on */
 static uint16_t toast_snap[240 * 240];
-static void toast_box(const char *m, int32_t *b)        /* the pill on the screen (ui_graph.c toast_pill) */
+static void toast_box(const char *m, int32_t *b)        /* the pill on the screen (ui_graph.c toast_pill, toast_at) */
 {
-    int32_t gh = (int32_t)graph_h(), w = clamp(text_w(&AF_S, m) + 16, 40, 224);
-    b[0] = 120 - w / 2; b[2] = b[0] + w;
-    b[1] = (int32_t)graph_y() + (gh >= 3 * TOAST_H ? gh - TOAST_H - 5 : (gh - TOAST_H) / 2); b[3] = b[1] + TOAST_H;
+    int32_t w = clamp(text_w(&AF_S, m) + 16, 40, 224);
+    b[0] = toast_at[0]; b[1] = toast_at[1]; b[2] = toast_at[2]; b[3] = toast_at[3];
+    if (b[2] > b[0] && b[2] - b[0] != w)               /* (its width: the message's) */
+        b[0] = b[2] = 0;
 }
 static int test_toasts(void)
 {
@@ -10612,51 +10620,49 @@ static int test_toasts(void)
         persist_t p = {0};
         uint32_t lc;
         ui.msg_t = 0;
-        layer_seen = 0;
-        for (k = 0, lc = 0; k < 3u; k++) {              /* SCL's: twice, then never (no layer held) */
+        for (k = 0, lc = 0; k < 3u; k++) {              /* (0.9.5) SCL tapped: no layer hint, ever (nothing counted) */
             go_home(); frames(160); ui.msg_t = 0;
-            press(B_SCL); frames(HINT_DWELL_MS + 64u);
-            lc += msg_is("HOLD [SCL] QUICK");
+            press(B_SCL);
+            lc += (uint32_t)frames_layer_hint(HINT_DWELL_MS + 64u);
         }
-        ok = lc == HINT_MAX && hint_given(HK_LAYER + LAYER_SCL) == HINT_MAX;
-        bad += check("  a button's \"HOLD [SCL] QUICK\": twice, then never", ok);
+        ok = lc == 0u;
+        for (k = HK_N; k < 13u; k++)                    /* (the old layer counts' bytes: untouched) */
+            ok &= favorites.factory[15][k] == 0u;
+        bad += check("  0.9.5 SCL tapped three times, dwelt on: no \"HOLD [SCL] QUICK\", nothing counted", ok);
         p.magic = PERSIST_MAGIC; p.panel = panel;
         settings_export(&p);
         ui_power_on();                                  /* (a fresh power-on: favorites cleared, then the settings loaded) */
-        ok = hint_given(HK_MUTATE) == 0u && settings_import(&p, sizeof p) && hint_given(HK_MUTATE) == HINT_MAX &&
-             hint_given(HK_LAYER + LAYER_SCL) == HINT_MAX;
+        ok = hint_given(HK_MUTATE) == 0u && settings_import(&p, sizeof p) && hint_given(HK_MUTATE) == HINT_MAX;
         go_title("TRACK"); frames(160); turn(EN_SELECT, 1);
         for (seen = 0, x = 0; x < 120u; x++) { frame(); seen |= msg_is("OCT+ KEEP  GLO+A4 FREEZE"); }
         go_home(); frames(160); ui.msg_t = 0;
         press(B_SCL);
-        for (x = 0; x < 120u; x++) { frame(); seen |= msg_is("HOLD [SCL] QUICK"); }
-        bad += check("  the counts kept with the settings: after a reboot no more MUTATE / SCL hints", ok && !seen);
+        seen |= frames_layer_hint(120u);
+        bad += check("  the counts kept with the settings: after a reboot no more MUTATE hints (no SCL one)", ok && !seen);
         p.favorites.factory[15][HK_MUTATE] = 0;         /* (older settings: those bytes 0 = not given yet) */
         ui_power_on();
         ok = settings_import(&p, sizeof p) && hint_given(HK_MUTATE) == 0u;
         bad += check("  older settings (the spare bytes 0): the hints not given yet", ok);
     }
-    ui_power_on(); layer_seen = 0;                      /* a layer held once: its hint never again */
-    press(B_EDIT); frames(HINT_DWELL_MS + 64u);
-    ok = msg_is("HOLD [EDIT] QUICK") && hint_given(HK_LAYER + LAYER_EDIT) == 1u;
+    ui_power_on();                                      /* (0.9.5) no layer hint: not before the layer is held, nor after */
+    press(B_EDIT);
+    ok = !frames_layer_hint(HINT_DWELL_MS + 64u);
     go_home(); frames(160);
     fm1_in.buttons |= 1u << panel.btn[B_EDIT]; host_pressed |= 1u << panel.btn[B_EDIT];
     frames(480);
-    ok &= ui.layer == LAYER_EDIT && ((layer_seen >> LAYER_EDIT) & 1u);
+    ok &= ui.layer == LAYER_EDIT;
     fm1_in.buttons &= ~(1u << panel.btn[B_EDIT]); frame();
     go_home(); frames(160); ui.msg_t = 0;
     press(B_EDIT);
-    for (seen = 0, x = 0; x < 120u; x++) { frame(); seen |= msg_is("HOLD [EDIT] QUICK"); }
-    bad += check("  a button's hint never again once its layer has been held (after one showing)", ok && !seen &&
-                 hint_given(HK_LAYER + LAYER_EDIT) == 1u);
+    bad += check("  0.9.5 no layer hint after an EDIT tap: before its layer is held, nor after", ok && !frames_layer_hint(120u));
     /* INIT SYSTEM (SAVE > TOOLS): the hints start over */
     hint_given(HK_MUTATE) = HINT_MAX;
     confirm_open(CF_INIT_SYS, 0); ui.force = 1; frame();
     press(B_OCTUP); frames(160);
-    ok = !ui.confirm && hint_given(HK_MUTATE) == 0u && hint_given(HK_LAYER + LAYER_EDIT) == 0u && layer_seen == 0u;
+    ok = !ui.confirm && hint_given(HK_MUTATE) == 0u;
     go_title("TRACK"); frames(160); turn(EN_SELECT, 1); ui.msg_t = 0;
     for (seen = 0, x = 0; x < 120u; x++) { frame(); seen |= msg_is("OCT+ KEEP  GLO+A4 FREEZE"); }
-    bad += check("  INIT SYSTEM: the counts and the layers held start over (MUTATE's hint again)", ok && seen);
+    bad += check("  INIT SYSTEM: the counts start over (MUTATE's hint again)", ok && seen);
     return bad;
 }
 

@@ -1501,15 +1501,41 @@ static void lib_poll(void)                              /* (graph_signature, onc
     }
 }
 /* (0.9.5) a toast (ui_say) on a lens page: a pill of BG behind its words alone, near the panel's foot, over the page
- * drawn as ever (its graph, roll, beings live behind it); HOME and the layers: the header says it */
+ * drawn as ever (its graph, roll, beings live behind it); HOME and the layers: the header says it.
+ * The pill keeps clear of the page's own words (gfx.c cv_txt: every text drawn on the panel this frame): near the foot
+ * if nothing is written there, else the nearest rows lower, then higher, with none; a page written all over (MUTATE's
+ * lines, AUTO LIST's rows where no gap is a pill high): no pill, the header says it alone, as on HOME */
 static int toast_on(void) { return lz_on() && ui.msg_t && ui.msg[0] && !ui.layer && !ui.home; }
 #define TOAST_H 17
+#define TOAST_GAP_X 3                                /* (the clearance round a word: its 2 px halo and a pixel) */
+#define TOAST_GAP_Y 2
+static int16_t toast_at[4];                          /* the pill drawn last (screen x0 y0 x1 y1; x1 == x0: none) */
+static int toast_clear(int32_t x, int32_t y, int32_t w)
+{
+    return !cv_txt_in(x - TOAST_GAP_X, y - TOAST_GAP_Y, x + w + TOAST_GAP_X, y + TOAST_H + TOAST_GAP_Y);
+}
+/* the pill's top row on the panel (canvas rows), -1: nowhere clear */
+static int32_t toast_row(int32_t x, int32_t w)
+{
+    int32_t gh = (int32_t)graph_h(), y0 = gh >= 3 * TOAST_H ? gh - TOAST_H - 5 : (gh - TOAST_H) / 2, y;
+    for (y = y0; y <= gh - TOAST_H - 1; y++)         /* where it was, or lower (nearer the foot) */
+        if (toast_clear(x, y, w))
+            return y;
+    for (y = y0 - 1; y >= 1; y--)                    /* .. else higher */
+        if (toast_clear(x, y, w))
+            return y;
+    return -1;
+}
 static void toast_pill(void)
 {
-    int32_t gh = (int32_t)graph_h(), w = clamp(text_w(&AF_S, ui.msg) + 16, 40, 224), x = 120 - w / 2;
-    int32_t y = gh >= 3 * TOAST_H ? gh - TOAST_H - 5 : (gh - TOAST_H) / 2;
+    int32_t w = clamp(text_w(&AF_S, ui.msg) + 16, 40, 224), x = 120 - w / 2, y = toast_row(x, w);
     uint8_t hl = cv_halo;
     char f[40];
+    toast_at[0] = toast_at[2] = 0;
+    if (y < 0)                                       /* (no clear rows: the header's words alone) */
+        return;
+    toast_at[0] = (int16_t)x; toast_at[1] = (int16_t)(y + (int32_t)graph_y());
+    toast_at[2] = (int16_t)(x + w); toast_at[3] = (int16_t)(toast_at[1] + TOAST_H);
     text_fit(f, sizeof f, ui.msg, &AF_S, w - 12);
     GFX_HOOK_COVER(x, y + cv_oy, x + w, y + cv_oy + TOAST_H);   /* (what the page has under it: hidden) */
     cv_halo = 1;                                     /* (its round ends blended onto what is there) */
@@ -2466,5 +2492,7 @@ static void draw_graph(void)
                                                       * which goes on drawing and moving behind it (0.8.5 .. 0.9.4: the
                                                       * panel cleared, the message boxed alone in it) */
         toast_pill();
+    else
+        toast_at[0] = toast_at[2] = 0;
     cv_blit(0, graph_y());
 }

@@ -55,7 +55,7 @@ static uint32_t user_of(const track_t *t)    /* user preset slot its sound came 
 }
 static uint32_t up_gen;                      /* bumped on every user bank change (redraws) */
 #include "favorites.c"
-/* MENU's two-valued settings (ui_menu.c MENU_FLAGS), a bit each in a byte no engine uses (as ui_layer.c layer_seen):
+/* MENU's two-valued settings (ui_menu.c MENU_FLAGS), a bit each in a byte no engine uses:
  * saved with the settings; 0 in older ones = every setting's default (append-only: a new setting takes a new bit,
  * its default is 0) */
 #define ui_prefs (favorites.factory[15][30])
@@ -212,11 +212,11 @@ static int32_t ratio_of(int32_t min, int32_t max, int32_t v)
 #define LB_CARD_Y 191
 #define LB_CARD_H 33
 
-/* (0.9.5) the hints a page or a tap gives ("OCT+ KEEP  GLO+A4 FREEZE", "HOLD [EDIT] QUICK"): only once the page has been
- * dwelt on HINT_DWELL_MS (never while SELECT walks past it), each at most HINT_MAX times ever (a button's never again once
- * its layer has been held: ui_layer.c layer_seen). The count kept with the settings, a byte a hint in engine 15's spare
- * favourite bytes 0..12 (no engine 15: 0 in older settings, a hint not yet given); INIT SYSTEM starts them over */
-enum { HK_NONE, HK_MOTION, HK_PUNCH, HK_MUTATE, HK_LAYER, HK_N = HK_LAYER + 9 };   /* (HK_LAYER + l: layer l's, LAYER_N 9) */
+/* (0.9.5) the hints a page gives ("OCT+ KEEP  GLO+A4 FREEZE"): only once the page has been dwelt on HINT_DWELL_MS (never
+ * while SELECT walks past it), each at most HINT_MAX times ever. The count kept with the settings, a byte a hint in engine
+ * 15's spare favourite bytes 0..12 (no engine 15: 0 in older settings, a hint not yet given; 4..12 held the layer buttons'
+ * "HOLD [X] QUICK" counts, gone: kept as saved, unused); INIT SYSTEM starts them over */
+enum { HK_NONE, HK_MOTION, HK_PUNCH, HK_MUTATE, HK_N };
 #define HINT_DWELL_MS 800u
 #define HINT_MAX 2u
 #define hint_given(k) (favorites.factory[15][(k)])
@@ -274,7 +274,7 @@ static struct {
     uint32_t layer_sig;          /* drawn-state cache of the map */
     char msg[40];                /* (0.9.0: 40, was 24 and cut the long ones silently; longer: ellipsised, ui_say) */
     char msg2[40];               /* a second message, shown when the first is over */
-    uint8_t hint_pg;             /* (0.9.0) the page (+ 1, HOME 255) a layer's hint ("HOLD [EDIT] QUICK") was given on: gone
+    uint8_t hint_pg;             /* (0.9.0) the page (+ 1, HOME 255) a page's hint (MUTATE's) was given on: gone
                                   * on another (ui_draw_page) */
     uint8_t hint_k;              /* (0.9.5) a hint waiting for its page to be dwelt on (HK_*; 0 none: ui_layer.c hint_tick) */
     uint8_t hint_at;             /* .. the page it is for (+ 1, HOME 255) */

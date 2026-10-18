@@ -34,8 +34,7 @@
  * MIDI, never recorded; keys held before stay notes. Only one layer at a time: a second layer button is ignored.
  * PLAY and REC work in every layer (GLO + PLAY: RESTART); SAVE, HOME, SEQ and the other page buttons are swallowed. In SET
  * layers OCT± do not shift the octave (TONIC: OCT- no longer puts back what the layer changed: no undo). A HOLD key's effect lasts until the key is let go, the map with it. No layer in the menu, a dialog,
- * NAME or the UPDATE MODE countdown. After a tap, until the layer has been opened once: "HOLD [GLO] QUICK"
- * (the seen bits are kept with the settings, favorites.c spare byte).
+ * NAME or the UPDATE MODE countdown. A tap says nothing of the layer (0.9.5: the "HOLD [GLO] QUICK" hint is gone).
  * TONIC: no lock (Felucca's double tap, Discussion #83, is gone): a layer is open while its button is held. */
 #include "ui_tools.c"                                   /* SEQ TOOLS' actions */
 /* the song layer's actions (project.c: song_main.c) */
@@ -64,7 +63,6 @@ static const layer_t LAYERS[LAYER_N] = {
     {B_SAVE, LK_SET, FAM_HOME, "[SAVE] SONG", {{KC_KEYS, "PLAY"}, {KC_OCTUP, "STORE"}, {KC_OCTDN, "RECALL"}}},
     {B_LFO, LK_SET, FAM_HOME, "[LFO] MACRO", {{KC_K14, "M1-M4"}, {KC_SELECT, "DICE"}, {KC_KEYS, "DICE / CLEAR"}}},   /* JIANT (mod.c macro_v; SELECT, F3: macro_dice, G3 clears) */
 };
-static const uint8_t LY_KC[LAYER_N] = {0, KC_FX, KC_GLO, KC_SCL, KC_EDIT, KC_SEQ, KC_REC, KC_SAVE, KC_LFO};
 /* SCL's knobs: the key and the sequence offset (cur_page() while the layer edits or draws them: page_over) */
 static const page_t LY_SCL = {"SCL", FAM_SCL, SC_TRACK, GR_SCALE, {P_ROOT, P_SCALE, P_SOFS, P_POFS}};
 /* SEQ TOOLS' knobs: the PATTERN page's (the length the tools work in) */
@@ -74,7 +72,6 @@ static const page_t *ly_page(uint32_t l) { return l == LAYER_SCL ? &LY_SCL : l =
 #define LY_COMBO 4u                    /* .. by a combo */
 #define LY_DEAD 8u                     /* .. pressed where there is no layer: does nothing */
 enum { LY_INIT, LY_RECALL };          /* EDIT: the white keys F3 G3 */
-#define layer_seen (favorites.factory[15][31])   /* bit l: layer l opened once (a byte no engine uses) */
 static const khint_t FX_LATCH_FOOT[3] = {{KC_KEYS, "ON / OFF"}, {KC_K14, "MACROS"}, {KC_OCTDN, "ALL OFF"}};
 static const khint_t MAC_LATCH_FOOT[3] = {{KC_K14, "M1-M4"}, {KC_SELECT, "DICE"}, {KC_LFO, "DONE"}};   /* (MACRO latched) */
 
@@ -218,13 +215,9 @@ static void layer_let_go(uint32_t quiet)
     ui.ly = 0;
 }
 
-/* the layer opened: once seen, no more hint */
+/* the layer opened */
 static void layer_opened(uint32_t l)
 {
-    if (!((layer_seen >> l) & 1u)) {
-        layer_seen |= (uint8_t)(1u << l);
-        settings_save();                                /* (deferred while playing) */
-    }
     lys.l = (uint8_t)l;
     lys.cook = 0;
     lys.nqc = 0;
@@ -272,35 +265,27 @@ static void layer_show(void)
     }
 }
 
-/* a tap: the button's page; the hint until its layer has been opened once (unless the tap said something, or
- * opened NAME: EDIT on USER / PROJECT renames; never over a dialog or the menu) */
+/* a tap: the button's page (0.9.5: no "HOLD [X] QUICK" hint any more: the layers show themselves when held) */
 static void layer_tap(uint32_t l)
 {
-    uint8_t m = ui.msg_t;
     if (l == LAYER_REC)                                 /* REC: arms / disarms (no page) */
         (void)rec_tap();
     else if (l == LAYER_SAVE)                           /* SAVE: its pages (presets, user sounds, projects) */
         open_family(FAM_SAVE);
     else
         (void)page_tap(LAYERS[l].btn);
-    if (!((layer_seen >> l) & 1u) && ui.msg_t == m && !name_on() && !ui.confirm && !ui.menu && !ui.hint_k) {
-        ui.hint_k = (uint8_t)(HK_LAYER + l);            /* (0.9.5: once the page is dwelt on, hint_tick) */
-        ui.hint_at = (uint8_t)(ui.home ? 255u : ui.page + 1u);
-        ui.hint_ms = fm1_ms;
-    }
 }
-typedef char hk_room_t[HK_N >= HK_LAYER + LAYER_N && HK_N <= 20 ? 1 : -1];   /* (bytes 20.. of engine 15's: other settings) */
-/* (0.9.5) INIT SYSTEM: the teaching hints start over (none given, no layer held yet) */
+typedef char hk_room_t[HK_N <= 20 ? 1 : -1];   /* (bytes 20.. of engine 15's: other settings) */
+/* (0.9.5) INIT SYSTEM: the teaching hints start over (none given) */
 static void hints_reset(void)
 {
     uint32_t k;
     for (k = 0; k < HK_N; k++)
         hint_given(k) = 0;
-    layer_seen = 0;
     ui.hint_k = 0;
     settings_save();
 }
-/* (0.9.5) a frame: the hint waiting (page_entered, layer_tap) given once its page has been shown HINT_DWELL_MS (gone with
+/* (0.9.5) a frame: the page's hint waiting (page_entered: MOTION, PUNCH, MUTATE) given once its page has been shown HINT_DWELL_MS (gone with
  * another page: walking past with SELECT says nothing), when nothing else is said or open over it, at most HINT_MAX times
  * ever (hint_given, kept with the settings); on its page only (ui.hint_pg) */
 static void hint_tick(void)
@@ -315,7 +300,7 @@ static void hint_tick(void)
     if (fm1_ms - ui.hint_ms < HINT_DWELL_MS || ui.msg_t || ui.menu || ui.confirm || ui.layer || name_on() || ui.uboot)
         return;
     ui.hint_k = 0;
-    if (hint_given(k) >= HINT_MAX || (k >= HK_LAYER && ((layer_seen >> (k - HK_LAYER)) & 1u)))
+    if (hint_given(k) >= HINT_MAX)
         return;
     hint_given(k)++;
     settings_save();                                    /* (the count kept: deferred while playing) */
@@ -323,13 +308,9 @@ static void hint_tick(void)
         ui_message("REC + PLAY, TURN A KNOB");          /* (0.6.92) how it is recorded */
     else if (k == HK_PUNCH)
         ui_message("REC + PLAY, HOLD FX + A KEY");      /* (0.6.99) the lane's recording */
-    else if (k == HK_MUTATE) {
+    else {                                              /* HK_MUTATE */
         ui_message("OCT+ KEEP  GLO+A4 FREEZE");
         str_cpy(ui.msg2, "SEQ+D5 REVERT  GLO+B4 ALL", sizeof ui.msg2);   /* (0.9.3) back to the anchor */
-    } else {
-        ui_say("HOLD [", KC[LY_KC[k - HK_LAYER]].label);
-        str_cpy(ui.msg + str_len(ui.msg), "] QUICK", sizeof ui.msg - str_len(ui.msg));
-        ui.msg_t = 90;                                  /* ~1.5 s */
     }
     ui.hint_pg = (uint8_t)at;                           /* (0.9.0: this page's only) */
 }
