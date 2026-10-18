@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments */
-/* (0.9.7) MENU > USB STEMS / STEMS+IN over minutes: src/usb.c's 8- and 10-channel stream (uac_render_start, uac_tap8,
+/* (0.9.8) MENU > USB STEMS / STEMS+IN over minutes: src/usb.c's 8- and 10-channel stream (uac_render_start, uac_tap8,
  * uac_packet) in the audio ISR's order against a simulated FM-1 and a host that reads it as the JIANT Stems app does
  * (android/stems: usbstream.c's isochronous URBs, each packet's buffer the endpoint's wMaxPacketSize, then
  * StemSplitter's frames), in ns:
@@ -12,7 +12,7 @@
  *                restarted 1..3 ms later (no tokens meanwhile).
  * Each channel of each frame holds the frame's number (channel c: (f + 4099 c) & 0x7FFF), so the host sees exactly
  * which frame came, in which channel: every frame the FM-1 rendered must reach the app's lanes once, in order, every
- * channel in its own lane (no slip, no repeat, no channel moved), and no packet may be babble. 0.9.5's descriptor
+ * channel in its own lane (no slip, no repeat, no channel moved), and no packet may be babble. 0.9.7's descriptor
  * (720 bytes for 8 channels, while the stream sends 46-frame packets of 736) is run too, to show what it did: blocks
  * dropped by the hundred, as in a field take (TOMA_03: T1..T6 and FX broken at ~120 block edges a second, the same
  * instants in every channel). Then starvation (renders of 150..190 % for 50 ms): the underrun repeats are made up
@@ -83,7 +83,7 @@ static void render_block(void)
     R.rendered += 32;
 }
 
-/* ---- the app: usbstream.c copies each packet's actual_length (whole frames: 0.9.7), StemSplitter splits the frames */
+/* ---- the app: usbstream.c copies each packet's actual_length (whole frames: 0.9.8), StemSplitter splits the frames */
 static int64_t last_f = -1;
 static double last_v[10], last_d[10];
 static int have_v;
@@ -307,14 +307,14 @@ int main(void)
                      !uac.overruns && !uac.underruns);
         }
     }
-    {   /* what 0.9.5 did: 720 bytes for 8 channels */
+    {   /* what 0.9.7 did: 720 bytes for 8 channels */
         double now = 0;
         reset(8, 0, 720u);
         sim(30.0, &now);
-        snprintf(s, sizeof s, "0.9.5's 720 bytes (8 ch, 30 s): %.0f babble/s (%.1f %% of the time halted), %u overruns: "
+        snprintf(s, sizeof s, "0.9.7's 720 bytes (8 ch, 30 s): %.0f babble/s (%.1f %% of the time halted), %u overruns: "
                  "%.0f slips/s, %.1f %% of the frames lost",
                  R.babble / 30.0, R.stall_ns / 3e8, uac.overruns, R.slips / 30.0, 100.0 * R.lost / (R.lost + R.got));
-        check(s, R.babble > 30u * 10u && R.slips > 30u * 20u);   /* (it shows the field take's damage; 0.9.7 above: none) */
+        check(s, R.babble > 30u * 10u && R.slips > 30u * 20u);   /* (it shows the field take's damage; 0.9.8 above: none) */
     }
     for (m = 0; m < 2u; m++) {   /* starvation: the underruns' repeats made up, every channel continuous */
         double now = 0;

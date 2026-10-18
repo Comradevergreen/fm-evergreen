@@ -1695,7 +1695,7 @@ static struct { int32_t l[CTL], r[CTL], c[CTL], d[CTL], rv[CTL], sl[CTL], sr[CTL
  * track's own stem (the host moves it by the latency; usb.c uac_tap8 sends it with the input as it came) */
 static int32_t stem_buf[NPART + 1][CTL], stem_fx[2][CTL];
 static volatile uint8_t fx_stems, mix_skip;
-/* (0.9.7) the parts that went into the SLICER's bus this block, a bit each (stem_slicer_bus): their dry sound was in
+/* (0.9.8) the parts that went into the SLICER's bus this block, a bit each (stem_slicer_bus): their dry sound was in
  * their stems and the SLICER's output in the FX return as well, so the eight summed had those parts twice */
 static uint8_t stem_sl;
 static __attribute__((noinline)) void stem_pre(int32_t *pre, const int32_t *ol, const int32_t *or_, uint32_t n)
@@ -1986,7 +1986,7 @@ static __attribute__((noinline)) void dx_mot_block(uint32_t n)
     dx_mot_v = (w * dx_mot[XM_DPTH]) >> 16;             /* (+-DPTH / 2) */
 }
 
-/* (0.9.7) MENU > USB STEMS: the SLICER as mix_block runs it (with FX ON the returns into it first), traced (slicer.c
+/* (0.9.8) MENU > USB STEMS: the SLICER as mix_block runs it (with FX ON the returns into it first), traced (slicer.c
  * sl_seg_tr) for stem_fx_block, and the parts it took noted (mix_part put them in its bus: routed, mixed, not left
  * out); out of the RAM code (mix_block calls this or its own two steps) */
 static void stem_fx_block(uint32_t n);
@@ -2013,11 +2013,11 @@ static __attribute__((noinline)) void stem_slicer_bus(uint32_t n)
         }
     stem_fx_block(n);
 }
-/* (0.7.1) the stems' FX return (fx_stems): the buses' return and sides, after the SLICER. (0.9.7) The parts through the
+/* (0.7.1) the stems' FX return (fx_stems): the buses' return and sides, after the SLICER. (0.9.8) The parts through the
  * SLICER (stem_sl): each its own sound as the SLICER let it through (its stem at the live gain slicer.c traced, sl_tg),
  * and what the SLICER added besides (its repeats of the whole bus: sl_tl / sl_tr) in the first one's stem, or with FX ON
  * (the returns through it too) in the FX return with the returns at that gain: every part once, the sum the mix (until
- * 0.9.5 a routed part's dry sound was in its stem and again, sliced, in the FX return) */
+ * 0.9.7 a routed part's dry sound was in its stem and again, sliced, in the FX return) */
 static __attribute__((noinline)) void stem_fx_block(uint32_t n)
 {
     uint32_t i, k, kf = NPART;
@@ -2348,7 +2348,7 @@ static __attribute__((noinline)) void mix_block(int32_t *out, uint32_t n)   /* (
         fxq_d[i] = send_d[i];
         fxq_r[i] = send_r[i];
     }
-    if (fx_stems) {                                     /* (0.9.7) the same, traced: each part through it its own */
+    if (fx_stems) {                                     /* (0.9.8) the same, traced: each part through it its own */
         stem_slicer_bus(n);                             /* stem; (0.7.1) and the stems' FX return (stem_fx_block) */
     } else {
         if (slicer_fx())                                /* (JIANT 0.6.3) FX ON: the returns through the SLICER */

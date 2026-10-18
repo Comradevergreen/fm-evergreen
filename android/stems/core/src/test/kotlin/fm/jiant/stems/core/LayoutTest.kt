@@ -52,14 +52,14 @@ class LayoutTest {
 
     @Test fun channelsFromThePacketSize() {
         assertEquals(8, Uac.channelsFromPacket(720))
-        assertEquals(8, Uac.channelsFromPacket(736))                           // (the FM-1's 0.9.7: 46 frames)
+        assertEquals(8, Uac.channelsFromPacket(736))                           // (the FM-1's 0.9.8: 46 frames)
         assertEquals(10, Uac.channelsFromPacket(920))
         assertEquals(2, Uac.channelsFromPacket(196))
         assertEquals(2, Uac.channelsFromPacket(184))
         assertEquals(0, Uac.channelsFromPacket(7))
     }
 
-    /** (1.1) STEMS from an FM-1 before 0.9.7: its 720-byte endpoint cannot carry the 46-frame packets it sends */
+    /** (1.1) STEMS from an FM-1 before 0.9.8: its 720-byte endpoint cannot carry the 46-frame packets it sends */
     @Test fun oldStemsFirmwareTold() {
         assertTrue(Uac.oldStemsFirmware(8, 720))
         assertFalse(Uac.oldStemsFirmware(8, 736))

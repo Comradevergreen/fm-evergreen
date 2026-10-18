@@ -17,7 +17,7 @@ Two apps, both built by GitHub Actions (`.github/workflows/android.yml`) on ever
    last one and keeps the takes.
 
 Android 10 or later, a USB-C data cable (or an OTG adapter), the FM-1 on firmware **0.8.0** or later for the voice,
-**0.9.7** or later for clean STEMS (before it, the 8-channel stream lost blocks: clicks in every stem; the app says so).
+**0.9.8** or later for clean STEMS (before it, the 8-channel stream lost blocks: clicks in every stem; the app says so).
 
 **1.1:** only whole frames are kept from a USB packet in error (a frame cut short no longer moves every channel after
 it); the mic sent to the FM-1 follows the clocks' drift by reading a little faster or slower instead of skipping or

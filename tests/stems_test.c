@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments */
-/* (0.9.7) MENU > USB STEMS, the render side (fx.c stem_buf / stem_fx, what usb.c uac_tap8 sends), on the host build of
+/* (0.9.8) MENU > USB STEMS, the render side (fx.c stem_buf / stem_fx, what usb.c uac_tap8 sends), on the host build of
  * the UI tests: dense DICE (EXPLORE) songs of six tracks played for seconds, the stems tapped each block as the audio
  * ISR does, against each track rendered alone in the same take (the others played but left out of the mix: mix_skip, as
  * the emulator's offline stems), from the same state (fork):
@@ -11,7 +11,7 @@
  *              DJ FILTER, CLIP and the leveler off), within the stems' halving (L + R >> 1);
  *   silence    a track with nothing to play is a stem of exact zeros;
  *   SLICER     a track through it: its stem is the SLICER's output, bit for bit its solo render, the sum still the mix
- *              (until 0.9.5 its dry sound was in its stem and again, sliced, in the FX return); FX ON: in the FX return;
+ *              (until 0.9.7 its dry sound was in its stem and again, sliced, in the FX return); FX ON: in the FX return;
  *   ECO        its tail trimming (the load budget, LOAD tight) and the shared voice cap act on the take itself: the stems
  *              keep exactly what the mix plays (they null against the solo render of the same take), however many voices
  *              the budget gave up (counted). */
@@ -191,7 +191,7 @@ int main(void)
             null_tol = 0;
             /* (one part through it: its stem is it alone through it; several, or the returns too: one bus, so its
              * repeats are in one place (the first part's stem, or the FX return) and only the sum must hold) */
-            snprintf(s, sizeof s, "SLICER %s: %s; the sum = the mix (until 0.9.5 the bus twice: dry in the stems, sliced in FX)",
+            snprintf(s, sizeof s, "SLICER %s: %s; the sum = the mix (until 0.9.7 the bus twice: dry in the stems, sliced in FX)",
                      V[v].what, V[v].mask == 0x02 ? "T2's stem T2 alone through it (within 2 LSB)" : "each part at the gain it got");
             st_check(s, sums && (V[v].mask != 0x02 || !bad));
         }

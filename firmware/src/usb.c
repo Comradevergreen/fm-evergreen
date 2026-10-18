@@ -81,7 +81,7 @@ static struct {
 #define UA_PRIME 136u            /* silence ahead of the first rendered frame */
 #define UA_LO 112u               /* a render may start late: keep a packet and more in hand */
 #define UA_HI 160u
-/* (0.9.7) STEMS / STEMS+IN: the band 1.1 ms higher still (a repeated frame is a click in a soloed stem; a few renders
+/* (0.9.8) STEMS / STEMS+IN: the band 1.1 ms higher still (a repeated frame is a click in a soloed stem; a few renders
  * late in a row emptied the ring now and then); the app measures the latency it lines the voice up by in each take */
 #define UA_PAD_STEMS 48u
 #define UAC_RATE 44100u
@@ -329,7 +329,7 @@ static void midi_out_event(uint32_t pkt)            /* from the audio ISR */
     7, 0x25, 1, 0x01, 0, 0, 0,                             /* CS endpoint: sampling frequency control */
 #define D_AS(s) D_AS_FMT(s, D_FMT, UAC_MAXP)
 /* (0.7.1) MENU > USB STEMS: 8 channels (the six parts mono, the FX return L R), 44.1 kHz only, 46 frames a packet at
- * most: 736 bytes. (0.9.7) It said 45 (720 bytes) while uac_packet sends 46 whenever it holds the ring's fill (+1 on a
+ * most: 736 bytes. (0.9.8) It said 45 (720 bytes) while uac_packet sends 46 whenever it holds the ring's fill (+1 on a
  * 45-frame millisecond): the host took each such packet as babble (the FM-1's clock is fast, so +1 comes often), dropped
  * it and stalled the endpoint, the ring filled and whole blocks were dropped, ~100 times a second: stems full of clicks */
 #define D_FMT8 11, 0x24, 2, 1, 8, 2, 16, 1, 0x44, 0xAC, 0x00,
@@ -342,7 +342,7 @@ static void midi_out_event(uint32_t pkt)            /* from the audio ISR */
 #define D_FMT10 11, 0x24, 2, 1, 10, 2, 16, 1, 0x44, 0xAC, 0x00,
 #define UAC_MAXP10 (46u * 20u)
 #define D_AS10(s) D_AS_FMT(s, D_FMT10, UAC_MAXP10)
-/* (0.9.7) every packet uac_packet can send fits the endpoint's wMaxPacketSize, in every mode: 44.1 kHz's 45 + 1 frames */
+/* (0.9.8) every packet uac_packet can send fits the endpoint's wMaxPacketSize, in every mode: 44.1 kHz's 45 + 1 frames */
 _Static_assert(UAC_MAXP8 >= (45u + 1u) * 16u && UAC_MAXP10 >= (45u + 1u) * 20u && UAC_MAXP >= UA_MAXF * 4u &&
                UAC_MAXP8 <= 1023u && UAC_MAXP10 <= 1023u, "the largest packet fits wMaxPacketSize (full speed: 1023)");
 /* (0.7.5) MENU > USB IN+OUT: the input as D_AC's, plus the host's output: input terminal 3 (USB streaming, L R) ->
@@ -1467,7 +1467,7 @@ static __attribute__((noinline)) void uac_tap8(uint32_t n)
 #define UAC_TAP8 1                 /* (audio.c: a build with fx.c but without usb.c, audio_test, has no stems tap) */
 #endif
 
-/* (0.9.7) a frame made up after an underrun (uac_packet): the ring's n + 1 frames from r read into the packet's n, each
+/* (0.9.8) a frame made up after an underrun (uac_packet): the ring's n + 1 frames from r read into the packet's n, each
  * channel linearly between its two neighbours (the step 1 + 1 / (n + 1) frame), so the frame left out is spread over
  * the millisecond instead of skipped (a skip is a step in a soloed stem: a click). Each 16-bit channel of each word */
 static __attribute__((noinline)) void uac_squeeze(uint32_t *d, uint32_t r, uint32_t n)
@@ -1522,7 +1522,7 @@ static uint32_t uac_packet(uint32_t *d)
     if (uac.owe && uac.fill_min >= lo && fill > n) {    /* (0.8.9) a frame an underrun repeated, made up: one */
         uac.owe--;                                      /* frame more of the ring taken, so the stream keeps the */
         uac.repaid++;                                   /* render's time and length (a packet still carries n). */
-        uac_squeeze(d, r, n);                           /* (0.9.7) n + 1 frames read into n, not one skipped: a */
+        uac_squeeze(d, r, n);                           /* (0.9.8) n + 1 frames read into n, not one skipped: a */
         RING_PUBLISH();                                 /* skip was a step in every stem (a click soloed) */
         ua_r = r + n + 1u;
         uac.pkts++;

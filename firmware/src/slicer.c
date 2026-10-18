@@ -161,7 +161,7 @@ static __attribute__((noinline)) void sl_enter(sl_t *s, uint32_t at)
     }
 }
 
-/* (0.9.7) MENU > USB STEMS with the SLICER on (sl_seg_tr): what each sample of the bus became, so that each part through
+/* (0.9.8) MENU > USB STEMS with the SLICER on (sl_seg_tr): what each sample of the bus became, so that each part through
  * it has a stem of its own (fx.c stem_fx_block): sl_tg the live sound's gain (the gate's and the repeat's cross-fade,
  * Q15), sl_tl / sl_tr the rest of the output (the repeats: the recording of the whole bus, and the gains' rounding) */
 static int32_t sl_tg[CTL], sl_tl[CTL], sl_tr[CTL];
@@ -232,7 +232,7 @@ static inline __attribute__((always_inline)) void sl_seg_x(sl_t *s, int32_t *bl,
     }
 }
 static void sl_seg(sl_t *s, int32_t *bl, int32_t *br, uint32_t m) { sl_seg_x(s, bl, br, m, 0, 0, 0, 0); }
-/* (0.9.7) the same with the trace, only while the stems are on (its own copy: the SLICER's loop as it was otherwise) */
+/* (0.9.8) the same with the trace, only while the stems are on (its own copy: the SLICER's loop as it was otherwise) */
 static __attribute__((noinline)) void sl_seg_tr(sl_t *s, int32_t *bl, int32_t *br, uint32_t m, uint32_t at)
 {
     sl_seg_x(s, bl, br, m, 1, sl_tg + at, sl_tl + at, sl_tr + at);
@@ -256,7 +256,7 @@ static __attribute__((noinline)) void slicer_bus(int32_t *bl, int32_t *br, uint3
         i += m;
     }
 }
-/* (0.9.7) the same with the trace (fx.c stem_slicer_bus, the stems on): its own copy, slicer_bus as it was */
+/* (0.9.8) the same with the trace (fx.c stem_slicer_bus, the stems on): its own copy, slicer_bus as it was */
 static __attribute__((noinline)) void slicer_bus_tr(int32_t *bl, int32_t *br, uint32_t n)
 {
     uint32_t i = 0;

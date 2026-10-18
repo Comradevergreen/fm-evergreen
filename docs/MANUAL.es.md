@@ -2065,16 +2065,16 @@ Dos maneras de sacar cada pista por separado, para procesarlas de a una en un DA
   tal como la oyen los buses. USB LEVEL a −6 dB o menos deja margen. La consola serie queda apagada en este modo; el
   USB-MIDI, el editor y el instalador siguen funcionando. El parlante y los auriculares tocan el master como siempre.
 
-  **0.9.7: stems limpios.** Hasta la 0.9.5 el endpoint de 8 canales decía 720 bytes (45 frames) mientras el FM-1 manda
+  **0.9.8: stems limpios.** Hasta la 0.9.7 el endpoint de 8 canales decía 720 bytes (45 frames) mientras el FM-1 manda
   46 frames cada vez que su reloj se adelanta (seguido: anda apenas rápido): el host descartaba cada uno de esos paquetes
   y se frenaba, el anillo del FM-1 se llenaba y se perdían bloques enteros de 32 frames, unas cien veces por segundo, en
   todos los canales a la vez: clics y un sonido entrecortado, "separado por IA", en cada stem (los modos de mezcla estéreo
   no tenían el problema). Ahora son 736 bytes; además el anillo guarda un milisegundo más en STEMS y STEMS+IN, y un frame
   repetido tras un faltante se recupera repartido en un paquete en vez de saltearse. **Actualizá el FM-1 y la app (JIANT
-  Stems 1.1) y volvé a grabar**: una toma hecha con la 0.9.5 no se puede arreglar después. Una pista que pasa por el
+  Stems 1.1) y volvé a grabar**: una toma hecha con la 0.9.7 no se puede arreglar después. Una pista que pasa por el
   **SLICER** tiene ahora en su stem su propio sonido tal como el SLICER lo dejó pasar (sus repeticiones en el stem de la
   primera de esas pistas, o con el FX ON del SLICER en el retorno de FX), así los ocho siguen sumando la mezcla (hasta la
-  0.9.5 esa pista estaba seca en su stem y otra vez, recortada, en el retorno de FX).
+  0.9.7 esa pista estaba seca en su stem y otra vez, recortada, en el retorno de FX).
   Qué es un stem: exactamente lo que la pista suma a la mezcla en esa toma, así que se anula contra la pista renderizada
   sola en la misma toma. Lo que hace que una pista dependa de las otras está en él, como en la mezcla: el **DUCK** (el
   bombeo del bombo sobre las otras pistas) y las **voces compartidas** (8 entre todas las pistas; con **LOAD ECO**: 6, 4

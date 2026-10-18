@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.9.7).** It builds and passes every test (Felucca's and its own). Back up the flash before installing it.
+> **Status: in development (v0.9.8).** It builds and passes every test (Felucca's and its own). Back up the flash before installing it.
   **A new skin, AIR** (0.9.7, the default of new settings): HUD's light look on every page with the knob row on top,
   the middle of the screen free; HOME's beings over the whole screen. **MENU › DISPLAY › SCOPE** (OFF by default): an
   engine's EDIT pages give its creature the whole panel. **HOME's beings have faces**: three isotherms coloured by their
@@ -645,6 +645,21 @@ JIANT's modifications are distributed under the same license.
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
 
 ### v0.9.8
+- **Clean USB stems** (MENU › USB STEMS / STEMS+IN; the stereo modes were not affected): the 8-channel endpoint said
+  720 bytes (45 frames) while the FM-1 sends 46-frame packets whenever its clock gets ahead (often: it runs a little
+  fast); the host dropped each one as babble and paused, the FM-1's ring filled and whole 32-frame blocks were lost,
+  ~100 a second, in every stem at once: clicks and a chopped sound. Now **736 bytes** (a build-time check that every
+  packet fits, in every mode); STEMS / STEMS+IN keep ~1 ms more in the ring, and a frame made up after an underrun is
+  spread over the packet (n + 1 frames read into n) instead of skipped. A track through the **SLICER** now has its own
+  sound in its stem as the SLICER let it through (its repeats in the first such track's stem, or with the SLICER's FX ON
+  in the FX return): the eight add up to the mix (before, that track was in its stem dry and again, sliced, in FX).
+  **Update the FM-1 and the app, and record again**: a take made before 0.9.8 cannot be mended.
+- **JIANT Stems 1.1** (android/stems): only whole frames are kept from a USB packet in error (a frame cut short no
+  longer moves every channel after it); the mic sent to the FM-1 follows the clocks' drift by reading a little faster
+  or slower instead of skipping a sample (a click in VOX); it tells an FM-1 on 0.9.7 or older in STEMS; a take being
+  recorded is never "recovered" by the takes list and a take cut short keeps all it wrote; the trim's edges are taken
+  by their grips, move from where they were taken and land exactly on the take's ends; EXPORT says when the take is
+  trimmed; Spanish INICIO AQUÍ / FINAL AQUÍ / SIN RECORTE.
 - **VOICE sings softer and more like a singer** (LANG ES / EN / JA; the vowel presets as before, but for their glide):
   - **Softer S** (and z, sh, f, th): the hiss is band-passed (no fizz past ~12 kHz; s centred ~6 kHz, sh ~2.7 kHz),
     comes in over ~10 ms instead of switching on (s: 10–90 % in 9 ms, was 3; at most 9 % of its level a ms, was 23)
@@ -663,6 +678,14 @@ Every update is listed here, newest first. (Since 0.6.80 at the end of the page:
     (song/cputest the same); +0.9 KB flash, 60 B of the pool, .data + .bss and the RAM code unchanged. Goldens: the eight
     word presets and VOICE LEGATO (its glide) only. voice_test checks the soft s and sh, the joins, the glide's S-curve
     and the formants across it, the vibrato (and none on ROBOT EN).
+- Memory: image **562700 B** of 581564 (0.9.7: 559976); .data + .bss **79556 B** (0.9.7: 79172; the stems'
+  fix: +384 B); pool spare **10816 B** (0.9.7: 10880; VOICE's 60 B, aligned); RAM code **22460 B** (0.9.7:
+  22472). cpu_vg song/cputest 3079 (baseline 3046), every line within budget; target budgets met.
+- Tests: stems_usb_test (8 / 10 channels for minutes into an app-like host: every frame once in its lane, no babble;
+  the old 720 B shown losing blocks), stems_test (DICE songs: each stem bit for bit its solo render in FULL / LITE /
+  ECO, CORES 1 / 2; the sum the mix; the SLICER GATE / STUT / FX ON), uac_test 736 B, the app's C and JVM tests;
+  voice_test (as above). Goldens: VOICE's word presets and VOICE LEGATO only.
+
 ### v0.9.7
 - **AIR, a new skin, the default of new settings** (the approved option of the "skin aireado" mock-up): HUD's look on
   every page (no cards, no panel box, the words light with a dark outline) with the **knob row on top**, right under

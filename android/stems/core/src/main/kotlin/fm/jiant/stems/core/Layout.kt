@@ -89,13 +89,13 @@ object Uac {
     }
 
     /** the channel count from the endpoint's largest packet when the descriptors say nothing: 16-bit, 46 frames a
-     * packet (STEMS: 736 bytes, 720 = 45 before the FM-1's 0.9.7; STEMS+IN: 920; stereo: 184 or 196 with 49) */
+     * packet (STEMS: 736 bytes, 720 = 45 before the FM-1's 0.9.8; STEMS+IN: 920; stereo: 184 or 196 with 49) */
     fun channelsFromPacket(maxPacket: Int): Int {
         for (f in intArrayOf(45, 46, 49, 44)) if (maxPacket % (f * 2) == 0 && maxPacket / (f * 2) in 1..16) return maxPacket / (f * 2)
         return 0
     }
 
-    /** (1.1) the FM-1 before 0.9.7 in STEMS: an endpoint of 720 bytes (45 frames) while it sends packets of 46 frames
+    /** (1.1) the FM-1 before 0.9.8 in STEMS: an endpoint of 720 bytes (45 frames) while it sends packets of 46 frames
      * (736 bytes) whenever its clock gets ahead; the phone drops each one and stalls, and the FM-1 drops whole blocks
      * (a click in every stem, ~100 a second). Nothing the app can mend: the FM-1 wants its update */
     fun oldStemsFirmware(channels: Int, maxPacket: Int): Boolean = channels == 8 && maxPacket < 46 * 16

@@ -61,7 +61,7 @@ static int check(const char *what, int ok)
 static uint32_t le16(const uint8_t *p) { return p[0] | (uint32_t)p[1] << 8; }
 
 /* ------------------------------------------------------------------ descriptors --- */
-/* (0.7.1) the stems: the 8-channel configuration (one rate, 736-byte packets: 0.9.7, was 720 while 46-frame packets went out; bcdDevice + 0x40), four words a frame
+/* (0.7.1) the stems: the 8-channel configuration (one rate, 736-byte packets: 0.9.8, was 720 while 46-frame packets went out; bcdDevice + 0x40), four words a frame
  * in the ring and the packet, the six parts then the FX return, each 16 bit */
 static void test_stems(void)
 {

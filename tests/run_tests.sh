@@ -69,12 +69,12 @@
 #                   underrun / overrun, restart; SET_CUR; the 44.1 -> 48 kHz resampler (every frame against a
 #                   double-precision one and bit for bit 0.8.8's, response, SNR, THD / aliasing spurs, cost); the stream
 #                   at 48 kHz (47..49 frames per packet, fast and slow I2S clocks, switching rates mid-stream).
-# USB STEMS (tests/stems_usb_test.c, 0.9.7): the 8- and 10-channel stream at 44.1 kHz against the FM-1's audio ISR and a
+# USB STEMS (tests/stems_usb_test.c, 0.9.8): the 8- and 10-channel stream at 44.1 kHz against the FM-1's audio ISR and a
 #                   host that reads it as the JIANT Stems app does (each packet's buffer wMaxPacketSize; a longer packet is
 #                   babble: cut, the endpoint halted 1..3 ms): every packet fits, every rendered frame reaches the app's lanes
-#                   once, in order, in its own channel (2 min each, +-500 ppm); 0.9.5's 720-byte endpoint shown dropping
+#                   once, in order, in its own channel (2 min each, +-500 ppm); 0.9.7's 720-byte endpoint shown dropping
 #                   blocks as a field take did; starvation's repeats made up with the frame spread over a packet.
-# STEMS (tests/stems_test.c, 0.9.7): fx.c's stems on dense DICE songs: each bit for bit its track's solo render (LOAD FULL,
+# STEMS (tests/stems_test.c, 0.9.8): fx.c's stems on dense DICE songs: each bit for bit its track's solo render (LOAD FULL,
 #                   LITE, ECO with its tail trimming; one core and CORES 2), the six and the FX return summing to the mix,
 #                   an empty track exact zeros, a track through the SLICER its own sound as it got through.
 # JIANT Stems app (android/stems, while it is in this repo): usbstream.c against a pretend usbfs (JDK headers), the :core
@@ -170,7 +170,7 @@ run "USB audio scheduler: 3 min at +-500 ppm, late renders, starvation, IRQs off
 $CC -O2 -DT_C1=1 -DHALF_FRAMES=$HALF -o "$OUT/uac_sched_test_c1" tests/uac_sched_test.c -lm
 run "USB audio scheduler: the same, CORES 2 (core 1 resamples each half at 48 kHz)" "$OUT/uac_sched_test_c1"
 $CC -O2 -DHALF_FRAMES=$HALF -o "$OUT/stems_usb_test" tests/stems_usb_test.c -lm
-run "USB STEMS / STEMS+IN (0.9.7): minutes into the app's lanes, every frame once in its channel, no babble, slips crossfaded" "$OUT/stems_usb_test"
+run "USB STEMS / STEMS+IN (0.9.8): minutes into the app's lanes, every frame once in its channel, no babble, slips crossfaded" "$OUT/stems_usb_test"
 # USB descriptor layouts (#67): CDC UAC LAYOUT CDC-presented 48K; layout 0 and the console left out = 1.0's bytes
 # (+ the 48 kHz rate with 48K = 1, the default; 48K = 0: byte for byte)
 for v in 1.1.0.1.1 1.1.1.1.1 1.1.2.1.1 1.1.3.1.1 1.1.0.0.1 1.1.2.0.1 0.1.0.1.1 1.1.0.1.0 1.1.0.0.0 1.1.2.1.0 0.1.0.1.0 \
@@ -213,7 +213,7 @@ if [ -f build/gen/felucca_tables.h ]; then
     $CC -O1 -w -Ibuild/gen -Ifirmware/src -Itests -o "$OUT/gen_test" tests/gen_test.c -lm
     run "GEN (0.6.91): the song generator, every genre: deterministic, one scale, the kick anchored, the bass's roots, chord tones, forms, the screen" "$OUT/gen_test"
     $CC -O1 -w -Ibuild/gen -Ifirmware/src -Itests -o "$OUT/stems_test" tests/stems_test.c -lm
-    run "STEMS (0.9.7): DICE songs, each stem = its track's solo render (FULL LITE ECO, CORES 1 / 2), the sum = the mix, the SLICER" "$OUT/stems_test"
+    run "STEMS (0.9.8): DICE songs, each stem = its track's solo render (FULL LITE ECO, CORES 1 / 2), the sum = the mix, the SLICER" "$OUT/stems_test"
     $CC -O1 -w -Ibuild/gen -Ifirmware/src -o "$OUT/ratchet_test" tests/ratchet_test.c -lm
     run "RATCH: x1..x4 in a step (notes, chords, drum hits), gates, chance, swing, projects, user presets, CHANCE page" "$OUT/ratchet_test"
     $CC -O1 -w -Ibuild/gen -Ifirmware/src -o "$OUT/drumx_oct_test" tests/drumx_oct_test.c -lm

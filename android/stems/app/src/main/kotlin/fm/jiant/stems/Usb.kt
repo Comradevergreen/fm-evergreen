@@ -76,7 +76,7 @@ class Fm1(val dev: UsbDevice, val inOn: UsbInterface, val inOff: UsbInterface?, 
 /** the FM-1 opened and streaming (one at a time: usbstream.c keeps one stream) */
 class Fm1Stream private constructor(val fm1: Fm1, private val conn: UsbDeviceConnection, val channels: Int, val withOut: Boolean) {
     val mode get() = Layout.mode(channels)
-    /** (1.1) an FM-1 whose STEMS packets do not fit its own endpoint (firmware 0.9.5 and older): the stems lose audio */
+    /** (1.1) an FM-1 whose STEMS packets do not fit its own endpoint (firmware 0.9.7 and older): the stems lose audio */
     val oldStemsFirmware get() = Uac.oldStemsFirmware(channels, fm1.ep.maxPacketSize)
 
     fun pump(buf: ByteArray, timeoutMs: Int, stats: IntArray) = UsbNative.pump(buf, timeoutMs, stats)
