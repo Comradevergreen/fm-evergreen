@@ -10544,7 +10544,8 @@ static int test_fx_live(void)
 
 /* ---------------------------------------------------------------------------- 0.9.4 the engines' creatures --- */
 /* (0.9.4, ui_engvis.c) VOICE's head (WORDS on and off), ANIMAL's creature, DRUM-X's kit on EDIT's SOUND / SOUND 1..4 and
- * HOME's BEING: drawn instead of the being (their own state read that frame), moving while the track sounds, still once
+ * HOME's BEING (0.9.6: ANALOG's cell, FM6's colony there and on OPERATOR / OP ENV / OPERATOR 2, WHEEL's worms, NOISE's
+ * swarm, PHASE's snail, LOFI's caterpillar): drawn instead of the being (their own state read that frame), moving while the track sounds, still once
  * it is silent; ANIMAL's MODE turned in silence: the creature changes (a glide), then holds still */
 static uint16_t vxt_a[240 * 140];
 static void vxt_run(uint32_t ms, int audio)               /* frames of 16 ms, the audio between them */
@@ -10614,7 +10615,16 @@ static int test_engvis(void)
         {5, "SINGER EN", 0, 0, "VOICE, HOME BEING"}, {ENGI_ANIMAL, "CANARY", "EDIT 1", 1, "ANIMAL bird, EDIT"},
         {ENGI_ANIMAL, "CRICKET", "EDIT 2", 1, "ANIMAL insect, EDIT"}, {ENGI_ANIMAL, "DOG BARK", 0, 1, "ANIMAL mammal, HOME BEING"},
         {ENGI_DRUM, "DRUM-X", "SOUND", 2, "DRUM-X kit, EDIT SOUND"}, {ENGI_DRUM, "DRUM-X", "EDIT 1", 2, "DRUM-X kit, EDIT KIT"},
-        {ENGI_DRUM, "DRUM-X", 0, 2, "DRUM-X kit, HOME BEING"}};
+        {ENGI_DRUM, "DRUM-X", 0, 2, "DRUM-X kit, HOME BEING"},
+        {ENGI_ANALOG, "ACID", "EDIT 1", 3, "ANALOG cell, EDIT"}, {ENGI_ANALOG, "SOFT PAD", 0, 3, "ANALOG cell, HOME BEING"},
+        {ENGI_FM6, "TINE EP", "EDIT 1", 4, "FM6 colony, EDIT"}, {ENGI_FM6, "TINE EP", "OPERATOR", 4, "FM6 colony, OPERATOR"},
+        {ENGI_FM6, "TINE EP", "OP ENV", 4, "FM6 envelope's bicho, OP ENV"}, {ENGI_FM6, "BRASS", "OPERATOR 2", 4, "FM6 colony, OPERATOR 2"},
+        {ENGI_FM6, "MARIMBA", 0, 4, "FM6 colony, HOME BEING"},
+        {7, "ROCK DRIVE", "EDIT 1", 5, "WHEEL worms, EDIT"}, {7, "GOSPEL", 0, 5, "WHEEL worms, HOME BEING"},
+        {11, "RAIN", "EDIT 1", 6, "NOISE swarm, EDIT"}, {11, "SEA", 0, 6, "NOISE swarm, HOME BEING"},
+        {2, "BRASS", "EDIT 1", 7, "PHASE snail, EDIT"}, {2, "CZ PIANO", 0, 7, "PHASE snail, HOME BEING"},
+        {3, "BYTEBEAT", "EDIT 1", 8, "LOFI caterpillar BYTE, EDIT"}, {3, "FLOAT PAD", "EDIT 2", 8, "LOFI caterpillar FLOAT, EDIT"},
+        {3, "PULSE LD", "EDIT 1", 8, "LOFI caterpillar PLS, EDIT"}, {3, "GB ARP", 0, 8, "LOFI caterpillar, HOME BEING"}};
     int bad = 0, ok = 1, mv, st;
     uint32_t c;
     for (c = 0; c < NELEM(C); c++) {
@@ -10622,7 +10632,8 @@ static int test_engvis(void)
         if (!mv || !st) printf("  %s: %s\n", C[c].what, !mv ? "still while it plays" : "moving in silence");
         ok &= mv && st;
     }
-    bad += check("0.9.4 VOICE's head, ANIMAL's creature, DRUM-X's kit (EDIT, HOME): move with the sound, still in silence", ok);
+    bad += check("0.9.4 / 0.9.6 the engines' creatures (VOICE ANIMAL DRUM-X ANALOG FM6 WHEEL NOISE PHASE LOFI; EDIT, FM6's OPERATOR "
+                 "pages, HOME): move with the sound, still in silence", ok);
     {   /* MODE turned in silence: the creature glides to the mammal, then holds */
         int32_t m0, m1;
         int changed;

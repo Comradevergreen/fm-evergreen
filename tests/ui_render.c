@@ -17,10 +17,8 @@
  * MENU > STYLE LINE: every screen again in every palette, the same lint; a text or icon on a divider
  * (ui_draw.c lcd_rule, GFX_HOOK_RULE: the rules between the strips; cv_rule's are cells) is a finding too.
  * Rolling digits: every frame of a header BPM roll and a card roll, up and down, in every palette (lint, GREY, MONO).
- * FM6 charts (ui_graph.c graph_fm6, its parts through FM6_CHART_HOOK), every algorithm and every chart drawn: no two
- * operator boxes overlapping or touching, no route, loop, bus or label inside a box or touching one it does not
- * connect, no two nets (one gap's routes that share an operator, the output, the loop, the label) sharing or
- * touching a pixel, everything inside the panel.
+ * FM6 colonies (0.9.6, ui_engvis.c vx_fm6 on OPERATOR, each bicho through VX_FM6_HOOK), every algorithm: no two
+ * operators' bichos overlapping or touching (as large as a full envelope makes them), every one inside the panel.
  * Output: OUTDIR/ppm/<PALETTE>_<screen>.ppm for GREY MONO GREEN PAPER NIGHT, OUTDIR/report.txt (findings, ellipsised
  * free text, the draw cost), OUTDIR/text_audit.tsv (GREY, per screen: texts, icons and keycaps with their ink-box px,
  * the ellipsised ones, the texts closer than 2 px to their cell's edge, the words).
@@ -220,14 +218,16 @@ static void hk_ink(uint16_t ink, uint16_t bg);
 #define GFX_HOOK_INK(ink, bg) hk_ink(ink, bg)
 #define GFX_HOOK_PIXELS(n) (px_visited += (n))
 #define UI_FILL_HOOK(x, y, w, h) hk_fill(x, y, w, h)
-static void fm6_hook(uint32_t kind, uint32_t a, uint32_t b);
-#define FM6_CHART_HOOK(kind, a, b) fm6_hook(kind, a, b)
+static void fm6_hook(int32_t k, int32_t x, int32_t y, int32_t r);
+#define VX_FM6_HOOK(k, x, y, r) fm6_hook(k, x, y, r)
 /* MENU > LARGE: the tall cards' values by the face they got (ui_draw.c LARGE_HOOK), the characters L lacked */
 static uint64_t lg_n[4];
 static char lg_miss[96], lg_wide[16][12], lg_small[16][12];
 static uint32_t lg_nwide, lg_nsmall;
 static void lg_hook(const char *s, int why);
 #define LARGE_HOOK(s, why) lg_hook(s, why)
+static uint8_t vx_full;                          /* (0.9.6) a creature on the whole EDIT panel (ui_lzedit.c VX_FULL_HOOK) */
+#define VX_FULL_HOOK vx_full
 #define UI_TEST_NO_MAIN 1
 #define PF_MS 900u                                       /* (0.6.61) the page name drawn (ui_test.c: off) */
 #include "ui_test.c"
@@ -292,103 +292,35 @@ static void hk_icon(int32_t x, int32_t y, uint32_t size, uint32_t id)
     al_item(x + x0, y + y0, x + x1, y + y1, 1, "icon");
 }
 
-/* the FM6 chart lint: each part of a chart (FMH_*) drawn alone onto a canvas of SENT, its pixels kept in fmp_mask
- * (bit: the part), then the canvas as drawn restored with the part on it; at FMH_END the parts are checked */
-#define FMP_MAX 48u
-#define FMP_SENT 0x0861u
-static uint64_t fmp_mask[CV_MAX];
-static uint16_t fmp_save[CV_MAX];
-static uint8_t fmp_kind[FMP_MAX], fmp_a[FMP_MAX], fmp_b[FMP_MAX];
-static uint32_t fmp_n, fmp_charts;
+/* (0.9.6) the FM6 colony lint: each operator's bicho (its centre, its largest radius, Q4 px) as drawn; at the sixth the
+ * six checked: apart by a pixel at least, at the largest a full LEVEL and envelope make them (vx_fm6 says), and
+ * inside the panel */
+static int32_t fmp_x[6], fmp_y[6], fmp_r[6];
+static uint32_t fmp_charts;
 static void finding(const char *what, const rbox_t *b, const rbox_t *o);
-static void fmp_find(uint32_t alg, const char *what, uint32_t i, int32_t x, int32_t y, uint32_t j)
+static void fm6_hook(int32_t k, int32_t x, int32_t y, int32_t r)
 {
-    static const char *const KIND[] = {"box", "route", "carrier", "bus", "loop", "label"};
-    rbox_t b = {(int16_t)x, (int16_t)y, (int16_t)x, (int16_t)y, 0, {0}}, o = b;
-    snprintf(b.s, sizeof b.s, "ALG %u %s %u>%u", alg + 1u, KIND[fmp_kind[i]], fmp_a[i] + 1u, fmp_b[i] + 1u);
-    snprintf(o.s, sizeof o.s, "%s %u>%u", j < FMP_MAX ? KIND[fmp_kind[j]] : "panel", j < FMP_MAX ? fmp_a[j] + 1u : 0u,
-             j < FMP_MAX ? fmp_b[j] + 1u : 0u);
-    finding(what, &b, &o);
-}
-static void fmp_check(uint32_t alg)
-{
-    int32_t bx0[FMP_MAX], by0[FMP_MAX], bx1[FMP_MAX], by1[FMP_MAX], x, y, dx, dy;
-    uint32_t net[FMP_MAX], par[12], i, j, w = cv_w, h = cv_h;
-    for (i = 0; i < 12u; i++) par[i] = i;               /* the routes' nets: an operator as source (0..5), as destination (6..11) */
-    #define FMP_ROOT(v) ({ uint32_t r_ = (v); while (par[r_] != r_) r_ = par[r_]; r_; })
-    for (i = 0; i < fmp_n; i++)
-        if (fmp_kind[i] == FMH_ROUTE) par[FMP_ROOT(fmp_a[i])] = FMP_ROOT(6u + fmp_b[i]);
-    for (i = 0; i < fmp_n; i++) {
-        net[i] = fmp_kind[i] == FMH_ROUTE ? FMP_ROOT(6u + fmp_b[i]) : fmp_kind[i] == FMH_CAR || fmp_kind[i] == FMH_BUS ? 20u
-                 : 21u + fmp_kind[i];
-        bx0[i] = by0[i] = 9999; bx1[i] = by1[i] = -1;
-    }
-    #undef FMP_ROOT
-    for (y = 0; y < (int32_t)h; y++)                     /* each part's extent */
-        for (x = 0; x < (int32_t)w; x++)
-            for (i = 0; i < fmp_n; i++)
-                if (fmp_mask[y * w + x] >> i & 1u) {
-                    if (x < bx0[i]) bx0[i] = x;
-                    if (y < by0[i]) by0[i] = y;
-                    if (x > bx1[i]) bx1[i] = x;
-                    if (y > by1[i]) by1[i] = y;
-                }
-    for (i = 0; i < fmp_n; i++)                          /* boxes: apart, by a pixel at least */
-        for (j = 0; j < i; j++)
-            if (fmp_kind[i] == FMH_BOX && fmp_kind[j] == FMH_BOX && bx0[i] <= bx1[j] + 1 && bx0[j] <= bx1[i] + 1 &&
-                by0[i] <= by1[j] + 1 && by0[j] <= by1[i] + 1)
-                fmp_find(alg, "FM6 boxes overlap", i, bx0[i], by0[i], j);
-    for (y = 0; y < (int32_t)h; y++)
-        for (x = 0; x < (int32_t)w; x++) {
-            uint64_t mk = fmp_mask[y * w + x];
-            if (!mk) continue;
-            for (i = 0; i < fmp_n; i++) {
-                if (!(mk >> i & 1u) || fmp_kind[i] == FMH_BOX) continue;
-                if (x < 6 || x > 233 || y < 2 || y > 119)
-                    fmp_find(alg, "FM6 part off the panel", i, x, y, FMP_MAX);
-                for (j = 0; j < fmp_n; j++) {
-                    if (fmp_kind[j] != FMH_BOX) continue;
-                    if (x >= bx0[j] && x <= bx1[j] && y >= by0[j] && y <= by1[j])
-                        fmp_find(alg, "FM6 part through a box", i, x, y, j);
-                    else if (x >= bx0[j] - 1 && x <= bx1[j] + 1 && y >= by0[j] - 1 && y <= by1[j] + 1 &&
-                             !((fmp_kind[i] == FMH_ROUTE && (fmp_a[i] == fmp_a[j] || fmp_b[i] == fmp_a[j])) ||
-                               ((fmp_kind[i] == FMH_CAR || fmp_kind[i] == FMH_FB) && fmp_a[i] == fmp_a[j])))
-                        fmp_find(alg, "FM6 part touches a box", i, x, y, j);
-                }
-                for (dy = -1; dy <= 1; dy++)              /* another net on this pixel or next to it */
-                    for (dx = -1; dx <= 1; dx++) {
-                        int32_t nx = x + dx, ny = y + dy;
-                        uint64_t mn;
-                        if (nx < 0 || ny < 0 || nx >= (int32_t)w || ny >= (int32_t)h) continue;
-                        mn = fmp_mask[ny * w + nx];
-                        for (j = 0; j < fmp_n; j++)
-                            if (mn >> j & 1u && fmp_kind[j] != FMH_BOX && net[j] != net[i])
-                                fmp_find(alg, "FM6 nets cross or touch", i, x, y, j);
-                    }
+    int32_t i, j;
+    fmp_x[k] = x; fmp_y[k] = y; fmp_r[k] = r;
+    if (k < 5)
+        return;
+    for (i = 0; i < 6; i++) {
+        rbox_t b = {(int16_t)((fmp_x[i] - fmp_r[i]) >> 4), (int16_t)((fmp_y[i] - fmp_r[i]) >> 4), (int16_t)((fmp_x[i] + fmp_r[i]) >> 4),
+                    (int16_t)((fmp_y[i] + fmp_r[i]) >> 4), 0, {0}}, o = b;
+        snprintf(b.s, sizeof b.s, "FM6 OP%d", (int)i + 1);
+        if (b.x0 < 4 || b.x1 > 236 || b.y0 < 0 || b.y1 >= (int32_t)cv_h) {
+            snprintf(o.s, sizeof o.s, "panel");
+            finding("FM6 bicho off the panel", &b, &o);
+        }
+        for (j = 0; j < i; j++) {
+            int64_t dx = fmp_x[i] - fmp_x[j], dy = fmp_y[i] - fmp_y[j], d = fmp_r[i] + fmp_r[j] + 16;
+            if (dx * dx + dy * dy < d * d) {
+                snprintf(o.s, sizeof o.s, "FM6 OP%d", (int)j + 1);
+                finding("FM6 bichos overlap", &b, &o);
             }
         }
+    }
     fmp_charts++;
-}
-static void fm6_hook(uint32_t kind, uint32_t a, uint32_t b)
-{
-    uint32_t i, n = cv_w * cv_h;
-    if (fmp_n) {                                         /* the part just drawn: its pixels */
-        for (i = 0; i < n; i++)
-            if (cv_px[i] != FMP_SENT) fmp_mask[i] |= (uint64_t)1u << (fmp_n - 1u);
-            else cv_px[i] = fmp_save[i];
-    } else {
-        memset(fmp_mask, 0, n * sizeof fmp_mask[0]);
-    }
-    if (kind == FMH_END) {
-        fmp_check(a);
-        fmp_n = 0;
-        return;
-    }
-    if (fmp_n >= FMP_MAX) { fprintf(stderr, "ui_render: an FM6 chart of more than %u parts\n", FMP_MAX); exit(1); }
-    memcpy(fmp_save, cv_px, n * sizeof cv_px[0]);
-    for (i = 0; i < n; i++) cv_px[i] = FMP_SENT;
-    fmp_kind[fmp_n] = (uint8_t)kind; fmp_a[fmp_n] = (uint8_t)a; fmp_b[fmp_n] = (uint8_t)b;
-    fmp_n++;
 }
 
 static void finding(const char *what, const rbox_t *b, const rbox_t *o)
@@ -670,6 +602,7 @@ enum { S_HOME, S_HOME_IDLE, S_MESSAGE, S_MESSAGE_KEY, S_MESSAGE_NOFILE, S_PRESET
        S_VX_ANIMAL_HOME, S_VX_KIT, S_VX_KIT_HITS, S_VX_KIT_GHOST, S_VX_KIT_HOME, S_VX_KIT_MUTED,
        S_VX_BUG_BD, S_VX_BUG_SD, S_VX_BUG_CP, S_VX_BUG_CH, S_VX_BUG_OH, S_VX_BUG_TM, S_VX_BUG_RS, S_VX_BUG_CB, S_VX_BUG_GHOST,
        S_VX_BUG_FLAM, S_VX_BUG_RATCH, S_VX_BUG_QUIET,
+       S_V6_ANALOG, S_V6_ANALOG_SQR, S_V6_ANALOG_RING, S_V6_ANALOG_QUIET, S_V6_ANALOG_HOME, S_V6_ANALOG_FULL, S_V6_FM6, S_V6_FM6_ALG32, S_V6_FM6_OP, S_V6_FM6_OP2, S_V6_FM6_ENV, S_V6_FM6_ENV_REL, S_V6_FM6_HOME, S_V6_FM6_FULL, S_V6_WHEEL, S_V6_WHEEL_FAST, S_V6_WHEEL_HOME, S_V6_WHEEL_FULL, S_V6_NOISE, S_V6_NOISE_LFSR, S_V6_NOISE_WHITE, S_V6_NOISE_HOME, S_V6_NOISE_FULL, S_V6_PHASE, S_V6_PHASE_RING, S_V6_PHASE_HOME, S_V6_PHASE_FULL, S_V6_LOFI, S_V6_LOFI_FLOAT, S_V6_LOFI_PLS, S_V6_LOFI_HOME, S_V6_LOFI_FULL,
        S_MIXER_T4, S_HOME_T4, S_MOCK_HOME, S_MOCK_PRESETS, S_MOCK_SEQ, S_MOCK_DRUM, S_MOCK_MIXER, S_MOCK_DIALOG, S_MOCK_MENU, S_COUNT };
 static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "message", "message_key", "message_nofile", "presets", "presets_nofav", "user",
     "phrases", "project", "tools", "song_empty", "song", "step", "pattern", "chance", "comp", "comp_trig", "comp_echo", "mutate", "morph", "dx_image", "dx_send", "page_flash", "page_flash_home", "fugue", "motion", "drum",
@@ -704,6 +637,7 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "message", "mes
     "vx_animal_home", "vx_kit", "vx_kit_hits", "vx_kit_ghost", "vx_kit_home", "vx_kit_muted",
     "vx_bug_bd", "vx_bug_sd", "vx_bug_cp", "vx_bug_ch", "vx_bug_oh", "vx_bug_tm", "vx_bug_rs", "vx_bug_cb", "vx_bug_ghost",
     "vx_bug_flam", "vx_bug_ratchet", "vx_bug_quiet",
+    "v6_analog", "v6_analog_sqr", "v6_analog_ring", "v6_analog_quiet", "v6_analog_home", "v6_analog_full", "v6_fm6", "v6_fm6_alg32", "v6_fm6_op", "v6_fm6_op2", "v6_fm6_env", "v6_fm6_env_rel", "v6_fm6_home", "v6_fm6_full", "v6_wheel", "v6_wheel_fast", "v6_wheel_home", "v6_wheel_full", "v6_noise", "v6_noise_lfsr", "v6_noise_white", "v6_noise_home", "v6_noise_full", "v6_phase", "v6_phase_ring", "v6_phase_home", "v6_phase_full", "v6_lofi", "v6_lofi_float", "v6_lofi_pls", "v6_lofi_home", "v6_lofi_full",
     "mixer_tracks4", "home_tracks4", "mock_home", "mock_presets", "mock_seq", "mock_drum", "mock_mixer", "mock_dialog", "mock_menu"};
 
 /* the scenes of the UI design screens: the state the UI-redesign
@@ -945,6 +879,36 @@ static void vx_bug_scene(uint32_t l, uint32_t dm, uint32_t n)
     }
     go_title("EDIT 1");
 }
+/* (0.9.6) the six creatures of the mock-up's family (ui_engvis.c): track 1 as engine e (preset pre), the knobs k[0..7]
+ * (-99: the preset's), a note (none: silent) played and rung a while, then on page (0: HOME's BEING); age: ms since the
+ * note when drawn (its squash, its blink), mt: the creature's time (its phases, NOISE's swarm moving) */
+enum { ENGI_PHASE_UI = 2, ENGI_LOFI_UI = 3, ENGI_WHEEL_UI = 7, ENGI_NOISE_UI = 11 };   /* (engines.c ENGINES[]) */
+static void v6_scene(uint32_t e, const char *pre, const char *page, const int16_t *k, uint32_t note, uint32_t age, uint32_t c)
+{
+    uint32_t i;
+    eng(e);
+    for (i = 0; i < ENGINES[e]->npresets; i++)
+        if (!strcmp(ENGINES[e]->presets[i].name, pre)) apply_preset_to(TSEL, i);
+    for (i = 0; k && i < 8u; i++)
+        if (k[i] != -99) TSEL->p[P_E0 + i] = k[i];
+    TSEL->engine = TSEL->eng_req;
+    song.playing = 0;
+    song.master_q12 = 4096;
+    for (i = 0; i < NTRK; i++) if (i != song.sel) trk[i].p[P_MUTE] = 1;
+    memset(vxs.fr, 0xFF, sizeof vxs.fr);
+    vx_run(40);
+    if (note) {
+        trk_note_on(TSEL, note, 110);
+        vx_run(60);
+        TSEL->peak = 7000;
+    } else
+        memset(scope_buf, 0, sizeof scope_buf);
+    vx_age(TSEL, c, 0);                                  /* (the note seen, age ms ago) */
+    vxs.nms[c] = fm1_ms - age;
+    vxs.mt[c] = 30u * 256u * 3u + c * 977u;
+    vxs.swt = vxs.mt[c] >> 8;
+    if (page) go_title(page); else { ui.home = 1; ui.hlv = 1; ui.hset[1] = 0; }
+}
 static void setup(int s)
 {
     memset(kb_on, 0, sizeof kb_on);               /* no key held (roll_playing holds one) */
@@ -955,6 +919,7 @@ static void setup(int s)
         return;
     }
     state();
+    vx_full = 0;
     switch (s) {
     case S_HOME: song.octave = 2; song.rec = 1; usb.config = 1; break;
     case S_HOME_IDLE: song.playing = 0; song.batt_raw = 570; ui.hot_col = 1; ui.hot_t = 30; break;
@@ -1541,6 +1506,41 @@ static void setup(int s)
     case S_VX_BUG_FLAM: vx_bug_scene(1, 3, 1); break;
     case S_VX_BUG_RATCH: vx_bug_scene(3, 0, 3); break;
     case S_VX_BUG_QUIET: vx_bug_scene(0, 0, 0); break;
+    case S_V6_ANALOG: { static const int16_t K[8] = {-99, -99, -99, -99, 70, 100, 110, -99}; v6_scene(ENGI_ANALOG, "ACID", "EDIT 1", K, 45, 400, 3); break; }
+    case S_V6_ANALOG_SQR: { static const int16_t K[8] = {1, 40, 80, 70, 40, 30, 0, 7}; v6_scene(ENGI_ANALOG, "SQR BASS", "EDIT 2", K, 40, 40, 3); break; }
+    case S_V6_ANALOG_RING: { static const int16_t K[8] = {6, 60, 90, -99, 90, 70, 40, -99}; v6_scene(ENGI_ANALOG, "SAW LEAD", "EDIT 1", K, 64, 700, 3); break; }
+    case S_V6_ANALOG_QUIET: v6_scene(ENGI_ANALOG, "ACID", "EDIT 1", 0, 0, 4000, 3); break;
+    case S_V6_ANALOG_HOME: v6_scene(ENGI_ANALOG, "SOFT PAD", 0, 0, 57, 300, 3); break;
+    case S_V6_ANALOG_FULL: { static const int16_t K[8] = {-99, -99, -99, 30, 70, 100, 110, -99}; v6_scene(ENGI_ANALOG, "ACID", "EDIT 1", K, 45, 300, 3); vx_full = 1; break; }
+    case S_V6_FM6: v6_scene(ENGI_FM6, "TINE EP", "EDIT 1", 0, 60, 300, 4); break;
+    case S_V6_FM6_ALG32: { static const int16_t K[8] = {32, 5, -99, -99, -99, -99, -99, -99}; v6_scene(ENGI_FM6, "BELL", "EDIT 2", K, 72, 120, 4); break; }
+    case S_V6_FM6_OP: v6_scene(ENGI_FM6, "TINE EP", "OPERATOR", 0, 60, 300, 4); fop_op = 2; break;
+    case S_V6_FM6_OP2:
+        v6_scene(ENGI_FM6, "BRASS", "OPERATOR 2", 0, 55, 500, 4); fop_op = 1;
+        fm6_patch[song.sel][(5u - 1u) * FP_OP + FP_DET] = 13;   /* (DETUNE +6: OP 2 shimmers) */
+        break;
+    case S_V6_FM6_ENV: v6_scene(ENGI_FM6, "BELL", "OP ENV", 0, 72, 600, 4); fop_op = 0; fop_stg = 1; break;
+    case S_V6_FM6_ENV_REL: v6_scene(ENGI_FM6, "PAD", "OP ENV", 0, 0, 4000, 4); fop_op = 2; fop_stg = 3; break;
+    case S_V6_FM6_HOME: v6_scene(ENGI_FM6, "MARIMBA", 0, 0, 67, 200, 4); break;
+    case S_V6_FM6_FULL: v6_scene(ENGI_FM6, "TINE EP", "EDIT 1", 0, 60, 300, 4); vx_full = 1; break;
+    case S_V6_WHEEL: v6_scene(ENGI_WHEEL_UI, "ROCK DRIVE", "EDIT 1", 0, 60, 300, 5); break;
+    case S_V6_WHEEL_FAST: { static const int16_t K[8] = {15, 0, 0, 0, 2, 100, 60, 2}; v6_scene(ENGI_WHEEL_UI, "JAZZ PERC", "EDIT 2", K, 62, 60, 5); break; }
+    case S_V6_WHEEL_HOME: v6_scene(ENGI_WHEEL_UI, "GOSPEL", 0, 0, 55, 300, 5); break;
+    case S_V6_WHEEL_FULL: v6_scene(ENGI_WHEEL_UI, "ROCK DRIVE", "EDIT 1", 0, 60, 300, 5); vx_full = 1; break;
+    case S_V6_NOISE: { static const int16_t K[8] = {1, 40, 80, 90, 64, 100, 30, 0}; v6_scene(ENGI_NOISE_UI, "RAIN", "EDIT 1", K, 60, 300, 6); break; }
+    case S_V6_NOISE_LFSR: { static const int16_t K[8] = {2, 64, 90, 40, 64, 32, 0, 40}; v6_scene(ENGI_NOISE_UI, "ARCADE", "EDIT 2", K, 60, 300, 6); break; }
+    case S_V6_NOISE_WHITE: { static const int16_t K[8] = {0, 0, 120, 10, 64, 0, 60, 0}; v6_scene(ENGI_NOISE_UI, "WIND", "EDIT 1", K, 48, 900, 6); break; }
+    case S_V6_NOISE_HOME: v6_scene(ENGI_NOISE_UI, "SEA", 0, 0, 48, 300, 6); break;
+    case S_V6_NOISE_FULL: { static const int16_t K[8] = {1, 40, 80, 90, 64, 100, 30, 0}; v6_scene(ENGI_NOISE_UI, "RAIN", "EDIT 1", K, 60, 300, 6); vx_full = 1; break; }
+    case S_V6_PHASE: v6_scene(ENGI_PHASE_UI, "BRASS", "EDIT 1", 0, 50, 300, 7); break;
+    case S_V6_PHASE_RING: { static const int16_t K[8] = {3, 2, 90, 60, 30, 1, 80, 70}; v6_scene(ENGI_PHASE_UI, "BELL", "EDIT 2", K, 62, 50, 7); break; }
+    case S_V6_PHASE_HOME: v6_scene(ENGI_PHASE_UI, "CZ PIANO", 0, 0, 57, 300, 7); break;
+    case S_V6_PHASE_FULL: v6_scene(ENGI_PHASE_UI, "BRASS", "EDIT 1", 0, 50, 300, 7); vx_full = 1; break;
+    case S_V6_LOFI: v6_scene(ENGI_LOFI_UI, "BYTEBEAT", "EDIT 1", 0, 60, 300, 8); break;
+    case S_V6_LOFI_FLOAT: v6_scene(ENGI_LOFI_UI, "FLOAT PAD", "EDIT 2", 0, 60, 120, 8); break;
+    case S_V6_LOFI_PLS: v6_scene(ENGI_LOFI_UI, "PULSE LD", "EDIT 1", 0, 72, 600, 8); break;
+    case S_V6_LOFI_HOME: v6_scene(ENGI_LOFI_UI, "GB ARP", 0, 0, 72, 300, 8); break;
+    case S_V6_LOFI_FULL: v6_scene(ENGI_LOFI_UI, "BYTEBEAT", "EDIT 1", 0, 60, 300, 8); vx_full = 1; break;
     case S_VX_KIT_MUTED: dx_mute_set(DXG_HAT | DXM_LANE(7)); vx_kit_scene(0x01u, 0); dx_ui_lane = 7; dx_ui_seen = last_note; go_title("SOUND 4"); break;
     case S_WORDS_OFF: eng(ENGI_VOICE_UI); TSEL->p[P_VLANG] = 0; go_page(GR_LYRIC); break;
     case S_NAME_LYRIC:
@@ -2200,7 +2200,7 @@ int main(int argc, char **argv)
         fprintf(rep, "SKIN BOTTOM and HUD (FLAT, LINE, LARGE, every palette): %u lint findings; %u screens with the knob row, %u HUD "
                 "HOMEs\n", nfind - n0, nlow, nhud);
     }
-    {   /* every FM6 chart (the lint above, fmp_check, runs on each), in GREY: gray */
+    {   /* every FM6 colony (the lint above, fm6_hook, runs on each), in GREY: gray */
         uint32_t a, c0 = fmp_charts;
         for (a = 1; a <= 32u; a++) {
             char name[32];
@@ -2211,7 +2211,29 @@ int main(int argc, char **argv)
             lint();
             mono_check();
         }
-        if (fmp_charts - c0 != 32u) { fprintf(stderr, "ui_render: %u FM6 charts drawn of 32\n", fmp_charts - c0); return 1; }
+        if (fmp_charts - c0 != 32u) { fprintf(stderr, "ui_render: %u FM6 colonies drawn of 32\n", fmp_charts - c0); return 1; }
+    }
+    {   /* (0.9.6) FM6's operator pages with their colony keep every number they showed: ALG, the operator and its frequency
+         * (OPERATOR, OPERATOR 2), OP ENV's stage with its R and L, the four cards */
+        static const struct { int s; const char *w[6]; } FT[] = {
+            {S_V6_FM6_OP, {"ALG 05 PAT", "OP3 x1.00", "RATIO", "FINE", "LEVEL", "/6"}},
+            {S_V6_FM6_OP2, {"ALG ", "OP2 x", "MODE", "DETUNE", "VEL", "+6"}},
+            {S_V6_FM6_ENV, {"OP1", "DEC  R ", "STAGE", "RATE", "LEVEL", "DEC"}}};
+        uint32_t f, w, i, n0 = nfind;
+        for (f = 0; f < NELEM(FT); f++) {
+            cur_name = S_NAME[FT[f].s];
+            setup(FT[f].s); pal(UI_GREY_INDEX);
+            draw(FT[f].s);
+            for (w = 0; w < 6u; w++) {
+                for (i = 0; i < nscr && !strstr(scr[i].s, FT[f].w[w]); i++)
+                    ;
+                if (i == nscr) {
+                    fprintf(rep, "FIND %-26s FM6's page lost '%s'\n", cur_name, FT[f].w[w]);
+                    nfind++;
+                }
+            }
+        }
+        if (nfind != n0) { fprintf(stderr, "ui_render: FM6's operator pages lost numbers (report.txt)\n"); return 1; }
     }
     sweep_columns();
     roll_frames(argc > 2 ? argv[2] : 0);
@@ -2223,7 +2245,11 @@ int main(int argc, char **argv)
                                    S_SAVE_LIB, S_SAVE_PROJ, S_SAVE_SOUND, S_FXL_SENDS, S_FXL_BUSES, S_FXL_REVERB,
                                    S_HOME_BEING, S_EDIT_ANALOG, S_ED_FILTER, S_ED_FOCUS, S_ENV_TRACKS, S_MOD, S_KEY_CHORD,
                                    S_SYSTEM, S_MENU_ROW, S_LY_FX_KNOBS, S_DLG_DICE_SOUND, S_EDIT_SAMPLE, S_VX_HEAD_S, S_VX_BIRD,
-                                   S_VX_MAMMAL, S_VX_KIT_HITS, S_VX_HEAD_HOME, S_VX_KIT_HOME, S_VX_BUG_SD};   /* (0.9.4: the creatures against a being) */   /* (0.8.5: the lenses everywhere) */   /* (0.8.3:
+                                   S_VX_MAMMAL, S_VX_KIT_HITS, S_VX_HEAD_HOME, S_VX_KIT_HOME, S_VX_BUG_SD,
+                                   S_V6_ANALOG, S_V6_FM6, S_V6_FM6_OP, S_V6_FM6_OP2, S_V6_FM6_ENV, S_V6_WHEEL, S_V6_NOISE, S_V6_PHASE,
+                                   S_V6_LOFI, S_V6_LOFI_FLOAT, S_V6_ANALOG_HOME, S_V6_FM6_HOME, S_V6_WHEEL_HOME, S_V6_NOISE_HOME,
+                                   S_V6_PHASE_HOME, S_V6_LOFI_HOME, S_V6_ANALOG_FULL, S_V6_FM6_FULL, S_V6_WHEEL_FULL,
+                                   S_V6_NOISE_FULL, S_V6_PHASE_FULL, S_V6_LOFI_FULL};   /* (0.9.6: the six, EDIT, HOME, the whole panel) */   /* (0.9.4: the creatures against a being) */   /* (0.8.5: the lenses everywhere) */   /* (0.8.3:
                                                                          * LENTE's three levels) */
         enum { N = 200 };
         uint32_t i, k;
