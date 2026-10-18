@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only
- * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments */
+ * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
+ * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) */
 /* Felucca UI: the panel (Y_GRAPH .. Y_GRAPH + H_GRAPH) between the cards and the footer: a SURF area
  * (rounded, on BG) holding the page graphs (ADSR, LFO, steps, piano roll, drum grid, scale, FX, SLICER,
  * MOD, lists: presets, user presets, patterns, project slots, song), the HOME oscilloscope, the
@@ -1533,7 +1534,7 @@ static uint32_t graph_signature(void)
             for (i = 0; i < CHAIN_ROWS; i++) h = (h ^ (uint32_t)song_idx.scene[song_cur][i].on * (i + 1u)) * 16777619u;
         }
         if (pg->graph == GR_BROWSE)
-            h ^= favorites.filter * 977u + preset_favorite() * 31u;
+            h ^= list_get() * 977u + preset_favorite() * 31u;
     }
     if (fx_on()) {                                   /* (0.8.5) FX's lens: the level, the module, the buses' values, the
                                                          * slicer's step, the output (MASTER), the punch lane */

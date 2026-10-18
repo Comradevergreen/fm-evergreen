@@ -881,6 +881,12 @@ JIANT appends (index = id; count 23 since 0.9.7): 18 TRACKS (4 / 6, AUDIO), 19 L
 1 COLORS, 2 BOTTOM, 3 HUD, AIR the default of new settings; 0.8.9 had 0 COLORS, 1 BOTTOM, 2 HUD) and (0.9.7) 22 SCOPE
 (0 OFF, 1 ON; OFF the default: an engine's EDIT pages the creature on the whole panel, DISPLAY).
 
+(JIANT 0.9.12) The tabs are five: 0 DISPLAY, 1 CONTROL, 2 AUDIO, **3 MIDI**, **4 SYSTEM** (SYSTEM was 3). MIDI OUT (id 20)
+moved to MIDI; its id and values are unchanged. MIDI also holds LEARN (arms MIDI LEARN on the device; not a setting) and
+LEARN CLEAR (an action), neither offered over MENU_DESC: the MIDI LEARN map is kept in the settings record (the
+favourites row of engine 1, DIGITAL, bytes 2..31: ten entries of CC | 0x80, track, parameter code; `src/midi_learn.c`),
+so a settings backup carries it; there is no command to read or edit it.
+
 The device's AUDIO tab shows SPEAKER EQ, USB LEVEL, CLICK, CLICK LEVEL, COUNT-IN (index 9, 10, 12, 13, 14).
 CLICK: the metronome while the transport runs: OFF, REC (while a track is armed), ON (always); CLICK LEVEL its
 level; COUNT-IN: PLAY from stop with a track armed counts in that many bars first (internal clock only). The click

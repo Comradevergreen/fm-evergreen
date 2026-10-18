@@ -1,7 +1,8 @@
 /* SPDX-License-Identifier: GPL-3.0-only
- * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments */
-/* Felucca menu (HOME held): its rows in tabs (1.0.5: DISPLAY CONTROL AUDIO SYSTEM; ALGORITHM between them, PRESETS
- * within one; no scrolling), the rows in menu_items.c (the settings, shared with the editor's MENU_DESC / MENU_SET).
+ * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
+ * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) */
+/* Felucca menu (HOME held): its rows in tabs (1.0.5: DISPLAY CONTROL AUDIO SYSTEM; JIANT 0.9.12: MIDI before SYSTEM;
+ * ALGORITHM between them, PRESETS within one; no scrolling), the rows in menu_items.c (the settings, shared with the editor's MENU_DESC / MENU_SET).
  * No BACK row: HOME closes it (ui_input.c). The two-valued rows are bits of ui_prefs (MENU_FLAGS). PRESETS scrolls from
  * ABOUT through all credits (OCT- back to the tabs). ui.menu: 1 the tabs, 2 information. */
 /* ------------------------------------------------------------ menu --- */
@@ -34,6 +35,14 @@ static void draw_about_qr(int32_t x, int32_t y)
 enum { MC_TEXT, MC_TITLE, MC_URL };
 typedef struct { const char *text; uint8_t kind; } menu_credit_t;
 static const menu_credit_t MENU_CREDITS[] = {
+    {"FELUCCA", MC_TITLE},                   /* (0.9.12) the base; MIDI LEARN from its 1.5 (midi_learn.c) */
+    {"Leo Kuroshita, Hugelton Instruments: the firmware JIANT builds on, MIDI LEARN: GPL-3.0", MC_TEXT},
+    {"https://github.com/hugelton/Felucca", MC_URL},
+    {"", MC_TEXT},
+    {"SKIFF", MC_TITLE},                     /* (0.9.12) designs after it: 12 voices on two cores, the sound types */
+    {"illuminus5: 12 voices with two cores, sound types: GPL-3.0", MC_TEXT},
+    {"https://github.com/illuminus5/skiff", MC_URL},
+    {"", MC_TEXT},
     {"SOUNDS + FONTS", MC_TITLE},
     {"CrispyZebra (PHASE waveforms), the DRUM voices, the Sample Pack: GPL-3.0", MC_TEXT},
     {"Fukiai icon font: MIT", MC_TEXT},
@@ -124,6 +133,7 @@ static int32_t menu_document(int32_t y, int draw)
         draw_about_qr(158, y + 122);
     }
     y = menu_text("THE PROJECT", y + 216, T_THEME, draw);
+    y = menu_text("Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)", y, T_TEXT, draw);   /* (0.9.12) */
     y = menu_text("Made in Argentina by Juan Jiant, visual artist and musician, a dad of two: an independent project, free for everyone.", y, T_TEXT, draw);
     y = menu_text("Manual, emulator, installer, editor:", y + 4, T_TEXT, draw);
     y = menu_text("juanjiant-bit.github.io/JIANT", y, T_MID, draw);
@@ -183,13 +193,23 @@ static uint32_t menu_tab(void) { return MI_TAB[ui.menu_sel % MI_COUNT]; }
 static uint32_t menu_set(void) { return (ui.menu_sel - mtab_first(menu_tab())) / 4u; }   /* ROWS 1-4: 0, 5-6: 1 */
 static void menu_val(uint32_t row, char *b)          /* the row's value as it reads ("0.4 s"; OCT+ rows: "OPEN") */
 {
-    str_cpy(b, row >= MI_VALUES ? "OPEN" : row == MI_HOLD ? HOLD_N[settings_hold % 4u] : menu_vname(row, menu_get(row)), 16);
+    if (row == MI_LCLEAR) {                            /* (0.9.12) LEARN CLEAR: how many CCs are learned, "NONE" */
+        uint32_t n = ml_count();
+        str_cpy(b, "NONE", 16);
+        if (n) {
+            fmt_int(b, (int32_t)n);
+            str_cpy(b + str_len(b), " CC", 4);
+        }
+        return;
+    }
+    str_cpy(b, !menu_valued(row) ? "OPEN" : row == MI_HOLD ? HOLD_N[settings_hold % 4u] : menu_vname(row, menu_get(row)), 16);
 }
 static const char *menu_short(uint32_t row)          /* a card's label: the row's name, or its short form */
 {
     static const struct { uint8_t row; char s[9]; } SH[] = {
         {MI_SCROFF, "SCR OFF"}, {MI_ACCEL, "ACCEL"}, {MI_SCLLED, "SCL LEDS"}, {MI_LOWCUT, "SPK EQ"}, {MI_USB, "USB LVL"},
-        {MI_CLKLVL, "CLICK LV"}, {MI_RESTORE, "RESTORE"}, {MI_PANEL, "CALIBR"}, {MI_INIT, "INIT SYS"}};
+        {MI_CLKLVL, "CLICK LV"}, {MI_RESTORE, "RESTORE"}, {MI_PANEL, "CALIBR"}, {MI_INIT, "INIT SYS"},
+        {MI_LCLEAR, "LRN CLR"}};
     uint32_t k;
     for (k = 0; k < NELEM(SH); k++)
         if (SH[k].row == row)
@@ -205,10 +225,10 @@ static void menu_cards(void)
         fmt_int(k, (int32_t)(ui.menu_sel - f) + 1);
         str_cpy(k + str_len(k), "/", 2);
         fmt_int(k + str_len(k), (int32_t)n);
-        draw_column(0, "TAB", MTAB_NAME[t], "", T_TEXT, (int32_t)t * 1000 / 3, ICON_NONE);
+        draw_column(0, "TAB", MTAB_NAME[t], "", T_TEXT, (int32_t)t * 1000 / (MTAB_COUNT - 1), ICON_NONE);
         draw_column(1, "ROW", k, "", T_TEXT, (int32_t)(ui.menu_sel - f) * 1000 / (int32_t)(n > 1u ? n - 1u : 1u), ICON_NONE);
         menu_val(ui.menu_sel, v);
-        draw_column(2, menu_short(ui.menu_sel), v, "", T_TEXT, ui.menu_sel < MI_VALUES && menu_n(ui.menu_sel) > 1u ?
+        draw_column(2, menu_short(ui.menu_sel), v, "", T_TEXT, menu_valued(ui.menu_sel) && menu_n(ui.menu_sel) > 1u ?
                     (int32_t)menu_get(ui.menu_sel) * 1000 / (int32_t)(menu_n(ui.menu_sel) - 1u) : -1, ICON_NONE);
         draw_column(3, "", "", "", T_DIM, -1, ICON_NONE);
         return;
@@ -220,7 +240,7 @@ static void menu_cards(void)
             continue;
         }
         menu_val(r, v);
-        draw_column(c, menu_short(r), v, "", r == ui.menu_sel ? T_ACCENT : T_TEXT, r < MI_VALUES && menu_n(r) > 1u ?
+        draw_column(c, menu_short(r), v, "", r == ui.menu_sel ? T_ACCENT : T_TEXT, menu_valued(r) && menu_n(r) > 1u ?
                     (int32_t)menu_get(r) * 1000 / (int32_t)(menu_n(r) - 1u) : -1, ICON_NONE);
     }
 }
@@ -228,25 +248,8 @@ static void menu_panel(void)
 {
     uint32_t t = menu_tab(), f = mtab_first(t), n = mtab_rows(t), k, r;
     char v[16];
-    if (ui.mlv == 0u) {                                /* MENU: the four tabs */
-        for (k = 0; k < MTAB_COUNT; k++) {   /* (0.8.9: the top tiles 72 tall, DISPLAY's seven rows; the others 64) */
-            int32_t x = 4 + (int32_t)(k & 1u) * 117, y = 2 + (int32_t)(k >> 1) * 74, h = k >> 1 ? 64 : 72;
-            lz_tile(x, y, 115, h, k == t, T_THEME);
-            cv_text(x + 5, y + 4 - AF_X_CAP_Y, &AF_X, MTAB_NAME[k], k == t ? T_THEME : T_MID);
-            if (k == t)
-                lz_uline(x + 5, y + 12, &AF_X, MTAB_NAME[k], T_THEME);
-            for (r = 0; r < mtab_rows(k); r++) {
-                uint32_t row = mtab_first(k) + r;
-                int32_t ry = y + 15 + (int32_t)r * (mtab_rows(k) > 7u ? 7 : 8);   /* (0.9.7: DISPLAY's eight 7 apart) */
-                uint16_t bg = lz_tile_bg();
-                menu_val(row, v);
-                cv_clip_text(x + 5, ry - AF_X_CAP_Y, &AF_X, menu_short(row), T_DIM, bg, 64);
-                cv_text_r(x + 110, ry - AF_X_CAP_Y, &AF_X, v, k == t ? T_TEXT : T_DIM, bg);
-            }
-        }
-        return;
-    }
-    if (ui.mlv == 1u) {                                /* TAB: its rows */
+    if (ui.mlv != 2u) {                                /* TAB: its rows (0.9.12: MENU's view of the tabs as tiles gone:
+                                                         * five do not fit, and since 0.9.2 the menu opens at TAB) */
         cv_text(10, 6 - AF_X_CAP_Y, &AF_X, MTAB_NAME[t], T_THEME);
         cv_text_r(228, 6 - AF_X_CAP_Y, &AF_X, "ALGO: TAB \xB7 SELECT: ROW", T_DIM, T_SURF);
         for (r = 0; r < n; r++) {               /* (0.8.9: seven rows fit, 17 apart; 0.9.7: eight, 15) */
@@ -268,14 +271,14 @@ static void menu_panel(void)
         return;
     }
     {   /* ROW: the row's values as chips (COLOR: each palette's colours) */
-        uint32_t row = ui.menu_sel, nv = row < MI_VALUES ? menu_n(row) : 0u, cur = nv ? menu_get(row) : 0u;
+        uint32_t row = ui.menu_sel, nv = menu_valued(row) ? menu_n(row) : 0u, cur = nv ? menu_get(row) : 0u;
         char b[32];
         str_cpy(b, MTAB_NAME[t], 32);
         str_cpy(b + str_len(b), " > ", 32 - str_len(b));
         str_cpy(b + str_len(b), MI_NAME[row], 32 - str_len(b));
         cv_text(10, 6 - AF_X_CAP_Y, &AF_X, b, T_THEME);
         if (!nv) {
-            cv_text_in(4, 60 - AF_M_CAP_Y, 232, &AF_M, "OCT+ OPENS IT", T_MID, T_SURF);
+            cv_text_in(4, 60 - AF_M_CAP_Y, 232, &AF_M, row == MI_LCLEAR ? "OCT+ CLEARS ALL" : "OCT+ OPENS IT", T_MID, T_SURF);
             return;
         }
         for (k = 0; k < nv && k < 18u; k++) {
@@ -373,7 +376,7 @@ static void menu_close(void)
     go_home();
 }
 
-/* (0.9.2) the menu: SELECT walks every row, tab after tab (DISPLAY CONTROL AUDIO SYSTEM, no wrap), ALGORITHM jumps to
+/* (0.9.2) the menu: SELECT walks every row, tab after tab (DISPLAY CONTROL AUDIO MIDI SYSTEM, no wrap), ALGORITHM jumps to
  * the next / previous tab's first row (no wrap), PRESETS does nothing (rule 3: no presets here), any of KNOB 1..4 or
  * OCT+ / OCT- change a value (menu_items.c menu_step), OCT+ opens CALIBRATION / ABOUT (OCT- nothing there); in ABOUT
  * SELECT scrolls, OCT- goes back. HOME closes it, from ABOUT too (ui_input.c). (Until 0.9.1: SELECT zoomed MENU . TAB .
@@ -402,14 +405,18 @@ static void menu_input(uint32_t oct)                  /* oct: ui_input.c oct_tap
         menu_tab_go(s);
     for (s = 0, k = 0; k < 4u; k++)                    /* KNOB 1..4, any of them */
         s += panel_enc(EN_K1 + k);
-    if (ui.menu_sel < MI_VALUES) {
+    if (menu_valued(ui.menu_sel)) {
         /* a step (OCT+ the next value, OCT- the previous); COLOR previews the palette, STYLE is drawn so from the next
          * frame (FX LATCH: the latched effects are off while the menu is up) */
         s += (int32_t)up - (int32_t)dn;
         if (s)
             menu_put(ui.menu_sel, menu_step(ui.menu_sel, s));
     } else if (up) {
-        if (ui.menu_sel == MI_PANEL) {
+        if (ui.menu_sel == MI_LCLEAR) {                 /* (0.9.12) LEARN CLEAR: every learned CC (no dialog: LEARN again
+                                                         * brings one back) */
+            ui_message(ml_clear_all() ? "LEARN CLEARED" : "NOTHING LEARNED");
+            ui.force = 1;
+        } else if (ui.menu_sel == MI_PANEL) {
             panel_setup();
             scrn.idle = fm1_ms;                         /* (SCREEN OFF: its own loop had the input) */
             ui.force = 1;

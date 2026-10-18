@@ -277,7 +277,7 @@ knobs, their pictures and every function are the same, only the way between them
   picked, so SAVE, OCT+, OCT+ still stores the sound (or the section).
 - **EDIT is always EDIT**: clearing a step went to the SEQ layer (**SEQ + G5**, CLR STEP; on AUTO LIST it deletes the
   record; TIME turned to REST clears a note too) and renaming to the SAVE layer (**SAVE + C5**, NAME).
-- **The MENU** (hold HOME): SELECT walks every row (DISPLAY → CONTROL → AUDIO → SYSTEM), ALGORITHM jumps tabs, a knob
+- **The MENU** (hold HOME): SELECT walks every row (DISPLAY → CONTROL → AUDIO → MIDI → SYSTEM), ALGORITHM jumps tabs, a knob
   changes the value, HOME closes it.
 - Some pages only appear when they apply: FM6's operator pages on an FM6 track, DRUM-X's pages on a DRUM track,
   RETRIG on LOFI BYTE/FLOAT, and with **LOAD ECO** the SLICER and CHORUS pages are hidden; the chain skips them.
@@ -442,7 +442,7 @@ the bars with KNOB 1 the bar and KNOB 2 LEN.
 
 | Page | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 | --- | --- | --- | --- | --- |
-| PRESETS | No. (the sound) | ENG (the engine) | FAV (mark a favourite) | LIST (ALL / FAV) |
+| PRESETS | No. (the sound) | ENG (the engine) | FAV (mark a favourite) | LIST (ALL / FAV / a sound type: BASS LEAD PAD KEYS PLUCK BELL VOX DRUM FX, 0.9.12) |
 | USER | SLOT (U01–U32) | LOAD (action) | ERASE (action) | SAVE (action) |
 | PROJECTS / SECTIONS (the PROJECT page) | PROJECT (1–8; on SECTIONS: SECT A–D) | SECT (A–D; on SECTIONS: the section's NAME) | LOAD (action) | SAVE (action) |
 | ARRANGE | ROW ("2/6") | SECT (on END: STOP / x2–x8 / LOOP) | BARS | SCENE |
@@ -567,6 +567,12 @@ every engine) or with KNOB 2 (ENG) on SAVE > PRESETS. Each track's four HOME kno
 LOFI, ANALOG, FM6, PHASE, WHEEL, NOISE** (the first six are the tracks at power-on, T1–T6). Only the order you see
 changed: projects, user presets, favourites and backups name engines by their numbers, which stay, so everything saved
 before loads as it was. PROGRAM CHANGE numbers the sounds in this new order (see [14](#14-midi-and-usb)).
+
+**Sound types** (0.9.12, after Skiff): every factory sound has a type: **BASS, LEAD, PAD, KEYS, PLUCK, BELL, VOX, DRUM,
+FX**. On SAVE › PRESETS, **KNOB 4 (LIST)** steps ALL → FAV → BASS → LEAD → … → FX: with a type, KNOB 1 and the PRESETS
+knob browse only that type's sounds, **across every engine** (BASS: ANALOG's SUB BASS, FM6's FM BASS, PHASE's GROWL,
+LOFI's TRI BASS, WHEEL's REED BASS …), and loading one keeps the steps as always. The type is kept with the settings;
+your user presets show under ALL and FAV. The dice (GEN) uses the types too: a bass sound only on the bass.
 
 **Smooth changes**: switching a track to another engine fades the old one out (about 12 ms) and what you are holding
 (keys, or the notes the sequencer holds) goes on in the new engine, fading in; nothing is cut. Changing a list value
@@ -857,7 +863,8 @@ track that follows LFO DEST / ENV DEST FILTER.
 ### VOICE (every engine)
 
 EDIT > **VOICE**: **VOICE** POLY, MONO, LEG (legato), UNI (unison); **GLIDE**; **MODE** RATE or TIME (how glide is
-measured); **PRIO** LAST, LOW, HIGH. The six tracks share a budget of 8 voices; FM6 plays at most four per track. (0.9.8) VOICE glides as a singer: an S-curve in
+measured); **PRIO** LAST, LOW, HIGH. The six tracks share a budget of 8 voices (**12 while the second core plays**,
+0.9.12: MENU › ABOUT says CORES 2); FM6 plays at most four per track, any track at most 8. (0.9.8) VOICE glides as a singer: an S-curve in
 pitch over the same time (the other engines: a straight line, as before).
 
 ---
@@ -1933,7 +1940,7 @@ How heavy the sound may get.
 | --- | --- |
 | **FULL** (default) | Everything as set. |
 | **LITE** | SHIMMER and CLOUD reverbs play as ROOM, RESO as SPRING; the GRAIN delay plays plain; FM6 plays two voices. The screen draws lighter: the beings and graphs animate at about 20 frames a second with simpler outlines, and values change at once (no rolling digits). |
-| **ECO** | LITE, plus every reverb plays as a light SPRING, **no SLICER** (its tracks go straight to the mix), **no chorus** (their pages are hidden), at most **4 voices** per synth track and **6 voices** between all tracks (8 otherwise; the drums count too). When the load climbs, nearly silent tails are let go sooner. The screen at about 14 frames a second, the beings simpler still. |
+| **ECO** | LITE, plus every reverb plays as a light SPRING, **no SLICER** (its tracks go straight to the mix), **no chorus** (their pages are hidden), at most **4 voices** per synth track and **6 voices** between all tracks (8 otherwise, 12 with both cores; the drums count too). When the load climbs, nearly silent tails are let go sooner. The screen at about 14 frames a second, the beings simpler still. |
 
 LOAD only changes how things are rendered: **projects keep their settings** and sound as saved on FULL (or on another
 FM-1). The cards of swapped effects say LITE or ECO. LOAD frees **CPU**, not RAM: the firmware reserves all its memory
@@ -1952,11 +1959,11 @@ track.
 
 ### The MENU (hold HOME)
 
-**SELECT** walks every row (0.9.2), all four tabs in one chain (DISPLAY → CONTROL → AUDIO → SYSTEM; it stops at the
-first and the last), **ALGORITHM** jumps to the next / previous tab (its first row), **any knob** or **OCT+ / OCT−**
+**SELECT** walks every row (0.9.2), all five tabs in one chain (DISPLAY → CONTROL → AUDIO → MIDI → SYSTEM; 0.9.12:
+MIDI is new, MIDI OUT moved there from CONTROL; it stops at the first and the last), **ALGORITHM** jumps to the next / previous tab (its first row), **any knob** or **OCT+ / OCT−**
 changes the value; PRESETS does nothing here. HOME closes it (settings are saved then). The screen shows the tab's rows,
 the selected row's four as cards (ROWS 1–4 / ROWS 5–6; DISPLAY: ROWS 5–8) with their knob's number; the tabs on top,
-the footer **MENU · DISPLAY · SKIN  2/26**. The header says MENU · DISPLAY.
+the footer **MENU · DISPLAY · SKIN  2/28**. The header says MENU · DISPLAY.
 
 | Tab | Row | Values |
 | --- | --- | --- |
@@ -1973,13 +1980,15 @@ the footer **MENU · DISPLAY · SKIN  2/26**. The header says MENU · DISPLAY.
 | CONTROL | FX LATCH | **OFF** (default since 0.6.64), ON |
 | CONTROL | BPM LOCK | OFF, ON — DICE ALL keeps the tempo (the tempo is GLO + SELECT, GLO's F4 TAP or GLOBAL's BPM) |
 | CONTROL | SCALE LEDS | OFF, ON — the keys of the scale glow, the root brighter |
-| CONTROL | MIDI OUT | **KEYS**, CLOCK, ALL, OFF — what goes out over USB MIDI (see [14](#14-midi-and-usb)) |
 | AUDIO | SPEAKER EQ | FLAT, LOWCUT, BASS+ (an EQ on the master for the small speaker; also reaches the outputs and USB) |
 | AUDIO | USB LEVEL | MASTER (USB follows the MASTER knob), FIXED (USB at full level), −6 / −12 / −18 / −24 dB (USB fixed and attenuated: for a phone or a computer whose input clips at the full level) |
 | AUDIO | CLICK | OFF, REC (while a track is armed and playing), ON |
 | AUDIO | CLICK LEVEL | LOW, MID, HIGH |
 | AUDIO | COUNT-IN | OFF, 1 BAR, 2 BARS |
 | AUDIO | TRACKS | **4** (default), 6 |
+| MIDI | MIDI OUT | **KEYS**, CLOCK, ALL, OFF — what goes out over USB MIDI (see [14](#14-midi-and-usb)) |
+| MIDI | LEARN | **OFF**, ON — (0.9.12) arms MIDI LEARN: a knob turned picks its parameter, the next CC is learned to it (see [MIDI LEARN](#midi-learn-0912)); not saved, OFF at power-on |
+| MIDI | LEARN CLEAR | OCT+ forgets every learned CC; the row shows how many there are (NONE, 3 CC …) |
 | SYSTEM | USB | CONSOLE (the serial console with stereo USB audio, the default; was USB SERIAL ON), STEREO (audio + MIDI only, class 0; was OFF: helps macOS 13–15 see the USB audio input), STEMS (0.7.1: an 8-channel audio input, see "Stems" below), IN+OUT (0.7.5: stereo audio both ways, see "USB audio in" below), STEMS+IN (0.8.0: the stems with the audio output too, see "Stems with a voice" below) |
 | SYSTEM | RESTORE LAST | **OFF** (default: no autosave, power-on at zero), ON (the last session back at power-on) |
 | SYSTEM | LOAD | ECO, LITE, **FULL** (default) |
@@ -1997,7 +2006,7 @@ faded): a photo of that screen helps when you report a problem.
 - **USB** is class-compliant MIDI and audio: the master output reaches the computer as a USB audio input.
 - **MIDI IN** over USB and the **TRS** jack. **ROUTE** decides which track each channel plays (see
   [13](#13-system-tracks-load-and-the-menu)). Incoming notes on an armed track are recorded like the keys.
-- **MIDI OUT** (over USB; MENU > CONTROL > **MIDI OUT**, 0.6.72), each track on its channel (T1 = channel 1 … T6 =
+- **MIDI OUT** (over USB; MENU > MIDI > **MIDI OUT**, 0.6.72; in CONTROL until 0.9.11), each track on its channel (T1 = channel 1 … T6 =
   channel 6):
   - **KEYS** (the default): the keys send their notes, as before.
   - **CLOCK**: and the clock (24 a beat) with **START / STOP**, while the tempo is the FM-1's own (CLOCK INT): a drum
@@ -2027,6 +2036,27 @@ faded): a photo of that screen helps when you report a problem.
   (0.6.96). CC1 (mod wheel), CC11 (expression) and channel aftertouch are sources in the MOD matrix (MODW, EXPR,
   AT). Pitch bend, sustain (CC64), All Sound Off (CC120) and All Notes Off (CC123) work. A CC is recorded as automation
   like a knob move.
+
+### MIDI LEARN (0.9.12)
+
+Any knob of a track's sound to any CC of your controller, on the device (from Felucca 1.5's MIDI LEARN):
+
+1. **MENU › MIDI › LEARN ON** (hold HOME, ALGORITHM to the MIDI tab, SELECT to LEARN, OCT+), then HOME to close the
+   menu.
+2. **Turn a knob** on any page that edits a track's parameter (HOME, EDIT, ENV, LFO, FX, the MIXER, GLO's levels):
+   the screen says **LEARN T2 CUT: SEND A CC** (or its CC if it already has one).
+3. **Move the controller's knob** (send the CC): **CC21 > T2 CUT**. From then on that CC sets T2's CUT as the knob
+   does (0–127 over its range, recorded as automation like a knob), on **any channel** and over **USB or the TRS jack**.
+4. Turn the next knob, send the next CC … **LEARN OFF** when you are done (with LEARN on, knobs keep picking).
+
+- One CC sets one parameter; a parameter has one CC: learning it again replaces the old one. **Ten** at most
+  (**LEARN FULL**: clear one by learning its CC to another knob, or everything with LEARN CLEAR).
+- **Never learned** (**CC7 RESERVED**, and they keep doing their own): CC0 / 32 (bank select), CC1 (mod wheel), CC6 /
+  38 / 96–101 (data entry, RPN), CC11 (expression), CC64 (sustain), CC120–127 (channel modes) and every CC of the
+  standard map above (CC5 7 10 16–23 71–75 91 93 94 102–105). So a learned CC and the map never meet.
+- **Kept with the settings** (not in a project; a settings backup carries it); **MENU › MIDI › LEARN CLEAR** forgets
+  them all. ROUTE still decides which channels are heard (CH1-6 ignores channels 7–16).
+- Bluetooth MIDI does not exist on the FM-1 with JIANT (see above), so learning works on USB and TRS.
 - USB MIDI and audio name: "JIANT FM" (0.7.0; "JIANT Update" while a package installs). The web editor and the installer also accept a device still named "Felucca".
 
 ### Stems (0.7.1)
@@ -2149,7 +2179,9 @@ waiting for the bar is called off. If something still plays after a clear, it ma
 
 **Two cores (0.6.71, test).** The second core renders some synth tracks; MENU > ABOUT says **CORES 2**, or
 **CORES 1** and why (REC held at power-on, a bad read, no answer, a fault: then it stays on one core until switched
-off). Hold **REC** while powering on to play on one core.
+off). Hold **REC** while powering on to play on one core. (0.9.12) With CORES 2 the tracks share **12 voices** instead
+of 8 (each track still at most 8); the load guard keeps the render in its time either way, and a second core that
+stops brings the budget back to 8 from the next note.
 
 **Clicks, stutters, the load meter full.** Keep TRACKS on 4, try **LOAD LITE** or **ECO**, use fewer voices (MONO,
 fewer FM6 tracks), lighter reverbs (CLOUD and SHIMMER are the heaviest). Check MENU > SYSTEM > ABOUT > AUDIO LOAD.

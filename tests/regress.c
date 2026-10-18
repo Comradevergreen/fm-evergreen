@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only
- * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments */
+ * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
+ * Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) */
 /* Regression suite of the FELUCCA DSP on the Mac (same sources as the firmware, through hostsim.c).
  *   build/host/regress [GOLDEN_FILE CPU_FILE]      (run_tests.sh builds and runs it)
  *
@@ -566,6 +567,65 @@ static int chk_retrigger_budget(char *msg, uint32_t n)
     return !bad;
 }
 
+/* (JIANT 0.9.12) the second core's voices: VOICES_2CORE (12) shared while it takes parts (here mc_host: its jobs run at
+ * once), NVOICE (8) with one core (REC at power-on: mc_off; or given up mid-session: from the next note), LOAD ECO's
+ * six either way; a part still at most NVOICE of its own, the bass of a full POLY part kept when its own are taken */
+static uint32_t budget_fill(void)
+{
+    static const uint8_t NOTES[8] = {40, 43, 47, 50, 53, 57, 60, 64};
+    uint32_t p, i, worst = 0;
+    host_tracks_init();
+    for (p = 0; p < NPART; p++) {
+        memset(trk[p].v, 0, sizeof trk[p].v);
+        host_preset(&trk[p], 0, 0);
+        trk[p].p[P_VOICE] = V_POLY;
+        trk[p].p[P_AMODE] = 0;
+        trk[p].p[P_SUS] = 127;
+    }
+    for (p = 0; p < 4u; p++)                            /* 4 parts x 5 notes held: 20 asked for */
+        for (i = 0; i < 5u; i++) {
+            trk_note_on(&trk[p], NOTES[(i + p) % 8u] + 12u * (p & 1u), 100);
+            blk();
+            worst = voices_busy() > worst ? voices_busy() : worst;
+        }
+    return worst;
+}
+static int chk_budget_2core(char *msg, uint32_t n)
+{
+    uint32_t two, one, eco, off, lost, own = 1, p, k;
+    mc_host = 1;
+    two = budget_fill();
+    for (p = 0; p < 4u; p++) {                          /* each part kept a voice; none past NVOICE */
+        uint32_t c = 0;
+        for (k = 0; k < NVOICE; k++)
+            c += trk[p].v[k].active && trk[p].v[k].stage != 4u;
+        own &= c >= 1u && c <= NVOICE;
+    }
+    trk_note_on(&trk[0], 72, 100);                      /* (lost mid-session: no voice added from the next note) */
+    blk();
+    mc_host = 0;
+    k = voices_busy();
+    trk_note_on(&trk[1], 74, 100);
+    blk();
+    lost = voices_busy() <= k && k == VOICES_2CORE;
+    one = budget_fill();
+    mc_host = 1;
+    mc_off = 1;
+    off = budget_fill();
+    mc_off = 0;
+    sys_load = LOAD_ECO;
+    eco = budget_fill();
+    sys_load = LOAD_FULL;
+    mc_host = 0;
+    for (p = 0; p < NPART; p++)
+        trk_all_off(&trk[p]);
+    for (k = 0; k < 4u * FS / CTL && !parts_free(); k++)
+        blk();
+    snprintf(msg, n, "two cores: %u voices at most (budget %u), one: %u, REC at power-on: %u, LOAD ECO: %u; each part its "
+             "own <= %u; core 1 given up: no voice added", two, VOICES_2CORE, one, off, eco, NVOICE);
+    return two == VOICES_2CORE && one == NVOICE && off == NVOICE && eco == 6u && own && lost && parts_free();
+}
+
 /* Voices held before a mode change must remain reclaimable except for the lead. */
 static int chk_cap_mode_budget(char *msg, uint32_t n)
 {
@@ -1075,6 +1135,7 @@ int main(int argc, char **argv)
     /* 4: the voice checks */
     k0 = nj;
     add(J_CHECK, "voices: budget of 8 across 4 parts")->check = chk_budget;
+    add(J_CHECK, "voices: 12 with the second core, 8 with one (0.9.12)")->check = chk_budget_2core;
     add(J_CHECK, "voices: reuse before the stolen tail fades")->check = chk_retrigger_budget;
     add(J_CHECK, "voices: budget after a live mode change")->check = chk_mode_budget;
     add(J_CHECK, "voices: budget after voice mode changes")->check = chk_cap_mode_budget;

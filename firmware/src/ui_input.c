@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only
- * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments */
+ * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
+ * Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) */
 /* Felucca UI input: LEDs, knobs and buttons, SEQ step entry, panel setup. */
 #include "ui_name.c"                                    /* NAME: naming user presets and projects */
 /* ----------------------------------------------------------- LEDs --- */
@@ -93,7 +94,8 @@ static uint32_t oct_leds(void)
         return ui.layer == LAYER_FX ? 1u : 0u;          /* FX LATCH: OCT- all off, lit */
     if (ui.menu && !ui.confirm)
         return ui.menu >= 2u ? 1u :                    /* (ABOUT: OCT- back, lit) */
-               ui.menu_sel >= MI_VALUES ? OCT_BREATH :  /* CALIBRATION / ABOUT: OCT+ opens */
+               !menu_valued(ui.menu_sel) ? (ui.menu_sel != MI_LCLEAR || ml_count() ? OCT_BREATH : 0u) :   /* CALIBRATION /
+                                                 * ABOUT: OCT+ opens; (0.9.12) LEARN CLEAR: clears, while CCs are learned */
                (menu_step(ui.menu_sel, -1) != menu_get(ui.menu_sel) ? OCT_BREATH_DN : 0u) |   /* a value: each */
                (menu_step(ui.menu_sel, 1) != menu_get(ui.menu_sel) ? OCT_BREATH : 0u);         /* way it can go */
     if (ui.confirm || act_cols())
@@ -441,6 +443,13 @@ static int32_t accel(uint32_t role, int32_t s, int32_t range)
     return s * (int32_t)m;
 }
 
+/* a knob turned parameter id of track t: recorded (AUTOMATION), and picked by MIDI LEARN (0.9.12, midi_learn.c) */
+static void knob_cap(track_t *t, uint32_t id)
+{
+    motion_capture(t, id, t->p[id]);
+    ml_knob(t, id);
+}
+
 /* MIXER page: KNOB 1 LEVEL, 2 PAN, 3 REV send of the selected track (the track itself is ALGORITHM's, on every page),
  * (0.9.1) KNOB 4 the master DJ FILTER (G_DJF: was the track's MUTE, which the GLO layer's black keys latch, as before).
  * Pattern length stays on SEQ. */
@@ -471,7 +480,7 @@ static void tracks_edit(uint32_t slot, int32_t steps)
         break;
     }
     *vp = (int16_t)clamp(*vp + accel(EN_K1 + slot, steps, d->max - d->min), d->min, d->max);
-    motion_capture(t, (uint32_t)(vp - t->p), *vp);
+    knob_cap(t, (uint32_t)(vp - t->p));
 }
 
 /* SEQ > STEP's piano roll (not the DRUM grid, whose white keys stay its steps): where step recording writes */
@@ -962,7 +971,7 @@ static void shape_knob(uint32_t slot, int32_t steps)
         ui_message(d > 0 ? "NUDGED RIGHT" : "NUDGED LEFT");
     } else {
         TSEL->p[P_SOFS] = (int16_t)clamp(TSEL->p[P_SOFS] + steps, -32, 32);
-        motion_capture(TSEL, P_SOFS, TSEL->p[P_SOFS]);
+        knob_cap(TSEL, P_SOFS);
     }
 }
 /* (0.8.5) EDIT > FOCUS: KNOB 1 the parameter (E1..E8 with a name, no wrap), 2 its value, 3 the SRC of the MOD slot aimed
@@ -989,7 +998,7 @@ static void focus_knob(uint32_t slot, int32_t steps)
     if (slot == 1u) {
         d = track_desc(TSEL, P_E0 + k);
         TSEL->p[P_E0 + k] = (int16_t)param_turn(d, TSEL->p[P_E0 + k], accel(EN_K1 + 1u, steps, d->fmt == F_ENUM ? 0 : d->max - d->min));
-        motion_capture(TSEL, P_E0 + k, TSEL->p[P_E0 + k]);
+        knob_cap(TSEL, P_E0 + k);
         return;
     }
     if (slot == 2u && j < 0) {                          /* (no slot aims at it: a free one, turned up) */
@@ -1071,7 +1080,7 @@ static void edit_param(uint32_t slot, int32_t steps)
         else {
             uint32_t id = P_ATK + (ui.stage & 3u);
             TSEL->p[id] = (int16_t)param_turn(&TP[id], TSEL->p[id], accel(EN_K1 + 1u, steps, 127));
-            motion_capture(TSEL, id, TSEL->p[id]);
+            knob_cap(TSEL, id);
         }
         return;
     }
@@ -1148,10 +1157,13 @@ static void edit_param(uint32_t slot, int32_t steps)
             select_engine(eng_step(TSEL->eng_req, steps));
         } else if (slot == 2u) {
             preset_mark(steps > 0);
-        } else if (slot == 3u && favorites.filter != (uint32_t)(steps > 0)) {
-            favorites.filter = steps > 0;
-            ui.force = 1;
-            settings_save();
+        } else if (slot == 3u) {                         /* (0.9.12) LIST: ALL FAV, then the types (BASS LEAD .. FX) */
+            uint32_t v = (uint32_t)clamp((int32_t)list_get() + (steps > 0 ? 1 : -1), 0, PT_N);
+            if (v != list_get()) {
+                list_put(v);
+                ui.force = 1;
+                settings_save();
+            }
         }
         return;
     }
@@ -1222,7 +1234,7 @@ static void edit_param(uint32_t slot, int32_t steps)
         return;
     }
     if (pg->scope != SC_GLOBAL && vp >= TSEL->p && vp < TSEL->p + P_COUNT)   /* (0.7.6: SCL's ALL TR is a global) */
-        motion_capture(TSEL, (uint32_t)(vp - TSEL->p), *vp);
+        knob_cap(TSEL, (uint32_t)(vp - TSEL->p));
 }
 
 /* OCT+ on an action page: the picked action. A load stays picked (browse and load again); the others
@@ -1984,6 +1996,7 @@ static void ui_input_frame(void)
     fx_usb_gain = USB_GAIN[fx_usb_fixed ? usb_lvl % 5u : 0u];   /* (0.7.0) .. and its attenuation (usb.c uac_tap) */
     mo_lvl = (uint8_t)(midi_out_mode & 3u);             /* (0.6.72) MENU > MIDI OUT (seq.c) */
     midi_pc_poll();                                     /* (0.6.72) PROGRAM CHANGE in: the sounds it asked for */
+    ml_poll();                                          /* (0.9.12) MIDI LEARN: a CC came for the picked parameter */
     rp_apply();                                        /* (MENU > CLICK, CLICK LEVEL, COUNT-IN: click.c, seq.c) */
     {   /* (0.6.55) TRACKS 6 -> 4 (MENU or GLO > SYSTEM) on T5 / T6: T4 selected (ALGORITHM stops there) */
         static uint8_t live0 = NTRK;
@@ -2482,7 +2495,7 @@ static void ui_input_frame(void)
             int16_t *vp;
             const param_desc_t *d = home_param(k, &vp);
             *vp = (int16_t)param_turn(d, *vp, accel(EN_K1 + k, s, d->fmt == F_ENUM ? 0 : d->max - d->min));
-            motion_capture(TSEL, (uint32_t)(vp - TSEL->p), *vp);
+            knob_cap(TSEL, (uint32_t)(vp - TSEL->p));
         } else {
             edit_param(k, s);
         }

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
+# Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
 """(JIANT 0.9.2) The navigation map: every section (its button), its groups (the tabs) and its pages in chain order,
 with the six rules, the held layers and the combos, read from the firmware's own chain tables (firmware/src/ui_lens.c
 CE_* / CG_* / CHAINS / NAV_DEF), so the map cannot drift from the firmware.
@@ -94,7 +95,7 @@ L = {
          'ARP': 'One group: ARP inside goes back to ARP.', 'SCL': 'KNOB 1 sets ROOT.',
          'ENV': 'ALGORITHM picks the track on TRACKS.', 'GLO': 'LIVE: MANO plays the modifiers on the keys. MIXER KNOB 4: the DJ FILTER.',
          'LFO': 'KNOB 1: the slot on MOD, the step on MSEQ.'},
-  layers=[('HOME', 'the MENU: DISPLAY · CONTROL · AUDIO · SYSTEM (SELECT the rows, ALGORITHM the tabs)'),
+  layers=[('HOME', 'the MENU: DISPLAY · CONTROL · AUDIO · MIDI · SYSTEM (SELECT the rows, ALGORITHM the tabs)'),
           ('EDIT', 'F3 INIT · G3 RECALL · DRUM: black keys 1–8 mute each sound'),
           ('SEQ', 'F3 CLEAR · G3 REVERSE · A3/B3 SHIFT · C4 RANDOM · D4 COOK · E4 BEAT · F4 CLR AUTO · D5 REVERT · **G5 CLR STEP** · REC: CLEAR ALL'),
           ('FX', 'punch-in: F3–A3 REPEAT · B3/C4 LPF/HPF · D4/E4 OCT · F4 ½ TEMPO · G4/A4 DEC · B4/C5 STUTTER · D5 ATK+ · E5 ARP · F5 RANDOM'),
@@ -138,7 +139,7 @@ L = {
          'ARP': 'Un grupo: ARP adentro vuelve a ARP.', 'SCL': 'KNOB 1 fija ROOT.',
          'ENV': 'ALGORITHM elige la pista en TRACKS.', 'GLO': 'LIVE: en MANO las teclas tocan los modificadores. MIXER KNOB 4: el DJ FILTER.',
          'LFO': 'KNOB 1: el slot en MOD, el paso en MSEQ.'},
-  layers=[('HOME', 'el MENU: DISPLAY · CONTROL · AUDIO · SYSTEM (SELECT las filas, ALGORITHM las pestañas)'),
+  layers=[('HOME', 'el MENU: DISPLAY · CONTROL · AUDIO · MIDI · SYSTEM (SELECT las filas, ALGORITHM las pestañas)'),
           ('EDIT', 'F3 INIT · G3 RECALL · DRUM: negras 1–8 silencian cada sonido'),
           ('SEQ', 'F3 CLEAR · G3 REVERSE · A3/B3 SHIFT · C4 RANDOM · D4 COOK · E4 BEAT · F4 CLR AUTO · D5 REVERT · **G5 CLR STEP** · REC: CLEAR ALL'),
           ('FX', 'punch-in: F3–A3 REPEAT · B3/C4 LPF/HPF · D4/E4 OCT · F4 ½ TEMPO · G4/A4 DEC · B4/C5 STUTTER · D5 ATK+ · E5 ARP · F5 RANDOM'),

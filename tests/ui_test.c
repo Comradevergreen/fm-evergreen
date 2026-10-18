@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only
- * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments */
+ * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
+ * Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) */
 /* Host test of the UI (firmware/src/ui*.c with the sound sources of hostsim.c;
  * the display and the HAL are stubs, the buttons and knobs are driven through them):
  *   SOUNDS     a sound load (PRESETS knob / page, TOOLS INIT, user preset) changes the sound only: the
@@ -164,6 +165,7 @@ static void ui_power_on(void)
     proj_name[0] = 0;
     proj_cur = PROJ_NO_SLOT;
     memset(&favorites, 0, sizeof favorites);
+    memset((void *)&ml, 0, sizeof ml);            /* (0.9.12) MIDI LEARN off (its state is the pool's: zero at boot) */
     ui_prefs = PREF_ACCEL_OFF;                    /* (the tests turn a detent a frame: one step each; KNOB ACCEL, ON on the
                                                    * device by default, has its own test) */
     mac_latch = 0;
@@ -1993,6 +1995,93 @@ static int test_screen(void)
     return bad;
 }
 
+/* (0.9.12) the sound types (core.h PT_*, in preset_t.mono's free bits): every factory preset of every engine one can pick
+ * has one; PRESETS' LIST (KNOB 4) steps ALL FAV BASS LEAD PAD KEYS PLUCK BELL VOX DRUM FX, each type's list every
+ * engine's presets of that type and only those, browsed across the engines (KNOB 1, the PRESETS knob) keeping the steps;
+ * the type kept with the settings, an unknown one read as none; MONO still the bit it was; the generator keeps the bass
+ * sounds (PT_BASS) off the other roles */
+static int test_preset_types(void)
+{
+    int bad = 0, ok = 1;
+    uint32_t r, e, k, total, t, n[PT_N] = {0}, sum = 0;
+    track_t before;
+    for (r = 0; r < NENG_SHOWN; r++) {
+        const engine_t *en = ENGINES[e = eng_vis(r)];
+        for (k = 0; k < en->npresets; k++) {
+            uint32_t g = PR_TAG(&en->presets[k]);
+            ok &= g > PT_NONE && g < PT_N && (en->presets[k].mono >> 5) == 0u;
+            ok &= e != ENGI_DRUM || g == PT_DRUM;
+            if (g < PT_N) n[g]++;
+        }
+    }
+    for (t = PT_BASS; t < PT_N; t++) ok &= n[t] > 0u;
+    ok &= PR_MONO(&ENG_ANALOG.presets[0]) == 1u && PR_TAG(&ENG_ANALOG.presets[0]) == PT_LEAD &&   /* SAW LEAD, MONO */
+          PR_MONO(&ENG_ANALOG.presets[1]) == 0u && PR_TAG(&ENG_ANALOG.presets[1]) == PT_PAD;    /* SOFT PAD, POLY */
+    bad += check("0.9.12 every factory preset has a sound type (DRUM's kits DRUM), MONO still bit 0", ok);
+    ui_power_on();
+    my_steps(TSEL);
+    go_page(GR_BROWSE);
+    ok = list_get() == 0u;
+    turn(EN_K4, 1); ok &= list_get() == 1u && favorites.filter && !list_type;
+    for (t = PT_BASS; t < PT_N; t++) {
+        uint32_t i, all, cnt;
+        turn(EN_K4, 1);
+        ok &= list_get() == t + 1u && list_type == t && !favorites.filter && str_eq(N_LIST[list_get()], N_LIST[t + 1u]);
+        preset_pos(&total);
+        ok &= total == n[t];
+        preset_all_pos(&all);
+        for (i = cnt = 0; i < total; i++) {             /* the list: that type's, in the PRESETS list's order */
+            uint32_t kk, ee = preset_at(i, &kk);
+            ok &= ee < NENGINES && PR_TAG(&ENGINES[ee]->presets[kk]) == t;
+            cnt++;
+        }
+        sum += cnt;
+    }
+    turn(EN_K4, 1); ok &= list_get() == PT_N;            /* (the end: FX stays) */
+    bad += check("0.9.12 PRESETS LIST: ALL FAV BASS LEAD PAD KEYS PLUCK BELL VOX DRUM FX, each type every engine's presets of it", ok && sum == n[PT_BASS] + n[PT_LEAD] + n[PT_PAD] + n[PT_KEYS] + n[PT_PLUCK] + n[PT_BELL] + n[PT_VOX] + n[PT_DRUM] + n[PT_FX]);
+    while (list_get() != PT_BASS + 1u) turn(EN_K4, -1);
+    before = *TSEL;
+    {   /* KNOB 1 / the PRESETS knob through the basses: every sound loaded a bass, several engines, the steps kept */
+        uint32_t i, eng = 0;
+        ok = 1;
+        for (i = 0; i < n[PT_BASS] + 2u; i++) {
+            turn(i & 1u ? EN_PRESET : EN_K1, 1);
+            ok &= user_of(TSEL) >= UP_SLOTS &&
+                  PR_TAG(&ENGINES[TSEL->eng_req]->presets[TSEL->preset % ENGINES[TSEL->eng_req]->npresets]) == PT_BASS;
+            eng |= 1u << TSEL->eng_req;
+        }
+        ok &= !memcmp(TSEL->step, before.step, sizeof before.step) && __builtin_popcount(eng) >= 4;
+        bad += check("0.9.12 LIST BASS: KNOB 1 and PRESETS load only bass sounds, across the engines, the steps kept", ok);
+    }
+    {   /* the settings keep it; an unknown type reads as none */
+        persist_t p;
+        settings_export(&p);
+        list_put(0);
+        ok = settings_import(&p, (int)sizeof p) && list_get() == PT_BASS + 1u;
+        p.favorites.factory[15][18] = PT_N;
+        ok &= settings_import(&p, (int)sizeof p) && list_get() == 0u;
+        bad += check("0.9.12 the LIST type kept with the settings; an unknown one: ALL", ok);
+    }
+    list_put(0);
+    {   /* the generator: no PT_BASS sound off the bass, whatever the genre and seed */
+        uint32_t g, sd, q;
+        ok = 1;
+        for (g = 0; g < 8u; g++)
+            for (sd = 1; sd < 4u; sd++) {
+                gp.genre = (uint8_t)g; gp.seed = (uint16_t)(sd * 7u); gp.energy = 50; gp.form = 0; gp.complex = 50;
+                gp.swing = GA_AUTO; gp.human = 30;
+                for (q = 0; q < GP_N; q++) gp.amt[q] = GA_AUTO;
+                gen_go();
+                for (q = 0; q < NTRK; q++)
+                    if (gs.role[q] < RL_N && gs.act[gs.role[q]] && gs.role[q] != RL_BASS && gs.role[q] != RL_DRUM &&
+                        !trk[q].user && ENGINES[trk[q].eng_req]->npresets)
+                        ok &= PR_TAG(&ENGINES[trk[q].eng_req]->presets[trk[q].preset % ENGINES[trk[q].eng_req]->npresets]) != PT_BASS;
+            }
+        bad += check("0.9.12 GEN: a bass sound (its type) only on the bass", ok);
+    }
+    return bad;
+}
+
 static int test_favorites(void)
 {
     int bad = 0;
@@ -2121,14 +2210,16 @@ static int test_menu_tabs(void)
         ok &= 14 + (int32_t)n * (n > 7u ? 15 : n > 6u ? 17 : 20) <= LZ_GRAPH_H;   /* (0.8.5 the lens: TAB's rows in the panel;
                                                          * 0.8.9 seven: 17 apart; 0.9.7 eight: 15) */
         for (i = f; i < f + n; i++)                     /* .. ROW's chips, every value */
-            ok &= i >= MI_VALUES || 16 + (int32_t)((menu_n(i) + 2u) / 3u) * 20 <= LZ_GRAPH_H;
+            ok &= !menu_valued(i) || 16 + (int32_t)((menu_n(i) + 2u) / 3u) * 20 <= LZ_GRAPH_H;
     }
     for (i = 0; i < MI_COUNT; i++) ok &= MI_TAB[i] < MTAB_COUNT;
     ui_prefs = 0;
-    bad += check("MENU tabs: DISPLAY CONTROL AUDIO SYSTEM (8 6 6 6 rows: 0.8.9 SKIN, 0.9.7 SCOPE), 1..8 each in a run, their rows and values fit the lens's panel",
-                 ok && MTAB_COUNT == 4u && str_eq(MTAB_NAME[0], "DISPLAY") && mtab_rows(MTAB_DISPLAY) == 8u &&
-                 mtab_rows(MTAB_CONTROL) == 6u && mtab_rows(MTAB_AUDIO) == 6u && mtab_rows(MTAB_SYSTEM) == 6u);   /* (0.6.58: INIT SYSTEM;
-                                                                         * 0.6.72: MIDI OUT in CONTROL) */
+    bad += check("MENU tabs: DISPLAY CONTROL AUDIO MIDI SYSTEM (8 5 6 3 6 rows: 0.9.12 MIDI), 1..8 each in a run, their rows and values fit the lens's panel",
+                 ok && MTAB_COUNT == 5u && str_eq(MTAB_NAME[0], "DISPLAY") && str_eq(MTAB_NAME[MTAB_MIDI], "MIDI") &&
+                 mtab_rows(MTAB_DISPLAY) == 8u && mtab_rows(MTAB_CONTROL) == 5u && mtab_rows(MTAB_AUDIO) == 6u &&
+                 mtab_rows(MTAB_MIDI) == 3u && mtab_rows(MTAB_SYSTEM) == 6u && MI_TAB[MI_MIDIOUT] == MTAB_MIDI &&
+                 MI_TAB[MI_LEARN] == MTAB_MIDI && MI_TAB[MI_LCLEAR] == MTAB_MIDI);   /* (0.6.58: INIT SYSTEM;
+                                                                         * 0.6.72: MIDI OUT in CONTROL; 0.9.12: in MIDI) */
 
     ui_power_on();
     hold(B_HOME);
@@ -2149,7 +2240,8 @@ static int test_menu_tabs(void)
     turn(EN_ALGO, -1); ok &= ui.menu_sel == MI_HOLD;    /* (its first row) */
     turn(EN_ALGO, -1); ok &= ui.menu_sel == MI_COLOR;
     turn(EN_ALGO, -1); ok &= ui.menu_sel == MI_COLOR && menu_tab() == MTAB_DISPLAY;   /* (no wrap) */
-    turn(EN_ALGO, 3); ok &= ui.menu_sel == MI_SERIAL && menu_tab() == MTAB_SYSTEM;
+    turn(EN_ALGO, 3); ok &= ui.menu_sel == MI_MIDIOUT && menu_tab() == MTAB_MIDI;   /* (0.9.12) */
+    turn(EN_ALGO, 1); ok &= ui.menu_sel == MI_SERIAL && menu_tab() == MTAB_SYSTEM;
     turn(EN_ALGO, 1); ok &= ui.menu_sel == MI_SERIAL;
     bad += check("0.9.2 MENU: ALGORITHM jumps to the next / previous tab's first row, no wrap (was round, at the row left)", ok && ui.menu == 1);
     ui.menu_sel = MI_LATCH; turn(EN_SELECT, -1);       /* CONTROL: from FX LATCH up to KNOB ACCEL */
@@ -2169,6 +2261,7 @@ static int test_menu_tabs(void)
     ok = 1;
     for (i = 0; i < MI_VALUES; i++) {
         uint32_t n = menu_n(i), v, j, seen, want;
+        if (!menu_valued(i)) continue;                 /* (0.9.12: LEARN CLEAR, an action) */
         ui.menu_sel = (uint8_t)i;
         for (j = 0; j <= n; j++)                       /* down to the first value (COLOR: round) */
             press(B_OCTDN);
@@ -2198,7 +2291,7 @@ static int test_menu_tabs(void)
         want = menu_step(i, -1);                       /* a knob steps as OCT does */
         turn(EN_K3, -1); ok &= menu_get(i) == want && ui.menu == 1;
     }
-    ui_prefs = 0; settings_hold = HOLD_DEF; settings_leds = LEDS_DIM; ui_style = ST_FLAT;
+    ui_prefs = 0; settings_hold = HOLD_DEF; settings_leds = LEDS_DIM; ui_style = ST_FLAT; ml_set(0);
     settings.lowcut = 0; fx_lowcut = 0; menu_put(MI_COLOR, UI_GREY_INDEX);
     bad += check("MENU: OCT+ / OCT- step every value row up / down (COLOR wraps, the rest stop), the menu stays", ok);
     {   /* the ON / OFF rows: up (a knob right, OCT+) is ON, the switch's knob to the right, whichever bit it is */
@@ -2286,10 +2379,10 @@ static int test_menu_tabs(void)
     ui_power_on();
     hold(B_HOME);
     frame();
-    ok = ui.menu == 1 && ui.mlv == 1u && lz_on() && lz_fam() == LZ_MENU && lz_tabs() == 4u && lz_tab_lit(0) &&
-         lz_crumb_is("MENU \xB7 DISPLAY \xB7 COLOR") && lz_count_is("1/26");
+    ok = ui.menu == 1 && ui.mlv == 1u && lz_on() && lz_fam() == LZ_MENU && lz_tabs() == 5u && lz_tab_lit(0) &&
+         lz_crumb_is("MENU \xB7 DISPLAY \xB7 COLOR") && lz_count_is("1/28");
     turn(EN_SELECT, 1); frame();
-    ok &= ui.mlv == 1u && lz_tab_lit(0) && lz_crumb_is("MENU \xB7 DISPLAY \xB7 SKIN") && lz_count_is("2/26");
+    ok &= ui.mlv == 1u && lz_tab_lit(0) && lz_crumb_is("MENU \xB7 DISPLAY \xB7 SKIN") && lz_count_is("2/28");
     turn(EN_ALGO, 1); frame();
     ok &= menu_tab() == MTAB_CONTROL && lz_tab_lit(1) && lz_crumb_is("MENU \xB7 CONTROL \xB7 HOLD");
     turn(EN_SELECT, 2); frame();
@@ -2298,7 +2391,131 @@ static int test_menu_tabs(void)
     ok &= (fx_latch & 1u) != 0u;
     turn(EN_K3, -1); frame();
     menu_close();
-    bad += check("0.9.2 MENU: four tabs (the row's lit), MENU . TAB . ROW and n/26 (0.9.7: SCOPE); ALGORITHM the tab, any knob the value", ok && MI_COUNT == 26u);
+    bad += check("0.9.2 MENU: five tabs (the row's lit), MENU . TAB . ROW and n/28 (0.9.12: MIDI's LEARN rows); ALGORITHM the tab, any knob the value", ok && MI_COUNT == 28u);
+    return bad;
+}
+
+/* (0.9.12) MIDI LEARN (src/midi_learn.c, from Felucca 1.5; the map and the hook: midi_control.c): MENU > MIDI > LEARN ON
+ * arms it; a knob turned on a sound page picks that track's parameter, the next CC is learned to it (USB and the TRS
+ * jack: one queue) and sets it as the knob does on any channel; another knob, another CC; the same CC again moves to the
+ * new one, a parameter keeps one CC; the reserved CCs (CC1 6 11 64 120.., the standard map's: CC7 74 ..) refused and
+ * still doing their own; ten at most ("LEARN FULL"); LEARN CLEAR clears them, NONE after; kept with the settings (the
+ * row the old DIGITAL stars' migration leaves), not in a project; with LEARN off a knob picks nothing */
+static void ml_cc(uint32_t ch, uint32_t cc, uint32_t v, int uart)   /* a CC over USB-MIDI (as usb.c queues it) or TRS */
+{
+    uint32_t st = 0xB0u | ch;
+    if (uart) {
+        um_byte(st); um_byte(cc); um_byte(v);
+    } else {
+        midi_in_event((st >> 4) | st << 8 | cc << 16 | v << 24);
+    }
+    events_block(CTL);
+}
+static int test_midi_learn(void)
+{
+    int bad = 0, ok;
+    uint32_t i, id;
+    int16_t v0;
+    ui_power_on();
+    memset(&um, 0, sizeof um);
+    track_select(3);                                   /* (T4: LOFI) */
+    ml_clear_all();
+    ok = ml_count() == 0u;
+    ml_set(0);
+    go_title("MIXER");                                 /* (KNOB 1 LEVEL, 2 PAN) */
+    turn(EN_K1, 1);
+    ok &= !ml.pick && !ml.arm;                          /* (LEARN off: a knob picks nothing) */
+    hold(B_HOME);
+    ui.menu_sel = MI_LEARN;
+    press(B_OCTUP);
+    ok &= ml.on && menu_get(MI_LEARN) == 1u && str_eq(menu_vname(MI_LEARN, 1), "ON");
+    press(B_HOME);
+    ok &= !ui.menu && ml.on;
+    bad += check("0.9.12 MIDI LEARN: MENU > MIDI > LEARN ON arms it (off, a knob picks nothing)", ok);
+    go_title("MIXER");
+    turn(EN_K2, 1);                                     /* PAN of the selected track */
+    ok = ml.pick && ml.arm && ml.trk == song.sel && ml.id == P_PAN && msg_is("LEARN T4 PAN: SEND A CC");
+    ml_cc(3, 25, 0, 0);                                 /* CC25 on channel 4, USB */
+    frame();
+    ok &= ml_count() == 1u && ml_cc_of(song.sel, P_PAN) == 26u && !ml.pick && !ml.arm && msg_is("CC25 > T4 PAN");
+    ml_cc(2, 25, 127, 0);                               /* .. another channel: PAN to its top */
+    ok &= trk[song.sel].p[P_PAN] == TP[P_PAN].max;
+    ml_cc(0, 25, 0, 1);                                 /* .. the TRS jack */
+    ok &= trk[song.sel].p[P_PAN] == TP[P_PAN].min;
+    bad += check("0.9.12 MIDI LEARN: a knob picks its parameter, the next CC is learned, then sets it on any channel, USB or TRS", ok);
+    {   /* an EDIT page's knob: the engine's parameter, of the selected track; then the same CC to another parameter */
+        const page_t *pg;
+        int16_t *vp;
+        go_title("EDIT 1");
+        pg = cur_page();
+        ok = page_desc(pg, 0, &vp) != 0;
+        id = (uint32_t)(vp - TSEL->p);
+        turn(EN_K1, 1);
+        ok &= ml.pick && ml.id == id;
+        ml_cc(0, 30, 0, 0); frame();
+        ok &= ml_cc_of(song.sel, id) == 31u && ml_count() == 2u;
+        go_title("MIXER");
+        turn(EN_K1, 1);                                 /* LEVEL picked, CC30 again: moves there */
+        ml_cc(0, 30, 0, 0); frame();
+        ok &= ml_cc_of(song.sel, P_LEVEL) == 31u && !ml_cc_of(song.sel, id) && ml_count() == 2u;
+        turn(EN_K1, -1);                                /* LEVEL again, CC40: one CC a parameter */
+        ml_cc(0, 40, 0, 0); frame();
+        ok &= ml_cc_of(song.sel, P_LEVEL) == 41u && ml_count() == 2u;
+        bad += check("0.9.12 MIDI LEARN: EDIT pages too; a CC learned again moves, a parameter keeps one CC", ok);
+    }
+    {   /* the reserved CCs: refused, still doing their own */
+        static const uint8_t R[] = {0, 1, 6, 11, 32, 38, 64, 96, 101, 120, 121, 123, 127, 5, 7, 10, 16, 23, 71, 74, 75, 91, 93, 94, 102, 105};
+        ok = 1;
+        for (i = 0; i < NELEM(R); i++) ok &= !ml_free_cc(R[i]) && ml_learn(R[i], 0, P_PAN) == 2u;
+        ok &= ml_free_cc(2) && ml_free_cc(24) && ml_free_cc(70) && ml_free_cc(119) && ml_count() == 2u;
+        go_title("MIXER");
+        turn(EN_K2, 1);                                 /* PAN picked, CC7 (the map's LEVEL) sent: refused, LEVEL set */
+        v0 = midi_track(0)->p[P_LEVEL];
+        ml_cc(0, 7, v0 > 60 ? 10 : 120, 0); frame();
+        ok &= msg_is("CC7 RESERVED") && ml.pick && ml_count() == 2u && midi_track(0)->p[P_LEVEL] != v0;
+        bad += check("0.9.12 MIDI LEARN: CC0 1 6 11 32 38 64 96..101 120..127 and the standard map's refused, still doing their own", ok);
+    }
+    {   /* ten at most */
+        ok = 1;
+        for (i = 0; i < 12u; i++)
+            ok &= ml_learn(50u + i, i % NTRK, P_E0 + i / NTRK) == (i < 8u ? 1u : 0u);
+        ok &= ml_count() == ML_N;
+        go_title("EDIT 1");
+        turn(EN_K2, 1);                                 /* T4's E2: none; CC90, no room */
+        ml_cc(0, 90, 0, 0); frame();
+        ok &= msg_is("CC90: LEARN FULL") && ml_count() == ML_N;
+        bad += check("0.9.12 MIDI LEARN: ten CCs at most (LEARN FULL)", ok);
+    }
+    {   /* kept with the settings, not with a project; LEARN CLEAR */
+        persist_t p;
+        uint8_t keep[32];
+        memcpy(keep, favorites.factory[ENGI_DIGITAL], 32);
+        settings_export(&p);
+        ml_put(0, 0, 0, 0);
+        ok = settings_import(&p, (int)sizeof p) && !memcmp(keep, favorites.factory[ENGI_DIGITAL], 32) && ml_count() == ML_N;
+        p.favorites.factory[ENGI_DIGITAL][0] = 0xFF;       /* (an old setting's DIGITAL stars: to FM6's, MIDI LEARN's kept) */
+#if !FELUCCA_FM4                                      /* (a FELUCCA_FM4 build: DIGITAL's stars are its own) */
+        ok &= settings_import(&p, (int)sizeof p) && favorites.factory[ENGI_DIGITAL][0] == 0u && ml_count() == ML_N &&
+              favorite_has(ENGI_FM6, 0);
+#endif
+        hold(B_HOME);
+        ui.menu_sel = MI_LCLEAR;
+        frame();
+        ok &= (oct_leds() & OCT_BREATH) != 0u;
+        press(B_OCTUP);
+        ok &= ml_count() == 0u && msg_is("LEARN CLEARED") && ui.menu == 1;
+        press(B_OCTUP);
+        ok &= msg_is("NOTHING LEARNED");
+        ui.menu_sel = MI_LEARN;
+        press(B_OCTDN);
+        ok &= !ml.on;
+        menu_close();
+        go_title("MIXER");
+        turn(EN_K1, 1);
+        ok &= !ml.pick && !ml.arm;
+        bad += check("0.9.12 MIDI LEARN: kept with the settings (an old setting's stars migrated, the map kept); LEARN CLEAR; LEARN OFF", ok);
+    }
+    ui_power_on();
     return bad;
 }
 
@@ -8665,7 +8882,8 @@ static int test_click_menu(void)
     turn(EN_SELECT, 1); ok &= ui.menu_sel == MI_TRACKS;
     turn(EN_K1, -1); frame(); ok &= trk_live == 4u && !(ui_rec_prefs & 0x80u);   /* (0.6.18) TRACKS 4 */
     turn(EN_K1, 1); frame(); ok &= trk_live == NTRK && (ui_rec_prefs & 0x80u);   /* 6 */
-    turn(EN_SELECT, 1); ok &= ui.menu_sel == MI_SERIAL;   /* (0.9.2: on into SYSTEM; was round within AUDIO) */
+    turn(EN_SELECT, 1); ok &= ui.menu_sel == MI_MIDIOUT;  /* (0.9.2: on into the next tab; was round within AUDIO; 0.9.12:
+                                                         * MIDI) */
     press(B_HOME);
     ok &= !ui.menu;
     bad += check("0.9.2 MENU > AUDIO: SELECT (was PRESETS) to CLICK, CLICK LEVEL, COUNT-IN, TRACKS; knobs / OCT step them, applied at once", ok);
@@ -8831,6 +9049,7 @@ static int test_click_menu(void)
                 uint64_t hh = 1469598103934665603ull, u = 0;
                 uint32_t b, j;
                 mc_host = (uint8_t)k;
+                mc_host_v12 = 1;                        /* (0.9.12) one core with two cores' voices: the same budget */
                 song.master_q12 = 4096;                 /* (heard: the test's power-on leaves MASTER at 0) */
                 for (b = 0; b < 4000u; b++) {
                     mix_block(o, CTL);
@@ -11766,6 +11985,8 @@ int main(void)
     bad += test_grid();
     bad += test_screen();
     bad += test_favorites();
+    bad += test_preset_types();
+    bad += test_midi_learn();
     bad += test_display_preferences();
     bad += test_menu_tabs();
     bad += test_information();

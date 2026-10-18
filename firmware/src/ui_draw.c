@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only
- * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments */
+ * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
+ * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) */
 /* Felucca UI drawing: the header, the four knob cards, the footer (steps + engine / preset / page)
  * and the frame; the panel between the cards and the footer is ui_graph.c. The layout:
  * flat SURF cards and panels on BG,
@@ -958,10 +959,12 @@ static uint32_t tabs_now(const char **nm, const char **tab, uint8_t *cnt, uint32
 {
     uint32_t f = lz_fam(), n, k, i, m;
     uint8_t gi[8];
-    if (f == LZ_MENU) {                                 /* the menu: its four tabs, a dot a row */
+    if (f == LZ_MENU) {                                 /* the menu: its five tabs, a dot a row (0.9.12: a name too wide
+                                                         * for a fifth of the strip, its short form) */
+        static const char *const MSH[MTAB_COUNT] = {"DISP", "CTRL", "AUDIO", "MIDI", "SYS"};
         for (k = 0; k < MTAB_COUNT; k++) {
             nm[k] = MTAB_NAME[k];
-            tab[k] = 0;
+            tab[k] = MSH[k];
             cnt[k] = (uint8_t)mtab_rows(k);
         }
         *lv = menu_tab();
@@ -1521,7 +1524,7 @@ static void draw_columns(void)
         draw_column(0, "No.", val, u, VAL(0u), -1, ICON_NONE);
         draw_column(1, "ENG", ENGINES[TSEL->eng_req]->name, "", VAL(1u), -1, engine_icon(ENGINES[TSEL->eng_req]->name));
         draw_column(2, "FAV", preset_favorite() ? "ON" : "OFF", "", VAL(2u), -1, ICON_X_STAR);
-        draw_column(3, "LIST", favorites.filter ? "FAV" : "ALL", "", VAL(3u), -1, ICON_X_FOLDER);
+        draw_column(3, "LIST", N_LIST[list_get()], "", VAL(3u), -1, ICON_X_FOLDER);
         return;
     }
     if (cur_page()->graph == GR_PATS) {                  /* PAT, then LOAD (a GO button) */

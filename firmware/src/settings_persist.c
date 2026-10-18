@@ -1,4 +1,5 @@
-/* SPDX-License-Identifier: GPL-3.0-only */
+/* SPDX-License-Identifier: GPL-3.0-only
+ * Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) */
 /* Shared PER4 layout: each feature updates only its own fields, preserving
  * the other feature's saved preferences when either is built independently.
  * PER1/PER2 are upstream; PER3 added bold; PER4 added favorites.
@@ -59,6 +60,9 @@ static int settings_import(persist_t *p, int n)
         p->favorites.factory[15][24] = 0;
     if (p->favorites.factory[15][27] > 7u)         /* SCREEN OFF (1.1.5, ui.c SCR_CODE): unknown = 0 (NEVER since 1.1.5.1) */
         p->favorites.factory[15][27] = 0;
+    if (p->favorites.factory[15][18] >= 10u)       /* PRESETS' LIST type (JIANT 0.9.12, ui.c list_type; core.h PT_N): unknown
+                                                     * = none */
+        p->favorites.factory[15][18] = 0;
     p->magic = PERSIST_MAGIC;
     p->palette = palette_to_stored(palette_from_stored(p->palette));
     settings.magic = SETTINGS_MAGIC;
@@ -76,7 +80,7 @@ static int settings_import(persist_t *p, int n)
         for (k = 0; k < FM4_NPRESETS; k++)
             if ((favorites.factory[ENGI_DIGITAL][0] >> k) & 1u)
                 favorites.factory[ENGI_FM6][FM4_TO_FM6[k] / 8u] |= (uint8_t)(1u << (FM4_TO_FM6[k] % 8u));
-        memset(favorites.factory[ENGI_DIGITAL], 0, sizeof favorites.factory[ENGI_DIGITAL]);
+        favorites.factory[ENGI_DIGITAL][0] = 0;   /* (0.9.12: the row's bytes 2..31 MIDI LEARN's, midi_learn.c) */
     }
 #endif
 #ifdef SMP_SET_PERC

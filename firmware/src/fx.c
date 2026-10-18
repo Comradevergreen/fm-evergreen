@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only
- * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments */
+ * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
+ * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) */
 /* Effects: per-track DIST insert, then sends into three
  * shared buses (chorus, tempo delay, reverb). Mono buses, stereo dry mix. */
 /* (0.8.4) the delay's line: DLY_LEN samples of int16 (params.c, the one constant of its size; a power of two). It runs
@@ -2077,12 +2078,17 @@ static __attribute__((noinline)) void perf_master(int32_t *out, uint32_t n)
 #define mc_wait() fm1_mc_wait()
 #define mc_live() (fm1_mc_on != 0)
 #else
+#ifndef MC_HOST_JOB
+#define MC_HOST_JOB()                                    /* (tests/cpu_vg.c: core 1's job left out of core 0's count) */
+#endif
 static int mc_run(void (*f)(uint32_t), uint32_t a)      /* (the host: at once, as core 1) */
 {
     if (!mc_host)
         return 0;
     mc_host_cpu = 1;
+    MC_HOST_JOB();
     f(a);
+    MC_HOST_JOB();
     mc_host_cpu = 0;
     return 1;
 }
@@ -2090,6 +2096,12 @@ static int mc_wait(void) { return 0; }
 #define mc_live() (mc_host != 0)
 #endif
 static volatile uint8_t mc_off;                          /* REC held at power-on: one core this session (main.c) */
+#if FELUCCA_DUAL_CORE
+static int mc_two(void) { return !mc_off && mc_live(); }   /* (0.9.12) the voices of two cores (voice.c voice_cap) */
+#else
+static uint8_t mc_host_v12;                              /* (tests: two cores' voices on one, to compare the sound) */
+static int mc_two(void) { return !mc_off && (mc_live() || mc_host_v12); }
+#endif
 static volatile int8_t mc_cur = -1;                      /* the part core 1 is in (a job given up: its matrix put back) */
 static uint8_t mc_mask_last;                             /* the parts core 1 had the last block (MENU > ABOUT, tests) */
 static uint32_t mc_jobs;                                 /* (0.6.72) blocks core 1 rendered parts in (console status) */

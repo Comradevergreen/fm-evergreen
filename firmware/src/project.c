@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only
- * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments */
+ * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
+ * Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) */
 /* Projects: four slots. The slots live in .noinit RAM: they
  * survive resets and UBOOT entry. With FELUCCA_FLASH (default) every save
  * also goes to flash through storage.c, and an
@@ -1395,7 +1396,7 @@ static void proj_legacy_drums(track_t *t)
     t->p[P_SUS] = pr->env[2];
     t->p[P_REL] = pr->env[3];
     t->p[P_ED_FLT] = pr->fenv;
-    t->p[P_VOICE] = pr->mono ? V_LEGATO : V_POLY;
+    t->p[P_VOICE] = PR_MONO(pr) ? V_LEGATO : V_POLY;
     for (i = 0; i < 4u; i++)
         t->p[P_DIST + i] = (int16_t)(pr->fx[i] ? pr->fx[i] - 1 : FX_DEF[i]);
 }

@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Adapted from MIDI control contribution by ChanceTheMaker (2026).
- * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments */
+ * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
+ * Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) */
 /* Shared USB/TRS channel controls. Included by seq.c after its input helpers.
  * USB and TRS intentionally share channel state, matching the existing routing.
  * A synth part has one live bend/wheel state; channels assigned to the same part
@@ -213,11 +214,72 @@ static const uint8_t MIDI_CC_ENG[NENGINES] = {
     0x80,                                             /* SLICE TONE (retired: ANALOG's played) */
     0x23,                                             /* ANIMAL PRESS (TOUCH CLICK BUZZ MOUTH), CHAOS (COUPLE Q DRIFT ROUGH) */
 };
+/* a CC sets parameter id of track t as a knob would: 0..127 over its range (the map's and MIDI LEARN's) */
+static void midi_cc_set(track_t *t, uint32_t id, uint32_t value)
+{
+    const param_desc_t *d = param_desc_of(eng_idx(t->eng_req), id);
+    int32_t v = d->min + ((int32_t)value * (d->max - d->min) + 63) / 127;
+    if (d->max <= d->min || t->p[id] == v)
+        return;
+    t->p[id] = (int16_t)v;
+    (void)motion_capture(t, id, (int16_t)v);
+}
+/* MIDI LEARN (JIANT 0.9.12, from Felucca 1.5 by Leo Kuroshita, Discussion #170; midi_learn.c the UI): up to ML_N CCs,
+ * each set to one parameter of one track, whatever channel it comes on (a channel ROUT ignores stays ignored) and over
+ * USB or the TRS jack alike (one queue: seq.c events_block). Kept with the settings in a favourites row no engine
+ * uses (DIGITAL's, engine 1: retired, its byte 0 the old stars' migration, settings_persist.c; bytes 2..31 0 in every
+ * older setting = nothing learned): an entry three bytes, the CC | 0x80 (0: empty), the track, the parameter's code: a
+ * common parameter its P_* id + 1 (1 .. ML_E0 - 1: their ids never move, new ones go before P_E0), an engine
+ * parameter ML_E0 + k for P_E0 + k (P_E0 moves when common ones are added). The CCs with a meaning of their own are
+ * never learned (ml_free_cc): CC0 / 32 bank select, CC1 the wheel, CC6 / 38 / 96..101 data entry and RPN, CC11 EXPR,
+ * CC64 the pedal, CC120..127 the channel modes, and the standard map's (MIDI_CC_MAP): so a learned CC and the map never
+ * meet. The UI writes the entries with the interrupts off; ml.arm / ml.heard hand it a CC heard while learning. Its
+ * state in the pool (not among the globals the audio ISR reaches) */
+#define ML_N 10u
+#define ML_E0 120u
+typedef char ml_ids_fit[P_E0 < ML_E0 && P_COUNT - P_E0 == 8 && NTRK <= 8 ? 1 : -1];
+static uint8_t *const ml_tab;               /* (midi_learn.c: favorites.factory[ENGI_DIGITAL] + 2; a build without the UI none) */
+static struct {
+    uint8_t on, pick, trk, id;               /* LEARN on; a parameter picked (a knob turned): track, P_* id */
+    volatile uint8_t arm, heard;             /* the UI waits for a CC; the CC that came meanwhile + 1 (0 none) */
+} ml __attribute__((section(".pool")));
+static uint32_t ml_id(uint32_t code)        /* an entry's code -> P_* id, P_COUNT: none this firmware knows */
+{
+    return code >= ML_E0 ? P_E0 + code - ML_E0 : code && code <= P_E0 ? code - 1u : P_COUNT;
+}
+static int ml_free_cc(uint32_t cc)
+{
+    uint32_t i;
+    if (cc < 2u || cc == 6u || cc == 11u || cc == 32u || cc == 38u || cc == 64u || (cc >= 96u && cc <= 101u) || cc >= 120u)
+        return 0;
+    for (i = 0; i < NELEM(MIDI_CC_MAP); i++)
+        if (MIDI_CC_MAP[i][0] == cc)
+            return 0;
+    return 1;
+}
+/* 1: cc is learned (set here) or taken by MIDI LEARN waiting for one (a CC never learned still does its own) */
+static int __attribute__((noinline)) midi_learned(uint32_t cc, uint32_t value)
+{
+    const uint8_t *e;
+    uint32_t i, id, hit = 0;
+    if (!ml_tab)
+        return 0;
+    if (ml.arm) {
+        if (!ml.heard)
+            ml.heard = (uint8_t)(cc + 1u);
+        return ml_free_cc(cc);
+    }
+    for (i = 0, e = ml_tab; i < ML_N; i++, e += 3)
+        if (e[0] == (0x80u | cc) && e[1] < NTRK && (id = ml_id(e[2])) < P_COUNT) {
+            midi_cc_set(&trk[e[1]], id, value);
+            hit = 1;
+        }
+    return hit;
+}
+
 static void __attribute__((noinline)) midi_cc_map(track_t *t, uint32_t cc, uint32_t value)
 {
-    const param_desc_t *d;
     uint32_t i, id = 0xFFFFu, e;
-    int32_t v;
     for (i = 0; i < NELEM(MIDI_CC_MAP); i++)
         if (MIDI_CC_MAP[i][0] == cc)
             id = MIDI_CC_MAP[i][1];
@@ -229,18 +291,15 @@ static void __attribute__((noinline)) midi_cc_map(track_t *t, uint32_t cc, uint3
             return;
         id = P_E0 + e - 1u;
     }
-    d = param_desc_of(eng_idx(t->eng_req), id);
-    v = d->min + ((int32_t)value * (d->max - d->min) + 63) / 127;
-    if (d->max <= d->min || t->p[id] == v)
-        return;
-    t->p[id] = (int16_t)v;
-    (void)motion_capture(t, id, (int16_t)v);
+    midi_cc_set(t, id, value);
 }
 
 static void midi_control(uint32_t ch, uint32_t cc, uint32_t value)
 {
     midi_channel_t *c = midi_channel(ch);
     uint32_t i, mask;
+    if (midi_learned(cc, value))                   /* (0.9.12) MIDI LEARN's (a learned CC is the user's) */
+        return;
     switch (cc) {
     case 1:
         c->wheel = (uint8_t)value;
