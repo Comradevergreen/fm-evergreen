@@ -1559,7 +1559,7 @@ static int32_t dice_by(int32_t v, int32_t lo, int32_t hi, int32_t span)
 }
 static void sound_dice_of(track_t *t, int quiet)
 {
-    uint32_t e = t->eng_req % NENGINES, i, l;
+    uint32_t e = trk_eng(t), i, l;
     if (e == ENGI_DRUM && drum_elsewhere(t)) {          /* (0.8.3, reported again) the section's one kit is another
                                                          * track's: its drums stay as they are */
         static char m[16] = "KIT OF T? KEPT";
@@ -1626,14 +1626,14 @@ static int32_t dk_frac(const param_desc_t *d, int32_t a, int32_t b)   /* a value
 static struct { const genome_t *g; bfeat_t f; uint8_t roll; } dkv;
 static const genome_t *dk_genome(const track_t *t)
 {
-    uint32_t e = t->eng_req % NENGINES;
+    uint32_t e = trk_eng(t);
     return e == ENGI_DRUM ? &LANE_G_HOME : &GENOME[EGEN[e]];
 }
 static void dk_feat(const track_t *t, bfeat_t *f)
 {
     uint8_t ids[4];
     uint32_t v;
-    for (v = 0; v < 4u; v++) ids[v] = (uint8_t)ENGINES[t->eng_req % NENGINES]->knob[v];
+    for (v = 0; v < 4u; v++) ids[v] = (uint8_t)trk_engp(t)->knob[v];
     bg_feat(t, dk_genome(t), ids, f);
 }
 static void dk_vis_take(void)

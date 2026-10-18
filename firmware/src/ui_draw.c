@@ -265,7 +265,7 @@ static uint16_t head_title(char *b)
         return T_MID;
     }
     str_cpy(b + 2, " \xB7 ", 4);
-    str_cpy(b + str_len(b), ENGINES[TSEL->eng_req % NENGINES]->name, 12);
+    str_cpy(b + str_len(b), trk_engp(TSEL)->name, 12);
     sound_name(TSEL, b + str_len(b) + 1u);
     if (b[str_len(b) + 1u])
         b[str_len(b)] = ' ';
@@ -888,7 +888,7 @@ static void foot_hint(char *a, char *b)
 /* the sound's name on the track: a user preset or the engine's preset (b holds 16) */
 static void sound_name(const track_t *t, char *b)
 {
-    const engine_t *e = ENGINES[t->eng_req % NENGINES];
+    const engine_t *e = trk_engp(t);
     b[0] = 0;
     if (user_of(t) < UP_SLOTS)
         up_name(user_of(t), b);
@@ -1198,7 +1198,7 @@ static void draw_foot(void)
 /* the EDIT layer's cards (ui_layer.c): ENG (the engine), No. (its sounds: KNOB 2's list), FAV, an empty card */
 static void engine_columns(void)
 {
-    uint32_t total, cur = eng_list_pos(&total), e = TSEL->eng_req % NENGINES;
+    uint32_t total, cur = eng_list_pos(&total), e = trk_eng(TSEL);
     char val[8], u[8];
     fmt_int(val, (int32_t)cur + 1);
     str_cpy(u, "/", 8);

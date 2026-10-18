@@ -172,36 +172,6 @@ static void graph_lfo(const track_t *t, uint16_t c)
     cv_rrect(PANEL_X0 + xp - 3, now - 3, 7, 7, 3, T_TEXT, T_SURF);
 }
 
-/* step bar x of step i of a 16-step row: 4 groups, as the footer (9 px bars, 13 px apart, 4 px between groups),
- * the row centred: x 12 .. 228 */
-static int32_t bar_x(uint32_t i) { return 12 + (int32_t)(i % 16u) * 13 + (int32_t)(i % 16u / 4u) * 4; }
-
-/* PATTERN page: the 64 steps as 4 rows of 16 bars (an accent: the accent colour, a tie: a lower bar,
- * empty: a stub), the cursor and the playhead under them */
-static void graph_steps(const track_t *t, uint16_t c)
-{
-    uint32_t i, len = (uint32_t)t->p[P_SLEN];
-    int32_t sm = graph_ht < 100;                     /* MENU > LARGE's strip: rows 14 px apart, bars 10 px */
-    int32_t bh = sm ? 10 : 14, pitch = sm ? 14 : 24, y0 = sm ? 2 : 4;
-    for (i = 0; i < NSTEP; i++) {
-        int32_t x = bar_x(i), y = y0 + (int32_t)(i / 16u) * pitch;
-        const step_t *st = &seq_steps(t)[i];
-        if (i >= len)
-            continue;
-        if (i % 16u == 0u && i + 16u <= len)
-            GFX_HOOK_ALIGN(0, 0, 240, 0, AL_H | AL_CELLS | AL_N(16), "step bars' row centred");
-        if (step_on(st))
-            cv_rrect(x, y, 9, bh, 2, step_heat(st, st->flags & SF_ACCENT, c), T_SURF);
-        else if (st->time == ST_TIE)
-            cv_rrect(x, y + bh - 6, 9, 6, 1, T_MID, T_SURF);
-        else
-            cv_rrect(x, y + bh - 3, 9, 3, 1, T_RAISE, T_SURF);
-        if (i == ui.cursor)
-            cv_rect(x, y + bh + 2 - sm, 9, 2, T_ACCENT);
-        else if (song.playing && i == seq_src(t, t->seq_idx))
-            cv_rect(x, y + bh + 2 - sm, 9, 2, T_TEXT);
-    }
-}
 
 /* (0.6.43) SEQ > MUTATE: a row a track, the next 32 bars: SOUND's changes an orange mark on top, PATTERN's a violet one
  * under it; the bar now ACCENT; the selected track's row lit; ORBIT / DRIFT at the right; FROZEN over it all */
@@ -340,7 +310,7 @@ static void graph_sing(const track_t *t)
 static void graph_morph(const track_t *t)
 {
     const int16_t *p = t->p;
-    uint32_t e = t->eng_req % NENGINES, i, a0 = 0, a1 = 0;
+    uint32_t e = trk_eng(t), i, a0 = 0, a1 = 0;
     int32_t px = 0, py = 0, pos, f;
     const char *n0 = "", *n1 = "";
     char b[24];
@@ -758,20 +728,6 @@ static void graph_grid(const track_t *t, uint16_t c)
     if (song.playing && seq_src(t, t->seq_idx) < len && seq_src(t, t->seq_idx) / 16u == ui.bank)
         cv_rect(40 + (int32_t)(seq_src(t, t->seq_idx) % 16u) * 12, y0 - 2, 10, 2, T_ACCENT);
 }
-/* SCL: the 12 keys as rounded bars (black keys high, white keys low): in the scale THEME, the root the
- * accent, out of the scale RAISE */
-static void graph_scale(const track_t *t, uint16_t c)
-{
-    static const uint8_t BLACK[12] = {0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0};
-    uint32_t i, mask = scale_mask(t);
-    for (i = 0; i < 12u; i++) {
-        uint32_t deg = (i + 12u - (uint32_t)t->p[P_ROOT]) % 12u;
-        int32_t x = 13 + (int32_t)i * 18;
-        uint16_t col = (mask >> deg) & 1u ? (deg == 0u ? T_ACCENT : c) : T_RAISE;
-        cv_rrect(x + 3, BLACK[i] ? 6 : 38, 10, 52, 3, col, T_SURF);
-    }
-}
-static void panel_note(const char *a, const char *b, const char *c);
 
 static uint32_t steps_hash(const track_t *t)
 {
@@ -971,7 +927,7 @@ static void page_title(char *ti)
 {
     const page_t *pg = cur_page();
     const track_t *t = TSEL;
-    const engine_t *e = ENGINES[t->eng_req % NENGINES];
+    const engine_t *e = trk_engp(t);
     uint32_t i, n = 0, k = 0;
     char nb[24];
     const char *pt = pg->scope == SC_ENGINE ? e->page_title[pg->id[0] != P_E0] : 0;   /* EDIT: the engine's */
@@ -1296,8 +1252,8 @@ static void page_flash_draw(void)
     uint32_t e = fm1_ms - pf_ms, ph, dim;
     char nm[20], sub[20] = {'T', 0, 0};
     const page_t *pg = cur_page();
-    const char *pt = pg->scope == SC_ENGINE ? ENGINES[TSEL->eng_req % NENGINES]->page_title[pg->id[0] != P_E0] : 0;
-    const char *en = ENGINES[TSEL->eng_req % NENGINES]->name;
+    const char *pt = pg->scope == SC_ENGINE ? trk_engp(TSEL)->page_title[pg->id[0] != P_E0] : 0;
+    const char *en = trk_engp(TSEL)->name;
     if (e >= PF_MS) {
         pf_on = 0;
         ui.foot_sig ^= 1u;                           /* (0.6.64) the footer, whole again: that alone redrawn */
@@ -1514,7 +1470,7 @@ static uint32_t graph_signature(void)
             h = (h ^ ((uint32_t)fg_set[ti][k].rate | (uint32_t)fg_set[ti][k].dir << 4 | (uint32_t)(uint8_t)fg_set[ti][k].ivl << 8 |
                       (song.playing ? (uint32_t)fg_head[ti][k].idx << 16 : 0u))) * 16777619u;
     }
-    if (pg->graph == GR_LYRIC || (pg->scope == SC_ENGINE && ENGINES[t->eng_req % NENGINES] == &ENG_FORMANT &&
+    if (pg->graph == GR_LYRIC || (pg->scope == SC_ENGINE && trk_engp(t) == &ENG_FORMANT &&
                                   t->p[P_VLANG])) {   /* (0.8.5) the syllable, the phoneme, the formants, the gains */
         const sing_t *s = sing_view(t);
         h = (h ^ ((uint32_t)s->nsy << 16 | (uint32_t)s->i << 8 | (uint32_t)s->np)) * 16777619u;
@@ -1549,13 +1505,13 @@ static uint32_t graph_signature(void)
         h = (h ^ ((uint32_t)cs->carg2 | (uint32_t)cs->cwhen << 8 | (uint32_t)cs->ctime << 16 | comp_slot() << 24)) *
             16777619u;                                  /* (0.6.82) COMP 2, WHEN */
     }
-    if (pg->scope == SC_ENGINE && (ENGINES[t->eng_req % NENGINES] == &ENG_WHEEL || t->eng_req % NENGINES == ENGI_FM6 ||
-                                   (FELUCCA_FM4 && t->eng_req % NENGINES == ENGI_DIGITAL)))
+    if (pg->scope == SC_ENGINE && (trk_engp(t) == &ENG_WHEEL || trk_eng(t) == ENGI_FM6 ||
+                                   (FELUCCA_FM4 && trk_eng(t) == ENGI_DIGITAL)))
         h ^= (ui.hot_t ? ui.hot_col + 1u : 0u) * 65537u;
-    if (pg->scope == SC_ENGINE && t->eng_req % NENGINES == ENGI_DRUM)
+    if (pg->scope == SC_ENGINE && trk_eng(t) == ENGI_DRUM)
         h ^= ui.frame * 2654435761u;                 /* DRUM-X: the specimen moves every frame */
     if (pg->graph == GR_DXSND) h ^= ui.frame * 2654435761u ^ dx_sig();
-    if (pg->scope == SC_ENGINE && t->eng_req % NENGINES == ENGI_FM6)   /* the patch (PAT's algorithm, levels, FB) */
+    if (pg->scope == SC_ENGINE && trk_eng(t) == ENGI_FM6)   /* the patch (PAT's algorithm, levels, FB) */
         h ^= (fm6_pgen[(t - trk) % NTRK] + 1u) * 2246822519u;
     if (fop_page(pg->graph))                         /* (0.6.77) OPERATOR, OP ENV (track pages): the patch, the operator */
         h = (h ^ ((fm6_pgen[(t - trk) % NTRK] + 1u) * 2246822519u ^ (uint32_t)fop_op << 8 ^ fop_stg)) * 16777619u;
@@ -1655,30 +1611,6 @@ static void list_row(int32_t y, int sel, const char *tag, uint16_t tc, const cha
     if (name[0])
         GFX_HOOK_ALIGN(0, y, 0, y + 16, AL_V, "list row text centred up/down");
     cv_free_text(54, y + CAP_IN(S, 16), &AF_S, name, sel ? T_INK : nc, bg, x1 - 54);
-}
-/* an empty list: a title and a hint, centred */
-static void note_line(int32_t y, const char *s, uint16_t fg)   /* centred S; "[K2] ADD PATTERN": a key hint */
-{
-    uint32_t n;
-    int32_t id = kc_tag(s, &n);
-    if (id < 0) {
-        GFX_HOOK_ALIGN(0, 0, 240, 0, AL_H, "panel note centred");
-        cv_text_in(0, y, 240, &AF_S, s, fg, T_SURF);
-        return;
-    }
-    s += n;
-    while (*s == ' ')
-        s++;
-    GFX_HOOK_ALIGN(0, 0, 240, 0, AL_H | AL_N(2), "panel note hint centred");
-    cv_text_on(cv_keycap(HALF_UP(240 - kh_ink((uint32_t)id, s)), y + 1, (uint32_t)id, T_KEY, T_INK, T_SURF) + KH_GAP, y,
-               &AF_S, s, fg, T_SURF);
-}
-static void panel_note(const char *a, const char *b, const char *c)
-{
-    GFX_HOOK_ALIGN(0, 0, 240, 0, AL_H, "panel note centred");
-    cv_text_in(0, 30, 240, &AF_M, a, T_TEXT, T_SURF);
-    if (b) note_line(60, b, T_MID);
-    if (c) note_line(82, c, T_DIM);
 }
 
 /* SEQ > PATTERNS: the pattern list around the one picked ("03  MELODY", "U07  MY BASS") */
@@ -1813,7 +1745,7 @@ static uint32_t trk_level(uint32_t c) { return (uint32_t)trk[c].p[P_LEVEL] & 127
 static void trk_short_name(uint32_t c, char *b)      /* the track's sound, b holds 13 */
 {
     const track_t *t = &trk[c];
-    const engine_t *e = ENGINES[t->eng_req % NENGINES];
+    const engine_t *e = trk_engp(t);
     if (user_of(t) < UP_SLOTS)
         up_name(user_of(t), b);
     else if (e->npresets)
@@ -2093,100 +2025,6 @@ static uint16_t sec_col(uint32_t s)
                                                          * violet orange yellow; was 60 115 175 230) */
     return heat_col(settings.palette == UI_JIANT_INDEX ? HJ[s & 3u] : HO[s & 3u]);
 }
-static void song_chip(int32_t x, int32_t y, uint32_t s, int saved, int sel, uint16_t bg)
-{
-    char b[2] = {(char)('A' + (s & 3u)), 0};
-    uint16_t c = sel ? T_INK : saved ? sec_col(s) : T_RAISE;   /* (on the selected row: ink, its letter the theme's) */
-    cv_rrect(x, y, 18, 14, 3, c, bg);
-    GFX_HOOK_ALIGN(x, y, x + 18, y + 14, AL_HV, "song chip letter centred");
-    cv_text_on(x + (18 - text_w(&AF_S, b)) / 2, y + CAP_IN(S, 14), &AF_S, b, sel ? T_THEME : saved ? T_BG : T_DIM, c);
-}
-static void graph_song(void)
-{
-    uint32_t end = song_end_row(), first, i, total = 0, played = 0;
-    int32_t mh = (int32_t)graph_h() - 22, my = 4, acc = 0;
-    if (!chain_config.count && ui.song_row == 0u) {
-        panel_note("A 4 BARS > B 2 BARS", "[K2] ADD SECTION", "SECTIONS: SAVE > PROJECT");
-        return;
-    }
-    first = ui.song_row > 3u ? ui.song_row - 3u : 0u;
-    if (first + 7u > end + 1u)
-        first = end + 1u > 7u ? end + 1u - 7u : 0u;
-    for (i = first; i <= end && i < first + 7u; i++) {
-        char b[16];
-        int32_t y = LIST_Y(i - first), k, nb;
-        int sel = i == ui.song_row, play = chain.running && i == chain.row;
-        uint16_t bg = sel ? T_THEME : T_SURF, dim = sel ? T_INK : T_DIM;
-        if (sel) cv_rrect(5, y, 182, 16, 4, T_THEME, T_SURF);
-        if (i == end) {                                  /* the song's END */
-            uint32_t e = SONG_END(&chain_config);
-            cv_text(9, y + 2, &AF_S, "L", sel ? T_INK : T_MID);   /* (0.8.5: the loop, no icon) */
-            cv_text_on(28, y + 1, &AF_S, "END", sel ? T_INK : T_MID, bg);
-            if (e == SONG_FOREVER) str_cpy(b, "LOOP", sizeof b);
-            else if (e >= 2u) { b[0] = 'x'; fmt_int(b + 1, (int32_t)e); }
-            else str_cpy(b, "STOP", sizeof b);
-            cv_text_on(60, y + 1, &AF_S, b, sel ? T_INK : T_TEXT, bg);
-            if (e >= 2u && e != SONG_FOREVER && chain.running) {   /* (the time through) */
-                fmt_int(b, chain.pass + 1); str_cpy(b + str_len(b), "/", 2); fmt_int(b + str_len(b), (int32_t)e);
-                cv_text_on(110, y + 1, &AF_S, b, dim, bg);
-            }
-            break;
-        }
-        if (i == chain_config.count) {                   /* + ADD: the rows used of all */
-            cv_text_on(28, y + 1, &AF_S, "+ ADD", sel ? T_INK : T_MID, bg);
-            fmt_int(b, (int32_t)chain_config.count); str_cpy(b + str_len(b), "/", 2);
-            fmt_int(b + str_len(b), (int32_t)CHAIN_ROWS);
-            cv_text_on(110, y + 1, &AF_S, b, dim, bg);
-            continue;
-        }
-        if (play) cv_text(8, y + 2, &AF_S, ">", sel ? T_INK : T_ACCENT);
-        else { fmt_int(b, (int32_t)i + 1); cv_text_on(9, y + 1, &AF_S, b, sel ? T_INK : T_MID, bg); }
-        {
-            const chain_row_t *r = &chain_config.row[i];
-            int saved = graph_project_used(r->slot);
-            uint32_t bars = r->bars, done = play ? bars - chain.remaining : 0u;
-            song_chip(28, y + 1, r->slot, saved, sel, bg);
-            if (!saved && bars <= 9u)                    /* (a section with nothing stored: it plays silence) */
-                cv_text_on(108, y + 1, &AF_S, "EMPTY", dim, bg);
-            nb = bars > 16u ? 16 : (int32_t)bars;
-            for (k = 0; k < nb; k++) {                   /* the bars as blocks, played ones full */
-                uint32_t upto = bars > 16u ? (uint32_t)(k + 1) * bars / 16u : (uint32_t)k + 1u;
-                uint16_t c = play && upto <= done ? (sel ? T_INK : T_TEXT) : saved ? sec_col(r->slot) : T_RAISE;
-                cv_rect(52 + k * 6, y + 4, 5, 8, sel && !(play && upto <= done) ? (saved ? T_INK : T_DIM) : c);
-            }
-            if (song_idx.scene[song_cur][i].on)          /* the row has a scene: a dot */
-                cv_rrect(150, y + 5, 6, 6, 3, sel ? T_INK : T_ACCENT, bg);
-            fmt_int(b, (int32_t)bars);
-            cv_text_r(182, y + 1, &AF_S, b, sel ? T_INK : saved ? T_TEXT : T_DIM, bg);
-        }
-    }
-    for (i = 0; i < chain_config.count; i++) {          /* the song strip: the bars in all, played so far */
-        total += chain_config.row[i].bars;
-        if (chain.running && i < chain.row) played += chain_config.row[i].bars;
-    }
-    if (chain.running && chain.row < chain_config.count)
-        played += chain_config.row[chain.row].bars - chain.remaining;
-    if (!total)
-        return;
-    for (i = 0; i < chain_config.count; i++) {
-        int32_t y0 = my + acc * mh / (int32_t)total, y1;
-        acc += chain_config.row[i].bars;
-        y1 = my + acc * mh / (int32_t)total;
-        if (y1 - y0 < 2) y1 = y0 + 2;
-        cv_rect(196, y0, 30, y1 - y0 - (y1 - y0 > 3 ? 1 : 0),
-                graph_project_used(chain_config.row[i].slot) ? sec_col(chain_config.row[i].slot) : T_RAISE);
-        if (i == ui.song_row)
-            cv_rect(192, y0, 2, y1 - y0 - (y1 - y0 > 3 ? 1 : 0), T_THEME);
-    }
-    if (chain.running)
-        cv_rect(194, my + (int32_t)(played * (uint32_t)mh / total), 34, 2, T_TEXT);   /* the play head */
-    {
-        char b[12];
-        fmt_int(b, (int32_t)total);
-        str_cpy(b + str_len(b), " BAR", 6);
-        cv_text_r(230, my + mh + 4, &AF_S, b, T_MID, T_SURF);
-    }
-}
 #include "ui_tech.c"                                /* (JIANT 0.5) the technical graphs (FX, DEST, VOICE, GLOBAL) */
 #include "ui_lzsave.c"                              /* (0.8.5) SAVE's lens: its levels' panels */
 #include "ui_lzfx.c"                                /* (0.8.5) FX's lens: its levels' panels */
@@ -2241,7 +2079,6 @@ static void draw_graph(void)
         if (k == SK_SCOPE) graph_scope(c);
         else if (k == SK_ADSR) graph_adsr(t, c);
         else if (k == SK_LFO) graph_lfo(t, c);
-        else if (k == SK_STEPS) graph_steps(t, c);
         else graph_title();
         graph_ht = 100;
     } else if (ui.confirm == CF_DICE_ALL) {          /* (0.8.5) GEN, HOME's lens's last level (gen.c) */
@@ -2276,12 +2113,6 @@ static void draw_graph(void)
         case GR_ADSR:
             graph_adsr(t, c);
             break;
-        case GR_LFO:
-            graph_lfo(t, c);
-            break;
-        case GR_STEPS:
-            graph_steps(t, c);
-            break;
         case GR_MUTATE:
             graph_mutate();
             break;
@@ -2306,16 +2137,6 @@ static void draw_graph(void)
                 graph_grid(t, c);
             else
                 graph_roll(t, c);
-            break;
-        case GR_SCALE:
-            graph_scale(t, c);
-            break;
-        case GR_MSEQ:
-            graph_mseq(t, c);
-            break;
-        case GR_SONG:
-            cv_oy = 0;
-            graph_song();
             break;
         case GR_PATS:
             cv_oy = 0;
@@ -2343,11 +2164,11 @@ static void draw_graph(void)
             graph_sing(t);
             break;
         default:
-            if (pg->scope == SC_ENGINE && ENGINES[t->eng_req % NENGINES] == &ENG_FORMANT && t->p[P_VLANG]) {
+            if (pg->scope == SC_ENGINE && trk_engp(t) == &ENG_FORMANT && t->p[P_VLANG]) {
                 graph_sing(t);                       /* (0.8.5) VOICE singing: its words on its pages */
                 break;
             }
-            if (pg->scope == SC_ENGINE && t->eng_req % NENGINES == ENGI_DRUM) {   /* (0.8.5: WHEEL's and FM6's EDIT 1
+            if (pg->scope == SC_ENGINE && trk_eng(t) == ENGI_DRUM) {   /* (0.8.5: WHEEL's and FM6's EDIT 1
                                                       * and 2 their beings, as every synth's: EDIT's lens, SOUND) */
                 cv_oy = 0;
                 if (pg->id[0] == P_E0)               /* (0.9.4) KIT: the kit's beings (ui_engvis.c); KIT 2 the colony */
@@ -2356,7 +2177,7 @@ static void draw_graph(void)
                     graph_colony(t, -1);
             }
 #if FELUCCA_FM4
-            else if ((pg->scope == SC_ENGINE || pg->id[0] == P_FM1_LEVEL) && t->eng_req % NENGINES == ENGI_DIGITAL)
+            else if ((pg->scope == SC_ENGINE || pg->id[0] == P_FM1_LEVEL) && trk_eng(t) == ENGI_DIGITAL)
                 graph_fm(t, c);                      /* (OP LEVEL too: the levels on the chart) */
 #endif
             else if (pg->scope == SC_ENGINE) { cv_oy = 0; graph_being(t); }   /* (JIANT 0.5: the being, was the scope) */

@@ -31,14 +31,14 @@ static struct {
 static int eco_off(uint32_t c) { return trk[c].p[P_MUTE] || c >= trk_live; }   /* (muted, or asleep: TRACKS 4) */
 static const genome_t *eco_genome(uint32_t c)
 {
-    uint32_t e = trk[c].eng_req % NENGINES;
+    uint32_t e = trk_eng(&trk[c]);
     return e == ENGI_DRUM ? &LANE_G_HOME : &GENOME[EGEN[e]];
 }
 /* track c's features: its genome, its HOME knobs, excited by its level k-fold (ui_being.c) */
 static void eco_feat(uint32_t c, bfeat_t *f, int32_t k)
 {
     uint8_t ids[4];
-    uint32_t v, e = trk[c].eng_req % NENGINES;
+    uint32_t v, e = trk_eng(&trk[c]);
     for (v = 0; v < 4u; v++) ids[v] = (uint8_t)ENGINES[e]->knob[v];
     bg_feat(&trk[c], eco_genome(c), ids, f);
     bg_excite(f, eco.en[c], k);
@@ -364,7 +364,7 @@ static void graph_home_being(void)
     }
     sound_name(&trk[c], b);
     GFX_HOOK_ALIGN(60, 0, 180, 0, AL_H, "BEING sound name centred");
-    cv_text_in(60, 129, 120, &AF_X, b[0] ? b : ENGINES[trk[c].eng_req % NENGINES]->name, T_MID, T_SURF);
+    cv_text_in(60, 129, 120, &AF_X, b[0] ? b : trk_engp(&trk[c])->name, T_MID, T_SURF);
 }
 static void graph_home_lz(void)
 {

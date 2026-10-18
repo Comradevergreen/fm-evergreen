@@ -4,9 +4,8 @@
  * as an engineer would, live where the sound is (thermal colours: heat_col / heat_y).
  *   DIST       tk_dist_y: the drive TYPE's transfer (the FX lens draws it, ui_lzfx.c; 0.8.5: DIST, DLY, REVERB, CHORUS,
  *              MASTER and AUTOPAN live there, their old drawings gone)
- *   ENV / LFO DEST  the source now (the envelope's level, the LFO's value) into four bipolar columns under the cards,
- *              each as long as its amount and lit by what it sends now
- *   VOICE      the track's voices: one slot each, as full as its envelope now; the glide as a curve between two notes
+ *   ENV DEST   the source now (the envelope's level) into four bipolar columns under the cards, each as long as its
+ *              amount and lit by what it sends now (0.9.7: LFO DEST's and VOICE's, never drawn since the lenses, gone)
  *   GLOBAL     a bar of 16 steps with SWING moving the off-beats, the playhead, the beat */
 #define TK_X0 PANEL_X0
 #define TK_X1 (PANEL_X0 + PANEL_W)
@@ -51,17 +50,15 @@ static int32_t tk_dist_y(uint32_t type, int32_t x, int32_t g, int32_t d)
     default: return softclip(v + 2400) - softclip(2400);
     }
 }
-/* ENV DEST / LFO DEST: the source now into four bipolar columns, one under each card */
-static void tech_dest(const track_t *t, int lfo)
+/* ENV DEST: the source now into four bipolar columns, one under each card (0.9.7: LFO DEST, VOICE and MSEQ 2 have
+ * their lenses' pictures: ui_lzpage.c, ui_lzedit.c) */
+static void tech_dest(const track_t *t)
 {
     int32_t src = 0, c, mid = (TK_Y0 + TK_Y1) / 2, half = 44;
     uint32_t i;
-    if (lfo)
-        src = mulq15(t->lfo_val, t->lfo_fade);
-    else
-        for (i = 0; i < NVOICE; i++)
-            if (t->v[i].stage && t->v[i].stage < 4u && (t->v[i].env >> 9) > src)
-                src = t->v[i].env >> 9;                 /* Q15 */
+    for (i = 0; i < NVOICE; i++)
+        if (t->v[i].stage && t->v[i].stage < 4u && (t->v[i].env >> 9) > src)
+            src = t->v[i].env >> 9;                     /* Q15 */
     for (c = 0; c < 4; c++) {
         int32_t x = CARD_X(c) + 22, amt = tk_amt((uint32_t)c), bh = amt * half / 500, live = bh * src / 32767;
         cv_rect(x - 6, mid, 25, 1, T_RAISE);
@@ -74,29 +71,6 @@ static void tech_dest(const track_t *t, int lfo)
     {   /* the source: its level now as a bar at the left edge */
         int32_t sh = (src < 0 ? -src : src) * half / 32767;
         cv_rect(TK_X0, src >= 0 ? mid - sh : mid, 3, sh ? sh : 1, T_TEXT);
-    }
-}
-
-/* VOICE: the track's voices now; the glide between two notes */
-static void tech_voice(const track_t *t)
-{
-    uint32_t i, nv = trk_nvoice(t) ? trk_nvoice(t) : NVOICE;
-    int32_t sw = PANEL_W / (int32_t)NVOICE, glide = t->p[P_GLIDE], py = 0, x;
-    for (i = 0; i < NVOICE; i++) {
-        int32_t x0 = TK_X0 + (int32_t)i * sw + 2, h = 40, lv = 0;
-        if (t->v[i].stage && t->v[i].stage < 4u)
-            lv = (int32_t)(((int64_t)t->v[i].env * h) >> 24);
-        cv_rrect(x0, TK_Y0, sw - 4, h, 2, i < nv ? T_RAISE : T_LINE, T_SURF);
-        if (lv > 0)
-            cv_rect(x0 + 1, TK_Y0 + h - lv, sw - 6, lv, heat_col(60 + lv * 190 / h));
-    }
-    for (x = 0; x <= PANEL_W - 20; x++) {               /* the glide: low note to high, as slow as GLIDE */
-        int32_t tm = glide ? x * 127 * 6 / (glide * 4 + 1) : 1000, k = tm > 255 ? 255 : tm;
-        int32_t y = TK_Y1 - 4 - 40 * (x < 30 ? 0 : (k * (255 - (255 - k) * (255 - k) / 255)) / 255) / 255;
-        if (x < 30) y = TK_Y1 - 4;
-        if (x)
-            cv_line_t(TK_X0 + 10 + x - 1, py, TK_X0 + 10 + x, y, heat_y(y, TK_Y1 - 44, TK_Y1 - 4, T_THEME), 2);
-        py = y;
     }
 }
 
@@ -156,10 +130,7 @@ static int graph_tech(const track_t *t, const page_t *pg)
     if (pg->scope != SC_GLOBAL)
         switch (pg->id[0]) {
         case P_LRTRG: if (pg->id[1] != 0xFFu) return 0; tech_retrig(t); return 1;   /* (not DIGITAL's OP1 ENV) */
-        case P_ED_FLT: tech_dest(t, 0); return 1;
-        case P_LD_PIT: tech_dest(t, 1); return 1;
-        case P_VOICE: tech_voice(t); return 1;
-        case P_MSDIV: cv_oy = GOY; graph_mseq(t, T_THEME); return 1;   /* (MSEQ's, on the 100 px scale) */
+        case P_ED_FLT: tech_dest(t); return 1;
         default: return 0;
         }
     switch (pg->id[0]) {

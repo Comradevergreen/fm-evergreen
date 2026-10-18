@@ -50,7 +50,7 @@ static void graph_env_tracks(int dest)
             cv_rect(x, y, 1, 66, T_THEME); cv_rect(x + 75, y, 1, 66, T_THEME);
         }
         cv_text(x + 4, y + 4 - AF_X_CAP_Y, &AF_X, n, ink);
-        cv_clip_text(x + 22, y + 4 - AF_X_CAP_Y, &AF_X, ENGINES[t->eng_req % NENGINES]->name, T_DIM, bg, 50);
+        cv_clip_text(x + 22, y + 4 - AF_X_CAP_Y, &AF_X, trk_engp(t)->name, T_DIM, bg, 50);
         env_mini(t, x + 5, y + 16, 66, dest ? 34 : 44, c >= trk_live ? T_DIM : settings.palette == UI_JIANT_INDEX ?
                  heat_col(150) : T_THEME, sel ? 2 : 1);
         if (!dest && (lv = env_now(t)) >= 0)

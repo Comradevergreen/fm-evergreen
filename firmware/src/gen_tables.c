@@ -18,6 +18,10 @@ enum { DM_HOUSE, DM_DEEP, DM_MICRO, DM_TECHHOUSE, DM_TECHNO, DM_DETROIT, DM_DUBT
        DM_EBM, DM_ITALO, DM_SYNTHPOP, DM_DARKWAVE, DM_POSTPUNK, DM_TRIBAL, DM_RBOX, DM_KLING, DM_MOTORIK, DM_INDIE,
        DM_SHOEGAZE, DM_FUNK, DM_DISCO, DM_BOOMBAP, DM_TRAP, DM_UKG, DM_DUBSTEP, DM_BREAKS, DM_DNB, DM_ONEDROP,
        DM_STEPPERS, DM_ROCKERS, DM_JAZZ, DM_BOSSA, DM_AFRO, DM_SPARSE, DM_IDM, DM_JOYDIV, DM_NEWORDER, DM_NONE };
+/* (0.9.7, flash) the maps and the pools below are the text tools/gen_drum_maps.py reads (not compiled): build/gen/
+ * gen_drum_maps.h holds them packed, each lane once at 16 levels a nibble (GM_LANE), the tables as lane numbers
+ * (DRUM_MAP_I, HAT_POOL_I ..: gen.c gm_level) */
+#ifdef GEN_DRUM_MAPS_TEXT
 static const char *const DRUM_MAP[][8] = {
     [DM_HOUSE]     = {"X...8...X...8...", "", "....9.......9...", "7.3.7.3.7.3.7.3.", "..8...8...8...8.", "", ".......2......3.", ""},
     [DM_DEEP]      = {"X...8...X...8..2", "", "....7.......7...", ".37..37..37..37.", "..8...8...8...8.", "", "...2......4.....", ""},
@@ -71,6 +75,8 @@ static const char *const OH_POOL[6] = {"", "..7...7...7...7.", "......7.......7.
 static const char *const RS_POOL[6] = {"", "...5......5.....", ".4....4.4....4..", "......5.....5...", "..5...5...5...5.", "...3..3....3..3."};
 static const char *const CB_POOL[4] = {"", "5..5..5...5.5...", "......4.......4.", "2.2.2.2.2.2.2.2."};
 static const char *const TM_POOL[4] = {"", "..............44", "......5.......5.", "..6..6....6..6.."};
+#endif
+#include "gen_drum_maps.h"
 /* the snare's ghost positions, the best first (the sixteenth before 2 and 4, then the "a"s, the "e"s, the "&"s) */
 static const uint8_t GHOST_RANK[12] = {3, 7, 11, 15, 13, 5, 9, 1, 14, 6, 10, 2};
 /* the hats' accent cells (percent of the hit's velocity on the four sixteenths of a beat) */
@@ -106,7 +112,10 @@ enum { BA_OFFBEAT, BA_OFFOCT, BA_BOUNCE, BA_DEEPWALK, BA_ROLL16, BA_OCTBNC, BA_D
        BA_ROCKERS, BA_DUB, BA_BOOMBAP, BA_TRAP, BA_DNB, BA_JUNGLE, BA_WOBBLE, BA_PEDAL, BA_FIFTHS, BA_NEOARP,
        BA_SUICIDE, BA_DARK8, BA_SEQ16, BA_ACID, BA_NITZER1, BA_NITZER2, BA_NITZER3, BA_RADIO, BA_HOOK2, BA_BLUEMON,
        BA_CEREMONY, BA_N };
-typedef struct { const char *n, *f; uint8_t bars; } barch_t;
+/* (0.9.7, flash) the archetypes below are the text tools/gen_drum_maps.py reads (not compiled): build/gen/gen_bass.h holds
+ * them a byte a step (BA_STEP: the note's code | the flag's << 4; gen.c ba_note, ba_flag), each its first step and bars */
+typedef struct { uint16_t at; uint8_t bars; } barch_t;
+#ifdef GEN_DRUM_MAPS_TEXT
 static const barch_t BASS_ARCH[BA_N] = {
     [BA_OFFBEAT]  = {"..R...R...R...R.", 0, 1},
     [BA_OFFOCT]   = {"..8...R...8...R.", 0, 1},
@@ -175,6 +184,8 @@ static const barch_t BASS_ARCH[BA_N] = {
     [BA_BLUEMON]  = {"R8R8R8R8R8R8R8R8R8R8R8R8R8R85858", "a...a...a...a...a...a...a...a...", 2},
     [BA_CEREMONY] = {"R.R.R.3.5.5.5.3.R.R.R.3.5.5.7.8.", "a.......a.......a.......a.......", 2},
 };
+#endif
+#include "gen_bass.h"
 enum { KM_DOUBLE, KM_ANSWER, KM_SUSTAIN, KM_INTERLOCK };   /* the bass against the kick */
 
 /* ------------------------------------------------------------------------------------------------- harmony --- */

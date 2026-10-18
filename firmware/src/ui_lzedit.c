@@ -35,7 +35,7 @@ static void ed_cap(int32_t x, int32_t y, const char *s, uint16_t c)   /* a capti
 }
 static void graph_sound_lz(const track_t *t)
 {
-    const engine_t *e = ENGINES[t->eng_req % NENGINES];
+    const engine_t *e = trk_engp(t);
     uint32_t k, two = cur_page()->id[0] != P_E0, n = 0;
     int32_t x = 122, w = 106, ty = 2, bare = ux.skin != 0u;
     uint16_t tb = lz_tile_bg();
@@ -132,7 +132,7 @@ static void graph_filter_lz(const track_t *t, const page_t *pg)
     cv_rect(xc, 6, 1, 99, T_ACCENT);
     og_node(xc * 16, ed_resp(ty, xc, xc, r[2]) * 16, 4, T_ACCENT);
     str_cpy(b, N_FTYPE[ty], 32);
-    str_cpy(b + str_len(b), t->eng_req % NENGINES == 0u ? " \xB7 PER VOICE" : " \xB7 ON THE PART", 32 - str_len(b));
+    str_cpy(b + str_len(b), trk_eng(t) == 0u ? " \xB7 PER VOICE" : " \xB7 ON THE PART", 32 - str_len(b));
     ed_cap(10, 6, b, T_TEXT);
     d = page_desc(pg, 3, &vp);
     if (d) {
@@ -185,7 +185,7 @@ static void graph_voice_lz(const track_t *t, const page_t *pg)
 }
 static void graph_focus_lz(const track_t *t)
 {
-    const engine_t *e = ENGINES[t->eng_req % NENGINES];
+    const engine_t *e = trk_engp(t);
     uint32_t k = focus_k(), i;
     int32_t j = focus_slot(k);
     const param_desc_t *d = track_desc(t, P_E0 + k);
@@ -225,7 +225,7 @@ static void graph_focus_lz(const track_t *t)
 /* the lens's panel for EDIT's page pg (1), else 0 (its own) */
 static int graph_edit_lz(const track_t *t, const page_t *pg)
 {
-    uint32_t e = t->eng_req % NENGINES;
+    uint32_t e = trk_eng(t);
     if (pg->scope == SC_ENGINE && e != ENGI_DRUM && !(FELUCCA_FM4 && e == ENGI_DIGITAL))
         graph_sound_lz(t);
     else if (pg->id[0] == P_FTYPE)

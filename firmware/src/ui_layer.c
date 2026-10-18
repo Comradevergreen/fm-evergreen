@@ -1176,7 +1176,7 @@ static void layer_state(uint32_t l)
             if (ly_card[k].l[0])
                 lst_chip(ly_card[k].l, ly_card[k].v, 1);
         b[0] = 'T'; b[1] = (char)('1' + song.sel); b[2] = ' ';
-        str_cpy(b + 3, ENGINES[TSEL->eng_req % NENGINES]->name, sizeof b - 3);
+        str_cpy(b + 3, trk_engp(TSEL)->name, sizeof b - 3);
         lst_chip(b, 0, 1);
         sound_name(TSEL, b);
         if (b[0])

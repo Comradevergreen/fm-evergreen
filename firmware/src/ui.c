@@ -4,6 +4,13 @@
  * Flat: SURF cards and panels on the palette's background, no rules, one type family (Inter Tight, three sizes), tracks
  * named by their numbers 1..4 on a cushion (icons.c trk_icon). Four columns <-> KNOB 1..4. Rendering is lazy:
  * every element remembers what it last drew and is redrawn only on change. */
+/* (0.9.7, flash) the selected track by a call in the main loop's code from here on (core.h's TSEL, an address computed
+ * in place, stays for the sound side included before) */
+static track_t *tsel_p(void) { return &trk[song.sel]; }
+#undef TSEL
+#define TSEL tsel_p()
+static uint32_t trk_eng(const track_t *t) { return t->eng_req % NENGINES; }   /* (0.9.7, flash) a track's engine */
+static const engine_t *trk_engp(const track_t *t) { return ENGINES[trk_eng(t)]; }   /* .. its engine's table */
 static int project_save(uint32_t slot);
 static void panel_setup(void);
 static void project_load(uint32_t slot);
@@ -160,7 +167,8 @@ static void draw_rules(uint32_t y, uint32_t h);       /* (ui_draw.c) */
 static uint8_t sync_reload;                  /* engine / preset / project / user preset loaded: editor RELOAD push */
 
 #define ACC T_THEME                /* values, curves */
-#define VAL(c) ((c) == ui.hot_col && ui.hot_t ? T_ACCENT : T_THEME)   /* the knob just turned: accent */
+static uint16_t val_col(uint32_t c);
+#define VAL(c) val_col(c)                  /* the knob just turned: accent (0.9.7, flash: a call, was in place) */
 /* a parameter's value as 0..1000 (-1: none). (0.9.5) It notes whether the parameter is bipolar (its range across 0: PAN,
  * DETUNE, a MOD amount ...): JIANT's cards heat by the distance from the centre then (ui_draw.c card_heat) */
 static struct { int32_t r; uint8_t bip; } ratio_last;
@@ -170,7 +178,8 @@ static int32_t ratio_of(int32_t min, int32_t max, int32_t v)
     ratio_last.bip = (uint8_t)(min < 0 && max > 0);
     return ratio_last.r;
 }
-#define RATIO(d, v) ratio_of((d)->min, (d)->max, (int32_t)(v))
+static int32_t ratio_d(const param_desc_t *d, int32_t v) { return ratio_of(d->min, d->max, v); }   /* (0.9.7, flash) */
+#define RATIO(d, v) ratio_d((d), (int32_t)(v))
 /* layout: header 0..24, four cards 28..72 (57 px at x 3 + 59 c),
  * the panel 76..198 (a SURF area; the graphs live in it), footer 202..240; BG between them. (0.8.5) The SEQ pages
  * (LENTE): its level tabs 28..41, the cards 44..88, the panel 92..214, the footer's second row 218..240 */
@@ -294,6 +303,7 @@ static struct {
     uint32_t knob_ms;            /* (0.8.9) when KNOB 1..4 last turned (SKIN HUD: the knob row fades while they rest) */
     uint32_t nav_sig, nav_at;    /* (0.9.2) ui_lens.c nav_cur's cache: what it last resolved, the entry */
 } ui;
+static uint16_t val_col(uint32_t c) { return c == ui.hot_col && ui.hot_t ? T_ACCENT : T_THEME; }
 
 enum { CF_NONE, CF_CLEAR_SEQ, CF_CLEAR_TRK, CF_OVR_PROJ, CF_OVR_USER, CF_LOAD_PAT,
        CF_DEL_ROW, CF_CLEAR_SONG, CF_INIT_SOUND, CF_CLEAR_MOTION, CF_ERASE_USER, CF_CLEAR_PFX,
@@ -511,33 +521,33 @@ static int page_visible(uint32_t i)
                                  (PAGES[i].fam == FAM_FX && PAGES[i].id[0] == G_CRATE)))
         return 0;                                       /* (0.6.30) LOAD ECO: no SLICER, no chorus: their pages gone */
     if (PAGES[i].graph == GR_MORPH) {                   /* (0.6.45) MORPH: ANALOG's plain waves, PHASE, LOFI's (not BYTE FLOAT) */
-        uint32_t e = TSEL->eng_req % NENGINES;
+        uint32_t e = trk_eng(TSEL);
         return e == ENGI_ANALOG || ENGINES[e] == &ENG_PHASE ||   /* (0.6.81: every ANALOG WAVE) */
                (ENGINES[e] == &ENG_LOFI && TSEL->p[P_E1] < RW_BYTE);
     }
     if (PAGES[i].graph == GR_LYRIC)                     /* (0.8.5) WORDS: VOICE's */
-        return ENGINES[TSEL->eng_req % NENGINES] == &ENG_FORMANT;
+        return trk_engp(TSEL) == &ENG_FORMANT;
     if (PAGES[i].graph == GR_PATS || PAGES[i].graph == GR_CHANCE)   /* (0.6.37) PHRASES, a step's CHANCE: out of the */
         return !ui.home && ui.page == i;               /* SEQ pages' cycle (only where code put the screen) */
     if (PAGES[i].graph == GR_DXSND || PAGES[i].graph == GR_DXIMG)   /* (0.6.48: IMAGE) */
-        return TSEL->eng_req % NENGINES == ENGI_DRUM;
+        return trk_eng(TSEL) == ENGI_DRUM;
     if (PAGES[i].scope == SC_TRACK && PAGES[i].id[0] >= P_LN0 && PAGES[i].id[0] <= P_LN7)
-        return TSEL->eng_req % NENGINES == ENGI_DRUM;
+        return trk_eng(TSEL) == ENGI_DRUM;
     if (PAGES[i].graph == GR_FOCUS)                     /* (0.8.5) FOCUS: a synth's (FM6: OPERATOR, DRUM: SOUND) */
-        return TSEL->eng_req % NENGINES != ENGI_DRUM && TSEL->eng_req % NENGINES != ENGI_FM6 &&
-               !(FELUCCA_FM4 && TSEL->eng_req % NENGINES == ENGI_DIGITAL);
+        return trk_eng(TSEL) != ENGI_DRUM && trk_eng(TSEL) != ENGI_FM6 &&
+               !(FELUCCA_FM4 && trk_eng(TSEL) == ENGI_DIGITAL);
     if (PAGES[i].id[0] == P_ALLOC)                      /* (0.8.5) VOICE 2: not a kit's */
-        return TSEL->eng_req % NENGINES != ENGI_DRUM;
+        return trk_eng(TSEL) != ENGI_DRUM;
     if (PAGES[i].graph >= GR_FMOP && PAGES[i].graph <= GR_FMENV)   /* (0.6.10) OPERATOR, OP ENV, OPERATOR 2: FM6's */
-        return TSEL->eng_req % NENGINES == ENGI_FM6;
+        return trk_eng(TSEL) == ENGI_FM6;
     if (PAGES[i].fam == FAM_EDIT && PAGES[i].id[0] == P_WRDEP)   /* (0.7.8) ROTOR: WHEEL's */
-        return ENGINES[TSEL->eng_req % NENGINES] == &ENG_WHEEL;
+        return trk_engp(TSEL) == &ENG_WHEEL;
     if (PAGES[i].id[0] == P_LRTRG && PAGES[i].id[1] == 0xFFu)   /* (0.6.12) RETRIG: LOFI BYTE / FLOAT's */
-        return ENGINES[TSEL->eng_req % NENGINES] == &ENG_LOFI && TSEL->p[P_E1] >= RW_BYTE;
+        return trk_engp(TSEL) == &ENG_LOFI && TSEL->p[P_E1] >= RW_BYTE;
     if (PAGES[i].scope == SC_TRACK && PAGES[i].id[0] == P_FTYPE)   /* (JIANT 0.5) FILTER: ANALOG's, or the part's */
-        return (TSEL->eng_req % NENGINES == ENGI_ANALOG) == (PAGES[i].id[1] == P_E4);
+        return (trk_eng(TSEL) == ENGI_ANALOG) == (PAGES[i].id[1] == P_E4);
     return !(PAGES[i].fam == FAM_EDIT && PAGES[i].id[0] >= P_FM1_ATK &&
-             PAGES[i].id[0] <= P_FM4_LEVEL) || (FELUCCA_FM4 && TSEL->eng_req % NENGINES == ENGI_DIGITAL);
+             PAGES[i].id[0] <= P_FM4_LEVEL) || (FELUCCA_FM4 && trk_eng(TSEL) == ENGI_DIGITAL);
 }
 
 static uint32_t page_first(uint32_t fam)
@@ -707,7 +717,7 @@ static int lock_page_ok(uint32_t i)
 static uint32_t lock_id(uint32_t k)
 {
     uint32_t id = ui.plk_src && lock_page_ok(ui.plk_src - 1u) ? PAGES[ui.plk_src - 1u].id[k & 3u]
-                                                               : ENGINES[TSEL->eng_req % NENGINES]->knob[k & 3u];
+                                                               : trk_engp(TSEL)->knob[k & 3u];
     return id < P_COUNT && motion_param(id) ? id : 0xFFu;
 }
 
@@ -1223,19 +1233,19 @@ static void set_engine_of(track_t *t, uint32_t ei);
 /* preset pi of the engine the track asked for: the sound only (not the steps, not param_kept) */
 static void apply_preset_to(track_t *t, uint32_t pi)
 {
-    const engine_t *e = ENGINES[t->eng_req % NENGINES];
+    const engine_t *e = trk_engp(t);
     uint32_t i;
 #if !FELUCCA_FM4
-    if (t->eng_req % NENGINES == ENGI_DIGITAL) {
+    if (trk_eng(t) == ENGI_DIGITAL) {
         fm4_load_preset(t, pi);
         return;
     }
 #endif
-    if (t->eng_req % NENGINES == ENGI_SAMPLE && pi == SMP_SET_PERC) {   /* SAMPLE preset 4 was PERC (retired, a stored */
+    if (trk_eng(t) == ENGI_SAMPLE && pi == SMP_SET_PERC) {   /* SAMPLE preset 4 was PERC (retired, a stored */
         set_engine_of(t, ENGI_DRUM);                  /* number: the editor's PRESET, a favourite): DRUM's kit */
         return;                                       /* (core.h drum_from_perc) */
     }
-    if (eng_gone(t->eng_req % NENGINES)) {            /* PHYS SAMPLE GRAIN SLICE (retired, core.h): ANALOG's first */
+    if (eng_gone(trk_eng(t))) {            /* PHYS SAMPLE GRAIN SLICE (retired, core.h): ANALOG's first */
         set_engine_of(t, ENGI_PHYS_TO);
         return;
     }
@@ -1305,14 +1315,14 @@ static uint32_t drum_elsewhere(const track_t *t)
 {
     uint32_t k;
     for (k = 0; k < trk_live; k++)
-        if (&trk[k] != t && trk[k].eng_req % NENGINES == ENGI_DRUM)
+        if (&trk[k] != t && trk_eng(&trk[k]) == ENGI_DRUM)
             return k + 1u;
     return 0;
 }
 static void apply_preset(uint32_t pi)                 /* the selected track's sound (browsing, the editor, PROGRAM CHANGE) */
 {
     apply_preset_to(TSEL, pi);
-    if (TSEL->eng_req % NENGINES == ENGI_DRUM) {      /* (0.7.2) DRUM: the preset is a factory kit, into the section's kit
+    if (trk_eng(TSEL) == ENGI_DRUM) {      /* (0.7.2) DRUM: the preset is a factory kit, into the section's kit
                                                        * (drumx_voice.c DX_KITS; a project load or an engine switch keeps the
                                                        * section's kit: apply_preset_to alone) */
         uint32_t o = drum_elsewhere(TSEL);
@@ -1337,7 +1347,7 @@ static void init_sound_of(track_t *t, uint32_t ei)
     uint32_t i;
     load_begin(t, LOAD_SOUND);
     set_engine_of(t, ei);
-    e = ENGINES[t->eng_req % NENGINES];
+    e = trk_engp(t);
     for (i = 0; i < 8u; i++)
         t->p[P_E0 + i] = e->edit[i].def;
     for (i = 0; i < 6u; i++)
@@ -1441,7 +1451,7 @@ static void preset_mark(int on)
  * preset's PAT(n); a user preset that holds a pattern: that one ("U07") */
 static int32_t preset_pat_hint(void)
 {
-    const engine_t *e = ENGINES[TSEL->eng_req % NENGINES];
+    const engine_t *e = trk_engp(TSEL);
     uint32_t u = user_of(TSEL);
     if (u < UP_SLOTS)
         return up_has_pat(u) ? (int32_t)(NPATTERNS + up_pat_rank(u)) : -1;
@@ -1510,8 +1520,8 @@ static void midi_pc_poll(void)
  * made with it (slot order). List index of the current sound; *total the length */
 static uint32_t eng_list_pos(uint32_t *total)
 {
-    const engine_t *en = ENGINES[TSEL->eng_req % NENGINES];
-    uint32_t e = TSEL->eng_req % NENGINES, np = preset_shown(e), u = user_of(TSEL), k, n = 0;
+    const engine_t *en = trk_engp(TSEL);
+    uint32_t e = trk_eng(TSEL), np = preset_shown(e), u = user_of(TSEL), k, n = 0;
     uint32_t cur = np ? preset_rank(en, preset_orig(en, TSEL->preset % en->npresets)) : 0u;   /* (#124: the aliases
                                         * skipped, as on PRESETS: SAMPLE 1 loads as 0, so counting it stuck KNOB 2) */
     for (k = 0; k < UP_SLOTS; k++)
@@ -1526,7 +1536,7 @@ static uint32_t eng_list_pos(uint32_t *total)
 
 static void eng_list_step(int32_t direction)         /* the next / previous sound of the engine (wraps) */
 {
-    uint32_t total, cur = eng_list_pos(&total), e = TSEL->eng_req % NENGINES, np = preset_shown(e), k, n;
+    uint32_t total, cur = eng_list_pos(&total), e = trk_eng(TSEL), np = preset_shown(e), k, n;
     if (total < 2u)
         return;
     n = (cur + (direction > 0 ? 1u : total - 1u)) % total;
@@ -1571,7 +1581,7 @@ static uint8_t mac_latch;
 /* HOME: what KNOB k edits: the engine's four main parameters */
 static const param_desc_t *home_param(uint32_t k, int16_t **vp)
 {
-    uint32_t id = ENGINES[TSEL->eng_req % NENGINES]->knob[k & 3u];
+    uint32_t id = trk_engp(TSEL)->knob[k & 3u];
     *vp = &TSEL->p[id];
     return track_desc(TSEL, id);
 }

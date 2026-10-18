@@ -1642,19 +1642,19 @@ static int32_t vx_fit(int32_t w, int32_t h, int32_t uw, int32_t uh)   /* a unit'
 }
 static int vx_draw(const track_t *t, int32_t x, int32_t y, int32_t w, int32_t h, int32_t en_home)
 {
-    const engine_t *e = ENGINES[t->eng_req % NENGINES];
+    const engine_t *e = trk_engp(t);
     int32_t A[4] = {x, y, w, h}, cx = x * 16 + w * 8, cy = y * 16 + h * 8, s;
     if (e == &ENG_FORMANT) {                             /* (the head ~97 x 117 units) */
         s = vx_fit(w, h, 97, 117);
         vx_voice(t, cx + 32 * s / 244, cy - 144 * s / 244, s, en_home);
-    } else if (t->eng_req % NENGINES == ENGI_DRUM) {    /* (the kit ~128 x 92) */
+    } else if (trk_eng(t) == ENGI_DRUM) {    /* (the kit ~128 x 92) */
         s = vx_fit(w, h, 128, 92);
         vx_kit(t, cx - (s >> 4), cy + (48 * s >> 8), s, en_home, -1);
     } else if (e == &ENG_ANIMAL)                        /* (the animal ~103 x 78) */
         vx_animal(t, cx, cy, vx_fit(w, h, 103, 78), en_home);
     else if (e == &ENG_ANALOG)
         vx_analog(t, A, en_home);
-    else if (t->eng_req % NENGINES == ENGI_FM6)
+    else if (trk_eng(t) == ENGI_FM6)
         vx_fm6(t, A, en_home, 6u, 0);
     else if (e == &ENG_WHEEL)
         vx_wheel(t, A, en_home);

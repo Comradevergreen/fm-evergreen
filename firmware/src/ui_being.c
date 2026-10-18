@@ -180,7 +180,7 @@ static void graph_being(const track_t *t) { graph_being_at(t, 120 * 16, 61 * 16,
 static void graph_being_at(const track_t *t, int32_t cx, int32_t cy, int32_t r)
 {
     static uint32_t tm, f0;                              /* its time runs with the sound: in silence it rests */
-    const genome_t *g = &GENOME[EGEN[t->eng_req % NENGINES]];
+    const genome_t *g = &GENOME[EGEN[trk_eng(t)]];
     const page_t *pg = cur_page();
     int32_t en = bg_energy();
     bfeat_t f;

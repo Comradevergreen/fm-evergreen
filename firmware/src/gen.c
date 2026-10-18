@@ -350,7 +350,12 @@ static uint32_t gvo_mode(void)
 }
 
 /* -------------------------------------------------------------------------------------------------- drums --- */
-static uint32_t glevel(char c) { return c == 'X' ? 255u : c >= '1' && c <= '9' ? (uint32_t)(c - '0') * 26u : 0u; }
+/* lane k's level at step p (gen_drum_maps.h GM_LANE: a nibble a step; the text's '.' 0, '1'..'9' 26 a step, 'X' 255) */
+static uint32_t gm_level(uint32_t k, uint32_t p)
+{
+    uint32_t v = (uint32_t)(GM_LANE[k][(p >> 1) & 7u] >> ((p & 1u) ? 0 : 4)) & 15u;
+    return v == 10u ? 255u : v * 26u;
+}
 static void gdrum_clear_region(track_t *t, uint32_t from, uint32_t to, uint32_t lanes)
 {
     uint32_t i;
@@ -408,7 +413,7 @@ static void gen_drums_idm(track_t *t, uint32_t len)
 static void gen_drums(track_t *t, uint32_t len)
 {
     const ggenre_t *g = gs.g;
-    const char *map[8];
+    uint8_t map[8];                                     /* (0.9.7) lane numbers (gen_drum_maps.h; 0: none) */
     static const int8_t OFF[8] = {40, 20, 20, 0, 0, -20, -20, -20};
     uint32_t a = gs.amt[GP_DRUMS], dens = (uint32_t)clamp(40 + (int32_t)a * 2 + ((int32_t)gs.energy - 50) / 2, 20, 255), i, l, bars = len / 16u ? len / 16u : 1u;
     /* (0.6.93) ENERGY: the density and the velocities with it, the hats sixteenths above 66, the percussion thinned under 34 */
@@ -416,16 +421,16 @@ static void gen_drums(track_t *t, uint32_t len)
     const uint8_t *cell = HAT_CELL[g->hats];
     gseed(GS_DRUMS);
     gs.kick = gs.snare = 0;
-    for (l = 0; l < 8u; l++) map[l] = DRUM_MAP[g->drum][l];
+    for (l = 0; l < 8u; l++) map[l] = DRUM_MAP_I[g->drum][l];
     if (g->drum != DM_IDM && g->drum != DM_NONE && g->drum != DM_SPARSE) {   /* (0.6.97) a throw's own top end: the hats,
                                                          * the open hats and the percussion from the pools now and then;
                                                          * the snare and the clap swapped now and then */
-        if (gch(50)) map[3] = HAT_POOL[gr() % 8u];
-        if (gch(40)) map[4] = OH_POOL[gr() % 6u];
-        if (gch(35)) map[6] = RS_POOL[gr() % 6u];
-        if (gch(18)) map[7] = CB_POOL[gr() % 4u];
-        if (gch(30)) map[5] = TM_POOL[gr() % 4u];
-        if (map[1][0] && map[2][0] && gch(30)) { const char *x = map[1]; map[1] = map[2]; map[2] = x; }
+        if (gch(50)) map[3] = HAT_POOL_I[gr() % 8u];
+        if (gch(40)) map[4] = OH_POOL_I[gr() % 6u];
+        if (gch(35)) map[6] = RS_POOL_I[gr() % 6u];
+        if (gch(18)) map[7] = CB_POOL_I[gr() % 4u];
+        if (gch(30)) map[5] = TM_POOL_I[gr() % 4u];
+        if (map[1] && map[2] && gch(30)) { uint8_t x = map[1]; map[1] = map[2]; map[2] = x; }
     }
     if (g->drum == DM_IDM) {
         gen_drums_idm(t, len);
@@ -437,7 +442,7 @@ static void gen_drums(track_t *t, uint32_t len)
         step_t *s = &t->step[i];
         uint32_t b = i / 16u, p = i % 16u, h = 0, acc = 0, hat_only = 1, lv_sum = 0, lv_n = 0, ghost_lv = 0;
         for (l = 0; l < 8u; l++) {
-            uint32_t lv = map[l][0] ? glevel(map[l][p]) : 0u, lim;
+            uint32_t lv = map[l] ? gm_level(map[l], p) : 0u, lim;
             int32_t d;
             if (!lv) continue;
             if (lv < 230u && b) {                       /* (Grids: a perturbation a bar, the first bar pure) */
@@ -466,7 +471,7 @@ static void gen_drums(track_t *t, uint32_t len)
             s->vel = (uint8_t)clamp(vel, 30, 127);
         }
     }
-    if (gs.energy > 66u && map[3][0]) {                 /* the hats driven: the empty sixteenth after a closed hat, softly */
+    if (gs.energy > 66u && map[3]) {                 /* the hats driven: the empty sixteenth after a closed hat, softly */
         uint8_t ch[NSTEP];
         for (i = 0; i < len; i++) ch[i] = (uint8_t)(t->step[i].time == ST_NOTE && (t->step[i].hit & 8u));
         for (i = 1; i < len; i++) {
@@ -512,7 +517,7 @@ static void gen_drums(track_t *t, uint32_t len)
         uint32_t fl = gs.drum_fill ? gs.drum_fill : g->fills, last = bars - 1u, base = last * 16u, k;
         int32_t e = (int32_t)gs.energy;
         if (bars >= 2u && fl != FL_NONE && (bars >= 4u || gs.drum_fill || gch(50))) {
-            uint32_t lane = map[1][0] ? 1u : map[2][0] ? 2u : 6u;
+            uint32_t lane = map[1] ? 1u : map[2] ? 2u : 6u;
             switch (fl) {
             case FL_ROLL:
                 gdrum_clear_region(t, base + 12u, base + 16u, 0x10u);
@@ -645,6 +650,9 @@ static int32_t gbass_near(int32_t lo, const gch_t *c, int32_t ref)   /* (a walk'
     if (ref - (n - 12) < n - ref && n - 12 >= lo - 3) n -= 12;
     return n;
 }
+/* (0.9.7) an archetype's note and flag at step i (gen_bass.h: the text's characters) */
+static char ba_note(const barch_t *a, uint32_t i) { return ".=R23456789ALNSx"[BA_STEP[a->at + i] & 15u]; }
+static char ba_flag(const barch_t *a, uint32_t i) { return ".asg"[(BA_STEP[a->at + i] >> 4) & 3u]; }
 static void gen_bass(track_t *t, uint32_t len)
 {
     const ggenre_t *g = gs.g;
@@ -655,7 +663,7 @@ static void gen_bass(track_t *t, uint32_t len)
     if (gs.ba == BA_ACID) { gen_acid(t, len, lo); return; }
     for (i = 0; i < len; i++) {
         step_t *s = &t->step[i];
-        char c = a->n[i % alen], f = a->f ? a->f[i % alen] : '.';
+        char c = ba_note(a, i % alen), f = ba_flag(a, i % alen);
         const gch_t *cc = gchord(i), *nc = gchord_next(i);
         int32_t root, n[1], vel = 96, same = nc == cc || (nc->deg == cc->deg && nc->alt == cc->alt);
         uint32_t fl = 0, chg = gchord_starts(i);
@@ -672,8 +680,8 @@ static void gen_bass(track_t *t, uint32_t len)
         switch (c) {
         case '7':                                       /* (a seventh alone over a major one with a major seventh: its
                                                          * sixth, the reggae's and the funk's note; in a run 6 7 8 it passes) */
-            n[0] = gbass_tone(cc, root, giv(cc, 6) == 11 && giv(cc, 2) == 4 && a->n[(i + alen - 1u) % alen] != '6' &&
-                                        a->n[(i + 1u) % alen] != '8' ? '6' : '7');
+            n[0] = gbass_tone(cc, root, giv(cc, 6) == 11 && giv(cc, 2) == 4 && ba_note(a, (i + alen - 1u) % alen) != '6' &&
+                                        ba_note(a, (i + 1u) % alen) != '8' ? '6' : '7');
             break;
         case '2': case '3': case '5': case '6': case '9': n[0] = gbass_tone(cc, root, c); break;
         case 'L': n[0] = gbass_tone(cc, root, '5') - 12; break;
@@ -1304,7 +1312,7 @@ static void gen_sound(track_t *t, uint32_t role, uint32_t ri)
     if (e == ENGI_FM6 && gs.fm6 >= 2u) e = r->eng[0] == ENGI_FM6 ? EG_A : r->eng[0];
     gs.fm6 += e == ENGI_FM6;
     set_engine_of(t, e);
-    en = ENGINES[t->eng_req % NENGINES];
+    en = trk_engp(t);
     n = en->npresets;
     if (!n) return;
     for (i = 0; i < n; i++) {

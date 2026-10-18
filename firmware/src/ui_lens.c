@@ -25,7 +25,7 @@ static uint32_t pd_of_fam(uint32_t f)
 }
 static uint32_t edit_kind(void)                          /* 0 a synth, 1 FM6, 2 DRUM, 3 DIGITAL (FELUCCA_FM4) */
 {
-    uint32_t e = TSEL->eng_req % NENGINES;
+    uint32_t e = trk_eng(TSEL);
     return e == ENGI_FM6 ? 1u : e == ENGI_DRUM ? 2u : FELUCCA_FM4 && e == ENGI_DIGITAL ? 3u : 0u;
 }
 static int pd_on(void) { return !ui.home && !page_over && pd_of_fam(PAGES[ui.page].fam) < PD_N; }
@@ -318,7 +318,7 @@ static __attribute__((noinline)) const char *nav_page_name(void)
     }
     str_cpy(b, v->nm ? v->nm : v->t, 24);
     if (sec == SEC_EDIT && v->g == 0u && !v->nm && PAGES[ui.page].scope == SC_ENGINE) {   /* (EDIT 1 . OSC) */
-        const char *pt = ENGINES[TSEL->eng_req % NENGINES]->page_title[PAGES[ui.page].id[0] != P_E0];
+        const char *pt = trk_engp(TSEL)->page_title[PAGES[ui.page].id[0] != P_E0];
         if (pt && pt[0] && pt[0] != '-') {
             str_cpy(b + str_len(b), " \xB7 ", 4);
             str_cpy(b + str_len(b), pt, 24 - str_len(b));

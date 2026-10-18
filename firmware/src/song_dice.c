@@ -252,6 +252,9 @@ static int euclid(uint32_t i, uint32_t k, uint32_t n, uint32_t rot)
 /* ---- DRUMS (lanes: 0 BD, 1 SD, 2 CP, 3 CH, 4 OH, 5 TM, 6 RS, 7 CB): a family's bar as strings ('x' a hit, 'a'
  * accented, 'g' a ghost: three times in four), a fill over the loop's last beat (0.6.35: as 0.6.33 wrote them, the
  * energy leaves the drums alone: they sounded better) */
+/* (0.9.7, flash) the text tools/gen_drum_maps.py reads (not compiled): build/gen/dice_bars.h holds each lane once, 2 bits
+ * a step (DB_LANE), the table as lane numbers (DRUM_BAR_I: db_char) */
+#ifdef GEN_DRUM_MAPS_TEXT
 static const char *const DRUM_BAR[][8] = {
     [DS_MOTORIK] = {"x...x...x...x...", "....x.......x...", "", "x.x.x.x.x.x.x.x.", "", "", "..x.....x.x.....", ""},
     [DS_ELECTRO] = {"a......x..x.....", "....a.......a...", "....x.......x..x", "xgxgxgxgxgxgxgxg", "", "..............x.", "", "......x........."},
@@ -273,6 +276,13 @@ static const char *const DRUM_BAR[][8] = {
     [DS_EBM]      = {"a...a...a...a...", "....a.......a...", "....x.......x...", "..x...x...x...x.", "", "", "", ""},   /* (0.6.81) */
     [DS_DARK]     = {"a...a...a...a...", "....a.......a...", "....x.......x...", "..a...a...a...a.", "", "", "", ""},
 };
+static const char *const DRUM_BAR_KICK[1] = {"a.......a.x....."};   /* (0.6.81: the post punk kick's other bar) */
+#endif
+#include "dice_bars.h"
+static char db_char(uint32_t k, uint32_t p)          /* lane k's step p: '.' 'x' 'a' 'g' */
+{
+    return ".xag"[(DB_LANE[k][(p >> 2) & 3u] >> (6u - 2u * (p & 3u))) & 3u];
+}
 static void dice_drums(track_t *t, const dstyle_t *st, uint32_t len)
 {
     uint32_t i, l;
@@ -295,7 +305,7 @@ static void dice_drums(track_t *t, const dstyle_t *st, uint32_t len)
     }
     /* (0.6.81) the post punk kick now and then on 1 and 3 and an eighth before 3 (Boy Harsher's Pain); darkwave's
      * snare now and then a sixteenth before the bar (step 15); the hat's open one on the last offbeat */
-    const char *kick = st->drums == DS_POSTPUNK && chance(30) ? "a.......a.x....." : 0;
+    uint32_t kick = st->drums == DS_POSTPUNK && chance(30) ? DRUM_BAR_KICK_I : 0u;   /* (dice_bars.h) */
     uint32_t snr15 = st->drums == DS_DARK && chance(50), oh = (st->drums == DS_POSTPUNK || st->drums == DS_DARK) && chance(40);
     for (i = 0; i < len; i++) {
         step_t *s = &t->step[i];
@@ -303,8 +313,8 @@ static void dice_drums(track_t *t, const dstyle_t *st, uint32_t len)
         uint32_t fill = len > 16u && i >= len - 4u && st->drums != DS_DEEP && st->drums != DS_SPARSE &&
                         st->drums != DS_KLING && st->drums != DS_RBOX && st->drums != DS_DARK;   /* (machines: no fills) */
         for (l = 0; l < NLANE; l++) {
-            const char *b = l == 0u && kick ? kick : DRUM_BAR[st->drums][l];
-            char c = b && b[0] ? b[p] : '.';
+            uint32_t b = l == 0u && kick ? kick : DRUM_BAR_I[st->drums][l];
+            char c = b ? db_char(b, p) : '.';
             if (c == 'x' || c == 'a' || (c == 'g' && rng() % 4u)) h |= 1u << l;
             if (c == 'a') a |= 1u << l;
             if (c == 'g') ghost = 1;
@@ -719,7 +729,7 @@ static void dice_sound(track_t *t, uint32_t role, const uint8_t *el)
         e = EG_A;
     dice_fm6 += e == ENGI_FM6;
     set_engine_of(t, e);
-    en = ENGINES[t->eng_req % NENGINES];
+    en = trk_engp(t);
     n = en->npresets;
     if (!n) return;
     for (i = 0; i < n; i++) {                           /* the presets whose names fit the role; the not bright ones,

@@ -172,11 +172,11 @@ static void lz_track_being(void)
 {
     static uint32_t tm, f0;
     const track_t *t = TSEL;
-    const genome_t *g = &GENOME[EGEN[t->eng_req % NENGINES]];
+    const genome_t *g = &GENOME[EGEN[trk_eng(t)]];
     int32_t en = bg_energy();
     bfeat_t f;
     char b[20];
-    bg_feat(t, g, ENGINES[t->eng_req % NENGINES]->knob, &f);
+    bg_feat(t, g, trk_engp(t)->knob, &f);
     bg_excite(&f, en, 2);
     if (en > 2) tm += (ui.frame - f0) * (uint32_t)(160 + en * 3);
     f0 = ui.frame;

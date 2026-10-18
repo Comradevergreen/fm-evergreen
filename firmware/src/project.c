@@ -1877,7 +1877,7 @@ static void mut_value(track_t *t, uint32_t id, const int16_t *base, uint32_t amt
 static void mut_sound(track_t *t, const proj_trk_t *a)
 {
     const uint8_t *COMMON = MUT_COMMON;
-    uint32_t i, amt = (uint32_t)clamp(t->p[P_MAMT], 0, 127), e = t->eng_req % NENGINES;
+    uint32_t i, amt = (uint32_t)clamp(t->p[P_MAMT], 0, 127), e = trk_eng(t);
     const int16_t *base = a ? a->p : t->p;
     for (i = 0; i < 8u; i++)
         if (!(e == ENGI_FM6 && i == 7u))                /* (FM6's SLOT: its patch stays) */
@@ -1954,7 +1954,7 @@ static int mut_differs(uint32_t k)                     /* track k against the an
     const track_t *t = &trk[k % NTRK];
     const proj_trk_t *a = &proj_scratch.t[k % NTRK];
     uint32_t i, id, d = memcmp(t->step, a->step, sizeof t->step) != 0;
-    for (i = 0; i < 15u && a->engine == t->eng_req % NENGINES; i++)
+    for (i = 0; i < 15u && a->engine == trk_eng(t); i++)
         if ((id = mut_sid(i, a->engine)) < P_COUNT)
             d |= t->p[id] != a->p[id];
     return (int)d;
@@ -1970,7 +1970,7 @@ static int mut_revert(uint32_t mask)                   /* the tracks of mask bac
         const proj_trk_t *a = &proj_scratch.t[k];
         if (!((mask >> k) & 1u))
             continue;
-        for (i = 0; i < 15u && a->engine == t->eng_req % NENGINES; i++)
+        for (i = 0; i < 15u && a->engine == trk_eng(t); i++)
             if ((id = mut_sid(i, a->engine)) < P_COUNT)
                 t->p[id] = (int16_t)param_fit(param_desc_of(a->engine, id), a->p[id]);
         memcpy(t->step, a->step, sizeof t->step);
@@ -2054,7 +2054,7 @@ static void mutate_poll(void)
     anc = mut.ok && proj_import(&proj_scratch, &mut_anchor, sizeof mut_anchor);
     for (k = 0; k < NTRK && anc; k++)                   /* (0.6.96) another engine on an enabled track since the anchor
                                                          * (a sound loaded, a piece thrown): the anchor is the music now */
-        if (((en >> k) & 1u) && proj_scratch.t[k].engine != trk[k].eng_req % NENGINES) {
+        if (((en >> k) & 1u) && proj_scratch.t[k].engine != trk_eng(&trk[k])) {
             mut_keep();
             anc = mut.ok && proj_import(&proj_scratch, &mut_anchor, sizeof mut_anchor);
             break;
@@ -2062,7 +2062,7 @@ static void mutate_poll(void)
     for (k = 0; k < NTRK; k++) {
         track_t *t = &trk[k];
         uint32_t s = mut_every(t, P_MSND), q = mut_every(t, P_MPAT), hit = 0;
-        const proj_trk_t *a = anc && !t->p[P_MMODE] && proj_scratch.t[k].engine == t->eng_req % NENGINES ?
+        const proj_trk_t *a = anc && !t->p[P_MMODE] && proj_scratch.t[k].engine == trk_eng(t) ?
                               &proj_scratch.t[k] : 0;  /* (ORBIT, the same engine: around it; else from now) */
         if (!((en >> k) & 1u))
             continue;
