@@ -2088,6 +2088,10 @@ on (or MENU > SYSTEM > CALIBRATION) and teach each button and knob. A piano key 
 
 **USB audio input doesn't appear on macOS.** MENU > SYSTEM > USB **STEREO** (or STEMS).
 
+**A new USB mode doesn't show up on the phone or computer.** Since 0.9.10 the FM-1 leaves the bus for half a second
+when MENU > SYSTEM > USB changes (it came back after ~25 ms, and some phones and hubs did not notice it had gone, so
+they kept the old mode); it appears about a second after the menu closes. Older firmware: switch again, or unplug.
+
 **SAVED (NO FLASH).** The flash chip wasn't detected; saves stay in RAM only. Power-cycle the device. If it persists,
 back up what you can with the editor and reinstall.
 

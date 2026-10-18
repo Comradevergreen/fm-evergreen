@@ -223,6 +223,7 @@ static struct {
     uint8_t rx_pend;             /* EP1 OUT packet seen, not yet taken (the MIDI ring was too full) */
     volatile uint8_t uboot_req;
     volatile uint8_t ota_req;    /* F0 22 24 35 7F F7: M-UPGRADE upgrade command (FELUCCA_OTA) */
+    uint8_t replug;              /* (0.9.10) a mode switch dropped off the bus: usb_retry waits USB_REPLUG_MS */
 } usb;
 
 #if FELUCCA_OTA
@@ -1830,13 +1831,28 @@ static void usb_start(void)                             /* boot, or main-loop re
 
 /* Powered on without a cable, the SIE does not answer and usb_start leaves
  * USB off: retry once a second from the main loop so a cable plugged in
- * later still enumerates. */
-static void usb_retry(uint32_t now_ms)
+ * later still enumerates.
+ * (0.9.10) After a mode switch (usb_replug) the device stays off the bus USB_REPLUG_MS first: it came back on the
+ * next pass (~25 ms, usb_start's reset), too short for some hosts (a phone, a hub polled every 256 ms) to see it
+ * leave, and they kept the old function: MENU > SYSTEM > USB > STEMS took several tries to appear. */
+#define USB_REPLUG_MS 500u
+static int usb_retry_due(uint32_t now_ms)              /* (apart: the host tests run it) */
 {
     static uint32_t t;
+    if (usb.replug) {
+        usb.replug = 0;
+        t = now_ms - 1000u + USB_REPLUG_MS;             /* (the next retry USB_REPLUG_MS from now) */
+        return 0;
+    }
     if (usb.up || usb.detached || now_ms - t < 1000u)
-        return;
+        return 0;
     t = now_ms;
+    return 1;
+}
+static void usb_retry(uint32_t now_ms)
+{
+    if (!usb_retry_due(now_ms))
+        return;
     usb.retries++;
     usb_start();
 }
@@ -1848,21 +1864,29 @@ static void usb_detach(void)
     fm1_usb_off();
 }
 
-#if FELUCCA_CDC
-/* Present the device with or without the serial console (main loop; at boot before usb_start, or later
- * from a setting). A change while attached drops off the bus; usb_retry attaches again within a second
- * with the other descriptors, and the host enumerates the device afresh. */
-static __attribute__((unused)) void usb_cdc_switch(uint32_t on)
+/* a mode switch (main loop): off the bus, attached again by usb_retry with the new descriptors. Two switches in one
+ * apply (the console off, the stems on) drop it once: the second finds it off */
+static __attribute__((unused)) void usb_replug(void)
 {
-    on = on != 0;
-    if (on == usb_cdc_on)
-        return;
     if (usb.up) {
         usb.up = 0;                                     /* usb_poll (TIMER5) stops before the SIE goes */
         RING_PUBLISH();
         fm1_usb_off();
     }
     usb.config = 0;
+    usb.replug = 1;
+}
+
+#if FELUCCA_CDC
+/* Present the device with or without the serial console (main loop; at boot before usb_start, or later
+ * from a setting). A change while attached drops off the bus; usb_retry attaches again 0.5 s later
+ * with the other descriptors, and the host enumerates the device afresh. */
+static __attribute__((unused)) void usb_cdc_switch(uint32_t on)
+{
+    on = on != 0;
+    if (on == usb_cdc_on)
+        return;
+    usb_replug();
     cdc.dtr = 0;                                        /* the console stops writing */
     cdc.rx_pend = 0;
     usb_cdc_on = (uint8_t)on;
@@ -1876,12 +1900,7 @@ static __attribute__((unused)) void usb_stems_switch(uint32_t on)
     on = on != 0;                                       /* ((0.8.0) STEMS+IN: this and usb_duplex_switch both on) */
     if (on == usb_stems)
         return;
-    if (usb.up) {
-        usb.up = 0;
-        RING_PUBLISH();
-        fm1_usb_off();
-    }
-    usb.config = 0;
+    usb_replug();
     uac.go = 0;                                         /* the ring restarts in the new frame size */
     usb_stems = (uint8_t)on;
 }
@@ -1891,12 +1910,7 @@ static __attribute__((unused)) void usb_duplex_switch(uint32_t on)
     on = on != 0;
     if (on == usb_duplex)
         return;
-    if (usb.up) {
-        usb.up = 0;
-        RING_PUBLISH();
-        fm1_usb_off();
-    }
-    usb.config = 0;
+    usb_replug();
     uac.go = 0;
     uin.alt = 0;
     uin.gen++;

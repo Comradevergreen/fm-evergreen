@@ -2219,6 +2219,11 @@ encendés (o MENU > SYSTEM > CALIBRATION) y enseñale cada botón y perilla. Una
 
 **La entrada de audio USB no aparece en macOS.** MENU > SYSTEM > USB **STEREO** (o STEMS).
 
+**El nuevo modo USB no aparece en el teléfono o la computadora.** Desde la 0.9.10 el FM-1 sale del bus medio segundo
+cuando cambia MENU > SYSTEM > USB (volvía a los ~25 ms y algunos teléfonos y hubs no notaban que se había ido, así que
+seguían con el modo anterior); aparece más o menos un segundo después de cerrar el menú. Con firmware anterior: cambiá
+de nuevo o desenchufá.
+
 **SAVED (NO FLASH).** No se detectó el chip de flash; lo guardado queda solo en RAM. Apagá y prendé el equipo. Si
 persiste, hacé un backup de lo que puedas con el editor y reinstalá.
 

@@ -656,6 +656,10 @@ Every update is listed here, newest first. (Since 0.6.80 at the end of the page:
   (checked on every 10 kHz tick; idle, the check is a few instructions, and nothing changes in the audio render). The
   stereo modes were not affected. A take recorded before cannot be repaired: record it again. (tests/stems_usb_test.c
   now models the bus time and the drift, and shows 0.9.9's timing losing up to half the frames in STEMS+IN.)
+- **MENU › SYSTEM › USB takes on the first try.** A mode change (CONSOLE, STEREO, STEMS, IN+OUT, STEMS+IN) dropped the
+  FM-1 off the bus for only ~25 ms, too short for some phones and hubs to see it go: they kept the old mode, and
+  STEMS took several switches to appear. It now stays off 0.5 s before attaching with the new descriptors (each mode
+  already has its own bcdDevice); the console off and the stems on in one change still drop it once.
 
 ### v0.9.9
 - **DRUM-X, VOICE and ANIMAL first: the tracks at power-on.** The FM-1 (and MENU › SYSTEM › INIT SYSTEM, SAVE › TOOLS
