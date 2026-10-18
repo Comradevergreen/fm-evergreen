@@ -143,7 +143,13 @@ static int32_t menu_document(int32_t y, int draw)
         str_cpy(b, "LATE ", sizeof b); fmt_int(n, (int32_t)load_diag.late); str_cpy(b + str_len(b), n, 12);
         str_cpy(b + str_len(b), "  SHED ", 8); fmt_int(n, (int32_t)load_diag.shed); str_cpy(b + str_len(b), n, 12);
         y = menu_text(b, y, T_TEXT, draw);
-        y = menu_text(mc_status(), y, T_TEXT, draw) - 216 + 8;   /* (0.6.71) the second core (fx.c) */
+        y = menu_text(cpu_status(), y, T_TEXT, draw);   /* (0.6.71) the second core (fx.c; 0.9.12: cpu_safe.c) */
+        y = menu_text(cpu_is_320() ? "CPU 320 MHZ" : "CPU 360 MHZ", y, T_TEXT, draw);   /* (0.9.12) the clock now */
+    }
+    {   /* (0.9.12) the last crash kept (cpu_safe.c crash_log; MANUAL: Troubleshooting) */
+        char b[CRASH_LOG_N + 1u];
+        y = menu_text("LAST CRASH", y + 4, T_THEME, draw);
+        y = menu_text(crash_log_get(b) ? b : "NONE", y, T_TEXT, draw) - 216 + 8;
     }
     y = menu_text("CREDITS", y + 216, T_THEME, draw) + 8;
     for (i = 0; i < NELEM(MENU_CREDITS); i++) {
@@ -189,7 +195,8 @@ static const char *menu_short(uint32_t row)          /* a card's label: the row'
 {
     static const struct { uint8_t row; char s[9]; } SH[] = {
         {MI_SCROFF, "SCR OFF"}, {MI_ACCEL, "ACCEL"}, {MI_SCLLED, "SCL LEDS"}, {MI_LOWCUT, "SPK EQ"}, {MI_USB, "USB LVL"},
-        {MI_CLKLVL, "CLICK LV"}, {MI_RESTORE, "RESTORE"}, {MI_PANEL, "CALIBR"}, {MI_INIT, "INIT SYS"}};
+        {MI_CLKLVL, "CLICK LV"}, {MI_RESTORE, "RESTORE"}, {MI_PANEL, "CALIBR"}, {MI_INIT, "INIT SYS"},
+        {MI_CLOCK, "CPU CLK"}};
     uint32_t k;
     for (k = 0; k < NELEM(SH); k++)
         if (SH[k].row == row)
@@ -237,7 +244,8 @@ static void menu_panel(void)
                 lz_uline(x + 5, y + 12, &AF_X, MTAB_NAME[k], T_THEME);
             for (r = 0; r < mtab_rows(k); r++) {
                 uint32_t row = mtab_first(k) + r;
-                int32_t ry = y + 15 + (int32_t)r * (mtab_rows(k) > 7u ? 7 : 8);   /* (0.9.7: DISPLAY's eight 7 apart) */
+                int32_t ry = y + 15 + (int32_t)r * (mtab_rows(k) > 6u ? 7 : 8);   /* (0.9.7: DISPLAY's eight 7 apart;
+                                                                                   * 0.9.12: seven too, a bottom tile) */
                 uint16_t bg = lz_tile_bg();
                 menu_val(row, v);
                 cv_clip_text(x + 5, ry - AF_X_CAP_Y, &AF_X, menu_short(row), T_DIM, bg, 64);

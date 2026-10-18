@@ -22,6 +22,8 @@ drum_mix 126
 slicer_bus 819
 fm1_alnk0_irq 270
 fm1_timer5_irq 33439
+ep4_tx 0
+ep4_fill 148
 click_render 30
 mod_begin 166
 mod_voice 30

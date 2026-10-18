@@ -2044,7 +2044,7 @@ arreglos y escenas, los presets de usuario y la configuración. Ver
   de GLO y en gris en HOME y en el MIXER.
 - **6**: suenan las seis pistas. Vigilá el medidor de carga.
 
-### LOAD (GLO > SYSTEM, KNOB 2 — también MENU > SYSTEM > LOAD)
+### LOAD (GLO > SYSTEM, KNOB 2 — también MENU > AUDIO > LOAD (SYSTEM hasta la 0.9.11))
 
 Cuán pesado puede ponerse el sonido.
 
@@ -2346,9 +2346,39 @@ ARP, y se cancela un salto de sección o una cadena rápida que estaba esperando
 después de un borrado, puede ser el **carril de punch-in**: mantené **REC y apretá FX** para borrarlo (o
 **SEQ + REC** para borrar todo).
 
-**Dos núcleos (0.6.71, prueba).** El segundo núcleo calcula algunas pistas de sinte; MENU > ABOUT dice **CORES 2**,
-o **CORES 1** y por qué (REC al prender, una lectura mala, sin respuesta, una falla: entonces sigue con un núcleo
-hasta que lo apagues). Mantené **REC** al prender para tocar con un núcleo.
+**Dos núcleos (0.6.71) y MENU > SYSTEM > CPU (0.9.12).** El segundo núcleo calcula algunas pistas de sinte; MENU >
+ABOUT dice **CORES 2**, o **CORES 1** y por qué. Desde la 0.9.12, **MENU > SYSTEM > CPU** elige **2 CORES** (por
+defecto) o **1 CORE**; se guarda con los ajustes y vale desde el próximo arranque. Si el FM-1 se cuelga o crashea con
+los dos núcleos trabajando, o el segundo núcleo lee mal, deja de responder o falla, **apaga los 2 núcleos para
+siempre** y lo avisa (**2 CORES OFF AFTER A CRASH** / **CORE 2 FAILED: 1 CORE**, y luego MENU > SYSTEM > CPU); ABOUT
+dice entonces **CORES 1 (AFTER A CRASH)**. Volvé a poner 2 CORES solo si querés probarlo. Mantener **REC** al prender
+da un núcleo solo en esa sesión.
+
+**Se cuelga: pantalla roja "JIANT CRASH" (o "FELUCCA CRASH" antes de la 0.7.0) con números.** Sacale una foto y
+decinos la versión (MENU > ABOUT). Cómo leerla:
+
+- Desde la 0.9.12: la versión, **CORE 0 OF 2** (el núcleo que falló, de cuántos andaban), **CODE xx-nn** (la causa y
+  el vector, abajo), y después **VEC, PC, EMU, DBG, RETS**.
+- Antes de la 0.9.12 salían esos mismos cinco números sin nombre, en ese orden de arriba abajo: VEC (1 = la excepción
+  de la CPU), PC (dónde falló), EMU y DBG (los bits de la causa), RETS (quién llamó a la función que falló).
+- El código: **IL** instrucción ilegal, **MA** acceso desalineado, **DZ** división por cero, **ST** desborde de pila,
+  **PC** un salto fuera del código, **WR** una escritura en una zona protegida, **MM** la unidad de memoria, **BU** un
+  acceso a memoria que no existe (un puntero malo), **WD** un cuelgue (lo reinició el watchdog: sin pantalla roja),
+  **??** ninguna de esas.
+- El FM-1 se reinicia solo a los 4 s. El último crash queda guardado en los ajustes, aunque lo apagues: **MENU >
+  ABOUT > LAST CRASH** lo muestra en una línea (`IL01 2C 0.9.12 0201ABCD 0201ABCD`: código y vector, núcleos,
+  versión, PC, RETS). El backup de ajustes del editor también lo lleva.
+- Para desarrolladores: `tools/crash_decode.py VEC PC EMU DBG RETS` dice la función, con el ELF de la versión que
+  falló.
+
+**Qué probar si se cuelga de vez en cuando (aunque no hagas nada).** En este orden, unas horas cada cosa:
+1. **MENU > SYSTEM > CPU 1 CORE** (la 0.9.12 lo hace sola después del primer crash con dos núcleos; antes de la
+   0.9.12, mantené REC en cada encendido).
+2. **MENU > SYSTEM > CPU CLOCK 320 MHZ**: el chip al reloj que JieLi garantiza en vez de los 360 MHz que pone el
+   arranque del FM-1 (se aplica en el próximo encendido; ABOUT dice **CPU 320 MHZ**). Es ~11 % menos de CPU: una
+   canción pesada puede soltar voces antes (LOAD LITE ayuda). Si el FM-1 no puede (su reloj está configurado de otra
+   forma), ABOUT sigue diciendo **CPU 360 MHZ**.
+3. Si sigue colgándose: la foto, la versión y LAST CRASH, por favor.
 
 **Clicks, cortes, el medidor de carga lleno.** Dejá TRACKS en 4, probá **LOAD LITE** o **ECO**, usá menos voces (MONO,
 menos pistas FM6), reverbs más livianas (CLOUD y SHIMMER son las más pesadas). Revisá MENU > SYSTEM > ABOUT >

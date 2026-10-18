@@ -880,6 +880,12 @@ JIANT appends (index = id; count 23 since 0.9.7): 18 TRACKS (4 / 6, AUDIO), 19 L
 20 MIDI OUT (KEYS / CLOCK / ALL / OFF, CONTROL), 21 SKIN (DISPLAY; 0.9.7: the values in the menu's order, 0 AIR,
 1 COLORS, 2 BOTTOM, 3 HUD, AIR the default of new settings; 0.8.9 had 0 COLORS, 1 BOTTOM, 2 HUD) and (0.9.7) 22 SCOPE
 (0 OFF, 1 ON; OFF the default: an engine's EDIT pages the creature on the whole panel, DISPLAY).
+(0.9.12, count 25; LOAD, id 19, moves to the AUDIO tab beside TRACKS) 23 CPU (0 "1 CORE", 1 "2 CORES"; 2 CORES the default, SYSTEM) and 24 CPU CLOCK (0 "360 MHZ" the
+default, 1 "320 MHZ", SYSTEM): both from the device's next start; the device sets CPU to 1 CORE by itself after a crash
+with both cores at work (`src/cpu_safe.c`). The last crash travels in the settings record (the full backup's settings
+item, `persist_t`): `favorites.factory[13]`, 32 ASCII bytes as MENU > ABOUT > LAST CRASH shows them, e.g.
+`IL01 2C 0.9.12 0201ABCD 02012345` (code and vector, cores, version, PC, RETS; MANUAL › Troubleshooting); any other
+content there is no record.
 
 The device's AUDIO tab shows SPEAKER EQ, USB LEVEL, CLICK, CLICK LEVEL, COUNT-IN (index 9, 10, 12, 13, 14).
 CLICK: the metronome while the transport runs: OFF, REC (while a track is armed), ON (always); CLICK LEVEL its

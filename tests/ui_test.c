@@ -2125,9 +2125,25 @@ static int test_menu_tabs(void)
     }
     for (i = 0; i < MI_COUNT; i++) ok &= MI_TAB[i] < MTAB_COUNT;
     ui_prefs = 0;
-    bad += check("MENU tabs: DISPLAY CONTROL AUDIO SYSTEM (8 6 6 6 rows: 0.8.9 SKIN, 0.9.7 SCOPE), 1..8 each in a run, their rows and values fit the lens's panel",
+    bad += check("MENU tabs: DISPLAY CONTROL AUDIO SYSTEM (8 6 7 7 rows: 0.8.9 SKIN, 0.9.7 SCOPE, 0.9.12 CPU, CPU CLOCK, LOAD in AUDIO), 1..8 each in a run, their rows and values fit the lens's panel",
                  ok && MTAB_COUNT == 4u && str_eq(MTAB_NAME[0], "DISPLAY") && mtab_rows(MTAB_DISPLAY) == 8u &&
-                 mtab_rows(MTAB_CONTROL) == 6u && mtab_rows(MTAB_AUDIO) == 6u && mtab_rows(MTAB_SYSTEM) == 6u);   /* (0.6.58: INIT SYSTEM;
+                 mtab_rows(MTAB_CONTROL) == 6u && mtab_rows(MTAB_AUDIO) == 7u && mtab_rows(MTAB_SYSTEM) == 7u);
+    {   /* (0.9.12) MENU > SYSTEM > CPU, CPU CLOCK (cpu_safe.c): after LOAD, values of their own, set through menu_put (the
+         * editor's MENU_SET too), from the next start */
+        uint8_t was = cpu_cfg;
+        cpu_cfg = 0;
+        ok = MI_TAB[MI_CPU] == MTAB_SYSTEM && MI_TAB[MI_CLOCK] == MTAB_SYSTEM && MI_CPU == MI_RESTORE + 1u && MI_TAB[MI_LOAD] == MTAB_AUDIO &&
+             MI_CLOCK < MI_VALUES && str_eq(MI_NAME[MI_CPU], "CPU") && str_eq(MI_NAME[MI_CLOCK], "CPU CLOCK") &&
+             menu_n(MI_CPU) == 2u && menu_n(MI_CLOCK) == 2u && menu_get(MI_CPU) == 1u && menu_get(MI_CLOCK) == 0u &&
+             str_eq(menu_vname(MI_CPU, 0), "1 CORE") && str_eq(menu_vname(MI_CPU, 1), "2 CORES") &&
+             str_eq(menu_vname(MI_CLOCK, 0), "360 MHZ") && str_eq(menu_vname(MI_CLOCK, 1), "320 MHZ");
+        menu_put(MI_CPU, menu_step(MI_CPU, -1));
+        ok &= cpu_cfg == CPU_1CORE && menu_get(MI_CPU) == 0u && str_eq(ui.msg, CPU_APPLY);
+        menu_put(MI_CLOCK, menu_step(MI_CLOCK, 1));
+        ok &= cpu_cfg == (CPU_1CORE | CPU_320) && menu_get(MI_CLOCK) == 1u;
+        cpu_cfg = was;
+        bad += check("0.9.12 MENU > SYSTEM > CPU (2 CORES / 1 CORE) and CPU CLOCK (360 / 320 MHZ): values, steps", ok);
+    }   /* (0.6.58: INIT SYSTEM;
                                                                          * 0.6.72: MIDI OUT in CONTROL) */
 
     ui_power_on();
@@ -2287,9 +2303,9 @@ static int test_menu_tabs(void)
     hold(B_HOME);
     frame();
     ok = ui.menu == 1 && ui.mlv == 1u && lz_on() && lz_fam() == LZ_MENU && lz_tabs() == 4u && lz_tab_lit(0) &&
-         lz_crumb_is("MENU \xB7 DISPLAY \xB7 COLOR") && lz_count_is("1/26");
+         lz_crumb_is("MENU \xB7 DISPLAY \xB7 COLOR") && lz_count_is("1/28");
     turn(EN_SELECT, 1); frame();
-    ok &= ui.mlv == 1u && lz_tab_lit(0) && lz_crumb_is("MENU \xB7 DISPLAY \xB7 SKIN") && lz_count_is("2/26");
+    ok &= ui.mlv == 1u && lz_tab_lit(0) && lz_crumb_is("MENU \xB7 DISPLAY \xB7 SKIN") && lz_count_is("2/28");
     turn(EN_ALGO, 1); frame();
     ok &= menu_tab() == MTAB_CONTROL && lz_tab_lit(1) && lz_crumb_is("MENU \xB7 CONTROL \xB7 HOLD");
     turn(EN_SELECT, 2); frame();
@@ -2298,7 +2314,7 @@ static int test_menu_tabs(void)
     ok &= (fx_latch & 1u) != 0u;
     turn(EN_K3, -1); frame();
     menu_close();
-    bad += check("0.9.2 MENU: four tabs (the row's lit), MENU . TAB . ROW and n/26 (0.9.7: SCOPE); ALGORITHM the tab, any knob the value", ok && MI_COUNT == 26u);
+    bad += check("0.9.2 MENU: four tabs (the row's lit), MENU . TAB . ROW and n/28 (0.9.7: SCOPE; 0.9.12: CPU, CPU CLOCK); ALGORITHM the tab, any knob the value", ok && MI_COUNT == 28u);
     return bad;
 }
 
@@ -8665,6 +8681,7 @@ static int test_click_menu(void)
     turn(EN_SELECT, 1); ok &= ui.menu_sel == MI_TRACKS;
     turn(EN_K1, -1); frame(); ok &= trk_live == 4u && !(ui_rec_prefs & 0x80u);   /* (0.6.18) TRACKS 4 */
     turn(EN_K1, 1); frame(); ok &= trk_live == NTRK && (ui_rec_prefs & 0x80u);   /* 6 */
+    turn(EN_SELECT, 1); ok &= ui.menu_sel == MI_LOAD;     /* (0.9.12: LOAD, AUDIO's since) */
     turn(EN_SELECT, 1); ok &= ui.menu_sel == MI_SERIAL;   /* (0.9.2: on into SYSTEM; was round within AUDIO) */
     press(B_HOME);
     ok &= !ui.menu;

@@ -50,12 +50,17 @@ static uint8_t fm1_mc_on;                       /* answering: core 0 may hand it
 static uint8_t fm1_mc_lost;                     /* why it stopped: 1 a wrong job, 2 a job not back, 3 a fault */
 static uint32_t fm1_mc_max_ticks;               /* the longest wait for a job (TIMER4 ticks): MENU > ABOUT */
 
-/* carried across soft resets (a crash, the watchdog, an update), gone at power-off */
+/* carried across soft resets (a crash, the watchdog, an update), gone at power-off (main.c fm1_cstart clears it then).
+ * (0.9.12) barred's bits: 0 barred; 1 core 1 started this run (a watchdog reset with it: main.c); 8..15 the crash's
+ * CR_* flags (main.c fm1_fault, cpu_safe.c); 16..17 the 320 MHz switch (main.c: 1 armed, 2 a reset in it). One word:
+ * .noinit's layout as before */
 #define FM1_MC_BAR_MAGIC 0x3152414Au            /* "JAR1" */
+#define FM1_MC_CLK_ARMED (1u << 16)             /* (0.9.12) barred: the 320 MHz switch under way, */
+#define FM1_MC_CLK_TRIP (2u << 16)              /* .. a reset in it (main.c) */
 typedef struct { uint32_t magic, barred; } fm1_mc_bar_t;
 fm1_mc_bar_t fm1_mc_bar __attribute__((section(".noinit")));   /* (not static: no assumed zero start) */
-static inline int fm1_mc_barred(void) { return fm1_mc_bar.magic == FM1_MC_BAR_MAGIC && fm1_mc_bar.barred; }
-static inline void fm1_mc_bar_set(void) { fm1_mc_bar.magic = FM1_MC_BAR_MAGIC; fm1_mc_bar.barred = 1; }
+static inline int fm1_mc_barred(void) { return fm1_mc_bar.magic == FM1_MC_BAR_MAGIC && (fm1_mc_bar.barred & 1u); }
+static inline void fm1_mc_bar_set(void) { fm1_mc_bar.magic = FM1_MC_BAR_MAGIC; fm1_mc_bar.barred |= 1u; }
 
 void fm1_c1_main(void);
 void __attribute__((section(".c1_text"), noinline, noreturn, used)) fm1_c1_main(void)
@@ -127,7 +132,24 @@ static int fm1_mc_start(void)
         return 0;
     }
     fm1_mc_on = 1;
+    fm1_mc_bar.barred |= 2u;                    /* (0.9.12) a watchdog reset from here on: beside core 1 (main.c) */
     return 1;
+}
+
+/* (0.9.12) before the flash goes off (hal/fm1_flash.h irq_save: every erase, write and read, IRQs off): core 1 back in
+ * its RAM loop. The audio ISR's jobs are always back before it returns; the 48 kHz resampler's (usb.c, 0.8.9) runs past
+ * it, from RAM, but a fault in it would take the vectors from the flash while it is off. Waited for (it takes well
+ * under 1 ms), else core 1 is held (NO ANSWER) */
+static __attribute__((noinline)) void fm1_mc_park(void)
+{
+    uint32_t t0 = FM1_C1_T4();
+    while (fm1_mc_on && fm1_mc_box.done != fm1_mc_box.job) {
+        FM1_C1_SYNC();
+        if (FM1_C1_T4() - t0 > 24000u * 2u) {
+            fm1_mc_lost = 2;
+            fm1_mc_hold();
+        }
+    }
 }
 
 static inline int fm1_mc_run(void (*fn)(uint32_t), uint32_t arg)

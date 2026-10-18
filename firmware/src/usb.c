@@ -1593,10 +1593,19 @@ static __attribute__((noinline)) void ep4_tx(void)
         uac.stalls++;
     }
 }
+/* (0.9.12) a packet just queued is on its way: TxPktRdy stays set until the next IN token has taken it, >= ~0.9 ms
+ * after the fill (the token after the one that took the last, then its time on the wire), so the first UAC_SKIP ticks
+ * after a fill are not polled (their wait still counted): ~4 SIE round trips a ms instead of ~20, inside the render
+ * too (TIMER5 nests in it) */
+#define UAC_SKIP 6u
 static inline void uac_service(void)                   /* (inline: the guard alone in the tick, nothing pushed) */
 {
-    if (usb.up && usb.config && uac.alt)
-        ep4_tx();
+    if (usb.up && usb.config && uac.alt) {
+        if (uac.queued && uac.wait < UAC_SKIP)
+            uac.wait++;
+        else
+            ep4_tx();
+    }
 }
 
 /* (0.7.5) MENU > USB IN+OUT, TIMER5: a packet the host played to us (n bytes of L | R << 16 frames) into ui_ring;

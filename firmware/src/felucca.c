@@ -38,7 +38,7 @@
 #define FELUCCA_ID "FM-1_900"    /* package identity (build.py: the .fwsc marker string) */
 #endif
 #ifndef FELUCCA_VERSION
-#define FELUCCA_VERSION "v0.9.11" /* JIANT's (based on Felucca 1.1.5.1): the splash, the menu, the console, the editor */
+#define FELUCCA_VERSION "v0.9.12" /* JIANT's (based on Felucca 1.1.5.1): the splash, the menu, the console, the editor */
 #endif
 #if FELUCCA_OTA && !FELUCCA_FLASH
 #error "FELUCCA_OTA needs FELUCCA_FLASH"
@@ -96,7 +96,11 @@
 
 /* --------------------------------------------- storage, update, editor --- */
 #if FELUCCA_FLASH
+#if FELUCCA_DUAL_CORE
+#define FL_PARK() fm1_mc_park()  /* (0.9.12) core 1 out of any job before the flash goes off (hal/fm1_multicore.h) */
+#endif
 #include "fm1_flash.h"
+#include "fm1_clk320.h"          /* (0.9.12) MENU > SYSTEM > CPU CLOCK 320 MHZ's switch (curist's, MIT; main.c) */
 #include "storage_hw.c"
 #include "storage.c"
 #endif
