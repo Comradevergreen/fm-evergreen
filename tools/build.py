@@ -33,11 +33,13 @@ LDR = OUT / "loader"
 sys.path.insert(0, str(SRC / "tools"))
 import fm1pkg_make  # noqa: E402
 import lz4blk  # noqa: E402
+import size_fns  # noqa: E402
 
 APP_XIP = 0x02000120                # app.bin offset 0 in the XIP map; the SPL jumps here
 APP_SLOT = fm1pkg_make.APP_SLOT
 LOADER_LOAD = 0x01C0A800
-POOL_END = 0x01C70000            # (JIANT 0.6.78) app.ld: POOL's end, RAMTEXT's start (0.6.97, 0.7.0: up 4 KiB each)
+POOL_END = 0x01C6FC00            # (JIANT 0.6.78) app.ld: POOL's end, RAMTEXT's start (0.6.97, 0.7.0: up 4 KiB each;
+                                 # 0.9.12: down 1 KiB, the 320 MHz switch's RAM code)
 RAMTEXT_END = 0x01C76000         # .. RAMTEXT's end (the user stack's guard band)
 LOADER_NAME = b"usb_hid_ota.bin"    # the file name the SPL looks for
 DOCKER_IMAGE = os.environ.get("JIELI_DOCKER_IMAGE", "debian:bookworm-slim")
@@ -199,6 +201,35 @@ def hot_sections(ir):
     return ir, found
 
 
+# (0.9.12) the flash layout of the sound: what an interrupt reaches (tools/size_fns.py isr_reach: the audio ISR, TIMER5,
+# the second core's jobs they hand over, the tables they read) goes first in the image, in name order (app.ld
+# .text.a.* / .rodata.a.*), ahead of the UI. Its code runs from the XIP flash through a small shared cache: from 0.9.9
+# to 0.9.10 the two new drawings (+6 KB of UI code) moved every engine's render 6 KB further (none of the sound
+# changed) and the owner's FM-1 went from fine to 94 % load and crackling on every output; the host counts were the
+# same. Now a change in the UI cannot move the sound's code or tables
+def audio_sections(ir, reach):
+    """reach's definitions and constants in the optimised IR given sections .text.a.<name> / .rodata.a.<name> (those
+    with a section of their own, the RAM code and .noinit, keep it); (the IR, functions, constants)"""
+    nf = nc = 0
+
+    def fn(m):
+        nonlocal nf
+        if m.group(2) not in reach or ' section "' in m.group(1):
+            return m.group(0)
+        nf += 1
+        return f'{m.group(1)} section ".text.a.{m.group(2)}" {{'
+
+    def const(m):
+        nonlocal nc
+        if m.group(2) not in reach or m.group(2).startswith(".") or ' section "' in m.group(0):
+            return m.group(0)                           # (a string literal stays merged with the others)
+        nc += 1
+        return f'{m.group(1)}, section ".rodata.a.{m.group(2)}"{m.group(3)}'
+    ir = re.sub(r'^(define [^\n]*?@"?([\w.]+)"?\([^\n]*?)\s*\{$', fn, ir, flags=re.M)
+    ir = re.sub(r'^(@"?([\w.]+)"? = [^\n]*? constant [^\n]*?)(, align \d+)$', const, ir, flags=re.M)
+    return ir, nf, nc
+
+
 def build_app():
     flags = [*CFLAGS, "-Ifirmware/hal", "-Ifirmware/src", "-Ibuild/gen"]
     for flag in ("FELUCCA_FLASH", "FELUCCA_OTA", "FELUCCA_OTA_DRYRUN", "FELUCCA_OTA_RAMONLY", "FELUCCA_CDC",
@@ -236,6 +267,8 @@ def build_app():
             ir, n = hot_sections((OUT / "felucca_opt.ll").read_text())
             if n != len(HOT_FNS):
                 raise SystemExit(f"hot RAM code: {n} of the {len(HOT_FNS)} functions found in the IR ({HOT_FNS})")
+            ir, nf, nc = audio_sections(ir, size_fns.isr_reach((OUT / "felucca_size.ll").read_text(), True))
+            print(f"layout: {nf} functions and {nc} constant tables an interrupt reaches first in the image")
             (OUT / "felucca_hot.ll").write_text(ir)
             tc("cc", *cf, "-Xclang", "-disable-llvm-optzns", "-c", OUT / "felucca_hot.ll", "-o", OUT / "felucca.o")
         else:

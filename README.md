@@ -433,7 +433,7 @@ each layer; the complete manual is in **[docs/MANUAL.md](docs/MANUAL.md)** (en e
   using right now. The firmware's RAM is reserved entirely at boot and doesn't change, so this is what's worth
   watching: with all five lit (red, yellow) you're close to the limit and should cut voices, the CLOUD reverb or heavy
   effects. If it's often full: GLO > SYSTEM > **TRACKS 4** (the default; also MENU > AUDIO > TRACKS) leaves T5 and T6
-  asleep for headroom, and **LOAD** (next to it; also MENU > SYSTEM > LOAD) lightens the sound: **FULL** everything as
+  asleep for headroom, and **LOAD** (next to it; also MENU > AUDIO > LOAD, SYSTEM until 0.9.11) lightens the sound: **FULL** everything as
   set, **LITE** the heavy reverbs, the GRAIN delay and FM6 lightened (SHIMMER and CLOUD as ROOM, RESO as SPRING, the
   GRAIN delay plain, FM6 two voices), **ECO** that plus every reverb a SPRING, no SLICER, no chorus (their pages
   hidden) and at most 4 voices a synth track. The project keeps its settings: back on FULL it sounds as saved.
@@ -647,6 +647,45 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### v0.9.12 (draft)
+- **Safe by default on FM-1s that crash.** Some FM-1s crash now and then (a red "JIANT CRASH" / "FELUCCA CRASH"
+  screen, even idle) since both cores work (0.6.71). Now:
+  - **MENU > SYSTEM > CPU: 2 CORES / 1 CORE**, kept with the settings (2 CORES by default, as before; editor id 23).
+    A crash or a hang (watchdog) while both cores ran, or the second core giving up (a misread, no answer, a fault),
+    **turns 2 CORES off for good**: the next start says **2 CORES OFF AFTER A CRASH — MENU > SYSTEM > CPU** and ABOUT
+    reads **CORES 1 (AFTER A CRASH)**. Until 0.9.11 that lasted only until the FM-1 was switched off.
+  - **MENU > SYSTEM > CPU CLOCK: 360 / 320 MHZ** (editor id 24): JieLi rates the chip at 320 MHz; the FM-1's boot runs
+    it at 360. Switched at power-on, before the audio and the second core, with curist's switch from
+    [fm1-clk320-probe](https://github.com/curist/fm1-clk320-probe) (MIT, `firmware/hal/fm1_clk320.h`), as
+    [Skiff](https://github.com/illuminus5/skiff) does. ~11 % less CPU: the load governor sheds voices sooner on the
+    heaviest songs. ABOUT shows the clock it runs at.
+    - **MENU > AUDIO > LOAD** (was SYSTEM's): beside TRACKS, as in GLO > SYSTEM; SYSTEM's tile holds seven rows.
+- **The crash screen says more**: the version, the core that faulted and how many ran, a short code (IL illegal
+    instruction, BU bad address, ST stack, ...; MANUAL › Troubleshooting) and the five numbers labelled (VEC PC EMU
+    DBG RETS, the same as every crash screen since Felucca, now named).
+  - **The last crash is kept** in the settings record (also after a power-off): MENU > ABOUT > LAST CRASH, the
+    editor's settings backup, the console's `crash`. A hang (a watchdog reset) is logged too (code WD).
+  - `tools/crash_decode.py`: a photo's numbers to the function that failed, from the build's ELF.
+- **Fixed: the flash written while the second core worked.** Every flash erase, write and read turns the flash off
+  (interrupts off); the second core's jobs from the audio interrupt were always back by then, but the 48 kHz USB
+  resampler's (0.8.9) runs on after it: a fault in it then would have run the exception vectors from a flash that was
+  off. Now the flash driver waits for the second core first (`fm1_mc_park`).
+- **The sound's code no longer moves when the screens grow (candidate fix for 0.9.10's crackle).** On the owner's FM-1
+  0.9.9 played clean and 0.9.10 / 0.9.11 crackle on every output, the load meter up to 94 %, while the host measures
+  the same work. Nothing in the sound changed in 0.9.10 and the RAM code is byte for byte 0.9.9's, but the two new
+  drawings (VOICE's tract, LOFI's chip: +6 KB of screen code) came before the engines in the image, so every engine's
+  render, run from the flash through the chip's small cache, moved 6 KB and collided differently with the effects and
+  the mix (analog_render 0x020573F8 -> 0x020598BE, the effects and the master where they were). Now everything an
+  interrupt reaches (the renders, the effects, the second core's jobs, their tables: 347 functions, 244 tables) comes
+  first in the image, in name order (`tools/build.py audio_sections`, `app.ld`): a change of the screens cannot move
+  it; the image the same size. To be confirmed on the device (SAVE > TOOLS > 6 CPU TEST, MENU > ABOUT AUDIO LOAD).
+- **One core: the load budget a little sooner** (55 % instead of 65 % of a half before new voices wait), so the peaks
+  have room without the second core.
+- **USB audio: fewer register round trips in TIMER5** (0.9.10 polled the endpoint on every 10 kHz tick, also inside
+  the audio render): a packet just queued is not polled for 0.6 ms (it cannot have gone yet), ~4 polls a ms instead of
+  ~10, the stems timing as 0.9.10.
+- RAM code 1 KiB larger (from the pool's spare), image +2.3 KB.
 
 ### v0.9.11
 - **GLO › LIVE: the six sequences in parallel, with live modifiers** (the approved mock-up *secuencias*, its MANO and

@@ -1925,7 +1925,7 @@ arrangements and scenes, the user presets and the settings. See [15](#15-web-too
   **T5-T6 ASLEEP** and **GLO>SYSTEM>TRACKS 6**. Asleep tracks are dim on the GLO map, greyed on HOME and the MIXER.
 - **6**: all six tracks play. Watch the load meter.
 
-### LOAD (GLO > SYSTEM, KNOB 2 — also MENU > SYSTEM > LOAD)
+### LOAD (GLO > SYSTEM, KNOB 2 — also MENU > AUDIO > LOAD (SYSTEM until 0.9.11))
 
 How heavy the sound may get.
 
@@ -2147,9 +2147,36 @@ punch-in lane's repeats (STUTTER, ARP), a DRUM track with no steps gets no ARP f
 waiting for the bar is called off. If something still plays after a clear, it may be the **punch-in lane**: hold
 **REC and press FX** to erase it (or **SEQ + REC** to clear everything).
 
-**Two cores (0.6.71, test).** The second core renders some synth tracks; MENU > ABOUT says **CORES 2**, or
-**CORES 1** and why (REC held at power-on, a bad read, no answer, a fault: then it stays on one core until switched
-off). Hold **REC** while powering on to play on one core.
+**Two cores (0.6.71) and MENU > SYSTEM > CPU (0.9.12).** The second core renders some synth tracks; MENU > ABOUT
+says **CORES 2**, or **CORES 1** and why. Since 0.9.12 **MENU > SYSTEM > CPU** chooses **2 CORES** (the default) or
+**1 CORE**, kept with the settings, from the next start. If the FM-1 crashes or hangs while both cores work, or the
+second core misreads, stops answering or faults, it **turns 2 CORES off for good** and says so (**2 CORES OFF AFTER A
+CRASH** / **CORE 2 FAILED: 1 CORE**, then MENU > SYSTEM > CPU); ABOUT then reads **CORES 1 (AFTER A CRASH)**. Set
+2 CORES again only if you want to test it. Hold **REC** while powering on for one core that session only.
+
+**It crashes: a red screen "JIANT CRASH" (or "FELUCCA CRASH" before 0.7.0) with numbers.** Take a photo of it and
+tell us the version (MENU > ABOUT). How to read it:
+
+- 0.9.12 on: the version, **CORE 0 OF 2** (the core that faulted, of how many were running), **CODE xx-nn** (the cause
+  and the vector, below), then **VEC, PC, EMU, DBG, RETS**.
+- Before 0.9.12 the same five numbers came unlabelled, in that order, top to bottom: VEC (1 = the CPU exception), PC
+  (where it failed), EMU and DBG (the cause bits), RETS (who called the function that failed).
+- The code: **IL** illegal instruction, **MA** misaligned access, **DZ** divide by zero, **ST** stack overflow, **PC**
+  a jump outside the code, **WR** a write into a protected area, **MM** the memory unit, **BU** an access to no memory
+  (a bad pointer), **WD** a hang (the watchdog reset it: no red screen), **??** none of those.
+- The FM-1 restarts by itself after 4 s. The last crash stays in the settings, also after switching off: **MENU >
+  ABOUT > LAST CRASH** shows it as one line (`IL01 2C 0.9.12 0201ABCD 0201ABCD`: code and vector, cores, version, PC,
+  RETS). The editor's settings backup carries it too.
+- For developers: `tools/crash_decode.py VEC PC EMU DBG RETS` names the function, against the ELF of the version that
+  crashed.
+
+**What to try when it crashes now and then (even idle).** In this order, a few hours each:
+1. **MENU > SYSTEM > CPU 1 CORE** (0.9.12 does it by itself after the first crash with both cores; before 0.9.12,
+   hold REC at every power-on).
+2. **MENU > SYSTEM > CPU CLOCK 320 MHZ**: the chip at JieLi's rated clock instead of the 360 MHz the FM-1's boot
+   sets (switched at the next power-on; ABOUT shows **CPU 320 MHZ**). About 11 % less CPU: a heavy song may shed
+   voices sooner (LOAD LITE helps). If the FM-1 refuses (its clock is set up differently), ABOUT keeps **CPU 360 MHZ**.
+3. If it still crashes: the photo, the version and LAST CRASH, please.
 
 **Clicks, stutters, the load meter full.** Keep TRACKS on 4, try **LOAD LITE** or **ECO**, use fewer voices (MONO,
 fewer FM6 tracks), lighter reverbs (CLOUD and SHIMMER are the heaviest). Check MENU > SYSTEM > ABOUT > AUDIO LOAD.

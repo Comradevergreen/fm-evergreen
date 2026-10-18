@@ -18,14 +18,17 @@ MEMORY
     XIP    (rx)  : ORIGIN = 0x02000120, LENGTH = 0x8DFBC
     LOWBUF (rw)  : ORIGIN = 0x01C00000, LENGTH = 0x7000
     RAM    (rwx) : ORIGIN = 0x01C08000, LENGTH = 96K
-    POOL   (rw)  : ORIGIN = 0x01C20000, LENGTH = 0x50000
-    RAMTEXT (rwx): ORIGIN = 0x01C70000, LENGTH = 0x6000   /* (0.6.97, 0.7.0: up 4 KiB each, the image grew: a call from here must
-                                                           * reach its end; the user stack 4 KiB shorter each time, 15.75 KiB) */
+    POOL   (rw)  : ORIGIN = 0x01C20000, LENGTH = 0x4FC00
+    RAMTEXT (rwx): ORIGIN = 0x01C6FC00, LENGTH = 0x6400   /* (0.6.97, 0.7.0: up 4 KiB each, the image grew: a call from here must
+                                                           * reach its end; the user stack 4 KiB shorter each time, 15.75 KiB;
+                                                           * 0.9.12: 1 KiB lower, from the pool: the 320 MHz switch) */
     NOINIT (rw)  : ORIGIN = 0x01C7C000, LENGTH = 0x3D50
 }
 SECTIONS
 {
-    .text : { KEEP(*(.text.crt0)) *(.text*) *(.rodata*) . = ALIGN(4); _etext = .; } > XIP
+    /* (0.9.12) what an interrupt reaches first, in name order (tools/build.py audio_sections): the UI cannot move it */
+    .text : { KEEP(*(.text.crt0)) *(SORT_BY_NAME(.text.a.*)) *(SORT_BY_NAME(.rodata.a.*)) *(.text*) *(.rodata*)
+              . = ALIGN(4); _etext = .; } > XIP
     .ram_text : { _rt_start = .; KEEP(*(.ram_text*)) . = ALIGN(4); _rt_end = .; } > RAMTEXT AT > XIP
     _rt_load = LOADADDR(.ram_text);
     /* (JIANT 0.6.71) the second core's waiting loop (hal/fm1_multicore.h): in RAM, after the flash driver, inside the

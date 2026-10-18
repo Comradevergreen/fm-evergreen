@@ -17,7 +17,7 @@ SRC = _ROOT / "firmware" / "src" if (_ROOT / "firmware" / "src").is_dir() else _
 # the UI, the stores, the editor and the console: main loop only, never called by sound code; and (1.1) every
 # other file without DSP: USB, MIDI, the sequencer, the drawing, the LCD, OTA, ... Of those, what an interrupt
 # reaches (ISR_ROOTS and everything they call or name, from the IR) keeps -Os (isr_reach)
-SIZE_FILES = ["ui.c", "favorites.c", "menu_items.c", "icons.c", "ui_graph.c", "ui_draw.c", "ui_menu.c", "ui_input.c",
+SIZE_FILES = ["ui.c", "favorites.c", "menu_items.c", "cpu_safe.c", "icons.c", "ui_graph.c", "ui_draw.c", "ui_menu.c", "ui_input.c",
               "storage.c", "upreset.c", "project.c", "settings_persist.c",
               "editor.c", "editor_preferences.c", "editor_backup.c", "editor_menu.c", "console.c",
               "usb.c", "midi_uart.c", "midi_control.c", "midi_clock.c", "seq.c", "song_chain.c", "motion.c",
@@ -68,7 +68,7 @@ IR_REF = re.compile(r"@\"?([\w.]+)\"?")
 IR_GLOBAL = re.compile(r"^@\"?([\w.]+)\"? = [^\n]*", re.M)
 
 
-def isr_reach(ir):
+def isr_reach(ir, with_globals=False):
     """the functions an interrupt can run: ISR_ROOTS and, transitively, every function their bodies call or
     name (a pointer taken there counts as called), from the unoptimised IR (before inlining: a superset).
     (0.9.0) A global they name counts as its initialiser: a function in a table they read (an engine's hooks:
@@ -84,7 +84,7 @@ def isr_reach(ir):
             continue
         seen.add(f)
         todo += [g for g in IR_REF.findall(body[f]) if g in body and g not in seen]
-    return {f for f in seen if f in fns}
+    return seen if with_globals else {f for f in seen if f in fns}
 
 
 def main(src, dst):

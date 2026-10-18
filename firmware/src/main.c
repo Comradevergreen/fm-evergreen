@@ -73,37 +73,46 @@ static void timer5_start(void)                 /* OSC /4 = 6 MHz, PRD 600 -> 10 
     fm1_timer5_start(isr_timer5, 4);   /* above ALNK0 (3): the scan nests into the render (see fm1_timer5_irq) */
 }
 
-static void hexs(char *b, uint32_t v)
-{
-    uint32_t i;
-    for (i = 0; i < 8u; i++)
-        b[i] = "0123456789ABCDEF"[(v >> (28u - 4u * i)) & 15u];
-    b[8] = 0;
-}
-
+/* The crash screen (MANUAL: Troubleshooting, tools/crash_decode.py): JIANT CRASH; the version, the core that faulted
+ * and how many ran; the short code (cpu_safe.c crash_code: the cause, then the vector); then VEC PC EMU DBG RETS, the
+ * five numbers of every crash screen since Felucca (up to 0.9.11 unlabelled, in this order). 4 s, then a reset; the
+ * next boot logs it into the settings (cpu_boot) and, with both cores at work, turns 2 CORES off */
 static void fm1_fault(const fm1_crash_t *c)
 {
-    char b[12];
-    uint32_t t0;
+    static const char L[5][6] = {"VEC ", "PC ", "EMU ", "DBG ", "RETS "};
+    const uint32_t v[5] = {c->vec, c->pc, c->emu, c->dbg, c->rets};
+    char b[40];
+    uint32_t t0, i, fl = fm1_clk_320() ? CR_320 : 0u;
 #if FELUCCA_DUAL_CORE
-    if (fm1_mc_on)
+    if (fm1_mc_on) {
         fm1_mc_bar_set();                             /* (0.6.71) a crash beside the second core: one core until power-off */
+        fl |= CR_2C;
+    }
+    fm1_mc_bar.barred = (fm1_mc_bar.barred & ~0xFF00u) | fl << 8;   /* (0.9.12) for the next boot (cpu_boot) */
     fm1_mc_hold();
 #endif
     fm1_audio_stop();
     scr_wake_now();                                   /* (MENU > SCREEN OFF: the panel on first) */
     lcd_fill(0, 0, 240, 240, UI_CRASH_BG);            /* fixed, outside the palettes */
     draw_text_line(0, 8, 240, &AF_M, "JIANT CRASH", UI_CRASH_INK, UI_CRASH_BG, 1);
-    hexs(b, c->vec);
-    draw_text_line(10, 40, 220, &AF_M, b, UI_CRASH_INK, UI_CRASH_BG, 0);
-    hexs(b, c->pc);
-    draw_text_line(10, 60, 220, &AF_M, b, UI_CRASH_INK, UI_CRASH_BG, 0);
-    hexs(b, c->emu);
-    draw_text_line(10, 84, 220, &AF_M, b, UI_CRASH_INK, UI_CRASH_BG, 0);
-    hexs(b, c->dbg);
-    draw_text_line(10, 102, 220, &AF_M, b, UI_CRASH_INK, UI_CRASH_BG, 0);
-    hexs(b, c->rets);
-    draw_text_line(10, 120, 220, &AF_M, b, UI_CRASH_INK, UI_CRASH_BG, 0);
+    str_cpy(b, FELUCCA_VERSION "  CORE ", 20);
+    i = str_len(b);
+    b[i] = (char)('0' + (fm1_cnum() & 1u));
+    str_cpy(b + i + 1u, fl & CR_2C ? " OF 2" : " OF 1", 8);
+    draw_text_line(10, 34, 220, &AF_M, b, UI_CRASH_INK, UI_CRASH_BG, 0);
+    str_cpy(b, "CODE ", 8);
+    crash_code(b + 5, c->emu, c->dbg, 0);
+    b[7] = '-';
+    hex8(b + 8, c->vec);
+    b[8] = b[14];
+    b[9] = b[15];
+    b[10] = 0;
+    draw_text_line(10, 54, 220, &AF_M, b, UI_CRASH_INK, UI_CRASH_BG, 0);
+    for (i = 0; i < 5u; i++) {
+        str_cpy(b, L[i], 6);
+        hex8(b + str_len(b), v[i]);
+        draw_text_line(10, 84 + 20 * i, 220, &AF_M, b, UI_CRASH_INK, UI_CRASH_BG, 0);
+    }
     t0 = fm1_ticks();
     while ((uint32_t)(fm1_ticks() - t0) < 4000u * 1000u * FM1_TICKS_PER_US)
         ;
@@ -154,9 +163,60 @@ static void boot_leds(void)
         fm1_led_anim_start(settings_leds == LEDS_DIM || settings_leds == LEDS_DIM_LO);
 }
 
+/* (0.9.12) what the last run left (cpu_safe.c): a crash (a record newer than the last boot saw, boot_leds) or a hang
+ * (a watchdog reset: the main loop's breadcrumbs in PC / RETS, felucca_dbg) is logged into the settings (MENU > ABOUT
+ * LAST CRASH, the editor's backup); with both cores at work then, MENU > SYSTEM > CPU goes to 1 CORE for good. 1: that
+ * (the UI says so at its start) */
+static __attribute__((noinline)) uint32_t cpu_boot(void)
+{
+    uint32_t fl = 0, cfg = cpu_cfg;
+#if FELUCCA_DUAL_CORE
+    uint32_t bar = fm1_mc_bar.barred;
+    fm1_mc_bar.barred = bar & ~0xFF02u;                 /* (this run's own from here) */
+    if (fm1_crash.magic == FM1_CRASH_MAGIC && fm1_crash.count != crash_seen) {
+        fl = (bar >> 8) & 0xFFu;
+        crash_log_put(fl, fm1_crash.vec, fm1_crash.pc, fm1_crash.rets, fm1_crash.emu, fm1_crash.dbg);
+    } else if (fm1_boot.p3_rst & 4u) {
+        fl = CR_WDT | (bar & 2u ? CR_2C : 0u) | (fm1_clk_320() ? CR_320 : 0u);
+        if (fl & CR_2C)
+            fm1_mc_bar_set();                           /* (a hang beside the second core: as a crash, fm1_fault) */
+        crash_log_put(fl, 0xFFu, felucca_dbg.prev_stage, felucca_dbg.prev_page, 0, 0);
+    } else
+        return 0;
+    cpu_cfg = (uint8_t)cpu_after(cfg, fl);
+    settings_save();
+    return cpu_cfg != cfg;
+#else
+    (void)fl; (void)cfg;
+    return 0;
+#endif
+}
+
+/* (0.9.12) MENU > SYSTEM > CPU CLOCK 320 MHZ: from the boot stage's 360 to JieLi's rated 320 (hal/fm1_clk320.h, curist's,
+ * as Skiff runs it), the screen up, on one core, before the scan, the second core, the audio and USB. Not after a failed
+ * boot, nor again until power-off after a reset in it (fm1_cstart); a soft reset keeps the PLL (the check: already 320).
+ * Registers not as the boot stage leaves them: not switched (ABOUT: CPU 360 MHZ) */
+static __attribute__((noinline)) void cpu_clock(void)
+{
+#if FELUCCA_DUAL_CORE
+    fm1_clk320_t k;
+    uint32_t f;
+    if (!(cpu_cfg & CPU_320) || bootguard.failed || (fm1_mc_bar.barred & (FM1_MC_CLK_ARMED | FM1_MC_CLK_TRIP)))
+        return;
+    lcd_sync();                                         /* (no LCD DMA through it) */
+    fm1_mc_bar.barred |= FM1_MC_CLK_ARMED;
+    fm1_wdt_feed();
+    f = irq_save();
+    if (!fm1_clk320_check(&k))
+        FL_FAR(fm1_clk320_switch)(&k);
+    irq_restore(f);
+    fm1_mc_bar.barred &= ~FM1_MC_CLK_ARMED;
+#endif
+}
+
 static void fm1_main(void)
 {
-    uint32_t ms;
+    uint32_t ms, said;
     persist_boot();
 #if FELUCCA_OTA
     if (flash_ok)
@@ -181,6 +241,8 @@ static void fm1_main(void)
     felucca_dbg.prev_home = felucca_dbg.home;
     felucca_dbg.prev_frames = felucca_dbg.ui_frames;
     felucca_dbg.prev_rst = fm1_boot.p3_rst;
+    said = cpu_boot();
+    cpu_clock();
     fm1_input_init();
     fm1_adc_init();
     panel_init();
@@ -206,7 +268,7 @@ static void fm1_main(void)
      * would enter UBOOT), or it was given up / beside a crash since power-on (hal/fm1_multicore.h fm1_mc_bar). Its entry
      * word is in the protected top of RAM: opened for it, interrupts off (up to 20 ms: under the splash) */
     mc_off = (uint8_t)((fm1_in.buttons >> panel.btn[B_REC]) & 1u);
-    if (!mc_off && !bootguard.failed && !fm1_mc_barred()) {
+    if (!mc_off && !bootguard.failed && !fm1_mc_barred() && !(cpu_cfg & CPU_1CORE)) {   /* (0.9.12: MENU > CPU) */
         fm1_irq_off();
         fm1_guard_unlock_top();
         fm1_mc_start();
@@ -230,6 +292,8 @@ static void fm1_main(void)
     kb_boot_hold = 0;
     lcd_fill(0, 0, 240, 240, T_BG);
     scrn.idle = fm1_ms;                        /* (MENU > SCREEN OFF: from here) */
+    if (said)                                  /* (0.9.12) cpu_boot */
+        cpu_off("2 CORES OFF AFTER A CRASH");
 
     for (;;) {
         uint32_t m = fm1_ms;
@@ -245,6 +309,13 @@ static void fm1_main(void)
                 song.batt_raw = song.batt_raw ? song.batt_raw + (b - song.batt_raw) / 32 : b;
         }
         master_poll();
+#if FELUCCA_DUAL_CORE
+        if (fm1_mc_lost && said != 2u) {                /* (0.9.12) the second core given up (a misread, no answer, a
+                                                         * fault): 1 CORE for good, said once */
+            said = 2;
+            cpu_off("CORE 2 FAILED: 1 CORE");
+        }
+#endif
         {   /* OCT- + OCT+ held 5 s: enter UBOOT with RAM intact (debug / update); a countdown
              * shows from 2 s over the whole screen (the menu and the dialogs too: ui_draw), letting
              * go cancels it */
@@ -339,6 +410,17 @@ void fm1_cstart(void)
         bootguard.failed = 0;
         bootguard.pending = 0;
     }
+#if FELUCCA_DUAL_CORE
+    if (fm1_mc_bar.magic != FM1_MC_BAR_MAGIC) {         /* (0.9.12: its other bits too; garbage after a power-off) */
+        fm1_mc_bar.magic = FM1_MC_BAR_MAGIC;
+        fm1_mc_bar.barred = 0;
+    }
+    if (fm1_mc_bar.barred & FM1_MC_CLK_ARMED) {                 /* (0.9.12) a reset in the 320 MHz switch (fm1_main): no failed
+                                                         * boot, and no switch again until power-off */
+        fm1_mc_bar.barred ^= FM1_MC_CLK_ARMED | FM1_MC_CLK_TRIP;
+        bootguard.pending = 0;
+    }
+#endif
     if (bootguard.pending)
         bootguard.failed++;
     bootguard.pending = 1;

@@ -21,6 +21,8 @@ FUNCS = ["analog_render", "digital_render", "digital_render_legacy", "digital_re
          "drum_side_add", "drum_mix", "drum_bus",           # (JIANT 0.6.48) DRUM-X IMAGE and SENDs; (0.7.9) the kit's curve
          "slicer_bus",                                      # (JIANT 0.6.3) the SLICER, one on a bus
          "fm1_alnk0_irq", "fm1_timer5_irq",               # the audio ISR; TIMER5: the key / LED scan (hal/fm1_input.h)
+         "ep4_tx", "ep4_fill",                              # (0.9.12) TIMER5's USB audio refill, nested in the render (usb.c:
+                                                            # the poll, and the packet once a ms: its copy loops)
          "uac_rs_run",                                      # the USB audio input at 48 kHz: the 44.1 -> 48 resampler (usb.c;
                                                             # 0.8.9: in RAM, on core 1 with CORES 2; was uac_tap48)
          "click_render",                                    # the metronome's click (click.c), while it sounds
