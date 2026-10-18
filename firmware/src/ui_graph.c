@@ -821,16 +821,12 @@ static void fm_bus(int32_t cl, int32_t cr, int32_t bus)
     cv_line(cr + 20, bus - 3, cr + 23, bus, T_MID); cv_line(cr + 20, bus + 3, cr + 23, bus, T_MID);
 }
 
-#ifndef FM6_CHART_HOOK
-#define FM6_CHART_HOOK(kind, a, b) ((void)0)   /* ui_render.c (host tests): the chart's parts one by one (its lint) */
-#endif
-enum { FMH_BOX, FMH_ROUTE, FMH_CAR, FMH_BUS, FMH_FB, FMH_LABEL, FMH_END };
-/* FM6's 32 algorithms as charts. FM6_CELL: per operator 1..6 its cell, the column in 24 px steps (bits 0..2) and
+/* FM6's 32 algorithms as charts (0.9.6: as the colony, ui_engvis.c vx_fm6). FM6_CELL: per operator 1..6 its cell, the column in 24 px steps (bits 0..2) and
  * the row above the output bus (bits 4..5; row 0 = the carriers). The routes, the carriers and the feedback
  * operator are fm6_core.c's FM6_ALG itself (fm6_routes, fm6_car_ops, fm6_fb_op). ui_test.c checks the cells
  * against them (a modulator one row above what it modulates, the carriers on the bottom row and only they, one
- * operator per cell) and the routes against the 32 algorithms written out; ui_render.c lints every chart as drawn
- * (no route through a box or touching another route, no two boxes overlapping, all inside the panel). The cells:
+ * operator per cell) and the routes against the 32 algorithms written out; ui_render.c lints every colony as drawn
+ * (no two bichos overlapping, all inside the panel). The cells:
  * a search for the fewest and shortest bends, the operators numbered left to right. */
 static const uint8_t FM6_CELL[32][6] = {
     {0x00, 0x10, 0x01, 0x11, 0x21, 0x31}, {0x00, 0x10, 0x02, 0x12, 0x22, 0x32}, {0x00, 0x10, 0x20, 0x01, 0x11, 0x21},
@@ -878,123 +874,6 @@ static uint32_t fm6_alg_of(const track_t *t)
 {
     return t->p[P_E0] >= 1 && t->p[P_E0] <= 32 ? (uint32_t)t->p[P_E0] - 1u : fm6_patch[(t - trk) % NTRK][FP_ALG] & 31u;
 }
-/* FM6's EDIT pages: the algorithm, drawn as graph_fm draws DIGITAL's, "ALG 05" top left. Carriers THEME with INK
- * numerals, modulators RAISE with THEME ones; an operator at output level 0: a DIM numeral (a carrier on RAISE).
- * Routes THEME, the feedback loop MID (DIM at feedback 0), the output bus MID. The knob just turned in ACCENT:
- * ALG and PTCH the label, FB the loop, MLVL the routes, MRAT MEG VMOD the modulators, DTUN the carriers. */
-static void graph_fm6(const track_t *t, uint16_t c, uint32_t sel)   /* sel < 6: the operator picked (ui_fm6op.c) */
-{
-    uint32_t alg = fm6_alg_of(t), k, j, car = fm6_car_ops(alg), top = 0, hi = 0, fbop = fm6_fb_op(alg), hotset = 0;
-    uint32_t hot = ui.hot_t ? (uint32_t)cur_page()->id[ui.hot_col & 3u] : 0u;
-    const uint8_t *pt = fm6_patch[(t - trk) % NTRK];
-    int32_t x[6], y[6], bus, cl = 240, cr = 0, fb = clamp(pt[FP_FB] + t->p[P_E1], 0, 7);
-    uint8_t m[6], fan[6] = {0, 0, 0, 0, 0, 0};
-    uint16_t rc = hot == P_E2 ? T_ACCENT : c;
-    char b[11] = {'A', 'L', 'G', ' ', (char)('0' + (alg + 1u) / 10u), (char)('0' + (alg + 1u) % 10u), 0};
-    if (!t->p[P_E0])                                 /* (0.6.46) ALG on PAT: the patch's number, and that it is the patch's */
-        str_cpy(b + 6, " PAT", 5);
-    if (hot == P_E3 || hot == P_E4 || hot == P_E5)
-        hotset = 63u & ~car;
-    else if (hot == P_E6)
-        hotset = car;
-    fm6_routes(alg, m);
-    for (k = 0; k < 6u; k++) {
-        uint32_t col = FM6_CELL[alg][k] & 7u, row = FM6_CELL[alg][k] >> 4;
-        hi = col > hi ? col : hi;
-        top = row > top ? row : top;
-        for (j = 0; j < 6u; j++)
-            fan[j] += (uint8_t)(m[k] >> j & 1u);
-    }
-    bus = 50 + (27 + 23 * (int32_t)top) / 2;         /* the chart centred on the 100 px scale */
-    for (k = 0; k < 6u; k++) {
-        x[k] = 120 + (int32_t)(FM6_CELL[alg][k] & 7u) * 24 - (int32_t)hi * 12;
-        y[k] = bus - 6 - FM_BH - 23 * (int32_t)(FM6_CELL[alg][k] >> 4);
-        if (car >> k & 1u) { cl = x[k] < cl ? x[k] : cl; cr = x[k] > cr ? x[k] : cr; }
-    }
-    for (k = 0; k < 6u; k++) {                       /* into k: its sources down to its jog row, across, down */
-        for (j = 0; j < 6u; j++)
-            if (m[k] >> j & 1u) {
-                FM6_CHART_HOOK(FMH_ROUTE, j, k);
-                fm_route(x[j], y[j] + FM_BH, x[k], y[k] - 3, y[k], rc);
-                if (fan[j] > 1u) fm_dot(x[j], y[k] - 3, rc);          /* one operator modulating several */
-                if (m[k] & (m[k] - 1u)) fm_dot(x[k], y[k] - 3, rc);   /* several modulating one */
-            }
-        if (car >> k & 1u) {
-            FM6_CHART_HOOK(FMH_CAR, k, 0);
-            cv_rect(x[k], y[k] + FM_BH, 1, bus - y[k] - FM_BH, T_MID);
-            if (x[k] != cl) fm_dot(x[k], bus, T_MID);
-        }
-    }
-    FM6_CHART_HOOK(FMH_BUS, 0, 0);
-    fm_bus(cl, cr, bus);
-    FM6_CHART_HOOK(FMH_FB, fbop, 0);
-    fm_loop(x[fbop], y[fbop], hot == P_E1 ? T_ACCENT : fb ? T_MID : T_DIM);
-    for (k = 0; k < 6u; k++) {
-        uint32_t on = pt[(5u - k) * FP_OP + FP_OL] != 0, fill_c = (car >> k & 1u) && on;
-        uint16_t f = hotset >> k & 1u ? T_ACCENT : c, fill = k == sel ? T_ACCENT : fill_c ? f : T_RAISE;
-        char n[2] = {(char)('1' + k), 0};
-        FM6_CHART_HOOK(FMH_BOX, k, 0);
-        cv_rrect(x[k] - 10, y[k], 21, FM_BH, 3, fill, T_SURF);
-        GFX_HOOK_ALIGN(x[k] - 10, y[k], x[k] + 11, y[k] + FM_BH, AL_HV, "FM6 operator number in its box");
-        cv_text_in(x[k] - 10, y[k] + CAP_IN(S, FM_BH), 21, &AF_S, n, fill_c || k == sel ? T_INK : on ? f : T_DIM, fill);
-    }
-    FM6_CHART_HOOK(FMH_LABEL, 0, 0);
-    cv_text(10, 4 - GOY, &AF_S, b, hot == P_E0 || hot == P_E7 ? T_ACCENT : T_MID);
-    if (sel < 6u) {                                  /* the operator picked: "OP3 x1.50" */
-        char fq[16] = {'O', 'P', (char)('1' + sel), ' ', 0};
-        fop_freq(pt + (5u - sel) * FP_OP, fq + 4);
-        cv_text_r(228, 4 - GOY, &AF_S, fq, T_TEXT, T_SURF);
-    } else if (fm6_bank_slot(fm6_slot[(t - trk) % NTRK]) >= 0) {   /* (0.6.11) SLOT B1..B32: the bank voice's name */
-        char nm[11];
-        for (k = 0; k < 10u; k++)
-            nm[k] = (char)pt[FP_NAME + k];
-        for (nm[10] = 0; k && nm[k - 1] == ' '; k--)
-            nm[k - 1] = 0;
-        cv_text_r(228, 4 - GOY, &AF_S, nm, T_TEXT, T_SURF);
-    }
-    FM6_CHART_HOOK(FMH_END, alg, 0);
-}
-
-/* OP ENV (ui_fm6op.c): the picked operator's envelope as the patch has it: from L4 to L1 at R1, L2 at R2, L3 at R3, held
- * there while the key is down (a RAISE mark where it is let go), back to L4 at R4. A stage's width grows as its rate
- * falls (4..48 px: 99 is a step, 0 the longest), the levels 0..99 linearly (dB). The curve THEME, the stage KNOB 3 / 4
- * edit (STAGE) ACCENT with a dot at its target; "OP3" top left, the stage's rate and level top right */
-static void graph_fm6env(const track_t *t, uint16_t c)
-{
-    static const char *const STG[4] = {"ATK", "DEC", "SUS", "REL"};
-    const uint8_t *op = fop_bytes((uint32_t)(t - trk));
-    int32_t top = 24, bot = 88, x[6], y[6], k;
-    uint32_t sg = fop_stg & 3u;
-    char b[24] = {'O', 'P', (char)('1' + fop_op % 6u), 0};
-#define FEGY(l) (bot - (int32_t)(l) * (bot - top) / 99)
-#define FEGW(r) (4 + (99 - (int32_t)(r)) * (99 - (int32_t)(r)) * 44 / 9801)
-    x[0] = 12;
-    y[0] = FEGY(op[FP_L1 + 3]);
-    for (k = 0; k < 3; k++) {
-        x[k + 1] = x[k] + FEGW(op[FP_R1 + k]);
-        y[k + 1] = FEGY(op[FP_L1 + k]);
-    }
-    x[5] = 228;
-    x[4] = x[5] - FEGW(op[FP_R1 + 3]);
-    y[4] = y[3];
-    y[5] = y[0];
-    cv_rect(PANEL_X0, bot + 2, PANEL_W, 1, T_RAISE);
-    cv_rect(x[4], top, 1, bot - top + 1, T_RAISE);   /* the key let go */
-    for (k = 0; k < 5; k++)                          /* (3: the hold, no stage of its own) */
-        cv_line_t(x[k], y[k], x[k + 1], y[k + 1], k != 3 && (uint32_t)(k < 3 ? k : 3) == sg ? T_ACCENT : c, 2);
-    k = sg < 3u ? (int32_t)sg + 1 : 5;
-    fm_dot(x[k], y[k], T_ACCENT);
-#undef FEGY
-#undef FEGW
-    cv_text(10, 4 - GOY, &AF_S, b, T_MID);
-    str_cpy(b, STG[sg], sizeof b);
-    str_cpy(b + str_len(b), "  R ", 5);
-    fmt_int(b + str_len(b), op[FP_R1 + sg]);
-    str_cpy(b + str_len(b), "  L ", 5);
-    fmt_int(b + str_len(b), op[FP_L1 + sg]);
-    cv_text_r(228, 4 - GOY, &AF_S, b, T_TEXT, T_SURF);
-}
-
 #if FELUCCA_FM4
 /* DIGITAL's eight algorithms as FM charts, read from src/eng_digital.c's switch (alg) (ui_test.c checks
  * these tables against it). FM_CELL: per operator 1..4 its grid cell, the column in 24 px steps (bits 0..2)
@@ -1647,6 +1526,8 @@ static uint32_t graph_signature(void)
         h = (h ^ ((uint32_t)t->p[P_DXIMG] << 16 | (uint32_t)dx_img_k(t))) * 16777619u;
     if (DX_KIT3(pg))                                 /* (0.8.8) KIT 3's colony lives every frame, as KIT's (was still) */
         h ^= ui.frame * 2654435761u;
+    if (pg->graph >= GR_FMOP && pg->graph <= GR_FMENV)   /* (0.9.6) FM6's operators: the colony lives, as the beings */
+        h ^= ui.frame / 2u * 2246822519u;
     if (pg->graph == GR_MORPH)                       /* (0.6.45) the wave, MORPH */
         h = (h ^ ((uint32_t)t->p[P_MORPH] << 16 | (uint32_t)t->p[P_E0] << 8 | (uint32_t)t->p[P_E1] |
                   (uint32_t)t->p[P_E2] << 24)) * 16777619u;
@@ -2444,12 +2325,12 @@ static void draw_graph(void)
             cv_oy = 0;
             graph_events();
             break;
-        case GR_FMOP:                                /* (0.6.10) FM6's operators: the chart, the operator picked */
-        case GR_FMOP2:
-            if (fop_ok()) graph_fm6(t, c, fop_op % 6u);
+        case GR_FMOP:                                /* (0.6.10) FM6's operators: (0.9.6) the colony (ui_engvis.c), the operator */
+        case GR_FMOP2:                               /* picked lit */
+            if (fop_ok()) vx_fm6_page(t, fop_op % 6u, pg->graph == GR_FMOP2);
             break;
-        case GR_FMENV:                               /* .. its envelope */
-            if (fop_ok()) graph_fm6env(t, c);
+        case GR_FMENV:                               /* .. its envelope, its bicho riding it */
+            if (fop_ok()) vx_fm6env(t);
             break;
         case GR_DXSND:                               /* EDIT > SOUND: the kit's lanes, the sound edited singled out */
             cv_oy = 0;

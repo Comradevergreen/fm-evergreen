@@ -303,7 +303,8 @@ the bars with KNOB 1 the bar and KNOB 2 LEN.
   KNOB 1–4 are **M1–M4** (the macros, as LFO held), the routes counted at the top left, LATCH at the right.
 - **BEING**: the track's being large, its four HOME knobs as organs at the corners (a gauge each, its value, a vein to
   the body), the sound's name under it. (0.9.4) A VOICE track shows its **head**, an ANIMAL track its **creature**, a DRUM-X track
-  its **kit of little beings** there (see [their pictures](#three-engines-draw-their-own-creature-094)). **ROUTES**: M1–M4 down the left with their routes drawn to where they go
+  its **kit of little beings** there (see [their pictures](#three-engines-draw-their-own-creature-094)); (0.9.6) the other six
+  engines theirs ([a cell, a colony, worms, a swarm, a snail, a caterpillar](#six-more-engines-draw-their-own-creature-096)). **ROUTES**: M1–M4 down the left with their routes drawn to where they go
   (**T2 CUT+62**).
 - **ENV** › **TRACKS** / **TRACKS DEST**: the six tracks' envelopes as tiles (the selected one tinted with its level now a dot; DEST:
   FILTER, PITCH and SHAPE as bars under each), the knobs the selected track's — **ALGORITHM** picks the
@@ -324,7 +325,7 @@ the bars with KNOB 1 the bar and KNOB 2 LEN.
   running along its curve. **LFO**: the wave under "RATE · WAVE" / **LFO DEST**: the LFO small
   on the left, the four amounts as rows lit by what the LFO sends now. **MSEQ** / **MSEQ 2**: the
   sixteen steps under their caption; KNOB 1 the step.
-- **EDIT** › **SOUND**: the engine's being on the left (0.9.4: VOICE's head, ANIMAL's creature; alive with the sound, the page's name over it, the sound's
+- **EDIT** › **SOUND**: the engine's creature on the left (0.9.4 / 0.9.6: each engine its own, see below; alive with the sound, the page's name over it, the sound's
   under it), the scope in a well and all eight E parameters as chips on the right, the page's four lit. **TONE**:
   **FILTER** draws TYPE's response at CUT with its RES peak (LP, HP, BP, COMB), CUT a line, DRIVE / DIST a row of
   cells; **VOICE** / **VOICE 2** the voices one a row as full as they sound, VOICE and PRIO (VOICE 2: ALLOC), GLIDE's
@@ -566,7 +567,8 @@ every engine) or with KNOB 2 (ENG) on SAVE > PRESETS. Each track's four HOME kno
   as its file has it: the macros go back to none (0.8.1). **OPERATOR / OP ENV / OPERATOR 2** edit each
   of the six operators on the device (KNOB 1 picks the operator); editing makes the patch the track's own (SLOT OWN),
   saved with the project. A bank voice you pick is copied into the track, so projects keep it even if you send
-  another bank later.
+  another bank later. (0.9.6) Their panel is the algorithm as a **colony of operators** (OP ENV: the envelope with the
+  operator riding it), every number they showed kept.
 - **PHASE**: phase distortion. WAVE / WAVE2: SAW, SQR, PLS, DSIN, SPLS, RSAW, RTRI, RTRP. LINE: MIX or RING.
   **FB** feeds the output back into the phase.
 - **LOFI**: chip sounds. CHIP: 4BIT, 4B/2, 8BIT, 1BIT, STEP. WAVE: PLS, TRI, SAW, NOIS, WRAM, **BYTE**, **FLOAT**.
@@ -751,6 +753,44 @@ while the track sounds and resting in silence:
 They cost about what a being costs to draw (host: the EDIT panel ~113 µs against ~122 µs for ANALOG's being; the
 whole KIT screen with the kit's beings ~167 µs, as ANALOG's EDIT screen) and ~10 KB of flash for the three, 160 bytes
 of RAM; nothing in the sound.
+
+### Six more engines draw their own creature (0.9.6)
+
+With 0.9.6 every engine has its own picture: ANALOG, FM6, WHEEL, NOISE, PHASE and LOFI draw theirs on **EDIT › SOUND**
+(on the left; the scope and the chips on the right as before) and on **HOME › BEING** (HOME's ecosystem keeps its
+beings), in the same thermal line art, the bichos' face shared with DRUM-X's beings, moving only while the track sounds:
+
+- **ANALOG: a cell.** Its membrane (three isotherms, the outer cold) is two cycles of the oscillators through the
+  filter and the drive, drawn round in polar form: WAVE (and MORPH), DETUNE, MIX, NOISE and INT shape it, CUT on the
+  note softens it, RES rings it; a SAW turns it into a pinwheel, a SQR into battlements. Where **DRIVE** clips the wave
+  short spikes come out; a ring at **CUT** glows and spreads as much as **RES**; NOISE grows cilia; the two oscillators
+  orbit inside at DETUNE's beat; the face shouts with the level and blinks on each note.
+- **FM6: a colony of operators.** The six operators are little beings wired as the algorithm (the 32 charts' cells and
+  routes: carriers standing on the output's floor, modulators above, a pulse down each wire as fast as its modulator's
+  RATIO). Each one is as big and hot as its **LEVEL times its envelope now**, has as many spikes as its **RATIO**, and
+  the feedback operator curls a tail as long as **FB**. On **OPERATOR** and **OPERATOR 2** the colony fills the panel
+  with the operator picked lit (DETUNE makes it shimmer), "ALG 05 PAT" on the left and its frequency ("OP3 x1.50") on
+  the right, the cards as before; on **OP ENV** the envelope as the patch has it (the stage KNOB 3 / 4 edit lit) and the
+  operator's bicho **rides it** where its envelope is now: up the attack, along the hold, down the release.
+- **WHEEL: nine tube worms**, one per drawbar, as tall as its level (the registration's digits under them), each with a
+  crown of as many tentacles as its harmonic; the **rotor is a current** that bends them (SLOW, FAST, its DEPTH), PERC
+  makes its worm leap and shout, CLICK lets bubbles out of their mouths, DUST drifts motes.
+- **NOISE: a swarm** of protozoa round a queen: **COLOR** is how they walk (white: jittering in place; brown: drifting),
+  **FREQ** how they swirl and how wide a ring they keep, **PEAK** how tight; in DUST each impulse makes some flare and
+  jump; in LFSR and META they march in columns, one per bit of the register.
+- **PHASE: a snail.** The shell's chambers sit at the **bent phase** (even at DCW 0; as DCW rises they crowd where the
+  phase rushes, which is what phase distortion does), coloured by the output; **the foot's sole is the wave** (WAVE and
+  WAVE2 alternating); FB frays the spiral, SUB makes the outer whorl breathe, the eyestalks pull in on each note; with
+  DETUNE or RING a little snail follows (RING: a thread between them).
+- **LOFI: a caterpillar** whose two skins are the **last 256 samples out** (the scope's own: nothing more is taken from
+  the sound), held steps on BYTE, smooth on FLOAT. Its 8 segments are the **byte's bits** (the highest next to the
+  head), each lit and lifting its legs with its bit; the antennae are tipped by the two lowest; the head is a bicho
+  shouting with the level. On FLOAT and the chip waves (PLS TRI SAW NOIS WRAM) the same caterpillar, its skin the
+  waveform and its segments lit by the wave's level.
+
+Each draws into whatever rectangle it is given (EDIT's left panel, HOME's middle, the whole panel). About 14 KB of flash
+for the six, 1.4 KB of RAM (the pool); each page draws no dearer than ANALOG's EDIT page with its being did; nothing
+in the sound.
 
 ### FILTER (every engine)
 
