@@ -143,8 +143,10 @@ layer's shortcuts; on the DRUM grid they are steps and lanes; on the NAME screen
 every page, every palette, FLAT and LINE:
 
 - **COLORS** (the default; older settings load as it): the LENTE layout in the **0.6 colours**. Black, near-black
-  rounded cards with a small mark and the knob's name, **each knob its colour** on its value and its bar (KNOB 1
-  violet, 2 yellow, 3 blue, 4 red on JIANT; every palette has its own four), the knob you turn framed in its colour; the
+  rounded cards with a small mark and the knob's name, **each knob its colour** on its value and its bar (JIANT,
+  0.9.5 as the 0.6: each parameter's own colour **moves with its amount** as heat, violet when low to yellow and cream
+  when high, a centred one such as PAN or DETUNE cold in the middle and hot at either end; the other palettes their
+  four knob colours), the knob you turn framed in its colour; the
   group's tab filled violet; the selected track's number in an orange box, a violet ▶ and a big violet BPM in the header;
   a near-black rounded panel; the beings in the 0.6 heat (violet spikes, red and orange rings, cream nuclei).
 - **BOTTOM**: the tabs are the groups' words (the one you are on underlined by a small pill, a dot a page under each), no cards and no panel box: the middle
@@ -460,7 +462,7 @@ PRESETS did both).
 KNOBS · STATE** (it remembers the level; SELECT keeps its combos: GLO + SELECT the tempo, the dice). (0.8.9, in the
 skins) **MAP** is the keyboard itself, F3 to G5: every key that does something is named upright on it (light on the
 white keys, tinted on the black ones), the one held lit orange, the value now violet, a muted track pale, what cannot be
-pressed now dim, and each white key's note under it; **KNOBS**: the four as gauges in their knobs' colours, the layer's
+pressed now dim, and each white key's note under it; **KNOBS**: the four as gauges in their knobs' colours (JIANT: their values' heat), the layer's
 key words under them (e.g. **PLAY RESTART · GLO DONE**); **STATE**: what is on, as chips (FX: the lock, the tracks, the
 latch, the effects held; GLO: each track ON / MUTE, the drum groups, UNDO, MUTATE; LFO: the latch and each macro's
 routes; REC, SAVE, SCL, EDIT, SEQ theirs). The header names the layer in words, **[GLO] SET**. The footer is the

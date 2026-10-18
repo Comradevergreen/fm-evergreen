@@ -1094,7 +1094,8 @@ static void layer_knobs(uint32_t l)                     /* the four as gauges in
             lz_arc(cx, 50, 25, 1, 0, T_LINE, T_LINE);
             continue;
         }
-        lz_arc(cx, 50, 25, 4, ly_card[c].r < 0 ? 0 : ly_card[c].r, T_LINE, ly_card[c].r < 0 ? T_LINE : T_K(c));
+        lz_arc(cx, 50, 25, 4, ly_card[c].r < 0 ? 0 : ly_card[c].r, T_LINE,
+               ly_card[c].r < 0 ? T_LINE : knob_col(c, ly_card[c].r, ly_card[c].b));   /* (0.9.5 JIANT: its heat) */
         GFX_HOOK_ALIGN(cx - 26, 0, cx + 26, 0, AL_H, "layer KNOBS gauge's words centred");
         cv_text_in(cx - 26, 44 - AF_X_CAP_Y, 52, &AF_X, ly_card[c].l, T_MID, T_SURF);
         cv_text_in(cx - 26, 54 - AF_X_CAP_Y, 52, &AF_X, ly_card[c].v, T_TEXT, T_SURF);

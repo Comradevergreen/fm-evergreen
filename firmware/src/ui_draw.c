@@ -479,17 +479,20 @@ static void card_mot_of(const int16_t *vp)
 #define LG_VB 49                                        /* the value's band: L capitals rows 49..69 */
 #define LG_UY 73                                        /* the unit's line (S capitals rows 76..84) */
 #define LG_GY 92                                        /* the gauge, 3 px */
-/* a card's gauge and value: (0.8.5, the mock-up) the gauge THEME, the value TEXT, in every palette (JIANT since 0.7.7
- * had a grey gauge); only the knob just turned (T_ACCENT) stands out */
+/* a card's gauge and value: (0.8.5, the mock-up) the gauge THEME, the value TEXT; only the knob just turned (T_ACCENT)
+ * stands out. (0.9.5, as the 0.6.36 had it) JIANT (thermal): each card's colour its value as heat, violet low .. cream
+ * high, the gauge in it and the value lifted a fifth toward the text (so the cold end reads); a bipolar parameter (its
+ * range across 0) by its distance from the centre, cold in the middle */
+static uint8_t card_bip;                                /* the card being drawn: a bipolar parameter (ratio_of) */
 static uint16_t gauge_col(int32_t ratio)
 {
-    (void)ratio;
-    return T_THEME;
+    return heat_on(ratio) ? card_heat(ratio, card_bip) : T_THEME;
 }
 static uint16_t value_col(uint16_t vc, int32_t ratio)
 {
-    (void)ratio;
-    return vc == T_THEME ? T_TEXT : vc;
+    if (vc != T_THEME)
+        return vc;
+    return heat_on(ratio) ? ux_mix(gauge_col(ratio), T_TEXT, 20) : T_TEXT;
 }
 static uint8_t card_free_next;                          /* (0.8.5) the next draw_column's value is a name: free text */
 static uint8_t card_arm_next;                           /* (0.8.5) the next draw_column is an action armed (OCT+ does it):
@@ -609,7 +612,7 @@ static void card_ico_draw(int32_t x, int32_t y, uint32_t i, uint16_t c)
             if ((CARD_ICO[i][r] >> (6u - b)) & 1u)
                 cv_pset(x + (int32_t)b, y + (int32_t)r, c);
 }
-static struct { int16_t r; char l[12], v[16]; } ly_card[4];
+static struct { int16_t r; uint8_t b; char l[12], v[16]; } ly_card[4];   /* (b: bipolar) */
 /* (0.9.1) GLO > MIXER KNOB 4, the DJ FILTER (fx.c djf_block): its value as "OFF", or the cutoff ("800", "1.2k", "12k")
  * with its side for unit ("LP" / "HP"); its card draws the response (djf_curve) where the gauge would be */
 #define DJF_NOCURVE 0x7FFF
@@ -657,8 +660,11 @@ static void djf_curve(int32_t x, int32_t y, int32_t w, int32_t rows, int32_t v, 
 static void draw_column(uint32_t c, const char *label, const char *val, const char *unit, uint16_t vc,
                         int32_t ratio, uint32_t icon)
 {
+    card_bip = (uint8_t)(ratio >= 0 && ratio == ratio_last.r && ratio_last.bip);   /* (its ratio from RATIO: bipolar?) */
+    ratio_last.bip = 0;
     if (ui.layer && c < 4u) {
         ly_card[c].r = (int16_t)ratio;
+        ly_card[c].b = card_bip;
         str_cpy(ly_card[c].l, label, sizeof ly_card[c].l);
         str_cpy(ly_card[c].v, val, sizeof ly_card[c].v);
         str_cpy(ly_card[c].v + str_len(ly_card[c].v), unit, sizeof ly_card[c].v - str_len(ly_card[c].v));
@@ -670,7 +676,7 @@ static void draw_column(uint32_t c, const char *label, const char *val, const ch
     card_curve_next = 0;
     uint32_t kind = large_kind();                       /* MENU > LARGE: tall (draw_column_tall), or the label in M */
     uint8_t sig;
-    uint16_t lc = hot ? T_ACCENT : arm || mot ? T_THEME : T_MID, cb = arm ? T_TINT : CARD_BG;
+    uint16_t lc = hot ? T_ACCENT : arm || mot ? T_THEME : T_MID, cb = arm ? T_TINT : CARD_BG, gk = 0;
     int low = lz_low(), hud = hud_home();
     uint32_t fd = hud_fade();                           /* (0.8.9) HUD: the row faded while the knobs rest */
     int32_t ox = hud ? CARD_X(c) - (int32_t)c * 60 : 0, cw = hud ? 60 : COL_W;   /* (HUD's HOME: the row whole, 4 x 60) */
@@ -679,16 +685,22 @@ static void draw_column(uint32_t c, const char *label, const char *val, const ch
     uint32_t n, kn, hk;
     int32_t kid = kc_tag(val, &kn);
     /* (0.8.9, the skins: the 0.6 colours) a lens card's value and gauge in its knob's colour (the knob turned: its card
-     * framed in it, COLORS; its label TEXT, BOTTOM / HUD); the label TEXT on COLORS' cards, MID in the knob row */
+     * framed in it, COLORS; its label TEXT, BOTTOM / HUD); the label TEXT on COLORS' cards, MID in the knob row. (0.9.5)
+     * JIANT: the knob's colour its value's heat (knob_col), the value lifted a fifth toward the text, as the 0.6's */
     if (lz_on() && kind != LK_TALL) {
-        if (kid < 0 && (vc == T_THEME || vc == T_ACCENT))
-            vc = T_K(c);
+        if (kid < 0 && (vc == T_THEME || vc == T_ACCENT)) {
+            gk = knob_col(c, ratio, card_bip);          /* (the gauge's, the frame's) */
+            vc = heat_on(ratio) ? ux_mix(gk, T_TEXT, 20) : gk;
+        }
         lc = arm || mot ? T_THEME : low && !hot && !hud ? T_MID : T_TEXT;   /* (0.9.0 HUD's HOME: TEXT, over the beings) */
     }
-    vc = value_col(vc, ratio);
+    if (!gk)
+        vc = value_col(vc, ratio);
     if (fd < 100u) {
         vc = ux_mix(T_BG, vc, (int32_t)fd);
         lc = ux_mix(T_BG, lc, (int32_t)fd);
+        if (gk)
+            gk = ux_mix(T_BG, gk, (int32_t)fd);
     }
     fmt_named = 0;                                      /* (params.c: a name, for this card only) */
     card_mot_next = 0;                                  /* (the same: MOTION, this card only) */
@@ -712,7 +724,7 @@ static void draw_column(uint32_t c, const char *label, const char *val, const ch
     key[n + 5] = (char)('!' + arm + 2 * (int)lz_on());
     key[n + 6] = (char)('0' + hot + 2 * mot + 4 * (int)kind);
     {   /* (0.6.10) the gauge's colour too */
-        uint16_t gc = ratio < 0 ? 0u : gauge_col(ratio);
+        uint16_t gc = ratio < 0 ? 0u : gk ? gk : gauge_col(ratio);
         key[n + 7] = (char)('A' + (gc & 15u));
         key[n + 8] = (char)('A' + ((gc >> 4) & 15u));
         key[n + 9] = (char)('A' + ((gc >> 8) & 15u));
@@ -735,7 +747,7 @@ static void draw_column(uint32_t c, const char *label, const char *val, const ch
         cv_begin(COL_W, ROLL_H, cb);
         cv_oy = -ry;
         if (lz_on() && !low && hot && vc != T_DIM) {    /* (0.8.9 COLORS: the hot card's frame, its sides) */
-            uint16_t fc = ux_mix(cb, T_K(c), 70);
+            uint16_t fc = ux_mix(cb, gk ? gk : T_K(c), 70);
             cv_rect(0, ry, 1, ROLL_H, fc);
             cv_rect(COL_W - 1, ry, 1, ROLL_H, fc);
         }
@@ -767,7 +779,7 @@ static void draw_column(uint32_t c, const char *label, const char *val, const ch
             if (!lz_on())
                 cv_rect(0, 0, COL_W, ch, cb);           /* (0.8.5, the mock-up: a square box) */
             else if (hot && vc != T_DIM) {              /* (0.8.9) COLORS: a rounded card, the knob turned framed in its colour */
-                uint16_t fc = ux_mix(cb, T_K(c), 70);
+                uint16_t fc = ux_mix(cb, gk ? gk : T_K(c), 70);
                 cv_rrect(0, 0, COL_W, ch, 5, fc, T_BG);
                 cv_rrect(1, 1, COL_W - 2, ch - 2, 4, cb, fc);
             } else
@@ -825,13 +837,13 @@ static void draw_column(uint32_t c, const char *label, const char *val, const ch
         }
         if (!strip && curve != DJF_NOCURVE && kind != LK_TALL) {   /* (0.9.1) the DJ FILTER: its response (BOTTOM, HUD:
                                                          * 5 rows, under the value's strip) */
-            uint16_t gc = hot && !lz_on() ? T_ACCENT : vc == T_DIM ? T_DIM : lz_on() ? vc : gauge_col(ratio);
+            uint16_t gc = hot && !lz_on() ? T_ACCENT : vc == T_DIM ? T_DIM : lz_on() ? (gk ? gk : vc) : gauge_col(ratio);
             uint16_t tc = fd < 100u ? ux_mix(T_BG, T_LINE, (int32_t)fd) : T_LINE;
             djf_curve(5 + ox, low ? ch - 5 : ch - 8, COL_W - 10, low ? 5 : 6, curve,
                       curve ? gc : fd < 100u ? ux_mix(T_BG, T_MID, (int32_t)fd) : T_MID, tc);
         } else if (!strip && ratio >= 0) {              /* the gauge: a 2 px LINE track, the value THEME on it */
             int32_t gw = COL_W - 10, fx = ratio * gw / 1000;
-            uint16_t gc = hot && !lz_on() ? T_ACCENT : vc == T_DIM ? T_DIM : lz_on() ? vc : gauge_col(ratio);
+            uint16_t gc = hot && !lz_on() ? T_ACCENT : vc == T_DIM ? T_DIM : lz_on() ? (gk ? gk : vc) : gauge_col(ratio);
             uint16_t tc = fd < 100u ? ux_mix(T_BG, T_LINE, (int32_t)fd) : T_LINE;
             if (low) {                                  /* (0.8.9) BOTTOM, HUD: a hairline, the value 2 px on it */
                 if (cv_halo) {                          /* (0.9.0) its outline 1 px round the line and the bar, not a band */

@@ -64,6 +64,22 @@ static int32_t graph_ht = 100;
 #include "ui_organic.c"                              /* JIANT FM's organic line art (drawn by code) */
 #include "ui_fm6op.c"                                /* (0.6.10, from Felucca 1.5) EDIT > OPERATOR, OP ENV, OPERATOR 2 */
 static uint16_t heat_col(int32_t v);
+/* (0.9.5, as the 0.6.36) JIANT (thermal): a card's colour its value as heat (ratio 0..1000, -1 none); bipolar (its range
+ * across 0): by the distance from the centre, cold in the middle */
+static int heat_on(int32_t ratio) { return settings.palette == UI_JIANT_INDEX && ratio >= 0; }
+static uint16_t card_heat(int32_t ratio, int bip)
+{
+    int32_t r = clamp(ratio, 0, 1000);
+    if (bip)
+        r = (r > 500 ? r - 500 : 500 - r) * 2;
+    return heat_col(r * 256 / 1000);
+}
+/* knob c's colour on a lens card, a layer's KNOBS, EDIT's chips: JIANT its value's heat; another palette the knob's own
+ * (UI_KNOBS) */
+static uint16_t knob_col(uint32_t c, int32_t ratio, int bip)
+{
+    return heat_on(ratio) ? card_heat(ratio, bip) : T_K(c);
+}
 /* JIANT (thermal): a curve's colour at canvas row y, hot at the top (y0) and cold at the bottom (y1); else c */
 static uint16_t heat_y(int32_t y, int32_t y0, int32_t y1, uint16_t c)
 {

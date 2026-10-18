@@ -17,7 +17,8 @@ editor update themselves with every change merged into `main`.
 
 > **Status: in development (v0.9.5).** It builds and passes every test (Felucca's and its own). Back up the flash before installing it.
   **Messages no longer darken the screen** (0.9.5): a message is a small pill over the page, which keeps moving behind
-  it; a page's hint comes only once you stay on it (never while SELECT walks past), at most twice ever.
+  it; a page's hint comes only once you stay on it (never while SELECT walks past), at most twice ever. On
+  JIANT each card's colour follows its value again, as in 0.6.
   **Three engines draw their own creature** (0.9.4): VOICE a CT scan of a singing head (the tongue, jaw, lips and velum
   move with the phoneme sung), ANIMAL a creature that metamorphoses between bird, insect and mammal, DRUM-X its kit as
   little beings that squash, shut their eyes and shout with every hit.
@@ -38,7 +39,7 @@ editor update themselves with every change merged into `main`.
 >   breadcrumb **SECTION · GROUP · page n/N** at the foot; SCL and ARP two sections; GEN three HOME pages. Clearing a
 >   step is **SEQ + G5**, renaming **SAVE + C5**: EDIT is always EDIT.
 > - **Three skins, MENU > DISPLAY > SKIN** (0.8.9; HUD faster in 0.9.0): **COLORS** (the default: rounded cards, each
->   knob its colour, violet, yellow, blue, red), **BOTTOM** (the picture edge to edge, a slim knob row) and **HUD**
+>   card its colour, on JIANT its value's heat as in 0.6), **BOTTOM** (the picture edge to edge, a slim knob row) and **HUD**
 >   (HOME's beings under everything). The **LENTE** look (0.8.5): tabs, cards and a breadcrumb in a crisp 5 × 7 pixel
 >   face, values in Inter Tight. **Held layers** show the keyboard itself: MAP, KNOBS and STATE (ALGORITHM while held).
 > - **VOICE sings words** (0.8.5): ES, EN or JA, each note the next syllable of a lyric you type (or the dice's).
@@ -167,8 +168,8 @@ audio CPU budget, the signature shown at power-on is 428 bytes. An instrument th
 VOICE singing its lyric, in the COLORS skin, exactly as the firmware draws them (the renders of `tests/ui_render.c`).*
 
 - **Thermal palette**: values, curves, steps, hits and notes are coloured by intensity (cyan → blue → violet → red →
-  orange → yellow → white). Selection is violet and active is orange; in the COLORS skin each knob has its colour on
-  its card (KNOB 1 violet, 2 yellow, 3 blue, 4 red on JIANT).
+  orange → yellow → white). Selection is violet and active is orange; on JIANT each card's value and gauge are its
+  amount's heat (0.9.5, as 0.6), the other palettes give each knob its own colour.
 - **Skins** (MENU > DISPLAY > SKIN, 0.8.9): **COLORS** (the default: near-black rounded cards on top, a rounded
   panel), **BOTTOM** (no cards: the picture the screen's width, a slim knob row at the foot) and **HUD** (HOME's
   beings swim under everything, the words float over them). Every skin wears the **LENTE** layout (0.8.5): the
@@ -404,7 +405,8 @@ each layer; the complete manual is in **[docs/MANUAL.md](docs/MANUAL.md)** (en e
 - **HOME**: each being is a track. Its species tells the engine, its shape comes from its four knobs, and it swells
   and heats up with its own audio. The biggest one is the selected track; a dark one is muted.
 - **Colours**: cold (indigo, violet) is little, hot (red, orange, cream, white) is a lot. Violet is what's selected,
-  orange what's active; each knob has its own colour on its card (violet, yellow, blue, red on JIANT).
+  orange what's active; on JIANT each card is coloured by its value (cold low, hot high; 0.9.5, as 0.6), the other
+  palettes give each knob its own colour.
 - **Skin** (MENU > DISPLAY > SKIN, 0.8.9): **COLORS** the cards on top in the 0.6 colours, **BOTTOM** the knobs a slim
   row at the foot and the middle free, **HUD** HOME's beings over the whole screen under floating words.
 - **Load meter** (top right, next to the battery): five small bars showing how much of the audio time the sound is
@@ -637,6 +639,11 @@ Every update is listed here, newest first. (Since 0.6.80 at the end of the page:
   walks past it (walking SEQ's chain no longer carries MUTATE's hint onto BAR), and each at most **twice in all**: the
   count is kept with the settings (older settings start at 0), a button's "HOLD [X] QUICK" never again once its layer
   has been held, and SAVE › TOOLS › INIT SYSTEM starts them over.
+- **Per-parameter colours as in 0.6** (JIANT palette): each card's value and gauge are coloured by its amount as heat
+  (violet low, yellow and cream high; the value lifted a fifth toward the text), so every parameter has its own colour
+  that moves as you turn it; a centred parameter (PAN, DETUNE, a MOD amount) by its distance from the centre. In all
+  three skins, the knob row of BOTTOM / HUD, a layer's KNOBS gauges and EDIT's chips. The other palettes keep their four
+  knob colours.
 
 ### v0.9.4
 - **Three engines draw their own creature**, long promised, where every engine shows its being (EDIT › SOUND on the

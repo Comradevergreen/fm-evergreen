@@ -161,7 +161,16 @@ static uint8_t sync_reload;                  /* engine / preset / project / user
 
 #define ACC T_THEME                /* values, curves */
 #define VAL(c) ((c) == ui.hot_col && ui.hot_t ? T_ACCENT : T_THEME)   /* the knob just turned: accent */
-#define RATIO(d, v) ((d)->max > (d)->min ? ((int32_t)(v) - (d)->min) * 1000 / ((d)->max - (d)->min) : -1)
+/* a parameter's value as 0..1000 (-1: none). (0.9.5) It notes whether the parameter is bipolar (its range across 0: PAN,
+ * DETUNE, a MOD amount ...): JIANT's cards heat by the distance from the centre then (ui_draw.c card_heat) */
+static struct { int32_t r; uint8_t bip; } ratio_last;
+static int32_t ratio_of(int32_t min, int32_t max, int32_t v)
+{
+    ratio_last.r = max > min ? (v - min) * 1000 / (max - min) : -1;
+    ratio_last.bip = (uint8_t)(min < 0 && max > 0);
+    return ratio_last.r;
+}
+#define RATIO(d, v) ratio_of((d)->min, (d)->max, (int32_t)(v))
 /* layout: header 0..24, four cards 28..72 (57 px at x 3 + 59 c),
  * the panel 76..198 (a SURF area; the graphs live in it), footer 202..240; BG between them. (0.8.5) The SEQ pages
  * (LENTE): its level tabs 28..41, the cards 44..88, the panel 92..214, the footer's second row 218..240 */

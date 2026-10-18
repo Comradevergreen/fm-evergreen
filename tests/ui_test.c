@@ -10478,6 +10478,7 @@ static int dlg_tab_lit(uint32_t l)
     return ok;
 }
 static int test_toasts(void);
+static int test_card_heat(void);
 static int test_lz_dialogs(void)
 {
     int bad = 0, ok;
@@ -10501,6 +10502,7 @@ static int test_lz_dialogs(void)
     bad += check("0.8.5 dialogs: EDIT + SELECT opens DICE (its tab), SELECT re-rolls inside it, OCT+ keeps", ok);
     (void)x; (void)y; (void)acc;
     bad += test_toasts();                               /* (0.9.5: the toast a pill over the live page; was boxed alone in it) */
+    bad += test_card_heat();
     ui_power_on();
     return bad;
 }
@@ -11292,3 +11294,70 @@ int main(void)
 }
 #endif
 
+/* (0.9.5, as the 0.6.36) JIANT's cards: each its value's heat (the gauge, the value a fifth toward the text), a bipolar
+ * parameter by its distance from the centre; another palette its knob's own colour whatever the value */
+static uint16_t gauge_px(uint32_t c) { return swap16(host_screen[(card_y() + card_h() - 5u) * 240u + (uint32_t)CARD_X(c) + 6u]); }
+static uint32_t card_ink(uint32_t c, uint16_t col)      /* pixels of colour col in card c's value strip */
+{
+    uint32_t x, y, n = 0;
+    for (y = card_y() + (uint32_t)ROLL_Y; y < card_y() + (uint32_t)(ROLL_Y + ROLL_H); y++)
+        for (x = (uint32_t)CARD_X(c); x < (uint32_t)(CARD_X(c) + COL_W); x++)
+            n += swap16(host_screen[y * 240u + x]) == col;
+    return n;
+}
+static int test_card_heat(void)
+{
+    int bad = 0, ok = 1, moved = 1, other = 1, bip = 0, vtext = 1;
+    uint32_t sk, c, k, i;
+    for (sk = 0; sk < SKIN_N; sk++) {
+        for (k = 0; k < 2u; k++) {                      /* JIANT, then PAPER */
+            uint8_t pal = k ? 6u : UI_JIANT_INDEX;
+            ui_power_on(); ui_skin = (uint8_t)sk; settings.palette = pal; palette_set(pal);
+            go_title("ENV"); ui.force = 1; frames(160);
+            for (c = 0; c < 4u; c++) {
+                int16_t *vp;
+                const param_desc_t *d = page_desc(cur_page(), c, &vp);
+                uint16_t prev = 0;
+                if (!d || !vp) continue;
+                for (i = 0; i < 3u; i++) {
+                    int32_t r;
+                    uint16_t want;
+                    *vp = (int16_t)(d->min + (d->max - d->min) * (int32_t)i / 2);
+                    ui.knob_ms = fm1_ms; ui.force = 1; frame();
+                    r = RATIO(d, enum_rank(d, *vp));
+                    want = k ? T_K(c) : card_heat(r, d->min < 0 && d->max > 0);
+                    if (k) other &= gauge_px(c) == want;
+                    else {
+                        ok &= gauge_px(c) == want;
+                        vtext &= card_ink(c, ux_mix(want, T_TEXT, 20)) > 4u;
+                        if (i) moved &= want != prev;
+                    }
+                    prev = want;
+                }
+            }
+        }
+    }
+    bad += check("0.9.5 JIANT: a card's gauge its value's heat (low .. high), in COLORS, BOTTOM and HUD", ok && moved);
+    bad += check("  .. its value in the heat lifted a fifth toward the text (as the 0.6.36)", vtext);
+    bad += check("  another palette (PAPER): the knob's own colour whatever the value", other);
+    ui_power_on(); settings.palette = UI_JIANT_INDEX; palette_set(UI_JIANT_INDEX);
+    for (i = 0; i < NPAGES && !bip; i++) {              /* a bipolar knob on a lens page: cold at its centre, hot at either end */
+        if (PAGES[i].scope != SC_TRACK || !page_visible(i)) continue;
+        ui.home = 0; ui.page = (uint8_t)i; page_entered(); ui.force = 1; frame();
+        if (!lz_on()) continue;
+        for (c = 0; c < 4u && !bip; c++) {
+            int16_t *vp;
+            const param_desc_t *d = page_desc(cur_page(), c, &vp);
+            uint16_t lo, mid, hi;
+            if (!d || !vp || !(d->min < 0 && d->max > 0) || d->names) continue;
+            *vp = d->min; ui.force = 1; frame(); lo = gauge_px(c);
+            *vp = d->max; ui.force = 1; frame(); hi = gauge_px(c);
+            *vp = 0; ui.force = 1; frame(); mid = gauge_px(c);
+            bip = 1 + (lo == hi && lo == card_heat(1000, 0) && mid == card_heat(RATIO(d, 0), 1) && mid != lo);
+            if (bip == 1) printf("  bipolar %s on %s: %04x %04x %04x\n", d->label, PAGES[i].title, lo, mid, hi);
+        }
+    }
+    bad += check("  a bipolar parameter by its distance from the centre (cold in the middle)", bip == 2);
+    ui_power_on();
+    return bad;
+}

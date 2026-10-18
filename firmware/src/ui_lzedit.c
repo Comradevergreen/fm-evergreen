@@ -59,9 +59,11 @@ static void graph_sound_lz(const track_t *t)
         int32_t y = ty + 63 + (int32_t)k * 13, hot = ui.hot_t && ui.hot_col == k;
         const char *u = "";
         char v[16];
+        int32_t r = d && d->label && d->label[0] != '-' ? RATIO(d, enum_rank(d, t->p[P_E0 + two * 4u + k])) : -1;
+        uint16_t kc = knob_col(k, r, d && d->min < 0 && d->max > 0);   /* (0.9.5 JIANT: its value's heat) */
         if (!bare) {
             cv_rrect(x, y, w, 12, 3, T_RAISE, T_SURF);
-            cv_rect(x, y + 2, 2, 8, T_K(k));
+            cv_rect(x, y + 2, 2, 8, kc);
         }
         if (!d || !d->label || d->label[0] == '-')
             continue;
@@ -69,7 +71,7 @@ static void graph_sound_lz(const track_t *t)
         str_cpy(v + str_len(v), u, sizeof v - str_len(v));
         GFX_HOOK_ALIGN(0, y, 0, y + 12, AL_V | AL_N(2), "EDIT chip on its row");
         cv_clip_text(x + (bare ? 2 : 6), y + 3 - AF_X_CAP_Y, &AF_X, d->label, hot ? T_TEXT : T_MID, tb, 58);
-        cv_text_r(x + w - (bare ? 2 : 4), y + 3 - AF_X_CAP_Y, &AF_X, v, T_K(k), tb);
+        cv_text_r(x + w - (bare ? 2 : 4), y + 3 - AF_X_CAP_Y, &AF_X, v, heat_on(r) ? ux_mix(kc, T_TEXT, 20) : kc, tb);
     }
     str_cpy(b, two ? "1/2" : "2/2", sizeof b);          /* the other page's names, as many as fit */
     for (k = 0; k < 4u; k++) {

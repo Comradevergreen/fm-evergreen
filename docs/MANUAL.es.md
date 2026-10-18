@@ -146,7 +146,9 @@ todas las páginas, todas las paletas, FLAT y LINE:
 
 - **COLORS** (la de fábrica; los ajustes viejos cargan con ella): la estructura LENTE con los **colores de la 0.6**.
   Negro, cartas casi negras redondeadas con una marquita y el nombre de la perilla, **cada perilla con su color** en el
-  valor y en la barra (KNOB 1 violeta, 2 amarillo, 3 azul, 4 rojo en JIANT; cada paleta tiene sus cuatro), la carta de
+  valor y en la barra (JIANT, 0.9.5 como la 0.6: el color propio de cada parámetro **se mueve con su cantidad**, como
+  calor, violeta si es poco, amarillo y crema si es mucho; uno centrado como PAN o DETUNE frío en el medio y caliente en
+  los dos extremos; las otras paletas sus cuatro colores de perilla), la carta de
   la perilla que girás enmarcada en su color; la pestaña del grupo rellena de violeta; el número de la pista en una
   cajita naranja, un ▶ violeta y el BPM grande en violeta en el encabezado; un panel casi negro redondeado; los seres con
   el calor de la 0.6 (púas violetas, anillos rojo y naranja, núcleos crema).
@@ -475,7 +477,7 @@ ir **MAP · KNOBS · STATE** (recuerda el nivel; SELECT conserva sus combinacion
 (0.8.9, en las pieles) **MAP** es el teclado mismo, de F3 a G5: cada tecla que hace algo lleva su nombre parado encima
 (clara en las blancas, teñida en las negras), la mantenida encendida en naranja, el valor actual en violeta, una pista
 muteada pálida, lo que ahora no se puede apagado, y la nota de cada blanca debajo; **KNOBS**: las cuatro como medidores
-en el color de su perilla, con las palabras de las teclas de la capa debajo (p. ej. **PLAY RESTART · GLO DONE**);
+en el color de su perilla (JIANT: el calor de su valor), con las palabras de las teclas de la capa debajo (p. ej. **PLAY RESTART · GLO DONE**);
 **STATE**: lo que está activo, como fichas (FX: el bloqueo, las pistas, el latch, los efectos mantenidos; GLO: cada
 pista ON / MUTE, los grupos de batería, UNDO, MUTATE; LFO: el latch y las rutas de cada macro; REC, SAVE, SCL, EDIT y
 SEQ las suyas). El encabezado nombra la capa en palabras, **[GLO] SET**. El pie es la miga de pan, **FX · MAP**. Las teclas y las perillas hacen exactamente lo mismo que antes.
