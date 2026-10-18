@@ -648,6 +648,22 @@ JIANT's modifications are distributed under the same license.
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
 
+### v0.9.11 (draft)
+- **LOFI quieter and less piercing, BYTEBEAT above all.** Coming to LOFI from another part (T5's FAT BASS → T4's
+  BYTEBEAT, worse after a quiet one) was a jump and a fright. In LUFS LOFI measured as loud as the others (the master's
+  leveler evens out peaks), but its waves are full-scale and dense, spread over the whole spectrum: a Zwicker-style
+  loudness put the factory presets' median 6 phon over the melodic engines' (BYTEBEAT over the loudest ANALOG preset),
+  their sharpness at twice the others', ~35 dB more of their energy above 6 kHz. Now LOFI's level is set by WAVE on the
+  voice's amplitude (BYTE and FLOAT −6 dB, PLS SAW NOIS −4.5, WRAM −3, TRI −1.5: user presets and every project too),
+  and a fixed one-pole (−3 dB at ~7.5 kHz) files the top of the chip waves and FLOAT, BYTE's own two smoothing poles
+  lowered from ~6.3 to ~4.9 kHz; the FILTER page's CUT keeps its scale. Factory presets' medians (C4 at 100, dry,
+  through the master): −12.4 → −14.7 LUFS (the melodic engines −12.3, ANALOG FM6 VOICE −13.2), 88.8 → 86.1 phon
+  (82.5), sharpness 1.58 → 1.44 acum (0.72); BYTEBEAT −11.6 → −15.0 LUFS, 92.0 → 88.4 phon (ANALOG's loudest 91.0);
+  FAT BASS → BYTEBEAT +1.8 LU / +5.8 phon → −2.7 LU / +1.2 phon. **Old projects with LOFI sound quieter and a little
+  softer** (raise the track's LEVEL if a mix needs it). LOFI's golden renders change (and the mixes with a LOFI part),
+  no other engine's; cost: BYTE −2 %, the chip waves and FLOAT +1.4–3 % (callgrind, 8 voices), the target's lofi_render
+  loop 253 → 260 (budget +10 %); flash +160 B.
+
 ### v0.9.10
 - **VOICE draws its vocal tract alive** (the mock-up's variant C, "Tracto vivo"), in place of 0.9.4's CT head: framed
   close (~80 × 62 units: the mouth and the neck; the crown off the panel), the head's outline a faint ghost and the

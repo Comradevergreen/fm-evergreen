@@ -255,6 +255,20 @@ static inline uint32_t lofi_bend(const lofi_bend_t *b, uint32_t ph)
 /* the sample out of the hold: quantized, MASKed, filtered, into out (the oscillators' shared tail) */
 static inline int32_t lofi_mask(int32_t s, int32_t msk) { return msk ? (((s >> 8) ^ msk) << 8) : s; }
 
+/* (0.9.11) LOFI's level and its edges. Through the master's leveler (fx.c lev_block: peaks to ~-9 dBFS, 2:1) LOFI measured
+ * as loud as the others in LUFS (-12.4 against the melodic engines' -12.3, the factory presets' medians, C4 at 100), but
+ * it was heard far louder and piercing: its waves are full-scale and dense (square-ish bytebeat, naive pulses and saws:
+ * a low crest factor, energy spread from 60 Hz to 16 kHz over every critical band), so a Zwicker loudness put it at
+ * +6 phon over the melodic engines (BYTEBEAT over the loudest ANALOG preset), its sharpness twice theirs, ~35 dB more
+ * of its energy above 6 kHz; after a quiet part the leveler, lifted, let its onset through +5 LU over the sound before.
+ * LOFI_GAIN, the voice's level by WAVE (Q15, on the block's amplitude ramp): -4.5 dB PLS SAW NOIS, -1.5 TRI, -3 WRAM,
+ * -6 BYTE FLOAT. LOFI_SOFT, a fixed one-pole (-3 dB at ~7.5 kHz, -6.8 at the top) on the chip waves and FLOAT, ahead
+ * of the FILTER page's CUT (which keeps its scale): the aliasing pulses' and saws' top filed, the 4 .. 8 kHz bite of
+ * FLOAT's FM a little; BYTE's own two poles lower (lofi_byte_render). Its state in v->ph[2] (kept on a retrigger).
+ * Three or four operations a sample; user presets and old projects play quieter and softer too */
+static const int16_t LOFI_GAIN[7] = {19519, 27571, 19519, 19519, 23198, 16384, 16384};
+#define LOFI_SOFT(x, y) ((y) + ((((x) - (y)) * 5) >> 3))   /* y + 5/8 (x - y): -3 dB at ~7.5 kHz, -1.2 at 4 */
+
 /* BYTE's samples (lofi_render's set-up done: inc the note's, the hold, the bits, the filter): t in v->s[2], its
  * fraction (Q24) in v->ph[0] */
 static __attribute__((noinline)) void lofi_byte_render(track_t *t, voice_t *v, int32_t *out, uint32_t n,
@@ -289,9 +303,10 @@ static __attribute__((noinline)) void lofi_byte_render(track_t *t, voice_t *v, i
         tt += tf >> 24;
         tf &= 0xFFFFFFu;
         ts += ((ti >> 8) * mul) >> 16;
-        l1 += ((held >> 1) - l1) * 19500 >> 15;        /* (JIANT 0.5) the 8-bit steps rounded: two one-poles at
-                                                         * ~6 kHz before the filter (BYTE was knife-sharp) */
-        l2 += (l1 - l2) * 19500 >> 15;
+        l1 += ((held >> 1) - l1) >> 1;                  /* (JIANT 0.5) the 8-bit steps rounded: two one-poles before
+                                                         * the filter (BYTE was knife-sharp); 0.9.11: at ~4.9 kHz, were
+                                                         * ~6.3 (x 0.6): their images softer, the steps' edges filed */
+        l2 += (l1 - l2) >> 1;
         out[i] += voice_amp(soft_knee(svf_mode(flt, l2, &ic1, &ic2, ft, kd), 16000) << 1, m, i);
     }
     v->s[3] = l1;
@@ -319,7 +334,7 @@ static __attribute__((noinline)) void lofi_float_render(track_t *t, voice_t *v, 
     uint32_t lm = p[P_E7] ? (1u << (17u - (uint32_t)p[P_E7] * 12u / 127u)) - 1u : 0xFFFFFFFFu;   /* LOOP: t's window */
     uint32_t ft = (uint32_t)p[P_FTYPE] & 3u;
     int32_t rs = p[P_FRES] > 50 ? p[P_FRES] : 50, kd = 8192 - rs * 7600 / 127, y1 = v->s[4], y2 = v->s[5];
-    int32_t aux = v->s[3], fb = v->s[0], fbk = p[P_E5];
+    int32_t aux = v->s[3], fb = v->s[0], fbk = p[P_E5], sm = (int32_t)v->ph[2];   /* (sm: LOFI_SOFT's state) */
     uint32_t chip = (uint32_t)p[P_E0], qs = chip == CHIP_8BIT ? 0u : chip == CHIP_1BIT ? 15u : 12u;   /* (CHIP: the bits) */
     for (i = 0; i < n; i++) {
         uint32_t te = mul == 256u ? tt : (tt & 255u) | ((ts >> 8) & ~255u), tl, tw;
@@ -342,8 +357,10 @@ static __attribute__((noinline)) void lofi_float_render(track_t *t, voice_t *v, 
         tt += tf >> 24;
         tf &= 0xFFFFFFu;
         ts += ((ti >> 8) * mul) >> 16;
-        out[i] += voice_amp(soft_knee(svf_mode(flt, s >> 1, &y1, &y2, ft, kd), 16000) << 1, m, i);
+        sm = LOFI_SOFT(s >> 1, sm);
+        out[i] += voice_amp(soft_knee(svf_mode(flt, sm, &y1, &y2, ft, kd), 16000) << 1, m, i);
     }
+    v->ph[2] = (uint32_t)sm;
     v->s[0] = fb;
     v->s[2] = (int32_t)tt;
     v->s[3] = aux;
@@ -465,8 +482,10 @@ static void lofi_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const 
     int32_t held = v->s[0], cnt = v->s[1], ic1 = v->s[4], ic2 = v->s[5], msk = p[P_E7] >> 1;   /* (locals: out[] may
                                                          * alias v->s[]) */
     tsvf_t flt;
+    vmod_t mg;
     lofi_bend_t bd;
     uint32_t inc, ph = v->ph[0], lfsr = (uint32_t)v->s[2];
+    int32_t sm = (int32_t)v->ph[2];                     /* (0.9.11) LOFI_SOFT's state (BYTE: its second pole) */
     const uint8_t *wr = WRAM[((uint32_t)p[P_E2] >> 3) & 15u];
     int32_t wdc = 0, mf = 0, dmf = 0;                    /* (0.6.50: MORPH's blend Q8, ramped across the block) */
     if (wave == RW_WRAM) {                              /* the table's mean: no DC from lopsided shapes */
@@ -475,6 +494,10 @@ static void lofi_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const 
             sum += bits == 1 ? ((wr[i] >> 7) + ((wr[i] >> 3) & 1)) * 2 - 2 : (wr[i] >> 4) + (wr[i] & 15) - 15;
         wdc = bits == 1 ? sum * 32767 / 32 : sum * 2 * Q4 / 32;   /* (2 v - 15) Q4, or +-32767 at 1 bit */
     }
+    mg = *m;                                            /* (0.9.11) the engine's level, by WAVE (LOFI_GAIN): on the */
+    mg.amp0 = mulq15(m->amp0, LOFI_GAIN[wave < 7u ? wave : 0u]);   /* block's amplitude ramp, nothing a sample */
+    mg.amp1 = mulq15(m->amp1, LOFI_GAIN[wave < 7u ? wave : 0u]);
+    m = &mg;
     inc = pitch_inc(clamp(m->pitch16, 0, 2047));       /* (the vibrato below; the track's LFO in m->pitch16 already) */
     {                                                   /* (JIANT 0.5) its RES the FILTER page's (or BYTE's, the more) */
         int32_t rs = 50;                                /* (0.5.4: BYTE's E5 is GRIT now, not a second RES) */
@@ -562,9 +585,11 @@ static void lofi_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const 
         }
         ph += inc;
         mf += dmf;                                      /* (0.6.50) MORPH's ramp */
-        out[i] += voice_amp(soft_knee(svf_mode(&flt, held >> 1, &ic1, &ic2, ft, kd), 16000) << 1, m, i);
+        sm = LOFI_SOFT(held >> 1, sm);
+        out[i] += voice_amp(soft_knee(svf_mode(&flt, sm, &ic1, &ic2, ft, kd), 16000) << 1, m, i);
     }
     v->ph[0] = ph;
+    v->ph[2] = (uint32_t)sm;
     v->s[0] = held;
     v->s[1] = cnt;
     v->s[2] = (int32_t)lfsr;
