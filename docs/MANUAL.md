@@ -132,6 +132,7 @@ layer's shortcuts; on the DRUM grid they are steps and lanes; on the NAME screen
 | **SEQ** held + **G5** | **CLR STEP**: clears the cursor step and its locks (NOTE with a note in focus: that note; AUTO LIST: deletes the record). |
 | **SAVE** held + **C5** | **NAME**: renames the slot on SAVE > USER, the section or project on SECTIONS / PROJECTS. |
 | A step held (SEQ > STEP) + **KNOB 1–4** | A parameter lock on that step. |
+| A step held (SEQ > STEP) + **SELECT** | (0.9.12) The page those knobs lock: walks the track's EDIT pages (KIT → KIT 2 → LEVELS …; EDIT 1 → EDIT 2 → FILTER …) without leaving STEP. |
 | **OCT− + OCT+** held at power-on | HARDWARE CALIBRATION. |
 | **OCT− + OCT+** held 5 s while running | Update mode (UBOOT), with a countdown from 2 s; let go to cancel. |
 
@@ -1165,9 +1166,33 @@ recorded into the pattern, quantized to its steps, overdubbing. Knob moves on th
 ### Parameter locks
 
 On **SEQ > STEP** (the BAR group), **hold a step** (a grid key, or the note being entered on the roll) and turn a knob: that step gets
-its own value of the parameter that knob edits on the sound page you visited last. Tap EDIT while holding the step to
-clear its locks. Automation events and locks share **64 records per section** (all tracks together); when they run out
-the screen says **AUTOMATION FULL**.
+its own value of the parameter that knob edits on the sound page you visited last (at power-on: HOME's four knobs).
+The cards show those four while the step is held: a locked value bright, the sound's own DIM.
+
+**Choosing the page while you hold (0.9.12).** Still holding the step, turn **SELECT**: the knobs move to the next of
+the track's **EDIT pages**, the same chain SELECT walks on EDIT, without leaving STEP. The cards show that page's four
+parameters and the footer says which page it is, **LOCK · KIT 2** with its place **2/7**. On a DRUM-X track the walk
+is KIT (MRPH TUNE TONE DECY) → KIT 2 (NOIS FM FOLD DRV) → LEVELS → LEVELS 2 → FILTER → STEREO → VOICE; on a synth
+EDIT 1 → EDIT 2 → FILTER → MORPH … → VOICE 2 (the pages that engine has). Pages whose values are not the track's
+parameters are skipped: DRUM's SOUND 1–4, KIT 3 and X-MOD hold the kit's own values, and FOCUS and the FM6 operator
+pages have no four track parameters on their knobs, so none of them can be locked. To lock DECAY and then FOLD on one drum step: hold the step, turn
+SELECT to KIT, turn KNOB 4, turn SELECT one more to KIT 2, turn KNOB 3, let go. When you let go, the page stays the
+locks' page (the next hold starts on it, and EDIT opens there). From a page outside the walk (ENV, LFO, FX, HOME's
+four) the first detent goes to the walk's first page. With no step held, SELECT walks SEQ's pages as before. SELECT
+had no use with a step held before 0.9.12: it left STEP.
+
+**Locks on a DRUM-X track** belong to the step: every sound struck on that step plays with the locked values (KIT's are
+the whole kit's). Black keys 1–8 still pick the lane: holding an empty step puts that lane's hit on it, and a step key
+pressed on a hit and held for a lock keeps the hit. To give one sound its own value on a step, lock its level on LEVELS.
+
+**Clearing (0.9.2 and later).** EDIT never clears a step any more. **SEQ held + G5** (CLR STEP) clears the cursor step,
+its locks with it. **A step held + EDIT** clears only that step's locks; the notes or hits stay (the screen says
+**LOCKS CLEARED**, or **NO LOCKS**). To change or delete one lock or one recorded automation event on a particular step,
+use **SEQ › AUTO LIST**: each record is a row (KNOB 1 the row, 2 the step, 3 the parameter, 4 the value), OCT+ switches
+it between LOCK and AUTO, and SEQ + G5 deletes it. **+ ADD LOCK** adds a lock on the cursor's step.
+
+Automation events and locks share **64 records per section** (all tracks together); when they run out the screen says
+**AUTOMATION FULL**.
 
 ### Scale
 

@@ -9367,6 +9367,90 @@ static int test_usb_serial(void)
 /* #58 MENU > BPM LOCK: OFF by default (and in every older setting): SELECT sets the tempo on every page. ON: SELECT
  * leaves it on the pages ("BPM LOCKED" once per turn burst); GLO > GLOBAL's BPM knob, GLO + SELECT (a combo: the map
  * opens, no GLO page; OCT- puts it back) and GLO's F4 TAP still set it; the menu never takes SELECT as the tempo */
+/* (0.9.12) a step held on SEQ > STEP + SELECT: the page the knobs lock walks the track's EDIT pages (ui_input.c
+ * lock_select, ui.c lock_chain over ui_lens.c's chain), STEP stays; the knobs lock that page's parameters on the held
+ * step; on DRUM-X the lane selected (a black key) gets the hit, the lock is the step's; let go, the page stays */
+static int lp_page_is(const char *title) { return ui.plk_src && str_eq(PAGES[ui.plk_src - 1u].title, title); }
+static int test_lock_pages(void)
+{
+    int bad = 0, ok;
+    int16_t v;
+    track_t *t;
+    uint8_t ch[16];
+    uint32_t at, n, k, k4, kn, stp, id;
+    char b[48];
+    ui_power_on();
+    song.sel = 3; t = &trk[3];                           /* T4: DRUM-X (TRK_OLD) */
+    track_defaults_steps(t); t->p[P_SLEN] = 16;
+    go_home(); open_family(FAM_SEQ); frame();
+    stp = ui.page;
+    n = lock_chain(ch, &at);
+    ok = grid_on() && n >= 4u && at == 0xFFu && str_eq(PAGES[nv_page(SEC_EDIT, ch[0])].title, "EDIT 1") &&
+         str_eq(PAGES[nv_page(SEC_EDIT, ch[1])].title, "EDIT 2");
+    for (k = 0; k < n; k++)
+        ok &= lock_page_ok(nv_page(SEC_EDIT, ch[k])) && PAGES[nv_page(SEC_EDIT, ch[k])].graph != GR_DXSND;
+    bad += check("DRUM: the locks' walk is EDIT's chain less what cannot lock (KIT, KIT 2 .. LEVELS; no SOUND 1..4)", ok);
+    tap_key(key_at(1, 2));                               /* lane 3 (CP) */
+    k4 = key_at(0, 4);
+    fm1_in.notes |= 1u << k4; host_notes |= 1u << k4; frame();
+    ok = lock_held() == (1u << 4) && step_lanes(&t->step[4]) == 1u << 2;
+    turn(EN_SELECT, 1);
+    ok &= lp_page_is("EDIT 1") && ui.page == stp && lock_id(3) == P_E3;
+    turn(EN_SELECT, 1);
+    foot_crumbs(b, sizeof b);
+    bad += check("  a step held (lane CP) + SELECT: KIT (from HOME's four), then KIT 2; STEP stays, the footer LOCK . KIT 2",
+                 ok && lp_page_is("EDIT 2") && ui.page == stp && lock_id(2) == P_E6 && str_eq(b, "LOCK \xB7 KIT 2"));
+    turn(EN_K3, 5);                                      /* FOLD */
+    turn(EN_SELECT, -1);
+    turn(EN_K4, -3);                                     /* KIT's DECAY */
+    turn(EN_SELECT, -4);
+    ok = lp_page_is("EDIT 1");                           /* (no wrap) */
+    fm1_in.notes &= ~(1u << k4); frame();
+    ok &= motion_lock_get(t, 4, P_E6, &v) && v == motion_base_value(t, P_E6) + 5 && motion_lock_get(t, 4, P_E3, &v) &&
+          v == motion_base_value(t, P_E3) - 3 && motion_lock_count(t) == 2u && motion_lock_steps(3) == 1u << 4;
+    bad += check("  KNOB 3 on KIT 2 locks FOLD, SELECT back, KNOB 4 locks DECAY: both on step 5, the sound unchanged", ok &&
+                 t->p[P_E6] == motion_base_value(t, P_E6));
+    bad += check("  let go: the step keeps the CP hit alone (the lane selected), the page stays the locks' (KIT)",
+                 step_lanes(&t->step[4]) == 1u << 2 && !lock_held() && lp_page_is("EDIT 1") && ui.page == stp);
+    turn(EN_SELECT, 1);
+    bad += check("  no step held: SELECT walks SEQ's chain again (STEP -> NOTE)", ui.page != stp &&
+                 str_eq(cur_page()->title, "NOTE") && lp_page_is("EDIT 1"));
+    nav_put(SEC_SEQ, "STEP"); frame();
+    fm1_in.notes |= 1u << k4; frame();
+    turn(EN_SELECT, 1);
+    id = lock_id(0);
+    turn(EN_K1, 2);
+    fm1_in.notes &= ~(1u << k4); frame();
+    bad += check("  the next hold starts on it (KIT): SELECT on to KIT 2, KNOB 1 locks NOIS", lp_page_is("EDIT 2") &&
+                 id == P_E4 && motion_lock_get(t, 4, P_E4, &v));
+    open_family(FAM_EDIT); frame();
+    bad += check("  EDIT opens on the page the locks took (KIT 2)", str_eq(cur_page()->title, "EDIT 2"));
+    /* a synth on the roll (armed, stopped: the step being entered is the one held) */
+    ui_power_on();
+    t = &trk[0];
+    track_defaults_steps(t);
+    go_home(); open_family(FAM_SEQ); frame();
+    stp = ui.page;
+    song.rec = 1;
+    for (kn = 0; kn < 27u && kb_map(t, kn) > 127u; kn++)
+        ;
+    fm1_in.notes |= 1u << kn; host_notes |= 1u << kn; frame();
+    ok = lock_held() == 1u;
+    n = lock_chain(ch, &at);
+    turn(EN_SELECT, 1);
+    turn(EN_SELECT, 1);
+    turn(EN_SELECT, 1);                                  /* EDIT 1, EDIT 2, the third that locks (TONE's) */
+    id = lock_id(1);
+    ok &= n >= 3u && ui.plk_src == nv_page(SEC_EDIT, ch[2]) + 1u && ui.page == stp && id != 0xFFu &&
+          id == PAGES[ui.plk_src - 1u].id[1];
+    turn(EN_K2, 3);
+    fm1_in.notes &= ~(1u << kn); frame();
+    bad += check("a synth's roll: a note held + SELECT x3: the walk's third page; KNOB 2 locks its 2nd on step 1", ok &&
+                 motion_lock_get(t, 0, id, &v) && motion_lock_count(t) == 1u && t->step[0].n == 1u);
+    song.rec = 0;
+    return bad;
+}
+
 static int test_bpm_lock(void)
 {
     int bad = 0, ok;
@@ -12049,6 +12133,7 @@ int main(void)
     bad += test_click_menu();
     bad += test_usb_serial();
     bad += test_bpm_lock();
+    bad += test_lock_pages();
     bad += test_large();
     bad += test_skin();
     bad += test_scope();

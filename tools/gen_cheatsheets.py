@@ -237,7 +237,7 @@ def controls():
         (k('SAVE') + ' + ' + k('OCT+') + ' / ' + k('OCT−'), 'Store / recall the playing section.'),
         (k('GLO') + ' + ' + k('PLAY'), 'Restart from the top.'),
         (k('GLO') + ' + ' + k('SELECT'), 'Tempo (from any page).'),
-        (k('STEP HELD', cls='a') + ' + ' + k('KNOB'), 'A parameter lock on that step (roll, grid).'),
+        (k('STEP HELD', cls='a') + ' + ' + k('KNOB'), 'A parameter lock on that step (roll, grid); + ' + k('SELECT', cls='v') + ' the EDIT page they lock; + ' + k('EDIT') + ' clears its locks.'),
         (k('HOME', cls='a') + ' held', 'MENU: skins (AIR · COLORS · BOTTOM · HUD), SCOPE on the EDIT pages, palettes, knob accel, FX latch, hold time, USB level, MIDI (MIDI OUT, MIDI LEARN), animation…'),
     ]
     t3 = '<table>' + ''.join(f'<tr><td style="white-space:nowrap;width:1%;padding-right:18px">{a}</td><td>{d}</td></tr>'

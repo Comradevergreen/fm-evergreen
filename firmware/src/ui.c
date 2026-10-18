@@ -759,6 +759,21 @@ static uint32_t lock_id(uint32_t k)
                                                                : trk_engp(TSEL)->knob[k & 3u];
     return id < P_COUNT && motion_param(id) ? id : 0xFFu;
 }
+/* (0.9.12) the pages a step held walks with SELECT (ui_input.c lock_select): the track's EDIT chain (ui_lens.c, as SELECT
+ * walks it on EDIT) less the pages that cannot lock (DRUM's SOUND 1..4, KIT 3, X-MOD: the kit's, not the track's; FOCUS,
+ * OPERATOR ..). Their entries in v, their count; *at ui.plk_src's place among them (0xFF: not one of them) */
+static uint32_t lock_chain(uint8_t *v, uint32_t *at)
+{
+    uint32_t k, m = 0, pg, n = nav_ch(SEC_EDIT)->n;
+    *at = 0xFFu;
+    for (k = 0; k < n; k++)
+        if (lock_page_ok(pg = nv_page(SEC_EDIT, k))) {  /* (NPAGES, not on this track: not ok) */
+            if (pg + 1u == ui.plk_src)
+                *at = m;
+            v[m++] = (uint8_t)k;
+        }
+    return m;
+}
 
 static void ev_enter(void);
 static void page_entered(void)
