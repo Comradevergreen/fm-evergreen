@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only
- * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments */
+ * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
+ * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) */
 /* LIVE (0.9.11): the sequencer's live modifiers, GLO > LIVE (the approved mock-up secuencias.html: MANO, its V3, and
  * RIELES, its V1; the pages are ui_live.c). Per track, never destructive: they change how the sequencer walks the steps,
  * not the steps, and are never saved (performance state, as the punch-in effects); COMMIT writes them into the track's

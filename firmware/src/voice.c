@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only
- * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments */
+ * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
+ * Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) */
 /* Voice allocation, envelopes, LFO and per-track rendering.
  * Runs in the audio ISR.
  *
@@ -307,8 +308,14 @@ static volatile uint8_t load_tight;
  * time (%), the halves that came late (each a click), the voices the overload guard faded */
 static struct { volatile uint32_t peak, late, shed; } load_diag;
 /* (JIANT 0.6.70) the budget shared by all parts: NVOICE, LOAD ECO ECO_VOICES (4 parts with reverb and delay still
- * crackled on ECO: the peaks are the voices, a tail ringing on each part as the next hits come) */
-static uint32_t voice_cap(void) { return sys_load == LOAD_ECO ? ECO_VOICES : NVOICE; }
+ * crackled on ECO: the peaks are the voices, a tail ringing on each part as the next hits come). (0.9.12, after Skiff
+ * by illuminus5) VOICES_2CORE while the second core takes parts (fx.c mc_two: CORES 2, not REC at power-on, not given
+ * up): the room its render gives. A part still has NVOICE of its own (track_t.v: no RAM more); the load budget
+ * (load_tight) and the overload guard (audio.c) measure core 0's half with core 1's wait in it, so they hold the
+ * render in its time either way; a core 1 given up mid-session: NVOICE again from the next note */
+#define VOICES_2CORE 12u
+static int mc_two(void);                                /* (fx.c) */
+static uint32_t voice_cap(void) { return sys_load == LOAD_ECO ? ECO_VOICES : mc_two() ? VOICES_2CORE : NVOICE; }
 static uint32_t voices_busy(void)                       /* sounding voices of all parts (not the fading ones) */
 {
     uint32_t p, i, n = 0;

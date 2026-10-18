@@ -1,4 +1,5 @@
-/* SPDX-License-Identifier: GPL-3.0-only */
+/* SPDX-License-Identifier: GPL-3.0-only
+ * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) */
 /* (JIANT 0.6.71) The AC79's second core, for the audio render (fx.c mix_block: some synth tracks on it).
  * What starts it and what keeps it safe comes from Melodee (github.com/keremimo/melodee, GPL-3.0) and fm1-x0x
  * (github.com/charlesvestal/fm1-x0x, GPL-3.0), who worked it out on the device from the AC79 SDK (its EnableOtherCpu

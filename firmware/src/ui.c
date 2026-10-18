@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only
- * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments */
+ * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
+ * Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) */
 /* FELUCCA user interface.
  * Flat: SURF cards and panels on the palette's background, no rules, one type family (Inter Tight, three sizes), tracks
  * named by their numbers 1..4 on a cushion (icons.c trk_icon). Four columns <-> KNOB 1..4. Rendering is lazy:
@@ -62,6 +63,19 @@ static uint32_t user_of(const track_t *t)    /* user preset slot its sound came 
 }
 static uint32_t up_gen;                      /* bumped on every user bank change (redraws) */
 #include "favorites.c"
+/* (JIANT 0.9.12) PRESETS' LIST (KNOB 4): 0 ALL, 1 FAV (favorites.filter, saved as before), 2.. a sound type (core.h PT_*:
+ * every engine's presets of that type, after Skiff by illuminus5), the type in a byte no engine uses (engine 15's
+ * favourite byte 18: 0 in older settings, ALL / FAV as they were) */
+#define list_type (favorites.factory[15][18])
+_Static_assert(PT_N == 10, "settings_persist.c checks the LIST type against 10");
+static const char *const N_LIST[PT_N + 1] = {"ALL", "FAV", "BASS", "LEAD", "PAD", "KEYS", "PLUCK", "BELL", "VOX", "DRUM",
+                                              "FX"};
+static uint32_t list_get(void) { return list_type && list_type < PT_N ? list_type + 1u : favorites.filter ? 1u : 0u; }
+static void list_put(uint32_t v)
+{
+    favorites.filter = v == 1u;
+    list_type = (uint8_t)(v >= 2u && v <= PT_N ? v - 1u : 0u);
+}
 /* MENU's two-valued settings (ui_menu.c MENU_FLAGS), a bit each in a byte no engine uses:
  * saved with the settings; 0 in older ones = every setting's default (append-only: a new setting takes a new bit,
  * its default is 0) */
@@ -696,6 +710,7 @@ static void ui_say(const char *a, const char *b)
 static void ui_message(const char *s) { ui_say(s, ""); }
 /* a message led by an icon: its first byte (ui_draw.c draw_head draws the icon, then the words) */
 #define MSG_NOFILE "\x01"                      /* the no-file icon (ICON_X_NOFILE) */
+#include "midi_learn.c"                       /* (0.9.12) MIDI LEARN's UI (the map: midi_control.c) */
 
 static int chain_busy(void) { return chain.running || chain.armed; }
 /* (0.6.22) ARRANGE: the rows 0..count-1, + ADD (while there is room), then the song's END row */
@@ -1294,7 +1309,7 @@ static void apply_preset_to(track_t *t, uint32_t pi)
     t->p[P_SUS] = e->presets[pi].env[2];
     t->p[P_REL] = e->presets[pi].env[3];
     t->p[P_ED_FLT] = e->presets[pi].fenv;
-    t->p[P_VOICE] = e->presets[pi].mono ? V_LEGATO : V_POLY;   /* mono presets keep the legato feel */
+    t->p[P_VOICE] = PR_MONO(&e->presets[pi]) ? V_LEGATO : V_POLY;   /* mono presets keep the legato feel */
     if (e == &ENG_FORMANT) {                          /* (0.8.5) VOICE's words: LANG, LYRIC (0: its vowels) */
         t->p[P_VLANG] = (int16_t)(e->presets[pi].xp & 3u);
         t->p[P_VLYR] = (int16_t)(e->presets[pi].xp >> 2);
@@ -1459,13 +1474,19 @@ static uint32_t preset_all_at(uint32_t n, uint32_t *k)
     return e;
 }
 
+/* list index i's sound (engine e, its preset or user slot k) is in the LIST */
+static int preset_in(uint32_t e, uint32_t k)
+{
+    uint32_t v = list_get();
+    return v == 1u ? favorite_has(e, k) : e < NENGINES && PR_TAG(&ENGINES[e]->presets[k]) == v - 1u;
+}
 static uint32_t preset_pos(uint32_t *total)
 {
     uint32_t all, current = preset_all_pos(&all), n = 0, pos = 0xFFFFFFFFu;
-    if (!favorites.filter) { *total = all; return current; }
+    if (!list_get()) { *total = all; return current; }
     for (uint32_t i = 0; i < all; i++) {
         uint32_t k, e = preset_all_at(i, &k);
-        if (!favorite_has(e, k)) continue;
+        if (!preset_in(e, k)) continue;
         if (i == current) pos = n;
         n++;
     }
@@ -1475,11 +1496,11 @@ static uint32_t preset_pos(uint32_t *total)
 static uint32_t preset_at(uint32_t n, uint32_t *k)
 {
     uint32_t all;
-    if (!favorites.filter) return preset_all_at(n, k);
+    if (!list_get()) return preset_all_at(n, k);
     preset_all_pos(&all);
     for (uint32_t i = 0; i < all; i++) {
         uint32_t e = preset_all_at(i, k);
-        if (favorite_has(e, *k) && !n--) return e;
+        if (preset_in(e, *k) && !n--) return e;
     }
     *k = UP_SLOTS;
     return NENGINES;
@@ -1620,7 +1641,7 @@ static uint32_t preset_visible(uint32_t cur, uint32_t total, uint32_t row)
 {
     uint32_t first, last;
     if (!total || row >= 7u) return total;
-    if (!favorites.filter)
+    if (!list_get())
         return (cur + total * 4u + row - 3u) % total;
     first = cur < total && cur > 3u ? cur - 3u : 0u;
     last = total > 7u ? total - 7u : 0u;

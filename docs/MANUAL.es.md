@@ -90,7 +90,7 @@ Los nombres de abajo son los que usa el firmware (la pantalla HARDWARE CALIBRATI
 
 | Control | Qué hace |
 | --- | --- |
-| **SELECT** (encoder) | Solo (0.9.2): **recorre las páginas de la sección**, una página por paso, en una sola cadena, frenando en la primera y en la última (sin niveles, sin zoom; ver [Cómo funciona la navegación](#cómo-funciona-la-navegación-seis-reglas-092)). En el MENU: sus filas, las cuatro pestañas en una cadena. Con un botón mantenido: **HOME** + SELECT **GEN**, **EDIT / SEQ / LFO / FX** + SELECT los **dados** de esa parte, **GLO** + SELECT el **tempo**, **ENV / SCL / ARP / SAVE** + SELECT recorren la cadena de esa sección desde donde estés. |
+| **SELECT** (encoder) | Solo (0.9.2): **recorre las páginas de la sección**, una página por paso, en una sola cadena, frenando en la primera y en la última (sin niveles, sin zoom; ver [Cómo funciona la navegación](#cómo-funciona-la-navegación-seis-reglas-092)). En el MENU: sus filas, las cinco pestañas en una cadena. Con un botón mantenido: **HOME** + SELECT **GEN**, **EDIT / SEQ / LFO / FX** + SELECT los **dados** de esa parte, **GLO** + SELECT el **tempo**, **ENV / SCL / ARP / SAVE** + SELECT recorren la cadena de esa sección desde donde estés. |
 | **ALGORITHM** (encoder) | Elige la pista desde cualquier página: T1–T6 (T1–T4 con TRACKS 4). La pista es siempre de ALGORITHM (0.9.2: PRESETS ya no la elige en ENV, LFO, CHORD, ARP). En el MENU: la pestaña siguiente / anterior. Con una capa mantenida: su vista, MAP ↔ KNOBS ↔ STATE. |
 | **PRESETS** (encoder) | **Siempre presets** (0.9.2): los sonidos de la pista seleccionada (los presets de fábrica de cada motor y después tus presets de usuario) en todas las páginas; en las páginas **SEQ** los **patrones** (abre el cargador PHRASES con el patrón siguiente elegido: OCT+ lo carga, OCT− vuelve a la página SEQ); en **GEN** el GENRE. En el MENU y con un botón mantenido no hace nada. Nunca cambia de página, de pista, de módulo ni de fila. |
 | **KNOB 1–4** | Las cuatro tarjetas (columnas) de la pantalla. Una página que elige algo lo elige con **KNOB 1** (el paso, el compás, el slot, la etapa, el operador, el sonido del kit, la fila). Con una capa mantenida, las perillas propias de la capa. Girar rápido recorre todo el rango, despacio ajusta fino (MENU > KNOB ACCEL lo desactiva). |
@@ -287,7 +287,7 @@ páginas, sus perillas, sus dibujos y todas las funciones son las mismas, solo c
   así SAVE, OCT+, OCT+ sigue guardando el sonido (o la sección).
 - **EDIT es siempre EDIT**: borrar un paso pasó a la capa SEQ (**SEQ + G5**, CLR STEP; en AUTO LIST borra el
   registro; llevar TIME a REST también borra la nota) y renombrar a la capa SAVE (**SAVE + C5**, NAME).
-- **El MENU** (mantené HOME): SELECT recorre todas las filas (DISPLAY → CONTROL → AUDIO → SYSTEM), ALGORITHM salta de
+- **El MENU** (mantené HOME): SELECT recorre todas las filas (DISPLAY → CONTROL → AUDIO → MIDI → SYSTEM), ALGORITHM salta de
   pestaña, una perilla cambia el valor, HOME lo cierra.
 - Algunas páginas solo aparecen cuando corresponden: las páginas de operadores de FM6 en una pista FM6, las de DRUM-X
   en una pista DRUM, RETRIG en LOFI BYTE/FLOAT, y con **LOAD ECO** se ocultan las páginas SLICER y CHORUS; la cadena
@@ -457,7 +457,7 @@ violeta, con el nombre violeta, y dice **OCT+**; apretá OCT+ para ejecutarla.
 
 | Página | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 | --- | --- | --- | --- | --- |
-| PRESETS | No. (el sonido) | ENG (el motor) | FAV (marcar como favorito) | LIST (ALL / FAV) |
+| PRESETS | No. (el sonido) | ENG (el motor) | FAV (marcar como favorito) | LIST (ALL / FAV / un tipo de sonido: BASS LEAD PAD KEYS PLUCK BELL VOX DRUM FX, 0.9.12) |
 | USER | SLOT (U01–U32) | LOAD (acción) | ERASE (acción) | SAVE (acción) |
 | PROJECTS / SECTIONS (la página PROJECT) | PROJECT (1–8; en SECTIONS: SECT A–D) | SECT (A–D; en SECTIONS: el NAME de la sección) | LOAD (acción) | SAVE (acción) |
 | ARRANGE | ROW ("2/6") | SECT (en END: STOP / x2–x8 / LOOP) | BARS | SCENE |
@@ -587,6 +587,13 @@ HOME de cada pista.
 ANIMAL, LOFI, ANALOG, FM6, PHASE, WHEEL, NOISE** (los seis primeros son las pistas al encender, T1–T6). Solo cambió el
 orden que ves: los proyectos, presets de usuario, favoritos y backups nombran los motores por su número, que no cambia,
 así que todo lo guardado antes carga igual. PROGRAM CHANGE numera los sonidos en este orden nuevo (ver [14](#14-midi-y-usb)).
+
+**Tipos de sonido** (0.9.12, a partir de Skiff): cada sonido de fábrica tiene un tipo: **BASS, LEAD, PAD, KEYS, PLUCK,
+BELL, VOX, DRUM, FX**. En SAVE › PRESETS, **KNOB 4 (LIST)** pasa por ALL → FAV → BASS → LEAD → … → FX: con un tipo,
+KNOB 1 y la perilla PRESETS recorren solo los sonidos de ese tipo, **de todos los motores** (BASS: el SUB BASS de
+ANALOG, el FM BASS de FM6, el GROWL de PHASE, el TRI BASS de LOFI, el REED BASS de WHEEL …), y cargar uno conserva los
+pasos como siempre. El tipo se guarda con la configuración; tus presets de usuario aparecen en ALL y FAV. Los dados
+(GEN) también usan los tipos: un sonido de bajo solo en el bajo.
 
 **Cambios suaves**: pasar una pista a otro motor apaga el anterior de a poco (unos 12 ms) y lo que estés sosteniendo
 (teclas, o las notas que sostiene el secuenciador) sigue en el motor nuevo, entrando de a poco; no se corta nada.
@@ -897,8 +904,8 @@ sobre la pista que sigue a LFO DEST / ENV DEST FILTER.
 ### VOICE (todos los motores)
 
 EDIT > **VOICE**: **VOICE** POLY, MONO, LEG (legato), UNI (unísono); **GLIDE**; **MODE** RATE o TIME (cómo se mide el
-glide); **PRIO** LAST, LOW, HIGH. Las seis pistas comparten un presupuesto de 8 voces; FM6 toca como máximo cuatro por
-pista. (0.9.8) VOICE hace el glide como un cantante: una curva en S de la altura en el mismo tiempo (los
+glide); **PRIO** LAST, LOW, HIGH. Las seis pistas comparten un presupuesto de 8 voces (**12 mientras toca el segundo
+núcleo**, 0.9.12: MENU › ABOUT dice CORES 2); FM6 toca como máximo cuatro por pista, cualquier pista como máximo 8. (0.9.8) VOICE hace el glide como un cantante: una curva en S de la altura en el mismo tiempo (los
 demás motores: una recta, como antes).
 
 ---
@@ -2052,7 +2059,7 @@ Cuán pesado puede ponerse el sonido.
 | --- | --- |
 | **FULL** (por defecto) | Todo tal como está configurado. |
 | **LITE** | Las reverbs SHIMMER y CLOUD suenan como ROOM, RESO como SPRING; el delay GRAIN suena común; FM6 toca dos voces. La pantalla se dibuja más liviana: los seres y gráficos se animan a unos 20 cuadros por segundo con contornos más simples, y los valores cambian al instante (sin dígitos que ruedan). |
-| **ECO** | LITE, más: todas las reverbs suenan como un SPRING liviano, **sin SLICER** (sus pistas van directo a la mezcla), **sin chorus** (sus páginas se ocultan), como máximo **4 voces** por pista de sinte y **6 voces** entre todas las pistas (8 si no; la batería también cuenta). Cuando la carga sube, las colas casi en silencio se sueltan antes. La pantalla a unos 14 cuadros por segundo, los seres aún más simples. |
+| **ECO** | LITE, más: todas las reverbs suenan como un SPRING liviano, **sin SLICER** (sus pistas van directo a la mezcla), **sin chorus** (sus páginas se ocultan), como máximo **4 voces** por pista de sinte y **6 voces** entre todas las pistas (8 si no, 12 con los dos núcleos; la batería también cuenta). Cuando la carga sube, las colas casi en silencio se sueltan antes. La pantalla a unos 14 cuadros por segundo, los seres aún más simples. |
 
 LOAD solo cambia cómo se renderizan las cosas: **los proyectos conservan su configuración** y suenan como se guardaron
 en FULL (o en otro FM-1). Las tarjetas de los efectos sustituidos dicen LITE o ECO. LOAD libera **CPU**, no RAM: el
@@ -2071,12 +2078,12 @@ la pista seleccionada.
 
 ### El MENU (mantené HOME)
 
-**SELECT** recorre todas las filas (0.9.2), las cuatro pestañas en una sola cadena (DISPLAY → CONTROL → AUDIO →
-SYSTEM; frena en la primera y en la última), **ALGORITHM** salta a la pestaña siguiente / anterior (a su primera fila),
+**SELECT** recorre todas las filas (0.9.2), las cinco pestañas en una sola cadena (DISPLAY → CONTROL → AUDIO → MIDI →
+SYSTEM; 0.9.12: MIDI es nueva, MIDI OUT pasó ahí desde CONTROL; frena en la primera y en la última), **ALGORITHM** salta a la pestaña siguiente / anterior (a su primera fila),
 **cualquier perilla** u **OCT+ / OCT−** cambia el valor; PRESETS acá no hace nada. HOME lo cierra (en ese momento se
 guarda la configuración). La pantalla muestra las filas de la pestaña, las cuatro de la fila elegida como tarjetas
 (ROWS 1–4 / ROWS 5–6; DISPLAY: ROWS 5–8) con el número de su perilla; las pestañas arriba, el pie **MENU · DISPLAY ·
-SKIN  2/26**. El encabezado dice MENU · DISPLAY.
+SKIN  2/28**. El encabezado dice MENU · DISPLAY.
 
 | Pestaña | Fila | Valores |
 | --- | --- | --- |
@@ -2093,13 +2100,15 @@ SKIN  2/26**. El encabezado dice MENU · DISPLAY.
 | CONTROL | FX LATCH | **OFF** (por defecto desde 0.6.64), ON |
 | CONTROL | BPM LOCK | OFF, ON — DICE ALL conserva el tempo (el tempo es GLO + SELECT, F4 TAP de GLO o el BPM de GLOBAL) |
 | CONTROL | SCALE LEDS | OFF, ON — las teclas de la escala se iluminan, la tónica más brillante |
-| CONTROL | MIDI OUT | **KEYS**, CLOCK, ALL, OFF — qué sale por MIDI USB (ver [14](#14-midi-y-usb)) |
 | AUDIO | SPEAKER EQ | FLAT, LOWCUT, BASS+ (un EQ en el master para el parlante chico; también llega a las salidas y al USB) |
 | AUDIO | USB LEVEL | MASTER (el USB sigue a la perilla MASTER), FIXED (USB a nivel completo), −6 / −12 / −18 / −24 dB (USB fijo y atenuado: para un celular o una computadora cuya entrada satura a nivel completo) |
 | AUDIO | CLICK | OFF, REC (mientras una pista está armada y sonando), ON |
 | AUDIO | CLICK LEVEL | LOW, MID, HIGH |
 | AUDIO | COUNT-IN | OFF, 1 BAR, 2 BARS |
 | AUDIO | TRACKS | **4** (por defecto), 6 |
+| MIDI | MIDI OUT | **KEYS**, CLOCK, ALL, OFF — qué sale por MIDI USB (ver [14](#14-midi-y-usb)) |
+| MIDI | LEARN | **OFF**, ON — (0.9.12) arma el MIDI LEARN: una perilla que girás elige su parámetro y el próximo CC queda aprendido en él (ver [MIDI LEARN](#midi-learn-0912)); no se guarda, al prender está en OFF |
+| MIDI | LEARN CLEAR | OCT+ olvida todos los CC aprendidos; la fila dice cuántos hay (NONE, 3 CC …) |
 | SYSTEM | USB | CONSOLE (la consola serie con audio USB estéreo, por defecto; era USB SERIAL ON), STEREO (solo audio + MIDI, clase 0; era OFF: ayuda a que macOS 13–15 vea la entrada de audio USB), STEMS (0.7.1: entrada de audio de 8 canales, ver "Stems" más abajo), IN+OUT (0.7.5: audio estéreo en los dos sentidos, ver "Entrada de audio USB" más abajo), STEMS+IN (0.8.0: los stems con la salida de audio también, ver "Stems con una voz" más abajo) |
 | SYSTEM | RESTORE LAST | **OFF** (por defecto: sin autoguardado, el encendido arranca en cero), ON (la última sesión vuelve al encender) |
 | SYSTEM | LOAD | ECO, LITE, **FULL** (por defecto) |
@@ -2117,7 +2126,7 @@ protección desvaneció): una foto de esa pantalla ayuda cuando reportás un pro
 - **USB** es MIDI y audio class-compliant: la salida master le llega a la computadora como una entrada de audio USB.
 - **MIDI IN** por USB y por el jack **TRS**. **ROUTE** decide qué pista toca cada canal (ver
   [13](#13-sistema-tracks-load-y-el-menu)). Las notas entrantes en una pista armada se graban igual que las teclas.
-- **MIDI OUT** (por USB; MENU > CONTROL > **MIDI OUT**, 0.6.72), cada pista por su canal (T1 = canal 1 … T6 =
+- **MIDI OUT** (por USB; MENU > MIDI > **MIDI OUT**, 0.6.72; en CONTROL hasta la 0.9.11), cada pista por su canal (T1 = canal 1 … T6 =
   canal 6):
   - **KEYS** (por defecto): las teclas mandan sus notas, como siempre.
   - **CLOCK**: y además el clock (24 por negra) con **START / STOP**, mientras el tempo es el del FM-1 (CLOCK INT): una
@@ -2151,6 +2160,30 @@ protección desvaneció): una foto de esa pantalla ayuda cuando reportás un pro
   **CC104** drive, **CC105** sustain (0.6.96). CC1 (rueda de modulación), CC11 (expresión) y el aftertouch de canal son fuentes de
   la matriz MOD (MODW, EXPR, AT). Funcionan el pitch bend, el sustain (CC64), All Sound Off (CC120) y All Notes Off
   (CC123). Un CC se graba como automatización igual que un movimiento de perilla.
+
+### MIDI LEARN (0.9.12)
+
+Cualquier perilla del sonido de una pista a cualquier CC de tu controlador, en el equipo (del MIDI LEARN de Felucca 1.5):
+
+1. **MENU › MIDI › LEARN ON** (mantené HOME, ALGORITHM hasta la pestaña MIDI, SELECT hasta LEARN, OCT+) y después HOME
+   para cerrar el menú.
+2. **Girá una perilla** en cualquier página que edite un parámetro de una pista (HOME, EDIT, ENV, LFO, FX, el MIXER,
+   los niveles de GLO): la pantalla dice **LEARN T2 CUT: SEND A CC** (o su CC si ya tiene uno).
+3. **Mové la perilla del controlador** (mandá el CC): **CC21 > T2 CUT**. Desde ahí ese CC mueve el CUT de T2 como la
+   perilla (0–127 sobre su rango, grabado como automatización igual que una perilla), en **cualquier canal** y por
+   **USB o el jack TRS**.
+4. Girá la próxima perilla, mandá el próximo CC … **LEARN OFF** cuando termines (con LEARN prendido, las perillas
+   siguen eligiendo).
+
+- Un CC mueve un parámetro y un parámetro tiene un CC: aprenderlo de nuevo reemplaza el anterior. Como máximo **diez**
+  (**LEARN FULL**: liberá uno aprendiendo su CC en otra perilla, o todos con LEARN CLEAR).
+- **Nunca se aprenden** (**CC7 RESERVED**, y siguen haciendo lo suyo): CC0 / 32 (bank select), CC1 (rueda de
+  modulación), CC6 / 38 / 96–101 (data entry, RPN), CC11 (expresión), CC64 (sustain), CC120–127 (modos de canal) y
+  todos los CC del mapa estándar de arriba (CC5 7 10 16–23 71–75 91 93 94 102–105). Así un CC aprendido y el mapa nunca
+  se pisan.
+- **Se guarda con la configuración** (no en un proyecto; un backup de la configuración lo lleva); **MENU › MIDI ›
+  LEARN CLEAR** los olvida todos. ROUTE sigue decidiendo qué canales se escuchan (CH1-6 ignora los canales 7–16).
+- MIDI por Bluetooth no existe en el FM-1 con JIANT (ver arriba), así que el learn funciona por USB y TRS.
 - Nombre USB MIDI y audio: "JIANT FM" (0.7.0; "JIANT Update" mientras se instala un paquete). El editor web y el instalador aceptan también un equipo que todavía se llame "Felucca".
 
 ### Stems (0.7.1)
@@ -2353,6 +2386,9 @@ los dos núcleos trabajando, o el segundo núcleo lee mal, deja de responder o f
 siempre** y lo avisa (**2 CORES OFF AFTER A CRASH** / **CORE 2 FAILED: 1 CORE**, y luego MENU > SYSTEM > CPU); ABOUT
 dice entonces **CORES 1 (AFTER A CRASH)**. Volvé a poner 2 CORES solo si querés probarlo. Mantener **REC** al prender
 da un núcleo solo en esa sesión.
+Con los dos núcleos andando las pistas comparten **12 voces** en vez de 8 (cada pista sigue con 8 como máximo); con un
+núcleo (1 CORE, después de un crash, REC al prender) son 8, y si el segundo núcleo se detiene el presupuesto vuelve a 8
+desde la próxima nota.
 
 **Se cuelga: pantalla roja "JIANT CRASH" (o "FELUCCA CRASH" antes de la 0.7.0) con números.** Sacale una foto y
 decinos la versión (MENU > ABOUT). Cómo leerla:

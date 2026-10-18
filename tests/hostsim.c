@@ -101,7 +101,7 @@ static void host_preset_values(track_t *t, uint32_t e, uint32_t pi, const preset
     t->p[P_SUS] = p->env[2];
     t->p[P_REL] = p->env[3];
     t->p[P_ED_FLT] = p->fenv;
-    t->p[P_VOICE] = p->mono ? V_LEGATO : V_POLY;
+    t->p[P_VOICE] = PR_MONO(p) ? V_LEGATO : V_POLY;
     if (ENGINES[e] == &ENG_FORMANT) {             /* (0.8.5) VOICE's words: LANG, LYRIC (ui.c apply_preset_to) */
         t->p[P_VLANG] = (int16_t)(p->xp & 3u);
         t->p[P_VLYR] = (int16_t)(p->xp >> 2);

@@ -19,8 +19,8 @@ static const uint8_t ED_MENU[][2] = {
     {MI_SCLLED, 16},                                   /* 1.2 (Discussion #127), a row of CONTROL */
     {MI_SCROFF, 17},                                   /* 1.1.5, a row of DISPLAY */
     {MI_TRACKS, 18},                                   /* (JIANT 0.6.18) TRACKS 4 / 6, a row of AUDIO */
-    {MI_LOAD, 19},                                     /* (JIANT 0.6.30) LOAD ECO / LITE / FULL, a row of SYSTEM */
-    {MI_MIDIOUT, 20},                                  /* (JIANT 0.6.72) MIDI OUT KEYS / CLOCK / ALL / OFF, CONTROL */
+    {MI_LOAD, 19},                                     /* (JIANT 0.6.30) LOAD ECO / LITE / FULL, SYSTEM (0.9.12: AUDIO) */
+    {MI_MIDIOUT, 20},                                  /* (JIANT 0.6.72) MIDI OUT KEYS / CLOCK / ALL / OFF, CONTROL (0.9.12: MIDI) */
     {MI_SKIN, 21},                                     /* (JIANT 0.8.9) SKIN COLORS / BOTTOM / HUD (0.9.7: AIR COLORS BOTTOM
                                                         * HUD), a row of DISPLAY */
     {MI_SCOPE, 22},                                    /* (0.9.7) SCOPE OFF / ON, a row of DISPLAY */

@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only
- * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments */
+ * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
+ * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) */
 /* Felucca quick layers: while a page button is held, the keys and KNOB 1..4
  * are its shortcuts and its map shows over the page. One table (LAYERS) drives the gesture, the keys, the knobs,
  * the LEDs and the overlay:
@@ -647,7 +648,7 @@ static void layer_knob(uint32_t k, int32_t s)
         int16_t *vp = &t->p[P_LEVEL];
         *vp = (int16_t)clamp(*vp + accel(EN_K1 + k, s, TP[P_LEVEL].max - TP[P_LEVEL].min), TP[P_LEVEL].min,
                              TP[P_LEVEL].max);
-        motion_capture(t, P_LEVEL, *vp);
+        knob_cap(t, P_LEVEL);
     } else if (l == LAYER_SAVE) {                       /* KNOB 1: the song (in when SAVE lets go); 2..4: none */
         if (k == 0u)
             lys.song = (uint8_t)(clamp((int32_t)(lys.song ? lys.song - 1u : song_cur) + (s > 0 ? 1 : -1), 0,

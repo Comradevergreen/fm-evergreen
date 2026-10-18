@@ -99,7 +99,7 @@ int main(void)
             printf(",\"env\":");
             js_ints(v, 4);
             printf(",\"xp\":%u", (unsigned)p->xp);   /* (0.8.5) VOICE: LANG | LYRIC << 2 */
-            printf(",\"mono\":%d,\"pat\":%d}", p->mono, p->pat);
+            printf(",\"mono\":%d,\"tag\":%u,\"pat\":%d}", (int)PR_MONO(p), (unsigned)PR_TAG(p), p->pat);   /* (0.9.12: the type, PT_*) */
         }
         printf("]}");
     }
@@ -150,7 +150,7 @@ int main(void)
         js_ints(v, 4);
         for (i = 0; i < 4u; i++)
             v[i] = p->fx[i];
-        printf(",\"fenv\":%d,\"mono\":%d,\"fx\":", p->fenv, p->mono);
+        printf(",\"fenv\":%d,\"mono\":%d,\"fx\":", p->fenv, (int)PR_MONO(p));
         js_ints(v, 4);
         printf(",\"pat\":%d}", p->pat);
     }

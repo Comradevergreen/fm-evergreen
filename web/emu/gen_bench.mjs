@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
 // (0.6.91) The song generator heard in the browser build: every genre (or the ones named) made by web_gen on the wasm
 // as the page runs it, played SECONDS each and written as WAV files to listen to, with a line of measurements a piece
 // (peak, RMS, the tracks that sound, BPM). Also a check: the same genre and seed twice give the same samples.

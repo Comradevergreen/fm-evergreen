@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only
- * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments */
+ * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
+ * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) */
 /* LIVE (0.9.11, GLO > LIVE: MANO and RIELES; firmware/src/seq_live.c, ui_live.c) on the real sequencer and UI sources
  * (with the stubs of tests/ui_test.c):
  *   TIMING     RATE goes in on the next beat (MANO's rate keys: the next 1/16), CORTE / LOOP / RATCH / THIN on the next

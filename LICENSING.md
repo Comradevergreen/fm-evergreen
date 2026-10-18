@@ -6,6 +6,10 @@ bundled or ported parts keep their own licences; they are listed below, and thei
 texts are in `LICENSES/`.
 
 Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
+Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) — JIANT FM, the fork of Felucca in this tree: its own files
+and its modifications. A file's header says which: "Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)" where the
+file is mostly JIANT's, "Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)" where it is mostly Felucca's
+and JIANT changed it; Felucca's line stays wherever it was. The licence is the same: GPL-3.0-only.
 
 ## What is GPL-3.0-only
 
@@ -52,6 +56,8 @@ All by Hügelton Instruments (Leo Kuroshita), in this tree:
 | X0X by charlesvestal (<https://github.com/charlesvestal/fm1-x0x>), a Felucca fork: the design of the browser emulator (the worklet, the device clock driven by its audio, the exports); its files credit it in their headers | GPL-3.0 | `web/emu/` |
 | DotGothic16 font by The DotGothic16 Project Authors (<https://github.com/fontworks-fonts/DotGothic16>): the browser emulator's knob labels, served with its page (cut to printable ASCII; the font declares no Reserved Font Name) | SIL OFL 1.1 | `web/emu/fonts/DotGothic16-subset.woff`, `LICENSES/OFL-DotGothic16.txt` (also `web/emu/fonts/OFL.txt`) |
 | JieLi AC79 SDK by JieLi Technology: three of its files go into every `.fwsc` package (below); none are in this tree | Apache-2.0 | `LICENSES/Apache-2.0.txt` |
+| Skiff by illuminus5 (<https://github.com/illuminus5/skiff>), a Felucca fork: the designs of JIANT 0.9.12's 12 voices with the second core and the factory presets' sound types (written anew; no code copied) | GPL-3.0-only | credit only (`firmware/src/voice.c`, `firmware/src/core.h`) |
+| MIDI LEARN from Felucca 1.5 by Leo Kuroshita (Hügelton Instruments), ported and modified for JIANT 0.9.12 | GPL-3.0-only | `firmware/src/midi_learn.c`, `firmware/src/midi_control.c` |
 
 On the device, HOME held > ABOUT opens the information screen; turning PRESETS scrolls on into
 CREDITS, a short list of these authors, licences and source URLs.

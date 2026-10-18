@@ -159,7 +159,8 @@ audio CPU budget, the signature shown at power-on is 428 bytes. An instrument th
   that the output is identical, bit for bit.
 - **More room.** With the second core doing part of the synth work, the load meter stays lower: more tracks, voices,
   FM6 and heavy reverbs before the clicks and the cut notes start. LOAD LITE / ECO are still there for the heaviest
-  songs.
+  songs. **12 voices** (0.9.12, after [Skiff](https://github.com/illuminus5/skiff)): while the second core plays, the
+  tracks share 12 voices instead of 8 (each still at most 8; ECO 6); with one core, 8 as before.
 - **Units that cannot run it.** On some FM-1s the second core now and then reads a word of memory wrong, more often
   under load (found by the Melodee and fm1-x0x developers). JIANT guards against it: every job carries a check word,
   and if the second core reads a wrong one, faults or does not answer in time, it is **stopped at once and the first
@@ -344,6 +345,8 @@ Turning fast sweeps the whole range; turning slowly is fine adjustment. Turn it 
 - USB: class-compliant MIDI and audio (the master reaches the computer); TRS MIDI; internal, USB or TRS clock. Since
   0.8.9 the USB audio keeps its time: no half buffer lost under load (the clicks), no packet dropped, the 48 kHz
   resampler on the second core.
+- **MIDI LEARN** (0.9.12, MENU › MIDI › LEARN): turn a knob, send a CC; up to ten, kept with the settings, over USB
+  and TRS (from Felucca 1.5).
 - **Stems** (MENU > SYSTEM > USB): **STEMS** sends every track on its own channel (8: T1–T6, FX L R), **STEMS+IN** adds
   your voice through the FM-1. On the phone, the **JIANT Stems** app records them, lines the voice up by the measured
   latency and exports a ZIP or a mix (a separate product, coming soon; Android 10+). The emulator page renders a backup's
@@ -632,6 +635,12 @@ These design notes are in Spanish.
 - Emulator: after [X0X](https://github.com/charlesvestal/fm1-x0x) by charlesvestal (GPL-3.0).
 - Testing and CPU work on a real FM-1: **praztalfractal** ([GitHub: gospodindilly-ops](https://github.com/gospodindilly-ops)):
   the load measurements behind the dual core work, the guard on the effects (0.6.76) and the hot code in RAM (0.6.78).
+- **[Skiff](https://github.com/illuminus5/skiff)** by illuminus5 (GPL-3.0-only), 0.9.12: the designs of two features,
+  written anew for JIANT: 12 voices while the second core plays, and a sound type on every factory preset (browsed by
+  type in PRESETS). JIANT also checks the FM6 voice bank's flash sector (0xE7000), where Skiff keeps its pattern bank,
+  before reading it.
+- **MIDI LEARN** (0.9.12): ported from Felucca 1.5 by Leo Kuroshita (`firmware/src/midi_learn.c`, modified for six
+  tracks and MENU › MIDI).
 - Package format: [JieLi AC79 SDK](https://gitee.com/Jieli-Tech/fw-AC79_AIoT_SDK)
   ([Apache-2.0](LICENSES/Apache-2.0.txt); three of its files go into every package, none in this tree).
 
@@ -649,6 +658,8 @@ Free software: [GPL-3.0-only](LICENSE), like Felucca. The fonts and the ported D
 FM-1 are trademarks of their owners; JIANT is not affiliated with or endorsed by them.
 
 Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments — Felucca.
+Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) — JIANT: its own files and its modifications (each source file
+says which in its header: "Copyright" where the file is JIANT's, "Portions Copyright" where it is mostly Felucca's).
 JIANT's modifications are distributed under the same license.
 
 ## Changelog
@@ -693,6 +704,43 @@ Every update is listed here, newest first. (Since 0.6.80 at the end of the page:
   the audio render): a packet just queued is not polled for 0.6 ms (it cannot have gone yet), ~4 polls a ms instead of
   ~10, the stems timing as 0.9.10.
 - RAM code 1 KiB larger (from the pool's spare), image +2.3 KB.
+### v0.9.12 (draft, not released)
+- **12 voices with the second core** (after [Skiff](https://github.com/illuminus5/skiff) by illuminus5): while CORES 2
+  runs (MENU › ABOUT), the tracks share **12 voices** instead of 8; one core (REC at power-on, a unit without it, a
+  core given up mid-session: from the next note) keeps 8, LOAD ECO 6. A track still has 8 of its own (no RAM more). The
+  load control stays in charge: the load budget (65 % of a half) and the overload guard (80 %) measure core 0's half
+  with its wait for core 1 in it, so they keep the render in time either way. Measured (callgrind, `tests/cpu_vg.c`,
+  six ANALOG / FM6 chords, 24 notes held, every FX on): one core with 8 voices 3241 instructions a sample; two cores
+  with 12, 3925 in all, **1949 on core 0** (the audio ISR's own share: 60 % of one core's with 8). The other sections
+  as before; target loop costs unchanged. Flash +64 B. `tests/regress.c` (12 / 8 / 8 REC / 6 ECO, each part ≤ 8, a
+  core lost), the dual-core test compares one core and two at the same budget.
+- **Sound types and PRESETS by type** (after Skiff): every factory preset has a type, **BASS LEAD PAD KEYS PLUCK
+  BELL VOX DRUM FX**, in the free bits of its MONO byte (no format, nothing stored changes). SAVE › PRESETS' **LIST**
+  (KNOB 4) steps ALL → FAV → BASS … FX: KNOB 1 and the PRESETS knob then browse that type over every engine. The type
+  is kept with the settings (a byte no engine uses; older settings: ALL). The generator (GEN) keeps bass sounds off the
+  other roles by the type instead of their names (a REESE is now a bass too). PROGRAM CHANGE numbers stay those of ALL.
+  Flash +128 B.
+- **MIDI LEARN** (ported from Felucca 1.5's, by Leo Kuroshita): **MENU › MIDI › LEARN ON**, turn a knob on any page
+  that edits a track's parameter, send a CC: learned (**CC21 > T2 CUT**), then it sets that parameter as the knob does
+  (and is recorded as automation) on any channel ROUTE hears, over USB and TRS. Ten at most; one CC a parameter;
+  **LEARN CLEAR**; the reserved CCs (CC0 1 6 11 32 38 64 96–101 120–127 and the standard map's 5 7 10 16–23 71–75 91 93
+  94 102–105) refused ("CC7 RESERVED") and doing their own. Kept with the settings (in the favourites row of the
+  retired DIGITAL engine, 30 bytes; older settings: none learned), not in projects. Its state in the pool (8 B), none
+  among the audio ISR's globals.
+- **MENU › MIDI**, a fifth tab before SYSTEM (as Felucca 1.2's): MIDI OUT (moved from CONTROL), LEARN, LEARN CLEAR. The
+  editor sees MIDI OUT in the MIDI tab (its id unchanged; SYSTEM's tab index 3 → 4). The tabs show short names when
+  five do not fit (DISP CTRL AUDIO MIDI SYS); MENU's tile view (renders only since 0.9.2) is gone.
+- **The FM6 voice bank's sector is checked before it is used**: Skiff keeps its pattern bank at 0xE7000, where JIANT
+  keeps the FM6 voice bank. A bank there was already read only with its commit record and CRCs right; now the power-on
+  also never erases that sector to finish a copy unless it is erased or holds a bank of ours (another firmware's data
+  reads as no bank and stays as it is) — only a bank you send from the editor writes over it. Flash +80 B.
+  `tests/fm6bank_test.c`.
+- **Copyright**: "Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)" in the header of every file JIANT wrote
+  ("Portions Copyright" in the Felucca files it changed substantially), Felucca's lines kept; README, LICENSING.md and
+  MENU › ABOUT (which now names Felucca and Skiff in its credits) say so. The license is unchanged.
+- Totals: flash image 576192 → 577712 B (+1520 B; 3852 B left of 581564): 12 voices +64, the sector guard +80, the
+  sound types +128, MIDI LEARN and the MIDI tab +864, ABOUT's credits and copyright +384. .data + .bss 79556 B
+  (unchanged), the pool +8 B (spare 10528 B), RAM code unchanged.
 
 ### v0.9.11
 - **GLO › LIVE: the six sequences in parallel, with live modifiers** (the approved mock-up *secuencias*, its MANO and

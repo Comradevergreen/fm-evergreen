@@ -1,4 +1,5 @@
-/* SPDX-License-Identifier: GPL-3.0-only */
+/* SPDX-License-Identifier: GPL-3.0-only
+ * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) */
 /* (JIANT 0.6.83) CPU cost on any host with valgrind: the instruction counts of the audio path, counted by callgrind
  * (the same on every run: exact, unlike the time), section by section, for tests/cpu_vg.py to compare with
  * tests/cpu_baseline_vg.txt. The proc_pid_rusage counts of regress / reverb_test / mod_test exist on the Mac only;
@@ -11,6 +12,9 @@
  *   rev/<TYPE>     a pad soaked in the reverb, each REVERB TYPE (ROOM SPRING SHIMR RESO CLOUD)
  *   dly/<RATE>     (0.8.4) a pad into the delay, its line at the full rate, half, a quarter (fx.c dly_lo)
  *   mix/full       six parts: four ANALOG / FM6 chords, drums, every FX on
+ *   mix/v12        (0.9.12) the second core's 12 voices: six ANALOG / FM6 chords (24 notes held), every FX on, 12 sounding,
+ *                  CORES 2 (mc_host): both cores' instructions; mix/v12.c0 core 0's alone (core 1's jobs not counted:
+ *                  what the audio ISR waits on); mix/v12.one the same scene on one core (8 sounding)
  *   seq/plain      the sequencer: six tracks of chords / hits on every step at 200 BPM
  *   seq/heavy      .. with two step components on each (ARP SEQ / ECHO x8, RAND / OCT), DIV, LEN, chord glides
  *   seqtick/plain  (0.9.11) the sequencer alone (events_block, no render): seq/plain's six tracks
@@ -19,9 +23,11 @@
  *   song/cputest.djf  (0.9.1) .. with the master DJ FILTER on (GLO > MIXER KNOB 4 at -24, a low-pass): its cost on top
  *   peak/VOICE.EN6 (0.9.0, last) six VOICE EN tracks starting a word in one block: that block's instructions, the worst
  *                  of 24 rounds (cpu_vg.py: not per sample) */
+#include <valgrind/callgrind.h>
+static int vg_c0;                                   /* (0.9.12) mix/v12.c0: core 1's jobs not counted (fx.c mc_run) */
+#define MC_HOST_JOB() do { if (vg_c0) CALLGRIND_TOGGLE_COLLECT; } while (0)
 #define UI_TEST_NO_MAIN
 #include "ui_test.c"
-#include <valgrind/callgrind.h>
 
 #define NB 256u                                     /* blocks a section (8192 samples) */
 static int32_t vo[2 * CTL];
@@ -177,6 +183,27 @@ int main(void)
     vg_part(5, ENGI_DRUM, 0, 4);
     song.g[G_RTYPE] = 4;
     vg_section("mix/full");
+    for (e = 0; e < 3u; e++) {                          /* (0.9.12) twelve voices on two cores; the scene on one */
+        static const char *const VN[3] = {"mix/v12.one", "mix/v12", "mix/v12.c0"};
+        uint32_t k, nv = 0, live = trk_live;
+        vg_quiet();
+        trk_live = NTRK;
+        mc_host = e != 0u;
+        for (i = 0; i < NPART; i++) {
+            vg_part(i, i & 1u ? ENGI_FM6 : ENGI_ANALOG, 0, 4);
+            trk[i].p[P_DLY] = 60; trk[i].p[P_REV] = 60; trk[i].p[P_CHOR] = 60; trk[i].p[P_DIST] = 40;
+        }
+        song.g[G_RTYPE] = 4;
+        vg_c0 = e == 2u;
+        vg_section(VN[e]);
+        vg_c0 = 0;
+        for (i = 0; i < NPART; i++)
+            for (k = 0; k < NVOICE; k++)
+                nv += trk[i].v[k].active && trk[i].v[k].stage != 4u;
+        mc_host = 0;
+        trk_live = live;
+        if (nv != (e ? 12u : 8u)) { printf("cpu_vg: %s: %u voices sounding\n", VN[e], nv); return 1; }
+    }
     vg_seq(0);
     vg_section("seq/plain");
     vg_seq(1);

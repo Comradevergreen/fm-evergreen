@@ -1,4 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only
+ * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
  * JIANT (0.6.26; 0.6.32 darker; 0.6.34 a generator of pieces, not of conditions): HOME + SELECT's DICE ALL. Included
  * by ui_input.c (main loop only).
  *

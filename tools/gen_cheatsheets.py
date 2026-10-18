@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
+# Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
 # (JIANT 0.6.7) the two cheat sheets of the README: docs/cheatsheet/controls.html and sound.html (the JIANT look: black,
 # Chakra Petch, the thermal palette, the signature), then tools/render_cheatsheets.mjs makes the PNGs and PDFs:
 #   python3 tools/gen_cheatsheets.py && node tools/render_cheatsheets.mjs
@@ -237,7 +238,7 @@ def controls():
         (k('GLO') + ' + ' + k('PLAY'), 'Restart from the top.'),
         (k('GLO') + ' + ' + k('SELECT'), 'Tempo (from any page).'),
         (k('STEP HELD', cls='a') + ' + ' + k('KNOB'), 'A parameter lock on that step (roll, grid).'),
-        (k('HOME', cls='a') + ' held', 'MENU: skins (AIR · COLORS · BOTTOM · HUD), SCOPE on the EDIT pages, palettes, knob accel, FX latch, hold time, USB level, animation…'),
+        (k('HOME', cls='a') + ' held', 'MENU: skins (AIR · COLORS · BOTTOM · HUD), SCOPE on the EDIT pages, palettes, knob accel, FX latch, hold time, USB level, MIDI (MIDI OUT, MIDI LEARN), animation…'),
     ]
     t3 = '<table>' + ''.join(f'<tr><td style="white-space:nowrap;width:1%;padding-right:18px">{a}</td><td>{d}</td></tr>'
                              for a, d in combos) + '</table>'
@@ -269,7 +270,7 @@ def controls():
                           ('COMP', 'STEP TYPE VAL EVERY'), ('COMP 2', 'STEP TYPE VAL EVERY')]),
         ('GLO · SAVE', HEAT[6], [('MANO', 'RATE LOOP THIN DJ FILT (the keys: live modifiers)'), ('RIELES', 'PISTAS RATE CORTE DENS'),
                                  ('MIXER', 'LEVEL PAN REV DJ FILT'), ('GLOBAL', 'BPM SWING CLOCK TUNE'),
-                                 ('SYSTEM', 'TRACKS LOAD ROUTE CPU'), ('PRESETS', 'No. ENG FAV LIST'),
+                                 ('SYSTEM', 'TRACKS LOAD ROUTE CPU'), ('PRESETS', 'No. ENG FAV LIST (ALL FAV BASS … FX)'),
                                  ('USER', 'SLOT LOAD ERASE SAVE'), ('PROJECTS', 'PROJECT SECT LOAD SAVE'), ('SECTIONS', 'SECT NAME LOAD SAVE'), ('ARRANGE', 'ROW SECT BARS SCENE (OCT+ adds a row)'),
                                  ('TOOLS', 'CLEAR SEQ · INIT SOUND · DEL ROW · CLEAR SONG · NEW PROJECT · CPU TEST: K1 picks, OCT+')]),
     ]

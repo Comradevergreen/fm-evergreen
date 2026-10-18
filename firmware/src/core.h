@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only
- * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments */
+ * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
+ * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) */
 /* FELUCCA core types: tracks, voices, engines, parameters.
  * Four tracks, each a synth part: its own engine, preset, parameters, voices and 64-step
  * pattern. The parts share one budget of NVOICE sounding voices (voice.c). Drums are the DRUM
@@ -327,7 +328,8 @@ typedef struct {
     int8_t e[8];                 /* P_E0..P_E7 (signed: an interval below the note; every value fits) */
     uint8_t env[4];              /* ATK DEC SUS REL */
     int8_t fenv;                 /* ENV -> FILTER amount (-64..63) */
-    uint8_t mono;                /* 1 = MONO (bass / lead), 0 = POLY */
+    uint8_t mono;                /* bit 0: 1 = MONO (bass / lead), 0 = POLY; (JIANT 0.9.12) bits 1..4 its sound type
+                                  * (PT_*, TAG) */
     /* the rest of the patch; each value is stored + 1, 0 = the default */
     uint8_t fx[4];               /* DIST, CHORUS, DELAY, REVERB sends */
     uint8_t pat;                 /* suggested pattern (PATTERNS[pat - 1], 0 = none): only a hint. A sound load
@@ -338,6 +340,13 @@ typedef struct {
 #define FX(d, c, dl, r) .fx = {(d) + 1, (c) + 1, (dl) + 1, (r) + 1}
 #define PAT(n) .pat = (n)
 #define WORDS(lang, lyr) .xp = (uint8_t)((lang) | (lyr) << 2)
+/* (JIANT 0.9.12, after Skiff by illuminus5) every factory preset's sound type, in the free bits of preset_t.mono (no
+ * byte more; presets live in flash, nothing stored changes): PRESETS' LIST browses all engines' presets by it (ui.c
+ * preset_in), the song generator keeps a bass's sounds off the other roles by it (gen.c gen_sound) */
+enum { PT_NONE, PT_BASS, PT_LEAD, PT_PAD, PT_KEYS, PT_PLUCK, PT_BELL, PT_VOX, PT_DRUM, PT_FX, PT_N };
+#define TAG(t) (PT_##t << 1)
+#define PR_MONO(pr) ((pr)->mono & 1u)
+#define PR_TAG(pr) ((uint32_t)(pr)->mono >> 1)
 
 struct track;
 typedef struct {                 /* an engine (engines.c ENGINES[]; the eng_*.c files) */

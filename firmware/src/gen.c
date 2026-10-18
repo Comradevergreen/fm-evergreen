@@ -1,4 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only
+ * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
  * JIANT (0.6.91) the song generator, second version: HOME + SELECT opens GEN, a screen of three pages (GENRE SEED
  * ENERGY FORM; DRUMS BASS CHORDS ARP; LEAD COMPLEX SWING HUMAN), OCT+ makes the piece, HOME (or OCT-) is done. Included by
  * ui_input.c after song_dice.c (whose helpers it shares: the roles, dhold, euclid, dtonic, dname_has, dlevel ..).
@@ -1318,7 +1319,8 @@ static void gen_sound(track_t *t, uint32_t role, uint32_t ri)
     for (i = 0; i < n; i++) {
         const char *pn = en->presets[i].name;
         if (gnever(pn)) continue;
-        if (role != RL_BASS && (dname_has(pn, "BASS") || dname_has(pn, "GROWL") || dname_has(pn, "ACID"))) continue;
+        if (role != RL_BASS && PR_TAG(&en->presets[i]) == PT_BASS) continue;   /* (0.9.12: by its type, was its name:
+                                                         * BASS GROWL ACID; a REESE now too) */
         if (na < sizeof any) any[na++] = (uint8_t)i;
     }
     for (k = 0; k < 3u && r->w[k] && !nm; k++)         /* (0.6.93) the recipe's words in order: the first that fits */

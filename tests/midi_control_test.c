@@ -1,4 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only
+ * Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
  * End-to-end channel input and external-clock tests using the real queues,
  * UART parser, ownership model, sequencer, voice renderer and UI source. */
 #define UI_TEST_NO_MAIN 1
