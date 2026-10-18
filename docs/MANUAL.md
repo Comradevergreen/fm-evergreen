@@ -748,17 +748,19 @@ Where every engine shows its being (EDIT › SOUND on the left, HOME › BEING l
 own, in the same thermal line art (the colder the line, the less dense or quieter; white is hottest), moving only
 while the track sounds and resting in silence:
 
-- **VOICE: a CT scan of a head**, in profile, the face to the left: the skin, the skull's two tables (bone white
-  hot), the folded brain and the corpus callosum, the cerebellum, the spine, the nasal cavity and its turbinates, the
-  palate, the velum, the tongue, the mandible, the lips, the pharynx, the larynx and the trachea. **The vocal tract
-  sings what you hear**: the tongue rises and falls with the vowel's F1 and moves forward and back with F2, the jaw
-  opens with F1, the lips round for o, u, w and sh and close for p, b, m, the lower lip touches the teeth for f and v,
-  the tongue's tip, blade or body goes to the place of each consonant (t d n l r at the ridge, k g ng on the velum ..)
-  with a hot mark where the tract closes, the velum drops for m, n and ng (the turbinates warm with the air through
-  the nose), the vocal folds shake and the trachea's rings pulse with the voicing, a jet of turbulence comes out of
-  the constriction for s, sh, f, x and the bursts, and breath rises at the glottis for h and BREATH. With WORDS on it
-  follows the syllable being sung (the phoneme, its formants and gains); without, VOWEL → VOWEL2 over TALK and BREATH.
-  A scan line runs slowly down the head as it sounds.
+- **VOICE: the vocal tract, alive** (0.9.9), seen close, the mouth and the neck filling the panel: the head's outline is
+  a faint ghost (the brow, the nose, the lips, the chin, the throat) and the vocal tract a glowing tube of two walls,
+  from the lips over the palate and the velum down the pharynx to the glottis, the trachea under it. **It sings what you
+  hear**: the tongue (the tube's floor) rises and falls with the vowel's F1 and moves forward and back with F2, the jaw
+  opens downward with F1, the lips round for o, u, w and sh and close for p, b, m, the lower lip touches the teeth for f
+  and v, the tongue's tip, blade or body goes to the place of each consonant (t d n l r at the ridge, k g ng on the
+  velum ..) and the tube narrows and heats there, with a hot mark where it closes; for m, n and ng the velum drops and a
+  branch to the nose opens. Each glottal pulse is a bulge travelling up the tube (through the nose for m, n, ng), the
+  vocal folds open and shut as a V with the voicing, and sound waves leave the mouth (the nose for the nasals); a jet of
+  turbulence comes out of the constriction for s, sh, f, x and the bursts, and breath rises at the glottis for h and
+  BREATH. The head nods a little at each vowel's onset and sways and breathes slowly with the level. With WORDS on it
+  follows the syllable being sung (the phoneme, its formants and gains); without, VOWEL → VOWEL2 over TALK and BREATH
+  (the nod at each note).
 - **ANIMAL: a creature between a bird, an insect and a mammal.** Its outline, legs, wing, antennae and eye are the same
   points in the three animals, mixed: MODE sets the animal (CMOS and WHSTL a bird, PULSE and WING an insect, GLOTT a
   mammal) and the creature **metamorphoses** to it in about half a second; **SIZE** leans it along insect – bird –
