@@ -349,8 +349,7 @@ Turning fast sweeps the whole range; turning slowly is fine adjustment. Turn it 
   and TRS (from Felucca 1.5).
 - **Stems** (MENU > SYSTEM > USB): **STEMS** sends every track on its own channel (8: T1–T6, FX L R), **STEMS+IN** adds
   your voice through the FM-1. On the phone, the **JIANT Stems** app records them, lines the voice up by the measured
-  latency and exports a ZIP or a mix (a separate product, coming soon; Android 10+). The emulator page renders a backup's
-  song as stems too.
+  latency and exports a ZIP or a mix (a separate product, coming soon; Android 10+).
 - 32 named user presets; the project autosaves 10 s after the last change while stopped (not at power-off).
 - **Web editor** for every parameter: FM6 patches, grid, mix and full backup (all 8 songs with their sections, rows
   and scenes).
@@ -1862,7 +1861,8 @@ The HUD skin, fixed (every finding of the HUD audit), and a faster screen there.
   FM-1 (the editor's or the installer's "Back up"), load the file on the emulator page (Stems), pick a song or the live
   section with a bar count, and get T1..T6 and MIX, all the same length, 16-bit 44.1 kHz, each track alone with its own
   share of the DELAY, REVERB and CHORUS (the others' sends left out), the song's rows once (a LOOP song once round).
-  Faster than real time, no USB limits, nothing on the device.
+  Faster than real time, no USB limits, nothing on the device. (Taken off the emulator page in 0.9.13: stems are
+  recorded with the JIANT Stems app.)
 - The USB audio ring moved into the pool (8 KiB: the stems need four times the stereo stream's); the RAM-code reach
   margin 12 KiB (was 16: RAMTEXT has moved up twice already, each move off the user stack).
 

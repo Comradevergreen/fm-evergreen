@@ -2119,12 +2119,6 @@ Two ways to get each track on its own, to post-process them one by one in a DAW:
   load budget tight the tails already under −50 dB are trimmed): a note another track's note took the voice from ends
   early (a 6 ms fade). In the mix that is masked; soloed, a dense song can sound gated. For stems, record at **LOAD
   FULL** when the CPU allows it, and keep the song's polyphony within the budget.
-- **From a backup, offline: the emulator page's "Stems".** Back up the FM-1 (the editor's or the installer's "Back up"),
-  open the emulator page, unfold "Stems", load the backup file, pick a song (its rows play once; a LOOP song once
-  round) or the live section with a bar count, and press Render. Each track is rendered alone with its own share of
-  the DELAY, REVERB and CHORUS (the other tracks' sends left out), plus the whole MIX (the master as the FM-1 plays it),
-  all the same length, 16-bit 44.1 kHz stereo, in one ZIP: T1.wav .. T6.wav and MIX.wav (a silent track is left out).
-  Faster than real time, no USB limits, nothing on the device.
 
 ### USB audio in (0.7.5, test version)
 
