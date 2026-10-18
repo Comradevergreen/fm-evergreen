@@ -855,6 +855,22 @@ solo mientras la pista suena:
   alto junto a la cabeza), cada uno encendido y levantando las patas con su bit; las antenas terminan en los dos más
   bajos; la cabeza es un bichito que grita con el nivel. En FLOAT y en las ondas de chip (PLS TRI SAW NOIS WRAM) la
   misma oruga, la piel la forma de onda y los segmentos encendidos por su nivel.
+  (0.9.10) **CHIP la convierte en un chip**, deslizándose hasta ahí en unos 0,6 s: en 8BIT (FULL en FLOAT) la oruga,
+  en 4BIT y STEP a medio camino, en 4B/2 casi, en 1BIT un **DIP visto desde arriba**. El lomo y la panza pasan a ser
+  los dos lados largos del encapsulado, las patas de atrás la fila de pines de arriba y las de adelante la de abajo
+  (cada pin sobresale con su bit), los anillos los pads del die, la cabeza se dobla y queda como la muesca, con el
+  punto del pin 1, y la onda sigue viva como dos pistas sobre el die; las pieles se escalonan a los bits (lisas, 7
+  niveles, 5 niveles, ±1). Las demás perillas también se ven: **DUTY** el ancho de los anillos; **ALGO** los bits de
+  la fórmula impresos en el lomo (una ROM en el chip); **WAV#** la tabla como espinas; **CRUSH** / **GRIT** un
+  tartamudeo (el dibujo se congela 1 a 6 cuadros) y escalones planos en la piel; **VAR** los segmentos desordenados;
+  **DECAY** (STEP) los anillos apagándose desde la cola con el volumen de 4 bits; **MOTION** la velocidad de la
+  reptada y el vaivén de las patas; **VIB** una ondulación más honda y un temblor; **FEEDBK** dos ecos de muestras
+  más viejas que se arrastran atrás; **BEND** los segmentos (los pines) amontonados hacia la cabeza; **MASK** el
+  dibujo rasgado en franjas horizontales; **LOOP** el patrón de segmentos que se repite y la cola que se enrosca. En
+  la página FILTER: **TYPE** HP sólo los bordes, con cilios que crecen al abrir **CUT**, BP la piel sólo en el medio,
+  COMB piel doble; un CUT cerrado la borronea y la hincha en una larva gorda y lisa; **RES** contornos que suenan
+  afuera de la piel y un anillo en el segmento del pico; **DIST** recorta la piel con púas y la infla; **MORPH**
+  cambia la especie de la cabeza. Quieta en silencio, se mueve con el sonido.
 
 Cada uno se dibuja en el rectángulo que le den (el panel izquierdo de EDIT, el medio de HOME, el panel entero). Unos
 14 KB de flash para los seis, 1,4 KB de RAM (el pool); cada página no cuesta más dibujarla que la de EDIT de ANALOG con

@@ -25,7 +25,8 @@ editor update themselves with every change merged into `main`.
   flash given back, nothing removed, the sound bit for bit.
   **Every engine draws its own creature** (0.9.6): ANALOG a cell whose membrane is its wave, FM6 its operators as
   little beings wired as the algorithm (also on OPERATOR and OP ENV), WHEEL nine tube worms, one a drawbar, NOISE a
-  swarm, PHASE a snail whose shell is the bent phase, LOFI a caterpillar whose skin is its output and segments its bits.
+  swarm, PHASE a snail whose shell is the bent phase, LOFI a caterpillar whose skin is its output and segments its bits
+  (0.9.10: CHIP flattens it into a DIP chip, 1BIT all the way; every knob shows on it).
   **Messages no longer darken the screen** (0.9.5): a message is a small pill over the page, which keeps moving behind
   it, clear of the page's words; a page's hint comes only once you stay on it (never while SELECT walks past), at most
   twice ever; a layer button's tap no longer says "HOLD [X] QUICK". On JIANT each card's colour follows its value
@@ -803,6 +804,17 @@ Every update is listed here, newest first. (Since 0.6.80 at the end of the page:
     segments are **the byte's bits** (BYTE: the highest next to the head), lit and lifting their legs with their bit,
     the antennae tipped by the two lowest, the head a bicho shouting with the level. On FLOAT and the chip waves
     (PLS TRI SAW NOIS WRAM) the same caterpillar, the skin the waveform and the segments lit by its level.
+    (0.9.10) **CHIP turns it into a chip** (gliding there in ~0.6 s): 8BIT / FULL the caterpillar, 4BIT and STEP half
+    way, 4B/2 nearly, 1BIT a **DIP seen from above**: back and belly the package's long edges, the back legs the top
+    row of pins and the front ones the bottom row (each pin jutting with its bit), the rings the die's pads, the head
+    folded into the notch with pin 1's dot, the wave still running as two traces on the die; the skins stair-stepped
+    to the bits. Every other knob shows too: DUTY the rings' width, ALGO the formula's bits on the back (a ROM on the
+    chip), WAV# the table as spines, CRUSH / GRIT a stutter and flat steps, VAR the segments scrambled, DECAY the rings
+    dimming with STEP's volume, MOTION the crawl's speed, VIB a wave and a shiver, FEEDBK two echoes of older samples,
+    BEND the segments crowding to the head, MASK the picture torn in bands, LOOP the segments repeating and the tail
+    curling up; FILTER: HP only the edges with cilia growing as CUT opens, BP only the body's middle, COMB a double
+    skin, a closed CUT a fat smooth larva, RES ringing contours; DIST the skin clipped with spikes; MORPH the head's
+    species. Still in silence, moving with the sound.
   - Each draws into a rectangle it is given and scales to it (EDIT's left panel, HOME's middle, or the whole panel:
     a layout without the scope can use it).
   - Cost: **~14.0 KB of flash for the six** (image 574220 B of 581564; FM6's chart and envelope drawing they replace

@@ -222,6 +222,18 @@ static __attribute__((noinline)) int32_t lofi_float(uint32_t f, uint32_t t, uint
 }
 #undef S
 #undef PM
+/* (0.9.10) read-only, for the creature (ui_engvis.c vx_lofi; nothing here runs in the audio path): ALGO's formula at t
+ * (BYTE's byte, a = VAR's; FLOAT's sample, Q15, its own state from 0), a WRAM table's nibble k (0..31) */
+static int32_t lofi_algo_at(int fl, uint32_t f, uint32_t t, uint32_t a)
+{
+    int32_t aux = 0;
+    return fl ? lofi_float(f, t, t << 8, &aux) : (int32_t)lofi_byte(f, t, a);
+}
+static uint32_t lofi_wram_nib(uint32_t tb, uint32_t k)
+{
+    uint32_t b = WRAM[tb & 15u][(k >> 1) & 15u];
+    return k & 1u ? b & 15u : b >> 4;
+}
 
 /* (JIANT 0.4) the filter and the deformations, for every wave: CUT a resonant low-pass (the ENV / LFO / matrix move it
  * as a synth's), BEND (BYTE: the time folded on itself, t ^ t >> s, new melodies and rhythms out of the same formula;

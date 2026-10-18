@@ -53,7 +53,19 @@
  *           note; the second line a little one following (RING a thread)
  *   LOFI    ORGANISMO DE CIRCUITO: a caterpillar whose two skins are the last 256 samples out (the scope's: nothing more
  *           from the audio), 8 segments the byte's bits (BYTE: the highest next to the head; the legs lift with their bit,
- *           the antennae the two lowest), lit by the wave's level elsewhere (FLOAT, PLS TRI SAW NOIS WRAM)
+ *           the antennae the two lowest), lit by the wave's level elsewhere (FLOAT, PLS TRI SAW NOIS WRAM). (0.9.10, V1
+ *           "DIP") CHIP sets how far it has turned into a chip, gliding there (~0.6 s): 8BIT / FULL the organism, 4BIT and
+ *           STEP half way, 4B/2 nearly, 1BIT a DIP seen from above (back and belly the long edges, the back legs the top
+ *           row of pins and the front ones the bottom row, each jutting with its bit, the rings the die's pads, the head
+ *           folded into the notch with pin 1's dot, the wave two traces on the die), its skins stair-stepped to the bits.
+ *           The other knobs: DUTY the rings' width, ALGO the formula's bits on the back (on the chip a ROM), WAV# the
+ *           table as spines, CRUSH / GRIT a stutter (the drawing held 1..6 frames) and flat steps on the skin, VAR the
+ *           segments scrambled, DECAY (STEP) the rings dimming as the 4-bit volume falls, MOTION the crawl's speed, VIB a
+ *           wave and a shiver, FEEDBK two echoes of older samples, BEND the segments crowding to the head, MASK the
+ *           picture torn in bands, LOOP the segments repeating and the tail curling; the FILTER: LP as it was, HP the
+ *           insides gone and cilia growing with CUT, BP only the body's middle, COMB a double skin, a closed CUT blurring
+ *           and swelling it, RES ringing contours and the peak's ring; DIST the skin clipped with spikes, MORPH the head's
+ *           species
  * Each takes a rectangle (vx_draw: EDIT's left panel, HOME's middle, or a whole panel) and scales to it.
  * State: vxs (in the pool: no global of the RAM region moves). MENU > ANIM OFF: they rest. */
 #define VX_POOL __attribute__((section(".pool")))
@@ -72,6 +84,8 @@ static struct {
     uint32_t rph[2], bub[9], fhold;                      /* WHEEL: the rotors as last seen sounding, CLICK's bubbles; OP ENV's hold */
     int16_t bd[8];                                       /* LOFI: the byte's bits, slewed (0..256) */
     uint32_t crawl, cmt;                                 /* .. its crawl (16-bit turns), the time it was taken at */
+    int16_t lm;                                          /* .. (0.9.10) the morph to the chip (Q8, gliding to CHIP's; -1 unset) */
+    uint8_t lst;                                         /* .. the mock-up frame its samples were last taken (the stutter) */
     int16_t dal, frel;                                   /* lines drawn this much fainter (256 - alpha); OP ENV: the release from */
     int16_t art[11];                                     /* VOICE: the articulation, slewed (vx_voice) */
     int16_t js, jc, hs, hc, hk;                          /* .. the jaw's turn (sin, cos Q15) about the condyle; the head's
@@ -1646,101 +1660,444 @@ static VX_CODE void vx_phase(const track_t *t, const int32_t *A, int32_t en_home
 }
 
 /* --------------------------------------------------------------------------------------------- LOFI --- */
-/* ORGANISMO DE CIRCUITO */
+/* (0.9.10) V1 "DIP": what each knob does to the drawing (lofi_desc's slots, as WAVE / CHIP make them: the knobs 0..127,
+ * -1 where the slot is another's), its frame and the bits now */
+typedef struct {
+    vxf_t f;
+    int32_t B, F, vb, half, duty, algo, wav, cg, varv, decay, vib, bend, tr, sd, loop, lp, ft, cut, res, dist, morph, fbk;
+    int32_t en, vol, fx, bc[8];
+} vxlf_t;
+#define VX_LERP(a, b, e) ((a) + ((((b) - (a)) * (e)) >> 8))   /* a .. b at e (Q8) */
+#define VX_CX0 (-46 * 16)                                /* the package: its ends, its long edges, its middle (Q4 units) */
+#define VX_CX1 (46 * 16)
+#define VX_CT (-6 * 16)
+#define VX_CB (18 * 16)
+#define VX_CYM (6 * 16)
+/* smoothstep((m - a) / w), Q8 */
+static int32_t vx_ss(int32_t m, int32_t a, int32_t w)
+{
+    int32_t t = clamp((m - a) * 256 / w, 0, 256);
+    return t * t * (768 - 2 * t) >> 16;
+}
+/* MASK: the shift (Q4 px) of the 5 px band at y (Q4 units): the picture torn in horizontal bands */
+static int32_t vx_lf_dx(const vxlf_t *L, int32_t y)
+{
+    int32_t b;
+    if (L->tr < 3) return 0;
+    b = (L->f.cy + ((y * L->f.s) >> 8)) / 80;
+    if (vx_hash((uint32_t)(b * 131 + L->sd)) > L->tr * 150 / 127) return 0;
+    return (vx_hash((uint32_t)(b * 7 + L->sd * 3)) - 128) * L->tr * 3 / 254;
+}
+static vxf_t vx_lf_at(const vxlf_t *L, int32_t y)        /* (the frame, torn where y is) */
+{
+    vxf_t g = L->f;
+    g.cx += vx_lf_dx(L, y);
+    return g;
+}
+static void vx_lf_line(const vxlf_t *L, int32_t x0, int32_t y0, int32_t x1, int32_t y1, int32_t h)
+{
+    vxf_t g = vx_lf_at(L, (y0 + y1) / 2);
+    vx_line(&g, x0, y0, x1, y1, h);
+}
+static void vx_lf_poly(const vxlf_t *L, const int32_t *p, uint32_t n, int closed, int32_t h)
+{
+    uint32_t i;
+    for (i = 1; i < n; i++)
+        vx_lf_line(L, p[2u * i - 2u], p[2u * i - 1u], p[2u * i], p[2u * i + 1u], h);
+    if (closed)
+        vx_lf_line(L, p[2u * n - 2u], p[2u * n - 1u], p[0], p[1], h);
+}
+/* a skin's sample j of n (Q12) from half (0 the belly's, 1 the back's) of the 256: held (CRUSH / GRIT: the rate),
+ * blurred as CUT closes (LP BP COMB), quantised to CHIP's bits (the outline stair-stepped), clipped by DIST */
+static int32_t vx_lf_s(const vxlf_t *L, int32_t j, int32_t n, int32_t half)
+{
+    const int16_t *H = vxs.wv + half * 128;
+    int32_t k = 1 + L->cg * 10 / 127, idx = j * 127 / n / k * k, wn = L->ft == 1 ? 0 : ((127 - L->cut) * 14 + 63) / 127, s, q;
+    if (wn) {
+        for (s = 0, q = -wn; q <= wn; q++)
+            s += H[clamp(idx + q, 0, 127)];
+        s = (s / (2 * wn + 1)) * (256 + (127 - L->cut) * 384 / 127) >> 8;
+    } else
+        s = H[idx];
+    if (L->vb == 1)
+        s = s >= 0 ? 4096 : -4096;
+    else if (L->vb == 4) {
+        q = L->half ? 2 : 3;
+        s = ((s * q + 2048) >> 12) * 4096 / q;
+    }
+    if (L->dist) {
+        q = 4096 - L->dist * 2867 / 127;
+        s = clamp((s * (256 + L->dist * 384 / 127)) >> 8, -q, q) * 4096 / q;
+    }
+    return s;
+}
+/* segment i's light (Q8): its bit (BYTE: the highest next to the head) or the wave's level there; LOOP repeats them;
+ * STEP's DECAY lights them as a staircase, with the 4-bit volume */
+static int32_t vx_lf_light(const vxlf_t *L, int32_t i)
+{
+    int32_t k = 1 + (i - 1) % L->lp, v = vxs.wv[k * 30 + 6];
+    v = L->B ? L->bc[8 - k] : clamp((v < 0 ? -v : v) * 115 / 100, 0, 4096) * 218 / 4096 + 13;
+    if (L->decay >= 0)
+        v = 9 - i <= (L->vol * 8 + 7) / 15 ? (v > 192 ? v : 192) : v / 4;
+    return v;
+}
+/* a skin drawn point by point: its last point, its sample, COMB's second skin, RES's contours */
+typedef struct { int32_t x, y, s, cx, cy, rx[3], ry[3]; } vxsk_t;
+/* point j of n at (x, y) (Q4 units), its outward normal (nx, ny: Q8), its sample s (Q12): the skin (BP only its middle,
+ * hotter with the sample, DIST, colder as CUT closes), COMB a second one, RES 1..3 ringing contours outside, HP's cilia
+ * growing as CUT opens, DIST spikes where it clips; fx fades the marks (the chip) */
+static void vx_lf_pt(const vxlf_t *L, vxsk_t *k, int32_t x, int32_t y, int32_t nx, int32_t ny, int32_t s, int32_t j, int32_t n)
+{
+    int32_t as = s < 0 ? -s : s, cx = x + ((nx * 42) >> 8), cy = y + ((ny * 42) >> 8), q;
+    if (j) {
+        int32_t al = 256;
+        if (L->ft == 2) al = clamp(((og_sin((uint32_t)j * 32768u / (uint32_t)n) * 410) >> 15) - 51, 38, 256);
+        vxs.dal = (int16_t)(256 - al);
+        vx_lf_line(L, k->x, k->y, x, y, 46 + as * 130 / 4096 + (L->en * 40 >> 8) + L->dist * 60 / 127 -
+                   (L->ft == 1 ? 0 : (127 - L->cut) * 45 / 127));
+        if (L->ft == 3) {
+            vxs.dal = 56;
+            vx_lf_line(L, k->cx, k->cy, cx, cy, 36 + as * 90 / 4096);
+        }
+        vxs.dal = (int16_t)(256 - L->fx);
+        if (L->dist > 12 && L->fx > 5 && as > 4014 && (k->s < 0 ? -k->s : k->s) <= 4014)
+            vx_lf_line(L, x, y, x + ((nx * 56 * L->dist / 127) >> 8), y + ((ny * 88 * L->dist / 127) >> 8), 240);
+    }
+    if (L->res > 5 && L->fx > 5 && j % 6 == 0)
+        for (q = 0; q < (L->res * 3 + 126) / 127; q++) {
+            int32_t o = (q + 1) * 34, rx = x + ((nx * o) >> 8), ry = y + ((ny * o) >> 8);
+            vxs.dal = (int16_t)(256 - (L->fx * (256 - q * 80) >> 8));
+            if (j) vx_lf_line(L, k->rx[q], k->ry[q], rx, ry, 70 + L->res * 150 / 127 - (q + 1) * 35);
+            k->rx[q] = rx;
+            k->ry[q] = ry;
+        }
+    if (L->ft == 1) {
+        int32_t c8 = L->cut * 256 / 127, hl = ((((c8 * (205 + (c8 * 51 >> 8))) >> 8) * 112 * (115 + L->en)) >> 16) * L->fx >> 8;
+        int32_t st = (n * 254 / (6 + L->cut * 18 / 127) + 1) / 2;
+        st = st > 2 ? st : 2;
+        if (hl > 6 && j % st == st >> 1) {
+            int32_t w = og_sin((uint32_t)j * 17732u + (uint32_t)L->en * 367u) >> 1;
+            vxs.dal = 46;
+            vx_lf_line(L, x, y, x + (((nx + ((ny * w) >> 15)) * hl) >> 8), y + (((ny - ((nx * w) >> 15)) * hl) >> 8),
+                       60 + L->cut * 90 / 127 + (L->en * 50 >> 8));
+        }
+    }
+    vxs.dal = 0;
+    k->x = x; k->y = y; k->s = s; k->cx = cx; k->cy = cy;
+}
+/* the head's outline (vx_blob's), folded in (fold Q8: its right half turned back: the notch) */
+static void vx_lf_blob(const vxf_t *f, const vxb_t *b, int32_t r, int outer, uint32_t t, uint32_t nv, int32_t h, int32_t fold)
+{
+    uint32_t i, lb = (uint32_t)b->lob;
+    int32_t px = 0, py = 0;
+    for (i = 0; i <= nv; i++) {
+        uint32_t th = (i % nv) * 65536u / nv;
+        int32_t rr = r + ((((r * b->wob) >> 8) * ((9175 * og_sin(lb * th + t) + 3932 * og_sin((lb + 2u) * th - 2u * t)) >> 15)) >> 15), x, y;
+        if (outer) {
+            int32_t c2 = og_sin(((uint32_t)b->sp * th >> 1) + 0x4000u);
+            rr += (((((r * b->len) >> 8) * (c2 > 0 ? c2 : 0)) >> 15) * 26) >> 4;
+            rr += ((((r * b->rip) >> 8) * og_sin(th * 18u + 3u * t)) >> 15) / 14;
+        }
+        x = ((((rr * og_cos(th)) >> 15) * b->ax) >> 8) * b->sx >> 8;
+        x = b->x + VX_LERP(x, x < 0 ? x : -x, fold);
+        y = b->by + ((((rr * og_sin(th)) >> 15) * b->sy) >> 8);
+        if (i) vx_line(f, px, py, x, y, h);
+        px = x;
+        py = y;
+    }
+}
+/* the spine at u (Q8: 256 the first segment's head end .. 2048 the tail): o its x y r (Q4 units), its direction dx dy */
+static void vx_lf_sp(const int32_t *X, const int32_t *Y, const int32_t *R, int32_t u, int32_t *o)
+{
+    int32_t i0 = u >> 8 < 7 ? u >> 8 : 7, fu = u - i0 * 256;
+    o[0] = VX_LERP(X[i0], X[i0 + 1], fu);
+    o[1] = VX_LERP(Y[i0], Y[i0 + 1], fu);
+    o[2] = VX_LERP(R[i0], R[i0 + 1], fu);
+    o[3] = X[i0 + 1] - X[i0];
+    o[4] = Y[i0 + 1] - Y[i0];
+}
+/* ORGANISMO DE CIRCUITO: the caterpillar flattening, as CHIP has fewer bits, into a DIP seen from above */
 static VX_CODE void vx_lofi(const track_t *t, const int32_t *A, int32_t en_home)
 {
+    static const uint8_t POW22[8] = {3, 12, 30, 56, 91, 136, 191, 255};   /* ((i / 8) ^ 2.2, Q8: LOOP's curl) */
     const int16_t *p = t->p;
-    int32_t a0 = A[2] * 256 / 124, b0 = (A[3] - 4) * 256 / 94, fl = p[P_E1] != RW_BYTE, new_fr = vxs.fr[8] != ui.frame;
-    int32_t en = vx_level(t, 8, en_home), i, j, pk = 6000, sx[9], sy[9], bc[8], px = 0, py = 0, qx = 0, qy = 0, q[2 * 22], g = fl ? 38 : 27;
-    uint32_t mt = vxs.mt[8], age = vx_age(t, 8, 0), w0 = scope_w - 256u, byte = 0, cr;
-    int32_t sq = vx_sq(vx_fall(age, 154u), age);
-    vxf_t f;
-    f.s = (a0 < b0 ? a0 : b0) * 112 / 100;
-    f.cx = (A[0] * 2 + A[2]) * 8 - ((32 * f.s) >> 8);
-    f.cy = (A[1] * 2 + A[3]) * 8;
+    vxlf_t L;
+    vxsk_t sk[2];
+    int32_t a0 = A[2] * 256 / 124, b0 = (A[3] - 4) * 256 / 94, w = p[P_E1], chip = p[P_E0], BF, step, hold, fresh;
+    uint32_t gap = ui.frame - vxs.fr[8], dm = fm1_ms - vxs.ms[8], new_fr = gap != 0u;
+    int32_t en = vx_level(t, 8, en_home), i, j, pk = 6000, jsc, X[9], Y[9], R[9], q[2 * 18], m, e1, e2, e3, e4, legf = 4096, mm = 4096;
+    uint32_t mt, age = vx_age(t, 8, 0), w0 = scope_w - 256u, byte = 0, cr, tt = 0, va;
+    vxf_t g;
+    L.f.s = (a0 < b0 ? a0 : b0) * 112 / 100;
+    L.f.cx = (A[0] * 2 + A[2]) * 8 - ((32 * L.f.s) >> 8);
+    L.f.cy = (A[1] * 2 + A[3]) * 8;
     vxs.kc = 1;
+    L.B = w == RW_BYTE;                                  /* the knobs, as the slots mean them now */
+    L.F = w == RW_FLOAT;
+    BF = L.B || L.F;
+    step = chip == CHIP_STEP && !L.F;
+    L.vb = chip == CHIP_8BIT ? 8 : chip == CHIP_1BIT ? 1 : 4;
+    L.half = chip == CHIP_4B2;
+    L.duty = w == RW_PLS ? p[P_E2] : -1;
+    L.algo = BF ? p[P_E2] >> 2 : -1;
+    L.wav = w == RW_WRAM ? (p[P_E2] >> 3) & 15 : -1;
+    L.cg = (!BF && !step ? p[P_E3] : 0) + (L.B ? p[P_E5] : 0);   /* (CRUSH, GRIT: the rate) */
+    L.varv = BF ? p[P_E3] : 0;
+    L.decay = step ? p[P_E3] >> 2 : -1;
+    L.vib = BF ? 0 : p[P_E5];
+    L.fbk = L.F ? p[P_E5] : 0;
+    L.bend = p[P_E6];
+    L.tr = BF ? 0 : p[P_E7];
+    L.loop = BF ? p[P_E7] : 0;
+    L.lp = L.loop > 2 ? 8 >> (L.loop * 4 / 127 < 3 ? L.loop * 4 / 127 : 3) : 8;
+    L.ft = p[P_FTYPE] & 3;
+    L.cut = p[P_FCUT];
+    L.res = p[P_FRES];
+    L.dist = p[P_DIST];
+    L.morph = w < RW_BYTE ? p[P_MORPH] : 0;
+    L.en = en;
+    if (BF) {                                            /* MOTION: the crawl's speed (x^0.75), the legs' sway (x^0.3) */
+        legf = clamp(vx_x2((p[P_E4] - 64) * 24 / 5), 1638, 9011);
+        mm = vx_x2((p[P_E4] - 64) * 12);
+    }
+    /* CHIP -> the morph's target (8BIT / FULL the organism, 4BIT and STEP half way, 4B/2 more, 1BIT the chip): a glide */
+    m = chip == CHIP_8BIT ? 0 : chip == CHIP_1BIT ? 256 : chip == CHIP_4B2 ? 179 : chip == CHIP_STEP ? 115 : 102;
+    if (gap > 8u || vxs.lm < 0 || (ui_prefs & PREF_ANIM_OFF))
+        vxs.lm = (int16_t)m;                             /* (just shown, unset, or at rest: there at once) */
+    else if (new_fr) {
+        j = (m - vxs.lm) * (int32_t)(dm < 100u ? dm : 100u) / 256;
+        vxs.lm = (int16_t)(vxs.lm + (j ? j : (m > vxs.lm) - (m < vxs.lm)));
+    }
+    m = vxs.lm;
+    e1 = vx_ss(m, 0, 218);                               /* the body flattening, the legs to pins, the head to the notch, the die */
+    e2 = vx_ss(m, 26, 192);
+    e3 = vx_ss(m, 77, 166);
+    e4 = vx_ss(m, 141, 115);
+    L.fx = 256 - (e1 * 205 >> 8);
     for (i = 0; i < 256; i++) {                          /* the last 256 samples out (the scope's): their peak */
         int32_t v = scope_buf[(w0 + (uint32_t)i) & (SCOPE_N - 1u)];
         v = v < 0 ? -v : v;
         pk = v > pk ? v : pk;
     }
-    for (i = 0, j = (4096 << 15) / pk; i < 256; i++)
-        vxs.wv[i] = (int16_t)((scope_buf[(w0 + (uint32_t)i) & (SCOPE_N - 1u)] * j) >> 15);
+    jsc = (4096 << 15) / pk;
+    for (i = 0, j = -1; i < NVOICE; i++)                 /* the newest voice: the formula's time, STEP's volume */
+        if ((int32_t)t->v[i].age > j) { j = (int32_t)t->v[i].age; tt = (uint32_t)t->v[i].s[2]; L.vol = t->v[i].s[6] & 15; }
+    /* CRUSH / GRIT: the drawing's inputs held 1 .. 6 frames (the stutter); taken each frame otherwise, and in silence */
+    hold = 1 + (L.cg * 5 + 63) / 127;
+    fresh = new_fr && (hold == 1 || !en || gap > 8u || (uint8_t)((vxs.mt[8] >> 8) - vxs.lst) >= (uint32_t)hold);
 #define VH(i) vxs.wv[i]
-    byte = (uint32_t)(VH(255) / 32 + 128) & 255u;       /* the byte now: BYTE's held sample, else the output's level */
-    for (i = 0, j = 0; i < NVOICE; i++)
-        if (!fl && t->v[i].active && t->v[i].age >= (uint32_t)j) { j = (int32_t)t->v[i].age; byte = (uint32_t)((t->v[i].s[0] + 32640) >> 8) & 255u; }
-    for (i = 0; i < 8; i++) {                            /* (its bits slewed, once a frame) */
-        if (new_fr)
+    if (fresh) {
+        for (i = 0; i < 256; i++)
+            vxs.wv[i] = (int16_t)((scope_buf[(w0 + (uint32_t)i) & (SCOPE_N - 1u)] * jsc) >> 15);
+        byte = (uint32_t)(VH(255) / 32 + 128) & 255u;   /* the byte now: BYTE's held sample, else the output's level */
+        for (i = 0, j = 0; i < NVOICE; i++)
+            if (L.B && t->v[i].active && t->v[i].age >= (uint32_t)j) { j = (int32_t)t->v[i].age; byte = (uint32_t)((t->v[i].s[0] + 32640) >> 8) & 255u; }
+        for (i = 0; i < 8; i++)                          /* (its bits slewed) */
             vxs.bd[i] = (int16_t)(vxs.bd[i] + (((byte >> i & 1u) ? en : 0) - vxs.bd[i]) * 141 / 256);
-        bc[i] = clamp((vxs.bd[i] - 46) * 410 / 256, 0, 256);
+        vxs.crawl += (((vxs.mt[8] - vxs.cmt) * (uint32_t)(307 + 4 * en) >> 8) * 10430u / 7680u) * (uint32_t)mm >> 12;   /* the crawl */
+        vxs.cmt = vxs.mt[8];
+        vxs.lst = (uint8_t)(vxs.mt[8] >> 8);
     }
-    vxs.crawl += ((mt - vxs.cmt) * (uint32_t)(307 + 4 * en) >> 8) * 10430u / 7680u;   /* the crawl */
-    vxs.cmt = mt;
+    mt = vxs.cmt;                                        /* (the time as taken: held by the stutter too) */
     cr = vxs.crawl;
-    for (i = 0; i <= 8; i++) {                           /* the spine: the head, then 8 segments back */
-        int32_t amp = (26 + (en * 54 >> 8)) * (77 + i * 179 / 8) / 256;
-        sx[i] = i ? (27 * 16 - (i - 1) * 149) : 38 * 16;
-        sy[i] = 6 * 16 + ((og_sin(cr * 22u / 10u - (uint32_t)i * 8344u) * amp) >> 15) - (i ? 0 : 64);
+    L.sd = (int32_t)((mt >> 8) / 3u);                    /* (MASK's bands: new every 3 frames, with the sound) */
+    for (i = 0; i < 8; i++)
+        L.bc[i] = clamp((vxs.bd[i] - 46) * 410 / 256, 0, 256);
+    {   /* the spine: the head, then 8 segments back; BEND crowds them to the head, VIB waves and shivers it, VAR scrambles
+         * them, LOOP curls the tail up, DIST and a closed CUT swell it; flattened to the package's middle by the morph */
+        int32_t xb = 128 - L.bend * 108 / 127, way = L.varv >> 4, sh = ((og_sin(vx_ang(mt, 1529)) * (L.vib * 29 / 127)) >> 15) * e1 >> 8;
+        va = way ? 90u + 166u * (uint32_t)(L.varv & 15) / 15u : 0u;
+        for (i = 0; i <= 8; i++) {
+            int32_t amp = (26 + (en * 54 >> 8) + L.vib * 112 / 127) * (77 + i * 179 / 8) / 256, x, y, r;
+            if (!i)
+                x = 38 * 16;
+            else {
+                int32_t tq = (i - 1) * 256 / 7, tb = tq < 128 ? tq * xb / 128 : xb + (tq - 128) * (256 - xb) / 128;
+                x = 27 * 16 - tb * 1043 / 256;
+            }
+            y = 6 * 16 + ((og_sin(cr * 22u / 10u - (uint32_t)i * 8344u) * amp) >> 15) - (i ? 0 : 64) +
+                ((og_sin(vx_ang(mt, 1299) + (uint32_t)i * 17732u) * (L.vib * 26 / 127)) >> 15);
+            r = i ? 147 - i * 8 : 176;
+            if (i && va) {
+                y += ((vx_hash((uint32_t)(way * 31 + i)) - 128) * 112 * (int32_t)va) >> 15;
+                x += ((vx_hash((uint32_t)(way * 57 + i * 3)) - 128) * 48 * (int32_t)va) >> 15;
+                r += (r * (vx_hash((uint32_t)(way * 17 + i + 5)) - 128) * 115 * (int32_t)va) >> 23;
+            }
+            if (L.loop && i) {
+                int32_t u = POW22[i - 1] * L.loop / 127;
+                y -= u * 320 >> 8;
+                x += u * 144 >> 8;
+            }
+            r = r * (256 + L.dist * 128 / 127) >> 8;
+            if (L.ft != 1) r = r * (256 + (127 - L.cut) * 77 / 127) >> 8;
+            X[i] = x;
+            Y[i] = VX_LERP(y, VX_CYM + sh, e1);
+            R[i] = VX_LERP(r, 112, e1);
+        }
     }
-#define VR(i) ((i) ? 147 - (i) * 8 : 176)
-    vx_line(&f, -54 * 16, 33 * 16, 54 * 16, 33 * 16, 26);
-    for (i = 1; i <= 8; i++) {                           /* legs: lifted where the bit is high */
-        int32_t r = VR(i), b = bc[8 - i], sw = (og_sin(cr * 4u + (uint32_t)i * 13560u) * 22) >> 15, k;
+    vx_lf_line(&L, -54 * 16, 33 * 16, 54 * 16, 33 * 16, 26);
+    if (L.fbk > 2)                                       /* FEEDBK: two echoes of the skins (older samples), trailing behind */
+        for (i = 2; i >= 1; i--) {
+            int32_t px = 0, pd = 0, pu = 0;
+            uint32_t o = w0 - 128u * (uint32_t)i;
+            vxs.dal = (int16_t)(256 - L.fbk * 179 / 127 / i);
+            for (j = 0; j <= 40; j++) {
+                int32_t sp[5], x, y, r;
+                vx_lf_sp(X, Y, R, 256 + j * 7 * 256 / 40, sp);
+                x = sp[0] - i * 72; y = sp[1] - i * 24; r = sp[2] + 26;
+                int32_t hd = (scope_buf[(o + (uint32_t)(j * 31 / 10)) & (SCOPE_N - 1u)] * jsc) >> 15;
+                int32_t hu = (scope_buf[(o + 128u + (uint32_t)(j * 31 / 10)) & (SCOPE_N - 1u)] * jsc) >> 15;
+                int32_t yd = y + r + (hd * 100 >> 12), yu = y - r - (hu * 100 >> 12);
+                if (j) {
+                    vx_lf_line(&L, px, pd, x, yd, 60);
+                    vx_lf_line(&L, px, pu, x, yu, 60);
+                }
+                px = x; pd = yd; pu = yu;
+            }
+            vxs.dal = 0;
+        }
+    for (i = 1; i <= 8; i++) {                           /* legs -> the two rows of pins (the back ones up); each juts with its bit */
+        int32_t k8 = 1 + (i - 1) % L.lp, b = L.B ? L.bc[8 - k8] : vx_lf_light(&L, i) * 179 >> 8, r = R[i], k;
+        int32_t sw = (((og_sin(cr * 4u + (uint32_t)i * 13560u) * 22) >> 15) * legf) >> 12;
         for (k = -1; k <= 1; k += 2) {
-            q[0] = sx[i] + k * 29; q[1] = sy[i] + (r * 179 >> 8);
-            q[2] = sx[i] + k * 45 + sw; q[3] = sy[i] + r + 38 - (b * 19 >> 8);
-            q[4] = sx[i] + k * 35 + (sw * 333 >> 8); q[5] = sy[i] + r + 96 - (b * 48 >> 8);
+            int32_t yb = k < 0 ? VX_CT : VX_CB, lp = k * (88 + (b * 48 >> 8)), c[8], n = e2 ? 4 : 3;
+            q[0] = X[i] + k * 29; q[1] = Y[i] + (r * 179 >> 8);
+            q[2] = X[i] + k * 45 + sw; q[3] = Y[i] + r + 38 - (b * 19 >> 8);
+            q[4] = X[i] + k * 35 + (sw * 333 >> 8); q[5] = Y[i] + r + 96 - (b * 48 >> 8);
             q[5] = q[5] < 33 * 16 ? q[5] : 33 * 16;
-            vx_poly(&f, q, 3, 0, 51 + b / 5);
+            q[6] = q[4]; q[7] = q[5];
+            c[0] = X[i] - 19; c[1] = yb; c[2] = X[i] - 19; c[3] = yb + lp; c[4] = X[i] + 19; c[5] = yb + lp; c[6] = X[i] + 19; c[7] = yb;
+            for (j = 0; j < 8; j++)
+                q[j] = VX_LERP(q[j], c[j], e2);
+            vx_lf_poly(&L, q, (uint32_t)n, 0, VX_LERP(51 + (b * 51 >> 8), 70 + (b * 175 >> 8), e2));
         }
     }
-    for (j = 0; j <= 80; j++) {                          /* the two skins: the samples themselves along the body */
-        int32_t u = 256 + j * 7 * 256 / 80, i0 = u >> 8 < 7 ? u >> 8 : 7, fu = u - i0 * 256;
-        int32_t x = sx[i0] + (sx[i0 + 1] - sx[i0]) * fu / 256, y = sy[i0] + (sy[i0 + 1] - sy[i0]) * fu / 256;
-        int32_t dx = sx[i0 + 1] - sx[i0], dy = sy[i0 + 1] - sy[i0], adx = dx < 0 ? -dx : dx, ady = dy < 0 ? -dy : dy;
-        int32_t L = (adx > ady ? adx + ady * 3 / 8 : ady + adx * 3 / 8) + 1, j5 = j * 16 / 5;
-        int32_t r = (VR(i0) + (VR(i0 + 1) - VR(i0)) * fu / 256) * (256 - ((((j5 * j5 >> 8) * (j5 * j5 >> 8) >> 8) * j5 >> 8) * 141 >> 8)) / 256 + 26;   /* (thinner to the tail) */
-        int32_t s1 = VH(j * 127 / 80), s2 = VH(128 + j * 127 / 80), d1 = r + ((s1 * g) >> 12), d2 = r + ((s2 * g) >> 12);
-        int32_t tx = x + dy * d1 / L, ty = y - dx * d1 / L, bx = x - dy * d2 / L, by = y + dx * d2 / L;
-        if (j) {
-            vx_line(&f, px, py, tx, ty, 46 + (s1 < 0 ? -s1 : s1) * 130 / 4096 + (en * 40 >> 8));
-            vx_line(&f, qx, qy, bx, by, 46 + (s2 < 0 ? -s2 : s2) * 130 / 4096 + (en * 40 >> 8));
+    {   /* the skins: the samples along the body -> the package's long edges (WAV#: the table as spines on the back) */
+        int32_t gs = (L.F ? 100 : 71) * (256 - e1) >> 8, kk = 0;
+        memset(sk, 0, sizeof sk);
+        for (j = 0; j <= 80; j++) {
+            int32_t sp[5], x, y, dx, dy, adx, ady, Ln, nx, ny, j5 = j * 16 / 5, tp, r, s1 = vx_lf_s(&L, j, 80, 0), s2 = vx_lf_s(&L, j, 80, 1);
+            vx_lf_sp(X, Y, R, 256 + j * 7 * 256 / 80, sp);
+            x = sp[0]; y = sp[1]; dx = sp[3]; dy = sp[4];
+            adx = dx < 0 ? -dx : dx;
+            ady = dy < 0 ? -dy : dy;
+            Ln = (adx > ady ? adx + ady * 3 / 8 : ady + adx * 3 / 8) + 1;
+            nx = dy * 256 / Ln;
+            ny = -dx * 256 / Ln;
+            tp = (((((j5 * j5 >> 8) * (j5 * j5 >> 8)) >> 8) * j5 >> 8) * 141 >> 8) * (256 - e1) >> 8;   /* (thinner to the tail) */
+            r = sp[2] * (256 - tp) / 256 + 26;
+            int32_t xc = VX_CX1 - j * (VX_CX1 - VX_CX0) / 80, d1 = r + (s1 * gs >> 12), d2 = r + (s2 * gs >> 12);
+            int32_t ux = VX_LERP(x - (nx * d2 >> 8), xc, e1), uy = VX_LERP(y - (ny * d2 >> 8), VX_CT, e1);
+            vx_lf_pt(&L, &sk[0], VX_LERP(x + (nx * d1 >> 8), xc, e1), VX_LERP(y + (ny * d1 >> 8), VX_CB, e1), nx, ny, s1, j, 81);
+            vx_lf_pt(&L, &sk[1], ux, uy, -nx, -ny, s2, j, 81);
+            if (L.wav >= 0 && kk < 32 && (kk * 80 + 16) / 32 == j) {
+                int32_t l = (int32_t)lofi_wram_nib((uint32_t)L.wav, (uint32_t)kk) * 96 * (256 - e1) / (15 * 256);
+                if (l > 4 && e1 < 251) vx_lf_line(&L, ux, uy, ux - (nx * l >> 8), uy - (ny * l >> 8), 90 + l * 20 / 16);
+                kk++;
+            }
         }
-        px = tx; py = ty; qx = bx; qy = by;
+        q[0] = sk[0].x; q[1] = sk[0].y; q[2] = VX_LERP(X[8] - 96, VX_CX0, e1); q[3] = VX_LERP(Y[8], VX_CYM, e1); q[4] = sk[1].x; q[5] = sk[1].y;
+        g = vx_lf_at(&L, q[3]);
+        vx_curve(&g, q, 3, 0, 60);
     }
-    q[0] = px; q[1] = py; q[2] = sx[8] - 96; q[3] = sy[8]; q[4] = qx; q[5] = qy;
-    vx_curve(&f, q, 3, 0, 60);
-    for (i = 8; i >= 1; i--) {                           /* the segments: rings lit by their bit (or the wave's level) */
-        int32_t r = VR(i), v = VH(i * 30 + 6), m;
-        v = fl ? clamp((v < 0 ? -v : v) * 115 / 100, 0, 4096) * 218 / 4096 + 13 : bc[8 - i];
-        for (m = 0; m < 18; m++) {
-            uint32_t a = (uint32_t)m * 65536u / 18u;
-            int32_t w = 4096 + VH((i * 29 + m * 9) & 255) * 9 / 100;
-            q[2 * m] = sx[i] + ((((og_cos(a) * r * 66 / 100) >> 15) * w) >> 12);
-            q[2 * m + 1] = sy[i] + ((((og_sin(a) * r * 8 / 10) >> 15) * w) >> 12);
+    if (e3 > 0) {                                        /* the notch's sides */
+        vx_lf_line(&L, VX_CX1, VX_CT, VX_CX1, VX_CT + (e3 * 134 >> 8), 80 + (en * 60 >> 8));
+        vx_lf_line(&L, VX_CX1, VX_CB, VX_CX1, VX_CB - (e3 * 134 >> 8), 80 + (en * 60 >> 8));
+    }
+    for (i = 8; i >= 1; i--) {                           /* the segments -> the die's pads, lit by their bit; DUTY their width */
+        int32_t v = vx_lf_light(&L, i), r = R[i] * 256 / (256 + L.dist * 128 / 127), rw = L.duty >= 0 ? 90 + L.duty * 333 / 127 : 256;
+        int32_t k8 = 1 + (i - 1) % L.lp, mi;
+        for (mi = 0; mi < 18; mi++) {
+            uint32_t a = (uint32_t)mi * 65536u / 18u;
+            int32_t c = og_cos(a), s = og_sin(a), ac = c < 0 ? -c : c, as = s < 0 ? -s : s, mx = ac > as ? ac : as;
+            int32_t ww = 4096 + VH((k8 * 29 + mi * 9) & 255) * 9 / 100;
+            q[2 * mi] = X[i] + VX_LERP(((((c * r) >> 15) * 169 >> 8) * rw >> 8) * ww >> 12, c * 27 / mx, e2);
+            q[2 * mi + 1] = Y[i] + VX_LERP((((s * r) >> 15) * 205 >> 8) * ww >> 12, s * 27 / mx, e2);
         }
-        vx_poly(&f, q, 18, 1, 44 + (v * 200 >> 8));
-        vx_ring(&f, sx[i], sy[i], (r * 77 >> 8), (r * 97 >> 8), 28 + (v * 150 >> 8));
-        if (v > 115) vx_dot(&f, sx[i], sy[i], (v - 51) * f.s / 4267, 184 + (v * 72 >> 8));
+        if (L.ft == 1) vxs.dal = 146;                    /* (HP: the bodies' insides gone, only edges) */
+        vx_lf_poly(&L, q, 18, 1, 44 + (v * 200 >> 8) - (L.ft == 1 ? 30 : 0));
+        g = vx_lf_at(&L, Y[i]);
+        vxs.dal = (int16_t)e2;
+        if (e2 < 251) vx_ring(&g, X[i], Y[i], r * 77 >> 8, r * 97 >> 8, 28 + (v * 150 >> 8));
+        vxs.dal = 0;
+        if (v > 115) vx_dot(&g, X[i], Y[i], (v - 51) * L.f.s / 4267, 184 + (v * 72 >> 8));
+        if (L.res > 38 && i == 1 + ((127 - L.cut) * 7 + 63) / 127) {   /* RES: the peak's segment (CUT places it) */
+            int32_t kq = 256 + L.res * 102 / 127;
+            vx_ring(&g, X[i], Y[i], (r * VX_LERP(230, 77, e2) >> 8) * kq >> 8, (r * VX_LERP(282, 77, e2) >> 8) * kq >> 8, 120 + L.res * 130 / 127);
+        }
     }
-    for (i = -1; i <= 1; i += 2) {                       /* the antennae: tipped by the two lowest bits */
-        int32_t b = bc[i < 0 ? 0 : 1], tx = sx[0] + 48 + i * 96 + (b * 32 >> 8);
-        int32_t ty = sy[0] - 320 - (b * 64 >> 8) + ((og_sin(cr * 3u + (uint32_t)(i * 10430)) * 24) >> 15);
-        q[0] = sx[0] + i * 48; q[1] = sy[0] - 144; q[2] = sx[0] + i * 80; q[3] = sy[0] - 240; q[4] = tx; q[5] = ty;
-        vx_curve(&f, q, 3, 0, 77 + b / 5);
-        vx_dot(&f, tx, ty, ((256 + (b * 307 >> 8)) * f.s * 6 / 10) >> 12, 128 + b / 2);
+    if (L.algo >= 0)                                     /* ALGO: the formula's bits on the back, 4 x 8 read at t; on the chip a ROM */
+        for (i = 1; i <= 8; i++) {
+            uint32_t tc = (tt >> 7) + (uint32_t)(i - 1) * 37u;
+            int32_t o = L.F ? lofi_algo_at(1, (uint32_t)L.algo, tc, 0) >> 12 : lofi_algo_at(0, (uint32_t)L.algo, tc, 1u + (uint32_t)(L.varv >> 3)) >> 3, row;
+            for (row = 0; row < 4; row++)
+                if (o >> row & 1) {
+                    int32_t y = VX_LERP(Y[i] - R[i] - 48 - row * 35, VX_CT + 22 + row * 20, e2);
+                    g = vx_lf_at(&L, y);
+                    vx_dot(&g, VX_LERP(X[i], X[i] + (row & 1) * 26 - 13, e2), y, 0, 200 + (en * 50 >> 8));
+                }
+        }
+    if (e4 > 0) {                                        /* the die: its edges, the wave as two traces on it, the bond wires */
+        int32_t hw = 480 * e4 >> 8, k, px = 0, py = 0;
+        vxs.dal = (int16_t)(256 - e4);
+        q[0] = -64 - hw; q[1] = 0; q[2] = -64 + hw; q[3] = 0; q[4] = -64 + hw; q[5] = 192; q[6] = -64 - hw; q[7] = 192;
+        vx_lf_poly(&L, q, 4, 1, 70 + (en * 50 >> 8));
+        for (j = 0; j < 2; j++)
+            for (k = 0; k <= 40; k++) {
+                int32_t x = -64 - hw + k * 2 * hw / 40, y = (j ? 157 : 35) + (vx_lf_s(&L, k, 40, j) * 22 >> 12);
+                if (k) vx_lf_line(&L, px, py, x, y, 60 + (en * 150 >> 8));
+                px = x; py = y;
+            }
+        vxs.dal = (int16_t)(256 - (220 * e4 >> 8));
+        for (i = 1; i <= 8; i++) {
+            int32_t v = vx_lf_light(&L, i);
+            vx_lf_line(&L, X[i], 0, X[i], VX_CT, 40 + (v * 160 >> 8));
+            vx_lf_line(&L, X[i], 192, X[i], VX_CB, 40 + (v * 160 >> 8));
+        }
+        vxs.dal = 0;
     }
-    {   /* the head: a bicho shouting with the level, squashed by the note */
-        uint32_t tt = mt * (uint32_t)(60 + (en * 260 >> 8)) >> 8;
-        int32_t hx = sx[0], hy = sy[0], ssx = 256 + (sq * 77 >> 8), ssy = 256 - (sq * 77 >> 8);
-        og_node(f.cx + ((hx * f.s) >> 8), f.cy + ((hy * f.s) >> 8), (10 * f.s) >> 8, T_SURF);
-        vxb_t g = {hx, 0, hy, 288, ssx, ssy, 4, 8 + (en * 30 >> 8), 40 + (en * 100 >> 8), (en * 80 >> 8), 4, 1};
-        vx_body(&f, &g, 168, 112, tt, 51 + (en * 77 >> 8), 102 + (en * 77 >> 8), 72, 40);
-        vx_bface(&f, hx + 16, hy, 168, (en * 333 >> 8), age < 177u, 0);
+    if (e2 < 251) {                                      /* the antennae: tipped by the two lowest bits; pulled in */
+        int32_t k = 256 - e2, hx = VX_LERP(X[0], VX_CX1, e3), hy = Y[0];
+        g = vx_lf_at(&L, hy);
+        for (i = -1; i <= 1; i += 2) {
+            int32_t b = L.bc[i < 0 ? 0 : 1], tx = hx + 48 + i * 96 + (b * 32 >> 8);
+            int32_t ty = hy - ((320 + (b * 64 >> 8)) * k >> 8) + ((((og_sin(cr * 3u + (uint32_t)(i * 10430)) * 24) >> 15) * k) >> 8);
+            q[0] = hx + (i * 48 * k >> 8); q[1] = hy - (144 * k >> 8); q[2] = hx + (i * 80 * k >> 8); q[3] = hy - (240 * k >> 8); q[4] = tx; q[5] = ty;
+            vxs.dal = (int16_t)(256 - k);
+            vx_curve(&g, q, 3, 0, 77 + b / 5);
+            vxs.dal = 0;
+            vx_dot(&g, tx, ty, ((((256 + (b * 307 >> 8)) * L.f.s * 6 / 10) >> 12) * k) >> 8, 128 + b / 2);
+        }
+    }
+    {   /* the head: a bicho shouting with the level, squashed by the note, MORPH its species; folding into the notch, its
+         * face going, pin 1's dot coming */
+        uint32_t tm = mt * (uint32_t)(60 + (en * 260 >> 8)) >> 8, no = 72, ni = 40;
+        int32_t sq = vx_sq(vx_fall(age, 154u), age), hx = VX_LERP(X[0], VX_CX1, e3), hy = VX_LERP(Y[0], VX_CYM, e3), r = VX_LERP(168, 58, e3);
+        int32_t ke = 256 - e3, fa = clamp(256 - (e3 * 358 >> 8), 0, 256);
+        vxb_t gb = {hx, 0, hy, VX_LERP(288, 256, e3), 256 + (sq * 77 >> 8), 256 - (sq * 77 >> 8), 4 + (L.morph * 8 + 63) / 127,
+                    (8 + (en * 30 >> 8) + L.morph * 60 / 127) * ke >> 8, (40 + (en * 100 >> 8)) * ke >> 8, (en * 80 >> 8) * ke >> 8,
+                    4 + (L.morph * 4 + 63) / 127, 1};
+        g = vx_lf_at(&L, hy);
+        if (sys_load) {                                  /* (LITE, ECO) */
+            no = no * (sys_load == LOAD_ECO ? 1u : 2u) / (sys_load == LOAD_ECO ? 2u : 3u);
+            ni = ni * (sys_load == LOAD_ECO ? 1u : 2u) / (sys_load == LOAD_ECO ? 2u : 3u);
+        }
+        if (e3 < 230)
+            og_node(g.cx + ((hx * g.s) >> 8), g.cy + ((hy * g.s) >> 8), (((r * ke >> 8) * g.s * 95 / 100) >> 12), T_SURF);
+        vx_lf_blob(&g, &gb, r, 1, tm, no, 51 + (en * 77 >> 8), e3);
+        if (e3 < 243) {
+            vxs.dal = (int16_t)e3;
+            vx_lf_blob(&g, &gb, r * 171 >> 8, 0, tm, ni, 102 + (en * 77 >> 8), e3);
+        }
+        if (fa > 8) {
+            vxs.dal = (int16_t)(256 - fa);
+            vx_bface(&g, hx + 16, hy, 168, (en * 333 >> 8), age < 177u, 0);
+        }
+        vxs.dal = 0;
+        if (e3 > 13)
+            vx_dot(&g, VX_CX1 - 80, VX_CT + 54, e3 * 24 * g.s >> 16, 120 + (en * 135 >> 8));
     }
 #undef VH
-#undef VR
     vxs.kc = 0;
 }
 
