@@ -647,6 +647,16 @@ JIANT's modifications are distributed under the same license.
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
 
+### v0.9.10 (draft)
+- **STEMS+IN (and STEMS) without the rhythmic glitch.** Over USB, STEMS+IN lost whole blocks of 32 frames in bursts, a
+  few times a second, in every channel at once (STEMS too, more rarely): the next USB packet was queued too late. A
+  10-channel packet is on the wire for ~0.65 ms of each 1 ms frame and the FM-1 looked for the moment it had gone only
+  every 0.5 ms; whenever that check drifted into the short gap before the host's next request, the request found nothing,
+  the FM-1's ring overflowed and blocks were dropped. The packet is now queued within 0.1 ms of the last one leaving
+  (checked on every 10 kHz tick; idle, the check is a few instructions, and nothing changes in the audio render). The
+  stereo modes were not affected. A take recorded before cannot be repaired: record it again. (tests/stems_usb_test.c
+  now models the bus time and the drift, and shows 0.9.9's timing losing up to half the frames in STEMS+IN.)
+
 ### v0.9.9
 - **DRUM-X, VOICE and ANIMAL first: the tracks at power-on.** The FM-1 (and MENU › SYSTEM › INIT SYSTEM, SAVE › TOOLS
   › NEW PROJECT) starts with **T1 DRUM-X** (the factory kit), **T2 VOICE SINGER EN** (it sings English words),
