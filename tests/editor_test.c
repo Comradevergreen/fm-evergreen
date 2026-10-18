@@ -863,11 +863,11 @@ static int menu_protocol(void)
     menu_desc(22, &it);                                   /* (0.9.7) SCOPE, a row of DISPLAY: OFF (the default) ON */
     ok &= !strcmp(it.name, "SCOPE") && it.id == 22 && it.tab == 0 && it.value == 0 && it.max == 1 && !strcmp(it.names[0], "OFF") &&
           !strcmp(it.names[1], "ON");
-    menu_desc(23, &it);                                   /* (0.9.12) CPU, CPU CLOCK, rows of SYSTEM (tab 3) */
-    ok &= !strcmp(it.name, "CPU") && it.id == 23 && it.tab == 3 && it.max == 1 && !strcmp(it.names[0], "1 CORE") &&
+    menu_desc(23, &it);                                   /* (0.9.12) CPU, CPU CLOCK, rows of SYSTEM (tab 4 since MIDI) */
+    ok &= !strcmp(it.name, "CPU") && it.id == 23 && it.tab == 4 && it.max == 1 && !strcmp(it.names[0], "1 CORE") &&
           !strcmp(it.names[1], "2 CORES");
     menu_desc(24, &it);
-    ok &= !strcmp(it.name, "CPU CLOCK") && it.id == 24 && it.tab == 3 && it.max == 1 && !strcmp(it.names[0], "360 MHZ") &&
+    ok &= !strcmp(it.name, "CPU CLOCK") && it.id == 24 && it.tab == 4 && it.max == 1 && !strcmp(it.names[0], "360 MHZ") &&
           !strcmp(it.names[1], "320 MHZ");
     n = menu_desc(25, &it);
     ok &= n == 2u && it.index == 25 && it.id == 127;

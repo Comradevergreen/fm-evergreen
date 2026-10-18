@@ -8,7 +8,7 @@ import html, os
 
 R = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(R, 'docs', 'cheatsheet')
-VERSION = 'v0.9.9'
+VERSION = 'v0.9.12'
 
 HEAT = ['#22d3ee', '#3b82f6', '#8b5cf6', '#d946ef', '#ef4444', '#ff7a00', '#facc15', '#f4f1ea']
 
@@ -238,7 +238,7 @@ def controls():
         (k('GLO') + ' + ' + k('PLAY'), 'Restart from the top.'),
         (k('GLO') + ' + ' + k('SELECT'), 'Tempo (from any page).'),
         (k('STEP HELD', cls='a') + ' + ' + k('KNOB'), 'A parameter lock on that step (roll, grid); + ' + k('SELECT', cls='v') + ' the EDIT page they lock; + ' + k('EDIT') + ' clears its locks.'),
-        (k('HOME', cls='a') + ' held', 'MENU: skins (AIR · COLORS · BOTTOM · HUD), SCOPE on the EDIT pages, palettes, knob accel, FX latch, hold time, USB level, MIDI (MIDI OUT, MIDI LEARN), animation…'),
+        (k('HOME', cls='a') + ' held', 'MENU: skins (AIR · COLORS · BOTTOM · HUD), SCOPE on the EDIT pages, palettes, knob accel, FX latch, hold time, USB level, MIDI (MIDI OUT, MIDI LEARN), CPU (2 / 1 cores, 360 / 320 MHz), animation…'),
     ]
     t3 = '<table>' + ''.join(f'<tr><td style="white-space:nowrap;width:1%;padding-right:18px">{a}</td><td>{d}</td></tr>'
                              for a, d in combos) + '</table>'

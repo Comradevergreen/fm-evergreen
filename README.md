@@ -15,7 +15,7 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.9.11).** It builds and passes every test (Felucca's and its own). Back up the flash before installing it.
+> **Status: in development (v0.9.12, a beta: the emulator and the preview installer; the official installer stays on 0.9.9 until it is tested on the device).** It builds and passes every test (Felucca's and its own). Back up the flash before installing it.
   **DRUM-X, VOICE and ANIMAL first** (0.9.9): the FM-1 powers on with T1 DRUM-X, T2 VOICE singing words, T3 ANIMAL's
   bird, T4 LOFI's bytebeat, T5 ANALOG's bass and T6 FM6's electric piano, and PRESETS lists the engines in that order.
   **A new skin, AIR** (0.9.7, the default of new settings): HUD's light look on every page with the knob row on top,
@@ -666,60 +666,61 @@ JIANT's modifications are distributed under the same license.
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
 
-### v0.9.12 (draft)
+### v0.9.12
+A beta (the emulator and `preview/webapp/installer/`); the official installer stays on 0.9.9 until it is tested on
+the device.
+- **The crackle of 0.9.10 / 0.9.11: the sound's code pinned in place (candidate fix).** On the owner's FM-1 0.9.9
+  played clean and 0.9.10 / 0.9.11 crackled on every output, the load meter up to 94 %, while the host measured the
+  same work. Nothing in the sound changed in 0.9.10, and the code that runs from RAM is byte for byte 0.9.9's. What
+  changed is *where* the rest of the sound sits in the flash: the FM-1 runs most of its code straight from the flash
+  chip, through a small cache that keeps only a few KB of it close at hand. Code at some addresses competes for the same
+  cache places as other code and keeps throwing it out, so the same work costs much more. 0.9.10's two new drawings
+  (VOICE's tract, LOFI's chip: +6 KB of screen code) came before the engines in the image and pushed every engine's
+  render 6 KB further (analog_render 0x020573F8 → 0x020598BE) while the effects and the mix stayed where they were: the
+  renders and the effects now collided in the cache. Now everything an interrupt reaches (the renders, the effects, the
+  second core's jobs and their tables: 350 functions, 244 tables) comes first in the image, in name order
+  (`tools/build.py audio_sections`, `app.ld`), so a change of the screens can no longer move the sound. To be confirmed
+  on the device (SAVE › TOOLS › 6 CPU TEST, MENU › ABOUT › AUDIO LOAD).
 - **Safe by default on FM-1s that crash.** Some FM-1s crash now and then (a red "JIANT CRASH" / "FELUCCA CRASH"
   screen, even idle) since both cores work (0.6.71). Now:
-  - **MENU > SYSTEM > CPU: 2 CORES / 1 CORE**, kept with the settings (2 CORES by default, as before; editor id 23).
+  - **MENU › SYSTEM › CPU: 2 CORES / 1 CORE**, kept with the settings (2 CORES by default, as before; editor id 23).
     A crash or a hang (watchdog) while both cores ran, or the second core giving up (a misread, no answer, a fault),
-    **turns 2 CORES off for good**: the next start says **2 CORES OFF AFTER A CRASH — MENU > SYSTEM > CPU** and ABOUT
+    **turns 2 CORES off for good**: the next start says **2 CORES OFF AFTER A CRASH — MENU › SYSTEM › CPU** and ABOUT
     reads **CORES 1 (AFTER A CRASH)**. Until 0.9.11 that lasted only until the FM-1 was switched off.
-  - **MENU > SYSTEM > CPU CLOCK: 360 / 320 MHZ** (editor id 24): JieLi rates the chip at 320 MHz; the FM-1's boot runs
+  - **MENU › SYSTEM › CPU CLOCK: 360 / 320 MHZ** (editor id 24): JieLi rates the chip at 320 MHz; the FM-1's boot runs
     it at 360. Switched at power-on, before the audio and the second core, with curist's switch from
     [fm1-clk320-probe](https://github.com/curist/fm1-clk320-probe) (MIT, `firmware/hal/fm1_clk320.h`), as
     [Skiff](https://github.com/illuminus5/skiff) does. ~11 % less CPU: the load governor sheds voices sooner on the
     heaviest songs. ABOUT shows the clock it runs at.
-    - **MENU > AUDIO > LOAD** (was SYSTEM's): beside TRACKS, as in GLO > SYSTEM; SYSTEM's tile holds seven rows.
+  - **One core: the load budget a little sooner** (55 % instead of 65 % of a half before new voices wait), so the peaks
+    have room without the second core.
 - **The crash screen says more**: the version, the core that faulted and how many ran, a short code (IL illegal
-    instruction, BU bad address, ST stack, ...; MANUAL › Troubleshooting) and the five numbers labelled (VEC PC EMU
-    DBG RETS, the same as every crash screen since Felucca, now named).
-  - **The last crash is kept** in the settings record (also after a power-off): MENU > ABOUT > LAST CRASH, the
+  instruction, BU bad address, ST stack, ...; MANUAL › Troubleshooting) and the five numbers labelled (VEC PC EMU DBG
+  RETS, the same as every crash screen since Felucca, now named).
+  - **The last crash is kept** in the settings record (also after a power-off): MENU › ABOUT › LAST CRASH, the
     editor's settings backup, the console's `crash`. A hang (a watchdog reset) is logged too (code WD).
   - `tools/crash_decode.py`: a photo's numbers to the function that failed, from the build's ELF.
 - **Fixed: the flash written while the second core worked.** Every flash erase, write and read turns the flash off
   (interrupts off); the second core's jobs from the audio interrupt were always back by then, but the 48 kHz USB
   resampler's (0.8.9) runs on after it: a fault in it then would have run the exception vectors from a flash that was
   off. Now the flash driver waits for the second core first (`fm1_mc_park`).
-- **The sound's code no longer moves when the screens grow (candidate fix for 0.9.10's crackle).** On the owner's FM-1
-  0.9.9 played clean and 0.9.10 / 0.9.11 crackle on every output, the load meter up to 94 %, while the host measures
-  the same work. Nothing in the sound changed in 0.9.10 and the RAM code is byte for byte 0.9.9's, but the two new
-  drawings (VOICE's tract, LOFI's chip: +6 KB of screen code) came before the engines in the image, so every engine's
-  render, run from the flash through the chip's small cache, moved 6 KB and collided differently with the effects and
-  the mix (analog_render 0x020573F8 -> 0x020598BE, the effects and the master where they were). Now everything an
-  interrupt reaches (the renders, the effects, the second core's jobs, their tables: 347 functions, 244 tables) comes
-  first in the image, in name order (`tools/build.py audio_sections`, `app.ld`): a change of the screens cannot move
-  it; the image the same size. To be confirmed on the device (SAVE > TOOLS > 6 CPU TEST, MENU > ABOUT AUDIO LOAD).
-- **One core: the load budget a little sooner** (55 % instead of 65 % of a half before new voices wait), so the peaks
-  have room without the second core.
 - **USB audio: fewer register round trips in TIMER5** (0.9.10 polled the endpoint on every 10 kHz tick, also inside
   the audio render): a packet just queued is not polled for 0.6 ms (it cannot have gone yet), ~4 polls a ms instead of
   ~10, the stems timing as 0.9.10.
-- RAM code 1 KiB larger (from the pool's spare), image +2.3 KB.
-### v0.9.12 (draft, not released)
-- **12 voices with the second core** (after [Skiff](https://github.com/illuminus5/skiff) by illuminus5): while CORES 2
-  runs (MENU › ABOUT), the tracks share **12 voices** instead of 8; one core (REC at power-on, a unit without it, a
-  core given up mid-session: from the next note) keeps 8, LOAD ECO 6. A track still has 8 of its own (no RAM more). The
-  load control stays in charge: the load budget (65 % of a half) and the overload guard (80 %) measure core 0's half
-  with its wait for core 1 in it, so they keep the render in time either way. Measured (callgrind, `tests/cpu_vg.c`,
-  six ANALOG / FM6 chords, 24 notes held, every FX on): one core with 8 voices 3241 instructions a sample; two cores
-  with 12, 3925 in all, **1949 on core 0** (the audio ISR's own share: 60 % of one core's with 8). The other sections
-  as before; target loop costs unchanged. Flash +64 B. `tests/regress.c` (12 / 8 / 8 REC / 6 ECO, each part ≤ 8, a
-  core lost), the dual-core test compares one core and two at the same budget.
+- **12 voices with the second core** (after [Skiff](https://github.com/illuminus5/skiff) by illuminus5): while two cores
+  actually run (MENU › ABOUT CORES 2), the tracks share **12 voices** instead of 8; one core (MENU › SYSTEM › CPU
+  1 CORE, 2 CORES turned off after a crash, REC at power-on, a core given up mid-session: from the next note) keeps 8,
+  LOAD ECO 6. A track still has 8 of its own (no RAM more). The load control stays in charge: the load budget and the
+  overload guard (80 %) measure core 0's half with its wait for core 1 in it, so they keep the render in time either
+  way. Measured (callgrind, `tests/cpu_vg.c`, six ANALOG / FM6 chords, 24 notes held, every FX on): one core with 8
+  voices 3241 instructions a sample; two cores with 12, 3925 in all, **1949 on core 0** (the audio ISR's own share: 60 %
+  of one core's with 8). `tests/regress.c` (12 / 8 / 8 REC / 6 ECO, each part ≤ 8, a core lost), the dual-core test
+  compares one core and two at the same budget.
 - **Sound types and PRESETS by type** (after Skiff): every factory preset has a type, **BASS LEAD PAD KEYS PLUCK
   BELL VOX DRUM FX**, in the free bits of its MONO byte (no format, nothing stored changes). SAVE › PRESETS' **LIST**
   (KNOB 4) steps ALL → FAV → BASS … FX: KNOB 1 and the PRESETS knob then browse that type over every engine. The type
   is kept with the settings (a byte no engine uses; older settings: ALL). The generator (GEN) keeps bass sounds off the
   other roles by the type instead of their names (a REESE is now a bass too). PROGRAM CHANGE numbers stay those of ALL.
-  Flash +128 B.
 - **MIDI LEARN** (ported from Felucca 1.5's, by Leo Kuroshita): **MENU › MIDI › LEARN ON**, turn a knob on any page
   that edits a track's parameter, send a CC: learned (**CC21 > T2 CUT**), then it sets that parameter as the knob does
   (and is recorded as automation) on any channel ROUTE hears, over USB and TRS. Ten at most; one CC a parameter;
@@ -727,20 +728,11 @@ Every update is listed here, newest first. (Since 0.6.80 at the end of the page:
   94 102–105) refused ("CC7 RESERVED") and doing their own. Kept with the settings (in the favourites row of the
   retired DIGITAL engine, 30 bytes; older settings: none learned), not in projects. Its state in the pool (8 B), none
   among the audio ISR's globals.
-- **MENU › MIDI**, a fifth tab before SYSTEM (as Felucca 1.2's): MIDI OUT (moved from CONTROL), LEARN, LEARN CLEAR. The
-  editor sees MIDI OUT in the MIDI tab (its id unchanged; SYSTEM's tab index 3 → 4). The tabs show short names when
-  five do not fit (DISP CTRL AUDIO MIDI SYS); MENU's tile view (renders only since 0.9.2) is gone.
-- **The FM6 voice bank's sector is checked before it is used**: Skiff keeps its pattern bank at 0xE7000, where JIANT
-  keeps the FM6 voice bank. A bank there was already read only with its commit record and CRCs right; now the power-on
-  also never erases that sector to finish a copy unless it is erased or holds a bank of ours (another firmware's data
-  reads as no bank and stays as it is) — only a bank you send from the editor writes over it. Flash +80 B.
-  `tests/fm6bank_test.c`.
-- **Copyright**: "Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)" in the header of every file JIANT wrote
-  ("Portions Copyright" in the Felucca files it changed substantially), Felucca's lines kept; README, LICENSING.md and
-  MENU › ABOUT (which now names Felucca and Skiff in its credits) say so. The license is unchanged.
-- Totals: flash image 576192 → 577712 B (+1520 B; 3852 B left of 581564): 12 voices +64, the sector guard +80, the
-  sound types +128, MIDI LEARN and the MIDI tab +864, ABOUT's credits and copyright +384. .data + .bss 79556 B
-  (unchanged), the pool +8 B (spare 10528 B), RAM code unchanged.
+- **MENU in five tabs: DISPLAY · CONTROL · AUDIO · MIDI · SYSTEM.** **MIDI** is new, before SYSTEM (as Felucca 1.2's):
+  MIDI OUT (moved from CONTROL), LEARN, LEARN CLEAR. **LOAD** moves to **AUDIO** beside TRACKS (as in GLO › SYSTEM);
+  **SYSTEM** holds USB SERIAL, RESTORE LAST, CPU, CPU CLOCK, CALIBRATION, INIT SYSTEM, ABOUT (seven). The editor sees
+  MIDI OUT in the MIDI tab and LOAD in AUDIO (their ids unchanged; SYSTEM's tab index 3 → 4). The tabs show short names
+  when five do not fit (DISP CTRL AUDIO MIDI SYS); MENU's tile view (renders only since 0.9.2) is gone.
 - **Parameter locks: choose the page while you hold the step.** Until now a step's knobs locked the four of the sound
   page visited last, so locking DECAY and then FOLD on one drum step meant leaving SEQ › STEP for EDIT and back, twice.
   Now, with a step held on SEQ › STEP (the roll's entry or a DRUM grid key), **SELECT walks the track's EDIT pages**
@@ -752,9 +744,7 @@ Every update is listed here, newest first. (Since 0.6.80 at the end of the page:
   none held it walks SEQ as before. DRUM-X: the lane picked with the black keys gets the hit, the lock stays the
   step's (LEVELS locks one sound's level). The manual's *Parameter locks* also says plainly what clears what since
   0.9.2 (EDIT never clears a step; SEQ + G5 does; a held step + EDIT clears only its locks) and points to SEQ › AUTO
-  LIST to edit a lock or recorded automation on a particular step. UI only, nothing in the audio path; flash +352 B
-  (image 576192 → 576544 B), .data+.bss unchanged. ui_test (test_lock_pages), ui_render scene drum_lock_page, the
-  navigation map's combos and the controls cheat sheet.
+  LIST to edit a lock or recorded automation on a particular step.
 - **The USB name is "JIANT", and Windows finally shows it.** Ableton Live (and every Windows program) kept listing the
   FM-1's MIDI port as "Felucca" long after JIANT renamed it: Windows' USB audio driver stores a MIDI port's name in the
   registry under a key made of VID, PID and the product string's *index* (not its text), the first time it sees the
@@ -762,11 +752,19 @@ Every update is listed here, newest first. (Since 0.6.80 at the end of the page:
   index 4 (`firmware/src/usb.c` USB_STR_PRODUCT), a new key, so the host reads the name again, and reads **"JIANT"**
   (was "JIANT FM"): the port in Live / Windows is "JIANT", on macOS the device and its port "JIANT", on Linux
   "JIANT MIDI 1". The manufacturer stays "Juan Jiant", the update loader "JIANT Update" (also on the new index);
-  VID/PID and bcdDevice unchanged. The installers (web and `tools/fm1_install.py`) and the editor already matched
-  JIANT / Felucca; they tell the firmware by its identity and INFO reply, not by the name: new tests with "JIANT",
-  "JIANT FM", "Felucca" and Windows' numbered names (web/test_web.mjs, tests/install_test.py, tests/usb_desc_test.c:
-  the strings as a host reads them). Flash −16 B (image 576192 → 576176 B). macOS may keep a renamed device's old name
-  in Audio MIDI Setup: delete the old FM-1 entry there (unplugged) once.
+  VID/PID and bcdDevice unchanged. The installers (web and `tools/fm1_install.py`) and the editor tell the firmware by
+  its identity and INFO reply, not by the name, and accept "JIANT", "JIANT FM", "Felucca" and Windows' numbered names.
+  macOS may keep a renamed device's old name in Audio MIDI Setup: delete the old FM-1 entry there (unplugged) once.
+- **The FM6 voice bank's sector is checked before it is used**: Skiff keeps its pattern bank at 0xE7000, where JIANT
+  keeps the FM6 voice bank. A bank there was already read only with its commit record and CRCs right; now the power-on
+  also never erases that sector to finish a copy unless it is erased or holds a bank of ours (another firmware's data
+  reads as no bank and stays as it is) — only a bank you send from the editor writes over it. `tests/fm6bank_test.c`.
+- **Copyright**: "Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)" in the header of every file JIANT wrote
+  ("Portions Copyright" in the Felucca files it changed substantially), Felucca's lines kept; README, LICENSING.md and
+  MENU › ABOUT (which now names Felucca and Skiff in its credits) say so. The license is unchanged.
+- Memory: image **580316 B** of 581564 (0.9.11: 576192; 1248 B free); .data + .bss **79556 B** of 98304, pool spare
+  **9504 B**, RAM code **22812 B** of 25600 (1 KiB more room, from the pool, for the 320 MHz switch). cpu_vg: every case within its baseline (two cores, 12 voices: 1949 instructions a sample on core 0).
+  The navigation map and the cheat sheets regenerated at v0.9.12.
 
 ### v0.9.11
 - **GLO › LIVE: the six sequences in parallel, with live modifiers** (the approved mock-up *secuencias*, its MANO and
