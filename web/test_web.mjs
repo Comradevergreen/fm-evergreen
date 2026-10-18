@@ -8,13 +8,18 @@
 //   and the mixer, the v5 drum grid in steps and user presets), its tab layout and ja/en strings
 // - fm1pkg.js: productOf and logicalImage on build/felucca.fwsc (skipped without a build)
 // - fm1ota.js: a full install and an unplug during the write against a simulated FM-1
+// - the installer (fm1diag.js, index_pkg.html): every failure path against simulated FM-1s (official V13..V16, JIANT,
+//   Felucca, Skiff, other firmware, update mode, a busy port, no answer, timeouts), the browsers, the report, the
+//   page in a fake DOM; 404.html's redirects
 
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import vm from "node:vm";
 import { logicalImage, productOf } from "./fm1pkg.js";
-import { Updater, pack7, unpack7 } from "./fm1ota.js";
+import { Updater, pack7, unpack7, pairOutput, portBase } from "./fm1ota.js";
+import { bkU32, bkR32, bkPack, bkCrc, readBackup } from "./fm1backup.js";
+import * as D from "./fm1diag.js";
 
 let failed = 0;
 const ok = (cond, what) => { console.log(`${what.padEnd(64)} ${cond ? "ok" : "FAIL"}`); if (!cond) failed++; };
@@ -31,12 +36,12 @@ const FW_ROOT = process.env.FELUCCA_ROOT || join(HERE, "..");
  * tracks and v0.x, Felucca (four tracks, 1.x) and anything else not */
 function installerCheck() {
   const html = readFileSync(join(HERE, "index_pkg.html"), "utf8");
-  const src = html.slice(html.indexOf("function isJiantInfo"), html.indexOf("async function fwKind"));
-  const isJiantInfo = vm.runInNewContext(`(${src.trim()})`);
+  const isJiantInfo = D.isJiantInfo;
   const info = (ver, ntrk, ext) => [...Buffer.from(ver), 0, 2, 0, 0, 0, 0, ...Buffer.from("A"), 0, ...Buffer.from("B"), 0, ntrk, 8, ...ext];
   ok(isJiantInfo(info("FELUCCA v0.6.62", 6, [0x56, 1, 32, 0x4A, 1, 1])), "installer: JIANT (its tag) may be written over");
   ok(isJiantInfo(info("FELUCCA v0.6.40", 6, [0x56, 1, 32])), "installer: an older JIANT (six tracks, v0.x) too");
   ok(!isJiantInfo(info("FELUCCA 1.5.1", 4, [0x56, 1, 32])), "installer: Felucca 1.x (four tracks) is not");
+  ok(!isJiantInfo(info("FELUCCA v1.3.2", 6, [0x56, 1, 32])), "installer: Skiff (six tracks, v1.x) is not");
   ok(!isJiantInfo(info("BAUDGIRL 2.0", 4, [])), "installer: another firmware is not");
   /* (0.8.5) the release notice: before 0.8.5 is written, on the preview installer only, in every language it has */
   const ns = html.slice(html.indexOf("function releaseNotice"), html.indexOf("const noticeOf"));
@@ -47,9 +52,10 @@ function installerCheck() {
      releaseNotice("v0.8.50-abc") === "", "installer: another version: none");
   const land = readFileSync(join(HERE, "landing", "index.html"), "utf8");
   ok(!/n085|DRUM-X octave/i.test(land), "installer: the landing page has no notice");
+  const T = installerText();
   for (const k of ["n085Title", "n085What", "n085Risk", "n085Keep", "n085Confirm"])
-    ok((html.match(new RegExp(`\\b${k}: "`, "g")) || []).length === 2, `installer: ${k} in English and Japanese`);
-  ok(/<div lang="es"[^>]*>[\s\S]*Aviso antes de instalar 0\.8\.5[\s\S]*backup completo/.test(html), "installer: the notice in Spanish");
+    ok(["en", "ja", "es"].every((L) => typeof T[L][k] === "string" && T[L][k].length > 5), `installer: ${k} in English, Japanese and Spanish`);
+  ok(/Aviso antes de instalar 0\.8\.5/.test(T.es.n085Title) && /backup completo/.test(T.es.n085Keep), "installer: the notice in Spanish");
 }
 
 /* ------------------------------------------------------------ editor protocol --- */
@@ -1504,19 +1510,25 @@ sys.stdout.buffer.write(b"".join(raw[i * 48:i * 48 + 47] for i in range(20)) + r
 const HS = [0xF0, 0x00, 0x32, 0x45, 0x00, 0x00, 0x00, 0x40, 0x7F, 0xF7];
 const UPGRADE = [0xF0, 0x22, 0x24, 0x35, 0x7F, 0xF7];
 
-/* an FM-1 on WebMIDI: identity, then "device asks, host answers" reads of the image */
+/* an FM-1 on WebMIDI: identity, then "device asks, host answers" reads of the image. (0.9.11) the installer's failure
+ * paths: o.identity / o.name (what it runs, its port), o.info (the editor's INFO it answers, or none), o.objs (the
+ * complete backup it lists), o.busy (a port another program holds: open() rejects), o.mute (no identity answer),
+ * o.noUpgrade (never asks for the update), o.noLoader (never comes back as the loader), o.after (what it reports after
+ * the write), o.dropGet (GET replies it drops), o.outName (Windows: the output's own name) */
 class FakeFM1 {
-  constructor(image, { unplugAfter = Infinity } = {}) {
-    this.image = image; this.unplugAfter = unplugAfter; this.served = 0; this.bad = 0;
+  constructor(image, { unplugAfter = Infinity, ...o } = {}) {
+    this.image = image; this.unplugAfter = unplugAfter; this.served = 0; this.bad = 0; this.o = o;
+    this.upgrades = 0; this.editorCmds = []; this.after = o.after || "FM-1_900";
     this.access = { inputs: new Map(), outputs: new Map() };
-    this.boot("FM-1_015", "FM-1");
+    this.boot(o.identity || "FM-1_015", o.name || "FM-1");
   }
-  boot(identity, name) {
+  boot(identity, name, outName = this.o.outName) {
     this.identity = identity; this.waiting = null; this.queue = [];
     for (const m of [this.access.inputs, this.access.outputs]) { for (const p of m.values()) p.state = "disconnected"; m.clear(); }
     const id = Math.random().toString(36).slice(2);
-    this.input = { id: "i" + id, name, state: "connected", onmidimessage: null, open: async () => {} };
-    this.output = { id: "o" + id, name, state: "connected", open: async () => {}, send: (d) => {
+    const open = this.o.busy ? async () => { const e = new Error("Port is not available"); e.name = "InvalidAccessError"; throw e; } : async () => {};
+    this.input = { id: "i" + id, name, manufacturer: "fake", state: "connected", onmidimessage: null, open };
+    this.output = { id: "o" + id, name: identity.startsWith("ota-") || !outName ? name : outName, state: "connected", open, send: (d) => {
       if (this.output.state !== "connected") throw new Error("InvalidStateError");
       setTimeout(() => this.rx(Array.from(d)), 1);
     } };
@@ -1524,12 +1536,33 @@ class FakeFM1 {
     this.access.outputs.set(this.output.id, this.output);
   }
   tx(bytes) { const i = this.input; setTimeout(() => { if (i.state === "connected" && i.onmidimessage) i.onmidimessage({ data: Uint8Array.from(bytes) }); }, 1); }
+  editor(cmd, a) {
+    this.editorCmds.push(cmd);
+    const reply = (body) => this.tx([240, 125, 70, 76, cmd, ...body, 247]);
+    if (!this.o.info || this.identity.startsWith("ota-")) return;      // an official firmware, a loader: silence
+    if (cmd === 1) return reply(this.o.info);
+    const objs = this.o.objs || [];
+    if (cmd === 65) {
+      const out = [1, 0, objs.length];
+      for (const [oid, v] of objs) out.push(oid, ...bkU32(v.length), ...bkU32(v.length ? bkCrc(v) : 0));
+      return reply(out);
+    }
+    if (cmd === 66) {
+      if (this.o.dropGet && this.o.dropGet-- > 0) return;
+      const oid = a[0], off = bkR32(a, 1), n = a[6] | a[7] << 7, v = objs.find(([k]) => k === oid)[1];
+      return reply([oid, 0, ...bkU32(off), n & 127, n >> 7, ...bkPack(v.subarray(off, off + n))]);
+    }
+  }
   rx(d) {
+    if (d[1] === 125 && d[2] === 70 && d[3] === 76) return this.editor(d[4], d.slice(5, -1));
     if (eq(d, HS)) {
+      if (this.o.mute) return;
       const t = [...new TextEncoder().encode(this.identity)];
       const body = [0, 0x59, 0x11, 0, 0, 0, ...t, ...new Array(28 - t.length).fill(0)];
       this.tx([0xF0, ...pack7(body), 0xF7]);
     } else if (eq(d, UPGRADE)) {
+      this.upgrades++;
+      if (this.o.noUpgrade && !this.identity.startsWith("ota-")) return;
       this.queue = this.identity.startsWith("ota-")
         ? [...Array.from({ length: 6 }, (_, k) => [k * 512, 512]), [0xF0000000, 8]]
         : [[0, 64], [0x40, 160], [0x1000, 512], [0xE0000000, 8]];
@@ -1543,8 +1576,8 @@ class FakeFM1 {
       this.waiting = null;
       this.served++;
       if (this.served >= this.unplugAfter) { this.input.state = this.output.state = "disconnected"; return; }
-      if (addr === 0xE0000000) setTimeout(() => this.boot("ota-FM-1_900", "Felucca Update"), 300);
-      else if (addr === 0xF0000000) setTimeout(() => this.boot("FM-1_900", "Felucca"), 300);
+      if (addr === 0xE0000000) { if (!this.o.noLoader) setTimeout(() => this.boot("ota-FM-1_900", this.o.loaderName || "JIANT Update"), 300); }
+      else if (addr === 0xF0000000) setTimeout(() => this.boot(this.after, this.o.afterName || "JIANT FM"), 300);
       else this.next();
     }
   }
@@ -1582,6 +1615,271 @@ async function updater() {
   ok(e2 && e2.code === "notfound", "fm1ota.js: no device -> error code 'notfound'");
 }
 
+/* ------------------------------------------- the installer's failure paths (0.9.11) --- */
+/* the page's strings: TEXT as the page builds it (en, ja, then Spanish and the shared tips) */
+function installerText() {
+  const html = readFileSync(join(HERE, "index_pkg.html"), "utf8");
+  const src = html.slice(html.indexOf("const TEXT = {"), html.indexOf("const LANGS"));
+  return vm.runInNewContext(src + "\nTEXT");
+}
+const FAST = { hs: 120, hsTries: 1, findTries: 2, backoff: 20, settle1: 40, idle1: 400, upgradeTries: 2, loaderSettle: 40,
+  loader: 2500, settle2: 40, idle2: 3000, back: 3000, poll: 60, info: 300, infoTries: 2 };
+const IMG = Uint8Array.from({ length: 0x2000 }, (_, i) => (i * 7) & 0xFF);
+const str = (x) => [...Buffer.from(x)];
+/* INFO as JIANT / Felucca / Skiff lay it out: version, engines, the tags after CHAIN_ROWS (16); backup: 42 01 03 */
+function infoOf(ver, ntrk, { backup = true, jiant = false } = {}) {
+  return [...str(ver), 0, 2, 64, 30, 16, 60, ...str("SYNTH"), 0, ...str("DRUM"), 0, ntrk, 16,
+    0x55, 1, 7, 0x4d, 1, 64, 1, ...(backup ? [0x42, 1, 3] : [0x46, 1, 8]), ...(jiant ? [0x4A, 1, 1] : [])];
+}
+const obj = (n, seed) => Uint8Array.from({ length: n }, (_, i) => (i * 13 + seed) & 255);
+const JIANT_OBJS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, ...Array.from({ length: 32 }, (_, i) => 40 + i)].map((id) => [id, id < 2 ? obj(700, id) : new Uint8Array(0)]);
+const FELUCCA_OBJS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 32, 33, 34].map((id) => [id, id < 2 ? obj(900, id) : id === 32 ? obj(5000, 9) : new Uint8Array(0)]);
+const SKIFF_OBJS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, ...Array.from({ length: 16 }, (_, i) => 16 + i), 32, 33, 34]
+  .map((id) => [id, id < 2 ? obj(800, id) : id === 17 ? obj(3552, 4) : new Uint8Array(0)]);
+const PROFILES = {
+  v15: { identity: "FM-1_015", name: "FM-1", after: "FM-1_900" },
+  v14: { identity: "FM-1_014", name: "FM-1" },
+  v13: { identity: "FM-1_013", name: "FM-1" },
+  v16: { identity: "FM-1_016", name: "FM-1", after: "FM-1_015" },
+  jiant: { identity: "FM-1_900", name: "JIANT FM", info: infoOf("JIANT v0.9.11", 6, { jiant: true }), objs: JIANT_OBJS, after: "FM-1_015" },
+  felucca: { identity: "FM-1_961", name: "Felucca", info: infoOf("FELUCCA v1.6.1", 4), objs: FELUCCA_OBJS, after: "FM-1_015" },
+  felucca10: { identity: "FM-1_910", name: "Felucca", info: infoOf("FELUCCA v1.0", 4, { backup: false }), after: "FM-1_015" },
+  skiff: { identity: "FM-1_732", name: "Skiff", info: infoOf("FELUCCA v1.3.2", 6), objs: SKIFF_OBJS, after: "FM-1_015" },
+  skiffQuiet: { identity: "FM-1_732", name: "Skiff", after: "FM-1_015" },
+  baudgirl: { identity: "FM-1_950", name: "FM-1", after: "FM-1_015" },
+  oddId: { identity: "FM1-V12", name: "FM-1" },
+};
+function flowCtx(dev, answers = {}) {
+  const said = [], asked = [], saved = [], up = new Updater(dev.access, null, { times: FAST });
+  const ui = { say: (k, a) => said.push(k + (a ? " " + a : "")), step: () => {}, openStock: () => said.push("openStock"),
+    confirm: (k) => { asked.push(k); return answers[k] ?? true; }, save: (a) => saved.push(a) };
+  return { up, ui, state: {}, said, asked, saved, image: IMG, product: "FM-1_900", stock: { image: IMG, product: "FM-1_015" } };
+}
+const codeOf = (p) => p.then(() => "ok", (e) => e.code || e.message);
+
+async function installerFlows() {
+  /* what each identity is */
+  const cls = ["FM-1_015", "FM-1_014", "FM-1_012", "FM-1_016", "FM-1_732", "FM-1_900", "FM-1_961", "FM-1_500", "FM1-V12", ""].map(D.classifyIdentity);
+  ok(js(cls) === js(["stock", "oldstock", "oldstock", "newstock", "skiff", "felucca9", "felucca9", "otherfw", "otherfw", "none"]),
+    "installer: identities: V15, older, newer, Skiff 7XY, Felucca 9XY, other");
+
+  /* Install */
+  const run = async (p, o = {}, answers) => { const dev = new FakeFM1(IMG, { ...PROFILES[p], after: "FM-1_900", ...o }); const c = flowCtx(dev, answers); return { dev, c, r: await codeOf(D.runInstall(c)) }; };
+  let x = await run("v15");
+  ok(x.r === "ok" && x.c.state.fw.kind === "stock" && x.dev.identity === "FM-1_900" && x.dev.bad === 0, "installer: Install over official V15: written");
+  x = await run("jiant");
+  ok(x.r === "ok" && x.c.state.fw.kind === "jiant" && x.c.state.fw.version === "JIANT v0.9.11", "installer: Install over JIANT: written");
+  for (const [p, code] of [["v14", "oldstock"], ["v13", "oldstock"], ["v16", "newstock"], ["skiff", "skiff"], ["skiffQuiet", "skiff"],
+    ["felucca", "felucca"], ["felucca10", "felucca"], ["baudgirl", "otherfw"], ["oddId", "otherfw"]]) {
+    x = await run(p);
+    ok(x.r === code && x.dev.served === 0 && x.dev.upgrades === 0 && x.c.said.includes("openStock"),
+      `installer: Install over ${PROFILES[p].identity} (${p}): '${code}', nothing written, Return opened`);
+  }
+  x = await run("v14");
+  ok(!x.dev.editorCmds.length, "installer: an official firmware is never asked the editor's INFO");
+  x = await run("v15", { identity: "ota-FM-1_900", name: "JIANT Update" });
+  ok(x.r === "ok" && x.c.state.fw.kind === "loader" && x.dev.identity === "FM-1_900", "installer: in update mode (ota-FM-1): Install resumes the write");
+  x = await run("v15", { busy: true });
+  ok(x.r === "busy", "installer: the port held by another program (Windows: open() rejects): 'busy'");
+  x = await run("v15", { mute: true });
+  ok(x.r === "noanswer", "installer: an FM-1 port that never answers: 'noanswer'");
+  const none = flowCtx({ access: { inputs: new Map(), outputs: new Map() } });
+  ok((await codeOf(D.runInstall(none))) === "notfound", "installer: no MIDI port at all (cable without data): 'notfound'");
+  x = await run("v15", { noUpgrade: true });
+  ok(x.r === "noupdate" && x.dev.upgrades === 2 && x.dev.served === 0, "installer: no update request: UPGRADE asked again, then 'noupdate'");
+  x = await run("v15", { noLoader: true });
+  ok(x.r === "noloader", "installer: the loader never appears (a slow hub, a driver install): 'noloader'");
+  x = await run("v15", { name: "MIDIIN2 (FM-1)", outName: "MIDIOUT2 (FM-1)" });
+  ok(x.r === "ok", "installer: Windows port names (MIDIIN2 (FM-1) / MIDIOUT2 (FM-1)) paired");
+  x = await run("v15", { name: "USB Audio Device" });
+  ok(x.r === "ok", "installer: an FM-1 under a name it does not know, alone: probed and found");
+  x = await run("v15", { loaderName: "USB MIDI Gadget" });
+  ok(x.r === "ok", "installer: the loader under a new unknown name: probed while waiting");
+  ok(portBase("2- FM-1") === "fm-1" && portBase("FM-1 1") === "fm-1" &&
+     pairOutput({ name: "MIDIIN2 (FM-1)" }, [{ name: "MIDIOUT2 (FM-1)", state: "connected" }, { name: "Microsoft GS Wavetable Synth", state: "connected" }])?.name === "MIDIOUT2 (FM-1)",
+     "installer: port pairing (Windows numbering)");
+
+  /* Return to official V15 */
+  const stock = async (p, o = {}, answers, recovery = false) => { const dev = new FakeFM1(IMG, { ...PROFILES[p], after: "FM-1_015", ...o }); const c = flowCtx(dev, answers); c.recovery = recovery; return { dev, c, r: await codeOf(D.runStock(c)) }; };
+  x = await stock("v14");
+  ok(x.r === "ok" && x.c.asked.join() === "officialConfirm" && !x.c.saved.length && x.dev.identity === "FM-1_015", "installer: Return from V14: no backup, a confirm, written");
+  x = await stock("v13");
+  ok(x.r === "ok" && x.c.asked.join() === "officialConfirm" && !x.dev.editorCmds.length, "installer: Return from V13: the same, no INFO asked (no timeout)");
+  x = await stock("v16");
+  ok(x.r === "ok" && x.c.asked.join() === "officialConfirm", "installer: Return from V16 (newer official): a confirm, written");
+  x = await stock("v15");
+  ok(x.r === "ok" && x.c.asked.join() === "stockAgainConfirm", "installer: Return over V15 itself: asks first");
+  x = await stock("jiant");
+  ok(x.r === "ok" && x.c.saved.length === 1 && x.c.saved[0].objects.length === 43 && x.c.asked.join() === "stockConfirm",
+    "installer: Return from JIANT: its complete backup, then V15");
+  ok(readBackup(JSON.stringify(x.c.saved[0])).objects.length === 43, "installer: that backup reads back in the JIANT editor");
+  x = await stock("felucca");
+  const fa = x.c.saved[0];
+  ok(x.r === "ok" && fa && fa.objects.map((o) => o.id).join() === "0,1,2,3,4,5,6,7,8,9,32,33,34" && fa.objects[10].size === 5000,
+    "installer: Return from Felucca 1.6.1: every object (its user samples too), then V15");
+  ok(readBackup(JSON.stringify(fa)).objects.length === 10, "installer: Felucca's backup: the JIANT editor restores its songs (no samples)");
+  x = await stock("skiff");
+  const sa = x.c.saved[0];
+  ok(x.r === "ok" && sa && sa.objects.length === 29 && sa.objects.find((o) => o.id === 17).size === 3552 && sa.identity === "FM-1_732",
+    "installer: Return from Skiff (FM-1_732): its own complete backup (pattern bank), then V15");
+  x = await stock("skiffQuiet", {}, { nobackupConfirm: false });
+  ok(x.r === "ok" && x.c.asked.join() === "nobackupConfirm" && x.dev.served === 0, "installer: Skiff without INFO: asks to go on without backup; no: nothing written");
+  x = await stock("felucca10");
+  ok(x.r === "ok" && x.c.asked.join() === "nobackupConfirm" && x.dev.identity === "FM-1_015", "installer: Felucca without the backup: a confirm, then V15 (no dead end)");
+  x = await stock("baudgirl");
+  ok(x.r === "ok" && x.c.asked.join() === "nobackupConfirm", "installer: another firmware (FM-1_950, no INFO): a confirm, then V15");
+  x = await stock("jiant", { info: infoOf("FELUCCA v0.2", 6, { backup: false }) });
+  ok(x.r === "stockUnsupported" && x.dev.served === 0, "installer: an old JIANT without the backup: update JIANT first");
+  x = await stock("jiant", { dropGet: 1 });
+  ok(x.r === "ok" && x.c.saved.length === 1, "installer: a GET reply lost once: retried, the backup completes");
+  x = await stock("jiant", { dropGet: 1e9 }, { backupFailConfirm: false });
+  ok(x.r === "backupfail" && x.dev.served === 0 && x.c.asked.join() === "backupFailConfirm", "installer: the backup times out: asked; no: 'backupfail', nothing written");
+  x = await stock("v15", { identity: "ota-FM-1_900", name: "JIANT Update" });
+  ok(x.r === "stockNeedBackup", "installer: Return in update mode without the resume box: 'stockNeedBackup'");
+  x = await stock("v15", { identity: "ota-FM-1_900", name: "JIANT Update", after: "FM-1_015" }, {}, true);
+  ok(x.r === "ok" && x.dev.identity === "FM-1_015", "installer: Return in update mode, resume ticked: written");
+  x = await stock("v15", { busy: true });
+  ok(x.r === "busy", "installer: Return with the port busy: 'busy'");
+}
+
+/* the browser: no WebMIDI (iPhone, Safari, an old Firefox), refused, blocked, a MIDI service that failed once */
+async function installerBrowsers() {
+  const UA = {
+    ios: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/130.0 Mobile/15E148 Safari/604.1",
+    ipad: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15",
+    safari: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15",
+    firefox: "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:102.0) Gecko/20100101 Firefox/102.0",
+    chrome: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
+    android: "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36",
+  };
+  const nomidi = async (ua, extra = {}) => codeOf(D.midiAccess({ userAgent: ua, ...extra }));
+  ok(await nomidi(UA.ios) === "nomidiIos" && await nomidi(UA.ipad, { maxTouchPoints: 5 }) === "nomidiIos", "installer: iPhone / iPad (any browser): 'nomidiIos'");
+  ok(await nomidi(UA.safari) === "nomidiSafari", "installer: Safari: 'nomidiSafari'");
+  ok(await nomidi(UA.firefox) === "nomidiFirefox", "installer: Firefox without WebMIDI: 'nomidiFirefox'");
+  const env = D.envOf({ userAgent: UA.android, requestMIDIAccess() {} });
+  ok(env.os === "android" && env.browser === "chrome" && env.webmidi, "installer: Android Chrome: WebMIDI, let through");
+  ok(D.envOf({ userAgent: UA.chrome, brave: {} }).browser === "brave", "installer: Brave told apart (its tips)");
+  const refuse = (name, perm) => ({ userAgent: UA.chrome, requestMIDIAccess: async () => { const e = new Error("no"); e.name = name; throw e; },
+    permissions: { query: async () => ({ state: perm }) } });
+  ok(await codeOf(D.midiAccess(refuse("SecurityError", "denied"))) === "blocked", "installer: MIDI blocked for the site: 'blocked'");
+  ok(await codeOf(D.midiAccess(refuse("SecurityError", "prompt"))) === "denied", "installer: the prompt dismissed: 'denied'");
+  ok(await codeOf(D.midiAccess(refuse("AbortError", "granted"))) === "midifail", "installer: the MIDI service fails twice: 'midifail'");
+  let n = 0;
+  const flaky = { userAgent: UA.chrome, requestMIDIAccess: async () => { if (!n++) { const e = new Error("x"); e.name = "AbortError"; throw e; } return { inputs: new Map() }; } };
+  ok((await D.midiAccess(flaky)).inputs instanceof Map && n === 2, "installer: the MIDI service fails once: asked again");
+  /* the official file */
+  const zip = Uint8Array.from([0x50, 0x4B, 3, 4, ...new Array(100).fill(0)]);
+  ok(D.stockFileProblem("FM-1_V15.zip", zip, 699956)?.code === "stockZip", "installer: the ZIP picked instead of FM-1.fwsc: 'stockZip'");
+  ok(D.stockFileProblem("FM-1.fwsc", new Uint8Array(1234), 699956)?.code === "stockNotV15", "installer: a .fwsc of another size: 'stockNotV15'");
+  ok(D.stockFileProblem("felucca-v0.9.11.fwsc", new Uint8Array(2000), 699956)?.code === "stockCustom", "installer: a JIANT package picked: 'stockCustom'");
+  ok(D.stockFileProblem("FM-1.fwsc", new Uint8Array(699956), 699956) === null, "installer: V15's size: on to the SHA-256 check");
+  /* the report */
+  const dev = new FakeFM1(IMG, { ...PROFILES.v14, name: "FM-1" });
+  const c = flowCtx(dev); await codeOf(D.runInstall(c));
+  const rep = D.makeReport({ env: D.envOf({ userAgent: UA.chrome, requestMIDIAccess() {} }), page: "https://x/JIANT/webapp/installer/", installer: "v0.9.11",
+    state: c.state, scan: c.up.lastScan, permission: "granted", error: { code: "oldstock", message: "nothing was written" }, log: "a\nb" });
+  ok(/identity: FM-1_014/.test(rep) && /- FM-1 \[fake\] connected: FM-1_014/.test(rep) && /error: oldstock/.test(rep) && /webmidi: yes/.test(rep),
+    "installer: the report: identity, every port probed, the error");
+}
+
+/* every string in English, Spanish and Japanese; every code the flows throw has its message and its tip */
+function installerStrings() {
+  const T = installerText();
+  const en = Object.keys(T.en), miss = (L) => en.filter((k) => !(k in T[L]));
+  ok(!miss("es").length, `installer: Spanish has every string${miss("es").length ? " (missing " + miss("es").join(" ") + ")" : ""}`);
+  ok(!miss("ja").length, `installer: Japanese has every string${miss("ja").length ? " (missing " + miss("ja").join(" ") + ")" : ""}`);
+  const src = ["fm1ota.js", "fm1diag.js"].map((f) => readFileSync(join(HERE, f), "utf8")).join("\n");
+  const codes = new Set([...src.matchAll(/fail\("([A-Za-z0-9]+)"/g)].map((m) => m[1]));
+  ["oldstock", "newstock", "skiff", "felucca", "otherfw", "nomidiIos", "nomidiSafari", "nomidiFirefox", "nomidi", "blocked", "denied"].forEach((k) => codes.add(k));
+  codes.delete("badreq");
+  const noMsg = [...codes].filter((k) => !T.en[k]);
+  ok(!noMsg.length, `installer: every failure code has a message${noMsg.length ? " (" + noMsg.join(" ") + ")" : ""}`);
+  const tipless = [...codes].filter((k) => !T.en["tip_" + k]);
+  ok(!tipless.length, `installer: every failure code has its troubleshooting box${tipless.length ? " (" + tipless.join(" ") + ")" : ""}`);
+}
+
+/* the page itself, inlined as make_site.py does, in a small fake DOM: V14 refused with its message and box, the port
+ * busy, the report copied; Spanish for a Spanish browser */
+async function installerPage() {
+  const html = readFileSync(join(HERE, "index_pkg.html"), "utf8");
+  const strip = (f) => readFileSync(join(HERE, f), "utf8").replace(/^export\s+/gm, "").replace(/^import .*?;\n/gm, "");
+  const product = "FM-1_900";
+  const pkg = new Uint8Array(960 + 0x2000);
+  for (let i = 0; i < 20; i++) pkg[i * 48 + 47] = i < product.length ? (product.charCodeAt(i) + i + 1) & 0xFF : 0x7D;
+  const meta = { version: "v0.9.11-abc1234", product, pkg: "../../firmware/felucca-v0.9.11.fwsc", versions: [{ version: "v0.9.11-abc1234", pkg: "../../firmware/felucca-v0.9.11.fwsc" }] };
+  let script = html.slice(html.indexOf('<script type="module">') + 22, html.lastIndexOf("</script>"));
+  script = script.replace("/*LIB*/", ["fm1pkg.js", "fm1ota.js", "fm1backup.js", "fm1diag.js"].map(strip).join("\n")).replace("/*META*/", JSON.stringify(meta));
+  const els = new Map();
+  const mk = (id, extra = {}) => {
+    const e = { id, textContent: "", hidden: false, disabled: false, value: "0", open: false, checked: false, files: [], dataset: {}, style: {},
+      children: [], h: {}, selectedIndex: 0, attrs: {},
+      addEventListener(ty, fn) { (this.h[ty] ||= []).push(fn); }, appendChild(c) { this.children.push(c); }, setAttribute(k, v) { this.attrs[k] = v; },
+      scrollIntoView() {}, select() {}, click() {}, remove() {}, ...extra };
+    return e;
+  };
+  for (const m of html.matchAll(/id="([\w-]+)"([^>]*)/g)) els.set(m[1], mk(m[1], { hidden: /\bhidden\b/.test(m[2]) }));
+  const dataT = [...html.matchAll(/data-t="(\w+)"/g)].map((m) => mk("", { dataset: { t: m[1] } }));
+  const langs = ["es", "en", "ja"].map((l) => mk("", { dataset: { lang: l } }));
+  let clip = "";
+  const run = async (devOpts, navExtra = {}) => {
+    const dev = devOpts && new FakeFM1(IMG, devOpts);
+    els.forEach((e) => { e.h = {}; e.textContent = ""; });
+    const nav = { language: "es-AR", userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
+      requestMIDIAccess: async () => dev.access, permissions: { query: async () => ({ state: "granted" }) },
+      clipboard: { writeText: async (s) => { clip = s; } }, ...navExtra };
+    const ctx = vm.createContext({
+      document: { getElementById: (id) => els.get(id) || (els.set(id, mk(id)), els.get(id)), querySelectorAll: (q) => q === "[data-t]" ? dataT : q === "#lang button" ? langs : [],
+        createElement: () => mk(""), body: { append() {} }, documentElement: {} },
+      navigator: nav, location: { href: "https://juanjiant-bit.github.io/JIANT/webapp/installer/", search: "" },
+      window: { addEventListener() {} }, confirm: () => true, console,
+      fetch: async () => ({ ok: true, arrayBuffer: async () => pkg.buffer.slice(0) }),
+      setTimeout, clearTimeout, setInterval, clearInterval, TextEncoder, URL: { createObjectURL: () => "blob:x", revokeObjectURL() {} },
+      URLSearchParams, Blob: class {}, btoa, atob, crypto: globalThis.crypto,
+    });
+    vm.runInContext(script, ctx);
+    await sleep(50);
+    return { dev, click: async (id) => { for (const f of els.get(id).h.click || []) await f(); } };
+  };
+  const status = () => els.get("status").textContent, tip = () => els.get("tiptext").children.map((c) => c.textContent).join(" | ");
+  let p = await run({ ...PROFILES.v14 });
+  ok(els.get("go").disabled === false && /JIANT FM v0\.9\.11/.test(status()), "installer page: the package loads, Install enabled");
+  await p.click("go");
+  ok(/firmware oficial más viejo.*FM-1_014/.test(status()) && els.get("tip").hidden === false && /Volver al V15 oficial/.test(tip()) && els.get("stock").open,
+    "installer page: V14 (Spanish): its message, its box, Return opened");
+  await p.click("copy-report");
+  ok(/identity: FM-1_014/.test(clip) && /firmware: oldstock/.test(clip) && /error: oldstock/.test(clip) && /midi inputs: FM-1/.test(clip), "installer page: COPY REPORT: browser, ports, identity, kind, error");
+  p = await run({ ...PROFILES.v15, busy: true });
+  await p.click("go");
+  ok(/otro programa.*FM-1/.test(status()) && /M-VAVE/.test(tip()), "installer page: the port busy: who to close");
+  p = await run({ ...PROFILES.skiff });
+  await p.click("go");
+  ok(/Skiff/.test(status()) && /FM-1_732/.test(status()), "installer page: Skiff named, with its identity");
+  p = await run(null, { requestMIDIAccess: undefined, userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1" });
+  ok(/iPhone y iPad/.test(status()) && els.get("tip").hidden === false, "installer page: an iPhone: told at once, with what to use");
+}
+
+/* (0.9.11) 404.html: old and mistyped links to the page they meant */
+function siteRedirects() {
+  const html = readFileSync(join(HERE, "404.html"), "utf8");
+  const src = html.slice(html.indexOf("/*REDIRECT-BEGIN*/"), html.indexOf("/*REDIRECT-END*/"));
+  const go = vm.runInNewContext(src + "\njiantTarget");
+  const cases = [
+    ["/JIANT/installer/", "/JIANT/webapp/installer/"], ["/JIANT/installer", "/JIANT/webapp/installer/"],
+    ["/JIANT/webapp/", "/JIANT/webapp/installer/"], ["/JIANT/webapp", "/JIANT/webapp/installer/"],
+    ["/JIANT/webapp/installer/:1:1", "/JIANT/webapp/installer/"], ["/JIANT/webapp/installer/index.html:302:15", "/JIANT/webapp/installer/"],
+    ["/JIANT/webapp/installer/)", "/JIANT/webapp/installer/"], ["/JIANT/webapp/installer/%20", "/JIANT/webapp/installer/"],
+    ["/JIANT/webapp/installer/foo/bar", "/JIANT/webapp/installer/"], ["/jiant/webapp/installer/", "/JIANT/webapp/installer/"],
+    ["/JIANT/instalador", "/JIANT/webapp/installer/"], ["/JIANT/editor", "/JIANT/webapp/editor/"], ["/JIANT/webapp/editor/x", "/JIANT/webapp/editor/"],
+    ["/JIANT/emulator", "/JIANT/emu/"], ["/JIANT/emu/index.html:1:1", "/JIANT/emu/"], ["/JIANT/preview/", "/JIANT/preview/webapp/installer/"],
+    ["/JIANT/preview/webapp/editor/z", "/JIANT/preview/webapp/editor/"], ["/JIANT/firmware/felucca-v0.6.40.fwsc", "/JIANT/webapp/installer/"],
+    ["/JIANT/nothing-here", "/JIANT/"], ["/JIANT/webapp/installer/", null], ["/JIANT/", null],
+  ];
+  const bad = cases.filter(([from, to]) => go(from) !== to);
+  ok(!bad.length, `site: 404.html sends old links where they meant${bad.length ? " (" + bad.map(([f]) => f + " -> " + go(f)).join(", ") + ")" : ""}`);
+  const mk = readFileSync(join(HERE, "make_site.py"), "utf8"), wf = readFileSync(join(HERE, "../.github/workflows/emulator.yml"), "utf8");
+  ok(/404\.html/.test(mk) && /cp web\/404\.html build\/pages\/404\.html/.test(wf) && /fm1diag\.js/.test(mk), "site: 404.html and fm1diag.js published (make_site.py, the workflow)");
+}
+
 await editorMock();
 await editorFm6Bank();
 await editorLyric();
@@ -1606,5 +1904,10 @@ editorIcons();
 await packages();
 await updater();
 installerCheck();
+await installerFlows();
+await installerBrowsers();
+installerStrings();
+await installerPage();
+siteRedirects();
 console.log(failed ? `WEB TESTS FAILED (${failed})` : "web tests passed");
 process.exit(failed ? 1 : 0);
