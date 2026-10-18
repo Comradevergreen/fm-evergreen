@@ -69,6 +69,16 @@
 #                   underrun / overrun, restart; SET_CUR; the 44.1 -> 48 kHz resampler (every frame against a
 #                   double-precision one and bit for bit 0.8.8's, response, SNR, THD / aliasing spurs, cost); the stream
 #                   at 48 kHz (47..49 frames per packet, fast and slow I2S clocks, switching rates mid-stream).
+# USB STEMS (tests/stems_usb_test.c, 0.9.7): the 8- and 10-channel stream at 44.1 kHz against the FM-1's audio ISR and a
+#                   host that reads it as the JIANT Stems app does (each packet's buffer wMaxPacketSize; a longer packet is
+#                   babble: cut, the endpoint halted 1..3 ms): every packet fits, every rendered frame reaches the app's lanes
+#                   once, in order, in its own channel (2 min each, +-500 ppm); 0.9.5's 720-byte endpoint shown dropping
+#                   blocks as a field take did; starvation's repeats made up with the frame spread over a packet.
+# STEMS (tests/stems_test.c, 0.9.7): fx.c's stems on dense DICE songs: each bit for bit its track's solo render (LOAD FULL,
+#                   LITE, ECO with its tail trimming; one core and CORES 2), the six and the FX return summing to the mix,
+#                   an empty track exact zeros, a track through the SLICER its own sound as it got through.
+# JIANT Stems app (android/stems, while it is in this repo): usbstream.c against a pretend usbfs (JDK headers), the :core
+#                   JVM tests with gradle (offline: the export's length, the trim, the WAV recovery, the mix).
 # USB audio scheduler (tests/uac_sched_test.c, 0.8.9): minutes of the stream against a simulated FM-1 (the audio ISR's
 #                   order, renders as a heavy song's with late halves, starvation bursts, IRQs off) and host (48 kHz,
 #                   +-500 ppm): every IN token finds a packet of n +- 1 frames, every rendered frame sent once (exact), no
@@ -159,6 +169,8 @@ $CC -O2 -DT_C1=0 -DHALF_FRAMES=$HALF -o "$OUT/uac_sched_test" tests/uac_sched_te
 run "USB audio scheduler: 3 min at +-500 ppm, late renders, starvation, IRQs off (one core)" "$OUT/uac_sched_test"
 $CC -O2 -DT_C1=1 -DHALF_FRAMES=$HALF -o "$OUT/uac_sched_test_c1" tests/uac_sched_test.c -lm
 run "USB audio scheduler: the same, CORES 2 (core 1 resamples each half at 48 kHz)" "$OUT/uac_sched_test_c1"
+$CC -O2 -DHALF_FRAMES=$HALF -o "$OUT/stems_usb_test" tests/stems_usb_test.c -lm
+run "USB STEMS / STEMS+IN (0.9.7): minutes into the app's lanes, every frame once in its channel, no babble, slips crossfaded" "$OUT/stems_usb_test"
 # USB descriptor layouts (#67): CDC UAC LAYOUT CDC-presented 48K; layout 0 and the console left out = 1.0's bytes
 # (+ the 48 kHz rate with 48K = 1, the default; 48K = 0: byte for byte)
 for v in 1.1.0.1.1 1.1.1.1.1 1.1.2.1.1 1.1.3.1.1 1.1.0.0.1 1.1.2.0.1 0.1.0.1.1 1.1.0.1.0 1.1.0.0.0 1.1.2.1.0 0.1.0.1.0 \
@@ -200,6 +212,8 @@ if [ -f build/gen/felucca_tables.h ]; then
     run "MICRO in 64ths (0.9.1): recorded within 1/64 of a step at any tempo / division, played there, REC Q 50 %, old projects, 'M' 'F'" "$OUT/micro_test"
     $CC -O1 -w -Ibuild/gen -Ifirmware/src -Itests -o "$OUT/gen_test" tests/gen_test.c -lm
     run "GEN (0.6.91): the song generator, every genre: deterministic, one scale, the kick anchored, the bass's roots, chord tones, forms, the screen" "$OUT/gen_test"
+    $CC -O1 -w -Ibuild/gen -Ifirmware/src -Itests -o "$OUT/stems_test" tests/stems_test.c -lm
+    run "STEMS (0.9.7): DICE songs, each stem = its track's solo render (FULL LITE ECO, CORES 1 / 2), the sum = the mix, the SLICER" "$OUT/stems_test"
     $CC -O1 -w -Ibuild/gen -Ifirmware/src -o "$OUT/ratchet_test" tests/ratchet_test.c -lm
     run "RATCH: x1..x4 in a step (notes, chords, drum hits), gates, chance, swing, projects, user presets, CHANCE page" "$OUT/ratchet_test"
     $CC -O1 -w -Ibuild/gen -Ifirmware/src -o "$OUT/drumx_oct_test" tests/drumx_oct_test.c -lm
@@ -346,6 +360,21 @@ fi
 run "installer CLI (fm1_install.py) against a simulated FM-1" python3 tests/install_test.py
 run "navigation map (docs/navigation-map*.svg) matches the firmware's chains" python3 tools/gen_nav_map.py --check
 
+if [ -d android/stems ]; then                         # (the app, while it lives here)
+    JH="${JAVA_HOME:-$(dirname "$(dirname "$(readlink -f "$(command -v javac || command -v java || echo /x/x/x)")")")}"
+    if [ -f "$JH/include/jni.h" ]; then
+        cc -O1 -I"$JH/include" -I"$JH/include/linux" -o "$OUT/usbstream_test" android/stems/app/src/test/cpp/usbstream_test.c -lm
+        run "JIANT Stems: usbstream.c (every frame once, a cut frame left out whole, the mic's drift with no sample slipped)" "$OUT/usbstream_test"
+    else
+        echo "== skip JIANT Stems usbstream.c (no JDK headers)"
+    fi
+    if command -v gradle >/dev/null 2>&1; then
+        run "JIANT Stems :core (JVM): WAV, layout, splitter, latency, mix, exports, the take's length and trim" \
+            gradle -q -p android/stems -PcoreOnly --offline :core:test
+    else
+        echo "== skip JIANT Stems :core (no gradle)"
+    fi
+fi
 if command -v node >/dev/null 2>&1; then
     run "web pages: editor protocol, package builder, update protocol" node web/test_web.mjs
     run "web backup: capture, validation before writes, restore order" node web/test_backup.mjs

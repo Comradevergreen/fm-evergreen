@@ -73,7 +73,7 @@ class RecordPage(app: MainActivity, stream: Fm1Stream) : Page(app), Engine.Event
             cards.addView(latCard, lp(0, WRAP, 1f))
             v.addView(cards, lp(MATCH, WRAP).apply { topMargin = app.dpi(12) })
         } else if (stream.mode == UsbMode.STEMS) {
-            msg.text = T.MIC_NEEDS_STEMS_IN.s()
+            msg.text = if (stream.oldStemsFirmware) T.OLD_FIRMWARE.s() else T.MIC_NEEDS_STEMS_IN.s()   // (1.1)
         } else if (stream.mode == UsbMode.STEREO) {
             msg.text = T.MODE_STEREO.s()
         }
@@ -144,7 +144,7 @@ class RecordPage(app: MainActivity, stream: Fm1Stream) : Page(app), Engine.Event
         val free = app.freeBytes()
         // the stream's health: packets with an error, and (STEMS+IN) mic samples sent as silence or dropped
         val st = engine.stats
-        val bad = st[2] + (if (stemsIn && mic.on) st[7] / 441 else 0)
+        val bad = st[2] + (if (st.size > 9 && st[9] > 0) 1 else 0) + (if (stemsIn && mic.on) st[7] / 441 else 0)
         val usb = if (bad == 0) "USB OK" else "USB $bad ERR"
         footer.set("44.1 kHz · 16 bit", (if (free >= 0) T.FREE.s(bytesText(free)) + " · " else "") + usb, "REC")
     }

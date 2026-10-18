@@ -59,21 +59,23 @@ static struct {
     /* stats: packets in, empty, with an error, the last errno, the largest; frames out, out short of mic, mic dropped,
      * mic samples slipped (the drift kept in check) */
     int packets, empty, perr, err, big, sent, under, drop, slip;
+    int cut;                    /* (1.1) bytes of a frame cut short in an IN packet, left out (the lanes stay aligned) */
+    int fb;                     /* (1.1) the IN stream's bytes a frame (every channel, 16 bit) */
     uint32_t acc;
     int go;
     int32_t avg;                /* the ring's fill, smoothed (frames x 256) */
-    int wait;                   /* packets until the next slip may come */
-    int16_t last;
+    uint32_t fr, step;          /* (1.1) the mic read between two of its samples (Q16), and its step a sample */
 } S;
 
 /* The phone's mic and the USB schedule run on two clocks: tens of ppm apart, a few frames a second, so over a long
  * take the ring would fill to the 46 ms limit (a jump in the voice's latency) or run dry (silence). The probe's
- * hard limits stay as a backstop; before them the ring is held at its 10 ms: when its average fill strays by more
- * than 3 ms, one sample is skipped or repeated, at most one every 10 ms (a 0.2 % correction at most, far beyond any
- * real drift, inaudible on a voice), so the round trip measured stays the round trip of the whole take. */
+ * hard limits stay as a backstop; before them the ring is held at its 10 ms. (1.1) By reading the mic a little
+ * faster or slower, between its samples (linear: at most 0.2 %, as far from its 10 ms as 3 ms asks), never by a
+ * sample skipped or repeated (1.0: one each time the fill strayed 3 ms, a click in the VOX lane), so the round trip
+ * measured stays the round trip of the whole take. */
 #define TARGET 441
 #define BAND 132
-#define SLIP_GAP 10
+#define STEP_MAX 131                /* 0.2 % of 65536 */
 
 static void setup_in(struct usbdevfs_urb *u)
 {
@@ -106,24 +108,31 @@ static void fill_out(struct usbdevfs_urb *u)
     u->status = 0;
     u->actual_length = 0;
     u->error_count = 0;
+    if (S.go) {                                         /* the drift, once an URB: the read's step from the fill */
+        int32_t e = S.avg - (TARGET << 8);
+        e = e / 256 * STEP_MAX / BAND;                  /* (3 ms off: the most) */
+        if (e > STEP_MAX) e = STEP_MAX;
+        if (e < -STEP_MAX) e = -STEP_MAX;
+        S.step = 65536u + (uint32_t)e;
+        S.slip = e * 1000000 / 65536;                   /* (stats: the correction, ppm) */
+    }
     for (int k = 0; k < OPK; k++) {
         int f = 44;                                     /* 44.1 frames a ms: a 45 every tenth */
         S.acc += 100u;
         if (S.acc >= 1000u) { S.acc -= 1000u; f = 45; }
-        int repeat = 0;
-        if (S.go) {                                     /* the drift */
-            uint32_t fill = w - r;
-            S.avg += ((int32_t)(fill << 8) - S.avg) / 128;
-            if (S.wait > 0) S.wait--;
-            else if (S.avg > (TARGET + BAND) << 8 && fill > 1) { r++; S.slip++; S.wait = SLIP_GAP; }
-            else if (S.avg < (TARGET - BAND) << 8 && fill > 0) { repeat = 1; S.slip++; S.wait = SLIP_GAP; }
-        }
+        if (S.go)
+            S.avg += ((int32_t)((w - r) << 8) - S.avg) / 128;
         for (int i = 0; i < f; i++) {
             int16_t v = 0;
-            if (repeat) { v = S.last; repeat = 0; }
-            else if (S.go && r != w) v = mring[r++ & (MR_N - 1u)];
-            else if (S.go) S.under++;
-            S.last = v;
+            if (S.go && w - r >= 2u) {                  /* between the two samples at the read */
+                int32_t a = mring[r & (MR_N - 1u)], b = mring[(r + 1u) & (MR_N - 1u)];
+                v = (int16_t)(a + (((b - a) * (int32_t)(S.fr >> 2)) >> 14));
+                S.fr += S.step ? S.step : 65536u;
+                r += S.fr >> 16;
+                S.fr &= 0xFFFFu;
+            } else if (S.go) {
+                S.under++;
+            }
             d[2 * (total + i)] = d[2 * (total + i) + 1] = v;   /* the mono mic on both sides */
         }
         u->iso_frame_desc[k].length = (unsigned)(f * 4);
@@ -163,13 +172,15 @@ static void drain(void)
     S.live = 0;
 }
 
-/* starts the stream: the IN endpoint ep (packets of maxp bytes) and, when epo >= 0, the OUT one. 0, or -errno */
-JNIEXPORT jint JNICALL Java_fm_jiant_stems_UsbNative_start(JNIEnv *env, jclass cls, jint fd, jint ep, jint maxp, jint epo)
+/* starts the stream: the IN endpoint ep (packets of maxp bytes, frames of fb bytes) and, when epo >= 0, the OUT one.
+ * 0, or -errno */
+JNIEXPORT jint JNICALL Java_fm_jiant_stems_UsbNative_start(JNIEnv *env, jclass cls, jint fd, jint ep, jint maxp, jint epo, jint fb)
 {
     (void)env; (void)cls;
     if (S.on) return -EBUSY;
     memset(&S, 0, sizeof S);
-    S.fd = fd; S.ep = ep; S.maxp = maxp; S.epo = epo;
+    S.fd = fd; S.ep = ep; S.maxp = maxp; S.epo = epo; S.fb = fb > 0 ? fb : 1;
+    S.step = 65536u;
     mr_r = __atomic_load_n(&mr_w, __ATOMIC_ACQUIRE);    /* (no mic from before) */
     size_t sz = sizeof(struct usbdevfs_urb) + NPK * sizeof(struct usbdevfs_iso_packet_desc);
     size_t szo = sizeof(struct usbdevfs_urb) + OPK * sizeof(struct usbdevfs_iso_packet_desc);
@@ -197,9 +208,10 @@ JNIEXPORT jint JNICALL Java_fm_jiant_stems_UsbNative_start(JNIEnv *env, jclass c
 }
 
 /* what came in since the last call, into out (as the device sends it: whole frames, the channels interleaved), for
- * up to timeout_ms or until out could not take another URB; the OUT side kept fed meanwhile. stats (9): packets,
- * empty, errors, errno, largest packet, frames out, out frames short of mic, mic frames dropped, mic samples
- * slipped. Returns the bytes, or -errno when the stream broke (the FM-1 unplugged) */
+ * up to timeout_ms or until out could not take another URB; the OUT side kept fed meanwhile. stats (10): packets,
+ * empty, errors, errno, largest packet, frames out, out frames short of mic, mic frames dropped, the mic's drift
+ * correction (ppm; 1.0: samples slipped), bytes of cut frames left out. Returns the bytes, or -errno when the stream
+ * broke (the FM-1 unplugged) */
 JNIEXPORT jint JNICALL Java_fm_jiant_stems_UsbNative_pump(JNIEnv *env, jclass cls, jbyteArray out, jint timeout_ms, jintArray stats)
 {
     (void)cls;
@@ -234,6 +246,8 @@ JNIEXPORT jint JNICALL Java_fm_jiant_stems_UsbNative_pump(JNIEnv *env, jclass cl
             if (r->iso_frame_desc[k].status) S.perr++;
             if (!n) { S.empty++; continue; }
             if (n > S.big) S.big = n;
+            if (n % S.fb) { S.cut += n % S.fb; n -= n % S.fb; }   /* (1.1) whole frames only: a frame cut short (a
+                                                    * packet in error) shifted every channel of every frame after it */
             memcpy(dst + got, b + k * S.maxp, (size_t)n);   /* iso packets sit at their requested offsets */
             got += n;
         }
@@ -242,9 +256,9 @@ JNIEXPORT jint JNICALL Java_fm_jiant_stems_UsbNative_pump(JNIEnv *env, jclass cl
         S.live++;
     }
     (*env)->ReleaseByteArrayElements(env, out, dst, 0);
-    jint st[9] = {S.packets, S.empty, S.perr, S.err, S.big, S.sent, S.under, S.drop, S.slip};
+    jint st[10] = {S.packets, S.empty, S.perr, S.err, S.big, S.sent, S.under, S.drop, S.slip, S.cut};
     jsize ns = (*env)->GetArrayLength(env, stats);
-    (*env)->SetIntArrayRegion(env, stats, 0, ns < 9 ? ns : 9, st);
+    (*env)->SetIntArrayRegion(env, stats, 0, ns < 10 ? ns : 10, st);
     if (got) return got;
     return S.err ? -S.err : 0;
 }

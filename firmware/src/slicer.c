@@ -161,8 +161,13 @@ static __attribute__((noinline)) void sl_enter(sl_t *s, uint32_t at)
     }
 }
 
-/* m samples of one step (no boundary inside), the bus l / r */
-static void sl_seg(sl_t *s, int32_t *bl, int32_t *br, uint32_t m)
+/* (0.9.7) MENU > USB STEMS with the SLICER on (sl_seg_tr): what each sample of the bus became, so that each part through
+ * it has a stem of its own (fx.c stem_fx_block): sl_tg the live sound's gain (the gate's and the repeat's cross-fade,
+ * Q15), sl_tl / sl_tr the rest of the output (the repeats: the recording of the whole bus, and the gains' rounding) */
+static int32_t sl_tg[CTL], sl_tl[CTL], sl_tr[CTL];
+/* m samples of one step (no boundary inside), the bus l / r; tr: the trace above from tg / tl / tr on */
+static inline __attribute__((always_inline)) void sl_seg_x(sl_t *s, int32_t *bl, int32_t *br, uint32_t m, int tr,
+                                                          int32_t *tgp, int32_t *tlp, int32_t *trp)
 {
     uint32_t mode = (uint32_t)song.g[G_SLMODE], j, nbit = (sl_pattern() >> ((s->idx + 1u) & 15u)) & 1u;
     int32_t depth = song.g[G_SLDEP] * 258;          /* Q15, 0..32766 */
@@ -216,9 +221,21 @@ static void sl_seg(sl_t *s, int32_t *bl, int32_t *br, uint32_t m)
             yl -= mulq16(yl, (uint32_t)s->w << 1);  /* (the repeat ended on a boundary: it is 0 there) */
             yr -= mulq16(yr, (uint32_t)s->w << 1);
         }
+        if (tr) {                                   /* (sl_seg_tr) the live gain, and what is not the live sound */
+            int32_t g = ((32768 - s->gc) * (32768 - s->w)) >> 15;
+            tgp[j] = g;
+            tlp[j] = yl - mulq16(xl, (uint32_t)g << 1);
+            trp[j] = yr - mulq16(xr, (uint32_t)g << 1);
+        }
         bl[j] = yl;
         br[j] = yr;
     }
+}
+static void sl_seg(sl_t *s, int32_t *bl, int32_t *br, uint32_t m) { sl_seg_x(s, bl, br, m, 0, 0, 0, 0); }
+/* (0.9.7) the same with the trace, only while the stems are on (its own copy: the SLICER's loop as it was otherwise) */
+static __attribute__((noinline)) void sl_seg_tr(sl_t *s, int32_t *bl, int32_t *br, uint32_t m, uint32_t at)
+{
+    sl_seg_x(s, bl, br, m, 1, sl_tg + at, sl_tl + at, sl_tr + at);
 }
 
 /* the step clock over n samples and the SLICER on the bus l / r (fx.c mix_block: every block, on or not) */
@@ -235,6 +252,24 @@ static __attribute__((noinline)) void slicer_bus(int32_t *bl, int32_t *br, uint3
             m = n - i;
         if (act)
             sl_seg(&sl, bl + i, br + i, m);
+        sl.pos += m;
+        i += m;
+    }
+}
+/* (0.9.7) the same with the trace (fx.c stem_slicer_bus, the stems on): its own copy, slicer_bus as it was */
+static __attribute__((noinline)) void slicer_bus_tr(int32_t *bl, int32_t *br, uint32_t n)
+{
+    uint32_t i = 0;
+    int act = slicer_on();
+    while (i < n) {
+        uint32_t m;
+        if (sl.pos >= sl.len)
+            sl_enter(&sl, i);
+        m = sl.len - sl.pos;
+        if (m > n - i)
+            m = n - i;
+        if (act)
+            sl_seg_tr(&sl, bl + i, br + i, m, i);
         sl.pos += m;
         i += m;
     }

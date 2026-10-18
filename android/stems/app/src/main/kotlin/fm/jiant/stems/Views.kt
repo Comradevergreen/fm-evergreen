@@ -15,6 +15,7 @@ import fm.jiant.stems.core.Heat
 import fm.jiant.stems.core.Lane
 import fm.jiant.stems.core.Layout
 import fm.jiant.stems.core.Session
+import fm.jiant.stems.core.Trim
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.log10
@@ -123,8 +124,8 @@ class LanesView(ctx: Context, private val s: Session, private val listener: List
     private fun rowH(): Float = if (s.lanes.isEmpty()) 0f else minOf(context.dp(56f), (height - rulerH - gap * s.lanes.size) / s.lanes.size)
     private fun rowTop(i: Int) = rulerH + gap + i * (rowH() + gap)
     private fun x0() = labelW + context.dp(4f)
-    private fun frameToX(f: Long): Float = x0() + (width - x0()) * (f.toFloat() / maxOf(1L, s.frames))
-    private fun xToFrame(x: Float): Long = (((x - x0()) / (width - x0())) * s.frames).toLong().coerceIn(0L, s.frames)
+    private fun frameToX(f: Long): Float = Trim.xOf(f, s.frames, x0(), width.toFloat())
+    private fun xToFrame(x: Float): Long = Trim.frameAt(x, s.frames, x0(), width.toFloat(), 0f)
 
     override fun onDraw(c: Canvas) {
         val x0 = x0()
@@ -215,6 +216,7 @@ class LanesView(ctx: Context, private val s: Session, private val listener: List
 
     private var drag = 0                                          // 1 the trim's start, 2 its end, 3 the playhead
     private var downX = 0f
+    private var dragFrom = 0L                                     // (1.1) the edge's frame when it was taken
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(e: MotionEvent): Boolean {
@@ -227,10 +229,8 @@ class LanesView(ctx: Context, private val s: Session, private val listener: List
                 val a = frameToX(s.trimStart); val b = frameToX(s.trimEnd)
                 val near = context.dp(22f)
                 drag = 0
-                if (x > x0() - near / 2) {
-                    if (abs(x - a) < near && abs(x - a) <= abs(x - b)) drag = 1
-                    else if (abs(x - b) < near) drag = 2
-                }
+                if (x > x0() - near / 2) drag = Trim.grab(x, y, a, b, rulerH + context.dp(6f), near)   // (1.1: by the grip)
+                dragFrom = if (drag == Trim.START) s.trimStart else s.trimEnd
                 val row = rowAt(y)
                 if (drag == 0 && x < x0()) {                           // the label: select, M, S
                     if (row >= 0) {
@@ -251,8 +251,10 @@ class LanesView(ctx: Context, private val s: Session, private val listener: List
                 }
             }
             MotionEvent.ACTION_MOVE -> when (drag) {
-                1 -> { s.trimStart = minOf(xToFrame(x), s.trimEnd - s.rate / 10).coerceAtLeast(0L); listener.onTrim(); invalidate() }
-                2 -> { s.trimEnd = maxOf(xToFrame(x), s.trimStart + s.rate / 10).coerceAtMost(s.frames); listener.onTrim(); invalidate() }
+                1, 2 -> {                                              // (1.1) from where it was, past a slop, ends snapped
+                    Trim.drag(s, drag, dragFrom, downX, x, x0(), width.toFloat(), context.dp(10f), context.dp(4f), (s.rate / 10).toLong())
+                    listener.onTrim(); invalidate()
+                }
                 3 -> seek(x)
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {

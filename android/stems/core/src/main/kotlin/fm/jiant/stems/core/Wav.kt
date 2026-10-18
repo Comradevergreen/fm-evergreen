@@ -75,15 +75,16 @@ object Wav {
         throw IOException("no data")
     }
 
-    /** a take left unfinished (the app killed while recording): its header's sizes set from the file's length */
+    /** a take left unfinished (the app killed while recording): its header's sizes set from the file's length. (1.1)
+     * From the length, not the header: a header patched before the last writes said less than the file holds, and
+     * 1.0 cut the file to it (the take's end lost); only a frame cut short at the end goes */
     fun repair(file: File): WavInfo = RandomAccessFile(file, "rw").use { raf ->
-        val i = info(raf)
-        val h = header(i.channels, i.rate, i.bits, i.frames)
-        if (i.dataOffset == HEADER.toLong()) {
-            raf.seek(0)
-            raf.write(h, 0, HEADER)
-            raf.setLength(HEADER + i.frames * i.bytesPerFrame)
-        }
+        val i0 = info(raf)
+        if (i0.dataOffset != HEADER.toLong()) return@use i0
+        val i = WavInfo(i0.channels, i0.rate, i0.bits, i0.dataOffset, (raf.length() - HEADER) / i0.bytesPerFrame)
+        raf.seek(0)
+        raf.write(header(i.channels, i.rate, i.bits, i.frames), 0, HEADER)
+        raf.setLength(HEADER + i.frames * i.bytesPerFrame)
         i
     }
 }

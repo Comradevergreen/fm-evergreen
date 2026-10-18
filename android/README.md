@@ -4,7 +4,7 @@ Two apps, both built by GitHub Actions (`.github/workflows/android.yml`) on ever
 
 | | What it is | APK |
 |---|---|---|
-| **JIANT Stems** (`android/stems`, 1.0) | Records the FM-1's USB stems on the phone, lines the voice up by the measured latency, trims and mixes, exports a ZIP of the stems or a stereo mix. | `jiant-stems.apk` |
+| **JIANT Stems** (`android/stems`, 1.1) | Records the FM-1's USB stems on the phone, lines the voice up by the measured latency, trims and mixes, exports a ZIP of the stems or a stereo mix. | `jiant-stems.apk` |
 | **JIANT Probe** (`android/probe`, 0.4) | Phase 0: the one-screen test of what a phone does with the FM-1 (channel counts, the own USB driver, the mic through the FM-1 and back). Kept as it was, for diagnosing a phone. | `jiant-probe.apk` |
 
 ## Install
@@ -16,7 +16,15 @@ Two apps, both built by GitHub Actions (`.github/workflows/android.yml`) on ever
 3. Every build is signed with the same public debug key (`app/stems-debug.keystore`), so a new APK installs over the
    last one and keeps the takes.
 
-Android 10 or later, a USB-C data cable (or an OTG adapter), the FM-1 on firmware **0.8.0** or later for the voice.
+Android 10 or later, a USB-C data cable (or an OTG adapter), the FM-1 on firmware **0.8.0** or later for the voice,
+**0.9.7** or later for clean STEMS (before it, the 8-channel stream lost blocks: clicks in every stem; the app says so).
+
+**1.1:** only whole frames are kept from a USB packet in error (a frame cut short no longer moves every channel after
+it); the mic sent to the FM-1 follows the clocks' drift by reading a little faster or slower instead of skipping or
+repeating a sample (a click in VOX); a take being recorded is never "recovered" by the takes list, and a take cut short
+keeps all it wrote (1.0 cut it to its header's last patch); the trim's edges are taken by their grips (a touch on a lane
+near one moves the playhead), move from where they were taken and land exactly on the take's ends; EXPORT says when the
+take is trimmed; in Spanish the trim buttons read INICIO AQUÍ / FINAL AQUÍ / SIN RECORTE.
 
 ## On the FM-1
 

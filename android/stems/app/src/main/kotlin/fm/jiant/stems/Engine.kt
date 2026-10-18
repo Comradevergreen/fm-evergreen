@@ -52,14 +52,14 @@ class Engine(val stream: Fm1Stream, private val events: Events) {
     @Volatile private var running = true
     @Volatile var recording = false
         private set
-    @Volatile var stats = IntArray(9)
+    @Volatile var stats = IntArray(10)
         private set
 
     private val thread = Thread({ loop() }, "fm1-usb").apply { priority = Thread.MAX_PRIORITY; start() }
 
     private fun loop() {
         val buf = ByteArray(1 shl 16)
-        val st = IntArray(9)
+        val st = IntArray(10)
         var take: Take? = null
         var lastSync = System.nanoTime()
         try {
@@ -124,6 +124,7 @@ class Engine(val stream: Fm1Stream, private val events: Events) {
         s.trimEnd = s.frames
         s.complete = true
         try { s.save() } catch (e: IOException) { err = e.message ?: e.toString() }
+        if (Session.recording?.absoluteFile == s.dir.absoluteFile) Session.recording = null   // (1.1: listed from now on)
         val why = err
         ui.post { if (why != null) events.onTakeError(why) else events.onTakeDone(s, t.probe) }
     }
@@ -136,6 +137,7 @@ class Engine(val stream: Fm1Stream, private val events: Events) {
         s.name = name
         s.deviceChannels = channels
         s.complete = false
+        Session.recording = dir                                 // (1.1: not recovered or listed while it grows)
         val writers = ArrayList<WavFileWriter?>()
         try {
             for (spec in lanes) {
@@ -146,6 +148,7 @@ class Engine(val stream: Fm1Stream, private val events: Events) {
             s.save()
         } catch (e: IOException) {
             for (w in writers) try { w?.close() } catch (_: IOException) { }
+            Session.recording = null
             throw e
         }
         val probe = if (channels >= 10) LatencyProbe() else null
