@@ -661,6 +661,7 @@ enum { S_HOME, S_HOME_IDLE, S_MESSAGE, S_MESSAGE_KEY, S_MESSAGE_NOFILE, S_PRESET
        S_VX_BUG_BD, S_VX_BUG_SD, S_VX_BUG_CP, S_VX_BUG_CH, S_VX_BUG_OH, S_VX_BUG_TM, S_VX_BUG_RS, S_VX_BUG_CB, S_VX_BUG_GHOST,
        S_VX_BUG_FLAM, S_VX_BUG_RATCH, S_VX_BUG_QUIET,
        S_V6_ANALOG, S_V6_ANALOG_SQR, S_V6_ANALOG_RING, S_V6_ANALOG_QUIET, S_V6_ANALOG_HOME, S_V6_ANALOG_FULL, S_V6_FM6, S_V6_FM6_ALG32, S_V6_FM6_OP, S_V6_FM6_OP2, S_V6_FM6_ENV, S_V6_FM6_ENV_REL, S_V6_FM6_HOME, S_V6_FM6_FULL, S_V6_WHEEL, S_V6_WHEEL_FAST, S_V6_WHEEL_HOME, S_V6_WHEEL_FULL, S_V6_NOISE, S_V6_NOISE_LFSR, S_V6_NOISE_WHITE, S_V6_NOISE_HOME, S_V6_NOISE_FULL, S_V6_PHASE, S_V6_PHASE_RING, S_V6_PHASE_HOME, S_V6_PHASE_FULL, S_V6_LOFI, S_V6_LOFI_FLOAT, S_V6_LOFI_PLS, S_V6_LOFI_HOME, S_V6_LOFI_FULL, S_V6_VOICE_FULL, S_V6_ANIMAL_FULL, S_VX_TRACT_A_FULL, S_VX_TRACT_M_FULL, S_VX_TRACT_A_EDIT, S_VX_TRACT_M_EDIT, S_VX_TRACT_A_HOME, S_VX_TRACT_M_HOME, S_HOME_MUT, S_HOME_FACES, S_V6_LOFI_4BIT, S_V6_LOFI_4B2, S_V6_LOFI_1BIT, S_V6_LOFI_STEP, S_V6_LOFI_FBK, S_V6_LOFI_MASK, S_V6_LOFI_WRAM, S_V6_LOFI_HP_RES, S_V6_LOFI_COMB_DIST, S_V6_LOFI_BP_LOOP, S_V6_LOFI_FULL_4BIT, S_V6_LOFI_FULL_1BIT, S_V6_LOFI_HOME_4BIT, S_V6_LOFI_HOME_1BIT,
+       S_LIVE_RIELES, S_LIVE_RIELES_T3, S_LIVE_MANO, S_LIVE_MANO_KEYS,
        S_MIXER_T4, S_HOME_T4, S_MOCK_HOME, S_MOCK_PRESETS, S_MOCK_SEQ, S_MOCK_DRUM, S_MOCK_MIXER, S_MOCK_DIALOG, S_MOCK_MENU,
        S_TOAST_ENV, S_TOAST_MUTATE, S_TOAST_MUTATE_HINT, S_TOAST_MOTION, S_TOAST_MOTION_LOCKS, S_TOAST_PUNCH, S_TOAST_AUTO_LIST,
        S_TOAST_AUTO_LIST_DRUM, S_TOAST_PATTERN, S_TOAST_FM6_OP, S_TOAST_ANALOG, S_COUNT };
@@ -698,10 +699,48 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "message", "mes
     "vx_bug_bd", "vx_bug_sd", "vx_bug_cp", "vx_bug_ch", "vx_bug_oh", "vx_bug_tm", "vx_bug_rs", "vx_bug_cb", "vx_bug_ghost",
     "vx_bug_flam", "vx_bug_ratchet", "vx_bug_quiet",
     "v6_analog", "v6_analog_sqr", "v6_analog_ring", "v6_analog_quiet", "v6_analog_home", "v6_analog_full", "v6_fm6", "v6_fm6_alg32", "v6_fm6_op", "v6_fm6_op2", "v6_fm6_env", "v6_fm6_env_rel", "v6_fm6_home", "v6_fm6_full", "v6_wheel", "v6_wheel_fast", "v6_wheel_home", "v6_wheel_full", "v6_noise", "v6_noise_lfsr", "v6_noise_white", "v6_noise_home", "v6_noise_full", "v6_phase", "v6_phase_ring", "v6_phase_home", "v6_phase_full", "v6_lofi", "v6_lofi_float", "v6_lofi_pls", "v6_lofi_home", "v6_lofi_full", "v6_voice_full", "v6_animal_full", "vx_tract_a_full", "vx_tract_m_full", "vx_tract_a_edit", "vx_tract_m_edit", "vx_tract_a_home", "vx_tract_m_home", "home_mutate", "home_faces", "v6_lofi_4bit", "v6_lofi_4b2", "v6_lofi_1bit", "v6_lofi_step", "v6_lofi_fbk", "v6_lofi_mask", "v6_lofi_wram", "v6_lofi_hp_res", "v6_lofi_comb_dist", "v6_lofi_bp_loop", "v6_lofi_full_4bit", "v6_lofi_full_1bit", "v6_lofi_home_4bit", "v6_lofi_home_1bit",
+    "live_rieles", "live_rieles_t3", "live_mano", "live_mano_keys",
     "mixer_tracks4", "home_tracks4", "mock_home", "mock_presets", "mock_seq", "mock_drum", "mock_mixer", "mock_dialog", "mock_menu",
     "toast_env", "toast_mutate", "toast_mutate_hint", "toast_motion", "toast_motion_locks", "toast_punch", "toast_auto_list",
     "toast_auto_list_drum", "toast_pattern", "toast_fm6_op", "toast_analog"};
 
+/* (0.9.11) GLO > LIVE: six sequences of their own lengths (16 32 7 16 . 1/8 20 4 . 1/4, as the mock-up's), modifiers on
+ * T2 (THIN 70 %), T3 (x2 RATCH x3), T4 (LOOP 8), T5 (2/3), played two seconds from PLAY so the playheads and ghosts are
+ * where they would be; RIELES (KNOB 1 ALL or T3), MANO (black key 3 and C4 held, A4 PING latched on T5, LATCH on) */
+static void live_scene(int s)
+{
+    static const uint8_t NN[5] = {60, 67, 63, 72, 58};
+    uint32_t k;
+    trk[2].p[P_SLEN] = 7; trk[3].p[P_SDIV] = 1; trk[4].p[P_SLEN] = 20; trk[5].p[P_SLEN] = 4; trk[5].p[P_SDIV] = 0;
+    for (k = 0; k < 20u; k++) {
+        step_t *st = &trk[4].step[k];
+        if (k % 3u) continue;
+        st->time = ST_NOTE; st->n = 1; st->note[0] = NN[k % 5u]; st->vel = 100;
+    }
+    for (k = 0; k < 4u; k++) { trk[5].step[k].time = ST_NOTE; trk[5].step[k].n = 1; trk[5].step[k].note[0] = NN[k]; trk[5].step[k].vel = 90; }
+    for (k = 0; k < 16u; k++) {                         /* T1 an acid line, T3 seven steps, T4 a beat of 1/8 */
+        static const uint8_t A[16] = {36, 0, 48, 36, 0, 39, 0, 36, 43, 0, 36, 48, 0, 41, 39, 0};
+        step_t *st = &trk[0].step[k], *d = &trk[3].step[k];
+        if (A[k]) { st->time = ST_NOTE; st->n = 1; st->note[0] = A[k]; st->vel = 100; st->flags = k % 4u ? 0 : SF_ACCENT; }
+        memset(d, 0, sizeof *d);
+        d->time = ST_NOTE; d->vel = 100;
+        d->hit = (uint8_t)((k % 4u == 0u ? 1u : 0u) | (k % 8u == 4u ? 2u : 0u) | (k % 2u ? 0u : 8u));
+        if (k < 7u && k != 4u) { trk[2].step[k].time = ST_NOTE; trk[2].step[k].n = 1; trk[2].step[k].note[0] = NN[k % 5u] - 12u; trk[2].step[k].vel = 100; }
+    }
+    memset(&lv, 0, sizeof lv);
+    lv.dn[1] = -3; lv.rate[2] = 2; lv.dn[2] = 2; lv.cut[3] = 5; lv.here = 1u << 3; lv.rate[4] = -1;
+    if (s == S_LIVE_RIELES_T3) lv.tgt = 3;
+    if (s == S_LIVE_MANO_KEYS) {
+        lv.latch = 1; lv.lt[9] = 1u << 4; lv.tk[5] = 1u << 2;
+        lv.kb = 1u << key_at(1, 2) | 1u << key_at(0, 5);
+    }
+    song.sel = 2;
+    seq_start();
+    live_publish();
+    for (k = 0; k < 2800u; k++) { events_block(CTL); if (!(k % 64u)) live_publish(); }
+    nav_put(SEC_GLO, s >= S_LIVE_MANO ? "MANO" : "RIELES");
+    if (s == S_LIVE_RIELES_T3) { ui.hot_col = 0; ui.hot_t = 30; }
+}
 /* the scenes of the UI design screens: the state the UI-redesign
  * prototype drew them from (its setup(): two pattern tracks, the drum pattern on track 4, a synthetic scope),
  * plus the hot knob each mock shows; tests/ui_mockcmp.py compares these renders with the mock PNGs */
@@ -1732,6 +1771,7 @@ static void setup(int s)
         song.octave = s == S_DRUM_OCT_UP ? 3 : -3;
         ui_message(drum_oct_name(song.octave));
         break;
+    case S_LIVE_RIELES: case S_LIVE_RIELES_T3: case S_LIVE_MANO: case S_LIVE_MANO_KEYS: live_scene(s); break;
     case S_COMP_TOUCH: case S_COMP_EVEN:
         drum(0);
         trk[3].step[0].comp = s == S_COMP_TOUCH ? CP_TOUCH : CP_ECHO;
