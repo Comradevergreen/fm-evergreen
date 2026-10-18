@@ -20,6 +20,7 @@ import fm.jiant.stems.core.Progress
 import fm.jiant.stems.core.Renderer
 import fm.jiant.stems.core.Session
 import fm.jiant.stems.core.T
+import fm.jiant.stems.core.Trim
 import fm.jiant.stems.core.WavSource
 import java.io.File
 import java.io.OutputStream
@@ -78,7 +79,8 @@ class ExportPage(app: MainActivity, private val s: Session) : Page(app) {
 
     private fun refresh() {
         val o = options()
-        what.text = if (zip) T.EXPORT_HINT_ZIP.s() else T.EXPORT_HINT_MIX.s()
+        what.text = (if (zip) T.EXPORT_HINT_ZIP.s() else T.EXPORT_HINT_MIX.s()) +
+            (if (Trim.trimmed(s)) "\n" + T.EXPORT_TRIMMED.s(mmss(s.length, s.rate), mmss(s.frames, s.rate)) else "")   // (1.1)
         // the files and about how big (WAV is barely compressed by the ZIP)
         var bytes = 0L
         val names: List<String>

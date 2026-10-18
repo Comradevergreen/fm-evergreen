@@ -171,12 +171,10 @@ class MainActivity : Activity() {
     fun takes(): List<Session> {
         val l = ArrayList<Session>()
         for (d in takesDir.listFiles() ?: emptyArray()) {
-            if (!d.isDirectory || !Session.exists(d)) continue
+            if (!d.isDirectory) continue
             try {
-                val s = Session.load(d)
-                if (!s.complete) s.recover()                     // (the app was killed while recording)
-                l.add(s)
-            } catch (_: Throwable) { }
+                Session.forList(d)?.let { l.add(it) }            // (recovered if the app was killed while recording it;
+            } catch (_: Throwable) { }                           // 1.1: never the take being recorded)
         }
         l.sortByDescending { it.created }
         return l

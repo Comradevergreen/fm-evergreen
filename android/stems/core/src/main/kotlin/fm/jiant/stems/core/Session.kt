@@ -129,6 +129,20 @@ class Session(val dir: File) {
 
         fun exists(dir: File) = File(dir, FILE).isFile
 
+        /** (1.1) the take being recorded now (the recorder sets it): never recovered nor listed while it grows. 1.0
+         * listed every take, recovering the ones not complete, and a take being recorded is not complete: its WAVs were
+         * cut to their headers' last patch, under the recorder still writing */
+        @Volatile var recording: File? = null
+
+        /** a take on disk for the list: loaded, and recovered if the app was killed while recording it; null for the
+         * take being recorded (or none) */
+        fun forList(dir: File): Session? {
+            if (!exists(dir) || dir.absoluteFile == recording?.absoluteFile) return null
+            val s = load(dir)
+            if (!s.complete) s.recover()
+            return s
+        }
+
         fun load(dir: File): Session {
             val p = Properties()
             File(dir, FILE).inputStream().use { p.load(it) }

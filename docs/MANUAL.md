@@ -1942,6 +1942,22 @@ Two ways to get each track on its own, to post-process them one by one in a DAW:
   leveler, limiter, CLIP or MASTER knob on them, so the sum of the eight is the mix as the buses hear it. USB LEVEL at
   −6 dB or lower gives headroom. The serial console is off in this mode; USB-MIDI, the editor and the installer still
   work. The speaker and the headphones play the master as always.
+
+  **0.9.7: clean stems.** Until 0.9.5 the 8-channel endpoint said 720 bytes (45 frames) while the FM-1 sends 46 frames
+  whenever its clock gets ahead (often: it runs a little fast): the host dropped each such packet and paused, the FM-1's
+  ring filled and whole blocks of 32 frames were lost, about a hundred times a second, in every channel at once: clicks,
+  and a chopped, "separated by AI" sound in each stem (the stereo mix modes were not affected). Now 736 bytes; the ring
+  also keeps a millisecond more in hand in STEMS and STEMS+IN, and a frame repeated after an underrun is made up spread
+  over a packet instead of skipped. **Update the FM-1 and the app (JIANT Stems 1.1), and record again**: a take made
+  with 0.9.5 cannot be mended afterwards. A track through the **SLICER** now has its own sound as the SLICER let it
+  through in its stem (its repeats in the first such track's stem, or with the SLICER's FX ON in the FX return), so the
+  eight still add up to the mix (until 0.9.5 that track was in its stem dry and again, sliced, in the FX return).
+  What a stem is: exactly what the track adds to the mix in that take, so it nulls against the track rendered alone
+  in the same take. The things that make one track depend on the others are in it, as in the mix: **DUCK** (the kick's
+  pump on the other tracks), and the **shared voices** (8 among all tracks; **LOAD ECO**: 6, 4 a track, and with the
+  load budget tight the tails already under −50 dB are trimmed): a note another track's note took the voice from ends
+  early (a 6 ms fade). In the mix that is masked; soloed, a dense song can sound gated. For stems, record at **LOAD
+  FULL** when the CPU allows it, and keep the song's polyphony within the budget.
 - **From a backup, offline: the emulator page's "Stems".** Back up the FM-1 (the editor's or the installer's "Back up"),
   open the emulator page, unfold "Stems", load the backup file, pick a song (its rows play once; a LOOP song once
   round) or the live section with a bar count, and press Render. Each track is rendered alone with its own share of

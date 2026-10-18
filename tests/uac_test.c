@@ -61,7 +61,7 @@ static int check(const char *what, int ok)
 static uint32_t le16(const uint8_t *p) { return p[0] | (uint32_t)p[1] << 8; }
 
 /* ------------------------------------------------------------------ descriptors --- */
-/* (0.7.1) the stems: the 8-channel configuration (one rate, 720-byte packets, bcdDevice + 0x40), four words a frame
+/* (0.7.1) the stems: the 8-channel configuration (one rate, 736-byte packets: 0.9.7, was 720 while 46-frame packets went out; bcdDevice + 0x40), four words a frame
  * in the ring and the packet, the six parts then the FX return, each 16 bit */
 static void test_stems(void)
 {
@@ -73,9 +73,9 @@ static void test_stems(void)
         const uint8_t *p = d + off;
         if (p[1] == 0x24 && p[2] == 2 && p[0] == 12) it_ok = p[7] == 8 && p[8] == 0 && p[9] == 0;   /* input terminal: 8 ch, no config */
         if (p[1] == 0x24 && p[2] == 2 && p[0] == 11) fmt_ok = p[4] == 8 && p[5] == 2 && p[6] == 16 && p[7] == 1 && p[8] == 0x44 && p[9] == 0xAC && p[10] == 0;
-        if (p[1] == 5 && p[2] == 0x84) ep_ok = le16(p + 4) == 720 && p[3] == 0x05;
+        if (p[1] == 5 && p[2] == 0x84) ep_ok = le16(p + 4) == 736 && p[3] == 0x05;
     }
-    check("stems: input terminal 8 channels, type I 8 ch 16 bit 44100 only, EP4 isochronous 720 bytes", it_ok && fmt_ok && ep_ok);
+    check("stems: input terminal 8 channels, type I 8 ch 16 bit 44100 only, EP4 isochronous 736 bytes (46 frames)", it_ok && fmt_ok && ep_ok);
     get_desc(0x0100, &d, &l);
     check("stems: the device descriptor's bcdDevice + 0x40 (a host never reuses the stereo one's)", d == DEV_DESC_PLAIN8 && l == 18 && d[12] == (BCD_LO(0) + 0x40));
     memset(&uac, 0, sizeof uac);

@@ -57,6 +57,8 @@ enum class T(val en: String, val es: String) {
     MIC_FAILED("Could not open the phone's microphone.", "No pude abrir el micrófono del teléfono."),
     MIC_HINT("Your voice goes into the FM-1's last live track (its LEVEL, PAN and sends) and comes back as VOX. With headphones on the FM-1, no feedback.",
              "Tu voz entra a la última pista activa del FM-1 (su LEVEL, PAN y sends) y vuelve como VOX. Con auriculares en el FM-1, sin acople."),
+    OLD_FIRMWARE("This FM-1's firmware (0.9.5 or older) loses audio in STEMS: clicks in every stem. Update the FM-1 to 0.9.7 or later.",
+                 "El firmware de este FM-1 (0.9.5 o anterior) pierde audio en STEMS: clics en todos los stems. Actualizá el FM-1 a 0.9.7 o posterior."),
     STREAM_ERROR("The USB stream stopped (error %d). Unplug the FM-1 and plug it in again.", "Se cortó el audio USB (error %d). Desenchufá el FM-1 y volvé a enchufarlo."),
     DISK_ERROR("Could not write the take: %s", "No pude escribir la toma: %s"),
     NOTHING_ARMED("Arm at least one lane.", "Armá al menos un carril."),
@@ -72,9 +74,9 @@ enum class T(val en: String, val es: String) {
     GAIN("GAIN", "GANANCIA"),
     PAN("PAN", "PANEO"),
     SHIFT("SHIFT", "CORRER"),
-    TRIM_IN("SET IN", "INICIO"),
-    TRIM_OUT("SET OUT", "FINAL"),
-    TRIM_ALL("FULL", "TODO"),
+    TRIM_IN("SET IN", "INICIO AQUÍ"),                 // (1.1: "INICIO" / "FINAL" read as "go to the start / end")
+    TRIM_OUT("SET OUT", "FINAL AQUÍ"),
+    TRIM_ALL("FULL", "SIN RECORTE"),
     RENAME("RENAME", "RENOMBRAR"),
     TAKE_NAME_TITLE("Take name", "Nombre de la toma"),
     EDIT_HINT("Tap a lane to select it, M mutes it, S solos it. Drag a card to change it, double-tap it to reset. Drag the orange edges to trim, tap the ruler to move the playhead.",
@@ -105,6 +107,8 @@ enum class T(val en: String, val es: String) {
     SHARE_TITLE("Share the take", "Compartir la toma"),
     EXPORT_FILES("%d files, %s", "%d archivos, %s"),
     EXPORT_HINT_ZIP("One WAV a lane, trimmed, the voice already moved by the latency.", "Un WAV por carril, recortado, con la voz ya corrida por la latencia."),
+    EXPORT_TRIMMED("Trimmed: %s of the take's %s. To export it all: EDIT › FULL.",
+                   "Recortada: %s de los %s de la toma. Para exportarla entera: EDITAR › SIN RECORTE."),
     EXPORT_HINT_MIX("The stereo mix as you hear it in EDIT: gains, pans, mutes, the trim.", "La mezcla estéreo como suena en EDITAR: ganancias, paneos, mutes, el recorte."),
     ;
 

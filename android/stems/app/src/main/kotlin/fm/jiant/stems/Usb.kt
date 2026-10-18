@@ -18,8 +18,9 @@ import java.util.Locale
 object UsbNative {
     init { System.loadLibrary("jiantstems") }
 
-    /** submits the URBs: the IN endpoint (packets of [maxp] bytes), and the OUT one when [epOut] >= 0. 0 or -errno */
-    @JvmStatic external fun start(fd: Int, ep: Int, maxp: Int, epOut: Int): Int
+    /** submits the URBs: the IN endpoint (packets of [maxp] bytes, frames of [frameBytes]), and the OUT one when
+     * [epOut] >= 0. 0 or -errno */
+    @JvmStatic external fun start(fd: Int, ep: Int, maxp: Int, epOut: Int, frameBytes: Int): Int
     /** the bytes that came in (whole frames) within [timeoutMs]; -errno when the stream broke */
     @JvmStatic external fun pump(out: ByteArray, timeoutMs: Int, stats: IntArray): Int
     @JvmStatic external fun stop()
@@ -75,6 +76,8 @@ class Fm1(val dev: UsbDevice, val inOn: UsbInterface, val inOff: UsbInterface?, 
 /** the FM-1 opened and streaming (one at a time: usbstream.c keeps one stream) */
 class Fm1Stream private constructor(val fm1: Fm1, private val conn: UsbDeviceConnection, val channels: Int, val withOut: Boolean) {
     val mode get() = Layout.mode(channels)
+    /** (1.1) an FM-1 whose STEMS packets do not fit its own endpoint (firmware 0.9.5 and older): the stems lose audio */
+    val oldStemsFirmware get() = Uac.oldStemsFirmware(channels, fm1.ep.maxPacketSize)
 
     fun pump(buf: ByteArray, timeoutMs: Int, stats: IntArray) = UsbNative.pump(buf, timeoutMs, stats)
 
@@ -114,7 +117,7 @@ class Fm1Stream private constructor(val fm1: Fm1, private val conn: UsbDeviceCon
                 // the sample rate (SET_CUR on the endpoint, as the probe's test 5): the FM-1 runs at 44.1 kHz only
                 conn.controlTransfer(0x22, 0x01, 0x0100, f.ep.address, byteArrayOf(0x44, 0xAC.toByte(), 0x00), 3, 500)
                 if (out && !conn.setInterface(f.outOn)) out = false
-                val r = UsbNative.start(conn.fileDescriptor, f.ep.address, f.ep.maxPacketSize, if (out) f.epOut!!.address else -1)
+                val r = UsbNative.start(conn.fileDescriptor, f.ep.address, f.ep.maxPacketSize, if (out) f.epOut!!.address else -1, ch * 2)
                 if (r != 0) throw Failure("start $r")
                 return Fm1Stream(f, conn, ch, out)
             } catch (t: Throwable) {
