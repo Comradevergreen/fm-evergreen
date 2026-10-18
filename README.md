@@ -15,7 +15,9 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.9.8).** It builds and passes every test (Felucca's and its own). Back up the flash before installing it.
+> **Status: in development (v0.9.9).** It builds and passes every test (Felucca's and its own). Back up the flash before installing it.
+  **DRUM-X, VOICE and ANIMAL first** (0.9.9): the FM-1 powers on with T1 DRUM-X, T2 VOICE singing words, T3 ANIMAL's
+  bird, T4 LOFI's bytebeat, T5 ANALOG's bass and T6 FM6's electric piano, and PRESETS lists the engines in that order.
   **A new skin, AIR** (0.9.7, the default of new settings): HUD's light look on every page with the knob row on top,
   the middle of the screen free; HOME's beings over the whole screen. **MENU › DISPLAY › SCOPE** (OFF by default): an
   engine's EDIT pages give its creature the whole panel. **HOME's beings have faces**: three isotherms coloured by their
@@ -210,7 +212,8 @@ VOICE singing its lyric, in the COLORS skin, exactly as the firmware draws them 
   up whole).
 
 ### Engines
-Nine engines, all synthesis, no samples: **ANALOG, FM6, PHASE, LOFI, VOICE, WHEEL, NOISE, DRUM (DRUM-X) and ANIMAL**.
+Nine engines, all synthesis, no samples: **DRUM (DRUM-X), VOICE, ANIMAL, LOFI, ANALOG, FM6, PHASE, WHEEL and NOISE**,
+in the order PRESETS shows them (0.9.9; the first six are the tracks at power-on, T1–T6).
 - **ANALOG**: two oscillators with **INT** (an interval of ±24 semitones: fifths, octaves) and DTN; besides SAW, SQR,
   TRI, SIN and PWM it has **SYNC**, **RING** and **SAW3** (three saws). Its filter is per voice.
 - **FM6**: Dexed's engine (imports .syx), with its algorithms drawn. Fully editable on the device (from Felucca 1.5):
@@ -643,6 +646,37 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### v0.9.9
+- **DRUM-X, VOICE and ANIMAL first: the tracks at power-on.** The FM-1 (and MENU › SYSTEM › INIT SYSTEM, SAVE › TOOLS
+  › NEW PROJECT) starts with **T1 DRUM-X** (the factory kit), **T2 VOICE SINGER EN** (it sings English words),
+  **T3 ANIMAL CMOS BIRD**, **T4 LOFI BYTEBEAT** (the bytebeat organism), **T5 ANALOG FAT BASS** and **T6 FM6 TINE EP**,
+  each its preset's sound (EDIT values, envelope, MONO / POLY, VOICE's words, FM6's patch) and dry: no DIST, CHORUS,
+  DELAY or REVERB send (until 0.9.8: T1 ANALOG, T2 FM6, T3 LOFI, T4 DRUM, T5 PHASE, T6 WHEEL at their engines'
+  defaults). With TRACKS 4, the default, T1–T4 play: drums, a voice, a bird and a bytebeat. INIT SOUND on a track is as
+  before (its engine's own defaults).
+- **The engines in that order**: PRESETS (the list and KNOB 2 ENG), the web editor's engine lists and the cheat sheet
+  show **DRUM-X, VOICE, ANIMAL, LOFI, ANALOG, FM6, PHASE, WHEEL, NOISE** (DIGITAL, in FELUCCA_FM4 builds, last); was
+  ANALOG FM6 PHASE LOFI VOICE WHEEL NOISE DRUM ANIMAL. Only what you see moved: the engine numbers that projects, user
+  presets, favourites, backups and the editor protocol hold are the same (a display-order table maps the selector to
+  them), so everything saved before loads unchanged; the old formats' extra tracks still load as 0.9.8's power-on
+  sounds. **PROGRAM CHANGE** keeps 0.9.8's numbers (ANALOG's SAW LEAD is still 0): a MIDI rig loads what it did.
+- Everything that looks for the drums finds them on T1: the DRUM-X kit and its octaves, the grid, MIDI, GEN / DICE's
+  drum part all ask which track plays DRUM (GEN, when none does, still makes T4 the drums, as before); the stems go by
+  track.
+- Memory: image **563020 B** of 581564 (0.9.8: 562700; +320 B: the power-on table, PROGRAM CHANGE's order); .data +
+  .bss **79556 B**, pool spare **10816 B**, RAM code **22460 B**, all as 0.9.8. cpu_vg every line as 0.9.8 (song/cputest
+  3079), target budgets met: no audio-path change.
+- Tests (ui_test): the power-on's six engines and presets in this order, dry, DRUM on T1 alone, each sounding with no
+  effect and none clipping, a key and a MIDI note on HOME sounding on T1 (as the browser emulator's boot test plays
+  them), NEW PROJECT the same value for value; the display order (every engine once, place ↔ engine
+  round trips, DIGITAL and the retired ones where they play, KNOB 2 round); ENGINES[] numbers unchanged; PROGRAM CHANGE
+  in 0.9.8's order; a project of 0.9.8's tracks loading unchanged after the new power-on and saving byte for byte the
+  same. The tests that asserted the old order or power-on now assert the new (KNOB 2's steps, ENGINE_ORDER, NEW
+  PROJECT's sounds, the web editor's lists and mock); the UI tests, renders and CPU sections keep 0.9.8's tracks as
+  their fixture (engines.c TRK_OLD). Goldens (every one a preset or project render), cpu_vg and the target budgets
+  unchanged. The README's HOME render (tests/ui_render.c, the hero) shows the power-on tracks now; the navigation map
+  and the cheat sheets (the engines' table in the device's order) regenerated at v0.9.9.
 
 ### v0.9.8
 - **Clean USB stems** (MENU › USB STEMS / STEMS+IN; the stereo modes were not affected): the 8-channel endpoint said

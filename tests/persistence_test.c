@@ -245,7 +245,7 @@ static void as_power_on(void)                            /* RAM lost: the defaul
     chain_defaults(&chain_config);
     host_tracks_init();
     for (k = 0; k < NTRK; k++)
-        trk[k].eng_req = trk[k].engine = (uint8_t)TRK_DEF[k][0];
+        trk[k].eng_req = trk[k].engine = (uint8_t)TRK_OLD[k][0];   /* (0.9.8's parts: the autosave tests' music) */
 }
 static void as_edit(uint32_t i)                          /* a change a project holds: step i's note (always another) */
 {

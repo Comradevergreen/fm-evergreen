@@ -1841,12 +1841,12 @@ function makeMockDevice(opt = {}) {
     st.bank[slot] = snapshot(name);
     clearSteps(); st.p[29] = 16;
   });
-  /* the power-on sounds (engines.c TRK_DEF): ACID, PAD, PULSE LD, DRUM-X, PHASE, WHEEL */
-  [[1, FM6_E, 4], [2, 3, 3], [3, 10, 0], [4, 2, 0], [5, 7, 0], [0, 0, 4]].forEach(([i, e, p]) => { st.sel = i; setEngine(e); applyPreset(p); });
-  /* the device powers on with its sequencers empty; the mock starts as a little demo to look at: track 1 with
-     the ACID pattern, track 4 with BEAT (as SEQ > PATTERNS would load them), pads left, lead right */
-  st.sel = 3; loadPattern(11);
-  st.sel = 0; loadPattern(0);
+  /* the power-on sounds (engines.c TRK_DEF, 0.9.9): DRUM-X, SINGER EN, CMOS BIRD, BYTEBEAT, FAT BASS, TINE EP */
+  [[1, 5, 9], [2, 14, 0], [3, 3, 0], [4, 0, 14], [5, FM6_E, 0], [0, 10, 0]].forEach(([i, e, p]) => { st.sel = i; setEngine(e); applyPreset(p); });
+  /* the device powers on with its sequencers empty; the mock starts as a little demo to look at: track 1 (DRUM-X)
+     with BEAT, track 5 (the bass) with OFFBEAT (as SEQ > PATTERNS would load them), the voice left, the bird right */
+  st.sel = 4; loadPattern(1);
+  st.sel = 0; loadPattern(11);
   st.tracks[1].p[39] = -24; st.tracks[2].p[39] = 20; st.tracks[2].p[0] = 92;
   const project = () => JSON.parse(JSON.stringify({ tracks: st.tracks, sel: st.sel, g: st.g, songRows: st.songRows }));
   st.slots[0] = project();
@@ -2352,7 +2352,9 @@ function enumShown(d) {
 /* the order the device shows its engines in (src/engines.c ENGINE_ORDER): the lists here follow it, the protocol keeps
    the engine numbers. engineOrder(names): the indices of names in that order, "-" (a reserved number) left out; a name
    the list does not know (another firmware) follows in index order */
-const ENGINE_ORDER = ["ANALOG", "FM6", "DIGITAL", "PHASE", "LOFI", "VOICE", "WHEEL", "NOISE", "DRUM", "ANIMAL"];   /* (0.8.3: ANIMAL after DRUM, the PROGRAM CHANGE numbers kept) */   /* (JIANT; TRIO folded into ANALOG in 0.4) */
+const ENGINE_ORDER = ["DRUM", "VOICE", "ANIMAL", "LOFI", "ANALOG", "FM6", "PHASE", "WHEEL", "NOISE", "DIGITAL"];   /* (0.9.9: DRUM-X, VOICE,
+   ANIMAL first, as the parts at power-on; DIGITAL, FELUCCA_FM4 builds only, last; was ANALOG FM6 DIGITAL PHASE LOFI VOICE WHEEL NOISE
+   DRUM ANIMAL, the order PROGRAM CHANGE still numbers the sounds in: engines.c ENGINE_PC_ORDER) */
 function engineOrder(names) {
   const rank = (n) => { const k = ENGINE_ORDER.indexOf(n); return k < 0 ? ENGINE_ORDER.length : k; };
   return (names || []).map((n, i) => i).filter((i) => names[i] !== "-")

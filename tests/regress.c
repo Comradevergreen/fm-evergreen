@@ -248,8 +248,8 @@ static void job_slicer(const job_t *j)
     phrase(t, 60);
 }
 
-/* the 4-track mix: T1 ANALOG ACID, T2 the power-on pad (TRK_DEF: FM6 PAD since DIGITAL was retired; DIGITAL PAD
- * before) (tied chords), T3 LOFI lead (12 steps against 16),
+/* the 4-track mix: T1 ANALOG ACID, T2 0.9.8's power-on pad (TRK_OLD, TRK_DEF until
+ * 0.9.9: FM6 PAD since DIGITAL was retired; DIGITAL PAD before) (tied chords), T3 LOFI lead (12 steps against 16),
  * T4 DRUM drums (SAMPLE PERC until 1.0.2); 120 BPM, 4 bars (the hostsim TRACKS demo without the recording), stop, the tail.
  * arg 1: with the SLICER (0.6.3, the bus: STUT on the acid line and the drums, SWING 20 %) */
 static void job_song(const job_t *j)
@@ -264,7 +264,7 @@ static void job_song(const job_t *j)
     host_tracks_init();
     song.g[G_BPM] = 120;
     host_preset(t1, 0, 4);
-    host_preset(t2, TRK_DEF[1][0], TRK_DEF[1][1]);
+    host_preset(t2, TRK_OLD[1][0], TRK_OLD[1][1]);
     host_preset(t3, 3, 0);
     host_drums(td);
     for (i = 0; i < 16u; i++) {

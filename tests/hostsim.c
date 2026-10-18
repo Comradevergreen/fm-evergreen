@@ -196,8 +196,8 @@ static uint32_t started_since(const track_t *t, uint32_t a0)
     return n;
 }
 
-/* the demo song: T1 ANALOG ACID (16 steps), T2 the power-on pad (TRK_DEF: FM6 PAD; DIGITAL PAD until it was
- * retired) (32 steps, tied chords), T3 LOFI PULSE LD
+/* the demo song: T1 ANALOG ACID (16 steps), T2 0.9.8's power-on pad (TRK_OLD, TRK_DEF
+ * until 0.9.9: FM6 PAD; DIGITAL PAD until it was retired) (32 steps, tied chords), T3 LOFI PULSE LD
  * (12 steps: 3 against 4), T4 DRUM drums (16 steps, up to 3 notes a step); 120 BPM, 8 bars. Bars 5..6:
  * live recording: a clap into the drums just before step 4 (quantised onto it, not triggered twice),
  * MIDI ch 3 into the lead, a two-key chord on the keys into an empty pad step. solo: 0 = the mix,
@@ -222,7 +222,7 @@ static int tracks_demo(const char *dir, const char *name, uint32_t solo)
     host_tracks_init();
     song.g[G_BPM] = 120;
     host_preset(t1, 0, 4);
-    host_preset(t2, TRK_DEF[1][0], TRK_DEF[1][1]);
+    host_preset(t2, TRK_OLD[1][0], TRK_OLD[1][1]);
     host_preset(t3, 3, 0);
     host_drums(td);                                /* DRUM KIT (SAMPLE PERC until 1.0.2) */
     for (i = 0; i < 16u; i++) {

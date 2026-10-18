@@ -105,8 +105,8 @@ static void fm1_fault(const fm1_crash_t *c)
     fm1_reboot();
 }
 
-/* power-on: the parts with their engines' defaults and first sounds (TRK_DEF's engines; JIANT 0.6.40: as INIT SYSTEM,
- * was TRK_DEF's presets); the sequencers empty. RESTORE LAST ON brings the last session back after (autosave_boot) */
+/* power-on: the parts with their power-on sounds (0.9.9: T1 DRUM-X, T2 VOICE, T3 ANIMAL, T4 LOFI, T5 ANALOG, T6 FM6,
+ * engines.c TRK_DEF; as INIT SYSTEM: ui.c power_sound_of); the sequencers empty. RESTORE LAST ON brings the last session back after (autosave_boot) */
 static void felucca_init(void)
 {
     uint32_t i;
@@ -121,18 +121,7 @@ static void felucca_init(void)
     sing_init();                              /* (0.9.0) VOICE's English generator words, resolved once (sing.c) */
     load_depth++;                             /* (the power-on loads: one outer load) */
     fm6_init();                               /* every track's FM6 patch: the init voice */
-    for (i = 0; i < NTRK; i++) {
-        track_t *t = &trk[i];
-        track_defaults(t);
-        init_sound_of(t, TRK_DEF[i][0]);      /* (0.6.49: as INIT SOUND: the engine's defaults, dry, FM6 the init
-                                               * voice; was its first preset with its sends) */
-        t->engine = t->eng_req;
-        track_defaults_steps(t);              /* (a sound load never touches them) */
-        if (TRK_DEF[i][2])
-            load_pat16(t, PATTERNS[TRK_DEF[i][2] - 1u].note, PATTERNS[TRK_DEF[i][2] - 1u].flags);
-        pat_sig[i] = steps_sig(t);            /* a default pattern, not the user's */
-        pat_last[i] = TRK_DEF[i][2];
-    }
+    power_on_parts();                         /* (0.9.9: ui.c, TRK_DEF's sounds; the tests run it too) */
     load_depth--;
     song.sel = 0;
     song.master_q12 = 2048;                   /* (the pot's level replaces it before the audio starts: master_boot) */

@@ -20,7 +20,7 @@
 #define main hostsim_main
 #include "hostsim.c"
 #undef main
-#define PROJ_HOST 1                             /* (trk_def_engine: engines.c, through hostsim.c) */
+#define PROJ_HOST 1                             /* (trk_old_engine: engines.c, through hostsim.c) */
 #define PROJ_FUNB_WRITER 1                      /* (JIANT 0.6) proj_pack_vb: the older formats are made of a FUNB */
 #include "../firmware/src/project.c"
 
@@ -262,7 +262,7 @@ int main(void)
                  str_eq(ENGINES[7]->name, "WHEEL") && str_eq(ENGINES[5]->name, "VOICE") && NENGINES > 8);
     bad += check("FUN2 -> FUN6: the drum track -> part 4, DRUM (its kit on load), steps kept (lanes as hits)",
                  q.parts == NPART && q.t[3].engine == ENGI_DRUM && str_eq(ENGINES[ENGI_DRUM]->name, "DRUM") &&
-                 TRK_DEF[3][0] == ENGI_DRUM && q.t[3].preset == PROJ_DEF_KEEP &&
+                 TRK_OLD[3][0] == ENGI_DRUM && q.t[3].preset == PROJ_DEF_KEEP &&
                  steps_grid_same(q.t[3].step, v2.t[3].step));
 
     /* format 3 (1.0, four parts), as written before the modulation matrix */
@@ -415,9 +415,9 @@ int main(void)
     ok = proj_import(&q, &buf, (int)sizeof v1) && proj_ok(&q) && track_ok(&q.t[0], &v1.t, 0, 0, 0, 0) && q.g[5] == 705 &&
          q.parts == NPART;
     for (t = 1; t < PROJ_LT; t++)
-        ok &= q.t[t].preset == PROJ_DEF_SOUND && q.t[t].engine == trk_def_engine(t) && q.t[t].p[P_SLCR] == 0 && q.t[t].p[P_LEVEL] == TP[P_LEVEL].def &&
-              q.t[t].p[P_E0] == ENGINES[trk_def_engine(t)]->edit[0].def && q.t[t].step[0].time == ST_REST;
-    bad += check("FUN1 -> FUN6: track 1 mapped, tracks 2..4 defaults", ok);
+        ok &= q.t[t].preset == PROJ_DEF_SOUND && q.t[t].engine == trk_old_engine(t) && q.t[t].p[P_SLCR] == 0 && q.t[t].p[P_LEVEL] == TP[P_LEVEL].def &&
+              q.t[t].p[P_E0] == ENGINES[trk_old_engine(t)]->edit[0].def && q.t[t].step[0].time == ST_REST;
+    bad += check("FUN1 -> FUN6: track 1 mapped, tracks 2..4 0.9.8's power-on sounds (TRK_OLD, whatever today's)", ok);
 
     /* PHYS MODEL DRUM (a FUN4 with phys 1) -> the DRUM engine; the old DRUM KIT preset becomes DRUM's */
     {
@@ -909,8 +909,8 @@ int main(void)
               MOTION_TRK(&g.motion.event[1]) == 4u && MOTION_VAL(&g.motion.event[1]) == -20;
         bad += check("FUNC: six tracks round trip (steps, ratchet, chance, patches, T5 / T6 motion, name, globals)", ok);
         ok = proj_pack_vb(&gs, &f) && proj_import(&h, &gs, sizeof gs) && !memcmp(h.t, f.t, PROJ_LT * sizeof f.t[0]) &&
-             h.t[4].engine == trk_def_engine(4u) && h.t[5].engine == trk_def_engine(5u) && h.t[5].step[0].time == ST_REST;
-        bad += check("FUNB (0.5) -> six tracks: its four kept, T5 / T6 at their power-on sounds, empty", ok);
+             h.t[4].engine == trk_old_engine(4u) && h.t[5].engine == trk_old_engine(5u) && h.t[5].step[0].time == ST_REST;
+        bad += check("FUNB (0.5) -> six tracks: its four kept, T5 / T6 at 0.9.8's power-on sounds (TRK_OLD), empty", ok);
         {   /* (JIANT 0.8.5) VOICE's lyrics: 'L' 'Y' blocks for the tracks that have one; none before */
             static project_t l1, l2;
             static project_store_t ls;

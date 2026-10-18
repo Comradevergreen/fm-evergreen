@@ -141,7 +141,10 @@ static int check(const char *what, int ok)
     return ok ? 0 : 1;
 }
 
-/* main.c felucca_init */
+/* main.c felucca_init, on the parts of 0.9.8 (TRK_OLD: T1 ANALOG ACID, T2 FM6 PAD, T3 LOFI PULSE LD, T4 DRUM-X, T5 PHASE,
+ * T6 WHEEL, each its preset's sound with its sends), the music the UI tests, the renders (ui_render.c) and the CPU
+ * sections (cpu_vg.c) are written on; (0.9.9) the device's own power-on (TRK_DEF: DRUM-X VOICE ANIMAL LOFI ANALOG FM6)
+ * is ui_power_on_099 */
 static void ui_power_on(void)
 {
     uint32_t i;
@@ -174,14 +177,14 @@ static void ui_power_on(void)
     for (i = 0; i < NTRK; i++) {
         track_t *t = &trk[i];
         track_defaults(t);
-        set_engine_of(t, TRK_DEF[i][0]);
-        apply_preset_to(t, TRK_DEF[i][1]);
-        t->engine = t->eng_req;
+        set_engine_of(t, TRK_OLD[i][0]);           /* (0.9.9) the parts the UI tests are written on: 0.9.8's power-on, */
+        apply_preset_to(t, TRK_OLD[i][1]);         /* T1 ANALOG ACID .. T4 DRUM-X (engines.c TRK_OLD); today's power-on */
+        t->engine = t->eng_req;                    /* (TRK_DEF, ui.c power_on_parts): test_power_on_099 */
         track_defaults_steps(t);
-        if (TRK_DEF[i][2])
-            load_pat16(t, PATTERNS[TRK_DEF[i][2] - 1u].note, PATTERNS[TRK_DEF[i][2] - 1u].flags);
+        if (TRK_OLD[i][2])
+            load_pat16(t, PATTERNS[TRK_OLD[i][2] - 1u].note, PATTERNS[TRK_OLD[i][2] - 1u].flags);
         pat_sig[i] = steps_sig(t);
-        pat_last[i] = TRK_DEF[i][2];
+        pat_last[i] = TRK_OLD[i][2];
     }
     load_depth--;
     song.sel = 0;
@@ -378,8 +381,8 @@ static int test_sound_loads(void)
     ui_power_on();
     for (i = 0; i < NTRK; i++)
         empty &= (uint32_t)seq_is_empty(&trk[i]);
-    bad += check("power-on: the four sounds, every sequencer empty, no load open", empty && load_depth == 0 &&
-                 trk[3].eng_req == ENGI_DRUM && trk[3].preset == 0u && trk[0].preset == TRK_DEF[0][1]);
+    bad += check("power-on (the tests' 0.9.8 parts): the four sounds, every sequencer empty, no load open", empty && load_depth == 0 &&
+                 trk[3].eng_req == ENGI_DRUM && trk[3].preset == 0u && trk[0].preset == TRK_OLD[0][1]);
     my_steps(t);
     t->p[P_E0 + 1] = 77;                          /* a sound edit */
     t->p[P_AMODE] = 2;                            /* and the track's own settings */
@@ -878,7 +881,7 @@ static int test_dximg(void)
     return bad;
 }
 /* (0.6.49) DRUM-X LAYER and each sound's FEEDBK: 0 runs the sound as before; LAYER moves it; kept with the project;
- * a new project has the factory LAYERs, an older one none; NEW PROJECT: every track dry, the engine's own defaults */
+ * a new project has the factory LAYERs, an older one none; NEW PROJECT: every track dry, its power-on preset (0.9.9) */
 static uint64_t dxlay_hash(uint32_t lane, uint8_t ly)
 {
     dx_voice_t v;
@@ -927,12 +930,14 @@ static int test_dxlay(void)
     bad += check("FUGUE: kept with the project (FUNC 'F' 'G')", ok);
     system_init();
     ok = !memcmp(dx_lay, DX_LAY_DEF, sizeof dx_lay) && 1;
-    for (i = 0; i < NTRK; i++) {
+    for (i = 0; i < NTRK; i++) {   /* (0.9.9) TRK_DEF's preset sound (was the engine's own defaults: EDIT, envelope) */
         const engine_t *e = ENGINES[trk[i].eng_req % NENGINES];
+        const preset_t *pr = &e->presets[TRK_DEF[i][1]];
+        ok &= trk[i].eng_req == TRK_DEF[i][0] && trk[i].preset == TRK_DEF[i][1];
         ok &= !trk[i].p[P_DIST] && !trk[i].p[P_CHOR] && !trk[i].p[P_DLY] && !trk[i].p[P_REV];
-        if (e != &ENG_FM6) ok &= trk[i].p[P_E1] == e->edit[1].def && trk[i].p[P_ATK] == TP[P_ATK].def;
+        ok &= trk[i].p[P_E1] == pr->e[1] && trk[i].p[P_ATK] == pr->env[0] && trk[i].p[P_REL] == pr->env[3];
     }
-    bad += check("NEW PROJECT: every track dry, the engine's own defaults, the factory LAYERs", ok);
+    bad += check("NEW PROJECT: every track dry, its power-on preset's sound (TRK_DEF, 0.9.9), the factory LAYERs", ok);
     ui_power_on();
     return bad;
 }
@@ -5050,7 +5055,7 @@ static int test_fm4_retired(void)
     int16_t p[P_COUNT];
     uint8_t v[FP_SIZE + 1u];
     ui_power_on();
-    bad += check("power-on: track 2 is FM6 PAD (TRK_DEF, was DIGITAL PAD)", trk[1].eng_req == ENGI_FM6 &&
+    bad += check("0.9.8's power-on: track 2 is FM6 PAD (TRK_OLD, was DIGITAL PAD; old projects' format-1 tracks)", trk[1].eng_req == ENGI_FM6 &&
                  str_eq(ENGINES[ENGI_FM6]->presets[trk[1].preset].name, "PAD"));
     preset_all_pos(&total);
     for (i = 0; i < total; i++) {
@@ -5066,11 +5071,13 @@ static int test_fm4_retired(void)
         turn(EN_K2, 1);
         seen |= 1u << TSEL->eng_req;
     }
-    bad += check("PRESETS KNOB 2: the engines in order, DIGITAL skipped, back to the first",
-                 seen == all && TSEL->eng_req == 0u && eng_step(0, 1) == ENGI_FM6 && eng_step(ENGI_FM6, 1) == 2u &&
-                 eng_step(ENGI_FM6, -1) == 0u && eng_step(0, -1) == ENGI_ANIMAL && eng_step(ENGI_ANIMAL, -1) == ENGI_DRUM);
-    {   /* the display order (engines.c ENGINE_ORDER): every engine one can pick once; the PRESETS list follows it */
-        static const char *const ORDER[] = {"ANALOG", "FM6", "PHASE", "LOFI", "VOICE", "WHEEL", "NOISE", "DRUM", "ANIMAL"};
+    bad += check("PRESETS KNOB 2: the engines in order (0.9.9: DRUM first, NOISE last, round), DIGITAL skipped, back to the first",
+                 seen == all && TSEL->eng_req == 0u && eng_step(0, 1) == ENGI_FM6 && eng_step(ENGI_FM6, 1) == ENGI_PHASE &&
+                 eng_step(ENGI_FM6, -1) == 0u && eng_step(0, -1) == ENGI_LOFI && eng_step(ENGI_DRUM, 1) == ENGI_VOICE &&
+                 eng_step(ENGI_VOICE, 1) == ENGI_ANIMAL && eng_step(ENGI_DRUM, -1) == ENGI_NOISE && eng_step(ENGI_NOISE, 1) == ENGI_DRUM);
+    {   /* the display order (engines.c ENGINE_ORDER, 0.9.9): every engine one can pick once; the PRESETS list follows it
+         * (was ANALOG FM6 PHASE LOFI VOICE WHEEL NOISE DRUM ANIMAL: test_engine_order_099 has PROGRAM CHANGE's) */
+        static const char *const ORDER[] = {"DRUM", "VOICE", "ANIMAL", "LOFI", "ANALOG", "FM6", "PHASE", "WHEEL", "NOISE"};
         uint32_t last = 0xFFu, r = 0, n = 0;
         ok = NENG_SHOWN == NELEM(ORDER);
         for (i = 0; ok && i < NENG_SHOWN; i++)
@@ -5085,7 +5092,7 @@ static int test_fm4_retired(void)
             last = e;
             r++;
         }
-        bad += check("engines shown ANALOG FM6 PHASE ... NOISE DRUM ANIMAL (ENGINE_ORDER); PRESETS lists them so",
+        bad += check("engines shown DRUM VOICE ANIMAL LOFI ANALOG FM6 PHASE WHEEL NOISE (ENGINE_ORDER); PRESETS lists them so",
                      ok && r == NENG_SHOWN);
     }
     /* a user preset stored with engine 1: kept as it is, it loads as FM6 with the converted patch */
@@ -8902,20 +8909,20 @@ static int test_click_menu(void)
             uint32_t all, sel0 = song.sel;
             song.sel = 1;
             preset_all_pos(&all);
-            e = preset_all_at(9u, &k);
+            e = preset_all_at_in(9u, &k, ENGINE_PC_ORDER);   /* (0.9.9: 0.9.8's numbers, ANALOG's first) */
             song.sel = (uint8_t)sel0;
             midi_enqueue(0x0Cu | 0xC1u << 8 | 9u << 16, 1u);   /* PROGRAM CHANGE 9 on channel 2 */
             mix_block(o, CTL); frame();
-            ok = all > 9u && e < NENGINES && trk[1].eng_req == e && song.sel == sel0;
+            ok = all > 9u && e == ENGI_ANALOG && trk[1].eng_req == e && song.sel == sel0;
             midi_enqueue(0x0Cu | 0xC1u << 8 | 127u << 16, 1u);   /* the 128th (0.8.3: ANIMAL's), or past the list: nothing */
             mix_block(o, CTL); frame();
             if (all > 127u) {
                 song.sel = 1;
-                e = preset_all_at(127u, &k);
+                e = preset_all_at_in(127u, &k, ENGINE_PC_ORDER);
                 song.sel = (uint8_t)sel0;
             }
             ok &= trk[1].eng_req == e;
-            bad += check("PROGRAM CHANGE n: the PRESETS list's n + 1-th sound into the channel's track, the selection kept", ok);
+            bad += check("PROGRAM CHANGE n: the n + 1-th sound in 0.9.8's engine order (ENGINE_PC_ORDER) into the channel's track, the selection kept", ok);
         }
     }
     {
@@ -11439,6 +11446,186 @@ static int test_nav_rules(void)
     return bad;
 }
 
+/* (0.9.9) the device's own power-on (main.c felucca_init): ui_power_on's state, then the parts as felucca_init makes them
+ * (ui.c power_on_parts: engines.c TRK_DEF) */
+static void ui_power_on_099(void)
+{
+    ui_power_on();
+    load_depth++;
+    fm6_init();
+    power_on_parts();
+    load_depth--;
+    song.sel = 0;
+}
+/* (0.9.9) the power-on parts: T1 DRUM-X, T2 VOICE, T3 ANIMAL, T4 LOFI, T5 ANALOG, T6 FM6, each its preset, dry, every
+ * sequencer empty; DRUM on T1 alone (the DRUM-X kit, the grid, GEN's drum track); INIT SYSTEM / NEW PROJECT the same;
+ * each part sounds a note with no effects, none clipping */
+static int test_power_on_099(void)
+{
+    static const char *const ENG[NPART] = {"DRUM", "VOICE", "ANIMAL", "LOFI", "ANALOG", "FM6"};
+    static const char *const PRE[NPART] = {"DRUM-X", "SINGER EN", "CMOS BIRD", "BYTEBEAT", "FAT BASS", "TINE EP"};
+    int bad = 0, ok = 1;
+    uint32_t i, k, b, drums = 0, live;
+    int16_t p0[NTRK][P_COUNT];
+    int32_t o[2u * CTL];
+    uint64_t lo = ~0ull, hi = 0;
+    int32_t peak_max = 0;
+    ui_power_on_099();
+    for (i = 0; i < NTRK; i++) {
+        const engine_t *e = ENGINES[trk[i].eng_req % NENGINES];
+        ok &= trk[i].eng_req == trk[i].engine && str_eq(e->name, ENG[i]) && str_eq(e->presets[trk[i].preset].name, PRE[i]);
+        ok &= !trk[i].p[P_DIST] && !trk[i].p[P_CHOR] && !trk[i].p[P_DLY] && !trk[i].p[P_REV] && !trk[i].p[P_MUTE];
+        ok &= seq_is_empty(&trk[i]) && !motion_count(&trk[i]) && trk_eng(&trk[i]) == TRK_DEF[i][0];
+        drums += drum_track(&trk[i]);
+    }
+    ok &= load_depth == 0 && song.sel == 0u && !memcmp(dx_kit, DX_KIT_DEF, sizeof dx_kit);
+    bad += check("0.9.9 power-on: T1 DRUM-X, T2 VOICE SINGER EN, T3 ANIMAL CMOS BIRD, T4 LOFI BYTEBEAT, T5 ANALOG FAT BASS, T6 FM6 TINE EP", ok);
+    ok = drums == 1u && drum_track(&trk[0]) && drum_elsewhere(&trk[1]) == 1u && !drum_elsewhere(&trk[0]) && perc_kit(&trk[0]);
+    ok &= trk[1].p[P_VLANG] == LG_EN && trk[1].p[P_VLYR] != 0;     /* (VOICE sings English words, its LYRIC's) */
+    for (i = 0; i < NPART; i++)
+        ok &= TRK_DEF[i][0] == eng_vis(i);                     /* (the display order's first six) */
+    bad += check("  .. DRUM on T1 alone (its factory kit); VOICE sings words (EN); T1..T6 the display order's first six", ok);
+    for (i = 0; i < NTRK; i++) memcpy(p0[i], trk[i].p, sizeof p0[i]);
+    trk[0].p[P_REV] = 90; trk[4].p[P_E0] = 3; set_engine_of(&trk[2], ENGI_PHASE);
+    system_init();
+    for (i = 0, ok = 1; i < NTRK; i++)
+        ok &= trk[i].eng_req == TRK_DEF[i][0] && trk[i].preset == TRK_DEF[i][1] && !memcmp(p0[i], trk[i].p, sizeof p0[i]);
+    bad += check("  INIT SYSTEM / NEW PROJECT: the same six sounds, value for value", ok);
+    ui_power_on_099();
+    song.master_q12 = 4096;
+    live = trk_live;
+    trk_live = NTRK;                                   /* (MENU > TRACKS 6: T5 / T6 play too; 4, the default, the first four) */
+    for (i = 0; i < NTRK; i++) {                       /* each part alone: a note (DRUM: the kick), ~0.4 s */
+        uint64_t e = 0;
+        int32_t pk = 0;
+        uint32_t note = i == 0u ? DRUM_LANE_NOTE[0] : i == 4u ? 36u : 60u;
+        for (k = 0; k < NTRK; k++) trk[k].p[P_MUTE] = k != i;
+        for (b = 0; b < 64u; b++) mix_block(o, CTL);
+        trk_note_on(&trk[i], note, 100);
+        for (b = 0; b < 1200u; b++) {
+            memset(o, 0, sizeof o);
+            mix_block(o, CTL);
+            for (k = 0; k < 2u * CTL; k++) {
+                int32_t a = o[k] < 0 ? -o[k] : o[k];
+                e += (uint64_t)a;
+                if (a > pk) pk = a;
+            }
+            if (b == 400u) trk_note_off(&trk[i], note);
+        }
+        if (e < lo) lo = e;
+        if (e > hi) hi = e;
+        if (pk > peak_max) peak_max = pk;
+        printf("  power-on T%u %-6s %-10s: level %llu, peak %d\n", i + 1u, ENG[i], PRE[i], (unsigned long long)(e / 1000u), pk);
+        for (k = 0; k < NTRK; k++) trk[k].p[P_MUTE] = 0;
+    }
+    trk_live = live;
+    bad += check("  each part sounds dry, none clipping, within 30 dB of the others", lo > 0u && lo * 32u > hi && peak_max < 32767);
+    {   /* as the browser emulator's boot test plays it (web/emu/emu_test.mjs): on HOME, C4 on the keys and E4 by MIDI on
+         * channel 1 sound on T1 (DRUM-X: the kit in its octaves) */
+        int32_t pk1 = 0, pk2 = 0;
+        ui_power_on_099();
+        song.master_q12 = 4096;
+        frame();
+        fm1_in.notes = host_notes = 1u << 7;            /* C4 */
+        for (b = 0; b < 400u; b++) {
+            if (b % 16u == 0u) frame();
+            mix_block(o, CTL);
+            for (k = 0; k < 2u * CTL; k++) if ((o[k] < 0 ? -o[k] : o[k]) > pk1) pk1 = o[k] < 0 ? -o[k] : o[k];
+        }
+        fm1_in.notes = host_notes = 0;
+        for (b = 0; b < 600u; b++) { if (b % 16u == 0u) frame(); mix_block(o, CTL); }
+        midi_enqueue(0x09u | 0x90u << 8 | 64u << 16 | 100u << 24, 1u);   /* E4 on channel 1 */
+        for (b = 0; b < 400u; b++) {
+            if (b % 16u == 0u) frame();
+            mix_block(o, CTL);
+            for (k = 0; k < 2u * CTL; k++) if ((o[k] < 0 ? -o[k] : o[k]) > pk2) pk2 = o[k] < 0 ? -o[k] : o[k];
+        }
+        midi_enqueue(0x08u | 0x80u << 8 | 64u << 16, 1u);
+        for (b = 0; b < 64u; b++) mix_block(o, CTL);
+        printf("  power-on HOME: C4 key peak %d, MIDI E4 peak %d\n", pk1, pk2);
+        bad += check("  HOME at power-on: a key (C4) and a MIDI note (E4, channel 1) sound on T1 DRUM-X", pk1 > 300 && pk2 > 300);
+    }
+    ui_power_on();
+    return bad;
+}
+/* (0.9.9) the engines' display order (engines.c ENGINE_ORDER) and the indices the stores hold: the selector maps a
+ * place to an engine and back for every engine one can pick (a retired one's sound: the engine it plays on), the
+ * numbers in ENGINES[] are as they were; PROGRAM CHANGE numbers the sounds as 0.9.8 did (ENGINE_PC_ORDER); a project
+ * saved on 0.9.8's parts loads as it was saved, whatever the power-on */
+static int test_engine_order_099(void)
+{
+    static const char *const IDX[NENGINES] = {"ANALOG", 0, "PHASE", "LOFI", "-", "VOICE", "-", "WHEEL", "-", "-", "DRUM",
+                                              "NOISE", "FM6", "-", "ANIMAL"};
+    static const char *const PC[] = {"ANALOG", "FM6",
+#if FELUCCA_FM4
+                                     "DIGITAL",
+#endif
+                                     "PHASE", "LOFI", "VOICE", "WHEEL", "NOISE", "DRUM", "ANIMAL"};
+    int bad = 0, ok = 1;
+    uint32_t i, e, k, n, all, seen = 0;
+    project_store_t st;
+    project_t a;
+    ui_power_on();
+    for (e = 0; e < NENGINES; e++)                     /* the stores' numbers: never renumbered */
+        ok &= !IDX[e] || str_eq(ENGINES[e]->name, IDX[e]);
+    ok &= ENGI_DRUM == 10u && ENGI_VOICE == 5u && ENGI_ANIMAL == 14u && ENGI_LOFI == 3u && ENGI_ANALOG == 0u && ENGI_FM6 == 12u &&
+          ENGI_PHASE == 2u && ENGI_WHEEL == 7u && ENGI_NOISE == 11u;
+    bad += check("0.9.9 engine order: ENGINES[] as before (0 ANALOG .. 10 DRUM 11 NOISE 12 FM6 14 ANIMAL)", ok);
+    for (n = 0, ok = 1; n < NENG_SHOWN; n++) {         /* place -> engine -> place */
+        e = eng_vis(n);
+        ok &= eng_ok(e) && eng_rank(e) == n && !((seen >> e) & 1u);
+        seen |= 1u << e;
+    }
+    for (e = 0; e < NENGINES; e++) {                   /* engine -> place -> engine; the others where they play */
+        if (eng_ok(e)) ok &= eng_vis(eng_rank(e)) == e;
+        else ok &= eng_vis(eng_rank(e)) == eng_live(e) && !((seen >> e) & 1u);
+    }
+    for (e = 0, n = 0, k = ENGI_DRUM; n < NENG_SHOWN; n++) {   /* KNOB 2 right: each once, round to DRUM */
+        ok &= k == eng_vis(n);
+        k = eng_step(k, 1);
+    }
+    ok &= k == ENGI_DRUM && eng_step(eng_step(ENGI_ANIMAL, 1), -1) == ENGI_ANIMAL && eng_step(ENGI_DIGITAL, 1) == (FELUCCA_FM4 ? ENGI_DRUM : ENGI_PHASE);
+    bad += check("  the selector: place <-> engine round trips (every engine once; DIGITAL / retired ones at FM6 / ANALOG's)", ok);
+    preset_all_pos(&all);
+    k = 0;
+    ok = preset_all_at(0, &k) == ENGI_DRUM && k == 0u;            /* the PRESETS list: DRUM-X first */
+    e = preset_all_at(preset_shown(ENGI_DRUM), &k);
+    ok &= e == ENGI_VOICE && k == preset_nth(ENGINES[ENGI_VOICE], 0);   /* the last kit, then VOICE's first */
+    for (i = 0, n = 0; i < all; i++) {                             /* the same sounds in both orders */
+        uint32_t k1, k2, e1 = preset_all_at(i, &k1), e2;
+        for (e2 = 0, n = 0; e2 < all && !n; e2++) {
+            uint32_t q, ee = preset_all_at_in(e2, &q, ENGINE_PC_ORDER);
+            n = ee == e1 && q == k1;
+        }
+        (void)k2;
+        if (!n) break;
+    }
+    ok &= i == all && NELEM(PC) == NENG_SHOWN;
+    for (i = 0; i < NELEM(PC); i++)
+        ok &= str_eq(ENGINES[ENGINE_PC_ORDER[i]]->name, PC[i]);
+    e = preset_all_at_in(0, &k, ENGINE_PC_ORDER);
+    ok &= e == ENGI_ANALOG && k == 0u;                              /* PROGRAM CHANGE 0: ANALOG SAW LEAD, as in 0.9.8 */
+    bad += check("  PRESETS lists DRUM-X first; PROGRAM CHANGE keeps 0.9.8's numbers (0 = ANALOG SAW LEAD), the same sounds", ok);
+    {   /* a project of 0.9.8's parts (T1 ANALOG ACID .. T4 DRUM-X): saved, then the 0.9.9 power-on, then loaded */
+        int16_t p0[NTRK][P_COUNT];
+        uint8_t e0[NTRK], pr0[NTRK];
+        project_store_t st2;
+        for (i = 0; i < NTRK; i++) { memcpy(p0[i], trk[i].p, sizeof p0[i]); e0[i] = trk[i].eng_req; pr0[i] = trk[i].preset; }
+        project_capture(&proj_scratch);
+        ok = proj_pack(&st, &proj_scratch);
+        ui_power_on_099();
+        ok &= proj_import(&a, &st, sizeof st) && !project_restore_runtime(&a);
+        for (i = 0; i < NTRK; i++)
+            ok &= trk[i].eng_req == e0[i] && trk[i].preset == pr0[i] && !memcmp(p0[i], trk[i].p, sizeof p0[i]);
+        ok &= trk[0].eng_req == ENGI_ANALOG && trk[3].eng_req == ENGI_DRUM && drum_track(&trk[3]) && !drum_track(&trk[0]);
+        project_capture(&proj_scratch);
+        ok &= proj_pack(&st2, &proj_scratch) && !memcmp(&st, &st2, sizeof st);
+        bad += check("  a project of 0.9.8's parts loads unchanged after the new power-on (engines, sounds, saved again byte for byte)", ok);
+    }
+    ui_power_on();
+    return bad;
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IONBF, 0);
@@ -11556,6 +11743,8 @@ int main(void)
 #else
     bad += test_fm4_retired();
 #endif
+    bad += test_power_on_099();
+    bad += test_engine_order_099();
 
     if (getenv("UI_SCREEN_DIR")) chain_screens(getenv("UI_SCREEN_DIR"));
     printf(bad ? "ui: %d FAILED\n" : "ui: all passed\n", bad);

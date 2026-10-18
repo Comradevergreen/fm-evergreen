@@ -998,7 +998,14 @@ static void setup(int s)
     ui_scope = 1;                                   /* (0.9.7) the scenes as before: MENU > DISPLAY > SCOPE ON (the *_full
                                                      * ones: OFF, the default, the creature on the whole EDIT panel) */
     switch (s) {
-    case S_HOME: song.octave = 2; song.rec = 1; usb.config = 1; break;
+    case S_HOME: {                                /* (0.9.9) the device's power-on parts (T1 DRUM-X, T2 VOICE, T3 ANIMAL,
+                                                   * T4 LOFI, ...: ui.c power_sound_of) with state()'s steps: README's HOME */
+        uint32_t k;
+        load_depth++;
+        for (k = 0; k < NTRK; k++) { power_sound_of(&trk[k], k); trk[k].engine = trk[k].eng_req; }
+        load_depth--;
+        song.octave = 2; song.rec = 1; usb.config = 1; break;
+    }
     case S_HOME_IDLE: song.playing = 0; song.batt_raw = 570; ui.hot_col = 1; ui.hot_t = 30; break;
     case S_MESSAGE: ui_say("LOADED ", "07 A VERY LONG PATTERN NAME"); break;
     case S_MESSAGE_KEY: ui_message("[SAVE] HOLD TO UNDO"); break;            /* a message with a keycap */

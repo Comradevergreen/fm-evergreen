@@ -49,7 +49,9 @@ files.
 
 ### Your first sound (1 minute)
 
-1. Power on. The signature draws itself, then you land on **HOME**: six creatures, one per track.
+1. Power on. The signature draws itself, then you land on **HOME**: six creatures, one per track. (0.9.9) The tracks
+   start as **T1 DRUM-X** (the factory kit), **T2 VOICE** (SINGER EN: it sings words), **T3 ANIMAL** (CMOS BIRD),
+   **T4 LOFI** (BYTEBEAT), **T5 ANALOG** (FAT BASS) and **T6 FM6** (TINE EP), each its preset's sound, dry.
 2. Turn **ALGORITHM** to pick a track (T1–T6). With the default **TRACKS 4** it stops at T4: T5 and T6 appear only with TRACKS 6 (see
    [13](#13-system-tracks-load-and-the-menu)).
 3. Turn **PRESETS** to browse sounds. Play the keys.
@@ -557,6 +559,11 @@ keep controlling the macros on every page) until you press LFO again. F3 rolls n
 Nine engines, all synthesis, no samples. Any engine can go on any track. Pick them with **PRESETS** (one list over
 every engine) or with KNOB 2 (ENG) on SAVE > PRESETS. Each track's four HOME knobs are listed too.
 
+**The order** (0.9.9): PRESETS, KNOB 2 (ENG) and the web editor's lists show the engines as **DRUM-X, VOICE, ANIMAL,
+LOFI, ANALOG, FM6, PHASE, WHEEL, NOISE** (the first six are the tracks at power-on, T1–T6). Only the order you see
+changed: projects, user presets, favourites and backups name engines by their numbers, which stay, so everything saved
+before loads as it was. PROGRAM CHANGE keeps 0.9.8's numbers (see [14](#14-midi-and-usb)).
+
 **Smooth changes**: switching a track to another engine fades the old one out (about 12 ms) and what you are holding
 (keys, or the notes the sequencer holds) goes on in the new engine, fading in; nothing is cut. Changing a list value
 (WAVE, CHIP, a type) while notes sound makes a short dip (about 3 ms) instead of a click; the notes go on.
@@ -664,8 +671,8 @@ octaves; above 16 syllables a second it narrows, as a bird's trill can only be t
 BULLFROG · CANARY, CARDINAL, DOVE, OWL, PEEPER, BAT · MOSQUITO, BEE, FLY · WOLF, DOG BARK, ROAR, PURR. They are set to
 sound right around C5 (the frogs' and mammals' an octave or two lower: BULLFROG and OWL C4, WOLF G4, ROAR C3, PURR C2).
 
-ANIMAL comes last in the PRESETS list, after DRUM, so every sound before it keeps its place (and its PROGRAM CHANGE
-number). It costs no RAM (each voice's state fits the voice), about 7.6 KB of flash, and at most ~85 % of the heaviest
+ANIMAL came last in the PRESETS list in 0.8.3, after DRUM, so every sound before it kept its place and its PROGRAM CHANGE
+number; since 0.9.9 the list shows it third (DRUM-X, VOICE, ANIMAL …) and PROGRAM CHANGE still numbers it last. It costs no RAM (each voice's state fits the voice), about 7.6 KB of flash, and at most ~85 % of the heaviest
 engine's CPU with eight voices (GLOTT; CMOS, PULSE, WHSTL and WING about half): all eight voices on every mode.
 
 ### VOICE: words and lyrics (0.8.5)
@@ -1185,7 +1192,7 @@ sounding after you let go; the next chord replaces them.
 | --- | --- |
 | The selected track's steps and automation | **REC held + F3**, or SAVE > TOOLS > CLEAR SEQ, or SEQ TOOLS F3 |
 | All six tracks' steps, automation and the punch-in lane | **SEQ held + REC**, then OCT+ |
-| **Everything** (NEW PROJECT): every track its engine's default sound (dry, FM6 the init voice), no steps or automation, the mix, effects, tempo and SLICER at their defaults, the song empty, macros at 0, the factory DRUM-X kit. Saved projects, user presets, MENU, CLOCK, TUNE and MIDI stay | **MENU > SYSTEM > INIT SYSTEM** or **SAVE > TOOLS > 5 NEW PROJECT**, then OCT+ (UNDO brings the music back) |
+| **Everything** (NEW PROJECT): every track its power-on sound (0.9.9: T1 DRUM-X, T2 VOICE SINGER EN, T3 ANIMAL CMOS BIRD, T4 LOFI BYTEBEAT, T5 ANALOG FAT BASS, T6 FM6 TINE EP, dry), no steps or automation, the mix, effects, tempo and SLICER at their defaults, the song empty, macros at 0, the factory DRUM-X kit. Saved projects, user presets, MENU, CLOCK, TUNE and MIDI stay | **MENU > SYSTEM > INIT SYSTEM** or **SAVE > TOOLS > 5 NEW PROJECT**, then OCT+ (UNDO brings the music back) |
 | Only one part's automation on the selected track | **REC held + FX / EDIT / ENV / LFO / SCL / ARP / GLO** |
 | *(not a clear)* A heavy test song, to measure the CPU on the device and listen for clicks (every live track chords of four with two step components a step and long glides, the kit on every lane, every FX on, 160 BPM) | **SAVE > TOOLS > 6 CPU TEST**, OCT+, then PLAY (UNDO brings your music back) |
 | The track's automation, keeping the steps | SEQ TOOLS **F4 CLR AUTO**, or SEQ > AUTOMATION > CLEAR |
@@ -1694,7 +1701,8 @@ This is the chapter to read carefully. JIANT keeps several kinds of data in diff
   button is held and nothing is sounding, and **at most once a minute**.
 - It does **not** save when you switch off. If you change something and power off within those seconds, that last
   change is lost. To be safe: **stop, wait ~10 s**, or better, save into a section.
-- At power-on the device starts at zero, as **NEW PROJECT** leaves it (every track its engine's default sound, no
+- At power-on the device starts at zero, as **NEW PROJECT** leaves it (0.9.9: T1 DRUM-X, T2 VOICE, T3 ANIMAL, T4 LOFI,
+  T5 ANALOG, T6 FM6, each its preset's sound, dry; no
   steps). With **MENU > SYSTEM > RESTORE LAST ON** the autosave becomes the music instead (the screen says
   **RESTORED**). RESTORE LAST is **OFF** by default since 0.6.40: no autosave at all.
 - After a crash, a hang or a failed start, the autosave is not restored (the music that was playing could be what
@@ -1919,6 +1927,8 @@ faded): a photo of that screen helps when you report a problem.
   - **OFF**: nothing.
 - **PROGRAM CHANGE** (0.6.72): program *n* on the channel a track plays loads the PRESETS list's sound number *n* + 1
   (every engine's presets in their order, then the user presets) into that track; the selection stays where it was.
+  (0.9.9) The engines in 0.9.8's order, ANALOG, FM6, PHASE, LOFI, VOICE, WHEEL, NOISE, DRUM, ANIMAL, whatever the
+  PRESETS page shows (it starts with DRUM-X now): a MIDI setup's program numbers keep loading the sounds they did.
   Programs reach the list's first 128 sounds: since 0.8.3 that ends inside ANIMAL's presets (it comes last), so the
   user presets after it are picked on the device or from the editor.
 - **Sections and projects** (0.6.80): **channel 16** is the song's: its PROGRAM CHANGE never loads a sound (whatever

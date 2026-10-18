@@ -1371,6 +1371,17 @@ static void init_sound_of(track_t *t, uint32_t ei)
     fm6_init_voice(t);
     load_end(t);
 }
+/* (0.9.9) the power-on, INIT SYSTEM and NEW PROJECT: part i (engines.c TRK_DEF) its engine with its preset's sound
+ * (the EDIT values, the envelope, MONO / POLY, VOICE's words, FM6's patch), over the engine's defaults as INIT SOUND
+ * leaves them, and dry: no DIST CHOR DLY REV send (the effects are the player's to add). Was INIT SOUND's alone */
+static void power_sound_of(track_t *t, uint32_t i)
+{
+    uint32_t k;
+    init_sound_of(t, TRK_DEF[i % NPART][0]);
+    apply_preset_to(t, TRK_DEF[i % NPART][1]);
+    for (k = 0; k < 4u; k++)
+        t->p[P_DIST + k] = 0;
+}
 
 static void track_defaults(track_t *t)
 {
@@ -1378,6 +1389,23 @@ static void track_defaults(track_t *t)
     for (i = 0; i < P_E0; i++)
         t->p[i] = TP[i].def;
     track_defaults_steps(t);
+}
+/* (0.9.9) the power-on's parts (main.c felucca_init, inside its load): each track at its defaults with its power-on
+ * sound (power_sound_of), the sequencers empty (or TRK_DEF's pattern: none has one) */
+static void power_on_parts(void)
+{
+    uint32_t i;
+    for (i = 0; i < NTRK; i++) {
+        track_t *t = &trk[i];
+        track_defaults(t);
+        power_sound_of(t, i);
+        t->engine = t->eng_req;
+        track_defaults_steps(t);              /* (a sound load never touches them) */
+        if (TRK_DEF[i][2])
+            load_pat16(t, PATTERNS[TRK_DEF[i][2] - 1u].note, PATTERNS[TRK_DEF[i][2] - 1u].flags);
+        pat_sig[i] = steps_sig(t);            /* a default pattern, not the user's */
+        pat_last[i] = TRK_DEF[i][2];
+    }
 }
 
 /* switch engine (its defaults + first preset) and say so */
@@ -1405,21 +1433,22 @@ static uint32_t preset_all_pos(uint32_t *total)          /* list index of the se
     return cur;
 }
 
-/* list index n (< total) -> engine, *k its preset; NENGINES = user preset, *k its slot */
-static uint32_t preset_all_at(uint32_t n, uint32_t *k)
+/* list index n (< total) -> engine, *k its preset; NENGINES = user preset, *k its slot. The engines in the order of
+ * `order` (NENG_SHOWN of them): ENGINE_ORDER, the list shown; (0.9.9) ENGINE_PC_ORDER, PROGRAM CHANGE's numbers */
+static uint32_t preset_all_at_in(uint32_t n, uint32_t *k, const uint8_t *order)
 {
-    uint32_t e = 0, i, r;
-    for (r = 0; r < NENG_SHOWN && n >= preset_shown(eng_vis(r)); r++)
-        n -= preset_shown(eng_vis(r));
+    uint32_t e, r;
+    for (r = 0; r < NENG_SHOWN && n >= preset_shown(order[r]); r++)
+        n -= preset_shown(order[r]);
     if (r == NENG_SHOWN) {
         *k = up_nth(n);
         return NENGINES;
     }
-    e = eng_vis(r);
-    (void)i;
+    e = order[r];
     *k = preset_nth(ENGINES[e], n);                     /* the n-th shown preset */
     return e;
 }
+static uint32_t preset_all_at(uint32_t n, uint32_t *k) { return preset_all_at_in(n, k, ENGINE_ORDER); }
 
 static uint32_t preset_pos(uint32_t *total)
 {
@@ -1497,7 +1526,9 @@ static void preset_go(uint32_t n)                    /* load list index n into t
 }
 
 /* (JIANT 0.6.72) PROGRAM CHANGE (midi_control.c midi_pc_req): the list's n-th sound into the track whose channel it
- * came on, the selection kept; out of the list's range, nothing. Every frame (ui_input) */
+ * came on, the selection kept; out of the list's range, nothing. (0.9.9) The list in 0.9.8's engine order
+ * (engines.c ENGINE_PC_ORDER), whatever the PRESETS page shows: a rig's program numbers keep their sounds. Every frame
+ * (ui_input) */
 static void midi_pc_poll(void)
 {
     uint32_t i, sel = song.sel;
@@ -1516,7 +1547,7 @@ static void midi_pc_poll(void)
             song.sel = (uint8_t)i;
             preset_all_pos(&all);
             if (n < all) {
-                e = preset_all_at(n, &k);
+                e = preset_all_at_in(n, &k, ENGINE_PC_ORDER);   /* (0.9.9: 0.9.8's numbers) */
                 if (e == NENGINES) {
                     up_load(k);
                 } else {

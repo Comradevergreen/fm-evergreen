@@ -295,14 +295,14 @@ static void proj_trk_from_v2(proj_trk_t *d, const proj_trk_v2_t *s)
     proj_trk_from(d, s->p, PROJ_NP_V2, s->engine, s->preset, s->step);
 }
 /* (JIANT 0.6) the tracks from `from` on of a project read from a format of PROJ_LT tracks: their power-on sounds
- * (PROJ_DEF_SOUND: project_restore_runtime gives TRK_DEF's), no steps */
+ * (PROJ_DEF_SOUND: project_restore_runtime gives TRK_OLD's: 0.9.8's power-on, whatever today's is), no steps */
 static void proj_new_tracks(project_t *q, uint32_t from)
 {
     uint32_t i, k;
     for (i = from; i < NTRK; i++) {
         for (k = 0; k < P_COUNT; k++)
-            q->t[i].p[k] = param_desc_of(trk_def_engine(i), k)->def;
-        q->t[i].engine = (uint8_t)trk_def_engine(i);
+            q->t[i].p[k] = param_desc_of(trk_old_engine(i), k)->def;
+        q->t[i].engine = (uint8_t)trk_old_engine(i);
         q->t[i].preset = PROJ_DEF_SOUND;
         for (k = 0; k < NSTEP; k++) {
             memset(&q->t[i].step[k], 0, sizeof q->t[i].step[k]);
@@ -1759,7 +1759,7 @@ static int project_restore_runtime(const project_t *input)
         track_t *t = &trk[k];
         int16_t keep[P_COUNT];
         if (p->t[k].preset == PROJ_DEF_SOUND) {
-            apply_preset_to(t, TRK_DEF[k][1]);
+            apply_preset_to(t, TRK_OLD[k][1]);          /* (0.9.9: 0.9.8's power-on sound, engines.c TRK_OLD) */
             track_defaults_steps(t);
         } else if (p->t[k].preset == PROJ_DEF_KEEP) {   /* the steps, LEVEL PAN MUTE, LEN DIV SWING GATE kept */
             memcpy(keep, t->p, sizeof keep);
@@ -1784,7 +1784,7 @@ static int project_restore_runtime(const project_t *input)
  * undo_do brings it back and keeps what it replaced, so a second UNDO goes forward again. The transport plays on */
 static project_store_t undo_st[2] __attribute__((section(".lowbuf")));   /* (0.6.78: app.ld LOWBUF) */
 /* (JIANT 0.6.40) INIT SYSTEM (SAVE > TOOLS 5, its dialog; UNDO brings the music back) and the power-on (main.c, with
- * RESTORE LAST OFF): the six tracks their engine (TRK_DEF's) at its defaults and first sound, as INIT SOUND does; no
+ * RESTORE LAST OFF): the six tracks their power-on sound (0.9.9: TRK_DEF's engine and preset, dry: ui.c power_sound_of); no
  * steps, automation or locks; the mix, the global effects, the tempo and the SLICER at their defaults; the song empty,
  * the macros at 0, the punch-in lane clear, the factory DRUM-X kit (X-MOD, TONE off, nothing muted), every FM6 patch
  * the init voice. What is saved (projects, user presets) and the setup (CLOCK, TUNE, MIDI, ROUTE, the project slot,
@@ -1816,7 +1816,7 @@ static void system_init(void)
         motion_clear(t);
         load_begin(t, LOAD_SOUND | LOAD_PAT);
         track_defaults(t);
-        init_sound_of(t, trk_def_engine(i));          /* (its defaults and first sound, dry; FM6 the init voice) */
+        power_sound_of(t, i);                         /* (0.9.9: TRK_DEF's sound, dry; was the engine's defaults) */
         motion_clear(t);
         load_end(t);
         pat_sig[i] = steps_sig(t);

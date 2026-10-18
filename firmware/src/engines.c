@@ -69,19 +69,32 @@ static const engine_t *const ENGINES[NENGINES] = {
 static inline uint32_t eng_idx(uint32_t e) { return e < NENGINES ? e : 0u; }
 
 /* the order the engines are shown in (PRESETS browsing and its ENG knob, the EDIT layer's keys, the editor's list):
- * engine indices, never DIGITAL's reserved 1 (with FELUCCA_FM4 it follows FM6). The indices stay as they are (the
- * stores and the protocol hold them); only this table orders them */
+ * engine indices, never DIGITAL's reserved 1 (with FELUCCA_FM4 it comes last). The indices stay as they are (the
+ * stores and the protocol hold them); only this table orders them. (0.9.9) DRUM-X, VOICE, ANIMAL first, as the parts
+ * at power-on (TRK_DEF: T1..T6 are its first six), then PHASE WHEEL NOISE; was ANALOG FM6 PHASE LOFI VOICE WHEEL
+ * NOISE DRUM ANIMAL, which PROGRAM CHANGE keeps (ENGINE_PC_ORDER) */
 static const uint8_t ENGINE_ORDER[NENG_SHOWN] = {
-    0,                           /* ANALOG */
-    12,                          /* FM6 */
+    ENGI_DRUM,                   /* DRUM (DRUM-X) */
+    ENGI_VOICE,                  /* VOICE */
+    ENGI_ANIMAL,                 /* ANIMAL */
+    ENGI_LOFI,                   /* LOFI */
+    ENGI_ANALOG,                 /* ANALOG */
+    ENGI_FM6,                    /* FM6 */
+    ENGI_PHASE, ENGI_WHEEL,      /* PHASE WHEEL */
+    ENGI_NOISE,                  /* NOISE */
 #if FELUCCA_FM4
-    1,                           /* DIGITAL */
+    ENGI_DIGITAL,                /* DIGITAL (retired, FELUCCA_FM4 builds only): after the rest */
 #endif
-    2, 3, 5, 7,                  /* PHASE LOFI VOICE WHEEL */
-    11,                          /* NOISE */
-    10,                          /* DRUM */
-    14,                          /* (0.8.3) ANIMAL: last, so every sound before it keeps its place in the PRESETS
-                                  * list (a PROGRAM CHANGE n loads its n + 1-th: 0..127) */
+};
+/* (0.9.9) PROGRAM CHANGE n loads the n + 1-th sound of the PRESETS list in the order of 0.9.8 (ANIMAL last: 0.8.3's
+ * numbers kept), so a MIDI rig's program numbers name the sounds they named before the display order changed; the
+ * PRESETS list itself follows ENGINE_ORDER (ui.c preset_all_at_in) */
+static const uint8_t ENGINE_PC_ORDER[NENG_SHOWN] = {
+    ENGI_ANALOG, ENGI_FM6,
+#if FELUCCA_FM4
+    ENGI_DIGITAL,
+#endif
+    ENGI_PHASE, ENGI_LOFI, ENGI_VOICE, ENGI_WHEEL, ENGI_NOISE, ENGI_DRUM, ENGI_ANIMAL,
 };
 
 /* the engines one can pick (engine 1 only with FELUCCA_FM4), in ENGINE_ORDER: eng_ok(e), the n-th of them
@@ -149,7 +162,18 @@ static const struct {
 #undef T_
 #define NPATTERNS (sizeof PATTERNS / sizeof PATTERNS[0])
 
-/* the parts at power-on (engine, preset, PATTERNS[n - 1] in the sequencer, 0 = empty: all are): bass, pad, lead, drums */
-static const uint8_t TRK_DEF[NPART][3] = {{0, 4, 0}, {ENGI_FM6, 4, 0}, {3, 3, 0}, {ENGI_DRUM, 0, 0}, {2, 0, 0}, {7, 0, 0}};
-/* ANALOG ACID, FM6 PAD (was DIGITAL PAD), LOFI PULSE LD (3: BYTE first), DRUM KIT; (JIANT 0.6) PHASE's first, WHEEL's first */
+/* (0.9.9) the parts at power-on, INIT SYSTEM and NEW PROJECT (engine, preset, PATTERNS[n - 1] in the sequencer,
+ * 0 = empty: all are), in the display order's first six: T1 DRUM-X's kit, T2 VOICE singing words, T3 ANIMAL's bird,
+ * T4 LOFI's bytebeat organism, T5 ANALOG's bass, T6 FM6's electric piano. Each its preset's sound, dry (ui.c
+ * power_sound_of: no DIST CHOR DLY REV send, the effects are the player's to add) */
+#define TRK_PR_VOICE 9u          /* SINGER EN (eng_formant.c FORMANT_PRESETS) */
+#define TRK_PR_ANALOG 14u        /* FAT BASS (eng_analog.c) */
+static const uint8_t TRK_DEF[NPART][3] = {{ENGI_DRUM, 0, 0}, {ENGI_VOICE, TRK_PR_VOICE, 0}, {ENGI_ANIMAL, 0, 0},
+                                          {ENGI_LOFI, 0, 0}, {ENGI_ANALOG, TRK_PR_ANALOG, 0}, {ENGI_FM6, 0, 0}};
+/* DRUM-X (DRUM's first, the factory kit), SINGER EN, CMOS BIRD, BYTEBEAT, FAT BASS, TINE EP */
+/* the parts at power-on through 0.9.8 (the same columns): what an old project's tracks it had no room for load as
+ * (project.c proj_new_tracks, PROJ_DEF_SOUND: format 1's tracks 2..4, a 4-track format's T5 / T6): never change it.
+ * ANALOG ACID, FM6 PAD (was DIGITAL PAD), LOFI PULSE LD (3: BYTE first), DRUM KIT; (JIANT 0.6) PHASE's first, WHEEL's first */
+static const uint8_t TRK_OLD[NPART][3] = {{0, 4, 0}, {ENGI_FM6, 4, 0}, {3, 3, 0}, {ENGI_DRUM, 0, 0}, {2, 0, 0}, {7, 0, 0}};
+static uint32_t trk_old_engine(uint32_t i) { return TRK_OLD[i % NPART][0]; }
 static uint32_t trk_def_engine(uint32_t i) { return TRK_DEF[i % NPART][0]; }

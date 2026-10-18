@@ -206,6 +206,11 @@ static void params_by_count(int16_t *out, const int16_t *in, uint32_t np, const 
 #define ENGI_SLICE 13u
 #define ENGI_SAMPLE 4u
 #define ENGI_ANIMAL 14u          /* (JIANT 0.8.3) eng_animal.c */
+#define ENGI_PHASE 2u            /* (0.9.9: named for the power-on parts and the display order, engines.c) */
+#define ENGI_LOFI 3u
+#define ENGI_VOICE 5u            /* eng_formant.c ENG_FORMANT */
+#define ENGI_WHEEL 7u
+#define ENGI_NOISE 11u
 #define ENGI_TRIO 6u             /* (JIANT 0.4) folded into ANALOG (analog_from_trio) */
 /* (JIANT) the retired engines: PHYS, and the sample engines SAMPLE GRAIN SLICE (their 123 KB of samples and GRAIN's
  * 27 KB of RAM went to DRUM-X and the effects). Their numbers stay reserved (engines.c ENG_GONE), never offered; a sound
