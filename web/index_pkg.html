@@ -98,6 +98,8 @@ const TEXT = {
     firstStock: "先に公式V15へ戻す",
     firstOk: "インストールの前に、接続された FM-1 のファームウェアを自動で確認します。公式V15 か JIANT のときだけ書き込みます。",
     checking: "FM-1 のファームウェアを確認中…",
+    oldstock: "この FM-1 には古い公式ファームウェアが入っています。書き込みませんでした。下のボタンで先に公式V15に更新してから（公式ファームウェアではバックアップは不要です）、もう一度インストールしてください。検出: ",
+    officialConfirm: "この FM-1 は公式ファームウェアです。公式V15に更新します（このページでは公式ファームウェアの曲はバックアップできません）。続けますか？",
     otherfw: "この FM-1 には公式V15 でも JIANT でもないファームウェアが入っています。書き込みませんでした。下のボタンで先に公式V15に戻してから、もう一度インストールしてください。 ",
     editor: "エディタ（インストール後、パソコンから音色やシーケンスを編集）",
     verLabel: "バージョン:", verOld: "以前のバージョンにも戻せます（最新が一番上）。新しい版で保存したプロジェクトは古い版で正しく開けないことがあります。先にエディタでバックアップしてください。", latest: "最新", manual: "マニュアル:",
@@ -144,6 +146,8 @@ const TEXT = {
     firstStock: "Return to official V15 first",
     firstOk: "Before installing, the installer checks the connected FM-1's firmware by itself: it writes only over official V15 or JIANT.",
     checking: "Checking the FM-1's firmware…",
+    oldstock: "This FM-1 runs an older official firmware: nothing was written. Update it to official V15 first with the button below (no backup is needed from an official firmware), then press Install again. Found: ",
+    officialConfirm: "This FM-1 runs official firmware: it is updated to official V15 (this page cannot back up an official firmware's songs). Continue?",
     otherfw: "This FM-1 runs a firmware that is neither official V15 nor JIANT: nothing was written. Return to official V15 first with the button below, then install again. Found: ",
     editor: "Editor (after installing: edit sounds and sequences from the computer)",
     verLabel: "Version:", verOld: "You can go back to an earlier version too (newest on top). Projects saved by a newer version may not open right in an older one: back them up with the editor first.", latest: "latest", manual: "Manual:",
@@ -265,6 +269,9 @@ async function fwKind(up) {
   if (!dev) return { kind: "none" };
   const text = dev.id.text;
   if (text === "FM-1_015") { dev.link.close(); return { kind: "stock", text }; }
+  /* (0.9.10) an older official firmware (V14 and before): it must go to V15 first, with no backup (an official
+   * firmware does not answer the editor's backup) */
+  if (/^FM-1_0\d\d$/.test(text)) { dev.link.close(); return { kind: "oldstock", text }; }
   if (!/^FM-1_9\d\d$/.test(text)) { dev.link.close(); return { kind: "other", text }; }
   const input = dev.link.input, output = dev.link.output; dev.link.close();
   const link = new BackupConnection(input, output);
@@ -303,6 +310,7 @@ $("go").addEventListener("click", async () => {
       const fw = await fwKind(up);
       log(`firmware: ${fw.kind} ${fw.text || ""}`);
       if (fw.kind === "none") { sayK("notfound"); lockInstaller(false); return; }
+      if (fw.kind === "oldstock") { sayK("oldstock", fw.text); $("stock").open = true; lockInstaller(false); return; }
       if (fw.kind === "other") { sayK("otherfw", fw.text); $("stock").open = true; lockInstaller(false); return; }
       await up.install(image, meta.product, step);
     }
@@ -357,6 +365,12 @@ $("stock-go").addEventListener("click", async () => {
     } else {
       const device = await up.find(id => id.model === "FM-1");
       if (!device) { sayK("notfound"); return; }
+      if (device.id.version < 900) {               /* (0.9.10) official firmware: no backup to take, straight to V15 */
+        device.link.close();
+        if (!confirm(t("officialConfirm"))) return;
+        await up.install(selected.image, selected.product, step);
+        return;
+      }
       const input = device.link.input, output = device.link.output; device.link.close();
       link = new BackupConnection(input, output);
       const info = archiveInfo(await link.request([1,[]]));
