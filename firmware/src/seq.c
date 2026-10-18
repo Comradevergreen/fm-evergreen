@@ -1540,6 +1540,7 @@ static void chord_glide(track_t *t, const uint8_t *nn, const uint8_t *vv, uint32
             int32_t d;
             if (mo_out[ti][o[i]]) { mo_send(0x80u | trk_midi_ch(ti), mo_out[ti][o[i]] - 1u, 0); mo_out[ti][o[i]] = 0; }
             v->note = n[i];
+            glide_from_trk(t, v);                       /* (0.9.8) VOICE's S-curve from where it sounds */
             v->pitch16 = ((int32_t)n[i] + tr) * 16 + t->pfx_rpit;
             d = v->pitch16 - v->pitch_cur;
             v->gstep = glide_q8(d, ticks);
@@ -1556,6 +1557,7 @@ static void chord_glide(track_t *t, const uint8_t *nn, const uint8_t *vv, uint32
                         voice_t *w = &t->v[k];
                         int32_t d;
                         w->pitch_cur = (cg_near(n[i], o, a, 1) + tr) * 16 + t->pfx_rpit;
+                        w->gfrom = (int16_t)w->pitch_cur;   /* (0.9.8: VOICE's glide from there) */
                         d = w->pitch16 - w->pitch_cur;
                         w->gstep = glide_q8(d, ticks);
                         w->gacc = 0;
@@ -1563,6 +1565,7 @@ static void chord_glide(track_t *t, const uint8_t *nn, const uint8_t *vv, uint32
                     }
         } else if (v) {                                 /* an old one left: to the nearest new note, fading out */
             int32_t d;
+            glide_from_trk(t, v);
             v->pitch16 = (cg_near(o[i], n, b, 0) + tr) * 16 + t->pfx_rpit;
             d = v->pitch16 - v->pitch_cur;
             v->gstep = glide_q8(d, ticks);

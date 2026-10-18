@@ -301,7 +301,10 @@ typedef struct {
     uint8_t mvel;                /* mod.c: the note-on velocity (before UNISON scaling) and RAND of the note */
     uint8_t gacc;                /* (0.6.82) the glide's fraction of a 1/16 st carried (gstep Q8) */
     int8_t henv;                 /* (0.6.92) HUMAN: this note's DEC and REL moved (steps of the knobs; voice.c env_tick) */
+    int8_t vjit;                 /* (0.9.8) VOICE words: this glottal period's jitter / shimmer (eng_formant.c; padding) */
     int16_t mrnd;
+    int16_t gfrom;               /* (0.9.8) where the glide set out from (1/16 st; VOICE sings it as an S-curve: voice.c
+                                  * glide_sung; in the struct's padding, its size as before) */
 } voice_t;
 
 typedef struct {                 /* per-voice control-rate modulation, computed in voice.c */

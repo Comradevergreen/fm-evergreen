@@ -680,6 +680,12 @@ on; at the release the syllable's last consonants sound (the *s* of "es", the *n
 syllable to syllable, and a syllable whose end was not sung yet gets it quickly before the next one. With several
 voices every voice sings the same syllable: a choir. The lyric loops when it ends.
 
+**How it sounds (0.9.8).** Like a singer: the hiss of *s*, *sh*, *f* comes in and goes softly (band-passed, ~6 kHz for
+*s*, under the vowel's level), the formants glide from sound to sound without corners, a note's vowel carries into the
+next syllable, held notes take a gentle vibrato after about 0.3 s (each voice of a choir its own), and the voice is
+never perfectly still (a little jitter and shimmer). A glide between notes eases out of the first and into the second
+(an S-curve, as long as GLIDE says); singing words, legato notes glide a little (~60 ms) even with GLIDE at 0.
+
 **EDIT > WORDS** (VOICE tracks only): **LANG**, **LYRIC**, **POS**; **OCT+** (TYPE) opens the lyric's typing screen.
 
 | LYRIC | sings |
@@ -696,7 +702,7 @@ With LANG on the EDIT pages read **POS THEME ARTIC SHIFT** | **BUZZ BREATH Q LOO
 | **THEME** | the dice's words (W): LOVE, NIGHT, SEA, SKY, ANY, ROAD, DREAM, FIRE |
 | **ARTIC** | the consonants: 100 % crisp (full closures, bursts, hiss) .. 0 % slurred (a mumble) |
 | **SHIFT** | every formant up or down (−: a bigger voice, +: smaller, female, a child) |
-| **BUZZ**, **BREATH**, **Q** | as for the vowels: brightness, air (127: a whisper), how sharp the formants are |
+| **BUZZ**, **BREATH**, **Q** | as for the vowels: brightness, air (127: a whisper), how sharp the formants are. (0.9.8) BUZZ's top (~112–127) also steadies the voice: no vibrato, no jitter, a machine (ROBOT EN) |
 | **LOOP** | FREE: on through the lyric. 1, 2, 4, 8: back to its start every so many loops of the pattern (a chorus) |
 
 **Writing a lyric.** On the device: EDIT > WORDS, **OCT+**. It is the NAME screen with room for 63 characters (the
@@ -817,7 +823,8 @@ track that follows LFO DEST / ENV DEST FILTER.
 ### VOICE (every engine)
 
 EDIT > **VOICE**: **VOICE** POLY, MONO, LEG (legato), UNI (unison); **GLIDE**; **MODE** RATE or TIME (how glide is
-measured); **PRIO** LAST, LOW, HIGH. The six tracks share a budget of 8 voices; FM6 plays at most four per track.
+measured); **PRIO** LAST, LOW, HIGH. The six tracks share a budget of 8 voices; FM6 plays at most four per track. (0.9.8) VOICE glides as a singer: an S-curve in
+pitch over the same time (the other engines: a straight line, as before).
 
 ---
 

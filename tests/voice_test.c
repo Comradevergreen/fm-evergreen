@@ -666,6 +666,288 @@ static void check_sound(void)
     }
 }
 
+/* ------------------------------------------------------------------------------------- (0.9.8) the singer --- */
+/* notes nt on track 0 as the sequencer gates them (7/8 of each, or held into the next with leg), the voice sum into y
+ * (n at most), each block's syllable count into nsy (if nsy) and the first voice's pitch as sung (1/4096 st) into pq (if
+ * pq); returns the samples */
+typedef struct { uint8_t note, len, leg; } snt_t;   /* len: 1/8 beats at 100 BPM */
+static uint32_t sing_notes(const snt_t *nt, uint32_t nn, double *y, uint32_t n, uint16_t *nsy, int32_t *pq)
+{
+    static int32_t b[CTL];
+    uint32_t k, i, f = 0, eighth = FS * 60u / 100u / 2u, prev = 0;
+    for (k = 0; k <= nn && f + CTL <= n; k++) {
+        uint32_t len = k < nn ? nt[k].len * eighth : FS / 2u, note = k < nn ? nt[k].note : 0, leg = k < nn && nt[k].leg;
+        if (note)
+            trk_note_on(&trk[0], note, 100);
+        if (prev)
+            trk_note_off(&trk[0], prev);
+        prev = 0;
+        for (i = 0; i < len && f + CTL <= n; i += CTL, f += CTL) {
+            uint32_t j;
+            if (note && !leg && i + CTL >= len - len / 8u && i < len - len / 8u)
+                trk_note_off(&trk[0], note);
+            track_render(&trk[0], b, CTL);
+            for (j = 0; j < CTL; j++)
+                y[f + j] = b[j] / 32768.0;
+            if (nsy)
+                nsy[f / CTL] = sing[0].nsy;
+            if (pq)
+                pq[f / CTL] = trk[0].v[0].active ? glide_sung(&trk[0].v[0]) : 0;
+        }
+        if (leg)
+            prev = note;
+    }
+    return f;
+}
+static int cmp_dbl(const void *a, const void *b)
+{
+    double x = *(const double *)a, z = *(const double *)b;
+    return x < z ? -1 : x > z;
+}
+/* F0 (Hz) of y[a .. a + 40 ms) by autocorrelation in 150 .. 400 Hz (0: unvoiced) */
+static double f0_at(const double *y, uint32_t a)
+{
+    uint32_t w = FS / 25u, lag, best = 0;
+    double bv = 0, e = 0, r0, r1, r2;
+    for (lag = 0; lag < w; lag++)
+        e += y[a + lag] * y[a + lag];
+    for (lag = FS / 400u; lag <= FS / 150u; lag++) {
+        double s = 0;
+        uint32_t i;
+        for (i = 0; i < w; i++)
+            s += y[a + i] * y[a + i + lag];
+        if (s > bv) { bv = s; best = lag; }
+    }
+    if (!best || bv < 0.3 * e)
+        return 0;
+    {   /* parabolic peak */
+        uint32_t i;
+        r0 = r1 = r2 = 0;
+        for (i = 0; i < w; i++) {
+            r0 += y[a + i] * y[a + i + best - 1u];
+            r1 += y[a + i] * y[a + i + best];
+            r2 += y[a + i] * y[a + i + best + 1u];
+        }
+        return FS / (best + 0.5 * (r0 - r2) / (r0 - 2 * r1 + r2));
+    }
+}
+static void check_singer(void)
+{
+    static double y[FS * 8], P[NFFT / 2], ctx[FS / 10];
+    static uint16_t nsy[FS * 8 / CTL];
+    static int32_t pq[FS * 8 / CTL];
+    char what[240];
+    int32_t pi = preset_of("CANTOR ES");
+    uint32_t i, k, n;
+    {   /* s: its noise comes in over >= 6 ms (10 .. 90 % of its 1 ms RMS; 0.9.7: ~2 ms, a third of it a ms), its level
+         * 14 .. 24 dB under the vowel (0.9.7: 14.6), its band ~6 kHz (0.9.7: 7.1) with little past 12 kHz (band-passed) */
+        double env[60], top, rv, rs, cs, hi, mid, step = 0;
+        uint32_t t10 = 0, t90 = 0;
+        vsetup(pi, LG_ES, "sa");
+        trk_note_on(&trk[0], 60, 100);
+        vrender(y, FS / 2);
+        for (k = 0; k < 60u; k++)
+            env[k] = rms(y, k * FS / 1000u, (k + 1u) * FS / 1000u);
+        for (k = 20, top = 0; k < 60u; k++)
+            top += env[k] / 40.0;
+        for (k = 0; k < 60u && env[k] < 0.1 * top; k++)
+            ;
+        t10 = k;
+        for (; k < 60u && env[k] < 0.9 * top; k++)
+            ;
+        t90 = k;
+        for (k = 0; k < 30u; k++) {                      /* the steepest rise a ms, of the 3 ms average */
+            double a0 = k >= 3u ? (env[k - 3u] + env[k - 2u] + env[k - 1u]) / 3.0 : 0, a1 = (env[k] + (k ? env[k - 1u] : 0) +
+                                                                                           (k > 1u ? env[k - 2u] : 0)) / 3.0;
+            if ((a1 - a0) / 3.0 / top > step)
+                step = (a1 - a0) / 3.0 / top;
+        }
+        rv = rms(y, (uint32_t)(0.2 * FS), (uint32_t)(0.4 * FS));
+        rs = rms(y, (uint32_t)(0.015 * FS), (uint32_t)(0.065 * FS));
+        spectrum(y + (uint32_t)(0.015 * FS), (uint32_t)(0.05 * FS), P);
+        cs = centroid(P);
+        mid = band(P, 4000, 8000);
+        hi = band(P, 12000, 20000);
+        printf("voice:   s: rise %u ms (10 .. 90 %%), at most %.0f %% of its level a ms, %.1f dB of the vowel, centroid %.0f Hz, "
+               "12 .. 20 kHz %.1f dB under 4 .. 8 kHz\n", t90 - t10, step * 100, 20 * log10(rs / rv), cs, 10 * log10(mid / hi));
+        snprintf(what, sizeof what, "soft s: in over %u ms (>= 6), at most %.0f %% of it a ms (<= 15), %.1f dB under the vowel "
+                 "(14 .. 24), ~6 kHz, no fizz", t90 - t10, step * 100, -20 * log10(rs / rv));
+        check(what, t90 - t10 >= 6u && step <= 0.15 && rs < rv / 5.0 && rs > rv / 16.0 && cs > 5000 && cs < 7500 &&
+                    mid > hi * 20.0);
+    }
+    {   /* sh: lower, 2 .. 4 kHz, no harsher onset than s */
+        double cs, lo, hi;
+        vsetup(preset_of("UTA JA"), LG_JA, "sha");
+        trk[0].p[P_E3] = 0;
+        trk_note_on(&trk[0], 60, 100);
+        vrender(y, FS / 2);
+        spectrum(y + (uint32_t)(0.02 * FS), (uint32_t)(0.05 * FS), P);
+        cs = centroid(P);
+        lo = band(P, 2000, 4000);
+        hi = band(P, 5000, 10000);
+        snprintf(what, sizeof what, "soft sh: centroid %.0f Hz (2.5 .. 4 k), 2 .. 4 kHz %.1f dB over 5 .. 10 kHz", cs,
+                 10 * log10(lo / hi));
+        check(what, cs > 2500 && cs < 4000 && lo > hi * 3.0);
+    }
+    {   /* joins: "sus suenyos son sonidos suaves", a note a syllable, gated as the sequencer does (7/8): at each syllable
+         * change the largest second difference within 3 ms against the 99th percentile of the 20 ms around (outside it)
+         * (0.9.7: up to 2.6); between two syllables (the gap, the consonant) the level never under -25 dB of the vowels
+         * (0.9.7: -48 dB, cut off by the gate) */
+        static const snt_t NT[] = {{62, 2, 0}, {64, 2, 0}, {65, 3, 0}, {67, 3, 0}, {65, 2, 0}, {64, 2, 0}, {62, 4, 0},
+                                   {64, 2, 0}, {62, 6, 0}};
+        static const snt_t NL[] = {{60, 2, 0}, {62, 2, 0}, {64, 2, 0}, {65, 2, 0}, {67, 4, 0}};
+        double worst = 0, dip = 0;
+        uint32_t nj = 0;
+        vsetup(pi, LG_ES, "sus suenyos son sonidos suaves");
+        trk[0].p[P_ATK] = ENG_FORMANT.presets[pi].env[0];   /* (the preset's envelope, as played) */
+        trk[0].p[P_SUS] = ENG_FORMANT.presets[pi].env[2];
+        n = sing_notes(NT, NELEM(NT), y, FS * 8u, nsy, 0);
+        for (k = 1; k < n / CTL; k++) {
+            uint32_t c = k * CTL, w3 = FS * 3u / 1000u, w20 = FS / 50u, m = 0;
+            double near = 0, p99;
+            if (nsy[k] == nsy[k - 1u] || c < w20 + 2u || c + w20 + 2u >= n)
+                continue;
+            for (i = c - w20; i < c + w20; i++) {
+                double d2 = fabs(y[i] - 2 * y[i - 1u] + y[i - 2u]);
+                if (i + w3 >= c && i < c + w3) { if (d2 > near) near = d2; }
+                else ctx[m++] = d2;
+            }
+            qsort(ctx, m, sizeof ctx[0], cmp_dbl);
+            p99 = ctx[m * 99u / 100u];
+            if (near / p99 > worst)
+                worst = near / p99;
+            nj++;
+        }
+        vsetup(pi, LG_ES, "la le li lo lu");                /* a syllable's vowel into the next note's l */
+        trk[0].p[P_ATK] = ENG_FORMANT.presets[pi].env[0];
+        trk[0].p[P_SUS] = ENG_FORMANT.presets[pi].env[2];
+        n = sing_notes(NL, NELEM(NL), y, FS * 6u, nsy, 0);
+        {
+            double rv = rms(y, (uint32_t)(0.3 * FS), (uint32_t)(0.5 * FS)), lo = 1e9;
+            for (i = (uint32_t)(0.45 * FS); i + FS / 200u < (uint32_t)(2.4 * FS); i += FS / 400u) {
+                double r = rms(y, i, i + FS / 200u);
+                if (r < lo) lo = r;
+            }
+            dip = 20 * log10(lo / rv);
+        }
+        snprintf(what, sizeof what, "syllable joins: no click (%u joins of sus suenyos son sonidos suaves, the worst %.2f x the "
+                 "sound around, <= 1.6), la le li lo lu at most %.1f dB down between notes (>= -25)", nj, worst, dip);
+        check(what, nj >= 8u && worst <= 1.6 && dip >= -25.0);
+    }
+    {   /* the glide as sung: LEGATO, GLIDE 36 TIME (1 + 36 * 36 / 8 = 163 blocks), A3 -> E4 held over, "ah -" (one vowel):
+         * the pitch the render plays (glide_sung) block by block: monotonic, there in 163 +- 2 blocks, an S-curve (at a
+         * quarter of its time <= 20 % of the way, linear 25; at three quarters >= 80 %), no step past 1/8 st a block; the
+         * formants: the vowel's targets (sing_t f) as they were, F1 as sounding (key tracking) moving smoothly (< 0.4 % a
+         * block), no jump; with GLIDE 0 a legato word glides a little (~80 blocks) */
+        static const snt_t GM[] = {{57, 4, 1}, {64, 4, 0}};
+        uint32_t a = 0, b = 0, mono = 1, bigstep = 0, okf = 1;
+        int32_t f1a = 0, f1b = 0;
+        double q25, q75, jmax = 0;
+        vsetup(preset_of("CANTORA ES"), LG_ES, "ah -");
+        trk[0].p[P_GLIDE] = 36;
+        trk[0].p[P_GLMODE] = 1;
+        trk[0].p[P_E3] = 0;
+        n = sing_notes(GM, NELEM(GM), y, FS * 3u, nsy, pq);
+        for (k = 1; k < n / CTL && !a; k++)
+            if (pq[k] != pq[k - 1u] && pq[k - 1u])
+                a = k - 1u;                              /* the last block on A3 */
+        for (k = a; k < n / CTL && pq[k] != 64 * 16 * 256; k++)
+            ;
+        b = k;                                           /* the first on E4 */
+        for (k = a + 1u; k <= b; k++) {
+            mono &= pq[k] >= pq[k - 1u];
+            bigstep |= pq[k] - pq[k - 1u] > 2 * 256;
+        }
+        q25 = (pq[a + (b - a) / 4u] - pq[a]) / (double)(pq[b] - pq[a]);
+        q75 = (pq[a + 3u * (b - a) / 4u] - pq[a]) / (double)(pq[b] - pq[a]);
+        for (k = a; k <= b + 4u; k++) {                  /* F1 as it sounds, per block (eng_formant.c: f x the ratio) */
+            const sing_t *s = &sing[0];
+            int32_t p16 = pq[k] >> 8, r = (int32_t)fmt_ratio(trk[0].p[P_E3] * 16 + ((FMT_FOLOW * (p16 - 60 * 16) * 516) >> 16));
+            int32_t f1 = (int32_t)(((int64_t)s->f[0] * r) >> 16);
+            (void)f1;
+            if (k == a) f1a = r;
+            if (k == b) f1b = r;
+            if (k > a) {
+                int32_t r0 = (int32_t)fmt_ratio(trk[0].p[P_E3] * 16 + ((FMT_FOLOW * ((pq[k - 1u] >> 8) - 60 * 16) * 516) >> 16));
+                double j = fabs((double)r / r0 - 1.0);
+                if (j > jmax) jmax = j;
+            }
+        }
+        {   /* the vowel's targets held over the glide (a melisma: no syllable moves) */
+            vsetup(preset_of("CANTORA ES"), LG_ES, "ah -");
+            trk[0].p[P_GLIDE] = 36;
+            trk[0].p[P_GLMODE] = 1;
+            trk_note_on(&trk[0], 57, 100);
+            vrender(0, FS / 2);
+            {
+                int16_t f0[3] = {sing[0].f[0], sing[0].f[1], sing[0].f[2]};
+                trk_note_on(&trk[0], 64, 100);
+                trk_note_off(&trk[0], 57);
+                for (k = 0; k < 200u; k++) {
+                    vrender(0, CTL);
+                    for (i = 0; i < 3u; i++)
+                        okf &= abs(sing[0].f[i] - f0[i]) <= 2;
+                }
+            }
+        }
+        printf("voice:   glide A3 -> E4 (TIME 36): %u blocks, at 1/4 of its time %.1f %% of the way, at 3/4 %.1f %%, F1's key "
+               "tracking x%.3f, at most %.2f %% a block\n", b - a, q25 * 100, q75 * 100, (double)f1b / f1a, jmax * 100);
+        snprintf(what, sizeof what, "glide as sung: an S-curve (%u blocks, 163 +- 2; %.0f %% at 1/4 of its time, %.0f %% at 3/4), "
+                 "monotonic, smooth; formants continuous across it", b - a, q25 * 100, q75 * 100);
+        check(what, a && b - a >= 161u && b - a <= 165u && mono && !bigstep && q25 <= 0.20 && q25 >= 0.08 && q75 >= 0.80 &&
+                    q75 <= 0.92 && jmax < 0.004 && okf && f1b > f1a);
+        {   /* GLIDE 0, words, legato: a singer's ~60 ms */
+            static const snt_t GW[] = {{60, 4, 1}, {64, 4, 0}};
+            vsetup(preset_of("CANTOR ES"), LG_ES, "la la");
+            n = sing_notes(GW, NELEM(GW), y, FS * 3u, nsy, pq);
+            for (k = 1, a = 0; k < n / CTL && !a; k++)
+                if (pq[k] != pq[k - 1u] && pq[k - 1u])
+                    a = k - 1u;
+            for (k = a; k < n / CTL && pq[k] != 64 * 16 * 256; k++)
+                ;
+            snprintf(what, sizeof what, "a legato word with GLIDE 0 slides as sung: %u blocks (~80, ~60 ms), a syllable on it",
+                     k - a);
+            check(what, a && k - a >= 76u && k - a <= 84u && nsy[k] == 2u);
+        }
+    }
+    {   /* vibrato: a held vowel at C4, 2.4 s: F0 steady in its first 0.25 s (within 6 ct: the jitter), then from ~0.7 s
+         * a swing of 12 .. 30 ct (+-) at 4.5 .. 6.5 Hz; ROBOT EN (BUZZ at its top): none */
+        uint32_t r;
+        for (r = 0; r < 2u; r++) {
+            double c[240], mean = 0, lo = 1e9, hi = -1e9, early = 0, rate;
+            uint32_t m = 0, zc = 0;
+            vsetup(preset_of(r ? "ROBOT EN" : "CANTOR ES"), LG_ES, "a");
+            trk[0].p[P_E5] = 0;                          /* (no breath: a clean F0) */
+            trk_note_on(&trk[0], 60, 100);
+            vrender(y, (uint32_t)(2.4 * FS));
+            for (k = 0; k < 230u; k++) {
+                double f = f0_at(y, k * FS / 100u);
+                c[k] = f > 0 ? 1200.0 * log2(f / 261.6256) : 0;
+            }
+            for (k = 5; k < 25u; k++)
+                if (fabs(c[k]) > early) early = fabs(c[k]);
+            for (k = 80; k < 230u; k++) { mean += c[k]; m++; }
+            mean /= m;
+            for (k = 80; k < 230u; k++) {
+                if (c[k] - mean < lo) lo = c[k] - mean;
+                if (c[k] - mean > hi) hi = c[k] - mean;
+                zc += k > 80u && (c[k] - mean > 0) != (c[k - 1u] - mean > 0);
+            }
+            rate = zc / 2.0 / 1.5;
+            printf("voice:   %s held C4: the first 0.25 s within %.1f ct, from 0.8 s %+.1f .. %+.1f ct at %.1f Hz\n",
+                   r ? "ROBOT EN" : "CANTOR ES", early, lo, hi, rate);
+            if (!r) {
+                snprintf(what, sizeof what, "vibrato on a held note: none at first (%.1f ct), then %+.0f .. %+.0f ct at %.1f Hz",
+                         early, lo, hi, rate);
+                check(what, early < 6.0 && hi > 12.0 && hi < 30.0 && lo < -12.0 && lo > -30.0 && rate > 4.5 && rate < 6.5);
+            } else {
+                snprintf(what, sizeof what, "ROBOT EN (BUZZ at its top): no vibrato, no jitter (%+.1f .. %+.1f ct)", lo, hi);
+                check(what, hi - lo < 2.0);
+            }
+        }
+    }
+}
+
 /* every word preset: sounds, no DC, ends, the same twice; at the corners no clipping */
 static void check_presets(void)
 {
@@ -923,6 +1205,7 @@ int main(int argc, char **argv)
     check_reading();
     check_generator();
     check_sound();
+    check_singer();
     check_presets();
     check_lyric();
     check_cost();
