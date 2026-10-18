@@ -579,6 +579,13 @@ Settings → Pages → Source: **GitHub Actions**, once).
    clicks more than before, hold **REC** while switching it on (one core) and tell us what MENU > ABOUT says.
 4. To go back to the official firmware, use M-VAVE's updater or the installer's **Return to official V15**.
 
+**If the installer does not install** (no WebMIDI, MIDI blocked, FM-1 not found, the port busy with another program,
+an older official firmware, Felucca / Skiff, where to get FM-1.fwsc, an install cut half way): the installer shows a
+*What to do* box for each error and a **COPY REPORT** button (browser, MIDI ports, firmware, step, error) to paste when
+you ask for help. The steps are in the manual: [English](docs/MANUAL.md#the-installer-does-not-install-what-to-do),
+[Español](docs/MANUAL.es.md#no-me-deja-instalar-qué-hacer). Use Chrome or Edge on a computer (not iPhone/iPad), a USB
+data cable straight into it, and close the M-VAVE app, DAWs and other editor tabs.
+
 If the FM-1 stays black after an interrupted update, check whether the computer sees it as **WL80UBOOT** (or a USB
 device 4C4A:8057): that's the chip's boot mode and it can be recovered by running the installer again with another
 cable. If that's not enough, [FM-1 Transporter](https://github.com/kurogedelic/FM-1-transporter) reads and writes the
@@ -677,6 +684,23 @@ Every update is listed here, newest first. (Since 0.6.80 at the end of the page:
   softer** (raise the track's LEVEL if a mix needs it). LOFI's golden renders change (and the mixes with a LOFI part),
   no other engine's; cost: BYTE −2 %, the chip waves and FLOAT +1.4–3 % (callgrind, 8 voices), the target's lofi_render
   loop 253 → 260 (budget +10 %); flash +160 B.
+- **The web installer diagnoses itself** (many could not install). Every failure has its own message and a *What to
+  do* box, in **Spanish**, English and Japanese, and **COPY REPORT** copies what it saw (browser, MIDI ports and what
+  each answered, the FM-1's identity and firmware, the step, the error). Told apart now: no WebMIDI (iPhone/iPad,
+  Safari, an old Firefox), MIDI refused or blocked, a MIDI service that fails to start (asked again), **a port another
+  program holds** (Windows: the M-VAVE app, a DAW, MIDI-OX), a port that does not answer, no FM-1 at all, official
+  **V13/V14 and a future V16**, **Felucca** (FM-1_9XY, INFO 1.x), **Skiff** (FM-1_7XY: it was taken for an official
+  firmware and sent to V15 without its backup), other firmware, an FM-1 that never starts the update, the loader not
+  appearing, the wrong file for Return to official V15 (the ZIP, another version, a JIANT package), WL80UBOOT (a WebUSB
+  check). More robust: scans again with backoff, UPGRADE asked again when nothing was read, the loader waited 90 s
+  (was 30: a driver install on Windows), a fresh MIDIAccess while waiting, Windows port names paired (MIDIIN2 (FM-1)),
+  an FM-1 under an unknown name probed when alone, INFO and the backup's reads retried (a late reply skipped), the
+  backup's LIST given 8 s. **Return to official V15** saves Felucca's and Skiff's complete archives (samples, Skiff's
+  pattern bank: restorable with their own editors) and, when a firmware cannot make one or the backup fails, asks
+  before going on without it (no dead end). The editor lets the FM-1 go while the installer writes in another tab.
+  **404.html**: old and mistyped links (/JIANT/installer/, /JIANT/webapp/, a link with ":1:1" stuck) go to the page
+  they meant. The installer's flows moved to web/fm1diag.js; web/test_web.mjs runs each failure path against a
+  simulated FM-1 and the page in a fake DOM. Manual § 16: "The installer does not install".
 
 ### v0.9.10
 - **VOICE draws its vocal tract alive** (the mock-up's variant C, "Tracto vivo"), in place of 0.9.4's CT head: framed

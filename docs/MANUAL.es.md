@@ -2274,6 +2274,69 @@ encanta.
 
 ## 16. Problemas y preguntas frecuentes
 
+### No me deja instalar: qué hacer
+
+Instalador: <https://juanjiant-bit.github.io/JIANT/webapp/installer/>
+
+**Antes que nada:** si algo falla, el instalador muestra un recuadro **«Qué hacer»** con los pasos para ese error. Si
+con eso no alcanza, apretá **COPIAR INFORME** y pegá el texto en tu mensaje: dice qué navegador usás, qué puertos MIDI
+vio, qué firmware tiene tu FM-1 y en qué paso se cortó.
+
+**«Este navegador no tiene WebMIDI» / no pasa nada al apretar Instalar.**
+Usá **Chrome o Edge en una computadora** (Windows, Mac, Linux o Chromebook). En **iPhone y iPad no se puede** con
+ningún navegador (Apple no permite WebMIDI). Safari no sirve; Firefox no es recomendable. En Android, Chrome con un
+cable OTG puede andar, pero la computadora es más segura.
+
+**«No se permitió el acceso a MIDI» / «MIDI está bloqueado».**
+Hacé clic en el ícono a la izquierda de la dirección → *Configuración del sitio* → *Dispositivos MIDI* → **Permitir**.
+Recargá la página. En Brave, desactivá los Shields para el sitio.
+
+**«No se encontró el FM-1».**
+- El FM-1 tiene que estar **prendido**.
+- Usá un **cable USB de datos**: muchos cables solo cargan. Probá con otro.
+- Conectalo **directo a la computadora**, sin hub ni adaptador.
+- Si sigue igual, apretá **«¿Está en modo boot (WL80UBOOT)?»** en el instalador.
+
+**«Otro programa está usando su puerto MIDI».**
+En Windows solo un programa a la vez puede usar el FM-1. **Cerrá la app de M-VAVE, tu DAW** (Ableton, FL Studio,
+Reaper…), MIDI-OX y **las otras pestañas** con el editor de JIANT. Desconectá y volvé a conectar el FM-1, recargá la
+página y apretá Instalar.
+
+**«Este FM-1 tiene un firmware oficial más viejo» (V14, V13…).**
+Abrí **«Volver al V15 oficial»**, elegí el archivo **FM-1.fwsc del V15** y apretá su botón (no hace falta backup).
+Cuando diga *Listo*, apretá **Instalar**.
+
+**«Este FM-1 tiene Felucca / Skiff / otro firmware».**
+No se puede instalar JIANT directo encima de otro firmware custom (puede dejar el FM-1 sin arrancar). Usá
+**«Volver al V15 oficial»**: primero guarda un archivo de backup (Felucca: con los samples; Skiff: su propio formato,
+que solo restaura el editor de Skiff) y después escribe el V15. Si ese firmware no puede hacer backup, la página te
+pregunta antes de seguir sin él. Después apretá **Instalar**.
+
+**¿De dónde saco el FM-1.fwsc?**
+De la página de descargas de **M-VAVE** (<https://www.m-vave.com/download>): buscá el FM-1, bajá el **firmware V15**,
+**descomprimí el ZIP** y elegí el archivo **FM-1.fwsc** (699.956 bytes). No lo podemos subir nosotros: es de M-VAVE.
+Si elegís el ZIP, otra versión o un archivo de JIANT, el instalador te dice cuál elegiste y qué falta.
+
+**Se cortó a mitad de camino («No se encontró el FM-1 en modo de actualización», «Se detuvo», «Se perdió la conexión»).**
+**No apagues el FM-1.** Volvé a conectar el cable (si podés en otro puerto) y apretá **el mismo botón** otra vez:
+sigue donde estaba. En Windows, la primera vez puede tardar un minuto en instalar el driver del modo de actualización:
+esperá y apretá de nuevo.
+
+**La pantalla quedó negra.**
+Conectalo y apretá Instalar de nuevo. Si la computadora lo ve como **WL80UBOOT**, está en el modo boot del chip:
+probá otro cable directo a la computadora; si no vuelve, se recupera con
+[FM-1 Transporter](https://github.com/kurogedelic/FM-1-transporter).
+
+**«Page not found» / la página no existe.**
+Usá exactamente <https://juanjiant-bit.github.io/JIANT/webapp/installer/> (sin nada pegado al final). Los enlaces
+viejos (`/JIANT/installer/`, `/JIANT/webapp/`…) ahora te redirigen solos.
+
+**¿Qué versión elijo?**
+La que dice **(la última)** es la versión estable aprobada. Las de abajo son anteriores (para volver atrás). El
+instalador *preview* (enlace al pie) tiene la próxima versión sin aprobar: solo para probar.
+
+### El firmware
+
 **T5 o T6 no suenan.** TRACKS está en 4 (el valor por defecto): T5 y T6 están dormidas. GLO > SYSTEM > TRACKS **6** (o
 MENU > AUDIO > TRACKS). La pantalla te avisa cuando tocás en una pista dormida.
 

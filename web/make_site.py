@@ -6,7 +6,9 @@
   index.html                  redirect to the installer (the old URL keeps working)
   firmware/felucca-VER.fwsc   the package (+ LICENSE, LICENSING.md, LICENSES/: the package holds
                               JieLi SDK files under Apache-2.0, see LICENSING.md)
-  webapp/installer/index.html index_pkg.html, self-contained (fm1pkg.js, fm1ota.js, metadata inlined)
+  webapp/installer/index.html index_pkg.html, self-contained (fm1pkg.js, fm1ota.js, fm1backup.js, fm1diag.js and the
+                              metadata inlined)
+  404.html                    web/404.html: an old or mistyped link (/installer/, /webapp/, ...:1:1) to the page it meant
   webapp/editor/index.html    editor.html (+ fukiai.ttf, FUKIAI-LICENSE.txt)
   src/                        not touched
 
@@ -81,7 +83,8 @@ def main(pkg, version, out, prev=None):
     html = (HERE / "index_pkg.html").read_text(encoding="utf-8")
     lib = strip_module((HERE / "fm1pkg.js").read_text(encoding="utf-8")) + "\n" + \
         strip_module((HERE / "fm1ota.js").read_text(encoding="utf-8")) + "\n" + \
-        strip_module((HERE / "fm1backup.js").read_text(encoding="utf-8"))
+        strip_module((HERE / "fm1backup.js").read_text(encoding="utf-8")) + "\n" + \
+        strip_module((HERE / "fm1diag.js").read_text(encoding="utf-8"))
     name = f"felucca-{re.sub(r'[^A-Za-z0-9.-]', '-', version)}.fwsc"
     old = earlier(Path(prev), version, product) if prev else []
     versions = [{"version": version, "file": name}] + [e for e, _ in old]
@@ -117,6 +120,7 @@ def main(pkg, version, out, prev=None):
     for f in ("fukiai.ttf", "FUKIAI-LICENSE.txt", "fm1backup.js"):
         if (HERE / f).exists():
             shutil.copy(HERE / f, ed / f)
+    shutil.copy(HERE / "404.html", out / "404.html")
     (out / "index.html").write_text(
         '<!doctype html><meta charset="utf-8"><title>Felucca</title>'
         '<meta http-equiv="refresh" content="0; url=webapp/installer/">'

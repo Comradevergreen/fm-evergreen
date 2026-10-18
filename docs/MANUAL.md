@@ -2139,6 +2139,36 @@ Back up before updating, before returning to stock, and whenever you finish some
 
 ## 16. Troubleshooting and FAQ
 
+### The installer does not install: what to do
+
+Installer: <https://juanjiant-bit.github.io/JIANT/webapp/installer/>. When something fails it shows a **What to do**
+box with the steps for that error; if that is not enough, press **COPY REPORT** and paste it into your message (the
+browser, the MIDI ports it saw, the FM-1's firmware, the step it stopped at).
+
+- **"This browser has no WebMIDI"**: Chrome or Edge on a computer. **iPhone and iPad cannot** (no browser there has
+  WebMIDI); Safari has none; Android Chrome with an OTG cable may work, a computer is safer.
+- **MIDI not allowed / blocked**: the icon left of the address → Site settings → MIDI devices → Allow; reload.
+  Brave: Shields off for the site.
+- **FM-1 not found**: switch it on; a USB **data** cable (many only charge); straight into the computer, no hub. Then
+  try **Is it in boot mode (WL80UBOOT)?**.
+- **Another program is using its MIDI port** (Windows: one program per port): close the M-VAVE app, the DAW, MIDI-OX
+  and other tabs with the JIANT editor; replug, reload, press Install.
+- **An older official firmware (V14, V13…)**: Return to official V15 (no backup needed), then Install.
+- **Felucca, Skiff or another custom firmware**: Return to official V15 first. It saves that firmware's backup first
+  (Felucca's with its samples; Skiff's in its own format, for Skiff's editor) or, when it cannot make one, asks before
+  going on without; then Install.
+- **Where is FM-1.fwsc?** M-VAVE's download page (<https://www.m-vave.com/download>): FM-1, firmware V15, unzip it, the
+  file FM-1.fwsc (699,956 bytes). We cannot host it: it is M-VAVE's. Picking the ZIP, another version or a JIANT
+  package is told apart.
+- **Stopped half way** (update mode not found, stopped, connection lost): do not switch it off; replug and press the
+  same button: it resumes. Windows may take a minute to install the update mode's driver the first time.
+- **Black screen**: connect it and press Install again; **WL80UBOOT** is the chip's boot mode (another cable, straight
+  in; else [FM-1 Transporter](https://github.com/kurogedelic/FM-1-transporter)).
+- **Page not found**: use the address above exactly; old links (`/JIANT/installer/`, `/JIANT/webapp/`, a link with
+  `:1:1` stuck to it) now redirect by themselves.
+
+### The firmware
+
 **T5 or T6 is silent.** TRACKS is set to 4 (the default): T5 and T6 are asleep. GLO > SYSTEM > TRACKS **6** (or
 MENU > AUDIO > TRACKS). The screen tells you when you play into an asleep track.
 
