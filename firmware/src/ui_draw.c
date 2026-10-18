@@ -1014,6 +1014,14 @@ static __attribute__((noinline)) void foot_crumbs(char *b, uint32_t n)   /* b ho
         str_cpy(b, "HOME", n);
         return;
     }
+    if (lock_held()) {                                  /* (0.9.12) a step held: the page its knobs lock (SELECT walks */
+        uint8_t v[16];                                  /* it, ui_input.c lock_select): LOCK . KIT 2, LOCK . EDIT 1 . OSC */
+        uint32_t at, m = lock_chain(v, &at);
+        str_cpy(b, "LOCK \xB7 ", n);                   /* (out of the walk: ENV, LFO, FX's page; HOME's four) */
+        str_cpy(b + 7, at < m ? nv_name(SEC_EDIT, v[at], ui.plk_src - 1u) : ui.plk_src ? PAGES[ui.plk_src - 1u].title : "HOME",
+                n - 7u);
+        return;
+    }
     if (!lz_on()) {
         page_title(ti);
         str_cpy(b, FAM_CRUMB[cur_page()->fam % FAM_COUNT], n);
@@ -1066,12 +1074,15 @@ static int32_t crumb_count(char *b)
     } else if (lz_fam() == LZ_LAYER) {
         k = ui.lylv % 3u;
         n = 3;
+    } else if (lock_held()) {                           /* (0.9.12) the locks' page in their walk */
+        uint8_t v[16];
+        n = lock_chain(v, &k);
     } else {
         uint8_t cnt[8], gi[8];
         uint32_t g, p;
         (void)nav_groups(cnt, gi, &g, &p, &k, &n);
     }
-    if (n < 2u)
+    if (n < 2u || k >= n)
         return 0;
     fmt_int(b, (int32_t)k + 1);
     str_cpy(b + str_len(b), "/", 2);

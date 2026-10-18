@@ -135,6 +135,7 @@ atajos de esa capa; en la grilla DRUM son pasos y carriles; en la pantalla NAME 
 | **SEQ** mantenido + **G5** | **CLR STEP**: borra el paso del cursor y sus locks (NOTE con una nota en foco: esa nota; AUTO LIST: borra el registro). |
 | **SAVE** mantenido + **C5** | **NAME**: renombra el slot en SAVE > USER, la sección o el proyecto en SECTIONS / PROJECTS. |
 | Un paso mantenido (SEQ > STEP) + **KNOB 1–4** | Un parameter lock en ese paso. |
+| Un paso mantenido (SEQ > STEP) + **SELECT** | (0.9.12) La página que bloquean esas perillas: recorre las páginas EDIT de la pista (KIT → KIT 2 → LEVELS …; EDIT 1 → EDIT 2 → FILTER …) sin salir de STEP. |
 | **OCT− + OCT+** mantenidos al encender | HARDWARE CALIBRATION. |
 | **OCT− + OCT+** mantenidos 5 s con el equipo funcionando | Modo de actualización (UBOOT), con una cuenta regresiva desde los 2 s; soltá para cancelar. |
 
@@ -1213,9 +1214,37 @@ seleccionada se graban como **automatización**. MENU > AUDIO tiene el **CLICK**
 
 En **SEQ > STEP** (el grupo BAR), **mantené un paso** (una tecla de la grilla, o la nota que estás entrando en el roll) y girá una
 perilla: ese paso recibe su propio valor del parámetro que esa perilla edita en la última página de sonido que
-visitaste. Tocá EDIT mientras mantenés el paso para borrar sus locks. Los eventos de automatización y los locks
-comparten **64 registros por sección** (todas las pistas juntas); cuando se acaban, la pantalla dice
-**AUTOMATION FULL**.
+visitaste (al encender: las cuatro perillas de HOME). Mientras mantenés el paso, las tarjetas muestran esas cuatro: un
+valor bloqueado brillante, el propio del sonido en DIM.
+
+**Elegir la página mientras mantenés (0.9.12).** Sin soltar el paso, girá **SELECT**: las perillas pasan a la página
+siguiente de las **páginas EDIT** de la pista, la misma cadena que recorre SELECT en EDIT, sin salir de STEP. Las
+tarjetas muestran los cuatro parámetros de esa página y el pie dice cuál es, **LOCK · KIT 2** con su lugar **2/7**. En
+una pista DRUM-X el recorrido es KIT (MRPH TUNE TONE DECY) → KIT 2 (NOIS FM FOLD DRV) → LEVELS → LEVELS 2 → FILTER →
+STEREO → VOICE; en un sinte EDIT 1 → EDIT 2 → FILTER → MORPH … → VOICE 2 (las páginas que tenga ese motor). Se saltean
+las páginas cuyos valores no son parámetros de la pista: SOUND 1–4, KIT 3 y X-MOD de DRUM guardan los valores propios
+del kit, y FOCUS y las páginas de operadores de FM6 no tienen cuatro parámetros de la pista en sus perillas, así que
+ninguna se puede bloquear. Para
+bloquear DECAY y después FOLD en un paso de batería: mantené el paso, girá SELECT hasta KIT, girá KNOB 4, un paso más
+de SELECT hasta KIT 2, girá KNOB 3, soltá. Al soltar, la página queda como la de los locks (el próximo paso mantenido
+empieza ahí, y EDIT abre ahí). Desde una página fuera del recorrido (ENV, LFO, FX, las cuatro de HOME) el primer paso
+va a la primera del recorrido. Sin un paso mantenido, SELECT recorre las páginas de SEQ como siempre. Antes de la
+0.9.12 SELECT no servía con un paso mantenido: salía de STEP.
+
+**Los locks en una pista DRUM-X** son del paso: cada sonido que suena en ese paso toca con los valores bloqueados (los
+de KIT son de todo el kit). Las teclas negras 1–8 siguen eligiendo el carril: mantener un paso vacío le pone el golpe
+de ese carril, y una tecla de paso apretada sobre un golpe y mantenida para un lock conserva el golpe. Para darle a un
+solo sonido su propio valor en un paso, bloqueá su nivel en LEVELS.
+
+**Borrar (0.9.2 en adelante).** EDIT ya nunca borra un paso. **SEQ mantenido + G5** (CLR STEP) borra el paso del
+cursor, con sus locks. **Un paso mantenido + EDIT** borra solo los locks de ese paso; las notas o los golpes quedan (la
+pantalla dice **LOCKS CLEARED**, o **NO LOCKS**). Para cambiar o borrar un lock o un evento de automatización grabado
+en un paso en particular, usá **SEQ › AUTO LIST**: cada registro es una fila (KNOB 1 la fila, 2 el paso, 3 el
+parámetro, 4 el valor), OCT+ lo cambia entre LOCK y AUTO, y SEQ + G5 lo borra. **+ ADD LOCK** agrega un lock en el
+paso del cursor.
+
+Los eventos de automatización y los locks comparten **64 registros por sección** (todas las pistas juntas); cuando se
+acaban, la pantalla dice **AUTOMATION FULL**.
 
 ### Escala
 

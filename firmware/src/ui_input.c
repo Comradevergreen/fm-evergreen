@@ -590,7 +590,8 @@ static void grid_keys(uint32_t pressed)
 
 /* ------------------------------------------------- parameter locks --- */
 /* 1.1 (Discussions #75, #53): on SEQ > STEP, hold a step and turn KNOB 1..4: the step gets a lock of the parameter
- * that knob edits on the sound page shown last (ui.plk_src: HOME's four, ENV, LFO, FX, EDIT 1 / 2, OP ENV, ..; the
+ * that knob edits on the sound page shown last (ui.plk_src: HOME's four, ENV, LFO, FX, EDIT 1 / 2, OP ENV, ..; 0.9.12:
+ * SELECT meanwhile walks the EDIT pages, lock_select; the
  * cards show those four while a step is held, a locked value bright, the sound's own DIM). The step held: on the
  * DRUM grid its white keys (several at once: each gets the lock; a press on a hit takes it away only when let go,
  * and not at all when it was held for a lock), on the roll the step being entered (its note keys held). [EDIT]
@@ -652,6 +653,21 @@ static void lock_turn(uint32_t k, int32_t s, uint64_t held)
         if (motion_set_lock(t, i, id, (int16_t)param_turn(d, v, s)) == 2)
             break;                                      /* (full: ui_notices says so) */
     }
+}
+
+/* (0.9.12) a step held + SELECT: the page KNOB 1..4 lock, a detent a page along lock_chain (no wrap; from a page out of
+ * it, HOME's four or ENV LFO FX: its first). It stays the page shown last for the locks (the next hold starts on it)
+ * and EDIT's page last shown; the cards show its four, the footer LOCK . page and n/N */
+static void lock_select(int32_t s)
+{
+    uint8_t v[16];
+    uint32_t at, n = lock_chain(v, &at);
+    int32_t to = at < n ? clamp((int32_t)at + s, 0, (int32_t)n - 1) : 0;
+    if (!n)
+        return;
+    ui.plk_src = (uint8_t)(nv_page(SEC_EDIT, v[to]) + 1u);
+    nav_mem_put(nav_key(SEC_EDIT), v[to]);
+    ui.force = 1;
 }
 
 /* [EDIT] with the steps `held` held: their locks go */
@@ -2441,7 +2457,10 @@ static void ui_input_frame(void)
         }
     } else if ((s = panel_enc(EN_SELECT)) != 0 && !lay && !ui.menu) {   /* (0.9.2, rule 1) SELECT alone: the section's
                                                         * chain, a page a detent (HOME's: ECO MACROS BEING ROUTES GEN 1..3) */
-        nav_select(s);
+        if (lock_held())                                /* (0.9.12) a step held on STEP: the page its locks take */
+            lock_select(s);
+        else
+            nav_select(s);
     }
     for (k = 0; k < 4u && !kq; k++) {
         const page_t *pg = cur_page();

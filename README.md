@@ -648,6 +648,22 @@ JIANT's modifications are distributed under the same license.
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
 
+### v0.9.12 (draft)
+- **Parameter locks: choose the page while you hold the step.** Until now a step's knobs locked the four of the sound
+  page visited last, so locking DECAY and then FOLD on one drum step meant leaving SEQ › STEP for EDIT and back, twice.
+  Now, with a step held on SEQ › STEP (the roll's entry or a DRUM grid key), **SELECT walks the track's EDIT pages**
+  (the same chain as SELECT on EDIT, less the pages that cannot lock: DRUM's SOUND 1–4, KIT 3 and X-MOD hold the kit's
+  own values; FOCUS and FM6's operators): DRUM-X KIT → KIT 2 → LEVELS → LEVELS 2 → FILTER → STEREO → VOICE, a synth
+  EDIT 1 → EDIT 2 → FILTER → MORPH … Without leaving STEP the cards show that page's four (locked bright, the sound's
+  own DIM) and the footer says **LOCK · KIT 2  2/7**; the knobs lock them on the held step(s). Let go and the page
+  stays the locks' (the next hold starts there; EDIT opens on it). SELECT with a step held used to leave STEP; with
+  none held it walks SEQ as before. DRUM-X: the lane picked with the black keys gets the hit, the lock stays the
+  step's (LEVELS locks one sound's level). The manual's *Parameter locks* also says plainly what clears what since
+  0.9.2 (EDIT never clears a step; SEQ + G5 does; a held step + EDIT clears only its locks) and points to SEQ › AUTO
+  LIST to edit a lock or recorded automation on a particular step. UI only, nothing in the audio path; flash +352 B
+  (image 576192 → 576544 B), .data+.bss unchanged. ui_test (test_lock_pages), ui_render scene drum_lock_page, the
+  navigation map's combos and the controls cheat sheet.
+
 ### v0.9.11
 - **GLO › LIVE: the six sequences in parallel, with live modifiers** (the approved mock-up *secuencias*, its MANO and
   RIELES versions), a new first group of GLO (**LIVE · MIX · GLOBAL · SYSTEM**; at power-on GLO still opens the MIXER).

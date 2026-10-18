@@ -308,19 +308,19 @@ static const char *nav_group_tab(uint32_t g)
     const ch_t *c = nav_ch(nav_sec());
     return c->g[g % c->ng].tab ? c->g[g % c->ng].tab : c->g[g % c->ng].nm;
 }
-/* the page's name in the chain: EDIT 1 . OSC (the engine's page name), KIT, TRACKS DEST, SENDS .. */
-static __attribute__((noinline)) const char *nav_page_name(void)
+/* the name in the chain of entry e of section sec, page pg: EDIT 1 . OSC (the engine's page name), KIT, TRACKS DEST,
+ * SENDS .. (nav_page_name: the page shown; 0.9.12 the locks' page, ui_draw.c foot_crumbs) */
+static __attribute__((noinline)) const char *nv_name(uint32_t sec, uint32_t e, uint32_t pg)
 {
     static char b[24];
-    uint32_t sec = nav_sec(), e = nav_cur();
     const nv_t *v = &nav_ch(sec)->e[e];
-    if (sec != SEC_HOME && v->t && !str_eq(PAGES[ui.page].title, v->t)) {   /* (PHRASES, CHANCE: their own) */
-        str_cpy(b, PAGES[ui.page].title, 24);
+    if (sec != SEC_HOME && v->t && !str_eq(PAGES[pg].title, v->t)) {   /* (PHRASES, CHANCE: their own) */
+        str_cpy(b, PAGES[pg].title, 24);
         return b;
     }
     str_cpy(b, v->nm ? v->nm : v->t, 24);
-    if (sec == SEC_EDIT && v->g == 0u && !v->nm && PAGES[ui.page].scope == SC_ENGINE) {   /* (EDIT 1 . OSC) */
-        const char *pt = trk_engp(TSEL)->page_title[PAGES[ui.page].id[0] != P_E0];
+    if (sec == SEC_EDIT && v->g == 0u && !v->nm && PAGES[pg].scope == SC_ENGINE) {   /* (EDIT 1 . OSC) */
+        const char *pt = trk_engp(TSEL)->page_title[PAGES[pg].id[0] != P_E0];
         if (pt && pt[0] && pt[0] != '-') {
             str_cpy(b + str_len(b), " \xB7 ", 4);
             str_cpy(b + str_len(b), pt, 24 - str_len(b));
@@ -328,6 +328,7 @@ static __attribute__((noinline)) const char *nav_page_name(void)
     }
     return b;
 }
+static const char *nav_page_name(void) { return nv_name(nav_sec(), nav_cur(), ui.page); }
 /* (code, the tests, the renders) the page of section sec named nm in its chain */
 static int nav_put(uint32_t sec, const char *nm)
 {
