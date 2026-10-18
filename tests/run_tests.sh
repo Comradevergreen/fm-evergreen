@@ -38,6 +38,8 @@
 #                   (1.2: when it writes, the power-on restore, damaged copies, a write cut short, wear over a session),
 #                   malformed transfers, transport-stop timeouts, MIDI and UART recovery; the MENU settings over the
 #                   editor (MENU_DESC / MENU_SET: every item, clamping, unknown ids, saving, USB SERIAL applied later).
+# LIVE (tests/live_test.c, 0.9.11): GLO > LIVE's modifiers (seq_live.c, ui_live.c): their timing, the ghost, RETURN, BYPASS,
+#                   COMMIT + UNDO, recording at the ghost, MANO's keys, RIELES' PISTAS, the GLO chain.
 # RATCH (tests/ratchet_test.c): a step's ratchet (x1..x4): its parts in the sequencer (equal, gated, chords and drum
 #                   hits whole, one chance roll, swing, no slide or tie out, STOP), FUN8 round trip and older projects x1,
 #                   user preset patterns, SEQ > CHANCE KNOB 3 and the roll / grid drawing.
@@ -217,6 +219,8 @@ if [ -f build/gen/felucca_tables.h ]; then
     run "STEMS (0.9.8): DICE songs, each stem = its track's solo render (FULL LITE ECO, CORES 1 / 2), the sum = the mix, the SLICER" "$OUT/stems_test"
     $CC -O1 -w -Ibuild/gen -Ifirmware/src -o "$OUT/ratchet_test" tests/ratchet_test.c -lm
     run "RATCH: x1..x4 in a step (notes, chords, drum hits), gates, chance, swing, projects, user presets, CHANCE page" "$OUT/ratchet_test"
+    $CC -O1 -w -Ibuild/gen -Ifirmware/src -o "$OUT/live_test" tests/live_test.c -lm
+    run "LIVE (0.9.11, GLO > LIVE MANO / RIELES): RATE on the beat, CORTE / LOOP / RATCH / THIN / REV / PING on the 1/16, the ghost, RETURN, BYPASS, COMMIT + UNDO, REC at the ghost, PISTAS ALL..T6, MANO's keys only there, the chain" "$OUT/live_test"
     $CC -O1 -w -Ibuild/gen -Ifirmware/src -o "$OUT/drumx_oct_test" tests/drumx_oct_test.c -lm
     run "DRUM-X OCTAVES (0.8.5): ratchets above the kit, SHORT GHOST FLAM below, live, recorded and played back as heard, MIDI bands" "$OUT/drumx_oct_test"
     $CC -O1 -w -Ibuild/gen -Ifirmware/src -o "$OUT/midi_control_test" tests/midi_control_test.c -lm

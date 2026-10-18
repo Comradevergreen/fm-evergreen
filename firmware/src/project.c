@@ -1809,6 +1809,7 @@ static void system_init(void)
     memset(dx_snd, 0, sizeof dx_snd);
     memcpy(dx_lay, DX_LAY_DEF, sizeof dx_lay);
     memset(fg_set, 0, sizeof fg_set);                   /* (0.6.52) no FUGUE */
+    live_return((1u << NTRK) - 1u);                     /* (0.9.11) no LIVE modifier (ui_live.c) */
     dx_mute_set(0);
     fm6_init();
     for (i = 0; i < NTRK; i++) {

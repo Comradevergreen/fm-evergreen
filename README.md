@@ -648,6 +648,22 @@ JIANT's modifications are distributed under the same license.
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
 
+### v0.9.11 (draft)
+- **GLO › LIVE: the six sequences in parallel, with live modifiers** (the approved mock-up *secuencias*, its MANO and
+  RIELES versions), a new first group of GLO (**LIVE · MIX · GLOBAL · SYSTEM**; at power-on GLO still opens the MIXER).
+  **MANO** makes the keys a performance board: the black keys 1–6 pick the tracks while held (several at once, none =
+  all), the white keys are momentary modifiers (/2 x2 3/2 2/3, LOOP 8 4 2 1, REV, PING, RATCH x2 x3, THIN, OCT±,
+  RETURN) with a LATCH key, GIRO and RND; KNOB 1–3 RATE LOOP THIN, KNOB 4 the DJ FILTER; off the page the keys play
+  notes again. **RIELES** draws six rails, each loop at its own length with its playhead and its ghost; KNOB 1 PISTAS
+  (ALL, then T1 … T6, SYN, DRM), KNOB 2 RATE (/4 … x4 with 2/3 and 3/2, on the next beat), KNOB 3 CORTE (the first N
+  steps), KNOB 4 DENS (THIN ← → RATCH x2–x4). Both pages drive one set of modifiers per track (the knobs a latched
+  layer, MANO's keys on top). Never destructive: a ghost playhead keeps each track's true place; OCT− tapped RETURNs on
+  the next beat, held is BYPASS (the original), OCT+ twice COMMITs into DIV (or STRETCH), LEN, ROTATE and CHANCE, with
+  UNDO (GLO + G4). Recording while modified writes at the ghost's step. Not saved (performance state). Nothing in the
+  audio render (cpu_vg song/cputest as before); the sequencer alone: see seqtick/plain vs seqtick/live in
+  tests/cpu_baseline_vg.txt. Flash +7108 B (image 568940 → 576048 B), .data + .bss unchanged, the pool's spare
+  10784 → 10528 B, RAM code 22460 → 22512 B. tests/live_test.c; the manual's § 11.
+
 ### v0.9.10
 - **VOICE draws its vocal tract alive** (the mock-up's variant C, "Tracto vivo"), in place of 0.9.4's CT head: framed
   close (~80 × 62 units: the mouth and the neck; the crown off the panel), the head's outline a faint ghost and the

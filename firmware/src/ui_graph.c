@@ -1301,7 +1301,8 @@ static int drift_on(void)
     if (UI_NO_DRIFT)
         return 0;
     return !ui.home && !sys_load && !(ui_prefs & PREF_ANIM_OFF) && strip_kind() == SK_NONE && !roll_view(cur_page()) &&
-           g != GR_ROLL && g != GR_SHAPE && g != GR_COMP && g != GR_FUGUE &&   /* (0.8.3: LENTE's step, the heads) */
+           g != GR_ROLL && g != GR_SHAPE && g != GR_COMP && g != GR_FUGUE && g < GR_LIVE &&   /* (0.8.3: LENTE's step, the heads;
+                                                         * 0.9.11: LIVE's rails, the enum's last) */
            g != GR_STEPS && g != GR_CHANCE && g != GR_BROWSE && g != GR_USER && g != GR_SLOTS && g != GR_EVENTS &&
            g != GR_SONG && g != GR_TOOLS && g != GR_PATS;
 }
@@ -1463,6 +1464,8 @@ static uint32_t graph_signature(void)
         h = (h ^ (n + 1u) * 40503u ^ ev_row(n) * 2654435761u ^ ((uint32_t)ui.ev_step << 8 | ui.ev_id) * 104729u) * 16777619u;
     }
     if (pg->graph == GR_CHANCE) h ^= ui.cursor * 40503u + step_chance(&t->step[ui.cursor]);
+    if (pg->graph == GR_LIVE)                        /* (0.9.11) GLO > LIVE: the playheads, the ghosts, the keys */
+        h = live_sig(h);
     if (pg->graph == GR_FUGUE) {                     /* (0.6.52) the heads, their settings, where they are */
         uint32_t ti = song.sel % NTRK, k;
         h = (h ^ (steps_hash(t) + (song.playing ? seq_src(t, t->seq_idx) : 0xFFFFu) * 31u + fg_ui * 7u)) * 16777619u;
@@ -2086,7 +2089,10 @@ static void draw_graph(void)
         gen_panel();
     } else if (ui.home) {
         cv_oy = 0;
-        graph_home_lz();                             /* (0.8.5: HOME's lens, ECO / BEING; JIANT 0.5: the system's
+        graph_home_lz();
+    } else if (pg->graph == GR_LIVE) {               /* (0.9.11) GLO > LIVE: the rails, MANO's board (ui_live.c) */
+        cv_oy = 0;
+        graph_live();                             /* (0.8.5: HOME's lens, ECO / BEING; JIANT 0.5: the system's
                                                       * beings, was the scope) */
     } else if (bars_view(pg)) {                      /* (0.8.3) LENTE's PATTERN: PATTERN STRETCH TRACK, the bars */
         cv_oy = 0;

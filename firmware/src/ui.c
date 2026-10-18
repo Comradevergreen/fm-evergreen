@@ -318,11 +318,21 @@ static uint16_t val_col(uint32_t c) { return c == ui.hot_col && ui.hot_t ? T_ACC
 enum { CF_NONE, CF_CLEAR_SEQ, CF_CLEAR_TRK, CF_OVR_PROJ, CF_OVR_USER, CF_LOAD_PAT,
        CF_DEL_ROW, CF_CLEAR_SONG, CF_INIT_SOUND, CF_CLEAR_MOTION, CF_ERASE_USER, CF_CLEAR_PFX,
        CF_RECALL_SOUND, CF_CLEAR_ALL, CF_DICE_ALL, CF_INIT_SYS, CF_DICE_SOUND, CF_DICE_SEQ, CF_DICE_LFO,
-       CF_DICE_FX, CF_CPU_TEST, CF_MUT_BACK };   /* ui.confirm: TOOLS' clears; (0.6.21) HOME + SELECT:
+       CF_DICE_FX, CF_CPU_TEST, CF_MUT_BACK, CF_LIVE_COMMIT };   /* ui.confirm: TOOLS' clears; (0.6.21) HOME + SELECT:
                                    * everything diced; (0.6.65) EDIT + SELECT: keep the diced sound?; (0.6.67) SEQ / LFO / FX + SELECT:
                                    * keep the diced sequence / LFO / effects?;
                                    * SAVE over a used slot; a pattern over the user's steps;
-                                   * USER ERASE; (0.9.3) MUTATE turned OFF: BACK TO BEFORE MUTATE? */
+                                   * USER ERASE; (0.9.3) MUTATE turned OFF: BACK TO BEFORE MUTATE?; (0.9.11) LIVE's COMMIT */
+/* (0.9.11) GLO > LIVE: MANO, RIELES (ui_live.c, included by ui_layer.c) */
+static int live_page(void);
+static int live_mano(void);
+static void live_frame(void);
+static void live_knob(uint32_t slot, int32_t steps);
+static void live_cards(void);
+static void graph_live(void);
+static uint32_t live_sig(uint32_t h);
+static uint32_t live_leds(void);
+static void live_commit(uint32_t m);
 
 /* MENU > DISPLAY > SCREEN OFF (1.1.5): after a while with no input on the panel the screen goes dark (the backlight
  * stays on: lcd.c lcd_power)
@@ -478,7 +488,7 @@ static uint32_t large_kind(void)
         return LK_TALL;
     g = cur_page()->graph;
     return g == GR_BROWSE || g == GR_SLOTS || g == GR_USER || g == GR_PATS || g == GR_SONG || g == GR_ROLL ||
-           g == GR_CHANCE || g == GR_COMP || g == GR_EVENTS || g == GR_LYRIC ? LK_LABEL : LK_TALL;
+           g == GR_CHANCE || g == GR_COMP || g == GR_EVENTS || g == GR_LYRIC || g == GR_LIVE ? LK_LABEL : LK_TALL;
 }
 /* the geometry of the page shown: the cards' height, the panel's top and height. (0.8.5) A lens page (lz_on): the
  * mock-up's (LZ_*), under its level tabs; a layer's map over it: the usual layout */

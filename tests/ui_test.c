@@ -219,6 +219,7 @@ static void ui_power_on(void)
     scrn.idle = fm1_ms;
     kb_asleep = 0;
     panel_moved = 0;
+    memset(&lv, 0, sizeof lv);                          /* (0.9.11) no LIVE modifier, no key on MANO (seq_live.c) */
 }
 /* card slot drawn with MOTION's mark (ui_draw.c card_mot: its icon, or a long label in the theme colour) */
 static int card_motion(uint32_t slot) { return (card_mot >> slot) & 1u; }
@@ -3022,8 +3023,9 @@ static int test_product_ux(void)
     turn(EN_SELECT, 1); frames(320); ok = str_eq(cur_page()->title, "SENDS");   /* (0.9.2: SELECT the chain; a GLO tap */
     press(B_GLO); frames(320); ok &= cur_page()->fam == FAM_GLO && str_eq(cur_page()->title, "GLOBAL");   /* the next group) */
     press(B_GLO); frames(320); ok &= str_eq(cur_page()->title, "SYSTEM");
-    press(B_GLO); ok &= cur_page()->graph == GR_TRK && str_eq(cur_page()->title, "MIXER");
-    bad += check("0.9.2 GLO: SELECT MIXER > SENDS, a GLO tap the next group: GLOBAL > SYSTEM > MIXER (was SENDS by a tap)", ok);
+    press(B_GLO); frames(320); ok &= cur_page()->graph == GR_LIVE && str_eq(cur_page()->title, "MANO");   /* (0.9.11: LIVE */
+    press(B_GLO); ok &= cur_page()->graph == GR_TRK && str_eq(cur_page()->title, "MIXER");          /* first, then MIX) */
+    bad += check("0.9.2 GLO: SELECT MIXER > SENDS, a GLO tap the next group: GLOBAL > SYSTEM > LIVE (MANO) > MIXER", ok);
     go_home(); hold(B_SEQ);
     bad += check("long SEQ off the SEQ pages is a tap (no SONG: SAVE held, G5)", cur_page()->graph != GR_SONG);
     go_page(GR_SONG);
@@ -10691,24 +10693,27 @@ static int test_lz_key(void)
 }
 
 /* GLO (0.9.2, ui_lzpage.c): MIX (MIXER, SENDS) . GLOBAL . SYSTEM one chain; a GLO tap the next group (MIX's first: MIXER),
- * from elsewhere the page left (was always MIXER); SENDS's knobs the track's sends */
+ * from elsewhere the page left (was always MIXER); SENDS's knobs the track's sends. (0.9.11) LIVE (MANO, RIELES) first in
+ * the chain; at power-on GLO still opens MIXER */
 static int test_lz_glo(void)
 {
     int bad = 0, ok;
     int16_t v;
     ui_power_on(); frame();
     press(B_GLO); frame();
-    ok = pd_on() && lz_fam() == LZ_GLO && pd_level() == 0u && str_eq(cur_page()->title, "MIXER") && lz_tab_lit(0) &&
-         lz_crumb_is("GLO \xB7 MIX \xB7 MIXER") && lz_count_is("1/4");
+    ok = pd_on() && lz_fam() == LZ_GLO && pd_level() == 0u && str_eq(cur_page()->title, "MIXER") && lz_tab_lit(1) &&
+         lz_crumb_is("GLO \xB7 MIX \xB7 MIXER") && lz_count_is("3/6");
     turn(EN_SELECT, 1); frame();
     ok &= str_eq(cur_page()->title, "SENDS") && lz_crumb_is("GLO \xB7 MIX \xB7 SENDS");
     v = TSEL->p[P_DLY];
     turn(EN_K3, 4); frame();
     ok &= TSEL->p[P_DLY] > v;
     frames(320); press(B_GLO); frame();
-    ok &= pd_level() == 1u && str_eq(cur_page()->title, "GLOBAL") && lz_tab_lit(1);
+    ok &= pd_level() == 1u && str_eq(cur_page()->title, "GLOBAL") && lz_tab_lit(2);
     frames(320); press(B_GLO); frame();
-    ok &= pd_level() == 2u && str_eq(cur_page()->title, "SYSTEM") && lz_tab_lit(2) && lz_crumb_is("GLO \xB7 SYSTEM \xB7 SYSTEM");
+    ok &= pd_level() == 2u && str_eq(cur_page()->title, "SYSTEM") && lz_tab_lit(3) && lz_crumb_is("GLO \xB7 SYSTEM \xB7 SYSTEM");
+    frames(320); press(B_GLO); frame();
+    ok &= str_eq(cur_page()->title, "MANO") && lz_tab_lit(0) && lz_crumb_is("GLO \xB7 LIVE \xB7 MANO") && lz_count_is("1/6");
     frames(320); press(B_GLO); frame();
     ok &= pd_level() == 0u && str_eq(cur_page()->title, "MIXER");
     turn(EN_SELECT, 3); frame();
@@ -10716,7 +10721,7 @@ static int test_lz_glo(void)
     open_family(FAM_ENV); frame();
     press(B_GLO); frame();
     ok &= str_eq(cur_page()->title, "SYSTEM");
-    bad += check("0.9.2 GLO: MIXER SENDS GLOBAL SYSTEM by SELECT, a GLO tap the next group; from elsewhere the page left", ok);
+    bad += check("0.9.2 GLO: MIXER SENDS GLOBAL SYSTEM by SELECT, a GLO tap the next group (0.9.11: LIVE first); from elsewhere the page left", ok);
     ui_power_on();
     return bad;
 }
