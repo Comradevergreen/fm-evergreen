@@ -55,9 +55,19 @@ static uint32_t mtab_rows(uint32_t t)                  /* .. and how many it has
 /* STYLE (ui_style, gfx.c ST_*): FLAT the filled cards; LINE black areas divided by 1 px rules (#50, #57: the 0.9 look)
  * (1.0.2: PIXEL retired, a saved PIXEL reads as LINE) */
 static const char *const STYLE_N[2] = {"FLAT", "LINE"};
-/* (0.8.9) SKIN (ui_skin, gfx.c SKIN_*): COLORS the lens in the 0.6 colours (the default, older settings too); BOTTOM the
- * knobs a slim row at the foot, the middle free; HUD the picture full screen, the words floating over it */
-static const char *const SKIN_NAME[SKIN_N] = {"COLORS", "BOTTOM", "HUD"};
+/* (0.8.9) SKIN (ui_skin, gfx.c SKIN_*): COLORS the lens in the 0.6 colours (older settings: 0); BOTTOM the knobs a slim row
+ * at the foot, the middle free; HUD the picture full screen, the words floating over it; (0.9.7) AIR, HUD's look with the
+ * knobs' row on top (the default of new settings). By the stored value; the menu steps them AIR COLORS BOTTOM HUD
+ * (SKIN_ORDER: the editor's MENU_DESC lists them so too) */
+static const char *const SKIN_NAME[SKIN_N] = {"COLORS", "BOTTOM", "HUD", "AIR"};
+static const uint8_t SKIN_ORDER[SKIN_N] = {SKIN_AIR, SKIN_COLORS, SKIN_BOTTOM, SKIN_HUD};
+static uint32_t skin_pos(uint32_t s)                   /* the menu's place of stored skin s */
+{
+    uint32_t i = 0;
+    while (i + 1u < SKIN_N && SKIN_ORDER[i] != s)
+        i++;
+    return i;
+}
 /* the two-valued rows: a bit of ui_prefs (PREF_REC: of ui_rec_prefs, ui.c PREF_SCALE_LEDS) and its names (bit clear =
  * the default, bit set). A step up (a knob right,
  * OCT+) = ON on the ON / OFF rows (the switch's knob to the right; ANIM, USB SERIAL: their bit clears), else the
@@ -147,7 +157,7 @@ static uint32_t menu_get(uint32_t row)
         return ((ui_prefs | (uint32_t)ui_rec_prefs << 8) & f->bit) != 0;
     switch (row) {
     case MI_COLOR: return settings.palette % NPALETTES;
-    case MI_SKIN: return ui_skin % SKIN_N;
+    case MI_SKIN: return skin_pos(ui_skin);
     case MI_STYLE: return ui_style == ST_LINE;
     case MI_LOWCUT: return settings.lowcut % 3u;
     case MI_USB: return (ui_prefs & PREF_USB_FIXED) ? 1u + usb_lvl % 5u : 0u;
@@ -171,7 +181,7 @@ static const char *menu_vname(uint32_t row, uint32_t v)
         return f->name[v & 1u];
     switch (row) {
     case MI_COLOR: return UI_PALETTES[v % NPALETTES].name;
-    case MI_SKIN: return SKIN_NAME[v % SKIN_N];
+    case MI_SKIN: return SKIN_NAME[SKIN_ORDER[v % SKIN_N]];
     case MI_STYLE: return STYLE_N[v & 1u];
     case MI_LOWCUT: return SPK_EQ[v % 3u];
     case MI_USB: return USBLVL_N[v % 6u];
@@ -207,7 +217,7 @@ static void menu_put(uint32_t row, uint32_t v)
         palette_set(v);                                /* (the menu signature redraws) */
         ui.force = 1;
         break;
-    case MI_SKIN: ui_skin = (uint8_t)(v % SKIN_N); break;                /* (ui_draw.c style_apply: the next frame) */
+    case MI_SKIN: ui_skin = SKIN_ORDER[v % SKIN_N]; break;              /* (ui_draw.c style_apply: the next frame) */
     case MI_STYLE: ui_style = (uint8_t)(v ? ST_LINE : ST_FLAT); break;   /* (drawn so from the next frame) */
     case MI_LOWCUT: settings.lowcut = v; fx_lowcut = (uint8_t)v; break;
     case MI_USB:                                   /* (at once; every frame too: ui_input) */

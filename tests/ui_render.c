@@ -2244,12 +2244,12 @@ int main(int argc, char **argv)
         for (s = 0; s < lg_nsmall; s++) fprintf(rep, " '%s'", lg_small[s]);
         fprintf(rep, "\n");
     }
-    {   /* (0.8.9) MENU > DISPLAY > SKIN BOTTOM and HUD (ui.c lz_low, hud_home): every screen in every palette in FLAT, in
+    {   /* (0.8.9) MENU > DISPLAY > SKIN BOTTOM and HUD (0.9.7: AIR) (ui.c lz_low, hud_home): every screen in every palette in FLAT, in
          * LINE and with MENU > LARGE ON (COLORS' layout, the skin's tabs and colours), linted (GREY: gray, MONO: neutral); FLAT
          * as OUTDIR/ppm/<SKIN>_<PALETTE>_<screen>.ppm for JIANT PAPER GREY MONO (ui_render.py: sheet_<SKIN>_<PALETTE>.png) */
-        static const char *const SK_N[SKIN_N] = {"COLORS", "BOTTOM", "HUD"}, *const ST_N[3] = {"", "-LINE", "-LARGE"};
+        static const char *const SK_N[SKIN_N] = {"COLORS", "BOTTOM", "HUD", "AIR"}, *const ST_N[3] = {"", "-LINE", "-LARGE"};
         uint32_t sk, st, n0 = nfind, nlow = 0, nhud = 0;
-        for (sk = SKIN_BOTTOM; sk <= SKIN_HUD; sk++)
+        for (sk = SKIN_BOTTOM; sk <= SKIN_AIR; sk++)   /* (0.9.7: AIR, the knobs' row on top) */
             for (st = 0; st < 3u; st++)
                 for (p = 0; p < NPALETTES; p++)
                     for (s = 0; s < S_COUNT; s++) {
@@ -2377,7 +2377,7 @@ int main(int argc, char **argv)
         {   /* (0.8.9) SKIN: HOME, EDIT, SEQ's BAR, FX's BUSES redrawn whole in each skin (us, texts, LCD px sent), and HOME frame
              * by frame (HUD: every strip each frame, on the beings) */
             static const int SC[] = {S_HOME, S_EDIT_ANALOG, S_LENTE_BAR, S_FXL_BUSES, S_VX_HEAD_S, S_VX_WING, S_VX_KIT_HOME};
-            static const char *const SK_N[SKIN_N] = {"COLORS", "BOTTOM", "HUD"};
+            static const char *const SK_N[SKIN_N] = {"COLORS", "BOTTOM", "HUD", "AIR"};
             uint32_t sk;
             fprintf(rep, "  SKIN (full redraw us / texts / LCD px; HOME a frame without force):\n");
             for (sk = 0; sk < SKIN_N; sk++) {

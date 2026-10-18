@@ -5,7 +5,7 @@
  * 0.6.81 fix (felucca_init clearing the arrangement persist_boot had read) and passes with it. */
 #include "../web/emu/felucca_web.c"
 
-static int startup_case(int saved, int restore)
+static int startup_case(int saved, int restore, int noprefs)
 {
     song_index_t want, got;
     persist_t prefs = {0};
@@ -30,9 +30,20 @@ static int startup_case(int saved, int restore)
     prefs.magic = PERSIST_MAGIC;
     prefs.panel = PANEL_DEFAULT;
     prefs.favorites.factory[15][30] = restore ? PREF_RESTORE_ON : 0;
-    if (st_save(OBJ_SETTINGS, &prefs, sizeof prefs)) return 1;
+    if (!noprefs && st_save(OBJ_SETTINGS, &prefs, sizeof prefs)) return 1;
 
     web_boot();
+    if (noprefs) {                                     /* (0.9.7) no settings saved: new settings, SKIN AIR, SCOPE OFF */
+        int okf = ui_skin == SKIN_AIR, i2;
+        for (i2 = 0; i2 < 2000; i2++) web_render(128);   /* (past the splash: the skin applied) */
+        okf &= ux.skin == SKIN_AIR && ui_skin == SKIN_AIR;
+        printf("startup: empty flash, no settings: SKIN AIR (new settings) %s\n", okf ? "ok" : "FAIL");
+        return !okf;
+    }
+    if (ui_skin != SKIN_COLORS) {                      /* (0.9.7) settings saved before AIR: their skin (0, COLORS) kept */
+        printf("startup: saved settings keep their SKIN (COLORS) FAIL\n");
+        return 1;
+    }
     ok = song_cur == want.cur && !memcmp(&chain_config, &want.rows[want.cur], sizeof chain_config);
     ok &= !!(ui_prefs & PREF_RESTORE_ON) == restore;
     ok &= !memcmp(song_idx.scene, want.scene, sizeof want.scene);
@@ -52,10 +63,10 @@ int main(void)
 {
     int mode, status, bad = 0;
     /* Each child starts with fresh static RAM, as a new device instance does. */
-    for (mode = 0; mode < 3; mode++) {
+    for (mode = 0; mode < 4; mode++) {                 /* (0.9.7: 3, no settings saved at all) */
         pid_t child = fork();
         if (child < 0) return 2;
-        if (!child) exit(startup_case(mode != 0, mode == 2));
+        if (!child) exit(startup_case(mode == 1 || mode == 2, mode == 2, mode == 3));
         if (waitpid(child, &status, 0) != child || !WIFEXITED(status) || WEXITSTATUS(status)) bad++;
     }
     puts(bad ? "startup test FAILED" : "startup test passed");
