@@ -2100,7 +2100,10 @@ Dos maneras de sacar cada pista por separado, para procesarlas de a una en un DA
   todos los canales a la vez: clics y un sonido entrecortado, "separado por IA", en cada stem (los modos de mezcla estéreo
   no tenían el problema). Ahora son 736 bytes; además el anillo guarda un milisegundo más en STEMS y STEMS+IN, y un frame
   repetido tras un faltante se recupera repartido en un paquete en vez de saltearse. **Actualizá el FM-1 y la app (JIANT
-  Stems 1.1) y volvé a grabar**: una toma hecha con la 0.9.7 no se puede arreglar después. Una pista que pasa por el
+  Stems 1.1) y volvé a grabar**: una toma hecha con la 0.9.7 no se puede arreglar después. **0.9.10:** STEMS+IN (y STEMS,
+  más rara vez) todavía perdía bloques, en ráfagas varias veces por segundo en todos los canales (un glitch rítmico),
+  porque el siguiente paquete USB se preparaba tarde después de que salía el anterior; ahora sale a tiempo. Las tomas
+  grabadas antes no se pueden arreglar: volvé a grabarlas. Una pista que pasa por el
   **SLICER** tiene ahora en su stem su propio sonido tal como el SLICER lo dejó pasar (sus repeticiones en el stem de la
   primera de esas pistas, o con el FX ON del SLICER en el retorno de FX), así los ocho siguen sumando la mezcla (hasta la
   0.9.7 esa pista estaba seca en su stem y otra vez, recortada, en el retorno de FX).
@@ -2233,6 +2236,11 @@ o UNDO.
 encendés (o MENU > SYSTEM > CALIBRATION) y enseñale cada botón y perilla. Una tecla del piano cancela.
 
 **La entrada de audio USB no aparece en macOS.** MENU > SYSTEM > USB **STEREO** (o STEMS).
+
+**El nuevo modo USB no aparece en el teléfono o la computadora.** Desde la 0.9.10 el FM-1 sale del bus medio segundo
+cuando cambia MENU > SYSTEM > USB (volvía a los ~25 ms y algunos teléfonos y hubs no notaban que se había ido, así que
+seguían con el modo anterior); aparece más o menos un segundo después de cerrar el menú. Con firmware anterior: cambiá
+de nuevo o desenchufá.
 
 **SAVED (NO FLASH).** No se detectó el chip de flash; lo guardado queda solo en RAM. Apagá y prendé el equipo. Si
 persiste, hacé un backup de lo que puedas con el editor y reinstalá.
