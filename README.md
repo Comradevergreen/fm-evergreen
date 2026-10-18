@@ -30,8 +30,9 @@ editor update themselves with every change merged into `main`.
   it, clear of the page's words; a page's hint comes only once you stay on it (never while SELECT walks past), at most
   twice ever; a layer button's tap no longer says "HOLD [X] QUICK". On JIANT each card's colour follows its value
   again, as in 0.6.
-  **Three engines draw their own creature** (0.9.4): VOICE a CT scan of a singing head (the tongue, jaw, lips and velum
-  move with the phoneme sung), ANIMAL a creature that metamorphoses between bird, insect and mammal, DRUM-X its kit as
+  **Three engines draw their own creature** (0.9.4): VOICE its vocal tract singing, a glowing tube in a ghost of a
+  head (0.9.9; the tongue, jaw, lips and velum move with the phoneme sung, glottal pulses travel up it, waves leave the
+  mouth), ANIMAL a creature that metamorphoses between bird, insect and mammal, DRUM-X its kit as
   little beings that squash, shut their eyes and shout with every hit.
   **MUTATE can go back** (0.9.3): turning MUTATE off asks to return the track to its anchor; SEQ + D5 REVERT, GLO + B4 REVERT ALL, undoable.
   **0.9.2 is driven by six rules** (see [Navigation](#navigation)): SELECT walks a section's pages as one chain, the
@@ -647,6 +648,19 @@ JIANT's modifications are distributed under the same license.
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
 
 ### v0.9.9
+- **VOICE draws its vocal tract alive** (the mock-up's variant C, "Tracto vivo"), in place of 0.9.4's CT head: framed
+  close (~80 × 62 units: the mouth and the neck; the crown off the panel), the head's outline a faint ghost and the
+  vocal tract a glowing tube of two walls from the lips over the palate and the velum down to the glottis, the trachea
+  under it. The tongue (its floor), the jaw, the lips and the place of each consonant shape it as before (it narrows and
+  heats where it closes); for m n ng the velum drops and a branch to the nose opens. Each glottal pulse is a bulge
+  travelling up the tube (up the nose for the nasals), the vocal folds open and shut as a V, sound waves leave the mouth
+  (the nose), and the head nods a little at each vowel's onset (WORDS off: each note) and sways and breathes slowly
+  with the level; still in silence, as before. **The jaw now opens downward** (0.9.4's turned it up: the chin rose on an
+  open vowel), its condyle gliding forward. UI only, nothing in the audio path (callgrind: song/cputest 3079, as
+  before). Draw (host, callgrind, vx_voice a frame over a sung phrase): the whole panel 668 k → 255 k instructions,
+  EDIT's left panel 598 k → 204 k, HOME's BEING 598 k → 236 k. The CT's tables, the scan line and the spine, brain and
+  turbinate code are gone; flash +816 B (image 562748 → 563564 B: the tube's resampling, pulses and waves), .data+.bss
+  and RAM code unchanged, the pool's spare 10816 → 10784 B (the nod, the pulses and the waves in vxs).
 - **DRUM-X, VOICE and ANIMAL first: the tracks at power-on.** The FM-1 (and MENU › SYSTEM › INIT SYSTEM, SAVE › TOOLS
   › NEW PROJECT) starts with **T1 DRUM-X** (the factory kit), **T2 VOICE SINGER EN** (it sings English words),
   **T3 ANIMAL CMOS BIRD**, **T4 LOFI BYTEBEAT** (the bytebeat organism), **T5 ANALOG FAT BASS** and **T6 FM6 TINE EP**,
