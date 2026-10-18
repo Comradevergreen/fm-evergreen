@@ -108,20 +108,23 @@ static const phon_t PHON[PH_COUNT] = {
     [PH_B] = {250, 900, 2200, PC_PLO, 50, 80, 30, 60, 40, 16, PL_LAB},
     [PH_D] = {250, 1750, 2700, PC_PLO, 50, 140, 86, 32, 35, 16, PL_ALV},
     [PH_G] = {250, 1950, 2500, PC_PLO, 50, 140, 46, 16, 40, 16, PL_VEL},
-    [PH_F] = {300, 1000, 2300, PC_FRI, 0, 90, 140, 80, 80, 16, PL_LABDEN},
-    [PH_S] = {300, 1650, 2700, PC_FRI, 0, 130, 116, 32, 85, 16, PL_ALV},
-    [PH_SH] = {300, 1900, 2500, PC_FRI, 0, 255, 54, 12, 90, 16, PL_POST | PL_RND},
+    [PH_F] = {300, 1000, 2300, PC_FRI, 0, 50, 140, 80, 80, 16, PL_LABDEN},
+    [PH_S] = {300, 1650, 2700, PC_FRI, 0, 78, 116, 32, 85, 16, PL_ALV},
+    [PH_SH] = {300, 1900, 2500, PC_FRI, 0, 217, 54, 12, 90, 16, PL_POST | PL_RND},
     [PH_H] = {0, 0, 0, PC_ASP, 0, 150, 0, 0, 60, 16, PL_GLO},
-    [PH_X] = {300, 1300, 2400, PC_FRI, 0, 150, 32, 16, 75, 16, PL_VEL},
-    [PH_TH] = {300, 1400, 2600, PC_FRI, 0, 60, 130, 90, 70, 16, PL_DEN},
-    [PH_V] = {300, 1000, 2300, PC_FRI, 140, 60, 140, 80, 60, 16, PL_LABDEN},
-    [PH_Z] = {300, 1650, 2700, PC_FRI, 140, 100, 116, 32, 70, 16, PL_ALV},
-    [PH_ZH] = {300, 1900, 2500, PC_FRI, 140, 200, 54, 12, 70, 16, PL_POST | PL_RND},
-    [PH_DH] = {300, 1400, 2600, PC_FRI, 160, 35, 130, 90, 50, 16, PL_DEN},
+    [PH_X] = {300, 1300, 2400, PC_FRI, 0, 84, 32, 16, 75, 16, PL_VEL},
+    [PH_TH] = {300, 1400, 2600, PC_FRI, 0, 34, 130, 90, 70, 16, PL_DEN},
+    [PH_V] = {300, 1000, 2300, PC_FRI, 140, 34, 140, 80, 60, 16, PL_LABDEN},
+    [PH_Z] = {300, 1650, 2700, PC_FRI, 140, 60, 116, 32, 70, 16, PL_ALV},
+    [PH_ZH] = {300, 1900, 2500, PC_FRI, 140, 170, 54, 12, 70, 16, PL_POST | PL_RND},
+    [PH_DH] = {300, 1400, 2600, PC_FRI, 160, 20, 130, 90, 50, 16, PL_DEN},
     [PH_CH] = {250, 1900, 2500, PC_AFF, 0, 0, 0, 0, 45, 16, PL_POST | PL_RND},
     [PH_TS] = {250, 1750, 2700, PC_AFF, 0, 0, 0, 0, 40, 16, PL_ALV},
     [PH_J] = {250, 1900, 2500, PC_AFF, 50, 0, 0, 0, 35, 16, PL_POST | PL_RND},
 };
+/* (0.9.8) the fricatives' noise band-passed (formant_word_render: 1 - z^-2 into F4, ~+5 dB at their peaks) and their gains
+ * halved (sy_tick), then af set for softer, more natural sibilants: s z ~5 dB under 0.9.7's (s ~-16 .. -20 dB of the vowel, ~6
+ * kHz), sh zh ~2 dB; f th v dh and the jota as before against s (f, th weak: ~5 dB under s) */
 static int ph_vowel(uint32_t c) { return c < PH_COUNT && PHON[c].cls == PC_VOW; }
 /* an affricate's fricative */
 static uint32_t ph_fric(uint32_t c) { return c == PH_CH ? PH_SH : c == PH_TS ? PH_S : PH_ZH; }
@@ -603,6 +606,14 @@ typedef struct {
     char w[20];                  /* the word (shown; the generator's, read from here) */
 } sing_t;
 static sing_t sing[NTRK];
+/* (0.9.8) more of a track's singer, in the pool (zeroed at boot; sing[] and the RAM region keep their layout, as sing_w):
+ * the formants' first smoothing stage (f follows it: an S-curve), the blocks since the syllable began (the vibrato's
+ * onset) and the vibrato's phase (eng_formant.c formant_word_render) */
+typedef struct {
+    int16_t fq[3];
+    uint16_t vb, vph;
+} sing_x_t;
+static sing_x_t sing_x[NTRK] __attribute__((section(".pool")));
 
 /* sing_view: what the UI reads (the VOICE page; the CT head) */
 static const sing_t *sing_view(const track_t *t) { return &sing[(uint32_t)(t - trk) % NTRK]; }
@@ -1053,12 +1064,13 @@ static void sy_next(const track_t *t, sing_t *s, uint32_t lang, uint32_t lyr)
 }
 
 /* the targets of the phoneme sounding, and the articulation one block on */
-static void sy_tick(const track_t *t, sing_t *s, uint32_t lang)
+static __attribute__((noinline)) void sy_tick(const track_t *t, sing_t *s, uint32_t lang)
 {
     uint32_t c, k, j, nxt = PH_A, sh = 4u;
     int32_t a15 = (127 - clamp(t->p[P_E2], 0, 127)) * 258, tv = 0, ta = 0, tf = 0, tff = 3300, tfb = 250, tbm;
     int32_t tF[3];
     const phon_t *P, *Q;
+    sing_x_t *x = &sing_x[(uint32_t)(s - sing) % NTRK];
     if (s->tb && !--s->tb)
         sy_adv(s, lang);
     c = sing_phon(s);
@@ -1091,7 +1103,7 @@ static void sy_tick(const track_t *t, sing_t *s, uint32_t lang)
             tF[2] = Q->f3;
             sh = 3;
             if (s->st == 1u) {
-                tf = (P->af << 7) * a15 >> 15;
+                tf = (P->af << 6) * a15 >> 15;
                 tff = P->ff * 50;
                 tfb = P->fbw * 50;
                 tv = P->av ? 16000 : 0;
@@ -1110,7 +1122,7 @@ static void sy_tick(const track_t *t, sing_t *s, uint32_t lang)
         } else {
             const phon_t *F = &PHON[ph_fric(c)];
             tv = F->av << 7;
-            tf = (F->af << 7) * a15 >> 15;
+            tf = (F->af << 6) * a15 >> 15;
             tff = F->ff * 50;
             tfb = F->fbw * 50;
             sh = 3;
@@ -1118,7 +1130,7 @@ static void sy_tick(const track_t *t, sing_t *s, uint32_t lang)
         break;
     case PC_FRI:
         tv = P->av << 7;
-        tf = (P->af << 7) * a15 >> 15;
+        tf = (P->af << 6) * a15 >> 15;               /* (0.9.8: x 1/2, the band-pass's gain) */
         tff = P->ff * 50;
         tfb = P->fbw * 50;
         if (c == PH_X)
@@ -1145,9 +1157,10 @@ static void sy_tick(const track_t *t, sing_t *s, uint32_t lang)
         break;
     }
     if (!s->live) {                                      /* from rest: at the first target at once */
-        s->f[0] = (int16_t)(k == PC_SIL ? Q->f1 : tF[0]);
-        s->f[1] = (int16_t)(k == PC_SIL ? Q->f2 : tF[1]);
-        s->f[2] = (int16_t)(k == PC_SIL ? Q->f3 : tF[2]);
+        x->fq[0] = s->f[0] = (int16_t)(k == PC_SIL ? Q->f1 : tF[0]);
+        x->fq[1] = s->f[1] = (int16_t)(k == PC_SIL ? Q->f2 : tF[1]);
+        x->fq[2] = s->f[2] = (int16_t)(k == PC_SIL ? Q->f3 : tF[2]);
+        x->vph = 0;                                      /* (the vibrato from its start: a phrase renders the same) */
         tF[0] = s->f[0];
         tF[1] = s->f[1];
         tF[2] = s->f[2];
@@ -1156,9 +1169,13 @@ static void sy_tick(const track_t *t, sing_t *s, uint32_t lang)
         s->bm = (int16_t)tbm;
         s->live = 1;
     }
-    for (j = 0; j < 3u; j++) {
-        int32_t d = tF[j] - s->f[j];
-        s->f[j] = (int16_t)(s->f[j] + (d >> sh) + (d > 0 && (d >> sh) == 0));
+    /* (0.9.8) coarticulation: two one-poles in a row (each twice as quick: about the time one took), so the formants
+     * ease out of a target and into the next, an S-curve with no corner at the phoneme's change */
+    sh--;
+    for (j = 0; j < 6u; j++) {
+        int16_t *a = j < 3u ? &x->fq[j] : &s->f[j - 3u];
+        int32_t d = (j < 3u ? tF[j] : x->fq[j - 3u]) - *a;
+        *a = (int16_t)(*a + (d >> sh) + (d > 0 && (d >> sh) == 0));
     }
     s->ff = (int16_t)(s->ff + ((tff - s->ff) >> 1));
     s->fb = (int16_t)(s->fb + ((tfb - s->fb) >> 1));
@@ -1166,9 +1183,12 @@ static void sy_tick(const track_t *t, sing_t *s, uint32_t lang)
     s->pv = s->gv;
     s->pa = s->ga;
     s->pf = s->gf;
-    s->gv = (int16_t)(s->gv + ((tv - s->gv) >> (tv < s->gv ? 1 : 2)));
+    /* (0.9.8) the gains: the voicing fades over ~6 ms into a fricative (the vowel's tail under the hiss), ~3 ms into a
+     * closure (a tap's, a trill's dips: at once), comes in over ~3 ms; the frication comes in over ~10 ms (a plosive's
+     * burst, an affricate's release: at once) and goes over ~5 ms: no hiss switched on and off */
+    s->gv = (int16_t)(s->gv + ((tv - s->gv) >> (tv >= s->gv ? 2 : k == PC_FRI ? 3 : k == PC_TAP || k == PC_TRL ? 1 : 2)));
     s->ga = (int16_t)(s->ga + ((ta - s->ga) >> 1));
-    s->gf = (int16_t)(tf > s->gf ? tf : s->gf + ((tf - s->gf) >> 1));
+    s->gf = (int16_t)(tf > s->gf && k != PC_FRI ? tf : s->gf + ((tf - s->gf) >> (tf > s->gf ? 3 : 2)));
 }
 
 /* the engine's block hook (eng_formant.c formant_block): the lyric, the syllable, the articulation */
@@ -1178,9 +1198,12 @@ static void sing_block(track_t *t)
     uint32_t lyr = (uint32_t)clamp(t->p[P_VLYR], 0, LYR_N - 1);
     int32_t pos = clamp(t->p[P_E0], 0, 127);
     sing_t *s = &sing[ti];
+    sing_x_t *x = &sing_x[ti];
     if (!lang) {
-        if (s->lang)
+        if (s->lang) {
             memset(s, 0, sizeof *s);
+            memset(x, 0, sizeof *x);
+        }
         return;
     }
     if (lang != s->lang || lyr != s->lyr || lyr_gen[ti] != s->gen) {
@@ -1214,6 +1237,7 @@ static void sing_block(track_t *t)
         if (pos && pos != s->posv)
             sy_seek(t, s, lang, lyr, (uint32_t)pos - 1u);
         s->posv = (int16_t)pos;
+        x->vb = 0;                                       /* (a syllable: the vibrato waits again) */
         sy_next(t, s, lang, lyr);
     } else if (!pos) {
         s->posv = 0;
@@ -1225,6 +1249,8 @@ static void sing_block(track_t *t)
     }
     s->gated = (uint8_t)gated;
     sy_tick(t, s, lang);
+    x->vb = (uint16_t)(x->vb + (x->vb < 0xFFFFu));       /* (0.9.8) the vibrato (formant_word_render): ~5.5 Hz */
+    x->vph = (uint16_t)(x->vph + 262u);
 }
 static void sing_note(const track_t *t) { sing[(uint32_t)(t - trk) % NTRK].pend = 1; }
 

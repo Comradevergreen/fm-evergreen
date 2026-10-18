@@ -491,7 +491,21 @@ static voice_t *voice_alloc(track_t *t, uint32_t note)
     return voice_reuse(t, &t->v[best == np ? 0 : best]);
 }
 
-/* glide: RATE = a fixed speed, TIME = the same time for any interval */
+/* (VOICE) a glide sets out from where the voice sounds: the S-curve (eng_formant.c glide_sung) folded into pitch_cur (a
+ * new note mid-glide: no jump) */
+static void glide_from(voice_t *v)
+{
+    v->pitch_cur = (glide_sung(v) + 128) >> 8;
+    v->gfrom = (int16_t)v->pitch_cur;
+}
+static __attribute__((noinline)) void glide_from_trk(const track_t *t, voice_t *v)   /* (a legato note, a chord glide) */
+{
+    if (ENGINES[t->engine % NENGINES] == &ENG_FORMANT)
+        glide_from(v);
+}
+
+/* glide: RATE = a fixed speed, TIME = the same time for any interval. (0.9.8) glide 2: VOICE singing words, a legato
+ * note with GLIDE 0: a singer's ~60 ms */
 static void glide_set(track_t *t, voice_t *v, int glide)
 {
     if (!glide || !v->pitch_cur) {
@@ -499,8 +513,8 @@ static void glide_set(track_t *t, voice_t *v, int glide)
         v->gstep = 0;
         return;
     }
-    if (t->p[P_GLMODE]) {
-        int32_t d = v->pitch16 - v->pitch_cur, ticks = 1 + t->p[P_GLIDE] * t->p[P_GLIDE] / 8;
+    if (t->p[P_GLMODE] || glide == 2) {
+        int32_t d = v->pitch16 - v->pitch_cur, ticks = glide == 2 ? 80 : 1 + t->p[P_GLIDE] * t->p[P_GLIDE] / 8;
         d = d < 0 ? -d : d;
         v->gstep = d * 256 / ticks > 0 ? d * 256 / ticks : 1;
     } else {
@@ -528,6 +542,8 @@ static void voice_start(track_t *t, voice_t *v, uint32_t note, uint32_t vel, int
     v->active = 1;
     v->stage = 1;
     v->age = ++vage;
+    if (e == &ENG_FORMANT)
+        glide_from(v);
     v->fin_d = 0;
     v->gacc = 0;
     v->pitch16 = ((int32_t)note + trk_trans(t)) * 16 + t->pfx_rpit;   /* (pfx.c RANDOM: 0 but while it is held) */
@@ -585,12 +601,14 @@ static void mono_play(track_t *t, uint32_t note, uint32_t vel, int retrig, int g
             }
         } else {                                            /* legato: new pitch, same envelope */
             v->note = (uint8_t)note;
+            glide_from_trk(t, v);
             v->pitch16 = ((int32_t)note + trk_trans(t)) * 16 + t->pfx_rpit;
             v->mvel = t->m_vel;
             v->mrnd = t->m_rnd;
             if (vel > v->vel && nv == 1u)
                 v->vel = (uint8_t)vel;
-            glide_set(t, v, glide);
+            /* (0.9.8) VOICE singing words: a legato note glides a little even with GLIDE 0 (a singer's ~60 ms) */
+            glide_set(t, v, glide ? glide : ENGINES[t->engine % NENGINES] == &ENG_FORMANT && t->p[P_VLANG] ? 2 : 0);
         }
     }
     t->mono_note = (uint8_t)note;

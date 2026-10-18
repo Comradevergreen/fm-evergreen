@@ -635,6 +635,26 @@ JIANT's modifications are distributed under the same license.
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
 
+### v0.9.8
+- **VOICE sings softer and more like a singer** (LANG ES / EN / JA; the vowel presets as before, but for their glide):
+  - **Softer S** (and z, sh, f, th): the hiss is band-passed (no fizz past ~12 kHz; s centred ~6 kHz, sh ~2.7 kHz),
+    comes in over ~10 ms instead of switching on (s: 10–90 % in 9 ms, was 3; at most 9 % of its level a ms, was 23)
+    and sits ~5 dB lower (s −19.6 dB of the vowel, was −14.6); the vowel's tail fades under it (~6 ms).
+  - **Joined syllables**: the formants move from phoneme to phoneme as an S-curve (two smoothing stages, no corner),
+    nasals keep a low, round murmur, the singers' presets release slower (REL ~190 ms) and start softer (ATK ~5 ms),
+    so a note's vowel carries into the next syllable: no click at the joins ("sus sueños son sonidos suaves": the worst
+    join 1.2× the sound around it, was 3.7), no hole between notes (la le li lo lu: −22 dB at the gap, was −48).
+  - **A voice**: a vibrato on held notes (~5.5 Hz, ±20 ct, after ~0.3 s; each choir voice at its own phase; none while
+    gliding), each glottal period its own length and level (jitter ~0.3 %, shimmer ~0.4 dB), a softer source and less
+    presence. BUZZ at its top (the last ~12 %) steadies it all away: ROBOT EN stays a robot.
+  - **The glide as sung**: VOICE's GLIDE is an S-curve in pitch (eases out of the note and into the next) over the same
+    time, the formants on the vowel all the way, the syllable not re-attacked; a legato note while singing words glides
+    ~60 ms even at GLIDE 0. The other engines' glide is untouched.
+  - Cost: VOICE words +3 % CPU (cpu_vg VOICE.ES 1796, peak VOICE.EN6 +4 %), the vowels and every other engine as before
+    (song/cputest the same); +0.9 KB flash, 60 B of the pool, .data + .bss and the RAM code unchanged. Goldens: the eight
+    word presets and VOICE LEGATO (its glide) only. voice_test checks the soft s and sh, the joins, the glide's S-curve
+    and the formants across it, the vibrato (and none on ROBOT EN).
+
 ### v0.9.6
 - **Every engine draws its own creature now**: the six that still showed the generic being get theirs, ported from the
   approved mock-up (the family's), on **EDIT › SOUND** (on the left, as 0.9.4's; the scope and the chips on the right as
