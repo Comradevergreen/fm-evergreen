@@ -2206,10 +2206,10 @@ function makeMockDevice(opt = {}) {
   }
 
   /* a WebMIDI-like access object: one input and one output named "Felucca" */
-  const input = { id: "mock-in", name: "JIANT FM", type: "input", state: "connected", onmidimessage: null };
+  const input = { id: "mock-in", name: "JIANT", type: "input", state: "connected", onmidimessage: null };
   let busy = false;
   const output = {
-    id: "mock-out", name: "JIANT FM", type: "output", state: "connected",
+    id: "mock-out", name: "JIANT", type: "output", state: "connected",
     send(data) {
       const f = unframe(data);
       if (!f) { console.error("mock: refused a frame that is not F0 7D 46 4C ... F7", data); return; }

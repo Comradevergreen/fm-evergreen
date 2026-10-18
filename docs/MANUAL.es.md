@@ -2189,6 +2189,13 @@ protección desvaneció): una foto de esa pantalla ayuda cuando reportás un pro
   **CC104** drive, **CC105** sustain (0.6.96). CC1 (rueda de modulación), CC11 (expresión) y el aftertouch de canal son fuentes de
   la matriz MOD (MODW, EXPR, AT). Funcionan el pitch bend, el sustain (CC64), All Sound Off (CC120) y All Notes Off
   (CC123). Un CC se graba como automatización igual que un movimiento de perilla.
+- Nombre USB MIDI y audio: **"JIANT"** (0.9.12; de 0.7.0 a 0.9.11 "JIANT FM"; "JIANT Update" mientras se instala un
+  paquete). En un DAW el puerto MIDI es "JIANT": Ableton Live y los demás programas de Windows muestran "JIANT" (un
+  segundo, "2- JIANT"), macOS el dispositivo "JIANT" y su puerto "JIANT", Linux "JIANT MIDI 1". Hasta 0.9.11 Windows
+  podía seguir mostrando "Felucca" (se quedaba con el primer nombre que vio); desde 0.9.12 lo vuelve a leer. Si macOS
+  sigue mostrando un nombre viejo, abrí Configuración de Audio MIDI > Estudio MIDI con el FM-1 desenchufado, borrá su
+  entrada vieja y volvé a enchufarlo. El editor web y el instalador aceptan también un equipo que todavía se llame
+  "JIANT FM" o "Felucca".
 
 ### MIDI LEARN (0.9.12)
 
@@ -2213,7 +2220,6 @@ Cualquier perilla del sonido de una pista a cualquier CC de tu controlador, en e
 - **Se guarda con la configuración** (no en un proyecto; un backup de la configuración lo lleva); **MENU › MIDI ›
   LEARN CLEAR** los olvida todos. ROUTE sigue decidiendo qué canales se escuchan (CH1-6 ignora los canales 7–16).
 - MIDI por Bluetooth no existe en el FM-1 con JIANT (ver arriba), así que el learn funciona por USB y TRS.
-- Nombre USB MIDI y audio: "JIANT FM" (0.7.0; "JIANT Update" mientras se instala un paquete). El editor web y el instalador aceptan también un equipo que todavía se llame "Felucca".
 
 ### Stems (0.7.1)
 
@@ -2258,7 +2264,7 @@ Dos maneras de sacar cada pista por separado, para procesarlas de a una en un DA
 ### Entrada de audio USB (0.7.5, versión de prueba)
 
 **MENU > SYSTEM > USB > IN+OUT** hace que el FM-1 sea, además de entrada, una salida de audio USB de la computadora o
-el celular: el equipo se vuelve a enumerar (como con STEMS, la consola serie se apaga) y el host ve "JIANT FM" como
+el celular: el equipo se vuelve a enumerar (como con STEMS, la consola serie se apaga) y el host ve "JIANT" como
 parlante, estéreo, 16 bits, 44.1 kHz. Lo que el host le mande entra por la **última pista** (T6, o T4 con TRACKS 4) y
 se mezcla como el sonido de esa pista:
 

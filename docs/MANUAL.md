@@ -2061,6 +2061,12 @@ faded): a photo of that screen helps when you report a problem.
   (0.6.96). CC1 (mod wheel), CC11 (expression) and channel aftertouch are sources in the MOD matrix (MODW, EXPR,
   AT). Pitch bend, sustain (CC64), All Sound Off (CC120) and All Notes Off (CC123) work. A CC is recorded as automation
   like a knob move.
+- USB MIDI and audio name: **"JIANT"** (0.9.12; 0.7.0–0.9.11 "JIANT FM"; "JIANT Update" while a package installs).
+  In a DAW the MIDI port is "JIANT": Ableton Live and other Windows programs list "JIANT" (a second one "2- JIANT"),
+  macOS the device "JIANT" and its port "JIANT", Linux "JIANT MIDI 1". Up to 0.9.11 Windows could keep showing
+  "Felucca" (it remembered the first name it saw); from 0.9.12 it reads the name again. If macOS still shows an old
+  name, open Audio MIDI Setup > MIDI Studio with the FM-1 unplugged, delete its old entry, and plug it in again. The
+  web editor and the installer also accept a device still named "JIANT FM" or "Felucca".
 
 ### MIDI LEARN (0.9.12)
 
@@ -2082,7 +2088,6 @@ Any knob of a track's sound to any CC of your controller, on the device (from Fe
 - **Kept with the settings** (not in a project; a settings backup carries it); **MENU › MIDI › LEARN CLEAR** forgets
   them all. ROUTE still decides which channels are heard (CH1-6 ignores channels 7–16).
 - Bluetooth MIDI does not exist on the FM-1 with JIANT (see above), so learning works on USB and TRS.
-- USB MIDI and audio name: "JIANT FM" (0.7.0; "JIANT Update" while a package installs). The web editor and the installer also accept a device still named "Felucca".
 
 ### Stems (0.7.1)
 
@@ -2124,7 +2129,7 @@ Two ways to get each track on its own, to post-process them one by one in a DAW:
 ### USB audio in (0.7.5, test version)
 
 **MENU > SYSTEM > USB > IN+OUT** makes the FM-1 a USB audio output of the computer or the phone as well as an input:
-the device re-enumerates (as with STEMS, the serial console is off), and the host now lists "JIANT FM" as a speaker,
+the device re-enumerates (as with STEMS, the serial console is off), and the host now lists "JIANT" as a speaker,
 stereo, 16 bit, 44.1 kHz. Whatever the host plays to it comes into the **last track** (T6, or T4 with TRACKS 4) and is
 mixed like that track's sound:
 
