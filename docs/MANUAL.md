@@ -815,6 +815,20 @@ beings), in the same thermal line art, the bichos' face shared with DRUM-X's bei
   head), each lit and lifting its legs with its bit; the antennae are tipped by the two lowest; the head is a bicho
   shouting with the level. On FLOAT and the chip waves (PLS TRI SAW NOIS WRAM) the same caterpillar, its skin the
   waveform and its segments lit by the wave's level.
+  (0.9.10) **CHIP turns it into a chip**, gliding there in about 0.6 s: on 8BIT (FLOAT's FULL) the caterpillar, on
+  4BIT and STEP half way, on 4B/2 nearly, on 1BIT a **DIP seen from above**. Its back and belly become the package's
+  long edges, the back legs the top row of pins and the front ones the bottom row (each pin jutting with its bit),
+  the rings the die's pads, the head folds into the notch with pin 1's dot, and the wave keeps running as two traces
+  on the die; the skins are stair-stepped to the bits (smooth, 7 levels, 5 levels, ±1). The other knobs show too:
+  **DUTY** the rings' width; **ALGO** the formula's bits printed on the back (a ROM on the chip); **WAV#** the table as
+  spines; **CRUSH** / **GRIT** a stutter (the drawing held 1 to 6 frames) and flat steps in the skin; **VAR** the
+  segments scrambled; **DECAY** (STEP) the rings dimming from the tail with the 4-bit volume; **MOTION** the crawl's
+  speed and the legs' sway; **VIB** a deeper wave and a shiver; **FEEDBK** two echoes of older samples trailing
+  behind; **BEND** the segments (the pins) crowding to the head; **MASK** the picture torn in horizontal bands;
+  **LOOP** the segments' pattern repeating and the tail curling up. On the FILTER page: **TYPE** HP only the edges,
+  with cilia growing as **CUT** opens, BP only the body's middle, COMB a double skin; a closed CUT blurs and swells it
+  into a fat smooth larva; **RES** rings contours outside the skin and lights the peak's segment; **DIST** clips the
+  skin with spikes and swells it; **MORPH** changes the head's species. Still in silence, moving with the sound.
 
 Each draws into whatever rectangle it is given (EDIT's left panel, HOME's middle, the whole panel). About 14 KB of flash
 for the six, 1.4 KB of RAM (the pool); each page draws no dearer than ANALOG's EDIT page with its being did; nothing

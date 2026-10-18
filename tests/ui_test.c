@@ -11066,6 +11066,55 @@ static int test_engvis(void)
         vxt_run(1500, 0);
         bad += check("0.9.4 ANIMAL: SIZE leans GLOTT's mammal towards the bird", vxs.w[0] < m1 - 40);
     }
+    {   /* (0.9.10) LOFI's V1 "DIP": CHIP turned in silence glides the caterpillar (8BIT) into the chip (1BIT), then it
+         * holds; 4BIT / STEP half way, 4B/2 nearly; the other knobs change the drawing (in silence too), which stays still */
+        static const struct { uint8_t chip; int16_t m; } CH[] = {{3, 256}, {0, 102}, {1, 179}, {4, 115}, {2, 0}};
+        static const struct { const char *pre; uint8_t p; int16_t v; } KN[] = {
+            {"BYTEBEAT", P_FTYPE, 1}, {"BYTEBEAT", P_FRES, 127}, {"BYTEBEAT", P_DIST, 127}, {"BYTEBEAT", P_E6, 127},
+            {"BYTEBEAT", P_FCUT, 20}, {"BYTEBEAT", P_E3, 120}, {"BYTEBEAT", P_E7, 127}, {"BYTEBEAT", P_E2, 90},
+            {"BYTEBEAT", P_FTYPE, 3}, {"PULSE LD", P_E2, 127}, {"PULSE LD", P_E5, 127}, {"PULSE LD", P_E7, 127},
+            {"PULSE LD", P_MORPH, 127}};
+        int32_t m0, mid;
+        int changed, held, glide = 1, knobs = 1;
+        uint32_t k;
+        vxt_case(3, "BYTEBEAT", "EDIT 1", 8, &mv, &st);
+        m0 = vxs.lm;
+        vxt_snap();
+        TSEL->p[P_E0] = 3;                               /* (1BIT) */
+        vxt_run(64, 0);
+        changed = !vxt_same();
+        mid = vxs.lm;
+        vxt_run(1500, 0);
+        glide = vxs.lm == 256;
+        vxt_snap();
+        vxt_run(400, 0);
+        held = vxt_same();
+        bad += check("0.9.10 LOFI: at 8BIT the organism (morph 0); CHIP 1BIT glides it into the DIP (morph 0 .. 1 over frames), "
+                     "then it holds still in silence", m0 == 0 && changed && mid > 0 && mid < 200 && glide && held);
+        for (k = 0; k < NELEM(CH); k++) {
+            TSEL->p[P_E0] = CH[k].chip;
+            vxt_run(1500, 0);
+            if (vxs.lm != CH[k].m) { printf("  CHIP %u: morph %d (want %d)\n", CH[k].chip, vxs.lm, CH[k].m); glide = 0; }
+        }
+        bad += check("0.9.10 LOFI: the morph glides to CHIP's target (4BIT .40, 4B/2 .70, 1BIT 1, STEP .45, 8BIT 0)", glide);
+        for (k = 0; k < NELEM(KN); k++) {
+            int16_t v0;
+            if (k == 0u || strcmp(KN[k].pre, KN[k - 1u].pre))
+                vxt_case(3, KN[k].pre, "EDIT 1", 8, &mv, &st);
+            vxt_snap();
+            v0 = TSEL->p[KN[k].p];
+            TSEL->p[KN[k].p] = KN[k].v;
+            vxt_run(64, 0);
+            changed = !vxt_same();
+            vxt_snap();
+            vxt_run(200, 0);
+            held = vxt_same();
+            TSEL->p[KN[k].p] = v0;
+            vxt_run(64, 0);
+            if (!changed || !held) { printf("  %s p%u = %d: %s\n", KN[k].pre, KN[k].p, KN[k].v, !changed ? "the drawing unchanged" : "moving in silence"); knobs = 0; }
+        }
+        bad += check("0.9.10 LOFI: TYPE RES DIST BEND CUT VAR LOOP ALGO COMB DUTY VIB MASK MORPH each change the drawing, still in silence", knobs);
+    }
     {   /* DRUM-X: KIT's beings (EDIT 1) and SOUND 1..4; KIT 2, KIT 3, X-MOD keep the colony; a hit squashes its being, a
          * ratchet's hits each */
         static const char *const PG[] = {"EDIT 1", "SOUND", "SOUND 4", "EDIT 2", "KIT 3", "X-MOD"};
