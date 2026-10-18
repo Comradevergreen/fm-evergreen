@@ -139,12 +139,20 @@ atajos de esa capa; en la grilla DRUM son pasos y carriles; en la pantalla NAME 
 
 ## 2. La pantalla
 
-### Pieles: COLORS, BOTTOM, HUD (0.8.9)
+### Pieles: AIR, COLORS, BOTTOM, HUD (0.8.9, AIR 0.9.7)
 
-**MENU > DISPLAY > SKIN** elige cómo se visten las lentes (la maqueta aprobada "skin aireado", opciones 1, 3 y 4); en
-todas las páginas, todas las paletas, FLAT y LINE:
+**MENU > DISPLAY > SKIN** elige cómo se visten las lentes (la maqueta aprobada "skin aireado", opciones 1, 3 y 4; 0.9.7:
+AIR, la opción aprobada); en todas las páginas, todas las paletas, FLAT y LINE. El menú las recorre AIR, COLORS, BOTTOM,
+HUD:
 
-- **COLORS** (la de fábrica; los ajustes viejos cargan con ella): la estructura LENTE con los **colores de la 0.6**.
+- **AIR** (0.9.7; la de fábrica de los ajustes nuevos: un FM-1 nuevo o con sus ajustes borrados; los ajustes guardados
+  antes conservan la piel que tenían): el aspecto de HUD en **todas** las páginas, con la **fila de perillas arriba**,
+  justo debajo de las pestañas: sin cartas ni caja de panel, el texto claro con un borde oscuro de 2 px, el medio de la
+  pantalla libre para el dibujo y el pie solo la miga de pan. En HOME los seres nadan por la pantalla entera debajo del
+  encabezado, las pestañas, la fila de perillas y la miga, como en HUD (la fila de perillas se apaga ahí unos segundos
+  después de la última vuelta); todas las capas, diálogos y el menú con la misma ropa. La palabra del grupo va
+  subrayada con una rayita.
+- **COLORS** (los ajustes guardados antes de 0.9.7 sin otra piel elegida cargan con ella): la estructura LENTE con los **colores de la 0.6**.
   Negro, cartas casi negras redondeadas con una marquita y el nombre de la perilla, **cada perilla con su color** en el
   valor y en la barra (JIANT, 0.9.5 como la 0.6: el color propio de cada parámetro **se mueve con su cantidad**, como
   calor, violeta si es poco, amarillo y crema si es mucho; uno centrado como PAN o DETUNE frío en el medio y caliente en
@@ -162,7 +170,8 @@ todas las páginas, todas las paletas, FLAT y LINE:
 
 Los valores (cartas, el BPM del encabezado) vuelven a una sans redondeada (Inter Tight SemiBold), como en la 0.6; los
 nombres, las pestañas y la miga siguen con las letras de píxel de 5 x 7. **MENU > LARGE** deja sus cartas grandes arriba
-en todas las pieles (la piel conserva sus pestañas y sus colores), así LARGE se lee igual en cualquiera.
+en todas las pieles (la piel conserva sus pestañas y sus colores; en AIR quedan donde va su fila de perillas, debajo de
+las pestañas), así LARGE se lee igual en cualquiera.
 
 Desde la 0.8.5 todas las páginas llevan la piel del diseño que aprobó el dueño (la maqueta HTML "LENTE"):
 
@@ -193,7 +202,7 @@ Desde la 0.8.5 todas las páginas llevan la piel del diseño que aprobó el due�
   la sección (0.9.2; p. ej. **FX · DELAY · DLY 2  6/16**, **ENV · TRACKS · TRACKS DEST  2/5**).
 - **Las pestañas** (0.9.2): debajo del encabezado, los **grupos** de la sección (FX: TRK · BUS · DLY · REV · CHO · SLC ·
   MST · PCH; SEQ: PATT · TRACK · BAR · STEP · AUTO), encendido el del grupo en el que estás (COLORS: relleno violeta;
-  BOTTOM: una pastillita; HUD: una rayita), y **un punto por página** debajo de cada uno, encendido el de la página que
+  BOTTOM: una pastillita; HUD y AIR: una rayita), y **un punto por página** debajo de cada uno, encendido el de la página que
   se ve. Las tarjetas debajo, un panel más alto, y el pie es solo la miga de pan.
 
 - **Las letras chicas** (desde la 0.8.5): los nombres de las tarjetas, las pestañas, la miga de pan, las
@@ -204,9 +213,10 @@ Los **colores** funcionan como una cámara térmica: frío (índigo, violeta) es
 mucho. Violeta es lo seleccionado, naranja lo activo.
 
 **HOME** es el ecosistema: una criatura por pista, su especie según su motor, su forma según sus cuatro perillas, que
-se hincha y se calienta con su propio audio (0.8.8: nadando libres por toda la pantalla, solas, como antes de 0.8.5, con bichitos nadando
-entre ellas; ver [las secciones](#las-secciones-y-sus-cadenas)). La pista seleccionada se dibuja más grande, su número en violeta, una muteada se oscurece, una
-pista dormida (TRACKS 4) se dibuja como muteada. En el **MIXER**, las pistas dormidas aparecen en gris y dicen OFF.
+se hincha y se calienta con su propio audio (0.8.8: nadando libres por toda la pantalla, solas, como antes de 0.8.5; ver
+[las secciones](#las-secciones-y-sus-cadenas)). (0.9.7) Cada ser lleva una **carita**: cierra los ojos con un golpe y abre
+la boca con su nivel. La pista seleccionada se dibuja más grande, su número en violeta, una muteada se **duerme** (un
+contorno apagado, los ojos cerrados), una pista dormida (TRACKS 4) se dibuja como muteada. En el **MIXER**, las pistas dormidas aparecen en gris y dicen OFF.
 
 Los **diálogos** preguntan antes de cualquier cosa destructiva: **OCT− NO**, **OCT+ YES**. (0.8.5, como la maqueta)
 Llevan las pestañas **NOTICE · DICE · NAME**: una pregunta es una tarjeta bajo una regla violeta con sus dos botones
@@ -262,7 +272,7 @@ páginas, sus perillas, sus dibujos y todas las funciones son las mismas, solo c
    no recorre páginas: regla 3.)
 6. **La pantalla dice dónde estás.** Arriba, las pestañas son los **grupos** de la sección, el actual encendido y un
    puntito por cada una de sus páginas. Abajo: **SECCIÓN · GRUPO · página** y **n/N**, el lugar de la página en la
-   cadena: **FX · DELAY · DLY 2  6/16**. Igual en COLORS, BOTTOM y HUD, con todas las paletas.
+   cadena: **FX · DELAY · DLY 2  6/16**. Igual en AIR, COLORS, BOTTOM y HUD, con todas las paletas.
 
 - Cada sección recuerda la página donde la dejaste (EDIT una para los sintes y una para FM6 y otra para DRUM); al
   encender SEQ abre en STEP, ENV en ENV, LFO en LFO, las demás en su primera página.
@@ -308,9 +318,13 @@ nivel PROJECT) y **PROJECTS** (el nivel LIBRARY); EDIT 1 / EDIT 2 del kit DRUM s
 
 - **ECO**: los seres de las seis pistas nadando libres por todo el panel, solos (0.8.8: como antes de 0.8.5), cada
   uno hinchándose con su sonido (un golpe lo empuja), su número debajo; el seleccionado más grande, su número violeta.
-  Alrededor, **bichitos**: ciliados, esporas, células a la deriva, flagelados y diatomeas diminutos que deambulan, se
-  juntan alrededor de las pistas que suenan, se dispersan cuando un ser recibe un golpe y laten con la salida (los
-  dibuja solo la pantalla: nada del tiempo del sonido). **MACROS**: KNOB 1–4 son **M1–M4** (las macros, como LFO
+  (0.9.7, "hoy con carita") Cada ser es el contorno con púas de su especie (las púas según suena) en **tres isotermas**,
+  coloreadas por **su propio nivel** como una cámara térmica (bajito: cian y azul; fuerte: rojo, naranja y amarillo; las
+  de adentro más calientes), y donde estaban sus núcleos una **carita**: dos ojos que **se cierran con un golpe** y una
+  boca que **se abre con el nivel**. El ser de una pista muteada duerme (un contorno apagado, los ojos cerrados). Cuando
+  **MUTATE** cambia una pista, su ser **mira para arriba**, su número se enciende **blanco** y se abre un anillo del
+  color de acento a su alrededor. Detrás derivan los gránulos del citoplasma (los dibuja solo la pantalla: nada del
+  tiempo del sonido). **MACROS**: KNOB 1–4 son **M1–M4** (las macros, como LFO
   mantenido), las rutas contadas arriba a la izquierda, LATCH a la derecha.
 - **BEING**: el ser de la pista grande, sus cuatro perillas de HOME como órganos en las esquinas (un medidor cada una,
   su valor, una vena hasta el cuerpo), el nombre del sonido debajo. (0.9.4) Una pista VOICE muestra ahí su **cabeza**, una ANIMAL su
@@ -790,7 +804,8 @@ bytes de RAM; nada en el sonido.
 ### Seis motores más dibujan su propia criatura (0.9.6)
 
 Con 0.9.6 cada motor tiene su propio dibujo: ANALOG, FM6, WHEEL, NOISE, PHASE y LOFI dibujan el suyo en **EDIT › SOUND**
-(a la izquierda; el osciloscopio y las fichas a la derecha como antes) y en **HOME › BEING** (el ecosistema de HOME
+(a la izquierda; el osciloscopio y las fichas a la derecha como antes; 0.9.7: con **MENU › DISPLAY › SCOPE** en ON — en OFF,
+el de fábrica, la criatura tiene todo el panel, centrada, el nombre del sonido un rótulo chiquito en una esquina) y en **HOME › BEING** (el ecosistema de HOME
 conserva sus seres), con el mismo dibujo térmico, la cara de los bichitos compartida con los de DRUM-X, y se mueven
 solo mientras la pista suena:
 
@@ -1125,8 +1140,8 @@ seleccionada se graban como **automatización**. MENU > AUDIO tiene el **CLICK**
   como está ahora. SOUND cambia los valores del motor, el filtro, su envolvente, DEC, REL y los envíos (nunca LEVEL, PAN
   ni MUTE); PATTERN mueve notas por la escala, cambia acentos, agrega o saca una nota fuera del tiempo (nunca en el
   tiempo); en DRUM cambia golpes, nunca el bombo. **OCT−** acá (o **GLO + A4**, FREEZE) frena todas las mutaciones
-  hasta volver a apretarlo. En HOME cada bichito tiene un anillo de puntos que se llena hasta su próximo cambio y se
-  enciende entero cuando cambia.
+  hasta volver a apretarlo. En HOME (0.9.7) el ser al que le llega un cambio mira para arriba, su número se enciende
+  blanco y se abre un anillo del color de acento a su alrededor.
   **Volver atrás** (0.9.3): MUTATE guarda su ancla, así que una pista puede volver a ella. Si apagás SOUND y PATTERN de
   una pista (los dos en OFF) después de que MUTATE la cambió, un aviso (NOTICE) pregunta **BACK TO BEFORE MUTATE?**:
   **OCT+** (BACK) devuelve el sonido y los pasos de la pista como los tiene el ancla, **OCT−** (KEEP) la deja como está
@@ -1954,13 +1969,14 @@ la pista seleccionada.
 SYSTEM; frena en la primera y en la última), **ALGORITHM** salta a la pestaña siguiente / anterior (a su primera fila),
 **cualquier perilla** u **OCT+ / OCT−** cambia el valor; PRESETS acá no hace nada. HOME lo cierra (en ese momento se
 guarda la configuración). La pantalla muestra las filas de la pestaña, las cuatro de la fila elegida como tarjetas
-(ROWS 1–4 / ROWS 5–6; DISPLAY: ROWS 5–7) con el número de su perilla; las pestañas arriba, el pie **MENU · DISPLAY ·
-SKIN  2/25**. El encabezado dice MENU · DISPLAY.
+(ROWS 1–4 / ROWS 5–6; DISPLAY: ROWS 5–8) con el número de su perilla; las pestañas arriba, el pie **MENU · DISPLAY ·
+SKIN  2/26**. El encabezado dice MENU · DISPLAY.
 
 | Pestaña | Fila | Valores |
 | --- | --- | --- |
 | DISPLAY | COLOR | GREY, GREEN, AMBER, ICE, VIOLET, ROSE, PAPER, HI-CON, NIGHT, MONO, **JIANT** (por defecto) |
-| DISPLAY | SKIN | **COLORS** (de fábrica), BOTTOM, HUD — (0.8.9) ver [Pieles](#pieles-colors-bottom-hud-089) |
+| DISPLAY | SKIN | **AIR** (de fábrica en los ajustes nuevos), COLORS, BOTTOM, HUD — (0.8.9; AIR 0.9.7) ver [Pieles](#pieles-air-colors-bottom-hud-089-air-097) |
+| DISPLAY | SCOPE | **OFF** (de fábrica), ON — (0.9.7) las páginas EDIT de un motor: OFF la criatura en todo el panel, centrada, el nombre de la página y el del sonido chiquitos en sus esquinas; ON la criatura a la izquierda, la carta SCOPE y las fichas como antes. Los ajustes guardados antes de 0.9.7 cargan OFF |
 | DISPLAY | STYLE | FLAT, LINE |
 | DISPLAY | LARGE | OFF, ON (etiquetas y valores grandes) |
 | DISPLAY | ANIM | ON, OFF (los valores saltan directo; la firma de encendido aparece entera) |

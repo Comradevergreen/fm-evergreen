@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
 # (JIANT 0.5; 0.6.30: from the presentation video's footage) the README's images, docs/jiant-hero.png and
-# docs/jiant-screens.png. (0.9.2) From the firmware's own renders in the default skin, COLORS on the JIANT palette
-# (tests/ui_render.c -> build/ui_new/JIANT/<screen>.png; BOTTOM_JIANT/ and HUD_JIANT/ for the other two skins), so the
-# README shows the screens as the firmware draws them now (the tabs, the cards in their knobs' colours, the breadcrumb):
+# docs/jiant-screens.png. (0.9.2) From the firmware's own renders in the default skin on the JIANT palette (0.9.7: AIR,
+# tests/ui_render.c -> build/ui_new/AIR_JIANT/<screen>.png, with MENU > DISPLAY > SCOPE OFF as a new FM-1 has it: the
+# *_full scenes; JIANT/ COLORS, BOTTOM_JIANT/ and HUD_JIANT/ the other skins), so the README shows the screens as the
+# firmware draws them now (the tabs, the knobs in their colours, the breadcrumb):
 #   python3 -c "import sys; sys.path.insert(0, 'tools'); import build; build.generate()"
 #   mkdir -p build/ui_new/ppm && cc -O1 -w -DFELUCCA_VERSION=\"v0.9.2\" -Ibuild/gen -Ifirmware/src -Itests \
 #       -o build/ui_render tests/ui_render.c -lm && build/ui_render build/ui_new && python3 tests/ui_render.py build/ui_new
@@ -24,7 +25,7 @@ def heat(v):
 BG, TXT, MID, DIM = (0, 0, 0), (244, 241, 234), (160, 154, 150), (80, 76, 84)
 
 
-def shot(name, skin='JIANT'):                         # a screen as the firmware draws it (240 x 240)
+def shot(name, skin='AIR_JIANT'):                         # a screen as the firmware draws it (240 x 240)
     return Image.open(U / skin / f'{name}.png').convert('RGB')
 
 
@@ -64,8 +65,8 @@ for i, (b, c) in enumerate(big):
     x = 70 + i * 500; framed(im, shot(b), x, y0, 2); d.text((x, y0 + 492), c, font=cap, fill=heat(0.15 + 0.3 * i))
 strips = [[('lente_step_note', 'NOTE · MICRO in 64ths'), ('seq_bar', 'SEQ › BAR · PLAYHEADS'), ('key_chord', 'CHORD'),
            ('fx_buses', 'FX › BUSES'), ('mixer', 'MIXER · DJ FILTER'), ('layer_glo_active', 'GLO held · MAP')],
-          [('edit_analog', 'ACID ANALOG'), ('drumx', 'DRUM-X'), ('words', 'VOICE · WORDS'), ('ed_operator', 'FM6 OPERATOR'),
-           ('reverb_reso', 'RESO REVERB'), (('home', 'HUD_JIANT'), 'HUD skin')]]
+          [('v6_analog_full', 'ACID ANALOG'), ('drumx', 'DRUM-X'), ('words', 'VOICE · WORDS'), ('ed_operator', 'FM6 OPERATOR'),
+           ('reverb_reso', 'RESO REVERB'), (('home', 'JIANT'), 'COLORS skin')]]
 y1 = y0 + 545
 for r, row in enumerate(strips):
     for i, (b, c) in enumerate(row):
@@ -75,7 +76,7 @@ for r, row in enumerate(strips):
         d.text((x, y + 222), c, font=font('SemiBold', 18), fill=MID)
 y2 = y1 + 2 * 270 + 20
 cards = [("SIX RULES", "SELECT walks a section's pages;\nits button jumps group to group."),
-         ("THREE SKINS", "COLORS, BOTTOM and HUD: each knob\nits colour, tabs and a breadcrumb."),
+         ("FOUR SKINS", "AIR, COLORS, BOTTOM and HUD: each\nknob its colour, tabs, a breadcrumb."),
          ("EXPLORE", "HOME + SELECT writes a whole song;\nEXPLORE breaks every rule, 43 genres."),
          ("VOICE SINGS", "Words in ES, EN and JA: each note\nthe next syllable of your lyric."),
          ("ANIMAL", "Birds, crickets, frogs, wolves:\ncalls from physical models."),

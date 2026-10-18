@@ -137,12 +137,20 @@ layer's shortcuts; on the DRUM grid they are steps and lanes; on the NAME screen
 
 ## 2. The screen
 
-### Skins: COLORS, BOTTOM, HUD (0.8.9)
+### Skins: AIR, COLORS, BOTTOM, HUD (0.8.9, AIR 0.9.7)
 
-**MENU > DISPLAY > SKIN** picks how the lenses are dressed (the approved mock-up "skin aireado", options 1, 3 and 4);
-every page, every palette, FLAT and LINE:
+**MENU > DISPLAY > SKIN** picks how the lenses are dressed (the approved mock-up "skin aireado", options 1, 3 and 4;
+0.9.7: AIR, the approved option); every page, every palette, FLAT and LINE. The menu steps them AIR, COLORS, BOTTOM,
+HUD:
 
-- **COLORS** (the default; older settings load as it): the LENTE layout in the **0.6 colours**. Black, near-black
+- **AIR** (0.9.7; the default of new settings: a new FM-1, or its settings erased; settings saved before keep the
+  skin they had): HUD's look on **every** page, with the **knob row on top**, right under the tabs: no cards and no
+  panel box, the words light with a 2 px dark outline, the middle of the screen free for the picture and the footer
+  the breadcrumb alone. On HOME
+  the beings swim over the whole screen under the header, the tabs, the knob row and the breadcrumb, as on HUD (the knob
+  row fading there a few seconds after the last turn); every layer, dialog and menu in the same dress. The group's word
+  is underlined by a dash.
+- **COLORS** (settings saved before 0.9.7 with no other skin chosen load as it): the LENTE layout in the **0.6 colours**. Black, near-black
   rounded cards with a small mark and the knob's name, **each knob its colour** on its value and its bar (JIANT,
   0.9.5 as the 0.6: each parameter's own colour **moves with its amount** as heat, violet when low to yellow and cream
   when high, a centred one such as PAN or DETUNE cold in the middle and hot at either end; the other palettes their
@@ -159,7 +167,8 @@ every page, every palette, FLAT and LINE:
 
 Values (cards, the header's BPM) are set in a rounded sans again (Inter Tight SemiBold), as in 0.6; names, tabs and the
 breadcrumb stay in the 5 x 7 pixel letters. **MENU > LARGE** keeps its big cards on top in every skin (the skin keeps
-its tabs and colours), so LARGE reads the same whatever the skin.
+its tabs and colours; on AIR they sit where AIR's knob row does, under the tabs), so LARGE reads the same whatever the
+skin.
 
 Since 0.8.5 every page wears the skin of the design the owner approved (the HTML mock-up "LENTE"):
 
@@ -186,8 +195,8 @@ Since 0.8.5 every page wears the skin of the design the owner approved (the HTML
   **breadcrumb**: **SECTION · GROUP · page** and the page's place in the section's chain at the right (0.9.2; e.g.
   **FX · DELAY · DLY 2  6/16**, **ENV · TRACKS · TRACKS DEST  2/5**).
 - **The tabs** (0.9.2): under the header, the section's **groups** (FX: TRK · BUS · DLY · REV · CHO · SLC · MST · PCH;
-  SEQ: PATT · TRACK · BAR · STEP · AUTO), the one you are on lit (COLORS: filled violet; BOTTOM: a small pill; HUD: a
-  dash), and **a dot a page** under each, the page shown lit. The cards under them, a taller panel, and the footer is
+  SEQ: PATT · TRACK · BAR · STEP · AUTO), the one you are on lit (COLORS: filled violet; BOTTOM: a small pill; HUD and AIR:
+  a dash), and **a dot a page** under each, the page shown lit. The cards under them, a taller panel, and the footer is
   the breadcrumb alone.
 
 - **The small letters** (since 0.8.5): the cards' names, the tabs, the breadcrumb, the header's middle words and
@@ -198,9 +207,10 @@ Since 0.8.5 every page wears the skin of the design the owner approved (the HTML
 what's selected, orange what's active.
 
 **HOME** is the ecosystem: one creature per track, its species from its engine, its shape from its four knobs, swelling
-and heating up with its own audio (0.8.8: swimming free over the whole screen by themselves, as before 0.8.5, critters swimming among them; see
-[the sections](#the-sections-and-their-chains)). The selected track is drawn bigger, its number in violet, a muted one goes dark, a track asleep
-(TRACKS 4) is drawn as muted. On the **MIXER**, asleep tracks are greyed and say OFF.
+and heating up with its own audio (0.8.8: swimming free over the whole screen by themselves, as before 0.8.5; see
+[the sections](#the-sections-and-their-chains)). (0.9.7) Each being wears a small **face**: its eyes shut on a hit, its
+mouth opens with its level. The selected track is drawn bigger, its number in violet, a muted one falls **asleep** (a dim
+outline, its eyes shut), a track asleep (TRACKS 4) is drawn as muted. On the **MIXER**, asleep tracks are greyed and say OFF.
 
 **Dialogs** ask before anything destructive: **OCT− NO**, **OCT+ YES**. (0.8.5, as the mock-up) They carry the
 tabs **NOTICE · DICE · NAME**: a question is a card under a violet rule with its two buttons (YES in the accent); a
@@ -253,7 +263,7 @@ knobs, their pictures and every function are the same, only the way between them
    **GLO** the tempo, **ENV / SCL / ARP / SAVE** walk their chain. (Held + PRESETS no longer walks pages: rule 3.)
 6. **The screen says where you are.** On top, the tabs are the section's **groups**, the one you are on lit and a dot
    for each of its pages. At the foot: **SECTION · GROUP · page** and **n/N**, the page's place in the chain:
-   **FX · DELAY · DLY 2  6/16**. The same in COLORS, BOTTOM and HUD, every palette.
+   **FX · DELAY · DLY 2  6/16**. The same in AIR, COLORS, BOTTOM and HUD, every palette.
 
 - Each section remembers the page it was left on (EDIT one for the synths and one each for FM6 and DRUM); at power-on
   SEQ opens on STEP, ENV on ENV, LFO on LFO, the others on their first page.
@@ -297,9 +307,13 @@ LIBRARY level); the DRUM kit's EDIT 1 / EDIT 2 are **KIT** / **KIT 2**. The new 
 the bars with KNOB 1 the bar and KNOB 2 LEN.
 
 - **ECO**: the six tracks' beings swimming free over the whole panel by themselves (0.8.8: as before 0.8.5), each
-  swelling with its sound (a hit kicks it on), its number under it; the selected one larger, its number violet. Around them **critters**: tiny
-  ciliates, spores, drifting cells, flagellates and diatoms that wander, gather round the tracks that sound, scatter
-  when a being is hit and pulse with the output (drawn by the screen alone: nothing of the sound's time). **MACROS**:
+  swelling with its sound (a hit kicks it on), its number under it; the selected one larger, its number violet.
+  (0.9.7, "today's being with a face") Each being is its species' spiky outline (the spikes as it sounds) in **three
+  isotherms**, coloured by **its own level** like a thermal camera (quiet: cyan and blue; loud: red, orange and
+  yellow; the inner lines warmer), and where its nuclei were a **face**: two eyes that **shut on a hit**, a mouth that
+  **opens with the level**. A muted track's being sleeps (a dim outline, its eyes shut). When **MUTATE** changes a
+  track, its being **looks up**, its number lights **white** and one ring in the accent opens round it. The cytoplasm's
+  granules drift behind them (drawn by the screen alone: nothing of the sound's time). **MACROS**:
   KNOB 1–4 are **M1–M4** (the macros, as LFO held), the routes counted at the top left, LATCH at the right.
 - **BEING**: the track's being large, its four HOME knobs as organs at the corners (a gauge each, its value, a vein to
   the body), the sound's name under it. (0.9.4) A VOICE track shows its **head**, an ANIMAL track its **creature**, a DRUM-X track
@@ -757,7 +771,8 @@ of RAM; nothing in the sound.
 ### Six more engines draw their own creature (0.9.6)
 
 With 0.9.6 every engine has its own picture: ANALOG, FM6, WHEEL, NOISE, PHASE and LOFI draw theirs on **EDIT › SOUND**
-(on the left; the scope and the chips on the right as before) and on **HOME › BEING** (HOME's ecosystem keeps its
+(on the left; the scope and the chips on the right as before; 0.9.7: with **MENU › DISPLAY › SCOPE** ON — OFF, the default,
+gives the creature the whole panel, centred, the sound's name a small caption in a corner) and on **HOME › BEING** (HOME's ecosystem keeps its
 beings), in the same thermal line art, the bichos' face shared with DRUM-X's beings, moving only while the track sounds:
 
 - **ANALOG: a cell.** Its membrane (three isotherms, the outer cold) is two cycles of the oscillators through the
@@ -1076,7 +1091,7 @@ recorded into the pattern, quantized to its steps, overdubbing. Knob moves on th
   what it is now. SOUND changes the engine's values, the filter, its envelope, DEC, REL and the sends (never LEVEL, PAN
   or MUTE); PATTERN moves notes along the scale, flips accents, adds or takes a note off the beat (never on it); on
   DRUM it flips hits, never the kick. **OCT−** here (or **GLO + A4**, FREEZE) stops every mutation until pressed again.
-  On HOME each being has a ring of dots filling up to its next change, all lit when it changes.
+  On HOME (0.9.7) the being a change lands on looks up, its number lights white and a ring in the accent opens round it.
   **Going back** (0.9.3): MUTATE keeps its anchor, so a track can return to it. Turn a track's SOUND and PATTERN both
   OFF after MUTATE has changed it and a NOTICE asks **BACK TO BEFORE MUTATE?**: **OCT+** (BACK) puts the track's sound
   and steps back as the anchor holds them, **OCT−** (KEEP) leaves it as it is (if nothing changed, nothing is asked).
@@ -1844,13 +1859,14 @@ track.
 **SELECT** walks every row (0.9.2), all four tabs in one chain (DISPLAY → CONTROL → AUDIO → SYSTEM; it stops at the
 first and the last), **ALGORITHM** jumps to the next / previous tab (its first row), **any knob** or **OCT+ / OCT−**
 changes the value; PRESETS does nothing here. HOME closes it (settings are saved then). The screen shows the tab's rows,
-the selected row's four as cards (ROWS 1–4 / ROWS 5–6; DISPLAY: ROWS 5–7) with their knob's number; the tabs on top,
-the footer **MENU · DISPLAY · SKIN  2/25**. The header says MENU · DISPLAY.
+the selected row's four as cards (ROWS 1–4 / ROWS 5–6; DISPLAY: ROWS 5–8) with their knob's number; the tabs on top,
+the footer **MENU · DISPLAY · SKIN  2/26**. The header says MENU · DISPLAY.
 
 | Tab | Row | Values |
 | --- | --- | --- |
 | DISPLAY | COLOR | GREY, GREEN, AMBER, ICE, VIOLET, ROSE, PAPER, HI-CON, NIGHT, MONO, **JIANT** (default) |
-| DISPLAY | SKIN | **COLORS** (default), BOTTOM, HUD — (0.8.9) see [Skins](#skins-colors-bottom-hud-089) |
+| DISPLAY | SKIN | **AIR** (default of new settings), COLORS, BOTTOM, HUD — (0.8.9; AIR 0.9.7) see [Skins](#skins-air-colors-bottom-hud-089-air-097) |
+| DISPLAY | SCOPE | **OFF** (default), ON — (0.9.7) an engine's EDIT pages: OFF the creature on the whole panel, centred, the page's name and the sound's name small in its corners; ON the creature on the left, the SCOPE card and the chips as before. Settings saved before 0.9.7 load as OFF |
 | DISPLAY | STYLE | FLAT, LINE |
 | DISPLAY | LARGE | OFF, ON (big labels and values) |
 | DISPLAY | ANIM | ON, OFF (values snap; the power-on signature appears whole) |

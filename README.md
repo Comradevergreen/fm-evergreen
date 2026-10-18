@@ -15,7 +15,12 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.9.6).** It builds and passes every test (Felucca's and its own). Back up the flash before installing it.
+> **Status: in development (v0.9.7).** It builds and passes every test (Felucca's and its own). Back up the flash before installing it.
+  **A new skin, AIR** (0.9.7, the default of new settings): HUD's light look on every page with the knob row on top,
+  the middle of the screen free; HOME's beings over the whole screen. **MENU › DISPLAY › SCOPE** (OFF by default): an
+  engine's EDIT pages give its creature the whole panel. **HOME's beings have faces**: three isotherms coloured by their
+  own level, eyes that shut on a hit, a mouth that opens with the sound, a look up when MUTATE changes them. 15 KB of
+  flash given back, nothing removed, the sound bit for bit.
   **Every engine draws its own creature** (0.9.6): ANALOG a cell whose membrane is its wave, FM6 its operators as
   little beings wired as the algorithm (also on OPERATOR and OP ENV), WHEEL nine tube worms, one a drawbar, NOISE a
   swarm, PHASE a snail whose shell is the bent phase, LOFI a caterpillar whose skin is its output and segments its bits.
@@ -42,7 +47,8 @@ editor update themselves with every change merged into `main`.
 > - **Flat navigation** (0.9.2): one chain of pages per section, the groups as tabs on top (a dot a page), the
 >   breadcrumb **SECTION · GROUP · page n/N** at the foot; SCL and ARP two sections; GEN three HOME pages. Clearing a
 >   step is **SEQ + G5**, renaming **SAVE + C5**: EDIT is always EDIT.
-> - **Three skins, MENU > DISPLAY > SKIN** (0.8.9; HUD faster in 0.9.0): **COLORS** (the default: rounded cards, each
+> - **Three skins, MENU > DISPLAY > SKIN** (0.8.9; HUD faster in 0.9.0; 0.9.7: a fourth, **AIR**, the default of new
+>   settings): **COLORS** (rounded cards, each
 >   card its colour, on JIANT its value's heat as in 0.6), **BOTTOM** (the picture edge to edge, a slim knob row) and **HUD**
 >   (HOME's beings under everything). The **LENTE** look (0.8.5): tabs, cards and a breadcrumb in a crisp 5 × 7 pixel
 >   face, values in Inter Tight. **Held layers** show the keyboard itself: MAP, KNOBS and STATE (ALGORITHM while held).
@@ -174,7 +180,8 @@ VOICE singing its lyric, in the COLORS skin, exactly as the firmware draws them 
 - **Thermal palette**: values, curves, steps, hits and notes are coloured by intensity (cyan → blue → violet → red →
   orange → yellow → white). Selection is violet and active is orange; on JIANT each card's value and gauge are its
   amount's heat (0.9.5, as 0.6), the other palettes give each knob its own colour.
-- **Skins** (MENU > DISPLAY > SKIN, 0.8.9): **COLORS** (the default: near-black rounded cards on top, a rounded
+- **Skins** (MENU > DISPLAY > SKIN, 0.8.9): **AIR** (0.9.7, the default of new settings: HUD's floating words on
+  every page, the knob row on top under the tabs, the middle free), **COLORS** (near-black rounded cards on top, a rounded
   panel), **BOTTOM** (no cards: the picture the screen's width, a slim knob row at the foot) and **HUD** (HOME's
   beings swim under everything, the words float over them). Every skin wears the **LENTE** layout (0.8.5): the
   section's groups as tabs on top (a dot a page), the breadcrumb **SECTION · GROUP · page n/N** at the foot. Values
@@ -182,7 +189,8 @@ VOICE singing its lyric, in the COLORS skin, exactly as the firmware draws them 
   pixel face, small captions in [Chakra Petch](https://github.com/m4rc1e/Chakra-Petch).
 - **HOME, the ecosystem**: one being per track (its species from its engine, its shape from its four knobs). Each one
   heats up, swells and moves with its own audio; the selected track is drawn bigger; muted ones go dark; in silence
-  they all stay still.
+  they all stay still. (0.9.7) Each wears a little face: its eyes shut on a hit, its mouth opens with its level, it
+  looks up when MUTATE changes it; muted, it sleeps.
 - **Engine pages**: each engine draws its own creature (0.9.4 / 0.9.6, [below](#v096)): VOICE a singing head, ANIMAL
   a bird / insect / mammal, DRUM-X its kit of little beings, ANALOG a cell, FM6 a colony of operators, WHEEL tube worms,
   NOISE a swarm, PHASE a snail, LOFI a caterpillar. (Before: the sound's being drawn in isotherms, four contours of
@@ -343,7 +351,7 @@ Turning fast sweeps the whole range; turning slowly is fine adjustment. Turn it 
 <details>
 <summary><b>What changed from Felucca 1.1.5.1</b></summary>
 
-- **New interface**: thermal palette, three skins (COLORS, BOTTOM, HUD), the LENTE layout (tabs, cards, breadcrumb),
+- **New interface**: thermal palette, four skins (AIR, COLORS, BOTTOM, HUD), the LENTE layout (tabs, cards, breadcrumb),
   beings, HOME ecosystem, live technical graphs and a power-on signature; navigation by six rules (0.9.2).
 - **DRUM** is DRUM-X; Felucca's kits were retired. **CHORD** was retired (its parameters are SHIFT). **PHYS** and
   **TRIO** were retired (TRIO lives inside ANALOG; a PHYS sound plays as ANALOG's first preset).
@@ -414,7 +422,8 @@ each layer; the complete manual is in **[docs/MANUAL.md](docs/MANUAL.md)** (en e
 - **Colours**: cold (indigo, violet) is little, hot (red, orange, cream, white) is a lot. Violet is what's selected,
   orange what's active; on JIANT each card is coloured by its value (cold low, hot high; 0.9.5, as 0.6), the other
   palettes give each knob its own colour.
-- **Skin** (MENU > DISPLAY > SKIN, 0.8.9): **COLORS** the cards on top in the 0.6 colours, **BOTTOM** the knobs a slim
+- **Skin** (MENU > DISPLAY > SKIN, 0.8.9): **AIR** (0.9.7, the default of new settings) HUD's look on every page with
+  the knob row on top, **COLORS** the cards on top in the 0.6 colours, **BOTTOM** the knobs a slim
   row at the foot and the middle free, **HUD** HOME's beings over the whole screen under floating words.
 - **Load meter** (top right, next to the battery): five small bars showing how much of the audio time the sound is
   using right now. The firmware's RAM is reserved entirely at boot and doesn't change, so this is what's worth
@@ -634,6 +643,42 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### v0.9.7
+- **AIR, a new skin, the default of new settings** (the approved option of the "skin aireado" mock-up): HUD's look on
+  every page (no cards, no panel box, the words light with a dark outline) with the **knob row on top**, right under
+  the tabs; the middle of the screen is free for the picture and the footer is the breadcrumb. HOME as HUD's: the
+  beings over the whole screen, the knob row on top fading a few seconds after the last turn. Every palette, FLAT and
+  LINE, every lens page, layer, dialog and the MENU; MENU › LARGE keeps its big cards on top as in every skin. MENU ›
+  DISPLAY › SKIN now steps **AIR, COLORS, BOTTOM, HUD**. A new FM-1 (or erased settings) starts in AIR; settings saved
+  before keep the skin they had (COLORS, BOTTOM, HUD), nothing changes for them. The HUD dirty-cell audit, run on AIR
+  as on HUD: no stale pixel.
+- **MENU › DISPLAY › SCOPE ON / OFF** (a new row under SKIN; the MENU 26 rows, DISPLAY 8; the editor's MENU id 22):
+  **OFF, the default** (new settings, and settings saved before, which never held it), an engine's EDIT pages draw its
+  creature on the **whole panel**, centred, the page's name and the sound's name small in its corners (no SCOPE card, no
+  chips); **ON** as 0.9.6 (the creature on the left, the scope and the chips on the right). Saved with the settings.
+- **HOME, variant A, "today's being with a face"**: each being is its species' spiky outline (the spikes as it sounds)
+  in **three isotherms** (four before), coloured by **its own level** (quiet cyan and blue .. loud red, orange and
+  yellow; the inner lines warmer; JIANT the creatures' ramp, other palettes the beings'), and where its nuclei were a
+  **face**: two eyes that **shut on a hit** (0.1 s), a mouth that **opens with the level**. A muted track's being
+  **sleeps** (a dim outline, its eyes shut). **MUTATE**: when a mutation lands the being **looks up**, its number lights
+  **white** and **one ring in the accent opens** round it. The 36 critters and the ring of twelve MUTATE dots are gone;
+  the granules stay; the swim, the swell and the bounces are exactly as before. Every skin.
+- **15 KB of flash back** (image 575384 B -> 559864 B before the rest; 559976 B with AIR, SCOPE and HOME's faces), with
+  no feature removed, every screen pixel for pixel (225,549 screens compared) and the sound bit for bit: GEN's and the
+  dice's drum maps and bass archetypes packed at build time (tools/gen_drum_maps.py: lanes as nibbles and 2-bit
+  codes, shared lanes stored once), more of the main loop's files built for size, the UI's repeated idioms (the
+  selected track, its engine, a value's colour) as functions, and code no page reached any more taken out.
+- Memory: image **559976 B** of 581564 (0.9.6: 575384); .data + .bss **79172 B** (as 0.9.6); pool spare **10880 B**
+  (as 0.9.6); RAM code 22472 B (as 0.9.6). No audio change: every function the audio reaches compiles to the same code
+  (GlobalMerge laid out as before), goldens, cpu_vg and the target budgets as 0.9.6.
+- Tests: ui_test (AIR the first in the menu and the default of new settings, saved settings keeping theirs, AIR's
+  geometry on every lens page and HOME's fade; SCOPE's row, OFF by default and for older settings, saved and read
+  back, every engine's EDIT page ON and OFF in every skin; HOME A: the face's mouth, eyes and look, a hit shutting
+  only its being's eyes for 0.1 s, a mutation only its being's look, no critters and no MUTATE ring in every skin);
+  startup_test (no settings: AIR, SCOPE OFF); editor_test (SKIN's order, SCOPE's id 22); ui_render draws AIR
+  everywhere, the creatures on the whole panel (SCOPE OFF, every engine) and HOME A (home_faces, home_mutate) in every
+  palette, skin and LARGE: 0 lint findings.
 
 ### v0.9.6
 - **Every engine draws its own creature now**: the six that still showed the generic being get theirs, ported from the

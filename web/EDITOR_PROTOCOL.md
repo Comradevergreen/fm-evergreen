@@ -875,6 +875,11 @@ before SCALE LEDS the first 16, before SCREEN OFF the first 17):
 | 16 | 16 | SCALE LEDS | 0 | 0 OFF, 1 ON (1.2) | OFF | 1 CONTROL |
 | 17 | 17 | SCREEN OFF | 0 | 0 NEVER, 1 "5 MIN", 2 "15 MIN", 3 "30 MIN", 4 "60 MIN" (1.1.5) | NEVER (1.1.5.1; 1.1.5: 30 MIN) | 0 DISPLAY |
 
+JIANT appends (index = id; count 23 since 0.9.7): 18 TRACKS (4 / 6, AUDIO), 19 LOAD (ECO / LITE / FULL, SYSTEM),
+20 MIDI OUT (KEYS / CLOCK / ALL / OFF, CONTROL), 21 SKIN (DISPLAY; 0.9.7: the values in the menu's order, 0 AIR,
+1 COLORS, 2 BOTTOM, 3 HUD, AIR the default of new settings; 0.8.9 had 0 COLORS, 1 BOTTOM, 2 HUD) and (0.9.7) 22 SCOPE
+(0 OFF, 1 ON; OFF the default: an engine's EDIT pages the creature on the whole panel, DISPLAY).
+
 The device's AUDIO tab shows SPEAKER EQ, USB LEVEL, CLICK, CLICK LEVEL, COUNT-IN (index 9, 10, 12, 13, 14).
 CLICK: the metronome while the transport runs: OFF, REC (while a track is armed), ON (always); CLICK LEVEL its
 level; COUNT-IN: PLAY from stop with a track armed counts in that many bars first (internal clock only). The click
