@@ -8909,20 +8909,20 @@ static int test_click_menu(void)
             uint32_t all, sel0 = song.sel;
             song.sel = 1;
             preset_all_pos(&all);
-            e = preset_all_at_in(9u, &k, ENGINE_PC_ORDER);   /* (0.9.9: 0.9.8's numbers, ANALOG's first) */
+            e = preset_all_at(9u, &k);                   /* (0.9.9: the list as PRESETS shows it) */
             song.sel = (uint8_t)sel0;
             midi_enqueue(0x0Cu | 0xC1u << 8 | 9u << 16, 1u);   /* PROGRAM CHANGE 9 on channel 2 */
             mix_block(o, CTL); frame();
-            ok = all > 9u && e == ENGI_ANALOG && trk[1].eng_req == e && song.sel == sel0;
+            ok = all > 9u && e < NENGINES && trk[1].eng_req == e && song.sel == sel0;
             midi_enqueue(0x0Cu | 0xC1u << 8 | 127u << 16, 1u);   /* the 128th (0.8.3: ANIMAL's), or past the list: nothing */
             mix_block(o, CTL); frame();
             if (all > 127u) {
                 song.sel = 1;
-                e = preset_all_at_in(127u, &k, ENGINE_PC_ORDER);
+                e = preset_all_at(127u, &k);
                 song.sel = (uint8_t)sel0;
             }
             ok &= trk[1].eng_req == e;
-            bad += check("PROGRAM CHANGE n: the n + 1-th sound in 0.9.8's engine order (ENGINE_PC_ORDER) into the channel's track, the selection kept", ok);
+            bad += check("PROGRAM CHANGE n: the n + 1-th sound of the PRESETS list (ENGINE_ORDER) into the channel's track, the selection kept", ok);
         }
     }
     {
@@ -11550,17 +11550,12 @@ static int test_power_on_099(void)
 }
 /* (0.9.9) the engines' display order (engines.c ENGINE_ORDER) and the indices the stores hold: the selector maps a
  * place to an engine and back for every engine one can pick (a retired one's sound: the engine it plays on), the
- * numbers in ENGINES[] are as they were; PROGRAM CHANGE numbers the sounds as 0.9.8 did (ENGINE_PC_ORDER); a project
+ * numbers in ENGINES[] are as they were; PROGRAM CHANGE numbers the sounds as PRESETS lists them; a project
  * saved on 0.9.8's parts loads as it was saved, whatever the power-on */
 static int test_engine_order_099(void)
 {
     static const char *const IDX[NENGINES] = {"ANALOG", 0, "PHASE", "LOFI", "-", "VOICE", "-", "WHEEL", "-", "-", "DRUM",
                                               "NOISE", "FM6", "-", "ANIMAL"};
-    static const char *const PC[] = {"ANALOG", "FM6",
-#if FELUCCA_FM4
-                                     "DIGITAL",
-#endif
-                                     "PHASE", "LOFI", "VOICE", "WHEEL", "NOISE", "DRUM", "ANIMAL"};
     int bad = 0, ok = 1;
     uint32_t i, e, k, n, all, seen = 0;
     project_store_t st;
@@ -11591,21 +11586,8 @@ static int test_engine_order_099(void)
     ok = preset_all_at(0, &k) == ENGI_DRUM && k == 0u;            /* the PRESETS list: DRUM-X first */
     e = preset_all_at(preset_shown(ENGI_DRUM), &k);
     ok &= e == ENGI_VOICE && k == preset_nth(ENGINES[ENGI_VOICE], 0);   /* the last kit, then VOICE's first */
-    for (i = 0, n = 0; i < all; i++) {                             /* the same sounds in both orders */
-        uint32_t k1, k2, e1 = preset_all_at(i, &k1), e2;
-        for (e2 = 0, n = 0; e2 < all && !n; e2++) {
-            uint32_t q, ee = preset_all_at_in(e2, &q, ENGINE_PC_ORDER);
-            n = ee == e1 && q == k1;
-        }
-        (void)k2;
-        if (!n) break;
-    }
-    ok &= i == all && NELEM(PC) == NENG_SHOWN;
-    for (i = 0; i < NELEM(PC); i++)
-        ok &= str_eq(ENGINES[ENGINE_PC_ORDER[i]]->name, PC[i]);
-    e = preset_all_at_in(0, &k, ENGINE_PC_ORDER);
-    ok &= e == ENGI_ANALOG && k == 0u;                              /* PROGRAM CHANGE 0: ANALOG SAW LEAD, as in 0.9.8 */
-    bad += check("  PRESETS lists DRUM-X first; PROGRAM CHANGE keeps 0.9.8's numbers (0 = ANALOG SAW LEAD), the same sounds", ok);
+    ok &= all > preset_shown(ENGI_DRUM);
+    bad += check("  PRESETS (and PROGRAM CHANGE's numbers) list DRUM-X first, then VOICE", ok);
     {   /* a project of 0.9.8's parts (T1 ANALOG ACID .. T4 DRUM-X): saved, then the 0.9.9 power-on, then loaded */
         int16_t p0[NTRK][P_COUNT];
         uint8_t e0[NTRK], pr0[NTRK];

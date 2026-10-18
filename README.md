@@ -660,18 +660,19 @@ Every update is listed here, newest first. (Since 0.6.80 at the end of the page:
   ANALOG FM6 PHASE LOFI VOICE WHEEL NOISE DRUM ANIMAL. Only what you see moved: the engine numbers that projects, user
   presets, favourites, backups and the editor protocol hold are the same (a display-order table maps the selector to
   them), so everything saved before loads unchanged; the old formats' extra tracks still load as 0.9.8's power-on
-  sounds. **PROGRAM CHANGE** keeps 0.9.8's numbers (ANALOG's SAW LEAD is still 0): a MIDI rig loads what it did.
+  sounds. **PROGRAM CHANGE** follows the new order too (program 0 is the DRUM-X kit): a MIDI rig set up for 0.9.8
+  or older needs its program numbers set again.
 - Everything that looks for the drums finds them on T1: the DRUM-X kit and its octaves, the grid, MIDI, GEN / DICE's
   drum part all ask which track plays DRUM (GEN, when none does, still makes T4 the drums, as before); the stems go by
   track.
-- Memory: image **563020 B** of 581564 (0.9.8: 562700; +320 B: the power-on table, PROGRAM CHANGE's order); .data +
+- Memory: image **563020 B** of 581564 (0.9.8: 562700; +320 B: the power-on table); .data +
   .bss **79556 B**, pool spare **10816 B**, RAM code **22460 B**, all as 0.9.8. cpu_vg every line as 0.9.8 (song/cputest
   3079), target budgets met: no audio-path change.
 - Tests (ui_test): the power-on's six engines and presets in this order, dry, DRUM on T1 alone, each sounding with no
   effect and none clipping, a key and a MIDI note on HOME sounding on T1 (as the browser emulator's boot test plays
   them), NEW PROJECT the same value for value; the display order (every engine once, place ↔ engine
   round trips, DIGITAL and the retired ones where they play, KNOB 2 round); ENGINES[] numbers unchanged; PROGRAM CHANGE
-  in 0.9.8's order; a project of 0.9.8's tracks loading unchanged after the new power-on and saving byte for byte the
+  in the new order; a project of 0.9.8's tracks loading unchanged after the new power-on and saving byte for byte the
   same. The tests that asserted the old order or power-on now assert the new (KNOB 2's steps, ENGINE_ORDER, NEW
   PROJECT's sounds, the web editor's lists and mock); the UI tests, renders and CPU sections keep 0.9.8's tracks as
   their fixture (engines.c TRK_OLD). Goldens (every one a preset or project render), cpu_vg and the target budgets

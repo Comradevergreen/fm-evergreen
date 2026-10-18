@@ -1433,22 +1433,21 @@ static uint32_t preset_all_pos(uint32_t *total)          /* list index of the se
     return cur;
 }
 
-/* list index n (< total) -> engine, *k its preset; NENGINES = user preset, *k its slot. The engines in the order of
- * `order` (NENG_SHOWN of them): ENGINE_ORDER, the list shown; (0.9.9) ENGINE_PC_ORDER, PROGRAM CHANGE's numbers */
-static uint32_t preset_all_at_in(uint32_t n, uint32_t *k, const uint8_t *order)
+/* list index n (< total) -> engine, *k its preset; NENGINES = user preset, *k its slot. The engines in ENGINE_ORDER
+ * (the list shown, and PROGRAM CHANGE's numbers) */
+static uint32_t preset_all_at(uint32_t n, uint32_t *k)
 {
     uint32_t e, r;
-    for (r = 0; r < NENG_SHOWN && n >= preset_shown(order[r]); r++)
-        n -= preset_shown(order[r]);
+    for (r = 0; r < NENG_SHOWN && n >= preset_shown(ENGINE_ORDER[r]); r++)
+        n -= preset_shown(ENGINE_ORDER[r]);
     if (r == NENG_SHOWN) {
         *k = up_nth(n);
         return NENGINES;
     }
-    e = order[r];
+    e = ENGINE_ORDER[r];
     *k = preset_nth(ENGINES[e], n);                     /* the n-th shown preset */
     return e;
 }
-static uint32_t preset_all_at(uint32_t n, uint32_t *k) { return preset_all_at_in(n, k, ENGINE_ORDER); }
 
 static uint32_t preset_pos(uint32_t *total)
 {
@@ -1526,9 +1525,8 @@ static void preset_go(uint32_t n)                    /* load list index n into t
 }
 
 /* (JIANT 0.6.72) PROGRAM CHANGE (midi_control.c midi_pc_req): the list's n-th sound into the track whose channel it
- * came on, the selection kept; out of the list's range, nothing. (0.9.9) The list in 0.9.8's engine order
- * (engines.c ENGINE_PC_ORDER), whatever the PRESETS page shows: a rig's program numbers keep their sounds. Every frame
- * (ui_input) */
+ * came on, the selection kept; out of the list's range, nothing. (0.9.9) The list as the PRESETS page shows it
+ * (engines.c ENGINE_ORDER: DRUM-X first). Every frame (ui_input) */
 static void midi_pc_poll(void)
 {
     uint32_t i, sel = song.sel;
@@ -1547,7 +1545,7 @@ static void midi_pc_poll(void)
             song.sel = (uint8_t)i;
             preset_all_pos(&all);
             if (n < all) {
-                e = preset_all_at_in(n, &k, ENGINE_PC_ORDER);   /* (0.9.9: 0.9.8's numbers) */
+                e = preset_all_at(n, &k);
                 if (e == NENGINES) {
                     up_load(k);
                 } else {

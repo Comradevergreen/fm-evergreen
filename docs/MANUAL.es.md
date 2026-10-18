@@ -582,7 +582,7 @@ HOME de cada pista.
 **El orden** (0.9.9): PRESETS, KNOB 2 (ENG) y las listas del editor web muestran los motores así: **DRUM-X, VOICE,
 ANIMAL, LOFI, ANALOG, FM6, PHASE, WHEEL, NOISE** (los seis primeros son las pistas al encender, T1–T6). Solo cambió el
 orden que ves: los proyectos, presets de usuario, favoritos y backups nombran los motores por su número, que no cambia,
-así que todo lo guardado antes carga igual. PROGRAM CHANGE conserva los números de la 0.9.8 (ver [14](#14-midi-y-usb)).
+así que todo lo guardado antes carga igual. PROGRAM CHANGE numera los sonidos en este orden nuevo (ver [14](#14-midi-y-usb)).
 
 **Cambios suaves**: pasar una pista a otro motor apaga el anterior de a poco (unos 12 ms) y lo que estés sosteniendo
 (teclas, o las notas que sostiene el secuenciador) sigue en el motor nuevo, entrando de a poco; no se corta nada.
@@ -701,8 +701,8 @@ para sonar bien alrededor de C5 (los de ranas y mamíferos una o dos octavas má
 ROAR C3, PURR C2).
 
 En la 0.8.3 ANIMAL fue último en la lista de PRESETS, después de DRUM, para que cada sonido anterior conservara su lugar
-y su número de PROGRAM CHANGE; desde la 0.9.9 la lista lo muestra tercero (DRUM-X, VOICE, ANIMAL …) y PROGRAM CHANGE lo
-sigue numerando último. No usa RAM (el estado de cada voz entra en la voz), unos 7,6 KB de flash y, con ocho voces, como
+y su número de PROGRAM CHANGE; desde la 0.9.9 la lista (y PROGRAM CHANGE) lo tiene
+tercero (DRUM-X, VOICE, ANIMAL …). No usa RAM (el estado de cada voz entra en la voz), unos 7,6 KB de flash y, con ocho voces, como
 mucho ~85 % de la CPU del motor más pesado (GLOTT; CMOS, PULSE, WHSTL y WING alrededor de la mitad): las ocho voces en
 todos los modos.
 
@@ -2040,11 +2040,11 @@ protección desvaneció): una foto de esa pantalla ayuda cuando reportás un pro
   - **OFF**: nada.
 - **PROGRAM CHANGE** (0.6.72): el programa *n* en el canal que toca una pista carga en esa pista el sonido número
   *n* + 1 de la lista de PRESETS (los presets de cada motor en su orden, después los presets de usuario); la pista
-  seleccionada no cambia. (0.9.9) Los motores en el orden de la 0.9.8, ANALOG, FM6, PHASE, LOFI, VOICE, WHEEL, NOISE,
-  DRUM, ANIMAL, muestre lo que muestre la página PRESETS (que ahora empieza por DRUM-X): los números de programa de un
-  equipo MIDI siguen cargando los sonidos de antes. Los programas llegan a los primeros 128 sonidos de la lista: desde 0.8.3 eso termina dentro
-  de los presets de ANIMAL (va último), así que los presets de usuario que vienen después se eligen en el equipo o
-  desde el editor.
+  seleccionada no cambia. Los números siguen la lista tal como la muestra PRESETS: desde la 0.9.9 empieza por DRUM-X
+  (el programa 0 es el kit de DRUM-X), después VOICE, ANIMAL, LOFI, ANALOG, FM6, PHASE, WHEEL, NOISE. Un equipo MIDI
+  configurado para la 0.9.8 o anterior tiene que volver a configurar sus números de programa. Los programas llegan a
+  los primeros 128 sonidos de la lista; los que siguen (y los presets de usuario) se eligen en el equipo o desde el
+  editor.
 - **Secciones y proyectos** (0.6.80): el **canal 16** es el de la canción: su PROGRAM CHANGE nunca carga un sonido
   (con cualquier ROUTE). Los programas **0–3** saltan a la sección **A–D** del proyecto (sonando: en el compás
   siguiente, como las teclas de la capa de la canción; parado: en el momento; si está vacía, lo avisa); los programas

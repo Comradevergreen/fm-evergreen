@@ -562,7 +562,7 @@ every engine) or with KNOB 2 (ENG) on SAVE > PRESETS. Each track's four HOME kno
 **The order** (0.9.9): PRESETS, KNOB 2 (ENG) and the web editor's lists show the engines as **DRUM-X, VOICE, ANIMAL,
 LOFI, ANALOG, FM6, PHASE, WHEEL, NOISE** (the first six are the tracks at power-on, T1–T6). Only the order you see
 changed: projects, user presets, favourites and backups name engines by their numbers, which stay, so everything saved
-before loads as it was. PROGRAM CHANGE keeps 0.9.8's numbers (see [14](#14-midi-and-usb)).
+before loads as it was. PROGRAM CHANGE numbers the sounds in this new order (see [14](#14-midi-and-usb)).
 
 **Smooth changes**: switching a track to another engine fades the old one out (about 12 ms) and what you are holding
 (keys, or the notes the sequencer holds) goes on in the new engine, fading in; nothing is cut. Changing a list value
@@ -672,7 +672,7 @@ BULLFROG · CANARY, CARDINAL, DOVE, OWL, PEEPER, BAT · MOSQUITO, BEE, FLY · WO
 sound right around C5 (the frogs' and mammals' an octave or two lower: BULLFROG and OWL C4, WOLF G4, ROAR C3, PURR C2).
 
 ANIMAL came last in the PRESETS list in 0.8.3, after DRUM, so every sound before it kept its place and its PROGRAM CHANGE
-number; since 0.9.9 the list shows it third (DRUM-X, VOICE, ANIMAL …) and PROGRAM CHANGE still numbers it last. It costs no RAM (each voice's state fits the voice), about 7.6 KB of flash, and at most ~85 % of the heaviest
+number; since 0.9.9 the list (and PROGRAM CHANGE) has it third (DRUM-X, VOICE, ANIMAL …). It costs no RAM (each voice's state fits the voice), about 7.6 KB of flash, and at most ~85 % of the heaviest
 engine's CPU with eight voices (GLOTT; CMOS, PULSE, WHSTL and WING about half): all eight voices on every mode.
 
 ### VOICE: words and lyrics (0.8.5)
@@ -1927,10 +1927,10 @@ faded): a photo of that screen helps when you report a problem.
   - **OFF**: nothing.
 - **PROGRAM CHANGE** (0.6.72): program *n* on the channel a track plays loads the PRESETS list's sound number *n* + 1
   (every engine's presets in their order, then the user presets) into that track; the selection stays where it was.
-  (0.9.9) The engines in 0.9.8's order, ANALOG, FM6, PHASE, LOFI, VOICE, WHEEL, NOISE, DRUM, ANIMAL, whatever the
-  PRESETS page shows (it starts with DRUM-X now): a MIDI setup's program numbers keep loading the sounds they did.
-  Programs reach the list's first 128 sounds: since 0.8.3 that ends inside ANIMAL's presets (it comes last), so the
-  user presets after it are picked on the device or from the editor.
+  The numbers follow the list exactly as PRESETS shows it: since 0.9.9 it starts with DRUM-X (program 0 is the
+  DRUM-X kit), then VOICE, ANIMAL, LOFI, ANALOG, FM6, PHASE, WHEEL, NOISE. A MIDI setup made for 0.9.8 or older needs
+  its program numbers set again. Programs reach the list's first 128 sounds; the ones after them (and the user
+  presets) are picked on the device or from the editor.
 - **Sections and projects** (0.6.80): **channel 16** is the song's: its PROGRAM CHANGE never loads a sound (whatever
   ROUTE). Programs **0–3** jump to section **A–D** of the project (playing: on the next bar, as the song layer's keys;
   stopped: at once; an empty one is said so); programs **16–23** load project **1–8** with its section A (stopped only,
