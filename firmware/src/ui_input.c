@@ -1888,6 +1888,7 @@ static void seq_clr_step(void)
  * or project load, SRC / SET turned, a slot erased; again after another source or a project load. One a frame; after
  * a message already showing (LOADED) as the second message. Not on notes: nothing in the audio path */
 
+static void hints_reset(void);                          /* (ui_layer.c) */
 /* messages of things that happened elsewhere (a load, the editor, MIDI in): after this frame's own */
 static void ui_notices(void)
 {
@@ -2227,6 +2228,7 @@ static void ui_input_frame(void)
                     undo_mark();
                     if (song.playing) transport_req = 2;
                     system_init();
+                    hints_reset();                      /* (0.9.5) the teaching hints start over */
                     gp.genre = GEN_EXPLORE;             /* (0.8.6) GEN's GENRE as at power-on: EXPLORE */
                     ui_message("NEW PROJECT");
                 }

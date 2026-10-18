@@ -15,7 +15,9 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.9.4).** It builds and passes every test (Felucca's and its own). Back up the flash before installing it.
+> **Status: in development (v0.9.5).** It builds and passes every test (Felucca's and its own). Back up the flash before installing it.
+  **Messages no longer darken the screen** (0.9.5): a message is a small pill over the page, which keeps moving behind
+  it; a page's hint comes only once you stay on it (never while SELECT walks past), at most twice ever.
   **Three engines draw their own creature** (0.9.4): VOICE a CT scan of a singing head (the tongue, jaw, lips and velum
   move with the phoneme sung), ANIMAL a creature that metamorphoses between bird, insect and mammal, DRUM-X its kit as
   little beings that squash, shut their eyes and shout with every hit.
@@ -623,6 +625,18 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### v0.9.5
+- **Messages and hints stop blanking the screen.** A message on a lens page (SAVED, LOADED, an octave's name on DRUM-X,
+  a page's hint...) was a box alone in a panel gone black for a second; now it is a small pill near the panel's foot,
+  dark only behind its words, over the page, whose graph, roll or beings keep drawing and moving behind it, in every
+  skin (COLORS, BOTTOM, HUD), palette and LARGE. A NOTICE question covers only its card, its tabs and its breadcrumb:
+  the page stays in sight round it, still moving (DICE's BEFORE / NOW are the whole screen, as before).
+- **A page's hint waits for you to stay.** MUTATE's "OCT+ KEEP  GLO+A4 FREEZE" (and its second line), MOTION's and
+  PUNCH's "REC + PLAY ...", a button's "HOLD [EDIT] QUICK" come only after about 0.8 s on the page, never while SELECT
+  walks past it (walking SEQ's chain no longer carries MUTATE's hint onto BAR), and each at most **twice in all**: the
+  count is kept with the settings (older settings start at 0), a button's "HOLD [X] QUICK" never again once its layer
+  has been held, and SAVE › TOOLS › INIT SYSTEM starts them over.
 
 ### v0.9.4
 - **Three engines draw their own creature**, long promised, where every engine shows its being (EDIT › SOUND on the

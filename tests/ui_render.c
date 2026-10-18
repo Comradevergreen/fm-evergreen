@@ -194,7 +194,12 @@ static void hk_fill(uint32_t x, uint32_t y, uint32_t w, uint32_t h);
 /* STYLE LINE: the dividers drawn on the screen (ui_draw.c lcd_rule) while no later blit or fill covers them */
 static int16_t rules[32][4];
 static uint32_t nrules;
+static void hk_rule_k(int32_t x0, int32_t y0, int32_t x1, int32_t y1, uint32_t k);
 static void hk_rule(uint32_t x, uint32_t y, uint32_t w, uint32_t h)
+{
+    hk_rule_k((int32_t)x, (int32_t)y, (int32_t)(x + w), (int32_t)(y + h), 0u);
+}
+static void hk_rule_put(uint32_t x, uint32_t y, uint32_t w, uint32_t h)
 {
     if (nrules < 32u) {
         rules[nrules][0] = (int16_t)x; rules[nrules][1] = (int16_t)y;
@@ -220,6 +225,8 @@ static void hk_ink(uint16_t ink, uint16_t bg);
 #define GFX_HOOK_INK(ink, bg) hk_ink(ink, bg)
 #define GFX_HOOK_PIXELS(n) (px_visited += (n))
 #define UI_FILL_HOOK(x, y, w, h) hk_fill(x, y, w, h)
+static void hk_overlay(int32_t x0, int32_t y0, int32_t x1, int32_t y1);
+#define GFX_HOOK_COVER(x0, y0, x1, y1) hk_overlay(x0, y0, x1, y1)
 static void fm6_hook(uint32_t kind, uint32_t a, uint32_t b);
 #define FM6_CHART_HOOK(kind, a, b) fm6_hook(kind, a, b)
 /* MENU > LARGE: the tall cards' values by the face they got (ui_draw.c LARGE_HOOK), the characters L lacked */
@@ -481,6 +488,53 @@ static void contain(int32_t x, int32_t y)
         }
     }
 }
+/* (0.9.5) an overlay drawn over its canvas (ui_graph.c toast_pill): the texts and cells under it so far are hidden by it,
+ * on purpose (the page goes on under a toast) */
+static void hk_overlay(int32_t x0, int32_t y0, int32_t x1, int32_t y1)
+{
+    uint32_t i, k = 0;
+    al_flush();
+    for (i = 0; i < npend; i++)
+        if (!(pend[i].x0 < x1 && x0 < pend[i].x1 && pend[i].y0 < y1 && y0 < pend[i].y1))
+            pend[k++] = pend[i];
+    npend = k;
+    for (i = k = 0; i < ncells; i++)
+        if (!(cells[i][0] < x1 && x0 < cells[i][2] && cells[i][1] < y1 && y0 < cells[i][3]))
+            memmove(cells[k++], cells[i], sizeof cells[i]);
+    ncells = k;
+}
+/* (0.9.5) a screen box under one of the holes a NOTICE keeps (gfx.c scr_holes): never sent, the dialog's there */
+static int in_hole(const rbox_t *b)
+{
+    uint32_t j;
+    for (j = 0; j < scr_nhole; j++)
+        if (b->x0 < scr_hole[j][0] + scr_hole[j][2] && scr_hole[j][0] < b->x1 && b->y0 < scr_hole[j][1] + scr_hole[j][3] &&
+            scr_hole[j][1] < b->y1)
+            return 1;
+    return 0;
+}
+/* (0.9.5) a divider less the NOTICE's holes (what of it the screen got: gfx.c sends nothing there) */
+static void hk_rule_k(int32_t x0, int32_t y0, int32_t x1, int32_t y1, uint32_t k)
+{
+    int32_t hx0, hy0, hx1, hy1, a, b;
+    if (x1 <= x0 || y1 <= y0)
+        return;
+    if (k >= scr_nhole) {
+        hk_rule_put((uint32_t)x0, (uint32_t)y0, (uint32_t)(x1 - x0), (uint32_t)(y1 - y0));
+        return;
+    }
+    hx0 = scr_hole[k][0]; hy0 = scr_hole[k][1]; hx1 = hx0 + scr_hole[k][2]; hy1 = hy0 + scr_hole[k][3];
+    if (hx0 >= x1 || hx1 <= x0 || hy0 >= y1 || hy1 <= y0) {
+        hk_rule_k(x0, y0, x1, y1, k + 1u);
+        return;
+    }
+    a = hy0 > y0 ? hy0 : y0;
+    b = hy1 < y1 ? hy1 : y1;
+    hk_rule_k(x0, y0, x1, a, k + 1u);
+    hk_rule_k(x0, b, x1, y1, k + 1u);
+    hk_rule_k(x0, a, hx0 < x1 ? hx0 : x1, b, k + 1u);
+    hk_rule_k(hx1 > x0 ? hx1 : x0, a, x1, b, k + 1u);
+}
 static void hk_blit(uint32_t x, uint32_t y, uint32_t r0, uint32_t w, uint32_t h)
 {
     uint32_t i, k = 0;
@@ -493,6 +547,7 @@ static void hk_blit(uint32_t x, uint32_t y, uint32_t r0, uint32_t w, uint32_t h)
         if (b.y1 <= (int32_t)r0) continue;           /* rows not blitted */
         if (b.y0 < (int32_t)r0) b.flags |= 2u;
         b.x0 += (int16_t)x; b.x1 += (int16_t)x; b.y0 += (int16_t)y; b.y1 += (int16_t)y;
+        if (in_hole(&b)) continue;                   /* (under a NOTICE's box: not on the screen) */
         if (!split_pair(&b)) pend[k++] = b;
     }
     cover((int32_t)x, (int32_t)(y + r0), (int32_t)(x + w), (int32_t)(y + h));

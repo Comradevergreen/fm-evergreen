@@ -210,9 +210,17 @@ Los **diálogos** preguntan antes de cualquier cosa destructiva: **OCT− NO**, 
 Llevan las pestañas **NOTICE · DICE · NAME**: una pregunta es una tarjeta bajo una regla violeta con sus dos botones
 (YES en el acento); el dado de una parte (EDIT, SEQ, LFO, FX + SELECT) muestra **BEFORE** y **NOW** lado a lado (el
 ser del sonido antes y ahora, los pasos, los valores del LFO o de los efectos) sobre una franja **KEEP DICED …? ·
-SELECT: DICE AGAIN · OCT− CANCEL · OCT+ OK**; un mensaje en una página con lente aparece también en su panel, como
-aviso (el encabezado también lo dice; no sobre los seres de HOME); NAME tiene sus tarjetas CURSOR, CHAR, LEN y OCT+
-SAVE / WRITE sobre el nombre, las letras de las teclas y las funciones de las teclas negras.
+SELECT: DICE AGAIN · OCT− CANCEL · OCT+ OK**; NAME tiene sus tarjetas CURSOR, CHAR, LEN y OCT+ SAVE / WRITE sobre el
+nombre, las letras de las teclas y las funciones de las teclas negras. (0.9.5) La tarjeta de una pregunta solo tapa su
+propio recuadro, sus pestañas y su ruta: la página sigue a la vista alrededor, en movimiento.
+
+**Mensajes** (0.9.5): un mensaje en una página con lente aparece como una pequeña píldora cerca del pie del panel, sobre
+la página, que sigue dibujándose y moviéndose detrás (el encabezado también lo dice; no sobre los seres de HOME ni el
+mapa de una capa); nada se oscurece. La **ayuda** de una página (la de MUTATE "OCT+ KEEP  GLO+A4 FREEZE", la de MOTION
+y PUNCH "REC + PLAY ...", la de un botón "HOLD [EDIT] QUICK") aparece solo si te quedás en la página unos 0,8 s, nunca
+mientras SELECT pasa por ella, y cada una como mucho dos veces en total (se cuentan con los ajustes: tampoco vuelven
+tras reiniciar); la de un botón nunca más una vez que lo mantuviste para su capa. SAVE › TOOLS › INIT SYSTEM las
+reinicia.
 
 ---
 

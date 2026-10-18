@@ -2150,11 +2150,9 @@ static void draw_confirm(void)
     int dk = ui.confirm >= CF_DICE_SOUND && ui.confirm <= CF_DICE_FX;
     confirm_text(a, b);
     if (dk)
-        lcd_fill(0, H_HEAD, 240, 240 - H_HEAD, T_BG);
-    else {                                            /* (0.9.0) NOTICE: round its tabs, its card and the breadcrumb */
-        const int16_t R[3][4] = {{0, LT_Y, 240, (int16_t)DLG_TAB_H}, {14, 66, 212, 140}, {0, LZ_FOOT_Y, 240, LZ_FOOT_H}};
-        fill_around(R, 3);
-    }
+        lcd_fill(0, H_HEAD, 240, 240 - H_HEAD, T_BG);   /* (DICE: BEFORE / NOW fill the screen, its box) */
+    /* (0.9.5) NOTICE: its tabs, its card and the breadcrumb alone, the page live round them (ui_draw_page, dlg_holes; 0.9.0
+     * .. 0.9.4: BG round them, the page gone) */
     ui.head_sig = ~0u;
     dlg_tabs(dk ? 1u : 0u);
     if (dk) {                                         /* DICE: the part, BEFORE / NOW, the question in a strip */
@@ -2251,7 +2249,37 @@ static void ui_draw(void)
     ui_draw_page(counting);
     scr_shown();
 }
+static void hint_tick(void);                            /* (ui_layer.c) */
+static uint8_t dlg_behind;                              /* (0.9.5) the page being drawn round a NOTICE */
+/* (0.9.5) a NOTICE (the OCT- / OCT+ questions) over the page: its tabs, its card, its breadcrumb the screen's holes (gfx.c
+ * scr_holes), the page drawn round them as ever (DICE's BEFORE / NOW are the whole screen; over the menu, NAME, UPDATE MODE:
+ * as before) */
+static int dlg_notice(void)
+{
+    return dlg_on() && !(ui.confirm >= CF_DICE_SOUND && ui.confirm <= CF_DICE_FX) && !ui.uboot && !ui.menu && !name_on();
+}
+static void ui_draw_body(uint32_t counting);
 static void ui_draw_page(uint32_t counting)
+{
+    if (dlg_notice()) {
+        const int16_t R[3][4] = {{0, LT_Y, 240, (int16_t)DLG_TAB_H}, {14, 66, 212, 140}, {0, LZ_FOOT_Y, 240, LZ_FOOT_H}};
+        uint8_t f = ui.force;
+        hint_tick();
+        scr_holes(R, 3);
+        dlg_behind = 1;
+        ui_draw_body(counting);
+        dlg_behind = 0;
+        scr_holes(R, 0);
+        if (f) {                                        /* (the page first: the box drawn over it, the lint's order too) */
+            draw_confirm();
+            ui.head_sig = ~0u;
+        }
+        return;
+    }
+    hint_tick();
+    ui_draw_body(counting);
+}
+static void ui_draw_body(uint32_t counting)
 {
     int skip = 0;
     if (ui.hint_pg && ui.hint_pg != (ui.home ? 255u : ui.page + 1u)) {   /* (0.9.0) a layer's hint: its own page's only */
@@ -2274,7 +2302,7 @@ static void ui_draw_page(uint32_t counting)
         draw_head();
         return;
     }
-    if (dlg_on()) {                                     /* the OCT- / OCT+ dialog */
+    if (dlg_on() && !dlg_behind) {                      /* the OCT- / OCT+ dialog (NOTICE: over the page, ui_draw_page) */
         if (ui.force) {
             draw_confirm();
             ui.force = 0;

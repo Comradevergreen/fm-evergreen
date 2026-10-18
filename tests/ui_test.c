@@ -3817,6 +3817,7 @@ static int test_quick_layers(void)
         btn_up(LB[i]); frame();
         ok &= !flash && !ui.home && (LB[i] == B_GLO ? cur_page()->graph == GR_TRK :
                                      LB[i] == B_SCL ? cur_page()->fam == FAM_SCL : str_eq(cur_page()->title, "EDIT 1"));
+        frames(HINT_DWELL_MS + 64u);                    /* (0.9.5: the hint once the page has been dwelt on) */
         hint &= msg_is(HINT[i]);
         go_home(); frame();
         btn_down(LB[i]); frames(368);
@@ -3826,7 +3827,7 @@ static int test_quick_layers(void)
         btn_up(LB[i]); frame();
         ok &= ui.home && !ui.layer;
         ui.msg_t = 0;
-        press(LB[i]);
+        press(LB[i]); frames(HINT_DWELL_MS + 64u);
         hint &= !msg_is(HINT[i]);
         go_home(); frame();
         btn_down(LB[i]); key_down(white(9)); frame();
@@ -4291,7 +4292,7 @@ static int test_bughunt_ui(void)
     ok = name_on() && !msg_is("HOLD [SAVE] QUICK") && !msg_is("HOLD [EDIT] QUICK");
     ui_power_on();
     layer_seen = 0;
-    press(B_EDIT);
+    press(B_EDIT); frames(HINT_DWELL_MS + 64u);         /* (0.9.5: once dwelt on) */
     bad += check("0.9.2 SAVE + C5 = RENAME on USER: no layer hint over NAME (an EDIT tap elsewhere: the hint as before)",
                  ok && msg_is("HOLD [EDIT] QUICK"));
     return bad;
@@ -6638,7 +6639,7 @@ static int test_seq_tools(void)
         for (q = 0; q < sizeof ORD / sizeof ORD[0]; q++) {
             press(B_SEQ); frames(320);
             ok &= str_eq(cur_page()->title, ORD[q]);
-            if (!q) ok &= msg_is("HOLD [SEQ] QUICK");
+            if (!q) { frames(HINT_DWELL_MS); ok &= msg_is("HOLD [SEQ] QUICK"); }   /* (0.9.5: once dwelt on) */
         }
     }
     bad += check("  0.9.2 a tap on STEP: the next group's first, round (the hint until the layer was opened; was BAR's next set)", ok);
@@ -9591,7 +9592,7 @@ static int test_skin(void)
     {   /* (0.9.0) a layer's hint ("HOLD [EDIT] QUICK") on its page only: gone when the page changes */
         ui_power_on(); frame();
         layer_seen = 0;
-        press(B_EDIT); frame();
+        press(B_EDIT); frames(HINT_DWELL_MS + 64u);    /* (0.9.5: once dwelt on) */
         ok = ui.msg_t && ui.hint_pg && str_eq(ui.msg, "HOLD [EDIT] QUICK");
         go_title("ENV"); frame();
         ok &= !ui.msg_t && !ui.hint_pg;
@@ -10476,6 +10477,7 @@ static int dlg_tab_lit(uint32_t l)
         ok &= swap16(host_screen[(LT_Y + LT_H / 2) * 240 + LT_X(k) + 2]) == (k == l ? T_THEME : T_RAISE);
     return ok;
 }
+static int test_toasts(void);
 static int test_lz_dialogs(void)
 {
     int bad = 0, ok;
@@ -10497,16 +10499,162 @@ static int test_lz_dialogs(void)
     press(B_OCTUP); frame();
     ok &= !ui.confirm;
     bad += check("0.8.5 dialogs: EDIT + SELECT opens DICE (its tab), SELECT re-rolls inside it, OCT+ keeps", ok);
-    ui_power_on(); go_title("ENV"); frames(1600);
-    ui_message("SAVED"); frame();
-    for (y = LZ_GRAPH_Y; y < LZ_GRAPH_Y + LZ_GRAPH_H; y++)
-        for (x = 0; x < 240; x++) acc += swap16(host_screen[y * 240 + x]) == T_ACCENT;
-    ok = acc > 40u;
-    frames(1600);
-    for (acc = 0, y = LZ_GRAPH_Y; y < LZ_GRAPH_Y + LZ_GRAPH_H; y++)
-        for (x = 0; x < 240; x++) acc += swap16(host_screen[y * 240 + x]) == T_ACCENT && x > 60 && x < 180;
-    bad += check("0.8.5 dialogs: a message on a lens page is a toast in its panel too (gone with it)", ok);
+    (void)x; (void)y; (void)acc;
+    bad += test_toasts();                               /* (0.9.5: the toast a pill over the live page; was boxed alone in it) */
     ui_power_on();
+    return bad;
+}
+
+/* (0.9.5) toasts and hints: a toast is a small pill over the page, never a cleared panel (every skin, palette, LARGE); a
+ * NOTICE leaves the page round its box; a page's hint only once dwelt on, never while SELECT walks past, at most HINT_MAX
+ * times a power-on */
+static uint16_t toast_snap[240 * 240];
+static void toast_box(const char *m, int32_t *b)        /* the pill on the screen (ui_graph.c toast_pill) */
+{
+    int32_t gh = (int32_t)graph_h(), w = clamp(text_w(&AF_S, m) + 16, 40, 224);
+    b[0] = 120 - w / 2; b[2] = b[0] + w;
+    b[1] = (int32_t)graph_y() + (gh >= 3 * TOAST_H ? gh - TOAST_H - 5 : (gh - TOAST_H) / 2); b[3] = b[1] + TOAST_H;
+}
+static int test_toasts(void)
+{
+    static const uint8_t PAL[3] = {UI_JIANT_INDEX, 0, 6};   /* JIANT, GREY, PAPER */
+    int bad = 0, ok = 1, moved = 1, gone = 1;
+    uint32_t sk, pi, lg, x, y, out, in, n, seen, passed, k;
+    int32_t b[4];
+    for (sk = 0; sk < SKIN_N; sk++)
+        for (pi = 0; pi < 3u; pi++)
+            for (lg = 0; lg < 2u; lg++) {
+                ui_power_on(); ui_skin = (uint8_t)sk; settings.palette = PAL[pi]; palette_set(PAL[pi]);
+                if (lg) ui_prefs |= PREF_LARGE; else ui_prefs &= ~PREF_LARGE;
+                go_title("ENV"); ui.force = 1; frames(1600);
+                memcpy(toast_snap, host_screen, sizeof toast_snap);
+                ui_message("SAVED A LONG MESSAGE"); frame();
+                toast_box(ui.msg, b);
+                for (out = in = 0, y = graph_y(); y < graph_y() + graph_h(); y++)
+                    for (x = 0; x < 240u; x++) {
+                        int inb = (int32_t)x >= b[0] && (int32_t)x < b[2] && (int32_t)y >= b[1] && (int32_t)y < b[3];
+                        uint16_t c = host_screen[y * 240u + x];
+                        if (c != toast_snap[y * 240u + x]) { if (inb) in++; else out++; }
+                    }
+                ok &= out == 0u && in > 100u && lz_on();
+                frames(1600);
+                gone &= !ui.msg_t && memcmp(toast_snap + graph_y() * 240u, host_screen + graph_y() * 240u, graph_h() * 480u) == 0;
+            }
+    ui_prefs &= ~PREF_LARGE;
+    bad += check("0.9.5 a toast is a pill over the page: the panel behind it as it was (every skin, JIANT GREY PAPER, LARGE)", ok);
+    bad += check("  gone with the message: the page whole again", gone);
+    for (sk = 0; sk < SKIN_N; sk++) {                   /* playing: the page moves on behind it */
+        ui_power_on(); ui_skin = (uint8_t)sk; settings.palette = UI_JIANT_INDEX; palette_set(UI_JIANT_INDEX);
+        TSEL->p[P_APDEP] = 100; song.playing = 1;      /* (as test_fx_live: AUTO PAN's dot runs while it plays) */
+        go_title("AUTO PAN"); frames(800);
+        ui_message("SAVED A LONG MESSAGE"); frame();
+        toast_box(ui.msg, b);
+        memcpy(toast_snap, host_screen, sizeof toast_snap);
+        frames(320);
+        for (n = 0, y = graph_y(); y < graph_y() + graph_h(); y++)
+            for (x = 0; x < 240u; x++)
+                if (!((int32_t)x >= b[0] && (int32_t)x < b[2] && (int32_t)y >= b[1] && (int32_t)y < b[3]))
+                    n += host_screen[y * 240u + x] != toast_snap[y * 240u + x];
+        moved &= ui.msg_t && n > 0u;
+        song.playing = 0;
+    }
+    bad += check("  playing: the page (AUTO PAN's dot) goes on moving behind the toast", moved);
+    for (ok = 1, sk = 0; sk < SKIN_N; sk++) {           /* NOTICE: the page round its box, its tabs, its breadcrumb */
+        static const int16_t R[3][4] = {{0, LT_Y, 240, 0}, {14, 66, 212, 140}, {0, LZ_FOOT_Y, 240, LZ_FOOT_H}};
+        ui_power_on(); ui_skin = (uint8_t)sk; settings.palette = UI_JIANT_INDEX; palette_set(UI_JIANT_INDEX);
+        go_title("ENV"); ui.force = 1; frames(800);
+        memcpy(toast_snap, host_screen, sizeof toast_snap);
+        confirm_open(CF_CLEAR_TRK, 2); ui.force = 1; frames(160);
+        for (n = out = 0, y = H_HEAD; y < 240u; y++)
+            for (x = 0; x < 240u; x++) {
+                int h = 0;
+                for (k = 0; k < 3u; k++)
+                    h |= (int32_t)x >= R[k][0] && (int32_t)x < R[k][0] + R[k][2] && (int32_t)y >= R[k][1] &&
+                         (int32_t)y < R[k][1] + (k ? R[k][3] : (int32_t)DLG_TAB_H);
+                if (h) continue;
+                n++;
+                out += host_screen[y * 240u + x] != toast_snap[y * 240u + x];
+            }
+        ok &= ui.confirm == CF_CLEAR_TRK && n > 5000u && out == 0u && dlg_tab_lit(0) == !sk;
+        press(B_OCTDN); frames(160);
+        ok &= !ui.confirm && memcmp(toast_snap + H_HEAD * 240u, host_screen + H_HEAD * 240u, (240u - H_HEAD) * 480u) == 0;
+    }
+    bad += check("  NOTICE blacks out no more than its box (its tabs, its card, its breadcrumb): the page round it, back whole", ok);
+    /* hints: walking SEQ's chain with SELECT (TRACK > MUTATE > BAR) says nothing; dwelt on, MUTATE's; at most HINT_MAX */
+    ui_power_on(); go_title("TRACK"); frames(400);
+    for (seen = passed = 0, k = 0; k < 2u; k++) {
+        turn(EN_SELECT, 1); passed |= str_eq(cur_page()->title, "MUTATE");
+        for (n = 0; n < 12u; n++) { frame(); seen |= msg_is("OCT+ KEEP  GLO+A4 FREEZE") || msg_is("SEQ+D5 REVERT  GLO+B4 ALL"); }
+    }
+    for (n = 0; n < 200u; n++) { frame(); seen |= ui.msg_t && ui.msg[0]; }
+    bad += check("0.9.5 a page's hint: none while SELECT walks past it (TRACK > MUTATE > BAR), nor carried onto the next",
+                 passed && str_eq(cur_page()->title, "BAR") && !seen);
+    turn(EN_SELECT, -1);                                /* back to MUTATE: stay */
+    ok = str_eq(cur_page()->title, "MUTATE");
+    frames(HINT_DWELL_MS - 160u);
+    ok &= !ui.msg_t;
+    frames(240u);
+    ok &= msg_is("OCT+ KEEP  GLO+A4 FREEZE");
+    for (n = 0, seen = 0; n < 200u; n++) { frame(); seen |= msg_is("SEQ+D5 REVERT  GLO+B4 ALL"); }
+    ok &= seen;
+    bad += check("  dwelt on (HINT_DWELL_MS): MUTATE's, then its second line", ok);
+    for (k = 0, n = 0; k < 3u; k++) {                   /* three more visits: once more (HINT_MAX), then no more */
+        go_title("BAR"); frames(400);
+        go_title("MUTATE");
+        for (seen = 0, x = 0; x < 120u; x++) { frame(); seen |= msg_is("OCT+ KEEP  GLO+A4 FREEZE"); }
+        n += seen;
+    }
+    bad += check("  at most HINT_MAX (2) times in all: counted (hint_given), then never", n == HINT_MAX - 1u &&
+                 hint_given(HK_MUTATE) == HINT_MAX);
+    {   /* the counts kept with the settings: a reboot (the settings saved, power off, loaded back) gives no more */
+        persist_t p = {0};
+        uint32_t lc;
+        ui.msg_t = 0;
+        layer_seen = 0;
+        for (k = 0, lc = 0; k < 3u; k++) {              /* SCL's: twice, then never (no layer held) */
+            go_home(); frames(160); ui.msg_t = 0;
+            press(B_SCL); frames(HINT_DWELL_MS + 64u);
+            lc += msg_is("HOLD [SCL] QUICK");
+        }
+        ok = lc == HINT_MAX && hint_given(HK_LAYER + LAYER_SCL) == HINT_MAX;
+        bad += check("  a button's \"HOLD [SCL] QUICK\": twice, then never", ok);
+        p.magic = PERSIST_MAGIC; p.panel = panel;
+        settings_export(&p);
+        ui_power_on();                                  /* (a fresh power-on: favorites cleared, then the settings loaded) */
+        ok = hint_given(HK_MUTATE) == 0u && settings_import(&p, sizeof p) && hint_given(HK_MUTATE) == HINT_MAX &&
+             hint_given(HK_LAYER + LAYER_SCL) == HINT_MAX;
+        go_title("TRACK"); frames(160); turn(EN_SELECT, 1);
+        for (seen = 0, x = 0; x < 120u; x++) { frame(); seen |= msg_is("OCT+ KEEP  GLO+A4 FREEZE"); }
+        go_home(); frames(160); ui.msg_t = 0;
+        press(B_SCL);
+        for (x = 0; x < 120u; x++) { frame(); seen |= msg_is("HOLD [SCL] QUICK"); }
+        bad += check("  the counts kept with the settings: after a reboot no more MUTATE / SCL hints", ok && !seen);
+        p.favorites.factory[15][HK_MUTATE] = 0;         /* (older settings: those bytes 0 = not given yet) */
+        ui_power_on();
+        ok = settings_import(&p, sizeof p) && hint_given(HK_MUTATE) == 0u;
+        bad += check("  older settings (the spare bytes 0): the hints not given yet", ok);
+    }
+    ui_power_on(); layer_seen = 0;                      /* a layer held once: its hint never again */
+    press(B_EDIT); frames(HINT_DWELL_MS + 64u);
+    ok = msg_is("HOLD [EDIT] QUICK") && hint_given(HK_LAYER + LAYER_EDIT) == 1u;
+    go_home(); frames(160);
+    fm1_in.buttons |= 1u << panel.btn[B_EDIT]; host_pressed |= 1u << panel.btn[B_EDIT];
+    frames(480);
+    ok &= ui.layer == LAYER_EDIT && ((layer_seen >> LAYER_EDIT) & 1u);
+    fm1_in.buttons &= ~(1u << panel.btn[B_EDIT]); frame();
+    go_home(); frames(160); ui.msg_t = 0;
+    press(B_EDIT);
+    for (seen = 0, x = 0; x < 120u; x++) { frame(); seen |= msg_is("HOLD [EDIT] QUICK"); }
+    bad += check("  a button's hint never again once its layer has been held (after one showing)", ok && !seen &&
+                 hint_given(HK_LAYER + LAYER_EDIT) == 1u);
+    /* INIT SYSTEM (SAVE > TOOLS): the hints start over */
+    hint_given(HK_MUTATE) = HINT_MAX;
+    confirm_open(CF_INIT_SYS, 0); ui.force = 1; frame();
+    press(B_OCTUP); frames(160);
+    ok = !ui.confirm && hint_given(HK_MUTATE) == 0u && hint_given(HK_LAYER + LAYER_EDIT) == 0u && layer_seen == 0u;
+    go_title("TRACK"); frames(160); turn(EN_SELECT, 1); ui.msg_t = 0;
+    for (seen = 0, x = 0; x < 120u; x++) { frame(); seen |= msg_is("OCT+ KEEP  GLO+A4 FREEZE"); }
+    bad += check("  INIT SYSTEM: the counts and the layers held start over (MUTATE's hint again)", ok && seen);
     return bad;
 }
 
@@ -11143,3 +11291,4 @@ int main(void)
     return bad ? 1 : 0;
 }
 #endif
+

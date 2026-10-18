@@ -204,9 +204,16 @@ and heating up with its own audio (0.8.8: swimming free over the whole screen by
 tabs **NOTICE · DICE · NAME**: a question is a card under a violet rule with its two buttons (YES in the accent); a
 part's dice (EDIT, SEQ, LFO, FX + SELECT) shows **BEFORE** and **NOW** side by side (the sound's being then and now,
 the steps, the LFO's or the effects' values) over a strip **KEEP DICED …? · SELECT: DICE AGAIN · OCT− CANCEL ·
-OCT+ OK**; a message on a lens page shows in its panel too, as a toast (the header says it as well; not over HOME's
-beings); NAME has its cards CURSOR, CHAR, LEN and OCT+ SAVE / WRITE over the name, the keys' letters and the black
-keys' functions.
+OCT+ OK**; NAME has its cards CURSOR, CHAR, LEN and OCT+ SAVE / WRITE over the name, the keys' letters and the black
+keys' functions. (0.9.5) A question's card covers only itself, its tabs and its breadcrumb: the page stays in sight
+around it, still moving.
+
+**Messages** (0.9.5): a message on a lens page shows as a small pill near the foot of the panel, over the page, which
+keeps drawing and moving behind it (the header says it as well; not over HOME's beings or a layer's map); nothing goes
+dark. A page's **hint** (MUTATE's "OCT+ KEEP  GLO+A4 FREEZE", MOTION's and PUNCH's "REC + PLAY ...", a button's
+"HOLD [EDIT] QUICK") comes only once you stay on the page for about 0.8 s, never while SELECT walks past it, and each
+one at most twice in all (counted with the settings, so not again after a reboot); a button's never again once you have
+held it for its layer. SAVE › TOOLS › INIT SYSTEM starts them over.
 
 ---
 
