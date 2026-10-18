@@ -296,6 +296,12 @@ static void midi_out_event(uint32_t pkt)            /* from the audio ISR */
 #ifndef FELUCCA_CDC_DEFAULT
 #define FELUCCA_CDC_DEFAULT 1
 #endif
+/* (0.9.12) iProduct's string index. Windows' USB audio driver keeps a MIDI port's name in the registry
+ * (MediaCategories\{GUID}\Name) under a GUID made of VID, PID and this index only (ksmedia.h
+ * INIT_USBAUDIO_PRODUCT_NAME), written the first time it sees the device and never again: every FM-1 that had
+ * Felucca (1209:0001, index 2) kept showing "Felucca" in Live / Windows after JIANT's rename. A new index is a new
+ * GUID, so the host reads the name again. Index 2 is no longer answered. Rename the product again: move it again. */
+#define USB_STR_PRODUCT 4u
 #ifndef FELUCCA_USB_PID
 #define FELUCCA_USB_PID 0x0001   /* the update loader is 0x0002 */
 #endif
@@ -405,7 +411,7 @@ _Static_assert(UAC_MAXP8 >= (45u + 1u) * 16u && UAC_MAXP10 >= (45u + 1u) * 20u &
 #define BCD_LO(cdc) (0x10 * (FELUCCA_UAC + FELUCCA_UAC_48K) + ((cdc) ? 0x01 + 2 * FELUCCA_USB_LAYOUT : 0))
 #define D_DEV_LO(bcdusb, cls, sub, proto, lo)                                                        \
     18, 1, (bcdusb) & 0xFF, (bcdusb) >> 8, (cls), (sub), (proto), 64, 0x09, 0x12, FELUCCA_USB_PID & 0xFF, \
-    FELUCCA_USB_PID >> 8, (lo), 0x03, 1, 2, 0, 1
+    FELUCCA_USB_PID >> 8, (lo), 0x03, 1, USB_STR_PRODUCT, 0, 1
 #define D_DEV(bcdusb, cls, sub, proto, cdc) D_DEV_LO(bcdusb, cls, sub, proto, BCD_LO(cdc))
 
 /* without the console (FELUCCA_CDC=0, or usb_cdc_on = 0): class 0, no IAD, as a plain USB-MIDI / audio device */
@@ -477,10 +483,12 @@ static uint8_t usb_cdc_on = FELUCCA_CDC_DEFAULT != 0;      /* the console is pre
 #define UAC_AS_IF (AUD_IF + 2u)
 static const uint8_t STR0[4] = {4, 3, 0x09, 0x04};
 static const uint8_t STR1[] = {22, 3, 'J', 0, 'u', 0, 'a', 0, 'n', 0, ' ', 0, 'J', 0, 'i', 0, 'a', 0, 'n', 0, 't', 0};   /* (0.7.0) the names JIANT's; the editor and the installer match /jiant|felucca/ */
+/* the product (USB_STR_PRODUCT): Windows names the MIDI port after it, macOS the device and its port; no interface
+ * or jack has a name of its own (iInterface / iJack 0). 0.7.0..0.9.11: "JIANT FM" (index 2); Felucca: "Felucca" */
 #ifdef FELUCCA_LOADER
-static const uint8_t STR2[] = {26, 3, 'J', 0, 'I', 0, 'A', 0, 'N', 0, 'T', 0, ' ', 0, 'U', 0, 'p', 0, 'd', 0, 'a', 0, 't', 0, 'e', 0};
+static const uint8_t STR_PROD[] = {26, 3, 'J', 0, 'I', 0, 'A', 0, 'N', 0, 'T', 0, ' ', 0, 'U', 0, 'p', 0, 'd', 0, 'a', 0, 't', 0, 'e', 0};
 #else
-static const uint8_t STR2[] = {18, 3, 'J', 0, 'I', 0, 'A', 0, 'N', 0, 'T', 0, ' ', 0, 'F', 0, 'M', 0};
+static const uint8_t STR_PROD[] = {12, 3, 'J', 0, 'I', 0, 'A', 0, 'N', 0, 'T', 0};
 #endif
 
 static int get_desc(uint32_t wvalue, const uint8_t **d, uint16_t *l)
@@ -514,9 +522,9 @@ static int get_desc(uint32_t wvalue, const uint8_t **d, uint16_t *l)
             *d = STR1;
             *l = sizeof STR1;
             return 1;
-        case 2:
-            *d = STR2;
-            *l = sizeof STR2;
+        case USB_STR_PRODUCT:
+            *d = STR_PROD;
+            *l = sizeof STR_PROD;
             return 1;
         default:
             return 0;

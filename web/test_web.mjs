@@ -17,7 +17,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import vm from "node:vm";
 import { logicalImage, productOf } from "./fm1pkg.js";
-import { Updater, pack7, unpack7, pairOutput, portBase } from "./fm1ota.js";
+import { Updater, pack7, unpack7, pairOutput, portBase, PORT_RE } from "./fm1ota.js";
 import { bkU32, bkR32, bkPack, bkCrc, readBackup } from "./fm1backup.js";
 import * as D from "./fm1diag.js";
 
@@ -1577,7 +1577,7 @@ class FakeFM1 {
       this.served++;
       if (this.served >= this.unplugAfter) { this.input.state = this.output.state = "disconnected"; return; }
       if (addr === 0xE0000000) { if (!this.o.noLoader) setTimeout(() => this.boot("ota-FM-1_900", this.o.loaderName || "JIANT Update"), 300); }
-      else if (addr === 0xF0000000) setTimeout(() => this.boot(this.after, this.o.afterName || "JIANT FM"), 300);
+      else if (addr === 0xF0000000) setTimeout(() => this.boot(this.after, this.o.afterName || "JIANT"), 300);
       else this.next();
     }
   }
@@ -1641,7 +1641,8 @@ const PROFILES = {
   v14: { identity: "FM-1_014", name: "FM-1" },
   v13: { identity: "FM-1_013", name: "FM-1" },
   v16: { identity: "FM-1_016", name: "FM-1", after: "FM-1_015" },
-  jiant: { identity: "FM-1_900", name: "JIANT FM", info: infoOf("JIANT v0.9.11", 6, { jiant: true }), objs: JIANT_OBJS, after: "FM-1_015" },
+  jiant: { identity: "FM-1_900", name: "JIANT", info: infoOf("JIANT v0.9.12", 6, { jiant: true }), objs: JIANT_OBJS, after: "FM-1_015" },   /* (0.9.12) USB name "JIANT" */
+  jiantFm: { identity: "FM-1_900", name: "JIANT FM", info: infoOf("JIANT v0.9.11", 6, { jiant: true }), objs: JIANT_OBJS, after: "FM-1_015" },   /* 0.7.0..0.9.11 */
   felucca: { identity: "FM-1_961", name: "Felucca", info: infoOf("FELUCCA v1.6.1", 4), objs: FELUCCA_OBJS, after: "FM-1_015" },
   felucca10: { identity: "FM-1_910", name: "Felucca", info: infoOf("FELUCCA v1.0", 4, { backup: false }), after: "FM-1_015" },
   skiff: { identity: "FM-1_732", name: "Skiff", info: infoOf("FELUCCA v1.3.2", 6), objs: SKIFF_OBJS, after: "FM-1_015" },
@@ -1668,7 +1669,23 @@ async function installerFlows() {
   let x = await run("v15");
   ok(x.r === "ok" && x.c.state.fw.kind === "stock" && x.dev.identity === "FM-1_900" && x.dev.bad === 0, "installer: Install over official V15: written");
   x = await run("jiant");
-  ok(x.r === "ok" && x.c.state.fw.kind === "jiant" && x.c.state.fw.version === "JIANT v0.9.11", "installer: Install over JIANT: written");
+  ok(x.r === "ok" && x.c.state.fw.kind === "jiant" && x.c.state.fw.version === "JIANT v0.9.12", "installer: Install over JIANT (USB name 'JIANT', 0.9.12): written");
+  x = await run("jiantFm");
+  ok(x.r === "ok" && x.c.state.fw.kind === "jiant" && x.c.state.fw.version === "JIANT v0.9.11", "installer: Install over JIANT 0.9.11 (USB name 'JIANT FM'): written");
+  x = await run("jiant", { name: "Felucca" });
+  ok(x.r === "ok" && x.c.state.fw.kind === "jiant", "installer: JIANT under the name Windows cached ('Felucca'): known by INFO, written");
+  for (const name of ["2- JIANT", "JIANT 1", "JIANT MIDI 1"]) {
+    x = await run("jiant", { name });
+    ok(x.r === "ok" && x.c.state.fw.kind === "jiant", `installer: JIANT's port as '${name}': written`);
+  }
+  x = await run("jiant", { name: "MIDIIN2 (JIANT)", outName: "MIDIOUT2 (JIANT)" });
+  ok(x.r === "ok" && x.c.state.fw.kind === "jiant", "installer: Windows port names (MIDIIN2 (JIANT) / MIDIOUT2 (JIANT)) paired");
+  x = await run("v15", { name: "JIANT" });
+  ok(x.r === "ok" && x.c.state.fw.kind === "stock", "installer: a port named 'JIANT' answering FM-1_015 is official V15 (the identity decides)");
+  x = await run("felucca", { name: "JIANT" });
+  ok(x.r === "felucca" && x.dev.served === 0, "installer: Felucca under JIANT's name is still Felucca (INFO decides)");
+  x = await run("v15", { identity: "ota-FM-1_900", name: "Felucca Update" });
+  ok(x.r === "ok" && x.c.state.fw.kind === "loader", "installer: the update loader as 'Felucca Update' (an older loader / a cached name): resumed");
   for (const [p, code] of [["v14", "oldstock"], ["v13", "oldstock"], ["v16", "newstock"], ["skiff", "skiff"], ["skiffQuiet", "skiff"],
     ["felucca", "felucca"], ["felucca10", "felucca"], ["baudgirl", "otherfw"], ["oddId", "otherfw"]]) {
     x = await run(p);
@@ -1695,6 +1712,18 @@ async function installerFlows() {
   ok(x.r === "ok", "installer: an FM-1 under a name it does not know, alone: probed and found");
   x = await run("v15", { loaderName: "USB MIDI Gadget" });
   ok(x.r === "ok", "installer: the loader under a new unknown name: probed while waiting");
+  /* (0.9.12) the USB names over the versions, as hosts show them: every one is probed (fm1ota.js PORT_RE) and the
+   * editor connects to every JIANT / Felucca one (editor.html's port filter), never to other gear */
+  const NAMES = ["JIANT", "2- JIANT", "MIDIIN2 (JIANT)", "MIDIOUT2 (JIANT)", "JIANT MIDI 1", "JIANT 1", "JIANT FM", "JIANT Update",
+    "Felucca", "Felucca Update", "2- Felucca"];
+  const edSrc = readFileSync(join(HERE, "editor.html"), "utf8");
+  const edRes = [...edSrc.matchAll(/\/(felucca\|jiant)\/i\.test\(p\.name/g)].map((m) => new RegExp(m[1], "i"));
+  ok(NAMES.every((n) => PORT_RE.test(n)) && !["IAC Driver Bus 1", "Microsoft GS Wavetable Synth", "Arturia KeyStep"].some((n) => PORT_RE.test(n)),
+    "installer: PORT_RE takes JIANT, JIANT FM, Felucca and their update names (not other gear)");
+  ok(edRes.length === 2 && edRes.every((re) => NAMES.filter((n) => !/update/i.test(n)).every((n) => re.test(n)) && !re.test("IAC Driver Bus 1")),
+    "editor: its port filter (connect, reconnect) takes JIANT, JIANT FM and Felucca");
+  ok(portBase("2- JIANT") === "jiant" && portBase("MIDIIN2 (JIANT)") === "jiant" && portBase("JIANT 1") === "jiant",
+    "installer: port base names of JIANT's ports (Windows numbering)");
   ok(portBase("2- FM-1") === "fm-1" && portBase("FM-1 1") === "fm-1" &&
      pairOutput({ name: "MIDIIN2 (FM-1)" }, [{ name: "MIDIOUT2 (FM-1)", state: "connected" }, { name: "Microsoft GS Wavetable Synth", state: "connected" }])?.name === "MIDIOUT2 (FM-1)",
      "installer: port pairing (Windows numbering)");

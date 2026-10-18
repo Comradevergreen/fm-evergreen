@@ -367,7 +367,7 @@ Turning fast sweeps the whole range; turning slowly is fine adjustment. Turn it 
   tempo, ENV / SCL / ARP / SAVE their chain.
 - **EDIT held**: INIT / RECALL instead of the voice selector. One-step **UNDO** with GLO held + G4 (SAVE held: OCT+ stores the
   section, OCT− recalls it). **No layer lock.**
-- **USB names**: "JIANT FM" (MIDI and audio), "JIANT Update" while updating; the web editor and the installer take the older "Felucca" too.
+- **USB names**: "JIANT" (MIDI and audio; 0.7.0–0.9.11 "JIANT FM"), "JIANT Update" while updating; the web editor and the installer take the older "JIANT FM" and "Felucca" too.
 
 </details>
 
@@ -654,6 +654,20 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### v0.9.12 (draft)
+- **The USB name is "JIANT", and Windows finally shows it.** Ableton Live (and every Windows program) kept listing the
+  FM-1's MIDI port as "Felucca" long after JIANT renamed it: Windows' USB audio driver stores a MIDI port's name in the
+  registry under a key made of VID, PID and the product string's *index* (not its text), the first time it sees the
+  device, and never reads it again; Felucca and JIANT shared all three (1209:0001, index 2). The product string moves to
+  index 4 (`firmware/src/usb.c` USB_STR_PRODUCT), a new key, so the host reads the name again, and reads **"JIANT"**
+  (was "JIANT FM"): the port in Live / Windows is "JIANT", on macOS the device and its port "JIANT", on Linux
+  "JIANT MIDI 1". The manufacturer stays "Juan Jiant", the update loader "JIANT Update" (also on the new index);
+  VID/PID and bcdDevice unchanged. The installers (web and `tools/fm1_install.py`) and the editor already matched
+  JIANT / Felucca; they tell the firmware by its identity and INFO reply, not by the name: new tests with "JIANT",
+  "JIANT FM", "Felucca" and Windows' numbered names (web/test_web.mjs, tests/install_test.py, tests/usb_desc_test.c:
+  the strings as a host reads them). Flash −16 B (image 576192 → 576176 B). macOS may keep a renamed device's old name
+  in Audio MIDI Setup: delete the old FM-1 entry there (unplugged) once.
 
 ### v0.9.11
 - **GLO › LIVE: the six sequences in parallel, with live modifiers** (the approved mock-up *secuencias*, its MANO and
