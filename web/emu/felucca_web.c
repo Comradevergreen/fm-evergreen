@@ -115,6 +115,8 @@ static void fm1_input_tick(void) {}
 static void fm1_wdt_feed(void) {}
 static void fm1_irq_off(void) {}
 static void fm1_irq_on(void) {}
+static int fm1_clk_320(void) { return 0; }                /* (0.9.12) the emulator: 360 MHz, one core */
+static uint32_t fm1_cnum(void) { return 0; }
 
 /* ----------------------------------------------------------- the screen --- */
 static uint16_t web_fb[240 * 240];       /* RGB565 as the panel gets it (high byte first) */
