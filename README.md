@@ -15,7 +15,10 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.9.4).** It builds and passes every test (Felucca's and its own). Back up the flash before installing it.
+> **Status: in development (v0.9.6).** It builds and passes every test (Felucca's and its own). Back up the flash before installing it.
+  **Every engine draws its own creature** (0.9.6): ANALOG a cell whose membrane is its wave, FM6 its operators as
+  little beings wired as the algorithm (also on OPERATOR and OP ENV), WHEEL nine tube worms, one a drawbar, NOISE a
+  swarm, PHASE a snail whose shell is the bent phase, LOFI a caterpillar whose skin is its output and segments its bits.
   **Three engines draw their own creature** (0.9.4): VOICE a CT scan of a singing head (the tongue, jaw, lips and velum
   move with the phoneme sung), ANIMAL a creature that metamorphoses between bird, insect and mammal, DRUM-X its kit as
   little beings that squash, shut their eyes and shout with every hit.
@@ -176,8 +179,10 @@ VOICE singing its lyric, in the COLORS skin, exactly as the firmware draws them 
 - **HOME, the ecosystem**: one being per track (its species from its engine, its shape from its four knobs). Each one
   heats up, swells and moves with its own audio; the selected track is drawn bigger; muted ones go dark; in silence
   they all stay still.
-- **Engine pages**: the sound's being drawn in isotherms (four contours of the same body, cold edge, hot core). The
-  knobs read as what they are: **CUT** grows spines (more harmonics, spikier), **RES** makes the membrane vibrate,
+- **Engine pages**: each engine draws its own creature (0.9.4 / 0.9.6, [below](#v096)): VOICE a singing head, ANIMAL
+  a bird / insect / mammal, DRUM-X its kit of little beings, ANALOG a cell, FM6 a colony of operators, WHEEL tube worms,
+  NOISE a swarm, PHASE a snail, LOFI a caterpillar. (Before: the sound's being drawn in isotherms, four contours of
+  the same body, cold edge, hot core, as HOME's ecosystem still shows them.) The being's knobs read as what they are: **CUT** grows spines (more harmonics, spikier), **RES** makes the membrane vibrate,
   **DTN/SPRD** splits two nuclei, **NOIS/RAND/CRSH** frays the edge, **WAVE** changes the lobes.
 - **DRUM-X, the colony**: one being per kit sound, each with its own shape (round kick, spiky snare, fringed hats,
   clustered clap, star-shaped cowbell) that swells and heats up when it hits (KIT 2, KIT 3, X-MOD); on KIT, SOUND 1–4
@@ -199,7 +204,8 @@ Nine engines, all synthesis, no samples: **ANALOG, FM6, PHASE, LOFI, VOICE, WHEE
 - **FM6**: Dexed's engine (imports .syx), with its algorithms drawn. Fully editable on the device (from Felucca 1.5):
   **EDIT > OPERATOR** (KNOB 1 the operator 1–6, then RATIO or FIXED frequency, FINE, LEVEL), **OP ENV** (the stage
   ATK DEC SUS REL, its RATE and LEVEL, drawn as the envelope) and **OPERATOR 2** (MODE ratio/fixed, DETUNE, VEL), the
-  operator lit on the algorithm chart with its frequency. Editing makes the patch the track's own (SLOT OWN) and it is
+  operator lit in the algorithm's colony of operators (0.9.6: each a little being wired as the chart was) with its
+  frequency; OP ENV's operator rides its envelope. Editing makes the patch the track's own (SLOT OWN) and it is
   saved with the project; the macros (EDIT 1 / 2) still act on top. The web editor edits every byte of it too.
   **Voice bank** (from Felucca 1.4.1): import a 32-voice DX7 cartridge (.syx) in the web editor's 6-OP FM tab and press
   **Send to the device's voice bank**; on an FM6 track **SLOT** (EDIT 2, KNOB 4) then goes F1–F8, OWN, **B1–B32**
@@ -623,6 +629,56 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### v0.9.6
+- **Every engine draws its own creature now**: the six that still showed the generic being get theirs, ported from the
+  approved mock-up (the family's), on **EDIT › SOUND** (on the left, as 0.9.4's; the scope and the chips on the right as
+  before) and on **HOME › BEING** for their tracks (HOME's ecosystem keeps its beings). The same thermal line art (in
+  the JIANT palette the mock-up's ramp, the other palettes as the beings), the bichos' face and outline shared with
+  DRUM-X's beings; each moves only while its track sounds and rests in silence:
+  - **ANALOG: a cell ("CÉLULA")** whose membrane, three isotherms, is two cycles of its oscillators (WAVE with MORPH,
+    DETUNE, MIX, NOISE, INT) through its filter (CUT on the note, RES) and DRIVE, drawn round in polar form: a SAW makes
+    a pinwheel, a SQR battlements, a low CUT a soft round cell. **Spikes** grow where DRIVE clips the wave, a **ring**
+    sits at CUT and glows and spreads with RES, NOISE gives it cilia, the two oscillators orbit inside at DETUNE's beat.
+  - **FM6: a colony ("COLONIA")**: the six operators as little beings wired exactly as the algorithm (the 32 charts'
+    cells and routes: the carriers standing on the output's floor, the modulators above, pulses down the wires as fast
+    as the modulator's ratio). Each is as large and as hot as its LEVEL times its envelope now (the notes sounding),
+    has as many spikes as its RATIO, the feedback operator a curled tail as long as FB, the carriers shouting. On EDIT,
+    on **OPERATOR** and **OPERATOR 2** (the operator picked in the theme colour, DETUNE a shimmer; "ALG 05 PAT" and
+    "OP3 x1.50" kept over it, the cards as before) and on **OP ENV** (the envelope as the patch has it, the stage edited
+    lit, and the operator's bicho **riding the curve** where its envelope is now: up the attack, along the hold,
+    down the release; "OP3" and "ATK R 95 L 99" kept).
+  - **WHEEL: nine tube worms ("TUBÍCOLAS")**, one a drawbar, as tall as its level (the registration's digits under
+    them, as 888000888), their crowns as many tentacles as the harmonic; **the rotor is a current bending them** (its
+    real phase and speed, DEPTH), PERC makes its worm leap and shout, CLICK sends bubbles out of their mouths, DUST motes.
+  - **NOISE: a swarm ("ENJAMBRE")** of protozoa round a queen with a face: **COLOR is how they walk** (white: they
+    jitter in place; brown: they drift), **FREQ how they swirl** and the ring they keep, PEAK how tight; in DUST they
+    flare and jump with the impulses, in LFSR / META they march in columns, a column a bit of the register.
+  - **PHASE: a snail ("CARACOL")** whose shell's chambers sit at the **bent phase** (even at DCW 0, crowding where the
+    phase rushes as DCW rises), coloured by the output, **its foot's sole the wave** (WAVE and WAVE2 alternating); FB
+    frays the spiral, SUB makes the outer whorl breathe, the eyestalks pull in on each note; the second line (DETUNE,
+    RING) a little snail following, RING a thread between them.
+  - **LOFI: a caterpillar ("ORGANISMO DE CIRCUITO")** whose two skins are **the last 256 samples out** (read from the
+    scope's buffer the UI already reads: nothing more from the audio), held steps on BYTE, smooth on FLOAT; its 8
+    segments are **the byte's bits** (BYTE: the highest next to the head), lit and lifting their legs with their bit,
+    the antennae tipped by the two lowest, the head a bicho shouting with the level. On FLOAT and the chip waves
+    (PLS TRI SAW NOIS WRAM) the same caterpillar, the skin the waveform and the segments lit by its level.
+  - Each draws into a rectangle it is given and scales to it (EDIT's left panel, HOME's middle, or the whole panel:
+    a layout without the scope can use it).
+  - Cost: **~14.0 KB of flash for the six** (image 574220 B of 581564; FM6's chart and envelope drawing they replace
+    given back), 1.4 KB more of the pool (vxs: 1536 B; spare 11136 B), .data + .bss unchanged; drawn no dearer than
+    ANALOG's EDIT page with its being was (host, a whole screen, sounding: 0.9.4's ANALOG EDIT ~165 µs; now ANALOG
+    ~157, FM6 EDIT ~160, OPERATOR ~147, OP ENV ~122, WHEEL ~149, NOISE ~143, PHASE ~143, LOFI ~155 (FLOAT ~157),
+    HOME › BEING 151–169; on the whole panel 127–146). Read-only: the track's
+    knobs, its voices (notes, envelopes, FM6's operator envelopes, LOFI's held byte), WHEEL's rotor and PERC, the
+    scope's buffer, as the UI already read them. No audio change: goldens, cpu_vg and the target budgets as 0.9.4.
+  - Tests: ui_render draws them (ANALOG SAW / SQR / RING, silent, HOME, whole panel; FM6 EDIT, ALG 32, OPERATOR,
+    OPERATOR 2 with DETUNE, OP ENV attack and release, HOME, whole panel; WHEEL, rotor FAST with PERC and CLICK, HOME,
+    whole panel; NOISE DUST, LFSR, white, HOME, whole panel; PHASE, WAVE2 + RING + SUB + FB, HOME, whole panel; LOFI
+    BYTE, FLOAT, PLS, HOME, whole panel) in every palette, COLORS / BOTTOM / HUD and LARGE, lint and alignment clean;
+    every FM6 algorithm's colony linted (no two operators overlapping, inside the panel) where the chart was; FM6's
+    operator pages checked to keep every number they showed; ui_test: each moves while it plays and holds still in
+    silence (EDIT, OPERATOR / OP ENV / OPERATOR 2, HOME).
 
 ### v0.9.4
 - **Three engines draw their own creature**, long promised, where every engine shows its being (EDIT › SOUND on the

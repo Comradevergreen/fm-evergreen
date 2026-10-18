@@ -7,7 +7,7 @@ import html, os
 
 R = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(R, 'docs', 'cheatsheet')
-VERSION = 'v0.9.4'
+VERSION = 'v0.9.6'
 
 HEAT = ['#22d3ee', '#3b82f6', '#8b5cf6', '#d946ef', '#ef4444', '#ff7a00', '#facc15', '#f4f1ea']
 
@@ -296,23 +296,29 @@ def sound():
     b.append(sec('ENGINES · EDIT 1 / EDIT 2'))
     eng = [
         ('ANALOG', HEAT[1], 'WAVE DETUNE MIX NOISE', 'CUT RES DRIVE INT',
-         'SAW SQR TRI SIN PWM <b>SYNC RING SAW3</b>; INT: osc 2 ±24 st. Its filter is per voice.'),
+         'SAW SQR TRI SIN PWM <b>SYNC RING SAW3</b>; INT: osc 2 ±24 st. Its filter is per voice. <b>Its picture</b> (0.9.6): '
+         'a cell whose membrane is the wave, spikes where DRIVE clips, a ring at CUT.'),
         ('FM6', HEAT[3], 'ALG FB MOD RATIO', 'MEG VMOD DETUNE SLOT',
          'Dexed\'s 6 operators, 32 algorithms drawn, .syx patches (SLOT), MOD / RATIO move the modulators. '
          '<b>OPERATOR · OP ENV · OPERATOR 2</b>: each operator on the device (ratio / fixed, fine, level, its envelope, '
-         'mode, detune, velocity). <b>SLOT B1–B32</b>: a 32-voice .syx sent from the web editor.'),
+         'mode, detune, velocity). <b>SLOT B1–B32</b>: a 32-voice .syx sent from the web editor. <b>Its picture</b> (0.9.6): '
+         'the operators as bichos wired as the algorithm, OP ENV\'s riding its envelope.'),
         ('PHASE', HEAT[2], 'WAVE WAVE2 DCW ENV', 'DETUNE LINE SUB FB',
-         'Phase distortion (CZ); <b>FB</b> feeds the output back into the phase: hard edge to growl.'),
+         'Phase distortion (CZ); <b>FB</b> feeds the output back into the phase: hard edge to growl. <b>Its picture</b> '
+         '(0.9.6): a snail, its shell\'s chambers at the bent phase, its sole the wave.'),
         ('LOFI', HEAT[0], 'CHIP WAVE DUTY CRUSH', '- VIB BEND MASK',
          'Chip: PLS TRI SAW NOIS WRAM. <b>BYTE</b>: ALGO VAR · MOTN GRIT BEND LOOP. <b>FLOAT</b> (floatbeat): '
-         'ALGO VAR · MOTN FBK BEND LOOP; CHIP sets FULL / 4BIT / 1BIT.'),
+         'ALGO VAR · MOTN FBK BEND LOOP; CHIP sets FULL / 4BIT / 1BIT. <b>Its picture</b> (0.9.6): a caterpillar whose skin '
+         'is the output, a segment per bit of the byte.'),
         ('VOICE', HEAT[6], 'VOWEL VOWEL2 TALK SHIFT', 'BUZZ BREATH Q RAND',
          'Formant voice (after klattsch): vowels, talk, breath. <b>WORDS</b> (0.8.5): LANG ES / EN / JA sings syllables, '
          'a note each (POS THEME ARTIC SHIFT · BUZZ BREATH Q LOOP); LYRIC TEXT (OCT+ on WORDS types it, KNOB 3 dice; '
          'the web editor sends it) or W1–16 words, S1–8 scat; "-" holds the vowel. <b>Its picture</b> (0.9.4): a CT head '
          'whose tongue, jaw, lips and velum sing the phoneme.'),
-        ('WHEEL', HEAT[5], 'REG SUB BODY TOP', 'PERC CLICK DRIVE ROTOR', 'Drawbar organ: registrations, percussion, rotary.'),
-        ('NOISE', HEAT[4], 'MODE COLOR FREQ PEAK', 'TRK DENSE DRIFT CRUSH', 'Coloured and metallic noise, tracked or free.'),
+        ('WHEEL', HEAT[5], 'REG SUB BODY TOP', 'PERC CLICK DRIVE ROTOR', 'Drawbar organ: registrations, percussion, rotary. '
+         '<b>Its picture</b> (0.9.6): nine tube worms, one a drawbar, bent by the rotor.'),
+        ('NOISE', HEAT[4], 'MODE COLOR FREQ PEAK', 'TRK DENSE DRIFT CRUSH', 'Coloured and metallic noise, tracked or free. '
+         '<b>Its picture</b> (0.9.6): a swarm walking by COLOR, swirling by FREQ.'),
         ('DRUM-X', '#ff7a00', 'MORPH TUNE TONE DECAY', 'NOISE FM ENV FOLD DRIVE',
          '8 sounds BD SD CP CH OH TM RS CB, sides A / B: <b>MORPH</b> morphs the kit. The kit first: <b>KIT 3</b> BP FEEDBK, <b>X-MOD</b> RATE DEPTH SHAPE '
          'RAND. Then a sound (KNOB 1 the sound): SIDE PITCH PMOD · DECAY NOISE COLOR · MODE PM.TYPE DRIVE · <b>LAYER</b> (no note) FEEDBK '
