@@ -599,6 +599,13 @@ before loads as it was. PROGRAM CHANGE numbers the sounds in this new order (see
   - **FLOAT** (floatbeat): CHIP becomes the resolution (4BIT, 4B/2, FULL, 1BIT), KNOB 3 **ALGO** (32 formulas made of
     sines), KNOB 4 **VAR**; EDIT 2: **MOTION, FEEDBK, BEND, LOOP**. Hold a key: the formula plays in that key.
   - **RETRIG** page (BYTE / FLOAT): **RTRG ON** restarts the formula from the top on every note.
+  - (0.9.11) **Level and edges.** LOFI's waves are full-scale and dense (a bytebeat is nearly a square), so at the same
+    meter reading they sound louder and sharper than the other engines. LOFI now plays them lower, by wave (BYTE and
+    FLOAT −6 dB, PLS SAW NOIS −4.5 dB, WRAM −3 dB, TRI −1.5 dB), and files their top a little: a fixed gentle low-pass
+    (−3 dB at ~7.5 kHz) on the chip waves and FLOAT, and BYTE's own smoothing of its steps a bit lower. The FILTER
+    page's CUT is unchanged (127 still opens it fully). Every LOFI sound gets it, user presets and **old projects too:
+    they sound quieter and slightly softer than in 0.9.10** — raise the track's LEVEL (+6 dB = 12 steps) if a mix needs
+    it back.
 - **MORPH** (EDIT > MORPH, on ANALOG, PHASE and LOFI): the wave slides continuously toward the next ones (on ANALOG
   SAW > SQR > TRI > SIN, on PHASE toward its next shape, on LOFI toward the next wave up to WRAM). 0 = the wave as
   chosen. On ANALOG and LOFI the **SHAPE** modulation moves the morph too, so an LFO or envelope sweeps the wave. The

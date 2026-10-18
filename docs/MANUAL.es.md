@@ -623,6 +623,13 @@ click; las notas siguen.
     hechas de senos), KNOB 4 **VAR**; EDIT 2: **MOTION, FEEDBK, BEND, LOOP**. Mantené una tecla: la fórmula suena en
     esa tonalidad.
   - Página **RETRIG** (BYTE / FLOAT): **RTRG ON** reinicia la fórmula desde el principio en cada nota.
+  - (0.9.11) **Nivel y bordes.** Las ondas de LOFI son densas y a escala completa (un bytebeat es casi una cuadrada), así
+    que con la misma lectura del medidor suenan más fuerte y más punzantes que los otros motores. Ahora LOFI las toca
+    más bajo, según la onda (BYTE y FLOAT −6 dB, PLS SAW NOIS −4,5 dB, WRAM −3 dB, TRI −1,5 dB), y les lima un poco los
+    agudos: un pasabajos suave y fijo (−3 dB en ~7,5 kHz) en las ondas de chip y FLOAT, y el suavizado propio de los
+    escalones de BYTE un poco más abajo. El CUT de la página FILTER no cambia (127 lo sigue abriendo del todo). Le pasa
+    a todo sonido LOFI, a los presets de usuario y **también a los proyectos viejos: suenan más bajos y un poco más
+    suaves que en 0.9.10**; si una mezcla lo necesita, subí el LEVEL de la pista (+6 dB = 12 pasos).
 - **MORPH** (EDIT > MORPH, en ANALOG, PHASE y LOFI): la onda se desliza de forma continua hacia las siguientes (en
   ANALOG SAW > SQR > TRI > SIN, en PHASE hacia su forma siguiente, en LOFI hacia la onda siguiente hasta WRAM). 0 = la
   onda tal como la elegiste. En ANALOG y LOFI la modulación **SHAPE** también mueve el morph, así un LFO o una
