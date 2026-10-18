@@ -11,7 +11,7 @@ JIANT FM is an alternative firmware for the **M-VAVE FM-1**, made for playing li
 a computer. It is a fork of [Felucca](https://github.com/hugelton/Felucca) 1.1.5.1 by Hügelton Instruments (GPL-3.0)
 and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 
-**▶ [Try it in the browser](https://juanjiant-bit.github.io/JIANT/emu/)** · **[Web installer](https://juanjiant-bit.github.io/JIANT/webapp/installer/)** · **[Web editor](https://juanjiant-bit.github.io/JIANT/webapp/editor/)** · **[JIANT Stems for Android](https://juanjiant-bit.github.io/JIANT/app/jiant-stems.apk)**: the emulator runs the same code as
+**▶ [Try it in the browser](https://juanjiant-bit.github.io/JIANT/emu/)** · **[Web installer](https://juanjiant-bit.github.io/JIANT/webapp/installer/)** · **[Web editor](https://juanjiant-bit.github.io/JIANT/webapp/editor/)**: the emulator runs the same code as
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
@@ -65,8 +65,8 @@ editor update themselves with every change merged into `main`.
 >   SEQ › NOTE's MICRO, −32/64 … +31/64.
 > - **USB audio that keeps its time** (0.8.9): no lost half buffers (the clicks under load), no dropped packets, the
 >   48 kHz resampler on the second core. **Stems**: every track to the computer (MENU > SYSTEM > USB > STEMS), or to the
->   phone with the **[JIANT Stems](android/README.md)** app (record, line up your voice, export a ZIP or a mix;
->   [APK](https://juanjiant-bit.github.io/JIANT/app/jiant-stems.apk)).
+>   phone with the **JIANT Stems** app (record, line up your voice, export a ZIP or a mix; a separate product, coming
+>   soon).
 > - Every version's details: the **[Changelog](#changelog)**.
 
 > 🫶 If you resonate with my work, consider supporting me on **[Ko-fi](https://ko-fi.com/juanjiant)** (in Argentina:
@@ -344,8 +344,7 @@ Turning fast sweeps the whole range; turning slowly is fine adjustment. Turn it 
   resampler on the second core.
 - **Stems** (MENU > SYSTEM > USB): **STEMS** sends every track on its own channel (8: T1–T6, FX L R), **STEMS+IN** adds
   your voice through the FM-1. On the phone, the **JIANT Stems** app records them, lines the voice up by the measured
-  latency and exports a ZIP or a mix ([android/README.md](android/README.md),
-  [APK](https://juanjiant-bit.github.io/JIANT/app/jiant-stems.apk), Android 10+). The emulator page renders a backup's
+  latency and exports a ZIP or a mix (a separate product, coming soon; Android 10+). The emulator page renders a backup's
   song as stems too.
 - 32 named user presets; the project autosaves 10 s after the last change while stopped (not at power-off).
 - **Web editor** for every parameter: FM6 patches, grid, mix and full backup (all 8 songs with their sections, rows
@@ -689,7 +688,7 @@ Every update is listed here, newest first. (Since 0.6.80 at the end of the page:
   sound in its stem as the SLICER let it through (its repeats in the first such track's stem, or with the SLICER's FX ON
   in the FX return): the eight add up to the mix (before, that track was in its stem dry and again, sliced, in FX).
   **Update the FM-1 and the app, and record again**: a take made before 0.9.8 cannot be mended.
-- **JIANT Stems 1.1** (android/stems): only whole frames are kept from a USB packet in error (a frame cut short no
+- **JIANT Stems 1.1**: only whole frames are kept from a USB packet in error (a frame cut short no
   longer moves every channel after it); the mic sent to the FM-1 follows the clocks' drift by reading a little faster
   or slower instead of skipping a sample (a click in VOX); it tells an FM-1 on 0.9.7 or older in STEMS; a take being
   recorded is never "recovered" by the takes list and a take cut short keeps all it wrote; the trim's edges are taken

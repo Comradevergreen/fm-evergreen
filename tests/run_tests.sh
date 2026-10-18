@@ -80,8 +80,6 @@
 # STEMS (tests/stems_test.c, 0.9.8): fx.c's stems on dense DICE songs: each bit for bit its track's solo render (LOAD FULL,
 #                   LITE, ECO with its tail trimming; one core and CORES 2), the six and the FX return summing to the mix,
 #                   an empty track exact zeros, a track through the SLICER its own sound as it got through.
-# JIANT Stems app (android/stems, while it is in this repo): usbstream.c against a pretend usbfs (JDK headers), the :core
-#                   JVM tests with gradle (offline: the export's length, the trim, the WAV recovery, the mix).
 # USB audio scheduler (tests/uac_sched_test.c, 0.8.9): minutes of the stream against a simulated FM-1 (the audio ISR's
 #                   order, renders as a heavy song's with late halves, starvation bursts, IRQs off) and host (48 kHz,
 #                   +-500 ppm): every IN token finds a packet of n +- 1 frames, every rendered frame sent once (exact), no
@@ -363,21 +361,6 @@ fi
 run "installer CLI (fm1_install.py) against a simulated FM-1" python3 tests/install_test.py
 run "navigation map (docs/navigation-map*.svg) matches the firmware's chains" python3 tools/gen_nav_map.py --check
 
-if [ -d android/stems ]; then                         # (the app, while it lives here)
-    JH="${JAVA_HOME:-$(dirname "$(dirname "$(readlink -f "$(command -v javac || command -v java || echo /x/x/x)")")")}"
-    if [ -f "$JH/include/jni.h" ]; then
-        cc -O1 -I"$JH/include" -I"$JH/include/linux" -o "$OUT/usbstream_test" android/stems/app/src/test/cpp/usbstream_test.c -lm
-        run "JIANT Stems: usbstream.c (every frame once, a cut frame left out whole, the mic's drift with no sample slipped)" "$OUT/usbstream_test"
-    else
-        echo "== skip JIANT Stems usbstream.c (no JDK headers)"
-    fi
-    if command -v gradle >/dev/null 2>&1; then
-        run "JIANT Stems :core (JVM): WAV, layout, splitter, latency, mix, exports, the take's length and trim" \
-            gradle -q -p android/stems -PcoreOnly --offline :core:test
-    else
-        echo "== skip JIANT Stems :core (no gradle)"
-    fi
-fi
 if command -v node >/dev/null 2>&1; then
     run "web pages: editor protocol, package builder, update protocol" node web/test_web.mjs
     run "web backup: capture, validation before writes, restore order" node web/test_backup.mjs

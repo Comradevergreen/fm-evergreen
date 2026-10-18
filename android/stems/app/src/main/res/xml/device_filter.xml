@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- the FM-1 by its USB product name (docs/MANUAL.md: "JIANT FM" since 0.7.0, "Felucca" before) -->
-<resources>
-    <usb-device product-name="JIANT FM" />
-    <usb-device product-name="Felucca" />
-</resources>

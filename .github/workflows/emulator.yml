@@ -101,13 +101,6 @@ jobs:
           gradle -p android/probe assembleDebug --no-daemon
           mkdir -p build/emu/app
           cp android/probe/app/build/outputs/apk/debug/app-debug.apk build/emu/app/jiant-probe.apk
-      # (JIANT Stems 1.0) the stems app (android/stems) beside it: app/jiant-stems.apk
-      - name: the Android stems app
-        continue-on-error: true
-        run: |
-          gradle -p android/stems :app:assembleDebug --no-daemon
-          mkdir -p build/emu/app
-          cp android/stems/app/build/outputs/apk/debug/app-debug.apk build/emu/app/jiant-stems.apk
       # (JIANT 0.8.1) the site's front page (web/landing: what JIANT is, install / try / edit, what comes next) at the
       # root, for people who just want to play; the emulator moves to emu/ (its links go up one level)
       - name: the front page and the emulator under emu/
