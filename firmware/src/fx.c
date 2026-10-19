@@ -2378,7 +2378,7 @@ static const char *mc_status(void)                      /* MENU > ABOUT's line *
 
 /* (0.9.15) the silence path. The master at rest (master_rest): this block's mix in (dry, the buses' return, the SLICER's)
  * all 0 and every state of the master chain where 0 in leaves it (the DC blockers at 0, the leveler's follower and
- * gain where a block of silence no longer moves them, the limiter under its threshold, LOWCUT at 0, not BASS+; DJ FILTER
+ * gain where a block of silence no longer moves them, the limiter under its threshold, SPEAKER EQ FLAT; DJ FILTER
  * off; CLIP has no state): what it gives is exactly 0 and its states stay as they are, so it is not run (bit for bit the
  * same). Then the whole mix at rest (mix_hush): the master at rest the block before, stopped, the buses at rest and
  * silenced (fx_rest), no part with a voice, a DIST tail, a fade, the host's audio, the FX layer, the stems, the SLICER
@@ -2398,8 +2398,8 @@ static __attribute__((noinline)) int master_rest(uint32_t n)
     if (a || dc_l || dc_r || (lev_env >> 11) || ((32768 - lev_g) >> 5) || lev_dg || lim_env > LIM_T || song.g[G_DJF] ||
         djf.mode)
         return 0;
-    if (fx_lowcut == 2u || (fx_lowcut && (lc_l1 | lc_l2 | lc_r1 | lc_r2 | ((lce[0] | lce[1] | lce[2] | lce[3]) >> 6))))
-        return 0;                                       /* (BASS+'s eight states can settle off 0: never skipped there) */
+    if (fx_lowcut)                                      /* (SPEAKER EQ LOWCUT / BASS+: their states can settle off 0, */
+        return 0;                                       /* not checked: never at rest there) */
     lev_cur = lev_g;                                    /* (as lev_block leaves them in a silent block) */
     return 1;
 }
