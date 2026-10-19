@@ -674,6 +674,23 @@ JIANT's modifications are distributed under the same license.
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
 
+### v0.9.16 (draft: the idle floor)
+- **At rest the audio does almost nothing.** An owner's PROFILE on 0.9.14, stopped and silent: 21 % of the audio's time
+  (SEQUENCER 7.6, MASTER 4.7, the six empty tracks 5.3, FX LAYER..CLIP 2.6, the buses 1.2, core 1 1.6). Now, once the
+  transport is stopped, no track has a voice, a DIST tail or a fade, the effects rest and the master has settled, a
+  block renders nothing: no track, no master chain, no job for the second core; the LFOs, DRIFT's clock and the
+  engines' block work go on, so the next note comes out exactly as it would have (tests/hush_test.c renders a session
+  both ways: bit for bit). Before that, while sound fades, the master stops on its own as soon as its input is 0 and
+  its states can no longer move (bit for bit too). With SPEAKER EQ LOWCUT / BASS+ the master keeps running.
+- **SEQUENCER at rest**: every block, for every track, the engine was asked to describe all eight of its parameters
+  (to notice a list value changing under a note): 48 calls into six engines' code a block, stopped too. Now only for a
+  value that changed.
+- Host (callgrind, both cores' work): the CPU TEST song stopped, 336 → 120 instructions a sample (tests/cpu_vg.c
+  idle/stopped); 30 EXPLORE pieces 20 s after STOP, 516 → 111 (0.9.13: 1533). Playing: unchanged.
+- The load meter (ABOUT's NOW, PROFILE's WHOLE HALF) is core 0's time in the audio interrupt, its wait for core 1
+  included (it is the deadline), the keyboard / USB interrupt nested in it left out; the drawing is never in it. It
+  read 20 % at rest because 20 % was being spent; it was not overstated.
+
 ### v0.9.15
 The FX layer, reworked.
 - **The FX layer reworked: sweeps, GLITCH, TAPE STOP and performance macros.** CRUSH, THROW and FILTER leave the knobs
