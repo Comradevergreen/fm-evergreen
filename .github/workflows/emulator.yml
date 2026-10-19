@@ -43,7 +43,7 @@ jobs:
           path: |
             ~/.jieli
             ~/fw-AC79_AIoT_SDK/cpu/wl82/tools
-          key: jieli-ac79-v1
+          key: jieli-ac79-v1.2.1
       - name: JieLi toolchain and SDK files
         id: tc
         continue-on-error: true
@@ -54,9 +54,11 @@ jobs:
           [ -e "$HOME/.jieli/toolchain" ] || retry sh tools/get_toolchain.sh "$HOME/.jieli"
           if [ ! -s "$T/uboot.boot" ] || [ ! -s "$T/cfg_tool.bin" ] || [ ! -s "$T/cfg/eq_cfg_hw.bin" ]; then
             rm -rf "$HOME/fw-AC79_AIoT_SDK"
-            retry git clone --filter=blob:none --no-checkout --depth 1 https://gitee.com/Jieli-Tech/fw-AC79_AIoT_SDK.git "$HOME/fw-AC79_AIoT_SDK"
+            # (0.9.13) the reference release, AC79NN_SDK_V1.2.1 (d179b44), not the tip: the tip's cfg_tool.bin / eq_cfg_hw.bin
+            # are 623 B longer and pushed the app region past 0x93000 with the grown slot (tools/fm1pkg_make.py)
+            retry git clone --filter=blob:none --no-checkout https://gitee.com/Jieli-Tech/fw-AC79_AIoT_SDK.git "$HOME/fw-AC79_AIoT_SDK"
             cd "$HOME/fw-AC79_AIoT_SDK" && git sparse-checkout set --no-cone /cpu/wl82/tools/uboot.boot /cpu/wl82/tools/cfg_tool.bin \
-              /cpu/wl82/tools/cfg/eq_cfg_hw.bin && retry git checkout
+              /cpu/wl82/tools/cfg/eq_cfg_hw.bin && retry git checkout d179b4484759423312073f5fbb232501aa491047
           fi
           test -s "$T/uboot.boot" && test -s "$T/cfg_tool.bin" && test -s "$T/cfg/eq_cfg_hw.bin"
       - name: the package, the installer and the editor
