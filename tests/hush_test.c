@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) */
-/* (0.9.15) the silence path (fx.c master_rest, mix_hush, mix_silent): built twice by run_tests.sh, as it is and with
+/* (0.9.16) the silence path (fx.c master_rest, mix_hush, mix_silent): built twice by run_tests.sh, as it is and with
  * -DFX_HUSH_OFF (the mix as 0.9.14 rendered it), the same session rendered: the power-on parts played and let ring,
  * a long silence, notes again; an EXPLORE piece played, stopped, 15 s of silence, played again, stopped; LOWCUT; a
  * CLOUD tail; MASTER. It prints a hash of every output sample (and of the LFOs' and the voices' state at the end): the

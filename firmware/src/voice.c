@@ -798,7 +798,7 @@ static void engine_block(track_t *t)
     uint32_t i, any = 0;
     if (!t->xf_on && t->eng_req == t->engine && !eng_kit(t->engine)) {   /* a list value changed while it sounds */
         const engine_t *e = ENGINES[t->engine % NENGINES];
-        for (i = 0; i < 8u; i++) {                      /* (0.9.15) only a value that changed, then followed (pe_old:
+        for (i = 0; i < 8u; i++) {                      /* (0.9.16) only a value that changed, then followed (pe_old:
                                                          * the last value heard): until 0.9.15 the engine's desc for all 8
                                                          * of every part, every block, stopped too (six engines' code a
                                                          * block: on the FM-1 most of PROFILE's SEQUENCER at rest) */

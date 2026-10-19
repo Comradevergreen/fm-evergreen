@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
 // The interactive manual's content (web/manual/index.html), Spanish first, English second: every text is [es, en].
-// Written from docs/MANUAL.es.md / docs/MANUAL.md and README.md at firmware v0.9.15; the layer maps from the firmware's
+// Written from docs/MANUAL.es.md / docs/MANUAL.md and README.md at firmware v0.9.16; the layer maps from the firmware's
 // own MAP screens (tests/ui_render.c). A shot is a render in shots/ (tools/gen_manual.py copies them).
 // A combo k: "A+B" = hold A and press / turn B; "A" alone = press it. Tokens: the panel's names (SELECT, KNOB 1, OCT+ ...)
 // and the keys F3 .. G5 (sharps as F#3).
@@ -611,6 +611,11 @@ recipes: [
 
 // ------------------------------------------------------------------------------------------- what's new (README's changelog, digested)
 news: [
+  {v: "0.9.16", items: [
+    ["Parado y en silencio, el audio casi no gasta CPU: sin voces, colas ni fades, no se renderiza ninguna pista ni el master, y el segundo núcleo descansa. La próxima nota suena exactamente igual.", "Stopped and silent, the audio uses almost no CPU: with no voices, tails or fades, no track and no master is rendered, and the second core rests. The next note sounds exactly the same."],
+    ["SEQUENCER más liviano parado: los motores solo describen un parámetro cuando cambia.", "SEQUENCER lighter when stopped: the engines only describe a parameter when it changes."],
+    ["Con SPEAKER EQ LOWCUT o BASS+ el master sigue corriendo (algo más de CPU parado).", "With SPEAKER EQ LOWCUT or BASS+ the master keeps running (a little more CPU when stopped)."],
+    ["El NOW de ABOUT era honesto: el 20 % parado era trabajo real. Mandá una foto nueva de PROFILE parado.", "ABOUT's NOW was honest: the 20 % at rest was real work. Send a new photo of PROFILE stopped."]]},
   {v: "0.9.15", items: [
     ["La capa FX renovada: CRUSH, THROW y FILTER pasan a las negras C#5 D#5 F#5 como barridos de seco a mojado en 2 compases (vuelven en un tiempo).", "The FX layer reworked: CRUSH, THROW and FILTER move to black keys C#5 D#5 F#5 as dry-to-wet sweeps over 2 bars (back in a beat)."],
     ["B3 GLITCH: cortes en semicorcheas (repeticiones, reversa, octavas, gates) que vuelven igual cada dos compases. C4 TAPE STOP: la cinta se frena en un tiempo.", "B3 GLITCH: sixteenth-note cuts (repeats, reverse, octaves, gates) that come back the same every two bars. C4 TAPE STOP: the tape slows to a stop over a beat."],

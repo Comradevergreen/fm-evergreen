@@ -674,7 +674,8 @@ JIANT's modifications are distributed under the same license.
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
 
-### v0.9.16 (draft: the idle floor)
+### v0.9.16
+The idle floor.
 - **At rest the audio does almost nothing.** An owner's PROFILE on 0.9.14, stopped and silent: 21 % of the audio's time
   (SEQUENCER 7.6, MASTER 4.7, the six empty tracks 5.3, FX LAYER..CLIP 2.6, the buses 1.2, core 1 1.6). Now, once the
   transport is stopped, no track has a voice, a DIST tail or a fade, the effects rest and the master has settled, a
@@ -690,6 +691,8 @@ Every update is listed here, newest first. (Since 0.6.80 at the end of the page:
 - The load meter (ABOUT's NOW, PROFILE's WHOLE HALF) is core 0's time in the audio interrupt, its wait for core 1
   included (it is the deadline), the keyboard / USB interrupt nested in it left out; the drawing is never in it. It
   read 20 % at rest because 20 % was being spent; it was not overstated.
+- For the flash's room: PROFILE no longer has 0.9.14's "EXPLORE: DEVICE x" line and the "CPU TEST: SEE ABOUT"
+  message is gone; the CPU TEST line on ABOUT and on PROFILE stays.
 
 ### v0.9.15
 The FX layer, reworked.

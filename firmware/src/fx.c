@@ -2376,7 +2376,7 @@ static const char *mc_status(void)                      /* MENU > ABOUT's line *
 #endif
 }
 
-/* (0.9.15) the silence path. The master at rest (master_rest): this block's mix in (dry, the buses' return, the SLICER's)
+/* (0.9.16) the silence path. The master at rest (master_rest): this block's mix in (dry, the buses' return, the SLICER's)
  * all 0 and every state of the master chain where 0 in leaves it (the DC blockers at 0, the leveler's follower and
  * gain where a block of silence no longer moves them, the limiter under its threshold, SPEAKER EQ FLAT; DJ FILTER
  * off; CLIP has no state): what it gives is exactly 0 and its states stay as they are, so it is not run (bit for bit the
@@ -2460,14 +2460,14 @@ static __attribute__((noinline)) void mix_block(int32_t *out, uint32_t n)   /* (
     duck_block();
     perf = perf_begin(n);                               /* the FX hold layer at work (perform.c) */
 #ifndef FX_HUSH_OFF                                     /* (tests/hush_test.c: the reference without it) */
-    if (!perf && mix_hush()) {                          /* (0.9.15) all at rest: nothing rendered (above) */
+    if (!perf && mix_hush()) {                          /* (0.9.16) all at rest: nothing rendered (above) */
         mix_silent(out, n, t0);
         return;
     }
 #endif
     if (!mc_off && mc_live()) {                         /* (0.6.71) core 1 at its parts meanwhile; (0.6.75) and the buses */
         c1m = mc_split(mc_fx_tk + 4u * MC_VW);
-        if ((c1m || prf.rest_ph < 6u) &&               /* (0.9.15: no parts for it and the buses at rest: no job, the
+        if ((c1m || prf.rest_ph < 6u) &&               /* (0.9.16: no parts for it and the buses at rest: no job, the
                                                          * buses' check here, no handshake to wait on) */
             mc_run(mc_job, c1m | MC_FX | n << 8))
             c1j = 1;
@@ -2534,7 +2534,7 @@ static __attribute__((noinline)) void mix_block(int32_t *out, uint32_t n)   /* (
     t0 = MC_TICKS();
     prf_blk[PRF_POST] = t0 - t1;
 #ifndef FX_HUSH_OFF
-    if ((mix_msil = (uint8_t)(!perf && master_rest(n))) != 0) {   /* (0.9.15) the master at rest: exactly 0 out */
+    if ((mix_msil = (uint8_t)(!perf && master_rest(n))) != 0) {   /* (0.9.16) the master at rest: exactly 0 out */
         memset(out, 0, 2u * n * sizeof *out);
         return;
     }
