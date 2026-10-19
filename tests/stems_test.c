@@ -42,7 +42,9 @@ static void song_from(uint32_t seed, uint32_t load)
     gp.complex = 70; gp.swing = GA_AUTO; gp.human = 30;
     mc_host_v12 = 1;                                     /* (0.9.13: made inside two cores' CPU budget, the FM-1's default;
                                                          * one core's would leave out parts: these are dense on purpose) */
+    cpt_res = 63; cpt_cores = 2;                         /* (0.9.14: the device as the model holds it, gen.c gc_dev x1.00) */
     gen_go();
+    cpt_res = 0;
     mc_host_v12 = 0;
     song.g[G_DJF] = 0;                                   /* (the sum is checked before the master: these off) */
     song.g[G_CLIP] = 0;
