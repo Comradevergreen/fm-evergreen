@@ -983,12 +983,12 @@ static __attribute__((noinline)) void dxo_tick(track_t *t, uint32_t n)
 }
 
 /* the effect of key k in the FX layer (PF_N none): the first 15 white keys (F3 .. F5) in order, G5 CLEAR; black keys
- * 1..6 (F#3 .. F#4) the track mutes, A#4 the tracks, (0.9.14) C#5 D#5 F#5 the sweeps */
+ * 1..6 (F#3 .. F#4) the track mutes, (0.9.17) G#4 FREEZE, A#4 the tracks, C#5 SHUFFLE, (0.9.14) D#5 F#5 the sweeps */
 static uint32_t perf_key(uint32_t k)
 {
     uint32_t p = key_place(k);
-    return !key_black(k) ? (p < PF_SFLT ? p : p == PF_SFLT ? PF_CLR : PF_N)
-                         : p < NTRK ? PF_M1 + p : p == 7u ? PF_TGT : p >= 8u ? PF_SFLT + p - 8u : PF_N;
+    return !key_black(k) ? (p < PF_NW ? p : p == PF_NW ? PF_CLR : PF_N)
+                         : p < NTRK ? PF_M1 + p : p == 6u ? PF_FRZ : p == 7u ? PF_TGT : p >= 8u ? PF_SHUF + p - 8u : PF_N;
 }
 
 /* (0.6.14) LATCH: ARP OFF and ARP 2's HOLD ON, the keys' notes keep sounding when let go; the first key of the next
