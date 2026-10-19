@@ -15,8 +15,7 @@ enum {
     PRF_WAIT,                    /* core 0 waiting for core 1 (mc_wait) */
     PRF_POST,                    /* the FX layer, the SLICER, DJ FILTER, CLIP (after the parts) */
     PRF_MST,                     /* the leveler and the master (master_out) */
-    PRF_USB,                     /* USB audio: the host's in, the tap out (audio_block) */
-    PRF_OUT,                     /* the scope, the metronome, 24-bit (audio_block) */
+    PRF_IO,                      /* USB audio (the host's in, the tap out), the scope, the metronome, 24-bit (audio_block) */
     PRF_C1,                      /* core 1 busy (mc_job) */
     PRF_NB,                      /* (the sections a block) */
     PRF_IRQ = PRF_NB,            /* a half: TIMER5 nested in the audio ISR (the keys, USB) */
@@ -31,12 +30,23 @@ typedef struct {
     uint32_t t5, lat, late, fxrest, frames;          /* TIMER5 in all (ticks); the ISR's latest start (ticks past its
                                                       * period); halves late; blocks the buses rested; UI frames */
 } prf_win_t;
-#define PRF_POOL __attribute__((section(".pool")))   /* (zeroed at boot; and out of the compiler's merged globals:
-                                                     * new ones there reshuffled them, +1.1 KB of code elsewhere) */
-static prf_win_t prf_cur PRF_POOL, prf_win[2] PRF_POOL;                /* this second; the last whole one stopped [0], playing [1] */
-static uint32_t prf_blk[PRF_NB] PRF_POOL;                     /* this block's (either core writes its sections, core 0 sums) */
-static volatile uint8_t prf_on PRF_POOL, prf_seq PRF_POOL;             /* measuring (PROFILE opened); a second published (the redraw) */
-static uint8_t prf_have PRF_POOL;                             /* bit k: prf_win[k] holds a second */
+/* all of it one object (the compiler merges small globals into groups; new ones reshuffled them, +1.7 KB of code
+ * elsewhere): this block's (either core writes its sections, core 0 sums them); this second; the last whole one
+ * stopped [0] and playing [1]; measuring (PROFILE opened); a second published (the redraw); bit k: win[k] holds one;
+ * prf_half's last start and halves; (ui_menu.c) CPU TEST's measurement */
+static struct {
+    uint32_t blk[PRF_NB];
+    prf_win_t cur, win[2];
+    uint32_t last, halves, cpt_ms, cpt_sum, cpt_n;
+    volatile uint8_t on, seq;
+    uint8_t have, cpt_arm, fxg_dly;
+} prf __attribute__((section(".pool")));             /* (zeroed at boot; an explicit section: never merged) */
+#define prf_blk (prf.blk)
+#define prf_cur (prf.cur)
+#define prf_win (prf.win)
+#define prf_on (prf.on)
+#define prf_seq (prf.seq)
+#define prf_have (prf.have)
 #if FELUCCA_DUAL_CORE
 #define PRF_T() fm1_mc_ticks()
 #else

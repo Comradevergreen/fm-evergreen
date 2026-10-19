@@ -16,5 +16,5 @@
 	rti
 	.endm
 
-	FM1_ISR isr_timer5, fm1_timer5_irq
+	FM1_ISR isr_timer5, fm1_timer5_top	/* (0.9.14: fm1_timer5_irq timed, main.c) */
 	FM1_ISR isr_alnk0, fm1_alnk0_irq

@@ -116,111 +116,97 @@ static int32_t menu_text(const char *s, int32_t y, uint16_t col, int draw)
     return y;
 }
 
-/* (0.9.14) SAVE > TOOLS 6 CPU TEST measured: its song played 8 s (after 2 s to settle), its mean AUDIO LOAD kept in the
- * settings with the cores it ran on (cpt_res %, cpt_cores; 0 = not run), on ABOUT and PROFILE. GEN's EXPLORE budgets
- * by it (gen.c gc_dev): the host's model holds this FM-1's CPU TEST at ~63 % (two cores), ~77 % (one) */
+/* (0.9.14) SAVE > TOOLS 6 CPU TEST measured: its song played 10 s or more, its mean AUDIO LOAD from 2 s on kept in the
+ * settings with the cores it ran on (cpt_res %, cpt_cores; 0 = not run): ABOUT, PROFILE, and GEN's EXPLORE budget
+ * (gen.c gc_dev: the host's model holds the song at ~63 % of a half with two cores, ~77 % with one) */
 #define cpt_res (favorites.factory[15][16])              /* (bytes no engine uses: engine 15) */
 #define cpt_cores (favorites.factory[15][15])
-static uint8_t cpt_arm PRF_POOL;                                  /* the CPU TEST song built, TRACKS 6 (song_dice.c cpu_test_song) */
-static uint32_t cpt_ms PRF_POOL, cpt_sum PRF_POOL, cpt_n PRF_POOL;
-static void cpt_poll(void)                               /* (ui.c rp_apply: every frame) */
+#define cpt_arm (prf.cpt_arm)                            /* the CPU TEST song built, TRACKS 6 (song_dice.c cpu_test_song) */
+static __attribute__((noinline)) void cpt_poll(void)    /* (ui_input: every pass) */
 {
+    uint32_t t = fm1_ms - prf.cpt_ms;
     if (!cpt_arm)
         return;
     if (song.playing) {
-        if (!cpt_ms)
-            cpt_ms = fm1_ms | 1u;
-        else if (fm1_ms - cpt_ms >= 2000u + cpt_n * 100u)   /* (a sample every 100 ms after 2 s) */
-            cpt_sum += song.cpu_q8, cpt_n++;
+        if (!prf.cpt_ms)
+            prf.cpt_ms = fm1_ms | 1u;
+        else if (t > 2000u)
+            prf.cpt_sum += song.cpu_q8, prf.cpt_n++;
         return;
     }
-    if (cpt_ms && cpt_n >= 80u) {                        /* stopped after 10 s of it: kept */
-        char b[24];
-        cpt_res = (uint8_t)clamp((int32_t)(cpt_sum * 100u / (cpt_n * 256u)), 1, 250);
+    if (prf.cpt_ms && t > 12000u && prf.cpt_n) {       /* stopped after 10 s of it: kept */
+        cpt_res = (uint8_t)clamp((int32_t)(prf.cpt_sum / prf.cpt_n * 100u >> 8), 1, 250);
         cpt_cores = (uint8_t)(mc_two() ? 2u : 1u);
         settings_save();
-        str_cpy(b, "CPU TEST: ", sizeof b);
-        fmt_int(b + str_len(b), cpt_res);
-        str_cpy(b + str_len(b), " %", 3);
-        ui_message(b);
+        ui_message("CPU TEST: SEE ABOUT");
     }
-    if (cpt_ms)
-        cpt_arm = 0;
-    cpt_ms = cpt_sum = cpt_n = 0;
+    cpt_arm = (uint8_t)!prf.cpt_ms;                      /* (played and stopped: done either way) */
+    prf.cpt_ms = prf.cpt_sum = prf.cpt_n = 0;
 }
-static void cpt_line(char *b)                            /* "CPU TEST 98 % (2 CORES)", "CPU TEST NOT RUN" */
+static void cpt_line(char *b)                            /* "CPU TEST 98 % (2 CORES)", "CPU TEST: TOOLS 6" */
 {
-    str_cpy(b, "CPU TEST ", 40);
-    if (!cpt_res) {
-        str_cpy(b + str_len(b), "NOT RUN (TOOLS 6)", 20);
-        return;
+    str_cpy(b, cpt_res ? "CPU TEST " : "CPU TEST: SAVE > TOOLS 6", 40);
+    if (cpt_res) {
+        fmt_int(b + 9, cpt_res);
+        str_cpy(b + str_len(b), cpt_cores == 1u ? " % (1 CORE)" : " % (2 CORES)", 14);
     }
-    fmt_int(b + str_len(b), cpt_res);
-    str_cpy(b + str_len(b), cpt_cores == 1u ? " % (1 CORE)" : " % (2 CORES)", 14);
 }
 
-/* (0.9.14) MENU > ABOUT > PROFILE (OCT+ on ABOUT): where the audio's time went (prof.c), the last second playing and
- * the last stopped, in % of a block (725 us; the load meter's halves are 4 of them): each the mean and the worst block.
- * SELECT scrolls, OCT- back to ABOUT. The rows: the sequencer, each part (its engine; C1: mostly on the second core),
- * the buses (of them the reverb, the rest the delay and chorus), core 0 waiting for core 1, the FX layer to CLIP, the
- * master, USB, the output, core 1 busy, TIMER5 within the render and the whole render (= AUDIO LOAD); then TIMER5 in
- * all, the latest start of the audio interrupt, the late halves, the buses at rest, the UI's frames */
+/* (0.9.14) MENU > ABOUT > PROFILE (OCT+ on ABOUT): where the audio's time went (prof.c), in % of a block (725 us; the
+ * load meter's halves are 4 of them): the last second playing, its mean and its worst block, then the same for the last
+ * second stopped (grey). SELECT scrolls, OCT- back to ABOUT. The rows: the sequencer, each part (its engine; C1: mostly
+ * on the second core), the buses (of them the reverb, the rest the delay and chorus), core 0 waiting for core 1, the FX
+ * layer to CLIP, the master, USB and the output, core 1 busy, TIMER5 within the render, the whole half (= AUDIO LOAD);
+ * then (means only) TIMER5 in all, the audio interrupt's latest start (us), the late halves, the blocks the buses
+ * rested (%), the UI's frames */
 static uint32_t gc_dev(void);                           /* (gen.c) */
 enum { PRV_DC = PRF_N, PRV_T5, PRV_LAT, PRV_LATE, PRV_REST, PRV_FPS };
-static int prf_val(const prf_win_t *w, uint32_t k, int mx, int32_t *v)   /* 1: tenths, 2: whole, 0: none */
+static int prf_val(const prf_win_t *w, uint32_t k, uint32_t mx, int32_t *v)   /* 1: tenths, 2: whole, 0: none */
 {
-    uint32_t bt = w->blocks ? w->blocks * PRF_BLK : 1u;
+    uint32_t bt = w->blocks * (PRF_BLK / 8u) / 125u + 1u, x;   /* (a second's ticks / 1000: no 64-bit divide) */
     if (k < PRF_N) {
-        *v = (int32_t)(mx ? (uint64_t)w->max[k] * 1000u / (PRF_BLK * (k >= PRF_NB ? 4u : 1u)) :
-                            (uint64_t)w->sum[k] * 1000u / bt);
+        *v = (int32_t)(mx ? w->max[k] * (k >= PRF_NB ? 250u : 1000u) / PRF_BLK : w->sum[k] / bt);
         return 1;
     }
     if (mx)
         return 0;
-    switch (k) {
-    case PRV_DC: *v = (int32_t)((uint64_t)(w->sum[PRF_FX] - w->sum[PRF_REV]) * 1000u / bt); return 1;
-    case PRV_T5: *v = (int32_t)((uint64_t)w->t5 * 1000u / bt); return 1;
-    case PRV_LAT: *v = (int32_t)(w->lat / 24u); return 2;
-    case PRV_LATE: *v = (int32_t)w->late; return 2;
-    case PRV_REST: *v = (int32_t)(w->fxrest * 100u / (w->blocks ? w->blocks : 1u)); return 2;
-    default: *v = (int32_t)w->frames; return 2;
-    }
+    x = k == PRV_DC ? w->sum[PRF_FX] - w->sum[PRF_REV] : k == PRV_T5 ? w->t5 : k == PRV_LAT ? w->lat / 24u :
+        k == PRV_LATE ? w->late : k == PRV_REST ? w->fxrest * 100u / (w->blocks + 1u) : w->frames;
+    *v = (int32_t)(k <= PRV_T5 ? x / bt : x);
+    return k <= PRV_T5 ? 1 : 2;
 }
-static int32_t prf_row(int32_t y, int draw, const char *name, uint32_t k)   /* k 254, 255: the two header rows */
+static int32_t prf_row(int32_t y, int draw, const char *name, uint32_t k)
 {
-    static const char *const HD[2][4] = {{"PLAY", "", "STOP", ""}, {"AVG", "MAX", "AVG", "MAX"}};
     uint32_t c;
     if (draw && y + AF_S.h > 0 && y < MENU_DOC_H) {
         cv_text(6, y, &AF_S, name, T_TEXT);
         for (c = 0; c < 4u; c++) {
             char b[12];
-            const prf_win_t *w = &prf_win[1u - c / 2u];
             int32_t v = 0;
-            int f = k < 254u && ((prf_have >> (1u - c / 2u)) & 1u) ? prf_val(w, k, (int)(c & 1u), &v) : 0;
-            if (f) fmt_fix(b, v, f == 1); else str_cpy(b, k >= 254u ? HD[k - 254u][c] : "-", 6);
-            cv_text_r(136 + (int32_t)c * 32 - (int32_t)(c == 3u) * 2, y, &AF_S, b, c / 2u ? T_MID : T_TEXT, T_BG);
+            int f = (prf_have >> (1u - c / 2u)) & 1u ? prf_val(&prf_win[1u - c / 2u], k, c & 1u, &v) : 0;
+            if (f) fmt_fix(b, v, f == 1); else str_cpy(b, "-", 2);
+            cv_text_r(136 + (int32_t)c * 31, y, &AF_S, b, c / 2u ? T_MID : T_TEXT, T_BG);
         }
     }
     return y + 18;
 }
 static int32_t prof_document(int32_t y, int draw)
 {
-    static const char *const NM[] = {"% OF A BLOCK", "LAST SECOND", "SEQUENCER", "FX BUSES", "REVERB ", "DELAY+CHORUS",
-                                     "CORE 0 WAITS", "FX LAYER..CLIP", "MASTER", "USB AUDIO", "OUTPUT", "CORE 1 BUSY",
-                                     "TIMER5 IN IT", "WHOLE HALF", "TIMER5 ALL", "IRQ LATE US", "LATE HALVES", "FX REST %",
-                                     "UI FRAMES"};
-    static const uint8_t KS[] = {254, 255, PRF_SEQ, PRF_FX, PRF_REV, PRV_DC, PRF_WAIT, PRF_POST, PRF_MST, PRF_USB, PRF_OUT,
-                                 PRF_C1, PRF_IRQ, PRF_HALF, PRV_T5, PRV_LAT, PRV_LATE, PRV_REST, PRV_FPS};
+    static const char *const NM[] = {"SEQUENCER", "FX BUSES", "REVERB ", "DELAY+CHORUS", "CORE 0 WAITS", "FX LAYER..CLIP",
+                                     "MASTER", "USB+OUTPUT", "CORE 1 BUSY", "TIMER5 IN IT", "WHOLE HALF", "TIMER5 ALL",
+                                     "IRQ LATE US", "LATE HALVES", "FX REST %", "UI FRAMES"};
+    static const uint8_t KS[] = {PRF_SEQ, PRF_FX, PRF_REV, PRV_DC, PRF_WAIT, PRF_POST, PRF_MST, PRF_IO, PRF_C1, PRF_IRQ,
+                                 PRF_HALF, PRV_T5, PRV_LAT, PRV_LATE, PRV_REST, PRV_FPS};
     const prf_win_t *w = &prf_win[prf_have >> 1];
     char b[40];
     uint32_t k, i;
-    y += 4;
+    y = menu_text("% OF A BLOCK: PLAY AVG MAX, STOP AVG MAX", y + 4, T_THEME, draw);
     for (i = 0; i < NELEM(KS); i++) {
         str_cpy(b, NM[i], sizeof b);
         if (KS[i] == PRF_REV)
             str_cpy(b + 7, N_RTYPE[REV_LITE[LOAD_EFF() % 3u][clamp(song.g[G_RTYPE], 0, 4)]], 8);
         y = prf_row(y, draw, b, KS[i]);
-        for (k = 0; KS[i] == PRF_SEQ && k < NPART; k++) {   /* (the parts after the sequencer; C1: mostly on core 1) */
+        for (k = 0; !i && k < NPART; k++) {             /* (the parts after the sequencer; C1: mostly on core 1) */
             b[0] = 'T'; b[1] = (char)('1' + k); b[2] = ' ';
             str_cpy(b + 3, k < trk_live ? ENGINES[trk[k].engine]->name : "-", 10);
             if (w->c1[k] * 2u > w->blocks && w->blocks)
@@ -232,13 +218,13 @@ static int32_t prof_document(int32_t y, int draw)
     fmt_int(b + 7, (int32_t)voices_busy());
     str_cpy(b + str_len(b), " CAP ", 6);
     fmt_int(b + str_len(b), (int32_t)voice_cap());
-    str_cpy(b + str_len(b), LOAD_EFF() == LOAD_ECO ? " ECO" : LOAD_EFF() ? (sys_load ? " LITE" : " GOV LITE") : " FULL", 10);
+    str_cpy(b + str_len(b), LOAD_EFF() == LOAD_ECO ? " ECO" : LOAD_EFF() ? " LITE" : " FULL", 6);
     y = menu_text(b, y + 4, T_TEXT, draw);
     y = menu_text(cpu_status(), y, T_TEXT, draw);
     cpt_line(b);
     y = menu_text(b, y, T_TEXT, draw);
     str_cpy(b, "EXPLORE: DEVICE X", sizeof b);
-    fmt_fix(b + str_len(b), (int32_t)gc_dev(), 2);
+    fmt_fix(b + 17, (int32_t)gc_dev(), 2);
     y = menu_text(b, y, T_TEXT, draw);
     return menu_text(FELUCCA_VERSION, y, T_MID, draw) + 4;
 }

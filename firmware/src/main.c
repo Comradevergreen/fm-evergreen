@@ -23,7 +23,7 @@ extern uint32_t _low_start[], _low_end[];                /* (0.6.78) main-loop b
  * consumer side of the audio ring, and usb_poll never runs nested, so the two never interleave.
  * (0.9.10) uac_service runs on every tick, nested or not (in usb_poll on its ticks), not every 5th: a
  * stems packet is on the wire up to ~0.65 ms, the next must be queued in the ~0.35 ms after it (usb.c). */
-void fm1_timer5_irq(void)
+__attribute__((noinline)) void fm1_timer5_irq(void)
 {
     static uint32_t sub, owed;
     uint32_t t0 = fm1_ticks(), usb_due = sub % 5u == 0u;
@@ -52,10 +52,9 @@ void fm1_timer5_irq(void)
 #if FELUCCA_UAC
         uac_service();
 #endif
-        t5_nested_ticks += fm1_ticks() - t0;   /* (0.9.14: PROFILE's TIMER5 ALL adds it, audio.c prf_half) */
+        t5_nested_ticks += fm1_ticks() - t0;
         return;
     }
-    prf_cur.t5 -= t0;
     if (owed & 1u)
         usb_poll();                             /* (uac_service at its end) */
 #if FELUCCA_UAC
@@ -67,8 +66,14 @@ void fm1_timer5_irq(void)
         uart_midi_poll();
 #endif
     owed = 0;
-    prf_cur.t5 += fm1_ticks();                    /* (0.9.14) MENU > ABOUT > PROFILE: TIMER5 outside the render (its
-                                                 * start taken off above: t0 not kept across the polls) */
+}
+/* (0.9.14) isr_timer5's body (hal/fm1_isr.S): TIMER5 timed whole, nested in the render or not, for MENU > ABOUT >
+ * PROFILE's TIMER5 ALL (prof.c); out here, the tick's own code as it was (a line in it moved its registers: +190 B) */
+void fm1_timer5_top(void)
+{
+    uint32_t t = fm1_ticks();
+    fm1_timer5_irq();
+    prf_cur.t5 += fm1_ticks() - t;
 }
 extern void isr_timer5(void);
 

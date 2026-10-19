@@ -1199,7 +1199,8 @@ static int32_t fxg_g = 32767;
  * over the floor went round the loop again: while that is within TIME, an echo is still to come back, the gate stays
  * open (a long delay's repeats come back at their level, not faded in after the gap). TIME up to 1.5 s as before */
 static uint32_t fxg_hold, fxg_dact;
-static uint8_t fxg_fb, fxg_dly PRF_POOL;
+static uint8_t fxg_fb;
+#define fxg_dly (prf.fxg_dly)                           /* (0.9.14: fx_rest; prof.c's object: no new global) */
 static void fx_gate(int32_t *wet, uint32_t n)
 {
     int32_t pk = 0, g0 = fxg_g, d;

@@ -49,21 +49,19 @@ static __attribute__((noinline)) void prf_block(void)   /* core 0, a block's end
 /* core 0, a half's end (fm1_alnk0_irq): all its ticks, TIMER5's in it, when it began; once a second the window kept */
 static __attribute__((noinline)) void prf_half(uint32_t all, uint32_t nested, uint32_t t0)
 {
-    static uint32_t last PRF_POOL, halves PRF_POOL;
-    uint32_t d = t0 - last - HALF_FRAMES * 544u, r = all - nested, w;
-    last = t0;
+    uint32_t d = t0 - prf.last - HALF_FRAMES * 544u, r = all - nested, w;
+    prf.last = t0;
     if (!prf_on)
         return;
     if (d > prf_cur.lat && d < 2400000u)               /* (started past its period: IRQs off, a flash write) */
         prf_cur.lat = d;
-    prf_cur.t5 += nested;
     prf_cur.sum[PRF_IRQ] += nested;
     prf_cur.sum[PRF_HALF] += r;
     if (nested > prf_cur.max[PRF_IRQ]) prf_cur.max[PRF_IRQ] = nested;
     if (r > prf_cur.max[PRF_HALF]) prf_cur.max[PRF_HALF] = r;
-    if (++halves < PRF_HALVES)
+    if (++prf.halves < PRF_HALVES)
         return;
-    halves = 0;
+    prf.halves = 0;
     w = song.playing ? 1u : 0u;
     prf_win[w] = prf_cur;
     prf_have |= (uint8_t)(1u << w);
@@ -82,7 +80,7 @@ static void audio_block(int32_t *out, uint32_t n)       /* mix (fx.c), then Q15 
 #endif
     t1 = PRF_T();
     mix_block(out, n);
-    t0 = PRF_T() - t1 + t0;                             /* (0.9.14) PROFILE: USB's, the mix left out */
+    t0 += PRF_T() - t1;                                 /* (0.9.14) PROFILE: USB and the output, the mix left out */
 #if FELUCCA_UAC
 #ifdef UAC_TAP8
     if (fx_stems)                                       /* (0.7.1) MENU > USB STEMS: 8 channels (fx.c stem_buf) */
@@ -93,8 +91,6 @@ static void audio_block(int32_t *out, uint32_t n)       /* mix (fx.c), then Q15 
 #endif
     if (fx_usb_fixed)                                   /* USB LEVEL FIXED: USB took the full level, the DAC */
         usb_fixed_dac(out, n);                          /* (speaker, headphones) gets MASTER's (fx.c) */
-    t1 = PRF_T();
-    prf_blk[PRF_USB] = t1 - t0;
     for (i = 1; i < n; i += 2u)                         /* the HOME scope: the music, before the click */
         scope_buf[scope_w++ & (SCOPE_N - 1u)] = (int16_t)out[2u * i];
     click_render(out, n);                               /* the metronome (click.c): the DAC only, not USB */
@@ -102,7 +98,7 @@ static void audio_block(int32_t *out, uint32_t n)       /* mix (fx.c), then Q15 
         out[2u * i] *= 1 << OUT_SHIFT;
         out[2u * i + 1u] *= 1 << OUT_SHIFT;
     }
-    prf_blk[PRF_OUT] = PRF_T() - t1;
+    prf_blk[PRF_IO] = PRF_T() - t0;
     prf_block();
 }
 
