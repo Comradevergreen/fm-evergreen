@@ -2175,10 +2175,28 @@ SKIN  2/28**. El encabezado dice MENU · DISPLAY.
 | SYSTEM | LOAD | ECO, LITE, **FULL** (por defecto) |
 | SYSTEM | CALIBRATION | OCT+ abre HARDWARE CALIBRATION (enseñarle cada botón y perilla) |
 | SYSTEM | INIT SYSTEM | OCT+ pregunta, y después todo vuelve a cero para una canción nueva (como SAVE > TOOLS > NEW PROJECT; UNDO devuelve la música) |
-| SYSTEM | ABOUT | OCT+ abre: versión, código QR, AUDIO LOAD (NOW, PEAK, LATE, SHED desde el encendido) y créditos (se desplaza con SELECT, OCT− vuelve) |
+| SYSTEM | ABOUT | OCT+ abre: versión, código QR, AUDIO LOAD (NOW, PEAK, LATE, SHED desde el encendido), CPU TEST y créditos (se desplaza con SELECT, OCT− vuelve); ahí OCT+ abre PROFILE |
 
 Si escuchás clicks, abrí ABOUT y mirá **LATE** (bloques de audio que llegaron tarde) y **SHED** (voces que la
 protección desvaneció): una foto de esa pantalla ayuda cuando reportás un problema.
+
+**PROFILE (0.9.14): a dónde va la CPU.** En ABOUT, OCT+ abre PROFILE (SELECT se desplaza, OCT− vuelve a ABOUT). Mide
+en el propio FM-1 desde la primera vez que se abre hasta apagarlo. Cada fila es una parte del tiempo del audio, en % de
+un bloque de 725 µs: primero el promedio y el peor bloque del **último segundo tocando**, después (en gris) del **último
+segundo parado** ("-" hasta que haya uno). Las filas: SEQUENCER; **T1–T6** (el motor de la pista; **C1** si corrió
+casi siempre en el segundo núcleo); FX BUSES y de eso la REVERB (su tipo) y DELAY+CHORUS; CORE 0 WAITS (el primer núcleo
+esperando al segundo); FX LAYER..CLIP; MASTER; USB+OUTPUT; CORE 1 BUSY; TIMER5 IN IT (la interrupción del teclado y el
+USB dentro del render) y **WHOLE HALF** (lo mismo que AUDIO LOAD); después TIMER5 ALL, IRQ LATE US (cuán tarde arrancó
+la interrupción del audio en el peor caso: la pantalla o una escritura en flash la retuvo), LATE HALVES, FX REST % (el
+tiempo que los efectos descansaron: parado no cuestan nada desde la 0.9.14) y UI FRAMES (por segundo). Abajo: las voces
+sonando y el tope, el LOAD con que suena, los núcleos, el CPU TEST y el factor con que presupuesta EXPLORE. **Para
+ajustar JIANT al hardware real, sacale fotos** (dos o tres pantallas) mientras suena tu tema, y otra vez unos segundos
+después de STOP.
+
+**CPU TEST (0.9.14).** SAVE › TOOLS 6 CPU TEST arma el tema de referencia más pesado (TRACKS 6); apretá PLAY, dejalo
+sonar 10 s o más y STOP: su carga media queda guardada con los ajustes (CPU TEST 98 % (2 CORES) en ABOUT y PROFILE).
+EXPLORE de GEN dimensiona sus piezas con eso (la estimación de la computadora pone ese tema en 63 % con dos núcleos);
+si nunca se midió, supone que el FM-1 es 1,6 veces más pesado que la estimación.
 
 ---
 

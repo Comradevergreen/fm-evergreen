@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
 // The interactive manual's content (web/manual/index.html), Spanish first, English second: every text is [es, en].
-// Written from docs/MANUAL.es.md / docs/MANUAL.md and README.md at firmware v0.9.13; the layer maps from the firmware's
+// Written from docs/MANUAL.es.md / docs/MANUAL.md and README.md at firmware v0.9.14; the layer maps from the firmware's
 // own MAP screens (tests/ui_render.c). A shot is a render in shots/ (tools/gen_manual.py copies them).
 // A combo k: "A+B" = hold A and press / turn B; "A" alone = press it. Tokens: the panel's names (SELECT, KNOB 1, OCT+ ...)
 // and the keys F3 .. G5 (sharps as F#3).
@@ -505,6 +505,10 @@ commands: [
    d: ["MENU › SYSTEM › CPU: 2 CORES (de fábrica, 12 voces) o 1 CORE (8 voces), desde el próximo arranque; tras un crash con dos núcleos se pasa solo a 1 CORE. CPU CLOCK 320 MHZ: el reloj nominal del chip (~11 % menos CPU). REC mantenido al encender: un núcleo esa sesión.", "MENU › SYSTEM › CPU: 2 CORES (default, 12 voices) or 1 CORE (8 voices), from the next start; after a crash with both cores it goes to 1 CORE by itself. CPU CLOCK 320 MHZ: the chip's rated clock (~11 % less CPU). REC held at power-on: one core that session."]},
   {s: "menu", k: "HOME", shot: 'about', t: ["ABOUT: versión, carga, último crash", "ABOUT: version, load, last crash"],
    d: ["MENU › SYSTEM › ABOUT: versión, AUDIO LOAD (NOW, PEAK, LATE, SHED), CORES y CPU, LAST CRASH. Con clics, mirá LATE y SHED y sacale una foto.", "MENU › SYSTEM › ABOUT: version, AUDIO LOAD (NOW, PEAK, LATE, SHED), CORES and CPU, LAST CRASH. With clicks, look at LATE and SHED and take a photo."]},
+  {s: "menu", k: "HOME", shot: 'about_profile', t: ["PROFILE: a dónde va la CPU", "PROFILE: where the CPU goes"],
+   d: ["MENU › SYSTEM › ABOUT, OCT+: PROFILE. Cada parte del audio (secuenciador, T1–T6 con su motor, buses de efectos, reverb, espera entre núcleos, master, USB…) en % de un bloque: promedio y peor del último segundo tocando, y en gris parado. Mide desde que se abre. Sacale fotos tocando y después de STOP: con eso se ajusta JIANT al FM-1 real.", "MENU › SYSTEM › ABOUT, OCT+: PROFILE. Every part of the audio (sequencer, T1–T6 with their engine, effect buses, reverb, the wait between cores, master, USB…) in % of a block: the mean and the worst of the last second playing, and greyed stopped. It measures from when it is opened. Photograph it playing and after STOP: that is how JIANT gets tuned to the real FM-1."]},
+  {s: "menu", k: "HOME", shot: 'about', t: ["CPU TEST medido", "CPU TEST measured"],
+   d: ["SAVE › TOOLS 6 CPU TEST, PLAY 10 s o más, STOP: la carga media queda en los ajustes (ABOUT: CPU TEST 98 % (2 CORES)). EXPLORE dimensiona sus piezas con eso; sin medir supone un FM-1 1,6 veces más pesado que la estimación.", "SAVE › TOOLS 6 CPU TEST, PLAY 10 s or more, STOP: the mean load is kept in the settings (ABOUT: CPU TEST 98 % (2 CORES)). EXPLORE sizes its pieces by it; unmeasured, it assumes an FM-1 1.6 times heavier than the estimate."]},
   {s: "menu", k: "HOME", t: ["INIT SYSTEM / NEW PROJECT", "INIT SYSTEM / NEW PROJECT"],
    d: ["MENU › SYSTEM › INIT SYSTEM (o SAVE › TOOLS › NEW PROJECT), OCT+: todo a cero para un tema nuevo (T1 DRUM-X, T2 VOICE, T3 ANIMAL, T4 LOFI, T5 ANALOG, T6 FM6). Proyectos guardados, presets y MENU quedan. UNDO trae la música.", "MENU › SYSTEM › INIT SYSTEM (or SAVE › TOOLS › NEW PROJECT), OCT+: everything to zero for a new song (T1 DRUM-X, T2 VOICE, T3 ANIMAL, T4 LOFI, T5 ANALOG, T6 FM6). Saved projects, presets and MENU stay. UNDO brings the music back."]}
 ],
@@ -601,6 +605,12 @@ recipes: [
 
 // ------------------------------------------------------------------------------------------- what's new (README's changelog, digested)
 news: [
+  {v: "0.9.14", items: [
+    ["MENU › ABOUT › PROFILE (OCT+ en ABOUT): la CPU medida en el FM-1, parte por parte, tocando y parado. Sacale fotos y mandalas.", "MENU › ABOUT › PROFILE (OCT+ on ABOUT): the CPU measured on the FM-1, part by part, playing and stopped. Photograph it and send it."],
+    ["Parado, los efectos ya no gastan CPU (en 0.9.13 la reverb, el delay y el chorus corrían siempre: el NOW 26 % parado).", "Stopped, the effects no longer use CPU (on 0.9.13 the reverb, delay and chorus always ran: the NOW 26 % while stopped)."],
+    ["Los acordes FM6 de GEN ya no suenan minutos después de parar.", "GEN's FM6 chords no longer ring for minutes after stopping."],
+    ["EXPLORE presupuestado para el FM-1 real (CPU TEST medido, o 1,6 veces la estimación): piezas más livianas.", "EXPLORE budgeted for the real FM-1 (CPU TEST measured, or 1.6 times the estimate): lighter pieces."],
+    ["El regulador de carga actúa antes (pasado 75 % saca una voz por medio bloque).", "The load governor acts sooner (past 75 % a voice less every half)."]]},
   {v: "0.9.13", items: [
     ["Seis pistas sin trabarse: un regulador de carga baja voces (de a una, mínimo 4) antes de que el audio cruja y las devuelve con calma; si hace falta pasa solo a LOAD LITE unos segundos.", "Six tracks without choking: a load governor drops voices (one at a time, 4 at least) before the audio crackles and gives them back when calm; if needed it goes LOAD LITE by itself for a few seconds."],
     ["Tras un crash ya no queda en 1 CORE para siempre: vuelve a los dos núcleos al tercer encendido.", "After a crash it no longer stays on 1 CORE for good: both cores come back on the third power-on."],

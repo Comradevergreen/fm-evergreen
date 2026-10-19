@@ -668,8 +668,43 @@ JIANT's modifications are distributed under the same license.
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
 
+### v0.9.14
+CPU: measured on the FM-1 instead of estimated on a computer, and lighter where it was wasted.
+- **MENU › ABOUT › PROFILE (OCT+ on ABOUT): where the audio's time goes, measured on the device.** Every 725 µs block
+  is timed where it runs (the 24 MHz timer, either core): the sequencer, **each track** (its engine; C1 when it runs
+  mostly on the second core), the **effect buses** (and of them the reverb, the rest the delay and chorus), **core 0
+  waiting for core 1**, the FX layer to CLIP, the master, USB and the output, core 1 busy, the keyboard / USB interrupt
+  inside the render and the **whole half** (= AUDIO LOAD); then the interrupt in all, the audio interrupt's latest
+  start (µs: the screen or a flash write holding it), the late halves, how much of the time the buses rested, the UI's
+  frames a second. Each row: the mean and the worst block of **the last second playing**, then of **the last second
+  stopped** (grey), in % of a block. It measures from the first time it is opened until power-off. **Please photograph
+  it** (SELECT scrolls: two or three photos) while a song plays and after STOP, and send it with the song: that is what
+  the next version is tuned on.
+- **CPU TEST measured.** SAVE › TOOLS 6 CPU TEST, then PLAY for 10 s or more and STOP: its mean load is kept with the
+  settings and shown on ABOUT and PROFILE (CPU TEST 98 % (2 CORES)). EXPLORE uses it (below).
+- **Stopped, the effects cost nothing.** On 0.9.13 the reverb, delay and chorus ran every sample forever, even
+  stopped and silent (with CLOUD two thirds of a stopped song's load on the host): that was ABOUT's NOW 26 % while
+  stopped. Now once their gate has shut (1.5–8 s after the last sound reached them) they rest, their lines silenced
+  over the first blocks (no ghost of the last tail at the next PLAY). Host, 30 EXPLORE pieces 20 s after STOP: 1533 →
+  529 instructions a sample (–65 %); the power-on parts at rest: 835 → 571.
+- **GEN's FM6 chords no longer ring for minutes.** GEN's long releases (REL 78–104 on chords) took an FM6 patch's
+  release rate R4 down to 1: every chord's voices sounded on for minutes after the notes and the transport stopped,
+  at the cost of the heaviest engine (4 of 17 EXPLORE pieces still had them 20 s after STOP). GEN now keeps an FM6
+  part's R4 at 40 at least (~4 s at most), and EXPLORE's estimate counts FM6's own release.
+- **EXPLORE budgeted for the device, not the host.** The 0.9.13 budget took the host's instruction counts as the
+  FM-1's; the FM-1 runs its code from the flash through a 32 KB cache the two cores share, so every engine and effect
+  a piece adds costs more there (an owner's FM-1: ~90 % where the estimate said ~62 %). The estimate is now scaled by
+  the device: its CPU TEST if it was measured (the host holds CPU TEST at 63 % with two cores), else ×1.6. Host, 60
+  pieces at COMPLEX 50: 717 → 502 thousandths of CPU TEST; 30 pieces played, both cores: 3063 → 2402 instructions a
+  sample (core 0's path 1449 → 1171), every piece still with two melodic parts.
+- **The load governor acts sooner.** Over the budget 3 halves in a row (was 6): a voice less for all tracks; past 75 %
+  (62 % on ECO, 70 % on one core), a voice less every half, and at the minimum of 4 still past it for 8 halves, LOAD
+  LITE by itself — before the guard's 80 % fades voices.
+- **The flash**: the code that runs once an event (a step, a note, a MIDI message, a USB request) and not once a
+  sample is now built for size, as the UI is (1.9 KB: the room PROFILE needed); the sound's own code is unchanged and
+  still first in the image (layout: no function an interrupt reaches fell out of it). Image 584212 B, 124 B free.
+
 ### v0.9.13
-Not released yet (FELUCCA_VERSION stays 0.9.12 until it is).
 - **Songs past four tracks no longer run the CPU over: a load governor.** On 0.9.12 a song of five or six tracks could
   take more than the FM-1 has, and the guard (a voice faded at 80 %) came too late. Now, every 2.9 ms half: over the
   load budget (65 %, 55 % on one core) six halves in a row, **one voice less for all the tracks** (down to 4; the
