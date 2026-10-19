@@ -475,7 +475,7 @@ static uint32_t gen_text(uint32_t lang, uint32_t lyr, uint32_t theme, uint32_t n
     memset(trk, 0, sizeof trk);
     host_tracks_init();
     host_preset(&trk[0], eng_voice(), 7);
-    trk[0].p[P_E1] = (int16_t)(theme * 16u + 8u);
+    trk[0].p[P_E1] = (int16_t)(theme & 0x100u ? theme & 127u : theme * 16u + 8u);   /* (0x100: THEME's value) */
     trk[0].p[P_SLEN] = 16;
     for (k = 0; k < 16u; k++) {                          /* pl NOTE steps */
         trk[0].step[k].time = k < pl ? ST_NOTE : ST_REST;
@@ -1232,6 +1232,23 @@ static void check_theme(void)
     ok = param_turn(&FMT_WDESC[7], 0, 1) == 38 && param_turn(&LOFI_WAVNUM, 64, 1) == 76 && param_turn(&NOISE_LONG, 0, 3) == 56 &&
          param_turn(&FMT_WDESC[0], 5, 1) == 6;       /* (LOOP 5 names; WAV# 16; LEN 8; POS no names: a value) */
     check("  the other named values a name a detent (LOOP, LOFI WAV#, NOISE LEN); POS a value a detent", ok);
+    {                                                    /* (0.9.17) between the detents: the blend */
+        static char t8[2048], tv[2048];
+        uint32_t s1, l, same = 1, diff = 1;
+        for (l = LG_ES; l <= LG_JA; l++) {
+            gen_text(l, 1, 0, 6, 9, t8, sizeof t8, &s1);
+            for (k = 0; k <= 8u; k += 4u) {              /* a name's low half: its words, bit for bit (projects) */
+                gen_text(l, 1, 0x100u + k, 6, 9, tv, sizeof tv, &s1);
+                same &= !strcmp(t8, tv);
+            }
+            gen_text(l, 1, 0x100u + 15u, 6, 9, tv, sizeof tv, &s1);
+            diff &= strcmp(t8, tv) != 0 && s1;           /* the top: the next theme's words in it, phrases whole */
+            gen_text(l, 1, 1, 6, 9, t8, sizeof t8, &s1);
+            gen_text(l, 1, 0x100u + 16u, 6, 9, tv, sizeof tv, &s1);
+            same &= !strcmp(t8, tv);
+        }
+        check("  THEME between detents: 0..8 of a name its words as at the detent, 15 a blend with the next", same && diff);
+    }
 }
 
 int main(int argc, char **argv)
