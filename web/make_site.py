@@ -14,6 +14,8 @@
   src/                        not touched
 
   web/make_site.py build/felucca-X.Y.fwsc X.Y OUT_DIR [PREV_DIR]
+  web/make_site.py manual OUT_DIR   (JIANT 0.9.12) only the interactive manual, OUT_DIR/manual/: web/manual (its page,
+                                    scripts and the firmware's screens, tools/gen_manual.py), checked complete first
 
 PREV_DIR (JIANT 0.6.46): what web/fetch_prev.py downloaded from the live site, its firmware/versions.json and its
 packages: up to KEEP_OLD earlier versions (the newest build of each) stay installable next to the current one
@@ -70,6 +72,31 @@ def earlier(prev, version, product):
         if len(out) >= KEEP_OLD:
             break
     return out
+
+
+MANUAL_FILES = ("index.html", "manual.js", "data.js", "nav.js", "sw.js")
+
+
+def manual(out):
+    """(JIANT 0.9.12) the interactive manual at OUT/manual/ (the front page links it; the workflow puts it next to the
+    emulator): its five files and the screens they name, nothing else from web/manual"""
+    src, dst = HERE / "manual", Path(out) / "manual"
+    names = set()
+    for f in ("nav.js", "data.js"):
+        names |= set(re.findall(r"""(?:"shot":"|\bshot:\s*')([\w-]+)""", (src / f).read_text(encoding="utf-8")))
+    for m in re.findall(r"\bshots:\s*\[([^\]]*)\]", (src / "data.js").read_text(encoding="utf-8")):
+        names |= set(re.findall(r"'([\w-]+)'", m))
+    missing = [n for n in sorted(names) if not (src / "shots" / f"{n}.png").is_file()]
+    if missing:
+        raise SystemExit(f"web/manual/shots: missing {' '.join(missing)} (run tools/gen_manual.py)")
+    if dst.exists():
+        shutil.rmtree(dst)
+    (dst / "shots").mkdir(parents=True)
+    for f in MANUAL_FILES:
+        shutil.copy(src / f, dst / f)
+    for n in sorted(names):
+        shutil.copy(src / "shots" / f"{n}.png", dst / "shots" / f"{n}.png")
+    print(f"site: {dst}: the manual, {len(names)} screens")
 
 
 def main(pkg, version, out, prev=None):
@@ -131,6 +158,9 @@ def main(pkg, version, out, prev=None):
 
 
 if __name__ == "__main__":
+    if len(sys.argv) == 3 and sys.argv[1] == "manual":
+        manual(sys.argv[2])
+        sys.exit(0)
     if len(sys.argv) not in (4, 5):
         sys.exit(__doc__)
     main(*sys.argv[1:5])

@@ -11,7 +11,7 @@ JIANT FM is an alternative firmware for the **M-VAVE FM-1**, made for playing li
 a computer. It is a fork of [Felucca](https://github.com/hugelton/Felucca) 1.1.5.1 by Hügelton Instruments (GPL-3.0)
 and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 
-**▶ [Try it in the browser](https://juanjiant-bit.github.io/JIANT/emu/)** · **[Web installer](https://juanjiant-bit.github.io/JIANT/webapp/installer/)** · **[Web editor](https://juanjiant-bit.github.io/JIANT/webapp/editor/)**: the emulator runs the same code as
+**▶ [Try it in the browser](https://juanjiant-bit.github.io/JIANT/emu/)** · **[Interactive manual](https://juanjiant-bit.github.io/JIANT/manual/)** · **[Web installer](https://juanjiant-bit.github.io/JIANT/webapp/installer/)** · **[Web editor](https://juanjiant-bit.github.io/JIANT/webapp/editor/)**: the emulator runs the same code as
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
@@ -105,6 +105,11 @@ What changed in each version: the **[Changelog](#changelog)**, at the end of thi
 
 The full user manual, every page, layer and setting, with a careful chapter on saving: **[English](docs/MANUAL.md)** ·
 **[Español](docs/MANUAL.es.md)**.
+
+**[The interactive manual](https://juanjiant-bit.github.io/JIANT/manual/)** (Spanish and English): the FM-1 drawn
+with every control (touch one: what it does alone, held and in combination, with the firmware's real screen), every
+command searchable, step-by-step recipes, the navigation map and what's new by version. Its source is
+[web/manual](web/manual) (the chains and screens from the firmware, `tools/gen_manual.py`).
 
 ## Cheat sheets
 

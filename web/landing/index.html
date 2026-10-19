@@ -336,6 +336,11 @@ footer .tm{flex-basis:100%;letter-spacing:0}
       <h2 data-i18n="m_h2">Manual and cheat sheets</h2>
       <p class="intro" data-i18n="m_in">The full manual explains every page and every knob. The cheat sheets fit the controls and the sound pages on one sheet each, to keep next to the FM-1.</p>
     </div>
+    <a class="nat brk" href="manual/" style="margin-bottom:14px">
+      <span class="k" data-i18n="mi_k">New · interactive manual</span>
+      <div><h3 data-i18n="mi_h">The interactive manual</h3><p data-i18n="mi_p">Touch any control of the FM-1 and see what it does alone, held and in combination, with the firmware's real screens. Search every command, follow step-by-step recipes, catch up on what's new.</p></div>
+      <span class="go" data-i18n="mi_go">Open the manual →</span>
+    </a>
     <div class="docs">
       <a class="doc brk" href="https://github.com/juanjiant-bit/JIANT/blob/main/docs/MANUAL.md" target="_blank" rel="noopener"><span class="t">EN</span><h3 data-i18n="m1_h">User manual</h3><p data-i18n="m1_p">Every page, layer and engine, in English.</p><span class="go">MANUAL.md ↗</span></a>
       <a class="doc brk" href="https://github.com/juanjiant-bit/JIANT/blob/main/docs/MANUAL.es.md" target="_blank" rel="noopener"><span class="t">ES</span><h3 data-i18n="m2_h">Manual de usuario</h3><p data-i18n="m2_p">The same manual, in Spanish.</p><span class="go">MANUAL.es.md ↗</span></a>
@@ -584,6 +589,7 @@ const energy=(k,t)=>reduce?.35:Math.exp(-(((t/BEAT)*DIV[k%9]/4)%1)*5);
     nv5_o:'mantener',nv5_h:'Mantener = la capa',nv5_p:'Un botón mantenido pone sus atajos en las teclas: SEQ + G5 borra un paso, SAVE + C5 nombra, GLO + G4 deshace. Mantenido + SELECT: GEN, los dados, el tempo.',
     nv6_o:'pantalla',nv6_h:'La pantalla dice dónde',nv6_p:'Arriba las pestañas son los grupos de la sección, un punto por página; abajo, SECCIÓN · GRUPO · página y n/N.',
     m_eb:'Aprender',m_h2:'Manual y cheat sheets',m_in:'El manual completo explica cada página y cada perilla. Las cheat sheets resumen los controles y las páginas de sonido en una hoja cada una, para tener al lado del FM-1.',
+    mi_k:'Nuevo · manual interactivo',mi_h:'El manual interactivo',mi_p:'Tocá cualquier control del FM-1 y mirá qué hace solo, mantenido y en combinación, con las pantallas reales del firmware. Buscá cada comando, seguí recetas paso a paso, ponete al día con las novedades.',mi_go:'Abrir el manual →',
     m1_h:'User manual',m1_p:'Cada página, capa y motor, en inglés.',m2_h:'Manual de usuario',m2_p:'El mismo manual, en castellano.',m3_h:'Cheat sheet de controles',m3_p:'Botones, capas y combinaciones en una página.',m4_h:'Cheat sheet de sonido',m4_p:'Motores, filtro, envolventes y efectos en una página.',
     n_eb:'Lo que viene',n_h2:'Próximas actualizaciones',n_in:'Lo que se está construyendo y probando en el laboratorio ahora. Las fechas dependen de las pruebas en FM-1 reales.',
     r1:'Stems + tu voz (STEMS+IN)',r2:'App Android: grabar y editar stems',r3:'Visuales en vivo en la app',r4:'Buses de FX A–D, ruteados por pista',r5:'JIANT en el SMK',r_test:'EN PRUEBA',r_test2:'SALIÓ · 1.0',r_lab:'EN EL LAB',r_lab2:'EN EL LAB',r_plan:'PLANEADO',r_more:'más ideas de la comunidad',
@@ -619,6 +625,7 @@ const energy=(k,t)=>reduce?.35:Math.exp(-(((t/BEAT)*DIV[k%9]/4)%1)*5);
     nv5_o:'按住',nv5_h:'按住 = 快捷层',nv5_p:'按住一个按键，琴键上就是它的快捷功能：SEQ + G5 清除一步，SAVE + C5 命名，GLO + G4 撤销。按住 + SELECT：GEN、骰子、速度。',
     nv6_o:'屏幕',nv6_h:'屏幕告诉你在哪',nv6_p:'顶部的标签是分区的分组，每页一个点；底部显示 分区 · 分组 · 页面 和 n/N。',
     m_eb:'学习',m_h2:'手册与速查表',m_in:'完整手册讲解每个页面和每个旋钮。速查表把控制和音色页面各浓缩成一张，方便放在 FM-1 旁边。',
+    mi_k:'新 · 交互式手册',mi_h:'交互式手册',mi_p:'点击 FM-1 上的任意控件，查看它单独、按住和组合时的作用，并配有固件的真实画面。搜索每条命令，跟着分步教程操作，了解各版本的新内容（西班牙文 / 英文）。',mi_go:'打开手册 →',
     m1_h:'用户手册（英文）',m1_p:'所有页面、层和引擎，英文版。',m2_h:'用户手册（西班牙文）',m2_p:'同一本手册，西班牙文版。',m3_h:'控制速查表',m3_p:'按键、层与组合键，一页看完。',m4_h:'音色速查表',m4_p:'引擎、滤波器、包络与效果器，一页看完。',
     n_eb:'即将推出',n_h2:'未来更新',n_in:'实验室里正在开发和测试的内容。上线时间取决于在真实 FM-1 上的测试。',
     r1:'分轨 + 你的声音（STEMS+IN）',r2:'Android 应用：录制与编辑分轨',r3:'应用内的实时视觉',r4:'FX 总线 A–D，按音轨路由',r5:'JIANT 移植到 SMK',r_test:'测试中',r_test2:'已发布 · 1.0',r_lab:'实验室中',r_lab2:'实验室中',r_plan:'计划中',r_more:'更多来自社区的想法',
@@ -654,6 +661,7 @@ const energy=(k,t)=>reduce?.35:Math.exp(-(((t/BEAT)*DIV[k%9]/4)%1)*5);
     nv5_o:'長押し',nv5_h:'長押し = レイヤー',nv5_p:'ボタンを押さえると鍵盤がショートカットに：SEQ + G5 でステップ消去、SAVE + C5 で名前、GLO + G4 で UNDO。押さえて SELECT：GEN、ダイス、テンポ。',
     nv6_o:'画面',nv6_h:'画面が居場所を示す',nv6_p:'上のタブはセクションのグループ（1 ページに 1 つの点）、下には セクション · グループ · ページ と n/N。',
     m_eb:'学ぶ',m_h2:'マニュアルとチートシート',m_in:'フルマニュアルはすべてのページとノブを説明します。チートシートは操作とサウンドのページをそれぞれ 1 枚にまとめたもので、FM-1 の横に置いておけます。',
+    mi_k:'新着 · インタラクティブマニュアル',mi_h:'インタラクティブマニュアル',mi_p:'FM-1 のどの操作子でも触れると、単独・長押し・組み合わせで何をするかが、ファームウェアの実際の画面とともにわかります。すべてのコマンドを検索し、手順どおりのレシピや新機能も確認できます（スペイン語 / 英語）。',mi_go:'マニュアルを開く →',
     m1_h:'ユーザーマニュアル（英語）',m1_p:'すべてのページ、レイヤー、エンジンを英語で。',m2_h:'ユーザーマニュアル（スペイン語）',m2_p:'同じマニュアルのスペイン語版。',m3_h:'操作チートシート',m3_p:'ボタン、レイヤー、組み合わせを 1 ページに。',m4_h:'サウンドチートシート',m4_p:'エンジン、フィルター、エンベロープ、エフェクトを 1 ページに。',
     n_eb:'次に来るもの',n_h2:'今後のアップデート',n_in:'いまラボで作り、テストしているもの。時期は実機 FM-1 でのテスト次第です。',
     r1:'ステム + あなたの声（STEMS+IN）',r2:'Android アプリ：ステムの録音と編集',r3:'アプリのライブビジュアル',r4:'FX バス A–D、トラックごとにルーティング',r5:'SMK への JIANT 移植',r_test:'テスト中',r_test2:'公開中 · 1.0',r_lab:'ラボで開発中',r_lab2:'ラボで開発中',r_plan:'予定',r_more:'コミュニティからのアイデア',
