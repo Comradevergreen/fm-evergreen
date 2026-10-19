@@ -90,6 +90,8 @@
 # web (web/test_web.mjs): the editor protocol against its mock device, whose tables must equal the
 #                   firmware's (tests/descdump.c -> build/host/desc.json; the MENU settings: tests/editor_test.c -> build/host/menu.json),
 #                   the package builder, the updater.
+# manual (web/test_manual.mjs, 0.9.12): the interactive manual's entries for every control, the search, the screens it
+#                   links (tests/ui_render.c's, tools/gen_manual.py), the map from the firmware's chains; the page in Chromium.
 # Browser emulator (web/emu, when emcc is there): the firmware in WebAssembly (build/emu) boots, plays keys and MIDI,
 #                   draws, lights its LEDs, keeps a save across instances, plays a song bit for bit as the same file
 #                   built with cc (web/emu/native_check.c); the cost of 1 s of a heavy song against real time.
@@ -382,6 +384,7 @@ run "navigation map (docs/navigation-map*.svg) matches the firmware's chains" py
 if command -v node >/dev/null 2>&1; then
     run "web pages: editor protocol, package builder, update protocol" node web/test_web.mjs
     run "web backup: capture, validation before writes, restore order" node web/test_backup.mjs
+    run "web manual: every control has an entry, the search, the screens, the map is the firmware's (web/manual)" node web/test_manual.mjs
 else
     echo "== skip web tests (no node)"
 fi

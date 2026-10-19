@@ -12,9 +12,6 @@ Download it from the site (<https://juanjiant-bit.github.io/JIANT/app/jiant-prob
 or from any branch: the Actions tab → the **android** run → **Artifacts** → `jiant-probe`. Android 10 or later and a
 USB-C data cable.
 
-**JIANT Stems**, the app that records the FM-1's stems on the phone, lines your voice up and exports a ZIP or a mix, is
-a separate product and is not part of this repository.
-
 ## On the FM-1
 
 **MENU › SYSTEM › USB**, then unplug and plug the cable again (the FM-1 re-enumerates):

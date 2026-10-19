@@ -607,7 +607,7 @@ Gr.app = (A, t, f) => {
 };
 /* the lab film's COMING NEXT: the roadmap, one card a line, Ko-fi's early access last */
 Gr.next = (A, t, f) => {
-  const it = [['FX BUSES A–D', 'four assignable effect chains, routed per track'], ['STEMS APP', 'recording, editing and live visuals on Android'],
+  const it = [['FX BUSES A–D', 'four assignable effect chains, routed per track'], ['COMING SOON', 'a separate product'],
     ['JIANT ON THE SMK', 'a port of the firmware: the same instrument, new hardware'], ['EARLY ACCESS', 'Ko-fi supporters play every new version first']];
   it.forEach((c, i) => {
     const on = A.cue === i + 1, seen = A.cue === 0 || A.cue > i, y = GY + 30 + i * 132, a = fade(A.ct, .3 + i * .25, .8 + i * .25);

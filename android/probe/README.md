@@ -1,6 +1,6 @@
 # JIANT Probe
 
-Phase 0 of the stems app (the design: one Android screen that answers, on a given phone, what the app depends on):
+A USB audio study (the design: one Android screen that answers, on a given phone, what the app depends on):
 
 1. **Devices**: every audio input and output Android sees, with the channel counts and index masks each declares,
    and the MIDI devices (the FM-1's USB-MIDI).

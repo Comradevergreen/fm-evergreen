@@ -2135,7 +2135,7 @@ Two ways to get each track on its own, to post-process them one by one in a DAW:
   ring filled and whole blocks of 32 frames were lost, about a hundred times a second, in every channel at once: clicks,
   and a chopped, "separated by AI" sound in each stem (the stereo mix modes were not affected). Now 736 bytes; the ring
   also keeps a millisecond more in hand in STEMS and STEMS+IN, and a frame repeated after an underrun is made up spread
-  over a packet instead of skipped. **Update the FM-1 (and the JIANT Stems app to 1.1 or later), and record again**: a take made
+  over a packet instead of skipped. **Update the FM-1, and record again**: a take made
   with 0.9.7 cannot be mended afterwards. **0.9.10:** STEMS+IN (and STEMS, more rarely) still lost blocks, in bursts a
   few times a second in every channel (a rhythmic glitch), because the next USB packet was queued too late after the
   last one left; it is queued in time now. Takes recorded before cannot be repaired: record them again.
