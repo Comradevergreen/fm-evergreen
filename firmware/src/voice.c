@@ -279,13 +279,20 @@ static void track_lfo_tick(track_t *t)
  * ECO_VOICES between all (voice_cap), the load budget sooner (audio.c TIGHT_ON_ECO) */
 enum { LOAD_FULL, LOAD_LITE, LOAD_ECO };
 static volatile uint8_t sys_load;
+/* (0.9.13) the load governor (audio.c gov_tick), ahead of the overload guard: gov_cap the voices all parts may share
+ * (one less after 6 halves in a row over the load budget, one more after 0.5 s under it, 4 at least), gov_lite LOAD LITE
+ * of its own while the guard keeps fading voices (two sheds in a second; 5 s calm to go back): the song's polyphony and
+ * the heavy reverbs give way before the audio is late. LOAD_EFF(): the LOAD the sound plays (the MENU's, else the
+ * governor's) */
+static volatile uint8_t gov_cap = 16u, gov_lite;
+#define LOAD_EFF() (sys_load ? sys_load : gov_lite)
 #define LITE_FM6_POLY 2u
 #define ECO_POLY 4u
 #define ECO_VOICES 6u            /* (0.6.70) LOAD ECO: the voices all parts share (NVOICE else) */
 static uint32_t trk_nvoice(const track_t *t)
 {
     uint32_t c = ENGINES[t->engine]->poly;
-    if (sys_load && t->engine == ENGI_FM6 && c > LITE_FM6_POLY)
+    if (LOAD_EFF() && t->engine == ENGI_FM6 && c > LITE_FM6_POLY)
         c = LITE_FM6_POLY;
     if (sys_load == LOAD_ECO && !ENGINES[t->engine]->oneshot && (!c || c > ECO_POLY))
         c = ECO_POLY;
@@ -315,7 +322,11 @@ static struct { volatile uint32_t peak, late, shed; } load_diag;
  * render in its time either way; a core 1 given up mid-session: NVOICE again from the next note */
 #define VOICES_2CORE 12u
 static int mc_two(void);                                /* (fx.c) */
-static uint32_t voice_cap(void) { return sys_load == LOAD_ECO ? ECO_VOICES : mc_two() ? VOICES_2CORE : NVOICE; }
+static uint32_t voice_cap(void)
+{
+    uint32_t c = sys_load == LOAD_ECO ? ECO_VOICES : mc_two() ? VOICES_2CORE : NVOICE;
+    return c < gov_cap ? c : gov_cap;
+}
 static uint32_t voices_busy(void)                       /* sounding voices of all parts (not the fading ones) */
 {
     uint32_t p, i, n = 0;
