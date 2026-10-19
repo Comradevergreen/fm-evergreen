@@ -372,7 +372,7 @@ static int32_t enum_rank(const param_desc_t *d, int32_t v)   /* v's place in the
     return o ? r + d->min : v;
 }
 /* a knob turned `steps` (signed) from v: clamped, over the shown order, past aliases (enum_step) */
-/* (0.9.16) a value with names (F_INT, its range split evenly over them: engine desc hooks): its name's index, *k the
+/* (0.9.17) a value with names (F_INT, its range split evenly over them: engine desc hooks): its name's index, *k the
  * names */
 static uint32_t name_of(const param_desc_t *d, int32_t v, uint32_t *k)
 {
@@ -389,7 +389,7 @@ static int32_t param_turn(const param_desc_t *d, int32_t v, int32_t steps)
     if (d->fmt == F_PCTINV) steps = -steps;         /* (right: more chance, less skipped) */
     if (o)
         return o[clamp(enum_rank(d, v) - d->min + steps, 0, d->max - d->min)] + d->min;
-    if (d->fmt == F_INT && d->names && (i = name_of(d, v, &k), k < w)) {   /* (0.9.16) a name a detent (VOICE's
+    if (d->fmt == F_INT && d->names && (i = name_of(d, v, &k), k < w)) {   /* (0.9.17) a name a detent (VOICE's
                                                          * THEME was 16 detents a name), onto its middle */
         i = (uint32_t)clamp((int32_t)i + steps, 0, (int32_t)k - 1);
         return d->min + (int32_t)((2u * i + 1u) * w / (2u * k));

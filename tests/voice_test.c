@@ -1191,7 +1191,7 @@ static void demos(const char *dir)
     printf("voice: demos in %s\n", dir);
 }
 
-/* (0.9.16) THEME: a name a detent (the knob, params.c param_turn), and swept while a note is held the voice goes on as
+/* (0.9.17) THEME: a name a detent (the knob, params.c param_turn), and swept while a note is held the voice goes on as
  * it was, bit for bit: THEME is the next words', never the sound (voice.c engine_block dipped at every value: crackle);
  * the other named values (LOFI WAV#, NOISE LEN) a name a detent too, a new name still a dip */
 static void check_theme(void)

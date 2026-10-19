@@ -725,7 +725,7 @@ With LANG on the EDIT pages read **POS THEME ARTIC SHIFT** | **BUZZ BREATH Q LOO
 | Knob | Does |
 | --- | --- |
 | **POS** | AUTO: each note the next syllable. 1–127: the next note sings that syllable of the lyric, whenever POS changes: lock it on a step to start a line there, or automate it |
-| **THEME** | the dice's words (W): LOVE, NIGHT, SEA, SKY, ANY, ROAD, DREAM, FIRE; one detent a theme (0.9.16; was 16). It never touches the sound: a held note goes on as it was and the next words come from the new theme |
+| **THEME** | the dice's words (W): LOVE, NIGHT, SEA, SKY, ANY, ROAD, DREAM, FIRE; one detent a theme (0.9.17; was 16). It never touches the sound: a held note goes on as it was and the next words come from the new theme. Between the detents (automation, a mod, an older project) the top half of a theme's values blends in the next theme's words, a few to nearly all |
 | **ARTIC** | the consonants: 100 % crisp (full closures, bursts, hiss) .. 0 % slurred (a mumble) |
 | **SHIFT** | every formant up or down (−: a bigger voice, +: smaller, female, a child) |
 | **BUZZ**, **BREATH**, **Q** | as for the vowels: brightness, air (127: a whisper), how sharp the formants are. (0.9.8) BUZZ's top (~112–127) also steadies the voice: no vibrato, no jitter, a machine (ROBOT EN) |
@@ -924,9 +924,9 @@ changes **how** they play, not which sound. The screen says it when you press OC
 
 | OCT | What a key does | Recorded (REC) as the hit and its sound's mode |
 |---|---|---|
-| **+3** | **RATCHET x4**: the hit four times a step while held | **x4** |
-| **+2** | **RATCHET x2** | **x2** |
-| **+1** | **REPEAT**: the hit once a step while held, a roll at the step rate (0.9.13: half as fast as before at each OCT; x2 at +1 was already too fast to play) | a hit on every step held (**ON**) |
+| **+3** | **RATCHET x2**: the hit twice a step while held | **x2** |
+| **+2** | **REPEAT**: the hit once a step while held, a roll at the step rate | a hit on every step held (**ON**) |
+| **+1** | **REPEAT 1/2**: the hit every other step while held (0.9.17: every OCT half as fast again; 0.9.13 had already halved them) | a hit on every other step held (**ON**) |
 | **0** | the kit as it always was | none (**ON**) |
 | **−1** | **SHORT**: half the decay | **SHORT** |
 | **−2** | **GHOST**: short, softer (~45 %), darker: a ghost note | **GHOST** |
@@ -946,7 +946,8 @@ changes **how** they play, not which sound. The screen says it when you press OC
   RATCH, ECHO and TOUCH (SEQ > COMP) still work on the whole step, as before.
 - **MIDI** (0.8.5): notes 35–81 still play the GM drum map exactly as before. The notes around it, which used to play
   their octave of 36–47 plain, are now these octaves, by pitch class: **23–34 SHORT, 11–22 GHOST, 0–10 FLAM, 82–93
-  REPEAT, 94–105 x2, 106–127 x4** (84 the kick REPEAT, 96 the kick x2, 24 the kick SHORT, 102 the closed hat x2). The keys send those notes to
+  REPEAT 1/2, 94–105 REPEAT, 106–127 x2** (0.9.17; 84 the kick every other step, 96 the kick once a step, 108 the kick
+  x2, 24 the kick SHORT, 114 the closed hat x2). The keys send those notes to
   MIDI OUT. **A song or MIDI setup that sent drum notes below 35 or above 81** (a kick on 24, say) will now hear these
   variations: move them into 35–81 (36–47 for the kit's own) to keep the old sound. Notes stored in the steps play as
   before, whatever their number.
@@ -1034,13 +1035,14 @@ recorded into the pattern, quantized to its steps, overdubbing. Knob moves on th
   - **CHANCE** (0–100 %) and **RATCH** (x1–x4): the step's own chance and ratchet (on COMP only). RATCH's KNOB 4 is
     its **DIV**: STEP shares the hits out over the step (as before); 1/2, 1/3, 1/4, 1/6, 1/8 put them that part of a
     step apart from its start, as many as fit (RATCH x3 at 1/8: three quick hits, then silence).
-  - **ARP NOTES / SEQ / SCALE**: the step plays an arpeggio and goes on over the TIEs after it (its duration the step
-    and its TIEs). NOTES: the step's notes, low to high; SEQ: the pattern's melody, in the order the pattern plays it
-    (0.6.82; it was sorted like NOTES); both over 1–4 octaves. SCALE: the scale up from the step's lowest note, 3, 5,
-    8 or 15 degrees. KNOB 3 **ORDER** and range as one list (UP, DOWN, UP-DN, RND over 1 OCT, then over 2 OCT …; on
-    SCALE 3, 5, 8, 15 DEG). KNOB 4 **RATE** (0.6.92), the arpeggio's speed in musical time: **x1** one note a step
-    (the track's DIV, 1/16), **1/32** two a step, **1/32T** three, **1/64** four, **1/64T** six, **1/128** eight (the
-    card says the note value for the track's DIV; an odd DIV: xn). The old pages' x2 … x8 are the same values.
+  - **ARP NOTES / SEQ / SCALE** (0.9.17): the step walks its arpeggio **one note a lap**: each time the pattern comes
+    round to it, it plays the next note, held over the TIEs after it like any note. NOTES: the step's notes, low to
+    high; SEQ: the pattern's melody, in the order the pattern plays it; both over 1–4 octaves. SCALE: the scale up
+    from the step's lowest note, 3, 5, 8 or 15 degrees. KNOB 3 **ORDER** and range as one list (UP, DOWN, UP-DN, RND
+    over 1 OCT, then over 2 OCT …; on SCALE 3, 5, 8, 15 DEG). KNOB 4 **LAP** shows the note this pass plays (RND: a
+    new one each lap). PLAY from a stop starts again from the first note, as the other components' loops do. (Until
+    0.9.16 the step played its notes inside the step, KNOB 4 their RATE x1 … x8; projects keep the RATE they stored, now
+    unused.)
   - **TRIG**: the step plays only on some loops of the pattern: 1:2, 2:2, 1:3, 2:3, 3:3, 1:4 … 4:4, 1:8, FIRST, !1ST
     (every loop but the first).
   - **RAND**: the note moves up or down the scale at random, up to RANGE degrees (1–7).
@@ -1082,7 +1084,7 @@ recorded into the pattern, quantized to its steps, overdubbing. Knob moves on th
     with its A / B read as one.
   Projects keep them. **On a drum kit** (0.6.83) they work too: OCT, RAND, TONAL tune the hits (RAND and TONAL in
   the track's scale), BEND bends each hit over the step; ARP NOTES plays the step's sounds one after another, SEQ
-  the pattern's sounds in the order they play, SCALE retriggers the step's hits each part a degree further up.
+  the pattern's sounds in the order they play, SCALE the step's hits a degree further up (0.9.17: one a lap).
 - **A long chord slide** (0.6.83): the glide into a chord lasts as long as that chord, its TIEs included; GLIDE sets
   how much of it (127: all of it). A chord held over TIEs on slow steps (e.g. DIV 1/4 at 120 BPM: ten steps, 5 s)
   slides that slowly and smoothly; new notes fade in as they glide.

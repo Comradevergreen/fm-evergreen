@@ -759,7 +759,7 @@ Con LANG activo, las páginas EDIT dicen **POS THEME ARTIC SHIFT** | **BUZZ BREA
 | Perilla | Hace |
 | --- | --- |
 | **POS** | AUTO: cada nota, la sílaba siguiente. 1–127: la próxima nota canta esa sílaba de la letra, cada vez que POS cambia: ponelo como lock en un paso para empezar un verso ahí, o automatizalo |
-| **THEME** | las palabras del dado (W): LOVE, NIGHT, SEA, SKY, ANY, ROAD, DREAM, FIRE (amor, noche, mar, cielo, cualquiera, camino, sueño, fuego); un paso de perilla por tema (0.9.16; eran 16). No toca el sonido: una nota mantenida sigue igual y las palabras siguientes salen del tema nuevo |
+| **THEME** | las palabras del dado (W): LOVE, NIGHT, SEA, SKY, ANY, ROAD, DREAM, FIRE (amor, noche, mar, cielo, cualquiera, camino, sueño, fuego); un paso de perilla por tema (0.9.17; eran 16). No toca el sonido: una nota mantenida sigue igual y las palabras siguientes salen del tema nuevo. Entre pasos (automatización, una modulación, un proyecto viejo) la mitad de arriba de los valores de un tema mezcla palabras del tema siguiente, de unas pocas a casi todas |
 | **ARTIC** | las consonantes: 100 % nítidas (cierres, explosiones y siseos completos) .. 0 % arrastradas (un murmullo) |
 | **SHIFT** | todos los formantes arriba o abajo (−: una voz más grande, +: más chica, femenina, de niño) |
 | **BUZZ**, **BREATH**, **Q** | como en las vocales: brillo, aire (127: un susurro), qué tan marcados son los formantes. (0.9.8) Arriba de todo (~112–127) BUZZ además aquieta la voz: sin vibrato ni jitter, una máquina (ROBOT EN) |
@@ -965,9 +965,9 @@ ahora cambia **cómo** suenan, no qué sonido. La pantalla lo dice cuando apret�
 
 | OCT | Qué hace una tecla | Se graba (REC) como el golpe y el modo de su sonido |
 |---|---|---|
-| **+3** | **RATCHET x4**: el golpe cuatro veces por paso mientras la mantenés | **x4** |
-| **+2** | **RATCHET x2** | **x2** |
-| **+1** | **REPEAT**: el golpe una vez por paso mientras la mantenés, un redoble al ritmo de los pasos (0.9.13: la mitad de rápido que antes en cada OCT; x2 en +1 ya era demasiado rápido para tocar) | un golpe en cada paso mantenido (**ON**) |
+| **+3** | **RATCHET x2**: el golpe dos veces por paso mientras la mantenés | **x2** |
+| **+2** | **REPEAT**: el golpe una vez por paso mientras la mantenés, un redoble al ritmo de los pasos | un golpe en cada paso mantenido (**ON**) |
+| **+1** | **REPEAT 1/2**: el golpe cada dos pasos mientras la mantenés (0.9.17: cada OCT otra vez a la mitad; 0.9.13 ya las había bajado a la mitad) | un golpe cada dos pasos mantenidos (**ON**) |
 | **0** | el kit como siempre | ninguno (**ON**) |
 | **−1** | **SHORT**: la mitad del decay | **SHORT** |
 | **−2** | **GHOST**: corto, más suave (~45 %), más oscuro: una nota fantasma | **GHOST** |
@@ -987,7 +987,8 @@ ahora cambia **cómo** suenan, no qué sonido. La pantalla lo dice cuando apret�
   propios del paso (SEQ > COMP) siguen valiendo para todo el paso, como antes.
 - **MIDI** (0.8.5): las notas 35–81 siguen tocando el mapa GM de batería exactamente como antes. Las notas alrededor,
   que antes sonaban como su octava de 36–47 sin más, ahora son estas octavas, por clase de altura: **23–34 SHORT, 11–22
-  GHOST, 0–10 FLAM, 82–93 REPEAT, 94–105 x2, 106–127 x4** (84 el bombo REPEAT, 96 el bombo x2, 24 el bombo SHORT, 102 el hi-hat cerrado x2). Las
+  GHOST, 0–10 FLAM, 82–93 REPEAT 1/2, 94–105 REPEAT, 106–127 x2** (0.9.17; 84 el bombo cada dos pasos, 96 el bombo una vez por paso, 108
+  el bombo x2, 24 el bombo SHORT, 114 el hi-hat cerrado x2). Las
   teclas mandan esas notas por MIDI OUT. **Una canción o un setup MIDI que mandaba notas de batería debajo de 35 o arriba
   de 81** (un bombo en 24, por ejemplo) ahora va a escuchar estas variaciones: movelas a 35–81 (36–47 para las del kit)
   para conservar el sonido de antes. Las notas guardadas en los pasos suenan como antes, sea cual sea su número.
@@ -1079,14 +1080,14 @@ seleccionada se graban como **automatización**. MENU > AUDIO tiene el **CLICK**
   - **CHANCE** (0–100 %) y **RATCH** (x1–x4): la probabilidad y el ratchet propios del paso (solo en COMP). El KNOB 4
     de RATCH es su **DIV**: STEP reparte los golpes en el paso (como antes); 1/2, 1/3, 1/4, 1/6, 1/8 los separa esa
     fracción de paso desde el inicio, los que entren (RATCH x3 a 1/8: tres golpes rápidos y después silencio).
-  - **ARP NOTES / SEQ / SCALE**: el paso toca un arpegio y sigue sobre los ties que vienen después (su duración, el
-    paso y sus ties). NOTES: las notas del paso, de grave a agudo; SEQ: la melodía del patrón, en el orden en que la
-    toca el patrón (0.6.82; antes se ordenaba como NOTES); los dos sobre 1–4 octavas. SCALE: la escala hacia arriba
-    desde la nota más grave del paso, 3, 5, 8 o 15 grados. KNOB 3 **ORDER** y rango en una sola lista (UP, DOWN, UP-DN,
-    RND sobre 1 OCT, después sobre 2 OCT …; en SCALE 3, 5, 8, 15 DEG). KNOB 4 **RATE** (0.6.92), la velocidad del
-    arpegio en tiempo musical: **x1** una nota por paso (el DIV de la pista, 1/16), **1/32** dos por paso, **1/32T**
-    tres, **1/64** cuatro, **1/64T** seis, **1/128** ocho (la tarjeta dice la figura según el DIV de la pista; un DIV
-    raro: xn). Los x2 … x8 de antes son los mismos valores.
+  - **ARP NOTES / SEQ / SCALE** (0.9.17): el paso recorre su arpegio **una nota por vuelta**: cada vez que el patrón
+    vuelve a él, toca la nota siguiente, sostenida sobre los ties que vienen después como cualquier nota. NOTES: las
+    notas del paso, de grave a agudo; SEQ: la melodía del patrón, en el orden en que la toca el patrón; los dos sobre
+    1–4 octavas. SCALE: la escala hacia arriba desde la nota más grave del paso, 3, 5, 8 o 15 grados. KNOB 3 **ORDER**
+    y rango en una sola lista (UP, DOWN, UP-DN, RND sobre 1 OCT, después sobre 2 OCT …; en SCALE 3, 5, 8, 15 DEG).
+    KNOB 4 **LAP** muestra la nota que toca esta vuelta (RND: una nueva cada vuelta). PLAY desde stop arranca otra vez
+    de la primera nota, como las vueltas de los otros componentes. (Hasta 0.9.16 el paso tocaba sus notas dentro del
+    paso, KNOB 4 su RATE x1 … x8; los proyectos guardan el RATE que tenían, ahora sin uso.)
   - **TRIG**: el paso suena solo en algunas vueltas del patrón: 1:2, 2:2, 1:3, 2:3, 3:3, 1:4 … 4:4, 1:8, FIRST, !1ST
     (todas menos la primera).
   - **RAND**: la nota sube o baja por la escala al azar, hasta RANGE grados (1–7).
@@ -1130,8 +1131,8 @@ seleccionada se graban como **automatización**. MENU > AUDIO tiene el **CLICK**
     página ya no existe), con su A / B leídos como uno solo.
   Los proyectos los guardan. **En un kit de batería** (0.6.83) también funcionan: OCT, RAND y TONAL afinan los golpes
   (RAND y TONAL en la escala de la pista), BEND dobla cada golpe durante el paso; ARP NOTES toca los sonidos del paso
-  uno tras otro, SEQ los sonidos del patrón en el orden en que suenan, SCALE re-dispara los golpes del paso, cada parte
-  un grado más arriba.
+  uno tras otro, SEQ los sonidos del patrón en el orden en que suenan, SCALE los golpes del paso un grado más arriba
+  (0.9.17: uno por vuelta).
 - **Un slide de acordes largo** (0.6.83): el glide hacia un acorde dura lo que dura ese acorde, con sus TIEs; GLIDE
   fija cuánto de ese tramo (127: todo). Un acorde sostenido con TIEs en pasos lentos (p. ej. DIV 1/4 a 120 BPM: diez
   pasos, 5 s) se desliza así de lento y suave; las notas nuevas aparecen a medida que se deslizan.

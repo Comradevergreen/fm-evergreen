@@ -75,8 +75,8 @@ controls: {
       {k: "FX+OCT-", t: ["con FX LATCH: apaga todos los efectos y las macros", "with FX LATCH: every effect and macro off"]}
     ]},
   "OCT+": {kind: "button", sec: "basic", shot: 'drum_oct_x8',
-    alone: ["Sube la octava. En diálogos y páginas de acción: hacerlo / YES / OK. En GEN: arma la pieza. En una pista DRUM: REPEAT, RATCHET x2, x4.",
-            "Octave up. In dialogs and action pages: do it / YES / OK. On GEN: makes the piece. On a DRUM track: REPEAT, RATCHET x2, x4."],
+    alone: ["Sube la octava. En diálogos y páginas de acción: hacerlo / YES / OK. En GEN: arma la pieza. En una pista DRUM: REPEAT 1/2, REPEAT, RATCHET x2.",
+            "Octave up. In dialogs and action pages: do it / YES / OK. On GEN: makes the piece. On a DRUM track: REPEAT 1/2, REPEAT, RATCHET x2."],
     combos: [
       {k: "SAVE+OCT+", t: ["guarda la música en la sección que suena", "store the music into the section playing"]},
       {k: "OCT-+OCT+", t: ["mantenidos 5 s: modo actualización; al encender: HARDWARE CALIBRATION", "held 5 s: update mode; at power-on: HARDWARE CALIBRATION"]}
@@ -321,7 +321,7 @@ commands: [
   {s: "drum", k: "KNOB 1", shot: 'drumx', t: ["MORPH: del lado A al B de todo el kit", "MORPH: the whole kit from side A to B"],
    d: ["Cada sonido tiene dos caras, A y B. MORPH (EDIT › KIT, KNOB 1, también en HOME) lleva todo el kit de una a otra: la perilla para tocar en vivo.", "Every sound has two sides, A and B. MORPH (EDIT › KIT, KNOB 1, also on HOME) moves the whole kit between them: the knob to play live."]},
   {s: "drum", k: "OCT+", shot: 'drum_oct_x8', t: ["Ratchets y ghost notes con OCT", "Ratchets and ghost notes with OCT"],
-   d: ["En una pista DRUM el kit queda en sus teclas: OCT +1 / +2 / +3 = REPEAT (una vez por paso) / RATCHET x2 / x4 a tempo; −1 SHORT, −2 GHOST, −3 FLAM. REC graba cada golpe con su modo.", "On a DRUM track the kit stays on its keys: OCT +1 / +2 / +3 = REPEAT (once a step) / RATCHET x2 / x4 in time; −1 SHORT, −2 GHOST, −3 FLAM. REC records each hit with its mode."]},
+   d: ["En una pista DRUM el kit queda en sus teclas: OCT +1 / +2 / +3 = REPEAT 1/2 (cada dos pasos) / REPEAT (una vez por paso) / RATCHET x2 a tempo; −1 SHORT, −2 GHOST, −3 FLAM. REC graba cada golpe con su modo.", "On a DRUM track the kit stays on its keys: OCT +1 / +2 / +3 = REPEAT 1/2 (every other step) / REPEAT (once a step) / RATCHET x2 in time; −1 SHORT, −2 GHOST, −3 FLAM. REC records each hit with its mode."]},
   {s: "drum", k: "EDIT", shot: 'dx_sound', t: ["Editar un sonido del kit", "Edit one sound of the kit"],
    d: ["EDIT › SOUND 1–4: KNOB 1 elige el sonido (BD SD CP CH OH TM RS CB; tocar una tecla también). SOUND: SIDE, PITCH, PMOD; SOUND 2: DECAY, NOISE, COLOR; SOUND 3: MODE, PM.TYPE, DRIVE; SOUND 4: LAYER, FEEDBK, SEND.", "EDIT › SOUND 1–4: KNOB 1 picks the sound (BD SD CP CH OH TM RS CB; striking a key too). SOUND: SIDE, PITCH, PMOD; SOUND 2: DECAY, NOISE, COLOR; SOUND 3: MODE, PM.TYPE, DRIVE; SOUND 4: LAYER, FEEDBK, SEND."]},
   {s: "drum", k: "EDIT+F#3", shot: 'layer_edit_drum', t: ["Mutear un sonido del kit", "Mute one sound of the kit"],
@@ -373,7 +373,7 @@ commands: [
   {s: "seq", k: "SEQ", shot: 'fugue', t: ["PLAYHEADS: más cabezales", "PLAYHEADS: more playheads"],
    d: ["SEQ › PLAYHEADS: tres cabezales más leen los mismos pasos: HEAD, RATE, DIR (FWD REV PING RND), INTERVAL en grados de la escala. Cánones y contrapunto.", "SEQ › PLAYHEADS: three more heads read the same steps: HEAD, RATE, DIR (FWD REV PING RND), INTERVAL in scale degrees. Canons and counterpoint."]},
   {s: "seq", k: "SEQ", shot: 'lente_step_comp', t: ["Componentes de paso (COMP)", "Step components (COMP)"],
-   d: ["SEQ › COMP / COMP 2: hasta dos por paso: CHANCE, RATCH, ARP, TRIG, RAND, OCT, TONAL, BEND, ECHO, PULSE, JUMP, REV, FILL, KILL, TOUCH, WALK, CLIMB. KNOB 4 EVERY: en qué vueltas suenan.", "SEQ › COMP / COMP 2: up to two a step: CHANCE, RATCH, ARP, TRIG, RAND, OCT, TONAL, BEND, ECHO, PULSE, JUMP, REV, FILL, KILL, TOUCH, WALK, CLIMB. KNOB 4 EVERY: which loops they play on."]},
+   d: ["SEQ › COMP / COMP 2: hasta dos por paso: CHANCE, RATCH, ARP, TRIG, RAND, OCT, TONAL, BEND, ECHO, PULSE, JUMP, REV, FILL, KILL, TOUCH, WALK, CLIMB. KNOB 4 EVERY: en qué vueltas suenan (en ARP, LAP: la nota de esta vuelta; el ARP toca una por vuelta).", "SEQ › COMP / COMP 2: up to two a step: CHANCE, RATCH, ARP, TRIG, RAND, OCT, TONAL, BEND, ECHO, PULSE, JUMP, REV, FILL, KILL, TOUCH, WALK, CLIMB. KNOB 4 EVERY: which loops they play on (on an ARP, LAP: this lap's note; an ARP plays one a lap)."]},
   {s: "seq", k: "SEQ", shot: 'motion', t: ["Automatización (AUTOMATION)", "Automation (AUTOMATION)"],
    d: ["SEQ › AUTOMATION: PLAY la prende o apaga, EVENT y LOCK cuentan los registros, CLEAR los borra (OCT+). 64 registros por sección entre todas las pistas (AUTOMATION FULL).", "SEQ › AUTOMATION: PLAY turns it on or off, EVENT and LOCK count the records, CLEAR erases them (OCT+). 64 records a section across all tracks (AUTOMATION FULL)."]},
   {s: "seq", k: "SEQ", shot: 'auto_list', t: ["Ver y editar cada registro (AUTO LIST)", "See and edit each record (AUTO LIST)"],
@@ -611,8 +611,10 @@ recipes: [
 
 // ------------------------------------------------------------------------------------------- what's new (README's changelog, digested)
 news: [
-  {v: "0.9.16", items: [
-    ["VOICE: THEME cambia de tema con cada paso de perilla (eran 16) y ya no cruje con una nota mantenida; las palabras nuevas, desde la palabra siguiente. Igual LOOP, WAV#, DECAY, ALGO y LEN de NOISE: un nombre por paso.", "VOICE: THEME moves a theme a detent (it was 16) and no longer crackles over a held note; the new words from the next word. LOOP, WAV#, DECAY, ALGO and NOISE's LEN too: a name a detent."]]},
+  {v: "0.9.17", items: [
+    ["VOICE: THEME cambia de tema con cada paso de perilla (eran 16) y ya no cruje con una nota mantenida; las palabras nuevas, desde la palabra siguiente. Entre pasos (automatización) la mitad de arriba de un tema mezcla palabras del siguiente. Igual LOOP, WAV#, DECAY, ALGO y LEN de NOISE: un nombre por paso.", "VOICE: THEME moves a theme a detent (it was 16) and no longer crackles over a held note; the new words from the next word. Between detents (automation) a theme's top half blends in the next theme's words. LOOP, WAV#, DECAY, ALGO and NOISE's LEN too: a name a detent."],
+    ["DRUM, OCT arriba otra vez a la mitad: +1 REPEAT 1/2 (cada dos pasos), +2 REPEAT (una vez por paso), +3 RATCHET x2. MIDI 82–93 / 94–105 / 106–127 igual.", "DRUM, OCT up half as fast again: +1 REPEAT 1/2 (every other step), +2 REPEAT (once a step), +3 RATCHET x2. MIDI 82–93 / 94–105 / 106–127 the same."],
+    ["ARP NOTES / SEQ / SCALE (SEQ › COMP): una nota por vuelta del patrón, la siguiente la próxima vez que pasa; KNOB 4 LAP muestra la de esta vuelta (era RATE).", "ARP NOTES / SEQ / SCALE (SEQ › COMP): one note a lap of the pattern, the next the next time round; KNOB 4 LAP shows this lap's (it was RATE)."]]},
   {v: "0.9.15", items: [
     ["La capa FX renovada: CRUSH, THROW y FILTER pasan a las negras C#5 D#5 F#5 como barridos de seco a mojado en 2 compases (vuelven en un tiempo).", "The FX layer reworked: CRUSH, THROW and FILTER move to black keys C#5 D#5 F#5 as dry-to-wet sweeps over 2 bars (back in a beat)."],
     ["B3 GLITCH: cortes en semicorcheas (repeticiones, reversa, octavas, gates) que vuelven igual cada dos compases. C4 TAPE STOP: la cinta se frena en un tiempo.", "B3 GLITCH: sixteenth-note cuts (repeats, reverse, octaves, gates) that come back the same every two bars. C4 TAPE STOP: the tape slows to a stop over a beat."],

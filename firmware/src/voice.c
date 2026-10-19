@@ -804,7 +804,7 @@ static void engine_block(track_t *t)
             d = d ? d : &e->edit[i];
             if (t->p[P_E0 + i] == t->pe_old[i] || (d->fmt != F_ENUM && !d->names))
                 continue;
-            /* (0.9.16) a value with names: only a new name dips; VOICE's THEME and LOOP never (the words, not the
+            /* (0.9.17) a value with names: only a new name dips; VOICE's THEME and LOOP never (the words, not the
              * sound: a THEME swept dipped at every one of its values, a held note crackling) */
             if (d->fmt == F_ENUM || (!(d >= FMT_WDESC && d < FMT_WDESC + 8) &&
                                      name_of(d, t->p[P_E0 + i], &k) != name_of(d, t->pe_old[i], &k)))
