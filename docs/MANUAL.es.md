@@ -964,9 +964,9 @@ ahora cambia **cómo** suenan, no qué sonido. La pantalla lo dice cuando apret�
 
 | OCT | Qué hace una tecla | Se graba (REC) como el golpe y el modo de su sonido |
 |---|---|---|
-| **+3** | **RATCHET x8**: el golpe ocho veces por paso mientras la mantenés | **x8** |
-| **+2** | **RATCHET x4** | **x4** |
-| **+1** | **RATCHET x2** | **x2** |
+| **+3** | **RATCHET x4**: el golpe cuatro veces por paso mientras la mantenés | **x4** |
+| **+2** | **RATCHET x2** | **x2** |
+| **+1** | **REPEAT**: el golpe una vez por paso mientras la mantenés, un redoble al ritmo de los pasos (0.9.13: la mitad de rápido que antes en cada OCT; x2 en +1 ya era demasiado rápido para tocar) | un golpe en cada paso mantenido (**ON**) |
 | **0** | el kit como siempre | ninguno (**ON**) |
 | **−1** | **SHORT**: la mitad del decay | **SHORT** |
 | **−2** | **GHOST**: corto, más suave (~45 %), más oscuro: una nota fantasma | **GHOST** |
@@ -986,7 +986,7 @@ ahora cambia **cómo** suenan, no qué sonido. La pantalla lo dice cuando apret�
   propios del paso (SEQ > COMP) siguen valiendo para todo el paso, como antes.
 - **MIDI** (0.8.5): las notas 35–81 siguen tocando el mapa GM de batería exactamente como antes. Las notas alrededor,
   que antes sonaban como su octava de 36–47 sin más, ahora son estas octavas, por clase de altura: **23–34 SHORT, 11–22
-  GHOST, 0–10 FLAM, 82–93 x2, 94–105 x4, 106–127 x8** (84 el bombo x2, 24 el bombo SHORT, 90 el hi-hat cerrado x2). Las
+  GHOST, 0–10 FLAM, 82–93 REPEAT, 94–105 x2, 106–127 x4** (84 el bombo REPEAT, 96 el bombo x2, 24 el bombo SHORT, 102 el hi-hat cerrado x2). Las
   teclas mandan esas notas por MIDI OUT. **Una canción o un setup MIDI que mandaba notas de batería debajo de 35 o arriba
   de 81** (un bombo en 24, por ejemplo) ahora va a escuchar estas variaciones: movelas a 35–81 (36–47 para las del kit)
   para conservar el sonido de antes. Las notas guardadas en los pasos suenan como antes, sea cual sea su número.

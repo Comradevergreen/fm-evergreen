@@ -43,7 +43,7 @@ editor update themselves with every change merged into `main`.
   **The dice starts in EXPLORE** (0.8.6): HOME + SELECT opens GEN on a choice that follows no genre and breaks every
   rule (any tempo, odd metres and polyrhythm, exotic modes, any engine on any role, DRUM-X octaves, PLAYHEADS, MUTATE),
   each seed a very different piece, still in the key its SCALE and CHORD pages show. RANDOM and the 43 genres follow.
-  **DRUM-X octaves** (0.8.5): the kit stays on its keys at every OCT; above the centre it ratchets in time (x2, x4, x8),
+  **DRUM-X octaves** (0.8.5): the kit stays on its keys at every OCT; above the centre it repeats in time (0.9.13: once a step, x2, x4),
   below it plays SHORT, GHOST or FLAM, each sound its own on each step, and live recording keeps exactly what you
   played. MIDI drum notes outside 35–81 now trigger these variations: see the changelog before installing.
 

@@ -923,9 +923,9 @@ changes **how** they play, not which sound. The screen says it when you press OC
 
 | OCT | What a key does | Recorded (REC) as the hit and its sound's mode |
 |---|---|---|
-| **+3** | **RATCHET x8**: the hit eight times a step while held | **x8** |
-| **+2** | **RATCHET x4** | **x4** |
-| **+1** | **RATCHET x2** | **x2** |
+| **+3** | **RATCHET x4**: the hit four times a step while held | **x4** |
+| **+2** | **RATCHET x2** | **x2** |
+| **+1** | **REPEAT**: the hit once a step while held, a roll at the step rate (0.9.13: half as fast as before at each OCT; x2 at +1 was already too fast to play) | a hit on every step held (**ON**) |
 | **0** | the kit as it always was | none (**ON**) |
 | **−1** | **SHORT**: half the decay | **SHORT** |
 | **−2** | **GHOST**: short, softer (~45 %), darker: a ghost note | **GHOST** |
@@ -945,7 +945,7 @@ changes **how** they play, not which sound. The screen says it when you press OC
   RATCH, ECHO and TOUCH (SEQ > COMP) still work on the whole step, as before.
 - **MIDI** (0.8.5): notes 35–81 still play the GM drum map exactly as before. The notes around it, which used to play
   their octave of 36–47 plain, are now these octaves, by pitch class: **23–34 SHORT, 11–22 GHOST, 0–10 FLAM, 82–93
-  x2, 94–105 x4, 106–127 x8** (84 the kick x2, 24 the kick SHORT, 90 the closed hat x2). The keys send those notes to
+  REPEAT, 94–105 x2, 106–127 x4** (84 the kick REPEAT, 96 the kick x2, 24 the kick SHORT, 102 the closed hat x2). The keys send those notes to
   MIDI OUT. **A song or MIDI setup that sent drum notes below 35 or above 81** (a kick on 24, say) will now hear these
   variations: move them into 35–81 (36–47 for the kit's own) to keep the old sound. Notes stored in the steps play as
   before, whatever their number.

@@ -5,7 +5,7 @@
  * sequencer, MIDI, project and UI sources (with the stubs of tests/ui_test.c):
  *   CENTRE     OCT 0: the keys' notes and hits as before (key 7 the kick, 36), no ratchet, no TOUCH, a hit bit for bit
  *              the one a plain note-on renders; recorded: the hit alone.
- *   UP         OCT +1 / +2 / +3: the same sound ratcheted x2 / x4 / x8 a step while held, stopped (from the press, a
+ *   UP         OCT +1 / +2 / +3: the same sound once / x2 / x4 a step while held (0.9.13; was x2 / x4 / x8), stopped (from the press, a
  *              step / n apart) and playing (on the sequencer's RATCH grid); the release ends it.
  *   DOWN       OCT -1 SHORT (half the length, its level), -2 GHOST (short, darker, under 55 % of the level), -3 FLAM (a
  *              soft grace hit, the hit itself ~20 ms later at its level): measured on the engine's output.
@@ -215,7 +215,7 @@ static int up(void)
 {
     int bad = 0, ok = 1;
     uint32_t at[64], nh, k, per, o;
-    static const uint8_t R[4] = {1, 2, 4, 8};
+    static const uint8_t R[4] = {1, 1, 2, 4};   /* (0.9.13: half as fast, was 1 2 4 8) */
     for (o = 1; o <= 3u; o++) {
         nh = held_stopped((int32_t)o, 4, at);
         per = div_samples((uint32_t)dt->p[P_SDIV]) / R[o];
@@ -231,7 +231,7 @@ static int up(void)
         ok &= nh == 0u && !dxo_n[3];
         if (!ok) printf("ui:   OCT +%u stopped: %u hits in 4 steps\n", o, held_stopped((int32_t)o, 4, at));
     }
-    bad += check("OCT +1 / +2 / +3 stopped: x2 / x4 / x8 a step from the press, the kick; the release ends it", ok);
+    bad += check("OCT +1 / +2 / +3 stopped: once / x2 / x4 a step from the press, the kick; the release ends it", ok);
     /* playing: on the sequencer's grid (a part every step / n from each step's start) */
     ok = 1;
     for (o = 1; o <= 3u; o++) {
@@ -326,7 +326,7 @@ static int rec_up(void)
 {
     int bad = 0, ok = 1;
     uint32_t live[32], back[32], nl = 0, nb = 0, k, s2, loop, o;
-    static const uint8_t R[4] = {1, 2, 4, 8};
+    static const uint8_t R[4] = {1, 1, 2, 4};   /* (0.9.13: half as fast, was 1 2 4 8) */
     for (o = 1; o <= 3u; o++) {
         drum_setup();
         song.octave = (int32_t)o;
@@ -366,10 +366,10 @@ static int rec_up(void)
         if (!ok) printf("ui:   REC OCT +%u: %u hits live, %u played back\n", o, nl, nb);
         seq_stop();
     }
-    bad += check("REC OCT +1 / +2 / +3: the kick and the KICK lane's x2 / x4 / x8 in each step held (the step x1); played back as heard", ok);
+    bad += check("REC OCT +1 / +2 / +3: the kick and the KICK lane's none / x2 / x4 in each step held (the step x1); played back as heard", ok);
     /* an early release in a step it was held into puts that step back */
     drum_setup();
-    song.octave = 1;
+    song.octave = 2;                                    /* (x2; 0.9.13: OCT +2) */
     song.rec = 1u << 3;
     seq_start();
     nb = 0;
@@ -386,7 +386,7 @@ static int rec_up(void)
     bad += check("  let go early in the next step: that step back as it was (one step recorded)", ok);
     /* late in a step: into the next one (the sequencer plays its later parts, the live ones stop) */
     drum_setup();
-    song.octave = 1;
+    song.octave = 2;                                    /* (x2; 0.9.13: OCT +2) */
     song.rec = 1u << 3;
     seq_start();
     nb = 0;
@@ -523,7 +523,7 @@ static int per_lane(void)
     key_dn(KICK_KEY);
     run_b(2, 0, 0, &nb);
     key_upk(KICK_KEY);
-    song.octave = 2;
+    song.octave = 3;                                    /* (x4: 0.9.13 OCT +3, was +2) */
     key_dn(KICK_KEY + 6u);                              /* F#: the closed hat */
     run_b(2, 0, 0, &nb);
     key_upk(KICK_KEY + 6u);
@@ -545,7 +545,7 @@ static int per_lane(void)
         run_c(1);
     ok &= cnt[36] == 1u && cnt[42] == 4u && cnt[38] == 1u && lane(DV_KICK)->dm == 0u && lane(DV_SNARE)->dm == 2u;
     seq_stop();
-    bad += check("REC per sound: kick OCT 0, hat OCT +2, snare OCT -2 on one step: the kick 1, the hat x4, the snare GHOST", ok);
+    bad += check("REC per sound: kick OCT 0, hat OCT +3, snare OCT -2 on one step: the kick 1, the hat x4, the snare GHOST", ok);
     /* the grid: KNOB 3 HIT goes -- ON x2 x4 x8 SHORT GHOST FLAM on the selected lane */
     drum_setup();
     go_page(GR_ROLL);
@@ -628,7 +628,7 @@ static int midi(void)
     bad += check("MIDI bands: ..10 -3, 11..22 -2, 23..34 -1, 35..81 the GM map, 82..93 +1, 94..105 +2, 106.. +3", ok);
     ok = 1;
     {
-        static const uint8_t UPN[3] = {84, 96, 108}, R[3] = {2, 4, 8}, DN[3] = {24, 12, 0};
+        static const uint8_t UPN[3] = {84, 96, 108}, R[3] = {1, 2, 4}, DN[3] = {24, 12, 0};
         for (i = 0; i < 3u; i++) {
             drum_setup();
             now_s = 0;
@@ -646,7 +646,7 @@ static int midi(void)
             ok &= nb == 1u && lane(DV_KICK)->dm == i + 1u;
         }
     }
-    bad += check("MIDI 84 / 96 / 108: the kick x2 / x4 / x8 while held; 24 / 12 / 0: the kick SHORT / GHOST / FLAM", ok);
+    bad += check("MIDI 84 / 96 / 108: the kick once a step / x2 / x4 while held; 24 / 12 / 0: the kick SHORT / GHOST / FLAM", ok);
     /* MIDI recording */
     drum_setup();
     song.rec = 1u << 3;
@@ -654,9 +654,9 @@ static int midi(void)
     nb = 0;
     while (!(dt->seq_idx == 3u && dt->seq_pos < CTL))
         run_b(1, 0, 0, &nb);
-    mev(0x90, 90, 100);                       /* F#: the closed hat, +1 */
+    mev(0x90, 102, 100);                      /* F#: the closed hat, +2 (x2; 0.9.13: was 90, +1) */
     run_b(4, 0, 0, &nb);
-    mev(0x80, 90, 0);
+    mev(0x80, 102, 0);
     while (!(dt->seq_idx == 5u && dt->seq_pos < CTL))
         run_b(1, 0, 0, &nb);
     mev(0x90, 26, 100);                       /* D: the snare, -1 */
@@ -666,7 +666,7 @@ static int midi(void)
     seq_stop();
     ok = dt->step[3].hit == 1u << DV_HATC && step_lmode(&dt->step[3], DV_HATC) == LM_X2 && !dt->step[4].hit &&
          dt->step[5].hit == 1u << DV_SNARE && step_lmode(&dt->step[5], DV_SNARE) == LM_SHORT && !dt->step[5].comp;
-    bad += check("MIDI REC: 90 the closed hat x2, 26 the snare SHORT, each into its step", ok);
+    bad += check("MIDI REC: 102 the closed hat x2, 26 the snare SHORT, each into its step", ok);
     {   /* FUNC round trip */
         project_t before, after;
         project_store_t packed;
@@ -685,9 +685,9 @@ static int ui_part(void)
     drum_setup();
     frame();
     press(B_OCTUP);
-    ok = song.octave == 1 && msg_is("RATCHET x2");
+    ok = song.octave == 1 && msg_is("REPEAT");
     press(B_OCTUP);
-    ok &= song.octave == 2 && msg_is("RATCHET x4");
+    ok &= song.octave == 2 && msg_is("RATCHET x2");
     press(B_OCTDN);
     press(B_OCTDN);
     press(B_OCTDN);
@@ -698,8 +698,8 @@ static int ui_part(void)
     ok &= song.octave == -3 && msg_is("FLAM");
     song.octave = 2;
     press(B_OCTUP);
-    ok &= song.octave == 3 && msg_is("RATCHET x8");
-    bad += check("OCT on a DRUM track: RATCHET x2 / x4 / x8, SHORT, GHOST, FLAM", ok);
+    ok &= song.octave == 3 && msg_is("RATCHET x4");
+    bad += check("OCT on a DRUM track: REPEAT, RATCHET x2 / x4, SHORT, GHOST, FLAM", ok);
     song.octave = 0;
     dt->step[2] = (step_t){{0}, 0, ST_NOTE, 0, 100, 1u << DV_KICK};
     dt->step[2].comp = CP_TOUCH;

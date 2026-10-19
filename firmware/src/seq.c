@@ -817,7 +817,7 @@ static void input_off(track_t *t, uint32_t note)
 /* ------------------------------------------- (0.8.5) the kit's octaves --- */
 /* A DRUM track's note in another octave than the kit's (eng_drum.c DXO_*): a key at OCT +-n (kb_oct), a MIDI note of a
  * band around the GM map (drum_oct_of). Below: the hit with TOUCH n (dx_in_tch on its note-on: SHORT GHOST FLAM).
- * Above: the hit, then again x2 / x4 / x8 a step while held (dxo_tick): playing, on the grid the sequencer's lane
+ * Above: the hit, then again once / x2 / x4 a step while held (dxo_tick; 0.9.13, was x2 x4 x8): playing, on the grid the sequencer's lane
  * ratchets use (a part every step / n from each step's start, swung as the steps are: seq_lane_rat), stopped, every
  * step / n from the press. Recording, playing (rec_on), the step it goes into gets the hit and its lane's mode
  * (rec_lmode: that lane only); every step entered while it is held too, before it plays (dxo_rec_hold: the sequencer
