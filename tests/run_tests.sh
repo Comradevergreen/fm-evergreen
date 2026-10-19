@@ -254,7 +254,7 @@ if [ -f build/gen/felucca_tables.h ]; then
     $CC -O1 -w -Ibuild/gen -Ifirmware/src -o "$OUT/text_ref_test" tests/text_ref_test.c -lm
     run "text: pens, kerning and pixels equal the reference renderer" "$OUT/text_ref_test"
     if python3 -c "import PIL" 2>/dev/null; then
-        run "text spacing: glyph gaps against the font's own (16x supersampled), S M <= 0.25 px, L <= 0.5 px" \
+        run "text spacing: glyph gaps against the font's own (16x supersampled), a phase step (S M L <= 0.5 px)" \
             python3 tests/text_spacing_test.py build/gen/ui_fonts.h
     fi
     $CC -O1 -w -Ibuild/gen -o "$OUT/settings_test" tests/settings_test.c
@@ -304,6 +304,12 @@ if [ -f build/gen/felucca_tables.h ]; then
     run "FX layer effects: on the 1/16, stereo, too-long REPEAT, SLICER, silent keys, idle bit-identical, clicks, cost, demos" "$OUT/perform_test" build/perform_demo
     $CC -O2 -w -Ibuild/gen -Ifirmware/src -o "$OUT/reverb_test" tests/reverb_test.c -lm
     run "REVERB TYPE: ROOM bit-identical, SPRING decay / chirp / stability / level, model change, cost, demos" "$OUT/reverb_test" build/fx_demo
+    # (0.9.16) the silence path: the same session with it and without it (-DFX_HUSH_OFF), bit for bit
+    $CC -O2 -w -Ibuild/gen -Ifirmware/src -Itests -o "$OUT/hush_test" tests/hush_test.c -lm
+    $CC -O2 -w -DFX_HUSH_OFF -Ibuild/gen -Ifirmware/src -Itests -o "$OUT/hush_ref" tests/hush_test.c -lm
+    hush_cmp() { a=$("$OUT/hush_test") && b=$("$OUT/hush_ref") && echo "$a" && [ "$(echo "$a" | head -1)" = "$(echo "$b" | head -1)" ] &&
+        [ "$(echo "$a" | sed -n 's/^hush: \([0-9]*\) blocks.*/\1/p')" -gt 50000 ]; }
+    run "silence path (0.9.16): a session played, stopped and played again, bit for bit as without it; most of the silence through it" hush_cmp
     $CC -O2 -w -Ibuild/gen -Ifirmware/src -o "$OUT/cloud_hot_test" tests/cloud_hot_test.c -lm
     run "CLOUD driven hot: the loop never runs away (any SIZE / RATE), its line never clamps, no grain across the write head, no trip" "$OUT/cloud_hot_test" build/fx_demo
     $CC -O2 -w -Ibuild/gen -Ifirmware/src -o "$OUT/delay_test" tests/delay_test.c -lm

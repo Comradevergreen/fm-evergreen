@@ -695,6 +695,28 @@ Slower rolls, arpeggios a lap at a time, and VOICE's THEME.
 - **THEME between its detents: a blend.** Automation, a mod or an older project can set THEME between two detents.
   The lower half of a theme's 16 values (the detent included) sings that theme exactly as before. The upper half mixes
   in words from the next theme, from 1 in 8 up to 7 in 8.
+### v0.9.16
+The idle floor.
+- **At rest the audio does almost nothing.** An owner's PROFILE on 0.9.14, stopped and silent: 21 % of the audio's time
+  (SEQUENCER 7.6, MASTER 4.7, the six empty tracks 5.3, FX LAYER..CLIP 2.6, the buses 1.2, core 1 1.6). Now, once the
+  transport is stopped, no track has a voice, a DIST tail or a fade, the effects rest and the master has settled, a
+  block renders nothing: no track, no master chain, no job for the second core; the LFOs, DRIFT's clock and the
+  engines' block work go on, so the next note comes out exactly as it would have (tests/hush_test.c renders a session
+  both ways: bit for bit). Before that, while sound fades, the master stops on its own as soon as its input is 0 and
+  its states can no longer move (bit for bit too). With SPEAKER EQ LOWCUT / BASS+ the master keeps running.
+- **SEQUENCER at rest**: every block, for every track, the engine was asked to describe all eight of its parameters
+  (to notice a list value changing under a note): 48 calls into six engines' code a block, stopped too. Now only for a
+  value that changed.
+- Host (callgrind, both cores' work): the CPU TEST song stopped, 336 → 120 instructions a sample (tests/cpu_vg.c
+  idle/stopped); 30 EXPLORE pieces 20 s after STOP, 516 → 111 (0.9.13: 1533). Playing: unchanged.
+- The load meter (ABOUT's NOW, PROFILE's WHOLE HALF) is core 0's time in the audio interrupt, its wait for core 1
+  included (it is the deadline), the keyboard / USB interrupt nested in it left out; the drawing is never in it. It
+  read 20 % at rest because 20 % was being spent; it was not overstated.
+- For the flash's room: PROFILE no longer has 0.9.14's "EXPLORE: DEVICE x" line and the "CPU TEST: SEE ABOUT"
+  message is gone; the CPU TEST line on ABOUT and on PROFILE stays.
+- **The screen's small and medium text at two sub-pixel phases** (were four; the large face has had two since 0.5):
+  12912 B of flash back (the image 571344 B, 12992 B free in the slot). A letter still sits within 1/4 px of its true
+  place and a gap between two neighbours within 1/2 px (S 0.43 px at worst, M 0.40); the drawing code is unchanged.
 
 ### v0.9.15
 The FX layer, reworked.

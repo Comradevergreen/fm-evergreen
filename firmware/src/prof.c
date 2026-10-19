@@ -39,7 +39,7 @@ static struct {
     prf_win_t cur, win[2];
     uint32_t last, halves, cpt_ms, cpt_sum, cpt_n;
     volatile uint8_t on, seq;
-    uint8_t have, cpt_arm, fxg_dly, rest_ph;         /* (.. fx.c's: fx_rest's clearing, a part a block) */
+    uint8_t have, cpt_arm, fxg_dly, rest_ph, msil;         /* (.. fx.c's: fx_rest's clearing, a part a block) */
 } prf __attribute__((section(".pool")));             /* (zeroed at boot; an explicit section: never merged) */
 #define prf_blk (prf.blk)
 #define prf_cur (prf.cur)

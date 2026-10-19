@@ -1529,7 +1529,7 @@ static int32_t fx_glide(int32_t cur, int32_t to, uint32_t n)
  * after 8 s) came back with it, a ghost of the last chord a pause later. Out of line: the buses' two copies call it */
 static __attribute__((noinline)) int fx_rest(int32_t any, int32_t *wet, uint32_t n)
 {
-    uint32_t i, rt = (uint32_t)song.g[G_RTYPE] <= 4u ? (uint32_t)song.g[G_RTYPE] : 0u, ph = prf.rest_ph;
+    uint32_t rt = (uint32_t)song.g[G_RTYPE] <= 4u ? (uint32_t)song.g[G_RTYPE] : 0u, ph = prf.rest_ph;
     if (any || fxg_g || fxg_dly || GFX(GF_DFDBK) >= 100 || fx.dsw || (rt == 4u && GFX(GF_RSIZE) >= 127) ||
         REV_LITE[LOAD_EFF() % 3u][rt] != fx.rtype) {
         prf.rest_ph = 0;
@@ -2376,6 +2376,68 @@ static const char *mc_status(void)                      /* MENU > ABOUT's line *
 #endif
 }
 
+/* (0.9.16) the silence path. The master at rest (master_rest): this block's mix in (dry, the buses' return, the SLICER's)
+ * all 0 and every state of the master chain where 0 in leaves it (the DC blockers at 0, the leveler's follower and
+ * gain where a block of silence no longer moves them, the limiter under its threshold, SPEAKER EQ FLAT; DJ FILTER
+ * off; CLIP has no state): what it gives is exactly 0 and its states stay as they are, so it is not run (bit for bit the
+ * same). Then the whole mix at rest (mix_hush): the master at rest the block before, stopped, the buses at rest and
+ * silenced (fx_rest), no part with a voice, a DIST tail, a fade, the host's audio, the FX layer, the stems, the SLICER
+ * or DJ FILTER at work: not one part rendered (their LFOs still turn, mix_silent), no job for the second core, the out
+ * block 0. A note, PLAY, a knob of the FX layer: the next block (the events run first) renders as ever, every state as
+ * the silence left it. Stopped and silent the audio's load was ~500 instructions a sample on the host (the six parts'
+ * block work, the master's chain, the clears): now ~150 */
+#ifndef HUSH_COUNT
+#define HUSH_COUNT()                                     /* (tests/hush_test.c counts the silent blocks) */
+#endif
+static __attribute__((noinline)) int master_rest(uint32_t n)
+{
+    uint32_t i;
+    int32_t a = 0;
+    for (i = 0; i < n; i++)
+        a |= mix_l[i] | mix_r[i] | wet[i];
+    if (a || dc_l || dc_r || (lev_env >> 11) || ((32768 - lev_g) >> 5) || lev_dg || lim_env > LIM_T || song.g[G_DJF] ||
+        djf.mode)
+        return 0;
+    if (fx_lowcut)                                      /* (SPEAKER EQ LOWCUT / BASS+: their states can settle off 0, */
+        return 0;                                       /* not checked: never at rest there) */
+    lev_cur = lev_g;                                    /* (as lev_block leaves them in a silent block) */
+    return 1;
+}
+#define mix_msil (prf.msil)                              /* the master at rest the block before (prof.c's object) */
+static __attribute__((noinline)) int mix_hush(void)
+{
+    uint32_t k, i;
+    if (!mix_msil || song.playing || prf.rest_ph < 6u || uin_on || pfx_any || fx_stems || mix_skip ||
+        slicer_on())
+        return 0;
+    for (k = 0; k < NPART; k++) {
+        const track_t *t = &trk[k];
+        if ((t->tail && t->p[P_DIST]) || t->xf_on || t->xin)   /* (tail: counted down only with DIST, mix_part) */
+            return 0;
+        for (i = 0; i < NVOICE; i++)
+            if (t->v[i].active)
+                return 0;
+    }
+    return 1;
+}
+static __attribute__((noinline)) void mix_silent(int32_t *out, uint32_t n, uint32_t t0)
+{
+    uint32_t k;
+    for (k = 0; k < NPART; k++) {
+        track_lfo_tick(&trk[k]);                        /* (the LFOs turn on: their pages, the next note's phase; */
+        drift_clk[k] += ENGINES[trk[k].engine] != &ENG_DRUM && trk[k].p[P_DRIFT] < 127;   /* DRIFT's clock as well) */
+        if (ENGINES[trk[k].engine]->block)
+            ENGINES[trk[k].engine]->block(&trk[k]);
+        mp_seen[k] = 0;
+    }
+    slicer_bus(sl_l, sl_r, n);                          /* (its clock; off: nothing else) */
+    mc_mask_last = 0;
+    prf_cur.fxrest++;
+    HUSH_COUNT();
+    memset(out, 0, 2u * n * sizeof *out);
+    prf_blk[PRF_SEQ] = MC_TICKS() - t0;                 /* (PROFILE: the block's whole work, the events' with it) */
+}
+
 static __attribute__((noinline)) void mix_block(int32_t *out, uint32_t n)   /* (0.6.71: kept out of the ISR's
                                                                                * body, as before: target_budget.py) */
 {
@@ -2397,9 +2459,17 @@ static __attribute__((noinline)) void mix_block(int32_t *out, uint32_t n)   /* (
     master_begin();
     duck_block();
     perf = perf_begin(n);                               /* the FX hold layer at work (perform.c) */
+#ifndef FX_HUSH_OFF                                     /* (tests/hush_test.c: the reference without it) */
+    if (!perf && mix_hush()) {                          /* (0.9.16) all at rest: nothing rendered (above) */
+        mix_silent(out, n, t0);
+        return;
+    }
+#endif
     if (!mc_off && mc_live()) {                         /* (0.6.71) core 1 at its parts meanwhile; (0.6.75) and the buses */
         c1m = mc_split(mc_fx_tk + 4u * MC_VW);
-        if (mc_run(mc_job, c1m | MC_FX | n << 8))
+        if ((c1m || prf.rest_ph < 6u) &&               /* (0.9.16: no parts for it and the buses at rest: no job, the
+                                                         * buses' check here, no handshake to wait on) */
+            mc_run(mc_job, c1m | MC_FX | n << 8))
             c1j = 1;
         else
             c1m = 0;
@@ -2463,6 +2533,12 @@ static __attribute__((noinline)) void mix_block(int32_t *out, uint32_t n)   /* (
         clip_block(n);
     t0 = MC_TICKS();
     prf_blk[PRF_POST] = t0 - t1;
+#ifndef FX_HUSH_OFF
+    if ((mix_msil = (uint8_t)(!perf && master_rest(n))) != 0) {   /* (0.9.16) the master at rest: exactly 0 out */
+        memset(out, 0, 2u * n * sizeof *out);
+        return;
+    }
+#endif
     lev_block(n);                                       /* (JIANT 0.5) the leveler: the loudness held */
     if (perf) {
         perf_master(out, n);

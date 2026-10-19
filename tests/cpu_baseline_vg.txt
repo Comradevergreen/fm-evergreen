@@ -19,6 +19,7 @@ eng/VOICE 1592
 eng/VOICE.EN 1778
 eng/VOICE.ES 1796
 eng/WHEEL 2149
+idle/stopped 120
 mix/full 2666
 mix/v12 3925
 mix/v12.c0 1949
