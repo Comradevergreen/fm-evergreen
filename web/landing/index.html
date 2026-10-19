@@ -298,7 +298,7 @@ footer .tm{flex-basis:100%;letter-spacing:0}
       <div class="org brk"><div class="hd"><span class="circ">C</span><span data-i18n="c_o">nervous system</span></div><h3 data-i18n="c_h">64-step sequencer</h3><p data-i18n="c_p">A piano roll per track, chords, probability, ratchets, extra playheads, recording off the grid to a 64th of a step, and MUTATE, which transforms sound and pattern every few bars.</p></div>
       <div class="org brk"><div class="hd"><span class="circ">D</span><span data-i18n="d_o">membrane</span></div><h3 data-i18n="d_h">Effects and master</h3><p data-i18n="d_p">Delay, five reverbs (SHIMMER, RESO, CLOUD…), chorus, slicer, live punch-in effects, a DJ filter on the whole mix and a master with limiter, clip and punch.</p></div>
       <div class="org brk"><div class="hd"><span class="circ">E</span><span data-i18n="e_o">memory</span></div><h3 data-i18n="e_h">Songs and the generator</h3><p data-i18n="e_p">Four sections per project, an ARRANGE page to chain them, and a generator that writes a whole song idea: from a genre, or in EXPLORE, breaking every rule.</p></div>
-      <div class="org brk"><div class="hd"><span class="circ">F</span><span data-i18n="f_o">roots</span></div><h3 data-i18n="f_h">USB audio and MIDI</h3><p data-i18n="f_p">The FM-1 becomes an audio interface that keeps its time: every track on its own channel into your DAW (STEMS), or onto your phone with the JIANT Stems app for Android. MIDI over USB, Bluetooth and TRS.</p><span class="go" data-i18n="f_go">JIANT Stems for Android: coming soon</span></div>
+      <div class="org brk"><div class="hd"><span class="circ">F</span><span data-i18n="f_o">roots</span></div><h3 data-i18n="f_h">USB audio and MIDI</h3><p data-i18n="f_p">The FM-1 becomes an audio interface that keeps its time: every track on its own channel into your DAW (STEMS), ready to record each part on its own. MIDI over USB, Bluetooth and TRS.</p><span class="go" data-i18n="f_go">A separate product: coming soon</span></div>
     </div>
   </section>
 
@@ -360,8 +360,8 @@ footer .tm{flex-basis:100%;letter-spacing:0}
         <div class="hdr">----- JIANT FM ----- ROADMAP</div>
         <table>
           <tr><td data-i18n="r1">Stems + your voice (STEMS+IN)</td><td class="wip" data-i18n="r_test">TESTING</td></tr>
-          <tr><td data-i18n="r2">Android app: record and edit stems</td><td data-i18n="r_test2">OUT · 1.0</td></tr>
-          <tr><td data-i18n="r3">Live visuals in the app</td><td data-i18n="r_lab">IN THE LAB</td></tr>
+          <tr><td data-i18n="r2">A separate product, coming soon</td><td data-i18n="r_test2">OUT · 1.0</td></tr>
+          <tr><td data-i18n="r3">Live visuals</td><td data-i18n="r_lab">IN THE LAB</td></tr>
           <tr><td data-i18n="r4">FX buses A–D, routed per track</td><td data-i18n="r_lab2">IN THE LAB</td></tr>
           <tr><td data-i18n="r5">JIANT on the SMK</td><td data-i18n="r_plan">PLANNED</td></tr>
         </table>
@@ -580,7 +580,7 @@ const energy=(k,t)=>reduce?.35:Math.exp(-(((t/BEAT)*DIV[k%9]/4)%1)*5);
     c_o:'sistema nervioso',c_h:'Secuenciador de 64 pasos',c_p:'Un piano roll por pista, acordes, probabilidad, ratchets, cabezales extra, grabación fuera de la grilla hasta 1/64 de paso, y MUTATE, que transforma sonido y patrón cada tantos compases.',
     d_o:'membrana',d_h:'Efectos y master',d_p:'Delay, cinco reverbs (SHIMMER, RESO, CLOUD…), chorus, slicer, efectos punch-in en vivo, un filtro DJ sobre toda la mezcla y un master con limiter, clip y punch.',
     e_o:'memoria',e_h:'Canciones y generador',e_p:'Cuatro secciones por proyecto, una página ARRANGE para encadenarlas, y un generador que escribe una idea de canción entera: desde un género, o en EXPLORE, rompiendo todas las reglas.',
-    f_o:'raíces',f_h:'Audio USB y MIDI',f_p:'El FM-1 se vuelve una interfaz de audio que no pierde el tiempo: cada pista en su propio canal hacia tu DAW (STEMS), o al celular con la app JIANT Stems para Android. MIDI por USB, Bluetooth y TRS.',f_go:'JIANT Stems para Android: muy pronto',
+    f_o:'raíces',f_h:'Audio USB y MIDI',f_p:'El FM-1 se vuelve una interfaz de audio que no pierde el tiempo: cada pista en su propio canal hacia tu DAW (STEMS), listo para grabar cada parte por separado. MIDI por USB, Bluetooth y TRS.',f_go:'Producto aparte: muy pronto',
     nv_eb:'Orientarse',nv_h2:'Seis reglas, un mapa',nv_in:'Desde la 0.9.2 todas las secciones se manejan igual: aprendés seis reglas una vez y conocés todo el sinte. El mapa muestra los grupos y las páginas de cada botón en el orden en que los recorre SELECT, en cualquiera de las tres pieles (COLORS, BOTTOM, HUD).',nv_cap:'El mapa de navegación · hacé clic para verlo grande (SVG, con zoom)',
     nv1_o:'SELECT',nv1_h:'SELECT recorre las páginas',nv1_p:'Una cadena por sección, una página por paso; frena en la primera y en la última.',
     nv2_o:'botón',nv2_h:'El botón: entrar o saltar',nv2_p:'Desde otra sección, la página donde la dejaste. Adentro, la primera página del grupo siguiente, en ronda.',
@@ -592,7 +592,7 @@ const energy=(k,t)=>reduce?.35:Math.exp(-(((t/BEAT)*DIV[k%9]/4)%1)*5);
     mi_k:'Nuevo · manual interactivo',mi_h:'El manual interactivo',mi_p:'Tocá cualquier control del FM-1 y mirá qué hace solo, mantenido y en combinación, con las pantallas reales del firmware. Buscá cada comando, seguí recetas paso a paso, ponete al día con las novedades.',mi_go:'Abrir el manual →',
     m1_h:'User manual',m1_p:'Cada página, capa y motor, en inglés.',m2_h:'Manual de usuario',m2_p:'El mismo manual, en castellano.',m3_h:'Cheat sheet de controles',m3_p:'Botones, capas y combinaciones en una página.',m4_h:'Cheat sheet de sonido',m4_p:'Motores, filtro, envolventes y efectos en una página.',
     n_eb:'Lo que viene',n_h2:'Próximas actualizaciones',n_in:'Lo que se está construyendo y probando en el laboratorio ahora. Las fechas dependen de las pruebas en FM-1 reales.',
-    r1:'Stems + tu voz (STEMS+IN)',r2:'App Android: grabar y editar stems',r3:'Visuales en vivo en la app',r4:'Buses de FX A–D, ruteados por pista',r5:'JIANT en el SMK',r_test:'EN PRUEBA',r_test2:'SALIÓ · 1.0',r_lab:'EN EL LAB',r_lab2:'EN EL LAB',r_plan:'PLANEADO',r_more:'más ideas de la comunidad',
+    r1:'Stems + tu voz (STEMS+IN)',r2:'Producto aparte, muy pronto',r3:'Visuales en vivo',r4:'Buses de FX A–D, ruteados por pista',r5:'JIANT en el SMK',r_test:'EN PRUEBA',r_test2:'SALIÓ · 1.0',r_lab:'EN EL LAB',r_lab2:'EN EL LAB',r_plan:'PLANEADO',r_more:'más ideas de la comunidad',
     e_k:'Acceso anticipado',e_h3:'Quienes apoyan tocan cada versión nueva primero',e_p1:'Quienes apoyan JIANT en Ko-fi o Cafecito reciben las versiones nuevas antes de que salgan al público, y ayudan a decidir qué viene después.',e_go:'Sumate en Ko-fi',
     sup_eb:'Apoyar',sup_h2:'JIANT es gratis. Si hace música con vos, invitame un café.',sup_in:'JIANT lo hace Juan Jiant, muralista y artista visual de Buenos Aires. Cada aporte paga horas de desarrollo y mantiene el firmware gratis para todos.',
     k_z:'global · usd',k_p:'Desde cualquier país, con tarjeta o PayPal. Único o mensual, con acceso anticipado a las versiones nuevas.',c_z:'argentina · ars',cf_p:'Desde Argentina, en pesos, con Mercado Pago o tarjeta.',
@@ -616,7 +616,7 @@ const energy=(k,t)=>reduce?.35:Math.exp(-(((t/BEAT)*DIV[k%9]/4)%1)*5);
     c_o:'神经系统',c_h:'64 步音序器',c_p:'每条音轨一个钢琴卷帘，和弦、概率、连击、额外播放头，精确到 1/64 步的离网格录音，以及每隔几小节变换声音与节奏型的 MUTATE。',
     d_o:'细胞膜',d_h:'效果器与总线',d_p:'延迟、五种混响（SHIMMER、RESO、CLOUD…）、合唱、切片器、现场即时效果、作用于整个混音的 DJ 滤波器，以及带限幅、削波和冲击力的总线。',
     e_o:'记忆',e_h:'歌曲与生成器',e_p:'每个工程四个段落，用 ARRANGE 页面串联，还有一个写出完整歌曲构思的生成器：按曲风，或在 EXPLORE 模式下打破所有规则。',
-    f_o:'根系',f_h:'USB 音频与 MIDI',f_p:'FM-1 变成一台时间稳定的音频接口：每条音轨各占一个通道送进你的 DAW（STEMS），或用 Android 应用 JIANT Stems 录到手机上。支持 USB、蓝牙和 TRS MIDI。',f_go:'JIANT Stems Android 版：即将推出',
+    f_o:'根系',f_h:'USB 音频与 MIDI',f_p:'FM-1 变成一台时间稳定的音频接口：每条音轨各占一个通道送进你的 DAW（STEMS），可分别录制每一轨。支持 USB、蓝牙和 TRS MIDI。',f_go:'独立产品：即将推出',
     nv_eb:'找到方向',nv_h2:'六条规则，一张地图',nv_in:'从 0.9.2 起，每个分区的操作方式都一样：六条规则学一次，就认识整台合成器。地图按 SELECT 走过的顺序列出每个按键的分组和页面，三种外观（COLORS、BOTTOM、HUD）通用。',nv_cap:'导航地图 · 点击查看大图（SVG，可缩放）',
     nv1_o:'SELECT',nv1_h:'SELECT 翻页',nv1_p:'每个分区一条页面链，转一格一页；到第一页和最后一页就停下。',
     nv2_o:'按键',nv2_h:'分区按键：进入或跳转',nv2_p:'从别的分区按下，回到你上次离开的页面；已在分区内，跳到下一组的第一页，循环。',
@@ -628,7 +628,7 @@ const energy=(k,t)=>reduce?.35:Math.exp(-(((t/BEAT)*DIV[k%9]/4)%1)*5);
     mi_k:'新 · 交互式手册',mi_h:'交互式手册',mi_p:'点击 FM-1 上的任意控件，查看它单独、按住和组合时的作用，并配有固件的真实画面。搜索每条命令，跟着分步教程操作，了解各版本的新内容（西班牙文 / 英文）。',mi_go:'打开手册 →',
     m1_h:'用户手册（英文）',m1_p:'所有页面、层和引擎，英文版。',m2_h:'用户手册（西班牙文）',m2_p:'同一本手册，西班牙文版。',m3_h:'控制速查表',m3_p:'按键、层与组合键，一页看完。',m4_h:'音色速查表',m4_p:'引擎、滤波器、包络与效果器，一页看完。',
     n_eb:'即将推出',n_h2:'未来更新',n_in:'实验室里正在开发和测试的内容。上线时间取决于在真实 FM-1 上的测试。',
-    r1:'分轨 + 你的声音（STEMS+IN）',r2:'Android 应用：录制与编辑分轨',r3:'应用内的实时视觉',r4:'FX 总线 A–D，按音轨路由',r5:'JIANT 移植到 SMK',r_test:'测试中',r_test2:'已发布 · 1.0',r_lab:'实验室中',r_lab2:'实验室中',r_plan:'计划中',r_more:'更多来自社区的想法',
+    r1:'分轨 + 你的声音（STEMS+IN）',r2:'独立产品，即将推出',r3:'实时视觉',r4:'FX 总线 A–D，按音轨路由',r5:'JIANT 移植到 SMK',r_test:'测试中',r_test2:'已发布 · 1.0',r_lab:'实验室中',r_lab2:'实验室中',r_plan:'计划中',r_more:'更多来自社区的想法',
     e_k:'抢先体验',e_h3:'支持者最先玩到每个新版本',e_p1:'在 Ko-fi 或 Cafecito 支持 JIANT 的朋友，会在公开发布前拿到新版本，并一起决定接下来做什么。',e_go:'在 Ko-fi 加入',
     sup_eb:'支持',sup_h2:'JIANT 是免费的。如果它陪你做音乐，请我喝杯咖啡吧。',sup_in:'JIANT 由 Juan Jiant 制作，他是来自布宜诺斯艾利斯的壁画家和视觉艺术家。每一份支持都用于开发时间，让固件对所有人保持免费。',
     k_z:'全球 · 美元',k_p:'任何国家都可以用银行卡或 PayPal 支持。一次性或按月，并可抢先体验新版本。',c_z:'阿根廷 · 比索',cf_p:'在阿根廷用比索支持，可用 Mercado Pago 或银行卡。',
@@ -652,7 +652,7 @@ const energy=(k,t)=>reduce?.35:Math.exp(-(((t/BEAT)*DIV[k%9]/4)%1)*5);
     c_o:'神経系',c_h:'64 ステップのシーケンサー',c_p:'トラックごとのピアノロール、コード、確率、ラチェット、追加のプレイヘッド、1/64 ステップ単位でグリッドを外せる録音、そして数小節ごとに音とパターンを変える MUTATE。',
     d_o:'膜',d_h:'エフェクトとマスター',d_p:'ディレイ、5 種類のリバーブ（SHIMMER、RESO、CLOUD…）、コーラス、スライサー、ライブのパンチインエフェクト、ミックス全体にかかる DJ フィルター、リミッター・クリップ・パンチ付きのマスター。',
     e_o:'記憶',e_h:'ソングとジェネレーター',e_p:'プロジェクトごとに 4 つのセクション、それをつなぐ ARRANGE ページ、そして曲のアイデアを丸ごと書くジェネレーター：ジャンルから、または EXPLORE ですべてのルールを破って。',
-    f_o:'根',f_h:'USB オーディオと MIDI',f_p:'FM-1 がタイミングの正確なオーディオインターフェースに。各トラックを別々のチャンネルで DAW へ（STEMS）、または Android アプリ JIANT Stems でスマホへ。USB、Bluetooth、TRS の MIDI に対応。',f_go:'JIANT Stems Android 版：近日公開',
+    f_o:'根',f_h:'USB オーディオと MIDI',f_p:'FM-1 がタイミングの正確なオーディオインターフェースに。各トラックを別々のチャンネルで DAW へ（STEMS）。パートごとに別々に録音できます。USB、Bluetooth、TRS の MIDI に対応。',f_go:'別製品：近日公開',
     nv_eb:'迷わない',nv_h2:'6 つのルール、1 枚の地図',nv_in:'0.9.2 から、どのセクションも同じ操作です。6 つのルールを一度覚えれば、シンセ全体がわかります。地図は各ボタンのグループとページを SELECT がたどる順に示し、3 つのスキン（COLORS、BOTTOM、HUD）すべてで同じです。',nv_cap:'ナビゲーションマップ · クリックで拡大（SVG、ズーム可）',
     nv1_o:'SELECT',nv1_h:'SELECT でページをめくる',nv1_p:'セクションごとに 1 本のページの鎖。1 クリックで 1 ページ、最初と最後のページで止まります。',
     nv2_o:'ボタン',nv2_h:'ボタン：入る、または進む',nv2_p:'別のセクションからは、前回いたページへ。中にいれば、次のグループの最初のページへ（一巡します）。',
@@ -664,7 +664,7 @@ const energy=(k,t)=>reduce?.35:Math.exp(-(((t/BEAT)*DIV[k%9]/4)%1)*5);
     mi_k:'新着 · インタラクティブマニュアル',mi_h:'インタラクティブマニュアル',mi_p:'FM-1 のどの操作子でも触れると、単独・長押し・組み合わせで何をするかが、ファームウェアの実際の画面とともにわかります。すべてのコマンドを検索し、手順どおりのレシピや新機能も確認できます（スペイン語 / 英語）。',mi_go:'マニュアルを開く →',
     m1_h:'ユーザーマニュアル（英語）',m1_p:'すべてのページ、レイヤー、エンジンを英語で。',m2_h:'ユーザーマニュアル（スペイン語）',m2_p:'同じマニュアルのスペイン語版。',m3_h:'操作チートシート',m3_p:'ボタン、レイヤー、組み合わせを 1 ページに。',m4_h:'サウンドチートシート',m4_p:'エンジン、フィルター、エンベロープ、エフェクトを 1 ページに。',
     n_eb:'次に来るもの',n_h2:'今後のアップデート',n_in:'いまラボで作り、テストしているもの。時期は実機 FM-1 でのテスト次第です。',
-    r1:'ステム + あなたの声（STEMS+IN）',r2:'Android アプリ：ステムの録音と編集',r3:'アプリのライブビジュアル',r4:'FX バス A–D、トラックごとにルーティング',r5:'SMK への JIANT 移植',r_test:'テスト中',r_test2:'公開中 · 1.0',r_lab:'ラボで開発中',r_lab2:'ラボで開発中',r_plan:'予定',r_more:'コミュニティからのアイデア',
+    r1:'ステム + あなたの声（STEMS+IN）',r2:'別製品、近日公開',r3:'ライブビジュアル',r4:'FX バス A–D、トラックごとにルーティング',r5:'SMK への JIANT 移植',r_test:'テスト中',r_test2:'公開中 · 1.0',r_lab:'ラボで開発中',r_lab2:'ラボで開発中',r_plan:'予定',r_more:'コミュニティからのアイデア',
     e_k:'先行アクセス',e_h3:'サポーターは新バージョンをいちばん先に',e_p1:'Ko-fi や Cafecito で JIANT を支援してくれた方は、公開前に新バージョンを受け取り、次に作るものを一緒に決められます。',e_go:'Ko-fi で参加する',
     sup_eb:'支援',sup_h2:'JIANT は無料です。音楽づくりの役に立ったら、コーヒーを一杯おごってください。',sup_in:'JIANT を作っているのは、ブエノスアイレスの壁画家でビジュアルアーティストの Juan Jiant です。支援は開発の時間にあてられ、ファームウェアを誰にでも無料のままにします。',
     k_z:'世界 · usd',k_p:'どの国からでも、カードまたは PayPal で。1 回でも毎月でも、新バージョンへの先行アクセス付き。',c_z:'アルゼンチン · ars',cf_p:'アルゼンチンからペソで、Mercado Pago またはカードで。',

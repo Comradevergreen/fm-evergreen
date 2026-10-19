@@ -2238,8 +2238,8 @@ Dos maneras de sacar cada pista por separado, para procesarlas de a una en un DA
   y se frenaba, el anillo del FM-1 se llenaba y se perdían bloques enteros de 32 frames, unas cien veces por segundo, en
   todos los canales a la vez: clics y un sonido entrecortado, "separado por IA", en cada stem (los modos de mezcla estéreo
   no tenían el problema). Ahora son 736 bytes; además el anillo guarda un milisegundo más en STEMS y STEMS+IN, y un frame
-  repetido tras un faltante se recupera repartido en un paquete en vez de saltearse. **Actualizá el FM-1 y la app (JIANT
-  Stems 1.1) y volvé a grabar**: una toma hecha con la 0.9.7 no se puede arreglar después. **0.9.10:** STEMS+IN (y STEMS,
+  repetido tras un faltante se recupera repartido en un paquete en vez de saltearse. **Actualizá el FM-1 y volvé a
+  grabar**: una toma hecha con la 0.9.7 no se puede arreglar después. **0.9.10:** STEMS+IN (y STEMS,
   más rara vez) todavía perdía bloques, en ráfagas varias veces por segundo en todos los canales (un glitch rítmico),
   porque el siguiente paquete USB se preparaba tarde después de que salía el anterior; ahora sale a tiempo. Las tomas
   grabadas antes no se pueden arreglar: volvé a grabarlas. Una pista que pasa por el
