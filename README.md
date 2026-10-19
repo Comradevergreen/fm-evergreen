@@ -693,6 +693,9 @@ The idle floor.
   read 20 % at rest because 20 % was being spent; it was not overstated.
 - For the flash's room: PROFILE no longer has 0.9.14's "EXPLORE: DEVICE x" line and the "CPU TEST: SEE ABOUT"
   message is gone; the CPU TEST line on ABOUT and on PROFILE stays.
+- **The screen's small and medium text at two sub-pixel phases** (were four; the large face has had two since 0.5):
+  12912 B of flash back (the image 571344 B, 12992 B free in the slot). A letter still sits within 1/4 px of its true
+  place and a gap between two neighbours within 1/2 px (S 0.43 px at worst, M 0.40); the drawing code is unchanged.
 
 ### v0.9.15
 The FX layer, reworked.
