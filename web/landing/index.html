@@ -123,13 +123,7 @@ h2{font:400 clamp(24px,3.4vw,36px)/1.2 var(--display);letter-spacing:.01em;margi
 /* what's inside: the eight species, then six organs */
 .species{--bc:var(--violet);padding:20px 20px 14px;margin-bottom:14px}
 .species .k{font:500 10px/1.4 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--violet);margin:0 0 6px}
-.zoo{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
-.sp{margin:0;min-width:0}
-.sp canvas{display:block;width:100%;aspect-ratio:4/3;background:#000;border:1px solid var(--rule);border-radius:6px}
-.sp figcaption{display:flex;justify-content:space-between;gap:8px;margin-top:6px;font:500 10px/1.4 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
-.sp figcaption b{color:var(--line);font-weight:500;white-space:nowrap}
-.sp figcaption span{text-align:right}
-.org .scr{display:block;width:120px;height:120px;image-rendering:pixelated;border-radius:6px;border:1px solid var(--rule);margin:2px 0 4px}
+#zoo{display:block;width:100%;max-width:100%;height:auto;aspect-ratio:9/2.1}
 .organs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
 .org{padding:20px;display:flex;flex-direction:column;gap:8px;min-width:0}
 .org .hd{display:flex;align-items:center;gap:10px;font:500 10px/1.4 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
@@ -206,11 +200,10 @@ footer .tm{flex-basis:100%;letter-spacing:0}
   .hero,.next{grid-template-columns:minmax(0,1fr)}
   .steps,.organs,.docs{grid-template-columns:repeat(2,minmax(0,1fr))}
   .step:nth-child(3){grid-column:1/-1}
+  #zoo{aspect-ratio:4/4.2}
 }
 @media (max-width:600px){
   .steps,.organs,.targets,.docs{grid-template-columns:minmax(0,1fr)}
-  .zoo{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .sp:last-child{grid-column:1/-1}.sp:last-child canvas{aspect-ratio:2/1}
   .wrap{gap:72px}
   .term{font-size:18px}
 }
@@ -293,29 +286,19 @@ footer .tm{flex-basis:100%;letter-spacing:0}
     <div class="head plate">
       <p class="eyebrow" data-i18n="i_eb">What's inside</p>
       <h2 data-i18n="i_h2">One organism, nine species</h2>
-      <p class="intro" data-i18n="i_in">Each engine draws its own creature, and it moves only with its sound: a cell, a colony, a snail, a vocal tract, a kit of little creatures that shout on every hit. On HOME every track is a being with a face, swelling and heating up with its own audio.</p>
+      <p class="intro" data-i18n="i_in">Each engine is a species, drawn by the firmware itself. On HOME every track is a creature of its engine's species: its shape comes from its knobs, and it swells and heats up with its own audio.</p>
     </div>
     <div class="species brk">
       <p class="k" data-i18n="zoo_k">The nine engines, as the FM-1 draws them</p>
-      <div class="zoo" id="zoo">
-        <figure class="sp"><canvas data-clip="analog" role="img" aria-label="ANALOG: a cell whose membrane is the waveform through the filter"></canvas><figcaption><b>ANALOG</b><span data-i18n="sp_analog">cell</span></figcaption></figure>
-        <figure class="sp"><canvas data-clip="fm6" role="img" aria-label="FM6: six operators as creatures wired as the algorithm"></canvas><figcaption><b>FM6</b><span data-i18n="sp_fm6">colony</span></figcaption></figure>
-        <figure class="sp"><canvas data-clip="phase" role="img" aria-label="PHASE: a snail whose shell chambers sit at the bent phase"></canvas><figcaption><b>PHASE</b><span data-i18n="sp_phase">snail</span></figcaption></figure>
-        <figure class="sp"><canvas data-clip="lofi" role="img" aria-label="LOFI: a caterpillar whose skins are the last samples out"></canvas><figcaption><b>LOFI</b><span data-i18n="sp_lofi">circuit organism</span></figcaption></figure>
-        <figure class="sp"><canvas data-clip="voice" role="img" aria-label="VOICE: the vocal tract singing, tongue, jaw and lips"></canvas><figcaption><b>VOICE</b><span data-i18n="sp_voice">living vocal tract</span></figcaption></figure>
-        <figure class="sp"><canvas data-clip="wheel" role="img" aria-label="WHEEL: nine tube worms, one a drawbar"></canvas><figcaption><b>WHEEL</b><span data-i18n="sp_wheel">tube worms</span></figcaption></figure>
-        <figure class="sp"><canvas data-clip="noise" role="img" aria-label="NOISE: a swarm round a queen with a face"></canvas><figcaption><b>NOISE</b><span data-i18n="sp_noise">swarm</span></figcaption></figure>
-        <figure class="sp"><canvas data-clip="drumx" role="img" aria-label="DRUM-X: the kit as creatures that squash and shout on each hit"></canvas><figcaption><b>DRUM-X</b><span data-i18n="sp_drumx">the kit's creatures</span></figcaption></figure>
-        <figure class="sp"><canvas data-clip="animal" role="img" aria-label="ANIMAL: between a bird, an insect and a mammal"></canvas><figcaption><b>ANIMAL</b><span data-i18n="sp_animal">bird · insect · mammal</span></figcaption></figure>
-      </div>
+      <canvas id="zoo" role="img" aria-label="The nine species: ANALOG radiolarian, FM6 pollen grain, PHASE amoeba, LOFI diatom, VOICE hydra, WHEEL ciliate, NOISE spore, DRUM-X colony, ANIMAL larva"></canvas>
     </div>
     <div class="organs">
-      <div class="org brk"><div class="hd"><span class="circ">A</span><span data-i18n="a_o">engines</span></div><img class="scr" src="manual/shots/edit_analog.png" width="240" height="240" loading="lazy" alt="ANALOG on EDIT: its cell and the scope"><h3 data-i18n="a_h">9 synthesis engines</h3><p data-i18n="a_p">ANALOG, FM6 (six operators, 32 algorithms, DX7 banks), PHASE, LOFI, VOICE (it sings words in Spanish, English and Japanese), WHEEL, NOISE, ANIMAL (birds, insects and frogs from physical models) and DRUM-X. No samples: everything is synthesized.</p></div>
-      <div class="org brk"><div class="hd"><span class="circ">B</span><span data-i18n="b_o">heart</span></div><img class="scr" src="manual/shots/drumx.png" width="240" height="240" loading="lazy" alt="EDIT > KIT: the DRUM-X kit"><h3 data-i18n="b_h">DRUM-X</h3><p data-i18n="b_p">A drum kit of eight synthesized sounds, each with two sides: MORPH moves the whole kit from one to the other, live. In every octave the same keys: ratchets above, short, ghost and flam hits below.</p></div>
-      <div class="org brk"><div class="hd"><span class="circ">C</span><span data-i18n="c_o">nervous system</span></div><img class="scr" src="manual/shots/seq_bar.png" width="240" height="240" loading="lazy" alt="SEQ > BAR: the steps and the playheads"><h3 data-i18n="c_h">64-step sequencer</h3><p data-i18n="c_p">A piano roll per track, chords, probability, ratchets, extra playheads, recording off the grid to a 64th of a step, and MUTATE, which transforms sound and pattern every few bars.</p></div>
-      <div class="org brk"><div class="hd"><span class="circ">D</span><span data-i18n="d_o">membrane</span></div><img class="scr" src="manual/shots/fx_effect_reverb.png" width="240" height="240" loading="lazy" alt="FX > REVERB"><h3 data-i18n="d_h">Effects and master</h3><p data-i18n="d_p">Delay, five reverbs (SHIMMER, RESO, CLOUD…), chorus, slicer, live punch-in effects, a DJ filter on the whole mix and a master with limiter, clip and punch.</p></div>
-      <div class="org brk"><div class="hd"><span class="circ">E</span><span data-i18n="e_o">memory</span></div><img class="scr" src="manual/shots/gen.png" width="240" height="240" loading="lazy" alt="HOME > GEN: the generator"><h3 data-i18n="e_h">Songs and the generator</h3><p data-i18n="e_p">Four sections per project, an ARRANGE page to chain them, and a generator that writes a whole song idea: from a genre, or in EXPLORE, breaking every rule.</p></div>
-      <div class="org brk"><div class="hd"><span class="circ">F</span><span data-i18n="f_o">roots</span></div><img class="scr" src="manual/shots/global.png" width="240" height="240" loading="lazy" alt="GLO > GLOBAL: the clock, INT USB TRS"><h3 data-i18n="f_h">USB audio and MIDI</h3><p data-i18n="f_p">The FM-1 becomes an audio interface that keeps its time: every track on its own channel into your DAW (STEMS), ready to record each part on its own. MIDI over USB, Bluetooth and TRS.</p><span class="go" data-i18n="f_go">A separate product: coming soon</span></div>
+      <div class="org brk"><div class="hd"><span class="circ">A</span><span data-i18n="a_o">engines</span></div><h3 data-i18n="a_h">9 synthesis engines</h3><p data-i18n="a_p">ANALOG, FM6 (six operators, 32 algorithms, DX7 banks), PHASE, LOFI, VOICE (it sings words in Spanish, English and Japanese), WHEEL, NOISE, ANIMAL (birds, insects and frogs from physical models) and DRUM-X. No samples: everything is synthesized.</p></div>
+      <div class="org brk"><div class="hd"><span class="circ">B</span><span data-i18n="b_o">heart</span></div><h3 data-i18n="b_h">DRUM-X</h3><p data-i18n="b_p">A drum kit of eight synthesized sounds, each with two sides: MORPH moves the whole kit from one to the other, live. In every octave the same keys: ratchets above, short, ghost and flam hits below.</p></div>
+      <div class="org brk"><div class="hd"><span class="circ">C</span><span data-i18n="c_o">nervous system</span></div><h3 data-i18n="c_h">64-step sequencer</h3><p data-i18n="c_p">A piano roll per track, chords, probability, ratchets, extra playheads, recording off the grid to a 64th of a step, and MUTATE, which transforms sound and pattern every few bars.</p></div>
+      <div class="org brk"><div class="hd"><span class="circ">D</span><span data-i18n="d_o">membrane</span></div><h3 data-i18n="d_h">Effects and master</h3><p data-i18n="d_p">Delay, five reverbs (SHIMMER, RESO, CLOUD…), chorus, slicer, live punch-in effects, a DJ filter on the whole mix and a master with limiter, clip and punch.</p></div>
+      <div class="org brk"><div class="hd"><span class="circ">E</span><span data-i18n="e_o">memory</span></div><h3 data-i18n="e_h">Songs and the generator</h3><p data-i18n="e_p">Four sections per project, an ARRANGE page to chain them, and a generator that writes a whole song idea: from a genre, or in EXPLORE, breaking every rule.</p></div>
+      <div class="org brk"><div class="hd"><span class="circ">F</span><span data-i18n="f_o">roots</span></div><h3 data-i18n="f_h">USB audio and MIDI</h3><p data-i18n="f_p">The FM-1 becomes an audio interface that keeps its time: every track on its own channel into your DAW (STEMS), ready to record each part on its own. MIDI over USB, Bluetooth and TRS.</p><span class="go" data-i18n="f_go">A separate product: coming soon</span></div>
     </div>
   </section>
 
@@ -436,137 +419,68 @@ footer .tm{flex-basis:100%;letter-spacing:0}
 </div>
 
 <script>
-/* (0.9.12) the firmware's own animations. Two kinds:
-   - recorded: each engine's creature (firmware/src/ui_engvis.c, as HOME's BEING shows it) and HOME's ECO, drawn by
-     the firmware's own code on the host and recorded line by line (tools/landing_anim: one bar at 118 BPM, its
-     notes on the touch keys), played back here on a canvas at any size (anim/<clip>.js, loaded when seen);
-   - ported: the background's beings, HOME's "Hoy con carita" (ui_lzhome.c eco_being, ui_being.c bg_outline): three
-     isotherms in the JIANT ramp by their level, the species' spikes, a face that shuts its eyes on a hit.
-   One clock (the demo's 118 BPM), one loop; what is off screen, or a hidden tab, does not draw; reduced motion: a still */
+/* the firmware's creatures (firmware/src/ui_being.c, as tools/video/beings.js ports it): a species per engine, its
+   isotherms in the heat ramp, spikes, lobes, nuclei; excited by its energy */
 (function(){
 const reduce=!!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
 const TAU=Math.PI*2,clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-const BAR=60/118*4,BEAT=BAR/4,STILL=BAR*0.06;
-function fit(c){const r=c.getBoundingClientRect(),d=Math.min(window.devicePixelRatio||1,2),w=Math.max(1,Math.round(r.width*d)),h=Math.max(1,Math.round(r.height*d));
-  if(c.width!==w||c.height!==h){c.width=w;c.height=h;}const x=c.getContext('2d');x.setTransform(d,0,0,d,0,0);return{w:r.width,h:r.height,x:x};}
-/* the loop: each canvas draws only while it is on screen */
-const items=[];let raf=0;
-function kick(){if(reduce){items.forEach(it=>it.fn(STILL));return;}if(!raf&&!document.hidden)raf=requestAnimationFrame(run);}
-function run(ms){raf=0;let any=0;const t=ms/1000;for(const it of items)if(it.on){it.fn(t);any=1;}if(any&&!document.hidden)raf=requestAnimationFrame(run);}
-function add(el,fn,always){const it={el:el,fn:fn,on:!!always};items.push(it);
-  if(!always)new IntersectionObserver(es=>{it.on=es[0].isIntersecting;if(it.on)kick();},{rootMargin:'120px'}).observe(el);
-  requestAnimationFrame(()=>fn(reduce?STILL:performance.now()/1000));}
-document.addEventListener('visibilitychange',kick);
+const H=[[0,208,255],[90,60,255],[181,48,230],[247,40,49],[255,121,0],[255,212,0],[255,255,255]];
+function heat(v,a){v=clamp(v,0,256);const k=Math.min(5,Math.floor(v*6/257)),m=(v*6-k*256)/256,p=H[k],q=H[k+1];const c=p.map((x,j)=>Math.round(x+(q[j]-x)*m));return a!==undefined&&a<1?`rgba(${c},${a})`:`rgb(${c})`;}
+const G={lar:[14,8,7,6,26,1,9],rad:[6,18,16,3,22,0,6],amo:[3,5,14,2,26,3,2],dia:[4,6,10,4,18,0,1],cil:[10,30,8,5,20,1,10],spo:[5,9,12,3,19,2,4],pol:[8,12,12,6,17,0,8],hyd:[3,7,15,3,21,4,5],drm:[12,0,10,3,18,0,6]};
+const SP=[['ANALOG','RADIOLARIA',G.rad,{spikes:24,len:98,wob:66,lob:3,nuc:2,ripple:160}],['FM6','POLLEN',G.pol,{spikes:14,len:110,wob:80,lob:6,nuc:3,sep:90}],
+  ['PHASE','AMOEBA',G.amo,{spikes:5,len:140,wob:150,lob:2,nuc:1}],['LOFI','DIATOM',G.dia,{spikes:8,len:90,wob:50,lob:4,nuc:1}],
+  ['VOICE','HYDRA',G.hyd,{spikes:6,len:160,wob:90,lob:3,nuc:2,sep:120}],['WHEEL','CILIATE',G.cil,{spikes:30,len:80,wob:70,lob:5,nuc:1}],
+  ['NOISE','SPORE',G.spo,{spikes:16,len:70,wob:110,lob:5,nuc:1,ripple:120}],['DRUM-X','COLONY',G.drm,{spikes:12,len:120,wob:60,lob:3,nuc:1}],
+  ['ANIMAL','LARVA',G.lar,{spikes:28,len:64,wob:72,lob:6,nuc:1}]];
+const gen=a=>({ax:a[4],tw:a[5],sh:a[6]});
+function iso(g,f,cx,cy,r,outer,t,nv){const pts=[];for(let i=0;i<=nv;i++){const th=(i%nv)/nv*TAU;const w=0.28*Math.sin(f.lob*th+t)+0.12*Math.sin((f.lob+2)*th-2*t);let rr=r+(r*f.wob/256)*w;
+  if(outer){const c2=Math.sin(f.spikes*th/2+g.tw*3000/65536*TAU+Math.PI/2);rr+=(r*f.len/256)*(c2>0?Math.pow(c2,g.sh):0)*26/16;rr+=(r*(f.ripple||0)/256)*Math.sin(th*18+3*t)/14;}
+  pts.push([cx+rr*Math.cos(th)*g.ax/16,cy+rr*Math.sin(th)]);}return pts;}
+function creature(ctx,sp,cx,cy,r,en,t,alpha){
+  const g=gen(sp[2]),E=en*256,f=Object.assign({sep:0,ripple:0},sp[3]);const e=E*0.4;
+  f.wob=clamp(f.wob+e*3/4,0,256);f.len=clamp(f.len+e,0,420);f.ripple=clamp(f.ripple+e,0,256);
+  r+=r*E*30/65536;const SC=[256,180,112,52],HT=[28,90,150,206];ctx.save();ctx.globalAlpha=alpha===undefined?1:alpha;ctx.lineWidth=1;
+  SC.forEach((s,i)=>{const p=iso(g,f,cx,cy,r*s/256,!i,t,i?40:80);ctx.beginPath();p.forEach((q,j)=>j?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]));ctx.closePath();ctx.strokeStyle=heat(HT[i]+E*40/256);ctx.stroke();});
+  for(let n=0;n<f.nuc;n++){const a=t+n*TAU/f.nuc,d=f.nuc>1?r*(24+f.sep*40/256)/100:0,x=cx+d*Math.cos(a)*g.ax/16,y=cy+d*Math.sin(a)*0.7;
+    ctx.strokeStyle=heat(214+E*42/256);ctx.beginPath();ctx.arc(x,y,Math.max(.5,r*.15),0,TAU);ctx.stroke();ctx.strokeStyle=heat(240);ctx.beginPath();ctx.arc(x,y,Math.max(.5,r*.06),0,TAU);ctx.stroke();}
+  ctx.restore();}
+function fit(c){const r=c.getBoundingClientRect(),d=Math.min(window.devicePixelRatio||1,2);c.width=Math.max(1,Math.round(r.width*d));c.height=Math.max(1,Math.round(r.height*d));const x=c.getContext('2d');x.setTransform(d,0,0,d,0,0);return{w:r.width,h:r.height,x:x};}
+function loop(fn){if(reduce){requestAnimationFrame(()=>fn(4000));return;}const f=ms=>{fn(ms);requestAnimationFrame(f);};requestAnimationFrame(f);}
+/* a beat for each creature to swell with (118 BPM, each track its own division) */
+const BEAT=60/118,DIV=[1,2,4,3,8,6,2,1,3];
+const energy=(k,t)=>reduce?.35:Math.exp(-(((t/BEAT)*DIV[k%9]/4)%1)*5);
 
-/* ---- the recorded clips (tools/landing_anim/pack.py's format) ---- */
-const CLIP={};window.JA_ANIM=window.JA_ANIM||{};
-function need(name){
-  if(CLIP[name])return CLIP[name].ready?CLIP[name]:null;
-  CLIP[name]={ready:false};
-  const s=document.createElement('script');s.src='anim/'+name+'.js';s.async=true;
-  s.onload=()=>{try{decode(name);}catch(e){}kick();};document.head.appendChild(s);return null;}
-function decode(name){
-  const A=window.JA_ANIM[name],b=atob(A.d),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);
-  let p=0;const rd=()=>{let v=0,s=0,c;do{c=u[p++];v+=(c&127)*Math.pow(2,s);s+=7;}while(c&128);return v%2?-(v+1)/2:v/2;};
-  const st=A.st.map(k=>({c:A.pal[k>>4],a:((k&15)+1)/16})),frames=[];
-  for(let f=0;f<A.n+A.xf;f++){const ops=[],n=rd();
-    for(let k=0;k<n;k++){const t=rd();
-      if(t===0){const s=rd(),m=rd(),pt=new Float32Array(m*2);let x=rd(),y=rd();pt[0]=x;pt[1]=y;for(let i=1;i<m;i++){x+=rd();y+=rd();pt[2*i]=x;pt[2*i+1]=y;}ops.push([0,st[s],pt]);}
-      else if(t===1)ops.push([1,st[rd()],rd(),rd(),rd()]);
-      else if(t===2)ops.push([2,A.pal[rd()],rd(),rd(),rd()]);
-      else if(t===3)ops.push([3,A.pal[rd()],rd(),rd(),rd(),rd()]);
-      else ops.push([4,rd(),A.pal[rd()],rd(),rd(),A.s[rd()]]);}
-    frames.push(ops);}
-  CLIP[name]={ready:true,w:A.w,h:A.h,bb:A.bb||[0,0,A.w,A.h],n:A.n,xf:A.xf,frames:frames};}
-/* the FM-1's 5 x 7 face (tools/gen_px_font.py AF_X), the figures and capitals the clips write */
-const F57={};'#0a0a1f0a1f0a0a|%18190204081303|+0004041f040400|-0000000e000000|.00000000000c0c|/00010204081000|00e11131519110e|1040c040404040e|20e11010204081f|31f02040201110e|402060a121f0202|51f101e0101110e|60608101e11110e|71f010204080808|80e11110e11110e|90e11110f01020c|:000c0c000c0c00|A0e1111111f1111|B1e11111e11111e|C0e11101010110e|D1c12111111121c|E1f10101e10101f|F1f10101e101010|G0e11101711110f|H1111111f111111|I0e04040404040e|J0702020202120c|K11121418141211|L1010101010101f|M111b1515111111|N11111915131111|O0e11111111110e|P1e11111e101010|Q0e11111115120d|R1e11111e141211|S0f10100e01011e|T1f040404040404|U1111111111110e|V11111111110a04|W1111111515150a|X11110a040a1111|Y1111110a040404|Z1f01020408101f'
-  .split('|').forEach(g=>{F57[g[0]]=[];for(let i=1;i<g.length;i+=2)F57[g[0]].push(parseInt(g.substr(i,2),16));});
-function frame(x,ops,ox,oy,sc,al,lw){
-  x.lineWidth=lw;x.lineJoin='round';x.lineCap='round';
-  for(const o of ops){const t=o[0];
-    if(t===0){const s=o[1],p=o[2],q=sc/4;x.globalAlpha=al*s.a;x.strokeStyle=s.c;x.beginPath();x.moveTo(ox+p[0]*q,oy+p[1]*q);for(let i=2;i<p.length;i+=2)x.lineTo(ox+p[i]*q,oy+p[i+1]*q);x.stroke();}
-    else if(t===1){x.globalAlpha=al*o[1].a;x.fillStyle=o[1].c;x.fillRect(ox+o[2]*sc,oy+o[3]*sc,o[4]*sc,o[4]*sc);}
-    else if(t===2){x.globalAlpha=al;x.fillStyle=o[1];x.beginPath();x.arc(ox+o[2]*sc/4,oy+o[3]*sc/4,(o[4]+.5)*sc,0,TAU);x.fill();}
-    else if(t===3){x.globalAlpha=al;x.fillStyle=o[1];x.fillRect(ox+o[2]*sc,oy+o[3]*sc,o[4]*sc,o[5]*sc);}
-    else{x.globalAlpha=al;x.fillStyle=o[2];
-      if(o[1]===0){let px=o[3];for(const ch of o[5]){const g=F57[ch];if(g)g.forEach((r,j)=>{for(let b=0;b<5;b++)if(r&(16>>b))x.fillRect(ox+(px+b)*sc,oy+(o[4]+1+j)*sc,sc,sc);});px+=6;}}
-      else{x.font='500 '+(11*sc)+'px "IBM Plex Mono",monospace';x.textBaseline='top';x.textAlign='left';x.fillText(o[5],ox+o[3]*sc,oy+(o[4]+1)*sc);}}}
-  x.globalAlpha=1;}
-/* clip name at time t (the bar's frame; its first frames crossfaded from the bar after it: the loop closes) */
-function play(x,name,t,ox,oy,sc,al,lw){
-  const C=need(name);if(!C)return false;
-  const ph=((t/BAR)%1+1)%1,fi=reduce?C.xf+1:Math.min(C.n-1,Math.floor(ph*C.n));   /* (a still: the first frame clear of the crossfade) */
-  if(fi<C.xf){const k=(fi+1)/(C.xf+1);frame(x,C.frames[C.n+fi],ox,oy,sc,al*(1-k),lw);frame(x,C.frames[fi],ox,oy,sc,al*k,lw);}
-  else frame(x,C.frames[fi],ox,oy,sc,al,lw);
-  return true;}
-window.JA_PLAY=play;
-
-/* ---- HOME's being, "Hoy con carita" (ui_lzhome.c eco_being, eco_face; ui_being.c bg_outline, bg_excite) ---- */
-const VK_HP=[0,26,51,82,118,154,200,255],VK_HC=[0x13D4,0x2DFC,0x4B5F,0x8B7F,0xFA49,0xFC43,0xFE87,0xFFFF].map(c=>[(c>>11&31)*255/31,(c>>5&63)*255/63,(c&31)*255/31]);
-function vk(h){h=clamp(h,0,255);let k=0;while(k<6&&h>VK_HP[k+1])k++;const m=(h-VK_HP[k])/(VK_HP[k+1]-VK_HP[k]),a=VK_HC[k],b=VK_HC[k+1];return 'rgb('+a.map((v,j)=>Math.round(v+(b[j]-v)*m))+')';}
-/* the genomes (k0 kk ss lob ax tw sh) and the species per engine (ui_being.c GENOME, EGEN; a DRUM-X track LANE_G_HOME) */
-const GEN=[[6,18,16,3,22,0,6],[3,5,14,2,26,3,2],[4,6,10,4,18,0,1],[10,30,8,5,20,1,10],[5,9,12,3,19,2,4],[2,4,16,2,30,1,3],[8,12,12,6,17,0,8],[3,7,15,3,21,4,5],[14,8,7,6,26,1,9]];
-const LANE_HOME=[12,0,10,3,18,0,6],EGEN=[0,5,1,2,5,7,5,3,5,5,0,4,6,5,8];
-const bs=a=>Math.sin(a/65536*TAU);
-function outline(x,g,f,cx,cy,r,outer,t,col,nv){
-  x.beginPath();
-  for(let i=0;i<=nv;i++){const th=(i%nv)*65536/nv;
-    let rr=r+(r*f.wob/256)*(.28*bs(f.lob*th+t)+.12*bs((f.lob+2)*th-2*t));
-    if(outer){const c2=bs(f.spikes*th/2+g[5]*3000+0x4000);const p=c2>0?Math.pow(c2,g[6]):0;
-      rr+=(r*f.len/256)*p*26/16+(r*f.ripple/256)*bs(th*18+3*t)/14;
-      if(f.fray)rr+=(((Math.imul(i,2654435761)+Math.imul(t|0,40503))>>>24)-128)*(r*f.fray/256)/1800;}
-    const X=cx+rr*bs(th+0x4000)*g[4]/16,Y=cy+rr*bs(th);i?x.lineTo(X,Y):x.moveTo(X,Y);}
-  x.strokeStyle=col;x.stroke();}
-function face(x,cx,cy,r,k,e,shut){
-  const rk=r*k/256,s=rk>=19?3:2,ex=Math.max(2.5,rk*77/256),ey=cy-rk*31/256,ec=vk(248);x.fillStyle=ec;
-  for(let d=-1;d<=1;d+=2){const X=Math.round(cx+d*ex),Y=Math.round(ey);shut?x.fillRect(X-(s+1)/2,Y,s+1,1):x.fillRect(X-s/2,Y-s/2,s,s);}
-  const my=ey+Math.max(rk*92/256,3.5),mo=Math.min(e*333/256,256)*(rk*97/256)/256;
-  if(mo>1.3){x.strokeStyle=vk(200);x.beginPath();x.ellipse(cx,my+mo/2-.5,Math.max(rk*26/256+mo*72/256,1.5),Math.max(mo/2,.6),0,0,TAU);x.stroke();}
-  else{const w=Math.max(1,Math.round(rk*31/256));x.fillStyle=vk(200);x.fillRect(Math.round(cx)-w,Math.round(my),2*w+1,1);}}
-/* a track's being at (cx, cy) px, radius rq px, level en (0..256), its time t, the engine e, a hit just now (its eyes shut) */
-function being(x,e,cx,cy,rq,en,t,shut,lw){
-  const g=e===10?LANE_HOME:GEN[EGEN[e]],f={spikes:g[0]+g[1]/2,len:152,wob:148,lob:g[3],ripple:0,fray:0};
-  f.wob=clamp(f.wob+en,0,256);f.len=clamp(f.len+en*4/3,0,420);f.ripple=clamp(f.ripple+en*4/3,0,256);f.fray=clamp(f.fray+en*2/3,0,256);
-  const rr=rq+rq*en*30/65536,h=23+en*118/256,sp=38+en*13/256;x.lineWidth=lw||1;
-  [256,179,113].forEach((s,i)=>outline(x,g,f,cx,cy,rr*s/256,!i,t,vk(h+i*sp),i?40:96));
-  face(x,cx,cy,rr,159,en,shut);}
-/* the demo's levels: each being its own division of the bar */
-const DIV=[1,2,4,3,8,6,2,1,3];
-const lev=(k,t)=>{const ph=((t/BEAT)*DIV[k%9]/4)%1;return{en:reduce?90:Math.round(256*Math.exp(-ph*5)),hit:!reduce&&ph<.06};};
-
-/* the background: HOME's beings drifting, slow, far */
+/* the background: the species drifting, slow, far */
 (function(){
   const c=document.getElementById('bg'),veil=document.getElementById('veil');let W,H,x,o=[],mx=0,my=0;
-  const ENG=[0,12,2,3,5,7,11,10,14];
   function init(){const f=fit(c);W=f.w;H=f.h;x=f.x;o=[];let s=7;const R=()=>{s=(s*16807)%2147483647;return s/2147483647;};
-    const n=Math.max(7,Math.min(16,Math.round(W*H/70000)));
-    for(let i=0;i<n;i++){const z=.45+R()*.8;o.push({k:i,e:ENG[i%ENG.length],x:R()*W,y:R()*H,r:(10+R()*20)*z,z:z,vx:(R()-.5)*.14*z,vy:(-.04-R()*.1)*z,ph:R()*9,tm:R()*65536});}}
+    const n=Math.max(8,Math.min(18,Math.round(W*H/60000)));
+    for(let i=0;i<n;i++){const z=.45+R()*.8;o.push({k:i%SP.length,x:R()*W,y:R()*H,r:(12+R()*26)*z,z:z,vx:(R()-.5)*.14*z,vy:(-.04-R()*.1)*z,ph:R()*9});}}
   addEventListener('pointermove',e=>{mx=e.clientX/W-.5;my=e.clientY/H-.5;},{passive:true});
-  let last=0;
-  function draw(t){const dt=Math.min(.1,Math.max(0,t-last));last=t;x.fillStyle='#050409';x.fillRect(0,0,W,H);
+  function frame(ms){const t=ms/1000;x.fillStyle='#050409';x.fillRect(0,0,W,H);
     x.strokeStyle='rgba(90,70,255,.18)';x.lineWidth=1;const gy=H*.7;
     for(let i=0;i<=12;i++){const y=gy+Math.pow(i/12,2)*(H-gy);x.beginPath();x.moveTo(0,y);x.lineTo(W,y);x.stroke();}
     for(let i=-14;i<=14;i++){x.beginPath();x.moveTo(W/2+i*18,gy);x.lineTo(W/2+i*W*.12,H);x.stroke();}
     for(const b of o){if(!reduce){b.x+=b.vx;b.y+=b.vy;const m=b.r*4;if(b.y<-m)b.y=H+m;if(b.x<-m)b.x=W+m;if(b.x>W+m)b.x=-m;}
-      const L=lev(b.k,t+b.ph);b.tm+=dt*66*(L.en>2?200+L.en*5:60);
-      x.globalAlpha=.35+b.z*.45;being(x,b.e,b.x-mx*30*b.z,b.y-my*30*b.z,b.r,L.en*.8,b.tm,L.hit&&L.en>77);x.globalAlpha=1;}
-    const v=clamp((window.scrollY-H*.45)/(H*.5),0,1);if(veil)veil.style.opacity=v.toFixed(3);}
-  init();addEventListener('resize',()=>{init();kick();});
-  if(reduce)addEventListener('scroll',()=>requestAnimationFrame(()=>draw(STILL)),{passive:true});
-  add(c,draw,true);
+      creature(x,SP[b.k],b.x-mx*30*b.z,b.y-my*30*b.z,b.r,energy(b.k,t+b.ph)*.8,t*.8+b.ph,.35+b.z*.45);}
+    const v=clamp((window.scrollY-H*.45)/(H*.5),0,1);if(veil)veil.style.opacity=v.toFixed(3);
+  }
+  init();addEventListener('resize',()=>{init();if(reduce)frame(4000);});
+  if(reduce)addEventListener('scroll',()=>requestAnimationFrame(()=>frame(4000)),{passive:true});
+  loop(frame);
 })();
 
 /* the FM-1 as it is, drawn on its own proportions (an 840 x 504 panel): MASTER, SELECT, PRESETS and ALGORITHM top
-   left over OCT- / OCT+, the small square screen with HOME's ECO live on it (recorded from the firmware: the six
-   tracks' beings, a song playing), KNOB1..4 top right over the 2 x 6 buttons, and the touch keys below, 11 above
-   (OP1..OP6, PIT, GLO, MONO, POLY and one more) and 16 under them, F3..G5. The demo plays an arpeggio on them at
-   118 BPM and the keys it touches light orange */
+   left over OCT- / OCT+, the small square screen with HOME live on it, KNOB1..4 top right over the 2 x 6 buttons, and
+   the touch keys below, 11 above (OP1..OP6, PIT, GLO, MONO, POLY and one more) and 16 under them, F3..G5. The demo
+   plays an arpeggio on them at 118 BPM and the keys it touches light orange */
 (function(){
   const c=document.getElementById('fm1');let f=fit(c);addEventListener('resize',()=>{f=fit(c);});
   const MONO='"IBM Plex Mono",monospace';
   const KN=[['MASTER',67,80],['SELECT',157,80],['PRESETS',67,168],['ALGORITHM',157,168],
     ['KNOB1',473,80],['KNOB2',568,80],['KNOB3',663,80],['KNOB4',758,80]];
   const BT=[['FX','SEL','ENV','LFO','EDIT','GLO'],['HOME','SAVE','ARP','SEQ','PLAY','REC']],BX=[485,538,590,643,696,749],BY=[172,224];
+  const HOME=[0,1,2,4,6,7];   /* the six tracks' engines: ANALOG, FM6, PHASE, VOICE, NOISE, DRUM-X */
   /* the 27 keys by semitone from F3: 16 below (white), 11 above at the black keys' places */
   const UP=['OP1','OP2','OP3','OP4','OP5','OP6','PIT','GLO','MONO','POLY',''],KEYS=[];
   for(let n=0,w=0,b=0;n<27;n++){if([1,3,6,8,10].includes((n+5)%12))KEYS.push({n,up:1,x:64+(w-.5)*47.6,lab:UP[b++]});else KEYS.push({n,up:0,x:64+(w++)*47.6});}
@@ -591,7 +505,7 @@ const lev=(k,t)=>{const ph=((t/BEAT)*DIV[k%9]/4)%1;return{en:reduce?90:Math.roun
     if(lit){x.save();x.shadowColor='rgba(255,122,26,'+lit+')';x.shadowBlur=10;}
     rr(x,X-2.4,Y+bar0,4.8,bar1-bar0,2.4);x.fillStyle=lit?'rgb(255,'+Math.round(122+(1-lit)*40)+','+Math.round(26+(1-lit)*40)+')':'#ececea';x.fill();
     if(lit)x.restore();}
-  add(c,function(t){const w=f.w,h=f.h,x=f.x,s=w/840;
+  loop(function(ms){const t=ms/1000,w=f.w,h=f.h,x=f.x,s=w/840;
     x.clearRect(0,0,w,h);x.save();x.scale(s,s);
     /* the body: dark grey, rounded, lit from above */
     x.fillStyle='rgba(0,0,0,.5)';rr(x,2,5,836,498,40);x.fill();
@@ -599,7 +513,7 @@ const lev=(k,t)=>{const ph=((t/BEAT)*DIV[k%9]/4)%1;return{en:reduce?90:Math.roun
     rr(x,1,1,838,498,40);x.fillStyle=g;x.fill();x.strokeStyle='#18181a';x.lineWidth=1.5;x.stroke();
     rr(x,3,3,834,494,38);x.strokeStyle='rgba(255,255,255,.08)';x.lineWidth=1;x.stroke();
     /* knobs and their names */
-    KN.forEach(([n,X,Y],i)=>{const a=i<4?(reduce?0:t*.3)+i*1.3:Math.PI*.75+(.35+.25*Math.sin((reduce?0:t)*.7+i))*Math.PI*1.5;
+    KN.forEach(([n,X,Y],i)=>{const a=i<4?t*.3+i*1.3:Math.PI*.75+(.35+.25*Math.sin(t*.7+i))*Math.PI*1.5;
       knob(x,X,Y,a);label(x,n,X,Y-30,10.5);});
     well(x,44,214,134,43,8);
     [['OCT-',54],['OCT+',120]].forEach(([n,X])=>{button(x,X,222,54,28,6);label(x,n,X+27,240,9.5,'#f0f0ec');});
@@ -608,27 +522,27 @@ const lev=(k,t)=>{const ph=((t/BEAT)*DIV[k%9]/4)%1;return{en:reduce?90:Math.roun
       const col=n==='HOME'?'#ffe14d':n==='PLAY'&&!reduce?'#8be06a':n==='REC'?'#ff5446':'#f0f0ec';x.font='600 10px '+MONO;
       if(n==='PLAY'){label(x,'PLAY',X,Y-2,9.5,col);x.fillStyle=col;x.fillRect(X-12,Y+1,24,1);label(x,'STOP',X,Y+11,9.5,col);}else label(x,n,X,Y+3.5,10,col);}));
     x.fillStyle='#9a9a98';x.beginPath();x.arc(617,198,1.2,0,TAU);x.fill();
-    /* the screen: a thick black bezel, a small square LCD; HOME's ECO on it, as the firmware draws it */
+    /* the screen: a thick black bezel, a small square LCD, HOME on it */
     g=x.createLinearGradient(0,39,0,237);g.addColorStop(0,'#141415');g.addColorStop(1,'#070708');
     x.fillStyle='rgba(0,0,0,.45)';rr(x,216,41,199,198,22);x.fill();rr(x,216,39,199,198,22);x.fillStyle=g;x.fill();
     x.strokeStyle='rgba(255,255,255,.1)';x.lineWidth=1;x.stroke();
-    const LX=241,LY=63,LS=150;x.save();rr(x,LX,LY,LS,LS,2);x.clip();x.translate(LX,LY);x.scale(LS/240,LS/240);
-    x.fillStyle='#000';x.fillRect(0,0,240,240);
-    x.fillStyle='#ff7a1a';rr(x,4,4,16,16,3);x.fill();x.fillStyle='#000';x.font='600 12px '+MONO;x.textAlign='center';x.fillText('1',12,16.5);
-    x.fillStyle='#b870ff';x.textAlign='left';x.font='600 17px '+MONO;x.fillText('▶ 118',26,18);
-    x.fillStyle='#a39cba';x.font='500 9px '+MONO;x.fillText('T1 · ANALOG',96,16);
-    x.fillStyle='#b870ff';x.fillText('ECO',20,40);x.fillStyle='#6f6888';x.fillText('BEING',98,40);x.fillText('GEN',190,40);x.fillStyle='#b870ff';x.fillRect(20,44,22,1);
-    play(x,'eco',t,0,64,1,1,1.05);
-    x.fillStyle='#d9d4e6';x.font='500 9px '+MONO;x.textAlign='left';x.fillText('HOME · ECO · ECO',6,234);x.textAlign='right';x.fillText('1/7',234,234);
-    g=x.createLinearGradient(0,0,240,240);g.addColorStop(0,'rgba(255,255,255,.07)');g.addColorStop(.45,'rgba(255,255,255,.02)');g.addColorStop(.46,'rgba(255,255,255,0)');
-    x.fillStyle=g;x.fillRect(0,0,240,240);x.restore();
+    const LX=241,LY=63,LS=150;x.save();rr(x,LX,LY,LS,LS,2);x.clip();x.translate(LX,LY);x.scale(LS/380,LS/380);
+    const SS=380;x.fillStyle='#04030a';x.fillRect(0,0,SS,SS);
+    x.fillStyle='#ff7a1a';rr(x,12,12,36,36,6);x.fill();x.fillStyle='#04030a';x.font='600 27px '+MONO;x.textAlign='center';x.fillText('1',30,40);
+    x.fillStyle='#b870ff';x.textAlign='right';x.font='600 29px '+MONO;x.fillText('▶ 118',SS-14,40);
+    const cx=SS/2,cy=SS*.53,R=SS*.29;
+    HOME.forEach((k,i)=>{const a=i/6*TAU-Math.PI/2+t*.03,px=cx+Math.cos(a)*R+6*Math.sin(t*.3+i),py=cy+Math.sin(a)*R*.74+5*Math.sin(t*.27+i*2);
+      creature(x,SP[k],px,py,i===0?40:32,energy(i,t),t*.8+i*1.9,1);});
+    x.fillStyle='#a39cba';x.font='500 22px '+MONO;x.textAlign='left';x.fillText(SP[HOME[0]][0],14,SS-14);x.textAlign='right';x.fillText('HOME',SS-14,SS-14);
+    g=x.createLinearGradient(0,0,SS,SS);g.addColorStop(0,'rgba(255,255,255,.07)');g.addColorStop(.45,'rgba(255,255,255,.02)');g.addColorStop(.46,'rgba(255,255,255,0)');
+    x.fillStyle=g;x.fillRect(0,0,SS,SS);x.restore();
     rr(x,LX-.5,LY-.5,LS+1,LS+1,2.5);x.strokeStyle='#202022';x.lineWidth=1;x.stroke();
     /* the touch keys, in their recessed panel; the demo's arpeggio lights them */
     well(x,28,287,784,183,26);
     const lit=new Array(27).fill(0);
     if(reduce)[9,12,16,2].forEach(n=>lit[n]=1);
     else{const st=t/(BEAT/2),i=Math.floor(st),ph=st-i;lit[ARP[i%16]]=.55+.45*Math.exp(-ph*3);
-      const bs8=Math.floor(i/8),bp=(st-bs8*8)/8;lit[BASS[bs8%4]]=Math.max(lit[BASS[bs8%4]],.45+.55*Math.exp(-bp*3));}
+      const bs=Math.floor(i/8),bp=(st-bs*8)/8;lit[BASS[bs%4]]=Math.max(lit[BASS[bs%4]],.45+.55*Math.exp(-bp*3));}
     x.fillStyle='#9a9a98';[3,6,10,13].forEach(i=>{x.beginPath();x.arc(64+(i+.5)*47.6,379,1.3,0,TAU);x.fill();});
     KEYS.forEach(k=>{if(k.up)return;pill(x,k.x,382,43,77,16,61,lit[k.n]);});
     KEYS.forEach(k=>{if(!k.up)return;if(k.lab){pill(x,k.x,300,40,76,20,44,lit[k.n]);label(x,k.lab,k.x,61+300-5,8.5,'#e4e4e2');}else pill(x,k.x,300,40,76,15,62,lit[k.n]);});
@@ -636,13 +550,17 @@ const lev=(k,t)=>{const ph=((t/BEAT)*DIV[k%9]/4)%1;return{en:reduce?90:Math.roun
   });
 })();
 
-/* the nine engines, each its own creature as the firmware draws it (recorded: anim/<engine>.js) */
-document.querySelectorAll('.sp canvas[data-clip]').forEach(c=>{
-  const name=c.dataset.clip;let f=fit(c);addEventListener('resize',()=>{f=fit(c);});
-  add(c,function(t){const x=f.x,w=f.w,h=f.h,C=need(name);x.clearRect(0,0,w,h);if(!C)return;
-    const b=C.bb,bw=b[2]-b[0],bh=b[3]-b[1],sc=Math.min(w/bw,h/bh)*.92;   /* (its ink box over the whole bar, centred) */
-    play(x,name,t,(w-bw*sc)/2-b[0]*sc,(h-bh*sc)/2-b[1]*sc,sc,1,Math.max(1,sc*.85));});
-});
+/* the nine species in a row (two rows on narrow screens), each named with its engine */
+(function(){
+  const c=document.getElementById('zoo');let f=fit(c);addEventListener('resize',()=>{f=fit(c);});
+  loop(function(ms){const t=ms/1000,w=f.w,h=f.h,x=f.x,narrow=w<520,cols=narrow?5:9,rows=narrow?2:1,cw=w/cols,ch=h/rows;
+    x.clearRect(0,0,w,h);
+    SP.forEach((sp,k)=>{const col=k%cols,row=Math.floor(k/cols),cx=cw*(col+.5),cy=ch*row+ch*.42,r=Math.min(cw,ch)*.2;
+      creature(x,sp,cx,cy,r,energy(k,t),t*.8+k,1);
+      x.textAlign='center';x.fillStyle='#efe6c8';x.font='500 '+Math.max(10,Math.min(13,cw/8))+'px "IBM Plex Mono",monospace';x.fillText(sp[0],cx,ch*row+ch*.86);
+      x.fillStyle='#a39cba';x.font=Math.max(9,Math.min(11,cw/10))+'px "IBM Plex Mono",monospace';x.fillText(sp[1],cx,ch*row+ch*.97);});
+  });
+})();
 })();
 </script>
 <script>
@@ -656,7 +574,7 @@ document.querySelectorAll('.sp canvas[data-clip]').forEach(c=>{
     st2_h:'Instalalo en tu FM-1',st2_p:'Abrí el instalador en Chrome o Edge, conectá el FM-1 con un cable USB de datos, apretá Instalar y esperá sin desenchufar.',st2_a:'El instalador revisa tu FM-1 primero y guarda un backup',st2_b:'¿Venís de otro firmware custom? Volvé primero al oficial V15, con el botón del instalador',st2_go:'Abrir el instalador',
     st3_h:'Editá y hacé backup',st3_p:'El editor web muestra tus sonidos y ajustes en la pantalla de la compu mientras el FM-1 sigue sonando.',st3_a:'Mandá bancos DX7 a FM6, organizá presets',st3_b:'Backup de todos tus proyectos con un clic',st3_go:'Abrir el editor',
     need:'Necesitás: Chrome o Edge en una computadora (WebUSB y Web MIDI) · un cable USB que pase datos, no solo carga.',
-    i_eb:'Qué tiene adentro',i_h2:'Un organismo, nueve especies',i_in:'Cada motor dibuja su propia criatura, y se mueve solo con su sonido: una célula, una colonia, un caracol, un tracto vocal, un kit de bichos que gritan en cada golpe. En HOME cada pista es un ser con carita que se hincha y se calienta con su propio audio.',zoo_k:'Los nueve motores, como los dibuja el FM-1',sp_analog:'célula',sp_fm6:'colonia',sp_phase:'caracol',sp_lofi:'organismo de circuito',sp_voice:'tracto vivo',sp_wheel:'tubícolas',sp_noise:'enjambre',sp_drumx:'los bichos del kit',sp_animal:'pájaro · insecto · mamífero',
+    i_eb:'Qué tiene adentro',i_h2:'Un organismo, nueve especies',i_in:'Cada motor es una especie, dibujada por el propio firmware. En HOME cada pista es una criatura de la especie de su motor: su forma sale de sus perillas, y se hincha y se calienta con su propio audio.',zoo_k:'Los nueve motores, como los dibuja el FM-1',
     a_o:'motores',a_h:'9 motores de síntesis',a_p:'ANALOG, FM6 (seis operadores, 32 algoritmos, bancos DX7), PHASE, LOFI, VOICE (canta palabras en castellano, inglés y japonés), WHEEL, NOISE, ANIMAL (pájaros, insectos y ranas con modelos físicos) y DRUM-X. Sin samples: todo es síntesis.',
     b_o:'corazón',b_h:'DRUM-X',b_p:'Una batería de ocho sonidos sintetizados, cada uno con dos caras: MORPH lleva todo el kit de una a la otra, en vivo. En cada octava, las mismas teclas: ratchets arriba, golpes cortos, ghost y flam abajo.',
     c_o:'sistema nervioso',c_h:'Secuenciador de 64 pasos',c_p:'Un piano roll por pista, acordes, probabilidad, ratchets, cabezales extra, grabación fuera de la grilla hasta 1/64 de paso, y MUTATE, que transforma sonido y patrón cada tantos compases.',
@@ -692,7 +610,7 @@ document.querySelectorAll('.sp canvas[data-clip]').forEach(c=>{
     st2_h:'安装到你的 FM-1',st2_p:'用 Chrome 或 Edge 打开安装器，用可传输数据的 USB 线连接 FM-1，点击安装，等待完成，期间不要拔线。',st2_a:'安装器会先检查你的 FM-1 并保存备份',st2_b:'用过其他自制固件？请先用安装器的按钮恢复到官方 V15',st2_go:'打开安装器',
     st3_h:'编辑与备份',st3_p:'网页编辑器在电脑屏幕上显示你的音色和设置，FM-1 同时照常演奏。',st3_a:'把 DX7 音色库发送到 FM6，管理预设',st3_b:'一键备份所有工程',st3_go:'打开编辑器',
     need:'需要：电脑上的 Chrome 或 Edge（WebUSB 与 Web MIDI）· 一根能传数据的 USB 线，而不只是充电线。',
-    i_eb:'里面有什么',i_h2:'一个有机体，九个物种',i_in:'每种引擎都画出自己的生物，只随自己的声音而动：细胞、群落、蜗牛、声道，还有每次击打都会大叫的鼓组小生物。在 HOME 页面，每条音轨都是一个带着小脸的生命，随自身的音频膨胀、升温。',zoo_k:'九种引擎，正如 FM-1 所绘',sp_analog:'细胞',sp_fm6:'群落',sp_phase:'蜗牛',sp_lofi:'电路生物',sp_voice:'活的声道',sp_wheel:'管栖虫',sp_noise:'虫群',sp_drumx:'鼓组小生物',sp_animal:'鸟·昆虫·哺乳动物',
+    i_eb:'里面有什么',i_h2:'一个有机体，九个物种',i_in:'每种引擎都是一个物种，由固件亲自绘制。在 HOME 页面，每条音轨都是其引擎物种的一个生物：形状来自它的旋钮，并随自身的音频膨胀、升温。',zoo_k:'九种引擎，正如 FM-1 所绘',
     a_o:'引擎',a_h:'9 种合成引擎',a_p:'ANALOG、FM6（六算子、32 种算法、DX7 音色库）、PHASE、LOFI、VOICE（能用西班牙语、英语和日语唱出歌词）、WHEEL、NOISE、ANIMAL（用物理模型模拟鸟、昆虫和青蛙的叫声）和 DRUM-X。没有采样：一切都是合成的。',
     b_o:'心脏',b_h:'DRUM-X',b_p:'由八种合成声音组成的鼓组，每种声音都有两面：MORPH 可以现场把整个鼓组从一面推到另一面。每个八度都是同样的琴键：往上是连击，往下是短击、幽灵音和装饰音（flam）。',
     c_o:'神经系统',c_h:'64 步音序器',c_p:'每条音轨一个钢琴卷帘，和弦、概率、连击、额外播放头，精确到 1/64 步的离网格录音，以及每隔几小节变换声音与节奏型的 MUTATE。',
@@ -728,7 +646,7 @@ document.querySelectorAll('.sp canvas[data-clip]').forEach(c=>{
     st2_h:'FM-1 にインストール',st2_p:'Chrome か Edge でインストーラーを開き、データ通信できる USB ケーブルで FM-1 をつなぎ、「インストール」を押して、抜かずに待ちます。',st2_a:'インストーラーがまず FM-1 を確認し、バックアップを保存します',st2_b:'他のカスタムファームウェアから移る場合は、まずインストーラーのボタンで公式 V15 に戻してください',st2_go:'インストーラーを開く',
     st3_h:'編集とバックアップ',st3_p:'Web エディターは、FM-1 が鳴り続けたまま、音色と設定をパソコンの画面に表示します。',st3_a:'DX7 のバンクを FM6 に送る、プリセットを整理する',st3_b:'すべてのプロジェクトをワンクリックでバックアップ',st3_go:'エディターを開く',
     need:'必要なもの：パソコンの Chrome または Edge（WebUSB と Web MIDI）· 充電専用ではない、データ通信できる USB ケーブル。',
-    i_eb:'中身',i_h2:'ひとつの有機体、9 つの種',i_in:'エンジンはそれぞれ自分の生き物を描き、自分の音でだけ動きます。細胞、群体、カタツムリ、声道、叩くたびに叫ぶ小さな生き物たちのキット。HOME では各トラックが顔のある生き物になり、自分の音でふくらみ、熱を帯びます。',zoo_k:'9 つのエンジン、FM-1 が描くとおりに',sp_analog:'細胞',sp_fm6:'群体',sp_phase:'カタツムリ',sp_lofi:'回路の生き物',sp_voice:'生きた声道',sp_wheel:'管虫',sp_noise:'群れ',sp_drumx:'キットの生き物',sp_animal:'鳥・虫・けもの',
+    i_eb:'中身',i_h2:'ひとつの有機体、9 つの種',i_in:'エンジンはそれぞれひとつの種で、ファームウェア自身が描きます。HOME では各トラックがそのエンジンの種の生き物になり、形はノブから生まれ、自分の音でふくらみ、熱を帯びます。',zoo_k:'9 つのエンジン、FM-1 が描くとおりに',
     a_o:'エンジン',a_h:'9 つのシンセシスエンジン',a_p:'ANALOG、FM6（6 オペレーター、32 アルゴリズム、DX7 バンク）、PHASE、LOFI、VOICE（スペイン語・英語・日本語で歌詞を歌う）、WHEEL、NOISE、ANIMAL（物理モデルによる鳥・虫・カエルの声）、DRUM-X。サンプルなし、すべてシンセシス。',
     b_o:'心臓',b_h:'DRUM-X',b_p:'8 つの合成サウンドのドラムキット。各サウンドに A と B の 2 つの顔があり、MORPH でキット全体をライブで行き来できます。どのオクターブでも同じ鍵盤：上はラチェット、下はショート・ゴースト・フラム。',
     c_o:'神経系',c_h:'64 ステップのシーケンサー',c_p:'トラックごとのピアノロール、コード、確率、ラチェット、追加のプレイヘッド、1/64 ステップ単位でグリッドを外せる録音、そして数小節ごとに音とパターンを変える MUTATE。',
