@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
 // The interactive manual's content (web/manual/index.html), Spanish first, English second: every text is [es, en].
-// Written from docs/MANUAL.es.md / docs/MANUAL.md and README.md at firmware v0.9.12; the layer maps from the firmware's
+// Written from docs/MANUAL.es.md / docs/MANUAL.md and README.md at firmware v0.9.13; the layer maps from the firmware's
 // own MAP screens (tests/ui_render.c). A shot is a render in shots/ (tools/gen_manual.py copies them).
 // A combo k: "A+B" = hold A and press / turn B; "A" alone = press it. Tokens: the panel's names (SELECT, KNOB 1, OCT+ ...)
 // and the keys F3 .. G5 (sharps as F#3).
@@ -75,8 +75,8 @@ controls: {
       {k: "FX+OCT-", t: ["con FX LATCH: apaga todos los efectos", "with FX LATCH: every effect off"]}
     ]},
   "OCT+": {kind: "button", sec: "basic", shot: 'drum_oct_x8',
-    alone: ["Sube la octava. En diálogos y páginas de acción: hacerlo / YES / OK. En GEN: arma la pieza. En una pista DRUM: ratchets x2, x4, x8.",
-            "Octave up. In dialogs and action pages: do it / YES / OK. On GEN: makes the piece. On a DRUM track: ratchets x2, x4, x8."],
+    alone: ["Sube la octava. En diálogos y páginas de acción: hacerlo / YES / OK. En GEN: arma la pieza. En una pista DRUM: REPEAT, RATCHET x2, x4.",
+            "Octave up. In dialogs and action pages: do it / YES / OK. On GEN: makes the piece. On a DRUM track: REPEAT, RATCHET x2, x4."],
     combos: [
       {k: "SAVE+OCT+", t: ["guarda la música en la sección que suena", "store the music into the section playing"]},
       {k: "OCT-+OCT+", t: ["mantenidos 5 s: modo actualización; al encender: HARDWARE CALIBRATION", "held 5 s: update mode; at power-on: HARDWARE CALIBRATION"]}
@@ -320,7 +320,7 @@ commands: [
   {s: "drum", k: "KNOB 1", shot: 'drumx', t: ["MORPH: del lado A al B de todo el kit", "MORPH: the whole kit from side A to B"],
    d: ["Cada sonido tiene dos caras, A y B. MORPH (EDIT › KIT, KNOB 1, también en HOME) lleva todo el kit de una a otra: la perilla para tocar en vivo.", "Every sound has two sides, A and B. MORPH (EDIT › KIT, KNOB 1, also on HOME) moves the whole kit between them: the knob to play live."]},
   {s: "drum", k: "OCT+", shot: 'drum_oct_x8', t: ["Ratchets y ghost notes con OCT", "Ratchets and ghost notes with OCT"],
-   d: ["En una pista DRUM el kit queda en sus teclas: OCT +1 / +2 / +3 = RATCHET x2 / x4 / x8 a tempo; −1 SHORT, −2 GHOST, −3 FLAM. REC graba cada golpe con su modo.", "On a DRUM track the kit stays on its keys: OCT +1 / +2 / +3 = RATCHET x2 / x4 / x8 in time; −1 SHORT, −2 GHOST, −3 FLAM. REC records each hit with its mode."]},
+   d: ["En una pista DRUM el kit queda en sus teclas: OCT +1 / +2 / +3 = REPEAT (una vez por paso) / RATCHET x2 / x4 a tempo; −1 SHORT, −2 GHOST, −3 FLAM. REC graba cada golpe con su modo.", "On a DRUM track the kit stays on its keys: OCT +1 / +2 / +3 = REPEAT (once a step) / RATCHET x2 / x4 in time; −1 SHORT, −2 GHOST, −3 FLAM. REC records each hit with its mode."]},
   {s: "drum", k: "EDIT", shot: 'dx_sound', t: ["Editar un sonido del kit", "Edit one sound of the kit"],
    d: ["EDIT › SOUND 1–4: KNOB 1 elige el sonido (BD SD CP CH OH TM RS CB; tocar una tecla también). SOUND: SIDE, PITCH, PMOD; SOUND 2: DECAY, NOISE, COLOR; SOUND 3: MODE, PM.TYPE, DRIVE; SOUND 4: LAYER, FEEDBK, SEND.", "EDIT › SOUND 1–4: KNOB 1 picks the sound (BD SD CP CH OH TM RS CB; striking a key too). SOUND: SIDE, PITCH, PMOD; SOUND 2: DECAY, NOISE, COLOR; SOUND 3: MODE, PM.TYPE, DRIVE; SOUND 4: LAYER, FEEDBK, SEND."]},
   {s: "drum", k: "EDIT+F#3", shot: 'layer_edit_drum', t: ["Mutear un sonido del kit", "Mute one sound of the kit"],
@@ -601,6 +601,12 @@ recipes: [
 
 // ------------------------------------------------------------------------------------------- what's new (README's changelog, digested)
 news: [
+  {v: "0.9.13", items: [
+    ["Seis pistas sin trabarse: un regulador de carga baja voces (de a una, mínimo 4) antes de que el audio cruja y las devuelve con calma; si hace falta pasa solo a LOAD LITE unos segundos.", "Six tracks without choking: a load governor drops voices (one at a time, 4 at least) before the audio crackles and gives them back when calm; if needed it goes LOAD LITE by itself for a few seconds."],
+    ["Tras un crash ya no queda en 1 CORE para siempre: vuelve a los dos núcleos al tercer encendido.", "After a crash it no longer stays on 1 CORE for good: both cores come back on the third power-on."],
+    ["EXPLORE más liviano y musical: cada pieza entra en la CPU; COMPLEX es cuán salvaje (50 por defecto).", "EXPLORE lighter and more musical: every piece fits the CPU; COMPLEX is how wild (50 by default)."],
+    ["GEN: sin la “sirena” de LFO en el pitch; vibrato suave solo en notas largas, más movimiento de filtro, releases por rol, progresiones de acordes casi siempre, menos ANIMAL.", "GEN: no more pitch-LFO “siren”; soft vibrato only on held notes, more filter movement, releases per role, chord progressions almost always, less ANIMAL."],
+    ["DRUM-X: OCT +1 / +2 / +3 = REPEAT (una vez por paso) / RATCHET x2 / x4 (la mitad de rápido).", "DRUM-X: OCT +1 / +2 / +3 = REPEAT (once a step) / RATCHET x2 / x4 (half as fast)."]]},
   {v: "0.9.12", items: [
     ["Arreglo candidato del crujido de 0.9.10 / 0.9.11 (el código de sonido fijo en flash).", "Candidate fix for 0.9.10 / 0.9.11's crackle (the sound's code pinned in flash)."],
     ["MENU › SYSTEM › CPU (2 CORES / 1 CORE) y CPU CLOCK 360 / 320 MHZ; tras un crash con dos núcleos queda en 1 CORE.", "MENU › SYSTEM › CPU (2 CORES / 1 CORE) and CPU CLOCK 360 / 320 MHZ; after a crash with both cores it stays on 1 CORE."],

@@ -668,7 +668,7 @@ JIANT's modifications are distributed under the same license.
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
 
-### v0.9.13 (draft)
+### v0.9.13
 Not released yet (FELUCCA_VERSION stays 0.9.12 until it is).
 - **Songs past four tracks no longer run the CPU over: a load governor.** On 0.9.12 a song of five or six tracks could
   take more than the FM-1 has, and the guard (a voice faded at 80 %) came too late. Now, every 2.9 ms half: over the
