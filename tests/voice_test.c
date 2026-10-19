@@ -1191,6 +1191,49 @@ static void demos(const char *dir)
     printf("voice: demos in %s\n", dir);
 }
 
+/* (0.9.16) THEME: a name a detent (the knob, params.c param_turn), and swept while a note is held the voice goes on as
+ * it was, bit for bit: THEME is the next words', never the sound (voice.c engine_block dipped at every value: crackle);
+ * the other named values (LOFI WAV#, NOISE LEN) a name a detent too, a new name still a dip */
+static void check_theme(void)
+{
+    static double a[FS], b[FS];
+    const param_desc_t *d = &FMT_WDESC[1];
+    uint32_t i, k, dips = 0, names = 1, ok = 1;
+    int32_t v = 0, w;
+    char nm[8], prev[8];
+    const char *u;
+    for (i = 0; i < 2u; i++) {
+        vsetup(0, LG_ES, "laaa");
+        trk[0].p[P_E1] = 0;
+        trk_note_on(&trk[0], 60, 100);
+        for (k = 0; k < FS; k += CTL) {
+            if (i && k >= FS / 4)
+                trk[0].p[P_E1] = (int16_t)((k / CTL) % 128u);   /* a value a block: swept back and forth */
+            engine_block(&trk[0]);
+            dips += trk[0].xf_dip;
+            vrender(i ? b + k : a + k, CTL);
+        }
+    }
+    for (k = 0; k < FS; k++)
+        ok &= a[k] == b[k];
+    check("THEME swept every block over a held note: no dip, the voice bit for bit as without it", ok && !dips);
+    param_format(d, 0, prev, &u);
+    for (k = 0; k < 7u; k++) {                           /* a detent: the next name, onto its middle */
+        w = param_turn(d, v, 1);
+        param_format(d, w, nm, &u);
+        names += strcmp(nm, prev) != 0;
+        ok &= w == (int32_t)(16u * (k + 1u) + 8u);
+        memcpy(prev, nm, sizeof prev);
+        v = w;
+    }
+    ok &= names == 8u && param_turn(d, v, 1) == 120 && param_turn(d, 64, 1) == 88 && param_turn(d, 64, -1) == 56 &&
+          param_turn(d, 127, -2) == 88;
+    check("THEME: LOVE .. FIRE in 7 detents, each onto its name's middle (stored 0..127 as before)", ok);
+    ok = param_turn(&FMT_WDESC[7], 0, 1) == 38 && param_turn(&LOFI_WAVNUM, 64, 1) == 76 && param_turn(&NOISE_LONG, 0, 3) == 56 &&
+         param_turn(&FMT_WDESC[0], 5, 1) == 6;       /* (LOOP 5 names; WAV# 16; LEN 8; POS no names: a value) */
+    check("  the other named values a name a detent (LOOP, LOFI WAV#, NOISE LEN); POS a value a detent", ok);
+}
+
 int main(int argc, char **argv)
 {
     if (argc > 2 && !strcmp(argv[1], "--g2p")) {
@@ -1209,6 +1252,7 @@ int main(int argc, char **argv)
     check_singer();
     check_presets();
     check_lyric();
+    check_theme();
     check_cost();
     if (argc > 1)
         demos(argv[1]);

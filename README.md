@@ -674,6 +674,14 @@ JIANT's modifications are distributed under the same license.
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
 
+### v0.9.16
+- **VOICE's THEME: one detent a theme, and no crackle.** THEME (WORDS) took 16 detents a name; now every value with
+  names steps a name a detent, onto the name's middle (THEME, LOOP; LOFI WAV#, DECAY, ALGO; NOISE LEN): the stored
+  0..127 values, projects, presets, automation and the editor are unchanged. Swept over a held note it crackled: every
+  one of its values counted as a new "list value" and dipped the voice (2.7 ms out and in) though THEME only chooses
+  the next words; now THEME and LOOP never dip and the other named values dip only when the name changes. The theme
+  changes at the next word.
+
 ### v0.9.15
 The FX layer, reworked.
 - **The FX layer reworked: sweeps, GLITCH, TAPE STOP and performance macros.** CRUSH, THROW and FILTER leave the knobs
