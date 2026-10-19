@@ -124,13 +124,18 @@ static uint32_t shed_count;
 #define TIGHT_1C() 0                                   /* (the host: as before) */
 #endif
 static uint8_t tight_calm;                             /* halves in a row under 60 % */
-/* (0.9.13) the load governor (voice.c gov_cap, gov_lite), a half at a time: over the budget 6 halves in a row, a voice
- * less for all parts (4 at least: the song thins out, its oldest released voices first, voice_room); a shed (the guard
- * at 80 %) two less; under the budget 172 halves (0.5 s), one back; two sheds in 344 halves (1 s), LOAD LITE of its own
- * (CLOUD / SHIMMER as ROOM, RESO as SPRING, the GRAIN delay plain, FM6 two voices) until 5 s under the budget */
+/* (0.9.13) the load governor (voice.c gov_cap, gov_lite), a half at a time: over the budget 3 halves in a row (0.9.14:
+ * was 6), a voice less for all parts (4 at least: the song thins out, its oldest released voices first, voice_room);
+ * (0.9.14) past GOV_HOT (75 %, ahead of the guard's 80 %) a voice less every half, and at 4 still past it 8 halves, LOAD
+ * LITE of its own; a shed (the guard at 80 %) two less; under the budget 172 halves (0.5 s), one back; two sheds in 344
+ * halves (1 s), LOAD LITE of its own (CLOUD / SHIMMER as ROOM, RESO as SPRING, the GRAIN delay plain, FM6 two voices)
+ * until 5 s under the budget */
+#define GOV_HOT ((HALF_FRAMES * 1000000u / FS) * 75u / 100u * FM1_TICKS_PER_US)
+#define GOV_HOT_ECO ((HALF_FRAMES * 1000000u / FS) * 62u / 100u * FM1_TICKS_PER_US)
+#define GOV_HOT_1C ((HALF_FRAMES * 1000000u / FS) * 70u / 100u * FM1_TICKS_PER_US)
 static uint16_t gov_hot, gov_calm, gov_win, gov_lcalm;
-static uint8_t gov_sheds;
-static void gov_tick(int over, int under, int shed)
+static uint8_t gov_sheds, gov_floor;
+static void gov_tick(int over, int hot, int under, int shed)
 {
     uint32_t c = gov_cap > NVOICE + 4u ? NVOICE + 4u : gov_cap;
     if (shed) {
@@ -140,9 +145,14 @@ static void gov_tick(int over, int under, int shed)
         if (++gov_sheds >= 2u) { gov_lite = LOAD_LITE; gov_lcalm = 0; }
     }
     if (gov_win) gov_win--;
-    if (over) {
+    gov_floor = hot ? gov_floor : 0;
+    if (over || hot) {
         gov_calm = 0;
-        if (++gov_hot >= 6u) { gov_hot = 0; if (c > 4u) c--; }
+        if (hot || ++gov_hot >= 3u) {
+            gov_hot = 0;
+            if (c > 4u) c--;
+            else if (hot && ++gov_floor >= 8u) { gov_lite = LOAD_LITE; gov_lcalm = 0; }
+        }
     } else {
         gov_hot = 0;
         if (under && ++gov_calm >= 172u) { gov_calm = 0; if (c < NVOICE + 4u) c++; }
@@ -165,8 +175,8 @@ static __attribute__((noinline)) uint32_t shed_check(uint32_t all)
     if ((shed_over & 3u) == 3u)                        /* (0.6.19: two in a row again, as before 0.6.17: one
                                                          * spike shed a voice every 2.9 ms, tails cut, clicks) */
         shed_req = 1;
-    gov_tick(r > (eco ? TIGHT_ON_ECO : one ? TIGHT_ON_1C : TIGHT_ON), r < (eco ? TIGHT_OFF_ECO : one ? TIGHT_OFF_1C : TIGHT_OFF),
-             shed_req);
+    gov_tick(r > (eco ? TIGHT_ON_ECO : one ? TIGHT_ON_1C : TIGHT_ON), r > (eco ? GOV_HOT_ECO : one ? GOV_HOT_1C : GOV_HOT),
+             r < (eco ? TIGHT_OFF_ECO : one ? TIGHT_OFF_1C : TIGHT_OFF), shed_req);
     return (all - t5_nested_ticks) / FM1_TICKS_PER_US;
 }
 

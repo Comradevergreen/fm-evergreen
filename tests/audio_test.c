@@ -353,30 +353,39 @@ static void boot_keys(void)
           ref > 100.0 && fabs(quiet - ref) < 1e-9 && silent == 0.0);
 }
 
-/* (0.9.13) the load governor: over the budget, a voice less every 6 halves down to 4; a shed two less; two sheds in a
- * second, LOAD LITE of its own (CLOUD as ROOM); 0.5 s calm a voice back, 5 s calm LITE off; the MENU's LOAD first */
+/* (0.9.13) the load governor: over the budget, a voice less every 3 halves (0.9.14: was 6) down to 4; (0.9.14) past 75 %
+ * a voice less every half, at 4 and still past it 8 halves LOAD LITE; a shed two less; two sheds in a second, LOAD LITE
+ * of its own (CLOUD as ROOM); 0.5 s calm a voice back, 5 s calm LITE off; the MENU's LOAD first */
 static void governor(void)
 {
-    uint32_t i, c0, c1, c2, lite, cap_lo;
-    gov_cap = 16u; gov_lite = 0; gov_hot = gov_calm = gov_win = gov_lcalm = 0; gov_sheds = 0;
+    uint32_t i, c0, c1, c2, lite, cap_lo, h1, h2;
+    gov_cap = 16u; gov_lite = 0; gov_hot = gov_calm = gov_win = gov_lcalm = 0; gov_sheds = gov_floor = 0;
     c0 = voice_cap();
-    for (i = 0; i < 12u; i++) gov_tick(1, 0, 0);
+    for (i = 0; i < 12u; i++) gov_tick(1, 0, 0, 0);
     c1 = gov_cap;
-    for (i = 0; i < 200u; i++) gov_tick(1, 0, 0);
+    for (i = 0; i < 200u; i++) gov_tick(1, 0, 0, 0);
     cap_lo = gov_cap;
-    gov_tick(1, 0, 1); gov_tick(1, 0, 0); gov_tick(1, 0, 1);
+    gov_tick(1, 0, 0, 1); gov_tick(1, 0, 0, 0); gov_tick(1, 0, 0, 1);
     lite = gov_lite;
-    check("governor: over the budget, a voice less every 6 halves (12 halves: 2), down to 4", c1 == 10u && cap_lo == 4u);
+    check("governor: over the budget, a voice less every 3 halves (12 halves: 4), down to 4", c1 == 8u && cap_lo == 4u && !gov_floor);
     check("  two sheds in a second: LOAD LITE of its own (the sound's LOAD; the MENU's stays FULL)",
           lite == LOAD_LITE && LOAD_EFF() == LOAD_LITE && sys_load == LOAD_FULL);
-    for (i = 0; i < 172u * 3u; i++) gov_tick(0, 1, 0);
+    for (i = 0; i < 172u * 3u; i++) gov_tick(0, 0, 1, 0);
     c2 = gov_cap;
-    for (i = 0; i < 1720u; i++) gov_tick(0, 1, 0);
+    for (i = 0; i < 1720u; i++) gov_tick(0, 0, 1, 0);
     check("  calm: a voice back every 0.5 s, LITE off after 5 s, the cap back to the full",
           c2 == 7u && !gov_lite && voice_cap() == c0);
-    gov_tick(0, 0, 1);
+    gov_tick(0, 0, 0, 1);
     check("  one shed alone: two voices less (12 -> 10), no LITE", gov_cap == 10u && !gov_lite);
-    gov_cap = 16u; gov_lite = 0; gov_hot = gov_calm = gov_win = gov_lcalm = 0; gov_sheds = 0;
+    gov_cap = 16u; gov_lite = 0; gov_hot = gov_calm = gov_win = gov_lcalm = 0; gov_sheds = gov_floor = 0;
+    for (i = 0; i < 4u; i++) gov_tick(1, 1, 0, 0);
+    h1 = gov_cap;
+    for (i = 0; i < 4u + 7u; i++) gov_tick(1, 1, 0, 0);
+    h2 = gov_lite;
+    gov_tick(1, 1, 0, 0);
+    check("  (0.9.14) past 75 %: a voice less every half (4 halves: 12 -> 8); at 4 and still past it 8 halves, LITE",
+          h1 == 8u && gov_cap == 4u && !h2 && gov_lite == LOAD_LITE);
+    gov_cap = 16u; gov_lite = 0; gov_hot = gov_calm = gov_win = gov_lcalm = 0; gov_sheds = gov_floor = 0;
 }
 
 int main(void)

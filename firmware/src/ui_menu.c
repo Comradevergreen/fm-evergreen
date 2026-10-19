@@ -458,8 +458,8 @@ static void draw_menu(void)
         }
         cv_begin(240, 240 - (H_HEAD + MENU_DOC_H), T_BG);
         {
-            static const khint_t KH[3] = {{KC_SELECT, "SCROLL"}, {KC_OCTDN, "BACK"}, {KC_OCTUP, "PROFILE"}};
-            cv_key_row(8, 232, 4, KH, ui.menu == 2 ? 3 : 2, 3u, T_BG);
+            static const khint_t KH[2] = {{KC_SELECT, "SCROLL"}, {KC_OCTDN, "BACK"}};
+            cv_key_row(8, 232, 4, KH, 2, 3u, T_BG);
         }
         cv_blit(0, H_HEAD + MENU_DOC_H);
         return;
