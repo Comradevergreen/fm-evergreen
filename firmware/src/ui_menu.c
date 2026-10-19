@@ -138,7 +138,6 @@ static __attribute__((noinline)) void cpt_poll(void)    /* (ui_input: every pass
         cpt_res = (uint8_t)clamp((int32_t)(prf.cpt_sum / prf.cpt_n * 100u >> 8), 1, 250);
         cpt_cores = (uint8_t)(mc_two() ? 2u : 1u);
         settings_save();
-        ui_message("CPU TEST: SEE ABOUT");
     }
     cpt_arm = (uint8_t)!prf.cpt_ms;                      /* (played and stopped: done either way) */
     prf.cpt_ms = prf.cpt_sum = prf.cpt_n = 0;
@@ -159,7 +158,6 @@ static void cpt_line(char *b)                            /* "CPU TEST 98 % (2 CO
  * layer to CLIP, the master, USB and the output, core 1 busy, TIMER5 within the render, the whole half (= AUDIO LOAD);
  * then (means only) TIMER5 in all, the audio interrupt's latest start (us), the late halves, the blocks the buses
  * rested (%), the UI's frames */
-static uint32_t gc_dev(void);                           /* (gen.c) */
 enum { PRV_DC = PRF_N, PRV_T5, PRV_LAT, PRV_LATE, PRV_REST, PRV_FPS };
 static int prf_val(const prf_win_t *w, uint32_t k, uint32_t mx, int32_t *v)   /* 1: tenths, 2: whole, 0: none */
 {
@@ -223,9 +221,6 @@ static int32_t prof_document(int32_t y, int draw)
     y = menu_text(b, y + 4, T_TEXT, draw);
     y = menu_text(cpu_status(), y, T_TEXT, draw);
     cpt_line(b);
-    y = menu_text(b, y, T_TEXT, draw);
-    str_cpy(b, "EXPLORE: DEVICE X", sizeof b);
-    fmt_fix(b + 17, (int32_t)gc_dev(), 2);
     y = menu_text(b, y, T_TEXT, draw);
     return menu_text(FELUCCA_VERSION, y, T_MID, draw) + 4;
 }

@@ -40,7 +40,9 @@ EVENT_PFX = ("ep0_", "e0_", "ep1_", "ep3_", "sysex_", "midi_", "um_", "uart_midi
              "seq_start", "seq_stop", "seq_note", "seq_release", "seq_ratchet", "arp_", "chord_", "cp_", "rec_",
              "motion_", "cin_", "latch_", "key_", "kb_", "keys_", "fm6_note_on", "drum_note_on", "dxo_on", "dxo_off",
              "dxo_rec_hold", "pfx_fire", "seq_lane_rat", "sy_word", "sy_gen_word", "sy_enter", "live_",
-             "mod_key", "mod_note", "sing_note", "ly_", "step_parts", "step_rolls", "tie_span", "every_on", "scale_snap")
+             "mod_key", "mod_note", "sing_note", "ly_", "step_parts", "step_rolls", "tie_span", "every_on", "scale_snap",
+             "input_on", "input_off", "fx_trip", "rev_state_clear", "scene_capture", "pfx_resync", "mc_lost", "drum_oct_note",
+             "sy_tok", "sy_norm", "cg_near", "fl_ok")
 EVENT_KEEP = {"mo_block", "key_latch", "midi_clock_advance", "cin_block", "kb_lat", "live_q", "live_adv"}
 ISR_ROOTS = ("fm1_alnk0_irq", "fm1_timer5_irq",      # hal/fm1_isr.S: the audio ISR, the key / LED scan (+ USB poll),
              "fm1_timer5_top")                       # (0.9.14) the scan's body, timed
