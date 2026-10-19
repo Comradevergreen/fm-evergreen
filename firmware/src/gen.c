@@ -1347,6 +1347,11 @@ static void gen_sound(track_t *t, uint32_t role, uint32_t ri)
     t->p[P_DEC] = (int16_t)grr(r->dec[0], r->dec[1]);
     t->p[P_SUS] = (int16_t)grr(r->sus[0], r->sus[1]);
     t->p[P_REL] = (int16_t)clamp(grr(r->rel[0], r->rel[1]), GREL[role][0], GREL[role][1]);   /* (0.9.13: never dry) */
+    if (e == ENGI_FM6) {                                /* (0.9.14) FM6: its carriers' R4 left at 40 at least (~4 s at the
+                                                         * most; eng_fm6.c fm6_rel_r4), not 1 (minutes: every chord rang on) */
+        uint32_t r4 = fm6_rel_r4(t), mx = r4 > 40u ? (r4 - 40u) * 127u / 90u : 0u;
+        if ((uint32_t)t->p[P_REL] > mx) t->p[P_REL] = (int16_t)mx;
+    }
     t->p[P_LD_PIT] = t->p[P_LD_FLT] = t->p[P_LD_SHP] = t->p[P_LD_AMP] = t->p[P_LFADE] = 0;   /* (0.9.13) the modulation
                                                          * from nothing: no preset's LFO, no track's before, left over */
     if (e == EG_FM) t->p[P_E2] = (int16_t)clamp(t->p[P_E2] - grr(4, 20), -64, 63);   /* (warmer) */
@@ -1891,8 +1896,23 @@ static const uint8_t GC_REV[5] = {0, 25, 32, 10, 47};   /* ROOM SPRING SHIMMER R
 static const uint8_t GC_DIVQ[6] = {1, 2, 4, 8, 3, 6};   /* a DIV's steps a beat, x 4 / 4 (1/4 .. 1/32, 8T, 16T) */
 #define GC_GRAIN 25u
 #define GC_HEAD 6u
-static uint32_t gc_budget(void) { return mc_two() ? 1030u - 100u : 714u - 120u; }   /* (65 / 63, 55 / 77, less 0.10; one
-                                                         * core 0.12: its pieces sparse, a held chord more of them) */
+/* (0.9.14) the FM-1 against the model: the model is the host's instruction counts, and the device is heavier than they
+ * say (its code runs from the flash through a small cache the two cores share: the more engines and effects a piece
+ * plays, the more of it misses). Measured: SAVE > TOOLS 6 CPU TEST played (ui_menu.c cpt_res: its load, the host
+ * holding it at 63 % with two cores, 77 % with one); not measured, GC_DEV_X100. On 0.9.13 an owner's FM-1 played EXPLORE
+ * at ~90 % where the model said ~62 %: x1.45; x1.6 to be safe. Never under x1.0 (0.9.13's budget), x3 at most. To
+ * recalibrate from a PROFILE photo: GC_DEV_X100 = the device's WHOLE HALF (AVG, playing) over the host's for the song */
+#define GC_DEV_X100 160u
+static uint32_t gc_dev(void)
+{
+    uint32_t d = cpt_res ? (uint32_t)cpt_res * 100u / (cpt_cores == 1u ? 77u : 63u) : GC_DEV_X100;
+    return d < 100u ? 100u : d > 300u ? 300u : d;
+}
+static uint32_t gc_budget(void)                          /* (65 / 63, 55 / 77, over the device; less 0.10; one core 0.12:
+                                                         * its pieces sparse, a held chord more of them) */
+{
+    return mc_two() ? 1030u * 100u / gc_dev() - 100u : 714u * 100u / gc_dev() - 120u;
+}
 static uint32_t gc_cost(int steps)                      /* steps 0: before the parts (a chord track's triads) */
 {
     const ggenre_t *g = gs.g;
@@ -1914,7 +1934,9 @@ static uint32_t gc_cost(int steps)                      /* steps 0: before the p
         else if (!on) v = 0;
         else {
             uint32_t g100 = t->p[P_SGATE] < 100 ? (uint32_t)t->p[P_SGATE] : 100u;
-            uint32_t tail = 5u * TIME_MS_X10[t->p[P_REL] & 127] / 600u * bpm * GC_DIVQ[(uint32_t)t->p[P_SDIV] % 6u] / 100u;
+            uint32_t tail = 5u * TIME_MS_X10[e == ENGI_FM6 ? 112u : t->p[P_REL] & 127] / 600u * bpm *   /* (0.9.14: FM6's own
+                                                         * release, its patch's R4: ~2..4 s) */
+                            GC_DIVQ[(uint32_t)t->p[P_SDIV] % 6u] / 100u;
             f = (on * (g100 + tail) + tie * 100u) / len;
             cap = t->p[P_VOICE] == V_MONO || t->p[P_VOICE] == V_LEGATO ? 100u : e == ENGI_FM6 || e == EG_VO ? 400u : 800u;
             v = cap == 100u ? f : ns * f / on;

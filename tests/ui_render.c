@@ -635,7 +635,7 @@ enum { S_HOME, S_HOME_IDLE, S_MESSAGE, S_MESSAGE_KEY, S_MESSAGE_NOFILE, S_PRESET
        S_ALG1, S_ALG2, S_ALG3, S_ALG4, S_ALG5, S_ALG6, S_ALG7, S_ALG8, S_OP_LEVEL,
        S_FM6_ALG1, S_FM6_ALG5, S_FM6_ALG22, S_FM6_ALG32, S_DRUMX, S_DRUMX_HIT, S_DX_SOUND, S_DX_SOUND2,
        S_CONFIRM_SEQ, S_CONFIRM_PROJ, S_CONFIRM_USER, S_CONFIRM_PAT, S_CONFIRM_MOTION, S_CONFIRM_ERASE, S_GEN, S_GEN_PARTS,
-       S_MENU, S_MENU_SPEAKER, S_ABOUT, S_ABOUT_REC, S_ABOUT_CREDITS, S_ABOUT_END, S_UBOOT, S_CALIBRATION, S_SPLASH,
+       S_MENU, S_MENU_SPEAKER, S_ABOUT, S_ABOUT_REC, S_ABOUT_CREDITS, S_ABOUT_END, S_ABOUT_PROFILE, S_ABOUT_PROFILE2, S_UBOOT, S_CALIBRATION, S_SPLASH,
        S_BATT0, S_BATT1, S_BATT2, S_BATT3, S_BATT_USB, S_MOTION_REC, S_MOTION_OFF, S_MOTION_CARD, S_SONG_HOME,
        S_FX_PEEK, S_FX_HELD, S_FX_WAIT, S_FX_HARM, S_MENU_HOLD, S_MENU_LEDS, S_MENU_END, S_MENU_SYSTEM, S_MENU_SLIDE, S_REVERB, S_REVERB_RESO,
        S_GLO_PEEK, S_GLO_ACTIVE, S_GLO_EXT, S_SCL_PEEK, S_SCL_ACTIVE, S_EDIT_PEEK, S_EDIT_ACTIVE, S_EDIT_USER, S_EDIT_DRUM, S_LAYER_HINT, S_LAYER_LOCK, S_LAYER_LOCK_FX, S_LAYER_SONG, S_LAYER_SONG_CHAIN,
@@ -671,7 +671,7 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "message", "mes
     "drum_hand", "drum_cym", "mixer", "mixer_pan", "env", "env_dest", "lfo", "mod", "fx", "slicer", "slbus", "slpitch", "dly", "scl", "shift", "arp",
     "voice", "global", "system", "edit_analog", FELUCCA_FM4 ? "edit_digital" : "edit_fm6", "op_env", "edit_wheel", "edit_voice",
     "edit_noise", "alg_1", "alg_2", "alg_3", "alg_4", "alg_5", "alg_6", "alg_7", "alg_8", "op_level", "fm6_alg_01", "fm6_alg_05", "fm6_alg_22", "fm6_alg_32", "drumx", "drumx_hit", "dx_sound", "dx_sound2", "confirm_seq", "confirm_project", "confirm_user", "confirm_pattern",
-    "confirm_motion", "confirm_erase", "gen", "gen_parts", "menu", "menu_speaker", "about", "about_rec", "about_credits", "about_end", "uboot", "calibration", "splash",
+    "confirm_motion", "confirm_erase", "gen", "gen_parts", "menu", "menu_speaker", "about", "about_rec", "about_credits", "about_end", "about_profile", "about_profile2", "uboot", "calibration", "splash",
     "batt_0", "batt_1", "batt_2", "batt_3", "batt_usb", "motion_rec", "motion_off", "motion_card", "song_home",
     "perform_peek", "perform_held", "perform_wait", "perform_harm", "menu_hold", "menu_leds", "menu_end", "menu_system", "menu_slide", "reverb_spring", "reverb_reso",
     "layer_glo_peek", "layer_glo_active", "layer_glo_ext", "layer_scl_peek", "layer_scl_active", "layer_edit_peek",
@@ -1363,6 +1363,33 @@ static void setup(int s)
     case S_ABOUT_REC: ui.menu = 2; ui.menu_scroll = 0; song.rec = 1; break;          /* the REC mark beside OCT- BACK */
     case S_ABOUT_CREDITS: ui.menu = 2; ui.menu_scroll = 360; break;
     case S_ABOUT_END: ui.menu = 2; ui.menu_scroll = (uint16_t)menu_scroll_max(); break;
+    case S_ABOUT_PROFILE: case S_ABOUT_PROFILE2: {   /* (0.9.14) MENU > ABOUT > PROFILE: a second playing and one stopped,
+                                                   * numbers made up for the picture (the host has no timer: prof.c) */
+        static const uint16_t P[2][PRF_N][2] = {   /* % x10, avg and max (the half's as its own) */
+            {{12, 20}, {8, 15}, {6, 9}, {6, 9}, {5, 8}, {7, 11}, {9, 13}, {3, 210}, {2, 160}, {4, 9}, {14, 25}, {38, 50}, {6, 9},
+             {50, 220}, {14, 30}, {160, 240}},
+            {{31, 95}, {78, 140}, {95, 160}, {62, 110}, {50, 90}, {84, 150}, {120, 190}, {210, 260}, {90, 110}, {60, 220},
+             {20, 40}, {40, 52}, {15, 30}, {460, 600}, {25, 60}, {580, 810}}};
+        uint32_t w, k;
+        ui.menu = 3; ui.menu_scroll = s == S_ABOUT_PROFILE2 ? (uint16_t)menu_scroll_max() : 0;
+        for (w = 0; w < 2u; w++) {
+            memset(&prf_win[w], 0, sizeof prf_win[w]);
+            prf_win[w].blocks = 1376u;
+            for (k = 0; k < PRF_N; k++) {
+                prf_win[w].sum[k] = P[w][k][0] * (1376u * (PRF_BLK / 8u) / 125u);
+                prf_win[w].max[k] = P[w][k][1] * PRF_BLK / (k >= PRF_NB ? 250u : 1000u);
+            }
+            for (k = 0; k < NPART; k++) prf_win[w].c1[k] = k == 2u || k == 3u || k == 5u ? 1376u : 0u;
+            prf_win[w].t5 = (w ? 32u : 30u) * (1376u * (PRF_BLK / 8u) / 125u);
+            prf_win[w].lat = (w ? 190u : 140u) * 24u;
+            prf_win[w].late = 0;
+            prf_win[w].fxrest = w ? 0u : 1300u;
+            prf_win[w].frames = w ? 52u : 60u;
+        }
+        prf_have = 3;
+        for (k = 0; k < NPART; k++) { set_engine_of(&trk[k], TRK_DEF[k][0]); trk[k].engine = trk[k].eng_req; }
+        break;
+    }
     case S_UBOOT: ui.uboot = 3; break;
     /* the header's battery at each stock level (raw ADC: under 531, 531.., 561.., 591..) and on USB power */
     case S_BATT0: usb.config = 0; song.batt_raw = 500; go_home(); break;

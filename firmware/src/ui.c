@@ -279,7 +279,7 @@ static struct {
     uint64_t plk_rm, plk_acc;    /* .. the grid's step keys pressed on a hit (bit = step): it goes when the key is let
                                   * go, unless the key was held for a lock (its accent: plk_acc) */
     uint8_t hot_col, hot_t;      /* column whose knob was just turned (drawn white) */
-    uint8_t menu;                /* 0 off, 1 list, 2 about + credits (HOME held) */
+    uint8_t menu;                /* 0 off, 1 list, 2 about + credits (HOME held), 3 ABOUT > PROFILE (0.9.14) */
     uint8_t menu_sel;            /* MENU: the row (menu_items.c MI_*; its tab MI_TAB), kept while the device runs */
     uint8_t mlv;                 /* (0.8.5) MENU's view: 1 TAB (its rows; 0.9.2: always, 0 MENU and 2 ROW for the renders) */
     uint8_t lylv;                /* (0.8.5) a held layer's lens: 0 MAP, 1 KNOBS, 2 STATE (ALGORITHM while held) */

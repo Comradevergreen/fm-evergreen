@@ -17,6 +17,7 @@ static int gcheck(const char *what, int ok)
     printf("gen: %-74s %s\n", what, ok ? "ok" : "FAIL");
     return ok ? 0 : 1;
 }
+static uint8_t gt_cpt;                                   /* (0.9.14) the CPU TEST result the pieces are made for (gen.c gc_dev) */
 static int form_drop_longest(void)                      /* (0.9.14) the drop (A) rows longer than every other row */
 {
     uint32_t k, a = 0, o = 0;
@@ -36,6 +37,7 @@ static void gen_reset(void)
 {
     ui_power_on();
     ui_rec_prefs |= PREF_SIX >> 8; rp_apply();          /* TRACKS 6 */
+    cpt_res = gt_cpt; cpt_cores = gt_cpt ? 2u : 0u;
     settings.palette = UI_JIANT_INDEX; palette_set(UI_JIANT_INDEX);
 }
 static void gen_with(uint32_t genre, uint32_t seed, uint32_t energy, uint32_t form)
@@ -546,6 +548,9 @@ int main(void)
         uint32_t vref = 0;
         bad += gcheck("EXPLORE (0.8.6): GENRE EXPLORE at power-on", genre0 == GEN_EXPLORE);
         gen_reset();
+        gt_cpt = 63;                                    /* (0.9.14) the device as the model holds it (gen.c gc_dev x1.00): the
+                                                         * pieces 0.9.13 made; the default's (x1.60) after these */
+        cpt_res = 63; cpt_cores = 2;
         mc_host_v12 = 1;                                /* (0.9.13: two cores, the FM-1's default: the CPU budget's, 12 voices) */
         for (g = 0; g < 3u * NGENRE; g++) {             /* (the voices the genres' pieces reach at once, the budget's
                                                          * own overshoot included: the reference) */
@@ -696,6 +701,51 @@ int main(void)
                           own[0] < own[1] && own[1] < own[2] && hd[0] <= hd[1] && hd[1] < hd[2] && hi[0] - lo[0] < hi[2] - lo[2] &&
                           est[1] < est[0]);
         }
+        {   /* (0.9.14) the device factor (gen.c gc_dev): no CPU TEST measured, x1.60: the budget 1/1.6 of the model's (two
+             * cores 1030 / 1.6 - 100 thousandths of CPU TEST), each piece inside it or at the floor (drums, bass, two-note
+             * chords), lighter than at x1.00 on average, still two melodic parts and sound; a CPU TEST measured at 63 %
+             * gives x1.00 again, at 126 % x2.00, never under x1.00 */
+            uint32_t est[2] = {0}, over = 0, mel_bad = 0, quiet2 = 0, d0, d1, d2, d3;
+            cpt_res = 0;
+            d0 = gc_dev();
+            mc_host_v12 = 1;
+            for (sd = 0; sd < 60u; sd++) {
+                double rms;
+                int32_t peak;
+                uint32_t clip, vmax, mel = 0, f;
+                for (f = 0; f < 2u; f++) {
+                    gt_cpt = f ? 0u : 63u;
+                    gen_reset();
+                    gp.genre = (uint8_t)GEN_EXPLORE; gp.seed = (uint16_t)(sd * 53u + 11u); gp.energy = 50; gp.form = 0;
+                    for (k = 0; k < GP_N; k++) gp.amt[k] = GA_AUTO;
+                    gp.complex = 50; gp.swing = GA_AUTO; gp.human = 30;
+                    gen_go();
+                    est[f] += gc_cost(1);
+                }
+                for (k = 0; k < NTRK; k++) {
+                    const track_t *t = &trk[k];
+                    uint32_t r = gs.role[k], on = 0;
+                    if (drum_track(t) || !gs.act[r] || (r == RL_TEX && k != gs.trk_of[RL_TEX])) continue;
+                    for (i = 0; i < dlen(t); i++) on += t->step[i].time == ST_NOTE;
+                    mel += on > 0u;
+                }
+                over += gc_cost(1) > gc_budget();
+                mel_bad += mel < 2u;
+                gx_listen(400u, &rms, &peak, &clip, &vmax);
+                quiet2 += rms < 150.0;
+            }
+            mc_host_v12 = 0;
+            cpt_res = 63; d1 = gc_dev(); cpt_res = 126; d2 = gc_dev(); cpt_res = 30; d3 = gc_dev();
+            cpt_res = 0; cpt_cores = 0; gt_cpt = 63;
+            printf("gen: (0.9.14) EXPLORE x 60 at COMPLEX 50, two cores: the device x%u.%02u by default: CPU %u thousandths of CPU TEST\n"
+                   "gen:   on average (x1.00: %u), %u at the floor over the budget %u; x%u.%02u at 63 %%, x%u.%02u at 126 %%, x%u.%02u at 30 %%\n",
+                   d0 / 100u, d0 % 100u, est[1] / 60u, est[0] / 60u, over, (uint32_t)(1030u * 100u / d0 - 100u), d1 / 100u, d1 % 100u,
+                   d2 / 100u, d2 % 100u, d3 / 100u, d3 % 100u);
+            bad += gcheck("  (0.9.14) the device factor: x1.60 without a CPU TEST, lighter pieces, still two melodic parts and sound",
+                          d0 == 160u && d1 == 100u && d2 == 200u && d3 == 100u && est[1] < est[0] * 3u / 4u && !mel_bad && !quiet2);
+            cpt_res = 63; cpt_cores = 2;
+        }
+        gt_cpt = 0; cpt_res = 0; cpt_cores = 0;
     }
     {   /* EXPLORE deterministic; its FORMs; a genre's piece the same before and after it (DIV 1/16, no PLAYHEADS) */
         uint32_t h1, h2, h3, h4, divs = 0, fg = 0, sec_bad = 0, f;

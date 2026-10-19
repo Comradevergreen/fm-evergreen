@@ -2083,10 +2083,27 @@ the footer **MENU · DISPLAY · SKIN  2/28**. The header says MENU · DISPLAY.
 | SYSTEM | LOAD | ECO, LITE, **FULL** (default) |
 | SYSTEM | CALIBRATION | OCT+ opens HARDWARE CALIBRATION (teach each button and knob) |
 | SYSTEM | INIT SYSTEM | OCT+ asks, then everything back to zero for a new song (as SAVE > TOOLS > NEW PROJECT; UNDO brings the music back) |
-| SYSTEM | ABOUT | OCT+ opens: version, QR code, AUDIO LOAD (NOW, PEAK, LATE, SHED since power-on) and credits (scroll with SELECT, OCT− back) |
+| SYSTEM | ABOUT | OCT+ opens: version, QR code, AUDIO LOAD (NOW, PEAK, LATE, SHED since power-on), CPU TEST, and credits (scroll with SELECT, OCT− back); there OCT+ opens PROFILE |
 
 If you hear clicks, open ABOUT and look at **LATE** (audio blocks that came too late) and **SHED** (voices the guard
 faded): a photo of that screen helps when you report a problem.
+
+**PROFILE (0.9.14): where the CPU goes.** On ABOUT, OCT+ opens PROFILE (SELECT scrolls, OCT− back to ABOUT). It
+measures on the FM-1 itself from the first time it is opened until power-off. Every row is a share of the audio's time,
+in % of a 725 µs block: first the mean and the worst block of **the last second playing**, then (grey) of **the last
+second stopped** ("-" until there has been one). The rows: SEQUENCER; **T1–T6** (the track's engine; **C1** when it
+ran mostly on the second core); FX BUSES and of them the REVERB (its type) and DELAY+CHORUS; CORE 0 WAITS (the first
+core idle, waiting for the second); FX LAYER..CLIP; MASTER; USB+OUTPUT; CORE 1 BUSY; TIMER5 IN IT (the keyboard and USB
+interrupt inside the render) and **WHOLE HALF** (the same as AUDIO LOAD); then TIMER5 ALL, IRQ LATE US (how late the
+audio interrupt started at worst: the screen or a flash write held it), LATE HALVES, FX REST % (the time the effects
+rested: stopped they cost nothing since 0.9.14) and UI FRAMES (a second). Below: the voices sounding and the cap,
+the LOAD the sound plays, the cores, the CPU TEST and the factor EXPLORE budgets with. **To help tune JIANT on real
+hardware, photograph it** (two or three screens) while your song plays, and again a few seconds after STOP.
+
+**CPU TEST (0.9.14).** SAVE › TOOLS 6 CPU TEST builds the heaviest reference song (TRACKS 6); press PLAY, let it play
+10 s or more and STOP: its mean load is kept with the settings (CPU TEST 98 % (2 CORES) on ABOUT and PROFILE). GEN's
+EXPLORE sizes its pieces by it (the computer's estimate holds that song at 63 % with two cores); never measured, it
+assumes the FM-1 is 1.6 times heavier than the estimate.
 
 ---
 

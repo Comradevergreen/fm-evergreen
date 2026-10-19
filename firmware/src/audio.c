@@ -29,16 +29,58 @@ static uint32_t audio_last_half = 2u, audio_lost;    /* (0.8.9) halves never ren
 static int16_t scope_buf[SCOPE_N];
 static uint32_t scope_w;
 
+static __attribute__((noinline)) void prf_block(void)   /* core 0, a block's end (audio.c audio_block) */
+{
+    uint32_t k, m = mc_mask_last;
+    if (prf_on) {
+        for (k = 0; k < PRF_NB; k++) {
+            prf_cur.sum[k] += prf_blk[k];
+            if (prf_blk[k] > prf_cur.max[k])
+                prf_cur.max[k] = prf_blk[k];
+        }
+        for (k = 0; k < NPART; k++)
+            prf_cur.c1[k] += (m >> k) & 1u;
+        prf_cur.blocks++;
+    }
+    for (k = 0; k < PRF_NB; k++)
+        prf_blk[k] = 0;
+}
+
+/* core 0, a half's end (fm1_alnk0_irq): all its ticks, TIMER5's in it, when it began; once a second the window kept */
+static __attribute__((noinline)) void prf_half(uint32_t all, uint32_t nested, uint32_t t0)
+{
+    uint32_t d = t0 - prf.last - HALF_FRAMES * 544u, r = all - nested, w;
+    prf.last = t0;
+    if (!prf_on)
+        return;
+    if (d > prf_cur.lat && d < 2400000u)               /* (started past its period: IRQs off, a flash write) */
+        prf_cur.lat = d;
+    prf_cur.sum[PRF_IRQ] += nested;
+    prf_cur.sum[PRF_HALF] += r;
+    if (nested > prf_cur.max[PRF_IRQ]) prf_cur.max[PRF_IRQ] = nested;
+    if (r > prf_cur.max[PRF_HALF]) prf_cur.max[PRF_HALF] = r;
+    if (++prf.halves < PRF_HALVES)
+        return;
+    prf.halves = 0;
+    w = song.playing ? 1u : 0u;
+    prf_win[w] = prf_cur;
+    prf_have |= (uint8_t)(1u << w);
+    memset(&prf_cur, 0, sizeof prf_cur);
+    prf_seq++;
+}
+
 static void audio_block(int32_t *out, uint32_t n)       /* mix (fx.c), then Q15 -> 24 bit */
 {
-    uint32_t i;
+    uint32_t i, t0 = PRF_T(), t1;
 #if FELUCCA_UAC && defined(UAC_UIN)
     if (USB_DUPLEX)                                     /* (0.7.5) MENU > USB IN+OUT: the host's audio, for the mix */
         uac_in_fill(n);
     else
         uin_on = 0;
 #endif
+    t1 = PRF_T();
     mix_block(out, n);
+    t0 += PRF_T() - t1;                                 /* (0.9.14) PROFILE: USB and the output, the mix left out */
 #if FELUCCA_UAC
 #ifdef UAC_TAP8
     if (fx_stems)                                       /* (0.7.1) MENU > USB STEMS: 8 channels (fx.c stem_buf) */
@@ -56,6 +98,8 @@ static void audio_block(int32_t *out, uint32_t n)       /* mix (fx.c), then Q15 
         out[2u * i] *= 1 << OUT_SHIFT;
         out[2u * i + 1u] *= 1 << OUT_SHIFT;
     }
+    prf_blk[PRF_IO] = PRF_T() - t0;
+    prf_block();
 }
 
 /* Overload: two halves in a row above 80 % (0.6.15: was 85, too late: a click first, the UI starved) (the render plus TIMER5 nested in it), fade one voice over the
@@ -80,13 +124,18 @@ static uint32_t shed_count;
 #define TIGHT_1C() 0                                   /* (the host: as before) */
 #endif
 static uint8_t tight_calm;                             /* halves in a row under 60 % */
-/* (0.9.13) the load governor (voice.c gov_cap, gov_lite), a half at a time: over the budget 6 halves in a row, a voice
- * less for all parts (4 at least: the song thins out, its oldest released voices first, voice_room); a shed (the guard
- * at 80 %) two less; under the budget 172 halves (0.5 s), one back; two sheds in 344 halves (1 s), LOAD LITE of its own
- * (CLOUD / SHIMMER as ROOM, RESO as SPRING, the GRAIN delay plain, FM6 two voices) until 5 s under the budget */
+/* (0.9.13) the load governor (voice.c gov_cap, gov_lite), a half at a time: over the budget 3 halves in a row (0.9.14:
+ * was 6), a voice less for all parts (4 at least: the song thins out, its oldest released voices first, voice_room);
+ * (0.9.14) past GOV_HOT (75 %, ahead of the guard's 80 %) a voice less every half, and at 4 still past it 8 halves, LOAD
+ * LITE of its own; a shed (the guard at 80 %) two less; under the budget 172 halves (0.5 s), one back; two sheds in 344
+ * halves (1 s), LOAD LITE of its own (CLOUD / SHIMMER as ROOM, RESO as SPRING, the GRAIN delay plain, FM6 two voices)
+ * until 5 s under the budget */
+#define GOV_HOT ((HALF_FRAMES * 1000000u / FS) * 75u / 100u * FM1_TICKS_PER_US)
+#define GOV_HOT_ECO ((HALF_FRAMES * 1000000u / FS) * 62u / 100u * FM1_TICKS_PER_US)
+#define GOV_HOT_1C ((HALF_FRAMES * 1000000u / FS) * 70u / 100u * FM1_TICKS_PER_US)
 static uint16_t gov_hot, gov_calm, gov_win, gov_lcalm;
-static uint8_t gov_sheds;
-static void gov_tick(int over, int under, int shed)
+static uint8_t gov_sheds, gov_floor;
+static void gov_tick(int over, int hot, int under, int shed)
 {
     uint32_t c = gov_cap > NVOICE + 4u ? NVOICE + 4u : gov_cap;
     if (shed) {
@@ -96,9 +145,14 @@ static void gov_tick(int over, int under, int shed)
         if (++gov_sheds >= 2u) { gov_lite = LOAD_LITE; gov_lcalm = 0; }
     }
     if (gov_win) gov_win--;
-    if (over) {
+    gov_floor = hot ? gov_floor : 0;
+    if (over || hot) {
         gov_calm = 0;
-        if (++gov_hot >= 6u) { gov_hot = 0; if (c > 4u) c--; }
+        if (hot || ++gov_hot >= 3u) {
+            gov_hot = 0;
+            if (c > 4u) c--;
+            else if (hot && ++gov_floor >= 8u) { gov_lite = LOAD_LITE; gov_lcalm = 0; }
+        }
     } else {
         gov_hot = 0;
         if (under && ++gov_calm >= 172u) { gov_calm = 0; if (c < NVOICE + 4u) c++; }
@@ -121,8 +175,8 @@ static __attribute__((noinline)) uint32_t shed_check(uint32_t all)
     if ((shed_over & 3u) == 3u)                        /* (0.6.19: two in a row again, as before 0.6.17: one
                                                          * spike shed a voice every 2.9 ms, tails cut, clicks) */
         shed_req = 1;
-    gov_tick(r > (eco ? TIGHT_ON_ECO : one ? TIGHT_ON_1C : TIGHT_ON), r < (eco ? TIGHT_OFF_ECO : one ? TIGHT_OFF_1C : TIGHT_OFF),
-             shed_req);
+    gov_tick(r > (eco ? TIGHT_ON_ECO : one ? TIGHT_ON_1C : TIGHT_ON), r > (eco ? GOV_HOT_ECO : one ? GOV_HOT_1C : GOV_HOT),
+             r < (eco ? TIGHT_OFF_ECO : one ? TIGHT_OFF_1C : TIGHT_OFF), shed_req);
     return (all - t5_nested_ticks) / FM1_TICKS_PER_US;
 }
 
@@ -192,7 +246,9 @@ void fm1_alnk0_irq(void)                       /* via isr_alnk0 (hal/fm1_isr.S) 
         uac_render_end();                               /* (0.8.9) the half's 48 kHz resampling: to core 1, off the render */
 #endif
         audio_halves++;
-        us = shed_check(fm1_ticks() - t0);
+        b = fm1_ticks() - t0;
+        prf_half(b, t5_nested_ticks, t0);              /* (0.9.14) PROFILE */
+        us = shed_check(b);
         if (us > audio_max_us)
             audio_max_us = us;
         {
@@ -201,7 +257,7 @@ void fm1_alnk0_irq(void)                       /* via isr_alnk0 (hal/fm1_isr.S) 
             audio_cpu_rem = load % CPU_AVG;
         }
         if (fm1_audio_free_half() != half)
-            felucca_dbg.late++;                         /* the DMA moved on while we rendered (0.8.9: caught up at
+            felucca_dbg.late++, prf_cur.late++;         /* the DMA moved on while we rendered (0.8.9: caught up at
                                                          * once, its half pending; a click only past ~1.7 halves) */
         {   /* (0.6.17) MENU > ABOUT's numbers (voice.c load_diag) */
             uint32_t pc = us * 100u / (HALF_FRAMES * 1000000u / FS);

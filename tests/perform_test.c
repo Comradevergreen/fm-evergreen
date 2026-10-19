@@ -628,7 +628,10 @@ static int test_pfx(void)
     c1 = zc(song_l, 110080u, 132096u);
     c2 = zc(song_l, 154112u, 176128u);
     bad += check("OCT+: a held note an octave up while held, back after", c1 > c0 * 1.7 && c1 < c0 * 2.3 &&
-                 c2 > c0 * 0.85 && c2 < c0 * 1.15 && !t1->pfx_pit);
+                 c2 > c0 * 0.8 && c2 < c0 * 1.15 && !t1->pfx_pit);   /* (0.9.14: 0.8, was 0.85: the buses start
+                                                         * silent since they rest (fx.c fx_rest), the delay's echoes of the
+                                                         * attack in c0's window plain: 65 / 55; with the last test's residue
+                                                         * under them, 54 / 56) */
     pfx_tgt = 2;
     pfx_render(2u * 44032u, 22016u, 88064u, PF_OCTU);
     c1 = zc(song_l, 44032u, 66048u);

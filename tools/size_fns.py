@@ -33,7 +33,17 @@ SIZE_FILES = ["ui.c", "favorites.c", "menu_items.c", "cpu_safe.c", "icons.c", "u
               # (0.9.7) the main-loop functions of the sound files (what the interrupts reach stays -Os, as above): the
               # MASTER pot's boot and poll, FM6's patch store, the kit's names and grids, MOD's names, the PUNCH lane
               "pfx.c", "master.c", "audio.c", "mod.c", "fx.c", "drumx_voice.c", "eng_drum.c", "eng_fm6.c"]
-ISR_ROOTS = ("fm1_alnk0_irq", "fm1_timer5_irq")      # hal/fm1_isr.S: the audio ISR, the key / LED scan (+ USB poll)
+# (0.9.14) of what an interrupt reaches, the code that runs once an event (a USB control transfer, a MIDI message, a
+# step, a note, a recorded key), not once a sample or a block: built for size as the main loop is (1.9 KB, the room
+# PROFILE needed in the slot). By prefix; EVENT_KEEP the ones among them that do run every block
+EVENT_PFX = ("ep0_", "e0_", "ep1_", "ep3_", "sysex_", "midi_", "um_", "uart_midi_", "ml_", "mn_", "mo_", "seq_step",
+             "seq_start", "seq_stop", "seq_note", "seq_release", "seq_ratchet", "arp_", "chord_", "cp_", "rec_",
+             "motion_", "cin_", "latch_", "key_", "kb_", "keys_", "fm6_note_on", "drum_note_on", "dxo_on", "dxo_off",
+             "dxo_rec_hold", "pfx_fire", "seq_lane_rat", "sy_word", "sy_gen_word", "sy_enter", "live_",
+             "mod_key", "mod_note", "sing_note", "ly_", "step_parts", "step_rolls", "tie_span", "every_on", "scale_snap")
+EVENT_KEEP = {"mo_block", "key_latch", "midi_clock_advance", "cin_block", "kb_lat", "live_q", "live_adv"}
+ISR_ROOTS = ("fm1_alnk0_irq", "fm1_timer5_irq",      # hal/fm1_isr.S: the audio ISR, the key / LED scan (+ USB poll),
+             "fm1_timer5_top")                       # (0.9.14) the scan's body, timed
 DEF = re.compile(r"^(?:static|void|int|uint\w*|int\w*|const)\b[^;=(]*?\b([A-Za-z_]\w*)\s*\(", re.M)
 IR_DEF = re.compile(r"^(define [^\n]*?@\"?([\w.]+)\"?\([^\n]*\)(?: unnamed_addr| local_unnamed_addr)?)( #\d+[^\n]*\{)$",
                     re.M)
@@ -91,7 +101,7 @@ def isr_reach(ir, with_globals=False):
 def main(src, dst):
     ir = Path(src).read_text()
     isr = isr_reach(ir)
-    names, hit = size_names() - isr, set()
+    names, hit = {n for n in size_names() if n not in isr or (n.startswith(EVENT_PFX) and n not in EVENT_KEEP)}, set()
 
     def mark(m):
         if m.group(2) not in names:
@@ -99,8 +109,8 @@ def main(src, dst):
         hit.add(m.group(2))
         return m.group(1) + " minsize" + m.group(3)
     Path(dst).write_text(IR_DEF.sub(mark, ir))
-    print(f"size: {len(hit)} main-loop functions built for size ({len(names) - len(hit)} not in this build; "
-          f"{len(size_names() & isr)} reached from an interrupt kept -Os)")
+    print(f"size: {len(hit)} main-loop and event functions built for size ({len(names) - len(hit)} not in this build; "
+          f"{len((size_names() & isr) - names)} reached from an interrupt kept -Os)")
     return 0
 
 
