@@ -1632,7 +1632,7 @@ static void sound_dice_of(track_t *t, int quiet)
             for (j = 0; j < 4u && last[j] != (e << 8 | p) + 1u; j++) {}
             if (j == 4u || n <= 4u) break;
         }
-        memmove(last + 1, last, sizeof last - sizeof last[0]);
+        for (j = 3; j; j--) last[j] = last[j - 1u];
         last[0] = (uint16_t)((e << 8 | p) + 1u);
         apply_preset_to(t, p);
     }

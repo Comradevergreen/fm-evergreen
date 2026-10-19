@@ -2554,7 +2554,7 @@ static void gen_new_seed(void)
         for (k = 0; k < 8u && gseed_last[k] != gp.seed + 1u; k++) {}
         if (k == 8u) break;
     }
-    memmove(gseed_last + 1, gseed_last, sizeof gseed_last - sizeof gseed_last[0]);
+    for (k = 7; k; k--) gseed_last[k] = gseed_last[k - 1u];
     gseed_last[0] = (uint16_t)(gp.seed + 1u);
 }
 /* OCT+ on the GEN screen: the piece; the same settings again: a new seed first */
