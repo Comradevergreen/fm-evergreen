@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
- * (0.9.18) the dice measured (not a test: numbers): consecutive presses of every DICE path from a fresh power-on and
+ * (0.9.17) the dice measured (not a test: numbers): consecutive presses of every DICE path from a fresh power-on and
  * mid-session, as the owner presses them. GEN (HOME + SELECT, OCT+ again: a new seed) per genre and EXPLORE; SEQ +
  * SELECT (the selected track's sequence); EDIT + SELECT (its sound). Per role: the share of a press's part the same as
  * the press before (exact, near: 90 % of its steps, transposition-invariant) and as one of the 8 before; the distinct

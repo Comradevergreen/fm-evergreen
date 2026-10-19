@@ -63,7 +63,7 @@ def main(src, dice, out, dout, bout):
     for name, v in ptab:
         L.append(f"static const uint8_t {name}_I[{len(v)}] = {{{', '.join(map(str, v))}}};")
     size = 8 * len(lanes) + 8 * len(table) + sum(len(v) for _, v in ptab)
-    # DICE's bars (0.9.18: gone with song_dice.c's own generator; the header stays, empty, for an older source)
+    # DICE's bars (0.9.17: gone with song_dice.c's own generator; the header stays, empty, for an older source)
     d = Path(dice).read_text()
     m = re.search(r"static const char \*const DRUM_BAR\[\]\[8\] = \{(.*?)\n\};", d, re.S)
     Path(out).write_text("\n".join(L) + "\n")

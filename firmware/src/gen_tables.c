@@ -268,7 +268,7 @@ enum { CS_HOLD, CS_SWELL, CS_STAB, CS_PULSE, CS_DUB, CS_SKANK, CS_COMP, CS_POWER
        CS_TRANCE };
 /* the arp: an order over the chord's notes (indices, +4 an octave up, -1 the end), its rate in steps, its gate */
 enum { AP_UP, AP_UPDOWN, AP_DOWN, AP_ALBERTI, AP_GLASS, AP_PULSE, AP_SEQ, AP_WALK, AP_CYCLE3, AP_CYCLE5, AP_TRANCE,
-       AP_BROKEN, AP_OCTAVES, AP_PEDAL, AP_THIRDS, AP_ZIGZAG, AP_N };   /* (0.9.18: the last three any genre's now and then) */
+       AP_BROKEN, AP_OCTAVES, AP_PEDAL, AP_THIRDS, AP_ZIGZAG, AP_N };   /* (0.9.17: the last three any genre's now and then) */
 typedef struct { int8_t ord[8]; uint8_t rate, gate; uint16_t mask; } garp_t;
 static const garp_t ARP[AP_N] = {
     [AP_UP]      = {{0, 1, 2, 3, 4, 5, 6, 7}, 1, 50, 0xFFFF},
@@ -284,7 +284,7 @@ static const garp_t ARP[AP_N] = {
     [AP_TRANCE]  = {{0, 4, 1, 5, 2, 6, 3, 7}, 1, 35, 0xDB6D},   /* (a trance gate: x.xx.xx.xx.xx.xx) */
     [AP_BROKEN]  = {{0, 2, 1, 3, -1}, 2, 60, 0xB6DB},
     [AP_OCTAVES] = {{0, 4, 0, 4, 1, 5, 0, 4}, 1, 45, 0xFFFF},
-    [AP_PEDAL]   = {{0, 2, 0, 3, 0, 1, 0, 2}, 1, 50, 0xFFFF},   /* (0.9.18) the low note a pedal under the others */
+    [AP_PEDAL]   = {{0, 2, 0, 3, 0, 1, 0, 2}, 1, 50, 0xFFFF},   /* (0.9.17) the low note a pedal under the others */
     [AP_THIRDS]  = {{0, 2, 1, 3, 2, 4, 3, 5}, 1, 55, 0xFFFF},   /* broken thirds, up */
     [AP_ZIGZAG]  = {{0, 3, 1, 2, 4, 2, 3, 1}, 2, 60, 0xFFFF},   /* up and down with skips */
 };

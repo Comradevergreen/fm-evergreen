@@ -1,8 +1,8 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
- * JIANT (0.6.26 .. 0.9.17 DICE ALL's own song-idea generator; 0.9.18 the helpers GEN shares, gen.c): the roles, the
+ * JIANT (0.6.26 .. 0.9.16 DICE ALL's own song-idea generator; 0.9.17 the helpers GEN shares, gen.c): the roles, the
  * engines' and scales' numbers, a step's tie, a note held, an euclid, a preset's name, a part's level by its register, a
- * track's loop, the CPU TEST song. Included by ui_input.c (main loop only) before gen.c. (0.9.18) Its own generator
+ * track's loop, the CPU TEST song. Included by ui_input.c (main loop only) before gen.c. (0.9.17) Its own generator
  * (DSTYLE's 21 genres, their drum bars, bass figures, chords, leads and arps) is gone: SEQ + SELECT, its last user,
  * dices with GEN's parts (gen.c dice_seq), on the song's harmony */
 
