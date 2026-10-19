@@ -665,6 +665,45 @@ JIANT's modifications are distributed under the same license.
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
 
+### v0.9.13 (draft)
+Not released yet (FELUCCA_VERSION stays 0.9.12 until it is).
+- **Songs past four tracks no longer run the CPU over: a load governor.** On 0.9.12 a song of five or six tracks could
+  take more than the FM-1 has, and the guard (a voice faded at 80 %) came too late. Now, every 2.9 ms half: over the
+  load budget (65 %, 55 % on one core) six halves in a row, **one voice less for all the tracks** (down to 4; the
+  oldest released ones go first); a voice faded by the guard, two less; half a second under the budget, one back. If the
+  guard still has to fade voices twice in a second, the sound goes to **LOAD LITE on its own** (CLOUD and SHIMMER play
+  as ROOM, RESO as SPRING, the GRAIN delay plain, FM6 two voices) until 5 s of calm; MENU › SYSTEM › LOAD stays as you
+  set it. Measured on the host (callgrind, a six-track song: DRUM-X VOICE ANIMAL LOFI ANALOG FM6 in chords, CLOUD,
+  delay, chorus; and a heavy one: DRUM FM6 PHASE WHEEL NOISE FM6): one core 2258 / 2509 instructions a sample; two
+  cores, the longer of the two cores' paths, 1642 / 1593 with 12 voices, 1229 / 1434 at 8, 1066 / 1218 at 6. 0.9.12's 12
+  voices on two cores cost 14–22 % more work than 0.9.9's 8 in all; the governor now takes that back when it is needed.
+- **After a crash, both cores again after three power-ons.** 0.9.12 turned 2 CORES off for good after any crash with
+  both cores at work, and a unit left on one core plays every song with ~1.5x the load. Now 1 CORE lasts two
+  power-ons; the third starts both cores again. A second crash with both cores after that: 1 CORE for good (ABOUT:
+  CORES 1 (AFTER 2 CRASHES)) until MENU › SYSTEM › CPU. Check MENU › ABOUT: CORES 2 is what the FM-1 should say.
+- **EXPLORE less extreme by default, and inside the CPU.** COMPLEX is now how wild EXPLORE goes: at the default 50 the
+  pieces are adventurous but musical (tempos 80–165, the commoner modes more often, polyrhythm on three tracks at most,
+  fewer PLAYHEADS and out-of-key colours); at 100 every rule broken as before. Each piece is estimated (its parts by
+  engine and voices, the reverb, the delay's grain, PLAYHEADS) and made lighter until it fits 65 % of the audio's time
+  with two cores, 55 % with one: a heavy engine as LOFI or ANALOG, CLOUD / SHIMMER as ROOM / SPRING, the texture, arp
+  or lead left out, the grain off, fewer PLAYHEADS and chord notes. Host scan of 500 seeds against the CPU TEST song
+  (its mean taken as ~63 % of a half with two cores, ~77 % with one): two cores, the mean load at most 0.98x CPU
+  TEST (62 %), the 99th percentile of the halves at most 1.12x (71 %); one core, mean at most 0.80x (median 0.60x,
+  from 0.75x), 18 pieces of 500 a little over 55 % (the floor: drums, bass, two-note chords). The genres and RANDOM are
+  not trimmed. MANUAL › GEN.
+- **GEN's sounds move, and no more sirens.** The lead (track 5 of six) had a 1–2 semitone pitch wobble at 1–2 Hz half
+  the time, plus whatever LFO its preset carried. Now every sound starts with its LFO routes cleared; a **vibrato only
+  on a held lead** (now and then a held pad): a fifth of a semitone, ~5 Hz, fading in. The **filter moves** on almost
+  every melodic part (its envelope, and on chords, arps and textures often a slow LFO over one, two or four bars at the
+  genre's tempo), and each role has a **release** of its own (bass short but never a click, chords long). **Chord
+  progressions** on 97 % of the pieces (79 % before; one-chord pedals now and then), the arp following the chords;
+  ANIMAL a quarter as often in EXPLORE.
+- **DRUM-X octaves half as fast.** Held keys on a DRUM track above the kit's octave: **+1 REPEAT** (the hit once a
+  step, a roll), **+2 RATCHET x2**, **+3 RATCHET x4** (were x2, x4, x8); recorded as heard. MIDI's bands the same.
+- **More room in the flash**: the app's slot grows by 2772 B (to 584336 B), up to where every loader already writes
+  (0x93000): no change to the update loader, the package or the installers. Image 582900 B, 1436 B free (was 1248 at
+  0.9.12 with 580316 B).
+
 ### v0.9.12
 A beta (the emulator and `preview/webapp/installer/`); the official installer stays on 0.9.9 until it is tested on
 the device.
