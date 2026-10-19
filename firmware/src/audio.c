@@ -29,16 +29,60 @@ static uint32_t audio_last_half = 2u, audio_lost;    /* (0.8.9) halves never ren
 static int16_t scope_buf[SCOPE_N];
 static uint32_t scope_w;
 
+static __attribute__((noinline)) void prf_block(void)   /* core 0, a block's end (audio.c audio_block) */
+{
+    uint32_t k, m = mc_mask_last;
+    if (prf_on) {
+        for (k = 0; k < PRF_NB; k++) {
+            prf_cur.sum[k] += prf_blk[k];
+            if (prf_blk[k] > prf_cur.max[k])
+                prf_cur.max[k] = prf_blk[k];
+        }
+        for (k = 0; k < NPART; k++)
+            prf_cur.c1[k] += (m >> k) & 1u;
+        prf_cur.blocks++;
+    }
+    for (k = 0; k < PRF_NB; k++)
+        prf_blk[k] = 0;
+}
+
+/* core 0, a half's end (fm1_alnk0_irq): all its ticks, TIMER5's in it, when it began; once a second the window kept */
+static __attribute__((noinline)) void prf_half(uint32_t all, uint32_t nested, uint32_t t0)
+{
+    static uint32_t last PRF_POOL, halves PRF_POOL;
+    uint32_t d = t0 - last - HALF_FRAMES * 544u, r = all - nested, w;
+    last = t0;
+    if (!prf_on)
+        return;
+    if (d > prf_cur.lat && d < 2400000u)               /* (started past its period: IRQs off, a flash write) */
+        prf_cur.lat = d;
+    prf_cur.t5 += nested;
+    prf_cur.sum[PRF_IRQ] += nested;
+    prf_cur.sum[PRF_HALF] += r;
+    if (nested > prf_cur.max[PRF_IRQ]) prf_cur.max[PRF_IRQ] = nested;
+    if (r > prf_cur.max[PRF_HALF]) prf_cur.max[PRF_HALF] = r;
+    if (++halves < PRF_HALVES)
+        return;
+    halves = 0;
+    w = song.playing ? 1u : 0u;
+    prf_win[w] = prf_cur;
+    prf_have |= (uint8_t)(1u << w);
+    memset(&prf_cur, 0, sizeof prf_cur);
+    prf_seq++;
+}
+
 static void audio_block(int32_t *out, uint32_t n)       /* mix (fx.c), then Q15 -> 24 bit */
 {
-    uint32_t i;
+    uint32_t i, t0 = PRF_T(), t1;
 #if FELUCCA_UAC && defined(UAC_UIN)
     if (USB_DUPLEX)                                     /* (0.7.5) MENU > USB IN+OUT: the host's audio, for the mix */
         uac_in_fill(n);
     else
         uin_on = 0;
 #endif
+    t1 = PRF_T();
     mix_block(out, n);
+    t0 = PRF_T() - t1 + t0;                             /* (0.9.14) PROFILE: USB's, the mix left out */
 #if FELUCCA_UAC
 #ifdef UAC_TAP8
     if (fx_stems)                                       /* (0.7.1) MENU > USB STEMS: 8 channels (fx.c stem_buf) */
@@ -49,6 +93,8 @@ static void audio_block(int32_t *out, uint32_t n)       /* mix (fx.c), then Q15 
 #endif
     if (fx_usb_fixed)                                   /* USB LEVEL FIXED: USB took the full level, the DAC */
         usb_fixed_dac(out, n);                          /* (speaker, headphones) gets MASTER's (fx.c) */
+    t1 = PRF_T();
+    prf_blk[PRF_USB] = t1 - t0;
     for (i = 1; i < n; i += 2u)                         /* the HOME scope: the music, before the click */
         scope_buf[scope_w++ & (SCOPE_N - 1u)] = (int16_t)out[2u * i];
     click_render(out, n);                               /* the metronome (click.c): the DAC only, not USB */
@@ -56,6 +102,8 @@ static void audio_block(int32_t *out, uint32_t n)       /* mix (fx.c), then Q15 
         out[2u * i] *= 1 << OUT_SHIFT;
         out[2u * i + 1u] *= 1 << OUT_SHIFT;
     }
+    prf_blk[PRF_OUT] = PRF_T() - t1;
+    prf_block();
 }
 
 /* Overload: two halves in a row above 80 % (0.6.15: was 85, too late: a click first, the UI starved) (the render plus TIMER5 nested in it), fade one voice over the
@@ -192,7 +240,9 @@ void fm1_alnk0_irq(void)                       /* via isr_alnk0 (hal/fm1_isr.S) 
         uac_render_end();                               /* (0.8.9) the half's 48 kHz resampling: to core 1, off the render */
 #endif
         audio_halves++;
-        us = shed_check(fm1_ticks() - t0);
+        b = fm1_ticks() - t0;
+        prf_half(b, t5_nested_ticks, t0);              /* (0.9.14) PROFILE */
+        us = shed_check(b);
         if (us > audio_max_us)
             audio_max_us = us;
         {
@@ -201,7 +251,7 @@ void fm1_alnk0_irq(void)                       /* via isr_alnk0 (hal/fm1_isr.S) 
             audio_cpu_rem = load % CPU_AVG;
         }
         if (fm1_audio_free_half() != half)
-            felucca_dbg.late++;                         /* the DMA moved on while we rendered (0.8.9: caught up at
+            felucca_dbg.late++, prf_cur.late++;         /* the DMA moved on while we rendered (0.8.9: caught up at
                                                          * once, its half pending; a click only past ~1.7 halves) */
         {   /* (0.6.17) MENU > ABOUT's numbers (voice.c load_diag) */
             uint32_t pc = us * 100u / (HALF_FRAMES * 1000000u / FS);

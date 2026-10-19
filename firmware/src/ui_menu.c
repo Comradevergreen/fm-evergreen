@@ -116,9 +116,138 @@ static int32_t menu_text(const char *s, int32_t y, uint16_t col, int draw)
     return y;
 }
 
+/* (0.9.14) SAVE > TOOLS 6 CPU TEST measured: its song played 8 s (after 2 s to settle), its mean AUDIO LOAD kept in the
+ * settings with the cores it ran on (cpt_res %, cpt_cores; 0 = not run), on ABOUT and PROFILE. GEN's EXPLORE budgets
+ * by it (gen.c gc_dev): the host's model holds this FM-1's CPU TEST at ~63 % (two cores), ~77 % (one) */
+#define cpt_res (favorites.factory[15][16])              /* (bytes no engine uses: engine 15) */
+#define cpt_cores (favorites.factory[15][15])
+static uint8_t cpt_arm PRF_POOL;                                  /* the CPU TEST song built, TRACKS 6 (song_dice.c cpu_test_song) */
+static uint32_t cpt_ms PRF_POOL, cpt_sum PRF_POOL, cpt_n PRF_POOL;
+static void cpt_poll(void)                               /* (ui.c rp_apply: every frame) */
+{
+    if (!cpt_arm)
+        return;
+    if (song.playing) {
+        if (!cpt_ms)
+            cpt_ms = fm1_ms | 1u;
+        else if (fm1_ms - cpt_ms >= 2000u + cpt_n * 100u)   /* (a sample every 100 ms after 2 s) */
+            cpt_sum += song.cpu_q8, cpt_n++;
+        return;
+    }
+    if (cpt_ms && cpt_n >= 80u) {                        /* stopped after 10 s of it: kept */
+        char b[24];
+        cpt_res = (uint8_t)clamp((int32_t)(cpt_sum * 100u / (cpt_n * 256u)), 1, 250);
+        cpt_cores = (uint8_t)(mc_two() ? 2u : 1u);
+        settings_save();
+        str_cpy(b, "CPU TEST: ", sizeof b);
+        fmt_int(b + str_len(b), cpt_res);
+        str_cpy(b + str_len(b), " %", 3);
+        ui_message(b);
+    }
+    if (cpt_ms)
+        cpt_arm = 0;
+    cpt_ms = cpt_sum = cpt_n = 0;
+}
+static void cpt_line(char *b)                            /* "CPU TEST 98 % (2 CORES)", "CPU TEST NOT RUN" */
+{
+    str_cpy(b, "CPU TEST ", 40);
+    if (!cpt_res) {
+        str_cpy(b + str_len(b), "NOT RUN (TOOLS 6)", 20);
+        return;
+    }
+    fmt_int(b + str_len(b), cpt_res);
+    str_cpy(b + str_len(b), cpt_cores == 1u ? " % (1 CORE)" : " % (2 CORES)", 14);
+}
+
+/* (0.9.14) MENU > ABOUT > PROFILE (OCT+ on ABOUT): where the audio's time went (prof.c), the last second playing and
+ * the last stopped, in % of a block (725 us; the load meter's halves are 4 of them): each the mean and the worst block.
+ * SELECT scrolls, OCT- back to ABOUT. The rows: the sequencer, each part (its engine; C1: mostly on the second core),
+ * the buses (of them the reverb, the rest the delay and chorus), core 0 waiting for core 1, the FX layer to CLIP, the
+ * master, USB, the output, core 1 busy, TIMER5 within the render and the whole render (= AUDIO LOAD); then TIMER5 in
+ * all, the latest start of the audio interrupt, the late halves, the buses at rest, the UI's frames */
+static uint32_t gc_dev(void);                           /* (gen.c) */
+enum { PRV_DC = PRF_N, PRV_T5, PRV_LAT, PRV_LATE, PRV_REST, PRV_FPS };
+static int prf_val(const prf_win_t *w, uint32_t k, int mx, int32_t *v)   /* 1: tenths, 2: whole, 0: none */
+{
+    uint32_t bt = w->blocks ? w->blocks * PRF_BLK : 1u;
+    if (k < PRF_N) {
+        *v = (int32_t)(mx ? (uint64_t)w->max[k] * 1000u / (PRF_BLK * (k >= PRF_NB ? 4u : 1u)) :
+                            (uint64_t)w->sum[k] * 1000u / bt);
+        return 1;
+    }
+    if (mx)
+        return 0;
+    switch (k) {
+    case PRV_DC: *v = (int32_t)((uint64_t)(w->sum[PRF_FX] - w->sum[PRF_REV]) * 1000u / bt); return 1;
+    case PRV_T5: *v = (int32_t)((uint64_t)w->t5 * 1000u / bt); return 1;
+    case PRV_LAT: *v = (int32_t)(w->lat / 24u); return 2;
+    case PRV_LATE: *v = (int32_t)w->late; return 2;
+    case PRV_REST: *v = (int32_t)(w->fxrest * 100u / (w->blocks ? w->blocks : 1u)); return 2;
+    default: *v = (int32_t)w->frames; return 2;
+    }
+}
+static int32_t prf_row(int32_t y, int draw, const char *name, uint32_t k)   /* k 254, 255: the two header rows */
+{
+    static const char *const HD[2][4] = {{"PLAY", "", "STOP", ""}, {"AVG", "MAX", "AVG", "MAX"}};
+    uint32_t c;
+    if (draw && y + AF_S.h > 0 && y < MENU_DOC_H) {
+        cv_text(6, y, &AF_S, name, T_TEXT);
+        for (c = 0; c < 4u; c++) {
+            char b[12];
+            const prf_win_t *w = &prf_win[1u - c / 2u];
+            int32_t v = 0;
+            int f = k < 254u && ((prf_have >> (1u - c / 2u)) & 1u) ? prf_val(w, k, (int)(c & 1u), &v) : 0;
+            if (f) fmt_fix(b, v, f == 1); else str_cpy(b, k >= 254u ? HD[k - 254u][c] : "-", 6);
+            cv_text_r(136 + (int32_t)c * 32 - (int32_t)(c == 3u) * 2, y, &AF_S, b, c / 2u ? T_MID : T_TEXT, T_BG);
+        }
+    }
+    return y + 18;
+}
+static int32_t prof_document(int32_t y, int draw)
+{
+    static const char *const NM[] = {"% OF A BLOCK", "LAST SECOND", "SEQUENCER", "FX BUSES", "REVERB ", "DELAY+CHORUS",
+                                     "CORE 0 WAITS", "FX LAYER..CLIP", "MASTER", "USB AUDIO", "OUTPUT", "CORE 1 BUSY",
+                                     "TIMER5 IN IT", "WHOLE HALF", "TIMER5 ALL", "IRQ LATE US", "LATE HALVES", "FX REST %",
+                                     "UI FRAMES"};
+    static const uint8_t KS[] = {254, 255, PRF_SEQ, PRF_FX, PRF_REV, PRV_DC, PRF_WAIT, PRF_POST, PRF_MST, PRF_USB, PRF_OUT,
+                                 PRF_C1, PRF_IRQ, PRF_HALF, PRV_T5, PRV_LAT, PRV_LATE, PRV_REST, PRV_FPS};
+    const prf_win_t *w = &prf_win[prf_have >> 1];
+    char b[40];
+    uint32_t k, i;
+    y += 4;
+    for (i = 0; i < NELEM(KS); i++) {
+        str_cpy(b, NM[i], sizeof b);
+        if (KS[i] == PRF_REV)
+            str_cpy(b + 7, N_RTYPE[REV_LITE[LOAD_EFF() % 3u][clamp(song.g[G_RTYPE], 0, 4)]], 8);
+        y = prf_row(y, draw, b, KS[i]);
+        for (k = 0; KS[i] == PRF_SEQ && k < NPART; k++) {   /* (the parts after the sequencer; C1: mostly on core 1) */
+            b[0] = 'T'; b[1] = (char)('1' + k); b[2] = ' ';
+            str_cpy(b + 3, k < trk_live ? ENGINES[trk[k].engine]->name : "-", 10);
+            if (w->c1[k] * 2u > w->blocks && w->blocks)
+                str_cpy(b + str_len(b), " C1", 4);
+            y = prf_row(y, draw, b, PRF_T1 + k);
+        }
+    }
+    str_cpy(b, "VOICES ", sizeof b);
+    fmt_int(b + 7, (int32_t)voices_busy());
+    str_cpy(b + str_len(b), " CAP ", 6);
+    fmt_int(b + str_len(b), (int32_t)voice_cap());
+    str_cpy(b + str_len(b), LOAD_EFF() == LOAD_ECO ? " ECO" : LOAD_EFF() ? (sys_load ? " LITE" : " GOV LITE") : " FULL", 10);
+    y = menu_text(b, y + 4, T_TEXT, draw);
+    y = menu_text(cpu_status(), y, T_TEXT, draw);
+    cpt_line(b);
+    y = menu_text(b, y, T_TEXT, draw);
+    str_cpy(b, "EXPLORE: DEVICE X", sizeof b);
+    fmt_fix(b + str_len(b), (int32_t)gc_dev(), 2);
+    y = menu_text(b, y, T_TEXT, draw);
+    return menu_text(FELUCCA_VERSION, y, T_MID, draw) + 4;
+}
+
 static int32_t menu_document(int32_t y, int draw)
 {
     uint32_t i;
+    if (ui.menu == 3)
+        return prof_document(y, draw);
     if (draw) {
         cv_text(6, y + 2, &AF_L, "JIANT FM", T_THEME);
         cv_text(6, y + 38, &AF_S, "Firmware for the MVAVE FM-1", T_TEXT);
@@ -155,6 +284,9 @@ static int32_t menu_document(int32_t y, int draw)
         y = menu_text(b, y, T_TEXT, draw);
         y = menu_text(cpu_status(), y, T_TEXT, draw);   /* (0.6.71) the second core (fx.c; 0.9.12: cpu_safe.c) */
         y = menu_text(cpu_is_320() ? "CPU 320 MHZ" : "CPU 360 MHZ", y, T_TEXT, draw);   /* (0.9.12) the clock now */
+        cpt_line(b);                                    /* (0.9.14) */
+        y = menu_text(b, y, T_TEXT, draw);
+        y = menu_text("OCT+: PROFILE", y, T_MID, draw);
     }
     {   /* (0.9.12) the last crash kept (cpu_safe.c crash_log; MANUAL: Troubleshooting) */
         char b[CRASH_LOG_N + 1u];
@@ -315,7 +447,7 @@ static void draw_menu(void)
     sig = ui.menu * 7u + ui.menu_sel * 131u + settings.palette * 1009u + settings.lowcut * 7919u + settings_hold * 3511u +
           settings_leds * 6151u + ui_prefs * 4099u + ui_style * 257u + ui_skin * 1543u + song.rec * 65537u + song.sel * 13u +
           ui_rec_prefs * 92821u + ui_scr * 131071u + ui.mlv * 0x9E3779B1u +   /* (#157: SCREEN OFF's value redraws its row) */
-          (ui.menu == 2 ? ui.menu_scroll * 48611u : 0u) +
+          (ui.menu >= 2 ? ui.menu_scroll * 48611u : 0u) + (ui.menu == 3 ? prf_seq * 2971u + 1u : 0u) +
           (ui.menu == 2 ? (song.cpu_q8 >> 3) * 7741u + load_diag.peak * 3329u + load_diag.late * 1931u +
                           load_diag.shed * 2671u : 0u);   /* (0.6.19) ABOUT's AUDIO LOAD: live (NOW in ~3 % steps) */
     draw_head();                                      /* (0.8.5: the pages' header, "MENU . DISPLAY") */
@@ -340,8 +472,8 @@ static void draw_menu(void)
         }
         cv_begin(240, 240 - (H_HEAD + MENU_DOC_H), T_BG);
         {
-            static const khint_t KH[2] = {{KC_SELECT, "SCROLL"}, {KC_OCTDN, "BACK"}};
-            cv_key_row(8, 232, 4, KH, 2, 3u, T_BG);
+            static const khint_t KH[3] = {{KC_SELECT, "SCROLL"}, {KC_OCTDN, "BACK"}, {KC_OCTUP, "PROFILE"}};
+            cv_key_row(8, 232, 4, KH, ui.menu == 2 ? 3 : 2, 3u, T_BG);
         }
         cv_blit(0, H_HEAD + MENU_DOC_H);
         return;
@@ -396,9 +528,15 @@ static void menu_input(uint32_t oct)                  /* oct: ui_input.c oct_tap
 {
     int32_t s;
     uint32_t k, up = (oct >> 1) & 1u, dn = oct & 1u;
-    if (ui.menu >= 2) {                                /* ABOUT: SELECT scrolls (bounded), OCT- back to the tabs */
+    if (ui.menu >= 2) {                                /* ABOUT: SELECT scrolls (bounded), OCT- back to the tabs; (0.9.14)
+                                                         * OCT+ PROFILE (its OCT- back to ABOUT) */
         if (dn)
-            ui.menu = 1, ui.force = 1;
+            ui.menu = (uint8_t)(ui.menu - 1), ui.menu_scroll = 0, ui.force = 1;
+        else if (up && ui.menu == 2) {
+            if (!prf_on)
+                memset(&prf_cur, 0, sizeof prf_cur);
+            ui.menu = 3, ui.menu_scroll = 0, prf_on = 1, ui.force = 1;
+        }
         else if ((s = panel_enc(EN_SELECT)) != 0)
             ui.menu_scroll = (uint16_t)clamp((int32_t)ui.menu_scroll + clamp(s, -128, 128) * 18, 0, menu_scroll_max());
         enc_drop();

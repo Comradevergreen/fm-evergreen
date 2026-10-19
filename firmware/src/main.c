@@ -52,9 +52,10 @@ void fm1_timer5_irq(void)
 #if FELUCCA_UAC
         uac_service();
 #endif
-        t5_nested_ticks += fm1_ticks() - t0;
+        t5_nested_ticks += fm1_ticks() - t0;   /* (0.9.14: PROFILE's TIMER5 ALL adds it, audio.c prf_half) */
         return;
     }
+    prf_cur.t5 -= t0;
     if (owed & 1u)
         usb_poll();                             /* (uac_service at its end) */
 #if FELUCCA_UAC
@@ -66,6 +67,8 @@ void fm1_timer5_irq(void)
         uart_midi_poll();
 #endif
     owed = 0;
+    prf_cur.t5 += fm1_ticks();                    /* (0.9.14) MENU > ABOUT > PROFILE: TIMER5 outside the render (its
+                                                 * start taken off above: t0 not kept across the polls) */
 }
 extern void isr_timer5(void);
 
@@ -379,6 +382,7 @@ static void fm1_main(void)
         cdc_task();
 #endif
         felucca_dbg.ui_frames++;
+        prf_cur.frames++;                               /* (0.9.14) PROFILE: UI FRAMES */
         felucca_dbg.page = ui.page;
         felucca_dbg.home = ui.home;
         felucca_dbg.stage = 1;

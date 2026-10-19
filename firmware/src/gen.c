@@ -1868,8 +1868,23 @@ static const uint8_t GC_REV[5] = {0, 25, 32, 10, 47};   /* ROOM SPRING SHIMMER R
 static const uint8_t GC_DIVQ[6] = {1, 2, 4, 8, 3, 6};   /* a DIV's steps a beat, x 4 / 4 (1/4 .. 1/32, 8T, 16T) */
 #define GC_GRAIN 25u
 #define GC_HEAD 6u
-static uint32_t gc_budget(void) { return mc_two() ? 1030u - 100u : 714u - 120u; }   /* (65 / 63, 55 / 77, less 0.10; one
-                                                         * core 0.12: its pieces sparse, a held chord more of them) */
+/* (0.9.14) the FM-1 against the model: the model is the host's instruction counts, and the device is heavier than they
+ * say (its code runs from the flash through a small cache the two cores share: the more engines and effects a piece
+ * plays, the more of it misses). Measured: SAVE > TOOLS 6 CPU TEST played (ui_menu.c cpt_res: its load, the host
+ * holding it at 63 % with two cores, 77 % with one); not measured, GC_DEV_X100. On 0.9.13 an owner's FM-1 played EXPLORE
+ * at ~90 % where the model said ~62 %: x1.45; x1.6 to be safe. Never under x1.0 (0.9.13's budget), x3 at most. To
+ * recalibrate from a PROFILE photo: GC_DEV_X100 = the device's WHOLE HALF (AVG, playing) over the host's for the song */
+#define GC_DEV_X100 160u
+static uint32_t gc_dev(void)
+{
+    uint32_t d = cpt_res ? (uint32_t)cpt_res * 100u / (cpt_cores == 1u ? 77u : 63u) : GC_DEV_X100;
+    return d < 100u ? 100u : d > 300u ? 300u : d;
+}
+static uint32_t gc_budget(void)                          /* (65 / 63, 55 / 77, over the device; less 0.10; one core 0.12:
+                                                         * its pieces sparse, a held chord more of them) */
+{
+    return mc_two() ? 1030u * 100u / gc_dev() - 100u : 714u * 100u / gc_dev() - 120u;
+}
 static uint32_t gc_cost(int steps)                      /* steps 0: before the parts (a chord track's triads) */
 {
     const ggenre_t *g = gs.g;

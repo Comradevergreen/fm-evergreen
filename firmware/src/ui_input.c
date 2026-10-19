@@ -93,7 +93,8 @@ static uint32_t oct_leds(void)
     if (layer_set_open())                               /* a SET layer: OCT± do nothing (TONIC: no put back); */
         return ui.layer == LAYER_FX ? 1u : 0u;          /* FX LATCH: OCT- all off, lit */
     if (ui.menu && !ui.confirm)
-        return ui.menu >= 2u ? 1u :                    /* (ABOUT: OCT- back, lit) */
+        return ui.menu >= 2u ? (ui.menu == 2u ? 1u | OCT_BREATH : 1u) :   /* (ABOUT: OCT- back, lit; 0.9.14: OCT+
+                                                 * PROFILE, breathing) */
                !menu_valued(ui.menu_sel) ? (ui.menu_sel != MI_LCLEAR || ml_count() ? OCT_BREATH : 0u) :   /* CALIBRATION /
                                                  * ABOUT: OCT+ opens; (0.9.12) LEARN CLEAR: clears, while CCs are learned */
                (menu_step(ui.menu_sel, -1) != menu_get(ui.menu_sel) ? OCT_BREATH_DN : 0u) |   /* a value: each */
@@ -1969,6 +1970,7 @@ static void scale_link(void)
 static void ui_input_frame(void);
 static void ui_input(void)
 {
+    cpt_poll();                                         /* (0.9.14) CPU TEST measured as it plays (ui_menu.c) */
     ui_input_frame();
     scale_link();                                       /* (JIANT 0.4) one scale for every melodic track (after the
                                                          * frame's edits) */
