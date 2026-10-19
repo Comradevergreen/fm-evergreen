@@ -69,6 +69,7 @@ static struct {
     uint8_t rs_root;                     /* .. the note FOLW last heard + 1 (0: none yet) */
     uint16_t rs_w;                       /* .. their write index (each its own line, 1024) */
     uint32_t cl_w, cl_rng;               /* .. CLOUD: its line's write count (half rate), its random numbers */
+    int32_t cl_dc;                       /* .. (0.9.14) its loop's DC (Q8 samples) */
     int32_t cl_next, cl_lp, cl_half, cl_gl, cl_gr;     /* .. the samples to the next grain, the output's low-pass, the odd sample */
     uint16_t sp_w;                       /* SPRING: the loop's write index (SP_MASK) */
     uint8_t sp_ns;                       /* (0.6.70) SPRING's allpass stages last block (SP_N, LOAD ECO SP_N_ECO) */
@@ -1012,7 +1013,6 @@ static __attribute__((noinline)) void rev_reso(const int32_t *rev_in, int32_t *o
 #define CL_WMAX 512                                      /* (0.9.14) the grains' windows summed: 2 grains' worth at most */
 #define CL_BACK (CL_LEN - 6000u - 1024u)                 /* .. the farthest back a grain may start (rev_cloud) */
 static struct { uint32_t pos, inc; uint16_t len, age; int16_t pl, pr; } cl_g[CL_N];
-static int32_t cl_dc;                                    /* (0.9.14) CLOUD's loop: its DC (Q8 samples) */
 static uint32_t cl_rand(void) { fx.cl_rng = fx.cl_rng * 1664525u + 1013904223u; return fx.cl_rng >> 8; }
 /* CLOUD (G_RTYPE 4, JIANT 0.5, made wet in 0.5.1): a granular wash. The input and the cloud's own tail fed back
  * (SIZE: the tail ~0.09, the grains ~0.43: the wash builds on itself) are written at half rate into a 0.74 s line;
@@ -1037,8 +1037,8 @@ static __attribute__((noinline)) void rev_cloud(const int32_t *rev_in, int32_t *
         int32_t l = 0, r = 0, m;
         if (!freeze) {                                   /* the line: the input and the tail, two samples into one */
             int32_t x = (rev_in[i] >> 1) + mulq15(shim_fb[i], fb) + mulq15(fx.cl_lp, fg);
-            cl_dc += ((x << 8) - cl_dc) >> 9;            /* (0.9.14) a low cut (~14 Hz, Q8) in the loop: ROOM's floors */
-            x -= (cl_dc + 128) >> 8;                     /* gave it a DC that went round for ever (RMS ~1700 at SIZE 126) */
+            fx.cl_dc += ((x << 8) - fx.cl_dc) >> 9;            /* (0.9.14) a low cut (~14 Hz, Q8) in the loop: ROOM's floors */
+            x -= (fx.cl_dc + 128) >> 8;                     /* gave it a DC that went round for ever (RMS ~1700 at SIZE 126) */
             if (fx.cl_w & 1u)
                 cloud_buf[(fx.cl_w >> 1) & (CL_LEN - 1u)] = (int16_t)rv_knee((fx.cl_half + x) >> 1);
             else
@@ -1155,7 +1155,7 @@ static void rev_state_clear(void)
     for (i = 0; i < CL_N; i++)
         cl_g[i].len = 0;
     fx.cl_gl = fx.cl_gr = 0;
-    cl_dc = 0;
+    fx.cl_dc = 0;
     fx.cl_lp = fx.cl_half = 0;                          /* (0.8.4: CLOUD's tone and odd sample too; its tone's state
                                                          * was kept, a residue back into the next CLOUD's line) */
 }
