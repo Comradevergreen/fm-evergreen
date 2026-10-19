@@ -1491,18 +1491,33 @@ static int32_t fx_glide(int32_t cur, int32_t to, uint32_t n)
 }
 /* (0.9.14) the buses at rest: their gate shut (fx_gate: what they give is 0 until something is sent), nothing sent
  * (fx_buses), the delay's own level under the floor and its loop under 100 % (it cannot grow back), its line not being
- * cleared, the reverb's model not changing, CLOUD not frozen: not run, their state held as it is (a residue under the
- * gate's floor, picked up again with the next send). Stopped, or a silent stretch: the reverb, the delay and the chorus
- * cost nothing (they were the most of a stopped song's load: 66 % of it with CLOUD on the host). Out of line: the
- * buses' two copies (flash, RAM) only call it */
-static __attribute__((noinline)) int fx_rest(int32_t *wet, uint32_t n)
+ * cleared, the reverb's model not changing, CLOUD not frozen: not run. Stopped, or a silent stretch: the reverb, the
+ * delay and the chorus cost nothing (they were the most of a stopped song's load: 66 % of it with CLOUD on the host).
+ * Their lines and states silenced over the first blocks of it (a part each: rev_state_clear, the delay's line a quarter
+ * at a time, CLOUD's line), so the next send starts from silence: held, the residue the gate had shut (up to -30 dB
+ * after 8 s) came back with it, a ghost of the last chord a pause later. Out of line: the buses' two copies call it */
+static __attribute__((noinline)) int fx_rest(int32_t any, int32_t *wet, uint32_t n)
 {
-    uint32_t i, rt = (uint32_t)song.g[G_RTYPE] <= 4u ? (uint32_t)song.g[G_RTYPE] : 0u;
-    if (fxg_g || fxg_dly || GFX(GF_DFDBK) >= 100 || fx.dsw || (rt == 4u && GFX(GF_RSIZE) >= 127) ||
-        REV_LITE[LOAD_EFF() % 3u][rt] != fx.rtype)
+    uint32_t i, rt = (uint32_t)song.g[G_RTYPE] <= 4u ? (uint32_t)song.g[G_RTYPE] : 0u, ph = prf.rest_ph;
+    if (any || fxg_g || fxg_dly || GFX(GF_DFDBK) >= 100 || fx.dsw || (rt == 4u && GFX(GF_RSIZE) >= 127) ||
+        REV_LITE[LOAD_EFF() % 3u][rt] != fx.rtype) {
+        prf.rest_ph = 0;
         return 0;
-    for (i = 0; i < n; i++)
-        wet[i] = 0;
+    }
+    memset(wet, 0, n * sizeof *wet);
+    if (ph == 0u) {
+        rev_state_clear();
+        memset(cho_buf, 0, sizeof cho_buf);
+        memset(&dlo, 0, sizeof dlo);
+        fx.dt1 = fx.dt2 = fx.rt1 = fx.rt2 = 0;
+        fx.dly_lp = fx.dly_hp = fx.rf_lp = fx.rpre_s = fx.cl_lp = fx.cl_half = 0;
+    } else if (ph <= 4u) {
+        dly_line_clear((ph - 1u) * (DLY_LEN / 4u), DLY_LEN / 4u);
+    } else if (ph == 5u) {
+        rev_line_clear(CL_LEN);
+    }
+    if (ph < 6u)
+        prf.rest_ph = (uint8_t)(ph + 1u);
     prf_cur.fxrest++;                                   /* (PROFILE: FX REST) */
     return 1;
 }
@@ -1516,7 +1531,7 @@ static inline __attribute__((always_inline)) void fx_buses(const int32_t *cho_in
         for (i = 0; i < n; i++)
             any |= cho_in[i] | dly_in[i] | rev_in[i];
         fxg_quiet = any ? 0u : fxg_quiet < 0xFFFFFFu ? fxg_quiet + 1u : fxg_quiet;
-        if (!any && fx_rest(wet, n))                    /* (0.9.14) at rest: not run */
+        if (fx_rest(any, wet, n))                       /* (0.9.14) at rest: not run */
             return;
     }                                                   /* (0.6.19: it opens over ~6 ms, fx_gate: at once, the
                                                          * residue in the lines stepped in: a tick on the next note) */
