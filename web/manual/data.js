@@ -610,7 +610,8 @@ news: [
     ["Parado, los efectos ya no gastan CPU (en 0.9.13 la reverb, el delay y el chorus corrían siempre: el NOW 26 % parado).", "Stopped, the effects no longer use CPU (on 0.9.13 the reverb, delay and chorus always ran: the NOW 26 % while stopped)."],
     ["Los acordes FM6 de GEN ya no suenan minutos después de parar.", "GEN's FM6 chords no longer ring for minutes after stopping."],
     ["EXPLORE presupuestado para el FM-1 real (CPU TEST medido, o 1,6 veces la estimación): piezas más livianas.", "EXPLORE budgeted for the real FM-1 (CPU TEST measured, or 1.6 times the estimate): lighter pieces."],
-    ["El regulador de carga actúa antes (pasado 75 % saca una voz por medio bloque).", "The load governor acts sooner (past 75 % a voice less every half)."]]},
+    ["El regulador de carga actúa antes (pasado 75 % saca una voz por medio bloque).", "The load governor acts sooner (past 75 % a voice less every half)."],
+    ["CLOUD ya no cruje con RATE alto: el loop siempre se apaga.", "CLOUD no longer crackles at a high RATE: its loop always dies away."]]},
   {v: "0.9.13", items: [
     ["Seis pistas sin trabarse: un regulador de carga baja voces (de a una, mínimo 4) antes de que el audio cruja y las devuelve con calma; si hace falta pasa solo a LOAD LITE unos segundos.", "Six tracks without choking: a load governor drops voices (one at a time, 4 at least) before the audio crackles and gives them back when calm; if needed it goes LOAD LITE by itself for a few seconds."],
     ["Tras un crash ya no queda en 1 CORE para siempre: vuelve a los dos núcleos al tercer encendido.", "After a crash it no longer stays on 1 CORE for good: both cores come back on the third power-on."],

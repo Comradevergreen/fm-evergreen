@@ -700,9 +700,15 @@ CPU: measured on the FM-1 instead of estimated on a computer, and lighter where 
 - **The load governor acts sooner.** Over the budget 3 halves in a row (was 6): a voice less for all tracks; past 75 %
   (62 % on ECO, 70 % on one core), a voice less every half, and at the minimum of 4 still past it for 8 halves, LOAD
   LITE by itself — before the guard's 80 % fades voices.
-- **The flash**: the code that runs once an event (a step, a note, a MIDI message, a USB request) and not once a
-  sample is now built for size, as the UI is (1.9 KB: the room PROFILE needed); the sound's own code is unchanged and
-  still first in the image (layout: no function an interrupt reaches fell out of it). Image 584212 B, 124 B free.
+- **CLOUD no longer crackles when pushed.** Its grains were summed however many overlapped, and at a high RATE (from
+  ~90, any SIZE) the loop's gain passed 1: the line ran into its clamps and the limiter crushed it. Now the grains'
+  overlap is capped (the loop always dies away), the line bends through a soft knee instead of clamping, the grains
+  enter the room at half the level (6 dB more headroom), a ~14 Hz low cut keeps a DC from circling, and with AIR high
+  no grain reads across the write head (a click each). ROOM, SPRING, SHIMMER and RESO bit for bit as before.
+- **The flash**: the code that runs once an event (a step, a note, a MIDI message, a USB request, a sung word) and not
+  once a sample is now built for size, as the UI is (~2.3 KB: the room PROFILE and the CLOUD fix needed); the sound's
+  own code is unchanged and still first in the image (layout: no function an interrupt reaches fell out of it). Image
+  584260 B, 76 B free: the slot is full, the next feature needs room made first.
 
 ### v0.9.13
 - **Songs past four tracks no longer run the CPU over: a load governor.** On 0.9.12 a song of five or six tracks could
