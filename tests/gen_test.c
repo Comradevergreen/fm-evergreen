@@ -146,7 +146,7 @@ int main(void)
                     for (j = 0; j < st->n; j++) {
                         notes_all++;
                         if (!in_scale(t, st->note[j])) notes_out++;
-                        if (st->note[j] > 84u || st->note[j] < 20u) range_bad++;
+                        if (st->note[j] > 84u || st->note[j] < 20u) { range_bad++; printf("  range: %s T%u role %u step %u note %u\n", gs.g->name, k + 1u, gs.role[k], i, st->note[j]); }
                     }
                     if (k == pd && st->n >= 3u && (st->note[0] < 46u || st->note[st->n - 1u] > 81u)) { chords_bad++; printf("  chord range: %s seed %u step %u %u..%u\n", gs.g->name, s, i, st->note[0], st->note[st->n - 1u]); }
                 }

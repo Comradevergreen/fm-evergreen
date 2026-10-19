@@ -1624,8 +1624,18 @@ static void sound_dice_of(track_t *t, int quiet)
         if (!quiet) ui_message("KIT DICED");
         return;
     }
-    if (ENGINES[e]->npresets)
-        apply_preset_to(t, rng() % ENGINES[e]->npresets);
+    if (ENGINES[e]->npresets) {                         /* (0.9.18) never one of the last four this engine gave */
+        static uint16_t last[4];
+        uint32_t n = ENGINES[e]->npresets, p = 0, tries, j;
+        for (tries = 0; tries < 8u; tries++) {
+            p = rng() % n;
+            for (j = 0; j < 4u && last[j] != (e << 8 | p) + 1u; j++) {}
+            if (j == 4u || n <= 4u) break;
+        }
+        memmove(last + 1, last, sizeof last - sizeof last[0]);
+        last[0] = (uint16_t)((e << 8 | p) + 1u);
+        apply_preset_to(t, p);
+    }
     for (i = 0; i < 8u; i++) {
         const param_desc_t *d = track_desc(t, P_E0 + i);
         int32_t span = (d->max - d->min) / 4;
@@ -1811,6 +1821,9 @@ static void part_dice(uint32_t kind)
         ui_message("STOP TO EDIT");
         return;
     }
+    rng_state ^= fm1_ticks() * 2654435761u;             /* (the press's time in the random numbers) */
+    if (!rng_state)
+        rng_state = 0x1234567u;
     if (ui.confirm != kind) {
         undo_mark();
         dk_keep(kind);

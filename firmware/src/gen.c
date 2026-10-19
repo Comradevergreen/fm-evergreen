@@ -85,6 +85,7 @@ static struct {
     uint8_t role[NTRK], act[RL_N], trk_of[RL_N];
     uint32_t drum_fill;                                 /* the fill forced (a BUILD section) */
     uint8_t mutant;                                     /* (0.6.95) RANDOM: a hybrid of two or three genres */
+    uint16_t snd[NTRK]; uint8_t nsnd;                   /* (0.9.18) the piece's sounds so far (engine << 8 | preset) */
 } gs;
 #define GKICK(i) ((uint32_t)(gs.kick >> ((i) & 63u)) & 1u)
 static uint32_t gseed_mix(uint32_t part) { return part == GS_PICK ? 0u : (gs.gi + 1u) * 0x85EBCA6Bu; }
@@ -806,6 +807,7 @@ static void gen_pads(track_t *t, uint32_t len)
     int32_t n[4];
     int rootless = (fam == HF_JAZZ || (fam == HF_JAZZY && gs.vm == VM_RICH)) && gs.act[RL_BASS];
     uint8_t dub[16] = {0}, comp[16] = {0}, brk[16] = {0};
+    uint32_t off, sh;
     gseed(GS_CHORDS);
     gs.nvo = 0;
     {   /* the bar figures kept the loop through */
@@ -816,6 +818,12 @@ static void gen_pads(track_t *t, uint32_t len)
         for (j = 0, m = (uint32_t)grr(3, 5); j < m; j++) comp[CP[(gr() + j * 2u) % 6u]] = 1;
         comp[gch(50) ? 6u : 14u] = 1;                   /* (the anticipation of 3 or of the bar) */
         for (j = 0, m = (uint32_t)grr(3, 4); j < m; j++) brk[BR[gr() % 6u]] = 1;
+        {   /* (0.9.18) a held chord's own place: on the change, or an eighth, a beat, a beat and a half late; a sparse
+             * one held to its end or for a dotted quarter (the held styles came out the same piece after piece) */
+            static const uint8_t OFS[6] = {0, 0, 0, 2, 4, 6};
+            off = OFS[gr() % 6u];
+            sh = style == CS_SPARSE && gch(40) ? 6u : 0u;
+        }
     }
     for (i = 0; i < len; i++) {
         step_t *s = &t->step[i];
@@ -823,8 +831,8 @@ static void gen_pads(track_t *t, uint32_t len)
         uint32_t pp = i % gs.len - c->at, p = i % 16u, b = i / 16u, cl = c->len;
         int on = 0, vel = 80, hold = 0;
         switch (style) {
-        case CS_HOLD: on = pp == 0u; hold = (int)cl - 1; break;
-        case CS_SWELL: on = pp == 0u; hold = (int)cl - 1; vel = 72; break;
+        case CS_HOLD: on = pp == (cl > off ? off : 0u); hold = (int)cl - 1; break;
+        case CS_SWELL: on = pp == (cl > off ? off : 0u); hold = (int)cl - 1; vel = 72; break;
         case CS_STAB: on = (p % 4u == 2u && gch(40 + a / 2u)) || (pp == 0u && gch(50)); vel = p % 4u == 2u ? 84 : 92; break;
         case CS_PULSE: on = i % (gs.energy > 66u ? 2u : 4u) == 0u && !(p == 12u && gch(40)); hold = gch(40); vel = p % 4u ? 76 : 86; break;
         case CS_DUB: on = dub[p]; vel = p == 2u ? 92 : 78; break;
@@ -833,7 +841,7 @@ static void gen_pads(track_t *t, uint32_t len)
             hold = p == 14u || p == 7u; vel = p == 0u ? 84 : 80; break;   /* (0.6.93: the bar's figure, varied a bar) */
         case CS_POWER: on = p == 0u || (p == 8u && (b & 1u) && gch(60)); hold = p == 8u ? 5 : 7; vel = 96; break;   /* (0.6.93: a push every bar) */
         case CS_DRONE: on = i == 0u; hold = (int)len - 1; vel = 70; break;
-        case CS_SPARSE: on = pp == 0u && (i == 0u || gch(40 + a / 3u)); hold = (int)cl - 1; vel = 76; break;
+        case CS_SPARSE: on = pp == (cl > off ? off : 0u) && (i == off || gch(40 + a / 3u)); hold = sh ? (int)sh : (int)cl - 1; vel = 76; break;
         case CS_BROKEN: on = brk[p]; vel = p ? 80 : 92; break;
         default: on = ((0xDB6Du >> p) & 1u) && gch(70 + a / 4u); vel = p % 4u ? 78 : 96; break;   /* CS_TRANCE */
         }
@@ -1311,12 +1319,16 @@ static void gen_texture(track_t *t, uint32_t len)
     int32_t n[1], lo = ri == SR_DRONE || ri == SR_SUB || ri == SR_NOISE || ri == SR_TEXTURE ? 43 : 55;   /* (an organ, a
                                                          * choir, strings: above the bass) */
     gseed(GS_TEX);
-    for (i = 0; i < len; i += 16u) {
-        const gch_t *c = gchord(i);
+    uint32_t at = gr() % 3u * 4u, hold = gs.g->form == FM_ARC ? 63u : 15u - at;   /* (0.9.18) on the bar, or a beat or two
+                                                         * into it; the chord's root, fifth, third or octave */
+    for (i = 0; i + at < len; i += 16u) {
+        static const int8_t DG[6] = {0, 0, 4, 4, 2, 7};
+        const gch_t *c = gchord(i + at);
         if (i && gch(45)) continue;
-        n[0] = gtone(c, gch(30) ? 4 : 0, lo);
-        gnote(&t->step[i], n, 1, 72, 0);
-        dhold(t, i, gs.g->form == FM_ARC ? 63 : 15, len);
+        n[0] = gtone(c, DG[gr() % 6u], lo);
+        if (n[0] > lo + 19) n[0] -= 12;
+        gnote(&t->step[i + at], n, 1, 72, 0);
+        dhold(t, i + at, hold, len);
     }
 }
 
@@ -1336,7 +1348,7 @@ static void gen_sound(track_t *t, uint32_t role, uint32_t ri)
     const grecipe_t *r = &RECIPE[ri];
     static const uint8_t EW[3] = {55, 30, 15};
     uint32_t e = r->eng[gpickw(EW, 3)], i, k, n, nm = 0, na = 0;
-    uint8_t m[32], any[32];
+    uint8_t m[32], w[32], any[32];
     const engine_t *en;
     if (gx.eng >= 0) e = (uint32_t)gx.eng;              /* (0.8.6) EXPLORE: any engine (gx_engine) */
     if (e == ENGI_FM6 && gs.fm6 >= 2u) e = r->eng[0] == ENGI_FM6 ? EG_A : r->eng[0];
@@ -1352,12 +1364,22 @@ static void gen_sound(track_t *t, uint32_t role, uint32_t ri)
                                                          * BASS GROWL ACID; a REESE now too) */
         if (na < sizeof any) any[na++] = (uint8_t)i;
     }
-    for (k = 0; k < 3u && r->w[k] && !nm; k++)         /* (0.6.93) the recipe's words in order: the first that fits */
-        for (i = 0; i < n; i++) {
-            const char *pn = en->presets[i].name;
-            if (!gnever(pn) && dname_has(pn, r->w[k]) && nm < sizeof m) m[nm++] = (uint8_t)i;
+    for (i = 0; i < na; i++) {                          /* (0.9.18) every preset a word of the recipe names, the first
+                                                         * word's likeliest (3 2 1), one another track of the piece has
+                                                         * already seldom: until 0.9.17 only the first word that fitted,
+                                                         * often one preset (MICRO HOUSE's lead: the press before's
+                                                         * sound in 45 % of the presses) */
+        const char *pn = en->presets[any[i]].name;
+        for (k = 0; k < 3u && r->w[k] && !dname_has(pn, r->w[k]); k++) {}
+        if (k < 3u && r->w[k]) {
+            uint32_t id = e << 8 | any[i], j;
+            for (j = 0; j < gs.nsnd && gs.snd[j] != id; j++) {}
+            m[nm] = any[i]; w[nm++] = (uint8_t)(j < gs.nsnd ? 1u : 6u - 2u * k);
         }
-    apply_preset_to(t, nm ? m[gr() % nm] : na ? any[gr() % na] : gr() % n);
+    }
+    k = nm ? m[gpickw(w, nm)] : na ? any[gr() % na] : gr() % n;
+    if (gs.nsnd < NTRK) gs.snd[gs.nsnd++] = (uint16_t)(e << 8 | k);
+    apply_preset_to(t, k);
     for (i = 0; i < 8u; i++) {                          /* (an eighth of each range: still that sound, a bit its own) */
         const param_desc_t *d = track_desc(t, P_E0 + i);
         int32_t span = (d->max - d->min) / 8;
@@ -2301,6 +2323,7 @@ static void gen_make(void)
     /* the sounds (their own stream), then the parts in the pipeline's order: drums, bass (reads the kick), chords,
      * arp (reads the voicing), lead (reads the bass) */
     gseed(GS_SOUND);
+    gs.nsnd = 0;
     for (k = 0; k < NTRK; k++) {
         track_t *t = &trk[k];
         uint32_t r = gs.role[k];
@@ -2417,8 +2440,15 @@ static void gen_make(void)
         song.g[G_DPING] = (int16_t)(gr() % 2u);
         song.g[G_DFDBK] = (int16_t)clamp(song.g[G_DFDBK], 0, 85);
     }
-    rng_state = gq | 1u;
-    macro_dice(3);
+    {   /* the macros' routes from the piece's stream (the same piece, the same routes), then the session's random
+         * numbers as they were with these in them (0.9.18: they were the piece's from here on: every dice after a GEN
+         * piece, MUTATE, CHANCE the seed's, the same after the same seed in every session) */
+        uint32_t keep = rng_state;
+        rng_state = gq | 1u;
+        macro_dice(3);
+        rng_state ^= keep * 2654435761u;
+        if (!rng_state) rng_state = 0x1234567u;
+    }
     for (k = 0; k < NTRK; k++) trk[k].p[P_MSND] = trk[k].p[P_MPAT] = 0;   /* (0.6.96) a new piece: MUTATE off on every
                                                          * track, its anchor the piece (a reroll kept the lanes and
                                                          * orbited the old piece's sounds) */
@@ -2451,11 +2481,19 @@ static uint32_t gen_sig(void)                           /* the settings that mak
     h = (h ^ gp.complex) * 16777619u; h = (h ^ gp.swing) * 16777619u; h = (h ^ gp.human) * 16777619u;
     return h ^ (trk_live << 28);
 }
+static uint16_t gseed_last[8];                          /* (0.9.18) the last seeds thrown */
 static void gen_new_seed(void)
 {
+    uint32_t k, tries;
     rng_state ^= fm1_ticks() * 2654435761u;
     if (!rng_state) rng_state = 0x1234567u;
-    gp.seed = (uint16_t)(rng() % 10000u);
+    for (tries = 0; tries < 8u; tries++) {              /* (never one of the last eight again) */
+        gp.seed = (uint16_t)(rng() % 10000u);
+        for (k = 0; k < 8u && gseed_last[k] != gp.seed + 1u; k++) {}
+        if (k == 8u) break;
+    }
+    memmove(gseed_last + 1, gseed_last, sizeof gseed_last - sizeof gseed_last[0]);
+    gseed_last[0] = (uint16_t)(gp.seed + 1u);
 }
 /* OCT+ on the GEN screen: the piece; the same settings again: a new seed first */
 static void gen_press(void)
@@ -2496,8 +2534,6 @@ static const char *dice_seq(track_t *t)
                                          "SEQ DICED: ARP", "SEQ DICED: TEXTURE"};
     uint32_t k = trk_index(t) % NTRK, r, i, len, lo = 0, cnt = 0, chord = 0;
     uint16_t s0 = gp.seed;
-    rng_state ^= fm1_ticks() * 2654435761u;
-    if (!rng_state) rng_state = 0x1234567u;
     for (i = 0; i < NSTEP; i++)                         /* (what it plays now: its register, its chords) */
         if (t->step[i].time == ST_NOTE && t->step[i].n) { lo += t->step[i].note[0]; cnt++; chord += t->step[i].n > 1u; }
     r = drum_track(t) ? RL_DRUM : gs.g && gs.role[k] != RL_DRUM ? gs.role[k] : cnt && lo / cnt < 48u ? RL_BASS :

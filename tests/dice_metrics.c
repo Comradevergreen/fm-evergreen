@@ -234,7 +234,7 @@ int main(int argc, char **argv)
             rng_state = 0x1234567u;
             host_ticks = 1000000u + i * 7777777u;
             session_dice(host_ticks ^ (i * 3u) << 16);   /* (main.c: the ticks and the battery's ADC) */
-            gp.genre = GEN_EXPLORE; gp.seed = 1; gp.sig = 0;   /* (gp as at power-on) */
+            gp.genre = GEN_EXPLORE; gp.sig = 0;   /* (gp as at power-on: its SEED session_dice's) */
             gen_press();
             h[i] = dice_print();
             for (j = 0; j < i; j++) same += h[j] == h[i];
