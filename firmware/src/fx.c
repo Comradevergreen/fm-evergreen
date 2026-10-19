@@ -2382,6 +2382,9 @@ static const char *mc_status(void)                      /* MENU > ABOUT's line *
  * block 0. A note, PLAY, a knob of the FX layer: the next block (the events run first) renders as ever, every state as
  * the silence left it. Stopped and silent the audio's load was ~500 instructions a sample on the host (the six parts'
  * block work, the master's chain, the clears): now ~150 */
+#ifndef HUSH_COUNT
+#define HUSH_COUNT()                                     /* (tests/hush_test.c counts the silent blocks) */
+#endif
 static __attribute__((noinline)) int master_rest(uint32_t n)
 {
     uint32_t i;
@@ -2417,12 +2420,16 @@ static __attribute__((noinline)) void mix_silent(int32_t *out, uint32_t n, uint3
 {
     uint32_t k;
     for (k = 0; k < NPART; k++) {
-        track_lfo_tick(&trk[k]);                        /* (the LFOs turn on: their pages, the next note's phase) */
+        track_lfo_tick(&trk[k]);                        /* (the LFOs turn on: their pages, the next note's phase; */
+        drift_clk[k] += ENGINES[trk[k].engine] != &ENG_DRUM && trk[k].p[P_DRIFT] < 127;   /* DRIFT's clock as well) */
+        if (ENGINES[trk[k].engine]->block)
+            ENGINES[trk[k].engine]->block(&trk[k]);
         mp_seen[k] = 0;
     }
     slicer_bus(sl_l, sl_r, n);                          /* (its clock; off: nothing else) */
     mc_mask_last = 0;
     prf_cur.fxrest++;
+    HUSH_COUNT();
     memset(out, 0, 2u * n * sizeof *out);
     prf_blk[PRF_SEQ] = MC_TICKS() - t0;                 /* (PROFILE: the block's whole work, the events' with it) */
 }
@@ -2448,10 +2455,12 @@ static __attribute__((noinline)) void mix_block(int32_t *out, uint32_t n)   /* (
     master_begin();
     duck_block();
     perf = perf_begin(n);                               /* the FX hold layer at work (perform.c) */
+#ifndef FX_HUSH_OFF                                     /* (tests/hush_test.c: the reference without it) */
     if (!perf && mix_hush()) {                          /* (0.9.15) all at rest: nothing rendered (above) */
         mix_silent(out, n, t0);
         return;
     }
+#endif
     if (!mc_off && mc_live()) {                         /* (0.6.71) core 1 at its parts meanwhile; (0.6.75) and the buses */
         c1m = mc_split(mc_fx_tk + 4u * MC_VW);
         if ((c1m || prf.rest_ph < 6u) &&               /* (0.9.15: no parts for it and the buses at rest: no job, the
@@ -2520,10 +2529,12 @@ static __attribute__((noinline)) void mix_block(int32_t *out, uint32_t n)   /* (
         clip_block(n);
     t0 = MC_TICKS();
     prf_blk[PRF_POST] = t0 - t1;
+#ifndef FX_HUSH_OFF
     if ((mix_msil = (uint8_t)(!perf && master_rest(n))) != 0) {   /* (0.9.15) the master at rest: exactly 0 out */
         memset(out, 0, 2u * n * sizeof *out);
         return;
     }
+#endif
     lev_block(n);                                       /* (JIANT 0.5) the leveler: the loudness held */
     if (perf) {
         perf_master(out, n);
