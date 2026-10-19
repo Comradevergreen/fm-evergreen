@@ -2405,7 +2405,7 @@ static __attribute__((noinline)) int mix_hush(void)
         return 0;
     for (k = 0; k < NPART; k++) {
         const track_t *t = &trk[k];
-        if (t->tail || t->xf_on || t->xin)
+        if ((t->tail && t->p[P_DIST]) || t->xf_on || t->xin)   /* (tail: counted down only with DIST, mix_part) */
             return 0;
         for (i = 0; i < NVOICE; i++)
             if (t->v[i].active)
@@ -2413,7 +2413,7 @@ static __attribute__((noinline)) int mix_hush(void)
     }
     return 1;
 }
-static __attribute__((noinline)) void mix_silent(int32_t *out, uint32_t n)
+static __attribute__((noinline)) void mix_silent(int32_t *out, uint32_t n, uint32_t t0)
 {
     uint32_t k;
     for (k = 0; k < NPART; k++) {
@@ -2424,6 +2424,7 @@ static __attribute__((noinline)) void mix_silent(int32_t *out, uint32_t n)
     mc_mask_last = 0;
     prf_cur.fxrest++;
     memset(out, 0, 2u * n * sizeof *out);
+    prf_blk[PRF_SEQ] = MC_TICKS() - t0;                 /* (PROFILE: the block's whole work, the events' with it) */
 }
 
 static __attribute__((noinline)) void mix_block(int32_t *out, uint32_t n)   /* (0.6.71: kept out of the ISR's
@@ -2448,7 +2449,7 @@ static __attribute__((noinline)) void mix_block(int32_t *out, uint32_t n)   /* (
     duck_block();
     perf = perf_begin(n);                               /* the FX hold layer at work (perform.c) */
     if (!perf && mix_hush()) {                          /* (0.9.15) all at rest: nothing rendered (above) */
-        mix_silent(out, n);
+        mix_silent(out, n, t0);
         return;
     }
     if (!mc_off && mc_live()) {                         /* (0.6.71) core 1 at its parts meanwhile; (0.6.75) and the buses */
