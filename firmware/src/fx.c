@@ -1191,14 +1191,14 @@ static inline int32_t cho_ens(const int16_t *buf, uint32_t w, uint32_t ph, int32
 #define FXG_FLOOR2 512
 #define FXG_QUIET3 ((uint32_t)FS * 8u / CTL)
 #define FXG_FLOOR3 1024
-static uint32_t fxg_quiet;
+static uint32_t fxg_quiet, fx_idle;                  /* (0.9.14) fx_idle: blocks the buses rested (MENU > ABOUT > PROFILE) */
 static int32_t fxg_dpk;                              /* (0.6.89) the delay line's peak this block (fx_buses) */
 static int32_t fxg_g = 32767;
 /* (0.8.4) TIME past the quiet's 1.5 s (blocks, else 0), FEEDBK not 0; the blocks since something was sent or a repeat
  * over the floor went round the loop again: while that is within TIME, an echo is still to come back, the gate stays
  * open (a long delay's repeats come back at their level, not faded in after the gap). TIME up to 1.5 s as before */
 static uint32_t fxg_hold, fxg_dact;
-static uint8_t fxg_fb;
+static uint8_t fxg_fb, fxg_dly;
 static void fx_gate(int32_t *wet, uint32_t n)
 {
     int32_t pk = 0, g0 = fxg_g, d;
@@ -1210,6 +1210,7 @@ static void fx_gate(int32_t *wet, uint32_t n)
     int dly = fxg_dpk >= FXG_FLOOR && !fx.gr_on;       /* (0.6.89) a plain delay's tail still there: only the first floor
                                                          * (its residue: the loop's DC block keeps it under it); the
                                                          * higher ones cut a long FEEDBK tail off at 4 or 8 s */
+    fxg_dly = (uint8_t)dly;                            /* (0.9.14: fx_buses' idle skip) */
     fxg_dact = !fxg_quiet || (dly && fxg_fb) ? 0u : fxg_dact < 0xFFFFFFu ? fxg_dact + 1u : fxg_dact;
     q = fxg_hold && fxg_dact <= fxg_hold ? 0u : fxg_quiet;
     fxg_dpk = 0;
@@ -1496,6 +1497,18 @@ static inline __attribute__((always_inline)) void fx_buses(const int32_t *cho_in
         for (i = 0; i < n; i++)
             any |= cho_in[i] | dly_in[i] | rev_in[i];
         fxg_quiet = any ? 0u : fxg_quiet < 0xFFFFFFu ? fxg_quiet + 1u : fxg_quiet;
+        /* (0.9.14) the buses at rest: their gate shut (fx_gate: what they give is 0 until something is sent), nothing
+         * sent, the delay's own level under the floor and its loop under 100 % (it cannot grow back), its line not
+         * being cleared, the reverb's model not changing: not run, their state held as it is (a residue under the gate's floor, picked up again with the
+         * next send). Stopped, or a silent stretch: the reverb, the delay and the chorus cost nothing (they were the
+         * most of a stopped song's load: 66 % of it with CLOUD on the host) */
+        if (!any && !fxg_g && !fxg_dly && GFX(GF_DFDBK) < 100 && !fx.dsw && !(song.g[G_RTYPE] == 4 && GFX(GF_RSIZE) >= 127) &&
+            REV_LITE[LOAD_EFF() % 3u][(uint32_t)song.g[G_RTYPE] <= 4u ? song.g[G_RTYPE] : 0] == fx.rtype) {
+            for (i = 0; i < n; i++)
+                wet[i] = 0;
+            fx_idle++;
+            return;
+        }
     }                                                   /* (0.6.19: it opens over ~6 ms, fx_gate: at once, the
                                                          * residue in the lines stepped in: a tick on the next note) */
     int32_t fb = dly_fb(GFX(GF_DFDBK)), tn = GFX(GF_DCOL) - 64;   /* (JIANT 0.4) TONE: one knob, low-pass .. open .. low cut */

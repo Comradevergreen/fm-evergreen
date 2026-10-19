@@ -204,6 +204,22 @@ static int fm6_load_slot(uint32_t tr, uint32_t s)
     return 0;
 }
 
+/* (0.9.14) the slowest release among the carriers of track t's patch (R4, 0..99): its SLOT's factory patch (P_E7), else
+ * the patch it has (OWN, a bank voice). GEN keeps an FM6 part's REL within it (gen.c gen_sound): REL slows R4 by up to
+ * 90 steps (fm6_sync), and a GEN pad at REL 78..104 left R4 at 1, a release of minutes: its chords' voices sounded on
+ * for good after the notes (and the transport) stopped, at the cost of the heaviest engine */
+static uint32_t fm6_rel_r4(const track_t *t)
+{
+    int32_t s = t->p[P_E7], a = t->p[P_E0];
+    uint32_t k, car, r = 99u, tr = (uint32_t)(t - trk) % NTRK, f = s >= 0 && s < (int32_t)FM6_NFACTORY;
+    const uint8_t *b = f ? FM6_FACTORY[s] : fm6_patch[tr];     /* (packed: 17 bytes an operator, ALG at 110) */
+    car = fm6_carriers(a >= 1 && a <= 32 ? (uint32_t)a - 1u : b[f ? 110u : FP_ALG] & 31u);
+    for (k = 0; k < 6u; k++)
+        if ((car >> k) & 1u && (b[k * (f ? 17u : FP_OP) + 3u] & 0x7Fu) < r)
+            r = b[k * (f ? 17u : FP_OP) + 3u] & 0x7Fu;
+    return r;
+}
+
 /* track tr's patch was just put in as its own (a project, a user preset, the editor, a conversion): an FM6 track's
  * SLOT shows the factory patch it equals unchanged (F n; the SLOT it had first), else OWN; nothing reloads over it
  * (fm6_poll) */
