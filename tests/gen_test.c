@@ -17,6 +17,21 @@ static int gcheck(const char *what, int ok)
     printf("gen: %-74s %s\n", what, ok ? "ok" : "FAIL");
     return ok ? 0 : 1;
 }
+static int form_drop_longest(void)                      /* (0.9.14) the drop (A) rows longer than every other row */
+{
+    uint32_t k, a = 0, o = 0;
+    for (k = 0; k < chain_config.count; k++) {
+        uint32_t b = chain_config.row[k].bars;
+        if (chain_config.row[k].slot == 0u) { if (b > a) a = b; } else if (b > o) o = b;
+    }
+    return a > o;
+}
+static uint32_t form_sig(void)                          /* the ARRANGE's rows: slots and bars */
+{
+    uint32_t k, h = chain_config.count;
+    for (k = 0; k < chain_config.count; k++) h = h * 131u + chain_config.row[k].slot * 7u + chain_config.row[k].bars;
+    return h;
+}
 static void gen_reset(void)
 {
     ui_power_on();
@@ -397,11 +412,18 @@ int main(void)
         bad += gcheck("FORM PARTS: sections written, ARRANGE filled, PLAY the song",
                       live.mode == 1 && chain_config.count >= 2u && (dice_secs & 3u) == 3u && SONG_END(&chain_config) == SONG_FOREVER);
         for (k = 0; k < chain_config.count; k++) if (chain_config.row[k].slot > 3u || !chain_config.row[k].bars) bad += gcheck("  a row's section and bars", 0);
+        {   /* (0.9.14) the seed changes the ARRANGE: the order and the rows' lengths (before: always the same) */
+            uint32_t sd, f, sigs[12], diff = 0;
+            for (f = 1; f <= 2u; f++)
+                for (sd = 0; sd < 6u; sd++) { gen_reset(); gen_with(1, 31 + sd * 977u, 60, f); sigs[(f - 1u) * 6u + sd] = form_sig(); }
+            for (sd = 1; sd < 6u; sd++) diff += sigs[sd] != sigs[0];
+            for (sd = 7; sd < 12u; sd++) diff += sigs[sd] != sigs[6];
+            bad += gcheck("FORM PARTS / SONG: other seeds, other arrangements (order and lengths)", diff >= 6u);
+        }
         gen_reset();
         gen_with(1, 31, 60, 2);
-        bad += gcheck("FORM SONG (HOUSE): four sections (intro, build, drop, break), six rows, the drop longest",
-                      live.mode == 1 && chain_config.count == 6u && (dice_secs & 15u) == 15u &&
-                      chain_config.row[2].slot == 0u && chain_config.row[2].bars > chain_config.row[0].bars);
+        bad += gcheck("FORM SONG (HOUSE): four sections (intro, build, drop, break), five rows or more, the drop longest",
+                      live.mode == 1 && chain_config.count >= 5u && (dice_secs & 15u) == 15u && form_drop_longest());
         {   /* the BUILD section holds automation on the chords (the filter opening), the BREAK no drums */
             project_t p;
             int ok = proj_import(&p, &proj_slot[2], sizeof(project_store_t)) && p.motion.count >= 4u;
