@@ -71,6 +71,16 @@ int main(void)
           cpu_after(CPU_320, CR_2C) == (CPU_320 | CPU_1CORE | CPU_AUTO) && cpu_after(0, CR_2C | CR_WDT) == (CPU_1CORE | CPU_AUTO));
     check("  a crash on one core, or already 1 CORE (set by hand): unchanged",
           cpu_after(0, 0) == 0 && cpu_after(CPU_1CORE, CR_2C) == CPU_1CORE && cpu_after(CPU_320, CR_WDT) == CPU_320);
+    {   /* (0.9.13) the fallback lasts three power-ons, then both cores again; a crash after that retry: for good */
+        uint32_t c = cpu_after(CPU_320, CR_2C), c1 = cpu_retry(c), c2 = cpu_retry(c1), c3 = cpu_retry(c2), c4 = cpu_after(c3, CR_2C);
+        check("(0.9.13) after a crash: 1 CORE for two clean power-ons, the third both cores (the clock kept)",
+              (c1 & CPU_1CORE) && (c2 & CPU_1CORE) && !(c3 & (CPU_1CORE | CPU_AUTO)) && (c3 & CPU_TRIED) && (c3 & CPU_320));
+        check("  a crash with both cores again after the retry: 1 CORE for good (no retry), MENU > CPU clears it all",
+              (c4 & (CPU_1CORE | CPU_AUTO | CPU_GOOD)) == (CPU_1CORE | CPU_AUTO | CPU_GOOD) && cpu_retry(c4) == c4 &&
+              cpu_retry(CPU_1CORE) == CPU_1CORE && cpu_retry(0) == 0);
+        cpu_cfg = (uint8_t)c4; cpu_put(0, 1);
+        check("  MENU > SYSTEM > CPU 2 CORES by hand: the crash state gone", cpu_cfg == CPU_320);
+    }
 
     cpu_cfg = 0;
     mc_host = 1;

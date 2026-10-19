@@ -179,8 +179,8 @@ int main(void)
         for (b = 0; b < 256u; b++) {
             p = original; p.favorites.factory[15][17] = (uint8_t)b;
             memset(p.favorites.factory[13], 'A' + (int)(b % 26u), 32);
-            assert(settings_import(&p, sizeof p) == 1 && favorites.factory[15][17] == (b <= 7u ? b : 0u));
-            settings_export(&q); assert(q.favorites.factory[15][17] == (b <= 7u ? b : 0u) &&
+            assert(settings_import(&p, sizeof p) == 1 && favorites.factory[15][17] == (b <= 127u ? b : 0u));
+            settings_export(&q); assert(q.favorites.factory[15][17] == (b <= 127u ? b : 0u) &&
                                         !memcmp(q.favorites.factory[13], p.favorites.factory[13], 32));
         }
         p = original; assert(settings_import(&p, sizeof p) == 1);

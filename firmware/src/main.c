@@ -166,7 +166,7 @@ static void boot_leds(void)
 
 /* (0.9.12) what the last run left (cpu_safe.c): a crash (a record newer than the last boot saw, boot_leds) or a hang
  * (a watchdog reset: the main loop's breadcrumbs in PC / RETS, felucca_dbg) is logged into the settings (MENU > ABOUT
- * LAST CRASH, the editor's backup); with both cores at work then, MENU > SYSTEM > CPU goes to 1 CORE for good. 1: that
+ * LAST CRASH, the editor's backup); with both cores at work then, MENU > SYSTEM > CPU goes to 1 CORE (0.9.13: for three power-ons, a second time for good). 1: that
  * (the UI says so at its start) */
 static __attribute__((noinline)) uint32_t cpu_boot(void)
 {
@@ -182,8 +182,13 @@ static __attribute__((noinline)) uint32_t cpu_boot(void)
         if (fl & CR_2C)
             fm1_mc_bar_set();                           /* (a hang beside the second core: as a crash, fm1_fault) */
         crash_log_put(fl, 0xFFu, felucca_dbg.prev_stage, felucca_dbg.prev_page, 0, 0);
-    } else
+    } else {
+        cpu_cfg = (uint8_t)cpu_retry(cfg);              /* (0.9.13) a clean power-on: after a crash, both cores again
+                                                         * on the third */
+        if (cpu_cfg != cfg)
+            settings_save();
         return 0;
+    }
     cpu_cfg = (uint8_t)cpu_after(cfg, fl);
     settings_save();
     return cpu_cfg != cfg;

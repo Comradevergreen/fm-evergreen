@@ -58,7 +58,7 @@ static int settings_import(persist_t *p, int n)
         p->favorites.factory[15][26] = 0;
     if (p->favorites.factory[15][24] > 3u)         /* MIDI OUT (JIANT 0.6.72, ui.c midi_out_mode): unknown = KEYS */
         p->favorites.factory[15][24] = 0;
-    if (p->favorites.factory[15][17] > 7u)         /* (0.9.12) MENU > SYSTEM > CPU, CPU CLOCK (cpu_safe.c cpu_cfg): unknown =
+    if (p->favorites.factory[15][17] > 127u)       /* (0.9.12) MENU > SYSTEM > CPU, CPU CLOCK (cpu_safe.c cpu_cfg): unknown =
                                                      * 2 CORES, 360 MHZ (0, older settings too) */
         p->favorites.factory[15][17] = 0;
     if (p->favorites.factory[15][27] > 7u)         /* SCREEN OFF (1.1.5, ui.c SCR_CODE): unknown = 0 (NEVER since 1.1.5.1) */

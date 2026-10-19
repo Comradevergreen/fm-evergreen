@@ -17,7 +17,9 @@
 #define FELUCCA_VERSION "0"                     /* (a host test without felucca.c) */
 #endif
 #define cpu_cfg (favorites.factory[15][17])
-enum { CPU_1CORE = 1u, CPU_AUTO = 2u, CPU_320 = 4u };
+enum { CPU_1CORE = 1u, CPU_AUTO = 2u, CPU_320 = 4u, CPU_WAIT = 8u | 16u, CPU_GOOD = 32u, CPU_TRIED = 64u };   /* (0.9.13:
+                                                         * WAIT the power-ons on one core after a crash, 0..2; GOOD for
+                                                         * good; TRIED both cores again after one) */
 /* a crash's flags (main.c fm1_fault, cpu_boot): both cores ran, a hang (the watchdog), 320 MHz */
 enum { CR_2C = 1u, CR_WDT = 4u, CR_320 = 8u };
 /* the record: 32 characters, as MENU > ABOUT shows them, "IL01 2C 0.9.12 0201ABCD 0201ABCD": the short code and the
@@ -90,10 +92,24 @@ static int crash_log_get(char *b)
     return b[4] == ' ' && b[6] == 'C' && b[7] == ' ' && b[0] >= '?' && b[0] <= 'Z';
 }
 
-/* the boot's CPU setting after the last run: a crash or a hang while both cores ran turns 2 CORES off for good */
+/* the boot's CPU setting after the last run: a crash or a hang while both cores ran turns 2 CORES off; (0.9.13) for
+ * three power-ons, then both cores again (cpu_retry: a crash in 0.9.12 left a unit on one core for good, every song past
+ * four tracks over its CPU); a crash again after that retry: for good (until MENU > SYSTEM > CPU) */
 static uint32_t cpu_after(uint32_t cfg, uint32_t crash_flags)
 {
-    return !(cfg & CPU_1CORE) && (crash_flags & CR_2C) ? cfg | CPU_1CORE | CPU_AUTO : cfg;
+    if (cfg & CPU_1CORE || !(crash_flags & CR_2C))
+        return cfg;
+    return (cfg & ~(uint32_t)CPU_WAIT) | CPU_1CORE | CPU_AUTO | (cfg & CPU_TRIED ? CPU_GOOD : 0u);
+}
+/* a power-on with no crash before it: one on one core after a crash counted, the third gives both cores back */
+static uint32_t cpu_retry(uint32_t cfg)
+{
+    uint32_t w = (cfg & CPU_WAIT) >> 3;
+    if ((cfg & (CPU_1CORE | CPU_AUTO | CPU_GOOD)) != (CPU_1CORE | CPU_AUTO))
+        return cfg;
+    if (w < 2u)
+        return (cfg & ~(uint32_t)CPU_WAIT) | (w + 1u) << 3;
+    return (cfg & ~(uint32_t)(CPU_WAIT | CPU_1CORE | CPU_AUTO)) | CPU_TRIED;
 }
 
 /* 2 CORES off for good (cpu_after), saved, and said: why, then where to set it back (main.c: after a crash at boot, the
@@ -115,12 +131,12 @@ static void cpu_put(uint32_t clock, uint32_t v)   /* (from the next start: main.
     if (v != cpu_get(clock))
         ui_message(CPU_APPLY);
     cpu_cfg = (uint8_t)(clock ? (v ? cpu_cfg | CPU_320 : cpu_cfg & ~CPU_320) :
-                        (v ? cpu_cfg & ~CPU_1CORE : cpu_cfg | CPU_1CORE) & ~CPU_AUTO);
+                        (v ? cpu_cfg & ~CPU_1CORE : cpu_cfg | CPU_1CORE) & ~(CPU_AUTO | CPU_WAIT | CPU_GOOD | CPU_TRIED));
 }
 /* MENU > ABOUT: the cores (fx.c mc_status, and why one: the MENU or a crash), the clock */
 static const char *cpu_status(void)
 {
     if (!mc_live() && (cpu_cfg & CPU_1CORE))     /* (1 CORE set: core 1 never started) */
-        return cpu_cfg & CPU_AUTO ? "CORES 1 (AFTER A CRASH)" : "CORES 1 (MENU > CPU)";
+        return cpu_cfg & CPU_AUTO ? (cpu_cfg & CPU_GOOD ? "CORES 1 (AFTER 2 CRASHES)" : "CORES 1 (AFTER A CRASH)") : "CORES 1 (MENU > CPU)";
     return mc_status();
 }
