@@ -865,21 +865,29 @@ static void gen_pads(track_t *t, uint32_t len)
 static void gen_arp(track_t *t, uint32_t len)
 {
     const garp_t *ap;
-    uint32_t i, k = 0, idx = 0, a = gs.amt[GP_ARP], no = 0, last = 0xFFFFu, cnt = 0, rate;
+    uint32_t i, k = 0, idx = 0, a = gs.amt[GP_ARP], no = 0, last = 0xFFFFu, cnt = 0, rate, hole = 0, gh = 0, tie = 0;
     int32_t c[4], n[1];
     gseed(GS_ARP);
-    ap = &ARP[gs.g->arp[gch(70) ? 0 : 1]];
+    ap = &ARP[gch(25) ? AP_PEDAL + gr() % 3u : gs.g->arp[gch(70) ? 0 : 1]];   /* (0.9.18) now and then a pedal, broken
+                                                         * thirds, a zigzag */
     rate = ap->rate;
     if (rate == 1u && (a < 35u || (gs.energy < 34u && gch(50)))) rate = 2;   /* (0.6.93) a small amount: eighths */
     gs.navo = 0;
     for (no = 0; no < 8u && ap->ord[no] >= 0; no++) {}
+    for (i = 0; i < 16u; i++) {                         /* (0.9.18) the holes (space), the ghosts and the held notes a
+                                                         * figure of the bar, kept bar after bar (the fourth bar a little
+                                                         * its own): until 0.9.17 thrown every step, a bar like no other */
+        hole |= (uint32_t)(gr() % 100u >= 20u + a * 3u / 4u && i % 4u) << i;
+        gh |= (uint32_t)(gch(18) && i % 4u) << i;
+        tie |= (uint32_t)gch(10) << i;
+    }
     for (i = 0; i < len; i++) {
-        uint32_t j;
+        uint32_t j, p = (i / rate) % 16u;
         int32_t o;
         if (i % rate) continue;
         idx = i / rate;
         if (!((ap->mask >> (idx % 16u)) & 1u)) { k++; continue; }
-        if (gr() % 100u >= 20u + a * 3u / 4u) { k++; continue; }   /* (holes: space; 0.6.93: the amount is the density) */
+        if (((hole >> p) & 1u) != (i / 16u % 4u == 3u && p % 4u == 2u && gch(40))) { k++; continue; }
         if (gci(i) != last || !cnt) {
             cnt = gchord_at(i, 50, 74, c, gs.avo, &gs.navo, gvo_mode() == VO_PLANE ? VO_PLANE : VO_CLOSE, 0);
             last = gci(i);
@@ -893,7 +901,8 @@ static void gen_arp(track_t *t, uint32_t len)
         n[0] = c[j] + (o >= 4 ? 12 : 0);
         while (n[0] > 79) n[0] -= 12;
         while (n[0] < 48) n[0] += 12;
-        gnote(&t->step[i], n, 1, idx % 4u == 0u || k % no == 0u ? 92 : 78, 0);
+        gnote(&t->step[i], n, 1, (gh >> p) & 1u ? 54 : idx % 4u == 0u || k % no == 0u ? 92 : 78, 0);
+        if ((tie >> p) & 1u) dhold(t, i, rate, len);
         if (gs.complex > 50u && gch(6)) step_set_ratchet(&t->step[i], 2);
         k++;
     }
@@ -1058,9 +1067,11 @@ static void gl_write(track_t *t, gline_t *L, uint32_t len, uint32_t legato)
 }
 /* the motif's rhythm cells: figures that hold together (a long note and two short, a tresillo, a pickup into three, a
  * dotted push ..) */
-static const char *const GL_CELL[12] = {"x..x..x...x.....", "x.x.x...x.x.....", "x...x.x.x.......", "..x...x...x...x.",
+static const char *const GL_CELL[16] = {"x..x..x...x.....", "x.x.x...x.x.....", "x...x.x.x.......", "..x...x...x...x.",
                                         "x..x.x..x..x.x..", "x.......x.x.x...", "x...x...x...x...", "x.x...x.x...x...",
-                                        "..x.x...x.x.....", "x..x..x..x..x...", "x.....x...x.x...", "x...x.x.......x."};
+                                        "..x.x...x.x.....", "x..x..x..x..x...", "x.....x...x.x...", "x...x.x.......x.",
+                                        "x..x...x..x.....", "..x..x..x.x.....", "x.x..x...x..x...", "x..x.x...x.x..x."};   /* (0.9.18:
+                                                         * the last four syncopated: off sixteenths, pushes) */
 enum { LB_M, LB_V, LB_R, LB_C, LB_REST };               /* a bar of the phrase: the motif, varied, the answer, the
                                                          * continuation, a rest */
 static void gen_lead(track_t *t, uint32_t len)
@@ -1192,10 +1203,11 @@ static void gen_lead(track_t *t, uint32_t len)
         static const int8_t ARCH[6][4] = {{0, 0, 1, 0}, {0, 0, 2, 0}, {0, 0, 1, 0}, {0, 0, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 0}};
         uint8_t at[8], used[16] = {0};
         int8_t mo[8];
-        uint32_t k = 3u + gs.complex / 40u + (a > 60u), nc = 0, tpl, op = gr() % 5u, ct = gr() % 4u;   /* (op: the varied
-                                                         * bar's: 0 TRUNC, 1 RETRO, 2 END moved, 3 ORN, 4 AUG) */
+        uint32_t k = 3u + gs.complex / 40u + (a > 60u), nc = 0, tpl, op = gr() % 6u, ct = gr() % 4u;   /* (op: the varied
+                                                         * bar's: 0 TRUNC, 1 RETRO, 2 END moved, 3 ORN, 4 AUG, 5 (0.9.18)
+                                                         * LATE: its notes an eighth late, syncopated) */
         int32_t anchor, d = 0, pv = 0, base0;
-        const char *cell = GL_CELL[gr() % 12u];
+        const char *cell = GL_CELL[gr() % 16u];
         if (a < 35u && k > 3u) k--;
         if (k > 6u) k = 6u;
         tpl = style == LD_HOOK ? (gch(65) ? 4u : 2u) :
@@ -1272,7 +1284,8 @@ static void gen_lead(track_t *t, uint32_t len)
                 sh += bo;
             }
             for (j = 0; j < kk; j++) {
-                uint32_t pos = b0 + (vop == 4u ? at[j] * 2u : at[j]);   /* AUG: its first half's rhythm doubled */
+                uint32_t pos = b0 + (vop == 4u ? at[j] * 2u : vop == 5u && at[j] + 2u < 16u ? at[j] + 2u : at[j]);   /* AUG: its
+                                                         * first half's rhythm doubled; LATE */
                 int32_t mj = vop == 1u ? mo[kk - 1u - j] - mo[kk - 1u] + mo[0] : mo[j];   /* RETRO: its notes backwards
                                                          * from its first (the rhythm kept) */
                 int32_t dd = anchor + (inv ? -mj + 2 * mo[0] : mj) + sh + arch;
@@ -2413,6 +2426,10 @@ static void gen_make(void)
                                                          * another metre */
                         static const uint8_t ODD[4] = {12, 20, 24, 28};
                         len = ODD[gr() % 4u];
+                    } else if (r == RL_LEAD && len < NSTEP && NSTEP % len == 0u && gch(80)) {
+                        len = NSTEP;                    /* (0.9.18, "longer melodies, call and response") the lead's
+                                                         * phrase over four bars where the loop is shorter (its chords
+                                                         * again under it): its template's call and answer, its cadences */
                     }
                 }
                 load_begin(t, LOAD_PAT);
