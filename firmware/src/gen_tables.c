@@ -604,11 +604,11 @@ static const uint8_t GX_TEX[8] = {SR_NOISE, SR_TEXTURE, SR_DRONE, SR_CHOIR, SR_P
 static const uint8_t GX_ENG[GX_NENG] = {EG_A, EG_FM, EG_PH, EG_LO, EG_VO, EG_WH, EG_NO, ENGI_ANIMAL};
 static const uint8_t GX_ENG_W[RL_N][GX_NENG] = {
     {0},
-    {20, 14, 14, 12, 8, 8, 0, 8},                       /* bass */
-    {14, 12, 12, 8, 14, 12, 4, 8},                      /* chords */
-    {14, 10, 12, 12, 16, 6, 0, 16},                     /* lead */
-    {12, 14, 14, 14, 8, 8, 0, 14},                      /* arp */
-    {8, 6, 8, 8, 14, 8, 20, 16},                        /* texture */
+    {20, 14, 14, 12, 8, 8, 0, 2},                       /* bass (0.9.13: ANIMAL a quarter as often) */
+    {14, 12, 12, 8, 14, 12, 4, 2},                      /* chords */
+    {14, 10, 12, 12, 16, 6, 0, 4},                      /* lead */
+    {12, 14, 14, 14, 8, 8, 0, 3},                       /* arp */
+    {8, 6, 8, 8, 14, 8, 20, 4},                         /* texture */
 };
 /* a track's own loop (polyrhythm: odd and irregular lengths against the piece's) and its DIV (N_DIV: 0 1/4, 1 1/8,
  * 2 1/16, 3 1/32, 4 8T, 5 16T); how often a role keeps the piece's loop, a role's DIV weights */

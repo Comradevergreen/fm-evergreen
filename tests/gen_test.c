@@ -515,7 +515,7 @@ int main(void)
         static const uint32_t SEEDS = 60u;
         uint32_t sd, nmel_bad = 0, page_bad = 0, chord_bad = 0, key_bad = 0, key_col = 0, key_appr = 0, nn = 0;
         uint32_t store_bad = 0, budget_bad = 0, quiet = 0, loud = 0, odd = 0, poly = 0, divs = 0, comps = 0, lms = 0, heads = 0, words = 0;
-        uint32_t nbpm = 0, nsc = 0, nlen = 0, ndm = 0, neng = 0, same = 0, bpm_lo = 999, bpm_hi = 0, name_bad = 0;
+        uint32_t nbpm = 0, nsc = 0, nlen = 0, ndm = 0, neng = 0, same = 0, bpm_lo = 999, bpm_hi = 0, name_bad = 0, cpu_bad = 0;
         uint8_t seen_bpm[256] = {0}, seen_sc[16] = {0}, seen_len[NSTEP + 1] = {0}, seen_dm[64] = {0}, seen_eng[NENGINES] = {0};
         uint32_t sig[60];
         double rms_min = 1e9;
@@ -524,6 +524,7 @@ int main(void)
         uint32_t vref = 0;
         bad += gcheck("EXPLORE (0.8.6): GENRE EXPLORE at power-on", genre0 == GEN_EXPLORE);
         gen_reset();
+        mc_host_v12 = 1;                                /* (0.9.13: two cores, the FM-1's default: the CPU budget's, 12 voices) */
         for (g = 0; g < 3u * NGENRE; g++) {             /* (the voices the genres' pieces reach at once, the budget's
                                                          * own overshoot included: the reference) */
             double rms;
@@ -594,6 +595,7 @@ int main(void)
                         for (c = chord_build(t, key, o), j = 0; j < c; j++) if (!in_scale(t, o[j])) chord_bad++;
                 }
             }
+            if (gc_cost(1) > gc_budget()) { cpu_bad++; printf("  EXPLORE seed %u: CPU %u over the budget %u\n", gp.seed, gc_cost(1), gc_budget()); }
             if (!seen_bpm[song.g[G_BPM] & 255]) { seen_bpm[song.g[G_BPM] & 255] = 1; nbpm++; }
             if ((uint32_t)song.g[G_BPM] < bpm_lo) bpm_lo = (uint32_t)song.g[G_BPM];
             if ((uint32_t)song.g[G_BPM] > bpm_hi) bpm_hi = (uint32_t)song.g[G_BPM];
@@ -631,6 +633,47 @@ int main(void)
         bad += gcheck("  any engine: six at least, ANIMAL and VOICE among them, VOICE singing words",
                       neng >= 6u && seen_eng[ENGI_ANIMAL] && seen_eng[EG_VO] && words);
         bad += gcheck("  every piece storable, the automation inside its 64", !store_bad);
+        bad += gcheck("  (0.9.13) every piece inside the CPU budget of two cores (gc_cost: 65 % of a half)", !cpu_bad);
+        mc_host_v12 = 0;
+        {   /* (0.9.13) COMPLEX sets how wild: 200 seeds at 0, 50 and 100, the tracks in a loop or a DIV of their own, the
+             * BPM's spread, the PLAYHEADS; one core: the budget made every piece lighter (the estimate down, never up) */
+            uint32_t cx, own[3] = {0}, hd[3] = {0}, lo[3] = {999, 999, 999}, hi[3] = {0}, est[2] = {0}, over1 = 0;
+            mc_host_v12 = 1;
+            for (cx = 0; cx < 3u; cx++)
+                for (sd = 0; sd < 200u; sd++) {
+                    uint32_t bpm;
+                    gen_reset();
+                    gp.genre = (uint8_t)GEN_EXPLORE; gp.seed = (uint16_t)(sd * 41u + 3u); gp.energy = 50; gp.form = 0;
+                    for (k = 0; k < GP_N; k++) gp.amt[k] = GA_AUTO;
+                    gp.complex = (uint8_t)(cx * 50u); gp.swing = GA_AUTO; gp.human = 30;
+                    gen_go();
+                    for (k = 0; k < NTRK; k++) {
+                        uint32_t h;
+                        own[cx] += !drum_track(&trk[k]) && gs.act[gs.role[k]] && (trk[k].p[P_SDIV] != 2 || (uint32_t)trk[k].p[P_SLEN] != gs.len);
+                        for (h = 0; h < FG_HEADS; h++) hd[cx] += fg_set[k][h].rate != 0;
+                    }
+                    bpm = (uint32_t)song.g[G_BPM];
+                    if (bpm < lo[cx]) lo[cx] = bpm;
+                    if (bpm > hi[cx]) hi[cx] = bpm;
+                    if (cx == 1u) {
+                        est[0] += gc_cost(1);
+                        mc_host_v12 = 0;
+                        gen_reset();
+                        gen_go();
+                        est[1] += gc_cost(1);
+                        over1 += gc_cost(1) > gc_budget();
+                        mc_host_v12 = 1;
+                    }
+                }
+            mc_host_v12 = 0;
+            printf("gen: EXPLORE COMPLEX 0 / 50 / 100 x 200: tracks of their own loop or DIV %u %u %u, PLAYHEADS %u %u %u, BPM %u..%u %u..%u %u..%u;\n"
+                   "gen:   CPU (thousandths of CPU TEST) at 50: two cores %u, one core %u on average, %u of 200 at one core's floor (the drums,\n"
+                   "gen:   the bass, two-note chords: lighter it cannot be)\n",
+                   own[0], own[1], own[2], hd[0], hd[1], hd[2], lo[0], hi[0], lo[1], hi[1], lo[2], hi[2], est[0] / 200u, est[1] / 200u, over1);
+            bad += gcheck("  (0.9.13) COMPLEX: wilder as it goes up (own loops / DIVs, PLAYHEADS, the tempo's spread); one core lighter",
+                          own[0] < own[1] && own[1] < own[2] && hd[0] <= hd[1] && hd[1] < hd[2] && hi[0] - lo[0] < hi[2] - lo[2] &&
+                          est[1] < est[0]);
+        }
     }
     {   /* EXPLORE deterministic; its FORMs; a genre's piece the same before and after it (DIV 1/16, no PLAYHEADS) */
         uint32_t h1, h2, h3, h4, divs = 0, fg = 0, sec_bad = 0, f;
@@ -670,6 +713,41 @@ int main(void)
             for (i = 0; i < 16u; i++) events_block(CTL);
         }
         bad += gcheck("  EXPLORE PARTS / SONG x 12: sections stored, ARRANGE filled, each on the piece's SCALE", !sec_bad);
+    }
+    {   /* (0.9.13) the sounds' movement: every genre, RANDOM and EXPLORE x 20 seeds. A pitch LFO only as a soft vibrato
+         * (at most a third of a semitone, ~5 Hz, fading in: never the old 2-semitone siren on the lead, track 5), the
+         * filter moving on most melodic parts (its envelope or a slow LFO), a release in its role's range (never dry),
+         * a progression of two chords or more on most pieces, ANIMAL rare in EXPLORE */
+        uint32_t gg, sd, n = 0, pit = 0, pit_bad = 0, mel = 0, fmod = 0, rel_bad = 0, prog = 0, xp = 0, anim = 0, xtr = 0;
+        static const uint8_t RL_LO[RL_N] = {0, 40, 70, 55, 50, 70};   /* (EXPLORE's CPU budget may shorten a long one to 84) */
+        gen_reset();
+        for (gg = 0; gg <= GEN_EXPLORE; gg++)
+            for (sd = 0; sd < 20u; sd++) {
+                uint32_t pd, ch = 0;
+                gen_with(gg, sd * 131u + 7u, 50, 0);
+                n++;
+                for (k = 0; k < NTRK; k++) {
+                    const track_t *t = &trk[k];
+                    uint32_t r = gs.role[k];
+                    int32_t d = t->p[P_LD_PIT] < 0 ? -t->p[P_LD_PIT] : t->p[P_LD_PIT];
+                    if (drum_track(t) || !gs.act[r] || k >= trk_live || (r == RL_TEX && k != gs.trk_of[RL_TEX])) continue;
+                    mel++;
+                    fmod += t->p[P_ED_FLT] != 0 || t->p[P_LD_FLT] != 0;
+                    if (d) { pit++; if (d > 2 || t->p[P_LFADE] < 60 || t->p[P_LRATE] < 80) { pit_bad++; printf("  pitch LFO %d rate %d fade %d: %s %u T%u\n", t->p[P_LD_PIT], t->p[P_LRATE], t->p[P_LFADE], gs.g->name, gp.seed, k + 1u); } }
+                    if (t->p[P_REL] < RL_LO[r]) { rel_bad++; printf("  release %d: %s %u T%u role %u\n", t->p[P_REL], gs.g->name, gp.seed, k + 1u, r); }
+                    if (gg == GEN_EXPLORE) { xtr++; anim += t->eng_req == ENGI_ANIMAL; }
+                }
+                pd = gs.trk_of[RL_PAD];
+                if (pd < NTRK && gs.act[RL_PAD]) for (i = 0; i < NSTEP; i++) ch += trk[pd].step[i].time == ST_NOTE && trk[pd].step[i].n >= 2u;
+                prog += ch && gs.pn >= 2u;
+                xp += gg == GEN_EXPLORE;
+            }
+        printf("gen: sounds x %u pieces: a soft vibrato on %u of %u melodic parts, the filter moving on %u; a progression in %u;"
+               " ANIMAL on %u of EXPLORE's %u parts\n", n, pit, mel, fmod, prog, anim, xtr);
+        bad += gcheck("(0.9.13) pitch LFO a soft vibrato only (<= 1/3 semitone, ~5 Hz, fading in), on few parts", !pit_bad && pit * 4u < mel);
+        bad += gcheck("(0.9.13) the filter moving on 90 % of the melodic parts; releases in their role's range", fmod * 10u >= mel * 9u && !rel_bad);
+        bad += gcheck("(0.9.13) a chord progression (two chords or more) in 90 % of the pieces; ANIMAL on under 5 % of EXPLORE's parts",
+                      prog * 10u >= n * 9u && anim * 20u < xtr);
     }
     {   /* NEW PROJECT (SAVE > TOOLS 5): GENRE back to EXPLORE */
         gen_reset();

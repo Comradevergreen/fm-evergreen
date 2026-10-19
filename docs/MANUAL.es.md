@@ -1427,8 +1427,10 @@ tipo y tiempo del delay, cuánta humedad).
 
 **EXPLORE** (0.8.6), la primera opción y donde la pantalla siempre abre (al encender, después de NEW PROJECT, cada vez
 que abrís GEN), no sigue **ningún género** y rompe sus reglas a propósito, así que cada semilla es una pieza muy
-distinta (**LAST: EXPLORE 0421**):
-- **Tempo** cualquiera entre 56 y 200 BPM; **cualquier mapa de batería** (también el procedural de IDM) y kit, con sus
+distinta (**LAST: EXPLORE 0421**). **Hasta dónde llega lo dice COMPLEX** (página 3, KNOB 2; 0.9.13): en **100**
+rompe todas las reglas de abajo como en 0.8.6–0.9.12; en el valor por defecto, **50**, las piezas son aventureras pero
+musicales; más abajo, más simples todavía (ver *COMPLEX en EXPLORE* abajo):
+- **Tempo** cualquiera entre 56 y 200 BPM (COMPLEX 100; 80–165 en 50, 104–146 en 0); **cualquier mapa de batería** (también el procedural de IDM) y kit, con sus
   sonidos lejos de los del kit; tres arquetipos de bajo cualesquiera contra cualquier regla del bombo; cualquier forma
   de tocar los acordes, voicing, arpegio y lead; un rol puede tomar el tipo de sonido de otro (un bajo punteado, un
   lead de campana, una textura de órgano).
@@ -1451,6 +1453,36 @@ distinta (**LAST: EXPLORE 0421**):
   acordes que toca, y cada nota está en esa tonalidad salvo las propias de los acordes coloreados y las aproximaciones.
   La misma semilla es la misma pieza; las piezas de los géneros son exactamente como antes. Después de una pieza
   EXPLORE, la de un género vuelve DIV a 1/16 y apaga PLAYHEADS.
+
+**COMPLEX en EXPLORE** (0.9.13). Hasta 0.9.12 EXPLORE le sumaba 10–40 a COMPLEX y rompía todas las reglas en cada
+semilla, dijera lo que dijera la perilla: casi todas las piezas salían lo más salvajes posible. Ahora la perilla es
+cuánto: cada tirada propia de EXPLORE pasa tan seguido como dice COMPLEX (en 50, la mitad que en 100) — una pista con
+su propio loop o DIV (y en 1 + COMPLEX / 20 pistas como mucho: tres en 50), largos de acorde y loops impares, los modos
+exóticos (debajo de 100 salen más los comunes: mayor, menor, dórico y mixolidio), los colores prestados y secundarios,
+los acordes fuera de la tonalidad, los componentes de paso, PLAYHEADS, MUTATE, los granos del delay; ANIMAL y VOICE en
+una pista cada uno debajo de COMPLEX 61; el rango de tempo se cierra hacia el medio. COMPLEX 100 vuelve a ser el caos
+completo.
+
+**El presupuesto de CPU** (0.9.13). Una pieza EXPLORE se arma para que entre en la CPU del FM-1: el generador estima
+cuánto va a costar tocarla (cada parte por su motor y cuántas voces mantiene sonando — sus acordes, cuánto suenan sus
+notas y releases al tempo de la pieza —, el tipo de reverb, los granos del delay, los PLAYHEADS) y la mantiene debajo
+del **65 % del tiempo del audio con dos núcleos** (MENU › ABOUT: CORES 2) y del **55 % con uno** (con el margen del
+error de la estimación). Si una pieza costaría más, se aliviana de a un paso hasta que entra: el motor más pesado
+cambiado por LOFI o ANALOG, CLOUD / SHIMMER tocados como ROOM / SPRING, la textura afuera, después el arpegio, después
+el lead (con un núcleo quedan al menos batería, bajo y acordes); los granos del delay apagados, un PLAYHEAD menos, una
+nota menos en cada acorde (dos como mínimo), los releases más largos más cortos. Con dos núcleos la mayoría de las
+piezas no cambia; con uno, la mayoría pierde una o dos partes. No cambia los géneros ni RANDOM.
+
+**Los sonidos** (0.9.13, todos los géneros y EXPLORE). Cada sonido arranca sin modulación heredada (se borran las rutas
+del LFO del preset y las de lo que tenía la pista), y después recibe las de su rol: el **filtro en movimiento** en casi
+todas las partes melódicas (su envolvente, más profunda según el rol; en acordes, arpegios y texturas muchas veces un
+LFO lento al filtro, un ciclo de uno, dos o cuatro compases al tempo del género), un **release** dentro del rango del
+rol (el bajo corto pero nunca un clic, acordes y texturas largos, arpegios y plucks en el medio) y **vibrato solo en
+un lead sostenido** (cada tanto un pad sostenido): suave (un quinto de semitono, un tercio como mucho), unos 5 Hz, que
+entra de a poco. (Hasta 0.9.12 el lead, la pista 5 en una pieza de 6, tenía la mitad de las veces una ondulación de
+1–2 semitonos a ~1–2 Hz: una sirena.) Más piezas tienen una **progresión de acordes**: un pedal de un solo acorde solo
+cada tanto (EXPLORE: uno de cada ocho), con el arpegio siguiendo los acordes; ANIMAL sale cuatro veces menos en
+EXPLORE.
 
 De qué está hecha una pieza:
 

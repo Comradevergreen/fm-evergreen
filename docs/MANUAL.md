@@ -1353,8 +1353,10 @@ time, how wet).
 
 **EXPLORE** (0.8.6), the first choice and where the screen always opens (at power-on, after NEW PROJECT, every time
 you open GEN), follows **no genre** and breaks their rules on purpose, so every seed is a very different piece
-(**LAST: EXPLORE 0421**):
-- **Tempo** anywhere from 56 to 200 BPM; **any drum map** (the procedural IDM's too) and kit, its sounds pulled far
+(**LAST: EXPLORE 0421**). **How far it goes is COMPLEX** (page 3, KNOB 2; 0.9.13): at **100** every rule below is
+broken as in 0.8.6–0.9.12; at the default **50** the pieces are adventurous but musical; lower, plainer still (see
+*COMPLEX on EXPLORE* below):
+- **Tempo** anywhere from 56 to 200 BPM (COMPLEX 100; 80–165 at 50, 104–146 at 0); **any drum map** (the procedural IDM's too) and kit, its sounds pulled far
   from the kit's; any three bass archetypes against any kick rule; any chord play, voicing, arp and lead; a role may
   take another role's kind of sound (a plucked bass, a bell lead, an organ texture).
 - **The key**: a mode of seven from the SCALE page, the exotic ones likeliest (phrygian, lydian, harmonic and melodic
@@ -1374,6 +1376,33 @@ you open GEN), follows **no genre** and breaks their rules on purpose, so every 
   short of self-oscillation), the **SCALE page** and the **CHORD page** say the key and the chords it plays, and every
   note is in that key but the coloured chords' own tones and the approaches. The same seed is the same piece; the
   genres' pieces are exactly as before. After an EXPLORE piece a genre's piece sets DIV back to 1/16 and PLAYHEADS off.
+
+**COMPLEX on EXPLORE** (0.9.13). Until 0.9.12 EXPLORE added 10–40 to COMPLEX and broke every rule on every seed,
+whatever the knob said: most pieces came out as wild as it gets. Now the knob is how wild: each of EXPLORE's own
+throws happens as often as COMPLEX says (at 50: half as often as at 100) — a track in a loop or a DIV of its own
+(and on at most 1 + COMPLEX / 20 tracks: three at 50), odd chord lengths and loops, the exotic modes (below 100 the
+commoner major, minor, dorian and mixolydian come up more), the borrowed and secondary colours, out-of-key chords,
+step components, PLAYHEADS, MUTATE, the delay's grain; ANIMAL and VOICE on one track each under COMPLEX 61; the tempo
+range narrows towards the middle. COMPLEX 100 is the full chaos again.
+
+**The CPU budget** (0.9.13). An EXPLORE piece is made to fit the FM-1's CPU: the generator estimates what the piece
+will cost to play (each part by its engine and how many voices it keeps sounding — its chords, how long its notes and
+releases ring at the piece's tempo —, the reverb type, the delay's grain, the PLAYHEADS) and keeps it under **65 % of
+the audio's time with two cores** (MENU › ABOUT: CORES 2), **55 % with one** (with the margin of the estimate's error).
+When a piece would cost more it gets lighter, a step at a time, until it fits: the heaviest engine swapped for LOFI or
+ANALOG, CLOUD / SHIMMER played as ROOM / SPRING, the texture left out, then the arp, then the lead (one core: drums,
+bass and chords at least); the delay's grain off, a PLAYHEAD less, a note less in each chord (two at least), the
+longest releases shorter. With two cores most pieces are untouched; with one, most lose a part or two. The genres and
+RANDOM are not changed by it.
+
+**The sounds** (0.9.13, every genre and EXPLORE). Each sound starts with no modulation left over (the preset's LFO
+routes and the previous track's are cleared), then gets its role's: the **filter moving** on almost every melodic part
+(its envelope, deeper by role; on chords, arps and textures often a slow LFO on the filter, a cycle over one, two or
+four bars at the genre's tempo), a **release** in the role's range (bass short but never a click, chords and textures
+long, arps and plucks between), and a **vibrato only on a held lead** (now and then a held pad): soft (a fifth of a
+semitone, a third at most), about 5 Hz, fading in. (Up to 0.9.12 the lead, track 5 on a 6-track piece, had a 1–2
+semitone wobble at ~1–2 Hz half the time: a siren.) More pieces have a **chord progression**: a one-chord pedal only
+now and then (EXPLORE: one in eight), the arp following the chords; ANIMAL comes up a quarter as often in EXPLORE.
 
 What a piece is made of:
 
