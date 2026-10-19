@@ -2097,7 +2097,7 @@ core idle, waiting for the second); FX LAYER..CLIP; MASTER; USB+OUTPUT; CORE 1 B
 interrupt inside the render) and **WHOLE HALF** (the same as AUDIO LOAD); then TIMER5 ALL, IRQ LATE US (how late the
 audio interrupt started at worst: the screen or a flash write held it), LATE HALVES, FX REST % (the time the effects
 rested: stopped they cost nothing since 0.9.14) and UI FRAMES (a second). Below: the voices sounding and the cap,
-the LOAD the sound plays, the cores, the CPU TEST and the factor EXPLORE budgets with. **To help tune JIANT on real
+the LOAD the sound plays, the cores and the CPU TEST. **To help tune JIANT on real
 hardware, photograph it** (two or three screens) while your song plays, and again a few seconds after STOP.
 
 **CPU TEST (0.9.14).** SAVE › TOOLS 6 CPU TEST builds the heaviest reference song (TRACKS 6); press PLAY, let it play

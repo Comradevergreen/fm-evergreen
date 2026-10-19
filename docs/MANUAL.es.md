@@ -2230,7 +2230,7 @@ esperando al segundo); FX LAYER..CLIP; MASTER; USB+OUTPUT; CORE 1 BUSY; TIMER5 I
 USB dentro del render) y **WHOLE HALF** (lo mismo que AUDIO LOAD); después TIMER5 ALL, IRQ LATE US (cuán tarde arrancó
 la interrupción del audio en el peor caso: la pantalla o una escritura en flash la retuvo), LATE HALVES, FX REST % (el
 tiempo que los efectos descansaron: parado no cuestan nada desde la 0.9.14) y UI FRAMES (por segundo). Abajo: las voces
-sonando y el tope, el LOAD con que suena, los núcleos, el CPU TEST y el factor con que presupuesta EXPLORE. **Para
+sonando y el tope, el LOAD con que suena, los núcleos y el CPU TEST. **Para
 ajustar JIANT al hardware real, sacale fotos** (dos o tres pantallas) mientras suena tu tema, y otra vez unos segundos
 después de STOP.
 
