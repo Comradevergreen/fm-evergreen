@@ -497,7 +497,7 @@ breadcrumb, **FX · MAP**. The keys and knobs do exactly what they did.
 | Keys | Effect |
 | --- | --- |
 | F3 G3 A3 | REPEAT 1/8, 1/16, 1/32 |
-| B3 / C4 | GLITCH / TAPE STOP (0.9.14) |
+| B3 / C4 | GLITCH / TAPE STOP (0.9.15) |
 | D4 / E4 | OCT− / OCT+ |
 | F4 | 1/2 TEMPO |
 | G4 / A4 | DEC− / DEC+ |
@@ -508,8 +508,8 @@ breadcrumb, **FX · MAP**. The keys and knobs do exactly what they did.
 | G5 | erases the punch-in lane |
 | Black keys 1–6 (F#3 G#3 A#3 C#4 D#4 F#4) | mute T1–T6 while held |
 | A#4 | which tracks the note effects touch: ALL / SYN / DRM |
-| C#5 / D#5 / F#5 | the sweeps FILTER / CRUSH / THROW (0.9.14): dry to wet over 2 bars while held, back in a beat |
-| **Knobs** | the performance macros STEPS, TRANSPOSE, MUTATE, FILTER (0.9.14): up to the right; any knob turned back turns all four off |
+| C#5 / D#5 / F#5 | the sweeps FILTER / CRUSH / THROW (0.9.15): dry to wet over 2 bars while held, back in a beat |
+| **Knobs** | the performance macros STEPS, TRANSPOSE, MUTATE, FILTER (0.9.15): up to the right; any knob turned back turns all four off |
 
 **GLO — mix**
 
@@ -1774,13 +1774,13 @@ passes get it; **G5** held erases where the playhead passes. Saved with the sect
 
 - **On the audio**: REPEAT 1/8, 1/16, 1/32 (F3 G3 A3), **GLITCH** (B3), **TAPE STOP** (C4). They start on the next 1/16
   while playing. Below about 81 BPM, REPEAT 1/8 is too long for its buffer and is shown dimmed.
-  - **GLITCH** (0.9.14) cuts the master on the transport's sixteenths: each sixteenth is played live, or the last 1/16,
+  - **GLITCH** (0.9.15) cuts the master on the transport's sixteenths: each sixteenth is played live, or the last 1/16,
     1/32 or 1/64 repeated, or the last sixteenth reversed, an octave up (twice as fast, twice) or an octave down (its
     first half at half speed), or gated at 1/32 or 1/64. Which one is fixed by the sixteenth's place in a two-bar cycle
     of the transport, so the pattern grooves and comes back the same every time you press it there; the downbeats are
     mostly left live. Every slice fades in and out in 3 ms (no clicks). Its first sixteenth is live (nothing recorded
     yet); below ~81 BPM only its gates and live slices play (the buffer holds 371 ms).
-  - **TAPE STOP** (0.9.14): the whole mix slows to a stop over a beat (at most 0.68 s, the buffer's limit: from about
+  - **TAPE STOP** (0.9.15): the whole mix slows to a stop over a beat (at most 0.68 s, the buffer's limit: from about
     88 BPM down it is shorter than a beat), the pitch falling with it and fading out over the last quarter; then
     silence while you hold. Let go: the music at once, where it is. One press at the end of a phrase, before the drop.
   REPEAT, GLITCH and TAPE STOP share one buffer (the SLICER's, borrowed: the SLICER plays live meanwhile); of those held,
@@ -1788,7 +1788,7 @@ passes get it; **G5** held erases where the playhead passes. Saved with the sect
 - **On the notes**: OCT− / OCT+ (D4 E4), 1/2 TEMPO (F4), DEC− (short, plucky) / DEC+ (long) (G4 A4), STUTTER 1/8 / 1/16
   (B4 C5), ATK+ (slow attacks, drums too) (D5), ARP (E5; on a DRUM track a new fill every press), RANDOM (F5). They come
   in on the next 1/16. **A#4** chooses which tracks they touch: ALL, SYN (synths) or DRM (drums); the header shows it.
-- **The sweeps** (0.9.14, black keys **C#5 D#5 F#5**; until 0.9.13 the knobs FILTER CRUSH THROW and the keys LPF HPF):
+- **The sweeps** (0.9.15, black keys **C#5 D#5 F#5**; until 0.9.14 the knobs FILTER CRUSH THROW and the keys LPF HPF):
   held, the effect goes from dry to wet over **2 bars at the tempo**, on an S curve (it leaves dry slowly, speeds up in
   the middle, settles into wet); let go, it goes back to dry over **a beat** on the same curve, so a release in time
   with the music sounds deliberate. They act at once (not on the 1/16) and stack with everything.
@@ -1797,7 +1797,7 @@ passes get it; **G5** held erases where the playhead passes. Saved with the sect
   - **CRUSH** (D#5): fewer bits (4 to 11 taken off) and a lower rate (a sample held 1 to 8 times), and its mix rising.
   - **THROW** (F#5): the dry mix (and the SLICER's bus) into the delay and reverb sends, up to all of it: the echoes and
     the room build up, and stay ringing when you let go.
-- **The knobs: PERFORMANCE MACROS** (0.9.14; until 0.9.13 FILTER CRUSH THROW DEPTH) on the whole project, never written
+- **The knobs: PERFORMANCE MACROS** (0.9.15; until 0.9.14 FILTER CRUSH THROW DEPTH) on the whole project, never written
   into the patterns, never saved. Each is OFF at its left end and builds up turning **right**:
   - **KNOB 1 STEPS**: every sequence plays only part of itself, from where it is: **1/2, 1/4, 1/8, 1 STEP** of its
     length (three detents a stage), like a loop roll; it goes in on the next 1/16 (seq_live's LOOP, as GLO › LIVE).

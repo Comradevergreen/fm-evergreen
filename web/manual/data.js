@@ -611,6 +611,11 @@ recipes: [
 
 // ------------------------------------------------------------------------------------------- what's new (README's changelog, digested)
 news: [
+  {v: "0.9.15", items: [
+    ["La capa FX renovada: CRUSH, THROW y FILTER pasan a las negras C#5 D#5 F#5 como barridos de seco a mojado en 2 compases (vuelven en un tiempo).", "The FX layer reworked: CRUSH, THROW and FILTER move to black keys C#5 D#5 F#5 as dry-to-wet sweeps over 2 bars (back in a beat)."],
+    ["B3 GLITCH: cortes en semicorcheas (repeticiones, reversa, octavas, gates) que vuelven igual cada dos compases. C4 TAPE STOP: la cinta se frena en un tiempo.", "B3 GLITCH: sixteenth-note cuts (repeats, reverse, octaves, gates) that come back the same every two bars. C4 TAPE STOP: the tape slows to a stop over a beat."],
+    ["Las perillas con FX son macros: STEPS, TRANSPOSE, MUTATE, FILTER; girar cualquiera para atrás apaga las cuatro de golpe.", "The knobs with FX are macros: STEPS, TRANSPOSE, MUTATE, FILTER; turn any back and all four are off at once."],
+    ["El carril PUNCH graba también GLITCH, TAPE STOP y los barridos.", "The PUNCH lane records GLITCH, TAPE STOP and the sweeps too."]]},
   {v: "0.9.14", items: [
     ["MENU › ABOUT › PROFILE (OCT+ en ABOUT): la CPU medida en el FM-1, parte por parte, tocando y parado. Sacale fotos y mandalas.", "MENU › ABOUT › PROFILE (OCT+ on ABOUT): the CPU measured on the FM-1, part by part, playing and stopped. Photograph it and send it."],
     ["Parado, los efectos ya no gastan CPU (en 0.9.13 la reverb, el delay y el chorus corrían siempre: el NOW 26 % parado).", "Stopped, the effects no longer use CPU (on 0.9.13 the reverb, delay and chorus always ran: the NOW 26 % while stopped)."],
