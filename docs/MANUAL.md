@@ -497,7 +497,7 @@ breadcrumb, **FX · MAP**. The keys and knobs do exactly what they did.
 | Keys | Effect |
 | --- | --- |
 | F3 G3 A3 | REPEAT 1/8, 1/16, 1/32 |
-| B3 / C4 | LPF / HPF |
+| B3 / C4 | GLITCH / TAPE STOP (0.9.14) |
 | D4 / E4 | OCT− / OCT+ |
 | F4 | 1/2 TEMPO |
 | G4 / A4 | DEC− / DEC+ |
@@ -508,7 +508,8 @@ breadcrumb, **FX · MAP**. The keys and knobs do exactly what they did.
 | G5 | erases the punch-in lane |
 | Black keys 1–6 (F#3 G#3 A#3 C#4 D#4 F#4) | mute T1–T6 while held |
 | A#4 | which tracks the note effects touch: ALL / SYN / DRM |
-| **Knobs** | FILTER, CRUSH, THROW, DEPTH |
+| C#5 / D#5 / F#5 | the sweeps FILTER / CRUSH / THROW (0.9.14): dry to wet over 2 bars while held, back in a beat |
+| **Knobs** | the performance macros STEPS, TRANSPOSE, MUTATE, FILTER (0.9.14): up to the right; any knob turned back turns all four off |
 
 **GLO — mix**
 
@@ -1771,19 +1772,54 @@ the lane's cells in the effects' colours with the playhead on them, the last eff
 on (ALL, SYN, DRM). To record: REC armed and playing (not in a song), hold FX and the effect's key; the steps it
 passes get it; **G5** held erases where the playhead passes. Saved with the section.
 
-- **On the audio**: REPEAT 1/8, 1/16, 1/32 (F3 G3 A3), LPF (B3), HPF (C4). REPEAT starts on the next 1/16 while
-  playing. Below about 81 BPM, REPEAT 1/8 is too long for its buffer and is shown dimmed.
+- **On the audio**: REPEAT 1/8, 1/16, 1/32 (F3 G3 A3), **GLITCH** (B3), **TAPE STOP** (C4). They start on the next 1/16
+  while playing. Below about 81 BPM, REPEAT 1/8 is too long for its buffer and is shown dimmed.
+  - **GLITCH** (0.9.14) cuts the master on the transport's sixteenths: each sixteenth is played live, or the last 1/16,
+    1/32 or 1/64 repeated, or the last sixteenth reversed, an octave up (twice as fast, twice) or an octave down (its
+    first half at half speed), or gated at 1/32 or 1/64. Which one is fixed by the sixteenth's place in a two-bar cycle
+    of the transport, so the pattern grooves and comes back the same every time you press it there; the downbeats are
+    mostly left live. Every slice fades in and out in 3 ms (no clicks). Its first sixteenth is live (nothing recorded
+    yet); below ~81 BPM only its gates and live slices play (the buffer holds 371 ms).
+  - **TAPE STOP** (0.9.14): the whole mix slows to a stop over a beat (at most 0.68 s, the buffer's limit: from about
+    88 BPM down it is shorter than a beat), the pitch falling with it and fading out over the last quarter; then
+    silence while you hold. Let go: the music at once, where it is. One press at the end of a phrase, before the drop.
+  REPEAT, GLITCH and TAPE STOP share one buffer (the SLICER's, borrowed: the SLICER plays live meanwhile); of those held,
+  the last pressed plays.
 - **On the notes**: OCT− / OCT+ (D4 E4), 1/2 TEMPO (F4), DEC− (short, plucky) / DEC+ (long) (G4 A4), STUTTER 1/8 / 1/16
   (B4 C5), ATK+ (slow attacks, drums too) (D5), ARP (E5; on a DRUM track a new fill every press), RANDOM (F5). They come
   in on the next 1/16. **A#4** chooses which tracks they touch: ALL, SYN (synths) or DRM (drums); the header shows it.
-- **Knobs** while FX is held: **FILTER** (left low-pass, right high-pass), **CRUSH**, **THROW** (sends the dry mix into
-  the delay and reverb), **DEPTH** (the REPEAT's level).
+- **The sweeps** (0.9.14, black keys **C#5 D#5 F#5**; until 0.9.13 the knobs FILTER CRUSH THROW and the keys LPF HPF):
+  held, the effect goes from dry to wet over **2 bars at the tempo**, on an S curve (it leaves dry slowly, speeds up in
+  the middle, settles into wet); let go, it goes back to dry over **a beat** on the same curve, so a release in time
+  with the music sounds deliberate. They act at once (not on the 1/16) and stack with everything.
+  - **FILTER** (C#5): the master DJ FILTER's high-pass opening, from ~32 Hz to ~6 kHz (the build-up's classic: the bass
+    goes first). While it sweeps it takes the DJ FILTER over from GLO › MIXER's KNOB 4, which comes back when it is dry.
+  - **CRUSH** (D#5): fewer bits (4 to 11 taken off) and a lower rate (a sample held 1 to 8 times), and its mix rising.
+  - **THROW** (F#5): the dry mix (and the SLICER's bus) into the delay and reverb sends, up to all of it: the echoes and
+    the room build up, and stay ringing when you let go.
+- **The knobs: PERFORMANCE MACROS** (0.9.14; until 0.9.13 FILTER CRUSH THROW DEPTH) on the whole project, never written
+  into the patterns, never saved. Each is OFF at its left end and builds up turning **right**:
+  - **KNOB 1 STEPS**: every sequence plays only part of itself, from where it is: **1/2, 1/4, 1/8, 1 STEP** of its
+    length (three detents a stage), like a loop roll; it goes in on the next 1/16 (seq_live's LOOP, as GLO › LIVE).
+  - **KNOB 2 TRANSPOSE**: every melodic sequence along the scale, **+2ND +3RD +4TH +5TH +6TH**, then **+OCT** and
+    **-OCT** (three detents an interval); the next notes play it; DRUM tracks untouched. It adds to SCL's STRN.
+  - **KNOB 3 MUTATE**: the music as it is becomes MUTATE's anchor and every pattern mutates around it by the amount
+    (notes along the scale, accents, notes added off the beat or taken, drum hits), on the next beat and again every bar.
+  - **KNOB 4 FILTER**: the master DJ FILTER's low-pass closing (the sweep's high-pass wins while it goes further).
+  - **Turn any of them back** (two detents counter-clockwise; one is ignored, so a nudge does nothing) and **all four
+    are off at once**: full length, no transposition, every pattern exactly as before MUTATE, the filter open. The
+    screen says **MACROS OFF** and the cards drop to OFF. Then each starts again from zero as you turn it right (the
+    knobs are encoders: nothing jumps). STEPS lands the tracks back in phase on the next 1/16; MUTATE puts the steps
+    back at once.
+  - They **stay on when FX is let go** (the FX LED stays lit); they turn off with the cut, FX + OCT− (FX LATCH), the
+    menu or a dialog. Not recorded as automation, not stored in scenes.
 - **Black keys 1–6**: mute T1–T6 while held (not saved).
 
 **The punch-in lane**: each section has a lane of 64 steps of 1/16 (4 bars). With **REC armed and playing** (not
-during a song), the **note effects (D4–F5)** you hold are recorded into it, one per step (REPEAT, LPF, HPF and the mutes
-are not recorded). Hold **FX + G5** while playing to erase where the play head passes; stopped, FX + G5 erases the whole
-lane. **REC held + FX** also clears it (along with the track's FX automation).
+during a song), the **note effects (D4–F5)**, **GLITCH**, **TAPE STOP** and **the sweeps** you hold are recorded into
+it, one per step (the lowest held; REPEAT and the mutes are not recorded). Played back, a sweep held over a run of steps
+ramps as if you held it. Hold **FX + G5** while playing to erase where the play head passes; stopped, FX + G5 erases
+the whole lane. **REC held + FX** also clears it (along with the track's FX automation).
 
 **Lock**: hold FX until its map opens and let go without touching anything: the FX layer stays open (**[FX]
 LOCKED**), as the macros do with LFO; the keys play the effects (momentary: held on, let go off), the knobs are FX's
@@ -1791,8 +1827,7 @@ macros and OCT− is ALL OFF, with both hands free. Press **FX** again to unlock
 works as before and closes when let go.
 
 **FX LATCH** (MENU > CONTROL > FX LATCH, **OFF by default**; ON by default from 0.6.44 to 0.6.63): ON, a key pressed
-with FX toggles its effect on and off, the knob macros keep their values, **FX + OCT−** turns everything off (FX ALL
-OFF). Latched effects are not recorded into the lane.
+with FX toggles its effect on and off, **FX + OCT−** turns everything off, the macros too (FX ALL OFF). Latched effects are not recorded into the lane.
 
 ### Mutes and solos
 

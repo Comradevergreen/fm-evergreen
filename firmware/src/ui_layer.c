@@ -188,8 +188,6 @@ static void layer_let_go(uint32_t quiet)
         (void)song_select(lys.song - 1u);
     lys.nqc = 0;
     lys.song = 0;
-    if (ui.ly == LAYER_FX && !perf_latch_on)
-        perf_k[0] = perf_k[1] = perf_k[2] = perf_k[3] = 0;
     if (ui.ly == LAYER_FX && (ui.ly_t0 & LY_OPEN) && !(ui.ly_t0 & (LY_DEAD | LY_COMBO)) &&
         !lys.used && !kb_layer && layer_allowed()) {
         fx_lock = 1;                                    /* (0.6.44) held open, nothing used, let go: locked open;
@@ -634,15 +632,38 @@ static void layer_keys(uint32_t keys)
     perf_solo = (uint8_t)s;
 }
 
+/* (0.9.14) FX's KNOB 1..4: the PERFORMANCE MACROS STEPS TRANSPOSE MUTATE FILTER, up turning right; a knob turned back
+ * (two detents, none forward between) puts all four off at once (the cut: the cards drop to OFF, "MACROS OFF") */
+static void live_publish(void);
+static uint8_t pm_neg;
+static void pm_off(void)
+{
+    pm_neg = 0;
+    if (!(perf_m[0] | perf_m[1] | perf_m[2] | perf_m[3]))
+        return;
+    perf_m[0] = perf_m[1] = perf_m[2] = perf_m[3] = 0;
+    live_publish();
+    ui_message("MACROS OFF");
+}
+static void pm_knob(uint32_t k, int32_t s)
+{
+    if (s < 0) {
+        if ((pm_neg = (uint8_t)(pm_neg - s)) >= 2u)
+            pm_off();
+        return;
+    }
+    pm_neg = 0;
+    perf_m[k] = (uint8_t)clamp(perf_m[k] + accel(EN_K1 + k, s, PM_MAX[k]), 0, PM_MAX[k]);
+    if (!k)
+        live_publish();
+}
 /* KNOB 1..4 in the open layer: its own (FX macros, GLO levels, EDIT's sound), else the four of its page */
 static void layer_knob(uint32_t k, int32_t s)
 {
     uint32_t l = layer_open();
     lys.used = 1;
-    if (l == LAYER_FX) {                                /* perform.c perf_k, not recorded */
-        if (k == 3u)
-            s = -s;                                     /* DEPTH (100 - perf_k[3]) rises to the right (#40: it fell) */
-        perf_k[k] = (int8_t)clamp(perf_k[k] + accel(EN_K1 + k, s, k ? 100 : 200), k ? 0 : -100, 100);   /* (#126) */
+    if (l == LAYER_FX) {                                /* (0.9.14) the performance macros (perform.c perf_m), not recorded */
+        pm_knob(k, s);
     } else if (l == LAYER_GLO) {                        /* T1..T4 LEVEL (T5, T6 selected: T3..T6), recorded as on MIXER */
         track_t *t = &trk[k + trk_base4()];
         int16_t *vp = &t->p[P_LEVEL];
@@ -708,7 +729,7 @@ static uint32_t layer_oct(uint32_t pressed, uint32_t oct)
     mine = oct & lys.oct;
     if ((mine & 1u) && lys.l == LAYER_FX) {             /* OCT- (FX LATCH): every effect and macro off */
         perf_latched = 0;
-        perf_k[0] = perf_k[1] = perf_k[2] = perf_k[3] = 0;
+        pm_off();
         ui_message("FX ALL OFF");
     }
     if (lys.l == LAYER_SAVE && (mine & 2u)) {           /* SAVE + OCT+: STORE the music into the section playing */
@@ -789,8 +810,9 @@ static uint32_t layer_leds(uint32_t *br)
  * the accent, a muted track KEY, unavailable its name DIM, its note under it; KNOBS the four as gauges in their knobs'
  * colours over the layer's keys (the keycaps' words); STATE what is on, as chips. (Until 0.8.8: cells with note names,
  * the Felucca map.) The keys and knobs do what they did: only the drawing is new */
-static const char *const PF_NAME[PF_M1] = {"RPT 1/8", "RPT 1/16", "RPT 1/32", "LPF", "HPF",   /* the audio ones (perform.c) */
-    "OCT-", "OCT+", "1/2 TEMPO", "DEC-", "DEC+", "STUT 1/8", "STUT 1/16", "ATK+", "ARP", "RANDOM"};   /* the MIDI ones (pfx.c) */
+static const char *const PF_NAME[PF_M1] = {"RPT 1/8", "RPT 1/16", "RPT 1/32", "GLITCH", "TAPE STOP",   /* the audio ones */
+    "OCT-", "OCT+", "1/2 TEMPO", "DEC-", "DEC+", "STUT 1/8", "STUT 1/16", "ATK+", "ARP", "RANDOM",   /* the MIDI ones (pfx.c) */
+    "FILTER", "CRUSH", "THROW"};                                     /* (0.9.14) the sweeps (black keys C#5 D#5 F#5) */
 static const char W_NOTE[16] = {'F', 'G', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'A', 'B', 'C', 'D', 'E', 'F', 'G'};
 static const char B_NOTE[11] = {'F', 'G', 'A', 'C', 'D', 'F', 'G', 'A', 'C', 'D', 'F'};   /* black keys 1..11: F# G# .. F#5 */
 static const uint8_t PK_BLK[11] = {1, 2, 3, 5, 6, 8, 9, 10, 12, 13, 15};   /* a black key: left of white key n */
@@ -842,20 +864,20 @@ static uint32_t ly_keyname(uint32_t l, int blk, uint32_t p, char *nm)
     uint32_t busy = chain_busy() ? LS_DIM : LS_OFF;
     nm[0] = 0;
     if (l == LAYER_FX) {
-        uint32_t held = perf_kill ? 0u : perf_held | perf_latched, e = blk ? PF_M1 + p : p;
+        uint32_t held = perf_kill ? 0u : perf_held | perf_latched, e = blk ? (p >= 8u ? PF_SFLT + p - 8u : PF_M1 + p) : p;
         static const char *const TG[3] = {"TRK ALL", "TRK SYN", "TRK DRM"};
         if (blk && p == 7u) {
             str_cpy(nm, TG[pfx_tgt % 3u], 12);
             return LS_OFF;
         }
-        if (blk ? p >= NTRK : p >= PF_M1)
+        if (blk ? p >= NTRK && p < 8u : p >= PF_SFLT)
             return LS_OFF;
-        if (blk) {
+        if (blk && p < NTRK) {
             str_cpy(nm, "MUTE T1", 12);
             nm[6] = (char)('1' + p);
             return (held >> e) & 1u ? LS_MUTE : LS_OFF;
         }
-        str_cpy(nm, PF_NAME[p], 12);
+        str_cpy(nm, PF_NAME[e], 12);                    /* (0.9.14: a sweep's black key too) */
         return !((perf_avail() >> e) & 1u) ? LS_DIM : !((held >> e) & 1u) ? LS_OFF :
                ((perf_act >> e) & 1u) || ((PF_MIDI >> e) & 1u) ? LS_HELD : LS_WAIT;
     }
@@ -1000,19 +1022,17 @@ static void layer_cards(uint32_t l)
     char val[12];
     const char *unit;
     uint32_t c;
-    if (l == LAYER_FX) {                                /* FILTER CRUSH THROW DEPTH */
-        int32_t m = perf_k[0];
-        fmt_int(val, m < 0 ? -m : m);
-        draw_column(0, "FILTER", m ? val : "OFF", m < 0 ? "LP" : m > 0 ? "HP" : "", m ? VAL(0u) : T_DIM, (m + 100) * 5,
-                    ICON_CUTOFF);
-        fmt_int(val, perf_k[1]);
-        draw_column(1, "CRUSH", perf_k[1] ? val : "OFF", perf_k[1] ? "%" : "", perf_k[1] ? VAL(1u) : T_DIM,
-                    perf_k[1] * 10, ICON_BITS);
-        fmt_int(val, perf_k[2]);
-        draw_column(2, "THROW", perf_k[2] ? val : "OFF", perf_k[2] ? "%" : "", perf_k[2] ? VAL(2u) : T_DIM,
-                    perf_k[2] * 10, ICON_DELAY);
-        fmt_int(val, 100 - perf_k[3]);
-        draw_column(3, "DEPTH", val, "%", VAL(3u), (100 - perf_k[3]) * 10, ICON_MIX);
+    if (l == LAYER_FX) {                                /* (0.9.14) STEPS TRANSPOSE MUTATE FILTER: OFF dim at the left */
+        static const char *const ST[5] = {"OFF", "1/2", "1/4", "1/8", "1 STEP"};
+        static const char *const TR[8] = {"OFF", "+2ND", "+3RD", "+4TH", "+5TH", "+6TH", "+OCT", "-OCT"};
+        static const char *const NM[4] = {"STEPS", "TRANSP", "MUTATE", "FILTER"};
+        static const uint8_t IC[4] = {ICON_LENGTH, ICON_TRANSPOSE, ICON_MIX, ICON_CUTOFF};
+        for (c = 0; c < 4u; c++) {
+            uint32_t m = perf_m[c];
+            fmt_int(val, (int32_t)m);
+            draw_column(c, NM[c], !c ? ST[(m + 2u) / 3u] : c == 1u ? TR[pm_trn()] : m ? val : "OFF",
+                        m && c > 1u ? "%" : "", m ? VAL(c) : T_DIM, (int32_t)(m * 1000u / PM_MAX[c]), IC[c]);
+        }
     } else if (l == LAYER_GLO) {                        /* T1..T4 LEVEL (T5, T6 selected: T3..T6; the icon; muted: dim) */
         for (c = 0; c < 4u; c++) {
             uint32_t t = c + trk_base4();
@@ -1132,8 +1152,11 @@ static void layer_state(uint32_t l)
         lst_chip("LOCK", 0, fx_lock);
         lst_chip("TRACKS", TG[pfx_tgt % 3u], 1);
         lst_chip("FX LATCH", perf_latch_on ? "ON" : "OFF", perf_latch_on);
-        for (e = 0; e < PF_M1; e++)
-            lst_chip(PF_NAME[e], 0, (held >> e) & 1u);
+        lst_chip("MACROS", perf_m[0] | perf_m[1] | perf_m[2] | perf_m[3] ? "ON" : "OFF",
+                 (perf_m[0] | perf_m[1] | perf_m[2] | perf_m[3]) != 0);
+        for (e = 0; e < PF_M1; e++)                     /* (0.9.14: the effects on, a sweep still on its way back) */
+            if (((held >> e) & 1u) || (e >= PF_SFLT && pf.sw[e - PF_SFLT]))
+                lst_chip(PF_NAME[e], 0, 1);
     } else if (l == LAYER_GLO) {                        /* the tracks, the DRUM groups, UNDO */
         for (k = 0; k < NTRK; k++) {
             char t[3] = {'T', (char)('1' + k), 0};
@@ -1192,7 +1215,9 @@ static void draw_layer(void)
     uint32_t l = ui.layer % LAYER_N, sig = l * 7919u + ux.gen * 977u;
     layer_cards(l);
     if (l == LAYER_FX)
-        sig += (perf_kill ? 0u : perf_held | perf_latched) * 31u + perf_latch_on * 11u + perf_act * 131u + perf_avail() * 7u;
+        sig += (perf_kill ? 0u : perf_held | perf_latched) * 31u + perf_latch_on * 11u + perf_act * 131u + perf_avail() * 7u +
+               ((uint32_t)perf_m[0] | (uint32_t)perf_m[1] << 8 | (uint32_t)perf_m[2] << 16 | (uint32_t)perf_m[3] << 24) * 5u +
+               (pf.sw[0] ? 1u : 0u) * 977u + (pf.sw[1] ? 2u : 0u) * 977u + (pf.sw[2] ? 4u : 0u) * 977u;
     else if (l == LAYER_GLO)
         sig += perf_solo * 31u + (uint32_t)song.g[G_CLOCK] * 5u +
                (uint32_t)(trk[0].p[P_MUTE] | trk[1].p[P_MUTE] << 1 | trk[2].p[P_MUTE] << 2 | trk[3].p[P_MUTE] << 3 |

@@ -21,8 +21,10 @@
  * Of the repeats (STUTTER, ARP) the fastest held plays. A#4 (black key 8) steps the tracks they act on: ALL,
  * SYN (the synths), DRM (DRUM tracks) (pfx_tgt; the layer's header says it).
  * The punch-in lane (the automation): a section's 64 steps of 1/16 (4 bars, from the transport's start or the
- * section's), one effect a step (pfx_lane: a nibble, 0 none, 1..10 D4 .. F5) and the tracks it acts on (pfx_ltgt).
- * Recording (REC armed, playing, not a song): the steps that pass while a MIDI effect is held get it (the lowest held),
+ * section's), one effect a step (pfx_lane: a nibble, 0 none, 1..10 D4 .. F5; 0.9.14: 11..13 the sweeps FILTER CRUSH
+ * THROW, 14 GLITCH, 15 TAPE STOP; the audio ones played by perform.c, pfx_lfx) and the tracks it acts on (pfx_ltgt).
+ * Recording (REC armed, playing, not a song): the steps that pass while an effect is held get it (the lowest held;
+ * not the REPEATs),
  * with the tracks A#4 picked; G5 held erases them. Stopped, FX + G5 clears the lane. Played back with the held ones.
  * Saved with the section (project.c FUNA: the 33 spare bytes at PROJ_PFX_OFF), staged by the song (song_chain.c).
  * In the ISR: pfx_block before the events (what acts on each track, the repeats, the decays put in), pfx_end after
@@ -123,7 +125,8 @@ static uint32_t pfx_qon;            /* (JIANT) the effects in (quantized to the 
 static int pfx_rec_ok(void);          /* seq.c: REC armed, not a song playing */
 static uint8_t pfx_rh, pfx_rs0, pfx_rst, pfx_rold;   /* recording the lane: a press on, its first step, the step being
                                                       * written and what it held before */
-/* the lane's step s: 0 none, else the effect (PF_OCTD + v - 1) */
+/* the lane's step s: 0 none, else the effect: 1..13 PF_OCTD + v - 1 (the MIDI ones, then the sweeps), 14 GLITCH, 15 TAPE */
+static uint32_t pfx_lane_v(uint32_t e) { return e >= PF_OCTD ? e - PF_OCTD + 1u : e + 11u; }
 static uint32_t pfx_lane_at(uint32_t s) { return (pfx_lane[(s >> 1) & 31u] >> ((s & 1u) * 4u)) & 15u; }
 /* (0.6.99) FX > PUNCH: the lane's length in steps (1..64) and a step's samples (RES: 1/8, 1/16, 1/32 of the beat) */
 static uint32_t pfx_lane_len(void) { return (uint32_t)clamp(song.g[G_PFXLEN], 1, 64); }
@@ -144,7 +147,7 @@ static uint32_t pfx_rec_held;                           /* (0.6.28) the effects 
                                                          * lane (a latched one wrote itself on every step it passed) */
 static __attribute__((noinline)) void pfx_block(uint32_t n, uint32_t held)
 {
-    uint32_t k, b = beat_samples(), lane = 0, raw = held & pfx_rec_held, nw;
+    uint32_t k, b = beat_samples(), lane = 0, raw = pfx_rec_held, nw;
     pfx_blk++;
     pfx_qon &= held;                                    /* (JIANT) let go: at once; pressed: on the next 1/16 */
     nw = held & ~pfx_qon;
@@ -157,7 +160,7 @@ static __attribute__((noinline)) void pfx_block(uint32_t n, uint32_t held)
     held = pfx_qon;
     if (song.playing && b >= 4u) {                      /* the lane: record, or play; (0.6.99) its LEN and RES */
         uint32_t s16 = pfx_lane_step(b), len = pfx_lane_len(), st = (pfx_lph / s16) % len, half = pfx_lph % s16 >= s16 / 2u;
-        uint32_t w = pfx_rec_ok() && (raw || pfx_clr) ? (raw ? (uint32_t)__builtin_ctz(raw) - PF_OCTD + 1u : 0u) : 16u;
+        uint32_t w = pfx_rec_ok() && (raw || pfx_clr) ? (raw ? pfx_lane_v((uint32_t)__builtin_ctz(raw)) : 0u) : 16u;
         pfx_lph += n;
         if (w < 16u) {                                  /* recording, to the nearest step: a press in a step's second */
             if (!pfx_rh) {                              /* half starts at the next one */
@@ -178,12 +181,14 @@ static __attribute__((noinline)) void pfx_block(uint32_t n, uint32_t held)
             if (pfx_rh && st == pfx_rst && !half && st != pfx_rs0)
                 pfx_lane_put(st, pfx_rold);             /* let go in a step's first half: that step as it was */
             pfx_rh = 0;
-            if ((k = pfx_lane_at(st)) != 0u && k <= 10u)
-                lane = PF_BIT(PF_OCTD + k - 1u);
+            if ((k = pfx_lane_at(st)) != 0u)
+                lane = PF_BIT(k <= 13u ? PF_OCTD + k - 1u : k - 11u);
         }
     } else if (pfx_clr) {
         memset(pfx_lane, 0, sizeof pfx_lane);
     }
+    pfx_lfx = lane & ~PF_MIDI;                          /* (0.9.14) the audio ones: perform.c, on the lane's step */
+    lane &= PF_MIDI;
     if (!held && !pfx_any && !lane && !nw)
         return;
     pfx_any = 0;

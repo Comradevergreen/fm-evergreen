@@ -177,6 +177,20 @@ static int32_t scale_steps(const track_t *t, int32_t n, int32_t d)
     return n;
 }
 
+/* (0.9.14) a sequence's note with ALL TR (G_STRN) and the FX layer's TRANSPOSE macro (perf_m[1]: OFF, +2ND +3RD +4TH +5TH
+ * +6TH along the scale, +OCT, -OCT) */
+static const int8_t PM_TRN[8] = {0, 1, 2, 3, 4, 5, 0, 0};    /* (scale steps; +OCT -OCT: PM_OCT's semitones) */
+static const int8_t PM_OCT[8] = {0, 0, 0, 0, 0, 0, 12, -12};
+static uint32_t pm_trn(void) { return (perf_m[1] + 2u) / 3u; }
+static uint32_t strn_note(const track_t *t, uint32_t x)
+{
+    uint32_t i = pm_trn();
+    int32_t s = song.g[G_STRN] + PM_TRN[i], n = (int32_t)x;
+    if (s)
+        n = scale_steps(t, n, s);
+    return (uint32_t)clamp(n + PM_OCT[i], 0, 127);
+}
+
 static uint32_t kb_map(const track_t *t, uint32_t k)
 {
     static const int8_t DEGREE[12] = {0, -1, 1, -1, 2, 3, -1, 4, -1, 5, -1, 6};
@@ -968,12 +982,13 @@ static __attribute__((noinline)) void dxo_tick(track_t *t, uint32_t n)
     }
 }
 
-/* the effect of key k in the FX layer (PF_N none): the first PF_M1 white keys (F3 .. A4) in order, black keys
- * 1..4 (F#3 G#3 A#3 C#4) the track mutes */
+/* the effect of key k in the FX layer (PF_N none): the first 15 white keys (F3 .. F5) in order, G5 CLEAR; black keys
+ * 1..6 (F#3 .. F#4) the track mutes, A#4 the tracks, (0.9.14) C#5 D#5 F#5 the sweeps */
 static uint32_t perf_key(uint32_t k)
 {
     uint32_t p = key_place(k);
-    return !key_black(k) ? (p < PF_M1 ? p : p == PF_M1 ? PF_CLR : PF_N) : p < NTRK ? PF_M1 + p : p == 7u ? PF_TGT : PF_N;
+    return !key_black(k) ? (p < PF_SFLT ? p : p == PF_SFLT ? PF_CLR : PF_N)
+                         : p < NTRK ? PF_M1 + p : p == 7u ? PF_TGT : p >= 8u ? PF_SFLT + p - 8u : PF_N;
 }
 
 /* (0.6.14) LATCH: ARP OFF and ARP 2's HOLD ON, the keys' notes keep sounding when let go; the first key of the next
@@ -1754,8 +1769,8 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
             if (oct)                                /* (0.6.82: with a RAND too) */
                 x = (uint32_t)clamp((int32_t)x + cp_oct(t, oa), 0, 127);
         }
-        if (song.g[G_STRN] && !kit)                 /* (JIANT 0.4) STRN: up / down the scale, every sequence */
-            x = (uint32_t)clamp(scale_steps(t, (int32_t)x, song.g[G_STRN]), 0, 127);
+        if (!kit)                                   /* (JIANT 0.4) STRN: up / down the scale, every sequence */
+            x = strn_note(t, x);
         if (qseq) {                                 /* QNT SEQ: onto the scale now; two notes snapping */
             x = (uint32_t)clamp(scale_snap(t, (int32_t)x), 0, 127);   /* together play once */
             for (j = 0; j < m && nn[j] != x; j++)

@@ -512,7 +512,7 @@ SEQ las suyas). El encabezado nombra la capa en palabras, **[GLO] SET**. El pie 
 | Teclas | Efecto |
 | --- | --- |
 | F3 G3 A3 | REPEAT 1/8, 1/16, 1/32 |
-| B3 / C4 | LPF / HPF |
+| B3 / C4 | GLITCH / TAPE STOP (0.9.14) |
 | D4 / E4 | OCT− / OCT+ |
 | F4 | 1/2 TEMPO |
 | G4 / A4 | DEC− / DEC+ |
@@ -523,7 +523,8 @@ SEQ las suyas). El encabezado nombra la capa en palabras, **[GLO] SET**. El pie 
 | G5 | borra el carril de punch-in |
 | Teclas negras 1–6 (F#3 G#3 A#3 C#4 D#4 F#4) | mutean T1–T6 mientras las mantenés |
 | A#4 | a qué pistas afectan los efectos de nota: ALL / SYN / DRM |
-| **Perillas** | FILTER, CRUSH, THROW, DEPTH |
+| C#5 / D#5 / F#5 | los barridos FILTER / CRUSH / THROW (0.9.14): de seco a mojado en 2 compases mientras los mantenés, vuelven en un tiempo |
+| **Perillas** | las macros de interpretación STEPS, TRANSPOSE, MUTATE, FILTER (0.9.14): suben a la derecha; girar cualquiera para atrás apaga las cuatro |
 
 **GLO — mezcla**
 
@@ -1883,20 +1884,61 @@ las pistas sobre las que actúa (ALL, SYN, DRM). Para grabar: REC armado y tocan
 la tecla del efecto; los pasos que pasa lo reciben; **G5** sostenido borra por donde pasa el cabezal. Se guarda con
 la sección.
 
-- **Sobre el audio**: REPEAT 1/8, 1/16, 1/32 (F3 G3 A3), LPF (B3), HPF (C4). REPEAT arranca en la siguiente 1/16
-  mientras suena. Por debajo de unos 81 BPM, REPEAT 1/8 es demasiado largo para su buffer y aparece atenuado.
+- **Sobre el audio**: REPEAT 1/8, 1/16, 1/32 (F3 G3 A3), **GLITCH** (B3), **TAPE STOP** (C4). Arrancan en la siguiente
+  1/16 mientras suena. Por debajo de unos 81 BPM, REPEAT 1/8 es demasiado largo para su buffer y aparece atenuado.
+  - **GLITCH** (0.9.14) corta el master en las semicorcheas del transporte: cada una suena en vivo, o repite la última
+    1/16, 1/32 o 1/64, o la última semicorchea al revés, una octava arriba (al doble de velocidad, dos veces) o una
+    octava abajo (su primera mitad a media velocidad), o con gate a 1/32 o 1/64. Cuál le toca lo fija su lugar en un
+    ciclo de dos compases del transporte: el dibujo groovea y vuelve igual cada vez que lo apretás ahí; los tiempos
+    fuertes quedan casi siempre en vivo. Cada corte entra y sale en 3 ms (sin clics). Su primera semicorchea es en vivo
+    (todavía no grabó nada); por debajo de ~81 BPM solo suenan sus gates y los cortes en vivo (el buffer tiene 371 ms).
+  - **TAPE STOP** (0.9.14): toda la mezcla se frena hasta pararse en un tiempo (como mucho 0,68 s, el límite del buffer:
+    desde unos 88 BPM para abajo es menos de un tiempo), la altura cayendo con ella y apagándose en el último cuarto;
+    después silencio mientras lo mantenés. Al soltar, la música al instante, donde va. Un toque al final de una frase,
+    antes del drop.
+  REPEAT, GLITCH y TAPE STOP comparten un buffer (el del SLICER, prestado: mientras tanto el SLICER suena en vivo); de
+  los que mantenés suena el último apretado.
 - **Sobre las notas**: OCT− / OCT+ (D4 E4), 1/2 TEMPO (F4), DEC− (corto, punteado) / DEC+ (largo) (G4 A4), STUTTER
   1/8 / 1/16 (B4 C5), ATK+ (ataques lentos, baterías incluidas) (D5), ARP (E5; en una pista DRUM, un fill nuevo en cada
   pulsación), RANDOM (F5). Entran en la siguiente 1/16. **A#4** elige a qué pistas afectan: ALL, SYN (sintes) o DRM
   (baterías); el encabezado lo muestra.
-- **Perillas** con FX mantenido: **FILTER** (izquierda pasa-bajos, derecha pasa-altos), **CRUSH**, **THROW** (manda la
-  mezcla seca al delay y la reverb), **DEPTH** (el nivel del REPEAT).
+- **Los barridos** (0.9.14, teclas negras **C#5 D#5 F#5**; hasta 0.9.13 las perillas FILTER CRUSH THROW y las teclas
+  LPF HPF): mantenidos, el efecto va de seco a mojado en **2 compases al tempo**, con una curva en S (sale despacio de
+  seco, acelera en el medio, se asienta en mojado); al soltar vuelve a seco en **un tiempo** con la misma curva, así un
+  soltar a tiempo suena intencional. Actúan al instante (no esperan la 1/16) y se suman a todo.
+  - **FILTER** (C#5): el pasa-altos del DJ FILTER del master abriéndose, de ~32 Hz a ~6 kHz (el clásico de la subida:
+    el bajo se va primero). Mientras barre le toma el DJ FILTER a la KNOB 4 de GLO › MIXER, que vuelve cuando está seco.
+  - **CRUSH** (D#5): menos bits (de 4 a 11 menos) y menos frecuencia (una muestra repetida de 1 a 8 veces), y su mezcla
+    subiendo.
+  - **THROW** (F#5): la mezcla seca (y el bus del SLICER) a los envíos de delay y reverb, hasta toda: los ecos y la sala
+    crecen, y quedan sonando al soltar.
+- **Las perillas: MACROS DE INTERPRETACIÓN** (0.9.14; hasta 0.9.13 FILTER CRUSH THROW DEPTH) sobre todo el proyecto,
+  nunca escritas en los patrones, nunca guardadas. Cada una está en OFF en su tope izquierdo y sube girando a la
+  **derecha**:
+  - **KNOB 1 STEPS**: cada secuencia toca solo una parte de sí misma, desde donde va: **1/2, 1/4, 1/8, 1 STEP** de su
+    largo (tres pasos de perilla por etapa), como un loop roll; entra en la siguiente 1/16 (el LOOP de GLO › LIVE).
+  - **KNOB 2 TRANSPOSE**: cada secuencia melódica por la escala, **+2ND +3RD +4TH +5TH +6TH**, después **+OCT** y
+    **-OCT** (tres pasos por intervalo); lo tocan las notas siguientes; las pistas DRUM no. Se suma al STRN de SCL.
+  - **KNOB 3 MUTATE**: la música como está pasa a ser el ancla de MUTATE y cada patrón muta alrededor de ella según la
+    cantidad (notas por la escala, acentos, notas agregadas a contratiempo o quitadas, golpes de batería), en el tiempo
+    siguiente y otra vez cada compás.
+  - **KNOB 4 FILTER**: el pasa-bajos del DJ FILTER del master cerrándose (el pasa-altos del barrido gana cuando va más
+    lejos).
+  - **Girá cualquiera para atrás** (dos pasos en contra del reloj; uno se ignora, así un roce no hace nada) y **las
+    cuatro se apagan de golpe**: largo completo, sin transponer, cada patrón exactamente como antes de MUTATE, el filtro
+    abierto. La pantalla dice **MACROS OFF** y las tarjetas caen a OFF. Después cada una vuelve a subir desde cero al
+    girarla a la derecha (las perillas son encoders: nada salta). STEPS vuelve a poner las pistas en fase en la
+    siguiente 1/16; MUTATE devuelve los pasos al instante.
+  - **Quedan prendidas al soltar FX** (el LED de FX sigue encendido); se apagan con el corte, con FX + OCT− (FX LATCH),
+    el menú o un diálogo. No se graban como automatización ni en las escenas.
 - **Teclas negras 1–6**: mutean T1–T6 mientras las mantenés (no se guarda).
 
 **El carril de punch-in**: cada sección tiene un carril de 64 pasos de 1/16 (4 compases). Con **REC armado y sonando**
-(no durante un tema), los **efectos de nota (D4–F5)** que mantenés se graban en él, uno por paso (REPEAT, LPF, HPF y
-los mutes no se graban). Mantené **FX + G5** mientras suena para borrar por donde pasa el cabezal; parado, FX + G5
-borra todo el carril. **REC mantenido + FX** también lo borra (junto con la automatización de FX de la pista).
+(no durante un tema), los **efectos de nota (D4–F5)**, **GLITCH**, **TAPE STOP** y **los barridos** que mantenés se
+graban en él, uno por paso (el más bajo mantenido; REPEAT y los mutes no se graban). Al reproducirse, un barrido
+mantenido a lo largo de varios pasos sube como si lo mantuvieras. Mantené **FX + G5** mientras suena para borrar por
+donde pasa el cabezal; parado, FX + G5 borra todo el carril. **REC mantenido + FX** también lo borra (junto con la
+automatización de FX de la pista).
 
 **Traba**: mantené FX hasta que se abra su mapa y soltalo sin tocar nada: la capa FX queda abierta (**[FX] LOCKED**),
 como las macros con LFO; las teclas tocan los efectos (momentáneos: apretada suena, soltada se apaga), las perillas son
@@ -1904,8 +1946,7 @@ las macros del FX y OCT− es ALL OFF, con las dos manos libres. Apretá **FX** 
 trabados que dejaste prendidos siguen). Si lo mantenés tocando teclas o perillas, FX funciona como siempre y se cierra al soltar.
 
 **FX LATCH** (MENU > CONTROL > FX LATCH, **OFF por defecto**; ON por defecto de 0.6.44 a 0.6.63): en ON, una tecla
-apretada con FX activa y desactiva su efecto, las macros de las perillas conservan sus valores, **FX + OCT−** apaga
-todo (FX ALL OFF). Los efectos trabados no se graban en el carril.
+apretada con FX activa y desactiva su efecto, **FX + OCT−** apaga todo, las macros también (FX ALL OFF). Los efectos trabados no se graban en el carril.
 
 ### Mutes y solos
 

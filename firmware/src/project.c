@@ -1888,9 +1888,9 @@ static void mut_sound(track_t *t, const proj_trk_t *a)
         if (!(e == ENGI_ANALOG && (COMMON[i] == P_FCUT || COMMON[i] == P_FRES)))   /* (ANALOG: its own CUT RES) */
             mut_value(t, COMMON[i], base, amt);
 }
-static void mut_pattern(track_t *t, const proj_trk_t *a)
+static void mut_pattern(track_t *t, const proj_trk_t *a, uint32_t amt)
 {
-    uint32_t i, len = t->p[P_SLEN] > 0 ? (uint32_t)t->p[P_SLEN] : 1u, amt = (uint32_t)clamp(t->p[P_MAMT], 0, 127), l;
+    uint32_t i, len = t->p[P_SLEN] > 0 ? (uint32_t)t->p[P_SLEN] : 1u, l;
     int kit = drum_track(t);
     int32_t last = -1;
     for (i = 0, l = 0; i < len && i < NSTEP; i++)       /* (0.6.68) an empty pattern stays empty: nothing out of */
@@ -2019,9 +2019,39 @@ static void mut_ask_poll(void)
     else
         mut.moved &= (uint8_t)~(1u << k);               /* (nothing to go back to: no question) */
 }
+/* (0.9.14) the FX layer's MUTATE macro (perform.c perf_m[2]): turned up, the music now the anchor and every pattern
+ * mutated around it by the amount, on the next beat (stopped: at once), again every bar; off, every track back to the
+ * anchor at once. Its steps written as MUTATE writes them: the signatures follow (no new anchor for MUTATE) */
+static uint8_t pm_on, pm_amt;
+static uint32_t pm_at;
+static __attribute__((noinline)) void perf_mut_poll(void)
+{
+    uint32_t a = perf_m[2], k, nx = bar_n * 4u + beat_n + 1u;
+    if (!a || !pm_on) {
+        if (pm_on)
+            (void)mut_revert((1u << trk_live) - 1u);
+        if ((pm_on = (uint8_t)(a != 0u)) != 0u) {
+            mut_keep();
+            pm_amt = 0;
+        }
+        if (!a)
+            return;
+    }
+    if (song.playing ? beat_pos < beat_samples() * 3u / 4u || pm_at == nx || (a == pm_amt && beat_n != 3u) : a == pm_amt)
+        return;                                         /* (playing: in a beat's last sixteenth, for the next one) */
+    pm_at = nx;
+    pm_amt = (uint8_t)a;
+    if (!mut_anchor_get())
+        return;
+    for (k = 0; k < trk_live; k++)
+        mut_pattern(&trk[k], proj_scratch.t[k].engine == trk_eng(&trk[k]) ? &proj_scratch.t[k] : 0, a * 127u / 100u);
+    for (k = 0; k < NTRK; k++)
+        mut.sig[k] = steps_sig(&trk[k]);
+}
 static void mutate_poll(void)
 {
     uint32_t en = mut_enabled(), k, nx, anc;
+    perf_mut_poll();
     mut.ask |= (uint8_t)(mut.en & ~en & mut.moved);    /* (0.9.3) OFF after mutating: BACK TO BEFORE MUTATE? */
     for (k = 0; k < NTRK; k++)                          /* turned on: an AMOUNT to hear (0: half) */
         if (((en & ~mut.en) >> k) & 1u && !trk[k].p[P_MAMT])
@@ -2069,7 +2099,7 @@ static void mutate_poll(void)
         if (!((en >> k) & 1u))
             continue;
         if (s && nx % s == 0u) { mut_sound(t, a); hit = 1; }
-        if (q && nx % q == 0u) { mut_pattern(t, a); hit = 1; }
+        if (q && nx % q == 0u) { mut_pattern(t, a, (uint32_t)clamp(t->p[P_MAMT], 0, 127)); hit = 1; }
         if (hit) { mut_flash[k] = 12; mut.moved |= (uint8_t)(1u << k); }
     }
     for (k = 0; k < NTRK; k++)

@@ -109,6 +109,12 @@ static void live_publish(void)
                     m.fl |= k == 13u ? LF_UP : LF_DN;
                 }
             }
+            if (perf_m[0]) {                            /* (0.9.14) the FX layer's STEPS: 1/2 1/4 1/8 of it, 1 step */
+                k = (perf_m[0] + 2u) / 3u;
+                d = k < 4u ? (uint32_t)clamp(trk[i].p[P_SLEN], 1, NSTEP) >> k : 1u;
+                m.cut = (uint8_t)(d ? d : 1u);          /* (over LIVE's own window) */
+                m.fl |= LF_HERE;
+            }
             if (m.cut && (m.fl & LF_HERE)) {            /* a LOOP: the N steps the playhead is in when it is taken */
                 d = (uint32_t)clamp(trk[i].p[P_SLEN], 1, NSTEP);
                 m.ws = lv.want[i].ws;

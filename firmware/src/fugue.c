@@ -89,9 +89,7 @@ static void fg_play(track_t *t, fg_head_t *h, const fg_set_t *f, uint32_t i, uin
         int32_t x = s->note[k] + t->p[P_POFS];
         if (f->ivl)
             x = scale_steps(t, x, f->ivl);
-        if (song.g[G_STRN])
-            x = scale_steps(t, x, song.g[G_STRN]);
-        h->note[h->n++] = (uint8_t)clamp(x, 0, 127);
+        h->note[h->n++] = (uint8_t)strn_note(t, (uint32_t)clamp(x, 0, 127));   /* (ALL TR, TRANSPOSE: seq.c) */
     }
     for (k = 0; k < NLANE && h->n < 4u; k++)             /* (a kit: its lanes, as the step has them) */
         if ((s->hit >> k) & 1u)

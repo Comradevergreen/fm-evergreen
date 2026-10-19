@@ -447,9 +447,100 @@ static int pages(void)
     return bad;
 }
 
+/* (0.9.14) the FX layer's PERFORMANCE MACROS (perform.c perf_m; ui_layer.c pm_knob; ui_live.c, seq.c, project.c) */
+static uint32_t gated_note(const track_t *t)             /* the note track t struck last (0: none) */
+{
+    uint32_t i, a = 0, n = 0;
+    for (i = 0; i < NVOICE; i++)
+        if (t->v[i].age > a) {
+            a = t->v[i].age;
+            n = t->v[i].note;
+        }
+    return n;
+}
+static int macros(void)
+{
+    int bad = 0, ok;
+    uint32_t p, n, k;
+    lev_t ev[64];
+    track_t *t = lsetup();
+    p = lper();
+    lrun(19u * p / 2u, 0, 0, 0);                        /* in step 10 */
+    btn_down(B_FX); frame();
+    turn(EN_K1, 1);                                     /* STEPS 1/2: the 8 steps the playhead is in */
+    n = lrun(10u * p, ev, 0, 64);
+    ok = n >= 9u && lv.want[0].cut == 8u && lv.want[0].ws == 8u && near(ev[0].at, 10u * p);
+    for (k = 0; k < 9u && k < n; k++)
+        ok &= ev[k].idx == 8u + (2u + k) % 8u;
+    bad += check("STEPS 1/2 turned in step 10: from the next 1/16 steps 11 .. 16 9 10 11 (the half it is in)", ok);
+    turn(EN_K1, 11);                                    /* all the way: 1 STEP */
+    n = lrun(4u * p, ev, 0, 64);
+    ok = lv.want[0].cut == 1u && n >= 3u && ev[1].idx == ev[2].idx && ev[2].idx == ev[3 < n ? 3 : 2].idx;
+    bad += check("  STEPS at the right end: a 1-step loop (every track)", ok && lv.want[3].cut == 1u);
+    turn(EN_K1, -2);                                    /* the cut: back in phase on the next 1/16 */
+    lrun(2u * p, 0, 0, 0);
+    ok = !perf_m[0] && !LV_ON(0) && t->seq_idx == (lv_clock / p) % 16u;
+    bad += check("  turned back: all off, the track where it would have been (its ghost)", ok);
+    btn_up(B_FX); frame();
+
+    /* TRANSPOSE: along the scale; the kit untouched */
+    t = lsetup();
+    t->p[P_ROOT] = 0;
+    t->p[P_SCALE] = 1;                                  /* C MAJ */
+    for (k = 0; k < 16u; k++)
+        t->step[k].note[0] = 60;
+    btn_down(B_FX); frame();
+    turn(EN_K2, 4);                                     /* +3RD (three detents an interval) */
+    ok = pm_trn() == 2u && strn_note(t, 60) == 64u && strn_note(t, 62) == 65u;
+    lrun(2u * p + p / 4u, 0, 0, 0);
+    ok &= gated_note(t) == 64u;
+    turn(EN_K2, 30);                                    /* -OCT at the right end */
+    ok &= pm_trn() == 7u && strn_note(t, 60) == 48u;
+    lrun(p, 0, 0, 0);
+    ok &= gated_note(t) == 48u;
+    turn(EN_K2, -2);
+    lrun(p, 0, 0, 0);
+    ok &= gated_note(t) == 60u && !perf_m[1];
+    bad += check("TRANSPOSE: +3RD in C major (C -> E, D -> F) on the next step, -OCT at the end; back: as written", ok);
+    btn_up(B_FX); frame();
+    /* MUTATE: the patterns move on the beat, every bar; off: exactly as they were */
+    t = lsetup();
+    for (k = 0; k < 16u; k++) t->step[k].note[0] = (uint8_t)(48 + (k * 5u) % 12u);
+    {
+        static step_t before[NTRK][NSTEP];
+        uint32_t i, moved = 0;
+        for (i = 0; i < NTRK; i++) memcpy(before[i], trk[i].step, sizeof before[i]);
+        btn_down(B_FX); frame();
+        turn(EN_K3, 100);
+        for (i = 0; i < 8u * 4u; i++) { lrun(p, 0, 0, 0); frame(); mutate_poll(); }
+        moved = memcmp(before[0], trk[0].step, sizeof before[0]) != 0;
+        turn(EN_K3, -2); frame(); mutate_poll();
+        ok = moved && !perf_m[2];
+        for (i = 0; i < NTRK; i++) ok &= !memcmp(before[i], trk[i].step, sizeof before[i]);
+        btn_up(B_FX); frame();
+        bad += check("MUTATE at 100: the patterns mutate while playing; turned back: every step as it was", ok);
+    }
+
+    /* FILTER: the DJ FILTER's low-pass, closing to the right; off: centred */
+    btn_down(B_FX); frame();
+    turn(EN_K4, 50);
+    perf_begin(CTL);
+    ok = perf_djf == -32 && djf_v() == -32;
+    turn(EN_K4, 50);
+    perf_begin(CTL);
+    ok &= perf_djf == -64;
+    turn(EN_K4, -3);
+    perf_begin(CTL);
+    ok &= !perf_djf && djf_v() == song.g[G_DJF];
+    btn_up(B_FX); frame();
+    bad += check("FILTER: the DJ FILTER's low-pass, -32 at 50 %, -64 at the end; back: the knob's own", ok);
+    stop_transport();
+    return bad;
+}
+
 int main(void)
 {
-    int bad = timing() + ghost() + commit() + record() + pages();
+    int bad = timing() + ghost() + commit() + record() + pages() + macros();
     printf("%s\n", bad ? "LIVE TEST FAILED" : "live tests passed");
     return bad != 0;
 }
