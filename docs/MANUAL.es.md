@@ -1080,14 +1080,18 @@ seleccionada se graban como **automatización**. MENU > AUDIO tiene el **CLICK**
   - **CHANCE** (0–100 %) y **RATCH** (x1–x4): la probabilidad y el ratchet propios del paso (solo en COMP). El KNOB 4
     de RATCH es su **DIV**: STEP reparte los golpes en el paso (como antes); 1/2, 1/3, 1/4, 1/6, 1/8 los separa esa
     fracción de paso desde el inicio, los que entren (RATCH x3 a 1/8: tres golpes rápidos y después silencio).
-  - **ARP NOTES / SEQ / SCALE** (0.9.17): el paso recorre su arpegio **una nota por vuelta**: cada vez que el patrón
-    vuelve a él, toca la nota siguiente, sostenida sobre los ties que vienen después como cualquier nota. NOTES: las
-    notas del paso, de grave a agudo; SEQ: la melodía del patrón, en el orden en que la toca el patrón; los dos sobre
-    1–4 octavas. SCALE: la escala hacia arriba desde la nota más grave del paso, 3, 5, 8 o 15 grados. KNOB 3 **ORDER**
-    y rango en una sola lista (UP, DOWN, UP-DN, RND sobre 1 OCT, después sobre 2 OCT …; en SCALE 3, 5, 8, 15 DEG).
-    KNOB 4 **LAP** muestra la nota que toca esta vuelta (RND: una nueva cada vuelta). PLAY desde stop arranca otra vez
-    de la primera nota, como las vueltas de los otros componentes. (Hasta 0.9.16 el paso tocaba sus notas dentro del
-    paso, KNOB 4 su RATE x1 … x8; los proyectos guardan el RATE que tenían, ahora sin uso.)
+  - **ARP NOTES / SEQ / SCALE**: el paso toca un arpegio y sigue sobre los ties que vienen después (su duración, el
+    paso y sus ties). NOTES: las notas del paso, de grave a agudo; SEQ: la melodía del patrón, en el orden en que la
+    toca el patrón (0.6.82; antes se ordenaba como NOTES); los dos sobre 1–4 octavas. SCALE: la escala hacia arriba
+    desde la nota más grave del paso, 3, 5, 8 o 15 grados. KNOB 3 **ORDER** y rango en una sola lista (UP, DOWN, UP-DN,
+    RND sobre 1 OCT, después sobre 2 OCT …; en SCALE 3, 5, 8, 15 DEG). KNOB 4 **RATE** (0.6.92), la velocidad del
+    arpegio en tiempo musical: **x1** una nota por paso (el DIV de la pista, 1/16), **1/32** dos por paso, **1/32T**
+    tres, **1/64** cuatro, **1/64T** seis, **1/128** ocho (la tarjeta dice la figura según el DIV de la pista; un DIV
+    raro: xn). Los x2 … x8 de antes son los mismos valores. **SEQ recorre una nota por vuelta** (0.9.17): cada vez
+    que el patrón vuelve al paso toca la nota siguiente de la melodía, en su ORDER y rango, sostenida sobre los ties
+    que vienen después como cualquier nota; su KNOB 4 es **LAP**, la nota de esta vuelta (RND: una nueva cada vuelta),
+    y PLAY desde stop arranca otra vez de la primera nota, como las vueltas de los otros componentes. (Hasta 0.9.16 SEQ
+    tocaba la melodía dentro del paso a su RATE; los proyectos guardan ese RATE, ahora sin uso.)
   - **TRIG**: el paso suena solo en algunas vueltas del patrón: 1:2, 2:2, 1:3, 2:3, 3:3, 1:4 … 4:4, 1:8, FIRST, !1ST
     (todas menos la primera).
   - **RAND**: la nota sube o baja por la escala al azar, hasta RANGE grados (1–7).
@@ -1131,8 +1135,8 @@ seleccionada se graban como **automatización**. MENU > AUDIO tiene el **CLICK**
     página ya no existe), con su A / B leídos como uno solo.
   Los proyectos los guardan. **En un kit de batería** (0.6.83) también funcionan: OCT, RAND y TONAL afinan los golpes
   (RAND y TONAL en la escala de la pista), BEND dobla cada golpe durante el paso; ARP NOTES toca los sonidos del paso
-  uno tras otro, SEQ los sonidos del patrón en el orden en que suenan, SCALE los golpes del paso un grado más arriba
-  (0.9.17: uno por vuelta).
+  uno tras otro, SEQ los sonidos del patrón en el orden en que suenan, SCALE re-dispara los golpes del paso, cada parte
+  un grado más arriba (0.9.17: SEQ uno por vuelta).
 - **Un slide de acordes largo** (0.6.83): el glide hacia un acorde dura lo que dura ese acorde, con sus TIEs; GLIDE
   fija cuánto de ese tramo (127: todo). Un acorde sostenido con TIEs en pasos lentos (p. ej. DIV 1/4 a 120 BPM: diez
   pasos, 5 s) se desliza así de lento y suave; las notas nuevas aparecen a medida que se deslizan.

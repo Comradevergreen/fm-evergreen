@@ -1035,14 +1035,17 @@ recorded into the pattern, quantized to its steps, overdubbing. Knob moves on th
   - **CHANCE** (0–100 %) and **RATCH** (x1–x4): the step's own chance and ratchet (on COMP only). RATCH's KNOB 4 is
     its **DIV**: STEP shares the hits out over the step (as before); 1/2, 1/3, 1/4, 1/6, 1/8 put them that part of a
     step apart from its start, as many as fit (RATCH x3 at 1/8: three quick hits, then silence).
-  - **ARP NOTES / SEQ / SCALE** (0.9.17): the step walks its arpeggio **one note a lap**: each time the pattern comes
-    round to it, it plays the next note, held over the TIEs after it like any note. NOTES: the step's notes, low to
-    high; SEQ: the pattern's melody, in the order the pattern plays it; both over 1–4 octaves. SCALE: the scale up
-    from the step's lowest note, 3, 5, 8 or 15 degrees. KNOB 3 **ORDER** and range as one list (UP, DOWN, UP-DN, RND
-    over 1 OCT, then over 2 OCT …; on SCALE 3, 5, 8, 15 DEG). KNOB 4 **LAP** shows the note this pass plays (RND: a
-    new one each lap). PLAY from a stop starts again from the first note, as the other components' loops do. (Until
-    0.9.16 the step played its notes inside the step, KNOB 4 their RATE x1 … x8; projects keep the RATE they stored, now
-    unused.)
+  - **ARP NOTES / SEQ / SCALE**: the step plays an arpeggio and goes on over the TIEs after it (its duration the step
+    and its TIEs). NOTES: the step's notes, low to high; SEQ: the pattern's melody, in the order the pattern plays it
+    (0.6.82; it was sorted like NOTES); both over 1–4 octaves. SCALE: the scale up from the step's lowest note, 3, 5,
+    8 or 15 degrees. KNOB 3 **ORDER** and range as one list (UP, DOWN, UP-DN, RND over 1 OCT, then over 2 OCT …; on
+    SCALE 3, 5, 8, 15 DEG). KNOB 4 **RATE** (0.6.92), the arpeggio's speed in musical time: **x1** one note a step
+    (the track's DIV, 1/16), **1/32** two a step, **1/32T** three, **1/64** four, **1/64T** six, **1/128** eight (the
+    card says the note value for the track's DIV; an odd DIV: xn). The old pages' x2 … x8 are the same values.
+    **SEQ walks one note a lap** (0.9.17): each time the pattern comes round to the step it plays the next note of the
+    melody, in its ORDER and range, held over the TIEs after it like any note; its KNOB 4 is **LAP**, the note this pass
+    plays (RND: a new one each lap), and PLAY from a stop starts again from the first note, as the other components'
+    loops do. (Until 0.9.16 SEQ played the melody inside the step at its RATE; projects keep that RATE, now unused.)
   - **TRIG**: the step plays only on some loops of the pattern: 1:2, 2:2, 1:3, 2:3, 3:3, 1:4 … 4:4, 1:8, FIRST, !1ST
     (every loop but the first).
   - **RAND**: the note moves up or down the scale at random, up to RANGE degrees (1–7).
@@ -1084,7 +1087,7 @@ recorded into the pattern, quantized to its steps, overdubbing. Knob moves on th
     with its A / B read as one.
   Projects keep them. **On a drum kit** (0.6.83) they work too: OCT, RAND, TONAL tune the hits (RAND and TONAL in
   the track's scale), BEND bends each hit over the step; ARP NOTES plays the step's sounds one after another, SEQ
-  the pattern's sounds in the order they play, SCALE the step's hits a degree further up (0.9.17: one a lap).
+  the pattern's sounds in the order they play, SCALE retriggers the step's hits each part a degree further up (0.9.17: SEQ one a lap).
 - **A long chord slide** (0.6.83): the glide into a chord lasts as long as that chord, its TIEs included; GLIDE sets
   how much of it (127: all of it). A chord held over TIEs on slow steps (e.g. DIV 1/4 at 120 BPM: ten steps, 5 s)
   slides that slowly and smoothly; new notes fade in as they glide.

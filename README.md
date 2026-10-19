@@ -675,17 +675,17 @@ JIANT's modifications are distributed under the same license.
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
 
 ### v0.9.17
-Slower rolls, arpeggios a lap at a time, and VOICE's THEME.
+Slower rolls, ARP SEQ a lap at a time, and VOICE's THEME.
 - **DRUM-X's octaves above the kit, half as fast again.** Holding a key above OCT 0 on a DRUM track now plays **OCT +1
   REPEAT 1/2** (the hit every other step), **+2 REPEAT** (once a step) and **+3 RATCHET x2** (0.9.16: once, x2, x4 a
   step). The same goes for MIDI notes 82–93, 94–105 and 106–127. Recording writes what you hear: +1 a hit on every other
   step held, +2 one on each, +3 the step's sound at x2. Steps recorded before keep the modes they stored.
-- **ARP NOTES / SEQ / SCALE walk one note a lap.** A step with an ARP component (SEQ > COMP) no longer plays its
-  arpeggio inside the step. Each time the pattern comes round to it, it plays the **next** note of its arpeggio, in its
-  ORDER and over its range, held over the TIEs after it like any note. SEQ walks the pattern's melody this way. PLAY
-  from a stop starts again from the first note, as the loops of TRIG, EVERY, WALK and CLIMB do. On a drum kit the
-  step's sounds take their turns the same way. COMP's KNOB 4 was RATE: it is now **LAP**, the note this pass plays
-  (RND: a new one each lap). Projects keep the RATE they stored, now unused.
+- **ARP SEQ walks the melody one note a lap.** A step with the ARP SEQ component (SEQ > COMP) no longer plays the
+  pattern's melody inside the step. Each time the pattern comes round to it, it plays the **next** note of the melody,
+  in its ORDER and over its range, held over the TIEs after it like any note. PLAY from a stop starts again from the
+  first note, as the loops of TRIG, EVERY, WALK and CLIMB do. On a drum kit the pattern's sounds take their turns the
+  same way. SEQ's KNOB 4 was RATE: it is now **LAP**, the note this pass plays (RND: a new one each lap). Projects keep
+  the RATE they stored, now unused. ARP NOTES and SCALE play as before.
 - **VOICE's THEME: one detent a theme, and no crackle.** THEME (WORDS) took 16 detents a name. Now every value with
   names steps one name a detent, onto the name's middle: THEME and LOOP; LOFI's WAV#, DECAY and ALGO; NOISE's LEN.
   The stored 0..127 values, projects, presets, automation and the editor are unchanged. Swept over a held note THEME

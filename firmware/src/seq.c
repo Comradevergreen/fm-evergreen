@@ -1366,12 +1366,17 @@ static const step_t *comp_lane(track_t *t, const step_t *s)
     t->cv_on = 1;
     return &t->cvs;
 }
-/* (0.9.17) an ARP component walks its notes a lap at a time: the step plays one, the next the next time the pattern
- * comes round (seq_step: t->loops, its ORDER), held over the TIEs after it as a plain note (no RATE: was its notes
- * in the step, over the TIEs) */
+/* (0.9.17) ARP SEQ walks the pattern's melody a lap at a time: the step plays one note, the next the next time the
+ * pattern comes round (seq_step: t->loops, its ORDER), held over the TIEs after it as a plain note (no RATE: was its
+ * notes in the step, over the TIEs); NOTES and SCALE as before */
+static int arp_lap(const track_t *t, const step_t *o) { return cp_get(t, o, CP_ARPN, CP_ARPS, 0) == CP_ARPQ; }
 static const step_t *arp_owner(const track_t *t, const step_t *s)
 {
     const step_t *o = s;
+    if (s->time == ST_TIE && t->arp_from)
+        o = t->arp_from == CV_IDX ? &t->cva : &seq_steps(t)[(t->arp_from - 1u) % NSTEP];
+    if (o != s && arp_lap(t, o))                        /* (0.9.17: SEQ's note held over the TIE) */
+        return 0;
     return o->time == ST_NOTE && (o->n || (o->hit && trk_kit(t))) && cp_get(t, o, CP_ARPN, CP_ARPS, 0) ? o : 0;   /* (0.6.82:
                                                          * a kit's hits too) */
 }
@@ -1383,8 +1388,11 @@ static uint32_t step_parts(const track_t *t, const step_t *s, uint32_t *div)
     const step_t *o = arp_owner(t, s);
     uint32_t h, d;
     uint8_t a;
-    if (o)                                          /* (0.9.17: one note a lap, not RATE) */
-        return *div = 1u;
+    if (o) {
+        if (cp_get(t, o, CP_ARPN, CP_ARPS, &a) == CP_ARPQ)   /* (0.9.17: SEQ, one note a lap, not RATE) */
+            return *div = 1u;
+        return *div = CP_RATES[CP_RATE(a) % CP_NRATE];
+    }
     h = s->time == ST_NOTE && CP_HAS(t, s, CP_ECHO, &a) ? 2u + (a & ~CP_ECHO_EVEN) % 7u : step_ratchet(s);
     if ((d = live_rat(t)) > h)                      /* (0.9.11) LIVE RATCH: every step at least that many parts */
         return *div = d;
@@ -1759,7 +1767,8 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
         }
     }
     for (i = 0; i < (arp ? 1u : s->n) && i < 4u && !(kit && arp); i++) {
-        uint32_t x = arp ? cp_arp_note(t, arp, ac, aa, t->loops) : s->note[i];   /* (0.9.17: this lap's) */
+        uint32_t x = arp ? cp_arp_note(t, arp, ac, aa, ac == CP_ARPQ ? t->loops : t->arp_k++) : s->note[i];   /* (0.9.17:
+                                                         * SEQ, this lap's) */
         x = (uint32_t)clamp((int32_t)x + up, 0, 127);
         if (!kit) {                                 /* (0.6.42) TONAL, RAND, OCT; (0.6.98) WALK, CLIMB */
             if (walk)
@@ -1800,7 +1809,7 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
         int32_t dp = 0, deg = 0;                    /* OCT RAND TONAL and ARP SCALE tune the hits, BEND bends them */
         if (arp) {
             uint8_t kn[4 + NLANE];
-            uint32_t c2 = cp_kit_arp(t, arp, ac, aa, t->loops, kn, &deg);
+            uint32_t c2 = cp_kit_arp(t, arp, ac, aa, ac == CP_ARPQ ? t->loops : t->arp_k++, kn, &deg);
             for (i = 0; i < c2 && m < 4u + NLANE; i++) {
                 nn[m] = kn[i];
                 vv[m++] = (uint8_t)vel;

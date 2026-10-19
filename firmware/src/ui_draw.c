@@ -1413,9 +1413,9 @@ static void draw_columns(void)
             uint32_t r = CP_WRATES[CP_WRATE(ca) % CP_NWRATE];
             fmt_int(val, (int32_t)r);
             draw_column(3, "EVERY", val, r == 1u ? "LOOP" : "LOOPS", VAL(3u), -1, ICON_RATE);
-        } else if (v >= COMP_ARPN && v <= COMP_ARPS && comp_slot() == 0u) {   /* (0.9.17) LAP: the note it plays this
-                                                         * pass of the pattern (one a lap; was RATE: its notes in the step) */
-            uint32_t lap = song.playing ? TSEL->loops : 0u, c = CP_ARPN + v - COMP_ARPN;
+        } else if (v == COMP_ARPQ && comp_slot() == 0u) {   /* (0.9.17) SEQ's LAP: the note it plays this pass of the
+                                                         * pattern (one a lap; was RATE: its notes in the step) */
+            uint32_t lap = song.playing ? TSEL->loops : 0u, c = CP_ARPQ;
             if (CP_ORD(ca) == 3u)                      /* (RND: a new one each lap, not known before) */
                 str_cpy(val, "RND", sizeof val);
             else if (drum_track(TSEL)) {
@@ -1426,6 +1426,9 @@ static void draw_columns(void)
             } else
                 note_name(val, cp_arp_note(TSEL, cs, c, ca, lap));
             draw_column(3, "LAP", val, "", VAL(3u), -1, ICON_RATE);
+        } else if (v >= COMP_ARPN && v <= COMP_ARPS && comp_slot() == 0u) {   /* (0.6.92) RATE as a note value of the track's DIV */
+            rate_name(TSEL, CP_RATES[CP_RATE(ca) % CP_NRATE], val);
+            draw_column(3, "RATE", val, "", VAL(3u), -1, ICON_RATE);
         } else if ((v == COMP_RATCH || v == COMP_ECHO) && comp_slot() == 0u) {   /* (0.6.82) the parts' spacing */
             if (CT_DIV(cs)) rate_name(TSEL, CT_DIVS[CT_DIV(cs) % CT_NDIV], val); else str_cpy(val, "FIT", sizeof val);
             draw_column(3, "RATE", val, "", CT_DIV(cs) ? VAL(3u) : T_DIM, -1, ICON_RATE);
