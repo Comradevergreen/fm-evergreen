@@ -661,7 +661,7 @@ static int32_t gbass_near(int32_t lo, const gch_t *c, int32_t ref)   /* (a walk'
 #define BA_FLAG(c) (".asg"[((c) >> 4) & 3u])
 /* (0.9.17) the archetype as this throw plays it: one to three of its steps moved (a ghost or a soft root after a note
  * on an off sixteenth, a weak root up the octave or to the fifth, a weak note left out, a note a sixteenth late or
- * early), the same in every bar (a riff, its own): until 0.9.17 a genre's throws played one of its three archetypes as
+ * early), the same in every bar (a riff, its own): until 0.9.16 a genre's throws played one of its three archetypes as
  * written, the same bass in a third of them (MICRO HOUSE: as one of the 8 before in 60 %) */
 static void gba_vary(uint8_t *bc, uint32_t alen)
 {
@@ -876,7 +876,7 @@ static void gen_arp(track_t *t, uint32_t len)
     for (no = 0; no < 8u && ap->ord[no] >= 0; no++) {}
     for (i = 0; i < 16u; i++) {                         /* (0.9.17) the holes (space), the ghosts and the held notes a
                                                          * figure of the bar, kept bar after bar (the fourth bar a little
-                                                         * its own): until 0.9.17 thrown every step, a bar like no other */
+                                                         * its own): until 0.9.16 thrown every step, a bar like no other */
         hole |= (uint32_t)(gr() % 100u >= 20u + a * 3u / 4u && i % 4u) << i;
         gh |= (uint32_t)(gch(18) && i % 4u) << i;
         tie |= (uint32_t)gch(10) << i;
@@ -1383,7 +1383,7 @@ static void gen_sound(track_t *t, uint32_t role, uint32_t ri)
     }
     for (i = 0; i < na; i++) {                          /* (0.9.17) every preset a word of the recipe names, the first
                                                          * word's likeliest (3 2 1), one another track of the piece has
-                                                         * already seldom: until 0.9.17 only the first word that fitted,
+                                                         * already seldom: until 0.9.16 only the first word that fitted,
                                                          * often one preset (MICRO HOUSE's lead: the press before's
                                                          * sound in 45 % of the presses) */
         const char *pn = en->presets[any[i]].name;
@@ -2586,7 +2586,7 @@ static uint32_t dice_print(void)                        /* a fingerprint of the 
  * stream each press (the random numbers, the ticks in them). Where a piece of the generator plays in the track's key,
  * on its harmony (its plan, its genre, the track's role in it): the part fits the others. Else a piece's choices made
  * up for it (the last genre, or any; the track's own key where it is a mode of seven): the drums on a DRUM track, else
- * the role its steps sound like (low: the bass, chords: the chords, else a lead or an arp). Until 0.9.17 song_dice.c's
+ * the role its steps sound like (low: the bass, chords: the chords, else a lead or an arp). Until 0.9.16 song_dice.c's
  * own parts: a random genre's progression against the song's (its lead's strong steps on the chords' tones 58 % of the
  * time, GEN's 90 %). The sound, the mix and the automation stay. Its message */
 static uint32_t dsq_last[NTRK];                         /* (each track's last diced sequence) */

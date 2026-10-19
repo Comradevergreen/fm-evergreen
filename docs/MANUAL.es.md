@@ -1609,9 +1609,11 @@ La misma idea para las otras partes de la pista seleccionada, cada una se escuch
 DICED …?** (SELECT otra vez: otra tirada, **OCT+ OK** la deja, **OCT− CANCEL** devuelve lo que había, el resto sigue
 sonando):
 
-- **SEQ + SELECT**: una secuencia nueva como escribe una parte DICE ALL, en la escala de la pista: un beat en una pista
-  DRUM; si no, el rol al que suenan sus pasos (notas graves: un bajo, acordes: un pad, si no una lead o un arpegio). Su
-  sonido, su mezcla y su automatización quedan.
+- **SEQ + SELECT** (0.9.17): una secuencia nueva, la parte que escribiría el generador de GEN para la pista: sobre la
+  armonía de la canción si GEN hizo la pieza (su plan, su género y el rol de la pista), así encaja con las otras; si
+  no, en la tonalidad de la pista, con un género inventado para ella. Batería en una pista DRUM; si no, el rol al que
+  suenan sus pasos (notas graves: un bajo, acordes: un pad, si no una lead o un arpegio). Nunca la misma parte dos
+  veces seguidas. Su sonido, su mezcla y su automatización quedan.
 - **LFO + SELECT**: el LFO de la pista: un rate en el medio del rango, cualquier onda y fase, a veces un fade, apuntado
   sobre todo al filtro, un poco a la forma, rara vez al pitch o al volumen.
 - **FX + SELECT**: el drive de la pista (la mitad de las veces nada), sus envíos de chorus, delay y reverb, un AUTO PAN

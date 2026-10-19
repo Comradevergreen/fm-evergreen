@@ -675,7 +675,22 @@ JIANT's modifications are distributed under the same license.
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
 
 ### v0.9.17
-Slower rolls, ARP SEQ a lap at a time, and VOICE's THEME.
+A livelier generator and dice, slower rolls, ARP SEQ a lap at a time, and VOICE's THEME.
+- **SEQ + SELECT dices with GEN's own generator.** The track's new sequence is the part GEN would write for it: on the
+  song's harmony when GEN made the piece (its plan, genre and the track's role), so it fits the other parts; otherwise
+  a piece's choices made up for it (the last genre, or any, in the track's key). DRUM tracks get drums; other tracks
+  get the role their steps sound like (low notes a bass, chords a pad, else a lead or an arp). Its sound, mix and
+  automation stay. song_dice.c's own generator is gone (7.2 KB of flash back).
+- **The dice never repeat themselves.** Each press mixes its moment into the random numbers. A throw never brings back
+  the part, seed or preset of the throw before (an engine's last four presets are skipped). GEN's SEED starts each
+  session somewhere new: the first OCT+ after power-on made the same piece every time. Bass lines vary their archetype
+  from throw to throw.
+- **GEN's sounds.** Leads and arps get their own envelope shapes, with releases that fit the tempo. Filters start
+  darker and open with an envelope, with more resonance. Leads get soft LFOs on the filter or a faster vibrato, and
+  percussion gets its sends. Every word of the recipe now shapes the sound.
+- **GEN's melodies.** The lead runs over four bars as a call and an answer, built from syncopated motif cells with a
+  late variation. The arp leaves space shaped like a figure of the bar, with ghost notes and held notes, and has three
+  new orders.
 - **DRUM-X's octaves above the kit, half as fast again.** Holding a key above OCT 0 on a DRUM track now plays **OCT +1
   REPEAT 1/2** (the hit every other step), **+2 REPEAT** (once a step) and **+3 RATCHET x2** (0.9.16: once, x2, x4 a
   step). The same goes for MIDI notes 82–93, 94–105 and 106–127. Recording writes what you hear: +1 a hit on every other
