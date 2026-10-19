@@ -210,7 +210,8 @@ static void ui_power_on(void)
     kb_mask = layer_bits();
     perf_solo = 0;
     memset(&lys, 0, sizeof lys);
-    perf_k[0] = perf_k[1] = perf_k[2] = perf_k[3] = 0;
+    perf_m[0] = perf_m[1] = perf_m[2] = perf_m[3] = 0;   /* (0.9.14: the macros off, nothing to revert) */
+    pm_on = 0;
     settings_hold = HOLD_DEF;
     fm1_in.buttons = fm1_in.notes = 0;
     memset(&motion, 0, sizeof motion);                  /* (main.c: no motion at power-on) */
@@ -3476,11 +3477,11 @@ static int test_layer(void)
     frame();                                           /* (the keys follow the lock from the next frame) */
     ok &= ui.home && ui.layer == LAYER_FX && fx_lock;   /* (0.6.64) let go unused: locked open, FX LATCH OFF too */
     {   /* the effects momentary (FX LATCH OFF, the default): a key held plays it, let go stops it */
-        uint32_t k = white(3);                         /* (the LPF key) */
+        uint32_t k = white(3);                         /* (the GLITCH key) */
         key_down(k); frame();
-        ok &= (perf_held & PF_BIT(PF_LPF)) != 0u && !perf_latched;
+        ok &= (perf_held & PF_BIT(PF_GLT)) != 0u && !perf_latched;
         key_up(k); frame();
-        ok &= !(perf_held & PF_BIT(PF_LPF)) && !perf_latched;
+        ok &= !(perf_held & PF_BIT(PF_GLT)) && !perf_latched;
     }
     press(B_FX); frames(64);
     ok &= !fx_lock && !ui.layer;
@@ -3570,24 +3571,25 @@ static int test_layer(void)
     song.playing = 0; song.rec = 0;
     /* FX let go first: the effect stays with its key, the map too; a key pressed now is a note */
     ui_power_on();
-    btn_down(B_FX); key_down(white(3)); frame();          /* white key 4 (B3): LPF */
+    btn_down(B_FX); key_down(white(3)); frame();          /* white key 4 (B3): GLITCH */
     btn_up(B_FX); frame();
-    ok = (perf_held & PF_BIT(PF_LPF)) && ui.layer == LAYER_FX;
+    ok = (perf_held & PF_BIT(PF_GLT)) && ui.layer == LAYER_FX;
     key_down(white(0)); frame();
     ok &= gates() > 0 && !((kb_layer >> white(0)) & 1u);
     key_up(white(0)); key_up(white(3)); frame();
     bad += check("FX let go first: the key holds its effect and the map; a new key is a note", ok && !ui.layer && !perf_held);
-    /* G5 (the 16th white key) does nothing (F3 .. C4 the audio effects, D4 .. F5 the MIDI ones: pfx.c); KNOB 4 (DEPTH)
+    /* G5 (the 16th white key) does nothing (F3 .. C4 the audio effects, D4 .. F5 the MIDI ones: pfx.c); KNOB 4 (FILTER)
      * turns, back to 0 with FX */
     ui_power_on();
     usb.config = 1; mo = mo_w;
     btn_down(B_FX); key_down(white(15)); frame();
     ok = ui.layer == LAYER_FX && !gates() && mo_w == mo && !perf_held && (kb_layer >> white(15)) & 1u;
-    turn(EN_K4, -40);
-    ok &= perf_k[3] == 40;
+    turn(EN_K4, 40);
+    ok &= perf_m[3] == 40;
     key_up(white(15)); btn_up(B_FX); frame();
-    bad += check("FX + G5: nothing held, silent, no MIDI; KNOB 4 turns; FX let go: K4 back to 0",
-                 ok && !perf_held && !ui.layer && !perf_k[3] && mo_w == mo);
+    bad += check("FX + G5: nothing held, silent, no MIDI; KNOB 4 (FILTER) turns; FX let go: it stays (0.9.14)",
+                 ok && !perf_held && !ui.layer && perf_m[3] == 40 && mo_w == mo);
+    pm_off();
     /* REVERB > TYPE (FX family, global): ROOM / SPRING on KNOB 1, kept by a project */
     ui_power_on();
     go_title("REVERB");
@@ -3631,13 +3633,20 @@ static int test_layer(void)
         int16_t atk = TSEL->p[P_ATK];
         uint32_t ev = motion.count;
         btn_down(B_FX); frame();
-        turn(EN_K1, -12); turn(EN_K2, 30);
-        ok = perf_k[0] == -12 && perf_k[1] == 30 && TSEL->p[P_ATK] == atk && motion.count == ev && ui.layer == LAYER_FX;
+        turn(EN_K1, 12); turn(EN_K2, 20);
+        ok = perf_m[0] == 12 && perf_m[1] == 20 && TSEL->p[P_ATK] == atk && motion.count == ev && ui.layer == LAYER_FX;
         turn(EN_PRESET, 3);
         ok &= user_of(TSEL) == UP_SLOTS && TSEL->preset == trk[0].preset;
         btn_up(B_FX); frame();
-        bad += check("FX + KNOB 1 / 2: the macros, not ATK, not recorded; FX let go: back to 0, no tap",
-                     ok && !perf_k[0] && !perf_k[1] && str_eq(cur_page()->title, "ENV"));
+        ok &= perf_m[0] == 12 && perf_m[1] == 20 && str_eq(cur_page()->title, "ENV");
+        btn_down(B_FX); frame();
+        turn(EN_K3, -1);
+        ok &= perf_m[0] == 12 && perf_m[1] == 20;                 /* (one detent back: the deadband) */
+        turn(EN_K3, -1);
+        ok &= !perf_m[0] && !perf_m[1] && msg_is("MACROS OFF") && motion.count == ev;
+        btn_up(B_FX); frame();
+        bad += check("FX + KNOB 1 / 2: the macros, not ATK, not recorded; FX let go: they stay, no tap; two detents "
+                     "back on any knob: all off", ok && str_eq(cur_page()->title, "ENV"));
     }
     song.rec = 0; song.playing = 0;
     /* buttons in the layer: PLAY works, SAVE, HOME, a page button are swallowed */
@@ -6414,7 +6423,7 @@ static int test_layer_knob_leak(void)
                 if (sc == 2u) { btn_up(LB[b]); frames(160); lk_turn(2); frame(); }   /* .. 160 ms after */
                 if (sc == 3u) { btn_up(LB[b]); frame(); lk_turn(3); frame(); key_up(white(1)); frame(); }   /* the map */
                 frames(400);
-                ok = lk_same(LL[b]) && !perf_k[0] && !perf_k[1] && !perf_k[2] && !perf_k[3];
+                ok = lk_same(LL[b]);                    /* (0.9.14: FX's macros stay when FX is let go) */
                 if (!ok) {
                     fails++;
                     if (fails < 6u)
@@ -6434,7 +6443,7 @@ static int test_layer_knob_leak(void)
         btn_down(B_FX); frame(); turn(EN_K1, 4); btn_up(B_FX); frame();
         frames(320);
         turn(EN_K1, 1);
-        ok = TSEL->p[P_AMODE] == m + 1 && !perf_k[0] && str_eq(cur_page()->title, "ARP");
+        ok = TSEL->p[P_AMODE] == m + 1 && perf_m[0] == 4 && str_eq(cur_page()->title, "ARP");
     }
     bad += check("  0.3 s after FX is let go KNOB 1 is ARP MODE again; a knob turned with FX opened no FX page", ok);
     /* a tap of FX with a knob turned in that frame: a combo, no FX page */
@@ -6454,7 +6463,7 @@ static int test_layer_knob_leak(void)
  * frame later), the layer's own control moved, and nothing under the layer changed (lk_same) */
 typedef struct {
     int16_t p[NTRK][P_COUNT], g[G_COUNT];
-    int8_t k[4];
+    uint8_t k[4];
     uint32_t sel, snd[NTRK], mot[NTRK];
     uint8_t home, page;
 } rc_state_t;
@@ -6470,7 +6479,7 @@ static void rc_take(rc_state_t *st)
         st->mot[i] = motion_count(&trk[i]);
     }
     memcpy(st->g, song.g, sizeof st->g);
-    memcpy(st->k, perf_k, sizeof st->k);
+    memcpy(st->k, (const void *)perf_m, sizeof st->k);
     st->sel = song.sel;
     st->home = ui.home;
     st->page = ui.page;
@@ -6486,7 +6495,7 @@ static void rc_enc(uint32_t role, int32_t s, int late)
  * the detents come after the reads. a: the state with the layer open, b: after it closed */
 static void rc_run(uint32_t lb, uint32_t mode, uint32_t k, uint32_t pg, int late, rc_state_t *a, rc_state_t *b)
 {
-    int32_t d = (lb == B_GLO || (lb == B_FX && k == 3u)) ? -1 : 1;   /* (GLO LEVEL, FX DEPTH: room to move) */
+    int32_t d = lb == B_GLO ? -1 : 1;                   /* (GLO LEVEL: room to move; 0.9.14 FX's macros: up) */
     uint32_t i;
     ui_power_on();
     if (pg < NPAGES) { ui.home = 0; ui.page = (uint8_t)pg; page_entered(); }
@@ -6544,10 +6553,9 @@ static int test_layer_knob_race(void)
                     rc_run(LB[l], mode, k, pg, 0, &a0, &b0);
                     rc_run(LB[l], mode, k, pg, 1, &a1, &b1);
                     ok = !memcmp(&a0, &a1, sizeof a0) && !memcmp(&b0, &b1, sizeof b0) &&
-                         lk_same(LL[l]) && song.sel == 0u &&
-                         !perf_k[0] && !perf_k[1] && !perf_k[2] && !perf_k[3];
-                    if (LL[l] == LAYER_FX)                  /* the layer's own control moved */
-                        ok &= a1.k[k] == 3;
+                         lk_same(LL[l]) && song.sel == 0u;
+                    if (LL[l] == LAYER_FX)                  /* the layer's own control moved (and stays: 0.9.14) */
+                        ok &= a1.k[k] == 3 && b1.k[k] == 3;
                     else if (LL[l] == LAYER_GLO)
                         ok &= a1.p[k][P_LEVEL] == lk_p[k][P_LEVEL] - 3;
                     else if (LL[l] == LAYER_SCL)
@@ -6596,9 +6604,9 @@ static int test_layer_knob_race(void)
         for (i = 0; i < 5u; i++) { rc_enc(EN_K1, 1, 1); frame(); }
         frame();
         btn_up(B_FX); frames(400);
-        ok = perf_k[0] == 5 && *vp == c;
+        ok = perf_m[0] == 5 && *vp == c;
         btn_down(B_FX); frames(560); press(B_OCTDN); btn_up(B_FX); frames(400);
-        ok &= !perf_k[0] && *vp == c;
+        ok &= !perf_m[0] && *vp == c;
     }
     fx_latch = PREF_ACCEL_OFF;
     bad += check("  FX LATCH: FILTER stays after FX is let go, HOME's KNOB 1 never moves; FX + OCT- turns it off", ok);
@@ -8003,7 +8011,7 @@ static int test_rec_layer(void)
     return bad;
 }
 
-/* #40: KNOB 4's DEPTH rises to the right (it fell); MENU > FX LATCH ON: a key with FX turns its effect on, again off,
+/* (0.9.14) the macros (until 0.9.13 #40: DEPTH); MENU > FX LATCH ON: a key with FX turns its effect on, again off,
  * nothing held needed; the macros stay after FX; FX + OCT- all off; the menu turns them off; FX's LED shows them;
  * OFF (the default, and every older setting): as before */
 static int test_fx_latch(void)
@@ -8012,11 +8020,19 @@ static int test_fx_latch(void)
     uint32_t lpf = white(3), m1 = black(0);
     ui_power_on();
     btn_down(B_FX); frame();
-    turn(EN_K4, 5);  ok = perf_k[3] == 0;                         /* DEPTH 100 %: right stays at 100 */
-    turn(EN_K4, -30); ok &= perf_k[3] == 30;                      /* left: 70 % */
-    turn(EN_K4, 10); ok &= perf_k[3] == 20;                       /* right: 80 % */
+    turn(EN_K4, 30); ok = perf_m[3] == 30;                        /* (0.9.14) FILTER up to the right */
+    turn(EN_K3, 50); ok &= perf_m[2] == 50 && perf_m[3] == 30;
+    turn(EN_K1, 20); ok &= perf_m[0] == 12;                       /* (STEPS: 12 at most, three detents a stage) */
+    turn(EN_K4, -1); turn(EN_K4, 1); turn(EN_K2, -1); turn(EN_K2, 4);   /* (a detent back, then on: no cut) */
+    ok &= perf_m[3] == 31 && perf_m[2] == 50 && perf_m[1] == 4;
+    turn(EN_K4, -2);                                              /* two back: all four off */
+    ok &= !perf_m[0] && !perf_m[1] && !perf_m[2] && !perf_m[3] && msg_is("MACROS OFF");
+    turn(EN_K4, 3); ok &= perf_m[3] == 3;                         /* up again from 0 */
     btn_up(B_FX); frame();
-    bad += check("#40 FX + KNOB 4: DEPTH rises to the right, falls to the left", ok && !perf_k[3]);
+    ok &= perf_m[3] == 3;
+    bad += check("FX + KNOB 1..4 (0.9.14): the macros up to the right, kept when FX is let go; one detent back nothing, "
+                 "two: all four off at once (MACROS OFF), then up from 0 again", ok);
+    pm_off();
     /* OFF (the default; a byte older settings leave 0) */
     ui_power_on();
     ok = !(fx_latch & 1u);
@@ -8028,38 +8044,38 @@ static int test_fx_latch(void)
     fx_latch = PREF_LATCH | PREF_ACCEL_OFF;
     frame();                                                      /* (ui_input hands the setting to the ISR) */
     btn_down(B_FX); key_down(lpf); frame(); key_up(lpf); frame();
-    turn(EN_K2, 30);
-    ok = perf_latched == PF_BIT(PF_LPF) && !perf_held && ui.layer == LAYER_FX && str_eq(layer_head(), "[FX] LATCH") &&
+    turn(EN_K2, 20);
+    ok = perf_latched == PF_BIT(PF_GLT) && !perf_held && ui.layer == LAYER_FX && str_eq(layer_head(), "[FX] LATCH") &&
          (layer_leds(0) >> lpf) & 1u;
     btn_up(B_FX); frame();
-    ok &= perf_latched == PF_BIT(PF_LPF) && perf_k[1] == 30 && !ui.layer;
-    ok &= perf_begin(CTL) && (perf_act & PF_BIT(PF_LPF));                 /* it runs with nothing held */
-    bad += check("  FX LATCH ON: FX + B3 latches LPF, CRUSH stays at 30 after FX is let go", ok);
+    ok &= perf_latched == PF_BIT(PF_GLT) && perf_m[1] == 20 && !ui.layer;
+    ok &= perf_begin(CTL) && (perf_act & PF_BIT(PF_GLT));                 /* it runs with nothing held */
+    bad += check("  FX LATCH ON: FX + B3 latches GLITCH, TRANSPOSE stays at 20 after FX is let go", ok);
     ui_leds();
     memset(led_pos, 0xFF, sizeof led_pos);
     led_pos[panel.btn[B_FX]] = 0u << 3 | 1u;
     go_home(); ui_leds();
     ok = (fm1_led[0] & 2u) != 0u;
     btn_down(B_FX); key_down(m1); frame(); key_up(m1); frame();   /* a mute latches too */
-    ok &= perf_latched == (PF_BIT(PF_LPF) | PF_BIT(PF_M1));
-    key_down(lpf); frame(); key_up(lpf); frame();                 /* B3 again: LPF off */
+    ok &= perf_latched == (PF_BIT(PF_GLT) | PF_BIT(PF_M1));
+    key_down(lpf); frame(); key_up(lpf); frame();                 /* B3 again: GLITCH off */
     ok &= perf_latched == PF_BIT(PF_M1);
     btn_up(B_FX); frame();
-    bad += check("  the FX LED lit while something is on; a mute key latches; B3 again: LPF off", ok);
+    bad += check("  the FX LED lit while something is on; a mute key latches; B3 again: GLITCH off", ok);
     btn_down(B_FX); frame(); turn(EN_K1, -40);
     ok = song.octave == 0 && oct_leds() == 1u;
     btn_down(B_OCTDN); frame(); btn_up(B_OCTDN); frame();
-    ok &= !perf_latched && !perf_k[0] && !perf_k[1] && song.octave == 0 && msg_is("FX ALL OFF");
+    ok &= !perf_latched && !perf_m[0] && !perf_m[1] && song.octave == 0 && msg_is("FX ALL OFF");
     btn_up(B_FX); frame();
     bad += check("  FX + OCT-: every latched effect and macro off (no octave)", ok);
     /* the quick combo: FX down and OCT- before HOLD, nothing else touched (it was nobody's: no ALL OFF, no octave) */
     btn_down(B_FX); key_down(lpf); frame(); key_up(lpf); frame(); turn(EN_K2, 20); btn_up(B_FX); frame();
     frames(400);
-    ok = perf_latched == PF_BIT(PF_LPF) && perf_k[1] == 20 && !ui.layer;
+    ok = perf_latched == PF_BIT(PF_GLT) && perf_m[1] == 20 && !ui.layer;
     btn_down(B_FX); frame(); btn_down(B_OCTDN); frame();
     ok &= ui.layer == LAYER_FX && song.octave == 0;               /* (a combo: the map at once) */
     btn_up(B_OCTDN); frame();
-    ok &= !perf_latched && !perf_k[1] && song.octave == 0 && msg_is("FX ALL OFF");
+    ok &= !perf_latched && !perf_m[1] && song.octave == 0 && msg_is("FX ALL OFF");
     {   uint32_t h = ui.home, pg = ui.page;
         btn_up(B_FX); frame();
         ok &= !ui.layer && ui.home == h && ui.page == pg;   /* (no tap: no page) */
@@ -8124,14 +8140,14 @@ static int test_fx_latch(void)
         ok = fx_lock && ui.layer == LAYER_FX;
         key_down(lpf); frame(); key_up(lpf); frame();
         turn(EN_K2, 10);
-        ok &= perf_latched == PF_BIT(PF_LPF) && perf_k[1] == 10 && ui.layer == LAYER_FX;
+        ok &= perf_latched == PF_BIT(PF_GLT) && perf_m[1] == 10 && ui.layer == LAYER_FX;
         press(B_OCTDN);
-        ok &= !perf_latched && !perf_k[1] && song.octave == 0;
+        ok &= !perf_latched && !perf_m[1] && song.octave == 0;
         key_down(lpf); frame(); key_up(lpf); frame();
         press(B_FX); frames(64);
-        ok &= !fx_lock && !ui.layer && perf_latched == PF_BIT(PF_LPF) && ui.home;
+        ok &= !fx_lock && !ui.layer && perf_latched == PF_BIT(PF_GLT) && ui.home;
         key_down(lpf); frame(); key_up(lpf); frame();                 /* (unlocked: the key plays its note) */
-        ok &= perf_latched == PF_BIT(PF_LPF);
+        ok &= perf_latched == PF_BIT(PF_GLT);
         perf_latched = 0;
         bad += check("  FX LATCH: FX held and let go unused locks the FX layer open (keys, knobs, OCT- ALL OFF); FX again "
                      "unlocks, the effects stay", ok);
@@ -8310,7 +8326,7 @@ static int test_knob_accel(void)
         ok &= TSEL->p[P_LEVEL] == 48;
         bad += check("#52 KNOB ACCEL on MIXER LEVEL: a fast turn of 8 detents moves 32 (OFF: 8)", ok);
     }
-    {   /* #126 the FX layer's KNOB 1 (FILTER -100..100): a flick of 12 detents 10 ms apart; OFF: 12; slow (70 ms): 12;
+    {   /* #126 the FX layer's KNOB 4 (0.9.14: FILTER 0..100; was KNOB 1): a flick of 12 detents 10 ms apart; OFF: 12; slow (70 ms): 12;
          * 6 right then 6 left fast: back to 0; GLO's LEVEL too */
         static const uint32_t GAP[4] = {10u, 10u, 70u, 10u};
         static const uint32_t ON[4] = {1u, 0u, 1u, 1u};
@@ -8322,11 +8338,11 @@ static int test_knob_accel(void)
             go_home(); frames(64);
             btn_down(B_FX); frames(560);
             for (k = 0; k < 12u; k++) {
-                host_enc[panel.enc[EN_K1]] += (c == 3u && k >= 6u ? -1 : 1) * panel.dir[EN_K1];
+                host_enc[panel.enc[EN_K4]] += (c == 3u && k >= 6u ? -1 : 1) * panel.dir[EN_K4];
                 fm1_ms += GAP[c] - 16u;                         /* (frame() adds 16) */
                 frame();
             }
-            got[c] = perf_k[0];
+            got[c] = perf_m[3];
             btn_up(B_FX); frames(400);
         }
         printf("  #126 FX FILTER, 12 detents: ON 10 ms %d, OFF %d, ON 70 ms %d, ON 6 right 6 left %d\n", (int)got[0],

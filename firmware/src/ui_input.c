@@ -2,6 +2,7 @@
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
  * Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) */
 /* Felucca UI input: LEDs, knobs and buttons, SEQ step entry, panel setup. */
+static void pm_off(void);                               /* (0.9.14) ui_layer.c: the FX macros off */
 #include "ui_name.c"                                    /* NAME: naming user presets and projects */
 /* ----------------------------------------------------------- LEDs --- */
 /* The LED picture is built off-line and copied one byte per column: clearing
@@ -356,8 +357,8 @@ static void ui_leds(void)
         led_put(nl, panel.btn[FAM_BTN[fam]], 1);
     if ((k = arp_led()) != 2u && (!ui.layer || layer_btn() != B_ARP))
         led_put(nl, panel.btn[B_ARP], FAM_BTN[fam] == B_ARP ? !k : (int)k);   /* (on ARP's page: dark flashes) */
-    if (!ui.layer && (perf_latched || perf_k[0] || perf_k[1] || perf_k[2] || perf_k[3]))
-        led_put(nl, panel.btn[B_FX], 1);                /* FX LATCH: lit while an effect or a macro is on */
+    if (!ui.layer && (perf_latched || perf_m[0] || perf_m[1] || perf_m[2] || perf_m[3]))
+        led_put(nl, panel.btn[B_FX], 1);                /* FX LATCH: lit while an effect or a macro is on (0.9.14) */
     if (ui.layer)                                       /* the layer's button breathes while its map is up */
         led_put(nb, panel.btn[layer_btn()], 1);
     led_put(nl, panel.btn[B_REC], song.rec != 0u && ui.layer != LAYER_REC);   /* (its layer: it breathes) */
@@ -2108,7 +2109,7 @@ static void ui_input_frame(void)
     if (!layer_allowed()) {
         perf_kill = 1;                                  /* (effects off until their keys are let go) */
         perf_latched = 0;                               /* (FX LATCH: the latched ones and the macros off) */
-        perf_k[0] = perf_k[1] = perf_k[2] = perf_k[3] = 0;
+        pm_off();
     }
     else if (!kb_layer)
         perf_kill = 0;

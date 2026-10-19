@@ -295,13 +295,19 @@ An 8-sound kit (BD SD CP CH OH TM RS CB) generated in real time, Microtonic styl
 
 ### Punch-in FX: effects you play and record
 With FX held the keys become effects that act while held; on release everything goes back exactly.
-- **Audio**: REPEAT 1/8 · 1/16 · 1/32, LPF and HPF.
+- **Audio**: REPEAT 1/8 · 1/16 · 1/32, **GLITCH** (the bar cut into repeats, reverses, octave slices and gates on the
+  grid, the same at the same place every time) and **TAPE STOP** (0.9.15).
+- **Sweeps** (0.9.15, black keys C#5 D#5 F#5): **FILTER** (high-pass opening), **CRUSH**, **THROW** (into the delay and
+  reverb): held, dry to wet over 2 bars on an S curve; let go, back in a beat.
+- **Performance macros** (0.9.15, the knobs with FX): **STEPS** (every sequence 1/2, 1/4, 1/8, one step, from where it
+  plays), **TRANSPOSE** (+2nd … +6th along the scale, ±octave), **MUTATE** and **FILTER** (low-pass), built up turning
+  right; turn any knob back and all four are off at once.
 - **On the notes, OP-Z style**: OCT− and OCT+, 1/2 TEMPO, short DECAY (also lowers sustain: plucks) and long, STUTTER
   1/8 · 1/16, ATK+ (drums too), momentary ARP (on drums, a different fill every time) and RANDOM.
 - **Quantized**: they kick in on the transport's next sixteenth; REPEAT and SLICER follow the grid from the first
   moment.
-- **Automatable**: with REC armed they land in a 4-bar lane per section. A#4 chooses whether they affect everything,
-  the synths or the drums.
+- **Automatable**: with REC armed they land in a 4-bar lane per section (the note effects, GLITCH, TAPE STOP and the
+  sweeps). A#4 chooses whether the note effects affect everything, the synths or the drums.
 
 ### Sequencing
 - 64 steps per track, piano roll, drum grid, parameter locks, chance, ratchets, slide and knob automation; live
@@ -386,7 +392,7 @@ Turning fast sweeps the whole range; turning slowly is fine adjustment. Turn it 
 
 | Hold | Keys | Knobs |
 | --- | --- | --- |
-| **FX** | F3 G3 A3 REPEAT 1/8, 1/16, 1/32; B3 LPF; C4 HPF. MIDI punch-ins: D4 OCT−, E4 OCT+, F4 1/2 TEMPO, G4 DEC−, A4 DEC+, B4 C5 STUTTER 1/8 · 1/16, D5 ATK+ (everything's attack up, drums included), E5 ARP (drums: a new fill on every press), F5 RANDOM (notes and steps). Everything comes in on the transport's next 1/16. Black keys 1–6: mute T1–T6; A#4 chooses which tracks the MIDI ones affect (all, synths, drums). **Automate**: with REC armed and playing (not in a song), the note effects D4–F5 you hold are recorded in the section's lane (64 steps of 1/16, one a step: the lowest held); repeats, filters, mutes and latched effects are not; G5 erases it where the playhead passes, or entirely with the transport stopped | FILTER, CRUSH, THROW, DEPTH |
+| **FX** | F3 G3 A3 REPEAT 1/8, 1/16, 1/32; B3 GLITCH; C4 TAPE STOP (0.9.15). MIDI punch-ins: D4 OCT−, E4 OCT+, F4 1/2 TEMPO, G4 DEC−, A4 DEC+, B4 C5 STUTTER 1/8 · 1/16, D5 ATK+ (everything's attack up, drums included), E5 ARP (drums: a new fill on every press), F5 RANDOM (notes and steps). Everything comes in on the transport's next 1/16. Black keys 1–6: mute T1–T6; A#4 chooses which tracks the MIDI ones affect (all, synths, drums); C#5 D#5 F#5 the sweeps FILTER, CRUSH, THROW (dry to wet over 2 bars, back in a beat). **Automate**: with REC armed and playing (not in a song), the note effects D4–F5, GLITCH, TAPE STOP and the sweeps you hold are recorded in the section's lane (64 steps of 1/16, one a step: the lowest held); REPEAT, mutes and latched effects are not; G5 erases it where the playhead passes, or entirely with the transport stopped | STEPS, TRANSPOSE, MUTATE, FILTER (performance macros: up to the right, any knob turned back cuts all four) |
 | **ARP TRNS** | With the ARP mode on TRNS, the keys (and incoming MIDI) transpose the track's sequence by their interval from C4, without playing notes; the transposition stays on release | — |
 | **SEQ > STRETCH · TRACK** | ROTATE (STRETCH, KNOB 4) reads the track's sequence from another step, −32 to +32 (within LEN; live recording writes where you hear it) and PITCH (TRACK, KNOB 1) transposes it ±24 semitones (not on kits). Both can be automated and are also on the SCL layer (KNOB 3 / 4) | ROTATE, PIT |
 | **REC + another button** | Hold REC and press FX, EDIT, ENV, LFO, SCL, ARP or GLO: clears that part's automation on the selected track (knob movements and per-step locks; stored values stay). FX: the punch-in lane too. GLO: levels and pan of the 6 tracks. The other way round (FX held then REC) arms recording, as always | — |
@@ -667,6 +673,37 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### v0.9.15
+The FX layer, reworked.
+- **The FX layer reworked: sweeps, GLITCH, TAPE STOP and performance macros.** CRUSH, THROW and FILTER leave the knobs
+  (and LPF / HPF the keys B3 C4) and become **sweeps** on the free black keys: **C#5 FILTER** (the master DJ FILTER's
+  high-pass opening, ~32 Hz → ~6 kHz), **D#5 CRUSH** (bits and rate down, its mix up), **F#5 THROW** (the dry mix into
+  the delay and reverb, up to all of it). Held, each goes from dry to wet over **2 bars at the tempo** on an S curve
+  (slow out of dry, slow into wet); let go, back to dry in **a beat**.
+- **GLITCH** (B3): the master cut on the transport's sixteenths into live slices, repeats of the last 1/16 … 1/64,
+  the last sixteenth reversed or an octave up or down, and 1/32 – 1/64 gates; the downbeats mostly left alone, the
+  pattern a two-bar cycle fixed to the transport, so it grooves and comes back the same. Every slice windowed (no
+  clicks). It borrows REPEAT's buffer (the SLICER's 32 KB); no new memory.
+- **TAPE STOP** (C4): the master slows to a stop over a beat (at most 0.68 s), pitch and all, then silence while held;
+  let go, the music at once. The transition the set lacked (REPEAT and GLITCH cut time, the sweeps colour it, nothing
+  bent it): one press at the end of a phrase.
+- **The knobs with FX are now four PERFORMANCE MACROS** on the whole project, built up turning right: **STEPS** (every
+  sequence's playing length 1/2, 1/4, 1/8, one step, from where it plays, on the next sixteenth; the tracks back in
+  phase when off), **TRANSPOSE** (+2ND +3RD +4TH +5TH +6TH along the scale, +OCT, -OCT; three detents an interval;
+  the drums untouched), **MUTATE** (the patterns mutated around the music as it was, every bar; off, exactly as it
+  was) and **FILTER** (the DJ FILTER's low-pass closing). **Turn any of them back (two detents) and all four are off at
+  once** (MACROS OFF): a sudden return to the original. They stay when FX is let go; never saved, never recorded.
+- **The punch-in lane records GLITCH, TAPE STOP and the sweeps** too (lane values 11–15), played back on their steps.
+- Host cost (callgrind, x86-64, the perform test's song, 1999 instructions a sample idle): REPEAT 1/16 +108,
+  GLITCH +144, TAPE STOP +147, CRUSH +67, THROW +73, FILTER sweep or macro +147..199 (the DJ FILTER's own cost),
+  GLITCH and the three sweeps together +324; nothing at all while idle (bit for bit).
+- **The flash made room for it** (0.9.14 had 76 B free), with the sound and its per-sample code unchanged: more of
+  the code that runs once an event (a note found a voice and started or ended, a key, a section or song row, the FX
+  layer's buffer effect started, the PUNCH lane's steps, the engines' note-ons and descriptions, the power-on LED
+  sweep, a fault) built for size, and kept a call where the interrupts' fast code reached it (inlined there it was
+  built for speed: the USB control requests in TIMER5's scan, the chord glide, the arp's notes), and identical
+  functions merged; the sound's code still first in the image. Image 584116 B, 220 B free.
 
 ### v0.9.14
 CPU: measured on the FM-1 instead of estimated on a computer, and lighter where it was wasted.

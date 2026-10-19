@@ -181,10 +181,11 @@ def controls():
                   ' walks every page of the section.</p>') + '</div>')
 
     b.append(sec('LAYERS · HOLD A BUTTON'))
-    fx_w = {'F3': 'REP 1/8', 'G3': 'REP 1/16', 'A3': 'REP 1/32', 'B3': 'LPF', 'C4': 'HPF', 'D4': 'OCT−', 'E4': 'OCT+',
+    fx_w = {'F3': 'REP 1/8', 'G3': 'REP 1/16', 'A3': 'REP 1/32', 'B3': 'GLITCH', 'C4': 'TAPE', 'D4': 'OCT−', 'E4': 'OCT+',
             'F4': '½ TEMPO', 'G4': 'DEC−', 'A4': 'DEC+', 'B4': 'STUT 1/8', 'C5': 'STUT 1/16', 'D5': 'ATK+', 'E5': 'ARP',
             'F5': 'RAND', 'G5': 'ERASE'}
-    fx_b = {'F#3': 'M1', 'G#3': 'M2', 'A#3': 'M3', 'C#4': 'M4', 'D#4': 'M5', 'F#4': 'M6', 'A#4': 'TGT'}
+    fx_b = {'F#3': 'M1', 'G#3': 'M2', 'A#3': 'M3', 'C#4': 'M4', 'D#4': 'M5', 'F#4': 'M6', 'A#4': 'TGT', 'C#5': 'FILT',
+            'D#5': 'CRSH', 'F#5': 'THRW'}
     glo_w = {'F3': 'SOLO 1', 'G3': 'SOLO 2', 'A3': 'SOLO 3', 'B3': 'SOLO 4', 'C4': 'SOLO 5', 'D4': 'SOLO 6',
              'E4': 'ALL', 'F4': 'TAP', 'G4': 'UNDO', 'A4': 'FRZ', 'B4': 'RVRT ALL'}
     glo_b = {'F#3': 'M1', 'G#3': 'M2', 'A#3': 'M3', 'C#4': 'M4', 'D#4': 'M5', 'F#4': 'M6', 'G#4': 'KICK',
@@ -197,8 +198,10 @@ def controls():
     b.append(card('FX · PUNCH-IN EFFECTS', HEAT[5], keyboard(fx_w, fx_b) +
                   '<p>A key plays its effect while held (MENU FX LATCH ON: toggles); hold FX and let go untouched: <b>LOCKED</b> '
                   'open, FX again unlocks; OCT- all off. In on the next 1/16. Black 1–6 mute T1–T6, A#4 picks which tracks the MIDI ones '
-                  'touch (all · synths · drums). With REC armed and playing they record into the section\'s lane; G5 '
-                  'erases it.</p><h4>KNOBS</h4>' + knobs('FILTER', 'CRUSH', 'THROW', 'DEPTH')))
+                  'touch (all · synths · drums); C#5 D#5 F#5 sweep FILTER, CRUSH, THROW dry to wet over 2 bars (back in a beat). '
+                  'With REC armed and playing they record into the section\'s lane; G5 erases it.</p>'
+                  '<h4>KNOBS · PERFORMANCE MACROS</h4>' + knobs('STEPS', 'TRANSP', 'MUTATE', 'FILTER') +
+                  '<p>Up to the right; turn any back: all four off at once.</p>'))
     b.append(card('GLO · MIX', HEAT[1], keyboard(glo_w, glo_b) +
                   '<p>Black 1–6 mute T1–T6 (latched), 7–10 the DRUM-X groups. White: solo while held, E4 unmutes all, '
                   'F4 tap tempo, G4 <b>UNDO</b> the last big change (again: redo), A4 <b>FREEZE</b> MUTATE, B4 <b>REVERT ALL</b> (every track back to MUTATE\'s anchor). SELECT: the tempo. PLAY: restart.</p><h4>KNOBS</h4>' +
@@ -432,8 +435,9 @@ def sound():
                   '<p style="margin-top:8px"><b>CLIP</b> saturates without getting louder. <b>PNCH</b> drives the drums: '
                   'denser body. <b>DUCK</b>: the kick pulls the rest down (REL its release). An always-on '
                   '<b>leveler</b> (slow 2:1, −9…+6 dB) before the limiter keeps patches at a steady volume.</p>'
-                  '<h4>PUNCH-IN FX (FX HELD)</h4><p>REPEAT 1/8 · 1/16 · 1/32, LPF, HPF; on the notes: OCT−/+, ½ TEMPO, '
-                  'DEC−/+, STUTTER, ATK+, ARP, RANDOM. Knobs: FILTER CRUSH THROW DEPTH. Recordable per section.</p>'))
+                  '<h4>PUNCH-IN FX (FX HELD)</h4><p>REPEAT 1/8 · 1/16 · 1/32, GLITCH, TAPE STOP; on the notes: OCT−/+, ½ TEMPO, '
+                  'DEC−/+, STUTTER, ATK+, ARP, RANDOM; sweeps FILTER CRUSH THROW. Knobs: STEPS TRANSPOSE MUTATE FILTER. '
+                  'Recordable per section.</p>'))
     b.append('</div>')
     page('SOUND · FX · MOD', 'engines, effects, modulation, sequencer and songs', ''.join(b), 'sound.html')
 

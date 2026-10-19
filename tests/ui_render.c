@@ -1262,8 +1262,8 @@ static void setup(int s)
     }
     case S_LY_FX_KNOBS: case S_LY_FX_STATE:            /* (0.8.5) a layer's lens: FX's KNOBS, STATE */
         go_home(); ui.layer = LAYER_FX; ui.lylv = s == S_LY_FX_KNOBS ? 1 : 2;
-        perf_held = perf_act = PF_BIT(PF_R16) | PF_BIT(PF_LPF) | PF_BIT(PF_M1 + 1);
-        perf_k[0] = -40; perf_k[1] = 25; perf_k[3] = 30;
+        perf_held = perf_act = PF_BIT(PF_R16) | PF_BIT(PF_GLT) | PF_BIT(PF_SCRU) | PF_BIT(PF_M1 + 1);
+        perf_m[0] = 6; perf_m[1] = 7; perf_m[2] = 40; perf_m[3] = 30; pf.sw[1] = 1u << 23;   /* (0.9.14: the macros) */
         break;
     case S_LY_GLO_STATE: go_home(); ui.layer = LAYER_GLO; ui.lylv = 2; break;
     case S_MENU_ROW: case S_MENU_ROW_LEDS:             /* (0.8.5) the menu's lens, ROW: COLOR's palettes, LEDS's names */
@@ -1412,24 +1412,24 @@ static void setup(int s)
         chain_config.row[0] = (chain_row_t){0, 2}; chain_config.row[1] = (chain_row_t){1, 4};
         go_page(GR_SONG); chain_prepare(); events_block(32); go_home(); ui.msg_t = 0;
         break;
-    /* the FX layer's map: held alone; REPEAT 1/16 + LPF + a mute playing with the macros turned;
-     * at 72 BPM: a REPEAT 1/16 waiting for its 1/16 (shown THEME) beside LPF playing, and REPEAT 1/8
+    /* the FX layer's map: held alone; REPEAT 1/16 + GLITCH + the CRUSH sweep + a mute playing with the macros turned;
+     * at 72 BPM: a REPEAT 1/16 waiting for its 1/16 (shown THEME) beside the FILTER sweep playing, and REPEAT 1/8
      * held, too long at that tempo (dimmed) */
     case S_FX_PEEK: go_title("ENV"); ui.layer = LAYER_FX; break;
     case S_FX_HELD:
         go_home(); ui.layer = LAYER_FX;
-        perf_held = perf_act = PF_BIT(PF_R16) | PF_BIT(PF_LPF) | PF_BIT(PF_M1 + 1);
-        perf_k[0] = -40; perf_k[1] = 25; perf_k[3] = 30; ui.hot_col = 0; ui.hot_t = 30;
+        perf_held = perf_act = PF_BIT(PF_R16) | PF_BIT(PF_GLT) | PF_BIT(PF_SCRU) | PF_BIT(PF_M1 + 1);
+        perf_m[0] = 6; perf_m[1] = 7; perf_m[2] = 40; perf_m[3] = 30; ui.hot_col = 0; ui.hot_t = 30;
         break;
     case S_FX_WAIT:
         song.playing = 1; song.g[G_BPM] = 72; ui.layer = LAYER_FX;
-        perf_held = PF_BIT(PF_R16) | PF_BIT(PF_R8) | PF_BIT(PF_LPF); perf_act = PF_BIT(PF_LPF);
-        perf_k[2] = 100;
+        perf_held = PF_BIT(PF_R16) | PF_BIT(PF_R8) | PF_BIT(PF_SFLT); perf_act = PF_BIT(PF_SFLT);
+        perf_m[3] = 100;
         break;
-    case S_FX_HARM:                                 /* (TONIC: no harmonizer) HPF playing, KNOB 4 DEPTH turned */
+    case S_FX_HARM:                                 /* (0.9.14) TAPE STOP and the THROW sweep, TRANSPOSE at -OCT */
         song.playing = 1; ui.layer = LAYER_FX;
-        perf_held = perf_act = PF_BIT(PF_HPF);
-        perf_k[3] = 60; ui.hot_col = 3; ui.hot_t = 30;
+        perf_held = perf_act = PF_BIT(PF_TAPE) | PF_BIT(PF_STHR);
+        perf_m[1] = 21; ui.hot_col = 1; ui.hot_t = 30;
         break;
     case S_REVERB: go_title("REVERB"); song.g[G_RTYPE] = 1; ui.hot_col = 0; ui.hot_t = 30; break;   /* TYPE: SPRING */
     case S_REVERB_RESO: go_title("REVERB"); song.g[G_RTYPE] = 3; song.g[G_RDAMP] = 2; song.g[G_RPRE] = 4; break;   /* (0.6.5) PITCH, FOLW */

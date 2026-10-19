@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant)
 // The interactive manual's content (web/manual/index.html), Spanish first, English second: every text is [es, en].
-// Written from docs/MANUAL.es.md / docs/MANUAL.md and README.md at firmware v0.9.14; the layer maps from the firmware's
+// Written from docs/MANUAL.es.md / docs/MANUAL.md and README.md at firmware v0.9.15; the layer maps from the firmware's
 // own MAP screens (tests/ui_render.c). A shot is a render in shots/ (tools/gen_manual.py copies them).
 // A combo k: "A+B" = hold A and press / turn B; "A" alone = press it. Tokens: the panel's names (SELECT, KNOB 1, OCT+ ...)
 // and the keys F3 .. G5 (sharps as F#3).
@@ -52,19 +52,19 @@ controls: {
   "KNOB 1": {kind: "knob", sec: "basic",
     alone: ["La primera tarjeta de la página. Si la página elige algo (el paso, el compás, el slot, la etapa, el operador, el sonido del kit, la fila), lo elige KNOB 1. En HOME de un DRUM-X: MORPH.",
             "The page's first card. When the page picks something (the step, the bar, the slot, the stage, the operator, the kit's sound, the row), KNOB 1 picks it. On HOME with DRUM-X: MORPH."],
-    held: ["Con una capa: la perilla de la capa (GLO: nivel; LFO: M1; FX: FILTER; SAVE: el proyecto).", "With a layer: the layer's knob (GLO: level; LFO: M1; FX: FILTER; SAVE: the project)."],
+    held: ["Con una capa: la perilla de la capa (GLO: nivel; LFO: M1; FX: STEPS; SAVE: el proyecto).", "With a layer: the layer's knob (GLO: level; LFO: M1; FX: STEPS; SAVE: the project)."],
     combos: [{k: "STEP+KNOB 1", t: ["paso mantenido: parameter lock", "a step held: parameter lock"]}]},
   "KNOB 2": {kind: "knob", sec: "basic",
     alone: ["La segunda tarjeta de la página.", "The page's second card."],
-    held: ["Con una capa: su segunda perilla (FX: CRUSH; LFO: M2).", "With a layer: its second knob (FX: CRUSH; LFO: M2)."],
+    held: ["Con una capa: su segunda perilla (FX: TRANSPOSE; LFO: M2).", "With a layer: its second knob (FX: TRANSPOSE; LFO: M2)."],
     combos: [{k: "STEP+KNOB 2", t: ["paso mantenido: parameter lock", "a step held: parameter lock"]}]},
   "KNOB 3": {kind: "knob", sec: "basic",
     alone: ["La tercera tarjeta. En SEQ › STEP: TIME, el largo de la nota.", "The third card. On SEQ › STEP: TIME, the note's length."],
-    held: ["Con una capa: su tercera perilla (FX: THROW; SCL: ROTATE).", "With a layer: its third knob (FX: THROW; SCL: ROTATE)."],
+    held: ["Con una capa: su tercera perilla (FX: MUTATE; SCL: ROTATE).", "With a layer: its third knob (FX: MUTATE; SCL: ROTATE)."],
     combos: [{k: "STEP+KNOB 3", t: ["paso mantenido: parameter lock", "a step held: parameter lock"]}]},
   "KNOB 4": {kind: "knob", sec: "basic",
     alone: ["La cuarta tarjeta. En SEQ › TRACK: REC Q; en SEQ › NOTE: MICRO; en GLO › MIXER: el DJ FILTER.", "The fourth card. On SEQ › TRACK: REC Q; on SEQ › NOTE: MICRO; on GLO › MIXER: the DJ FILTER."],
-    held: ["Con una capa: su cuarta perilla (FX: DEPTH; SCL: PITCH).", "With a layer: its fourth knob (FX: DEPTH; SCL: PITCH)."],
+    held: ["Con una capa: su cuarta perilla (FX: FILTER; SCL: PITCH).", "With a layer: its fourth knob (FX: FILTER; SCL: PITCH)."],
     combos: [{k: "STEP+KNOB 4", t: ["paso mantenido: parameter lock", "a step held: parameter lock"]}]},
   "OCT-": {kind: "button", sec: "basic", shot: 'drum_oct_flam',
     alone: ["Baja la octava (−3 a +3). En diálogos y páginas de acción: atrás / NO / CANCEL. En una pista DRUM: SHORT, GHOST, FLAM.",
@@ -72,7 +72,7 @@ controls: {
     combos: [
       {k: "OCT-+OCT+", t: ["los dos juntos: octava 0", "both together: octave 0"]},
       {k: "SAVE+OCT-", t: ["recupera la sección que suena como estaba guardada", "recall the section playing as stored"]},
-      {k: "FX+OCT-", t: ["con FX LATCH: apaga todos los efectos", "with FX LATCH: every effect off"]}
+      {k: "FX+OCT-", t: ["con FX LATCH: apaga todos los efectos y las macros", "with FX LATCH: every effect and macro off"]}
     ]},
   "OCT+": {kind: "button", sec: "basic", shot: 'drum_oct_x8',
     alone: ["Sube la octava. En diálogos y páginas de acción: hacerlo / YES / OK. En GEN: arma la pieza. En una pista DRUM: REPEAT, RATCHET x2, x4.",
@@ -84,7 +84,7 @@ controls: {
   "FX": {kind: "button", sec: "fx", shot: 'fx_track_sends', layer: "FX",
     alone: ["Sección FX: desde otra sección vuelve a la página donde la dejaste; adentro salta al módulo siguiente TRACK → BUSES → DELAY → REVERB → CHORUS → SLICER → MASTER → PUNCH.",
             "The FX section: from elsewhere the page you left there; inside, the next module TRACK → BUSES → DELAY → REVERB → CHORUS → SLICER → MASTER → PUNCH."],
-    held: ["Capa de efectos punch-in: las teclas son efectos mientras las mantenés; perillas FILTER, CRUSH, THROW, DEPTH.", "Punch-in effects layer: the keys are effects while held; knobs FILTER, CRUSH, THROW, DEPTH."],
+    held: ["Capa de efectos punch-in: las teclas son efectos mientras las mantenés (C#5 D#5 F#5: barridos FILTER, CRUSH, THROW); perillas: las macros STEPS, TRANSPOSE, MUTATE, FILTER (girar una para atrás las apaga todas).", "Punch-in effects layer: the keys are effects while held (C#5 D#5 F#5: the sweeps FILTER, CRUSH, THROW); knobs: the macros STEPS, TRANSPOSE, MUTATE, FILTER (turning one back turns them all off)."],
     combos: [
       {k: "FX+SELECT", t: ["dados de efectos (BEFORE / NOW)", "effects dice (BEFORE / NOW)"]},
       {k: "FX+G5", t: ["borra el carril punch-in (sonando: donde pasa el cabezal)", "erase the punch-in lane (playing: where the playhead passes)"]},
@@ -179,9 +179,10 @@ controls: {
 // what each key does while a button is held (the firmware's MAP screens); black keys counted 1..11 from F#3
 layers: {
   FX: {shot: 'perform_held', t: ["FX mantenido: punch-in", "FX held: punch-in"], keys: {
-    "F3": "RPT 1/8", "G3": "RPT 1/16", "A3": "RPT 1/32", "B3": "LPF", "C4": "HPF", "D4": "OCT−", "E4": "OCT+", "F4": "1/2 TEMPO",
+    "F3": "RPT 1/8", "G3": "RPT 1/16", "A3": "RPT 1/32", "B3": "GLITCH", "C4": "TAPE STOP", "D4": "OCT−", "E4": "OCT+", "F4": "1/2 TEMPO",
     "G4": "DEC−", "A4": "DEC+", "B4": "STUT 1/8", "C5": "STUT 1/16", "D5": "ATK+", "E5": "ARP", "F5": "RANDOM", "G5": ["BORRA CARRIL", "ERASE LANE"],
-    "F#3": "MUTE T1", "G#3": "MUTE T2", "A#3": "MUTE T3", "C#4": "MUTE T4", "D#4": "MUTE T5", "F#4": "MUTE T6", "A#4": "TRK ALL/SYN/DRM"}},
+    "F#3": "MUTE T1", "G#3": "MUTE T2", "A#3": "MUTE T3", "C#4": "MUTE T4", "D#4": "MUTE T5", "F#4": "MUTE T6", "A#4": "TRK ALL/SYN/DRM",
+    "C#5": "FILTER", "D#5": "CRUSH", "F#5": "THROW"}},
   GLO: {shot: 'layer_glo_active', t: ["GLO mantenido: mezcla", "GLO held: mix"], keys: {
     "F3": "SOLO T1", "G3": "SOLO T2", "A3": "SOLO T3", "B3": "SOLO T4", "C4": "SOLO T5", "D4": "SOLO T6", "E4": "UNMUTE",
     "F4": "TAP", "G4": "UNDO", "A4": "FREEZE", "B4": "REVERT ALL",
@@ -426,11 +427,15 @@ commands: [
 
   // PUNCH-IN
   {s: "punch", k: "FX+F3", shot: 'perform_held', t: ["Efectos punch-in (FX mantenido)", "Punch-in effects (FX held)"],
-   d: ["Con FX mantenido, cada tecla actúa mientras la mantenés y todo vuelve al soltar: F3 G3 A3 REPEAT 1/8 1/16 1/32, B3 LPF, C4 HPF, D4/E4 OCT− OCT+, F4 1/2 TEMPO, G4/A4 DEC− DEC+, B4/C5 STUTTER, D5 ATK+, E5 ARP, F5 RANDOM. Entran en la próxima semicorchea.", "With FX held, each key acts while held and everything returns on release: F3 G3 A3 REPEAT 1/8 1/16 1/32, B3 LPF, C4 HPF, D4/E4 OCT− OCT+, F4 1/2 TEMPO, G4/A4 DEC− DEC+, B4/C5 STUTTER, D5 ATK+, E5 ARP, F5 RANDOM. They come in on the next 1/16."]},
-  {s: "punch", k: "FX+KNOB 1", t: ["Macros de FX y a qué pistas", "FX macros and which tracks"],
-   d: ["Perillas con FX: FILTER (izq. LP, der. HP), CRUSH, THROW (manda la mezcla al delay y la reverb), DEPTH. A#4 elige qué pistas tocan los efectos de nota: ALL, SYN, DRM. Negras 1–6: mute mientras se mantienen.", "Knobs with FX: FILTER (left LP, right HP), CRUSH, THROW (sends the mix into delay and reverb), DEPTH. A#4 picks which tracks the note effects touch: ALL, SYN, DRM. Black keys 1–6: mute while held."]},
+   d: ["Con FX mantenido, cada tecla actúa mientras la mantenés y todo vuelve al soltar: F3 G3 A3 REPEAT 1/8 1/16 1/32, B3 GLITCH, C4 TAPE STOP, D4/E4 OCT− OCT+, F4 1/2 TEMPO, G4/A4 DEC− DEC+, B4/C5 STUTTER, D5 ATK+, E5 ARP, F5 RANDOM. Entran en la próxima semicorchea.", "With FX held, each key acts while held and everything returns on release: F3 G3 A3 REPEAT 1/8 1/16 1/32, B3 GLITCH, C4 TAPE STOP, D4/E4 OCT− OCT+, F4 1/2 TEMPO, G4/A4 DEC− DEC+, B4/C5 STUTTER, D5 ATK+, E5 ARP, F5 RANDOM. They come in on the next 1/16."]},
+  {s: "punch", k: "FX+B3", shot: 'perform_held', t: ["GLITCH y TAPE STOP", "GLITCH and TAPE STOP"],
+   d: ["B3 GLITCH: el master cortado en semicorcheas: repeticiones de 1/16 a 1/64, la última semicorchea al revés o una octava arriba / abajo, gates; los tiempos casi siempre limpios, el mismo dibujo cada dos compases (groovea). C4 TAPE STOP: la cinta se frena en un tiempo y queda en silencio; al soltar, la música al instante.", "B3 GLITCH: the master cut into sixteenths: 1/16 to 1/64 repeats, the last sixteenth reversed or an octave up / down, gates; the beats mostly clean, the same pattern every two bars (it grooves). C4 TAPE STOP: the tape slows to a stop over a beat and stays silent; let go, the music at once."]},
+  {s: "punch", k: "FX+C#5", shot: 'perform_wait', t: ["Barridos: FILTER, CRUSH, THROW", "Sweeps: FILTER, CRUSH, THROW"],
+   d: ["Negras C#5 FILTER (el pasa-altos del DJ FILTER abriéndose), D#5 CRUSH (bits y frecuencia bajando), F#5 THROW (la mezcla al delay y la reverb): mantenidas van de seco a mojado en 2 compases con curva en S; al soltar vuelven en un tiempo. Se graban en el carril.", "Black keys C#5 FILTER (the DJ FILTER's high-pass opening), D#5 CRUSH (bits and rate falling), F#5 THROW (the mix into delay and reverb): held, dry to wet over 2 bars on an S curve; let go, back in a beat. They record into the lane."]},
+  {s: "punch", k: "FX+KNOB 1", shot: 'ly_fx_knobs', t: ["Macros de interpretación (perillas con FX)", "Performance macros (knobs with FX)"],
+   d: ["KNOB 1 STEPS (todas las secuencias 1/2, 1/4, 1/8, un paso, desde donde suenan), 2 TRANSPOSE (+2DA … +6TA por la escala, ±OCT), 3 MUTATE (los patrones mutan cada compás), 4 FILTER (pasa-bajos). Suben a la derecha y quedan al soltar FX; girar cualquiera para atrás (dos pasos) apaga las cuatro de golpe: la música como era. A#4: qué pistas tocan los efectos de nota. Negras 1–6: mute mientras se mantienen.", "KNOB 1 STEPS (every sequence 1/2, 1/4, 1/8, one step, from where it plays), 2 TRANSPOSE (+2ND … +6TH along the scale, ±OCT), 3 MUTATE (the patterns mutate every bar), 4 FILTER (low-pass). Up to the right, kept when FX is let go; turn any back (two detents) and all four are off at once: the music as it was. A#4: which tracks the note effects touch. Black keys 1–6: mute while held."]},
   {s: "punch", k: "FX+D4", shot: 'toast_punch', t: ["Grabar los punch-in (carril PUNCH)", "Record the punch-ins (PUNCH lane)"],
-   d: ["Con REC armado y sonando (no en una canción), mantené FX y los efectos de nota D4–F5: se graban en el carril de la sección. FX › PUNCH: LEN, RES (1/8 1/16 1/32), CLEAR. FX + G5 borra donde pasa el cabezal (parado: todo).", "With REC armed and playing (not in a song), hold FX and the note effects D4–F5: they record into the section's lane. FX › PUNCH: LEN, RES (1/8 1/16 1/32), CLEAR. FX + G5 erases where the playhead passes (stopped: all)."]},
+   d: ["Con REC armado y sonando (no en una canción), mantené FX y los efectos de nota D4–F5, GLITCH, TAPE STOP o un barrido: se graban en el carril de la sección. FX › PUNCH: LEN, RES (1/8 1/16 1/32), CLEAR. FX + G5 borra donde pasa el cabezal (parado: todo).", "With REC armed and playing (not in a song), hold FX and the note effects D4–F5, GLITCH, TAPE STOP or a sweep: they record into the section's lane. FX › PUNCH: LEN, RES (1/8 1/16 1/32), CLEAR. FX + G5 erases where the playhead passes (stopped: all)."]},
   {s: "punch", k: "FX", shot: 'layer_lock_fx', t: ["Dejar la capa FX abierta (LOCK)", "Keep the FX layer open (LOCK)"],
    d: ["Mantené FX hasta que abra su mapa y soltalo sin tocar nada: [FX] LOCKED, con las dos manos libres; OCT− = ALL OFF. FX otra vez lo suelta.", "Hold FX until its map opens and let go without touching anything: [FX] LOCKED, both hands free; OCT− = ALL OFF. FX again unlocks."]},
   {s: "punch", k: "FX+OCT-", t: ["FX LATCH: efectos que quedan prendidos", "FX LATCH: effects that stay on"],
@@ -566,8 +571,9 @@ recipes: [
     ["Volver: SOUND y PATTERN a OFF → BACK TO BEFORE MUTATE? OCT+. O SEQ + D5 REVERT / GLO + B4 REVERT ALL.", "Go back: SOUND and PATTERN OFF → BACK TO BEFORE MUTATE? OCT+. Or SEQ + D5 REVERT / GLO + B4 REVERT ALL."],
     ["¿Te arrepentiste del revert? GLO + G4.", "Regret the revert? GLO + G4."]]},
   {id: "punch", s: "punch", shots: ['perform_held', 'toast_punch'], t: ["Punch-in FX, grabarlos y engancharlos", "Punch-in FX, record and latch them"], steps: [
-    ["Mantené FX y una tecla: el efecto actúa mientras la mantenés (REPEAT, filtros, OCT, STUTTER, ARP…). Perillas: FILTER, CRUSH, THROW, DEPTH.", "Hold FX and a key: the effect acts while held (REPEAT, filters, OCT, STUTTER, ARP…). Knobs: FILTER, CRUSH, THROW, DEPTH."],
-    ["Grabar: REC armado y sonando, FX + D4–F5. Se escriben en el carril de la sección (FX › PUNCH). FX + G5 borra.", "Record: REC armed and playing, FX + D4–F5. They are written into the section's lane (FX › PUNCH). FX + G5 erases."],
+    ["Mantené FX y una tecla: el efecto actúa mientras la mantenés (REPEAT, GLITCH, TAPE STOP, OCT, STUTTER, ARP…); las negras C#5 D#5 F#5 barren FILTER, CRUSH, THROW en 2 compases.", "Hold FX and a key: the effect acts while held (REPEAT, GLITCH, TAPE STOP, OCT, STUTTER, ARP…); black keys C#5 D#5 F#5 sweep FILTER, CRUSH, THROW over 2 bars."],
+    ["Perillas con FX: STEPS, TRANSPOSE, MUTATE, FILTER, a la derecha; girá cualquiera para atrás y vuelve todo al original de golpe.", "Knobs with FX: STEPS, TRANSPOSE, MUTATE, FILTER, to the right; turn any back and everything snaps back to the original."],
+    ["Grabar: REC armado y sonando, FX + D4–F5, B3, C4 o un barrido. Se escriben en el carril de la sección (FX › PUNCH). FX + G5 borra.", "Record: REC armed and playing, FX + D4–F5, B3, C4 or a sweep. They are written into the section's lane (FX › PUNCH). FX + G5 erases."],
     ["Manos libres: mantené FX hasta ver el mapa y soltá sin tocar nada ([FX] LOCKED). FX otra vez lo cierra.", "Hands free: hold FX until the map shows and let go without touching anything ([FX] LOCKED). FX again closes it."],
     ["Que queden prendidos: MENU › CONTROL › FX LATCH ON; FX + OCT− apaga todo.", "To keep them on: MENU › CONTROL › FX LATCH ON; FX + OCT− turns all off."]]},
   {id: "liveP", s: "glo", shots: ['live_mano', 'live_rieles'], t: ["Páginas LIVE (MANO y RIELES)", "LIVE pages (MANO and RIELES)"], steps: [
@@ -605,6 +611,11 @@ recipes: [
 
 // ------------------------------------------------------------------------------------------- what's new (README's changelog, digested)
 news: [
+  {v: "0.9.15", items: [
+    ["La capa FX renovada: CRUSH, THROW y FILTER pasan a las negras C#5 D#5 F#5 como barridos de seco a mojado en 2 compases (vuelven en un tiempo).", "The FX layer reworked: CRUSH, THROW and FILTER move to black keys C#5 D#5 F#5 as dry-to-wet sweeps over 2 bars (back in a beat)."],
+    ["B3 GLITCH: cortes en semicorcheas (repeticiones, reversa, octavas, gates) que vuelven igual cada dos compases. C4 TAPE STOP: la cinta se frena en un tiempo.", "B3 GLITCH: sixteenth-note cuts (repeats, reverse, octaves, gates) that come back the same every two bars. C4 TAPE STOP: the tape slows to a stop over a beat."],
+    ["Las perillas con FX son macros: STEPS, TRANSPOSE, MUTATE, FILTER; girar cualquiera para atrás apaga las cuatro de golpe.", "The knobs with FX are macros: STEPS, TRANSPOSE, MUTATE, FILTER; turn any back and all four are off at once."],
+    ["El carril PUNCH graba también GLITCH, TAPE STOP y los barridos.", "The PUNCH lane records GLITCH, TAPE STOP and the sweeps too."]]},
   {v: "0.9.14", items: [
     ["MENU › ABOUT › PROFILE (OCT+ en ABOUT): la CPU medida en el FM-1, parte por parte, tocando y parado. Sacale fotos y mandalas.", "MENU › ABOUT › PROFILE (OCT+ on ABOUT): the CPU measured on the FM-1, part by part, playing and stopped. Photograph it and send it."],
     ["Parado, los efectos ya no gastan CPU (en 0.9.13 la reverb, el delay y el chorus corrían siempre: el NOW 26 % parado).", "Stopped, the effects no longer use CPU (on 0.9.13 the reverb, delay and chorus always ran: the NOW 26 % while stopped)."],

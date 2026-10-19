@@ -291,9 +291,13 @@ static struct {
     int8_t mode;                                        /* -1 LP, 1 HP in the chain; 0 out */
 } djf __attribute__((section(".bss.djf")));             /* (its own section: the merged statics the ISR reads keep their
                                                          * places, and its code with them) */
+/* (0.9.14) the knob's, or the FX layer's while it filters (perform.c perf_djf: the FILTER macro's low-pass, the
+ * sweep's high-pass) */
+static volatile int8_t perf_djf;
+static int32_t djf_v(void) { return perf_djf ? perf_djf : song.g[G_DJF]; }
 static __attribute__((noinline)) void djf_block(uint32_t n)
 {
-    int32_t v = song.g[G_DJF], dm = v < 0 ? -1 : v > 0 ? 1 : 0, w0, w1, dw, k, c[3], d[3];
+    int32_t v = djf_v(), dm = v < 0 ? -1 : v > 0 ? 1 : 0, w0, w1, dw, k, c[3], d[3];
     uint32_t i;
     if (!djf.mode) {                                    /* in: at its cutoff, the states as the mix (no step) */
         djf.mode = (int8_t)dm;
@@ -2444,7 +2448,7 @@ static __attribute__((noinline)) void mix_block(int32_t *out, uint32_t n)   /* (
         send_c[i] = send_d[i] = send_r[i] = mix_l[i] = mix_r[i] = sl_l[i] = sl_r[i] = 0;
     if (fx_stems)                                       /* (0.7.1) a part not mixed this block: a silent stem */
         memset(stem_buf, 0, sizeof stem_buf);
-    pfx_rec_held = perf_kill ? 0u : perf_held & PF_MIDI;
+    pfx_rec_held = perf_kill ? 0u : perf_held & PF_LANE;   /* (0.9.14: the audio ones too) */
     pfx_block(n, (perf_kill ? 0u : (perf_held | perf_latched) & PF_MIDI) | scene_pfx);
     events_block(n);
     if (song.playing)                                   /* (JIANT) the modulation sequences' clock (mod.c): the block's end on
@@ -2523,7 +2527,7 @@ static __attribute__((noinline)) void mix_block(int32_t *out, uint32_t n)   /* (
                 mix_r[i] += sl_r[i];
             }
     }
-    if (song.g[G_DJF] || djf.mode)                      /* (0.9.1) the DJ FILTER; centred and out: not run */
+    if (song.g[G_DJF] || perf_djf || djf.mode)          /* (0.9.1) the DJ FILTER; centred and out: not run */
         djf_block(n);
     if (clip_g)
         clip_block(n);

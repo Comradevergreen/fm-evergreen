@@ -264,7 +264,7 @@ def build_app():
         if hot:   # (JIANT 0.6.78) optimised first, then HOT_FNS put in .hot_text, then only the code generator: a
             # section attribute before the optimiser would stop it inlining anything into them (this clang inlines
             # nothing across sections), so they come out as they were, only in RAM (app.ld)
-            tc("cc", *cf, "-S", "-emit-llvm", "-c", OUT / "felucca_size.ll", "-o", OUT / "felucca_opt.ll")
+            tc("cc", *cf, "-Xclang", "-fmerge-functions", "-S", "-emit-llvm", "-c", OUT / "felucca_size.ll", "-o", OUT / "felucca_opt.ll")
             ir, n = hot_sections((OUT / "felucca_opt.ll").read_text())
             if n != len(HOT_FNS):
                 raise SystemExit(f"hot RAM code: {n} of the {len(HOT_FNS)} functions found in the IR ({HOT_FNS})")
