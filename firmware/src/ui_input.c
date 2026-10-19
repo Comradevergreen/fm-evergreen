@@ -922,12 +922,7 @@ static void comp_knob(uint32_t slot, int32_t steps)
     } else if (v >= COMP_ARPN && v <= COMP_ARPS && slot == 2u) {   /* (0.6.92) ORDER x RANGE: one list, a range after another */
         int32_t i = clamp((int32_t)(CP_ORD(*ap) * 4u + CP_RNG(*ap)) + d, 0, 15);
         *ap = CP_ARG((uint32_t)i / 4u, CP_RATE(*ap), (uint32_t)i % 4u);
-    } else if (v >= COMP_ARPN && v <= COMP_ARPS && slot == 3u) {   /* (0.6.92) RATE: x1 x2 x3 x4 x6 x8 (in the track's time) */
-        uint32_t i;
-        for (i = 0; i < CP_NRATE && CP_RATE_ORD[i] != CP_RATE(*ap) % CP_NRATE; i++) {}
-        i = (uint32_t)clamp((int32_t)i + e, 0, CP_NRATE - 1);
-        *ap = CP_ARG(CP_ORD(*ap), CP_RATE_ORD[i], CP_RNG(*ap));
-    }
+    }                                                   /* (0.9.17: an ARP's KNOB 4 shows the lap's note, no RATE) */
 }
 /* (0.6.85) SEQ > STRETCH: KNOB 1 STRETCH /8 .. /2, x1, x2 .. x8; KNOB 2 REPEAT OFF, x2 .. x8, TO 64; (0.6.92) done as the
  * knob turns, always from the sequence as it was before the first turn (its base: the steps, LEN and automation,

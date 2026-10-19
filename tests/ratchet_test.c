@@ -377,44 +377,42 @@ static int components(void)
     uint32_t n;
     track_t *t;
     project_store_t st;
-    /* ARP NOTES: x4 UP over a chord, one octave: the chord's notes in turn, again from the bottom */
+    /* (0.9.17) an ARP walks its notes a lap at a time (seq.c arp_owner): one note a pass of the pattern, the next the
+     * next time round, in its ORDER; RATE no longer counts (a one-step loop: a lap a pass) */
+    t = one_step(1, 0);                                   /* NOTES UP over a chord, one octave */
+    t->step[0] = (step_t){{60, 64, 67}, 3, ST_NOTE, 0, 100};
+    t->step[0].comp = CP_ARPN; t->step[0].carg = CP_ARG(0u, 4u, 0u);   /* (RATE x8 stored: one a lap all the same) */
+    n = run_notes(t, passes(t, 4), nt, sizeof nt);
+    bad += check("ARP NOTES UP: one note a lap, 60 | 64 | 67 | 60 over four passes", n == 4u && nt[0] == 60u &&
+                 nt[1] == 64u && nt[2] == 67u && nt[3] == 60u);
     t = one_step(1, 0);
     t->step[0] = (step_t){{60, 64, 67}, 3, ST_NOTE, 0, 100};
-    t->step[0].comp = CP_ARPN; t->step[0].carg = CP_ARG(0u, 2u, 0u);
+    t->step[0].comp = CP_ARPN; t->step[0].carg = CP_ARG(1u, 1u, 1u);   /* DOWN, two octaves */
+    n = run_notes(t, passes(t, 3), nt, sizeof nt);
+    bad += check("ARP NOTES DOWN over two octaves, a lap each: 79 | 76 | 72", n == 3u && nt[0] == 79u && nt[1] == 76u &&
+                 nt[2] == 72u);
+    seq_stop();                                           /* PLAY from a stop: from its first note again */
+    seq_start();
     n = run_notes(t, passes(t, 1), nt, sizeof nt);
-    bad += check("ARP NOTES x4 UP: 60 64 67 60 in one step", n == 4u && nt[0] == 60u && nt[1] == 64u && nt[2] == 67u &&
-                 nt[3] == 60u);
-    t = one_step(1, 0);
-    t->step[0] = (step_t){{60, 64, 67}, 3, ST_NOTE, 0, 100};
-    t->step[0].comp = CP_ARPN; t->step[0].carg = CP_ARG(1u, 1u, 1u);   /* DOWN x3, two octaves */
-    n = run_notes(t, passes(t, 1), nt, sizeof nt);
-    bad += check("ARP NOTES x3 DOWN over two octaves: 79 76 72", n == 3u && nt[0] == 79u && nt[1] == 76u && nt[2] == 72u);
-    t = one_step(1, 0);                                   /* over the TIE after it: the arpeggio goes on */
+    bad += check("  PLAY again: the first note (79), as the other components' loops", n == 1u && nt[0] == 79u);
+    t = one_step(1, 0);                                   /* a TIE after it: the lap's note held over it, no new one */
     t->p[P_SLEN] = 2;
     t->step[0] = (step_t){{60, 64, 67}, 3, ST_NOTE, 0, 100};
-    t->step[0].comp = CP_ARPN; t->step[0].carg = CP_ARG(0u, 0u, 0u);   /* x2 */
+    t->step[0].comp = CP_ARPN; t->step[0].carg = CP_ARG(0u, 0u, 0u);
     t->step[1] = (step_t){{0}, 0, ST_TIE, 0, 0};
     seq_start();
-    n = run_notes(t, 2u * step_len(t, 0) / CTL - 1u, nt, sizeof nt);
-    bad += check("ARP x2 over a TIE: 60 64 | 67 60 (the TIE goes on with it)", n == 4u && nt[0] == 60u && nt[1] == 64u &&
-                 nt[2] == 67u && nt[3] == 60u);
+    n = run_notes(t, 2u * step_len(t, 0) / CTL - 2u, nt, sizeof nt);
+    ok = n == 1u && nt[0] == 60u && t->seq_n == 1u;
+    n = run_notes(t, 2u * step_len(t, 0) / CTL, nt, sizeof nt);
+    bad += check("ARP over a TIE: the lap's note held through it (60, then 64 the next lap)", ok && n == 1u && nt[0] == 64u);
     t = one_step(1, 0);                                   /* SCALE: C major up from the step's note, 3 degrees */
     t->p[P_ROOT] = 0; t->p[P_SCALE] = 1;
     t->step[0] = (step_t){{60}, 1, ST_NOTE, 0, 100};
     t->step[0].comp = CP_ARPS; t->step[0].carg = CP_ARG(0u, 2u, 0u);
-    n = run_notes(t, passes(t, 1), nt, sizeof nt);
-    bad += check("ARP SCALE x4 UP, 3 degrees of C major: 60 62 64 60", n == 4u && nt[0] == 60u && nt[1] == 62u &&
-                 nt[2] == 64u && nt[3] == 60u);
-    t = one_step(1, 0);                                   /* SEQ: every note of the pattern */
-    t->p[P_SLEN] = 2;
-    t->step[0] = (step_t){{60}, 1, ST_NOTE, 0, 100};
-    t->step[0].comp = CP_ARPQ; t->step[0].carg = CP_ARG(0u, 0u, 0u);
-    t->step[1] = (step_t){{67}, 1, ST_NOTE, 0, 100};
-    seq_start();
-    n = run_notes(t, 2u * step_len(t, 0) / CTL - 1u, nt, sizeof nt);
-    bad += check("ARP SEQ x2: the pattern's notes (60 67), then the next step's own 67", n == 3u && nt[0] == 60u &&
-                 nt[1] == 67u && nt[2] == 67u);
-    /* (0.6.82) SEQ: the pattern's melody in its order (67 60 64), NOTES would sort it */
+    n = run_notes(t, passes(t, 4), nt, sizeof nt);
+    bad += check("ARP SCALE UP, 3 degrees of C major, a lap each: 60 | 62 | 64 | 60", n == 4u && nt[0] == 60u &&
+                 nt[1] == 62u && nt[2] == 64u && nt[3] == 60u);
+    /* SEQ: the pattern's melody in its order (67 60 64; NOTES would sort it), a note of it a lap */
     t = one_step(1, 0);
     t->p[P_SLEN] = 3;
     t->step[0] = (step_t){{67}, 1, ST_NOTE, 0, 100};
@@ -422,9 +420,10 @@ static int components(void)
     t->step[1] = (step_t){{60}, 1, ST_NOTE, 0, 100};
     t->step[2] = (step_t){{64}, 1, ST_NOTE, 0, 100};
     seq_start();
-    n = run_notes(t, step_len(t, 0) / CTL - 1u, nt, sizeof nt);
-    bad += check("ARP SEQ x4: the pattern's melody as it plays: 67 60 64 67", n == 4u && nt[0] == 67u && nt[1] == 60u &&
-                 nt[2] == 64u && nt[3] == 67u);
+    n = run_notes(t, 4u * 3u * step_len(t, 0) / CTL - 1u, nt, sizeof nt);
+    bad += check("ARP SEQ: the melody a lap at a time: 67 60 64 | 60 60 64 | 64 60 64 | 67 60 64", n == 12u &&
+                 nt[0] == 67u && nt[1] == 60u && nt[2] == 64u && nt[3] == 60u && nt[6] == 64u && nt[9] == 67u &&
+                 nt[10] == 60u && nt[11] == 64u);
     /* TRIG: the loops it plays on (a one-step loop: a loop a pass) */
     {
         static const uint8_t COND[4] = {0, 1, 10, 11}, WANT[4] = {2, 2, 1, 3};   /* 1:2 2:2 FIRST NOT FIRST, 4 loops */
@@ -459,8 +458,9 @@ static int components(void)
     ok = str_eq(cur_page()->title, "COMP") && comp_view() == COMP_OFF;
     turn(EN_K2, 3);                                       /* OFF CHANCE RATCH NOTES */
     ok &= t->step[0].comp == CP_ARPN && t->step[0].carg == CP_ARG(0u, 2u, 0u);
-    turn(EN_K3, 4); turn(EN_K3, 1); turn(EN_K4, 1);       /* (0.6.92) KNOB 3 ORDER x RANGE: DOWN over two octaves; KNOB 4 RATE x6 */
-    ok &= CP_ORD(t->step[0].carg) == 1u && CP_RATE(t->step[0].carg) == 3u && CP_RNG(t->step[0].carg) == 1u;
+    turn(EN_K3, 4); turn(EN_K3, 1); turn(EN_K4, 1);       /* (0.6.92) KNOB 3 ORDER x RANGE: DOWN over two octaves; (0.9.17)
+                                                           * KNOB 4 the lap's note, shown: nothing to turn (RATE kept) */
+    ok &= CP_ORD(t->step[0].carg) == 1u && CP_RATE(t->step[0].carg) == 2u && CP_RNG(t->step[0].carg) == 1u;
     turn(EN_K2, 2);                                       /* SCALE: the values kept */
     ok &= t->step[0].comp == CP_ARPS && CP_ORD(t->step[0].carg) == 1u;
     turn(EN_K2, 1); turn(EN_K3, 4); turn(EN_K3, 1);      /* TRIG 1:2 .. 2:4 (4 detents a pass at most) */
@@ -784,7 +784,7 @@ static int components3(void)
     ok &= proj_import(&proj_scratch, &st, sizeof st) && !project_restore_runtime(&proj_scratch);
     ok &= t->step[0].comp2 == CP_REV && t->step[0].carg2 == 2u && t->step[0].cwhen == 0xBu && t->step[0].ctime == 0x5Cu;
     bad += check("a project keeps the second component, WHEN, DIV and LEN (FUNC round trip)", ok);
-    /* on a drum kit: OCT +1 tunes the hit an octave up; ARP NOTES x4 over BD + SD plays them in turn; BEND bends it */
+    /* on a drum kit: OCT +1 tunes the hit an octave up; ARP NOTES over BD + SD plays them in turn, a lap each; BEND bends it */
     {
         uint32_t kick = DRUM_LANE_NOTE[DV_KICK], snr = DRUM_LANE_NOTE[DV_SNARE];
         int32_t base = DRUM_GM[drum_gm_ix(kick)][1];
@@ -803,7 +803,7 @@ static int components3(void)
         t->step[0] = (step_t){{0}, 0, ST_NOTE, 0, 100, 1u << DV_KICK | 1u << DV_SNARE, 0};
         t->step[0].comp = CP_ARPN; t->step[0].carg = CP_ARG(0u, 2u, 0u);
         seq_start();
-        n = run_notes(t, step_len(t, 0) / CTL - 1u, nt, sizeof nt);
+        n = run_notes(t, passes(t, 4), nt, sizeof nt);   /* (0.9.17: a sound a lap) */
         ok &= n == 4u && nt[0] == kick && nt[1] == snr && nt[2] == kick && nt[3] == snr;
         bad += check("on a drum kit: OCT tunes the hit, BEND bends it, ARP NOTES plays its sounds in turn", ok);
     }
