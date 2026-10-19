@@ -184,7 +184,8 @@ static int32_t prf_row(int32_t y, int draw, const char *name, uint32_t k)
             char b[12];
             int32_t v = 0;
             int f = (prf_have >> (1u - c / 2u)) & 1u ? prf_val(&prf_win[1u - c / 2u], k, c & 1u, &v) : 0;
-            if (f) fmt_fix(b, v, f == 1); else str_cpy(b, "-", 2);
+            b[0] = '0';                                  /* ("0.5", not ".5") */
+            if (f) fmt_fix(b + (f == 1 && v < 10), v, f == 1); else str_cpy(b, "-", 2);
             cv_text_r(136 + (int32_t)c * 31, y, &AF_S, b, c / 2u ? T_MID : T_TEXT, T_BG);
         }
     }

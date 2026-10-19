@@ -2346,7 +2346,7 @@ static int test_menu_tabs(void)
     press(B_OCTDN); ok &= ui.menu == 1 && ui.menu_sel == MI_ABOUT;   /* (no close, no back) */
     turn(EN_K1, 1); ok &= ui.menu == 1 && ui.menu_sel == MI_ABOUT;
     press(B_OCTUP); ok &= ui.menu == 2;
-    ok &= oct_leds() == 1u;                             /* (ABOUT: OCT- back, lit) */
+    ok &= oct_leds() == (1u | OCT_BREATH);              /* (ABOUT: OCT- back, lit; 0.9.14: OCT+ PROFILE, breathing) */
     press(B_OCTDN); ok &= ui.menu == 1 && ui.menu_sel == MI_ABOUT;
     turn(EN_SELECT, -1); ok &= ui.menu_sel == MI_INIT;   /* (0.6.58) INIT SYSTEM: OCT+ its dialog, the menu closed */
     press(B_OCTUP); ok &= ui.menu == 0 && ui.confirm == CF_INIT_SYS;
@@ -2564,10 +2564,19 @@ static int test_information(void)
     bad += check("0.9.2 SELECT continues from ABOUT into CREDITS without changing pages",
                  ui.menu == 2 && ui.menu_scroll > 216 && !memcmp(header, host_screen, sizeof header) &&
                  !memcmp(footer, host_screen + 221 * 240, sizeof footer));
-    uint16_t position = ui.menu_scroll;
-    press(B_OCTUP);
-    bad += check("OCT+ does not switch pages or alter the octave in the document",
-                 ui.menu == 2 && ui.menu_scroll == position && song.octave == 0);
+    press(B_OCTUP);                                     /* (0.9.14) OCT+: PROFILE (MENU > ABOUT > PROFILE), OCT- back */
+    ui_draw();
+    {
+        int ok = ui.menu == 3 && !ui.menu_scroll && song.octave == 0 && prf_on && oct_leds() == 1u;
+        turn(EN_SELECT, 3);
+        ok &= ui.menu == 3 && ui.menu_scroll > 0;
+        press(B_OCTUP);
+        ok &= ui.menu == 3 && song.octave == 0;
+        press(B_OCTDN);
+        bad += check("0.9.14 OCT+ on ABOUT opens PROFILE (SELECT scrolls, OCT+ nothing more, the octave kept); OCT- back to ABOUT",
+                     ok && ui.menu == 2 && !ui.menu_scroll);
+    }
+    turn(EN_SELECT, 15);
     turn(EN_SELECT, 10000);
     turn(EN_SELECT, 10000);
     ui_draw();
@@ -8999,6 +9008,7 @@ static int test_click_menu(void)
             song.g[G_SLMODE] = 1;
             ok = slicer_on();
             load_put(0u);
+            fxg_g = 32767;                              /* (0.9.14: the buses awake; at rest they hold, fx.c fx_rest) */
             song.g[G_RTYPE] = 0; mix_block(o, CTL); mix_block(o, CTL);
             ok &= sys_load == LOAD_ECO && fx.rtype == 1u && !slicer_on() && song.g[G_SLMODE] == 1;
             ok &= trk_nvoice(&ft) == ECO_POLY;
@@ -9016,6 +9026,7 @@ static int test_click_menu(void)
             go_title("REVERB"); frame();
             ok &= strstr(ui.col[0], "|ROOM|ECO") != 0;
             load_put(2u);
+            fxg_g = 32767;
             song.g[G_RTYPE] = 1; mix_block(o, CTL);
             ok &= voice_cap() == NVOICE && fx.sp_ns == SP_N;   /* FULL: all of them */
             for (i = 0; i < NPAGES && !str_eq(PAGES[i].title, "SLICER"); i++) {}
