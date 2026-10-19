@@ -1550,6 +1550,37 @@ static void gen_pitched(uint32_t rot, int32_t lift)
 }
 static step_t gen_keep[NSTEP];                          /* (the drums of the section before; 0.8.3: the chords are made
                                                          * again, not kept) */
+/* (0.9.14) the FORM's order: one of several orders a form takes, and each row's length (in halves of the form's
+ * bars: 1 half, 2 as set, 4 double), picked from the SEED, GENRE and FORM alone (not the piece's random streams, so
+ * the GEN screen shows it before MAKE). Before, PARTS was always A B A C and SONG B C A D C A (or B A C D), whatever
+ * the seed. A: the whole piece, B a break, C a drop / a turn, D the apex (gen_parts) */
+#define GF_MAXROWS 8u
+static uint32_t gform_hash(void)
+{
+    uint32_t h = 2166136261u;
+    h = (h ^ gp.seed) * 16777619u; h = (h ^ gp.genre) * 16777619u; h = (h ^ gp.form) * 16777619u;
+    h ^= h >> 13; h *= 2246822519u; h ^= h >> 16;
+    return h;
+}
+static uint32_t gform_order(uint32_t form, uint8_t *ord, uint8_t *mul)
+{
+    static const uint8_t PARTS[8][7] = {{4, 0, 1, 0, 2}, {4, 0, 0, 1, 2}, {4, 0, 1, 2, 0}, {4, 0, 2, 0, 1},
+                                        {4, 1, 0, 2, 0}, {5, 0, 1, 0, 2, 2}, {4, 0, 2, 1, 0}, {6, 0, 1, 0, 2, 1, 0}};
+    static const uint8_t CLUB[8][8] = {{6, 1, 2, 0, 3, 2, 0}, {5, 0, 1, 2, 3, 0}, {6, 1, 0, 2, 3, 2, 0}, {6, 1, 2, 3, 0, 2, 0},
+                                       {6, 0, 2, 1, 3, 3, 0}, {7, 1, 1, 0, 2, 3, 2, 0}, {6, 0, 1, 0, 2, 3, 2}, {5, 2, 0, 1, 3, 0}};
+    static const uint8_t ARC[6][6] = {{4, 1, 0, 2, 3}, {4, 0, 1, 2, 3}, {5, 1, 0, 3, 2, 0}, {4, 1, 2, 0, 3}, {4, 0, 1, 3, 2},
+                                      {5, 1, 0, 2, 3, 0}};
+    uint32_t h = gform_hash(), k, n;
+    const uint8_t *t = form == FM_CLUB ? CLUB[h % 8u] : form == FM_ARC ? ARC[h % 6u] : PARTS[h % 8u];
+    n = t[0];
+    for (k = 0; k < n; k++) {
+        uint32_t r = (h >> (8u + 3u * k)) % 8u;          /* (a row's length: mostly as set, now and then double or half) */
+        ord[k] = t[1 + k];
+        mul[k] = (uint8_t)(r < 5u ? 2u : r < 7u ? 4u : 1u);
+        if (form == FM_CLUB) mul[k] = ord[k] == 0u ? 4u : r < 6u ? 2u : 1u;   /* (a club's drop, A, the longest) */
+    }
+    return n;
+}
 static void section_store(uint32_t s);                  /* (song_main.c) */
 static int section_load(uint32_t s);
 static void gen_parts(void)
@@ -1558,10 +1589,9 @@ static void gen_parts(void)
     uint32_t form = gp.form == 0u ? FM_LOOP : gp.form == 2u ? (g->form == FM_ARC ? FM_ARC : FM_CLUB) : g->form == FM_LOOP ? FM_PARTS : g->form;
     uint32_t dr = gs.trk_of[RL_DRUM], bs = gs.trk_of[RL_BASS], pd = gs.trk_of[RL_PAD], ld = gs.trk_of[RL_LEAD], ar = gs.trk_of[RL_ARP];
     uint32_t k, n = 0, rows = 0, bars = gp.form == 2u ? 16u : 8u, i, fam = HXF(gs.hx);
-    static const uint8_t ORD_CLUB[6] = {1, 2, 0, 3, 2, 0}, ORD_PARTS[4] = {0, 1, 0, 2}, ORD_ARC[4] = {1, 0, 2, 3};
     static const uint8_t FILLS[6] = {FL_ROLL, FL_TOM, FL_HAT, FL_DROP, FL_LINEAR, FL_KICK16};   /* (0.6.97) a fill a section */
     uint8_t pdeg[4], pq[4], pn = gs.pn;
-    const uint8_t *ord;
+    uint8_t ord[GF_MAXROWS], mul[GF_MAXROWS];
     uint32_t nord;
     if (form == FM_LOOP) return;
     gseed(GS_FORM);
@@ -1658,13 +1688,11 @@ static void gen_parts(void)
     live.cur = 0;
     if (n < 2u) return;
     chain_defaults(&chain_config);
-    if (form == FM_CLUB) { ord = ORD_CLUB; nord = n >= 4u ? 6u : n == 3u ? 4u : 2u; }
-    else if (form == FM_ARC) { ord = ORD_ARC; nord = n; }
-    else { ord = ORD_PARTS; nord = n >= 3u ? 4u : 2u; }
+    nord = gform_order(form, ord, mul);                 /* (0.9.14) the order and lengths from the seed (gform_order) */
     for (k = 0; k < nord && rows < CHAIN_ROWS; k++) {
         if (ord[k] >= n) continue;
         chain_config.row[rows].slot = ord[k];
-        chain_config.row[rows].bars = (uint8_t)(form == FM_CLUB && ord[k] == 0u ? bars * 2u : bars);
+        chain_config.row[rows].bars = (uint8_t)(bars * mul[k] / 2u);
         rows++;
     }
     chain_config.count = (uint8_t)rows;
@@ -2521,9 +2549,9 @@ static uint32_t gen_hash(uint32_t x) { x *= 2654435761u; x ^= x >> 15; x *= 2246
 static void gen_panel(void)
 {
     static const char *const ROLE[5] = {"DRUMS", "BASS", "CHORDS", "ARP", "LEAD"};
-    static const char FORM[3][7] = {"A", "ABAC", "BCADCA"};
-    uint32_t k, i, p = gp.page % 3u, n = (uint32_t)str_len(FORM[gp.form % 3u]);
-    int32_t bw = 228 / (int32_t)n;
+    uint8_t ord[GF_MAXROWS], mul[GF_MAXROWS];
+    uint32_t k, i, p = gp.page % 3u, n;
+    int32_t bw;
     char v[24];
     for (k = 0; k < 5u; k++) {
         int32_t y = 4 + (int32_t)k * 19, dn;
@@ -2546,9 +2574,13 @@ static void gen_panel(void)
             }
         }
     }
-    for (i = 0; i < n; i++) {                           /* the FORM's sections */
-        uint32_t sc = (uint32_t)(FORM[gp.form % 3u][i] - 'A');
-        char l[2] = {FORM[gp.form % 3u][i], 0};
+    if (gp.form % 3u == 0u) { ord[0] = 0; n = 1; }      /* the FORM's sections, in the order this seed makes */
+    else n = gform_order(gp.form == 2u ? (gp.genre && GENRE[(gp.genre - 1u) % NGENRE].form == FM_ARC ? FM_ARC : FM_CLUB) : FM_PARTS,
+                         ord, mul);
+    bw = 228 / (int32_t)n;
+    for (i = 0; i < n; i++) {
+        uint32_t sc = ord[i];
+        char l[2] = {(char)('A' + ord[i]), 0};
         int32_t x = 6 + (int32_t)i * bw;
         cv_rect(x, 102, bw - 2, 14, sec_col(sc));
         GFX_HOOK_ALIGN(x, 102, x + bw - 2, 116, AL_HV, "GEN section letter centred");
