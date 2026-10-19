@@ -1343,6 +1343,10 @@ static int gnever(const char *s)
  * the texture long, plucks and arps between) and the filter envelope it adds to its recipe's */
 static const uint8_t GREL[RL_N][2] = {{0, 127}, {40, 64}, {78, 104}, {55, 88}, {50, 80}, {70, 110}};
 static const uint8_t GENVF[RL_N][2] = {{0, 0}, {6, 20}, {4, 14}, {6, 18}, {8, 24}, {2, 10}};
+/* (0.9.18) a lead's and an arp's envelope shapes, ATK DEC SUS REL ranges: plucked, swelling, held with a tail, the
+ * recipe's (no range); their weights */
+static const uint8_t GENV[3][8] = {{0, 6, 55, 76, 12, 58, 55, 72}, {38, 62, 70, 88, 55, 90, 66, 90}, {2, 14, 62, 84, 60, 88, 64, 86}};
+static const uint8_t GENV_LW[4] = {45, 15, 25, 15}, GENV_AW[4] = {60, 8, 17, 15};
 static void gen_sound(track_t *t, uint32_t role, uint32_t ri)
 {
     const grecipe_t *r = &RECIPE[ri];
@@ -1389,7 +1393,26 @@ static void gen_sound(track_t *t, uint32_t role, uint32_t ri)
     t->p[P_ATK] = (int16_t)grr(r->atk[0], r->atk[1]);
     t->p[P_DEC] = (int16_t)grr(r->dec[0], r->dec[1]);
     t->p[P_SUS] = (int16_t)grr(r->sus[0], r->sus[1]);
-    t->p[P_REL] = (int16_t)clamp(grr(r->rel[0], r->rel[1]), GREL[role][0], GREL[role][1]);   /* (0.9.13: never dry) */
+    t->p[P_REL] = (int16_t)grr(r->rel[0], r->rel[1]);
+    if ((role == RL_LEAD || role == RL_ARP) && r->sus[1] < 120u) {   /* (0.9.18, "too many leads with full sustain and
+                                                         * no release") a lead's or an arp's envelope a shape of its own:
+                                                         * plucked (a real decay to a sustain well under the top, a short
+                                                         * release), swelling (a slow attack), held with a tail; the
+                                                         * recipe's as it was the rest of the time; an organ's (its
+                                                         * recipe's sustain at the top) left full */
+        uint32_t sh = gpickw(role == RL_LEAD ? GENV_LW : GENV_AW, 4);
+        const uint8_t *e6 = GENV[sh];
+        if (sh < 3u) {
+            t->p[P_ATK] = (int16_t)grr(e6[0], e6[1]); t->p[P_DEC] = (int16_t)grr(e6[2], e6[3]);
+            t->p[P_SUS] = (int16_t)grr(e6[4], e6[5]); t->p[P_REL] = (int16_t)grr(e6[6], e6[7]);
+        }
+    }
+    {   /* (0.9.18) the release inside the tempo: a plucked or short part's tail three sixteenths at most at the genre's
+         * tempo (a pad's, a texture's: as long as they are), never under the role's floor */
+        uint32_t ms10 = 3u * 150000u / ((gs.g->bpm_lo + gs.g->bpm_hi) / 2u + 1u), v = (uint32_t)t->p[P_REL];
+        if (role != RL_PAD && role != RL_TEX && t->p[P_SUS] < 100) while (v > GREL[role][0] && TIME_MS_X10[v] > ms10) v--;
+        t->p[P_REL] = (int16_t)clamp((int32_t)v, GREL[role][0], GREL[role][1]);   /* (0.9.13: never dry) */
+    }
     if (e == ENGI_FM6) {                                /* (0.9.14) FM6: its carriers' R4 left at 40 at least (~4 s at the
                                                          * most; eng_fm6.c fm6_rel_r4), not 1 (minutes: every chord rang on) */
         uint32_t r4 = fm6_rel_r4(t), mx = r4 > 40u ? (r4 - 40u) * 127u / 90u : 0u;
@@ -1399,10 +1422,20 @@ static void gen_sound(track_t *t, uint32_t role, uint32_t ri)
                                                          * from nothing: no preset's LFO, no track's before, left over */
     if (e == EG_FM) t->p[P_E2] = (int16_t)clamp(t->p[P_E2] - grr(4, 20), -64, 63);   /* (warmer) */
     if (r->ftype != 255u) {
-        int32_t cut = grr(r->cut[0], r->cut[1]), res = grr(r->res[0], r->res[1]);
+        int32_t cut = grr(r->cut[0], r->cut[1]), res = grr(r->res[0], r->res[1]), ef = 0;
         if (role == RL_BASS && e != EG_A) cut += 20;    /* (a bass: only its fizz taken) */
         if (gs.g->human >= 40u && role != RL_BASS) cut += 10;   /* (a band: air) */
         if (gs.energy > 66u) cut += 6;
+        if (role != RL_TEX && gs.g->wet < 85u && gch(70)) {   /* (0.9.18, "more low cutoff and envelope to the filter,
+                                                         * resonance and drive") most parts darker, the envelope opening
+                                                         * each note, more resonance the lower the cutoff (never a peak:
+                                                         * 30 more at most); the machines' loops (house, techno ..) more of
+                                                         * it, the wet rooms (ambient, dub techno, film) as they were */
+            int32_t lo = HXF(gs.hx) == HF_LOOP && gs.g->human < 20u ? 8 : 0, d = grr(4, 14) + lo;
+            cut -= d; ef = d / 2 + grr(2, 8);
+            res += clamp((84 - cut) / 3, 0, 18) + lo / 2;
+            if (res > r->res[1] + 30) res = r->res[1] + 30;
+        }
         t->p[P_FTYPE] = (int16_t)r->ftype;
         if (e == EG_A) {                                /* (0.6.93: the recipe's cutoff, not the duller of the two) */
             t->p[P_E4] = (int16_t)clamp(cut, 0, 127);
@@ -1412,23 +1445,27 @@ static void gen_sound(track_t *t, uint32_t role, uint32_t ri)
             t->p[P_FCUT] = (int16_t)clamp(cut, 0, 127);
             t->p[P_FRES] = (int16_t)res;
         }
-        t->p[P_ED_FLT] = (int16_t)(grr(r->envf[0], r->envf[1]) + grr(GENVF[role][0], GENVF[role][1]));   /* (0.9.13: the
-                                                         * filter's envelope on every sound, a role's more) */
+        t->p[P_ED_FLT] = (int16_t)clamp(grr(r->envf[0], r->envf[1]) + grr(GENVF[role][0], GENVF[role][1]) + ef, -64, 63);   /* (0.9.13:
+                                                         * the filter's envelope on every sound, a role's more) */
     }
     if (r->lfo[1]) {
         t->p[P_LWAVE] = (int16_t)(gch(70) ? 0 : 1);
         t->p[P_LRATE] = (int16_t)grr(r->lfo_rate[0], r->lfo_rate[1]);
         t->p[P_LD_FLT] = (int16_t)grr(r->lfo[0], r->lfo[1]);
-    } else if ((role == RL_PAD || role == RL_ARP || role == RL_TEX) && gch(65)) {   /* (0.9.13) the filter moving slowly,
-                                                         * a cycle over one, two or four bars at the genre's tempo */
+    } else if (role != RL_DRUM && gch(role == RL_BASS ? 30u : role == RL_LEAD ? 45u : 65u)) {   /* (0.9.13) the filter
+                                                         * moving slowly, a cycle over one, two or four bars at the genre's
+                                                         * tempo; 0.9.18 ("LFO to the filters, soft") the lead's and the
+                                                         * bass's too, softly */
         uint32_t hz = (uint32_t)(gs.g->bpm_lo + gs.g->bpm_hi) * 50u / (240u << (gr() % 3u)), v = 0;
         while (v < 127u && LFO_HZ_X100[v] < hz) v++;
-        t->p[P_LWAVE] = 0; t->p[P_LRATE] = (int16_t)v; t->p[P_LD_FLT] = (int16_t)grr(8, 22);
+        t->p[P_LWAVE] = 0; t->p[P_LRATE] = (int16_t)v; t->p[P_LD_FLT] = (int16_t)(role == RL_BASS || role == RL_LEAD ? grr(5, 12) : grr(8, 20));
     }
-    if (role == RL_LEAD && t->p[P_SUS] >= 60 && gch(50)) {   /* (0.6.97) a vibrato that comes in late, now and then a
-                                                         * tremolo; 0.9.13: soft (a fifth of a semitone, a third now and
-                                                         * then: LD_PIT 1..2 x 3/16), ~5 Hz, on a held lead only */
-        t->p[P_LWAVE] = 0; t->p[P_LRATE] = (int16_t)grr(86, 92); t->p[P_LFADE] = (int16_t)grr(75, 100);
+    if ((role == RL_LEAD || (role == RL_PAD && !t->p[P_LD_FLT])) && t->p[P_SUS] >= 40 && gch(role == RL_LEAD ? 50u : 20u)) {   /* (0.6.97)
+                                                         * a vibrato that comes in late, now and then a tremolo; 0.9.13:
+                                                         * soft (a fifth of a semitone, a third now and then: LD_PIT 1..2
+                                                         * x 3/16) on a held lead only; 0.9.18 ("or a soft vibrato with a
+                                                         * high rate") 5 .. 8 Hz, a pad's too, the filter's LFO then off */
+        t->p[P_LWAVE] = 0; t->p[P_LRATE] = (int16_t)grr(88, 96); t->p[P_LFADE] = (int16_t)grr(70, 100);
         t->p[P_LD_PIT] = (int16_t)(gch(75) ? 1 : 2); t->p[P_LD_FLT] = 0;
         if (gch(30)) t->p[P_LD_AMP] = (int16_t)grr(6, 16);
     } else if (role == RL_PAD && gch(35)) {             /* (a pad breathing: a slow tremolo or a slow pan) */
@@ -1479,6 +1516,14 @@ static void gen_kit(track_t *t)
         dx_snd[DV_CLAP] = (uint8_t)((3u << 6) | (uint32_t)clamp(rv + grr(-6, 10), 6, 63));
         dx_snd[DV_RIM] = (uint8_t)(wet >= 60 ? (2u << 6) | (uint32_t)grr(20, 45) : 0u);
         dx_snd[DV_HATO] = (uint8_t)(wet >= 70 && gch(50) ? (3u << 6) | (uint32_t)grr(8, 20) : 0u);
+        {   /* (0.9.18, "percs with sends") the percussion now and then into the delay or the reverb, a little, as wet
+             * as the genre (the kick never: lane 0; the snare and the clap: above) */
+            uint32_t l;
+            dx_snd[DV_KICK] = dx_snd[DV_HATC] = dx_snd[DV_TOM] = dx_snd[DV_BELL] = 0;
+            for (l = DV_HATC; l < 8u; l++)
+                if (!dx_snd[l] && gch(l == DV_HATC ? 30u : 40u))
+                    dx_snd[l] = (uint8_t)((gch(55) ? 2u : 3u) << 6 | (uint32_t)clamp(grr(6, l == DV_HATC ? 14 : 28) * (40 + wet) / 100, 3, 40));
+        }
     }
     for (l = DV_HATC; l <= DV_HATO; l++) {               /* (0.6.94) the hats: a band-pass high up, more noise in them */
         dx_lane_t *H = &dx_kit[l];

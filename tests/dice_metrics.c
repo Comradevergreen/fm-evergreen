@@ -106,15 +106,16 @@ static void dm_mel_print(const char *what, const dm_mel_t *m)
            m->strong ? 100.0 * m->ct / m->strong : 0);
 }
 /* the sound's numbers, a role */
-typedef struct { uint32_t n, flat, swell, pluck, cut, cutn, res, envf, drive, lfof, vib, low; uint16_t pre[DM_MAXP]; uint32_t npre, pre_rep1; } dm_snd_t;
+typedef struct { uint32_t n, flat, held, susv, relv, swell, pluck, cut, cutn, res, envf, drive, lfof, vib, low; uint16_t pre[DM_MAXP]; uint32_t npre, pre_rep1; } dm_snd_t;
 static void dm_sound(const track_t *t, dm_snd_t *s)
 {
     uint32_t e = t->eng_req, id = e << 8 | t->preset, k;
     int32_t cut = e == EG_A ? t->p[P_E4] : t->p[P_FCUT];
     s->n++;
     s->flat += t->p[P_SUS] >= 120 && t->p[P_REL] <= 12;
+    s->held += t->p[P_SUS] >= 100; s->susv += (uint32_t)t->p[P_SUS]; s->relv += (uint32_t)t->p[P_REL];
     s->swell += t->p[P_ATK] >= 40;
-    s->pluck += t->p[P_SUS] <= 90 && t->p[P_DEC] <= 80;
+    s->pluck += t->p[P_SUS] <= 65 && t->p[P_DEC] <= 78;
     s->cut += (uint32_t)cut; s->cutn++; s->low += cut < 80;
     s->res += (uint32_t)(e == EG_A ? t->p[P_E5] : t->p[P_FRES]);
     s->envf += (uint32_t)(t->p[P_ED_FLT] > 0 ? t->p[P_ED_FLT] : 0);
@@ -127,9 +128,9 @@ static void dm_sound(const track_t *t, dm_snd_t *s)
 static void dm_snd_print(const char *what, const dm_snd_t *s)
 {
     if (!s->n) return;
-    printf("  %-6s n %3u  presets %3u  static (SUS>=95%%, REL~0) %4.1f%%  pluck %4.1f%%  swell %4.1f%%  cutoff %5.1f (under 80: %4.1f%%)  "
+    printf("  %-6s n %3u  presets %3u  static (SUS>=95%%, REL~0) %4.1f%%  SUS>=79%% %4.1f%%  SUS %4.1f REL %4.1f  pluck %4.1f%%  swell %4.1f%%  cutoff %5.1f (under 80: %4.1f%%)  "
            "reso %4.1f  env>flt %4.1f  drive %4.1f%%  LFO>flt %4.1f%%  vibrato %4.1f%%\n", what, s->n, s->npre,
-           100.0 * s->flat / s->n, 100.0 * s->pluck / s->n, 100.0 * s->swell / s->n, s->cutn ? (double)s->cut / s->cutn : 0,
+           100.0 * s->flat / s->n, 100.0 * s->held / s->n, (double)s->susv / s->n, (double)s->relv / s->n, 100.0 * s->pluck / s->n, 100.0 * s->swell / s->n, s->cutn ? (double)s->cut / s->cutn : 0,
            s->cutn ? 100.0 * s->low / s->cutn : 0, (double)s->res / s->n, (double)s->envf / s->n, 100.0 * s->drive / s->n,
            100.0 * s->lfof / s->n, 100.0 * s->vib / s->n);
 }
