@@ -332,6 +332,9 @@ def check(img, syms, dis, rt):
                 errors.append(f"reference to ROM address {val:#010x}")
     if len(img) > APP_SLOT:
         errors.append(f"image {len(img)} B exceeds the app slot")
+    ld = re.search(r"XIP\s*\(rx\)\s*:\s*ORIGIN = (0x[0-9A-Fa-f]+), LENGTH = (0x[0-9A-Fa-f]+)", (FW / "app.ld").read_text())
+    if not ld or int(ld[1], 16) != APP_XIP or int(ld[2], 16) != APP_SLOT:
+        errors.append(f"app.ld XIP must be ORIGIN {APP_XIP:#x}, LENGTH {APP_SLOT:#x} (fm1pkg_make.APP_SLOT)")
 
     def sym(name):
         mm = re.search(r"^([0-9a-f]+) .*\s" + name + r"$", syms, re.M)
@@ -339,7 +342,7 @@ def check(img, syms, dis, rt):
     bss = sym("_bss_end") - 0x01C08000
     pool = sym("_pool_end") - sym("_pool_start")
     pool_top = max(sym("_pool_end"), sym("_c1_stack_hi"))   # (the second core's stacks after the pool)
-    notes.append(f"image {len(img)} B; RAM .data+.bss {bss} B of 98304; pool {pool} B, spare {POOL_END - pool_top} B")
+    notes.append(f"image {len(img)} B of the {APP_SLOT} B slot ({APP_SLOT - len(img)} B free); RAM .data+.bss {bss} B of 98304; pool {pool} B, spare {POOL_END - pool_top} B")
     if bss > 96 * 1024:
         errors.append("RAM region overflow")
     if POOL_END - pool_top < 8192:                # keep >= 8 KiB of the pool spare
