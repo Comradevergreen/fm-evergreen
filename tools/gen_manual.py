@@ -47,7 +47,7 @@ PAGE_SHOT = {
             'GLOBAL': 'global', 'SYSTEM': 'system'},
     'ENV': {'TRACKS': 'env_tracks', 'TRACKS DEST': 'env_tracks_dest', 'ENV': 'env', 'ENV DEST': 'env_dest',
             'STAGE': 'env_stage'},
-    'LFO': {'MOD': 'mod', 'LFO': 'lfo', 'LFO DEST': 'lfo_dest', 'MSEQ': 'mseq', 'MSEQ 2': 'mseq2'},
+    'LFO': {'MOD': 'mod', 'LFO': 'lfo', 'LFO 2': 'lfo2', 'LFO DEST': 'lfo_dest', 'MSEQ': 'mseq', 'MSEQ 2': 'mseq2'},
     'SCL': {'SCL': 'scl', 'CHORD': 'key_chord'},
     'ARP': {'ARP': 'key_arp', 'ARP 2': 'key_arp2'},
     'SAVE': {'USER': 'save_sound', 'PRESETS': 'save_presets', 'SECTIONS': 'save_project', 'ARRANGE': 'save_arrange',

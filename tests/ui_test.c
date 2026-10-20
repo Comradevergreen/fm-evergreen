@@ -1050,6 +1050,213 @@ static int test_lfo_sync(void)
     bad += check("LFO PHASE FREE: a note does not restart it; 0: it does", ok);
     return bad;
 }
+/* (0.9.18) LFO MODE FREE never restarts the LFO: neither its phase nor its FADE, whatever plays it (keys apart or legato,
+ * the sequencer, a DRUM-X kit, a rate in time); FADE fades it in once, from a project's load. TRIG (PHASE 0..127)
+ * restarts both on a fresh phrase, as before. The LFO's level (lfo_val x lfo_fade) watched block by block */
+static void go_title(const char *title);
+static uint32_t lfo_w_jump, lfo_w_blocks;
+static int32_t lfo_w_minfade;
+static void lfo_watch(track_t *t, uint32_t blocks, uint32_t inc)   /* inc: the phase's step a block (0: not checked) */
+{
+    int32_t o[2u * CTL];
+    uint32_t b, ph = t->lfo_ph;
+    for (b = 0; b < blocks; b++) {
+        mix_block(o, CTL);
+        if (inc && t->lfo_ph - ph != inc)
+            lfo_w_jump++;
+        ph = t->lfo_ph;
+        if (t->lfo_fade < lfo_w_minfade)
+            lfo_w_minfade = t->lfo_fade;
+        lfo_w_blocks++;
+    }
+}
+static void lfo_w_reset(void) { lfo_w_jump = lfo_w_blocks = 0; lfo_w_minfade = 32767; }
+static int lfo_free_case(track_t *t, int32_t fade, int seqd, int legato, const char *what)
+{
+    uint32_t inc = LFO_INC[t->p[P_LRATE] & 127], k;
+    int ok;
+    t->p[P_LPHASE] = -1;                                 /* FREE */
+    t->p[P_LFADE] = (int16_t)fade;
+    lfo_fade_restart((1u << NTRK) - 1u);                /* (as a project's load: FADE from 0, once) */
+    lfo_w_reset();
+    lfo_watch(t, 3000, inc);                             /* (FADE 100: ~2 s; the fade done) */
+    ok = t->lfo_fade == 32767;
+    lfo_w_reset();
+    if (seqd) {
+        for (k = 0; k < 16u; k += 2u)
+            t->step[k] = (step_t){.note = {(uint8_t)(48 + k)}, .n = 1, .time = ST_NOTE};
+        t->seq_active = 1;
+        seq_start();
+        lfo_watch(t, 4000, 0);                           /* (the grid moves the phase? no: a free rate) */
+        transport_req = 2;
+        lfo_watch(t, 4, 0);
+        for (k = 0; k < NSTEP; k++)
+            t->step[k] = (step_t){0};
+    } else
+        for (k = 0; k < 6u; k++) {
+            uint32_t ph = t->lfo_ph;
+            int32_t f = t->lfo_fade;
+            trk_note_on(t, 60 + (int32_t)k, 100);
+            ok &= t->lfo_ph == ph && t->lfo_fade == f;   /* (not even for the block: the matrix reads it before) */
+            lfo_watch(t, 120, inc);
+            if (legato && k)
+                trk_note_off(t, 59 + (int32_t)k);        /* (the one before let go after this one began) */
+            if (!legato)
+                trk_note_off(t, 60 + (int32_t)k);
+            lfo_watch(t, legato ? 60 : 900, inc);        /* (apart: the release over, a fresh phrase next) */
+        }
+    if (legato)
+        trk_note_off(t, 65);
+    ok &= lfo_w_minfade == 32767 && (seqd || !lfo_w_jump);
+    if (!ok)
+        fprintf(stderr, "  %s: %u of %u blocks jumped, the fade down to %d\n", what, lfo_w_jump, lfo_w_blocks,
+                lfo_w_minfade);
+    return ok;
+}
+static int test_lfo_free(void)
+{
+    int bad = 0, ok;
+    uint32_t len, k;
+    track_t *t;
+    char v[12];
+    const char *u;
+    ui_power_on();
+    t = &trk[0];                                         /* (ANALOG) */
+    t->p[P_LRATE] = 60;
+    t->p[P_LD_FLT] = 40;
+    ok = lfo_free_case(t, 0, 0, 0, "FREE FADE 0, notes apart");
+    ok &= lfo_free_case(t, 100, 0, 0, "FREE FADE 100, notes apart");
+    ok &= lfo_free_case(t, 100, 0, 1, "FREE FADE 100, legato");
+    t->p[P_VOICE] = 2;                                   /* LEGATO */
+    ok &= lfo_free_case(t, 100, 0, 1, "FREE FADE 100, VOICE LEGATO");
+    t->p[P_VOICE] = 1;                                   /* MONO */
+    ok &= lfo_free_case(t, 100, 0, 0, "FREE FADE 100, VOICE MONO");
+    t->p[P_VOICE] = 0;
+    bad += check("LFO MODE FREE (free rate): no note restarts the phase or the FADE, apart or legato, POLY MONO LEGATO", ok);
+    ok = lfo_free_case(t, 0, 1, 0, "FREE FADE 0, sequenced");
+    ok &= lfo_free_case(t, 100, 1, 0, "FREE FADE 100, sequenced");
+    bad += check("LFO MODE FREE: the sequencer's notes restart nothing either (FADE 0 and 100)", ok);
+    t = &trk[3];                                         /* (DRUM-X: a hit is a fresh phrase each time) */
+    t->p[P_LRATE] = 40;
+    t->p[P_LD_SHP] = 40;
+    ok = lfo_free_case(t, 100, 0, 0, "DRUM-X FREE FADE 100, hits");
+    ok &= lfo_free_case(t, 100, 1, 0, "DRUM-X FREE FADE 100, sequenced");
+    bad += check("LFO MODE FREE on a DRUM-X kit: hits restart nothing", ok);
+    t = &trk[0];                                         /* TRIG: as before */
+    t->p[P_LPHASE] = 32;
+    t->p[P_LFADE] = 100;
+    lfo_w_reset();
+    lfo_watch(t, 3000, 0);
+    trk_note_on(t, 60, 100);
+    ok = t->lfo_ph == 32u << 25 && t->lfo_fade == 0;
+    lfo_watch(t, 50, 0);
+    ok &= t->lfo_fade > 0 && t->lfo_fade < 32767;
+    trk_note_on(t, 64, 100);                             /* (legato: the phrase goes on) */
+    ok &= t->lfo_fade > 0;
+    trk_note_off(t, 60);
+    trk_note_off(t, 64);
+    lfo_watch(t, 900, 0);
+    bad += check("LFO MODE TRIG: a fresh phrase restarts its PHASE and FADE, a legato note does not", ok);
+    /* in time (RATE < 0), playing: the transport's grid, a note moves nothing (TRIG and FREE) */
+    {
+        uint32_t m;
+        ok = 1;
+        for (m = 0; m < 2u; m++) {
+            t->p[P_LRATE] = -5;                          /* 1/4 */
+            t->p[P_LPHASE] = m ? -1 : 0;
+            t->p[P_LFADE] = 0;
+            for (k = 0; k < 16u; k += 4u)
+                t->step[k] = (step_t){.note = {60}, .n = 1, .time = ST_NOTE};
+            t->seq_active = 1;
+            seq_start();
+            len = beat_samples();
+            for (k = 0; k < 3000u; k++) {
+                int32_t o[2u * CTL];
+                uint32_t want;
+                mix_block(o, CTL);
+                want = (uint32_t)(((uint64_t)(ms_clock % len) << 32) / len);   /* (the tick reads ms_clock before the
+                                                                                 * block's events advance it) */
+                if (t->lfo_ph - want + 0x02000000u > 0x04000000u + (uint32_t)(((uint64_t)CTL << 32) / len))
+                    ok = 0;
+            }
+            transport_req = 2;
+            lfo_watch(t, 4, 0);
+            for (k = 0; k < NSTEP; k++)
+                t->step[k] = (step_t){0};
+        }
+        bad += check("LFO in time, playing: on the grid at every note (TRIG and FREE)", ok);
+    }
+    t->p[P_LRATE] = 60;
+    /* MODE, a view of PHASE: TRIG keeps PHASE 0..127, FREE is PHASE -1 (every project before it opens as it was) */
+    t->p[P_LPHASE] = 0;
+    ok = lfo_mode_of(t) == 0;
+    t->p[P_LPHASE] = -1;
+    ok &= lfo_mode_of(t) == 1;
+    param_format(&LFO_MODE_DESC, 1, v, &u);
+    ok &= str_eq(v, "FREE");
+    param_format(&LFO_MODE_DESC, 0, v, &u);
+    ok &= str_eq(v, "TRIG");
+    bad += check("LFO MODE: PHASE -1 reads FREE, 0..127 TRIG", ok);
+    /* the pages: LFO = RATE WAVE MODE FADE, LFO 2 = PHASE; MODE FREE keeps TRIG's phase for TRIG again */
+    ui_power_on();
+    song.sel = 0;
+    t = TSEL;
+    t->p[P_LPHASE] = 40;
+    t->p[P_LFADE] = 60;
+    lfo_watch(t, 3000, 0);
+    go_title("LFO"); frame();
+    {
+        int16_t *vp;
+        const param_desc_t *d = page_desc(cur_page(), 2, &vp);
+        ok = d && str_eq(d->label, "MODE") && *vp == 0;
+        d = page_desc(cur_page(), 3, &vp);
+        ok &= d && str_eq(d->label, "FADE");
+        turn(EN_K3, 1); frame();
+        ok &= t->p[P_LPHASE] == -1 && t->lfo_fade < 32767;   /* FREE: turned on, it fades in once */
+        lfo_watch(t, 3000, 0);
+        trk_note_on(t, 60, 100);
+        ok &= t->lfo_fade == 32767;
+        trk_note_off(t, 60);
+        go_title("LFO 2"); frame();
+        d = page_desc(cur_page(), 0, &vp);
+        ok &= d && str_eq(d->label, "PHASE") && *vp == 40;   /* (dimmed: FREE) */
+        turn(EN_K1, 1); turn(EN_K1, 1); frame();
+        ok &= t->p[P_LPHASE] == -1;                      /* (PHASE in FREE: only what TRIG will start from) */
+        go_title("LFO"); frame();
+        turn(EN_K3, -1); frame();
+        ok &= t->p[P_LPHASE] == 42;
+        go_title("LFO 2"); frame();
+        turn(EN_K1, -2); frame();
+        ok &= t->p[P_LPHASE] == 40;
+    }
+    bad += check("LFO pages: RATE WAVE MODE FADE, LFO 2 PHASE; FREE keeps TRIG's PHASE, fades in once when turned on", ok);
+    /* a project: MODE kept as stored (PHASE -1 FREE, 40 TRIG at 40); its load fades the LFOs in once, a song's next
+     * section (or UNDO) does not */
+    t->p[P_LPHASE] = -1;
+    trk[1].p[P_LPHASE] = 40;
+    lfo_watch(t, 3000, 0);
+    project_capture(&proj_scratch);
+    ok = !project_restore_runtime(&proj_scratch) && lfo_mode_of(t) && trk[1].p[P_LPHASE] == 40 && t->lfo_fade == 0;
+    lfo_watch(t, 3000, 0);
+    project_capture(&proj_scratch);
+    proj_lfo_keep = 1;
+    ok &= !project_restore_runtime(&proj_scratch) && t->lfo_fade == 32767;
+    proj_lfo_keep = 0;
+    bad += check("LFO MODE in a project: as stored; a load fades FREE in once, a section / UNDO keeps it going", ok);
+    {   /* LFO + SELECT: FREE half the time (was 2 in 3), TRIG at any phase 0..127 */
+        uint32_t n = 0, lo = 0, hi = 0, i;
+        for (i = 0; i < 4000u; i++) {
+            lfo_dice(t);
+            n += t->p[P_LPHASE] < 0;
+            lo += t->p[P_LPHASE] >= 0 && t->p[P_LPHASE] < 64;
+            hi += t->p[P_LPHASE] >= 64;
+            if (t->p[P_LPHASE] < -1 || t->p[P_LPHASE] > 127) n = 99999u;
+        }
+        printf("ui:   LFO dice: FREE %u of 4000, TRIG 0..63 %u, 64..127 %u\n", n, lo, hi);
+        bad += check("LFO dice: MODE FREE half the time, TRIG at any phase", n > 1850u && n < 2150u && lo > 850u && hi > 850u);
+    }
+    return bad;
+}
 static int test_patterns(void)
 {
     int bad = 0;
@@ -10989,16 +11196,18 @@ static int test_lz_mod(void)
     ui_power_on(); frame();
     press(B_LFO); frame();
     ok = pd_on() && lz_fam() == LZ_MOD && pd_level() == 1u && str_eq(cur_page()->title, "LFO") && lz_tab_lit(1) &&
-         lz_crumb_is("LFO \xB7 LFO \xB7 LFO") && lz_count_is("2/5");
+         lz_crumb_is("LFO \xB7 LFO \xB7 LFO") && lz_count_is("2/6");
+    turn(EN_SELECT, 1); frame();
+    ok &= str_eq(cur_page()->title, "LFO 2") && lz_crumb_is("LFO \xB7 LFO \xB7 LFO 2");   /* (0.9.18: PHASE) */
     turn(EN_SELECT, 1); frame();
     ok &= str_eq(cur_page()->title, "LFO DEST");
     turn(EN_SELECT, 1); frame();
     ok &= pd_level() == 2u && str_eq(cur_page()->title, "MSEQ") && lz_crumb_is("LFO \xB7 MSEQ \xB7 MSEQ");
     turn(EN_SELECT, 1); frame();
-    ok &= str_eq(cur_page()->title, "MSEQ 2") && lz_crumb_is("LFO \xB7 MSEQ \xB7 MSEQ 2") && lz_count_is("5/5");
+    ok &= str_eq(cur_page()->title, "MSEQ 2") && lz_crumb_is("LFO \xB7 MSEQ \xB7 MSEQ 2") && lz_count_is("6/6");
     frames(320); press(B_LFO); frame();
     ok &= pd_level() == 0u && str_eq(cur_page()->title, "MOD") && lz_tab_lit(0) && lz_crumb_is("LFO \xB7 MOD \xB7 MOD");
-    bad += check("0.9.2 LFO: opens on LFO; MOD . LFO (LFO, LFO DEST) . MSEQ (MSEQ, MSEQ 2) by SELECT; an LFO tap round to MOD", ok);
+    bad += check("0.9.2 LFO: opens on LFO; MOD . LFO (LFO, LFO 2, LFO DEST) . MSEQ (MSEQ, MSEQ 2) by SELECT; an LFO tap round to MOD", ok);
     mod_ui_slot = 0;
     TSEL->p[P_M1SRC] = 1; TSEL->p[P_M1DST] = 2; TSEL->p[P_M1AMT] = 40;
     turn(EN_K1, 1); frame();
@@ -11640,7 +11849,7 @@ static const old_lv_t OLD_LV[] = {
     {FAM_EDIT, 0, 2, {"EDIT 1", "EDIT 2", "KIT 3"}}, {FAM_EDIT, 1, 2, {"X-MOD", "FILTER", "STEREO", "LEVELS", "LEVELS 2", "VOICE"}},
     {FAM_EDIT, 2, 2, {"SOUND", "SOUND 2", "SOUND 3", "SOUND 4"}},
     {FAM_ENV, 0, 9, {"ENV", "ENV DEST"}}, {FAM_ENV, 1, 9, {"ENV", "ENV DEST"}}, {FAM_ENV, 2, 9, {"STAGE"}},
-    {FAM_LFO, 0, 9, {"MOD"}}, {FAM_LFO, 1, 9, {"LFO", "LFO DEST"}}, {FAM_LFO, 2, 9, {"MSEQ", "MSEQ 2"}},
+    {FAM_LFO, 0, 9, {"MOD"}}, {FAM_LFO, 1, 9, {"LFO", "LFO 2", "LFO DEST"}}, {FAM_LFO, 2, 9, {"MSEQ", "MSEQ 2"}},
     {FAM_SCL, 0, 9, {"SCL"}}, {FAM_SCL, 1, 9, {"CHORD"}}, {FAM_ARP, 2, 9, {"ARP", "ARP 2"}},
     {FAM_GLO, 0, 9, {"MIXER", "SENDS"}}, {FAM_GLO, 1, 9, {"GLOBAL"}}, {FAM_GLO, 2, 9, {"SYSTEM"}},
     {FAM_SAVE, SV_LIB, 9, {"PROJECT", "TOOLS"}}, {FAM_SAVE, SV_PROJ, 9, {"PROJECT", "ARRANGE"}},
@@ -12126,6 +12335,7 @@ int main(void)
     bad += test_morph();
     bad += test_morph_click();
     bad += test_lfo_sync();
+    bad += test_lfo_free();
     bad += test_init_dry();
     bad += test_dximg();
     bad += test_dxlay();

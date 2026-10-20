@@ -684,6 +684,22 @@ JIANT's modifications are distributed under the same license.
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
 
+### v0.9.18 (in progress)
+- **The LFO's MODE: TRIG or FREE, on its own knob.** The owner: "the LFO has no TRIGGER/FREE option... it always
+  retriggers." FREE was hidden at the left end of PHASE, and even there each new phrase still began the LFO again in
+  a way: its **FADE** started over from nothing, so with FADE up a FREE LFO faded in again on every note (and with FADE
+  at 0 it dropped out for one control block, 32 samples, at each phrase). Now **FREE never restarts anything**: a
+  note (apart, legato, from the sequencer, a DRUM-X hit) leaves the phase and the fade alone, and FADE fades the LFO
+  in only once, when the project loads (a song's next section keeps it going) or when MODE is turned to FREE. **TRIG** is as before: a new phrase restarts the LFO at PHASE and fades it in again. In time (RATE left of
+  the slowest) it follows the bar while playing in both modes, as it did.
+  - The **LFO** page is **RATE, WAVE, MODE, FADE**; **PHASE** moves to a new **LFO 2** page (after LFO in the chain),
+    dimmed in FREE. The caption over the wave says the mode ("1.18Hz · SIN · FREE").
+  - Nothing to convert: MODE is a view of PHASE, whose −1 is FREE as since 0.6.51, so every project and preset opens
+    and sounds as it was saved (a PHASE of FREE opens as MODE FREE, any other as TRIG at that phase). Turning MODE to
+    FREE keeps TRIG's phase for when you turn it back (until power-off).
+  - **LFO + SELECT** picks FREE half the time (was two in three), TRIG at any phase otherwise.
+  - The web editor shows the LFO's **MODE** (TRIG / FREE) and its **PHASE** (TRIG's) as the device does.
+
 ### v0.9.17
 The glitcher, one piano roll across the SEQ pages, a livelier generator and dice, slower rolls, ARP SEQ a lap at a
 time, VOICE's THEME, and two fixes.
