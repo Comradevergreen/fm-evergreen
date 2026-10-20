@@ -523,7 +523,7 @@ static int lock_playback(void)
     }
     bad += check("  CHANCE 50 %: the lock applies exactly when the step's notes play", ok);
     seq_stop();
-    t = lock_track(0);                                   /* RATCH x3: the lock over all its parts */
+    t = lock_track(0);                                   /* RATCH x3: the lock on the step's own hit */
     motion_set_lock(t, 2, P_REV, 100);
     step_set_ratchet(&t->step[2], 3);
     seq_start(); seq_tick(t, CTL);
@@ -534,7 +534,9 @@ static int lock_playback(void)
             ok &= t->p[P_REV] == 100;
             seq_tick(t, CTL);
         }
-        bad += check("  RATCH x3: its 3 parts all with the lock, back at the next step", ok && vage - v0 >= 3u &&
+        /* (0.9.18) x3 spills over 4 steps (4/3 of a step apart): the step's own hit with its lock; a spilled hit
+         * plays with the lock of the step it falls in */
+        bad += check("  RATCH x3: its hit in the step with the lock, back at the next step", ok && vage - v0 >= 1u &&
             t->p[P_REV] == 20);
     }
     seq_stop();

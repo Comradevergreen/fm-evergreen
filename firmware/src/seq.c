@@ -1407,8 +1407,11 @@ static uint32_t step_rat(const track_t *t, const step_t *s, uint32_t sl, rat_t *
     } else
         h = step_ratchet(s);
     d = CT_DIVS[CT_DIV(s) % CT_NDIV];
-    if ((l = live_rat(t)) > h)                      /* (0.9.11) LIVE RATCH: every step at least that many hits */
-        h = d = l;
+    if ((l = live_rat(t)) > h) {                    /* (0.9.11) LIVE RATCH: every step at least that many hits, */
+        r->h = l;                                   /* (0.9.18) inside the step (it plays on every one: no spill) */
+        r->q = sl / l;
+        return l;
+    }
     r->h = h;
     r->q = h < 2u ? sl : sl * (trk_kit(t) ? RAT_WKIT : RAT_WMEL) / (d ? d : h);
     return h;

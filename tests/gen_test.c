@@ -346,7 +346,7 @@ int main(void)
                 if (gs.role[k] == RL_DRUM) continue;
                 memcpy(tt.p, pc.t[k].p, sizeof tt.p);
                 memcpy(tt.step, pc.t[k].step, sizeof tt.step);
-                proj_steps(tt.step);
+                proj_steps(tt.step, pc.t[k].engine);
                 for (i = 0; i < NSTEP; i++) {
                     uint32_t j;
                     if (tt.step[i].time != ST_NOTE) continue;
@@ -355,8 +355,8 @@ int main(void)
             }
             {   /* B: the chords turned (its first bass note another root than A's) */
                 step_t sa[NSTEP], sb[NSTEP];
-                memcpy(sa, pa.t[bs].step, sizeof sa); proj_steps(sa);
-                memcpy(sb, pb.t[bs].step, sizeof sb); proj_steps(sb);
+                memcpy(sa, pa.t[bs].step, sizeof sa); proj_steps(sa, pa.t[bs].engine);
+                memcpy(sb, pb.t[bs].step, sizeof sb); proj_steps(sb, pb.t[bs].engine);
                 for (i = 0, a0 = b0 = 0; i < NSTEP && (!a0 || !b0); i++) {
                     if (!a0 && sa[i].time == ST_NOTE) a0 = sa[i].note[0] % 12u + 1u;
                     if (!b0 && sb[i].time == ST_NOTE) b0 = sb[i].note[0] % 12u + 1u;
@@ -774,7 +774,7 @@ int main(void)
                     if (gs.role[k] == RL_DRUM) continue;
                     memcpy(tt.p, ps.t[k].p, sizeof tt.p);
                     memcpy(tt.step, ps.t[k].step, sizeof tt.step);
-                    proj_steps(tt.step);
+                    proj_steps(tt.step, ps.t[k].engine);
                     if (tt.p[P_SCALE] != gs.scale) sec_bad++;
                     for (i = 0; i < NSTEP; i++) {
                         if (tt.step[i].time != ST_NOTE) continue;
