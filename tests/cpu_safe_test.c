@@ -119,7 +119,7 @@ int main(void)
             cpu_off("2 CORES OFF AFTER A CRASH");
         check("boot after a crash with 2 CORES: logged, 1 CORE for good, saved, said with where to undo it",
               k && cpu_cfg == (CPU_1CORE | CPU_AUTO) && saves == 2 && crash_log_get(b) && !strncmp(b, "BU01 2C", 7) &&
-              !strcmp(ui.msg, "2 CORES OFF AFTER A CRASH") && !strcmp(ui.msg2, "MENU > AUDIO > CORES"));
+              !strcmp(ui.msg, "2 CORES OFF AFTER A CRASH") && !strcmp(ui.msg2, "MENU > SYSTEM > CORES"));
         cpu_cfg = 0;
         cpu_off("CORE 2 FAILED: 1 CORE");
         check("the second core given up while playing: 1 CORE for good, said",

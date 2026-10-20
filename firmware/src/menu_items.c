@@ -3,15 +3,16 @@
  * Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) */
 /* MENU's rows and their settings: what ui_menu.c draws and steps, and what the editor reads and sets (editor_menu.c
  * MENU_DESC / MENU_SET). One apply path for both: menu_put. A row is a setting (its MI_* is its place in the menu's
- * tables, not stored: the editor's ids are editor_menu.c ED_MENU's). (0.9.18) On eight pages of four knobs in five tabs
- * (MPAGE): SCREEN (COLOR SKIN STYLE LARGE; SCOPE ANIMATION LED GLOW SCREEN SLEEP), AUDIO (SPEAKER EQ TRACKS LOAD CPU
- * CORES; CLICK CLICK LEVEL COUNT-IN BPM LOCK), MIDI (MIDI OUT LEARN LEARN CLEAR), USB (USB AUDIO USB LEVEL), SYSTEM
- * (HOLD TIME KNOB SPEEDUP FX LATCH SCALE LEDS; RESTORE LAST CPU CLOCK CALIBRATION ABOUT). Until 0.9.17 one list in the
+ * tables, not stored: the editor's ids are editor_menu.c ED_MENU's). (0.9.18) On nine pages of up to four knobs in five
+ * tabs (MPAGE): SCREEN (COLOR SKIN STYLE LARGE; SCOPE ANIMATION SCREEN SLEEP; LEDS: LED GLOW SCALE LEDS), AUDIO
+ * (SPEAKER EQ TRACKS LOAD BPM LOCK; CLICK CLICK LEVEL COUNT-IN), MIDI (MIDI OUT LEARN LEARN CLEAR), USB (USB AUDIO USB
+ * LEVEL), SYSTEM (CONTROLS: HOLD TIME KNOB SPEEDUP FX LATCH CALIBRATION; SYSTEM: RESTORE LAST CPU CORES CPU CLOCK, what
+ * a power-on does, and ABOUT). Until 0.9.17 one list in the
  * tabs DISPLAY CONTROL AUDIO MIDI SYSTEM, SELECT a row, any knob its value; the stored values and their meanings are
  * the same. LEARN (OFF / ON) is not a setting: it arms MIDI LEARN (midi_learn.c ml_set) and is never saved; LEARN
  * CLEAR is an action: OCT+ clears the map (ml_clear_all), its card shows how many CCs are learned. Neither is offered
  * to the editor (editor_menu.c ED_MENU); the map travels with the settings */
-#include "cpu_safe.c"        /* (0.9.12) MENU > SYSTEM > CPU, CPU CLOCK; the last crash kept in the settings */
+#include "cpu_safe.c"        /* (0.9.12) MENU > SYSTEM > CPU CORES, CPU CLOCK; the last crash kept in the settings */
 enum { MI_COLOR, MI_SKIN, MI_SCOPE, MI_STYLE, MI_LARGE, MI_ANIM, MI_LEDS, MI_SCROFF, MI_HOLD, MI_ACCEL, MI_LATCH, MI_BPMLOCK, MI_SCLLED,
        MI_LOWCUT, MI_USB,
        MI_CLICK, MI_CLKLVL, MI_COUNTIN, MI_TRACKS, MI_LOAD, MI_MIDIOUT, MI_LEARN, MI_LCLEAR, MI_SERIAL, MI_RESTORE, MI_CPU,
@@ -29,22 +30,23 @@ static const char *const MI_NAME[MI_COUNT] = {"COLOR", "SKIN", "SCOPE", "STYLE",
                                               "RESTORE LAST", "CPU CORES", "CPU CLOCK", "CALIBRATION", "ABOUT"};
 /* (0.9.18) the MENU as the rest of the system (rule 1..6): pages of four knobs, KNOB n the page's setting n, SELECT walks
  * the pages, ALGORITHM jumps to the next / previous tab; the tabs the groups (a dot a page), the footer MENU . TAB . page
- * n/N. Each row on one page (tests/ui_test.c checks it); the editor gets a row's tab after its MENU_DESC reply (tab
+ * n/N (a page named as its tab, or its tab and a number: MENU . page). Each row on one page (tests/ui_test.c checks it); the editor gets a row's tab after its MENU_DESC reply (tab
  * indexes are not ids: 0.9.18 regrouped them). An action (LEARN CLEAR, CALIBRATION, ABOUT) is a card armed by its knob,
  * OCT+ does it */
 enum { MTAB_SCREEN, MTAB_AUDIO, MTAB_MIDI, MTAB_USB, MTAB_SYSTEM, MTAB_COUNT };
 static const char *const MTAB_NAME[MTAB_COUNT] = {"SCREEN", "AUDIO", "MIDI", "USB", "SYSTEM"};
-#define MP_COUNT 8u
+#define MP_COUNT 9u
 typedef struct { char name[9]; uint8_t tab, row[4]; } menu_page_t;
-static const menu_page_t MPAGE[MP_COUNT] = {
+static const menu_page_t MPAGE[MP_COUNT] = {   /* (a page opens on its first setting: a value, never an action) */
     {"SCREEN", MTAB_SCREEN, {MI_COLOR, MI_SKIN, MI_STYLE, MI_LARGE}},
-    {"SCREEN 2", MTAB_SCREEN, {MI_SCOPE, MI_ANIM, MI_LEDS, MI_SCROFF}},
-    {"AUDIO", MTAB_AUDIO, {MI_LOWCUT, MI_TRACKS, MI_LOAD, MI_CPU}},
-    {"CLICK", MTAB_AUDIO, {MI_CLICK, MI_CLKLVL, MI_COUNTIN, MI_BPMLOCK}},
+    {"SCREEN 2", MTAB_SCREEN, {MI_SCOPE, MI_ANIM, MI_SCROFF, MI_NONE}},
+    {"LEDS", MTAB_SCREEN, {MI_LEDS, MI_SCLLED, MI_NONE, MI_NONE}},
+    {"AUDIO", MTAB_AUDIO, {MI_LOWCUT, MI_TRACKS, MI_LOAD, MI_BPMLOCK}},
+    {"CLICK", MTAB_AUDIO, {MI_CLICK, MI_CLKLVL, MI_COUNTIN, MI_NONE}},
     {"MIDI", MTAB_MIDI, {MI_MIDIOUT, MI_LEARN, MI_LCLEAR, MI_NONE}},
     {"USB", MTAB_USB, {MI_SERIAL, MI_USB, MI_NONE, MI_NONE}},
-    {"CONTROLS", MTAB_SYSTEM, {MI_HOLD, MI_ACCEL, MI_LATCH, MI_SCLLED}},
-    {"SYSTEM", MTAB_SYSTEM, {MI_RESTORE, MI_CLOCK, MI_PANEL, MI_ABOUT}},
+    {"CONTROLS", MTAB_SYSTEM, {MI_HOLD, MI_ACCEL, MI_LATCH, MI_PANEL}},
+    {"SYSTEM", MTAB_SYSTEM, {MI_RESTORE, MI_CPU, MI_CLOCK, MI_ABOUT}},   /* (RESTORE LAST, CPU CORES, CPU CLOCK: at power-on) */
 };
 static uint32_t menu_page_of(uint32_t row)             /* the page a row is on */
 {

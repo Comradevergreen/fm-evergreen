@@ -812,7 +812,8 @@ static void draw_column(uint32_t c, const char *label, const char *val, const ch
                 GFX_HOOK_ALIGN(lx + b[0] - 2, cy - 2, lx + b[0] - 2 + w, cy + chh + 2, AL_HV, "card label chip (MONO hot)");
                 cv_text_fit(lx, ly, lf, label, T_INK, T_ACCENT, COL_W - 2 - 5);
             } else {
-                int32_t ic = lf == &AF_X && lz_on() && kind != LK_TALL ? card_ico(label) : -1;
+                int32_t ic = lf == &AF_X && lz_on() && kind != LK_TALL && !ui.menu ? card_ico(label) : -1;   /* (0.9.18: the
+                                                         * MENU's settings no mark: LEVEL's was the only one) */
                 if (ic >= 0 && 10 + text_w(lf, label) <= COL_W - 2 - 5) {   /* (0.8.9) its mark, then the label */
                     for (hk = 0; cv_halo && hk < HALO_N; hk++)   /* (0.9.0: outlined as the words, 2 px) */
                         card_ico_draw(lx + HALO_X[hk], cy + HALO_Y[hk], (uint32_t)ic, T_BG);
@@ -1028,11 +1029,18 @@ static __attribute__((noinline)) void foot_crumbs(char *b, uint32_t n)   /* b ho
         return;
     }
     f = lz_fam();
-    if (f == LZ_MENU) {
+    if (f == LZ_MENU) {                                 /* (0.9.18: the page, was the row; a page named as its tab,
+                                                         * "SCREEN" or "SCREEN 2", not after it again: MENU . SCREEN 2) */
+        const char *tn = MTAB_NAME[menu_tab()], *pn = MPAGE[menu_page()].name;
+        uint32_t i = 0;
         str_cpy(b, "MENU \xB7 ", n);
-        str_cpy(b + str_len(b), MTAB_NAME[menu_tab()], 12);
-        str_cpy(b + str_len(b), " \xB7 ", 4);
-        str_cpy(b + str_len(b), MPAGE[menu_page()].name, 12);   /* (0.9.18: the page, was the row) */
+        while (tn[i] && tn[i] == pn[i])
+            i++;
+        if (tn[i] || (pn[i] && pn[i] != ' ')) {
+            str_cpy(b + str_len(b), tn, 12);
+            str_cpy(b + str_len(b), " \xB7 ", 4);
+        }
+        str_cpy(b + str_len(b), pn, 12);
         return;
     }
     if (f == LZ_LAYER) {
@@ -1067,7 +1075,7 @@ static int32_t crumb_count(char *b)
     if (!lz_on())
         return 0;
     if (lz_fam() == LZ_MENU) {
-        k = menu_page();                                /* (0.9.18: the page among the eight, was the row) */
+        k = menu_page();                                /* (0.9.18: the page among the nine, was the row) */
         n = MP_COUNT;
     } else if (lz_fam() == LZ_LAYER) {
         k = ui.lylv % 3u;

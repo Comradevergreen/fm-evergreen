@@ -289,8 +289,8 @@ páginas, sus perillas, sus dibujos y todas las funciones son las mismas, solo c
   así SAVE, OCT+, OCT+ sigue guardando el sonido (o la sección).
 - **EDIT es siempre EDIT**: borrar un paso pasó a la capa SEQ (**SEQ + G5**, CLR STEP; en AUTO LIST borra el
   registro; llevar TIME a REST también borra la nota) y renombrar a la capa SAVE (**SAVE + C5**, NAME).
-- **El MENU** (mantené HOME, 0.9.18): las mismas reglas: SELECT recorre sus ocho páginas (SCREEN → AUDIO → MIDI →
-  USB → SYSTEM), ALGORITHM salta de pestaña, KNOB 1–4 los cuatro ajustes de las tarjetas, HOME lo cierra.
+- **El MENU** (mantené HOME, 0.9.18): las mismas reglas: SELECT recorre sus nueve páginas (SCREEN → AUDIO → MIDI →
+  USB → SYSTEM), ALGORITHM salta de pestaña, KNOB 1–4 los ajustes de las tarjetas, HOME lo cierra.
 - Algunas páginas solo aparecen cuando corresponden: las páginas de operadores de FM6 en una pista FM6, las de DRUM-X
   en una pista DRUM, RETRIG en LOFI BYTE/FLOAT, y con **LOAD ECO** se ocultan las páginas SLICER y CHORUS; la cadena
   las saltea.
@@ -2212,13 +2212,13 @@ la pista seleccionada.
 
 ### El MENU (mantené HOME)
 
-(0.9.18) El MENU se maneja como cualquier sección: **ocho páginas de cuatro ajustes** en cinco pestañas, **SCREEN ·
+(0.9.18) El MENU se maneja como cualquier sección: **nueve páginas de hasta cuatro ajustes** en cinco pestañas, **SCREEN ·
 AUDIO · MIDI · USB · SYSTEM** (un punto por página bajo cada pestaña). **SELECT** recorre las páginas (frena en la
 primera y en la última), **ALGORITHM** salta a la primera página de la pestaña siguiente / anterior, **KNOB 1–4**
-cambian los cuatro ajustes de las tarjetas y **OCT− / OCT+** mueven un paso el último ajuste que giraste (su fila queda
+cambian los ajustes de las tarjetas y **OCT− / OCT+** mueven un paso el último ajuste que giraste (su fila queda
 marcada; los LEDs respiran hacia donde puede ir). PRESETS acá no hace nada. HOME lo cierra (en ese momento se guarda la
 configuración) y lo vuelve a abrir en la página donde lo dejaste. El encabezado dice **MENU · AUDIO**, el pie
-**MENU · AUDIO · CLICK  4/8**.
+**MENU · AUDIO · CLICK  5/9** (una página con el nombre de su pestaña no lo repite: **MENU · SCREEN 2**, **MENU · SYSTEM**).
 
 Bajo las tarjetas, una fila por ajuste: el número de su perilla, su nombre completo, su valor (en su color de calor,
 como el de la tarjeta) y una línea en palabras simples sobre qué hace (en algunos, sobre qué hace el valor elegido).
@@ -2235,16 +2235,16 @@ configuración guardada ni para el editor.)
 | | 4 | LARGE | OFF, ON (etiquetas y valores grandes) |
 | SCREEN › SCREEN 2 | 1 | SCOPE | **OFF** (por defecto), ON — (0.9.7) las páginas EDIT de un motor: OFF la criatura en todo el panel, centrada; ON la criatura a la izquierda, la tarjeta SCOPE y las fichas como antes |
 | | 2 | ANIMATION | ON, OFF (los valores saltan; la firma del encendido aparece entera) — era ANIM |
-| | 3 | LED GLOW | OFF, LOW, **HIGH** (por defecto), INVERT — cómo brillan las teclas y botones en reposo (era LEDS: OFF, DIM LO, DIM HI, INV) |
-| | 4 | SCREEN SLEEP | **NEVER** (por defecto), 5 MIN, 15 MIN, 30 MIN, 60 MIN — la pantalla se apaga tras ese tiempo sin tocar nada (era SCREEN OFF) |
+| | 3 | SCREEN SLEEP | **NEVER** (por defecto), 5 MIN, 15 MIN, 30 MIN, 60 MIN — la pantalla se apaga tras ese tiempo sin tocar nada (era SCREEN OFF) |
+| SCREEN › LEDS | 1 | LED GLOW | OFF, LOW, **HIGH** (por defecto), INVERT — cómo brillan las teclas y botones en reposo (era LEDS: OFF, DIM LO, DIM HI, INV) |
+| | 2 | SCALE LEDS | OFF, ON — las teclas de la escala brillan, la raíz más |
 | AUDIO › AUDIO | 1 | SPEAKER EQ | FLAT, LOWCUT, BASS+ (un EQ en el master para el parlante chico; llega también a las salidas y al USB) |
 | | 2 | TRACKS | **4** (por defecto), 6 — lo mismo que GLO › SYSTEM KNOB 1 |
 | | 3 | LOAD | ECO, LITE, **FULL** (por defecto) — lo mismo que GLO › SYSTEM KNOB 2 |
-| | 4 | CPU CORES | 1 CORE, **2 CORES** (por defecto) — desde el próximo arranque (ver [Problemas](#16-problemas-y-preguntas-frecuentes)); era SYSTEM › CPU |
+| | 4 | BPM LOCK | OFF, ON — DICE ALL mantiene el tempo (el tempo es GLO + SELECT, el F4 TAP de GLO o el BPM de GLOBAL) |
 | AUDIO › CLICK | 1 | CLICK | OFF, REC (mientras una pista está armada y sonando), ON |
 | | 2 | CLICK LEVEL | LOW, MID, HIGH |
 | | 3 | COUNT-IN | OFF, 1 BAR, 2 BARS |
-| | 4 | BPM LOCK | OFF, ON — DICE ALL mantiene el tempo (el tempo es GLO + SELECT, el F4 TAP de GLO o el BPM de GLOBAL) |
 | MIDI › MIDI | 1 | MIDI OUT | **KEYS**, CLOCK, ALL, OFF — qué sale por USB MIDI (ver [14](#14-midi-y-usb)) |
 | | 2 | LEARN | **OFF**, ON — (0.9.12) arma MIDI LEARN: una perilla girada elige su parámetro, el próximo CC queda aprendido (ver [MIDI LEARN](#midi-learn-0912)); no se guarda, OFF al encender |
 | | 3 | LEARN CLEAR | una acción: la tarjeta muestra cuántos CC hay aprendidos (NONE, 3 CC …); KNOB 3 a la derecha la arma, OCT+ los olvida todos |
@@ -2253,10 +2253,10 @@ configuración guardada ni para el editor.)
 | SYSTEM › CONTROLS | 1 | HOLD TIME | 0.3 s, **0.4 s** (por defecto), 0.5 s, 0.6 s — cuánto mantener un botón para que abra su capa (era HOLD) |
 | | 2 | KNOB SPEEDUP | **ON** (por defecto), OFF — girar rápido da pasos más grandes (era KNOB ACCEL) |
 | | 3 | FX LATCH | **OFF** (por defecto desde la 0.6.64), ON |
-| | 4 | SCALE LEDS | OFF, ON — las teclas de la escala brillan, la raíz más |
+| | 4 | CALIBRATION | una acción: OCT+ abre HARDWARE CALIBRATION (enseñale cada botón y perilla) |
 | SYSTEM › SYSTEM | 1 | RESTORE LAST | **OFF** (por defecto: sin autoguardado, encendido de cero), ON (la última sesión vuelve al encender) |
-| | 2 | CPU CLOCK | **360 MHZ** (por defecto), 320 MHZ — desde el próximo arranque (ver [Problemas](#16-problemas-y-preguntas-frecuentes)) |
-| | 3 | CALIBRATION | una acción: OCT+ abre HARDWARE CALIBRATION (enseñale cada botón y perilla) |
+| | 2 | CPU CORES | 1 CORE, **2 CORES** (por defecto) — desde el próximo arranque (ver [Problemas](#16-problemas-y-preguntas-frecuentes)); era CPU |
+| | 3 | CPU CLOCK | **360 MHZ** (por defecto), 320 MHZ — desde el próximo arranque (ver [Problemas](#16-problemas-y-preguntas-frecuentes)) |
 | | 4 | ABOUT | una acción: OCT+ abre versión, código QR, AUDIO LOAD (NOW, PEAK, LATE, SHED desde el encendido), CPU TEST y créditos (SELECT desplaza, OCT− vuelve); ahí OCT+ abre PROFILE |
 
 INIT SYSTEM (en el MENU hasta la 0.9.17) es **SAVE › TOOLS › NEW PROJECT**: el mismo diálogo, el mismo UNDO.
@@ -2541,11 +2541,11 @@ ARP, y se cancela un salto de sección o una cadena rápida que estaba esperando
 después de un borrado, puede ser el **carril de punch-in**: mantené **REC y apretá FX** para borrarlo (o
 **SEQ + REC** para borrar todo).
 
-**Dos núcleos (0.6.71) y MENU › AUDIO › CPU CORES (0.9.12).** El segundo núcleo calcula algunas pistas de sinte; MENU ›
-SYSTEM › ABOUT dice **CORES 2**, o **CORES 1** y por qué. Desde la 0.9.12, **MENU › AUDIO › CPU CORES** elige **2 CORES** (por
+**Dos núcleos (0.6.71) y MENU › SYSTEM › CPU CORES (0.9.12).** El segundo núcleo calcula algunas pistas de sinte; MENU ›
+SYSTEM › ABOUT dice **CORES 2**, o **CORES 1** y por qué. Desde la 0.9.12, **MENU › SYSTEM › CPU CORES** elige **2 CORES** (por
 defecto) o **1 CORE**; se guarda con los ajustes y vale desde el próximo arranque. Si el FM-1 se cuelga o crashea con
 los dos núcleos trabajando, o el segundo núcleo lee mal, deja de responder o falla, **apaga los 2 núcleos para
-siempre** y lo avisa (**2 CORES OFF AFTER A CRASH** / **CORE 2 FAILED: 1 CORE**, y luego MENU › AUDIO › CORES); ABOUT
+siempre** y lo avisa (**2 CORES OFF AFTER A CRASH** / **CORE 2 FAILED: 1 CORE**, y luego MENU › SYSTEM › CORES); ABOUT
 dice entonces **CORES 1 (AFTER A CRASH)**. Volvé a poner 2 CORES solo si querés probarlo. Mantener **REC** al prender
 da un núcleo solo en esa sesión.
 Con los dos núcleos andando las pistas comparten **12 voces** en vez de 8 (cada pista sigue con 8 como máximo); con un
@@ -2570,7 +2570,7 @@ decinos la versión (MENU › SYSTEM › ABOUT). Cómo leerla:
   falló.
 
 **Qué probar si se cuelga de vez en cuando (aunque no hagas nada).** En este orden, unas horas cada cosa:
-1. **MENU › AUDIO › CPU CORES 1 CORE** (la 0.9.12 lo hace sola después del primer crash con dos núcleos; antes de la
+1. **MENU › SYSTEM › CPU CORES 1 CORE** (la 0.9.12 lo hace sola después del primer crash con dos núcleos; antes de la
    0.9.12, mantené REC en cada encendido).
 2. **MENU › SYSTEM › CPU CLOCK 320 MHZ**: el chip al reloj que JieLi garantiza en vez de los 360 MHz que pone el
    arranque del FM-1 (se aplica en el próximo encendido; ABOUT dice **CPU 320 MHZ**). Es ~11 % menos de CPU: una
@@ -2595,7 +2595,7 @@ Guardá música en esa sección, o cambiá la fila.
 o UNDO.
 
 **Las teclas parecen invertidas / un botón hace otra cosa.** Corré HARDWARE CALIBRATION: mantené OCT− y OCT+ mientras
-encendés (o MENU › SYSTEM › CALIBRATION, KNOB 3 y OCT+) y enseñale cada botón y perilla. Una tecla del piano cancela.
+encendés (o MENU › SYSTEM › CONTROLS › CALIBRATION, KNOB 4 y OCT+) y enseñale cada botón y perilla. Una tecla del piano cancela.
 
 **La entrada de audio USB no aparece en macOS.** MENU › USB › USB AUDIO **STEREO** (o STEMS).
 
