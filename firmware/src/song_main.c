@@ -80,7 +80,7 @@ static int song_stage(uint32_t s, uint32_t row)
         for (i = 0; i < P_COUNT; i++)
             d->p[i] = (int16_t)param_fit(param_desc_of(e, i), t->p[i]);
         memcpy(d->step, t->step, sizeof d->step);
-        proj_steps(d->step);
+        proj_steps(d->step, e);
         fm6_unpack(p->fm6[k], d->fm6);
         fm6_sanitize(d->fm6);
     }

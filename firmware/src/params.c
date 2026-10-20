@@ -234,12 +234,6 @@ static const param_desc_t GP[G_COUNT] = {
 static const param_desc_t LOFI_RTRG = {"RTRG", F_ONOFF, 0, 1, 0, 0, 0};   /* (0.6.12) P_LRTRG on a LOFI track */
 static const param_desc_t TRK_CHANCE = {"CHANCE", F_PCTINV, 0, 127, 0, 0, 0};   /* (0.6.37) P_TCHAN: 0 = 100 % */
 static const param_desc_t MORPH_DESC = {"MORPH", F_PCT, 0, 127, 0, 0, 0};   /* (0.6.45) P_MORPH */
-static const char *const N_CLEN[] = {"OFF", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15",
-                                     "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29",
-                                     "30", "31", "32", "33", "34", "35", "36", "37", "38", "39", "40", "41", "42", "43",
-                                     "44", "45", "46", "47", "48", "49", "50", "51", "52", "53", "54", "55", "56", "57",
-                                     "58", "59", "60", "61", "62", "63", "64", 0};
-static const param_desc_t CLEN_DESC = {"C.LEN", F_ENUM, 0, 64, 0, N_CLEN, 0};   /* (0.6.47) P_CLEN */
 static const param_desc_t DXIMG_DESC = {"IMAGE", F_INT, 0, 127, 0, 0, 0};       /* (0.6.48) P_DXIMG */
 static const char *const N_MUTBARS[] = {"OFF", "1", "2", "4", "8", "16", "32"};
 static const char *const N_MUTMODE[] = {"ORBIT", "DRIFT"};
@@ -282,7 +276,6 @@ static const param_desc_t *track_desc(const track_t *t, uint32_t id)
         case P_MAMT: return &MUT_DESC[2];
         case P_MMODE: return &MUT_DESC[3];
         case P_MORPH: return &MORPH_DESC;
-        case P_CLEN: return &CLEN_DESC;
         case P_DXIMG: return &DXIMG_DESC;
         case P_CHRD: return &CHORD_DESC[0];
         case P_CVOI: return &CHORD_DESC[1];

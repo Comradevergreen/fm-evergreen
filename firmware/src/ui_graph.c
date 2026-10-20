@@ -1192,12 +1192,15 @@ static void graph_bigstep(const track_t *t, const page_t *pg, uint16_t c)
     else { b[6] = m < 0 ? '-' : '+'; fmt_int(b + 7, m < 0 ? -m : m); str_cpy(b + str_len(b), "/64", 4); }   /* (0.9.1) */
     bs_chip(2, b, m != 0);
     str_cpy(b, "COMP1 ", sizeof b);
-    if (st->comp) str_cpy(b + 6, COMP_NAMES[(COMP_ARPN + st->comp - CP_ARPN) % COMP_N], 10);
-    else if (step_ratchet(st) > 1u) { str_cpy(b + 6, "RATCH x", 10); b[13] = (char)('0' + step_ratchet(st)); b[14] = 0; }
+    if (st->comp == CP_ECHO || (!st->comp && step_ratchet(st) > 1u)) {   /* (0.9.18) RATCH x2..x8, one */
+        str_cpy(b + 6, "RATCH x", 10);
+        b[13] = (char)('1' + (rat_ui(st, 0u) ? (rat_ui(st, 0u) - 1u) % 7u + 1u : 0u));
+        b[14] = 0;
+    } else if (st->comp) str_cpy(b + 6, COMP_NAMES[comp_ui(st->comp)], 10);
     else str_cpy(b + 6, "-", 4);
     bs_chip(3, b, st->comp || step_ratchet(st) > 1u);
     str_cpy(b, "COMP2 ", sizeof b);
-    str_cpy(b + 6, st->comp2 ? COMP_NAMES[(COMP_ARPN + st->comp2 - CP_ARPN) % COMP_N] : "-", 10);
+    str_cpy(b + 6, st->comp2 ? COMP_NAMES[comp_ui(st->comp2)] : "-", 10);
     bs_chip(4, b, st->comp2 != 0u);
     str_cpy(b, "CHANCE ", sizeof b);
     fmt_int(b + 7, (int32_t)step_chance(st));
@@ -1500,11 +1503,10 @@ static uint32_t graph_signature(void)
         const step_t *cs = &t->step[ui.cursor];
         uint32_t ph = song.playing ? seq_src(t, t->seq_idx) : 0xFFFFu;
         h = (h ^ (steps_hash(t) + ph * 31u + ui.cursor * 7919u + ui.bank * 613u)) * 16777619u;
-        h = (h ^ ((uint32_t)t->p[P_CLEN] << 8 | (song.playing ? t->cpos : 0xFFu))) * 16777619u;   /* (0.6.47) C.LEN */
         for (i = ui.bank * 16u; i < ui.bank * 16u + 16u && i < NSTEP; i++)
             h = (h ^ ((uint32_t)t->step[i].comp << 8 | t->step[i].carg | (uint32_t)t->step[i].probability << 16 |
                       (uint32_t)t->step[i].flags << 24 | (uint32_t)t->step[i].comp2 << 4)) * 16777619u;
-        h = (h ^ (comp_view() * 977u + cs->carg + (song.playing ? t->arp_k * 131u + t->loops * 7u + t->arp_from : 0u))) *
+        h = (h ^ (comp_view() * 977u + cs->carg + (song.playing ? t->loops * 7u : 0u))) *
             16777619u;
         h = (h ^ ((uint32_t)cs->carg2 | (uint32_t)cs->cwhen << 8 | (uint32_t)cs->ctime << 16 | comp_slot() << 24)) *
             16777619u;                                  /* (0.6.82) COMP 2, WHEN */

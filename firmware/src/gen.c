@@ -1823,17 +1823,17 @@ static void gx_comps(void)
             step_t *s = &trk[k].step[gr() % len];
             uint32_t c = GX_COMP[gpickw(GX_COMP_W, NELEM(GX_COMP))], a;
             if (s->time != ST_NOTE || !s->n || s->comp) continue;
-            if (r == RL_BASS && (cp_isarp(c) || c == CP_CLIMB || c == CP_JUMP || c == CP_REV)) c = CP_OCT;
+            if (r == RL_BASS && (cp_isarp(c) || c == CP_JUMP || c == CP_REV)) c = CP_CLIMB;   /* (0.9.18: OCT) */
             if (c == CP_ARPN && s->n < 2u) c = CP_ARPQ;
             switch (c) {
             case CP_RAND: a = (uint32_t)grr(1, 4); break;
-            case CP_OCT: a = gr() % 6u; break;
             case CP_BEND: a = (uint32_t)(12 + (gch(50) ? 1 : -1) * grr(1, 12)); break;
             case CP_ECHO: a = gr() % 5u | (gch(25) ? CP_ECHO_EVEN : 0u); break;
             case CP_PULSE: a = gr() % 4u; break;
             case CP_WALK: a = CP_WARG(gr() % CP_NWRATE, gr() % 4u, gr() % 4u); break;
-            case CP_CLIMB: a = CP_WARG(gr() % CP_NWRATE, gr() % 4u, gr() % 2u); break;
-            case CP_ARPQ: case CP_ARPN: a = CP_ARG(gr() % 4u, gr() % 5u, gr() % 2u); break;
+            case CP_CLIMB: a = CP_WARG(r == RL_BASS ? gr() % 4u : gr() % CP_NWRATE, gr() % (r == RL_BASS ? 2u : 4u), gr() % 2u); break;
+            case CP_ARPQ: case CP_ARPN: a = CP_ARG(gr() % 4u, ARP_RCODE[1u + gr() % 3u], gr() % 2u); break;   /* (0.9.18:
+                                                         * 1/8 1/16 1/32) */
             case CP_TONAL: a = (uint32_t)(7 + grr(-4, 4)); break;
             case CP_JUMP: a = gr() % len | (gr() % 4u) << 6; break;
             default: a = gr() % 4u; break;              /* REV: its TIMES */
@@ -2035,7 +2035,7 @@ static void gen_post(void)
                 if (s->time != ST_NOTE || !s->n || s->comp) continue;
                 if (r == RL_PAD) {
                     if (s->n < 2u) continue;
-                    if (gch(60)) { s->comp = CP_ARPN; s->carg = CP_ARG(gr() % 3u, gch(50) ? 0u : 2u, 0u); }
+                    if (gch(60)) { s->comp = CP_ARPN; s->carg = CP_ARG(gr() % 3u, gch(50) ? 5u : 6u, 0u); }   /* (0.9.18: 1/16, 1/8) */
                     else { s->comp = CP_ECHO; s->carg = (uint8_t)(gr() % 2u); }
                 } else if (r == RL_LEAD) {              /* (0.8.3: never a random walk or an octave thrown into the
                                                          * line: its notes are composed) */
@@ -2045,8 +2045,8 @@ static void gen_post(void)
                     s->carg = (uint8_t)(s->comp == CP_ECHO ? gr() % 2u : s->comp == CP_BEND ? (gch(50) ? 2u : 10u) : 1u);
                 } else {                                /* (the arp: its chord's tones; 0.8.3: no RAND, no WALK) */
                     uint32_t c = gr() % 3u;
-                    s->comp = (uint8_t)(c == 0u ? CP_OCT : c == 1u ? CP_ECHO : CP_CLIMB);
-                    s->carg = (uint8_t)(s->comp == CP_OCT ? 4u : s->comp == CP_CLIMB ? CP_WARG(2u + gr() % 6u, gch(50) ? 2u : 0u, gr() % 2u) : 0u);
+                    s->comp = (uint8_t)(c == 1u ? CP_ECHO : CP_CLIMB);   /* (0.9.18: OCT is CLIMB, a lap at a time) */
+                    s->carg = (uint8_t)(c == 0u ? CP_WARG(0u, 0u, 0u) : c == 2u ? CP_WARG(2u + gr() % 6u, gch(50) ? 2u : 0u, gr() % 2u) : 0u);
                     if (c == 1u && gs.energy > 60u && gch(50)) { s->comp = 0; step_set_ratchet(s, 2); }
                 }
                 if (s->comp && gch(40)) ST_EVERY_SET(s, gch(50) ? EV_1_2 : EV_2_2);   /* (every other loop) */

@@ -1357,24 +1357,39 @@ static void draw_columns(void)
     }
     if (cur_page()->graph == GR_COMP) {                /* (0.6.39) STEP TYPE and the TYPE's two values */
         const step_t *cs = &TSEL->step[ui.cursor];
-        uint32_t v = comp_view(), ca = comp_arg(cs), ct = comp_type(cs);
+        uint32_t v = comp_view(), ca = comp_arg(cs), k = comp_slot();
         static const char *const ORD[4] = {"UP", "DOWN", "UP-DN", "RND"};
         fmt_int(val, (int32_t)ui.cursor + 1);
         draw_column(0, "STEP", val, "", VAL(0u), -1, ICON_AUTO);
-        draw_column(1, v >= COMP_ARPN && v <= COMP_ARPS ? "ARP" : "TYPE", COMP_NAMES[v], "", v ? VAL(1u) : T_DIM, -1,
+        draw_column(1, v == COMP_ARPN || v == COMP_ARPQ ? "ARP" : "TYPE", COMP_NAMES[v], "", v ? VAL(1u) : T_DIM, -1,
                     v == COMP_CHANCE ? ICON_PROB : v == COMP_RATCH ? ICON_X_REPEAT : ICON_ARP);
         if (v == COMP_CHANCE) {
             fmt_int(val, (int32_t)step_chance(cs));
             draw_column(2, "CHANCE", val, "%", VAL(2u), -1, ICON_PROB);
-        } else if (v == COMP_RATCH) {
-            val[0] = 'x'; val[1] = (char)('0' + step_ratchet(cs)); val[2] = 0;
-            draw_column(2, "RATCH", val, "", VAL(2u), -1, ICON_X_REPEAT);
+        } else if (v == COMP_RATCH) {                  /* (0.9.18) x1 .. x8, FLAT FADE RISE */
+            static const char *const SH[3] = {"FLAT", "FADE", "RISE"};
+            uint32_t r = rat_ui(cs, k);
+            val[0] = 'x'; fmt_int(val + 1, r ? 2 + (int32_t)((r - 1u) % 7u) : 1);
+            draw_column(2, "RATCH", val, r ? SH[(r - 1u) / 7u % 3u] : "", r ? VAL(2u) : T_DIM, -1, ICON_X_REPEAT);
         } else if (v == COMP_TRIG) {
             const uint8_t *c = CP_TRIGS[ca % CP_NTRIG];
             if (!c[0]) str_cpy(val, c[1] == 1u ? "FIRST" : "!1ST", sizeof val);
             else { val[0] = (char)('0' + c[0]); val[1] = ':'; val[2] = (char)('0' + c[1]); val[3] = 0; }
             draw_column(2, "COND", val, "", VAL(2u), -1, ICON_PROB);
-        } else if (v > COMP_TRIG) {                    /* (0.6.42) the others' one value */
+        } else if (v == COMP_WALK || v == COMP_OCT) {  /* (0.6.98) MODE and RANGE in one: the range as the unit (OCT:
+                                                     * 0.9.18, CLIMB's octaves) */
+            static const char *const WM[4] = {"UP", "DOWN", "UP-DN", "RND"};
+            char u[8];
+            str_cpy(val, WM[CP_WMODE(ca)], sizeof val);
+            fmt_int(u, v == COMP_OCT ? (int32_t)CP_WRNG(ca) + 1 : (int32_t)CP_WDEGS[CP_WRNG(ca)]);
+            str_cpy(u + str_len(u), v == COMP_OCT ? " OCT" : " DEG", 5);
+            draw_column(2, "MODE", val, u, VAL(2u), -1, ICON_ORDER);
+        } else if (v == COMP_ARPN || v == COMP_ARPQ) {  /* (0.6.92) an ARP: ORDER and RANGE in one (the range as the label) */
+            char lb[10];
+            fmt_int(lb, (int32_t)CP_RNG(ca) + 1);
+            str_cpy(lb + str_len(lb), " OCT", 5);       /* (an ARP of one note: itself and that many above) */
+            draw_column(2, lb, ORD[CP_ORD(ca)], "", VAL(2u), -1, ICON_ORDER);
+        } else if (v != COMP_OFF) {                    /* (0.6.42) the others' one value */
             static const char *const OCTN[6] = {"+1", "-1", "+1/2", "-1/2", "ALT", "RND"};
             int32_t a = (int32_t)ca;
             const char *lb = "", *un = "";
@@ -1384,56 +1399,43 @@ static void draw_columns(void)
             case COMP_OCT: lb = "MODE"; str_cpy(val, OCTN[a % 6], sizeof val); un = "OCT"; break;
             case COMP_TONAL: lb = "SHIFT"; a -= 7; val[0] = a < 0 ? '-' : '+'; fmt_int(val + 1, a < 0 ? -a : a); un = "DEG"; break;
             case COMP_BEND: lb = "BEND"; a -= 12; val[0] = a < 0 ? '-' : '+'; fmt_int(val + 1, a < 0 ? -a : a); un = "ST"; break;
-            case COMP_ECHO: lb = "REPEAT"; val[0] = 'x'; fmt_int(val + 1, 2 + (a & 127) % 7); un = a & 128 ? "EVEN" : ""; break;
-            case COMP_TOUCH: { static const char *const TN[3] = {"SHORT", "GHOST", "FLAM"}; lb = "HIT"; str_cpy(val, TN[a % 3], sizeof val); break; }   /* (0.8.5) */
             case COMP_PULSE: lb = "EVERY"; fmt_int(val, 1 + a % 4); un = a ? "STEPS" : "STEP"; break;
             case COMP_JUMP: lb = "TO STEP"; fmt_int(val, (int32_t)CP_JTO(a) + 1); break;
-            case COMP_WALK: case COMP_CLIMB: {          /* (0.6.98) MODE and RANGE in one: the range as the unit */
-                static const char *const WM[4] = {"UP", "DOWN", "UP-DN", "RND"};
-                char u[8];
-                lb = "MODE"; str_cpy(val, WM[CP_WMODE(a)], sizeof val);
-                fmt_int(u, v == COMP_WALK ? (int32_t)CP_WDEGS[CP_WRNG(a)] : (int32_t)CP_WRNG(a) + 1);
-                str_cpy(u + str_len(u), v == COMP_WALK ? " DEG" : " OCT", 5);
-                draw_column(2, lb, val, u, VAL(2u), -1, ICON_ORDER);
-                lb = "";
-                break;
-            }
             default: break;
             }
             if (lb[0]) draw_column(2, lb, val, un, VAL(2u), -1, ICON_X_REPEAT);
-            else if (v != COMP_WALK && v != COMP_CLIMB) draw_column(2, "", "", "", T_THEME, -1, ICON_NONE);
-        } else if (v != COMP_OFF) {                    /* (0.6.92) an ARP: ORDER and RANGE in one (the range as the label) */
-            char lb[10];
-            fmt_int(lb, v == COMP_ARPS ? CP_DEGS[CP_RNG(ca)] : (int32_t)CP_RNG(ca) + 1);
-            str_cpy(lb + str_len(lb), v == COMP_ARPS ? " DEG" : " OCT", 5);
-            draw_column(2, lb, ORD[CP_ORD(ca)], "", VAL(2u), -1, ICON_ORDER);
+            else draw_column(2, "", "", "", T_THEME, -1, ICON_NONE);
         } else
             draw_column(2, "", "", "", T_THEME, -1, ICON_NONE);
-        if (v == COMP_WALK || v == COMP_CLIMB) {       /* (0.6.98) RATE: a move every so many loops */
+        if (v == COMP_WALK || v == COMP_OCT) {         /* (0.6.98) RATE: a move every so many loops */
             uint32_t r = CP_WRATES[CP_WRATE(ca) % CP_NWRATE];
             fmt_int(val, (int32_t)r);
             draw_column(3, "EVERY", val, r == 1u ? "LOOP" : "LOOPS", VAL(3u), -1, ICON_RATE);
-        } else if (v >= COMP_ARPN && v <= COMP_ARPS && comp_slot() == 0u) {   /* (0.9.17) LAP: the note it plays this
-                                                         * pass of the pattern (one a lap; was RATE: its notes in the step) */
-            uint32_t lap = song.playing ? TSEL->loops : 0u, c = CP_ARPN + v - COMP_ARPN;
+        } else if (v == COMP_ARPN) {                   /* (0.9.18) RATE, a note value; the laps it plays on */
+            static const char *const RN[4] = {"1/4", "1/8", "1/16", "1/32"};
+            uint32_t ev = ST_EVERY(cs) % EV_N;
+            str_cpy(val, RN[3u - ARP_DIVI[CP_RATE(ca)] % 4u], sizeof val);
+            draw_column(3, "RATE", val, ev ? EV_NAMES[ev] : "", VAL(3u), -1, ICON_RATE);
+        } else if (v == COMP_ARPQ && k == 0u) {        /* (0.9.17) LAP: the note it plays this pass of the pattern */
+            uint32_t lap = song.playing ? TSEL->loops : 0u, c = COMP_CP[v];
             if (CP_ORD(ca) == 3u)                      /* (RND: a new one each lap, not known before) */
                 str_cpy(val, "RND", sizeof val);
             else if (drum_track(TSEL)) {
                 uint8_t kn[4 + NLANE];
-                int32_t deg;
-                str_cpy(val, cp_kit_arp(TSEL, cs, c, ca, lap, kn, &deg) ? drum_lane_abbr(TSEL, drum_lane(kn[0])) : "-",
+                str_cpy(val, cp_kit_arp(TSEL, cs, c, ca, lap, kn) ? drum_lane_abbr(TSEL, drum_lane(kn[0])) : "-",
                         sizeof val);
             } else
                 note_name(val, cp_arp_note(TSEL, cs, c, ca, lap));
             draw_column(3, "LAP", val, "", VAL(3u), -1, ICON_RATE);
-        } else if ((v == COMP_RATCH || v == COMP_ECHO) && comp_slot() == 0u) {   /* (0.6.82) the parts' spacing */
+        } else if (v == COMP_RATCH) {                  /* (0.6.82) the hits' spacing; (0.9.18) and the pitch step */
+            static const char *const PN[4] = {"", "+1 DEG", "-1 DEG", "+OCT"};
+            uint32_t pit = rat_pit_of(cs, k);
             if (CT_DIV(cs)) rate_name(TSEL, CT_DIVS[CT_DIV(cs) % CT_NDIV], val); else str_cpy(val, "FIT", sizeof val);
-            draw_column(3, "RATE", val, "", CT_DIV(cs) ? VAL(3u) : T_DIM, -1, ICON_RATE);
+            draw_column(3, "RATE", val, PN[pit & 3u], CT_DIV(cs) || pit ? VAL(3u) : T_DIM, -1, ICON_RATE);
         } else {                                       /* (0.6.92) EVERY: the loops the step's components play on */
             uint32_t ev = ST_EVERY(cs) % EV_N;
             draw_column(3, "EVERY", EV_NAMES[ev], "", ev ? VAL(3u) : T_DIM, -1, ICON_PROB);
         }
-        (void)ct;
         return;
     }
     if (cur_page()->graph == GR_CHANCE) {              /* STEP CHANCE RATCH: the cursor step's, of all of it */

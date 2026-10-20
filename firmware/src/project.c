@@ -800,6 +800,28 @@ static uint32_t proj_mf_tracks(const project_t *q)
                 m |= 1u << t;
     return m;
 }
+/* (0.9.18) FUNC's block 'S' 'X', the last: what a step holds that firmware before 0.9.18 does not read, kept out of the
+ * main step record so that firmware loads the rest as it was (it stops reading at a block it does not know). Its head:
+ * 'S' 'X', a byte of the tracks it holds (bit t); then each of them: a 64-bit map of its steps that have something
+ * here, and those alone, two bytes each: x0 the ECHO components' bits 3-5 (RATCH's RISE and pitch step: core.h
+ * CP_ECHO_X), the first's in bits 0-2, the second's in 3-5; x1 0 (kept for the step's condition). A store without
+ * the block: none (every ECHO a FADE or a FLAT one, no pitch step) */
+static uint32_t proj_sx0(const step_t *s)
+{
+    return (s->comp == CP_ECHO ? (s->carg & CP_ECHO_X) >> 3 : 0u) | (s->comp2 == CP_ECHO ? (s->carg2 & CP_ECHO_X) : 0u);
+}
+static uint32_t proj_sx_tracks(const project_t *q, uint32_t *steps)
+{
+    uint32_t t, i, m = 0, n = 0;
+    for (t = 0; t < NTRK; t++)
+        for (i = 0; i < NSTEP; i++)
+            if (proj_sx0(&q->t[t].step[i])) {
+                m |= 1u << t;
+                n++;
+            }
+    if (steps) *steps = n;
+    return m;
+}
 static uint32_t proj_bits(uint32_t m)
 {
     uint32_t n = 0;
@@ -814,6 +836,10 @@ static uint32_t proj_packed_size(const project_t *q)
         n += 3u;
     if (proj_mf_tracks(q))                              /* (0.9.1) MICRO's 64ths: their block */
         n += 3u + 16u * proj_bits(proj_mf_tracks(q));
+    {   /* (0.9.18) 'S' 'X': its head, each track's map, two bytes a step */
+        uint32_t ns, m = proj_sx_tracks(q, &ns);
+        if (m) n += 3u + 8u * proj_bits(m) + 2u * ns;
+    }
     if (q->g[G_DMOD] != GP[G_DMOD].def)                 /* (0.6.86) the delay's MOD's, when not the default */
         n += 3u;
     if (q->g[G_DTYPE] || q->g[G_DPING])                 /* (0.6.90) its TYPE and PING-PONG's */
@@ -889,8 +915,11 @@ static int proj_pack(project_store_t *out, const project_t *q)
             b[pos++] = (uint8_t)((s->vel > 127u ? 127u : s->vel) | (r & 1u) << 7);
             if (x & 1u) { b[pos++] = s->hit; b[pos++] = s->acc & s->hit; }
             if (x & 2u) b[pos++] = s->probability;
-            if (x & 16u) { b[pos++] = s->comp; b[pos++] = s->carg; }
-            if (x & 32u) { b[pos++] = s->comp2; b[pos++] = s->carg2; b[pos++] = s->cwhen; b[pos++] = s->ctime; }
+            if (x & 16u) { b[pos++] = s->comp; b[pos++] = (uint8_t)(s->comp == CP_ECHO ? s->carg & ~CP_ECHO_X : s->carg); }
+            if (x & 32u) {
+                b[pos++] = s->comp2; b[pos++] = (uint8_t)(s->comp2 == CP_ECHO ? s->carg2 & ~CP_ECHO_X : s->carg2);
+                b[pos++] = s->cwhen; b[pos++] = s->ctime;
+            }
             if (x & 64u) { b[pos++] = s->lm[0]; b[pos++] = s->lm[1]; b[pos++] = s->lm[2]; }
         }
     }
@@ -966,6 +995,24 @@ static int proj_pack(project_store_t *out, const project_t *q)
             for (i = 0; i < NSTEP; i++)
                 b[pos + i / 4u] |= (uint8_t)(((q->t[t].step[i].flags & SF_MFINE) >> SF_MFINE_SH) << (2u * (i & 3u)));
             pos += 16u;
+        }
+    }
+    if (proj_sx_tracks(q, 0)) {                         /* (0.9.18) 'S' 'X', the very last: what firmware before skips */
+        uint32_t m = proj_sx_tracks(q, 0), map;
+        b[pos++] = 'S'; b[pos++] = 'X'; b[pos++] = (uint8_t)m;
+        for (t = 0; t < NTRK; t++) {
+            if (!((m >> t) & 1u))
+                continue;
+            map = pos;
+            pos += 8u;
+            for (i = 0; i < NSTEP; i++) {
+                const step_t *s = &q->t[t].step[i];
+                if (!proj_sx0(s))
+                    continue;
+                b[map + i / 8u] |= (uint8_t)(1u << (i & 7u));
+                b[pos++] = (uint8_t)proj_sx0(s);
+                b[pos++] = 0;
+            }
         }
     }
     memcpy(b + PROJC_PFX_OFF, q->pfx_lane, sizeof q->pfx_lane);
@@ -1224,6 +1271,30 @@ static int proj_unpack_c(project_t *q, const uint8_t *b)
             pos += 16u;
         }
     }
+    if (pos + 3u <= room && b[pos] == 'S' && b[pos + 1u] == 'X') {   /* (0.9.18) RATCH's shape and pitch step (else
+                                                         * none) */
+        uint32_t m = b[pos + 2u];
+        if (!m || (m >> nt)) return 0;
+        pos += 3u;
+        for (t = 0; t < nt; t++) {
+            uint32_t map = pos;
+            if (!((m >> t) & 1u))
+                continue;
+            if (pos + 8u > room) return 0;
+            pos += 8u;
+            for (i = 0; i < NSTEP; i++) {
+                step_t *s = &q->t[t].step[i];
+                uint32_t x0;
+                if (!((b[map + i / 8u] >> (i & 7u)) & 1u))
+                    continue;
+                if (pos + 2u > room) return 0;
+                x0 = b[pos];
+                pos += 2u;
+                if (s->comp == CP_ECHO) s->carg = (uint8_t)(s->carg | (x0 & 7u) << 3);
+                if (s->comp2 == CP_ECHO) s->carg2 = (uint8_t)(s->carg2 | (x0 & 0x38u));
+            }
+        }
+    }
     proj_new_tracks(q, nt);                             /* (a FUNC of fewer tracks: the rest at power-on) */
     for (t = nt; t < NTRK; t++)
         memcpy(q->fm6[t], FM6_INIT, FM6_PACKED);
@@ -1424,7 +1495,7 @@ static union {                               /* serialized main-loop work; no re
 #define proj_wire (proj_wire_u.s)
 static uint8_t proj_wire_gen;                /* +1 whenever proj_wire is rewritten (a backup's runtime copy lives there) */
 
-static void proj_steps(step_t *s)            /* a loaded sequence stays inside its fixed fields */
+static void proj_steps(step_t *s, uint32_t e)   /* a loaded sequence (engine e's) stays inside its fixed fields */
 {
     uint32_t i, j;
     for (i = 0; i < NSTEP; i++) {
@@ -1432,6 +1503,7 @@ static void proj_steps(step_t *s)            /* a loaded sequence stays inside i
         if (s[i].time > ST_REST) s[i].time = ST_REST;
         for (j = 0; j < 4u; j++) s[i].note[j] &= 127u;
         s[i].acc &= s[i].hit;
+        step_norm(&s[i], e == ENGI_DRUM);    /* (0.9.18) ARP SCALE, TOUCH, OCT: as what replaced them */
     }
 }
 
@@ -1440,7 +1512,7 @@ static void proj_bound(project_t *q)
 {
     uint32_t t, i;
     for (t = 0; t < NTRK; t++) {
-        proj_steps(q->t[t].step);
+        proj_steps(q->t[t].step, q->t[t].engine);
         for (i = 0; i < NSTEP; i++) {
             step_t *s = &q->t[t].step[i];
             s->flags &= 3u | SF_RATCH | SF_MFINE;
@@ -1743,7 +1815,7 @@ static int project_restore_runtime(const project_t *input)
         }
         t->preset = (uint8_t)(ENGINES[e]->npresets ? (s->preset >= PROJ_DEF_KEEP ? 0u : s->preset) % ENGINES[e]->npresets : 0u);
         memcpy(t->step, s->step, sizeof t->step);
-        proj_steps(t->step);
+        proj_steps(t->step, e);
         {   /* the project's own FM6 patch, never reloaded from SLOT: F n if it is that factory patch, else OWN */
             uint8_t v[FP_SIZE + 1u];
             fm6_unpack(p->fm6[k], v);

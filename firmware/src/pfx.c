@@ -202,14 +202,8 @@ static __attribute__((noinline)) void pfx_block(uint32_t n, uint32_t held)
         t->pfx_pit = (int16_t)(((on >> PF_OCTU) & 1u) * 192 - ((on >> PF_OCTD) & 1u) * 192);
         f = ((on >> PF_RND) & 1u ? PFX_RND : 0u) | ((on >> PF_HALF) & 1u ? PFX_HALF : 0u) | (rep ? PFX_REP : 0u) |
             (on & (PF_BIT(PF_DSHT) | PF_BIT(PF_DLNG)) ? PFX_DEC : 0u) | ((on >> PF_ATK) & 1u ? PFX_ATK : 0u);
-        if ((f & PFX_HALF) && !(old & PFX_HALF) && song.playing) {   /* 1/2 TEMPO: where it was */
-            t->pfx_idx0 = t->seq_idx;
-            t->pfx_pos0 = t->seq_pos;
-            t->pfx_el = 0;
-            t->pfx_half = 0;
-        } else if (!(f & PFX_HALF) && (old & PFX_HALF)) {
-            t->pfx_rs = 1;                              /* (seq.c seq_tick: back to the real place) */
-        }
+        /* (0.9.18) 1/2 TEMPO and RANDOM's steps are LIVE's RATE /2 and RND on the track while held (seq_live.c live_q,
+         * the next thing the sequencer does): let go, the track lands back on its ghost, in phase */
         if (rep && !(old & PFX_REP)) {
             t->pfx_si = 0;
             t->pfx_sc = per;                            /* (the first repeat now) */
@@ -245,7 +239,7 @@ static __attribute__((noinline)) void pfx_block(uint32_t n, uint32_t held)
             pfx_keep[k][2] = t->p[P_ATK];
             t->p[P_ATK] = (int16_t)(t->p[P_ATK] + (127 - t->p[P_ATK]) * 2 / 3);
         }
-        if (f || t->pfx_rs || t->pfx_pit)
+        if (f || t->pfx_pit)
             pfx_any = 1;
     }
 }
