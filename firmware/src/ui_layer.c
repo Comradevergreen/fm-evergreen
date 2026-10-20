@@ -1129,7 +1129,16 @@ static void layer_cards(uint32_t l)
  * on. The header "[FX] HELD"; the breadcrumb "LENTE . MAP . FX" */
 static const khint_t *layer_foot(uint32_t l)
 {
-    return l == LAYER_FX && perf_latch_on ? FX_LATCH_FOOT : l == LAYER_MACRO && !layer_open() ? MAC_LATCH_FOOT : LAYERS[l].foot;
+    static const char *const GX_FOOT[4] = {"GLITCH", "TAPE STOP", "SHUFFLE", "FREEZE"};
+    static khint_t gf[3];
+    const khint_t *f = l == LAYER_FX && perf_latch_on ? FX_LATCH_FOOT : l == LAYER_MACRO && !layer_open() ? MAC_LATCH_FOOT
+                     : LAYERS[l].foot;
+    if (l == LAYER_FX && perf_gfocus() != PF_N) {       /* (0.9.17) a glitcher's key down: K1-4 are its knobs */
+        memcpy(gf, f, sizeof gf);
+        gf[1].act = GX_FOOT[perf_gx(perf_gfocus())];
+        return gf;
+    }
+    return f;
 }
 static void layer_knobs(uint32_t l)                     /* the four as gauges in their knobs' colours, the keys' words */
 {
