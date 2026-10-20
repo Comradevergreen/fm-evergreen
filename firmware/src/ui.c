@@ -280,7 +280,7 @@ static struct {
                                   * go, unless the key was held for a lock (its accent: plk_acc) */
     uint8_t hot_col, hot_t;      /* column whose knob was just turned (drawn white) */
     uint8_t menu;                /* 0 off, 1 list, 2 about + credits (HOME held), 3 ABOUT > PROFILE (0.9.14) */
-    uint8_t menu_sel;            /* MENU: the row (menu_items.c MI_*; its tab MI_TAB), kept while the device runs */
+    uint8_t menu_sel;            /* MENU: the setting turned last (menu_items.c MI_*; its page MPAGE), kept while it runs */
     uint8_t mlv;                 /* (0.8.5) MENU's view: 1 TAB (its rows; 0.9.2: always, 0 MENU and 2 ROW for the renders) */
     uint8_t lylv;                /* (0.8.5) a held layer's lens: 0 MAP, 1 KNOBS, 2 STATE (ALGORITHM while held) */
     uint16_t menu_scroll;        /* continuous ABOUT + CREDITS position, pixels */
@@ -685,6 +685,7 @@ static int hud_home(void)
 }
 /* the tab lit: the section's group shown, the menu's tab, a layer's view */
 static uint32_t menu_tab(void);
+static uint32_t menu_page(void);                        /* (0.9.18) the MENU's page (ui_menu.c) */
 static uint32_t lz_level(void)
 {
     uint8_t cnt[8], gi[8];
@@ -812,8 +813,22 @@ static uint32_t note_len(const track_t *t, uint32_t c, uint32_t len)
     return l;
 }
 
-enum { COMP_OFF, COMP_CHANCE, COMP_RATCH, COMP_ARPN, COMP_ARPQ, COMP_ARPS, COMP_TRIG, COMP_RAND, COMP_OCT, COMP_TONAL,
-       COMP_BEND, COMP_ECHO, COMP_PULSE, COMP_JUMP, COMP_REV, COMP_FILL, COMP_KILL, COMP_WALK, COMP_CLIMB, COMP_TOUCH, COMP_N };   /* (CP_* in order) */
+/* (0.9.18) COMP's TYPE list, by family (was CP_*'s order, 20 entries): OFF, the step's CHANCE, RATCH (its flags' x1..x4
+ * or an ECHO component's x2..x8: one), ARP (the step's notes one at a time at a RATE, CP_ARPN), SEQ (the pattern's melody
+ * a note a lap, CP_ARPQ), WALK (a degree a lap), PULSE, OCT (an octave a lap: CP_CLIMB), RAND, BEND, TONAL, JUMP, REV,
+ * TRIG, FILL, KILL. ARP SCALE (WALK now), the old OCT (CLIMB, or the notes moved) and TOUCH (the grid's lane modes)
+ * are converted where a step comes in (seq.c step_norm) */
+enum { COMP_OFF, COMP_CHANCE, COMP_RATCH, COMP_ARPN, COMP_ARPQ, COMP_WALK, COMP_PULSE, COMP_OCT, COMP_RAND, COMP_BEND,
+       COMP_TONAL, COMP_JUMP, COMP_REV, COMP_TRIG, COMP_FILL, COMP_KILL, COMP_N };
+static const uint8_t COMP_CP[COMP_N] = {CP_NONE, CP_NONE, CP_ECHO, CP_ARPN, CP_ARPQ, CP_WALK, CP_PULSE, CP_CLIMB, CP_RAND,
+                                        CP_BEND, CP_TONAL, CP_JUMP, CP_REV, CP_TRIG, CP_FILL, CP_KILL};
+static uint32_t comp_ui(uint32_t c)                    /* a component's place in the list (0: none) */
+{
+    uint32_t i;
+    for (i = COMP_RATCH; i < COMP_N; i++)
+        if (COMP_CP[i] == c) return i;
+    return COMP_OFF;
+}
 static const char *const EV_NAMES[EV_N] = {"ALWAYS", "1:2", "2:2", "SKIP", "1:3", "2:3", "3:3", "1:4", "2:4", "3:4", "4:4",
                                            "1:8", "FIRST", "!FIRST"};   /* (0.6.92) EVERY */
 /* (0.6.92) a part of the step as a note value: n parts a step of the track's DIV (1/16: x2 1/32, x3 1/32T, x4 1/64 ..;
@@ -829,9 +844,21 @@ static void rate_name(const track_t *t, uint32_t n, char *b)
     if (!v) { b[0] = 'x'; fmt_int(b + 1, (int32_t)n); return; }
     b[0] = '1'; b[1] = '/'; fmt_int(b + 2, (int32_t)v); str_cpy(b + str_len(b), tr, 2);
 }
-static const char *const COMP_NAMES[COMP_N] = {"OFF", "CHANCE", "RATCH", "NOTES", "SEQ", "SCALE", "TRIG", "RAND", "OCT",
-                                               "TONAL", "BEND", "ECHO", "PULSE", "JUMP", "REV", "FILL", "KILL", "WALK", "CLIMB",
-                                               "TOUCH"};
+/* (0.9.18) a RATCH's DIV d as the note value its hits are apart: RAT_W steps (a synth's 4, a kit's 2) / d of the
+ * track's DIV (at 1/16 a synth's 2 3 4 6 8: 1/8 1/8T 1/16 1/16T 1/32); else "/d" */
+static void rat_rate_name(const track_t *t, uint32_t d, char *b)
+{
+    static const uint8_t BASE[10] = {4, 8, 16, 32, 0, 0, 2, 1, 0, 0};
+    uint32_t w = trk_kit(t) ? RAT_WKIT : RAT_WMEL, n = BASE[(uint32_t)clamp(t->p[P_SDIV], 0, 9)] * d, v = n / w;
+    const char *tr = "";
+    if (n % w || !v || (v & (v - 1u))) {
+        if (n % w == 0u && v % 3u == 0u && !((v / 3u * 2u) & (v / 3u * 2u - 1u))) { v = v / 3u * 2u; tr = "T"; }
+        else { b[0] = '/'; fmt_int(b + 1, (int32_t)d); return; }
+    }
+    b[0] = '1'; b[1] = '/'; fmt_int(b + 2, (int32_t)v); str_cpy(b + str_len(b), tr, 2);
+}
+static const char *const COMP_NAMES[COMP_N] = {"OFF", "CHANCE", "RATCH", "ARP", "SEQ", "WALK", "PULSE", "OCT", "RAND",
+                                               "BEND", "TONAL", "JUMP", "REV", "TRIG", "FILL", "KILL"};
 /* (0.6.82) the COMP pages one after another: COMP (the step's first component), COMP 2 (its second), WHEN (theirs, and
  * the step's LEN): which this is (0..2) */
 static uint32_t comp_slot(void)
@@ -848,7 +875,7 @@ static uint32_t comp_view(void)                         /* the TYPE shown for th
 {
     const step_t *s = &TSEL->step[ui.cursor];
     if (comp_slot() == 1u)
-        return s->comp2 ? COMP_ARPN + s->comp2 - CP_ARPN : COMP_OFF;
+        return comp_ui(s->comp2);
     return comp_view1();
 }
 static uint32_t comp_view1(void)                        /* the first's, CHANCE and RATCH (read once a step) */
@@ -857,12 +884,40 @@ static uint32_t comp_view1(void)                        /* the first's, CHANCE a
     uint32_t at = (uint32_t)ui.cursor + 1u + (uint32_t)song.sel * 64u;
     if (ui.comp_at != at || ui.comp_sel >= COMP_N) {
         ui.comp_at = (uint16_t)at;
-        ui.comp_sel = (uint8_t)(s->comp ? COMP_ARPN + s->comp - CP_ARPN : step_chance(s) < 100u ? COMP_CHANCE :
+        ui.comp_sel = (uint8_t)(s->comp ? comp_ui(s->comp) : step_chance(s) < 100u ? COMP_CHANCE :
                                 step_ratchet(s) > 1u ? COMP_RATCH : COMP_OFF);
     }
-    if (s->comp && ui.comp_sel != COMP_ARPN + s->comp - CP_ARPN)   /* (changed elsewhere: the editor, a dice) */
-        ui.comp_sel = (uint8_t)(COMP_ARPN + s->comp - CP_ARPN);
+    if (s->comp && ui.comp_sel != comp_ui(s->comp))     /* (changed elsewhere: the editor, a dice) */
+        ui.comp_sel = (uint8_t)comp_ui(s->comp);
     return ui.comp_sel;
+}
+/* (0.9.18) RATCH as COMP's KNOB 3 shows it, one list: x1, then x2..x8 FLAT, FADE, RISE (0..21); slot k's (COMP: the step's
+ * flags or its ECHO; COMP 2: its second component's ECHO) */
+static uint32_t rat_ui(const step_t *s, uint32_t k)
+{
+    uint32_t c = k ? s->comp2 : s->comp, a = k ? s->carg2 : s->carg, h;
+    if (c != CP_ECHO)
+        return k ? 0u : step_ratchet(s) - 1u;
+    h = 2u + (a & 7u) % 7u;
+    return h - 1u + 7u * (a & CP_ECHO_EVEN ? 0u : a & CP_ECHO_RISE ? 2u : 1u);
+}
+static uint32_t rat_pit_of(const step_t *s, uint32_t k)
+{
+    return (k ? s->comp2 : s->comp) == CP_ECHO ? CP_ECHO_PIT(k ? s->carg2 : s->carg) : RP_NONE;
+}
+/* .. set: x1..x4 FLAT with no pitch step in the flags (what every firmware reads), else an ECHO in slot k */
+static void rat_ui_set(step_t *s, uint32_t k, uint32_t i, uint32_t pit)
+{
+    uint32_t h = i ? 2u + (i - 1u) % 7u : 1u, sh = i ? (i - 1u) / 7u : 0u;
+    uint8_t *cp = k ? &s->comp2 : &s->comp, *ap = k ? &s->carg2 : &s->carg;
+    if (h == 1u || (!k && !sh && h <= 4u && pit == RP_NONE)) {
+        if (*cp == CP_ECHO) *cp = *ap = 0;
+        if (!k) step_set_ratchet(s, h);
+        return;
+    }
+    if (!k) step_set_ratchet(s, 1u);
+    *cp = CP_ECHO;
+    *ap = (uint8_t)((h - 2u) | (sh == 0u ? CP_ECHO_EVEN : sh == 2u ? CP_ECHO_RISE : 0u) | (pit & 3u) << 4);
 }
 static void step_clear(step_t *st)
 {
@@ -1217,8 +1272,8 @@ static int param_kept(uint32_t i)
            (i >= P_SLCR && i <= P_SLDEPTH) || i == P_SOFS || i == P_POFS ||
            (!FELUCCA_FM4 && (i == P_HVEL || i == P_HTIM || i == P_HGAT || i == P_HRQ)) ||   /* (0.6.87) HUMAN: the sequencer's, a sound
                                                          * keeps it (FELUCCA_FM4: DIGITAL's OP SUS / LEVEL there) */
-           (!FELUCCA_FM4 && (i == P_CHRD || i == P_CVOI || i == P_CSTR || i == P_CLEN || i == P_TCHAN ||
-                             i == P_MSND || i == P_MPAT || i == P_MAMT || i == P_MMODE));   /* (0.7.0) SCL > CHORD, C.LEN, CHANCE,
+           (!FELUCCA_FM4 && (i == P_CHRD || i == P_CVOI || i == P_CSTR || i == P_TCHAN ||
+                             i == P_MSND || i == P_MPAT || i == P_MAMT || i == P_MMODE));   /* (0.7.0) SCL > CHORD, CHANCE,
                                                          * MUTATE: the sequencer's too (a community report: browsing
                                                          * presets switched CHORD off) */
 }

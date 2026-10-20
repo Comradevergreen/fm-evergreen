@@ -62,7 +62,7 @@ static const nv_t CE_DIG[] = {NV("EDIT 1", 0, 0, 0), NV("EDIT 2", 0, 0, 0), NV("
 static const ng_t CG_DIG[] = {{"SOUND", 0}, {"TONE", 0}, {"OPERATOR", "OPS"}};
 enum { LV_PAT, LV_BAR, LV_STEP, LV_N };                 /* SEQ's pictures: the bars, the roll, the step large */
 static const nv_t CE_SEQ[] = {NV("PATTERN", 0, 0, LV_PAT), NV("STRETCH", 0, 0, LV_PAT), NV("PLAYHEADS", 0, 0, LV_PAT),
-                              NV("TRACK", 0, 1, LV_PAT), NV("MUTATE", 0, 1, LV_PAT), NV("BAR", 0, 2, LV_PAT),
+                              NV("TRACK", 0, 1, LV_PAT), NV("MUTATE", 0, 1, LV_PAT),   /* (0.9.18: no BAR page) */
                               NV("STEP", 0, 2, LV_BAR), NV("NOTE", 0, 2, LV_BAR), NV("COMP", 0, 3, LV_STEP),
                               NV("COMP 2", 0, 3, LV_STEP), NV("AUTOMATION", 0, 4, LV_BAR), NV("AUTO LIST", 0, 4, LV_BAR)};
 static const ng_t CG_SEQ[] = {{"PATTERN", "PATT"}, {"TRACK", 0}, {"BAR", 0}, {"STEP", 0}, {"AUTO", 0}};
@@ -81,8 +81,8 @@ static const ng_t CG_GLO[] = {{"LIVE", 0}, {"MIX", 0}, {"GLOBAL", 0}, {"SYSTEM",
 static const nv_t CE_ENV[] = {NV("ENV", "TRACKS", 0, 0), NV("ENV DEST", "TRACKS DEST", 0, 0), NV("ENV", 0, 1, 1),
                               NV("ENV DEST", 0, 1, 1), NV("STAGE", 0, 2, 2)};
 static const ng_t CG_ENV[] = {{"TRACKS", 0}, {"ENV", 0}, {"STAGE", 0}};
-static const nv_t CE_LFO[] = {NV("MOD", 0, 0, 0), NV("LFO", 0, 1, 1), NV("LFO DEST", 0, 1, 1), NV("MSEQ", 0, 2, 2),
-                              NV("MSEQ 2", 0, 2, 2)};
+static const nv_t CE_LFO[] = {NV("MOD", 0, 0, 0), NV("LFO", 0, 1, 1), NV("LFO 2", 0, 1, 1), NV("LFO DEST", 0, 1, 1),
+                              NV("MSEQ", 0, 2, 2), NV("MSEQ 2", 0, 2, 2)};   /* (0.9.18: LFO 2, PHASE) */
 static const ng_t CG_LFO[] = {{"MOD", 0}, {"LFO", 0}, {"MSEQ", 0}};
 static const nv_t CE_SCL[] = {NV("SCL", 0, 0, 0), NV("CHORD", 0, 1, 1)};
 static const ng_t CG_SCL[] = {{"KEY", 0}, {"CHORD", 0}};
@@ -100,7 +100,8 @@ static const ch_t CHAINS[NAV_KEYS] = {CH(CE_HOME, CG_HOME), CH(CE_SYN, CG_SYN), 
                                       CH(CE_DIG, CG_DIG)};
 /* the page each opens on at power-on (the mock-up's): SEQ its STEP, ENV its ENV, LFO its LFO, (0.9.11) GLO its MIXER (LIVE's
  * pages before it: a GLO tap inside, rule 2); ui.nmem holds it ^ this */
-static const uint8_t NAV_DEF[NAV_KEYS] = {0, 0, 6, 0, 2, 2, 1, 0, 0, 0, 0, 0, 0};   /* (0.9.11: GLO its MIXER) */
+static const uint8_t NAV_DEF[NAV_KEYS] = {0, 0, 5, 0, 2, 2, 1, 0, 0, 0, 0, 0, 0};   /* (0.9.11: GLO its MIXER; 0.9.18: SEQ its
+                                                         * STEP, 5 with BAR gone) */
 static uint32_t nav_key(uint32_t sec) { uint32_t k = sec == SEC_EDIT ? edit_kind() : 0u; return k ? SEC_N - 1u + k : sec; }
 static const ch_t *nav_ch(uint32_t sec) { return &CHAINS[nav_key(sec)]; }
 static uint32_t nav_mem(uint32_t key) { return (uint32_t)(ui.nmem[key] ^ NAV_DEF[key]); }

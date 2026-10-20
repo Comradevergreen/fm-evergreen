@@ -2,68 +2,74 @@
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
  * Portions Copyright (C) 2026 Juan Ignacio Antonucci (Juan Jiant) */
 /* MENU's rows and their settings: what ui_menu.c draws and steps, and what the editor reads and sets (editor_menu.c
- * MENU_DESC / MENU_SET). One apply path for both: menu_put. Grouped: the screen (COLOR, SKIN (0.8.9), STYLE, LARGE, ANIM, LEDS; 1.1.5:
- * SCREEN OFF), the
- * controls (HOLD: the layer threshold, KNOB ACCEL, FX LATCH, BPM LOCK; 1.2: SCALE LEDS, the keys), the sound (SPEAKER EQ: FLAT LOWCUT BASS+,
- * USB LEVEL; 1.1: CLICK, CLICK LEVEL, COUNT-IN; 0.9.12: TRACKS, LOAD), MIDI (JIANT 0.9.12: MIDI OUT, was CONTROL's;
- * MIDI LEARN's LEARN and LEARN CLEAR, as Felucca 1.5's), USB SERIAL, RESTORE LAST (1.2), CPU, CPU CLOCK (0.9.12), then
- * CALIBRATION (the setup screen: HARDWARE CALIBRATION) and ABOUT, the rows with no value (MI_VALUES: the rows before
- * them hold one, but LEARN CLEAR: menu_valued).
- * 1.0.5: in four tabs (MI_TAB); 0.9.12: five. LEARN (OFF / ON) is not a setting: it arms MIDI LEARN (midi_learn.c ml_set)
- * and is never saved; LEARN CLEAR is an action: OCT+ clears the map (ml_clear_all), the row shows how many CCs are
- * learned. Neither is offered to the editor (editor_menu.c ED_MENU); the map travels with the settings */
-#include "cpu_safe.c"        /* (0.9.12) MENU > SYSTEM > CPU, CPU CLOCK; the last crash kept in the settings */
+ * MENU_DESC / MENU_SET). One apply path for both: menu_put. A row is a setting (its MI_* is its place in the menu's
+ * tables, not stored: the editor's ids are editor_menu.c ED_MENU's). (0.9.18) On nine pages of up to four knobs in five
+ * tabs (MPAGE): SCREEN (COLOR SKIN STYLE LARGE; SCOPE ANIMATION SCREEN SLEEP; LEDS: LED GLOW SCALE LEDS), AUDIO
+ * (SPEAKER EQ TRACKS LOAD BPM LOCK; CLICK CLICK LEVEL COUNT-IN), MIDI (MIDI OUT LEARN LEARN CLEAR), USB (USB AUDIO USB
+ * LEVEL), SYSTEM (CONTROLS: HOLD TIME KNOB SPEEDUP FX LATCH CALIBRATION; SYSTEM: RESTORE LAST CPU CORES CPU CLOCK, what
+ * a power-on does, and ABOUT). Until 0.9.17 one list in the
+ * tabs DISPLAY CONTROL AUDIO MIDI SYSTEM, SELECT a row, any knob its value; the stored values and their meanings are
+ * the same. LEARN (OFF / ON) is not a setting: it arms MIDI LEARN (midi_learn.c ml_set) and is never saved; LEARN
+ * CLEAR is an action: OCT+ clears the map (ml_clear_all), its card shows how many CCs are learned. Neither is offered
+ * to the editor (editor_menu.c ED_MENU); the map travels with the settings */
+#include "cpu_safe.c"        /* (0.9.12) MENU > SYSTEM > CPU CORES, CPU CLOCK; the last crash kept in the settings */
 enum { MI_COLOR, MI_SKIN, MI_SCOPE, MI_STYLE, MI_LARGE, MI_ANIM, MI_LEDS, MI_SCROFF, MI_HOLD, MI_ACCEL, MI_LATCH, MI_BPMLOCK, MI_SCLLED,
        MI_LOWCUT, MI_USB,
        MI_CLICK, MI_CLKLVL, MI_COUNTIN, MI_TRACKS, MI_LOAD, MI_MIDIOUT, MI_LEARN, MI_LCLEAR, MI_SERIAL, MI_RESTORE, MI_CPU,
-       MI_CLOCK, MI_PANEL, MI_INIT, MI_ABOUT, MI_COUNT };   /* (1.1: the metronome's rows in AUDIO; 1.2: RESTORE LAST in
-                      * SYSTEM, SCALE LEDS in CONTROL; 0.9.12: MIDI OUT, LEARN, LEARN CLEAR in MIDI; CPU, CPU CLOCK in
-                      * SYSTEM, cpu_safe.c, and LOAD to AUDIO beside TRACKS: a tile holds seven) */
+       MI_CLOCK, MI_PANEL, MI_ABOUT, MI_COUNT };   /* (1.1: the metronome's rows; 1.2: RESTORE LAST, SCALE LEDS; 0.9.12: MIDI
+                      * OUT, LEARN, LEARN CLEAR; CPU, CPU CLOCK, cpu_safe.c; 0.9.18: INIT SYSTEM gone, SAVE > TOOLS > NEW
+                      * PROJECT is the same) */
 #define MI_VALUES MI_PANEL
+#define MI_NONE 0xFFu
 static int menu_valued(uint32_t row) { return row < MI_VALUES && row != MI_LCLEAR; }   /* (a row with a value) */
-static const char *const MI_NAME[MI_COUNT] = {"COLOR", "SKIN", "SCOPE", "STYLE", "LARGE", "ANIM", "LEDS", "SCREEN OFF", "HOLD", "KNOB ACCEL", "FX LATCH", "BPM LOCK",
-                                              "SCALE LEDS",
+/* (0.9.18) the full names (the panel's rows, the editor's MENU_DESC; plain words, at most 12 characters) */
+static const char *const MI_NAME[MI_COUNT] = {"COLOR", "SKIN", "SCOPE", "STYLE", "LARGE", "ANIMATION", "LED GLOW", "SCREEN SLEEP",
+                                              "HOLD TIME", "KNOB SPEEDUP", "FX LATCH", "BPM LOCK", "SCALE LEDS",
                                               "SPEAKER EQ", "USB LEVEL", "CLICK", "CLICK LEVEL", "COUNT-IN", "TRACKS", "LOAD",
-                                              "MIDI OUT", "LEARN", "LEARN CLEAR", "USB",
-                                              "RESTORE LAST", "CPU", "CPU CLOCK", "CALIBRATION", "INIT SYSTEM", "ABOUT"};
-/* 1.0.5: the MENU's tabs (ui_menu.c: ALGORITHM steps between them, PRESETS among one tab's rows; the editor gets a
- * row's tab after its MENU_DESC reply). A tab's rows follow each other in MI order (tests/ui_test.c checks it); at
- * most MTAB_ROWS each (the page does not scroll: ui_menu.c fits them). A new row joins a tab here, a new tab is
- * appended (its index is what the editor is told) */
-enum { MTAB_DISPLAY, MTAB_CONTROL, MTAB_AUDIO, MTAB_MIDI, MTAB_SYSTEM, MTAB_COUNT };   /* (0.9.12: MIDI before SYSTEM,
-                                                                                        * as Felucca 1.2: SYSTEM's index 3 -> 4) */
-#define MTAB_ROWS 8u                           /* (0.8.9: DISPLAY's seven with SKIN; 0.9.7: eight with SCOPE) */
-static const char *const MTAB_NAME[MTAB_COUNT] = {"DISPLAY", "CONTROL", "AUDIO", "MIDI", "SYSTEM"};
-static const uint8_t MI_TAB[MI_COUNT] = {
-    MTAB_DISPLAY, MTAB_DISPLAY, MTAB_DISPLAY, MTAB_DISPLAY, MTAB_DISPLAY,   /* COLOR SKIN (0.8.9) SCOPE (0.9.7) STYLE LARGE */
-    MTAB_DISPLAY,                                                           /* ANIM */
-    MTAB_DISPLAY,                                                           /* LEDS */
-    MTAB_DISPLAY,                                                           /* SCREEN OFF (1.1.5) */
-    MTAB_CONTROL, MTAB_CONTROL, MTAB_CONTROL, MTAB_CONTROL,                 /* HOLD KNOB ACCEL FX LATCH BPM LOCK */
-    MTAB_CONTROL,                                                           /* SCALE LEDS (1.2) */
-    MTAB_AUDIO, MTAB_AUDIO, MTAB_AUDIO, MTAB_AUDIO, MTAB_AUDIO,             /* SPEAKER EQ, USB LEVEL, CLICK, CLICK LEVEL,
-                                                                             * COUNT-IN */
-    MTAB_AUDIO, MTAB_AUDIO,                                                 /* TRACKS (JIANT 0.6.18), LOAD (0.6.30; SYSTEM's
-                                                                             * until 0.9.11) */
-    MTAB_MIDI, MTAB_MIDI, MTAB_MIDI,                                        /* MIDI OUT (JIANT 0.6.72), LEARN, LEARN CLEAR
-                                                                             * (0.9.12) */
-    MTAB_SYSTEM, MTAB_SYSTEM, MTAB_SYSTEM, MTAB_SYSTEM,                     /* USB SERIAL, RESTORE LAST, CPU, CPU CLOCK
-                                                                             * (0.9.12) */
-    MTAB_SYSTEM, MTAB_SYSTEM,                                               /* CALIBRATION, INIT SYSTEM (0.6.58) */
-    MTAB_SYSTEM,                                                            /* ABOUT */
+                                              "MIDI OUT", "LEARN", "LEARN CLEAR", "USB AUDIO",
+                                              "RESTORE LAST", "CPU CORES", "CPU CLOCK", "CALIBRATION", "ABOUT"};
+/* (0.9.18) the MENU as the rest of the system (rule 1..6): pages of four knobs, KNOB n the page's setting n, SELECT walks
+ * the pages, ALGORITHM jumps to the next / previous tab; the tabs the groups (a dot a page), the footer MENU . TAB . page
+ * n/N (a page named as its tab, or its tab and a number: MENU . page). Each row on one page (tests/ui_test.c checks it); the editor gets a row's tab after its MENU_DESC reply (tab
+ * indexes are not ids: 0.9.18 regrouped them). An action (LEARN CLEAR, CALIBRATION, ABOUT) is a card armed by its knob,
+ * OCT+ does it */
+enum { MTAB_SCREEN, MTAB_AUDIO, MTAB_MIDI, MTAB_USB, MTAB_SYSTEM, MTAB_COUNT };
+static const char *const MTAB_NAME[MTAB_COUNT] = {"SCREEN", "AUDIO", "MIDI", "USB", "SYSTEM"};
+#define MP_COUNT 9u
+typedef struct { char name[9]; uint8_t tab, row[4]; } menu_page_t;
+static const menu_page_t MPAGE[MP_COUNT] = {   /* (a page opens on its first setting: a value, never an action) */
+    {"SCREEN", MTAB_SCREEN, {MI_COLOR, MI_SKIN, MI_STYLE, MI_LARGE}},
+    {"SCREEN 2", MTAB_SCREEN, {MI_SCOPE, MI_ANIM, MI_SCROFF, MI_NONE}},
+    {"LEDS", MTAB_SCREEN, {MI_LEDS, MI_SCLLED, MI_NONE, MI_NONE}},
+    {"AUDIO", MTAB_AUDIO, {MI_LOWCUT, MI_TRACKS, MI_LOAD, MI_BPMLOCK}},
+    {"CLICK", MTAB_AUDIO, {MI_CLICK, MI_CLKLVL, MI_COUNTIN, MI_NONE}},
+    {"MIDI", MTAB_MIDI, {MI_MIDIOUT, MI_LEARN, MI_LCLEAR, MI_NONE}},
+    {"USB", MTAB_USB, {MI_SERIAL, MI_USB, MI_NONE, MI_NONE}},
+    {"CONTROLS", MTAB_SYSTEM, {MI_HOLD, MI_ACCEL, MI_LATCH, MI_PANEL}},
+    {"SYSTEM", MTAB_SYSTEM, {MI_RESTORE, MI_CPU, MI_CLOCK, MI_ABOUT}},   /* (RESTORE LAST, CPU CORES, CPU CLOCK: at power-on) */
 };
-static uint32_t mtab_first(uint32_t t)                 /* a tab's first row */
+static uint32_t menu_page_of(uint32_t row)             /* the page a row is on */
 {
-    uint32_t i = 0;
-    while (i < MI_COUNT && MI_TAB[i] != t)
-        i++;
-    return i;
+    uint32_t p, c;
+    for (p = 0; p < MP_COUNT; p++)
+        for (c = 0; c < 4u; c++)
+            if (MPAGE[p].row[c] == row)
+                return p;
+    return 0;
 }
-static uint32_t mtab_rows(uint32_t t)                  /* .. and how many it has */
+static uint32_t mi_tab(uint32_t row) { return MPAGE[menu_page_of(row)].tab; }
+static uint32_t mtab_page(uint32_t t)                  /* a tab's first page */
 {
-    uint32_t i, n = 0;
-    for (i = 0; i < MI_COUNT; i++)
-        n += MI_TAB[i] == t;
+    uint32_t p = 0;
+    while (p < MP_COUNT && MPAGE[p].tab != t)
+        p++;
+    return p;
+}
+static uint32_t mtab_pages(uint32_t t)                 /* .. and how many it has */
+{
+    uint32_t p, n = 0;
+    for (p = 0; p < MP_COUNT; p++)
+        n += MPAGE[p].tab == t;
     return n;
 }
 /* STYLE (ui_style, gfx.c ST_*): FLAT the filled cards; LINE black areas divided by 1 px rules (#50, #57: the 0.9 look)
@@ -113,7 +119,7 @@ static const char *const USBLVL_N[6] = {"MASTER", "FIXED", "-6 dB", "-12 dB", "-
  * audio as the last track mixed it and as it came; the phone app records a voice through the FM-1 and moves it by
  * the latency). ui.c usb_out */
 static const char *const USBOUT_N[5] = {"CONSOLE", "STEREO", "STEMS", "IN+OUT", "STEMS+IN"};
-static const char *const HOLD_N[4] = {"0.3 s", "0.4 s", "0.5 s", "0.6 s"};   /* (the editor's names; the menu draws its own) */
+static const char *const HOLD_N[4] = {"0.3 s", "0.4 s", "0.5 s", "0.6 s"};   /* (HOLD TIME: the menu's and the editor's names) */
 /* 1.1 (Discussion #131): the metronome (click.c) and the count-in (seq.c); ui.c ui_rec_prefs holds them */
 static const char *const CLICK_N[3] = {"OFF", "REC", "ON"};          /* REC: while a track is armed and playing */
 static const char *const CLKLVL_N[3] = {"LOW", "MID", "HIGH"};

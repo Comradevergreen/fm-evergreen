@@ -104,9 +104,8 @@ enum {                          /* per-track parameters */
 #define P_MMODE P_FM2_REL
 #define P_MORPH P_FM3_ATK              /* (JIANT 0.6.45) EDIT > MORPH: ANALOG PHASE LOFI's wave on towards the next ones
                                          * (0: as WAVE has it; every project and preset before it), in DIGITAL's slot */
-#define P_CLEN P_FM3_DEC               /* (JIANT 0.6.47) SHIFT > C.LEN: the step components as a lane of their own, steps
-                                         * 1..C.LEN's read in turn as the track plays (polymetric over the steps); 0 OFF
-                                         * (each step its own: every project and preset before it); seq.c comp_lane */
+/* (0.6.47 .. 0.9.17) DIGITAL's OP3 DEC slot was C.LEN, the step components as a lane of their own length (no page since
+ * 0.6.92): retired in 0.9.18 (a project that set it plays each step's components on their steps) */
 #define P_DXIMG P_FM3_REL              /* (JIANT 0.6.48) a DRUM track's EDIT > IMAGE: one knob through the kit's pan maps
                                          * (eng_drum.c dx_img_pan; 0: every sound in the middle, as before) */
 /* (JIANT 0.6.81) SCL > CHORD (seq.c chord_build), in DIGITAL's OP4 slots (0, every project and preset before it: OFF,
@@ -484,6 +483,19 @@ enum { CP_NONE, CP_ARPN, CP_ARPQ, CP_ARPS, CP_TRIG, CP_RAND, CP_OCT, CP_TONAL, C
  * the kit's records (OCT -1 .. -3, MIDI below 35: seq.c dxo_on). Other engines: nothing. ECHO's carg bit 7, EVEN
  * (0.8.5): its repeats all at the step's level, a ratchet past RATCH's x4 (OCT +3 on a kit records x8 so) */
 #define CP_ECHO_EVEN 0x80u
+/* (0.9.18) ECHO is RATCH x2..x8 (SEQ > COMP's RATCH, past what the step's flags hold): carg bits 0-2 the hits - 2, bit 7
+ * EVEN (FLAT: every hit at the step's level), bit 3 RISE (else FADE: each softer, as ECHO was), bits 4-5 the PITCH step a
+ * hit (RP_*: none, a degree up, a degree down, an octave up every other hit). Bits 3-5 are kept out of the main step
+ * record (project.c: the 'S' 'X' block), so firmware before 0.9.18 reads the hits right */
+#define CP_ECHO_RISE 0x08u
+#define CP_ECHO_PIT(a) (((uint32_t)(a) >> 4) & 3u)
+#define CP_ECHO_X 0x38u
+enum { RS_FLAT, RS_FADE, RS_RISE };
+enum { RP_NONE, RP_UP, RP_DOWN, RP_OCT };
+/* (0.9.18) the spill: a ratchet keeps its hits and spaces them RAT_W x wider (a step's hits shared out over RAT_W steps,
+ * a DIV's 1/n of a step RAT_W x), spilling over the steps after it; a kit's x 2, a synth's x 4 */
+#define RAT_WKIT 2u
+#define RAT_WMEL 4u
 /* (0.6.98) WALK and CLIMB (after the OP-Z's and OP-XY's evolving components): the step's notes move one degree of the
  * scale (WALK) or one octave (CLIMB) every RATE loops of the pattern, over a RANGE of moves, then round again: UP,
  * DOWN, UP-DN (there and back) or RND (a random place a move, the same every time round). carg: bits 0-3 RATE
@@ -507,7 +519,11 @@ static int cp_iswalk(uint32_t c) { return c == CP_WALK || c == CP_CLIMB; }
  * the pattern, then it plays on), x2, 1:2 (once, every other pass). 0, ALWAYS: as a JUMP / REV of before (seq.c fl_ok) */
 #define CP_JTO(a) ((uint32_t)(a) & 63u)
 #define CP_TIMES(c, a) ((c) == CP_JUMP ? ((uint32_t)(a) >> 6) & 3u : (uint32_t)(a) & 3u)
-#define CP_RATE(a) (((uint32_t)(a) >> 2) & 7u)    /* 0..4: x2 x3 x4 x6 x8 */
+#define CP_RATE(a) (((uint32_t)(a) >> 2) & 7u)    /* 0..4: x2 x3 x4 x6 x8 (until 0.9.16; 0.9.18: ARP_DIVI) */
+/* (0.9.18) an ARP's RATE as a note value (the transport's, fx.c div_samples: 0 1/4, 1 1/8, 2 1/16, 3 1/32): the old x2 ..
+ * x8 a step 1/32, x1 1/16; 6 1/8, 7 1/4. COMP's KNOB 4 lists 1/4 1/8 1/16 1/32 (ARP_RCODE) */
+static const uint8_t ARP_DIVI[8] = {3, 3, 3, 3, 3, 2, 1, 0};
+static const uint8_t ARP_RCODE[4] = {7, 6, 5, 0};
 #define CP_RNG(a) (((uint32_t)(a) >> 5) & 3u)     /* 0..3: 1..4 octaves (SCALE: 3 5 8 15 degrees) */
 #define CP_ARG(o, r, g) ((uint8_t)(((o) & 3u) | ((r) & 7u) << 2 | ((g) & 3u) << 5))
 #define CP_NRATE 6u                                 /* (0.6.92: x1, a note a step over the TIEs, as index 5) */
@@ -599,17 +615,27 @@ typedef struct track {
     uint8_t seq_n;
     uint8_t seq_hold;            /* last step slides: keep the notes until the next step */
     uint8_t slide_glide;         /* next legato note glides (slide) */
-    uint8_t rat_left;            /* RATCH: repeats of the playing step still to come (seq.c seq_ratchet) */
-    uint8_t arp_from;            /* (0.6.39) an ARP component playing: its step + 1 (0: none), over the TIEs after it */
-    uint8_t arp_k;               /* .. the arpeggio's next note (its position in the ORDER) */
+    /* (0.9.18) RATCH spills: a ratcheted step's hits after its first, each sp_q samples on from the step's start (seq.c
+     * seq_spill), over the steps after it; never saved */
+    uint8_t sp_left, sp_k, sp_m, sp_inst;   /* hits still to come; the next one's number; its notes; the step it came from */
+    uint8_t sp_shape, sp_pit, sp_kit;       /* RS_*; the pitch step a hit (RP_*); from a kit (no note-offs, the pitch on dpit) */
+    uint8_t sp_arp, sp_ord, sp_oc;          /* (0.9.18) an ARP: one of its notes a hit, in ORDER, over sp_oc octaves */
+    int8_t sp_dpit;              /* .. the kit's tune on the first hit */
+    uint8_t sp_nn[4 + NLANE], sp_vv[4 + NLANE], sp_tc[4 + NLANE];   /* its notes, velocities, TOUCH (kits) */
+    uint8_t sp_pn[4 + NLANE], sp_pm;        /* the notes the last hit sounded (a synth's), their count: their note-offs */
+    uint32_t sp_t, sp_q, sp_gate, sp_off;   /* samples since the step's start, between hits; a hit's gate, to its note-off */
+    uint8_t step_inst;           /* (0.9.18) a count of the steps started (a spilled hit on another step: seq_spill) */
+    uint8_t st_inst, st_n, st_nn[4 + NLANE];   /* .. the notes the step st_inst struck (a synth's: seq_spill leaves them out) */
+    uint8_t ls_on;               /* (0.9.18) the lanes ratcheting (LM_X2 X4 X8, a bit each: seq_spill), their hits to come */
+    uint8_t sp_fresh, ls_new;    /* .. the step's hits, the lanes' (a bit each) begun this block (seq_pos counts it already) */
+    uint8_t ls_left[NLANE], ls_note[NLANE], ls_vel[NLANE], ls_inst[NLANE];
+    uint32_t ls_due[NLANE], ls_q[NLANE];
     uint16_t loops;              /* (0.6.39) the pattern's loops since PLAY (TRIG components) */
     int8_t tonal;                /* (0.6.42) TONAL: the rest of the loop this many degrees up / down */
     uint8_t pulse_from, pulse_k; /* .. PULSE: its step + 1 (0: none), the empty steps since */
     uint8_t jump_to, rev;        /* .. JUMP: the next step + 1 (0: the next one); REV: backwards to step 1 */
     uint16_t mo_cur, mo_prev;    /* (0.6.50) MORPH as the engines play it: Q8, slewed a block at a time (voice.c
                                   * track_render) and ramped across the block from mo_prev (no step: no click) */
-    uint8_t cpos, cv_on;         /* (0.6.47) C.LEN: the component lane's next step; the step playing is cvs */
-    step_t cvs, cva, cvp;        /* .. the step playing with the lane's component; the ARP's and PULSE's (CV_IDX) */
     uint32_t seq_off;
     uint8_t seq_active;          /* any step programmed */
     uint8_t rskip_idx;           /* live recording put notes into the step about to play: */
@@ -659,15 +685,10 @@ typedef struct track {
     uint8_t ss_nn[4 + NLANE], ss_vv[4 + NLANE];  /* order low to high (seq.c seq_step, seq_tick), ss_due samples to the next */
     uint8_t dtch, ss_tch;        /* (0.8.5) a step's TOUCH (1..3, 0 none) on the sequencer's next drum hits; .. on the
                                   * queued ones (HUMAN TIME: seq_tick) */
-    uint8_t lr_on;               /* (0.8.5) the playing step has a lane ratcheting (seq.c seq_lane_rat) */
     uint32_t ss_due, ss_gap;     /* (.. and the gap between them; 0.6.88: 32 bits, a long TIMING) */
     uint16_t ext;                /* (0.6.88) TIMING: samples the playing step began before its place (it is early) */
     int8_t mic;                  /* .. the playing step's own TIMING (ST_MICRO), late: seq_step queues its notes */
     int8_t hum_env;              /* (0.6.92) HUMAN: the next notes' DEC / REL move (seq_step sets it, voice_start takes it) */
-    uint8_t pfx_half;            /* 1/2 TEMPO: the odd sample carried; pfx_rs: let go, back to the real place */
-    uint8_t pfx_rs;
-    uint16_t pfx_idx0;           /* .. where it was pressed (step, samples into it) and the samples since */
-    uint32_t pfx_pos0, pfx_el;
     uint8_t pfx_ln[4], pfx_lv[4], pfx_lnn;   /* the last notes struck together (a step's), STUTTER / ARP repeat them */
     uint32_t pfx_lblk;           /* .. the block they were struck in */
     uint8_t pfx_sn[4], pfx_snn;  /* the notes a repeat holds now */

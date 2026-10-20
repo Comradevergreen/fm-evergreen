@@ -5,7 +5,10 @@
  * RIELES, its V1; the pages are ui_live.c). Per track, never destructive: they change how the sequencer walks the steps,
  * not the steps, and are never saved (performance state, as the punch-in effects); COMMIT writes them into the track's
  * own parameters (UNDO: GLO + G4).
- *   RATE   /4 /3 /2 2/3 x1 3/2 x2 x3 x4: the samples the playhead moves by a block scaled (as 1/2 TEMPO, PFX_HALF)
+ *   RATE   /4 /3 /2 2/3 x1 3/2 x2 x3 x4: the samples the playhead moves by a block scaled
+ * (0.9.18) The FX layer's 1/2 TEMPO and RANDOM (pfx.c: PFX_HALF, PFX_RND on the track while held or played from the
+ * PUNCH lane) are these: RATE /2 (or slower if LIVE has it slower) and RND over the track's modifiers, in and out at
+ * once (they come on the transport's 1/16 already); let go, back on the ghost as any modifier taken back
  *   CORTE  the first N steps only; LOOP (MANO's keys and K2): N steps from where the playhead is (a window of LEN)
  *   DIR    REV, PING (MANO's keys), RND (MANO's F#5) inside the window
  *   GIRO   the playhead a step on / back (MANO's C#5 D#5): a rotation, COMMIT puts it into ROTATE (P_SOFS)
@@ -57,6 +60,8 @@ static struct {
     lv_mod_t cur[NTRK];
     uint8_t act, rs[NTRK], pd[NTRK], rem[NTRK];         /* modified (a bit a track); rq seen; PING going down; RATE's
                                                          * remainder */
+    uint8_t pfo[NTRK], pfa;                             /* (0.9.18) the FX layer's 1/2 TEMPO / RANDOM on it last block
+                                                         * (PFX_HALF | PFX_RND); a bit a track: some */
     int8_t rj[NTRK];                                    /* GIRO moved: steps the next one is on / back */
     uint16_t gidx[NTRK];                                /* the ghost: its step, samples into it */
     uint32_t gpos[NTRK];
@@ -169,9 +174,12 @@ static int live_swap(track_t *t)
  * on the beat), RETURN on the beat, BYPASS and COMMIT at once; back in phase, the playhead onto the ghost */
 static __attribute__((noinline)) void live_q(uint32_t n)
 {
-    uint32_t s16, i, st, b16, bb;
-    if (!(lv.busy | lv.act))
+    uint32_t s16, i, st, b16, bb, pa = 0;
+    for (i = 0; i < NTRK; i++)                          /* (0.9.18) 1/2 TEMPO, RANDOM held (pfx.c) */
+        pa |= (trk[i].pfx & (PFX_HALF | PFX_RND) ? 1u : 0u) << i;
+    if (!(lv.busy | lv.act | pa | lv.pfa))
         return;
+    lv.pfa = (uint8_t)pa;
     s16 = div_samples(2);
     st = clk_pos == CLK_START || !song.playing;
     b16 = st || clk_pos + n >= s16;
@@ -179,7 +187,15 @@ static __attribute__((noinline)) void live_q(uint32_t n)
     for (i = 0; i < NTRK; i++) {
         track_t *t = &trk[i];
         lv_mod_t *c = &lv.cur[i], w = lv.want[i];
-        uint32_t bit = 1u << i, rq = lv.rq[i] != lv.rs[i] ? lv.rk[i] : LQ_NONE;
+        uint32_t bit = 1u << i, rq = lv.rq[i] != lv.rs[i] ? lv.rk[i] : LQ_NONE, po = t->pfx & (PFX_HALF | PFX_RND);
+        if (po & PFX_HALF)                              /* (0.9.18) the FX layer's: on the modifiers, at once */
+            w.rate = (int8_t)(w.rate < -2 ? w.rate : -2);
+        if (po & PFX_RND)
+            w.fl = (uint8_t)((w.fl & ~6u) | LD_RND << 1);
+        if (po != lv.pfo[i]) {
+            lv.pfo[i] = (uint8_t)po;
+            rq = LQ_NOW;
+        }
         if (rq != LQ_NOW && !bb && (!b16 || rq == LQ_BEAT))
             continue;
         if (rq != LQ_NOW && !bb && !((lv.r16 >> i) & 1u))

@@ -55,99 +55,229 @@ static uint32_t run(track_t *t, uint32_t blocks, uint32_t *at, uint32_t nat, uin
 /* blocks in `passes` passes of a one-step loop, the last block before the next pass left out */
 static uint32_t passes(const track_t *t, uint32_t n) { return n * step_len(t, 0) / CTL - 1u; }
 
+/* (0.9.18) an 8-step loop on track 1: step 0 NOTE 60 at RATCH hits (flags), the rest empty; the transport started */
+static track_t *spill_trk(uint32_t hits, uint32_t flags)
+{
+    track_t *t = one_step(hits, flags);
+    uint32_t i;
+    t->p[P_SLEN] = 8;
+    for (i = 1; i < 8u; i++)
+        t->step[i] = (step_t){{0}, 0, ST_REST};
+    seq_start();
+    return t;
+}
+/* note-ons over `steps` steps of t (its note and velocity each: nt, vl) */
+static uint32_t run_nv(track_t *t, uint32_t steps, uint32_t *at, uint8_t *nt, uint8_t *vl, uint32_t max)
+{
+    uint32_t b, n = 0, k, blocks = steps * step_len(t, 0) / CTL - 1u;
+    for (b = 0; b < blocks; b++) {
+        uint32_t v0 = vage;
+        seq_tick(t, CTL);
+        for (; v0 < vage; v0++, n++)
+            for (k = 0; k < NVOICE && n < max; k++)
+                if (t->v[k].age == v0 + 1u) {
+                    if (at) at[n] = b * CTL;
+                    if (nt) nt[n] = t->v[k].note;
+                    if (vl) vl[n] = t->v[k].vel;
+                }
+    }
+    return n;
+}
 static int play(void)
 {
     int bad = 0, ok = 1;
-    uint32_t h, n, at[8], rel, len;
+    uint32_t h, n, at[40], len, k;
+    uint8_t nt[40], vl[40];
     track_t *t;
-    for (h = 1; h <= 4u; h++) {
-        t = one_step(h, 0);
-        rel = 0;
-        n = run(t, passes(t, 1), at, 8, &rel);
+    for (h = 1; h <= 4u; h++) {                       /* a synth: h hits, 4 steps / h apart, spilling */
+        t = spill_trk(h, 0);
         len = step_len(t, 0);
-        ok &= n == h && rel >= h - 1u;
-        for (uint32_t k = 0; k < n && k < 8u; k++) {   /* part k at k / h of the step, to the block */
-            int32_t d = (int32_t)at[k] - (int32_t)(k * (len / h));
+        n = run_nv(t, 8, at, 0, 0, 40);
+        ok &= n == h;
+        for (k = 0; k < n && k < 8u; k++) {
+            int32_t d = (int32_t)at[k] - (int32_t)(k * (len * 4u / h));
             ok &= d > -(int32_t)CTL && d <= (int32_t)CTL;
         }
-        if (n != h)
-            printf("ui:   RATCH x%u: %u note-ons in one pass\n", h, n);
+        if (n != h) printf("ui:   RATCH x%u: %u note-ons in 8 steps\n", h, n);
     }
-    bad += check("RATCH x1..x4: that many note-ons in a pass, in equal parts, each ended by its gate", ok);
-    t = one_step(4, 0);
-    bad += check("  x4 over 8 passes: 32 note-ons", run(t, passes(t, 8), 0, 0, 0) == 32u);
-    t = one_step(3, 0);
+    bad += check("RATCH x1..x4 (0.9.18): that many note-ons, 4 steps / n apart from the step's start (spilling)", ok);
+    t = spill_trk(4, 0);
+    bad += check("  x4 over 8 passes of 8 steps: 32 note-ons", run_nv(t, 64, 0, 0, 0, 0) == 32u);
+    t = spill_trk(3, 0);
     t->p[P_VOICE] = V_POLY;
     t->step[0].n = 3; t->step[0].note[1] = 64; t->step[0].note[2] = 67;
-    bad += check("  a chord of 3 at x3: 9 note-ons", run(t, passes(t, 1), 0, 0, 0) == 9u);
-    t = one_step(1, SF_SLIDE);
+    bad += check("  a chord of 3 at x3: 9 note-ons", run_nv(t, 8, 0, 0, 0, 0) == 9u);
+    t = spill_trk(1, SF_SLIDE);
     run(t, 4, 0, 0, 0);
     ok = t->seq_hold == 1u;
-    t = one_step(2, SF_SLIDE);
-    run(t, passes(t, 1), 0, 0, 0);
-    bad += check("  x1 slides out as before; x2 never (its last part ends at its gate)", ok && !t->seq_hold && !t->seq_n);
-    t = one_step(4, 0);
-    t->p[P_SLEN] = 2;
+    t = spill_trk(2, SF_SLIDE);
+    run(t, step_len(t, 0) / CTL - 2u, 0, 0, 0);
+    bad += check("  x1 slides out as before; x2 never", ok && !t->seq_hold);
+    t = spill_trk(4, 0);
     t->step[1] = (step_t){{0}, 0, ST_TIE};
     seq_start();
-    run(t, step_len(t, 0) / CTL + step_len(t, 1) / CTL - 1u, 0, 0, 0);
-    bad += check("  nor ties out: a TIE after a ratcheted step holds nothing", !t->seq_n);
+    run(t, step_len(t, 0) / CTL + step_len(t, 1) / CTL / 2u, 0, 0, 0);
+    bad += check("  nor ties out: a TIE after a ratcheted step holds nothing of the step's own", !t->seq_n);
 
-    t = one_step(4, 0);                               /* the DRUM grid: hits of BD (accented) and CH */
+    t = spill_trk(4, 0);                              /* the rule: another step's own note */
+    t->p[P_VOICE] = V_POLY;
+    t->step[2] = (step_t){{60}, 1, ST_NOTE, 0, 100};
+    n = run_nv(t, 8, 0, 0, 0, 40);
+    ok = n == 4u;                                     /* (0, 1, step 2's own (the spilled one left out), 3) */
+    t = spill_trk(4, 0);
+    t->p[P_VOICE] = V_POLY;
+    t->step[2] = (step_t){{64}, 1, ST_NOTE, 0, 100};
+    ok &= run_nv(t, 8, 0, 0, 0, 40) == 5u;            /* (another note: both) */
+    t = spill_trk(4, 0);
+    t->p[P_VOICE] = V_MONO;
+    t->step[2] = (step_t){{64}, 1, ST_NOTE, 0, 100};
+    n = run_nv(t, 8, 0, 0, 0, 40);
+    ok &= n == 3u;                                    /* (MONO: step 2's note cuts the rest) */
+    if (!ok) printf("  rule: mono %u\n", n);
+    bad += check("  a spilled hit on a step with the same note: left out; another note on POLY: both; MONO: cut", ok);
+
+    {   /* (0.9.18) a POLY note recorded into a ratcheted synth step: once, live and on the passes after, not rolled
+         * with the step's own (lm slot LM_ONCE); into a plain step: no mark */
+        uint32_t n60 = 0, n64 = 0;
+        t = spill_trk(2, 0);
+        t->p[P_VOICE] = V_POLY;
+        run(t, 2, 0, 0, 0);                           /* (early in step 1) */
+        rec_note(t, 64, 100);
+        rec_release(t, 64);
+        ok = t->step[0].n == 2u && t->step[0].note[1] == 64u && step_lm_raw(&t->step[0], 1u) == LM_ONCE &&
+             step_lm_raw(&t->step[0], 0u) == LM_NONE;
+        seq_start();
+        n = run_nv(t, 8, 0, nt, 0, 40);
+        for (k = 0; k < n; k++) { n60 += nt[k] == 60u; n64 += nt[k] == 64u; }
+        ok &= n60 == 2u && n64 == 1u;
+        t = spill_trk(1, 0);
+        t->p[P_VOICE] = V_POLY;
+        run(t, 2, 0, 0, 0);
+        rec_note(t, 64, 100);
+        rec_release(t, 64);
+        ok &= t->step[0].n == 2u && !step_lm_any(&t->step[0]);
+        bad += check("  a POLY note recorded into an x2 step: once (60 x2, 64 x1); into an x1 step: no mark", ok);
+    }
+
+    t = spill_trk(3, 0);                              /* the DRUM grid: hits of BD (accented) and CH */
     set_engine_of(t, ENGI_DRUM);
     t->engine = t->eng_req;
     t->step[0] = (step_t){{0}, 0, ST_NOTE, 0, 100, 1u << DV_KICK | 1u << DV_HATC, 1u << DV_KICK};
     step_set_ratchet(&t->step[0], 3);
     seq_start();
-    n = run(t, passes(t, 1), 0, 0, 0);
-    ok = 0;
-    for (h = 0; h < NVOICE; h++)
-        ok |= t->v[h].note == DRUM_LANE_NOTE[DV_KICK] && t->v[h].vel == 127u;
-    bad += check("  DRUM grid: BD + CH at x3, 6 hits, BD accented", n == 6u && ok);
+    len = step_len(t, 0);
+    n = run_nv(t, 8, at, nt, vl, 40);
+    ok = n == 6u && at[5] >= len * 4u / 3u - CTL && at[5] < len * 2u;   /* (x3 over 2 steps: 0, 2/3, 4/3) */
+    for (k = 0; k < n; k++)
+        ok &= nt[k] != DRUM_LANE_NOTE[DV_KICK] || vl[k] == 127u;
+    bad += check("  DRUM grid: BD + CH at x3, 6 hits over 2 steps (a kit's x 2), BD accented", ok);
+    t->step[1] = (step_t){{0}, 0, ST_NOTE, 0, 100, 1u << DV_KICK};
+    seq_start();
+    bad += check("  .. a step after it with its own BD: the BD spilled there left out", run_nv(t, 8, 0, 0, 0, 40) == 6u);
+    t->step[1] = (step_t){{0}, 0, ST_REST};
     step_set_chance(&t->step[0], 0);
     seq_start();
-    bad += check("  chance 0: no part plays", run(t, passes(t, 2), 0, 0, 0) == 0u);
+    bad += check("  chance 0: no hit plays", run_nv(t, 16, 0, 0, 0, 40) == 0u);
 
-    t = one_step(4, 0);                               /* chance: one roll for all four parts */
+    t = spill_trk(4, 0);                              /* chance: one roll for all four hits */
     step_set_chance(&t->step[0], 50);
-    {   /* a pass starts where the step's position wraps (seq_pos below a block) */
-        uint32_t heard = 0, p = 0, odd = 0, v0;
-        n = 0;
-        while (p < 400u) {
-            v0 = vage;
-            seq_tick(t, CTL);
-            if (t->seq_pos < CTL) {                  /* (this block started a pass: count the one before) */
-                odd += p && n != 0u && n != 4u;
-                heard += p ? n : 0u;
-                p++;
-                n = 0;
-            }
-            n += vage - v0;
+    {
+        uint32_t heard = 0, odd = 0, p;
+        for (p = 0; p < 200u; p++) {
+            n = run_nv(t, 8, 0, 0, 0, 0);
+            odd += n != 0u && n != 4u;
+            heard += n;
         }
-        bad += check("  chance 50 % at x4: each pass all 4 parts or none, about half", !odd && heard > 4u * 140u &&
-                     heard < 4u * 260u);
+        bad += check("  chance 50 % at x4: each pass all 4 hits or none, about half", !odd && heard > 4u * 70u &&
+                     heard < 4u * 130u);
     }
-
-    t = one_step(2, 0);                               /* swing: a step's parts stay inside its swung length */
-    t->p[P_SLEN] = 2;
-    t->p[P_SSWING] = SWING_MAX;
-    t->step[1] = t->step[0];
-    seq_start();
-    n = run(t, (step_len(t, 0) + step_len(t, 1)) / CTL - 1u, at, 8, 0);
-    bad += check("  SWING 100: x2 on a long and a short step, 4 note-ons, the short step's within it",
-                 n == 4u && at[1] < step_len(t, 0) && at[2] >= step_len(t, 0) - CTL &&
-                 at[3] - at[2] <= step_len(t, 1) / 2u + CTL);
-
-    t = one_step(4, 0);
+    {   /* FADE, RISE, the pitch steps */
+        static const uint8_t SH[3] = {0, CP_ECHO_RISE, CP_ECHO_EVEN};
+        for (k = 0; k < 3u; k++) {
+            t = spill_trk(1, 0);
+            t->step[0].comp = CP_ECHO; t->step[0].carg = (uint8_t)(2u | SH[k]);   /* x4 */
+            seq_start();
+            n = run_nv(t, 8, 0, 0, vl, 40);
+            ok = n == 4u && (k == 0u ? vl[0] > vl[1] && vl[1] > vl[2] && vl[2] > vl[3] :
+                             k == 1u ? vl[0] < vl[1] && vl[1] < vl[2] && vl[2] < vl[3] : vl[0] == vl[3]);
+            bad += check(k == 0u ? "  RATCH x4 FADE: each hit softer" : k == 1u ? "  RATCH x4 RISE: each louder" :
+                         "  RATCH x4 FLAT: all at the step's level", ok);
+        }
+        t = spill_trk(1, 0);
+        t->p[P_ROOT] = 0; t->p[P_SCALE] = 1;          /* (C major) */
+        t->step[0].comp = CP_ECHO; t->step[0].carg = (uint8_t)(2u | CP_ECHO_EVEN | RP_UP << 4);
+        seq_start();
+        n = run_nv(t, 8, 0, nt, 0, 40);
+        ok = n == 4u && nt[0] == 60u && nt[1] == 62u && nt[2] == 64u && nt[3] == 65u;
+        t = spill_trk(1, 0);
+        t->step[0].comp = CP_ECHO; t->step[0].carg = (uint8_t)(2u | CP_ECHO_EVEN | RP_OCT << 4);
+        seq_start();
+        n = run_nv(t, 8, 0, nt, 0, 40);
+        ok &= n == 4u && nt[0] == 60u && nt[1] == 72u && nt[2] == 60u && nt[3] == 72u;
+        bad += check("  RATCH's pitch step: +1 DEG 60 62 64 65; +OCT 60 72 60 72", ok);
+    }
+    t = spill_trk(4, 0);
     run(t, 2, 0, 0, 0);
-    ok = t->rat_left == 3u;
+    ok = t->sp_left == 3u;
     seq_stop();
-    bad += check("  STOP: no part left", ok && !t->rat_left && !t->seq_n);
-    t = one_step(4, 0);
-    run(t, 2, 0, 0, 0);
-    step_set_ratchet(&t->step[0], 1);
-    bad += check("  an edit to x1 while it plays ends the parts", run(t, passes(t, 1) - 2u, 0, 0, 0) == 0u && !t->rat_left);
+    bad += check("  STOP: no hit left", ok && !t->sp_left && !t->sp_pm && !t->seq_n);
     seq_stop();
+    return bad;
+}
+
+/* (0.9.18) SEQ > COMP marks on the roll and the grid (ui_graph.c seq_overlay): the step the component goes on framed
+ * THEME with a tab at its foot, following KNOB 1 at once; the steps with the same component a 3 px ACCENT bar on top
+ * (a RATCH of the flags the same as an ECHO), another component a 1 px MID one; a JUMP's step framed ACCENT, following
+ * KNOB 3 */
+static uint16_t gpx(int32_t x, int32_t y) { return swap16(host_screen[(uint32_t)(y + (int32_t)graph_y()) * 240u + (uint32_t)x]); }
+static int comp_marks(void)
+{
+    int bad = 0, ok, dr;
+    uint32_t i;
+    track_t *t;
+    for (dr = 0; dr < 2; dr++) {
+        int32_t x, w, top, bot, y;
+        ui_power_on();
+        song.sel = dr ? 3u : 0u;
+        t = TSEL;
+        if (dr) { set_engine_of(t, ENGI_DRUM); t->engine = t->eng_req; }
+        track_defaults_steps(t);
+        t->p[P_SLEN] = 16;
+        for (i = 0; i < 16u; i++)
+            t->step[i] = dr ? (step_t){{0}, 0, ST_NOTE, 0, 100, 1u << DV_HATC} : (step_t){{(uint8_t)(52u + i)}, 1, ST_NOTE, 0, 100};
+        t->step[2].comp = CP_ECHO; t->step[2].carg = 1;
+        step_set_ratchet(&t->step[7], 3);
+        t->step[12].comp = CP_ECHO;
+        t->step[4].comp = CP_RAND; t->step[4].carg = 2;
+        go_page(GR_COMP);
+        cursor_set(12);
+        ui.force = 1; frame();
+        top = dr ? 19 : PR_Y0; bot = dr ? 19 + 8 * 15 - 1 : PR_Y0 + PR_ROWS * PR_RH;
+        y = (top + bot) / 2;
+        seq_col((uint32_t)dr, 12, &x, &w);
+        ok = gpx(x - 1, y) == T_THEME && gpx(x + w + 1, y) == T_THEME && gpx(x + w / 2, bot - 2) == T_THEME;
+        seq_col((uint32_t)dr, 2, &x, &w);
+        ok &= gpx(x + w / 2, top - 2) == T_ACCENT && gpx(x - 1, y) != T_THEME;
+        seq_col((uint32_t)dr, 7, &x, &w);
+        ok &= gpx(x + w / 2, top - 2) == T_ACCENT;
+        seq_col((uint32_t)dr, 4, &x, &w);
+        ok &= gpx(x + w / 2, top - 2) == T_MID && gpx(x + w / 2, top - 3) != T_ACCENT;
+        turn(EN_K1, 1); frame();                          /* KNOB 1: the frame on step 14 at once */
+        seq_col((uint32_t)dr, 13, &x, &w);
+        ok &= ui.cursor == 13u && gpx(x - 1, y) == T_THEME;
+        seq_col((uint32_t)dr, 12, &x, &w);
+        ok &= gpx(x - 1, y) != T_THEME;
+        t->step[13].comp = CP_JUMP; t->step[13].carg = 5;   /* a JUMP to step 6, then KNOB 3 to step 7 */
+        ui.force = 1; frame();
+        seq_col((uint32_t)dr, 5, &x, &w);
+        ok &= gpx(x + 1, y) == T_ACCENT;
+        turn(EN_K3, 1); frame();
+        ok &= CP_JTO(t->step[13].carg) == 6u && gpx(x + 1, y) != T_ACCENT;
+        seq_col((uint32_t)dr, 6, &x, &w);
+        ok &= gpx(x + 1, y) == T_ACCENT;
+        bad += check(dr ? "  .. the same on a kit's grid" :
+                     "SEQ > COMP marks: the step framed THEME (live with KNOB 1), the same component ACCENT, another MID, JUMP's step ACCENT", ok);
+    }
     return bad;
 }
 
@@ -377,59 +507,66 @@ static int components(void)
     uint32_t n;
     track_t *t;
     project_store_t st;
-    /* ARP NOTES: x4 UP over a chord, one octave: the chord's notes in turn, again from the bottom */
-    t = one_step(1, 0);
-    t->step[0] = (step_t){{60, 64, 67}, 3, ST_NOTE, 0, 100};
-    t->step[0].comp = CP_ARPN; t->step[0].carg = CP_ARG(0u, 2u, 0u);
-    n = run_notes(t, passes(t, 1), nt, sizeof nt);
-    bad += check("ARP NOTES x4 UP: 60 64 67 60 in one step", n == 4u && nt[0] == 60u && nt[1] == 64u && nt[2] == 67u &&
-                 nt[3] == 60u);
-    t = one_step(1, 0);
-    t->step[0] = (step_t){{60, 64, 67}, 3, ST_NOTE, 0, 100};
-    t->step[0].comp = CP_ARPN; t->step[0].carg = CP_ARG(1u, 1u, 1u);   /* DOWN x3, two octaves */
-    n = run_notes(t, passes(t, 1), nt, sizeof nt);
-    bad += check("ARP NOTES x3 DOWN over two octaves: 79 76 72", n == 3u && nt[0] == 79u && nt[1] == 76u && nt[2] == 72u);
-    t = one_step(1, 0);                                   /* over the TIE after it: the arpeggio goes on */
-    t->p[P_SLEN] = 2;
-    t->step[0] = (step_t){{60, 64, 67}, 3, ST_NOTE, 0, 100};
-    t->step[0].comp = CP_ARPN; t->step[0].carg = CP_ARG(0u, 0u, 0u);   /* x2 */
-    t->step[1] = (step_t){{0}, 0, ST_TIE, 0, 0};
-    seq_start();
-    n = run_notes(t, 2u * step_len(t, 0) / CTL - 1u, nt, sizeof nt);
-    bad += check("ARP x2 over a TIE: 60 64 | 67 60 (the TIE goes on with it)", n == 4u && nt[0] == 60u && nt[1] == 64u &&
-                 nt[2] == 67u && nt[3] == 60u);
-    t = one_step(1, 0);                                   /* SCALE: C major up from the step's note, 3 degrees */
-    t->p[P_ROOT] = 0; t->p[P_SCALE] = 1;
-    t->step[0] = (step_t){{60}, 1, ST_NOTE, 0, 100};
-    t->step[0].comp = CP_ARPS; t->step[0].carg = CP_ARG(0u, 2u, 0u);
-    n = run_notes(t, passes(t, 1), nt, sizeof nt);
-    bad += check("ARP SCALE x4 UP, 3 degrees of C major: 60 62 64 60", n == 4u && nt[0] == 60u && nt[1] == 62u &&
-                 nt[2] == 64u && nt[3] == 60u);
-    /* (0.9.17) ARP SEQ walks the pattern's melody a lap at a time (seq.c arp_lap): one note a pass of the pattern, the
-     * next the next time round, in its ORDER; its RATE no longer counts */
-    t = one_step(1, 0);
-    t->p[P_SLEN] = 2;
-    t->step[0] = (step_t){{60}, 1, ST_NOTE, 0, 100};
-    t->step[0].comp = CP_ARPQ; t->step[0].carg = CP_ARG(0u, 4u, 0u);   /* (RATE x8 stored: one a lap all the same) */
-    t->step[1] = (step_t){{67}, 1, ST_NOTE, 0, 100};
-    seq_start();
-    n = run_notes(t, 4u * step_len(t, 0) / CTL - 1u, nt, sizeof nt);
-    bad += check("ARP SEQ: a note of the pattern a lap (60, 67 | 67, 67), then the next step's own 67", n == 4u &&
-                 nt[0] == 60u && nt[1] == 67u && nt[2] == 67u && nt[3] == 67u);
-    seq_stop();                                           /* PLAY from a stop: from its first note again */
-    seq_start();
-    n = run_notes(t, step_len(t, 0) / CTL, nt, sizeof nt);
-    bad += check("  PLAY again: the first note (60), as the other components' loops", n == 1u && nt[0] == 60u);
-    t = one_step(1, 0);                                   /* a TIE after it: the lap's note held over it, no new one */
-    t->p[P_SLEN] = 2;
-    t->step[0] = (step_t){{60}, 1, ST_NOTE, 0, 100};
-    t->step[0].comp = CP_ARPQ; t->step[0].carg = CP_ARG(0u, 0u, 1u);   /* (two octaves: 60 72) */
-    t->step[1] = (step_t){{0}, 0, ST_TIE, 0, 0};
-    seq_start();
-    n = run_notes(t, 2u * step_len(t, 0) / CTL - 2u, nt, sizeof nt);
-    ok = n == 1u && nt[0] == 60u && t->seq_n == 1u;
-    n = run_notes(t, 2u * step_len(t, 0) / CTL, nt, sizeof nt);
-    bad += check("ARP SEQ over a TIE: the lap's note held through it (60, then 72 the next lap)", ok && n == 1u && nt[0] == 72u);
+    /* (0.9.18) ARP: the step's notes one at a time at its RATE (a note value), in its ORDER, over RANGE octaves (one
+     * note: itself and RANGE octaves up), the step and its TIEs at least once through, spilling over the steps after */
+    {
+        uint32_t at[16];
+        uint8_t vl[16];
+        t = spill_trk(1, 0);                              /* (DIV 1/16: a step a sixteenth) */
+        t->p[P_VOICE] = V_POLY;
+        t->step[0] = (step_t){{67, 60, 64}, 3, ST_NOTE, 0, 100};
+        t->step[0].comp = CP_ARPN; t->step[0].carg = CP_ARG(0u, 5u, 0u);   /* UP 1/16 */
+        seq_start();
+        n = run_nv(t, 8, at, nt, vl, 16);
+        ok = n == 3u && nt[0] == 60u && nt[1] == 64u && nt[2] == 67u && at[1] >= step_len(t, 0) - CTL &&
+             at[1] <= step_len(t, 0) + CTL && at[2] >= 2u * step_len(t, 0) - CTL;
+        bad += check("ARP UP 1/16 over a chord: 60 64 67 a step each, spilling over the empty steps", ok);
+        t = spill_trk(1, 0);
+        t->p[P_SLEN] = 16;
+        t->p[P_VOICE] = V_POLY;
+        for (n = 8; n < 16u; n++) t->step[n] = (step_t){{0}, 0, ST_REST};
+        t->step[0] = (step_t){{60, 64, 67}, 3, ST_NOTE, 0, 100};
+        t->step[0].comp = CP_ARPN; t->step[0].carg = CP_ARG(1u, 6u, 1u);   /* DOWN 1/8, two octaves */
+        seq_start();
+        n = run_nv(t, 16, at, nt, 0, 16);
+        ok = n == 6u && nt[0] == 79u && nt[1] == 76u && nt[2] == 72u && nt[5] == 60u &&
+             at[1] >= 2u * step_len(t, 0) - CTL && at[1] <= 2u * step_len(t, 0) + CTL;
+        bad += check("ARP DOWN 1/8 over two octaves: 79 76 72 67 64 60, two steps apart", ok);
+        t = spill_trk(1, 0);
+        t->step[0].comp = CP_ARPN; t->step[0].carg = CP_ARG(0u, 5u, 1u);   /* one note, UP 2 OCT */
+        seq_start();
+        n = run_nv(t, 8, 0, nt, 0, 16);
+        bad += check("ARP of one note, 2 OCT: itself and two octaves up (60 72 84)", n == 3u && nt[0] == 60u &&
+                     nt[1] == 72u && nt[2] == 84u);
+        t = spill_trk(1, 0);
+        t->p[P_VOICE] = V_POLY;
+        t->step[0] = (step_t){{60, 64, 67}, 3, ST_NOTE, 0, 100};
+        t->step[0].comp = CP_ARPN; t->step[0].carg = CP_ARG(0u, 5u, 0u);
+        for (n = 1; n < 5u; n++) t->step[n] = (step_t){{0}, 0, ST_TIE};
+        seq_start();
+        n = run_nv(t, 8, 0, nt, 0, 16);
+        bad += check("  over 4 TIEs: on through the step and its TIEs (60 64 67 60 64)", n == 5u && nt[3] == 60u &&
+                     nt[4] == 64u);
+        t = spill_trk(1, 0);
+        t->p[P_SLEN] = 4;
+        t->p[P_VOICE] = V_POLY;
+        t->step[0] = (step_t){{60, 64, 67}, 3, ST_NOTE, 0, 100};
+        t->step[0].comp = CP_ARPN; t->step[0].carg = CP_ARG(0u, 5u, 0u);
+        ST_EVERY_SET(&t->step[0], EV_1_2);
+        seq_start();
+        n = run_nv(t, 8, at, nt, 0, 16);                  /* (lap 1 the arpeggio, lap 2 the chord at once) */
+        ok = n == 6u && at[1] > at[0] + CTL && at[3] == at[4] && at[4] == at[5];
+        bad += check("  ARP 1:2: the arpeggio on the odd laps, the chord as written on the others", ok);
+        t = spill_trk(1, 0);
+        t->p[P_VOICE] = V_MONO;
+        t->step[0] = (step_t){{60, 64, 67}, 3, ST_NOTE, 0, 100};
+        t->step[0].comp = CP_ARPN; t->step[0].carg = CP_ARG(0u, 6u, 0u);   /* 1/8: 60 64 67 on 0 2 4 */
+        t->step[3] = (step_t){{50}, 1, ST_NOTE, 0, 100};
+        seq_start();
+        n = run_nv(t, 8, 0, nt, 0, 16);
+        bad += check("  MONO: a note after it cuts the rest (60 64, then 50)", n == 3u && nt[0] == 60u && nt[1] == 64u &&
+                     nt[2] == 50u);
+    }
     /* SEQ: the pattern's melody in its order (67 60 64; NOTES would sort it), a note of it a lap */
     t = one_step(1, 0);
     t->p[P_SLEN] = 3;
@@ -458,14 +595,14 @@ static int components(void)
     /* a project keeps them (FUNC: x bit 16, two bytes), an old step none */
     ui_power_on();
     trk[0].step[3] = (step_t){{60, 64}, 2, ST_NOTE, 0, 100};
-    trk[0].step[3].comp = CP_ARPS; trk[0].step[3].carg = CP_ARG(2u, 3u, 2u);
+    trk[0].step[3].comp = CP_ARPN; trk[0].step[3].carg = CP_ARG(2u, 6u, 2u);
     trk[1].step[0] = (step_t){{50}, 1, ST_NOTE, 0, 100};
     trk[1].step[0].comp = CP_TRIG; trk[1].step[0].carg = 7;
     project_capture(&proj_scratch);
     ok = proj_pack(&st, &proj_scratch);
     trk[0].step[3].comp = trk[1].step[0].comp = 0;
     ok &= proj_import(&proj_scratch, &st, sizeof st) && !project_restore_runtime(&proj_scratch);
-    ok &= trk[0].step[3].comp == CP_ARPS && trk[0].step[3].carg == CP_ARG(2u, 3u, 2u) && trk[1].step[0].comp == CP_TRIG &&
+    ok &= trk[0].step[3].comp == CP_ARPN && trk[0].step[3].carg == CP_ARG(2u, 6u, 2u) && trk[1].step[0].comp == CP_TRIG &&
           trk[1].step[0].carg == 7u && !trk[0].step[2].comp;
     bad += check("a project keeps the components (FUNC round trip)", ok);
     /* SEQ > COMP: K2 the TYPE, K3 / K4 its values; OFF / CHANCE / RATCH take a component away */
@@ -474,22 +611,29 @@ static int components(void)
     t->step[0] = (step_t){{60, 64, 67}, 3, ST_NOTE, 0, 100};
     go_page(GR_COMP); frame();
     ok = str_eq(cur_page()->title, "COMP") && comp_view() == COMP_OFF;
-    turn(EN_K2, 3);                                       /* OFF CHANCE RATCH NOTES */
-    ok &= t->step[0].comp == CP_ARPN && t->step[0].carg == CP_ARG(0u, 2u, 0u);
-    turn(EN_K3, 4); turn(EN_K3, 1); turn(EN_K4, 1);       /* (0.6.92) KNOB 3 ORDER x RANGE: DOWN over two octaves; KNOB 4 RATE x6 */
-    ok &= CP_ORD(t->step[0].carg) == 1u && CP_RATE(t->step[0].carg) == 3u && CP_RNG(t->step[0].carg) == 1u;
-    turn(EN_K2, 1); turn(EN_K4, 1);                       /* (0.9.17) SEQ: KNOB 4 its lap's note, shown: nothing to turn */
-    ok &= t->step[0].comp == CP_ARPQ && CP_RATE(t->step[0].carg) == 3u;
-    turn(EN_K2, 1);
-                                                          /* SCALE: the values kept */
-    ok &= t->step[0].comp == CP_ARPS && CP_ORD(t->step[0].carg) == 1u;
-    turn(EN_K2, 1); turn(EN_K3, 4); turn(EN_K3, 1);      /* TRIG 1:2 .. 2:4 (4 detents a pass at most) */
+    turn(EN_K2, 3);                                       /* OFF CHANCE RATCH ARP */
+    ok &= t->step[0].comp == CP_ARPN && t->step[0].carg == CP_ARG(0u, 5u, 0u);
+    turn(EN_K3, 4); turn(EN_K3, 1); turn(EN_K4, 1);       /* (0.6.92) KNOB 3 ORDER x RANGE: DOWN over two octaves; (0.9.18)
+                                                           * KNOB 4 RATE x the laps: 1/16 -> 1/32 */
+    frame();
+    ok &= CP_ORD(t->step[0].carg) == 1u && CP_RATE(t->step[0].carg) == 0u && CP_RNG(t->step[0].carg) == 1u &&
+          !strncmp(ui.col[3], "RATE|1/32", 9);         /* (the label as it plays: 1/32) */
+    turn(EN_K4, 1); turn(EN_K4, 1); frame();           /* (1/32 1/16 1/8: a detent a value) */
+    ok &= CP_RATE(t->step[0].carg) == 6u && !strncmp(ui.col[3], "RATE|1/8", 8);
+    turn(EN_K4, -1); turn(EN_K4, -1);
+    turn(EN_K4, 4);                                       /* (.. 1/4 1:2: the step's EVERY) */
+    ok &= CP_RATE(t->step[0].carg) == 7u && ST_EVERY(&t->step[0]) == EV_1_2;
+    turn(EN_K4, -4);
+    ok &= ST_EVERY(&t->step[0]) == EV_ALWAYS;
+    turn(EN_K2, 1);                                       /* SEQ: the values kept */
+    ok &= t->step[0].comp == CP_ARPQ && CP_ORD(t->step[0].carg) == 1u;
+    turn(EN_K2, 4); turn(EN_K2, 4); turn(EN_K2, 1); turn(EN_K3, 4); turn(EN_K3, 1);   /* TRIG 1:2 .. 2:4 */
     ok &= t->step[0].comp == CP_TRIG && t->step[0].carg == 5u;
-    turn(EN_K2, -4); turn(EN_K2, -1); turn(EN_K3, -40);  /* CHANCE 60 %: the TRIG gone */
+    turn(EN_K2, -4); turn(EN_K2, -4); turn(EN_K2, -4); turn(EN_K3, -40);   /* CHANCE 60 %: the TRIG gone */
     ok &= !t->step[0].comp && step_chance(&t->step[0]) == 60u && comp_view() == COMP_CHANCE;
     turn(EN_K1, 1); frame();
     ok &= ui.cursor == 1u && comp_view() == COMP_OFF;
-    bad += check("SEQ > COMP: TYPE, ORDER x RANGE, RATE, TRIG's condition, CHANCE takes the component away", ok);
+    bad += check("SEQ > COMP: TYPE, ORDER x RANGE, RATE x laps, TRIG's condition, CHANCE takes the component away", ok);
     return bad;
 }
 
@@ -525,15 +669,15 @@ static int components2(void)
         for (i = 0; i < n; i++) { ok &= nt[i] == 59u || nt[i] == 60u || nt[i] == 62u; seen |= 1u << (nt[i] - 59u); }
         bad += check("RAND 1: the note a degree up / down at random (C major: 59 60 62)", ok && seen != 1u && seen != 2u && seen != 8u);
     }
-    {   /* OCT: +1 always; +1 every other loop */
+    {   /* (0.9.18) OCT (CP_CLIMB): an octave a lap, up to its range, then round: UP 2 OCT 60 72 84 60 ..; DOWN 1 */
         static const uint8_t P1[1] = {60};
-        t = pat(1, P1); t->step[0].comp = CP_OCT; t->step[0].carg = 0;
-        n = run_steps(t, 2, nt, sizeof nt);
-        ok = n == 2u && nt[0] == 72u && nt[1] == 72u;
-        t = pat(1, P1); t->step[0].comp = CP_OCT; t->step[0].carg = 2;
+        t = pat(1, P1); t->step[0].comp = CP_CLIMB; t->step[0].carg = CP_WARG(0u, 0u, 1u);
         n = run_steps(t, 4, nt, sizeof nt);
-        ok &= n == 4u && nt[0] == 60u && nt[1] == 72u && nt[2] == 60u && nt[3] == 72u;
-        bad += check("OCT: +1 every time; +1/2 every other loop", ok);
+        ok = n == 4u && nt[0] == 60u && nt[1] == 72u && nt[2] == 84u && nt[3] == 60u;
+        t = pat(1, P1); t->step[0].comp = CP_CLIMB; t->step[0].carg = CP_WARG(0u, 1u, 0u);
+        n = run_steps(t, 4, nt, sizeof nt);
+        ok &= n == 4u && nt[0] == 60u && nt[1] == 48u && nt[2] == 60u && nt[3] == 48u;
+        bad += check("OCT: an octave a lap up to its range and round (60 72 84 60); DOWN 1 (60 48 60 48)", ok);
     }
     {   /* (0.6.98) WALK UP 3 degrees every loop: 60 62 64 65 60 .. (C major); DOWN; UP-DN 3 every 2 loops: 60 60 62 62
          * 64 64 65 65 64 64 62 62 60 ..; CLIMB UP 1 octave every loop: 60 72 60 72; RND: inside the range, the same
@@ -565,22 +709,7 @@ static int components2(void)
         n = run_steps(t, 4, nt, sizeof nt);
         ok &= n == 4u && nt[0] == 60u && nt[1] == 62u && nt[2] == 76u && nt[3] == 77u;
         if (!ok) printf("  stacked: %u %u %u %u\n", nt[0], nt[1], nt[2], nt[3]);
-        bad += check("CLIMB: an octave a loop and back; WALK RND inside its range, moving; WALK + CLIMB stacked add up", ok);
-    }
-    {   /* (0.6.47) C.LEN 3 over LEN 4: step 1's OCT on the lane, so on plays 1, 4, 7 (steps 1 4 3 ..); C.LEN OFF as before */
-        static const uint8_t P4[4] = {60, 62, 64, 65};
-        t = pat(4, P4); t->step[0].comp = CP_OCT; t->step[0].carg = 0; t->p[P_CLEN] = 3;
-        n = run_steps(t, 8, nt, sizeof nt);
-        ok = n == 8u && nt[0] == 72u && nt[1] == 62u && nt[2] == 64u && nt[3] == 77u && nt[4] == 60u && nt[5] == 62u &&
-             nt[6] == 76u && nt[7] == 65u;
-        t = pat(4, P4); t->step[0].comp = CP_OCT; t->step[0].carg = 0; t->p[P_CLEN] = 0;
-        n = run_steps(t, 8, nt, sizeof nt);
-        ok &= n == 8u && nt[0] == 72u && nt[3] == 65u && nt[4] == 72u && nt[6] == 64u;
-        t = pat(4, P4); t->step[0].comp = CP_ECHO; t->step[0].carg = 0; t->p[P_CLEN] = 3;   /* the repeats too */
-        n = run_steps(t, 4, nt, sizeof nt);
-        ok &= n == 6u && nt[0] == 60u && nt[1] == 60u && nt[2] == 62u && nt[3] == 64u && nt[4] == 65u && nt[5] == 65u;
-        t->p[P_CLEN] = 0;
-        bad += check("C.LEN 3 over 4 steps: the components drift over the steps (OCT, ECHO's repeats); OFF as before", ok);
+        bad += check("OCT (CLIMB): an octave a loop and back; WALK RND inside its range, moving; WALK + OCT stacked add up", ok);
     }
     {   /* (0.6.52) FUGUE: head 2 at x2, +2 degrees: two notes a step, a third up the scale; head 2 REV x1: the pattern
          * backwards beside it; OFF: as before */
@@ -624,17 +753,17 @@ static int components2(void)
                 ok = t->v[k].pitch16 == 72 * 16 && t->v[k].pitch_cur < 72 * 16 && t->v[k].gstep > 0;
         bad += check("BEND +12: the note glides to 72 over the step", ok);
     }
-    {   /* ECHO x3: three note-ons in a step, each softer */
-        static const uint8_t P1[1] = {60};
+    {   /* ECHO x3 (0.9.18: RATCH x3 FADE): three note-ons, each softer, spilling over the empty steps after it */
+        static const uint8_t P4[4] = {60, 0, 0, 0};
         uint32_t b, v0, vel[8], nv = 0;
-        t = pat(1, P1); t->step[0].comp = CP_ECHO; t->step[0].carg = 1;
-        for (b = 0; b + 1u < step_len(t, 0) / CTL; b++) {
+        t = pat(4, P4); t->step[0].comp = CP_ECHO; t->step[0].carg = 1;
+        for (b = 0; b + 1u < 4u * step_len(t, 0) / CTL; b++) {
             v0 = vage;
             seq_tick(t, CTL);
             for (k = 0; k < NVOICE; k++)
                 if (t->v[k].age > v0 && nv < 8u) vel[nv++] = t->v[k].vel;
         }
-        bad += check("ECHO x3: three in the step, each softer", nv == 3u && vel[0] > vel[1] && vel[1] > vel[2]);
+        bad += check("ECHO x3: three, each softer", nv == 3u && vel[0] > vel[1] && vel[1] > vel[2]);
     }
     {   /* PULSE: on every empty step after it; every 2 */
         static const uint8_t P4[4] = {60, 0, 0, 0};
@@ -707,16 +836,16 @@ static int components2(void)
         t = TSEL;
         t->step[0] = (step_t){{60}, 1, ST_NOTE, 0, 100};
         go_page(GR_COMP); frame();
-        turn(EN_K2, 4); turn(EN_K2, 3);                   /* .. RAND */
+        turn(EN_K2, 4); turn(EN_K2, 4);                   /* .. RAND (0.9.18: the list by family) */
         ok = t->step[0].comp == CP_RAND && t->step[0].carg == 2u;
-        turn(EN_K2, 4); turn(EN_K2, 2);                   /* .. JUMP */
+        turn(EN_K2, 3);                                   /* .. JUMP */
         turn(EN_K3, 9);
         ok &= t->step[0].comp == CP_JUMP && t->step[0].carg == 9u;
         turn(EN_K4, 1); frame();                          /* (0.6.92) EVERY 1:2, the step kept */
         ok &= ST_EVERY(&t->step[0]) == EV_1_2 && CP_JTO(t->step[0].carg) == 9u && strstr(ui.col[3], "1:2") != 0;
         turn(EN_K3, -2);
         ok &= ST_EVERY(&t->step[0]) == EV_1_2 && CP_JTO(t->step[0].carg) == 7u;
-        turn(EN_K2, 3);                                   /* KILL */
+        turn(EN_K2, 4);                                   /* KILL */
         ok &= t->step[0].comp == CP_KILL && comp_view() == COMP_KILL;
         bad += check("SEQ > COMP: RAND .. KILL on KNOB 2, JUMP's step on KNOB 3, EVERY on KNOB 4", ok);
     }
@@ -744,50 +873,58 @@ static int components3(void)
     track_t *t;
     project_store_t st;
     static const uint8_t P1[1] = {60};
-    /* WHEN: OCT +1 on odd loops (1:2): 72 60 72 60; on even (2:2): 60 72 ..; SKIP: never */
-    t = pat(1, P1); t->step[0].comp = CP_OCT; t->step[0].carg = 0; ST_EVERY_SET(&t->step[0], EV_1_2);
+    /* WHEN: TONAL +7 (an octave of C major) on odd loops (1:2): 72 60 72 60; on even (2:2): 60 72 ..; SKIP: never */
+    t = pat(1, P1); t->step[0].comp = CP_TONAL; t->step[0].carg = 14; ST_EVERY_SET(&t->step[0], EV_1_2);
     n = run_steps(t, 4, nt, sizeof nt);
     ok = n == 4u && nt[0] == 72u && nt[1] == 60u && nt[2] == 72u && nt[3] == 60u;
-    t = pat(1, P1); t->step[0].comp = CP_OCT; t->step[0].carg = 0; ST_EVERY_SET(&t->step[0], EV_2_2);
+    t = pat(1, P1); t->step[0].comp = CP_TONAL; t->step[0].carg = 14; ST_EVERY_SET(&t->step[0], EV_2_2);
     n = run_steps(t, 4, nt, sizeof nt);
     ok &= n == 4u && nt[0] == 60u && nt[1] == 72u && nt[2] == 60u && nt[3] == 72u;
-    t = pat(1, P1); t->step[0].comp = CP_OCT; t->step[0].carg = 0; ST_EVERY_SET(&t->step[0], EV_SKIP);
+    t = pat(1, P1); t->step[0].comp = CP_TONAL; t->step[0].carg = 14; ST_EVERY_SET(&t->step[0], EV_SKIP);
     n = run_steps(t, 3, nt, sizeof nt);
     ok &= n == 3u && nt[0] == 60u && nt[1] == 60u && nt[2] == 60u;
-    bad += check("EVERY: OCT on 1:2 loops, on 2:2 loops, SKIP never", ok);
-    /* two components: ECHO x2 and OCT +1: both, two notes a step an octave up; the second one's WHEN its own */
-    t = pat(1, P1); t->step[0].comp = CP_ECHO; t->step[0].carg = 0; t->step[0].comp2 = CP_OCT; t->step[0].carg2 = 0;
-    n = run_steps(t, 2, nt, sizeof nt);
-    ok = n == 4u && nt[0] == 72u && nt[1] == 72u && nt[2] == 72u && nt[3] == 72u;
-    t = pat(1, P1); t->step[0].comp = CP_ECHO; t->step[0].carg = 0; t->step[0].comp2 = CP_OCT; t->step[0].carg2 = 0;
-    ST_EVERY_SET(&t->step[0], EV_2_2);                    /* (0.6.92: EVERY is the step's: both on the even loops) */
-    n = run_steps(t, 2, nt, sizeof nt);
-    ok &= n == 3u && nt[0] == 60u && nt[1] == 72u && nt[2] == 72u;
-    bad += check("two components a step: ECHO x2 + OCT +1 together; EVERY 2:2 holds both back on the odd loops", ok);
-    /* the one that silences wins: OCT and TRIG FIRST: the octave on the first loop, then nothing */
-    t = pat(1, P1); t->step[0].comp = CP_OCT; t->step[0].carg = 0; t->step[0].comp2 = CP_TRIG; t->step[0].carg2 = 10;
+    bad += check("EVERY: TONAL on 1:2 loops, on 2:2 loops, SKIP never", ok);
+    /* two components: ECHO x2 and TONAL +7: both, two hits an octave up; EVERY the step's: both held back */
+    {
+        static const uint8_t P4[4] = {60, 0, 0, 0};
+        t = pat(4, P4); t->step[0].comp = CP_ECHO; t->step[0].carg = 0; t->step[0].comp2 = CP_TONAL; t->step[0].carg2 = 14;
+        n = run_steps(t, 4, nt, sizeof nt);
+        ok = n == 2u && nt[0] == 72u && nt[1] == 72u;
+        t = pat(4, P4); t->step[0].comp = CP_ECHO; t->step[0].carg = 0; t->step[0].comp2 = CP_TONAL; t->step[0].carg2 = 14;
+        ST_EVERY_SET(&t->step[0], EV_2_2);                /* (0.6.92: EVERY is the step's: both on the even loops) */
+        n = run_steps(t, 8, nt, sizeof nt);
+        ok &= n == 3u && nt[0] == 60u && nt[1] == 72u && nt[2] == 72u;
+        bad += check("two components a step: ECHO x2 + TONAL together; EVERY 2:2 holds both back on the odd loops", ok);
+    }
+    /* the one that silences wins: TONAL and TRIG FIRST: the octave on the first loop, then nothing */
+    t = pat(1, P1); t->step[0].comp = CP_TONAL; t->step[0].carg = 14; t->step[0].comp2 = CP_TRIG; t->step[0].carg2 = 10;
     n = run_steps(t, 3, nt, sizeof nt);
     ok = n == 1u && nt[0] == 72u;
     ST_EVERY_SET(&t->step[0], EV_SKIP);                   /* (both skipped: it plays, as written) */
     seq_start();
     n = run_steps(t, 3, nt, sizeof nt);
     ok &= n == 3u && nt[0] == 60u;
-    bad += check("a TRIG beside an OCT: the TRIG keeps it silent (FIRST: one loop only); EVERY SKIP: every loop, as written", ok);
-    /* DIV: ECHO x3 a step/4 apart: the third at half the step (shared out: at two thirds); RATCH x4 at 1/2: two */
+    bad += check("a TRIG beside a TONAL: the TRIG keeps it silent (FIRST: one loop only); EVERY SKIP: every loop, as written", ok);
+    /* DIV (0.9.18, spilling): ECHO x3 at 1/4 a step x 4 apart; shared out: 4/3 of a step; RATCH x4 at 1/2 two steps
+     * apart; ECHO x8 half a step apart */
+    nb = step_len(pat(1, P1), 0);
+    {
+        uint32_t a2[16];
+        t = spill_trk(1, 0); t->step[0].comp = CP_ECHO; t->step[0].carg = 1; t->step[0].ctime = 3;
+        n = run_nv(t, 8, a2, 0, 0, 16);
+        ok = n == 3u && a2[1] + CTL >= nb && a2[1] <= nb + CTL && a2[2] + CTL >= 2u * nb && a2[2] <= 2u * nb + CTL;
+        t = spill_trk(1, 0); t->step[0].comp = CP_ECHO; t->step[0].carg = 1;
+        n = run_nv(t, 8, a2, 0, 0, 16);
+        ok &= n == 3u && a2[1] + CTL >= nb * 4u / 3u && a2[1] <= nb * 4u / 3u + CTL;
+        t = spill_trk(4, 0); t->step[0].ctime = 1;
+        n = run_nv(t, 8, a2, 0, 0, 16);
+        ok &= n == 4u && a2[3] + CTL >= 6u * nb && a2[3] <= 6u * nb + CTL;
+        t = spill_trk(1, 0); t->step[0].comp = CP_ECHO; t->step[0].carg = 6;   /* (x8) */
+        n = run_nv(t, 8, a2, 0, 0, 16);
+        ok &= n == 8u && a2[7] + CTL >= nb * 7u / 2u && a2[7] <= nb * 7u / 2u + CTL;
+        bad += check("DIV: ECHO x3 at 1/4 a step apart (x 4); shared out 4/3 of a step; RATCH x4 at 1/2 two steps; ECHO x8", ok);
+    }
     nb = step_len(pat(1, P1), 0) / CTL;
-    t = pat(1, P1); t->step[0].comp = CP_ECHO; t->step[0].carg = 1; t->step[0].ctime = 3;
-    n = onsets(t, at, 8);
-    ok = n == 3u && at[2] * 10u < nb * 6u && at[2] * 10u > nb * 4u;
-    t = pat(1, P1); t->step[0].comp = CP_ECHO; t->step[0].carg = 1;
-    n = onsets(t, at, 8);
-    ok &= n == 3u && at[2] * 10u > nb * 6u;
-    t = pat(1, P1); step_set_ratchet(&t->step[0], 4); t->step[0].ctime = 1;
-    n = onsets(t, at, 8);
-    ok &= n == 2u;
-    t = pat(1, P1); t->step[0].comp = CP_ECHO; t->step[0].carg = 6;   /* (x8 now) */
-    n = onsets(t, at, 8);
-    ok &= n == 8u;
-    bad += check("DIV: ECHO x3 a step/4 apart (the third at half the step); RATCH x4 at 1/2 plays two; ECHO x8", ok);
     /* LEN 4/16: the note off by half the step (the track's GATE holds it longer) */
     t = pat(1, P1); t->p[P_SGATE] = 120; t->step[0].ctime = 4u << 3;
     run_notes(t, nb / 2u, nt, sizeof nt);
@@ -804,7 +941,7 @@ static int components3(void)
     ok &= proj_import(&proj_scratch, &st, sizeof st) && !project_restore_runtime(&proj_scratch);
     ok &= t->step[0].comp2 == CP_REV && t->step[0].carg2 == 2u && t->step[0].cwhen == 0xBu && t->step[0].ctime == 0x5Cu;
     bad += check("a project keeps the second component, WHEN, DIV and LEN (FUNC round trip)", ok);
-    /* on a drum kit: OCT +1 tunes the hit an octave up; ARP NOTES x4 over BD + SD plays them in turn; BEND bends it */
+    /* on a drum kit: OCT tunes the hit an octave up a lap; ARP over BD + SD plays them in turn; BEND bends it */
     {
         uint32_t kick = DRUM_LANE_NOTE[DV_KICK], snr = DRUM_LANE_NOTE[DV_SNARE];
         int32_t base = DRUM_GM[drum_gm_ix(kick)][1];
@@ -812,19 +949,23 @@ static int components3(void)
         set_engine_of(t, ENGI_DRUM);
         t->engine = t->eng_req;
         t->step[0] = (step_t){{0}, 0, ST_NOTE, 0, 100, 1u << DV_KICK, 0};
-        t->step[0].comp = CP_OCT; t->step[0].carg = 0;
+        t->step[0].comp = CP_CLIMB; t->step[0].carg = CP_WARG(0u, 0u, 0u);
         seq_start();
-        run_notes(t, 2, nt, sizeof nt);
+        n = run_notes(t, passes(t, 1) + 3u, nt, sizeof nt);   /* (the second lap) */
         ok = drum_kit[0][DV_KICK].st == base + 12 && t->dpit == 0;
+        if (!ok) printf("  kit oct: n %u loops %u st %d len %d sl %u pos %u idx %u\n", n, t->loops, drum_kit[0][DV_KICK].st, t->p[P_SLEN], step_len(t, 0), t->seq_pos, t->seq_idx);
         t->step[0].comp = CP_BEND; t->step[0].carg = 0;       /* (-12) */
         seq_start();
         run_notes(t, 2, nt, sizeof nt);
         ok &= drum_kit[0][DV_KICK].st == base && drum_kit[0][DV_KICK].bd == -12 * 16 && drum_kit[0][DV_KICK].bs > 0;
+        t->p[P_SLEN] = 4;
         t->step[0] = (step_t){{0}, 0, ST_NOTE, 0, 100, 1u << DV_KICK | 1u << DV_SNARE, 0};
-        t->step[0].comp = CP_ARPN; t->step[0].carg = CP_ARG(0u, 2u, 0u);
+        t->step[0].comp = CP_ARPN; t->step[0].carg = CP_ARG(0u, 5u, 0u);   /* (1/16: a sound a step) */
+        for (n = 1; n < 4u; n++) t->step[n] = (step_t){{0}, 0, ST_REST};
         seq_start();
-        n = run_notes(t, step_len(t, 0) / CTL - 1u, nt, sizeof nt);
+        n = run_notes(t, 8u * step_len(t, 0) / CTL - 1u, nt, sizeof nt);
         ok &= n == 4u && nt[0] == kick && nt[1] == snr && nt[2] == kick && nt[3] == snr;
+        if (!ok) printf("  kit: n %u %u %u %u %u st %d base %d\n", n, nt[0], nt[1], nt[2], nt[3], drum_kit[0][DV_KICK].st, base);
         bad += check("on a drum kit: OCT tunes the hit, BEND bends it, ARP NOTES plays its sounds in turn", ok);
     }
     /* SEQ > COMP 2: its knobs; (0.6.92) KNOB 4 EVERY there, RATE (DIV) on COMP for an ECHO */
@@ -834,19 +975,21 @@ static int components3(void)
     go_page(GR_COMP); frame();
     ui.page++; page_entered(); frame();
     ok = str_eq(cur_page()->title, "COMP 2") && comp_slot() == 1u && comp_view() == COMP_OFF;
-    turn(EN_K2, 1);                                       /* OFF -> NOTES (no CHANCE, RATCH here) */
-    ok &= t->step[0].comp2 == CP_ARPN && !t->step[0].comp;
-    turn(EN_K2, 4); turn(EN_K2, 4);                       /* .. ECHO */
-    ok &= t->step[0].comp2 == CP_ECHO;
+    turn(EN_K2, 1);                                       /* OFF -> RATCH (no CHANCE here: an ECHO, x2 FLAT) */
+    ok &= t->step[0].comp2 == CP_ECHO && t->step[0].carg2 == CP_ECHO_EVEN && !t->step[0].comp;
+    turn(EN_K2, 1);                                       /* .. ARP */
+    ok &= t->step[0].comp2 == CP_ARPN;
+    turn(EN_K2, 4); turn(EN_K2, 1);                       /* .. RAND */
+    ok &= t->step[0].comp2 == CP_RAND;
     turn(EN_K4, 1); turn(EN_K4, 1); turn(EN_K4, 1);       /* EVERY: 1:2 2:2 1:3 */
     ok &= ST_EVERY(&t->step[0]) == EV_1_3 && strstr(ui.col[3], "1:3") != 0;
     ui.page--; page_entered(); frame();
     ok &= str_eq(cur_page()->title, "COMP") && comp_slot() == 0u;
-    turn(EN_K2, 4); turn(EN_K2, 4); turn(EN_K2, 3);       /* OFF .. ECHO on the first */
-    ok &= t->step[0].comp == CP_ECHO;
+    turn(EN_K2, 2); turn(EN_K3, 4);                       /* OFF CHANCE RATCH: x5 FLAT, an ECHO on the first */
+    ok &= t->step[0].comp == CP_ECHO && t->step[0].carg == (CP_ECHO_EVEN | 3u);
     turn(EN_K4, 1); turn(EN_K4, 1); turn(EN_K4, 1);       /* RATE: a step/4 (DIV) */
-    ok &= CT_DIV(&t->step[0]) == 3u && strstr(ui.col[3], "1/64") != 0;
-    bad += check("SEQ > COMP 2: a second component (ECHO), EVERY 1:3 on KNOB 4; COMP: an ECHO's RATE 1/64 (a step/4 at 1/16)", ok);
+    ok &= CT_DIV(&t->step[0]) == 3u && strstr(ui.col[3], "1/16") != 0;   /* (4 over a synth's 4 steps: one apart) */
+    bad += check("SEQ > COMP 2: a second component (RATCH, ARP, RAND), EVERY 1:3 on KNOB 4; COMP: RATCH x5, its RATE 1/16 (as it plays: a step apart)", ok);
     return bad;
 }
 
@@ -987,7 +1130,7 @@ static int timing(void)
 
 int main(void)
 {
-    int bad = play() + projects() + presets() + screens() + components() + components2() + components3() + human() + timing();
+    int bad = play() + comp_marks() + projects() + presets() + screens() + components() + components2() + components3() + human() + timing();
     printf("%s\n", bad ? "RATCHET TEST FAILED" : "ratchet tests passed");
     return bad != 0;
 }

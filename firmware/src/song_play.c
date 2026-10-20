@@ -28,7 +28,7 @@ static void sec_apply(void)
         t->seq_pos = 0x7FFFFFFFu;
         t->ext = 0;
         t->rh_n = t->rskip_n = 0;
-        t->rat_left = 0;
+        spill_stop(t);                              /* (0.9.18) a RATCH's spill: none into the new section */
     }
     motion = sec_stage.motion;
     memcpy(dx_kit, sec_stage.dx, sizeof dx_kit);

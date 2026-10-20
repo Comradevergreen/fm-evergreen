@@ -245,7 +245,7 @@ static uint16_t head_title(char *b)
     if (ui.menu) {                                      /* (0.8.5) the menu: "MENU . DISPLAY", "ABOUT / CREDITS" */
         str_cpy(b, ui.menu == 2 ? "ABOUT / CREDITS" : ui.menu == 3 ? "ABOUT / PROFILE" : "MENU \xB7 ", 40);
         if (ui.menu == 1)
-            str_cpy(b + str_len(b), MTAB_NAME[MI_TAB[ui.menu_sel % MI_COUNT]], 16);
+            str_cpy(b + str_len(b), MTAB_NAME[menu_tab()], 16);
         return T_MID;
     }
     b[0] = 'T';
@@ -812,7 +812,8 @@ static void draw_column(uint32_t c, const char *label, const char *val, const ch
                 GFX_HOOK_ALIGN(lx + b[0] - 2, cy - 2, lx + b[0] - 2 + w, cy + chh + 2, AL_HV, "card label chip (MONO hot)");
                 cv_text_fit(lx, ly, lf, label, T_INK, T_ACCENT, COL_W - 2 - 5);
             } else {
-                int32_t ic = lf == &AF_X && lz_on() && kind != LK_TALL ? card_ico(label) : -1;
+                int32_t ic = lf == &AF_X && lz_on() && kind != LK_TALL && !ui.menu ? card_ico(label) : -1;   /* (0.9.18: the
+                                                         * MENU's settings no mark: LEVEL's was the only one) */
                 if (ic >= 0 && 10 + text_w(lf, label) <= COL_W - 2 - 5) {   /* (0.8.9) its mark, then the label */
                     for (hk = 0; cv_halo && hk < HALO_N; hk++)   /* (0.9.0: outlined as the words, 2 px) */
                         card_ico_draw(lx + HALO_X[hk], cy + HALO_Y[hk], (uint32_t)ic, T_BG);
@@ -956,16 +957,14 @@ static uint32_t tabs_now(const char **nm, const char **tab, uint8_t *cnt, uint32
 {
     uint32_t f = lz_fam(), n, k, i, m;
     uint8_t gi[8];
-    if (f == LZ_MENU) {                                 /* the menu: its five tabs, a dot a row (0.9.12: a name too wide
-                                                         * for a fifth of the strip, its short form) */
-        static const char *const MSH[MTAB_COUNT] = {"DISP", "CTRL", "AUDIO", "MIDI", "SYS"};
+    if (f == LZ_MENU) {                                 /* the menu: its five tabs, a dot a page (0.9.18; was a row) */
         for (k = 0; k < MTAB_COUNT; k++) {
             nm[k] = MTAB_NAME[k];
-            tab[k] = MSH[k];
-            cnt[k] = (uint8_t)mtab_rows(k);
+            tab[k] = 0;
+            cnt[k] = (uint8_t)mtab_pages(k);
         }
         *lv = menu_tab();
-        *at = ui.menu_sel - mtab_first(*lv);
+        *at = menu_page() - mtab_page(*lv);
         return MTAB_COUNT;
     }
     if (f == LZ_LAYER) {                                /* a layer: its views (ALGORITHM), no dots */
@@ -1002,7 +1001,7 @@ static void draw_tabs(void)
     tabs_paint(n, lv, nm, tab, cnt, at);
 }
 /* (0.9.2, rule 6) the footer's breadcrumb, as the mock-up's: small, DIM, from x 6, its parts apart by " . ": SECTION .
- * GROUP . page ("FX . DELAY . DLY 2"; the menu "MENU . DISPLAY . COLOR", a layer "FX . MAP"), the group THEME, the page
+ * GROUP . page ("FX . DELAY . DLY 2"; the menu "MENU . SCREEN . SCREEN 2", a layer "FX . MAP"), the group THEME, the page
  * TEXT (`last`: a flash TEXT; the DRUM grid with ACC held: ACCENT, "ACCENT"); its place n/N in the chain at the right */
 static const char *const FAM_CRUMB[FAM_COUNT] = {"HOME", "ENV", "LFO", "FX", "SCL", "EDIT", "GLO", "SAVE", "ARP", "SEQ",
                                                  "GLO"};
@@ -1030,11 +1029,18 @@ static __attribute__((noinline)) void foot_crumbs(char *b, uint32_t n)   /* b ho
         return;
     }
     f = lz_fam();
-    if (f == LZ_MENU) {
+    if (f == LZ_MENU) {                                 /* (0.9.18: the page, was the row; a page named as its tab,
+                                                         * "SCREEN" or "SCREEN 2", not after it again: MENU . SCREEN 2) */
+        const char *tn = MTAB_NAME[menu_tab()], *pn = MPAGE[menu_page()].name;
+        uint32_t i = 0;
         str_cpy(b, "MENU \xB7 ", n);
-        str_cpy(b + str_len(b), MTAB_NAME[menu_tab()], 12);
-        str_cpy(b + str_len(b), " \xB7 ", 4);
-        str_cpy(b + str_len(b), MI_NAME[ui.menu_sel % MI_COUNT], 16);
+        while (tn[i] && tn[i] == pn[i])
+            i++;
+        if (tn[i] || (pn[i] && pn[i] != ' ')) {
+            str_cpy(b + str_len(b), tn, 12);
+            str_cpy(b + str_len(b), " \xB7 ", 4);
+        }
+        str_cpy(b + str_len(b), pn, 12);
         return;
     }
     if (f == LZ_LAYER) {
@@ -1061,7 +1067,7 @@ static __attribute__((noinline)) void foot_crumbs(char *b, uint32_t n)   /* b ho
     }
 }
 #define CRUMB_Y 4                                       /* (0.8.5) a lens footer's breadcrumb (AF_X): capitals rows 5..11 */
-/* the page's place in its chain at the footer's right, "6/16" (the menu: the row among all; a layer: its view) */
+/* the page's place in its chain at the footer's right, "6/16" (the menu: its page; a layer: its view) */
 static int32_t crumb_count(char *b)
 {
     uint32_t k, n;
@@ -1069,8 +1075,8 @@ static int32_t crumb_count(char *b)
     if (!lz_on())
         return 0;
     if (lz_fam() == LZ_MENU) {
-        k = ui.menu_sel % MI_COUNT;
-        n = MI_COUNT;
+        k = menu_page();                                /* (0.9.18: the page among the nine, was the row) */
+        n = MP_COUNT;
     } else if (lz_fam() == LZ_LAYER) {
         k = ui.lylv % 3u;
         n = 3;
@@ -1354,24 +1360,39 @@ static void draw_columns(void)
     }
     if (cur_page()->graph == GR_COMP) {                /* (0.6.39) STEP TYPE and the TYPE's two values */
         const step_t *cs = &TSEL->step[ui.cursor];
-        uint32_t v = comp_view(), ca = comp_arg(cs), ct = comp_type(cs);
+        uint32_t v = comp_view(), ca = comp_arg(cs), k = comp_slot();
         static const char *const ORD[4] = {"UP", "DOWN", "UP-DN", "RND"};
         fmt_int(val, (int32_t)ui.cursor + 1);
         draw_column(0, "STEP", val, "", VAL(0u), -1, ICON_AUTO);
-        draw_column(1, v >= COMP_ARPN && v <= COMP_ARPS ? "ARP" : "TYPE", COMP_NAMES[v], "", v ? VAL(1u) : T_DIM, -1,
+        draw_column(1, v == COMP_ARPN || v == COMP_ARPQ ? "ARP" : "TYPE", COMP_NAMES[v], "", v ? VAL(1u) : T_DIM, -1,
                     v == COMP_CHANCE ? ICON_PROB : v == COMP_RATCH ? ICON_X_REPEAT : ICON_ARP);
         if (v == COMP_CHANCE) {
             fmt_int(val, (int32_t)step_chance(cs));
             draw_column(2, "CHANCE", val, "%", VAL(2u), -1, ICON_PROB);
-        } else if (v == COMP_RATCH) {
-            val[0] = 'x'; val[1] = (char)('0' + step_ratchet(cs)); val[2] = 0;
-            draw_column(2, "RATCH", val, "", VAL(2u), -1, ICON_X_REPEAT);
+        } else if (v == COMP_RATCH) {                  /* (0.9.18) x1 .. x8, FLAT FADE RISE */
+            static const char *const SH[3] = {"FLAT", "FADE", "RISE"};
+            uint32_t r = rat_ui(cs, k);
+            val[0] = 'x'; fmt_int(val + 1, r ? 2 + (int32_t)((r - 1u) % 7u) : 1);
+            draw_column(2, "RATCH", val, r ? SH[(r - 1u) / 7u % 3u] : "", r ? VAL(2u) : T_DIM, -1, ICON_X_REPEAT);
         } else if (v == COMP_TRIG) {
             const uint8_t *c = CP_TRIGS[ca % CP_NTRIG];
             if (!c[0]) str_cpy(val, c[1] == 1u ? "FIRST" : "!1ST", sizeof val);
             else { val[0] = (char)('0' + c[0]); val[1] = ':'; val[2] = (char)('0' + c[1]); val[3] = 0; }
             draw_column(2, "COND", val, "", VAL(2u), -1, ICON_PROB);
-        } else if (v > COMP_TRIG) {                    /* (0.6.42) the others' one value */
+        } else if (v == COMP_WALK || v == COMP_OCT) {  /* (0.6.98) MODE and RANGE in one: the range as the unit (OCT:
+                                                     * 0.9.18, CLIMB's octaves) */
+            static const char *const WM[4] = {"UP", "DOWN", "UP-DN", "RND"};
+            char u[8];
+            str_cpy(val, WM[CP_WMODE(ca)], sizeof val);
+            fmt_int(u, v == COMP_OCT ? (int32_t)CP_WRNG(ca) + 1 : (int32_t)CP_WDEGS[CP_WRNG(ca)]);
+            str_cpy(u + str_len(u), v == COMP_OCT ? " OCT" : " DEG", 5);
+            draw_column(2, "MODE", val, u, VAL(2u), -1, ICON_ORDER);
+        } else if (v == COMP_ARPN || v == COMP_ARPQ) {  /* (0.6.92) an ARP: ORDER and RANGE in one (the range as the label) */
+            char lb[10];
+            fmt_int(lb, (int32_t)CP_RNG(ca) + 1);
+            str_cpy(lb + str_len(lb), " OCT", 5);       /* (an ARP of one note: itself and that many above) */
+            draw_column(2, lb, ORD[CP_ORD(ca)], "", VAL(2u), -1, ICON_ORDER);
+        } else if (v != COMP_OFF) {                    /* (0.6.42) the others' one value */
             static const char *const OCTN[6] = {"+1", "-1", "+1/2", "-1/2", "ALT", "RND"};
             int32_t a = (int32_t)ca;
             const char *lb = "", *un = "";
@@ -1381,59 +1402,43 @@ static void draw_columns(void)
             case COMP_OCT: lb = "MODE"; str_cpy(val, OCTN[a % 6], sizeof val); un = "OCT"; break;
             case COMP_TONAL: lb = "SHIFT"; a -= 7; val[0] = a < 0 ? '-' : '+'; fmt_int(val + 1, a < 0 ? -a : a); un = "DEG"; break;
             case COMP_BEND: lb = "BEND"; a -= 12; val[0] = a < 0 ? '-' : '+'; fmt_int(val + 1, a < 0 ? -a : a); un = "ST"; break;
-            case COMP_ECHO: lb = "REPEAT"; val[0] = 'x'; fmt_int(val + 1, 2 + (a & 127) % 7); un = a & 128 ? "EVEN" : ""; break;
-            case COMP_TOUCH: { static const char *const TN[3] = {"SHORT", "GHOST", "FLAM"}; lb = "HIT"; str_cpy(val, TN[a % 3], sizeof val); break; }   /* (0.8.5) */
             case COMP_PULSE: lb = "EVERY"; fmt_int(val, 1 + a % 4); un = a ? "STEPS" : "STEP"; break;
             case COMP_JUMP: lb = "TO STEP"; fmt_int(val, (int32_t)CP_JTO(a) + 1); break;
-            case COMP_WALK: case COMP_CLIMB: {          /* (0.6.98) MODE and RANGE in one: the range as the unit */
-                static const char *const WM[4] = {"UP", "DOWN", "UP-DN", "RND"};
-                char u[8];
-                lb = "MODE"; str_cpy(val, WM[CP_WMODE(a)], sizeof val);
-                fmt_int(u, v == COMP_WALK ? (int32_t)CP_WDEGS[CP_WRNG(a)] : (int32_t)CP_WRNG(a) + 1);
-                str_cpy(u + str_len(u), v == COMP_WALK ? " DEG" : " OCT", 5);
-                draw_column(2, lb, val, u, VAL(2u), -1, ICON_ORDER);
-                lb = "";
-                break;
-            }
             default: break;
             }
             if (lb[0]) draw_column(2, lb, val, un, VAL(2u), -1, ICON_X_REPEAT);
-            else if (v != COMP_WALK && v != COMP_CLIMB) draw_column(2, "", "", "", T_THEME, -1, ICON_NONE);
-        } else if (v != COMP_OFF) {                    /* (0.6.92) an ARP: ORDER and RANGE in one (the range as the label) */
-            char lb[10];
-            fmt_int(lb, v == COMP_ARPS ? CP_DEGS[CP_RNG(ca)] : (int32_t)CP_RNG(ca) + 1);
-            str_cpy(lb + str_len(lb), v == COMP_ARPS ? " DEG" : " OCT", 5);
-            draw_column(2, lb, ORD[CP_ORD(ca)], "", VAL(2u), -1, ICON_ORDER);
+            else draw_column(2, "", "", "", T_THEME, -1, ICON_NONE);
         } else
             draw_column(2, "", "", "", T_THEME, -1, ICON_NONE);
-        if (v == COMP_WALK || v == COMP_CLIMB) {       /* (0.6.98) RATE: a move every so many loops */
+        if (v == COMP_WALK || v == COMP_OCT) {         /* (0.6.98) RATE: a move every so many loops */
             uint32_t r = CP_WRATES[CP_WRATE(ca) % CP_NWRATE];
             fmt_int(val, (int32_t)r);
             draw_column(3, "EVERY", val, r == 1u ? "LOOP" : "LOOPS", VAL(3u), -1, ICON_RATE);
-        } else if (v == COMP_ARPQ && comp_slot() == 0u) {   /* (0.9.17) SEQ's LAP: the note it plays this pass of the
-                                                         * pattern (one a lap; was RATE: its notes in the step) */
-            uint32_t lap = song.playing ? TSEL->loops : 0u, c = CP_ARPQ;
+        } else if (v == COMP_ARPN) {                   /* (0.9.18) RATE, a note value; the laps it plays on */
+            static const char *const RN[4] = {"1/4", "1/8", "1/16", "1/32"};
+            uint32_t ev = ST_EVERY(cs) % EV_N;
+            str_cpy(val, RN[ARP_DIVI[CP_RATE(ca)] % 4u], sizeof val);   /* (N_DIV: 0 1/4 .. 3 1/32) */
+            draw_column(3, "RATE", val, ev ? EV_NAMES[ev] : "", VAL(3u), -1, ICON_RATE);
+        } else if (v == COMP_ARPQ && k == 0u) {        /* (0.9.17) LAP: the note it plays this pass of the pattern */
+            uint32_t lap = song.playing ? TSEL->loops : 0u, c = COMP_CP[v];
             if (CP_ORD(ca) == 3u)                      /* (RND: a new one each lap, not known before) */
                 str_cpy(val, "RND", sizeof val);
             else if (drum_track(TSEL)) {
                 uint8_t kn[4 + NLANE];
-                int32_t deg;
-                str_cpy(val, cp_kit_arp(TSEL, cs, c, ca, lap, kn, &deg) ? drum_lane_abbr(TSEL, drum_lane(kn[0])) : "-",
+                str_cpy(val, cp_kit_arp(TSEL, cs, c, ca, lap, kn) ? drum_lane_abbr(TSEL, drum_lane(kn[0])) : "-",
                         sizeof val);
             } else
                 note_name(val, cp_arp_note(TSEL, cs, c, ca, lap));
             draw_column(3, "LAP", val, "", VAL(3u), -1, ICON_RATE);
-        } else if (v >= COMP_ARPN && v <= COMP_ARPS && comp_slot() == 0u) {   /* (0.6.92) RATE as a note value of the track's DIV */
-            rate_name(TSEL, CP_RATES[CP_RATE(ca) % CP_NRATE], val);
-            draw_column(3, "RATE", val, "", VAL(3u), -1, ICON_RATE);
-        } else if ((v == COMP_RATCH || v == COMP_ECHO) && comp_slot() == 0u) {   /* (0.6.82) the parts' spacing */
-            if (CT_DIV(cs)) rate_name(TSEL, CT_DIVS[CT_DIV(cs) % CT_NDIV], val); else str_cpy(val, "FIT", sizeof val);
-            draw_column(3, "RATE", val, "", CT_DIV(cs) ? VAL(3u) : T_DIM, -1, ICON_RATE);
+        } else if (v == COMP_RATCH) {                  /* (0.6.82) the hits' spacing; (0.9.18) and the pitch step */
+            static const char *const PN[4] = {"", "+1 DEG", "-1 DEG", "+OCT"};
+            uint32_t pit = rat_pit_of(cs, k);
+            if (CT_DIV(cs)) rat_rate_name(TSEL, CT_DIVS[CT_DIV(cs) % CT_NDIV], val); else str_cpy(val, "FIT", sizeof val);
+            draw_column(3, "RATE", val, PN[pit & 3u], CT_DIV(cs) || pit ? VAL(3u) : T_DIM, -1, ICON_RATE);
         } else {                                       /* (0.6.92) EVERY: the loops the step's components play on */
             uint32_t ev = ST_EVERY(cs) % EV_N;
             draw_column(3, "EVERY", EV_NAMES[ev], "", ev ? VAL(3u) : T_DIM, -1, ICON_PROB);
         }
-        (void)ct;
         return;
     }
     if (cur_page()->graph == GR_CHANCE) {              /* STEP CHANCE RATCH: the cursor step's, of all of it */
@@ -1740,14 +1745,6 @@ static void draw_columns(void)
     for (c = 0; c < 4u; c++) {
         int16_t *vp;
         const param_desc_t *d = page_desc(cur_page(), c, &vp);
-        if (c == 0u && BAR_PAGE(cur_page())) {          /* (0.9.2) SEQ > BAR: KNOB 1 the bar ("2/4") */
-            uint32_t nb = ((uint32_t)clamp(TSEL->p[P_SLEN], 1, NSTEP) + 15u) / 16u;
-            char u[4] = "/1";
-            fmt_int(val, (int32_t)ui.bank + 1);
-            u[1] = (char)('0' + nb);
-            draw_column(0, "BAR", val, u, VAL(0u), nb > 1u ? (int32_t)ui.bank * 1000 / (int32_t)(nb - 1u) : 0, ICON_X_PATTERN);
-            continue;
-        }
         if (!d || !d->label || d->label[0] == '-') {
             draw_column(c, "", "", "", T_THEME, -1, ICON_AUTO);
             continue;
@@ -1775,7 +1772,7 @@ static void draw_columns(void)
                 unit = "ECO";                           /* (0.6.30) no chorus: the send goes nowhere */
         }
         card_mot_of(vp);                                /* (a global: never) */
-        draw_column(c, d->label, val, unit, VAL(c), d->fmt == F_ENUM && d->max < 2 ? -1 : RATIO(d, enum_rank(d, *vp)),
+        draw_column(c, d->label, val, unit, vp == &lphase_ui && TSEL->p[P_LPHASE] < 0 ? T_DIM : VAL(c), d->fmt == F_ENUM && d->max < 2 ? -1 : RATIO(d, enum_rank(d, *vp)),
                     param_icon(d, *vp));
     }
 }

@@ -16,14 +16,17 @@ the FM-1, with sound, and is played with your computer keyboard or the mouse. Th
 editor update themselves with every change merged into `main`.
 
 > **Status: in development (v0.9.12, a beta: the emulator and the preview installer; the official installer stays on 0.9.9 until it is tested on the device).** It builds and passes every test (Felucca's and its own). Back up the flash before installing it.
-  **Every SEQ page is the piano roll** (0.9.17): the same bars' strip and roll (a kit: the grid) on all twelve pages,
+  **RATCH and ARP spill over the steps** (0.9.18): RATCH x1–x8 (ECHO folded in: FLAT, FADE, RISE, a pitch step) and
+  ARP one note at a time at its RATE play on past their step; OCT an octave a lap; SEQ › COMP frames the step it edits;
+  the SEQ › BAR page is gone.
+  **Every SEQ page is the piano roll** (0.9.17): the same bars' strip and roll (a kit: the grid) on all the pages,
   the values on top, each page marking what it does on the notes: PATTERN their GATE and SWING, TRACK the notes moved
   by PITCH, PLAYHEADS the extra heads as they play, COMP the steps with a component, AUTOMATION and AUTO LIST every
   record, MUTATE when the next mutation comes. The BOTTOM skin is retired (a saved BOTTOM opens as AIR).
   **DRUM-X, VOICE and ANIMAL first** (0.9.9): the FM-1 powers on with T1 DRUM-X, T2 VOICE singing words, T3 ANIMAL's
   bird, T4 LOFI's bytebeat, T5 ANALOG's bass and T6 FM6's electric piano, and PRESETS lists the engines in that order.
   **A new skin, AIR** (0.9.7, the default of new settings): HUD's light look on every page with the knob row on top,
-  the middle of the screen free; HOME's beings over the whole screen. **MENU › DISPLAY › SCOPE** (OFF by default): an
+  the middle of the screen free; HOME's beings over the whole screen. **MENU › SCREEN › SCOPE** (OFF by default): an
   engine's EDIT pages give its creature the whole panel. **HOME's beings have faces**: three isotherms coloured by their
   own level, eyes that shut on a hit, a mouth that opens with the sound, a look up when MUTATE changes them. 15 KB of
   flash given back, nothing removed, the sound bit for bit.
@@ -55,7 +58,7 @@ editor update themselves with every change merged into `main`.
 > - **Flat navigation** (0.9.2): one chain of pages per section, the groups as tabs on top (a dot a page), the
 >   breadcrumb **SECTION · GROUP · page n/N** at the foot; SCL and ARP two sections; GEN three HOME pages. Clearing a
 >   step is **SEQ + G5**, renaming **SAVE + C5**: EDIT is always EDIT.
-> - **Three skins, MENU > DISPLAY > SKIN** (0.8.9; HUD faster in 0.9.0; 0.9.7: a fourth, **AIR**, the default of new
+> - **Three skins, MENU > SCREEN > SKIN** (0.8.9; HUD faster in 0.9.0; 0.9.7: a fourth, **AIR**, the default of new
 >   settings; 0.9.17: BOTTOM retired): **COLORS** (rounded cards, each
 >   card its colour, on JIANT its value's heat as in 0.6), **BOTTOM** (the picture edge to edge, a slim knob row) and **HUD**
 >   (HOME's beings under everything). The **LENTE** look (0.8.5): tabs, cards and a breadcrumb in a crisp 5 × 7 pixel
@@ -70,7 +73,7 @@ editor update themselves with every change merged into `main`.
 >   the chain in the middle; automatable, saved with the project. **REC off the grid in 64ths** of a step (0.9.1):
 >   SEQ › NOTE's MICRO, −32/64 … +31/64.
 > - **USB audio that keeps its time** (0.8.9): no lost half buffers (the clicks under load), no dropped packets, the
->   48 kHz resampler on the second core. **Stems**: every track to the computer (MENU > SYSTEM > USB > STEMS), one channel each, into
+>   48 kHz resampler on the second core. **Stems**: every track to the computer (MENU > USB > AUDIO STEMS), one channel each, into
 >   your DAW.
 > - Every version's details: the **[Changelog](#changelog)**.
 
@@ -176,7 +179,7 @@ audio CPU budget, the signature shown at power-on is 428 bytes. An instrument th
   effects' output is checked too: far out of range, the block is muted, their lines cleared and the second core stopped
   the same way. Such a unit
   then stays on one core **until it is switched off**, and so does any unit after a crash while both cores ran.
-- **What it says.** MENU > ABOUT, under AUDIO LOAD: **CORES 2**, or **CORES 1** with the reason: REC AT POWER-ON,
+- **What it says.** MENU > SYSTEM > ABOUT, under AUDIO LOAD: **CORES 2**, or **CORES 1** with the reason: REC AT POWER-ON,
   BAD READ, NO ANSWER, FAULT, SINCE A FAULT (an earlier one this power-on), NO START.
 - **One core on purpose.** Hold **REC** while switching the FM-1 on: that session plays on one core, as before.
 - **Credits.** How to start the second core safely on the FM-1 and the guard against misreads come from
@@ -193,7 +196,7 @@ VOICE singing its lyric, in the COLORS skin, exactly as the firmware draws them 
 - **Thermal palette**: values, curves, steps, hits and notes are coloured by intensity (cyan → blue → violet → red →
   orange → yellow → white). Selection is violet and active is orange; on JIANT each card's value and gauge are its
   amount's heat (0.9.5, as 0.6), the other palettes give each knob its own colour.
-- **Skins** (MENU > DISPLAY > SKIN, 0.8.9): **AIR** (0.9.7, the default of new settings: HUD's floating words on
+- **Skins** (MENU > SCREEN > SKIN, 0.8.9): **AIR** (0.9.7, the default of new settings: HUD's floating words on
   every page, the knob row on top under the tabs, the middle free), **COLORS** (near-black rounded cards on top, a rounded
   panel) and **HUD** (HOME's beings swim under everything, the words float over them, the knob row at the foot; on the
   SEQ pages on top, as AIR's). (0.9.17: BOTTOM, the knob row at the foot on every page, is retired; a saved BOTTOM
@@ -220,7 +223,7 @@ VOICE singing its lyric, in the COLORS skin, exactly as the firmware draws them 
   they send), VOICE (one cell per voice and the glide curve), GLOBAL (the bar in thermal columns with swing, clock and
   tuning).
 - **Load meter**: five small bars next to the battery showing the current audio load.
-- **Power-on**: the "Jiant FM1" signature is written stroke by stroke in thermal colours (MENU > ANIM OFF: it shows
+- **Power-on**: the "Jiant FM1" signature is written stroke by stroke in thermal colours (MENU > SCREEN > ANIMATION OFF: it shows
   up whole).
 
 ### Engines
@@ -317,13 +320,14 @@ With FX held the keys become effects that act while held; on release everything 
 ### Sequencing
 - 64 steps per track, piano roll, drum grid, parameter locks, chance, ratchets, slide and knob automation; live
   recording with overdub, metronome and count-in.
-- **SEQ's chain** (0.9.2): PATTERN (PATTERN, STRETCH, PLAYHEADS), TRACK (TRACK, MUTATE), BAR (BAR, STEP, NOTE), STEP
-  (COMP, COMP 2), AUTO (AUTOMATION, AUTO LIST); KNOB 1 the bar on BAR, all 64 steps on STEP; PRESETS loads a pattern.
+- **SEQ's chain** (0.9.2): PATTERN (PATTERN, STRETCH, PLAYHEADS), TRACK (TRACK, MUTATE), BAR (STEP, NOTE; 0.9.18: the
+  BAR page is gone), STEP (COMP, COMP 2), AUTO (AUTOMATION, AUTO LIST); KNOB 1 all 64 steps on STEP; PRESETS loads a pattern.
 - **One picture for the whole SEQ** (0.9.17): every page shows the pattern's bars in a strip and the cursor's bar as
   the piano roll (a kit: the grid), the values on top; each page marks what it does on it: PATTERN draws the notes as
   long as GATE plays them and the odd steps late by SWING, TRACK outlines where PITCH moves the notes, PLAYHEADS draws
   the extra heads as lines while they play, COMP / COMP 2 a bar over each step with that component, AUTOMATION and
   AUTO LIST a mark under each record's step (the row picked framed), MUTATE a chip with the bars to the next mutation.
+  (0.9.18) COMP frames the step the component goes on, live with KNOB 1, and marks the steps with the same one.
 - **Off the grid in 64ths** (0.9.1): live recording with REC Q under 100 % keeps where you played, to a 64th of a
   step; **SEQ › NOTE**'s MICRO edits it (−32/64 … +31/64), and playback honours it to the sample.
 - **ROTATE** (STRETCH, KNOB 4) and **PITCH** (TRACK, KNOB 1) shift the sequence in steps and in pitch, automatable.
@@ -359,7 +363,7 @@ SONG REC. The song's END plays it once (STOP), x2..x8 or forever (LOOP).
   the middle. Automatable and saved with the project.
 
 ### Knob acceleration
-Turning fast sweeps the whole range; turning slowly is fine adjustment. Turn it off in MENU > KNOB ACCEL.
+Turning fast sweeps the whole range; turning slowly is fine adjustment. Turn it off in MENU > SYSTEM > KNOB SPEEDUP.
 
 ### Connections and storage
 - USB: class-compliant MIDI and audio (the master reaches the computer); TRS MIDI; internal, USB or TRS clock. Since
@@ -367,7 +371,7 @@ Turning fast sweeps the whole range; turning slowly is fine adjustment. Turn it 
   resampler on the second core.
 - **MIDI LEARN** (0.9.12, MENU › MIDI › LEARN): turn a knob, send a CC; up to ten, kept with the settings, over USB
   and TRS (from Felucca 1.5).
-- **Stems** (MENU > SYSTEM > USB): **STEMS** sends every track on its own channel (8: T1–T6, FX L R), **STEMS+IN** adds
+- **Stems** (MENU > USB > AUDIO): **STEMS** sends every track on its own channel (8: T1–T6, FX L R), **STEMS+IN** adds
   your voice through the FM-1. Record them in your DAW, one track per channel.
 - 32 named user presets; the project autosaves 10 s after the last change while stopped (not at power-off).
 - **Web editor** for every parameter: FM6 patches, grid, mix and full backup (all 8 songs with their sections, rows
@@ -440,6 +444,10 @@ each layer; the complete manual is in **[docs/MANUAL.md](docs/MANUAL.md)** (en e
 - **ALGORITHM** picks the track (T1–T6) from any page; track pages show the selected track.
 - The four knobs drive the four columns on screen. Turning fast sweeps the whole range, slowly fine-tunes.
 - **Holding** a button opens its layer (FX, GLO, SCL, LFO, EDIT, SAVE…): release it and you're back where you were.
+- (0.9.18) **The MENU** (hold HOME) works the same way: nine pages of up to four settings in five tabs, **SCREEN · AUDIO ·
+  MIDI · USB · SYSTEM**. SELECT walks the pages, ALGORITHM the tabs, **KNOB 1–4 the settings on screen**, OCT− / OCT+
+  step the one you turned last. Each row under the cards says in plain words what it does. CALIBRATION, ABOUT and LEARN
+  CLEAR are action cards: turn their knob to arm them, OCT+ does it. HOME closes it.
 
 ### 2. Reading the screen
 - **HOME**: each being is a track. Its species tells the engine, its shape comes from its four knobs, and it swells
@@ -447,7 +455,7 @@ each layer; the complete manual is in **[docs/MANUAL.md](docs/MANUAL.md)** (en e
 - **Colours**: cold (indigo, violet) is little, hot (red, orange, cream, white) is a lot. Violet is what's selected,
   orange what's active; on JIANT each card is coloured by its value (cold low, hot high; 0.9.5, as 0.6), the other
   palettes give each knob its own colour.
-- **Skin** (MENU > DISPLAY > SKIN, 0.8.9): **AIR** (0.9.7, the default of new settings) HUD's look on every page with
+- **Skin** (MENU > SCREEN > SKIN, 0.8.9): **AIR** (0.9.7, the default of new settings) HUD's look on every page with
   the knob row on top, **COLORS** the cards on top in the 0.6 colours, **HUD** HOME's beings over the whole screen under
   floating words (the knobs at the foot, on top on the SEQ pages). BOTTOM is retired (0.9.17): a saved BOTTOM opens as AIR.
 - **Load meter** (top right, next to the battery): five small bars showing how much of the audio time the sound is
@@ -458,7 +466,7 @@ each layer; the complete manual is in **[docs/MANUAL.md](docs/MANUAL.md)** (en e
   set, **LITE** the heavy reverbs, the GRAIN delay and FM6 lightened (SHIMMER and CLOUD as ROOM, RESO as SPRING, the
   GRAIN delay plain, FM6 two voices), **ECO** that plus every reverb a SPRING, no SLICER, no chorus (their pages
   hidden) and at most 4 voices a synth track. The project keeps its settings: back on FULL it sounds as saved.
-- **Power-on**: the signature draws itself in about a second, with beings swimming round it. To boot straight in: MENU > **ANIM OFF**.
+- **Power-on**: the signature draws itself in about a second, with beings swimming round it. To boot straight in: MENU > SCREEN > **ANIMATION OFF**.
 
 ### 3. Making a sound
 1. Pick the track with ALGORITHM and the engine/preset with **PRESETS**.
@@ -560,7 +568,7 @@ makes the kick pull the rest down. The leveler is always on: no need to babysit 
 - **Project**: SAVE > **SECTIONS**: KNOB 1 the section A–D, LOAD, SAVE; SAVE > **PROJECTS**: KNOB 1 the project (1–8),
   KNOB 2 its section, LOAD, SAVE; SAVE > ARRANGE chains the sections into the song. SAVE from another section comes
   back with SAVE armed on USER and SECTIONS: **SAVE, OCT+, OCT+** stores. The project autosaves 10 s after your last change while stopped
-  (at most once a minute; never at power-off: stop and wait a moment before switching off). MENU > RESTORE LAST OFF
+  (at most once a minute; never at power-off: stop and wait a moment before switching off). MENU > SYSTEM > RESTORE LAST OFF
   turns it off. The full story, with what is saved where: **[the manual, chapter 12](docs/MANUAL.md)**.
 - **Backup**: the web editor (USB) downloads and restores everything: songs, sections, scenes and presets.
 
@@ -597,7 +605,7 @@ Settings → Pages → Source: **GitHub Actions**, once).
    [emulator](https://juanjiant-bit.github.io/JIANT/emu/), is checked there, and only
    then reaches this installer ([web/STABLE](web/STABLE.md)). Offline: `python3 tools/fm1_install.py build/felucca.fwsc`.
 3. **Since 0.6.71 JIANT uses both cores** ([details](#both-cores-dual-core)). If your FM-1 crashes, freezes or
-   clicks more than before, hold **REC** while switching it on (one core) and tell us what MENU > ABOUT says.
+   clicks more than before, hold **REC** while switching it on (one core) and tell us what MENU > SYSTEM > ABOUT says.
 4. To go back to the official firmware, use M-VAVE's updater or the installer's **Return to official V15**.
 
 **If the installer does not install** (no WebMIDI, MIDI blocked, FM-1 not found, the port busy with another program,
@@ -684,6 +692,88 @@ JIANT's modifications are distributed under the same license.
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
 
+### v0.9.18
+RATCH and ARP over the steps, the components regrouped, rolls that stay where they belong, COMP showing its step, and
+the BAR page gone; the LFO's MODE; the MENU as pages.
+- **RATCH spills over the steps after it.** RATCH and ECHO are one component: **RATCH x1–x8**, KNOB 3 the count and
+  its shape, **FLAT** (every hit at the step's level), **FADE** (each softer: the old ECHO) or **RISE** (each louder).
+  KNOB 4 its **RATE**: **FIT** spreads the hits over four steps on a synth and two on a drum kit, a note value fixes
+  their spacing, and a **pitch step** moves the hits after the first (+1 DEG, −1 DEG along the scale, +OCT every
+  other). The hits after the first now play on over the following steps instead of inside the step. A hit that lands
+  on a step with the same note of its own (a kit: the same sound) is left out; another note plays beside it on POLY;
+  on MONO and LEGATO the next note cuts the rest. The chance is rolled once for all of them. SEQ › CHANCE's x1–x4 is
+  RATCH FLAT and a project's ECHO is RATCH FADE (EVEN: FLAT). The live RATCH (GLO › LIVE) stays inside each step.
+- **ARP plays its notes one at a time at its RATE.** KNOB 4 **1/32, 1/16, 1/8, 1/4** (then the same with the loops it
+  plays on, 1:2 …; the other loops play the chord as written), KNOB 3 ORDER over 1–4 octaves (a single note: itself
+  and that many octaves up), through the step and its TIEs and at least once round, spilling on as RATCH does; on MONO
+  the next note cuts it. (0.9.17 played them inside the step.) ARP SEQ walks the melody a lap at a time as before.
+- **The components by family.** KNOB 2 goes OFF, CHANCE, RATCH, ARP, SEQ, WALK, PULSE, OCT, RAND, BEND, TONAL, JUMP,
+  REV, TRIG, FILL, KILL. **OCT** is now an octave every so many loops over 1–4 octaves (CLIMB's place, UP / DOWN /
+  UP-DN / RND). Retired and loaded as what they played: **ARP SCALE** (a WALK of the step's lowest note), the old
+  **OCT** modes (the notes moved an octave, or OCT with that motion), **TOUCH** (its SHORT / GHOST / FLAM as the mode of
+  each of the step's sounds), **CLIMB** (OCT), the long-hidden **C.LEN**.
+- **Rolls stay where they belong.** Not repeated with the step's RATCH: a sound with its own x2 / x4 / x8 on the grid
+  (the sound's mode wins, never a ratchet of a ratchet), a hit recorded live into the step (0.9.17's ONCE) and now also
+  a note recorded live into a ratcheted POLY step: each plays once, as heard. **GEN and the dice** write the drums'
+  rolls on their lane (the hat's x2 / x4, a fill's roll on its sound), not as the step's RATCH, so a kick under a
+  rolled hat no longer rolls. A sound's x2 / x4 / x8 spill as RATCH does (a hit, two, four a step); **OCT +3**
+  recorded on a DRUM track writes the sound's x4, two hits a step as heard.
+- **SEQ › COMP shows where the component goes.** The owner: adding a component and setting its step, the step was not
+  shown. The roll (a kit: the grid) now frames the step KNOB 1 picks, its whole column in violet with a tab at its foot,
+  at once as the knob turns; every step with the same component as the one edited has an orange bar on top, a step
+  with another component a thin line; a JUMP's TO STEP is framed orange as KNOB 3 turns. The cards' RATE now says the
+  spacing the hits really have (a RATCH's DIV over the spread, an ARP's 1/32 read 1/4 before).
+- **The SEQ › BAR page is gone** (the owner: redundant). The SEQ chain is eleven pages; the BAR group holds STEP and
+  NOTE. The bar is the roll's cursor and STEP's KNOB 1 over all 64 steps, which now accelerates when turned fast (KNOB
+  SPEEDUP, up to x4 on 64 steps); LEN is PATTERN's. The task race: bar 3 takes 13 actions turning fast (5 with BAR).
+- **Fix (tests):** the web editor's "PING keeps WATCH on" waits for the push instead of a fixed 10 ms.
+- **The LFO's MODE: TRIG or FREE, on its own knob.** The owner: "the LFO has no TRIGGER/FREE option... it always
+  retriggers." FREE was hidden at the left end of PHASE, and even there each new phrase still began the LFO again in
+  a way: its **FADE** started over from nothing, so with FADE up a FREE LFO faded in again on every note (and with FADE
+  at 0 it dropped out for one control block, 32 samples, at each phrase). Now **FREE never restarts anything**: a
+  note (apart, legato, from the sequencer, a DRUM-X hit) leaves the phase and the fade alone, and FADE fades the LFO
+  in only once, when the project loads (a song's next section keeps it going) or when MODE is turned to FREE. **TRIG** is as before: a new phrase restarts the LFO at PHASE and fades it in again. In time (RATE left of
+  the slowest) it follows the bar while playing in both modes, as it did.
+  - The **LFO** page is **RATE, WAVE, MODE, FADE**; **PHASE** moves to a new **LFO 2** page (after LFO in the chain),
+    dimmed in FREE. The caption over the wave says the mode ("1.18Hz · SIN · FREE").
+  - Nothing to convert: MODE is a view of PHASE, whose −1 is FREE as since 0.6.51, so every project and preset opens
+    and sounds as it was saved (a PHASE of FREE opens as MODE FREE, any other as TRIG at that phase). Turning MODE to
+    FREE keeps TRIG's phase for when you turn it back (until power-off).
+  - **LFO + SELECT** picks FREE half the time (was two in three), TRIG at any phase otherwise.
+  - The web editor shows the LFO's **MODE** (TRIG / FREE) and its **PHASE** (TRIG's) as the device does.
+- **The MENU follows the rest of the system** (users found it confusing: one long list with its own rules). Since
+  0.9.18 it is nine pages of up to four settings, in five tabs:
+  | Tab | Page | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
+  | --- | --- | --- | --- | --- | --- |
+  | SCREEN | SCREEN | COLOR | SKIN | STYLE | LARGE |
+  | SCREEN | SCREEN 2 | SCOPE | ANIMATION | SCREEN SLEEP | — |
+  | SCREEN | LEDS | LED GLOW | SCALE LEDS | — | — |
+  | AUDIO | AUDIO | SPEAKER EQ | TRACKS | LOAD | BPM LOCK |
+  | AUDIO | CLICK | CLICK | CLICK LEVEL | COUNT-IN | — |
+  | MIDI | MIDI | MIDI OUT | LEARN | LEARN CLEAR | — |
+  | USB | USB | USB AUDIO | USB LEVEL | — | — |
+  | SYSTEM | CONTROLS | HOLD TIME | KNOB SPEEDUP | FX LATCH | CALIBRATION |
+  | SYSTEM | SYSTEM | RESTORE LAST | CPU CORES | CPU CLOCK | ABOUT |
+
+  **SELECT walks the pages, ALGORITHM jumps tabs, KNOB n changes the setting on card n** (until 0.9.17: SELECT walked
+  30 rows and any knob changed the selected one). OCT− / OCT+ step the setting you turned last. The tabs are whole
+  words (no more DISP / CTRL / SYS), the cards whole words where they fit (SPEAKER, CORES, SLEEP, CALIB, CPU MHZ, USB
+  AUD …; no two alike on a page, no marks), the values in their heat colours like every other card, the footer **MENU ·
+  AUDIO · CLICK 5/9** (a page named as its tab not said twice: **MENU · SCREEN 2**, **MENU · SYSTEM**). The SYSTEM page
+  holds what a power-on does (RESTORE LAST, CPU CORES, CPU CLOCK: from the next start) and ABOUT; CALIBRATION sits with
+  the controls it teaches. Under the
+  cards each setting has a row: its knob, its full name, its value and one plain line on what it does (for some, what
+  the value chosen does: USB AUDIO STEMS "8 CHANNELS: EVERY TRACK + FX"). **CALIBRATION, ABOUT and LEARN CLEAR** are
+  action cards: turn their knob right to arm them (the card says OCT+), OCT+ does it. Messages show as the usual pill
+  and go away on their own; HUD keeps its value row at the foot (it vanished in the MENU before).
+- **Renamed for plain words** (the settings themselves, their values and the editor's ids are unchanged; nothing to
+  migrate): ANIM → ANIMATION, LEDS → LED GLOW (DIM LO / DIM HI / INV → LOW / HIGH / INVERT), SCREEN OFF → SCREEN SLEEP,
+  HOLD → HOLD TIME, KNOB ACCEL → KNOB SPEEDUP, USB → USB AUDIO, CPU → CPU CORES. MIDI OUT stays in MIDI; USB AUDIO
+  moved next to USB LEVEL; CPU CORES next to CPU CLOCK (the crash message says MENU > SYSTEM > CORES); BPM LOCK beside
+  the engine's load on AUDIO; SCALE LEDS beside LED GLOW on SCREEN › LEDS.
+- **INIT SYSTEM left the MENU**: it was SAVE › TOOLS › NEW PROJECT under another name (same dialog, same UNDO).
+- The web editor groups the settings by the new tabs (it reads them from the device).
+- Flash: the image 568436 B, 15900 B free in the slot (the BAR page gave back 384 B; the MENU pages and the LFO MODE took more).
 ### v0.9.17
 The glitcher, one piano roll across the SEQ pages, a livelier generator and dice, slower rolls, ARP SEQ a lap at a
 time, VOICE's THEME, and two fixes.

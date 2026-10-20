@@ -896,6 +896,16 @@ LEARN CLEAR (an action), neither offered over MENU_DESC: the MIDI LEARN map is k
 favourites row of engine 1, DIGITAL, bytes 2..31: ten entries of CC | 0x80, track, parameter code; `src/midi_learn.c`),
 so a settings backup carries it; there is no command to read or edit it.
 
+(JIANT 0.9.18) The MENU is regrouped as the device's pages (no id, index, value or default changes; nothing stored
+changes): count 25, tabs **0 SCREEN, 1 AUDIO, 2 MIDI, 3 USB, 4 SYSTEM**. Each item's tab: SCREEN COLOR (0), STYLE (1),
+LARGE (2), ANIMATION (3), LED GLOW (4), SCALE LEDS (16), SCREEN SLEEP (17), SKIN (21), SCOPE (22); AUDIO BPM LOCK (8),
+SPEAKER EQ (9), CLICK (12), CLICK LEVEL (13), COUNT-IN (14), TRACKS (18), LOAD (19); MIDI MIDI OUT (20); USB USB LEVEL
+(10), USB AUDIO (11); SYSTEM HOLD TIME (5), KNOB SPEEDUP (6), FX LATCH (7), RESTORE LAST (15), CPU CORES (23), CPU
+CLOCK (24). Names now whole words: ANIM → ANIMATION, LEDS → LED GLOW (values OFF, LOW, HIGH, INVERT: were OFF, DIM LO,
+DIM HI, INV), HOLD → HOLD TIME, KNOB ACCEL → KNOB SPEEDUP, USB → USB AUDIO, SCREEN OFF → SCREEN SLEEP, CPU → CPU CORES.
+The device's SYSTEM tab also holds CALIBRATION and ABOUT (not offered); INIT SYSTEM left the MENU (SAVE > TOOLS > NEW
+PROJECT). An editor that groups by tab name follows by itself; remember settings by id.
+
 The device's AUDIO tab shows SPEAKER EQ, USB LEVEL, CLICK, CLICK LEVEL, COUNT-IN (index 9, 10, 12, 13, 14).
 CLICK: the metronome while the transport runs: OFF, REC (while a track is armed), ON (always); CLICK LEVEL its
 level; COUNT-IN: PLAY from stop with a track armed counts in that many bars first (internal clock only). The click

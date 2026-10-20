@@ -523,7 +523,7 @@ static int lock_playback(void)
     }
     bad += check("  CHANCE 50 %: the lock applies exactly when the step's notes play", ok);
     seq_stop();
-    t = lock_track(0);                                   /* RATCH x3: the lock over all its parts */
+    t = lock_track(0);                                   /* RATCH x3: the lock on the step's own hit */
     motion_set_lock(t, 2, P_REV, 100);
     step_set_ratchet(&t->step[2], 3);
     seq_start(); seq_tick(t, CTL);
@@ -534,7 +534,9 @@ static int lock_playback(void)
             ok &= t->p[P_REV] == 100;
             seq_tick(t, CTL);
         }
-        bad += check("  RATCH x3: its 3 parts all with the lock, back at the next step", ok && vage - v0 >= 3u &&
+        /* (0.9.18) x3 spills over 4 steps (4/3 of a step apart): the step's own hit with its lock; a spilled hit
+         * plays with the lock of the step it falls in */
+        bad += check("  RATCH x3: its hit in the step with the lock, back at the next step", ok && vage - v0 >= 1u &&
             t->p[P_REV] == 20);
     }
     seq_stop();
@@ -826,7 +828,7 @@ static int auto_list(void)
         str_eq(ui.msg, "AUTOMATION FULL") && !act_ready());
     motion_clear(&trk[1]);
     for (i = 0; i < P_COUNT; i++)                        /* names: an id each, none of DIGITAL's, lanes on DRUM only */
-        if (ev_id_ok(t, i) && ((i >= P_FM1_ATK && i <= P_FM4_LEVEL && i != P_TCHAN && i != P_MORPH && i != P_CLEN && i != P_DXIMG && i != P_HVEL && i != P_HTIM && i != P_HGAT && i != P_HRQ) || (i >= P_LN0 && i <= P_LN7) ||
+        if (ev_id_ok(t, i) && ((i >= P_FM1_ATK && i <= P_FM4_LEVEL && i != P_TCHAN && i != P_MORPH && i != P_DXIMG && i != P_HVEL && i != P_HTIM && i != P_HGAT && i != P_HRQ) || (i >= P_LN0 && i <= P_LN7) ||
                                !motion_param(i)))       /* (0.6.37: SHIFT's CHANCE in DIGITAL's OP1 DEC slot) */
             break;
     bad += check("  KNOB 3's list: what motion records and the sound has (no OP ENV, no DRUM lanes off DRUM)", i == P_COUNT &&

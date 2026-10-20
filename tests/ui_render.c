@@ -642,12 +642,12 @@ enum { S_HOME, S_HOME_IDLE, S_MESSAGE, S_MESSAGE_KEY, S_MESSAGE_NOFILE, S_PRESET
        S_SEQ_TOOLS, S_SEQ_TOOLS_DRUM, S_SEQ_TOOLS_SONG,
        S_LENTE_PAT, S_LENTE_PAT_DRUM, S_LENTE_STRETCH, S_LENTE_BAR, S_LENTE_BAR_DRUM, S_LENTE_STEP, S_LENTE_STEP_COMP,
        S_LENTE_STEP_COMP2, S_LENTE_STEP_TIE, S_LENTE_STEP_REST, S_LENTE_STEP_DRUM, S_LENTE_BAR_LONG, S_LENTE_STEP_LONG,
-       S_SEQ_BAR, S_SEQ_BAR_DRUM,
+       /* (0.9.18: S_SEQ_BAR, S_SEQ_BAR_DRUM gone with the page) */
        S_NAME_USER, S_NAME_TYPING, S_NAME_123, S_NAME_EMPTY, S_NAME_FULL, S_NAME_PLAYING, S_PROJECT_NAMED, S_SONG_NAMED,
        S_USER_FOOT,
        S_WORDS, S_WORDS_EN, S_WORDS_JA, S_WORDS_EDIT, S_WORDS_OFF, S_NAME_LYRIC, S_NAME_LYRIC_LONG,
        S_ROLL_EMPTY, S_ROLL_ACID, S_ROLL_CHORDS, S_ROLL_TIES, S_ROLL_LEN32, S_ROLL_HIGH, S_ROLL_LOW, S_ROLL_WIDE, S_ROLL_PLAYING,
-       S_ROLL_LOCKS, S_ROLL_LOCK_HELD, S_DRUM_LOCKS, S_DRUM_LOCK_HELD, S_DRUM_LOCK_PAGE, S_MOTION_LOCKS, S_AUTO_LIST, S_AUTO_LIST_ADD, S_AUTO_LIST_DRUM, S_REC_LAYER, S_REC_LAYER_SET, S_REC_LAYER_SONG, S_MACRO_LAYER, S_MSEQ, S_DIST_PAGE, S_DLY2, S_REVERB2, S_CHORUS, S_MASTER, S_LFO_DEST,
+       S_ROLL_LOCKS, S_ROLL_LOCK_HELD, S_DRUM_LOCKS, S_DRUM_LOCK_HELD, S_DRUM_LOCK_PAGE, S_MOTION_LOCKS, S_AUTO_LIST, S_AUTO_LIST_ADD, S_AUTO_LIST_DRUM, S_REC_LAYER, S_REC_LAYER_SET, S_REC_LAYER_SONG, S_MACRO_LAYER, S_MSEQ, S_DIST_PAGE, S_DLY2, S_REVERB2, S_CHORUS, S_MASTER, S_LFO_DEST, S_LFO2, S_LFO2_FREE,
        S_COUNTIN, S_COUNTIN2, S_MENU_AUDIO, S_HEAD_PLAY_REC, S_HEAD_REC_OTHER, S_HEAD_BPM_TURN, S_HEAD_BPM_LOCK,
        S_HEAD_BPM_LOCKED, S_HEAD_GLO_TURN, S_HEAD_DOWNBEAT, S_HEAD_BEAT_2,
        S_SAVE_LIB, S_SAVE_TOOLS, S_SAVE_PROJ, S_SAVE_ARR, S_SAVE_SOUND, S_SAVE_PRESETS,
@@ -655,7 +655,7 @@ enum { S_HOME, S_HOME_IDLE, S_MESSAGE, S_MESSAGE_KEY, S_MESSAGE_NOFILE, S_PRESET
        S_HOME_MACROS, S_HOME_BEING, S_HOME_ROUTES, S_GEN_LEAD,
        S_ED_FILTER, S_ED_FILTER_BP, S_ED_VOICE2, S_ED_FOCUS, S_ED_FOCUS_MOD, S_ED_OPERATOR,
        S_ENV_TRACKS, S_ENV_TRACKS_DEST, S_ENV_STAGE, S_ENV_STAGE_SUS, S_MSEQ2, S_KEY_CHORD, S_KEY_CHORD_OFF, S_KEY_ARP, S_KEY_ARP2, S_GLO_SENDS, S_MENU_ROW, S_MENU_ROW_LEDS, S_LY_FX_KNOBS, S_LY_FX_STATE, S_LY_GLO_STATE, S_DLG_DICE_SOUND, S_DLG_DICE_SEQ, S_DLG_DICE_FX, S_DLG_MUT_BACK,
-       S_DRUM_X4, S_DRUM_GHOST, S_DRUM_OCT_UP, S_DRUM_OCT_DN, S_COMP_TOUCH, S_COMP_EVEN, S_GEN_EXPLORE,
+       S_DRUM_X4, S_DRUM_GHOST, S_DRUM_OCT_UP, S_DRUM_OCT_DN, S_COMP_TOUCH, S_COMP_EVEN, S_COMP_SEL, S_COMP_SEL_DRUM, S_COMP_JUMP, S_GEN_EXPLORE,
        S_VX_HEAD_A, S_VX_HEAD_I, S_VX_HEAD_U, S_VX_HEAD_S, S_VX_HEAD_M, S_VX_HEAD_K, S_VX_HEAD_T, S_VX_HEAD_F, S_VX_HEAD_VOWEL,
        S_VX_HEAD_HOME, S_VX_HEAD_QUIET, S_VX_BIRD, S_VX_CMOS, S_VX_INSECT, S_VX_WING, S_VX_MAMMAL, S_VX_MORPH_IB, S_VX_MORPH_BM,
        S_VX_ANIMAL_HOME, S_VX_KIT, S_VX_KIT_HITS, S_VX_KIT_GHOST, S_VX_KIT_HOME, S_VX_KIT_MUTED,
@@ -665,7 +665,7 @@ enum { S_HOME, S_HOME_IDLE, S_MESSAGE, S_MESSAGE_KEY, S_MESSAGE_NOFILE, S_PRESET
        S_LIVE_RIELES, S_LIVE_RIELES_T3, S_LIVE_MANO, S_LIVE_MANO_KEYS,
        S_MIXER_T4, S_HOME_T4, S_MOCK_HOME, S_MOCK_PRESETS, S_MOCK_SEQ, S_MOCK_DRUM, S_MOCK_MIXER, S_MOCK_DIALOG, S_MOCK_MENU,
        S_TOAST_ENV, S_TOAST_MUTATE, S_TOAST_MUTATE_HINT, S_TOAST_MOTION, S_TOAST_MOTION_LOCKS, S_TOAST_PUNCH, S_TOAST_AUTO_LIST,
-       S_TOAST_AUTO_LIST_DRUM, S_TOAST_PATTERN, S_TOAST_FM6_OP, S_TOAST_ANALOG, S_PRESETS_TYPE, S_MENU_MIDI, S_COUNT };
+       S_TOAST_AUTO_LIST_DRUM, S_TOAST_PATTERN, S_TOAST_FM6_OP, S_TOAST_ANALOG, S_PRESETS_TYPE, S_MENU_MIDI, S_MENU_SCREEN2, S_COUNT };
 static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "message", "message_key", "message_nofile", "presets", "presets_nofav", "user",
     "phrases", "project", "tools", "song_empty", "song", "step", "pattern", "chance", "comp", "comp_trig", "comp_echo", "mutate", "morph", "dx_image", "dx_send", "page_flash", "page_flash_home", "fugue", "motion", "drum",
     "drum_hand", "drum_cym", "mixer", "mixer_pan", "env", "env_dest", "lfo", "mod", "fx", "slicer", "slbus", "slpitch", "dly", "scl", "shift", "arp",
@@ -679,12 +679,12 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "message", "mes
     "layer_seq_tools", "layer_seq_tools_drum", "layer_seq_tools_song",
     "lente_pattern", "lente_pattern_drum", "lente_stretch", "lente_bar", "lente_bar_drum", "lente_step_note",
     "lente_step_comp", "lente_step_comp2", "lente_step_tie", "lente_step_rest", "lente_step_drum", "lente_bar_long",
-    "lente_step_long", "seq_bar", "seq_bar_drum",
+    "lente_step_long",
     "name_user", "name_typing", "name_123", "name_empty", "name_full", "name_playing", "project_named", "song_named",
     "user_foot",
     "words", "words_en", "words_ja", "words_edit", "words_off", "name_lyric", "name_lyric_long",
     "roll_empty", "roll_acid", "roll_chords", "roll_ties", "roll_len32_p2", "roll_high", "roll_low", "roll_wide", "roll_playing",
-    "roll_locks", "roll_lock_held", "drum_locks", "drum_lock_held", "drum_lock_page", "motion_locks", "auto_list", "auto_list_add", "auto_list_drum", "layer_rec", "layer_rec_set", "layer_rec_song", "layer_macro", "mseq", "dist", "dly2", "reverb2", "chorus", "master", "lfo_dest",
+    "roll_locks", "roll_lock_held", "drum_locks", "drum_lock_held", "drum_lock_page", "motion_locks", "auto_list", "auto_list_add", "auto_list_drum", "layer_rec", "layer_rec_set", "layer_rec_song", "layer_macro", "mseq", "dist", "dly2", "reverb2", "chorus", "master", "lfo_dest", "lfo2", "lfo2_free",
     "countin", "countin_2bars", "menu_audio", "head_play_rec", "head_rec_other", "head_bpm_turn", "head_bpm_lock",
     "head_bpm_locked", "head_glo_turn", "head_downbeat", "head_beat_2",
     "save_library", "save_tools", "save_project", "save_arrange", "save_sound", "save_presets",
@@ -693,7 +693,7 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "message", "mes
     "home_macros", "home_being", "home_routes", "gen_lead",
     "ed_filter", "ed_filter_bp", "ed_voice2", "ed_focus", "ed_focus_mod", "ed_operator",
     "env_tracks", "env_tracks_dest", "env_stage", "env_stage_sus", "mseq2", "key_chord", "key_chord_off", "key_arp", "key_arp2", "glo_sends", "menu_row", "menu_row_leds", "ly_fx_knobs", "ly_fx_state", "ly_glo_state", "dlg_dice_sound", "dlg_dice_seq", "dlg_dice_fx", "dlg_mut_back",
-    "drum_hit_x4", "drum_hit_ghost", "drum_oct_x8", "drum_oct_flam", "comp_touch", "comp_echo_even", "gen_explore",
+    "drum_hit_x4", "drum_hit_ghost", "drum_oct_x8", "drum_oct_flam", "comp_touch", "comp_echo_even", "comp_sel", "comp_sel_drum", "comp_jump", "gen_explore",
     "vx_head_a", "vx_head_i", "vx_head_u", "vx_head_s", "vx_head_m", "vx_head_k", "vx_head_t", "vx_head_f", "vx_head_vowel",
     "vx_head_home", "vx_head_quiet", "vx_bird", "vx_cmos", "vx_insect", "vx_wing", "vx_mammal", "vx_morph_insect_bird", "vx_morph_bird_mammal",
     "vx_animal_home", "vx_kit", "vx_kit_hits", "vx_kit_ghost", "vx_kit_home", "vx_kit_muted",
@@ -703,7 +703,7 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "message", "mes
     "live_rieles", "live_rieles_t3", "live_mano", "live_mano_keys",
     "mixer_tracks4", "home_tracks4", "mock_home", "mock_presets", "mock_seq", "mock_drum", "mock_mixer", "mock_dialog", "mock_menu",
     "toast_env", "toast_mutate", "toast_mutate_hint", "toast_motion", "toast_motion_locks", "toast_punch", "toast_auto_list",
-    "toast_auto_list_drum", "toast_pattern", "toast_fm6_op", "toast_analog", "presets_pluck", "menu_midi"};
+    "toast_auto_list_drum", "toast_pattern", "toast_fm6_op", "toast_analog", "presets_pluck", "menu_midi", "menu_screen2"};
 
 /* (0.9.11) GLO > LIVE: six sequences of their own lengths (16 32 7 16 . 1/8 20 4 . 1/4, as the mock-up's), modifiers on
  * T2 (THIN 70 %), T3 (x2 RATCH x3), T4 (LOOP 8), T5 (2/3), played two seconds from PLAY so the playheads and ghosts are
@@ -1055,7 +1055,7 @@ static void setup(int s)
     memset(kb_on, 0, sizeof kb_on);               /* no key held (roll_playing holds one) */
     live.req = live.cur = -1; live.mode = live.srec = live.dirty = 0; lys.nqc = 0;   /* (the song layer: off) */
     trk_live = NTRK;                              /* (the six awake but on *_tracks4) */
-    if (s >= S_TOAST_ENV) {                       /* (0.9.5) a toast over a page with words to its foot: the pill keeps clear
+    if (s >= S_TOAST_ENV && s <= S_TOAST_ANALOG) {   /* (0.9.5) a toast over a page with words to its foot: the pill keeps clear
                                                    * of them (or is not drawn: the header says it), never over one (hk_overlay) */
         static const uint16_t BASE[] = {S_ENV, S_MUTATE, S_MUTATE, S_MOTION, S_MOTION_LOCKS, S_COUNT, S_AUTO_LIST,
                                        S_AUTO_LIST_DRUM, S_PATTERN, S_V6_FM6_OP, S_V6_ANALOG};   /* (0.9.6: over the creatures too) */
@@ -1069,7 +1069,8 @@ static void setup(int s)
             ui_message("SAVED A LONG MESSAGE");
         return;
     }
-    if (s >= S_MOCK_HOME) {
+    if (s >= S_MOCK_HOME && s <= S_MOCK_MENU) {   /* (0.9.18: the scenes appended after the toasts are their own: until
+                                                   * then PRESETS TYPE and MENU > MIDI drew a toast over a stray page) */
         mock_state(s);
         return;
     }
@@ -1095,6 +1096,8 @@ static void setup(int s)
     case S_MENU_MIDI:                                   /* (0.9.12) MENU > MIDI: LEARN ON, LEARN CLEAR with three learned */
         ml_learn(24, 0, P_PAN); ml_learn(25, 1, P_E0); ml_learn(26, 2, P_LEVEL); ml_set(1);
         ui.menu = 1; ui.menu_sel = MI_LCLEAR; break;
+    case S_MENU_SCREEN2:                                /* (0.9.18) MENU > SCREEN 2: SCREEN SLEEP 15 MIN just turned */
+        scr_put(2u); ui.menu = 1; ui.menu_sel = MI_SCROFF; ui.hot_col = 2u; ui.hot_t = 30; break;
     case S_USER: song.playing = 0; up_store(3, "MY LONG BASS NAME"); up_store(4, "PAD"); ui.uslot = 3; go_page(GR_USER); break;
     case S_PHRASES: go_page(GR_PATS); break;
     case S_PROJECT: song.playing = 0; project_save(1); song.g[G_SLOT] = 2; go_page(GR_SLOTS); ui.act = 4; break;
@@ -1165,6 +1168,8 @@ static void setup(int s)
     case S_REVERB2: song.g[G_RMOD] = 80; song.g[G_RWIDE] = 100; go_title("REVERB 2"); break;
     case S_CHORUS: song.g[G_CDEPTH] = 90; go_title("CHORUS"); break;
     case S_MASTER: song.g[G_CLIP] = 60; song.g[G_PUNCH] = 50; song.g[G_DUCK] = 40; go_title("MASTER"); break;
+    case S_LFO2: TSEL->p[P_LPHASE] = 32; go_title("LFO 2"); break;   /* (0.9.18) PHASE, TRIG */
+    case S_LFO2_FREE: TSEL->p[P_LPHASE] = -1; go_title("LFO 2"); break;   /* .. FREE: PHASE dimmed */
     case S_LFO_DEST: TSEL->p[P_LD_PIT] = 20; TSEL->p[P_LD_FLT] = -40; TSEL->p[P_LD_AMP] = 60; go_title("LFO DEST"); break;
     case S_MACRO_LAYER:                              /* M1: T1 CUT and T4's MRPH; M2: CLIP; M3 at 0, M4 none */
         go_home(); ui.layer = LAYER_MACRO;
@@ -1274,8 +1279,10 @@ static void setup(int s)
         perf_m[0] = 6; perf_m[1] = 7; perf_m[2] = 40; perf_m[3] = 30; pf.sw[0] = 1u << 23;   /* (0.9.14: the macros) */
         break;
     case S_LY_GLO_STATE: go_home(); ui.layer = LAYER_GLO; ui.lylv = 2; break;
-    case S_MENU_ROW: case S_MENU_ROW_LEDS:             /* (0.8.5) the menu's lens, ROW: COLOR's palettes, LEDS's names */
-        ui.menu = 1; ui.mlv = 2; ui.menu_sel = s == S_MENU_ROW ? MI_COLOR : MI_LEDS; break;
+    case S_MENU_ROW: case S_MENU_ROW_LEDS:             /* (0.9.18) the knob just turned: COLOR's card lit (SCREEN), LED GLOW's
+                                                         * (LEDS, KNOB 1) */
+        ui.menu = 1; ui.menu_sel = s == S_MENU_ROW ? MI_COLOR : MI_LEDS; ui.hot_col = 0u; ui.hot_t = 30;
+        break;
     case S_GLO_SENDS:                                  /* (0.8.5) GLO's lens: MIX > SENDS */
         trk[0].p[P_DIST] = 30; trk[1].p[P_CHOR] = 90; trk[2].p[P_DLY] = 60; trk[3].p[P_REV] = 127; trk[4].p[P_MUTE] = 1;
         go_title("SENDS"); ui.hot_col = 2; ui.hot_t = 30;
@@ -1513,7 +1520,7 @@ static void setup(int s)
     case S_LENTE_STEP_REST:
     case S_LENTE_BAR_LONG:                              /* (0.8.4) a chord 16 steps long: TIME 16 ST, the big step's LEN 16 */
     case S_LENTE_STEP_LONG:
-    case S_SEQ_BAR: {                                   /* (0.9.2) SEQ > BAR: KNOB 1 the bar (3/4 here), KNOB 2 LEN */
+    {
         static const uint8_t CH[3] = {60, 64, 69};
         track_t *t = TSEL;
         uint32_t i;
@@ -1538,7 +1545,7 @@ static void setup(int s)
             song.g[G_STRN] = -12;
         song.playing = 1; t->seq_idx = 21;
         nav_scene(SEC_SEQ, s == S_LENTE_PAT ? "PATTERN" : s == S_LENTE_STRETCH ? "STRETCH" : s == S_LENTE_BAR || s == S_LENTE_BAR_LONG ?
-                  "STEP" : s == S_LENTE_STEP_COMP2 ? "COMP 2" : s == S_LENTE_STEP ? "NOTE" : s == S_SEQ_BAR ? "BAR" : "COMP");   /* (0.9.2: NOTE the roll; the
+                  "STEP" : s == S_LENTE_STEP_COMP2 ? "COMP 2" : s == S_LENTE_STEP ? "NOTE" : "COMP");   /* (0.9.2: NOTE the roll; the
                                                          * step large on COMP: TIE, REST, LONG there) */
         cursor_set(s == S_LENTE_STEP_TIE ? 35 : s == S_LENTE_STEP_REST ? 36 : s == S_LENTE_BAR_LONG || s == S_LENTE_STEP_LONG ? 40 : 34);
         ui.pr_focus = s == S_LENTE_STEP ? 2u : 0u;
@@ -1547,11 +1554,10 @@ static void setup(int s)
     case S_LENTE_PAT_DRUM:
     case S_LENTE_BAR_DRUM:
     case S_LENTE_STEP_DRUM:
-    case S_SEQ_BAR_DRUM:
         drum(0); trk[3].p[P_SLEN] = 32;
         memcpy(&trk[3].step[16], &trk[3].step[0], 16u * sizeof(step_t));
         trk[3].step[20].hit |= 0x30u; trk[3].step[20].acc |= 0x10u;
-        nav_scene(SEC_SEQ, s == S_LENTE_PAT_DRUM ? "PATTERN" : s == S_LENTE_BAR_DRUM ? "STEP" : s == S_SEQ_BAR_DRUM ? "BAR" : "COMP");
+        nav_scene(SEC_SEQ, s == S_LENTE_PAT_DRUM ? "PATTERN" : s == S_LENTE_BAR_DRUM ? "STEP" : "COMP");
         cursor_set(20); ui.lane = 4;
         break;
     /* NAME (ui_name.c): USER SAVE prefilled; a letter cycling (RS: S, R next); 123 on a project; an empty project name
@@ -1852,6 +1858,35 @@ static void setup(int s)
         trk[3].step[0].comp = s == S_COMP_TOUCH ? CP_TOUCH : CP_ECHO;
         trk[3].step[0].carg = s == S_COMP_TOUCH ? 1u : (uint8_t)(2u | CP_ECHO_EVEN);
         go_page(GR_COMP); ui.cursor = 0;
+        break;
+    /* (0.9.18) SEQ > COMP: the step the component goes on framed (THEME, a tab at the foot), the steps with the same
+     * component a bar on top (ACCENT), those with another a thin one; a synth's roll, a kit's grid, a JUMP's step */
+    case S_COMP_SEL: case S_COMP_JUMP: {
+        static const uint8_t N[16] = {48, 0, 55, 51, 60, 0, 53, 58, 48, 63, 0, 55, 60, 51, 0, 58};
+        track_t *t = TSEL;
+        uint32_t i;
+        track_defaults_steps(t);
+        t->p[P_SLEN] = 16;
+        for (i = 0; i < 16u; i++) {
+            uint8_t n = N[i];
+            step_put(&t->step[i], n ? ST_NOTE : ST_REST, 0, n ? 1u : 0u, &n);
+        }
+        t->step[2].comp = CP_ECHO; t->step[2].carg = 1;
+        step_set_ratchet(&t->step[7], 3);                /* (a RATCH of its flags: the same component) */
+        t->step[12].comp = CP_ECHO; t->step[12].carg = 2;
+        t->step[4].comp = CP_RAND; t->step[4].carg = 2;
+        t->step[9].comp = CP_JUMP; t->step[9].carg = 3;
+        nav_scene(SEC_SEQ, "COMP");
+        cursor_set(s == S_COMP_JUMP ? 9 : 12);
+        break;
+    }
+    case S_COMP_SEL_DRUM:
+        drum(0);
+        trk[3].step[2].comp = CP_ECHO; trk[3].step[2].carg = 1;
+        trk[3].step[10].comp = CP_ECHO; trk[3].step[10].carg = 0;
+        trk[3].step[6].comp = CP_RAND; trk[3].step[6].carg = 1;
+        nav_scene(SEC_SEQ, "COMP");
+        cursor_set(10); ui.lane = 3;
         break;
     default: break;
     }

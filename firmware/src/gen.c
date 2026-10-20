@@ -371,6 +371,12 @@ static void gdrum_clear_region(track_t *t, uint32_t from, uint32_t to, uint32_t 
         if (!s->hit) gclear(s);
     }
 }
+/* (0.9.18) a roll on lane l of step s alone (its mode x2 / x4: n 2, 3..4), not the step's RATCH: the step's other
+ * sounds (a kick under the hat) and a hit recorded live into it never roll with it */
+static void glane_rat(step_t *s, uint32_t l, uint32_t n)
+{
+    step_set_lmode(s, l, n > 2u ? LM_X4 : LM_X2);
+}
 static void gdrum_hit(track_t *t, uint32_t i, uint32_t lane, int32_t vel, int acc)
 {
     step_t *s = &t->step[i];
@@ -412,7 +418,7 @@ static void gen_drums_idm(track_t *t, uint32_t len)
         if (!h) continue;
         s->time = ST_NOTE; s->hit = (uint8_t)h; s->acc = (uint8_t)(i % 4u == 0u ? h & 1u : 0u);
         s->vel = (uint8_t)(h & 1u ? 104 : grr(70, 100));
-        if ((h & 8u) && gch(25)) step_set_ratchet(s, (uint32_t)grr(2, 4));
+        if ((h & 8u) && gch(25)) glane_rat(s, 3u, (uint32_t)grr(2, 4));
         if (!(h & 1u) && gch(30)) step_set_chance(s, (uint32_t)grr(45, 85));
     }
 }
@@ -529,7 +535,7 @@ static void gen_drums(track_t *t, uint32_t len)
                 gdrum_clear_region(t, base + 12u, base + 16u, 0x10u);
                 for (k = 0; k < 4u; k++) {
                     gdrum_hit(t, base + 12u + k, lane, 70 + (int32_t)k * 15, k == 3u);
-                    if (e > 55 && k >= 2u) step_set_ratchet(&t->step[base + 12u + k], 2);
+                    if (e > 55 && k >= 2u) glane_rat(&t->step[base + 12u + k], lane, 2);
                 }
                 if (bars >= 8u) { gdrum_clear_region(t, base + 8u, base + 12u, 0x10u); for (k = 0; k < 4u; k++) gdrum_hit(t, base + 8u + k, lane, 50 + (int32_t)k * 5, 0); }
                 break;
@@ -545,7 +551,7 @@ static void gen_drums(track_t *t, uint32_t len)
                 gdrum_hit(t, base + 15u, 4, 100, 1);
                 break;
             case FL_HAT:
-                for (k = 12; k < 16u; k++) { gdrum_hit(t, base + k, 3, 70 + (int32_t)(k - 12u) * 12, 0); step_set_ratchet(&t->step[base + k], k < 14u ? 2u : 3u); }
+                for (k = 12; k < 16u; k++) { gdrum_hit(t, base + k, 3, 70 + (int32_t)(k - 12u) * 12, 0); glane_rat(&t->step[base + k], 3u, k < 14u ? 2u : 3u); }
                 break;
             case FL_LINEAR: {
                 static const uint8_t BD[8] = {1, 0, 1, 0, 1, 0, 0, 1}, SD[8] = {0, 1, 0, 1, 0, 1, 1, 0};
@@ -578,7 +584,7 @@ static void gen_drums(track_t *t, uint32_t len)
             step_t *s = &t->step[i];
             uint32_t p = i % 16u;
             if (s->time != ST_NOTE || !(s->hit & 8u) || (s->hit & 3u)) continue;
-            if ((p == 6u || p == 14u || p == 10u) && gch(35 + gs.complex / 2u)) step_set_ratchet(s, (uint32_t)grr(2, p == 14u ? 4 : 3));
+            if ((p == 6u || p == 14u || p == 10u) && gch(35 + gs.complex / 2u)) glane_rat(s, 3u, (uint32_t)grr(2, p == 14u ? 4 : 3));
         }
     }
     for (i = 0; i < len; i++) {                         /* the snare laid back where the genre plays late; the kick's steps */
@@ -1924,17 +1930,17 @@ static void gx_comps(void)
             step_t *s = &trk[k].step[gr() % len];
             uint32_t c = GX_COMP[gpickw(GX_COMP_W, NELEM(GX_COMP))], a;
             if (s->time != ST_NOTE || !s->n || s->comp) continue;
-            if (r == RL_BASS && (cp_isarp(c) || c == CP_CLIMB || c == CP_JUMP || c == CP_REV)) c = CP_OCT;
+            if (r == RL_BASS && (cp_isarp(c) || c == CP_JUMP || c == CP_REV)) c = CP_CLIMB;   /* (0.9.18: OCT) */
             if (c == CP_ARPN && s->n < 2u) c = CP_ARPQ;
             switch (c) {
             case CP_RAND: a = (uint32_t)grr(1, 4); break;
-            case CP_OCT: a = gr() % 6u; break;
             case CP_BEND: a = (uint32_t)(12 + (gch(50) ? 1 : -1) * grr(1, 12)); break;
             case CP_ECHO: a = gr() % 5u | (gch(25) ? CP_ECHO_EVEN : 0u); break;
             case CP_PULSE: a = gr() % 4u; break;
             case CP_WALK: a = CP_WARG(gr() % CP_NWRATE, gr() % 4u, gr() % 4u); break;
-            case CP_CLIMB: a = CP_WARG(gr() % CP_NWRATE, gr() % 4u, gr() % 2u); break;
-            case CP_ARPQ: case CP_ARPN: a = CP_ARG(gr() % 4u, gr() % 5u, gr() % 2u); break;
+            case CP_CLIMB: a = CP_WARG(r == RL_BASS ? gr() % 4u : gr() % CP_NWRATE, gr() % (r == RL_BASS ? 2u : 4u), gr() % 2u); break;
+            case CP_ARPQ: case CP_ARPN: a = CP_ARG(gr() % 4u, ARP_RCODE[1u + gr() % 3u], gr() % 2u); break;   /* (0.9.18:
+                                                         * 1/8 1/16 1/32) */
             case CP_TONAL: a = (uint32_t)(7 + grr(-4, 4)); break;
             case CP_JUMP: a = gr() % len | (gr() % 4u) << 6; break;
             default: a = gr() % 4u; break;              /* REV: its TIMES */
@@ -2136,7 +2142,7 @@ static void gen_post(void)
                 if (s->time != ST_NOTE || !s->n || s->comp) continue;
                 if (r == RL_PAD) {
                     if (s->n < 2u) continue;
-                    if (gch(60)) { s->comp = CP_ARPN; s->carg = CP_ARG(gr() % 3u, gch(50) ? 0u : 2u, 0u); }
+                    if (gch(60)) { s->comp = CP_ARPN; s->carg = CP_ARG(gr() % 3u, gch(50) ? 5u : 6u, 0u); }   /* (0.9.18: 1/16, 1/8) */
                     else { s->comp = CP_ECHO; s->carg = (uint8_t)(gr() % 2u); }
                 } else if (r == RL_LEAD) {              /* (0.8.3: never a random walk or an octave thrown into the
                                                          * line: its notes are composed) */
@@ -2146,8 +2152,8 @@ static void gen_post(void)
                     s->carg = (uint8_t)(s->comp == CP_ECHO ? gr() % 2u : s->comp == CP_BEND ? (gch(50) ? 2u : 10u) : 1u);
                 } else {                                /* (the arp: its chord's tones; 0.8.3: no RAND, no WALK) */
                     uint32_t c = gr() % 3u;
-                    s->comp = (uint8_t)(c == 0u ? CP_OCT : c == 1u ? CP_ECHO : CP_CLIMB);
-                    s->carg = (uint8_t)(s->comp == CP_OCT ? 4u : s->comp == CP_CLIMB ? CP_WARG(2u + gr() % 6u, gch(50) ? 2u : 0u, gr() % 2u) : 0u);
+                    s->comp = (uint8_t)(c == 1u ? CP_ECHO : CP_CLIMB);   /* (0.9.18: OCT is CLIMB, a lap at a time) */
+                    s->carg = (uint8_t)(c == 0u ? CP_WARG(0u, 0u, 0u) : c == 2u ? CP_WARG(2u + gr() % 6u, gch(50) ? 2u : 0u, gr() % 2u) : 0u);
                     if (c == 1u && gs.energy > 60u && gch(50)) { s->comp = 0; step_set_ratchet(s, 2); }
                 }
                 if (s->comp && gch(40)) ST_EVERY_SET(s, gch(50) ? EV_1_2 : EV_2_2);   /* (every other loop) */

@@ -1519,7 +1519,7 @@ function makeMockDevice(opt = {}) {
     D("LEVEL", F.DB, 0, 127, 104),
     D("ATK", F.TIME, 0, 127, 10), D("DEC", F.TIME, 0, 127, 70), D("SUS", F.PCT, 0, 127, 90), D("REL", F.TIME, 0, 127, 60),
     D("FILTER", F.BIPCT, -64, 63, 0), D("PITCH", F.BIPCT, -64, 63, 0), D("SHAPE", F.BIPCT, -64, 63, 0), E("LOOP", ["OFF", "ON"], 0),   /* (JIANT 0.4: P_ED_FX is the ENV LOOP) */
-    D("RATE", F.LFOHZ, -12, 127, 60), E("WAVE", ["SIN", "TRI", "SAW", "SQR", "S&H"], 0), D("PHASE", F.INT, -1, 127, 0), D("FADE", F.TIME, 0, 127, 0),   /* (0.6.51) RATE < 0 in time, PHASE -1 FREE */
+    D("RATE", F.LFOHZ, -12, 127, 60), E("WAVE", ["SIN", "TRI", "SAW", "SQR", "S&H"], 0), D("PHASE", F.INT, -1, 127, 0), D("FADE", F.TIME, 0, 127, 0),   /* (0.6.51) RATE < 0 in time, PHASE -1 FREE (0.9.18: shown as MODE TRIG / FREE, lfoModeRows) */
     D("PITCH", F.BIPCT, -64, 63, 0), D("FILTER", F.BIPCT, -64, 63, 0), D("SHAPE", F.BIPCT, -64, 63, 0), D("AMP", F.PCT, 0, 127, 0),
     E("MODE", ["OFF", "UP", "DN", "UPDN", "RND", "ORD", "REPEAT", "DNUP", "UP+8", "CONV", "DIVG", "PINKY", "THUMB", "WALK", "CHORD", "TRNS"], 0), E("RATE", NDIV, 2), D("OCT", F.INT, 1, 4, 1), D("GATE", F.PCT, 1, 127, 64),
     D("SWING", F.PCT, 0, 100, 0), D("PROB", F.PCT, 0, 127, 127), E("HOLD", NONOFF, 0), E("ORDER", ["NOTE", "PLAY"], 0),
@@ -3122,6 +3122,7 @@ function buildGroups() {
 function paramRow(s, id) {
   const d = s ? dev.gdesc[id] : dev.pdesc[id];
   if (!visible(d) || (s === 1 && G_SKIP.has(d.label))) return null;
+  if (!s && d.label === "PHASE" && d.min === -1 && d.fmt === F.INT) return lfoModeRows(id, d);
   const k = key(s, id);
   let input;
   if (d.fmt === F.ENUM || d.fmt === F.NOTE || d.fmt === F.ONOFF) {
@@ -3170,9 +3171,42 @@ function paramRow(s, id) {
   return row;
 }
 
+/* (0.9.18) the LFO's PHASE as the device's pages show it: MODE TRIG / FREE (FREE is PHASE -1, as stored since 0.6.51) and
+   PHASE 0..127, TRIG's start (dimmed in FREE: the phase TRIG had is kept here for TRIG again) */
+function lfoModeRows(id, d) {
+  const k = key(0, id);
+  const mode = el("select", {}, el("option", { value: 0 }, "TRIG"), el("option", { value: 1 }, "FREE"));
+  const ph = el("input", { type: "range", min: 0, max: d.max, step: 1 });
+  const mout = el("span", { class: "v" }), out = el("span", { class: "v" });
+  const c = { input: ph, out, desc: d, scope: 0, id, mem: 0 };
+  c.show = (v, force) => {
+    if (v >= 0) c.mem = v;
+    mode.value = v < 0 ? "1" : "0";
+    mout.textContent = v < 0 ? "FREE" : "TRIG";
+    ph.disabled = v < 0;
+    out.textContent = String(c.mem);
+    if (force || !touched(k)) ph.value = String(c.mem);
+  };
+  mode.addEventListener("change", () => userSet(0, id, +mode.value ? -1 : c.mem, true));
+  ph.addEventListener("pointerdown", () => { dragging = k; });
+  ph.addEventListener("input", () => userSet(0, id, +ph.value, false));
+  ph.addEventListener("change", () => userSet(0, id, +ph.value, true));
+  mode.title = "MODE";
+  ph.title = "PHASE";
+  const rows = [el("div", { class: "row" }, el("span", { text: "MODE" }), mode, mout),
+    el("div", { class: "row" }, el("span", { text: "PHASE" }), ph, out)];
+  c.row = rows[1];
+  ctl.set(k, c);
+  c.show(dev.dump.p[id], true);
+  const f = document.createDocumentFragment();
+  f.append(...rows);
+  return f;
+}
+
 function showValue(k, v, force) {
   const c = ctl.get(k);
   if (!c || v == null) return;
+  if (c.show) return c.show(v, force);
   const [txt0, unit] = fmtValue(c.desc, v), txt = modDst(c.desc, txt0);
   c.out.textContent = unit ? `${txt} ${unit}` : txt;
   if (force || !touched(k)) c.input.value = String(v);

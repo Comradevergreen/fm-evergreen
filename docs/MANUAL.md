@@ -87,10 +87,10 @@ The names below are the ones the firmware uses (the HARDWARE CALIBRATION screen 
 
 | Control | What it does |
 | --- | --- |
-| **SELECT** (encoder) | Alone (0.9.2): **walks the section's pages**, one page a detent, as one chain, stopping at its first and last page (no levels, no zoom; see [How navigation works](#how-navigation-works-six-rules-092)). In the MENU: its rows, all four tabs in one chain. With a button held: **HOME** + SELECT **GEN**, **EDIT / SEQ / LFO / FX** + SELECT that part's **dice**, **GLO** + SELECT the **tempo**, **ENV / SCL / ARP / SAVE** + SELECT walk that section's chain from wherever you are. |
+| **SELECT** (encoder) | Alone (0.9.2): **walks the section's pages**, one page a detent, as one chain, stopping at its first and last page (no levels, no zoom; see [How navigation works](#how-navigation-works-six-rules-092)). In the MENU: its pages. With a button held: **HOME** + SELECT **GEN**, **EDIT / SEQ / LFO / FX** + SELECT that part's **dice**, **GLO** + SELECT the **tempo**, **ENV / SCL / ARP / SAVE** + SELECT walk that section's chain from wherever you are. |
 | **ALGORITHM** (encoder) | Selects the track from any page: T1–T6 (T1–T4 with TRACKS 4). The track is always ALGORITHM's (0.9.2: PRESETS no longer picks it on ENV, LFO, CHORD, ARP). In the MENU: the next / previous tab. With a layer held: its view, MAP ↔ KNOBS ↔ STATE. |
 | **PRESETS** (encoder) | **Always presets** (0.9.2): the selected track's sounds (every engine's factory presets, then your user presets) on every page; on the **SEQ** pages the **patterns** (it opens the PHRASES loader with the next pattern picked: OCT+ loads it, OCT− back to the SEQ page); on **GEN** the GENRE. In the MENU and with a button held it does nothing. It never changes page, track, module or row. |
-| **KNOB 1–4** | The four cards (columns) on screen. A page that picks something picks it with **KNOB 1** (the step, the bar, the slot, the stage, the operator, the kit's sound, the row). With a layer held, the layer's own knobs. Turning fast sweeps the whole range, slowly fine-tunes (MENU > KNOB ACCEL turns this off). |
+| **KNOB 1–4** | The four cards (columns) on screen. A page that picks something picks it with **KNOB 1** (the step, the bar, the slot, the stage, the operator, the kit's sound, the row). With a layer held, the layer's own knobs. Turning fast sweeps the whole range, slowly fine-tunes (MENU › SYSTEM › KNOB SPEEDUP turns this off). In the MENU: KNOB n the setting on card n. |
 | **MASTER** | The output volume. |
 
 ### Buttons
@@ -142,7 +142,7 @@ layer's shortcuts; on the DRUM grid they are steps and lanes; on the NAME screen
 
 ### Skins: AIR, COLORS, HUD (0.8.9, AIR 0.9.7)
 
-**MENU > DISPLAY > SKIN** picks how the lenses are dressed (the approved mock-up "skin aireado", options 1, 3 and 4;
+**MENU › SCREEN › SKIN** picks how the lenses are dressed (the approved mock-up "skin aireado", options 1, 3 and 4;
 0.9.7: AIR, the approved option); every page, every palette, FLAT and LINE. The menu steps them AIR, COLORS, HUD
 (0.9.17: BOTTOM, the knob row at the foot on every page, is retired; a BOTTOM saved in the settings, or set by the
 editor or a restore, opens as AIR):
@@ -230,7 +230,7 @@ dark. The pill keeps clear of the page's own words: where the foot is written (A
 sits in the nearest free rows, and on a page with no free rows it is left out and the header alone says it. A page's
 **hint** (MUTATE's "OCT+ KEEP  GLO+A4 FREEZE", MOTION's and PUNCH's "REC + PLAY ...") comes only once you stay on the
 page for about 0.8 s, never while SELECT walks past it, and each one at most twice in all (counted with the settings,
-so not again after a reboot). SAVE › TOOLS › INIT SYSTEM starts them over. Tapping a layer button says nothing (the
+so not again after a reboot). SAVE › TOOLS › NEW PROJECT starts them over. Tapping a layer button says nothing (the
 "HOLD [X] QUICK" hints are gone): hold it and its layer shows itself.
 
 ---
@@ -261,7 +261,7 @@ knobs, their pictures and every function are the same, only the way between them
 4. **KNOB 1 picks.** When a page picks something (a step, a bar, a slot, a stage, an operator, the kit's sound, a
    row) KNOB 1 is the one that picks it. The track is always **ALGORITHM**'s. SEQ › STEP: KNOB 1 walks all 64 steps,
    bar after bar; the new **SEQ › BAR** page: KNOB 1 the bar.
-5. **Hold = the layer.** Holding a button opens its layer of shortcuts, as before (past the HOLD time, MENU > HOLD,
+5. **Hold = the layer.** Holding a button opens its layer of shortcuts, as before (past the HOLD time, MENU › SYSTEM › HOLD TIME,
    0.4 s by default: the keys and knobs change function while you hold it, a map shows what each key does; a key or a
    knob opens it at once; let go and you are back). Held + SELECT: **HOME** GEN, **EDIT / SEQ / LFO / FX** their dice,
    **GLO** the tempo, **ENV / SCL / ARP / SAVE** walk their chain. (Held + PRESETS no longer walks pages: rule 3.)
@@ -279,8 +279,8 @@ knobs, their pictures and every function are the same, only the way between them
   picked, so SAVE, OCT+, OCT+ still stores the sound (or the section).
 - **EDIT is always EDIT**: clearing a step went to the SEQ layer (**SEQ + G5**, CLR STEP; on AUTO LIST it deletes the
   record; TIME turned to REST clears a note too) and renaming to the SAVE layer (**SAVE + C5**, NAME).
-- **The MENU** (hold HOME): SELECT walks every row (DISPLAY → CONTROL → AUDIO → MIDI → SYSTEM), ALGORITHM jumps tabs, a knob
-  changes the value, HOME closes it.
+- **The MENU** (hold HOME, 0.9.18): the same rules: SELECT walks its nine pages (SCREEN → AUDIO → MIDI → USB →
+  SYSTEM), ALGORITHM jumps tabs, KNOB 1–4 the settings on the cards, HOME closes it.
 - Some pages only appear when they apply: FM6's operator pages on an FM6 track, DRUM-X's pages on a DRUM track,
   RETRIG on LOFI BYTE/FLOAT, and with **LOAD ECO** the SLICER and CHORUS pages are hidden; the chain skips them.
 
@@ -371,7 +371,8 @@ the bars with KNOB 1 the bar and KNOB 2 LEN.
 
 | Page | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 | --- | --- | --- | --- | --- |
-| LFO | RATE | WAVE | PHASE | FADE |
+| LFO | RATE | WAVE | MODE (TRIG / FREE) | FADE |
+| LFO 2 (0.9.18) | PHASE (TRIG's; dimmed in FREE) | — | — | — |
 | LFO DEST | PITCH | FILTER | SHAPE | AMP |
 | MOD | SLOT (1–4) | SRC | DEST | AMT |
 | MSEQ | STEP (1–16) | LEVEL | LEN | SLEW |
@@ -473,7 +474,7 @@ them page by page, a **SEQ** tap jumps to the next group.
 | BAR | STEP (melodic: piano roll) | STEP (all 64, bar after bar) | NOTE | TIME (REST ← TIE ← NOTE → 2 ST … 16 ST: the note's length in steps; REST clears the step) | FLAG (– / ACC / SLD / A+S) |
 | BAR | STEP (DRUM: grid) | STEP | LANE | HIT | ACC |
 | BAR | NOTE | FOCUS | PITCH | MOVE | MICRO (−32/64 … +31/64; 0.9.1) |
-| STEP | COMP | STEP | TYPE | (its value; ARP: ORDER × RANGE) | EVERY (ARP: RATE; RATCH / ECHO: DIV) |
+| STEP | COMP | STEP | TYPE | (its value; ARP: ORDER × RANGE; RATCH: x1–x8 × FLAT FADE RISE) | EVERY (ARP: RATE; RATCH: RATE and its pitch step) |
 | STEP | COMP 2 | STEP | TYPE (the second component) | (its value) | EVERY |
 | AUTO | AUTOMATION | PLAY (ON/OFF) | EVENT (count) | LOCK (count) | CLEAR (action) |
 | AUTO | AUTO LIST | ROW | STEP | PARAM | VALUE |
@@ -808,7 +809,7 @@ of RAM; nothing in the sound.
 ### Six more engines draw their own creature (0.9.6)
 
 With 0.9.6 every engine has its own picture: ANALOG, FM6, WHEEL, NOISE, PHASE and LOFI draw theirs on **EDIT › SOUND**
-(on the left; the scope and the chips on the right as before; 0.9.7: with **MENU › DISPLAY › SCOPE** ON — OFF, the default,
+(on the left; the scope and the chips on the right as before; 0.9.7: with **MENU › SCREEN 2 › SCOPE** ON — OFF, the default,
 gives the creature the whole panel, centred, the sound's name a small caption in a corner) and on **HOME › BEING** (HOME's ecosystem keeps its
 beings), in the same thermal line art, the bichos' face shared with DRUM-X's beings, moving only while the track sounds:
 
@@ -869,7 +870,7 @@ track that follows LFO DEST / ENV DEST FILTER.
 
 EDIT > **VOICE**: **VOICE** POLY, MONO, LEG (legato), UNI (unison); **GLIDE**; **MODE** RATE or TIME (how glide is
 measured); **PRIO** LAST, LOW, HIGH. The six tracks share a budget of 8 voices (**12 while the second core plays**,
-0.9.12: MENU › ABOUT says CORES 2); FM6 plays at most four per track, any track at most 8. (0.9.8) VOICE glides as a singer: an S-curve in
+0.9.12: MENU › SYSTEM › ABOUT says CORES 2); FM6 plays at most four per track, any track at most 8. (0.9.8) VOICE glides as a singer: an S-curve in
 pitch over the same time (the other engines: a straight line, as before).
 
 ---
@@ -927,7 +928,7 @@ changes **how** they play, not which sound. The screen says it when you press OC
 
 | OCT | What a key does | Recorded (REC) as the hit and its sound's mode |
 |---|---|---|
-| **+3** | **RATCHET x2**: the hit twice a step while held | **x2** |
+| **+3** | **RATCHET x2**: the hit twice a step while held | **x4** (0.9.18: a sound's x4 spills two hits a step over two steps, as heard; was x2) |
 | **+2** | **REPEAT**: the hit once a step while held, a roll at the step rate | a hit on every step held (**ON**) |
 | **+1** | **REPEAT 1/2**: the hit every other step while held (0.9.17: every OCT half as fast again; 0.9.13 had already halved them) | a hit on every other step held (**ON**) |
 | **0** | the kit as it always was | none (**ON**) |
@@ -945,8 +946,9 @@ changes **how** they play, not which sound. The screen says it when you press OC
   exactly as you heard it). Let go before the middle of the last one and that step is put back, as with a held synth
   note.
 - **See and edit it** on SEQ > STEP (the DRUM grid): KNOB 2 picks the sound, **KNOB 3 HIT** goes **--, ON, x2, x4, x8,
-  SHORT, GHOST, FLAM** for it on the cursor step (left back to -- takes the hit and its mode away). The step's own
-  RATCH, ECHO and TOUCH (SEQ > COMP) still work on the whole step, as before.
+  SHORT, GHOST, FLAM** for it on the cursor step (left back to -- takes the hit and its mode away). A sound's x2 x4
+  x8 spill over the steps after it as RATCH does (0.9.18: x2 a hit a step, x4 two, x8 four). The step's own RATCH
+  (SEQ > COMP) repeats its other sounds: a sound with its own x2 / x4 / x8 or recorded ONCE is left out of it.
 - **MIDI** (0.8.5): notes 35–81 still play the GM drum map exactly as before. The notes around it, which used to play
   their octave of 36–47 plain, are now these octaves, by pitch class: **23–34 SHORT, 11–22 GHOST, 0–10 FLAM, 82–93
   REPEAT 1/2, 94–105 REPEAT, 106–127 x2** (0.9.17; 84 the kick every other step, 96 the kick once a step, 108 the kick
@@ -954,7 +956,7 @@ changes **how** they play, not which sound. The screen says it when you press OC
   MIDI OUT. **A song or MIDI setup that sent drum notes below 35 or above 81** (a kick on 24, say) will now hear these
   variations: move them into 35–81 (36–47 for the kit's own) to keep the old sound. Notes stored in the steps play as
   before, whatever their number.
-- With the ARP on, the keys feed the arp plain (no ratchet or TOUCH). The DRUM grid's lane keys are always the centre
+- With the ARP on, the keys feed the arp plain (no ratchet, SHORT, GHOST or FLAM). The DRUM grid's lane keys are always the centre
   octave.
 
 One kit per section, shared by every track on DRUM: while another track plays DRUM-X, browsing kit presets on a different track keeps that kit ("KIT OF T4 KEPT", 0.8.1); load kits on the drum track itself. The kit is saved with each section of a project (not with user presets — see [12](#12-saving-and-loading)).
@@ -968,10 +970,10 @@ of different lengths turn against each other.
 
 ### Finding your way: the SEQ chain
 
-(0.9.2) The sequencer's twelve pages are one chain in five groups, as every section: **SELECT** walks them a page a
+(0.9.2) The sequencer's eleven pages (0.9.18: the BAR page is gone) are one chain in five groups, as every section: **SELECT** walks them a page a
 detent (no wrap), a **SEQ** tap jumps to the next group's first page (round), and the **tabs at the top** are the
 groups, **PATT · TRACK · BAR · STEP · AUTO**, the one you are on lit with a dot for each of its pages; the footer says
-**SEQ · BAR · STEP  7/12**. Until 0.9.1 SELECT zoomed three levels (PATTERN ↔ BAR ↔ STEP, the LENTE of 0.8.3) and the
+**SEQ · BAR · STEP  6/11**. Until 0.9.1 SELECT zoomed three levels (PATTERN ↔ BAR ↔ STEP, the LENTE of 0.8.3) and the
 tap went round each level's sets: the pages and their pictures are the same, only the way between them is new. The
 pattern's bars (up to four, at LEN 64) are drawn as small cells: the bar you edit tinted violet with its number violet,
 the number of the bar playing orange, a bar past LEN dark.
@@ -980,8 +982,8 @@ the number of the bar playing orange, a bar past LEN dark.
 | --- | --- | --- |
 | **PATTERN** | PATTERN · STRETCH · PLAYHEADS | (0.9.17) The roll, as every SEQ page. **PATTERN** draws the notes as long as **GATE** plays them and the odd steps late by **SWING**; steps past **LEN** are dark (in the strip, the bars past it). **PLAYHEADS** draws its extra heads over the roll as lines while they play, each as hot as its number (the head you edit 3 px wide). |
 | **TRACK** | TRACK · MUTATE | **TRACK** outlines where **PITCH** moves the notes (in grey, over the notes as written). **MUTATE** shows a chip at the roll's foot: the bars to the next mutation (**NEXT n BARS**), **FROZEN**, or **MUTATE OFF**. |
-| **BAR** | **BAR** · STEP · NOTE | **KNOB 1 the bar** on BAR (the cursor keeps its place in it), KNOB 2 LEN. STEP's KNOB 1 walks **all 64 steps**, crossing into the next bar by itself; NOTE's note in focus orange. |
-| **STEP** | COMP · COMP 2 | A bar over the top of each step with that component (COMP: the first, COMP 2: the second; an arpeggio orange, another violet); the cursor step framed. |
+| **BAR** | STEP · NOTE | STEP's KNOB 1 walks **all 64 steps**, crossing into the next bar by itself (0.9.18: a fast turn several at a time, KNOB SPEEDUP; the BAR page with its bar knob is gone, LEN is PATTERN's); NOTE's note in focus orange. |
+| **STEP** | COMP · COMP 2 | (0.9.18) The step the component goes on framed violet with a tab at its foot (KNOB 1, at once); an orange bar over each step with the same component, a thin line over a step with another; a JUMP's step framed orange. |
 | **AUTO** | AUTOMATION · AUTO LIST | A mark under each step with a record (a lock orange, automation white); on AUTO LIST the record picked has its step framed violet, the cards giving its row, step, parameter and value. |
 
 **One picture for the whole SEQ** (0.9.17, the owner's "all the sequencer pages the same piano roll, each page doing
@@ -1035,37 +1037,48 @@ focus.
 
 Press **REC** anywhere (not on STEP while stopped): the track is armed and the transport starts. What you play is
 recorded into the pattern, quantized to its steps, overdubbing. Knob moves on the selected track are recorded as
-**automation**. MENU > AUDIO has the **CLICK** (OFF / REC / ON), **CLICK LEVEL** and **COUNT-IN** (OFF, 1 BAR, 2 BARS).
+**automation**. MENU › AUDIO › CLICK has the **CLICK** (OFF / REC / ON), **CLICK LEVEL** and **COUNT-IN** (OFF, 1 BAR, 2 BARS).
 
 ### Pattern pages
 
 - **COMP** (step components, OP-Z style): up to two per step (**COMP** the first, **COMP 2** the second, the same
-  way; 0.6.82). KNOB 1 picks the step, KNOB 2 its **TYPE**, KNOB 3 its value, KNOB 4 **EVERY** (0.6.92; on COMP an
-  ARP's RATE or a RATCH / ECHO's DIV sit there instead). COMP and COMP 2 are the STEP group: the step drawn
-  large, its COMP or COMP 2 chip lit with the type it holds (0.8.3; the component's own picture is gone, its values are
-  on the cards).
-  - **CHANCE** (0–100 %) and **RATCH** (x1–x4): the step's own chance and ratchet (on COMP only). RATCH's KNOB 4 is
-    its **DIV**: STEP shares the hits out over the step (as before); 1/2, 1/3, 1/4, 1/6, 1/8 put them that part of a
-    step apart from its start, as many as fit (RATCH x3 at 1/8: three quick hits, then silence).
-  - **ARP NOTES / SEQ / SCALE**: the step plays an arpeggio and goes on over the TIEs after it (its duration the step
-    and its TIEs). NOTES: the step's notes, low to high; SEQ: the pattern's melody, in the order the pattern plays it
-    (0.6.82; it was sorted like NOTES); both over 1–4 octaves. SCALE: the scale up from the step's lowest note, 3, 5,
-    8 or 15 degrees. KNOB 3 **ORDER** and range as one list (UP, DOWN, UP-DN, RND over 1 OCT, then over 2 OCT …; on
-    SCALE 3, 5, 8, 15 DEG). KNOB 4 **RATE** (0.6.92), the arpeggio's speed in musical time: **x1** one note a step
-    (the track's DIV, 1/16), **1/32** two a step, **1/32T** three, **1/64** four, **1/64T** six, **1/128** eight (the
-    card says the note value for the track's DIV; an odd DIV: xn). The old pages' x2 … x8 are the same values.
-    **SEQ walks one note a lap** (0.9.17): each time the pattern comes round to the step it plays the next note of the
-    melody, in its ORDER and range, held over the TIEs after it like any note; its KNOB 4 is **LAP**, the note this pass
-    plays (RND: a new one each lap), and PLAY from a stop starts again from the first note, as the other components'
-    loops do. (Until 0.9.16 SEQ played the melody inside the step at its RATE; projects keep that RATE, now unused.)
+  way; 0.6.82). KNOB 1 picks the step, KNOB 2 its **TYPE**, KNOB 3 its value, KNOB 4 **EVERY** (0.6.92; on COMP a
+  RATCH's or an ARP's RATE sits there instead). The TYPEs by family (0.9.18): **OFF, CHANCE, RATCH, ARP, SEQ, WALK,
+  PULSE, OCT, RAND, BEND, TONAL, JUMP, REV, TRIG, FILL, KILL** (COMP 2 has no CHANCE).
+  **Where it goes** (0.9.18): the roll (a kit: the grid) frames the step KNOB 1 picks in violet, its whole column with
+  a tab at its foot, following the knob at once; every step with the same component as the one you edit has an orange
+  bar on top, a step with another component a thin line; a JUMP's TO STEP is framed orange as KNOB 3 turns.
+  - **CHANCE** (0–100 %): the step's own chance (on COMP only).
+  - **RATCH** (0.9.18: RATCH and ECHO in one): the step plays **x1–x8** hits. KNOB 3 the count and its shape:
+    **FLAT** (every hit at the step's level), **FADE** (each softer: the old ECHO), **RISE** (each louder). KNOB 4 its
+    **RATE**: **FIT** spreads the hits over **four steps** on a synth (two on a drum kit: x2 there is a hit a step), a
+    note value sets how far apart they are (the card says it for the track's DIV), and a **pitch step** for the hits
+    after the first: **+1 DEG** / **−1 DEG** along the scale, **+OCT** every other hit an octave up.
+    The hits after the first **spill over the steps after it** (until 0.9.17 they fell inside the step): a hit that
+    lands on a step with the same note of its own (a kit: the same sound) is left out, another note plays beside it on
+    POLY; on MONO / LEGATO the next note cuts what is left; a new ratcheted step replaces it. The chance is rolled once
+    for all of them, STOP ends them. Not repeated with the step: a sound with its own x2 / x4 / x8 on the grid (the
+    sound's mode wins, never a ratchet of a ratchet), a hit recorded live into the step (ONCE, 0.9.17) and a note
+    recorded live into a ratcheted POLY step (0.9.18): each plays once, as it was heard. SEQ > CHANCE's x1–x4 is RATCH
+    FLAT; a project's ECHO is RATCH FADE (EVEN: FLAT). The live RATCH (GLO › LIVE) stays inside each step.
+  - **ARP** (0.9.18): the step's notes (its chord; a kit: its sounds) **one at a time at RATE** (KNOB 4: **1/32, 1/16,
+    1/8, 1/4**, then the same again with the loops it plays on, 1:2 …; the other loops play the chord as written), in
+    KNOB 3's **ORDER** (UP, DOWN, UP-DN, RND) over 1–4 octaves (a single note: itself and that many octaves up), through
+    the step and its TIEs and at least once round, spilling over the steps after it as RATCH's hits do; on MONO the next
+    note cuts it. (Until 0.9.17 ARP NOTES played its notes inside the step at x1–x8 a step.) **ARP SCALE is gone**: a
+    step that had it loads as a WALK of its lowest note (the same degrees, a move a lap).
+  - **SEQ** walks the pattern's melody **one note a lap** (0.9.17): each time the pattern comes round to the step it
+    plays the next note of the melody, in its ORDER and range, held over the TIEs after it like any note; its KNOB 4 is
+    **LAP**, the note this pass plays (RND: a new one each lap), and PLAY from a stop starts again from the first note,
+    as the other components' loops do.
   - **TRIG**: the step plays only on some loops of the pattern: 1:2, 2:2, 1:3, 2:3, 3:3, 1:4 … 4:4, 1:8, FIRST, !1ST
     (every loop but the first).
   - **RAND**: the note moves up or down the scale at random, up to RANGE degrees (1–7).
-  - **OCT**: an octave: +1, −1, +1 every other loop, −1 every other loop, ALT (up and down by turns), RND.
+  - **OCT** (0.9.18, CLIMB's place): the step's notes move **an octave every so many loops** (KNOB 4: 1 … 10, 12, 16),
+    over 1–4 octaves, KNOB 3 **UP / DOWN / UP-DN / RND**, then round again (WALK in octaves). The old OCT loads as what
+    it played: +1 / −1 every time as the notes moved an octave, every other loop / ALT / RND as OCT with that motion.
   - **TONAL**: from this step to the end of the loop every note moves SHIFT degrees (−7 to +7) along the scale.
   - **BEND**: the note glides BEND semitones (−12 to +12) over the step.
-  - **ECHO**: the step repeats x2–x8 in its length, each repeat softer. KNOB 4 its **DIV**, as RATCH's: STEP shares
-    the repeats out over the step, 1/2 … 1/8 sets how far apart they are.
   - **PULSE**: the note plays again on the empty steps after it, EVERY 1–4 steps, until the next note.
   - **JUMP**: after this step the pattern goes on from TO STEP.
   - **REV**: from this step the pattern plays backwards to step 1, then forwards again (ping-pong).
@@ -1073,33 +1086,28 @@ recorded into the pattern, quantized to its steps, overdubbing. Knob moves on th
     the first time (an intro), !FIRST every loop but the first (0.6.92; it was TIMES).
   - **FILL**: the step plays only while **FX** is held.
   - **KILL**: the step first cuts everything the track is sounding (long releases, held notes), then plays.
-  - **TOUCH** (0.8.5, a DRUM track): how all its hits are struck, KNOB 3 **SHORT** (half the decay), **GHOST** (short,
-    softer, darker), **FLAM** (a soft grace hit ~20 ms before); one sound alone: its mode on the grid (see
-    [5](#5-drum-x)). On other engines it does nothing.
-  - ECHO's **EVEN** (0.8.5): an ECHO that keeps every repeat at the step's level (a ratchet past RATCH's x4, set from
-    the editor or a 0.8.5 development build); the card shows "x8 EVEN", KNOB 3 keeps it.
-  - **WALK** and **CLIMB** (0.6.98, after the OP-Z's and OP-XY's evolving components): the step's notes move one
-    degree of the scale (WALK) or one octave (CLIMB) **every so many loops** of the pattern (KNOB 4: 1 … 10, 12, 16
-    loops a move), over a **range** (WALK 3, 5, 7 or 12 degrees; CLIMB 1 … 4 octaves), then round again. KNOB 3 the
-    **MODE** and the range in one: **UP** (0, 1, 2 … range, 0 …), **DOWN**, **UP-DN** (there and back), **RND** (a
-    place of the range each move, the same every time round). They stack with each other and with the rest: a WALK on
-    COMP and a CLIMB on COMP 2 add up, a TONAL or an OCT on top still applies, an ARP walks with its chord. Four notes
-    with a WALK UP-DN 5 every 2 loops and a CLIMB UP 1 every 3 come back to themselves after 36 loops, different every
-    time round. A drum kit ignores them. The page draws the moves round the range, this loop's lit.
-  - **Two on one step**: both play (an ECHO with an OCT: the repeats an octave up; a RAND with an OCT: both moves).
-    One that keeps the note silent wins: a **TRIG** or **FILL** in either place decides whether the step plays at all,
-    before anything else. Of two that do the same job, the first wins (an ARP over an ECHO, two ARPs: COMP's).
-  - **EVERY** (0.6.92, KNOB 4 on COMP 2, and on COMP for every type but ARP, RATCH and ECHO): the loops of the pattern
+  - **TOUCH is gone** (0.9.18): a step that had it loads with its SHORT / GHOST / FLAM as the mode of each of its
+    sounds that had none, the same sound (see [5](#5-drum-x)).
+  - **WALK** (0.6.98, after the OP-Z's and OP-XY's evolving components): the step's notes move one degree of the scale
+    **every so many loops** of the pattern (KNOB 4: 1 … 10, 12, 16 loops a move), over a **range** (3, 5, 7 or 12
+    degrees), then round again. KNOB 3 the **MODE** and the range in one: **UP** (0, 1, 2 … range, 0 …), **DOWN**,
+    **UP-DN** (there and back), **RND** (a place of the range each move, the same every time round). They stack with
+    each other and with the rest: a WALK on COMP and an OCT on COMP 2 add up, a TONAL on top still applies, an ARP
+    walks with its chord. Four notes with a WALK UP-DN 5 every 2 loops and an OCT UP 1 every 3 come back to themselves
+    after 36 loops, different every time round. A drum kit ignores WALK.
+  - **Two on one step**: both play (a RATCH with a TONAL: the hits moved; a RAND with an OCT: both moves). One that
+    keeps the note silent wins: a **TRIG** or **FILL** in either place decides whether the step plays at all, before
+    anything else. Of two that do the same job, the first wins (an ARP over a RATCH, two ARPs: COMP's).
+  - **EVERY** (0.6.92, KNOB 4 on COMP 2, and on COMP for every type but ARP and RATCH): the loops of the pattern
     the step's components play on — **ALWAYS**; **1:2** (the 1st, 3rd, … loop), **2:2** (the 2nd, 4th, …); **1:3**,
     **2:3**, **3:3**; **1:4** … **4:4**; **1:8**; **FIRST** (the first loop only); **!FIRST** (every loop but the
     first); **SKIP** at the end of the knob (kept, but not played: an on/off switch). One setting a step, for both of
     its components, set from COMP 2's KNOB 4 whatever its TYPE (or COMP's, for the types without a knob of their own
-    there): an arpeggio that comes in every fourth bar is ARP on COMP (ORDER, RATE) and EVERY 4:4 on COMP 2. The
-    step's own note plays on every loop (a **TRIG** component decides that). It took WHEN's place (that page is gone),
-    with its A / B read as one.
-  Projects keep them. **On a drum kit** (0.6.83) they work too: OCT, RAND, TONAL tune the hits (RAND and TONAL in
-  the track's scale), BEND bends each hit over the step; ARP NOTES plays the step's sounds one after another, SEQ
-  the pattern's sounds in the order they play, SCALE retriggers the step's hits each part a degree further up (0.9.17: SEQ one a lap).
+    there; an ARP's KNOB 4 past 1/4). The step's own note plays on every loop (a **TRIG** component decides that). It
+    took WHEN's place (that page is gone), with its A / B read as one.
+  Projects keep them. **On a drum kit** (0.6.83) they work too: OCT (an octave a lap), RAND, TONAL tune the hits (RAND
+  and TONAL in the track's scale), BEND bends each hit over the step, RATCH repeats the step's sounds, ARP plays them
+  one after another at its RATE, SEQ the pattern's sounds one a lap.
 - **A long chord slide** (0.6.83): the glide into a chord lasts as long as that chord, its TIEs included; GLIDE sets
   how much of it (127: all of it). A chord held over TIEs on slow steps (e.g. DIV 1/4 at 120 BPM: ten steps, 5 s)
   slides that slowly and smoothly; new notes fade in as they glide.
@@ -1269,7 +1277,7 @@ sounding after you let go; the next chord replaces them.
 | --- | --- |
 | The selected track's steps and automation | **REC held + F3**, or SAVE > TOOLS > CLEAR SEQ, or SEQ TOOLS F3 |
 | All six tracks' steps, automation and the punch-in lane | **SEQ held + REC**, then OCT+ |
-| **Everything** (NEW PROJECT): every track its power-on sound (0.9.9: T1 DRUM-X, T2 VOICE SINGER EN, T3 ANIMAL CMOS BIRD, T4 LOFI BYTEBEAT, T5 ANALOG FAT BASS, T6 FM6 TINE EP, dry), no steps or automation, the mix, effects, tempo and SLICER at their defaults, the song empty, macros at 0, the factory DRUM-X kit. Saved projects, user presets, MENU, CLOCK, TUNE and MIDI stay | **MENU > SYSTEM > INIT SYSTEM** or **SAVE > TOOLS > 5 NEW PROJECT**, then OCT+ (UNDO brings the music back) |
+| **Everything** (NEW PROJECT): every track its power-on sound (0.9.9: T1 DRUM-X, T2 VOICE SINGER EN, T3 ANIMAL CMOS BIRD, T4 LOFI BYTEBEAT, T5 ANALOG FAT BASS, T6 FM6 TINE EP, dry), no steps or automation, the mix, effects, tempo and SLICER at their defaults, the song empty, macros at 0, the factory DRUM-X kit. Saved projects, user presets, MENU, CLOCK, TUNE and MIDI stay | **SAVE > TOOLS > 5 NEW PROJECT** (until 0.9.17 also MENU > SYSTEM > INIT SYSTEM), then OCT+ (UNDO brings the music back) |
 | Only one part's automation on the selected track | **REC held + FX / EDIT / ENV / LFO / SCL / ARP / GLO** |
 | *(not a clear)* A heavy test song, to measure the CPU on the device and listen for clicks (every live track chords of four with two step components a step and long glides, the kit on every lane, every FX on, 160 BPM) | **SAVE > TOOLS > 6 CPU TEST**, OCT+, then PLAY (UNDO brings your music back) |
 | The track's automation, keeping the steps | SEQ TOOLS **F4 CLR AUTO**, or SEQ > AUTOMATION > CLEAR |
@@ -1406,7 +1414,7 @@ range narrows towards the middle. COMPLEX 100 is the full chaos again.
 **The CPU budget** (0.9.13). An EXPLORE piece is made to fit the FM-1's CPU: the generator estimates what the piece
 will cost to play (each part by its engine and how many voices it keeps sounding — its chords, how long its notes and
 releases ring at the piece's tempo —, the reverb type, the delay's grain, the PLAYHEADS) and keeps it under **65 % of
-the audio's time with two cores** (MENU › ABOUT: CORES 2), **55 % with one** (with the margin of the estimate's error).
+the audio's time with two cores** (MENU › SYSTEM › ABOUT: CORES 2), **55 % with one** (with the margin of the estimate's error).
 When a piece would cost more it gets lighter, a step at a time, until it fits: the heaviest engine swapped for LOFI or
 ANALOG, CLOUD / SHIMMER played as ROOM / SPRING, the texture left out, then the arp, then the lead (one core: drums,
 bass and chords at least); the delay's grain off, a PLAYHEAD less, a note less in each chord (two at least), the
@@ -1534,7 +1542,8 @@ The same idea for the other parts of the selected track, each heard at once unde
   harmony when GEN made the piece (its plan, genre and the track's role), so it fits the others; else in the track's
   own key, a genre made up for it. Drums on a DRUM track, else the role its steps sound like (low notes: a bass line,
   chords: a pad, else a lead or an arp). Never the same part twice in a row. Its sound, mix and automation stay.
-- **LFO + SELECT**: the track's LFO: a rate in the middle of the range, any wave and phase, a fade now and then, aimed
+- **LFO + SELECT**: the track's LFO: a rate in the middle of the range, any wave, MODE FREE or TRIG (half the time
+  each; TRIG at any phase), a fade now and then, aimed
   mostly at the filter, a little at the shape, seldom at the pitch or the level.
 - **FX + SELECT**: the track's drive (half the time none), its chorus, delay and reverb sends, an AUTO PAN one time in
   three, and the shared reverb's kind, size and damping and the delay's time and feedback (pitched one time in five).
@@ -1699,10 +1708,15 @@ curve where the bar would be.
 
 - **ENV DEST**: the envelope to FILTER, PITCH, SHAPE; **LOOP ON**: with the note held, the envelope goes back to the
   attack when it reaches sustain (an ADSR-shaped LFO).
-- **LFO**: RATE, WAVE (SIN, TRI, SAW, SQR, S&H), PHASE, FADE. **LFO DEST**: PITCH, FILTER, SHAPE, AMP.
+- **LFO**: RATE, WAVE (SIN, TRI, SAW, SQR, S&H), MODE, FADE; **LFO 2**: PHASE. **LFO DEST**: PITCH, FILTER, SHAPE, AMP.
   - **RATE** is free in Hz; turn it left past the slowest and it goes **in time** with the tempo (4BAR, 2BAR, 1BAR, 1/2,
-    1/4, 1/8D, 1/4T, 1/8, 1/8T, 1/16, 1/16T, 1/32), locked to the bar while the transport plays (PHASE its offset).
-  - **PHASE** is where a new phrase restarts the LFO; turn it left past 0 to **FREE**: it never restarts, it just runs.
+    1/4, 1/8D, 1/4T, 1/8, 1/8T, 1/16, 1/16T, 1/32), locked to the bar while the transport plays (in TRIG, PHASE is its
+    offset), in either MODE: a note never moves it then.
+  - **MODE TRIG**: a new phrase (a note with none held) restarts the LFO at **PHASE** (LFO 2) and fades it in again over
+    **FADE**; a note played legato over another does not. **MODE FREE**: no note restarts anything: the LFO just runs,
+    and FADE fades it in only once, when the project loads or when you turn MODE to FREE. In FREE, PHASE is dimmed:
+    the phase TRIG had is kept for when you go back to TRIG. (Until 0.9.18 FREE was PHASE turned left past 0, and FREE
+    still faded in again on every phrase; projects keep their mode: PHASE FREE opens as MODE FREE.)
 - **MOD matrix**: 4 slots per track (KNOB 1 picks the slot).
   - Sources: OFF, LFO, ENV, VEL, KEY, RAND, MODW (MIDI CC1), AT (aftertouch), EXPR (CC11), **M1–M4**, **STEP** (MSEQ), **NOISE** (a smooth random wander, a new value about every 46 ms: a living wobble on
     the filter, the pan, a send).
@@ -1856,7 +1870,7 @@ LOCKED**), as the macros do with LFO; the keys play the effects (momentary: held
 macros and OCT− is ALL OFF, with both hands free. Press **FX** again to unlock (latched effects you left on stay on). Held with keys or knobs, FX
 works as before and closes when let go.
 
-**FX LATCH** (MENU > CONTROL > FX LATCH, **OFF by default**; ON by default from 0.6.44 to 0.6.63): ON, a key pressed
+**FX LATCH** (MENU › SYSTEM › CONTROLS › FX LATCH, **OFF by default**; ON by default from 0.6.44 to 0.6.63): ON, a key pressed
 with FX toggles its effect on and off, **FX + OCT−** turns everything off, the macros too (FX ALL OFF). Latched effects are not recorded into the lane.
 
 ### Mutes and solos
@@ -1910,7 +1924,7 @@ This is the chapter to read carefully. JIANT keeps several kinds of data in diff
   change is lost. To be safe: **stop, wait ~10 s**, or better, save into a section.
 - At power-on the device starts at zero, as **NEW PROJECT** leaves it (0.9.9: T1 DRUM-X, T2 VOICE, T3 ANIMAL, T4 LOFI,
   T5 ANALOG, T6 FM6, each its preset's sound, dry; no
-  steps). With **MENU > SYSTEM > RESTORE LAST ON** the autosave becomes the music instead (the screen says
+  steps). With **MENU › SYSTEM › RESTORE LAST ON** the autosave becomes the music instead (the screen says
   **RESTORED**). RESTORE LAST is **OFF** by default since 0.6.40: no autosave at all.
 - After a crash, a hang or a failed start, the autosave is not restored (the music that was playing could be what
   crashed).
@@ -2078,42 +2092,52 @@ track.
 
 ### The MENU (hold HOME)
 
-**SELECT** walks every row (0.9.2), all five tabs in one chain (DISPLAY → CONTROL → AUDIO → MIDI → SYSTEM; 0.9.12:
-MIDI is new, MIDI OUT moved there from CONTROL; it stops at the first and the last), **ALGORITHM** jumps to the next / previous tab (its first row), **any knob** or **OCT+ / OCT−**
-changes the value; PRESETS does nothing here. HOME closes it (settings are saved then). The screen shows the tab's rows,
-the selected row's four as cards (ROWS 1–4 / ROWS 5–6; DISPLAY: ROWS 5–8) with their knob's number; the tabs on top,
-the footer **MENU · DISPLAY · SKIN  2/28**. The header says MENU · DISPLAY.
+(0.9.18) The MENU is driven like every section: **nine pages of up to four settings** in five tabs, **SCREEN · AUDIO · MIDI
+· USB · SYSTEM** (a dot a page under each tab). **SELECT** walks the pages (stopping at the first and the last),
+**ALGORITHM** jumps to the next / previous tab's first page, **KNOB 1–4** change the settings on the cards, and
+**OCT− / OCT+** step the setting you turned last (its row is framed; the LEDs breathe the way it can go). PRESETS does
+nothing here. HOME closes it (the settings are saved then) and opens it again on the page you left. The header says
+**MENU · AUDIO**, the footer **MENU · AUDIO · CLICK  5/9** (a page named as its tab is not said twice: **MENU · SCREEN 2**, **MENU · SYSTEM**).
 
-| Tab | Row | Values |
-| --- | --- | --- |
-| DISPLAY | COLOR | GREY, GREEN, AMBER, ICE, VIOLET, ROSE, PAPER, HI-CON, NIGHT, MONO, **JIANT** (default) |
-| DISPLAY | SKIN | **AIR** (default of new settings), COLORS, HUD — (0.8.9; AIR 0.9.7; BOTTOM retired in 0.9.17: opens as AIR) see [Skins](#skins-air-colors-hud-089-air-097) |
-| DISPLAY | SCOPE | **OFF** (default), ON — (0.9.7) an engine's EDIT pages: OFF the creature on the whole panel, centred, the page's name and the sound's name small in its corners; ON the creature on the left, the SCOPE card and the chips as before. Settings saved before 0.9.7 load as OFF |
-| DISPLAY | STYLE | FLAT, LINE |
-| DISPLAY | LARGE | OFF, ON (big labels and values) |
-| DISPLAY | ANIM | ON, OFF (values snap; the power-on signature appears whole) |
-| DISPLAY | LEDS | OFF, DIM LO, **DIM HI** (default), INV — (0.7.3) the idle glow's LEDs take turns frame to frame, so the glow no longer hums through the speaker once the music stops |
-| DISPLAY | SCREEN OFF | **NEVER** (default), 5 MIN, 15 MIN, 30 MIN, 60 MIN |
-| CONTROL | HOLD | 0.3 s, **0.4 s** (default), 0.5 s, 0.6 s — how long until a held button opens its layer |
-| CONTROL | KNOB ACCEL | **ON** (default), OFF |
-| CONTROL | FX LATCH | **OFF** (default since 0.6.64), ON |
-| CONTROL | BPM LOCK | OFF, ON — DICE ALL keeps the tempo (the tempo is GLO + SELECT, GLO's F4 TAP or GLOBAL's BPM) |
-| CONTROL | SCALE LEDS | OFF, ON — the keys of the scale glow, the root brighter |
-| AUDIO | SPEAKER EQ | FLAT, LOWCUT, BASS+ (an EQ on the master for the small speaker; also reaches the outputs and USB) |
-| AUDIO | USB LEVEL | MASTER (USB follows the MASTER knob), FIXED (USB at full level), −6 / −12 / −18 / −24 dB (USB fixed and attenuated: for a phone or a computer whose input clips at the full level) |
-| AUDIO | CLICK | OFF, REC (while a track is armed and playing), ON |
-| AUDIO | CLICK LEVEL | LOW, MID, HIGH |
-| AUDIO | COUNT-IN | OFF, 1 BAR, 2 BARS |
-| AUDIO | TRACKS | **4** (default), 6 |
-| MIDI | MIDI OUT | **KEYS**, CLOCK, ALL, OFF — what goes out over USB MIDI (see [14](#14-midi-and-usb)) |
-| MIDI | LEARN | **OFF**, ON — (0.9.12) arms MIDI LEARN: a knob turned picks its parameter, the next CC is learned to it (see [MIDI LEARN](#midi-learn-0912)); not saved, OFF at power-on |
-| MIDI | LEARN CLEAR | OCT+ forgets every learned CC; the row shows how many there are (NONE, 3 CC …) |
-| SYSTEM | USB | CONSOLE (the serial console with stereo USB audio, the default; was USB SERIAL ON), STEREO (audio + MIDI only, class 0; was OFF: helps macOS 13–15 see the USB audio input), STEMS (0.7.1: an 8-channel audio input, see "Stems" below), IN+OUT (0.7.5: stereo audio both ways, see "USB audio in" below), STEMS+IN (0.8.0: the stems with the audio output too, see "Stems with a voice" below) |
-| SYSTEM | RESTORE LAST | **OFF** (default: no autosave, power-on at zero), ON (the last session back at power-on) |
-| SYSTEM | LOAD | ECO, LITE, **FULL** (default) |
-| SYSTEM | CALIBRATION | OCT+ opens HARDWARE CALIBRATION (teach each button and knob) |
-| SYSTEM | INIT SYSTEM | OCT+ asks, then everything back to zero for a new song (as SAVE > TOOLS > NEW PROJECT; UNDO brings the music back) |
-| SYSTEM | ABOUT | OCT+ opens: version, QR code, AUDIO LOAD (NOW, PEAK, LATE, SHED since power-on), CPU TEST, and credits (scroll with SELECT, OCT− back); there OCT+ opens PROFILE |
+Under the cards, a row for each setting: its knob's number, its full name, its value (in its heat colour, like the
+card's) and a plain line on what it does (for some, on what the chosen value does). **CALIBRATION, ABOUT and LEARN
+CLEAR** are actions: turn their knob to the right and the card says **OCT+** (armed); OCT+ does it; turning left lets go.
+(Until 0.9.17 the MENU was one list of 30 rows, SELECT walked the rows and any knob changed the selected one; 0.9.18 kept
+every setting, its values and its meaning: nothing changes in the saved settings or for the editor.)
+
+| Tab › page | KNOB | Setting | Values |
+| --- | --- | --- | --- |
+| SCREEN › SCREEN | 1 | COLOR | GREY, GREEN, AMBER, ICE, VIOLET, ROSE, PAPER, HI-CON, NIGHT, MONO, **JIANT** (default) |
+| | 2 | SKIN | **AIR** (default of new settings), COLORS, HUD — (0.8.9; AIR 0.9.7; BOTTOM retired in 0.9.17: opens as AIR) see [Skins](#skins-air-colors-hud-089-air-097) |
+| | 3 | STYLE | FLAT, LINE |
+| | 4 | LARGE | OFF, ON (big labels and values) |
+| SCREEN › SCREEN 2 | 1 | SCOPE | **OFF** (default), ON — (0.9.7) an engine's EDIT pages: OFF the creature on the whole panel, centred, the page's name and the sound's name small in its corners; ON the creature on the left, the SCOPE card and the chips as before. Settings saved before 0.9.7 load as OFF |
+| | 2 | ANIMATION | ON, OFF (values snap; the power-on signature appears whole) — was ANIM |
+| | 3 | SCREEN SLEEP | **NEVER** (default), 5 MIN, 15 MIN, 30 MIN, 60 MIN — the screen dark after that long without a touch (was SCREEN OFF) |
+| SCREEN › LEDS | 1 | LED GLOW | OFF, LOW, **HIGH** (default), INVERT — how the idle keys and buttons glow (was LEDS: OFF, DIM LO, DIM HI, INV); (0.7.3) the glow's LEDs take turns frame to frame, so it no longer hums through the speaker once the music stops |
+| | 2 | SCALE LEDS | OFF, ON — the keys of the scale glow, the root brighter |
+| AUDIO › AUDIO | 1 | SPEAKER EQ | FLAT, LOWCUT, BASS+ (an EQ on the master for the small speaker; also reaches the outputs and USB) |
+| | 2 | TRACKS | **4** (default), 6 — the same as GLO › SYSTEM KNOB 1 |
+| | 3 | LOAD | ECO, LITE, **FULL** (default) — the same as GLO › SYSTEM KNOB 2 |
+| | 4 | BPM LOCK | OFF, ON — DICE ALL keeps the tempo (the tempo is GLO + SELECT, GLO's F4 TAP or GLOBAL's BPM) |
+| AUDIO › CLICK | 1 | CLICK | OFF, REC (while a track is armed and playing), ON |
+| | 2 | CLICK LEVEL | LOW, MID, HIGH |
+| | 3 | COUNT-IN | OFF, 1 BAR, 2 BARS |
+| MIDI › MIDI | 1 | MIDI OUT | **KEYS**, CLOCK, ALL, OFF — what goes out over USB MIDI (see [14](#14-midi-and-usb)) |
+| | 2 | LEARN | **OFF**, ON — (0.9.12) arms MIDI LEARN: a knob turned picks its parameter, the next CC is learned to it (see [MIDI LEARN](#midi-learn-0912)); not saved, OFF at power-on |
+| | 3 | LEARN CLEAR | an action: the card shows how many CCs are learned (NONE, 3 CC …); KNOB 3 right arms it, OCT+ forgets them all |
+| USB › USB | 1 | USB AUDIO | CONSOLE (the serial console with stereo USB audio, the default), STEREO (audio + MIDI only, class 0: helps macOS 13–15 see the USB audio input), STEMS (0.7.1: an 8-channel audio input, see "Stems" below), IN+OUT (0.7.5: stereo audio both ways, see "USB audio in" below), STEMS+IN (0.8.0: the stems with the audio output too, see "Stems with a voice" below) — was SYSTEM › USB; applied when the MENU closes |
+| | 2 | USB LEVEL | MASTER (USB follows the MASTER knob), FIXED (USB at full level), −6 / −12 / −18 / −24 dB (USB fixed and attenuated: for a phone or a computer whose input clips at the full level) |
+| SYSTEM › CONTROLS | 1 | HOLD TIME | 0.3 s, **0.4 s** (default), 0.5 s, 0.6 s — how long until a held button opens its layer (was HOLD) |
+| | 2 | KNOB SPEEDUP | **ON** (default), OFF — fast turns take bigger steps (was KNOB ACCEL) |
+| | 3 | FX LATCH | **OFF** (default since 0.6.64), ON |
+| | 4 | CALIBRATION | an action: OCT+ opens HARDWARE CALIBRATION (teach each button and knob) |
+| SYSTEM › SYSTEM | 1 | RESTORE LAST | **OFF** (default: no autosave, power-on at zero), ON (the last session back at power-on) |
+| | 2 | CPU CORES | 1 CORE, **2 CORES** (default) — from the next start (see [Troubleshooting](#16-troubleshooting-and-faq)); was CPU |
+| | 3 | CPU CLOCK | **360 MHZ** (default), 320 MHZ — from the next start (see [Troubleshooting](#16-troubleshooting-and-faq)) |
+| | 4 | ABOUT | an action: OCT+ opens version, QR code, AUDIO LOAD (NOW, PEAK, LATE, SHED since power-on), CPU TEST, and credits (scroll with SELECT, OCT− back); there OCT+ opens PROFILE |
+
+INIT SYSTEM (until 0.9.17 in the MENU) is **SAVE › TOOLS › NEW PROJECT**: the same dialog, the same UNDO.
 
 If you hear clicks, open ABOUT and look at **LATE** (audio blocks that came too late) and **SHED** (voices the guard
 faded): a photo of that screen helps when you report a problem.
@@ -2183,7 +2207,7 @@ assumes the FM-1 is 1.6 times heavier than the estimate.
 
 Any knob of a track's sound to any CC of your controller, on the device (from Felucca 1.5's MIDI LEARN):
 
-1. **MENU › MIDI › LEARN ON** (hold HOME, ALGORITHM to the MIDI tab, SELECT to LEARN, OCT+), then HOME to close the
+1. **MENU › MIDI › LEARN ON** (hold HOME, ALGORITHM to the MIDI tab, KNOB 2 to the right), then HOME to close the
    menu.
 2. **Turn a knob** on any page that edits a track's parameter (HOME, EDIT, ENV, LFO, FX, the MIXER, GLO's levels):
    the screen says **LEARN T2 CUT: SEND A CC** (or its CC if it already has one).
@@ -2204,7 +2228,7 @@ Any knob of a track's sound to any CC of your controller, on the device (from Fe
 
 Two ways to get each track on its own, to post-process them one by one in a DAW:
 
-- **Over USB, live: MENU > SYSTEM > USB > STEMS.** The device re-enumerates as an 8-channel USB audio input at 44.1 kHz,
+- **Over USB, live: MENU › USB › USB AUDIO STEMS.** The device re-enumerates as an 8-channel USB audio input at 44.1 kHz,
   16 bit (set the DAW's input to the device, 8 channels): channels 1–6 are the six tracks, each mono with its LEVEL,
   DIST, SLICER routing and mutes in and its PAN left out (what it adds to the mix, L + R halved); channels 7–8 are the
   FX return in stereo (the DELAY, REVERB and CHORUS buses, the SLICER's when it is on). All before the master: no
@@ -2233,7 +2257,7 @@ Two ways to get each track on its own, to post-process them one by one in a DAW:
 
 ### USB audio in (0.7.5, test version)
 
-**MENU > SYSTEM > USB > IN+OUT** makes the FM-1 a USB audio output of the computer or the phone as well as an input:
+**MENU › USB › USB AUDIO IN+OUT** makes the FM-1 a USB audio output of the computer or the phone as well as an input:
 the device re-enumerates (as with STEMS, the serial console is off), and the host now lists "JIANT" as a speaker,
 stereo, 16 bit, 44.1 kHz. Whatever the host plays to it comes into the **last track** (T6, or T4 with TRACKS 4) and is
 mixed like that track's sound:
@@ -2251,7 +2275,7 @@ with your computer or phone.
 
 ### Stems with a voice (0.8.0, test version)
 
-**MENU > SYSTEM > USB > STEMS+IN** is STEMS and IN+OUT together, for the phone app: the phone's microphone goes out to
+**MENU › USB › USB AUDIO STEMS+IN** is STEMS and IN+OUT together, for the phone app: the phone's microphone goes out to
 the FM-1, comes into the **last track** as IN+OUT's input does (its LEVEL, PAN, MUTE and its CHORUS, DELAY and REVERB
 sends: your voice through that track's effects), and **10 channels** come back: T1–T6, the FX return L R, then **the
 voice as the track mixed it** and **the voice as it came**. The voice has a channel of its own (not in the track's
@@ -2342,17 +2366,17 @@ punch-in lane's repeats (STUTTER, ARP), a DRUM track with no steps gets no ARP f
 waiting for the bar is called off. If something still plays after a clear, it may be the **punch-in lane**: hold
 **REC and press FX** to erase it (or **SEQ + REC** to clear everything).
 
-**Two cores (0.6.71) and MENU > SYSTEM > CPU (0.9.12).** The second core renders some synth tracks; MENU > ABOUT
-says **CORES 2**, or **CORES 1** and why. Since 0.9.12 **MENU > SYSTEM > CPU** chooses **2 CORES** (the default) or
+**Two cores (0.6.71) and MENU › SYSTEM › CPU CORES (0.9.12).** The second core renders some synth tracks; MENU › SYSTEM › ABOUT
+says **CORES 2**, or **CORES 1** and why. Since 0.9.12 **MENU › SYSTEM › CPU CORES** chooses **2 CORES** (the default) or
 **1 CORE**, kept with the settings, from the next start. If the FM-1 crashes or hangs while both cores work, or the
 second core misreads, stops answering or faults, it **turns 2 CORES off for good** and says so (**2 CORES OFF AFTER A
-CRASH** / **CORE 2 FAILED: 1 CORE**, then MENU > SYSTEM > CPU); ABOUT then reads **CORES 1 (AFTER A CRASH)**. Set
+CRASH** / **CORE 2 FAILED: 1 CORE**, then MENU › SYSTEM › CORES); ABOUT then reads **CORES 1 (AFTER A CRASH)**. Set
 2 CORES again only if you want to test it. Hold **REC** while powering on for one core that session only.
 With both cores running the tracks share **12 voices** instead of 8 (each track still at most 8); on one core (1 CORE
 set, after a crash, REC held) it is 8, and a second core that stops brings the budget back to 8 from the next note.
 
 **It crashes: a red screen "JIANT CRASH" (or "FELUCCA CRASH" before 0.7.0) with numbers.** Take a photo of it and
-tell us the version (MENU > ABOUT). How to read it:
+tell us the version (MENU › SYSTEM › ABOUT). How to read it:
 
 - 0.9.12 on: the version, **CORE 0 OF 2** (the core that faulted, of how many were running), **CODE xx-nn** (the cause
   and the vector, below), then **VEC, PC, EMU, DBG, RETS**.
@@ -2368,15 +2392,15 @@ tell us the version (MENU > ABOUT). How to read it:
   crashed.
 
 **What to try when it crashes now and then (even idle).** In this order, a few hours each:
-1. **MENU > SYSTEM > CPU 1 CORE** (0.9.12 does it by itself after the first crash with both cores; before 0.9.12,
+1. **MENU › SYSTEM › CPU CORES 1 CORE** (0.9.12 does it by itself after the first crash with both cores; before 0.9.12,
    hold REC at every power-on).
-2. **MENU > SYSTEM > CPU CLOCK 320 MHZ**: the chip at JieLi's rated clock instead of the 360 MHz the FM-1's boot
+2. **MENU › SYSTEM › CPU CLOCK 320 MHZ**: the chip at JieLi's rated clock instead of the 360 MHz the FM-1's boot
    sets (switched at the next power-on; ABOUT shows **CPU 320 MHZ**). About 11 % less CPU: a heavy song may shed
    voices sooner (LOAD LITE helps). If the FM-1 refuses (its clock is set up differently), ABOUT keeps **CPU 360 MHZ**.
 3. If it still crashes: the photo, the version and LAST CRASH, please.
 
 **Clicks, stutters, the load meter full.** Keep TRACKS on 4, try **LOAD LITE** or **ECO**, use fewer voices (MONO,
-fewer FM6 tracks), lighter reverbs (CLOUD and SHIMMER are the heaviest). Check MENU > SYSTEM > ABOUT > AUDIO LOAD.
+fewer FM6 tracks), lighter reverbs (CLOUD and SHIMMER are the heaviest). Check MENU › SYSTEM › ABOUT › AUDIO LOAD.
 
 **SELECT doesn't change the tempo.** Since 0.6.67 SELECT alone scrolls the pages; the tempo is **GLO held + SELECT**
 (or GLO's F4 TAP, or GLO > GLOBAL's BPM knob).
@@ -2389,12 +2413,12 @@ Save music into that section, or change the row.
 **It says STOP TO EDIT.** A song (arrangement) or quick chain is playing; stop it to edit steps, use tools or UNDO.
 
 **The keys feel inverted / a button does the wrong thing.** Run HARDWARE CALIBRATION: hold OCT− and OCT+ while powering
-on (or MENU > SYSTEM > CALIBRATION) and teach each button and knob. A piano key cancels.
+on (or MENU › SYSTEM › CONTROLS › CALIBRATION, KNOB 4 then OCT+) and teach each button and knob. A piano key cancels.
 
-**USB audio input doesn't appear on macOS.** MENU > SYSTEM > USB **STEREO** (or STEMS).
+**USB audio input doesn't appear on macOS.** MENU › USB › USB AUDIO **STEREO** (or STEMS).
 
 **A new USB mode doesn't show up on the phone or computer.** Since 0.9.10 the FM-1 leaves the bus for half a second
-when MENU > SYSTEM > USB changes (it came back after ~25 ms, and some phones and hubs did not notice it had gone, so
+when MENU › USB › USB AUDIO changes (it came back after ~25 ms, and some phones and hubs did not notice it had gone, so
 they kept the old mode); it appears about a second after the menu closes. Older firmware: switch again, or unplug.
 
 **SAVED (NO FLASH).** The flash chip wasn't detected; saves stay in RAM only. Power-cycle the device. If it persists,

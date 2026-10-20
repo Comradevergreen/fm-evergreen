@@ -80,7 +80,7 @@ static int song_stage(uint32_t s, uint32_t row)
         for (i = 0; i < P_COUNT; i++)
             d->p[i] = (int16_t)param_fit(param_desc_of(e, i), t->p[i]);
         memcpy(d->step, t->step, sizeof d->step);
-        proj_steps(d->step);
+        proj_steps(d->step, e);
         fm6_unpack(p->fm6[k], d->fm6);
         fm6_sanitize(d->fm6);
     }
@@ -142,7 +142,11 @@ static int section_load(uint32_t s)
 {
     chain_config_t keep = chain_config;
     uint8_t row = ui.song_row;
-    if (!proj_import(&proj_scratch, &proj_slot[s & 3u], sizeof(project_store_t)) || project_restore_runtime(&proj_scratch))
+    int rc;
+    proj_lfo_keep = 1;                                  /* (0.9.18: the song plays on, MODE FREE's LFOs not faded again) */
+    rc = !proj_import(&proj_scratch, &proj_slot[s & 3u], sizeof(project_store_t)) || project_restore_runtime(&proj_scratch);
+    proj_lfo_keep = 0;
+    if (rc)
         return 1;
     chain_config = keep;
     ui.song_row = row;

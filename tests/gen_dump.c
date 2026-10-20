@@ -152,7 +152,7 @@ int main(int argc, char **argv)
                     if (r == RL_DRUM || !gs.act[r] || p.t[k].p[P_MUTE] || (r == RL_TEX && k != gs.trk_of[RL_TEX])) continue;
                     memset(&tt, 0, sizeof tt);
                     memcpy(tt.step, p.t[k].step, sizeof tt.step);
-                    proj_steps(tt.step);
+                    proj_steps(tt.step, p.t[k].engine);
                     tt.p[P_SLEN] = p.t[k].p[P_SLEN];
                     printf("T%u %-4s\n", k + 1u, RLN[r]);
                     dump_track(&tt, r, 4);

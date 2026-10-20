@@ -969,7 +969,8 @@ async function editorLive() {
   for (let i = 0; i < 4; i++) { await sleep(120); await rq(E.req.ping()); }
   let n0 = ev.pushes.length;
   m.sim.knob();
-  await sleep(10);
+  /* the push on its way: waited for (polled, at most 200 ms, inside the watch's time), not a fixed 10 ms */
+  for (const t0 = Date.now(); ev.pushes.length < n0 + 1 && Date.now() - t0 < 200;) await sleep(2);
   ok(ev.pushes.length === n0 + 1, "live: PING keeps WATCH on");
   await sleep(320);
   n0 = ev.pushes.length;

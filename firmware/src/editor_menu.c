@@ -3,7 +3,8 @@
 /* MENU's settings for the editor (EDITOR_PROTOCOL.md "MENU settings"): MENU_DESC describes one, MENU_SET sets one;
  * INFO 4E 01 count. The editor builds its settings from these; the values, names and the apply path are the menu's
  * own (menu_items.c), so the two cannot differ. CALIBRATION and ABOUT are not offered (no value). 1.0.5: each reply
- * ends with the row's MENU tab (MI_TAB: its index and name), so the editor can group the settings as the device does.
+ * ends with the row's MENU tab (mi_tab: its index and name; 0.9.18: SCREEN AUDIO MIDI USB SYSTEM), so the editor can group
+ * the settings as the device does.
  * ED_MENU: {row, id}, the 1.0.4 settings in the menu's order, then the later ones as they came (1.1: CLICK, CLICK LEVEL,
  * COUNT-IN, rows of AUDIO; 1.2: RESTORE LAST, SYSTEM; SCALE LEDS, CONTROL; 1.1.5: SCREEN OFF, DISPLAY): an index keeps its
  * setting too, so an older editor lists what it knew where it was (the
@@ -66,8 +67,8 @@ static int ed_menu_handle(uint32_t cmd, const uint8_t *a, uint32_t n)
         ed_str(MI_NAME[row], 12);
         for (i = 0; i < k; i++)
             ed_str(menu_vname(row, i), 12);
-        ed_b(MI_TAB[row]);                             /* (after the names: an older editor stops before it) */
-        ed_str(MTAB_NAME[MI_TAB[row]], 12);
+        ed_b(mi_tab(row));                             /* (after the names: an older editor stops before it) */
+        ed_str(MTAB_NAME[mi_tab(row)], 12);
         return 1;
     }
     if (cmd != ED_MENU_SET)

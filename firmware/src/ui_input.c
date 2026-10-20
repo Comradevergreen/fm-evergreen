@@ -445,6 +445,24 @@ static int32_t accel(uint32_t role, int32_t s, int32_t range)
     return s * (int32_t)m;
 }
 
+/* (0.9.18) the LFO's MODE (mode 1) or PHASE turned to v (params.c ID_LMODE, ID_LPHS): FREE stores PHASE -1, keeping
+ * TRIG's phase in lfo_ph_mem for TRIG again; FREE begun fades the LFO in from 0 (its FADE, once: it is turned on) */
+static void lfo_view_put(track_t *t, int mode, int32_t v)
+{
+    uint32_t k = (uint32_t)(t - trk) % NTRK;
+    if (!mode) {
+        if (t->p[P_LPHASE] >= 0)
+            t->p[P_LPHASE] = (int16_t)v;
+        else
+            lfo_ph_mem[k] = (uint8_t)v;
+    } else if (v && t->p[P_LPHASE] >= 0) {
+        lfo_ph_mem[k] = (uint8_t)t->p[P_LPHASE];
+        t->p[P_LPHASE] = -1;
+        lfo_fade_restart(1u << k);
+    } else if (!v && t->p[P_LPHASE] < 0)
+        t->p[P_LPHASE] = lfo_ph_mem[k];
+}
+
 /* a knob turned parameter id of track t: recorded (AUTOMATION), and picked by MIDI LEARN (0.9.12, midi_learn.c) */
 static void knob_cap(track_t *t, uint32_t id)
 {
@@ -536,6 +554,12 @@ static void confirm_open(uint32_t kind, uint32_t trk)
     ui.force = 1;
 }
 
+/* (0.9.18) KNOB 1 the step: a detent a step, a fast turn on a pattern longer than a bar several (KNOB ACCEL: up to x4
+ * on 64 steps), the bar picker SEQ > BAR was until 0.9.17 */
+static void cursor_turn(int32_t steps)
+{
+    cursor_set((int32_t)ui.cursor + accel(EN_K1, steps, (int32_t)clamp(TSEL->p[P_SLEN], 1, NSTEP)));
+}
 /* the grid's page down (-1) / up (+1): the cursor to the same place on it (at most the last step) */
 static void page_go(int32_t d)
 {
@@ -551,7 +575,7 @@ static void page_go(int32_t d)
 static void grid_edit(uint32_t slot, int32_t steps)
 {
     if (slot == 0u)
-        cursor_set(ui.cursor + steps);
+        cursor_turn(steps);
     else if (slot == 1u)
         ui.lane = (uint8_t)clamp((int32_t)ui.lane + (steps > 0 ? 1 : -1), 0, NLANE - 1);
     else if (slot == 2u)
@@ -813,7 +837,7 @@ static void step_edit(uint32_t slot, int32_t steps)
     uint32_t i;
     if (cur_page()->id[0] == 4u) {                      /* (0.6.81) SEQ > NOTE; (0.6.92) KNOB 4 MICRO, on a kit too */
         if (slot == 3u) micro_edit(steps);
-        else if (drum_track(TSEL)) { if (slot == 0u) cursor_set(ui.cursor + steps); else ui_message("A KIT: STEP + MICRO"); }
+        else if (drum_track(TSEL)) { if (slot == 0u) cursor_turn(steps); else ui_message("A KIT: STEP + MICRO"); }
         else note_edit(slot, steps);
         return;
     }
@@ -823,7 +847,7 @@ static void step_edit(uint32_t slot, int32_t steps)
     }
     switch (slot) {
     case 0:                                               /* STEP: the cursor */
-        cursor_set(ui.cursor + steps);
+        cursor_turn(steps);
         break;
     case 1:                                               /* NOTE: transpose the step */
         if (!st->n) {
@@ -865,21 +889,21 @@ static void step_edit(uint32_t slot, int32_t steps)
     }
 }
 
-/* (0.6.39) SEQ > COMP: KNOB 1 the step, KNOB 2 its TYPE (OFF, the step's CHANCE and RATCH, the components), KNOB 3 / 4
- * the TYPE's values (CHANCE %, RATCH x1..x4; ARP: ORDER, RATE x RANGE; TRIG: the condition). CHANCE and RATCH are the
- * step's own fields; a component is one at a time: turning to OFF, CHANCE or RATCH takes it away. (0.6.82) COMP 2: the
- * step's second component the same way (no CHANCE or RATCH there); RATCH and ECHO: KNOB 4 their DIV. WHEN: KNOB 2 / 3
- * the loops each component plays on (ALWAYS, 1:2, 2:2, SKIP), KNOB 4 the step's LEN */
+/* (0.6.39) SEQ > COMP: KNOB 1 the step, KNOB 2 its TYPE (OFF, the step's CHANCE and RATCH, the components: ui.c COMP_*),
+ * KNOB 3 / 4 the TYPE's values. CHANCE is the step's own field; RATCH its flags (x1..x4 FLAT) or an ECHO component
+ * (x2..x8, a shape, a pitch step: ui.c rat_ui_set); a component is one at a time: turning to OFF or CHANCE takes it
+ * away. (0.6.82) COMP 2: the step's second component the same way (no CHANCE there; its RATCH an ECHO). KNOB 4: EVERY
+ * (0.6.92), but an ARP's LAP (0.9.17), RATCH's DIV x PITCH (0.9.18) and WALK's RATE (0.6.98) */
 static void comp_knob(uint32_t slot, int32_t steps)
 {
     step_t *st = &TSEL->step[ui.cursor];
     uint32_t v = comp_view(), k = comp_slot();
     int32_t d = clamp(steps, -4, 4), e = steps > 0 ? 1 : -1;
     uint8_t *cp = k == 1u ? &st->comp2 : &st->comp, *ap = k == 1u ? &st->carg2 : &st->carg;
-    if (slot == 0u) { cursor_set(ui.cursor + steps); return; }
+    if (slot == 0u) { cursor_turn(steps); return; }
     if (chain_busy()) { ui_message("STOP TO EDIT"); return; }
-    if (slot == 3u && !((v >= COMP_ARPN && v <= COMP_ARPS && k == 0u) || ((v == COMP_RATCH || v == COMP_ECHO) && k == 0u) ||
-                        v == COMP_WALK || v == COMP_CLIMB)) {   /* (0.6.98: WALK / CLIMB's KNOB 4 is their RATE on both pages) */
+    if (slot == 3u && !(v == COMP_ARPQ && k == 0u) && v != COMP_ARPN && v != COMP_RATCH && v != COMP_WALK &&
+        v != COMP_OCT) {
         uint32_t i;                                     /* (0.6.92) EVERY: the step's components' loops, in the knob's order */
         for (i = 0; i < EV_N && EV_ORD[i] != ST_EVERY(st); i++) {}
         i = (uint32_t)clamp((int32_t)i + e, 0, EV_N - 1);
@@ -888,47 +912,55 @@ static void comp_knob(uint32_t slot, int32_t steps)
     }
     if (slot == 1u) {
         v = (uint32_t)clamp((int32_t)v + d, 0, COMP_N - 1);
-        if (k && v > COMP_OFF && v < COMP_ARPN)         /* (COMP 2: no CHANCE or RATCH) */
-            v = d > 0 ? COMP_ARPN : COMP_OFF;
+        if (k && v == COMP_CHANCE)                      /* (COMP 2: no CHANCE) */
+            v = d > 0 ? COMP_RATCH : COMP_OFF;
         if (!k) ui.comp_sel = (uint8_t)v;
-        if (v >= COMP_ARPN) {
-            uint32_t c = CP_ARPN + v - COMP_ARPN;
+        if (v == COMP_RATCH) {                          /* (COMP: the flags' x1 until KNOB 3 turns; COMP 2: x2 FLAT) */
+            if (*cp != CP_ECHO) { *cp = (uint8_t)(k ? CP_ECHO : 0u); *ap = (uint8_t)(k ? CP_ECHO_EVEN : 0u); }
+        } else if (v >= COMP_ARPN) {
+            uint32_t c = COMP_CP[v];
             if (*cp != c) {
-                int keep = cp_isarp(*cp) && cp_isarp(c);   /* (ARP to ARP: ORDER, RATE, RANGE kept) */
+                int keep = cp_isarp(*cp) && cp_isarp(c);   /* (ARP to SEQ: ORDER, RANGE kept) */
                 *cp = (uint8_t)c;
-                if (!keep) *ap = c <= CP_ARPS ? CP_ARG(0u, 2u, 0u) : CP_ADEF[c];   /* (UP x4 1 OCT; the others' own) */
+                if (!keep) *ap = cp_isarp(c) ? CP_ARG(0u, 5u, 0u) : CP_ADEF[c];   /* (UP 1/16 1 OCT; the others' own) */
             }
         } else
             *cp = *ap = 0;
         return;
     }
-    if ((v == COMP_RATCH || v == COMP_ECHO) && slot == 3u)   /* (0.6.82) DIV */
-        st->ctime = (uint8_t)((st->ctime & ~7u) | (uint32_t)clamp((int32_t)CT_DIV(st) + e, 0, CT_NDIV - 1));
-    else if (v == COMP_CHANCE && slot == 2u)
+    if (v == COMP_RATCH && slot == 2u)                  /* (0.9.18) x1, x2..x8 FLAT, FADE, RISE */
+        rat_ui_set(st, k, (uint32_t)clamp((int32_t)rat_ui(st, k) + d, 0, 21), rat_pit_of(st, k));
+    else if (v == COMP_RATCH) {                         /* .. DIV x PITCH: STEP 1/2 .. 1/8, then each with a pitch step */
+        int32_t i = clamp((int32_t)(rat_pit_of(st, k) * CT_NDIV + CT_DIV(st)) + e, 0, 4 * (int32_t)CT_NDIV - 1);
+        if (!rat_ui(st, k)) i %= (int32_t)CT_NDIV;      /* (x1: no pitch step) */
+        st->ctime = (uint8_t)((st->ctime & ~7u) | (uint32_t)i % CT_NDIV);
+        if (rat_ui(st, k)) rat_ui_set(st, k, rat_ui(st, k), (uint32_t)i / CT_NDIV);
+    } else if (v == COMP_CHANCE && slot == 2u)
         step_set_chance(st, (uint32_t)clamp((int32_t)step_chance(st) + steps, 0, 100));
-    else if (v == COMP_RATCH && slot == 2u)
-        step_set_ratchet(st, (uint32_t)clamp((int32_t)step_ratchet(st) + d, 1, 4));
     else if (*cp == CP_JUMP && slot == 2u)            /* (0.6.62) TO STEP (0.6.92: TIMES is EVERY, KNOB 4) */
         *ap = (uint8_t)((*ap & 0xC0u) | (uint32_t)clamp((int32_t)CP_JTO(*ap) + steps, 0, 63));
-    else if (v >= COMP_TRIG && slot == 2u && *cp > CP_ARPS && CP_AMAX[*cp])   /* TRIG .. PULSE: their value (0.8.5: ECHO's
-                                                                              * EVEN kept) */
-        *ap = (uint8_t)((*cp == CP_ECHO ? *ap & CP_ECHO_EVEN : 0u) |
-                        (uint32_t)clamp((int32_t)(*cp == CP_ECHO ? *ap & ~CP_ECHO_EVEN : *ap) + d, CP_AMIN[*cp], CP_AMAX[*cp]));
-    else if ((v == COMP_WALK || v == COMP_CLIMB) && slot == 2u) {   /* (0.6.98) MODE x RANGE: one list, a range after another */
+    else if ((v == COMP_WALK || v == COMP_OCT) && slot == 2u) {   /* (0.6.98) MODE x RANGE: one list (WALK 3 5 7 12 DEG,
+                                                     * OCT 1 2 3 4 OCT) */
         int32_t i = clamp((int32_t)(CP_WMODE(*ap) * 4u + CP_WRNG(*ap)) + d, 0, 15);
         *ap = CP_WARG(CP_WRATE(*ap), (uint32_t)i / 4u, (uint32_t)i % 4u);
-    } else if ((v == COMP_WALK || v == COMP_CLIMB) && slot == 3u) {   /* .. RATE: the loops a move, 1 .. 16 */
+    } else if (v == COMP_ARPN && slot == 3u) {          /* (0.9.18) RATE 1/4 1/8 1/16 1/32 x the laps it plays on: ALWAYS,
+                                                     * 1:2 1:3 1:4 1:8 (the step's EVERY) */
+        static const uint8_t AE[5] = {EV_ALWAYS, EV_1_2, EV_1_3, EV_1_4, EV_1_8};
+        uint32_t r, c;
+        int32_t i;
+        for (r = 0; r < 3u && ARP_RCODE[r] != CP_RATE(*ap); r++) {}
+        for (c = 0; c < 4u && AE[c] != ST_EVERY(st); c++) {}
+        i = clamp((int32_t)(c * 4u + r) + e, 0, 19);
+        *ap = CP_ARG(CP_ORD(*ap), ARP_RCODE[i % 4], CP_RNG(*ap));
+        ST_EVERY_SET(st, AE[i / 4]);
+    } else if (v == COMP_WALK || v == COMP_OCT) {       /* .. RATE: the loops a move, 1 .. 16 */
         *ap = CP_WARG((uint32_t)clamp((int32_t)CP_WRATE(*ap) + e, 0, (int32_t)CP_NWRATE - 1), CP_WMODE(*ap), CP_WRNG(*ap));
-    } else if (v >= COMP_ARPN && v <= COMP_ARPS && slot == 2u) {   /* (0.6.92) ORDER x RANGE: one list, a range after another */
+    } else if ((v == COMP_ARPN || v == COMP_ARPQ) && slot == 2u) {   /* (0.6.92) ORDER x RANGE: one list */
         int32_t i = clamp((int32_t)(CP_ORD(*ap) * 4u + CP_RNG(*ap)) + d, 0, 15);
         *ap = CP_ARG((uint32_t)i / 4u, CP_RATE(*ap), (uint32_t)i % 4u);
-    } else if (v >= COMP_ARPN && v <= COMP_ARPS && v != COMP_ARPQ && slot == 3u) {   /* (0.6.92) RATE: x1 x2 x3 x4 x6 x8
-                                                         * (in the track's time); (0.9.17) SEQ's KNOB 4 shows the lap's note */
-        uint32_t i;
-        for (i = 0; i < CP_NRATE && CP_RATE_ORD[i] != CP_RATE(*ap) % CP_NRATE; i++) {}
-        i = (uint32_t)clamp((int32_t)i + e, 0, CP_NRATE - 1);
-        *ap = CP_ARG(CP_ORD(*ap), CP_RATE_ORD[i], CP_RNG(*ap));
-    }
+    } else if (slot == 2u && *cp > CP_ARPS && CP_AMAX[*cp])   /* TRIG .. KILL: their one value */
+        *ap = (uint8_t)clamp((int32_t)*ap + d, CP_AMIN[*cp], CP_AMAX[*cp]);
+                                                        /* (0.9.17: an ARP's KNOB 4 shows the lap's note, no RATE) */
 }
 /* (0.6.85) SEQ > STRETCH: KNOB 1 STRETCH /8 .. /2, x1, x2 .. x8; KNOB 2 REPEAT OFF, x2 .. x8, TO 64; (0.6.92) done as the
  * knob turns, always from the sequence as it was before the first turn (its base: the steps, LEN and automation,
@@ -1049,13 +1081,6 @@ static void edit_param(uint32_t slot, int32_t steps)
         return;
     }
     int32_t v;
-    if (BAR_PAGE(pg) && slot == 0u) {                    /* (0.9.2) SEQ > BAR: KNOB 1 the bar (no wrap), the cursor at its
-                                                         * place in it */
-        uint32_t len = (uint32_t)clamp(TSEL->p[P_SLEN], 1, NSTEP), nb = (len + 15u) / 16u;
-        uint32_t b = (uint32_t)clamp((int32_t)ui.bank + steps, 0, (int32_t)nb - 1), at = b * 16u + ui.cursor % 16u;
-        cursor_set((int32_t)(at < len ? at : len - 1u));
-        return;
-    }
     if (pg->graph == GR_COMP) {
         comp_knob(slot, steps);
         return;
@@ -1074,7 +1099,7 @@ static void edit_param(uint32_t slot, int32_t steps)
         return;
     }
     if (pg->graph == GR_CHANCE) {
-        if (slot == 0u) cursor_set(ui.cursor + steps);
+        if (slot == 0u) cursor_turn(steps);
         else if (slot == 1u || slot == 2u) {
             if (chain_busy()) { ui_message("STOP TO EDIT"); return; }
             step_t *st = &TSEL->step[ui.cursor];
@@ -1244,6 +1269,11 @@ static void edit_param(uint32_t slot, int32_t steps)
         trks_put(v);
         ui_message(v ? "6 TRACKS: MORE CPU" : "4 TRACKS: T5-T6 ASLEEP");
         settings_save();
+        return;
+    }
+    if (vp == &lmode_ui || vp == &lphase_ui) {          /* (0.9.18) LFO MODE / PHASE: P_LPHASE written back */
+        lfo_view_put(TSEL, vp == &lmode_ui, v);
+        knob_cap(TSEL, P_LPHASE);
         return;
     }
     if (vp == &load_ui) {                               /* (0.6.30) GLO > SYSTEM's LOAD: the same */
@@ -1775,14 +1805,15 @@ static int dk_back(uint32_t kind, uint32_t k)           /* CANCEL: 0 done */
     }
     return 0;
 }
-/* the LFO: its rate in the middle of the range, any wave and phase, a fade now and then; aimed mostly at the filter,
+/* the LFO: its rate in the middle of the range, any wave, MODE FREE or TRIG (any phase) alike, a fade now and then; aimed mostly at the filter,
  * a little at the shape, seldom at the pitch or the level (a wobble, not a siren) */
 static void lfo_dice(track_t *t)
 {
     const param_desc_t *d;
     d = track_desc(t, P_LRATE); t->p[P_LRATE] = (int16_t)dk_frac(d, 25, 80);
     d = track_desc(t, P_LWAVE); t->p[P_LWAVE] = (int16_t)dk_frac(d, 0, 100);
-    d = track_desc(t, P_LPHASE); t->p[P_LPHASE] = (int16_t)(rng() % 3u ? d->min : dk_frac(d, 0, 100));
+    d = track_desc(t, P_LPHASE); t->p[P_LPHASE] = (int16_t)(rng() >> 31 ? -1 : dk_rr(0, d->max));   /* (0.9.18: MODE FREE
+                                                         * half the time, was 2 in 3; TRIG at a phase the rest, 0..127) */
     d = track_desc(t, P_LFADE); t->p[P_LFADE] = (int16_t)(rng() % 3u ? d->min : dk_frac(d, 0, 50));
     d = track_desc(t, P_LD_PIT); t->p[P_LD_PIT] = (int16_t)(rng() % 4u ? 0 : dk_frac(d, 44, 56));
     d = track_desc(t, P_LD_FLT); t->p[P_LD_FLT] = (int16_t)dk_frac(d, d->min < 0 ? 15 : 20, d->min < 0 ? 85 : 70);
@@ -2192,8 +2223,12 @@ static void ui_input_frame(void)
         if (ui.menu) {
             menu_close();
         } else {
-            ui.menu = 1;                                /* (at the tab and row it was left at) */
-            ui.mlv = 1;                                 /* (0.8.5: the lens at TAB, its rows) */
+            ui.menu = 1;                                /* (at the page and setting it was left at) */
+            ui.mlv = 1;
+            ui.hot_t = 0;                               /* (0.9.18: no card lit from the page before) */
+            if (!menu_valued(ui.menu_sel))              /* (an action armed before it closed is let go: OCT+ on
+                                                         * opening never clears the learned CCs or opens a screen) */
+                ui.menu_sel = MPAGE[menu_page()].row[0];
             ui.confirm = 0;                             /* (a clear dialog is cancelled, NAME too) */
             name_close();
             ui.force = 1;
@@ -2518,7 +2553,7 @@ static void ui_input_frame(void)
             continue;
         }
         if (ui.home || pg->scope == SC_STEP || pg->scope == SC_TRK || page_desc(pg, k, &hv) ||
-            ((pg->graph == GR_USER || pg->graph == GR_MOD || pg->graph == GR_MSEQ || pg->graph == GR_PATS || BAR_PAGE(pg)) &&
+            ((pg->graph == GR_USER || pg->graph == GR_MOD || pg->graph == GR_MSEQ || pg->graph == GR_PATS) &&
              k == 0u)
             || pg->graph == GR_SONG || pg->graph == GR_DXSND || pg->graph == GR_FOCUS || pg->graph == GR_STAGE ||
             pg->graph == GR_LIVE) {   /* (not an empty column) */

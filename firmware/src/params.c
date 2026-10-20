@@ -90,7 +90,8 @@ static const param_desc_t TP[P_COUNT] = {
     [P_ED_FX] = PE("LOOP", N_ONOFF, 0),          /* (JIANT 0.4, P_ELOOP) ON: held, the ENV starts again at the sustain */
     [P_LRATE] = PD("RATE", F_LFOHZ, -12, 127, 60),  /* (JIANT 0.6.51) below 0 in time: 4BAR .. 1/32 (N_LSYNC) */
     [P_LWAVE] = PE("WAVE", N_LWAVE, 0),
-    [P_LPHASE] = PD("PHASE", F_INT, -1, 127, 0),   /* (JIANT 0.6.51) -1: FREE, never restarted by a note */
+    [P_LPHASE] = PD("PHASE", F_INT, -1, 127, 0),   /* (JIANT 0.6.51) -1: FREE, never restarted by a note (0.9.18: nor its
+                                                     * FADE); the pages show it as MODE TRIG / FREE and PHASE 0..127 */
     [P_LFADE] = PD("FADE", F_TIME, 0, 127, 0),
     [P_LD_PIT] = PD("PITCH", F_BIPCT, -64, 63, 0),
     [P_LD_FLT] = PD("FILTER", F_BIPCT, -64, 63, 0),
@@ -234,12 +235,6 @@ static const param_desc_t GP[G_COUNT] = {
 static const param_desc_t LOFI_RTRG = {"RTRG", F_ONOFF, 0, 1, 0, 0, 0};   /* (0.6.12) P_LRTRG on a LOFI track */
 static const param_desc_t TRK_CHANCE = {"CHANCE", F_PCTINV, 0, 127, 0, 0, 0};   /* (0.6.37) P_TCHAN: 0 = 100 % */
 static const param_desc_t MORPH_DESC = {"MORPH", F_PCT, 0, 127, 0, 0, 0};   /* (0.6.45) P_MORPH */
-static const char *const N_CLEN[] = {"OFF", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15",
-                                     "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29",
-                                     "30", "31", "32", "33", "34", "35", "36", "37", "38", "39", "40", "41", "42", "43",
-                                     "44", "45", "46", "47", "48", "49", "50", "51", "52", "53", "54", "55", "56", "57",
-                                     "58", "59", "60", "61", "62", "63", "64", 0};
-static const param_desc_t CLEN_DESC = {"C.LEN", F_ENUM, 0, 64, 0, N_CLEN, 0};   /* (0.6.47) P_CLEN */
 static const param_desc_t DXIMG_DESC = {"IMAGE", F_INT, 0, 127, 0, 0, 0};       /* (0.6.48) P_DXIMG */
 static const char *const N_MUTBARS[] = {"OFF", "1", "2", "4", "8", "16", "32"};
 static const char *const N_MUTMODE[] = {"ORBIT", "DRIFT"};
@@ -282,7 +277,6 @@ static const param_desc_t *track_desc(const track_t *t, uint32_t id)
         case P_MAMT: return &MUT_DESC[2];
         case P_MMODE: return &MUT_DESC[3];
         case P_MORPH: return &MORPH_DESC;
-        case P_CLEN: return &CLEN_DESC;
         case P_DXIMG: return &DXIMG_DESC;
         case P_CHRD: return &CHORD_DESC[0];
         case P_CVOI: return &CHORD_DESC[1];
@@ -556,10 +550,22 @@ static int16_t trks_ui;
 static const char *const N_LOAD[] = {"ECO", "LITE", "FULL"};
 static const param_desc_t LOAD_DESC = PE("LOAD", N_LOAD, 2);
 static int16_t load_ui;
+/* (0.9.18) the LFO's MODE TRIG / FREE (LFO KNOB 3) and its PHASE (LFO 2 KNOB 1): views of P_LPHASE, whose -1 has been FREE
+ * since 0.6.51 (stored as ever: every project and preset opens as it was). page_desc reads them into lmode_ui / lphase_ui,
+ * a turn writes P_LPHASE back (ui_input.c lfo_view_put). FREE keeps no phase: the one TRIG had stays in lfo_ph_mem
+ * (RAM, a track each) for TRIG again, and PHASE turned in FREE moves only that (shown dimmed) */
+#define ID_LMODE 0xFBu
+#define ID_LPHS 0xFAu
+static const char *const N_LMODE[] = {"TRIG", "FREE"};
+static const param_desc_t LFO_MODE_DESC = PE("MODE", N_LMODE, 0);
+static const param_desc_t LFO_PHASE_DESC = PD("PHASE", F_INT, 0, 127, 0);
+static int16_t lmode_ui, lphase_ui;
+static uint8_t lfo_ph_mem[NTRK];
+static int lfo_mode_of(const track_t *t) { return t->p[P_LPHASE] < 0; }   /* 1 FREE */
 static const page_t PAGES[] = {
     {"ENV", FAM_ENV, SC_TRACK, GR_ADSR, {P_ATK, P_DEC, P_SUS, P_REL}},
     {"ENV DEST", FAM_ENV, SC_TRACK, GR_NONE, {P_ED_FLT, P_ED_PIT, P_ED_SHP, P_ELOOP}},   /* JIANT 0.4: LOOP */
-    {"LFO", FAM_LFO, SC_TRACK, GR_LFO, {P_LRATE, P_LWAVE, P_LPHASE, P_LFADE}},
+    {"LFO", FAM_LFO, SC_TRACK, GR_LFO, {P_LRATE, P_LWAVE, ID_LMODE, P_LFADE}},   /* (0.9.18: MODE where PHASE was) */
     {"LFO DEST", FAM_LFO, SC_TRACK, GR_NONE, {P_LD_PIT, P_LD_FLT, P_LD_SHP, P_LD_AMP}},
     {"MOD", FAM_LFO, SC_TRACK, GR_MOD, {0xFF, P_M1SRC, P_M1DST, P_M1AMT}},   /* KNOB 1: the slot (mod_ui_slot) */
     {"MSEQ", FAM_LFO, SC_TRACK, GR_MSEQ, {0xFF, P_MS0, P_MSLEN, P_MSSLW}},   /* JIANT: KNOB 1 the step (ms_ui_step) */
@@ -662,14 +668,13 @@ static const page_t PAGES[] = {
                                                          * value, LOOP (ui_input.c stage_knob) */
     {"SENDS", FAM_TRK, SC_TRACK, GR_TRK, {P_DIST, P_CHOR, P_DLY, P_REV}},   /* GLO > MIX: the track's sends (as FX > SENDS),
                                                          * the six tracks' as bars (ui_graph.c track_col6) */
-    {"BAR", FAM_SEQ, SC_TRACK, GR_STEPS, {0xFF, P_SLEN, 0xFF, 0xFF}},   /* (0.9.2) SEQ > BAR: the pattern's bars, KNOB 1
-                                                         * the bar (the cursor at its place in it; was PRESETS on PATTERN's
-                                                         * level), KNOB 2 LEN (ui_input.c edit_param) */
+    /* (0.9.18) SEQ > BAR gone (0.9.2 .. 0.9.17: KNOB 1 the bar, KNOB 2 LEN): the bar is the roll's cursor / strip and
+     * STEP's KNOB 1 walks all 64 steps, LEN is PATTERN's */
     {"MANO", FAM_GLO, SC_GLOBAL, GR_LIVE, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (0.9.11) GLO > LIVE: the keys a board of live
                                                          * modifiers (ui_live.c, seq_live.c) */
     {"RIELES", FAM_GLO, SC_GLOBAL, GR_LIVE, {0xFF, 0xFF, 0xFF, 0xFF}},   /* .. the six sequences as rails, four knobs */
+    {"LFO 2", FAM_LFO, SC_TRACK, GR_LFO, {ID_LPHS, 0xFF, 0xFF, 0xFF}},   /* (0.9.18) PHASE: where TRIG starts (FREE: dimmed) */
 };
-#define BAR_PAGE(pg) ((pg)->graph == GR_STEPS && (pg)->id[0] == 0xFFu)
 #define NPAGES (sizeof(PAGES) / sizeof(PAGES[0]))
 static uint8_t mod_ui_slot;      /* the MOD page: the matrix slot (0..3) KNOB 2..4 edit */
 static uint8_t ms_ui_step;       /* (JIANT) the MSEQ page: the step (0..15) KNOB 2 edits */
@@ -696,6 +701,13 @@ static const param_desc_t *page_desc(const page_t *pg, uint32_t slot, int16_t **
     if (id == G_TRKS) {                               /* (0.6.18) not a song global: the device's setting */
         *valp = &trks_ui;
         return &TRKS_DESC;
+    }
+    if (id == ID_LMODE || id == ID_LPHS) {           /* (0.9.18) the LFO's MODE and PHASE: views of P_LPHASE */
+        int32_t ph = TSEL->p[P_LPHASE];
+        lmode_ui = (int16_t)(ph < 0);
+        lphase_ui = (int16_t)(ph < 0 ? lfo_ph_mem[song.sel % NTRK] : ph);
+        *valp = id == ID_LMODE ? &lmode_ui : &lphase_ui;
+        return id == ID_LMODE ? &LFO_MODE_DESC : &LFO_PHASE_DESC;
     }
     if (id == G_LOADP) {                              /* (0.6.30) the same */
         *valp = &load_ui;
