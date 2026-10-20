@@ -523,6 +523,20 @@ static int per_lane(void)
     run_c(2u * step_len(0) / CTL);
     seq_stop();
     bad += check("  a step's RATCH x2 as before (lanes without a mode)", cnt[36] == 2u);
+    /* (0.9.18) a lane's own x4 on a step with RATCH x2: the lane's mode wins (4 hats, not 4 + the step's repeat); the
+     * kick, plain, x2 with the step */
+    drum_setup();
+    dt->p[P_SLEN] = 4;
+    dt->step[0] = (step_t){{0}, 0, ST_NOTE, 0, 100, 1u << DV_KICK | 1u << DV_HATC};
+    for (nb = 1; nb < 4u; nb++) dt->step[nb] = (step_t){{0}, 0, ST_REST};
+    step_set_ratchet(&dt->step[0], 2);
+    step_set_lmode(&dt->step[0], DV_HATC, LM_X4);
+    seq_start();
+    memset(cnt, 0, sizeof cnt);
+    run_c(4u * step_len(0) / CTL);
+    seq_stop();
+    bad += check("  a lane's x4 on a RATCH x2 step: the lane's 4 (no repeats of repeats), the kick x2", cnt[36] == 2u &&
+                 cnt[42] == 4u);
     /* recorded live: the kick at OCT 0 and the closed hat at OCT +2 into the same step, then the snare at OCT -2 */
     drum_setup();
     song.rec = 1u << 3;
@@ -778,27 +792,27 @@ static int rec_ratch(void)
             key_dn(KICK_KEY);
             lanes_b(4);
             key_upk(KICK_KEY);
-            lanes_until(3, 0);
+            lanes_until(4, 0);   /* (0.9.18: a kit's repeats spill over 2 steps) */
             ok = lane_n[DV_KICK] == 1u && lane_n[DV_HATC] == r - (late ? 0u : 1u) && dt->step[2].hit == (1u << DV_HATC | 1u << DV_KICK) &&
                  step_ratchet(&dt->step[2]) == r && step_lm_raw(&dt->step[2], DV_KICK) == LM_ONCE &&
                  step_lmode(&dt->step[2], DV_KICK) == LM_NONE;
             memset(lane_n, 0, sizeof lane_n);             /* the next pass: once, the hats x r */
             lanes_until(1, 0);
-            lanes_until(3, 0);
+            lanes_until(4, 0);   /* (0.9.18: a kit's repeats spill over 2 steps) */
             ok &= lane_n[DV_KICK] == 1u && lane_n[DV_HATC] == r;
             memset(lane_n, 0, sizeof lane_n);             /* played there again: the recorded one and the key's, once each */
             lanes_until(2, sl / 8u);
             key_dn(KICK_KEY);
             lanes_b(4);
             key_upk(KICK_KEY);
-            lanes_until(3, 0);
+            lanes_until(4, 0);   /* (0.9.18: a kit's repeats spill over 2 steps) */
             ok &= lane_n[DV_KICK] == 2u && step_lm_raw(&dt->step[2], DV_KICK) == LM_ONCE;
             memset(lane_n, 0, sizeof lane_n);             /* a hat played into its own step: it rolls with it, as before */
             lanes_until(2, sl / 8u);
             fm1_in.notes |= 1u << 13;                     /* (key 13: 42, the closed hat) */
             lanes_b(4);
             fm1_in.notes &= ~(1u << 13);
-            lanes_until(3, 0);
+            lanes_until(4, 0);   /* (0.9.18: a kit's repeats spill over 2 steps) */
             ok &= drum_lane(29u + 13u) == DV_HATC && step_lmode(&dt->step[2], DV_HATC) == LM_NONE &&
                   step_lm_raw(&dt->step[2], DV_HATC) == LM_NONE;
             seq_stop();
@@ -819,7 +833,7 @@ static int rec_ratch(void)
         key_dn(KICK_KEY);
         lanes_b(4);
         key_upk(KICK_KEY);
-        lanes_until(3, 0);
+        lanes_until(4, 0);   /* (0.9.18: a kit's repeats spill over 2 steps) */
         ok = lane_n[DV_KICK] == 1u && lane_n[DV_HATC] == 2u && step_lm_raw(&dt->step[2], DV_KICK) == LM_ONCE;
         lanes_until(5, step_len(5) / 8u);
         key_dn(KICK_KEY);

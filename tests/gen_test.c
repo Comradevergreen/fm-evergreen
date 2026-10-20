@@ -966,6 +966,24 @@ int main(void)
                           steps_sig(&trk[0]) != sig0);
         }
     }
+    {   /* (0.9.18) the drums' rolls on their lanes (x2 / x4), never the step's RATCH: a kick under a rolled hat, a hit
+         * recorded into the step, never roll with it */
+        uint32_t g, sd, k, i, stepr = 0, lrolls = 0;
+        for (g = 0; g < NGENRE; g++)
+            for (sd = 0; sd < 4u; sd++) {
+                gen_with(g + 1u, sd * 977u + g * 13u + 3u, 40u + sd * 20u, 0);
+                for (k = 0; k < NTRK; k++) {
+                    const track_t *t = &trk[k];
+                    if (!drum_track(t)) continue;
+                    for (i = 0; i < NSTEP; i++) {
+                        stepr += t->step[i].time == ST_NOTE && step_ratchet(&t->step[i]) > 1u;
+                        for (uint32_t l = 0; l < NLANE; l++) lrolls += lm_hits(step_lmode(&t->step[i], l)) > 1u;
+                    }
+                }
+            }
+        printf("gen:   drum rolls on their lanes: %u, steps with RATCH on a kit: %u\n", lrolls, stepr);
+        bad += gcheck("GEN drums: rolls as the lanes' x2 / x4, no step RATCH on a kit", !stepr && lrolls > 0u);
+    }
     printf(bad ? "gen: %d FAILED\n" : "gen: all passed\n", bad);
     return bad ? 1 : 0;
 }

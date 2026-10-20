@@ -683,14 +683,19 @@ static void rec_note_at(track_t *t, uint32_t note, uint32_t vel)
         s->n = 0;                                   /* a fresh step */
         s->flags = 0;
         s->vel = 0;
+        s->lm[0] = s->lm[1] = s->lm[2] = 0;         /* (0.9.18: no note of it once) */
         ST_MICRO_SET(s, mic);                       /* (0.6.88) its place off the grid (REC Q) */
     }
     for (k = 0; k < s->n && s->note[k] != note; k++)
         ;
     if (k == s->n) {
+        /* (0.9.18) a note added to a POLY step that repeats (RATCH, ECHO): once, as played, not rolled with the step's
+         * own notes (lm_once; 0.9.16's LM_ONCE for a kit's lanes) */
+        uint32_t rep = s->n && (step_ratchet(s) > 1u || s->comp == CP_ECHO || s->comp2 == CP_ECHO);
         if (s->n < 4u)
             s->n++;
         s->note[s->n - 1u] = (uint8_t)note;
+        step_set_lmode(s, s->n - 1u, rep ? LM_ONCE : LM_NONE);
     }
     s->time = ST_NOTE;
     if (vel > 110)
@@ -1536,6 +1541,14 @@ static void seq_stop(void)
  * out; a synth's hit takes the step's notes and velocity (its shape, its pitch step), a kit's its hits and TOUCH. On a
  * MONO / LEGATO track a new note cuts what is still to come; a new ratcheted step replaces it. The lanes' x2 x4 x8
  * (LM_*) spill the same way, each lane its own. Nothing to do: one test a block (seq_tick) */
+/* (0.9.18) an entry of a step not in its RATCH's repeats: on a kit lane l recorded once (LM_ONCE, 0.9.16) or with its
+ * own x2 x4 x8 (the lane's mode wins: no repeats of repeats); on a synth note l (0..3) overdubbed once (its lm slot l
+ * LM_ONCE, seq.c rec_note_at: a POLY note added live to a step that repeats) */
+static int lm_once(const step_t *s, uint32_t l, uint32_t kit)
+{
+    uint32_t r = step_lm_raw(s, l % NLANE);
+    return r == LM_ONCE || (kit && lm_hits(r) > 1u);
+}
 static void spill_off(track_t *t)                   /* the notes the last spilled hit sounded: off */
 {
     uint32_t i;
@@ -1849,7 +1862,7 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
     int32_t walk = 0, climb = 0;                       /* (0.6.98) WALK / OCT (0.9.18: CLIMB): this loop's move */
     int cont = 0;                                   /* .. a PULSE's note again */
     uint8_t nn[4 + NLANE], vv[4 + NLANE];           /* the notes it plays: its notes, then its hits */
-    uint32_t m = 0, sk = 0, sk0, hdel = 0;
+    uint32_t m = 0, sk = 0, sk0, hdel = 0, once = 0;
     /* QNT SEQ: the step's notes (not the lane hits) snap to the scale as they play; never on a drum kit, the slices
      * or another engine that maps the keys itself. seq_notes keeps the notes that sound: their note-offs match */
     const engine_t *e = ENGINES[eng_idx(t->eng_req)];
@@ -1937,6 +1950,7 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
         nn[m] = (uint8_t)x;
         vv[m] = (uint8_t)vel;
         sk |= ((skip >> i) & 1u) << m;
+        once |= (uint32_t)(arpq ? 0 : lm_once(s, kit ? drum_lane(s->note[i]) : i, kit)) << m;
         m++;
     }
     for (i = 0; i < NLANE && !arpq; i++)
@@ -1944,6 +1958,7 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
             nn[m] = DRUM_LANE_NOTE[i];
             vv[m] = (uint8_t)((s->acc >> i) & 1u ? 127u : vel);
             sk |= ((skip >> (8u + i)) & 1u) << m;
+            once |= (uint32_t)lm_once(s, i, 1u) << m;
             m++;
         }
     if (kit) {                                      /* (0.6.82) on a drum kit: SEQ plays the pattern's sounds (cp_kit_arp); */
@@ -2040,7 +2055,7 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
         m = arp_start(t, nn, vv, m, kit, aa, gate, tie_span(t, period, len));
         sk = 0;
     } else if (hits > 1u && m)                      /* (0.9.18) RATCH: its other hits, from here (seq_spill) */
-        spill_start(t, s, nn, vv, m, sk, kit, &rt, gate);
+        spill_start(t, s, nn, vv, m, sk | once, kit, &rt, gate);   /* (LM_ONCE, a lane's own xN: not repeated) */
     if (kit)                                        /* (0.8.5) a kit: each lane's own mode on its hits (TOUCH now; 0.9.18:
                                                      * x2 x4 x8 spill as RATCH does, seq_spill) */
         lane_start(t, s, vel, step_samples(t, period, t->seq_idx));
@@ -2049,10 +2064,7 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
             vv[i] = (uint8_t)rat_vel(vv[i], RS_RISE, 0u, hits);
     for (i = 0; i < m; i++)
         if (!((sk >> i) & 1u)) {
-            uint32_t a0 = vage, dt0 = t->dtch, lt = kit ? step_lm_raw(s, drum_lane(nn[i])) : 0u;
-            if (lt == LM_ONCE && (skip & SEQ_REP))
-                continue;                           /* (0.9.16) a hit recorded once: not in the step's repeats */
-            lt = lm_touch(lt);
+            uint32_t a0 = vage, dt0 = t->dtch, lt = kit ? lm_touch(step_lmode(s, drum_lane(nn[i]))) : 0u;
             if (lt)
                 t->dtch = (uint8_t)lt;
             seq_note_on(t, nn[i], vv[i]);

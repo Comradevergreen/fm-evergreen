@@ -136,6 +136,29 @@ static int play(void)
     if (!ok) printf("  rule: mono %u\n", n);
     bad += check("  a spilled hit on a step with the same note: left out; another note on POLY: both; MONO: cut", ok);
 
+    {   /* (0.9.18) a POLY note recorded into a ratcheted synth step: once, live and on the passes after, not rolled
+         * with the step's own (lm slot LM_ONCE); into a plain step: no mark */
+        uint32_t n60 = 0, n64 = 0;
+        t = spill_trk(2, 0);
+        t->p[P_VOICE] = V_POLY;
+        run(t, 2, 0, 0, 0);                           /* (early in step 1) */
+        rec_note(t, 64, 100);
+        rec_release(t, 64);
+        ok = t->step[0].n == 2u && t->step[0].note[1] == 64u && step_lm_raw(&t->step[0], 1u) == LM_ONCE &&
+             step_lm_raw(&t->step[0], 0u) == LM_NONE;
+        seq_start();
+        n = run_nv(t, 8, 0, nt, 0, 40);
+        for (k = 0; k < n; k++) { n60 += nt[k] == 60u; n64 += nt[k] == 64u; }
+        ok &= n60 == 2u && n64 == 1u;
+        t = spill_trk(1, 0);
+        t->p[P_VOICE] = V_POLY;
+        run(t, 2, 0, 0, 0);
+        rec_note(t, 64, 100);
+        rec_release(t, 64);
+        ok &= t->step[0].n == 2u && !step_lm_any(&t->step[0]);
+        bad += check("  a POLY note recorded into an x2 step: once (60 x2, 64 x1); into an x1 step: no mark", ok);
+    }
+
     t = spill_trk(3, 0);                              /* the DRUM grid: hits of BD (accented) and CH */
     set_engine_of(t, ENGI_DRUM);
     t->engine = t->eng_req;
