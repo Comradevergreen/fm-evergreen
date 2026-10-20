@@ -659,13 +659,43 @@ static void pm_knob(uint32_t k, int32_t s)
     if (!k)
         live_publish();
 }
+/* (0.9.17) the glitcher's knobs while its key is down (perform.c perf_gp: these ranges; its defaults; never saved) */
+static const char *const GX_GSZ[4] = {"LONG", "MID", "SHORT", "TINY"};
+static const char *const GX_TIME[5] = {"1/64", "1/32", "1/16", "1/8", "1/4"};
+static const char *const GX_SSZ[3] = {"1/4", "1/8", "1/16"};
+static const char *const GX_FSZ[5] = {"1/128", "1/64", "1/32", "1/16", "1/8"};
+static const struct { const char *lab; int8_t min, max; uint8_t fmt, nm; } GX_K[4][4] = {   /* (nm: GX_NAMES' list) */
+    {{"DENS", 0, 100, F_PCT, 0}, {"PITCH", -12, 12, F_SEMI, 0}, {"SIZE", 0, 3, F_ENUM, 1}, {"VARI", 1, 16, F_INT, 0}},   /* GLITCH */
+    {{"SCRATCH", 0, 0, F_INT, 0}, {"TIME", 0, 4, F_ENUM, 2}, {"CURVE", -100, 100, F_INT, 0}, {"", 0, 0, F_INT, 0}},   /* TAPE */
+    {{"AMOUNT", 0, 100, F_PCT, 0}, {"SIZE", 0, 2, F_ENUM, 3}, {"SPEED", 0, 100, F_PCT, 0}, {"VARI", 1, 16, F_INT, 0}},   /* SHUFFLE */
+    {{"DENS", 0, 100, F_PCT, 0}, {"PITCH", -12, 12, F_SEMI, 0}, {"SPRAY", 0, 100, F_PCT, 0}, {"SIZE", 0, 4, F_ENUM, 4}}};   /* FREEZE */
+static const char *const *const GX_NAMES[5] = {0, GX_GSZ, GX_TIME, GX_SSZ, GX_FSZ};
+static param_desc_t gx_desc(uint32_t x, uint32_t k)    /* (as a page's parameter: param_format, RATIO) */
+{
+    param_desc_t d = {GX_K[x][k].lab, GX_K[x][k].fmt, GX_K[x][k].min, GX_K[x][k].max, 0, GX_NAMES[GX_K[x][k].nm], 0};
+    return d;
+}
+static const uint8_t GX_IC[4][4] = {{ICON_PROB, ICON_PITCH, ICON_LENGTH, ICON_SHAPE}, {ICON_SWEEP, ICON_TIME, ICON_SHAPE, ICON_NONE},
+                                    {ICON_PROB, ICON_SLICE, ICON_RATE, ICON_SHAPE}, {ICON_GRAIN, ICON_PITCH, ICON_NOISE, ICON_SIZE}};
+static void gx_knob(uint32_t x, uint32_t k, int32_t s)
+{
+    int32_t lo = GX_K[x][k].min, hi = GX_K[x][k].max;
+    if (x == GX_TAPE && !k)
+        perf_scr += (uint32_t)s;                        /* SCRATCH: the hand on the record (perform.c perf_scratch) */
+    else if (hi)
+        perf_gp[x][k] = (int8_t)clamp(perf_gp[x][k] + accel(EN_K1 + k, s, hi - lo), lo, hi);
+}
 /* KNOB 1..4 in the open layer: its own (FX macros, GLO levels, EDIT's sound), else the four of its page */
 static void layer_knob(uint32_t k, int32_t s)
 {
     uint32_t l = layer_open();
     lys.used = 1;
-    if (l == LAYER_FX) {                                /* (0.9.14) the performance macros (perform.c perf_m), not recorded */
-        pm_knob(k, s);
+    if (l == LAYER_FX) {                                /* (0.9.14) the performance macros (perform.c perf_m), not recorded; */
+        uint32_t g = perf_gfocus();                     /* (0.9.17) a glitcher's key down: its own */
+        if (g == PF_N)
+            pm_knob(k, s);
+        else
+            gx_knob(perf_gx(g), k, s);
     } else if (l == LAYER_GLO) {                        /* T1..T4 LEVEL (T5, T6 selected: T3..T6), recorded as on MIXER */
         track_t *t = &trk[k + trk_base4()];
         int16_t *vp = &t->p[P_LEVEL];
@@ -814,7 +844,7 @@ static uint32_t layer_leds(uint32_t *br)
  * the Felucca map.) The keys and knobs do what they did: only the drawing is new */
 static const char *const PF_NAME[PF_M1] = {"RPT 1/8", "RPT 1/16", "RPT 1/32", "GLITCH", "TAPE STOP",   /* the audio ones */
     "OCT-", "OCT+", "1/2 TEMPO", "DEC-", "DEC+", "STUT 1/8", "STUT 1/16", "ATK+", "ARP", "RANDOM",   /* the MIDI ones (pfx.c) */
-    "FILTER", "CRUSH", "THROW"};                                     /* (0.9.14) the sweeps (black keys C#5 D#5 F#5) */
+    "SHUFFLE", "CRUSH", "THROW", "FREEZE"};             /* (0.9.17) C#5 SHUFFLE, (0.9.14) the sweeps D#5 F#5, G#4 FREEZE */
 static const char W_NOTE[16] = {'F', 'G', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'A', 'B', 'C', 'D', 'E', 'F', 'G'};
 static const char B_NOTE[11] = {'F', 'G', 'A', 'C', 'D', 'F', 'G', 'A', 'C', 'D', 'F'};   /* black keys 1..11: F# G# .. F#5 */
 static const uint8_t PK_BLK[11] = {1, 2, 3, 5, 6, 8, 9, 10, 12, 13, 15};   /* a black key: left of white key n */
@@ -866,20 +896,21 @@ static uint32_t ly_keyname(uint32_t l, int blk, uint32_t p, char *nm)
     uint32_t busy = chain_busy() ? LS_DIM : LS_OFF;
     nm[0] = 0;
     if (l == LAYER_FX) {
-        uint32_t held = perf_kill ? 0u : perf_held | perf_latched, e = blk ? (p >= 8u ? PF_SFLT + p - 8u : PF_M1 + p) : p;
+        uint32_t held = perf_kill ? 0u : perf_held | perf_latched,
+                 e = blk ? (p >= 8u ? PF_SHUF + p - 8u : p == 6u ? PF_FRZ : PF_M1 + p) : p;
         static const char *const TG[3] = {"TRK ALL", "TRK SYN", "TRK DRM"};
         if (blk && p == 7u) {
             str_cpy(nm, TG[pfx_tgt % 3u], 12);
             return LS_OFF;
         }
-        if (blk ? p >= NTRK && p < 8u : p >= PF_SFLT)
+        if (blk ? p == 7u : p >= PF_NW)
             return LS_OFF;
         if (blk && p < NTRK) {
             str_cpy(nm, "MUTE T1", 12);
             nm[6] = (char)('1' + p);
             return (held >> e) & 1u ? LS_MUTE : LS_OFF;
         }
-        str_cpy(nm, PF_NAME[e], 12);                    /* (0.9.14: a sweep's black key too) */
+        str_cpy(nm, PF_NAME[e], 12);                    /* (0.9.14: a sweep's black key too; 0.9.17 FREEZE, SHUFFLE) */
         return !((perf_avail() >> e) & 1u) ? LS_DIM : !((held >> e) & 1u) ? LS_OFF :
                ((perf_act >> e) & 1u) || ((PF_MIDI >> e) & 1u) ? LS_HELD : LS_WAIT;
     }
@@ -1024,7 +1055,20 @@ static void layer_cards(uint32_t l)
     char val[12];
     const char *unit;
     uint32_t c;
-    if (l == LAYER_FX) {                                /* (0.9.14) STEPS TRANSPOSE MUTATE FILTER: OFF dim at the left */
+    if (l == LAYER_FX && perf_gfocus() != PF_N) {       /* (0.9.17) a glitcher's key down: its four */
+        uint32_t x = perf_gx(perf_gfocus());
+        for (c = 0; c < 4u; c++) {
+            param_desc_t d = gx_desc(x, c);
+            int32_t v = perf_gp[x][c];
+            if (!d.max) {                               /* (TAPE: SCRATCH, once stopped; the empty card) */
+                draw_column(c, d.label, !d.label[0] ? "" : pf.mode == BM_TAPE && pf.state ? "TURN" : "-", "",
+                            d.label[0] && pf.mode == BM_TAPE && pf.state ? VAL(c) : T_DIM, -1, GX_IC[x][c]);
+                continue;
+            }
+            param_format(&d, v, val, &unit);
+            draw_column(c, d.label, val, unit, VAL(c), RATIO(&d, v), GX_IC[x][c]);
+        }
+    } else if (l == LAYER_FX) {                         /* (0.9.14) STEPS TRANSPOSE MUTATE FILTER: OFF dim at the left */
         static const char *const ST[5] = {"OFF", "1/2", "1/4", "1/8", "1 STEP"};
         static const char *const TR[8] = {"OFF", "+2ND", "+3RD", "+4TH", "+5TH", "+6TH", "+OCT", "-OCT"};
         static const char *const NM[4] = {"STEPS", "TRANSP", "MUTATE", "FILTER"};
@@ -1157,7 +1201,7 @@ static void layer_state(uint32_t l)
         lst_chip("MACROS", perf_m[0] | perf_m[1] | perf_m[2] | perf_m[3] ? "ON" : "OFF",
                  (perf_m[0] | perf_m[1] | perf_m[2] | perf_m[3]) != 0);
         for (e = 0; e < PF_M1; e++)                     /* (0.9.14: the effects on, a sweep still on its way back) */
-            if (((held >> e) & 1u) || (e >= PF_SFLT && pf.sw[e - PF_SFLT]))
+            if (((held >> e) & 1u) || ((PF_SWEEP >> e) & 1u && pf.sw[e - PF_SCRU]))
                 lst_chip(PF_NAME[e], 0, 1);
     } else if (l == LAYER_GLO) {                        /* the tracks, the DRUM groups, UNDO */
         for (k = 0; k < NTRK; k++) {
@@ -1216,11 +1260,15 @@ static void draw_layer(void)
 {
     uint32_t l = ui.layer % LAYER_N, sig = l * 7919u + ux.gen * 977u;
     layer_cards(l);
-    if (l == LAYER_FX)
+    if (l == LAYER_FX) {
+        uint32_t k;
         sig += (perf_kill ? 0u : perf_held | perf_latched) * 31u + perf_latch_on * 11u + perf_act * 131u + perf_avail() * 7u +
                ((uint32_t)perf_m[0] | (uint32_t)perf_m[1] << 8 | (uint32_t)perf_m[2] << 16 | (uint32_t)perf_m[3] << 24) * 5u +
-               (pf.sw[0] ? 1u : 0u) * 977u + (pf.sw[1] ? 2u : 0u) * 977u + (pf.sw[2] ? 4u : 0u) * 977u;
-    else if (l == LAYER_GLO)
+               (pf.sw[0] ? 1u : 0u) * 977u + (pf.sw[1] ? 2u : 0u) * 977u +
+               (perf_gfocus() + 1u) * 2971u + (uint32_t)(pf.mode == BM_TAPE && pf.state) * 6151u;
+        for (k = 0; k < 16u; k++)                       /* (0.9.17: a glitcher's key down, its knobs) */
+            sig = (sig ^ (uint8_t)perf_gp[k / 4u][k % 4u]) * 16777619u;
+    } else if (l == LAYER_GLO)
         sig += perf_solo * 31u + (uint32_t)song.g[G_CLOCK] * 5u +
                (uint32_t)(trk[0].p[P_MUTE] | trk[1].p[P_MUTE] << 1 | trk[2].p[P_MUTE] << 2 | trk[3].p[P_MUTE] << 3 |
                           trk[4].p[P_MUTE] << 4 | trk[5].p[P_MUTE] << 5) * 131u +

@@ -21,6 +21,8 @@
  *    of the transport (two bars), every kind of slice, no click (a 110 Hz sine), live back bit for bit; TAPE STOP:
  *    the pitch falling, silent after a beat, no click; the lane records and plays them.
  * Demos (WAV) into DEMO_DIR. TONIC removed REVERSE, FREEZE and OCT UP / DN (perform.c). */
+static unsigned pt_hushed;                         /* (0.9.17) blocks the silence path took (fx.c mix_silent) */
+#define HUSH_COUNT() (pt_hushed++)
 #define main hostsim_main
 #include "hostsim.c"
 #undef main
@@ -64,6 +66,7 @@ static void perf_reset(void)
 /* the stage alone on the test signal: samples [t0, t1); ev: press (+e + 1) / let go (-(e + 1)) at block bt */
 typedef struct { uint32_t t; int e; } ev_t;
 static int busy_seen;
+static uint8_t blk_cru[NT / CTL + 1];              /* (0.9.17) a block in a GLITCH CRUSH slice (its steps are the crusher's) */
 static void run(uint32_t bpm, int playing, const ev_t *ev, uint32_t nev, uint32_t t1)
 {
     uint32_t t, k = 0;
@@ -82,10 +85,12 @@ static void run(uint32_t bpm, int playing, const ev_t *ev, uint32_t nev, uint32_
         memcpy(out_r + t, in_r + t, CTL * 4);
         clk_pos = t % div_samples(2);              /* (the transport's 1/16 at the block's start, as events_block leaves it) */
         clk_n = t / div_samples(2);
+        blk_cru[t / CTL] = pf.mode == BM_GLT && pf.u.g.a == GA_CRU;
         if (perf_begin(CTL)) {
             busy_seen = 1;
             perf_block(out_l + t, out_r + t, CTL);
         }
+        blk_cru[t / CTL] |= pf.mode == BM_GLT && pf.u.g.a == GA_CRU;
     }
 }
 #define P16 5512u                                  /* a 1/16 at 120 BPM */
@@ -426,7 +431,8 @@ static int test_misc(void)
     char what[160];
     static const struct { const char *name; int e; uint32_t off; } C[] = {
         {"REPEAT 1/8", PF_R8, 30000}, {"REPEAT 1/16", PF_R16, 30000}, {"REPEAT 1/32", PF_R32, 30000},
-        {"GLITCH", PF_GLT, 170000}, {"TAPE STOP", PF_TAPE, 30000}};
+        {"GLITCH", PF_GLT, 170000}, {"TAPE STOP", PF_TAPE, 30000}, {"SHUFFLE", PF_SHUF, 220000},
+        {"FREEZE", PF_FRZ, 60000}};
     uint32_t c, t;
     int32_t own;
     test_signal(110, 16000, 110, 16000);
@@ -438,9 +444,11 @@ static int test_misc(void)
         run(133, 1, ev, 2, C[c].off + 9000);
         for (t = 1; t < C[c].off + 9000; t++) {
             int32_t d = abs(out_l[t] - out_l[t - 1]);
-            mx = d > mx ? d : mx;
+            if (!blk_cru[t / CTL] && !blk_cru[(t - 1u) / CTL])
+                mx = d > mx ? d : mx;
         }
-        snprintf(what, sizeof what, "no clicks: %s on a 110 Hz sine, in and out: largest step %d (sine %d)", C[c].name, mx, own);
+        snprintf(what, sizeof what, "no clicks: %s on a 110 Hz sine, in and out: largest step %d (sine %d)%s", C[c].name, mx, own,
+                 C[c].e == PF_GLT ? " (not in CRUSH)" : "");
         bad += check(what, mx <= 4 * own);
         bad += check("  back to the live signal, bit for bit", same(C[c].off + 3000, C[c].off + 9000));
     }
@@ -450,9 +458,12 @@ static int test_misc(void)
             in_r[t] = (t / 53u) & 1u ? 120000 : -120000;
         }
         {
-            ev_t e2[] = {{0, PF_SCRU + 1}, {0, PF_GLT + 1}, {90000, PF_R16 + 1}, {150000, PF_TAPE + 1}};
-            run(120, 1, e2, 4, 200000);
-            snprintf(what, sizeof what, "4x full scale through the CRUSH sweep + GLITCH, REPEAT, TAPE: peak %d (no wrap)",
+            ev_t e2[] = {{0, PF_SCRU + 1}, {0, PF_GLT + 1}, {90000, PF_R16 + 1}, {150000, PF_TAPE + 1}, {170000, PF_FRZ + 1},
+                         {190000, PF_SHUF + 1}};
+            perf_gp[GX_GLT][1] = 12;                /* (the repeats rising: up to 4x) */
+            run(120, 1, e2, 6, 200000);
+            perf_gp[GX_GLT][1] = 0;
+            snprintf(what, sizeof what, "4x full scale through the CRUSH sweep + GLITCH, REPEAT, TAPE, FREEZE, SHUFFLE: peak %d (no wrap)",
                      peak(out_l, 0, 200000) > peak(out_r, 0, 200000) ? peak(out_l, 0, 200000) : peak(out_r, 0, 200000));
             bad += check(what, peak(out_l, 0, 200000) < 300000 && peak(out_r, 0, 200000) < 300000);
         }
@@ -515,7 +526,7 @@ static uint64_t instr_now(void)
 }
 static double cost_run(int on)
 {
-    static const int ALL[] = {PF_GLT, PF_SFLT, PF_SCRU, PF_STHR, PF_M1 + 2};
+    static const int ALL[] = {PF_GLT, PF_SCRU, PF_STHR, PF_M1 + 2};
     uint32_t f, k;
     uint64_t i0;
     int32_t o[2 * CTL];
@@ -546,7 +557,7 @@ static int test_cost(void)
         printf("perform: cost: no instruction counter on this host\n");
         return 0;
     }
-    snprintf(what, sizeof what, "cost: the song %.0f instructions / sample idle, %.0f with GLITCH+FILTER+CRUSH+THROW+MUTE: +%.0f",
+    snprintf(what, sizeof what, "cost: the song %.0f instructions / sample idle, %.0f with GLITCH+CRUSH+THROW+MUTE: +%.0f",
              idle, on, on - idle);
     bad = check(what, on - idle < 400);
     printf("perform: cost: over the idle song: REPEAT 1/16 alone +%.0f (the layer's own stage)\n", rep - idle);
@@ -559,7 +570,7 @@ static void demo_at(uint32_t t)
     static const struct { uint32_t t; int e; } D[] = {     /* press +(e + 1), let go -(e + 1) */
         {88192, PF_R8 + 1}, {110080, -(PF_R8 + 1)}, {110080, PF_R16 + 1}, {121088, PF_R32 + 1},
         {126592, -(PF_R32 + 1)}, {132096, -(PF_R16 + 1)}, {132096, PF_GLT + 1}, {220288, -(PF_GLT + 1)},
-        {220288, PF_SFLT + 1}, {308480, -(PF_SFLT + 1)}, {330496, PF_TAPE + 1}, {352512, -(PF_TAPE + 1)},
+        {220288, PF_SHUF + 1}, {308480, -(PF_SHUF + 1)}, {330496, PF_TAPE + 1}, {352512, -(PF_TAPE + 1)},
         {374528, PF_SCRU + 1}, {418560, -(PF_SCRU + 1)}, {440896, PF_M1 + 1}, {462848, -(PF_M1 + 1)},
         {418560, PF_STHR + 1}, {440576, -(PF_STHR + 1)}};
     uint32_t i;
@@ -581,7 +592,7 @@ static void demos(const char *dir)
     for (t = 0; t < NT - 4096u; t++)
         wav_put(f, song_l[t], song_r[t]);
     fclose(f);
-    printf("perform: demo %s (REPEAT 1/8, a 1/16 -> 1/32 roll, GLITCH, FILTER, TAPE STOP, CRUSH, THROW, MUTE 1)\n", path);
+    printf("perform: demo %s (REPEAT 1/8, a 1/16 -> 1/32 roll, GLITCH, SHUFFLE, TAPE STOP, CRUSH, THROW, MUTE 1)\n", path);
 }
 
 /* ------------------------------------------------- 9. punch-in MIDI --- */
@@ -896,45 +907,18 @@ static int test_sweeps(void)
     uint32_t bar = 4u * 22050u, t, k;
     int32_t q, h, e, f;
     test_signal(440, 12000, 277, 9000);
-    fresh(120);                                     /* FILTER: 2 bars to the high-pass's end on an S curve */
-    perf_press(PF_SFLT, 1);
-    blocks(0, bar / 2u);
-    q = pf.ss[0];
-    blocks(bar / 2u, bar);
-    h = pf.ss[0];
-    blocks(bar, 2u * bar - 2u * CTL);
-    e = perf_djf;
-    blocks(2u * bar - 2u * CTL, 2u * bar + CTL);
-    f = perf_djf;
-    snprintf(what, sizeof what, "FILTER sweep at 120 BPM: a quarter of the way %d (S: < 8192), half %d, 2 bars: DJ FILTER %d -> %d",
-             q, h, e, f);
-    ok = q > 4600 && q < 5600 && h > 16000 && h < 16800 && e < 63 && e > 55 && f == 63 && pf.sw[0] == 1u << 24;
-    bad += check(what, ok);
-    perf_press(PF_SFLT, 0);                         /* let go: a beat back */
-    blocks(2u * bar + CTL, 2u * bar + CTL + 11008u);
-    h = perf_djf;
-    blocks(2u * bar + CTL + 11008u, 2u * bar + 22050u + 2u * CTL);
-    snprintf(what, sizeof what, "  let go: half way down after half a beat (%d), dry after a beat (%d)", h, perf_djf);
-    bad += check(what, h > 25 && h < 38 && !perf_djf && !pf.sw[0]);
-    fresh(90);                                      /* 90 BPM: 2 bars are 235200 samples */
-    perf_press(PF_SFLT, 1);
-    blocks(0, 223000u);
-    ok = pf.sw[0] < (1u << 24);
-    blocks(223000u, 236000u);
-    bad += check("  at 90 BPM: not there before 2 bars of 90 (musically timed), there after", ok && pf.sw[0] == 1u << 24);
-    perf_press(PF_SFLT, 0);
-    fresh(120);                                     /* the FILTER macro and the sweep: the further one plays */
+    fresh(120);                                     /* (0.9.17: no FILTER sweep) the FILTER macro: the DJ FILTER's low-pass */
     perf_m[3] = 50;
     blocks(0, CTL);
     ok = perf_djf == -32;
-    perf_press(PF_SFLT, 1);
-    blocks(CTL, 2u * bar + 2u * CTL);
-    ok &= perf_djf == 63;
-    perf_press(PF_SFLT, 0);
-    blocks(2u * bar, 3u * bar);
-    ok &= perf_djf == -32;
+    perf_m[3] = 100;
+    blocks(CTL, 2u * CTL);
+    ok &= perf_djf == -64;
     perf_m[3] = 0;
-    bad += check("  with the FILTER macro at 50 %: its low-pass (-32), the sweep's high-pass over it, back to -32", ok);
+    blocks(2u * CTL, 3u * CTL);
+    ok &= !perf_djf;
+    bad += check("FILTER macro (the layer's one filter, 0.9.17): 50 % -> DJ FILTER -32, 100 % -> -64, off -> 0", ok);
+    (void)q; (void)h; (void)e; (void)f;
     {   /* CRUSH: the bits and the rate fall as it rises; let go, a beat and the ramp later the input bit for bit */
         ev_t ev[] = {{0, PF_SCRU + 1}, {2u * 88200u, -(PF_SCRU + 1)}};
         int32_t e1, e2;
@@ -949,7 +933,7 @@ static int test_sweeps(void)
     {
         static uint8_t ga[2][64], seen[2][64];
         static int32_t o1[NT];
-        uint32_t r, n[6] = {0}, agree = 1, both = 0;
+        uint32_t r, n[8] = {0}, agree = 1, both = 0;
         for (r = 0; r < 2u; r++) {
             fresh(120);
             test_signal(440, 12000, 277, 9000);
@@ -958,7 +942,7 @@ static int test_sweeps(void)
                     perf_press(PF_GLT, 1);
                 blocks(t, t + CTL);
                 if (pf.mode == BM_GLT && pf.gs < 48u && pf.gs != (r ? 8u : 1u)) {   /* (its first: live, nothing before) */
-                    ga[r][pf.gs] = pf.ga;
+                    ga[r][pf.gs] = pf.u.g.a;
                     seen[r][pf.gs] = 1;
                 }
             }
@@ -972,13 +956,14 @@ static int test_sweeps(void)
                 agree &= ga[0][k] == ga[1][k];
             }
         for (k = 2; k < 34u; k++) {
-            n[ga[0][k] % 6u]++;
+            n[ga[0][k] % 8u]++;
             agree &= ga[0][k] == ga[0][k + 32u] || k + 32u >= 48u;
         }
         snprintf(what, sizeof what, "GLITCH: pressed in step 1 or 8, the same slices at the same steps (%u compared), "
-                 "a 2-bar cycle; in 2 bars: live %u repeat %u reverse %u up %u down %u gate %u", both, n[0], n[1], n[2],
-                 n[3], n[4], n[5]);
-        bad += check(what, agree && both >= 36u && n[0] >= 8u && n[0] <= 22u && n[1] && n[2] && n[3] && n[4] && n[5]);
+                 "a 2-bar cycle; in 2 bars: live %u repeat %u reverse %u up %u down %u gate %u skip %u crush %u", both,
+                 n[0], n[1], n[2], n[3], n[4], n[5], n[6], n[7]);
+        bad += check(what, agree && both >= 36u && n[0] >= 8u && n[0] <= 22u && n[1] && n[1] + n[2] + n[3] + n[4] >= 6u &&
+                     n[5] + n[6] + n[7] >= 3u);
         fresh(120);
         test_signal(440, 12000, 277, 9000);
         perf_press(PF_GLT, 1);
@@ -1039,7 +1024,7 @@ static int test_sweeps(void)
         for (i = 64u * s16; i < 128u * s16; i += CTL) {
             st = ((i - 64u * s16) / s16) & 63u;
             mix_block(o, CTL);
-            if (st == 5u) on5 = (perf_act & PF_BIT(PF_SCRU)) && pf.sw[1];
+            if (st == 5u) on5 = (perf_act & PF_BIT(PF_SCRU)) && pf.sw[0];
             if (st == 10u) on10 = (perf_act & PF_BIT(PF_SCRU)) != 0u;
             if (st == 20u && i % s16 > 2u * CTL) ok2 &= pf.mode == BM_GLT;   /* (on the lane's own step) */
             if (st == 30u && i % s16 > s16 / 2u) ok2 &= pf.mode == BM_TAPE;
@@ -1049,6 +1034,397 @@ static int test_sweeps(void)
         memset(pfx_lane, 0, sizeof pfx_lane);
         bad += check("punch-in lane (0.9.14): a sweep (CRUSH), GLITCH, TAPE STOP recorded (12, 14, 15), played back", ok2 && on5 && !on10);
     }
+    return bad;
+}
+
+/* ----------------------------------------------- 11. the glitcher (0.9.17) --- */
+static void gp_reset(void)
+{
+    static const int8_t D[4][4] = {{50, 0, 0, 1}, {0, 4, 0, 0}, {60, 2, 20, 1}, {50, 0, 30, 2}};
+    memcpy((void *)perf_gp, D, sizeof D);
+}
+static uint32_t xings(const int32_t *x, uint32_t a, uint32_t b)   /* rising zero crossings, with a +-400 hysteresis */
+{
+    uint32_t c = 0, up = x[a] > 0;
+    for (; a < b; a++)
+        if (!up && x[a] > 400) { up = 1; c++; }
+        else if (up && x[a] < -400) up = 0;
+    return c;
+}
+static void glide_signal(void)                     /* (SHUFFLE) a tone a 1/16 at 120 BPM, each another, phase on */
+{
+    double ph = 0;
+    uint32_t t;
+    for (t = 0; t < NT; t++) {
+        ph += 2 * M_PI * 220.0 * pow(2.0, (double)((t / P16) % 7u) * 2.0 / 12.0) / FS;
+        in_l[t] = (int32_t)lrint(11000 * sin(ph));
+        in_r[t] = (int32_t)lrint(9000 * sin(ph + 0.3));
+    }
+}
+static int test_glitcher(void)
+{
+    int bad = 0, ok;
+    char what[240];
+    uint32_t t, k, v;
+    /* ---- GLITCH */
+    gp_reset();
+    test_signal(440, 12000, 277, 9000);
+    perf_gp[GX_GLT][0] = 0;
+    fresh(120);
+    perf_press(PF_GLT, 1);
+    blocks(0, 40u * P16);
+    perf_press(PF_GLT, 0);
+    blocks(40u * P16, 41u * P16);
+    bad += check("GLITCH DENS 0: no 1/16 glitched, the input bit for bit", same(0, 41u * P16));
+    {
+        uint32_t pass = 0, n = 0;
+        perf_gp[GX_GLT][0] = 100;
+        fresh(120);
+        perf_press(PF_GLT, 1);
+        for (t = 0; t < 40u * P16; t += CTL) {
+            blocks(t, t + CTL);
+            if (pf.mode == BM_GLT && pf.gs >= 3u && pf.gph < CTL) {
+                n++;
+                pass += pf.u.g.a == GA_PASS;
+            }
+        }
+        perf_press(PF_GLT, 0);
+        snprintf(what, sizeof what, "GLITCH DENS 100: every 1/16 glitched once there is a 1/16 to read (%u of %u live)", pass, n);
+        bad += check(what, !pass && n >= 30u);
+    }
+    {
+        static uint8_t A[3][64];
+        static const int8_t VR[3] = {1, 2, 1};
+        memset(A, 0xFF, sizeof A);
+        for (v = 0; v < 3u; v++) {
+            gp_reset();
+            perf_gp[GX_GLT][3] = VR[v];
+            fresh(120);
+            perf_press(PF_GLT, 1);
+            for (t = 0; t < 40u * P16; t += CTL) {
+                blocks(t, t + CTL);
+                if (pf.mode == BM_GLT && pf.gs >= 3u && pf.gs < 64u && pf.gph < CTL)
+                    A[v][pf.gs] = pf.u.g.a;
+            }
+            perf_press(PF_GLT, 0);
+        }
+        bad += check("GLITCH VARI: VARI 2 another pattern, VARI 1 again the same one", !memcmp(A[0], A[2], 64) && memcmp(A[0], A[1], 64));
+    }
+    {   /* PITCH: a repeat's k-th segment k * PITCH semitones up (or down), two octaves at most */
+        int32_t r[2][4];
+        uint32_t i;
+        for (i = 0; i < 2u; i++) {
+            perf_gp[GX_GLT][1] = (int8_t)(i ? -12 : 12);
+            pf.u.g.a = GA_RPT;
+            pf.u.g.l = 1000;
+            pf.u.g.g0 = 20000;
+            for (k = 0; k < 4u; k++) {
+                pf.u.g.k = k;
+                perf_glt_seg();
+                r[i][k] = pf.u.g.rate;
+            }
+        }
+        snprintf(what, sizeof what, "GLITCH PITCH +12: the repeats at x%.2f x%.2f x%.2f x%.2f; -12: x%.2f x%.2f x%.2f x%.2f",
+                 r[0][0] / 65536.0, r[0][1] / 65536.0, r[0][2] / 65536.0, r[0][3] / 65536.0, r[1][0] / 65536.0,
+                 r[1][1] / 65536.0, r[1][2] / 65536.0, r[1][3] / 65536.0);
+        bad += check(what, r[0][0] == 65536 && r[0][1] == 131072 && r[0][2] == 262144 && r[0][3] == 262144 &&
+                     r[1][0] == 65536 && r[1][1] == 32768 && r[1][2] == 16384 && r[1][3] == 16384);
+        gp_reset();
+    }
+    {   /* every SIZE and PITCH on a full-scale input: bounded */
+        int32_t pk = 0;
+        for (t = 0; t < NT; t++) {
+            in_l[t] = (t / 37u) & 1u ? 120000 : -120000;
+            in_r[t] = (t / 53u) & 1u ? 120000 : -120000;
+        }
+        for (v = 0; v < 8u; v++) {
+            gp_reset();
+            perf_gp[GX_GLT][0] = 100;
+            perf_gp[GX_GLT][1] = (int8_t)(v & 1u ? 12 : -12);
+            perf_gp[GX_GLT][2] = (int8_t)(v / 2u);
+            fresh(120);
+            perf_press(PF_GLT, 1);
+            blocks(0, 24u * P16);
+            perf_press(PF_GLT, 0);
+            pk = peak(out_l, 0, 24u * P16) > pk ? peak(out_l, 0, 24u * P16) : pk;
+            pk = peak(out_r, 0, 24u * P16) > pk ? peak(out_r, 0, 24u * P16) : pk;
+        }
+        snprintf(what, sizeof what, "GLITCH every SIZE, PITCH +-12, DENS 100, 4x full scale in: peak %d (the input's 120000)", pk);
+        bad += check(what, pk <= 140000);
+        gp_reset();
+    }
+    /* ---- SHUFFLE */
+    test_signal(440, 12000, 277, 9000);
+    perf_gp[GX_SHUF][0] = 0;
+    fresh(120);
+    perf_press(PF_SHUF, 1);
+    blocks(0, 40u * P16);
+    perf_press(PF_SHUF, 0);
+    blocks(40u * P16, 41u * P16);
+    bad += check("SHUFFLE AMOUNT 0: nothing moved, the input bit for bit", same(0, 41u * P16));
+    {   /* AMOUNT 100, SPEED 0: each moved 1/16 is one of the bar's, as it was (ADPCM, mono): its SNR */
+        static uint8_t kd[2][64], kk[2][64];
+        static int32_t o1[NT];
+        double se = 0, sr = 0, wse = 0;
+        uint32_t r, moved = 0, beat = 0, far = 0, agree = 1, cmp = 0;
+        for (r = 0; r < 2u; r++) {
+            gp_reset();
+            perf_gp[GX_SHUF][0] = 100;
+            perf_gp[GX_SHUF][2] = 0;
+            glide_signal();
+            fresh(120);
+            memset(kd[r], 0xFF, 64);
+            for (t = 0; t < 52u * P16; t += CTL) {
+                if (t == (r ? (7u * P16 / CTL + 10u) * CTL : 992u))
+                    perf_press(PF_SHUF, 1);
+                blocks(t, t + CTL);
+                if (pf.mode == BM_SHUF && pf.gph < CTL && pf.gs < 64u) {
+                    kd[r][pf.gs] = pf.u.s.r[0].live ? 0xFEu : (uint8_t)((pf.gs - pf.u.s.j0) & 31u);
+                    kk[r][pf.gs] = pf.u.s.kind;
+                }
+            }
+            perf_press(PF_SHUF, 0);
+            if (!r)
+                memcpy(o1, out_l, sizeof o1);
+        }
+        for (k = 26u; k < 50u; k++) {               /* (both with a bar behind them) */
+            cmp++;
+            agree &= kd[0][k] == kd[1][k] && kk[0][k] == kk[1][k];
+        }
+        for (k = 18u; k < 50u; k++) {
+            uint32_t d = kd[0][k], a = k * P16 + 256u, b = (k + 1u) * P16 - 192u, lag;
+            if (d == 0xFEu || d == 0xFFu)
+                continue;
+            moved++;
+            beat += d % 4u == 0u;
+            far += d > 8u;
+            {   /* (the best of a few samples' lag: the coder's half rate and its reader's interpolation, ~4) */
+                double be = 0, bq = 1;
+                for (lag = 0; lag < 8u; lag++) {
+                    double e = 0, q = 0;
+                    for (t = a; t < b; t++) {
+                        double ref = (in_l[t - d * P16 - lag] + in_r[t - d * P16 - lag]) / 2.0, x = o1[t] - ref;
+                        e += x * x;
+                        q += ref * ref;
+                    }
+                    if (!lag || e / q < be / bq) {
+                        be = e;
+                        bq = q;
+                    }
+                }
+                se += be;
+                sr += bq;
+                wse = be / bq > wse ? be / bq : wse;   /* (the worst 1/16) */
+            }
+        }
+        snprintf(what, sizeof what, "SHUFFLE AMOUNT 100: %u of 32 1/16s moved (%u by whole beats, %u from past half a bar), "
+                 "each the bar's own 1/16 (SNR %.1f dB, the worst %.1f: mono 4-bit)", moved, beat, far, 10 * log10(sr / (se ? se : 1)),
+                 -10 * log10(wse ? wse : 1e-9));
+        bad += check(what, moved >= 20u && beat && far && 10 * log10(sr / (se ? se : 1)) > 28.0 && -10 * log10(wse ? wse : 1e-9) > 24.0);
+        snprintf(what, sizeof what, "  pressed on step 2 or 8: the same chunks once both have a bar (%u compared)", cmp);
+        bad += check(what, agree && cmp == 24u);
+    }
+    {   /* SPEED 100, every SIZE, 4x full scale: bounded; at 70 BPM too (less of the bar fits) */
+        int32_t pk = 0;
+        uint32_t kinds = 0;
+        for (t = 0; t < NT; t++) {
+            in_l[t] = (t / 37u) & 1u ? 120000 : -120000;
+            in_r[t] = (t / 53u) & 1u ? 120000 : -120000;
+        }
+        for (v = 0; v < 4u; v++) {
+            gp_reset();
+            perf_gp[GX_SHUF][0] = 100;
+            perf_gp[GX_SHUF][2] = 100;
+            perf_gp[GX_SHUF][1] = (int8_t)(v % 3u);
+            fresh(v == 3u ? 70 : 120);
+            perf_press(PF_SHUF, 1);
+            for (t = 0; t < 48u * P16; t += CTL) {
+                blocks(t, t + CTL);
+                kinds |= 1u << pf.u.s.kind;
+            }
+            perf_press(PF_SHUF, 0);
+            pk = peak(out_l, 0, 48u * P16) > pk ? peak(out_l, 0, 48u * P16) : pk;
+            pk = peak(out_r, 0, 48u * P16) > pk ? peak(out_r, 0, 48u * P16) : pk;
+        }
+        snprintf(what, sizeof what, "SHUFFLE SPEED 100 (half, double, stutter: %s), SIZE 1/4 1/8 1/16, 70 BPM: 4x full scale, peak %d",
+                 kinds == 15u ? "all" : "NOT ALL", pk);
+        bad += check(what, kinds == 15u && pk <= 140000);
+        gp_reset();
+    }
+    /* ---- FREEZE */
+    {
+        uint32_t f0, c0, c1;
+        int32_t pk, tail;
+        for (v = 0; v < 2u; v++) {
+            gp_reset();
+            perf_gp[GX_FRZ][2] = 0;                 /* (SPRAY 0: every grain at PITCH) */
+            perf_gp[GX_FRZ][1] = (int8_t)(v ? 12 : 0);
+            test_signal(440, 12000, 440, 12000);
+            fresh(120);
+            perf_press(PF_FRZ, 1);
+            for (t = 0; !pf.state && t < 40000u; t += CTL)
+                blocks(t, t + CTL);
+            f0 = t;
+            for (k = f0; k < NT; k++)
+                in_l[k] = in_r[k] = 0;              /* (the input silent once frozen) */
+            blocks(f0, f0 + 2u * 44100u);
+            if (!v)
+                c0 = xings(out_l, f0 + 4410u, f0 + 4410u + 44100u);
+            else
+                c1 = xings(out_l, f0 + 4410u, f0 + 4410u + 44100u);
+            pk = peak(out_l, f0 + 4410u, f0 + 2u * 44100u);
+            perf_press(PF_FRZ, 0);
+            blocks(f0 + 2u * 44100u, f0 + 2u * 44100u + 4096u);
+            tail = peak(out_l, f0 + 2u * 44100u + 512u, f0 + 2u * 44100u + 4096u);
+            if (!v) {
+                snprintf(what, sizeof what, "FREEZE: an eighth kept (%u samples), held as grains with the input silent: "
+                         "peak %d, %u crossings a second (440 Hz)", f0, pk, c0);
+                bad += check(what, f0 > 11025u && f0 < 11025u + 6000u && pk > 6000 && pk < 16000 && c0 > 400u && c0 < 480u);
+                bad += check("  let go: the (silent) input again", !tail && !pf.busy);
+            }
+        }
+        snprintf(what, sizeof what, "FREEZE PITCH +12: %u crossings a second (880 Hz)", c1);
+        bad += check(what, c1 > 820u && c1 < 940u);
+        pk = 0;                                     /* 4x full scale, DENS SPRAY 100, every SIZE, PITCH +12 */
+        for (t = 0; t < NT; t++) {
+            in_l[t] = (t / 37u) & 1u ? 120000 : -120000;
+            in_r[t] = (t / 53u) & 1u ? 120000 : -120000;
+        }
+        for (v = 0; v < 5u; v++) {
+            gp_reset();
+            perf_gp[GX_FRZ][0] = 100;
+            perf_gp[GX_FRZ][1] = 12;
+            perf_gp[GX_FRZ][2] = 100;
+            perf_gp[GX_FRZ][3] = (int8_t)v;
+            fresh(120);
+            perf_press(PF_FRZ, 1);
+            blocks(0, 60000u);
+            perf_press(PF_FRZ, 0);
+            pk = peak(out_l, 0, 60000u) > pk ? peak(out_l, 0, 60000u) : pk;
+        }
+        snprintf(what, sizeof what, "FREEZE every SIZE, DENS and SPRAY 100, PITCH +12, 4x full scale: peak %d", pk);
+        bad += check(what, pk <= 150000);
+        gp_reset();
+    }
+    /* ---- TAPE STOP: TIME, CURVE; the scratch */
+    {
+        int32_t pk[3], tl[3], mv, rest, mx = 0;
+        static const int8_t CV[3] = {0, -100, 100};
+        test_signal(880, 12000, 880, 12000);
+        for (v = 0; v < 3u; v++) {
+            gp_reset();
+            perf_gp[GX_TAPE][1] = 2;                /* (TIME 1/16: 5512 samples) */
+            perf_gp[GX_TAPE][2] = CV[v];
+            fresh(120);
+            perf_press(PF_TAPE, 1);
+            blocks(0, 2u * P16 + 512u);
+            pk[v] = peak(out_l, 0, P16 / 2u);
+            tl[v] = peak(out_l, P16 + 64u, 2u * P16 + 512u);
+            perf_press(PF_TAPE, 0);
+        }
+        snprintf(what, sizeof what, "TAPE STOP TIME 1/16: stopped within it, CURVE 0 / -100 / +100 (silent after: %d %d %d)",
+                 tl[0], tl[1], tl[2]);
+        bad += check(what, pk[0] > 8000 && !tl[0] && !tl[1] && !tl[2] && pf.state);
+        gp_reset();
+        fresh(120);                                 /* the scratch: KNOB 1 a detent every 8 blocks, on, back, then at rest */
+        test_signal(440, 12000, 440, 12000);
+        perf_press(PF_TAPE, 1);
+        blocks(0, 30000u);
+        ok = pf.mode == BM_TAPE && pf.state;
+        for (t = 30000u; t < 30000u + 512u * CTL; t += CTL) {
+            uint32_t b = (t - 30000u) / CTL;
+            if (b % 8u == 0u && b < 384u)
+                perf_scr += b < 192u ? 1u : (uint32_t)-1;
+            blocks(t, t + CTL);
+        }
+        mv = peak(out_l, 30000u, 30000u + 384u * CTL);
+        rest = peak(out_l, 30000u + 448u * CTL, 30000u + 512u * CTL);
+        for (t = 30001u; t < 30000u + 512u * CTL; t++)
+            mx = abs(out_l[t] - out_l[t - 1]) > mx ? abs(out_l[t] - out_l[t - 1]) : mx;
+        perf_press(PF_TAPE, 0);
+        snprintf(what, sizeof what, "TAPE stopped, KNOB 1 the hand: the record moves (peak %d), at rest silent (%d), "
+                 "no click (largest step %d)", mv, rest, mx);
+        bad += check(what, ok && mv > 3000 && rest < 64 && mx < 1500);
+        gp_reset();
+    }
+    /* ---- the knobs follow the glitcher whose key is down */
+    perf_reset();
+    perf_press(PF_GLT, 1);
+    ok = perf_gfocus() == PF_GLT;
+    perf_press(PF_FRZ, 1);
+    ok &= perf_gfocus() == PF_FRZ;
+    perf_press(PF_FRZ, 0);
+    ok &= perf_gfocus() == PF_GLT;
+    perf_press(PF_GLT, 0);
+    ok &= perf_gfocus() == PF_N;
+    perf_latch_on = 1;
+    perf_press(PF_SHUF, 1);
+    ok &= perf_gfocus() == PF_SHUF && perf_latched == PF_BIT(PF_SHUF);
+    perf_press(PF_SHUF, 0);
+    ok &= perf_gfocus() == PF_N && perf_latched == PF_BIT(PF_SHUF);
+    perf_press(PF_R16, 1);
+    ok &= perf_gfocus() == PF_N;
+    perf_press(PF_R16, 0);
+    perf_latch_on = 0;
+    perf_reset();
+    bad += check("the knobs: the glitcher whose key is down (the last pressed), FX LATCH too; REPEAT none", ok);
+    /* ---- the lane: SHUFFLE recorded (11, the FILTER sweep's), played back; FREEZE not */
+    {
+        uint32_t s16, st, i, ok2 = 1, on = 0;
+        int32_t o[2 * CTL];
+        song_setup();
+        memset(pfx_lane, 0, sizeof pfx_lane);
+        s16 = beat_samples() / 4u;
+        song.rec = 1;
+        transport_req = 1;
+        for (i = 0; i < 64u * s16; i += CTL) {
+            st = (i / s16) & 63u;
+            if (st == 40u && !(perf_held & PF_BIT(PF_SHUF))) perf_press(PF_SHUF, 1);
+            if (st == 44u && (perf_held & PF_BIT(PF_SHUF))) perf_press(PF_SHUF, 0);
+            if (st == 50u && !(perf_held & PF_BIT(PF_FRZ))) perf_press(PF_FRZ, 1);
+            if (st == 52u && (perf_held & PF_BIT(PF_FRZ))) perf_press(PF_FRZ, 0);
+            mix_block(o, CTL);
+        }
+        song.rec = 0;
+        for (st = 0; st < 64u; st++)
+            ok2 &= pfx_lane_at(st) == (st >= 40u && st < 44u ? 11u : 0u);
+        for (i = 64u * s16; i < 128u * s16; i += CTL) {
+            st = ((i - 64u * s16) / s16) & 63u;
+            mix_block(o, CTL);
+            if (st == 42u) on |= pf.mode == BM_SHUF;
+            if (st == 51u) ok2 &= pf.mode != BM_FRZ;
+        }
+        transport_req = 2;
+        mix_block(o, CTL);
+        memset(pfx_lane, 0, sizeof pfx_lane);
+        bad += check("punch-in lane (0.9.17): SHUFFLE recorded (11), played back on its steps; FREEZE not recorded", ok2 && on);
+    }
+    /* ---- at rest: once a glitcher is let go and stopped, the silence path again (0.9.16) */
+    {
+        int32_t o[2 * CTL];
+        uint32_t i, h0;
+        song_setup();
+        transport_req = 2;
+        for (i = 0, h0 = pt_hushed; i < 20u * FS && pt_hushed - h0 < 64u; i += CTL)   /* (every tail out first) */
+            mix_block(o, CTL);
+        ok = pt_hushed - h0 >= 64u;
+        for (v = 0; v < 4u; v++) {
+            static const uint8_t G[4] = {PF_GLT, PF_TAPE, PF_SHUF, PF_FRZ};
+            perf_press(G[v], 1);
+            for (i = 0; i < FS / 2u; i += CTL)
+                mix_block(o, CTL);
+            ok &= pf.mode != BM_NONE;
+            perf_press(G[v], 0);
+            for (i = 0; i < FS / 4u; i += CTL)
+                mix_block(o, CTL);
+            h0 = pt_hushed;
+            for (i = 0; i < FS / 10u; i += CTL)
+                mix_block(o, CTL);
+            ok &= pf.mode == BM_NONE && !pf.busy && !sl_lent && !perf_begin(CTL) && pt_hushed - h0 >= FS / 10u / CTL;
+        }
+        bad += check("at rest: each glitcher let go (stopped): the layer idle, the buffer back, the silence path every block", ok);
+    }
+    gp_reset();
     return bad;
 }
 
@@ -1064,6 +1440,7 @@ int main(int argc, char **argv)
     bad += test_misc();
     bad += test_pfx();
     bad += test_sweeps();
+    bad += test_glitcher();
     bad += test_cost();
     if (argc > 1)
         demos(argv[1]);

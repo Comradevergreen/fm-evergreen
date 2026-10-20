@@ -211,6 +211,13 @@ static void ui_power_on(void)
     perf_solo = 0;
     memset(&lys, 0, sizeof lys);
     perf_m[0] = perf_m[1] = perf_m[2] = perf_m[3] = 0;   /* (0.9.14: the macros off, nothing to revert) */
+    {   /* (0.9.17) no glitcher key down, its knobs at their defaults, the buffer free */
+        static const int8_t GP0[4][4] = {{50, 0, 0, 1}, {0, 4, 0, 0}, {60, 2, 20, 1}, {50, 0, 30, 2}};
+        perf_down = 0;
+        memcpy((void *)perf_gp, GP0, sizeof GP0);
+        pf.mode = BM_NONE;
+        pf.state = 0;
+    }
     pm_on = 0;
     settings_hold = HOLD_DEF;
     fm1_in.buttons = fm1_in.notes = 0;
@@ -3730,7 +3737,8 @@ static int test_layer(void)
         for (i = 0; i < 15u; i++)                                     /* the other effects (F3 .. F5): breathe */
             ok &= i == 1u || ((a ^ b2) >> white(i)) & 1u;
         ok &= !((a | b2) >> white(15) & 1u);                          /* G5: no effect, dark */
-        ok &= ((a ^ b2) >> key_at(1, 0)) & 1u && !((a | b2) >> key_at(1, 6) & 1u);   /* a mute breathes, a spare black dark */
+        ok &= ((a ^ b2) >> key_at(1, 0)) & 1u && !((a | b2) >> key_at(1, 7) & 1u);   /* a mute breathes, a spare black dark */
+        ok &= ((a ^ b2) >> key_at(1, 6)) & 1u && ((a ^ b2) >> key_at(1, 8)) & 1u;     /* (0.9.17) FREEZE G#4, SHUFFLE C#5 */
         song.g[G_BPM] = 72;
         a = leds_at(0); b2 = leds_at(250);
         ok &= !((a | b2) >> white(0) & 1u);                          /* 1/8: too long at 72 */
@@ -3738,7 +3746,7 @@ static int test_layer(void)
         song.g[G_BPM] = 120;
     }
     key_up(white(1)); btn_up(B_FX); frame();
-    bad += check("map LEDs: held lit, the 15 effects breathe, G5 and a too-long REPEAT dark", ok);
+    bad += check("map LEDs: held lit, the 15 effects, FREEZE and SHUFFLE breathe, G5, A#4 and a too-long REPEAT dark", ok);
     usb.config = 0;
     return bad;
 }

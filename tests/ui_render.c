@@ -637,7 +637,7 @@ enum { S_HOME, S_HOME_IDLE, S_MESSAGE, S_MESSAGE_KEY, S_MESSAGE_NOFILE, S_PRESET
        S_CONFIRM_SEQ, S_CONFIRM_PROJ, S_CONFIRM_USER, S_CONFIRM_PAT, S_CONFIRM_MOTION, S_CONFIRM_ERASE, S_GEN, S_GEN_PARTS,
        S_MENU, S_MENU_SPEAKER, S_ABOUT, S_ABOUT_REC, S_ABOUT_CREDITS, S_ABOUT_END, S_ABOUT_PROFILE, S_ABOUT_PROFILE2, S_UBOOT, S_CALIBRATION, S_SPLASH,
        S_BATT0, S_BATT1, S_BATT2, S_BATT3, S_BATT_USB, S_MOTION_REC, S_MOTION_OFF, S_MOTION_CARD, S_SONG_HOME,
-       S_FX_PEEK, S_FX_HELD, S_FX_WAIT, S_FX_HARM, S_MENU_HOLD, S_MENU_LEDS, S_MENU_END, S_MENU_SYSTEM, S_MENU_SLIDE, S_REVERB, S_REVERB_RESO,
+       S_FX_PEEK, S_FX_HELD, S_FX_WAIT, S_FX_HARM, S_FX_GLT, S_FX_SCR, S_FX_SHUF, S_FX_FRZ, S_MENU_HOLD, S_MENU_LEDS, S_MENU_END, S_MENU_SYSTEM, S_MENU_SLIDE, S_REVERB, S_REVERB_RESO,
        S_GLO_PEEK, S_GLO_ACTIVE, S_GLO_EXT, S_SCL_PEEK, S_SCL_ACTIVE, S_EDIT_PEEK, S_EDIT_ACTIVE, S_EDIT_USER, S_EDIT_DRUM, S_LAYER_HINT, S_LAYER_LOCK, S_LAYER_LOCK_FX, S_LAYER_SONG, S_LAYER_SONG_CHAIN,
        S_SEQ_TOOLS, S_SEQ_TOOLS_DRUM, S_SEQ_TOOLS_SONG,
        S_LENTE_PAT, S_LENTE_PAT_DRUM, S_LENTE_STRETCH, S_LENTE_BAR, S_LENTE_BAR_DRUM, S_LENTE_STEP, S_LENTE_STEP_COMP,
@@ -673,7 +673,7 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "message", "mes
     "edit_noise", "alg_1", "alg_2", "alg_3", "alg_4", "alg_5", "alg_6", "alg_7", "alg_8", "op_level", "fm6_alg_01", "fm6_alg_05", "fm6_alg_22", "fm6_alg_32", "drumx", "drumx_hit", "dx_sound", "dx_sound2", "confirm_seq", "confirm_project", "confirm_user", "confirm_pattern",
     "confirm_motion", "confirm_erase", "gen", "gen_parts", "menu", "menu_speaker", "about", "about_rec", "about_credits", "about_end", "about_profile", "about_profile2", "uboot", "calibration", "splash",
     "batt_0", "batt_1", "batt_2", "batt_3", "batt_usb", "motion_rec", "motion_off", "motion_card", "song_home",
-    "perform_peek", "perform_held", "perform_wait", "perform_harm", "menu_hold", "menu_leds", "menu_end", "menu_system", "menu_slide", "reverb_spring", "reverb_reso",
+    "perform_peek", "perform_held", "perform_wait", "perform_harm", "perform_glitch", "perform_scratch", "perform_shuffle", "perform_freeze", "menu_hold", "menu_leds", "menu_end", "menu_system", "menu_slide", "reverb_spring", "reverb_reso",
     "layer_glo_peek", "layer_glo_active", "layer_glo_ext", "layer_scl_peek", "layer_scl_active", "layer_edit_peek",
     "layer_edit_active", "layer_edit_user", "layer_edit_drum", "layer_hint", "layer_lock", "layer_lock_fx", "layer_song", "layer_song_chain",
     "layer_seq_tools", "layer_seq_tools_drum", "layer_seq_tools_song",
@@ -1271,7 +1271,7 @@ static void setup(int s)
     case S_LY_FX_KNOBS: case S_LY_FX_STATE:            /* (0.8.5) a layer's lens: FX's KNOBS, STATE */
         go_home(); ui.layer = LAYER_FX; ui.lylv = s == S_LY_FX_KNOBS ? 1 : 2;
         perf_held = perf_act = PF_BIT(PF_R16) | PF_BIT(PF_GLT) | PF_BIT(PF_SCRU) | PF_BIT(PF_M1 + 1);
-        perf_m[0] = 6; perf_m[1] = 7; perf_m[2] = 40; perf_m[3] = 30; pf.sw[1] = 1u << 23;   /* (0.9.14: the macros) */
+        perf_m[0] = 6; perf_m[1] = 7; perf_m[2] = 40; perf_m[3] = 30; pf.sw[0] = 1u << 23;   /* (0.9.14: the macros) */
         break;
     case S_LY_GLO_STATE: go_home(); ui.layer = LAYER_GLO; ui.lylv = 2; break;
     case S_MENU_ROW: case S_MENU_ROW_LEDS:             /* (0.8.5) the menu's lens, ROW: COLOR's palettes, LEDS's names */
@@ -1431,13 +1431,32 @@ static void setup(int s)
         break;
     case S_FX_WAIT:
         song.playing = 1; song.g[G_BPM] = 72; ui.layer = LAYER_FX;
-        perf_held = PF_BIT(PF_R16) | PF_BIT(PF_R8) | PF_BIT(PF_SFLT); perf_act = PF_BIT(PF_SFLT);
+        perf_held = PF_BIT(PF_R16) | PF_BIT(PF_R8) | PF_BIT(PF_SHUF); perf_act = PF_BIT(PF_SHUF);
         perf_m[3] = 100;
         break;
     case S_FX_HARM:                                 /* (0.9.14) TAPE STOP and the THROW sweep, TRANSPOSE at -OCT */
         song.playing = 1; ui.layer = LAYER_FX;
         perf_held = perf_act = PF_BIT(PF_TAPE) | PF_BIT(PF_STHR);
         perf_m[1] = 21; ui.hot_col = 1; ui.hot_t = 30;
+        break;
+    /* (0.9.17) the glitcher's key down: its four knobs on the cards (MAP), as gauges (KNOBS: SHUFFLE, FREEZE); TAPE
+     * stopped: SCRATCH TURN */
+    case S_FX_GLT:
+        song.playing = 1; ui.layer = LAYER_FX;
+        perf_held = perf_act = perf_down = PF_BIT(PF_GLT); perf_gp[GX_GLT][1] = -5; perf_gp[GX_GLT][2] = 3;
+        perf_gp[GX_GLT][3] = 16; ui.hot_col = 1; ui.hot_t = 30;
+        break;
+    case S_FX_SCR:
+        song.playing = 1; ui.layer = LAYER_FX;
+        perf_held = perf_act = perf_down = PF_BIT(PF_TAPE); pf.mode = BM_TAPE; pf.state = 1; perf_gp[GX_TAPE][2] = -100;
+        break;
+    case S_FX_SHUF:
+        song.playing = 1; ui.layer = LAYER_FX; ui.lylv = 1;
+        perf_held = perf_act = perf_down = PF_BIT(PF_SHUF) | PF_BIT(PF_R8); perf_gp[GX_SHUF][0] = 100; perf_gp[GX_SHUF][2] = 100;
+        break;
+    case S_FX_FRZ:
+        song.playing = 1; ui.layer = LAYER_FX; ui.lylv = 1;
+        perf_held = perf_act = perf_down = PF_BIT(PF_FRZ); perf_gp[GX_FRZ][1] = 12; perf_gp[GX_FRZ][3] = 0;
         break;
     case S_REVERB: go_title("REVERB"); song.g[G_RTYPE] = 1; ui.hot_col = 0; ui.hot_t = 30; break;   /* TYPE: SPRING */
     case S_REVERB_RESO: go_title("REVERB"); song.g[G_RTYPE] = 3; song.g[G_RDAMP] = 2; song.g[G_RPRE] = 4; break;   /* (0.6.5) PITCH, FOLW */
