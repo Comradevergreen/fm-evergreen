@@ -803,10 +803,15 @@ static void engine_block(track_t *t)
                                                          * of every part, every block, stopped too (six engines' code a
                                                          * block: on the FM-1 most of PROFILE's SEQUENCER at rest) */
             const param_desc_t *d;
+            uint32_t k;
             if (t->p[P_E0 + i] == t->pe_old[i])
                 continue;
             d = e->desc ? e->desc(t, i) : 0;
-            if ((d ? d : &e->edit[i])->fmt == F_ENUM || (d ? d : &e->edit[i])->names)
+            d = d ? d : &e->edit[i];
+            /* (0.9.17) a value with names: only a new name dips; VOICE's THEME and LOOP never (the words, not the
+             * sound: a THEME swept dipped at every one of its values, a held note crackling) */
+            if (d->fmt == F_ENUM || (d->names && !(d >= FMT_WDESC && d < FMT_WDESC + 8) &&
+                                     name_of(d, t->p[P_E0 + i], &k) != name_of(d, t->pe_old[i], &k)))
                 break;
             t->pe_old[i] = t->p[P_E0 + i];
         }

@@ -140,11 +140,12 @@ layer's shortcuts; on the DRUM grid they are steps and lanes; on the NAME screen
 
 ## 2. The screen
 
-### Skins: AIR, COLORS, BOTTOM, HUD (0.8.9, AIR 0.9.7)
+### Skins: AIR, COLORS, HUD (0.8.9, AIR 0.9.7)
 
 **MENU > DISPLAY > SKIN** picks how the lenses are dressed (the approved mock-up "skin aireado", options 1, 3 and 4;
-0.9.7: AIR, the approved option); every page, every palette, FLAT and LINE. The menu steps them AIR, COLORS, BOTTOM,
-HUD:
+0.9.7: AIR, the approved option); every page, every palette, FLAT and LINE. The menu steps them AIR, COLORS, HUD
+(0.9.17: BOTTOM, the knob row at the foot on every page, is retired; a BOTTOM saved in the settings, or set by the
+editor or a restore, opens as AIR):
 
 - **AIR** (0.9.7; the default of new settings: a new FM-1, or its settings erased; settings saved before keep the
   skin they had): HUD's look on **every** page, with the **knob row on top**, right under the tabs: no cards and no
@@ -160,10 +161,10 @@ HUD:
   four knob colours), the knob you turn framed in its colour; the
   group's tab filled violet; the selected track's number in an orange box, a violet ▶ and a big violet BPM in the header;
   a near-black rounded panel; the beings in the 0.6 heat (violet spikes, red and orange rings, cream nuclei).
-- **BOTTOM**: the tabs are the groups' words (the one you are on underlined by a small pill, a dot a page under each), no cards and no panel box: the middle
-  of the screen is the picture, the screen's width (HOME's beings get the most room), and the four knobs are a slim row
-  over the breadcrumb (mark and name, the value in its colour, a hairline bar).
-- **HUD**: as BOTTOM, but on HOME the beings swim **under everything, over the whole screen**: the header, the tabs,
+- **HUD**: the tabs are the groups' words (a dot a page under each), no cards and no panel box: the middle of the
+  screen is the picture, the screen's width, and the four knobs are a slim row over the breadcrumb (mark and name, the
+  value in its colour, a hairline bar); on the SEQ pages the row is on top under the tabs, as AIR's (0.9.17: the values
+  over the roll). On HOME the beings swim **under everything, over the whole screen**: the header, the tabs,
   the knobs and the breadcrumb float over them as light words with a 2 px dark outline (0.9.0). There the knob row
   fades to a fifth a few seconds after you last turned a knob, and comes back at the next turn or when you change page;
   on every other page it stays lit. The group's word is underlined by a dash.
@@ -198,7 +199,7 @@ Since 0.8.5 every page wears the skin of the design the owner approved (the HTML
   **breadcrumb**: **SECTION · GROUP · page** and the page's place in the section's chain at the right (0.9.2; e.g.
   **FX · DELAY · DLY 2  6/16**, **ENV · TRACKS · TRACKS DEST  2/5**).
 - **The tabs** (0.9.2): under the header, the section's **groups** (FX: TRK · BUS · DLY · REV · CHO · SLC · MST · PCH;
-  SEQ: PATT · TRACK · BAR · STEP · AUTO), the one you are on lit (COLORS: filled violet; BOTTOM: a small pill; HUD and AIR:
+  SEQ: PATT · TRACK · BAR · STEP · AUTO), the one you are on lit (COLORS: filled violet; HUD and AIR:
   a dash), and **a dot a page** under each, the page shown lit. The cards under them, a taller panel, and the footer is
   the breadcrumb alone.
 
@@ -266,7 +267,7 @@ knobs, their pictures and every function are the same, only the way between them
    **GLO** the tempo, **ENV / SCL / ARP / SAVE** walk their chain. (Held + PRESETS no longer walks pages: rule 3.)
 6. **The screen says where you are.** On top, the tabs are the section's **groups**, the one you are on lit and a dot
    for each of its pages. At the foot: **SECTION · GROUP · page** and **n/N**, the page's place in the chain:
-   **FX · DELAY · DLY 2  6/16**. The same in AIR, COLORS, BOTTOM and HUD, every palette.
+   **FX · DELAY · DLY 2  6/16**. The same in AIR, COLORS and HUD, every palette.
 
 - Each section remembers the page it was left on (EDIT one for the synths and one each for FM6 and DRUM); at power-on
   SEQ opens on STEP, ENV on ENV, LFO on LFO, the others on their first page.
@@ -497,7 +498,7 @@ breadcrumb, **FX · MAP**. The keys and knobs do exactly what they did.
 | Keys | Effect |
 | --- | --- |
 | F3 G3 A3 | REPEAT 1/8, 1/16, 1/32 |
-| B3 / C4 | GLITCH / TAPE STOP (0.9.15) |
+| B3 / C4 | GLITCH / TAPE STOP (0.9.15; 0.9.17 the knobs are theirs while held, TAPE STOP scratches) |
 | D4 / E4 | OCT− / OCT+ |
 | F4 | 1/2 TEMPO |
 | G4 / A4 | DEC− / DEC+ |
@@ -507,9 +508,11 @@ breadcrumb, **FX · MAP**. The keys and knobs do exactly what they did.
 | F5 | RANDOM |
 | G5 | erases the punch-in lane |
 | Black keys 1–6 (F#3 G#3 A#3 C#4 D#4 F#4) | mute T1–T6 while held |
+| G#4 | FREEZE (0.9.17): the eighth after the press held as grains |
 | A#4 | which tracks the note effects touch: ALL / SYN / DRM |
-| C#5 / D#5 / F#5 | the sweeps FILTER / CRUSH / THROW (0.9.15): dry to wet over 2 bars while held, back in a beat |
-| **Knobs** | the performance macros STEPS, TRANSPOSE, MUTATE, FILTER (0.9.15): up to the right; any knob turned back turns all four off |
+| C#5 | SHUFFLE (0.9.17): the last bar's 1/16s in another order (the FILTER sweep's key until 0.9.16) |
+| D#5 / F#5 | the sweeps CRUSH / THROW (0.9.15): dry to wet over 2 bars while held, back in a beat |
+| **Knobs** | the performance macros STEPS, TRANSPOSE, MUTATE, FILTER (0.9.15): up to the right; any knob turned back turns all four off. While GLITCH, TAPE STOP, FREEZE or SHUFFLE is down: its own four (0.9.17) |
 
 **GLO — mix**
 
@@ -725,7 +728,7 @@ With LANG on the EDIT pages read **POS THEME ARTIC SHIFT** | **BUZZ BREATH Q LOO
 | Knob | Does |
 | --- | --- |
 | **POS** | AUTO: each note the next syllable. 1–127: the next note sings that syllable of the lyric, whenever POS changes: lock it on a step to start a line there, or automate it |
-| **THEME** | the dice's words (W): LOVE, NIGHT, SEA, SKY, ANY, ROAD, DREAM, FIRE |
+| **THEME** | the dice's words (W): LOVE, NIGHT, SEA, SKY, ANY, ROAD, DREAM, FIRE; one detent a theme (0.9.17; was 16). It never touches the sound: a held note goes on as it was and the next words come from the new theme. Between the detents (automation, a mod, an older project) the top half of a theme's values blends in the next theme's words, a few to nearly all |
 | **ARTIC** | the consonants: 100 % crisp (full closures, bursts, hiss) .. 0 % slurred (a mumble) |
 | **SHIFT** | every formant up or down (−: a bigger voice, +: smaller, female, a child) |
 | **BUZZ**, **BREATH**, **Q** | as for the vowels: brightness, air (127: a whisper), how sharp the formants are. (0.9.8) BUZZ's top (~112–127) also steadies the voice: no vibrato, no jitter, a machine (ROBOT EN) |
@@ -924,9 +927,9 @@ changes **how** they play, not which sound. The screen says it when you press OC
 
 | OCT | What a key does | Recorded (REC) as the hit and its sound's mode |
 |---|---|---|
-| **+3** | **RATCHET x4**: the hit four times a step while held | **x4** |
-| **+2** | **RATCHET x2** | **x2** |
-| **+1** | **REPEAT**: the hit once a step while held, a roll at the step rate (0.9.13: half as fast as before at each OCT; x2 at +1 was already too fast to play) | a hit on every step held (**ON**) |
+| **+3** | **RATCHET x2**: the hit twice a step while held | **x2** |
+| **+2** | **REPEAT**: the hit once a step while held, a roll at the step rate | a hit on every step held (**ON**) |
+| **+1** | **REPEAT 1/2**: the hit every other step while held (0.9.17: every OCT half as fast again; 0.9.13 had already halved them) | a hit on every other step held (**ON**) |
 | **0** | the kit as it always was | none (**ON**) |
 | **−1** | **SHORT**: half the decay | **SHORT** |
 | **−2** | **GHOST**: short, softer (~45 %), darker: a ghost note | **GHOST** |
@@ -946,7 +949,8 @@ changes **how** they play, not which sound. The screen says it when you press OC
   RATCH, ECHO and TOUCH (SEQ > COMP) still work on the whole step, as before.
 - **MIDI** (0.8.5): notes 35–81 still play the GM drum map exactly as before. The notes around it, which used to play
   their octave of 36–47 plain, are now these octaves, by pitch class: **23–34 SHORT, 11–22 GHOST, 0–10 FLAM, 82–93
-  REPEAT, 94–105 x2, 106–127 x4** (84 the kick REPEAT, 96 the kick x2, 24 the kick SHORT, 102 the closed hat x2). The keys send those notes to
+  REPEAT 1/2, 94–105 REPEAT, 106–127 x2** (0.9.17; 84 the kick every other step, 96 the kick once a step, 108 the kick
+  x2, 24 the kick SHORT, 114 the closed hat x2). The keys send those notes to
   MIDI OUT. **A song or MIDI setup that sent drum notes below 35 or above 81** (a kick on 24, say) will now hear these
   variations: move them into 35–81 (36–47 for the kit's own) to keep the old sound. Notes stored in the steps play as
   before, whatever their number.
@@ -974,14 +978,23 @@ the number of the bar playing orange, a bar past LEN dark.
 
 | Group | Pages | What the screen shows |
 | --- | --- | --- |
-| **PATTERN** | PATTERN · STRETCH · PLAYHEADS | The pattern's bars side by side as large thumbnails, each its sixteen steps as small dashes (a DRUM track: its lanes); under them **PLAYHEADS**: the whole pattern as one small roll (the scale's rows tinted, the beats' lines brighter, a step with a component marked on top, steps past LEN dark) with the playhead and PLAYHEADS' extra heads (a tick each at the foot). |
-| **TRACK** | TRACK · MUTATE | The same picture, the track's own settings on the cards. |
-| **BAR** | **BAR** · STEP · NOTE | **BAR** (new): the bars as on PATTERN, **KNOB 1 the bar** you edit (the cursor keeps its place in it), KNOB 2 LEN. **STEP** / **NOTE**: a strip of the pattern's bars, small, on top (the one you edit tinted), and under it the bar's **piano roll** across the whole width: 30 semitones, the scale's rows tinted, the cursor a violet frame round its column, the playhead an orange line, a step with a component a small mark on top, a parameter lock a mark at the foot, a key held on the track a mark at the left of its row (a DRUM track: the **grid**, with its keys). STEP's KNOB 1 walks **all 64 steps**, crossing into the next bar by itself. |
-| **STEP** | COMP · COMP 2 | The cursor step drawn large: **STEP n** on top with NOTE / TIE / REST at the right (a note longer than a step: **LEN n**, set on STEP's KNOB 3); at the left its notes as bars where their pitch puts them, each named (the note in focus orange, MICRO moving them, RATCH splitting them; a TIE shows the notes it holds), and at the right its chips: **ACC, SLD, MICRO n, COMP1 x, COMP2 x, CHANCE n%** (a value set: a violet-tinted chip; nothing set: dim). |
-| **AUTO** | AUTOMATION · AUTO LIST | The track's automation: the records counted, then as a list. |
+| **PATTERN** | PATTERN · STRETCH · PLAYHEADS | (0.9.17) The roll, as every SEQ page. **PATTERN** draws the notes as long as **GATE** plays them and the odd steps late by **SWING**; steps past **LEN** are dark (in the strip, the bars past it). **PLAYHEADS** draws its extra heads over the roll as lines while they play, each as hot as its number (the head you edit 3 px wide). |
+| **TRACK** | TRACK · MUTATE | **TRACK** outlines where **PITCH** moves the notes (in grey, over the notes as written). **MUTATE** shows a chip at the roll's foot: the bars to the next mutation (**NEXT n BARS**), **FROZEN**, or **MUTATE OFF**. |
+| **BAR** | **BAR** · STEP · NOTE | **KNOB 1 the bar** on BAR (the cursor keeps its place in it), KNOB 2 LEN. STEP's KNOB 1 walks **all 64 steps**, crossing into the next bar by itself; NOTE's note in focus orange. |
+| **STEP** | COMP · COMP 2 | A bar over the top of each step with that component (COMP: the first, COMP 2: the second; an arpeggio orange, another violet); the cursor step framed. |
+| **AUTO** | AUTOMATION · AUTO LIST | A mark under each step with a record (a lock orange, automation white); on AUTO LIST the record picked has its step framed violet, the cards giving its row, step, parameter and value. |
 
-The roll has no keyboard strip nor the C rows' names since 0.8.5 (the mock-up's): the STEP picture names the notes,
-and the PITCH card says the note in focus.
+**One picture for the whole SEQ** (0.9.17, the owner's "all the sequencer pages the same piano roll, each page doing
+something different on top of it"): every page shows a strip of the pattern's bars, small, on top (the one you edit
+tinted) and under it the bar's **piano roll** across the whole width: 30 semitones, the scale's rows tinted, the cursor
+a frame round its column, the playhead an orange line, a step with a component a small mark on top, a parameter lock
+a mark at the foot, a key held on the track a mark at the left of its row (a DRUM track: the **grid**, with its
+keys). The page's own marks go over it (the table). Until 0.9.16 PATTERN's group drew the bars as big thumbnails with a
+"PLAYHEADS" roll under them, COMP the step large with its chips, PLAYHEADS three lanes, MUTATE and AUTO LIST panels of
+their own.
+
+The roll has no keyboard strip nor the C rows' names since 0.8.5 (the mock-up's): the PITCH card says the note in
+focus.
 
 - **SEQ from another page** comes back to the page you left; at power-on STEP, the piano roll.
 - **PRESETS** on a SEQ page loads a **pattern**: it opens the PHRASES loader with the next pattern picked (KNOB 1
@@ -1041,6 +1054,10 @@ recorded into the pattern, quantized to its steps, overdubbing. Knob moves on th
     SCALE 3, 5, 8, 15 DEG). KNOB 4 **RATE** (0.6.92), the arpeggio's speed in musical time: **x1** one note a step
     (the track's DIV, 1/16), **1/32** two a step, **1/32T** three, **1/64** four, **1/64T** six, **1/128** eight (the
     card says the note value for the track's DIV; an odd DIV: xn). The old pages' x2 … x8 are the same values.
+    **SEQ walks one note a lap** (0.9.17): each time the pattern comes round to the step it plays the next note of the
+    melody, in its ORDER and range, held over the TIEs after it like any note; its KNOB 4 is **LAP**, the note this pass
+    plays (RND: a new one each lap), and PLAY from a stop starts again from the first note, as the other components'
+    loops do. (Until 0.9.16 SEQ played the melody inside the step at its RATE; projects keep that RATE, now unused.)
   - **TRIG**: the step plays only on some loops of the pattern: 1:2, 2:2, 1:3, 2:3, 3:3, 1:4 … 4:4, 1:8, FIRST, !1ST
     (every loop but the first).
   - **RAND**: the note moves up or down the scale at random, up to RANGE degrees (1–7).
@@ -1082,7 +1099,7 @@ recorded into the pattern, quantized to its steps, overdubbing. Knob moves on th
     with its A / B read as one.
   Projects keep them. **On a drum kit** (0.6.83) they work too: OCT, RAND, TONAL tune the hits (RAND and TONAL in
   the track's scale), BEND bends each hit over the step; ARP NOTES plays the step's sounds one after another, SEQ
-  the pattern's sounds in the order they play, SCALE retriggers the step's hits each part a degree further up.
+  the pattern's sounds in the order they play, SCALE retriggers the step's hits each part a degree further up (0.9.17: SEQ one a lap).
 - **A long chord slide** (0.6.83): the glide into a chord lasts as long as that chord, its TIEs included; GLIDE sets
   how much of it (127: all of it). A chord held over TIEs on slow steps (e.g. DIV 1/4 at 120 BPM: ten steps, 5 s)
   slides that slowly and smoothly; new notes fade in as they glide.
@@ -1513,9 +1530,10 @@ the music plays on). After OK, **GLO held + G4** still undoes it.
 The same idea for the other parts of the selected track, each heard at once under its **KEEP DICED …?** dialog
 (SELECT again: another roll, **OCT+ OK** keeps it, **OCT− CANCEL** puts back what was there, the rest plays on):
 
-- **SEQ + SELECT**: a new sequence as DICE ALL writes a part, in the track's own scale: a beat on a DRUM track, else
-  the role its steps sound like (low notes: a bass line, chords: a pad, else a lead or an arp). Its sound, mix and
-  automation stay.
+- **SEQ + SELECT** (0.9.17): a new sequence, the part GEN's generator would write for the track: on the song's
+  harmony when GEN made the piece (its plan, genre and the track's role), so it fits the others; else in the track's
+  own key, a genre made up for it. Drums on a DRUM track, else the role its steps sound like (low notes: a bass line,
+  chords: a pad, else a lead or an arp). Never the same part twice in a row. Its sound, mix and automation stay.
 - **LFO + SELECT**: the track's LFO: a rate in the middle of the range, any wave and phase, a fade now and then, aimed
   mostly at the filter, a little at the shape, seldom at the pitch or the level.
 - **FX + SELECT**: the track's drive (half the time none), its chorus, delay and reverb sends, an AUTO PAN one time in
@@ -1772,28 +1790,40 @@ the lane's cells in the effects' colours with the playhead on them, the last eff
 on (ALL, SYN, DRM). To record: REC armed and playing (not in a song), hold FX and the effect's key; the steps it
 passes get it; **G5** held erases where the playhead passes. Saved with the section.
 
-- **On the audio**: REPEAT 1/8, 1/16, 1/32 (F3 G3 A3), **GLITCH** (B3), **TAPE STOP** (C4). They start on the next 1/16
-  while playing. Below about 81 BPM, REPEAT 1/8 is too long for its buffer and is shown dimmed.
-  - **GLITCH** (0.9.15) cuts the master on the transport's sixteenths: each sixteenth is played live, or the last 1/16,
-    1/32 or 1/64 repeated, or the last sixteenth reversed, an octave up (twice as fast, twice) or an octave down (its
-    first half at half speed), or gated at 1/32 or 1/64. Which one is fixed by the sixteenth's place in a two-bar cycle
-    of the transport, so the pattern grooves and comes back the same every time you press it there; the downbeats are
-    mostly left live. Every slice fades in and out in 3 ms (no clicks). Its first sixteenth is live (nothing recorded
-    yet); below ~81 BPM only its gates and live slices play (the buffer holds 371 ms).
-  - **TAPE STOP** (0.9.15): the whole mix slows to a stop over a beat (at most 0.68 s, the buffer's limit: from about
-    88 BPM down it is shorter than a beat), the pitch falling with it and fading out over the last quarter; then
-    silence while you hold. Let go: the music at once, where it is. One press at the end of a phrase, before the drop.
-  REPEAT, GLITCH and TAPE STOP share one buffer (the SLICER's, borrowed: the SLICER plays live meanwhile); of those held,
-  the last pressed plays.
+- **On the audio**: REPEAT 1/8, 1/16, 1/32 (F3 G3 A3) and **the glitcher** (0.9.17): **GLITCH** (B3), **TAPE STOP**
+  (C4), **FREEZE** (G#4), **SHUFFLE** (C#5). They start on the next 1/16 while playing (at once when stopped). Below
+  about 81 BPM, REPEAT 1/8 is too long for its buffer and is shown dimmed. **While a glitcher key is down** (held, or
+  pressed with FX LATCH) **the four knobs are its own** (the cards and the footer say so); let it go and they are the
+  macros again. Its settings are not saved.
+  - **GLITCH** (0.9.15; knobs 0.9.17: **DENS PITCH SIZE VARI**) cuts the master on the transport's sixteenths: each is
+    played live, or the last slice repeated (SIZE: from a 1/16 down to a 1/256), each repeat PITCH semitones above or
+    below the one before (a riser, or a fall), or the last sixteenth reversed, an octave up or down, gated, **SKIP**
+    (tiny fragments from anywhere in the last 1/16, like a CD skipping) or **CRUSH**ed. DENS sets how many sixteenths
+    are cut (the beats less often); VARI picks another pattern. Which slice does what is fixed by its place in a
+    two-bar cycle of the transport, so the pattern grooves and comes back the same every time. Every slice fades in and
+    out (no clicks). Below ~82 BPM only its gates, crushes and live slices play (the buffer holds 371 ms).
+  - **TAPE STOP** (0.9.15; knobs 0.9.17: **SCRATCH TIME CURVE**): the whole mix slows to a stop over TIME (1/64 to a
+    beat, at most what the buffer holds), the pitch falling with it; CURVE − drops at once, + holds then drops. Once
+    stopped, the end of the music is kept and **KNOB 1 is your hand on the record**: turn it to scratch back and forth
+    (the pitch with the speed, silent at rest). Let go of C4: the music at once, where it is.
+  - **FREEZE** (0.9.17, G#4; **DENS PITCH SPRAY SIZE**): the eighth after the press is kept (you hear it live
+    meanwhile), then played as grains: SIZE 1/128 to 1/8 long, 1 to 4 overlapping (DENS), PITCH semitones, slowly
+    scanning the eighth and back (a stretch); SPRAY scatters where they read and moves some an octave, a fifth or a
+    fourth.
+  - **SHUFFLE** (0.9.17, C#5; **AMOUNT SIZE SPEED VARI**): the last bar's 1/16s (1/8s, 1/4s: SIZE) played back in
+    another order: AMOUNT of them are replaced by another piece of the last bar (the beats, then the bar's first, only
+    at higher amounts); SPEED plays the moved ones at half speed, double, or their first half twice; VARI picks another
+    order. The bar is kept compressed in the same buffer (down to about 87 BPM a whole bar).
+  REPEAT and the glitcher share one buffer (the SLICER's, borrowed: the SLICER plays live meanwhile); of those held,
+  the last pressed plays, and letting it go returns to the one held before.
 - **On the notes**: OCT− / OCT+ (D4 E4), 1/2 TEMPO (F4), DEC− (short, plucky) / DEC+ (long) (G4 A4), STUTTER 1/8 / 1/16
   (B4 C5), ATK+ (slow attacks, drums too) (D5), ARP (E5; on a DRUM track a new fill every press), RANDOM (F5). They come
   in on the next 1/16. **A#4** chooses which tracks they touch: ALL, SYN (synths) or DRM (drums); the header shows it.
-- **The sweeps** (0.9.15, black keys **C#5 D#5 F#5**; until 0.9.14 the knobs FILTER CRUSH THROW and the keys LPF HPF):
+- **The sweeps** (0.9.15, black keys **D#5 F#5**; until 0.9.14 the knobs FILTER CRUSH THROW and the keys LPF HPF):
   held, the effect goes from dry to wet over **2 bars at the tempo**, on an S curve (it leaves dry slowly, speeds up in
   the middle, settles into wet); let go, it goes back to dry over **a beat** on the same curve, so a release in time
   with the music sounds deliberate. They act at once (not on the 1/16) and stack with everything.
-  - **FILTER** (C#5): the master DJ FILTER's high-pass opening, from ~32 Hz to ~6 kHz (the build-up's classic: the bass
-    goes first). While it sweeps it takes the DJ FILTER over from GLO › MIXER's KNOB 4, which comes back when it is dry.
+  - (The FILTER sweep on C#5 is gone in 0.9.17: KNOB 4's FILTER macro is the layer's one filter, and C#5 is SHUFFLE.)
   - **CRUSH** (D#5): fewer bits (4 to 11 taken off) and a lower rate (a sample held 1 to 8 times), and its mix rising.
   - **THROW** (F#5): the dry mix (and the SLICER's bus) into the delay and reverb sends, up to all of it: the echoes and
     the room build up, and stay ringing when you let go.
@@ -1805,7 +1835,7 @@ passes get it; **G5** held erases where the playhead passes. Saved with the sect
     **-OCT** (three detents an interval); the next notes play it; DRUM tracks untouched. It adds to SCL's STRN.
   - **KNOB 3 MUTATE**: the music as it is becomes MUTATE's anchor and every pattern mutates around it by the amount
     (notes along the scale, accents, notes added off the beat or taken, drum hits), on the next beat and again every bar.
-  - **KNOB 4 FILTER**: the master DJ FILTER's low-pass closing (the sweep's high-pass wins while it goes further).
+  - **KNOB 4 FILTER**: the master DJ FILTER's low-pass closing.
   - **Turn any of them back** (two detents counter-clockwise; one is ignored, so a nudge does nothing) and **all four
     are off at once**: full length, no transposition, every pattern exactly as before MUTATE, the filter open. The
     screen says **MACROS OFF** and the cards drop to OFF. Then each starts again from zero as you turn it right (the
@@ -1816,7 +1846,7 @@ passes get it; **G5** held erases where the playhead passes. Saved with the sect
 - **Black keys 1–6**: mute T1–T6 while held (not saved).
 
 **The punch-in lane**: each section has a lane of 64 steps of 1/16 (4 bars). With **REC armed and playing** (not
-during a song), the **note effects (D4–F5)**, **GLITCH**, **TAPE STOP** and **the sweeps** you hold are recorded into
+during a song), the **note effects (D4–F5)**, **GLITCH**, **TAPE STOP**, **SHUFFLE** and **the sweeps** you hold are recorded into
 it, one per step (the lowest held; REPEAT and the mutes are not recorded). Played back, a sweep held over a run of steps
 ramps as if you held it. Hold **FX + G5** while playing to erase where the play head passes; stopped, FX + G5 erases
 the whole lane. **REC held + FX** also clears it (along with the track's FX automation).
@@ -2057,7 +2087,7 @@ the footer **MENU · DISPLAY · SKIN  2/28**. The header says MENU · DISPLAY.
 | Tab | Row | Values |
 | --- | --- | --- |
 | DISPLAY | COLOR | GREY, GREEN, AMBER, ICE, VIOLET, ROSE, PAPER, HI-CON, NIGHT, MONO, **JIANT** (default) |
-| DISPLAY | SKIN | **AIR** (default of new settings), COLORS, BOTTOM, HUD — (0.8.9; AIR 0.9.7) see [Skins](#skins-air-colors-bottom-hud-089-air-097) |
+| DISPLAY | SKIN | **AIR** (default of new settings), COLORS, HUD — (0.8.9; AIR 0.9.7; BOTTOM retired in 0.9.17: opens as AIR) see [Skins](#skins-air-colors-hud-089-air-097) |
 | DISPLAY | SCOPE | **OFF** (default), ON — (0.9.7) an engine's EDIT pages: OFF the creature on the whole panel, centred, the page's name and the sound's name small in its corners; ON the creature on the left, the SCOPE card and the chips as before. Settings saved before 0.9.7 load as OFF |
 | DISPLAY | STYLE | FLAT, LINE |
 | DISPLAY | LARGE | OFF, ON (big labels and values) |

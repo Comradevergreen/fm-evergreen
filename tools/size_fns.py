@@ -57,7 +57,12 @@ EVENT_PFX = ("ep0_", "e0_", "ep1_", "ep3_", "sysex_", "midi_", "um_", "uart_midi
              "param_desc_of", "param_fit", "uac_rate_set", "uac_ep4_reset", "fl_reset", "rev_line_clear", "dly_line_clear",
              "rev_clear", "dly_lo_reset", "slicer_start", "slicer_drop", "perf_drop_slicer", "dx_mute_set", "mc_lost",
              "uin_ep_config", "fm1__anim_frame", "sy_tok", "trk_chance", "drum_oct_of", "perf_key",
-             "perf_len", "mod_midi", "sy_norm", "fl_ok", "get_desc")
+             "perf_len", "mod_midi", "sy_norm", "fl_ok", "get_desc", "drum_muted", "drum_lane", "trk_kit", "drum_kit_of",
+             "name_of",
+             # (0.9.17) the glitcher's once a slice, segment, chunk, grain or block: GLITCH's segments, SHUFFLE's 1/16s
+             # and chunks, FREEZE's grains, the scratch's hand, the knobs' focus
+             "perf_glt_seg", "perf_shuf_step", "perf_shuf_go", "perf_frz_grain", "perf_scratch", "perf_gfocus",
+             "perf_gx", "perf_pick", "pf_hash")
 EVENT_KEEP = {"mo_block", "ep1_tx", "key_latch", "midi_clock_advance", "cin_block", "kb_lat", "live_q", "live_adv"}
 ISR_ROOTS = ("fm1_alnk0_irq", "fm1_timer5_irq",      # hal/fm1_isr.S: the audio ISR, the key / LED scan (+ USB poll),
              "fm1_timer5_top")                       # (0.9.14) the scan's body, timed

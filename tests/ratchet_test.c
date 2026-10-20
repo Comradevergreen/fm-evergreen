@@ -405,16 +405,32 @@ static int components(void)
     n = run_notes(t, passes(t, 1), nt, sizeof nt);
     bad += check("ARP SCALE x4 UP, 3 degrees of C major: 60 62 64 60", n == 4u && nt[0] == 60u && nt[1] == 62u &&
                  nt[2] == 64u && nt[3] == 60u);
-    t = one_step(1, 0);                                   /* SEQ: every note of the pattern */
+    /* (0.9.17) ARP SEQ walks the pattern's melody a lap at a time (seq.c arp_lap): one note a pass of the pattern, the
+     * next the next time round, in its ORDER; its RATE no longer counts */
+    t = one_step(1, 0);
     t->p[P_SLEN] = 2;
     t->step[0] = (step_t){{60}, 1, ST_NOTE, 0, 100};
-    t->step[0].comp = CP_ARPQ; t->step[0].carg = CP_ARG(0u, 0u, 0u);
+    t->step[0].comp = CP_ARPQ; t->step[0].carg = CP_ARG(0u, 4u, 0u);   /* (RATE x8 stored: one a lap all the same) */
     t->step[1] = (step_t){{67}, 1, ST_NOTE, 0, 100};
     seq_start();
-    n = run_notes(t, 2u * step_len(t, 0) / CTL - 1u, nt, sizeof nt);
-    bad += check("ARP SEQ x2: the pattern's notes (60 67), then the next step's own 67", n == 3u && nt[0] == 60u &&
-                 nt[1] == 67u && nt[2] == 67u);
-    /* (0.6.82) SEQ: the pattern's melody in its order (67 60 64), NOTES would sort it */
+    n = run_notes(t, 4u * step_len(t, 0) / CTL - 1u, nt, sizeof nt);
+    bad += check("ARP SEQ: a note of the pattern a lap (60, 67 | 67, 67), then the next step's own 67", n == 4u &&
+                 nt[0] == 60u && nt[1] == 67u && nt[2] == 67u && nt[3] == 67u);
+    seq_stop();                                           /* PLAY from a stop: from its first note again */
+    seq_start();
+    n = run_notes(t, step_len(t, 0) / CTL, nt, sizeof nt);
+    bad += check("  PLAY again: the first note (60), as the other components' loops", n == 1u && nt[0] == 60u);
+    t = one_step(1, 0);                                   /* a TIE after it: the lap's note held over it, no new one */
+    t->p[P_SLEN] = 2;
+    t->step[0] = (step_t){{60}, 1, ST_NOTE, 0, 100};
+    t->step[0].comp = CP_ARPQ; t->step[0].carg = CP_ARG(0u, 0u, 1u);   /* (two octaves: 60 72) */
+    t->step[1] = (step_t){{0}, 0, ST_TIE, 0, 0};
+    seq_start();
+    n = run_notes(t, 2u * step_len(t, 0) / CTL - 2u, nt, sizeof nt);
+    ok = n == 1u && nt[0] == 60u && t->seq_n == 1u;
+    n = run_notes(t, 2u * step_len(t, 0) / CTL, nt, sizeof nt);
+    bad += check("ARP SEQ over a TIE: the lap's note held through it (60, then 72 the next lap)", ok && n == 1u && nt[0] == 72u);
+    /* SEQ: the pattern's melody in its order (67 60 64; NOTES would sort it), a note of it a lap */
     t = one_step(1, 0);
     t->p[P_SLEN] = 3;
     t->step[0] = (step_t){{67}, 1, ST_NOTE, 0, 100};
@@ -422,9 +438,10 @@ static int components(void)
     t->step[1] = (step_t){{60}, 1, ST_NOTE, 0, 100};
     t->step[2] = (step_t){{64}, 1, ST_NOTE, 0, 100};
     seq_start();
-    n = run_notes(t, step_len(t, 0) / CTL - 1u, nt, sizeof nt);
-    bad += check("ARP SEQ x4: the pattern's melody as it plays: 67 60 64 67", n == 4u && nt[0] == 67u && nt[1] == 60u &&
-                 nt[2] == 64u && nt[3] == 67u);
+    n = run_notes(t, 4u * 3u * step_len(t, 0) / CTL - 1u, nt, sizeof nt);
+    bad += check("ARP SEQ: the melody a lap at a time: 67 60 64 | 60 60 64 | 64 60 64 | 67 60 64", n == 12u &&
+                 nt[0] == 67u && nt[1] == 60u && nt[2] == 64u && nt[3] == 60u && nt[6] == 64u && nt[9] == 67u &&
+                 nt[10] == 60u && nt[11] == 64u);
     /* TRIG: the loops it plays on (a one-step loop: a loop a pass) */
     {
         static const uint8_t COND[4] = {0, 1, 10, 11}, WANT[4] = {2, 2, 1, 3};   /* 1:2 2:2 FIRST NOT FIRST, 4 loops */
@@ -461,7 +478,10 @@ static int components(void)
     ok &= t->step[0].comp == CP_ARPN && t->step[0].carg == CP_ARG(0u, 2u, 0u);
     turn(EN_K3, 4); turn(EN_K3, 1); turn(EN_K4, 1);       /* (0.6.92) KNOB 3 ORDER x RANGE: DOWN over two octaves; KNOB 4 RATE x6 */
     ok &= CP_ORD(t->step[0].carg) == 1u && CP_RATE(t->step[0].carg) == 3u && CP_RNG(t->step[0].carg) == 1u;
-    turn(EN_K2, 2);                                       /* SCALE: the values kept */
+    turn(EN_K2, 1); turn(EN_K4, 1);                       /* (0.9.17) SEQ: KNOB 4 its lap's note, shown: nothing to turn */
+    ok &= t->step[0].comp == CP_ARPQ && CP_RATE(t->step[0].carg) == 3u;
+    turn(EN_K2, 1);
+                                                          /* SCALE: the values kept */
     ok &= t->step[0].comp == CP_ARPS && CP_ORD(t->step[0].carg) == 1u;
     turn(EN_K2, 1); turn(EN_K3, 4); turn(EN_K3, 1);      /* TRIG 1:2 .. 2:4 (4 detents a pass at most) */
     ok &= t->step[0].comp == CP_TRIG && t->step[0].carg == 5u;

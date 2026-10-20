@@ -637,7 +637,7 @@ enum { S_HOME, S_HOME_IDLE, S_MESSAGE, S_MESSAGE_KEY, S_MESSAGE_NOFILE, S_PRESET
        S_CONFIRM_SEQ, S_CONFIRM_PROJ, S_CONFIRM_USER, S_CONFIRM_PAT, S_CONFIRM_MOTION, S_CONFIRM_ERASE, S_GEN, S_GEN_PARTS,
        S_MENU, S_MENU_SPEAKER, S_ABOUT, S_ABOUT_REC, S_ABOUT_CREDITS, S_ABOUT_END, S_ABOUT_PROFILE, S_ABOUT_PROFILE2, S_UBOOT, S_CALIBRATION, S_SPLASH,
        S_BATT0, S_BATT1, S_BATT2, S_BATT3, S_BATT_USB, S_MOTION_REC, S_MOTION_OFF, S_MOTION_CARD, S_SONG_HOME,
-       S_FX_PEEK, S_FX_HELD, S_FX_WAIT, S_FX_HARM, S_MENU_HOLD, S_MENU_LEDS, S_MENU_END, S_MENU_SYSTEM, S_MENU_SLIDE, S_REVERB, S_REVERB_RESO,
+       S_FX_PEEK, S_FX_HELD, S_FX_WAIT, S_FX_HARM, S_FX_GLT, S_FX_SCR, S_FX_SHUF, S_FX_FRZ, S_MENU_HOLD, S_MENU_LEDS, S_MENU_END, S_MENU_SYSTEM, S_MENU_SLIDE, S_REVERB, S_REVERB_RESO,
        S_GLO_PEEK, S_GLO_ACTIVE, S_GLO_EXT, S_SCL_PEEK, S_SCL_ACTIVE, S_EDIT_PEEK, S_EDIT_ACTIVE, S_EDIT_USER, S_EDIT_DRUM, S_LAYER_HINT, S_LAYER_LOCK, S_LAYER_LOCK_FX, S_LAYER_SONG, S_LAYER_SONG_CHAIN,
        S_SEQ_TOOLS, S_SEQ_TOOLS_DRUM, S_SEQ_TOOLS_SONG,
        S_LENTE_PAT, S_LENTE_PAT_DRUM, S_LENTE_STRETCH, S_LENTE_BAR, S_LENTE_BAR_DRUM, S_LENTE_STEP, S_LENTE_STEP_COMP,
@@ -673,7 +673,7 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "message", "mes
     "edit_noise", "alg_1", "alg_2", "alg_3", "alg_4", "alg_5", "alg_6", "alg_7", "alg_8", "op_level", "fm6_alg_01", "fm6_alg_05", "fm6_alg_22", "fm6_alg_32", "drumx", "drumx_hit", "dx_sound", "dx_sound2", "confirm_seq", "confirm_project", "confirm_user", "confirm_pattern",
     "confirm_motion", "confirm_erase", "gen", "gen_parts", "menu", "menu_speaker", "about", "about_rec", "about_credits", "about_end", "about_profile", "about_profile2", "uboot", "calibration", "splash",
     "batt_0", "batt_1", "batt_2", "batt_3", "batt_usb", "motion_rec", "motion_off", "motion_card", "song_home",
-    "perform_peek", "perform_held", "perform_wait", "perform_harm", "menu_hold", "menu_leds", "menu_end", "menu_system", "menu_slide", "reverb_spring", "reverb_reso",
+    "perform_peek", "perform_held", "perform_wait", "perform_harm", "perform_glitch", "perform_scratch", "perform_shuffle", "perform_freeze", "menu_hold", "menu_leds", "menu_end", "menu_system", "menu_slide", "reverb_spring", "reverb_reso",
     "layer_glo_peek", "layer_glo_active", "layer_glo_ext", "layer_scl_peek", "layer_scl_active", "layer_edit_peek",
     "layer_edit_active", "layer_edit_user", "layer_edit_drum", "layer_hint", "layer_lock", "layer_lock_fx", "layer_song", "layer_song_chain",
     "layer_seq_tools", "layer_seq_tools_drum", "layer_seq_tools_song",
@@ -1042,6 +1042,14 @@ static void v6_scene(uint32_t e, const char *pre, const char *page, const int16_
     vxs.swt = vxs.mt[c] >> 8;
     if (page) go_title(page); else { ui.home = 1; ui.hlv = 1; ui.hset[1] = 0; }
 }
+/* (0.9.17) a short line on the selected track for the SEQ pages that drew their own panel before (TRACK, MUTATE, AUTOMATION,
+ * AUTO LIST): every page shows the roll now, its marks over these notes */
+static void seq_line(void)
+{
+    static const uint8_t NN[8] = {60, 63, 67, 70, 67, 65, 63, 58};
+    uint32_t j;
+    for (j = 0; j < 16u; j += 2u) step_put(&TSEL->step[j], ST_NOTE, 0, 1, &NN[j / 2u]);
+}
 static void setup(int s)
 {
     memset(kb_on, 0, sizeof kb_on);               /* no key held (roll_playing holds one) */
@@ -1124,7 +1132,7 @@ static void setup(int s)
         break;
     case S_MUTATE:                                      /* (0.6.43) three tracks mutating, bar 5 */
         trk[0].p[P_MSND] = 2; trk[0].p[P_MPAT] = 4; trk[1].p[P_MSND] = 3; trk[1].p[P_MMODE] = 1; trk[3].p[P_MPAT] = 1;
-        bar_n = 5; go_page(GR_MUTATE);
+        seq_line(); bar_n = 5; go_page(GR_MUTATE);
         break;
     case S_CHANCE: go_page(GR_CHANCE); step_set_chance(&TSEL->step[0], 65); break;
     case S_COMP:                                        /* (0.6.39) an ARP NOTES step: UP-DN x6 over two octaves */
@@ -1137,7 +1145,7 @@ static void setup(int s)
         TSEL->step[4].comp = CP_TRIG; step_set_chance(&TSEL->step[6], 50); step_set_ratchet(&TSEL->step[8], 3);
         go_page(GR_COMP);
         break;
-    case S_MOTION: go_page(GR_MOTION); break;
+    case S_MOTION: seq_line(); motion_set_event(TSEL, 4, P_REV, 40); go_page(GR_MOTION); break;
     /* 1.1.5, the REC layer (REC held): over HOME, the settings as they come (CLICK OFF, COUNT-IN OFF, LEVEL MID);
      * over STEP armed, CLICK REC, COUNT-IN 2 BARS, LEVEL HIGH (KNOB 2 just turned); a song playing on an empty
      * track (CLEAR dimmed: STOP TO EDIT) */
@@ -1263,7 +1271,7 @@ static void setup(int s)
     case S_LY_FX_KNOBS: case S_LY_FX_STATE:            /* (0.8.5) a layer's lens: FX's KNOBS, STATE */
         go_home(); ui.layer = LAYER_FX; ui.lylv = s == S_LY_FX_KNOBS ? 1 : 2;
         perf_held = perf_act = PF_BIT(PF_R16) | PF_BIT(PF_GLT) | PF_BIT(PF_SCRU) | PF_BIT(PF_M1 + 1);
-        perf_m[0] = 6; perf_m[1] = 7; perf_m[2] = 40; perf_m[3] = 30; pf.sw[1] = 1u << 23;   /* (0.9.14: the macros) */
+        perf_m[0] = 6; perf_m[1] = 7; perf_m[2] = 40; perf_m[3] = 30; pf.sw[0] = 1u << 23;   /* (0.9.14: the macros) */
         break;
     case S_LY_GLO_STATE: go_home(); ui.layer = LAYER_GLO; ui.lylv = 2; break;
     case S_MENU_ROW: case S_MENU_ROW_LEDS:             /* (0.8.5) the menu's lens, ROW: COLOR's palettes, LEDS's names */
@@ -1308,7 +1316,7 @@ static void setup(int s)
     }
     case S_DLY: go_title("DLY"); break;
     case S_SCL: TSEL->p[P_SCALE] = 2; go_title("SCL"); break;
-    case S_SHIFT: TSEL->p[P_SOFS] = -3; TSEL->p[P_POFS] = 7; TSEL->p[P_HVEL] = 80; go_title("TRACK"); break;   /* (0.6.92: TRACK) */
+    case S_SHIFT: seq_line(); TSEL->p[P_SOFS] = -3; TSEL->p[P_POFS] = 7; TSEL->p[P_HVEL] = 80; go_title("TRACK"); break;   /* (0.6.92: TRACK) */
     case S_ARP: go_title("ARP"); break;
     case S_VOICE: go_title("VOICE"); break;
     case S_GLOBAL: go_title("GLOBAL"); break;
@@ -1423,13 +1431,32 @@ static void setup(int s)
         break;
     case S_FX_WAIT:
         song.playing = 1; song.g[G_BPM] = 72; ui.layer = LAYER_FX;
-        perf_held = PF_BIT(PF_R16) | PF_BIT(PF_R8) | PF_BIT(PF_SFLT); perf_act = PF_BIT(PF_SFLT);
+        perf_held = PF_BIT(PF_R16) | PF_BIT(PF_R8) | PF_BIT(PF_SHUF); perf_act = PF_BIT(PF_SHUF);
         perf_m[3] = 100;
         break;
     case S_FX_HARM:                                 /* (0.9.14) TAPE STOP and the THROW sweep, TRANSPOSE at -OCT */
         song.playing = 1; ui.layer = LAYER_FX;
         perf_held = perf_act = PF_BIT(PF_TAPE) | PF_BIT(PF_STHR);
         perf_m[1] = 21; ui.hot_col = 1; ui.hot_t = 30;
+        break;
+    /* (0.9.17) the glitcher's key down: its four knobs on the cards (MAP), as gauges (KNOBS: SHUFFLE, FREEZE); TAPE
+     * stopped: SCRATCH TURN */
+    case S_FX_GLT:
+        song.playing = 1; ui.layer = LAYER_FX;
+        perf_held = perf_act = perf_down = PF_BIT(PF_GLT); perf_gp[GX_GLT][1] = -5; perf_gp[GX_GLT][2] = 3;
+        perf_gp[GX_GLT][3] = 16; ui.hot_col = 1; ui.hot_t = 30;
+        break;
+    case S_FX_SCR:
+        song.playing = 1; ui.layer = LAYER_FX;
+        perf_held = perf_act = perf_down = PF_BIT(PF_TAPE); pf.mode = BM_TAPE; pf.state = 1; perf_gp[GX_TAPE][2] = -100;
+        break;
+    case S_FX_SHUF:
+        song.playing = 1; ui.layer = LAYER_FX; ui.lylv = 1;
+        perf_held = perf_act = perf_down = PF_BIT(PF_SHUF) | PF_BIT(PF_R8); perf_gp[GX_SHUF][0] = 100; perf_gp[GX_SHUF][2] = 100;
+        break;
+    case S_FX_FRZ:
+        song.playing = 1; ui.layer = LAYER_FX; ui.lylv = 1;
+        perf_held = perf_act = perf_down = PF_BIT(PF_FRZ); perf_gp[GX_FRZ][1] = 12; perf_gp[GX_FRZ][3] = 0;
         break;
     case S_REVERB: go_title("REVERB"); song.g[G_RTYPE] = 1; ui.hot_col = 0; ui.hot_t = 30; break;   /* TYPE: SPRING */
     case S_REVERB_RESO: go_title("REVERB"); song.g[G_RTYPE] = 3; song.g[G_RDAMP] = 2; song.g[G_RPRE] = 4; break;   /* (0.6.5) PITCH, FOLW */
@@ -1599,6 +1626,7 @@ static void setup(int s)
         break;
     }
     case S_MOTION_LOCKS:
+        seq_line();
         motion_set_event(TSEL, 1, P_REV, 40); motion_set_lock(TSEL, 2, P_REV, 100); motion_set_lock(TSEL, 6, P_ATK, 90);
         go_page(GR_MOTION);
         break;
@@ -1606,6 +1634,7 @@ static void setup(int s)
      * VALUE just turned; empty (+ ADD LOCK: step 5, the first knob of HOME); a DRUM track's long list, scrolled
      * (its lane levels, E names, the last row), playing */
     case S_AUTO_LIST:
+        seq_line();
         motion_set_event(TSEL, 0, P_LRATE, 70); motion_set_lock(TSEL, 2, P_REV, 100); motion_set_lock(TSEL, 2, P_ED_FLT, -30);
         motion_set_lock(TSEL, 6, P_ATK, 90); motion_set_lock(TSEL, 6, P_E4, 20); motion_set_event(TSEL, 8, P_PAN, -40);
         motion_set_lock(TSEL, 11, P_LD_FLT, 50); motion_set_lock(TSEL, 13, P_DLY, 80); motion_set_lock(TSEL, 15, P_GLIDE, 60);
@@ -2419,12 +2448,12 @@ int main(int argc, char **argv)
         for (s = 0; s < lg_nsmall; s++) fprintf(rep, " '%s'", lg_small[s]);
         fprintf(rep, "\n");
     }
-    {   /* (0.8.9) MENU > DISPLAY > SKIN BOTTOM and HUD (0.9.7: AIR) (ui.c lz_low, hud_home): every screen in every palette in FLAT, in
+    {   /* (0.8.9) MENU > DISPLAY > SKIN HUD (0.9.7: AIR; 0.9.17: BOTTOM retired) (ui.c lz_low, hud_home): every screen in every palette in FLAT, in
          * LINE and with MENU > LARGE ON (COLORS' layout, the skin's tabs and colours), linted (GREY: gray, MONO: neutral); FLAT
          * as OUTDIR/ppm/<SKIN>_<PALETTE>_<screen>.ppm for JIANT PAPER GREY MONO (ui_render.py: sheet_<SKIN>_<PALETTE>.png) */
-        static const char *const SK_N[SKIN_N] = {"COLORS", "BOTTOM", "HUD", "AIR"}, *const ST_N[3] = {"", "-LINE", "-LARGE"};
+        static const char *const SK_N[SKIN_N] = {"COLORS", "", "HUD", "AIR"}, *const ST_N[3] = {"", "-LINE", "-LARGE"};
         uint32_t sk, st, n0 = nfind, nlow = 0, nhud = 0;
-        for (sk = SKIN_BOTTOM; sk <= SKIN_AIR; sk++)   /* (0.9.7: AIR, the knobs' row on top) */
+        for (sk = SKIN_HUD; sk <= SKIN_AIR; sk++)      /* (0.9.7: AIR, the knobs' row on top; 0.9.17: BOTTOM retired) */
             for (st = 0; st < 3u; st++)
                 for (p = 0; p < NPALETTES; p++)
                     for (s = 0; s < S_COUNT; s++) {
@@ -2450,7 +2479,7 @@ int main(int argc, char **argv)
                     }
         ui_skin = SKIN_COLORS; ui_style = ST_FLAT; style_apply();
         if (nlow < 1000u || nhud < 20u) { fprintf(stderr, "ui_render: SKIN drew %u screens low, %u HUD HOMEs only\n", nlow, nhud); return 1; }
-        fprintf(rep, "SKIN BOTTOM and HUD (FLAT, LINE, LARGE, every palette): %u lint findings; %u screens with the knob row, %u HUD "
+        fprintf(rep, "SKIN HUD and AIR (FLAT, LINE, LARGE, every palette): %u lint findings; %u screens with the knob row, %u HUD "
                 "HOMEs\n", nfind - n0, nlow, nhud);
     }
     {   /* every FM6 colony (the lint above, fm6_hook, runs on each), in GREY: gray */
@@ -2552,10 +2581,11 @@ int main(int argc, char **argv)
         {   /* (0.8.9) SKIN: HOME, EDIT, SEQ's BAR, FX's BUSES redrawn whole in each skin (us, texts, LCD px sent), and HOME frame
              * by frame (HUD: every strip each frame, on the beings) */
             static const int SC[] = {S_HOME, S_EDIT_ANALOG, S_LENTE_BAR, S_FXL_BUSES, S_VX_HEAD_S, S_VX_WING, S_VX_KIT_HOME};
-            static const char *const SK_N[SKIN_N] = {"COLORS", "BOTTOM", "HUD", "AIR"};
+            static const char *const SK_N[SKIN_N] = {"COLORS", "", "HUD", "AIR"};
             uint32_t sk;
             fprintf(rep, "  SKIN (full redraw us / texts / LCD px; HOME a frame without force):\n");
             for (sk = 0; sk < SKIN_N; sk++) {
+                if (sk == SKIN_BOTTOM_OLD) continue;    /* (0.9.17: retired, reads as AIR) */
                 fprintf(rep, "  %-7s", SK_N[sk]);
                 for (k = 0; k < sizeof SC / sizeof SC[0]; k++) {
                     clock_t c0;

@@ -5,7 +5,7 @@
  * sequencer, MIDI, project and UI sources (with the stubs of tests/ui_test.c):
  *   CENTRE     OCT 0: the keys' notes and hits as before (key 7 the kick, 36), no ratchet, no TOUCH, a hit bit for bit
  *              the one a plain note-on renders; recorded: the hit alone.
- *   UP         OCT +1 / +2 / +3: the same sound once / x2 / x4 a step while held (0.9.13; was x2 / x4 / x8), stopped (from the press, a
+ *   UP         OCT +1 / +2 / +3: the same sound every other step / once / x2 a step while held (0.9.17; 0.9.13 once / x2 / x4), stopped (from the press, a
  *              step / n apart) and playing (on the sequencer's RATCH grid); the release ends it.
  *   DOWN       OCT -1 SHORT (half the length, its level), -2 GHOST (short, darker, under 55 % of the level), -3 FLAM (a
  *              soft grace hit, the hit itself ~20 ms later at its level): measured on the engine's output.
@@ -16,6 +16,8 @@
  *   MIDI       35..81 the GM map as before; 82.. ratchet bands, ..34 TOUCH bands (by pitch class), note-offs end them.
  *   UI         OCT on a DRUM track says what the octave does; SEQ > COMP shows a recorded TOUCH step, ECHO's EVEN kept
  *              by its knob.
+ *   ONCE       (0.9.16) REC at OCT 0 over a RATCH / ECHO step (DICE, GEN): the key's new hit struck once, live and played
+ *              back (LM_ONCE), the step's own hits still x2..x4; FUNC keeps it.
  * Built and run by tests/run_tests.sh. */
 #define UI_TEST_NO_MAIN 1
 #define PROJ_FUNB_WRITER 1                               /* (an older format to load: FUNB, as JIANT 0.2 .. 0.5 wrote it) */
@@ -215,11 +217,12 @@ static int up(void)
 {
     int bad = 0, ok = 1;
     uint32_t at[64], nh, k, per, o;
-    static const uint8_t R[4] = {1, 1, 2, 4};   /* (0.9.13: half as fast, was 1 2 4 8) */
+    static const uint8_t R[4] = {2, 1, 2, 4};   /* hits in two steps (0.9.13: half as fast, was 2 4 8 16; 0.9.17: half
+                                                 * again, was 2 4 8) */
     for (o = 1; o <= 3u; o++) {
         nh = held_stopped((int32_t)o, 4, at);
-        per = div_samples((uint32_t)dt->p[P_SDIV]) / R[o];
-        ok &= nh == 4u * R[o] && dxo_n[3] == 1u;
+        per = 2u * div_samples((uint32_t)dt->p[P_SDIV]) / R[o];
+        ok &= nh == 2u * R[o] && dxo_n[3] == 1u;
         for (k = 1; k < nh && k < 64u; k++) {
             int32_t d = (int32_t)(at[k] - at[0]) - (int32_t)(k * per);   /* (in the block holding its sample) */
             ok &= d > -(int32_t)CTL && d <= 0;
@@ -231,7 +234,7 @@ static int up(void)
         ok &= nh == 0u && !dxo_n[3];
         if (!ok) printf("ui:   OCT +%u stopped: %u hits in 4 steps\n", o, held_stopped((int32_t)o, 4, at));
     }
-    bad += check("OCT +1 / +2 / +3 stopped: once / x2 / x4 a step from the press, the kick; the release ends it", ok);
+    bad += check("OCT +1 / +2 / +3 stopped: every other step / once / x2 a step from the press, the kick; the release ends it", ok);
     /* playing: on the sequencer's grid (a part every step / n from each step's start) */
     ok = 1;
     for (o = 1; o <= 3u; o++) {
@@ -247,15 +250,16 @@ static int up(void)
         nh = 0;
         run_b((step_len(0) * 4u) / CTL - 1u, at, 64, &nh);
         key_upk(KICK_KEY);
-        ok &= nh == 4u * R[o];
-        for (i = 1; i < nh && i < 64u; i++) {           /* hit i: part i % n of step i / n */
-            uint32_t want = s0 + (i / R[o]) * step_len(0) + (i % R[o]) * (step_len(0) / R[o]);
+        ok &= nh == 2u * R[o];
+        for (i = 1; i < nh && i < 64u; i++) {           /* hit i: part i % n of step i / n (+1: every other step) */
+            uint32_t r = R[o] / 2u, want = r ? s0 + (i / r) * step_len(0) + (i % r) * (step_len(0) / r)
+                                             : s0 + 2u * i * step_len(0);
             int32_t d = (int32_t)at[i] - (int32_t)want;
             ok &= d >= 0 && d < (int32_t)CTL;
         }
         seq_stop();
     }
-    bad += check("OCT +1 / +2 / +3 playing: n hits a step, each on the RATCH grid of the step (to the block)", ok);
+    bad += check("OCT +1 / +2 / +3 playing: every other step / once / x2 a step, each on the RATCH grid of the step (to the block)", ok);
     return bad;
 }
 
@@ -326,7 +330,7 @@ static int rec_up(void)
 {
     int bad = 0, ok = 1;
     uint32_t live[32], back[32], nl = 0, nb = 0, k, s2, loop, o;
-    static const uint8_t R[4] = {1, 1, 2, 4};   /* (0.9.13: half as fast, was 1 2 4 8) */
+    static const uint8_t R[4] = {1, 1, 1, 2};   /* the lane's hits a step (0.9.13: was 1 2 4 8; 0.9.17: 1 1 2 4) */
     for (o = 1; o <= 3u; o++) {
         drum_setup();
         song.octave = (int32_t)o;
@@ -349,7 +353,7 @@ static int rec_up(void)
             loop += step_len(k);
         for (k = 0; k < 16u; k++) {
             const step_t *s = &dt->step[k];
-            int has = k >= 2u && k <= 4u;
+            int has = k >= 2u && k <= 4u && (o != 1u || k != 3u);   /* (+1: every other step) */
             ok &= has ? s->time == ST_NOTE && s->hit == 1u << DV_KICK && lm_hits(step_lmode(s, DV_KICK)) == R[o] &&
                             !s->comp && step_ratchet(s) == 1u && lane_modes_but(s, DV_KICK) == 0u
                       : s->time != ST_NOTE || (!s->hit && !s->n);
@@ -357,7 +361,7 @@ static int rec_up(void)
         nb = 0;
         while (!(dt->seq_idx == 5u))                      /* the next pass, steps 3..5 */
             run_b(1, back, 32, &nb);
-        ok &= nl == 3u * R[o] && nb == nl;
+        ok &= nl == (o == 1u ? 2u : 3u * R[o]) && nb == nl;
         for (k = 0; k < nl && k < nb && k < 32u; k++) {
             int32_t d = (int32_t)(back[k] - loop) - (int32_t)live[k];   /* (the press: a block late, as heard) */
             ok &= d >= -(int32_t)CTL && d <= (int32_t)CTL;
@@ -366,10 +370,10 @@ static int rec_up(void)
         if (!ok) printf("ui:   REC OCT +%u: %u hits live, %u played back\n", o, nl, nb);
         seq_stop();
     }
-    bad += check("REC OCT +1 / +2 / +3: the kick and the KICK lane's none / x2 / x4 in each step held (the step x1); played back as heard", ok);
+    bad += check("REC OCT +1 / +2 / +3: the kick (every other step / each / each) and the KICK lane's none / none / x2 (the step x1); played back as heard", ok);
     /* an early release in a step it was held into puts that step back */
     drum_setup();
-    song.octave = 2;                                    /* (x2; 0.9.13: OCT +2) */
+    song.octave = 3;                                    /* (x2; 0.9.13: OCT +2, 0.9.17: +3) */
     song.rec = 1u << 3;
     seq_start();
     nb = 0;
@@ -386,7 +390,7 @@ static int rec_up(void)
     bad += check("  let go early in the next step: that step back as it was (one step recorded)", ok);
     /* late in a step: into the next one (the sequencer plays its later parts, the live ones stop) */
     drum_setup();
-    song.octave = 2;                                    /* (x2; 0.9.13: OCT +2) */
+    song.octave = 3;                                    /* (x2; 0.9.13: OCT +2, 0.9.17: +3) */
     song.rec = 1u << 3;
     seq_start();
     nb = 0;
@@ -523,7 +527,7 @@ static int per_lane(void)
     key_dn(KICK_KEY);
     run_b(2, 0, 0, &nb);
     key_upk(KICK_KEY);
-    song.octave = 3;                                    /* (x4: 0.9.13 OCT +3, was +2) */
+    song.octave = 3;                                    /* (x2: 0.9.17 OCT +3, was x4) */
     key_dn(KICK_KEY + 6u);                              /* F#: the closed hat */
     run_b(2, 0, 0, &nb);
     key_upk(KICK_KEY + 6u);
@@ -536,16 +540,16 @@ static int per_lane(void)
     {
         const step_t *s = &dt->step[4];
         ok = s->hit == (1u << DV_KICK | 1u << DV_HATC | 1u << DV_SNARE) && step_lmode(s, DV_KICK) == LM_NONE &&
-             step_lmode(s, DV_HATC) == LM_X4 && step_lmode(s, DV_SNARE) == LM_GHOST && step_ratchet(s) == 1u && !s->comp;
+             step_lmode(s, DV_HATC) == LM_X2 && step_lmode(s, DV_SNARE) == LM_GHOST && step_ratchet(s) == 1u && !s->comp;
     }
     while (dt->seq_idx != 3u)                           /* the next pass: step 5 plays them each its own way */
         run_b(1, 0, 0, &nb);
     memset(cnt, 0, sizeof cnt);
     while (dt->seq_idx != 5u)
         run_c(1);
-    ok &= cnt[36] == 1u && cnt[42] == 4u && cnt[38] == 1u && lane(DV_KICK)->dm == 0u && lane(DV_SNARE)->dm == 2u;
+    ok &= cnt[36] == 1u && cnt[42] == 2u && cnt[38] == 1u && lane(DV_KICK)->dm == 0u && lane(DV_SNARE)->dm == 2u;
     seq_stop();
-    bad += check("REC per sound: kick OCT 0, hat OCT +3, snare OCT -2 on one step: the kick 1, the hat x4, the snare GHOST", ok);
+    bad += check("REC per sound: kick OCT 0, hat OCT +3, snare OCT -2 on one step: the kick 1, the hat x2, the snare GHOST", ok);
     /* the grid: KNOB 3 HIT goes -- ON x2 x4 x8 SHORT GHOST FLAM on the selected lane */
     drum_setup();
     go_page(GR_ROLL);
@@ -634,7 +638,7 @@ static int midi(void)
             now_s = 0;
             nb = mev(0x90, UPN[i], 100);
             run_b(4u * div_samples((uint32_t)dt->p[P_SDIV]) / CTL - 1u, 0, 0, &nb);
-            ok &= nb == 4u * R[i] && dxo_n[3] == 1u;
+            ok &= nb == 2u * R[i] && dxo_n[3] == 1u;   /* (R: in two steps, 0.9.17) */
             mev(0x80, UPN[i], 0);
             nb = 0;
             run_b(div_samples((uint32_t)dt->p[P_SDIV]) * 2u / CTL, 0, 0, &nb);
@@ -646,7 +650,7 @@ static int midi(void)
             ok &= nb == 1u && lane(DV_KICK)->dm == i + 1u;
         }
     }
-    bad += check("MIDI 84 / 96 / 108: the kick once a step / x2 / x4 while held; 24 / 12 / 0: the kick SHORT / GHOST / FLAM", ok);
+    bad += check("MIDI 84 / 96 / 108: the kick every other step / once / x2 a step while held; 24 / 12 / 0: the kick SHORT / GHOST / FLAM", ok);
     /* MIDI recording */
     drum_setup();
     song.rec = 1u << 3;
@@ -654,9 +658,9 @@ static int midi(void)
     nb = 0;
     while (!(dt->seq_idx == 3u && dt->seq_pos < CTL))
         run_b(1, 0, 0, &nb);
-    mev(0x90, 102, 100);                      /* F#: the closed hat, +2 (x2; 0.9.13: was 90, +1) */
+    mev(0x90, 114, 100);                      /* F#: the closed hat, +3 (x2; 0.9.13: 102, +2; was 90, +1) */
     run_b(4, 0, 0, &nb);
-    mev(0x80, 102, 0);
+    mev(0x80, 114, 0);
     while (!(dt->seq_idx == 5u && dt->seq_pos < CTL))
         run_b(1, 0, 0, &nb);
     mev(0x90, 26, 100);                       /* D: the snare, -1 */
@@ -666,7 +670,7 @@ static int midi(void)
     seq_stop();
     ok = dt->step[3].hit == 1u << DV_HATC && step_lmode(&dt->step[3], DV_HATC) == LM_X2 && !dt->step[4].hit &&
          dt->step[5].hit == 1u << DV_SNARE && step_lmode(&dt->step[5], DV_SNARE) == LM_SHORT && !dt->step[5].comp;
-    bad += check("MIDI REC: 102 the closed hat x2, 26 the snare SHORT, each into its step", ok);
+    bad += check("MIDI REC: 114 the closed hat x2, 26 the snare SHORT, each into its step", ok);
     {   /* FUNC round trip */
         project_t before, after;
         project_store_t packed;
@@ -685,9 +689,9 @@ static int ui_part(void)
     drum_setup();
     frame();
     press(B_OCTUP);
-    ok = song.octave == 1 && msg_is("REPEAT");
+    ok = song.octave == 1 && msg_is("REPEAT 1/2");
     press(B_OCTUP);
-    ok &= song.octave == 2 && msg_is("RATCHET x2");
+    ok &= song.octave == 2 && msg_is("REPEAT");
     press(B_OCTDN);
     press(B_OCTDN);
     press(B_OCTDN);
@@ -698,8 +702,8 @@ static int ui_part(void)
     ok &= song.octave == -3 && msg_is("FLAM");
     song.octave = 2;
     press(B_OCTUP);
-    ok &= song.octave == 3 && msg_is("RATCHET x4");
-    bad += check("OCT on a DRUM track: REPEAT, RATCHET x2 / x4, SHORT, GHOST, FLAM", ok);
+    ok &= song.octave == 3 && msg_is("RATCHET x2");
+    bad += check("OCT on a DRUM track: REPEAT 1/2, REPEAT, RATCHET x2, SHORT, GHOST, FLAM", ok);
     song.octave = 0;
     dt->step[2] = (step_t){{0}, 0, ST_NOTE, 0, 100, 1u << DV_KICK};
     dt->step[2].comp = CP_TOUCH;
@@ -725,6 +729,111 @@ static int ui_part(void)
     return bad;
 }
 
+
+/* (0.9.16) finger drumming at OCT 0, recording over a beat with RATCH / ECHO steps (DICE and GEN write x2..x4 on hats,
+ * fills): Danil's "random rolls". A key's hit on a lane the step did not play is struck once, live and on every pass
+ * after (LM_ONCE), not x3 with the step's repeats; the step's own hits still roll; FUNC keeps it, a project of before
+ * plays as it did */
+static uint32_t lane_n[NLANE], lane_age[NVOICE];
+static void lanes_b(uint32_t nb)                         /* nb blocks, the hits of each lane counted */
+{
+    uint32_t i;
+    while (nb--) {
+        events_block(CTL);
+        for (i = 0; i < NVOICE; i++)
+            if (dt->v[i].age != lane_age[i]) {
+                lane_age[i] = dt->v[i].age;
+                lane_n[drum_lane(dt->v[i].note)]++;
+            }
+    }
+}
+static void lanes_until(uint32_t idx, uint32_t from)   /* to play index idx, from its sample from on */
+{
+    while (!(dt->seq_idx == idx && dt->seq_pos >= from && dt->seq_pos < 0x7FFFFFFFu))
+        lanes_b(1);
+}
+static int rec_ratch(void)
+{
+    int bad = 0, ok, late;
+    uint32_t r;
+    for (late = 0; late < 2; late++)
+        for (r = 2; r <= 4u; r++) {
+            uint32_t sl, at = late ? 1u : 2u;
+            drum_setup();
+            dt->step[2] = (step_t){{0}, 0, ST_NOTE, 0, 100, 1u << DV_HATC};
+            step_set_ratchet(&dt->step[2], r);
+            song.rec = 1u << 3;
+            seq_start();
+            sl = step_len(2);
+            lanes_until(at, late ? sl * 3u / 4u : sl / 8u);   /* early in step 3, or late in step 2 (into step 3) */
+            memset(lane_n, 0, sizeof lane_n);
+            key_dn(KICK_KEY);
+            lanes_b(4);
+            key_upk(KICK_KEY);
+            lanes_until(3, 0);
+            ok = lane_n[DV_KICK] == 1u && lane_n[DV_HATC] == r - (late ? 0u : 1u) && dt->step[2].hit == (1u << DV_HATC | 1u << DV_KICK) &&
+                 step_ratchet(&dt->step[2]) == r && step_lm_raw(&dt->step[2], DV_KICK) == LM_ONCE &&
+                 step_lmode(&dt->step[2], DV_KICK) == LM_NONE;
+            memset(lane_n, 0, sizeof lane_n);             /* the next pass: once, the hats x r */
+            lanes_until(1, 0);
+            lanes_until(3, 0);
+            ok &= lane_n[DV_KICK] == 1u && lane_n[DV_HATC] == r;
+            memset(lane_n, 0, sizeof lane_n);             /* played there again: the recorded one and the key's, once each */
+            lanes_until(2, sl / 8u);
+            key_dn(KICK_KEY);
+            lanes_b(4);
+            key_upk(KICK_KEY);
+            lanes_until(3, 0);
+            ok &= lane_n[DV_KICK] == 2u && step_lm_raw(&dt->step[2], DV_KICK) == LM_ONCE;
+            memset(lane_n, 0, sizeof lane_n);             /* a hat played into its own step: it rolls with it, as before */
+            lanes_until(2, sl / 8u);
+            fm1_in.notes |= 1u << 13;                     /* (key 13: 42, the closed hat) */
+            lanes_b(4);
+            fm1_in.notes &= ~(1u << 13);
+            lanes_until(3, 0);
+            ok &= drum_lane(29u + 13u) == DV_HATC && step_lmode(&dt->step[2], DV_HATC) == LM_NONE &&
+                  step_lm_raw(&dt->step[2], DV_HATC) == LM_NONE;
+            seq_stop();
+            bad += check(late ? "REC at OCT 0 late into a RATCH step: the new hit once (live, after), the step's x2..x4"
+                              : "REC at OCT 0 into a RATCH x2..x4 step: the new hit once (live, after), the step's x2..x4",
+                         ok);
+        }
+    {   /* an ECHO step the same; a step without repeats as before (no mode) */
+        drum_setup();
+        dt->step[2] = (step_t){{0}, 0, ST_NOTE, 0, 100, 1u << DV_HATC};
+        dt->step[2].comp = CP_ECHO;
+        dt->step[2].carg = 1;                             /* (x3) */
+        dt->step[5] = (step_t){{0}, 0, ST_NOTE, 0, 100, 1u << DV_HATC};
+        song.rec = 1u << 3;
+        seq_start();
+        lanes_until(2, step_len(2) / 8u);
+        memset(lane_n, 0, sizeof lane_n);
+        key_dn(KICK_KEY);
+        lanes_b(4);
+        key_upk(KICK_KEY);
+        lanes_until(3, 0);
+        ok = lane_n[DV_KICK] == 1u && lane_n[DV_HATC] == 2u && step_lm_raw(&dt->step[2], DV_KICK) == LM_ONCE;
+        lanes_until(5, step_len(5) / 8u);
+        key_dn(KICK_KEY);
+        lanes_b(4);
+        key_upk(KICK_KEY);
+        lanes_b(4);
+        ok &= !step_lm_any(&dt->step[5]) && dt->step[5].hit == (1u << DV_HATC | 1u << DV_KICK);
+        seq_stop();
+        bad += check("REC at OCT 0 into an ECHO step: once; into a plain step: no lane mode, as before", ok);
+    }
+    {   /* FUNC keeps it; read as none by the rest (and by a firmware before: the hit rolls with the step, as it did) */
+        project_t before, after;
+        project_store_t b;
+        step_set_lmode(&dt->step[2], DV_KICK, LM_ONCE);
+        project_capture(&before);
+        ok = proj_pack(&b, &before) && proj_import(&after, &b, sizeof b) &&
+             step_lm_raw(&after.t[3].step[2], DV_KICK) == LM_ONCE && step_lmode(&after.t[3].step[2], DV_KICK) == LM_NONE;
+        bad += check("FUNC: LM_ONCE round trip (step_lmode: none)", ok);
+    }
+    return bad;
+}
+
 int main(void)
 {
     int bad = 0;
@@ -736,6 +845,7 @@ int main(void)
     bad += midi();
     bad += per_lane();
     bad += ui_part();
+    bad += rec_ratch();
     if (bad) {
         printf("drumx octaves: %d FAILED\n", bad);
         return 1;

@@ -28,10 +28,10 @@ click_render 30
 mod_begin 166
 mod_voice 30
 mod_end 7
-perf_begin 28
-perf_mute 21
+perf_begin 11
+perf_mute 18
 perf_pre 31
-perf_block 522
+perf_block 93
 perf_master 32
 rev_room 160
 rev_spring 127

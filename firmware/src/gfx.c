@@ -112,7 +112,7 @@ static struct {
     uint8_t light, mono;
     uint8_t chamfer;             /* (JIANT 0.5) the JIANT palette: corners cut on the diagonal (cv_rrect), not rounded */
     uint8_t style;               /* MENU > STYLE (ui.c style_apply): ST_FLAT, ST_LINE */
-    uint8_t skin;                /* (0.8.9) MENU > SKIN (ui_draw.c style_apply): SKIN_COLORS, SKIN_BOTTOM, SKIN_HUD, SKIN_AIR */
+    uint8_t skin;                /* (0.8.9) MENU > SKIN (ui_draw.c style_apply): SKIN_COLORS, SKIN_HUD, SKIN_AIR */
     uint32_t gen;                /* bumped by palette_set (the text ramps follow) */
 } ux;
 /* STYLE: FLAT, the filled SURF cards and panels; LINE, no SURF (it is BG) and 1 px T_RULE dividers between the
@@ -123,12 +123,14 @@ static struct {
 /* (0.8.9) SKIN (the approved mock-up opciones_skin.html): COLORS, the lens's cards and panel in the 0.6 colours; BOTTOM, the
  * knobs a slim row at the foot and the middle free (no panel, no boxes: SURF is BG); HUD, the picture full screen and the
  * words floating over it. (0.9.7) AIR (the default of new settings): HUD's look everywhere, the knobs' row on top, right
- * under the tabs, the middle free for the pictures, the breadcrumb at the foot (stored 3: older settings keep theirs) */
+ * under the tabs, the middle free for the pictures, the breadcrumb at the foot (stored 3: older settings keep theirs).
+ * (0.9.17) BOTTOM retired (its premise, the knobs at the foot, put the SEQ pages' values under their pictures): a stored 1
+ * reads as AIR (settings_persist.c, ui_draw.c style_apply); HUD's SEQ pages take AIR's knobs' row on top too (ui.c lz_top) */
 #define SKIN_COLORS 0u
-#define SKIN_BOTTOM 1u
+#define SKIN_BOTTOM_OLD 1u           /* (0.9.17: retired, reads as AIR) */
 #define SKIN_HUD 2u
 #define SKIN_AIR 3u
-#define SKIN_N 4u
+#define SKIN_N 4u                    /* the stored values (0..3) */
 static int skin_hud(void) { return ux.skin == SKIN_HUD || ux.skin == SKIN_AIR; }   /* (0.9.7) HUD's look: no rules, words float */
 #define T_K(c) ux.k[(c) & 3u]    /* KNOB c's colour */
 #define T_RULE ux.dim            /* LINE: the dividers (DIM: visible on NIGHT, GREY, MONO and PAPER, quieter than labels) */

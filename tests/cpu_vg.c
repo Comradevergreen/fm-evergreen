@@ -21,6 +21,8 @@
  *   seqtick/live   .. every track under GLO > LIVE's modifiers (seq_live.c: x2, a LOOP of 4, REV, THIN 30 %, GIRO +1)
  *   song/cputest   SAVE > TOOLS 6 CPU TEST's song (song_dice.c cpu_test_song), playing: what the device is measured on
  *   song/cputest.djf  (0.9.1) .. with the master DJ FILTER on (GLO > MIXER KNOB 4 at -24, a low-pass): its cost on top
+ *   fx/<EFFECT>    (0.9.17) the CPU TEST song with an FX layer buffer effect held (REPEAT 1/16, GLITCH, TAPE STOP, its
+ *                  SCRATCH, SHUFFLE, FREEZE; .max at their heaviest knobs): the mean of its rounds (cpu_vg.py)
  *   idle/stopped   (0.9.16) that song stopped and every tail out: the audio at rest (both cores' work)
  *   peak/VOICE.EN6 (0.9.0, last) six VOICE EN tracks starting a word in one block: that block's instructions, the worst
  *                  of 24 rounds (cpu_vg.py: not per sample) */
@@ -235,6 +237,46 @@ int main(void)
     song.g[G_DJF] = -24;                                /* (0.9.1) the same song through the DJ FILTER (a low-pass, ~1.4 kHz) */
     vg_section("song/cputest.djf");
     song.g[G_DJF] = 0;
+    {   /* (0.9.17) fx/<EFFECT>: the same song with an FX layer buffer effect held, rounds of NB blocks (cpu_vg.py: their
+         * mean): REPEAT 1/16 (for scale), the glitcher at its defaults and at its heaviest (.max) */
+        static const struct { const char *n; uint8_t e, rounds, k, v; uint16_t pre; } FXS[] = {
+            {"fx/R16", PF_R16, 4, 0, 0, 64}, {"fx/GLITCH", PF_GLT, 8, 0, 0, 64},
+            {"fx/GLITCH.max", PF_GLT, 8, 0, 100, 64}, {"fx/TAPE", PF_TAPE, 1, 0, 0, 8},
+            {"fx/SCRATCH", PF_TAPE, 4, 1, 0, 1200}, {"fx/SHUFFLE", PF_SHUF, 8, 0, 0, 900},
+            {"fx/SHUFFLE.max", PF_SHUF, 8, 0, 100, 900}, {"fx/FREEZE", PF_FRZ, 4, 0, 0, 400},
+            {"fx/FREEZE.max", PF_FRZ, 4, 0, 100, 400}};
+        uint32_t f, r, b;
+        for (f = 0; f < sizeof FXS / sizeof FXS[0]; f++) {
+            if (FXS[f].v) {                             /* (.max: GLITCH DENS 100 PITCH +12 TINY; SHUFFLE AMOUNT and SPEED
+                                                         * 100; FREEZE DENS 100 (4 grains) SPRAY 100 PITCH +12) */
+                perf_gp[GX_GLT][0] = 100; perf_gp[GX_GLT][1] = 12; perf_gp[GX_GLT][2] = 3;
+                perf_gp[GX_SHUF][0] = 100; perf_gp[GX_SHUF][2] = 100;
+                perf_gp[GX_FRZ][0] = 100; perf_gp[GX_FRZ][1] = 12; perf_gp[GX_FRZ][2] = 100;
+            }
+            perf_press(FXS[f].e, 1);
+            for (b = 0; b < FXS[f].pre; b++)
+                mix_block(vo, CTL);
+            for (r = 0; r < FXS[f].rounds; r++) {
+                CALLGRIND_ZERO_STATS;
+                CALLGRIND_START_INSTRUMENTATION;
+                for (b = 0; b < NB; b++) {
+                    if (FXS[f].k && b % 4u == 0u)   /* (SCRATCH: KNOB 1 a detent every 4 blocks, on and back) */
+                        perf_scr += (b / 64u) & 1u ? (uint32_t)-1 : 1u;
+                    mix_block(vo, CTL);
+                }
+                snprintf(name, sizeof name, "%s.r%02u", FXS[f].n, r);
+                CALLGRIND_DUMP_STATS_AT(name);
+                CALLGRIND_STOP_INSTRUMENTATION;
+            }
+            perf_press(FXS[f].e, 0);
+            for (b = 0; b < 64u; b++)
+                mix_block(vo, CTL);
+            if (pf.mode != BM_NONE) { printf("cpu_vg: %s: the effect still on after it was let go\n", FXS[f].n); return 1; }
+            perf_gp[GX_GLT][0] = 50; perf_gp[GX_GLT][1] = 0; perf_gp[GX_GLT][2] = 0;
+            perf_gp[GX_SHUF][0] = 60; perf_gp[GX_SHUF][2] = 20;
+            perf_gp[GX_FRZ][0] = 50; perf_gp[GX_FRZ][1] = 0; perf_gp[GX_FRZ][2] = 30;
+        }
+    }
     {   /* (0.9.16) idle/stopped: the CPU TEST song stopped, 20 s on (every tail out): the audio at rest, both cores'
          * work (the silence path, fx.c mix_hush: the events, the LFOs, the engines' block work; 0.9.14: ~500) */
         uint32_t b;

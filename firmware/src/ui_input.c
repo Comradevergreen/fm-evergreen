@@ -922,7 +922,8 @@ static void comp_knob(uint32_t slot, int32_t steps)
     } else if (v >= COMP_ARPN && v <= COMP_ARPS && slot == 2u) {   /* (0.6.92) ORDER x RANGE: one list, a range after another */
         int32_t i = clamp((int32_t)(CP_ORD(*ap) * 4u + CP_RNG(*ap)) + d, 0, 15);
         *ap = CP_ARG((uint32_t)i / 4u, CP_RATE(*ap), (uint32_t)i % 4u);
-    } else if (v >= COMP_ARPN && v <= COMP_ARPS && slot == 3u) {   /* (0.6.92) RATE: x1 x2 x3 x4 x6 x8 (in the track's time) */
+    } else if (v >= COMP_ARPN && v <= COMP_ARPS && v != COMP_ARPQ && slot == 3u) {   /* (0.6.92) RATE: x1 x2 x3 x4 x6 x8
+                                                         * (in the track's time); (0.9.17) SEQ's KNOB 4 shows the lap's note */
         uint32_t i;
         for (i = 0; i < CP_NRATE && CP_RATE_ORD[i] != CP_RATE(*ap) % CP_NRATE; i++) {}
         i = (uint32_t)clamp((int32_t)i + e, 0, CP_NRATE - 1);
@@ -1624,8 +1625,18 @@ static void sound_dice_of(track_t *t, int quiet)
         if (!quiet) ui_message("KIT DICED");
         return;
     }
-    if (ENGINES[e]->npresets)
-        apply_preset_to(t, rng() % ENGINES[e]->npresets);
+    if (ENGINES[e]->npresets) {                         /* (0.9.17) never one of the last four this engine gave */
+        static uint16_t last[4];
+        uint32_t n = ENGINES[e]->npresets, p = 0, tries, j;
+        for (tries = 0; tries < 8u; tries++) {
+            p = rng() % n;
+            for (j = 0; j < 4u && last[j] != (e << 8 | p) + 1u; j++) {}
+            if (j == 4u || n <= 4u) break;
+        }
+        for (j = 3; j; j--) last[j] = last[j - 1u];
+        last[0] = (uint16_t)((e << 8 | p) + 1u);
+        apply_preset_to(t, p);
+    }
     for (i = 0; i < 8u; i++) {
         const param_desc_t *d = track_desc(t, P_E0 + i);
         int32_t span = (d->max - d->min) / 4;
@@ -1811,6 +1822,9 @@ static void part_dice(uint32_t kind)
         ui_message("STOP TO EDIT");
         return;
     }
+    rng_state ^= fm1_ticks() * 2654435761u;             /* (the press's time in the random numbers) */
+    if (!rng_state)
+        rng_state = 0x1234567u;
     if (ui.confirm != kind) {
         undo_mark();
         dk_keep(kind);
