@@ -37,7 +37,7 @@ PAGE_SHOT = {
     'CE_DRM': {'KIT': 'drumx', 'SOUND': 'dx_sound', 'SOUND 2': 'dx_sound2', 'SOUND 3': 'vx_kit_ghost',
                'SOUND 4': 'dx_send', 'FILTER': 'ed_filter', 'STEREO': 'dx_image', 'VOICE': 'voice'},
     'SEQ': {'PATTERN': 'lente_pattern', 'STRETCH': 'lente_stretch', 'PLAYHEADS': 'fugue', 'TRACK': 'shift',
-            'MUTATE': 'mutate', 'BAR': 'seq_bar', 'STEP': 'lente_bar', 'NOTE': 'lente_step_note',
+            'MUTATE': 'mutate', 'STEP': 'lente_bar', 'NOTE': 'lente_step_note',
             'COMP': 'lente_step_comp', 'COMP 2': 'lente_step_comp2', 'AUTOMATION': 'motion', 'AUTO LIST': 'auto_list'},
     'FX': {'SENDS': 'fx_track_sends', 'DIST': 'fx_track_dist', 'AUTO PAN': 'fx_track_pan', 'BUSES': 'fx_buses',
            'DLY': 'fx_effect_delay', 'DLY 2': 'fx_effect_delay2', 'REVERB': 'fx_effect_reverb', 'REVERB 2': 'reverb2',

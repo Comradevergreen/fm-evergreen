@@ -1739,14 +1739,6 @@ static void draw_columns(void)
     for (c = 0; c < 4u; c++) {
         int16_t *vp;
         const param_desc_t *d = page_desc(cur_page(), c, &vp);
-        if (c == 0u && BAR_PAGE(cur_page())) {          /* (0.9.2) SEQ > BAR: KNOB 1 the bar ("2/4") */
-            uint32_t nb = ((uint32_t)clamp(TSEL->p[P_SLEN], 1, NSTEP) + 15u) / 16u;
-            char u[4] = "/1";
-            fmt_int(val, (int32_t)ui.bank + 1);
-            u[1] = (char)('0' + nb);
-            draw_column(0, "BAR", val, u, VAL(0u), nb > 1u ? (int32_t)ui.bank * 1000 / (int32_t)(nb - 1u) : 0, ICON_X_PATTERN);
-            continue;
-        }
         if (!d || !d->label || d->label[0] == '-') {
             draw_column(c, "", "", "", T_THEME, -1, ICON_AUTO);
             continue;

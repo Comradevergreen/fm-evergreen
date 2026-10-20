@@ -655,14 +655,12 @@ static const page_t PAGES[] = {
                                                          * value, LOOP (ui_input.c stage_knob) */
     {"SENDS", FAM_TRK, SC_TRACK, GR_TRK, {P_DIST, P_CHOR, P_DLY, P_REV}},   /* GLO > MIX: the track's sends (as FX > SENDS),
                                                          * the six tracks' as bars (ui_graph.c track_col6) */
-    {"BAR", FAM_SEQ, SC_TRACK, GR_STEPS, {0xFF, P_SLEN, 0xFF, 0xFF}},   /* (0.9.2) SEQ > BAR: the pattern's bars, KNOB 1
-                                                         * the bar (the cursor at its place in it; was PRESETS on PATTERN's
-                                                         * level), KNOB 2 LEN (ui_input.c edit_param) */
+    /* (0.9.18) SEQ > BAR gone (0.9.2 .. 0.9.17: KNOB 1 the bar, KNOB 2 LEN): the bar is the roll's cursor / strip and
+     * STEP's KNOB 1 walks all 64 steps, LEN is PATTERN's */
     {"MANO", FAM_GLO, SC_GLOBAL, GR_LIVE, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (0.9.11) GLO > LIVE: the keys a board of live
                                                          * modifiers (ui_live.c, seq_live.c) */
     {"RIELES", FAM_GLO, SC_GLOBAL, GR_LIVE, {0xFF, 0xFF, 0xFF, 0xFF}},   /* .. the six sequences as rails, four knobs */
 };
-#define BAR_PAGE(pg) ((pg)->graph == GR_STEPS && (pg)->id[0] == 0xFFu)
 #define NPAGES (sizeof(PAGES) / sizeof(PAGES[0]))
 static uint8_t mod_ui_slot;      /* the MOD page: the matrix slot (0..3) KNOB 2..4 edit */
 static uint8_t ms_ui_step;       /* (JIANT) the MSEQ page: the step (0..15) KNOB 2 edits */

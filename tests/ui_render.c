@@ -642,7 +642,7 @@ enum { S_HOME, S_HOME_IDLE, S_MESSAGE, S_MESSAGE_KEY, S_MESSAGE_NOFILE, S_PRESET
        S_SEQ_TOOLS, S_SEQ_TOOLS_DRUM, S_SEQ_TOOLS_SONG,
        S_LENTE_PAT, S_LENTE_PAT_DRUM, S_LENTE_STRETCH, S_LENTE_BAR, S_LENTE_BAR_DRUM, S_LENTE_STEP, S_LENTE_STEP_COMP,
        S_LENTE_STEP_COMP2, S_LENTE_STEP_TIE, S_LENTE_STEP_REST, S_LENTE_STEP_DRUM, S_LENTE_BAR_LONG, S_LENTE_STEP_LONG,
-       S_SEQ_BAR, S_SEQ_BAR_DRUM,
+       /* (0.9.18: S_SEQ_BAR, S_SEQ_BAR_DRUM gone with the page) */
        S_NAME_USER, S_NAME_TYPING, S_NAME_123, S_NAME_EMPTY, S_NAME_FULL, S_NAME_PLAYING, S_PROJECT_NAMED, S_SONG_NAMED,
        S_USER_FOOT,
        S_WORDS, S_WORDS_EN, S_WORDS_JA, S_WORDS_EDIT, S_WORDS_OFF, S_NAME_LYRIC, S_NAME_LYRIC_LONG,
@@ -679,7 +679,7 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "message", "mes
     "layer_seq_tools", "layer_seq_tools_drum", "layer_seq_tools_song",
     "lente_pattern", "lente_pattern_drum", "lente_stretch", "lente_bar", "lente_bar_drum", "lente_step_note",
     "lente_step_comp", "lente_step_comp2", "lente_step_tie", "lente_step_rest", "lente_step_drum", "lente_bar_long",
-    "lente_step_long", "seq_bar", "seq_bar_drum",
+    "lente_step_long",
     "name_user", "name_typing", "name_123", "name_empty", "name_full", "name_playing", "project_named", "song_named",
     "user_foot",
     "words", "words_en", "words_ja", "words_edit", "words_off", "name_lyric", "name_lyric_long",
@@ -1513,7 +1513,7 @@ static void setup(int s)
     case S_LENTE_STEP_REST:
     case S_LENTE_BAR_LONG:                              /* (0.8.4) a chord 16 steps long: TIME 16 ST, the big step's LEN 16 */
     case S_LENTE_STEP_LONG:
-    case S_SEQ_BAR: {                                   /* (0.9.2) SEQ > BAR: KNOB 1 the bar (3/4 here), KNOB 2 LEN */
+    {
         static const uint8_t CH[3] = {60, 64, 69};
         track_t *t = TSEL;
         uint32_t i;
@@ -1538,7 +1538,7 @@ static void setup(int s)
             song.g[G_STRN] = -12;
         song.playing = 1; t->seq_idx = 21;
         nav_scene(SEC_SEQ, s == S_LENTE_PAT ? "PATTERN" : s == S_LENTE_STRETCH ? "STRETCH" : s == S_LENTE_BAR || s == S_LENTE_BAR_LONG ?
-                  "STEP" : s == S_LENTE_STEP_COMP2 ? "COMP 2" : s == S_LENTE_STEP ? "NOTE" : s == S_SEQ_BAR ? "BAR" : "COMP");   /* (0.9.2: NOTE the roll; the
+                  "STEP" : s == S_LENTE_STEP_COMP2 ? "COMP 2" : s == S_LENTE_STEP ? "NOTE" : "COMP");   /* (0.9.2: NOTE the roll; the
                                                          * step large on COMP: TIE, REST, LONG there) */
         cursor_set(s == S_LENTE_STEP_TIE ? 35 : s == S_LENTE_STEP_REST ? 36 : s == S_LENTE_BAR_LONG || s == S_LENTE_STEP_LONG ? 40 : 34);
         ui.pr_focus = s == S_LENTE_STEP ? 2u : 0u;
@@ -1547,11 +1547,10 @@ static void setup(int s)
     case S_LENTE_PAT_DRUM:
     case S_LENTE_BAR_DRUM:
     case S_LENTE_STEP_DRUM:
-    case S_SEQ_BAR_DRUM:
         drum(0); trk[3].p[P_SLEN] = 32;
         memcpy(&trk[3].step[16], &trk[3].step[0], 16u * sizeof(step_t));
         trk[3].step[20].hit |= 0x30u; trk[3].step[20].acc |= 0x10u;
-        nav_scene(SEC_SEQ, s == S_LENTE_PAT_DRUM ? "PATTERN" : s == S_LENTE_BAR_DRUM ? "STEP" : s == S_SEQ_BAR_DRUM ? "BAR" : "COMP");
+        nav_scene(SEC_SEQ, s == S_LENTE_PAT_DRUM ? "PATTERN" : s == S_LENTE_BAR_DRUM ? "STEP" : "COMP");
         cursor_set(20); ui.lane = 4;
         break;
     /* NAME (ui_name.c): USER SAVE prefilled; a letter cycling (RS: S, R next); 123 on a project; an empty project name

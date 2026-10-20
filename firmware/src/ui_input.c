@@ -536,6 +536,12 @@ static void confirm_open(uint32_t kind, uint32_t trk)
     ui.force = 1;
 }
 
+/* (0.9.18) KNOB 1 the step: a detent a step, a fast turn on a pattern longer than a bar several (KNOB ACCEL: up to x4
+ * on 64 steps), the bar picker SEQ > BAR was until 0.9.17 */
+static void cursor_turn(int32_t steps)
+{
+    cursor_set((int32_t)ui.cursor + accel(EN_K1, steps, (int32_t)clamp(TSEL->p[P_SLEN], 1, NSTEP)));
+}
 /* the grid's page down (-1) / up (+1): the cursor to the same place on it (at most the last step) */
 static void page_go(int32_t d)
 {
@@ -551,7 +557,7 @@ static void page_go(int32_t d)
 static void grid_edit(uint32_t slot, int32_t steps)
 {
     if (slot == 0u)
-        cursor_set(ui.cursor + steps);
+        cursor_turn(steps);
     else if (slot == 1u)
         ui.lane = (uint8_t)clamp((int32_t)ui.lane + (steps > 0 ? 1 : -1), 0, NLANE - 1);
     else if (slot == 2u)
@@ -813,7 +819,7 @@ static void step_edit(uint32_t slot, int32_t steps)
     uint32_t i;
     if (cur_page()->id[0] == 4u) {                      /* (0.6.81) SEQ > NOTE; (0.6.92) KNOB 4 MICRO, on a kit too */
         if (slot == 3u) micro_edit(steps);
-        else if (drum_track(TSEL)) { if (slot == 0u) cursor_set(ui.cursor + steps); else ui_message("A KIT: STEP + MICRO"); }
+        else if (drum_track(TSEL)) { if (slot == 0u) cursor_turn(steps); else ui_message("A KIT: STEP + MICRO"); }
         else note_edit(slot, steps);
         return;
     }
@@ -823,7 +829,7 @@ static void step_edit(uint32_t slot, int32_t steps)
     }
     switch (slot) {
     case 0:                                               /* STEP: the cursor */
-        cursor_set(ui.cursor + steps);
+        cursor_turn(steps);
         break;
     case 1:                                               /* NOTE: transpose the step */
         if (!st->n) {
@@ -876,7 +882,7 @@ static void comp_knob(uint32_t slot, int32_t steps)
     uint32_t v = comp_view(), k = comp_slot();
     int32_t d = clamp(steps, -4, 4), e = steps > 0 ? 1 : -1;
     uint8_t *cp = k == 1u ? &st->comp2 : &st->comp, *ap = k == 1u ? &st->carg2 : &st->carg;
-    if (slot == 0u) { cursor_set(ui.cursor + steps); return; }
+    if (slot == 0u) { cursor_turn(steps); return; }
     if (chain_busy()) { ui_message("STOP TO EDIT"); return; }
     if (slot == 3u && !(v == COMP_ARPQ && k == 0u) && v != COMP_ARPN && v != COMP_RATCH && v != COMP_WALK &&
         v != COMP_OCT) {
@@ -1057,13 +1063,6 @@ static void edit_param(uint32_t slot, int32_t steps)
         return;
     }
     int32_t v;
-    if (BAR_PAGE(pg) && slot == 0u) {                    /* (0.9.2) SEQ > BAR: KNOB 1 the bar (no wrap), the cursor at its
-                                                         * place in it */
-        uint32_t len = (uint32_t)clamp(TSEL->p[P_SLEN], 1, NSTEP), nb = (len + 15u) / 16u;
-        uint32_t b = (uint32_t)clamp((int32_t)ui.bank + steps, 0, (int32_t)nb - 1), at = b * 16u + ui.cursor % 16u;
-        cursor_set((int32_t)(at < len ? at : len - 1u));
-        return;
-    }
     if (pg->graph == GR_COMP) {
         comp_knob(slot, steps);
         return;
@@ -1082,7 +1081,7 @@ static void edit_param(uint32_t slot, int32_t steps)
         return;
     }
     if (pg->graph == GR_CHANCE) {
-        if (slot == 0u) cursor_set(ui.cursor + steps);
+        if (slot == 0u) cursor_turn(steps);
         else if (slot == 1u || slot == 2u) {
             if (chain_busy()) { ui_message("STOP TO EDIT"); return; }
             step_t *st = &TSEL->step[ui.cursor];
@@ -2526,7 +2525,7 @@ static void ui_input_frame(void)
             continue;
         }
         if (ui.home || pg->scope == SC_STEP || pg->scope == SC_TRK || page_desc(pg, k, &hv) ||
-            ((pg->graph == GR_USER || pg->graph == GR_MOD || pg->graph == GR_MSEQ || pg->graph == GR_PATS || BAR_PAGE(pg)) &&
+            ((pg->graph == GR_USER || pg->graph == GR_MOD || pg->graph == GR_MSEQ || pg->graph == GR_PATS) &&
              k == 0u)
             || pg->graph == GR_SONG || pg->graph == GR_DXSND || pg->graph == GR_FOCUS || pg->graph == GR_STAGE ||
             pg->graph == GR_LIVE) {   /* (not an empty column) */

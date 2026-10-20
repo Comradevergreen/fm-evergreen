@@ -6756,18 +6756,18 @@ static int test_save_lens(void)
  * layer and the dice on every page. (Was 0.8.3's LENTE: SELECT PATTERN <-> BAR <-> STEP, PRESETS the bar / step) */
 static int test_lente(void)
 {
-    static const char *const CH[12] = {"PATTERN", "STRETCH", "PLAYHEADS", "TRACK", "MUTATE", "BAR", "STEP", "NOTE", "COMP",
-                                       "COMP 2", "AUTOMATION", "AUTO LIST"};
-    static const char *const TP[4] = {"TRACK", "BAR", "COMP", "AUTOMATION"};
+    static const char *const CH[11] = {"PATTERN", "STRETCH", "PLAYHEADS", "TRACK", "MUTATE", "STEP", "NOTE", "COMP",
+                                       "COMP 2", "AUTOMATION", "AUTO LIST"};   /* (0.9.18: no BAR) */
+    static const char *const TP[4] = {"TRACK", "STEP", "COMP", "AUTOMATION"};
     int bad = 0, ok;
     uint32_t q, sig;
     ui_power_on();
     TSEL->p[P_SLEN] = 64;
     open_family(FAM_SEQ); frame();
     ok = str_eq(cur_page()->title, "STEP") && lens_level() == LV_BAR && roll_view(cur_page()) && lz_tabs() == 5u &&
-         lz_tab_lit(2) && lz_crumb_is("SEQ \xB7 BAR \xB7 STEP") && lz_count_is("7/12");
-    turn(EN_SELECT, -1); frames(32);
-    ok &= str_eq(cur_page()->title, "BAR") && seq_roll_view(cur_page()) && lens_strip() && lz_tab_lit(2) && lz_count_is("6/12");
+         lz_tab_lit(2) && lz_crumb_is("SEQ \xB7 BAR \xB7 STEP") && lz_count_is("6/11");
+    turn(EN_SELECT, -1); frames(32);                   /* (0.9.18: BAR gone, MUTATE before STEP) */
+    ok &= str_eq(cur_page()->title, "MUTATE") && seq_roll_view(cur_page()) && lens_strip() && lz_tab_lit(1) && lz_count_is("5/11");
     turn(EN_SELECT, 2); frames(32);
     ok &= str_eq(cur_page()->title, "NOTE") && roll_view(cur_page()) && seq_roll_view(cur_page());   /* (NOTE: the roll) */
     turn(EN_SELECT, 1); frames(32);
@@ -6781,12 +6781,12 @@ static int test_lente(void)
                       (!seq_roll_view(cur_page()) || lens_strip());
                 n++;
             }
-        ok &= n >= 12u;
+        ok &= n >= 11u;
         go_title("COMP"); frame();
     }
-    bad += check("0.9.2 SEQ: enters at STEP (BAR group, 7/12); 0.9.17: every page the roll under the bars' strip", ok);
-    bad += check("0.9.2 SEQ: one chain of 12 by SELECT (no wrap); a SEQ tap each group's first, round",
-                 chain_walk(B_SEQ, CH, 12, TP, 4));
+    bad += check("0.9.2 SEQ: enters at STEP (BAR group, 6/11: 0.9.18 no BAR page); 0.9.17: every page the roll under the bars' strip", ok);
+    bad += check("0.9.2 SEQ: one chain of 11 by SELECT (no wrap); a SEQ tap each group's first, round",
+                 chain_walk(B_SEQ, CH, 11, TP, 4));
     /* the memory: the section's (not the track's) */
     ui_power_on(); TSEL->p[P_SLEN] = 64;
     open_family(FAM_SEQ); frame();
@@ -6805,34 +6805,23 @@ static int test_lente(void)
     press(B_SEQ); frames(32);
     ok &= str_eq(cur_page()->title, "COMP");                                       /* (hidden CHANCE: from NOTE's group) */
     bad += check("0.9.2 SEQ from elsewhere: the page left, on any track (was per track); a page put by code brings its entry", ok);
-    /* BAR: KNOB 1 the bar (no wrap, the cursor at its place), KNOB 2 LEN; STEP's KNOB 1 into the next bar */
+    /* (0.9.18) no BAR page: STEP's KNOB 1 walks every step, into the next bar (the bar shown follows); LEN on PATTERN */
     ui_power_on(); TSEL->p[P_SLEN] = 64;
     open_family(FAM_SEQ); frame();
-    turn(EN_SELECT, -1); frames(32);
-    cursor_set(5);
-    turn(EN_K1, 1);
-    ok = str_eq(cur_page()->title, "BAR") && ui.cursor == 21u && ui.bank == 1u && TSEL->p[P_SLEN] == 64 &&
-         !strncmp(ui.col[0], "BAR|", 4);
-    turn(EN_K1, 1);
-    ok &= ui.cursor == 37u && ui.bank == 2u;
-    turn(EN_K1, 5);
-    ok &= ui.cursor == 53u && ui.bank == 3u;                                       /* (a bar a detent, no wrap) */
-    turn(EN_K1, -1); turn(EN_K1, -1); turn(EN_K1, -1); turn(EN_K1, -1);
-    ok &= ui.cursor == 5u && ui.bank == 0u;
-    turn(EN_K2, -1);                                                               /* KNOB 2: LEN */
-    ok &= TSEL->p[P_SLEN] == 63;
-    TSEL->p[P_SLEN] = 32;
-    turn(EN_K1, 3);
-    ok &= ui.bank == 1u && ui.cursor == 21u;                                       /* (LEN 32: two bars) */
-    turn(EN_SELECT, 1); frames(32);
+    for (q = 0, ok = 1; q < NPAGES; q++) ok &= !(PAGES[q].fam == FAM_SEQ && str_eq(PAGES[q].title, "BAR"));
     cursor_set(15);
     turn(EN_K1, 1);
     ok &= str_eq(cur_page()->title, "STEP") && ui.cursor == 16u && ui.bank == 1u;  /* STEP: the step, into the next bar */
+    turn(EN_K1, 32);
+    ok &= ui.bank >= 2u;
     turn(EN_PRESET, 1); frames(2);
-    ok &= cur_page()->graph == GR_PATS && ui.cursor == 16u;                        /* PRESETS: the patterns */
+    ok &= cur_page()->graph == GR_PATS;                                            /* PRESETS: the patterns */
     press(B_OCTDN); frame();
     ok &= str_eq(cur_page()->title, "STEP");
-    bad += check("0.9.2 SEQ > BAR: KNOB 1 the bar (no wrap), KNOB 2 LEN; STEP's KNOB 1 into the next bar; PRESETS the patterns", ok);
+    go_title("PATTERN"); frame();
+    turn(EN_K1, -1);
+    ok &= TSEL->p[P_SLEN] == 63;                                                   /* LEN: PATTERN's KNOB 1 */
+    bad += check("0.9.18 no SEQ > BAR: STEP's KNOB 1 into the next bars; PRESETS the patterns; LEN on PATTERN", ok);
     {
         char ti[20];
         go_title("COMP 2"); frame();
@@ -6847,7 +6836,7 @@ static int test_lente(void)
     /* the tools layer and the dice on every page */
     ok = 1;
     for (q = 0; q < 3u; q++) {
-        static const char *const T[3] = {"MUTATE", "AUTO LIST", "BAR"};
+        static const char *const T[3] = {"MUTATE", "AUTO LIST", "PATTERN"};
         uint32_t pg;
         ui_power_on();
         go_title(T[q]); frame();
@@ -6863,7 +6852,7 @@ static int test_lente(void)
         press(B_OCTDN); frame();
         ok &= !ui.confirm && steps_sig(TSEL) == sig && ui.page == pg;
     }
-    bad += check("  SEQ held: the tools on every page (MUTATE, AUTO LIST, BAR); SEQ + SELECT: the dice, the page stays", ok);
+    bad += check("  SEQ held: the tools on every page (MUTATE, AUTO LIST, PATTERN); SEQ + SELECT: the dice, the page stays", ok);
     /* the DRUM grid: STEP's; BAR its bars, KNOB 1 the bar; COMP the step large, the grid's keys still its */
     ui_power_on();
     set_engine_of(TSEL, ENGI_DRUM); TSEL->engine = TSEL->eng_req;
@@ -6871,13 +6860,14 @@ static int test_lente(void)
     open_family(FAM_SEQ); frame();
     ok = grid_on() && roll_view(cur_page()) && lens_level() == LV_BAR && song.grid == 1u;
     frames(500);
+    cursor_set(15);
+    turn(EN_K1, 1);                                     /* (0.9.18) STEP's KNOB 1 into the next bar */
+    ok &= ui.bank == 1u && ui.cursor == 16u;
     turn(EN_SELECT, -1); frames(32);
     ok &= seq_roll_view(cur_page()) && lens_strip();
-    turn(EN_K1, 1);
-    ok &= ui.bank == 1u;
     turn(EN_SELECT, 3); frames(32);
     ok &= seq_roll_view(cur_page()) && lens_level() == LV_STEP;
-    bad += check("  DRUM: STEP is the grid (its keys); BAR the grid too, KNOB 1 the bar; COMP the grid (0.9.17)", ok);
+    bad += check("  DRUM: STEP is the grid (its keys), KNOB 1 into the next bar; MUTATE the grid too; COMP the grid (0.9.17)", ok);
     return bad;
 }
 
@@ -6918,7 +6908,7 @@ static int test_seq_tools(void)
     ui_power_on();
     go_page(GR_ROLL); frame();
     {   /* (0.9.2) a tap on STEP: the next group's first (STEP's COMP, AUTO's AUTOMATION, PATTERN, TRACK, BAR, round) */
-        static const char *const ORD[] = {"COMP", "AUTOMATION", "PATTERN", "TRACK", "BAR"};
+        static const char *const ORD[] = {"COMP", "AUTOMATION", "PATTERN", "TRACK", "STEP"};
         uint32_t q;
         ok = 1;
         for (q = 0; q < sizeof ORD / sizeof ORD[0]; q++) {
@@ -11249,15 +11239,15 @@ static int test_toasts(void)
         ok &= !ui.confirm && memcmp(toast_snap + H_HEAD * 240u, host_screen + H_HEAD * 240u, (240u - H_HEAD) * 480u) == 0;
     }
     bad += check("  NOTICE blacks out no more than its box (its tabs, its card, its breadcrumb): the page round it, back whole", ok);
-    /* hints: walking SEQ's chain with SELECT (TRACK > MUTATE > BAR) says nothing; dwelt on, MUTATE's; at most HINT_MAX */
+    /* hints: walking SEQ's chain with SELECT (TRACK > MUTATE > STEP) says nothing; dwelt on, MUTATE's; at most HINT_MAX */
     ui_power_on(); go_title("TRACK"); frames(400);
     for (seen = passed = 0, k = 0; k < 2u; k++) {
         turn(EN_SELECT, 1); passed |= str_eq(cur_page()->title, "MUTATE");
         for (n = 0; n < 12u; n++) { frame(); seen |= msg_is("OCT+ KEEP  GLO+A4 FREEZE") || msg_is("SEQ+D5 REVERT  GLO+B4 ALL"); }
     }
     for (n = 0; n < 200u; n++) { frame(); seen |= ui.msg_t && ui.msg[0]; }
-    bad += check("0.9.5 a page's hint: none while SELECT walks past it (TRACK > MUTATE > BAR), nor carried onto the next",
-                 passed && str_eq(cur_page()->title, "BAR") && !seen);
+    bad += check("0.9.5 a page's hint: none while SELECT walks past it (TRACK > MUTATE > STEP), nor carried onto the next",
+                 passed && str_eq(cur_page()->title, "STEP") && !seen);
     turn(EN_SELECT, -1);                                /* back to MUTATE: stay */
     ok = str_eq(cur_page()->title, "MUTATE");
     frames(HINT_DWELL_MS - 160u);
@@ -11268,7 +11258,7 @@ static int test_toasts(void)
     ok &= seen;
     bad += check("  dwelt on (HINT_DWELL_MS): MUTATE's, then its second line", ok);
     for (k = 0, n = 0; k < 3u; k++) {                   /* three more visits: once more (HINT_MAX), then no more */
-        go_title("BAR"); frames(400);
+        go_title("STEP"); frames(400);
         go_title("MUTATE");
         for (seen = 0, x = 0; x < 120u; x++) { frame(); seen |= msg_is("OCT+ KEEP  GLO+A4 FREEZE"); }
         n += seen;
@@ -11748,6 +11738,14 @@ static void tk_go(uint32_t enc, int32_t n)              /* (moving: a detent at 
     for (i = 0; i < (n < 0 ? -n : n); i++) { turn(enc, n < 0 ? -1 : 1); frames(4); tk_n++; }
 }
 static void tk_val(uint32_t enc, int32_t n) { turn(enc, n); frames(4); tk_n++; }   /* (the value: one gesture) */
+static void tk_key(uint32_t k) { frames(8); tap_key(k); frames(8); tk_n++; }
+static void tk_flick(uint32_t to)                       /* (0.9.18) KNOB 1 turned fast to step to (KNOB ACCEL), then back a
+                                                         * detent at a time: every detent counted */
+{
+    while (ui.cursor < to) { turn(EN_K1, 1); frames(1); tk_n++; }
+    frames(8);
+    while (ui.cursor > to) { turn(EN_K1, -1); frames(8); tk_n++; }
+}
 static void tk_start(uint32_t from)                     /* 0 home, 1 seq, 2 fxdly, 3 savearr (not counted) */
 {
     uint32_t i;
@@ -11769,7 +11767,8 @@ static void tk_start(uint32_t from)                     /* 0 home, 1 seq, 2 fxdl
 }
 static int test_nav_tasks(void)
 {
-    static const uint8_t WANT[14] = {4, 3, 5, 6, 5, 7, 10, 2, 3, 1, 4, 8, 11, 4};
+    static const uint8_t WANT[14] = {4, 3, 5, 6, 13, 7, 10, 2, 3, 1, 3, 8, 11, 4};   /* (0.9.18, no BAR page: task 5 13 (was 5:
+                                                         * KNOB 1 turned fast to bar 3), task 11 3 (was 4) */
     uint32_t got[14], t, tot = 0;
     int bad = 0, ok, okall = 1;
     int16_t v;
@@ -11795,9 +11794,14 @@ static int test_nav_tasks(void)
             tk_start(0); tk_btn(B_SEQ); tk_go(EN_K1, 4); tk_val(EN_K3, 1);
             ok = str_eq(cur_page()->title, "STEP") && ui.cursor == 4u && note_len(TSEL, 4, 64) == 2u;
             break;
-        case 4:                                         /* bar 3, an accent on its first step */
-            tk_start(1); tk_go(EN_SELECT, -1); tk_go(EN_K1, 2); tk_go(EN_SELECT, 1); tk_val(EN_K4, 1);
+        case 4:                                         /* bar 3, an accent on its first step (0.9.18: STEP's KNOB 1 there) */
+            tk_start(1);                                /* (0.9.18: no BAR page, KNOB 1 turned fast, KNOB ACCEL on as a
+                                                         * device has it; was 5 with BAR) */
+            ui_prefs &= (uint8_t)~PREF_ACCEL_OFF;
+            tk_flick(32); tk_val(EN_K4, 1);
+            ui_prefs |= PREF_ACCEL_OFF;
             ok = str_eq(cur_page()->title, "STEP") && ui.cursor == 32u && (TSEL->step[32].flags & SF_ACCENT);
+            if (!ok) printf("  task 5: %s cursor %u bank %u flags %u\n", cur_page()->title, ui.cursor, ui.bank, TSEL->step[32].flags);
             break;
         case 5:                                         /* the sound into U05 */
             tk_start(0); tk_btn(B_SAVE); tk_go(EN_K1, 4); tk_btn(B_OCTUP); tk_btn(B_OCTUP);
@@ -11824,7 +11828,7 @@ static int test_nav_tasks(void)
             break;
         }
         case 10:                                        /* REC Q 0 % */
-            tk_start(1); tk_go(EN_SELECT, -3); tk_val(EN_K4, -127);
+            tk_start(1); tk_go(EN_SELECT, -2); tk_val(EN_K4, -127);   /* (0.9.18: -2, no BAR) */
             ok = str_eq(cur_page()->title, "TRACK") && TSEL->p[P_HRQ] == 0;
             break;
         case 11:                                        /* DRUM-X (track 4): the snare's DECAY */
@@ -11851,7 +11855,7 @@ static int test_nav_tasks(void)
     }
     printf("ui:   the race: %u %u %u %u %u %u %u %u %u %u %u %u %u %u = %u actions (0.9.1: 75)\n", got[0], got[1], got[2], got[3],
            got[4], got[5], got[6], got[7], got[8], got[9], got[10], got[11], got[12], got[13], tot);
-    bad += check("0.9.2 the mock-up's 14 tasks on the panel: each goal reached in its PROPOSED actions (73)", okall && tot == 73u);
+    bad += check("0.9.2 the mock-up's 14 tasks on the panel: each goal reached in its PROPOSED actions (80: 0.9.18 no BAR, was 73)", okall && tot == 80u);
     ui_power_on();
     return bad;
 }
