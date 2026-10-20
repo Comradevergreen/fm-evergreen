@@ -773,7 +773,7 @@ the BAR page gone; the LFO's MODE; the MENU as pages.
   the engine's load on AUDIO; SCALE LEDS beside LED GLOW on SCREEN › LEDS.
 - **INIT SYSTEM left the MENU**: it was SAVE › TOOLS › NEW PROJECT under another name (same dialog, same UNDO).
 - The web editor groups the settings by the new tabs (it reads them from the device).
-- Flash: the image 568340 B, 15996 B free in the slot (the BAR page gave back 384 B; the MENU pages and the LFO MODE took more).
+- Flash: the image 568436 B, 15900 B free in the slot (the BAR page gave back 384 B; the MENU pages and the LFO MODE took more).
 ### v0.9.17
 The glitcher, one piano roll across the SEQ pages, a livelier generator and dice, slower rolls, ARP SEQ a lap at a
 time, VOICE's THEME, and two fixes.
