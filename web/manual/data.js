@@ -241,7 +241,7 @@ pages: {
   "GLO/SENDS": ["DIST", "CHORUS", "DLY", "REV"], "GLO/GLOBAL": ["BPM", "SWING", "CLOCK", "TUNE"], "GLO/SYSTEM": ["TRACKS", "LOAD", "ROUTE", "CPU %"],
   "ENV/TRACKS": ["ATK", "DEC", "SUS", "REL"], "ENV/TRACKS DEST": ["FILTER", "PITCH", "SHAPE", "LOOP"], "ENV/ENV": ["ATK", "DEC", "SUS", "REL"],
   "ENV/ENV DEST": ["FILTER", "PITCH", "SHAPE", "LOOP"], "ENV/STAGE": ["STAGE", "VALUE", "LOOP", "—"],
-  "LFO/MOD": ["SLOT", "SRC", "DEST", "AMT"], "LFO/LFO": ["RATE", "WAVE", "PHASE", "FADE"], "LFO/LFO DEST": ["PITCH", "FILTER", "SHAPE", "AMP"],
+  "LFO/MOD": ["SLOT", "SRC", "DEST", "AMT"], "LFO/LFO": ["RATE", "WAVE", "MODE", "FADE"], "LFO/LFO 2": ["PHASE", "—", "—", "—"], "LFO/LFO DEST": ["PITCH", "FILTER", "SHAPE", "AMP"],
   "LFO/MSEQ": ["STEP", "LEVEL", "LEN", "SLEW"], "LFO/MSEQ 2": ["DIV", "—", "—", "—"],
   "SCL/SCL": ["ROOT", "SCALE", "QUANT", "ALL TR"], "SCL/CHORD": ["CHORD", "VOICING", "STRUM", "—"],
   "ARP/ARP": ["MODE", "RATE", "OCT", "GATE"], "ARP/ARP 2": ["SWING", "PROB", "HOLD", "ORDER"],
@@ -457,7 +457,7 @@ commands: [
   {s: "mod", k: "ENV", shot: 'env', t: ["Envolvente (ENV)", "Envelope (ENV)"],
    d: ["ENV: ATK, DEC, SUS, REL. ENV DEST: FILTER, PITCH, SHAPE, LOOP (con la nota mantenida vuelve al ataque: un LFO con forma de ADSR). STAGE: una etapa grande. TRACKS: las seis envolventes.", "ENV: ATK, DEC, SUS, REL. ENV DEST: FILTER, PITCH, SHAPE, LOOP (with the note held it goes back to the attack: an ADSR-shaped LFO). STAGE: one stage large. TRACKS: the six envelopes."]},
   {s: "mod", k: "LFO", shot: 'lfo', t: ["LFO", "LFO"],
-   d: ["LFO: RATE (libre en Hz; a la izquierda del más lento, a tempo), WAVE, PHASE (a la izquierda de 0: FREE), FADE. LFO DEST: PITCH, FILTER, SHAPE, AMP.", "LFO: RATE (free in Hz; left past the slowest, in time), WAVE, PHASE (left past 0: FREE), FADE. LFO DEST: PITCH, FILTER, SHAPE, AMP."]},
+   d: ["LFO: RATE (libre en Hz; a la izquierda del más lento, a tempo), WAVE, MODE (TRIG: cada frase nueva lo reinicia en PHASE y vuelve a entrar con el FADE; FREE: nunca se reinicia, el FADE una sola vez), FADE. LFO 2: PHASE (atenuada en FREE). LFO DEST: PITCH, FILTER, SHAPE, AMP.", "LFO: RATE (free in Hz; left past the slowest, in time), WAVE, MODE (TRIG: each new phrase restarts it at PHASE and fades it in again; FREE: never restarted, FADE only once), FADE. LFO 2: PHASE (dimmed in FREE). LFO DEST: PITCH, FILTER, SHAPE, AMP."]},
   {s: "mod", k: "LFO", shot: 'mod', t: ["Matriz de modulación (MOD)", "Modulation matrix (MOD)"],
    d: ["LFO › MOD: 4 slots por pista: SLOT, SRC (LFO ENV VEL KEY RAND MODW AT EXPR M1–M4 STEP NOISE), DEST (PITCH CUT … E1–E8, CLIP, buses del delay/reverb/chorus), AMT.", "LFO › MOD: 4 slots a track: SLOT, SRC (LFO ENV VEL KEY RAND MODW AT EXPR M1–M4 STEP NOISE), DEST (PITCH CUT … E1–E8, CLIP, the delay/reverb/chorus buses), AMT."]},
   {s: "mod", k: "LFO", shot: 'mseq', t: ["MSEQ: secuenciador de modulación", "MSEQ: modulation sequencer"],
@@ -465,7 +465,7 @@ commands: [
   {s: "mod", k: "LFO+KNOB 1", shot: 'layer_macro', t: ["Macros M1–M4", "Macros M1–M4"],
    d: ["LFO mantenido: KNOB 1–4 son M1–M4; al soltar quedan enganchadas ([LFO] LATCH) en cualquier página hasta tocar LFO. F3 tira rutas nuevas en las pistas que suenan, G3 las borra. Se editan en MOD (SRC M1–M4).", "LFO held: KNOB 1–4 are M1–M4; let go and they stay latched ([LFO] LATCH) on any page until LFO is pressed. F3 rolls new routes on the tracks sounding, G3 clears them. Edit them on MOD (SRC M1–M4)."]},
   {s: "mod", k: "LFO+SELECT", t: ["Dados del LFO", "LFO dice"],
-   d: ["LFO + SELECT: rate al medio del rango, cualquier onda y fase, casi siempre al filtro. OCT+ OK, OCT− CANCEL.", "LFO + SELECT: a rate mid-range, any wave and phase, mostly to the filter. OCT+ OK, OCT− CANCEL."]},
+   d: ["LFO + SELECT: rate al medio del rango, cualquier onda, FREE o TRIG mitad y mitad, casi siempre al filtro. OCT+ OK, OCT− CANCEL.", "LFO + SELECT: a rate mid-range, any wave, FREE or TRIG half the time each, mostly to the filter. OCT+ OK, OCT− CANCEL."]},
 
   // SAVE
   {s: "save", k: "SAVE", shot: 'save_sound', t: ["Guardar un sonido (USER)", "Save a sound (USER)"],

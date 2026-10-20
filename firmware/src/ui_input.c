@@ -445,6 +445,24 @@ static int32_t accel(uint32_t role, int32_t s, int32_t range)
     return s * (int32_t)m;
 }
 
+/* (0.9.18) the LFO's MODE (mode 1) or PHASE turned to v (params.c ID_LMODE, ID_LPHS): FREE stores PHASE -1, keeping
+ * TRIG's phase in lfo_ph_mem for TRIG again; FREE begun fades the LFO in from 0 (its FADE, once: it is turned on) */
+static void lfo_view_put(track_t *t, int mode, int32_t v)
+{
+    uint32_t k = (uint32_t)(t - trk) % NTRK;
+    if (!mode) {
+        if (t->p[P_LPHASE] >= 0)
+            t->p[P_LPHASE] = (int16_t)v;
+        else
+            lfo_ph_mem[k] = (uint8_t)v;
+    } else if (v && t->p[P_LPHASE] >= 0) {
+        lfo_ph_mem[k] = (uint8_t)t->p[P_LPHASE];
+        t->p[P_LPHASE] = -1;
+        lfo_fade_restart(1u << k);
+    } else if (!v && t->p[P_LPHASE] < 0)
+        t->p[P_LPHASE] = lfo_ph_mem[k];
+}
+
 /* a knob turned parameter id of track t: recorded (AUTOMATION), and picked by MIDI LEARN (0.9.12, midi_learn.c) */
 static void knob_cap(track_t *t, uint32_t id)
 {
@@ -1253,6 +1271,11 @@ static void edit_param(uint32_t slot, int32_t steps)
         settings_save();
         return;
     }
+    if (vp == &lmode_ui || vp == &lphase_ui) {          /* (0.9.18) LFO MODE / PHASE: P_LPHASE written back */
+        lfo_view_put(TSEL, vp == &lmode_ui, v);
+        knob_cap(TSEL, P_LPHASE);
+        return;
+    }
     if (vp == &load_ui) {                               /* (0.6.30) GLO > SYSTEM's LOAD: the same */
         load_put(v);
         ui_message(v == 2 ? "LOAD FULL: ALL FX" : v ? "LOAD LITE: LIGHTER FX" : "LOAD ECO: NO SLICER/CHORUS");
@@ -1782,14 +1805,15 @@ static int dk_back(uint32_t kind, uint32_t k)           /* CANCEL: 0 done */
     }
     return 0;
 }
-/* the LFO: its rate in the middle of the range, any wave and phase, a fade now and then; aimed mostly at the filter,
+/* the LFO: its rate in the middle of the range, any wave, MODE FREE or TRIG (any phase) alike, a fade now and then; aimed mostly at the filter,
  * a little at the shape, seldom at the pitch or the level (a wobble, not a siren) */
 static void lfo_dice(track_t *t)
 {
     const param_desc_t *d;
     d = track_desc(t, P_LRATE); t->p[P_LRATE] = (int16_t)dk_frac(d, 25, 80);
     d = track_desc(t, P_LWAVE); t->p[P_LWAVE] = (int16_t)dk_frac(d, 0, 100);
-    d = track_desc(t, P_LPHASE); t->p[P_LPHASE] = (int16_t)(rng() % 3u ? d->min : dk_frac(d, 0, 100));
+    d = track_desc(t, P_LPHASE); t->p[P_LPHASE] = (int16_t)(rng() >> 31 ? -1 : dk_rr(0, d->max));   /* (0.9.18: MODE FREE
+                                                         * half the time, was 2 in 3; TRIG at a phase the rest, 0..127) */
     d = track_desc(t, P_LFADE); t->p[P_LFADE] = (int16_t)(rng() % 3u ? d->min : dk_frac(d, 0, 50));
     d = track_desc(t, P_LD_PIT); t->p[P_LD_PIT] = (int16_t)(rng() % 4u ? 0 : dk_frac(d, 44, 56));
     d = track_desc(t, P_LD_FLT); t->p[P_LD_FLT] = (int16_t)dk_frac(d, d->min < 0 ? 15 : 20, d->min < 0 ? 85 : 70);
