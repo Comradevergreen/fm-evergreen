@@ -16,6 +16,8 @@
  *   MIDI       35..81 the GM map as before; 82.. ratchet bands, ..34 TOUCH bands (by pitch class), note-offs end them.
  *   UI         OCT on a DRUM track says what the octave does; SEQ > COMP shows a recorded TOUCH step, ECHO's EVEN kept
  *              by its knob.
+ *   ONCE       (0.9.16) REC at OCT 0 over a RATCH / ECHO step (DICE, GEN): the key's new hit struck once, live and played
+ *              back (LM_ONCE), the step's own hits still x2..x4; FUNC keeps it.
  * Built and run by tests/run_tests.sh. */
 #define UI_TEST_NO_MAIN 1
 #define PROJ_FUNB_WRITER 1                               /* (an older format to load: FUNB, as JIANT 0.2 .. 0.5 wrote it) */
@@ -727,6 +729,111 @@ static int ui_part(void)
     return bad;
 }
 
+
+/* (0.9.16) finger drumming at OCT 0, recording over a beat with RATCH / ECHO steps (DICE and GEN write x2..x4 on hats,
+ * fills): Danil's "random rolls". A key's hit on a lane the step did not play is struck once, live and on every pass
+ * after (LM_ONCE), not x3 with the step's repeats; the step's own hits still roll; FUNC keeps it, a project of before
+ * plays as it did */
+static uint32_t lane_n[NLANE], lane_age[NVOICE];
+static void lanes_b(uint32_t nb)                         /* nb blocks, the hits of each lane counted */
+{
+    uint32_t i;
+    while (nb--) {
+        events_block(CTL);
+        for (i = 0; i < NVOICE; i++)
+            if (dt->v[i].age != lane_age[i]) {
+                lane_age[i] = dt->v[i].age;
+                lane_n[drum_lane(dt->v[i].note)]++;
+            }
+    }
+}
+static void lanes_until(uint32_t idx, uint32_t from)   /* to play index idx, from its sample from on */
+{
+    while (!(dt->seq_idx == idx && dt->seq_pos >= from && dt->seq_pos < 0x7FFFFFFFu))
+        lanes_b(1);
+}
+static int rec_ratch(void)
+{
+    int bad = 0, ok, late;
+    uint32_t r;
+    for (late = 0; late < 2; late++)
+        for (r = 2; r <= 4u; r++) {
+            uint32_t sl, at = late ? 1u : 2u;
+            drum_setup();
+            dt->step[2] = (step_t){{0}, 0, ST_NOTE, 0, 100, 1u << DV_HATC};
+            step_set_ratchet(&dt->step[2], r);
+            song.rec = 1u << 3;
+            seq_start();
+            sl = step_len(2);
+            lanes_until(at, late ? sl * 3u / 4u : sl / 8u);   /* early in step 3, or late in step 2 (into step 3) */
+            memset(lane_n, 0, sizeof lane_n);
+            key_dn(KICK_KEY);
+            lanes_b(4);
+            key_upk(KICK_KEY);
+            lanes_until(3, 0);
+            ok = lane_n[DV_KICK] == 1u && lane_n[DV_HATC] == r - (late ? 0u : 1u) && dt->step[2].hit == (1u << DV_HATC | 1u << DV_KICK) &&
+                 step_ratchet(&dt->step[2]) == r && step_lm_raw(&dt->step[2], DV_KICK) == LM_ONCE &&
+                 step_lmode(&dt->step[2], DV_KICK) == LM_NONE;
+            memset(lane_n, 0, sizeof lane_n);             /* the next pass: once, the hats x r */
+            lanes_until(1, 0);
+            lanes_until(3, 0);
+            ok &= lane_n[DV_KICK] == 1u && lane_n[DV_HATC] == r;
+            memset(lane_n, 0, sizeof lane_n);             /* played there again: the recorded one and the key's, once each */
+            lanes_until(2, sl / 8u);
+            key_dn(KICK_KEY);
+            lanes_b(4);
+            key_upk(KICK_KEY);
+            lanes_until(3, 0);
+            ok &= lane_n[DV_KICK] == 2u && step_lm_raw(&dt->step[2], DV_KICK) == LM_ONCE;
+            memset(lane_n, 0, sizeof lane_n);             /* a hat played into its own step: it rolls with it, as before */
+            lanes_until(2, sl / 8u);
+            fm1_in.notes |= 1u << 13;                     /* (key 13: 42, the closed hat) */
+            lanes_b(4);
+            fm1_in.notes &= ~(1u << 13);
+            lanes_until(3, 0);
+            ok &= drum_lane(29u + 13u) == DV_HATC && step_lmode(&dt->step[2], DV_HATC) == LM_NONE &&
+                  step_lm_raw(&dt->step[2], DV_HATC) == LM_NONE;
+            seq_stop();
+            bad += check(late ? "REC at OCT 0 late into a RATCH step: the new hit once (live, after), the step's x2..x4"
+                              : "REC at OCT 0 into a RATCH x2..x4 step: the new hit once (live, after), the step's x2..x4",
+                         ok);
+        }
+    {   /* an ECHO step the same; a step without repeats as before (no mode) */
+        drum_setup();
+        dt->step[2] = (step_t){{0}, 0, ST_NOTE, 0, 100, 1u << DV_HATC};
+        dt->step[2].comp = CP_ECHO;
+        dt->step[2].carg = 1;                             /* (x3) */
+        dt->step[5] = (step_t){{0}, 0, ST_NOTE, 0, 100, 1u << DV_HATC};
+        song.rec = 1u << 3;
+        seq_start();
+        lanes_until(2, step_len(2) / 8u);
+        memset(lane_n, 0, sizeof lane_n);
+        key_dn(KICK_KEY);
+        lanes_b(4);
+        key_upk(KICK_KEY);
+        lanes_until(3, 0);
+        ok = lane_n[DV_KICK] == 1u && lane_n[DV_HATC] == 2u && step_lm_raw(&dt->step[2], DV_KICK) == LM_ONCE;
+        lanes_until(5, step_len(5) / 8u);
+        key_dn(KICK_KEY);
+        lanes_b(4);
+        key_upk(KICK_KEY);
+        lanes_b(4);
+        ok &= !step_lm_any(&dt->step[5]) && dt->step[5].hit == (1u << DV_HATC | 1u << DV_KICK);
+        seq_stop();
+        bad += check("REC at OCT 0 into an ECHO step: once; into a plain step: no lane mode, as before", ok);
+    }
+    {   /* FUNC keeps it; read as none by the rest (and by a firmware before: the hit rolls with the step, as it did) */
+        project_t before, after;
+        project_store_t b;
+        step_set_lmode(&dt->step[2], DV_KICK, LM_ONCE);
+        project_capture(&before);
+        ok = proj_pack(&b, &before) && proj_import(&after, &b, sizeof b) &&
+             step_lm_raw(&after.t[3].step[2], DV_KICK) == LM_ONCE && step_lmode(&after.t[3].step[2], DV_KICK) == LM_NONE;
+        bad += check("FUNC: LM_ONCE round trip (step_lmode: none)", ok);
+    }
+    return bad;
+}
+
 int main(void)
 {
     int bad = 0;
@@ -738,6 +845,7 @@ int main(void)
     bad += midi();
     bad += per_lane();
     bad += ui_part();
+    bad += rec_ratch();
     if (bad) {
         printf("drumx octaves: %d FAILED\n", bad);
         return 1;

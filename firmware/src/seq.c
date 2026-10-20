@@ -602,7 +602,7 @@ static uint32_t rec_lmode(void)
 /* a hit (a GM note) into step s of a DRUM track (rec_note, a held ratchet's next step: dxo_rec_hold) */
 static void rec_drum(track_t *t, step_t *s, uint32_t note, uint32_t vel, int32_t mic)
 {
-    uint32_t l = drum_lane(note), k;
+    uint32_t l = drum_lane(note), k, m = rec_lmode(), was;
     if (s->time != ST_NOTE || (!s->n && !s->hit)) {
         s->n = s->hit = s->acc = 0;
         s->flags = 0;
@@ -616,13 +616,14 @@ static void rec_drum(track_t *t, step_t *s, uint32_t note, uint32_t vel, int32_t
     }
     s->time = ST_NOTE;
     if (note == DRUM_LANE_NOTE[l]) {                    /* a lane's note: its hit */
+        was = (s->hit >> l) & 1u;                       /* (0.9.16) the sound in the step already (it rolls with it) */
         s->hit |= (uint8_t)(1u << l);
         if (vel > 110)
             s->acc |= (uint8_t)(1u << l);
     } else {                                            /* another GM drum (a low tom, a crash): a note */
         for (k = 0; k < s->n && s->note[k] != note; k++)
             ;
-        if (k == s->n) {
+        if (!(was = k < s->n)) {
             if (s->n < 4u)
                 s->n++;
             s->note[s->n - 1u] = (uint8_t)note;
@@ -632,7 +633,12 @@ static void rec_drum(track_t *t, step_t *s, uint32_t note, uint32_t vel, int32_t
     }
     if (vel > s->vel)
         s->vel = (uint8_t)vel;
-    step_set_lmode(s, l, rec_lmode());
+    /* (0.9.16) a plain hit on a lane new to a step with a RATCH or an ECHO: once, as played (it rolled x2..x4 at once,
+     * the step's next parts replaying it, and on every pass after: rolls finger drumming over a DICE / GEN beat); played
+     * there again, still once */
+    if (!m && (was ? step_lm_raw(s, l) == LM_ONCE : step_ratchet(s) > 1u || s->comp == CP_ECHO || s->comp2 == CP_ECHO))
+        m = LM_ONCE;
+    step_set_lmode(s, l, m);
     t->seq_active = 1;
 }
 static uint8_t rec_at, rec_late;                        /* (0.8.5) the step (play index + 1) the last hit went into;
@@ -1902,7 +1908,10 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
     }
     for (i = 0; i < m; i++)
         if (!((sk >> i) & 1u)) {
-            uint32_t a0 = vage, dt0 = t->dtch, lt = kit ? lm_touch(step_lmode(s, drum_lane(nn[i]))) : 0u;
+            uint32_t a0 = vage, dt0 = t->dtch, lt = kit ? step_lm_raw(s, drum_lane(nn[i])) : 0u;
+            if (lt == LM_ONCE && (skip & SEQ_REP))
+                continue;                           /* (0.9.16) a hit recorded once: not in the step's repeats */
+            lt = lm_touch(lt);
             if (lt)
                 t->dtch = (uint8_t)lt;
             seq_note_on(t, nn[i], vv[i]);
