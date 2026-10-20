@@ -409,15 +409,23 @@ typedef struct {                 /* acid-style step: up to 4 notes (POLY), time,
 /* (0.8.5) a lane's mode (eng_drum.c, the DRUM-X octaves): its hit ratcheted x2 / x4 / x8 over the step, or struck SHORT,
  * GHOST, FLAM; that lane only. 0: as ever (every step before 0.8.5) */
 enum { LM_NONE, LM_X2, LM_X4, LM_X8, LM_SHORT, LM_GHOST, LM_FLAM, LM_N };
+/* (0.9.16) LM_ONCE (the code left, 7): a hit recorded live into a step with a RATCH / ECHO, on a lane the step did not
+ * play: struck once, as it was heard (seq.c rec_drum, seq_step), not rolled by the step's repeats. Read as none by
+ * step_lmode (and by every firmware before: the hit then rolls with the step, as it did) */
+#define LM_ONCE 7u
+static uint32_t step_lm_raw(const step_t *s, uint32_t l)
+{
+    return (((uint32_t)s->lm[0] | (uint32_t)s->lm[1] << 8 | (uint32_t)s->lm[2] << 16) >> (3u * (l & 7u))) & 7u;
+}
 static uint32_t step_lmode(const step_t *s, uint32_t l)
 {
-    uint32_t v = (uint32_t)s->lm[0] | (uint32_t)s->lm[1] << 8 | (uint32_t)s->lm[2] << 16, m = (v >> (3u * (l & 7u))) & 7u;
+    uint32_t m = step_lm_raw(s, l);
     return m < LM_N ? m : LM_NONE;
 }
 static void step_set_lmode(step_t *s, uint32_t l, uint32_t m)
 {
     uint32_t v = (uint32_t)s->lm[0] | (uint32_t)s->lm[1] << 8 | (uint32_t)s->lm[2] << 16, sh = 3u * (l & 7u);
-    v = (v & ~(7u << sh)) | ((m < LM_N ? m : 0u) << sh);
+    v = (v & ~(7u << sh)) | ((m & 7u) << sh);
     s->lm[0] = (uint8_t)v; s->lm[1] = (uint8_t)(v >> 8); s->lm[2] = (uint8_t)(v >> 16);
 }
 static int step_lm_any(const step_t *s) { return s->lm[0] | s->lm[1] | s->lm[2]; }

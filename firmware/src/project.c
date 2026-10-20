@@ -1177,12 +1177,12 @@ static int proj_unpack_c(project_t *q, const uint8_t *b)
                 if (CT_DIV(s) >= CT_NDIV || s->ctime > 127u) return 0;
             }
             s->lm[0] = s->lm[1] = s->lm[2] = 0;
-            if (x & 64u) {                              /* (0.8.5) the lanes' modes (a 7: none) */
+            if (x & 64u) {                              /* (0.8.5) the lanes' modes (0.9.16: a 7, LM_ONCE, kept) */
                 uint32_t l;
                 if (pos + 3u > room) return 0;
                 s->lm[0] = b[pos++]; s->lm[1] = b[pos++]; s->lm[2] = b[pos++];
                 for (l = 0; l < NLANE; l++)
-                    step_set_lmode(s, l, step_lmode(s, l));
+                    step_set_lmode(s, l, step_lm_raw(s, l));
             }
             r |= (x >> 1) & 2u;
             step_set_ratchet(s, r + 1u);
