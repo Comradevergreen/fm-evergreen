@@ -140,11 +140,12 @@ layer's shortcuts; on the DRUM grid they are steps and lanes; on the NAME screen
 
 ## 2. The screen
 
-### Skins: AIR, COLORS, BOTTOM, HUD (0.8.9, AIR 0.9.7)
+### Skins: AIR, COLORS, HUD (0.8.9, AIR 0.9.7)
 
 **MENU > DISPLAY > SKIN** picks how the lenses are dressed (the approved mock-up "skin aireado", options 1, 3 and 4;
-0.9.7: AIR, the approved option); every page, every palette, FLAT and LINE. The menu steps them AIR, COLORS, BOTTOM,
-HUD:
+0.9.7: AIR, the approved option); every page, every palette, FLAT and LINE. The menu steps them AIR, COLORS, HUD
+(0.9.17: BOTTOM, the knob row at the foot on every page, is retired; a BOTTOM saved in the settings, or set by the
+editor or a restore, opens as AIR):
 
 - **AIR** (0.9.7; the default of new settings: a new FM-1, or its settings erased; settings saved before keep the
   skin they had): HUD's look on **every** page, with the **knob row on top**, right under the tabs: no cards and no
@@ -160,10 +161,10 @@ HUD:
   four knob colours), the knob you turn framed in its colour; the
   group's tab filled violet; the selected track's number in an orange box, a violet ▶ and a big violet BPM in the header;
   a near-black rounded panel; the beings in the 0.6 heat (violet spikes, red and orange rings, cream nuclei).
-- **BOTTOM**: the tabs are the groups' words (the one you are on underlined by a small pill, a dot a page under each), no cards and no panel box: the middle
-  of the screen is the picture, the screen's width (HOME's beings get the most room), and the four knobs are a slim row
-  over the breadcrumb (mark and name, the value in its colour, a hairline bar).
-- **HUD**: as BOTTOM, but on HOME the beings swim **under everything, over the whole screen**: the header, the tabs,
+- **HUD**: the tabs are the groups' words (a dot a page under each), no cards and no panel box: the middle of the
+  screen is the picture, the screen's width, and the four knobs are a slim row over the breadcrumb (mark and name, the
+  value in its colour, a hairline bar); on the SEQ pages the row is on top under the tabs, as AIR's (0.9.17: the values
+  over the roll). On HOME the beings swim **under everything, over the whole screen**: the header, the tabs,
   the knobs and the breadcrumb float over them as light words with a 2 px dark outline (0.9.0). There the knob row
   fades to a fifth a few seconds after you last turned a knob, and comes back at the next turn or when you change page;
   on every other page it stays lit. The group's word is underlined by a dash.
@@ -198,7 +199,7 @@ Since 0.8.5 every page wears the skin of the design the owner approved (the HTML
   **breadcrumb**: **SECTION · GROUP · page** and the page's place in the section's chain at the right (0.9.2; e.g.
   **FX · DELAY · DLY 2  6/16**, **ENV · TRACKS · TRACKS DEST  2/5**).
 - **The tabs** (0.9.2): under the header, the section's **groups** (FX: TRK · BUS · DLY · REV · CHO · SLC · MST · PCH;
-  SEQ: PATT · TRACK · BAR · STEP · AUTO), the one you are on lit (COLORS: filled violet; BOTTOM: a small pill; HUD and AIR:
+  SEQ: PATT · TRACK · BAR · STEP · AUTO), the one you are on lit (COLORS: filled violet; HUD and AIR:
   a dash), and **a dot a page** under each, the page shown lit. The cards under them, a taller panel, and the footer is
   the breadcrumb alone.
 
@@ -266,7 +267,7 @@ knobs, their pictures and every function are the same, only the way between them
    **GLO** the tempo, **ENV / SCL / ARP / SAVE** walk their chain. (Held + PRESETS no longer walks pages: rule 3.)
 6. **The screen says where you are.** On top, the tabs are the section's **groups**, the one you are on lit and a dot
    for each of its pages. At the foot: **SECTION · GROUP · page** and **n/N**, the page's place in the chain:
-   **FX · DELAY · DLY 2  6/16**. The same in AIR, COLORS, BOTTOM and HUD, every palette.
+   **FX · DELAY · DLY 2  6/16**. The same in AIR, COLORS and HUD, every palette.
 
 - Each section remembers the page it was left on (EDIT one for the synths and one each for FM6 and DRUM); at power-on
   SEQ opens on STEP, ENV on ENV, LFO on LFO, the others on their first page.
@@ -975,14 +976,23 @@ the number of the bar playing orange, a bar past LEN dark.
 
 | Group | Pages | What the screen shows |
 | --- | --- | --- |
-| **PATTERN** | PATTERN · STRETCH · PLAYHEADS | The pattern's bars side by side as large thumbnails, each its sixteen steps as small dashes (a DRUM track: its lanes); under them **PLAYHEADS**: the whole pattern as one small roll (the scale's rows tinted, the beats' lines brighter, a step with a component marked on top, steps past LEN dark) with the playhead and PLAYHEADS' extra heads (a tick each at the foot). |
-| **TRACK** | TRACK · MUTATE | The same picture, the track's own settings on the cards. |
-| **BAR** | **BAR** · STEP · NOTE | **BAR** (new): the bars as on PATTERN, **KNOB 1 the bar** you edit (the cursor keeps its place in it), KNOB 2 LEN. **STEP** / **NOTE**: a strip of the pattern's bars, small, on top (the one you edit tinted), and under it the bar's **piano roll** across the whole width: 30 semitones, the scale's rows tinted, the cursor a violet frame round its column, the playhead an orange line, a step with a component a small mark on top, a parameter lock a mark at the foot, a key held on the track a mark at the left of its row (a DRUM track: the **grid**, with its keys). STEP's KNOB 1 walks **all 64 steps**, crossing into the next bar by itself. |
-| **STEP** | COMP · COMP 2 | The cursor step drawn large: **STEP n** on top with NOTE / TIE / REST at the right (a note longer than a step: **LEN n**, set on STEP's KNOB 3); at the left its notes as bars where their pitch puts them, each named (the note in focus orange, MICRO moving them, RATCH splitting them; a TIE shows the notes it holds), and at the right its chips: **ACC, SLD, MICRO n, COMP1 x, COMP2 x, CHANCE n%** (a value set: a violet-tinted chip; nothing set: dim). |
-| **AUTO** | AUTOMATION · AUTO LIST | The track's automation: the records counted, then as a list. |
+| **PATTERN** | PATTERN · STRETCH · PLAYHEADS | (0.9.17) The roll, as every SEQ page. **PATTERN** draws the notes as long as **GATE** plays them and the odd steps late by **SWING**; steps past **LEN** are dark (in the strip, the bars past it). **PLAYHEADS** draws its extra heads over the roll as lines while they play, each as hot as its number (the head you edit 3 px wide). |
+| **TRACK** | TRACK · MUTATE | **TRACK** outlines where **PITCH** moves the notes (in grey, over the notes as written). **MUTATE** shows a chip at the roll's foot: the bars to the next mutation (**NEXT n BARS**), **FROZEN**, or **MUTATE OFF**. |
+| **BAR** | **BAR** · STEP · NOTE | **KNOB 1 the bar** on BAR (the cursor keeps its place in it), KNOB 2 LEN. STEP's KNOB 1 walks **all 64 steps**, crossing into the next bar by itself; NOTE's note in focus orange. |
+| **STEP** | COMP · COMP 2 | A bar over the top of each step with that component (COMP: the first, COMP 2: the second; an arpeggio orange, another violet); the cursor step framed. |
+| **AUTO** | AUTOMATION · AUTO LIST | A mark under each step with a record (a lock orange, automation white); on AUTO LIST the record picked has its step framed violet, the cards giving its row, step, parameter and value. |
 
-The roll has no keyboard strip nor the C rows' names since 0.8.5 (the mock-up's): the STEP picture names the notes,
-and the PITCH card says the note in focus.
+**One picture for the whole SEQ** (0.9.17, the owner's "all the sequencer pages the same piano roll, each page doing
+something different on top of it"): every page shows a strip of the pattern's bars, small, on top (the one you edit
+tinted) and under it the bar's **piano roll** across the whole width: 30 semitones, the scale's rows tinted, the cursor
+a frame round its column, the playhead an orange line, a step with a component a small mark on top, a parameter lock
+a mark at the foot, a key held on the track a mark at the left of its row (a DRUM track: the **grid**, with its
+keys). The page's own marks go over it (the table). Until 0.9.16 PATTERN's group drew the bars as big thumbnails with a
+"PLAYHEADS" roll under them, COMP the step large with its chips, PLAYHEADS three lanes, MUTATE and AUTO LIST panels of
+their own.
+
+The roll has no keyboard strip nor the C rows' names since 0.8.5 (the mock-up's): the PITCH card says the note in
+focus.
 
 - **SEQ from another page** comes back to the page you left; at power-on STEP, the piano roll.
 - **PRESETS** on a SEQ page loads a **pattern**: it opens the PHRASES loader with the next pattern picked (KNOB 1
@@ -2063,7 +2073,7 @@ the footer **MENU · DISPLAY · SKIN  2/28**. The header says MENU · DISPLAY.
 | Tab | Row | Values |
 | --- | --- | --- |
 | DISPLAY | COLOR | GREY, GREEN, AMBER, ICE, VIOLET, ROSE, PAPER, HI-CON, NIGHT, MONO, **JIANT** (default) |
-| DISPLAY | SKIN | **AIR** (default of new settings), COLORS, BOTTOM, HUD — (0.8.9; AIR 0.9.7) see [Skins](#skins-air-colors-bottom-hud-089-air-097) |
+| DISPLAY | SKIN | **AIR** (default of new settings), COLORS, HUD — (0.8.9; AIR 0.9.7; BOTTOM retired in 0.9.17: opens as AIR) see [Skins](#skins-air-colors-hud-089-air-097) |
 | DISPLAY | SCOPE | **OFF** (default), ON — (0.9.7) an engine's EDIT pages: OFF the creature on the whole panel, centred, the page's name and the sound's name small in its corners; ON the creature on the left, the SCOPE card and the chips as before. Settings saved before 0.9.7 load as OFF |
 | DISPLAY | STYLE | FLAT, LINE |
 | DISPLAY | LARGE | OFF, ON (big labels and values) |

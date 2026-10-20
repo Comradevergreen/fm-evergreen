@@ -1042,6 +1042,14 @@ static void v6_scene(uint32_t e, const char *pre, const char *page, const int16_
     vxs.swt = vxs.mt[c] >> 8;
     if (page) go_title(page); else { ui.home = 1; ui.hlv = 1; ui.hset[1] = 0; }
 }
+/* (0.9.17) a short line on the selected track for the SEQ pages that drew their own panel before (TRACK, MUTATE, AUTOMATION,
+ * AUTO LIST): every page shows the roll now, its marks over these notes */
+static void seq_line(void)
+{
+    static const uint8_t NN[8] = {60, 63, 67, 70, 67, 65, 63, 58};
+    uint32_t j;
+    for (j = 0; j < 16u; j += 2u) step_put(&TSEL->step[j], ST_NOTE, 0, 1, &NN[j / 2u]);
+}
 static void setup(int s)
 {
     memset(kb_on, 0, sizeof kb_on);               /* no key held (roll_playing holds one) */
@@ -1124,7 +1132,7 @@ static void setup(int s)
         break;
     case S_MUTATE:                                      /* (0.6.43) three tracks mutating, bar 5 */
         trk[0].p[P_MSND] = 2; trk[0].p[P_MPAT] = 4; trk[1].p[P_MSND] = 3; trk[1].p[P_MMODE] = 1; trk[3].p[P_MPAT] = 1;
-        bar_n = 5; go_page(GR_MUTATE);
+        seq_line(); bar_n = 5; go_page(GR_MUTATE);
         break;
     case S_CHANCE: go_page(GR_CHANCE); step_set_chance(&TSEL->step[0], 65); break;
     case S_COMP:                                        /* (0.6.39) an ARP NOTES step: UP-DN x6 over two octaves */
@@ -1137,7 +1145,7 @@ static void setup(int s)
         TSEL->step[4].comp = CP_TRIG; step_set_chance(&TSEL->step[6], 50); step_set_ratchet(&TSEL->step[8], 3);
         go_page(GR_COMP);
         break;
-    case S_MOTION: go_page(GR_MOTION); break;
+    case S_MOTION: seq_line(); motion_set_event(TSEL, 4, P_REV, 40); go_page(GR_MOTION); break;
     /* 1.1.5, the REC layer (REC held): over HOME, the settings as they come (CLICK OFF, COUNT-IN OFF, LEVEL MID);
      * over STEP armed, CLICK REC, COUNT-IN 2 BARS, LEVEL HIGH (KNOB 2 just turned); a song playing on an empty
      * track (CLEAR dimmed: STOP TO EDIT) */
@@ -1308,7 +1316,7 @@ static void setup(int s)
     }
     case S_DLY: go_title("DLY"); break;
     case S_SCL: TSEL->p[P_SCALE] = 2; go_title("SCL"); break;
-    case S_SHIFT: TSEL->p[P_SOFS] = -3; TSEL->p[P_POFS] = 7; TSEL->p[P_HVEL] = 80; go_title("TRACK"); break;   /* (0.6.92: TRACK) */
+    case S_SHIFT: seq_line(); TSEL->p[P_SOFS] = -3; TSEL->p[P_POFS] = 7; TSEL->p[P_HVEL] = 80; go_title("TRACK"); break;   /* (0.6.92: TRACK) */
     case S_ARP: go_title("ARP"); break;
     case S_VOICE: go_title("VOICE"); break;
     case S_GLOBAL: go_title("GLOBAL"); break;
@@ -1599,6 +1607,7 @@ static void setup(int s)
         break;
     }
     case S_MOTION_LOCKS:
+        seq_line();
         motion_set_event(TSEL, 1, P_REV, 40); motion_set_lock(TSEL, 2, P_REV, 100); motion_set_lock(TSEL, 6, P_ATK, 90);
         go_page(GR_MOTION);
         break;
@@ -1606,6 +1615,7 @@ static void setup(int s)
      * VALUE just turned; empty (+ ADD LOCK: step 5, the first knob of HOME); a DRUM track's long list, scrolled
      * (its lane levels, E names, the last row), playing */
     case S_AUTO_LIST:
+        seq_line();
         motion_set_event(TSEL, 0, P_LRATE, 70); motion_set_lock(TSEL, 2, P_REV, 100); motion_set_lock(TSEL, 2, P_ED_FLT, -30);
         motion_set_lock(TSEL, 6, P_ATK, 90); motion_set_lock(TSEL, 6, P_E4, 20); motion_set_event(TSEL, 8, P_PAN, -40);
         motion_set_lock(TSEL, 11, P_LD_FLT, 50); motion_set_lock(TSEL, 13, P_DLY, 80); motion_set_lock(TSEL, 15, P_GLIDE, 60);
@@ -2419,12 +2429,12 @@ int main(int argc, char **argv)
         for (s = 0; s < lg_nsmall; s++) fprintf(rep, " '%s'", lg_small[s]);
         fprintf(rep, "\n");
     }
-    {   /* (0.8.9) MENU > DISPLAY > SKIN BOTTOM and HUD (0.9.7: AIR) (ui.c lz_low, hud_home): every screen in every palette in FLAT, in
+    {   /* (0.8.9) MENU > DISPLAY > SKIN HUD (0.9.7: AIR; 0.9.17: BOTTOM retired) (ui.c lz_low, hud_home): every screen in every palette in FLAT, in
          * LINE and with MENU > LARGE ON (COLORS' layout, the skin's tabs and colours), linted (GREY: gray, MONO: neutral); FLAT
          * as OUTDIR/ppm/<SKIN>_<PALETTE>_<screen>.ppm for JIANT PAPER GREY MONO (ui_render.py: sheet_<SKIN>_<PALETTE>.png) */
-        static const char *const SK_N[SKIN_N] = {"COLORS", "BOTTOM", "HUD", "AIR"}, *const ST_N[3] = {"", "-LINE", "-LARGE"};
+        static const char *const SK_N[SKIN_N] = {"COLORS", "", "HUD", "AIR"}, *const ST_N[3] = {"", "-LINE", "-LARGE"};
         uint32_t sk, st, n0 = nfind, nlow = 0, nhud = 0;
-        for (sk = SKIN_BOTTOM; sk <= SKIN_AIR; sk++)   /* (0.9.7: AIR, the knobs' row on top) */
+        for (sk = SKIN_HUD; sk <= SKIN_AIR; sk++)      /* (0.9.7: AIR, the knobs' row on top; 0.9.17: BOTTOM retired) */
             for (st = 0; st < 3u; st++)
                 for (p = 0; p < NPALETTES; p++)
                     for (s = 0; s < S_COUNT; s++) {
@@ -2450,7 +2460,7 @@ int main(int argc, char **argv)
                     }
         ui_skin = SKIN_COLORS; ui_style = ST_FLAT; style_apply();
         if (nlow < 1000u || nhud < 20u) { fprintf(stderr, "ui_render: SKIN drew %u screens low, %u HUD HOMEs only\n", nlow, nhud); return 1; }
-        fprintf(rep, "SKIN BOTTOM and HUD (FLAT, LINE, LARGE, every palette): %u lint findings; %u screens with the knob row, %u HUD "
+        fprintf(rep, "SKIN HUD and AIR (FLAT, LINE, LARGE, every palette): %u lint findings; %u screens with the knob row, %u HUD "
                 "HOMEs\n", nfind - n0, nlow, nhud);
     }
     {   /* every FM6 colony (the lint above, fm6_hook, runs on each), in GREY: gray */
@@ -2552,10 +2562,11 @@ int main(int argc, char **argv)
         {   /* (0.8.9) SKIN: HOME, EDIT, SEQ's BAR, FX's BUSES redrawn whole in each skin (us, texts, LCD px sent), and HOME frame
              * by frame (HUD: every strip each frame, on the beings) */
             static const int SC[] = {S_HOME, S_EDIT_ANALOG, S_LENTE_BAR, S_FXL_BUSES, S_VX_HEAD_S, S_VX_WING, S_VX_KIT_HOME};
-            static const char *const SK_N[SKIN_N] = {"COLORS", "BOTTOM", "HUD", "AIR"};
+            static const char *const SK_N[SKIN_N] = {"COLORS", "", "HUD", "AIR"};
             uint32_t sk;
             fprintf(rep, "  SKIN (full redraw us / texts / LCD px; HOME a frame without force):\n");
             for (sk = 0; sk < SKIN_N; sk++) {
+                if (sk == SKIN_BOTTOM_OLD) continue;    /* (0.9.17: retired, reads as AIR) */
                 fprintf(rep, "  %-7s", SK_N[sk]);
                 for (k = 0; k < sizeof SC / sizeof SC[0]; k++) {
                     clock_t c0;
