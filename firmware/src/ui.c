@@ -280,7 +280,7 @@ static struct {
                                   * go, unless the key was held for a lock (its accent: plk_acc) */
     uint8_t hot_col, hot_t;      /* column whose knob was just turned (drawn white) */
     uint8_t menu;                /* 0 off, 1 list, 2 about + credits (HOME held), 3 ABOUT > PROFILE (0.9.14) */
-    uint8_t menu_sel;            /* MENU: the row (menu_items.c MI_*; its tab MI_TAB), kept while the device runs */
+    uint8_t menu_sel;            /* MENU: the setting turned last (menu_items.c MI_*; its page MPAGE), kept while it runs */
     uint8_t mlv;                 /* (0.8.5) MENU's view: 1 TAB (its rows; 0.9.2: always, 0 MENU and 2 ROW for the renders) */
     uint8_t lylv;                /* (0.8.5) a held layer's lens: 0 MAP, 1 KNOBS, 2 STATE (ALGORITHM while held) */
     uint16_t menu_scroll;        /* continuous ABOUT + CREDITS position, pixels */
@@ -685,6 +685,7 @@ static int hud_home(void)
 }
 /* the tab lit: the section's group shown, the menu's tab, a layer's view */
 static uint32_t menu_tab(void);
+static uint32_t menu_page(void);                        /* (0.9.18) the MENU's page (ui_menu.c) */
 static uint32_t lz_level(void)
 {
     uint8_t cnt[8], gi[8];

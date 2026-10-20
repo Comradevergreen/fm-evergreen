@@ -299,19 +299,29 @@ static int32_t menu_scroll_max(void)
     return h > MENU_DOC_H ? h - MENU_DOC_H : 0;
 }
 
-/* (0.8.5) The menu as a lens, as the approved mock-up (MENU . TAB . ROW; SELECT zooms, ui.mlv): the header "MENU .
- * DISPLAY" (draw_head), the level tabs, four cards, a panel, the breadcrumb.
- *   cards  the selected row's four (ROWS 1-4 / ROWS 5-6 of its tab: TAB's two sets, the set following the row); ROW:
- *          TAB, ROW k/n, the row's value
- *   panel  MENU: the four tabs as tiles, each with its rows and their values (the tab shown framed); TAB: the tab's rows
- *          (the set's tinted with their knob's number, the selected one striped in the accent); ROW: the row's values as
- *          chips (the one set framed; COLOR: each palette's colours, live)
- * The knobs, ALGORITHM, PRESETS, OCT-/+ as before (any knob or OCT-/+ the selected row's value; PRESETS its row, on MENU
- * the tab). The drawing redone whole on a change (menu_sig) */
-static int menu_large(void) { return (ui_prefs & PREF_LARGE) != 0u; }
-static uint32_t menu_tab(void) { return MI_TAB[ui.menu_sel % MI_COUNT]; }
-static uint32_t menu_set(void) { return (ui.menu_sel - mtab_first(menu_tab())) / 4u; }   /* ROWS 1-4: 0, 5-6: 1 */
-static void menu_val(uint32_t row, char *b)          /* the row's value as it reads ("0.4 s"; OCT+ rows: "OPEN") */
+/* (0.9.18) The MENU's settings as the rest of the system's pages (until 0.9.17 a list of rows, any knob the row's value,
+ * SELECT a row): the header "MENU . SCREEN", the tabs the groups (SCREEN AUDIO MIDI USB SYSTEM, a dot a page), the
+ * page's four settings as the four cards (KNOB n the card n's value, each value in its heat as every card's), the panel
+ * their rows (the knob's number, the full name, the value, one plain line on what it does: the value's own where the
+ * values differ in kind), the footer MENU . TAB . page n/8. SELECT walks the pages (no wrap), ALGORITHM jumps to the next
+ * / previous tab's first page, PRESETS does nothing (rule 3). The last setting turned (ui.menu_sel, a row) is framed in
+ * the panel; OCT+ / OCT- step it too (the LEDs breathe where it can go). An action (LEARN CLEAR, CALIBRATION, ABOUT):
+ * its knob arms it (its card TINT, OCT+ its value, as every action card), OCT+ does it. Messages: the toast pill. The
+ * drawing redone whole on a change (menu_sig) */
+static uint32_t menu_page(void) { return menu_page_of(ui.menu_sel % MI_COUNT); }
+static uint32_t menu_tab(void) { return MPAGE[menu_page()].tab; }
+static uint32_t menu_pos(uint32_t row)                 /* a value's place in the menu's steps (ON / OFF rows: ON up) */
+{
+    const menu_flag_t *f = menu_flag(row);
+    uint32_t v = menu_get(row);
+    return f && str_eq(f->name[0], "ON") ? !v : v;
+}
+static int32_t menu_ratio(uint32_t row)               /* a card's gauge and heat, 0..1000; -1 none */
+{
+    uint32_t n = menu_n(row);
+    return menu_valued(row) && n > 1u ? (int32_t)(menu_pos(row) * 1000u / (n - 1u)) : -1;
+}
+static void menu_val(uint32_t row, char *b)          /* the row's value as it reads ("0.4 s"; LEARN CLEAR "3 CC") */
 {
     if (row == MI_LCLEAR) {                            /* (0.9.12) LEARN CLEAR: how many CCs are learned, "NONE" */
         uint32_t n = ml_count();
@@ -322,117 +332,153 @@ static void menu_val(uint32_t row, char *b)          /* the row's value as it re
         }
         return;
     }
-    str_cpy(b, !menu_valued(row) ? "OPEN" : row == MI_HOLD ? HOLD_N[settings_hold % 4u] : menu_vname(row, menu_get(row)), 16);
+    str_cpy(b, menu_valued(row) ? menu_vname(row, menu_get(row)) : "", 16);
 }
-static const char *menu_short(uint32_t row)          /* a card's label: the row's name, or its short form */
+static const char *menu_short(uint32_t row)          /* a card's label: a whole word of the row's name (8 characters) */
 {
     static const struct { uint8_t row; char s[9]; } SH[] = {
-        {MI_SCROFF, "SCR OFF"}, {MI_ACCEL, "ACCEL"}, {MI_SCLLED, "SCL LEDS"}, {MI_LOWCUT, "SPK EQ"}, {MI_USB, "USB LVL"},
-        {MI_CLKLVL, "CLICK LV"}, {MI_RESTORE, "RESTORE"}, {MI_PANEL, "CALIBR"}, {MI_INIT, "INIT SYS"},
-        {MI_CLOCK, "CPU CLK"}, {MI_LCLEAR, "LRN CLR"}};
+        {MI_LOWCUT, "SPEAKER"}, {MI_CPU, "CORES"}, {MI_CLKLVL, "LEVEL"}, {MI_USB, "LEVEL"}, {MI_SERIAL, "AUDIO"},
+        {MI_ANIM, "ANIMATE"}, {MI_SCROFF, "SLEEP"}, {MI_HOLD, "HOLD"}, {MI_ACCEL, "SPEEDUP"}, {MI_SCLLED, "SCALE"},
+        {MI_RESTORE, "RESTORE"}, {MI_CLOCK, "CPU"}, {MI_PANEL, "SETUP"}, {MI_LCLEAR, "CLEAR"}};
     uint32_t k;
     for (k = 0; k < NELEM(SH); k++)
         if (SH[k].row == row)
             return SH[k].s;
     return MI_NAME[row];
 }
+/* the panel's line under a row: what it does, in plain words; a value's own (v) where the values differ in kind */
+static const struct { uint8_t row, v; const char *s; } MI_HELP[] = {
+    {MI_COLOR, 255, "THE SCREEN'S COLOURS"},
+    {MI_SKIN, 0, "VALUES ON TOP, THE PICTURE BELOW"},
+    {MI_SKIN, 1, "CARDS AND A PANEL, AS 0.6"},
+    {MI_SKIN, 2, "PICTURE FULL, VALUES AT THE FOOT"},
+    {MI_STYLE, 255, "FILLED CARDS, OR LINES"},
+    {MI_LARGE, 255, "BIG LABELS AND VALUES"},
+    {MI_SCOPE, 255, "EDIT PAGES: A SCOPE BY THE BEING"},
+    {MI_ANIM, 255, "OFF: VALUES SNAP, NOTHING ROLLS"},
+    {MI_LEDS, 255, "HOW IDLE KEYS AND BUTTONS GLOW"},
+    {MI_SCROFF, 255, "SCREEN DARK AFTER THIS LONG IDLE"},
+    {MI_LOWCUT, 255, "EQ FOR THE BUILT-IN SPEAKER"},
+    {MI_TRACKS, 0, "T5 AND T6 ASLEEP, LESS CPU"},
+    {MI_TRACKS, 1, "ALL SIX TRACKS PLAY"},
+    {MI_LOAD, 0, "LIGHTEST: NO SLICER, NO CHORUS"},
+    {MI_LOAD, 1, "LIGHTER REVERBS AND DELAY"},
+    {MI_LOAD, 2, "EVERYTHING AS SET"},
+    {MI_CPU, 255, "2 CORES: MORE VOICES (RESTART)"},
+    {MI_CLICK, 0, "NO METRONOME"},
+    {MI_CLICK, 1, "METRONOME WHILE RECORDING"},
+    {MI_CLICK, 2, "METRONOME WHILE PLAYING"},
+    {MI_CLKLVL, 255, "THE METRONOME'S VOLUME"},
+    {MI_COUNTIN, 255, "BARS BEFORE RECORDING STARTS"},
+    {MI_BPMLOCK, 255, "DICE ALL KEEPS THE TEMPO"},
+    {MI_MIDIOUT, 0, "USB MIDI OUT: THE KEYS' NOTES"},
+    {MI_MIDIOUT, 1, "THE KEYS + CLOCK, START, STOP"},
+    {MI_MIDIOUT, 2, "EVERY NOTE PLAYED + CLOCK"},
+    {MI_MIDIOUT, 3, "NOTHING GOES OUT"},
+    {MI_LEARN, 255, "ON: TURN A KNOB, THEN SEND A CC"},
+    {MI_LCLEAR, 255, "OCT+ FORGETS EVERY LEARNED CC"},
+    {MI_SERIAL, 0, "STEREO + THE SERIAL CONSOLE"},
+    {MI_SERIAL, 1, "STEREO AND MIDI ONLY (MACOS)"},
+    {MI_SERIAL, 2, "8 CHANNELS: EVERY TRACK + FX"},
+    {MI_SERIAL, 3, "STEREO BOTH WAYS"},
+    {MI_SERIAL, 4, "THE STEMS + THE COMPUTER'S AUDIO"},
+    {MI_USB, 0, "USB FOLLOWS THE MASTER KNOB"},
+    {MI_USB, 255, "USB AT A FIXED LEVEL"},
+    {MI_HOLD, 255, "HOLD THIS LONG FOR ITS LAYER"},
+    {MI_ACCEL, 255, "FAST TURNS TAKE BIGGER STEPS"},
+    {MI_LATCH, 255, "PUNCH-IN FX STAY ON WHEN LET GO"},
+    {MI_SCLLED, 255, "THE KEYS OF THE SCALE GLOW"},
+    {MI_RESTORE, 255, "ON: THE LAST SESSION AT POWER-ON"},
+    {MI_CLOCK, 255, "320 MHZ IF IT CRASHES (RESTART)"},
+    {MI_PANEL, 255, "OCT+: TEACH EACH BUTTON AND KNOB"},
+    {MI_ABOUT, 255, "OCT+: VERSION, LOAD, CREDITS"},
+};
+static const char *menu_help(uint32_t row)
+{
+    uint32_t k, v = menu_valued(row) ? menu_get(row) : 255u;
+    for (k = 0; k < NELEM(MI_HELP); k++)
+        if (MI_HELP[k].row == row && (MI_HELP[k].v == v || MI_HELP[k].v == 255u))
+            return MI_HELP[k].s;
+    return "";
+}
+static uint16_t menu_vcol(uint32_t c, uint32_t row)   /* a value's colour, as its card's (knob_col, the heat) */
+{
+    int32_t r = menu_ratio(row);
+    uint16_t k = knob_col(c, r, 0);
+    return r < 0 ? T_MID : heat_on(r) ? ux_mix(k, T_TEXT, 20) : k;
+}
 static void menu_cards(void)
 {
-    uint32_t t = menu_tab(), f = mtab_first(t), n = mtab_rows(t), c, r;
+    uint32_t p = menu_page(), c, r;
     char v[16];
-    if (ui.mlv == 2u) {
-        char k[8];
-        fmt_int(k, (int32_t)(ui.menu_sel - f) + 1);
-        str_cpy(k + str_len(k), "/", 2);
-        fmt_int(k + str_len(k), (int32_t)n);
-        draw_column(0, "TAB", MTAB_NAME[t], "", T_TEXT, (int32_t)t * 1000 / (MTAB_COUNT - 1), ICON_NONE);
-        draw_column(1, "ROW", k, "", T_TEXT, (int32_t)(ui.menu_sel - f) * 1000 / (int32_t)(n > 1u ? n - 1u : 1u), ICON_NONE);
-        menu_val(ui.menu_sel, v);
-        draw_column(2, menu_short(ui.menu_sel), v, "", T_TEXT, menu_valued(ui.menu_sel) && menu_n(ui.menu_sel) > 1u ?
-                    (int32_t)menu_get(ui.menu_sel) * 1000 / (int32_t)(menu_n(ui.menu_sel) - 1u) : -1, ICON_NONE);
-        draw_column(3, "", "", "", T_DIM, -1, ICON_NONE);
-        return;
-    }
     for (c = 0; c < 4u; c++) {
-        r = f + menu_set() * 4u + c;
-        if (r >= f + n) {
+        r = MPAGE[p].row[c];
+        if (r == MI_NONE) {
             draw_column(c, "", "", "", T_DIM, -1, ICON_NONE);
             continue;
         }
         menu_val(r, v);
-        draw_column(c, menu_short(r), v, "", r == ui.menu_sel ? T_ACCENT : T_TEXT, menu_valued(r) && menu_n(r) > 1u ?
-                    (int32_t)menu_get(r) * 1000 / (int32_t)(menu_n(r) - 1u) : -1, ICON_NONE);
+        if (!menu_valued(r)) {                         /* an action: armed by its knob (TINT, OCT+ its value) */
+            int arm = r == ui.menu_sel;
+            card_arm_next = (uint8_t)arm;
+            draw_column(c, menu_short(r), arm ? "OCT+" : v, "", arm ? (r == MI_LCLEAR && !ml_count() ? T_DIM : T_TEXT) : T_MID,
+                        -1, ICON_NONE);
+            continue;
+        }
+        draw_column(c, menu_short(r), v, "", VAL(c), menu_ratio(r), ICON_NONE);
     }
 }
+#define MROW_H 34                                      /* a row of the panel: 32 px and a gap; four in 136 */
 static void menu_panel(void)
 {
-    uint32_t t = menu_tab(), f = mtab_first(t), n = mtab_rows(t), k, r;
-    char v[16];
-    if (ui.mlv != 2u) {                                /* TAB: its rows (0.9.12: MENU's view of the tabs as tiles gone:
-                                                         * five do not fit, and since 0.9.2 the menu opens at TAB) */
-        cv_text(10, 6 - AF_X_CAP_Y, &AF_X, MTAB_NAME[t], T_THEME);
-        cv_text_r(228, 6 - AF_X_CAP_Y, &AF_X, "ALGO: TAB \xB7 SELECT: ROW", T_DIM, T_SURF);
-        for (r = 0; r < n; r++) {               /* (0.8.9: seven rows fit, 17 apart; 0.9.7: eight, 15) */
-            uint32_t row = f + r, in = r / 4u == menu_set();
-            int32_t y = 14 + (int32_t)r * (n > 7u ? 15 : n > 6u ? 17 : 20), h = n > 7u ? 14 : n > 6u ? 16 : 18;
-            uint16_t bg = in ? T_TINT : T_RAISE;
-            cv_rect(8, y, 224, h, bg);
-            if (row == ui.menu_sel)
-                cv_rect(8, y, 3, h, T_ACCENT);
-            GFX_HOOK_ALIGN(0, y, 0, y + h, AL_V, "menu row name centred up/down");
-            cv_text_on(16, y + CAP_IN(S, h), &AF_S, MI_NAME[row], in ? T_TEXT : T_MID, bg);
-            menu_val(row, v);
-            cv_text_r(in ? 218 : 226, y + CAP_IN(S, h), &AF_S, v, in ? T_TEXT : T_MID, bg);
-            if (in) {
-                char kn[2] = {(char)('1' + r % 4u), 0};
-                cv_text(221, y + 2 - AF_X_CAP_Y, &AF_X, kn, T_THEME);
-            }
+    uint32_t p = menu_page(), c, r;
+    char v[16], kn[2] = {0, 0};
+    for (c = 0; c < 4u; c++) {
+        int32_t y = 2 + (int32_t)c * MROW_H;
+        int sel;
+        uint16_t bg;
+        r = MPAGE[p].row[c];
+        if (r == MI_NONE)
+            continue;
+        sel = r == ui.menu_sel;
+        bg = sel ? T_TINT : T_RAISE;
+        cv_rect(8, y, 224, MROW_H - 2, bg);
+        if (sel)
+            cv_rect(8, y, 3, MROW_H - 2, T_ACCENT);
+        kn[0] = (char)('1' + c);
+        GFX_HOOK_ALIGN(0, y + 3, 0, y + 16, AL_V, "menu row name centred up/down");
+        cv_text(16, y + 3 + CAP_IN(X, 13), &AF_X, kn, T_THEME);
+        GFX_HOOK_ALIGN(0, y + 3, 0, y + 16, AL_V, "menu row name centred up/down");
+        cv_text_on(26, y + 3 + CAP_IN(S, 13), &AF_S, MI_NAME[r], sel ? T_TEXT : T_MID, bg);
+        menu_val(r, v);
+        if (v[0]) {
+            GFX_HOOK_ALIGN(0, y + 3, 0, y + 16, AL_V, "menu row name centred up/down");
+            cv_text_r(226, y + 3 + CAP_IN(S, 13), &AF_S, v, menu_vcol(c, r), bg);
         }
-        return;
-    }
-    {   /* ROW: the row's values as chips (COLOR: each palette's colours) */
-        uint32_t row = ui.menu_sel, nv = menu_valued(row) ? menu_n(row) : 0u, cur = nv ? menu_get(row) : 0u;
-        char b[32];
-        str_cpy(b, MTAB_NAME[t], 32);
-        str_cpy(b + str_len(b), " > ", 32 - str_len(b));
-        str_cpy(b + str_len(b), MI_NAME[row], 32 - str_len(b));
-        cv_text(10, 6 - AF_X_CAP_Y, &AF_X, b, T_THEME);
-        if (!nv) {
-            cv_text_in(4, 60 - AF_M_CAP_Y, 232, &AF_M, row == MI_LCLEAR ? "OCT+ CLEARS ALL" : "OCT+ OPENS IT", T_MID, T_SURF);
-            return;
-        }
-        for (k = 0; k < nv && k < 18u; k++) {
-            int32_t x = 8 + (int32_t)(k % 3u) * 75, y = 16 + (int32_t)(k / 3u) * 20;
-            uint16_t bg = k == cur ? T_TINT : T_RAISE;
-            cv_rect(x, y, 72, 18, bg);
-            if (k == cur) {
-                cv_rect(x, y, 72, 1, T_ACCENT); cv_rect(x, y + 17, 72, 1, T_ACCENT);
-                cv_rect(x, y, 1, 18, T_ACCENT); cv_rect(x + 71, y, 1, 18, T_ACCENT);
-            }
-            cv_clip_text(x + 5, y + 6 - AF_X_CAP_Y, &AF_X, row == MI_HOLD ? HOLD_N[k % 4u] : menu_vname(row, k),
-                         k == cur ? T_TEXT : T_MID, bg, row == MI_COLOR ? 44 : 62);
-            if (row == MI_COLOR) {                     /* (the palette's THEME and ACCENT) */
-                uint32_t q;
-                for (q = 0; q < 2u; q++) {
-                    uint16_t col = q ? UI_PALETTES[k % NPALETTES].accent : UI_PALETTES[k % NPALETTES].theme;
-                    cv_rect(x + 50 + (int32_t)q * 10, y + 5, 8, 8, ux.mono || settings.palette == UI_BW_INDEX ?
-                            ux_gray(ux_luma(col) >> 3) : col);   /* (GREY, MONO: their grays) */
-                }
-            }
-        }
+        cv_free_text(26, y + 20 - AF_X_CAP_Y, &AF_X, menu_help(r), T_DIM, bg, 202);
     }
 }
-static void confirm_open(uint32_t kind, uint32_t trk);   /* (0.6.58) INIT SYSTEM: ui_input.c */
 static void draw_menu(void)
 {
     uint32_t sig;
+    if (ui.menu == 1) {                                /* (the message's and the knob's timers: the page path's lz_frame_end) */
+        if (ui.msg_t && !--ui.msg_t && ui.msg2[0]) {
+            str_cpy(ui.msg, ui.msg2, sizeof ui.msg);
+            ui.msg2[0] = 0;
+            ui.msg_t = 60;
+        }
+        if (ui.hot_t)
+            ui.hot_t--;
+    }
     sig = ui.menu * 7u + ui.menu_sel * 131u + settings.palette * 1009u + settings.lowcut * 7919u + settings_hold * 3511u +
           settings_leds * 6151u + ui_prefs * 4099u + ui_style * 257u + ui_skin * 1543u + song.rec * 65537u + song.sel * 13u +
-          ui_rec_prefs * 92821u + ui_scr * 131071u + ui.mlv * 0x9E3779B1u +   /* (#157: SCREEN OFF's value redraws its row) */
+          ui_rec_prefs * 92821u + ui_scr * 131071u + (ui.hot_t ? ui.hot_col + 1u : 0u) * 0x9E3779B1u +
+          (ui.menu == 1 && ui.msg_t ? str_hash(0x70A57u, ui.msg) : 0u) + ml_count() * 977u + ml.on * 3u + usb_out * 61u +
+          midi_out_mode * 89u + cpu_cfg * 197u + ui_load * 433u + ui_scope * 71u +
           (ui.menu >= 2 ? ui.menu_scroll * 48611u : 0u) + (ui.menu == 3 ? prf_seq * 2971u + 1u : 0u) +
           (ui.menu == 2 ? (song.cpu_q8 >> 3) * 7741u + load_diag.peak * 3329u + load_diag.late * 1931u +
                           load_diag.shed * 2671u : 0u);   /* (0.6.19) ABOUT's AUDIO LOAD: live (NOW in ~3 % steps) */
-    draw_head();                                      /* (0.8.5: the pages' header, "MENU . DISPLAY") */
+    draw_head();                                      /* (0.8.5: the pages' header, "MENU . SCREEN") */
     if (!ui.force && sig == ui.menu_sig)
         return;
     ui.menu_sig = sig;
@@ -461,7 +507,7 @@ static void draw_menu(void)
         return;
     }
     if (ui.force) {                                    /* (0.9.0) round its tabs, cards, panel and footer, not under them */
-        int16_t R[7][4] = {{0, LT_Y, 240, (int16_t)(lz_low() ? LB_TAB_H : LT_H)}, {0, LZ_GRAPH_Y, 240, LZ_GRAPH_H},
+        int16_t R[7][4] = {{0, LT_Y, 240, (int16_t)(lz_low() ? LB_TAB_H : LT_H)}, {0, (int16_t)graph_y(), 240, (int16_t)graph_h()},
                            {0, (int16_t)foot_y(), 240, (int16_t)foot_h()}};
         uint32_t c;
         for (c = 0; c < 4u; c++) {
@@ -474,11 +520,17 @@ static void draw_menu(void)
     }
     draw_tabs();
     menu_cards();
-    cv_begin(240, LZ_GRAPH_H, T_BG);
-    cv_rect(4, 0, 232, LZ_GRAPH_H, T_SURF);
+    cv_begin(240, graph_h(), T_BG);                    /* (the panel as draw_graph's: COLORS its box, AIR / HUD none) */
+    if (!lz_low())
+        cv_rrect(4, 0, 232, (int32_t)graph_h(), 6, T_SURF, T_BG);
     cv_bg = T_SURF;
     menu_panel();
-    cv_blit(0, LZ_GRAPH_Y);
+    cv_oy = 0;
+    if (ui.msg_t && ui.msg[0])                         /* a message: the toast pill, as on every page */
+        toast_pill();
+    else
+        toast_at[0] = toast_at[2] = 0;
+    cv_blit(0, graph_y());
     draw_foot();
 }
 static void enc_drop(void)                             /* knob turns nobody takes */
@@ -496,15 +548,17 @@ static void menu_close(void)
     go_home();
 }
 
-/* (0.9.2) the menu: SELECT walks every row, tab after tab (DISPLAY CONTROL AUDIO MIDI SYSTEM, no wrap), ALGORITHM jumps to
- * the next / previous tab's first row (no wrap), PRESETS does nothing (rule 3: no presets here), any of KNOB 1..4 or
- * OCT+ / OCT- change a value (menu_items.c menu_step), OCT+ opens CALIBRATION / ABOUT (OCT- nothing there); in ABOUT
- * SELECT scrolls, OCT- goes back. HOME closes it, from ABOUT too (ui_input.c). (Until 0.9.1: SELECT zoomed MENU . TAB .
- * ROW, PRESETS the row, ALGORITHM the tab round.) */
-static void menu_tab_go(int32_t s)                     /* ALGORITHM: the next / previous tab, its first row */
+/* (0.9.18) SELECT: the next / previous page (no wrap), its first setting; ALGORITHM: the next / previous tab's first
+ * page; KNOB n: the page's setting n (menu_items.c menu_step; an action: armed right, back to the page's first setting
+ * left); OCT+ / OCT-: the last setting turned a step (an action: OCT+ does it); PRESETS nothing (rule 3). In ABOUT SELECT
+ * scrolls, OCT- goes back. HOME closes it, from ABOUT too (ui_input.c). (0.9.2 .. 0.9.17: SELECT every row, any knob the
+ * row's value; until 0.9.1 SELECT zoomed MENU . TAB . ROW, PRESETS the row, ALGORITHM the tab round.) */
+static void menu_page_go(uint32_t p)
 {
-    int32_t t = clamp((int32_t)menu_tab() + s, 0, MTAB_COUNT - 1);   /* (a tab a detent) */
-    ui.menu_sel = (uint8_t)mtab_first((uint32_t)t);
+    if (p >= MP_COUNT || p == menu_page())
+        return;
+    ui.menu_sel = MPAGE[p].row[0];
+    ui.hot_t = 0;
 }
 static void menu_input(uint32_t oct)                  /* oct: ui_input.c oct_taps */
 {
@@ -524,17 +578,27 @@ static void menu_input(uint32_t oct)                  /* oct: ui_input.c oct_tap
         enc_drop();
         return;
     }
-    if ((s = panel_enc(EN_SELECT)) != 0)                /* (0.9.2) SELECT: every row, one a detent */
-        ui.menu_sel = (uint8_t)clamp((int32_t)ui.menu_sel + s, 0, MI_COUNT - 1);
-    ui.mlv = 1;                                         /* (the tab's rows) */
-    if ((s = panel_enc(EN_ALGO)) != 0)
-        menu_tab_go(s);
-    for (s = 0, k = 0; k < 4u; k++)                    /* KNOB 1..4, any of them */
-        s += panel_enc(EN_K1 + k);
+    ui.mlv = 1;
+    if ((s = panel_enc(EN_SELECT)) != 0)                /* SELECT: the pages, one a detent */
+        menu_page_go((uint32_t)clamp((int32_t)menu_page() + s, 0, MP_COUNT - 1));
+    if ((s = panel_enc(EN_ALGO)) != 0)                 /* ALGORITHM: a tab a detent, its first page */
+        menu_page_go(mtab_page((uint32_t)clamp((int32_t)menu_tab() + s, 0, MTAB_COUNT - 1)));
+    for (k = 0; k < 4u; k++) {                         /* KNOB n: the page's setting n */
+        uint32_t r = MPAGE[menu_page()].row[k];
+        if ((s = panel_enc(EN_K1 + k)) == 0 || r == MI_NONE)
+            continue;
+        ui.hot_col = (uint8_t)k;
+        ui.hot_t = 40;
+        if (menu_valued(r)) {
+            ui.menu_sel = (uint8_t)r;
+            menu_put(r, menu_step(r, s));
+        } else
+            ui.menu_sel = (uint8_t)(s > 0 ? r : MPAGE[menu_page()].row[0]);   /* (an action: armed, or let go) */
+    }
     if (menu_valued(ui.menu_sel)) {
-        /* a step (OCT+ the next value, OCT- the previous); COLOR previews the palette, STYLE is drawn so from the next
-         * frame (FX LATCH: the latched effects are off while the menu is up) */
-        s += (int32_t)up - (int32_t)dn;
+        /* OCT+ the next value, OCT- the previous, of the setting turned last; COLOR previews the palette, STYLE is drawn
+         * so from the next frame (FX LATCH: the latched effects are off while the menu is up) */
+        s = (int32_t)up - (int32_t)dn;
         if (s)
             menu_put(ui.menu_sel, menu_step(ui.menu_sel, s));
     } else if (up) {
@@ -545,11 +609,6 @@ static void menu_input(uint32_t oct)                  /* oct: ui_input.c oct_tap
         } else if (ui.menu_sel == MI_PANEL) {
             panel_setup();
             scrn.idle = fm1_ms;                         /* (SCREEN OFF: its own loop had the input) */
-            ui.force = 1;
-        } else if (ui.menu_sel == MI_INIT) {           /* (0.6.58) INIT SYSTEM: a new song from zero (as SAVE > TOOLS 5,
-                                                         * its dialog; UNDO brings the music back) */
-            ui.menu = 0;
-            confirm_open(CF_INIT_SYS, song.sel);
             ui.force = 1;
         } else {                                       /* MI_ABOUT */
             ui.menu = 2;

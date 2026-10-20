@@ -1055,7 +1055,7 @@ static void setup(int s)
     memset(kb_on, 0, sizeof kb_on);               /* no key held (roll_playing holds one) */
     live.req = live.cur = -1; live.mode = live.srec = live.dirty = 0; lys.nqc = 0;   /* (the song layer: off) */
     trk_live = NTRK;                              /* (the six awake but on *_tracks4) */
-    if (s >= S_TOAST_ENV) {                       /* (0.9.5) a toast over a page with words to its foot: the pill keeps clear
+    if (s >= S_TOAST_ENV && s <= S_TOAST_ANALOG) {   /* (0.9.5) a toast over a page with words to its foot: the pill keeps clear
                                                    * of them (or is not drawn: the header says it), never over one (hk_overlay) */
         static const uint16_t BASE[] = {S_ENV, S_MUTATE, S_MUTATE, S_MOTION, S_MOTION_LOCKS, S_COUNT, S_AUTO_LIST,
                                        S_AUTO_LIST_DRUM, S_PATTERN, S_V6_FM6_OP, S_V6_ANALOG};   /* (0.9.6: over the creatures too) */
@@ -1069,7 +1069,8 @@ static void setup(int s)
             ui_message("SAVED A LONG MESSAGE");
         return;
     }
-    if (s >= S_MOCK_HOME) {
+    if (s >= S_MOCK_HOME && s <= S_MOCK_MENU) {   /* (0.9.18: the scenes appended after the toasts are their own: until
+                                                   * then PRESETS TYPE and MENU > MIDI drew a toast over a stray page) */
         mock_state(s);
         return;
     }
@@ -1276,8 +1277,10 @@ static void setup(int s)
         perf_m[0] = 6; perf_m[1] = 7; perf_m[2] = 40; perf_m[3] = 30; pf.sw[0] = 1u << 23;   /* (0.9.14: the macros) */
         break;
     case S_LY_GLO_STATE: go_home(); ui.layer = LAYER_GLO; ui.lylv = 2; break;
-    case S_MENU_ROW: case S_MENU_ROW_LEDS:             /* (0.8.5) the menu's lens, ROW: COLOR's palettes, LEDS's names */
-        ui.menu = 1; ui.mlv = 2; ui.menu_sel = s == S_MENU_ROW ? MI_COLOR : MI_LEDS; break;
+    case S_MENU_ROW: case S_MENU_ROW_LEDS:             /* (0.9.18) the knob just turned: COLOR's card lit (SCREEN), LED GLOW's
+                                                         * (SCREEN 2) */
+        ui.menu = 1; ui.menu_sel = s == S_MENU_ROW ? MI_COLOR : MI_LEDS; ui.hot_col = s == S_MENU_ROW ? 0u : 2u; ui.hot_t = 30;
+        break;
     case S_GLO_SENDS:                                  /* (0.8.5) GLO's lens: MIX > SENDS */
         trk[0].p[P_DIST] = 30; trk[1].p[P_CHOR] = 90; trk[2].p[P_DLY] = 60; trk[3].p[P_REV] = 127; trk[4].p[P_MUTE] = 1;
         go_title("SENDS"); ui.hot_col = 2; ui.hot_t = 30;

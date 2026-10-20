@@ -2223,8 +2223,9 @@ static void ui_input_frame(void)
         if (ui.menu) {
             menu_close();
         } else {
-            ui.menu = 1;                                /* (at the tab and row it was left at) */
-            ui.mlv = 1;                                 /* (0.8.5: the lens at TAB, its rows) */
+            ui.menu = 1;                                /* (at the page and setting it was left at) */
+            ui.mlv = 1;
+            ui.hot_t = 0;                               /* (0.9.18: no card lit from the page before) */
             ui.confirm = 0;                             /* (a clear dialog is cancelled, NAME too) */
             name_close();
             ui.force = 1;
