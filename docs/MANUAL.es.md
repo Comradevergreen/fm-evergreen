@@ -143,11 +143,12 @@ atajos de esa capa; en la grilla DRUM son pasos y carriles; en la pantalla NAME 
 
 ## 2. La pantalla
 
-### Pieles: AIR, COLORS, BOTTOM, HUD (0.8.9, AIR 0.9.7)
+### Pieles: AIR, COLORS, HUD (0.8.9, AIR 0.9.7)
 
 **MENU > DISPLAY > SKIN** elige cómo se visten las lentes (la maqueta aprobada "skin aireado", opciones 1, 3 y 4; 0.9.7:
-AIR, la opción aprobada); en todas las páginas, todas las paletas, FLAT y LINE. El menú las recorre AIR, COLORS, BOTTOM,
-HUD:
+AIR, la opción aprobada); en todas las páginas, todas las paletas, FLAT y LINE. El menú las recorre AIR, COLORS, HUD
+(0.9.17: BOTTOM, la fila de perillas al pie en todas las páginas, se retiró; un BOTTOM guardado en los ajustes, o puesto
+por el editor o una restauración, abre como AIR):
 
 - **AIR** (0.9.7; la de fábrica de los ajustes nuevos: un FM-1 nuevo o con sus ajustes borrados; los ajustes guardados
   antes conservan la piel que tenían): el aspecto de HUD en **todas** las páginas, con la **fila de perillas arriba**,
@@ -164,10 +165,10 @@ HUD:
   la perilla que girás enmarcada en su color; la pestaña del grupo rellena de violeta; el número de la pista en una
   cajita naranja, un ▶ violeta y el BPM grande en violeta en el encabezado; un panel casi negro redondeado; los seres con
   el calor de la 0.6 (púas violetas, anillos rojo y naranja, núcleos crema).
-- **BOTTOM**: las pestañas son las palabras de los grupos (la del grupo en el que estás con una pastillita debajo, un punto por página), sin cartas ni caja de panel: el
-  medio de la pantalla es el dibujo, de borde a borde (los seres de HOME tienen todo el lugar), y las cuatro perillas
-  son una fila fina sobre la miga de pan (marca y nombre, el valor en su color, una barra finita).
-- **HUD**: como BOTTOM, pero en HOME los seres nadan **debajo de todo, por la pantalla entera**: el encabezado, las
+- **HUD**: las pestañas son las palabras de los grupos (un punto por página debajo de cada una), sin cartas ni caja de
+  panel: el medio de la pantalla es el dibujo, de borde a borde, y las cuatro perillas son una fila fina sobre la miga de
+  pan (marca y nombre, el valor en su color, una barra finita); en las páginas SEQ la fila va arriba, debajo de las
+  pestañas, como en AIR (0.9.17: los valores sobre el roll). En HOME los seres nadan **debajo de todo, por la pantalla entera**: el encabezado, las
   pestañas, las perillas y la miga flotan encima como texto claro con un borde oscuro de 2 px (0.9.0). Ahí la fila de
   perillas se apaga a un quinto unos segundos después de la última vuelta de perilla y vuelve con la siguiente o al
   cambiar de página; en las demás páginas queda encendida. La palabra del grupo va subrayada con una rayita.
@@ -206,7 +207,7 @@ Desde la 0.8.5 todas las páginas llevan la piel del diseño que aprobó el due�
   la sección (0.9.2; p. ej. **FX · DELAY · DLY 2  6/16**, **ENV · TRACKS · TRACKS DEST  2/5**).
 - **Las pestañas** (0.9.2): debajo del encabezado, los **grupos** de la sección (FX: TRK · BUS · DLY · REV · CHO · SLC ·
   MST · PCH; SEQ: PATT · TRACK · BAR · STEP · AUTO), encendido el del grupo en el que estás (COLORS: relleno violeta;
-  BOTTOM: una pastillita; HUD y AIR: una rayita), y **un punto por página** debajo de cada uno, encendido el de la página que
+  HUD y AIR: una rayita), y **un punto por página** debajo de cada uno, encendido el de la página que
   se ve. Las tarjetas debajo, un panel más alto, y el pie es solo la miga de pan.
 
 - **Las letras chicas** (desde la 0.8.5): los nombres de las tarjetas, las pestañas, la miga de pan, las
@@ -276,7 +277,7 @@ páginas, sus perillas, sus dibujos y todas las funciones son las mismas, solo c
    no recorre páginas: regla 3.)
 6. **La pantalla dice dónde estás.** Arriba, las pestañas son los **grupos** de la sección, el actual encendido y un
    puntito por cada una de sus páginas. Abajo: **SECCIÓN · GRUPO · página** y **n/N**, el lugar de la página en la
-   cadena: **FX · DELAY · DLY 2  6/16**. Igual en AIR, COLORS, BOTTOM y HUD, con todas las paletas.
+   cadena: **FX · DELAY · DLY 2  6/16**. Igual en AIR, COLORS y HUD, con todas las paletas.
 
 - Cada sección recuerda la página donde la dejaste (EDIT una para los sintes y una para FM6 y otra para DRUM); al
   encender SEQ abre en STEP, ENV en ENV, LFO en LFO, las demás en su primera página.
@@ -1016,14 +1017,23 @@ naranja, un compás más allá de LEN oscuro.
 
 | Grupo | Páginas | Qué muestra la pantalla |
 | --- | --- | --- |
-| **PATTERN** | PATTERN · STRETCH · PLAYHEADS | Los compases del patrón uno al lado del otro en miniaturas grandes, cada una sus dieciséis pasos como rayitas (una pista DRUM: sus carriles); debajo, **PLAYHEADS**: el patrón entero como un solo roll chiquito (las filas de la escala teñidas, las líneas de los tiempos más claras, un paso con componente marcado arriba, los pasos más allá de LEN oscuros) con el cabezal y los cabezales extra de PLAYHEADS (una marquita cada uno al pie). |
-| **TRACK** | TRACK · MUTATE | El mismo dibujo, con los ajustes de la pista en las tarjetas. |
-| **BAR** | **BAR** · STEP · NOTE | **BAR** (nueva): los compases como en PATTERN, **KNOB 1 el compás** que editás (el cursor conserva su lugar dentro del compás), KNOB 2 LEN. **STEP** / **NOTE**: arriba una tira con los compases del patrón en chiquito (el que editás teñido), y debajo el **piano roll** del compás a todo el ancho: 30 semitonos, las filas de la escala teñidas, el cursor un marco violeta alrededor de su columna, el cabezal una línea naranja, un paso con componente una marquita arriba, un lock una marca al pie, una tecla apretada en la pista una marca a la izquierda de su fila (una pista DRUM: la **grilla**, con sus teclas). El KNOB 1 de STEP recorre **los 64 pasos** y entra solo en el compás siguiente. |
-| **STEP** | COMP · COMP 2 | El paso del cursor dibujado grande: arriba **STEP n** y a la derecha NOTE / TIE / REST (una nota de más de un paso: **LEN n**, que se fija con el KNOB 3 de STEP); a la izquierda sus notas como barras donde las pone su altura, cada una con su nombre (la nota en foco en naranja, MICRO las corre, RATCH las parte; un TIE muestra las notas que sostiene), y a la derecha sus fichas: **ACC, SLD, MICRO n, COMP1 x, COMP2 x, CHANCE n%** (con un valor puesto: una ficha teñida de violeta; sin nada: apagada). |
-| **AUTO** | AUTOMATION · AUTO LIST | La automatización de la pista: los registros contados, después como lista. |
+| **PATTERN** | PATTERN · STRETCH · PLAYHEADS | (0.9.17) El roll, como toda página SEQ. **PATTERN** dibuja las notas tan largas como las toca **GATE** y los pasos impares atrasados según **SWING**; los pasos más allá de **LEN** oscuros (en la tira, los compases más allá). **PLAYHEADS** dibuja sus cabezales extra sobre el roll como líneas mientras suenan, cada uno tan caliente como su número (el que editás de 3 px). |
+| **TRACK** | TRACK · MUTATE | **TRACK** contornea adónde lleva **PITCH** las notas (en gris, sobre las notas como están escritas). **MUTATE** muestra una ficha al pie del roll: los compases hasta la próxima mutación (**NEXT n BARS**), **FROZEN** o **MUTATE OFF**. |
+| **BAR** | **BAR** · STEP · NOTE | **KNOB 1 el compás** en BAR (el cursor conserva su lugar dentro del compás), KNOB 2 LEN. El KNOB 1 de STEP recorre **los 64 pasos** y entra solo en el compás siguiente; en NOTE la nota en foco en naranja. |
+| **STEP** | COMP · COMP 2 | Una barra arriba de cada paso con ese componente (COMP: el primero, COMP 2: el segundo; un arpegio naranja, otro violeta); el paso del cursor enmarcado. |
+| **AUTO** | AUTOMATION · AUTO LIST | Una marca debajo de cada paso con un registro (un lock naranja, automatización blanca); en AUTO LIST el registro elegido tiene su paso enmarcado en violeta, y las tarjetas dicen su fila, paso, parámetro y valor. |
 
-Desde la 0.8.5 el roll ya no tiene la tira de teclado ni los nombres de las filas de C (como la maqueta): el dibujo del
-paso nombra las notas y la tarjeta PITCH dice la nota en foco.
+**Un solo dibujo para todo SEQ** (0.9.17, el pedido del dueño: "todas las páginas del secuenciador con el mismo piano
+roll, y cada página hace algo distinto encima"): toda página muestra arriba una tira con los compases del patrón en
+chiquito (el que editás teñido) y debajo el **piano roll** del compás a todo el ancho: 30 semitonos, las filas de la
+escala teñidas, el cursor un marco alrededor de su columna, el cabezal una línea naranja, un paso con componente una
+marquita arriba, un lock una marca al pie, una tecla apretada en la pista una marca a la izquierda de su fila (una
+pista DRUM: la **grilla**, con sus teclas). Las marcas propias de la página van encima (la tabla). Hasta la 0.9.16 el
+grupo PATTERN dibujaba los compases en miniaturas grandes con un roll "PLAYHEADS" debajo, COMP el paso grande con sus
+fichas, PLAYHEADS tres carriles, MUTATE y AUTO LIST paneles propios.
+
+Desde la 0.8.5 el roll ya no tiene la tira de teclado ni los nombres de las filas de C (como la maqueta): la tarjeta
+PITCH dice la nota en foco.
 
 - **SEQ desde otra página** vuelve a la página que dejaste; al encender, STEP, el piano roll.
 - **PRESETS** en una página SEQ carga un **patrón**: abre el cargador PHRASES con el patrón siguiente elegido (KNOB 1
@@ -2190,7 +2200,7 @@ SKIN  2/28**. El encabezado dice MENU · DISPLAY.
 | Pestaña | Fila | Valores |
 | --- | --- | --- |
 | DISPLAY | COLOR | GREY, GREEN, AMBER, ICE, VIOLET, ROSE, PAPER, HI-CON, NIGHT, MONO, **JIANT** (por defecto) |
-| DISPLAY | SKIN | **AIR** (de fábrica en los ajustes nuevos), COLORS, BOTTOM, HUD — (0.8.9; AIR 0.9.7) ver [Pieles](#pieles-air-colors-bottom-hud-089-air-097) |
+| DISPLAY | SKIN | **AIR** (de fábrica en los ajustes nuevos), COLORS, HUD — (0.8.9; AIR 0.9.7; BOTTOM retirado en 0.9.17: abre como AIR) ver [Pieles](#pieles-air-colors-hud-089-air-097) |
 | DISPLAY | SCOPE | **OFF** (de fábrica), ON — (0.9.7) las páginas EDIT de un motor: OFF la criatura en todo el panel, centrada, el nombre de la página y el del sonido chiquitos en sus esquinas; ON la criatura a la izquierda, la carta SCOPE y las fichas como antes. Los ajustes guardados antes de 0.9.7 cargan OFF |
 | DISPLAY | STYLE | FLAT, LINE |
 | DISPLAY | LARGE | OFF, ON (etiquetas y valores grandes) |

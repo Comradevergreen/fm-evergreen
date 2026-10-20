@@ -418,10 +418,10 @@ static void lcd_rule(uint32_t x, uint32_t y, uint32_t w, uint32_t h)
 static void draw_rules(uint32_t y, uint32_t h)
 {
     uint32_t i;
-    if (y == card_y() && lz_low() && ux.skin == SKIN_AIR) {   /* (0.9.7) AIR: over the knobs' row and under it */
+    if (y == card_y() && lz_top()) {                    /* (0.9.7) AIR (0.9.17: HUD's SEQ): over the knobs' row and under it */
         lcd_rule(RULE_X0, (LT_Y + LB_TAB_H + card_y()) / 2, RULE_W, 1);
         lcd_rule(RULE_X0, (card_y() + card_h() + graph_y()) / 2, RULE_W, 1);
-    } else if (y == card_y() && lz_low()) {             /* (0.8.9) BOTTOM, HUD: over the panel and under it */
+    } else if (y == card_y() && lz_low()) {             /* (0.8.9) HUD: over the panel and under it */
         lcd_rule(RULE_X0, (LT_Y + LB_TAB_H + graph_y()) / 2, RULE_W, 1);
         lcd_rule(RULE_X0, (graph_y() + graph_h() + card_y()) / 2, RULE_W, 1);
     } else if (y == card_y()) {                         /* (LARGE: the geometry of the page, ui.c card_h; 0.8.5: a lens
@@ -905,9 +905,9 @@ static void sound_name(const track_t *t, char *b)
  * marked). COLORS: n rounded tabs (r 4) in a row, x 4 .. 236, 2 apart (three: 76 wide at x 4 + 78 l, as 0.8.5's), y 26,
  * 13 tall; the group shown THEME with INK text, the others RAISE with MID; the name (its short form where it does not
  * fit) centred, capitals rows 29..35; the dots on row 37, 2 x 1, 4 apart (INK on the lit tab, the others a mix; DIM on the
- * rest). BOTTOM and HUD (the mock-up opciones_skin.html): the names centred in n equal slots (capitals rows 28..34), the
- * one shown THEME, the others MID; the dots on row 38 (DIM, the group shown MID), the page's BOTTOM a THEME pill (5 x 3,
- * rows 37..39), HUD a THEME dash (4 x 1); HUD's HOME outlined, over the beings. Drawn when what it shows changes */
+ * rest). HUD and AIR (the mock-up opciones_skin.html): the names centred in n equal slots (capitals rows 28..34), the
+ * one shown THEME, the others MID; the dots on row 38 (DIM, the group shown MID), the page's a THEME dash (4 x 1; 0.9.17:
+ * BOTTOM's pill retired with it); HUD's HOME outlined, over the beings. Drawn when what it shows changes */
 #define LT_W 76
 #define LT_X(l) (4 + (int32_t)(l) * 78)
 #define TAB_X(i, n) (4 + (int32_t)(i) * 234 / (int32_t)(n))   /* tab i of n (COLORS): from here, TAB_X(i + 1) - 2 wide */
@@ -933,12 +933,9 @@ static void tabs_paint(uint32_t n, uint32_t lv, const char *const *nm, const cha
                 cv_rect(dx - 1, dy - 1, nd * 4, 3, T_BG);
             for (d = 0; d < (uint32_t)nd; d++) {
                 int32_t px = dx + (int32_t)d * 4;
-                if (l == lv && d == at) {
-                    if (ux.skin == SKIN_BOTTOM)
-                        cv_rrect(px - 1, dy - 1, 5, 3, -1, T_THEME, T_BG);
-                    else
-                        cv_rect(px - 1, dy, 4, 1, T_THEME);
-                } else
+                if (l == lv && d == at)
+                    cv_rect(px - 1, dy, 4, 1, T_THEME);
+                else
                     cv_rect(px, dy, 2, 1, l == lv ? hud_cap(T_MID) : T_DIM);
             }
             continue;
@@ -2244,6 +2241,8 @@ static void style_apply(void)
         ui_style = ui_style == 2u ? ST_LINE : ST_FLAT;
     if (ui_skin >= SKIN_N)                              /* (0.8.9) SKIN: unknown, COLORS */
         ui_skin = SKIN_COLORS;
+    else if (ui_skin == SKIN_BOTTOM_OLD)                /* (0.9.17) BOTTOM, retired: AIR */
+        ui_skin = SKIN_AIR;
     if (ux.style != ui_style || ux.skin != ui_skin) {
         ux.style = ui_style;
         ux.skin = ui_skin;
