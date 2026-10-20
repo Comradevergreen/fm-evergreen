@@ -146,7 +146,7 @@ int main(void)
                     for (j = 0; j < st->n; j++) {
                         notes_all++;
                         if (!in_scale(t, st->note[j])) notes_out++;
-                        if (st->note[j] > 84u || st->note[j] < 20u) range_bad++;
+                        if (st->note[j] > 84u || st->note[j] < 20u) { range_bad++; printf("  range: %s T%u role %u step %u note %u\n", gs.g->name, k + 1u, gs.role[k], i, st->note[j]); }
                     }
                     if (k == pd && st->n >= 3u && (st->note[0] < 46u || st->note[st->n - 1u] > 81u)) { chords_bad++; printf("  chord range: %s seed %u step %u %u..%u\n", gs.g->name, s, i, st->note[0], st->note[st->n - 1u]); }
                 }
@@ -820,6 +820,96 @@ int main(void)
         bad += gcheck("(0.9.13) the filter moving on 90 % of the melodic parts; releases in their role's range", fmod * 10u >= mel * 9u && !rel_bad);
         bad += gcheck("(0.9.13) a chord progression (two chords or more) in 90 % of the pieces; ANIMAL on under 5 % of EXPLORE's parts",
                       prog * 10u >= n * 9u && anim * 20u < xtr);
+    }
+    {   /* (0.9.18) the dice's variety and its melodies (tests/dice_metrics.c measures them at length): OCT+ pressed 24
+         * times a genre (MICRO HOUSE among them: the owner's), a part the same as the press before (90 % of its steps,
+         * transposed to the key) seldom, the sounds of a part many, the press before's seldom; the power-on's first
+         * piece not the same every session; SEQ + SELECT on the piece's harmony, never the same twice running; EDIT +
+         * SELECT never the same preset twice running; the lead in the key, by steps, few leaps, a few syncopations; its
+         * envelope seldom held at the top */
+        static const uint8_t GG[6] = {3, 1, 6, 14, 27, 40};   /* (MICRO HOUSE, HOUSE, TECHNO, SYNTH POP, BOOM BAP, AMBIENT) */
+        static int16_t prev[NTRK][NSTEP];
+        uint32_t gi, pr, near = 0, parts = 0, sndrep = 0, snd = 0, ml_pre[24], nml = 0, liv = 0, lstep = 0, lleap = 0, lon = 0,
+                 loff = 0, lflat = 0, lfull = 0, nl = 0, seq_ct = 0, seq_st = 0, seq_same = 0, sd_rep = 0, po_same = 0;
+        uint16_t lastsnd[NTRK];
+        for (gi = 0; gi < 6u; gi++) {
+            gen_reset();
+            gen_with(GG[gi], 4321u + gi, 50, 0);
+            memset(prev, 0, sizeof prev);
+            for (k = 0; k < NTRK; k++) lastsnd[k] = 0xFFFF;
+            for (pr = 0; pr < 24u; pr++) {
+                host_ticks += 1300000u + pr * 777u;
+                gen_press();
+                for (k = 0; k < NTRK; k++) {
+                    const track_t *t = &trk[k];
+                    uint32_t r = gs.role[k], len = dlen(t), eq = 0, any = 0;
+                    uint16_t id = (uint16_t)(t->eng_req << 8 | t->preset);
+                    int32_t pv = -1;
+                    if (!gs.act[r] || (r == RL_TEX && k != gs.trk_of[RL_TEX])) { prev[k][0] = 0x7FFF; continue; }
+                    for (i = 0; i < len; i++) {
+                        const step_t *st = &t->step[i];
+                        int16_t v = (int16_t)(r == RL_DRUM ? (st->time == ST_NOTE ? st->hit : 0) :
+                                              st->time == ST_NOTE && st->n ? 200 + st->note[0] - gs.root : st->time == ST_TIE);
+                        eq += v == prev[k][i]; any |= v; prev[k][i] = v;
+                    }
+                    for (; i < NSTEP; i++) prev[k][i] = 0x7FFF;
+                    if (pr && any) { parts++; near += eq * 10u >= len * 9u; }
+                    if (r != RL_DRUM) { snd++; sndrep += pr && id == lastsnd[k]; lastsnd[k] = id; }
+                    if (gi == 0u && r == RL_LEAD) {
+                        uint32_t j;
+                        for (j = 0; j < nml && ml_pre[j] != id; j++) {}
+                        if (j == nml && nml < 24u) ml_pre[nml++] = id;
+                    }
+                    if (r == RL_LEAD) {
+                        nl++; lflat += t->p[P_SUS] >= 120 && t->p[P_REL] <= 12; lfull += t->p[P_SUS] >= 100;
+                        for (i = 0; i < len; i++) {
+                            const step_t *st = &t->step[i];
+                            int32_t a;
+                            if (st->time != ST_NOTE || !st->n) continue;
+                            lon++; loff += i & 1u;
+                            if (pv >= 0) { a = st->note[0] - pv; if (a < 0) a = -a; liv++; lstep += a && a <= 2; lleap += a > 7; }
+                            pv = st->note[0];
+                        }
+                    }
+                }
+            }
+        }
+        printf("gen: (0.9.18) 6 genres x 24 presses: a part near the press before's in %u of %u, the press before's sound in %u of %u;"
+               " MICRO HOUSE's lead %u sounds; the lead: steps %u %%, leaps past a fifth %u %%, off the eighths %u %%, held at the top %u of %u\n",
+               near, parts, sndrep, snd, nml, liv ? lstep * 100u / liv : 0u, liv ? lleap * 100u / liv : 0u, lon ? loff * 100u / lon : 0u, lfull, nl);
+        bad += gcheck("(0.9.18) DICE: a part near the press before's under 8 %, its sound the press before's under 25 %", near * 100u < parts * 8u && sndrep * 4u < snd);
+        bad += gcheck("  MICRO HOUSE's lead: 8 sounds at least in 24 presses (0.9.17: 7 in 40)", nml >= 8u);
+        bad += gcheck("  the lead by steps (40 % at least), leaps past a fifth under 5 %, 12 % at least off the eighths", lstep * 100u >= liv * 40u && lleap * 100u < liv * 5u && loff * 100u >= lon * 12u);
+        bad += gcheck("  the lead's envelope: no release at full sustain never, held at 79 % or more under 15 %", !lflat && lfull * 100u < nl * 15u);
+        {   /* the power-on: the first OCT+ of two sessions */
+            uint32_t h0;
+            gen_reset(); session_dice(111u); gp.genre = GEN_EXPLORE; gp.sig = 0; gen_press(); h0 = dice_print();
+            gen_reset(); session_dice(222u); gp.genre = GEN_EXPLORE; gp.sig = 0; gen_press(); po_same = dice_print() == h0;
+            bad += gcheck("  the power-on's SEED its session's: the first OCT+ another piece every session (0.9.17: SEED 0001)", !po_same);
+        }
+        {   /* SEQ + SELECT on a HOUSE piece's lead, 20 times */
+            uint32_t ld, last = 0;
+            gen_reset(); gen_with(1, 77, 50, 0);
+            ld = gs.trk_of[RL_LEAD];
+            for (pr = 0; pr < 20u && ld < NTRK; pr++) {
+                uint32_t sg;
+                host_ticks += 990000u;
+                dice_seq(&trk[ld]);
+                sg = steps_sig(&trk[ld]);
+                seq_same += pr && sg == last; last = sg;
+                for (i = 0; i < dlen(&trk[ld]); i += 4u)
+                    if (trk[ld].step[i].time == ST_NOTE && trk[ld].step[i].n) { seq_st++; seq_ct += (gchord_pcs(i) >> (trk[ld].step[i].note[0] % 12u)) & 1u; }
+            }
+            printf("gen: (0.9.18) SEQ + SELECT x 20 on HOUSE 0077's lead: strong steps on the piece's chord tones %u of %u, the same twice running %u\n", seq_ct, seq_st, seq_same);
+            bad += gcheck("  SEQ + SELECT: on the piece's chords (75 % of the strong steps; 0.9.17: 58 %), never the same twice running", ld < NTRK && seq_ct * 4u >= seq_st * 3u && !seq_same);
+        }
+        {   /* EDIT + SELECT x 30, on FM6 (15 presets) */
+            uint32_t last = 0xFFFF;
+            gen_reset();
+            set_engine_of(&trk[1], ENGI_FM6);
+            for (pr = 0; pr < 30u; pr++) { host_ticks += 700000u; sound_dice_of(&trk[1], 1); sd_rep += trk[1].preset == last; last = trk[1].preset; }
+            bad += gcheck("  EDIT + SELECT: never the same preset twice running (FM6 x 30)", !sd_rep);
+        }
     }
     {   /* NEW PROJECT (SAVE > TOOLS 5): GENRE back to EXPLORE */
         gen_reset();
