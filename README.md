@@ -23,7 +23,7 @@ editor update themselves with every change merged into `main`.
   **DRUM-X, VOICE and ANIMAL first** (0.9.9): the FM-1 powers on with T1 DRUM-X, T2 VOICE singing words, T3 ANIMAL's
   bird, T4 LOFI's bytebeat, T5 ANALOG's bass and T6 FM6's electric piano, and PRESETS lists the engines in that order.
   **A new skin, AIR** (0.9.7, the default of new settings): HUD's light look on every page with the knob row on top,
-  the middle of the screen free; HOME's beings over the whole screen. **MENU › DISPLAY › SCOPE** (OFF by default): an
+  the middle of the screen free; HOME's beings over the whole screen. **MENU › SCREEN › SCOPE** (OFF by default): an
   engine's EDIT pages give its creature the whole panel. **HOME's beings have faces**: three isotherms coloured by their
   own level, eyes that shut on a hit, a mouth that opens with the sound, a look up when MUTATE changes them. 15 KB of
   flash given back, nothing removed, the sound bit for bit.
@@ -55,7 +55,7 @@ editor update themselves with every change merged into `main`.
 > - **Flat navigation** (0.9.2): one chain of pages per section, the groups as tabs on top (a dot a page), the
 >   breadcrumb **SECTION · GROUP · page n/N** at the foot; SCL and ARP two sections; GEN three HOME pages. Clearing a
 >   step is **SEQ + G5**, renaming **SAVE + C5**: EDIT is always EDIT.
-> - **Three skins, MENU > DISPLAY > SKIN** (0.8.9; HUD faster in 0.9.0; 0.9.7: a fourth, **AIR**, the default of new
+> - **Three skins, MENU > SCREEN > SKIN** (0.8.9; HUD faster in 0.9.0; 0.9.7: a fourth, **AIR**, the default of new
 >   settings; 0.9.17: BOTTOM retired): **COLORS** (rounded cards, each
 >   card its colour, on JIANT its value's heat as in 0.6), **BOTTOM** (the picture edge to edge, a slim knob row) and **HUD**
 >   (HOME's beings under everything). The **LENTE** look (0.8.5): tabs, cards and a breadcrumb in a crisp 5 × 7 pixel
@@ -70,7 +70,7 @@ editor update themselves with every change merged into `main`.
 >   the chain in the middle; automatable, saved with the project. **REC off the grid in 64ths** of a step (0.9.1):
 >   SEQ › NOTE's MICRO, −32/64 … +31/64.
 > - **USB audio that keeps its time** (0.8.9): no lost half buffers (the clicks under load), no dropped packets, the
->   48 kHz resampler on the second core. **Stems**: every track to the computer (MENU > SYSTEM > USB > STEMS), one channel each, into
+>   48 kHz resampler on the second core. **Stems**: every track to the computer (MENU > USB > AUDIO STEMS), one channel each, into
 >   your DAW.
 > - Every version's details: the **[Changelog](#changelog)**.
 
@@ -176,7 +176,7 @@ audio CPU budget, the signature shown at power-on is 428 bytes. An instrument th
   effects' output is checked too: far out of range, the block is muted, their lines cleared and the second core stopped
   the same way. Such a unit
   then stays on one core **until it is switched off**, and so does any unit after a crash while both cores ran.
-- **What it says.** MENU > ABOUT, under AUDIO LOAD: **CORES 2**, or **CORES 1** with the reason: REC AT POWER-ON,
+- **What it says.** MENU > SYSTEM > ABOUT, under AUDIO LOAD: **CORES 2**, or **CORES 1** with the reason: REC AT POWER-ON,
   BAD READ, NO ANSWER, FAULT, SINCE A FAULT (an earlier one this power-on), NO START.
 - **One core on purpose.** Hold **REC** while switching the FM-1 on: that session plays on one core, as before.
 - **Credits.** How to start the second core safely on the FM-1 and the guard against misreads come from
@@ -193,7 +193,7 @@ VOICE singing its lyric, in the COLORS skin, exactly as the firmware draws them 
 - **Thermal palette**: values, curves, steps, hits and notes are coloured by intensity (cyan → blue → violet → red →
   orange → yellow → white). Selection is violet and active is orange; on JIANT each card's value and gauge are its
   amount's heat (0.9.5, as 0.6), the other palettes give each knob its own colour.
-- **Skins** (MENU > DISPLAY > SKIN, 0.8.9): **AIR** (0.9.7, the default of new settings: HUD's floating words on
+- **Skins** (MENU > SCREEN > SKIN, 0.8.9): **AIR** (0.9.7, the default of new settings: HUD's floating words on
   every page, the knob row on top under the tabs, the middle free), **COLORS** (near-black rounded cards on top, a rounded
   panel) and **HUD** (HOME's beings swim under everything, the words float over them, the knob row at the foot; on the
   SEQ pages on top, as AIR's). (0.9.17: BOTTOM, the knob row at the foot on every page, is retired; a saved BOTTOM
@@ -220,7 +220,7 @@ VOICE singing its lyric, in the COLORS skin, exactly as the firmware draws them 
   they send), VOICE (one cell per voice and the glide curve), GLOBAL (the bar in thermal columns with swing, clock and
   tuning).
 - **Load meter**: five small bars next to the battery showing the current audio load.
-- **Power-on**: the "Jiant FM1" signature is written stroke by stroke in thermal colours (MENU > ANIM OFF: it shows
+- **Power-on**: the "Jiant FM1" signature is written stroke by stroke in thermal colours (MENU > SCREEN > ANIMATION OFF: it shows
   up whole).
 
 ### Engines
@@ -359,7 +359,7 @@ SONG REC. The song's END plays it once (STOP), x2..x8 or forever (LOOP).
   the middle. Automatable and saved with the project.
 
 ### Knob acceleration
-Turning fast sweeps the whole range; turning slowly is fine adjustment. Turn it off in MENU > KNOB ACCEL.
+Turning fast sweeps the whole range; turning slowly is fine adjustment. Turn it off in MENU > SYSTEM > KNOB SPEEDUP.
 
 ### Connections and storage
 - USB: class-compliant MIDI and audio (the master reaches the computer); TRS MIDI; internal, USB or TRS clock. Since
@@ -367,7 +367,7 @@ Turning fast sweeps the whole range; turning slowly is fine adjustment. Turn it 
   resampler on the second core.
 - **MIDI LEARN** (0.9.12, MENU › MIDI › LEARN): turn a knob, send a CC; up to ten, kept with the settings, over USB
   and TRS (from Felucca 1.5).
-- **Stems** (MENU > SYSTEM > USB): **STEMS** sends every track on its own channel (8: T1–T6, FX L R), **STEMS+IN** adds
+- **Stems** (MENU > USB > AUDIO): **STEMS** sends every track on its own channel (8: T1–T6, FX L R), **STEMS+IN** adds
   your voice through the FM-1. Record them in your DAW, one track per channel.
 - 32 named user presets; the project autosaves 10 s after the last change while stopped (not at power-off).
 - **Web editor** for every parameter: FM6 patches, grid, mix and full backup (all 8 songs with their sections, rows
@@ -440,6 +440,10 @@ each layer; the complete manual is in **[docs/MANUAL.md](docs/MANUAL.md)** (en e
 - **ALGORITHM** picks the track (T1–T6) from any page; track pages show the selected track.
 - The four knobs drive the four columns on screen. Turning fast sweeps the whole range, slowly fine-tunes.
 - **Holding** a button opens its layer (FX, GLO, SCL, LFO, EDIT, SAVE…): release it and you're back where you were.
+- (0.9.18) **The MENU** (hold HOME) works the same way: eight pages of four settings in five tabs, **SCREEN · AUDIO ·
+  MIDI · USB · SYSTEM**. SELECT walks the pages, ALGORITHM the tabs, **KNOB 1–4 the four settings on screen**, OCT− / OCT+
+  step the one you turned last. Each row under the cards says in plain words what it does. CALIBRATION, ABOUT and LEARN
+  CLEAR are action cards: turn their knob to arm them, OCT+ does it. HOME closes it.
 
 ### 2. Reading the screen
 - **HOME**: each being is a track. Its species tells the engine, its shape comes from its four knobs, and it swells
@@ -447,7 +451,7 @@ each layer; the complete manual is in **[docs/MANUAL.md](docs/MANUAL.md)** (en e
 - **Colours**: cold (indigo, violet) is little, hot (red, orange, cream, white) is a lot. Violet is what's selected,
   orange what's active; on JIANT each card is coloured by its value (cold low, hot high; 0.9.5, as 0.6), the other
   palettes give each knob its own colour.
-- **Skin** (MENU > DISPLAY > SKIN, 0.8.9): **AIR** (0.9.7, the default of new settings) HUD's look on every page with
+- **Skin** (MENU > SCREEN > SKIN, 0.8.9): **AIR** (0.9.7, the default of new settings) HUD's look on every page with
   the knob row on top, **COLORS** the cards on top in the 0.6 colours, **HUD** HOME's beings over the whole screen under
   floating words (the knobs at the foot, on top on the SEQ pages). BOTTOM is retired (0.9.17): a saved BOTTOM opens as AIR.
 - **Load meter** (top right, next to the battery): five small bars showing how much of the audio time the sound is
@@ -458,7 +462,7 @@ each layer; the complete manual is in **[docs/MANUAL.md](docs/MANUAL.md)** (en e
   set, **LITE** the heavy reverbs, the GRAIN delay and FM6 lightened (SHIMMER and CLOUD as ROOM, RESO as SPRING, the
   GRAIN delay plain, FM6 two voices), **ECO** that plus every reverb a SPRING, no SLICER, no chorus (their pages
   hidden) and at most 4 voices a synth track. The project keeps its settings: back on FULL it sounds as saved.
-- **Power-on**: the signature draws itself in about a second, with beings swimming round it. To boot straight in: MENU > **ANIM OFF**.
+- **Power-on**: the signature draws itself in about a second, with beings swimming round it. To boot straight in: MENU > SCREEN > **ANIMATION OFF**.
 
 ### 3. Making a sound
 1. Pick the track with ALGORITHM and the engine/preset with **PRESETS**.
@@ -560,7 +564,7 @@ makes the kick pull the rest down. The leveler is always on: no need to babysit 
 - **Project**: SAVE > **SECTIONS**: KNOB 1 the section A–D, LOAD, SAVE; SAVE > **PROJECTS**: KNOB 1 the project (1–8),
   KNOB 2 its section, LOAD, SAVE; SAVE > ARRANGE chains the sections into the song. SAVE from another section comes
   back with SAVE armed on USER and SECTIONS: **SAVE, OCT+, OCT+** stores. The project autosaves 10 s after your last change while stopped
-  (at most once a minute; never at power-off: stop and wait a moment before switching off). MENU > RESTORE LAST OFF
+  (at most once a minute; never at power-off: stop and wait a moment before switching off). MENU > SYSTEM > RESTORE LAST OFF
   turns it off. The full story, with what is saved where: **[the manual, chapter 12](docs/MANUAL.md)**.
 - **Backup**: the web editor (USB) downloads and restores everything: songs, sections, scenes and presets.
 
@@ -597,7 +601,7 @@ Settings → Pages → Source: **GitHub Actions**, once).
    [emulator](https://juanjiant-bit.github.io/JIANT/emu/), is checked there, and only
    then reaches this installer ([web/STABLE](web/STABLE.md)). Offline: `python3 tools/fm1_install.py build/felucca.fwsc`.
 3. **Since 0.6.71 JIANT uses both cores** ([details](#both-cores-dual-core)). If your FM-1 crashes, freezes or
-   clicks more than before, hold **REC** while switching it on (one core) and tell us what MENU > ABOUT says.
+   clicks more than before, hold **REC** while switching it on (one core) and tell us what MENU > SYSTEM > ABOUT says.
 4. To go back to the official firmware, use M-VAVE's updater or the installer's **Return to official V15**.
 
 **If the installer does not install** (no WebMIDI, MIDI blocked, FM-1 not found, the port busy with another program,
@@ -683,6 +687,35 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### v0.9.18
+- **The MENU follows the rest of the system** (users found it confusing: one long list with its own rules). Since
+  0.9.18 it is eight pages of four settings, in five tabs:
+  | Tab | Page | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
+  | --- | --- | --- | --- | --- | --- |
+  | SCREEN | SCREEN | COLOR | SKIN | STYLE | LARGE |
+  | SCREEN | SCREEN 2 | SCOPE | ANIMATION | LED GLOW | SCREEN SLEEP |
+  | AUDIO | AUDIO | SPEAKER EQ | TRACKS | LOAD | CPU CORES |
+  | AUDIO | CLICK | CLICK | CLICK LEVEL | COUNT-IN | BPM LOCK |
+  | MIDI | MIDI | MIDI OUT | LEARN | LEARN CLEAR | — |
+  | USB | USB | USB AUDIO | USB LEVEL | — | — |
+  | SYSTEM | CONTROLS | HOLD TIME | KNOB SPEEDUP | FX LATCH | SCALE LEDS |
+  | SYSTEM | SYSTEM | RESTORE LAST | CPU CLOCK | CALIBRATION | ABOUT |
+
+  **SELECT walks the pages, ALGORITHM jumps tabs, KNOB n changes the setting on card n** (until 0.9.17: SELECT walked
+  30 rows and any knob changed the selected one). OCT− / OCT+ step the setting you turned last. The tabs are whole
+  words (no more DISP / CTRL / SYS), the cards whole words (SPEAKER, LEVEL, CORES, SLEEP …, no SPK EQ / USB LVL /
+  CALIBR), the values in their heat colours like every other card, the footer **MENU · AUDIO · CLICK 4/8**. Under the
+  cards each setting has a row: its knob, its full name, its value and one plain line on what it does (for some, what
+  the value chosen does: USB AUDIO STEMS "8 CHANNELS: EVERY TRACK + FX"). **CALIBRATION, ABOUT and LEARN CLEAR** are
+  action cards: turn their knob right to arm them (the card says OCT+), OCT+ does it. Messages show as the usual pill
+  and go away on their own; HUD keeps its value row at the foot (it vanished in the MENU before).
+- **Renamed for plain words** (the settings themselves, their values and the editor's ids are unchanged; nothing to
+  migrate): ANIM → ANIMATION, LEDS → LED GLOW (DIM LO / DIM HI / INV → LOW / HIGH / INVERT), SCREEN OFF → SCREEN SLEEP,
+  HOLD → HOLD TIME, KNOB ACCEL → KNOB SPEEDUP, USB → USB AUDIO, CPU → CPU CORES. MIDI OUT stays in MIDI; USB AUDIO
+  moved next to USB LEVEL; CPU CORES next to TRACKS and LOAD (the crash message says MENU > AUDIO > CORES).
+- **INIT SYSTEM left the MENU**: it was SAVE › TOOLS › NEW PROJECT under another name (same dialog, same UNDO).
+- The web editor groups the settings by the new tabs (it reads them from the device).
 
 ### v0.9.17
 The glitcher, one piano roll across the SEQ pages, a livelier generator and dice, slower rolls, ARP SEQ a lap at a
