@@ -810,7 +810,7 @@ static int menu_protocol(void)
         {"SCREEN SLEEP", "NEVER,5 MIN,15 MIN,30 MIN,60 MIN"}, {"TRACKS", "4,6"},   /* (0.6.18) */
         {"LOAD", "ECO,LITE,FULL"}};                                                                 /* (0.6.30) */
     static const int32_t DEF[20] = {-1, 0, 0, 0, 2, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 2};   /* (COLOR: the default palette) */
-    static const uint8_t TAB[20] = {0, 0, 0, 0, 0, 4, 4, 4, 1, 1, 3, 3, 1, 1, 1, 4, 4, 0, 1, 1};      /* (0.9.18) SCREEN AUDIO MIDI
+    static const uint8_t TAB[20] = {0, 0, 0, 0, 0, 4, 4, 4, 1, 1, 3, 3, 1, 1, 1, 4, 0, 0, 1, 1};      /* (0.9.18) SCREEN AUDIO MIDI
                                                          * USB SYSTEM (until 0.9.17 DISPLAY CONTROL AUDIO MIDI SYSTEM) */
     static const char *const TABN[5] = {"SCREEN", "AUDIO", "MIDI", "USB", "SYSTEM"};
     int bad = 0, ok = 1;
@@ -864,7 +864,7 @@ static int menu_protocol(void)
     ok &= !strcmp(it.name, "SCOPE") && it.id == 22 && it.tab == 0 && it.value == 0 && it.max == 1 && !strcmp(it.names[0], "OFF") &&
           !strcmp(it.names[1], "ON");
     menu_desc(23, &it);                                   /* (0.9.12) CPU, CPU CLOCK, rows of SYSTEM (tab 4 since MIDI) */
-    ok &= !strcmp(it.name, "CPU CORES") && it.id == 23 && it.tab == 1 && it.max == 1 && !strcmp(it.names[0], "1 CORE") &&
+    ok &= !strcmp(it.name, "CPU CORES") && it.id == 23 && it.tab == 4 && it.max == 1 && !strcmp(it.names[0], "1 CORE") &&
           !strcmp(it.names[1], "2 CORES");
     menu_desc(24, &it);
     ok &= !strcmp(it.name, "CPU CLOCK") && it.id == 24 && it.tab == 4 && it.max == 1 && !strcmp(it.names[0], "360 MHZ") &&

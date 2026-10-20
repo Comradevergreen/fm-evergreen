@@ -2409,7 +2409,7 @@ static int test_display_preferences(void)
     return bad;
 }
 
-/* 0.9.18: the MENU as the system's pages (ui_menu.c, menu_items.c MPAGE): every setting on one page, eight pages of four
+/* 0.9.18: the MENU as the system's pages (ui_menu.c, menu_items.c MPAGE): every setting on one page, nine pages of up to four
  * knobs in five tabs (SCREEN AUDIO MIDI USB SYSTEM), a tab's pages in a run; SELECT walks the pages (no wrap), ALGORITHM
  * the tabs' first pages (no wrap), PRESETS nothing, KNOB n the page's setting n, OCT+ / OCT- the setting turned last; an
  * action armed by its knob, OCT+ does it; HOME closes (OCT- not); reopened at the same page */
@@ -2436,12 +2436,24 @@ static int test_menu_tabs(void)
     for (n = 0, t = 0; t < MTAB_COUNT; t++)
         n += mtab_pages(t);
     ui_prefs = 0;
-    bad += check("0.9.18 MENU: every setting on one page (8 pages of 4 knobs), tabs SCREEN AUDIO MIDI USB SYSTEM (2 2 1 1 2 pages)",
+    {   /* (no two cards on a page read the same; the CPU's two settings side by side) */
+        uint32_t a, b2;
+        for (p = 0; p < MP_COUNT; p++)
+            for (a = 0; a < 4u; a++)
+                for (b2 = a + 1u; b2 < 4u; b2++)
+                    ok &= MPAGE[p].row[a] == MI_NONE || MPAGE[p].row[b2] == MI_NONE ||
+                          !str_eq(menu_short(MPAGE[p].row[a]), menu_short(MPAGE[p].row[b2]));
+        ok &= menu_page_of(MI_CPU) == menu_page_of(MI_CLOCK) && menu_page_of(MI_BPMLOCK) != menu_page_of(MI_CLICK) &&
+              str_eq(menu_short(MI_PANEL), "CALIB") && str_eq(menu_short(MI_CLOCK), "CPU MHZ") &&
+              str_eq(menu_short(MI_SERIAL), "USB AUD");
+    }
+    bad += check("0.9.18 MENU: every setting on one page (9 pages of up to 4 knobs, no two cards alike), tabs SCREEN AUDIO MIDI USB SYSTEM (3 2 1 1 2 pages)",
                  ok && n == MP_COUNT && MTAB_COUNT == 5u && str_eq(MTAB_NAME[0], "SCREEN") && str_eq(MTAB_NAME[MTAB_SYSTEM], "SYSTEM") &&
-                 mtab_pages(MTAB_SCREEN) == 2u && mtab_pages(MTAB_AUDIO) == 2u && mtab_pages(MTAB_MIDI) == 1u &&
+                 mtab_pages(MTAB_SCREEN) == 3u && mtab_pages(MTAB_AUDIO) == 2u && mtab_pages(MTAB_MIDI) == 1u &&
                  mtab_pages(MTAB_USB) == 1u && mtab_pages(MTAB_SYSTEM) == 2u && mi_tab(MI_MIDIOUT) == MTAB_MIDI &&
                  mi_tab(MI_LEARN) == MTAB_MIDI && mi_tab(MI_LCLEAR) == MTAB_MIDI && mi_tab(MI_SERIAL) == MTAB_USB &&
-                 mi_tab(MI_USB) == MTAB_USB && mi_tab(MI_CPU) == MTAB_AUDIO && mi_tab(MI_CLOCK) == MTAB_SYSTEM);
+                 mi_tab(MI_USB) == MTAB_USB && mi_tab(MI_CPU) == MTAB_SYSTEM && mi_tab(MI_CLOCK) == MTAB_SYSTEM &&
+                 mi_tab(MI_BPMLOCK) == MTAB_AUDIO && mi_tab(MI_SCLLED) == MTAB_SCREEN && mi_tab(MI_PANEL) == MTAB_SYSTEM);
     {   /* (0.9.12) CPU CORES, CPU CLOCK (cpu_safe.c): values of their own, set through menu_put (the editor's MENU_SET too),
          * from the next start */
         uint8_t was = cpu_cfg;
@@ -2462,28 +2474,29 @@ static int test_menu_tabs(void)
     hold(B_HOME);
     ok = ui.menu == 1 && ui.menu_sel == MI_COLOR && menu_page() == 0u && menu_tab() == MTAB_SCREEN;
     turn(EN_SELECT, 1); ok &= menu_page() == 1u && ui.menu_sel == MI_SCOPE;   /* (SELECT: a page a detent, its first) */
-    turn(EN_SELECT, 1); ok &= menu_page() == 2u && ui.menu_sel == MI_LOWCUT && menu_tab() == MTAB_AUDIO;
-    turn(EN_SELECT, -1); ok &= menu_page() == 1u;
+    turn(EN_SELECT, 1); ok &= menu_page() == 2u && ui.menu_sel == MI_LEDS && menu_tab() == MTAB_SCREEN;
+    turn(EN_SELECT, 1); ok &= menu_page() == 3u && ui.menu_sel == MI_LOWCUT && menu_tab() == MTAB_AUDIO;
+    turn(EN_SELECT, -2); ok &= menu_page() == 1u;
     turn(EN_SELECT, -40); ok &= menu_page() == 0u && ui.menu_sel == MI_COLOR;   /* (no wrap) */
     turn(EN_PRESET, 1); ok &= ui.menu_sel == MI_COLOR;   /* (PRESETS: nothing, rule 3) */
     turn(EN_SELECT, 40); ok &= menu_page() == MP_COUNT - 1u && ui.menu_sel == MI_RESTORE;
     turn(EN_SELECT, -40);
     bad += check("0.9.18 MENU: SELECT walks the pages (SCREEN .. SYSTEM, no wrap), each opened on its first setting; PRESETS does nothing", ok);
-    turn(EN_ALGO, 1); ok = menu_tab() == MTAB_AUDIO && menu_page() == 2u;
-    turn(EN_SELECT, 1); ok &= menu_page() == 3u && ui.menu_sel == MI_CLICK;
+    turn(EN_ALGO, 1); ok = menu_tab() == MTAB_AUDIO && menu_page() == 3u;
+    turn(EN_SELECT, 1); ok &= menu_page() == 4u && ui.menu_sel == MI_CLICK;
     turn(EN_ALGO, 1); ok &= menu_tab() == MTAB_MIDI && ui.menu_sel == MI_MIDIOUT;
-    turn(EN_ALGO, -1); ok &= menu_page() == 2u;        /* (its first page) */
+    turn(EN_ALGO, -1); ok &= menu_page() == 3u;        /* (its first page) */
     turn(EN_ALGO, -1); ok &= menu_page() == 0u;
     turn(EN_ALGO, -1); ok &= menu_page() == 0u && menu_tab() == MTAB_SCREEN;   /* (no wrap) */
     turn(EN_ALGO, 3); ok &= menu_tab() == MTAB_USB && ui.menu_sel == MI_SERIAL;
     turn(EN_ALGO, 1); ok &= menu_tab() == MTAB_SYSTEM && ui.menu_sel == MI_HOLD;
-    turn(EN_ALGO, 1); ok &= menu_page() == 6u;
+    turn(EN_ALGO, 1); ok &= menu_page() == 7u;
     bad += check("0.9.18 MENU: ALGORITHM jumps to the next / previous tab's first page, no wrap", ok && ui.menu == 1);
-    ok = 1;                                            /* SYSTEM > CONTROLS: HOLD TIME, KNOB SPEEDUP, FX LATCH, SCALE LEDS */
+    ok = 1;                                            /* SYSTEM > CONTROLS: HOLD TIME, KNOB SPEEDUP, FX LATCH, CALIBRATION */
     turn(EN_K2, 1); ok &= !(ui_prefs & PREF_ACCEL_OFF) && ui.menu_sel == MI_ACCEL;
     turn(EN_K2, -1); ok &= (ui_prefs & PREF_ACCEL_OFF) != 0u;
-    turn(EN_K4, 1); ok &= (ui_rec_prefs & (PREF_SCALE_LEDS >> 8)) != 0u && ui.menu_sel == MI_SCLLED && !(ui_prefs & PREF_LATCH);
-    turn(EN_K4, -1); ok &= !(ui_rec_prefs & (PREF_SCALE_LEDS >> 8));
+    turn(EN_K4, 1); ok &= ui.menu_sel == MI_PANEL && !(ui_prefs & PREF_LATCH) && ui.menu == 1;   /* (armed) */
+    turn(EN_K4, -1); ok &= ui.menu_sel == MI_HOLD;     /* (let go) */
     turn(EN_K1, 1); ok &= settings_hold == HOLD_DEF + 1u && ui.menu_sel == MI_HOLD && ui.hot_t && ui.hot_col == 0u;
     turn(EN_K1, -1); ok &= settings_hold == HOLD_DEF;
     ui_prefs = 0;
@@ -2561,7 +2574,7 @@ static int test_menu_tabs(void)
     hold(B_HOME);
     bad += check("MENU: HOME pressed closes it, held too (no reopen); held opens it again at the same tab and row",
                  ok && ui.menu == 1 && ui.menu_sel == MI_USB);
-    turn(EN_SELECT, 40);                               /* SYSTEM: RESTORE LAST, CPU CLOCK, CALIBRATION, ABOUT */
+    turn(EN_SELECT, 40);                               /* SYSTEM: RESTORE LAST, CPU CORES, CPU CLOCK, ABOUT */
     ok = ui.menu_sel == MI_RESTORE;
     frame();
     turn(EN_K4, 1); frame();                           /* (KNOB 4 arms ABOUT: its card TINT, OCT+ its value) */
@@ -2572,7 +2585,8 @@ static int test_menu_tabs(void)
     ok &= oct_leds() == (1u | OCT_BREATH);              /* (ABOUT: OCT- back, lit; 0.9.14: OCT+ PROFILE, breathing) */
     press(B_OCTDN); ok &= ui.menu == 1 && ui.menu_sel == MI_ABOUT;
     turn(EN_K4, -1); ok &= ui.menu_sel == MI_RESTORE;  /* (left: let go, the page's first setting) */
-    turn(EN_K3, 1); ok &= ui.menu_sel == MI_PANEL;
+    turn(EN_SELECT, -1); turn(EN_K4, 1);               /* (CONTROLS: KNOB 4 arms CALIBRATION) */
+    ok &= menu_page() == MP_COUNT - 2u && ui.menu_sel == MI_PANEL;
     press(B_OCTDN); ok &= ui.menu == 1 && ui.menu_sel == MI_PANEL;
     {   /* CALIBRATION: OCT+ starts the setup (nothing pressed here: it times out and keeps the table) */
         panel_t p0 = panel;
@@ -2590,12 +2604,13 @@ static int test_menu_tabs(void)
         fm1_in.notes = 0;
         ok &= !memcmp(&p0, &panel, sizeof panel) && msg_is("SETUP CANCELLED") && ui.menu == 1 && fm1_ms - t < 1000u;
     }
-    bad += check("MENU SYSTEM: KNOB 3 / 4 arm CALIBRATION / ABOUT, OCT+ opens them (ABOUT's OCT- back); OCT- does nothing on them", ok);
-    turn(EN_K4, 1); press(B_OCTUP);                    /* ABOUT, HOME: closed, from the document */
+    bad += check("MENU SYSTEM: KNOB 4 arms CALIBRATION (CONTROLS) / ABOUT (SYSTEM), OCT+ opens them (ABOUT's OCT- back); OCT- does nothing on them", ok);
+    turn(EN_SELECT, 1); turn(EN_K4, 1); press(B_OCTUP);                    /* ABOUT, HOME: closed, from the document */
     ok = ui.menu == 2;
     press(B_HOME);
     ok &= !ui.menu && ui.home;
-    hold(B_HOME); ok &= ui.menu == 1 && ui.menu_sel == MI_ABOUT && menu_page() == MP_COUNT - 1u;   /* (its page) */
+    hold(B_HOME); ok &= ui.menu == 1 && ui.menu_sel == MI_RESTORE && menu_page() == MP_COUNT - 1u;   /* (its page; ABOUT
+                                                         * let go: an armed action does not outlive the MENU) */
     turn(EN_ALGO, -1); frame();
     {   /* a value row: OCT- and OCT+ both breathe, each while that way has a value to go to; none lit */
         uint32_t r = ui.menu_sel, want = (menu_step(r, -1) != menu_get(r) ? OCT_BREATH_DN : 0u) |
@@ -2607,26 +2622,32 @@ static int test_menu_tabs(void)
         ok &= oct_leds() == (OCT_BREATH | OCT_BREATH_DN);
     }
     menu_close();
-    bad += check("MENU: HOME closes ABOUT too; reopened at its page; the setting turned last breathes OCT- / OCT+ where they can go", ok);
+    bad += check("MENU: HOME closes ABOUT too; reopened at its page, the action let go; the setting turned last breathes OCT- / OCT+ where they can go", ok);
 
     /* (0.9.18) the tabs and the breadcrumb (rule 6): five tabs (the page's lit, a dot a page), "MENU . TAB . page" and the
-     * page's place among the eight */
+     * page's place among the nine; a page named as its tab ("SCREEN", "SCREEN 2", "AUDIO") not repeated: MENU . page */
     ui_power_on();
     hold(B_HOME);
     frame();
     ok = ui.menu == 1 && lz_on() && lz_fam() == LZ_MENU && lz_tabs() == 5u && lz_tab_lit(0) &&
-         lz_crumb_is("MENU \xB7 SCREEN \xB7 SCREEN") && lz_count_is("1/8");
+         lz_crumb_is("MENU \xB7 SCREEN") && lz_count_is("1/9");
     turn(EN_SELECT, 1); frame();
-    ok &= lz_tab_lit(0) && lz_crumb_is("MENU \xB7 SCREEN \xB7 SCREEN 2") && lz_count_is("2/8");
+    ok &= lz_tab_lit(0) && lz_crumb_is("MENU \xB7 SCREEN 2") && lz_count_is("2/9");
+    turn(EN_SELECT, 1); frame();
+    ok &= lz_tab_lit(0) && lz_crumb_is("MENU \xB7 SCREEN \xB7 LEDS") && lz_count_is("3/9");
     turn(EN_ALGO, 1); frame();
-    ok &= menu_tab() == MTAB_AUDIO && lz_tab_lit(1) && lz_crumb_is("MENU \xB7 AUDIO \xB7 AUDIO") && lz_count_is("3/8");
+    ok &= menu_tab() == MTAB_AUDIO && lz_tab_lit(1) && lz_crumb_is("MENU \xB7 AUDIO") && lz_count_is("4/9");
+    turn(EN_SELECT, 1); frame();
+    ok &= lz_crumb_is("MENU \xB7 AUDIO \xB7 CLICK") && lz_count_is("5/9");
     turn(EN_ALGO, 3); frame();
-    ok &= lz_tab_lit(4) && lz_crumb_is("MENU \xB7 SYSTEM \xB7 CONTROLS") && lz_count_is("7/8");
+    ok &= lz_tab_lit(4) && lz_crumb_is("MENU \xB7 SYSTEM \xB7 CONTROLS") && lz_count_is("8/9");
     turn(EN_K3, 1); frame();
     ok &= (fx_latch & 1u) != 0u && ui.menu_sel == MI_LATCH;
     turn(EN_K3, -1); frame();
+    turn(EN_SELECT, 1); frame();
+    ok &= lz_crumb_is("MENU \xB7 SYSTEM") && lz_count_is("9/9");
     menu_close();
-    bad += check("0.9.18 MENU: five tabs (the page's lit), MENU . TAB . page and n/8; ALGORITHM the tab, KNOB n the value", ok && MI_COUNT == 29u);
+    bad += check("0.9.18 MENU: five tabs (the page's lit), MENU . TAB . page (MENU . page when named as its tab) and n/9; ALGORITHM the tab, KNOB n the value", ok && MI_COUNT == 29u);
     return bad;
 }
 
@@ -3748,7 +3769,7 @@ static int test_layer(void)
         ok &= !memcmp(before, host_screen, sizeof before);
     }
     hold(B_HOME);
-    bad += check("menu LED GLOW: HIGH by default; SCREEN 2 KNOB 3 OFF < LOW < HIGH < INVERT (stops at the ends), OCT+ / OCT- the same; "
+    bad += check("menu LED GLOW: HIGH by default; LEDS KNOB 1 OFF < LOW < HIGH < INVERT (stops at the ends), OCT+ / OCT- the same; "
                  "a change from the editor redraws the shown MENU", ok && !ui.menu);
     {
         persist_t p = {0};
@@ -6412,16 +6433,16 @@ static int test_screen_off(void)
     ui_power_on();                                    /* in the MENU: OCT+ / a knob step it */
     menu_put(MI_SCROFF, 3u);
     hold(B_HOME);
-    turn(EN_SELECT, 1);                               /* (0.9.18: SCREEN 2, KNOB 4) */
+    turn(EN_SELECT, 1);                               /* (0.9.18: SCREEN 2, KNOB 3) */
     ok = ui.menu == 1 && ui.menu_sel == MI_SCOPE && menu_page_of(MI_SCROFF) == 1u;
-    turn(EN_K4, 1); ok &= scr_get() == 4u && ui.menu_sel == MI_SCROFF;
+    turn(EN_K3, 1); ok &= scr_get() == 4u && ui.menu_sel == MI_SCROFF;
     press(B_OCTUP); ok &= scr_get() == 4u;           /* (stops at the end) */
-    for (i = 0; i < 4u; i++) turn(EN_K4, -1);
+    for (i = 0; i < 4u; i++) turn(EN_K3, -1);
     ok &= scr_get() == 0u;
     press(B_OCTDN); ok &= scr_get() == 0u && ui.menu == 1;
     press(B_OCTUP); press(B_OCTUP); press(B_OCTUP); ok &= scr_get() == 3u;
     press(B_HOME); ok &= ui.menu == 0;
-    bad += check("SCREEN SLEEP: SCREEN 2 KNOB 4 / OCT-+ step NEVER .. 60 MIN, stops at the ends", ok);
+    bad += check("SCREEN SLEEP: SCREEN 2 KNOB 3 / OCT-+ step NEVER .. 60 MIN, stops at the ends", ok);
 
     {
         uint32_t f0 = 0, f1 = 0;
@@ -6464,7 +6485,7 @@ static int test_scale_leds(void)
     t->p[P_ROOT] = 0;
     settings_leds = LEDS_DIM;
     ui_leds();
-    ok = !menu_get(MI_SCLLED) && str_eq(MI_NAME[MI_SCLLED], "SCALE LEDS") && mi_tab(MI_SCLLED) == MTAB_SYSTEM &&
+    ok = !menu_get(MI_SCLLED) && str_eq(MI_NAME[MI_SCLLED], "SCALE LEDS") && mi_tab(MI_SCLLED) == MTAB_SCREEN &&
          !scale_leds(&root) && lit_keys(fm1_led_dim) == ALL && !lit_keys(fm1_led_hi);
     bad += check("#127 SCALE LEDS OFF (the default): every key glows as before (0.6.96: DIM HI's level above empty)", ok);
     menu_put(MI_SCLLED, menu_step(MI_SCLLED, 1));

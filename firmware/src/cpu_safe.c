@@ -119,7 +119,7 @@ static __attribute__((noinline)) void cpu_off(const char *why)
     cpu_cfg = (uint8_t)cpu_after(cpu_cfg, CR_2C);
     settings_save();
     ui_message(why);
-    str_cpy(ui.msg2, "MENU > AUDIO > CORES", sizeof ui.msg2);   /* (0.9.18: was SYSTEM > CPU) */
+    str_cpy(ui.msg2, "MENU > SYSTEM > CORES", sizeof ui.msg2);   /* (0.9.18: CPU CORES, was CPU) */
 }
 
 static const char CPU_APPLY[] = "SWITCH OFF AND ON TO APPLY";

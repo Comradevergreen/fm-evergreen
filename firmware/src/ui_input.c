@@ -2226,6 +2226,9 @@ static void ui_input_frame(void)
             ui.menu = 1;                                /* (at the page and setting it was left at) */
             ui.mlv = 1;
             ui.hot_t = 0;                               /* (0.9.18: no card lit from the page before) */
+            if (!menu_valued(ui.menu_sel))              /* (an action armed before it closed is let go: OCT+ on
+                                                         * opening never clears the learned CCs or opens a screen) */
+                ui.menu_sel = MPAGE[menu_page()].row[0];
             ui.confirm = 0;                             /* (a clear dialog is cancelled, NAME too) */
             name_close();
             ui.force = 1;

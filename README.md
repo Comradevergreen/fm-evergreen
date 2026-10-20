@@ -444,8 +444,8 @@ each layer; the complete manual is in **[docs/MANUAL.md](docs/MANUAL.md)** (en e
 - **ALGORITHM** picks the track (T1–T6) from any page; track pages show the selected track.
 - The four knobs drive the four columns on screen. Turning fast sweeps the whole range, slowly fine-tunes.
 - **Holding** a button opens its layer (FX, GLO, SCL, LFO, EDIT, SAVE…): release it and you're back where you were.
-- (0.9.18) **The MENU** (hold HOME) works the same way: eight pages of four settings in five tabs, **SCREEN · AUDIO ·
-  MIDI · USB · SYSTEM**. SELECT walks the pages, ALGORITHM the tabs, **KNOB 1–4 the four settings on screen**, OCT− / OCT+
+- (0.9.18) **The MENU** (hold HOME) works the same way: nine pages of up to four settings in five tabs, **SCREEN · AUDIO ·
+  MIDI · USB · SYSTEM**. SELECT walks the pages, ALGORITHM the tabs, **KNOB 1–4 the settings on screen**, OCT− / OCT+
   step the one you turned last. Each row under the cards says in plain words what it does. CALIBRATION, ABOUT and LEARN
   CLEAR are action cards: turn their knob to arm them, OCT+ does it. HOME closes it.
 
@@ -742,22 +742,26 @@ the BAR page gone; the LFO's MODE; the MENU as pages.
   - **LFO + SELECT** picks FREE half the time (was two in three), TRIG at any phase otherwise.
   - The web editor shows the LFO's **MODE** (TRIG / FREE) and its **PHASE** (TRIG's) as the device does.
 - **The MENU follows the rest of the system** (users found it confusing: one long list with its own rules). Since
-  0.9.18 it is eight pages of four settings, in five tabs:
+  0.9.18 it is nine pages of up to four settings, in five tabs:
   | Tab | Page | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
   | --- | --- | --- | --- | --- | --- |
   | SCREEN | SCREEN | COLOR | SKIN | STYLE | LARGE |
-  | SCREEN | SCREEN 2 | SCOPE | ANIMATION | LED GLOW | SCREEN SLEEP |
-  | AUDIO | AUDIO | SPEAKER EQ | TRACKS | LOAD | CPU CORES |
-  | AUDIO | CLICK | CLICK | CLICK LEVEL | COUNT-IN | BPM LOCK |
+  | SCREEN | SCREEN 2 | SCOPE | ANIMATION | SCREEN SLEEP | — |
+  | SCREEN | LEDS | LED GLOW | SCALE LEDS | — | — |
+  | AUDIO | AUDIO | SPEAKER EQ | TRACKS | LOAD | BPM LOCK |
+  | AUDIO | CLICK | CLICK | CLICK LEVEL | COUNT-IN | — |
   | MIDI | MIDI | MIDI OUT | LEARN | LEARN CLEAR | — |
   | USB | USB | USB AUDIO | USB LEVEL | — | — |
-  | SYSTEM | CONTROLS | HOLD TIME | KNOB SPEEDUP | FX LATCH | SCALE LEDS |
-  | SYSTEM | SYSTEM | RESTORE LAST | CPU CLOCK | CALIBRATION | ABOUT |
+  | SYSTEM | CONTROLS | HOLD TIME | KNOB SPEEDUP | FX LATCH | CALIBRATION |
+  | SYSTEM | SYSTEM | RESTORE LAST | CPU CORES | CPU CLOCK | ABOUT |
 
   **SELECT walks the pages, ALGORITHM jumps tabs, KNOB n changes the setting on card n** (until 0.9.17: SELECT walked
   30 rows and any knob changed the selected one). OCT− / OCT+ step the setting you turned last. The tabs are whole
-  words (no more DISP / CTRL / SYS), the cards whole words (SPEAKER, LEVEL, CORES, SLEEP …, no SPK EQ / USB LVL /
-  CALIBR), the values in their heat colours like every other card, the footer **MENU · AUDIO · CLICK 4/8**. Under the
+  words (no more DISP / CTRL / SYS), the cards whole words where they fit (SPEAKER, CORES, SLEEP, CALIB, CPU MHZ, USB
+  AUD …; no two alike on a page, no marks), the values in their heat colours like every other card, the footer **MENU ·
+  AUDIO · CLICK 5/9** (a page named as its tab not said twice: **MENU · SCREEN 2**, **MENU · SYSTEM**). The SYSTEM page
+  holds what a power-on does (RESTORE LAST, CPU CORES, CPU CLOCK: from the next start) and ABOUT; CALIBRATION sits with
+  the controls it teaches. Under the
   cards each setting has a row: its knob, its full name, its value and one plain line on what it does (for some, what
   the value chosen does: USB AUDIO STEMS "8 CHANNELS: EVERY TRACK + FX"). **CALIBRATION, ABOUT and LEARN CLEAR** are
   action cards: turn their knob right to arm them (the card says OCT+), OCT+ does it. Messages show as the usual pill
@@ -765,7 +769,8 @@ the BAR page gone; the LFO's MODE; the MENU as pages.
 - **Renamed for plain words** (the settings themselves, their values and the editor's ids are unchanged; nothing to
   migrate): ANIM → ANIMATION, LEDS → LED GLOW (DIM LO / DIM HI / INV → LOW / HIGH / INVERT), SCREEN OFF → SCREEN SLEEP,
   HOLD → HOLD TIME, KNOB ACCEL → KNOB SPEEDUP, USB → USB AUDIO, CPU → CPU CORES. MIDI OUT stays in MIDI; USB AUDIO
-  moved next to USB LEVEL; CPU CORES next to TRACKS and LOAD (the crash message says MENU > AUDIO > CORES).
+  moved next to USB LEVEL; CPU CORES next to CPU CLOCK (the crash message says MENU > SYSTEM > CORES); BPM LOCK beside
+  the engine's load on AUDIO; SCALE LEDS beside LED GLOW on SCREEN › LEDS.
 - **INIT SYSTEM left the MENU**: it was SAVE › TOOLS › NEW PROJECT under another name (same dialog, same UNDO).
 - The web editor groups the settings by the new tabs (it reads them from the device).
 - Flash: the image 568340 B, 15996 B free in the slot (the BAR page gave back 384 B; the MENU pages and the LFO MODE took more).

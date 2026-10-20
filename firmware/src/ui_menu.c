@@ -303,7 +303,7 @@ static int32_t menu_scroll_max(void)
  * SELECT a row): the header "MENU . SCREEN", the tabs the groups (SCREEN AUDIO MIDI USB SYSTEM, a dot a page), the
  * page's four settings as the four cards (KNOB n the card n's value, each value in its heat as every card's), the panel
  * their rows (the knob's number, the full name, the value, one plain line on what it does: the value's own where the
- * values differ in kind), the footer MENU . TAB . page n/8. SELECT walks the pages (no wrap), ALGORITHM jumps to the next
+ * values differ in kind), the footer MENU . TAB . page n/9 (MENU . page where the page is named as its tab). SELECT walks the pages (no wrap), ALGORITHM jumps to the next
  * / previous tab's first page, PRESETS does nothing (rule 3). The last setting turned (ui.menu_sel, a row) is framed in
  * the panel; OCT+ / OCT- step it too (the LEDs breathe where it can go). An action (LEARN CLEAR, CALIBRATION, ABOUT):
  * its knob arms it (its card TINT, OCT+ its value, as every action card), OCT+ does it. Messages: the toast pill. The
@@ -337,9 +337,10 @@ static void menu_val(uint32_t row, char *b)          /* the row's value as it re
 static const char *menu_short(uint32_t row)          /* a card's label: a whole word of the row's name (8 characters) */
 {
     static const struct { uint8_t row; char s[9]; } SH[] = {
-        {MI_LOWCUT, "SPEAKER"}, {MI_CPU, "CORES"}, {MI_CLKLVL, "LEVEL"}, {MI_USB, "LEVEL"}, {MI_SERIAL, "AUDIO"},
+        {MI_LOWCUT, "SPEAKER"}, {MI_CPU, "CORES"}, {MI_CLKLVL, "LEVEL"}, {MI_USB, "LEVEL"}, {MI_SERIAL, "USB AUD"},
         {MI_ANIM, "ANIMATE"}, {MI_SCROFF, "SLEEP"}, {MI_HOLD, "HOLD"}, {MI_ACCEL, "SPEEDUP"}, {MI_SCLLED, "SCALE"},
-        {MI_RESTORE, "RESTORE"}, {MI_CLOCK, "CPU"}, {MI_PANEL, "SETUP"}, {MI_LCLEAR, "CLEAR"}};
+        {MI_RESTORE, "RESTORE"}, {MI_CLOCK, "CPU MHZ"}, {MI_PANEL, "CALIB"}, {MI_LCLEAR, "CLEAR"}};   /* (no two alike on a
+                                                         * page: tests/ui_test.c) */
     uint32_t k;
     for (k = 0; k < NELEM(SH); k++)
         if (SH[k].row == row)

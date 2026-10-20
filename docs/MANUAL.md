@@ -230,7 +230,7 @@ dark. The pill keeps clear of the page's own words: where the foot is written (A
 sits in the nearest free rows, and on a page with no free rows it is left out and the header alone says it. A page's
 **hint** (MUTATE's "OCT+ KEEP  GLO+A4 FREEZE", MOTION's and PUNCH's "REC + PLAY ...") comes only once you stay on the
 page for about 0.8 s, never while SELECT walks past it, and each one at most twice in all (counted with the settings,
-so not again after a reboot). SAVE › TOOLS › INIT SYSTEM starts them over. Tapping a layer button says nothing (the
+so not again after a reboot). SAVE › TOOLS › NEW PROJECT starts them over. Tapping a layer button says nothing (the
 "HOLD [X] QUICK" hints are gone): hold it and its layer shows itself.
 
 ---
@@ -279,8 +279,8 @@ knobs, their pictures and every function are the same, only the way between them
   picked, so SAVE, OCT+, OCT+ still stores the sound (or the section).
 - **EDIT is always EDIT**: clearing a step went to the SEQ layer (**SEQ + G5**, CLR STEP; on AUTO LIST it deletes the
   record; TIME turned to REST clears a note too) and renaming to the SAVE layer (**SAVE + C5**, NAME).
-- **The MENU** (hold HOME, 0.9.18): the same rules: SELECT walks its eight pages (SCREEN → AUDIO → MIDI → USB →
-  SYSTEM), ALGORITHM jumps tabs, KNOB 1–4 the four settings on the cards, HOME closes it.
+- **The MENU** (hold HOME, 0.9.18): the same rules: SELECT walks its nine pages (SCREEN → AUDIO → MIDI → USB →
+  SYSTEM), ALGORITHM jumps tabs, KNOB 1–4 the settings on the cards, HOME closes it.
 - Some pages only appear when they apply: FM6's operator pages on an FM6 track, DRUM-X's pages on a DRUM track,
   RETRIG on LOFI BYTE/FLOAT, and with **LOAD ECO** the SLICER and CHORUS pages are hidden; the chain skips them.
 
@@ -2092,12 +2092,12 @@ track.
 
 ### The MENU (hold HOME)
 
-(0.9.18) The MENU is driven like every section: **eight pages of four settings** in five tabs, **SCREEN · AUDIO · MIDI
+(0.9.18) The MENU is driven like every section: **nine pages of up to four settings** in five tabs, **SCREEN · AUDIO · MIDI
 · USB · SYSTEM** (a dot a page under each tab). **SELECT** walks the pages (stopping at the first and the last),
-**ALGORITHM** jumps to the next / previous tab's first page, **KNOB 1–4** change the four settings on the cards, and
+**ALGORITHM** jumps to the next / previous tab's first page, **KNOB 1–4** change the settings on the cards, and
 **OCT− / OCT+** step the setting you turned last (its row is framed; the LEDs breathe the way it can go). PRESETS does
 nothing here. HOME closes it (the settings are saved then) and opens it again on the page you left. The header says
-**MENU · AUDIO**, the footer **MENU · AUDIO · CLICK  4/8**.
+**MENU · AUDIO**, the footer **MENU · AUDIO · CLICK  5/9** (a page named as its tab is not said twice: **MENU · SCREEN 2**, **MENU · SYSTEM**).
 
 Under the cards, a row for each setting: its knob's number, its full name, its value (in its heat colour, like the
 card's) and a plain line on what it does (for some, on what the chosen value does). **CALIBRATION, ABOUT and LEARN
@@ -2113,16 +2113,16 @@ every setting, its values and its meaning: nothing changes in the saved settings
 | | 4 | LARGE | OFF, ON (big labels and values) |
 | SCREEN › SCREEN 2 | 1 | SCOPE | **OFF** (default), ON — (0.9.7) an engine's EDIT pages: OFF the creature on the whole panel, centred, the page's name and the sound's name small in its corners; ON the creature on the left, the SCOPE card and the chips as before. Settings saved before 0.9.7 load as OFF |
 | | 2 | ANIMATION | ON, OFF (values snap; the power-on signature appears whole) — was ANIM |
-| | 3 | LED GLOW | OFF, LOW, **HIGH** (default), INVERT — how the idle keys and buttons glow (was LEDS: OFF, DIM LO, DIM HI, INV); (0.7.3) the glow's LEDs take turns frame to frame, so it no longer hums through the speaker once the music stops |
-| | 4 | SCREEN SLEEP | **NEVER** (default), 5 MIN, 15 MIN, 30 MIN, 60 MIN — the screen dark after that long without a touch (was SCREEN OFF) |
+| | 3 | SCREEN SLEEP | **NEVER** (default), 5 MIN, 15 MIN, 30 MIN, 60 MIN — the screen dark after that long without a touch (was SCREEN OFF) |
+| SCREEN › LEDS | 1 | LED GLOW | OFF, LOW, **HIGH** (default), INVERT — how the idle keys and buttons glow (was LEDS: OFF, DIM LO, DIM HI, INV); (0.7.3) the glow's LEDs take turns frame to frame, so it no longer hums through the speaker once the music stops |
+| | 2 | SCALE LEDS | OFF, ON — the keys of the scale glow, the root brighter |
 | AUDIO › AUDIO | 1 | SPEAKER EQ | FLAT, LOWCUT, BASS+ (an EQ on the master for the small speaker; also reaches the outputs and USB) |
 | | 2 | TRACKS | **4** (default), 6 — the same as GLO › SYSTEM KNOB 1 |
 | | 3 | LOAD | ECO, LITE, **FULL** (default) — the same as GLO › SYSTEM KNOB 2 |
-| | 4 | CPU CORES | 1 CORE, **2 CORES** (default) — from the next start (see [Troubleshooting](#16-troubleshooting-and-faq)); was SYSTEM › CPU |
+| | 4 | BPM LOCK | OFF, ON — DICE ALL keeps the tempo (the tempo is GLO + SELECT, GLO's F4 TAP or GLOBAL's BPM) |
 | AUDIO › CLICK | 1 | CLICK | OFF, REC (while a track is armed and playing), ON |
 | | 2 | CLICK LEVEL | LOW, MID, HIGH |
 | | 3 | COUNT-IN | OFF, 1 BAR, 2 BARS |
-| | 4 | BPM LOCK | OFF, ON — DICE ALL keeps the tempo (the tempo is GLO + SELECT, GLO's F4 TAP or GLOBAL's BPM) |
 | MIDI › MIDI | 1 | MIDI OUT | **KEYS**, CLOCK, ALL, OFF — what goes out over USB MIDI (see [14](#14-midi-and-usb)) |
 | | 2 | LEARN | **OFF**, ON — (0.9.12) arms MIDI LEARN: a knob turned picks its parameter, the next CC is learned to it (see [MIDI LEARN](#midi-learn-0912)); not saved, OFF at power-on |
 | | 3 | LEARN CLEAR | an action: the card shows how many CCs are learned (NONE, 3 CC …); KNOB 3 right arms it, OCT+ forgets them all |
@@ -2131,10 +2131,10 @@ every setting, its values and its meaning: nothing changes in the saved settings
 | SYSTEM › CONTROLS | 1 | HOLD TIME | 0.3 s, **0.4 s** (default), 0.5 s, 0.6 s — how long until a held button opens its layer (was HOLD) |
 | | 2 | KNOB SPEEDUP | **ON** (default), OFF — fast turns take bigger steps (was KNOB ACCEL) |
 | | 3 | FX LATCH | **OFF** (default since 0.6.64), ON |
-| | 4 | SCALE LEDS | OFF, ON — the keys of the scale glow, the root brighter |
+| | 4 | CALIBRATION | an action: OCT+ opens HARDWARE CALIBRATION (teach each button and knob) |
 | SYSTEM › SYSTEM | 1 | RESTORE LAST | **OFF** (default: no autosave, power-on at zero), ON (the last session back at power-on) |
-| | 2 | CPU CLOCK | **360 MHZ** (default), 320 MHZ — from the next start (see [Troubleshooting](#16-troubleshooting-and-faq)) |
-| | 3 | CALIBRATION | an action: OCT+ opens HARDWARE CALIBRATION (teach each button and knob) |
+| | 2 | CPU CORES | 1 CORE, **2 CORES** (default) — from the next start (see [Troubleshooting](#16-troubleshooting-and-faq)); was CPU |
+| | 3 | CPU CLOCK | **360 MHZ** (default), 320 MHZ — from the next start (see [Troubleshooting](#16-troubleshooting-and-faq)) |
 | | 4 | ABOUT | an action: OCT+ opens version, QR code, AUDIO LOAD (NOW, PEAK, LATE, SHED since power-on), CPU TEST, and credits (scroll with SELECT, OCT− back); there OCT+ opens PROFILE |
 
 INIT SYSTEM (until 0.9.17 in the MENU) is **SAVE › TOOLS › NEW PROJECT**: the same dialog, the same UNDO.
@@ -2366,11 +2366,11 @@ punch-in lane's repeats (STUTTER, ARP), a DRUM track with no steps gets no ARP f
 waiting for the bar is called off. If something still plays after a clear, it may be the **punch-in lane**: hold
 **REC and press FX** to erase it (or **SEQ + REC** to clear everything).
 
-**Two cores (0.6.71) and MENU › AUDIO › CPU CORES (0.9.12).** The second core renders some synth tracks; MENU › SYSTEM › ABOUT
-says **CORES 2**, or **CORES 1** and why. Since 0.9.12 **MENU › AUDIO › CPU CORES** chooses **2 CORES** (the default) or
+**Two cores (0.6.71) and MENU › SYSTEM › CPU CORES (0.9.12).** The second core renders some synth tracks; MENU › SYSTEM › ABOUT
+says **CORES 2**, or **CORES 1** and why. Since 0.9.12 **MENU › SYSTEM › CPU CORES** chooses **2 CORES** (the default) or
 **1 CORE**, kept with the settings, from the next start. If the FM-1 crashes or hangs while both cores work, or the
 second core misreads, stops answering or faults, it **turns 2 CORES off for good** and says so (**2 CORES OFF AFTER A
-CRASH** / **CORE 2 FAILED: 1 CORE**, then MENU › AUDIO › CORES); ABOUT then reads **CORES 1 (AFTER A CRASH)**. Set
+CRASH** / **CORE 2 FAILED: 1 CORE**, then MENU › SYSTEM › CORES); ABOUT then reads **CORES 1 (AFTER A CRASH)**. Set
 2 CORES again only if you want to test it. Hold **REC** while powering on for one core that session only.
 With both cores running the tracks share **12 voices** instead of 8 (each track still at most 8); on one core (1 CORE
 set, after a crash, REC held) it is 8, and a second core that stops brings the budget back to 8 from the next note.
@@ -2392,7 +2392,7 @@ tell us the version (MENU › SYSTEM › ABOUT). How to read it:
   crashed.
 
 **What to try when it crashes now and then (even idle).** In this order, a few hours each:
-1. **MENU › AUDIO › CPU CORES 1 CORE** (0.9.12 does it by itself after the first crash with both cores; before 0.9.12,
+1. **MENU › SYSTEM › CPU CORES 1 CORE** (0.9.12 does it by itself after the first crash with both cores; before 0.9.12,
    hold REC at every power-on).
 2. **MENU › SYSTEM › CPU CLOCK 320 MHZ**: the chip at JieLi's rated clock instead of the 360 MHz the FM-1's boot
    sets (switched at the next power-on; ABOUT shows **CPU 320 MHZ**). About 11 % less CPU: a heavy song may shed
@@ -2413,7 +2413,7 @@ Save music into that section, or change the row.
 **It says STOP TO EDIT.** A song (arrangement) or quick chain is playing; stop it to edit steps, use tools or UNDO.
 
 **The keys feel inverted / a button does the wrong thing.** Run HARDWARE CALIBRATION: hold OCT− and OCT+ while powering
-on (or MENU › SYSTEM › CALIBRATION, KNOB 3 then OCT+) and teach each button and knob. A piano key cancels.
+on (or MENU › SYSTEM › CONTROLS › CALIBRATION, KNOB 4 then OCT+) and teach each button and knob. A piano key cancels.
 
 **USB audio input doesn't appear on macOS.** MENU › USB › USB AUDIO **STEREO** (or STEMS).
 
