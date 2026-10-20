@@ -95,7 +95,8 @@ static int hold_stored_ok(uint32_t v) { return v <= 1u || (v & ~3u) == HOLD_TAG;
 #define LEDS_TAG 0x4C454400u                    /* "LED" */
 enum { LEDS_DIM, LEDS_INV, LEDS_OFF, LEDS_DIM_LO, LEDS_COUNT };
 static const uint8_t LEDS_MENU[LEDS_COUNT] = {LEDS_OFF, LEDS_DIM_LO, LEDS_DIM, LEDS_INV};
-static const char *const LEDS_NAME[LEDS_COUNT] = {"DIM HI", "INV", "OFF", "DIM LO"};
+static const char *const LEDS_NAME[LEDS_COUNT] = {"HIGH", "INVERT", "OFF", "LOW"};   /* (0.9.18 MENU > SCREEN 2 > LED GLOW;
+                                                         * until 0.9.17 DIM HI, INV, OFF, DIM LO) */
 static uint8_t settings_leds = LEDS_DIM;
 static uint32_t leds_from_stored(uint32_t v) { return (v & ~3u) == LEDS_TAG && (v & 3u) < LEDS_COUNT ? v & 3u : LEDS_DIM; }
 static uint32_t leds_to_stored(uint32_t old, uint32_t m)

@@ -245,7 +245,7 @@ static uint16_t head_title(char *b)
     if (ui.menu) {                                      /* (0.8.5) the menu: "MENU . DISPLAY", "ABOUT / CREDITS" */
         str_cpy(b, ui.menu == 2 ? "ABOUT / CREDITS" : ui.menu == 3 ? "ABOUT / PROFILE" : "MENU \xB7 ", 40);
         if (ui.menu == 1)
-            str_cpy(b + str_len(b), MTAB_NAME[MI_TAB[ui.menu_sel % MI_COUNT]], 16);
+            str_cpy(b + str_len(b), MTAB_NAME[menu_tab()], 16);
         return T_MID;
     }
     b[0] = 'T';
@@ -956,16 +956,14 @@ static uint32_t tabs_now(const char **nm, const char **tab, uint8_t *cnt, uint32
 {
     uint32_t f = lz_fam(), n, k, i, m;
     uint8_t gi[8];
-    if (f == LZ_MENU) {                                 /* the menu: its five tabs, a dot a row (0.9.12: a name too wide
-                                                         * for a fifth of the strip, its short form) */
-        static const char *const MSH[MTAB_COUNT] = {"DISP", "CTRL", "AUDIO", "MIDI", "SYS"};
+    if (f == LZ_MENU) {                                 /* the menu: its five tabs, a dot a page (0.9.18; was a row) */
         for (k = 0; k < MTAB_COUNT; k++) {
             nm[k] = MTAB_NAME[k];
-            tab[k] = MSH[k];
-            cnt[k] = (uint8_t)mtab_rows(k);
+            tab[k] = 0;
+            cnt[k] = (uint8_t)mtab_pages(k);
         }
         *lv = menu_tab();
-        *at = ui.menu_sel - mtab_first(*lv);
+        *at = menu_page() - mtab_page(*lv);
         return MTAB_COUNT;
     }
     if (f == LZ_LAYER) {                                /* a layer: its views (ALGORITHM), no dots */
@@ -1002,7 +1000,7 @@ static void draw_tabs(void)
     tabs_paint(n, lv, nm, tab, cnt, at);
 }
 /* (0.9.2, rule 6) the footer's breadcrumb, as the mock-up's: small, DIM, from x 6, its parts apart by " . ": SECTION .
- * GROUP . page ("FX . DELAY . DLY 2"; the menu "MENU . DISPLAY . COLOR", a layer "FX . MAP"), the group THEME, the page
+ * GROUP . page ("FX . DELAY . DLY 2"; the menu "MENU . SCREEN . SCREEN 2", a layer "FX . MAP"), the group THEME, the page
  * TEXT (`last`: a flash TEXT; the DRUM grid with ACC held: ACCENT, "ACCENT"); its place n/N in the chain at the right */
 static const char *const FAM_CRUMB[FAM_COUNT] = {"HOME", "ENV", "LFO", "FX", "SCL", "EDIT", "GLO", "SAVE", "ARP", "SEQ",
                                                  "GLO"};
@@ -1034,7 +1032,7 @@ static __attribute__((noinline)) void foot_crumbs(char *b, uint32_t n)   /* b ho
         str_cpy(b, "MENU \xB7 ", n);
         str_cpy(b + str_len(b), MTAB_NAME[menu_tab()], 12);
         str_cpy(b + str_len(b), " \xB7 ", 4);
-        str_cpy(b + str_len(b), MI_NAME[ui.menu_sel % MI_COUNT], 16);
+        str_cpy(b + str_len(b), MPAGE[menu_page()].name, 12);   /* (0.9.18: the page, was the row) */
         return;
     }
     if (f == LZ_LAYER) {
@@ -1061,7 +1059,7 @@ static __attribute__((noinline)) void foot_crumbs(char *b, uint32_t n)   /* b ho
     }
 }
 #define CRUMB_Y 4                                       /* (0.8.5) a lens footer's breadcrumb (AF_X): capitals rows 5..11 */
-/* the page's place in its chain at the footer's right, "6/16" (the menu: the row among all; a layer: its view) */
+/* the page's place in its chain at the footer's right, "6/16" (the menu: its page; a layer: its view) */
 static int32_t crumb_count(char *b)
 {
     uint32_t k, n;
@@ -1069,8 +1067,8 @@ static int32_t crumb_count(char *b)
     if (!lz_on())
         return 0;
     if (lz_fam() == LZ_MENU) {
-        k = ui.menu_sel % MI_COUNT;
-        n = MI_COUNT;
+        k = menu_page();                                /* (0.9.18: the page among the eight, was the row) */
+        n = MP_COUNT;
     } else if (lz_fam() == LZ_LAYER) {
         k = ui.lylv % 3u;
         n = 3;

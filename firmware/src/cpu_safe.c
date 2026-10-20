@@ -119,7 +119,7 @@ static __attribute__((noinline)) void cpu_off(const char *why)
     cpu_cfg = (uint8_t)cpu_after(cpu_cfg, CR_2C);
     settings_save();
     ui_message(why);
-    str_cpy(ui.msg2, "MENU > SYSTEM > CPU", sizeof ui.msg2);
+    str_cpy(ui.msg2, "MENU > AUDIO > CORES", sizeof ui.msg2);   /* (0.9.18: was SYSTEM > CPU) */
 }
 
 static const char CPU_APPLY[] = "SWITCH OFF AND ON TO APPLY";
@@ -137,6 +137,6 @@ static void cpu_put(uint32_t clock, uint32_t v)   /* (from the next start: main.
 static const char *cpu_status(void)
 {
     if (!mc_live() && (cpu_cfg & CPU_1CORE))     /* (1 CORE set: core 1 never started) */
-        return cpu_cfg & CPU_AUTO ? (cpu_cfg & CPU_GOOD ? "CORES 1 (AFTER 2 CRASHES)" : "CORES 1 (AFTER A CRASH)") : "CORES 1 (MENU > CPU)";
+        return cpu_cfg & CPU_AUTO ? (cpu_cfg & CPU_GOOD ? "CORES 1 (AFTER 2 CRASHES)" : "CORES 1 (AFTER A CRASH)") : "CORES 1 (MENU > CORES)";
     return mc_status();
 }
