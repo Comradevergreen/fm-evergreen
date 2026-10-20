@@ -741,6 +741,8 @@ THEME, and two fixes.
 - **Fix: CLOUD silent at SIZE 100 %.** SIZE at its top freezes the grain buffer; after the buffer had been cleared
   (a new project, the reverb switched) it froze an empty line and went silent. It now fills before it freezes, and
   the grains' overlap limit no longer drops the level 12 dB.
+- Flash: the image 562132 B, 22204 B free in the slot (0.9.16: 12992 B free; the SEQ pages' old pictures and
+  song_dice.c's generator gave back more than the rest took).
 ### v0.9.16
 The idle floor.
 - **At rest the audio does almost nothing.** An owner's PROFILE on 0.9.14, stopped and silent: 21 % of the audio's time
