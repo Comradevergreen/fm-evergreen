@@ -988,8 +988,8 @@ static int components3(void)
     turn(EN_K2, 2); turn(EN_K3, 4);                       /* OFF CHANCE RATCH: x5 FLAT, an ECHO on the first */
     ok &= t->step[0].comp == CP_ECHO && t->step[0].carg == (CP_ECHO_EVEN | 3u);
     turn(EN_K4, 1); turn(EN_K4, 1); turn(EN_K4, 1);       /* RATE: a step/4 (DIV) */
-    ok &= CT_DIV(&t->step[0]) == 3u && strstr(ui.col[3], "1/64") != 0;
-    bad += check("SEQ > COMP 2: a second component (RATCH, ARP, RAND), EVERY 1:3 on KNOB 4; COMP: RATCH x5, its RATE 1/64", ok);
+    ok &= CT_DIV(&t->step[0]) == 3u && strstr(ui.col[3], "1/16") != 0;   /* (4 over a synth's 4 steps: one apart) */
+    bad += check("SEQ > COMP 2: a second component (RATCH, ARP, RAND), EVERY 1:3 on KNOB 4; COMP: RATCH x5, its RATE 1/16 (as it plays: a step apart)", ok);
     return bad;
 }
 

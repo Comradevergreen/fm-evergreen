@@ -1427,7 +1427,7 @@ static void draw_columns(void)
         } else if (v == COMP_RATCH) {                  /* (0.6.82) the hits' spacing; (0.9.18) and the pitch step */
             static const char *const PN[4] = {"", "+1 DEG", "-1 DEG", "+OCT"};
             uint32_t pit = rat_pit_of(cs, k);
-            if (CT_DIV(cs)) rate_name(TSEL, CT_DIVS[CT_DIV(cs) % CT_NDIV], val); else str_cpy(val, "FIT", sizeof val);
+            if (CT_DIV(cs)) rat_rate_name(TSEL, CT_DIVS[CT_DIV(cs) % CT_NDIV], val); else str_cpy(val, "FIT", sizeof val);
             draw_column(3, "RATE", val, PN[pit & 3u], CT_DIV(cs) || pit ? VAL(3u) : T_DIM, -1, ICON_RATE);
         } else {                                       /* (0.6.92) EVERY: the loops the step's components play on */
             uint32_t ev = ST_EVERY(cs) % EV_N;

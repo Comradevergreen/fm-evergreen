@@ -843,6 +843,19 @@ static void rate_name(const track_t *t, uint32_t n, char *b)
     if (!v) { b[0] = 'x'; fmt_int(b + 1, (int32_t)n); return; }
     b[0] = '1'; b[1] = '/'; fmt_int(b + 2, (int32_t)v); str_cpy(b + str_len(b), tr, 2);
 }
+/* (0.9.18) a RATCH's DIV d as the note value its hits are apart: RAT_W steps (a synth's 4, a kit's 2) / d of the
+ * track's DIV (at 1/16 a synth's 2 3 4 6 8: 1/8 1/8T 1/16 1/16T 1/32); else "/d" */
+static void rat_rate_name(const track_t *t, uint32_t d, char *b)
+{
+    static const uint8_t BASE[10] = {4, 8, 16, 32, 0, 0, 2, 1, 0, 0};
+    uint32_t w = trk_kit(t) ? RAT_WKIT : RAT_WMEL, n = BASE[(uint32_t)clamp(t->p[P_SDIV], 0, 9)] * d, v = n / w;
+    const char *tr = "";
+    if (n % w || !v || (v & (v - 1u))) {
+        if (n % w == 0u && v % 3u == 0u && !((v / 3u * 2u) & (v / 3u * 2u - 1u))) { v = v / 3u * 2u; tr = "T"; }
+        else { b[0] = '/'; fmt_int(b + 1, (int32_t)d); return; }
+    }
+    b[0] = '1'; b[1] = '/'; fmt_int(b + 2, (int32_t)v); str_cpy(b + str_len(b), tr, 2);
+}
 static const char *const COMP_NAMES[COMP_N] = {"OFF", "CHANCE", "RATCH", "ARP", "SEQ", "WALK", "PULSE", "OCT", "RAND",
                                                "BEND", "TONAL", "JUMP", "REV", "TRIG", "FILL", "KILL"};
 /* (0.6.82) the COMP pages one after another: COMP (the step's first component), COMP 2 (its second), WHEN (theirs, and
