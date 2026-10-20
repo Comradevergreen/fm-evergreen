@@ -1411,7 +1411,7 @@ static void draw_columns(void)
         } else if (v == COMP_ARPN) {                   /* (0.9.18) RATE, a note value; the laps it plays on */
             static const char *const RN[4] = {"1/4", "1/8", "1/16", "1/32"};
             uint32_t ev = ST_EVERY(cs) % EV_N;
-            str_cpy(val, RN[3u - ARP_DIVI[CP_RATE(ca)] % 4u], sizeof val);
+            str_cpy(val, RN[ARP_DIVI[CP_RATE(ca)] % 4u], sizeof val);   /* (N_DIV: 0 1/4 .. 3 1/32) */
             draw_column(3, "RATE", val, ev ? EV_NAMES[ev] : "", VAL(3u), -1, ICON_RATE);
         } else if (v == COMP_ARPQ && k == 0u) {        /* (0.9.17) LAP: the note it plays this pass of the pattern */
             uint32_t lap = song.playing ? TSEL->loops : 0u, c = COMP_CP[v];

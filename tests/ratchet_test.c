@@ -615,7 +615,12 @@ static int components(void)
     ok &= t->step[0].comp == CP_ARPN && t->step[0].carg == CP_ARG(0u, 5u, 0u);
     turn(EN_K3, 4); turn(EN_K3, 1); turn(EN_K4, 1);       /* (0.6.92) KNOB 3 ORDER x RANGE: DOWN over two octaves; (0.9.18)
                                                            * KNOB 4 RATE x the laps: 1/16 -> 1/32 */
-    ok &= CP_ORD(t->step[0].carg) == 1u && CP_RATE(t->step[0].carg) == 0u && CP_RNG(t->step[0].carg) == 1u;
+    frame();
+    ok &= CP_ORD(t->step[0].carg) == 1u && CP_RATE(t->step[0].carg) == 0u && CP_RNG(t->step[0].carg) == 1u &&
+          !strncmp(ui.col[3], "RATE|1/32", 9);         /* (the label as it plays: 1/32) */
+    turn(EN_K4, 1); turn(EN_K4, 1); frame();           /* (1/32 1/16 1/8: a detent a value) */
+    ok &= CP_RATE(t->step[0].carg) == 6u && !strncmp(ui.col[3], "RATE|1/8", 8);
+    turn(EN_K4, -1); turn(EN_K4, -1);
     turn(EN_K4, 4);                                       /* (.. 1/4 1:2: the step's EVERY) */
     ok &= CP_RATE(t->step[0].carg) == 7u && ST_EVERY(&t->step[0]) == EV_1_2;
     turn(EN_K4, -4);
