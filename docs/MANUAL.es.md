@@ -513,7 +513,7 @@ SEQ las suyas). El encabezado nombra la capa en palabras, **[GLO] SET**. El pie 
 | Teclas | Efecto |
 | --- | --- |
 | F3 G3 A3 | REPEAT 1/8, 1/16, 1/32 |
-| B3 / C4 | GLITCH / TAPE STOP (0.9.15) |
+| B3 / C4 | GLITCH / TAPE STOP (0.9.15; 0.9.17 mientras los mantenés las perillas son suyas, TAPE STOP scratchea) |
 | D4 / E4 | OCT− / OCT+ |
 | F4 | 1/2 TEMPO |
 | G4 / A4 | DEC− / DEC+ |
@@ -524,8 +524,10 @@ SEQ las suyas). El encabezado nombra la capa en palabras, **[GLO] SET**. El pie 
 | G5 | borra el carril de punch-in |
 | Teclas negras 1–6 (F#3 G#3 A#3 C#4 D#4 F#4) | mutean T1–T6 mientras las mantenés |
 | A#4 | a qué pistas afectan los efectos de nota: ALL / SYN / DRM |
-| C#5 / D#5 / F#5 | los barridos FILTER / CRUSH / THROW (0.9.15): de seco a mojado en 2 compases mientras los mantenés, vuelven en un tiempo |
-| **Perillas** | las macros de interpretación STEPS, TRANSPOSE, MUTATE, FILTER (0.9.15): suben a la derecha; girar cualquiera para atrás apaga las cuatro |
+| G#4 | FREEZE (0.9.17): la corchea después de apretar, sostenida en granos |
+| C#5 | SHUFFLE (0.9.17): las 1/16 del último compás en otro orden (la tecla del barrido FILTER hasta 0.9.16) |
+| D#5 / F#5 | los barridos CRUSH / THROW (0.9.15): de seco a mojado en 2 compases mientras los mantenés, vuelven en un tiempo |
+| **Perillas** | las macros de interpretación STEPS, TRANSPOSE, MUTATE, FILTER (0.9.15): suben a la derecha; girar cualquiera para atrás apaga las cuatro. Mientras GLITCH, TAPE STOP, FREEZE o SHUFFLE está abajo: sus cuatro (0.9.17) |
 
 **GLO — mezcla**
 
@@ -1901,30 +1903,44 @@ las pistas sobre las que actúa (ALL, SYN, DRM). Para grabar: REC armado y tocan
 la tecla del efecto; los pasos que pasa lo reciben; **G5** sostenido borra por donde pasa el cabezal. Se guarda con
 la sección.
 
-- **Sobre el audio**: REPEAT 1/8, 1/16, 1/32 (F3 G3 A3), **GLITCH** (B3), **TAPE STOP** (C4). Arrancan en la siguiente
-  1/16 mientras suena. Por debajo de unos 81 BPM, REPEAT 1/8 es demasiado largo para su buffer y aparece atenuado.
-  - **GLITCH** (0.9.15) corta el master en las semicorcheas del transporte: cada una suena en vivo, o repite la última
-    1/16, 1/32 o 1/64, o la última semicorchea al revés, una octava arriba (al doble de velocidad, dos veces) o una
-    octava abajo (su primera mitad a media velocidad), o con gate a 1/32 o 1/64. Cuál le toca lo fija su lugar en un
-    ciclo de dos compases del transporte: el dibujo groovea y vuelve igual cada vez que lo apretás ahí; los tiempos
-    fuertes quedan casi siempre en vivo. Cada corte entra y sale en 3 ms (sin clics). Su primera semicorchea es en vivo
-    (todavía no grabó nada); por debajo de ~81 BPM solo suenan sus gates y los cortes en vivo (el buffer tiene 371 ms).
-  - **TAPE STOP** (0.9.15): toda la mezcla se frena hasta pararse en un tiempo (como mucho 0,68 s, el límite del buffer:
-    desde unos 88 BPM para abajo es menos de un tiempo), la altura cayendo con ella y apagándose en el último cuarto;
-    después silencio mientras lo mantenés. Al soltar, la música al instante, donde va. Un toque al final de una frase,
-    antes del drop.
-  REPEAT, GLITCH y TAPE STOP comparten un buffer (el del SLICER, prestado: mientras tanto el SLICER suena en vivo); de
-  los que mantenés suena el último apretado.
+- **Sobre el audio**: REPEAT 1/8, 1/16, 1/32 (F3 G3 A3) y **el glitcher** (0.9.17): **GLITCH** (B3), **TAPE STOP**
+  (C4), **FREEZE** (G#4), **SHUFFLE** (C#5). Arrancan en la siguiente 1/16 mientras suena (al instante parado). Por
+  debajo de unos 81 BPM, REPEAT 1/8 es demasiado largo para su buffer y aparece atenuado. **Mientras una tecla del
+  glitcher está abajo** (mantenida, o apretada con FX LATCH) **las cuatro perillas son suyas** (lo dicen las tarjetas
+  y el pie); al soltarla vuelven a ser las macros. Sus ajustes no se guardan.
+  - **GLITCH** (0.9.15; perillas 0.9.17: **DENS PITCH SIZE VARI**) corta el master en las semicorcheas del
+    transporte: cada una suena en vivo, o repite el último corte (SIZE: de 1/16 a 1/256), cada repetición PITCH
+    semitonos más arriba o más abajo que la anterior (una subida o una caída), o la última semicorchea al revés, una
+    octava arriba o abajo, con gate, **SKIP** (fragmentos mínimos de cualquier lugar de la última 1/16, como un CD que
+    salta) o **CRUSH**. DENS fija cuántas semicorcheas se cortan (los tiempos, menos); VARI elige otro dibujo. Qué hace
+    cada corte lo fija su lugar en un ciclo de dos compases del transporte: groovea y vuelve igual cada vez. Cada corte
+    entra y sale suave (sin clics). Por debajo de ~82 BPM solo suenan sus gates, crushes y cortes en vivo (el buffer
+    tiene 371 ms).
+  - **TAPE STOP** (0.9.15; perillas 0.9.17: **SCRATCH TIME CURVE**): toda la mezcla se frena hasta pararse en TIME
+    (de 1/64 a un tiempo, como mucho lo que entra en el buffer), la altura cayendo con ella; CURVE − cae enseguida, +
+    aguanta y después cae. Ya parada, el final de la música queda guardado y **la KNOB 1 es tu mano sobre el disco**:
+    girala para scratchear para atrás y para adelante (la altura con la velocidad, mudo en reposo). Al soltar C4, la
+    música al instante, donde va.
+  - **FREEZE** (0.9.17, G#4; **DENS PITCH SPRAY SIZE**): la corchea después de apretar queda guardada (mientras tanto
+    se oye en vivo) y suena en granos: SIZE de 1/128 a 1/8, de 1 a 4 superpuestos (DENS), PITCH semitonos, recorriendo
+    la corchea despacio ida y vuelta (un estiramiento); SPRAY dispersa dónde leen y mueve algunos una octava, una
+    quinta o una cuarta.
+  - **SHUFFLE** (0.9.17, C#5; **AMOUNT SIZE SPEED VARI**): las 1/16 del último compás (1/8, 1/4: SIZE) en otro orden:
+    AMOUNT de ellas se reemplazan por otro pedazo del último compás (los tiempos, y el primero del compás, solo con
+    más cantidad); SPEED toca las movidas a media velocidad, al doble o su primera mitad dos veces; VARI elige otro
+    orden. El compás se guarda comprimido en el mismo buffer (un compás entero hasta unos 87 BPM).
+  REPEAT y el glitcher comparten un buffer (el del SLICER, prestado: mientras tanto el SLICER suena en vivo); de los
+  que mantenés suena el último apretado, y al soltarlo vuelve el que mantenías antes.
 - **Sobre las notas**: OCT− / OCT+ (D4 E4), 1/2 TEMPO (F4), DEC− (corto, punteado) / DEC+ (largo) (G4 A4), STUTTER
   1/8 / 1/16 (B4 C5), ATK+ (ataques lentos, baterías incluidas) (D5), ARP (E5; en una pista DRUM, un fill nuevo en cada
   pulsación), RANDOM (F5). Entran en la siguiente 1/16. **A#4** elige a qué pistas afectan: ALL, SYN (sintes) o DRM
   (baterías); el encabezado lo muestra.
-- **Los barridos** (0.9.15, teclas negras **C#5 D#5 F#5**; hasta 0.9.14 las perillas FILTER CRUSH THROW y las teclas
+- **Los barridos** (0.9.15, teclas negras **D#5 F#5**; hasta 0.9.14 las perillas FILTER CRUSH THROW y las teclas
   LPF HPF): mantenidos, el efecto va de seco a mojado en **2 compases al tempo**, con una curva en S (sale despacio de
   seco, acelera en el medio, se asienta en mojado); al soltar vuelve a seco en **un tiempo** con la misma curva, así un
   soltar a tiempo suena intencional. Actúan al instante (no esperan la 1/16) y se suman a todo.
-  - **FILTER** (C#5): el pasa-altos del DJ FILTER del master abriéndose, de ~32 Hz a ~6 kHz (el clásico de la subida:
-    el bajo se va primero). Mientras barre le toma el DJ FILTER a la KNOB 4 de GLO › MIXER, que vuelve cuando está seco.
+  - (El barrido FILTER en C#5 se fue en 0.9.17: la macro FILTER de la KNOB 4 es el único filtro de la capa, y C#5 es
+    SHUFFLE.)
   - **CRUSH** (D#5): menos bits (de 4 a 11 menos) y menos frecuencia (una muestra repetida de 1 a 8 veces), y su mezcla
     subiendo.
   - **THROW** (F#5): la mezcla seca (y el bus del SLICER) a los envíos de delay y reverb, hasta toda: los ecos y la sala
@@ -1939,8 +1955,7 @@ la sección.
   - **KNOB 3 MUTATE**: la música como está pasa a ser el ancla de MUTATE y cada patrón muta alrededor de ella según la
     cantidad (notas por la escala, acentos, notas agregadas a contratiempo o quitadas, golpes de batería), en el tiempo
     siguiente y otra vez cada compás.
-  - **KNOB 4 FILTER**: el pasa-bajos del DJ FILTER del master cerrándose (el pasa-altos del barrido gana cuando va más
-    lejos).
+  - **KNOB 4 FILTER**: el pasa-bajos del DJ FILTER del master cerrándose.
   - **Girá cualquiera para atrás** (dos pasos en contra del reloj; uno se ignora, así un roce no hace nada) y **las
     cuatro se apagan de golpe**: largo completo, sin transponer, cada patrón exactamente como antes de MUTATE, el filtro
     abierto. La pantalla dice **MACROS OFF** y las tarjetas caen a OFF. Después cada una vuelve a subir desde cero al
@@ -1951,7 +1966,7 @@ la sección.
 - **Teclas negras 1–6**: mutean T1–T6 mientras las mantenés (no se guarda).
 
 **El carril de punch-in**: cada sección tiene un carril de 64 pasos de 1/16 (4 compases). Con **REC armado y sonando**
-(no durante un tema), los **efectos de nota (D4–F5)**, **GLITCH**, **TAPE STOP** y **los barridos** que mantenés se
+(no durante un tema), los **efectos de nota (D4–F5)**, **GLITCH**, **TAPE STOP**, **SHUFFLE** y **los barridos** que mantenés se
 graban en él, uno por paso (el más bajo mantenido; REPEAT y los mutes no se graban). Al reproducirse, un barrido
 mantenido a lo largo de varios pasos sube como si lo mantuvieras. Mantené **FX + G5** mientras suena para borrar por
 donde pasa el cabezal; parado, FX + G5 borra todo el carril. **REC mantenido + FX** también lo borra (junto con la

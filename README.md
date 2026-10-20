@@ -685,8 +685,20 @@ JIANT's modifications are distributed under the same license.
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
 
 ### v0.9.17
-One piano roll across the SEQ pages, a livelier generator and dice, slower rolls, ARP SEQ a lap at a time, VOICE's
-THEME, and two fixes.
+The glitcher, one piano roll across the SEQ pages, a livelier generator and dice, slower rolls, ARP SEQ a lap at a
+time, VOICE's THEME, and two fixes.
+- **The glitcher (FX layer).** While **GLITCH, TAPE STOP, FREEZE or SHUFFLE** is down (held, or pressed with FX LATCH)
+  the four knobs are its own; let it go and they are the macros again. The cards and the footer name it.
+  - **GLITCH** (B3): **DENS** how many sixteenths are cut, **PITCH** each repeat that many semitones above or below the
+    one before (a riser, or a fall), **SIZE** the repeated slice from a 1/16 down to a 1/256, **VARI** another pattern.
+    New slices: **SKIP** (tiny fragments of the last 1/16, like a CD skipping) and **CRUSH**.
+  - **TAPE STOP** (C4): **TIME** (1/64 to a beat) and **CURVE** (− drops at once, + holds then drops). Once stopped,
+    **KNOB 1 SCRATCH** is your hand on the record: the end of the music, back and forth, its pitch with the speed.
+  - **SHUFFLE** (C#5, new): the last bar's 1/16s (1/8s, 1/4s) played back in another order, **AMOUNT** of them, some at
+    half or double speed (**SPEED**); the bar is kept compressed (ADPCM) in the same buffer.
+  - **FREEZE** (G#4, new): the eighth after the press held as grains, **DENS PITCH SPRAY SIZE**.
+  - **The FILTER sweep is gone**: KNOB 4's FILTER macro is the layer's one filter, and C#5 is SHUFFLE (a punch-in lane
+    that recorded the FILTER sweep now plays SHUFFLE there). The glitcher costs nothing at rest.
 - **Every SEQ page is the piano roll.** The owner, on the emulator: "Why does it say PLAYHEADS on the sequencer
   pages? ... all the sequencer pages should have the same piano roll, each page doing something different on top of
   it." All twelve SEQ pages now draw the same picture, the pattern's bars in a strip and the cursor's bar as the roll
@@ -741,8 +753,8 @@ THEME, and two fixes.
 - **Fix: CLOUD silent at SIZE 100 %.** SIZE at its top freezes the grain buffer; after the buffer had been cleared
   (a new project, the reverb switched) it froze an empty line and went silent. It now fills before it freezes, and
   the grains' overlap limit no longer drops the level 12 dB.
-- Flash: the image 562132 B, 22204 B free in the slot (0.9.16: 12992 B free; the SEQ pages' old pictures and
-  song_dice.c's generator gave back more than the rest took).
+- Flash: the image 565072 B, 19264 B free in the slot (0.9.16: 12992 B free; the SEQ pages' old pictures and
+  song_dice.c's generator gave back more than the glitcher and the rest took).
 ### v0.9.16
 The idle floor.
 - **At rest the audio does almost nothing.** An owner's PROFILE on 0.9.14, stopped and silent: 21 % of the audio's time
