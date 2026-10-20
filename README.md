@@ -725,7 +725,7 @@ the BAR page gone; the LFO's MODE; the MENU as pages.
   spacing the hits really have (a RATCH's DIV over the spread, an ARP's 1/32 read 1/4 before).
 - **The SEQ › BAR page is gone** (the owner: redundant). The SEQ chain is eleven pages; the BAR group holds STEP and
   NOTE. The bar is the roll's cursor and STEP's KNOB 1 over all 64 steps, which now accelerates when turned fast (KNOB
-  ACCEL, up to x4 on 64 steps); LEN is PATTERN's. The task race: bar 3 takes 13 actions turning fast (5 with BAR).
+  SPEEDUP, up to x4 on 64 steps); LEN is PATTERN's. The task race: bar 3 takes 13 actions turning fast (5 with BAR).
 - **Fix (tests):** the web editor's "PING keeps WATCH on" waits for the push instead of a fixed 10 ms.
 - **The LFO's MODE: TRIG or FREE, on its own knob.** The owner: "the LFO has no TRIGGER/FREE option... it always
   retriggers." FREE was hidden at the left end of PHASE, and even there each new phrase still began the LFO again in
@@ -768,7 +768,7 @@ the BAR page gone; the LFO's MODE; the MENU as pages.
   moved next to USB LEVEL; CPU CORES next to TRACKS and LOAD (the crash message says MENU > AUDIO > CORES).
 - **INIT SYSTEM left the MENU**: it was SAVE › TOOLS › NEW PROJECT under another name (same dialog, same UNDO).
 - The web editor groups the settings by the new tabs (it reads them from the device).
-- Flash: the image 566560 B (17776 B free in the slot).
+- Flash: the image 568340 B, 15996 B free in the slot (the BAR page gave back 384 B; the MENU pages and the LFO MODE took more).
 ### v0.9.17
 The glitcher, one piano roll across the SEQ pages, a livelier generator and dice, slower rolls, ARP SEQ a lap at a
 time, VOICE's THEME, and two fixes.
