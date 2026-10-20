@@ -655,7 +655,7 @@ enum { S_HOME, S_HOME_IDLE, S_MESSAGE, S_MESSAGE_KEY, S_MESSAGE_NOFILE, S_PRESET
        S_HOME_MACROS, S_HOME_BEING, S_HOME_ROUTES, S_GEN_LEAD,
        S_ED_FILTER, S_ED_FILTER_BP, S_ED_VOICE2, S_ED_FOCUS, S_ED_FOCUS_MOD, S_ED_OPERATOR,
        S_ENV_TRACKS, S_ENV_TRACKS_DEST, S_ENV_STAGE, S_ENV_STAGE_SUS, S_MSEQ2, S_KEY_CHORD, S_KEY_CHORD_OFF, S_KEY_ARP, S_KEY_ARP2, S_GLO_SENDS, S_MENU_ROW, S_MENU_ROW_LEDS, S_LY_FX_KNOBS, S_LY_FX_STATE, S_LY_GLO_STATE, S_DLG_DICE_SOUND, S_DLG_DICE_SEQ, S_DLG_DICE_FX, S_DLG_MUT_BACK,
-       S_DRUM_X4, S_DRUM_GHOST, S_DRUM_OCT_UP, S_DRUM_OCT_DN, S_COMP_TOUCH, S_COMP_EVEN, S_GEN_EXPLORE,
+       S_DRUM_X4, S_DRUM_GHOST, S_DRUM_OCT_UP, S_DRUM_OCT_DN, S_COMP_TOUCH, S_COMP_EVEN, S_COMP_SEL, S_COMP_SEL_DRUM, S_COMP_JUMP, S_GEN_EXPLORE,
        S_VX_HEAD_A, S_VX_HEAD_I, S_VX_HEAD_U, S_VX_HEAD_S, S_VX_HEAD_M, S_VX_HEAD_K, S_VX_HEAD_T, S_VX_HEAD_F, S_VX_HEAD_VOWEL,
        S_VX_HEAD_HOME, S_VX_HEAD_QUIET, S_VX_BIRD, S_VX_CMOS, S_VX_INSECT, S_VX_WING, S_VX_MAMMAL, S_VX_MORPH_IB, S_VX_MORPH_BM,
        S_VX_ANIMAL_HOME, S_VX_KIT, S_VX_KIT_HITS, S_VX_KIT_GHOST, S_VX_KIT_HOME, S_VX_KIT_MUTED,
@@ -693,7 +693,7 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "message", "mes
     "home_macros", "home_being", "home_routes", "gen_lead",
     "ed_filter", "ed_filter_bp", "ed_voice2", "ed_focus", "ed_focus_mod", "ed_operator",
     "env_tracks", "env_tracks_dest", "env_stage", "env_stage_sus", "mseq2", "key_chord", "key_chord_off", "key_arp", "key_arp2", "glo_sends", "menu_row", "menu_row_leds", "ly_fx_knobs", "ly_fx_state", "ly_glo_state", "dlg_dice_sound", "dlg_dice_seq", "dlg_dice_fx", "dlg_mut_back",
-    "drum_hit_x4", "drum_hit_ghost", "drum_oct_x8", "drum_oct_flam", "comp_touch", "comp_echo_even", "gen_explore",
+    "drum_hit_x4", "drum_hit_ghost", "drum_oct_x8", "drum_oct_flam", "comp_touch", "comp_echo_even", "comp_sel", "comp_sel_drum", "comp_jump", "gen_explore",
     "vx_head_a", "vx_head_i", "vx_head_u", "vx_head_s", "vx_head_m", "vx_head_k", "vx_head_t", "vx_head_f", "vx_head_vowel",
     "vx_head_home", "vx_head_quiet", "vx_bird", "vx_cmos", "vx_insect", "vx_wing", "vx_mammal", "vx_morph_insect_bird", "vx_morph_bird_mammal",
     "vx_animal_home", "vx_kit", "vx_kit_hits", "vx_kit_ghost", "vx_kit_home", "vx_kit_muted",
@@ -1852,6 +1852,35 @@ static void setup(int s)
         trk[3].step[0].comp = s == S_COMP_TOUCH ? CP_TOUCH : CP_ECHO;
         trk[3].step[0].carg = s == S_COMP_TOUCH ? 1u : (uint8_t)(2u | CP_ECHO_EVEN);
         go_page(GR_COMP); ui.cursor = 0;
+        break;
+    /* (0.9.18) SEQ > COMP: the step the component goes on framed (THEME, a tab at the foot), the steps with the same
+     * component a bar on top (ACCENT), those with another a thin one; a synth's roll, a kit's grid, a JUMP's step */
+    case S_COMP_SEL: case S_COMP_JUMP: {
+        static const uint8_t N[16] = {48, 0, 55, 51, 60, 0, 53, 58, 48, 63, 0, 55, 60, 51, 0, 58};
+        track_t *t = TSEL;
+        uint32_t i;
+        track_defaults_steps(t);
+        t->p[P_SLEN] = 16;
+        for (i = 0; i < 16u; i++) {
+            uint8_t n = N[i];
+            step_put(&t->step[i], n ? ST_NOTE : ST_REST, 0, n ? 1u : 0u, &n);
+        }
+        t->step[2].comp = CP_ECHO; t->step[2].carg = 1;
+        step_set_ratchet(&t->step[7], 3);                /* (a RATCH of its flags: the same component) */
+        t->step[12].comp = CP_ECHO; t->step[12].carg = 2;
+        t->step[4].comp = CP_RAND; t->step[4].carg = 2;
+        t->step[9].comp = CP_JUMP; t->step[9].carg = 3;
+        nav_scene(SEC_SEQ, "COMP");
+        cursor_set(s == S_COMP_JUMP ? 9 : 12);
+        break;
+    }
+    case S_COMP_SEL_DRUM:
+        drum(0);
+        trk[3].step[2].comp = CP_ECHO; trk[3].step[2].carg = 1;
+        trk[3].step[10].comp = CP_ECHO; trk[3].step[10].carg = 0;
+        trk[3].step[6].comp = CP_RAND; trk[3].step[6].carg = 1;
+        nav_scene(SEC_SEQ, "COMP");
+        cursor_set(10); ui.lane = 3;
         break;
     default: break;
     }

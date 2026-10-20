@@ -1748,6 +1748,12 @@ static uint16_t sec_col(uint32_t s)
  * 3 px); COMP / COMP 2 the steps with that component a bar on top (an arpeggio ACCENT, another THEME); AUTOMATION and
  * AUTO LIST every record a mark at the foot (a lock ACCENT, automation TEXT; AUTO LIST's row picked framed THEME);
  * MUTATE when the next mutation comes (a chip at the foot) */
+/* (0.9.18) a step's component on COMP (slot 0, a RATCH of its flags counted as the ECHO it is) or COMP 2 (slot 1) */
+static uint32_t comp_key(const step_t *st, uint32_t slot)
+{
+    if (slot) return st->comp2;
+    return st->comp ? st->comp : step_ratchet(st) > 1u ? CP_ECHO : 0u;
+}
 static void seq_col(uint32_t dr, uint32_t i, int32_t *x, int32_t *w)
 {
     *x = dr ? 40 + (int32_t)i * 12 : PR_CX(i);
@@ -1766,13 +1772,33 @@ static void seq_overlay(const track_t *t, const page_t *pg)
             cv_rect(x + w / 2 - 1, top, k == fg_ui % FG_HEADS ? 3 : 1, bot - top, heat_col(70 + (int32_t)k * 60));
         }
     } else if (pg->graph == GR_COMP) {
+        /* (0.9.18) the step the component goes on, as SEQ selects elsewhere: its column framed THEME with a tab at the
+         * foot, live with KNOB 1; the steps with the same component (the one edited) a bar on top ACCENT, those with
+         * another a thin MID one; a JUMP's step (KNOB 3) framed ACCENT */
+        uint32_t sl = comp_slot(), mine = comp_key(&seq_steps(t)[ui.cursor % NSTEP], sl), cur = ui.cursor % NSTEP;
         for (i = 0; i < 16u && base + i < len; i++) {
             const step_t *st = &seq_steps(t)[base + i];
-            uint32_t cp = pg->title[4] ? st->comp2 : st->comp;
+            uint32_t cp = comp_key(st, sl);
             if (!cp || !step_on(st))
                 continue;
             seq_col(dr, i, &x, &w);
-            cv_rect(x + 1, top, w - 2, 2, cp >= CP_ARPN && cp <= CP_ARPN + 2u ? T_ACCENT : T_THEME);
+            if (cp == mine)
+                cv_rect(x + 1, top - 3, w - 2, 3, T_ACCENT);
+            else
+                cv_rect(x + 2, top - 2, w - 4, 1, T_MID);
+        }
+        if (mine == CP_JUMP) {
+            const step_t *cs = &seq_steps(t)[cur];
+            uint32_t to = CP_JTO(sl ? cs->carg2 : cs->carg);
+            if (to < len && to / 16u == ui.bank) {
+                seq_col(dr, to % 16u, &x, &w);
+                cv_frame(x + 1, top + 1, w - 1, bot - top - 2, T_ACCENT);
+            }
+        }
+        if (cur / 16u == ui.bank && cur < len) {
+            seq_col(dr, cur % 16u, &x, &w);
+            cv_frame(x - 1, top - 1, w + 3, bot - top + 2, T_THEME);
+            cv_rect(x, bot - 3, w + 1, 3, T_THEME);
         }
     } else if (pg->graph == GR_MOTION || pg->graph == GR_EVENTS) {
         uint8_t idx[MOTION_MAX];

@@ -225,6 +225,62 @@ static int play(void)
     return bad;
 }
 
+/* (0.9.18) SEQ > COMP marks on the roll and the grid (ui_graph.c seq_overlay): the step the component goes on framed
+ * THEME with a tab at its foot, following KNOB 1 at once; the steps with the same component a 3 px ACCENT bar on top
+ * (a RATCH of the flags the same as an ECHO), another component a 1 px MID one; a JUMP's step framed ACCENT, following
+ * KNOB 3 */
+static uint16_t gpx(int32_t x, int32_t y) { return swap16(host_screen[(uint32_t)(y + (int32_t)graph_y()) * 240u + (uint32_t)x]); }
+static int comp_marks(void)
+{
+    int bad = 0, ok, dr;
+    uint32_t i;
+    track_t *t;
+    for (dr = 0; dr < 2; dr++) {
+        int32_t x, w, top, bot, y;
+        ui_power_on();
+        song.sel = dr ? 3u : 0u;
+        t = TSEL;
+        if (dr) { set_engine_of(t, ENGI_DRUM); t->engine = t->eng_req; }
+        track_defaults_steps(t);
+        t->p[P_SLEN] = 16;
+        for (i = 0; i < 16u; i++)
+            t->step[i] = dr ? (step_t){{0}, 0, ST_NOTE, 0, 100, 1u << DV_HATC} : (step_t){{(uint8_t)(52u + i)}, 1, ST_NOTE, 0, 100};
+        t->step[2].comp = CP_ECHO; t->step[2].carg = 1;
+        step_set_ratchet(&t->step[7], 3);
+        t->step[12].comp = CP_ECHO;
+        t->step[4].comp = CP_RAND; t->step[4].carg = 2;
+        go_page(GR_COMP);
+        cursor_set(12);
+        ui.force = 1; frame();
+        top = dr ? 19 : PR_Y0; bot = dr ? 19 + 8 * 15 - 1 : PR_Y0 + PR_ROWS * PR_RH;
+        y = (top + bot) / 2;
+        seq_col((uint32_t)dr, 12, &x, &w);
+        ok = gpx(x - 1, y) == T_THEME && gpx(x + w + 1, y) == T_THEME && gpx(x + w / 2, bot - 2) == T_THEME;
+        seq_col((uint32_t)dr, 2, &x, &w);
+        ok &= gpx(x + w / 2, top - 2) == T_ACCENT && gpx(x - 1, y) != T_THEME;
+        seq_col((uint32_t)dr, 7, &x, &w);
+        ok &= gpx(x + w / 2, top - 2) == T_ACCENT;
+        seq_col((uint32_t)dr, 4, &x, &w);
+        ok &= gpx(x + w / 2, top - 2) == T_MID && gpx(x + w / 2, top - 3) != T_ACCENT;
+        turn(EN_K1, 1); frame();                          /* KNOB 1: the frame on step 14 at once */
+        seq_col((uint32_t)dr, 13, &x, &w);
+        ok &= ui.cursor == 13u && gpx(x - 1, y) == T_THEME;
+        seq_col((uint32_t)dr, 12, &x, &w);
+        ok &= gpx(x - 1, y) != T_THEME;
+        t->step[13].comp = CP_JUMP; t->step[13].carg = 5;   /* a JUMP to step 6, then KNOB 3 to step 7 */
+        ui.force = 1; frame();
+        seq_col((uint32_t)dr, 5, &x, &w);
+        ok &= gpx(x + 1, y) == T_ACCENT;
+        turn(EN_K3, 1); frame();
+        ok &= CP_JTO(t->step[13].carg) == 6u && gpx(x + 1, y) != T_ACCENT;
+        seq_col((uint32_t)dr, 6, &x, &w);
+        ok &= gpx(x + 1, y) == T_ACCENT;
+        bad += check(dr ? "  .. the same on a kit's grid" :
+                     "SEQ > COMP marks: the step framed THEME (live with KNOB 1), the same component ACCENT, another MID, JUMP's step ACCENT", ok);
+    }
+    return bad;
+}
+
 static int projects(void)
 {
     int bad = 0, ok = 1;
@@ -1069,7 +1125,7 @@ static int timing(void)
 
 int main(void)
 {
-    int bad = play() + projects() + presets() + screens() + components() + components2() + components3() + human() + timing();
+    int bad = play() + comp_marks() + projects() + presets() + screens() + components() + components2() + components3() + human() + timing();
     printf("%s\n", bad ? "RATCHET TEST FAILED" : "ratchet tests passed");
     return bad != 0;
 }
