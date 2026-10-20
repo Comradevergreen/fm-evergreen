@@ -2388,7 +2388,8 @@ static int test_menu_tabs(void)
     ok = ui.menu == 2;
     press(B_HOME);
     ok &= !ui.menu && ui.home;
-    hold(B_HOME); ok &= ui.menu == 1 && ui.menu_sel == MI_ABOUT && menu_page() == MP_COUNT - 1u;   /* (its page) */
+    hold(B_HOME); ok &= ui.menu == 1 && ui.menu_sel == MI_RESTORE && menu_page() == MP_COUNT - 1u;   /* (its page; ABOUT
+                                                         * let go: an armed action does not outlive the MENU) */
     turn(EN_ALGO, -1); frame();
     {   /* a value row: OCT- and OCT+ both breathe, each while that way has a value to go to; none lit */
         uint32_t r = ui.menu_sel, want = (menu_step(r, -1) != menu_get(r) ? OCT_BREATH_DN : 0u) |
@@ -2400,7 +2401,7 @@ static int test_menu_tabs(void)
         ok &= oct_leds() == (OCT_BREATH | OCT_BREATH_DN);
     }
     menu_close();
-    bad += check("MENU: HOME closes ABOUT too; reopened at its page; the setting turned last breathes OCT- / OCT+ where they can go", ok);
+    bad += check("MENU: HOME closes ABOUT too; reopened at its page, the action let go; the setting turned last breathes OCT- / OCT+ where they can go", ok);
 
     /* (0.9.18) the tabs and the breadcrumb (rule 6): five tabs (the page's lit, a dot a page), "MENU . TAB . page" and the
      * page's place among the eight */

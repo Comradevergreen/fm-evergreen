@@ -230,7 +230,7 @@ dark. The pill keeps clear of the page's own words: where the foot is written (A
 sits in the nearest free rows, and on a page with no free rows it is left out and the header alone says it. A page's
 **hint** (MUTATE's "OCT+ KEEP  GLO+A4 FREEZE", MOTION's and PUNCH's "REC + PLAY ...") comes only once you stay on the
 page for about 0.8 s, never while SELECT walks past it, and each one at most twice in all (counted with the settings,
-so not again after a reboot). SAVE › TOOLS › INIT SYSTEM starts them over. Tapping a layer button says nothing (the
+so not again after a reboot). SAVE › TOOLS › NEW PROJECT starts them over. Tapping a layer button says nothing (the
 "HOLD [X] QUICK" hints are gone): hold it and its layer shows itself.
 
 ---
