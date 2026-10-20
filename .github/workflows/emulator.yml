@@ -83,9 +83,9 @@ jobs:
             (cd /tmp/stable && python3 tools/build.py)
             PKG=/tmp/stable/build/felucca.fwsc; SV=$(ver /tmp/stable); SH=${S::7}
           fi
-          # (0.6.46) the versions the site offers now stay installable (the last few, web/fetch_prev.py)
-          python3 web/fetch_prev.py "https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}" build/prev || true
-          python3 web/make_site.py "$PKG" "${SV:-dev}-$SH" build/site build/prev
+          # The public installer offers only the approved version in web/STABLE (0.9.9).
+          # Do not carry forward packages from the live site: later builds crash on the device.
+          python3 web/make_site.py "$PKG" "${SV:-dev}-$SH" build/site
           cp -r build/site/webapp build/site/firmware build/emu/
       # (JIANT 0.7.9) the stems app's phase-0 probe (android/probe), next to the installer: app/jiant-probe.apk
       - uses: actions/setup-java@v4
