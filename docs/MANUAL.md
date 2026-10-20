@@ -473,7 +473,7 @@ them page by page, a **SEQ** tap jumps to the next group.
 | BAR | STEP (melodic: piano roll) | STEP (all 64, bar after bar) | NOTE | TIME (REST ← TIE ← NOTE → 2 ST … 16 ST: the note's length in steps; REST clears the step) | FLAG (– / ACC / SLD / A+S) |
 | BAR | STEP (DRUM: grid) | STEP | LANE | HIT | ACC |
 | BAR | NOTE | FOCUS | PITCH | MOVE | MICRO (−32/64 … +31/64; 0.9.1) |
-| STEP | COMP | STEP | TYPE | (its value; ARP: ORDER × RANGE) | EVERY (ARP: RATE; RATCH / ECHO: DIV) |
+| STEP | COMP | STEP | TYPE | (its value; ARP: ORDER × RANGE; RATCH: x1–x8 × FLAT FADE RISE) | EVERY (ARP: RATE; RATCH: RATE and its pitch step) |
 | STEP | COMP 2 | STEP | TYPE (the second component) | (its value) | EVERY |
 | AUTO | AUTOMATION | PLAY (ON/OFF) | EVENT (count) | LOCK (count) | CLEAR (action) |
 | AUTO | AUTO LIST | ROW | STEP | PARAM | VALUE |
@@ -927,7 +927,7 @@ changes **how** they play, not which sound. The screen says it when you press OC
 
 | OCT | What a key does | Recorded (REC) as the hit and its sound's mode |
 |---|---|---|
-| **+3** | **RATCHET x2**: the hit twice a step while held | **x2** |
+| **+3** | **RATCHET x2**: the hit twice a step while held | **x4** (0.9.18: a sound's x4 spills two hits a step over two steps, as heard; was x2) |
 | **+2** | **REPEAT**: the hit once a step while held, a roll at the step rate | a hit on every step held (**ON**) |
 | **+1** | **REPEAT 1/2**: the hit every other step while held (0.9.17: every OCT half as fast again; 0.9.13 had already halved them) | a hit on every other step held (**ON**) |
 | **0** | the kit as it always was | none (**ON**) |
@@ -945,8 +945,9 @@ changes **how** they play, not which sound. The screen says it when you press OC
   exactly as you heard it). Let go before the middle of the last one and that step is put back, as with a held synth
   note.
 - **See and edit it** on SEQ > STEP (the DRUM grid): KNOB 2 picks the sound, **KNOB 3 HIT** goes **--, ON, x2, x4, x8,
-  SHORT, GHOST, FLAM** for it on the cursor step (left back to -- takes the hit and its mode away). The step's own
-  RATCH, ECHO and TOUCH (SEQ > COMP) still work on the whole step, as before.
+  SHORT, GHOST, FLAM** for it on the cursor step (left back to -- takes the hit and its mode away). A sound's x2 x4
+  x8 spill over the steps after it as RATCH does (0.9.18: x2 a hit a step, x4 two, x8 four). The step's own RATCH
+  (SEQ > COMP) repeats its other sounds: a sound with its own x2 / x4 / x8 or recorded ONCE is left out of it.
 - **MIDI** (0.8.5): notes 35–81 still play the GM drum map exactly as before. The notes around it, which used to play
   their octave of 36–47 plain, are now these octaves, by pitch class: **23–34 SHORT, 11–22 GHOST, 0–10 FLAM, 82–93
   REPEAT 1/2, 94–105 REPEAT, 106–127 x2** (0.9.17; 84 the kick every other step, 96 the kick once a step, 108 the kick
@@ -954,7 +955,7 @@ changes **how** they play, not which sound. The screen says it when you press OC
   MIDI OUT. **A song or MIDI setup that sent drum notes below 35 or above 81** (a kick on 24, say) will now hear these
   variations: move them into 35–81 (36–47 for the kit's own) to keep the old sound. Notes stored in the steps play as
   before, whatever their number.
-- With the ARP on, the keys feed the arp plain (no ratchet or TOUCH). The DRUM grid's lane keys are always the centre
+- With the ARP on, the keys feed the arp plain (no ratchet, SHORT, GHOST or FLAM). The DRUM grid's lane keys are always the centre
   octave.
 
 One kit per section, shared by every track on DRUM: while another track plays DRUM-X, browsing kit presets on a different track keeps that kit ("KIT OF T4 KEPT", 0.8.1); load kits on the drum track itself. The kit is saved with each section of a project (not with user presets — see [12](#12-saving-and-loading)).
@@ -968,10 +969,10 @@ of different lengths turn against each other.
 
 ### Finding your way: the SEQ chain
 
-(0.9.2) The sequencer's twelve pages are one chain in five groups, as every section: **SELECT** walks them a page a
+(0.9.2) The sequencer's eleven pages (0.9.18: the BAR page is gone) are one chain in five groups, as every section: **SELECT** walks them a page a
 detent (no wrap), a **SEQ** tap jumps to the next group's first page (round), and the **tabs at the top** are the
 groups, **PATT · TRACK · BAR · STEP · AUTO**, the one you are on lit with a dot for each of its pages; the footer says
-**SEQ · BAR · STEP  7/12**. Until 0.9.1 SELECT zoomed three levels (PATTERN ↔ BAR ↔ STEP, the LENTE of 0.8.3) and the
+**SEQ · BAR · STEP  6/11**. Until 0.9.1 SELECT zoomed three levels (PATTERN ↔ BAR ↔ STEP, the LENTE of 0.8.3) and the
 tap went round each level's sets: the pages and their pictures are the same, only the way between them is new. The
 pattern's bars (up to four, at LEN 64) are drawn as small cells: the bar you edit tinted violet with its number violet,
 the number of the bar playing orange, a bar past LEN dark.
@@ -980,8 +981,8 @@ the number of the bar playing orange, a bar past LEN dark.
 | --- | --- | --- |
 | **PATTERN** | PATTERN · STRETCH · PLAYHEADS | (0.9.17) The roll, as every SEQ page. **PATTERN** draws the notes as long as **GATE** plays them and the odd steps late by **SWING**; steps past **LEN** are dark (in the strip, the bars past it). **PLAYHEADS** draws its extra heads over the roll as lines while they play, each as hot as its number (the head you edit 3 px wide). |
 | **TRACK** | TRACK · MUTATE | **TRACK** outlines where **PITCH** moves the notes (in grey, over the notes as written). **MUTATE** shows a chip at the roll's foot: the bars to the next mutation (**NEXT n BARS**), **FROZEN**, or **MUTATE OFF**. |
-| **BAR** | **BAR** · STEP · NOTE | **KNOB 1 the bar** on BAR (the cursor keeps its place in it), KNOB 2 LEN. STEP's KNOB 1 walks **all 64 steps**, crossing into the next bar by itself; NOTE's note in focus orange. |
-| **STEP** | COMP · COMP 2 | A bar over the top of each step with that component (COMP: the first, COMP 2: the second; an arpeggio orange, another violet); the cursor step framed. |
+| **BAR** | STEP · NOTE | STEP's KNOB 1 walks **all 64 steps**, crossing into the next bar by itself (0.9.18: a fast turn several at a time, KNOB ACCEL; the BAR page with its bar knob is gone, LEN is PATTERN's); NOTE's note in focus orange. |
+| **STEP** | COMP · COMP 2 | (0.9.18) The step the component goes on framed violet with a tab at its foot (KNOB 1, at once); an orange bar over each step with the same component, a thin line over a step with another; a JUMP's step framed orange. |
 | **AUTO** | AUTOMATION · AUTO LIST | A mark under each step with a record (a lock orange, automation white); on AUTO LIST the record picked has its step framed violet, the cards giving its row, step, parameter and value. |
 
 **One picture for the whole SEQ** (0.9.17, the owner's "all the sequencer pages the same piano roll, each page doing
@@ -1040,32 +1041,43 @@ recorded into the pattern, quantized to its steps, overdubbing. Knob moves on th
 ### Pattern pages
 
 - **COMP** (step components, OP-Z style): up to two per step (**COMP** the first, **COMP 2** the second, the same
-  way; 0.6.82). KNOB 1 picks the step, KNOB 2 its **TYPE**, KNOB 3 its value, KNOB 4 **EVERY** (0.6.92; on COMP an
-  ARP's RATE or a RATCH / ECHO's DIV sit there instead). COMP and COMP 2 are the STEP group: the step drawn
-  large, its COMP or COMP 2 chip lit with the type it holds (0.8.3; the component's own picture is gone, its values are
-  on the cards).
-  - **CHANCE** (0–100 %) and **RATCH** (x1–x4): the step's own chance and ratchet (on COMP only). RATCH's KNOB 4 is
-    its **DIV**: STEP shares the hits out over the step (as before); 1/2, 1/3, 1/4, 1/6, 1/8 put them that part of a
-    step apart from its start, as many as fit (RATCH x3 at 1/8: three quick hits, then silence).
-  - **ARP NOTES / SEQ / SCALE**: the step plays an arpeggio and goes on over the TIEs after it (its duration the step
-    and its TIEs). NOTES: the step's notes, low to high; SEQ: the pattern's melody, in the order the pattern plays it
-    (0.6.82; it was sorted like NOTES); both over 1–4 octaves. SCALE: the scale up from the step's lowest note, 3, 5,
-    8 or 15 degrees. KNOB 3 **ORDER** and range as one list (UP, DOWN, UP-DN, RND over 1 OCT, then over 2 OCT …; on
-    SCALE 3, 5, 8, 15 DEG). KNOB 4 **RATE** (0.6.92), the arpeggio's speed in musical time: **x1** one note a step
-    (the track's DIV, 1/16), **1/32** two a step, **1/32T** three, **1/64** four, **1/64T** six, **1/128** eight (the
-    card says the note value for the track's DIV; an odd DIV: xn). The old pages' x2 … x8 are the same values.
-    **SEQ walks one note a lap** (0.9.17): each time the pattern comes round to the step it plays the next note of the
-    melody, in its ORDER and range, held over the TIEs after it like any note; its KNOB 4 is **LAP**, the note this pass
-    plays (RND: a new one each lap), and PLAY from a stop starts again from the first note, as the other components'
-    loops do. (Until 0.9.16 SEQ played the melody inside the step at its RATE; projects keep that RATE, now unused.)
+  way; 0.6.82). KNOB 1 picks the step, KNOB 2 its **TYPE**, KNOB 3 its value, KNOB 4 **EVERY** (0.6.92; on COMP a
+  RATCH's or an ARP's RATE sits there instead). The TYPEs by family (0.9.18): **OFF, CHANCE, RATCH, ARP, SEQ, WALK,
+  PULSE, OCT, RAND, BEND, TONAL, JUMP, REV, TRIG, FILL, KILL** (COMP 2 has no CHANCE).
+  **Where it goes** (0.9.18): the roll (a kit: the grid) frames the step KNOB 1 picks in violet, its whole column with
+  a tab at its foot, following the knob at once; every step with the same component as the one you edit has an orange
+  bar on top, a step with another component a thin line; a JUMP's TO STEP is framed orange as KNOB 3 turns.
+  - **CHANCE** (0–100 %): the step's own chance (on COMP only).
+  - **RATCH** (0.9.18: RATCH and ECHO in one): the step plays **x1–x8** hits. KNOB 3 the count and its shape:
+    **FLAT** (every hit at the step's level), **FADE** (each softer: the old ECHO), **RISE** (each louder). KNOB 4 its
+    **RATE**: **FIT** spreads the hits over **four steps** on a synth (two on a drum kit: x2 there is a hit a step), a
+    note value sets how far apart they are (the card says it for the track's DIV), and a **pitch step** for the hits
+    after the first: **+1 DEG** / **−1 DEG** along the scale, **+OCT** every other hit an octave up.
+    The hits after the first **spill over the steps after it** (until 0.9.17 they fell inside the step): a hit that
+    lands on a step with the same note of its own (a kit: the same sound) is left out, another note plays beside it on
+    POLY; on MONO / LEGATO the next note cuts what is left; a new ratcheted step replaces it. The chance is rolled once
+    for all of them, STOP ends them. Not repeated with the step: a sound with its own x2 / x4 / x8 on the grid (the
+    sound's mode wins, never a ratchet of a ratchet), a hit recorded live into the step (ONCE, 0.9.17) and a note
+    recorded live into a ratcheted POLY step (0.9.18): each plays once, as it was heard. SEQ > CHANCE's x1–x4 is RATCH
+    FLAT; a project's ECHO is RATCH FADE (EVEN: FLAT). The live RATCH (GLO › LIVE) stays inside each step.
+  - **ARP** (0.9.18): the step's notes (its chord; a kit: its sounds) **one at a time at RATE** (KNOB 4: **1/32, 1/16,
+    1/8, 1/4**, then the same again with the loops it plays on, 1:2 …; the other loops play the chord as written), in
+    KNOB 3's **ORDER** (UP, DOWN, UP-DN, RND) over 1–4 octaves (a single note: itself and that many octaves up), through
+    the step and its TIEs and at least once round, spilling over the steps after it as RATCH's hits do; on MONO the next
+    note cuts it. (Until 0.9.17 ARP NOTES played its notes inside the step at x1–x8 a step.) **ARP SCALE is gone**: a
+    step that had it loads as a WALK of its lowest note (the same degrees, a move a lap).
+  - **SEQ** walks the pattern's melody **one note a lap** (0.9.17): each time the pattern comes round to the step it
+    plays the next note of the melody, in its ORDER and range, held over the TIEs after it like any note; its KNOB 4 is
+    **LAP**, the note this pass plays (RND: a new one each lap), and PLAY from a stop starts again from the first note,
+    as the other components' loops do.
   - **TRIG**: the step plays only on some loops of the pattern: 1:2, 2:2, 1:3, 2:3, 3:3, 1:4 … 4:4, 1:8, FIRST, !1ST
     (every loop but the first).
   - **RAND**: the note moves up or down the scale at random, up to RANGE degrees (1–7).
-  - **OCT**: an octave: +1, −1, +1 every other loop, −1 every other loop, ALT (up and down by turns), RND.
+  - **OCT** (0.9.18, CLIMB's place): the step's notes move **an octave every so many loops** (KNOB 4: 1 … 10, 12, 16),
+    over 1–4 octaves, KNOB 3 **UP / DOWN / UP-DN / RND**, then round again (WALK in octaves). The old OCT loads as what
+    it played: +1 / −1 every time as the notes moved an octave, every other loop / ALT / RND as OCT with that motion.
   - **TONAL**: from this step to the end of the loop every note moves SHIFT degrees (−7 to +7) along the scale.
   - **BEND**: the note glides BEND semitones (−12 to +12) over the step.
-  - **ECHO**: the step repeats x2–x8 in its length, each repeat softer. KNOB 4 its **DIV**, as RATCH's: STEP shares
-    the repeats out over the step, 1/2 … 1/8 sets how far apart they are.
   - **PULSE**: the note plays again on the empty steps after it, EVERY 1–4 steps, until the next note.
   - **JUMP**: after this step the pattern goes on from TO STEP.
   - **REV**: from this step the pattern plays backwards to step 1, then forwards again (ping-pong).
@@ -1073,33 +1085,28 @@ recorded into the pattern, quantized to its steps, overdubbing. Knob moves on th
     the first time (an intro), !FIRST every loop but the first (0.6.92; it was TIMES).
   - **FILL**: the step plays only while **FX** is held.
   - **KILL**: the step first cuts everything the track is sounding (long releases, held notes), then plays.
-  - **TOUCH** (0.8.5, a DRUM track): how all its hits are struck, KNOB 3 **SHORT** (half the decay), **GHOST** (short,
-    softer, darker), **FLAM** (a soft grace hit ~20 ms before); one sound alone: its mode on the grid (see
-    [5](#5-drum-x)). On other engines it does nothing.
-  - ECHO's **EVEN** (0.8.5): an ECHO that keeps every repeat at the step's level (a ratchet past RATCH's x4, set from
-    the editor or a 0.8.5 development build); the card shows "x8 EVEN", KNOB 3 keeps it.
-  - **WALK** and **CLIMB** (0.6.98, after the OP-Z's and OP-XY's evolving components): the step's notes move one
-    degree of the scale (WALK) or one octave (CLIMB) **every so many loops** of the pattern (KNOB 4: 1 … 10, 12, 16
-    loops a move), over a **range** (WALK 3, 5, 7 or 12 degrees; CLIMB 1 … 4 octaves), then round again. KNOB 3 the
-    **MODE** and the range in one: **UP** (0, 1, 2 … range, 0 …), **DOWN**, **UP-DN** (there and back), **RND** (a
-    place of the range each move, the same every time round). They stack with each other and with the rest: a WALK on
-    COMP and a CLIMB on COMP 2 add up, a TONAL or an OCT on top still applies, an ARP walks with its chord. Four notes
-    with a WALK UP-DN 5 every 2 loops and a CLIMB UP 1 every 3 come back to themselves after 36 loops, different every
-    time round. A drum kit ignores them. The page draws the moves round the range, this loop's lit.
-  - **Two on one step**: both play (an ECHO with an OCT: the repeats an octave up; a RAND with an OCT: both moves).
-    One that keeps the note silent wins: a **TRIG** or **FILL** in either place decides whether the step plays at all,
-    before anything else. Of two that do the same job, the first wins (an ARP over an ECHO, two ARPs: COMP's).
-  - **EVERY** (0.6.92, KNOB 4 on COMP 2, and on COMP for every type but ARP, RATCH and ECHO): the loops of the pattern
+  - **TOUCH is gone** (0.9.18): a step that had it loads with its SHORT / GHOST / FLAM as the mode of each of its
+    sounds that had none, the same sound (see [5](#5-drum-x)).
+  - **WALK** (0.6.98, after the OP-Z's and OP-XY's evolving components): the step's notes move one degree of the scale
+    **every so many loops** of the pattern (KNOB 4: 1 … 10, 12, 16 loops a move), over a **range** (3, 5, 7 or 12
+    degrees), then round again. KNOB 3 the **MODE** and the range in one: **UP** (0, 1, 2 … range, 0 …), **DOWN**,
+    **UP-DN** (there and back), **RND** (a place of the range each move, the same every time round). They stack with
+    each other and with the rest: a WALK on COMP and an OCT on COMP 2 add up, a TONAL on top still applies, an ARP
+    walks with its chord. Four notes with a WALK UP-DN 5 every 2 loops and an OCT UP 1 every 3 come back to themselves
+    after 36 loops, different every time round. A drum kit ignores WALK.
+  - **Two on one step**: both play (a RATCH with a TONAL: the hits moved; a RAND with an OCT: both moves). One that
+    keeps the note silent wins: a **TRIG** or **FILL** in either place decides whether the step plays at all, before
+    anything else. Of two that do the same job, the first wins (an ARP over a RATCH, two ARPs: COMP's).
+  - **EVERY** (0.6.92, KNOB 4 on COMP 2, and on COMP for every type but ARP and RATCH): the loops of the pattern
     the step's components play on — **ALWAYS**; **1:2** (the 1st, 3rd, … loop), **2:2** (the 2nd, 4th, …); **1:3**,
     **2:3**, **3:3**; **1:4** … **4:4**; **1:8**; **FIRST** (the first loop only); **!FIRST** (every loop but the
     first); **SKIP** at the end of the knob (kept, but not played: an on/off switch). One setting a step, for both of
     its components, set from COMP 2's KNOB 4 whatever its TYPE (or COMP's, for the types without a knob of their own
-    there): an arpeggio that comes in every fourth bar is ARP on COMP (ORDER, RATE) and EVERY 4:4 on COMP 2. The
-    step's own note plays on every loop (a **TRIG** component decides that). It took WHEN's place (that page is gone),
-    with its A / B read as one.
-  Projects keep them. **On a drum kit** (0.6.83) they work too: OCT, RAND, TONAL tune the hits (RAND and TONAL in
-  the track's scale), BEND bends each hit over the step; ARP NOTES plays the step's sounds one after another, SEQ
-  the pattern's sounds in the order they play, SCALE retriggers the step's hits each part a degree further up (0.9.17: SEQ one a lap).
+    there; an ARP's KNOB 4 past 1/4). The step's own note plays on every loop (a **TRIG** component decides that). It
+    took WHEN's place (that page is gone), with its A / B read as one.
+  Projects keep them. **On a drum kit** (0.6.83) they work too: OCT (an octave a lap), RAND, TONAL tune the hits (RAND
+  and TONAL in the track's scale), BEND bends each hit over the step, RATCH repeats the step's sounds, ARP plays them
+  one after another at its RATE, SEQ the pattern's sounds one a lap.
 - **A long chord slide** (0.6.83): the glide into a chord lasts as long as that chord, its TIEs included; GLIDE sets
   how much of it (127: all of it). A chord held over TIEs on slow steps (e.g. DIV 1/4 at 120 BPM: ten steps, 5 s)
   slides that slowly and smoothly; new notes fade in as they glide.

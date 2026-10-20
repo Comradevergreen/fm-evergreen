@@ -488,7 +488,7 @@ recorre página por página, un toque de **SEQ** salta al grupo siguiente.
 | BAR | STEP (melódica: piano roll) | STEP (los 64, compás tras compás) | NOTE | TIME (REST ← TIE ← NOTE → 2 ST … 16 ST: la duración de la nota en pasos; REST borra el paso) | FLAG (– / ACC / SLD / A+S) |
 | BAR | STEP (DRUM: grilla) | STEP | LANE | HIT | ACC |
 | BAR | NOTE | FOCUS | PITCH | MOVE | MICRO (−32/64 … +31/64; 0.9.1) |
-| STEP | COMP | STEP | TYPE | (su valor; ARP: ORDER × RANGE) | EVERY (ARP: RATE; RATCH / ECHO: DIV) |
+| STEP | COMP | STEP | TYPE | (su valor; ARP: ORDER × RANGE; RATCH: x1–x8 × FLAT FADE RISE) | EVERY (ARP: RATE; RATCH: RATE y su paso de altura) |
 | STEP | COMP 2 | STEP | TYPE (el segundo componente) | (su valor) | EVERY |
 | AUTO | AUTOMATION | PLAY (ON/OFF) | EVENT (cantidad) | LOCK (cantidad) | CLEAR (acción) |
 | AUTO | AUTO LIST | ROW | STEP | PARAM | VALUE |
@@ -968,7 +968,7 @@ ahora cambia **cómo** suenan, no qué sonido. La pantalla lo dice cuando apret�
 
 | OCT | Qué hace una tecla | Se graba (REC) como el golpe y el modo de su sonido |
 |---|---|---|
-| **+3** | **RATCHET x2**: el golpe dos veces por paso mientras la mantenés | **x2** |
+| **+3** | **RATCHET x2**: el golpe dos veces por paso mientras la mantenés | **x4** (0.9.18: el x4 de un sonido derrama dos golpes por paso sobre dos pasos, como se escuchó; antes x2) |
 | **+2** | **REPEAT**: el golpe una vez por paso mientras la mantenés, un redoble al ritmo de los pasos | un golpe en cada paso mantenido (**ON**) |
 | **+1** | **REPEAT 1/2**: el golpe cada dos pasos mientras la mantenés (0.9.17: cada OCT otra vez a la mitad; 0.9.13 ya las había bajado a la mitad) | un golpe cada dos pasos mantenidos (**ON**) |
 | **0** | el kit como siempre | ninguno (**ON**) |
@@ -986,8 +986,9 @@ ahora cambia **cómo** suenan, no qué sonido. La pantalla lo dice cuando apret�
   así la vuelta siguiente suena exactamente como lo escuchaste). Si soltás antes de la mitad del último, ese paso
   vuelve a como estaba, igual que con una nota sostenida de un sinte.
 - **Verlo y editarlo** en SEQ > STEP (la grilla DRUM): KNOB 2 elige el sonido, **KNOB 3 HIT** recorre **--, ON, x2, x4,
-  x8, SHORT, GHOST, FLAM** para él en el paso del cursor (volver a -- saca el golpe y su modo). El RATCH, ECHO y TOUCH
-  propios del paso (SEQ > COMP) siguen valiendo para todo el paso, como antes.
+  x8, SHORT, GHOST, FLAM** para él en el paso del cursor (volver a -- saca el golpe y su modo). Los x2 x4 x8 de un
+  sonido se derraman sobre los pasos que siguen como RATCH (0.9.18: x2 un golpe por paso, x4 dos, x8 cuatro). El RATCH
+  propio del paso (SEQ > COMP) repite sus otros sonidos: un sonido con su propio x2 / x4 / x8 o grabado ONCE queda afuera.
 - **MIDI** (0.8.5): las notas 35–81 siguen tocando el mapa GM de batería exactamente como antes. Las notas alrededor,
   que antes sonaban como su octava de 36–47 sin más, ahora son estas octavas, por clase de altura: **23–34 SHORT, 11–22
   GHOST, 0–10 FLAM, 82–93 REPEAT 1/2, 94–105 REPEAT, 106–127 x2** (0.9.17; 84 el bombo cada dos pasos, 96 el bombo una vez por paso, 108
@@ -995,7 +996,7 @@ ahora cambia **cómo** suenan, no qué sonido. La pantalla lo dice cuando apret�
   teclas mandan esas notas por MIDI OUT. **Una canción o un setup MIDI que mandaba notas de batería debajo de 35 o arriba
   de 81** (un bombo en 24, por ejemplo) ahora va a escuchar estas variaciones: movelas a 35–81 (36–47 para las del kit)
   para conservar el sonido de antes. Las notas guardadas en los pasos suenan como antes, sea cual sea su número.
-- Con el ARP prendido las teclas alimentan el arpegio sin cambios (sin ratchet ni TOUCH). Las teclas de carril de la
+- Con el ARP prendido las teclas alimentan el arpegio sin cambios (sin ratchet, SHORT, GHOST ni FLAM). Las teclas de carril de la
   grilla DRUM son siempre la octava central.
 
 Un kit por sección, compartido por todas las pistas en DRUM: mientras otra pista toca DRUM-X, recorrer kits en una pista distinta deja ese kit como está ("KIT OF T4 KEPT", 0.8.1); cargá los kits en la pista de batería. El kit se guarda con cada sección de un proyecto (no con los presets de usuario — ver [12](#12-guardar-y-cargar)).
@@ -1009,10 +1010,10 @@ patrones de distinto largo giran unos contra otros.
 
 ### Cómo moverse: la cadena de SEQ
 
-(0.9.2) Las doce páginas del secuenciador son una cadena de cinco grupos, como en todas las secciones: **SELECT** las
+(0.9.2) Las once páginas del secuenciador (0.9.18: la página BAR ya no está) son una cadena de cinco grupos, como en todas las secciones: **SELECT** las
 recorre una página por paso (sin dar la vuelta), un toque de **SEQ** salta a la primera página del grupo siguiente (en
 ronda), y las **pestañas de arriba** son los grupos, **PATT · TRACK · BAR · STEP · AUTO**, encendido el actual con un
-punto por cada una de sus páginas; el pie dice **SEQ · BAR · STEP  7/12**. Hasta la 0.9.1 SELECT hacía zoom en tres
+punto por cada una de sus páginas; el pie dice **SEQ · BAR · STEP  6/11**. Hasta la 0.9.1 SELECT hacía zoom en tres
 niveles (PATRÓN ↔ COMPÁS ↔ PASO, la LENTE de la 0.8.3) y el toque recorría los juegos de cada nivel: las páginas y sus
 dibujos son los mismos, solo es nuevo el camino entre ellas. Los compases del patrón (hasta cuatro, con LEN 64) se
 dibujan como celdas chicas: el que editás teñido de violeta con su número en violeta, el número del que suena en
@@ -1022,8 +1023,8 @@ naranja, un compás más allá de LEN oscuro.
 | --- | --- | --- |
 | **PATTERN** | PATTERN · STRETCH · PLAYHEADS | (0.9.17) El roll, como toda página SEQ. **PATTERN** dibuja las notas tan largas como las toca **GATE** y los pasos impares atrasados según **SWING**; los pasos más allá de **LEN** oscuros (en la tira, los compases más allá). **PLAYHEADS** dibuja sus cabezales extra sobre el roll como líneas mientras suenan, cada uno tan caliente como su número (el que editás de 3 px). |
 | **TRACK** | TRACK · MUTATE | **TRACK** contornea adónde lleva **PITCH** las notas (en gris, sobre las notas como están escritas). **MUTATE** muestra una ficha al pie del roll: los compases hasta la próxima mutación (**NEXT n BARS**), **FROZEN** o **MUTATE OFF**. |
-| **BAR** | **BAR** · STEP · NOTE | **KNOB 1 el compás** en BAR (el cursor conserva su lugar dentro del compás), KNOB 2 LEN. El KNOB 1 de STEP recorre **los 64 pasos** y entra solo en el compás siguiente; en NOTE la nota en foco en naranja. |
-| **STEP** | COMP · COMP 2 | Una barra arriba de cada paso con ese componente (COMP: el primero, COMP 2: el segundo; un arpegio naranja, otro violeta); el paso del cursor enmarcado. |
+| **BAR** | STEP · NOTE | El KNOB 1 de STEP recorre **los 64 pasos** y entra solo en el compás siguiente (0.9.18: girado rápido avanza varios, KNOB ACCEL; la página BAR con su perilla del compás ya no está, LEN es de PATTERN); en NOTE la nota en foco en naranja. |
+| **STEP** | COMP · COMP 2 | (0.9.18) El paso donde va el componente enmarcado en violeta con una lengüeta al pie (KNOB 1, al instante); una barra naranja arriba de cada paso con el mismo componente, una línea fina arriba de uno con otro; el paso de un JUMP enmarcado en naranja. |
 | **AUTO** | AUTOMATION · AUTO LIST | Una marca debajo de cada paso con un registro (un lock naranja, automatización blanca); en AUTO LIST el registro elegido tiene su paso enmarcado en violeta, y las tarjetas dicen su fila, paso, parámetro y valor. |
 
 **Un solo dibujo para todo SEQ** (0.9.17, el pedido del dueño: "todas las páginas del secuenciador con el mismo piano
@@ -1086,32 +1087,47 @@ seleccionada se graban como **automatización**. MENU > AUDIO tiene el **CLICK**
 
 - **COMP** (step components, al estilo OP-Z): hasta dos por paso (**COMP** el primero, **COMP 2** el segundo, igual;
   0.6.82). KNOB 1 elige el paso, KNOB 2 su **TYPE**, KNOB 3 su valor, KNOB 4 **EVERY** (0.6.92; en COMP, el RATE de un
-  ARP o el DIV de RATCH / ECHO van ahí en su lugar). COMP y COMP 2 son el grupo STEP: el
-  paso dibujado grande, con su ficha COMP o COMP 2 encendida y el tipo que tiene (0.8.3; el dibujo propio del
-  componente ya no está, sus valores están en las tarjetas).
-  - **CHANCE** (0–100 %) y **RATCH** (x1–x4): la probabilidad y el ratchet propios del paso (solo en COMP). El KNOB 4
-    de RATCH es su **DIV**: STEP reparte los golpes en el paso (como antes); 1/2, 1/3, 1/4, 1/6, 1/8 los separa esa
-    fracción de paso desde el inicio, los que entren (RATCH x3 a 1/8: tres golpes rápidos y después silencio).
-  - **ARP NOTES / SEQ / SCALE**: el paso toca un arpegio y sigue sobre los ties que vienen después (su duración, el
-    paso y sus ties). NOTES: las notas del paso, de grave a agudo; SEQ: la melodía del patrón, en el orden en que la
-    toca el patrón (0.6.82; antes se ordenaba como NOTES); los dos sobre 1–4 octavas. SCALE: la escala hacia arriba
-    desde la nota más grave del paso, 3, 5, 8 o 15 grados. KNOB 3 **ORDER** y rango en una sola lista (UP, DOWN, UP-DN,
-    RND sobre 1 OCT, después sobre 2 OCT …; en SCALE 3, 5, 8, 15 DEG). KNOB 4 **RATE** (0.6.92), la velocidad del
-    arpegio en tiempo musical: **x1** una nota por paso (el DIV de la pista, 1/16), **1/32** dos por paso, **1/32T**
-    tres, **1/64** cuatro, **1/64T** seis, **1/128** ocho (la tarjeta dice la figura según el DIV de la pista; un DIV
-    raro: xn). Los x2 … x8 de antes son los mismos valores. **SEQ recorre una nota por vuelta** (0.9.17): cada vez
-    que el patrón vuelve al paso toca la nota siguiente de la melodía, en su ORDER y rango, sostenida sobre los ties
-    que vienen después como cualquier nota; su KNOB 4 es **LAP**, la nota de esta vuelta (RND: una nueva cada vuelta),
-    y PLAY desde stop arranca otra vez de la primera nota, como las vueltas de los otros componentes. (Hasta 0.9.16 SEQ
-    tocaba la melodía dentro del paso a su RATE; los proyectos guardan ese RATE, ahora sin uso.)
+  RATCH o de un ARP va ahí en su lugar). Los TYPE por familia (0.9.18): **OFF, CHANCE, RATCH, ARP, SEQ, WALK, PULSE,
+  OCT, RAND, BEND, TONAL, JUMP, REV, TRIG, FILL, KILL** (COMP 2 no tiene CHANCE).
+  **Dónde va** (0.9.18): el roll (un kit: la grilla) enmarca en violeta el paso que elige el KNOB 1, toda su columna con
+  una lengüeta al pie, y sigue a la perilla al instante; cada paso con el mismo componente que el que editás lleva una
+  barra naranja arriba, un paso con otro componente una línea fina; el TO STEP de un JUMP se enmarca en naranja
+  mientras girás el KNOB 3.
+  - **CHANCE** (0–100 %): la probabilidad propia del paso (solo en COMP).
+  - **RATCH** (0.9.18: RATCH y ECHO en uno): el paso toca **x1–x8** golpes. KNOB 3 la cantidad y su forma: **FLAT**
+    (todos al nivel del paso), **FADE** (cada uno más suave: el ECHO de antes), **RISE** (cada uno más fuerte). KNOB 4
+    su **RATE**: **FIT** reparte los golpes en **cuatro pasos** en un sinte (dos en un kit de batería: ahí x2 es un
+    golpe por paso), una figura fija cuán separados van (la tarjeta la dice según el DIV de la pista), y un **paso de
+    altura** para los golpes después del primero: **+1 DEG** / **−1 DEG** por la escala, **+OCT** uno sí y uno no una
+    octava arriba.
+    Los golpes después del primero **se derraman sobre los pasos que siguen** (hasta 0.9.17 caían dentro del paso): un
+    golpe que cae en un paso con la misma nota propia (un kit: el mismo sonido) se omite, otra nota suena al lado en
+    POLY; en MONO / LEGATO la nota siguiente corta lo que queda; un nuevo paso con ratchet lo reemplaza. La
+    probabilidad se tira una vez para todos, STOP los termina. No se repiten con el paso: un sonido con su propio x2 /
+    x4 / x8 en la grilla (gana el modo del sonido, nunca un ratchet de un ratchet), un golpe grabado en vivo en el paso
+    (ONCE, 0.9.17) y una nota grabada en vivo en un paso POLY con ratchet (0.9.18): cada uno suena una vez, como se
+    escuchó. El x1–x4 de SEQ > CHANCE es RATCH FLAT; el ECHO de un proyecto es RATCH FADE (EVEN: FLAT). El RATCH en vivo
+    (GLO › LIVE) queda dentro de cada paso.
+  - **ARP** (0.9.18): las notas del paso (su acorde; un kit: sus sonidos) **de a una al RATE** (KNOB 4: **1/32, 1/16,
+    1/8, 1/4**, y después lo mismo con las vueltas en que toca, 1:2 …; las otras vueltas tocan el acorde como está
+    escrito), en el **ORDER** del KNOB 3 (UP, DOWN, UP-DN, RND) sobre 1–4 octavas (una sola nota: ella y esas octavas
+    arriba), a lo largo del paso y sus ties y al menos una vuelta entera, derramándose sobre los pasos que siguen como
+    los golpes de RATCH; en MONO la nota siguiente lo corta. (Hasta 0.9.17 ARP NOTES tocaba sus notas dentro del paso a
+    x1–x8 por paso.) **ARP SCALE ya no está**: un paso que lo tenía se carga como un WALK de su nota más grave (los
+    mismos grados, un movimiento por vuelta).
+  - **SEQ** recorre la melodía del patrón **una nota por vuelta** (0.9.17): cada vez que el patrón vuelve al paso toca
+    la nota siguiente de la melodía, en su ORDER y rango, sostenida sobre los ties que vienen después como cualquier
+    nota; su KNOB 4 es **LAP**, la nota de esta vuelta (RND: una nueva cada vuelta), y PLAY desde stop arranca otra vez
+    de la primera nota, como las vueltas de los otros componentes.
   - **TRIG**: el paso suena solo en algunas vueltas del patrón: 1:2, 2:2, 1:3, 2:3, 3:3, 1:4 … 4:4, 1:8, FIRST, !1ST
     (todas menos la primera).
   - **RAND**: la nota sube o baja por la escala al azar, hasta RANGE grados (1–7).
-  - **OCT**: una octava: +1, −1, +1 cada dos vueltas, −1 cada dos vueltas, ALT (arriba y abajo alternando), RND.
+  - **OCT** (0.9.18, en lugar de CLIMB): las notas del paso se mueven **una octava cada tantas vueltas** (KNOB 4: 1 …
+    10, 12, 16), sobre 1–4 octavas, KNOB 3 **UP / DOWN / UP-DN / RND**, y vuelven a empezar (un WALK en octavas). El OCT
+    de antes se carga como lo que tocaba: +1 / −1 siempre como las notas movidas una octava, cada dos vueltas / ALT /
+    RND como OCT con ese movimiento.
   - **TONAL**: desde este paso hasta el final de la vuelta todas las notas se mueven SHIFT grados (−7 a +7) por la escala.
   - **BEND**: la nota se desliza BEND semitonos (−12 a +12) durante el paso.
-  - **ECHO**: el paso se repite x2–x8 en su duración, cada repetición más suave. KNOB 4 su **DIV**, como el de RATCH:
-    STEP reparte las repeticiones en el paso, 1/2 … 1/8 fija cuán separadas van.
   - **PULSE**: la nota vuelve a sonar en los pasos vacíos que siguen, cada 1–4 pasos (EVERY), hasta la próxima nota.
   - **JUMP**: después de este paso el patrón sigue desde TO STEP.
   - **REV**: desde este paso el patrón vuelve hacia atrás hasta el paso 1 y después sigue hacia adelante (ping-pong).
@@ -1119,36 +1135,29 @@ seleccionada se graban como **automatización**. MENU > AUDIO tiene el **CLICK**
     FIRST solo la primera vez (una intro), !FIRST todas menos la primera (0.6.92; antes era TIMES).
   - **FILL**: el paso suena solo mientras mantenés **FX**.
   - **KILL**: el paso primero corta todo lo que suena en la pista (releases largos, notas sostenidas) y después toca.
-  - **TOUCH** (0.8.5, una pista DRUM): cómo se golpean todos sus sonidos, KNOB 3 **SHORT** (la mitad del decay),
-    **GHOST** (corto, más suave, más oscuro), **FLAM** (un golpe de adorno suave ~20 ms antes); un solo sonido: su modo
-    en la grilla (ver [5](#5-drum-x)). En otros motores no hace nada.
-  - **EVEN** del ECHO (0.8.5): un ECHO que mantiene cada repetición al nivel del paso (un ratchet más allá del x4 de
-    RATCH, puesto desde el editor o una versión de desarrollo de 0.8.5); la tarjeta muestra "x8 EVEN", KNOB 3 lo conserva.
-  - **WALK** y **CLIMB** (0.6.98, a la manera de los componentes evolutivos del OP-Z y el OP-XY): las notas del paso se
-    mueven un grado de la escala (WALK) o una octava (CLIMB) **cada tantas vueltas** del patrón (KNOB 4: 1 … 10, 12,
-    16 vueltas por movimiento), dentro de un **rango** (WALK 3, 5, 7 o 12 grados; CLIMB 1 … 4 octavas), y vuelven a
-    empezar. KNOB 3 el **MODE** y el rango juntos: **UP** (0, 1, 2 … rango, 0 …), **DOWN**, **UP-DN** (ida y vuelta),
-    **RND** (un lugar del rango por movimiento, el mismo en cada vuelta completa). Se apilan entre sí y con el resto:
-    un WALK en COMP y un CLIMB en COMP 2 se suman, un TONAL o un OCT encima siguen valiendo, un ARP camina con su
-    acorde. Cuatro notas con un WALK UP-DN 5 cada 2 vueltas y un CLIMB UP 1 cada 3 vuelven a sí mismas a las 36
-    vueltas, distintas en cada pasada. Un kit de batería los ignora. La página dibuja los movimientos del rango, con el
-    de esta vuelta encendido.
-  - **Dos en un paso**: suenan los dos (un ECHO con un OCT: las repeticiones una octava arriba; un RAND con un OCT:
-    los dos movimientos). Gana el que deja la nota en silencio: un **TRIG** o un **FILL** en cualquiera de los dos
-    lugares decide primero si el paso suena. De dos que hacen lo mismo gana el primero (un ARP sobre un ECHO, dos ARP:
-    el de COMP).
-  - **EVERY** (0.6.92, KNOB 4 en COMP 2, y en COMP para todos los tipos menos ARP, RATCH y ECHO): en qué vueltas del
-    patrón suenan los componentes del paso — **ALWAYS**; **1:2** (1ª, 3ª, … vuelta), **2:2** (2ª, 4ª, …); **1:3**,
-    **2:3**, **3:3**; **1:4** … **4:4**; **1:8**; **FIRST** (solo la primera vuelta); **!FIRST** (todas menos la
-    primera); **SKIP** al final de la perilla (se guarda pero no suena: un interruptor). Un solo valor por paso, para
-    sus dos componentes, que se fija desde el KNOB 4 de COMP 2 sea cual sea su TYPE (o desde COMP, en los tipos que no
-    usan esa perilla): un arpegio que entra cada cuatro compases es ARP en COMP (ORDER, RATE) y EVERY 4:4 en COMP 2.
-    La nota propia del paso suena en todas las vueltas (eso lo decide un componente **TRIG**). Reemplaza a WHEN (esa
-    página ya no existe), con su A / B leídos como uno solo.
-  Los proyectos los guardan. **En un kit de batería** (0.6.83) también funcionan: OCT, RAND y TONAL afinan los golpes
-  (RAND y TONAL en la escala de la pista), BEND dobla cada golpe durante el paso; ARP NOTES toca los sonidos del paso
-  uno tras otro, SEQ los sonidos del patrón en el orden en que suenan, SCALE re-dispara los golpes del paso, cada parte
-  un grado más arriba (0.9.17: SEQ uno por vuelta).
+  - **TOUCH ya no está** (0.9.18): un paso que lo tenía se carga con su SHORT / GHOST / FLAM como el modo de cada uno de
+    sus sonidos que no tenía ninguno, el mismo sonido (ver [5](#5-drum-x)).
+  - **WALK** (0.6.98, a la manera de los componentes evolutivos del OP-Z y el OP-XY): las notas del paso se mueven un
+    grado de la escala **cada tantas vueltas** del patrón (KNOB 4: 1 … 10, 12, 16 vueltas por movimiento), dentro de un
+    **rango** (3, 5, 7 o 12 grados), y vuelven a empezar. KNOB 3 el **MODE** y el rango juntos: **UP** (0, 1, 2 …
+    rango, 0 …), **DOWN**, **UP-DN** (ida y vuelta), **RND** (un lugar del rango por movimiento, el mismo en cada vuelta
+    completa). Se apilan entre sí y con el resto: un WALK en COMP y un OCT en COMP 2 se suman, un TONAL encima sigue
+    valiendo, un ARP camina con su acorde. Cuatro notas con un WALK UP-DN 5 cada 2 vueltas y un OCT UP 1 cada 3 vuelven
+    a sí mismas a las 36 vueltas, distintas en cada pasada. Un kit de batería ignora WALK.
+  - **Dos en un paso**: suenan los dos (un RATCH con un TONAL: los golpes movidos; un RAND con un OCT: los dos
+    movimientos). Gana el que deja la nota en silencio: un **TRIG** o un **FILL** en cualquiera de los dos lugares
+    decide primero si el paso suena. De dos que hacen lo mismo gana el primero (un ARP sobre un RATCH, dos ARP: el de
+    COMP).
+  - **EVERY** (0.6.92, KNOB 4 en COMP 2, y en COMP para todos los tipos menos ARP y RATCH): en qué vueltas del patrón
+    suenan los componentes del paso — **ALWAYS**; **1:2** (1ª, 3ª, … vuelta), **2:2** (2ª, 4ª, …); **1:3**, **2:3**,
+    **3:3**; **1:4** … **4:4**; **1:8**; **FIRST** (solo la primera vuelta); **!FIRST** (todas menos la primera);
+    **SKIP** al final de la perilla (se guarda pero no suena: un interruptor). Un solo valor por paso, para sus dos
+    componentes, que se fija desde el KNOB 4 de COMP 2 sea cual sea su TYPE (o desde COMP, en los tipos que no usan esa
+    perilla; el KNOB 4 de un ARP pasado 1/4). La nota propia del paso suena en todas las vueltas (eso lo decide un
+    componente **TRIG**). Reemplaza a WHEN (esa página ya no existe), con su A / B leídos como uno solo.
+  Los proyectos los guardan. **En un kit de batería** (0.6.83) también funcionan: OCT (una octava por vuelta), RAND y
+  TONAL afinan los golpes (RAND y TONAL en la escala de la pista), BEND dobla cada golpe durante el paso, RATCH repite
+  los sonidos del paso, ARP los toca uno tras otro a su RATE, SEQ los sonidos del patrón, uno por vuelta.
 - **Un slide de acordes largo** (0.6.83): el glide hacia un acorde dura lo que dura ese acorde, con sus TIEs; GLIDE
   fija cuánto de ese tramo (127: todo). Un acorde sostenido con TIEs en pasos lentos (p. ej. DIV 1/4 a 120 BPM: diez
   pasos, 5 s) se desliza así de lento y suave; las notas nuevas aparecen a medida que se deslizan.

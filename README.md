@@ -16,7 +16,10 @@ the FM-1, with sound, and is played with your computer keyboard or the mouse. Th
 editor update themselves with every change merged into `main`.
 
 > **Status: in development (v0.9.12, a beta: the emulator and the preview installer; the official installer stays on 0.9.9 until it is tested on the device).** It builds and passes every test (Felucca's and its own). Back up the flash before installing it.
-  **Every SEQ page is the piano roll** (0.9.17): the same bars' strip and roll (a kit: the grid) on all twelve pages,
+  **RATCH and ARP spill over the steps** (0.9.18): RATCH x1–x8 (ECHO folded in: FLAT, FADE, RISE, a pitch step) and
+  ARP one note at a time at its RATE play on past their step; OCT an octave a lap; SEQ › COMP frames the step it edits;
+  the SEQ › BAR page is gone.
+  **Every SEQ page is the piano roll** (0.9.17): the same bars' strip and roll (a kit: the grid) on all the pages,
   the values on top, each page marking what it does on the notes: PATTERN their GATE and SWING, TRACK the notes moved
   by PITCH, PLAYHEADS the extra heads as they play, COMP the steps with a component, AUTOMATION and AUTO LIST every
   record, MUTATE when the next mutation comes. The BOTTOM skin is retired (a saved BOTTOM opens as AIR).
@@ -317,13 +320,14 @@ With FX held the keys become effects that act while held; on release everything 
 ### Sequencing
 - 64 steps per track, piano roll, drum grid, parameter locks, chance, ratchets, slide and knob automation; live
   recording with overdub, metronome and count-in.
-- **SEQ's chain** (0.9.2): PATTERN (PATTERN, STRETCH, PLAYHEADS), TRACK (TRACK, MUTATE), BAR (BAR, STEP, NOTE), STEP
-  (COMP, COMP 2), AUTO (AUTOMATION, AUTO LIST); KNOB 1 the bar on BAR, all 64 steps on STEP; PRESETS loads a pattern.
+- **SEQ's chain** (0.9.2): PATTERN (PATTERN, STRETCH, PLAYHEADS), TRACK (TRACK, MUTATE), BAR (STEP, NOTE; 0.9.18: the
+  BAR page is gone), STEP (COMP, COMP 2), AUTO (AUTOMATION, AUTO LIST); KNOB 1 all 64 steps on STEP; PRESETS loads a pattern.
 - **One picture for the whole SEQ** (0.9.17): every page shows the pattern's bars in a strip and the cursor's bar as
   the piano roll (a kit: the grid), the values on top; each page marks what it does on it: PATTERN draws the notes as
   long as GATE plays them and the odd steps late by SWING, TRACK outlines where PITCH moves the notes, PLAYHEADS draws
   the extra heads as lines while they play, COMP / COMP 2 a bar over each step with that component, AUTOMATION and
   AUTO LIST a mark under each record's step (the row picked framed), MUTATE a chip with the bars to the next mutation.
+  (0.9.18) COMP frames the step the component goes on, live with KNOB 1, and marks the steps with the same one.
 - **Off the grid in 64ths** (0.9.1): live recording with REC Q under 100 % keeps where you played, to a 64th of a
   step; **SEQ › NOTE**'s MICRO edits it (−32/64 … +31/64), and playback honours it to the sample.
 - **ROTATE** (STRETCH, KNOB 4) and **PITCH** (TRACK, KNOB 1) shift the sequence in steps and in pitch, automatable.
@@ -684,6 +688,42 @@ JIANT's modifications are distributed under the same license.
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
 
+### v0.9.18
+RATCH and ARP over the steps, the components regrouped, rolls that stay where they belong, COMP showing its step, and
+the BAR page gone.
+- **RATCH spills over the steps after it.** RATCH and ECHO are one component: **RATCH x1–x8**, KNOB 3 the count and
+  its shape, **FLAT** (every hit at the step's level), **FADE** (each softer: the old ECHO) or **RISE** (each louder).
+  KNOB 4 its **RATE**: **FIT** spreads the hits over four steps on a synth and two on a drum kit, a note value fixes
+  their spacing, and a **pitch step** moves the hits after the first (+1 DEG, −1 DEG along the scale, +OCT every
+  other). The hits after the first now play on over the following steps instead of inside the step. A hit that lands
+  on a step with the same note of its own (a kit: the same sound) is left out; another note plays beside it on POLY;
+  on MONO and LEGATO the next note cuts the rest. The chance is rolled once for all of them. SEQ › CHANCE's x1–x4 is
+  RATCH FLAT and a project's ECHO is RATCH FADE (EVEN: FLAT). The live RATCH (GLO › LIVE) stays inside each step.
+- **ARP plays its notes one at a time at its RATE.** KNOB 4 **1/32, 1/16, 1/8, 1/4** (then the same with the loops it
+  plays on, 1:2 …; the other loops play the chord as written), KNOB 3 ORDER over 1–4 octaves (a single note: itself
+  and that many octaves up), through the step and its TIEs and at least once round, spilling on as RATCH does; on MONO
+  the next note cuts it. (0.9.17 played them inside the step.) ARP SEQ walks the melody a lap at a time as before.
+- **The components by family.** KNOB 2 goes OFF, CHANCE, RATCH, ARP, SEQ, WALK, PULSE, OCT, RAND, BEND, TONAL, JUMP,
+  REV, TRIG, FILL, KILL. **OCT** is now an octave every so many loops over 1–4 octaves (CLIMB's place, UP / DOWN /
+  UP-DN / RND). Retired and loaded as what they played: **ARP SCALE** (a WALK of the step's lowest note), the old
+  **OCT** modes (the notes moved an octave, or OCT with that motion), **TOUCH** (its SHORT / GHOST / FLAM as the mode of
+  each of the step's sounds), **CLIMB** (OCT), the long-hidden **C.LEN**.
+- **Rolls stay where they belong.** Not repeated with the step's RATCH: a sound with its own x2 / x4 / x8 on the grid
+  (the sound's mode wins, never a ratchet of a ratchet), a hit recorded live into the step (0.9.17's ONCE) and now also
+  a note recorded live into a ratcheted POLY step: each plays once, as heard. **GEN and the dice** write the drums'
+  rolls on their lane (the hat's x2 / x4, a fill's roll on its sound), not as the step's RATCH, so a kick under a
+  rolled hat no longer rolls. A sound's x2 / x4 / x8 spill as RATCH does (a hit, two, four a step); **OCT +3**
+  recorded on a DRUM track writes the sound's x4, two hits a step as heard.
+- **SEQ › COMP shows where the component goes.** The owner: adding a component and setting its step, the step was not
+  shown. The roll (a kit: the grid) now frames the step KNOB 1 picks, its whole column in violet with a tab at its foot,
+  at once as the knob turns; every step with the same component as the one edited has an orange bar on top, a step
+  with another component a thin line; a JUMP's TO STEP is framed orange as KNOB 3 turns. The cards' RATE now says the
+  spacing the hits really have (a RATCH's DIV over the spread, an ARP's 1/32 read 1/4 before).
+- **The SEQ › BAR page is gone** (the owner: redundant). The SEQ chain is eleven pages; the BAR group holds STEP and
+  NOTE. The bar is the roll's cursor and STEP's KNOB 1 over all 64 steps, which now accelerates when turned fast (KNOB
+  ACCEL, up to x4 on 64 steps); LEN is PATTERN's. The task race: bar 3 takes 13 actions turning fast (5 with BAR).
+- **Fix (tests):** the web editor's "PING keeps WATCH on" waits for the push instead of a fixed 10 ms.
+- Flash: the image 566560 B (17776 B free in the slot).
 ### v0.9.17
 The glitcher, one piano roll across the SEQ pages, a livelier generator and dice, slower rolls, ARP SEQ a lap at a
 time, VOICE's THEME, and two fixes.
