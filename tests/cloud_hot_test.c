@@ -260,6 +260,36 @@ int main(int argc, char **argv)
     check("CLOUD's line never clamps (any send), nor ROOM's combs / allpasses under it up to ROOM_CLEAN's send", !any_clamp);
     check("CLOUD never trips the buses' range check (FX_SANE) up to a 200000 send", !worst_trip);
     check("CLOUD AIR +24: no grain reads across the write head", cross_air == 0);
+    {   /* (0.9.16) the tester: "CLOUD at SIZE 100 % seems off". SIZE 127 (FREEZE) from a cleared line held silence
+         * (fx_rest clears it in any pause); and past 2 grains' overlap the grains fell 12 dB (high RATE). Now a
+         * cleared line first takes a line's worth of sound, then holds; the level about even across RATE. */
+        static const int RT[5] = {0, 30, 60, 90, 127};
+        double e[3][5];
+        uint32_t b, k, i;
+        int ok = 1;
+        stats_t st;
+        for (k = 0; k < 3u; k++)
+            for (b = 0; b < 5u; b++) {
+                double s0 = 0, s1 = 0;
+                cl_reset();
+                song.g[G_RSIZE] = (int16_t)(k == 0 ? 127 : k == 1 ? 126 : 100); song.g[G_RRATE] = (int16_t)RT[b];
+                song.g[G_RMOD] = 0; song.g[G_RWIDE] = 0; song.g[G_RPRE] = 0;
+                render(16000, 1.0, wl, wr, &st);
+                for (i = FS * 3u / 4u; i < 2u * FS; i++) s0 += (double)wl[i] * wl[i] + (double)wr[i] * wr[i];
+                for (i = 3u * FS; i < 4u * FS; i++) s1 += (double)wl[i] * wl[i] + (double)wr[i] * wr[i];
+                e[k][b] = 10.0 * log10(s0 / (2.5 * FS) + 1.0);
+                if (k == 0) {
+                    double held = 10.0 * log10(s1 / (2.0 * FS) + 1.0);
+                    printf("cloud:   SIZE 127 RATE %3d: %5.1f dB with the send, %5.1f dB held 1-2 s after it\n", RT[b], e[0][b], held);
+                    ok &= held > e[0][b] - 6.0;
+                }
+            }
+        for (b = 0; b < 5u; b++) {
+            printf("cloud:   RATE %3d: SIZE 127 %5.1f dB, 126 %5.1f dB, 100 %5.1f dB\n", RT[b], e[0][b], e[1][b], e[2][b]);
+            ok &= e[0][b] > e[1][b] - 6.0 && e[2][b] > e[2][0] - 8.0;
+        }
+        check("CLOUD SIZE 127 from a cleared line, any RATE: sounds (within 6 dB of 126) and holds; RATE 127 within 8 dB of 0", ok);
+    }
     printf(bad ? "cloud hot test FAILED\n" : "cloud hot test passed\n");
     return bad != 0;
 }

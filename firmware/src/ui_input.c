@@ -1633,7 +1633,7 @@ static void sound_dice_of(track_t *t, int quiet)
         if (!quiet) ui_message("KIT DICED");
         return;
     }
-    if (ENGINES[e]->npresets) {                         /* (0.9.18) never one of the last four this engine gave */
+    if (ENGINES[e]->npresets) {                         /* (0.9.17) never one of the last four this engine gave */
         static uint16_t last[4];
         uint32_t n = ENGINES[e]->npresets, p = 0, tries, j;
         for (tries = 0; tries < 8u; tries++) {

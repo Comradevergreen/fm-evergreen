@@ -821,7 +821,7 @@ int main(void)
         bad += gcheck("(0.9.13) a chord progression (two chords or more) in 90 % of the pieces; ANIMAL on under 5 % of EXPLORE's parts",
                       prog * 10u >= n * 9u && anim * 20u < xtr);
     }
-    {   /* (0.9.18) the dice's variety and its melodies (tests/dice_metrics.c measures them at length): OCT+ pressed 24
+    {   /* (0.9.17) the dice's variety and its melodies (tests/dice_metrics.c measures them at length): OCT+ pressed 24
          * times a genre (MICRO HOUSE among them: the owner's), a part the same as the press before (90 % of its steps,
          * transposed to the key) seldom, the sounds of a part many, the press before's seldom; the power-on's first
          * piece not the same every session; SEQ + SELECT on the piece's harmony, never the same twice running; EDIT +
@@ -874,10 +874,10 @@ int main(void)
                 }
             }
         }
-        printf("gen: (0.9.18) 6 genres x 24 presses: a part near the press before's in %u of %u, the press before's sound in %u of %u;"
+        printf("gen: (0.9.17) 6 genres x 24 presses: a part near the press before's in %u of %u, the press before's sound in %u of %u;"
                " MICRO HOUSE's lead %u sounds; the lead: steps %u %%, leaps past a fifth %u %%, off the eighths %u %%, held at the top %u of %u\n",
                near, parts, sndrep, snd, nml, liv ? lstep * 100u / liv : 0u, liv ? lleap * 100u / liv : 0u, lon ? loff * 100u / lon : 0u, lfull, nl);
-        bad += gcheck("(0.9.18) DICE: a part near the press before's under 8 %, its sound the press before's under 25 %", near * 100u < parts * 8u && sndrep * 4u < snd);
+        bad += gcheck("(0.9.17) DICE: a part near the press before's under 8 %, its sound the press before's under 25 %", near * 100u < parts * 8u && sndrep * 4u < snd);
         bad += gcheck("  MICRO HOUSE's lead: 8 sounds at least in 24 presses (0.9.17: 7 in 40)", nml >= 8u);
         bad += gcheck("  the lead by steps (40 % at least), leaps past a fifth under 5 %, 12 % at least off the eighths", lstep * 100u >= liv * 40u && lleap * 100u < liv * 5u && loff * 100u >= lon * 12u);
         bad += gcheck("  the lead's envelope: no release at full sustain never, held at 79 % or more under 15 %", !lflat && lfull * 100u < nl * 15u);
@@ -900,7 +900,7 @@ int main(void)
                 for (i = 0; i < dlen(&trk[ld]); i += 4u)
                     if (trk[ld].step[i].time == ST_NOTE && trk[ld].step[i].n) { seq_st++; seq_ct += (gchord_pcs(i) >> (trk[ld].step[i].note[0] % 12u)) & 1u; }
             }
-            printf("gen: (0.9.18) SEQ + SELECT x 20 on HOUSE 0077's lead: strong steps on the piece's chord tones %u of %u, the same twice running %u\n", seq_ct, seq_st, seq_same);
+            printf("gen: (0.9.17) SEQ + SELECT x 20 on HOUSE 0077's lead: strong steps on the piece's chord tones %u of %u, the same twice running %u\n", seq_ct, seq_st, seq_same);
             bad += gcheck("  SEQ + SELECT: on the piece's chords (75 % of the strong steps; 0.9.17: 58 %), never the same twice running", ld < NTRK && seq_ct * 4u >= seq_st * 3u && !seq_same);
         }
         {   /* EDIT + SELECT x 30, on FM6 (15 presets) */

@@ -16,6 +16,10 @@ the FM-1, with sound, and is played with your computer keyboard or the mouse. Th
 editor update themselves with every change merged into `main`.
 
 > **Status: in development (v0.9.12, a beta: the emulator and the preview installer; the official installer stays on 0.9.9 until it is tested on the device).** It builds and passes every test (Felucca's and its own). Back up the flash before installing it.
+  **Every SEQ page is the piano roll** (0.9.17): the same bars' strip and roll (a kit: the grid) on all twelve pages,
+  the values on top, each page marking what it does on the notes: PATTERN their GATE and SWING, TRACK the notes moved
+  by PITCH, PLAYHEADS the extra heads as they play, COMP the steps with a component, AUTOMATION and AUTO LIST every
+  record, MUTATE when the next mutation comes. The BOTTOM skin is retired (a saved BOTTOM opens as AIR).
   **DRUM-X, VOICE and ANIMAL first** (0.9.9): the FM-1 powers on with T1 DRUM-X, T2 VOICE singing words, T3 ANIMAL's
   bird, T4 LOFI's bytebeat, T5 ANALOG's bass and T6 FM6's electric piano, and PRESETS lists the engines in that order.
   **A new skin, AIR** (0.9.7, the default of new settings): HUD's light look on every page with the knob row on top,
@@ -52,7 +56,7 @@ editor update themselves with every change merged into `main`.
 >   breadcrumb **SECTION · GROUP · page n/N** at the foot; SCL and ARP two sections; GEN three HOME pages. Clearing a
 >   step is **SEQ + G5**, renaming **SAVE + C5**: EDIT is always EDIT.
 > - **Three skins, MENU > DISPLAY > SKIN** (0.8.9; HUD faster in 0.9.0; 0.9.7: a fourth, **AIR**, the default of new
->   settings): **COLORS** (rounded cards, each
+>   settings; 0.9.17: BOTTOM retired): **COLORS** (rounded cards, each
 >   card its colour, on JIANT its value's heat as in 0.6), **BOTTOM** (the picture edge to edge, a slim knob row) and **HUD**
 >   (HOME's beings under everything). The **LENTE** look (0.8.5): tabs, cards and a breadcrumb in a crisp 5 × 7 pixel
 >   face, values in Inter Tight. **Held layers** show the keyboard itself: MAP, KNOBS and STATE (ALGORITHM while held).
@@ -191,8 +195,9 @@ VOICE singing its lyric, in the COLORS skin, exactly as the firmware draws them 
   amount's heat (0.9.5, as 0.6), the other palettes give each knob its own colour.
 - **Skins** (MENU > DISPLAY > SKIN, 0.8.9): **AIR** (0.9.7, the default of new settings: HUD's floating words on
   every page, the knob row on top under the tabs, the middle free), **COLORS** (near-black rounded cards on top, a rounded
-  panel), **BOTTOM** (no cards: the picture the screen's width, a slim knob row at the foot) and **HUD** (HOME's
-  beings swim under everything, the words float over them). Every skin wears the **LENTE** layout (0.8.5): the
+  panel) and **HUD** (HOME's beings swim under everything, the words float over them, the knob row at the foot; on the
+  SEQ pages on top, as AIR's). (0.9.17: BOTTOM, the knob row at the foot on every page, is retired; a saved BOTTOM
+  opens as AIR.) Every skin wears the **LENTE** layout (0.8.5): the
   section's groups as tabs on top (a dot a page), the breadcrumb **SECTION · GROUP · page n/N** at the foot. Values
   in [Inter Tight](https://github.com/rsms/inter-tight) SemiBold, names, tabs and the breadcrumb in a crisp 5 × 7
   pixel face, small captions in [Chakra Petch](https://github.com/m4rc1e/Chakra-Petch).
@@ -314,6 +319,11 @@ With FX held the keys become effects that act while held; on release everything 
   recording with overdub, metronome and count-in.
 - **SEQ's chain** (0.9.2): PATTERN (PATTERN, STRETCH, PLAYHEADS), TRACK (TRACK, MUTATE), BAR (BAR, STEP, NOTE), STEP
   (COMP, COMP 2), AUTO (AUTOMATION, AUTO LIST); KNOB 1 the bar on BAR, all 64 steps on STEP; PRESETS loads a pattern.
+- **One picture for the whole SEQ** (0.9.17): every page shows the pattern's bars in a strip and the cursor's bar as
+  the piano roll (a kit: the grid), the values on top; each page marks what it does on it: PATTERN draws the notes as
+  long as GATE plays them and the odd steps late by SWING, TRACK outlines where PITCH moves the notes, PLAYHEADS draws
+  the extra heads as lines while they play, COMP / COMP 2 a bar over each step with that component, AUTOMATION and
+  AUTO LIST a mark under each record's step (the row picked framed), MUTATE a chip with the bars to the next mutation.
 - **Off the grid in 64ths** (0.9.1): live recording with REC Q under 100 % keeps where you played, to a 64th of a
   step; **SEQ › NOTE**'s MICRO edits it (−32/64 … +31/64), and playback honours it to the sample.
 - **ROTATE** (STRETCH, KNOB 4) and **PITCH** (TRACK, KNOB 1) shift the sequence in steps and in pitch, automatable.
@@ -366,7 +376,7 @@ Turning fast sweeps the whole range; turning slowly is fine adjustment. Turn it 
 <details>
 <summary><b>What changed from Felucca 1.1.5.1</b></summary>
 
-- **New interface**: thermal palette, four skins (AIR, COLORS, BOTTOM, HUD), the LENTE layout (tabs, cards, breadcrumb),
+- **New interface**: thermal palette, three skins (AIR, COLORS, HUD), the LENTE layout (tabs, cards, breadcrumb),
   beings, HOME ecosystem, live technical graphs and a power-on signature; navigation by six rules (0.9.2).
 - **DRUM** is DRUM-X; Felucca's kits were retired. **CHORD** was retired (its parameters are SHIFT). **PHYS** and
   **TRIO** were retired (TRIO lives inside ANALOG; a PHYS sound plays as ANALOG's first preset).
@@ -438,8 +448,8 @@ each layer; the complete manual is in **[docs/MANUAL.md](docs/MANUAL.md)** (en e
   orange what's active; on JIANT each card is coloured by its value (cold low, hot high; 0.9.5, as 0.6), the other
   palettes give each knob its own colour.
 - **Skin** (MENU > DISPLAY > SKIN, 0.8.9): **AIR** (0.9.7, the default of new settings) HUD's look on every page with
-  the knob row on top, **COLORS** the cards on top in the 0.6 colours, **BOTTOM** the knobs a slim
-  row at the foot and the middle free, **HUD** HOME's beings over the whole screen under floating words.
+  the knob row on top, **COLORS** the cards on top in the 0.6 colours, **HUD** HOME's beings over the whole screen under
+  floating words (the knobs at the foot, on top on the SEQ pages). BOTTOM is retired (0.9.17): a saved BOTTOM opens as AIR.
 - **Load meter** (top right, next to the battery): five small bars showing how much of the audio time the sound is
   using right now. The firmware's RAM is reserved entirely at boot and doesn't change, so this is what's worth
   watching: with all five lit (red, yellow) you're close to the limit and should cut voices, the CLOUD reverb or heavy
@@ -675,17 +685,59 @@ JIANT's modifications are distributed under the same license.
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
 
 ### v0.9.17
-Slower rolls, arpeggios a lap at a time, and VOICE's THEME.
+The glitcher, one piano roll across the SEQ pages, a livelier generator and dice, slower rolls, ARP SEQ a lap at a
+time, VOICE's THEME, and two fixes.
+- **The glitcher (FX layer).** While **GLITCH, TAPE STOP, FREEZE or SHUFFLE** is down (held, or pressed with FX LATCH)
+  the four knobs are its own; let it go and they are the macros again. The cards and the footer name it.
+  - **GLITCH** (B3): **DENS** how many sixteenths are cut, **PITCH** each repeat that many semitones above or below the
+    one before (a riser, or a fall), **SIZE** the repeated slice from a 1/16 down to a 1/256, **VARI** another pattern.
+    New slices: **SKIP** (tiny fragments of the last 1/16, like a CD skipping) and **CRUSH**.
+  - **TAPE STOP** (C4): **TIME** (1/64 to a beat) and **CURVE** (− drops at once, + holds then drops). Once stopped,
+    **KNOB 1 SCRATCH** is your hand on the record: the end of the music, back and forth, its pitch with the speed.
+  - **SHUFFLE** (C#5, new): the last bar's 1/16s (1/8s, 1/4s) played back in another order, **AMOUNT** of them, some at
+    half or double speed (**SPEED**); the bar is kept compressed (ADPCM) in the same buffer.
+  - **FREEZE** (G#4, new): the eighth after the press held as grains, **DENS PITCH SPRAY SIZE**.
+  - **The FILTER sweep is gone**: KNOB 4's FILTER macro is the layer's one filter, and C#5 is SHUFFLE (a punch-in lane
+    that recorded the FILTER sweep now plays SHUFFLE there). The glitcher costs nothing at rest.
+- **Every SEQ page is the piano roll.** The owner, on the emulator: "Why does it say PLAYHEADS on the sequencer
+  pages? ... all the sequencer pages should have the same piano roll, each page doing something different on top of
+  it." All twelve SEQ pages now draw the same picture, the pattern's bars in a strip and the cursor's bar as the roll
+  (a kit: the grid), the page's marks over it: PATTERN the notes as long as GATE plays them and the odd steps late by
+  SWING; TRACK the notes moved by PITCH outlined; PLAYHEADS the extra heads as lines while they play (the head edited
+  3 px; the separate lanes are gone); COMP / COMP 2 a bar over each step with that component; AUTOMATION and AUTO LIST
+  a mark under each record's step (AUTO LIST's row framed); MUTATE a chip with the bars to the next mutation (FROZEN,
+  MUTATE OFF). STRETCH, BAR, STEP and NOTE the roll as it was. The "PLAYHEADS" caption over PATTERN's roll is gone
+  (playheads live on the PLAYHEADS page only), as are PATTERN's big bars, the step drawn large on COMP, and MUTATE's
+  and AUTO LIST's own panels (the cards say the same). PHRASES and SONG keep their lists.
+- **The values on top on every SEQ page, in every skin.** The BOTTOM skin (its knob row at the foot put the values
+  under the pictures) is retired: MENU › DISPLAY › SKIN steps AIR, COLORS, HUD (the editor's list too); a BOTTOM saved
+  in the settings, or set by the editor or a restore, opens as AIR, the same word tabs with the row on top. HUD keeps
+  its row at the foot except on the SEQ pages, where it is on top as AIR's.
+- **SEQ + SELECT dices with GEN's own generator.** The track's new sequence is the part GEN would write for it: on the
+  song's harmony when GEN made the piece (its plan, genre and the track's role), so it fits the other parts; otherwise
+  a piece's choices made up for it (the last genre, or any, in the track's key). DRUM tracks get drums; other tracks
+  get the role their steps sound like (low notes a bass, chords a pad, else a lead or an arp). Its sound, mix and
+  automation stay. song_dice.c's own generator is gone (7.2 KB of flash back).
+- **The dice never repeat themselves.** Each press mixes its moment into the random numbers. A throw never brings back
+  the part, seed or preset of the throw before (an engine's last four presets are skipped). GEN's SEED starts each
+  session somewhere new: the first OCT+ after power-on made the same piece every time. Bass lines vary their archetype
+  from throw to throw.
+- **GEN's sounds.** Leads and arps get their own envelope shapes, with releases that fit the tempo. Filters start
+  darker and open with an envelope, with more resonance. Leads get soft LFOs on the filter or a faster vibrato, and
+  percussion gets its sends. Every word of the recipe now shapes the sound.
+- **GEN's melodies.** The lead runs over four bars as a call and an answer, built from syncopated motif cells with a
+  late variation. The arp leaves space shaped like a figure of the bar, with ghost notes and held notes, and has three
+  new orders.
 - **DRUM-X's octaves above the kit, half as fast again.** Holding a key above OCT 0 on a DRUM track now plays **OCT +1
   REPEAT 1/2** (the hit every other step), **+2 REPEAT** (once a step) and **+3 RATCHET x2** (0.9.16: once, x2, x4 a
   step). The same goes for MIDI notes 82–93, 94–105 and 106–127. Recording writes what you hear: +1 a hit on every other
   step held, +2 one on each, +3 the step's sound at x2. Steps recorded before keep the modes they stored.
-- **ARP NOTES / SEQ / SCALE walk one note a lap.** A step with an ARP component (SEQ > COMP) no longer plays its
-  arpeggio inside the step. Each time the pattern comes round to it, it plays the **next** note of its arpeggio, in its
-  ORDER and over its range, held over the TIEs after it like any note. SEQ walks the pattern's melody this way. PLAY
-  from a stop starts again from the first note, as the loops of TRIG, EVERY, WALK and CLIMB do. On a drum kit the
-  step's sounds take their turns the same way. COMP's KNOB 4 was RATE: it is now **LAP**, the note this pass plays
-  (RND: a new one each lap). Projects keep the RATE they stored, now unused.
+- **ARP SEQ walks the melody one note a lap.** A step with the ARP SEQ component (SEQ > COMP) no longer plays the
+  pattern's melody inside the step. Each time the pattern comes round to it, it plays the **next** note of the melody,
+  in its ORDER and over its range, held over the TIEs after it like any note. PLAY from a stop starts again from the
+  first note, as the loops of TRIG, EVERY, WALK and CLIMB do. On a drum kit the pattern's sounds take their turns the
+  same way. SEQ's KNOB 4 was RATE: it is now **LAP**, the note this pass plays (RND: a new one each lap). Projects keep
+  the RATE they stored, now unused. ARP NOTES and SCALE play as before.
 - **VOICE's THEME: one detent a theme, and no crackle.** THEME (WORDS) took 16 detents a name. Now every value with
   names steps one name a detent, onto the name's middle: THEME and LOOP; LOFI's WAV#, DECAY and ALGO; NOISE's LEN.
   The stored 0..127 values, projects, presets, automation and the editor are unchanged. Swept over a held note THEME
@@ -695,6 +747,14 @@ Slower rolls, arpeggios a lap at a time, and VOICE's THEME.
 - **THEME between its detents: a blend.** Automation, a mod or an older project can set THEME between two detents.
   The lower half of a theme's 16 values (the detent included) sings that theme exactly as before. The upper half mixes
   in words from the next theme, from 1 in 8 up to 7 in 8.
+- **Fix: a drum hit recorded into a RATCH or ECHO step rolled.** Finger-drumming live into a step that already had a
+  RATCH or ECHO made the new hit repeat with the step ("random rolls"). A hit recorded so now plays once (the lane's
+  ONCE mode); the step's other sounds keep their ratchet. Projects store it.
+- **Fix: CLOUD silent at SIZE 100 %.** SIZE at its top freezes the grain buffer; after the buffer had been cleared
+  (a new project, the reverb switched) it froze an empty line and went silent. It now fills before it freezes, and
+  the grains' overlap limit no longer drops the level 12 dB.
+- Flash: the image 565072 B, 19264 B free in the slot (0.9.16: 12992 B free; the SEQ pages' old pictures and
+  song_dice.c's generator gave back more than the glitcher and the rest took).
 ### v0.9.16
 The idle floor.
 - **At rest the audio does almost nothing.** An owner's PROFILE on 0.9.14, stopped and silent: 21 % of the audio's time

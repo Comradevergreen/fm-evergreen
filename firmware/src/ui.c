@@ -172,7 +172,7 @@ static void rp_put(uint32_t f, uint32_t v)
  * 0 in older ones = FLAT; 2, the retired PIXEL (1.0.1), reads as LINE; anything else unknown as FLAT (settings_persist.c). gfx.c draws from its copy, ux.style
  * (ui_draw.c style_apply) */
 #define ui_style (favorites.factory[15][29])
-/* (0.8.9) MENU > DISPLAY > SKIN (ui_menu.c): SKIN_COLORS SKIN_BOTTOM SKIN_HUD (gfx.c) in a byte no engine uses (engine 15,
+/* (0.8.9) MENU > DISPLAY > SKIN (ui_menu.c): SKIN_COLORS SKIN_HUD SKIN_AIR (gfx.c; 0.9.17 BOTTOM's 1 reads as AIR) in a byte no engine uses (engine 15,
  * byte 20), saved with the settings; 0 in older ones = COLORS, unknown = COLORS (settings_persist.c). gfx.c draws from its
  * copy, ux.skin (ui_draw.c style_apply) */
 #define ui_skin (favorites.factory[15][20])
@@ -508,17 +508,20 @@ static uint32_t large_kind(void)
  * mock-up's (LZ_*), under its level tabs; a layer's map over it: the usual layout */
 /* (0.8.9) a lens page in SKIN BOTTOM / HUD's layout (LARGE: COLORS'); HUD's HOME (ECO): the beings full screen */
 static int lz_low(void) { return ux.skin && lz_on() && !(ui_prefs & PREF_LARGE); }
+/* (0.9.17) .. with the knobs' row on top, under the tabs: AIR; HUD on the SEQ pages (the values over the pattern's pictures,
+ * as AIR and COLORS: the owner's "parameters on top") */
+static int lz_top(void);
 static int hud_home(void);
 static uint32_t card_y(void)
 {
-    return lz_low() ? (ux.skin == SKIN_AIR ? (hud_home() ? LA_HOME_CARD_Y : LA_CARD_Y) : LB_CARD_Y) : lz_on() ? LZ_CARD_Y : Y_LABEL;
+    return lz_low() ? (lz_top() ? (hud_home() ? LA_HOME_CARD_Y : LA_CARD_Y) : LB_CARD_Y) : lz_on() ? LZ_CARD_Y : Y_LABEL;
 }
 static uint32_t foot_y(void) { return hud_home() ? LZ_FOOT_Y - 1u : lz_on() ? LZ_FOOT_Y : Y_FOOT; }
 static uint32_t foot_h(void) { return hud_home() ? LZ_FOOT_H + 1u : lz_on() ? LZ_FOOT_H : H_FOOT; }
 static uint32_t card_h(void) { return large_kind() == LK_TALL ? LG_CARD_H : lz_low() ? LB_CARD_H : lz_on() ? LZ_CARD_H : CARD_H; }
 static uint32_t graph_y(void)
 {
-    int air = ux.skin == SKIN_AIR;
+    int air = lz_top();
     return large_kind() == LK_TALL ? (lz_on() ? LZ_LG_Y_GRAPH : LG_Y_GRAPH) : hud_home() ? (air ? LA_HOME_GRAPH_Y : LB_GRAPH_Y - 1u) :
            lz_low() ? (air ? LA_GRAPH_Y : LB_GRAPH_Y) : lz_on() ? LZ_GRAPH_Y : Y_GRAPH;
 }
@@ -673,6 +676,7 @@ static uint32_t lz_fam(void)                            /* which lens */
     return save_on() ? LZ_SAVE : fx_on() ? LZ_FX : LZ_SEQ;
 }
 static int lz_mock_cards(void) { return lz_on() && lz_fam() <= LZ_FX; }
+static int lz_top(void) { return lz_low() && (ux.skin == SKIN_AIR || lz_fam() == LZ_SEQ); }   /* (0.9.17, card_y) */
 /* (MENU > LARGE: their cards as they are; 0.9.0: not under the count-in or UPDATE MODE's countdown, which cover the page:
  * their header on BG, as every other page's) */
 static int hud_home(void)

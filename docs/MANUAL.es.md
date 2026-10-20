@@ -143,11 +143,12 @@ atajos de esa capa; en la grilla DRUM son pasos y carriles; en la pantalla NAME 
 
 ## 2. La pantalla
 
-### Pieles: AIR, COLORS, BOTTOM, HUD (0.8.9, AIR 0.9.7)
+### Pieles: AIR, COLORS, HUD (0.8.9, AIR 0.9.7)
 
 **MENU > DISPLAY > SKIN** elige cómo se visten las lentes (la maqueta aprobada "skin aireado", opciones 1, 3 y 4; 0.9.7:
-AIR, la opción aprobada); en todas las páginas, todas las paletas, FLAT y LINE. El menú las recorre AIR, COLORS, BOTTOM,
-HUD:
+AIR, la opción aprobada); en todas las páginas, todas las paletas, FLAT y LINE. El menú las recorre AIR, COLORS, HUD
+(0.9.17: BOTTOM, la fila de perillas al pie en todas las páginas, se retiró; un BOTTOM guardado en los ajustes, o puesto
+por el editor o una restauración, abre como AIR):
 
 - **AIR** (0.9.7; la de fábrica de los ajustes nuevos: un FM-1 nuevo o con sus ajustes borrados; los ajustes guardados
   antes conservan la piel que tenían): el aspecto de HUD en **todas** las páginas, con la **fila de perillas arriba**,
@@ -164,10 +165,10 @@ HUD:
   la perilla que girás enmarcada en su color; la pestaña del grupo rellena de violeta; el número de la pista en una
   cajita naranja, un ▶ violeta y el BPM grande en violeta en el encabezado; un panel casi negro redondeado; los seres con
   el calor de la 0.6 (púas violetas, anillos rojo y naranja, núcleos crema).
-- **BOTTOM**: las pestañas son las palabras de los grupos (la del grupo en el que estás con una pastillita debajo, un punto por página), sin cartas ni caja de panel: el
-  medio de la pantalla es el dibujo, de borde a borde (los seres de HOME tienen todo el lugar), y las cuatro perillas
-  son una fila fina sobre la miga de pan (marca y nombre, el valor en su color, una barra finita).
-- **HUD**: como BOTTOM, pero en HOME los seres nadan **debajo de todo, por la pantalla entera**: el encabezado, las
+- **HUD**: las pestañas son las palabras de los grupos (un punto por página debajo de cada una), sin cartas ni caja de
+  panel: el medio de la pantalla es el dibujo, de borde a borde, y las cuatro perillas son una fila fina sobre la miga de
+  pan (marca y nombre, el valor en su color, una barra finita); en las páginas SEQ la fila va arriba, debajo de las
+  pestañas, como en AIR (0.9.17: los valores sobre el roll). En HOME los seres nadan **debajo de todo, por la pantalla entera**: el encabezado, las
   pestañas, las perillas y la miga flotan encima como texto claro con un borde oscuro de 2 px (0.9.0). Ahí la fila de
   perillas se apaga a un quinto unos segundos después de la última vuelta de perilla y vuelve con la siguiente o al
   cambiar de página; en las demás páginas queda encendida. La palabra del grupo va subrayada con una rayita.
@@ -206,7 +207,7 @@ Desde la 0.8.5 todas las páginas llevan la piel del diseño que aprobó el due�
   la sección (0.9.2; p. ej. **FX · DELAY · DLY 2  6/16**, **ENV · TRACKS · TRACKS DEST  2/5**).
 - **Las pestañas** (0.9.2): debajo del encabezado, los **grupos** de la sección (FX: TRK · BUS · DLY · REV · CHO · SLC ·
   MST · PCH; SEQ: PATT · TRACK · BAR · STEP · AUTO), encendido el del grupo en el que estás (COLORS: relleno violeta;
-  BOTTOM: una pastillita; HUD y AIR: una rayita), y **un punto por página** debajo de cada uno, encendido el de la página que
+  HUD y AIR: una rayita), y **un punto por página** debajo de cada uno, encendido el de la página que
   se ve. Las tarjetas debajo, un panel más alto, y el pie es solo la miga de pan.
 
 - **Las letras chicas** (desde la 0.8.5): los nombres de las tarjetas, las pestañas, la miga de pan, las
@@ -276,7 +277,7 @@ páginas, sus perillas, sus dibujos y todas las funciones son las mismas, solo c
    no recorre páginas: regla 3.)
 6. **La pantalla dice dónde estás.** Arriba, las pestañas son los **grupos** de la sección, el actual encendido y un
    puntito por cada una de sus páginas. Abajo: **SECCIÓN · GRUPO · página** y **n/N**, el lugar de la página en la
-   cadena: **FX · DELAY · DLY 2  6/16**. Igual en AIR, COLORS, BOTTOM y HUD, con todas las paletas.
+   cadena: **FX · DELAY · DLY 2  6/16**. Igual en AIR, COLORS y HUD, con todas las paletas.
 
 - Cada sección recuerda la página donde la dejaste (EDIT una para los sintes y una para FM6 y otra para DRUM); al
   encender SEQ abre en STEP, ENV en ENV, LFO en LFO, las demás en su primera página.
@@ -512,7 +513,7 @@ SEQ las suyas). El encabezado nombra la capa en palabras, **[GLO] SET**. El pie 
 | Teclas | Efecto |
 | --- | --- |
 | F3 G3 A3 | REPEAT 1/8, 1/16, 1/32 |
-| B3 / C4 | GLITCH / TAPE STOP (0.9.15) |
+| B3 / C4 | GLITCH / TAPE STOP (0.9.15; 0.9.17 mientras los mantenés las perillas son suyas, TAPE STOP scratchea) |
 | D4 / E4 | OCT− / OCT+ |
 | F4 | 1/2 TEMPO |
 | G4 / A4 | DEC− / DEC+ |
@@ -523,8 +524,10 @@ SEQ las suyas). El encabezado nombra la capa en palabras, **[GLO] SET**. El pie 
 | G5 | borra el carril de punch-in |
 | Teclas negras 1–6 (F#3 G#3 A#3 C#4 D#4 F#4) | mutean T1–T6 mientras las mantenés |
 | A#4 | a qué pistas afectan los efectos de nota: ALL / SYN / DRM |
-| C#5 / D#5 / F#5 | los barridos FILTER / CRUSH / THROW (0.9.15): de seco a mojado en 2 compases mientras los mantenés, vuelven en un tiempo |
-| **Perillas** | las macros de interpretación STEPS, TRANSPOSE, MUTATE, FILTER (0.9.15): suben a la derecha; girar cualquiera para atrás apaga las cuatro |
+| G#4 | FREEZE (0.9.17): la corchea después de apretar, sostenida en granos |
+| C#5 | SHUFFLE (0.9.17): las 1/16 del último compás en otro orden (la tecla del barrido FILTER hasta 0.9.16) |
+| D#5 / F#5 | los barridos CRUSH / THROW (0.9.15): de seco a mojado en 2 compases mientras los mantenés, vuelven en un tiempo |
+| **Perillas** | las macros de interpretación STEPS, TRANSPOSE, MUTATE, FILTER (0.9.15): suben a la derecha; girar cualquiera para atrás apaga las cuatro. Mientras GLITCH, TAPE STOP, FREEZE o SHUFFLE está abajo: sus cuatro (0.9.17) |
 
 **GLO — mezcla**
 
@@ -1017,14 +1020,23 @@ naranja, un compás más allá de LEN oscuro.
 
 | Grupo | Páginas | Qué muestra la pantalla |
 | --- | --- | --- |
-| **PATTERN** | PATTERN · STRETCH · PLAYHEADS | Los compases del patrón uno al lado del otro en miniaturas grandes, cada una sus dieciséis pasos como rayitas (una pista DRUM: sus carriles); debajo, **PLAYHEADS**: el patrón entero como un solo roll chiquito (las filas de la escala teñidas, las líneas de los tiempos más claras, un paso con componente marcado arriba, los pasos más allá de LEN oscuros) con el cabezal y los cabezales extra de PLAYHEADS (una marquita cada uno al pie). |
-| **TRACK** | TRACK · MUTATE | El mismo dibujo, con los ajustes de la pista en las tarjetas. |
-| **BAR** | **BAR** · STEP · NOTE | **BAR** (nueva): los compases como en PATTERN, **KNOB 1 el compás** que editás (el cursor conserva su lugar dentro del compás), KNOB 2 LEN. **STEP** / **NOTE**: arriba una tira con los compases del patrón en chiquito (el que editás teñido), y debajo el **piano roll** del compás a todo el ancho: 30 semitonos, las filas de la escala teñidas, el cursor un marco violeta alrededor de su columna, el cabezal una línea naranja, un paso con componente una marquita arriba, un lock una marca al pie, una tecla apretada en la pista una marca a la izquierda de su fila (una pista DRUM: la **grilla**, con sus teclas). El KNOB 1 de STEP recorre **los 64 pasos** y entra solo en el compás siguiente. |
-| **STEP** | COMP · COMP 2 | El paso del cursor dibujado grande: arriba **STEP n** y a la derecha NOTE / TIE / REST (una nota de más de un paso: **LEN n**, que se fija con el KNOB 3 de STEP); a la izquierda sus notas como barras donde las pone su altura, cada una con su nombre (la nota en foco en naranja, MICRO las corre, RATCH las parte; un TIE muestra las notas que sostiene), y a la derecha sus fichas: **ACC, SLD, MICRO n, COMP1 x, COMP2 x, CHANCE n%** (con un valor puesto: una ficha teñida de violeta; sin nada: apagada). |
-| **AUTO** | AUTOMATION · AUTO LIST | La automatización de la pista: los registros contados, después como lista. |
+| **PATTERN** | PATTERN · STRETCH · PLAYHEADS | (0.9.17) El roll, como toda página SEQ. **PATTERN** dibuja las notas tan largas como las toca **GATE** y los pasos impares atrasados según **SWING**; los pasos más allá de **LEN** oscuros (en la tira, los compases más allá). **PLAYHEADS** dibuja sus cabezales extra sobre el roll como líneas mientras suenan, cada uno tan caliente como su número (el que editás de 3 px). |
+| **TRACK** | TRACK · MUTATE | **TRACK** contornea adónde lleva **PITCH** las notas (en gris, sobre las notas como están escritas). **MUTATE** muestra una ficha al pie del roll: los compases hasta la próxima mutación (**NEXT n BARS**), **FROZEN** o **MUTATE OFF**. |
+| **BAR** | **BAR** · STEP · NOTE | **KNOB 1 el compás** en BAR (el cursor conserva su lugar dentro del compás), KNOB 2 LEN. El KNOB 1 de STEP recorre **los 64 pasos** y entra solo en el compás siguiente; en NOTE la nota en foco en naranja. |
+| **STEP** | COMP · COMP 2 | Una barra arriba de cada paso con ese componente (COMP: el primero, COMP 2: el segundo; un arpegio naranja, otro violeta); el paso del cursor enmarcado. |
+| **AUTO** | AUTOMATION · AUTO LIST | Una marca debajo de cada paso con un registro (un lock naranja, automatización blanca); en AUTO LIST el registro elegido tiene su paso enmarcado en violeta, y las tarjetas dicen su fila, paso, parámetro y valor. |
 
-Desde la 0.8.5 el roll ya no tiene la tira de teclado ni los nombres de las filas de C (como la maqueta): el dibujo del
-paso nombra las notas y la tarjeta PITCH dice la nota en foco.
+**Un solo dibujo para todo SEQ** (0.9.17, el pedido del dueño: "todas las páginas del secuenciador con el mismo piano
+roll, y cada página hace algo distinto encima"): toda página muestra arriba una tira con los compases del patrón en
+chiquito (el que editás teñido) y debajo el **piano roll** del compás a todo el ancho: 30 semitonos, las filas de la
+escala teñidas, el cursor un marco alrededor de su columna, el cabezal una línea naranja, un paso con componente una
+marquita arriba, un lock una marca al pie, una tecla apretada en la pista una marca a la izquierda de su fila (una
+pista DRUM: la **grilla**, con sus teclas). Las marcas propias de la página van encima (la tabla). Hasta la 0.9.16 el
+grupo PATTERN dibujaba los compases en miniaturas grandes con un roll "PLAYHEADS" debajo, COMP el paso grande con sus
+fichas, PLAYHEADS tres carriles, MUTATE y AUTO LIST paneles propios.
+
+Desde la 0.8.5 el roll ya no tiene la tira de teclado ni los nombres de las filas de C (como la maqueta): la tarjeta
+PITCH dice la nota en foco.
 
 - **SEQ desde otra página** vuelve a la página que dejaste; al encender, STEP, el piano roll.
 - **PRESETS** en una página SEQ carga un **patrón**: abre el cargador PHRASES con el patrón siguiente elegido (KNOB 1
@@ -1080,14 +1092,18 @@ seleccionada se graban como **automatización**. MENU > AUDIO tiene el **CLICK**
   - **CHANCE** (0–100 %) y **RATCH** (x1–x4): la probabilidad y el ratchet propios del paso (solo en COMP). El KNOB 4
     de RATCH es su **DIV**: STEP reparte los golpes en el paso (como antes); 1/2, 1/3, 1/4, 1/6, 1/8 los separa esa
     fracción de paso desde el inicio, los que entren (RATCH x3 a 1/8: tres golpes rápidos y después silencio).
-  - **ARP NOTES / SEQ / SCALE** (0.9.17): el paso recorre su arpegio **una nota por vuelta**: cada vez que el patrón
-    vuelve a él, toca la nota siguiente, sostenida sobre los ties que vienen después como cualquier nota. NOTES: las
-    notas del paso, de grave a agudo; SEQ: la melodía del patrón, en el orden en que la toca el patrón; los dos sobre
-    1–4 octavas. SCALE: la escala hacia arriba desde la nota más grave del paso, 3, 5, 8 o 15 grados. KNOB 3 **ORDER**
-    y rango en una sola lista (UP, DOWN, UP-DN, RND sobre 1 OCT, después sobre 2 OCT …; en SCALE 3, 5, 8, 15 DEG).
-    KNOB 4 **LAP** muestra la nota que toca esta vuelta (RND: una nueva cada vuelta). PLAY desde stop arranca otra vez
-    de la primera nota, como las vueltas de los otros componentes. (Hasta 0.9.16 el paso tocaba sus notas dentro del
-    paso, KNOB 4 su RATE x1 … x8; los proyectos guardan el RATE que tenían, ahora sin uso.)
+  - **ARP NOTES / SEQ / SCALE**: el paso toca un arpegio y sigue sobre los ties que vienen después (su duración, el
+    paso y sus ties). NOTES: las notas del paso, de grave a agudo; SEQ: la melodía del patrón, en el orden en que la
+    toca el patrón (0.6.82; antes se ordenaba como NOTES); los dos sobre 1–4 octavas. SCALE: la escala hacia arriba
+    desde la nota más grave del paso, 3, 5, 8 o 15 grados. KNOB 3 **ORDER** y rango en una sola lista (UP, DOWN, UP-DN,
+    RND sobre 1 OCT, después sobre 2 OCT …; en SCALE 3, 5, 8, 15 DEG). KNOB 4 **RATE** (0.6.92), la velocidad del
+    arpegio en tiempo musical: **x1** una nota por paso (el DIV de la pista, 1/16), **1/32** dos por paso, **1/32T**
+    tres, **1/64** cuatro, **1/64T** seis, **1/128** ocho (la tarjeta dice la figura según el DIV de la pista; un DIV
+    raro: xn). Los x2 … x8 de antes son los mismos valores. **SEQ recorre una nota por vuelta** (0.9.17): cada vez
+    que el patrón vuelve al paso toca la nota siguiente de la melodía, en su ORDER y rango, sostenida sobre los ties
+    que vienen después como cualquier nota; su KNOB 4 es **LAP**, la nota de esta vuelta (RND: una nueva cada vuelta),
+    y PLAY desde stop arranca otra vez de la primera nota, como las vueltas de los otros componentes. (Hasta 0.9.16 SEQ
+    tocaba la melodía dentro del paso a su RATE; los proyectos guardan ese RATE, ahora sin uso.)
   - **TRIG**: el paso suena solo en algunas vueltas del patrón: 1:2, 2:2, 1:3, 2:3, 3:3, 1:4 … 4:4, 1:8, FIRST, !1ST
     (todas menos la primera).
   - **RAND**: la nota sube o baja por la escala al azar, hasta RANGE grados (1–7).
@@ -1131,8 +1147,8 @@ seleccionada se graban como **automatización**. MENU > AUDIO tiene el **CLICK**
     página ya no existe), con su A / B leídos como uno solo.
   Los proyectos los guardan. **En un kit de batería** (0.6.83) también funcionan: OCT, RAND y TONAL afinan los golpes
   (RAND y TONAL en la escala de la pista), BEND dobla cada golpe durante el paso; ARP NOTES toca los sonidos del paso
-  uno tras otro, SEQ los sonidos del patrón en el orden en que suenan, SCALE los golpes del paso un grado más arriba
-  (0.9.17: uno por vuelta).
+  uno tras otro, SEQ los sonidos del patrón en el orden en que suenan, SCALE re-dispara los golpes del paso, cada parte
+  un grado más arriba (0.9.17: SEQ uno por vuelta).
 - **Un slide de acordes largo** (0.6.83): el glide hacia un acorde dura lo que dura ese acorde, con sus TIEs; GLIDE
   fija cuánto de ese tramo (127: todo). Un acorde sostenido con TIEs en pasos lentos (p. ej. DIV 1/4 a 120 BPM: diez
   pasos, 5 s) se desliza así de lento y suave; las notas nuevas aparecen a medida que se deslizan.
@@ -1605,9 +1621,11 @@ La misma idea para las otras partes de la pista seleccionada, cada una se escuch
 DICED …?** (SELECT otra vez: otra tirada, **OCT+ OK** la deja, **OCT− CANCEL** devuelve lo que había, el resto sigue
 sonando):
 
-- **SEQ + SELECT**: una secuencia nueva como escribe una parte DICE ALL, en la escala de la pista: un beat en una pista
-  DRUM; si no, el rol al que suenan sus pasos (notas graves: un bajo, acordes: un pad, si no una lead o un arpegio). Su
-  sonido, su mezcla y su automatización quedan.
+- **SEQ + SELECT** (0.9.17): una secuencia nueva, la parte que escribiría el generador de GEN para la pista: sobre la
+  armonía de la canción si GEN hizo la pieza (su plan, su género y el rol de la pista), así encaja con las otras; si
+  no, en la tonalidad de la pista, con un género inventado para ella. Batería en una pista DRUM; si no, el rol al que
+  suenan sus pasos (notas graves: un bajo, acordes: un pad, si no una lead o un arpegio). Nunca la misma parte dos
+  veces seguidas. Su sonido, su mezcla y su automatización quedan.
 - **LFO + SELECT**: el LFO de la pista: un rate en el medio del rango, cualquier onda y fase, a veces un fade, apuntado
   sobre todo al filtro, un poco a la forma, rara vez al pitch o al volumen.
 - **FX + SELECT**: el drive de la pista (la mitad de las veces nada), sus envíos de chorus, delay y reverb, un AUTO PAN
@@ -1885,30 +1903,44 @@ las pistas sobre las que actúa (ALL, SYN, DRM). Para grabar: REC armado y tocan
 la tecla del efecto; los pasos que pasa lo reciben; **G5** sostenido borra por donde pasa el cabezal. Se guarda con
 la sección.
 
-- **Sobre el audio**: REPEAT 1/8, 1/16, 1/32 (F3 G3 A3), **GLITCH** (B3), **TAPE STOP** (C4). Arrancan en la siguiente
-  1/16 mientras suena. Por debajo de unos 81 BPM, REPEAT 1/8 es demasiado largo para su buffer y aparece atenuado.
-  - **GLITCH** (0.9.15) corta el master en las semicorcheas del transporte: cada una suena en vivo, o repite la última
-    1/16, 1/32 o 1/64, o la última semicorchea al revés, una octava arriba (al doble de velocidad, dos veces) o una
-    octava abajo (su primera mitad a media velocidad), o con gate a 1/32 o 1/64. Cuál le toca lo fija su lugar en un
-    ciclo de dos compases del transporte: el dibujo groovea y vuelve igual cada vez que lo apretás ahí; los tiempos
-    fuertes quedan casi siempre en vivo. Cada corte entra y sale en 3 ms (sin clics). Su primera semicorchea es en vivo
-    (todavía no grabó nada); por debajo de ~81 BPM solo suenan sus gates y los cortes en vivo (el buffer tiene 371 ms).
-  - **TAPE STOP** (0.9.15): toda la mezcla se frena hasta pararse en un tiempo (como mucho 0,68 s, el límite del buffer:
-    desde unos 88 BPM para abajo es menos de un tiempo), la altura cayendo con ella y apagándose en el último cuarto;
-    después silencio mientras lo mantenés. Al soltar, la música al instante, donde va. Un toque al final de una frase,
-    antes del drop.
-  REPEAT, GLITCH y TAPE STOP comparten un buffer (el del SLICER, prestado: mientras tanto el SLICER suena en vivo); de
-  los que mantenés suena el último apretado.
+- **Sobre el audio**: REPEAT 1/8, 1/16, 1/32 (F3 G3 A3) y **el glitcher** (0.9.17): **GLITCH** (B3), **TAPE STOP**
+  (C4), **FREEZE** (G#4), **SHUFFLE** (C#5). Arrancan en la siguiente 1/16 mientras suena (al instante parado). Por
+  debajo de unos 81 BPM, REPEAT 1/8 es demasiado largo para su buffer y aparece atenuado. **Mientras una tecla del
+  glitcher está abajo** (mantenida, o apretada con FX LATCH) **las cuatro perillas son suyas** (lo dicen las tarjetas
+  y el pie); al soltarla vuelven a ser las macros. Sus ajustes no se guardan.
+  - **GLITCH** (0.9.15; perillas 0.9.17: **DENS PITCH SIZE VARI**) corta el master en las semicorcheas del
+    transporte: cada una suena en vivo, o repite el último corte (SIZE: de 1/16 a 1/256), cada repetición PITCH
+    semitonos más arriba o más abajo que la anterior (una subida o una caída), o la última semicorchea al revés, una
+    octava arriba o abajo, con gate, **SKIP** (fragmentos mínimos de cualquier lugar de la última 1/16, como un CD que
+    salta) o **CRUSH**. DENS fija cuántas semicorcheas se cortan (los tiempos, menos); VARI elige otro dibujo. Qué hace
+    cada corte lo fija su lugar en un ciclo de dos compases del transporte: groovea y vuelve igual cada vez. Cada corte
+    entra y sale suave (sin clics). Por debajo de ~82 BPM solo suenan sus gates, crushes y cortes en vivo (el buffer
+    tiene 371 ms).
+  - **TAPE STOP** (0.9.15; perillas 0.9.17: **SCRATCH TIME CURVE**): toda la mezcla se frena hasta pararse en TIME
+    (de 1/64 a un tiempo, como mucho lo que entra en el buffer), la altura cayendo con ella; CURVE − cae enseguida, +
+    aguanta y después cae. Ya parada, el final de la música queda guardado y **la KNOB 1 es tu mano sobre el disco**:
+    girala para scratchear para atrás y para adelante (la altura con la velocidad, mudo en reposo). Al soltar C4, la
+    música al instante, donde va.
+  - **FREEZE** (0.9.17, G#4; **DENS PITCH SPRAY SIZE**): la corchea después de apretar queda guardada (mientras tanto
+    se oye en vivo) y suena en granos: SIZE de 1/128 a 1/8, de 1 a 4 superpuestos (DENS), PITCH semitonos, recorriendo
+    la corchea despacio ida y vuelta (un estiramiento); SPRAY dispersa dónde leen y mueve algunos una octava, una
+    quinta o una cuarta.
+  - **SHUFFLE** (0.9.17, C#5; **AMOUNT SIZE SPEED VARI**): las 1/16 del último compás (1/8, 1/4: SIZE) en otro orden:
+    AMOUNT de ellas se reemplazan por otro pedazo del último compás (los tiempos, y el primero del compás, solo con
+    más cantidad); SPEED toca las movidas a media velocidad, al doble o su primera mitad dos veces; VARI elige otro
+    orden. El compás se guarda comprimido en el mismo buffer (un compás entero hasta unos 87 BPM).
+  REPEAT y el glitcher comparten un buffer (el del SLICER, prestado: mientras tanto el SLICER suena en vivo); de los
+  que mantenés suena el último apretado, y al soltarlo vuelve el que mantenías antes.
 - **Sobre las notas**: OCT− / OCT+ (D4 E4), 1/2 TEMPO (F4), DEC− (corto, punteado) / DEC+ (largo) (G4 A4), STUTTER
   1/8 / 1/16 (B4 C5), ATK+ (ataques lentos, baterías incluidas) (D5), ARP (E5; en una pista DRUM, un fill nuevo en cada
   pulsación), RANDOM (F5). Entran en la siguiente 1/16. **A#4** elige a qué pistas afectan: ALL, SYN (sintes) o DRM
   (baterías); el encabezado lo muestra.
-- **Los barridos** (0.9.15, teclas negras **C#5 D#5 F#5**; hasta 0.9.14 las perillas FILTER CRUSH THROW y las teclas
+- **Los barridos** (0.9.15, teclas negras **D#5 F#5**; hasta 0.9.14 las perillas FILTER CRUSH THROW y las teclas
   LPF HPF): mantenidos, el efecto va de seco a mojado en **2 compases al tempo**, con una curva en S (sale despacio de
   seco, acelera en el medio, se asienta en mojado); al soltar vuelve a seco en **un tiempo** con la misma curva, así un
   soltar a tiempo suena intencional. Actúan al instante (no esperan la 1/16) y se suman a todo.
-  - **FILTER** (C#5): el pasa-altos del DJ FILTER del master abriéndose, de ~32 Hz a ~6 kHz (el clásico de la subida:
-    el bajo se va primero). Mientras barre le toma el DJ FILTER a la KNOB 4 de GLO › MIXER, que vuelve cuando está seco.
+  - (El barrido FILTER en C#5 se fue en 0.9.17: la macro FILTER de la KNOB 4 es el único filtro de la capa, y C#5 es
+    SHUFFLE.)
   - **CRUSH** (D#5): menos bits (de 4 a 11 menos) y menos frecuencia (una muestra repetida de 1 a 8 veces), y su mezcla
     subiendo.
   - **THROW** (F#5): la mezcla seca (y el bus del SLICER) a los envíos de delay y reverb, hasta toda: los ecos y la sala
@@ -1923,8 +1955,7 @@ la sección.
   - **KNOB 3 MUTATE**: la música como está pasa a ser el ancla de MUTATE y cada patrón muta alrededor de ella según la
     cantidad (notas por la escala, acentos, notas agregadas a contratiempo o quitadas, golpes de batería), en el tiempo
     siguiente y otra vez cada compás.
-  - **KNOB 4 FILTER**: el pasa-bajos del DJ FILTER del master cerrándose (el pasa-altos del barrido gana cuando va más
-    lejos).
+  - **KNOB 4 FILTER**: el pasa-bajos del DJ FILTER del master cerrándose.
   - **Girá cualquiera para atrás** (dos pasos en contra del reloj; uno se ignora, así un roce no hace nada) y **las
     cuatro se apagan de golpe**: largo completo, sin transponer, cada patrón exactamente como antes de MUTATE, el filtro
     abierto. La pantalla dice **MACROS OFF** y las tarjetas caen a OFF. Después cada una vuelve a subir desde cero al
@@ -1935,7 +1966,7 @@ la sección.
 - **Teclas negras 1–6**: mutean T1–T6 mientras las mantenés (no se guarda).
 
 **El carril de punch-in**: cada sección tiene un carril de 64 pasos de 1/16 (4 compases). Con **REC armado y sonando**
-(no durante un tema), los **efectos de nota (D4–F5)**, **GLITCH**, **TAPE STOP** y **los barridos** que mantenés se
+(no durante un tema), los **efectos de nota (D4–F5)**, **GLITCH**, **TAPE STOP**, **SHUFFLE** y **los barridos** que mantenés se
 graban en él, uno por paso (el más bajo mantenido; REPEAT y los mutes no se graban). Al reproducirse, un barrido
 mantenido a lo largo de varios pasos sube como si lo mantuvieras. Mantené **FX + G5** mientras suena para borrar por
 donde pasa el cabezal; parado, FX + G5 borra todo el carril. **REC mantenido + FX** también lo borra (junto con la
@@ -2191,7 +2222,7 @@ SKIN  2/28**. El encabezado dice MENU · DISPLAY.
 | Pestaña | Fila | Valores |
 | --- | --- | --- |
 | DISPLAY | COLOR | GREY, GREEN, AMBER, ICE, VIOLET, ROSE, PAPER, HI-CON, NIGHT, MONO, **JIANT** (por defecto) |
-| DISPLAY | SKIN | **AIR** (de fábrica en los ajustes nuevos), COLORS, BOTTOM, HUD — (0.8.9; AIR 0.9.7) ver [Pieles](#pieles-air-colors-bottom-hud-089-air-097) |
+| DISPLAY | SKIN | **AIR** (de fábrica en los ajustes nuevos), COLORS, HUD — (0.8.9; AIR 0.9.7; BOTTOM retirado en 0.9.17: abre como AIR) ver [Pieles](#pieles-air-colors-hud-089-air-097) |
 | DISPLAY | SCOPE | **OFF** (de fábrica), ON — (0.9.7) las páginas EDIT de un motor: OFF la criatura en todo el panel, centrada, el nombre de la página y el del sonido chiquitos en sus esquinas; ON la criatura a la izquierda, la carta SCOPE y las fichas como antes. Los ajustes guardados antes de 0.9.7 cargan OFF |
 | DISPLAY | STYLE | FLAT, LINE |
 | DISPLAY | LARGE | OFF, ON (etiquetas y valores grandes) |

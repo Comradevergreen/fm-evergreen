@@ -4,7 +4,7 @@
 # (JIANT 0.5; 0.6.30: from the presentation video's footage) the README's images, docs/jiant-hero.png and
 # docs/jiant-screens.png. (0.9.2) From the firmware's own renders in the default skin on the JIANT palette (0.9.7: AIR,
 # tests/ui_render.c -> build/ui_new/AIR_JIANT/<screen>.png, with MENU > DISPLAY > SCOPE OFF as a new FM-1 has it: the
-# *_full scenes; JIANT/ COLORS, BOTTOM_JIANT/ and HUD_JIANT/ the other skins), so the README shows the screens as the
+# *_full scenes; JIANT/ COLORS and HUD_JIANT/ the other skins), so the README shows the screens as the
 # firmware draws them now (the tabs, the knobs in their colours, the breadcrumb):
 #   python3 -c "import sys; sys.path.insert(0, 'tools'); import build; build.generate()"
 #   mkdir -p build/ui_new/ppm && cc -O1 -w -DFELUCCA_VERSION=\"v0.9.2\" -Ibuild/gen -Ifirmware/src -Itests \
@@ -64,7 +64,7 @@ big = [('home', 'HOME · six living tracks'), ('gen_explore', 'GEN · EXPLORE, a
        ('save_arrange', 'ARRANGE · the song in sections')]
 for i, (b, c) in enumerate(big):
     x = 70 + i * 500; framed(im, shot(b), x, y0, 2); d.text((x, y0 + 492), c, font=cap, fill=heat(0.15 + 0.3 * i))
-strips = [[('lente_step_note', 'NOTE · MICRO in 64ths'), ('seq_bar', 'SEQ › BAR · PLAYHEADS'), ('key_chord', 'CHORD'),
+strips = [[('lente_step_note', 'NOTE · MICRO in 64ths'), ('seq_bar', 'SEQ › BAR · THE ROLL'), ('key_chord', 'CHORD'),
            ('fx_buses', 'FX › BUSES'), ('mixer', 'MIXER · DJ FILTER'), ('layer_glo_active', 'GLO held · MAP')],
           [('v6_analog_full', 'ACID ANALOG'), ('drumx', 'DRUM-X'), ('words', 'VOICE · WORDS'), ('ed_operator', 'FM6 OPERATOR'),
            ('reverb_reso', 'RESO REVERB'), (('home', 'JIANT'), 'COLORS skin')]]
@@ -77,7 +77,7 @@ for r, row in enumerate(strips):
         d.text((x, y + 222), c, font=font('SemiBold', 18), fill=MID)
 y2 = y1 + 2 * 270 + 20
 cards = [("SIX RULES", "SELECT walks a section's pages;\nits button jumps group to group."),
-         ("FOUR SKINS", "AIR, COLORS, BOTTOM and HUD: each\nknob its colour, tabs, a breadcrumb."),
+         ("THREE SKINS", "AIR, COLORS and HUD: each\nknob its colour, tabs, a breadcrumb."),
          ("EXPLORE", "HOME + SELECT writes a whole song;\nEXPLORE breaks every rule, 43 genres."),
          ("VOICE SINGS", "Words in ES, EN and JA: each note\nthe next syllable of your lyric."),
          ("ANIMAL", "Birds, crickets, frogs, wolves:\ncalls from physical models."),

@@ -21,7 +21,7 @@ r = subprocess.run(["valgrind", "--tool=callgrind", "--collect-atstart=yes", "--
 if r.returncode:
     print("cpu_vg: the run failed\n" + r.stderr[-2000:])
     sys.exit(1)
-now = {}
+now, fx_n = {}, {}
 for f in glob.glob(prefix + "*"):
     txt = open(f, errors="replace").read()
     m = re.search(r"^desc: Trigger: Client Request: (\S+)", txt, re.M)
@@ -29,6 +29,10 @@ for f in glob.glob(prefix + "*"):
     if m and t and m.group(1).startswith("peak/"):    # (0.9.0) one block each: the worst of its rounds (.rNN)
         k = re.sub(r"\.r\d+$", "", m.group(1))
         now[k] = max(now.get(k, 0), int(t.group(1)))
+    elif m and t and m.group(1).startswith("fx/"):    # (0.9.17) rounds of NB blocks (.rNN): their mean
+        k = re.sub(r"\.r\d+$", "", m.group(1))
+        fx_n[k] = fx_n.get(k, 0) + 1
+        now[k] = now.get(k, 0) + (int(t.group(1)) / SAMPLES - now.get(k, 0)) / fx_n[k]
     elif m and t:
         now[m.group(1)] = int(t.group(1)) / SAMPLES
 if not now:
