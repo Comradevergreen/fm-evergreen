@@ -12,7 +12,7 @@
  * The buffer effects (REPEAT, the GLITCHER: GLITCH, TAPE STOP, SHUFFLE, FREEZE) start on the next 1/16 (at once while
  * stopped) and end when let go, with a 2.9 ms ramp; of them the last pressed plays, and letting it go returns to the one
  * held before. (0.9.17) While a glitcher's key is down (held, or pressed with FX LATCH) the four knobs are its own
- * (perf_gp, ui_layer.c GX_D; never saved): let it go and they are the macros again.
+ * (perf_gp, ui_layer.c GX_K; never saved): let it go and they are the macros again.
  *   GLITCH (DENS PITCH SIZE VARI): the master cut on the transport's 1/16s, each one (a hash of its place in a 2-bar
  *     cycle and VARI: the same every time, so it grooves; the beats glitched by DENS squared) played live, or: the last
  *     L repeated (L from SIZE: LONG 1/16 .. TINY 1/256), each repeat PITCH semitones above the one before (a riser, or
@@ -92,7 +92,7 @@ static volatile uint8_t perf_kill;    /* main: every effect off (the menu, a dia
 static volatile uint8_t perf_m[4];    /* main (0.9.14): the PERFORMANCE MACROS, 0 OFF: STEPS 0..12 (three detents a
                                        * stage), TRANSPOSE 0..21 (three an interval), MUTATE, FILTER 0..100 (PM_MAX) */
 static const uint8_t PM_MAX[4] = {12, 21, 100, 100};
-/* (0.9.17) main: the glitcher's knobs (ui_layer.c GX_D: their names, ranges and these defaults), read by the ISR.
+/* (0.9.17) main: the glitcher's knobs (ui_layer.c GX_K: their names, ranges and these defaults), read by the ISR.
  * GLITCH DENS % PITCH st SIZE (LONG MID SHORT TINY) VARI; TAPE (SCRATCH) TIME (1/64 .. 1/4) CURVE; SHUFFLE AMOUNT %
  * SIZE (1/4 1/8 1/16) SPEED % VARI; FREEZE DENS % PITCH st SPRAY % SIZE (1/128 .. 1/8) */
 static volatile int8_t perf_gp[4][4] = {{50, 0, 0, 1}, {0, 4, 0, 0}, {60, 2, 20, 1}, {50, 0, 30, 2}};

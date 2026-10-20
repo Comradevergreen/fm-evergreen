@@ -657,29 +657,31 @@ static void pm_knob(uint32_t k, int32_t s)
     if (!k)
         live_publish();
 }
-/* (0.9.17) the glitcher's knobs while its key is down (perform.c perf_gp: these ranges, its defaults; never saved) */
+/* (0.9.17) the glitcher's knobs while its key is down (perform.c perf_gp: these ranges; its defaults; never saved) */
 static const char *const GX_GSZ[4] = {"LONG", "MID", "SHORT", "TINY"};
 static const char *const GX_TIME[5] = {"1/64", "1/32", "1/16", "1/8", "1/4"};
 static const char *const GX_SSZ[3] = {"1/4", "1/8", "1/16"};
 static const char *const GX_FSZ[5] = {"1/128", "1/64", "1/32", "1/16", "1/8"};
-static const param_desc_t GX_D[4][4] = {
-    {{"DENS", F_PCT, 0, 100, 50, 0, 0}, {"PITCH", F_SEMI, -12, 12, 0, 0, 0}, {"SIZE", F_ENUM, 0, 3, 0, GX_GSZ, 0},
-     {"VARI", F_INT, 1, 16, 1, 0, 0}},                                                    /* GLITCH */
-    {{"SCRATCH", F_INT, 0, 0, 0, 0, 0}, {"TIME", F_ENUM, 0, 4, 4, GX_TIME, 0}, {"CURVE", F_INT, -100, 100, 0, 0, 0},
-     {"", F_INT, 0, 0, 0, 0, 0}},                                                         /* TAPE STOP */
-    {{"AMOUNT", F_PCT, 0, 100, 60, 0, 0}, {"SIZE", F_ENUM, 0, 2, 2, GX_SSZ, 0}, {"SPEED", F_PCT, 0, 100, 20, 0, 0},
-     {"VARI", F_INT, 1, 16, 1, 0, 0}},                                                    /* SHUFFLE */
-    {{"DENS", F_PCT, 0, 100, 50, 0, 0}, {"PITCH", F_SEMI, -12, 12, 0, 0, 0}, {"SPRAY", F_PCT, 0, 100, 30, 0, 0},
-     {"SIZE", F_ENUM, 0, 4, 2, GX_FSZ, 0}}};                                              /* FREEZE */
+static const struct { const char *lab; int8_t min, max; uint8_t fmt, nm; } GX_K[4][4] = {   /* (nm: GX_NAMES' list) */
+    {{"DENS", 0, 100, F_PCT, 0}, {"PITCH", -12, 12, F_SEMI, 0}, {"SIZE", 0, 3, F_ENUM, 1}, {"VARI", 1, 16, F_INT, 0}},   /* GLITCH */
+    {{"SCRATCH", 0, 0, F_INT, 0}, {"TIME", 0, 4, F_ENUM, 2}, {"CURVE", -100, 100, F_INT, 0}, {"", 0, 0, F_INT, 0}},   /* TAPE */
+    {{"AMOUNT", 0, 100, F_PCT, 0}, {"SIZE", 0, 2, F_ENUM, 3}, {"SPEED", 0, 100, F_PCT, 0}, {"VARI", 1, 16, F_INT, 0}},   /* SHUFFLE */
+    {{"DENS", 0, 100, F_PCT, 0}, {"PITCH", -12, 12, F_SEMI, 0}, {"SPRAY", 0, 100, F_PCT, 0}, {"SIZE", 0, 4, F_ENUM, 4}}};   /* FREEZE */
+static const char *const *const GX_NAMES[5] = {0, GX_GSZ, GX_TIME, GX_SSZ, GX_FSZ};
+static param_desc_t gx_desc(uint32_t x, uint32_t k)    /* (as a page's parameter: param_format, RATIO) */
+{
+    param_desc_t d = {GX_K[x][k].lab, GX_K[x][k].fmt, GX_K[x][k].min, GX_K[x][k].max, 0, GX_NAMES[GX_K[x][k].nm], 0};
+    return d;
+}
 static const uint8_t GX_IC[4][4] = {{ICON_PROB, ICON_PITCH, ICON_LENGTH, ICON_SHAPE}, {ICON_SWEEP, ICON_TIME, ICON_SHAPE, ICON_NONE},
                                     {ICON_PROB, ICON_SLICE, ICON_RATE, ICON_SHAPE}, {ICON_GRAIN, ICON_PITCH, ICON_NOISE, ICON_SIZE}};
 static void gx_knob(uint32_t x, uint32_t k, int32_t s)
 {
-    const param_desc_t *d = &GX_D[x][k];
+    int32_t lo = GX_K[x][k].min, hi = GX_K[x][k].max;
     if (x == GX_TAPE && !k)
         perf_scr += (uint32_t)s;                        /* SCRATCH: the hand on the record (perform.c perf_scratch) */
-    else if (d->max)
-        perf_gp[x][k] = (int8_t)clamp(perf_gp[x][k] + accel(EN_K1 + k, s, d->max - d->min), d->min, d->max);
+    else if (hi)
+        perf_gp[x][k] = (int8_t)clamp(perf_gp[x][k] + accel(EN_K1 + k, s, hi - lo), lo, hi);
 }
 /* KNOB 1..4 in the open layer: its own (FX macros, GLO levels, EDIT's sound), else the four of its page */
 static void layer_knob(uint32_t k, int32_t s)
@@ -1054,15 +1056,15 @@ static void layer_cards(uint32_t l)
     if (l == LAYER_FX && perf_gfocus() != PF_N) {       /* (0.9.17) a glitcher's key down: its four */
         uint32_t x = perf_gx(perf_gfocus());
         for (c = 0; c < 4u; c++) {
-            const param_desc_t *d = &GX_D[x][c];
+            param_desc_t d = gx_desc(x, c);
             int32_t v = perf_gp[x][c];
-            if (!d->max) {                              /* (TAPE: SCRATCH, once stopped; the empty card) */
-                draw_column(c, d->label, !d->label[0] ? "" : pf.mode == BM_TAPE && pf.state ? "TURN" : "-", "",
-                            d->label[0] && pf.mode == BM_TAPE && pf.state ? VAL(c) : T_DIM, -1, GX_IC[x][c]);
+            if (!d.max) {                               /* (TAPE: SCRATCH, once stopped; the empty card) */
+                draw_column(c, d.label, !d.label[0] ? "" : pf.mode == BM_TAPE && pf.state ? "TURN" : "-", "",
+                            d.label[0] && pf.mode == BM_TAPE && pf.state ? VAL(c) : T_DIM, -1, GX_IC[x][c]);
                 continue;
             }
-            param_format(d, v, val, &unit);
-            draw_column(c, d->label, val, unit, VAL(c), RATIO(d, v), GX_IC[x][c]);
+            param_format(&d, v, val, &unit);
+            draw_column(c, d.label, val, unit, VAL(c), RATIO(&d, v), GX_IC[x][c]);
         }
     } else if (l == LAYER_FX) {                         /* (0.9.14) STEPS TRANSPOSE MUTATE FILTER: OFF dim at the left */
         static const char *const ST[5] = {"OFF", "1/2", "1/4", "1/8", "1 STEP"};
