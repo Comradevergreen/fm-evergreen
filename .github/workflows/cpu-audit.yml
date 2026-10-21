@@ -60,6 +60,10 @@ jobs:
           build/host/regress tests/golden.txt tests/cpu_baseline.txt
           cc -O2 -w -pthread -Ibuild/gen -Ifirmware/src tests/mc_thread_test.c -lm -o build/host/mc_thread_test
           python3 tests/mc_thread_test.py build/host/mc_thread_test
+          for core in 0 1; do
+            cc -O2 -w -DT_C1=$core -Ibuild/gen -Ifirmware/src tests/uac_sched_test.c -lm -o build/host/uac_sched_test
+            build/host/uac_sched_test
+          done
           cc -O2 -w -Ibuild/gen -Ifirmware/src tests/cpu_probe.c -lm -o build/host/cpu_probe
           for scene in '0 0' '3 0' '5 0' '5 7' '7 0' '11 0' '12 0' '12 7' '14 0'; do
             build/host/cpu_probe $scene 4
