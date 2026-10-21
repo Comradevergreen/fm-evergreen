@@ -2,9 +2,8 @@
 # The site on GitHub Pages: the front page (web/landing) at the root and the browser emulator (web/emu) under emu/: the firmware's sources compiled to WebAssembly, on every push to
 # main. Needs Settings > Pages > Source: "GitHub Actions" once. The emulator needs only the generated headers; the
 # installer (webapp/installer) and the editor (webapp/editor) need the package, built with JieLi's toolchain (downloaded).
-# (JIANT 0.6.61) Two channels: the emulator and preview/webapp/installer are main as it is now (to check before anyone
-# installs it); webapp/installer, the one people use, is the version approved in web/STABLE (a commit of main, set by
-# a PR once the preview was checked in the emulator). No web/STABLE yet: main, as before.
+# Two installers: preview/webapp/installer follows web/PREVIEW when set (otherwise main); webapp/installer follows
+# the approved web/STABLE commit. The browser emulator continues to follow main.
 name: emulator
 on:
   push:
@@ -27,7 +26,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-      - run: pip install Pillow numpy fonttools
+      - run: pip install Pillow==12.3.0 numpy==2.3.5 fonttools==4.61.1
       - name: generated headers (fonts, icons, palettes, shapes, tables, samples)
         run: python3 -c "import sys; sys.path.insert(0, 'tools'); import build; build.generate()"
       - uses: mymindstorm/setup-emsdk@v14
@@ -36,7 +35,7 @@ jobs:
       - name: the emulator
         run: sh web/emu/build.sh
       # (JIANT) the installer and the web editor next to the emulator: the package needs JieLi's toolchain (downloaded)
-      # and three files of their AC79 SDK (a partial clone: only those blobs). If any of it fails the emulator still goes up
+      # and three files of their AC79 SDK (a partial clone: only those blobs). A firmware build failure stops deployment.
       - name: JieLi toolchain and SDK files (cached)
         uses: actions/cache@v4
         with:
@@ -46,7 +45,6 @@ jobs:
           key: jieli-ac79-v1.2.1
       - name: JieLi toolchain and SDK files
         id: tc
-        continue-on-error: true
         run: |
           # gitee resets connections from the runners now and then: retries with backoff; the cache above keeps them
           retry() { for d in 0 5 15 30 60; do sleep $d; "$@" && return 0; done; return 1; }
@@ -63,18 +61,30 @@ jobs:
           test -s "$T/uboot.boot" && test -s "$T/cfg_tool.bin" && test -s "$T/cfg/eq_cfg_hw.bin"
       - name: the package, the installer and the editor
         if: steps.tc.outcome == 'success'
-        continue-on-error: true
         env:
           AC79_SDK: /home/runner/fw-AC79_AIoT_SDK
           JIELI_TOOLCHAIN: /home/runner/.jieli/toolchain
         run: |
           ver() { sed -n 's/^#define FELUCCA_VERSION "\([^"]*\)".*/\1/p' "$1/firmware/src/felucca.c" | head -1; }
-          # the preview: main as it is now, next to the emulator that runs it (preview/webapp/installer)
-          python3 tools/build.py
+          # The preview follows an explicitly selected source commit, or main when no pin exists.
+          PREVIEW_ROOT=.
+          PREVIEW_SHA="$GITHUB_SHA"
+          P=$(tr -d ' \n' < web/PREVIEW 2>/dev/null || true)
+          if [ -n "$P" ]; then
+            [[ "$P" =~ ^[0-9a-f]{40}$ ]]
+            git cat-file -e "$P^{commit}"
+            git worktree add --detach /tmp/preview "$P"
+            PREVIEW_ROOT=/tmp/preview
+            PREVIEW_SHA="$P"
+          fi
+          (cd "$PREVIEW_ROOT" && python3 tools/build.py)
+          PV=$(ver "$PREVIEW_ROOT")
           V=$(ver .)
-          python3 web/make_site.py build/felucca.fwsc "${V:-dev}-${GITHUB_SHA::7}-preview" build/site_preview
+          python3 web/make_site.py "$PREVIEW_ROOT/build/felucca.fwsc" "${PV:-dev}-${PREVIEW_SHA::7}-preview" build/site_preview
           mkdir -p build/emu/preview
           cp -r build/site_preview/webapp build/site_preview/firmware build/emu/preview/
+          printf '%s\n' "$PREVIEW_SHA" > build/emu/preview/firmware/SOURCE_COMMIT
+          (cd build/emu/preview/firmware && sha256sum felucca-*.fwsc > SHA256SUMS)
           # the public installer: the approved commit (web/STABLE), built from its own sources
           S=$(tr -d ' \n' < web/STABLE 2>/dev/null || true)
           PKG=build/felucca.fwsc; SV=${V:-dev}; SH=${GITHUB_SHA::7}
