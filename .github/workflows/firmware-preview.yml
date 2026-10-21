@@ -20,7 +20,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-      - run: pip install Pillow numpy fonttools
+      - run: pip install Pillow==12.3.0 numpy==2.3.5 fonttools==4.61.1
       - uses: actions/cache@v4
         with:
           path: |
@@ -41,6 +41,19 @@ jobs:
           fi
       - name: Build the FM1 package and enforce target layout checks
         run: python3 tools/build.py
+      - name: Target budgets and committed navigation maps
+        run: |
+          python3 tests/target_budget.py build/felucca.dis tests/target_budget.txt
+          python3 tools/gen_nav_map.py --check
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+      - name: Resolve and test Stems JVM dependencies before the offline suite
+        run: gradle -p android/stems -PcoreOnly :core:test --no-daemon
       - name: Host suites and target instruction budgets
         run: sh tests/run_tests.sh
       - name: Package provenance

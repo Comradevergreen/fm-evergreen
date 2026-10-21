@@ -950,7 +950,8 @@ static void sy_reset(sing_t *s)
     s->nsy = 0;
 }
 /* POS: syllable k of the lyric (from its start; GEN: its phrases again) */
-static void sy_seek(const track_t *t, sing_t *s, uint32_t lang, uint32_t lyr, uint32_t k)
+/* POS changes are events: keep this walk out of the per-block articulation loop. */
+static __attribute__((noinline)) void sy_seek(const track_t *t, sing_t *s, uint32_t lang, uint32_t lyr, uint32_t k)
 {
     uint32_t w, first_to = 0, first_tl = 0, first_n = 0, first_w = 0;
     int text = !lyr && lyr_txt[(uint32_t)(t - trk) % NTRK][0];
