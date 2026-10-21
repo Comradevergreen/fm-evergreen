@@ -16,6 +16,13 @@ static int16_t cho_buf[CHO_LEN] __attribute__((section(".pool")));
 /* A full ring of zero input proves every tap is exactly zero. Keep its
  * write/LFO/glide clocks running, but avoid the three interpolated reads. */
 static uint32_t cho_zeros = CHO_LEN;
+/* Control work once per block, outside the RAM-resident sample kernel. */
+static __attribute__((noinline)) uint32_t cho_admit(int32_t input, uint32_t n)
+{
+    uint32_t run = input || cho_zeros < CHO_LEN;
+    cho_zeros = input ? 0u : cho_zeros + n < CHO_LEN ? cho_zeros + n : CHO_LEN;
+    return run;
+}
 static const uint16_t REV_COMB[4] = {1116, 1188, 1277, 1356};
 static const uint16_t REV_AP[2] = {556, 441};
 static int16_t rev_comb[1116 + 1188 + 1277 + 1356] __attribute__((section(".pool")));
@@ -1499,8 +1506,7 @@ static inline __attribute__((always_inline)) void fx_buses(const int32_t *cho_in
             any |= cho_in[i] | dly_in[i] | rev_in[i];
             ci |= cho_in[i];
         }
-        cho_run = ci || cho_zeros < CHO_LEN;
-        cho_zeros = ci ? 0u : cho_zeros + n < CHO_LEN ? cho_zeros + n : CHO_LEN;
+        cho_run = cho_admit(ci, n);
         fxg_quiet = any ? 0u : fxg_quiet < 0xFFFFFFu ? fxg_quiet + 1u : fxg_quiet;
     }                                                   /* (0.6.19: it opens over ~6 ms, fx_gate: at once, the
                                                          * residue in the lines stepped in: a tick on the next note) */
