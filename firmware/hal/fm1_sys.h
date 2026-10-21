@@ -110,12 +110,7 @@ static void fm1_reset_reason(void)
 /* (JIANT 0.6.71) hold the second core (C1_CON 0x1EEE004: bit 1 holds it, bit 3 lets it run; the SDK's, as Melodee and
  * fm1-x0x have it): before every reset and update, and first thing at boot, so it never runs over RAM being cleared
  * or handed back to the boot loader. Harmless when it is not running */
-static inline void fm1_core1_stop(void)
-{
-    *(volatile uint32_t *)0x1EEE004u |= 2u;
-    *(volatile uint32_t *)0x1EEE004u &= ~8u;
-    __asm__ volatile("csync" ::: "memory");
-}
+#include "fm1_core1_stop.h"
 
 static void fm1_reboot(void)
 {
