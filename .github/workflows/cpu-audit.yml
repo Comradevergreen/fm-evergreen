@@ -61,7 +61,7 @@ jobs:
           cc -O2 -w -pthread -Ibuild/gen -Ifirmware/src tests/mc_thread_test.c -lm -o build/host/mc_thread_test
           python3 tests/mc_thread_test.py build/host/mc_thread_test
           for core in 0 1; do
-            cc -O2 -w -DT_C1=$core -Ibuild/gen -Ifirmware/src tests/uac_sched_test.c -lm -o build/host/uac_sched_test
+            cc -O2 -w -DT_C1=$core -DHALF_FRAMES=128 -Ibuild/gen -Ifirmware/src tests/uac_sched_test.c -lm -o build/host/uac_sched_test
             build/host/uac_sched_test
           done
           cc -O2 -w -Ibuild/gen -Ifirmware/src tests/cpu_probe.c -lm -o build/host/cpu_probe
