@@ -102,7 +102,8 @@ static __attribute__((noinline)) uint32_t shed_check(uint32_t all)
     return (all - t5_nested_ticks) / FM1_TICKS_PER_US;
 }
 
-static void shed_voice(void)
+/* Rare overload control stays out of the audio ISR's hot instruction loop. */
+static __attribute__((noinline)) void shed_voice(void)
 {
     uint32_t p, i;
     voice_t *best = 0;
