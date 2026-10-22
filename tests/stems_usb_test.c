@@ -31,8 +31,10 @@
 #define FELUCCA_UAC 1
 static void fm1_delay_ms(uint32_t ms) { (void)ms; }
 #pragma GCC diagnostic ignored "-Wint-to-pointer-cast"
-static uint8_t t_stems;                                  /* fx.c's fx_stems: 1 the 8 channels, 2 the 10 */
+static volatile uint8_t t_stems;                         /* match fx.c: the render must read the current USB mode */
+#ifndef UAC_STEMS
 #define UAC_STEMS() t_stems
+#endif
 #define UAC_STEMS_SRC 1
 static int32_t stem_buf[7][32], stem_fx[2][32];
 static int32_t uin_l[64], uin_r[64];

@@ -1453,21 +1453,28 @@ static __attribute__((noinline)) void uac_tap(const int32_t *out, uint32_t n)   
  * reference the host finds its latency against) */
 static __attribute__((noinline)) void uac_tap8(uint32_t n)
 {
-    uint32_t w = ua_w, i, k;
+    /* USB mode changes stop/re-enumerate the stream outside the audio IRQ.
+     * Snapshot it once: UA_FW reads volatile fx_stems, not a loop constant.
+     * Walk slots rather than recomputing the 409-frame modulo for each sample. */
+    uint32_t w = ua_w, i, k, fw = UA_FW;
+    uint32_t nf = fw == 5u ? UA_NF10 : UA_N;
+    uint32_t slot = fw == 5u ? w % UA_NF10 : w & (UA_N - 1u);
     if (!uac.feed)
         return;
-    if (UA_NF - (w - ua_r) < n) {
+    if (nf - (w - ua_r) < n) {
         uac.overruns++;
         return;
     }
     for (i = 0; i < n; i++) {
-        uint32_t *f = &ua_ring[ua_slot(w + i) * UA_FW];
+        if ((uint32_t)(w + i) == 0u) slot = 0;          /* preserve the free-running index's uint32 wrap */
+        uint32_t *f = &ua_ring[slot * fw];
         for (k = 0; k < 3u; k++)
             f[k] = (uint32_t)(uint16_t)uac_s16(stem_buf[2u * k][i]) | (uint32_t)(uint16_t)uac_s16(stem_buf[2u * k + 1u][i]) << 16;
         f[3] = (uint32_t)(uint16_t)uac_s16(stem_fx[0][i]) | (uint32_t)(uint16_t)uac_s16(stem_fx[1][i]) << 16;
-        if (UA_FW == 5u)
+        if (fw == 5u)
             f[4] = (uint32_t)(uint16_t)uac_s16(stem_buf[6][i]) |
                    (uint32_t)(uint16_t)(uin_on ? (int16_t)((uin_l[i] + uin_r[i]) >> 1) : 0) << 16;
+        if (++slot == nf) slot = 0;
     }
     RING_PUBLISH();
     ua_w = w + n;
@@ -1481,8 +1488,11 @@ static __attribute__((noinline)) void uac_tap8(uint32_t n)
 static __attribute__((noinline)) void uac_squeeze(uint32_t *d, uint32_t r, uint32_t n)
 {
     uint32_t i, j, fw = UA_FW, st = (16384u << 8) / (n + 1u), q = st;
+    uint32_t nf = fw == 5u ? UA_NF10 : UA_N;
+    uint32_t slot = fw == 5u ? r % UA_NF10 : r & (UA_N - 1u);
     for (i = 0; i < n; i++, q += st) {
-        const uint32_t *a = &ua_ring[ua_slot(r + i) * fw], *b = &ua_ring[ua_slot(r + i + 1u) * fw];
+        uint32_t next = (uint32_t)(r + i + 1u) == 0u || slot + 1u == nf ? 0u : slot + 1u;
+        const uint32_t *a = &ua_ring[slot * fw], *b = &ua_ring[next * fw];
         int32_t w = (int32_t)(q >> 8);                  /* (i + 1) / (n + 1), Q14 */
         for (j = 0; j < fw; j++) {
             int32_t al = (int16_t)a[j], ah = (int16_t)(a[j] >> 16);
@@ -1490,6 +1500,7 @@ static __attribute__((noinline)) void uac_squeeze(uint32_t *d, uint32_t r, uint3
             int32_t h = ah + ((((int32_t)(int16_t)(b[j] >> 16) - ah) * w + 8192) >> 14);
             d[i * fw + j] = (uint32_t)(uint16_t)l | (uint32_t)(uint16_t)h << 16;
         }
+        slot = next;
     }
 }
 
@@ -1497,7 +1508,8 @@ static __attribute__((noinline)) void uac_squeeze(uint32_t *d, uint32_t r, uint3
  * primed, silence. An empty ring repeats the last frame. Returns the frame count. */
 static uint32_t uac_packet(uint32_t *d)
 {
-    uint32_t n = 44u, r, fill, k, i, pad = UA_FW > 1u ? UA_PAD_STEMS : 0u, lo = UA_LO + pad, hi = UA_HI + pad;
+    uint32_t fw = UA_FW, n = 44u, r, fill, k, i;
+    uint32_t pad = fw > 1u ? UA_PAD_STEMS : 0u, lo = UA_LO + pad, hi = UA_HI + pad;
 #if FELUCCA_UAC_48K
     if (uac.r48) {                                      /* 48 frames a ms, no pattern */
         n = 48u;
@@ -1513,7 +1525,7 @@ static uint32_t uac_packet(uint32_t *d)
         }
     }
     if (!uac.go || uac.ring48 != uac.r48) {             /* not primed (at this rate) yet */
-        for (i = 0; i < n * UA_FW; i++)
+        for (i = 0; i < n * fw; i++)
             d[i] = 0;
         return n;
     }
@@ -1535,16 +1547,20 @@ static uint32_t uac_packet(uint32_t *d)
         ua_r = r + n + 1u;
         uac.pkts++;
         uac.frames += n;
-        for (i = 0; i < UA_FW; i++)
-            uac.last[i] = d[(n - 1u) * UA_FW + i];
+        for (i = 0; i < fw; i++)
+            uac.last[i] = d[(n - 1u) * fw + i];
         return n;
     }
     k = fill < n ? fill : n;
     {
-        uint32_t fw = UA_FW, j;
-        for (i = 0; i < k; i++)
+        uint32_t j, nf = fw == 5u ? UA_NF10 : UA_N;
+        uint32_t slot = fw == 5u ? r % UA_NF10 : r & (UA_N - 1u);
+        for (i = 0; i < k; i++) {
+            if ((uint32_t)(r + i) == 0u) slot = 0;
             for (j = 0; j < fw; j++)
-                d[i * fw + j] = ua_ring[ua_slot(r + i) * fw + j];
+                d[i * fw + j] = ua_ring[slot * fw + j];
+            if (++slot == nf) slot = 0;
+        }
         if (k < n) {
             uac.underruns++;
             uac.owe += n - k;

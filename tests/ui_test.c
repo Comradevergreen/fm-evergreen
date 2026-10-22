@@ -107,6 +107,8 @@ static void lcd_blit(uint32_t x, uint32_t y, uint32_t w, uint32_t h, const uint1
     for (j = 0; j < h && y + j < 240u; j++)
         for (i = 0; i < w && x + i < 240u; i++) host_screen[(y + j) * 240u + x + i] = p[j * w + i];
 }
+/* audio.c counters read by CPU5's ABOUT page; no audio IRQ in this host harness. */
+static uint32_t shed_count, audio_halves;
 static struct { uint32_t stage; } felucca_dbg;
 #define FELUCCA_FLASH 0
 #ifndef FELUCCA_VERSION
