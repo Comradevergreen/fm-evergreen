@@ -204,6 +204,8 @@ static void con_status(void)
     con_kv("audio_max_us", (int32_t)felucca_dbg.max_us);
     con_kv("audio_late", (int32_t)felucca_dbg.late);
     con_kv("voices_shed", (int32_t)shed_count);
+    con_kv("guard_trips", (int32_t)guard_trips);        /* (cpu5) the averaged guard tripped (voice.c load_half) */
+    con_kv("load_avg_pct", (int32_t)(load_avg_q8 >> 8));   /* .. the render's share of a half, averaged (~93 ms) */
     con_kv("audio_lost", (int32_t)audio_lost);         /* (0.8.9) halves never rendered (a click each): a render > ~2 halves */
     con_kv("voices_given_up", (int32_t)voice_kills);    /* (0.8.9) events, one a voice: the three below */
     con_kv("voices_trimmed", (int32_t)voice_trims);     /* the load budget: a tail already under -50 dB, inaudible */

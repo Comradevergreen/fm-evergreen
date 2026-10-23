@@ -298,11 +298,34 @@ static uint32_t trk_vmode(const track_t *t)
 }
 
 /* ------------------------------------------------- the shared voice budget --- */
-/* (JIANT 0.6.16) the load budget: audio.c sets it when a half took more than 65 % of its time (the render), clears
- * it after a while under 60 %. While it is set the sound may not grow: a new note takes a voice (the oldest released
- * first) instead of adding one (voice_room), CLOUD spawns half its grains (fx.c). Ahead of the overload guard (80 %:
- * a voice faded) and of a late half (a click): the load stops climbing before it gets there */
+/* (JIANT 0.6.16) the load budget: while it is set the sound may not grow: a new note takes a voice instead of adding
+ * one (voice_alloc, voice_room: a dying tail, or at the guard's cap the oldest released), CLOUD spawns half its grains
+ * (fx.c). Ahead of a late half (a click, audio.c shed_voice): the load stops climbing before it gets there.
+ * (0.9.9 cpu5, after LOOM-8's engine.c) It was set by one half over 65 % and cleared after 16 under 60 %: a 2.9 ms
+ * half's share is noisy (a chord's note-ons, a cache miss, a UI frame nested) and one spike closed the budget for
+ * 50 ms. Now the guard (load_half) trips on the average of the render's share over ~93 ms past GUARD_ON_AVG, or on
+ * GUARD_RUN halves in a row past GUARD_ON_RUN (a load that keeps the audio late); a single spike never trips it.
+ * Tripped, it caps the voices at what sounds (GUARD_MIN at least: a lead a track) and lets go a step at a time: a
+ * voice more for each GUARD_STEP of calm under GUARD_OFF with no such run, until the cap is the budget's again. LOAD
+ * ECO: the same sooner (the user's "room kept for the peaks") */
 static volatile uint8_t load_tight;
+#define GUARD_AVG_LOG2 5u                               /* the average: ~32 halves, 93 ms */
+#define GUARD_ON_AVG 85u                                /* FULL / LITE: the average past this .. */
+#define GUARD_ON_RUN 92u                                /* .. or GUARD_RUN halves in a row past this */
+#define GUARD_OFF 70u                                   /* calm: the average under this, no half past GUARD_ON_RUN */
+#define GUARD_ON_AVG_ECO 65u
+#define GUARD_ON_RUN_ECO 75u
+#define GUARD_OFF_ECO 50u
+#define GUARD_RUN 3u
+#define GUARD_STEP ((uint32_t)FS / 2u / HALF_FRAMES)    /* halves of calm a voice given back: 0.5 s */
+#define GUARD_MIN 4u                                    /* the cap never under this: a lead for each of 4 tracks */
+static uint32_t load_avg_q8, load_all_q8;               /* the render's share of a half (%, Q8), averaged; with TIMER5
+                                                         * nested in it (audio.c: the extra voices' admission) */
+static uint32_t load_pred_q8;                           /* the admission's prediction: the average, plus what the
+                                                         * voices admitted since add (load_admit) */
+static uint8_t guard_run, guard_cap, load_cores2;       /* halves in a row past GUARD_ON_RUN; the cap while tripped
+                                                         * (0: none: the budget's); both cores render */
+static uint32_t guard_calm, guard_trips;                /* halves of calm toward the next voice back; trips (console) */
 /* Extra shared voices are admitted only after the audio ISR establishes
  * sustained deadline headroom on two healthy cores. No extra per-part slots. */
 static uint8_t voice_headroom;
@@ -312,10 +335,15 @@ static uint8_t voice_headroom;
 static struct { volatile uint32_t peak, late, shed; } load_diag;
 /* (JIANT 0.6.70) the budget shared by all parts: NVOICE, LOAD ECO ECO_VOICES (4 parts with reverb and delay still
  * crackled on ECO: the peaks are the voices, a tail ringing on each part as the next hits come) */
-static uint32_t voice_cap(void)
+static uint32_t voice_cap0(void)                        /* the budget as set (LOAD, the extra voices) */
 {
     return sys_load == LOAD_ECO ? ECO_VOICES :
            sys_load == LOAD_FULL && voice_headroom ? FULL_VOICES : NVOICE;
+}
+static uint32_t voice_cap(void)                         /* .. under the guard's cap while it is tripped */
+{
+    uint32_t c = voice_cap0();
+    return load_tight && guard_cap && guard_cap < c ? guard_cap : c;
 }
 static uint32_t voices_busy(void)                       /* sounding voices of all parts (not the fading ones) */
 {
@@ -324,6 +352,41 @@ static uint32_t voices_busy(void)                       /* sounding voices of al
         for (i = 0; i < NVOICE; i++)
             n += trk[p].v[i].active && trk[p].v[i].stage != 4u;
     return n;
+}
+
+/* the end of a half (audio.c shed_check): pct the render's share of it (%), pct_all with TIMER5 nested in it, cores2
+ * both cores rendering. The guard above; the admission's prediction starts again from the average */
+static __attribute__((noinline)) void load_half(uint32_t pct, uint32_t pct_all, uint32_t cores2)
+{
+    uint32_t eco = sys_load == LOAD_ECO;
+    uint32_t on_avg = eco ? GUARD_ON_AVG_ECO : GUARD_ON_AVG, on_run = eco ? GUARD_ON_RUN_ECO : GUARD_ON_RUN;
+    uint32_t off = eco ? GUARD_OFF_ECO : GUARD_OFF;
+    load_avg_q8 = (load_avg_q8 * ((1u << GUARD_AVG_LOG2) - 1u) + (pct << 8) + (1u << (GUARD_AVG_LOG2 - 1u))) >> GUARD_AVG_LOG2;
+    load_all_q8 = (load_all_q8 * ((1u << GUARD_AVG_LOG2) - 1u) + (pct_all << 8) + (1u << (GUARD_AVG_LOG2 - 1u))) >> GUARD_AVG_LOG2;
+    load_cores2 = (uint8_t)cores2;
+    guard_run = pct > on_run ? (uint8_t)(guard_run < 255u ? guard_run + 1u : 255u) : 0u;
+    if (guard_run >= GUARD_RUN || load_avg_q8 > (on_avg << 8)) {
+        uint32_t busy = voices_busy(), cap = voice_cap0();
+        if (busy < GUARD_MIN) busy = GUARD_MIN;
+        if (busy > cap) busy = cap;
+        if (!load_tight || !guard_cap || busy < guard_cap) {   /* a trip, or one on the way back: down to what sounds */
+            guard_cap = (uint8_t)busy;
+            guard_trips++;
+        }
+        load_tight = 1;
+        guard_calm = 0;
+    } else if (load_tight) {
+        if (load_avg_q8 >= (off << 8) || guard_run) {
+            guard_calm = 0;
+        } else if (++guard_calm >= GUARD_STEP) {        /* calm: a voice back, and so on */
+            guard_calm = 0;
+            if (!guard_cap || ++guard_cap >= voice_cap0()) {
+                guard_cap = 0;
+                load_tight = 0;
+            }
+        }
+    }
+    load_pred_q8 = load_avg_q8;
 }
 
 /* Key-up ends a melodic hold, but a one-shot drum is still a live hit.
