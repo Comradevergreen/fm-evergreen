@@ -1279,6 +1279,9 @@ static inline int32_t uac_s16(int32_t v)
  * at it, phase ph's taps (rs_tab), Q30 into 64-bit sums, four taps a pass. Returns the frames written. (0.8.9) In RAM
  * and calling nothing: core 1 runs it outside the audio ISR (uac_rs_job), core 0 with one core; bit for bit the
  * resampler of 0.7 .. 0.8.8 */
+/* (0.9.9-stab) two taps' products, out of line in RAM beside it (core.h mul64: the pi32v2 fault beside 16-bit loads; the
+ * FIR's history is int16 and its taps Q30, so 32-bit products cannot do). The same sums bit for bit (uac_test) */
+static UAC_C1_TEXT int64_t uac_mac2(int32_t c0, int32_t x0, int32_t c1, int32_t x1) { return (int64_t)c0 * x0 + (int64_t)c1 * x1; }
 static UAC_C1_TEXT uint32_t uac_rs_run(const uint32_t *in, uint32_t n, uint32_t w)
 {
     uint32_t i, j, k = 0, h = rs.w, ph = rs.ph;
@@ -1297,14 +1300,10 @@ static UAC_C1_TEXT uint32_t uac_rs_run(const uint32_t *in, uint32_t n, uint32_t 
             int32_t yl, yr;
             for (j = UAC_FIR_N / 4u; j; j--, x += 4, c += 4) {
                 int32_t c0 = c[0], c1 = c[1], c2 = c[2], c3 = c[3];
-                al += (int64_t)c0 * x[0];
-                ar += (int64_t)c0 * x[2u * RS_H];
-                al += (int64_t)c1 * x[1];
-                ar += (int64_t)c1 * x[2u * RS_H + 1u];
-                al += (int64_t)c2 * x[2];
-                ar += (int64_t)c2 * x[2u * RS_H + 2u];
-                al += (int64_t)c3 * x[3];
-                ar += (int64_t)c3 * x[2u * RS_H + 3u];
+                al += uac_mac2(c0, x[0], c1, x[1]);
+                ar += uac_mac2(c0, x[2u * RS_H], c1, x[2u * RS_H + 1u]);
+                al += uac_mac2(c2, x[2], c3, x[3]);
+                ar += uac_mac2(c2, x[2u * RS_H + 2u], c3, x[2u * RS_H + 3u]);
             }
             yl = (int32_t)((al + (1 << (UAC_FIR_Q - 1))) >> UAC_FIR_Q);
             yr = (int32_t)((ar + (1 << (UAC_FIR_Q - 1))) >> UAC_FIR_Q);

@@ -335,20 +335,20 @@ static __attribute__((noinline)) void djf_block(uint32_t n)
             int32_t sr = clamp(xr, -DJF_MAX >> DJF_SL, DJF_MAX >> DJF_SL) << DJF_SL;
             a1 += d[0]; a2 += d[1]; a3 += d[2]; w += dw; kq += dk;
             v3 = sl - l2;
-            v1 = (int32_t)(((int64_t)a1 * l1 + (int64_t)a2 * v3) >> 28);
-            v2 = l2 + (int32_t)(((int64_t)a2 * l1 + (int64_t)a3 * v3) >> 28);
+            v1 = (int32_t)(mac2_64(a1, l1, a2, v3) >> 28);
+            v2 = l2 + (int32_t)(mac2_64(a2, l1, a3, v3) >> 28);
             l1 = clamp(2 * v1 - l1, -DJF_MAX, DJF_MAX);
             l2 = clamp(2 * v2 - l2, -DJF_MAX, DJF_MAX);
-            yl = hp ? sl - v2 - (int32_t)(((int64_t)kq * v1) >> 20) : v2;
+            yl = hp ? sl - v2 - (int32_t)(mul64(kq, v1) >> 20) : v2;
             v3 = sr - r2;
-            v1 = (int32_t)(((int64_t)a1 * r1 + (int64_t)a2 * v3) >> 28);
-            v2 = r2 + (int32_t)(((int64_t)a2 * r1 + (int64_t)a3 * v3) >> 28);
+            v1 = (int32_t)(mac2_64(a1, r1, a2, v3) >> 28);
+            v2 = r2 + (int32_t)(mac2_64(a2, r1, a3, v3) >> 28);
             r1 = clamp(2 * v1 - r1, -DJF_MAX, DJF_MAX);
             r2 = clamp(2 * v2 - r2, -DJF_MAX, DJF_MAX);
-            yr = hp ? sr - v2 - (int32_t)(((int64_t)kq * v1) >> 20) : v2;
+            yr = hp ? sr - v2 - (int32_t)(mul64(kq, v1) >> 20) : v2;
             /* the dry mix exact, plus the filter's difference by its share */
-            mix_l[i] = xl + (int32_t)(((int64_t)(clamp(yl, -DJF_MAX, DJF_MAX) - sl) * w) >> (12 + DJF_SL));
-            mix_r[i] = xr + (int32_t)(((int64_t)(clamp(yr, -DJF_MAX, DJF_MAX) - sr) * w) >> (12 + DJF_SL));
+            mix_l[i] = xl + (int32_t)(mul64(clamp(yl, -DJF_MAX, DJF_MAX) - sl, w) >> (12 + DJF_SL));
+            mix_r[i] = xr + (int32_t)(mul64(clamp(yr, -DJF_MAX, DJF_MAX) - sr, w) >> (12 + DJF_SL));
             wet[i] = 0;
         }
         djf.ic[0] = l1; djf.ic[1] = l2; djf.ic[2] = r1; djf.ic[3] = r2;
@@ -1072,9 +1072,9 @@ static __attribute__((noinline)) void rev_cloud(const int32_t *rev_in, int32_t *
                 uint32_t pk = cl_rand() % 100u < (uint32_t)song.g[G_RMOD] * 3u / 4u ? 1u + cl_rand() % 3u : 0u;
                 int32_t pan = (int32_t)(cl_rand() % 257u) - 128;   /* -128 .. 128, times WIDE */
                 pan = pan * wd >> 7;
-                uint32_t inc = (uint32_t)(((uint64_t)(PITCH[pk] >> 1) * ar) >> 16), back;
+                uint32_t inc = (uint32_t)(umul64(PITCH[pk] >> 1, ar) >> 16), back;
                 cl_g[k].len = (uint16_t)(2000u + cl_rand() % 4200u);
-                back = inc > 32768u ? (uint32_t)(((uint64_t)cl_g[k].len * (inc - 32768u)) >> 16) : 0u;   /* (faster than
+                back = inc > 32768u ? (uint32_t)(umul64(cl_g[k].len, inc - 32768u) >> 16) : 0u;   /* (faster than
                                                          * the line is written: started that much further back) */
                 cl_g[k].pos = ((fx.cl_w >> 1) - 200u - back - cl_rand() % (CL_LEN - 6000u - back)) << 16;
                 cl_g[k].inc = inc + (cl_rand() % 129u) - 64u;   /* (the line at half rate; each grain
@@ -1566,7 +1566,7 @@ static inline __attribute__((always_inline)) void fx_buses(const int32_t *cho_in
     /* (0.6.90) PING-PONG (not with the GRAIN): the line read at TIME (left) and twice TIME (right, the loop's tap), the
      * loop's gain squared, the right x FEEDBK: the repeats left, right, left .., each FEEDBK softer; TIME at most half
      * the line (0.8.4: of its longest, at a quarter rate, dly_rate); WIDE out of it */
-    int32_t png = song.g[G_DPING] == 1 && !gr, fb2 = (int32_t)(((int64_t)fb * fb) >> 15);
+    int32_t png = song.g[G_DPING] == 1 && !gr, fb2 = mul64_sh15(fb, fb);
     if (dig && fb > 32767) fb = 32767;                  /* (0.6.90) DIGITAL: 100 % at most, a repeat held for ever */
     if (dig && fb2 > 32767) fb2 = 32767;
     int32_t cho = sys_load != LOAD_ECO && cho_run;                /* (0.6.30) LOAD ECO: no chorus */

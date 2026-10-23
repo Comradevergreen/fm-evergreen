@@ -160,8 +160,8 @@ static __attribute__((noinline)) int32_t dx_hands_step(dx_voice_t *v, uint32_t n
     s = clamp(s, 0, 12 << 12);
     v->hsum = (uint16_t)(s > 65535 ? 65535 : s);
     v->hpos = (uint16_t)(p0 + n < 65535u ? p0 + n : 65535u);
-    *g1 = (int32_t)(((int64_t)*g1 * (4096 + s)) >> 12);
-    return (int32_t)(((int64_t)gn * (4096 + s0)) >> 12);
+    *g1 = (int32_t)(mul64(*g1, 4096 + s) >> 12);
+    return (int32_t)(mul64(gn, 4096 + s0) >> 12);
 }
 static __attribute__((noinline)) void dx_run(const dx_lane_t *L, dx_voice_t *v, int32_t morph, int32_t tune16,
                                              int32_t dofs, int32_t cofs, int32_t nofs, int32_t warp, int32_t fm, int32_t *y,

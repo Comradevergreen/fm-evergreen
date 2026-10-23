@@ -48,6 +48,20 @@ static MC_HOST_STORAGE uint8_t mc_host_cpu; /* the concurrent host test uses thr
 #define UP_SLOTS 32u             /* user presets (upreset.c) */
 #define NELEM(a) (sizeof(a) / sizeof((a)[0]))
 
+/* (JIANT 0.9.9-stab) the 32 x 32 -> 64-bit multiplies of the audio path, out of line. On the FM-1 (pi32v2 at 360 MHz) a
+ * multiply into a register pair (rN_rM = rA * rB) inlined beside loads, most of all 16-bit ones (a table, a delay line, a
+ * frame of USB audio), now and then leaves a register a bit off: an index 0x12 read as 0x00800012, sp a word off, so a
+ * return pops a neighbour (felucca-bsp docs/CPU.md, reproduced in minutes on its AAC filterbank: clean for the whole run
+ * with the multiplies in helpers of their own, the product used at once, so the multiply completes before any load that
+ * follows). The same products bit for bit (tests/golden.txt); a call each (tools/build.py mul64_near_loads counts what
+ * is left inline). Up to four arguments: all in registers, no load in the helper */
+#define MUL64_FN static __attribute__((noinline))
+MUL64_FN int64_t mul64(int32_t a, int32_t b) { return (int64_t)a * b; }
+MUL64_FN int64_t mul64_us(uint32_t a, int32_t b) { return (int64_t)a * b; }
+MUL64_FN uint64_t umul64(uint32_t a, uint32_t b) { return (uint64_t)a * b; }
+MUL64_FN int64_t mac2_64(int32_t a, int32_t b, int32_t c, int32_t d) { return (int64_t)a * b + (int64_t)c * d; }
+MUL64_FN int32_t mul64_sh15(int32_t a, int32_t b) { return (int32_t)(((int64_t)a * b) >> 15); }
+
 /* ------------------------------------------------------- parameters --- */
 enum {
     F_INT, F_PCT, F_BIPCT, F_TIME, F_LFOHZ, F_CUTOFF, F_DB, F_SEMI, F_ENUM, F_BPM, F_NOTE,

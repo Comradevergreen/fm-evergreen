@@ -34,8 +34,9 @@ FUNCS = ["analog_render", "digital_render", "digital_render_legacy", "digital_re
 # built only with FELUCCA_FM4=1 (DIGITAL, src/eng_digital.c; not in the default build, so not in BUDGET): absent,
 # they are skipped; present, checked against these (their budget lines until the engine was retired in 1.0)
 OPTIONAL = {"digital_render": 12, "digital_render_legacy": 333, "digital_render_custom": 558,
-            "uac_rs_run": 558}          # (absent from a FELUCCA_UAC_48K=0 or FELUCCA_UAC=0 build; 0.8.9: four taps a pass, so
-                                        # the static count is up, ~185 instructions an output frame run against ~230)
+            "uac_rs_run": 838}          # (absent from a FELUCCA_UAC_48K=0 or FELUCCA_UAC=0 build; 0.8.9: four taps a pass, so
+                                        # the static count is up, ~185 instructions an output frame run against ~230;
+                                        # 0.9.9-stab: its products two taps a call, uac_mac2: 558 -> 838)
 TOL = 0.10                      # exact (no noise): small edits pass, a grown render loop does not
 DIV_W = 8                       # a divide weighs 1 + 8 instructions
 NEST = 4                        # an instruction in a loop inside a loop weighs 4, two deep 16, ...

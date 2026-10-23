@@ -49,7 +49,7 @@ enum {
 static inline uint32_t fm6_mant(int32_t x)
 {
     uint32_t f = (uint32_t)x & 0xFFFFFFu, k = f >> 14, a = FM6_EXP2[k];
-    return (1u << 30) + a + (uint32_t)(((uint64_t)(FM6_EXP2[k + 1u] - a) * (f & 0x3FFFu)) >> 14);
+    return (1u << 30) + a + (uint32_t)(umul64(FM6_EXP2[k + 1u] - a, f & 0x3FFFu) >> 14);
 }
 static inline int32_t fm6_exp2(int32_t x)
 {
@@ -61,7 +61,7 @@ static inline int32_t fm6_exp2(int32_t x)
 static inline int32_t fm6_freq(int32_t x)
 {
     int32_t i = x >> 24;
-    uint32_t q = (uint32_t)(((uint64_t)fm6_mant(x) * FM6_FREQ_R) >> 25);    /* 2^(i + 21) Hz units */
+    uint32_t q = (uint32_t)(umul64(fm6_mant(x), FM6_FREQ_R) >> 25);    /* 2^(i + 21) Hz units */
     if (i < 0)
         return 0;
     return (int32_t)(q >> (21 - (i > 21 ? 21 : i)));
@@ -334,7 +334,7 @@ typedef struct {                 /* msfa FmOpParams */
 #define FM6_OP_LOOP(PH, STORE)                                                    \
     for (i = 0; i < FM6_N; i++) {                                               \
         g += dg;                                                                \
-        out[i] STORE (int32_t)(((int64_t)fm6_sin(PH) * g) >> 15);               \
+        out[i] STORE mul64_sh15(fm6_sin(PH), g);                                \
         phase = (int32_t)((uint32_t)phase + (uint32_t)freq);                    \
     }
 static __attribute__((noinline)) void fm6_op_run(int32_t *out, const int32_t *in, int32_t phase, int32_t freq,
@@ -362,7 +362,7 @@ static __attribute__((noinline)) void fm6_op_fb(int32_t *out, int32_t phase, int
         int32_t s = (y0 + y) >> (shift + 1);
         g += dg;
         y0 = y;
-        y = (int32_t)(((int64_t)fm6_sin(phase + s) * g) >> 15);
+        y = mul64_sh15(fm6_sin(phase + s), g);
         out[i] = add ? out[i] + y : y;
         phase = (int32_t)((uint32_t)phase + (uint32_t)freq);
     }
@@ -511,7 +511,7 @@ static void fm6_note_key(fm6_note_t *n, const uint8_t *p, int down)
  * unison detune, tune and bend below 1/16 semitone): log2(1 + x) ~ x / ln 2 for these small factors */
 static int32_t fm6_note_logfreq(int32_t pitch16, int32_t fine)
 {
-    return FM6_LOGF0 + (int32_t)(((int64_t)pitch16 * ((1 << 24) / 12)) >> 4) + fine * 5909;
+    return FM6_LOGF0 + (int32_t)(mul64(pitch16, (1 << 24) / 12) >> 4) + fine * 5909;
 }
 
 /* one block (msfa note compute): the LFO's value and delay (Q24), the note's log2 frequency, the patch's
@@ -523,22 +523,22 @@ static int fm6_note_compute(fm6_note_t *n, const uint8_t *p, int32_t *out, int32
 {
     uint32_t pmd = (uint32_t)((p[FP_LPMD] % 100u) * 165u >> 6) * (uint32_t)lfo_delay;   /* Q32 */
     int32_t senslfo = FM6_PMS[p[FP_LPMS] & 7u] * (lfo_val - (1 << 23));
-    int32_t pmod = (int32_t)(((int64_t)pmd * senslfo) >> 39), pitch_mod;
+    int32_t pmod = (int32_t)(mul64_us(pmd, senslfo) >> 39), pitch_mod;
     uint32_t amd = (uint32_t)((p[FP_LAMD] % 100u) * 165u >> 6), amod, car = fm6_carriers(alg), k;
     pmod = pmod < 0 ? -pmod : pmod;
     pitch_mod = fm6_penv_get(&n->penv, p) + (senslfo < 0 ? -pmod : pmod);
-    amod = (uint32_t)(((int64_t)amd * lfo_delay) >> 8);                 /* Q24 */
-    amod = (uint32_t)(((int64_t)amod * ((1 << 24) - lfo_val)) >> 24);
+    amod = (uint32_t)(mul64_us(amd, lfo_delay) >> 8);                 /* Q24 */
+    amod = (uint32_t)(mul64_us(amod, (1 << 24) - lfo_val) >> 24);
     for (k = 0; k < 6u; k++) {
         const uint8_t *op = p + k * FP_OP;
         int32_t level = fm6_env_get(&n->env[k], op);
         uint32_t ams = FM6_AMSENS[op[FP_AMS] & 3u];
         n->op[k].freq = fm6_freq((n->fixed >> k) & 1u ? n->base[k] : logfreq + n->base[k] + pitch_mod + dt[k]);
         if (ams) {                                 /* msfa: pt = exp(sensamp / 262144 * 0.07 + 12.2) */
-            uint32_t sensamp = (uint32_t)(((uint64_t)amod * ams) >> 24);
-            int32_t lg = FM6_AMS_C0 + (int32_t)(((uint64_t)sensamp * FM6_AMS_K) >> 10);
+            uint32_t sensamp = (uint32_t)(umul64(amod, ams) >> 24);
+            int32_t lg = FM6_AMS_C0 + (int32_t)(umul64(sensamp, FM6_AMS_K) >> 10);
             uint32_t pt = fm6_mant(lg) << ((lg >> 24) - 16);   /* (2^17.6 .. 2^24.1: shift 1..8) */
-            level -= (int32_t)(((uint64_t)(uint32_t)level * ((uint64_t)pt << 4)) >> 28);
+            level -= (int32_t)(umul64((uint32_t)level, pt << 4) >> 28);
         }
         if (!((car >> k) & 1u))
             level += modlvl;

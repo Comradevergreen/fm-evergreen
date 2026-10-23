@@ -108,13 +108,13 @@ static void fres_coef(fres_t *r, uint32_t f16, uint32_t bw16)
 {
     int32_t s = sine_i(f16 * 3044u);                    /* sin(pi F / FS), Q15 (2^32 / (2 FS) / 16) */
     int32_t x = (int32_t)(bw16 * 4781u);                /* pi BW / FS, Q30 (<= 0.2) */
-    int32_t x2 = (int32_t)(((int64_t)x * x) >> 30), x3 = (int32_t)(((int64_t)x2 * x) >> 30);
-    int32_t x4 = (int32_t)(((int64_t)x3 * x) >> 30);
-    int32_t e = (1 << 30) - x + (x2 >> 1) - (int32_t)(((int64_t)x3 * 178956971) >> 30)   /* exp(-x): x^3 / 6, */
-                + (int32_t)(((int64_t)x4 * 44739243) >> 30);                            /* x^4 / 24 */
+    int32_t x2 = (int32_t)(mul64(x, x) >> 30), x3 = (int32_t)(mul64(x2, x) >> 30);
+    int32_t x4 = (int32_t)(mul64(x3, x) >> 30);
+    int32_t e = (1 << 30) - x + (x2 >> 1) - (int32_t)(mul64(x3, 178956971) >> 30)   /* exp(-x): x^3 / 6, */
+                + (int32_t)(mul64(x4, 44739243) >> 30);                            /* x^4 / 24 */
     int32_t cs = (1 << 30) - 2 * s * s;                 /* cos(2 pi F / FS) = 1 - 2 sin^2, Q30 */
-    r->b = (int32_t)(((int64_t)e * cs) >> 29);          /* 2 r cos */
-    r->c = -(int32_t)(((int64_t)e * e) >> 30);          /* -r^2 */
+    r->b = (int32_t)(mul64(e, cs) >> 29);               /* 2 r cos */
+    r->c = -(int32_t)(mul64(e, e) >> 30);               /* -r^2 */
     r->a = (1 << 30) - r->b - r->c;
 }
 
@@ -175,16 +175,16 @@ static void __attribute__((noinline)) formant_word_render(track_t *t, voice_t *v
     shim = 32768 + (jr << 7);
     ratio = fmt_ratio(p[P_E3] * 16 + ((FMT_FOLOW * (p16 - 60 * 16) * 516) >> 16));   /* (the pitch sung: its glide) */
     bws = fmt_ratio((64 - p[P_E6]) * 4);
-    f0 = (uint32_t)(((uint64_t)inc * 705600u) >> 32);
+    f0 = (uint32_t)(umul64(inc, 705600u) >> 32);
     bm = clamp(sg->bm, 8, 64);
     bw[0] = BW0[0] * (bm < 24 ? bm : 24);               /* (0.9.8) a nasal's, a lateral's F1 less widened than F2 F3: */
     bw[1] = BW0[1] * bm;                                /* the murmur low and round, the mouth's formants damped */
     bw[2] = BW0[2] * bm;
     for (j = 0; j < 3; j++) {
-        int32_t f = (int32_t)(((int64_t)(sg->f[j] << 4) * ratio) >> 16);
-        int32_t b = (int32_t)(((((int64_t)bw[j] * ratio) >> 16) * bws) >> 16);
+        int32_t f = (int32_t)(mul64_us(ratio, sg->f[j] << 4) >> 16);
+        int32_t b = (int32_t)(mul64_us(bws, (int32_t)(mul64_us(ratio, bw[j]) >> 16)) >> 16);
         if (j == 0 && (uint32_t)f < f0 + (f0 >> 4) && f > 0) {
-            b = (int32_t)(((int64_t)b * (int32_t)(f0 + (f0 >> 4))) / f);
+            b = (int32_t)(mul64(b, (int32_t)(f0 + (f0 >> 4))) / f);
             f = (int32_t)(f0 + (f0 >> 4));
         }
         fa[j] = clamp(f, 60 * 16, 7000 * 16);
@@ -195,9 +195,9 @@ static void __attribute__((noinline)) formant_word_render(track_t *t, voice_t *v
     fres_coef(&r3, (uint32_t)fa[2], (uint32_t)ba[2]);
     fw = clamp(sg->gf * 16, 0, 32767);                  /* frication's weight: F4 its resonance (SHIFT not on it), */
     r4r = ratio + (uint32_t)((((int32_t)65536 - (int32_t)ratio) * fw) >> 15);   /* no presence on the noise */
-    fres_coef(&r4, (uint32_t)clamp((int32_t)(((uint32_t)clamp(sg->ff, 200, 7600) * 16u * (uint64_t)r4r) >> 16),
+    fres_coef(&r4, (uint32_t)clamp((int32_t)(umul64((uint32_t)clamp(sg->ff, 200, 7600) * 16u, r4r) >> 16),
                                    60 * 16, 7600 * 16),
-              (uint32_t)clamp((int32_t)(((uint32_t)clamp(sg->fb, 50, 5000) * 16u * (uint64_t)r4r) >> 16), 20 * 16,
+              (uint32_t)clamp((int32_t)(umul64((uint32_t)clamp(sg->fb, 50, 5000) * 16u, r4r) >> 16), 20 * 16,
                               5000 * 16));
     buzz = clamp((p[P_E4] << 8) + m->shape - (64 << 8) + (v->vel - 96) * 40, 0, 127 << 8);
     oq = 58982 - ((buzz * 284) >> 8);
@@ -215,8 +215,8 @@ static void __attribute__((noinline)) formant_word_render(track_t *t, voice_t *v
     gf = sg->pf;
     dgf = (sg->gf - gf) >> CTL_LOG2;
     og = 13000 - ((p[P_E6] - 64) * 50);
-    og = (int32_t)(((int64_t)og * fmt_ratio((60 * 16 - p16) / 4)) >> 16);
-    ogk = (int32_t)(((int64_t)((og >> 2) * (6 + (buzz >> 11))) * (32767 - fw)) >> 15);   /* (0.9.8: less presence) */
+    og = (int32_t)(mul64_us(fmt_ratio((60 * 16 - p16) / 4), og) >> 16);
+    ogk = mul64_sh15((og >> 2) * (6 + (buzz >> 11)), 32767 - fw);   /* (0.9.8: less presence) */
     for (i = 0; i < n; i++) {
         int32_t e, x, a, s, nz, fz;
         if (ph < tp)
@@ -239,19 +239,19 @@ static void __attribute__((noinline)) formant_word_render(track_t *t, voice_t *v
         nzq = nzp;                                      /* nor at the top, no fizz past ~12 kHz), into F4 */
         nzp = nz;
         gf += dgf;
-        a = (int32_t)(((int64_t)r1.a * (x << 6) + (int64_t)r1.b * y1 + (int64_t)r1.c * y2 + (1 << 29)) >> 30);
+        a = (int32_t)((mac2_64(r1.a, x << 6, r1.b, y1) + mul64(r1.c, y2) + (1 << 29)) >> 30);
         y2 = y1;
         y1 = a;
-        a = (int32_t)(((int64_t)r2.a * a + (int64_t)r2.b * y3 + (int64_t)r2.c * y4 + (1 << 29)) >> 30);
+        a = (int32_t)((mac2_64(r2.a, a, r2.b, y3) + mul64(r2.c, y4) + (1 << 29)) >> 30);
         y4 = y3;
         y3 = a;
-        a = (int32_t)(((int64_t)r3.a * a + (int64_t)r3.b * y5 + (int64_t)r3.c * y6 + (1 << 29)) >> 30);
+        a = (int32_t)((mac2_64(r3.a, a, r3.b, y5) + mul64(r3.c, y6) + (1 << 29)) >> 30);
         y6 = y5;
         y5 = a;
-        a = (int32_t)(((int64_t)r4.a * (a + (fz << 6)) + (int64_t)r4.b * y7 + (int64_t)r4.c * y8 + (1 << 29)) >> 30);
+        a = (int32_t)((mac2_64(r4.a, a + (fz << 6), r4.b, y7) + mul64(r4.c, y8) + (1 << 29)) >> 30);
         y8 = y7;
         y7 = clamp(a, -(1 << 28), 1 << 28);
-        s = soft_knee(clamp((int32_t)(((int64_t)y7 * og + (int64_t)(y7 - y8) * ogk) >> 21), -200000, 200000), 24000);
+        s = soft_knee(clamp((int32_t)(mac2_64(y7, og, y7 - y8, ogk) >> 21), -200000, 200000), 24000);
         ph += incj;
         if (ph < incj) {                                /* a glottal period begins (the glottis shut: no step) */
             jr = (nz * jd) >> 15;
@@ -350,13 +350,13 @@ static void formant_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, con
     /* SHIFT (semitones) and FOLOW (key tracking around C4, fixed), one ratio for all four */
     ratio = fmt_ratio(p[P_E3] * 16 + ((FMT_FOLOW * (v->pitch_cur - 60 * 16) * 516) >> 16));   /* FOLOW / 127 */
     bws = fmt_ratio((64 - p[P_E6]) * 4);                /* Q: bandwidth x2.5 .. x0.4 */
-    f0 = (uint32_t)(((uint64_t)inc * 705600u) >> 32);   /* F0 in Hz * 16 */
+    f0 = (uint32_t)(umul64(inc, 705600u) >> 32);   /* F0 in Hz * 16 */
     for (j = 0; j < 3; j++) {
         int32_t f = fa[j], b = ba[j];
-        f = (int32_t)(((int64_t)f * ratio) >> 16);
-        b = (int32_t)(((((int64_t)b * ratio) >> 16) * bws) >> 16);
+        f = (int32_t)(mul64_us(ratio, f) >> 16);
+        b = (int32_t)(mul64_us(bws, (int32_t)(mul64_us(ratio, b) >> 16)) >> 16);
         if (j == 0 && (uint32_t)f < f0 + (f0 >> 4) && f > 0) {   /* sung high: F1 follows F0 (sopranos do), */
-            b = (int32_t)(((int64_t)b * (int32_t)(f0 + (f0 >> 4))) / f);   /* same Q: no boom on the fundamental */
+            b = (int32_t)(mul64(b, (int32_t)(f0 + (f0 >> 4))) / f);   /* same Q: no boom on the fundamental */
             f = (int32_t)(f0 + (f0 >> 4));
         }
         fa[j] = clamp(f, 60 * 16, 7000 * 16);
@@ -365,8 +365,8 @@ static void formant_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, con
     fres_coef(&r1, (uint32_t)fa[0], (uint32_t)ba[0]);
     fres_coef(&r2, (uint32_t)fa[1], (uint32_t)ba[1]);
     fres_coef(&r3, (uint32_t)fa[2], (uint32_t)ba[2]);
-    fres_coef(&r4, (uint32_t)clamp((int32_t)((3300u * 16u * (uint64_t)ratio) >> 16), 60 * 16, 7000 * 16),
-              (uint32_t)clamp((int32_t)((((250u * 16u * (uint64_t)ratio) >> 16) * bws) >> 16), 20 * 16, 1500 * 16));
+    fres_coef(&r4, (uint32_t)clamp((int32_t)(umul64(3300u * 16u, ratio) >> 16), 60 * 16, 7000 * 16),
+              (uint32_t)clamp((int32_t)(umul64((uint32_t)(umul64(250u * 16u, ratio) >> 16), bws) >> 16), 20 * 16, 1500 * 16));
 
     /* source: BUZZ (+ SHP modulation, + velocity) -> open quotient and tilt */
     buzz = clamp((p[P_E4] << 8) + m->shape - (64 << 8) + (v->vel - 96) * 40, 0, 127 << 8);
@@ -380,7 +380,7 @@ static void formant_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, con
     gn = p[P_E5] * 258;                                 /* noise: Q15, up to 1.0 */
     if (gn) nst = formant_nz;
     og = 13000 - ((p[P_E6] - 64) * 50);                 /* output: narrower bands ring louder */
-    og = (int32_t)(((int64_t)og * fmt_ratio((60 * 16 - v->pitch_cur) / 4)) >> 16);   /* 1.5 dB / oct: low notes are sparse pulses */
+    og = (int32_t)(mul64_us(fmt_ratio((60 * 16 - v->pitch_cur) / 4), og) >> 16);   /* 1.5 dB / oct: low notes are sparse pulses */
     ogk = (og >> 2) * (4 + (buzz >> 10));               /* presence k = 1 .. 4.9 */
 
     for (i = 0; i < n; i++) {
@@ -400,19 +400,19 @@ static void formant_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, con
         }
         /* F1 -> F2 -> F3 -> F4, Q30, rounded; the signal x 64 inside: the rounding
          * dead band of F1 (+-0.5 / A, ~340 at 270 Hz) stays below 6 LSB */
-        a = (int32_t)(((int64_t)r1.a * (x << 6) + (int64_t)r1.b * y1 + (int64_t)r1.c * y2 + (1 << 29)) >> 30);
+        a = (int32_t)((mac2_64(r1.a, x << 6, r1.b, y1) + mul64(r1.c, y2) + (1 << 29)) >> 30);
         y2 = y1;
         y1 = a;
-        a = (int32_t)(((int64_t)r2.a * a + (int64_t)r2.b * y3 + (int64_t)r2.c * y4 + (1 << 29)) >> 30);
+        a = (int32_t)((mac2_64(r2.a, a, r2.b, y3) + mul64(r2.c, y4) + (1 << 29)) >> 30);
         y4 = y3;
         y3 = a;
-        a = (int32_t)(((int64_t)r3.a * a + (int64_t)r3.b * y5 + (int64_t)r3.c * y6 + (1 << 29)) >> 30);
+        a = (int32_t)((mac2_64(r3.a, a, r3.b, y5) + mul64(r3.c, y6) + (1 << 29)) >> 30);
         y6 = y5;
         y5 = a;
-        a = (int32_t)(((int64_t)r4.a * a + (int64_t)r4.b * y7 + (int64_t)r4.c * y8 + (1 << 29)) >> 30);
+        a = (int32_t)((mac2_64(r4.a, a, r4.b, y7) + mul64(r4.c, y8) + (1 << 29)) >> 30);
         y8 = y7;
         y7 = clamp(a, -(1 << 28), 1 << 28);             /* int32 state stays far from overflow */
-        s = soft_knee(clamp((int32_t)(((int64_t)y7 * og + (int64_t)(y7 - y8) * ogk) >> 21), -200000, 200000), 24000);
+        s = soft_knee(clamp((int32_t)(mac2_64(y7, og, y7 - y8, ogk) >> 21), -200000, 200000), 24000);
         ph += inc;
         out[i] += voice_amp(s, m, i) << 1;
     }

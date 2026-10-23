@@ -207,7 +207,7 @@ static __attribute__((noinline)) int32_t lofi_float(uint32_t f, uint32_t t, uint
     }
     case 22: return S(x * (1u + (((t >> 9) & (t >> 7)) & 7u)) + (((t >> 9) & (t >> 7) & 255u) << 9));   /* bytebeat in it */
     case 23: return S(x * 2u + PM(S(x * 5u), (int32_t)((t >> 11) & 3u) * 8));                 /* FM 5:2, stepped */
-    case 24: a = S(x * (1u + (st & 3u))); return (int32_t)((int64_t)a * (a < 0 ? -a : a) >> 15) * E >> 15;   /* squared */
+    case 24: a = S(x * (1u + (st & 3u))); return mul64_sh15(a, a < 0 ? -a : a) * E >> 15;   /* squared */
     case 25: return S(x & ~(1u << (8u + (st & 7u)))) * E >> 15;                              /* a bit of t dropped: jumps */
     case 26: return S((x >> 4) * (34u - ((t >> 11) & 15u)) >> 1) * E >> 15;                   /* a descending line */
     case 27: return (S(x) + mulq15(S(x * (((t >> 13) & 3u) + 2u)), E)) >> 1;                   /* a partial, struck */
