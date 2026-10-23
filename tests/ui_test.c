@@ -4771,6 +4771,39 @@ static int test_step_rec(void)
         key_up(7); key_up(11); frame();
         bad += check("step recording: ARP ORDER DOWN (KNOB 2): the high note first",
                      t->step[0].note[0] == kb_map(t, 11) && t->step[1].note[0] == kb_map(t, 7) && ui.cursor == 2u);
+        {   /* (0.9.9-seq2c) SELECT's two roles while armed and stopped: a chord held, its LEN (as KNOB 1, the roll's bar
+             * growing); no key, the cursor a step either way, round in LEN; the page stays. Not armed: the pages */
+            const page_t *pg0 = cur_page();
+            uint32_t h0, h1;
+            for (h0 = 0; h0 < NSTEP; h0++) step_clear(&t->step[h0]);
+            cursor_set(2); frame();
+            key_down(7); frame(); key_down(11); frame();
+            h0 = graph_signature();
+            turn(EN_SELECT, 2);
+            h1 = graph_signature();
+            ok = ui.ent_len == 3u && msg_is("LEN 3 STEPS") && cur_page() == pg0 && ui.cursor == 2u && h1 != h0;
+            key_up(7); key_up(11); frame();
+            ok &= t->step[2].n == 2u && t->step[3].time == ST_TIE && t->step[4].time == ST_TIE && t->step[5].time != ST_TIE &&
+                  ui.cursor == 5u;
+            bad += check("seq2c step recording: a chord held + SELECT: its LEN (3, the bar on the roll), TIEs after, the page stays", ok);
+            turn(EN_SELECT, -1);
+            ok = ui.cursor == 4u && cur_page() == pg0;
+            turn(EN_SELECT, 1); turn(EN_SELECT, 1);
+            ok &= ui.cursor == 6u;
+            cursor_set(0); frame();
+            turn(EN_SELECT, -1);
+            ok &= ui.cursor == 15u && cur_page() == pg0;
+            turn(EN_SELECT, 1);
+            ok &= ui.cursor == 0u && cur_page() == pg0 && song.rec == 1u;
+            bad += check("seq2c step recording: no key + SELECT: the cursor a step left / right, round in LEN 16, the page stays", ok);
+            song.rec = 0;
+            turn(EN_SELECT, 1);
+            ok = cur_page() != pg0 && ui.cursor == 0u;
+            turn(EN_SELECT, -1);
+            ok &= cur_page() == pg0;
+            song.rec = 1u;
+            bad += check("seq2c not armed: SELECT walks the pages as before", ok);
+        }
         t->p[P_SLEN] = 8;
     }
     cursor_set(4);                                                    /* (an empty step, away from the play head) */

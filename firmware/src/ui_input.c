@@ -2467,7 +2467,14 @@ static void ui_input_frame(void)
         }
     } else if ((s = panel_enc(EN_SELECT)) != 0 && !lay && !ui.menu) {   /* (0.9.2, rule 1) SELECT alone: the section's
                                                         * chain, a page a detent (HOME's: ECO MACROS BEING ROUTES GEN 1..3) */
-        nav_select(s);
+        if (!ui.home && !ui.layer && !ui.confirm && song.seq_mode && cur_page()->graph == GR_ROLL && !song.grid &&
+            ((song.rec >> song.sel) & 1u) && !live_rec_sel() && !chain_busy()) {   /* (0.9.9-seq2c) step recording: */
+            if (ui.entry_open && lock_held())
+                ent_knob(0, s);                         /* a chord held: its LEN, as KNOB 1 (the roll's bar grows) */
+            else if (!(fm1_in.notes & ~kb_layer))
+                cursor_set((int32_t)ui.cursor + (s > 0 ? 1 : -1));   /* no key: the cursor a step (round in LEN) */
+        } else
+            nav_select(s);
     }
     for (k = 0; k < 4u && !kq; k++) {
         const page_t *pg = cur_page();
