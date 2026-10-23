@@ -50,8 +50,9 @@ def product_of(raw):
 
 
 def base_of(version):
-    """v0.6.46-abc1234 -> v0.6.46: the builds of one version"""
-    return version.split("-")[0]
+    """v0.6.46-abc1234 -> v0.6.46: the builds of one version (0.9.9-beta4: only a commit's 7 hex digits come off, so
+    v0.9.9-beta3 and v0.9.9 stay two versions)"""
+    return re.sub(r"-[0-9a-f]{7}$", "", version)
 
 
 def earlier(prev, version, product):
