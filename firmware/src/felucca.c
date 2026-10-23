@@ -96,6 +96,9 @@
 
 /* --------------------------------------------- storage, update, editor --- */
 #if FELUCCA_FLASH
+#if FELUCCA_DUAL_CORE
+#define FL_PARK() fm1_mc_park()  /* (0.9.9-stab) core 1 out of any job before the flash goes off (hal/fm1_multicore.h) */
+#endif
 #include "fm1_flash.h"
 #include "fm1_clk320.h"          /* (0.9.9-stab, as 0.9.12) MENU > SYSTEM > CPU CLOCK 320 MHZ's switch (curist's, MIT; main.c) */
 #include "storage_hw.c"
