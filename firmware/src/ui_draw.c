@@ -1078,14 +1078,60 @@ static int32_t crumb_count(char *b)
     fmt_int(b + str_len(b), (int32_t)n);
     return text_w(&AF_X, b);
 }
+/* (0.9.9-seq2, the approved mock-up: the 0.6's footer back) the footer's left, on every page: a square a 16-step bar of the
+ * track's pattern (LEN / 16 rounded up, 1..4; a partial last bar a narrower box), the bar playing lit (THEME) with the
+ * playhead a 1 px mark inside it that moves a step at a time (a function of the step, never of the frame: held under load
+ * or not, the footer is drawn again once a step), the bar under the edit cursor outlined (ACCENT) when it is another one
+ * (stopped: always); the breadcrumb from its right. The state the signature holds; the drawing returns the breadcrumb's x */
+#define FB_W 9                                          /* a square (the mock-up's 10 x 7 at 13: a touch bigger, as asked) */
+#define FB_H 7
+#define FB_GAP 2
+static uint32_t foot_bars_state(uint32_t *len, uint32_t *nb, uint32_t *play, uint32_t *cur)
+{
+    const track_t *t = TSEL;
+    uint32_t ph = song.playing ? seq_src(t, t->seq_idx) : 0xFFu;
+    *len = t->p[P_SLEN] > 0 ? (uint32_t)t->p[P_SLEN] : 1u;
+    *nb = (*len + 15u) / 16u;
+    *play = ph < *len ? ph / 16u : 0xFFu;
+    *cur = ui.cursor < *len ? ui.cursor / 16u : 0xFFu;
+    return ph;
+}
+static uint32_t foot_bars_sig(void)
+{
+    uint32_t len, nb, play, cur, ph = foot_bars_state(&len, &nb, &play, &cur);
+    return ((len * 131u + play) * 7u + cur) * 2654435761u + (ph == 0xFFu ? 0u : (ph % 16u) + 1u) * 40503u;
+}
+static int32_t foot_bars(int32_t x, int32_t y)
+{
+    uint32_t len, nb, play, cur, ph = foot_bars_state(&len, &nb, &play, &cur), b;
+    for (b = 0; b < nb; b++, x += FB_W + FB_GAP) {
+        uint32_t in = len - b * 16u;                    /* the steps in this bar: a partial last one a narrower box */
+        int32_t w = in < 16u ? (int32_t)((in * FB_W + 15u) / 16u) : FB_W;
+        if (w < 3)
+            w = 3;
+        if (b == play) {
+            cv_rect(x, y, w, FB_H, T_THEME);
+            cv_rect(x + 1 + (int32_t)((ph % 16u) * (uint32_t)(w - 2) / 16u), y + 1, 1, FB_H - 2, T_ACCENT);
+        } else
+            cv_rect(x, y, w, FB_H, T_RAISE);
+        if (b == cur && cur != play) {                  /* the bar edited, outlined */
+            cv_rect(x, y, w, 1, T_ACCENT);
+            cv_rect(x, y + FB_H - 1, w, 1, T_ACCENT);
+            cv_rect(x, y, 1, FB_H, T_ACCENT);
+            cv_rect(x + w - 1, y, 1, FB_H, T_ACCENT);
+        }
+    }
+    return x + 4;                                       /* (past the last gap: 6 px before the breadcrumb) */
+}
 static __attribute__((noinline)) void draw_crumbs(int32_t y, uint16_t fg, uint16_t last)
 {
     char cnt[8];
     int32_t cw = crumb_count(cnt), mx = cw ? 234 - cw - 8 : 234;
     char b[48];
     uint32_t i, k = 0;
-    int32_t x;
+    int32_t x, x0;
     const aafont_t *f = lz_on() ? &AF_X : &AF_S;        /* (0.8.5: a lens page, the mock-up's small mono) */
+    x0 = foot_bars(6, y + (f == &AF_X ? AF_X_CAP_Y : AF_S_CAP_Y + 1));   /* (the squares on the capitals' band) */
     foot_crumbs(b, sizeof b);
     for (i = 0; b[i]; i++)                              /* (the last part: after the last dot) */
         if ((uint8_t)b[i] == 0xB7u)
@@ -1111,7 +1157,7 @@ static __attribute__((noinline)) void draw_crumbs(int32_t y, uint16_t fg, uint16
                 d++;
             c = b[j];
             b[j] = 0;
-            x = cv_text_on(6, y, f, b, fg, T_BG);
+            x = cv_text_on(x0, y, f, b, fg, T_BG);
             b[j] = c;
             c = b[d];                                   /* (the level, then the dot before the set) */
             b[d] = 0;
@@ -1128,13 +1174,13 @@ static __attribute__((noinline)) void draw_crumbs(int32_t y, uint16_t fg, uint16
             last = T_THEME;
     }
     if (last == fg || !k) {
-        cv_free_text(6, y, f, b, fg, T_BG, mx - 6);
+        cv_free_text(x0, y, f, b, fg, T_BG, mx - x0);
         return;
     }
     {
         char c = b[k];
         b[k] = 0;
-        x = cv_text_on(6, y, f, b, fg, T_BG);
+        x = cv_text_on(x0, y, f, b, fg, T_BG);
         b[k] = c;
         cv_free_text(x, y, f, b + k, last, T_BG, mx - x);
     }
@@ -1161,7 +1207,7 @@ static void draw_foot(void)
         foot_hint(ha, hb);
         sig += str_hash(str_hash(act_ready() ? 7u : 3u, ha), hb);
     }
-    sig += (uint32_t)accw * 977u;
+    sig += (uint32_t)accw * 977u + foot_bars_sig();     /* (0.9.9-seq2) the bar squares: a step at a time */
     if (!ui.force && sig == ui.foot_sig)
         return;
     ui.foot_sig = sig;
