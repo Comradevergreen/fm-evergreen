@@ -224,6 +224,7 @@ static void fm1_time_init(void) {}
 static void fm1_reset_reason(void) {}
 static void fm1_wdt_arm(uint32_t v) { (void)v; }
 static void fm1_mailbox_clear(void) {}
+static void fm1_rails_boot(void) {}                /* (0.9.9-stab: the core supplies, hal/fm1_sys.h; none here) */
 static void fm1_guard_enable(uint32_t m) { (void)m; }
 enum { FM1_GUARD_STACK = 1, FM1_GUARD_WRITE = 2, FM1_GUARD_BUS = 4, FM1_GUARD_PC = 8 };
 #if FELUCCA_CDC

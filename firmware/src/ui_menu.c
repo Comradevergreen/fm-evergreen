@@ -170,7 +170,22 @@ static int32_t menu_document(int32_t y, int draw)
                 y = menu_text(d, y, T_TEXT, draw);
             }
         }
-        y = y - 216 + 8;   /* (0.6.71) the second core (fx.c) */
+#if defined(FM1_IRQ_TARGET)
+        {   /* (0.9.9-stab) the core supplies' steps as reached, and as the boot loader left them (hal/fm1_sys.h
+             * fm1_rails_boot: V15's 7 / 15 wanted; the boot loader's 3 / 11) */
+            static const char RL[4][3] = {"S ", "/", " (", "/"};
+            uint32_t i;
+            str_cpy(b, "RAIL", sizeof b);
+            for (i = 0; i < 4u; i++) {
+                str_cpy(b + str_len(b), RL[i], 4);
+                fmt_int(n, fm1_rails[(i + 2u) & 3u]);
+                str_cpy(b + str_len(b), n, 4);
+            }
+            str_cpy(b + str_len(b), ")", 2);
+            y = menu_text(b, y, T_TEXT, draw);
+        }
+#endif
+        y = y - 216 + 8;
     }
     y = menu_text("CREDITS", y + 216, T_THEME, draw) + 8;
     for (i = 0; i < NELEM(MENU_CREDITS); i++) {
