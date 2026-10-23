@@ -294,10 +294,15 @@ if [ -f build/gen/felucca_tables.h ]; then
     $CC -O2 -w -Ibuild/gen -Ifirmware/src -o "$OUT/voice_fairness_test" tests/voice_fairness_test.c -lm
     run "four single-note tracks: own release before cross-track stealing (budget 8)" "$OUT/voice_fairness_test" 8
     run "four single-note tracks: own release before cross-track stealing (budget 12)" "$OUT/voice_fairness_test" 12
+    run "four single-note tracks at 70..90 % (cpu5): no tail cut under the cap, a spike no trip, the guard keeps the leads, the prediction" "$OUT/voice_fairness_test" load
     $CC -O2 -w -Ibuild/gen -Ifirmware/src -o "$OUT/chorus_sleep_test" tests/chorus_sleep_test.c -lm
     run "chorus: exact zero-ring shortcut, tails and restart, unchanged state" python3 tests/chorus_sleep_test.py "$OUT/chorus_sleep_test"
     $CC -O2 -w -Ibuild/gen -Ifirmware/src -o "$OUT/empty_fx_test" tests/empty_fx_test.c -lm
     run "empty FX: exact zero-state shortcuts, wake and model changes" python3 tests/empty_fx_test.py "$OUT/empty_fx_test"
+    $CC -O2 -w -Ibuild/gen -Ifirmware/src -o "$OUT/fx_rest_test" tests/fx_rest_test.c -lm
+    $CC -O2 -w -DFX_REST_OFF -Ibuild/gen -Ifirmware/src -o "$OUT/fx_rest_ref" tests/fx_rest_test.c -lm
+    run "FX at rest (cpu5): the gate shut, the buses not run and silenced, the same output before, zeros through, the wake" \
+        python3 tests/fx_rest_test.py "$OUT/fx_rest_test" "$OUT/fx_rest_ref"
     $CC -O2 -w -Ibuild/gen -Ifirmware/src -o "$OUT/regress" tests/regress.c -lm
     run "regression: golden renders, health, voices, CPU budget" "$OUT/regress" tests/golden.txt tests/cpu_baseline.txt
     $CC -O2 -w -pthread -Ibuild/gen -Ifirmware/src -o "$OUT/mc_thread_test" tests/mc_thread_test.c -lm

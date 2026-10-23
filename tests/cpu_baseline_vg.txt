@@ -20,6 +20,8 @@ eng/VOICE.EN 1778
 eng/VOICE.ES 1796
 eng/WHEEL 2149
 mix/full 2666
+mix/idle 344
+mix/idle.tail 329
 peak/VOICE.EN6 152813
 rev/CLOUD 1566
 rev/RESO 1382

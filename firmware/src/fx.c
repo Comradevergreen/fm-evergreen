@@ -326,6 +326,19 @@ static __attribute__((noinline)) void djf_block(uint32_t n)
     for (i = 0; i < 3u; i++)                            /* (ramped across the block: a step a sample) */
         d[i] = (c[i] - djf.a[i]) / (int32_t)n;
     dw = (w1 - w0) / (int32_t)n;
+    {   /* (cpu5) at rest: nothing in, its states 0, its coefficients and share where they were: 0 in, 0 out, the
+         * states stay 0 (the loop below would compute exactly that): not run */
+        int32_t z = djf.ic[0] | djf.ic[1] | djf.ic[2] | djf.ic[3] | (w1 - w0) | (k - djf.k) | (c[0] - djf.a[0]) |
+                    (c[1] - djf.a[1]) | (c[2] - djf.a[2]);
+        for (i = 0; i < n && !z; i++)
+            z |= mix_l[i] | mix_r[i] | wet[i];
+        if (!z) {
+            djf.w = w1;
+            if (!w1 && dm != djf.mode)
+                djf.mode = 0;
+            return;
+        }
+    }
     {
         int32_t a1 = djf.a[0], a2 = djf.a[1], a3 = djf.a[2], w = w0, l1 = djf.ic[0], l2 = djf.ic[1], r1 = djf.ic[2];
         int32_t r2 = djf.ic[3], kq = djf.k << 8, dk = ((k - djf.k) << 8) / (int32_t)n, hp = djf.mode > 0;
@@ -707,14 +720,15 @@ static int32_t rev_size(void)
     int32_t g = GFX(GF_RSIZE);
     return 25000 + g * 40 + g * g / 7;
 }
-/* A never-excited (or explicitly cleared) ROOM has exactly zero buffers and
- * filter states. Advance its read/write clocks without six sample networks.
- * After any input, normal rendering remains enabled for the whole tail. */
-static __attribute__((noinline)) int room_zero(const int32_t *in, uint32_t n)
+/* A never-excited (or explicitly cleared) reverb has exactly zero buffers and filter states (room_used: the
+ * certificate). With no input this block its output is exactly 0 and its states stay 0: the sample networks are not
+ * run, only what moves by the block or the sample whatever the sound (the clocks below: read / write indices, the
+ * LFOs' phases, SIZE's glide, CLOUD's grain scheduler and its random numbers) is advanced, so that the first input
+ * finds every state as the full kernel would have left it: bit for bit the same from there on (tests/empty_fx_test.c).
+ * After any input, normal rendering remains enabled for the whole tail (cpu4: ROOM alone; cpu5: every model) */
+static void room_clock(uint32_t n)                      /* ROOM's combs' and allpasses' indices, n samples on */
 {
     uint32_t i;
-    if (room_used) return 0;
-    for (i = 0; i < n; i++) if (in[i]) { room_used = 1; return 0; }
     for (i = 0; i < 4u; i++) {
         uint32_t k = fx.comb_i[i] + n;
         fx.comb_i[i] = (uint16_t)(k >= REV_COMB[i] ? k - REV_COMB[i] : k);
@@ -723,7 +737,24 @@ static __attribute__((noinline)) int room_zero(const int32_t *in, uint32_t n)
         uint32_t k = fx.ap_i[i] + n;
         fx.ap_i[i] = (uint16_t)(k >= REV_AP[i] ? k - REV_AP[i] : k);
     }
+}
+static __attribute__((noinline)) int room_zero(const int32_t *in, uint32_t n)
+{
+    uint32_t i;
+    if (room_used) return 0;
+    for (i = 0; i < n; i++) if (in[i]) { room_used = 1; return 0; }
+    room_clock(n);
     return 1;
+}
+/* ROOM with MOD / WIDE (rev_room_mod) at rest: its LFO's phase on, the combs' offsets where the block's end puts them */
+static void room_mod_clock(uint32_t n)
+{
+    uint32_t k;
+    int32_t depth = song.g[G_RMOD] ? 64 + song.g[G_RMOD] * song.g[G_RMOD] * 4 : 0;
+    fx.rm_ph += LFO_INC[song.g[G_RRATE] & 127];
+    for (k = 0; k < 4u; k++)
+        fx.rm_m[k] = (int32_t)(((uint32_t)(osc_sine(fx.rm_ph + k * 0x40000000u) + 32768) * (uint32_t)depth) >> 16);
+    room_clock(n);
 }
 
 /* ROOM (G_RTYPE 0): 4 damped combs + 2 allpasses (Freeverb-like, mono), added to out (WIDE: rev_room_mod) */
@@ -779,7 +810,6 @@ static __attribute__((noinline)) void rev_room(const int32_t *rev_in, int32_t *o
  * (MOD 0 here: offsets 0, the plain one's sound) */
 static __attribute__((noinline)) void rev_room_mod(const int32_t *rev_in, int32_t *out, uint32_t n, int32_t wd)
 {
-    room_used = 1;
     uint32_t i, k;
     int32_t size = rev_size(), damp = 32767 - GFX(GF_RDAMP) * 200, m1[4], dm[4];
     int32_t depth = song.g[G_RMOD] ? 64 + song.g[G_RMOD] * song.g[G_RMOD] * 4 : 0;   /* Q8 samples: 0.25 .. 252 (~5.7 ms) */
@@ -843,27 +873,33 @@ static __attribute__((noinline)) void sp_chain(int32_t *ap, uint32_t ns)
     fx.sp_ns = (uint8_t)ns;
 }
 /* SPRING (see the top), added to out */
-static __attribute__((noinline)) void rev_spring(const int32_t *rev_in, int32_t *out, uint32_t n)
+/* SPRING's block: SIZE's glide, the wobble's phase, the chain's length (LOAD); returns the stages */
+static uint32_t spring_block(void)
 {
-    room_used = 1;
-    uint32_t i, k, s = (uint32_t)GFX(GF_RSIZE);
-    int32_t g = 19661 + (int32_t)s * 85 + (int32_t)(s * s) / 16;   /* the loop's gain: 0.6 .. 0.96 (0.5: was 0.93) */
-    int32_t kl = 26000 - GFX(GF_RDAMP) * 160;         /* its low-pass: ~9 kHz .. ~1.3 kHz */
-    int32_t len = (int32_t)(1323u + ((s * 1323u) >> 7)) << 8, L, L2, L3, f, w;
-    int16_t *ln = rev_comb;
-    int32_t *ap = rev_u.sp;
-    uint32_t ns = sys_load == LOAD_ECO ? SP_N_ECO : SP_N;   /* (0.6.70) LOAD ECO: a shorter chain */
+    uint32_t s = (uint32_t)GFX(GF_RSIZE), ns = sys_load == LOAD_ECO ? SP_N_ECO : SP_N;   /* (0.6.70) LOAD ECO: a shorter chain */
+    int32_t len = (int32_t)(1323u + ((s * 1323u) >> 7)) << 8;
     if (!fx.sp_size)
         fx.sp_size = len;
     fx.sp_size += clamp(len - fx.sp_size, -256, 256);   /* SIZE glides (a sample a block at most) */
-    L = fx.sp_size >> 8;
     fx.sp_ph += 2u * LFO_INC[song.g[G_RMOD] ? song.g[G_RRATE] & 127 : 24];   /* the wobble: a slow sine, 1.5 samples */
+    if (ns != fx.sp_ns)
+        sp_chain(rev_u.sp, ns);
+    return ns;
+}
+static __attribute__((noinline)) void rev_spring(const int32_t *rev_in, int32_t *out, uint32_t n)
+{
+    uint32_t i, k, s = (uint32_t)GFX(GF_RSIZE);
+    int32_t g = 19661 + (int32_t)s * 85 + (int32_t)(s * s) / 16;   /* the loop's gain: 0.6 .. 0.96 (0.5: was 0.93) */
+    int32_t kl = 26000 - GFX(GF_RDAMP) * 160;         /* its low-pass: ~9 kHz .. ~1.3 kHz */
+    int32_t L, L2, L3, f, w;
+    int16_t *ln = rev_comb;
+    int32_t *ap = rev_u.sp;
+    uint32_t ns = spring_block();
+    L = fx.sp_size >> 8;
     w = (fx.sp_size >> 1) + ((osc_sine(fx.sp_ph) * (3 + song.g[G_RMOD] / 2)) >> 8);   /* deep (MOD: up to 66); the far end, Q8 */
     L2 = w >> 8;
     f = w & 255;
     L3 = (L * 3) >> 2;
-    if (ns != fx.sp_ns)
-        sp_chain(ap, ns);
     for (i = 0; i < n; i++) {
         uint32_t wp = fx.sp_w, j = (wp & 3u) * (SP_N + 1u);
         int32_t x = mulq15(rev_in[i], 2580), r = ln[(wp - (uint32_t)L) & SP_MASK], p, o;
@@ -932,7 +968,6 @@ static int32_t rev_air(void)
 static int32_t sh_tlp;                                  /* (0.6.12) SHIMMER's tone: AIR's low-pass / its shelf */
 static __attribute__((noinline)) void rev_shimmer(const int32_t *rev_in, int32_t *out, uint32_t n)
 {
-    room_used = 1;
     int32_t in[CTL], t[CTL], amt = song.g[G_RMOD] * 190;   /* Q15: up to ~0.74 */
     int32_t air = rev_air(), st = clamp(12 + air, -12, 24), tk = air < 0 ? 32767 + air * 1150 : 9000;
     int32_t step = (int32_t)semi_q16(st) - 65536;       /* (the delay changes by 1 - speed a sample, Q16) */
@@ -969,14 +1004,12 @@ _Static_assert(sizeof rev_comb / 2u >= 4u * RS_LEN, "RESO in ROOM's buffers");
  * the lowest note that track sounds (held after it stops), so it moves with the sequence. The strings glide there */
 static uint32_t reso_pitch(void) { return song.g[G_RTYPE] == 3 ? (uint32_t)clamp(song.g[G_RPRE], 0, 14) : 0u; }
 static uint32_t reso_folw(void) { return GFX(GF_RDAMP) >= 1 && GFX(GF_RDAMP) <= 6 ? (uint32_t)GFX(GF_RDAMP) : 0u; }
-static __attribute__((noinline)) void rev_reso(const int32_t *rev_in, int32_t *out, uint32_t n)
+/* RESO's block: the chord (ROOT, SCALE, PITCH, FOLW) into the strings' periods, gliding (per[]) */
+static void reso_block(uint32_t *per)
 {
-    room_used = 1;
     const track_t *t = &trk[0];
-    uint32_t i, k, per[4], mask, s, fol = reso_folw(), up = reso_pitch();
-    int32_t sz = GFX(GF_RSIZE), dk = 32767 - 60 * 200, note[4], deg = 0, nn;
-    int32_t fb = sz <= 100 ? 26000 + sz * 52 : clamp(31200 + (sz - 100) * 58, 0, 32740);   /* (0.5.1: the top of SIZE
-                                                         * rings on for tens of seconds: 0.9992 at 127, was 0.995) */
+    uint32_t k, mask, s, fol = reso_folw(), up = reso_pitch();
+    int32_t note[4], deg = 0, nn;
     for (k = 0; k < NTRK; k++)                           /* the song's scale: the first melodic track's (they share it) */
         if (ENGINES[eng_idx(trk[k].eng_req)] != &ENG_DRUM) { t = &trk[k]; break; }
     mask = scale_mask(t) & 0xFFFu;
@@ -1016,6 +1049,14 @@ static __attribute__((noinline)) void rev_reso(const int32_t *rev_in, int32_t *o
         fx.rs_per[k] += (uint32_t)(((int32_t)per[k] - (int32_t)fx.rs_per[k]) / 6);   /* (a glide, ~6 blocks) */
         per[k] = fx.rs_per[k];
     }
+}
+static __attribute__((noinline)) void rev_reso(const int32_t *rev_in, int32_t *out, uint32_t n)
+{
+    uint32_t i, k, per[4];
+    int32_t sz = GFX(GF_RSIZE), dk = 32767 - 60 * 200;
+    int32_t fb = sz <= 100 ? 26000 + sz * 52 : clamp(31200 + (sz - 100) * 58, 0, 32740);   /* (0.5.1: the top of SIZE
+                                                         * rings on for tens of seconds: 0.9992 at 127, was 0.995) */
+    reso_block(per);
     for (i = 0; i < n; i++) {
         int32_t in = mulq15(rev_in[i], 3600), a = 0;
         for (k = 0; k < 4u; k++) {
@@ -1041,10 +1082,61 @@ static uint32_t cl_rand(void) { fx.cl_rng = fx.cl_rng * 1664525u + 1013904223u; 
  * them an octave up, down or a fifth up; each grain panned at random (WIDE: how far, left and right). The grains go
  * through ROOM's network (SIZE its decay, DAMP its tone; MOD chorusing it, WIDE its combs apart): the grains are not
  * heard dry, they bloom into a tail around the sound. SIZE full freezes the line (the cloud holds) */
+/* a grain born (the scheduler's sample came): the next drawn, the first slot free takes its place, pitch, length and
+ * pan (its random numbers drawn whether a slot is free or not: the sequence is the clock's) */
+static void cl_spawn(int32_t gap, int32_t wd, uint32_t ar)
+{
+    static const uint32_t PITCH[4] = {65536u, 131072u, 32768u, 98184u};   /* x1, an octave up, down, a fifth up (Q16) */
+    uint32_t k, cap = load_tight ? CL_N / 2u : CL_N;    /* (0.6.16: the load budget: half the grains) */
+    fx.cl_next = gap / 2 + (int32_t)(cl_rand() % (uint32_t)gap);
+    for (k = 0; k < cap && cl_g[k].len; k++) {}
+    if (k < cap) {
+        uint32_t pk = cl_rand() % 100u < (uint32_t)song.g[G_RMOD] * 3u / 4u ? 1u + cl_rand() % 3u : 0u;
+        int32_t pan = (int32_t)(cl_rand() % 257u) - 128;   /* -128 .. 128, times WIDE */
+        pan = pan * wd >> 7;
+        uint32_t inc = (uint32_t)(umul64(PITCH[pk] >> 1, ar) >> 16), back;
+        cl_g[k].len = (uint16_t)(2000u + cl_rand() % 4200u);
+        back = inc > 32768u ? (uint32_t)(umul64(cl_g[k].len, inc - 32768u) >> 16) : 0u;   /* (faster than
+                                                         * the line is written: started that much further back) */
+        cl_g[k].pos = ((fx.cl_w >> 1) - 200u - back - cl_rand() % (CL_LEN - 6000u - back)) << 16;
+        cl_g[k].inc = inc + (cl_rand() % 129u) - 64u;   /* (the line at half rate; each grain
+                                                         * a few cents off: a chorused shimmer, not one pitch) */
+        cl_g[k].age = 0;
+        cl_g[k].pl = (int16_t)(128 - pan);               /* (0 .. 256: 128 the centre) */
+        cl_g[k].pr = (int16_t)(128 + pan);
+    }
+}
+static void cl_age(void)                                 /* the grains two samples on (after their reads) */
+{
+    uint32_t k;
+    for (k = 0; k < CL_N; k++)
+        if (cl_g[k].len) {
+            cl_g[k].pos += cl_g[k].inc << 1;
+            cl_g[k].age = (uint16_t)(cl_g[k].age + 2u);
+            if (cl_g[k].age >= cl_g[k].len) cl_g[k].len = 0;
+        }
+}
+/* CLOUD at rest (room_used clear, no input): its line's clock, the scheduler (and its random numbers), the grains'
+ * ages, the network's clocks: everything that moves with no sound, nothing read or summed (all of it exactly 0) */
+static void cloud_clock(uint32_t n)
+{
+    uint32_t i, freeze = GFX(GF_RSIZE) >= 127, ar = semi_q16(rev_air());
+    int32_t gap = 1700 - song.g[G_RRATE] * 11, wd = song.g[G_RWIDE];
+    for (i = 0; i < n; i++) {
+        if (!freeze)
+            fx.cl_w++;
+        if (--fx.cl_next <= 0)
+            cl_spawn(gap, wd, ar);
+        if (!(i & 1u))
+            cl_age();
+    }
+    if (song.g[G_RMOD] || wd)
+        room_mod_clock(n);
+    else
+        room_clock(n);
+}
 static __attribute__((noinline)) void rev_cloud(const int32_t *rev_in, int32_t *out, uint32_t n)
 {
-    room_used = 1;
-    static const uint32_t PITCH[4] = {65536u, 131072u, 32768u, 98184u};   /* x1, an octave up, down, a fifth up (Q16) */
     uint32_t i, k, freeze = GFX(GF_RSIZE) >= 127;
     int32_t gap = 1700 - song.g[G_RRATE] * 11, dk = 32767 - GFX(GF_RDAMP) * 220, wd = song.g[G_RWIDE], air = rev_air();
     uint32_t ar = semi_q16(air);                         /* (0.6.12) AIR: the grains up / down, the tone with them */
@@ -1064,26 +1156,8 @@ static __attribute__((noinline)) void rev_cloud(const int32_t *rev_in, int32_t *
                 fx.cl_half = x;
             fx.cl_w++;
         }
-        if (--fx.cl_next <= 0) {                         /* a grain is born, in the first one free */
-            fx.cl_next = gap / 2 + (int32_t)(cl_rand() % (uint32_t)gap);
-            uint32_t cap = load_tight ? CL_N / 2u : CL_N;   /* (0.6.16: the load budget: half the grains) */
-            for (k = 0; k < cap && cl_g[k].len; k++) {}
-            if (k < cap) {
-                uint32_t pk = cl_rand() % 100u < (uint32_t)song.g[G_RMOD] * 3u / 4u ? 1u + cl_rand() % 3u : 0u;
-                int32_t pan = (int32_t)(cl_rand() % 257u) - 128;   /* -128 .. 128, times WIDE */
-                pan = pan * wd >> 7;
-                uint32_t inc = (uint32_t)(umul64(PITCH[pk] >> 1, ar) >> 16), back;
-                cl_g[k].len = (uint16_t)(2000u + cl_rand() % 4200u);
-                back = inc > 32768u ? (uint32_t)(umul64(cl_g[k].len, inc - 32768u) >> 16) : 0u;   /* (faster than
-                                                         * the line is written: started that much further back) */
-                cl_g[k].pos = ((fx.cl_w >> 1) - 200u - back - cl_rand() % (CL_LEN - 6000u - back)) << 16;
-                cl_g[k].inc = inc + (cl_rand() % 129u) - 64u;   /* (the line at half rate; each grain
-                                                         * a few cents off: a chorused shimmer, not one pitch) */
-                cl_g[k].age = 0;
-                cl_g[k].pl = (int16_t)(128 - pan);       /* (0 .. 256: 128 the centre) */
-                cl_g[k].pr = (int16_t)(128 + pan);
-            }
-        }
+        if (--fx.cl_next <= 0)                           /* a grain is born, in the first one free */
+            cl_spawn(gap, wd, ar);
         if (!(i & 1u)) {                                 /* (0.6.12) the grains every other sample, as the line is
                                                          * written (half rate): half the work; in between, the two
                                                          * averaged (a linear step, half a sample late) */
@@ -1097,11 +1171,9 @@ static __attribute__((noinline)) void rev_cloud(const int32_t *rev_in, int32_t *
                     x = (x * w) >> 8;
                     gl += (x * cl_g[k].pl) >> 7;
                     gr += (x * cl_g[k].pr) >> 7;
-                    cl_g[k].pos += cl_g[k].inc << 1;
-                    cl_g[k].age = (uint16_t)(a + 2u);
-                    if (cl_g[k].age >= cl_g[k].len) cl_g[k].len = 0;
                 }
             }
+            cl_age();
             l = (gl + fx.cl_gl) >> 1;
             r = (gr + fx.cl_gr) >> 1;
             fx.cl_gl = gl;
@@ -1131,9 +1203,42 @@ static __attribute__((noinline)) void rev_cloud(const int32_t *rev_in, int32_t *
         shim_fb[i] = t[i];                               /* (the tail into the line, next block) */
     }
 }
+/* (cpu5) the reverb's certificate held (room_used clear) and nothing in this block: its clocks on, nothing rendered
+ * (its output is exactly 0, its states stay 0: see room_clock). Returns 0 with the certificate gone */
+static __attribute__((noinline)) int rev_idle(uint32_t ty, const int32_t *rev_in, uint32_t n)
+{
+    uint32_t i, per[4];
+    if (room_used) return 0;
+    for (i = 0; i < n; i++) if (rev_in[i]) { room_used = 1; return 0; }
+    switch (ty) {
+    case 1:                                             /* SPRING: SIZE's glide, the wobble, the loop's write index */
+        spring_block();
+        fx.sp_w = (uint16_t)(fx.sp_w + n);
+        break;
+    case 2:                                             /* SHIMMER: ROOM's clocks, its grains' phase, its line's */
+        room_clock(n);
+        fx.sh_ph += (uint32_t)((int32_t)semi_q16(clamp(12 + rev_air(), -12, 24)) - 65536) * n;
+        fx.sh_w += n;
+        break;
+    case 3:                                             /* RESO: the chord's glide, the strings' write index */
+        reso_block(per);
+        fx.rs_w = (uint16_t)(fx.rs_w + n);
+        break;
+    case 4:
+        cloud_clock(n);
+        break;
+    default:
+        if (song.g[G_RMOD] || song.g[G_RWIDE]) room_mod_clock(n);
+        else room_clock(n);
+        break;
+    }
+    return 1;
+}
 /* the model ty's block into out */
 static void rev_run(uint32_t ty, const int32_t *rev_in, int32_t *out, uint32_t n)
 {
+    if (rev_idle(ty, rev_in, n))
+        return;
     switch (ty) {
     case 1: rev_spring(rev_in, out, n); if (song.g[G_RWIDE]) rev_spring_side(n, song.g[G_RWIDE]); break;
     case 2: rev_shimmer(rev_in, out, n); break;
@@ -1234,7 +1339,7 @@ static int32_t fxg_g = 32767;
  * over the floor went round the loop again: while that is within TIME, an echo is still to come back, the gate stays
  * open (a long delay's repeats come back at their level, not faded in after the gap). TIME up to 1.5 s as before */
 static uint32_t fxg_hold, fxg_dact;
-static uint8_t fxg_fb;
+static uint8_t fxg_fb, fxg_dly;                      /* .. FEEDBK not 0; the delay's level over the floor (fx_rest) */
 static void fx_gate(int32_t *wet, uint32_t n)
 {
     int32_t pk = 0, g0 = fxg_g, d;
@@ -1246,6 +1351,7 @@ static void fx_gate(int32_t *wet, uint32_t n)
     int dly = fxg_dpk >= FXG_FLOOR && !fx.gr_on;       /* (0.6.89) a plain delay's tail still there: only the first floor
                                                          * (its residue: the loop's DC block keeps it under it); the
                                                          * higher ones cut a long FEEDBK tail off at 4 or 8 s */
+    fxg_dly = (uint8_t)dly;
     fxg_dact = !fxg_quiet || (dly && fxg_fb) ? 0u : fxg_dact < 0xFFFFFFu ? fxg_dact + 1u : fxg_dact;
     q = fxg_hold && fxg_dact <= fxg_hold ? 0u : fxg_quiet;
     fxg_dpk = 0;
@@ -1526,26 +1632,76 @@ static int32_t fx_glide(int32_t cur, int32_t to, uint32_t n)
  * All other configurations conservatively keep the original processing.
  * This is not a send-level bypass: a single real input disables it until an
  * explicit FX reset, so long echoes, feedback and low-level tails survive. */
-static __attribute__((noinline)) int delay_zero(const int32_t *in, uint32_t n, uint32_t low, int32_t ping, int32_t wide)
+/* (cpu5) and the right echo (WIDE, PING-PONG: reads of the zero line), a read point's crossfade (between two zero
+ * reads: its count on) and the line at half / a quarter rate (dly_lo: its half-band filters' states are 0 as well, the
+ * line's write index on by the block's steps; a block is whole steps, so its decimation phase is where it would be).
+ * Not with the GRAIN read (its clock draws the shared random numbers: run, as before) nor through a rate change
+ * (the fades, the line being cleared): then run, the certificate kept */
+static __attribute__((noinline)) int delay_zero(const int32_t *in, uint32_t n, uint32_t low)
 {
     uint32_t i;
     if (dly_used) return 0;
-    if (low || ping || wide || fx.dsw || fx.dr_sh || fx.gr_on || fx.gr_old ||
-        fx.dr_xf || fx.dr_now != fx.dl_now) { dly_used = 1; return 0; }
     for (i = 0; i < n; i++) if (in[i]) { dly_used = 1; return 0; }
+    if (fx.dsw || fx.din_g || fx.gr_on || fx.gr_old) return 0;
     for (i = 0; i < n; i++) dlo_x[i] = dlo_xr[i] = 0;
-    fx.dly_w += n;
+    fx.dly_w += low ? n >> fx.dr_sh : n;
     fx.dl_xf = fx.dl_xf > n ? fx.dl_xf - n : 0;
+    fx.dr_xf = fx.dr_xf > n ? fx.dr_xf - n : 0;
     return 1;
 }
 
+/* (cpu5, after 0.9.14's) the buses at rest: their gate shut (fx_gate: what they give is exactly 0 until something is
+ * sent), nothing sent this block, the delay's own level under the floor and its loop under 100 % (it cannot grow back),
+ * no rate change under way, the reverb's model not changing, CLOUD not frozen: not run. Stopped, or a silent stretch
+ * of a song, the three buses cost nothing: they were most of a stopped song's load. Their lines and states are
+ * silenced over the first six blocks of the rest (a part each: the reverb's states, the delay's line a quarter at a
+ * time, the reverb models' lines), and the certificates (room_used, dly_used, cho_zeros) hold from there: the next
+ * send starts from silence, exactly as a never-excited bus does. What the gate hid (a residue under -55 dB, a limit
+ * cycle of the feedback) is gone with it: it used to come back stepped in with the gate's reopening, a tick. What
+ * moves whatever the sound keeps moving meanwhile (the chorus's LFO and the glides, the delay's WOW: the clocks). */
+static uint8_t rest_ph;                                  /* the rest's clearing: 0 .. 6 (done) */
+static __attribute__((noinline)) int fx_rest(int32_t *wet, uint32_t n, uint32_t cinc, int32_t cdepth, int32_t cw,
+                                             int32_t dmix)
+{
+    uint32_t rt = (uint32_t)song.g[G_RTYPE] <= 4u ? (uint32_t)song.g[G_RTYPE] : 0u, ph = rest_ph, i;
+    int32_t wm, dwm;
+    if (fxg_g || fxg_dly || GFX(GF_DFDBK) >= 100 || fx.dsw || fx.din_g || (rt == 4u && GFX(GF_RSIZE) >= 127) ||
+        REV_LITE[sys_load % 3u][rt] != fx.rtype) {
+        rest_ph = 0;
+        return 0;
+    }
+    for (i = 0; i < n; i++)
+        wet[i] = 0;
+    if (ph == 0u) {
+        rev_state_clear();                              /* (room_used clear with it) */
+        memset(cho_buf, 0, sizeof cho_buf);
+        memset(&dlo, 0, sizeof dlo);
+        fx.dt1 = fx.dt2 = fx.rt1 = fx.rt2 = 0;
+        fx.dly_lp = fx.dly_hp = fx.rf_lp = fx.rpre_s = fx.cl_lp = fx.cl_half = 0;
+        fx.dl_xf = fx.dr_xf = 0;                        /* (a crossfade between two silent reads: nothing) */
+        cho_zeros = CHO_LEN;
+    } else if (ph <= 4u) {
+        dly_line_clear((ph - 1u) * (DLY_LEN / 4u), DLY_LEN / 4u);
+    } else if (ph == 5u) {
+        rev_line_clear(CL_LEN);                         /* (the pre-delay's line too) */
+        dly_used = 0;
+    }
+    if (ph < 6u)
+        rest_ph = (uint8_t)(ph + 1u);
+    fx.cho_ph += cinc * n;                              /* the clocks: as the loop would have moved them */
+    fx.cd_cur += fx_glide(fx.cd_cur, cdepth, n) * (int32_t)n;
+    fx.cw_cur += fx_glide(fx.cw_cur, cw, n) * (int32_t)n;
+    fx.dm_cur += fx_glide(fx.dm_cur, dmix, n) * (int32_t)n;
+    dly_wow_adv(n, &wm, &dwm);
+    return 1;
+}
 static inline __attribute__((always_inline)) void fx_buses(const int32_t *cho_in, const int32_t *dly_in, const int32_t *rev_in, int32_t *wet,
                      uint32_t n)
 {
     uint32_t i, dl = delay_samples(), cho_run;
-    int32_t dcd, dcw, ddm;
+    int32_t dcd, dcw, ddm, any = 0;
     {   /* (0.6.14) anything sent to the buses this block: their gate open (fx_gate) */
-        int32_t any = 0, ci = 0;
+        int32_t ci = 0;
         for (i = 0; i < n; i++) {
             any |= cho_in[i] | dly_in[i] | rev_in[i];
             ci |= cho_in[i];
@@ -1572,6 +1728,11 @@ static inline __attribute__((always_inline)) void fx_buses(const int32_t *cho_in
     int32_t cho = sys_load != LOAD_ECO && cho_run;                /* (0.6.30) LOAD ECO: no chorus */
     int32_t cs = song.g[G_CSTER], cw = 80 + wd / 2;    /* (0.6.9) the chorus's side: 0 as before, - to mono, + ~2x */
     cw = cs >= 0 ? cw + cs * 2 : (cw * (64 + cs)) >> 6;
+#ifndef FX_REST_OFF                                     /* (tests/fx_rest_test.c: the reference without it) */
+    if (!any && fx.primed && fx_rest(wet, n, cinc, cdepth, cw, dmix))   /* (cpu5) at rest: not run */
+        return;
+#endif
+    rest_ph = 0;
     uint32_t dro = wd && !png ? div_samples(3) * (uint32_t)wd / 127u : 0u, dr;   /* the right echo: up to 1/32 later */
     int dly_lo_on = dly_rate(&dl, &dr, dro, png, gr);   /* (0.8.4) the line's rate; TIME within what it holds */
     fxg_fb = fb > 0;
@@ -1630,7 +1791,7 @@ static inline __attribute__((always_inline)) void fx_buses(const int32_t *cho_in
         }
         rev_in = rpre_out;
     }
-    if (delay_zero(dly_in, n, (uint32_t)dly_lo_on, png, wd)) {
+    if (delay_zero(dly_in, n, (uint32_t)dly_lo_on)) {
         dly_lo_on = 1; /* existing loop consumes an exact zero stereo block */
     } else if (dly_lo_on) {                             /* (0.8.4) the delay at half / a quarter rate, or changing its
                                                          * rate: its block first (dly_lo), the loop below takes it */
@@ -2366,6 +2527,7 @@ static __attribute__((noinline)) void fx_trip(uint32_t c1, uint32_t n)
     fx.dt1 = fx.dt2 = fx.rt1 = fx.rt2 = 0;
     fx.dly_lp = fx.dly_hp = fx.rf_lp = fx.rpre_s = fx.cl_lp = fx.cl_half = 0;
     dly_used = 0;
+    rest_ph = 6;                                         /* (all of it silenced here) */
     fx_bad = 0;
     fx_trips++;
     if (c1) {
