@@ -103,6 +103,7 @@ static void fm1_mc_hold(void)
 {
     fm1_core1_stop();
     fm1_mc_on = 0;
+    fm1_other_live = 0;                         /* (0.9.9-stab) fm1_irq.h: not paused for a crash's record any more */
 }
 
 static int fm1_mc_start(void)
@@ -132,6 +133,7 @@ static int fm1_mc_start(void)
         return 0;
     }
     fm1_mc_on = 1;
+    fm1_other_live = 1;                         /* (0.9.9-stab) a crash of core 0 pauses it and notes its PC (fm1_irq.h) */
     return 1;
 }
 

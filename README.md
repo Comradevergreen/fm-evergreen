@@ -179,6 +179,11 @@ audio CPU budget, the signature shown at power-on is 428 bytes. An instrument th
   core, with curist's switch from [fm1-clk320-probe](https://github.com/curist/fm1-clk320-probe) (MIT,
   `firmware/hal/fm1_clk320.h`); ~11 % fewer cycles a block, so the load governor sheds voices sooner on the heaviest
   songs. A change applies from the next power-on; ABOUT shows the clock it runs at (**CPU 360 MHZ** / **CPU 320 MHZ**).
+- **If it crashes (0.9.9-stab).** The red screen names its numbers (VEC PC EMU DBG RETS as before, then SP USP SSP, the
+  second core's PC and the bus master of a bad access) and stays 10 s for a photo; MENU > ABOUT repeats the main ones until
+  the unit is switched off. A hardware window now closes the RAM code and the first core's stacks to the second core and
+  to every DMA: a stray write there is caught at once and attributed, where before it was only seen afterwards as a
+  corrupted word.
 - **Credits.** How to start the second core safely on the FM-1 and the guard against misreads come from
   [Melodee](https://github.com/keremimo/melodee) (keremimo) and [fm1-x0x](https://github.com/charlesvestal/fm1-x0x)
   (Charles Vestal), both GPL-3.0; JIANT's version is in `firmware/hal/fm1_multicore.h`.

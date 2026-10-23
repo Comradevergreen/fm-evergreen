@@ -185,10 +185,13 @@ static void fm1_enter_uboot(void)
     uint32_t i;
     __asm__ volatile("cli");
     fm1_core1_stop();
-    /* CPU0 write limits (fm1_guard.h) may cover the mailbox: drop them all */
+    /* CPU0 write limits (fm1_guard.h) may cover the mailbox: drop them all (0.9.9-stab: core 1's and the DMA's too, for
+     * the boot loader's own transfers) */
     if (!(*(volatile uint32_t *)0x1EEE240u & 1u))
         *(volatile uint32_t *)0x1EEE240u = 0xE7u;
     *(volatile uint32_t *)0x1EEE348u = 0;
+    *(volatile uint32_t *)0x1EEE34Cu = 0;
+    *(volatile uint32_t *)0x1EEE350u = 0;
     for (i = 0; i < 16u; i++)
         FM1_BOOT_STATE[i] = (uint8_t)k[i];
     fm1_p33_or(FM1_P3_PR_PWR, 0x10);
@@ -209,9 +212,11 @@ FM1_INLINE void fm1_enter_update(const uint8_t *parm)
 {
     uint32_t i;
     __asm__ volatile("cli");
-    if (!(*(volatile uint32_t *)0x1EEE240u & 1u))       /* drop CPU0 write limits, as fm1_enter_uboot */
+    if (!(*(volatile uint32_t *)0x1EEE240u & 1u))       /* drop the write limits, as fm1_enter_uboot */
         *(volatile uint32_t *)0x1EEE240u = 0xE7u;
     *(volatile uint32_t *)0x1EEE348u = 0;
+    *(volatile uint32_t *)0x1EEE34Cu = 0;
+    *(volatile uint32_t *)0x1EEE350u = 0;
     for (i = 0; i < FM1_UPDATA_PARM_LEN; i++)
         FM1_UPDATA_PARM[i] = parm[i];
     fm1_core_reset();

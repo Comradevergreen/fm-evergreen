@@ -76,31 +76,54 @@ static void hexs(char *b, uint32_t v)
     b[8] = 0;
 }
 
+/* (0.9.9-stab) the crash screen, labelled (every number in hex): the firmware and the core that faulted of how many ran;
+ * VEC PC EMU DBG RETS as every crash screen since Felucca (in this order, now named); then (0.9.19's record,
+ * hal/fm1_irq.h) SP USP SSP (which stack the main loop runs on: crash audit, cause 6), C2 PC where the second core was
+ * (when it ran), and the debug unit's culprits: WR / RD the bus master of a bad write / read (AXI_WR_INV_ID / RD), P the
+ * DMA that wrote into a closed window (PRP_WR_LIMIT_ID), N the windows hit by core 0 / core 1 / the DMA
+ * (_WR_LIMIT_ERR_NUM). 10 s, then a reset (was 4: time for a photo); MENU > ABOUT repeats the main numbers until the
+ * unit is switched off */
 static void fm1_fault(const fm1_crash_t *c)
 {
-    char b[12];
-    uint32_t t0;
+    static const char L[9][6] = {"VEC ", "PC ", "EMU ", "DBG ", "RETS ", "SP ", "USP ", "SSP ", "C2 PC "};
+    const uint32_t v[9] = {c->vec, c->pc, c->emu, c->dbg, c->rets, c->sp, c->usp, c->ssp, c->other_pc};
+    char b[40];
+    uint32_t t0, i, two = 0;
 #if FELUCCA_DUAL_CORE
-    if (fm1_mc_on)
+    if (fm1_mc_on) {
         fm1_mc_bar_set();                             /* (0.6.71) a crash beside the second core: one core until power-off */
+        two = 1;
+    }
     fm1_mc_hold();
 #endif
+    fm1_crash.app = (felucca_dbg.in_audio ? 1u : 0u) | (uint32_t)felucca_dbg.stage << 8 | (uint32_t)felucca_dbg.page << 16;
     fm1_audio_stop();
     scr_wake_now();                                   /* (MENU > SCREEN OFF: the panel on first) */
     lcd_fill(0, 0, 240, 240, UI_CRASH_BG);            /* fixed, outside the palettes */
-    draw_text_line(0, 8, 240, &AF_M, "JIANT CRASH", UI_CRASH_INK, UI_CRASH_BG, 1);
-    hexs(b, c->vec);
-    draw_text_line(10, 40, 220, &AF_M, b, UI_CRASH_INK, UI_CRASH_BG, 0);
-    hexs(b, c->pc);
-    draw_text_line(10, 60, 220, &AF_M, b, UI_CRASH_INK, UI_CRASH_BG, 0);
-    hexs(b, c->emu);
-    draw_text_line(10, 84, 220, &AF_M, b, UI_CRASH_INK, UI_CRASH_BG, 0);
-    hexs(b, c->dbg);
-    draw_text_line(10, 102, 220, &AF_M, b, UI_CRASH_INK, UI_CRASH_BG, 0);
-    hexs(b, c->rets);
-    draw_text_line(10, 120, 220, &AF_M, b, UI_CRASH_INK, UI_CRASH_BG, 0);
+    draw_text_line(0, 6, 240, &AF_M, "JIANT CRASH", UI_CRASH_INK, UI_CRASH_BG, 1);
+    str_cpy(b, FELUCCA_VERSION "  CORE ", 24);
+    i = str_len(b);
+    b[i] = (char)('0' + (c->cnum & 1u));
+    str_cpy(b + i + 1u, two ? " OF 2" : " OF 1", 8);
+    draw_text_line(10, 30, 220, &AF_S, b, UI_CRASH_INK, UI_CRASH_BG, 0);
+    for (i = 0; i < (c->other ? 9u : 8u); i++) {
+        str_cpy(b, L[i], 7);
+        hexs(b + str_len(b), v[i]);
+        draw_text_line(10, 48 + 17 * i, 220, &AF_S, b, UI_CRASH_INK, UI_CRASH_BG, 0);
+    }
+    str_cpy(b, "WR ", 4); hexs(b + 3, c->bus[5]);
+    str_cpy(b + 11, " RD ", 5); hexs(b + 15, c->bus[4]);
+    draw_text_line(10, 48 + 17 * 9, 220, &AF_S, b, UI_CRASH_INK, UI_CRASH_BG, 0);
+    str_cpy(b, "P ", 3); hexs(b + 2, c->bus[3]);
+    str_cpy(b + 10, " N ", 4);
+    for (i = 0; i < 3u; i++) {                        /* (a window's number, 0..15, a digit each; '-' past 9) */
+        uint32_t n = c->bus[i] & 15u;
+        b[13 + i] = n < 10u ? (char)('0' + n) : '-';
+    }
+    b[16] = 0;
+    draw_text_line(10, 48 + 17 * 10, 220, &AF_S, b, UI_CRASH_INK, UI_CRASH_BG, 0);
     t0 = fm1_ticks();
-    while ((uint32_t)(fm1_ticks() - t0) < 4000u * 1000u * FM1_TICKS_PER_US)
+    while ((uint32_t)(fm1_ticks() - t0) < 10000u * 1000u * FM1_TICKS_PER_US)
         ;
     fm1_reboot();
 }

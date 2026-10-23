@@ -183,6 +183,28 @@ static int32_t menu_document(int32_t y, int draw)
             }
             str_cpy(b + str_len(b), ")", 2);
             y = menu_text(b, y, T_TEXT, draw);
+            if (fm1_crash.magic == FM1_CRASH_MAGIC && fm1_crash.count) {   /* (0.9.9-stab) the last crash since power-on
+                                                         * (.noinit, hal/fm1_irq.h): what its red screen showed, in hex */
+                static const char *const CL[6] = {"CRASH ", " VEC ", "PC ", " SP ", "C2 ", " BUS "};
+                const uint32_t cv[6] = {fm1_crash.count, fm1_crash.vec, fm1_crash.pc, fm1_crash.sp, fm1_crash.other_pc,
+                                        fm1_crash.bus[5] | fm1_crash.bus[3]};
+                for (i = 0; i < 6u; i++) {
+                    uint32_t k, v = cv[i];
+                    if (!(i & 1u))
+                        b[0] = 0;
+                    str_cpy(b + str_len(b), CL[i], 7);
+                    if (i == 0) {
+                        fmt_int(n, (int32_t)v);
+                        str_cpy(b + str_len(b), n, 8);
+                    } else {
+                        for (k = str_len(b) + 8u; k > str_len(b); k--, v >>= 4)
+                            b[k - 1u] = "0123456789ABCDEF"[v & 15u];
+                        b[k + 8u] = 0;
+                    }
+                    if (i & 1u)
+                        y = menu_text(b, y, T_TEXT, draw);
+                }
+            }
         }
 #endif
         y = y - 216 + 8;

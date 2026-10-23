@@ -196,7 +196,7 @@ static void fl_plain_window_init(void) {}
 #include "../../firmware/src/project.c"
 
 /* ------------------------------------------------- main.c and its HAL --- */
-typedef struct { uint32_t magic, count, vec, pc, emu, dbg, rets; } fm1_crash_t;
+typedef struct { uint32_t magic, count, vec, pc, emu, dbg, rets, sp, usp, ssp, other_pc, other, cnum, bus[8], app; } fm1_crash_t;   /* (0.9.9-stab: as hal/fm1_irq.h's) */
 #define FM1_CRASH_MAGIC 0x43525348u
 static fm1_crash_t fm1_crash;                     /* (none: main.c boot_leds runs the sweep) */
 static struct { uint8_t p3_rst, wdt_con; uint32_t rst_src; } fm1_boot;
