@@ -46,6 +46,8 @@ int main(int argc,char **argv)
         h=hash_bytes(h,fx_sl,sizeof fx_sl); h=hash_bytes(h,fx_sr,sizeof fx_sr);
         h=hash_bytes(h,&fx,sizeof fx);
         h=hash_bytes(h,&rng_state,sizeof rng_state);
+        h=hash_bytes(h,cl_g,sizeof cl_g); h=hash_bytes(h,shim_fb,sizeof shim_fb);   /* (cpu5: every model's clocks) */
+        h=hash_bytes(h,&sh_tlp,sizeof sh_tlp); h=hash_bytes(h,&dlo,sizeof dlo);
     }
     h=hash_bytes(h,cho_buf,sizeof cho_buf);
     h=hash_bytes(h,dly_buf,sizeof dly_buf); h=hash_bytes(h,rev_comb,sizeof rev_comb);

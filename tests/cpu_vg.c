@@ -186,6 +186,28 @@ int main(void)
     song.g[G_DJF] = -24;                                /* (0.9.1) the same song through the DJ FILTER (a low-pass, ~1.4 kHz) */
     vg_section("song/cputest.djf");
     song.g[G_DJF] = 0;
+    {   /* (cpu5) the idle floor: mix/idle the power-on state 2 s on, nothing played (the buses never excited: cpu4's
+         * certificates); mix/idle.tail after a chord into CLOUD, the delay and the chorus has rung out and the buses'
+         * gate has shut (fx.c fx_rest), 4 s after the keys went up */
+        uint32_t b;
+        ui_power_on();
+        for (b = 0; b < 3000u; b++)
+            mix_block(vo, CTL);
+        vg_section("mix/idle");
+        ui_power_on();
+        song.g[G_RTYPE] = 4; song.g[G_DFDBK] = 60;
+        for (i = 0; i < 4u; i++) {
+            vg_part(i, i == 1u ? ENGI_FM6 : ENGI_ANALOG, 0, 3);
+            trk[i].p[P_DLY] = 60; trk[i].p[P_REV] = 60; trk[i].p[P_CHOR] = 60; trk[i].p[P_REL] = 40;
+        }
+        for (b = 0; b < 400u; b++)
+            mix_block(vo, CTL);
+        for (i = 0; i < 4u; i++)
+            trk_all_off(&trk[i]);
+        for (b = 0; b < (uint32_t)FS * 4u / CTL; b++)
+            mix_block(vo, CTL);
+        vg_section("mix/idle.tail");
+    }
     {   /* (0.9.0) peak/VOICE.EN6: six VOICE EN tracks starting a word in the same block (TEXT of one-syllable words on
          * three, W1 W9 S3 on the others), 24 times: the instructions of that one block, the worst of them */
         static const char *const TX[3] = {"love me now we go home", "strength through the night", "stay and fly so high"};
