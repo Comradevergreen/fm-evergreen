@@ -890,7 +890,6 @@ static uint32_t spring_block(void)
     if (!fx.sp_size)
         fx.sp_size = len;
     fx.sp_size += clamp(len - fx.sp_size, -(8 * (int32_t)CTL), 8 * (int32_t)CTL);   /* SIZE glides (a sample a block of 32 at most) */
-    L = fx.sp_size >> 8;
     fx.sp_ph += 2u * LFO_INC[song.g[G_RMOD] ? song.g[G_RRATE] & 127 : 24];   /* the wobble: a slow sine, 1.5 samples */
     if (ns != fx.sp_ns)
         sp_chain(rev_u.sp, ns);
