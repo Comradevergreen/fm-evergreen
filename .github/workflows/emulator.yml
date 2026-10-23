@@ -3,7 +3,7 @@
 # main. Needs Settings > Pages > Source: "GitHub Actions" once. The emulator needs only the generated headers; the
 # installer (webapp/installer) and the editor (webapp/editor) need the package, built with JieLi's toolchain (downloaded).
 # Two installers: preview/webapp/installer follows web/PREVIEW when set (otherwise main); webapp/installer follows
-# the approved web/STABLE commit. The browser emulator continues to follow main.
+# the approved web/STABLE commit. The browser emulator follows web/PREVIEW too (main without a pin).
 name: emulator
 on:
   push:
@@ -33,7 +33,23 @@ jobs:
         with:
           version: 6.0.11                # (the version the emulator is tested with)
       - name: the emulator
-        run: sh web/emu/build.sh
+        # (0.9.9-seq2) the emulator runs the beta's firmware (web/PREVIEW's commit, as the beta installer), main's if
+        # no pin is set or the pinned tree's emulator does not build
+        run: |
+          P=$(tr -d ' \n' < web/PREVIEW 2>/dev/null || true)
+          if [ -n "$P" ] && git cat-file -e "$P^{commit}" 2>/dev/null; then
+            rm -rf /tmp/emusrc; git worktree add -f --detach /tmp/emusrc "$P"
+            if (cd /tmp/emusrc && python3 -c "import sys; sys.path.insert(0, 'tools'); import build; build.generate()" \
+                && sh web/emu/build.sh); then
+              rm -rf build/emu; mkdir -p build; cp -r /tmp/emusrc/build/emu build/emu
+              echo "emulator: web/PREVIEW ${P::7}"
+            else
+              echo "emulator: ${P::7} did not build, main's instead"; sh web/emu/build.sh
+            fi
+            git worktree remove -f /tmp/emusrc || true
+          else
+            sh web/emu/build.sh
+          fi
       # (JIANT) the installer and the web editor next to the emulator: the package needs JieLi's toolchain (downloaded)
       # and three files of their AC79 SDK (a partial clone: only those blobs). A firmware build failure stops deployment.
       - name: JieLi toolchain and SDK files (cached)
