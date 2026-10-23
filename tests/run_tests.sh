@@ -41,6 +41,9 @@
 # RATCH (tests/ratchet_test.c): a step's ratchet (x1..x4): its parts in the sequencer (equal, gated, chords and drum
 #                   hits whole, one chance roll, swing, no slide or tie out, STOP), FUN8 round trip and older projects x1,
 #                   user preset patterns, SEQ > CHANCE KNOB 3 and the roll / grid drawing.
+# COMPONENTS (tests/comp_test.c, 0.9.9-seq2d): the step components v2 (ACTION LENGTH CONDITION VALUE): the mock-up's
+#                   16-bar cycle, every action over its LENGTH, conditions, MONO (C2 ELSE) / POLY, a v2 project round trip
+#                   and a project of before seq2d migrated (CP_*, EVERY), SEQ > COMP / COMP 2's knobs.
 # CTL64 (tests/ctl64_timing_test.c, 0.9.9): blocks of 64 samples (core.h CTL): every note of a MICRO-shifted pattern lands
 #                   in the rendered audio within 2 samples of where the sequencer puts it running a sample at a time
 #                   (voice.c track_render starts and releases a voice at its sample inside the block); POLY, MONO cuts, a kit.
@@ -227,6 +230,8 @@ if [ -f build/gen/felucca_tables.h ]; then
     run "STEMS (0.9.8): DICE songs, each stem = its track's solo render (FULL LITE ECO, CORES 1 / 2), the sum = the mix, the SLICER" "$OUT/stems_test"
     $CC -O1 -w -Ibuild/gen -Ifirmware/src -o "$OUT/ratchet_test" tests/ratchet_test.c -lm
     run "RATCH: x1..x4 in a step (notes, chords, drum hits), gates, chance, swing, projects, user presets, CHANCE page" "$OUT/ratchet_test"
+    $CC -O1 -w -Ibuild/gen -Ifirmware/src -o "$OUT/comp_test" tests/comp_test.c -lm
+    run "COMPONENTS v2 (seq2d): the 16-bar cycle, RATCHET STUTTER MUTE ARP SEQ JUMP over their LENGTH, MONO / POLY, migration, COMP pages" "$OUT/comp_test"
     $CC -O1 -w -Ibuild/gen -Ifirmware/src -o "$OUT/drumx_oct_test" tests/drumx_oct_test.c -lm
     run "DRUM-X OCTAVES (0.8.5): ratchets above the kit, SHORT GHOST FLAM below, live, recorded and played back as heard, MIDI bands" "$OUT/drumx_oct_test"
     $CC -O1 -w -Ibuild/gen -Ifirmware/src -o "$OUT/midi_control_test" tests/midi_control_test.c -lm

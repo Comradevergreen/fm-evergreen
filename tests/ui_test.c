@@ -11636,7 +11636,8 @@ static int test_nav_tasks(void)
               ok = song.sel == 3u && str_eq(cur_page()->title, "SOUND 2") && c == 1u && dv[DXP_DECAY] != d0; }
             break;
         case 12:                                        /* COMP 2 of step 9 */
-            tk_start(1); tk_go(EN_SELECT, 8); tk_go(EN_K1, 8); tk_val(EN_K2, 1);   /* (seq2c: eight detents to COMP 2) */
+            tk_start(1); tk_go(EN_K1, 8); tk_go(EN_SELECT, 8); tk_val(EN_K1, 1);   /* (seq2c: eight detents to COMP 2;
+                                                         * seq2d: the step picked on STEP, KNOB 1 its ACTION) */
             ok = str_eq(cur_page()->title, "COMP 2") && ui.cursor == 8u && TSEL->step[8].comp2 != 0u;
             break;
         default:                                        /* GLO: six tracks (SYSTEM > TRACKS) */

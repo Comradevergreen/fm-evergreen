@@ -703,26 +703,29 @@ static int ui_part(void)
     bad += check("OCT on a DRUM track: RATCHET x2 / x4 / x8, SHORT, GHOST, FLAM", ok);
     song.octave = 0;
     dt->step[2] = (step_t){{0}, 0, ST_NOTE, 0, 100, 1u << DV_KICK};
-    dt->step[2].comp = CP_TOUCH;
+    dt->step[2].comp = CO_MAKE(CA_SOUND, CC_ALWAYS);   /* (seq2d: TOUCH is SOUND, a component v2) */
     dt->step[2].carg = 2;
     go_page(GR_COMP);
     cursor_set(2);
     frame();
-    ok = comp_view() == COMP_TOUCH;
-    bad += check("SEQ > COMP: a TOUCH step shows TOUCH", ok);
+    ok = comp_view() == CA_SOUND && strstr(ui.col[3], "FLAM") != 0;
+    bad += check("SEQ > COMP: a TOUCH step shows SOUND FLAM", ok);
     dt->step[3] = (step_t){{0}, 0, ST_NOTE, 0, 100, 1u << DV_KICK};
-    dt->step[3].comp = CP_ECHO;
-    dt->step[3].carg = CP_ECHO_EVEN | 6u;
+    dt->step[3].comp = CO_MAKE(CA_RATCH, CC_ALWAYS);
+    dt->step[3].carg = 6u;                              /* x8 FLAT (0.8.5's ECHO x8 EVEN) */
     cursor_set(3);
     frame();
-    comp_knob(2, -1);
-    ok = comp_view() == COMP_ECHO && dt->step[3].carg == (CP_ECHO_EVEN | 5u);
+    comp_knob(3, -3);
+    ok = comp_view() == CA_RATCH && dt->step[3].carg == 5u;
     {
         uint32_t dv;
-        comp_knob(2, 1);
-        ok &= dt->step[3].carg == (CP_ECHO_EVEN | 6u) && step_parts(dt, &dt->step[3], &dv) == 8u;
+        comp_knob(3, 3);
+        ok &= dt->step[3].carg == 6u;
+        comp_run(dt, &dt->step[3], 16u);
+        ok &= step_parts(dt, &dt->step[3], &dv) == 8u;
+        dt->csp_n = 0;
     }
-    bad += check("SEQ > COMP: a recorded x8 shows ECHO x8 EVEN; KNOB 3 keeps EVEN", ok);
+    bad += check("SEQ > COMP: a RATCHET x8 FLAT, KNOB 4 x7 and back; it plays eight parts", ok);
     return bad;
 }
 

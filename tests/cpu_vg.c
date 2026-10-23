@@ -12,7 +12,7 @@
  *   dly/<RATE>     (0.8.4) a pad into the delay, its line at the full rate, half, a quarter (fx.c dly_lo)
  *   mix/full       six parts: four ANALOG / FM6 chords, drums, every FX on
  *   seq/plain      the sequencer: six tracks of chords / hits on every step at 200 BPM
- *   seq/heavy      .. with two step components on each (ARP SEQ / ECHO x8, RAND / OCT), DIV, LEN, chord glides
+ *   seq/heavy      .. with two step components on each (ARP / RATCHET x8, RANDOM / OCT+ at 75 %), DIV, LEN, chord glides
  *   song/cputest   SAVE > TOOLS 6 CPU TEST's song (song_dice.c cpu_test_song), playing: what the device is measured on
  *   song/cputest.djf  (0.9.1) .. with the master DJ FILTER on (GLO > MIXER KNOB 4 at -24, a low-pass): its cost on top
  *   mix/idle       (0.9.9 ctl64) nothing sounding, stopped: the fixed cost of a block (the events, the split, the buses,
@@ -116,9 +116,9 @@ static void vg_seq(int heavy)
                 s->note[2] = (uint8_t)(55 + i % 12); s->note[3] = (uint8_t)(59 + i % 12);
             }
             if (heavy) {
-                s->comp = i % 3u == 0u ? CP_ARPQ : CP_ECHO;
-                s->carg = s->comp == CP_ARPQ ? CP_ARG(3u, 4u, 3u) : 6u;
-                s->comp2 = i % 2u ? CP_RAND : CP_OCT; s->carg2 = i % 2u ? 7u : 5u;
+                s->comp = CO_MAKE(i % 3u == 0u ? CA_ARP : CA_RATCH, CC_ALWAYS);   /* (seq2d: components v2) */
+                s->carg = i % 3u == 0u ? CP_ARG(3u, 4u, 3u) : 6u;
+                s->comp2 = CO_MAKE(i % 2u ? CA_RAND : CA_OCTU, CC_P75); s->carg2 = i % 2u ? 6u : 0u;
                 s->ctime = 5u | (6u << 3);
             }
         }
