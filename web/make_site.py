@@ -17,9 +17,11 @@
   web/make_site.py manual OUT_DIR   (JIANT 0.9.12) only the interactive manual, OUT_DIR/manual/: web/manual (its page,
                                     scripts and the firmware's screens, tools/gen_manual.py), checked complete first
 
-PREV_DIR (JIANT 0.6.46): what web/fetch_prev.py downloaded from the live site, its firmware/versions.json and its
-packages: up to KEEP_OLD earlier versions (the newest build of each) stay installable next to the current one
-(firmware/versions.json, the installer's version list).
+PREV_DIR (JIANT 0.6.46): earlier versions offered next to the current one (firmware/versions.json, the installer's
+version list): its versions.json ([{"version", "file"}]) and the packages it names, up to KEEP_OLD, one build per
+version. Since 0.9.9-beta1 the workflow builds them from the commits listed in web/CLASSIC (never from the live site),
+and each version keeps its own package identity (FM-1_900 for the 0.6 line, FM-1_909 later): the installer checks the
+package it loads against the identity listed for that version.
 
 The package must be one made by tools/fm1pkg_make.py (Felucca's own loader, no vendor files).
 Its identity (FM-1_9xx) is read from the package; the device must report it after
@@ -54,7 +56,7 @@ def base_of(version):
 
 def earlier(prev, version, product):
     """[(entry, file)]: PREV_DIR's versions, newest first, one per version, not this one, at most KEEP_OLD, each
-    package there and with this device's identity"""
+    package there and a Felucca package for this model (its own identity goes in the entry: an older line has another)"""
     out, seen = [], {base_of(version)}
     try:
         listed = json.loads((prev / "versions.json").read_text(encoding="utf-8"))
@@ -65,10 +67,12 @@ def earlier(prev, version, product):
         src = prev / f
         if not SAFE.fullmatch(f) or base_of(v) in seen or not src.is_file():
             continue
-        if product_of(src.read_bytes()) != product:
+        raw = src.read_bytes()
+        pf = product_of(raw)
+        if pf.split("_")[0] != product.split("_")[0] or b"FELUCCA-LOADER-1" not in raw:
             continue
         seen.add(base_of(v))
-        out.append(({"version": v, "file": f}, src))
+        out.append(({"version": v, "file": f, "product": pf}, src))
         if len(out) >= KEEP_OLD:
             break
     return out
@@ -115,9 +119,10 @@ def main(pkg, version, out, prev=None):
         strip_module((HERE / "fm1diag.js").read_text(encoding="utf-8"))
     name = f"felucca-{re.sub(r'[^A-Za-z0-9.-]', '-', version)}.fwsc"
     old = earlier(Path(prev), version, product) if prev else []
-    versions = [{"version": version, "file": name}] + [e for e, _ in old]
+    versions = [{"version": version, "file": name, "product": product}] + [e for e, _ in old]
     meta = json.dumps({"version": version, "product": product, "pkg": "../../firmware/" + name,
-                       "versions": [{"version": e["version"], "pkg": "../../firmware/" + e["file"]} for e in versions]})
+                       "versions": [{"version": e["version"], "pkg": "../../firmware/" + e["file"], "product": e["product"]}
+                                    for e in versions]})
     for mark in ("/*LIB*/", "/*META*/"):
         if html.count(mark) != 1:
             raise SystemExit(f"index_pkg.html must contain {mark} once; update make_site.py")

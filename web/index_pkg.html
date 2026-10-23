@@ -507,6 +507,10 @@ window.addEventListener("beforeunload", (e) => { if (writing) { e.preventDefault
 
 /* (0.6.46) the version to install: the current one or one of the last few (make_site.py PREV_DIR) */
 const versions = meta.versions && meta.versions.length ? meta.versions : [{ version: meta.version, pkg: meta.pkg }];
+/* (0.9.9-beta1) each version's own package identity (the 0.6 line is FM-1_900, later ones FM-1_909): the device must
+ * report it after the install */
+const productOfVersion = (v) => v.product || meta.product;
+let product = meta.product;
 let loadEpoch = 0;
 function fillVersions() {
   const sel = $("ver"), at = sel.selectedIndex;
@@ -524,8 +528,8 @@ async function loadVersion(i) {
       if (!r.ok) throw new Error(`${v.pkg}: HTTP ${r.status}`);
       const pkg = new Uint8Array(await r.arrayBuffer());
       if (epoch !== loadEpoch) return;
-      if (productOf(pkg) !== meta.product) { sayK("badpkg"); showTip("badpkg"); log(`package ${v.pkg}: ${productOf(pkg)}`); return; }
-      image = logicalImage(pkg);
+      if (productOf(pkg) !== productOfVersion(v)) { sayK("badpkg"); showTip("badpkg"); log(`package ${v.pkg}: ${productOf(pkg)}`); return; }
+      image = logicalImage(pkg); product = productOfVersion(v);
       say(`JIANT FM ${v.version}`); showTip(null);
       $("go").disabled = writing;
       return;
@@ -557,7 +561,7 @@ $("first-stock").addEventListener("click", () => { $("stock").open = true; $("st
 
 /* ------------------------------------------------------------- the report --- */
 function report() {
-  return makeReport({ env, page: location.href, installer: `${(versions[+$("ver").value] || versions[0]).version} (${meta.product})${preview ? " preview" : ""}`,
+  return makeReport({ env, page: location.href, installer: `${(versions[+$("ver").value] || versions[0]).version} (${product})${preview ? " preview" : ""}`,
     state, scan: lastUp ? lastUp.lastScan : null, permission, error: lastError, log: $("log").textContent });
 }
 $("copy-report").addEventListener("click", async () => {
@@ -622,7 +626,7 @@ $("go").addEventListener("click", async () => {
   lockInstaller(true);
   try {
     const up = await begin();
-    await runInstall({ up, image, product: meta.product, ui, state });
+    await runInstall({ up, image, product, ui, state });
     sayK("done");
   } catch (e) { showError(e); }
   log(`firmware: ${state.fw ? `${state.fw.kind} ${state.fw.text || ""} ${state.fw.version || ""}` : "-"}`);

@@ -1,0 +1,4 @@
+# Earlier versions the public installer offers next to the current one (web/STABLE), each built from its own commit
+# by .github/workflows/emulator.yml (never a package taken from the live site). One per line: the commit, then a note.
+# Newest first. Up to make_site.py's KEEP_OLD are offered. A version in web/WITHDRAWN stays out.
+6522453c2893322ea574e39b579277775fde650b  # JIANT 0.6.2 (2026-10-10): six tracks, one core, the line users ask for

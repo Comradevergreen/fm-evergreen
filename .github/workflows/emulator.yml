@@ -93,9 +93,26 @@ jobs:
             (cd /tmp/stable && python3 tools/build.py)
             PKG=/tmp/stable/build/felucca.fwsc; SV=$(ver /tmp/stable); SH=${S::7}
           fi
-          # The public installer offers only the approved version in web/STABLE (0.9.9).
-          # Do not carry forward packages from the live site: later builds crash on the device.
-          python3 web/make_site.py "$PKG" "${SV:-dev}-$SH" build/site
+          # (0.9.9-beta1) web/CLASSIC: earlier versions offered too, each built from its own commit here (never a
+          # package taken from the live site: later builds crashed on the device). versions.json for make_site.py.
+          rm -rf build/prev; mkdir -p build/prev; : > build/prev/list
+          W=$(sed 's/#.*//' web/WITHDRAWN 2>/dev/null | awk 'NF{print $1}' | tr '\n' ' ')
+          while read -r C NOTE; do
+            case "$C" in ''|'#'*) continue;; esac
+            git cat-file -e "$C^{commit}" 2>/dev/null || { echo "CLASSIC: $C is not a commit here, skipped"; continue; }
+            rm -rf /tmp/classic; git worktree prune; git worktree add -f --detach /tmp/classic "$C"
+            if (cd /tmp/classic && python3 tools/build.py >/tmp/classic.log 2>&1); then
+              CV=$(ver /tmp/classic); F="felucca-${CV}-${C::7}.fwsc"
+              case " $W " in *" ${CV#v} "*) echo "CLASSIC: $CV withdrawn (web/WITHDRAWN), skipped";;
+                *) cp /tmp/classic/build/felucca.fwsc "build/prev/$F"; printf '%s %s\n' "$CV-${C::7}" "$F" >> build/prev/list;;
+              esac
+            else
+              echo "CLASSIC: $C did not build, skipped"; tail -5 /tmp/classic.log
+            fi
+            git worktree remove -f /tmp/classic || true
+          done < web/CLASSIC
+          python3 -c 'import json,sys; L=[l.split() for l in open("build/prev/list") if l.strip()]; json.dump([{"version":v,"file":f} for v,f in L], open("build/prev/versions.json","w"))'
+          python3 web/make_site.py "$PKG" "${SV:-dev}-$SH" build/site build/prev
           cp -r build/site/webapp build/site/firmware build/emu/
       # (JIANT 0.7.9) the stems app's phase-0 probe (android/probe), next to the installer: app/jiant-probe.apk
       - uses: actions/setup-java@v4
