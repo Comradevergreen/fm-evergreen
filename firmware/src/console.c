@@ -210,6 +210,7 @@ static void con_status(void)
     con_kv("voices_given_up", (int32_t)voice_kills);    /* (0.8.9) events, one a voice: the three below */
     con_kv("voices_trimmed", (int32_t)voice_trims);     /* the load budget: a tail already under -50 dB, inaudible */
     con_kv("voices_stolen", (int32_t)(voice_kills - voice_trims - shed_count));   /* for a new note, the 8 all busy */
+    con_kv("load_steals", (int32_t)load_steals);        /* (cpu5) .. of them, the admission's: the prediction past LOAD_ADMIT */
     con_puts("cpu2 ");                                  /* (0.6.72) the second core (fx.c mc_status) */
     con_puts(mc_status());
     con_puts("\r\n");

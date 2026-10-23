@@ -386,7 +386,8 @@ static __attribute__((noinline)) void load_half(uint32_t pct, uint32_t pct_all, 
             }
         }
     }
-    load_pred_q8 = load_avg_q8;
+    if (load_pred_q8 < load_avg_q8)
+        load_pred_q8 = load_avg_q8;                     /* (what the voices added decays by the block: load_block) */
 }
 
 /* Key-up ends a melodic hold, but a one-shot drum is still a live hit.
@@ -474,6 +475,107 @@ static uint32_t quiet_tail(track_t **pp)
     return best;
 }
 
+/* (0.9.9 cpu5, after LOOM-8's synth.c find_voice) the admission at a note's start, predicted: a voice added costs its
+ * part's measured time (fx.c mc_tk: the part's block, smoothed, shared by its voices; a part that has not sounded yet,
+ * or the host: a weight by engine) as a share of a half; added to the half's average load (load_half) plus what the
+ * voices admitted since the half's end add. Past LOAD_ADMIT the voice is not added: a released voice is given up for it
+ * instead (load_victim), the quietest of a POLY part's first, then the oldest of the part's own; never a MONO / LEGATO /
+ * UNISON part's released tail (its lead's voice) while a voice is free. The guard (load_half) only sees a half once it
+ * has run late; a chord's new voices could take it there in one block. With both cores rendering a voice is shared
+ * between them: LOAD_SHARE of its cost */
+#define LOAD_ADMIT 90u                                  /* %: the prediction may not pass this (ECO: LOAD_ADMIT_ECO) */
+#define LOAD_ADMIT_ECO 70u
+#define LOAD_SHARE_Q8 154u                              /* 0.6: the two cores' share (the FM-1: the split is by cost) */
+#define LOAD_FRAME_TICKS 544u                           /* TIMER4 ticks a frame (24 MHz / 44,117.6 Hz: audio.c DAC_TICKS) */
+#define LOAD_W_PCT 1u                                   /* a weight unit of mc_cost (fx.c) as % of a half: an estimate
+                                                         * until the part is measured (FM6 4 %, LOFI / NOISE 2, else 3) */
+#define LOAD_ADD_LOG2 7u                                /* what the admitted voices added decays over ~128 blocks (93 ms,
+                                                         * the average's time: as their load shows in it, load_block) */
+static uint32_t mc_tk[NTRK];                            /* (fx.c measures it: a part's block in TIMER4 ticks, smoothed) */
+static uint32_t load_steals;                            /* voices given up by the admission (console status) */
+static uint32_t load_cost_q8(const track_t *t)          /* a voice more of part t: its share of a half, %, Q8 */
+{
+    uint32_t ti = (uint32_t)(t - trk) % NTRK, k, nv = 0, c;
+    const engine_t *e = ENGINES[t->engine];
+    for (k = 0; k < NVOICE; k++)
+        nv += t->v[k].active;
+    if (mc_tk[ti] && nv) {                              /* measured: the part's block over its voices, a half of them */
+        uint32_t half = mc_tk[ti] * (HALF_FRAMES / CTL) / nv;
+        c = half * 25600u / (HALF_FRAMES * LOAD_FRAME_TICKS);
+    } else
+        c = (e == &ENG_FM6 ? 4u : e == &ENG_LOFI || e == &ENG_NOISE ? 2u : 3u) * LOAD_W_PCT * 256u;
+    return load_cores2 ? (c * LOAD_SHARE_Q8) >> 8 : c;
+}
+static void load_take(const track_t *t)                 /* a voice added: into the prediction */
+{
+    load_pred_q8 += load_cost_q8(t);
+}
+static void load_block(void)                            /* a block rendered (track_render, part 1: every block, on the
+                                                         * host too): the prediction back toward the average */
+{
+    uint32_t add = load_pred_q8 > load_avg_q8 ? load_pred_q8 - load_avg_q8 : 0u;
+    load_pred_q8 = load_avg_q8 + add - ((add + (1u << (LOAD_ADD_LOG2 - 1u))) >> LOAD_ADD_LOG2);
+}
+static uint32_t load_sounding_q8(void)                  /* what every sounding voice costs: the most the voices admitted
+                                                         * since the average can have added (a bound on the prediction:
+                                                         * many notes in one block, or none rendered between them) */
+{
+    uint32_t p, i, s = 0;
+    for (p = 0; p < NPART; p++) {
+        uint32_t nv = 0;
+        for (i = 0; i < NVOICE; i++)
+            nv += trk[p].v[i].active && trk[p].v[i].stage != 4u;
+        if (nv)
+            s += nv * load_cost_q8(&trk[p]);
+    }
+    return s;
+}
+static int load_admit(const track_t *t)                 /* room for a voice of part t? taken if so */
+{
+    uint32_t limit = (sys_load == LOAD_ECO ? LOAD_ADMIT_ECO : LOAD_ADMIT) << 8, add, most;
+    add = load_pred_q8 > load_avg_q8 ? load_pred_q8 - load_avg_q8 : 0u;
+    most = load_sounding_q8();
+    if (add > most) {
+        add = most;
+        load_pred_q8 = load_avg_q8 + add;
+    }
+    if (load_avg_q8 + add + load_cost_q8(t) > limit)
+        return 0;
+    load_take(t);
+    return 1;
+}
+/* the voice given up when the prediction is past the budget: the quietest released voice of a POLY part (self
+ * included), else the oldest held voice of self but its bass (POLY); NVOICE = none (the voice is added after all) */
+static uint32_t load_victim(track_t *self, track_t **pp)
+{
+    uint32_t p, i, best = NVOICE, low;
+    int32_t quiet = 0x7FFFFFFF;
+    for (p = 0; p < NPART; p++) {
+        track_t *t = &trk[p];
+        if (trk_vmode(t) != V_POLY && t != self)
+            continue;                                   /* (a mono part's tail is its lead's voice: kept) */
+        for (i = 0; i < NVOICE; i++) {
+            const voice_t *v = &t->v[i];
+            if (v->active && v->stage != 4u && !voice_held(t, v) && v->env_out < quiet) {
+                quiet = v->env_out;
+                best = i;
+                *pp = t;
+            }
+        }
+    }
+    if (best < NVOICE || trk_vmode(self) != V_POLY)
+        return best;
+    low = lowest_held(self);
+    for (i = 0; i < NVOICE; i++) {
+        const voice_t *v = &self->v[i];
+        if (v->active && v->stage != 4u && i != low && (best == NVOICE || v->age < self->v[best].age)) {
+            best = i;
+            *pp = self;
+        }
+    }
+    return best;
+}
+
 /* the budget is full: free a voice for part t. 0 = nothing to take (soft) */
 static int voice_room(track_t *t, int soft)
 {
@@ -484,6 +586,9 @@ static int voice_room(track_t *t, int soft)
             voice_kill(&vp->v[k]);                      /* (the load budget: a dying tail makes the room) */
             voice_trims++;
         }
+        if (soft)                                       /* (cpu5) an extra UNISON voice: only within the prediction */
+            return load_admit(t);
+        load_take(t);                                   /* (a lead is never refused: counted) */
         return 1;
     }
     k = voice_victim(t, soft, &vp);
@@ -523,26 +628,41 @@ static voice_t *voice_alloc(track_t *t, uint32_t note)
             return voice_reuse(t, &t->v[i]);
         nfree += !t->v[i].active;
     }
-    if (nfree && (voices_busy() >= voice_cap() || load_tight)) {   /* (0.6.16: the load budget too; 0.6.18: a dying tail) */
+    if (nfree) {
         track_t *vp = 0;
         uint32_t full = voices_busy() >= voice_cap(), k, own = np;
-        /* At capacity, this part's released slot can be retriggered in place.
-         * Taking another part's release instead both cuts its tail and renders
-         * an extra fading voice for several blocks. Held notes stay protected. */
-        if (full) {
-            for (i = 0; i < np; i++)
-                if (t->v[i].active && !voice_held(t, &t->v[i]) && t->v[i].stage != 4u &&
-                    (own == np || t->v[i].age < t->v[own].age))
-                    own = i;
-            if (own < np)
-                return &t->v[own];
+        if (full || load_tight) {                       /* (0.6.16: the load budget too; 0.6.18: a dying tail) */
+            /* At capacity, this part's released slot can be retriggered in place.
+             * Taking another part's release instead both cuts its tail and renders
+             * an extra fading voice for several blocks. Held notes stay protected. */
+            if (full) {
+                for (i = 0; i < np; i++)
+                    if (t->v[i].active && !voice_held(t, &t->v[i]) && t->v[i].stage != 4u &&
+                        (own == np || t->v[i].age < t->v[own].age))
+                        own = i;
+                if (own < np)
+                    return &t->v[own];
+            }
+            k = full ? voice_victim(t, 0, &vp) : quiet_tail(&vp);
+            if (k < np && vp == t)
+                return &t->v[k];                        /* our own: restart it in place (no click) */
+            if (k < NVOICE) {
+                voice_kill(&vp->v[k]);
+                voice_trims += !full;                   /* (the load budget's quiet tail, not a steal) */
+            }
         }
-        k = full ? voice_victim(t, 0, &vp) : quiet_tail(&vp);
-        if (k < np && vp == t)
-            return &t->v[k];                            /* our own: restart it in place (no click) */
-        if (k < NVOICE) {
-            voice_kill(&vp->v[k]);
-            voice_trims += !full;                       /* (the load budget's quiet tail, not a steal) */
+        if (full) {
+            load_take(t);                               /* (the voice added over the one given up) */
+        } else if (!load_admit(t)) {                    /* (cpu5) predicted past the budget: a released voice given up
+                                                         * for it (its own first, in place), the count stays */
+            k = load_victim(t, &vp);
+            if (k < NVOICE) {
+                if (vp == t)
+                    return &t->v[k];
+                voice_kill(&vp->v[k]);
+                load_steals++;
+            } else
+                load_take(t);                           /* (nothing to give up: added after all) */
         }
     }
     if (t->p[P_ALLOC] || t->p[P_GLIDE]) {
@@ -1036,6 +1156,8 @@ static uint32_t track_render(track_t *t, int32_t *out, uint32_t n)
     int16_t pe_new[8], p_new[P_COUNT];
     for (i = 0; i < n; i++)
         out[i] = 0;
+    if (!ti)
+        load_block();                                   /* (cpu5) the block's clock for the admission's prediction */
     if (snap) {                                         /* (0.6.13) a sound load: the whole sound as it was */
         memcpy(p_new, t->p, sizeof p_new);
         memcpy(t->p, xf_snap, sizeof p_new);
