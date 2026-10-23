@@ -38,7 +38,7 @@
 #define FELUCCA_ID "FM-1_900"    /* package identity (build.py: the .fwsc marker string) */
 #endif
 #ifndef FELUCCA_VERSION
-#define FELUCCA_VERSION "v0.9.9-seq2d" /* the sequencer redesign: the footer's bars, SEQ's chain, one roll on every SEQ page, MUTATE with control, step components v2, on beta4a */
+#define FELUCCA_VERSION "v0.9.9-seq2e" /* the sequencer redesign: the footer's bars, SEQ's chain, one roll on every SEQ page, MUTATE with control, step components v2, EDIT's MOMENTARY, on beta4a */
 #endif
 #if FELUCCA_OTA && !FELUCCA_FLASH
 #error "FELUCCA_OTA needs FELUCCA_FLASH"

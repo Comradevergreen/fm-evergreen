@@ -102,7 +102,7 @@ The names below are the ones the firmware uses (the HARDWARE CALIBRATION screen 
 | **LFO** | The LFO section: from elsewhere the page last shown (at power-on LFO); inside **MOD → LFO → MSEQ**, round. | **MACRO** layer: KNOB 1–4 are M1–M4. |
 | **FX** | The FX section: from elsewhere the page last shown; inside, the next module: **TRACK → BUSES → DELAY → REVERB → CHORUS → SLICER → MASTER → PUNCH**, round. | **Punch-in FX** layer. |
 | **SCL** | The SCL section (0.9.2: its own, ARP apart): **KEY ↔ CHORD**. | **SCL** layer: keys set the root. |
-| **EDIT** | The EDIT section: from elsewhere the page last shown (one memory for the synths, one each for FM6 and DRUM); inside the next group: **SOUND → TONE → FOCUS** (FM6: SOUND → TONE → OPERATOR; DRUM: KIT → SOUND → LEVELS → TONE). Always EDIT (0.9.2: clearing a step is SEQ + G5, renaming SAVE + C5). A step held + EDIT still clears that step's locks. | **EDIT** layer: INIT, RECALL, DRUM-X sound mutes. |
+| **EDIT** | The EDIT section: from elsewhere the page last shown (one memory for the synths, one each for FM6 and DRUM); inside the next group: **SOUND → TONE → FOCUS** (FM6: SOUND → TONE → OPERATOR; DRUM: KIT → SOUND → LEVELS → TONE). Always EDIT (0.9.2: clearing a step is SEQ + G5, renaming SAVE + C5). A step held + EDIT still clears that step's locks. | **EDIT** layer: INIT, RECALL, DRUM-X sound mutes, SELECT the presets. Held + KNOB 1–4: **MOMENTARY** (the page under, put back when let go). |
 | **GLO** | The GLO section: from elsewhere the page last shown; inside **MIX → GLOBAL → SYSTEM**, round. | **GLO** layer: mutes, solos, levels, tap tempo, UNDO. |
 | **SAVE** | The SAVE section: from elsewhere the page last shown, and USER or SECTIONS come with their **SAVE already picked** (SAVE, OCT+, OCT+ as before); inside **SOUND → PROJECT → LIBRARY**, round. | **SAVE** layer: play/store sections live; C5 NAME. |
 | **ARP** | The ARP section (ARP · ARP 2, one group): from elsewhere the page last shown; inside, back to ARP. A chord held + ARP during step recording still arpeggiates it. | (no layer) |
@@ -524,7 +524,25 @@ breadcrumb, **FX · MAP**. The keys and knobs do exactly what they did.
 
 **EDIT** — F3 **INIT** (the track's sound back to its engine's own defaults (a plain INIT, not a preset), dry: every effect send at 0; FM6 the init
 voice, OP1 alone at full level; on DRUM the factory DRUM-X kit too), G3 **RECALL** (the sound as the current section stored it; on DRUM with its kit). Both ask first and leave the
-steps alone. On a DRUM track, black keys 1–8 mute each DRUM-X sound (BD SD CP CH OH TM RS CB). Knobs: EDIT 1's four.
+steps alone. On a DRUM track, black keys 1–8 mute each DRUM-X sound (BD SD CP CH OH TM RS CB). **SELECT** (while EDIT is
+held): the presets of the track's engine, one a detent (factory ones, then your user presets made with it), the cards
+showing **No.**, **ENG** and **FAV**. The engine itself is picked on PRESETS (KNOB 2), FAV is marked there too (KNOB 3).
+The knobs are **MOMENTARY** (below).
+
+**EDIT's three gestures** (0.9.9-seq2e):
+
+1. **Tap EDIT** (press and let go, no knob turned): the EDIT pages, as always.
+2. **Hold EDIT**, no knob turned: the EDIT layer above (INIT, RECALL, the DRUM-X mutes, SELECT the presets).
+3. **Hold EDIT and turn any of KNOB 1–4: MOMENTARY.** The knob edits its parameter on the page that was showing when
+   you pressed EDIT (any page: HOME, a FILTER page, FX, DLY, ENV …), live, as a normal edit. Turn as many knobs as you
+   like. The screen stays on that page with the values moving and **MOMENTARY** in the header; the layer never comes.
+   Let go of EDIT and every parameter you touched glides back (about 30 ms, no click) to the value it had when you first
+   touched it. Letting go never changes page. Nothing is kept: a save, a section store, a user preset or the autosave
+   made during the hold stores the values from before, and nothing is recorded into the automation. A turn decides at
+   once, even before the layer would show; a turn after the layer showed closes it and goes MOMENTARY. Up to 16
+   parameters a hold. Pages whose knobs are not plain parameters (steps, the kit's sounds, FM6's operators, lists,
+   actions) say **NOT MOMENTARY HERE**. SELECT with EDIT held is always the presets, never MOMENTARY (a preset picked
+   during MOMENTARY stays, and that track's values are not put back).
 
 **SEQ TOOLS** (on every SEQ page) — F3 CLEAR, G3 REVERSE, A3 / B3 SHIFT left / right,
 C4 RANDOM, D4 COOK, E4 BEAT (DRUM), F4 CLR AUTO (the track's automation and locks; the steps stay). On a DRUM track the
@@ -869,7 +887,7 @@ DRUM-X is a synthesized kit of eight sounds, **BD SD CP CH OH TM RS CB**, genera
       sound, more as it goes up: from a metal edge to a clang with no note, so the sound melts into the rhythm and stays
       out of the harmony (the factory kit has it on the snare, the hats and the cowbell); **FEEDBK** (OFF, 1–15): that
       sound's own (added to KIT 3's); **SEND**: that hit alone into one effect, OFF then CHO, DLY, REV with 16 amounts
-      each, on one knob ("REV 75%"), on top of the track's own sends. The dice (EDIT + SELECT on a DRUM track, DICE ALL) set
+      each, on one knob ("REV 75%"), on top of the track's own sends. The dice (DICE ALL; the sound dice) set
       LAYER and FEEDBK boldly. Each sound with a LAYER costs a little CPU (about as FEEDBK).
   - **LEVELS / LEVELS 2**: the level of each sound (KICK, SNARE, CLAP, HATCL, HATOP, TOM, RIM, BELL).
   - **STEREO**: **IMAGE** (automatable) sweeps the kit through its placings in the stereo field. 0 (MONO): every sound
@@ -879,7 +897,7 @@ DRUM-X is a synthesized kit of eight sounds, **BD SD CP CH OH TM RS CB**, genera
   - KIT 3, X-MOD, LAYER, FEEDBK and SEND are saved with the section's kit.
 - **Mutes**: GLO held + black keys 7–10 mute the groups KICK, SNARE, HAT, PERC; EDIT held + black keys 1–8 mute each
   sound.
-- **EDIT held + SELECT** rolls a new kit around the factory one. **EDIT held + F3 (INIT)** brings the factory kit
+- **EDIT held + SELECT** steps through DRUM's presets (0.9.9-seq2e; the kit dice is no longer there). **EDIT held + F3 (INIT)** brings the factory kit
   back.
 
 ### The kit in every octave (0.8.5)
@@ -1406,9 +1424,10 @@ What a piece is made of:
 Every piece replaces every track's steps, sounds, kit, mix and automation. Mutes are left as they are. The roles that
 play go on the first tracks (drums on the DRUM track), so with TRACKS 4 you hear the most important ones.
 
-### Sound dice (EDIT + SELECT)
+### Sound dice
 
-Hold **EDIT** and turn SELECT (from any page): the selected track loads a random factory preset of its engine and each engine
+(0.9.9-seq2e: EDIT + SELECT now browses the engine's presets, so the sound dice has no gesture of its own in this build;
+DICE ALL still rolls every track.) The sound dice: the selected track loads a random factory preset of its engine and each engine
 parameter moves up to a quarter of its range. On DRUM, both sides of every kit sound are rolled around the factory kit.
 You hear it at once under **KEEP DICED SOUND?** (DRUM: **KEEP DICED KIT?**): turn SELECT again for another roll,
 **OCT+ OK** keeps it, **OCT− CANCEL** brings back the sound you had before the first roll (only that track's sound:

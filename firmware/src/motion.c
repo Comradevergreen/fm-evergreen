@@ -134,12 +134,30 @@ static uint32_t motion_mask(uint32_t k, uint32_t m[(P_COUNT + 31u) / 32u])
     }
     return any;
 }
+/* (0.9.9-seq2e) MOMENTARY (ui_layer.c mom_*): EDIT held + KNOB 1..4 edits the page under the layer for as long as EDIT
+ * is held. Each parameter touched is kept here as it was when first touched (its track, or MOM_G a song global; its id;
+ * the value): EDIT let go, it glides back. What is saved (project_capture, the autosave's signature, a user preset, the
+ * editor's reads) is the kept value, never the momentary one: mom_base */
+#define MOM_N 16u
+#define MOM_G 0xFFu
+typedef struct { uint8_t t, id; int16_t v, from; } mom_t;
+static mom_t mom[MOM_N];
+static uint8_t mom_n, mom_on, mom_glide;          /* entries; EDIT held and a knob turned; gliding back (EDIT let go) */
+static uint32_t mom_t0;                           /* fm1_ms the glide began */
+static int16_t mom_base(uint32_t t, uint32_t id, int16_t v)
+{
+    uint32_t i;
+    for (i = 0; i < mom_n; i++)
+        if (mom[i].t == t && mom[i].id == id)
+            return mom[i].v;
+    return v;
+}
 static int16_t motion_base_value(const track_t *t, uint32_t id)
 {
     uint32_t k = trk_index(t);
     if (id == MOT_DJF)
         return motion_djf_value();
-    return (motion_active[k][id / 32u] >> (id % 32u)) & 1u ? motion_base[k][id] : t->p[id];
+    return (motion_active[k][id / 32u] >> (id % 32u)) & 1u ? motion_base[k][id] : mom_base(k, id, t->p[id]);
 }
 static void motion_restore(track_t *t)
 {

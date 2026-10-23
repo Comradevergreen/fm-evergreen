@@ -1203,7 +1203,8 @@ static void edit_param(uint32_t slot, int32_t steps)
         settings_save();
         return;
     }
-    if (pg->scope != SC_GLOBAL && vp >= TSEL->p && vp < TSEL->p + P_COUNT)   /* (0.7.6: SCL's ALL TR is a global) */
+    if (!mom_on && pg->scope != SC_GLOBAL && vp >= TSEL->p && vp < TSEL->p + P_COUNT)   /* (0.7.6: SCL's ALL TR is a
+                                                         * global; 0.9.9-seq2e: MOMENTARY records nothing) */
         motion_capture(TSEL, (uint32_t)(vp - TSEL->p), *vp);
 }
 
@@ -1847,6 +1848,10 @@ static int layer_set_open(void);
 static uint32_t layer_oct(uint32_t pressed, uint32_t oct);
 static void layer_oct_open(uint32_t pressed);
 static int layer_allowed(void);
+static uint8_t ed_sel;                                  /* (0.9.9-seq2e) EDIT + SELECT turned this pass: a combo */
+static void mom_knob(uint32_t k, int32_t s);            /* (0.9.9-seq2e) MOMENTARY: EDIT held + KNOB 1..4 */
+static void mom_poll(void);
+static void mom_forget(uint32_t t);
 static uint32_t ly_bit(uint32_t l);
 
 /* a page button let go (they act on release; a layer's own button: layer_gesture): its section (rule 2; 0.9.2: EDIT is
@@ -1959,6 +1964,7 @@ static void ui_input_frame(void)
     uint32_t lay, combo = 0, lytap, lkeys, glo, kq = 0;
     int32_t s, sel = 0, ks[4] = {0, 0, 0, 0};
     fm6_poll();                                         /* FM6: PTCH turned -> its patch */
+    mom_poll();                                         /* (0.9.9-seq2e) MOMENTARY's glide back, its header tag */
     {   /* (JIANT 0.6.5) RESO's PITCH and FOLW live in PRE's and DAMP's slots: into RESO a ROOM's values become theirs
          * (DAMP past FOLW's T6: OFF; PRE past 14: 14), out of it the reverb's own defaults back */
         static uint8_t rt0 = 0xFFu;
@@ -2044,7 +2050,7 @@ static void ui_input_frame(void)
     layer_masks();                                      /* seq.c: keys pressed with a layer's button are its own */
     {   /* (0.6.67) a button held + SELECT (rule 5): its dice (HOME the generator, GEN; EDIT the sound, SEQ the sequence,
          * LFO the LFO, FX the effects; GLO + SELECT the tempo), ENV SCL ARP SAVE their chain (nav_jump); the button's tap
-         * and layer swallowed, and the turn's last detents for a moment after it is let go (no page moved by them). Not in
+         * and layer swallowed (0.9.9-seq2e: EDIT + SELECT the presets instead, ed_sel), and the turn's last detents for a moment after it is let go (no page moved by them). Not in
          * the menu, a dialog, NAME. (0.9.2) A button held + PRESETS: nothing (rule 3; until 0.9.1 its pages) */
         static uint32_t pj_sel_ms;
         uint32_t f = held_family(), hb = (fm1_in.buttons >> panel.btn[B_HOME]) & 1u;
@@ -2053,7 +2059,12 @@ static void ui_input_frame(void)
             (ps = panel_enc(EN_SELECT)) != 0) {
             uint32_t k = f == FAM_EDIT ? CF_DICE_SOUND : f == FAM_SEQ ? CF_DICE_SEQ : f == FAM_LFO ? CF_DICE_LFO :
                          f == FAM_FX ? CF_DICE_FX : 0u;
-            if (f == FAM_COUNT) {                       /* HOME held: GEN, HOME's generator */
+            if (f == FAM_EDIT) {                        /* (0.9.9-seq2e) EDIT held: the engine's presets, as the layer's
+                                                         * KNOB 2 did (ui.c eng_list_step); the layer stays (not dice) */
+                mom_forget(song.sel);                   /* (a MOMENTARY value of the sound replaced: not put back) */
+                eng_list_step(ps);
+                ed_sel = 1;
+            } else if (f == FAM_COUNT) {                /* HOME held: GEN, HOME's generator */
                 ui.home_t0 |= 2u;
                 if (!pj_sel_ms || fm1_ms - pj_sel_ms > 400u)
                     nav_go(SEC_HOME, 4u + gen_page(), 1);
@@ -2105,9 +2116,16 @@ static void ui_input_frame(void)
             ui.home_t0 |= 2u;
         if (pressed & (1u << panel.btn[B_SEQ]))
             ui.seq_t0 |= 2u;
-        for (k = 0; k < 4u; k++)                        /* KNOB 1..4: the layer's (ui_layer.c layer_knob) */
-            if ((ks[k] = panel_enc(EN_K1 + k)) != 0)
-                combo = 1;
+        for (k = 0; k < 4u; k++)                        /* KNOB 1..4: the layer's (ui_layer.c layer_knob); (0.9.9-seq2e)
+                                                         * EDIT's: MOMENTARY, the page under (ui_layer.c mom_knob) */
+            if ((ks[k] = panel_enc(EN_K1 + k)) != 0) {
+                if (ui.ly == LAYER_EDIT && (mom_on || !(ui.ly_t0 & 8u))) {   /* (LY_DEAD: not a dead press) */
+                    mom_knob(k, ks[k]);
+                    ks[k] = 0;
+                } else
+                    combo = 1;
+            }
+        combo |= ed_sel;                                /* (EDIT + SELECT: no tap; the layer shows the preset) */
         panel_enc(EN_PRESET);                           /* (a stray turn would load another sound) */
         {   /* (0.8.5) ALGORITHM: the layer's lens, MAP <-> KNOBS <-> STATE (no wrap; was dropped: another track there,
              * OCT- put back the layer's track only) */
@@ -2130,6 +2148,7 @@ static void ui_input_frame(void)
             if (panel_enc(EN_K1 + k) != 0)
                 combo = 1;                              /* (with the button let go this frame: no tap) */
     }
+    ed_sel = 0;
     if (!lay)
         ly_used = 0;
     else if (combo)

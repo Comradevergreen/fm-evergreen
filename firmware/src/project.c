@@ -1508,8 +1508,8 @@ static void project_capture(project_t *p)
     p->magic = PROJ_MAGIC;
     p->size = sizeof *p;
     for (i = 0; i < G_COUNT; i++)
-        p->g[i] = song.g[i];
-    p->g[G_DJF] = motion_djf_value();                   /* (0.9.1) the knob's, not what its automation set */
+        p->g[i] = mom_base(MOM_G, i, song.g[i]);       /* (0.9.9-seq2e: a MOMENTARY value: the one kept) */
+    p->g[G_DJF] = mom_base(MOM_G, G_DJF, motion_djf_value());                   /* (0.9.1) the knob's, not what its automation set */
     p->sel = song.sel;
     p->parts = NPART;
     p->phys = PROJ_PHYS;
@@ -2355,7 +2355,7 @@ static uint32_t autosave_sig(void)
     }
     for (i = 0; i < G_COUNT; i++)
         if (i != G_SLOT && i != G_LOAD && i != G_SAVE) {
-            int16_t v = i == G_DJF ? motion_djf_value() : song.g[i];   /* (0.9.1: the knob's, not its records') */
+            int16_t v = mom_base(MOM_G, i, i == G_DJF ? motion_djf_value() : song.g[i]);   /* (0.9.1: the knob's, not its records') */
             h = as_mix(h, &v, sizeof v);
         }
     h = as_mix(h, &motion, sizeof motion);
