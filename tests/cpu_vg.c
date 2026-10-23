@@ -188,7 +188,7 @@ int main(void)
     song.g[G_DJF] = 0;
     {   /* (cpu5) the idle floor: mix/idle the power-on state 2 s on, nothing played (the buses never excited: cpu4's
          * certificates); mix/idle.tail after a chord into CLOUD, the delay and the chorus has rung out and the buses'
-         * gate has shut (fx.c fx_rest), 4 s after the keys went up */
+         * gate has shut (fx.c fx_rest), 6 s after the keys went up (the delay's FEEDBK holds the gate ~4 s) */
         uint32_t b;
         ui_power_on();
         for (b = 0; b < 3000u; b++)
@@ -196,15 +196,15 @@ int main(void)
         vg_section("mix/idle");
         ui_power_on();
         song.g[G_RTYPE] = 4; song.g[G_DFDBK] = 60;
-        for (i = 0; i < 4u; i++) {
-            vg_part(i, i == 1u ? ENGI_FM6 : ENGI_ANALOG, 0, 3);
+        for (i = 0; i < 4u; i++) {                      /* (ANALOG: FM6's preset 0 never ends its release: sends on) */
+            vg_part(i, ENGI_ANALOG, 0, 3);
             trk[i].p[P_DLY] = 60; trk[i].p[P_REV] = 60; trk[i].p[P_CHOR] = 60; trk[i].p[P_REL] = 40;
         }
         for (b = 0; b < 400u; b++)
             mix_block(vo, CTL);
         for (i = 0; i < 4u; i++)
             trk_all_off(&trk[i]);
-        for (b = 0; b < (uint32_t)FS * 4u / CTL; b++)
+        for (b = 0; b < (uint32_t)FS * 6u / CTL; b++)
             mix_block(vo, CTL);
         vg_section("mix/idle.tail");
     }

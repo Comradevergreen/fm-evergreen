@@ -8765,7 +8765,8 @@ static int test_click_menu(void)
             song.g[G_SLMODE] = 1;
             ok = slicer_on();
             load_put(0u);
-            song.g[G_RTYPE] = 0; mix_block(o, CTL); mix_block(o, CTL);
+            song.g[G_RTYPE] = 0; fxq_r[0] = 4000; mix_block(o, CTL); fxq_r[0] = 4000; mix_block(o, CTL);   /* (cpu5: a
+                                                         * send, or the buses rest and SPRING's chain is set at the wake) */
             ok &= sys_load == LOAD_ECO && fx.rtype == 1u && !slicer_on() && song.g[G_SLMODE] == 1;
             ok &= trk_nvoice(&ft) == ECO_POLY;
             ft.engine = ENGI_FM6;
@@ -8782,7 +8783,7 @@ static int test_click_menu(void)
             go_title("REVERB"); frame();
             ok &= strstr(ui.col[0], "|ROOM|ECO") != 0;
             load_put(2u);
-            song.g[G_RTYPE] = 1; mix_block(o, CTL);
+            song.g[G_RTYPE] = 1; fxq_r[0] = 4000; mix_block(o, CTL);
             ok &= voice_cap() == NVOICE && fx.sp_ns == SP_N;   /* FULL: all of them */
             for (i = 0; i < NPAGES && !str_eq(PAGES[i].title, "SLICER"); i++) {}
             ok &= slicer_on() && page_visible(i);
