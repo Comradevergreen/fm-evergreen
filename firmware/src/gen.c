@@ -1779,7 +1779,7 @@ static void gx_comps(void)
             case CP_JUMP: a = gr() % len | (gr() % 4u) << 6; break;
             default: a = gr() % 4u; break;              /* REV: its TIMES */
             }
-            s->comp = (uint8_t)c; s->carg = (uint8_t)a;
+            comp_legacy(s, 0, c, a);                    /* (seq2d: migrated in gen_post) */
             if (gch(35)) ST_EVERY_SET(s, EV[gr() % 7u]);
             j++;
         }
@@ -1847,19 +1847,19 @@ static void gen_post(void)
                 if (s->time != ST_NOTE || !s->n || s->comp) continue;
                 if (r == RL_PAD) {
                     if (s->n < 2u) continue;
-                    if (gch(60)) { s->comp = CP_ARPN; s->carg = CP_ARG(gr() % 3u, gch(50) ? 0u : 2u, 0u); }
-                    else { s->comp = CP_ECHO; s->carg = (uint8_t)(gr() % 2u); }
+                    if (gch(60)) comp_legacy(s, 0, CP_ARPN, CP_ARG(gr() % 3u, gch(50) ? 0u : 2u, 0u));
+                    else comp_legacy(s, 0, CP_ECHO, gr() % 2u);
                 } else if (r == RL_LEAD) {              /* (0.8.3: never a random walk or an octave thrown into the
                                                          * line: its notes are composed) */
                     uint32_t c = gr() % 3u;
                     if (s->time != ST_NOTE || !gin_mode(s->note[0])) continue;
-                    s->comp = (uint8_t)(c == 0u ? CP_ECHO : c == 1u ? CP_BEND : CP_PULSE);
-                    s->carg = (uint8_t)(s->comp == CP_ECHO ? gr() % 2u : s->comp == CP_BEND ? (gch(50) ? 2u : 10u) : 1u);
+                    uint32_t cc = c == 0u ? CP_ECHO : c == 1u ? CP_BEND : CP_PULSE;
+                    comp_legacy(s, 0, cc, cc == CP_ECHO ? gr() % 2u : cc == CP_BEND ? (gch(50) ? 2u : 10u) : 1u);
                 } else {                                /* (the arp: its chord's tones; 0.8.3: no RAND, no WALK) */
                     uint32_t c = gr() % 3u;
-                    s->comp = (uint8_t)(c == 0u ? CP_OCT : c == 1u ? CP_ECHO : CP_CLIMB);
-                    s->carg = (uint8_t)(s->comp == CP_OCT ? 4u : s->comp == CP_CLIMB ? CP_WARG(2u + gr() % 6u, gch(50) ? 2u : 0u, gr() % 2u) : 0u);
-                    if (c == 1u && gs.energy > 60u && gch(50)) { s->comp = 0; step_set_ratchet(s, 2); }
+                    uint32_t cc = c == 0u ? CP_OCT : c == 1u ? CP_ECHO : CP_CLIMB;
+                    comp_legacy(s, 0, cc, cc == CP_OCT ? 4u : cc == CP_CLIMB ? CP_WARG(2u + gr() % 6u, gch(50) ? 2u : 0u, gr() % 2u) : 0u);
+                    if (c == 1u && gs.energy > 60u && gch(50)) { s->comp = 0; s->clen[0] = 0; step_set_ratchet(s, 2); }
                 }
                 if (s->comp && gch(40)) ST_EVERY_SET(s, gch(50) ? EV_1_2 : EV_2_2);   /* (every other loop) */
                 got++;
@@ -1867,6 +1867,8 @@ static void gen_post(void)
         }
     }
     if (gx.on) gx_comps();                              /* (0.8.6) EXPLORE: wilder ones, on the bass too */
+    for (k = 0; k < NTRK; k++)                          /* (seq2d) the CP_* written above as components v2 */
+        comp_migrate(trk[k].step, dlen(&trk[k]));
 }
 /* (0.8.3) the piece's key on the SCALE page, every track (the keys, CHORD, ALL TR and the RESO reverb with it), QUANT
  * SNAP unless one is chosen (the keys play in the key); the CHORD page on the chord track as its chords are (TRIAD, 7TH,

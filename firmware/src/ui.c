@@ -790,10 +790,6 @@ static uint32_t note_len(const track_t *t, uint32_t c, uint32_t len)
     return l;
 }
 
-enum { COMP_OFF, COMP_CHANCE, COMP_RATCH, COMP_ARPN, COMP_ARPQ, COMP_ARPS, COMP_TRIG, COMP_RAND, COMP_OCT, COMP_TONAL,
-       COMP_BEND, COMP_ECHO, COMP_PULSE, COMP_JUMP, COMP_REV, COMP_FILL, COMP_KILL, COMP_WALK, COMP_CLIMB, COMP_TOUCH, COMP_N };   /* (CP_* in order) */
-static const char *const EV_NAMES[EV_N] = {"ALWAYS", "1:2", "2:2", "SKIP", "1:3", "2:3", "3:3", "1:4", "2:4", "3:4", "4:4",
-                                           "1:8", "FIRST", "!FIRST"};   /* (0.6.92) EVERY */
 /* (0.6.92) a part of the step as a note value: n parts a step of the track's DIV (1/16: x2 1/32, x3 1/32T, x4 1/64 ..;
  * a triplet or a bar's DIV, or an odd count: "xn") */
 static void rate_name(const track_t *t, uint32_t n, char *b)
@@ -807,11 +803,14 @@ static void rate_name(const track_t *t, uint32_t n, char *b)
     if (!v) { b[0] = 'x'; fmt_int(b + 1, (int32_t)n); return; }
     b[0] = '1'; b[1] = '/'; fmt_int(b + 2, (int32_t)v); str_cpy(b + str_len(b), tr, 2);
 }
-static const char *const COMP_NAMES[COMP_N] = {"OFF", "CHANCE", "RATCH", "NOTES", "SEQ", "SCALE", "TRIG", "RAND", "OCT",
-                                               "TONAL", "BEND", "ECHO", "PULSE", "JUMP", "REV", "FILL", "KILL", "WALK", "CLIMB",
-                                               "TOUCH"};
-/* (0.6.82) the COMP pages one after another: COMP (the step's first component), COMP 2 (its second), WHEN (theirs, and
- * the step's LEN): which this is (0..2) */
+/* (0.9.9-seq2d) SEQ > COMP / COMP 2: the step's C1 / C2 as ACTION LENGTH CONDITION VALUE (core.h CA_* CC_*) */
+static const char *const CA_NAMES[CA_N] = {"OFF", "ARP", "SEQ", "OCT+", "OCT-", "RATCH", "STUTTER", "MUTE", "TRANSP",
+                                           "RANDOM", "LOCK", "JUMP", "SOUND", "BEND"};
+static const char *const CC_NAMES[CC_NM] = {"ALWAYS", "25%", "50%", "75%", "FIRST", "!FIRST", "FILL", "!FILL", "PRE",
+                                            "!PRE", "NEI", "!NEI", "ELSE"};
+#define CCL_NM 135u                                     /* N:M, M 2..16, N 1..M */
+#define CCL_N (CC_NM + 2u * CCL_NM)                     /* KNOB 3's list: the thirteen, the N:Ms, the !N:Ms */
+/* the COMP pages one after another: COMP (the step's C1), COMP 2 (its C2): which this is (0..1) */
 static uint32_t comp_slot(void)
 {
     uint32_t i = ui.page, k = 0;
@@ -819,28 +818,104 @@ static uint32_t comp_slot(void)
         i--, k++;
     return k;
 }
-static uint32_t comp_type(const step_t *s) { return comp_slot() == 1u ? s->comp2 : s->comp; }   /* (the page's) */
+static uint32_t comp_type(const step_t *s) { return CO_ACT(comp_slot() == 1u ? s->comp2 : s->comp); }   /* (the page's) */
 static uint32_t comp_arg(const step_t *s) { return comp_slot() == 1u ? s->carg2 : s->carg; }
-static uint32_t comp_view1(void);
-static uint32_t comp_view(void)                         /* the TYPE shown for the cursor step: COMP 2's its second */
+static uint32_t comp_view(void)                         /* the ACTION shown for the cursor step */
 {
-    const step_t *s = &TSEL->step[ui.cursor];
-    if (comp_slot() == 1u)
-        return s->comp2 ? COMP_ARPN + s->comp2 - CP_ARPN : COMP_OFF;
-    return comp_view1();
+    return comp_type(&TSEL->step[ui.cursor]) % CA_N;
 }
-static uint32_t comp_view1(void)                        /* the first's, CHANCE and RATCH (read once a step) */
+/* a CONDITION (and its N:M) as KNOB 3's place in the list, and back */
+static uint32_t cond_idx(uint32_t c, uint32_t nm)
 {
-    const step_t *s = &TSEL->step[ui.cursor];
-    uint32_t at = (uint32_t)ui.cursor + 1u + (uint32_t)song.sel * 64u;
-    if (ui.comp_at != at || ui.comp_sel >= COMP_N) {
-        ui.comp_at = (uint16_t)at;
-        ui.comp_sel = (uint8_t)(s->comp ? COMP_ARPN + s->comp - CP_ARPN : step_chance(s) < 100u ? COMP_CHANCE :
-                                step_ratchet(s) > 1u ? COMP_RATCH : COMP_OFF);
+    uint32_t n = CNM_N(nm), m = CNM_M(nm);
+    if (c < CC_NM) return c;
+    if (m < 2u) m = 2u;
+    if (n > m) n = m;
+    return CC_NM + (c == CC_NNM ? CCL_NM : 0u) + (m - 1u) * m / 2u - 1u + n - 1u;
+}
+static void cond_at(uint32_t i, uint32_t *c, uint32_t *nm)
+{
+    uint32_t m = 2u, q;
+    if (i < CC_NM) { *c = i; *nm = 0; return; }
+    q = (i - CC_NM) % CCL_NM;
+    *c = i - CC_NM >= CCL_NM ? CC_NNM : CC_NM;
+    while (q >= m) { q -= m; m++; }
+    *nm = CNM_MAKE(q + 1u, m);
+}
+static void cond_name(uint32_t c, uint32_t nm, char *b)
+{
+    uint32_t k = 0;
+    if (c < CC_NM) { str_cpy(b, CC_NAMES[c], 8); return; }
+    if (c == CC_NNM) b[k++] = '!';
+    fmt_int(b + k, (int32_t)CNM_N(nm));
+    k = str_len(b); b[k++] = ':';
+    fmt_int(b + k, (int32_t)CNM_M(nm));
+}
+/* a VALUE as KNOB 4's place (0 .. CA_VMAX), and back: ARP its NOTES / SCALE, RANGE, ORDER, RATE (the knob's: x1 ..);
+ * RATCHET its hits and DECAY; TRANSPOSE its RANGE and move; the others as they are stored */
+static uint32_t comp_vidx(uint32_t a, uint32_t v)
+{
+    uint32_t r;
+    switch (a) {
+    case CA_ARP:
+        for (r = 0; r < CP_NRATE && CP_RATE_ORD[r] != CP_RATE(v) % CP_NRATE; r++) {}
+        return ((((v & CV_ARP_SCALE) ? 4u : 0u) + CP_RNG(v)) * 4u + CP_ORD(v)) * CP_NRATE + r % CP_NRATE;
+    case CA_RATCH: return ((v & 7u) % 7u) * 3u + CV_RAT_DEC(v);
+    case CA_TRANS: return (CV_TR_RANGE(v) - 1u) * 15u + (uint32_t)(CV_TR_MOVE(v) + 7);
+    default: return v;
     }
-    if (s->comp && ui.comp_sel != COMP_ARPN + s->comp - CP_ARPN)   /* (changed elsewhere: the editor, a dice) */
-        ui.comp_sel = (uint8_t)(COMP_ARPN + s->comp - CP_ARPN);
-    return ui.comp_sel;
+}
+static uint32_t comp_vat(uint32_t a, uint32_t i)
+{
+    switch (a) {
+    case CA_ARP: {
+        uint32_t r = i % CP_NRATE, o = i / CP_NRATE % 4u, g = i / CP_NRATE / 4u % 4u, sc = i / CP_NRATE / 16u;
+        return CP_ARG(o, CP_RATE_ORD[r], g) | (sc ? CV_ARP_SCALE : 0u);
+    }
+    case CA_RATCH: return i / 3u | (i % 3u) << 3;
+    case CA_TRANS: return CV_TR_MAKE((int32_t)(i % 15u) - 7, i / 15u + 1u);
+    default: return i;
+    }
+}
+static void rate_name(const track_t *t, uint32_t n, char *b);
+/* KNOB 4's column: its label, value, unit */
+static void comp_vname(const track_t *t, const step_t *s, uint32_t a, uint32_t v, char *lb, char *val, char *un)
+{
+    static const char *const ORD[4] = {"UP", "DOWN", "UP-DN", "RND"};
+    static const char *const DEC[3] = {"FLAT", "DOWN", "UP"};
+    static const char *const HIT[3] = {"SHORT", "GHOST", "FLAM"};
+    int32_t m;
+    lb[0] = val[0] = un[0] = 0;
+    switch (a) {
+    case CA_ARP:
+        str_cpy(lb, v & CV_ARP_SCALE ? "SCALE " : "NOTES ", 8);
+        fmt_int(lb + 6, v & CV_ARP_SCALE ? CP_DEGS[CP_RNG(v)] : (int32_t)CP_RNG(v) + 1);
+        str_cpy(val, ORD[CP_ORD(v)], 8);
+        rate_name(t, CP_RATES[CP_RATE(v) % CP_NRATE], un);
+        break;
+    case CA_SEQ: str_cpy(lb, "FROM", 8); fmt_int(val, (int32_t)(v & 63u) + 1); str_cpy(un, v & CV_SEQ_BOUNCE ? "BOUNCE" : "LOOP", 8); break;
+    case CA_OCTU: case CA_OCTD: str_cpy(lb, "OCTAVES", 8); fmt_int(val, (int32_t)(v % 3u) + 1); break;
+    case CA_RATCH: str_cpy(lb, "RATE", 8); val[0] = 'x'; fmt_int(val + 1, (int32_t)CV_RAT_HITS(v)); str_cpy(un, DEC[CV_RAT_DEC(v)], 8); break;
+    case CA_STUT: str_cpy(lb, "EVERY", 8); fmt_int(val, (int32_t)(v % 4u) + 1); str_cpy(un, v % 4u ? "STEPS" : "STEP", 8); break;
+    case CA_MUTE: str_cpy(lb, "MODE", 8); str_cpy(val, v ? "CUT" : "MUTE", 8); break;
+    case CA_TRANS:
+        str_cpy(lb, "MOVE", 8); m = CV_TR_MOVE(v);
+        val[0] = m < 0 ? '-' : '+'; fmt_int(val + 1, m < 0 ? -m : m);
+        if (CV_TR_RANGE(v) > 1u) { un[0] = 'R'; fmt_int(un + 1, (int32_t)CV_TR_RANGE(v)); } else str_cpy(un, "FIX", 8);
+        break;
+    case CA_RAND: str_cpy(lb, "RANGE", 8); fmt_int(val, (int32_t)(v % 7u) + 1); str_cpy(un, "DEG", 8); break;
+    case CA_LOCK: {
+        uint32_t id, n = 0;
+        int16_t lv;
+        for (id = 0; id < P_COUNT; id++) n += (uint32_t)motion_lock_get(t, (uint32_t)(s - t->step) % NSTEP, id, &lv);
+        str_cpy(lb, "LOCKS", 8); fmt_int(val, (int32_t)n);
+        break;
+    }
+    case CA_JUMP: str_cpy(lb, "TO STEP", 8); if (v >= CV_JUMP_REV) str_cpy(val, "REV", 8); else fmt_int(val, (int32_t)v + 1); break;
+    case CA_SOUND: str_cpy(lb, "HIT", 8); str_cpy(val, HIT[v % 3u], 8); break;
+    case CA_BEND: str_cpy(lb, "BEND", 8); m = (int32_t)(v % 25u) - 12; val[0] = m < 0 ? '-' : '+'; fmt_int(val + 1, m < 0 ? -m : m); str_cpy(un, "ST", 8); break;
+    default: break;
+    }
 }
 static void step_clear(step_t *st)
 {
@@ -851,6 +926,7 @@ static void step_clear(step_t *st)
     st->hit = st->acc = 0;
     st->comp = st->carg = 0;
     st->comp2 = st->carg2 = st->cwhen = st->ctime = 0;
+    st->clen[0] = st->clen[1] = st->cnm[0] = st->cnm[1] = 0;   /* (seq2d) */
     st->probability = 0;
     st->lm[0] = st->lm[1] = st->lm[2] = 0;                /* (0.8.5) */
 }

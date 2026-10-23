@@ -878,18 +878,17 @@ static void cpu_test_song(void)
             s->time = ST_NOTE; s->vel = 100;
             if (drum) {
                 s->hit = 0xFF;
-                s->comp = i % 4u ? CP_OCT : CP_ARPN;
-                s->carg = s->comp == CP_OCT ? 4u : CP_ARG(0u, 2u, 0u);
+                comp_legacy(s, 0, i % 4u ? CP_OCT : CP_ARPN, i % 4u ? 4u : CP_ARG(0u, 2u, 0u));
             } else {
                 uint32_t r = 48u + (i * 5u) % 12u;
                 s->n = 4; s->note[0] = (uint8_t)r; s->note[1] = (uint8_t)(r + 4u); s->note[2] = (uint8_t)(r + 7u);
                 s->note[3] = (uint8_t)(r + 11u);
-                s->comp = i % 3u == 0u ? CP_ARPQ : CP_ECHO;
-                s->carg = s->comp == CP_ARPQ ? CP_ARG(3u, 4u, 3u) : 6u;
-                s->comp2 = i % 2u ? CP_RAND : CP_OCT; s->carg2 = i % 2u ? 7u : 5u;
+                comp_legacy(s, 0, i % 3u == 0u ? CP_ARPQ : CP_ECHO, i % 3u == 0u ? CP_ARG(3u, 4u, 3u) : 6u);
+                comp_legacy(s, 1, i % 2u ? CP_RAND : CP_OCT, i % 2u ? 7u : 5u);
                 s->ctime = 5u | (6u << 3);
             }
         }
+        comp_migrate(t->step, 32u);                     /* (seq2d: as components v2) */
         load_end(t);
     }
 }

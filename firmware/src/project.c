@@ -735,7 +735,16 @@ static uint8_t proj_full;                               /* the last proj_pack fa
 static int proj_step_empty(const step_t *s)
 {
     return !s->n && s->time == ST_REST && !s->flags && !s->vel && !s->hit && !s->acc && !s->probability && !s->comp &&
-           !s->comp2 && !s->cwhen && !s->ctime && !step_lm_any(s);
+           !s->comp2 && !s->cwhen && !s->ctime && !step_lm_any(s) && !s->clen[0] && !s->clen[1] && !s->cnm[0] && !s->cnm[1];
+}
+/* (0.9.9-seq2d) components v2: x bit 7, four bytes after the lanes' modes: C1's and C2's LENGTH - 1, their N:M. Every step
+ * with a component has it (so firmware before seq2d refuses the project, as any newer format); a step with a component
+ * and no x bit 7 is a project before seq2d: its CP_* migrate as it loads (seq.c comp_migrate). proj_comp_legacy (the
+ * tests): written as before seq2d, the step's comp bytes as they are */
+static uint8_t proj_comp_legacy;
+static int proj_step_v2(const step_t *s)
+{
+    return !proj_comp_legacy && (comp_any(s) || s->clen[0] || s->clen[1] || s->cnm[0] || s->cnm[1]);
 }
 static uint32_t proj_step_x(const step_t *s, uint32_t *nn)   /* its x byte (0: none), *nn the notes stored */
 {
@@ -746,13 +755,14 @@ static uint32_t proj_step_x(const step_t *s, uint32_t *nn)   /* its x byte (0: n
     return (s->hit || s->acc ? 1u : 0u) | (s->probability ? 2u : 0u) | (r & 2u ? 4u : 0u) | (all ? 8u : 0u) |
            (s->comp ? 16u : 0u) |                       /* (0.6.39) a component: two bytes, its type and arguments */
            (s->comp2 || s->cwhen || s->ctime ? 32u : 0u) |   /* (0.6.82) the second, WHEN, DIV / LEN: four more */
-           (step_lm_any(s) ? 64u : 0u);                 /* (0.8.5) the lanes' modes: three more (firmware before refuses) */
+           (step_lm_any(s) ? 64u : 0u) |                /* (0.8.5) the lanes' modes: three more (firmware before refuses) */
+           (proj_step_v2(s) ? 128u : 0u);               /* (seq2d) components v2: four more */
 }
 static uint32_t proj_step_size(const step_t *s)
 {
     uint32_t nn, x = proj_step_x(s, &nn);
     return 2u + nn + (x ? 1u + (x & 1u ? 2u : 0u) + (x & 2u ? 1u : 0u) + (x & 16u ? 2u : 0u) + (x & 32u ? 4u : 0u) +
-                          (x & 64u ? 3u : 0u) : 0u);
+                          (x & 64u ? 3u : 0u) + (x & 128u ? 4u : 0u) : 0u);
 }
 static int proj_fm_kept(const project_t *q, uint32_t t)
 {
@@ -851,7 +861,10 @@ static int proj_pack(project_store_t *out, const project_t *q)
         for (i = 0; i < NSTEP; i++) {
             const step_t *s = &q->t[t].step[i];
             if (s->n > 4u || s->time > ST_REST || (s->flags & ~(3u | SF_RATCH | SF_MFINE)) || s->probability > 101u ||
-                s->comp >= CP_N || s->comp2 >= CP_N || CT_DIV(s) >= CT_NDIV || s->ctime > 127u) return 0;
+                CT_DIV(s) >= CT_NDIV || s->ctime > 127u) return 0;
+            if (proj_comp_legacy ? s->comp >= CP_N || s->comp2 >= CP_N :
+                CO_ACT(s->comp) >= CA_N || CO_COND(s->comp) >= CC_N || CO_ACT(s->comp2) >= CA_N ||
+                CO_COND(s->comp2) >= CC_N || s->clen[0] >= CL_MAX || s->clen[1] >= CL_MAX) return 0;
         }
     }
     if (!chain_valid(&q->chain) || !motion_valid(&q->motion) || P_COUNT > 127u || !dx_kit_ok(q->dx)) return 0;
@@ -891,6 +904,7 @@ static int proj_pack(project_store_t *out, const project_t *q)
             if (x & 16u) { b[pos++] = s->comp; b[pos++] = s->carg; }
             if (x & 32u) { b[pos++] = s->comp2; b[pos++] = s->carg2; b[pos++] = s->cwhen; b[pos++] = s->ctime; }
             if (x & 64u) { b[pos++] = s->lm[0]; b[pos++] = s->lm[1]; b[pos++] = s->lm[2]; }
+            if (x & 128u) { b[pos++] = s->clen[0]; b[pos++] = s->clen[1]; b[pos++] = s->cnm[0]; b[pos++] = s->cnm[1]; }
         }
     }
     memcpy(b + pos, &q->chain, sizeof q->chain); pos += sizeof q->chain;
@@ -1102,7 +1116,7 @@ static int proj_unpack_c(project_t *q, const uint8_t *b)
             if (meta & 128u) {
                 if (pos + 1u > room) return 0;
                 x = b[pos++];
-                if (!x || (x & ~127u)) return 0;
+                if (!x) return 0;
                 if (x & 8u) nn = 4u;
             }
             if (pos + nn + 1u > room) return 0;
@@ -1118,13 +1132,16 @@ static int proj_unpack_c(project_t *q, const uint8_t *b)
                 if (pos + 1u > room || (s->probability = b[pos++]) > 101u || !s->probability) return 0;
             }
             s->comp = s->carg = 0;
-            if (x & 16u) {                              /* (0.6.39) a component */
-                if (pos + 2u > room || (s->comp = b[pos++]) >= CP_N || !s->comp) return 0;
+            if (x & 16u) {                              /* (0.6.39) a component (seq2d: v2 with x bit 7, else a CP_*) */
+                if (pos + 2u > room || !(s->comp = b[pos++]) ||
+                    (x & 128u ? CO_ACT(s->comp) >= CA_N || CO_COND(s->comp) >= CC_N : s->comp >= CP_N)) return 0;
                 s->carg = b[pos++];
             }
             s->comp2 = s->carg2 = s->cwhen = s->ctime = 0;
             if (x & 32u) {                              /* (0.6.82) the second component, WHEN, DIV and LEN */
-                if (pos + 4u > room || (s->comp2 = b[pos++]) >= CP_N) return 0;
+                if (pos + 4u > room) return 0;
+                s->comp2 = b[pos++];
+                if (x & 128u ? CO_ACT(s->comp2) >= CA_N || CO_COND(s->comp2) >= CC_N : s->comp2 >= CP_N) return 0;
                 s->carg2 = b[pos++]; s->cwhen = b[pos++]; s->ctime = b[pos++];
                 if (CT_DIV(s) >= CT_NDIV || s->ctime > 127u) return 0;
             }
@@ -1136,9 +1153,20 @@ static int proj_unpack_c(project_t *q, const uint8_t *b)
                 for (l = 0; l < NLANE; l++)
                     step_set_lmode(s, l, step_lmode(s, l));
             }
+            s->clen[0] = s->clen[1] = s->cnm[0] = s->cnm[1] = 0;
+            if (x & 128u) {                             /* (seq2d) components v2: LENGTHs and N:Ms */
+                if (pos + 4u > room) return 0;
+                s->clen[0] = b[pos++]; s->clen[1] = b[pos++]; s->cnm[0] = b[pos++]; s->cnm[1] = b[pos++];
+                if (s->clen[0] >= CL_MAX || s->clen[1] >= CL_MAX) return 0;
+            } else {                                    /* (before seq2d: its CP_*, EVERY, migrated below) */
+                if (s->comp) s->clen[0] = CL_LEGACY;
+                if (s->comp2) s->clen[1] = CL_LEGACY;
+                if (!s->comp && !s->comp2) s->cwhen &= 0xF0u;
+            }
             r |= (x >> 1) & 2u;
             step_set_ratchet(s, r + 1u);
         }
+        comp_migrate(q->t[t].step, (uint32_t)clamp(q->t[t].p[P_SLEN], 1, NSTEP));   /* (seq2d) a CP_* of before */
     }
     if (pos + sizeof q->chain + 4u > room) return 0;
     memcpy(&q->chain, b + pos, sizeof q->chain); pos += sizeof q->chain;

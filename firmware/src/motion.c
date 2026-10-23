@@ -11,6 +11,7 @@
 static motion_store_t motion;
 static int16_t motion_base[NTRK][P_COUNT];
 static uint32_t motion_active[NTRK][(P_COUNT + 31u) / 32u];
+static uint8_t cx_lkhold;                       /* (seq2d) seq.c: a LOCK component holds the locks over this step */
 static uint32_t motion_locked[NTRK][(P_COUNT + 31u) / 32u];   /* the ids a lock holds now (put back at the next step) */
 static uint8_t motion_base_valid, motion_full;
 /* (0.9.1) the DJ FILTER's records (MOT_DJF): the global's value before they moved it (the knob's), and the tracks whose
@@ -327,7 +328,7 @@ static __attribute__((noinline)) void motion_step(track_t *t, uint32_t step, con
     for (w = 0; w < (P_COUNT + 31u) / 32u; w++)
         any |= motion_locked[k][w];
     if (!step) motion_restore(t);
-    else if (any) motion_unlock(t, step, m);
+    else if (any && !cx_lkhold) motion_unlock(t, step, m);   /* (seq2d: a LOCK component holds them over its LENGTH) */
     for (i = 0; i < m->count; i++) {
         const motion_event_t *e = &m->event[i];
         uint32_t id = MOTION_ID(e);

@@ -462,6 +462,9 @@ typedef struct {                 /* acid-style step: up to 4 notes (POLY), time,
                                   * shared out, as before); bits 3-6 LEN: a part's gate n/16 (0: the track's GATE) */
     uint8_t lm[3];               /* (0.8.5) each drum lane's own way of playing on this step (a DRUM track: its hit and
                                   * its notes on the lane): 3 bits a lane, lane l at bits 3l..3l+2 of the 24, LM_* */
+    uint8_t clen[2];             /* (0.9.9-seq2d) components v2: C1's / C2's LENGTH - 1 (0..31; CL_LEGACY: a CP_* still
+                                  * to migrate, seq.c comp_migrate) */
+    uint8_t cnm[2];              /* .. their N:M: N - 1 | (M - 1) << 4 */
 } step_t;
 /* (0.8.5) a lane's mode (eng_drum.c, the DRUM-X octaves): its hit ratcheted x2 / x4 / x8 over the step, or struck SHORT,
  * GHOST, FLAM; that lane only. 0: as ever (every step before 0.8.5) */
@@ -565,8 +568,41 @@ static const uint8_t CP_RATE_ORD[CP_NRATE] = {5, 0, 1, 2, 3, 4};   /* the knob's
 static const uint8_t CP_DEGS[4] = {3, 5, 8, 15};
 static const uint8_t CP_TRIGS[CP_NTRIG][2] = {{1, 2}, {2, 2}, {1, 3}, {2, 3}, {3, 3}, {1, 4}, {2, 4}, {3, 4}, {4, 4},
                                               {1, 8}, {0, 1}, {0, 2}};   /* (a of b; {0, 1} FIRST, {0, 2} NOT FIRST) */
-static int cp_arp(const step_t *s) { return s->comp >= CP_ARPN && s->comp <= CP_ARPS; }
 static int cp_isarp(uint32_t c) { return c >= CP_ARPN && c <= CP_ARPS; }
+/* (0.9.9-seq2d) STEP COMPONENTS v2 (the approved mock-up's chapter 4): the CP_* above are the legacy codes, read only by
+ * the migration (seq.c comp_migrate: projects before seq2d, GEN and DICE write them and migrate). A component now is
+ * ACTION + LENGTH + CONDITION + VALUE (SEQ > COMP / COMP 2 KNOB 1..4): comp / comp2 hold ACTION (bits 0-3) and
+ * CONDITION (4-7), carg / carg2 the VALUE, clen[] LENGTH - 1 (the steps it stays on, from its own on, as the track
+ * plays them), cnm[] N:M. Two a step: C1 first, then C2; C2's condition ELSE is MONO (it acts only when C1 did not),
+ * any other POLY (both stack: C1 on the step, C2 over the result). seq.c comp_run */
+enum { CA_NONE, CA_ARP, CA_SEQ, CA_OCTU, CA_OCTD, CA_RATCH, CA_STUT, CA_MUTE, CA_TRANS, CA_RAND, CA_LOCK, CA_JUMP,
+       CA_SOUND, CA_BEND, CA_N };
+enum { CC_ALWAYS, CC_P25, CC_P50, CC_P75, CC_FIRST, CC_NFIRST, CC_FILL, CC_NFILL, CC_PRE, CC_NPRE, CC_NEI, CC_NNEI,
+       CC_ELSE, CC_NM, CC_NNM, CC_N };
+#define CO_ACT(c) ((uint32_t)(c) & 15u)
+#define CO_COND(c) ((uint32_t)(c) >> 4)
+#define CO_MAKE(a, c) ((uint8_t)(((a) & 15u) | ((c) & 15u) << 4))
+#define CL_LEGACY 0xFFu
+#define CL_MAX 32u                                  /* LENGTH 1..32 */
+#define CNM_N(v) (((uint32_t)(v) & 15u) + 1u)
+#define CNM_M(v) (((uint32_t)(v) >> 4) + 1u)
+#define CNM_MAKE(n, m) ((uint8_t)((((n) - 1u) & 15u) | (((m) - 1u) & 15u) << 4))
+/* VALUE: ARP CP_ARG's ORDER RATE RANGE, bit 7 SCALE (else the step's NOTES); SEQ bits 0-5 the note it starts from, bit 6
+ * BOUNCE; OCT+ / OCT- 0..2: 1..3 octaves; RATCHET bits 0-2 x2..x8, bits 3-4 DECAY (0 flat, 1 down, 2 up); STUTTER 0..3: again
+ * every 1..4 steps; MUTE 0 MUTE, 1 CUT; TRANSPOSE bits 0-3 the move -7..+7 (7: 0), bits 4-7 RANGE - 1 (RANGE 1: FIX, the
+ * move whenever the condition holds; 2..16: it adds up each pass the condition holds, round RANGE places, acting every
+ * pass); RANDOM 0..6: 1..7 degrees; JUMP 0..63 the step, 64 REV; SOUND 0..2 SHORT GHOST FLAM (a kit); BEND 0..24 -12..+12 */
+#define CV_ARP_SCALE 0x80u
+#define CV_SEQ_BOUNCE 0x40u
+#define CV_RAT_HITS(v) (2u + ((uint32_t)(v) & 7u) % 7u)
+#define CV_RAT_DEC(v) ((((uint32_t)(v) >> 3) & 3u) % 3u)
+#define CV_TR_MOVE(v) ((int32_t)((uint32_t)(v) & 15u) % 15 - 7)
+#define CV_TR_RANGE(v) (((uint32_t)(v) >> 4) + 1u)
+#define CV_TR_MAKE(mv, rng) ((uint8_t)(((uint32_t)((mv) + 7) & 15u) | (((rng) - 1u) & 15u) << 4))
+#define CV_JUMP_REV 64u
+static const uint8_t CA_VMAX[CA_N] = {0, 191, 127, 2, 2, 20, 3, 1, 239, 6, 0, 64, 2, 24};   /* KNOB 4's list, 0.. */
+static const uint8_t CA_VDEF[CA_N] = {0, 0x08, 0, 0, 0, 0, 0, 0, 0x38, 1, 0, 0, 0, 14};    /* (stored VALUE) */
+static int comp_any(const step_t *s) { return CO_ACT(s->comp) || CO_ACT(s->comp2); }
 typedef struct {                 /* a step as formats 1..4 (projects to FUN4) stored it: no hits */
     uint8_t note[4];
     uint8_t n, time, flags, vel;
@@ -616,6 +652,8 @@ typedef struct {
     chain_row_t row[CHAIN_ROWS];
 } chain_config_t;
 
+#define CSP_N 4                  /* (0.9.9-seq2d) spans of components a track at once (a fifth: the oldest goes) */
+typedef struct { uint8_t act, val, left, len; int8_t mv; uint8_t base; } cspan_t;
 typedef struct track {
     int16_t p[P_COUNT];
     uint8_t engine, preset;      /* engine: what the audio ISR renders */
@@ -651,13 +689,19 @@ typedef struct track {
     uint8_t arp_from;            /* (0.6.39) an ARP component playing: its step + 1 (0: none), over the TIEs after it */
     uint8_t arp_k;               /* .. the arpeggio's next note (its position in the ORDER) */
     uint16_t loops;              /* (0.6.39) the pattern's loops since PLAY (TRIG components) */
-    int8_t tonal;                /* (0.6.42) TONAL: the rest of the loop this many degrees up / down */
-    uint8_t pulse_from, pulse_k; /* .. PULSE: its step + 1 (0: none), the empty steps since */
+    /* (0.9.9-seq2d) components v2 (seq.c comp_run): the spans playing (the oldest first), what they do to the step
+     * playing (cx_*), the last condition's result (PRE; the next track's NEI) and the count of TRANSPOSE's passes */
+    cspan_t csp[CSP_N];
+    uint8_t csp_n, c_pre, c_acc;
+    int8_t cx_deg, cx_oct;       /* .. TRANSPOSE's degrees, OCT's semitones on the step playing */
+    uint8_t cx_rnd, cx_rat, cx_dec, cx_tch, cx_bend, cx_arp, cx_lock;   /* RANDOM's degrees, RATCHET's hits and DECAY,
+                                  * SOUND (1..3), BEND (1 + 0..24), an ARP from this step, a LOCK held over it */
     uint8_t jump_to, rev;        /* .. JUMP: the next step + 1 (0: the next one); REV: backwards to step 1 */
     uint16_t mo_cur, mo_prev;    /* (0.6.50) MORPH as the engines play it: Q8, slewed a block at a time (voice.c
                                   * track_render) and ramped across the block from mo_prev (no step: no click) */
     uint8_t cpos, cv_on;         /* (0.6.47) C.LEN: the component lane's next step; the step playing is cvs */
-    step_t cvs, cva, cvp;        /* .. the step playing with the lane's component; the ARP's and PULSE's (CV_IDX) */
+    step_t cvs, cva, cvp;        /* .. the step playing with the lane's component (seq2d: and its components applied);
+                                  * the ARP's (CV_IDX); STUTTER's step (seq2d, was PULSE's) */
     uint32_t seq_off;
     uint8_t seq_active;          /* any step programmed */
     uint8_t rskip_idx;           /* live recording put notes into the step about to play: */

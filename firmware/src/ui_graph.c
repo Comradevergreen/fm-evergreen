@@ -448,13 +448,37 @@ static uint16_t lz_note(const step_t *st, int acc, uint16_t c)
         return heat_col(acc ? 243 : st->n > 1u ? 146 : 115);
     return acc ? T_TEXT : T_ACCENT;
 }
-/* a step's component mark (3 x 3 at y): an arpeggio ACCENT, another THEME; none: nothing */
+/* (seq2d) a component's colour by its family, as the mock-up's: the pitch (ARP SEQ OCT TRANSPOSE RANDOM BEND) ACCENT,
+ * the time (RATCHET STUTTER) THEME, the flow (MUTE JUMP) MID, the sound (LOCK SOUND) TEXT */
+static uint16_t comp_col(uint32_t a)
+{
+    return a == CA_RATCH || a == CA_STUT ? T_THEME : a == CA_MUTE || a == CA_JUMP ? T_MID :
+           a == CA_LOCK || a == CA_SOUND ? T_TEXT : T_ACCENT;
+}
+/* a step's component marks (3 x 3 at y, centred on x): C1's, C2's beside it; none: nothing */
 static void lz_comp_mark(const step_t *st, int32_t x, int32_t y)
 {
-    uint32_t c = st->comp;
-    if (!c && !st->comp2)
-        return;
-    cv_rect(x - 1, y, 3, 3, c >= CP_ARPN && c <= CP_ARPN + 2u ? T_ACCENT : T_THEME);
+    uint32_t a1 = CO_ACT(st->comp), a2 = CO_ACT(st->comp2);
+    if (a1 && a2) {
+        cv_rect(x - 3, y, 3, 3, comp_col(a1));
+        cv_rect(x + 1, y, 3, 3, comp_col(a2));
+    } else if (a1 || a2)
+        cv_rect(x - 1, y, 3, 3, comp_col(a1 ? a1 : a2));
+}
+/* (seq2d) a component's LENGTH over the steps after it: the slot of step k that covers step si (0: none; 1 C1, 2 C2),
+ * the pattern's steps in order (len), round the loop */
+static uint32_t comp_span_at(const track_t *t, uint32_t si, uint32_t len)
+{
+    uint32_t j, k;
+    for (j = 1; j < CL_MAX && j < len; j++) {
+        const step_t *st = &seq_steps(t)[(si + len - j) % len];
+        for (k = 0; k < 2u; k++) {
+            uint32_t a = CO_ACT(k ? st->comp2 : st->comp), l = st->clen[k];
+            if (a && a != CA_JUMP && l < CL_MAX && l >= j)
+                return k + 1u + (a << 2);
+        }
+    }
+    return 0;
 }
 /* (0.8.3) LENTE's bars; (0.8.5) drawn as the approved mock-up has them: a bar of the pattern as a cell (RAISE; the bar
  * edited TINT), its sixteen steps as a tiny roll (each note-on step's first note a 2 px dash over the pattern's range;
@@ -691,6 +715,16 @@ static void graph_roll(const track_t *t, uint16_t c)
         if (s == si)
             lz_comp_mark(st, x + w / 2, PR_Y0 + 1);
     }
+    for (i = 0; i < ncol; i++) {                      /* (seq2d) a component's marks on any step, its LENGTH a line on */
+        uint32_t si = base + i, sp;
+        int32_t x = PR_CX(i), w = PR_CWI(i);
+        if (si >= len)
+            break;
+        if (seq_steps(t)[si].time != ST_NOTE || (!seq_steps(t)[si].n && !seq_steps(t)[si].hit))
+            lz_comp_mark(&seq_steps(t)[si], x + w / 2, PR_Y0 + 1);
+        if ((sp = comp_span_at(t, si, len)) != 0u)
+            cv_rect(x, PR_Y0 + 2, w, 1, comp_col(sp >> 2));
+    }
     for (i = 0; i < ncol; i++) {
         uint32_t si = base + i;
         int32_t x = PR_CX(i);
@@ -770,6 +804,9 @@ static uint32_t steps_hash(const track_t *t)
             16777619u;
         h = (h ^ (st->hit | (uint32_t)st->acc << 8 | (uint32_t)st->note[2] << 16 | (uint32_t)st->note[3] << 24)) * 16777619u;
         h = (h ^ ((uint32_t)st->cwhen >> 4)) * 16777619u;   /* (0.9.1: MICRO's sixteenth; its 64ths are in the flags) */
+        if (st->comp || st->comp2)                      /* (seq2d) the components' marks and LENGTHs */
+            h = (h ^ ((uint32_t)st->comp | (uint32_t)st->comp2 << 8 | (uint32_t)st->clen[0] << 16 |
+                      (uint32_t)st->clen[1] << 24)) * 16777619u;
     }
     return h;
 }
@@ -1416,11 +1453,12 @@ static uint32_t graph_signature(void)
         h = (h ^ ((uint32_t)t->p[P_CLEN] << 8 | (song.playing ? t->cpos : 0xFFu))) * 16777619u;   /* (0.6.47) C.LEN */
         for (i = ui.bank * 16u; i < ui.bank * 16u + 16u && i < NSTEP; i++)
             h = (h ^ ((uint32_t)t->step[i].comp << 8 | t->step[i].carg | (uint32_t)t->step[i].probability << 16 |
-                      (uint32_t)t->step[i].flags << 24 | (uint32_t)t->step[i].comp2 << 4)) * 16777619u;
+                      (uint32_t)t->step[i].flags << 24 | (uint32_t)t->step[i].comp2 << 4 | (uint32_t)t->step[i].clen[0] << 12 |
+                      (uint32_t)t->step[i].clen[1] << 20)) * 16777619u;
         h = (h ^ (comp_view() * 977u + cs->carg + (song.playing ? t->arp_k * 131u + t->loops * 7u + t->arp_from : 0u))) *
             16777619u;
-        h = (h ^ ((uint32_t)cs->carg2 | (uint32_t)cs->cwhen << 8 | (uint32_t)cs->ctime << 16 | comp_slot() << 24)) *
-            16777619u;                                  /* (0.6.82) COMP 2, WHEN */
+        h = (h ^ ((uint32_t)cs->carg2 | (uint32_t)cs->cnm[0] << 8 | (uint32_t)cs->cnm[1] << 16 | comp_slot() << 24)) *
+            16777619u;                                  /* (0.6.82) COMP 2; (seq2d) the N:Ms */
     }
     if (pg->scope == SC_ENGINE && (trk_engp(t) == &ENG_WHEEL || trk_eng(t) == ENGI_FM6 ||
                                    (FELUCCA_FM4 && trk_eng(t) == ENGI_DIGITAL)))
