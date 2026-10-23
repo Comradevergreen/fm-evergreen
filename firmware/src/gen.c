@@ -1808,7 +1808,7 @@ static void gx_mutate(void)
     for (tries = 0; tries < 16u && n; tries++) {
         uint32_t ti = gr() % NTRK;
         track_t *t = &trk[ti];
-        if (!gs.act[gs.role[ti]] || t->p[P_MSND] || t->p[P_MPAT]) continue;
+        if (!gs.act[gs.role[ti]] || t->p[P_MSND] || t->p[P_MPAT] || MUT_WHAT(t)) continue;
         if (gs.role[ti] == RL_DRUM || gch(50)) t->p[P_MPAT] = (int16_t)grr(2, 5); else t->p[P_MSND] = (int16_t)grr(2, 5);
         t->p[P_MAMT] = (int16_t)grr(20, 60);
         t->p[P_MMODE] = (int16_t)(gch(75) ? 0 : 1);
@@ -2189,7 +2189,7 @@ static void gen_make(void)
     }
     rng_state = gq | 1u;
     macro_dice(3);
-    for (k = 0; k < NTRK; k++) trk[k].p[P_MSND] = trk[k].p[P_MPAT] = 0;   /* (0.6.96) a new piece: MUTATE off on every
+    for (k = 0; k < NTRK; k++) trk[k].p[P_MSND] = trk[k].p[P_MPAT] = 0, trk[k].p[P_MCFG] = 127;   /* (0.6.96) a new piece: MUTATE off on every
                                                          * track, its anchor the piece (a reroll kept the lanes and
                                                          * orbited the old piece's sounds) */
     if (gx.on) { gx_mutate(); gx_heads(); }             /* (0.8.6) EXPLORE: MUTATE, PLAYHEADS (before the sections:

@@ -245,6 +245,29 @@ static const char *const N_MUTMODE[] = {"ORBIT", "DRIFT"};
 static const param_desc_t MUT_DESC[4] = {                /* (0.6.43) MUTATE: P_MSND P_MPAT P_MAMT P_MMODE */
     {"SOUND", F_ENUM, 0, 6, 0, N_MUTBARS, 0}, {"PATTERN", F_ENUM, 0, 6, 0, N_MUTBARS, 0},
     {"AMOUNT", F_PCT, 0, 127, 0, 0, 0}, {"MODE", F_ENUM, 0, 1, 0, N_MUTMODE, 0}};
+/* (0.9.9-seq2c) the MUTATE pages' own knobs (page_desc: ids ID_MUT0.., the values packed in P_MCFG / P_MMODE, core.h) */
+static const char *const N_MWHAT[] = {"OFF", "NOTES", "RHYTHM", "PATTERN", "SOUND", "PARAM", "ALL"};
+static const char *const N_MLOOP[] = {"OFF", "1", "2", "3", "4", "5", "HOLD"};
+static const char *const N_MPARAM[] = {"CUT", "RES", "ENV", "DEC", "REL", "DLY", "REV", "EDIT 1"};
+static const char *const N_MTURN[] = {"TURN"};
+enum { MK_WHAT, MK_DIR, MK_LOOP, MK_PARAM, MK_SCALE, MK_KEEP, MK_REV, MK_N };
+#define ID_MUT0 0xF0u                                   /* .. ID_MUT0 + MK_N - 1 */
+static const param_desc_t MUTK_DESC[MK_N + 1] = {
+    {"WHAT", F_ENUM, 0, MW_N - 1, 0, N_MWHAT, 0}, {"DIR", F_ENUM, 0, 1, 0, N_MUTMODE, 0},
+    {"LOOP", F_ENUM, 0, ML_HOLD, 0, N_MLOOP, 0}, {"PARAM", F_ENUM, 0, 7, 0, N_MPARAM, 0},
+    {"SCALE", F_ENUM, 0, 1, 1, N_ONOFF, 0}, {"KEEP", F_ENUM, 0, 0, 0, N_MTURN, 0}, {"REVERT", F_ENUM, 0, 0, 0, N_MTURN, 0},
+    {"EVERY", F_ENUM, 0, 6, 0, N_MUTBARS, 0}};          /* (LOOP of a 0.6.43 MUTATE: its bars, until a knob turns) */
+static int16_t mutk_v[MK_N];
+static const param_desc_t *mutk_desc(const track_t *t, uint32_t k, int16_t **valp)
+{
+    uint32_t leg = MUT_LEGACY(t), s = (uint32_t)clamp(t->p[P_MSND], 0, 6), q = (uint32_t)clamp(t->p[P_MPAT], 0, 6);
+    k %= MK_N;
+    mutk_v[k] = (int16_t)(k == MK_WHAT ? (leg ? (s && q ? MW_ALL : s ? MW_SOUND : MW_PATTERN) : MUT_WHAT(t)) :
+                          k == MK_DIR ? MUT_DRIFT(t) : k == MK_LOOP ? (leg ? (s && q ? (s < q ? s : q) : s ? s : q) : MUT_LOOP(t)) :
+                          k == MK_PARAM ? MUT_PARAM(t) : k == MK_SCALE ? !MUT_CHROM(t) : 0u);
+    *valp = &mutk_v[k];
+    return k == MK_LOOP && leg ? &MUTK_DESC[MK_N] : &MUTK_DESC[k];
+}
 static const char *const N_CHRD[] = {"OFF", "TRIAD", "7TH", "ADD9", "SUS2", "SUS4", "MAJ", "MIN", "7", "MAJ7", "MIN7",
                                      "POWER", 0};
 static const char *const N_CVOI[] = {"CLOSE", "LEAD", "OPEN", "+BASS", 0};
@@ -637,7 +660,8 @@ static const page_t PAGES[] = {
     {"CHANCE", FAM_SEQ, SC_STEP, GR_CHANCE, {0xFF, 0xFF, 0xFF, 0xFF}},   /* a step's CHANCE RATCH; 0.6.37: hidden */
     {"AUTOMATION", FAM_SEQ, SC_TRACK, GR_MOTION, {0xFF, 0xFF, 0xFF, 0xFF}},
     {"AUTO LIST", FAM_SEQ, SC_TRACK, GR_EVENTS, {0xFF, 0xFF, 0xFF, 0xFF}},   /* 1.1.5: the locks and events, edited */
-    {"MUTATE", FAM_SEQ, SC_TRACK, GR_MUTATE, {P_MSND, P_MPAT, P_MAMT, P_MMODE}},   /* (0.6.43) project.c mutate_poll */
+    {"MUTATE", FAM_SEQ, SC_TRACK, GR_MUTATE, {ID_MUT0 + MK_WHAT, P_MAMT, ID_MUT0 + MK_DIR, ID_MUT0 + MK_LOOP}},   /* (0.6.43)
+                                                         * project.c mutate_poll; (0.9.9-seq2c) WHAT AMOUNT DIR LOOP */
     /* (0.8.5) LENTE everywhere (ui_lens.c): pages the mock-up added, appended (the table's order is no one's index) */
     {"VOICE 2", FAM_EDIT, SC_TRACK, GR_NONE, {P_ALLOC, P_DETUNE, 0xFF, 0xFF}},   /* EDIT > TONE: ALLOC, UNISON's DETUNE (in
                                                          * TP since Felucca, on no page until now) */
@@ -650,6 +674,8 @@ static const page_t PAGES[] = {
     {"BAR", FAM_SEQ, SC_TRACK, GR_STEPS, {0xFF, P_SLEN, 0xFF, 0xFF}},   /* (0.9.2) SEQ > BAR: the pattern's bars, KNOB 1
                                                          * the bar (the cursor at its place in it; was PRESETS on PATTERN's
                                                          * level), KNOB 2 LEN (ui_input.c edit_param) */
+    {"MUTATE 2", FAM_SEQ, SC_TRACK, GR_MUTATE, {ID_MUT0 + MK_PARAM, ID_MUT0 + MK_SCALE, ID_MUT0 + MK_KEEP, ID_MUT0 + MK_REV}},
+                                                         /* (0.9.9-seq2c) PARAM SCALE, KEEP REVERT on the turn */
 };
 #define BAR_PAGE(pg) ((pg)->graph == GR_STEPS && (pg)->id[0] == 0xFFu)
 #define NPAGES (sizeof(PAGES) / sizeof(PAGES[0]))
@@ -701,6 +727,8 @@ static const param_desc_t *page_desc(const page_t *pg, uint32_t slot, int16_t **
         id += 3u * mod_ui_slot;
     if (pg->graph == GR_MSEQ && id == P_MS0)          /* the level of the step shown */
         id += ms_ui_step & 15u;
+    if (id >= ID_MUT0 && id < ID_MUT0 + MK_N)         /* (0.9.9-seq2c) MUTATE's packed knobs (ui_input.c mutk_put) */
+        return mutk_desc(TSEL, id - ID_MUT0, valp);
     *valp = &TSEL->p[id];
     if (id == P_APRATE && TSEL->p[P_APSYNC])         /* (0.6.9) AUTO PAN on the tempo: a division */
         return &AP_BEAT;

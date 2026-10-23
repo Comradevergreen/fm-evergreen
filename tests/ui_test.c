@@ -1696,6 +1696,125 @@ static void mut_run(uint32_t k, uint32_t bars)        /* MUTATE on track k (SOUN
     mut_bars(bars);
 }
 static void mut_off(uint32_t k) { trk[k].p[P_MSND] = trk[k].p[P_MPAT] = 0; mutate_poll(); frame(); }
+/* (0.9.9-seq2c) MUTATE with control: WHAT AMOUNT DIR LOOP; MUTATE 2 PARAM SCALE KEEP REVERT (P_MCFG / P_MMODE packed) */
+static int mut_inscale(const track_t *t)
+{
+    uint32_t i, j, m = scale_mask(t), ok = 1;
+    for (i = 0; i < NSTEP; i++)
+        for (j = 0; j < t->step[i].n && t->step[i].time == ST_NOTE; j++)
+            ok &= (m >> (uint32_t)((t->step[i].note[j] - t->p[P_ROOT] + 120) % 12)) & 1u;
+    return (int)ok;
+}
+static uint32_t mut_rhythm(const track_t *t)
+{
+    uint32_t i, r = 0;
+    for (i = 0; i < 16u; i++) r |= (uint32_t)step_on(&t->step[i]) << i;
+    return r;
+}
+static int test_mutate2(void)
+{
+    static const uint8_t MAJ[7] = {60, 62, 64, 65, 67, 69, 71};
+    int bad = 0, ok;
+    uint32_t i, b, ch, gap, last, sig, r0, nmut;
+    char m[16];
+    track_t *t;
+    project_store_t st;
+    ui_power_on();
+    track_select(1);
+    t = TSEL;
+    set_engine_of(t, ENGI_ANALOG); t->engine = t->eng_req;
+    mut_freeze = 0;
+    ok = MUT_WHAT(t) == 0u && !MUT_LEGACY(t) && mut_progress(1) == 0xFFFFu;
+    t->p[P_MSND] = 1; t->p[P_MPAT] = 3;                    /* a 0.6.43 MUTATE: shown as ALL, its LOOP its bars */
+    {
+        int16_t *vp; const param_desc_t *d;
+        go_title("MUTATE"); frame();
+        d = page_desc(cur_page(), 0, &vp); ok &= str_eq(d->names[*vp], "ALL");
+        d = page_desc(cur_page(), 3, &vp); ok &= str_eq(d->label, "EVERY") && *vp == 1;
+    }
+    ok &= MUT_LEGACY(t) && mut_period(t) == 1u;
+    t->p[P_MSND] = t->p[P_MPAT] = 0;
+    bad += check("seq2c MUTATE: off at power-on (P_MCFG's 127: WHAT OFF); a 0.6.43 one plays and shows as it was (ALL, EVERY 1)", ok);
+    for (i = 0; i < NSTEP; i++) step_clear(&t->step[i]);
+    for (i = 0; i < 16u; i++)
+        if (i % 4u != 3u) { t->step[i].n = 1; t->step[i].note[0] = MAJ[i % 7u]; t->step[i].time = ST_NOTE; t->step[i].vel = 100; }
+    t->p[P_SLEN] = 16; t->p[P_ROOT] = 0; t->p[P_SCALE] = 1;   /* (C major) */
+    ok = mut_inscale(t);
+    r0 = mut_rhythm(t);
+    turn(EN_K1, 1);                                        /* WHAT: NOTES */
+    turn(EN_K4, 2);                                        /* LOOP 2: a result lasts three bars */
+    t->p[P_MAMT] = 127;
+    ok &= MUT_WHAT(t) == MW_NOTES && MUT_LOOP(t) == 2u && mut_period(t) == 3u && !MUT_LEGACY(t);
+    mutate_poll();
+    press(B_PLAY);
+    mutate_poll();
+    for (b = 0, ch = 0, gap = 1, last = 0, nmut = 0, sig = steps_sig(t); b < 12u; b++) {
+        mut_bars(1);
+        if (steps_sig(t) != sig) {
+            nmut++;
+            gap &= !last || b - last >= 3u;               /* (at least three bars between two results) */
+            last = b;
+            sig = steps_sig(t);
+        }
+        ok &= mut_inscale(t) && mut_rhythm(t) == r0;
+    }
+    mut_chip(t, m);
+    ok &= nmut >= 2u && nmut <= 5u && gap && !strncmp(m, "LOOP ", 5) && strchr(m, '/') && m[str_len(m) - 1] == '3';
+    bad += check("seq2c MUTATE LOOP 2: each result unchanged for its bars (3), the chip LOOP n/3", ok && gap);
+    bad += check("seq2c MUTATE WHAT NOTES: every note stays in the scale (SCALE ON), the rhythm as it was", ok);
+    turn(EN_K4, 9);                                        /* LOOP HOLD */
+    ok = MUT_LOOP(t) == ML_HOLD && msg_is("MUTATE: HOLD") && mut_period(t) == 0u;
+    sig = steps_sig(t);
+    mut_bars(8);
+    mut_chip(t, m);
+    ok &= steps_sig(t) == sig && str_eq(m, "HOLD");
+    bad += check("seq2c MUTATE LOOP HOLD: no change over 8 bars, the chip HOLD", ok);
+    turn(EN_K4, -9);                                       /* LOOP OFF: a new result every bar */
+    ok = MUT_LOOP(t) == 0u && msg_is("MUTATE: FREE");
+    turn(EN_K1, 4);                                        /* WHAT: PARAM (MUTATE 2's: RES) */
+    go_title("MUTATE 2"); frame();
+    turn(EN_K1, 1);
+    ok &= MUT_WHAT(t) == MW_PARAM && MUT_PARAM(t) == 1u && mut_pid(t) == P_E5 && MUT_DRIFT(t) == 0u;
+    {
+        int16_t e5 = t->p[P_E5], e0 = t->p[P_E0], fc = t->p[P_FCUT];
+        sig = steps_sig(t);
+        for (b = 0, ch = 0; b < 4u; b++) { mut_bars(1); ch += t->p[P_E5] != e5; e5 = t->p[P_E5]; }
+        ok &= ch > 0u && t->p[P_E0] == e0 && t->p[P_FCUT] == fc && steps_sig(t) == sig;
+    }
+    bad += check("seq2c MUTATE WHAT PARAM: only MUTATE 2's PARAM moves (RES: ANALOG's own), nothing else", ok);
+    turn(EN_K2, -1);                                       /* SCALE OFF (chromatic) */
+    ok = MUT_CHROM(t) == 1u && MUT_WHAT(t) == MW_PARAM;
+    turn(EN_K2, 1);
+    ok &= MUT_CHROM(t) == 0u;
+    /* KEEP: the music now the anchor; then REVERT goes back to it, not to the first */
+    go_title("MUTATE"); frame();
+    turn(EN_K1, -2);                                       /* WHAT: PATTERN */
+    ok &= MUT_WHAT(t) == MW_PATTERN;
+    mut_bars(3);
+    go_title("MUTATE 2"); frame();
+    {
+        step_t kept[NSTEP];
+        int16_t k5 = t->p[P_E5];
+        turn(EN_K3, 1);
+        ok &= msg_is("ANCHOR: THE MUSIC NOW");
+        memcpy(kept, t->step, sizeof kept);
+        for (b = 0; b < 6u && !memcmp(kept, t->step, sizeof kept); b++) mut_bars(1);
+        ok &= memcmp(kept, t->step, sizeof kept) != 0;
+        turn(EN_K4, 1);                                    /* REVERT */
+        ok &= !memcmp(kept, t->step, sizeof kept) && t->p[P_E5] == k5 && msg_is("T2 BACK TO ANCHOR");
+    }
+    bad += check("seq2c MUTATE 2: KEEP (turned) the music now the anchor, REVERT (turned) back to it, with their toasts", ok);
+    /* saved and loaded: the packed fields kept; the format as it was */
+    project_capture(&proj_scratch);
+    ok = proj_pack(&st, &proj_scratch) && proj_import(&proj_scratch, &st, sizeof st) &&
+         proj_scratch.t[1].p[P_MCFG] == t->p[P_MCFG] && proj_scratch.t[1].p[P_MMODE] == t->p[P_MMODE] &&
+         127 - proj_scratch.t[1].p[P_MCFG] == (MW_PATTERN | 0u << 3);
+    bad += check("seq2c MUTATE: WHAT LOOP SCALE DIR PARAM saved and loaded (FUNC as it was: P_MCFG, P_MMODE)", ok);
+    stop_transport();
+    t->p[P_MCFG] = 127; t->p[P_MMODE] = 0;
+    mutate_poll();
+    return bad;
+}
 static int test_mutate_back(void)
 {
     int bad = 0, ok;
@@ -6550,8 +6669,8 @@ static int test_save_lens(void)
  * layer and the dice on every page. (Was 0.8.3's LENTE: SELECT PATTERN <-> BAR <-> STEP, PRESETS the bar / step) */
 static int test_lente(void)
 {
-    static const char *const CH[10] = {"STEP", "LENGTH", "TRACK", "MUTATE", "PLAYHEADS", "STRETCH", "COMP", "COMP 2",
-                                       "AUTOMATION", "AUTO LIST"};
+    static const char *const CH[11] = {"STEP", "LENGTH", "TRACK", "MUTATE", "MUTATE 2", "PLAYHEADS", "STRETCH", "COMP",
+                                       "COMP 2", "AUTOMATION", "AUTO LIST"};
     static const char *const TP[6] = {"LENGTH", "MUTATE", "PLAYHEADS", "STRETCH", "COMP", "AUTOMATION"};
     int bad = 0, ok;
     uint32_t q, sig;
@@ -6559,30 +6678,30 @@ static int test_lente(void)
     TSEL->p[P_SLEN] = 64;
     open_family(FAM_SEQ); frame();
     ok = str_eq(cur_page()->title, "STEP") && lens_level() == LV_BAR && roll_view(cur_page()) && lz_tabs() == 7u &&
-         lz_tab_lit(0) && lz_crumb_is("SEQ \xB7 STEP \xB7 STEP") && lz_count_is("1/10");
+         lz_tab_lit(0) && lz_crumb_is("SEQ \xB7 STEP \xB7 STEP") && lz_count_is("1/11");
     turn(EN_SELECT, -1); frames(32);
-    ok &= str_eq(cur_page()->title, "STEP") && lz_count_is("1/10");                /* (the first: no wrap) */
+    ok &= str_eq(cur_page()->title, "STEP") && lz_count_is("1/11");                /* (the first: no wrap) */
     turn(EN_SELECT, 1); frames(32);
-    ok &= str_eq(cur_page()->title, "PATTERN") && seq_roll_view(cur_page()) && lz_tab_lit(1) && lz_count_is("2/10") &&
+    ok &= str_eq(cur_page()->title, "PATTERN") && seq_roll_view(cur_page()) && lz_tab_lit(1) && lz_count_is("2/11") &&
           lz_crumb_is("SEQ \xB7 LENGTH \xB7 LENGTH");                              /* (PATTERN, named LENGTH) */
     turn(EN_SELECT, 1); frames(32);
-    ok &= str_eq(cur_page()->title, "TRACK") && lz_tab_lit(1) && lz_count_is("3/10") &&
+    ok &= str_eq(cur_page()->title, "TRACK") && lz_tab_lit(1) && lz_count_is("3/11") &&
           lz_crumb_is("SEQ \xB7 LENGTH \xB7 TRACK");                               /* (TRACK under the LEN tab) */
-    turn(EN_SELECT, 4); frames(32);
-    ok &= str_eq(cur_page()->title, "COMP") && seq_roll_view(cur_page()) && lz_tab_lit(5) && lz_count_is("7/10") &&
+    turn(EN_SELECT, 5); frames(32);
+    ok &= str_eq(cur_page()->title, "COMP") && seq_roll_view(cur_page()) && lz_tab_lit(5) && lz_count_is("8/11") &&
           lz_crumb_is("SEQ \xB7 COMP \xB7 COMP");
     turn(EN_SELECT, 1); frames(32);
-    ok &= str_eq(cur_page()->title, "COMP 2") && lz_tab_lit(5) && lz_count_is("8/10");
-    bad += check("seq2 SEQ: enters at STEP (1/10, seven tabs); LENGTH the roll (seq2b), TRACK under its tab, COMP the roll, COMP 2 after it", ok);
-    bad += check("seq2 SEQ: one chain of 10 by SELECT (no wrap); a SEQ tap the next tab's first, round",
-                 chain_walk(B_SEQ, CH, 10, TP, 6));
+    ok &= str_eq(cur_page()->title, "COMP 2") && lz_tab_lit(5) && lz_count_is("9/11");
+    bad += check("seq2 SEQ: enters at STEP (1/11, seven tabs); LENGTH the roll (seq2b), TRACK under its tab, COMP the roll, COMP 2 after it", ok);
+    bad += check("seq2 SEQ: one chain of 11 by SELECT (no wrap); a SEQ tap the next tab's first, round",
+                 chain_walk(B_SEQ, CH, 11, TP, 6));
     {   /* (0.9.9-seq2b) every page of the chain the same picture: the bars' strip, the roll with its keys */
-        static const char *const TI[10] = {"STEP", "PATTERN", "TRACK", "MUTATE", "PLAYHEADS", "STRETCH", "COMP", "COMP 2",
-                                           "AUTOMATION", "AUTO LIST"};
+        static const char *const TI[11] = {"STEP", "PATTERN", "TRACK", "MUTATE", "MUTATE 2", "PLAYHEADS", "STRETCH", "COMP",
+                                           "COMP 2", "AUTOMATION", "AUTO LIST"};
         ui_power_on(); TSEL->p[P_SLEN] = 64;
         open_family(FAM_SEQ); frame();
         ok = 1;
-        for (q = 0; q < 10u; q++) {
+        for (q = 0; q < 11u; q++) {
             go_title(TI[q]); frame();
             memset(host_screen, 0, sizeof host_screen); ui.force = 1; ui_draw();
             ok &= str_eq(cur_page()->title, TI[q]) && seq_roll_view(cur_page()) && lens_strip() &&
@@ -6681,7 +6800,7 @@ static int test_lente(void)
     go_title("BAR"); frames(32);
     turn(EN_K1, 1);
     ok &= ui.bank == 1u;
-    turn(EN_SELECT, 5); frames(32);                                               /* (from BAR, LENGTH's place: COMP) */
+    turn(EN_SELECT, 6); frames(32);                                               /* (from BAR, LENGTH's place: COMP) */
     ok &= seq_roll_view(cur_page()) && lens_level() == LV_STEP;
     bad += check("  DRUM: STEP is the grid (its keys); LENGTH the grid (seq2b), BAR (by code) KNOB 1 the bar; COMP the grid", ok);
     return bad;
@@ -10983,14 +11102,14 @@ static int test_toasts(void)
     bad += check("  NOTICE blacks out no more than its box (its tabs, its card, its breadcrumb): the page round it, back whole", ok);
     /* hints: walking SEQ's chain with SELECT (TRACK > MUTATE > PLAYHEADS) says nothing; dwelt on, MUTATE's; at most HINT_MAX */
     ui_power_on(); go_title("TRACK"); frames(400);
-    for (seen = passed = 0, k = 0; k < 2u; k++) {
+    for (seen = passed = 0, k = 0; k < 3u; k++) {
         turn(EN_SELECT, 1); passed |= str_eq(cur_page()->title, "MUTATE");
         for (n = 0; n < 12u; n++) { frame(); seen |= msg_is("OCT+ KEEP  GLO+A4 FREEZE") || msg_is("SEQ+D5 REVERT  GLO+B4 ALL"); }
     }
     for (n = 0; n < 200u; n++) { frame(); seen |= ui.msg_t && ui.msg[0]; }
     bad += check("0.9.5 a page's hint: none while SELECT walks past it (TRACK > MUTATE > PLAYHEADS), nor carried onto the next",
                  passed && str_eq(cur_page()->title, "PLAYHEADS") && !seen);
-    turn(EN_SELECT, -1);                                /* back to MUTATE: stay */
+    turn(EN_SELECT, -2);                                /* back to MUTATE (past MUTATE 2): stay */
     ok = str_eq(cur_page()->title, "MUTATE");
     frames(HINT_DWELL_MS - 160u);
     ok &= !ui.msg_t;
@@ -11417,8 +11536,9 @@ static void tk_start(uint32_t from)                     /* 0 home, 1 seq, 2 fxdl
 }
 static int test_nav_tasks(void)
 {
-    static const uint8_t WANT[14] = {4, 3, 5, 6, 33, 7, 10, 2, 3, 1, 3, 8, 16, 4};   /* (seq2: task 5 by STEP's KNOB 1, no BAR;
-                                                         * task 11 TRACK under LEN's tab; task 13 seven detents; was 73) */
+    static const uint8_t WANT[14] = {4, 3, 5, 6, 33, 7, 10, 2, 3, 1, 3, 8, 17, 4};   /* (seq2: task 5 by STEP's KNOB 1, no BAR;
+                                                         * task 11 TRACK under LEN's tab; task 13 eight detents (seq2c:
+                                                         * MUTATE 2); was 73) */
     uint32_t got[14], t, tot = 0;
     int bad = 0, ok, okall = 1;
     int16_t v;
@@ -11483,7 +11603,7 @@ static int test_nav_tasks(void)
               ok = song.sel == 3u && str_eq(cur_page()->title, "SOUND 2") && c == 1u && dv[DXP_DECAY] != d0; }
             break;
         case 12:                                        /* COMP 2 of step 9 */
-            tk_start(1); tk_go(EN_SELECT, 7); tk_go(EN_K1, 8); tk_val(EN_K2, 1);   /* (seq2: seven detents to COMP 2) */
+            tk_start(1); tk_go(EN_SELECT, 8); tk_go(EN_K1, 8); tk_val(EN_K2, 1);   /* (seq2c: eight detents to COMP 2) */
             ok = str_eq(cur_page()->title, "COMP 2") && ui.cursor == 8u && TSEL->step[8].comp2 != 0u;
             break;
         default:                                        /* GLO: six tracks (SYSTEM > TRACKS) */
@@ -11500,7 +11620,7 @@ static int test_nav_tasks(void)
     }
     printf("ui:   the race: %u %u %u %u %u %u %u %u %u %u %u %u %u %u = %u actions (0.9.1: 75)\n", got[0], got[1], got[2], got[3],
            got[4], got[5], got[6], got[7], got[8], got[9], got[10], got[11], got[12], got[13], tot);
-    bad += check("0.9.2 the mock-up's 14 tasks on the panel: each goal reached in its PROPOSED actions (seq2: 105, was 73)", okall && tot == 105u);
+    bad += check("0.9.2 the mock-up's 14 tasks on the panel: each goal reached in its PROPOSED actions (seq2c: 106, was 73)", okall && tot == 106u);
     ui_power_on();
     return bad;
 }
@@ -11790,6 +11910,7 @@ int main(void)
     bad += test_transitions();
     bad += test_mutate();
     bad += test_mutate_back();
+    bad += test_mutate2();
     bad += test_morph();
     bad += test_morph_click();
     bad += test_lfo_sync();

@@ -1842,11 +1842,30 @@ static struct { uint8_t ok, playing, moved, ask, stale; uint32_t en, done, sig[N
                                                          * music's (a load, NEW PROJECT): REVERT says NO ANCHOR */
 static const uint8_t MUT_COMMON[7] = {P_FCUT, P_FRES, P_ED_FLT, P_DEC, P_REL, P_DLY, P_REV};   /* SOUND's, past the eight */
 static uint32_t mut_every(const track_t *t, uint32_t id) { return MUT_BARS[(uint32_t)clamp(t->p[id], 0, 6)]; }
+/* (0.9.9-seq2c) a track's MUTATE: on (WHAT, or 0.6.43's periods), the bars each result lasts (0: HOLD) */
+static uint32_t mut_on(const track_t *t) { return MUT_WHAT(t) || mut_every(t, P_MSND) || mut_every(t, P_MPAT); }
+static uint32_t mut_period(const track_t *t)
+{
+    uint32_t s, q;
+    if (MUT_WHAT(t))
+        return MUT_LOOP(t) >= ML_HOLD ? 0u : MUT_LOOP(t) + 1u;
+    s = mut_every(t, P_MSND); q = mut_every(t, P_MPAT);
+    return s && q ? (s < q ? s : q) : s ? s : q;
+}
+/* WHAT = PARAM's list (MUTATE 2 KNOB 1): CUT RES ENV DEC REL DLY REV, the engine's first knob; ANALOG's CUT RES its own */
+static const uint8_t MUT_PIDS[8] = {P_FCUT, P_FRES, P_ED_FLT, P_DEC, P_REL, P_DLY, P_REV, P_E0};
+static uint32_t mut_pid(const track_t *t)
+{
+    uint32_t id = MUT_PIDS[MUT_PARAM(t)];
+    if (trk_eng(t) == ENGI_ANALOG && (id == P_FCUT || id == P_FRES))
+        id = id == P_FCUT ? P_E4 : P_E5;
+    return id;
+}
 static uint32_t mut_enabled(void)
 {
     uint32_t k, m = 0;
     for (k = 0; k < NTRK; k++)
-        if (k < trk_live && (mut_every(&trk[k], P_MSND) || mut_every(&trk[k], P_MPAT)))
+        if (k < trk_live && mut_on(&trk[k]))
             m |= 1u << k;
     return m;
 }
@@ -1886,7 +1905,10 @@ static void mut_sound(track_t *t, const proj_trk_t *a)
         if (!(e == ENGI_ANALOG && (COMMON[i] == P_FCUT || COMMON[i] == P_FRES)))   /* (ANALOG: its own CUT RES) */
             mut_value(t, COMMON[i], base, amt);
 }
-static void mut_pattern(track_t *t, const proj_trk_t *a)
+#define MF_NOTES 1u                                     /* mut_pattern: the pitches, */
+#define MF_RHYTHM 2u                                    /* .. which steps play and their accents, */
+#define MF_CHROM 4u                                     /* .. the pitches by semitones (SCALE OFF) */
+static void mut_pattern(track_t *t, const proj_trk_t *a, uint32_t f)
 {
     uint32_t i, len = t->p[P_SLEN] > 0 ? (uint32_t)t->p[P_SLEN] : 1u, amt = (uint32_t)clamp(t->p[P_MAMT], 0, 127), l;
     int kit = drum_track(t);
@@ -1898,7 +1920,7 @@ static void mut_pattern(track_t *t, const proj_trk_t *a)
     for (i = 0; i < len && i < NSTEP; i++) {
         step_t s = a ? a->step[i] : t->step[i];
         if (kit) {                                      /* hits on and off, the kick never */
-            for (l = 1; l < NLANE; l++)
+            for (l = 1; l < NLANE && (f & MF_RHYTHM); l++)
                 if (rng() % 640u < amt) {
                     s.hit ^= (uint8_t)(1u << l);
                     s.acc &= s.hit;
@@ -1907,19 +1929,19 @@ static void mut_pattern(track_t *t, const proj_trk_t *a)
             if (!s.hit && !s.n) s.time = ST_REST;
         } else if (s.time == ST_NOTE && s.n) {
             uint32_t j;
-            if (i % 4u && rng() % 1024u < amt) {        /* one taken (never on a beat) */
+            if ((f & MF_RHYTHM) && i % 4u && rng() % 1024u < amt) {   /* one taken (never on a beat) */
                 s.n = 0; s.time = ST_REST;
             } else {
-                if (rng() % 256u < amt) {               /* up / down the scale */
+                if ((f & MF_NOTES) && rng() % 256u < amt) {   /* up / down the scale (SCALE OFF: semitones) */
                     int32_t d = mut_rr(-2, 2);
                     if (!d) d = 1;
                     for (j = 0; j < s.n && j < 4u; j++)
-                        s.note[j] = (uint8_t)clamp(scale_steps(t, s.note[j], d), 0, 127);
+                        s.note[j] = (uint8_t)clamp(f & MF_CHROM ? s.note[j] + d : scale_steps(t, s.note[j], d), 0, 127);
                 }
-                if (rng() % 512u < amt) s.flags ^= SF_ACCENT;
+                if ((f & MF_RHYTHM) && rng() % 512u < amt) s.flags ^= SF_ACCENT;
                 last = s.note[0];
             }
-        } else if (s.time == ST_REST && (i & 1u) && last >= 0 && rng() % 1024u < amt) {   /* one added, off the beat */
+        } else if ((f & MF_RHYTHM) && s.time == ST_REST && (i & 1u) && last >= 0 && rng() % 1024u < amt) {   /* one added, off the beat */
             memset(&s, 0, sizeof s);
             s.n = 1; s.time = ST_NOTE; s.vel = 90;
             s.note[0] = (uint8_t)clamp(scale_steps(t, last, mut_rr(-1, 1)), 0, 127);
@@ -1930,10 +1952,10 @@ static void mut_pattern(track_t *t, const proj_trk_t *a)
 static uint32_t mut_progress(uint32_t k)
 {
     const track_t *t = &trk[k % NTRK];
-    uint32_t s = mut_every(t, P_MSND), q = mut_every(t, P_MPAT), e = s && q ? (s < q ? s : q) : s ? s : q;
-    if (!e || k >= trk_live)
+    uint32_t e = mut_period(t);
+    if (!mut_on(t) || k >= trk_live)
         return 0xFFFFu;
-    if (!song.playing || mut_freeze)
+    if (!song.playing || mut_freeze || !e)
         return 0;
     return (((bar_n % e) * 4u + beat_n) * 256u) / (e * 4u);
 }
@@ -2061,13 +2083,26 @@ static void mutate_poll(void)
         }
     for (k = 0; k < NTRK; k++) {
         track_t *t = &trk[k];
-        uint32_t s = mut_every(t, P_MSND), q = mut_every(t, P_MPAT), hit = 0;
-        const proj_trk_t *a = anc && !t->p[P_MMODE] && proj_scratch.t[k].engine == trk_eng(t) ?
+        uint32_t s = mut_every(t, P_MSND), q = mut_every(t, P_MPAT), hit = 0, w = MUT_WHAT(t), e = mut_period(t);
+        const proj_trk_t *a = anc && !MUT_DRIFT(t) && proj_scratch.t[k].engine == trk_eng(t) ?
                               &proj_scratch.t[k] : 0;  /* (ORBIT, the same engine: around it; else from now) */
         if (!((en >> k) & 1u))
             continue;
-        if (s && nx % s == 0u) { mut_sound(t, a); hit = 1; }
-        if (q && nx % q == 0u) { mut_pattern(t, a); hit = 1; }
+        if (w) {                                        /* (0.9.9-seq2c) WHAT, every LOOP + 1 bars; HOLD: none */
+            if (!e || nx % e)
+                continue;
+            if (w == MW_SOUND || w == MW_ALL) mut_sound(t, a);
+            if (w == MW_PARAM) {
+                uint32_t id = mut_pid(t);
+                mut_value(t, id, a ? a->p : t->p, (uint32_t)clamp(t->p[P_MAMT], 0, 127));
+            }
+            if (w != MW_SOUND && w != MW_PARAM)
+                mut_pattern(t, a, (w == MW_RHYTHM ? 0u : MF_NOTES) | (w == MW_NOTES ? 0u : MF_RHYTHM) |
+                                  (MUT_CHROM(t) ? MF_CHROM : 0u));
+            hit = 1;
+        }
+        if (s && !w && nx % s == 0u) { mut_sound(t, a); hit = 1; }
+        if (q && !w && nx % q == 0u) { mut_pattern(t, a, MF_NOTES | MF_RHYTHM); hit = 1; }
         if (hit) { mut_flash[k] = 12; mut.moved |= (uint8_t)(1u << k); }
     }
     for (k = 0; k < NTRK; k++)

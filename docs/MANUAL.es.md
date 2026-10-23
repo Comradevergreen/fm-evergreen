@@ -304,7 +304,7 @@ la misma de la 0.9.1, con sus perillas y su dibujo (los que dibujaban las lentes
 | **EDIT** (un sinte) | **SOUND**: EDIT 1 · EDIT 2 — **TONE**: FILTER · MORPH · RETRIG · ROTOR · VOICE · VOICE 2 · WORDS (las que tenga el motor) — **FOCUS**: FOCUS | hasta 10 |
 | **EDIT** (FM6) | **SOUND**: EDIT 1 · EDIT 2 — **TONE**: FILTER · VOICE · VOICE 2 — **OPERATOR**: OPERATOR · OP ENV · OPERATOR 2 | 8 |
 | **EDIT** (DRUM) | **KIT**: KIT · KIT 2 · KIT 3 — **SOUND**: SOUND · SOUND 2 · SOUND 3 · SOUND 4 — **LEVELS**: LEVELS · LEVELS 2 — **TONE**: X-MOD · FILTER · STEREO · VOICE | 13 |
-| **SEQ** | STEP · **LENGTH**: LENGTH · TRACK · MUTATE · PLAYHEADS · STRETCH · **COMP**: COMP · COMP 2 · **AUTO**: AUTOMATION · AUTO LIST | 10 |
+| **SEQ** | STEP · **LENGTH**: LENGTH · TRACK · **MUTATE**: MUTATE · MUTATE 2 · PLAYHEADS · STRETCH · **COMP**: COMP · COMP 2 · **AUTO**: AUTOMATION · AUTO LIST | 11 |
 | **FX** | **TRACK**: SENDS · DIST · AUTO PAN — **BUSES**: BUSES — **DELAY**: DLY · DLY 2 · DLY 3 — **REVERB**: REVERB · REVERB 2 — **CHORUS**: CHORUS — **SLICER**: SLICER · SL BUS · SL BUS 2 · SL PITCH — **MASTER**: MASTER — **PUNCH**: PUNCH | 16 |
 | **GLO** | **MIX**: MIXER · SENDS — **GLOBAL**: GLOBAL — **SYSTEM**: SYSTEM | 4 |
 | **ENV** | **TRACKS**: TRACKS · TRACKS DEST — **ENV**: ENV · ENV DEST — **STAGE**: STAGE | 5 |
@@ -477,7 +477,8 @@ recorre página por página, un toque de **SEQ** salta al grupo siguiente.
 | PATTERN | STRETCH | STRETCH (/8 … /2, x1, x2 … x8) | REPEAT (OFF, x2 … x8, TO 64) | NUDGE | ROTATE (−32 … +32) |
 | PATTERN | PLAYHEADS | HEAD | RATE | DIR | INTERVAL |
 | TRACK | TRACK | PITCH | CHANCE | HUMAN | REC Q |
-| TRACK | MUTATE | SOUND (cada) | PATTERN (cada) | AMOUNT | MODE |
+| TRACK | MUTATE | WHAT | AMOUNT | DIR | LOOP |
+| TRACK | MUTATE 2 (0.9.9-seq2c) | PARAM | SCALE | KEEP (girar) | REVERT (girar) |
 | BAR | BAR (0.9.2) | BAR (el compás que editás) | LEN | — | — |
 | BAR | STEP (melódica: piano roll) | STEP (los 64, compás tras compás) | NOTE | TIME (REST ← TIE ← NOTE → 2 ST … 16 ST: la duración de la nota en pasos; REST borra el paso) | FLAG (– / ACC / SLD / A+S) |
 | BAR | STEP (DRUM: grilla) | STEP | LANE | HIT | ACC |
@@ -1148,6 +1149,17 @@ seleccionada se graban como **automatización**. MENU > AUDIO tiene el **CLICK**
   parámetro, 4 el valor. En **+ ADD LOCK**, OCT+ agrega un lock; sobre un registro, OCT+ lo alterna entre LOCK y AUTO;
   **SEQ + G5** (DEL REC; hasta la 0.9.1 EDIT) lo borra.
 - **MUTATE**: la pista cambia sola, sincronizada con el clock, para que una textura evolucione durante minutos.
+  **0.9.9-seq2c: dos páginas** (SELECT las recorre). **MUTATE**: **WHAT**, qué toca: OFF, **NOTES** (las alturas, en la
+  escala), **RHYTHM** (qué pasos suenan, los acentos; en DRUM los golpes), **PATTERN** (las dos), **SOUND** (como abajo),
+  **PARAM** (un solo valor, el de MUTATE 2), **ALL** (patrón y sonido); **AMOUNT**; **DIR**: ORBIT / DRIFT (abajo);
+  **LOOP**: OFF (un resultado nuevo cada compás), **1..5** (cada resultado se repite esos compases sin cambiar, dura 2..6),
+  **HOLD** (el resultado queda como está, sin cambios hasta sacar LOOP de HOLD). La ficha del roll dice NEXT 1 BAR,
+  **LOOP n/m** (el compás del resultado) o **HOLD**. **MUTATE 2**: **PARAM** (CUT, RES, ENV, DEC, REL, DLY, REV, EDIT 1;
+  en ANALOG su CUT y RES propios), **SCALE** (ON: NOTES camina los grados de la escala; OFF: semitonos), **KEEP** (girar
+  a la derecha: la música de ahora es el ancla) y **REVERT** (girar a la derecha: vuelta al ancla, con UNDO antes). Un
+  proyecto de antes conserva sus períodos SOUND / PATTERN y suena igual (WHAT muestra SOUND, PATTERN o ALL, LOOP sus
+  compases como EVERY); girar una perilla de la página lo pasa a los ajustes nuevos. El texto de 0.6.43, que sigue valiendo
+  para los períodos:
   **SOUND** y **PATTERN**: cada OFF, 1, 2, 4, 8, 16 o 32 compases (el cambio cae en el 1 del compás). **AMOUNT**:
   cuánto (al activar uno queda en 50 %). La página (0.6.92) muestra los próximos 32 compases de la pista elegida como
   una sola tira, una marca en cada compás donde cae un cambio (naranja: SOUND, violeta: PATTERN), el cabezal encima y
@@ -1159,7 +1171,7 @@ seleccionada se graban como **automatización**. MENU > AUDIO tiene el **CLICK**
   tiempo); en DRUM cambia golpes, nunca el bombo. **OCT−** acá (o **GLO + A4**, FREEZE) frena todas las mutaciones
   hasta volver a apretarlo. En HOME (0.9.7) el ser al que le llega un cambio mira para arriba, su número se enciende
   blanco y se abre un anillo del color de acento a su alrededor.
-  **Volver atrás** (0.9.3): MUTATE guarda su ancla, así que una pista puede volver a ella. Si apagás SOUND y PATTERN de
+  **Volver atrás** (0.9.3): MUTATE guarda su ancla, así que una pista puede volver a ella. Si apagás WHAT (antes SOUND y PATTERN) de
   una pista (los dos en OFF) después de que MUTATE la cambió, un aviso (NOTICE) pregunta **BACK TO BEFORE MUTATE?**:
   **OCT+** (BACK) devuelve el sonido y los pasos de la pista como los tiene el ancla, **OCT−** (KEEP) la deja como está
   (si nada cambió, no pregunta). En cualquier momento **SEQ + D5** (**REVERT**, en todas las páginas de SEQ) hace lo

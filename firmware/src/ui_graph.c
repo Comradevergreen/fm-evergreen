@@ -1073,12 +1073,21 @@ static void seq_col(uint32_t dr, uint32_t i, int32_t *x, int32_t *w)
 static void mut_chip(const track_t *t, char *m)
 {
     uint32_t sb = MUT_BARS[(uint32_t)clamp(t->p[P_MSND], 0, 6)], qb = MUT_BARS[(uint32_t)clamp(t->p[P_MPAT], 0, 6)];
-    uint32_t now = song.playing ? bar_n : 0u, b = 1u;
-    if (!(sb || qb) || song.sel >= trk_live)
+    uint32_t now = song.playing ? bar_n : 0u, b = 1u, e = mut_period(t);
+    if (!mut_on(t) || song.sel >= trk_live)
         str_cpy(m, "MUTATE OFF", 16);
     else if (mut_freeze)
         str_cpy(m, "FROZEN", 16);
-    else {
+    else if (MUT_WHAT(t) && !e)                      /* (0.9.9-seq2c) LOOP HOLD: the result as it is */
+        str_cpy(m, "HOLD", 16);
+    else if (MUT_WHAT(t) && e > 1u) {                /* .. LOOP n: the bar of its n + 1 */
+        str_cpy(m, "LOOP ", 16);
+        fmt_int(m + 5, (int32_t)(now % e + 1u));
+        b = str_len(m);
+        m[b++] = '/';
+        fmt_int(m + b, (int32_t)e);
+    } else {
+        if (MUT_WHAT(t)) sb = 1u, qb = 0u;
         while (b < 32u && !(sb && (now + b) % sb == 0u) && !(qb && (now + b) % qb == 0u))
             b++;
         str_cpy(m, "NEXT ", 16);
@@ -1397,7 +1406,8 @@ static uint32_t graph_signature(void)
     if (pg->graph == GR_MUTATE) {                    /* (0.6.43) the bar, the settings, FREEZE */
         h = (h ^ (song.playing ? bar_n : 0u) * 2654435761u ^ mut_freeze * 977u ^ (uint32_t)mut_back_ok() * 131u) * 16777619u;
         for (i = 0; i < NTRK; i++)
-            h = (h ^ ((uint32_t)trk[i].p[P_MSND] | (uint32_t)trk[i].p[P_MPAT] << 4 | (uint32_t)trk[i].p[P_MMODE] << 8)) * 16777619u;
+            h = (h ^ ((uint32_t)trk[i].p[P_MSND] | (uint32_t)trk[i].p[P_MPAT] << 4 | (uint32_t)trk[i].p[P_MMODE] << 8 |
+                      (uint32_t)(uint8_t)trk[i].p[P_MCFG] << 16)) * 16777619u;
     }
     if (pg->graph == GR_COMP) {                      /* (0.6.39) the steps, their components, the arpeggio and the loop */
         const step_t *cs = &t->step[ui.cursor];

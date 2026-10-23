@@ -293,7 +293,7 @@ it was in 0.9.1, with its knobs and its picture (the ones 0.8.5's lenses drew).
 | **EDIT** (a synth) | **SOUND**: EDIT 1 · EDIT 2 — **TONE**: FILTER · MORPH · RETRIG · ROTOR · VOICE · VOICE 2 · WORDS (those the engine has) — **FOCUS**: FOCUS | up to 10 |
 | **EDIT** (FM6) | **SOUND**: EDIT 1 · EDIT 2 — **TONE**: FILTER · VOICE · VOICE 2 — **OPERATOR**: OPERATOR · OP ENV · OPERATOR 2 | 8 |
 | **EDIT** (DRUM) | **KIT**: KIT · KIT 2 · KIT 3 — **SOUND**: SOUND · SOUND 2 · SOUND 3 · SOUND 4 — **LEVELS**: LEVELS · LEVELS 2 — **TONE**: X-MOD · FILTER · STEREO · VOICE | 13 |
-| **SEQ** | STEP · **LENGTH**: LENGTH · TRACK · MUTATE · PLAYHEADS · STRETCH · **COMP**: COMP · COMP 2 · **AUTO**: AUTOMATION · AUTO LIST | 10 |
+| **SEQ** | STEP · **LENGTH**: LENGTH · TRACK · **MUTATE**: MUTATE · MUTATE 2 · PLAYHEADS · STRETCH · **COMP**: COMP · COMP 2 · **AUTO**: AUTOMATION · AUTO LIST | 11 |
 | **FX** | **TRACK**: SENDS · DIST · AUTO PAN — **BUSES**: BUSES — **DELAY**: DLY · DLY 2 · DLY 3 — **REVERB**: REVERB · REVERB 2 — **CHORUS**: CHORUS — **SLICER**: SLICER · SL BUS · SL BUS 2 · SL PITCH — **MASTER**: MASTER — **PUNCH**: PUNCH | 16 |
 | **GLO** | **MIX**: MIXER · SENDS — **GLOBAL**: GLOBAL — **SYSTEM**: SYSTEM | 4 |
 | **ENV** | **TRACKS**: TRACKS · TRACKS DEST — **ENV**: ENV · ENV DEST — **STAGE**: STAGE | 5 |
@@ -462,7 +462,8 @@ them page by page, a **SEQ** tap jumps to the next group.
 | PATTERN | STRETCH | STRETCH (/8 … /2, x1, x2 … x8) | REPEAT (OFF, x2 … x8, TO 64) | NUDGE | ROTATE (−32 … +32) |
 | PATTERN | PLAYHEADS | HEAD | RATE | DIR | INTERVAL |
 | TRACK | TRACK | PITCH | CHANCE | HUMAN | REC Q |
-| TRACK | MUTATE | SOUND (every) | PATTERN (every) | AMOUNT | MODE |
+| TRACK | MUTATE | WHAT | AMOUNT | DIR | LOOP |
+| TRACK | MUTATE 2 (0.9.9-seq2c) | PARAM | SCALE | KEEP (turn) | REVERT (turn) |
 | BAR | BAR (0.9.2) | BAR (the bar you edit) | LEN | — | — |
 | BAR | STEP (melodic: piano roll) | STEP (all 64, bar after bar) | NOTE | TIME (REST ← TIE ← NOTE → 2 ST … 16 ST: the note's length in steps; REST clears the step) | FLAG (– / ACC / SLD / A+S) |
 | BAR | STEP (DRUM: grid) | STEP | LANE | HIT | ACC |
@@ -1096,6 +1097,16 @@ recorded into the pattern, quantized to its steps, overdubbing. Knob moves on th
   of each the track holds and whether they play; the page's hint says so. AUTO LIST is where to see and edit each one.
 - **AUTO LIST**: every automation event and lock as a list. KNOB 1 the row, 2 the step, 3 the parameter, 4 the value.
 - **MUTATE**: the track changes by itself, in time with the clock, so a texture can evolve for minutes.
+  **0.9.9-seq2c: two pages** (SELECT walks them). **MUTATE**: **WHAT** it touches: OFF, **NOTES** (the pitches, in the
+  scale), **RHYTHM** (which steps play, the accents; on DRUM the hits), **PATTERN** (both), **SOUND** (as below),
+  **PARAM** (one value only, MUTATE 2's), **ALL** (pattern and sound); **AMOUNT**; **DIR**: ORBIT / DRIFT (below);
+  **LOOP**: OFF (a new result every bar), **1..5** (each result repeats that many bars unchanged, so it lasts 2..6 bars),
+  **HOLD** (the result as it is, no change until LOOP leaves HOLD). The chip on the roll says NEXT 1 BAR, **LOOP n/m**
+  (the bar of the result) or **HOLD**. **MUTATE 2**: **PARAM** (CUT, RES, ENV, DEC, REL, DLY, REV, EDIT 1; ANALOG's CUT
+  and RES its own), **SCALE** (ON: NOTES walk the scale's degrees; OFF: semitones), **KEEP** (turn right: the music now
+  is the anchor) and **REVERT** (turn right: back to the anchor, UNDO first). A project from before keeps its SOUND /
+  PATTERN periods and plays as it did (WHAT shows SOUND, PATTERN or ALL, LOOP its bars as EVERY); a knob turned on the
+  page takes it to the new settings. The 0.6.43 text, still true of the periods:
   **SOUND** and **PATTERN**: every OFF, 1, 2, 4, 8, 16 or 32 bars (the change lands on the bar's one). **AMOUNT**: how
   much (turning one on sets 50 %). The page (0.6.92) shows the selected track's next 32 bars as one strip, a mark on
   each bar a change lands on (orange: SOUND, violet: PATTERN), the playhead on it, and a line saying what each knob
@@ -1106,7 +1117,7 @@ recorded into the pattern, quantized to its steps, overdubbing. Knob moves on th
   or MUTE); PATTERN moves notes along the scale, flips accents, adds or takes a note off the beat (never on it); on
   DRUM it flips hits, never the kick. **OCT−** here (or **GLO + A4**, FREEZE) stops every mutation until pressed again.
   On HOME (0.9.7) the being a change lands on looks up, its number lights white and a ring in the accent opens round it.
-  **Going back** (0.9.3): MUTATE keeps its anchor, so a track can return to it. Turn a track's SOUND and PATTERN both
+  **Going back** (0.9.3): MUTATE keeps its anchor, so a track can return to it. Turn a track's WHAT (once SOUND and PATTERN) to
   OFF after MUTATE has changed it and a NOTICE asks **BACK TO BEFORE MUTATE?**: **OCT+** (BACK) puts the track's sound
   and steps back as the anchor holds them, **OCT−** (KEEP) leaves it as it is (if nothing changed, nothing is asked).
   At any time **SEQ + D5** (**REVERT**, on every SEQ page) does the same for the selected track, and **GLO + B4**

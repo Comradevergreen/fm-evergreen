@@ -20,6 +20,8 @@ static void undo_mark(void);                    /* (0.6.21) project.c: the music
 static void system_init(void);                  /* (0.6.40) project.c: INIT SYSTEM */
 static uint32_t mut_progress(uint32_t k);       /* (0.6.43) project.c: MUTATE's next, 0..256 (0xFFFF: off) */
 static void mut_keep(void);                     /* .. the music now the anchor */
+static uint32_t mut_on(const track_t *t);        /* (0.9.9-seq2c) .. a track's MUTATE on, */
+static uint32_t mut_period(const track_t *t);    /* .. the bars a result lasts (0: HOLD) */
 static void mut_forget(void);                   /* (0.9.3) .. another music now: no going back to the anchor */
 static int mut_revert(uint32_t mask);           /* .. those tracks back to the anchor (0: done, 1: NO ANCHOR) */
 static void mut_revert_ui(int all);             /* .. REVERT (SEQ + D5) / REVERT ALL (GLO + B4), UNDO first */
@@ -1194,7 +1196,7 @@ static int param_kept(uint32_t i)
            (!FELUCCA_FM4 && (i == P_HVEL || i == P_HTIM || i == P_HGAT || i == P_HRQ)) ||   /* (0.6.87) HUMAN: the sequencer's, a sound
                                                          * keeps it (FELUCCA_FM4: DIGITAL's OP SUS / LEVEL there) */
            (!FELUCCA_FM4 && (i == P_CHRD || i == P_CVOI || i == P_CSTR || i == P_CLEN || i == P_TCHAN ||
-                             i == P_MSND || i == P_MPAT || i == P_MAMT || i == P_MMODE));   /* (0.7.0) SCL > CHORD, C.LEN, CHANCE,
+                             i == P_MSND || i == P_MPAT || i == P_MAMT || i == P_MMODE || i == P_MCFG));   /* (0.7.0) SCL > CHORD, C.LEN, CHANCE,
                                                          * MUTATE: the sequencer's too (a community report: browsing
                                                          * presets switched CHORD off) */
 }

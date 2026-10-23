@@ -131,6 +131,20 @@ enum {                          /* per-track parameters */
 #define P_MPAT P_FM2_ATK
 #define P_MAMT P_FM2_DEC
 #define P_MMODE P_FM2_REL
+/* (JIANT 0.9.9-seq2c) MUTATE with control: P_MMODE bit 0 DIR (ORBIT / DRIFT, as before), bits 1..3 PARAM (the one value
+ * WHAT = PARAM moves, MUT_PIDS); P_MCFG, DIGITAL's free OP4 LEVEL slot, holds 127 - cfg (its stored default 127: cfg 0 in
+ * every project and preset before it): bits 0..2 WHAT, 3..5 LOOP, 6 SCALE OFF. WHAT 0 with P_MSND / P_MPAT set is the
+ * 0.6.43 MUTATE as it was (SOUND / PATTERN every OFF 1 2 4 8 16 32 bars: every old project plays the same) */
+#define P_MCFG P_FM4_LEVEL
+#define MUT_CFG(t) ((uint32_t)(127 - ((t)->p[P_MCFG] < 0 ? 0 : (t)->p[P_MCFG] > 127 ? 127 : (t)->p[P_MCFG])))
+#define MUT_WHAT(t) (MUT_CFG(t) & 7u)
+#define MUT_LOOP(t) ((MUT_CFG(t) >> 3) & 7u)
+#define MUT_CHROM(t) ((MUT_CFG(t) >> 6) & 1u)
+#define MUT_DRIFT(t) ((uint32_t)(t)->p[P_MMODE] & 1u)
+#define MUT_PARAM(t) (((uint32_t)(t)->p[P_MMODE] >> 1) & 7u)
+#define MUT_LEGACY(t) (!MUT_WHAT(t) && ((t)->p[P_MSND] > 0 || (t)->p[P_MPAT] > 0))
+enum { MW_OFF, MW_NOTES, MW_RHYTHM, MW_PATTERN, MW_SOUND, MW_PARAM, MW_ALL, MW_N };
+#define ML_HOLD 6u                     /* LOOP: OFF (a new result every bar), 1..5 (it repeats that many bars), HOLD */
 #define P_MORPH P_FM3_ATK              /* (JIANT 0.6.45) EDIT > MORPH: ANALOG PHASE LOFI's wave on towards the next ones
                                          * (0: as WAVE has it; every project and preset before it), in DIGITAL's slot */
 #define P_CLEN P_FM3_DEC               /* (JIANT 0.6.47) SHIFT > C.LEN: the step components as a lane of their own, steps

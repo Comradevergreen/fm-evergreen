@@ -1009,6 +1009,7 @@ static void focus_knob(uint32_t slot, int32_t steps)
     d = track_desc(TSEL, P_M1SRC + 3u * (uint32_t)j + (slot == 2u ? 0u : 2u));
     *p = (int16_t)param_turn(d, *p, slot == 2u ? (steps > 0 ? 1 : -1) : accel(EN_K1 + 3u, steps, d->max - d->min));
 }
+static void mutk_put(track_t *t, uint32_t k, int32_t v);
 static void edit_param(uint32_t slot, int32_t steps)
 {
     int16_t *vp;
@@ -1198,11 +1199,23 @@ static void edit_param(uint32_t slot, int32_t steps)
         mod_ui_slot = (uint8_t)clamp((int32_t)mod_ui_slot + (steps > 0 ? 1 : -1), 0, 3);
         return;
     }
+    if (pg->graph == GR_MUTATE && (pg->id[slot] == ID_MUT0 + MK_KEEP || pg->id[slot] == ID_MUT0 + MK_REV)) {
+        if (steps > 0 && pg->id[slot] == ID_MUT0 + MK_KEEP) {   /* (0.9.9-seq2c) MUTATE 2: KEEP, REVERT on the turn */
+            mut_keep();
+            ui_message("ANCHOR: THE MUSIC NOW");
+        } else if (steps > 0)
+            mut_revert_ui(0);
+        return;
+    }
     d = page_desc(pg, slot, &vp);
     if (!d || !vp || d->max == d->min)
         return;
     v = param_turn(d, *vp, accel(EN_K1 + slot, steps, d->fmt == F_ENUM ? 0 : d->max - d->min));
     *vp = (int16_t)v;
+    if (vp >= mutk_v && vp < mutk_v + MK_N) {           /* (0.9.9-seq2c) MUTATE's packed knobs */
+        mutk_put(TSEL, (uint32_t)(vp - mutk_v), v);
+        return;
+    }
     if (vp == &trks_ui) {                               /* (0.6.18) GLO > SYSTEM's TRKS: the MENU's setting, saved */
         trks_put(v);
         ui_message(v ? "6 TRACKS: MORE CPU" : "4 TRACKS: T5-T6 ASLEEP");
@@ -1217,6 +1230,30 @@ static void edit_param(uint32_t slot, int32_t steps)
     }
     if (pg->scope != SC_GLOBAL && vp >= TSEL->p && vp < TSEL->p + P_COUNT)   /* (0.7.6: SCL's ALL TR is a global) */
         motion_capture(TSEL, (uint32_t)(vp - TSEL->p), *vp);
+}
+
+/* (0.9.9-seq2c) a MUTATE knob k (params.c MK_*) to v, packed into P_MCFG / P_MMODE. A 0.6.43 MUTATE (P_MSND / P_MPAT,
+ * WHAT 0) turned: WHAT and LOOP as near as they say (SOUND / PATTERN / ALL, LOOP its bars - 1), the periods cleared */
+static void mutk_put(track_t *t, uint32_t k, int32_t v)
+{
+    uint32_t c = MUT_CFG(t), m = (uint32_t)clamp(t->p[P_MMODE], 0, 15), held = MUT_WHAT(t) && MUT_LOOP(t) >= ML_HOLD;
+    if (MUT_LEGACY(t)) {
+        uint32_t s = MUT_BARS[clamp(t->p[P_MSND], 0, 6)], q = MUT_BARS[clamp(t->p[P_MPAT], 0, 6)];
+        uint32_t e = s && q ? (s < q ? s : q) : s ? s : q;
+        c = (s && q ? MW_ALL : s ? MW_SOUND : MW_PATTERN) | (uint32_t)clamp((int32_t)e - 1, 0, 5) << 3 | (c & 64u);
+        t->p[P_MSND] = t->p[P_MPAT] = 0;
+        if (k == MK_LOOP) v = clamp(v, 0, 6) >= 4 ? 5 : (int32_t)(MUT_BARS[clamp(v, 0, 6)] ? MUT_BARS[clamp(v, 0, 6)] - 1u : 0u);
+    }
+    if (k == MK_WHAT) c = (c & ~7u) | (uint32_t)clamp(v, 0, MW_N - 1);
+    if (k == MK_LOOP) c = (c & ~56u) | (uint32_t)clamp(v, 0, ML_HOLD) << 3;
+    if (k == MK_SCALE) c = (c & ~64u) | (v ? 0u : 64u);
+    if (k == MK_DIR) m = (m & ~1u) | (uint32_t)(v & 1);
+    if (k == MK_PARAM) m = (m & 1u) | (uint32_t)clamp(v, 0, 7) << 1;
+    t->p[P_MCFG] = (int16_t)(127 - (int32_t)c);
+    t->p[P_MMODE] = (int16_t)m;
+    if (MUT_WHAT(t) && (MUT_LOOP(t) >= ML_HOLD) != held)
+        ui_message(held ? "MUTATE: FREE" : "MUTATE: HOLD");
+    ui.force = 1;
 }
 
 /* OCT+ on an action page: the picked action. A load stays picked (browse and load again); the others
