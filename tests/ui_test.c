@@ -567,7 +567,7 @@ static int test_transitions(void)
     for (b = 0; b < 40u; b++) mix_block(o, CTL);
     set_engine_of(t, 3u);                                /* LOFI, the note still held */
     for (b = 0; b < 4u; b++) events_block(CTL), mix_block(o, CTL);
-    ok = t->xf_on && t->xf_len == 16u;
+    ok = t->xf_on && t->xf_len == 512u / CTL;            /* (XF_ENG: 11.6 ms in blocks) */
     for (b = 0; b < 40u; b++) events_block(CTL), mix_block(o, CTL);
     for (k = 0, held = 0; k < NVOICE; k++) held |= t->v[k].active && t->v[k].gate && t->v[k].note == 60u;
     ok &= t->engine == 3u && held;
@@ -8326,10 +8326,10 @@ static int test_chord(void)
     key_down(k);
     for (i = 0; i < 2u; i++) events_block(CTL);
     ok = chord_sounding(t, nn) == 1u;
-    for (i = 0; i < 40u; i++) events_block(CTL);       /* ~27 ms: the second */
+    for (i = 0; i < 40u * 32u / CTL; i++) events_block(CTL);   /* ~27 ms: the second */
     ok &= chord_sounding(t, nn) == 2u;
     key_up(k);
-    for (i = 0; i < 80u; i++) events_block(CTL);
+    for (i = 0; i < 80u * 32u / CTL; i++) events_block(CTL);
     ok &= chord_sounding(t, nn) == 0u;                  /* (the third never came) */
     bad += check("STRUM: the notes one after the other; let go before the last: everything ends, none comes later", ok);
     {   /* (0.8.3) the scales of five, six and eight notes: every tone in the scale, chords that are chords (a pentatonic
@@ -8961,7 +8961,7 @@ static int test_click_menu(void)
         ok &= now0 != next0;                            /* the first beat's cell lit, the next not */
         ui_leds();
         ok &= (fm1_led[8] & 2u) != 0u;                  /* PLAY's green: on the beat */
-        for (i = 0; i < 400u; i++) events_block(CTL);    /* (~0.3 s: past the first quarter of the beat) */
+        for (i = 0; i < 400u * 32u / CTL; i++) events_block(CTL);    /* (~0.3 s: past the first quarter of the beat) */
         ui_leds();
         ok &= !(fm1_led[8] & 2u);
         cin_beat();

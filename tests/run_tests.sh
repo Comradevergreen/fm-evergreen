@@ -41,6 +41,9 @@
 # RATCH (tests/ratchet_test.c): a step's ratchet (x1..x4): its parts in the sequencer (equal, gated, chords and drum
 #                   hits whole, one chance roll, swing, no slide or tie out, STOP), FUN8 round trip and older projects x1,
 #                   user preset patterns, SEQ > CHANCE KNOB 3 and the roll / grid drawing.
+# CTL64 (tests/ctl64_timing_test.c, 0.9.9): blocks of 64 samples (core.h CTL): every note of a MICRO-shifted pattern lands
+#                   in the rendered audio within 2 samples of where the sequencer puts it running a sample at a time
+#                   (voice.c track_render starts and releases a voice at its sample inside the block); POLY, MONO cuts, a kit.
 # MOD (tests/mod_test.c): the modulation matrix: slots that do nothing are bit-identical, every source on each
 #                   kind of destination, clamping, MIDI CC1 / CC11 / aftertouch routing, the cost of 4 active
 #                   slots (at most +5 %), demos in build/mod_demo/.
@@ -216,6 +219,8 @@ if [ -f build/gen/felucca_tables.h ]; then
     run "DJ FILTER (0.9.1): centred bit for bit 0.9.0, LP / HP response, no click crossing the middle, automation, old projects" "$OUT/djf_test"
     $CC -O1 -w -Ibuild/gen -Ifirmware/src -Itests -o "$OUT/micro_test" tests/micro_test.c -lm
     run "MICRO in 64ths (0.9.1): recorded within 1/64 of a step at any tempo / division, played there, REC Q 50 %, old projects, 'M' 'F'" "$OUT/micro_test"
+    $CC -O1 -w -Ibuild/gen -Ifirmware/src -Itests -o "$OUT/ctl64_timing_test" tests/ctl64_timing_test.c -lm
+    run "ctl64 (0.9.9): the rendered notes at the sequencer's sample (MICRO-shifted steps, POLY, MONO cuts, kit hits) in blocks of CTL" "$OUT/ctl64_timing_test"
     $CC -O1 -w -Ibuild/gen -Ifirmware/src -Itests -o "$OUT/gen_test" tests/gen_test.c -lm
     run "GEN (0.6.91): the song generator, every genre: deterministic, one scale, the kick anchored, the bass's roots, chord tones, forms, the screen" "$OUT/gen_test"
     $CC -O1 -w -Ibuild/gen -Ifirmware/src -Itests -o "$OUT/stems_test" tests/stems_test.c -lm

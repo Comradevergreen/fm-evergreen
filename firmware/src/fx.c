@@ -266,7 +266,7 @@ static __attribute__((noinline)) void clip_block(uint32_t n)
 #define DJF_HI 107                                      /* the high-pass's (~6 kHz) */
 #define DJF_KMAX 5689                                   /* damping (Q12) near the middle: Q 0.72 */
 #define DJF_KMIN 3724                                   /* .. at the ends: Q 1.1 */
-#define DJF_XB 8                                        /* blocks of a crossfade (8 x CTL = 256 samples) */
+#define DJF_XB (256 / CTL)                              /* blocks of a crossfade (256 samples) */
 #define DJF_SL 4                                        /* the mix << 4 in the states */
 #define DJF_MAX (1 << 28)                               /* (the states' bound: far past any mix, never an overflow) */
 /* v (-64..63, not 0) -> its cutoff (CUTOFF_HZ index, Q8) */
@@ -316,7 +316,7 @@ static __attribute__((noinline)) void djf_block(uint32_t n)
     w0 = djf.w;
     if (dm == djf.mode) {                               /* its side: the filter in, the cutoff toward the knob's */
         int32_t e = djf_cut(v) - djf.cut;
-        djf.cut += e / 8 ? e / 8 : e;                   /* (an eighth a block: ~6 ms) */
+        djf.cut += e / (256 / (int32_t)CTL) ? e / (256 / (int32_t)CTL) : e;   /* (an eighth a block of 32: ~6 ms) */
         w1 = w0 + 4096 / DJF_XB > 4096 ? 4096 : w0 + 4096 / DJF_XB;
     } else {                                            /* the middle, or the other side: out first (then in, there) */
         w1 = w0 - 4096 / DJF_XB < 0 ? 0 : w0 - 4096 / DJF_XB;
@@ -380,35 +380,40 @@ static __attribute__((noinline)) void master_begin(void)
 static int32_t lev_env, lev_g = 32768, lev_cur = 32768, lev_dg;   /* the gain now and its step a sample (master_out) */
 static __attribute__((noinline)) void lev_block(uint32_t n)
 {
-    uint32_t i;
-    int32_t pk = 0, g1;
-    for (i = 0; i < n; i++) {
-        int32_t l = mix_l[i] + wet[i], r = mix_r[i] + wet[i];
-        l = l < 0 ? -l : l;
-        r = r < 0 ? -r : r;
-        if (l > pk) pk = l;
-        if (r > pk) pk = r;
-    }
-    lev_env += pk > lev_env ? (pk - lev_env) >> 6 : -((lev_env - pk) >> 11);   /* (0.5.1: ~45 ms up, ~1.5 s down: it
-                                                         * rides the song's loudness, not each hit; was ~1 / ~46 ms) */
-    g1 = 32768;                                         /* (below the gate: back to unity, slowly) */
-    if (lev_env > LEV_GATE && pk > LEV_GATE) {         /* (0.5.1: the block itself above the gate too: a tail
-                                                         * dying under it is not lifted while the slow follower falls) */
-        uint32_t q = ((uint32_t)LEV_T << 12) / (uint32_t)lev_env, rt = 0, b = 1u << 30;   /* LEV_T / level, Q12 */
-        q <<= 8;                                        /* (Q20: its square root Q10) */
-        while (b > q) b >>= 2;
-        while (b) {
-            if (q >= rt + b) { q -= rt + b; rt = (rt >> 1) + b; }
-            else rt >>= 1;
-            b >>= 2;
+    uint32_t i, j;
+    int32_t g0 = lev_g;
+    for (j = 0; j < n; j += 32u) {                      /* (ctl64) every 32 samples, as with blocks of 32: the peak of
+                                                         * them, the follower, the gain (a bass note's cycle read over 64
+                                                         * samples peaks higher: the leveler lifted it less); the gain
+                                                         * then ramps across the whole block (master_out) */
+        int32_t pk = 0, g1;
+        for (i = j; i < j + 32u && i < n; i++) {
+            int32_t l = mix_l[i] + wet[i], r = mix_r[i] + wet[i];
+            l = l < 0 ? -l : l;
+            r = r < 0 ? -r : r;
+            if (l > pk) pk = l;
+            if (r > pk) pk = r;
         }
-        g1 = clamp((int32_t)rt << 5, 11500, 65536);     /* Q15: x0.35 .. x2 */
+        lev_env += pk > lev_env ? (pk - lev_env) >> 6 : -((lev_env - pk) >> 11);   /* (0.5.1: ~45 ms up, ~1.5 s down: it
+                                                         * rides the song's loudness, not each hit; was ~1 / ~46 ms) */
+        g1 = 32768;                                     /* (below the gate: back to unity, slowly) */
+        if (lev_env > LEV_GATE && pk > LEV_GATE) {     /* (0.5.1: the block itself above the gate too: a tail
+                                                         * dying under it is not lifted while the slow follower falls) */
+            uint32_t q = ((uint32_t)LEV_T << 12) / (uint32_t)lev_env, rt = 0, b = 1u << 30;   /* LEV_T / level, Q12 */
+            q <<= 8;                                    /* (Q20: its square root Q10) */
+            while (b > q) b >>= 2;
+            while (b) {
+                if (q >= rt + b) { q -= rt + b; rt = (rt >> 1) + b; }
+                else rt >>= 1;
+                b >>= 2;
+            }
+            g1 = clamp((int32_t)rt << 5, 11500, 65536); /* Q15: x0.35 .. x2 */
+        }
+        lev_g += (g1 - lev_g) >> (lev_env > LEV_GATE && pk > LEV_GATE ? 8 : 5);   /* (smoothed: ~190 ms; gated, under
+                                                         * -38 dB: ~25 ms back to unity, no gain left on a tail's offset) */
     }
-    g1 = lev_g + ((g1 - lev_g) >> (lev_env > LEV_GATE && pk > LEV_GATE ? 8 : 5));   /* (smoothed: ~190 ms; gated, under -38 dB: ~25 ms
-                                                         * back to unity, no gain left on a tail's offset) */
-    lev_cur = lev_g;                                    /* (master_out ramps it across the block, after the DC block) */
-    lev_dg = (g1 - lev_g) / (int32_t)n;
-    lev_g = g1;
+    lev_cur = g0;                                       /* (master_out ramps it across the block, after the DC block) */
+    lev_dg = (lev_g - g0) / (int32_t)n;
 }
 /* DUCK (G_DUCK 0..100, G_DREL its release 40 .. 600 ms): a kick (eng_drum.c duck_hit) takes the parts that are not
  * DRUM down by up to 30 dB in ~2 ms, holds them there ~25 ms, and they come back with the release, shaped as a
@@ -426,7 +431,11 @@ static __attribute__((noinline)) void duck_block(void)
     }
     duck_g0 = duck_g1;
     if (duck_att) {
-        duck_env += (32767 - duck_env) >> 1;
+#if CTL == 32
+        duck_env += (32767 - duck_env) >> 1;            /* (~2 ms) */
+#else
+        duck_env += ((32767 - duck_env) * 3) >> 2;      /* (the same ~2 ms in blocks of 64) */
+#endif
         if (duck_env > 31000)
             duck_att = 0;
     } else if (duck_hold) {
@@ -855,7 +864,7 @@ static __attribute__((noinline)) void rev_spring(const int32_t *rev_in, int32_t 
     uint32_t ns = sys_load == LOAD_ECO ? SP_N_ECO : SP_N;   /* (0.6.70) LOAD ECO: a shorter chain */
     if (!fx.sp_size)
         fx.sp_size = len;
-    fx.sp_size += clamp(len - fx.sp_size, -256, 256);   /* SIZE glides (a sample a block at most) */
+    fx.sp_size += clamp(len - fx.sp_size, -(8 * (int32_t)CTL), 8 * (int32_t)CTL);   /* SIZE glides (a sample a block of 32 at most) */
     L = fx.sp_size >> 8;
     fx.sp_ph += 2u * LFO_INC[song.g[G_RMOD] ? song.g[G_RRATE] & 127 : 24];   /* the wobble: a slow sine, 1.5 samples */
     w = (fx.sp_size >> 1) + ((osc_sine(fx.sp_ph) * (3 + song.g[G_RMOD] / 2)) >> 8);   /* deep (MOD: up to 66); the far end, Q8 */
@@ -1013,7 +1022,7 @@ static __attribute__((noinline)) void rev_reso(const int32_t *rev_in, int32_t *o
         if (per[k] > (RS_LEN - 2u) << 8) per[k] = (RS_LEN - 2u) << 8;
         if (!fx.rs_per[k])
             fx.rs_per[k] = per[k];
-        fx.rs_per[k] += (uint32_t)(((int32_t)per[k] - (int32_t)fx.rs_per[k]) / 6);   /* (a glide, ~6 blocks) */
+        fx.rs_per[k] += (uint32_t)(((int32_t)per[k] - (int32_t)fx.rs_per[k]) / (192 / (int32_t)CTL));   /* (a glide, ~6 blocks of 32) */
         per[k] = fx.rs_per[k];
     }
     for (i = 0; i < n; i++) {
@@ -1234,6 +1243,7 @@ static int32_t fxg_g = 32767;
  * over the floor went round the loop again: while that is within TIME, an echo is still to come back, the gate stays
  * open (a long delay's repeats come back at their level, not faded in after the gap). TIME up to 1.5 s as before */
 static uint32_t fxg_hold, fxg_dact;
+#define FXG_STEP (1024 * (int32_t)CTL / 32)          /* (ctl64) the gate's step a block: 1024 of 32767 a block of 32 (~25 ms) */
 static uint8_t fxg_fb;
 static void fx_gate(int32_t *wet, uint32_t n)
 {
@@ -1252,11 +1262,11 @@ static void fx_gate(int32_t *wet, uint32_t n)
     if (((q > FXG_QUIET && pk < FXG_FLOOR) || (!dly && q > FXG_QUIET2 && pk < FXG_FLOOR2) ||
          (!dly && q > FXG_QUIET3 && pk < FXG_FLOOR3)) &&
         !(song.g[G_RTYPE] == 4 && GFX(GF_RSIZE) >= 127))
-        fxg_g = g0 > 1024 ? g0 - 1024 : 0;
+        fxg_g = g0 > FXG_STEP ? g0 - FXG_STEP : 0;
     else if (g0 < 32767 && (g0 > 0 || fxg_quiet == 0u || dly))   /* (0.6.89: or the delay growing by itself) */   /* (0.6.19) closing and the residue swells again (a pitched
                                                          * delay's feedback): back up as it went down, ~25 ms (it
                                                          * snapped open: a click); */
-        fxg_g = g0 < 32767 - (fxg_quiet ? 1024 : 4096) ? g0 + (fxg_quiet ? 1024 : 4096) : 32767;
+        fxg_g = g0 < 32767 - (fxg_quiet ? FXG_STEP : 4 * FXG_STEP) ? g0 + (fxg_quiet ? FXG_STEP : 4 * FXG_STEP) : 32767;
     else if (g0 == 0 && !(song.g[G_RTYPE] == 4 && GFX(GF_RSIZE) >= 127))   /* .. closed: it stays closed until
                                                          * something is sent (CLOUD's FREEZE: open) */
         fxg_g = 0;                                      /* (something sent: the branch above opens it) */
@@ -1915,7 +1925,7 @@ static inline __attribute__((always_inline)) void mix_part(track_t *t, uint32_t 
     mod_begin(t);                                       /* the matrix's per-block values into t->p (mod.c) */
     int uin = uin_on && (uint32_t)(t - trk) + 1u == trk_live;   /* (0.7.5) USB IN+OUT: the host's audio comes in here */
     if (track_render(t, b, n))
-        t->tail = 16;                                   /* blocks of DIST state to run out after the last voice */
+        t->tail = (uint8_t)(512u / CTL);                /* blocks of DIST state to run out after the last voice */
     else if (!uin && (!t->tail || !t->p[P_DIST] || !--t->tail)) {
         mp_seen[(uint32_t)(t - trk) % NTRK] = 0;       /* (silent: the next sound at its LEVEL and PAN) */
         if (MOD.on)
@@ -1934,8 +1944,8 @@ static inline __attribute__((always_inline)) void mix_part(track_t *t, uint32_t 
         }
         l0 = mp_lvl[ti];
         p0 = mp_pan[ti];
-        mp_lvl[ti] += (lvl - l0) >> 2;
-        mp_pan[ti] += (pan - p0) >> 2;
+        mp_lvl[ti] += (lvl - l0) >> (7 - CTL_LOG2);       /* (a quarter a block of 32: ~3 ms) */
+        mp_pan[ti] += (pan - p0) >> (7 - CTL_LOG2);
         if (mp_lvl[ti] - lvl < 256 && lvl - mp_lvl[ti] < 256) mp_lvl[ti] = lvl;   /* (there: exactly) */
         if (mp_pan[ti] - pan < 64 && pan - mp_pan[ti] < 64) mp_pan[ti] = pan;
         lq = l0;

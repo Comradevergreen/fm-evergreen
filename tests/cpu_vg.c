@@ -15,6 +15,10 @@
  *   seq/heavy      .. with two step components on each (ARP SEQ / ECHO x8, RAND / OCT), DIV, LEN, chord glides
  *   song/cputest   SAVE > TOOLS 6 CPU TEST's song (song_dice.c cpu_test_song), playing: what the device is measured on
  *   song/cputest.djf  (0.9.1) .. with the master DJ FILTER on (GLO > MIXER KNOB 4 at -24, a low-pass): its cost on top
+ *   mix/idle       (0.9.9 ctl64) nothing sounding, stopped: the fixed cost of a block (the events, the split, the buses,
+ *                  the buffers, the master)
+ *   seq/mono4      (0.9.9 ctl64) four MONO tracks (ANALOG FM6 VOICE WHEEL) at 1/16, 150 BPM, one note a step, each
+ *                  cutting the one before (GATE past the step: a legato retrigger each step), dry
  *   peak/VOICE.EN6 (0.9.0, last) six VOICE EN tracks starting a word in one block: that block's instructions, the worst
  *                  of 24 rounds (cpu_vg.py: not per sample) */
 #define UI_TEST_NO_MAIN
@@ -66,6 +70,30 @@ static void vg_part(uint32_t k, uint32_t e, uint32_t pr, uint32_t notes)
         mix_block(vo, CTL);                         /* (the sound load and the engine switch over first: they let held notes go) */
     for (i = 0; i < notes && i < 8u; i++)
         trk_note_on(t, e == ENGI_DRUM ? DRUM_LANE_NOTE[i] : N[i], 100);
+}
+static void vg_mono4(void)                          /* (0.9.9 ctl64) four MONO tracks cutting each other's notes */
+{
+    static const uint8_t EN[4] = {ENGI_ANALOG, ENGI_FM6, ENGI_VOICE, ENGI_WHEEL};
+    uint32_t k, i;
+    ui_power_on();
+    for (k = 0; k < NTRK; k++) {
+        track_t *t = &trk[k];
+        if (k >= 4u) { t->p[P_MUTE] = 1; continue; }
+        set_engine_of(t, EN[k]);
+        apply_preset_to(t, 0);
+        t->engine = t->eng_req;
+        t->p[P_VOICE] = V_MONO; t->p[P_SLEN] = 16; t->p[P_SGATE] = 127; t->p[P_SDIV] = 2;
+        t->p[P_MUTE] = 0; t->p[P_CHOR] = t->p[P_DLY] = t->p[P_REV] = 0;
+        for (i = 0; i < 16u; i++) {
+            step_t *st = &t->step[i];
+            memset(st, 0, sizeof *st);
+            st->time = ST_NOTE; st->vel = 100; st->n = 1;
+            st->note[0] = (uint8_t)(36 + 12 * k + (i * 5u + k) % 12u);
+            if (i & 1u) ST_MICRO_SET(st, (int32_t)((i * 7u) % 23u) - 11);   /* (off the grid: the starts inside blocks) */
+        }
+    }
+    song.g[G_BPM] = 150;
+    transport_req = 1; ui_input();
 }
 static void vg_seq(int heavy)
 {
@@ -186,6 +214,13 @@ int main(void)
     song.g[G_DJF] = -24;                                /* (0.9.1) the same song through the DJ FILTER (a low-pass, ~1.4 kHz) */
     vg_section("song/cputest.djf");
     song.g[G_DJF] = 0;
+    transport_req = 2; ui_input();
+    vg_quiet();                                         /* (ctl64) the fixed cost of a block: nothing sounding */
+    for (i = 0; i < 400u; i++)
+        mix_block(vo, CTL);
+    vg_section("mix/idle");
+    vg_mono4();
+    vg_section("seq/mono4");
     {   /* (0.9.0) peak/VOICE.EN6: six VOICE EN tracks starting a word in the same block (TEXT of one-syllable words on
          * three, W1 W9 S3 on the others), 24 times: the instructions of that one block, the worst of them */
         static const char *const TX[3] = {"love me now we go home", "strength through the night", "stay and fly so high"};

@@ -148,11 +148,11 @@ audio CPU budget, the signature shown at power-on is 428 bytes. An instrument th
 *Since 0.6.71, experimental.* The FM-1's chip (JieLi AC791N) has **two processor cores**; Felucca and JIANT up to
 0.6.70 used one, which ran everything: the sound, the screen, the keys. Now the second one helps with the sound:
 
-- **How the work is shared.** Every 0.7 ms block, the tracks are split between the two cores by how long each took to
+- **How the work is shared.** Every block (1.45 ms since 0.9.9, 0.7 ms before: see below), the tracks are split between the two cores by how long each took to
   render over the last blocks (timed as they play, since 0.6.73). While the first core renders its tracks, the second
   renders the others into buffers of its own; then they are added together and go through the master on the first
   core. The drum tracks go together, on one core or the other. Since 0.6.75 the second core also runs the effect
-  buses (chorus, delay, reverb), on the sends of the block before (0.7 ms later, inaudible), so they no longer wait.
+  buses (chorus, delay, reverb), on the sends of the block before (a block later, inaudible), so they no longer wait.
 - **The same sound.** The sum is exactly the one-core sum: a test plays a whole six-track song both ways and checks
   that the output is identical, bit for bit.
 - **More room.** With the second core doing part of the synth work, the load meter stays lower: more tracks, voices,
@@ -161,13 +161,27 @@ audio CPU budget, the signature shown at power-on is 428 bytes. An instrument th
 - **Units that cannot run it.** On some FM-1s the second core now and then reads a word of memory wrong, more often
   under load (found by the Melodee and fm1-x0x developers). JIANT guards against it: every job carries a check word,
   and if the second core reads a wrong one, faults or does not answer in time, it is **stopped at once and the first
-  core plays every track again**, with no crash (at most one 0.7 ms block of those tracks is lost). Since 0.6.76 the
+  core plays every track again**, with no crash (at most one block of those tracks is lost). Since 0.6.76 the
   effects' output is checked too: far out of range, the block is muted, their lines cleared and the second core stopped
   the same way. Such a unit
   then stays on one core **until it is switched off**, and so does any unit after a crash while both cores ran.
 - **What it says.** MENU > ABOUT, under AUDIO LOAD: **CORES 2**, or **CORES 1** with the reason: REC AT POWER-ON,
   BAD READ, NO ANSWER, FAULT, SINCE A FAULT (an earlier one this power-on), NO START.
 - **One core on purpose.** Hold **REC** while switching the FM-1 on: that session plays on one core, as before.
+- **Blocks of 64 samples (0.9.9 "ctl64").** The audio is rendered in blocks: each one runs the sequencer, splits the
+  tracks between the cores, hands the second core its job and waits for it, clears and sums the buffers, runs the
+  effect buses and the master. Up to 0.9.8 a block was 32 samples (0.7 ms: four per 2.9 ms half of the output buffer);
+  since 0.9.9 it is 64 (1.45 ms, two per half), so that fixed work happens half as often: measured on the host, a
+  silent mixer costs 17 % less, four MONO tracks cutting each other's notes 21 % less, the whole test song 9 % less
+  (`docs/CPU3_PERFORMANCE.md`). Envelopes, LFOs, glides and fades tick at the new rate with their times unchanged.
+  The sequencer did not get coarser: a note that falls inside a block (an off-grid MICRO step, a strum, HUMAN time, a
+  ratchet, an ARP step, a gate's end) now starts or ends **at its own sample** within the block (before, at the
+  block's first sample: up to 0.7 ms off), for every engine but FM6, whose operators render whole blocks (its notes
+  start at the nearer block edge, within 0.7 ms, as every engine did before). A key or a MIDI note still plays at the
+  start of the next block, as before: its latency is set by the output buffer, not the block. What did change: the
+  effect buses run a block behind the dry sound, so their return is now 1.45 ms late instead of 0.7 (a shorter
+  pre-delay than any room has; with a sustained tone and a heavy send the dry and wet now add up with another phase,
+  and the master's leveler, which reads the peaks of the sum, can sit a few dB from where it did).
 - **Credits.** How to start the second core safely on the FM-1 and the guard against misreads come from
   [Melodee](https://github.com/keremimo/melodee) (keremimo) and [fm1-x0x](https://github.com/charlesvestal/fm1-x0x)
   (Charles Vestal), both GPL-3.0; JIANT's version is in `firmware/hal/fm1_multicore.h`.
