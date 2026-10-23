@@ -4742,6 +4742,10 @@ static int test_step_rec(void)
     return bad;
 }
 
+static uint16_t key_px(int32_t r, int32_t dx)            /* (seq2b) the keys' pixel of row r from the top, dx into it */
+{
+    return r >= 0 && r < PR_ROWS ? swap16(host_screen[(graph_y() + PR_Y0 + (uint32_t)r * PR_RH + 1u) * 240u + (uint32_t)(PR_KX + dx)]) : 0;
+}
 static int test_piano_roll(void)
 {
     int bad = 0, ok;
@@ -4790,11 +4794,55 @@ static int test_piano_roll(void)
     key_down(7); frames(200);                                         /* a key held: its row lit on the strip */
     {
         int32_t r = (int32_t)proll.lo + PR_ROWS - 1 - (int32_t)kb_snd[7][0];
-        uint16_t c = r >= 0 && r < PR_ROWS ? swap16(host_screen[(graph_y() + PR_Y0 + (uint32_t)r * PR_RH + 1u) * 240u + PR_RX + 1]) : 0;
-        bad += check("  a key held: its row marked at the roll's left in the accent", kb_on[7] && c == T_ACCENT);
+        uint16_t c = r >= 0 && r < PR_ROWS ? swap16(host_screen[(graph_y() + PR_Y0 + (uint32_t)r * PR_RH + 1u) * 240u + PR_KX + 1]) : 0;
+        int32_t rs = (int32_t)proll.lo + PR_ROWS - 1 - (int32_t)t->step[ui.cursor].note[0];   /* (seq2b) the held step's note */
+        uint16_t cs = rs >= 0 && rs < PR_ROWS ? swap16(host_screen[(graph_y() + PR_Y0 + (uint32_t)rs * PR_RH + 1u) * 240u + PR_KX + 6]) : 0;
+        bad += check("  a key held: its row marked at the roll's left in the accent (seq2b: its key on the keyboard)", kb_on[7] && c == T_ACCENT);
+        bad += check("  seq2b: the keyboard lights the held step's note in the accent", ui.entry_open && lock_held() &&
+                     t->step[ui.cursor].n && cs == T_ACCENT);
     }
     key_up(7); frames(100);
     song.rec = 0;
+    {   /* (0.9.9-seq2b) the keys at the roll's left: stopped, the cursor's step's note TEXT, another key plain, the root's
+         * tooth; playing, a line a playhead in its colour and each head's note lit on the keys in it; drawn again a step at
+         * a time, not a frame at a time */
+        uint32_t ti = song.sel % NTRK, k, sig, okk = 1, okl = 1;
+        int32_t yl = (int32_t)graph_y() + PR_Y0 + PR_ROWS * PR_RH / 2, r, root = -1;
+#define KEYPX(n, dx) key_px((int32_t)proll.lo + PR_ROWS - 1 - (int32_t)(n), dx)
+        cursor_set(20); frame();
+        memset(host_screen, 0, sizeof host_screen); ui.force = 1; ui_draw();
+        ok = t->step[20].n && KEYPX(t->step[20].note[0], 6) == T_TEXT &&
+             KEYPX(t->step[20].note[0] - 1, 6) == (PR_KB[(t->step[20].note[0] - 1) % 12] ? T_BG : T_MID);
+        for (r = 0; r < PR_ROWS && root < 0; r++)
+            if (((int32_t)proll.lo + PR_ROWS - 1 - r - t->p[P_ROOT] + 120) % 12 == 0) root = r;
+        ok &= root >= 0 && key_px(root, -3) == T_THEME && key_px(root < PR_ROWS - 1 ? root + 1 : root - 1, -3) != T_THEME;
+        bad += check("  seq2b keys: stopped, the cursor's step's note lit TEXT, the others plain (white MID, black BG), the root's tooth", ok);
+        memset(fg_set, 0, sizeof fg_set);
+        fg_set[ti][0].rate = 5; fg_set[ti][1].rate = 3; fg_set[ti][2].rate = 7;
+        fg_head[ti][0].idx = 22; fg_head[ti][1].idx = 24; fg_head[ti][2].idx = 26;
+        song.playing = 1; t->seq_idx = 20;
+        memset(host_screen, 0, sizeof host_screen); ui.force = 1; ui_draw();
+        for (k = 0; k <= FG_HEADS; k++) {
+            uint32_t st = pr_head_step(t, k);
+            int32_t x = PR_CX(st % 16u) + (k ? (PR_CWI(st % 16u) + 1) * (int32_t)k / 4 : 0);
+            okl &= st / 16u == 1u && swap16(host_screen[(uint32_t)yl * 240u + (uint32_t)x]) == pr_head_col(k);
+            if (!k)
+                okk &= KEYPX(t->step[st].note[0], 6) == T_ACCENT;
+            else if (k == 1u && t->step[st].note[0] != t->step[pr_head_step(t, 0)].note[0])
+                okk &= KEYPX(t->step[st].note[0], 6) == pr_head_col(1);
+        }
+        bad += check("  seq2b playing: a line a playhead (the sequencer's ACCENT, FUGUE's 2..4 their colours) in its column", okl);
+        bad += check("  seq2b playing: the note each playhead sounds lit on the keys in its colour", okk);
+        frame(); sig = ui.graph_sig; frame(); frame();
+        ok = ui.graph_sig == sig;
+        fg_head[ti][1].idx = 25; frame();
+        ok &= ui.graph_sig != sig;
+        sig = ui.graph_sig; t->seq_idx = 21; frame();
+        ok &= ui.graph_sig != sig;
+        bad += check("  seq2b: the roll drawn again when a playhead steps, not frame by frame", ok);
+        song.playing = 0; memset(fg_set, 0, sizeof fg_set);
+#undef KEYPX
+    }
     return bad;
 }
 
@@ -6515,19 +6563,33 @@ static int test_lente(void)
     turn(EN_SELECT, -1); frames(32);
     ok &= str_eq(cur_page()->title, "STEP") && lz_count_is("1/10");                /* (the first: no wrap) */
     turn(EN_SELECT, 1); frames(32);
-    ok &= str_eq(cur_page()->title, "PATTERN") && bars_view(cur_page()) && lz_tab_lit(1) && lz_count_is("2/10") &&
+    ok &= str_eq(cur_page()->title, "PATTERN") && seq_roll_view(cur_page()) && lz_tab_lit(1) && lz_count_is("2/10") &&
           lz_crumb_is("SEQ \xB7 LENGTH \xB7 LENGTH");                              /* (PATTERN, named LENGTH) */
     turn(EN_SELECT, 1); frames(32);
     ok &= str_eq(cur_page()->title, "TRACK") && lz_tab_lit(1) && lz_count_is("3/10") &&
           lz_crumb_is("SEQ \xB7 LENGTH \xB7 TRACK");                               /* (TRACK under the LEN tab) */
     turn(EN_SELECT, 4); frames(32);
-    ok &= str_eq(cur_page()->title, "COMP") && bigstep_view(cur_page()) && lz_tab_lit(5) && lz_count_is("7/10") &&
+    ok &= str_eq(cur_page()->title, "COMP") && seq_roll_view(cur_page()) && lz_tab_lit(5) && lz_count_is("7/10") &&
           lz_crumb_is("SEQ \xB7 COMP \xB7 COMP");
     turn(EN_SELECT, 1); frames(32);
     ok &= str_eq(cur_page()->title, "COMP 2") && lz_tab_lit(5) && lz_count_is("8/10");
-    bad += check("seq2 SEQ: enters at STEP (1/10, seven tabs); LENGTH's bars, TRACK under its tab, COMP the step large, COMP 2 after it", ok);
+    bad += check("seq2 SEQ: enters at STEP (1/10, seven tabs); LENGTH the roll (seq2b), TRACK under its tab, COMP the roll, COMP 2 after it", ok);
     bad += check("seq2 SEQ: one chain of 10 by SELECT (no wrap); a SEQ tap the next tab's first, round",
                  chain_walk(B_SEQ, CH, 10, TP, 6));
+    {   /* (0.9.9-seq2b) every page of the chain the same picture: the bars' strip, the roll with its keys */
+        static const char *const TI[10] = {"STEP", "PATTERN", "TRACK", "MUTATE", "PLAYHEADS", "STRETCH", "COMP", "COMP 2",
+                                           "AUTOMATION", "AUTO LIST"};
+        ui_power_on(); TSEL->p[P_SLEN] = 64;
+        open_family(FAM_SEQ); frame();
+        ok = 1;
+        for (q = 0; q < 10u; q++) {
+            go_title(TI[q]); frame();
+            memset(host_screen, 0, sizeof host_screen); ui.force = 1; ui_draw();
+            ok &= str_eq(cur_page()->title, TI[q]) && seq_roll_view(cur_page()) && lens_strip() &&
+                  key_px(PR_ROWS / 2, 6) != T_SURF && key_px(PR_ROWS / 2, 6) != 0u;
+        }
+        bad += check("seq2b SEQ: every page of the chain draws the roll, its keys and the bars' strip (its knobs its own)", ok);
+    }
     /* the memory: the section's (not the track's) */
     ui_power_on(); TSEL->p[P_SLEN] = 64;
     open_family(FAM_SEQ); frame();
@@ -6540,13 +6602,13 @@ static int test_lente(void)
     ok &= str_eq(cur_page()->title, "MUTATE");                                     /* (T2: the same page) */
     track_select(0); frame();
     go_title("COMP 2"); frame();
-    ok &= lens_level() == LV_STEP && bigstep_view(cur_page());                     /* (a page put by code: its entry) */
+    ok &= lens_level() == LV_STEP && seq_roll_view(cur_page());                     /* (a page put by code: its entry) */
     go_page(GR_CHANCE); frame();
     ok &= lens_level() == LV_STEP;
     press(B_SEQ); frames(32);
     ok &= str_eq(cur_page()->title, "AUTOMATION");                                 /* (hidden CHANCE: from COMP's tab) */
     go_title("NOTE"); frame();
-    ok &= roll_view(cur_page()) && !bigstep_view(cur_page());                      /* (NOTE, out of the chain: the roll) */
+    ok &= roll_view(cur_page()) && seq_roll_view(cur_page());                      /* (NOTE, out of the chain: the roll) */
     bad += check("0.9.2 SEQ from elsewhere: the page left, on any track (was per track); a page put by code brings its entry", ok);
     /* BAR: KNOB 1 the bar (no wrap, the cursor at its place), KNOB 2 LEN; STEP's KNOB 1 into the next bar */
     ui_power_on(); TSEL->p[P_SLEN] = 64;
@@ -6615,13 +6677,13 @@ static int test_lente(void)
     ok = grid_on() && roll_view(cur_page()) && lens_level() == LV_BAR && song.grid == 1u;
     frames(500);
     turn(EN_SELECT, 1); frames(32);
-    ok &= bars_view(cur_page()) && str_eq(cur_page()->title, "PATTERN");
+    ok &= seq_roll_view(cur_page()) && str_eq(cur_page()->title, "PATTERN");
     go_title("BAR"); frames(32);
     turn(EN_K1, 1);
     ok &= ui.bank == 1u;
     turn(EN_SELECT, 5); frames(32);                                               /* (from BAR, LENGTH's place: COMP) */
-    ok &= bigstep_view(cur_page()) && lens_level() == LV_STEP;
-    bad += check("  DRUM: STEP is the grid (its keys); LENGTH its bars, BAR (by code) KNOB 1 the bar; COMP the step large", ok);
+    ok &= seq_roll_view(cur_page()) && lens_level() == LV_STEP;
+    bad += check("  DRUM: STEP is the grid (its keys); LENGTH the grid (seq2b), BAR (by code) KNOB 1 the bar; COMP the grid", ok);
     return bad;
 }
 
@@ -9014,7 +9076,7 @@ static int test_click_menu(void)
     }
     bad += check("CLICK / CLICK LEVEL / COUNT-IN saved and read back; a stored 3 the default; older settings OFF / MID / OFF", ok);
 
-    /* the count-in from the UI (0.8.5: read at the cells' row 40, where the roll's lens page is one colour across) */
+    /* the count-in from the UI (0.8.5: read at the cells' row 40, where the roll's lens page is one colour across; seq2b: the page back read at x 28, 84, inside the roll past its keys) */
     ui_power_on();
     menu_put(MI_COUNTIN, 1u);
     go_page(GR_ROLL);
@@ -9045,14 +9107,14 @@ static int test_click_menu(void)
     ok = transport_req == 2u;
     events_block(CTL);
     frame();
-    ok &= !seq_counting() && !song.playing && (song.rec & 1u) && px_at(16, CI_Y + 40) == px_at(16 + 56, CI_Y + 40);
+    ok &= !seq_counting() && !song.playing && (song.rec & 1u) && px_at(28, CI_Y + 40) == px_at(28 + 56, CI_Y + 40);
     bad += check("PLAY while counting in stops it: nothing plays, still armed, the page back", ok);
     press(B_PLAY);
     events_block(CTL);
     ok = seq_counting() && cin_left == 4u;
     for (i = 0; i < 4u; i++) cin_beat();
     frame();
-    ok &= !seq_counting() && song.playing && trk[0].seq_idx == 0u && px_at(16, CI_Y + 40) == px_at(16 + 56, CI_Y + 40);
+    ok &= !seq_counting() && song.playing && trk[0].seq_idx == 0u && px_at(28, CI_Y + 40) == px_at(28 + 56, CI_Y + 40);
     bad += check("PLAY armed and stopped: the count-in again; at its end the sequencer plays from step 1, the page back", ok);
     press(B_PLAY);
     events_block(CTL);
