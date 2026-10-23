@@ -358,7 +358,8 @@ static void fm6_sync(const track_t *t)
                                                          * a decaying patch can be held too) */
                     op[FP_L1 + 2u] = (uint8_t)(t->p[P_SUS] > 0 ? 50 + clamp(t->p[P_SUS], 0, 126) * 49 / 126 : 0);   /* (the
                                                          * EG's levels are logarithmic, ~0.75 dB a step: 50..99) */
-                op[FP_R1 + 3u] = (uint8_t)clamp(op[FP_R1 + 3u] - clamp(t->p[P_REL], 0, 127) * 90 / 127, 1, 99);
+                op[FP_R1 + 3u] = (uint8_t)clamp(op[FP_R1 + 3u] - clamp(t->p[P_REL], 0, 127) * 90 / 127, 12, 99);   /* (beta3: R4 floor 12,
+                                                         * ~25 s at REL 127; at 1 a released voice rendered for minutes) */
                 continue;
             }
             if (!op[FP_MODE])

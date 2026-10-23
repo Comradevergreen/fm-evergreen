@@ -556,7 +556,8 @@ static int fm6_note_done(const fm6_note_t *n, const uint8_t *p, uint32_t alg)
         const fm6_env_t *e = &n->env[k];
         if (!((car >> k) & 1u))
             continue;
-        if (n->op[k].gain_out >= FM6_DONE)
+        if (n->op[k].gain_out >= (e->ix == 3u && !e->down ? FM6_THRESH * 2 : FM6_DONE))   /* (beta3: a released note
+                                                         * ends sooner, ~6 dB over the skip threshold) */
             return 0;
         if (e->ix < 3u)
             return 0;

@@ -489,7 +489,7 @@ static uint32_t quiet_tail(track_t **pp)
 #define LOAD_FRAME_TICKS 544u                           /* TIMER4 ticks a frame (24 MHz / 44,117.6 Hz: audio.c DAC_TICKS) */
 #define LOAD_W_PCT 1u                                   /* a weight unit of mc_cost (fx.c) as % of a half: an estimate
                                                          * until the part is measured (FM6 4 %, LOFI / NOISE 2, else 3) */
-#define LOAD_ADD_LOG2 7u                                /* what the admitted voices added decays over ~128 blocks (93 ms,
+#define LOAD_ADD_LOG2 (12u - CTL_LOG2)                 /* what the admitted voices added decays over ~93 ms (128 blocks of 32,
                                                          * the average's time: as their load shows in it, load_block) */
 static uint32_t mc_tk[NTRK];                            /* (fx.c measures it: a part's block in TIMER4 ticks, smoothed) */
 static uint32_t load_steals;                            /* voices given up by the admission (console status) */
