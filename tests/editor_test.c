@@ -157,7 +157,8 @@ static int preferences(void)
         host_wire[n0 - 23] == 0 &&                        /* (no bank since 1.0.3) */
         host_wire[n0 - 22] == 0x53 && host_wire[n0 - 21] == 1 && host_wire[n0 - 20] == 3 &&
         host_wire[n0 - 19] == 0x50 && host_wire[n0 - 18] == 1 && host_wire[n0 - 17] == 3 &&   /* FM6 v2: no bank, preset patches */
-        host_wire[n0 - 16] == 0x4E && host_wire[n0 - 15] == 1 && host_wire[n0 - 14] == 23 &&   /* MENU settings: 23 items (0.6.72: MIDI OUT; 0.8.9 SKIN; 0.9.7 SCOPE) */
+        host_wire[n0 - 16] == 0x4E && host_wire[n0 - 15] == 1 && host_wire[n0 - 14] == 24 &&   /* MENU settings: 24 items (0.6.72: MIDI OUT; 0.8.9 SKIN; 0.9.7 SCOPE;
+                                                                                             * 0.9.9-stab CPU CLOCK) */
         host_wire[n0 - 13] == 0x52 && host_wire[n0 - 12] == 1 && host_wire[n0 - 11] == 4 &&   /* RATCH */
         host_wire[n0 - 10] == 0x4C && host_wire[n0 - 9] == 1 && host_wire[n0 - 8] == 1 &&   /* 1.1 parameter locks */
         host_wire[n0 - 7] == 0x56 && host_wire[n0 - 6] == 1 && host_wire[n0 - 5] == 32 &&   /* (0.6.11) FM6 voice bank */
@@ -861,8 +862,12 @@ static int menu_protocol(void)
     menu_desc(22, &it);                                   /* (0.9.7) SCOPE, a row of DISPLAY: OFF (the default) ON */
     ok &= !strcmp(it.name, "SCOPE") && it.id == 22 && it.tab == 0 && it.value == 0 && it.max == 1 && !strcmp(it.names[0], "OFF") &&
           !strcmp(it.names[1], "ON");
-    n = menu_desc(23, &it);
-    ok &= n == 2u && it.index == 23 && it.id == 127;
+    menu_desc(23, &it);                                   /* (0.9.9-stab) CPU CLOCK, a row of SYSTEM: 360 MHZ (the default) 320 MHZ,
+                                                           * id 24 as 0.9.12's (23, its CPU CORES, is not on this line) */
+    ok &= !strcmp(it.name, "CPU CLOCK") && it.id == 24 && it.tab == 3 && it.value == 0 && it.max == 1 &&
+          !strcmp(it.names[0], "360 MHZ") && !strcmp(it.names[1], "320 MHZ");
+    n = menu_desc(24, &it);
+    ok &= n == 2u && it.index == 24 && it.id == 127;
     n = menu_desc(127, &it);
     bad += check("MENU_DESC: no CALIBRATION / ABOUT; an index past the list answers index, 127 (no item)",
                  ok && n == 2u && it.index == 127 && it.id == 127);

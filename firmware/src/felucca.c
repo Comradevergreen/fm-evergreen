@@ -97,6 +97,7 @@
 /* --------------------------------------------- storage, update, editor --- */
 #if FELUCCA_FLASH
 #include "fm1_flash.h"
+#include "fm1_clk320.h"          /* (0.9.9-stab, as 0.9.12) MENU > SYSTEM > CPU CLOCK 320 MHZ's switch (curist's, MIT; main.c) */
 #include "storage_hw.c"
 #include "storage.c"
 #endif

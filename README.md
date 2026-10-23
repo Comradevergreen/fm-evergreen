@@ -168,6 +168,17 @@ audio CPU budget, the signature shown at power-on is 428 bytes. An instrument th
 - **What it says.** MENU > ABOUT, under AUDIO LOAD: **CORES 2**, or **CORES 1** with the reason: REC AT POWER-ON,
   BAD READ, NO ANSWER, FAULT, SINCE A FAULT (an earlier one this power-on), NO START.
 - **One core on purpose.** Hold **REC** while switching the FM-1 on: that session plays on one core, as before.
+- **The core supplies (0.9.9-stab).** Up to 0.9.9-cpu3 JIANT ran both cores at 360 MHz on the boot loader's core
+  voltages (1.40 V / 1.26 V), a configuration no M-VAVE firmware uses: M-VAVE's own firmware raises them to 1.60 V /
+  1.38 V as it starts, at the same 360 MHz. JIANT now does the same at boot, before the second core and the audio
+  (`firmware/hal/fm1_sys.h`, after fm1-base's code, MPL-2.0). MENU > ABOUT shows the steps reached: **RAILS 7/15**
+  (and the boot loader's 3/11).
+- **MENU > SYSTEM > CPU CLOCK: 360 MHZ / 320 MHZ (0.9.9-stab; editor id 24).** JieLi rates the chip at 320 MHz; the FM-1's
+  boot stage runs it at 360, and so does M-VAVE's firmware with the supplies above, so **360 MHZ stays the default**. 320
+  MHZ is the configuration of M-VAVE's open firmware and of Skiff: switched at power-on, before the audio and the second
+  core, with curist's switch from [fm1-clk320-probe](https://github.com/curist/fm1-clk320-probe) (MIT,
+  `firmware/hal/fm1_clk320.h`); ~11 % fewer cycles a block, so the load governor sheds voices sooner on the heaviest
+  songs. A change applies from the next power-on; ABOUT shows the clock it runs at (**CPU 360 MHZ** / **CPU 320 MHZ**).
 - **Credits.** How to start the second core safely on the FM-1 and the guard against misreads come from
   [Melodee](https://github.com/keremimo/melodee) (keremimo) and [fm1-x0x](https://github.com/charlesvestal/fm1-x0x)
   (Charles Vestal), both GPL-3.0; JIANT's version is in `firmware/hal/fm1_multicore.h`.

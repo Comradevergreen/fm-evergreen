@@ -18,9 +18,10 @@ MEMORY
     XIP    (rx)  : ORIGIN = 0x02000120, LENGTH = 0x8DFBC
     LOWBUF (rw)  : ORIGIN = 0x01C00000, LENGTH = 0x7000
     RAM    (rwx) : ORIGIN = 0x01C08000, LENGTH = 96K
-    POOL   (rw)  : ORIGIN = 0x01C20000, LENGTH = 0x50000
-    RAMTEXT (rwx): ORIGIN = 0x01C70000, LENGTH = 0x6000   /* (0.6.97, 0.7.0: up 4 KiB each, the image grew: a call from here must
-                                                           * reach its end; the user stack 4 KiB shorter each time, 15.75 KiB) */
+    POOL   (rw)  : ORIGIN = 0x01C20000, LENGTH = 0x4FC00
+    RAMTEXT (rwx): ORIGIN = 0x01C6FC00, LENGTH = 0x6400   /* (0.6.97, 0.7.0: up 4 KiB each, the image grew: a call from here must
+                                                           * reach its end; the user stack 4 KiB shorter each time, 15.75 KiB;
+                                                           * 0.9.9-stab, as 0.9.12: 1 KiB lower, from the pool: the 320 MHz switch) */
     NOINIT (rw)  : ORIGIN = 0x01C7C000, LENGTH = 0x3D50
 }
 SECTIONS

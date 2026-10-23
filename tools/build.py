@@ -37,7 +37,8 @@ import lz4blk  # noqa: E402
 APP_XIP = 0x02000120                # app.bin offset 0 in the XIP map; the SPL jumps here
 APP_SLOT = fm1pkg_make.APP_SLOT
 LOADER_LOAD = 0x01C0A800
-POOL_END = 0x01C70000            # (JIANT 0.6.78) app.ld: POOL's end, RAMTEXT's start (0.6.97, 0.7.0: up 4 KiB each)
+POOL_END = 0x01C6FC00            # (JIANT 0.6.78) app.ld: POOL's end, RAMTEXT's start (0.6.97, 0.7.0: up 4 KiB each;
+                                 # 0.9.9-stab: 1 KiB lower, the 320 MHz switch's RAM code)
 RAMTEXT_END = 0x01C76000         # .. RAMTEXT's end (the user stack's guard band)
 LOADER_NAME = b"usb_hid_ota.bin"    # the file name the SPL looks for
 DOCKER_IMAGE = os.environ.get("JIELI_DOCKER_IMAGE", "debian:bookworm-slim")

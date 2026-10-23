@@ -166,6 +166,10 @@ static void fm1_reset_reason(void)
  * or handed back to the boot loader. Harmless when it is not running */
 #include "fm1_core1_stop.h"
 
+/* (JIANT 0.9.9-stab, as 0.9.12) the core clock is JieLi's 320 MHz (PLL2's multiplier 240, field + 2; the boot stage's
+ * 360: 270): MENU > ABOUT. hal/fm1_clk320.h switches it */
+static inline int fm1_clk_320(void) { return ((*(volatile uint32_t *)0x119ACu) & 0xFFFu) == 238u; }
+
 static void fm1_reboot(void)
 {
     __asm__ volatile("cli");

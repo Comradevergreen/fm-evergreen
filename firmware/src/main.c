@@ -149,6 +149,29 @@ static void boot_leds(void)
         fm1_led_anim_start(settings_leds == LEDS_DIM || settings_leds == LEDS_DIM_LO);
 }
 
+/* (0.9.9-stab, as 0.9.12) MENU > SYSTEM > CPU CLOCK 320 MHZ: from the boot stage's 360 to JieLi's rated 320 (hal/fm1_clk320.h,
+ * curist's, as Skiff runs it), the screen up, on one core, before the scan, the second core, the audio and USB. Not after
+ * a failed boot, nor again until power-off after a reset in it (fm1_cstart); a soft reset keeps the PLL (the check:
+ * already 320). Registers not as the boot stage leaves them: not switched (ABOUT: 360 MHZ). The default stays 360 MHZ:
+ * with the core rails at V15's levels (fm1_rails_boot) that is M-VAVE's own configuration */
+static __attribute__((noinline)) void cpu_clock(void)
+{
+#if FELUCCA_DUAL_CORE
+    fm1_clk320_t k;
+    uint32_t f;
+    if (!(cpu_cfg & CPU_320) || bootguard.failed || (fm1_mc_bar.barred & (FM1_MC_CLK_ARMED | FM1_MC_CLK_TRIP)))
+        return;
+    lcd_sync();                                         /* (no LCD DMA through it) */
+    fm1_mc_bar.barred |= FM1_MC_CLK_ARMED;
+    fm1_wdt_feed();
+    f = irq_save();
+    if (!fm1_clk320_check(&k))
+        FL_FAR(fm1_clk320_switch)(&k);
+    irq_restore(f);
+    fm1_mc_bar.barred &= ~FM1_MC_CLK_ARMED;
+#endif
+}
+
 static void fm1_main(void)
 {
     uint32_t ms;
@@ -176,6 +199,7 @@ static void fm1_main(void)
     felucca_dbg.prev_home = felucca_dbg.home;
     felucca_dbg.prev_frames = felucca_dbg.ui_frames;
     felucca_dbg.prev_rst = fm1_boot.p3_rst;
+    cpu_clock();                                        /* (0.9.9-stab) MENU > SYSTEM > CPU CLOCK 320 MHZ, if set */
     fm1_input_init();
     fm1_adc_init();
     panel_init();
@@ -334,6 +358,17 @@ void fm1_cstart(void)
         bootguard.failed = 0;
         bootguard.pending = 0;
     }
+#if FELUCCA_DUAL_CORE
+    if (fm1_mc_bar.magic != FM1_MC_BAR_MAGIC) {         /* (0.9.9-stab, as 0.9.12: its other bits too; garbage after a power-off) */
+        fm1_mc_bar.magic = FM1_MC_BAR_MAGIC;
+        fm1_mc_bar.barred = 0;
+    }
+    if (fm1_mc_bar.barred & FM1_MC_CLK_ARMED) {         /* a reset in the 320 MHz switch (fm1_main cpu_clock): no failed
+                                                         * boot, and no switch again until power-off */
+        fm1_mc_bar.barred ^= FM1_MC_CLK_ARMED | FM1_MC_CLK_TRIP;
+        bootguard.pending = 0;
+    }
+#endif
     if (bootguard.pending)
         bootguard.failed++;
     bootguard.pending = 1;

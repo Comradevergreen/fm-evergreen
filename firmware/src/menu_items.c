@@ -8,15 +8,16 @@
  * value (MI_VALUES: the rows before them hold one). 1.0.5: in four tabs (MI_TAB). */
 enum { MI_COLOR, MI_SKIN, MI_SCOPE, MI_STYLE, MI_LARGE, MI_ANIM, MI_LEDS, MI_SCROFF, MI_HOLD, MI_ACCEL, MI_LATCH, MI_BPMLOCK, MI_SCLLED, MI_MIDIOUT,
        MI_LOWCUT, MI_USB,
-       MI_CLICK, MI_CLKLVL, MI_COUNTIN, MI_TRACKS, MI_SERIAL, MI_RESTORE, MI_LOAD, MI_PANEL, MI_INIT, MI_ABOUT, MI_COUNT };   /* (1.1: the metronome's rows in
-                                                                                             * AUDIO; 1.2: RESTORE LAST in SYSTEM, SCALE LEDS
-                                                                                             * in CONTROL) */
+       MI_CLICK, MI_CLKLVL, MI_COUNTIN, MI_TRACKS, MI_SERIAL, MI_RESTORE, MI_LOAD, MI_CLOCK, MI_PANEL, MI_INIT, MI_ABOUT, MI_COUNT };   /* (1.1: the
+                                                                                             * metronome's rows in AUDIO; 1.2: RESTORE LAST in
+                                                                                             * SYSTEM, SCALE LEDS in CONTROL; 0.9.9-stab: CPU
+                                                                                             * CLOCK in SYSTEM) */
 #define MI_VALUES MI_PANEL
 static const char *const MI_NAME[MI_COUNT] = {"COLOR", "SKIN", "SCOPE", "STYLE", "LARGE", "ANIM", "LEDS", "SCREEN OFF", "HOLD", "KNOB ACCEL", "FX LATCH", "BPM LOCK",
                                               "SCALE LEDS", "MIDI OUT",
                                               "SPEAKER EQ", "USB LEVEL", "CLICK", "CLICK LEVEL", "COUNT-IN", "TRACKS",
                                               "USB",
-                                              "RESTORE LAST", "LOAD", "CALIBRATION", "INIT SYSTEM", "ABOUT"};
+                                              "RESTORE LAST", "LOAD", "CPU CLOCK", "CALIBRATION", "INIT SYSTEM", "ABOUT"};
 /* 1.0.5: the MENU's tabs (ui_menu.c: ALGORITHM steps between them, PRESETS among one tab's rows; the editor gets a
  * row's tab after its MENU_DESC reply). A tab's rows follow each other in MI order (tests/ui_test.c checks it); at
  * most MTAB_ROWS each (the page does not scroll: ui_menu.c fits them). A new row joins a tab here, a new tab is
@@ -36,8 +37,8 @@ static const uint8_t MI_TAB[MI_COUNT] = {
                                                                              * COUNT-IN */
     MTAB_AUDIO,                                                             /* TRACKS (JIANT 0.6.18) */
     MTAB_SYSTEM, MTAB_SYSTEM, MTAB_SYSTEM, MTAB_SYSTEM, MTAB_SYSTEM,        /* USB SERIAL, RESTORE LAST, LOAD (JIANT
-                                                                             * 0.6.30), CALIBRATION, INIT SYSTEM (0.6.58) */
-    MTAB_SYSTEM,                                                            /* ABOUT */
+                                                                             * 0.6.30), CPU CLOCK (0.9.9-stab), CALIBRATION */
+    MTAB_SYSTEM, MTAB_SYSTEM,                                               /* INIT SYSTEM (0.6.58), ABOUT */
 };
 static uint32_t mtab_first(uint32_t t)                 /* a tab's first row */
 {
@@ -112,6 +113,23 @@ static const char *const SCROFF_N[5] = {"NEVER", "5 MIN", "15 MIN", "30 MIN", "6
 /* (JIANT 0.6.72) MIDI OUT over USB (ui.c midi_out_mode, seq.c MO_*): the keys; and the clock + START / STOP; and every
  * note the FM-1 plays; nothing */
 static const char *const MIDIOUT_N[4] = {"KEYS", "CLOCK", "ALL", "OFF"};
+/* (JIANT 0.9.9-stab, as 0.9.12) MENU > SYSTEM > CPU CLOCK: 360 MHZ (the default: the boot stage's clock, M-VAVE's V15
+ * runs it so with the core rails at 1.60 / 1.38 V, hal/fm1_sys.h fm1_rails_boot) or 320 MHZ (JieLi's rated clock, as
+ * M-VAVE's open firmware and Skiff run it: ~11 % fewer cycles a block), switched at boot before the audio and the second
+ * core (main.c cpu_clock, hal/fm1_clk320.h: curist's, MIT); from the next power-on (a soft reset keeps the PLL).
+ * The settings byte: favorites.factory[15][17] (a byte no engine uses; 0.9.12's cpu_cfg, its bit 2 = CPU_320: a
+ * settings backup moves between the lines), 0 in every older record = 360 MHZ */
+#define cpu_cfg (favorites.factory[15][17])
+enum { CPU_320 = 4u };
+static const char *const CLOCK_N[2] = {"360 MHZ", "320 MHZ"};
+static const char CPU_APPLY[] = "SWITCH OFF AND ON TO APPLY";
+static uint32_t cpu_get(void) { return (cpu_cfg & CPU_320) != 0u; }
+static void cpu_put(uint32_t v)                        /* (from the next start: main.c cpu_clock) */
+{
+    if (v != cpu_get())
+        ui_message(CPU_APPLY);
+    cpu_cfg = (uint8_t)(v ? cpu_cfg | CPU_320 : cpu_cfg & ~CPU_320);
+}
 
 /* MENU > USB SERIAL (#67). The serial console is a developer tool (README: FELUCCA_CDC). ON (the default) presents it,
  * the descriptors byte for byte as before; OFF re-enumerates as audio + MIDI only, device class 0 (the bytes of a
@@ -170,6 +188,7 @@ static uint32_t menu_get(uint32_t row)
     case MI_CLICK: case MI_CLKLVL: case MI_COUNTIN: return rp_get(row - MI_CLICK);
     case MI_LOAD: return load_get();
     case MI_MIDIOUT: return midi_out_mode & 3u;
+    case MI_CLOCK: return cpu_get();
     case MI_LEDS:
         while (i + 1u < LEDS_COUNT && LEDS_MENU[i] != settings_leds)
             i++;
@@ -196,6 +215,7 @@ static const char *menu_vname(uint32_t row, uint32_t v)
     case MI_COUNTIN: return COUNTIN_N[v % 3u];
     case MI_LOAD: return N_LOAD[v % 3u];
     case MI_MIDIOUT: return MIDIOUT_N[v & 3u];
+    case MI_CLOCK: return CLOCK_N[v & 1u];
     case MI_SCROFF: return SCROFF_N[v % NELEM(SCROFF_N)];
     case MI_LEDS: return LEDS_NAME[LEDS_MENU[v % LEDS_COUNT]];
     }
@@ -241,6 +261,7 @@ static void menu_put(uint32_t row, uint32_t v)
     case MI_CLICK: case MI_CLKLVL: case MI_COUNTIN: rp_put(row - MI_CLICK, v); break;   /* (at once: click.c, seq.c) */
     case MI_LOAD: load_put(v % 3u); break;
     case MI_MIDIOUT: midi_out_mode = (uint8_t)(v & 3u); break;   /* (seq.c reads it every frame: ui_input) */         /* (at once: voice.c sys_load) */
+    case MI_CLOCK: cpu_put(v & 1u); break;             /* (0.9.9-stab: at the next power-on, main.c cpu_clock) */
     }
 }
 /* the menu's step, any of KNOB 1..4 or OCT+ (s > 0) / OCT- (s < 0): the next / previous value, stopping at the ends;

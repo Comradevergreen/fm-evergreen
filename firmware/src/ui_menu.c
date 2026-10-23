@@ -171,11 +171,11 @@ static int32_t menu_document(int32_t y, int draw)
             }
         }
 #if defined(FM1_IRQ_TARGET)
-        {   /* (0.9.9-stab) the core supplies' steps as reached, and as the boot loader left them (hal/fm1_sys.h
-             * fm1_rails_boot: V15's 7 / 15 wanted; the boot loader's 3 / 11) */
+        {   /* (0.9.9-stab) the clock (MENU > SYSTEM > CPU CLOCK, hal/fm1_sys.h fm1_clk_320) and the core supplies' steps
+             * as reached, and as the boot loader left them (fm1_rails_boot: V15's 7 / 15 wanted; the boot loader's 3 / 11) */
             static const char RL[4][3] = {"S ", "/", " (", "/"};
             uint32_t i;
-            str_cpy(b, "RAIL", sizeof b);
+            str_cpy(b, fm1_clk_320() ? "CPU 320 MHZ  RAIL" : "CPU 360 MHZ  RAIL", sizeof b);
             for (i = 0; i < 4u; i++) {
                 str_cpy(b + str_len(b), RL[i], 4);
                 fmt_int(n, fm1_rails[(i + 2u) & 3u]);
@@ -231,7 +231,7 @@ static const char *menu_short(uint32_t row)          /* a card's label: the row'
 {
     static const struct { uint8_t row; char s[9]; } SH[] = {
         {MI_SCROFF, "SCR OFF"}, {MI_ACCEL, "ACCEL"}, {MI_SCLLED, "SCL LEDS"}, {MI_LOWCUT, "SPK EQ"}, {MI_USB, "USB LVL"},
-        {MI_CLKLVL, "CLICK LV"}, {MI_RESTORE, "RESTORE"}, {MI_PANEL, "CALIBR"}, {MI_INIT, "INIT SYS"}};
+        {MI_CLKLVL, "CLICK LV"}, {MI_RESTORE, "RESTORE"}, {MI_CLOCK, "CPU MHZ"}, {MI_PANEL, "CALIBR"}, {MI_INIT, "INIT SYS"}};
     uint32_t k;
     for (k = 0; k < NELEM(SH); k++)
         if (SH[k].row == row)
