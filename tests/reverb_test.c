@@ -757,13 +757,13 @@ static void test_jiant(void)
         duck_env = 0;
         duck_g1 = 32767;
         duck_hit = 1;
-        for (b = 0; b < 4u; b++)
+        for (b = 0; b < 4u * 32u / CTL; b++)             /* (the moments in blocks of 32: 3 ms, 20 ms, 0.4 s) */
             duck_block();
         g3 = duck_g1;
-        for (; b < 28u; b++)
+        for (; b < 28u * 32u / CTL; b++)
             duck_block();
         g20 = duck_g1;
-        for (; b < 600u; b++)
+        for (; b < 600u * 32u / CTL; b++)
             duck_block();
         gend = duck_g1;
         check("DUCK 100: below -26 dB in 3 ms, still there at 20 ms (the hold), back to unity after the release",

@@ -36,6 +36,7 @@ _Static_assert(PB_FRAMES <= SL_FR && !(PB_FRAMES & (PB_FRAMES - 1u)), "the REPEA
 #define PB_MAX (2u * PB_FRAMES)               /* the longest loop, 44.1 kHz samples */
 #define PF_TOP (63 << 8)                      /* filter cutoff index, Q8 (PF_SVF): the LPF's open end */
 #define PF_LOW (14 << 8)                      /* .. the LPF sweep's end, the HPF sweep's (and K1's) top */
+#define PF_CSTEP (192 * (int32_t)CTL / 32)    /* (ctl64) a cutoff's step a block: 192 a block of 32, the range in ~45 ms */
 enum { BM_NONE, BM_LOOP };
 
 static volatile uint32_t perf_mask;   /* main: the FX button's bit while its layer may own keys, 0 = none */
@@ -260,8 +261,8 @@ static __attribute__((noinline)) int perf_begin(uint32_t n)
         }
         if (m > 0 && m * (PF_TOP - PF_LOW) / 100 > ht)
             ht = m * (PF_TOP - PF_LOW) / 100;
-        pf.lc += clamp(lt - pf.lc, -192, 192);      /* ~45 ms over the range */
-        pf.hc += clamp(ht - pf.hc, -192, 192);
+        pf.lc += clamp(lt - pf.lc, -PF_CSTEP, PF_CSTEP);   /* ~45 ms over the range */
+        pf.hc += clamp(ht - pf.hc, -PF_CSTEP, PF_CSTEP);
         for (k = 0; k < 3u; k++) {                  /* the coefficients, between two table rows */
             int32_t i = pf.lc >> 8, f = pf.lc & 255, j = pf.hc >> 8, g = pf.hc & 255;
             pf.lk[k] = (int16_t)(PF_SVF[i][k] + (((PF_SVF[i < 63 ? i + 1 : 63][k] - PF_SVF[i][k]) * f) >> 8));

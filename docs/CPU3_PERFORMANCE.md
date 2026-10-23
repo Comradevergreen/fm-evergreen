@@ -58,3 +58,46 @@ The repository also retains DIGITAL, a separate four-operator engine behind FELU
 ## Reproduction
 
 Compile `tests/performance_probe.c` against each source revision using `cc -O2 -w -Ibuild/gen -Ifirmware/src ... -lm`. Copy this new probe to the cpu2 reference checkout first so both builds use the same harness. `tools/profile_performance.py BEFORE AFTER 9` prints the scene comparison. Raw results are in `docs/performance/cpu3-host.jsonl` and `cpu3-presets.jsonl`. No timing thresholds or automatic FM1 utilization conversions are imposed.
+
+## 0.9.9 ctl64: blocks of 64 samples
+
+The control block (core.h `CTL`, `tools/gen_tables.py`) went from 32 to 64 samples, with the half buffer kept at 128
+frames: two `mix_block` passes per half instead of four, so the fixed cost of a block (`events_block`, `mc_split`, the
+core-1 handshake, the buffers cleared and summed, the sends and the effect buses, the master) is paid half as often.
+Everything that counted blocks of 32 now counts in `CTL` (envelope and LFO tables, glides, fades, the steal fade, the
+leveler's and DUCK's followers, DRUM-X's FLAM and PUNCH, the FX gate, WORDS' phoneme timing, the FX layer's LPF / HPF
+sweep back to open: `perform.c` `PF_CSTEP`, 192 a block of 32, so the layer is idle again ~45 ms after a key is let go
+as before, not 95). The host tests that counted blocks (`reverb_test` DUCK's 3 / 20 ms, `voice_test`'s glide: 163
+blocks of 32, 1/8 st a block, `perform_test`'s return to the live signal) count in `CTL` now. Two DRUM-X checks compared
+a strike against another with the noise generator left where the last hit had taken it (a clap's first ms, a snare's
+first 5 ms under PUNCH: the window's energy varied up to x5 strike to strike on the 32-sample build as well); they now
+reset the kit's generator before each compared strike (`drumx_test.c` `same_noise`), so they compare the same noise.
+
+Timing: the sequencer runs once a block as before, but a note falling inside the block carries its sample (core.h
+`ev_off`, voice.c `voice_begin` / `voice_off_at`, `track_render`): the voice sounding is rendered up to that sample, the
+new note from it (its amplitude ramp keeps the block's slope), a release likewise. `tests/ctl64_timing_test.c`: on a
+MICRO-shifted pattern, every rendered onset is within 2 samples of the sequencer's sample-at-a-time position (POLY, MONO
+cuts, kit hits); the 32-sample build placed them within −22 .. +5 samples. FM6 renders whole blocks (`engine_t.whole`):
+its notes start at the nearer block edge, as before. Keys and MIDI are unchanged (the next block, as before).
+
+Host CPU, exact instruction counts under valgrind (`tests/cpu_vg.py`, instructions / sample, x86-64 gcc -O2; the base
+is `codex/fm1-v099-cpu5usb1` with the same sections added):
+
+| Section | 32 | 64 | Delta |
+|---|---:|---:|---:|
+| mix/idle (nothing sounding: the fixed cost) | 516 | 426 | -17.5 % |
+| seq/mono4 (four MONO tracks cutting each other, 1/16, dry) | 1514 | 1188 | -21.5 % |
+| eng/DRUM (8 lanes) | 1477 | 1156 | -21.7 % |
+| eng/FM6 (8 notes) | 1710 | 1507 | -11.9 % |
+| eng/VOICE / VOICE.EN | 1500 / 1783 | 1337 / 1619 | -10.9 % / -9.2 % |
+| eng/ANALOG / PHASE / LOFI / NOISE / WHEEL | 2210 / 2033 / 1899 / 1847 / 2071 | 2072 / 1896 / 1748 / 1694 / 1892 | -6 .. -9 % |
+| rev/ROOM .. CLOUD, dly/full .. quarter | 1416 .. 1597 | 1302 .. 1492 | -7 .. -8 % |
+| mix/full (six parts, every FX) | 2671 | 2505 | -6.2 % |
+| seq/plain / seq/heavy | 2381 / 2783 | 2158 / 2485 | -9.4 % / -10.7 % |
+| song/cputest (.djf) | 3016 (3085) | 2742 (2812) | -9.1 % (-8.8 %) |
+| peak/VOICE.EN6 (the worst block, per sample) | 3304 | 2937 | -11.1 % |
+
+The fixed cost of a block fell from about 516 to 426 instructions a sample in the idle mixer (90 fewer: on the FM-1,
+roughly 3 % of a half); the per-voice work is unchanged (`tests/target_budget.py`: the render loops' instructions as
+before). Static RAM grew 9 KB (the CTL-long buffers; `.data+.bss` 88 KB of 96), the image 1.4 KB. The one audible side
+effect is the effect buses' one-block lag, now 1.45 ms (see the README's dual-core section).

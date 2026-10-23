@@ -425,7 +425,9 @@ static int steal_test(const char *dir)
                 trk_note_on(&trk[0], N1[i], 90);
         if (f == FS / 2u / CTL * CTL)
             trk_note_on(&trk[1], 74, 90);          /* 8: the budget is full */
-        if (ms >= 1000u && ms % 500u == 0u && f % (FS / 2u) < CTL && ms < 3500u) {
+        if (f % (FS / 2u) < CTL && f >= FS && f < 7u * FS / 2u) {   /* (ctl64: the half second inside this block,
+                                                     * whatever the block; ms % 500 == 0 missed it with blocks of 64) */
+            ms = f / (FS / 2u) * 500u;
             p = ms / 500u % 2u ? 1u : 2u;          /* parts 2, 3 in turn: each takes a voice */
             trk_note_on(&trk[p], 76u + ms / 250u, 90);
         }

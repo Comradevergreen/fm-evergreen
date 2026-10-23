@@ -60,6 +60,16 @@ static track_t *kitx(int16_t morph, int16_t tune)
         t->p[P_DIST + i] = 0;
     return t;
 }
+/* (ctl64) the kit's noise from its seed at the next hit (drumx_voice.c dx_run: an empty generator takes the constant): two
+ * strikes compared sample for sample, or in a short window (a clap's first ms, a snare's first 5 ms), hear the same noise.
+ * Without it each strike drew another realization and those windows differed up to x5 strike to strike (the probe on
+ * the 32-sample build too): the checks passed or failed with the generator's position */
+static void same_noise(track_t *t)
+{
+    uint32_t l;
+    for (l = 0; l < DV_NLANE; l++)
+        drum_kit[t - trk][l].x.rng = 0;
+}
 /* lane l struck, n samples of the left output into buf; returns the voice still sounding at the end */
 static int strike(track_t *t, uint32_t l, uint32_t n)
 {
@@ -325,8 +335,10 @@ int main(int argc, char **argv)
             uint32_t h;
             int other;
             for (h = 0; h < 2u; h++) {
+                track_t *tk = kitx(64, 64);
                 dx_hands = (uint8_t)(h ? 15 : 0);
-                strike(kitx(64, 64), DV_CLAP, FS / 8u);
+                same_noise(tk);
+                strike(tk, DV_CLAP, FS / 8u);
                 for (i = 0; i < FS / 8u; i++) {
                     double x = buf[i];
                     if (i < FS / 1000u) a0[h] += x * x;            /* its first ms: the strike */
@@ -334,9 +346,13 @@ int main(int argc, char **argv)
                     if (h && abs(buf[i]) > pk2) pk2 = abs(buf[i]);
                 }
             }
-            dx_hands = 15; strike(kitx(64, 64), DV_KICK, FS / 8u); memcpy(r1, buf, sizeof r1);
-            dx_hands = 0; strike(kitx(64, 64), DV_KICK, FS / 8u);
-            {   /* (the kick: its energy the same, within 1 %: its noise is another each strike) */
+            {
+                track_t *tk = kitx(64, 64);
+                dx_hands = 15; same_noise(tk); strike(tk, DV_KICK, FS / 8u); memcpy(r1, buf, sizeof r1);
+                tk = kitx(64, 64);
+                dx_hands = 0; same_noise(tk); strike(tk, DV_KICK, FS / 8u);
+            }
+            {   /* (the kick: its energy the same, within 1 %) */
                 double k0 = 0, k1 = 0;
                 for (i = 0; i < FS / 8u; i++) { k0 += (double)buf[i] * buf[i]; k1 += (double)r1[i] * r1[i]; }
                 other = k1 < k0 * 1.01 && k1 > k0 * 0.99;
@@ -352,11 +368,13 @@ int main(int argc, char **argv)
         double e0, t0, e1, t1;
         track_t *t = kitx(64, 64);
         song.g[G_PUNCH] = 0;
+        same_noise(t);
         strike(t, 1, FS / 4u);
         e0 = rms(0, FS / 200u);
         t0 = rms(FS / 20u, FS / 4u);
         t = kitx(64, 64);
         song.g[G_PUNCH] = 100;
+        same_noise(t);
         strike(t, 1, FS / 4u);
         e1 = rms(0, FS / 200u);
         t1 = rms(FS / 20u, FS / 4u);
