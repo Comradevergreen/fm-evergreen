@@ -925,7 +925,7 @@ static int32_t env_tick(track_t *t, voice_t *v)
                                                          * more voices rendering under load */
     {
         static const uint8_t KFADE[6] = {239, 206, 171, 128, 69, 0};
-        v->env = (int32_t)(((int64_t)v->env * KFADE[v->kfade < 6u ? v->kfade : 5u]) >> 8);
+        v->env = (int32_t)(mul64(v->env, KFADE[v->kfade < 6u ? v->kfade : 5u]) >> 8);   /* (core.h: out of line) */
         v->kfade++;
         if (v->kfade >= 6u || !v->env) {
             v->env = 0;

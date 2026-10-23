@@ -277,8 +277,76 @@ def build_app():
     return bytes(img), syms, dis, rt
 
 
+# (0.9.9-stab) felucca-bsp docs/CPU.md: on the AC79 a 32 x 32 -> 64-bit multiply inlined beside loads (most of all 16-bit
+# ones) now and then leaves a register a bit off; src/core.h's helpers (mul64 ...) hold the audio path's. These keep theirs:
+# once a block or a frame, 64 x 64-bit products or the UI (the SDK's own 64-bit printf digits are the same case: not hot)
+MUL64_SKIP = {"djf_coef", "draw_graph", "graph_adsr", "vx_arc", "fm1_main", "fugue_tick", "midi_clock_pulse", "seq_step"}
+
+
+def mul64_near_loads(dis, window=4):
+    """(0.9.9-stab, after fm1-base's tools/build.py, MPL-2.0) functions with a load in flight beside a 32x32->64-bit multiply
+    (rN_rM = rA * rB): one up to two instructions before it, or one after it before its product is used (using it waits
+    for the multiply). On the FM-1 such code now and then leaves a register a bit off, most of all beside 16-bit loads
+    (felucca-bsp docs/CPU.md); a multiply in a helper of its own (noinline, src/core.h mul64) is clear of it.
+    [(function, sites, the nearest load's distance in instructions, 1 = a 16-bit load among them)]"""
+    found, fn, body = [], "", []
+
+    def scan():
+        sites, near, half = 0, 99, 0
+        for i, ins in enumerate(body):
+            m = re.match(r"(r\d+)_(r\d+) [+-]?= r\d+ \* r\d+", ins)
+            if not m:
+                continue
+            dst, hit = {m.group(1), m.group(2)}, 0
+            for d, b in enumerate(reversed(body[max(0, i - 2):i]), 1):
+                if re.search(r"\bcall\b", b):
+                    break
+                if re.search(r"= [hbd]?\[", b):
+                    hit, near = 1, min(near, d)
+                    half |= b.split("=", 1)[1].lstrip().startswith("h[")
+            for d, b in enumerate(body[i + 1:i + 1 + window], 1):
+                if any(re.search(r"\b" + r + r"\b", b) for r in dst):
+                    break                       # the product used: the multiply has finished
+                if re.search(r"= [hbd]?\[", b):
+                    hit, near = 1, min(near, d)
+                    half |= b.split("=", 1)[1].lstrip().startswith("h[")
+            sites += hit
+        return sites, near, half
+
+    for ln in dis.splitlines() + ["end:"]:
+        mm = LINE.match(ln)
+        if not mm:
+            m2 = re.match(r"^([A-Za-z_$][\w.$]*):$", ln.strip())
+            if m2:                              # (a label starting with '.': a jump table's piece, still the function)
+                if fn and not fn.startswith("__") and fn.split(".")[0] not in MUL64_SKIP:
+                    n, near, half = scan()
+                    if n:
+                        found.append((fn, n, near, half))
+                fn, body = m2.group(1), []
+            continue
+        body.append(mm.group(3))
+    return found
+
+
+SOFT_DOUBLE = ("__adddf3", "__subdf3", "__muldf3", "__divdf3", "__floatsidf", "__floatunsidf", "__fixdfsi",
+               "__fixunsdfsi", "__extendsfdf2", "__truncdfsf2", "__eqdf2", "__nedf2", "__gtdf2", "__gedf2", "__ltdf2", "__ledf2")
+
+
 def check(img, syms, dis, rt):
     errors, notes = [], []
+    mul64 = mul64_near_loads(dis)       # (0.9.9-stab) the CPU fault of felucca-bsp docs/CPU.md: a note, the code may be fine
+    if mul64:
+        notes.append("64-bit multiplies inlined beside loads (felucca-bsp docs/CPU.md: may corrupt a register; move them "
+                     "into src/core.h's mul64 helpers): " +
+                     ", ".join(f"{f} ({n} site{'s' if n > 1 else ''}, a load {d} insn{'s' if d > 1 else ''} away{', 16-bit' if h else ''})"
+                               for f, n, d, h in mul64[:8]) + (" ..." if len(mul64) > 8 else ""))
+    else:
+        notes.append("no 64-bit multiply inlined beside a load (src/core.h mul64 helpers; felucca-bsp docs/CPU.md)")
+    dbl = [n for n in SOFT_DOUBLE if re.search(r"\s" + n + r"$", syms, re.M)]
+    if dbl:                             # (0.9.9-stab) the pi32v2 has no double: a soft one is a slow mistake (fm1-base's check)
+        errors.append(f"soft-double routines linked (a double crept in): {dbl}")
+    else:
+        notes.append("no soft-double routine linked")
     m = re.search(r"^([0-9a-f]+) .*\s_start$", syms, re.M)
     if not m or int(m.group(1), 16) != APP_XIP:
         errors.append(f"_start is not at {APP_XIP:#x}")
