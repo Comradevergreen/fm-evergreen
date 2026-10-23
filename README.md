@@ -15,11 +15,54 @@ and takes its song system from [SLOOP](https://github.com/isod89/sloop-fm1).
 the FM-1, with sound, and is played with your computer keyboard or the mouse. The emulator, the installer and the
 editor update themselves with every change merged into `main`.
 
-> **Status: in development (v0.9.12, a beta: the emulator and the preview installer; the official installer stays on 0.9.9 until it is tested on the device).** It builds and passes every test (Felucca's and its own). Back up the flash before installing it.
-  **RATCH and ARP spill over the steps** (0.9.18): RATCH x1–x8 (ECHO folded in: FLAT, FADE, RISE, a pitch step) and
+## Current versions
+
+| Where | Version |
+|---|---|
+| **Public installer** (stable) | **0.9.9-beta4a** |
+| **Beta installer and emulator** | **0.9.9-seq2b** (beta4a + the new SEQ pages) |
+| Earlier versions the public installer also offers | 0.9.17, 0.9.14, 0.9.9, 0.8.9, 0.7.9, 0.6.82, 0.6.2, 0.5.5 |
+
+[Public installer](https://juanjiant-bit.github.io/JIANT/webapp/installer/) · [Beta installer](https://juanjiant-bit.github.io/JIANT/preview/webapp/installer/) · [Emulator](https://juanjiant-bit.github.io/JIANT/emu/)
+
+`main` is the **0.9.18 development line**, which this README also describes. Both installed versions descend from 0.9.9, not
+from 0.9.18: features marked *"in the 0.9.1x line"* below (0.9.10 to 0.9.18; 0.9.17 is the newest one in the installer's
+list of earlier versions) are **not** in 0.9.9-beta4a or 0.9.9-seq2b.
+
+## What's new in 0.9.9-beta4a / seq2
+
+**Stability**
+- The core supplies are raised to M-VAVE's V15 levels at boot (VDC14 1.60 V, SYSVDD 1.38 V).
+- MENU > SYSTEM > CPU CLOCK 360 / 320 MHz (360 stays the default).
+- The second core is parked, and the cache idled, before the flash is written.
+- The audio path's 64-bit multiplies are out of line (they faulted beside 16-bit loads); the sound is bit for bit the same.
+- A write guard keeps core 1 and the DMA out of core 0's code and stacks, and the crash screen says more (see below).
+
+**Polyphony and CPU**
+- An averaged overload guard replaces the spike-driven budget; a note's start predicts the load and gives up a released voice past the budget.
+- The effect buses go to rest when silent, and more proven-empty work is skipped.
+- Control rate 64: the control block is 64 samples and notes start at their sample inside it.
+- FM6's released notes end sooner; the delay, reverb and chorus code runs from RAM.
+- The screen is held under load: past 60 % of the render it redraws every 50 ms and keeps animating.
+- Measured on the owner's unit: six tracks without glitches at about 45 % CPU, and the resting floor down from 18 % to 14 %.
+
+**seq2 (beta installer and emulator only, 0.9.9-seq2b)**
+- The footer's bar squares on every page (a square a bar, the sounding one lit, the cursor's outlined).
+- The new SEQ chain: **STEP · LENGTH/TRACK · MUTATE · PLAYHEADS · STRETCH · COMP · AUTO**.
+- One shared piano roll on every SEQ page, with the keys at its left and a coloured line per playhead.
+
+## Reporting a crash
+
+If the FM-1 crashes, the red screen now stays **10 seconds** (it was 4) and names the core, the VEC, PC and SP, and the bus
+master that wrote or read where it should not. **Take a photo of it**, then power on and open **MENU > ABOUT**, which keeps
+the CRASH line (VEC / PC / SP / bus) until power-off. Report both, with the version you installed, in a
+[GitHub issue](https://github.com/juanjiant-bit/JIANT/issues/new/choose) (the bug report template asks for the rest).
+
+> **Status of `main`: the 0.9.18 development line (the text below).** The public installer ships 0.9.9-beta4a and the beta installer 0.9.9-seq2b: see *Current versions* above. It builds and passes every test (Felucca's and its own). Back up the flash before installing it.
+  **RATCH and ARP spill over the steps** (0.9.18) *(in the 0.9.1x line, installer: 0.9.17; not yet in 0.9.9-beta4a)*: RATCH x1–x8 (ECHO folded in: FLAT, FADE, RISE, a pitch step) and
   ARP one note at a time at its RATE play on past their step; OCT an octave a lap; SEQ › COMP frames the step it edits;
   the SEQ › BAR page is gone.
-  **Every SEQ page is the piano roll** (0.9.17): the same bars' strip and roll (a kit: the grid) on all the pages,
+  **Every SEQ page is the piano roll** (0.9.17) *(in the 0.9.1x line, installer: 0.9.17; not yet in 0.9.9-beta4a)*: the same bars' strip and roll (a kit: the grid) on all the pages,
   the values on top, each page marking what it does on the notes: PATTERN their GATE and SWING, TRACK the notes moved
   by PITCH, PLAYHEADS the extra heads as they play, COMP the steps with a component, AUTOMATION and AUTO LIST every
   record, MUTATE when the next mutation comes. The BOTTOM skin is retired (a saved BOTTOM opens as AIR).
@@ -302,6 +345,8 @@ An 8-sound kit (BD SD CP CH OH TM RS CB) generated in real time, Microtonic styl
   with the project.
 
 ### Punch-in FX: effects you play and record
+
+> *In the 0.9.1x line (installer: 0.9.17), not yet in 0.9.9-beta4a:* the sweeps, TAPE STOP, the performance macros and recorded FX lanes below (0.9.15-0.9.17).
 With FX held the keys become effects that act while held; on release everything goes back exactly.
 - **Audio**: REPEAT 1/8 · 1/16 · 1/32, **GLITCH** (the bar cut into repeats, reverses, octave slices and gates on the
   grid, the same at the same place every time) and **TAPE STOP** (0.9.15).
@@ -318,6 +363,8 @@ With FX held the keys become effects that act while held; on release everything 
   sweeps). A#4 chooses whether the note effects affect everything, the synths or the drums.
 
 ### Sequencing
+
+> *In the 0.9.1x line (installer: 0.9.17), not yet in 0.9.9-beta4a:* the roll on every SEQ page, COMP, RATCH / ARP spilling over steps (0.9.17-0.9.18). 0.9.9-seq2b has its own SEQ chain (see *What's new*).
 - 64 steps per track, piano roll, drum grid, parameter locks, chance, ratchets, slide and knob automation; live
   recording with overdub, metronome and count-in.
 - **SEQ's chain** (0.9.2): PATTERN (PATTERN, STRETCH, PLAYHEADS), TRACK (TRACK, MUTATE), BAR (STEP, NOTE; 0.9.18: the
@@ -432,6 +479,8 @@ each layer; the complete manual is in **[docs/MANUAL.md](docs/MANUAL.md)** (en e
 **[docs/MANUAL.es.md](docs/MANUAL.es.md)**).
 
 ### 1. Getting around
+
+> *In the 0.9.1x line (installer: 0.9.17), not yet in 0.9.9-beta4a:* the MENU as nine pages in five tabs, MIDI LEARN, BOTTOM retired (0.9.12-0.9.18); 0.9.9-beta4a has the older MENU.
 - (0.9.2) Each section is one chain of pages in groups. **SELECT** walks the pages (a page a detent, stopping at the
   ends); the section's button brings you back to the page you left there and, inside, jumps to the next group's first
   page (round). The tabs on top are the groups (a dot a page), the footer **SECTION · GROUP · page n/N**. **HOME**
