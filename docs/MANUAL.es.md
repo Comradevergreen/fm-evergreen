@@ -904,6 +904,10 @@ resonancia igual se apaga cuando la parte queda en silencio). Las mismas perilla
 RES y el drive de la KNOB 4. En ANALOG y LOFI el MS20 (como los peines) es el filtro de la pista después de las voces:
 su propio filtro se abre. LP, HP y BP suenan exactamente igual que antes.
 
+El **CHORUS** (0.9.9-snd2) es más liviano: su LFO se lee cada 64 muestras (16, 8, 4 en los RATE más rápidos) y las
+tres voces se deslizan entre esos puntos, en vez de tres senos por muestra; suena igual (-63 dB de diferencia con el de
+antes en el valor por defecto).
+
 **DELAY DRIVE** (0.9.9-snd2; DLY 3 KNOB 3, la perilla libre de la página; 0–100): una saturación suave dentro del lazo
 de realimentación del delay. Una repetición suave vuelve como entró, una fuerte sale redondeada y aplastada, así que
 cada pasada queda un poco más sucia y un poco más baja, como una cinta o un BBD manejados fuerte; con FEEDBK pasado

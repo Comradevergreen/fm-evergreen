@@ -1380,11 +1380,20 @@ static inline int32_t cho_tap(const int16_t *buf, uint32_t w, int32_t r)
     int32_t f = r & 255, c0 = buf[(w - ri) & (CHO_LEN - 1u)], c1 = buf[(w - ri - 1u) & (CHO_LEN - 1u)];
     return c0 + (((c1 - c0) * f) >> 8);
 }
-static inline int32_t cho_ens(const int16_t *buf, uint32_t w, uint32_t ph, int32_t depth, int32_t *sd)
+/* (0.9.9-snd2, lighter) the three read points at the LFO phase ph and depth (Q14 samples), into r: the LFO is read at a
+ * segment's ends only and the read points glide between (fx_buses): a segment 64 samples below RATE 64, 16 below 96, 8
+ * below 120, 4 above (the fast, deep sweeps bend most between two points): three sines a segment, not three a sample.
+ * Against the old (a saw through it): -63 dB at the default, about -58 at RATE 80 .. 100, -50 at the fastest and deepest
+ * (a 40 Hz sweep of 17 ms: an FM, not a chorus) (tests/delay_test.c test_chorus) */
+static __attribute__((noinline)) void cho_lfo(uint32_t ph, int32_t depth, int32_t *r)   /* (out of the RAM code) */
 {
-    int32_t a = cho_tap(buf, w, (300 << 8) + ((osc_sine(ph) + 32768) * depth >> 8));
-    int32_t b = cho_tap(buf, w, (420 << 8) + ((osc_sine(ph + 0x55555555u) + 32768) * depth >> 8));
-    int32_t c = cho_tap(buf, w, (540 << 8) + ((osc_sine(ph + 0xAAAAAAAAu) + 32768) * depth >> 8));
+    r[0] = ((300 << 8) + ((osc_sine(ph) + 32768) * depth >> 8)) << 6;   /* (Q14: the glide's step exact enough) */
+    r[1] = ((420 << 8) + ((osc_sine(ph + 0x55555555u) + 32768) * depth >> 8)) << 6;
+    r[2] = ((540 << 8) + ((osc_sine(ph + 0xAAAAAAAAu) + 32768) * depth >> 8)) << 6;
+}
+static inline int32_t cho_ens(const int16_t *buf, uint32_t w, const int32_t *r, int32_t *sd)
+{
+    int32_t a = cho_tap(buf, w, r[0] >> 6), b = cho_tap(buf, w, r[1] >> 6), c = cho_tap(buf, w, r[2] >> 6);
     *sd = a - b;
     return ((a + b + c) * 21845) >> 15;                 /* (x2 / 3 each: the sum at x2, as the one tap was) */
 }
@@ -1879,6 +1888,11 @@ static inline __attribute__((always_inline)) void fx_buses(const int32_t *cho_in
         k.tn = dtn; k.dg = dg; k.dgi = dgi; k.db = db;
         dly_lo(dly_in, dlo_x, dlo_xr, n, &k, wm, dwm);
     }
+    int32_t cr[3], cdr[3] = {0, 0, 0};                  /* (snd2) the chorus's read points, their step a sample; */
+    uint32_t clg = GFX(GF_CRATE) < 64 ? 6u : GFX(GF_CRATE) < 96 ? 4u : GFX(GF_CRATE) < 120 ? 3u : 2u;   /* .. the LFO read
+                                                         * every 64 / 16 / 8 / 4 samples */
+    if (cho)
+        cho_lfo(fx.cho_ph, fx.cd_cur, cr);              /* (at the sample before the block: the loop steps first) */
     for (i = 0; i < n; i++) {
         int32_t y = 0, x, side = 0, xr = 0, wr = 0;
         /* chorus (0.5.1: an ensemble): three taps of the line, ~7, 9.5 and 12 ms, each swept by the LFO a third of a
@@ -1888,7 +1902,13 @@ static inline __attribute__((always_inline)) void fx_buses(const int32_t *cho_in
         fx.cd_cur += dcd; fx.cw_cur += dcw; fx.dm_cur += ddm;
         if (cho) {
             int32_t sd;
-            y += cho_ens(cho_buf, fx.cho_w, fx.cho_ph, fx.cd_cur, &sd);
+            if (!(i & ((1u << clg) - 1u))) {            /* (a segment: where the LFO will be at its end) */
+                int32_t ce[3];
+                cho_lfo(fx.cho_ph - cinc + (cinc << clg), fx.cd_cur - dcd + dcd * (1 << clg), ce);
+                cdr[0] = (ce[0] - cr[0]) >> clg; cdr[1] = (ce[1] - cr[1]) >> clg; cdr[2] = (ce[2] - cr[2]) >> clg;
+            }
+            cr[0] += cdr[0]; cr[1] += cdr[1]; cr[2] += cdr[2];
+            y += cho_ens(cho_buf, fx.cho_w, cr, &sd);
             sd = (sd * fx.cw_cur) >> 7;
             side += sd;
         }

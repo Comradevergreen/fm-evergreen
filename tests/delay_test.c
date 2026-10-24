@@ -828,12 +828,64 @@ static void test_band(void)
 }
 #endif
 
+/* (0.9.9-snd2) the chorus lighter: its LFO read at the block's ends and the read points gliding between, against the
+ * read points as they were (three sines a sample, computed here on the same line): the difference at the fastest RATE
+ * and the deepest DEPTH, a 220 Hz saw through it */
+static int32_t saw_src(uint32_t t) { return (int32_t)((t * 220u * 65536u / FS) & 65535u) - 32768; }
+static double cho_diff(int32_t rate, int32_t depth)
+{
+    static int16_t ref_buf[CHO_LEN];
+    static int32_t c[CTL], d[CTL], r[CTL], w[CTL];
+    uint32_t t, i, wpos = 0, ph = 0;
+    double e = 0, sg = 0;
+    int32_t dep = depth * 6, cdcur;
+    dreset();
+    memset(ref_buf, 0, sizeof ref_buf);
+    song.g[G_CRATE] = (int16_t)rate; song.g[G_CDEPTH] = (int16_t)depth; song.g[G_CSTER] = 0;
+    fx.cho_w = 0; fx.cho_ph = 0;
+    for (t = 0; t < FS; t += CTL) {
+        uint32_t cinc = LFO_INC[rate] / CTL;
+        for (i = 0; i < CTL; i++) { c[i] = saw_src(t + i) / 2; d[i] = r[i] = 0; fx_sl[i] = fx_sr[i] = 0; }
+        if (!t) { fx.primed = 0; }
+        fx_buses(c, d, r, w, CTL);
+        cdcur = fx.cd_cur;
+        for (i = 0; i < CTL; i++) {                    /* the reference: three taps a sample, the LFO at each */
+            int32_t a, b, cc, y, rr[3];
+            ref_buf[wpos & (CHO_LEN - 1u)] = (int16_t)clamp(c[i] >> 1, -32768, 32767);
+            ph += cinc;
+            rr[0] = (300 << 8) + ((osc_sine(ph) + 32768) * dep >> 8);
+            rr[1] = (420 << 8) + ((osc_sine(ph + 0x55555555u) + 32768) * dep >> 8);
+            rr[2] = (540 << 8) + ((osc_sine(ph + 0xAAAAAAAAu) + 32768) * dep >> 8);
+            a = cho_tap(ref_buf, wpos, rr[0]); b = cho_tap(ref_buf, wpos, rr[1]); cc = cho_tap(ref_buf, wpos, rr[2]);
+            y = ((a + b + cc) * 21845) >> 15;
+            wpos++;
+            if (t >= FS / 4u) { e += (double)(w[i] - y) * (w[i] - y); sg += (double)y * y; }
+        }
+        (void)cdcur;
+    }
+    song.g[G_CRATE] = 40; song.g[G_CDEPTH] = 60;
+    return 10.0 * log10(e / (sg > 0 ? sg : 1) + 1e-30);
+}
+static void test_chorus(void)
+{
+    static const uint8_t RT[4] = {40, 80, 100, 127}, DP[4] = {60, 127, 127, 127};
+    double dd[4];
+    uint32_t k;
+    for (k = 0; k < 4u; k++)
+        dd[k] = cho_diff(RT[k], DP[k]);
+    printf("delay: the chorus lighter against three sines a sample (a 220 Hz saw): RATE 40 DEPTH 60 %.1f dB, 80/127 %.1f, "
+           "100/127 %.1f, 127/127 %.1f\n", dd[0], dd[1], dd[2], dd[3]);
+    check("the chorus lighter: within -60 dB of the old at the default, -50 dB at the deepest and fastest", dd[0] < -60.0 &&
+          dd[1] < -50.0 && dd[2] < -50.0 && dd[3] < -48.0);
+}
+
 int main(int argc, char **argv)
 {
     test_drive();
 #ifndef DRIVE_REF
     test_band();
 #endif
+    test_chorus();
     if (argc > 2 && !strcmp(argv[2], "drive")) return bad != 0;
     test_leak();
 #ifdef DLY_SPAN

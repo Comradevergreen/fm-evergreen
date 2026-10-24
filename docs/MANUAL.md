@@ -866,6 +866,9 @@ ring still dies out when the part goes silent). Same knobs: CUT (with LFO / ENV 
 KNOB 4. On ANALOG and LOFI the MS20 (like the combs) is the track's filter after the voices: their own filter opens.
 LP, HP and BP sound exactly as before.
 
+**CHORUS** (0.9.9-snd2) is lighter: its LFO is read every 64 samples (16, 8, 4 at the fastest RATEs) and the three
+voices glide between, instead of three sines every sample; it sounds the same (-63 dB from before at the default).
+
 **DELAY DRIVE** (0.9.9-snd2; DLY 3 KNOB 3, the page's free knob; 0–100): a soft saturation inside the delay's
 feedback loop. A quiet repeat comes back as it went, a loud one is rounded and pressed down, so every pass gets a little
 grittier and a little quieter, like a tape or a BBD driven hard; with FEEDBK past 100 it holds the runaway lower. 0 is

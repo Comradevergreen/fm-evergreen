@@ -11,6 +11,7 @@
  *   rev/<TYPE>     a pad soaked in the reverb, each REVERB TYPE (ROOM SPRING SHIMR RESO CLOUD)
  *   dly/<RATE>     (0.8.4) a pad into the delay, its line at the full rate, half, a quarter (fx.c dly_lo); (snd2)
  *                  .drive: DRIVE 100; .throw: THROW held (KNOB 3 of the FX layer at 100), the loop's band in
+ *   cho/pad        (snd2) a pad into the chorus only, RATE 40 (.fast: 127)
  *   mix/full       six parts: four ANALOG / FM6 chords, drums, every FX on; (snd2) .repeat / .glitch: the FX layer's
  *                  REPEAT 1/16 / GLITCH held on it
  *   seq/plain      the sequencer: six tracks of chords / hits on every step at 200 BPM
@@ -207,6 +208,15 @@ int main(void)
         vg_section(DN[i]);
         song.g[G_DDRV] = 0;
     }
+    vg_quiet();                                         /* (snd2) a pad into the chorus only (its LFO a segment: fx.c
+                                                         * cho_lfo), at the default RATE and at RATE 127 */
+    vg_part(0, ENGI_ANALOG, 0, 4);
+    trk[0].p[P_CHOR] = 127;
+    vg_section("cho/pad");
+    song.g[G_CRATE] = 127;
+    vg_section("cho/pad.fast");
+    song.g[G_CRATE] = 40;
+    trk[0].p[P_CHOR] = 0;
     vg_quiet();                                         /* (snd2) THROW held (the FX layer's KNOB 3 at 100): the mix */
     song.g[G_DTIME] = DT_FREE + 40; song.g[G_DFDBK] = 70; song.g[G_DMOD] = 20;   /* sent, the loop's band */
     vg_part(0, ENGI_ANALOG, 0, 4);
