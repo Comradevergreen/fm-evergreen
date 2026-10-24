@@ -433,7 +433,8 @@ static void gen_drums(track_t *t, uint32_t len)
     gseed(GS_DRUMS);
     gs.kick = gs.snare = 0;
     for (l = 0; l < 8u; l++) map[l] = DRUM_MAP_I[g->drum][l];
-    if (g->drum != DM_IDM && g->drum != DM_NONE && g->drum != DM_SPARSE) {   /* (0.6.97) a throw's own top end: the hats,
+    if (g->drum != DM_IDM && g->drum != DM_NONE && g->drum != DM_SPARSE && g->lead <= LD_NONE) {   /* (0.6.97) a throw's
+                                                         * own top end (gen6: an archetype's as written): the hats,
                                                          * the open hats and the percussion from the pools now and then;
                                                          * the snare and the clap swapped now and then */
         if (gch(50)) map[3] = HAT_POOL_I[gr() % 8u];
@@ -471,6 +472,7 @@ static void gen_drums(track_t *t, uint32_t len)
             if (l < 3u || l > 4u) hat_only = 0;
             if (lv < 90u && l < 3u) ghost_lv = lv;
         }
+        if (g->drum == DM_TECHHOUSE && !p && (b & 1u)) h &= ~1u;   /* (gen6, Villalobos: the one skipped every other bar) */
         if (!h) continue;
         s->time = ST_NOTE; s->hit = (uint8_t)h; s->acc = (uint8_t)(acc & h);
         {
@@ -1136,6 +1138,7 @@ static void gen_lead(track_t *t, uint32_t len)
          * for Part's line */
         int32_t lo = style == LD_OSTINATO ? 55 : style == LD_SPARSE ? 56 : style == LD_TINTI ? 60 : 58, hi = lo + 17;
         if (style == LD_OSTINATO) hi = 72;
+        if (style > LD_NONE) hi = lo + 26;               /* (gen6: an archetype's octave leaps whole) */
         for (L.dlo = -7; gnd(L.tn, L.dlo) < lo; L.dlo++) {}
         for (L.dhi = L.dlo; gnd(L.tn, L.dhi + 1) <= hi; L.dhi++) {}
     }
@@ -1168,6 +1171,22 @@ static void gen_lead(track_t *t, uint32_t len)
             gl_add(&L, i, dd, q % nc == 0u ? 98 : 82, 0);
             if (gch(12) && L.k) L.n[L.k - 1u].fl = 1;
             q++;
+        }
+        gl_write(t, &L, len, 1);
+        return;
+    }
+    if (style > LD_NONE) {                              /* (gen6) an archetype's motif (gen_tables.c LD_CELLS) */
+        const gcell_t *c = &LD_CELLS[style - LD_EBM];
+        int32_t o = -14, lo = c->d[0] < c->d[1] ? c->d[0] : c->d[1];
+        uint32_t q = 0;
+        while (lo + o < L.dlo) o += 7;                   /* (the motif from the window's floor: its octave whole) */
+        for (i = 0; i < len; i += c->every, q++) {
+            int32_t sh = (int32_t)gchord(i)->deg - (int32_t)gchord(0)->deg, dd;
+            while (sh > 3) sh -= 7;
+            while (sh < -3) sh += 7;
+            dd = c->d[q % 4u] + o + sh + ((i / 16u) % 4u == 3u && q % 4u == 3u);   /* (as written: the fourth too) */
+            gl_add(&L, i, dd, q % 4u ? 88u : 100u, 1);   /* (locked: the voice leading leaves it) */
+            if (L.k) L.n[L.k - 1u].len = c->hold;
         }
         gl_write(t, &L, len, 1);
         return;
@@ -2153,12 +2172,14 @@ static void gen_make(void)
         /* (0.6.95) a throw its own: the drums from the map's family, the chords' play from the neighbours (0.9.9-gen1: a
          * role's sound always its archetype) */
         g = gs.g = &gmut;
-        if (!gclub()) {                                 /* (gen5: the club's four on the floor keep their records' parts) */
+        if (!gclub() && g->lead <= LD_NONE) {           /* (gen5: the club's four on the floor keep their records' parts;
+                                                         * gen6: an archetype its own) */
             if (gmut.drum < DM_NONE && gmut.drum != DM_IDM && gch(35)) gmut.drum = DM_ALT[gmut.drum][gr() % 2u];
             if (gmut.pads <= CS_TRANCE && gch(35)) gmut.pads = CS_ALT[gmut.pads][gr() % 2u];
         }
     }
-    gs.root = (int16_t)grr(0, 11);
+    gs.root = (int16_t)(g->lead == LD_EBM ? grr(4, 7) : g->lead == LD_KRAFT ? grr(0, 1) * 2 : grr(0, 11));   /* (gen6: DAF's
+                                                         * dark E F F# G, Kraftwerk's C D) */
     {   /* (0.8.3) the key: always a mode of seven, so the CHORD page, the chords, the arp and the lead stand on it; a
          * genre's pentatonic or blues is its lead's palette over the mode that holds it (dorian where the genre is
          * jazzy, aeolian else; major for the major pentatonic) */

@@ -322,7 +322,8 @@ int main(void)
                             else { out_bad++; if (out_bad < 6u) printf("  off the key: %s seed %u T%u step %u note %d\n", gs.g->name, gp.seed, k + 1u, i, n); }
                         }
                     }
-                    if (r == RL_LEAD) {
+                    if (r == RL_LEAD && gs.g->lead <= LD_NONE) {   /* (gen6: an archetype's motif as written: its
+                                                         * octaves and fourths, not a sung line's rules) */
                         int32_t prev = -1, piv = 0, last = -1;
                         uint32_t pend = 0;
                         uint16_t bar0 = 0;
