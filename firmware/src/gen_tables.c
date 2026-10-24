@@ -26,7 +26,7 @@ static const char *const DRUM_MAP[][8] = {
     [DM_HOUSE]     = {"X...8...X...8...", "", "....9.......9...", "7.3.7.3.7.3.7.3.", "..8...8...8...8.", "", ".......2......3.", ""},
     [DM_DEEP]      = {"X...8...X...8..2", "", "....7.......7...", ".37..37..37..37.", "..8...8...8...8.", "", "...2......4.....", ""},
     [DM_MICRO]     = {"X...8...X...8...", "", "", "..6...5.6.5...6.", "", "", "....6.......6...", ".2..2....3...2.."},
-    [DM_TECHHOUSE] = {"X...8...X...8...", "", "....3.......3...", "..7..7..7..7..7.", "......6.......6.", "", "...5......5.....", ""},
+    [DM_TECHHOUSE] = {"X...X...X...X...", "", "....X.......X...", "7.57.57.7.57.57.", "..8...8...8...8.", "", "...5..5....5..5.", ""},
     [DM_TECHNO]    = {"X...9...X...9...", "", "....6.......6...", "..8...8...8...8.", "", "", "......5.....5..2", ""},
     [DM_DETROIT]   = {"X...9...X...9...", "", "....7.......7...", "6686668666866686", "..8...8...8...8.", "", "", ""},
     [DM_DUBTECH]   = {"X...8...X...8...", "", "", "..5...5...5...5.", "", "", "...3......6.....", ""},
@@ -173,10 +173,10 @@ static const barch_t BASS_ARCH[BA_N] = {
     [BA_ACID]     = {0, 0, 1},                          /* (procedural: the 303's rules) */
     /* (0.6.95) EBM after Nitzer Ebb: relentless sixteenths on the root, the octave and the minor third thrown in, a
      * rest where the body hits, accents on the beat (Join in the Chant, Murderous, Let Your Body Learn) */
-    [BA_DAF]      = {"R..R.R..R..R.R..", "a.......a.......", 1},   /* (gen6) DAF / Gesaffelstein: 16ths, mute on 3 6 8 */
+    [BA_DAF]      = {"RRRRRRR8RRRRRR8R", "a...a...a...a...", 1},   /* (gen6b) DAF, Nitzer Ebb: the 16ths never stop */
     [BA_CCARP]    = {"R878R878R878R878", "a...a...a...a...", 1},   /* Crystal Castles: root octave 7th octave */
     [BA_ROTHER]   = {"R.8.7.R.R.8.7.R.", "a.......a.......", 1},   /* Anthony Rother: the electro answer */
-    [BA_VILLA]    = {"R=====............R..R....R..R..", 0, 2},   /* Villalobos: the root held, then off the kick */
+    [BA_VILLA]    = {"..R..RR...R..R.8", "..a.......a.....", 1},   /* (gen6b) tech house's roller: off the kick */
     [BA_NITZER1]  = {"R.R8R.R8R.R3R8R8", "a...a...a...a...", 1},
     [BA_NITZER2]  = {"RR8RRR8RRR8RRR3RRR8RRR8RRR8RR2R8", "a...a...a...a...a...a...a...a...", 2},
     [BA_NITZER3]  = {"R.RR.R8.R.RR.R3.", "a.....a.a.....a.", 1},
@@ -298,11 +298,11 @@ static const uint8_t STAB_SET[5][3] = {{0, 1, 4}, {2, 3, 4}, {0, 2, 6}, {5, 6, 2
  * figure, a two-bar hook (call and answer), none */
 enum { LD_MOTIF, LD_OSTINATO, LD_SPARSE, LD_TINTI, LD_MECH, LD_HOOK, LD_NONE, LD_EBM, LD_KRAFT, LD_ELEC, LD_CC, LD_SUICIDE };
 /* (gen6, the owner's archetypes) a fixed motif in the scale's degrees, a note every `every` steps held `hold`, the
- * chord's moves followed, its last note a step up every fourth bar (the answer): DAF's root and the step under it, a
- * note two bars; Kraftwerk's fourths and fifths; Rother's octave and fifth; Crystal Castles' octave glitch; Suicide's
+ * chord's moves followed, its last note a step up every fourth bar (the answer): DAF's shout on the bar's one (the
+ * step under it now and then); Kraftwerk's fourths and fifths; Rother's octave and fifth; Crystal Castles' octave glitch; Suicide's
  * one note and its step of tension. A genre with one is an archetype: its parts as written (no pools, no neighbours) */
 typedef struct { int8_t d[4]; uint8_t every, hold; } gcell_t;
-static const gcell_t LD_CELLS[5] = {{{0, -1, 0, -1}, 32, 24}, {{0, 3, 4, 3}, 4, 2}, {{0, 7, 0, 4}, 2, 1}, {{0, 7, 4, 0}, 2, 1},
+static const gcell_t LD_CELLS[5] = {{{0, 0, -1, 0}, 16, 3}, {{0, 3, 4, 3}, 4, 2}, {{0, 7, 0, 4}, 2, 1}, {{0, 7, 4, 0}, 2, 1},
                                     {{0, 0, 0, 1}, 16, 12}};
 
 /* ------------------------------------------------------------------------------------------ sounds and mix --- */
@@ -473,13 +473,13 @@ static const ggenre_t GENRE[] = {
      {BA_OFFBEAT, BA_DEEPWALK, BA_ROLL16}, 36, KM_ANSWER, 40, {PR_ONE, PR_I_VII, PR_I_IV}, 2, CS_SPARSE, VM_QUART,
      {AP_CYCLE3, AP_WALK}, LD_SPARSE, AMT(70, 65, 40, 45, 20), {KIT_CLICK, SR_FMBASS, SR_PLUCK, SR_PLUCK, SR_CHIP}, SR_TEXTURE,
      0, 1, 45, 0, FM_CLUB, 0, HF_LOOP},
-    /* (gen6, the owner's references) Villalobos, Margaret Dygas, Sonja Moonear, Raresh, John Tejada: a minimal kit (a
-     * short kick that skips the one every other bar, euclid hats, a ghost clap), a sub held and answering off the kick,
-     * one chord four bars, a stab now and then, swing ~58 %; less is more */
-    {"TECH HOUSE", 122, 128, 40, {SC_MIN, SC_DOR, SC_DOR, SC_MIN}, DM_TECHHOUSE, 100, KIT_CLICK, 0, HC_HOUSE, FL_NONE, 0,
-     {BA_VILLA, BA_OFFBEAT, BA_VILLA}, 36, KM_ANSWER, 40, {PR_ONE, PR_I_VI, PR_I_VII}, 4, CS_STAB, VM_SUS,
-     {AP_BROKEN, AP_SEQ}, LD_OSTINATO, AMT(85, 65, 35, 0, 25), {KIT_CLICK, SR_SUB, SR_STAB, SR_PLUCK, SR_CHIP}, SR_TEXTURE,
-     0, 1, 25, 0, FM_CLUB, 10, HF_LOOP},
+    /* (gen6b, the owner: "nothing like the real thing") Green Velvet, Hot Since 82, Solardo, Terry Francis: a 909
+     * four on the floor that never lets go, the clap on 2 and 4, shuffled 16th hats, the open hat off the beat, a
+     * syncopated rim; a rolling bass off the kick, one stab with its filter moving; no lead, swing ~55 % */
+    {"TECH HOUSE", 124, 128, 22, {SC_MIN, SC_DOR, SC_MIN, SC_PHRY}, DM_TECHHOUSE, 100, KIT_909, 0, HC_HOUSE, FL_ROLL, 0,
+     {BA_VILLA, BA_OFFOCT, BA_VILLA}, 36, KM_ANSWER, 40, {PR_ONE, PR_I_VII, PR_ONE}, 4, CS_STAB, VM_SUS,
+     {AP_BROKEN, AP_SEQ}, LD_NONE, AMT(95, 90, 40, 0, 0), {KIT_909, SR_TECHBASS, SR_DUBCHORD, SR_PLUCK, SR_LEAD}, SR_NOISE,
+     0, 1, 30, 0, FM_CLUB, 5, HF_LOOP},
     /* Phuture (Acid Tracks), DJ Pierre, Hardfloor: the TB-303 over a 909 (the owner: as it is) */
     {"ACID HOUSE", 122, 130, 8, {SC_MIN, SC_PHRY, SC_DOR, SC_MIN}, DM_HOUSE, 100, KIT_909, 0, HC_HOUSE, FL_ROLL, 0,
      {BA_ACID, BA_ACID, BA_ACID}, 36, KM_SUSTAIN, 60, {PR_ONE, PR_I_VII, PR_I_IV}, 2, CS_STAB, VM_SUS,
@@ -532,11 +532,12 @@ static const ggenre_t GENRE[] = {
     /* DAF (Der Mussolini), Nitzer Ebb: a sequenced mono MS-20 bass in driving 8ths / 16ths, a dry minimal kit, VOICE
      * shouts */
     {"EBM", 126, 135, 0, {SC_PHRY, SC_MIN, SC_PHRY, SC_PHRY}, DM_EBM, 100, KIT_INDUS, 0, HC_MACHINE, FL_NONE, 1,
-     {BA_DAF, BA_NITZER1, BA_DAF}, 33, KM_DOUBLE, 45, {PR_ONE, PR_ONE, PR_I_VI}, 4, CS_STAB, VM_POWER,
-     {AP_SEQ, AP_PULSE}, LD_EBM, AMT(100, 100, 0, 0, 40), {KIT_INDUS, SR_EBMBASS, SR_STAB, SR_PLUCK, SR_VOXLEAD}, SR_NOISE,
+     {BA_DAF, BA_NITZER1, BA_DAF}, 33, KM_DOUBLE, 40, {PR_ONE, PR_ONE, PR_I_VI}, 4, CS_STAB, VM_POWER,
+     {AP_SEQ, AP_OCTAVES}, LD_EBM, AMT(100, 100, 0, 45, 35), {KIT_INDUS, SR_EBMBASS, SR_STAB, SR_PLUCK, SR_VOXLEAD}, SR_NOISE,
      1, 0, 8, 0, FM_PARTS, 0, HF_LOOP},   /* (gen6, the owner: DAF, Gesaffelstein (Viol, Aleph): a dry 909 four on the
                                      * floor, the clap on 2 and 4, accented 16th hats, a metal hit, no open hat; 16ths of
-                                     * bass with its mutes, one chord; two notes a lead, slow; no pads, no reverb) */
+                                     * bass that never stop (gen6b), a second sequence an octave up, one chord;
+                                     * a shout on the bar's one; no pads, no reverb) */
     /* Gazebo, Kano, Laserdance, Moroder: an 808, the octave bass, brassy stabs, a saw lead's hook */
     {"ITALO", 114, 124, 0, {SC_MIN, SC_MIN, SC_MAJ, SC_MIN}, DM_ITALO, 100, KIT_808, 0, HC_MACHINE, FL_TOM, 0,
      {BA_ITALO, BA_ITALO16, BA_SYNTHW}, 36, KM_DOUBLE, 40, {PR_AEOL, PR_ANDAL, PR_POP}, 1, CS_STAB, VM_PLAIN,

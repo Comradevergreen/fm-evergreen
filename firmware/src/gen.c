@@ -472,7 +472,6 @@ static void gen_drums(track_t *t, uint32_t len)
             if (l < 3u || l > 4u) hat_only = 0;
             if (lv < 90u && l < 3u) ghost_lv = lv;
         }
-        if (g->drum == DM_TECHHOUSE && !p && (b & 1u)) h &= ~1u;   /* (gen6, Villalobos: the one skipped every other bar) */
         if (!h) continue;
         s->time = ST_NOTE; s->hit = (uint8_t)h; s->acc = (uint8_t)(acc & h);
         {
