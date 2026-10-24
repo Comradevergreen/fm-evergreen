@@ -383,11 +383,16 @@ violeta, con el nombre violeta, y dice **OCT+**; apretá OCT+ para ejecutarla.
 
 | Página | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 | --- | --- | --- | --- | --- |
-| LFO | RATE | WAVE | PHASE | FADE |
+| LFO | RATE | WAVE | MODE (TRIG / FREE) | FADE |
+| LFO 2 | PHASE (donde arranca TRIG; atenuado en FREE) | — | — | — |
 | LFO DEST | PITCH | FILTER | SHAPE | AMP |
 | MOD | SLOT (1–4) | SRC | DEST | AMT |
 | MSEQ | STEP (1–16) | LEVEL | LEN | SLEW |
 | MSEQ 2 | DIV | — | — | — |
+
+**MODE** del LFO: **TRIG** reinicia el LFO (en PHASE) y su FADE en cada frase nueva; **FREE** sigue corriendo entre
+notas y golpes, nunca se reinicia (su FADE una vez, al cargar un proyecto o al pasar MODE a FREE). Se guarda como
+PHASE −1, como desde 0.6.51: todo proyecto abre como estaba.
 
 **FX** (las páginas TRACK son por pista; el resto son globales)
 

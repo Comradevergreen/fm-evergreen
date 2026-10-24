@@ -1738,6 +1738,8 @@ static void fg_load(const project_t *p)
             fg_set[a][h].ivl = (int8_t)clamp((int32_t)(int8_t)p->fugue[a][h][1], -14, 14);
         }
 }
+static uint8_t proj_lfo_keep;                          /* (0.9.18) song_main.c section_load (a song's next section), undo_do: the
+                                                         * music going on: the LFOs' FADE not again */
 static int project_restore_runtime(const project_t *input)
 {
     project_t *p = &proj_scratch;
@@ -1813,6 +1815,8 @@ static int project_restore_runtime(const project_t *input)
         }
     }
     song.sel = (uint8_t)(p->sel < NTRK ? p->sel : 0u);
+    if (!proj_lfo_keep)
+        lfo_fade_restart((1u << NTRK) - 1u);            /* (0.9.18) the LFOs' FADE from 0 (MODE FREE: only now) */
     fm1_irq_on();
     proj_name_get(proj_name, (const uint8_t *)p->name);
     proj_cur = PROJ_NO_SLOT;                            /* (project_load: its slot) */
@@ -2190,7 +2194,11 @@ static int undo_do(void)                                /* 0: done */
     str_cpy(name, proj_name, sizeof name);
     {
         uint8_t st = mut.stale, mv = mut.moved;         /* (0.9.3) the same music: its anchor still holds */
-        if (project_restore_runtime(&proj_scratch))
+        int rc;
+        proj_lfo_keep = 1;                              /* (0.9.18: it plays on, MODE FREE's LFOs not faded again) */
+        rc = project_restore_runtime(&proj_scratch);
+        proj_lfo_keep = 0;
+        if (rc)
             return 1;
         mut.stale = st;
         mut.moved = mv;

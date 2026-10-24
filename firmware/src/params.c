@@ -89,7 +89,8 @@ static const param_desc_t TP[P_COUNT] = {
     [P_ED_FX] = PE("LOOP", N_ONOFF, 0),          /* (JIANT 0.4, P_ELOOP) ON: held, the ENV starts again at the sustain */
     [P_LRATE] = PD("RATE", F_LFOHZ, -12, 127, 60),  /* (JIANT 0.6.51) below 0 in time: 4BAR .. 1/32 (N_LSYNC) */
     [P_LWAVE] = PE("WAVE", N_LWAVE, 0),
-    [P_LPHASE] = PD("PHASE", F_INT, -1, 127, 0),   /* (JIANT 0.6.51) -1: FREE, never restarted by a note */
+    [P_LPHASE] = PD("PHASE", F_INT, -1, 127, 0),   /* (JIANT 0.6.51) -1: FREE, never restarted by a note (0.9.18: nor its
+                                                     * FADE); the pages show it as MODE TRIG / FREE and PHASE 0..127 */
     [P_LFADE] = PD("FADE", F_TIME, 0, 127, 0),
     [P_LD_PIT] = PD("PITCH", F_BIPCT, -64, 63, 0),
     [P_LD_FLT] = PD("FILTER", F_BIPCT, -64, 63, 0),
@@ -564,10 +565,22 @@ static int16_t trks_ui;
 static const char *const N_LOAD[] = {"ECO", "LITE", "FULL"};
 static const param_desc_t LOAD_DESC = PE("LOAD", N_LOAD, 2);
 static int16_t load_ui;
+/* (0.9.18) the LFO's MODE TRIG / FREE (LFO KNOB 3) and its PHASE (LFO 2 KNOB 1): views of P_LPHASE, whose -1 has been FREE
+ * since 0.6.51 (stored as ever: every project and preset opens as it was). page_desc reads them into lmode_ui / lphase_ui,
+ * a turn writes P_LPHASE back (ui_input.c lfo_view_put). FREE keeps no phase: the one TRIG had stays in lfo_ph_mem
+ * (RAM, a track each) for TRIG again, and PHASE turned in FREE moves only that (shown dimmed) */
+#define ID_LMODE 0xFBu
+#define ID_LPHS 0xFAu
+static const char *const N_LMODE[] = {"TRIG", "FREE"};
+static const param_desc_t LFO_MODE_DESC = PE("MODE", N_LMODE, 0);
+static const param_desc_t LFO_PHASE_DESC = PD("PHASE", F_INT, 0, 127, 0);
+static int16_t lmode_ui, lphase_ui;
+static uint8_t lfo_ph_mem[NTRK];
+static int lfo_mode_of(const track_t *t) { return t->p[P_LPHASE] < 0; }   /* 1 FREE */
 static const page_t PAGES[] = {
     {"ENV", FAM_ENV, SC_TRACK, GR_ADSR, {P_ATK, P_DEC, P_SUS, P_REL}},
     {"ENV DEST", FAM_ENV, SC_TRACK, GR_NONE, {P_ED_FLT, P_ED_PIT, P_ED_SHP, P_ELOOP}},   /* JIANT 0.4: LOOP */
-    {"LFO", FAM_LFO, SC_TRACK, GR_LFO, {P_LRATE, P_LWAVE, P_LPHASE, P_LFADE}},
+    {"LFO", FAM_LFO, SC_TRACK, GR_LFO, {P_LRATE, P_LWAVE, ID_LMODE, P_LFADE}},   /* (0.9.18: MODE where PHASE was) */
     {"LFO DEST", FAM_LFO, SC_TRACK, GR_NONE, {P_LD_PIT, P_LD_FLT, P_LD_SHP, P_LD_AMP}},
     {"MOD", FAM_LFO, SC_TRACK, GR_MOD, {0xFF, P_M1SRC, P_M1DST, P_M1AMT}},   /* KNOB 1: the slot (mod_ui_slot) */
     {"MSEQ", FAM_LFO, SC_TRACK, GR_MSEQ, {0xFF, P_MS0, P_MSLEN, P_MSSLW}},   /* JIANT: KNOB 1 the step (ms_ui_step) */
@@ -679,6 +692,7 @@ static const page_t PAGES[] = {
                                                          * level), KNOB 2 LEN (ui_input.c edit_param) */
     {"MUTATE 2", FAM_SEQ, SC_TRACK, GR_MUTATE, {ID_MUT0 + MK_PARAM, ID_MUT0 + MK_SCALE, ID_MUT0 + MK_KEEP, ID_MUT0 + MK_REV}},
                                                          /* (0.9.9-seq2c) PARAM SCALE, KEEP REVERT on the turn */
+    {"LFO 2", FAM_LFO, SC_TRACK, GR_LFO, {ID_LPHS, 0xFF, 0xFF, 0xFF}},   /* (0.9.18) PHASE: where TRIG starts (FREE: dimmed) */
 };
 #define BAR_PAGE(pg) ((pg)->graph == GR_STEPS && (pg)->id[0] == 0xFFu)
 #define NPAGES (sizeof(PAGES) / sizeof(PAGES[0]))
@@ -707,6 +721,13 @@ static const param_desc_t *page_desc(const page_t *pg, uint32_t slot, int16_t **
     if (id == G_TRKS) {                               /* (0.6.18) not a song global: the device's setting */
         *valp = &trks_ui;
         return &TRKS_DESC;
+    }
+    if (id == ID_LMODE || id == ID_LPHS) {           /* (0.9.18) the LFO's MODE and PHASE: views of P_LPHASE */
+        int32_t ph = TSEL->p[P_LPHASE];
+        lmode_ui = (int16_t)(ph < 0);
+        lphase_ui = (int16_t)(ph < 0 ? lfo_ph_mem[song.sel % NTRK] : ph);
+        *valp = id == ID_LMODE ? &lmode_ui : &lphase_ui;
+        return id == ID_LMODE ? &LFO_MODE_DESC : &LFO_PHASE_DESC;
     }
     if (id == G_LOADP) {                              /* (0.6.30) the same */
         *valp = &load_ui;
