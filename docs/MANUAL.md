@@ -100,7 +100,7 @@ The names below are the ones the firmware uses (the HARDWARE CALIBRATION screen 
 | **HOME** | HOME (0.9.2, as every section's button): from another section the HOME page last shown; on HOME the first page of the next group, round: **ECO → BEING → GEN → ECO**. | About 0.7 s: opens the **MENU**. |
 | **ENV** | The ENV section: from elsewhere the page last shown (at power-on ENV); inside, the next group: **TRACKS → ENV → STAGE**, round. | (no layer) |
 | **LFO** | The LFO section: from elsewhere the page last shown (at power-on LFO); inside **MOD → LFO → MSEQ**, round. | **MACRO** layer: KNOB 1–4 are M1–M4. |
-| **FX** | The FX section: from elsewhere the page last shown; inside, the next module: **TRACK → BUSES → DELAY → REVERB → CHORUS → SLICER → MASTER → PUNCH**, round. | **Punch-in FX** layer. |
+| **FX** | The FX section: from elsewhere the page last shown; inside, the next module: **TRACK → BUSES → DELAY → REVERB → CHORUS → SLICER → PUNCH → MASTER**, round. | **Punch-in FX** layer. |
 | **SCL** | The SCL section (0.9.2: its own, ARP apart): **KEY ↔ CHORD**. | **SCL** layer: keys set the root. |
 | **EDIT** | The EDIT section: from elsewhere the page last shown (one memory for the synths, one each for FM6 and DRUM); inside the next group: **SOUND → TONE → FOCUS** (FM6: SOUND → TONE → OPERATOR; DRUM: KIT → SOUND → LEVELS → TONE). Always EDIT (0.9.2: clearing a step is SEQ + G5, renaming SAVE + C5). A step held + EDIT still clears that step's locks. | **EDIT** layer: INIT, RECALL, DRUM-X sound mutes, SELECT the sound dice. Held + KNOB 1–4: **MOMENTARY** (the page under, put back when let go). |
 | **GLO** | The GLO section: from elsewhere the page last shown; inside **MIX → GLOBAL → SYSTEM**, round. | **GLO** layer: mutes, solos, levels, tap tempo, UNDO. |
@@ -197,7 +197,7 @@ Since 0.8.5 every page wears the skin of the design the owner approved (the HTML
 - **Footer**: the step bars of the bar you edit (four under each card) or key hints, and under them a small grey
   **breadcrumb**: **SECTION · GROUP · page** and the page's place in the section's chain at the right (0.9.2; e.g.
   **FX · DELAY · DLY 2  6/16**, **ENV · TRACKS · TRACKS DEST  2/5**).
-- **The tabs** (0.9.2): under the header, the section's **groups** (FX: TRK · BUS · DLY · REV · CHO · SLC · MST · PCH;
+- **The tabs** (0.9.2): under the header, the section's **groups** (FX: TRK · BUS · DLY · REV · CHO · SLC · PCH · MST;
   SEQ: PATT · TRACK · BAR · STEP · AUTO), the one you are on lit (COLORS: filled violet; BOTTOM: a small pill; HUD and AIR:
   a dash), and **a dot a page** under each, the page shown lit. The cards under them, a taller panel, and the footer is
   the breadcrumb alone.
@@ -295,7 +295,7 @@ it was in 0.9.1, with its knobs and its picture (the ones 0.8.5's lenses drew).
 | **EDIT** (FM6) | **SOUND**: EDIT 1 · EDIT 2 — **TONE**: FILTER · VOICE · VOICE 2 — **OPERATOR**: OPERATOR · OP ENV · OPERATOR 2 | 8 |
 | **EDIT** (DRUM) | **KIT**: KIT · KIT 2 · KIT 3 — **SOUND**: SOUND · SOUND 2 · SOUND 3 · SOUND 4 — **LEVELS**: LEVELS · LEVELS 2 — **TONE**: X-MOD · FILTER · STEREO · VOICE | 13 |
 | **SEQ** | STEP · **LENGTH**: LENGTH · TRACK · **MUTATE**: MUTATE · MUTATE 2 · PLAYHEADS · STRETCH · **COMP**: COMP · COMP 2 · **AUTO**: AUTOMATION · AUTO LIST | 11 |
-| **FX** | **TRACK**: SENDS · DIST · AUTO PAN — **BUSES**: BUSES — **DELAY**: DLY · DLY 2 · DLY 3 — **REVERB**: REVERB · REVERB 2 — **CHORUS**: CHORUS — **SLICER**: SLICER · SL BUS · SL BUS 2 · SL PITCH — **MASTER**: MASTER — **PUNCH**: PUNCH | 16 |
+| **FX** | **TRACK**: SENDS · DIST · AUTO PAN — **BUSES**: BUSES — **DELAY**: DLY · DLY 2 · DLY 3 — **REVERB**: REVERB · REVERB 2 — **CHORUS**: CHORUS — **SLICER**: SLICER · SL BUS · SL BUS 2 · SL PITCH — **PUNCH**: PUNCH — **MASTER**: MASTER | 16 |
 | **GLO** | **MIX**: MIXER · SENDS — **GLOBAL**: GLOBAL — **SYSTEM**: SYSTEM | 4 |
 | **ENV** | **TRACKS**: TRACKS · TRACKS DEST — **ENV**: ENV · ENV DEST — **STAGE**: STAGE | 5 |
 | **LFO** | **MOD**: MOD — **LFO**: LFO · LFO DEST — **MSEQ**: MSEQ · MSEQ 2 | 5 |
@@ -1537,11 +1537,11 @@ sounds picked with PRESETS, SEQ TOOLS actions, or ordinary knob turns. It is not
 
 ## 9. Effects and master
 
-### FX's chain: TRACK · BUSES · DELAY · REVERB · CHORUS · SLICER · MASTER · PUNCH
+### FX's chain: TRACK · BUSES · DELAY · REVERB · CHORUS · SLICER · PUNCH · MASTER
 
-(0.9.2) FX is one flat chain of 16 pages in eight groups, its tabs **TRK · BUS · DLY · REV · CHO · SLC · MST · PCH**:
+(0.9.2; 0.9.9-snd2: MASTER last, the end of the chain) FX is one flat chain of 16 pages in eight groups, its tabs **TRK · BUS · DLY · REV · CHO · SLC · PCH · MST**:
 **SELECT** walks every page (SENDS → DIST → AUTO PAN → BUSES → DLY → DLY 2 → DLY 3 → REVERB → REVERB 2 → CHORUS →
-SLICER → SL BUS → SL BUS 2 → SL PITCH → MASTER → PUNCH), an **FX** tap jumps to the next module (round), and there is
+SLICER → SL BUS → SL BUS 2 → SL PITCH → PUNCH → MASTER), an **FX** tap jumps to the next module (round), and there is
 no module picker any more (until 0.9.1 SELECT zoomed TRACK ↔ BUSES ↔ EFFECT, PRESETS picked the module and the FX tap
 its page). PRESETS loads the track's sounds, as everywhere. The pages, their knobs and their pictures are the same.
 
@@ -1549,7 +1549,7 @@ its page). PRESETS loads the track's sounds, as everywhere. The pages, their kno
 | --- | --- | --- |
 | **TRACK** | SENDS (the FX page: DIST CHORUS DLY REV) · DIST · AUTO PAN | The track's set: its picture (the four sends as bars, DIST's curve with TYPE and TONE, AUTO PAN's swing with WAVE and RATE) and DIST's curve small under it. |
 | **BUSES** | BUSES | The six modules as tiles, each its picture small: **DELAY** (its echoes), **REVERB** (its decay), **CHORUS** (three waves), **SLICER** (its 16 steps, the one playing framed), **MASTER** (the output now, the duck's curve), **PUNCH** (the lane); with LOAD ECO CHORUS and SLICER are dark ("ECO"). Knobs: **DLY MIX, REV SIZE, CHORUS DEPTH, SLICER DEPTH**. |
-| **DELAY · REVERB · CHORUS · SLICER · MASTER · PUNCH** | DLY · DLY 2 · DLY 3 — REVERB · REVERB 2 — CHORUS — SLICER · SL BUS · SL BUS 2 · SL PITCH — MASTER — PUNCH | The module large: its picture, "DELAY 2/3" (its page) in the title. With LOAD ECO the chain skips CHORUS and SLICER. |
+| **DELAY · REVERB · CHORUS · SLICER · PUNCH · MASTER** | DLY · DLY 2 · DLY 3 — REVERB · REVERB 2 — CHORUS — SLICER · SL BUS · SL BUS 2 · SL PITCH — PUNCH — MASTER | The module large: its picture, "DELAY 2/3" (its page) in the title. With LOAD ECO the chain skips CHORUS and SLICER. |
 
 - **FX from another page** comes back to the FX page you left.
 - The footer says **FX · DELAY · DLY 2  6/16**; the header shows the track, **T1**, in orange.

@@ -283,8 +283,8 @@ static void fxg_mod(uint32_t m, int32_t x, int32_t y, int32_t w, int32_t h)
     case 1: fxg_reverb(x, y, w, h); break;
     case 2: fxg_chorus(x, y, w, h); break;
     case 3: if (cur_page()->graph == GR_SLPIT && w > 120) fxg_slpitch(x, y, w, h); else fxg_slicer(x, y, w, h); break;
-    case 4: fxg_master(x, y, w, h); break;
-    default: fxg_punch(x, y, w, h); break;
+    case 4: fxg_punch(x, y, w, h); break;
+    default: fxg_master(x, y, w, h); break;           /* (snd2: MASTER last) */
     }
 }
 /* the set's place: n dots (5 x 3, 7 apart) at the top left, k lit; its name at the right */

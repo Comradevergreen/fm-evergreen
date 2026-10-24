@@ -75,10 +75,10 @@ static const nv_t CE_FX[] = {NV("FX", "SENDS", 0, FXL_TRACK), NV("DIST", 0, 0, F
                              NV("BUSES", 0, 1, FXL_BUSES), NV("DLY", 0, 2, FXL_EFFECT), NV("DLY 2", 0, 2, FXL_EFFECT),
                              NV("DLY 3", 0, 2, FXL_EFFECT), NV("REVERB", 0, 3, FXL_EFFECT), NV("REVERB 2", 0, 3, FXL_EFFECT),
                              NV("CHORUS", 0, 4, FXL_EFFECT), NV("SLICER", 0, 5, FXL_EFFECT), NV("SL BUS", 0, 5, FXL_EFFECT),
-                             NV("SL BUS 2", 0, 5, FXL_EFFECT), NV("SL PITCH", 0, 5, FXL_EFFECT), NV("MASTER", 0, 6, FXL_EFFECT),
-                             NV("PUNCH", 0, 7, FXL_EFFECT)};
+                             NV("SL BUS 2", 0, 5, FXL_EFFECT), NV("SL PITCH", 0, 5, FXL_EFFECT), NV("PUNCH", 0, 6, FXL_EFFECT),
+                             NV("MASTER", 0, 7, FXL_EFFECT)};   /* (0.9.9-snd2: MASTER last, the end of the chain) */
 static const ng_t CG_FX[] = {{"TRACK", "TRK"}, {"BUSES", "BUS"}, {"DELAY", "DLY"}, {"REVERB", "REV"}, {"CHORUS", "CHO"},
-                             {"SLICER", "SLC"}, {"MASTER", "MST"}, {"PUNCH", "PCH"}};
+                             {"SLICER", "SLC"}, {"PUNCH", "PCH"}, {"MASTER", "MST"}};
 static const nv_t CE_GLO[] = {NV("MIXER", 0, 0, 0), NV("SENDS", 0, 0, 0), NV("GLOBAL", 0, 1, 1), NV("SYSTEM", 0, 2, 2),
                               NV("COMPS", 0, 3, 3), NV("COMPS 2", 0, 3, 3)};   /* (0.9.9-seq2f) the global lane */
 static const ng_t CG_GLO[] = {{"MIX", 0}, {"GLOBAL", 0}, {"SYSTEM", 0}, {"COMPS", "CMP"}};

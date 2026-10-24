@@ -1502,7 +1502,7 @@ static uint32_t graph_signature(void)
         if (fx_level() == FXL_BUSES || (fx_level() == FXL_EFFECT && fx_mod_of(ui.page) == 3u))   /* (the SLICER drawn) */
             h ^= (song.playing && song.g[G_SLMODE] ? sl.idx + 1u : 0u) * 2654435761u;
         h ^= sl_ui_step * 7919u + (uint32_t)pfx_rec_ok() * 31u;
-        if (fx_level() == FXL_BUSES || fx_mod_of(ui.page) == 4u)
+        if (fx_level() == FXL_BUSES || fx_mod_of(ui.page) == 5u)   /* (MASTER: last, snd2) */
             h ^= (uint32_t)(bg_energy() / 16) * 104729u;   /* (MASTER's level bar: 16 steps, not every frame) */
         for (i = 0; i < 32u; i++)
             h = (h ^ pfx_lane[i]) * 16777619u;

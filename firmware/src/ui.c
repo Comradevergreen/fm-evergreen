@@ -606,8 +606,8 @@ static int save_on(void) { return !ui.home && !page_over && PAGES[ui.page].fam =
 static void page_entered(void);
 static void page_flash(void);
 #define FX_NMOD 6u
-static const char *const FX_MOD[FX_NMOD] = {"DELAY", "REVERB", "CHORUS", "SLICER", "MASTER", "PUNCH"};
-static const char *const FX_MHEAD[FX_NMOD] = {"DLY", "REVERB", "CHORUS", "SLICER", "MASTER", "PUNCH"};   /* its first page */
+static const char *const FX_MOD[FX_NMOD] = {"DELAY", "REVERB", "CHORUS", "SLICER", "PUNCH", "MASTER"};   /* (snd2: MASTER */
+static const char *const FX_MHEAD[FX_NMOD] = {"DLY", "REVERB", "CHORUS", "SLICER", "PUNCH", "MASTER"};   /* last) its first page */
 static const uint8_t FX_MN[FX_NMOD] = {3, 2, 1, 4, 1, 1};   /* its pages, one after another in PAGES */
 static int page_visible(uint32_t i);
 static int fx_on(void) { return !ui.home && !page_over && PAGES[ui.page].fam == FAM_FX; }
