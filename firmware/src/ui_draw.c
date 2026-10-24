@@ -1078,50 +1078,53 @@ static int32_t crumb_count(char *b)
     fmt_int(b + str_len(b), (int32_t)n);
     return text_w(&AF_X, b);
 }
-/* (0.9.9-seq2, the approved mock-up: the 0.6's footer back) the footer's left, on every page: a square a 16-step bar of the
- * track's pattern (LEN / 16 rounded up, 1..4; a partial last bar a narrower box), the bar playing lit (THEME) with the
- * playhead a 1 px mark inside it that moves a step at a time (a function of the step, never of the frame: held under load
- * or not, the footer is drawn again once a step), the bar under the edit cursor outlined (ACCENT) when it is another one
- * (stopped: always); the breadcrumb from its right. The state the signature holds; the drawing returns the breadcrumb's x */
-#define FB_W 9                                          /* a square (the mock-up's 10 x 7 at 13: a touch bigger, as asked) */
-#define FB_H 7
-#define FB_GAP 2
-static uint32_t foot_bars_state(uint32_t *len, uint32_t *nb, uint32_t *play, uint32_t *cur)
+/* (0.9.9-seq2g: the 0.6's footer back, as the owner asked) the 16 steps of the bar the cursor is in, on every page: a step
+ * with a note (DRUM: any lane hitting there) a lit bar (THEME; accented ACCENT), an empty one a stub (a tie MID), under
+ * them the step sounding (TEXT; it moves a step at a time: a function of the step, never of the frame) and in SEQ the
+ * step edited (ACCENT, over it); the bars of the pattern as tiny 3 x 3 dots at the strip's right end (the one shown TEXT,
+ * the one playing THEME when it is another). The normal footer: row 1, x 12 .. 228 as 0.6's (the dots in a column at
+ * x 233); a lens footer (one row of 15 px): a compact strip before the breadcrumb, which shortens to the page's name */
+static uint32_t foot_ph(const track_t *t, uint32_t *len)
+{
+    *len = t->p[P_SLEN] > 0 ? (uint32_t)t->p[P_SLEN] : 1u;
+    return song.playing ? seq_src(t, t->seq_idx) : 0xFFu;
+}
+static uint32_t foot_strip_sig(void)
 {
     const track_t *t = TSEL;
-    uint32_t ph = song.playing ? seq_src(t, t->seq_idx) : 0xFFu;
-    *len = t->p[P_SLEN] > 0 ? (uint32_t)t->p[P_SLEN] : 1u;
-    *nb = (*len + 15u) / 16u;
-    *play = ph < *len ? ph / 16u : 0xFFu;
-    *cur = ui.cursor < *len ? ui.cursor / 16u : 0xFFu;
-    return ph;
+    uint32_t len, ph = foot_ph(t, &len), bk = ui.bank;
+    return steps_hash(t) + (len * 131u + bk) * 2654435761u + (ph / 16u == bk ? ph % 16u + 1u : 0u) * 40503u +
+           (ph < len ? ph / 16u + 1u : 0u) * 977u + (song.seq_mode ? ui.cursor + 1u : 0u) * 3001u;
 }
-static uint32_t foot_bars_sig(void)
+static int32_t foot_strip(int32_t x0, int32_t y, int lens)
 {
-    uint32_t len, nb, play, cur, ph = foot_bars_state(&len, &nb, &play, &cur);
-    return ((len * 131u + play) * 7u + cur) * 2654435761u + (ph == 0xFFu ? 0u : (ph % 16u) + 1u) * 40503u;
-}
-static int32_t foot_bars(int32_t x, int32_t y)
-{
-    uint32_t len, nb, play, cur, ph = foot_bars_state(&len, &nb, &play, &cur), b;
-    for (b = 0; b < nb; b++, x += FB_W + FB_GAP) {
-        uint32_t in = len - b * 16u;                    /* the steps in this bar: a partial last one a narrower box */
-        int32_t w = in < 16u ? (int32_t)((in * FB_W + 15u) / 16u) : FB_W;
-        if (w < 3)
-            w = 3;
-        if (b == play) {
-            cv_rect(x, y, w, FB_H, T_THEME);
-            cv_rect(x + 1 + (int32_t)((ph % 16u) * (uint32_t)(w - 2) / 16u), y + 1, 1, FB_H - 2, T_ACCENT);
-        } else
-            cv_rect(x, y, w, FB_H, T_RAISE);
-        if (b == cur && cur != play) {                  /* the bar edited, outlined */
-            cv_rect(x, y, w, 1, T_ACCENT);
-            cv_rect(x, y + FB_H - 1, w, 1, T_ACCENT);
-            cv_rect(x, y, 1, FB_H, T_ACCENT);
-            cv_rect(x + w - 1, y, 1, FB_H, T_ACCENT);
-        }
+    const track_t *t = TSEL;
+    uint32_t len, ph = foot_ph(t, &len), nb = (len + 15u) / 16u, i;
+    int32_t w = lens ? 4 : 9, hb = lens ? 7 : 11, my = lens ? y + 9 : y + 13, x = x0;
+    for (i = 0; i < 16u; i++) {
+        uint32_t si = ui.bank * 16u + i;
+        const step_t *st = &seq_steps(t)[si];
+        x = lens ? x0 + (int32_t)i * 5 + (int32_t)(i / 4u) * 2 : 12 + (int32_t)i * 13 + (int32_t)(i / 4u) * 4;
+        if (si >= len)
+            continue;
+        if (step_on(st))
+            cv_rect(x, y, w, hb, (st->flags & SF_ACCENT) || st->acc ? T_ACCENT : T_THEME);
+        else
+            cv_rect(x, y + hb - 3, w, 3, st->time == ST_TIE ? T_MID : T_RAISE);
+        if (song.seq_mode && si == ui.cursor)
+            cv_rect(x, my, w, 2, T_ACCENT);
+        else if (si == ph)
+            cv_rect(x, my, w, 2, T_TEXT);
     }
-    return x + 4;                                       /* (past the last gap: 6 px before the breadcrumb) */
+    x += w + 4;
+    for (i = 0; nb > 1u && i < nb; i++) {
+        uint16_t c = i == ui.bank ? T_TEXT : ph < len && i == ph / 16u ? T_THEME : T_RAISE;
+        if (lens)
+            cv_rect(x + (int32_t)i * 4, y + 2, 3, 3, c);
+        else
+            cv_rect(233, y + (int32_t)i * 4, 3, 3, c);
+    }
+    return lens ? x + (nb > 1u ? (int32_t)nb * 4 + 3 : 0) : x;
 }
 static __attribute__((noinline)) void draw_crumbs(int32_t y, uint16_t fg, uint16_t last)
 {
@@ -1131,7 +1134,7 @@ static __attribute__((noinline)) void draw_crumbs(int32_t y, uint16_t fg, uint16
     uint32_t i, k = 0;
     int32_t x, x0;
     const aafont_t *f = lz_on() ? &AF_X : &AF_S;        /* (0.8.5: a lens page, the mock-up's small mono) */
-    x0 = foot_bars(6, y + (f == &AF_X ? AF_X_CAP_Y : AF_S_CAP_Y + 1));   /* (the squares on the capitals' band) */
+    x0 = f == &AF_X ? foot_strip(6, y + AF_X_CAP_Y, 1) : 8;   /* (seq2g, a lens footer: the steps first, on the capitals) */
     foot_crumbs(b, sizeof b);
     for (i = 0; b[i]; i++)                              /* (the last part: after the last dot) */
         if ((uint8_t)b[i] == 0xB7u)
@@ -1144,34 +1147,10 @@ static __attribute__((noinline)) void draw_crumbs(int32_t y, uint16_t fg, uint16
         GFX_HOOK_ALIGN(0, y + AF_S_CAP_Y, 0, y + AF_S_CAP_Y + AF_S_CAP_H, AL_V, "footer breadcrumb on its line");
     if (cw)
         cv_text_r(234, y, f, cnt, f == &AF_X ? T_TEXT : fg, T_BG);   /* (0.8.9, the skins' mock-up: the count TEXT) */
-    if (f == &AF_X && k) {                              /* (0.8.9) "LENTE" DIM, the level THEME, the set TEXT (as `last` if
-                                                         * that is not DIM) */
-        uint32_t j = 0;
-        char c;
-        for (i = 0; b[i] && i + 2u < k && !j; i++)      /* (the end of the first part) */
-            if ((uint8_t)b[i] == 0xB7u)
-                j = i + 2u;
-        if (j && j < k) {
-            uint32_t d = j;                             /* (the level's end: the second dot) */
-            while ((uint8_t)b[d] != 0xB7u)
-                d++;
-            c = b[j];
-            b[j] = 0;
-            x = cv_text_on(x0, y, f, b, fg, T_BG);
-            b[j] = c;
-            c = b[d];                                   /* (the level, then the dot before the set) */
-            b[d] = 0;
-            x = cv_text_on(x, y, f, b + j, T_THEME, T_BG);
-            b[d] = c;
-            c = b[d + 2u];
-            b[d + 2u] = 0;
-            x = cv_text_on(x, y, f, b + d, fg, T_BG);
-            b[d + 2u] = c;
-            cv_free_text(x, y, f, b + d + 2u, last == fg ? T_TEXT : last, T_BG, mx - x);
-            return;
-        }
-        if (last == fg)                                 /* (two parts, "FX . BUSES": the level THEME) */
-            last = T_THEME;
+    if (f == &AF_X && k) {                              /* (seq2g) a lens footer: the page's name alone after the steps
+                                                         * (TEXT, as `last` if that is not DIM) */
+        cv_free_text(x0, y, f, b + k, last == fg ? T_TEXT : last, T_BG, mx - x0);
+        return;
     }
     if (last == fg || !k) {
         cv_free_text(x0, y, f, b, fg, T_BG, mx - x0);
@@ -1197,17 +1176,13 @@ static void draw_foot(void)
         str_cpy(ti, "HOME", sizeof ti);
     else
         page_title(ti);
-    {   /* step markers: the playhead only when it is in the shown bank, the cursor only in SEQ */
-        uint32_t ph = song.playing && seq_src(t, t->seq_idx) / 16u == ui.bank ? seq_src(t, t->seq_idx) : 0xFFu;
-        sig = str_hash(0x9E3779B9u, s) + str_hash(7u, ti) + (lz ? 0u : ph * 97u + (song.seq_mode ? ui.cursor : 0xFFu) * 3001u +
-              steps_hash(t) + ui.bank * 7u + (uint32_t)t->p[P_SLEN] * 13u) + (uint32_t)lz * 104729u;
-    }
+    sig = str_hash(0x9E3779B9u, s) + str_hash(7u, ti) + (uint32_t)lz * 104729u + foot_strip_sig();   /* (seq2g) the steps */
     if (act_cols() && !lz) {                           /* the hint, and whether OCT+ would act */
         char ha[16], hb[16];
         foot_hint(ha, hb);
         sig += str_hash(str_hash(act_ready() ? 7u : 3u, ha), hb);
     }
-    sig += (uint32_t)accw * 977u + foot_bars_sig();     /* (0.9.9-seq2) the bar squares: a step at a time */
+    sig += (uint32_t)accw * 977u;
     if (!ui.force && sig == ui.foot_sig)
         return;
     ui.foot_sig = sig;
@@ -1221,25 +1196,10 @@ static void draw_foot(void)
         kh[0] = (khint_t){KC_OCTUP, ha + 5};
         kh[1] = (khint_t){KC_OCTDN, hb + 5};
         cv_key_row(8, 232, 2, kh, 2, act_ready() ? 3u : 2u, T_BG);
-    } else {
-        uint32_t i;
+    } else {                                          /* row 1: the cursor's bar, 16 steps in 4 groups (seq2g, 0.6's) */
         if ((ui.bank + 1u) * 16u <= (uint32_t)t->p[P_SLEN])
-            GFX_HOOK_ALIGN(CARD_X(0) + 5, 0, CARD_X(3) + 5 + 48, 0, AL_H | AL_CELLS | AL_N(16), "footer step bars under the cards");
-        for (i = 0; i < 16u; i++) {                   /* row 1: the cursor's bank, 16 bars, four under each card */
-            uint32_t si = ui.bank * 16u + i;
-            int32_t sx = CARD_X(i / 4u) + 5 + (int32_t)(i % 4u) * 13;
-            const step_t *st = &seq_steps(t)[si];
-            if (si >= (uint32_t)t->p[P_SLEN])
-                continue;
-            if (step_on(st))                          /* a note: a bar (accented: the accent) */
-                cv_rect(sx, 1, 9, 11, (st->flags & SF_ACCENT) ? T_ACCENT : T_THEME);
-            else                                      /* empty: a stub (a tie: brighter) */
-                cv_rect(sx, 9, 9, 3, st->time == ST_TIE ? T_MID : T_RAISE);
-            if (song.seq_mode && si == ui.cursor)
-                cv_rect(sx, 14, 9, 2, T_ACCENT);        /* the step edited */
-            else if (song.playing && si == seq_src(t, t->seq_idx))
-                cv_rect(sx, 14, 9, 2, T_TEXT);          /* the step sounding */
-        }
+            GFX_HOOK_ALIGN(0, 0, 240, 0, AL_H | AL_CELLS | AL_N(16), "footer step bars centred");
+        (void)foot_strip(12, 1, 0);
     }
     draw_crumbs(ry, hud_cap(T_DIM), accw ? T_ACCENT : hud_cap(T_DIM));   /* (0.9.0 HUD's HOME: TEXT, over the beings) */   /* (0.8.5) row 2: the breadcrumb (the track's engine and sound:
                                                          * the header's centre) */

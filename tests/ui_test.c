@@ -6942,51 +6942,66 @@ static int test_lente(void)
  * on a new step only, never per frame), the cursor's outline only when its bar is another; the breadcrumb to its right */
 static uint16_t fpx(int32_t x, int32_t y) { return swap16(host_screen[y * 240 + x]); }
 static int32_t fb_y(void) { return (int32_t)foot_y() + (lz_on() ? 4 + AF_X_CAP_Y : 19 + AF_S_CAP_Y + 1); }
-static int test_foot_bars(void)
+/* (seq2g) the footer's strip: cell i's x, its top, its mark's row, the bars' dot k (a lens footer: compact, before the
+ * breadcrumb; the normal one: row 1, 0.6's x 12 .. 228, the dots a column at x 233) */
+static int32_t fs_x(uint32_t i) { return lz_on() ? 6 + (int32_t)i * 5 + (int32_t)(i / 4u) * 2 : 12 + (int32_t)i * 13 + (int32_t)(i / 4u) * 4; }
+static int32_t fs_y(void) { return lz_on() ? fb_y() : (int32_t)foot_y() + 1; }
+static int32_t fs_my(void) { return fs_y() + (lz_on() ? 9 : 13); }
+static int32_t fs_dx(uint32_t k) { return lz_on() ? 95 + (int32_t)k * 4 : 233; }
+static int32_t fs_dy(uint32_t k) { return lz_on() ? fs_y() + 2 : fs_y() + (int32_t)k * 4; }
+static int test_foot_steps(void)
 {
     int bad = 0, ok;
-    uint32_t sig;
-    int32_t y;
-    ui_power_on();
-    TSEL->p[P_SLEN] = 64;
+    uint32_t sig, i;
+    track_t *t;
+    ui_power_on(); stop_transport();
+    t = TSEL;
+    t->p[P_SLEN] = 64;
+    for (i = 0; i < 64u; i++) step_clear(&t->step[i]);
+    t->step[2].time = ST_NOTE; t->step[2].n = 1; t->step[2].note[0] = 60; t->step[2].vel = 100;
+    t->step[3] = t->step[2]; t->step[3].flags |= SF_ACCENT;
+    t->step[4].time = ST_TIE;
+    t->step[24].time = ST_NOTE; t->step[24].hit = 1;                                /* a drum lane's hit: lit too */
     open_family(FAM_SEQ); frame();
-    y = fb_y();                                                                    /* STEP, stopped, the cursor on bar 1 */
-    ok = fpx(6, y) == T_ACCENT && fpx(14, y + 6) == T_ACCENT && fpx(7, y + 1) == T_RAISE && fpx(17, y + 3) == T_RAISE &&
-         fpx(28, y + 3) == T_RAISE && fpx(39, y) == T_RAISE && fpx(47, y + 6) == T_RAISE && fpx(48, y + 3) == T_BG &&
-         fpx(16, y + 3) == T_BG;
-    TSEL->p[P_SLEN] = 40; frame();                                                 /* three bars, the last 8 steps: 5 px */
-    ok &= fpx(28, y + 3) == T_RAISE && fpx(32, y + 3) == T_RAISE && fpx(33, y + 3) == T_BG && fpx(39, y + 3) == T_BG;
-    cursor_set(20); frame();                                                       /* the cursor on bar 2: that one outlined */
-    ok &= fpx(17, y) == T_ACCENT && fpx(25, y + 6) == T_ACCENT && fpx(6, y) == T_RAISE && fpx(18, y + 1) == T_RAISE;
-    TSEL->p[P_SLEN] = 16; cursor_set(0); frame();
-    ok &= fpx(6, y) == T_ACCENT && fpx(17, y + 3) == T_BG;                         /* one bar */
-    bad += check("seq2 footer: a square a bar (LEN 64 four, 40 three with the last narrower, 16 one), the cursor's outlined", ok);
-    TSEL->p[P_SLEN] = 64; cursor_set(0);
-    song.playing = 1; TSEL->seq_idx = 20; frame();                                 /* bar 2 sounding, step 5 of it */
-    ok = fpx(17, y + 3) == T_THEME && fpx(18, y + 3) == T_THEME && fpx(19, y + 3) == T_ACCENT && fpx(19, y) == T_THEME &&
-         fpx(6, y) == T_ACCENT && fpx(7, y + 1) == T_RAISE;                          /* (the mark; the cursor's bar outlined) */
+    ok = fpx(fs_x(2), fs_y()) == T_THEME && fpx(fs_x(3), fs_y()) == T_ACCENT && fpx(fs_x(1), fs_y()) == T_BG &&
+         fpx(fs_x(1), fs_my() - 3) == T_RAISE && fpx(fs_x(4), fs_my() - 3) == T_MID;
+    ok &= fpx(fs_x(0), fs_my()) == T_ACCENT && fpx(fs_x(2), fs_my()) == T_BG;       /* the step edited (SEQ) */
+    ok &= fpx(fs_dx(0), fs_dy(0)) == T_TEXT && fpx(fs_dx(1), fs_dy(1)) == T_RAISE && fpx(fs_dx(3), fs_dy(3)) == T_RAISE;
+    bad += check("seq2g footer: the bar's 16 steps (a note lit, accented ACCENT, empty a stub, a tie MID), the edited mark, 1/4", ok);
+    song.playing = 1; t->seq_idx = 5; frame();
+    ok = fpx(fs_x(5), fs_my()) == T_TEXT && fpx(fs_x(0), fs_my()) == T_ACCENT;
     sig = ui.foot_sig;
     frames(160);
     ok &= ui.foot_sig == sig;                                                      /* the same step: not drawn again */
-    TSEL->seq_idx = 31; frame();                                                   /* its last step: the mark at the right */
-    ok &= ui.foot_sig != sig && fpx(24, y + 3) == T_ACCENT && fpx(19, y + 3) == T_THEME;
-    cursor_set(20); frame();                                                       /* the cursor in the sounding bar: no outline */
-    ok &= fpx(17, y) == T_THEME && fpx(6, y) == T_RAISE;
-    song.playing = 0; frame();
-    ok &= fpx(17, y) == T_ACCENT && fpx(18, y + 1) == T_RAISE && fpx(24, y + 3) == T_RAISE;
-    bad += check("  playing: the bar lit, the playhead a mark inside it moving a step at a time (no redraw between steps)", ok);
-    song.playing = 1; TSEL->seq_idx = 20; cursor_set(0);
-    go_title("ENV"); frame(); y = fb_y();
-    ok = fpx(17, y + 3) == T_THEME && fpx(19, y + 3) == T_ACCENT && fpx(6, y) == T_ACCENT;
-    go_title("MIXER"); frame(); y = fb_y();
-    ok &= fpx(17, y + 3) == T_THEME && fpx(19, y + 3) == T_ACCENT;
-    go_home(); frame(); y = fb_y();
-    ok &= fpx(17, y + 3) == T_THEME && fpx(19, y + 3) == T_ACCENT;
-    turn(EN_PRESET, 1); frames(2);                                                 /* (PHRASES, the patterns' loader too) */
-    go_title("STEP"); frame(); turn(EN_PRESET, 1); frames(2); y = fb_y();
-    ok &= cur_page()->graph == GR_PATS && fpx(17, y + 3) == T_THEME && fpx(19, y + 3) == T_ACCENT;
-    bad += check("  on every page (ENV, GLO MIXER, HOME, PHRASES)", ok);
+    t->seq_idx = 6; frame();
+    ok &= ui.foot_sig != sig && fpx(fs_x(6), fs_my()) == T_TEXT && fpx(fs_x(5), fs_my()) == T_BG;
+    bad += check("  playing: the sounding mark a step at a time, no redraw between steps", ok);
+    cursor_set(20); frame();                                                       /* bar 2 shown: 2/4, the playing bar THEME */
+    ok = fpx(fs_dx(1), fs_dy(1)) == T_TEXT && fpx(fs_dx(0), fs_dy(0)) == T_THEME && fpx(fs_x(4), fs_my()) == T_ACCENT &&
+         fpx(fs_x(6), fs_my()) == T_BG && fpx(fs_x(8), fs_y()) == T_THEME && fpx(fs_x(2), fs_y()) == T_BG;
+    t->seq_idx = 21; frame();
+    ok &= fpx(fs_x(5), fs_my()) == T_TEXT && fpx(fs_dx(0), fs_dy(0)) == T_RAISE;
+    bad += check("  LEN 64, the cursor on bar 2: its steps (a DRUM hit lit), 2/4, the marks there", ok);
+    go_title("ENV"); frame();
+    ok = fpx(fs_x(8), fs_y()) == T_THEME && fpx(fs_x(5), fs_my()) == T_TEXT;
+    go_title("MIXER"); frame();
+    ok &= fpx(fs_x(8), fs_y()) == T_THEME && fpx(fs_x(5), fs_my()) == T_TEXT;
+    go_home(); frame();
+    ok &= fpx(fs_x(8), fs_y()) == T_THEME && fpx(fs_x(5), fs_my()) == T_TEXT;
+    bad += check("  on every page (ENV, GLO MIXER, HOME)", ok);
     song.playing = 0;
+    ui_power_on(); stop_transport();                                               /* SEQ > COMP: the keys pick the step */
+    t = TSEL;
+    t->p[P_SLEN] = 32;
+    for (i = 0; i < 32u; i++) step_clear(&t->step[i]);
+    go_page(GR_COMP); frame();
+    tap_key(key_at(0, 4));
+    ok = cur_page()->graph == GR_COMP && ui.cursor == 4u && ui.bank == 0u && str_eq(ui.msg, "STEP 5");
+    tap_key(key_at(1, GK_PGUP)); tap_key(key_at(0, 4));
+    ok &= ui.cursor == 20u && ui.bank == 1u && str_eq(ui.msg, "STEP 21") && fpx(fs_x(4), fs_my()) == T_ACCENT;
+    turn(EN_K1, 1); frame();
+    ok &= CO_ACT(t->step[20].comp) != 0 && !t->step[4].comp;
+    bad += check("SEQ > COMP: key 5 the step 5 (bar 1), on bar 2 step 21; KNOB 1 its C1", ok);
     ui_power_on();
     return bad;
 }
@@ -7039,7 +7054,7 @@ static int test_seq_tools(void)
     }
     bad += check("  0.9.2 a tap on STEP: the next group's first, round (0.9.5: no layer hint; was BAR's next set)", ok);
     bad += test_lente();
-    bad += test_foot_bars();
+    bad += test_foot_steps();
     bad += test_save_lens();
     {   /* (0.6.85) SEQ > STRETCH: x2 .. x8 / 2 .. / 8 (the notes spread, held ones held), REPEAT x2 .. x8 / TO 64, NUDGE */
         track_t *t;

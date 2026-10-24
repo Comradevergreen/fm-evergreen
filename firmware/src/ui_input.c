@@ -586,6 +586,30 @@ static void grid_keys(uint32_t pressed)
     }
 }
 
+/* (0.9.9-seq2g) SEQ > COMP / COMP 2: a white key picks its step of the bar shown (the footer's strip; DRUM the same), black
+ * keys 10 / 11 the bar down / up; silent (ui_name.c keys_mode). KNOB 1..4 then edit that step's component */
+static void comp_keys(uint32_t pressed)
+{
+    uint32_t k;
+    for (k = 0; k < 27u; k++) {
+        uint32_t p = key_place(k), i = ui.bank * 16u + p;
+        char b[12];
+        if (!((pressed >> k) & 1u))
+            continue;
+        if (key_black(k)) {
+            if (p == GK_PGUP || p == GK_PGDN)
+                page_go(p == GK_PGUP ? 1 : -1);
+            continue;
+        }
+        if (i >= (uint32_t)TSEL->p[P_SLEN])
+            continue;
+        cursor_set((int32_t)i);
+        str_cpy(b, "STEP ", sizeof b);
+        fmt_int(b + 5, (int32_t)i + 1);
+        ui_message(b);
+    }
+}
+
 /* ------------------------------------------------- parameter locks --- */
 /* 1.1 (Discussions #75, #53): on SEQ > STEP, hold a step and turn KNOB 1..4: the step gets a lock of the parameter
  * that knob edits on the sound page shown last (ui.plk_src: HOME's four, ENV, LFO, FX, EDIT 1 / 2, OP ENV, ..; the
@@ -2429,6 +2453,8 @@ static void ui_input_frame(void)
     lock_keys();                                        /* (a grid key on a hit let go: the hit goes) */
     if (gco_on()) {                                     /* (0.9.9-seq2f) GLO > COMPS: the keys are the lane's */
         gco_keys(notes);
+    } else if (ckeys_on()) {                            /* (seq2g) SEQ > COMP: the keys pick the step */
+        comp_keys(notes);
     } else if (song.grid) {
         grid_keys(notes);
     } else if (song.seq_mode && cur_page()->graph == GR_ROLL) {   /* STEP (not CHANCE: its knobs only) */

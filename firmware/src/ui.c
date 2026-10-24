@@ -924,6 +924,7 @@ static uint8_t gl_cur, gl_trk;
 static const uint8_t GA_LIST[] = {CA_NONE, CA_MUTE, CA_STUT, CA_OCTU, CA_OCTD, CA_RATCH, CA_TRANS, CA_ARP, CA_JUMP, CA_RAND};
 static uint32_t gco_slot(void) { return ui.page > 0u && PAGES[ui.page - 1u].graph == GR_GCOMP; }
 static int gco_on(void) { return !ui.home && !ui.menu && !ui.confirm && !ui.layer && cur_page()->graph == GR_GCOMP; }
+static int ckeys_on(void) { return !ui.home && !ui.menu && !ui.confirm && !ui.layer && cur_page()->graph == GR_COMP; }   /* (seq2g) */
 static uint32_t ga_idx(uint32_t a)
 {
     uint32_t i;
