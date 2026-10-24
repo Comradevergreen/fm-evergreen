@@ -288,7 +288,7 @@ def layout_record(mapt, syms, reach):
 # (0.9.9-gen1) main-loop code placed after the sound (never in the holes before its pinned runs): the song generator's
 # functions (firmware/src/gen.c), so it can change size without moving the sound and without the UI's room before it.
 # Only UI code ('-' rows): they leave the recorded order and land with the code not in the layout, past the tables
-LATE_SRC = ("gen.c",)
+LATE_SRC = ("gen.c", "favorites.c")   # (0.9.9-snd5: favorites.c fav_rows_new, once)
 
 
 def late_fns():
@@ -302,8 +302,11 @@ def late_tables():
     """the generator's own constant tables (gen.c, gen_tables.c): out of .rodata like the UI's recorded ones ('n'), so a
     new one never moves the sound's merged constants after .rodata"""
     names = set()
-    for f in ("gen.c", "gen_tables.c"):
-        names |= set(re.findall(r"^static const [^=;(]*?\b(\w+)\s*\[", (FW / "src" / f).read_text(), flags=re.M))
+    for f in ("gen.c", "gen_tables.c", "eng_string.c", "eng_add.c", "ui_engvis.c"):   # (0.9.9-snd5: the two engines' own
+        # tables and descriptors, the creatures' new ones: out of .rodata too, the sound's tables where they were)
+        txt = (FW / "src" / f).read_text()
+        names |= set(re.findall(r"^static const [^=;(]*?\b(\w+)\s*\[", txt, flags=re.M))
+        names |= set(re.findall(r"^static const engine_t (\w+) =", txt, flags=re.M))
     return names
 
 
@@ -427,7 +430,7 @@ def build_app():
                 # (0.9.9-gen1) a generator table the layout has not recorded: out of .rodata too, unless the
                 # compiler merges it with the small constants (4 8 16 32 B: the sound's are checked after them)
                 ty = re.search(r" constant (\[[^\]]*(?:\][^\]]*)*?\]|i\d+) ", m.group(1) + " ")
-                if m.group(2) not in late or not ty or ir_bytes(ty[1]) in (4, 8, 16, 32):
+                if m.group(2) not in late or (ty and ir_bytes(ty[1]) in (4, 8, 16, 32)):   # (snd5: a struct's too)
                     return m.group(0)
             aligns[m.group(2)] = int(m.group(4))
             return f'{m.group(1)}, section ".rodata.n.{m.group(2)}"{m.group(3)}'

@@ -126,6 +126,8 @@ static void prefs_update(void)
         prefs_rev = 2u;
         settings_save();
     }
+    if (prefs_rev < 3u)                                /* (0.9.9-snd5) STRING's and ADD's stars (favorites.c fav_rows_new) */
+        fav_rows_new();
 }
 /* MENU > AUDIO CLICK, CLICK LEVEL, COUNT-IN (1.1, Discussion #131; click.c, seq.c): two bits each in another byte no
  * engine uses, saved with the settings: bits 0-1 CLICK (OFF REC ON), 2-3 CLICK LEVEL (stored 0 MID, 1 LOW, 2 HIGH),

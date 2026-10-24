@@ -52,11 +52,21 @@
  *   LOFI    ORGANISMO DE CIRCUITO: a caterpillar whose two skins are the last 256 samples out (the scope's: nothing more
  *           from the audio), 8 segments the byte's bits (BYTE: the highest next to the head; the legs lift with their bit,
  *           the antennae the two lowest), lit by the wave's level elsewhere (FLOAT, PLS TRI SAW NOIS WRAM)
+ * (JIANT 0.9.9-snd5) Two more, the same family's:
+ *   STRING  TEJEDORA: a spider on its web, one thread a voice sounding, each thread the string itself (its delay
+ *           line, one period of what the loop holds now: the real standing wave, ringing down as it decays); the
+ *           spider sits at POS on the top thread and plucks with a front leg at each note (saws while BOW feeds it), a
+ *           cocoon under the web as large as SIZE glows with BODY; BRIGHT warms the silk
+ *   ADD     MEDUSA: a jellyfish whose nine tentacles are the partials, each as long as its gain now (the voices' own:
+ *           they shrink as DECAY and DAMP take them, the highest first), waving as fast as its ratio; the bell's shape
+ *           MODE's (a dome, a box, a flat disc, a church bell, a tall bar, a drum's skin), pulsing at each note,
+ *           STRETCH spreading the tentacles, PEAK the one lit (FORMNT how much), its glow ring in the bell
  * Each takes a rectangle (vx_draw: EDIT's left panel, HOME's middle, or a whole panel) and scales to it.
  * State: vxs (in the pool: no global of the RAM region moves). MENU > ANIM OFF: they rest. */
 #define VX_POOL __attribute__((section(".pool")))
 #define VX_CODE __attribute__((noinline))                 /* (each creature its own function: its size on its own) */
-#define VX_NE 9                                          /* the creatures: VOICE ANIMAL DRUM-X ANALOG FM6 WHEEL NOISE PHASE LOFI */
+#define VX_NE 9                                          /* the creatures: VOICE ANIMAL DRUM-X ANALOG FM6 WHEEL NOISE PHASE LOFI
+                                                         * ((0.9.9-snd5) STRING ADD: PHASE's and WHEEL's slots, below) */
 #define VX_NSW 56                                        /* NOISE's swarm (the mock-up's 84: its cost) */
 typedef struct { int32_t cx, cy, s; } vxf_t;            /* a unit (Q4: 16) -> Q4 px: c + u * s / 256 */
 static struct {
@@ -1642,6 +1652,116 @@ static VX_CODE void vx_lofi(const track_t *t, const int32_t *A, int32_t en_home)
     vxs.kc = 0;
 }
 
+/* (0.9.9-snd5) STRING and ADD keep their time, level and newest note in vxs's slots of PHASE (7) and WHEEL (5): one creature
+ * is drawn at a time (EDIT's, HOME's), so a slot shared costs a glance at most when the track changes, and no byte of the
+ * pool (at its floor) */
+#define VX_K_STRING 7u
+#define VX_K_ADD 5u
+/* ---------------------------------------------------------------------------------------- (snd5) STRING --- */
+/* TEJEDORA */
+static VX_CODE void vx_string(const track_t *t, const int32_t *A, int32_t en_home)
+{
+    const int16_t *p = t->p;
+    vxf_t f = vx_uf(A, 100, 0);
+    int32_t en = vx_level(t, VX_K_STRING, en_home), silk = 40 + p[P_E2] / 3, sx, sy, k, j, nth = 0, q[2 * 25], bow = 0;
+    uint32_t age = vx_age(t, VX_K_STRING, 0), mt = vxs.mt[VX_K_STRING], i;
+    vxs.kc = 1;
+    for (k = -1; k <= 1; k += 2)                         /* the two twigs the web hangs from */
+        vx_line(&f, k * 58 * 16, -42 * 16, k * 55 * 16, 34 * 16, 64 + en / 6);
+    for (i = 0; i < NVOICE; i++) {                       /* a thread a voice sounding: its line, one period */
+        const voice_t *v = &t->v[i];
+        const int16_t *b = str_line(t, v);
+        uint32_t d, n = str_period(pitch_inc((uint32_t)clamp(v->pitch_cur, 0, 2047)), &d) >> 8, w = v->ph[1] % ST_SL;
+        int32_t y = (-30 + nth * 9) * 16, pk = 0;
+        if (!v->active || nth >= 7) continue;
+        if (n < 2u) n = 2u;
+        for (j = 0; j <= 24; j++) {
+            int32_t a = b[(w + ST_SL - n + (uint32_t)j * n / 25u) % ST_SL];
+            pk = a > pk ? a : -a > pk ? -a : pk;
+            q[2 * j] = (-55 + j * 110 / 24) * 16;
+            q[2 * j + 1] = y + ((j && j < 24 ? a : 0) * 5 >> 10);
+        }
+        vx_curve(&f, q, 25, 0, silk + (pk >> 8) + en / 4);
+        if (v->gate && p[P_E7]) bow = 1;
+        nth++;
+    }
+    for (; nth < 3; nth++)                               /* (at rest: the web's empty threads, still) */
+        vx_line(&f, -55 * 16, (-30 + nth * 9) * 16, 55 * 16, (-30 + nth * 9) * 16, 36);
+    for (k = -2; k <= 2; k++)                            /* the web's spokes */
+        vx_line(&f, k * 8 * 16, -38 * 16, k * 22 * 16, 26 * 16, 28 + en / 10);
+    {   /* the cocoon under it: SIZE its size, BODY its glow */
+        int32_t rx = (9 + p[P_E6] / 9) * 16, ry = (5 + p[P_E6] / 14) * 16, g = 40 + (p[P_E5] * (64 + en) >> 7);
+        vx_ring(&f, 0, 30 * 16, rx, ry, g);
+        vx_ring(&f, 0, 30 * 16, rx * 2 / 3, ry * 2 / 3, g - 20);
+        vx_line(&f, 0, -30 * 16, 0, 30 * 16 - ry, 30);
+    }
+    sx = (-50 + p[P_E3] * 50 / 127) * 16;                /* the spider at POS on the top thread */
+    sy = -36 * 16;
+    {
+        int32_t pl = age < 160u ? (int32_t)(160u - age) * 256 / 160 : 0, saw = bow ? (og_sin(vx_ang(mt, 900)) * 5 >> 15) * 16 : 0;
+        int32_t h = 120 + en / 3;
+        vx_ring(&f, sx - 4 * 16, sy, 5 * 16, 4 * 16, h);  /* the abdomen */
+        vx_ring(&f, sx + 3 * 16, sy + 8, 3 * 16, 3 * 16, h + 20);   /* the head */
+        for (k = 0; k < 8; k++) {                        /* eight legs, four a side, each a knee up and a foot down; the
+                                                         * front right one plucks (or saws while BOW feeds it) */
+            int32_t side = k < 4 ? -1 : 1, j4 = k & 3, kx = sx + side * (3 + j4) * 16 - 2 * 16;
+            int32_t ky = sy - (7 + (j4 == 1 || j4 == 2) * 2) * 16, fx = sx + side * (9 + j4 * 2) * 16 - 2 * 16, fy = sy + (4 + j4) * 16;
+            if (k == 4) { kx += saw; fx += saw; fy -= pl * 7 * 16 >> 8; }
+            vx_line(&f, sx + side * 2 * 16 - 2 * 16, sy, kx, ky, h - 10);
+            vx_line(&f, kx, ky, fx, fy, h - 25);
+        }
+        vx_face(&f, sx + 3 * 16, sy + 4, 14, 10, age < 90u, sy + 28, 8, pl > 64 ? 14 : 0, 12, 243, 218, 154);
+    }
+    vxs.kc = 0;
+}
+
+/* ------------------------------------------------------------------------------------------- (snd5) ADD --- */
+/* MEDUSA: the bell's half widths by MODE (x y, / 64) */
+static const int8_t VM_BELL[AD_N][2] = {{64, 64}, {64, 48}, {72, 34}, {52, 80}, {40, 88}, {70, 22}};
+static VX_CODE void vx_add(const track_t *t, const int32_t *A, int32_t en_home)
+{
+    const int16_t *p = t->p;
+    vxf_t f = vx_uf(A, 100, 0);
+    uint32_t mode = (uint32_t)p[P_E0] % AD_N, age = vx_age(t, VX_K_ADD, 0), mt = vxs.mt[VX_K_ADD], i, k;
+    int32_t en = vx_level(t, VX_K_ADD, en_home), g[DRW_NP], gmax = 1, rx, ry, cy = -16 * 16, pulse, j, q[2 * 11];
+    int32_t pk = clamp(p[P_E4], 0, 127) * 8 / 127, st = clamp(p[P_E3], -64, 63), form = clamp(p[P_E5], 0, 127);
+    vxs.kc = 1;
+    for (k = 0; k < DRW_NP; k++) {                       /* each partial's gain now, the voices' summed */
+        g[k] = 0;
+        for (i = 0; i < NVOICE; i++)
+            if (t->v[i].active) g[k] += drw_v[drw_part(t)][i].gp[k];
+        if (g[k] > gmax) gmax = g[k];
+    }
+    if (gmax <= 1)                                       /* (silent: the tilt at rest, short) */
+        for (k = 0; k < DRW_NP; k++) {
+            g[k] = (int32_t)(str_exp2n((uint32_t)((127 - clamp(p[P_E1], 0, 127)) * 4 * ADD_LOG2[k]) >> 8) >> 2);
+            gmax = 65536;
+        }
+    pulse = age < 400u ? vx_sq(256, age) : 0;            /* (a note: the bell contracts, swims) */
+    rx = (30 * VM_BELL[mode][0] / 64) * 16 * (256 - pulse / 5) / 256;
+    ry = (18 * VM_BELL[mode][1] / 64) * 16 * (256 + pulse / 6) / 256;
+    vx_arc(&f, 0, cy, rx, ry, 32768u, 65536u, 18, 110 + en / 3);   /* the bell, its rim */
+    vx_arc(&f, 0, cy, rx * 3 / 4, ry * 2 / 3, 32768u, 65536u, 14, 70 + en / 4);
+    vx_line(&f, -rx, cy, rx, cy, 90 + en / 4);
+    if (mode == AD_BELL)                                 /* (a church bell's flare and lip) */
+        for (k = -1; k <= 1; k += 2)
+            vx_line(&f, k * rx, cy, k * (rx + 5 * 16), cy + 4 * 16, 100 + en / 4);
+    if (form)                                            /* the glow ring: PEAK's place in the bell */
+        vx_ring(&f, (pk - 4) * rx / 5, cy - ry / 3, 4 * 16, 3 * 16, 80 + form);
+    vx_face(&f, 0, cy - ry / 2, 7 * 16, 14, age < 90u, cy - ry / 2 + 6 * 16, 10, pulse > 96 ? 20 : 0, 16, 243, 218, 154);
+    for (k = 0; k < DRW_NP; k++) {                       /* the tentacles: the partials */
+        int32_t x0 = (-rx + (2 * (int32_t)k + 1) * rx / DRW_NP) * (128 + st) / 128, len = 6 * 16 + g[k] * 52 / gmax * 16;
+        int32_t rat = ADD_RATIO[mode][k], hot = 60 + g[k] * 150 / gmax + ((int32_t)k == pk ? form : 0);
+        for (j = 0; j <= 10; j++) {
+            int32_t yy = cy + 2 * 16 + len * j / 10;
+            q[2 * j] = x0 + (int32_t)k * (st * j) / 6 + ((og_sin((uint32_t)(j * rat * 7) + k * 7919u - vx_ang(mt, 150 + rat / 12)) * (1 + j / 3)) >> 15) * 16 * (96 + en) / 256;
+            q[2 * j + 1] = yy;
+        }
+        vx_curve(&f, q, 11, 0, hot);
+    }
+    vxs.kc = 0;
+}
+
 /* ------------------------------------------------------------------------------------------------ the glue --- */
 /* the engine's own creature in the rectangle x y w h (px: EDIT's left panel 8 14 108 112, HOME's middle 146 x 112, or a
  * whole panel: each fits itself to it), en_home: HOME's level for the track (-1: its own); 0 when the engine has none
@@ -1650,6 +1770,9 @@ static int32_t vx_fit(int32_t w, int32_t h, int32_t uw, int32_t uh)   /* a unit'
 {
     return w * 256 / uw < h * 256 / uh ? w * 256 / uw : h * 256 / uh;
 }
+typedef struct { const engine_t *e; void (*f)(const track_t *, const int32_t *, int32_t); } vxe_t;
+static const vxe_t VX_F[] = {{&ENG_ANALOG, vx_analog}, {&ENG_WHEEL, vx_wheel}, {&ENG_NOISE, vx_noise}, {&ENG_PHASE, vx_phase},
+                             {&ENG_LOFI, vx_lofi}, {&ENG_STRING, vx_string}, {&ENG_ADD, vx_add}};   /* (0.9.9-snd5) */
 static int vx_draw(const track_t *t, int32_t x, int32_t y, int32_t w, int32_t h, int32_t en_home)
 {
     const engine_t *e = trk_engp(t);
@@ -1662,20 +1785,15 @@ static int vx_draw(const track_t *t, int32_t x, int32_t y, int32_t w, int32_t h,
         vx_kit(t, cx - (s >> 4), cy + (48 * s >> 8), s, en_home, -1);
     } else if (e == &ENG_ANIMAL)                        /* (the animal ~103 x 78) */
         vx_animal(t, cx, cy, vx_fit(w, h, 103, 78), en_home);
-    else if (e == &ENG_ANALOG)
-        vx_analog(t, A, en_home);
     else if (trk_eng(t) == ENGI_FM6)
         vx_fm6(t, A, en_home, 6u, 0);
-    else if (e == &ENG_WHEEL)
-        vx_wheel(t, A, en_home);
-    else if (e == &ENG_NOISE)
-        vx_noise(t, A, en_home);
-    else if (e == &ENG_PHASE)
-        vx_phase(t, A, en_home);
-    else if (e == &ENG_LOFI)
-        vx_lofi(t, A, en_home);
-    else
-        return 0;
+    else {                                               /* (0.9.9-snd5: the creatures drawn the same way, a table) */
+        uint32_t i;
+        for (i = 0; i < NELEM(VX_F) && VX_F[i].e != e; i++) {}
+        if (i == NELEM(VX_F))
+            return 0;
+        VX_F[i].f(t, A, en_home);
+    }
     return 1;
 }
 /* EDIT > KIT (lane -1) and SOUND 1..4 (a DRUM track): the kit large on the panel, KIT over it on the left; on the right

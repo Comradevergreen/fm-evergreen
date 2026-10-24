@@ -114,6 +114,10 @@
 #                   video (chirps at 1.0 .. 1.3 kHz with rising hooks, 2.4 .. 4.5 a second; a trill of 8 .. 10), the cricket's
 #                   carrier and chirp rate, TEMP (Dolbear), the Hopf whistle's onset by bifurcation and its pitch, every
 #                   preset sounding, no DC, ending, the same twice, no clipping at any mode's corners; demos in build/animal_demo/.
+# STRING / ADD (tests/string_add_test.c, 0.9.9-snd5): the Karplus-Strong string (src/eng_string.c) in tune over C1 .. C6 for every
+#                   EXCITE (the decimated loops too), DECAY's T60 rising and even over the keys, BRIGHT, a COMB TYPE turned BP;
+#                   the additive engine (src/eng_add.c): every MODE's partials at their ratios, BRIGHT's tilt, EVEN, DAMP, no
+#                   alias at the top; every preset of both sounding, no DC, the same twice, ending; the knobs' corners; demos.
 # VOICE words (tests/voice_test.c, 0.8.5): the VOICE engine singing (src/sing.c): Spanish by rules and Japanese romaji on word
 #                   lists (phonemes, syllables), English through its dictionary, every bank word's syllables; the lyric
 #                   generator (the same lyric per seed, phrases as long as the pattern's notes, bank words); the vowels' F1 / F2,
@@ -335,6 +339,9 @@ if [ -f build/gen/felucca_tables.h ]; then
     $CC -O2 -w -Ibuild/gen -Ifirmware/src -o "$OUT/animal_test" tests/animal_test.c -lm
     mkdir -p build/animal_demo
     run "ANIMAL: CMOS on the key and the owner's video, cricket, TEMP, Hopf onset, presets, DC, clipping, retrigger, demos" "$OUT/animal_test" build/animal_demo
+    $CC -O2 -w -Ibuild/gen -Ifirmware/src -o "$OUT/string_add_test" tests/string_add_test.c -lm
+    mkdir -p build/string_add_demo
+    run "STRING ADD (0.9.9-snd5): in tune C1 .. C6, DECAY's T60, BRIGHT, the COMB TYPE, partials, tilt, EVEN, DAMP, no alias, presets, corners, demos" "$OUT/string_add_test" build/string_add_demo
     $CC -O2 -w -Ibuild/gen -Ifirmware/src -o "$OUT/voice_test" tests/voice_test.c -lm
     mkdir -p build/voice_demo
     run "VOICE words: ES / JA / EN reading, the generator, formants, fricatives, plosives, clicks, DC, the lyric, POS, LOOP, demos" "$OUT/voice_test" build/voice_demo
