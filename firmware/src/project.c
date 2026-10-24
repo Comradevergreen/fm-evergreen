@@ -132,7 +132,9 @@ typedef struct {
                                                 * sounds' DXM_LANE in the second) */
     uint8_t dx_mot[4];                         /* (0.5.1) the kit's X-MOD (eng_drum.c), in its reserved bytes 3..6 */
     uint8_t dx_tone;                           /* (0.6.36) the kit's TONE (drumx_voice.c: BP, FEEDBK), its byte 7 */
-    uint8_t dx_hands;                          /* (0.7.9) the kit's HANDS (drumx_voice.c), byte 0's high nibble (0 before) */
+    uint8_t dx_hands;                          /* (0.7.9) the kit's HANDS (drumx_voice.c), byte 0's high nibble (0 before);
+                                                * (0.9.9-snd1) its high nibble here GLUE (eng_drum.c dx_glue): FUNC's 'D' 'G'
+                                                * block, 0 before */
     uint8_t dx_snd[8];                         /* (0.6.48) its sounds' SENDs (eng_drum.c): FUNC's 'D' 'S' block, 0 before */
     uint8_t dx_lay[8];                         /* (0.6.49) its sounds' LAYER, FEEDBK (drumx_voice.c): 'D' 'L', 0 before */
     uint8_t fugue[NTRK][3][2];                 /* (0.6.52) SEQ > FUGUE's heads (fugue.c): RATE | DIR << 4, INTERVAL (int8);
@@ -836,6 +838,8 @@ static uint32_t proj_packed_size(const project_t *q)
         n += 3u + 16u * proj_bits(proj_mf_tracks(q));
     if (proj_gl_used(q))                                /* (seq2f) the global lane's */
         n += 3u + sizeof q->gl;
+    if (q->dx_hands >> 4)                               /* (snd1) the kit's GLUE, when on */
+        n += 3u;
     if (q->g[G_DMOD] != GP[G_DMOD].def)                 /* (0.6.86) the delay's MOD's, when not the default */
         n += 3u;
     if (q->g[G_DTYPE] || q->g[G_DPING])                 /* (0.6.90) its TYPE and PING-PONG's */
@@ -1000,6 +1004,10 @@ static int proj_pack(project_store_t *out, const project_t *q)
         memcpy(b + pos, q->gl, sizeof q->gl);
         pos += sizeof q->gl;
     }
+    if (q->dx_hands >> 4) {                             /* (0.9.9-snd1) the kit's GLUE, when on (after the lane: seq2h
+                                                         * stops at it, the rest loads; a project without it as before) */
+        b[pos++] = 'D'; b[pos++] = 'G'; b[pos++] = (uint8_t)(q->dx_hands >> 4);
+    }
     memcpy(b + PROJC_PFX_OFF, q->pfx_lane, sizeof q->pfx_lane);
     b[PROJC_PFX_OFF + sizeof q->pfx_lane] = q->pfx_ltgt > 2u ? 0u : q->pfx_ltgt;
     for (i = 0; i < 4u; i++)
@@ -1081,7 +1089,7 @@ static int proj_pack_vb(project_store_t *out, const project_t *q)
 /* a FUNC store (3840 bytes) -> q; 0 = not one (its hash, a value out of range, a length past its room) */
 static int proj_unpack_c(project_t *q, const uint8_t *b)
 {
-    uint32_t pos = 68u, t, i, size, sum, np = b[66], nt = b[67], room = PROJC_PFX_OFF;
+    uint32_t pos = 68u, t, i, size, sum, np = b[66], nt = b[67], room = PROJC_PFX_OFF, glue = 0;
     memcpy(&size, b + 4, 4); memcpy(&sum, b + PROJ_STORE_SIZE - 4u, 4);
     if (size != PROJ_STORE_SIZE || sum != proj_hash(b, PROJ_STORE_SIZE - 4u) || np < 8u || np > P_COUNT || !nt || nt > NTRK)
         return 0;
@@ -1280,6 +1288,10 @@ static int proj_unpack_c(project_t *q, const uint8_t *b)
                 (q->gl[i][4] >> NTRK)) return 0;
         pos += 3u + sizeof q->gl;
     }
+    if (pos + 3u <= room && b[pos] == 'D' && b[pos + 1u] == 'G') {   /* (0.9.9-snd1) the kit's GLUE (else OFF) */
+        glue = b[pos + 2u] > 15u ? 15u : b[pos + 2u];
+        pos += 3u;
+    }
     proj_new_tracks(q, nt);                             /* (a FUNC of fewer tracks: the rest at power-on) */
     for (t = nt; t < NTRK; t++)
         memcpy(q->fm6[t], FM6_INIT, FM6_PACKED);
@@ -1292,7 +1304,7 @@ static int proj_unpack_c(project_t *q, const uint8_t *b)
     q->dx_mute = (uint16_t)((b[PROJC_DX_OFF + sizeof q->dx] & DXG_ALL) | b[PROJC_DX_OFF + sizeof q->dx + 1u] << 8);
     memcpy(q->dx_mot, b + PROJC_DX_OFF + sizeof q->dx + 3u, sizeof q->dx_mot);
     q->dx_tone = b[PROJC_DX_OFF + sizeof q->dx + 7u];
-    q->dx_hands = b[PROJC_DX_OFF + sizeof q->dx] >> 4;   /* (0.7.9) */
+    q->dx_hands = (uint8_t)(b[PROJC_DX_OFF + sizeof q->dx] >> 4 | glue << 4);   /* (0.7.9; snd1: GLUE) */
     q->dx_mot[XM_RATE] = q->dx_mot[XM_RATE] > 8u ? 0u : q->dx_mot[XM_RATE];
     q->dx_mot[XM_DPTH] &= 127u;
     q->dx_mot[XM_SHPE] = q->dx_mot[XM_SHPE] > 4u ? 0u : q->dx_mot[XM_SHPE];
@@ -1555,7 +1567,7 @@ static void project_capture(project_t *p)
     p->dx_mute = dx_mute;
     memcpy(p->dx_mot, dx_mot, sizeof p->dx_mot);
     p->dx_tone = dx_tone;
-    p->dx_hands = dx_hands;                             /* (0.7.9) */
+    p->dx_hands = (uint8_t)(dx_hands | dx_glue << 4);   /* (0.7.9; snd1: GLUE) */
     memcpy(p->dx_snd, dx_snd, sizeof p->dx_snd);        /* (0.6.48) */
     memcpy(p->dx_lay, dx_lay, sizeof p->dx_lay);        /* (0.6.49) */
     {                                                   /* (0.6.52) FUGUE */
@@ -1716,6 +1728,7 @@ static void sound_put(project_t *p, uint32_t k)
         memcpy(dx_mot, p->dx_mot, sizeof dx_mot);
         dx_tone = p->dx_tone;
         dx_hands = p->dx_hands & 15u;
+        dx_glue = p->dx_hands >> 4;
         memcpy(dx_snd, p->dx_snd, sizeof dx_snd);
         memcpy(dx_lay, p->dx_lay, sizeof dx_lay);
     }
@@ -1762,6 +1775,7 @@ static int project_restore_runtime(const project_t *input)
     memcpy(dx_mot, p->dx_mot, sizeof dx_mot);           /* (0.5.1: the kit's X-MOD) */
     dx_tone = p->dx_tone;                               /* (0.6.36: its TONE) */
     dx_hands = p->dx_hands & 15u;                       /* (0.7.9: its HANDS) */
+    dx_glue = p->dx_hands >> 4;                         /* (snd1: its GLUE) */
     memcpy(dx_snd, p->dx_snd, sizeof dx_snd);           /* (0.6.48: its SENDs) */
     memcpy(dx_lay, p->dx_lay, sizeof dx_lay);           /* (0.6.49: its LAYERs) */
     fg_load(p);                                         /* (0.6.52: its FUGUE) */
@@ -1875,6 +1889,7 @@ static void system_init(void)
     memset(dx_mot, 0, sizeof dx_mot);
     dx_tone = 0;
     dx_hands = 0;
+    dx_glue = 0;
     memset(dx_snd, 0, sizeof dx_snd);
     memcpy(dx_lay, DX_LAY_DEF, sizeof dx_lay);
     memset(fg_set, 0, sizeof fg_set);                   /* (0.6.52) no FUGUE */

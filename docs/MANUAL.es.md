@@ -433,7 +433,7 @@ PHASE −1, como desde 0.6.51: todo proyecto abre como estaba.
 | OP ENV | OP | STAGE | RATE | LEVEL | FM6 |
 | OPERATOR 2 | OP | MODE | DTUN | VEL | FM6 |
 | FILTER | TYPE | CUT | RES | DRIVE (ANALOG) / DIST (los demás) | todos los motores |
-| KIT 3 | BP | FEEDBK | HANDS | — | DRUM (todo el kit) |
+| KIT 3 | BP | FEEDBK | HANDS | GLUE | DRUM (todo el kit) |
 | X-MOD | RATE | DEPTH | SHAPE | RAND | DRUM (todo el kit) |
 | STEREO | IMAGE | — | — | — | DRUM (todo el kit) |
 | SOUND | SOUND | SIDE | PITCH | PMOD | DRUM (un sonido) |
@@ -933,7 +933,11 @@ DRUM-X es un kit sintetizado de ocho sonidos, **BD SD CP CH OH TM RS CB**, gener
     aprox.; **FEEDBK**, el oscilador de cada sonido realimentado sobre sí mismo (OFF, 1–15: cálido, gruñido, arena,
     ruido); **HANDS** (OFF, 1–15): más gente aplaudiendo en el CLAP. Cada mano extra golpea unos milisegundos después de
     la primera (3 a 45 ms), en su propio momento y nivel, sorteados de nuevo en cada golpe: nunca a tempo. OFF es el clap
-    como antes; unas pocas, un grupo chico; 15, una multitud.
+    como antes; unas pocas, un grupo chico; 15, una multitud. **GLUE** (0.9.9-snd1; OFF, 1–15): una perilla de
+    compresión / limitador sobre el bus del kit, después de su DRV: OFF es el kit exactamente como antes; el medio, una
+    compresión suave (más o menos 2:1, ataque rápido, ~90 ms de release) que pega los golpes; arriba de todo, un límite
+    duro con ganancia de compensación y un recorte suave (fuerte y denso, los picos sujetos). Se guarda con el proyecto
+    (un proyecto de antes abre con GLUE en OFF).
   - **X-MOD**: **RATE** (OFF, 4BAR … 1/32, a tempo), **DEPTH** (cuánto oscila MORPH), **SHAPE** (SINE, TRI, SAW, RAMP,
     S&H), **RAND** (cada golpe con su propio MORPH y un poco de afinación).
   - **FILTER**: el del kit.

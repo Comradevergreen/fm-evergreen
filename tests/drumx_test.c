@@ -561,6 +561,60 @@ int main(int argc, char **argv)
         song.g[G_CLIP] = 0;
     }
 
+    /* (0.9.9-snd1) GLUE, on the bus itself (eng_drum.c drum_bus -> drum_glue; the mix's leveler and the kit's noise
+     * kept out): a loud kit's sum (eight hits, bursts of decaying noise and a kick's sine, DRV up) at 0 / 8 / 15: the
+     * crest factor down as it rises, the peak never up; OFF bit for bit what the bus gave without it (fresh, and after
+     * it was on); bounded under full scale at 15 (the project: ui_test) */
+    {
+        static int32_t in[FS / 2u], ref[FS / 2u];
+        double cr[3];
+        int32_t pkg[3];
+        uint32_t m, k, j, nn = FS / 2u, bad0 = 0;
+        static const uint8_t G[3] = {0, 8, 15};
+        track_t *t = kitx(64, 64);
+        uint32_t seed = 1u;
+        dx_xon = 0;
+        for (i = 0; i < nn; i++) {                       /* a hit every 1/8 s: kick (sine 55 Hz) + snare (noise) */
+            uint32_t ph = i % (FS / 8u);
+            double e = exp(-(double)ph / (FS * 0.06)), en = exp(-(double)ph / (FS * 0.02));
+            seed = seed * 1664525u + 1013904223u;
+            in[i] = (int32_t)(e * 60000 * sin(2 * M_PI * 55.0 * ph / FS) + en * 40000 * ((int32_t)(seed >> 16) - 32768) / 32768.0);
+        }
+        t->p[P_E7] = 40;
+        for (m = 0; m < 3u; m++) {
+            double r = 0;
+            dx_glue = G[m];
+            for (k = 0; k < nn; k += CTL) {
+                for (j = 0; j < CTL; j++)
+                    buf[k + j] = in[k + j];
+                drum_bus(t, buf + k, CTL);
+            }
+            for (pkg[m] = 0, i = 0; i < nn; i++) {
+                pkg[m] = abs(buf[i]) > pkg[m] ? abs(buf[i]) : pkg[m];
+                r += (double)buf[i] * buf[i];
+                if (!m) ref[i] = buf[i];
+            }
+            cr[m] = pkg[m] / sqrt(r / nn);
+            if (m == 1u) {                               /* GLUE turned OFF after it was on: as fresh */
+                dx_glue = 0;
+                for (k = 0; k < nn; k += CTL) {
+                    for (j = 0; j < CTL; j++)
+                        buf[k + j] = in[k + j];
+                    drum_bus(t, buf + k, CTL);
+                }
+                for (i = 0; i < nn; i++)
+                    bad0 += buf[i] != ref[i];
+            }
+        }
+        check("GLUE 0 / 8 / 15 on a loud kit's bus: the crest factor down, the peak never up, under full scale",
+              cr[1] < cr[0] * 0.97 && cr[2] < cr[1] * 0.95 && pkg[1] <= pkg[0] && pkg[2] <= pkg[0] && pkg[2] < 65536,
+              "crest %.2f -> %.2f -> %.2f, peak %d %d %d (x2 scale)", cr[0], cr[1], cr[2], pkg[0], pkg[1], pkg[2]);
+        check("GLUE OFF: the bus bit for bit as without it (the goldens: OFF is the kit as before), also after it was on",
+              bad0 == 0u, "%u samples differ", bad0);
+        dx_glue = 0;
+        t->p[P_E7] = 0;
+    }
+
     /* 6 */
     for (l = 0; l < 8u; l++) {
         static const int16_t M[3] = {0, 64, 127};

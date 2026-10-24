@@ -418,7 +418,7 @@ since 0.6.51: every project opens as it was.
 | OP ENV | OP | STAGE | RATE | LEVEL | FM6 |
 | OPERATOR 2 | OP | MODE | DTUN | VEL | FM6 |
 | FILTER | TYPE | CUT | RES | DRIVE (ANALOG) / DIST (others) | every engine |
-| KIT 3 | BP | FEEDBK | HANDS | — | DRUM (the whole kit) |
+| KIT 3 | BP | FEEDBK | HANDS | GLUE | DRUM (the whole kit) |
 | X-MOD | RATE | DEPTH | SHAPE | RAND | DRUM (the whole kit) |
 | STEREO | IMAGE | — | — | — | DRUM (the whole kit) |
 | SOUND | SOUND | SIDE | PITCH | PMOD | DRUM (one sound) |
@@ -894,7 +894,10 @@ DRUM-X is a synthesized kit of eight sounds, **BD SD CP CH OH TM RS CB**, genera
     1.5 to 9 kHz; **FEEDBK**, every sound's oscillator fed back into itself (OFF, 1–15: warm, growl, grit, noise);
     **HANDS** (OFF, 1–15): more people clapping on the CLAP. Each extra hand strikes a few milliseconds after the first
     (3 to 45 ms), at its own moment and level, thrown again on every hit: never in time with the tempo. OFF is the clap
-    as before; a few is a small group, 15 a crowd.
+    as before; a few is a small group, 15 a crowd. **GLUE** (0.9.9-snd1; OFF, 1–15): one knob of glue / limiting on
+    the kit's bus, after its DRV: OFF is the kit exactly as before; the middle a gentle compression (about 2:1, fast
+    attack, ~90 ms release) that pulls the hits together; the top a hard limit with makeup and a soft clip (loud and
+    dense, the peaks held). Saved with the project (a project of before opens with it OFF).
   - **X-MOD**: **RATE** (OFF, 4BAR … 1/32, in time), **DEPTH** (how far MORPH swings), **SHAPE** (SINE, TRI, SAW, RAMP,
     S&H), **RAND** (each hit gets its own MORPH and a little tune).
   - **FILTER**: the kit's.

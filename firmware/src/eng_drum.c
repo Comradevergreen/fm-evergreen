@@ -527,6 +527,9 @@ static void drum_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const 
     }
 }
 
+static uint8_t dx_glue;                                 /* (0.9.9-snd1) GLUE, below */
+static int32_t glue_g[NTRK];                            /* .. a DRUM track's gain at the last block's end, Q15 (0: rest) */
+static __attribute__((noinline)) void drum_glue(uint32_t ti, int32_t *out, uint32_t n, uint32_t side);
 /* (JIANT 0.6.16) the kit's sum, once a block (voice.c track_render): DRV x1..x4 into the soft clip, its level kept,
  * and the knee (were each hit's: eight lanes, two curves a sample each; now the bus's, a glue) */
 static __attribute__((noinline)) void drum_bus(const track_t *t, int32_t *out, uint32_t n)
@@ -555,6 +558,53 @@ static __attribute__((noinline)) void drum_bus(const track_t *t, int32_t *out, u
             sr[i] = ((sr[i] >> 2) * k) >> 10;
         }
     }
+    if (dx_glue)                                        /* (0.9.9-snd1) GLUE, on */
+        drum_glue((uint32_t)(t - trk) % NTRK, out, n, side);
+    else
+        glue_g[(uint32_t)(t - trk) % NTRK] = 0;
+}
+
+/* (0.9.9-snd1) GLUE (KIT 3 KNOB 4, the kit's: 0 OFF .. 15), the owner's "a one-knob glue / limiter on the DRUM-X bus".
+ * After the bus's DRV and knee (drum_bus), only when on (OFF: not run, the kit bit for bit as before): the block's peak,
+ * a gain toward the curve's (over T: (T + (pk - T) s) / pk; T 24000 .. 10000 (by 2x - x^2: the middle's ~13000), s 1 - x: 2:1 at the middle, a limit at
+ * the top; x = GLUE / 15) at once down (from the block's first sample: its peak caught) and ~93 ms back up, the makeup (x1 .. x1.6) and a
+ * soft clip whose knee comes down with it (24000 .. 16000: the top a hard limit and a clip). The IMAGE's sides through
+ * the gain the sum got, as drum_bus's (every 4th sample) */
+static __attribute__((noinline)) void drum_glue(uint32_t ti, int32_t *out, uint32_t n, uint32_t side)
+{
+    int32_t x = (int32_t)dx_glue * 256 / 15, th = 24000 - (2 * x - ((x * x) >> 8)) * 14000 / 256, pk = 0, g0, g1, tg = 32768, dg, kn, mk;
+    int32_t k = 4096, *sl = dx_sl, *sr = dx_sr;
+    uint32_t i;
+    for (i = 0; i < n; i++) {                           /* the peak (the sum's, as drum_bus left it: x2) */
+        int32_t a = out[i] < 0 ? -out[i] : out[i];
+        pk = a > pk ? a : pk;
+    }
+    pk = clamp(pk >> 1, 0, 131071);
+    if (pk > th)                                        /* (num <= pk: num << 14 fits) */
+        tg = ((th + (((pk - th) * (256 - x)) >> 8)) << 14) / pk << 1;
+    g0 = glue_g[ti] ? glue_g[ti] : 32768;
+    g1 = tg < g0 ? tg : g0 + ((tg - g0) >> 6);          /* down at once, up over ~64 blocks */
+    dg = (g1 - g0) / (int32_t)(n ? n : 1u);             /* (up: over the block) */
+    if (g1 < g0) {                                      /* (down: from the block's first sample, its peak caught: a
+                                                         * limiter's; a ramp let a hit's onset through) */
+        g0 = g1;
+        dg = 0;
+    }
+    mk = 4096 + ((((x * x) >> 8) * x >> 8) * 2458 >> 8);   /* the makeup, Q12: 1 + 0.6 x^3 (the middle's peaks no
+                                                         * higher, the top's limit loud) */
+    kn = 24000 - x * 8000 / 256;
+    for (i = 0; i < n; i++) {
+        int32_t s = out[i] >> 1, gm = ((g0 + dg * (int32_t)(i + 1u)) * mk) >> 12;   /* Q15, < 2^16 */
+        int32_t y = soft_knee((clamp(s, -65535, 65535) * (gm >> 1)) >> 14, kn);
+        out[i] = y << 1;
+        if (side) {
+            if ((s > 256 || s < -256) && !(i & 3u))
+                k = clamp((y << 12) / s, 0, 16384);
+            sl[i] = ((sl[i] >> 2) * k) >> 10;
+            sr[i] = ((sr[i] >> 2) * k) >> 10;
+        }
+    }
+    glue_g[ti] = g1;
 }
 
 /* the GM drum map, the first C (key 7) is the kick (C2, 36), at every OCT (0.8.5: the octaves, above) */

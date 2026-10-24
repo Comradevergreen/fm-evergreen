@@ -1105,6 +1105,36 @@ static int lfo_free_case(track_t *t, int32_t fade, int seqd, int legato, const c
                 lfo_w_minfade);
     return ok;
 }
+/* (0.9.9-snd1) DRUM-X GLUE: KIT 3 KNOB 4 (the page's free knob), 0 OFF .. 15; the project keeps it (FUNC's 'D' 'G', only
+ * when on: a project without it packs as before); a project of before opens with it OFF */
+static int test_dx_glue(void)
+{
+    static project_t before, after;
+    static project_store_t a, b;
+    int ok, bad = 0;
+    uint32_t k;
+    ui_power_on();
+    dx_glue = 0;
+    for (k = 0; k < 20u; k++)
+        dx_kit3_knob(3u, 1);
+    ok = dx_glue == 15u;
+    for (k = 0; k < 7u; k++)
+        dx_kit3_knob(3u, -1);
+    ok &= dx_glue == 8u && DX_TONE_FB(dx_tone) == 0u && dx_hands == 0u;
+    bad += check("DRUM-X GLUE on KIT 3 KNOB 4: 0 .. 15, the other knobs untouched", ok);
+    project_capture(&before);
+    ok = proj_pack(&a, &before) && proj_import(&after, &a, sizeof a) && after.dx_hands >> 4 == 8u;
+    dx_glue = 0;
+    project_capture(&before);
+    ok &= proj_pack(&b, &before) && proj_import(&after, &b, sizeof b) && after.dx_hands >> 4 == 0u &&
+          memcmp(&a, &b, sizeof a) != 0;
+    after.dx_hands = (uint8_t)(after.dx_hands | 5u << 4);
+    after.sum = proj_sum(&after);
+    ok &= !project_restore_runtime(&after) && dx_glue == 5u;
+    bad += check("DRUM-X GLUE in the project: 8 back as 8, OFF as OFF, restored to the kit", ok);
+    dx_glue = 0;
+    return bad;
+}
 static int test_lfo_free(void)
 {
     int bad = 0, ok;
@@ -12376,6 +12406,7 @@ int main(void)
     bad += test_morph_click();
     bad += test_lfo_sync();
     bad += test_lfo_free();
+    bad += test_dx_glue();
     bad += test_init_dry();
     bad += test_dximg();
     bad += test_dxlay();

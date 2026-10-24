@@ -19,6 +19,7 @@ FUNCS = ["analog_render", "digital_render", "digital_render_legacy", "digital_re
          "drum_render", "noise_render", "fm6_render", "fm6_op_run", "fm6_op_fb",
          "dx_run", "dx_layer",                              # DRUM-X (drumx_voice.c): a hit, osc + noise; (0.6.49) LAYER
          "drum_side_add", "drum_mix", "drum_bus",           # (JIANT 0.6.48) DRUM-X IMAGE and SENDs; (0.7.9) the kit's curve
+         "drum_glue",                                       # (0.9.9-snd1) DRUM-X GLUE, while it is on
          "slicer_bus",                                      # (JIANT 0.6.3) the SLICER, one on a bus
          "fm1_alnk0_irq", "fm1_timer5_irq",               # the audio ISR; TIMER5: the key / LED scan (hal/fm1_input.h)
          "uac_rs_run",                                      # the USB audio input at 48 kHz: the 44.1 -> 48 resampler (usb.c;
