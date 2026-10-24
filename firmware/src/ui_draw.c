@@ -1470,7 +1470,7 @@ static void draw_columns(void)
         fmt_int(val, (int32_t)n);
         draw_column(2, pfx_rec_ok() ? "REC" : song.playing ? "PLAY" : "STEPS", pfx_rec_ok() ? "ON" : song.playing ? "ON" : val, "",
                     pfx_rec_ok() ? T_ACCENT : T_MID, -1, pfx_rec_ok() ? ICON_X_REC : ICON_NONE);
-        draw_act_column(3, "CLEAR", n ? T_MID : T_DIM, ICON_X_MOTION_DEL);
+        draw_act_column(3, "CLR AUTO", n ? T_MID : T_DIM, ICON_X_MOTION_DEL);   /* (snd2: the lane only) */
         return;
     }
     if (cur_page()->graph == GR_MOTION) {
@@ -2058,7 +2058,7 @@ static void confirm_text(char *a, char *b)
         str_cpy(a, "CLEAR T1 AUTOMATION?", 24); a[7] = (char)('1' + k % NTRK);
         break;
     case CF_CLEAR_PFX:
-        str_cpy(a, "CLEAR THE PUNCH LANE?", 24);
+        str_cpy(a, "CLEAR PUNCH AUTOMATION?", 24);   /* (snd2: the lane only) */
         break;
     case CF_OVR_USER:
         str_cpy(a, "OVERWRITE ", 24);

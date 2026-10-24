@@ -154,6 +154,9 @@ static __attribute__((noinline)) void pfx_block(uint32_t n, uint32_t held)
             pfx_qon |= nw;
     }
     held = pfx_qon;
+    if (pfx_clr && !(song.playing && pfx_rec_ok()))     /* (snd2) G5 CLR AUTO, not recording: the whole lane (only it: the
+                                                         * tracks' automation stays) */
+        memset(pfx_lane, 0, sizeof pfx_lane);
     if (song.playing && b >= 4u) {                      /* the lane: record, or play; (0.6.99) its LEN and RES */
         uint32_t s16 = pfx_lane_step(b), len = pfx_lane_len(), st = (pfx_lph / s16) % len, half = pfx_lph % s16 >= s16 / 2u;
         uint32_t w = pfx_rec_ok() && (raw || pfx_clr) ? (raw ? (uint32_t)__builtin_ctz(raw) - PF_OCTD + 1u : 0u) : 16u;
@@ -180,8 +183,6 @@ static __attribute__((noinline)) void pfx_block(uint32_t n, uint32_t held)
             if ((k = pfx_lane_at(st)) != 0u && k <= 10u)
                 lane = PF_BIT(PF_OCTD + k - 1u);
         }
-    } else if (pfx_clr) {
-        memset(pfx_lane, 0, sizeof pfx_lane);
     }
     if (!held && !pfx_any && !lane && !nw)
         return;

@@ -1722,6 +1722,9 @@ passes get it; **G5** held erases where the playhead passes. Saved with the sect
   wash of hats and snare noise (each pass loses the noise much faster than the notes). The delay without THROW is as
   before.
 - **Black keys 1–6**: mute T1–T6 while held (not saved).
+- (0.9.9-snd2) **G5 CLR AUTO** (named on the map): FX + G5 empties the punch-in lane (its automation) and nothing
+  else, stopped or playing; while recording it still erases only where the playhead passes. FX > PUNCH's KNOB 4 is
+  **CLR AUTO** too (the same, with a dialog), and the PUNCH page's lane line is in the large letters.
 - (0.9.9-snd2) **G#4 LOOP 3**, **C#5 LOOP 5**, **D#5 LOOP 7**: while held, every track (of those A#4 picks) repeats
   its last 3, 5 or 7 steps (from the step playing when it comes in, on the next 1/16), not on the bar: odd loops that
   turn against the 4/4. Let go and each track is back where it would have been. **F#5 GLITCH** (from 0.9.18): the

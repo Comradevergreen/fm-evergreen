@@ -4703,6 +4703,25 @@ static int test_rec_combos(void)
     btn_up(B_REC); frames(20);
     ok = motion_find(t, 4, P_DIST) < 0 && !pfx_lane[0] && motion_find(t, 3, P_ATK) >= 0 && !song.rec && ui.home;
     bad += check("  REC + FX (REC first): the FX automation and the punch-in lane go, ENV stays, REC not armed", ok);
+    {   /* (0.9.9-snd2) CLEAR AUTOMATION on the punch-in layer itself: FX + G5 (CLR AUTO on the map) empties the lane
+         * only, stopped or playing (not recording); the tracks' automation stays */
+        char nm[12];
+        uint32_t st, k2;
+        static int32_t o2[2 * CTL];
+        motion_set_event(t, 4, P_DIST, 50);
+        for (k2 = 0; k2 < 2u; k2++) {
+            pfx_lane[0] = 0x11; pfx_lane[5] = 0x30;
+            if (k2) { transport_req = 1; mix_block(o2, CTL); }
+            btn_down(B_FX); frame(); key_down(white(15)); frame();
+            st = ly_keyname(LAYER_FX, 0, 15u, nm);
+            mix_block(o2, CTL); mix_block(o2, CTL);
+            key_up(white(15)); btn_up(B_FX); frame();
+            ok = !pfx_lane[0] && !pfx_lane[5] && motion_find(t, 4, P_DIST) >= 0 && !strcmp(nm, "CLR AUTO") && st == LS_HELD;
+            if (k2) { transport_req = 2; mix_block(o2, CTL); }
+            bad += check(k2 ? "  FX + G5 CLR AUTO playing: the punch-in lane only (the FX automation stays)"
+                            : "  FX + G5 CLR AUTO stopped: the punch-in lane only (the FX automation stays), named on the map", ok);
+        }
+    }
     btn_down(B_REC); frame();
     btn_down(B_GLO); frame(); btn_up(B_GLO); frame();
     btn_up(B_REC); frames(20);

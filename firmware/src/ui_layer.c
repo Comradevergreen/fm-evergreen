@@ -994,6 +994,10 @@ static uint32_t ly_keyname(uint32_t l, int blk, uint32_t p, char *nm)
             str_cpy(nm, TG[pfx_tgt % 3u], 12);
             return LS_OFF;
         }
+        if (!blk && p == PF_M1) {                       /* (snd2) G5: CLEAR AUTOMATION, the punch-in lane's */
+            str_cpy(nm, "CLR AUTO", 12);
+            return pfx_clr ? LS_HELD : LS_OFF;
+        }
         if (blk && p >= NTRK && p != 7u && p <= 10u) {  /* (snd2) G#4 LOOP 3, C#5 LOOP 5, D#5 LOOP 7, F#5 GLITCH */
             static const char *const BN[4] = {"LOOP 3", "LOOP 5", "LOOP 7", "GLITCH"};
             static const uint8_t BE[4] = {PF_LP3, PF_LP5, PF_LP7, PF_GLT};
