@@ -89,7 +89,8 @@ static int32_t menu_text(const char *s, int32_t y, uint16_t col, int draw)
             line[n + 1u] = 0;
             pen += (prev ? kern(&AF_S, prev, c) : 0) + AF_S.gh[glyph(&AF_S, c) >> AF_S.psh].adv;
             prev = c;
-            if ((pen + 8) >> 4 > 226)
+            if (pen >= 227 * 16 - 8)                     /* (pen + 8) >> 4 > 226; (0.9.9-snd4) 2 phases of S made this
+                                                            function 2 B longer and its hole before the sound has none */
                 break;
             if (s[n] == ' ')
                 space = n;

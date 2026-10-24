@@ -38,7 +38,7 @@
 #define FELUCCA_ID "FM-1_900"    /* package identity (build.py: the .fwsc marker string) */
 #endif
 #ifndef FELUCCA_VERSION
-#define FELUCCA_VERSION "v0.9.9-snd3" /* the sound's flash layout pinned (tools/audio_layout.txt: the UI can shrink without moving it); sound beta B: the delay's DRIVE, the punch-in delay band-limited, LOOP 3 / 5 / 6 / 7, CLEAR AUTOMATION on PUNCH, MASTER last in FX, a lighter chorus; on snd1 */
+#define FELUCCA_VERSION "v0.9.9-snd4" /* S and M fonts at 2 sub-pixel phases (were 4: 12.9 KB of flash); the sound's flash layout pinned (tools/audio_layout.txt: the UI can shrink without moving it); sound beta B: the delay's DRIVE, the punch-in delay band-limited, LOOP 3 / 5 / 6 / 7, CLEAR AUTOMATION on PUNCH, MASTER last in FX, a lighter chorus; on snd1 */
 #endif
 #if FELUCCA_OTA && !FELUCCA_FLASH
 #error "FELUCCA_OTA needs FELUCCA_FLASH"
