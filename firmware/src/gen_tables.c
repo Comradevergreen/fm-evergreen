@@ -290,48 +290,82 @@ enum { LD_MOTIF, LD_OSTINATO, LD_SPARSE, LD_TINTI, LD_MECH, LD_HOOK, LD_NONE };
 
 /* ------------------------------------------------------------------------------------------ sounds and mix --- */
 #define EG_WH 7u                                        /* WHEEL (the others: song_dice.c) */
-/* a recipe: three engines it may take (the first the likeliest), words of the factory presets that fit (any engine),
- * then what the role asks of the sound: ADSR ranges, the filter (type: LP HP BP, 255 the engine's own), its cutoff and
- * resonance, the envelope on it, a slow LFO on it, drive and chorus, glide, the voice mode */
+/* (0.9.9-gen1) a role's SOUND ARCHETYPE, packed (18 B; was 44): up to three (engine, factory preset) options (the first
+ * the likeliest; a bass takes the first two only, so its engine is the archetype's), then what the role asks of the
+ * sound over the preset, in the engine's real parameters: the amp envelope (GR: a range in eighths of 0..127), the
+ * filter (type LP HP BP COMB COMB- MS20, 7: the engine's own; its cutoff and resonance: ANALOG's CUT RES, the part's
+ * filter on the others), the filter envelope (GR4: in fourths of 0..63), the glide, ANALOG's WAVE (two: the second one
+ * time in three; MIX 0: one oscillator), the LFO on the filter (its depth, a free rate or 1/4 1/8 1/8T 1/16 synced), the
+ * part's drive and chorus, the voice mode */
 typedef struct {
-    uint8_t eng[3];
-    const char *w[3];
-    uint8_t atk[2], dec[2], sus[2], rel[2];
-    uint8_t ftype, cut[2], res[2], envf[2], lfo[2], lfo_rate[2], dist[2], chor[2], glide, voice;
+    uint8_t o[3][2];                                    /* (engine, preset); engine 255: none */
+    uint8_t atk, dec, sus, rel, cut, res;               /* GR ranges */
+    uint8_t envf;                                       /* GR4 */
+    uint8_t ft;                                         /* bits 0..2 P_FTYPE (7: unset), 3..7 GLIDE / 4 */
+    uint8_t wv;                                         /* ANALOG: bits 0..2 WAVE, 3..5 the other, 6 MIX 0, 7 none */
+    uint8_t lfo;                                        /* high nibble depth / 4, low the rate (GLFO_RATE) */
+    uint8_t dc;                                         /* high nibble DIST / 4, low CHORUS / 4 */
+    uint8_t voice;
 } grecipe_t;
+#define GR(lo, hi) (uint8_t)((((lo) / 8) << 4) | ((hi) / 8))
+#define GR4(lo, hi) (uint8_t)((((lo) / 4) << 4) | ((hi) / 4))
+#define GFT(t, gl) (uint8_t)((t) | (((gl) / 4) << 3))
+#define GWV(a, b, m) (uint8_t)((a) | ((b) << 3) | ((m) << 6))
+#define GNOWV 0x80u
+#define GLFO(d, r) (uint8_t)((((d) / 4) << 4) | (r))      /* r < 12: a free rate r * 2 + 2; 12 .. 15: 1/4 1/8 1/8T 1/16 */
+#define GDC(d, c) (uint8_t)((((d) / 4) << 4) | ((c) / 4))
+#define NO_ {255, 0}
 enum { SR_SUB, SR_ACID, SR_REESE, SR_FMBASS, SR_ROCKBASS, SR_HOOK, SR_WOW, SR_PAD, SR_STRINGS, SR_CHOIR, SR_ORGAN,
        SR_EP, SR_STAB, SR_DUBCHORD, SR_PLUCK, SR_BELL, SR_LEAD, SR_VOXLEAD, SR_CHIP, SR_KEYS, SR_DRONE, SR_NOISE,
-       SR_TEXTURE, SR_HOOVER, SR_WALL, SR_GTR, SR_SINEKEY, SR_EBMBASS, SR_N };
+       SR_TEXTURE, SR_HOOVER, SR_WALL, SR_GTR, SR_SINEKEY, SR_EBMBASS, SR_808, SR_UPRIGHT, SR_TECHBASS, SR_SUPERSAW, SR_N };
+/* the factory presets by their place (eng_analog.c, eng_phase.c .. : ANALOG 2 SQR BASS, 4 ACID, 7 SUB BASS ..) */
 static const grecipe_t RECIPE[SR_N] = {
-    [SR_SUB]      = {{EG_A, EG_A, EG_LO}, {"SUB BASS", "TRI BASS", "SINE"}, {0, 1}, {55, 75}, {90, 120}, {15, 35}, 0, {30, 48}, {0, 10}, {0, 10}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, 0, V_LEGATO},
-    [SR_ACID]     = {{EG_A, EG_A, EG_PH}, {"ACID", "RESO", "SQR BASS"}, {0, 2}, {38, 60}, {0, 30}, {20, 40}, 0, {40, 64}, {55, 90}, {40, 62}, {0, 0}, {0, 0}, {12, 36}, {0, 0}, 30, V_LEGATO},
-    [SR_REESE]    = {{EG_A, EG_A, EG_PH}, {"REESE", "FAT BASS", "GROWL"}, {2, 8}, {70, 90}, {100, 120}, {30, 45}, 0, {40, 62}, {15, 35}, {0, 10}, {0, 0}, {0, 0}, {10, 30}, {20, 40}, 20, V_LEGATO},
-    [SR_FMBASS]   = {{EG_FM, EG_PH, EG_LO}, {"FM BASS", "HARD BASS", "FB BASS"}, {0, 2}, {45, 70}, {40, 90}, {18, 35}, 0, {50, 80}, {10, 30}, {10, 30}, {0, 0}, {0, 0}, {0, 15}, {0, 0}, 0, V_LEGATO},
-    [SR_ROCKBASS] = {{EG_A, EG_A, EG_PH}, {"SQR BASS", "REED BASS", "FAT BASS"}, {0, 3}, {50, 75}, {70, 110}, {20, 40}, 0, {50, 76}, {10, 30}, {10, 25}, {0, 0}, {0, 0}, {15, 40}, {0, 0}, 0, V_LEGATO},
-    [SR_HOOK]     = {{EG_A, EG_A, EG_PH}, {"SQR BASS", "SYN BASS", "FAT BASS"}, {0, 2}, {60, 85}, {90, 115}, {30, 50}, 0, {60, 86}, {10, 24}, {5, 15}, {0, 0}, {0, 0}, {5, 20}, {35, 65}, 0, V_LEGATO},
-    [SR_WOW]      = {{EG_VO, EG_A, EG_PH}, {"WOW BASS", "TALK BOX", "GROWL"}, {0, 2}, {60, 75}, {60, 80}, {25, 35}, 0, {70, 100}, {10, 30}, {10, 30}, {0, 0}, {0, 0}, {10, 20}, {0, 0}, 0, V_LEGATO},
-    [SR_PAD]      = {{EG_A, EG_FM, EG_PH}, {"JUNO PAD", "GLASS PAD", "SOFT PAD"}, {55, 100}, {80, 100}, {100, 120}, {80, 115}, 0, {44, 68}, {10, 25}, {5, 20}, {8, 20}, {4, 16}, {0, 0}, {25, 60}, 0, V_POLY},
-    [SR_STRINGS]  = {{EG_A, EG_PH, EG_FM}, {"STRINGS", "FM STRINGS", "VOX PAD"}, {40, 80}, {80, 100}, {105, 125}, {70, 100}, 0, {50, 76}, {8, 20}, {0, 12}, {6, 16}, {4, 14}, {0, 0}, {40, 70}, 0, V_POLY},
-    [SR_CHOIR]    = {{EG_VO, EG_VO, EG_FM}, {"CHOIR", "OOH PAD", "CHANT"}, {60, 100}, {90, 100}, {105, 120}, {85, 115}, 0, {60, 90}, {0, 10}, {0, 8}, {6, 12}, {3, 10}, {0, 0}, {50, 80}, 0, V_POLY},
-    [SR_ORGAN]    = {{EG_WH, EG_WH, EG_PH}, {"DUB ORGAN", "JAZZ PERC", "SOFT KEYS"}, {0, 2}, {64, 64}, {127, 127}, {25, 45}, 0, {60, 90}, {0, 10}, {0, 0}, {0, 0}, {0, 0}, {0, 15}, {0, 20}, 0, V_POLY},
-    [SR_EP]       = {{EG_FM, EG_PH, EG_FM}, {"TINE EP", "DX KEYS", "CZ PIANO"}, {0, 2}, {70, 90}, {20, 50}, {50, 75}, 0, {60, 90}, {0, 15}, {5, 20}, {0, 0}, {0, 0}, {0, 0}, {10, 30}, 0, V_POLY},
-    [SR_STAB]     = {{EG_A, EG_PH, EG_FM}, {"DUB STAB", "DIGI STAB", "BRASS"}, {0, 6}, {55, 72}, {30, 70}, {25, 45}, 0, {50, 78}, {15, 40}, {15, 40}, {0, 0}, {0, 0}, {0, 15}, {15, 40}, 0, V_POLY},
-    [SR_DUBCHORD] = {{EG_A, EG_PH, EG_FM}, {"DUB STAB", "DUB ORGAN", "PWM STR"}, {0, 8}, {50, 70}, {20, 60}, {30, 50}, 2, {46, 66}, {25, 45}, {10, 30}, {0, 0}, {0, 0}, {0, 0}, {20, 50}, 0, V_POLY},
-    [SR_PLUCK]    = {{EG_A, EG_FM, EG_PH}, {"ARP PLUCK", "FM PLUCK", "PLUCK"}, {0, 3}, {40, 66}, {0, 20}, {35, 60}, 0, {58, 86}, {20, 50}, {30, 55}, {0, 0}, {0, 0}, {0, 0}, {0, 20}, 0, V_POLY},
-    [SR_BELL]     = {{EG_FM, EG_PH, EG_A}, {"SOFT BELL", "ICE BELL", "BELL"}, {0, 2}, {80, 100}, {0, 10}, {70, 100}, 0, {70, 100}, {0, 20}, {0, 10}, {0, 0}, {0, 0}, {0, 0}, {0, 20}, 0, V_POLY},
-    [SR_LEAD]     = {{EG_A, EG_PH, EG_FM}, {"MOOG LEAD", "PD LEAD", "SAW LEAD"}, {2, 20}, {50, 85}, {30, 90}, {30, 70}, 0, {56, 84}, {15, 40}, {15, 40}, {0, 14}, {6, 24}, {0, 25}, {0, 30}, 15, V_LEGATO},
-    [SR_VOXLEAD]  = {{EG_VO, EG_A, EG_FM}, {"VOX LEAD", "TALK BOX", "MOOG LEAD"}, {4, 20}, {55, 85}, {40, 95}, {35, 70}, 0, {60, 90}, {10, 30}, {10, 25}, {0, 10}, {6, 20}, {0, 10}, {10, 35}, 20, V_LEGATO},
-    [SR_CHIP]     = {{EG_LO, EG_LO, EG_PH}, {"GB ARP", "PULSE LD", "SAW CHIP"}, {0, 4}, {45, 75}, {25, 80}, {20, 50}, 0, {70, 110}, {10, 30}, {10, 30}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, 0, V_LEGATO},
-    [SR_KEYS]     = {{EG_A, EG_FM, EG_PH}, {"GLASS KEYS", "RING KEYS", "SOFT KEYS"}, {0, 4}, {65, 85}, {20, 50}, {45, 70}, 0, {60, 90}, {5, 20}, {5, 20}, {0, 0}, {0, 0}, {0, 0}, {10, 30}, 0, V_POLY},
-    [SR_DRONE]    = {{EG_A, EG_FM, EG_PH}, {"DARK PAD", "CELLO", "WIND"}, {90, 120}, {90, 100}, {120, 127}, {100, 125}, 0, {36, 60}, {15, 35}, {0, 10}, {10, 24}, {2, 8}, {0, 0}, {30, 60}, 0, V_POLY},
-    [SR_NOISE]    = {{EG_NO, EG_NO, EG_LO}, {"SEA", "TAPE AIR", "HISS PAD"}, {80, 120}, {90, 100}, {110, 127}, {80, 120}, 255, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, 0, V_POLY},
-    [SR_TEXTURE]  = {{EG_NO, EG_LO, EG_VO}, {"HISS PAD", "CRACKLE", "FLOAT PAD"}, {70, 110}, {90, 100}, {110, 127}, {90, 120}, 2, {40, 70}, {20, 50}, {0, 10}, {10, 30}, {2, 10}, {0, 0}, {20, 50}, 0, V_POLY},
-    [SR_HOOVER]   = {{EG_A, EG_A, EG_PH}, {"HOOVER", "RAVE", "PWM STR"}, {4, 12}, {60, 90}, {60, 110}, {35, 60}, 0, {60, 90}, {10, 25}, {10, 30}, {0, 0}, {0, 0}, {15, 35}, {40, 60}, 0, V_POLY},
-    [SR_WALL]     = {{EG_A, EG_A, EG_PH}, {"DARK PAD", "JUNO PAD", "STRINGS"}, {30, 60}, {90, 100}, {110, 127}, {80, 110}, 0, {50, 70}, {0, 10}, {0, 10}, {6, 14}, {3, 9}, {30, 55}, {40, 70}, 0, V_POLY},
-    [SR_GTR]      = {{EG_PH, EG_A, EG_FM}, {"HARP", "DIGI STAB", "PLUCK"}, {2, 10}, {70, 90}, {60, 100}, {50, 80}, 2, {56, 80}, {15, 35}, {5, 20}, {0, 0}, {0, 0}, {5, 25}, {20, 40}, 0, V_POLY},
-    [SR_SINEKEY]  = {{EG_A, EG_FM, EG_PH}, {"GLASS KEYS", "WOOD", "SINE KEY"}, {0, 4}, {70, 90}, {30, 60}, {50, 80}, 0, {60, 90}, {0, 15}, {0, 15}, {0, 0}, {0, 0}, {0, 0}, {0, 20}, 0, V_POLY},
-    /* (0.6.95) the EBM bass: a square, short and punchy, the filter's envelope on it, driven */
-    [SR_EBMBASS]  = {{EG_A, EG_A, EG_PH}, {"SYN BASS", "HARD BASS", "SQR BASS"}, {0, 1}, {34, 50}, {10, 40}, {12, 25}, 0, {58, 80}, {15, 35}, {25, 45}, {0, 0}, {0, 0}, {18, 40}, {0, 0}, 0, V_LEGATO},
+    /* ---- basses: their engine fixed */
+    [SR_SUB]      = {{{EG_A, 7}, {EG_A, 7}, {EG_LO, 14}}, GR(0, 7), GR(56, 79), GR(88, 119), GR(16, 31), GR(32, 47), GR(0, 15), GR4(0, 7), GFT(0, 0), GNOWV, 0, 0, V_LEGATO},
+    /* the 303: one saw (or a square), the low-pass nearly closed, high resonance, a short decay and the filter's
+     * envelope high on it, glide (the SLIDEs), driven */
+    [SR_ACID]     = {{{EG_A, 4}, {EG_A, 2}, NO_}, GR(0, 7), GR(32, 47), GR(0, 7), GR(8, 23), GR(24, 47), GR(96, 111), GR4(44, 63), GFT(0, 36), GWV(0, 1, 1), 0, GDC(24, 0), V_LEGATO},
+    [SR_REESE]    = {{{EG_A, 16}, {EG_A, 14}, NO_}, GR(0, 7), GR(72, 95), GR(104, 119), GR(32, 47), GR(40, 55), GR(16, 31), GR4(0, 11), GFT(0, 16), GNOWV, GLFO(12, 1), GDC(20, 28), V_LEGATO},
+    [SR_FMBASS]   = {{{EG_FM, 2}, {EG_FM, 13}, {EG_PH, 7}}, GR(0, 7), GR(48, 71), GR(40, 87), GR(16, 31), GR(72, 103), GR(8, 23), GR4(8, 27), GFT(0, 0), GNOWV, 0, GDC(8, 0), V_LEGATO},
+    [SR_ROCKBASS] = {{{EG_A, 2}, {EG_A, 14}, NO_}, GR(0, 7), GR(48, 71), GR(64, 111), GR(16, 39), GR(48, 71), GR(8, 23), GR4(8, 23), GFT(0, 0), GWV(1, 0, 0), 0, GDC(24, 16), V_LEGATO},
+    /* the octave bass of italo, synth pop, electro, trance: a saw (or a square), plucked by the filter */
+    [SR_HOOK]     = {{{EG_A, 2}, {EG_A, 14}, NO_}, GR(0, 7), GR(40, 63), GR(16, 55), GR(16, 31), GR(48, 71), GR(16, 39), GR4(20, 39), GFT(0, 0), GWV(0, 1, 0), 0, GDC(12, 16), V_LEGATO},
+    /* dubstep's wobble: the fat saws, the resonant low-pass moved by an LFO on the beat */
+    [SR_WOW]      = {{{EG_A, 14}, {EG_A, 16}, NO_}, GR(0, 7), GR(72, 95), GR(104, 127), GR(24, 39), GR(32, 47), GR(48, 71), GR4(0, 7), GFT(0, 8), GNOWV, GLFO(44, 13), GDC(40, 0), V_LEGATO},
+    /* ---- chords, pads */
+    [SR_PAD]      = {{{EG_A, 15}, {EG_FM, 4}, {EG_PH, 9}}, GR(56, 103), GR(80, 103), GR(104, 119), GR(80, 111), GR(40, 71), GR(8, 23), GR4(4, 19), GFT(0, 0), GNOWV, GLFO(12, 3), GDC(0, 40), V_POLY},
+    [SR_STRINGS]  = {{{EG_A, 11}, {EG_FM, 12}, {EG_PH, 2}}, GR(40, 79), GR(80, 103), GR(104, 127), GR(72, 103), GR(48, 79), GR(8, 23), GR4(0, 11), GFT(0, 0), GNOWV, GLFO(12, 2), GDC(0, 56), V_POLY},
+    [SR_CHOIR]    = {{{EG_VO, 0}, {EG_VO, 4}, {EG_FM, 4}}, GR(56, 103), GR(88, 103), GR(104, 119), GR(80, 111), GR(56, 95), GR(0, 7), GR4(0, 7), GFT(0, 0), GNOWV, GLFO(8, 2), GDC(0, 60), V_POLY},
+    [SR_ORGAN]    = {{{EG_WH, 5}, {EG_WH, 1}, {EG_PH, 1}}, GR(0, 7), GR(64, 71), GR(120, 127), GR(24, 47), GR(56, 95), GR(0, 7), GR4(0, 3), GFT(0, 0), GNOWV, 0, GDC(0, 8), V_POLY},
+    [SR_EP]       = {{{EG_FM, 0}, {EG_FM, 9}, {EG_PH, 8}}, GR(0, 7), GR(72, 95), GR(16, 55), GR(48, 79), GR(56, 95), GR(0, 15), GR4(4, 19), GFT(0, 0), GNOWV, 0, GDC(0, 20), V_POLY},
+    [SR_STAB]     = {{{EG_A, 18}, {EG_PH, 10}, {EG_FM, 3}}, GR(0, 7), GR(56, 71), GR(24, 71), GR(24, 47), GR(48, 79), GR(16, 39), GR4(16, 39), GFT(0, 0), GNOWV, 0, GDC(8, 28), V_POLY},
+    [SR_DUBCHORD] = {{{EG_A, 18}, {EG_WH, 5}, {EG_A, 3}}, GR(0, 7), GR(48, 71), GR(16, 63), GR(32, 55), GR(48, 71), GR(24, 47), GR4(12, 31), GFT(2, 0), GNOWV, 0, GDC(0, 32), V_POLY},
+    /* ---- arps, leads */
+    [SR_PLUCK]    = {{{EG_A, 20}, {EG_FM, 10}, {EG_A, 8}}, GR(0, 7), GR(40, 63), GR(0, 23), GR(32, 63), GR(56, 87), GR(24, 47), GR4(28, 55), GFT(0, 0), GNOWV, 0, GDC(0, 8), V_POLY},
+    [SR_BELL]     = {{{EG_FM, 11}, {EG_FM, 8}, {EG_A, 13}}, GR(0, 7), GR(80, 103), GR(0, 7), GR(72, 103), GR(72, 103), GR(0, 15), GR4(0, 11), GFT(0, 0), GNOWV, 0, GDC(0, 8), V_POLY},
+    [SR_LEAD]     = {{{EG_A, 21}, {EG_A, 0}, {EG_PH, 14}}, GR(0, 23), GR(48, 87), GR(32, 95), GR(32, 71), GR(56, 87), GR(16, 39), GR4(16, 39), GFT(0, 16), GNOWV, GLFO(8, 6), GDC(12, 12), V_LEGATO},
+    [SR_VOXLEAD]  = {{{EG_VO, 1}, {EG_VO, 6}, {EG_A, 21}}, GR(0, 23), GR(56, 87), GR(40, 95), GR(32, 71), GR(56, 95), GR(8, 31), GR4(8, 23), GFT(0, 20), GNOWV, GLFO(4, 6), GDC(0, 20), V_LEGATO},
+    [SR_CHIP]     = {{{EG_LO, 3}, {EG_LO, 13}, {EG_LO, 16}}, GR(0, 7), GR(40, 79), GR(24, 79), GR(16, 47), GR(72, 111), GR(8, 31), GR4(8, 27), GFT(0, 0), GNOWV, 0, 0, V_LEGATO},
+    [SR_KEYS]     = {{{EG_A, 23}, {EG_PH, 15}, {EG_WH, 6}}, GR(0, 7), GR(64, 87), GR(16, 55), GR(40, 71), GR(56, 95), GR(0, 23), GR4(4, 19), GFT(0, 0), GNOWV, 0, GDC(0, 20), V_POLY},
+    /* ---- textures */
+    [SR_DRONE]    = {{{EG_A, 22}, {EG_A, 19}, {EG_FM, 4}}, GR(88, 119), GR(88, 103), GR(120, 127), GR(96, 127), GR(32, 63), GR(16, 39), GR4(0, 11), GFT(0, 0), GNOWV, GLFO(16, 1), GDC(0, 44), V_POLY},
+    [SR_NOISE]    = {{{EG_NO, 4}, {EG_NO, 7}, {EG_NO, 5}}, GR(80, 119), GR(88, 103), GR(104, 127), GR(80, 119), 0, 0, 0, GFT(7, 0), GNOWV, 0, 0, V_POLY},
+    [SR_TEXTURE]  = {{{EG_NO, 5}, {EG_NO, 6}, {EG_LO, 11}}, GR(64, 111), GR(88, 103), GR(104, 127), GR(88, 119), GR(40, 71), GR(16, 47), GR4(0, 11), GFT(2, 0), GNOWV, GLFO(20, 2), GDC(0, 32), V_POLY},
+    [SR_HOOVER]   = {{{EG_A, 17}, {EG_A, 6}, {EG_PH, 6}}, GR(0, 15), GR(56, 95), GR(56, 111), GR(32, 63), GR(56, 95), GR(8, 23), GR4(8, 31), GFT(0, 0), GNOWV, 0, GDC(24, 48), V_POLY},
+    [SR_WALL]     = {{{EG_A, 22}, {EG_A, 15}, {EG_A, 11}}, GR(24, 63), GR(88, 103), GR(104, 127), GR(80, 111), GR(48, 71), GR(0, 7), GR4(0, 7), GFT(0, 0), GNOWV, GLFO(8, 2), GDC(40, 56), V_POLY},
+    [SR_GTR]      = {{{EG_PH, 13}, {EG_PH, 2}, {EG_A, 8}}, GR(0, 15), GR(64, 95), GR(56, 103), GR(48, 79), GR(56, 79), GR(16, 39), GR4(4, 19), GFT(2, 0), GNOWV, 0, GDC(12, 28), V_POLY},
+    [SR_SINEKEY]  = {{{EG_A, 5}, {EG_FM, 14}, {EG_A, 23}}, GR(0, 7), GR(64, 95), GR(24, 63), GR(48, 79), GR(56, 95), GR(0, 15), GR4(0, 15), GFT(0, 0), GNOWV, 0, GDC(0, 8), V_POLY},
+    /* ---- (0.9.9-gen1) the archetypes the genres lacked */
+    /* EBM, darkwave: a square through the MS20 filter, short, the envelope on it, driven */
+    [SR_EBMBASS]  = {{{EG_A, 2}, {EG_A, 14}, NO_}, GR(0, 7), GR(32, 47), GR(8, 31), GR(8, 23), GR(48, 71), GR(40, 63), GR4(28, 47), GFT(5, 0), GWV(1, 0, 1), 0, GDC(28, 0), V_LEGATO},
+    /* trap's 808: a sine's long boom, gliding (the SLIDEs), driven */
+    [SR_808]      = {{{EG_A, 7}, {EG_A, 7}, NO_}, GR(0, 7), GR(88, 111), GR(0, 15), GR(32, 47), GR(56, 79), GR(0, 7), GR4(0, 7), GFT(0, 48), GWV(3, 3, 1), 0, GDC(36, 0), V_LEGATO},
+    /* jazz, bossa, boom bap: an upright's triangle, plucked */
+    [SR_UPRIGHT]  = {{{EG_A, 7}, {EG_A, 7}, NO_}, GR(0, 7), GR(48, 63), GR(0, 23), GR(24, 39), GR(40, 63), GR(0, 15), GR4(8, 23), GFT(0, 0), GWV(2, 2, 1), 0, 0, V_LEGATO},
+    /* techno's rolling bass: a saw (or a square), short, resonant, the envelope on it, driven */
+    [SR_TECHBASS] = {{{EG_A, 14}, {EG_A, 2}, NO_}, GR(0, 7), GR(40, 55), GR(0, 31), GR(16, 31), GR(32, 55), GR(32, 55), GR4(20, 39), GFT(0, 0), GWV(0, 1, 1), 0, GDC(32, 0), V_LEGATO},
+    /* trance's supersaw (SAW3), chorused */
+    [SR_SUPERSAW] = {{{EG_A, 6}, {EG_A, 17}, {EG_A, 0}}, GR(0, 15), GR(64, 95), GR(80, 119), GR(40, 71), GR(72, 103), GR(8, 23), GR4(8, 23), GFT(0, 0), GWV(7, 7, 0), 0, GDC(0, 48), V_POLY},
 };
 /* (0.6.95) a throw its own: the neighbours a throw may take instead (the drum map's family, the chords' play, a role's
  * recipe), so two throws of a genre are not the same piece in another key */
@@ -354,15 +388,6 @@ static const uint8_t CS_ALT[CS_TRANCE + 1][2] = {
     [CS_HOLD] = {CS_SWELL, CS_PULSE}, [CS_SWELL] = {CS_HOLD, CS_PULSE}, [CS_STAB] = {CS_PULSE, CS_DUB}, [CS_PULSE] = {CS_STAB, CS_HOLD},
     [CS_DUB] = {CS_STAB, CS_SPARSE}, [CS_SKANK] = {CS_DUB, CS_STAB}, [CS_COMP] = {CS_STAB, CS_BROKEN}, [CS_POWER] = {CS_PULSE, CS_HOLD},
     [CS_DRONE] = {CS_HOLD, CS_SWELL}, [CS_SPARSE] = {CS_HOLD, CS_DUB}, [CS_BROKEN] = {CS_COMP, CS_STAB}, [CS_TRANCE] = {CS_PULSE, CS_STAB},
-};
-static const uint8_t SR_ALT[SR_N][2] = {
-    [SR_SUB] = {SR_FMBASS, SR_REESE}, [SR_ACID] = {SR_SUB, SR_FMBASS}, [SR_REESE] = {SR_FMBASS, SR_SUB}, [SR_FMBASS] = {SR_SUB, SR_ROCKBASS},
-    [SR_ROCKBASS] = {SR_FMBASS, SR_HOOK}, [SR_HOOK] = {SR_ROCKBASS, SR_FMBASS}, [SR_WOW] = {SR_FMBASS, SR_REESE}, [SR_PAD] = {SR_STRINGS, SR_CHOIR},
-    [SR_STRINGS] = {SR_PAD, SR_ORGAN}, [SR_CHOIR] = {SR_PAD, SR_STRINGS}, [SR_ORGAN] = {SR_EP, SR_KEYS}, [SR_EP] = {SR_KEYS, SR_ORGAN},
-    [SR_STAB] = {SR_DUBCHORD, SR_HOOVER}, [SR_DUBCHORD] = {SR_STAB, SR_PAD}, [SR_PLUCK] = {SR_BELL, SR_KEYS}, [SR_BELL] = {SR_PLUCK, SR_SINEKEY},
-    [SR_LEAD] = {SR_VOXLEAD, SR_HOOVER}, [SR_VOXLEAD] = {SR_LEAD, SR_CHOIR}, [SR_CHIP] = {SR_PLUCK, SR_LEAD}, [SR_KEYS] = {SR_EP, SR_SINEKEY},
-    [SR_DRONE] = {SR_PAD, SR_TEXTURE}, [SR_NOISE] = {SR_TEXTURE, SR_DRONE}, [SR_TEXTURE] = {SR_NOISE, SR_DRONE}, [SR_HOOVER] = {SR_STAB, SR_LEAD},
-    [SR_WALL] = {SR_STRINGS, SR_PAD}, [SR_GTR] = {SR_PLUCK, SR_KEYS}, [SR_SINEKEY] = {SR_KEYS, SR_BELL}, [SR_EBMBASS] = {SR_ROCKBASS, SR_ACID},
 };
 /* the names the song generator never picks (the cheerful, the odd), whatever the role */
 static const char *const GEN_NEVER[] = {"ARCADE", "BYTEBEAT", "GOSPEL", "ROCK DRIVE", "METAL", "BYTE VAR", "FLOAT FM",
@@ -411,20 +436,20 @@ static const ggenre_t GENRE[] = {
      0, 1, 45, 0, FM_CLUB, 0, HF_LOOP},
     {"TECH HOUSE", 124, 128, 10, {SC_MIN, SC_PHRY, SC_DOR, SC_MIN}, DM_TECHHOUSE, 100, KIT_909, 0, HC_HOUSE, FL_ROLL, 0,
      {BA_OFFBEAT, BA_OFFOCT, BA_BOUNCE}, 36, KM_ANSWER, 40, {PR_ONE, PR_I_VII, PR_I_VI}, 2, CS_STAB, VM_SUS,
-     {AP_BROKEN, AP_SEQ}, LD_SPARSE, AMT(85, 80, 40, 30, 25), {KIT_909, SR_FMBASS, SR_STAB, SR_PLUCK, SR_LEAD}, SR_NOISE,
+     {AP_BROKEN, AP_SEQ}, LD_SPARSE, AMT(85, 80, 40, 30, 25), {KIT_909, SR_TECHBASS, SR_STAB, SR_PLUCK, SR_LEAD}, SR_NOISE,
      0, 1, 35, 0, FM_CLUB, 0, HF_LOOP},
     {"ACID HOUSE", 122, 130, 8, {SC_MIN, SC_PHRY, SC_DOR, SC_MIN}, DM_HOUSE, 100, KIT_909, 0, HC_HOUSE, FL_ROLL, 0,
-     {BA_ACID, BA_ACID, BA_BOUNCE}, 36, KM_SUSTAIN, 60, {PR_ONE, PR_I_VII, PR_I_IV}, 2, CS_STAB, VM_SUS,
+     {BA_ACID, BA_ACID, BA_ACID}, 36, KM_SUSTAIN, 60, {PR_ONE, PR_I_VII, PR_I_IV}, 2, CS_STAB, VM_SUS,
      {AP_UP, AP_SEQ}, LD_NONE, AMT(85, 90, 30, 20, 0), {KIT_909, SR_ACID, SR_STAB, SR_PLUCK, SR_LEAD}, SR_NOISE,
      0, 1, 35, 0, FM_CLUB, 0, HF_LOOP},
     /* ---- the club: techno */
     {"TECHNO", 128, 136, 4, {SC_MIN, SC_PHRY, SC_MIN, SC_MIN}, DM_TECHNO, 100, KIT_909, 0, HC_MACHINE, FL_DROP, 0,
      {BA_ROLL16, BA_OCTBNC, BA_OFFBEAT}, 33, KM_SUSTAIN, 45, {PR_ONE, PR_PHRY, PR_I_VII}, 4, CS_STAB, VM_PLANE,
-     {AP_PULSE, AP_SEQ}, LD_OSTINATO, AMT(90, 80, 35, 35, 25), {KIT_909, SR_REESE, SR_STAB, SR_PLUCK, SR_LEAD}, SR_NOISE,
+     {AP_PULSE, AP_SEQ}, LD_OSTINATO, AMT(90, 80, 35, 35, 25), {KIT_909, SR_TECHBASS, SR_STAB, SR_PLUCK, SR_LEAD}, SR_NOISE,
      0, 2, 35, 0, FM_CLUB, 0, HF_LOOP},
     {"DETROIT", 124, 132, 8, {SC_MIN, SC_DOR, SC_MIN, SC_MAJ}, DM_DETROIT, 100, KIT_909, 0, HC_HOUSE, FL_ROLL, 0,
      {BA_DETROIT, BA_OCTBNC, BA_SYNTHW}, 36, KM_SUSTAIN, 50, {PR_I_VI, PR_MINOR4, PR_DEEPVI}, 1, CS_STAB, VM_RICH,
-     {AP_UPDOWN, AP_BROKEN}, LD_MOTIF, AMT(85, 80, 60, 45, 45), {KIT_909, SR_FMBASS, SR_STRINGS, SR_PLUCK, SR_LEAD}, SR_PAD,
+     {AP_UPDOWN, AP_BROKEN}, LD_MOTIF, AMT(85, 80, 60, 45, 45), {KIT_909, SR_HOOK, SR_STRINGS, SR_PLUCK, SR_LEAD}, SR_PAD,
      0, 1, 45, 0, FM_CLUB, 5, HF_JAZZY},
     {"DUB TECHNO", 116, 124, 6, {SC_MIN, SC_DOR, SC_MIN, SC_MPEN}, DM_DUBTECH, 100, KIT_DUB, 0, HC_FLAT, FL_DUB, 0,
      {BA_DUB, BA_PEDAL, BA_OFFBEAT}, 31, KM_SUSTAIN, 70, {PR_ONE, PR_I_IV, PR_I_VI}, 4, CS_DUB, VM_RICH,
@@ -432,20 +457,20 @@ static const ggenre_t GENRE[] = {
      4, 4, 85, 0, FM_ARC, 0, HF_LOOP},
     {"HARD TECHNO", 138, 150, 0, {SC_PHRY, SC_MIN, SC_HARM, SC_PHRY}, DM_HARD, 100, KIT_INDUS, 0, HC_MACHINE, FL_DROP, 0,
      {BA_ROLL16, BA_PSY, BA_OCTBNC}, 33, KM_SUSTAIN, 40, {PR_ONE, PR_PHRY, PR_I_VII}, 4, CS_STAB, VM_POWER,
-     {AP_PULSE, AP_OCTAVES}, LD_OSTINATO, AMT(100, 85, 30, 30, 25), {KIT_INDUS, SR_REESE, SR_STAB, SR_PLUCK, SR_HOOVER}, SR_NOISE,
+     {AP_PULSE, AP_OCTAVES}, LD_OSTINATO, AMT(100, 85, 30, 30, 25), {KIT_INDUS, SR_TECHBASS, SR_STAB, SR_PLUCK, SR_HOOVER}, SR_NOISE,
      1, 2, 25, 0, FM_CLUB, 0, HF_LOOP},
     {"HYPNOTIC", 128, 134, 2, {SC_PHRY, SC_MIN, SC_DOR, SC_HARM}, DM_HYPNO, 100, KIT_CLICK, 0, HC_FLAT, FL_NONE, 0,
      {BA_ROLL16, BA_PSY, BA_OFFBEAT}, 33, KM_SUSTAIN, 40, {PR_ONE, PR_ONE, PR_I_II}, 4, CS_DUB, VM_PLANE,
-     {AP_CYCLE5, AP_CYCLE3}, LD_OSTINATO, AMT(90, 80, 30, 50, 30), {KIT_CLICK, SR_FMBASS, SR_STAB, SR_PLUCK, SR_PLUCK}, SR_TEXTURE,
+     {AP_CYCLE5, AP_CYCLE3}, LD_OSTINATO, AMT(90, 80, 30, 50, 30), {KIT_CLICK, SR_TECHBASS, SR_STAB, SR_PLUCK, SR_PLUCK}, SR_TEXTURE,
      0, 4, 50, 0, FM_ARC, 0, HF_LOOP},
     {"TRANCE", 134, 140, 0, {SC_MIN, SC_MIN, SC_HARM, SC_MIN}, DM_TECHHOUSE, 100, KIT_909, 0, HC_FLAT, FL_ROLL, 0,
      {BA_PSY, BA_PUMP8, BA_OFFBEAT}, 36, KM_ANSWER, 45, {PR_AEOL, PR_EPIC, PR_50S}, 2, CS_TRANCE, VM_RICH,
-     {AP_TRANCE, AP_UP}, LD_MOTIF, AMT(85, 85, 70, 70, 50), {KIT_909, SR_REESE, SR_STRINGS, SR_PLUCK, SR_LEAD}, SR_NOISE,
+     {AP_TRANCE, AP_UP}, LD_MOTIF, AMT(85, 85, 70, 70, 50), {KIT_909, SR_HOOK, SR_SUPERSAW, SR_PLUCK, SR_SUPERSAW}, SR_NOISE,
      2, 4, 55, 3, FM_CLUB, 0, HF_POP | HX_RAISE},
     /* ---- electro, EBM, italo, synth pop, the wave */
     {"ELECTRO", 112, 128, 2, {SC_MIN, SC_PHRY, SC_MIN, SC_MPEN}, DM_ELECTRO, 100, KIT_808, 0, HC_MACHINE, FL_KICK16, 0,
      {BA_SYNTHW, BA_ITALO16, BA_ANGULAR}, 36, KM_DOUBLE, 40, {PR_I_VII, PR_ONE, PR_MINOR4}, 2, CS_STAB, VM_SUS,
-     {AP_SEQ, AP_OCTAVES}, LD_MECH, AMT(90, 85, 40, 50, 45), {KIT_808, SR_FMBASS, SR_STAB, SR_CHIP, SR_LEAD}, SR_NOISE,
+     {AP_SEQ, AP_OCTAVES}, LD_MECH, AMT(90, 85, 40, 50, 45), {KIT_808, SR_HOOK, SR_STAB, SR_CHIP, SR_LEAD}, SR_NOISE,
      1, 2, 35, 1, FM_PARTS, 0, HF_LOOP},
     {"EBM", 118, 132, 0, {SC_PHRY, SC_MIN, SC_PHRY, SC_MIN}, DM_EBM, 100, KIT_INDUS, 0, HC_MACHINE, FL_NONE, 0,
      {BA_NITZER1, BA_NITZER2, BA_NITZER3}, 33, KM_DOUBLE, 45, {PR_ONE, PR_I_VII, PR_PHRY}, 4, CS_STAB, VM_POWER,
@@ -453,15 +478,15 @@ static const ggenre_t GENRE[] = {
      1, 1, 25, 0, FM_PARTS, 0, HF_LOOP},
     {"ITALO", 114, 124, 0, {SC_MIN, SC_MIN, SC_MAJ, SC_MIN}, DM_ITALO, 100, KIT_808, 0, HC_MACHINE, FL_TOM, 0,
      {BA_ITALO, BA_ITALO16, BA_SYNTHW}, 36, KM_DOUBLE, 40, {PR_AEOL, PR_ANDAL, PR_POP}, 1, CS_STAB, VM_PLAIN,
-     {AP_OCTAVES, AP_UP}, LD_HOOK, AMT(90, 90, 60, 60, 60), {KIT_808, SR_FMBASS, SR_STAB, SR_PLUCK, SR_LEAD}, SR_PAD,
+     {AP_OCTAVES, AP_UP}, LD_HOOK, AMT(90, 90, 60, 60, 60), {KIT_808, SR_HOOK, SR_STAB, SR_PLUCK, SR_LEAD}, SR_PAD,
      0, 1, 40, 2, FM_PARTS, 0, HF_POP | HX_RAISE | HX_LIFT},
     {"SYNTH POP", 112, 128, 0, {SC_MIN, SC_MAJ, SC_MIN, SC_MAJ}, DM_SYNTHPOP, 100, KIT_808, 0, HC_MACHINE, FL_TOM, 0,
      {BA_ITALO, BA_HOOK, BA_ROCK8}, 36, KM_DOUBLE, 50, {PR_AEOL, PR_POP, PR_50S}, 1, CS_HOLD, VM_PLAIN,
-     {AP_SEQ, AP_UPDOWN}, LD_HOOK, AMT(85, 85, 65, 55, 60), {KIT_808, SR_FMBASS, SR_PAD, SR_PLUCK, SR_LEAD}, SR_STRINGS,
+     {AP_SEQ, AP_UPDOWN}, LD_HOOK, AMT(85, 85, 65, 55, 60), {KIT_808, SR_HOOK, SR_PAD, SR_PLUCK, SR_LEAD}, SR_STRINGS,
      0, 1, 45, 2, FM_PARTS, 5, HF_POP | HX_RAISE | HX_BOR | HX_LIFT},
     {"DARKWAVE", 124, 136, 0, {SC_MIN, SC_PHRY, SC_DOR, SC_MIN}, DM_DARKWAVE, 100, KIT_808, 0, HC_MACHINE, FL_NONE, 0,
      {BA_DARK8, BA_PUNK16, BA_OCTBNC}, 31, KM_DOUBLE, 40, {PR_I_VI, PR_EPIC, PR_I_VII}, 4, CS_HOLD, VM_PLAIN,
-     {AP_PULSE, AP_SEQ}, LD_SPARSE, AMT(90, 95, 60, 25, 40), {KIT_808, SR_ROCKBASS, SR_PAD, SR_PLUCK, SR_LEAD}, SR_TEXTURE,
+     {AP_PULSE, AP_SEQ}, LD_SPARSE, AMT(90, 95, 60, 25, 40), {KIT_808, SR_EBMBASS, SR_PAD, SR_PLUCK, SR_LEAD}, SR_TEXTURE,
      0, 1, 50, 0, FM_PARTS, 0, HF_POP},
     {"POST PUNK", 118, 148, 0, {SC_MIN, SC_DOR, SC_MIN, SC_MAJ}, DM_POSTPUNK, 100, KIT_SOFT, 1, HC_FLAT, FL_TOM, 1,
      {BA_HOOK2, BA_BLUEMON, BA_CEREMONY}, 40, KM_DOUBLE, 70, {PR_I_VI, PR_I_IV, PR_AEOL}, 2, CS_PULSE, VM_PLAIN,
@@ -474,7 +499,7 @@ static const ggenre_t GENRE[] = {
      0, 1, 55, 0, FM_PARTS, 40, HF_LOOP},
     {"MINIMAL SYNTH", 104, 132, 0, {SC_MIN, SC_DOR, SC_MIN, SC_PHRY}, DM_RBOX, 100, KIT_SOFT, 0, HC_MACHINE, FL_NONE, 0,
      {BA_SUICIDE, BA_SEQ16, BA_DARK8}, 33, KM_DOUBLE, 40, {PR_ONE, PR_ONE, PR_I_IV}, 4, CS_DRONE, VM_POWER,
-     {AP_PULSE, AP_SEQ}, LD_SPARSE, AMT(85, 95, 55, 20, 45), {KIT_SOFT, SR_ROCKBASS, SR_ORGAN, SR_CHIP, SR_VOXLEAD}, SR_NOISE,
+     {AP_PULSE, AP_SEQ}, LD_SPARSE, AMT(85, 95, 55, 20, 45), {KIT_SOFT, SR_EBMBASS, SR_ORGAN, SR_CHIP, SR_VOXLEAD}, SR_NOISE,
      1, 2, 50, 0, FM_LOOP, 0, HF_LOOP},
     {"MAN MACHINE", 100, 124, 0, {SC_MIN, SC_MAJ, SC_DOR, SC_MIN}, DM_KLING, 100, KIT_CLICK, 0, HC_MACHINE, FL_NONE, 0,
      {BA_SEQ16, BA_SYNTHW, BA_MOTORIK}, 36, KM_DOUBLE, 45, {PR_ONE, PR_I_IV, PR_CYCLE}, 4, CS_HOLD, VM_PLAIN,
@@ -500,7 +525,7 @@ static const ggenre_t GENRE[] = {
     /* ---- funk, disco, hip hop, UK */
     {"FUNK", 96, 112, 14, {SC_DOR, SC_MIX, SC_MPEN, SC_BLUE}, DM_FUNK, 100, KIT_BREAKS, 4, HC_FUNK, FL_LINEAR, 1,
      {BA_JAMERSON, BA_SLAP, BA_AROUND}, 33, KM_INTERLOCK, 40, {PR_I_IV, PR_ONE, PR_IV_I}, 2, CS_COMP, VM_RICH,
-     {AP_BROKEN, AP_WALK}, LD_HOOK, AMT(90, 100, 55, 20, 45), {KIT_BREAKS, SR_ROCKBASS, SR_EP, SR_PLUCK, SR_LEAD}, SR_ORGAN,
+     {AP_BROKEN, AP_WALK}, LD_HOOK, AMT(90, 100, 55, 20, 45), {KIT_BREAKS, SR_FMBASS, SR_EP, SR_PLUCK, SR_LEAD}, SR_ORGAN,
      0, 1, 30, 0, FM_PARTS, 60, HF_JAZZY | HX_APPR},
     {"DISCO", 114, 122, 8, {SC_MIN, SC_DOR, SC_MAJ, SC_MIN}, DM_DISCO, 100, KIT_BREAKS, 1, HC_HOUSE, FL_ROLL, 0,
      {BA_ITALO, BA_GOODTIME, BA_BOUNCE}, 36, KM_DOUBLE, 40, {PR_I_IV, PR_TURN, PR_DEEP4}, 2, CS_COMP, VM_RICH,
@@ -508,11 +533,11 @@ static const ggenre_t GENRE[] = {
      0, 1, 40, 0, FM_PARTS, 30, HF_JAZZY | HX_RAISE | HX_SEC | HX_LIFT},
     {"BOOM BAP", 86, 96, 16, {SC_MIN, SC_DOR, SC_MPEN, SC_MIN}, DM_BOOMBAP, 100, KIT_SOFT, 1, HC_FUNK, FL_NONE, 2,
      {BA_BOOMBAP, BA_JUNGLE, BA_DUB}, 33, KM_DOUBLE, 65, {PR_I_IV, PR_MINOR4, PR_I_VI}, 2, CS_SPARSE, VM_RICH,
-     {AP_BROKEN, AP_WALK}, LD_SPARSE, AMT(90, 85, 60, 20, 35), {KIT_SOFT, SR_SUB, SR_EP, SR_KEYS, SR_BELL}, SR_TEXTURE,
+     {AP_BROKEN, AP_WALK}, LD_SPARSE, AMT(90, 85, 60, 20, 35), {KIT_SOFT, SR_UPRIGHT, SR_EP, SR_KEYS, SR_BELL}, SR_TEXTURE,
      0, 1, 40, 0, FM_LOOP, 50, HF_JAZZY},
     {"TRAP", 136, 146, 0, {SC_MIN, SC_PHRY, SC_HARM, SC_MIN}, DM_TRAP, 100, KIT_808, 0, HC_FLAT, FL_HAT, 0,
      {BA_TRAP, BA_WOBBLE, BA_DUB}, 29, KM_SUSTAIN, 110, {PR_I_VI, PR_50S, PR_I_V}, 2, CS_SPARSE, VM_RICH,
-     {AP_BROKEN, AP_UPDOWN}, LD_SPARSE, AMT(90, 100, 45, 40, 35), {KIT_808, SR_SUB, SR_PAD, SR_BELL, SR_BELL}, SR_CHOIR,
+     {AP_BROKEN, AP_UPDOWN}, LD_SPARSE, AMT(90, 100, 45, 40, 35), {KIT_808, SR_808, SR_PAD, SR_BELL, SR_BELL}, SR_CHOIR,
      2, 1, 55, 0, FM_PARTS, 0, HF_POP | HX_RAISE},
     {"UK GARAGE", 128, 134, 24, {SC_MIN, SC_DOR, SC_MIN, SC_MAJ}, DM_UKG, 100, KIT_909, 2, HC_GARAGE, FL_KICK16, 1,
      {BA_UKG, BA_SPEEDG, BA_DEEPWALK}, 33, KM_INTERLOCK, 45, {PR_I_IV, PR_JAZZ, PR_DEEP4}, 1, CS_BROKEN, VM_RICH,
@@ -520,7 +545,7 @@ static const ggenre_t GENRE[] = {
      0, 1, 40, 0, FM_CLUB, 10, HF_JAZZY},
     {"DUBSTEP", 138, 142, 0, {SC_MIN, SC_PHRY, SC_HARM, SC_MIN}, DM_DUBSTEP, 100, KIT_808, 1, HC_FLAT, FL_BREAK, 0,
      {BA_WOBBLE, BA_DUB, BA_TRAP}, 29, KM_SUSTAIN, 110, {PR_ONE, PR_I_VI, PR_PHRY}, 2, CS_SPARSE, VM_SUS,
-     {AP_PULSE, AP_BROKEN}, LD_SPARSE, AMT(85, 100, 40, 20, 30), {KIT_808, SR_REESE, SR_PAD, SR_PLUCK, SR_BELL}, SR_NOISE,
+     {AP_PULSE, AP_BROKEN}, LD_SPARSE, AMT(85, 100, 40, 20, 30), {KIT_808, SR_WOW, SR_PAD, SR_PLUCK, SR_BELL}, SR_NOISE,
      2, 1, 55, 1, FM_CLUB, 0, HF_LOOP},
     {"BREAKS", 126, 140, 6, {SC_MIN, SC_DOR, SC_PHRY, SC_MIN}, DM_BREAKS, 100, KIT_BREAKS, 3, HC_FUNK, FL_LINEAR, 1,
      {BA_ACID, BA_JUNGLE, BA_AROUND}, 33, KM_INTERLOCK, 50, {PR_ONE, PR_I_IV, PR_I_VI}, 2, CS_STAB, VM_RICH,
@@ -542,11 +567,11 @@ static const ggenre_t GENRE[] = {
     /* ---- jazz, latin */
     {"JAZZ", 110, 150, 40, {SC_MAJ, SC_DOR, SC_MIN, SC_MAJ}, DM_JAZZ, 90, KIT_BREAKS, 2, HC_FLAT, FL_NONE, 1,
      {BA_WALK, BA_WALK2, BA_TWOFEEL}, 33, KM_SUSTAIN, 95, {PR_JAZZ, PR_TURN, PR_JAZZ2}, 1, CS_COMP, VM_RICH,
-     {AP_WALK, AP_UPDOWN}, LD_MOTIF, AMT(60, 95, 75, 20, 55), {KIT_BREAKS, SR_ROCKBASS, SR_EP, SR_EP, SR_VOXLEAD}, SR_ORGAN,
+     {AP_WALK, AP_UPDOWN}, LD_MOTIF, AMT(60, 95, 75, 20, 55), {KIT_BREAKS, SR_UPRIGHT, SR_EP, SR_EP, SR_VOXLEAD}, SR_ORGAN,
      0, 1, 40, 0, FM_LOOP, 70, HF_JAZZ | HX_RAISE | HX_SEC | HX_BOR | HX_APPR},
     {"BOSSA", 120, 136, 6, {SC_MAJ, SC_LYD, SC_DOR, SC_MIN}, DM_BOSSA, 100, KIT_SOFT, 0, HC_FLAT, FL_NONE, 0,
      {BA_BOSSA, BA_TUMBAO, BA_TWOFEEL}, 33, KM_DOUBLE, 80, {PR_BOSSA, PR_I_II, PR_JAZZ}, 2, CS_COMP, VM_RICH,
-     {AP_ALBERTI, AP_UPDOWN}, LD_MOTIF, AMT(75, 90, 70, 30, 50), {KIT_SOFT, SR_ROCKBASS, SR_GTR, SR_EP, SR_SINEKEY}, SR_STRINGS,
+     {AP_ALBERTI, AP_UPDOWN}, LD_MOTIF, AMT(75, 90, 70, 30, 50), {KIT_SOFT, SR_UPRIGHT, SR_GTR, SR_EP, SR_SINEKEY}, SR_STRINGS,
      0, 1, 40, 0, FM_LOOP, 50, HF_JAZZ | HX_RAISE | HX_SEC | HX_APPR},
     {"AFROBEAT", 112, 126, 10, {SC_DOR, SC_MIX, SC_MPEN, SC_MIN}, DM_AFRO, 100, KIT_BREAKS, 3, HC_FUNK, FL_LINEAR, 1,
      {BA_AROUND, BA_SKA, BA_ANGULAR}, 33, KM_INTERLOCK, 45, {PR_I_IV, PR_ONE, PR_I_VII}, 2, CS_COMP, VM_RICH,
@@ -579,6 +604,31 @@ static const ggenre_t GENRE[] = {
      4, 4, 65, 0, FM_PARTS, 50, HF_JAZZY},
 };
 #define NGENRE (sizeof GENRE / sizeof GENRE[0])
+/* (0.9.9-gen1) each genre's PATTERN GRAMMAR past its maps and archetypes (GENRE's order): on the bass, how many ACCENTs
+ * (off the kick), SLIDEs (a note tied into the next: its glide), octave jumps (the offbeat sixteenths), 0 .. 3 each;
+ * DRUM-X GLUE (0 .. 3: x 4); the closed hats ratcheted now and then (a condition: every other loop); MUTATE on the arp
+ * or the chords (WHAT PATTERN, LOOP 4, ORBIT: a pattern orbiting the piece). The 303's own rules (gen_acid) are the acid bass's */
+#define GG(acc, sld, oct, glue, rat, mut) (uint16_t)((acc) | (sld) << 2 | (oct) << 4 | (glue) << 6 | (rat) << 8 | (mut) << 9)
+#define GG_ACC(g) ((g) & 3u)
+#define GG_SLD(g) (((g) >> 2) & 3u)
+#define GG_OCT(g) (((g) >> 4) & 3u)
+#define GG_GLUE(g) (((g) >> 6) & 3u)
+#define GG_RAT(g) (((g) >> 8) & 1u)
+#define GG_MUT(g) (((g) >> 9) & 1u)
+static const uint16_t GGRAM[] = {
+    GG(1, 0, 1, 0, 0, 0), GG(0, 1, 0, 0, 0, 0), GG(1, 0, 0, 1, 0, 1), GG(1, 0, 1, 1, 0, 0),   /* HOUSE DEEP MICRO TECH */
+    GG(0, 0, 0, 1, 0, 0), GG(1, 0, 0, 2, 0, 0), GG(1, 0, 1, 1, 0, 0), GG(0, 0, 0, 1, 0, 1),   /* ACID TECHNO DETROIT DUB TECHNO */
+    GG(2, 0, 0, 3, 1, 0), GG(1, 0, 0, 2, 0, 1), GG(1, 0, 1, 1, 0, 0), GG(2, 0, 1, 1, 1, 0),   /* HARD HYPNOTIC TRANCE ELECTRO */
+    GG(2, 0, 0, 2, 0, 0), GG(1, 0, 2, 0, 0, 0), GG(1, 0, 2, 0, 0, 0), GG(1, 0, 1, 1, 0, 0),   /* EBM ITALO SYNTH POP DARKWAVE */
+    GG(1, 0, 1, 0, 0, 0), GG(1, 0, 0, 0, 0, 0), GG(1, 0, 1, 0, 0, 1), GG(1, 0, 1, 0, 0, 1),   /* POST PUNK TRIBAL MINIMAL MAN MACHINE */
+    GG(0, 0, 1, 0, 0, 1), GG(1, 0, 0, 0, 0, 0), GG(0, 1, 0, 0, 0, 0), GG(0, 1, 0, 0, 0, 0),   /* MOTORIK INDIE SHOEGAZE POST ROCK */
+    GG(2, 1, 2, 0, 0, 0), GG(1, 0, 3, 0, 0, 0), GG(1, 1, 0, 1, 0, 0), GG(1, 3, 0, 1, 1, 0),   /* FUNK DISCO BOOM BAP TRAP */
+    GG(1, 1, 1, 0, 1, 0), GG(1, 2, 0, 2, 0, 0), GG(1, 0, 0, 1, 1, 0), GG(1, 2, 0, 2, 1, 0),   /* UK GARAGE DUBSTEP BREAKS DNB */
+    GG(0, 1, 0, 0, 0, 0), GG(0, 0, 0, 0, 0, 0), GG(1, 1, 0, 0, 0, 0), GG(0, 1, 0, 0, 0, 0),   /* DUB STEPPERS JAZZ BOSSA */
+    GG(2, 0, 1, 0, 0, 0), GG(0, 1, 0, 0, 0, 1), GG(0, 0, 0, 0, 0, 0), GG(0, 0, 0, 0, 0, 0),   /* AFROBEAT AMBIENT NEO CLASSIC IMPRESSION */
+    GG(0, 0, 0, 0, 0, 1), GG(1, 1, 1, 1, 1, 1), GG(1, 1, 1, 0, 0, 0),                         /* SOUNDTRACK IDM BROKEN */
+};
+_Static_assert(sizeof GGRAM / sizeof GGRAM[0] == NGENRE, "GGRAM: a grammar a genre");
 
 /* ------------------------------------------------------------------------------------------- (0.8.6) EXPLORE --- */
 /* GENRE's first choice and the dice's default: no genre's template, every one of its rules thrown (gen.c gx_genre).
@@ -593,7 +643,8 @@ static const uint8_t GX_SCALE_W[9] = {4, 4, 8, 8, 13, 14, 14, 8, 13};
 /* the lead's degrees over the mode: all seven, the pentatonics, hexatonics, a gapped one, an odd five */
 static const uint8_t GX_PAL[8] = {0x7Fu, 0x5Du, 0x37u, 0x6Fu, 0x3Bu, 0x77u, 0x2Du, 0x5Bu};
 /* the recipes a role may take (beyond its usual ones: a plucked bass, a bell lead, an organ texture ..) */
-static const uint8_t GX_BASS[11] = {SR_SUB, SR_ACID, SR_REESE, SR_FMBASS, SR_ROCKBASS, SR_HOOK, SR_WOW, SR_EBMBASS, SR_PLUCK, SR_CHIP, SR_GTR};
+static const uint8_t GX_BASS[14] = {SR_SUB, SR_ACID, SR_REESE, SR_FMBASS, SR_ROCKBASS, SR_HOOK, SR_WOW, SR_EBMBASS, SR_PLUCK, SR_CHIP, SR_GTR,
+                                    SR_808, SR_UPRIGHT, SR_TECHBASS};
 static const uint8_t GX_PADS[13] = {SR_PAD, SR_STRINGS, SR_CHOIR, SR_ORGAN, SR_EP, SR_STAB, SR_DUBCHORD, SR_HOOVER, SR_WALL, SR_GTR, SR_KEYS, SR_BELL, SR_DRONE};
 static const uint8_t GX_ARPS[8] = {SR_PLUCK, SR_BELL, SR_CHIP, SR_KEYS, SR_SINEKEY, SR_EP, SR_GTR, SR_STAB};
 static const uint8_t GX_LEADS[8] = {SR_LEAD, SR_VOXLEAD, SR_CHIP, SR_HOOVER, SR_BELL, SR_PLUCK, SR_WOW, SR_ORGAN};

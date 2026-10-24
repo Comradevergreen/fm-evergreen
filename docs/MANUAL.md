@@ -1375,6 +1375,41 @@ range, its scales and chord progressions, its drum map and kit, its bass archety
 and lead speak, which sound recipe each role takes, how human it plays and its space (reverb type, delay type and
 time, how wet).
 
+**A clean base** (0.9.9-gen1): every piece starts from **NEW PROJECT's state** — every track's parameters, sound,
+steps, step components, p-locks and automation, MUTATE, the song's globals (but the clock, tune, MIDI and routing),
+the punch-in and global component lanes, DRUM-X's kit (GLUE, octaves, sends, layers), FUGUE's playheads, PLAY's SONG
+mode — so nothing of the piece before, or of your edits, carries into it: **the same settings and seed make the same
+project whatever was there**. Kept: the tempo under **BPM LOCK**, the project's name and your own sections (PARTS never
+writes over them); **UNDO** brings the old music back.
+
+**Sound archetypes and pattern grammar** (0.9.9-gen1). Each role of a genre plays a **sound archetype** set in the
+engine's real parameters: the engine and its factory preset (a bass always the archetype's engine), the oscillator
+wave, the filter type, cutoff, resonance and envelope amount, the amp envelope, glide, drive and chorus, an LFO on the
+filter, each with a small random range so two seeds differ but stay the sound. Some of them:
+
+| Archetype | Genres | The sound |
+|---|---|---|
+| **ACID** (the 303) | ACID HOUSE, BREAKS | ANALOG saw (or square), one oscillator, LP nearly closed, RES high, the filter envelope high and short, glide on the SLIDEs, driven |
+| **TECH BASS** | TECHNO, TECH HOUSE, HARD TECHNO, HYPNOTIC | ANALOG saw or square, short, resonant LP, envelope, drive |
+| **EBM BASS** | EBM, DARKWAVE, MINIMAL SYNTH | ANALOG square through the **MS20** filter, short, envelope, drive |
+| **808** | TRAP | a sine's long boom, glide 30+, driven |
+| **WOBBLE** | DUBSTEP | fat saws, resonant LP moved by an LFO **on the beat** (1/8) |
+| **REESE** | DRUM & BASS, UK GARAGE | SAW3 detuned, a slow LFO on the filter, chorus |
+| **OCTAVE BASS** | ITALO, SYNTH POP, ELECTRO, DETROIT, TRANCE | ANALOG saw or square plucked by the filter envelope |
+| **UPRIGHT** | JAZZ, BOSSA, BOOM BAP | a triangle, short and plucked |
+| **SUB** | DEEP HOUSE, DUB, STEPPERS, DUB TECHNO, AMBIENT, SOUNDTRACK | a sine, LP low |
+| **SUPERSAW** | TRANCE (chords, lead) | ANALOG SAW3, chorused |
+| **FM BASS** | HOUSE, MICRO HOUSE, FUNK, MAN MACHINE, IDM, BROKEN | FM6 FM BASS / HARD BASS |
+
+Over the genre's drum map, bass archetypes, chord play, arp and lead, a **pattern grammar** a genre adds: on the bass,
+ACCENTs off the kick, SLIDEs into the next note (its glide), octave jumps on the offbeat sixteenths (each 0–3 by
+genre: FUNK and DISCO jump, TRAP and DUBSTEP slide, EBM and HARD TECHNO accent; the acid bass keeps the 303's own
+rules: 16ths with rests, 3–5 accents and 2–3 slides a bar, octave jumps); **DRUM-X GLUE** where the genre bus-compresses
+(the techno family, EBM, DnB, dubstep); now and then the closed hat **rolled on the beat's last sixteenth every other
+loop** (TRAP, DnB, UK GARAGE, BREAKS, ELECTRO, HARD TECHNO, IDM); **MUTATE** (WHAT PATTERN, LOOP 4, ORBIT) on the arp or
+the chords where the genre orbits (MICRO HOUSE, DUB TECHNO, HYPNOTIC, MINIMAL SYNTH, MAN MACHINE, MOTORIK, AMBIENT,
+SOUNDTRACK, IDM). A role's sound is always its archetype (no more neighbour recipes swapped in).
+
 **EXPLORE** (0.8.6), the first choice and where the screen always opens (at power-on, after NEW PROJECT, every time
 you open GEN), follows **no genre** and breaks their rules on purpose, so every seed is a very different piece
 (**LAST: EXPLORE 0421**):
@@ -1397,7 +1432,7 @@ you open GEN), follows **no genre** and breaks their rules on purpose, so every 
 - What it keeps: it always plays (two melodic parts at least, the genres' levels, the shared voice budget, the delay
   short of self-oscillation), the **SCALE page** and the **CHORD page** say the key and the chords it plays, and every
   note is in that key but the coloured chords' own tones and the approaches. The same seed is the same piece; the
-  genres' pieces are exactly as before. After an EXPLORE piece a genre's piece sets DIV back to 1/16 and PLAYHEADS off.
+  genres' pieces are untouched by it; a genre's piece after it starts from the clean base (DIV 1/16, no PLAYHEADS).
 
 What a piece is made of:
 

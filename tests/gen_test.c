@@ -7,6 +7,8 @@
  * tones more often than not; chords of three or four, voiced in C3..G5, led closely; a storable project; a form in
  * ARRANGE when asked; the parts' knobs only touching their own part. (0.8.6) EXPLORE, the default: no genre, every
  * rule broken, every piece still playing in its key, very different from the next.
+ * (0.9.9-gen1) The clean base (the same seed from three different states, the same project), each genre's sound
+ * archetypes and grammar (the acid house's 303 ..), one seed one project in every genre, the CPU budget.
  *   cc -O1 -w -Ibuild/gen -Ifirmware/src -Itests -o build/host/gen_test tests/gen_test.c -lm */
 #define UI_TEST_NO_MAIN 1
 #include "ui_test.c"
@@ -76,6 +78,87 @@ static void gx_listen(uint32_t blocks, double *rms, int32_t *peak, uint32_t *cli
     transport_req = 2;
     { int32_t o[2 * CTL]; ui_input(); mix_block(o, CTL); }
     *rms = sqrt(acc / (double)(blocks * 2u * CTL)); *peak = pk; *clip = cl; *vmax = vm;
+}
+/* (0.9.9-gen1) the whole project as a hash: every track's parameters, engine, preset, steps and automation, the song's
+ * globals, DRUM-X's kit (GLUE, octaves, sends, layers), the global components lane, FUGUE's playheads, the punch-in
+ * lane, the macros, the chain, PLAY's mode */
+static uint64_t gfnv(uint64_t h, const void *p, size_t n)
+{
+    const uint8_t *b = (const uint8_t *)p;
+    while (n--) h = (h ^ *b++) * 1099511628211ull;
+    return h;
+}
+static uint64_t gen_proj_hash(void)
+{
+    uint64_t h = 1469598103934665603ull;
+    uint32_t k;
+    for (k = 0; k < NTRK; k++) {
+        h = gfnv(h, trk[k].p, sizeof trk[k].p);
+        h = gfnv(h, &trk[k].eng_req, sizeof trk[k].eng_req);
+        h = gfnv(h, &trk[k].preset, sizeof trk[k].preset);
+        h = gfnv(h, trk[k].step, sizeof trk[k].step);
+    }
+    h = gfnv(h, motion.event, motion.count * sizeof motion.event[0]);
+    h = gfnv(h, song.g, sizeof song.g);
+    h = gfnv(h, dx_kit, sizeof dx_kit); h = gfnv(h, dx_snd, sizeof dx_snd); h = gfnv(h, dx_lay, sizeof dx_lay);
+    h = gfnv(h, dx_mot, sizeof dx_mot); h = gfnv(h, &dx_glue, 1); h = gfnv(h, &dx_tone, sizeof dx_tone); h = gfnv(h, &dx_hands, sizeof dx_hands);
+    h = gfnv(h, glane, sizeof glane); h = gfnv(h, &gl_mono, sizeof gl_mono);
+    h = gfnv(h, fg_set, sizeof fg_set); h = gfnv(h, pfx_lane, sizeof pfx_lane); h = gfnv(h, macro_v, sizeof macro_v);
+    h = gfnv(h, &chain_config, sizeof chain_config); h = gfnv(h, &live.mode, sizeof live.mode);
+    return h;
+}
+/* (0.9.9-gen1) another state to generate from: a piece of another genre (EXPLORE, a SONG), then the player's hand on
+ * everything the clean base must clear */
+static void gen_dirty(uint32_t seed)
+{
+    uint32_t k, i;
+    gen_with(GEN_EXPLORE, seed, 70, 2);
+    gen_with(5, seed + 3u, 30, 1);
+    for (k = 0; k < NTRK; k++) {
+        track_t *t = &trk[k];
+        t->p[P_LD_FLT] = 40; t->p[P_LRATE] = 90; t->p[P_LD_PIT] = 9; t->p[P_APDEP] = 50; t->p[P_SDIV] = 3; t->p[P_SSWING] = 33;
+        t->p[P_MSND] = 2; t->p[P_MAMT] = 50; t->p[P_DIST] = 77; t->p[P_LEVEL] = 40; t->p[P_E3] = 99;
+        for (i = 0; i < 8u; i++) { t->step[i].comp = CP_RAND; t->step[i].probability = 50; }
+        motion_set_event(t, 5, P_FCUT, 20);
+    }
+    dx_glue = 9; dx_tone = 3; dx_hands = 1; dx_mot[0] = 5; dx_snd[0] = 77;
+    memset(glane, 0x5A, sizeof glane); gl_mono = 1;
+    memset(fg_set, 1, sizeof fg_set);
+    memset(pfx_lane, 0x33, sizeof pfx_lane);
+    macro_v[0] = 99; live.mode = 1;
+}
+static uint32_t genre_of(const char *name)
+{
+    uint32_t g;
+    for (g = 0; g < NGENRE; g++) if (!strcmp(GENRE[g].name, name)) return g + 1u;
+    return 0;
+}
+/* the steps of a lane: how many of steps a ..b (every 4th from a) have a hit there */
+static uint32_t lane_on(const track_t *t, uint32_t lane, uint32_t from, uint32_t every)
+{
+    uint32_t i, c = 0;
+    for (i = from; i < (uint32_t)t->p[P_SLEN]; i += every) c += t->step[i].time == ST_NOTE && ((t->step[i].hit >> lane) & 1u);
+    return c;
+}
+/* (0.9.9-gen1) a piece's CPU load as the FM-1 predicts it (voice.c load_sounding_q8: every sounding voice at its
+ * part's cost, by engine on the host), the most over a while, in % of a half */
+static uint32_t render_load(uint32_t blocks)
+{
+    uint32_t i, most = 0;
+    song.master_q12 = 4096;
+    transport_req = 1;
+    for (i = 0; i < blocks; i++) {
+        int32_t o[2 * CTL];
+        uint32_t l;
+        if (i % 32u == 0u) { ui_input(); song_poll(); host_ticks += 20000u; fm1_ms += 20u; }
+        memset(o, 0, sizeof o);
+        mix_block(o, CTL);
+        l = load_sounding_q8() >> 8;
+        if (l > most) most = l;
+    }
+    transport_req = 2;
+    { int32_t o[2 * CTL]; ui_input(); mix_block(o, CTL); }
+    return most;
 }
 static uint32_t hits_all(const track_t *t)
 {
@@ -724,6 +807,129 @@ int main(void)
             bad += gcheck("  OCT-: done (0.9.2: HOME's ECO), the piece stays", !ui.confirm && ui.home && home_level() == 0u &&
                           steps_sig(&trk[0]) != sig0);
         }
+    }
+    /* ---- (0.9.9-gen1) the clean base: a piece is the same piece whatever was there before it */
+    {
+        static const char *const CB[4] = {"ACID HOUSE", "TECHNO", "DUB", "TRAP"};
+        uint32_t c, same = 0, n = 0;
+        for (c = 0; c < 4u; c++) {
+            uint32_t gi = genre_of(CB[c]), f;
+            for (f = 0; f < 2u; f++) {
+                uint64_t h0, h1, h2;
+                gen_reset(); gen_with(gi, 1234u + c, 50, f); h0 = gen_proj_hash();
+                gen_dirty(77u + c); gen_with(gi, 1234u + c, 50, f); h1 = gen_proj_hash();
+                gen_dirty(901u + c); gen_with(gi, 1234u + c, 50, f); gen_with(gi, 1234u + c, 50, f); h2 = gen_proj_hash();
+                n++; same += h0 == h1 && h1 == h2;
+                if (h0 != h1 || h1 != h2) printf("  clean base: %s FORM %u differs after another state\n", CB[c], f);
+            }
+        }
+        bad += gcheck("(0.9.9-gen1) clean base: the same seed from 3 different states, the same project (8 of 8)", same == n);
+        bad += gcheck("  the clean base cleared the player's hand: LFO, DIV, MUTATE, comps, GLUE, lanes, PLAY mode",
+                      trk[0].p[P_SDIV] == 2 && !trk[0].p[P_MSND] && trk[0].step[1].probability != 50 && dx_tone == 0 && !gl_mono && !macro_v[0]);
+    }
+    /* ---- (0.9.9-gen1) each genre's archetypes: the bass's and the lead's engine, filter and wave the archetype's;
+     * the acid house's 303; the 808, the EBM's MS20, the wobble, GLUE, MUTATE where the grammar has them */
+    {
+        uint32_t eng_bad = 0, flt_bad = 0, wave_bad = 0, glue_bad = 0, mut_bad = 0, checks = 0, kit_bad = 0;
+        uint32_t acid_ok = 0, acid_n = 0, trap_ok = 0, ebm_ok = 0, wob_ok = 0, four_ok = 0, four_n = 0;
+        gen_reset();
+        for (g = 0; g < NGENRE; g++)
+            for (s = 0; s < 4u; s++) {
+                uint32_t gg = GGRAM[g], dr = NTRK, muts = 0;
+                gen_with(g + 1u, 40u * g + 7u * s + 11u, 35u + 15u * s, 0);
+                if (gs.mutant) continue;
+                for (k = 0; k < NTRK; k++) {
+                    const track_t *t = &trk[k];
+                    uint32_t r = gs.role[k], ri, ft, o, ok = 0;
+                    const grecipe_t *a;
+                    if (drum_track(t)) { dr = k; continue; }
+                    muts += MUT_WHAT(t) == MW_PATTERN;
+                    if (!gs.act[r] || (r != RL_BASS && r != RL_LEAD)) continue;
+                    ri = gs.g->snd[r == RL_BASS ? GP_BASS : GP_LEAD];
+                    a = &RECIPE[ri];
+                    checks++;
+                    for (o = 0; o < (r == RL_BASS ? 2u : 3u); o++) ok |= a->o[o][0] == t->eng_req;
+                    if (!ok && !(t->eng_req == EG_A || (a->o[0][0] == ENGI_FM6 && t->eng_req == a->o[2][0]))) { eng_bad++; printf("  archetype: %s %s on %s\n", gs.g->name, r == RL_BASS ? "bass" : "lead", trk_engp(t)->name); }
+                    ft = a->ft & 7u;
+                    if (ft != 7u && t->p[P_FTYPE] != (int16_t)ft) flt_bad++;
+                    if (t->eng_req == EG_A && a->o[0][0] == EG_A && !(a->wv & GNOWV) && t->p[P_E0] != (int16_t)(a->wv & 7u) && t->p[P_E0] != (int16_t)((a->wv >> 3) & 7u)) wave_bad++;
+                }
+                if (dr < NTRK && gs.act[RL_DRUM] && dx_glue != GG_GLUE(gg) * 4u) glue_bad++;
+                if (dr < NTRK && !gs.act[RL_DRUM] && trk[dr].step[0].time == ST_NOTE) kit_bad++;
+                if (GG_MUT(gg) && (gs.act[RL_ARP] || gs.act[RL_PAD]) && muts != 1u) mut_bad++;
+                if (!GG_MUT(gg) && muts) mut_bad++;
+                if (dr < NTRK && gs.act[RL_DRUM] && (gs.g->drum == DM_HOUSE || gs.g->drum == DM_TECHNO || gs.g->drum == DM_TECHHOUSE)) {
+                    const track_t *d = &trk[dr];   /* (four on the floor, the clap or snare on 2 and 4) */
+                    four_n++;
+                    four_ok += lane_on(d, 0, 0, 4) * 16u >= (uint32_t)d->p[P_SLEN] * 3u && lane_on(d, DV_CLAP, 4, 8) + lane_on(d, DV_SNARE, 4, 8) > 0u;
+                }
+                if (gs.trk_of[RL_BASS] < NTRK && gs.act[RL_BASS]) {
+                    const track_t *b = &trk[gs.trk_of[RL_BASS]];
+                    uint32_t i2, slid = 0, acc = 0, len = (uint32_t)b->p[P_SLEN], oct = 0;
+                    for (i2 = 0; i2 < len; i2++) {
+                        const step_t *st = &b->step[i2];
+                        if (st->time != ST_NOTE) continue;
+                        acc += (st->flags & SF_ACCENT) != 0;
+                        if ((st->flags & SF_SLIDE) && i2 + 1u < len && b->step[i2 + 1u].time == ST_NOTE) slid++;
+                        if (i2 && b->step[i2 - 1u].time == ST_NOTE && (st->note[0] == b->step[i2 - 1u].note[0] + 12 || st->note[0] + 12 == b->step[i2 - 1u].note[0])) oct++;
+                    }
+                    if (!strcmp(GENRE[g].name, "ACID HOUSE")) {
+                        const track_t *d = dr < NTRK ? &trk[dr] : 0;
+                        acid_n++;
+                        acid_ok += b->eng_req == EG_A && b->p[P_FTYPE] == 0 && b->p[P_E5] >= 90 && b->p[P_E4] <= 60 && b->p[P_ED_FLT] >= 40 &&
+                                   b->p[P_GLIDE] >= 20 && b->p[P_SUS] <= 16 && b->p[P_E2] == 0 && (b->p[P_E0] == 0 || b->p[P_E0] == 1) &&
+                                   slid >= 1u && acc >= 2u && oct >= 1u && gs.ba == BA_ACID &&
+                                   (!d || !gs.act[RL_DRUM] || (lane_on(d, 0, 0, 4) * 16u >= (uint32_t)d->p[P_SLEN] * 3u && lane_on(d, DV_HATO, 2, 4) > 0u));
+                    }
+                    if (!strcmp(GENRE[g].name, "TRAP")) trap_ok += b->eng_req == EG_A && b->p[P_E0] == 3 && b->p[P_GLIDE] >= 30 && b->p[P_DEC] >= 80;
+                    if (!strcmp(GENRE[g].name, "EBM")) ebm_ok += b->eng_req == EG_A && b->p[P_FTYPE] == 5 && b->p[P_DIST] > 0;
+                    if (!strcmp(GENRE[g].name, "DUBSTEP")) wob_ok += b->eng_req == EG_A && b->p[P_LRATE] < 0 && b->p[P_LD_FLT] >= 20;
+                }
+            }
+        printf("gen: archetypes: %u parts checked; engine %u, filter %u, wave %u off; GLUE %u, MUTATE %u off; four on the floor %u of %u\n",
+               checks, eng_bad, flt_bad, wave_bad, glue_bad, mut_bad, four_ok, four_n);
+        bad += gcheck("(0.9.9-gen1) archetypes: every genre's bass and lead on its engine, its filter type and wave", !eng_bad && !flt_bad && !wave_bad);
+        bad += gcheck("  the grammar: DRUM-X GLUE and MUTATE as the genre has them; 4/4 kick, 2/4 clap in house and techno",
+                      !glue_bad && !mut_bad && !kit_bad && four_ok == four_n && four_n);
+        bad += gcheck("  ACID HOUSE: ANALOG saw/square, LP, RES >= 90, CUT low, ENV high, short, glide, slides, accents, octaves, offbeat hats",
+                      acid_n && acid_ok == acid_n);
+        bad += gcheck("  TRAP's 808 (a sine, long, gliding), EBM's MS20 driven, DUBSTEP's synced wobble", trap_ok && ebm_ok && wob_ok);
+    }
+    /* ---- (0.9.9-gen1) the same seed, the same piece (and a different one from another seed), every genre */
+    {
+        uint32_t det = 0;
+        for (g = 0; g < NGENRE; g++) {
+            uint64_t a, b, c;
+            gen_with(g + 1u, 555u + g, 60, 1); a = gen_proj_hash();
+            gen_with(g + 1u, 556u + g, 60, 1); c = gen_proj_hash();
+            gen_with(g + 1u, 555u + g, 60, 1); b = gen_proj_hash();
+            det += a == b && a != c;
+        }
+        bad += gcheck("(0.9.9-gen1) every genre: one seed one project (FORM PARTS), another seed another", det == NGENRE);
+    }
+    /* ---- (0.9.9-gen1) the CPU budget: every piece's voices, as the FM-1 predicts their load (voice.c), under the
+     * admission's limit (LOAD_ADMIT: past it a voice is given up), the CPU TEST song's (SAVE > TOOLS 6) printed beside;
+     * the voice budget kept */
+    {
+        uint32_t heavy, worst = 0, vbad = 0, e;
+        const char *wn = "";
+        gen_reset();
+        cpu_test_song();
+        heavy = render_load(3000);
+        for (g = 0; g < NGENRE; g++)
+            for (e = 0; e < 2u; e++) {
+                uint32_t l, cl, vm;
+                double rms;
+                int32_t pk;
+                gen_with(g + 1u, 31u * g + 5u + e, e ? 85u : 50u, 0);
+                l = render_load(2000);
+                if (l > worst) { worst = l; wn = GENRE[g].name; }
+                gx_listen(400, &rms, &pk, &cl, &vm);
+                vbad += vm > NVOICE + 1u;               /* (the budget's own overshoot: a fading voice) */
+            }
+        printf("gen: CPU: the heaviest piece %s %u %% predicted (the CPU TEST song %u %%, the admission %u %%)\n", wn, worst, heavy, LOAD_ADMIT);
+        bad += gcheck("(0.9.9-gen1) CPU: every genre's piece (ENERGY 50, 85) under the admission's limit, the voice budget kept",
+                      worst < LOAD_ADMIT && !vbad);
     }
     printf(bad ? "gen: %d FAILED\n" : "gen: all passed\n", bad);
     return bad ? 1 : 0;

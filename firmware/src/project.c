@@ -1921,6 +1921,14 @@ static void system_init(void)
     mut_forget();                                       /* (0.9.3: the anchor is the old music's) */
     ui.force = 1;
 }
+/* (0.9.9-gen1) GEN's clean base (gen.c gen_clean): NEW PROJECT's state, the music's name kept */
+static void system_init_named(void)
+{
+    char nm[sizeof proj_name];
+    memcpy(nm, proj_name, sizeof nm);
+    system_init();
+    memcpy(proj_name, nm, sizeof nm);
+}
 /* (JIANT 0.6.43) MUTATE: each track's SOUND and PATTERN change by themselves every OFF / 1 .. 32 bars, on the bar (the
  * change made in the bar before's last sixteenth, so it lands on the one), by AMOUNT, in the clock with the rest of the
  * gear. ORBIT (the default): around the anchor, the music as it was when MUTATE came on, PLAY started or KEEP (the

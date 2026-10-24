@@ -285,16 +285,38 @@ def layout_record(mapt, syms, reach):
     print(f"layout: recorded {len(text)} code sections, {sum(1 for x in lines if ' @ ' in x)} runs of the sound pinned")
 
 
+# (0.9.9-gen1) main-loop code placed after the sound (never in the holes before its pinned runs): the song generator's
+# functions (firmware/src/gen.c), so it can change size without moving the sound and without the UI's room before it.
+# Only UI code ('-' rows): they leave the recorded order and land with the code not in the layout, past the tables
+LATE_SRC = ("gen.c",)
+
+
+def late_fns():
+    names = set()
+    for f in LATE_SRC:
+        names |= set(re.findall(r"^static [^;=()]*?\b(\w+)\((?![^)]*\)\s*;)", (FW / "src" / f).read_text(), flags=re.M))
+    return names
+
+
+def late_tables():
+    """the generator's own constant tables (gen.c, gen_tables.c): out of .rodata like the UI's recorded ones ('n'), so a
+    new one never moves the sound's merged constants after .rodata"""
+    names = set()
+    for f in ("gen.c", "gen_tables.c"):
+        names |= set(re.findall(r"^static const [^=;(]*?\b(\w+)\s*\[", (FW / "src" / f).read_text(), flags=re.M))
+    return names
+
+
 def layout_ld(rows, fills=None):
     """build/layout.ld: the code sections in the recorded order, each run of the sound at its address; fills: {run: [n
     sections]} put in the hole before it"""
-    out, k = [], 0
+    out, k, late = [], 0, late_fns()
     for off, flag, name in rows:
         if flag == "@":
             out += [f"*(.rodata.n.{f})" for f in (fills or {}).get(k, [])]
             out += [f"_lay_gap{k} = .;", f". = {off:#x};"]
             k += 1
-        if flag in "@a-":
+        if flag in "@a" or (flag == "-" and name not in late):
             out.append(f"*(.text.{name})")
     LAYOUT_LD.write_text("\n".join(out) + "\n")
 
@@ -373,17 +395,40 @@ def build_app():
     elf = OUT / "felucca.elf"
     objs = (OUT / "crt0.o", OUT / "fm1_vec.o", OUT / "fm1_isr.o", OUT / "felucca.o")
 
-    def link():
-        tc("pi32v2/bin/ld", "-T", FW / "app.ld", *objs, "-o", elf, "-Map", OUT / "felucca.map")
+    def link(probe=False):
+        """probe (0.9.9-gen1): the holes measured with the code moved past the sound (LATE_SRC) before the UI's tables
+        fill them, in an XIP region 1 MiB larger (the image would not fit with the holes still empty)"""
+        ld = FW / "app.ld"
+        if probe:
+            ld = OUT / "app_probe.ld"
+            ld.write_text(re.sub(r"(XIP\s+\(rx\)\s*:\s*ORIGIN = 0x[0-9A-Fa-f]+, LENGTH = )(0x[0-9A-Fa-f]+)",
+                                 lambda m: m[1] + hex(int(m[2], 16) + 0x100000), (FW / "app.ld").read_text()))
+        tc("pi32v2/bin/ld", "-T", ld, *objs, "-o", elf, "-Map", OUT / "felucca.map")
         return (OUT / "felucca.map").read_text(), tc("common/bin/objdump", "-t", elf)
 
     def compile_hot(rows):
         """the hot IR, the UI's tables of the layout ('n') in sections of their own; {table: alignment}"""
         tables, aligns = {name for _, flag, name in rows if flag == "n"}, {}
+        late = late_tables() - tables
+
+        def ir_bytes(ty):
+            """[N x iK] / [N x [M x iK]]: its size in bytes (None: another type)"""
+            m = re.fullmatch(r"\[(\d+) x (.+)\]", ty.strip())
+            if not m:
+                k = re.fullmatch(r"i(8|16|32|64)", ty.strip())
+                return int(k[1]) // 8 if k else None
+            inner = ir_bytes(m[2])
+            return int(m[1]) * inner if inner else None
 
         def const(m):
-            if m.group(2) not in tables or ' section "' in m.group(0):
+            if ' section "' in m.group(0):
                 return m.group(0)
+            if m.group(2) not in tables:
+                # (0.9.9-gen1) a generator table the layout has not recorded: out of .rodata too, unless the
+                # compiler merges it with the small constants (4 8 16 32 B: the sound's are checked after them)
+                ty = re.search(r" constant (\[[^\]]*(?:\][^\]]*)*?\]|i\d+) ", m.group(1) + " ")
+                if m.group(2) not in late or not ty or ir_bytes(ty[1]) in (4, 8, 16, 32):
+                    return m.group(0)
             aligns[m.group(2)] = int(m.group(4))
             return f'{m.group(1)}, section ".rodata.n.{m.group(2)}"{m.group(3)}'
         ir = re.sub(r'^(@"?([\w.]+)"? = [^\n]*? constant [^\n]*?)(, align (\d+))$', const, hot_ir, flags=re.M)
@@ -408,11 +453,10 @@ def build_app():
         rows = layout_read()
         aligns = compile_hot(rows)
         layout_ld(rows)
-        mapt, syms = link()
+        mapt, syms = link(probe=True)
         fills, hole, lost = layout_fills(rows, sym_table(syms), map_inputs(mapt), aligns)
-        if fills:
-            layout_ld(rows, fills)
-            mapt, syms = link()
+        layout_ld(rows, fills)
+        mapt, syms = link()
         moved = layout_check(rows, mapt, sym_table(syms))
         new = [n for n in reach if f".text.{n}" in {s[0] for s in map_inputs(mapt)}
                and n not in {name for _, _, name in rows}]
