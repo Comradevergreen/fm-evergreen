@@ -615,34 +615,44 @@ static int32_t gbass_tone(const gch_t *c, int32_t root, char ch)
     }
     return root + giv(c, s);
 }
+/* (0.9.9-gen2) the 303's line as X0X's TB-3PO writes one (after Phazerville's TB_3PO): one 16-step line, each step a
+ * note at ~68 % (the beat's first sixteenth always; a rest else), a degree of the mode over the chord (the root most, on
+ * the beat more), an octave up a third of the time (down now and then: the 1-octave jumps), an ACCENT on ~30 % of the
+ * notes, a SLIDE on ~25 % (never into a rest: the gate held into the next note, which glides and does not retrigger),
+ * a TIE now and then where a rest was; every other bar a few of its notes re-rolled (TB-3PO's mutate) */
 static void gen_acid(track_t *t, uint32_t len, int32_t lo)
 {
-    static const uint8_t W[6] = {55, 15, 10, 10, 5, 5};   /* R 8 b7 5 b3 2 */
-    static const char D[6] = {'R', '8', '7', '5', '3', '2'};
-    uint8_t pt[16], on[16];
+    static const uint8_t W[7] = {34, 8, 14, 9, 14, 7, 14};   /* the mode's degrees over the chord: 1 2 3 4 5 6 7 */
+    uint8_t dg[16], oc[16], fl[16];
     uint32_t i, b, bars = len / 16u ? len / 16u : 1u;
-    (void)t;
     for (i = 0; i < 16u; i++) {
-        on[i] = (uint8_t)(i % 4u == 0u || gch(45 + gs.complex / 3u));
-        pt[i] = (uint8_t)gpickw(W, 6);
+        uint32_t on = i == 0u || gch(i % 4u == 0u ? 80u : 60u + gs.complex / 10u);
+        dg[i] = (uint8_t)(i % 4u == 0u && gch(40) ? 0u : gpickw(W, 7));
+        oc[i] = (uint8_t)(gch(30) ? 2u : gch(8) ? 0u : 1u);   /* (up, down, as written) */
+        fl[i] = (uint8_t)(on ? 1u | (gch(30) ? 2u : 0u) | (gch(34) ? 4u : 0u) : gch(10) ? 8u : 0u);   /* note accent slide; tie */
+        if (i && on && (fl[i - 1u] & 1u) && gch(30)) { dg[i] = dg[i - 1u]; oc[i] = (uint8_t)(oc[i - 1u] == 2u ? 1u : 2u); }   /* (the
+                                                         * note before an octave away: the 303's jump) */
+    }
+    for (i = 0; i < 16u; i++) {                         /* (a slide into a rest does nothing; a tie only after a note) */
+        if ((fl[i] & 4u) && !(fl[(i + 1u) % 16u] & 1u)) fl[i] &= (uint8_t)~4u;
+        if ((fl[i] & 8u) && !(fl[(i + 15u) % 16u] & 9u)) fl[i] = 0;
     }
     for (b = 0; b < bars; b++) {
-        uint32_t na = (uint32_t)grr(3, 5), ns = (uint32_t)grr(2, 3), k, tries;
-        uint8_t acc[16] = {0}, sl[16] = {0};
-        for (tries = 0, k = 0; k < na && tries < 32u; tries++) { uint32_t p = gr() % 16u; if (on[p] && !acc[p]) { acc[p] = 1; k++; } }
-        for (tries = 0, k = 0; k < ns && tries < 32u; tries++) {
-            uint32_t p = gr() % 15u;
-            if (on[p] && on[p + 1u] && !sl[p]) { sl[p] = 1; k++; if (pt[p + 1u] == 0u && gch(50)) pt[p + 1u] = 1; }
-        }
         for (i = 0; i < 16u; i++) {
-            uint32_t s = b * 16u + i;
+            uint32_t s = b * 16u + i, d = dg[i], o = oc[i];
             const gch_t *c;
             int32_t n[1], r;
-            if (s >= len || !on[i]) continue;
+            if (s >= len) break;
+            if (fl[i] & 8u) { dstep_tie(&t->step[s]); continue; }
+            if (!(fl[i] & 1u)) continue;
+            if ((b & 1u) && i && gch(15)) { d = gpickw(W, 7); o = gch(30) ? 2u : 1u; }   /* (the answer bar: a few re-rolled) */
             c = gchord(s);
             r = gbass_root(lo, c);
-            n[0] = gchord_starts(s) ? r : pt[i] == 1u ? r + 12 : gbass_tone(c, r, D[pt[i]]);   /* (the root at a change) */
-            gnote(&t->step[s], n, 1, acc[i] ? 112 : 90, (acc[i] ? SF_ACCENT : 0u) | (sl[i] ? SF_SLIDE : 0u));
+            n[0] = gchord_starts(s) ? r : r + giv(c, (int32_t)d);   /* (the root at a change) */
+            if (o == 2u) n[0] += 12;
+            else if (!o && n[0] >= lo + 7) n[0] -= 12;
+            if (n[0] > lo + 24) n[0] -= 12;
+            gnote(&t->step[s], n, 1, 84, ((fl[i] & 2u) ? SF_ACCENT : 0u) | ((fl[i] & 4u) ? SF_SLIDE : 0u));
         }
     }
 }
@@ -1307,6 +1317,8 @@ static int gnever(const char *s)
 }
 /* (0.9.9-gen1) a value from a packed range (gen_tables.c GR, GR4) */
 static int16_t grg(uint32_t b, uint32_t u) { return (int16_t)grr((int32_t)(b >> 4) * (int32_t)u, (int32_t)(b & 15u) * (int32_t)u + (int32_t)u - 1); }
+#define GVIB_RLO 88                                     /* (0.9.9-gen2) a vibrato's RATE: 5.1 .. 6.3 Hz (params.c F_LFOHZ) */
+#define GVIB_RHI 92
 static int16_t gnear(int32_t c, int32_t w) { return (int16_t)(c ? clamp(grr(c - w, c + w), 0, 127) : 0); }
 /* (0.9.9-gen1) a role's sound as its archetype has it (gen_tables.c RECIPE): the archetype's engine and preset (a bass
  * its first two options only: the archetype's engine), the engine's knobs a little their own, then the archetype's
@@ -1350,7 +1362,7 @@ static void gen_sound(track_t *t, uint32_t role, uint32_t ri)
         if (gs.g->human >= 40u && role != RL_BASS) cut += 10;   /* (a band: air) */
         if (gs.energy > 66u) cut += 6;
         t->p[P_FTYPE] = (int16_t)ft;
-        if (e == EG_A) { t->p[P_E4] = (int16_t)clamp(cut, 0, 127); t->p[P_E5] = (int16_t)clamp(res, 0, 112); }
+        if (e == EG_A) { t->p[P_E4] = (int16_t)clamp(cut, 0, 127); t->p[P_E5] = (int16_t)clamp(res, 0, ri == SR_ACID ? 120 : 112); }
         else { t->p[P_FCUT] = (int16_t)clamp(cut, 0, 127); t->p[P_FRES] = (int16_t)res; }
         t->p[P_ED_FLT] = grg(r->envf, 4);
     }
@@ -1361,10 +1373,11 @@ static void gen_sound(track_t *t, uint32_t role, uint32_t ri)
                                                          * 1/4 1/8 1/8T 1/16, N_LSYNC's -5 -8 -9 -10) */
         t->p[P_LD_FLT] = (int16_t)grr((int32_t)(r->lfo >> 4) * 3, (int32_t)(r->lfo >> 4) * 4);
     }
-    if (role == RL_LEAD && gch(55)) {                   /* (0.6.97) a vibrato that comes in late, now and then a tremolo */
-        t->p[P_LWAVE] = 0; t->p[P_LRATE] = (int16_t)grr(52, 72); t->p[P_LFADE] = (int16_t)grr(40, 90);
-        t->p[P_LD_PIT] = (int16_t)grr(3, 9);
-        if (gch(30)) t->p[P_LD_AMP] = (int16_t)grr(10, 30);
+    if (role == RL_LEAD && gch(55)) {                   /* (0.6.97) a vibrato that comes in late; (0.9.9-gen2) a singer's,
+                                                         * not a siren's: ~19 cents (PITCH 1), 5.1 .. 6.3 Hz, faded in over
+                                                         * 160 .. 450 ms (the attack clean), the filter's LFO off under it */
+        t->p[P_LWAVE] = 0; t->p[P_LRATE] = (int16_t)grr(GVIB_RLO, GVIB_RHI); t->p[P_LFADE] = (int16_t)grr(70, 84);
+        t->p[P_LD_PIT] = 1; t->p[P_LD_FLT] = 0;
     } else if (role == RL_PAD && gch(35)) {             /* (a pad breathing: a slow tremolo or a slow pan) */
         if (gch(50)) { t->p[P_LWAVE] = 0; t->p[P_LRATE] = (int16_t)grr(6, 18); t->p[P_LD_AMP] = (int16_t)grr(12, 30); }
         else { t->p[P_APDEP] = (int16_t)grr(25, 55); t->p[P_APSYNC] = 1; t->p[P_APRATE] = (int16_t)grr(1, 3); }
@@ -1376,11 +1389,20 @@ static void gen_sound(track_t *t, uint32_t role, uint32_t ri)
     t->p[P_CHOR] = gnear((int32_t)(r->dc & 15u) * 4, 10);
     t->p[P_GLIDE] = gnear((int32_t)(r->ft >> 3) * 4, 6);
     t->p[P_VOICE] = (int16_t)r->voice;
+    if (ri == SR_ACID && e == EG_A) {                   /* (0.9.9-gen2) the 303: no noise, a fixed ~55 ms slide (TIME:
+                                                         * any interval as long, as the 303's RC) */
+        t->p[P_E3] = 0;
+        t->p[P_GLMODE] = 1; t->p[P_GLIDE] = (int16_t)grr(24, 26);
+    }
     t->p[P_DETUNE] = (int16_t)(ri == SR_REESE || ri == SR_WALL || ri == SR_HOOVER ? grr(30, 60) : t->p[P_DETUNE]);
     if (ri == SR_GTR || ri == SR_DRONE) {               /* (a tremolo: AUTO PAN on the beat) */
         t->p[P_APDEP] = (int16_t)grr(30, 60); t->p[P_APSYNC] = 1; t->p[P_APRATE] = (int16_t)grr(4, 6); t->p[P_APWAVE] = (int16_t)(ri == SR_GTR ? 3 : 0);
     }
 }
+/* (0.9.9-gen2) the owner: the drums "eat the rest of the sounds": every lane's DECAY shorter, twice a nibble a lane
+ * (KICK SNARE CLAP HATC HATO TOM RIM BELL: -12 0 -8 -6 -12 -14 -4 -6; the snare shortened below), a constant (not a
+ * table: the pinned sound's .rodata stays where it is) */
+#define DX_SHORT(l) (2 * (int32_t)((0x32763406u >> (4u * (l))) & 15u))
 static void gen_kit(track_t *t)
 {
     const gkit_t *k = &KIT[gs.g->kit];
@@ -1391,8 +1413,12 @@ static void gen_kit(track_t *t)
         L->mode = D->mode;
         for (i = 0; i < DXP_N; i++) {
             int32_t j = grr(-6, 6) * (int32_t)gs.complex / 100;
-            L->a[i] = (uint8_t)clamp(D->a[i] + k->d[l][i] + j, 0, 127);
-            L->b[i] = (uint8_t)clamp(D->b[i] + k->d[l][i] + j, 0, 127);
+            int32_t o = k->d[l][i] + j;
+            if (i == DXP_DECAY) o -= DX_SHORT(l);       /* (0.9.9-gen2) shorter: room for the bass and the lead */
+            if (i == DXP_PMOD || i == DXP_COLOR) o = (o > 0 ? o / 2 : o) - (i == DXP_PMOD ? (D->a[i] + D->b[i]) / 8 : 0);
+            L->a[i] = (uint8_t)clamp(D->a[i] + o, 0, 127);   /* (.. and less of the pitch sweep and the FM / drive:
+                                                         * the kits' own offsets halved, the factory sweep an eighth less) */
+            L->b[i] = (uint8_t)clamp(D->b[i] + o, 0, 127);
         }
     }
     dx_glue = (uint8_t)(GG_GLUE(GGR) * 4u);                /* (0.9.9-gen1) DRUM-X GLUE where the genre bus-compresses */
@@ -1404,11 +1430,11 @@ static void gen_kit(track_t *t)
         S->a[DXP_DECAY] = (uint8_t)clamp(S->a[DXP_DECAY] - dc, 0, 127); S->b[DXP_DECAY] = (uint8_t)clamp(S->b[DXP_DECAY] - dc, 0, 127);
         S->a[DXP_PMOD] = (uint8_t)clamp(S->a[DXP_PMOD] - pm, 0, 127); S->b[DXP_PMOD] = (uint8_t)clamp(S->b[DXP_PMOD] - pm, 0, 127);
         S->a[DXP_COLOR] = (uint8_t)clamp(S->a[DXP_COLOR] + cl, 0, 127); S->b[DXP_COLOR] = (uint8_t)clamp(S->b[DXP_COLOR] + cl, 0, 127);
-        dx_lay[DV_SNARE] = (uint8_t)(DX_LAY_L(DX_LAY_DEF[DV_SNARE]) | ((uint32_t)grr(3, 6) << 4));
+        dx_lay[DV_SNARE] = (uint8_t)(DX_LAY_L(DX_LAY_DEF[DV_SNARE]) | ((uint32_t)grr(2, 4) << 4));   /* (gen2: FEEDBK 2..4, was 3..6) */
     }
     {   /* (0.6.97) the snare and the clap into the reverb (the kit's space), the rim into the delay where the genre is
          * wet (dub, dub techno ..): the kit's own SENDs (eng_drum.c dx_snd) */
-        int32_t wet = (int32_t)gs.g->wet, rv = clamp((18 + grr(0, 22)) * (40 + wet) / 100, 6, 63);
+        int32_t wet = (int32_t)gs.g->wet, rv = clamp((12 + grr(0, 16)) * (40 + wet) / 100, 6, 63);   /* (gen2: drier) */
         dx_snd[DV_SNARE] = (uint8_t)((3u << 6) | (uint32_t)rv);
         dx_snd[DV_CLAP] = (uint8_t)((3u << 6) | (uint32_t)clamp(rv + grr(-6, 10), 6, 63));
         dx_snd[DV_RIM] = (uint8_t)(wet >= 60 ? (2u << 6) | (uint32_t)grr(20, 45) : 0u);
@@ -1434,7 +1460,7 @@ static void gen_kit(track_t *t)
     t->p[P_E2] = (int16_t)clamp(70 + k->tone, 0, 127);
     t->p[P_E3] = (int16_t)clamp(64 + k->decy, 0, 127);
     t->p[P_E4] = (int16_t)clamp(64 + k->nois, 0, 127);
-    t->p[P_E7] = (int16_t)clamp(k->drv, 0, 127);
+    t->p[P_E7] = (int16_t)clamp(k->drv * 2 / 3, 0, 127);   /* (gen2: the kit's DRIVE two thirds) */
     t->p[P_FTYPE] = 0;
     t->p[P_FCUT] = (int16_t)(gs.g->human >= 40u ? grr(118, 127) : grr(104, 120));
     t->p[P_FRES] = (int16_t)grr(0, 14);
@@ -1449,7 +1475,7 @@ static void gen_mix(track_t *t, uint32_t r)
     int32_t wet = (int32_t)g->wet + (gs.energy < 34 ? 20 : gs.energy > 66 ? -15 : 0), hum = (int32_t)(gs.human);
     static const uint8_t HV[RL_N] = {20, 25, 45, 60, 35, 40}, HT[RL_N] = {0, 0, 30, 25, 10, 60}, HG[RL_N] = {0, 10, 10, 40, 30, 0};
     wet = clamp(wet, 0, 100);
-    t->p[P_LEVEL] = (int16_t)(r == RL_DRUM ? 106 : r == RL_BASS ? 102 : r == RL_LEAD ? 88 : r == RL_TEX ? (g->tex == SR_NOISE ? 44 : 54) : r == RL_PAD ? 80 : 82);
+    t->p[P_LEVEL] = (int16_t)(r == RL_DRUM ? 94 : r == RL_BASS ? 102 : r == RL_LEAD ? 88 : r == RL_TEX ? (g->tex == SR_NOISE ? 44 : 54) : r == RL_PAD ? 80 : 82);
     t->p[P_PAN] = (int16_t)(r == RL_ARP ? grr(-30, -10) : r == RL_TEX ? grr(10, 30) : r == RL_PAD ? grr(-8, 8) : r == RL_LEAD ? grr(-6, 12) : 0);
     t->p[P_REV] = (int16_t)clamp((r == RL_PAD || r == RL_TEX ? grr(45, 95) : r == RL_LEAD ? grr(30, 70) : r == RL_ARP ? grr(20, 60) :
                                   r == RL_DRUM ? grr(4, 20) : grr(0, 6)) * (40 + wet) / 100, 0, 127);
@@ -1748,7 +1774,13 @@ static void gx_sound(track_t *t, uint32_t r)
     if (t->eng_req == EG_VO && gch(70)) { t->p[P_VLANG] = (int16_t)grr(1, LG_N - 1); t->p[P_VLYR] = (int16_t)grr(1, LYR_N - 1); }
     if (t->p[P_DIST] && gch(50)) t->p[P_DTYPE] = (int16_t)grr(0, 5);
     if ((r == RL_LEAD || r == RL_BASS) && gch(30)) t->p[P_GLIDE] = (int16_t)grr(20, 70);
-    if (r != RL_BASS && gch(25)) { t->p[P_LWAVE] = (int16_t)(gr() % 2u); t->p[P_LRATE] = (int16_t)grr(30, 80); t->p[P_LD_PIT] = (int16_t)grr(2, 12); }
+    if (r != RL_BASS && gch(25)) {                     /* (0.9.9-gen2) a vibrato on a line (shallow, ~5.5 Hz, faded in),
+                                                         * a slow drift on the rest (a detune moving), never a siren */
+        uint32_t line = r == RL_LEAD || r == RL_ARP;
+        t->p[P_LWAVE] = (int16_t)(gr() % 2u); t->p[P_LD_PIT] = 1;
+        t->p[P_LRATE] = (int16_t)(line ? grr(GVIB_RLO, GVIB_RHI) : grr(30, 50));
+        if (line) { t->p[P_LFADE] = (int16_t)grr(70, 84); t->p[P_LD_FLT] = 0; }
+    }
     if (gch(25)) t->p[P_DETUNE] = (int16_t)grr(10, 50);
 }
 /* the step components scattered over the melodic tracks (a bass's never an arpeggio, a jump or a climb) */
@@ -2170,7 +2202,7 @@ static void gen_make(void)
                                                          * automation) */
         track_t *t = &trk[dr];
         uint32_t len = dlen(t), j, n = len >= 32u ? 4u : 2u;
-        int32_t base = t->p[P_E0], sw = grr(14, 34) * (gch(50) ? 1 : -1);
+        int32_t base = t->p[P_E0], sw = grr(8, 18) * (gch(50) ? 1 : -1);   /* (gen2: was 14 .. 34) */
         for (j = 0; j < n; j++)
             motion_set_event(t, j * len / n, P_E0, (int16_t)clamp(base + (j == 0u ? 0 : j == n / 2u ? sw : sw / 2), 0, 127));
     }
@@ -2304,9 +2336,13 @@ static void gen_knob(uint32_t k, int32_t s)
     gp.hot = (uint8_t)k;
     if (p == 0u) {
         if (k == 0u) {                                  /* (0.8.6) EXPLORE first, then RANDOM, then the genres */
-            uint32_t pos = gp.genre == GEN_EXPLORE ? 0u : gp.genre + 1u;
+            uint32_t g = gp.genre, pos;                 /* (0.9.9-gen2) ACID HOUSE shown first of the genres (asked for
+                                                         * most): the knob's order only, gp.genre the genre's own number */
+            g = g > GEN_TOP + 1u || !g || g == GEN_EXPLORE ? g : g == GEN_TOP + 1u ? 1u : g + 1u;
+            pos = g == GEN_EXPLORE ? 0u : g + 1u;
             pos = (pos + (s > 0 ? 1u : GEN_NPOS - 1u)) % GEN_NPOS;
-            gp.genre = (uint8_t)(pos ? pos - 1u : GEN_EXPLORE);
+            g = pos ? pos - 1u : GEN_EXPLORE;
+            gp.genre = (uint8_t)(g > GEN_TOP + 1u || !g || g == GEN_EXPLORE ? g : g == 1u ? GEN_TOP + 1u : g - 1u);
         }
         else if (k == 1u) gp.seed = (uint16_t)((gp.seed + 10000u + (uint32_t)clamp(accel(EN_K2, s, 9999), -9999, 9999)) % 10000u);
         else if (k == 2u) gp.energy = (uint8_t)clamp((int32_t)gp.energy + s * 5, 0, 100);

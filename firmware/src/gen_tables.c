@@ -84,18 +84,18 @@ enum { HC_FLAT, HC_HOUSE, HC_FUNK, HC_GARAGE, HC_MACHINE };
 static const uint8_t HAT_CELL[5][4] = {{100, 100, 100, 100}, {100, 55, 80, 55}, {90, 50, 70, 65}, {110, 40, 60, 90}, {100, 70, 100, 70}};
 /* fills on the phrase's last bar */
 enum { FL_NONE, FL_ROLL, FL_TOM, FL_DROP, FL_HAT, FL_LINEAR, FL_KICK16, FL_DUB, FL_BREAK };
-/* the kits: offsets on the factory kit's {PITCH PMOD DECAY NOISE COLOR} a lane (both patches), then the DRUM track's
+/* (0.9.9-gen2: the 808's and the DUB kit's kick shorter, 22 -> 12, 18 -> 10) the kits: offsets on the factory kit's {PITCH PMOD DECAY NOISE COLOR} a lane (both patches), then the DRUM track's
  * TONE DECY NOIS DRV */
 enum { KIT_DEF, KIT_909, KIT_808, KIT_CLICK, KIT_INDUS, KIT_SOFT, KIT_DUB, KIT_BREAKS, KIT_N };
 typedef struct { int8_t d[8][5]; int8_t tone, decy, nois, drv; } gkit_t;
 static const gkit_t KIT[KIT_N] = {
     [KIT_DEF]    = {{{0}}, 0, 0, 0, 0},
     [KIT_909]    = {{{-2, 25, -6, 0, 25}, {0, 0, 6, 10, 10}, {0, 0, 4, 0, 0}, {4, 0, -4, 0, 6}, {4, 0, 0, 0, 6}, {0, 10, 0, 0, 10}, {0, 0, 0, 0, 0}, {0, 0, 0, 0, 0}}, 6, 0, 0, 6},
-    [KIT_808]    = {{{-4, -20, 22, -4, -10}, {-4, -10, -8, 10, -20}, {-2, 0, 0, 0, -10}, {-6, 0, -6, 0, -20}, {-6, 0, -4, 0, -20}, {-4, -10, 10, 0, -10}, {0, 0, 0, 0, -10}, {0, 0, 4, 0, 0}}, -10, 6, 0, 0},
+    [KIT_808]    = {{{-4, -20, 12, -4, -10}, {-4, -10, -8, 10, -20}, {-2, 0, 0, 0, -10}, {-6, 0, -6, 0, -20}, {-6, 0, -4, 0, -20}, {-4, -10, 10, 0, -10}, {0, 0, 0, 0, -10}, {0, 0, 4, 0, 0}}, -10, 6, 0, 0},
     [KIT_CLICK]  = {{{2, 10, -16, 0, 0}, {6, 0, -20, 20, 10}, {4, 0, -10, 0, 10}, {6, 0, -10, 0, 10}, {6, 0, -16, 0, 10}, {4, 0, -16, 0, 0}, {6, 0, -6, 0, 10}, {4, 0, -10, 0, 10}}, 10, -16, -6, 0},
     [KIT_INDUS]  = {{{-2, 30, 6, 12, 40}, {0, 20, 10, 20, 30}, {0, 0, 6, 10, 20}, {0, 0, 8, 10, 20}, {0, 0, 10, 10, 20}, {0, 20, 8, 10, 30}, {0, 10, 4, 10, 20}, {0, 0, 0, 10, 20}}, 12, 6, 10, 40},
     [KIT_SOFT]   = {{{0, -10, 6, 6, -25}, {-2, 0, 8, 14, -18}, {-2, 0, 6, 0, -20}, {-4, 0, 2, 0, -30}, {-4, 0, 6, 0, -30}, {-2, -10, 6, 6, -20}, {-2, 0, 4, 0, -20}, {-2, 0, 4, 0, -20}}, -20, 4, 4, 0},
-    [KIT_DUB]    = {{{-6, -10, 18, 0, -20}, {-6, 0, 12, 8, -10}, {-2, 0, 6, 0, -10}, {-2, 0, 0, 0, -20}, {-2, 0, 6, 0, -20}, {-4, 0, 10, 0, -10}, {-4, 0, 10, 0, 0}, {0, 0, 6, 0, -10}}, -16, 8, 0, 0},
+    [KIT_DUB]    = {{{-6, -10, 10, 0, -20}, {-6, 0, 12, 8, -10}, {-2, 0, 6, 0, -10}, {-2, 0, 0, 0, -20}, {-2, 0, 6, 0, -20}, {-4, 0, 10, 0, -10}, {-4, 0, 10, 0, 0}, {0, 0, 6, 0, -10}}, -16, 8, 0, 0},
     [KIT_BREAKS] = {{{2, 6, -4, 8, 10}, {2, 6, 2, 16, 20}, {0, 0, 2, 4, 10}, {0, 0, 4, 6, 0}, {0, 0, 8, 6, 0}, {2, 6, 0, 8, 10}, {0, 0, 0, 4, 10}, {0, 0, 0, 0, 0}}, 4, 0, 6, 10},
 };
 
@@ -322,9 +322,13 @@ enum { SR_SUB, SR_ACID, SR_REESE, SR_FMBASS, SR_ROCKBASS, SR_HOOK, SR_WOW, SR_PA
 static const grecipe_t RECIPE[SR_N] = {
     /* ---- basses: their engine fixed */
     [SR_SUB]      = {{{EG_A, 7}, {EG_A, 7}, {EG_LO, 14}}, GR(0, 7), GR(56, 79), GR(88, 119), GR(16, 31), GR(32, 47), GR(0, 15), GR4(0, 7), GFT(0, 0), GNOWV, 0, 0, V_LEGATO},
-    /* the 303: one saw (or a square), the low-pass nearly closed, high resonance, a short decay and the filter's
-     * envelope high on it, glide (the SLIDEs), driven */
-    [SR_ACID]     = {{{EG_A, 4}, {EG_A, 2}, NO_}, GR(0, 7), GR(32, 47), GR(0, 7), GR(8, 23), GR(24, 47), GR(96, 111), GR4(44, 63), GFT(0, 36), GWV(0, 1, 1), 0, GDC(24, 0), V_LEGATO},
+    /* the 303 (0.9.9-gen2, after X0X's Open303: CUT ~48, RES ~100, ENV MOD ~85 of 127, DECAY ~200..600 ms, a 60 ms
+     * slide, ACCENT on the filter's envelope and the level): one saw (or a square), the low-pass low (~400 Hz at rest)
+     * with RES high (not ringing on its own) and the envelope high on it (~2 kHz at its peak; an ACCENT opens it ~2
+     * octaves more: voice.c), its decay short (400..900 ms to the end: the filter's sweep) and a sustain under it
+     * (ANALOG's one envelope is the level's too: the note's body), LEGATO, the SLIDEs gliding in TIME (gen_sound:
+     * ~55 ms, no retrigger), driven after (DIST) */
+    [SR_ACID]     = {{{EG_A, 4}, {EG_A, 2}, NO_}, GR(0, 7), GR(80, 88), GR(40, 48), GR(16, 31), GR(32, 40), GR(104, 112), GR4(52, 60), GFT(0, 24), GWV(0, 1, 1), 0, GDC(24, 0), V_LEGATO},
     [SR_REESE]    = {{{EG_A, 16}, {EG_A, 14}, NO_}, GR(0, 7), GR(72, 95), GR(104, 119), GR(32, 47), GR(40, 55), GR(16, 31), GR4(0, 11), GFT(0, 16), GNOWV, GLFO(12, 1), GDC(20, 28), V_LEGATO},
     [SR_FMBASS]   = {{{EG_FM, 2}, {EG_FM, 13}, {EG_PH, 7}}, GR(0, 7), GR(48, 71), GR(40, 87), GR(16, 31), GR(72, 103), GR(8, 23), GR4(8, 27), GFT(0, 0), GNOWV, 0, GDC(8, 0), V_LEGATO},
     [SR_ROCKBASS] = {{{EG_A, 2}, {EG_A, 14}, NO_}, GR(0, 7), GR(48, 71), GR(64, 111), GR(16, 39), GR(48, 71), GR(8, 23), GR4(8, 23), GFT(0, 0), GWV(1, 0, 0), 0, GDC(24, 16), V_LEGATO},
@@ -343,7 +347,7 @@ static const grecipe_t RECIPE[SR_N] = {
     /* ---- arps, leads */
     [SR_PLUCK]    = {{{EG_A, 20}, {EG_FM, 10}, {EG_A, 8}}, GR(0, 7), GR(40, 63), GR(0, 23), GR(32, 63), GR(56, 87), GR(24, 47), GR4(28, 55), GFT(0, 0), GNOWV, 0, GDC(0, 8), V_POLY},
     [SR_BELL]     = {{{EG_FM, 11}, {EG_FM, 8}, {EG_A, 13}}, GR(0, 7), GR(80, 103), GR(0, 7), GR(72, 103), GR(72, 103), GR(0, 15), GR4(0, 11), GFT(0, 0), GNOWV, 0, GDC(0, 8), V_POLY},
-    [SR_LEAD]     = {{{EG_A, 21}, {EG_A, 0}, {EG_PH, 14}}, GR(0, 23), GR(48, 87), GR(32, 95), GR(32, 71), GR(56, 87), GR(16, 39), GR4(16, 39), GFT(0, 16), GNOWV, GLFO(8, 6), GDC(12, 12), V_LEGATO},
+    [SR_LEAD]     = {{{EG_A, 21}, {EG_A, 0}, {EG_PH, 14}}, GR(0, 23), GR(48, 87), GR(32, 95), GR(32, 71), GR(56, 87), GR(16, 39), GR4(16, 39), GFT(0, 16), GNOWV, GLFO(4, 6), GDC(12, 12), V_LEGATO},
     [SR_VOXLEAD]  = {{{EG_VO, 1}, {EG_VO, 6}, {EG_A, 21}}, GR(0, 23), GR(56, 87), GR(40, 95), GR(32, 71), GR(56, 95), GR(8, 31), GR4(8, 23), GFT(0, 20), GNOWV, GLFO(4, 6), GDC(0, 20), V_LEGATO},
     [SR_CHIP]     = {{{EG_LO, 3}, {EG_LO, 13}, {EG_LO, 16}}, GR(0, 7), GR(40, 79), GR(24, 79), GR(16, 47), GR(72, 111), GR(8, 31), GR4(8, 27), GFT(0, 0), GNOWV, 0, 0, V_LEGATO},
     [SR_KEYS]     = {{{EG_A, 23}, {EG_PH, 15}, {EG_WH, 6}}, GR(0, 7), GR(64, 87), GR(16, 55), GR(40, 71), GR(56, 95), GR(0, 23), GR4(4, 19), GFT(0, 0), GNOWV, 0, GDC(0, 20), V_POLY},
@@ -606,7 +610,7 @@ static const ggenre_t GENRE[] = {
 #define NGENRE (sizeof GENRE / sizeof GENRE[0])
 /* (0.9.9-gen1) each genre's PATTERN GRAMMAR past its maps and archetypes (GENRE's order): on the bass, how many ACCENTs
  * (off the kick), SLIDEs (a note tied into the next: its glide), octave jumps (the offbeat sixteenths), 0 .. 3 each;
- * DRUM-X GLUE (0 .. 3: x 4); the closed hats ratcheted now and then (a condition: every other loop); MUTATE on the arp
+ * DRUM-X GLUE (0 .. 3: x 4; 0.9.9-gen2: 2 at most, moderate); the closed hats ratcheted now and then (a condition: every other loop); MUTATE on the arp
  * or the chords (WHAT PATTERN, LOOP 4, ORBIT: a pattern orbiting the piece). The 303's own rules (gen_acid) are the acid bass's */
 #define GG(acc, sld, oct, glue, rat, mut) (uint16_t)((acc) | (sld) << 2 | (oct) << 4 | (glue) << 6 | (rat) << 8 | (mut) << 9)
 #define GG_ACC(g) ((g) & 3u)
@@ -618,7 +622,7 @@ static const ggenre_t GENRE[] = {
 static const uint16_t GGRAM[] = {
     GG(1, 0, 1, 0, 0, 0), GG(0, 1, 0, 0, 0, 0), GG(1, 0, 0, 1, 0, 1), GG(1, 0, 1, 1, 0, 0),   /* HOUSE DEEP MICRO TECH */
     GG(0, 0, 0, 1, 0, 0), GG(1, 0, 0, 2, 0, 0), GG(1, 0, 1, 1, 0, 0), GG(0, 0, 0, 1, 0, 1),   /* ACID TECHNO DETROIT DUB TECHNO */
-    GG(2, 0, 0, 3, 1, 0), GG(1, 0, 0, 2, 0, 1), GG(1, 0, 1, 1, 0, 0), GG(2, 0, 1, 1, 1, 0),   /* HARD HYPNOTIC TRANCE ELECTRO */
+    GG(2, 0, 0, 2, 1, 0), GG(1, 0, 0, 2, 0, 1), GG(1, 0, 1, 1, 0, 0), GG(2, 0, 1, 1, 1, 0),   /* HARD HYPNOTIC TRANCE ELECTRO */
     GG(2, 0, 0, 2, 0, 0), GG(1, 0, 2, 0, 0, 0), GG(1, 0, 2, 0, 0, 0), GG(1, 0, 1, 1, 0, 0),   /* EBM ITALO SYNTH POP DARKWAVE */
     GG(1, 0, 1, 0, 0, 0), GG(1, 0, 0, 0, 0, 0), GG(1, 0, 1, 0, 0, 1), GG(1, 0, 1, 0, 0, 1),   /* POST PUNK TRIBAL MINIMAL MAN MACHINE */
     GG(0, 0, 1, 0, 0, 1), GG(1, 0, 0, 0, 0, 0), GG(0, 1, 0, 0, 0, 0), GG(0, 1, 0, 0, 0, 0),   /* MOTORIK INDIE SHOEGAZE POST ROCK */
@@ -635,7 +639,9 @@ _Static_assert(sizeof GGRAM / sizeof GGRAM[0] == NGENRE, "GGRAM: a grammar a gen
  * gp.genre keeps its values (0 RANDOM, 1 + a genre's index) and EXPLORE comes after them, so every number that names a
  * genre (the web emulator's web_gen, the tests, the tools) still names it; the knob shows it first (gen_knob) */
 #define GEN_EXPLORE ((uint32_t)NGENRE + 1u)
-#define GEN_NPOS ((uint32_t)NGENRE + 2u)                /* the knob's places: EXPLORE, RANDOM, the genres */
+#define GEN_NPOS ((uint32_t)NGENRE + 2u)
+#define GEN_TOP 4u                                      /* (0.9.9-gen2) GENRE[4], ACID HOUSE: the knob's first genre (gen.c
+                                                         * gen_knob; its number kept: projects, the emulator, the tools) */                /* the knob's places: EXPLORE, RANDOM, the genres */
 /* its keys: the SCALE page's modes of seven, the exotic ones likeliest (LOC too: its tonic chord a diminished one the
  * plan never takes, the other six degrees do) */
 static const uint8_t GX_SCALE[9] = {SC_MAJ, SC_MIN, SC_DOR, SC_MIX, SC_HARM, SC_PHRY, SC_LYD, 10u /* LOC */, SC_MEL};

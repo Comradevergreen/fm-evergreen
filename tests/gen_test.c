@@ -9,6 +9,8 @@
  * rule broken, every piece still playing in its key, very different from the next.
  * (0.9.9-gen1) The clean base (the same seed from three different states, the same project), each genre's sound
  * archetypes and grammar (the acid house's 303 ..), one seed one project in every genre, the CPU budget.
+ * (0.9.9-gen2) The owner's ear: the acid line's densities (X0X's TB-3PO), a SLIDE played legato (no retrigger, gliding), the
+ * leads' vibrato shallow and fast, the pads' pitch LFO a drift at most, the drums' decays, GLUE and level.
  *   cc -O1 -w -Ibuild/gen -Ifirmware/src -Itests -o build/host/gen_test tests/gen_test.c -lm */
 #define UI_TEST_NO_MAIN 1
 #include "ui_test.c"
@@ -565,10 +567,10 @@ int main(void)
         gen_reset();
         gen_with(1, 5, 50, 0);                          /* HOUSE (a drum track) */
         if (dx_kit[DV_SNARE].a[DXP_NOISE] < 100u) printf("  snare: noise %u / %u, decay %u, lay %02x\n", dx_kit[DV_SNARE].a[DXP_NOISE], dx_kit[DV_SNARE].b[DXP_NOISE], dx_kit[DV_SNARE].a[DXP_DECAY], dx_lay[DV_SNARE]);
-        bad += gcheck("the generated snare: NOISE >= 100 both ends, DECAY under the factory kit's, FEEDBK 3..6, LAYER kept",
+        bad += gcheck("the generated snare: NOISE >= 100 both ends, DECAY under the factory kit's, FEEDBK 2..4, LAYER kept",
                       dx_kit[DV_SNARE].a[DXP_NOISE] >= 100u && dx_kit[DV_SNARE].b[DXP_NOISE] >= 100u &&
-                      dx_kit[DV_SNARE].a[DXP_DECAY] < DX_KIT_DEF[DV_SNARE].a[DXP_DECAY] && DX_LAY_FB(dx_lay[DV_SNARE]) >= 3u &&
-                      DX_LAY_FB(dx_lay[DV_SNARE]) <= 6u && DX_LAY_L(dx_lay[DV_SNARE]) == DX_LAY_L(DX_LAY_DEF[DV_SNARE]));
+                      dx_kit[DV_SNARE].a[DXP_DECAY] < DX_KIT_DEF[DV_SNARE].a[DXP_DECAY] && DX_LAY_FB(dx_lay[DV_SNARE]) >= 2u &&
+                      DX_LAY_FB(dx_lay[DV_SNARE]) <= 4u && DX_LAY_L(dx_lay[DV_SNARE]) == DX_LAY_L(DX_LAY_DEF[DV_SNARE]));
         bad += gcheck("the generated hats: a band-pass (not the factory HP), COLOR >= 120, NOISE >= 112, the kick and clap as the kit's",
                       ((dx_kit[DV_HATC].mode >> 2) & 3u) == DXF_BP && ((dx_kit[DV_HATO].mode >> 2) & 3u) == DXF_BP &&
                       dx_kit[DV_HATC].a[DXP_COLOR] >= 120u && dx_kit[DV_HATO].b[DXP_COLOR] >= 120u &&
@@ -775,12 +777,16 @@ int main(void)
             int ok = 1;
             gen_value(0, 0, v); ok &= !strcmp(v, "EXPLORE");
             gen_knob(0, 1); gen_value(0, 0, v); ok &= gp.genre == 0u && !strcmp(v, "RANDOM");
+            gen_knob(0, 1); gen_value(0, 0, v); ok &= gp.genre == genre_of("ACID HOUSE") && !strcmp(v, "ACID HOUSE");   /* (gen2) */
             gen_knob(0, 1); gen_value(0, 0, v); ok &= gp.genre == 1u && !strcmp(v, "HOUSE");
+            gen_knob(0, 1); gen_knob(0, 1); gen_knob(0, 1); gen_value(0, 0, v); ok &= gp.genre == genre_of("TECH HOUSE");
+            gen_knob(0, 1); gen_value(0, 0, v); ok &= !strcmp(v, "TECHNO");   /* (past ACID's own place: on as before) */
+            gen_knob(0, -1); gen_knob(0, -1); gen_knob(0, -1); gen_knob(0, -1); gen_knob(0, -1); ok &= gp.genre == genre_of("ACID HOUSE");
             gen_knob(0, -1); gen_knob(0, -1); ok &= gp.genre == GEN_EXPLORE;
             gen_knob(0, -1); gen_value(0, 0, v); ok &= gp.genre == NGENRE && !strcmp(v, GENRE[NGENRE - 1u].name);
             gen_knob(0, 1); ok &= gp.genre == GEN_EXPLORE;
             gp.genre = g0; gp.hot = 0xFF;
-            bad += gcheck("  GENRE's order: EXPLORE, RANDOM, HOUSE .. (back from EXPLORE: the last genre)", ok);
+            bad += gcheck("  GENRE's order: EXPLORE, RANDOM, ACID HOUSE (gen2), HOUSE .. (back from EXPLORE: the last genre)", ok);
         }
         frames(800);
         press(B_PLAY); frames(4);
@@ -789,8 +795,8 @@ int main(void)
         bad += gcheck("  PLAY again: stopped, the screen stays", (!song.playing || transport_req == 2) && ui.confirm == CF_DICE_ALL);
         frames(8);
         frames(800);                                    /* (the knobs quiet a moment after a button: ui_layer.c) */
-        turn(EN_K1, 1); turn(EN_K1, 1); turn(EN_K3, 2);
-        bad += gcheck("  KNOB 1 the genre (EXPLORE -> RANDOM -> HOUSE), KNOB 3 the energy (+10)", gp.genre == 1u && gp.energy == 60u);
+        turn(EN_K1, 1); turn(EN_K1, 1); turn(EN_K1, 1); turn(EN_K3, 2);
+        bad += gcheck("  KNOB 1 the genre (EXPLORE -> RANDOM -> ACID HOUSE -> HOUSE), KNOB 3 the energy (+10)", gp.genre == 1u && gp.energy == 60u);
         turn(EN_SELECT, 1); frames(800);                /* (0.9.2: SELECT GEN's next page, GEN 2; a HOME tap: on to ECO) */
         turn(EN_K1, -1); turn(EN_K2, 1);
         bad += gcheck("  SELECT: page 2 (PARTS); DRUMS AUTO -> 100 %, BASS AUTO stays AUTO above 100", gp.page == 1u && gp.amt[GP_DRUMS] == 100u && gp.amt[GP_BASS] == GA_AUTO);
@@ -877,7 +883,8 @@ int main(void)
                         const track_t *d = dr < NTRK ? &trk[dr] : 0;
                         acid_n++;
                         acid_ok += b->eng_req == EG_A && b->p[P_FTYPE] == 0 && b->p[P_E5] >= 90 && b->p[P_E4] <= 60 && b->p[P_ED_FLT] >= 40 &&
-                                   b->p[P_GLIDE] >= 20 && b->p[P_SUS] <= 16 && b->p[P_E2] == 0 && (b->p[P_E0] == 0 || b->p[P_E0] == 1) &&
+                                   b->p[P_GLIDE] >= 24 && b->p[P_GLIDE] <= 26 && b->p[P_GLMODE] == 1 && b->p[P_SUS] >= 40 && b->p[P_SUS] <= 55 &&
+                                   b->p[P_DEC] >= 80 && b->p[P_DEC] <= 95 && !b->p[P_E3] && b->p[P_VOICE] == V_LEGATO && b->p[P_E2] == 0 && (b->p[P_E0] == 0 || b->p[P_E0] == 1) &&
                                    slid >= 1u && acc >= 2u && oct >= 1u && gs.ba == BA_ACID &&
                                    (!d || !gs.act[RL_DRUM] || (lane_on(d, 0, 0, 4) * 16u >= (uint32_t)d->p[P_SLEN] * 3u && lane_on(d, DV_HATO, 2, 4) > 0u));
                     }
@@ -891,9 +898,124 @@ int main(void)
         bad += gcheck("(0.9.9-gen1) archetypes: every genre's bass and lead on its engine, its filter type and wave", !eng_bad && !flt_bad && !wave_bad);
         bad += gcheck("  the grammar: DRUM-X GLUE and MUTATE as the genre has them; 4/4 kick, 2/4 clap in house and techno",
                       !glue_bad && !mut_bad && !kit_bad && four_ok == four_n && four_n);
-        bad += gcheck("  ACID HOUSE: ANALOG saw/square, LP, RES >= 90, CUT low, ENV high, short, glide, slides, accents, octaves, offbeat hats",
+        bad += gcheck("  ACID HOUSE: ANALOG saw/square, LP, RES >= 90, CUT low, ENV high, short over a sustain, LEGATO, glide TIME ~55 ms, slides ..",
                       acid_n && acid_ok == acid_n);
         bad += gcheck("  TRAP's 808 (a sine, long, gliding), EBM's MS20 driven, DUBSTEP's synced wobble", trap_ok && ebm_ok && wob_ok);
+    }
+    /* ---- (0.9.9-gen2) the owner's ear. ACID HOUSE's line as X0X's TB-3PO writes one (notes on 60..75 % of the steps,
+     * ACCENTs on 25..35 % of the notes, SLIDEs on 20..30 %, never into a rest, octave jumps), over 40 seeds; played,
+     * a SLIDE does not retrigger: the next note on the same voice (its age kept), gliding, every other note a fresh
+     * start. The leads' vibrato (every genre, and EXPLORE): PITCH 1 at most (~19 cents, 1.1 %), 5 Hz or faster and faded
+     * in, the filter's LFO off under it; the pads' a slow drift at most. The drums: decays under thresholds, GLUE 8 at
+     * most, the track's LEVEL under 96 */
+    {
+        uint32_t n = 0, notes = 0, acc = 0, sld = 0, octs = 0, into_rest = 0, steps = 0;
+        uint32_t lfo_bad = 0, pad_bad = 0, leads = 0, vib = 0, kit_bad = 0, kits = 0, sd;
+        uint32_t fresh = 0, legato = 0, want_fresh = 0, want_leg = 0, glid = 0, retrig = 0;
+        gen_reset();
+        for (sd = 0; sd < 40u; sd++) {
+            const track_t *b;
+            uint32_t i2, len;
+            gen_with(genre_of("ACID HOUSE"), 300u + 17u * sd, 30u + sd % 5u * 15u, 0);
+            if (gs.mutant || gs.trk_of[RL_BASS] >= NTRK) continue;
+            b = &trk[gs.trk_of[RL_BASS]];
+            len = (uint32_t)b->p[P_SLEN];
+            n++;
+            for (i2 = 0; i2 < len && i2 < 16u; i2++) {
+                const step_t *st = &b->step[i2], *nx = &b->step[(i2 + 1u) % len], *pv = &b->step[(i2 + len - 1u) % len];
+                steps++;
+                if (st->time != ST_NOTE) continue;
+                notes++;
+                acc += (st->flags & SF_ACCENT) != 0;
+                sld += (st->flags & SF_SLIDE) != 0;
+                into_rest += (st->flags & SF_SLIDE) && nx->time == ST_REST;
+                octs += pv->time == ST_NOTE && (st->note[0] == pv->note[0] + 12 || st->note[0] + 12 == pv->note[0]);
+            }
+        }
+        printf("gen: ACID HOUSE x %u: notes %u %% of the steps, accents %u %%, slides %u %% of the notes, %u octave jumps, %u slides into a rest\n",
+               n, notes * 100u / (steps ? steps : 1u), acc * 100u / (notes ? notes : 1u), sld * 100u / (notes ? notes : 1u), octs, into_rest);
+        bad += gcheck("(0.9.9-gen2) ACID HOUSE x 40: notes 60..75 % of the steps, accents 25..35 %, slides 20..30 % (never into a rest), octaves",
+                      n >= 30u && notes * 100u >= steps * 60u && notes * 100u <= steps * 75u && acc * 100u >= notes * 25u && acc * 100u <= notes * 35u &&
+                      sld * 100u >= notes * 20u && sld * 100u <= notes * 30u && !into_rest && octs * 10u >= n);
+        for (sd = 0; sd < 3u; sd++) {                  /* (played: 4 loops from PLAY, the bass's voice watched a block a time) */
+            track_t *b;
+            uint32_t len, i2, blk, nb, age0, note0, gate0;
+            gen_reset();
+            gen_with(genre_of("ACID HOUSE"), 2054u + 31u * sd, 60, 0);
+            if (gs.trk_of[RL_BASS] >= NTRK) continue;
+            b = &trk[gs.trk_of[RL_BASS]];
+            len = (uint32_t)b->p[P_SLEN];
+            b->p[P_HVEL] = 127;                             /* (HUMAN off: on the grid) */
+            for (i2 = 0; i2 < len; i2++) {
+                const step_t *st = &b->step[i2], *pv = &b->step[(i2 + len - 1u) % len];
+                if (st->time != ST_NOTE) continue;
+                if (pv->time == ST_NOTE && (pv->flags & SF_SLIDE) && i2) { want_leg += pv->note[0] != st->note[0]; }
+                else want_fresh++;
+            }
+            nb = (uint32_t)((uint64_t)len * (FS * 15u) / (uint32_t)song.g[G_BPM] / CTL);   /* (one loop's blocks) */
+            age0 = b->v[0].age; note0 = b->v[0].note; gate0 = 0;
+            song.master_q12 = 4096;
+            transport_req = 1;
+            for (blk = 0; blk < nb + 16u; blk++) {
+                int32_t o[2 * CTL];
+                voice_t *v = &b->v[0];
+                if (blk % 32u == 0u) { ui_input(); song_poll(); host_ticks += 20000u; fm1_ms += 20u; }
+                memset(o, 0, sizeof o);
+                mix_block(o, CTL);
+                if (blk >= nb) continue;               /* (the loop's tail: past one loop, not counted) */
+                if (v->age != age0) fresh++;
+                else if (v->active && v->gate && gate0 && v->note != note0) {
+                    legato++;
+                    glid += v->pitch_cur != v->pitch16;   /* (still on its way: a glide, not a jump) */
+                    retrig += v->stage == 1u;
+                }
+                age0 = v->age; note0 = v->note; gate0 = v->active && v->gate;
+            }
+            transport_req = 2;
+            { int32_t o[2 * CTL]; ui_input(); mix_block(o, CTL); }
+        }
+        printf("gen: ACID HOUSE played: %u fresh notes (%u written), %u legato slides (%u written), %u gliding, %u retriggered\n",
+               fresh, want_fresh, legato, want_leg, glid, retrig);
+        bad += gcheck("  played: a SLIDE's next note legato on the same voice (no envelope retrigger), gliding; the others fresh",
+                      want_leg && legato == want_leg && glid == legato && !retrig && fresh == want_fresh);
+        gen_reset();
+        for (g = 0; g <= NGENRE; g++)                   /* (every genre at 3 seeds, and EXPLORE at 24) */
+            for (s = 0; s < (g < NGENRE ? 3u : 24u); s++) {
+                gen_with(g < NGENRE ? g + 1u : GEN_EXPLORE, 70u * g + 13u * s + 1u, 40u + 20u * (s % 3u), 0);
+                for (k = 0; k < NTRK; k++) {
+                    const track_t *t = &trk[k];
+                    uint32_t r = gs.role[k];
+                    int32_t pit = t->p[P_LD_PIT] < 0 ? -t->p[P_LD_PIT] : t->p[P_LD_PIT], flt = t->p[P_LD_FLT] < 0 ? -t->p[P_LD_FLT] : t->p[P_LD_FLT];
+                    if (drum_track(t) || !gs.act[r]) continue;
+                    if (r == RL_LEAD || r == RL_ARP) {
+                        leads += r == RL_LEAD;
+                        vib += pit != 0;
+                        if (pit > 1 || (pit && (t->p[P_LRATE] < 88 || !t->p[P_LFADE] || flt > 4))) {
+                            lfo_bad++;
+                            printf("  %s %s: LFO PITCH %d RATE %d FADE %d FILTER %d\n", gs.gi < NGENRE ? GENRE[gs.gi].name : "EXPLORE", r == RL_LEAD ? "lead" : "arp",
+                                   t->p[P_LD_PIT], t->p[P_LRATE], t->p[P_LFADE], t->p[P_LD_FLT]);
+                        }
+                    } else if (pit > 1 || (pit && t->p[P_LRATE] > 60 && r != RL_BASS)) pad_bad++;
+                }
+                if (g < NGENRE && gs.act[RL_DRUM] && gs.trk_of[RL_DRUM] < NTRK) {
+                    static const uint8_t DMAX[8] = {96, 127, 64, 32, 80, 80, 127, 127};   /* (kick clap hats toms) */
+                    const track_t *d = &trk[gs.trk_of[RL_DRUM]];
+                    uint32_t l;
+                    kits++;
+                    for (l = 0; l < 8u; l++)
+                        if (dx_kit[l].a[DXP_DECAY] > DMAX[l] || dx_kit[l].b[DXP_DECAY] > DMAX[l]) {
+                            kit_bad++;
+                            printf("  %s: lane %u DECAY %u / %u over %u\n", gs.g->name, l, dx_kit[l].a[DXP_DECAY], dx_kit[l].b[DXP_DECAY], DMAX[l]);
+                        }
+                    if (dx_glue > 8u || d->p[P_LEVEL] > 96 || DX_LAY_FB(dx_lay[DV_SNARE]) > 4u) kit_bad++;
+                }
+            }
+        printf("gen: leads %u (vibrato on %u), %u off the rule; pads %u off; kits %u, %u over\n", leads, vib, lfo_bad, pad_bad, kits, kit_bad);
+        bad += gcheck("  the leads' and arps' pitch LFO 19 cents at most, 5 Hz or faster, faded in, no filter LFO with it (all genres, EXPLORE)",
+                      !lfo_bad && vib && leads);
+        bad += gcheck("  the pads', chords', textures' pitch LFO a slow drift at most (PITCH 1, under 0.8 Hz)", !pad_bad);
+        bad += gcheck("  the drums: kick, clap, hats, toms DECAY under 96 / 64 / 32 / 80 / 80, GLUE 8 at most, LEVEL 96 at most, FEEDBK 4",
+                      kits && !kit_bad);
     }
     /* ---- (0.9.9-gen1) the same seed, the same piece (and a different one from another seed), every genre */
     {

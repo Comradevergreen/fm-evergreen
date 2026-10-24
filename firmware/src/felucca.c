@@ -38,7 +38,7 @@
 #define FELUCCA_ID "FM-1_900"    /* package identity (build.py: the .fwsc marker string) */
 #endif
 #ifndef FELUCCA_VERSION
-#define FELUCCA_VERSION "v0.9.9-gen1" /* the song generator redesigned: a clean base each piece (NEW PROJECT's state), a sound archetype a role and a pattern grammar a genre (gen_tables.c), its code past the pinned sound; on snd4: S and M fonts at 2 sub-pixel phases (were 4: 12.9 KB of flash); the sound's flash layout pinned (tools/audio_layout.txt: the UI can shrink without moving it); sound beta B: the delay's DRIVE, the punch-in delay band-limited, LOOP 3 / 5 / 6 / 7, CLEAR AUTOMATION on PUNCH, MASTER last in FX, a lighter chorus; on snd1 */
+#define FELUCCA_VERSION "v0.9.9-gen2" /* the generator tuned by ear: ACID HOUSE a 303 (X0X's Open303 / TB-3PO mapped onto ANALOG: the decay, a sustain, RES up to 120, the SLIDEs gliding ~55 ms in TIME, LEGATO, accents ~30 %, slides ~25 %) and first on the GENRE knob; the leads' vibrato shallow, fast and faded in; the drums shorter, less modulated, lower (48 % of the energy, was 74 %); on gen1: the song generator redesigned: a clean base each piece (NEW PROJECT's state), a sound archetype a role and a pattern grammar a genre (gen_tables.c), its code past the pinned sound; on snd4: S and M fonts at 2 sub-pixel phases (were 4: 12.9 KB of flash); the sound's flash layout pinned (tools/audio_layout.txt: the UI can shrink without moving it); sound beta B: the delay's DRIVE, the punch-in delay band-limited, LOOP 3 / 5 / 6 / 7, CLEAR AUTOMATION on PUNCH, MASTER last in FX, a lighter chorus; on snd1 */
 #endif
 #if FELUCCA_OTA && !FELUCCA_FLASH
 #error "FELUCCA_OTA needs FELUCCA_FLASH"

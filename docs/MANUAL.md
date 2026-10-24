@@ -1367,7 +1367,9 @@ back. **OCT+ with the settings unchanged throws a new seed** (another piece); tu
 the **same piece with that one thing changed** — every part draws its random numbers from its own stream, so BASS
 turned leaves the drums and the lead as they were. The screen shows **LAST: HOUSE 0421** (the genre and the seed).
 
-The genres: HOUSE, DEEP HOUSE, MICRO HOUSE, TECH HOUSE, ACID HOUSE, TECHNO, DETROIT, DUB TECHNO, HARD TECHNO,
+The genres, as KNOB 1 turns them after EXPLORE and RANDOM (0.9.9-gen2: ACID HOUSE first, the one asked for most; a
+genre keeps its own number, so a stored GEN setting keeps its genre): ACID HOUSE, HOUSE, DEEP HOUSE, MICRO HOUSE,
+TECH HOUSE, TECHNO, DETROIT, DUB TECHNO, HARD TECHNO,
 HYPNOTIC, TRANCE, ELECTRO, EBM, ITALO, SYNTH POP, DARKWAVE, POST PUNK, TRIBAL PUNK, MINIMAL SYNTH, MAN MACHINE,
 MOTORIK, INDIE, SHOEGAZE, POST ROCK, FUNK, DISCO, BOOM BAP, TRAP, UK GARAGE, DUBSTEP, BREAKS, DRUM & BASS, DUB,
 STEPPERS, JAZZ, BOSSA, AFROBEAT, AMBIENT, NEO CLASSIC, IMPRESSION, SOUNDTRACK, IDM, BROKEN. Each one knows its tempo
@@ -1389,7 +1391,7 @@ filter, each with a small random range so two seeds differ but stay the sound. S
 
 | Archetype | Genres | The sound |
 |---|---|---|
-| **ACID** (the 303) | ACID HOUSE, BREAKS | ANALOG saw (or square), one oscillator, LP nearly closed, RES high, the filter envelope high and short, glide on the SLIDEs, driven |
+| **ACID** (the 303) | ACID HOUSE, BREAKS | (0.9.9-gen2, after X0X's Open303) ANALOG saw (or square), one oscillator, no noise; LP low (~400 Hz at rest), RES 104–120 (high, never ringing on its own), the envelope high on it (~2 kHz at the peak) with a short decay (400–900 ms) over a sustain (the note's body: ANALOG's one envelope is the level's too); an **ACCENT** opens the filter ~2 octaves more and plays louder; LEGATO, so a **SLIDE** holds the gate and the next note glides (MODE TIME, ~55 ms whatever the interval) **without retriggering** the envelope; DIST after |
 | **TECH BASS** | TECHNO, TECH HOUSE, HARD TECHNO, HYPNOTIC | ANALOG saw or square, short, resonant LP, envelope, drive |
 | **EBM BASS** | EBM, DARKWAVE, MINIMAL SYNTH | ANALOG square through the **MS20** filter, short, envelope, drive |
 | **808** | TRAP | a sine's long boom, glide 30+, driven |
@@ -1404,11 +1406,21 @@ filter, each with a small random range so two seeds differ but stay the sound. S
 Over the genre's drum map, bass archetypes, chord play, arp and lead, a **pattern grammar** a genre adds: on the bass,
 ACCENTs off the kick, SLIDEs into the next note (its glide), octave jumps on the offbeat sixteenths (each 0–3 by
 genre: FUNK and DISCO jump, TRAP and DUBSTEP slide, EBM and HARD TECHNO accent; the acid bass keeps the 303's own
-rules: 16ths with rests, 3–5 accents and 2–3 slides a bar, octave jumps); **DRUM-X GLUE** where the genre bus-compresses
+rules, after X0X's TB-3PO (0.9.9-gen2): one 16-step line, ~68 % of the steps a note (the bar's first always), the mode's
+degrees over the chord (the root most), an octave up a third of the time and down now and then, ACCENTs on ~30 % of the
+notes, SLIDEs on ~25 % (never into a rest), now and then a TIE, every other bar a few notes re-rolled); **DRUM-X GLUE** where the genre bus-compresses
 (the techno family, EBM, DnB, dubstep); now and then the closed hat **rolled on the beat's last sixteenth every other
 loop** (TRAP, DnB, UK GARAGE, BREAKS, ELECTRO, HARD TECHNO, IDM); **MUTATE** (WHAT PATTERN, LOOP 4, ORBIT) on the arp or
 the chords where the genre orbits (MICRO HOUSE, DUB TECHNO, HYPNOTIC, MINIMAL SYNTH, MAN MACHINE, MOTORIK, AMBIENT,
 SOUNDTRACK, IDM). A role's sound is always its archetype (no more neighbour recipes swapped in).
+
+**Leads and drums** (0.9.9-gen2). A lead's vibrato is a singer's, not a siren's: LFO PITCH 1 (~19 cents), 5.1–6.3 Hz,
+faded in over 160–450 ms so the attack is clean, the filter's LFO off under it; otherwise no pitch LFO, only a slow,
+subtle one on the filter. Pads never get more than a tiny, slow pitch drift (EXPLORE included). The drums leave room for
+the bass and the lead: every lane's DECAY shorter (the kick's tail, the clap, the hats, the toms most; the 808 and DUB
+kicks shorter too), the kits' pitch sweep, FM and drive offsets halved, the snare's FEEDBK 2–4, MORPH moving less, GLUE
+at most 8, the drum track's LEVEL 94 (was 106) and drier sends: over the 43 genres the drums went from 74 % of the mix's
+energy to 48 %.
 
 **EXPLORE** (0.8.6), the first choice and where the screen always opens (at power-on, after NEW PROJECT, every time
 you open GEN), follows **no genre** and breaks their rules on purpose, so every seed is a very different piece
