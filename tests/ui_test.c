@@ -6949,6 +6949,109 @@ static int32_t fs_y(void) { return lz_on() ? fb_y() : (int32_t)foot_y() + 1; }
 static int32_t fs_my(void) { return fs_y() + (lz_on() ? 9 : 13); }
 static int32_t fs_dx(uint32_t k) { return lz_on() ? 95 + (int32_t)k * 4 : 233; }
 static int32_t fs_dy(uint32_t k) { return lz_on() ? fs_y() + 2 : fs_y() + (int32_t)k * 4; }
+/* (0.9.9-seq2h) SEQ's COPY / PASTE: step keys held + SELECT copy (one, a range, the bar), a step key + REC pastes (round in
+ * LEN), across tracks, DRUM <-> melodic refused, REC alone still arms, UNDO takes a paste back */
+static void cp_keys_down(uint32_t a, uint32_t b)          /* the white keys at places a and b held (b == a: one) */
+{
+    fm1_in.notes |= 1u << key_at(0, a) | 1u << key_at(0, b);
+    host_notes |= 1u << key_at(0, a) | 1u << key_at(0, b);
+    frame();
+}
+static void cp_keys_up(void) { fm1_in.notes = 0; frame(); frame(); }
+static int test_copy_paste(void)
+{
+    int bad = 0, ok;
+    uint32_t i;
+    int16_t v;
+    track_t *t = &trk[0], *u = &trk[1], *d = &trk[2];
+    step_t keep[NSTEP];
+    char tag[8];
+    ui_power_on(); stop_transport();
+    memset(&clip, 0, sizeof clip);
+    set_engine_of(t, ENGI_ANALOG); t->engine = t->eng_req;
+    set_engine_of(u, ENGI_ANALOG); u->engine = u->eng_req;
+    set_engine_of(d, ENGI_DRUM); d->engine = d->eng_req;
+    for (i = 0; i < NSTEP; i++) { step_clear(&t->step[i]); step_clear(&u->step[i]); step_clear(&d->step[i]); }
+    t->p[P_SLEN] = u->p[P_SLEN] = d->p[P_SLEN] = 16;
+    t->step[2].time = ST_NOTE; t->step[2].n = 2; t->step[2].note[0] = 60; t->step[2].note[1] = 67; t->step[2].vel = 100;
+    t->step[2].flags = SF_ACCENT; t->step[2].comp = 3; t->step[2].clen[0] = 2; t->step[2].cnm[0] = 0x21;
+    t->step[3].time = ST_TIE; t->step[3].vel = 100;                                 /* (its length: 2 steps) */
+    t->step[0].time = ST_NOTE; t->step[0].n = 1; t->step[0].note[0] = 48; t->step[0].vel = 90;
+    ok = motion_set_lock(t, 2, P_PAN, 20) == 0;
+    open_family(FAM_SEQ); frame();
+    ok &= cur_page()->graph == GR_ROLL && !grid_on() && !clip_tag(tag);
+    cp_keys_down(2, 3);                                  /* steps 3 and 4 held, SELECT turned */
+    turn(EN_SELECT, 1);
+    ok &= clip.n == 2u && msg_is("COPIED 2 STEPS") && clip.nl == 1u && clip_tag(tag) && str_eq(tag, "[2]") && !song.rec;
+    cp_keys_up();
+    bad += check("seq2h COPY: two step keys + SELECT copy the range (its notes, TIE, components, a lock), the footer's [2]", ok);
+    cp_keys_down(9, 9);                                  /* step 10 held, REC tapped: PASTE */
+    press(B_REC);
+    cp_keys_up();
+    ok = !memcmp(&t->step[9], &t->step[2], 2 * sizeof(step_t)) && motion_lock_get(t, 9, P_PAN, &v) && v == 20 &&
+         !motion_lock_get(t, 10, P_PAN, &v) && msg_is("PASTED 2 STEPS") && song.rec == 0u && transport_req == 0u;
+    bad += check("  a step key + REC pastes there (notes, length, components, the lock equal), REC not armed", ok);
+    ok = !undo_do() && t->step[9].time != ST_NOTE && !t->step[9].n && !motion_lock_get(t, 9, P_PAN, &v) && t->step[2].n == 2u;
+    bad += check("  UNDO (GLO + G4) takes the paste back", ok);
+    t = &trk[0];
+    cp_keys_down(0, 3);                                  /* steps 1..4, pasted at 14 with LEN 16: 14 15 16 1 */
+    turn(EN_SELECT, 1);
+    cp_keys_up();
+    memcpy(keep, t->step, sizeof keep);
+    cp_keys_down(13, 13);
+    press(B_REC);
+    cp_keys_up();
+    ok = clip.n == 4u && !memcmp(&t->step[13], &keep[0], 3 * sizeof(step_t)) && !memcmp(&t->step[0], &keep[3], sizeof(step_t)) &&
+         !memcmp(&t->step[16], &keep[16], 48 * sizeof(step_t)) && !memcmp(&t->step[1], &keep[1], 12 * sizeof(step_t));
+    bad += check("  a range pasted past the bar's end goes round within LEN (14 15 16 1), nothing past LEN", ok);
+    memcpy(keep, t->step, sizeof keep);
+    cp_keys_down(0, 15);                                 /* keys 1 and 16: the whole bar */
+    turn(EN_SELECT, 1);
+    cp_keys_up();
+    track_select(1); frame();
+    cp_keys_down(0, 0);
+    press(B_REC);
+    cp_keys_up();
+    ok = clip.n == 16u && msg_is("PASTED 16 STEPS") && !memcmp(trk[1].step, keep, 16 * sizeof(step_t)) &&
+         motion_lock_get(&trk[1], 2, P_PAN, &v) && motion_lock_get(&trk[1], 15, P_PAN, &v) && v == 20;
+    bad += check("  keys 1 + 16 copy the bar; another track pastes it (its steps, the lock)", ok);
+    track_select(2); frame();
+    memcpy(keep, trk[2].step, sizeof keep);
+    cp_keys_down(4, 4);
+    press(B_REC);
+    cp_keys_up();
+    ok = grid_on() && msg_is("DRUM <-> NOTES: NO") && !song.rec && step_lanes(&trk[2].step[4]) == 0u &&
+         !memcmp(&trk[2].step[5], &keep[5], 59 * sizeof(step_t));
+    bad += check("  notes onto a DRUM track refused (the key's own hit taken back), REC not armed", ok);
+    grid_hit(&trk[2], 4, 0, 1); grid_hit(&trk[2], 4, 2, 1); grid_acc(&trk[2], 4, 2, 1);
+    memcpy(keep, trk[2].step, sizeof keep);
+    cp_keys_down(4, 4);                                  /* a hit there: held for the copy, it stays */
+    turn(EN_SELECT, 1);
+    cp_keys_up();
+    cp_keys_down(8, 8);                                  /* an empty step: the press's hit, then the paste over it */
+    press(B_REC);
+    cp_keys_up();
+    ok = clip.drum && !memcmp(&trk[2].step[4], &keep[4], sizeof(step_t)) && !memcmp(&trk[2].step[8], &keep[4], sizeof(step_t)) &&
+         msg_is("PASTED 1 STEP");
+    track_select(0); frame();
+    cp_keys_down(5, 5);
+    press(B_REC);
+    cp_keys_up();
+    ok &= msg_is("DRUM <-> NOTES: NO") && !song.rec;
+    bad += check("  DRUM: a step's hits and accents copied and pasted whole; DRUM onto notes refused", ok);
+    frames(400);
+    press(B_REC);
+    ok = song.rec == 1u && msg_is("KEYS WRITE STEPS");
+    song.rec = 0; frames(400);
+    memset(&clip, 0, sizeof clip);
+    cp_keys_down(5, 5);
+    press(B_REC);
+    cp_keys_up();
+    ok &= song.rec == 1u;
+    song.rec = 0;
+    bad += check("  REC alone still arms; a step key held with the clipboard empty too", ok);
+    return bad;
+}
 static int test_foot_steps(void)
 {
     int bad = 0, ok;
@@ -7055,6 +7158,7 @@ static int test_seq_tools(void)
     bad += check("  0.9.2 a tap on STEP: the next group's first, round (0.9.5: no layer hint; was BAR's next set)", ok);
     bad += test_lente();
     bad += test_foot_steps();
+    bad += test_copy_paste();
     bad += test_save_lens();
     {   /* (0.6.85) SEQ > STRETCH: x2 .. x8 / 2 .. / 8 (the notes spread, held ones held), REPEAT x2 .. x8 / TO 64, NUDGE */
         track_t *t;

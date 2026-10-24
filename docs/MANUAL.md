@@ -132,6 +132,7 @@ layer's shortcuts; on the DRUM grid they are steps and lanes; on the NAME screen
 | **SEQ** held + **G5** | **CLR STEP**: clears the cursor step and its locks (NOTE with a note in focus: that note; AUTO LIST: deletes the record). |
 | **SAVE** held + **C5** | **NAME**: renames the slot on SAVE > USER, the section or project on SECTIONS / PROJECTS. |
 | A step held (SEQ > STEP) + **KNOB 1–4** | A parameter lock on that step. |
+| Step keys held (SEQ, the roll / grid) + **SELECT** / a step key + **REC** | **COPY** those steps / **PASTE** them from that step (see Copy and paste). |
 | **OCT− + OCT+** held at power-on | HARDWARE CALIBRATION. |
 | **OCT− + OCT+** held 5 s while running | Update mode (UBOOT), with a countdown from 2 s; let go to cancel. |
 
@@ -1159,6 +1160,28 @@ On **SEQ > STEP** (the BAR group), **hold a step** (a grid key, or the note bein
 its own value of the parameter that knob edits on the sound page you visited last. Tap EDIT while holding the step to
 clear its locks. Automation events and locks share **64 records per section** (all tracks together); when they run out
 the screen says **AUTOMATION FULL**.
+
+### Copy and paste (0.9.9-seq2h)
+
+On SEQ's roll pages (STEP, NOTE, ..; a DRUM track's grid too), stopped or playing, the **16 white keys are the steps of
+the bar shown** (the cursor's bar, as on the grid and COMP):
+
+- **COPY a step**: hold its key and turn **SELECT** (one detent is enough).
+- **COPY a range**: hold its first and last keys and turn SELECT: every step between them.
+- **COPY the bar**: hold keys **1 and 16** and turn SELECT.
+- **PASTE**: hold a step key and **tap REC**: the clipboard lands from that step on, going round within LEN (4 steps
+  pasted at 14 with LEN 16: 14 15 16 1).
+
+The screen says **COPIED n STEPS** / **PASTED n STEPS**, and the footer shows **[n]** while the clipboard holds something.
+What is copied: each step whole (notes, length / TIEs, accent, slide, ratchet, MICRO, chance, both components with their
+LENGTH and N:M; on a DRUM track its lanes' hits, accents and lane modes) and the steps' parameter locks. The clipboard
+stays when you change track, bar or section: select another track and paste. **DRUM <-> melodic** is refused (**DRUM
+<-> NOTES: NO**). **UNDO** (GLO + G4) takes the last paste back.
+
+REC tapped with no step key held, or with the clipboard empty, arms / disarms as always. On a melodic track **armed for
+recording** the keys write (or record) notes, so copy and paste wait until REC is off; on the DRUM grid the white keys
+stay the steps (a key pressed on an empty step for a copy or paste does not leave its hit there). On the roll the held
+keys still sound their notes.
 
 ### Scale
 

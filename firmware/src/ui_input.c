@@ -482,9 +482,12 @@ static int roll_on(void)
  * starts the transport too (live recording), except on STEP's piano roll (1.2, Discussion #133): there it arms step
  * recording and the transport stays stopped: the keys write the cursor step (seq_entry), PLAY then records live.
  * Armed and playing, STEP's keys record live (at the play head) instead of writing the cursor step */
+static int cp_paste_rec(void);
 static int rec_tap(void)                                /* 1: the arming changed */
 {
     uint8_t bit = (uint8_t)(1u << song.sel);
+    if (cp_paste_rec())                                 /* (seq2h) a step key held, the clipboard full: PASTE */
+        return 0;
     if (chain_busy()) {
         ui_message("STOP TO RECORD");
         return 0;
@@ -573,8 +576,10 @@ static void grid_keys(uint32_t pressed)
                     ui.plk_trk = song.sel;
                 } else if (acc) {
                     grid_acc(TSEL, i, ui.lane, 1);
+                    cp_add |= b, cp_add_acc |= b, cp_add_lane = ui.lane;   /* (seq2h: a copy with the key takes it back) */
                 } else {
                     grid_hit(TSEL, i, ui.lane, 1);
+                    cp_add |= b, cp_add_acc &= ~b, cp_add_lane = ui.lane;
                 }
             }
             cursor_set((int32_t)i);
@@ -639,6 +644,7 @@ static void lock_keys(void)
 {
     uint64_t gone = ui.plk_rm & ~lock_held();
     uint32_t i;
+    cp_add &= lock_held();                              /* (seq2h) a key let go: the hit it put there stays */
     for (i = 0; gone && i < NSTEP; i++)
         if ((gone >> i) & 1u) {
             if ((ui.plk_acc >> i) & 1u)
@@ -689,6 +695,109 @@ static void lock_clear(uint64_t held)
         if ((held >> i) & 1u)
             n += motion_clear_locks(TSEL, i);
     ui_message(n ? "LOCKS CLEARED" : "NO LOCKS");
+}
+
+/* ------------------------------------------------- copy / paste --- */
+/* (0.9.9-seq2h, the approved mock-up's CP / CP2) on SEQ's roll pages (the DRUM grid too), stopped or playing, the white
+ * keys are the steps of the bar shown (ui.bank, as the grid's and COMP's): a step key held + SELECT turned COPIES that
+ * step, two held (the first and the last) the range between them, keys 1 and 16 the whole bar; a step key held + REC
+ * tapped PASTES the clipboard from that step on (round within LEN). REC tapped with no step key, or the clipboard empty,
+ * arms / disarms as ever. A melodic track armed: its keys write or record notes, no copy or paste (DRUM: the white
+ * keys stay the steps). DRUM <-> melodic refused. UNDO (GLO + G4, project.c) takes the paste back */
+static uint64_t cp_held(void)
+{
+    const track_t *t = TSEL;
+    uint32_t k, len = (uint32_t)clamp(t->p[P_SLEN], 1, NSTEP), keys = fm1_in.notes & ~kb_layer;
+    uint64_t m = 0;
+    if (!keys || ui.home || ui.menu || ui.confirm || name_on() || !song.seq_mode ||
+        cur_page()->graph != GR_ROLL || (!drum_track(t) && ((song.rec >> song.sel) & 1u)))
+        return 0;
+    for (k = 0; k < 27u; k++)
+        if (((keys >> k) & 1u) && !key_black(k) && ui.bank * 16u + key_place(k) < len)
+            m |= (uint64_t)1 << (ui.bank * 16u + key_place(k));
+    return m;
+}
+
+/* the held keys' own doing on the grid undone (the hit a press put there; a hit pressed stays when let go) */
+static void cp_keys_used(track_t *t, uint64_t held)
+{
+    uint32_t i;
+    ui.plk_rm &= ~held;
+    for (i = 0; i < NSTEP; i++)
+        if (((cp_add & held) >> i) & 1u) {
+            if ((cp_add_acc >> i) & 1u)
+                grid_acc(t, i, cp_add_lane, 0);
+            else
+                grid_hit(t, i, cp_add_lane, 0);
+        }
+    cp_add &= ~held;
+}
+
+static void cp_say(const char *what, uint32_t n)
+{
+    char b[24];
+    str_cpy(b, what, sizeof b);
+    fmt_int(b + str_len(b), (int32_t)n);
+    str_cpy(b + str_len(b), n == 1u ? " STEP" : " STEPS", 8);
+    ui_message(b);
+}
+
+static void cp_copy(uint64_t held)
+{
+    track_t *t = TSEL;
+    uint32_t lo = (uint32_t)__builtin_ctzll(held), hi = 63u - (uint32_t)__builtin_clzll(held), i, k = trk_index(t), f;
+    cp_keys_used(t, held);
+    clip.n = (uint8_t)(hi - lo + 1u);
+    clip.drum = (uint8_t)drum_track(t);
+    memcpy(clip.st, &t->step[lo], clip.n * sizeof clip.st[0]);
+    clip.nl = 0;
+    f = motion_guard();
+    for (i = 0; i < motion.count && clip.nl < CLIP_LOCKS; i++) {
+        const motion_event_t *e = &motion.event[i];
+        if (MOTION_TRK(e) != k || !(e->param & MOTION_LOCK) || MOTION_STEP(e) < lo || MOTION_STEP(e) > hi)
+            continue;
+        clip.lk[clip.nl].off = (uint8_t)(MOTION_STEP(e) - lo);
+        clip.lk[clip.nl].id = (uint8_t)MOTION_ID(e);
+        clip.lk[clip.nl++].v = MOTION_VAL(e);
+    }
+    motion_unguard(f);
+    cp_say("COPIED ", clip.n);
+    ui.force = 1;
+}
+
+/* REC tapped: 1 = it pasted (or refused), not an arming tap */
+static int cp_paste_rec(void)
+{
+    track_t *t = TSEL;
+    uint64_t held = clip.n ? cp_held() : 0u;
+    uint32_t a, len, n, j;
+    if (!held)
+        return 0;
+    if (chain_busy()) {
+        ui_message("STOP TO EDIT");
+        return 1;
+    }
+    cp_keys_used(t, held);
+    if (clip.drum != (uint8_t)drum_track(t)) {
+        ui_message("DRUM <-> NOTES: NO");
+        return 1;
+    }
+    undo_mark();                                        /* (GLO + G4: UNDO, the music before the paste) */
+    a = (uint32_t)__builtin_ctzll(held);
+    len = (uint32_t)clamp(t->p[P_SLEN], 1, NSTEP);
+    n = clip.n < len ? clip.n : len;
+    for (j = 0; j < n; j++) {
+        uint32_t d = (a + j) % len;
+        (void)motion_clear_locks(t, d);
+        t->step[d] = clip.st[j];
+    }
+    for (j = 0; j < clip.nl; j++)
+        if (clip.lk[j].off < n && motion_set_lock(t, (a + clip.lk[j].off) % len, clip.lk[j].id, clip.lk[j].v) == 2)
+            break;                                      /* (full: ui_notices says so) */
+    cp_say("PASTED ", n);
+    str_cpy(ui.msg2, "UNDO: GLO + G4", sizeof ui.msg2);
+    ui.force = 1;
+    return 1;
 }
 
 /* (0.6.81) SEQ > NOTE, the piano roll's edits on the cursor's step: FOCUS the chord or one of its notes (lit), PITCH
@@ -2488,7 +2597,10 @@ static void ui_input_frame(void)
         }
     } else if ((s = panel_enc(EN_SELECT)) != 0 && !lay && !ui.menu) {   /* (0.9.2, rule 1) SELECT alone: the section's
                                                         * chain, a page a detent (HOME's: ECO MACROS BEING ROUTES GEN 1..3) */
-        if (!ui.home && !ui.layer && !ui.confirm && song.seq_mode && cur_page()->graph == GR_ROLL && !song.grid &&
+        uint64_t cph = cp_held();
+        if (cph)                                        /* (seq2h) step keys held: COPY them (the range between) */
+            cp_copy(cph);
+        else if (!ui.home && !ui.layer && !ui.confirm && song.seq_mode && cur_page()->graph == GR_ROLL && !song.grid &&
             ((song.rec >> song.sel) & 1u) && !live_rec_sel() && !chain_busy()) {   /* (0.9.9-seq2c) step recording: */
             if (ui.entry_open && lock_held())
                 ent_knob(0, s);                         /* a chord held: its LEN, as KNOB 1 (the roll's bar grows) */

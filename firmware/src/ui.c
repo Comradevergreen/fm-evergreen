@@ -706,6 +706,18 @@ static void ui_say(const char *a, const char *b)
 }
 
 static void ui_message(const char *s) { ui_say(s, ""); }
+
+/* (0.9.9-seq2h) SEQ's clipboard (ui_input.c cp_copy / cp_paste): up to a bar of steps, whole (notes, time, flags, the
+ * DRUM hits, accents and lane modes, the components), their parameter locks by offset; n 0: empty (the footer's [n]) */
+#define CLIP_LOCKS 32u
+static struct {
+    uint8_t n, drum, nl;                           /* steps held, from a DRUM track, locks held */
+    step_t st[16];
+    struct { uint8_t off, id; int16_t v; } lk[CLIP_LOCKS];
+} clip;
+static uint64_t cp_add, cp_add_acc;                /* DRUM grid: the steps whose hit (accent) a held key put there, on
+                                                    * lane cp_add_lane (undone by a copy / paste made with that key) */
+static uint8_t cp_add_lane;
 /* a message led by an icon: its first byte (ui_draw.c draw_head draws the icon, then the words) */
 #define MSG_NOFILE "\x01"                      /* the no-file icon (ICON_X_NOFILE) */
 

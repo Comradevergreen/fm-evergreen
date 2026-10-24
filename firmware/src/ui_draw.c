@@ -1126,9 +1126,19 @@ static int32_t foot_strip(int32_t x0, int32_t y, int lens)
     }
     return lens ? x + (nb > 1u ? (int32_t)nb * 4 + 3 : 0) : x;
 }
+/* (0.9.9-seq2h) SEQ's clipboard holding n steps: "[n]" at the footer's right, before the count (ui_input.c cp_copy) */
+static int clip_tag(char *b)
+{
+    if (!clip.n || ui.home || ui.menu || !song.seq_mode)
+        return 0;
+    b[0] = '[';
+    fmt_int(b + 1, clip.n);
+    str_cpy(b + str_len(b), "]", 2);
+    return 1;
+}
 static __attribute__((noinline)) void draw_crumbs(int32_t y, uint16_t fg, uint16_t last)
 {
-    char cnt[8];
+    char cnt[8], ct[8];
     int32_t cw = crumb_count(cnt), mx = cw ? 234 - cw - 8 : 234;
     char b[48];
     uint32_t i, k = 0;
@@ -1147,6 +1157,8 @@ static __attribute__((noinline)) void draw_crumbs(int32_t y, uint16_t fg, uint16
         GFX_HOOK_ALIGN(0, y + AF_S_CAP_Y, 0, y + AF_S_CAP_Y + AF_S_CAP_H, AL_V, "footer breadcrumb on its line");
     if (cw)
         cv_text_r(234, y, f, cnt, f == &AF_X ? T_TEXT : fg, T_BG);   /* (0.8.9, the skins' mock-up: the count TEXT) */
+    if (clip_tag(ct))
+        mx = cv_text_r(mx, y, f, ct, T_THEME, T_BG) - 6;   /* (seq2h) the clipboard's [n] */
     if (f == &AF_X && k) {                              /* (seq2g) a lens footer: the page's name alone after the steps
                                                          * (TEXT, as `last` if that is not DIM) */
         cv_free_text(x0, y, f, b + k, last == fg ? T_TEXT : last, T_BG, mx - x0);
@@ -1182,7 +1194,7 @@ static void draw_foot(void)
         foot_hint(ha, hb);
         sig += str_hash(str_hash(act_ready() ? 7u : 3u, ha), hb);
     }
-    sig += (uint32_t)accw * 977u;
+    sig += (uint32_t)accw * 977u + (uint32_t)clip.n * 7919u;   /* (seq2h) the clipboard's [n] */
     if (!ui.force && sig == ui.foot_sig)
         return;
     ui.foot_sig = sig;
