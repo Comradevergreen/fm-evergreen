@@ -194,15 +194,31 @@ static __attribute__((noinline)) void pfx_block(uint32_t n, uint32_t held)
         rep = on & (PF_BIT(PF_S16) | PF_BIT(PF_S8) | PF_BIT(PF_ARP));
         per = (rep & (PF_BIT(PF_S16) | PF_BIT(PF_ARP))) ? b / 4u : b / 2u;   /* (JIANT 0.4: 1/8, 1/16; ARP 1/16) */
         t->pfx_pit = (int16_t)(((on >> PF_OCTU) & 1u) * 192 - ((on >> PF_OCTD) & 1u) * 192);
+        uint32_t lpn = (on >> PF_LP3) & 1u ? 3u : (on >> PF_LP5) & 1u ? 5u : (on >> PF_LP7) & 1u ? 7u : 0u;   /* (snd2) LOOP
+                                                         * 3 / 5 / 7 (the shortest held wins) */
         f = ((on >> PF_RND) & 1u ? PFX_RND : 0u) | ((on >> PF_HALF) & 1u ? PFX_HALF : 0u) | (rep ? PFX_REP : 0u) |
-            (on & (PF_BIT(PF_DSHT) | PF_BIT(PF_DLNG)) ? PFX_DEC : 0u) | ((on >> PF_ATK) & 1u ? PFX_ATK : 0u);
-        if ((f & PFX_HALF) && !(old & PFX_HALF) && song.playing) {   /* 1/2 TEMPO: where it was */
-            t->pfx_idx0 = t->seq_idx;
+            (on & (PF_BIT(PF_DSHT) | PF_BIT(PF_DLNG)) ? PFX_DEC : 0u) | ((on >> PF_ATK) & 1u ? PFX_ATK : 0u) |
+            (lpn && song.playing ? PFX_LOOP : 0u);
+        if ((f & (PFX_HALF | PFX_LOOP)) && !(old & (PFX_HALF | PFX_LOOP)) && song.playing) {   /* 1/2 TEMPO, LOOP: where */
+            t->pfx_idx0 = t->seq_idx;                   /* it was (and the samples since: let go, back where it would be) */
             t->pfx_pos0 = t->seq_pos;
             t->pfx_el = 0;
-            t->pfx_half = 0;
-        } else if (!(f & PFX_HALF) && (old & PFX_HALF)) {
+        } else if (!(f & (PFX_HALF | PFX_LOOP)) && (old & (PFX_HALF | PFX_LOOP))) {
             t->pfx_rs = 1;                              /* (seq.c seq_tick: back to the real place) */
+        }
+        if ((f & PFX_HALF) && !(old & PFX_HALF))
+            t->pfx_half = 0;
+        if ((f & PFX_LOOP) && !(old & PFX_LOOP)) {      /* (snd2) LOOP N: the last N steps, the one playing the last of
+                                                         * them; its next step is the first again (not on the bar: a 3
+                                                         * or a 5 against the 4 of the bar) */
+            uint32_t len = t->p[P_SLEN] > 0 ? (uint32_t)t->p[P_SLEN] : 1u;
+            t->pfx_lps = (uint16_t)(((uint32_t)t->seq_idx % len + lpn * len - (lpn - 1u)) % len);
+            t->pfx_lpc = (uint8_t)(lpn - 1u);
+        }
+        if (lpn) {
+            t->pfx_lpn = (uint8_t)lpn;
+            if (t->pfx_lpc >= lpn)
+                t->pfx_lpc = (uint8_t)(lpn - 1u);
         }
         if (rep && !(old & PFX_REP)) {
             t->pfx_si = 0;

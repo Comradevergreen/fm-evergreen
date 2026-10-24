@@ -1722,6 +1722,11 @@ passes get it; **G5** held erases where the playhead passes. Saved with the sect
   wash of hats and snare noise (each pass loses the noise much faster than the notes). The delay without THROW is as
   before.
 - **Black keys 1–6**: mute T1–T6 while held (not saved).
+- (0.9.9-snd2) **G#4 LOOP 3**, **C#5 LOOP 5**, **D#5 LOOP 7**: while held, every track (of those A#4 picks) repeats
+  its last 3, 5 or 7 steps (from the step playing when it comes in, on the next 1/16), not on the bar: odd loops that
+  turn against the 4/4. Let go and each track is back where it would have been. **F#5 GLITCH** (from 0.9.18): the
+  master cut on the 1/16s, each one live, repeated, reversed, an octave up or down, gated, skipping or crushed, by its
+  place in a 2-bar cycle (the same every time, so it grooves); here at its default settings.
 
 **The punch-in lane**: each section has a lane of 64 steps of 1/16 (4 bars). With **REC armed and playing** (not
 during a song), the **note effects (D4–F5)** you hold are recorded into it, one per step (REPEAT, LPF, HPF and the mutes

@@ -11,7 +11,8 @@
  *   rev/<TYPE>     a pad soaked in the reverb, each REVERB TYPE (ROOM SPRING SHIMR RESO CLOUD)
  *   dly/<RATE>     (0.8.4) a pad into the delay, its line at the full rate, half, a quarter (fx.c dly_lo); (snd2)
  *                  .drive: DRIVE 100; .throw: THROW held (KNOB 3 of the FX layer at 100), the loop's band in
- *   mix/full       six parts: four ANALOG / FM6 chords, drums, every FX on
+ *   mix/full       six parts: four ANALOG / FM6 chords, drums, every FX on; (snd2) .repeat / .glitch: the FX layer's
+ *                  REPEAT 1/16 / GLITCH held on it
  *   seq/plain      the sequencer: six tracks of chords / hits on every step at 200 BPM
  *   seq/heavy      .. with two step components on each (ARP / RATCHET x8, RANDOM / OCT+ at 75 %), DIV, LEN, chord glides
  *   song/cputest   SAVE > TOOLS 6 CPU TEST's song (song_dice.c cpu_test_song), playing: what the device is measured on
@@ -221,6 +222,11 @@ int main(void)
     vg_part(5, ENGI_DRUM, 0, 4);
     song.g[G_RTYPE] = 4;
     vg_section("mix/full");
+    perf_held = PF_BIT(PF_R16);                         /* (snd2) the FX layer's buffer: REPEAT 1/16, then GLITCH, on it */
+    vg_section("mix/full.repeat");
+    perf_held = PF_BIT(PF_GLT);
+    vg_section("mix/full.glitch");
+    perf_held = 0;
     vg_seq(0);
     vg_section("seq/plain");
     vg_seq(1);

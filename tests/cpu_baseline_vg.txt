@@ -23,6 +23,8 @@ eng/VOICE.EN 1632
 eng/VOICE.ES 1651
 eng/WHEEL 1904
 mix/full 2547
+mix/full.glitch 2800
+mix/full.repeat 2794
 mix/idle 272
 mix/idle.tail 264
 peak/VOICE.EN6 188838

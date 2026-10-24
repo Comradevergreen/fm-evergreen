@@ -2658,7 +2658,7 @@ static __attribute__((noinline)) void mix_block(int32_t *out, uint32_t n)   /* (
     if (fx_stems)                                       /* (0.7.1) a part not mixed this block: a silent stem */
         memset(stem_buf, 0, sizeof stem_buf);
     pfx_rec_held = perf_kill ? 0u : perf_held & PF_MIDI;
-    pfx_block(n, (perf_kill ? 0u : (perf_held | perf_latched) & PF_MIDI) | scene_pfx);
+    pfx_block(n, (perf_kill ? 0u : (perf_held | perf_latched) & (PF_MIDI | PF_LOOPS)) | scene_pfx);
     events_block(n);
     if (song.playing)                                   /* (JIANT) the modulation sequences' clock (mod.c): the block's end on
                                                          * the transport's grid (through tempo changes, an external clock) */

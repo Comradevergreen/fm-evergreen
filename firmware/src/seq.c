@@ -985,7 +985,8 @@ static __attribute__((noinline)) void dxo_tick(track_t *t, uint32_t n)
 static uint32_t perf_key(uint32_t k)
 {
     uint32_t p = key_place(k);
-    return !key_black(k) ? (p < PF_M1 ? p : p == PF_M1 ? PF_CLR : PF_N) : p < NTRK ? PF_M1 + p : p == 7u ? PF_TGT : PF_N;
+    static const uint8_t BK[5] = {PF_LP3, PF_TGT, PF_LP5, PF_LP7, PF_GLT};   /* (snd2) black keys 7..11: G#4 A#4 C#5 D#5 F#5 */
+    return !key_black(k) ? (p < PF_M1 ? p : p == PF_M1 ? PF_CLR : PF_N) : p < NTRK ? PF_M1 + p : p - NTRK < 5u ? BK[p - NTRK] : PF_N;
 }
 
 /* (0.6.14) LATCH: ARP OFF and ARP 2's HOLD ON, the keys' notes keep sounding when let go; the first key of the next
@@ -2377,6 +2378,8 @@ static void seq_tick(track_t *t, uint32_t n)
         t->pfx_el += n;
         t->pfx_half = (uint8_t)(h & 1u);
         n = h >> 1;
+    } else if ((t->pfx & PFX_LOOP) && song.playing) {  /* (snd2) LOOP: the samples since it went in (pfx_resync) */
+        t->pfx_el += n;
     }
     if (!song.playing) {
         seq_due(t, n);
@@ -2395,7 +2398,14 @@ static void seq_tick(track_t *t, uint32_t n)
         ev_at(start || t->seq_pos >= n ? 0u : n - t->seq_pos);   /* (ctl64) the step's first sample (seq_pos: the samples
                                                          * past it at the block's end; 0 past it: the next block's first) */
         t->ext = (uint16_t)(start ? 0u : e);            /* (the next one longer by as much: the grid kept) */
-        if (t->jump_to && !start) {                     /* (0.6.42) JUMP: the step it names */
+        if ((t->pfx & PFX_LOOP) && !start) {            /* (snd2) LOOP 3 / 5: the last N steps again (pfx.c) */
+            if (++t->pfx_lpc >= t->pfx_lpn) {
+                t->pfx_lpc = 0;
+                t->seq_idx = (uint16_t)(t->pfx_lps % (len ? len : 1u));
+            } else {
+                t->seq_idx = (uint16_t)((t->seq_idx + 1u) % (len ? len : 1u));
+            }
+        } else if (t->jump_to && !start) {              /* (0.6.42) JUMP: the step it names */
             t->seq_idx = (uint16_t)((t->jump_to - 1u) % (len ? len : 1u));
             t->rev = 0;
         } else if (t->rev && !start && t->seq_idx > 1u) {   /* REV: back towards step 1 */

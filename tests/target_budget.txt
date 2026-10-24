@@ -30,7 +30,7 @@ mod_end 6
 perf_begin 28
 perf_mute 18
 perf_pre 30
-perf_block 538
+perf_block 327
 perf_master 30
 rev_room 147
 rev_spring 138
@@ -46,3 +46,5 @@ track_comb 122
 tf_run 126
 tf_ms20 94
 drum_glue 231
+perf_buf 0
+perf_glt 0

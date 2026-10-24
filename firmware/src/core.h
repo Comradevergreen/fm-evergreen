@@ -780,8 +780,10 @@ typedef struct track {
     uint8_t pfx_sn[4], pfx_snn;  /* the notes a repeat holds now */
     uint8_t pfx_si;              /* ARP: the next of them */
     uint32_t pfx_sc;             /* samples since the last repeat */
+    uint8_t pfx_lpn, pfx_lpc;    /* (0.9.9-snd2) LOOP 3 / 5 (pfx.c): the steps it repeats, how far into them; */
+    uint16_t pfx_lps;            /* .. the first of them */
 } track_t;
-enum { PFX_RND = 1, PFX_HALF = 2, PFX_REP = 4, PFX_DEC = 8, PFX_ATK = 16 };   /* (track_t.pfx) */
+enum { PFX_RND = 1, PFX_HALF = 2, PFX_REP = 4, PFX_DEC = 8, PFX_ATK = 16, PFX_LOOP = 32 };   /* (snd2) LOOP 3 / 5 / 7 */   /* (track_t.pfx) */
 
 typedef struct {
     int16_t g[G_COUNT];
