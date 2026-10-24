@@ -847,7 +847,7 @@ in the sound.
 
 ### FILTER (every engine)
 
-EDIT > **FILTER**: **TYPE** LP, HP, BP, **COMB** or **COMB-** (a comb tuned to the note you play; CUT moves it, RES is how much
+EDIT > **FILTER**: **TYPE** LP, HP, BP, **COMB**, **COMB-** or **MS20** (a comb tuned to the note you play; CUT moves it, RES is how much
 it rings), **CUT**, **RES**, and KNOB 4: on ANALOG its own DRIVE, on every other engine the track's DIST. On ANALOG
 the filter is per voice; on LOFI the filter page drives its per-voice filter; on the others it is a filter on the
 track that follows LFO DEST / ENV DEST FILTER.
@@ -858,6 +858,13 @@ short colour (25 ms) up to ~9 s near self-oscillation at the top; a soft clip in
 and a damping low-pass in the loop (opening with RES) lets the highs die first, like a string. **COMB** (positive
 feedback) is metallic and flanger-like; **COMB-** (negative) keeps only the odd harmonics: hollow, clarinet-like, at
 the same pitch.
+
+**MS20** (0.9.9-snd1): an aggressive 2-pole low-pass after the Korg MS-20: its resonance is fed back through a
+diode-like clip, so it screams at high RES but stays under control (the clip sets how loud it can ring, and a hot
+input growls instead of blowing up); RES is exponential (soft at 0, very sharp in the last part of its travel, and the
+ring still dies out when the part goes silent). Same knobs: CUT (with LFO / ENV DEST FILTER), RES, and the drive of
+KNOB 4. On ANALOG and LOFI the MS20 (like the combs) is the track's filter after the voices: their own filter opens.
+LP, HP and BP sound exactly as before.
 
 ### VOICE (every engine)
 

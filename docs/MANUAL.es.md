@@ -885,7 +885,7 @@ su ser; nada en el sonido.
 
 ### FILTER (todos los motores)
 
-EDIT > **FILTER**: **TYPE** LP, HP, BP, **COMB** o **COMB-** (un filtro peine afinado a la nota que tocás; CUT lo mueve, RES es
+EDIT > **FILTER**: **TYPE** LP, HP, BP, **COMB**, **COMB-** o **MS20** (un filtro peine afinado a la nota que tocás; CUT lo mueve, RES es
 cuánto resuena), **CUT**, **RES**, y KNOB 4: en ANALOG su propio DRIVE, en todos los demás motores el DIST de la
 pista. En ANALOG el filtro es por voz; en LOFI la página de filtro maneja su filtro por voz; en los demás es un filtro
 sobre la pista que sigue a LFO DEST / ENV DEST FILTER.
@@ -896,6 +896,13 @@ desde un color corto (25 ms) hasta ~9 s, cerca de la auto-oscilación arriba de 
 mantiene la resonancia acotada y un pasabajos de amortiguación en el lazo (que se abre con RES) apaga primero los
 agudos, como una cuerda. **COMB** (realimentación positiva) suena metálico, tipo flanger; **COMB-** (negativa) deja
 solo los armónicos impares: hueco, tipo clarinete, a la misma altura.
+
+**MS20** (0.9.9-snd1): un pasabajos de 2 polos agresivo, a la manera del Korg MS-20: su resonancia vuelve por un
+recorte tipo diodo, así que grita con RES alto pero queda controlado (el recorte fija cuán fuerte puede sonar, y una
+entrada caliente gruñe en vez de reventar); RES es exponencial (suave en 0, muy filoso en el último tramo, y la
+resonancia igual se apaga cuando la parte queda en silencio). Las mismas perillas: CUT (con LFO / ENV DEST FILTER),
+RES y el drive de la KNOB 4. En ANALOG y LOFI el MS20 (como los peines) es el filtro de la pista después de las voces:
+su propio filtro se abre. LP, HP y BP suenan exactamente igual que antes.
 
 ### VOICE (todos los motores)
 

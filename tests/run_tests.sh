@@ -104,7 +104,7 @@
 #                   very hits heard; MIDI's bands around 35..81, MIDI REC, a project round trip, the OCT message, COMP.
 # FILTER (tests/filter_test.c, 0.9.9-snd1): the part's FILTER (src/voice.c tf_run, track_comb): every TYPE bounded at RES
 #                   127 from C1 to C8 (3 engines), COMB / COMB- in tune with the note, no zipper sweeping CUT, RES the
-#                   ring's length; demos in build/filter_demo/.
+#                   ring's length, MS20 screaming under full scale; demos in build/filter_demo/.
 # DRUM-X (tests/drumx_test.c): the DRUM engine (src/drumx_voice.c): every lane sounds, stays under full scale and ends,
 #                   MORPH A <-> B (also while a hit rings), PITCH, the hat choke, MRPH on the knob; demos in build/drumx_demo/.
 # NOISE (tests/noise_test.c): the engine (src/eng_noise.c): COLR's slope (white, pink, brown), the filter and the
@@ -324,7 +324,7 @@ if [ -f build/gen/felucca_tables.h ]; then
     echo "== parameter and engine tables as JSON (for the editor mock test)"
     "$OUT/descdump" > "$OUT/desc.json" || fail=1
     $CC -O2 -w -Ibuild/gen -Ifirmware/src -o "$OUT/filter_test" tests/filter_test.c -lm
-    run "FILTER: every TYPE bounded at RES 127 across the keyboard, COMB / COMB- in tune, no zipper, RES the ring, demos" \
+    run "FILTER: every TYPE bounded at RES 127 across the keyboard, COMB / COMB- in tune, no zipper, RES the ring, MS20, demos" \
         "$OUT/filter_test" build/filter_demo
     $CC -O2 -w -Ibuild/gen -Ifirmware/src -o "$OUT/drumx_test" tests/drumx_test.c -lm
     mkdir -p build/drumx_demo

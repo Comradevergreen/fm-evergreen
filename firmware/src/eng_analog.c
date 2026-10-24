@@ -13,7 +13,7 @@ enum { AW_SYNC = 5, AW_RING, AW_SAW3 };
  * note and CUT (+-32 semitones about it), RES its feedback (voice.c track_comb).
  * (0.9.9-snd1) COMB- the same comb with its feedback negative: odd harmonics, hollow (its line half as long: the note
  * where COMB's is). FT_POST(ft): a TYPE the part's (voice.c tf_run), every engine's own filter open under it */
-enum { FT_LP, FT_HP, FT_BP, FT_COMB, FT_COMBN, FT_N };
+enum { FT_LP, FT_HP, FT_BP, FT_COMB, FT_COMBN, FT_MS20, FT_N };   /* (snd1: MS20, voice.c tf_ms20) */
 #define FT_IS_COMB(ft) ((ft) == FT_COMB || (ft) == FT_COMBN)
 #define FT_POST(ft) ((ft) >= FT_COMB)
 /* the TYPE stored, in range (was & 3: a value past the last read as another TYPE) */

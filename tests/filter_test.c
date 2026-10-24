@@ -2,9 +2,9 @@
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments */
 /* (0.9.9-snd1) The FILTER after the voices (src/voice.c track_filter, tf_run, track_comb) on the host, fed directly
  * (a saw, noise, a sine at the part's newest note; its voices faked: the comb follows the newest one):
- * 1. every TYPE (LP HP BP COMB COMB-) at RES 0 / 100 / 127, CUT 0 / 64 / 127, from C1 to C8: bounded (no sample at
- *    full scale for more than a few in a row), no lockup (the combs: silence in, from 1.5 s on silent, or under 70 % of
- *    where its tail began: COMB's longest ring is ~9 s), the part's own-filter
+ * 1. every TYPE (LP HP BP COMB COMB- MS20) at RES 0 / 100 / 127, CUT 0 / 64 / 127, from C1 to C8: bounded (no sample at
+ *    full scale for more than a few in a row), no lockup (silence in: from 1.5 s on silent, or under 70 % of where its
+ *    tail began: COMB's longest ring is ~9 s; about its mean: the SVF's fixed point holds a DC at CUT 0), the part's own-filter
  *    engines (ANALOG, LOFI) and the others;
  * 2. COMB tuned to the note (CUT 64): the autocorrelation of noise through it peaks at the note's period (+-1 %),
  *    across the keyboard; COMB- has its first positive peak there too and a negative one at half of it (hollow);
@@ -12,7 +12,9 @@
  *    them (the line glided, was a step a block);
  * 4. RES on a curve: the ring after a burst longer as RES rises, near self-oscillation at the top (still ringing a
  *    second later) and bounded;
- * demos (argv[1], default build/filter_demo): comb_sweep.wav, comb_neg_sweep.wav. */
+ * 5. MS20: the ring longer as RES rises; a full-scale saw at RES 127, every CUT, C1..C7: under full scale and no
+ *    more than 6x RES 0's level (it screams, the clip holding it);
+ * demos (argv[1], default build/filter_demo): comb_sweep.wav, comb_neg_sweep.wav, ms20_sweep.wav. */
 #include <stdarg.h>
 #define main hostsim_main
 #include "hostsim.c"
@@ -88,6 +90,19 @@ static void run(track_t *t, uint32_t kind, int note, double f, uint32_t n, int32
             buf[k + i] = o[i];
     }
 }
+/* the largest swing about the mean (a DC the SVF's fixed point holds at CUT 0 is no sound) */
+static int32_t swing(uint32_t a, uint32_t b)
+{
+    double m = 0;
+    int32_t p = 0;
+    uint32_t i;
+    for (i = a; i < b; i++)
+        m += buf[i];
+    m /= (b - a);
+    for (i = a; i < b; i++)
+        p = fabs(buf[i] - m) > p ? (int32_t)fabs(buf[i] - m) : p;
+    return p;
+}
 static int32_t peak(uint32_t a, uint32_t b)
 {
     int32_t p = 0;
@@ -138,7 +153,7 @@ static void save(const char *dir, const char *name, uint32_t n)
     fclose(f);
 }
 
-static const char *const TN[] = {"LP", "HP", "BP", "COMB", "COMB-"};
+static const char *const TN[] = {"LP", "HP", "BP", "COMB", "COMB-", "MS20"};
 #define NT ((int)(sizeof TN / sizeof TN[0]))
 static int sw_from, sw_to;
 static void sweep(track_t *t, uint32_t k)
@@ -154,6 +169,16 @@ static void sweep_demo(track_t *t, uint32_t k)
     t->p[P_FCUT] = t->p[P_E4] = (int16_t)(40 + (int32_t)((k % (FS * 2u)) * 48u / (FS * 2u)));
     if (k % (FS / 2u) == 0)                             /* a new note each half second (C2 G2 C3 D#3 ..) */
         t->v[0].pitch_cur = (int16_t)((36 + (int)((k / (FS / 2u)) * 7u % 24u)) * 16);
+}
+
+static void sweep_ms20(track_t *t, uint32_t k)
+{
+    static const int16_t R[4] = {40, 90, 120, 127};
+    static const uint8_t RIFF[8] = {36, 36, 48, 36, 39, 36, 43, 46};
+    uint32_t seg = k / (FS * 2u), ph = k % (FS * 2u);
+    t->p[P_FRES] = t->p[P_E5] = R[seg & 3u];
+    t->p[P_FCUT] = t->p[P_E4] = (int16_t)(30 + (int32_t)((ph < FS ? ph : FS * 2u - ph) * 80u / FS));
+    t->v[0].pitch_cur = (int16_t)(RIFF[(k / (FS / 8u)) & 7u] * 16);
 }
 
 int main(int argc, char **argv)
@@ -179,17 +204,16 @@ int main(int argc, char **argv)
                         pk = peak(0, FS / 4u) > pk ? peak(0, FS / 4u) : pk;
                         pg = pegged(0, FS / 4u) > pg ? pegged(0, FS / 4u) : pg;
                         run(t, 0, note, 0, 2u * FS, 0, 0);
-                        p0 = peak(0, FS / 4u);
+                        p0 = swing(0, FS / 4u);
                         pg = pegged(0, 2u * FS) > pg ? pegged(0, 2u * FS) : pg;
-                        if (peak(FS * 3u / 2u, 2u * FS) > 64 && peak(FS * 3u / 2u, 2u * FS) * 10 > p0 * 7) {
+                        if (swing(FS * 3u / 2u, 2u * FS) > 64 && swing(FS * 3u / 2u, 2u * FS) * 10 > p0 * 7) {
                             lock++;
                             if (getenv("VERBOSE"))
-                                printf("  %s e%u res %d cut %d note %d: %d after 1.5 s\n", TN[ft], ENG[e], RES[ri], CUT[ci], note, peak(FS * 3u / 2u, 2u * FS));
+                                printf("  %s e%u res %d cut %d note %d: %d after 1.5 s\n", TN[ft], ENG[e], RES[ri], CUT[ci], note, swing(FS * 3u / 2u, 2u * FS));
                         }
                     }
         snprintf(what, sizeof what, "%s at RES 0..127, CUT 0..127, C1..C8, 3 engines: bounded, dying out after", TN[ft]);
-        check(what, pg <= 4u && (ft < 3 || !lock), "peak %d, run at full scale %u, %u still sounding after 2 s%s", pk, pg, lock,
-              ft < 3 ? ": as ever, the SVF's fixed-point rest at CUT 0, not looked at" : "");
+        check(what, pg <= 4u && !lock, "peak %d, run at full scale %u, %u still sounding after 2 s", pk, pg, lock);
     }
 
     /* 2 */
@@ -254,6 +278,41 @@ int main(int argc, char **argv)
               "a second on at 127: rms %.0f, peak %d", rms(FS, FS * 3u / 2u), pk);
     }
 
+    /* 5 */
+    {
+        double prev = 0, lo = 1e9, hi = 0;
+        int mono = 1, r, c;
+        int32_t pk = 0;
+        for (r = 0; r <= 127; r += 127 / 4) {
+            track_t *t = part(ENGI_PHASE, 5, 50, r, 57);
+            double tail;
+            run(t, 2, 57, 0, FS / 20u, 12000, 0);
+            run(t, 0, 57, 0, FS / 2u, 0, 0);
+            tail = rms(FS / 50u, FS / 10u);
+            if (tail < prev)
+                mono = 0;
+            prev = tail;
+        }
+        check("MS20's ring after a burst longer as RES rises", mono, "at 127: rms %.0f 20 .. 100 ms on", prev);
+        for (c = 20; c <= 120; c += 20)                 /* a full-scale saw at RES 127, against RES 0 */
+            for (note = 24; note <= 96; note += 24) {
+                track_t *t = part(ENGI_ANALOG, 5, c, 127, note);
+                double a, b;
+                run(t, 1, note, 0, FS / 4u, 32000, 0);
+                pk = peak(0, FS / 4u) > pk ? peak(0, FS / 4u) : pk;
+                b = rms(FS / 8u, FS / 4u);
+                t = part(ENGI_ANALOG, 5, c, 0, note);
+                run(t, 1, note, 0, FS / 4u, 32000, 0);
+                a = rms(FS / 8u, FS / 4u);
+                if (a > 100) {
+                    lo = b / a < lo ? b / a : lo;
+                    hi = b / a > hi ? b / a : hi;
+                }
+            }
+        check("MS20 screams but controlled: a full-scale saw at RES 127, every CUT, C1..C7: under full scale",
+              pk < 32767 && hi < 6.0, "peak %d, level against RES 0 x%.2f .. x%.2f", pk, lo, hi);
+    }
+
     /* demos */
     {
         char cmd[600];
@@ -264,6 +323,12 @@ int main(int argc, char **argv)
             sph = 0;
             run(t, 1, 36, 0, FS * 8u, 9000, sweep_demo);
             save(dir, ft == 3 ? "comb_sweep.wav" : "comb_neg_sweep.wav", FS * 8u);
+        }
+        {   /* MS20: a saw riff, CUT swept up and down each 2 s, RES 40 / 90 / 120 / 127 */
+            track_t *t = part(ENGI_PHASE, 5, 40, 40, 36);
+            sph = 0;
+            run(t, 1, 36, 0, FS * 8u, 14000, sweep_ms20);
+            save(dir, "ms20_sweep.wav", FS * 8u);
         }
     }
     printf("filter: %s\n", fails ? "FAILED" : "all ok");
