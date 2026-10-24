@@ -44,7 +44,8 @@ static const char *const N_PFXRES[] = {"1/8", "1/16", "1/32"};     /* (0.6.99) F
  * they play (seq.c seq_step; the steps keep what was written). Append-only: older projects hold 0..2 */
 static const char *const N_QUANT[] = {"OFF", "SNAP", "WHITE", "SEQ"};
 static const char *const N_DTYPE[] = {"SOFT", "HARD", "FOLD", "CRUSH", "RECT", "AMP"};   /* (JIANT) fx.c DT_*; 0.7.8 AMP */
-static const char *const N_FTYPE[] = {"LP", "HP", "BP", "COMB"};   /* (JIANT 0.5) P_FTYPE: eng_analog.c FT_* */
+static const char *const N_FTYPE[] = {"LP", "HP", "BP", "COMB", "COMB-"};   /* (JIANT 0.5) P_FTYPE: eng_analog.c FT_*
+                                                         * (0.9.9-snd1: COMB- the negative comb) */
 static const char *const N_VOICE[] = {"POLY", "MONO", "LEG", "UNI"};   /* V_POLY .. V_UNISON */
 static const char *const N_GLMODE[] = {"RATE", "TIME"};
 static const char *const N_PRIO[] = {"LAST", "LOW", "HIGH"};

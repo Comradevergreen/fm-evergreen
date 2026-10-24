@@ -847,10 +847,17 @@ in the sound.
 
 ### FILTER (every engine)
 
-EDIT > **FILTER**: **TYPE** LP, HP, BP or **COMB** (a comb tuned to the note you play; CUT moves it, RES is how much
+EDIT > **FILTER**: **TYPE** LP, HP, BP, **COMB** or **COMB-** (a comb tuned to the note you play; CUT moves it, RES is how much
 it rings), **CUT**, **RES**, and KNOB 4: on ANALOG its own DRIVE, on every other engine the track's DIST. On ANALOG
 the filter is per voice; on LOFI the filter page drives its per-voice filter; on the others it is a filter on the
 track that follows LFO DEST / ENV DEST FILTER.
+
+**COMB** and **COMB-** (0.9.9-snd1): the comb is tuned to the newest note (CUT 64 = the note, ±32 semitones either
+side) and glides when CUT or the note moves (no zipper). **RES** is how long it rings, the same on every note: from a
+short colour (25 ms) up to ~9 s near self-oscillation at the top; a soft clip inside the loop keeps the ring bounded
+and a damping low-pass in the loop (opening with RES) lets the highs die first, like a string. **COMB** (positive
+feedback) is metallic and flanger-like; **COMB-** (negative) keeps only the odd harmonics: hollow, clarinet-like, at
+the same pitch.
 
 ### VOICE (every engine)
 

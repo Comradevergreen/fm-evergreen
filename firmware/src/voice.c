@@ -44,16 +44,26 @@ static uint32_t lfo_rand(track_t *t)
 }
 
 /* (JIANT 0.5) ANALOG's FILTER TYPE COMB: the part's sum through a feedback comb, tuned to its newest note moved by
- * CUT (+-32 semitones; 64: the note: a resonance at the pitch), RES its feedback (up to ~0.99: long metallic rings);
- * the level kept about the dry's. One line a part (1024 samples: down to ~43 Hz) */
+ * CUT (+-32 semitones; 64: the note: a resonance at the pitch), RES its feedback; the level kept about the dry's. One
+ * line a part (1024 samples: down to ~43 Hz).
+ * (0.9.9-snd1, the owner: "make it musical") RES the ring's length, the same on every note (T60 25 ms .. ~9 s on an
+ * exponential curve: most of the travel where it rings, near self-oscillation at the top), a soft clip inside the loop (however long the ring, bounded: no full-scale lockup), a
+ * damping low-pass in the loop (RES opens it, ~3.5 .. ~12 kHz: a string's highs dying first; the line shortened by its
+ * delay, in tune), the line's length and the feedback glided over the block (CUT turned or a new note: no zipper, was a
+ * step a block), COMB- (neg) the feedback negative over half the line: the odd harmonics of the note, hollow. The wet
+ * level by 1 - fb as before, at least a quarter: the clipped ring heard at the top of RES */
 #define COMB_LEN 1024u
 static int16_t comb_buf[NTRK][COMB_LEN] __attribute__((section(".pool")));   /* (0.6: six tracks, in the pool) */
 static uint16_t comb_w[NTRK];
 static int16_t comb_p16[NTRK];
-static __attribute__((noinline)) void track_comb(track_t *t, int32_t *out, uint32_t n, int32_t cut, int32_t res)
+static uint32_t comb_pq[NTRK];                          /* (snd1) the line's length at the block's end, Q16 (0: new) */
+static int32_t comb_fb[NTRK], comb_lp[NTRK];            /* .. the feedback there (signed, Q15), the damping's state */
+static __attribute__((noinline)) void track_comb(track_t *t, int32_t *out, uint32_t n, int32_t cut, int32_t res,
+                                                 uint32_t neg)
 {
-    uint32_t ti = (uint32_t)(t - trk) % NTRK, i, per, age = 0, w = comb_w[ti];
-    int32_t p16 = comb_p16[ti], fb = 16000 + res * 130, g = 32768 - fb;
+    uint32_t ti = (uint32_t)(t - trk) % NTRK, i, per, age = 0, w = comb_w[ti], pq, pq1;
+    int32_t p16 = comb_p16[ti], r = clamp(res, 0, 127), lp = comb_lp[ti], dq, dfb, fbc, gn, fb, a, m, xq;
+    int32_t dmp = 6400 + r * 55;                        /* (the damping's pole, Q14) */
     int16_t *b = comb_buf[ti];
     for (i = 0; i < NVOICE; i++)                        /* the newest note sounding */
         if (t->v[i].active && t->v[i].age >= age) {
@@ -63,18 +73,49 @@ static __attribute__((noinline)) void track_comb(track_t *t, int32_t *out, uint3
     comb_p16[ti] = (int16_t)p16;
     p16 = clamp(p16 + (cut - 64) * 8, 0, 2047);
     per = 0xFFFFFFFFu / ((pitch_inc((uint32_t)p16) >> 8) | 1u);   /* the period, Q8 */
-    per = per < (2u << 8) ? 2u << 8 : per > ((COMB_LEN - 2u) << 8) ? (COMB_LEN - 2u) << 8 : per;
+    if (neg)
+        per >>= 1;                                      /* (the negative feedback: half a period, the note's odd harmonics) */
+    per -= (uint32_t)(((16384 - dmp) << 8) / dmp);      /* (the damping's delay at low frequencies: in tune) */
+    per = (int32_t)per < (2 << 8) ? 2u << 8 : per > ((COMB_LEN - 2u) << 8) ? (COMB_LEN - 2u) << 8 : per;
+    /* the feedback for a ring of T60 = 25 ms x 2^(8.5 RES / 127) (25 ms .. ~9 s) whatever the note: fb = e^-a, a =
+     * 6.9 per / T60 (2^-x linear between octaves, e^-a by its (2,2) Pade, a at most 4); at most 0.998 */
+    xq = r * 2176 / 127;                                /* 8.5 RES / 127, Q8 */
+    m = (65536 - ((xq & 255) << 7)) >> (xq >> 8);       /* 2^-x, Q16 */
+    a = (int32_t)(((per >> 4) * 6566u) >> 12);          /* per / 25 ms x 6.9, Q12 (6566: 6.9 / 1102.5 Q20) */
+    a = (a * (m >> 1)) >> 15;
+    a = a > 4 * 4096 ? 4 * 4096 : a;
+    {
+        int32_t a2 = (a * a) / 12 >> 12, num = 4096 - a / 2 + a2, den = 4096 + a / 2 + a2;
+        fb = (num << 15) / den;
+    }
+    fb = fb > 32700 ? 32700 : fb;
+    pq1 = per << 8;
+    pq = comb_pq[ti] ? comb_pq[ti] : pq1;
+    fb = neg ? -fb : fb;
+    fbc = comb_pq[ti] ? comb_fb[ti] : fb;
+    dq = ((int32_t)pq1 - (int32_t)pq) / (int32_t)(n ? n : 1u);
+    dfb = (fb - fbc) / (int32_t)(n ? n : 1u);
+    gn = 2 * (32768 - (fb < 0 ? -fb : fb));
+    gn = gn < 8192 ? 8192 : gn;
     for (i = 0; i < n; i++) {
-        uint32_t d = per >> 8;
-        int32_t a = b[(w - d) & (COMB_LEN - 1u)], c = b[(w - d - 1u) & (COMB_LEN - 1u)];
-        int32_t x = (a + (((c - a) * (int32_t)(per & 255u)) >> 8)) << 1, y = out[i] + mulq15(x, fb);
-        b[w & (COMB_LEN - 1u)] = (int16_t)clamp(y >> 1, -32768, 32767);
+        uint32_t d;
+        int32_t a, c, x, y;
+        pq += (uint32_t)dq;
+        fbc += dfb;
+        d = pq >> 16;
+        a = b[(w - d) & (COMB_LEN - 1u)];
+        c = b[(w - d - 1u) & (COMB_LEN - 1u)];
+        x = (a + (((c - a) * (int32_t)((pq >> 8) & 255u)) >> 8)) << 1;
+        lp += ((x - lp) * dmp) >> 14;                   /* the damping (|x - lp| < 2^17, dmp < 2^14) */
+        y = soft_knee(clamp(out[i] + mulq15(lp, fbc), -262000, 262000), 20000);   /* the loop's clip: |y| < 36400 */
+        b[w & (COMB_LEN - 1u)] = (int16_t)(y >> 1);
         w++;
-        y = clamp(y, -262000, 262000);                  /* (0.6.81: y * g overflowed with a loud part, ~96000 in: the
-                                                         * sign flipped, a full-scale crackle; a quarter first) */
-        out[i] = soft_knee((((y >> 2) * g) >> 15) * 8 + (out[i] >> 2), 24000);
+        out[i] = soft_knee(((y * gn) >> 14) + (out[i] >> 2), 16000);   /* (under full scale: was 24000, ~40000) */
     }
     comb_w[ti] = (uint16_t)w;
+    comb_pq[ti] = pq1;
+    comb_fb[ti] = fb;
+    comb_lp[ti] = lp;
 }
 
 /* (JIANT 0.5) the FILTER of every engine but ANALOG (its own, per voice): the part's sum through a drive (DRV: x1 ..
@@ -132,10 +173,13 @@ static __attribute__((noinline)) void tf_run(track_t *t, int32_t *out, uint32_t 
     uint32_t ti = (uint32_t)(t - trk) % NTRK, i;
     int32_t cut = p[P_FCUT] << 8, envq = 0, ic1 = tf_ic1[ti], ic2 = tf_ic2[ti], k;
     tsvf_t c;
-    if (ft == FT_COMB) {
-        if (!tf_cmb[ti])                                /* (0.6.81) in: its line cleared (the last time's, stale) */
+    if (FT_IS_COMB(ft)) {
+        if (!tf_cmb[ti]) {                              /* (0.6.81) in: its line cleared (the last time's, stale) */
             memset(comb_buf[ti], 0, sizeof comb_buf[ti]);
-        track_comb(t, out, n, ccut, cres);
+            comb_pq[ti] = 0;                            /* (snd1: no glide in, its damping from rest) */
+            comb_lp[ti] = 0;
+        }
+        track_comb(t, out, n, ccut, cres, ft == FT_COMBN);
         tf_cmb[ti] = 1;
         return;
     }
@@ -193,13 +237,14 @@ static int32_t tf_tmp[CTL];
 static __attribute__((noinline)) void track_filter(track_t *t, int32_t *out, uint32_t n, uint32_t own, int32_t ccut,
                                                    int32_t cres)
 {
-    uint32_t ti = (uint32_t)(t - trk) % NTRK, r = (uint32_t)t->p[P_FTYPE] & 3u, ft, fo, i;
+    uint32_t ti = (uint32_t)(t - trk) % NTRK, r = ft_of(t->p), ft, fo, i;
     uint32_t act = (tf_on[ti] && !own) || tf_cmb[ti];
     int32_t w0, dw;
-    if (own && r != FT_COMB)
-        r = FT_LP;                                      /* (an engine's own filter: COMB or nothing here) */
+    if (own && !FT_POST(r))
+        r = FT_LP;                                      /* (an engine's own filter: the part's TYPEs or nothing here) */
     if (!tf_xb[ti]) {
-        if (r != tf_ft[ti] && (act || r == FT_COMB)) {
+        if (r != tf_ft[ti] && (act || FT_POST(r)) && !(FT_IS_COMB(r) && FT_IS_COMB(tf_ft[ti]))) {
+                                                        /* (snd1: COMB <-> COMB- in the one line, its feedback glided) */
             tf_fo[ti] = (uint8_t)(act ? tf_ft[ti] : TF_DRY);
             tf_xb[ti] = TF_XB;
         }
@@ -208,7 +253,7 @@ static __attribute__((noinline)) void track_filter(track_t *t, int32_t *out, uin
     ft = tf_ft[ti];
     if (!tf_xb[ti]) {
         tf_run(t, out, n, ft, TF_DRY, 0, 0, own, ccut, cres);
-        tf_cmb[ti] = ft == FT_COMB;
+        tf_cmb[ti] = FT_IS_COMB(ft);
         return;
     }
     if (n > CTL)
@@ -216,7 +261,7 @@ static __attribute__((noinline)) void track_filter(track_t *t, int32_t *out, uin
     fo = tf_fo[ti];
     w0 = (int32_t)(((TF_XB - tf_xb[ti]) << 12) / TF_XB);
     dw = (4096 / (int32_t)TF_XB) >> CTL_LOG2;
-    if (fo != TF_DRY && fo != FT_COMB && ft != FT_COMB && !own) {
+    if (fo != TF_DRY && !FT_POST(fo) && !FT_POST(ft) && !own) {
         tf_run(t, out, n, ft, fo, w0, dw, own, ccut, cres);   /* (one SVF, two of its outputs) */
     } else {
         for (i = 0; i < n; i++)
@@ -228,7 +273,7 @@ static __attribute__((noinline)) void track_filter(track_t *t, int32_t *out, uin
             out[i] = tf_tmp[i] + (((out[i] - tf_tmp[i]) * (w0 + (int32_t)(i + 1u) * dw)) >> 12);
     }
     if (!--tf_xb[ti])
-        tf_cmb[ti] = ft == FT_COMB;
+        tf_cmb[ti] = FT_IS_COMB(ft);
 }
 
 /* the FILTER after the voices: ANALOG's and LOFI's COMB here (their own filters are per voice), every other engine's

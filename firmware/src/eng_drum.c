@@ -347,7 +347,7 @@ static int32_t dx_img_k(const track_t *t)
     int32_t k = 256 - clamp(t->p[P_E7], 0, 127) * 160 / 127, d = clamp(t->p[P_DIST], 0, 64);
     if (d)
         k = k * (256 - d * 3) >> 8;
-    if (t->p[P_FTYPE] == FT_COMB)                        /* (0.6.81: the other filters shape the sides too, voice.c
+    if (FT_POST(ft_of(t->p)))                          /* (0.6.81: the other filters shape the sides too, voice.c
                                                           * tf_sides: the image stays whole through them) */
         k >>= 2;
     return k;
