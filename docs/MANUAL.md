@@ -1050,6 +1050,18 @@ recorded into the pattern, quantized to its steps, overdubbing. Knob moves on th
     alternating OCT or a WALK at a rate is dropped; OCT RND becomes 50 %; WALK / CLIMB UP-DN and RND go UP, CLIMB
     moves 7 degrees (an octave on a seven-note scale); JUMP x2 jumps once a pass. Saved again, the project is v2
     (firmware before seq2d refuses it). The step's own **CHANCE** and **RATCH** stay on the CHANCE page.
+  - **Global components** (0.9.9-seq2f): **GLO > COMPS** (GLO's last tab, after SYSTEM) is a lane of 16 steps on the
+    transport's 1/16 (one bar, looping) whose components act on several tracks at once. The white keys pick its step,
+    **KNOB 1–4** are ACTION, LENGTH, CONDITION, VALUE as on COMP (actions MUTE, STUTTER, OCT+ / OCT−, RATCH, TRANSP,
+    ARP on each track's own notes, JUMP, RANDOM; conditions as the tracks', without NEI and ELSE; the passes are the
+    bars since PLAY, the lane has its own PRE and its own dice). Black keys 1–6 turn the tracks it applies to on and
+    off (the roll shows them as small marks under each step); **COMPS 2**: STEP, TRACK, that track ON / OFF, and
+    **MODE**: **POLY** (the default) the global transforms the step first and the track's C1 / C2 run on the result
+    (a track's ARP inside a global STUTTER); **MONO** while a global acts on a track, that track's own components do
+    not. One component a step; its LENGTH counts global steps. An empty lane changes nothing. Example: step 1 STUTTER
+    LENGTH 2 at 4:4 on all tracks, step 3 MUTE LENGTH 14 at 8:8 on T1 alone: every fourth bar stutters, bar 8 drops
+    the drums. The lane is saved with the project (and in each section's slot); projects before seq2f load with it
+    empty.
 - **A long chord slide** (0.6.83): the glide into a chord lasts as long as that chord, its TIEs included; GLIDE sets
   how much of it (127: all of it). A chord held over TIEs on slow steps (e.g. DIV 1/4 at 120 BPM: ten steps, 5 s)
   slides that slowly and smoothly; new notes fade in as they glide.

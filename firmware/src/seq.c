@@ -1187,6 +1187,7 @@ static uint8_t fl_cnt[NTRK][NSTEP], fl_pass[NTRK];
 static void fl_reset(uint32_t ti) { memset(fl_cnt[ti % NTRK], 0, NSTEP); }
 /* -------------------------------------------------------- sequencer --- */
 static void fg_reset(void);                         /* (fugue.c) */
+static void gl_reset(void);                         /* (seq2f: the global lane) */
 static void seq_start(void)
 {
     uint32_t i;
@@ -1212,6 +1213,7 @@ static void seq_start(void)
         fl_reset(i), fl_pass[i] = 0;               /* (0.6.62) TIMES from the first pass */
     }
     fg_reset();                                    /* (0.6.52) FUGUE's heads from their first step */
+    gl_reset();                                    /* (seq2f) the global lane from its first step, its first pass */
     song.tick = 0;
     beat_pos = 0; beat_n = 0;                      /* the ARP LED's beat from the top too */
     bar_n = 0;
@@ -1290,6 +1292,138 @@ static const step_t *seq_unit(const track_t *t, uint32_t len, uint32_t k, uint32
     return r;
 }
 static uint8_t cx_jump[NTRK];                       /* the step's JUMP: to step v (1..64), 65 REV; 0 none */
+/* (0.9.9-seq2f) GLOBAL STEP COMPONENTS (GLO > COMPS, the approved mock-up's G1): a lane of GL_N steps on the transport's
+ * 1/16 grid (clk_n: one bar, looping), one component a step (ACTION | CONDITION << 4, VALUE, LENGTH - 1, N:M as the
+ * tracks', core.h CA_* CC_*) and the TRACKS it applies to (mask, bit k track k). Each global step's CONDITION is
+ * evaluated once (gl_eval, from comp_run: the first track step on or past it), with its own passes (the bars since
+ * PLAY) and PRE; one that holds starts a span of its LENGTH in global steps (gsp, GSP_N at once, the oldest goes),
+ * which every masked track playing a step inside it takes once into its own spans (CSF_GLO; its LENGTH still counted
+ * on the global grid). POLY (gl_mono 0): the global first, then the track's C1 / C2 over the result; MONO: while a
+ * global acts on the track, its own components do not. An empty lane (gl_on 0): nothing, no state, no roll */
+#define GL_N 16u
+#define GSP_N 2u
+#define CSF_GLO 0x80u                                   /* (cspan_t.act: a global's; base: its end, the global step & 255) */
+typedef struct { uint8_t comp, val, len, nm, mask; } gcomp_t;
+typedef struct { uint32_t g0; uint8_t act, val, len, mask, ser; int8_t mv; } gspan_t;
+static gcomp_t glane[GL_N];
+static uint8_t gl_mono, gl_on;                          /* MONO (1) / POLY (0); any step of the lane set */
+static gspan_t gsp[GSP_N];
+static uint8_t gsp_n, gl_ser, gl_pre, gl_acc, gl_took[NTRK];
+static uint32_t gl_next;                                /* the next global step to evaluate */
+static uint32_t gl_rs;                                  /* its own dice (the tracks' rolls untouched by it) */
+static void gl_touch(void)                              /* (after an edit or a load) */
+{
+    uint32_t i, on = 0;
+    for (i = 0; i < GL_N; i++) {
+        if (CO_ACT(glane[i].comp) >= CA_N || CO_COND(glane[i].comp) >= CC_N) glane[i].comp = 0;
+        if (glane[i].len >= CL_MAX) glane[i].len = CL_MAX - 1u;
+        glane[i].mask &= (1u << NTRK) - 1u;
+        on |= CO_ACT(glane[i].comp) != 0u;
+    }
+    gl_mono &= 1u;
+    gl_on = (uint8_t)on;
+}
+static void gl_reset(void) { gsp_n = gl_ser = gl_pre = gl_acc = 0; gl_next = 0; gl_rs = 0x2545F491u; memset(gl_took, 0, sizeof gl_took); }
+/* the global step a track's step starting off samples into this block falls on (the nearest 1/16 of the transport) */
+static uint32_t gl_step_at(uint32_t off)
+{
+    uint32_t p = div_samples(2);
+    if (!p) p = 1u;
+    return clk_pos == CLK_START ? (off + p / 2u) / p : clk_n + (clk_pos + off + p / 2u) / p;
+}
+static int gl_cond(const gcomp_t *c, uint32_t p)       /* its CONDITION on pass p (NEI: PRE; ELSE: always) */
+{
+    uint32_t k = CO_COND(c->comp), n = CNM_N(c->nm), m = CNM_M(c->nm);
+    int r;
+    switch (k) {
+    case CC_ALWAYS: case CC_ELSE: return 1;
+    case CC_PRE: case CC_NEI: return gl_pre;
+    case CC_NPRE: case CC_NNEI: return !gl_pre;
+    case CC_P25: case CC_P50: case CC_P75:
+        gl_rs ^= gl_rs << 13; gl_rs ^= gl_rs >> 17; gl_rs ^= gl_rs << 5;
+        r = (gl_rs >> 8) % 100u < 25u * (k - CC_P25 + 1u);
+        break;
+    case CC_FIRST: r = !p; break;
+    case CC_NFIRST: r = p != 0u; break;
+    case CC_FILL: r = seq_fill != 0u; break;
+    case CC_NFILL: r = !seq_fill; break;
+    case CC_NM: r = n <= m && p % m == n - 1u; break;
+    case CC_NNM: r = !(n <= m && p % m == n - 1u); break;
+    default: r = 1; break;
+    }
+    gl_pre = (uint8_t)r;
+    return r;
+}
+static void gl_eval(uint32_t g)                         /* every global step up to g, once */
+{
+    if (g >= gl_next + 64u)                             /* (turned on while playing: from near here) */
+        gl_next = g - 63u;
+    for (; gl_next <= g; gl_next++) {
+        const gcomp_t *c = &glane[gl_next % GL_N];
+        uint32_t a = CO_ACT(c->comp), v = c->val, p = gl_next / GL_N, ok, i, n = 0;
+        int32_t mv = 0;
+        if (!a || !c->mask)
+            continue;
+        ok = (uint32_t)gl_cond(c, p);
+        if (a == CA_TRANS) {
+            mv = CV_TR_MOVE(v);
+            if (CV_TR_RANGE(v) > 1u) {                  /* adding up, as a track's (its passes: the bars) */
+                uint32_t k = CO_COND(c->comp), h, nn = CNM_N(c->nm), m = CNM_M(c->nm);
+                gl_acc = (uint8_t)(gl_acc + ok);
+                h = k == CC_ALWAYS ? p + 1u : k == CC_FIRST ? 1u : k == CC_NFIRST ? p :
+                    k == CC_NM || k == CC_NNM ? 0u : gl_acc;
+                if (k == CC_NM || k == CC_NNM) {
+                    h = nn <= m ? (p + m + 1u - nn) / m : 0u;
+                    if (k == CC_NNM) h = p + 1u - h;
+                }
+                mv *= (int32_t)(h ? (h - 1u) % CV_TR_RANGE(v) : 0u);
+                ok = 1;
+            }
+        }
+        if (!ok)
+            continue;
+        for (i = 0; i < gsp_n; i++)                     /* (the ones over: gone) */
+            if (gsp[i].g0 + gsp[i].len > gl_next) gsp[n++] = gsp[i];
+        gsp_n = (uint8_t)n;
+        if (gsp_n == GSP_N) {
+            gsp[0] = gsp[1];
+            gsp_n--;
+        }
+        gsp[gsp_n].g0 = gl_next; gsp[gsp_n].act = (uint8_t)a; gsp[gsp_n].val = (uint8_t)v;
+        gsp[gsp_n].len = (uint8_t)(a == CA_JUMP ? 1u : c->len + 1u); gsp[gsp_n].mask = c->mask;
+        gsp[gsp_n].ser = ++gl_ser; gsp[gsp_n].mv = (int8_t)clamp(mv, -100, 100);
+        gsp_n++;
+    }
+}
+/* track t (index ti) playing step s on global step g: the global spans it is under and has not taken, into its own */
+static void gl_take(track_t *t, const step_t *s, uint32_t ti, uint32_t g)
+{
+    uint32_t i;
+    for (i = 0; i < gsp_n; i++) {
+        const gspan_t *G = &gsp[i];
+        cspan_t *c;
+        if (!((G->mask >> ti) & 1u) || g < G->g0 || g >= G->g0 + G->len || (int8_t)(G->ser - gl_took[ti]) <= 0)
+            continue;
+        gl_took[ti] = G->ser;
+        if (G->act == CA_JUMP) {
+            cx_jump[ti] = (uint8_t)(G->val % (CV_JUMP_REV + 1u) + 1u);
+            continue;
+        }
+        if (G->act == CA_MUTE && G->val)
+            trk_fade_out(t);
+        if (G->act == CA_STUT)
+            t->cvp = *s;
+        if (t->csp_n == CSP_N) {
+            uint32_t k;
+            for (k = 1; k < CSP_N; k++) t->csp[k - 1u] = t->csp[k];
+            t->csp_n--;
+        }
+        c = &t->csp[t->csp_n++];
+        c->act = (uint8_t)(G->act | CSF_GLO); c->val = G->val; c->mv = G->mv; c->len = G->len;
+        c->left = (uint8_t)(G->g0 + G->len - g);
+        c->base = (uint8_t)(G->g0 + G->len);
+    }
+}
 /* the step the track plays now, with its components: the spans before it a step older (gone after their LENGTH), this
  * step's own (C1, then C2: those whose CONDITION holds start a span of their LENGTH, this step its first), then what
  * every span does here, the oldest first: s itself when nothing replaces or silences it, else t->cvs (cv_on: a RATCH
@@ -1298,21 +1432,38 @@ static __attribute__((noinline)) const step_t *comp_run(track_t *t, const step_t
                                                     * in mix_block's RAM code) */
 {
     uint32_t i, n = 0, k, acted = 0, rep = 0, rq = 0, rb = 0, arp = 0, av = 0, mute = 0, ti = trk_index(t) % NTRK, cnt;
+    uint32_t g = 0, gm = 0, ps, grep = 0;
     const step_t *src = s;
     t->cx_deg = t->cx_oct = 0;
     t->cx_rnd = t->cx_rat = t->cx_dec = t->cx_tch = t->cx_bend = t->cx_arp = t->cx_lock = 0;
     cx_jump[ti] = 0;
+    if (gl_on || gsp_n) {                               /* (seq2f) the global lane: evaluated up to here */
+        g = gl_step_at(ev_off);
+        gl_eval(g);
+    }
     for (i = 0; i < t->csp_n; i++)
-        if (t->csp[i].left > 1u) {
+        if (t->csp[i].act & CSF_GLO) {                  /* (seq2f) a global's: its LENGTH on the global grid */
+            uint32_t l = (uint8_t)(t->csp[i].base - (uint8_t)g);
+            if (l >= 1u && l <= t->csp[i].len) {
+                t->csp[n] = t->csp[i];
+                t->csp[n++].left = (uint8_t)l;
+            }
+        } else if (t->csp[i].left > 1u) {
             t->csp[n] = t->csp[i];
             t->csp[n++].left--;
         }
     t->csp_n = (uint8_t)n;
+    if (gsp_n)
+        gl_take(t, s, ti, g);
+    for (i = 0; i < t->csp_n; i++)
+        gm |= (t->csp[i].act & CSF_GLO) != 0u;
+    gm = gm && gl_mono;                                 /* MONO: a global acting here, the track's own do not */
+    n = t->csp_n;
     if (!n && !comp_any(s)) {
         t->arp_from = 0;                            /* (an ARP's LENGTH over: a TIE after it holds its last note) */
         return s;
     }
-    for (k = 0; k < 2u; k++) {
+    for (k = 0; k < 2u && !gm; k++) {
         uint32_t a = CO_ACT(k ? s->comp2 : s->comp), v = k ? s->carg2 : s->carg, l = s->clen[k], ok;
         int32_t mv = 0;
         cspan_t *c;
@@ -1357,11 +1508,15 @@ static __attribute__((noinline)) const step_t *comp_run(track_t *t, const step_t
             c->base = (uint8_t)(per ? ((v & 63u) + t->loops) % per : 0u);
         }
     }
+    for (ps = 0; ps < 2u; ps++)                     /* (seq2f) the globals first, then the track's (POLY: over them) */
     for (i = 0; i < t->csp_n; i++) {                /* what each does here, the oldest first (C1 before C2) */
         const cspan_t *c = &t->csp[i];
         uint32_t j = (uint32_t)(c->len - c->left), v = c->val;
-        switch (c->act) {
-        case CA_ARP: arp = j ? 2u : 1u; av = v; rep = 0; break;
+        if (ps != !(c->act & CSF_GLO) || (ps && gm))
+            continue;
+        if (ps && !grep) grep = rep | 0x100u;           /* (what the globals left: an ARP of the track's keeps it) */
+        switch (c->act & ~CSF_GLO) {
+        case CA_ARP: arp = j ? 2u : 1u; av = v; rep = ps ? grep & 0xFFu : 0u; break;
         case CA_SEQ: rep = 1; rq = (uint32_t)c->base + j; rb = (v & CV_SEQ_BOUNCE) != 0u; arp = 0; break;
         case CA_STUT: rep = j % (v % 4u + 1u) ? 2u : 3u; arp = 0; break;
         case CA_OCTU: t->cx_oct = (int8_t)(t->cx_oct + 12 * (int32_t)(v % 3u + 1u)); break;

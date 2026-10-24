@@ -10,6 +10,10 @@
  *   FORMAT     a v2 project round trip; a project of before seq2d (its CP_* and EVERY, no x bit 7) loads migrated:
  *              ARP over its TIEs, ARP SEQ the walker, TRIG 1:2 MUTE !1:2, OCT with EVERY 1:4 OCT+ 1:4, ECHO RATCHET.
  *   UI         SEQ > COMP / COMP 2: KNOB 1 ACTION, KNOB 2 LENGTH, KNOB 3 CONDITION (ELSE on COMP 2 alone), KNOB 4 VALUE.
+ *   GLOBAL     (0.9.9-seq2f: seq.c glane, GLO > COMPS) the mock-up's example (d): a STUTTER of 2 steps every 4 bars on all
+ *              the tracks and a MUTE of the drum track in bar 8, over 8 bars of the whole sequencer (events_block); MONO
+ *              against POLY with a track's ARP; an empty lane (or one masked off) changes nothing; the save round trip,
+ *              a project without the block an empty lane; COMPS / COMPS 2's keys and knobs.
  * Built and run by tests/run_tests.sh. */
 #define UI_TEST_NO_MAIN 1
 #include "ui_test.c"
@@ -381,9 +385,196 @@ static int comp_ui(void)
     return bad;
 }
 
+/* ---- (0.9.9-seq2f) the global lane: the whole sequencer (events_block), every track's notes by global step ---- */
+static void gl_clear(void) { memset(glane, 0, sizeof glane); gl_mono = 0; gl_touch(); }
+static void gl_set(uint32_t i, uint32_t a, uint32_t c, uint32_t nm, uint32_t len, uint32_t v, uint32_t mask)
+{
+    glane[i] = (gcomp_t){CO_MAKE(a, c), (uint8_t)v, (uint8_t)(len - 1u), (uint8_t)nm, (uint8_t)mask};
+    gl_touch();
+}
+/* every track REST over 16 steps, 1/16, no swing; the transport stopped */
+static void gl_blank(void)
+{
+    uint32_t k, i;
+    ui_power_on();
+    gl_clear();
+    song.g[G_SWING] = 0;
+    for (k = 0; k < NTRK; k++) {
+        track_t *t = &trk[k];
+        track_defaults_steps(t);
+        t->p[P_SLEN] = 16; t->p[P_SGATE] = 64; t->p[P_SSWING] = 0;
+        t->p[P_ROOT] = 0; t->p[P_SCALE] = 1;
+        for (i = 0; i < NSTEP; i++) t->step[i] = (step_t){{0}, 0, ST_REST, 0, 0};
+    }
+}
+#define GRUN_MAX 512u
+static uint8_t g_trk[GRUN_MAX], g_note[GRUN_MAX];
+static uint16_t g_at[GRUN_MAX];
+/* `steps` 1/16 steps of the transport from PLAY: the notes every voice starts (track, global step, note) */
+static uint32_t grun(uint32_t steps)
+{
+    uint32_t b, n = 0, a, k, v, sl = div_samples(2), blocks = steps * sl / CTL - 1u;
+    seq_start();
+    for (b = 0; b < blocks; b++) {
+        uint32_t v0 = vage;
+        events_block(CTL);
+        for (a = v0 + 1u; a <= vage; a++)
+            for (k = 0; k < NTRK; k++)
+                for (v = 0; v < NVOICE; v++)
+                    if (trk[k].v[v].age == a && n < GRUN_MAX) {
+                        g_trk[n] = (uint8_t)k; g_at[n] = (uint16_t)(b * CTL / sl); g_note[n++] = trk[k].v[v].note;
+                    }
+    }
+    song.playing = 0;
+    return n;
+}
+static const uint8_t GMEL[16] = {60, 62, 64, 65, 67, 69, 71, 72, 74, 76, 77, 79, 81, 83, 84, 86};
+static int gl_example(void)
+{
+    int bad = 0, ok = 1;
+    uint32_t n, i, bar, st, hits[8] = {0}, mel = 0, bad_mel = 0;
+    gl_blank();
+    for (i = 0; i < 16u; i++) {                         /* T1 (DRUM-X) BD on every step, T4 the scale up */
+        trk[0].step[i] = (step_t){{0}, 0, ST_NOTE, 0, 100}; trk[0].step[i].hit = 1;
+        trk[3].step[i] = (step_t){{GMEL[i]}, 1, ST_NOTE, 0, 100};
+    }
+    gl_set(0, CA_STUT, CC_NM, CNM_MAKE(4u, 4u), 2, 0, 63);    /* step 1: STUTTER 2 steps, 4:4, all */
+    gl_set(2, CA_MUTE, CC_NM, CNM_MAKE(8u, 8u), 14, 0, 1);    /* step 3: MUTE 14 steps, 8:8, T1 */
+    n = grun(8u * 16u);
+    for (i = 0; i < n; i++) {
+        bar = g_at[i] / 16u; st = g_at[i] % 16u;
+        if (bar >= 8u) continue;
+        if (g_trk[i] == 0u) hits[bar]++;
+        else if (g_trk[i] == 3u) {
+            uint8_t want = st == 1u && bar % 4u == 3u ? GMEL[0] : GMEL[st];
+            mel++;
+            bad_mel += g_note[i] != want;
+        } else
+            ok = 0;
+    }
+    for (bar = 0; bar < 8u; bar++)
+        ok &= hits[bar] == (bar == 7u ? 2u : 16u);
+    ok &= mel == 128u && !bad_mel;
+    if (!ok) {
+        printf("ui:   mel %u (wrong %u), hits", mel, bad_mel);
+        for (bar = 0; bar < 8u; bar++) printf(" %u", hits[bar]);
+        printf("\n");
+    }
+    bad += check("GLOBAL (d): STUTTER 2 steps at 4:4 on all (bars 4, 8: step 2 plays step 1 again), MUTE 14 of T1 at 8:8 "
+                 "(bar 8: its two first hits alone), the other tracks untouched", ok);
+    return bad;
+}
+static int gl_mono_poly(void)
+{
+    int bad = 0, ok;
+    uint32_t n0, n1, n2, n, i;
+    static uint8_t a0[64], a1[64], a2[64];
+    gl_blank();
+    trk[3].step[0] = (step_t){{60, 64, 67}, 3, ST_NOTE, 0, 100};
+    comp_set(&trk[3].step[0], 0, CA_ARP, CC_ALWAYS, 0, 4, CA_VDEF[CA_ARP]);
+    n0 = grun(4);                                       /* the ARP alone */
+    for (i = 0; i < n0 && i < 64u; i++) a0[i] = g_note[i];
+    gl_set(0, CA_STUT, CC_ALWAYS, 0, 2, 0, 1u << 3);    /* a global STUTTER over steps 1-2 on T4 */
+    gl_mono = 0;
+    n1 = grun(4);                                       /* POLY: the ARP inside the stutter */
+    for (i = 0; i < n1 && i < 64u; i++) a1[i] = g_note[i];
+    gl_mono = 1;
+    n2 = grun(4);                                       /* MONO: the stutter alone, the chord twice */
+    for (i = 0; i < n2 && i < 64u; i++) a2[i] = g_note[i];
+    trk[3].step[0].comp = 0;                            /* the reference: the chord stuttered, no ARP */
+    n = grun(4);
+    ok = n0 > 3u && a0[0] == 60u && a0[1] != 60u;       /* (the arpeggio: one note at a time) */
+    ok &= n1 == n0 && !memcmp(a0, a1, n0);
+    ok &= n2 == n && n2 >= 4u && !memcmp(a2, g_note, n2) && (n2 != n1 || memcmp(a1, a2, n2));
+    bad += check("GLOBAL POLY: a track's ARP runs inside the global STUTTER; MONO: the global alone (the chord twice)", ok);
+    return bad;
+}
+static int gl_empty(void)
+{
+    int bad = 0, ok;
+    uint32_t n0, n1, i;
+    static uint8_t a0[GRUN_MAX];
+    static uint16_t t0[GRUN_MAX];
+    gl_blank();
+    for (i = 0; i < 16u; i += 2u) trk[3].step[i] = (step_t){{GMEL[i]}, 1, ST_NOTE, 0, 100};
+    comp_set(&trk[3].step[0], 0, CA_OCTU, CC_NM, CNM_MAKE(1u, 2u), 1, 0);
+    comp_set(&trk[3].step[4], 0, CA_RATCH, CC_P50, 0, 1, 1);
+    comp_set(&trk[3].step[8], 1, CA_TRANS, CC_ALWAYS, 0, 4, CV_TR_MAKE(2, 3u));
+    rng_state = 0x1234567u;
+    n0 = grun(64);
+    for (i = 0; i < n0; i++) a0[i] = g_note[i], t0[i] = g_at[i];
+    ok = n0 > 30u && !gsp_n && !gl_ser && !gl_on;       /* (empty: no span, no state) */
+    gl_set(3, CA_STUT, CC_P50, 0, 4, 1, 1u << 2);       /* a lane for T3 alone: T4 as before */
+    gl_set(9, CA_OCTU, CC_ALWAYS, 0, 2, 1, 1u << 1);
+    rng_state = 0x1234567u;
+    n1 = grun(64);
+    ok &= n1 == n0 && !memcmp(a0, g_note, n0) && !memcmp(t0, g_at, n0 * sizeof t0[0]);
+    bad += check("GLOBAL: an empty lane changes nothing (no state, no roll); one masked to other tracks neither (its own dice)", ok);
+    return bad;
+}
+static int gl_format(void)
+{
+    int bad = 0, ok;
+    project_store_t st;
+    gcomp_t keep[GL_N];
+    ui_power_on();
+    gl_clear();
+    gl_set(0, CA_STUT, CC_NM, CNM_MAKE(1u, 4u), 2, 1, 63);
+    gl_set(8, CA_MUTE, CC_NM, CNM_MAKE(8u, 8u), 16, 1, 8);
+    gl_set(15, CA_TRANS, CC_P75, 0, 32, CV_TR_MAKE(-3, 4u), 0x22);
+    gl_mono = 1;
+    memcpy(keep, glane, sizeof keep);
+    project_capture(&proj_scratch);
+    ok = proj_pack(&st, &proj_scratch);
+    gl_clear();
+    ok &= proj_import(&proj_scratch, &st, sizeof st) && !project_restore_runtime(&proj_scratch);
+    ok &= !memcmp(keep, glane, sizeof keep) && gl_mono == 1u && gl_on;
+    bad += check("GLOBAL FORMAT: the lane (ACTION CONDITION VALUE LENGTH N:M TRACKS) and MONO round trip ('G' 'C')", ok);
+    /* a project without the block (as every one before seq2f): the lane empty, POLY */
+    gl_clear();
+    project_capture(&proj_scratch);
+    ok = proj_pack(&st, &proj_scratch);
+    gl_set(4, CA_JUMP, CC_ALWAYS, 0, 1, 0, 63); gl_mono = 1;
+    ok &= proj_import(&proj_scratch, &st, sizeof st) && !project_restore_runtime(&proj_scratch);
+    ok &= !gl_on && !gl_mono && !glane[4].comp;
+    bad += check("  a project without the global block loads with the lane empty, POLY", ok);
+    return bad;
+}
+static int gl_ui(void)
+{
+    int bad = 0, ok;
+    ui_power_on();
+    gl_clear();
+    go_page(GR_GCOMP); frame();
+    ok = str_eq(cur_page()->title, "COMPS") && gco_on() && !gco_slot();
+    tap_key(key_at(0, 2));                              /* step 3 */
+    turn(EN_K1, 2);                                     /* OFF MUTE STUTTER */
+    ok &= gl_cur == 2u && CO_ACT(glane[2].comp) == CA_STUT && glane[2].len == 1u && glane[2].mask == 63u && gl_on;
+    turn(EN_K2, 2);                                     /* LENGTH 4 */
+    turn(EN_K3, 13);                                    /* past NEI !NEI ELSE: 1:2 */
+    ok &= glane[2].len == 3u && CO_COND(glane[2].comp) == CC_NM && glane[2].nm == CNM_MAKE(1u, 2u);
+    turn(EN_K4, 1);                                     /* EVERY 2 */
+    ok &= glane[2].val == 1u && strstr(ui.col[2], "1:2") != 0;
+    tap_key(key_at(1, 0));                              /* black key 1: T1 off */
+    ok &= glane[2].mask == 62u;
+    bad += check("GLO > COMPS: a white key the step, KNOB 1..4 ACTION LENGTH CONDITION (no NEI, no ELSE) VALUE, black keys "
+                 "the TRACKS", ok);
+    ui.page++; page_entered(); frame();
+    ok = str_eq(cur_page()->title, "COMPS 2") && gco_slot();
+    turn(EN_K2, 1); turn(EN_K3, 1);                     /* T2 .. ON (already) */
+    ok &= gl_trk == 1u && glane[2].mask == 62u;
+    turn(EN_K3, -1);
+    ok &= glane[2].mask == 60u;
+    turn(EN_K4, 1);
+    ok &= gl_mono == 1u && strstr(ui.col[3], "MONO") != 0;
+    bad += check("GLO > COMPS 2: STEP, TRACK, its ON / OFF, MODE MONO / POLY", ok);
+    return bad;
+}
+
 int main(void)
 {
     int bad = cycle() + actions() + mono_poly() + format() + comp_ui();
+    bad += gl_example() + gl_mono_poly() + gl_empty() + gl_format() + gl_ui();
     printf("%s\n", bad ? "COMP TEST FAILED" : "comp tests passed");
     return bad != 0;
 }

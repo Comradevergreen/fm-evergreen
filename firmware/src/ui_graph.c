@@ -1446,6 +1446,13 @@ static uint32_t graph_signature(void)
             h = (h ^ ((uint32_t)trk[i].p[P_MSND] | (uint32_t)trk[i].p[P_MPAT] << 4 | (uint32_t)trk[i].p[P_MMODE] << 8 |
                       (uint32_t)(uint8_t)trk[i].p[P_MCFG] << 16)) * 16777619u;
     }
+    if (pg->graph == GR_GCOMP) {                     /* (0.9.9-seq2f) the global lane, its cursor, MONO, the step playing */
+        h = (h ^ (gl_cur * 7919u + gl_trk * 31u + gl_mono * 977u + (song.playing ? gl_step_at(0) % GL_N + 1u : 0u))) *
+            16777619u;
+        for (i = 0; i < GL_N; i++)
+            h = (h ^ ((uint32_t)glane[i].comp | (uint32_t)glane[i].val << 8 | (uint32_t)glane[i].len << 16 |
+                      (uint32_t)glane[i].mask << 24) ^ glane[i].nm * 131u) * 16777619u;
+    }
     if (pg->graph == GR_COMP) {                      /* (0.6.39) the steps, their components, the arpeggio and the loop */
         const step_t *cs = &t->step[ui.cursor];
         uint32_t ph = song.playing ? seq_src(t, t->seq_idx) : 0xFFFFu;
@@ -1954,6 +1961,32 @@ static uint16_t sec_col(uint32_t s)
 #include "ui_lzhome.c"                              /* (0.8.5) HOME's lens: ECO, BEING, the critters */
 #include "ui_lzedit.c"                               /* (0.8.5) EDIT's lens panels */
 #include "ui_lzpage.c"                               /* (0.8.5) ENV's, LFO . MOD's, SCL . ARP's, GLO's */
+/* (0.9.9-seq2f) GLO > COMPS' roll: the lane's 16 steps as columns, each one's component mark on top (comp_col, as a
+ * track's), its LENGTH a line after it, the six tracks it applies to as small marks in rows below, the cursor step
+ * framed, the global step playing underlined; MONO / POLY at the right */
+static void graph_gcomp(void)
+{
+    uint32_t i, k, j, h = graph_h(), play = song.playing ? gl_step_at(0) % GL_N : GL_N;
+    int32_t x0 = 12, cw = 13, y0 = 8;
+    for (i = 0; i < GL_N; i++) {
+        const gcomp_t *c = &glane[i];
+        uint32_t a = CO_ACT(c->comp) % CA_N;
+        int32_t x = x0 + (int32_t)i * cw;
+        cv_rect(x + 1, (int32_t)h - 10, cw - 2, 1, (i & 3u) ? T_DIM : T_MID);   /* (the beats) */
+        if (i == gl_cur % GL_N)
+            cv_frame(x, y0 - 4, cw, (int32_t)h - y0 - 2, T_ACCENT);
+        if (i == play)
+            cv_rect(x + 1, (int32_t)h - 8, cw - 2, 3, T_THEME);
+        if (!a)
+            continue;
+        cv_rect(x + cw / 2 - 2, y0, 4, 4, comp_col(a));
+        for (j = 1; a != CA_JUMP && j <= c->len && j < GL_N; j++)   /* (its LENGTH, round the bar) */
+            cv_rect(x0 + (int32_t)((i + j) % GL_N) * cw, y0 + 6, cw, 1, comp_col(a));
+        for (k = 0; k < NTRK; k++)
+            cv_rect(x + cw / 2 - 1, y0 + 12 + (int32_t)k * 9, 3, 3, (c->mask >> k) & 1u ? T_TEXT : T_DIM);
+    }
+    cv_text(x0, (int32_t)h - 24 - AF_X_CAP_Y, &AF_X, gl_mono ? "MONO" : "POLY", T_DIM);
+}
 static void draw_graph(void)
 {
     const page_t *pg = cur_page();
@@ -2028,6 +2061,9 @@ static void draw_graph(void)
     } else if (lz_on() && lz_fam() == LZ_ENV && (cv_oy = 0, graph_env_lz(t, pg))) {     /* .. ENV's (ui_lzpage.c) */
     } else if (lz_on() && lz_fam() == LZ_MOD && (cv_oy = 0, graph_mod_lz(t, pg))) {     /* .. LFO . MOD's */
     } else if (lz_on() && lz_fam() == LZ_KEY && (cv_oy = 0, graph_key_lz(t, pg))) {     /* .. SCL . ARP's */
+    } else if (pg->graph == GR_GCOMP) {              /* (0.9.9-seq2f) GLO > COMPS: the global lane */
+        cv_oy = 0;
+        graph_gcomp();
     } else if (lz_on() && lz_fam() == LZ_GLO && pg->id[0] == G_TRKS) {               /* .. GLO's SYSTEM */
         cv_oy = 0;
         graph_system();

@@ -121,7 +121,8 @@ typedef struct {
     uint8_t parts;                             /* NPART; 0: track 4 is the old GM drum part (see the top) */
     uint8_t phys;                              /* PROJ_PHYS: PHYS MODEL values as today; 1: MODEL 4 was DRUM;
                                                 * 0 (a reserved byte before 1.0): MODEL 2 was DUST */
-    uint8_t rsv;
+    uint8_t gmode;                             /* (0.9.9-seq2f) the global components' MONO (1) / POLY (0); reserved, 0
+                                                * before */
     proj_trk_t t[NTRK];
     chain_config_t chain;
     motion_store_t motion;
@@ -139,9 +140,12 @@ typedef struct {
     uint8_t pfx_lane[32], pfx_ltgt;            /* the punch-in lane (pfx.c), in FUN9's spare bytes (PROJ_PFX_OFF) */
     uint8_t macro[4];                          /* the macros M1..M4 (mod.c macro_v), 0..127: after the lane's tracks */
     char lyr[NTRK][LYR_LEN];                   /* (0.8.5) VOICE's lyrics (sing.c lyr_txt): FUNC's 'L' 'Y' blocks, "" before */
+    uint8_t gl[GL_N][5];                       /* (0.9.9-seq2f) GLO > COMPS, the global lane (seq.c glane): FUNC's 'G' 'C'
+                                                * block, empty before */
     char name[PROJ_NAME_LEN];                  /* the project's name: upper-case ASCII 32..126, 0-padded; "" = none */
     uint32_t sum;
 } project_t;
+_Static_assert(sizeof(gcomp_t) == 5u, "the global lane as stored");
 /* Historical FUN5/6 types are frozen, independent of today's P_COUNT/step_t. */
 typedef struct { uint8_t note[4], n, time, flags, vel, hit, acc; } step10_t;
 typedef struct { int16_t p[69]; uint8_t engine, preset; step10_t step[NSTEP]; uint8_t lane[NLANE][5]; } proj_trk_v5_t;
@@ -816,6 +820,13 @@ static uint32_t proj_bits(uint32_t m)
         n += m & 1u;
     return n;
 }
+static int proj_gl_used(const project_t *q)            /* (0.9.9-seq2f) a global component, or MONO: its block */
+{
+    uint32_t i;
+    for (i = 0; i < GL_N; i++)
+        if (q->gl[i][0]) return 1;
+    return q->gmode != 0u;
+}
 static uint32_t proj_packed_size(const project_t *q)
 {
     uint32_t n = 68u + sizeof q->chain + 4u + q->motion.count * sizeof q->motion.event[0] + 2u + G_SL_N, t, i;
@@ -823,6 +834,8 @@ static uint32_t proj_packed_size(const project_t *q)
         n += 3u;
     if (proj_mf_tracks(q))                              /* (0.9.1) MICRO's 64ths: their block */
         n += 3u + 16u * proj_bits(proj_mf_tracks(q));
+    if (proj_gl_used(q))                                /* (seq2f) the global lane's */
+        n += 3u + sizeof q->gl;
     if (q->g[G_DMOD] != GP[G_DMOD].def)                 /* (0.6.86) the delay's MOD's, when not the default */
         n += 3u;
     if (q->g[G_DTYPE] || q->g[G_DPING])                 /* (0.6.90) its TYPE and PING-PONG's */
@@ -980,6 +993,12 @@ static int proj_pack(project_store_t *out, const project_t *q)
                 b[pos + i / 4u] |= (uint8_t)(((q->t[t].step[i].flags & SF_MFINE) >> SF_MFINE_SH) << (2u * (i & 3u)));
             pos += 16u;
         }
+    }
+    if (proj_gl_used(q)) {                              /* (0.9.9-seq2f) the global lane, last: firmware before stops
+                                                         * reading at it, the rest loads */
+        b[pos++] = 'G'; b[pos++] = 'C'; b[pos++] = (uint8_t)(q->gmode & 1u);
+        memcpy(b + pos, q->gl, sizeof q->gl);
+        pos += sizeof q->gl;
     }
     memcpy(b + PROJC_PFX_OFF, q->pfx_lane, sizeof q->pfx_lane);
     b[PROJC_PFX_OFF + sizeof q->pfx_lane] = q->pfx_ltgt > 2u ? 0u : q->pfx_ltgt;
@@ -1250,6 +1269,16 @@ static int proj_unpack_c(project_t *q, const uint8_t *b)
             }
             pos += 16u;
         }
+    }
+    if (pos + 3u + sizeof q->gl <= room && b[pos] == 'G' && b[pos + 1u] == 'C') {   /* (0.9.9-seq2f) the global lane
+                                                         * (else empty, POLY) */
+        if (b[pos + 2u] > 1u) return 0;
+        q->gmode = b[pos + 2u];
+        memcpy(q->gl, b + pos + 3u, sizeof q->gl);
+        for (i = 0; i < GL_N; i++)
+            if (CO_ACT(q->gl[i][0]) >= CA_N || CO_COND(q->gl[i][0]) >= CC_N || q->gl[i][2] >= CL_MAX ||
+                (q->gl[i][4] >> NTRK)) return 0;
+        pos += 3u + sizeof q->gl;
     }
     proj_new_tracks(q, nt);                             /* (a FUNC of fewer tracks: the rest at power-on) */
     for (t = nt; t < NTRK; t++)
@@ -1540,6 +1569,8 @@ static void project_capture(project_t *p)
     memcpy(p->pfx_lane, pfx_lane, sizeof p->pfx_lane);
     p->pfx_ltgt = pfx_ltgt;
     memcpy(p->macro, macro_v, sizeof p->macro);
+    memcpy(p->gl, glane, sizeof p->gl);                 /* (0.9.9-seq2f) the global lane */
+    p->gmode = gl_mono;
     for (i = 0; i < NTRK; i++)                          /* (0.8.5) VOICE's lyrics */
         memcpy(p->lyr[i], lyr_get(i), LYR_LEN);
     motion_unguard(f);
@@ -1736,6 +1767,9 @@ static int project_restore_runtime(const project_t *input)
     pfx_ltgt = p->pfx_ltgt > 2u ? 0u : p->pfx_ltgt;
     for (i = 0; i < 4u; i++)
         macro_v[i] = p->macro[i] & 127u;            /* (the macros: a load sets them; a section jump keeps them) */
+    memcpy(glane, p->gl, sizeof glane);                 /* (0.9.9-seq2f) the global lane (none: an older project) */
+    gl_mono = p->gmode & 1u;
+    gl_touch();
     for (k = 0; k < NTRK; k++) {                        /* (0.8.5) VOICE's lyrics (none: an older project) */
         char ly[LYR_LEN];
         memcpy(ly, p->lyr[k], LYR_LEN);
@@ -1830,6 +1864,9 @@ static void system_init(void)
     memset(pfx_lane, 0, sizeof pfx_lane);
     for (i = 0; i < 4u; i++) macro_v[i] = 0;
     for (i = 0; i < NTRK; i++) lyr_set(i, "");          /* (0.8.5) no lyrics */
+    memset(glane, 0, sizeof glane);                     /* (0.9.9-seq2f) no global component, POLY */
+    gl_mono = 0;
+    gl_touch();
     memcpy(dx_kit, DX_KIT_DEF, sizeof dx_kit);
     memset(dx_mot, 0, sizeof dx_mot);
     dx_tone = 0;
@@ -2361,6 +2398,8 @@ static uint32_t autosave_sig(void)
     h = as_mix(h, &motion, sizeof motion);
     h = as_mix(h, &chain_config, sizeof chain_config);
     h = as_mix(h, lyr_txt, sizeof lyr_txt);             /* (0.8.5) VOICE's lyrics */
+    h = as_mix(h, glane, sizeof glane);                 /* (0.9.9-seq2f) the global lane */
+    h = as_mix(h, &gl_mono, 1);
     return as_mix(h, proj_name, sizeof proj_name);
 }
 

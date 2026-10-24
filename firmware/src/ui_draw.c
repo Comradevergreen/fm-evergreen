@@ -1385,6 +1385,36 @@ static void draw_columns(void)
         draw_column(3, "INTVL", val, "DEG", f->rate ? VAL(3u) : T_DIM, (int32_t)(f->ivl + 14) * 1000 / 28, ICON_PITCH);
         return;
     }
+    if (cur_page()->graph == GR_GCOMP) {               /* (0.9.9-seq2f) GLO > COMPS: the lane's step; COMPS 2 its tracks */
+        const gcomp_t *gc = &glane[gl_cur % GL_N];
+        uint32_t a = CO_ACT(gc->comp) % CA_N;
+        char lb[10], un[8];
+        if (gco_slot()) {
+            fmt_int(val, (int32_t)gl_cur + 1);
+            draw_column(0, "STEP", val, "", VAL(0u), -1, ICON_AUTO);
+            val[0] = 'T'; fmt_int(val + 1, (int32_t)gl_trk + 1);
+            draw_column(1, "TRACK", val, "", VAL(1u), -1, ICON_NONE);
+            draw_column(2, "APPLIES", (gc->mask >> gl_trk) & 1u ? "ON" : "OFF", "", a ? VAL(2u) : T_DIM, -1, ICON_NONE);
+            draw_column(3, "MODE", gl_mono ? "MONO" : "POLY", "", VAL(3u), -1, ICON_ORDER);
+            return;
+        }
+        draw_column(0, "ACTION", CA_NAMES[a], "", a ? VAL(0u) : T_DIM, -1, ICON_ARP);
+        if (a && a != CA_JUMP) {
+            fmt_int(val, (int32_t)gc->len + 1);
+            draw_column(1, "LENGTH", val, gc->len ? "STEPS" : "STEP", VAL(1u), -1, ICON_RATE);
+        } else
+            draw_column(1, "LENGTH", "-", "", T_DIM, -1, ICON_RATE);
+        if (a) {
+            cond_name(CO_COND(gc->comp), gc->nm, val);
+            draw_column(2, "COND", val, gl_mono ? "MONO" : "POLY", CO_COND(gc->comp) ? VAL(2u) : T_DIM, -1, ICON_PROB);
+            comp_vname(TSEL, TSEL->step, a, gc->val, lb, val, un);
+            draw_column(3, lb, val, un, lb[0] ? VAL(3u) : T_DIM, -1, ICON_ORDER);
+        } else {
+            draw_column(2, "COND", "", "", T_DIM, -1, ICON_PROB);
+            draw_column(3, "", "", "", T_THEME, -1, ICON_NONE);
+        }
+        return;
+    }
     if (cur_page()->graph == GR_COMP) {                /* (seq2d) the cursor step's C1 / C2: ACTION LENGTH COND VALUE */
         const step_t *cs = &TSEL->step[ui.cursor];
         uint32_t a = comp_view(), k = comp_slot(), c = CO_COND(k ? cs->comp2 : cs->comp), l = cs->clen[k & 1u];

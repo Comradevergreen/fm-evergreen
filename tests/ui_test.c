@@ -163,6 +163,7 @@ static void ui_power_on(void)
     memset(&ui, 0, sizeof ui);
     cin_left = cin_total = 0;                     /* (no count-in) */
     memset(&nm, 0, sizeof nm);                    /* NAME closed, no project name */
+    memset(glane, 0, sizeof glane); gl_mono = 0; gl_touch(); gl_cur = gl_trk = 0;   /* (seq2f) no global lane */
     proj_name[0] = 0;
     proj_cur = PROJ_NO_SLOT;
     memset(&favorites, 0, sizeof favorites);
@@ -3144,8 +3145,9 @@ static int test_product_ux(void)
     turn(EN_SELECT, 1); frames(320); ok = str_eq(cur_page()->title, "SENDS");   /* (0.9.2: SELECT the chain; a GLO tap */
     press(B_GLO); frames(320); ok &= cur_page()->fam == FAM_GLO && str_eq(cur_page()->title, "GLOBAL");   /* the next group) */
     press(B_GLO); frames(320); ok &= str_eq(cur_page()->title, "SYSTEM");
+    press(B_GLO); frames(320); ok &= str_eq(cur_page()->title, "COMPS");   /* (0.9.9-seq2f) */
     press(B_GLO); ok &= cur_page()->graph == GR_TRK && str_eq(cur_page()->title, "MIXER");
-    bad += check("0.9.2 GLO: SELECT MIXER > SENDS, a GLO tap the next group: GLOBAL > SYSTEM > MIXER (was SENDS by a tap)", ok);
+    bad += check("0.9.2 GLO: SELECT MIXER > SENDS, a GLO tap the next group: GLOBAL > SYSTEM > COMPS > MIXER (was SENDS by a tap)", ok);
     go_home(); hold(B_SEQ);
     bad += check("long SEQ off the SEQ pages is a tap (no SONG: SAVE held, G5)", cur_page()->graph != GR_SONG);
     go_page(GR_SONG);
@@ -6502,7 +6504,7 @@ static int test_momentary(void)
 {
     int bad = 0, ok;
     int16_t *v1, *v2, c1, c2, m1, m2, h1;
-    uint32_t i, pg0, sig0, s0, tot;
+    uint32_t i, pg0, sig0;
     ui_power_on(); go_home(); frames(64);
     press(B_EDIT);
     ok = !ui.home && cur_page()->fam == FAM_EDIT && !ui.layer && !mom_on;
@@ -11057,7 +11059,7 @@ static int test_lz_glo(void)
     ui_power_on(); frame();
     press(B_GLO); frame();
     ok = pd_on() && lz_fam() == LZ_GLO && pd_level() == 0u && str_eq(cur_page()->title, "MIXER") && lz_tab_lit(0) &&
-         lz_crumb_is("GLO \xB7 MIX \xB7 MIXER") && lz_count_is("1/4");
+         lz_crumb_is("GLO \xB7 MIX \xB7 MIXER") && lz_count_is("1/6");
     turn(EN_SELECT, 1); frame();
     ok &= str_eq(cur_page()->title, "SENDS") && lz_crumb_is("GLO \xB7 MIX \xB7 SENDS");
     v = TSEL->p[P_DLY];
@@ -11068,13 +11070,15 @@ static int test_lz_glo(void)
     frames(320); press(B_GLO); frame();
     ok &= pd_level() == 2u && str_eq(cur_page()->title, "SYSTEM") && lz_tab_lit(2) && lz_crumb_is("GLO \xB7 SYSTEM \xB7 SYSTEM");
     frames(320); press(B_GLO); frame();
+    ok &= pd_level() == 3u && str_eq(cur_page()->title, "COMPS") && lz_tab_lit(3);   /* (0.9.9-seq2f) */
+    frames(320); press(B_GLO); frame();
     ok &= pd_level() == 0u && str_eq(cur_page()->title, "MIXER");
     turn(EN_SELECT, 3); frame();
     ok &= pd_level() == 2u && str_eq(cur_page()->title, "SYSTEM");
     open_family(FAM_ENV); frame();
     press(B_GLO); frame();
     ok &= str_eq(cur_page()->title, "SYSTEM");
-    bad += check("0.9.2 GLO: MIXER SENDS GLOBAL SYSTEM by SELECT, a GLO tap the next group; from elsewhere the page left", ok);
+    bad += check("0.9.2 GLO: MIXER SENDS GLOBAL SYSTEM (seq2f: COMPS COMPS 2) by SELECT, a GLO tap the next group; from elsewhere the page left", ok);
     ui_power_on();
     return bad;
 }
