@@ -323,7 +323,6 @@ static int song_switch(uint32_t n, int load_a)
     }
     song_idx.rows[song_cur] = chain_config;           /* (the rows of the song left) */
     song_cur = (uint8_t)n;
-    dice_secs = 0;                                    /* (0.6.81) another project's sections: none DICE ALL's */
     chain_config = song_idx.rows[n];
     if (song_index_save()) {                          /* (failed: written again by song_poll) */
         song_idx_dirty = 1;

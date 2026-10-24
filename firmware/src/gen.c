@@ -1680,6 +1680,7 @@ static void gen_pitched(uint32_t rot, int32_t lift)
                                                          * again, not kept) */
 static void section_store(uint32_t s);                  /* (song_main.c) */
 static int section_load(uint32_t s);
+static uint8_t gform_kept;                              /* (gen6c) FORM asked, sections of the player's in A..D */
 static void gen_parts(void)
 {
     const ggenre_t *g = gs.g;
@@ -1694,7 +1695,8 @@ static void gen_parts(void)
     if (form == FM_LOOP) return;
     gseed(GS_FORM);
     for (k = 0; k < 4u; k++)
-        if (project_used(k) && !((dice_secs >> k) & 1u)) return;   /* (a section of yours: kept) */
+        if (project_used(k) && !((dice_secs >> k) & 1u)) { gform_kept = 1; return; }   /* (a section of yours: kept,
+                                                         * and said: gen_go) */
     live.cur = -1;
     section_store(0);                                   /* A: the whole piece */
     if (live.cur != 0) return;
@@ -1785,7 +1787,11 @@ static void gen_parts(void)
     section_load(0);                                    /* (the whole piece back, as A holds it) */
     live.cur = 0;
     if (n < 2u) return;
-    chain_defaults(&chain_config);
+    {
+        uint8_t ds = dice_secs;
+        chain_defaults(&chain_config);
+        dice_secs = ds;                                 /* (gen6c: the marks live in the rows) */
+    }
     if (form == FM_CLUB) { ord = ORD_CLUB; nord = n >= 4u ? 6u : n == 3u ? 4u : 2u; }
     else if (form == FM_ARC) { ord = ORD_ARC; nord = n; }
     else { ord = ORD_PARTS; nord = n >= 3u ? 4u : 2u; }
@@ -2411,6 +2417,7 @@ static void gen_go(void)
     uint32_t k;
     char b[8];
     undo_mark();
+    gform_kept = 0;
     gen_make();
     str_cpy(gp.last, gs.g->name, sizeof gp.last);
     k = str_len(gp.last);
@@ -2418,7 +2425,7 @@ static void gen_go(void)
     b[3] = (char)('0' + gp.seed / 10u % 10u); b[4] = (char)('0' + gp.seed % 10u); b[5] = 0;
     str_cpy(gp.last + k, b, sizeof gp.last - k);
     ui_say("GEN: ", gp.last);
-    str_cpy(ui.msg2, live.mode ? "PARTS: PLAY THE SONG" : "UNDO: GLO + G4", sizeof ui.msg2);
+    str_cpy(ui.msg2, live.mode ? "PARTS: PLAY THE SONG" : gform_kept ? "FORM: A-D ARE YOURS" : "UNDO: GLO + G4", sizeof ui.msg2);
     ui.force = 1;
 }
 static uint32_t gen_sig(void)                           /* the settings that make the piece */

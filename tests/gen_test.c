@@ -110,7 +110,12 @@ static uint64_t gen_proj_hash(void)
     h = gfnv(h, dx_mot, sizeof dx_mot); h = gfnv(h, &dx_glue, 1); h = gfnv(h, &dx_tone, sizeof dx_tone); h = gfnv(h, &dx_hands, sizeof dx_hands);
     h = gfnv(h, glane, sizeof glane); h = gfnv(h, &gl_mono, sizeof gl_mono);
     h = gfnv(h, fg_set, sizeof fg_set); h = gfnv(h, pfx_lane, sizeof pfx_lane); h = gfnv(h, macro_v, sizeof macro_v);
-    h = gfnv(h, &chain_config, sizeof chain_config); h = gfnv(h, &live.mode, sizeof live.mode);
+    {   /* (gen6c) the rows without GEN's marks: whose the sections in flash are is not the piece */
+        chain_config_t c = chain_config;
+        c.rsv[1] = 0;
+        h = gfnv(h, &c, sizeof c);
+    }
+    h = gfnv(h, &live.mode, sizeof live.mode);
     return h;
 }
 /* (0.9.9-gen1) another state to generate from: a piece of another genre (EXPLORE, a SONG), then the player's hand on
@@ -504,6 +509,20 @@ int main(void)
             uint32_t m = 0;
             for (k = 0; k < NTRK; k++) m += trk[k].p[P_MUTE] != 0;
             bad += gcheck("  after: the whole piece live (A), nothing muted", m == 0u && live.cur == 0);
+        }
+        {   /* (gen6c, a tester: "under FORM song mode doesn't work any more") GEN's sections stay GEN's after a power
+             * cycle (the marks with the song's rows in flash, not in RAM), so FORM writes them again; a section the
+             * player stored is kept, and the screen says why there is no song */
+            chain_config_t keep = chain_config;
+            int ok;
+            gen_reset();
+            chain_config = keep;                        /* (the index back from flash) */
+            gen_with(1, 32, 60, 2);
+            ok = live.mode == 1 && chain_config.count == 6u && (dice_secs & 15u) == 15u;
+            section_store(1);
+            gen_with(1, 33, 60, 2);
+            ok &= live.mode == 0 && !chain_config.count && str_eq(ui.msg2, "FORM: A-D ARE YOURS");
+            bad += gcheck("FORM after a power cycle: the song written again; a section of the player's kept, and said", ok);
         }
     }
     /* ---- (0.6.97) the kit's space, the top end's variety, Hook's register, the lead's envelope */
