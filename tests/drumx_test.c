@@ -327,6 +327,49 @@ int main(int argc, char **argv)
             dx_tone = 0;
             check("TONE (0.6.36): BP on the hats, rim and cowbell only; FEEDBK moves every sound, under full scale", okb && okf, 0);
         }
+        {   /* (0.9.9-snd1) FEEDBK and FM ENV on curves (drumx_voice.c DX_FB_CURVE, dx_fm_env, dx_fm_lim): monotonic, most
+             * of the travel musical, the extreme in the last steps; the tom's brightness (the first difference's energy
+             * over the signal's) rising with each, at half of the knob well under its top; FM's index kept under the
+             * half rate's Nyquist on a high hit, a low one as it is */
+            static const int16_t FB[5] = {0, 4, 8, 12, 15}, FMV[5] = {0, 32, 64, 95, 127};
+            double br[2][5];
+            uint32_t k2, kk;
+            int mono = 1, okc = 1;
+            for (k2 = 1; k2 < 16u; k2++)
+                okc &= DX_FB_CURVE[k2] > DX_FB_CURVE[k2 - 1u];
+            for (k2 = 1; k2 < 128u; k2++)
+                okc &= dx_fm_env((int32_t)k2) >= dx_fm_env((int32_t)k2 - 1);
+            okc &= DX_FB_CURVE[12] * 2 < DX_FB_CURVE[15] && dx_fm_env(114) * 2 < dx_fm_env(127) && dx_fm_env(64) * 8 < 64 * 3;
+            for (kk = 0; kk < 2u; kk++)
+                for (k2 = 0; k2 < 5u; k2++) {
+                    track_t *t = kitx(64, 64);
+                    double e = 0, d = 0;
+                    if (kk)
+                        t->p[P_E5] = FMV[k2];
+                    else
+                        dx_tone = (uint8_t)(FB[k2] << 4);
+                    same_noise(t);
+                    strike(t, DV_TOM, FS / 8u);
+                    for (i = 1; i < FS / 8u; i++) {
+                        e += (double)buf[i] * buf[i];
+                        d += ((double)buf[i] - buf[i - 1]) * ((double)buf[i] - buf[i - 1]);
+                    }
+                    br[kk][k2] = d / (e + 1);
+                    if (k2 && br[kk][k2] < br[kk][k2 - 1] * 0.8)   /* (the tom's noise: another each hit) */
+                        mono = 0;
+                    dx_tone = 0;
+                }
+            check("FEEDBK, FM ENV on curves (0.9.9-snd1): monotonic, the extreme only in the last steps", okc,
+                  "FEEDBK beta %.2f at 8, %.2f at 12, %.2f at 15; FM ENV index %.2f rad at 64, %.2f at 114, %.2f at 127",
+                  DX_FB_CURVE[8] * M_PI / 65536, DX_FB_CURVE[12] * M_PI / 65536, DX_FB_CURVE[15] * M_PI / 65536,
+                  dx_fm_env(64) * 0.02454, dx_fm_env(114) * 0.02454, dx_fm_env(127) * 0.02454);
+            check("  the tom brighter as each rises, half the knob well under the top", mono && br[0][2] < br[0][4] * 0.5 &&
+                  br[1][2] < br[1][4] * 0.5, "FEEDBK 0 4 8 12 15: %.4f %.4f %.4f %.4f %.4f; FM ENV 0 32 64 95 127: %.4f %.4f %.4f %.4f %.4f",
+                  br[0][0], br[0][1], br[0][2], br[0][3], br[0][4], br[1][0], br[1][1], br[1][2], br[1][3], br[1][4]);
+            check("  FM ENV's index under Nyquist: a C2 hit's as it is, an 8 kHz one's eased",
+                  dx_fm_lim(200, pitch_inc(36u * 16u), 4096u) >= 195 && dx_fm_lim(200, pitch_inc(120u * 16u), 4096u) < 100, "%d %d",
+                  dx_fm_lim(200, pitch_inc(36u * 16u), 4096u), dx_fm_lim(200, pitch_inc(120u * 16u), 4096u));
+        }
         {   /* (0.7.9) KIT 3 > HANDS: more hands, more of the clap after its strike (each hand the noise struck again in
              * its first ~50 ms, then dying as the hit), the strike itself as it was, under full scale; the kick untouched */
             static int32_t r1[FS / 8];

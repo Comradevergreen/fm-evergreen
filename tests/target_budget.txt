@@ -15,8 +15,8 @@ noise_render 256
 fm6_render 364
 fm6_op_run 72
 fm6_op_fb 25
-dx_run 419
-dx_layer 105
+dx_run 424
+dx_layer 113
 drum_side_add 30
 drum_mix 125
 drum_bus 104
