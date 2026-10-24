@@ -56,8 +56,8 @@ static const layer_t LAYERS[LAYER_N] = {
     {B_FX, LK_HOLD, FAM_HOME, "[FX] HOLD", {{KC_KEYS, "EFFECTS"}, {KC_K14, "MACROS"}, {0, 0}}},   /* (LET GO: the header's HOLD) */
     {B_GLO, LK_SET, FAM_HOME, "[GLO] SET", {{KC_PLAY, "RESTART"}, {KC_GLO, "DONE"}, {0, 0}}},
     {B_SCL, LK_SET, FAM_SCL, "[SCL] SET", {{KC_KEYS, "ROOT"}, {KC_SCL, "DONE"}, {0, 0}}},
-    {B_EDIT, LK_SET, FAM_EDIT, "[EDIT] SET", {{KC_SELECT, "PRESET"}, {KC_K14, "TWEAK"}, {KC_KEYS, "INIT / RECALL"}}},   /* (0.9.9-seq2e:
-                                                                     * SELECT the presets, KNOB 1..4 MOMENTARY: mom_knob) */
+    {B_EDIT, LK_SET, FAM_EDIT, "[EDIT] SET", {{KC_SELECT, "DICE"}, {KC_K14, "TWEAK"}, {KC_KEYS, "INIT / RECALL"}}},   /* (0.9.9-seq2e:
+                                                                     * KNOB 1..4 MOMENTARY: mom_knob; seq2f: SELECT the sound dice) */
     {B_SEQ, LK_SET, FAM_SEQ, "[SEQ] TOOLS", {{KC_REC, "CLEAR ALL"}, {KC_SEQ, "DONE"}, {0, 0}}},   /* (0.6.14: REC, all six
                                                                      * tracks cleared, shown: it was nowhere) */
     {B_REC, LK_SET, FAM_HOME, "[REC] SET", {{KC_KEYS, "RECORDING"}, {KC_REC, "DONE"}, {0, 0}}},
@@ -182,7 +182,7 @@ static void layer_arm(uint32_t pressed, uint32_t now)
  * turned (before the layer shows or after), the knob edits the page under it (the page shown before EDIT went down),
  * live, recorded nowhere (no motion), and EDIT let go every parameter touched in the hold glides back over MOM_GLIDE_MS
  * to its value when first touched (motion.c mom[]: up to MOM_N); a save meanwhile stores those values. The page under
- * shows, "MOMENTARY" in the header; no tap, no layer after it. SELECT stays the presets (ui_input.c ed_sel) */
+ * shows, "MOMENTARY" in the header; no tap, no layer after it. SELECT is the sound dice (0.9.9-seq2f; CF_DICE_SOUND) */
 #define MOM_GLIDE_MS 32u
 static void mom_release(void);
 static int16_t *mom_ptr(const mom_t *m) { return m->t == MOM_G ? &song.g[m->id] : &trk[m->t % NTRK].p[m->id]; }
@@ -194,7 +194,7 @@ static void mom_finish(void)                            /* every value back, now
     mom_n = 0;
     mom_glide = 0;
 }
-static void mom_forget(uint32_t t)                      /* track t's sound replaced (EDIT + SELECT): its own kept */
+static void mom_forget(uint32_t t)                      /* track t's sound replaced (EDIT + SELECT's dice): its own kept */
 {
     uint32_t i, n = 0;
     for (i = 0; i < mom_n; i++)
@@ -1190,7 +1190,7 @@ static void layer_cards(uint32_t l)
             else
                 draw_column(c, "", "", "", T_THEME, -1, ICON_NONE);
         }
-    } else if (l == LAYER_EDIT) {                       /* (0.9.9-seq2e) No. (SELECT), ENG, FAV (ui_draw.c) */
+    } else if (l == LAYER_EDIT) {                       /* (0.9.9-seq2f) ENG, No. (PRESETS), FAV (ui_draw.c) */
         engine_columns();
     } else {                                            /* the page's four (SCL: LY_SCL) */
         uint8_t h = ui.home, pg = ui.page, nm[sizeof ui.nmem];

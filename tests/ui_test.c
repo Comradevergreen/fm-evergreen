@@ -6509,14 +6509,14 @@ static int test_momentary(void)
     bad += check("0.9.9-seq2e EDIT tapped: its pages, as before", ok);
     ui_power_on(); go_home(); frames(64);
     btn_down(B_EDIT); frames(800);
-    ok = ui.layer == LAYER_EDIT && !mom_on && str_eq(ly_card[0].l, "No.") && str_eq(ly_card[1].l, "ENG") &&
+    ok = ui.layer == LAYER_EDIT && !mom_on && str_eq(ly_card[0].l, "ENG") && str_eq(ly_card[1].l, "No.") &&
          str_eq(ly_card[2].l, "FAV");
-    s0 = rc_snd(TSEL);
-    turn(EN_SELECT, 1); frame();                        /* SELECT in the layer: the next preset, the layer stays */
-    ok &= ui.layer == LAYER_EDIT && rc_snd(TSEL) != s0 && !ui.confirm && !mom_on;
-    btn_up(B_EDIT); frames(200);
-    ok &= ui.home && !ui.layer;
-    bad += check("  EDIT held: its layer, cards No. ENG FAV; SELECT the engine's next preset there; let go: no page", ok);
+    turn(EN_SELECT, 1); frame();                        /* (0.9.9-seq2f) SELECT in the layer: the sound dice, asked */
+    ok &= ui.confirm == CF_DICE_SOUND && !mom_on;
+    btn_up(B_EDIT); frames(8);
+    press(B_OCTDN); frames(200);                        /* CANCEL */
+    ok &= ui.home && !ui.layer && !ui.confirm;
+    bad += check("  EDIT held: its layer, cards ENG No. FAV; SELECT the sound dice there, asked (seq2f); let go: no page", ok);
     /* a FILTER page (CUT, RES): two knobs, live, back exactly */
     ui_power_on(); track_select(1);
     for (i = 0; i < NPAGES && !(PAGES[i].fam == FAM_EDIT && PAGES[i].id[1] == P_FCUT); i++)
@@ -6561,15 +6561,15 @@ static int test_momentary(void)
     ok &= *v1 == c1 && str_eq(cur_page()->title, "FX");
     bad += check("  EDIT held + KNOBs on FX (DLY's globals, FX's REV send): live, a save meanwhile stores the values from "
                  "before; let go: back", ok);
-    /* EDIT + SELECT before the layer: presets, not MOMENTARY; a knob first, then SELECT: MOMENTARY ends for the sound */
+    /* (0.9.9-seq2f) EDIT + SELECT before the layer: the sound dice (its dialog), not MOMENTARY, not the presets */
     ui_power_on(); go_home(); frames(64);
-    s0 = rc_snd(TSEL); i = eng_list_pos(&tot);
     btn_down(B_EDIT); frame();
     turn(EN_SELECT, 1); frame();
-    ok = !mom_on && rc_snd(TSEL) != s0 && eng_list_pos(&tot) == (i + 1u) % tot;
-    btn_up(B_EDIT); frames(200);
-    ok &= ui.home && rc_snd(TSEL) != s0 && !ui.layer;
-    bad += check("  EDIT + SELECT (before the layer): the engine's next preset, kept; no MOMENTARY, no page", ok);
+    ok = !mom_on && ui.confirm == CF_DICE_SOUND;
+    btn_up(B_EDIT); frames(8);
+    press(B_OCTDN); frames(200);                        /* CANCEL: the sound back */
+    ok &= !ui.confirm && ui.home && !ui.layer;
+    bad += check("  EDIT + SELECT (before the layer): the sound dice and its dialog; no MOMENTARY, no page", ok);
     return bad;
 }
 static int test_layer_knob_race(void)
@@ -9555,18 +9555,36 @@ static int test_bpm_lock(void)
         for (j = 0; j < 8u; j++) moved += TSEL->p[P_E0 + j] != before[j];
         ok = !moved && song.g[G_BPM] == b0 && str_eq(cur_page()->title, "ENV DEST") && !ui.confirm;   /* (0.9.2: the next page) */
         fm1_ms += 1200u;
-        {   /* (0.9.9-seq2e) EDIT held + SELECT: the engine's presets (the EDIT layer's old KNOB 2), no dice, no tap */
-            uint32_t tot, p0 = eng_list_pos(&tot), s0 = rc_snd(TSEL);
-            held_turn(B_EDIT, 1);
-            frame();
-            ok &= str_eq(cur_page()->title, "ENV DEST") && !ui.confirm && song.g[G_BPM] == b0 && tot > 1u &&
-                  eng_list_pos(&tot) == (p0 + 1u) % tot && rc_snd(TSEL) != s0;
+        held_turn(B_EDIT, 1);                           /* EDIT held + SELECT: the sound's dice */
+        ok &= str_eq(cur_page()->title, "ENV DEST");    /* (no page: EDIT's tap swallowed) */
+        for (j = 0; j < 8u; j++) moved += TSEL->p[P_E0 + j] != before[j];
+        ok &= song.g[G_BPM] == b0 && ui.confirm == CF_DICE_SOUND && moved > 0u && undo_ok;   /* (0.6.65) heard, asked */
+        {
+            int16_t orig[8], d1[8];
+            uint32_t same = 1;
+            for (j = 0; j < 8u; j++) orig[j] = before[j];
+            for (j = 0; j < 8u; j++) d1[j] = TSEL->p[P_E0 + j];
+            turn(EN_SELECT, 1);                                       /* (the same burst: no second dice) */
+            for (j = 0; j < 8u; j++) ok &= TSEL->p[P_E0 + j] == d1[j];
             fm1_ms += 1200u;
-            held_turn(B_EDIT, -1);
-            frame();
-            ok &= str_eq(cur_page()->title, "ENV DEST") && !ui.confirm && eng_list_pos(&tot) == p0 && rc_snd(TSEL) == s0;
+            for (uint32_t n = 0; n < 4u && same; n++) {               /* SELECT again (a new burst): another dice */
+                turn(EN_SELECT, 1); fm1_ms += 1200u;
+                for (j = 0; j < 8u; j++) same &= TSEL->p[P_E0 + j] == d1[j];
+            }
+            ok &= !same && ui.confirm == CF_DICE_SOUND;
+            press(B_OCTDN); frame();                                  /* CANCEL: the sound before the first dice */
+            for (j = 0; j < 8u; j++) ok &= TSEL->p[P_E0 + j] == orig[j];
+            ok &= !ui.confirm && msg_is("SOUND BACK");
+            bad += check("0.6.65: EDIT (0.6.67: held) + SELECT dices at once under KEEP DICED SOUND?; SELECT again dices again; CANCEL "
+                         "brings the sound back", ok);
+            fm1_ms += 1200u;
+            held_turn(B_EDIT, 1);
+            for (j = 0; j < 8u; j++) d1[j] = TSEL->p[P_E0 + j];
+            press(B_OCTUP); frame();                                  /* OK: the dice stays */
+            ok = !ui.confirm && msg_is("SOUND DICED");
+            for (j = 0; j < 8u; j++) ok &= TSEL->p[P_E0 + j] == d1[j];
         }
-        bad += check("0.9.9-seq2e: EDIT + SELECT browses the engine's presets (was the sound's dice), the page kept, no dialog", ok);
+        bad += check("0.6.21: EDIT + SELECT dices the sound (not the tempo), once a turn burst (0.6.65: OK keeps it; 0.9.9-seq2f: again, not the presets)", ok);
     }
     {   /* (0.6.67) the MIXER: SELECT the next of GLO's pages, the tempo kept */
         go_title("MIXER"); frame(); fm1_ms += 1200u;
@@ -11118,15 +11136,15 @@ static int test_lz_dialogs(void)
     ok &= !ui.confirm;
     bad += check("0.8.5 dialogs: a question under the NOTICE tab, a card with its THEME rule; OCT- NO", ok);
     ui_power_on(); go_title("EDIT 1"); frame(); fm1_ms += 1200u;
-    held_turn(B_SEQ, 1);                                /* (0.9.9-seq2e: EDIT + SELECT the presets; SEQ's dice) */
-    ok = ui.confirm == CF_DICE_SEQ && dlg_tab_lit(1);
+    held_turn(B_EDIT, 1);                               /* (0.9.9-seq2f: EDIT + SELECT the sound dice again) */
+    ok = ui.confirm == CF_DICE_SOUND && dlg_tab_lit(1);
     e0 = TSEL->p[P_E0];
     fm1_ms += 1200u; turn(EN_SELECT, 1); fm1_ms += 1200u; turn(EN_SELECT, 1); frame();
-    ok &= ui.confirm == CF_DICE_SEQ && dlg_tab_lit(1);
+    ok &= ui.confirm == CF_DICE_SOUND && dlg_tab_lit(1);
     (void)e0;
     press(B_OCTUP); frame();
     ok &= !ui.confirm;
-    bad += check("0.8.5 dialogs: SEQ + SELECT opens DICE (its tab), SELECT re-rolls inside it, OCT+ keeps", ok);
+    bad += check("0.8.5 dialogs: EDIT + SELECT opens DICE (its tab), SELECT re-rolls inside it, OCT+ keeps", ok);
     (void)x; (void)y; (void)acc;
     bad += test_toasts();                               /* (0.9.5: the toast a pill over the live page; was boxed alone in it) */
     bad += test_card_heat();

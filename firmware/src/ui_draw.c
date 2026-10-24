@@ -1245,8 +1245,8 @@ static void draw_foot(void)
                                                          * the header's centre) */
     lz_blit(0, foot_y());
 }
-/* the EDIT layer's cards (ui_layer.c; 0.9.9-seq2e): No. (the engine's sounds: SELECT's list, ui.c eng_list_step), ENG,
- * FAV (PRESETS' KNOB 3 marks it), an empty card. KNOB 1..4 are MOMENTARY there (ui_layer.c mom_knob) */
+/* the EDIT layer's cards (ui_layer.c; 0.9.9-seq2f): ENG, No. (the engine's sounds: PRESETS' list, ui.c eng_list_pos),
+ * FAV (PRESETS' KNOB 3 marks it), an empty card. KNOB 1..4 are MOMENTARY there (ui_layer.c mom_knob); SELECT the dice */
 static void engine_columns(void)
 {
     uint32_t total, cur = eng_list_pos(&total), e = trk_eng(TSEL);
@@ -1255,9 +1255,9 @@ static void engine_columns(void)
     str_cpy(u, "/", 8);
     fmt_int(u + 1, (int32_t)total);
     if (cur + 1u >= 100u && total >= 100u) u[0] = 0;
-    draw_column(0, "No.", val, u, VAL(0u), total > 1u ? (int32_t)(cur * 1000u / (total - 1u)) : 0, ICON_NONE);
-    draw_column(1, "ENG", ENGINES[e]->name, "", VAL(1u), (int32_t)eng_rank(e) * 1000 / (NENG_SHOWN > 1 ? NENG_SHOWN - 1 : 1),
+    draw_column(0, "ENG", ENGINES[e]->name, "", VAL(0u), (int32_t)eng_rank(e) * 1000 / (NENG_SHOWN > 1 ? NENG_SHOWN - 1 : 1),
                 engine_icon(ENGINES[e]->name));
+    draw_column(1, "No.", val, u, VAL(1u), total > 1u ? (int32_t)(cur * 1000u / (total - 1u)) : 0, ICON_NONE);
     draw_column(2, "FAV", preset_favorite() ? "ON" : "OFF", "", VAL(2u), -1, ICON_X_STAR);
     draw_column(3, "", "", "", T_THEME, -1, ICON_NONE);
 }

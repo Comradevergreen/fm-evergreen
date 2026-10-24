@@ -1848,7 +1848,6 @@ static int layer_set_open(void);
 static uint32_t layer_oct(uint32_t pressed, uint32_t oct);
 static void layer_oct_open(uint32_t pressed);
 static int layer_allowed(void);
-static uint8_t ed_sel;                                  /* (0.9.9-seq2e) EDIT + SELECT turned this pass: a combo */
 static void mom_knob(uint32_t k, int32_t s);            /* (0.9.9-seq2e) MOMENTARY: EDIT held + KNOB 1..4 */
 static void mom_poll(void);
 static void mom_forget(uint32_t t);
@@ -2050,7 +2049,7 @@ static void ui_input_frame(void)
     layer_masks();                                      /* seq.c: keys pressed with a layer's button are its own */
     {   /* (0.6.67) a button held + SELECT (rule 5): its dice (HOME the generator, GEN; EDIT the sound, SEQ the sequence,
          * LFO the LFO, FX the effects; GLO + SELECT the tempo), ENV SCL ARP SAVE their chain (nav_jump); the button's tap
-         * and layer swallowed (0.9.9-seq2e: EDIT + SELECT the presets instead, ed_sel), and the turn's last detents for a moment after it is let go (no page moved by them). Not in
+         * and layer swallowed, and the turn's last detents for a moment after it is let go (no page moved by them). Not in
          * the menu, a dialog, NAME. (0.9.2) A button held + PRESETS: nothing (rule 3; until 0.9.1 its pages) */
         static uint32_t pj_sel_ms;
         uint32_t f = held_family(), hb = (fm1_in.buttons >> panel.btn[B_HOME]) & 1u;
@@ -2059,16 +2058,14 @@ static void ui_input_frame(void)
             (ps = panel_enc(EN_SELECT)) != 0) {
             uint32_t k = f == FAM_EDIT ? CF_DICE_SOUND : f == FAM_SEQ ? CF_DICE_SEQ : f == FAM_LFO ? CF_DICE_LFO :
                          f == FAM_FX ? CF_DICE_FX : 0u;
-            if (f == FAM_EDIT) {                        /* (0.9.9-seq2e) EDIT held: the engine's presets, as the layer's
-                                                         * KNOB 2 did (ui.c eng_list_step); the layer stays (not dice) */
-                mom_forget(song.sel);                   /* (a MOMENTARY value of the sound replaced: not put back) */
-                eng_list_step(ps);
-                ed_sel = 1;
-            } else if (f == FAM_COUNT) {                /* HOME held: GEN, HOME's generator */
+            if (f == FAM_COUNT) {                       /* HOME held: GEN, HOME's generator */
                 ui.home_t0 |= 2u;
                 if (!pj_sel_ms || fm1_ms - pj_sel_ms > 400u)
                     nav_go(SEC_HOME, 4u + gen_page(), 1);
             } else if (k) {
+                if (f == FAM_EDIT)                      /* (0.9.9-seq2f) EDIT + SELECT: the sound dice again (SELECT is
+                                                         * no sound parameter; the presets: PRESETS only) */
+                    mom_forget(song.sel);               /* (a MOMENTARY value of the sound replaced: not put back) */
                 part_dice(k);
                 btn_used(FAM_BTN[f]);
             } else {
@@ -2125,7 +2122,6 @@ static void ui_input_frame(void)
                 } else
                     combo = 1;
             }
-        combo |= ed_sel;                                /* (EDIT + SELECT: no tap; the layer shows the preset) */
         panel_enc(EN_PRESET);                           /* (a stray turn would load another sound) */
         {   /* (0.8.5) ALGORITHM: the layer's lens, MAP <-> KNOBS <-> STATE (no wrap; was dropped: another track there,
              * OCT- put back the layer's track only) */
@@ -2148,7 +2144,6 @@ static void ui_input_frame(void)
             if (panel_enc(EN_K1 + k) != 0)
                 combo = 1;                              /* (with the button let go this frame: no tap) */
     }
-    ed_sel = 0;
     if (!lay)
         ly_used = 0;
     else if (combo)
