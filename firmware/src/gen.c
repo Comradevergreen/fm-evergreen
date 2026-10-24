@@ -1355,6 +1355,13 @@ static void gen_sound(track_t *t, uint32_t role, uint32_t ri)
         if (r->wv & 0x40u) t->p[P_E2] = 0;
     }
     t->p[P_ATK] = grg(r->atk, 8); t->p[P_DEC] = grg(r->dec, 8); t->p[P_SUS] = grg(r->sus, 8); t->p[P_REL] = grg(r->rel, 8);
+    {   /* (gen3) the envelope by the role, whatever the archetype (gen_tables.c ENV_RULE): a lead never at full sustain, a
+         * pluck or a stab short, a held pad slow in and out */
+        const uint8_t *er = ENV_RULE[role == RL_LEAD ? ((r->sus & 15u) < 7u) : role == RL_ARP ? 1 : role == RL_BASS ? 4 : role != RL_PAD ? 5 :
+                                     GSTAB(gs.g->pads) ? 2 : (0x103u >> gs.g->pads) & 1u ? 3 : 5];   /* (held: HOLD SWELL DRONE) */
+        for (i = 0; i < 4u; i++)
+            t->p[P_ATK + i] = (int16_t)clamp(t->p[P_ATK + i], (er[i] >> 4) * 8, (er[i] & 15u) * 8 + 7);
+    }
     if (e == EG_FM) t->p[P_E2] = (int16_t)clamp(t->p[P_E2] - grr(4, 20), -64, 63);   /* (warmer) */
     if (ft != 7u) {
         int32_t cut = grg(r->cut, 8), res = grg(r->res, 8);
@@ -1365,6 +1372,8 @@ static void gen_sound(track_t *t, uint32_t role, uint32_t ri)
         if (e == EG_A) { t->p[P_E4] = (int16_t)clamp(cut, 0, 127); t->p[P_E5] = (int16_t)clamp(res, 0, ri == SR_ACID ? 120 : 112); }
         else { t->p[P_FCUT] = (int16_t)clamp(cut, 0, 127); t->p[P_FRES] = (int16_t)res; }
         t->p[P_ED_FLT] = grg(r->envf, 4);
+        if (role != RL_PAD && role != RL_TEX && t->p[P_ED_FLT] < 6)   /* (gen3: the filter's envelope on a bass, a lead, an arp) */
+            t->p[P_ED_FLT] = (int16_t)(6 + (gs.complex >> 4));
     }
     if (r->lfo) {                                       /* the LFO on the filter: a slow drift, or on the beat */
         uint32_t lr = r->lfo & 15u;
@@ -1378,6 +1387,12 @@ static void gen_sound(track_t *t, uint32_t role, uint32_t ri)
                                                          * 160 .. 450 ms (the attack clean), the filter's LFO off under it */
         t->p[P_LWAVE] = 0; t->p[P_LRATE] = (int16_t)grr(GVIB_RLO, GVIB_RHI); t->p[P_LFADE] = (int16_t)grr(70, 84);
         t->p[P_LD_PIT] = 1; t->p[P_LD_FLT] = 0;
+    } else if (role == RL_LEAD) {                       /* (gen3) else the filter moving: slow (0.1 .. 0.5 Hz), shallow */
+        t->p[P_LWAVE] = 0; t->p[P_LD_PIT] = 0;
+        if (t->p[P_LD_FLT] < 3) { t->p[P_LRATE] = (int16_t)grr(12, 44); t->p[P_LD_FLT] = (int16_t)grr(3, 8); }
+    } else if (role == RL_PAD && GSTAB(gs.g->pads) && gch(GG_MUT(GGR) ? 70 : 40)) {   /* (gen3) a stab's filter swept over
+                                                         * 2 or 4 bars (Basic Channel, the hypnotic stabs) */
+        t->p[P_LWAVE] = 0; t->p[P_LRATE] = (int16_t)(gch(50) ? -1 : -2); t->p[P_LD_FLT] = (int16_t)grr(8, 16);
     } else if (role == RL_PAD && gch(35)) {             /* (a pad breathing: a slow tremolo or a slow pan) */
         if (gch(50)) { t->p[P_LWAVE] = 0; t->p[P_LRATE] = (int16_t)grr(6, 18); t->p[P_LD_AMP] = (int16_t)grr(12, 30); }
         else { t->p[P_APDEP] = (int16_t)grr(25, 55); t->p[P_APSYNC] = 1; t->p[P_APRATE] = (int16_t)grr(1, 3); }
@@ -1475,7 +1490,13 @@ static void gen_mix(track_t *t, uint32_t r)
     int32_t wet = (int32_t)g->wet + (gs.energy < 34 ? 20 : gs.energy > 66 ? -15 : 0), hum = (int32_t)(gs.human);
     static const uint8_t HV[RL_N] = {20, 25, 45, 60, 35, 40}, HT[RL_N] = {0, 0, 30, 25, 10, 60}, HG[RL_N] = {0, 10, 10, 40, 30, 0};
     wet = clamp(wet, 0, 100);
-    t->p[P_LEVEL] = (int16_t)(r == RL_DRUM ? 94 : r == RL_BASS ? 102 : r == RL_LEAD ? 88 : r == RL_TEX ? (g->tex == SR_NOISE ? 44 : 54) : r == RL_PAD ? 80 : 82);
+    /* (gen3) the parts round the drums given their room back (gen2 left the drums 60 .. 93 % of the parts' energy in
+     * house, techno, italo, synth pop, darkwave, electro ..): the bass, the chords, the arp and the lead 8 .. 12 dB up,
+     * the drums 5 dB, then the genre's own lift (GG_LIFT: -3 .. +7.5 dB on the four, by what its kit and its kick weigh).
+     * The whole louder into the LEVELER (fx.c lev_block, 2:1 toward its target, x0.35 .. x2): gen2's mix sat ~3 dB under
+     * gen1's; now its gain ~0.5 .. 0.8 (inside its range), the mix as loud as gen1's (gen_test: the drums' share, the gain) */
+    t->p[P_LEVEL] = (int16_t)clamp((r == RL_DRUM ? 104 : r == RL_BASS ? 118 : r == RL_LEAD ? 112 : r == RL_TEX ? (g->tex == SR_NOISE ? 62 : 74) : 104) +
+                                   (r != RL_DRUM && r != RL_TEX ? GG_LIFT(GGR) : 0), 1, 127);   /* (the genre's own: GGRAM) */
     t->p[P_PAN] = (int16_t)(r == RL_ARP ? grr(-30, -10) : r == RL_TEX ? grr(10, 30) : r == RL_PAD ? grr(-8, 8) : r == RL_LEAD ? grr(-6, 12) : 0);
     t->p[P_REV] = (int16_t)clamp((r == RL_PAD || r == RL_TEX ? grr(45, 95) : r == RL_LEAD ? grr(30, 70) : r == RL_ARP ? grr(20, 60) :
                                   r == RL_DRUM ? grr(4, 20) : grr(0, 6)) * (40 + wet) / 100, 0, 127);
@@ -1884,13 +1905,19 @@ static void gen_post(void)
     }
     /* (0.8.3: the lead's clashes with the bass are avoided as it is written, against the chord's root: so turning
      * BASS leaves the lead as it was) */
-    for (k = 0; k < NTRK; k++) {                        /* the breath: each fourth bar's last two steps softer */
+    for (k = 0; k < NTRK; k++) {                        /* the breath: each fourth bar's last two steps softer; (gen3) the
+                                                         * lead's and the arp's accents: the bar's one up, the offbeats down */
         track_t *t = &trk[k];
-        uint32_t len = dlen(t);
-        if (len < 64u || k == dr) continue;
-        for (i = 0; i < len; i++)
-            if ((i / 16u) % 4u == 3u && i % 16u >= 14u && t->step[i].time == ST_NOTE)
-                t->step[i].vel = (uint8_t)clamp((int32_t)t->step[i].vel * 60 / 100, 30, 127);
+        uint32_t len = dlen(t), r = gs.role[k];
+        if (k == dr) continue;
+        for (i = 0; i < len; i++) {
+            step_t *s = &t->step[i];
+            if (s->time != ST_NOTE) continue;
+            if ((r == RL_LEAD || r == RL_ARP) && !gx.on)
+                s->vel = (uint8_t)clamp((int32_t)s->vel + (i % 16u == 0u ? 14 : i % 4u == 0u ? 4 : i % 2u ? -10 : -4), 30, 127);
+            if (len >= 64u && (i / 16u) % 4u == 3u && i % 16u >= 14u)
+                s->vel = (uint8_t)clamp((int32_t)s->vel * 60 / 100, 30, 127);
+        }
     }
     if (gs.complex > 30u) {                             /* step components (0.6.97: more of them, some every other loop):
                                                          * the lead echoed, an octave up or bent, the arp jumping its
@@ -1912,13 +1939,19 @@ static void gen_post(void)
                     if (s->time != ST_NOTE || !gin_mode(s->note[0])) continue;
                     uint32_t cc = c == 0u ? CP_ECHO : c == 1u ? CP_BEND : CP_PULSE;
                     comp_legacy(s, 0, cc, cc == CP_ECHO ? gr() % 2u : cc == CP_BEND ? (gch(50) ? 2u : 10u) : 1u);
-                } else {                                /* (the arp: its chord's tones; 0.8.3: no RAND, no WALK) */
-                    uint32_t c = gr() % 3u;
-                    uint32_t cc = c == 0u ? CP_OCT : c == 1u ? CP_ECHO : CP_CLIMB;
-                    comp_legacy(s, 0, cc, cc == CP_OCT ? 4u : cc == CP_CLIMB ? CP_WARG(2u + gr() % 6u, gch(50) ? 2u : 0u, gr() % 2u) : 0u);
+                } else {                                /* (the arp: its chord's tones; 0.8.3: no RAND, no WALK; gen3: the
+                                                         * SEQ walker, its steps from this one on) */
+                    uint32_t c = gr() % 4u;
+                    uint32_t cc = c == 0u ? CP_OCT : c == 1u ? CP_ECHO : c == 2u ? CP_CLIMB : CP_ARPQ;
+                    comp_legacy(s, 0, cc, cc == CP_OCT ? 4u : cc == CP_CLIMB ? CP_WARG(2u + gr() % 6u, gch(50) ? 2u : 0u, gr() % 2u) :
+                                cc == CP_ARPQ ? CP_ARG(0u, 0u, 0u) : 0u);
                     if (c == 1u && gs.energy > 60u && gch(50)) { s->comp = 0; s->clen[0] = 0; step_set_ratchet(s, 2); }
                 }
-                if (s->comp && gch(40)) ST_EVERY_SET(s, gch(50) ? EV_1_2 : EV_2_2);   /* (every other loop) */
+                if (s->comp && gch(55)) {               /* (every other loop; gen3: or once in four, the third of four:
+                                                         * 1:4 3:4; no table: the sound's merged constants stay put) */
+                    uint32_t q = gr() % 4u;
+                    ST_EVERY_SET(s, q < 2u ? EV_1_2 + q : EV_1_4 + 2u * (q - 2u));
+                }
                 got++;
             }
         }
@@ -2236,7 +2269,7 @@ static void gen_make(void)
     song.g[G_CDEPTH] = (int16_t)grr(20, 80);
     song.g[G_DUCK] = (int16_t)(gs.act[RL_DRUM] ? (g->kick_mode == KM_SUSTAIN ? grr(30, 50) : grr(14, 30)) : 0);
     song.g[G_DREL] = (int16_t)(g->drum == DM_TECHNO || g->drum == DM_HARD ? grr(15, 30) : grr(25, 45));
-    song.g[G_CLIP] = (int16_t)(gs.act[RL_DRUM] ? grr(25, 55) : grr(10, 30));
+    song.g[G_CLIP] = (int16_t)(gs.act[RL_DRUM] ? grr(35, 65) : grr(10, 30));   /* (gen3: a little more: the peaks rounded) */
     song.g[G_PUNCH] = (int16_t)(gs.act[RL_DRUM] ? grr(45, 85) : 0);
     if (gx.on) {                                        /* (0.8.6) EXPLORE: the grain delay's pitch and spray, a ping-pong,
                                                          * the feedback short of self-oscillation */

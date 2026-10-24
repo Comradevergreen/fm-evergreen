@@ -11,6 +11,10 @@
  * archetypes and grammar (the acid house's 303 ..), one seed one project in every genre, the CPU budget.
  * (0.9.9-gen2) The owner's ear: the acid line's densities (X0X's TB-3PO), a SLIDE played legato (no retrigger, gliding), the
  * leads' vibrato shallow and fast, the pads' pitch LFO a drift at most, the drums' decays, GLUE and level.
+ * (0.9.9-gen3) The rules by role: no lead at full sustain (44..75 %, a bell's or a pluck's lead short), every lead moving
+ * (a vibrato or a slow, shallow filter LFO) and its filter's envelope on, the basses' too, the plucks and stabs short;
+ * the mix: the drums at most 60 % of the parts' energy in every genre (fx.c's stems: what each part adds, before the
+ * leveler), the LEVELER's gain inside its range (x0.35 .. x2) and the mix as loud as gen1's.
  *   cc -O1 -w -Ibuild/gen -Ifirmware/src -Itests -o build/host/gen_test tests/gen_test.c -lm */
 #define UI_TEST_NO_MAIN 1
 #include "ui_test.c"
@@ -1007,15 +1011,99 @@ int main(void)
                             kit_bad++;
                             printf("  %s: lane %u DECAY %u / %u over %u\n", gs.g->name, l, dx_kit[l].a[DXP_DECAY], dx_kit[l].b[DXP_DECAY], DMAX[l]);
                         }
-                    if (dx_glue > 8u || d->p[P_LEVEL] > 96 || DX_LAY_FB(dx_lay[DV_SNARE]) > 4u) kit_bad++;
+                    if (dx_glue > 8u || d->p[P_LEVEL] > 106 || DX_LAY_FB(dx_lay[DV_SNARE]) > 4u) kit_bad++;   /* (gen3: the mix
+                                                         * 9 dB louder into the leveler: 104; the share below) */
                 }
             }
         printf("gen: leads %u (vibrato on %u), %u off the rule; pads %u off; kits %u, %u over\n", leads, vib, lfo_bad, pad_bad, kits, kit_bad);
         bad += gcheck("  the leads' and arps' pitch LFO 19 cents at most, 5 Hz or faster, faded in, no filter LFO with it (all genres, EXPLORE)",
                       !lfo_bad && vib && leads);
         bad += gcheck("  the pads', chords', textures' pitch LFO a slow drift at most (PITCH 1, under 0.8 Hz)", !pad_bad);
-        bad += gcheck("  the drums: kick, clap, hats, toms DECAY under 96 / 64 / 32 / 80 / 80, GLUE 8 at most, LEVEL 96 at most, FEEDBK 4",
+        bad += gcheck("  the drums: kick, clap, hats, toms DECAY under 96 / 64 / 32 / 80 / 80, GLUE 8 at most, LEVEL 106 at most, FEEDBK 4",
                       kits && !kit_bad);
+    }
+    /* ---- (0.9.9-gen3) the rules by role, every genre x 3 seeds: the leads under full sustain (SUS 95 at most: 75 %),
+     * moving (a vibrato, or a filter LFO slow and shallow: under 0.8 Hz or synced, depth 3..16), their filter's
+     * envelope on; the basses' envelope on the filter where they have one; the arps and the stabbed chords short
+     * (SUS 47 at most, the attack fast) */
+    {
+        uint32_t sd, leads = 0, lead_bad = 0, bass_bad = 0, short_bad = 0, vib = 0, flfo = 0;
+        for (g = 0; g < NGENRE; g++)
+            for (sd = 0; sd < 3u; sd++) {
+                gen_reset();
+                gen_with(g + 1u, 77u + 13u * g + 1000u * sd, 60, 0);
+                for (k = 0; k < NTRK; k++) {
+                    const track_t *t = &trk[k];
+                    uint32_t r = gs.role[k];
+                    if (!gs.act[r] || (r == RL_TEX && k != gs.trk_of[RL_TEX])) continue;
+                    if (r == RL_LEAD) {
+                        int mv = t->p[P_LD_PIT] == 1 || (t->p[P_LD_FLT] >= 3 && t->p[P_LD_FLT] <= 16 && t->p[P_LRATE] < 52);
+                        leads++;
+                        vib += t->p[P_LD_PIT] != 0;
+                        flfo += t->p[P_LD_FLT] != 0;
+                        if (t->p[P_SUS] > 95 || !mv || (t->p[P_FTYPE] != 7 && t->p[P_ED_FLT] <= 0)) {
+                            lead_bad++;
+                            printf("  %s lead: SUS %d, LFO PITCH %d FILTER %d RATE %d, ENV>FILTER %d\n", GENRE[g].name, t->p[P_SUS],
+                                   t->p[P_LD_PIT], t->p[P_LD_FLT], t->p[P_LRATE], t->p[P_ED_FLT]);
+                        }
+                    } else if (r == RL_BASS && t->p[P_FTYPE] != 7 && t->p[P_ED_FLT] <= 0) bass_bad++;
+                    else if ((r == RL_ARP || (r == RL_PAD && GSTAB(gs.g->pads))) && (t->p[P_SUS] > 47 || t->p[P_ATK] > 7)) short_bad++;
+                }
+            }
+        printf("gen: leads %u: vibrato %u, filter LFO %u, %u off the rule; basses %u, plucks / stabs %u off\n", leads, vib, flfo,
+               lead_bad, bass_bad, short_bad);
+        bad += gcheck("(0.9.9-gen3) every genre x 3: no lead at full sustain, each moving (vibrato / slow filter LFO), its filter's envelope on",
+                      leads && !lead_bad && vib && flfo);
+        bad += gcheck("  the basses' filter envelope on; the arps and the stabbed chords short (SUS 37 %, a fast attack)", !bass_bad && !short_bad);
+    }
+    /* ---- (0.9.9-gen3) the mix, every genre x 2 seeds, 4 bars: the drums' share of the parts' energy (fx.c stem_buf: what
+     * each part adds to the mix, before the leveler; the FX return with the rest) at most 60 %; the LEVELER's gain on
+     * average inside its range (x0.4 .. x1.9), the mix's RMS -15.5 dBFS or louder on average (gen2's: -16.9, gen1's ~-13.6) */
+    {
+        uint32_t sd, over = 0, lev_bad = 0, n = 0;
+        double worst = 0, rms_db = 0;
+        const char *wn = "";
+        for (g = 0; g < NGENRE; g++)
+            for (sd = 0; sd < 2u; sd++) {
+                double ed = 0, ea = 0, acc = 0, lsum = 0, sh;
+                uint32_t b, nb, i, dr;
+                gen_reset();
+                gen_with(g + 1u, 2026u + 7u * g + 1000u * sd, 60, 0);
+                dr = gs.trk_of[RL_DRUM];
+                nb = (uint32_t)(4u * 4u * 60u * FS / (uint32_t)song.g[G_BPM] / CTL);
+                song.master_q12 = 4096;
+                transport_req = 1;
+                for (b = 0; b < nb; b++) {
+                    int32_t o[2 * CTL];
+                    if (b % 32u == 0u) { ui_input(); song_poll(); host_ticks += 20000u; fm1_ms += 20u; }
+                    fx_stems = 1;
+                    mix_block(o, CTL);
+                    lsum += lev_g / 32768.0;
+                    for (i = 0; i < 2u * CTL; i++) acc += (double)o[i] * o[i];
+                    for (i = 0; i < CTL; i++) {
+                        uint32_t p;
+                        for (p = 0; p < NPART; p++) {
+                            double e = (double)stem_buf[p][i] * stem_buf[p][i];
+                            ea += e;
+                            if (p == dr && gs.act[RL_DRUM]) ed += e;
+                        }
+                        ea += 0.25 * ((double)stem_fx[0][i] * stem_fx[0][i] + (double)stem_fx[1][i] * stem_fx[1][i]);
+                    }
+                }
+                fx_stems = 0;
+                transport_req = 2;
+                { int32_t o[2 * CTL]; ui_input(); mix_block(o, CTL); }
+                sh = ea > 0 ? ed / ea : 0;
+                if (sh > worst) { worst = sh; wn = GENRE[g].name; }
+                if (sh > 0.60) { over++; printf("  %s seed %u: the drums %.1f %% of the energy\n", GENRE[g].name, 2026u + 7u * g + 1000u * sd, 100 * sh); }
+                lev_bad += lsum / nb < 0.4 || lsum / nb > 1.9;
+                rms_db += 20 * log10(sqrt(acc / (2.0 * nb * CTL)) / 32768.0 + 1e-9);
+                n++;
+            }
+        printf("gen: the drums' share at most %.1f %% (%s); the mix %.1f dBFS RMS on average, the leveler's gain off its range %u times\n",
+               100 * worst, wn, rms_db / n, lev_bad);
+        bad += gcheck("(0.9.9-gen3) every genre x 2: the drums 60 % of the parts' energy at most, the leveler in its range, the mix loud",
+                      !over && !lev_bad && rms_db / n >= -15.5);
     }
     /* ---- (0.9.9-gen1) the same seed, the same piece (and a different one from another seed), every genre */
     {

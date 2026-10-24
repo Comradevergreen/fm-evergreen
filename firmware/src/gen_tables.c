@@ -347,15 +347,15 @@ static const grecipe_t RECIPE[SR_N] = {
     /* ---- arps, leads */
     [SR_PLUCK]    = {{{EG_A, 20}, {EG_FM, 10}, {EG_A, 8}}, GR(0, 7), GR(40, 63), GR(0, 23), GR(32, 63), GR(56, 87), GR(24, 47), GR4(28, 55), GFT(0, 0), GNOWV, 0, GDC(0, 8), V_POLY},
     [SR_BELL]     = {{{EG_FM, 11}, {EG_FM, 8}, {EG_A, 13}}, GR(0, 7), GR(80, 103), GR(0, 7), GR(72, 103), GR(72, 103), GR(0, 15), GR4(0, 11), GFT(0, 0), GNOWV, 0, GDC(0, 8), V_POLY},
-    [SR_LEAD]     = {{{EG_A, 21}, {EG_A, 0}, {EG_PH, 14}}, GR(0, 23), GR(48, 87), GR(32, 95), GR(32, 71), GR(56, 87), GR(16, 39), GR4(16, 39), GFT(0, 16), GNOWV, GLFO(4, 6), GDC(12, 12), V_LEGATO},
-    [SR_VOXLEAD]  = {{{EG_VO, 1}, {EG_VO, 6}, {EG_A, 21}}, GR(0, 23), GR(56, 87), GR(40, 95), GR(32, 71), GR(56, 95), GR(8, 31), GR4(8, 23), GFT(0, 20), GNOWV, GLFO(4, 6), GDC(0, 20), V_LEGATO},
+    [SR_LEAD]     = {{{EG_A, 21}, {EG_A, 0}, {EG_PH, 14}}, GR(0, 23), GR(48, 87), GR(56, 95), GR(32, 71), GR(56, 87), GR(16, 39), GR4(16, 39), GFT(0, 16), GNOWV, GLFO(4, 6), GDC(12, 12), V_LEGATO},
+    [SR_VOXLEAD]  = {{{EG_VO, 1}, {EG_VO, 6}, {EG_A, 21}}, GR(0, 23), GR(56, 87), GR(56, 95), GR(32, 71), GR(56, 95), GR(8, 31), GR4(8, 23), GFT(0, 20), GNOWV, GLFO(4, 6), GDC(0, 20), V_LEGATO},
     [SR_CHIP]     = {{{EG_LO, 3}, {EG_LO, 13}, {EG_LO, 16}}, GR(0, 7), GR(40, 79), GR(24, 79), GR(16, 47), GR(72, 111), GR(8, 31), GR4(8, 27), GFT(0, 0), GNOWV, 0, 0, V_LEGATO},
     [SR_KEYS]     = {{{EG_A, 23}, {EG_PH, 15}, {EG_WH, 6}}, GR(0, 7), GR(64, 87), GR(16, 55), GR(40, 71), GR(56, 95), GR(0, 23), GR4(4, 19), GFT(0, 0), GNOWV, 0, GDC(0, 20), V_POLY},
     /* ---- textures */
     [SR_DRONE]    = {{{EG_A, 22}, {EG_A, 19}, {EG_FM, 4}}, GR(88, 119), GR(88, 103), GR(120, 127), GR(96, 127), GR(32, 63), GR(16, 39), GR4(0, 11), GFT(0, 0), GNOWV, GLFO(16, 1), GDC(0, 44), V_POLY},
     [SR_NOISE]    = {{{EG_NO, 4}, {EG_NO, 7}, {EG_NO, 5}}, GR(80, 119), GR(88, 103), GR(104, 127), GR(80, 119), 0, 0, 0, GFT(7, 0), GNOWV, 0, 0, V_POLY},
     [SR_TEXTURE]  = {{{EG_NO, 5}, {EG_NO, 6}, {EG_LO, 11}}, GR(64, 111), GR(88, 103), GR(104, 127), GR(88, 119), GR(40, 71), GR(16, 47), GR4(0, 11), GFT(2, 0), GNOWV, GLFO(20, 2), GDC(0, 32), V_POLY},
-    [SR_HOOVER]   = {{{EG_A, 17}, {EG_A, 6}, {EG_PH, 6}}, GR(0, 15), GR(56, 95), GR(56, 111), GR(32, 63), GR(56, 95), GR(8, 23), GR4(8, 31), GFT(0, 0), GNOWV, 0, GDC(24, 48), V_POLY},
+    [SR_HOOVER]   = {{{EG_A, 17}, {EG_A, 6}, {EG_PH, 6}}, GR(0, 15), GR(56, 95), GR(56, 95), GR(32, 63), GR(56, 95), GR(8, 23), GR4(8, 31), GFT(0, 0), GNOWV, 0, GDC(24, 48), V_POLY},
     [SR_WALL]     = {{{EG_A, 22}, {EG_A, 15}, {EG_A, 11}}, GR(24, 63), GR(88, 103), GR(104, 127), GR(80, 111), GR(48, 71), GR(0, 7), GR4(0, 7), GFT(0, 0), GNOWV, GLFO(8, 2), GDC(40, 56), V_POLY},
     [SR_GTR]      = {{{EG_PH, 13}, {EG_PH, 2}, {EG_A, 8}}, GR(0, 15), GR(64, 95), GR(56, 103), GR(48, 79), GR(56, 79), GR(16, 39), GR4(4, 19), GFT(2, 0), GNOWV, 0, GDC(12, 28), V_POLY},
     [SR_SINEKEY]  = {{{EG_A, 5}, {EG_FM, 14}, {EG_A, 23}}, GR(0, 7), GR(64, 95), GR(24, 63), GR(48, 79), GR(56, 95), GR(0, 15), GR4(0, 15), GFT(0, 0), GNOWV, 0, GDC(0, 8), V_POLY},
@@ -369,8 +369,21 @@ static const grecipe_t RECIPE[SR_N] = {
     /* techno's rolling bass: a saw (or a square), short, resonant, the envelope on it, driven */
     [SR_TECHBASS] = {{{EG_A, 14}, {EG_A, 2}, NO_}, GR(0, 7), GR(40, 55), GR(0, 31), GR(16, 31), GR(32, 55), GR(32, 55), GR4(20, 39), GFT(0, 0), GWV(0, 1, 1), 0, GDC(32, 0), V_LEGATO},
     /* trance's supersaw (SAW3), chorused */
-    [SR_SUPERSAW] = {{{EG_A, 6}, {EG_A, 17}, {EG_A, 0}}, GR(0, 15), GR(64, 95), GR(80, 119), GR(40, 71), GR(72, 103), GR(8, 23), GR4(8, 23), GFT(0, 0), GWV(7, 7, 0), 0, GDC(0, 48), V_POLY},
+    [SR_SUPERSAW] = {{{EG_A, 6}, {EG_A, 17}, {EG_A, 0}}, GR(0, 15), GR(64, 95), GR(64, 95), GR(40, 71), GR(72, 103), GR(8, 23), GR4(8, 23), GFT(0, 0), GWV(7, 7, 0), 0, GDC(0, 48), V_POLY},
 };
+/* (gen3) the amp envelope a role keeps whatever its archetype (gen.c gen_sound clamps ATK DEC SUS REL into these GR ranges):
+ * a LEAD's sustain 44..75 % (never the organ's or the choir's full one: a medium decay to it, a short release; a bell's,
+ * an EP's, a pluck's lead, its archetype's sustain under 56, a pluck's), an ARP's a pluck's (a fast attack, a short-medium decay, a low sustain), the CHORDS stabbed short (STAB PULSE DUB SKANK COMP
+ * BROKEN TRANCE: GSTAB) or held slow in and out (HOLD SWELL DRONE), a BASS fast in; the rest as the archetype has it */
+static const uint8_t ENV_RULE[6][4] = {
+    {GR(0, 23), GR(48, 95), GR(56, 95), GR(16, 47)},    /* lead */
+    {GR(0, 7), GR(32, 79), GR(0, 39), GR(16, 63)},      /* arp: a pluck */
+    {GR(0, 7), GR(32, 71), GR(0, 47), GR(16, 47)},      /* chords stabbed */
+    {GR(16, 127), GR(48, 127), GR(56, 127), GR(64, 127)},   /* chords held */
+    {GR(0, 15), GR(24, 127), GR(0, 127), GR(8, 63)},    /* bass */
+    {GR(0, 127), GR(0, 127), GR(0, 127), GR(0, 127)},   /* the others */
+};
+#define GSTAB(p) ((0xC7Cu >> (p)) & 1u)                 /* CS_STAB PULSE DUB SKANK COMP BROKEN TRANCE: the chords short */
 /* (0.6.95) a throw its own: the neighbours a throw may take instead (the drum map's family, the chords' play, a role's
  * recipe), so two throws of a genre are not the same piece in another key */
 static const uint8_t DM_ALT[DM_NONE][2] = {
@@ -426,183 +439,244 @@ typedef struct {
 #define AMT(d, b, c, a, l) {d, b, c, a, l}
 static const ggenre_t GENRE[] = {
     /* ---- the club: house */
-    {"HOUSE", 122, 127, 8, {SC_MIN, SC_DOR, SC_MAJ, SC_MIN}, DM_HOUSE, 100, KIT_909, 0, HC_HOUSE, FL_ROLL, 0,
+    /* Chicago / New York house (Frankie Knuckles, Marshall Jefferson, Kerri Chandler): a 909 four on the floor, the
+     * open hat off the beat, M1 piano / organ stabs on the chords, a synth bass answering the kick, swing ~56 % */
+    {"HOUSE", 120, 126, 30, {SC_MIN, SC_DOR, SC_MAJ, SC_MIN}, DM_HOUSE, 100, KIT_909, 0, HC_HOUSE, FL_ROLL, 0,
      {BA_OFFBEAT, BA_BOUNCE, BA_OFFOCT}, 36, KM_ANSWER, 45, {PR_I_IV, PR_I_VI, PR_DEEP4}, 1, CS_STAB, VM_RICH,
-     {AP_BROKEN, AP_UP}, LD_HOOK, AMT(80, 70, 60, 30, 40), {KIT_909, SR_FMBASS, SR_STAB, SR_PLUCK, SR_KEYS}, SR_NOISE,
+     {AP_BROKEN, AP_UP}, LD_HOOK, AMT(80, 70, 60, 30, 40), {KIT_909, SR_FMBASS, SR_KEYS, SR_PLUCK, SR_ORGAN}, SR_NOISE,
      0, 1, 40, 0, FM_CLUB, 10, HF_JAZZY},
-    {"DEEP HOUSE", 118, 124, 20, {SC_MIN, SC_DOR, SC_DOR, SC_MPEN}, DM_DEEP, 100, KIT_808, 0, HC_HOUSE, FL_DROP, 1,
+    /* Larry Heard (Can You Feel It), Chez Damier, Kerri Chandler: an 808, a Rhodes on 7ths and 9ths through the
+     * delay, a walking sub, swing ~57 % */
+    {"DEEP HOUSE", 118, 124, 35, {SC_MIN, SC_DOR, SC_DOR, SC_MPEN}, DM_DEEP, 100, KIT_808, 0, HC_HOUSE, FL_DROP, 1,
      {BA_DEEPWALK, BA_OFFBEAT, BA_UKG}, 36, KM_ANSWER, 50, {PR_I_IV, PR_JAZZ, PR_IV_I}, 2, CS_DUB, VM_RICH,
      {AP_BROKEN, AP_UPDOWN}, LD_SPARSE, AMT(70, 75, 70, 30, 30), {KIT_808, SR_SUB, SR_EP, SR_KEYS, SR_SINEKEY}, SR_TEXTURE,
      0, 1, 55, 0, FM_CLUB, 20, HF_JAZZY},
-    {"MICRO HOUSE", 122, 128, 10, {SC_MIN, SC_DOR, SC_MIN, SC_PHRY}, DM_MICRO, 100, KIT_CLICK, 0, HC_FLAT, FL_DROP, 0,
+    /* Perlon, Villalobos, Akufen: clicks for a kit, a plucked loop that orbits, a dry FM bass, swing ~54 % */
+    {"MICRO HOUSE", 122, 128, 20, {SC_MIN, SC_DOR, SC_MIN, SC_PHRY}, DM_MICRO, 100, KIT_CLICK, 0, HC_FLAT, FL_DROP, 0,
      {BA_OFFBEAT, BA_DEEPWALK, BA_ROLL16}, 36, KM_ANSWER, 40, {PR_ONE, PR_I_VII, PR_I_IV}, 2, CS_SPARSE, VM_QUART,
      {AP_CYCLE3, AP_WALK}, LD_SPARSE, AMT(70, 65, 40, 45, 20), {KIT_CLICK, SR_FMBASS, SR_PLUCK, SR_PLUCK, SR_CHIP}, SR_TEXTURE,
      0, 1, 45, 0, FM_CLUB, 0, HF_LOOP},
-    {"TECH HOUSE", 124, 128, 10, {SC_MIN, SC_PHRY, SC_DOR, SC_MIN}, DM_TECHHOUSE, 100, KIT_909, 0, HC_HOUSE, FL_ROLL, 0,
+    /* Terry Francis, Mr. C, Fuse: house's swing on techno's machines, a rolling bass, a stab with the filter moving */
+    {"TECH HOUSE", 124, 128, 15, {SC_MIN, SC_PHRY, SC_DOR, SC_MIN}, DM_TECHHOUSE, 100, KIT_909, 0, HC_HOUSE, FL_ROLL, 0,
      {BA_OFFBEAT, BA_OFFOCT, BA_BOUNCE}, 36, KM_ANSWER, 40, {PR_ONE, PR_I_VII, PR_I_VI}, 2, CS_STAB, VM_SUS,
      {AP_BROKEN, AP_SEQ}, LD_SPARSE, AMT(85, 80, 40, 30, 25), {KIT_909, SR_TECHBASS, SR_STAB, SR_PLUCK, SR_LEAD}, SR_NOISE,
      0, 1, 35, 0, FM_CLUB, 0, HF_LOOP},
+    /* Phuture (Acid Tracks), DJ Pierre, Hardfloor: the TB-303 over a 909 (the owner: as it is) */
     {"ACID HOUSE", 122, 130, 8, {SC_MIN, SC_PHRY, SC_DOR, SC_MIN}, DM_HOUSE, 100, KIT_909, 0, HC_HOUSE, FL_ROLL, 0,
      {BA_ACID, BA_ACID, BA_ACID}, 36, KM_SUSTAIN, 60, {PR_ONE, PR_I_VII, PR_I_IV}, 2, CS_STAB, VM_SUS,
      {AP_UP, AP_SEQ}, LD_NONE, AMT(85, 90, 30, 20, 0), {KIT_909, SR_ACID, SR_STAB, SR_PLUCK, SR_LEAD}, SR_NOISE,
      0, 1, 35, 0, FM_CLUB, 0, HF_LOOP},
     /* ---- the club: techno */
+    /* Detroit / Berlin (Jeff Mills, Robert Hood, Surgeon): a 909, a rolling bass, one hypnotic stab with its filter
+     * swept over the bars */
     {"TECHNO", 128, 136, 4, {SC_MIN, SC_PHRY, SC_MIN, SC_MIN}, DM_TECHNO, 100, KIT_909, 0, HC_MACHINE, FL_DROP, 0,
      {BA_ROLL16, BA_OCTBNC, BA_OFFBEAT}, 33, KM_SUSTAIN, 45, {PR_ONE, PR_PHRY, PR_I_VII}, 4, CS_STAB, VM_PLANE,
      {AP_PULSE, AP_SEQ}, LD_OSTINATO, AMT(90, 80, 35, 35, 25), {KIT_909, SR_TECHBASS, SR_STAB, SR_PLUCK, SR_LEAD}, SR_NOISE,
      0, 2, 35, 0, FM_CLUB, 0, HF_LOOP},
-    {"DETROIT", 124, 132, 8, {SC_MIN, SC_DOR, SC_MIN, SC_MAJ}, DM_DETROIT, 100, KIT_909, 0, HC_HOUSE, FL_ROLL, 0,
+    /* Derrick May (Strings of Life), Carl Craig, UR: string stabs on minor 7ths, a melodic lead, a 909 with a light
+     * swing */
+    {"DETROIT", 124, 132, 12, {SC_MIN, SC_DOR, SC_MIN, SC_MAJ}, DM_DETROIT, 100, KIT_909, 0, HC_HOUSE, FL_ROLL, 0,
      {BA_DETROIT, BA_OCTBNC, BA_SYNTHW}, 36, KM_SUSTAIN, 50, {PR_I_VI, PR_MINOR4, PR_DEEPVI}, 1, CS_STAB, VM_RICH,
      {AP_UPDOWN, AP_BROKEN}, LD_MOTIF, AMT(85, 80, 60, 45, 45), {KIT_909, SR_HOOK, SR_STRINGS, SR_PLUCK, SR_LEAD}, SR_PAD,
      0, 1, 45, 0, FM_CLUB, 5, HF_JAZZY},
-    {"DUB TECHNO", 116, 124, 6, {SC_MIN, SC_DOR, SC_MIN, SC_MPEN}, DM_DUBTECH, 100, KIT_DUB, 0, HC_FLAT, FL_DUB, 0,
+    /* Basic Channel (Phylyps Trak), Maurizio, Deepchord: one chord stab through a long delay and reverb, its filter
+     * swept, a sub, the hats soft */
+    {"DUB TECHNO", 118, 126, 6, {SC_MIN, SC_DOR, SC_MIN, SC_MPEN}, DM_DUBTECH, 100, KIT_DUB, 0, HC_FLAT, FL_DUB, 0,
      {BA_DUB, BA_PEDAL, BA_OFFBEAT}, 31, KM_SUSTAIN, 70, {PR_ONE, PR_I_IV, PR_I_VI}, 4, CS_DUB, VM_RICH,
      {AP_PULSE, AP_CYCLE3}, LD_SPARSE, AMT(60, 60, 75, 20, 15), {KIT_DUB, SR_SUB, SR_DUBCHORD, SR_PLUCK, SR_SINEKEY}, SR_TEXTURE,
      4, 4, 85, 0, FM_ARC, 0, HF_LOOP},
+    /* Ancient Methods, Perc, the Birmingham sound: an industrial kit hard, a rolling 16th bass, a hoover lead */
     {"HARD TECHNO", 138, 150, 0, {SC_PHRY, SC_MIN, SC_HARM, SC_PHRY}, DM_HARD, 100, KIT_INDUS, 0, HC_MACHINE, FL_DROP, 0,
      {BA_ROLL16, BA_PSY, BA_OCTBNC}, 33, KM_SUSTAIN, 40, {PR_ONE, PR_PHRY, PR_I_VII}, 4, CS_STAB, VM_POWER,
      {AP_PULSE, AP_OCTAVES}, LD_OSTINATO, AMT(100, 85, 30, 30, 25), {KIT_INDUS, SR_TECHBASS, SR_STAB, SR_PLUCK, SR_HOOVER}, SR_NOISE,
      1, 2, 25, 0, FM_CLUB, 0, HF_LOOP},
+    /* Donato Dozzy, Voices From The Lake: a click kit, a 16th bass, a pluck cycling in fives and threes, everything
+     * orbiting slowly */
     {"HYPNOTIC", 128, 134, 2, {SC_PHRY, SC_MIN, SC_DOR, SC_HARM}, DM_HYPNO, 100, KIT_CLICK, 0, HC_FLAT, FL_NONE, 0,
      {BA_ROLL16, BA_PSY, BA_OFFBEAT}, 33, KM_SUSTAIN, 40, {PR_ONE, PR_ONE, PR_I_II}, 4, CS_DUB, VM_PLANE,
      {AP_CYCLE5, AP_CYCLE3}, LD_OSTINATO, AMT(90, 80, 30, 50, 30), {KIT_CLICK, SR_TECHBASS, SR_STAB, SR_PLUCK, SR_PLUCK}, SR_TEXTURE,
      0, 4, 50, 0, FM_ARC, 0, HF_LOOP},
+    /* Paul van Dyk (For an Angel), ATB, Ferry Corsten: supersaw chords gated in 16ths, a supersaw lead, the bass off
+     * the beat */
     {"TRANCE", 134, 140, 0, {SC_MIN, SC_MIN, SC_HARM, SC_MIN}, DM_TECHHOUSE, 100, KIT_909, 0, HC_FLAT, FL_ROLL, 0,
      {BA_PSY, BA_PUMP8, BA_OFFBEAT}, 36, KM_ANSWER, 45, {PR_AEOL, PR_EPIC, PR_50S}, 2, CS_TRANCE, VM_RICH,
      {AP_TRANCE, AP_UP}, LD_MOTIF, AMT(85, 85, 70, 70, 50), {KIT_909, SR_HOOK, SR_SUPERSAW, SR_PLUCK, SR_SUPERSAW}, SR_NOISE,
      2, 4, 55, 3, FM_CLUB, 0, HF_POP | HX_RAISE},
     /* ---- electro, EBM, italo, synth pop, the wave */
+    /* Cybotron (Clear), Afrika Bambaataa (Planet Rock), Drexciya: an 808, a sawtooth bass jumping octaves, a
+     * vocoder-like VOICE */
     {"ELECTRO", 112, 128, 2, {SC_MIN, SC_PHRY, SC_MIN, SC_MPEN}, DM_ELECTRO, 100, KIT_808, 0, HC_MACHINE, FL_KICK16, 0,
      {BA_SYNTHW, BA_ITALO16, BA_ANGULAR}, 36, KM_DOUBLE, 40, {PR_I_VII, PR_ONE, PR_MINOR4}, 2, CS_STAB, VM_SUS,
-     {AP_SEQ, AP_OCTAVES}, LD_MECH, AMT(90, 85, 40, 50, 45), {KIT_808, SR_HOOK, SR_STAB, SR_CHIP, SR_LEAD}, SR_NOISE,
+     {AP_SEQ, AP_OCTAVES}, LD_MECH, AMT(90, 85, 40, 50, 45), {KIT_808, SR_HOOK, SR_STAB, SR_CHIP, SR_VOXLEAD}, SR_NOISE,
      1, 2, 35, 1, FM_PARTS, 0, HF_LOOP},
+    /* DAF (Der Mussolini), Nitzer Ebb: a sequenced mono MS-20 bass in driving 8ths / 16ths, a dry minimal kit, VOICE
+     * shouts */
     {"EBM", 118, 132, 0, {SC_PHRY, SC_MIN, SC_PHRY, SC_MIN}, DM_EBM, 100, KIT_INDUS, 0, HC_MACHINE, FL_NONE, 0,
      {BA_NITZER1, BA_NITZER2, BA_NITZER3}, 33, KM_DOUBLE, 45, {PR_ONE, PR_I_VII, PR_PHRY}, 4, CS_STAB, VM_POWER,
      {AP_SEQ, AP_PULSE}, LD_SPARSE, AMT(95, 100, 30, 25, 30), {KIT_INDUS, SR_EBMBASS, SR_STAB, SR_PLUCK, SR_VOXLEAD}, SR_NOISE,
-     1, 1, 25, 0, FM_PARTS, 0, HF_LOOP},
+     1, 1, 15, 0, FM_PARTS, 0, HF_LOOP},
+    /* Gazebo, Kano, Laserdance, Moroder: an 808, the octave bass, brassy stabs, a saw lead's hook */
     {"ITALO", 114, 124, 0, {SC_MIN, SC_MIN, SC_MAJ, SC_MIN}, DM_ITALO, 100, KIT_808, 0, HC_MACHINE, FL_TOM, 0,
      {BA_ITALO, BA_ITALO16, BA_SYNTHW}, 36, KM_DOUBLE, 40, {PR_AEOL, PR_ANDAL, PR_POP}, 1, CS_STAB, VM_PLAIN,
      {AP_OCTAVES, AP_UP}, LD_HOOK, AMT(90, 90, 60, 60, 60), {KIT_808, SR_HOOK, SR_STAB, SR_PLUCK, SR_LEAD}, SR_PAD,
      0, 1, 40, 2, FM_PARTS, 0, HF_POP | HX_RAISE | HX_LIFT},
-    {"SYNTH POP", 112, 128, 0, {SC_MIN, SC_MAJ, SC_MIN, SC_MAJ}, DM_SYNTHPOP, 100, KIT_808, 0, HC_MACHINE, FL_TOM, 0,
+    /* Depeche Mode (Just Can't Get Enough), OMD, the Human League: an 808, a pad held, a plucked sequence, a saw
+     * hook */
+    {"SYNTH POP", 112, 126, 0, {SC_MIN, SC_MAJ, SC_MIN, SC_MAJ}, DM_SYNTHPOP, 100, KIT_808, 0, HC_MACHINE, FL_TOM, 0,
      {BA_ITALO, BA_HOOK, BA_ROCK8}, 36, KM_DOUBLE, 50, {PR_AEOL, PR_POP, PR_50S}, 1, CS_HOLD, VM_PLAIN,
      {AP_SEQ, AP_UPDOWN}, LD_HOOK, AMT(85, 85, 65, 55, 60), {KIT_808, SR_HOOK, SR_PAD, SR_PLUCK, SR_LEAD}, SR_STRINGS,
      0, 1, 45, 2, FM_PARTS, 5, HF_POP | HX_RAISE | HX_BOR | HX_LIFT},
-    {"DARKWAVE", 124, 136, 0, {SC_MIN, SC_PHRY, SC_DOR, SC_MIN}, DM_DARKWAVE, 100, KIT_808, 0, HC_MACHINE, FL_NONE, 0,
+    /* Clan of Xymox, Lebanon Hanover, Boy Harsher: an MS-20 bass in 8ths, a cold pad, a lone lead */
+    {"DARKWAVE", 120, 136, 0, {SC_MIN, SC_PHRY, SC_DOR, SC_MIN}, DM_DARKWAVE, 100, KIT_808, 0, HC_MACHINE, FL_NONE, 0,
      {BA_DARK8, BA_PUNK16, BA_OCTBNC}, 31, KM_DOUBLE, 40, {PR_I_VI, PR_EPIC, PR_I_VII}, 4, CS_HOLD, VM_PLAIN,
      {AP_PULSE, AP_SEQ}, LD_SPARSE, AMT(90, 95, 60, 25, 40), {KIT_808, SR_EBMBASS, SR_PAD, SR_PLUCK, SR_LEAD}, SR_TEXTURE,
      0, 1, 50, 0, FM_PARTS, 0, HF_POP},
+    /* Joy Division and New Order: Hook's bass high on the neck, Morris's drums, Sumner's pulsed chords */
     {"POST PUNK", 118, 148, 0, {SC_MIN, SC_DOR, SC_MIN, SC_MAJ}, DM_POSTPUNK, 100, KIT_SOFT, 1, HC_FLAT, FL_TOM, 1,
      {BA_HOOK2, BA_BLUEMON, BA_CEREMONY}, 40, KM_DOUBLE, 70, {PR_I_VI, PR_I_IV, PR_AEOL}, 2, CS_PULSE, VM_PLAIN,
      {AP_OCTAVES, AP_UPDOWN}, LD_HOOK, AMT(95, 100, 55, 45, 50), {KIT_SOFT, SR_HOOK, SR_STRINGS, SR_PLUCK, SR_LEAD}, SR_CHOIR,
      1, 2, 45, 0, FM_PARTS, 35, HF_POP},   /* (0.6.97: after Joy Division and New Order: Hook's bass, Morris's drums, Sumner's
                                     * pulsed chords, a sequenced octave arp, strings and choir behind) */
+    /* Adam and the Ants, Bow Wow Wow (the Burundi beat), Killing Joke: toms for a kit, an angular bass, a chanted
+     * lead */
     {"TRIBAL PUNK", 140, 165, 0, {SC_MIN, SC_PHRY, SC_MIN, SC_DOR}, DM_TRIBAL, 100, KIT_SOFT, 0, HC_FLAT, FL_TOM, 1,
      {BA_ANGULAR, BA_ROCK8, BA_HOOK}, 36, KM_SUSTAIN, 60, {PR_ONE, PR_I_VII, PR_I_VI}, 4, CS_POWER, VM_POWER,
      {AP_PULSE, AP_UP}, LD_OSTINATO, AMT(95, 95, 40, 10, 45), {KIT_SOFT, SR_ROCKBASS, SR_GTR, SR_PLUCK, SR_VOXLEAD}, SR_NOISE,
      0, 1, 55, 0, FM_PARTS, 40, HF_LOOP},
+    /* Suicide (Ghost Rider), Martin Rev, Absolute Body Control: a rhythm box, a sequenced bass, an organ drone, a
+     * voice */
     {"MINIMAL SYNTH", 104, 132, 0, {SC_MIN, SC_DOR, SC_MIN, SC_PHRY}, DM_RBOX, 100, KIT_SOFT, 0, HC_MACHINE, FL_NONE, 0,
      {BA_SUICIDE, BA_SEQ16, BA_DARK8}, 33, KM_DOUBLE, 40, {PR_ONE, PR_ONE, PR_I_IV}, 4, CS_DRONE, VM_POWER,
      {AP_PULSE, AP_SEQ}, LD_SPARSE, AMT(85, 95, 55, 20, 45), {KIT_SOFT, SR_EBMBASS, SR_ORGAN, SR_CHIP, SR_VOXLEAD}, SR_NOISE,
      1, 2, 50, 0, FM_LOOP, 0, HF_LOOP},
-    {"MAN MACHINE", 100, 124, 0, {SC_MIN, SC_MAJ, SC_DOR, SC_MIN}, DM_KLING, 100, KIT_CLICK, 0, HC_MACHINE, FL_NONE, 0,
+    /* Kraftwerk (The Robots, Computer World): clean machines, a sequenced FM bass, a pad, a vocoder */
+    {"MAN MACHINE", 106, 126, 0, {SC_MIN, SC_MAJ, SC_DOR, SC_MIN}, DM_KLING, 100, KIT_CLICK, 0, HC_MACHINE, FL_NONE, 0,
      {BA_SEQ16, BA_SYNTHW, BA_MOTORIK}, 36, KM_DOUBLE, 45, {PR_ONE, PR_I_IV, PR_CYCLE}, 4, CS_HOLD, VM_PLAIN,
      {AP_SEQ, AP_OCTAVES}, LD_MECH, AMT(85, 90, 50, 60, 60), {KIT_CLICK, SR_FMBASS, SR_PAD, SR_PLUCK, SR_LEAD}, SR_VOXLEAD,
      0, 0, 15, 1, FM_PARTS, 0, HF_LOOP},
     /* ---- kraut, indie, shoegaze, post rock */
+    /* NEU! (Hallogallo), La Dusseldorf, Stereolab: the motorik beat, one chord, a droning guitar */
     {"MOTORIK", 118, 140, 0, {SC_MAJ, SC_MIX, SC_DOR, SC_MIN}, DM_MOTORIK, 100, KIT_SOFT, 0, HC_FLAT, FL_NONE, 0,
      {BA_MOTORIK, BA_ROCK8, BA_PUMP8}, 33, KM_DOUBLE, 60, {PR_ONE, PR_I_IV, PR_I_VII}, 4, CS_PULSE, VM_PLAIN,
      {AP_UPDOWN, AP_GLASS}, LD_TINTI, AMT(90, 95, 45, 50, 35), {KIT_SOFT, SR_ROCKBASS, SR_GTR, SR_PLUCK, SR_LEAD}, SR_DRONE,
      0, 1, 45, 0, FM_ARC, 30, HF_LOOP | HX_BOR},
+    /* The Strokes, the Smiths, Pavement: a live kit, a root-eighths bass, guitars, a sung hook */
     {"INDIE", 110, 140, 0, {SC_MAJ, SC_MIN, SC_MIX, SC_MAJ}, DM_INDIE, 100, KIT_BREAKS, 1, HC_FLAT, FL_TOM, 1,
      {BA_INDIE, BA_ROOT5, BA_MCCART}, 36, KM_DOUBLE, 70, {PR_POP, PR_ROCK, PR_SECPOP}, 1, CS_POWER, VM_PLAIN,
      {AP_UPDOWN, AP_ALBERTI}, LD_HOOK, AMT(85, 90, 70, 20, 55), {KIT_BREAKS, SR_ROCKBASS, SR_GTR, SR_PLUCK, SR_KEYS}, SR_STRINGS,
      0, 1, 45, 0, FM_PARTS, 50, HF_POP | HX_SEC | HX_BOR | HX_LIFT},
+    /* My Bloody Valentine (Soon), Slowdive, Ride: a wall of guitars, the drums under it, a voice in the haze */
     {"SHOEGAZE", 100, 130, 0, {SC_MAJ, SC_LYD, SC_MIX, SC_MIN}, DM_SHOEGAZE, 100, KIT_SOFT, 0, HC_FLAT, FL_ROLL, 1,
      {BA_ROCK8, BA_PUMP8, BA_ROOT5}, 36, KM_DOUBLE, 90, {PR_I_IV, PR_BORROW, PR_I_II}, 2, CS_SWELL, VM_RICH,
      {AP_UPDOWN, AP_GLASS}, LD_SPARSE, AMT(75, 85, 100, 30, 40), {KIT_SOFT, SR_ROCKBASS, SR_WALL, SR_PLUCK, SR_VOXLEAD}, SR_DRONE,
      2, 0, 90, 0, FM_ARC, 40, HF_COLOR | HX_BOR},
+    /* Radiohead, Mogwai, Explosions in the Sky: add9 / sus chords, a clean arpeggio, long roots */
     {"POST ROCK", 84, 118, 0, {SC_MIN, SC_MAJ, SC_MIN, SC_MIN}, DM_INDIE, 85, KIT_BREAKS, 2, HC_FLAT, FL_TOM, 1,
      {BA_RADIO, BA_PUMP8, BA_FIFTHS}, 36, KM_SUSTAIN, 100, {PR_RADIO, PR_EPIC, PR_PYRAMID}, 2, CS_SWELL, VM_PAD,
      {AP_GLASS, AP_UPDOWN}, LD_MOTIF, AMT(60, 75, 80, 75, 45), {KIT_BREAKS, SR_ROCKBASS, SR_EP, SR_GTR, SR_VOXLEAD}, SR_STRINGS,
      4, 0, 70, 0, FM_ARC, 45, HF_COLOR},   /* (0.6.95: after Radiohead: add9 / sus chords, a clean arpeggio, long roots) */
     /* ---- funk, disco, hip hop, UK */
-    {"FUNK", 96, 112, 14, {SC_DOR, SC_MIX, SC_MPEN, SC_BLUE}, DM_FUNK, 100, KIT_BREAKS, 4, HC_FUNK, FL_LINEAR, 1,
+    /* James Brown (Funky Drummer), the Meters, Parliament: ghosted 16ths, the bass on the one, comped EP, swing ~59
+     * % */
+    {"FUNK", 96, 112, 22, {SC_DOR, SC_MIX, SC_MPEN, SC_BLUE}, DM_FUNK, 100, KIT_BREAKS, 4, HC_FUNK, FL_LINEAR, 1,
      {BA_JAMERSON, BA_SLAP, BA_AROUND}, 33, KM_INTERLOCK, 40, {PR_I_IV, PR_ONE, PR_IV_I}, 2, CS_COMP, VM_RICH,
      {AP_BROKEN, AP_WALK}, LD_HOOK, AMT(90, 100, 55, 20, 45), {KIT_BREAKS, SR_FMBASS, SR_EP, SR_PLUCK, SR_LEAD}, SR_ORGAN,
      0, 1, 30, 0, FM_PARTS, 60, HF_JAZZY | HX_APPR},
-    {"DISCO", 114, 122, 8, {SC_MIN, SC_DOR, SC_MAJ, SC_MIN}, DM_DISCO, 100, KIT_BREAKS, 1, HC_HOUSE, FL_ROLL, 0,
+    /* Chic (Good Times), Donna Summer, Sylvester: the octave and walking bass, strings, the open hat off the beat */
+    {"DISCO", 114, 124, 12, {SC_MIN, SC_DOR, SC_MAJ, SC_MIN}, DM_DISCO, 100, KIT_BREAKS, 1, HC_HOUSE, FL_ROLL, 0,
      {BA_ITALO, BA_GOODTIME, BA_BOUNCE}, 36, KM_DOUBLE, 40, {PR_I_IV, PR_TURN, PR_DEEP4}, 2, CS_COMP, VM_RICH,
      {AP_UP, AP_BROKEN}, LD_HOOK, AMT(90, 100, 65, 35, 45), {KIT_BREAKS, SR_ROCKBASS, SR_STRINGS, SR_PLUCK, SR_LEAD}, SR_STRINGS,
      0, 1, 40, 0, FM_PARTS, 30, HF_JAZZY | HX_RAISE | HX_SEC | HX_LIFT},
-    {"BOOM BAP", 86, 96, 16, {SC_MIN, SC_DOR, SC_MPEN, SC_MIN}, DM_BOOMBAP, 100, KIT_SOFT, 1, HC_FUNK, FL_NONE, 2,
+    /* DJ Premier, Pete Rock, J Dilla: a dusty kit with the MPC's swing (~58 %), an upright bass, Rhodes and keys, a
+     * bell */
+    {"BOOM BAP", 86, 96, 40, {SC_MIN, SC_DOR, SC_MPEN, SC_MIN}, DM_BOOMBAP, 100, KIT_SOFT, 1, HC_FUNK, FL_NONE, 2,
      {BA_BOOMBAP, BA_JUNGLE, BA_DUB}, 33, KM_DOUBLE, 65, {PR_I_IV, PR_MINOR4, PR_I_VI}, 2, CS_SPARSE, VM_RICH,
      {AP_BROKEN, AP_WALK}, LD_SPARSE, AMT(90, 85, 60, 20, 35), {KIT_SOFT, SR_UPRIGHT, SR_EP, SR_KEYS, SR_BELL}, SR_TEXTURE,
      0, 1, 40, 0, FM_LOOP, 50, HF_JAZZY},
-    {"TRAP", 136, 146, 0, {SC_MIN, SC_PHRY, SC_HARM, SC_MIN}, DM_TRAP, 100, KIT_808, 0, HC_FLAT, FL_HAT, 0,
+    /* Metro Boomin, Zaytoven: an 808 gliding, rolling hats, a dark bell over a pad (half time) */
+    {"TRAP", 132, 148, 0, {SC_MIN, SC_PHRY, SC_HARM, SC_MIN}, DM_TRAP, 100, KIT_808, 0, HC_FLAT, FL_HAT, 0,
      {BA_TRAP, BA_WOBBLE, BA_DUB}, 29, KM_SUSTAIN, 110, {PR_I_VI, PR_50S, PR_I_V}, 2, CS_SPARSE, VM_RICH,
      {AP_BROKEN, AP_UPDOWN}, LD_SPARSE, AMT(90, 100, 45, 40, 35), {KIT_808, SR_808, SR_PAD, SR_BELL, SR_BELL}, SR_CHOIR,
      2, 1, 55, 0, FM_PARTS, 0, HF_POP | HX_RAISE},
-    {"UK GARAGE", 128, 134, 24, {SC_MIN, SC_DOR, SC_MIN, SC_MAJ}, DM_UKG, 100, KIT_909, 2, HC_GARAGE, FL_KICK16, 1,
+    /* MJ Cole, Todd Edwards, the Artful Dodger: the 2-step shuffle (~58 %), a reese / organ bass, EP chords, chopped
+     * vocals */
+    {"UK GARAGE", 130, 136, 40, {SC_MIN, SC_DOR, SC_MIN, SC_MAJ}, DM_UKG, 100, KIT_909, 2, HC_GARAGE, FL_KICK16, 1,
      {BA_UKG, BA_SPEEDG, BA_DEEPWALK}, 33, KM_INTERLOCK, 45, {PR_I_IV, PR_JAZZ, PR_DEEP4}, 1, CS_BROKEN, VM_RICH,
      {AP_BROKEN, AP_SEQ}, LD_HOOK, AMT(90, 90, 60, 35, 45), {KIT_909, SR_REESE, SR_EP, SR_PLUCK, SR_VOXLEAD}, SR_TEXTURE,
      0, 1, 40, 0, FM_CLUB, 10, HF_JAZZY},
+    /* Skream (Midnight Request Line), Benga, Coki: half time, the wobble's LFO on the beat, sparse pads */
     {"DUBSTEP", 138, 142, 0, {SC_MIN, SC_PHRY, SC_HARM, SC_MIN}, DM_DUBSTEP, 100, KIT_808, 1, HC_FLAT, FL_BREAK, 0,
      {BA_WOBBLE, BA_DUB, BA_TRAP}, 29, KM_SUSTAIN, 110, {PR_ONE, PR_I_VI, PR_PHRY}, 2, CS_SPARSE, VM_SUS,
      {AP_PULSE, AP_BROKEN}, LD_SPARSE, AMT(85, 100, 40, 20, 30), {KIT_808, SR_WOW, SR_PAD, SR_PLUCK, SR_BELL}, SR_NOISE,
      2, 1, 55, 1, FM_CLUB, 0, HF_LOOP},
+    /* The Chemical Brothers, Hardfloor, Plump DJs: a breakbeat, an acid bass, stabs */
     {"BREAKS", 126, 140, 6, {SC_MIN, SC_DOR, SC_PHRY, SC_MIN}, DM_BREAKS, 100, KIT_BREAKS, 3, HC_FUNK, FL_LINEAR, 1,
      {BA_ACID, BA_JUNGLE, BA_AROUND}, 33, KM_INTERLOCK, 50, {PR_ONE, PR_I_IV, PR_I_VI}, 2, CS_STAB, VM_RICH,
      {AP_UPDOWN, AP_BROKEN}, LD_OSTINATO, AMT(95, 90, 45, 30, 40), {KIT_BREAKS, SR_ACID, SR_STAB, SR_PLUCK, SR_LEAD}, SR_NOISE,
      1, 1, 40, 0, FM_PARTS, 20, HF_LOOP},
+    /* Photek, Ed Rush & Optical (Wormhole), Goldie: the breakbeat, a reese bass, a dark pad */
     {"DRUM & BASS", 170, 176, 0, {SC_MIN, SC_DOR, SC_MIN, SC_MPEN}, DM_DNB, 100, KIT_BREAKS, 2, HC_FLAT, FL_LINEAR, 0,
      {BA_DNB, BA_JUNGLE, BA_WOBBLE}, 29, KM_DOUBLE, 90, {PR_I_VI, PR_DEEP4, PR_ONE}, 2, CS_SPARSE, VM_RICH,
      {AP_BROKEN, AP_CYCLE3}, LD_SPARSE, AMT(95, 95, 50, 20, 30), {KIT_BREAKS, SR_REESE, SR_PAD, SR_PLUCK, SR_LEAD}, SR_NOISE,
      2, 4, 50, 1, FM_CLUB, 0, HF_JAZZY},
     /* ---- dub, reggae */
+    /* King Tubby, Lee Perry, Augustus Pablo: the one drop, a sub bass, the skank's organ through the delay, a
+     * melodica-like lead */
     {"DUB", 70, 80, 20, {SC_MIN, SC_MAJ, SC_DOR, SC_MIN}, DM_ONEDROP, 100, KIT_DUB, 1, HC_FLAT, FL_DUB, 1,
      {BA_ONEDROP, BA_DUB, BA_ONEDROP2}, 33, KM_SUSTAIN, 50, {PR_I_VII, PR_I_IV, PR_ONE}, 2, CS_SKANK, VM_PLAIN,
-     {AP_PULSE, AP_BROKEN}, LD_SPARSE, AMT(80, 100, 60, 10, 25), {KIT_DUB, SR_SUB, SR_DUBCHORD, SR_ORGAN, SR_ORGAN}, SR_TEXTURE,
+     {AP_PULSE, AP_BROKEN}, LD_SPARSE, AMT(80, 100, 60, 10, 25), {KIT_DUB, SR_SUB, SR_DUBCHORD, SR_ORGAN, SR_LEAD}, SR_TEXTURE,
      1, 4, 80, 0, FM_ARC, 40, HF_LOOP},
+    /* Jah Shaka, Mad Professor, the Twinkle Brothers: the kick on every beat, a heavy sub, the skank, a
+     * melodica-like lead */
     {"STEPPERS", 76, 88, 16, {SC_MIN, SC_MIN, SC_DOR, SC_MAJ}, DM_STEPPERS, 100, KIT_DUB, 1, HC_FLAT, FL_DUB, 1,
      {BA_STEPPERS, BA_ROCKERS, BA_ONEDROP2}, 33, KM_DOUBLE, 45, {PR_I_VII, PR_I_IV, PR_ONE}, 2, CS_SKANK, VM_PLAIN,
-     {AP_PULSE, AP_UP}, LD_SPARSE, AMT(90, 100, 65, 15, 30), {KIT_DUB, SR_SUB, SR_ORGAN, SR_ORGAN, SR_ORGAN}, SR_TEXTURE,
+     {AP_PULSE, AP_UP}, LD_SPARSE, AMT(90, 100, 65, 15, 30), {KIT_DUB, SR_SUB, SR_ORGAN, SR_ORGAN, SR_LEAD}, SR_TEXTURE,
      1, 4, 70, 0, FM_PARTS, 40, HF_LOOP},
     /* ---- jazz, latin */
+    /* Bill Evans, Blue Note's trios: triplet swing (~66 %), a walking upright, comped 7ths, a voice-like lead */
     {"JAZZ", 110, 150, 40, {SC_MAJ, SC_DOR, SC_MIN, SC_MAJ}, DM_JAZZ, 90, KIT_BREAKS, 2, HC_FLAT, FL_NONE, 1,
      {BA_WALK, BA_WALK2, BA_TWOFEEL}, 33, KM_SUSTAIN, 95, {PR_JAZZ, PR_TURN, PR_JAZZ2}, 1, CS_COMP, VM_RICH,
      {AP_WALK, AP_UPDOWN}, LD_MOTIF, AMT(60, 95, 75, 20, 55), {KIT_BREAKS, SR_UPRIGHT, SR_EP, SR_EP, SR_VOXLEAD}, SR_ORGAN,
      0, 1, 40, 0, FM_LOOP, 70, HF_JAZZ | HX_RAISE | HX_SEC | HX_BOR | HX_APPR},
-    {"BOSSA", 120, 136, 6, {SC_MAJ, SC_LYD, SC_DOR, SC_MIN}, DM_BOSSA, 100, KIT_SOFT, 0, HC_FLAT, FL_NONE, 0,
+    /* Joao Gilberto, Jobim (Desafinado): the bossa's clave on a soft kit, a two-feel bass, nylon guitar chords */
+    {"BOSSA", 120, 140, 6, {SC_MAJ, SC_LYD, SC_DOR, SC_MIN}, DM_BOSSA, 100, KIT_SOFT, 0, HC_FLAT, FL_NONE, 0,
      {BA_BOSSA, BA_TUMBAO, BA_TWOFEEL}, 33, KM_DOUBLE, 80, {PR_BOSSA, PR_I_II, PR_JAZZ}, 2, CS_COMP, VM_RICH,
      {AP_ALBERTI, AP_UPDOWN}, LD_MOTIF, AMT(75, 90, 70, 30, 50), {KIT_SOFT, SR_UPRIGHT, SR_GTR, SR_EP, SR_SINEKEY}, SR_STRINGS,
      0, 1, 40, 0, FM_LOOP, 50, HF_JAZZ | HX_RAISE | HX_SEC | HX_APPR},
-    {"AFROBEAT", 112, 126, 10, {SC_DOR, SC_MIX, SC_MPEN, SC_MIN}, DM_AFRO, 100, KIT_BREAKS, 3, HC_FUNK, FL_LINEAR, 1,
+    /* Fela Kuti, Tony Allen: the drums' interlocking parts, a riffing bass, organ and guitar figures, horns-like
+     * lead */
+    {"AFROBEAT", 110, 128, 16, {SC_DOR, SC_MIX, SC_MPEN, SC_MIN}, DM_AFRO, 100, KIT_BREAKS, 3, HC_FUNK, FL_LINEAR, 1,
      {BA_AROUND, BA_SKA, BA_ANGULAR}, 33, KM_INTERLOCK, 45, {PR_I_IV, PR_ONE, PR_I_VII}, 2, CS_COMP, VM_RICH,
      {AP_BROKEN, AP_CYCLE3}, LD_HOOK, AMT(100, 100, 55, 40, 45), {KIT_BREAKS, SR_ROCKBASS, SR_ORGAN, SR_GTR, SR_LEAD}, SR_ORGAN,
      0, 1, 30, 0, FM_ARC, 50, HF_JAZZY},
     /* ---- the night, the room */
+    /* Brian Eno (Music for Airports), Aphex Twin (SAW II), Stars of the Lid: slow pads, sparse or no drums, bells */
     {"AMBIENT", 60, 90, 0, {SC_LYD, SC_MAJ, SC_MIN, SC_DOR}, DM_SPARSE, 25, KIT_SOFT, 0, HC_FLAT, FL_NONE, 0,
      {BA_PEDAL, BA_FIFTHS, BA_NEOARP}, 31, KM_SUSTAIN, 120, {PR_I_II, PR_I_IV, PR_SUS}, 4, CS_SWELL, VM_RICH,
      {AP_GLASS, AP_UPDOWN}, LD_TINTI, AMT(20, 50, 100, 40, 30), {KIT_SOFT, SR_SUB, SR_PAD, SR_BELL, SR_SINEKEY}, SR_DRONE,
      4, 0, 95, 0, FM_ARC, 20, HF_COLOR},
+    /* Nils Frahm, Olafur Arnalds, Max Richter: a felt piano-like key, strings, no drums */
     {"NEO CLASSIC", 70, 112, 0, {SC_MIN, SC_DOR, SC_MAJ, SC_MEL}, DM_NONE, 0, KIT_SOFT, 0, HC_FLAT, FL_NONE, 0,
      {BA_NEOARP, BA_PEDAL, BA_FIFTHS}, 36, KM_SUSTAIN, 100, {PR_50S, PR_NEOCL, PR_CYCLE}, 1, CS_HOLD, VM_RICH,
      {AP_GLASS, AP_ALBERTI}, LD_TINTI, AMT(0, 60, 70, 90, 55), {KIT_SOFT, SR_SINEKEY, SR_STRINGS, SR_EP, SR_BELL}, SR_CHOIR,
      0, 1, 70, 0, FM_ARC, 30, HF_CINE | HX_RAISE | HX_SEC | HX_BOR},
+    /* Debussy, Satie (Gymnopedies): lydian colours, parallel chords, a bell, no drums */
     {"IMPRESSION", 60, 92, 0, {SC_LYD, SC_MAJ, SC_LYD, SC_PEN}, DM_SPARSE, 25, KIT_SOFT, 0, HC_FLAT, FL_NONE, 0,
      {BA_FIFTHS, BA_PEDAL, BA_NEOARP}, 36, KM_SUSTAIN, 110, {PR_I_II, PR_I_III, PR_SUS}, 2, CS_SWELL, VM_PLANE,
      {AP_UPDOWN, AP_GLASS}, LD_TINTI, AMT(15, 50, 85, 75, 40), {KIT_SOFT, SR_SINEKEY, SR_PAD, SR_EP, SR_BELL}, SR_CHOIR,
      4, 0, 90, 0, FM_ARC, 30, HF_COLOR},
+    /* Vangelis (Blade Runner), Hans Zimmer: strings swelling, a CS-80-like brass lead with vibrato, a choir behind */
     {"SOUNDTRACK", 64, 92, 0, {SC_MIN, SC_MIN, SC_MEL, SC_MPEN}, DM_SPARSE, 40, KIT_DUB, 0, HC_FLAT, FL_NONE, 0,
      {BA_PEDAL, BA_FIFTHS, BA_DUB}, 29, KM_SUSTAIN, 120, {PR_50S, PR_ANDAL, PR_EPIC}, 2, CS_SWELL, VM_RICH,
-     {AP_ALBERTI, AP_GLASS}, LD_SPARSE, AMT(30, 60, 100, 30, 35), {KIT_DUB, SR_SUB, SR_STRINGS, SR_BELL, SR_CHOIR}, SR_DRONE,
+     {AP_ALBERTI, AP_GLASS}, LD_SPARSE, AMT(30, 60, 100, 30, 35), {KIT_DUB, SR_SUB, SR_STRINGS, SR_BELL, SR_LEAD}, SR_DRONE,
      4, 0, 90, 0, FM_ARC, 20, HF_CINE | HX_RAISE | HX_BOR},
-    {"IDM", 86, 140, 10, {SC_PHRY, SC_HARM, SC_MIN, SC_DOR}, DM_IDM, 100, KIT_CLICK, 2, HC_FLAT, FL_KICK16, 0,
+    /* Aphex Twin (Xtal), Autechre (Tri Repetae), Boards of Canada: euclidean drums against each other, FM, bells */
+    {"IDM", 90, 140, 10, {SC_PHRY, SC_HARM, SC_MIN, SC_DOR}, DM_IDM, 100, KIT_CLICK, 2, HC_FLAT, FL_KICK16, 0,
      {BA_JUNGLE, BA_ANGULAR, BA_DUST}, 33, KM_INTERLOCK, 50, {PR_MINOR4, PR_I_VI, PR_I_II}, 2, CS_SPARSE, VM_QUART,
      {AP_WALK, AP_CYCLE5}, LD_MOTIF, AMT(85, 70, 50, 60, 45), {KIT_CLICK, SR_FMBASS, SR_EP, SR_BELL, SR_CHIP}, SR_TEXTURE,
      4, 5, 60, 1, FM_PARTS, 10, HF_LOOP},
-    {"BROKEN", 80, 100, 14, {SC_DOR, SC_MIN, SC_MEL, SC_DOR}, DM_BREAKS, 90, KIT_SOFT, 3, HC_FUNK, FL_LINEAR, 2,
+    /* Bugz in the Attic, IG Culture, 4hero: West London broken beat, a syncopated kit, Rhodes, a jazzy bass */
+    {"BROKEN", 110, 124, 20, {SC_DOR, SC_MIN, SC_MEL, SC_DOR}, DM_BREAKS, 90, KIT_SOFT, 3, HC_FUNK, FL_LINEAR, 2,
      {BA_AROUND, BA_DUST, BA_JUNGLE}, 33, KM_INTERLOCK, 55, {PR_I_IV, PR_JAZZ, PR_MINOR4}, 2, CS_COMP, VM_QUART,
      {AP_WALK, AP_BROKEN}, LD_MOTIF, AMT(80, 85, 60, 30, 45), {KIT_SOFT, SR_FMBASS, SR_EP, SR_KEYS, SR_VOXLEAD}, SR_TEXTURE,
      4, 4, 65, 0, FM_PARTS, 50, HF_JAZZY},
@@ -611,26 +685,30 @@ static const ggenre_t GENRE[] = {
 /* (0.9.9-gen1) each genre's PATTERN GRAMMAR past its maps and archetypes (GENRE's order): on the bass, how many ACCENTs
  * (off the kick), SLIDEs (a note tied into the next: its glide), octave jumps (the offbeat sixteenths), 0 .. 3 each;
  * DRUM-X GLUE (0 .. 3: x 4; 0.9.9-gen2: 2 at most, moderate); the closed hats ratcheted now and then (a condition: every other loop); MUTATE on the arp
- * or the chords (WHAT PATTERN, LOOP 4, ORBIT: a pattern orbiting the piece). The 303's own rules (gen_acid) are the acid bass's */
-#define GG(acc, sld, oct, glue, rat, mut) (uint16_t)((acc) | (sld) << 2 | (oct) << 4 | (glue) << 6 | (rat) << 8 | (mut) << 9)
+ * or the chords (WHAT PATTERN, LOOP 4, ORBIT: a pattern orbiting the piece); (gen3) LIFT 0 .. 7: the bass, chords, arp and
+ * lead's level over the drums, (LIFT - 2) x 1.5 dB (GG_LIFT: the drums at most 60 % of the parts' energy, gen_test). The
+ * 303's own rules (gen_acid) are the acid bass's */
+#define GG(acc, sld, oct, glue, rat, mut, lift) (uint16_t)((acc) | (sld) << 2 | (oct) << 4 | (glue) << 6 | (rat) << 8 | (mut) << 9 | (lift) << 10)
 #define GG_ACC(g) ((g) & 3u)
 #define GG_SLD(g) (((g) >> 2) & 3u)
 #define GG_OCT(g) (((g) >> 4) & 3u)
 #define GG_GLUE(g) (((g) >> 6) & 3u)
 #define GG_RAT(g) (((g) >> 8) & 1u)
 #define GG_MUT(g) (((g) >> 9) & 1u)
-static const uint16_t GGRAM[] = {
-    GG(1, 0, 1, 0, 0, 0), GG(0, 1, 0, 0, 0, 0), GG(1, 0, 0, 1, 0, 1), GG(1, 0, 1, 1, 0, 0),   /* HOUSE DEEP MICRO TECH */
-    GG(0, 0, 0, 1, 0, 0), GG(1, 0, 0, 2, 0, 0), GG(1, 0, 1, 1, 0, 0), GG(0, 0, 0, 1, 0, 1),   /* ACID TECHNO DETROIT DUB TECHNO */
-    GG(2, 0, 0, 2, 1, 0), GG(1, 0, 0, 2, 0, 1), GG(1, 0, 1, 1, 0, 0), GG(2, 0, 1, 1, 1, 0),   /* HARD HYPNOTIC TRANCE ELECTRO */
-    GG(2, 0, 0, 2, 0, 0), GG(1, 0, 2, 0, 0, 0), GG(1, 0, 2, 0, 0, 0), GG(1, 0, 1, 1, 0, 0),   /* EBM ITALO SYNTH POP DARKWAVE */
-    GG(1, 0, 1, 0, 0, 0), GG(1, 0, 0, 0, 0, 0), GG(1, 0, 1, 0, 0, 1), GG(1, 0, 1, 0, 0, 1),   /* POST PUNK TRIBAL MINIMAL MAN MACHINE */
-    GG(0, 0, 1, 0, 0, 1), GG(1, 0, 0, 0, 0, 0), GG(0, 1, 0, 0, 0, 0), GG(0, 1, 0, 0, 0, 0),   /* MOTORIK INDIE SHOEGAZE POST ROCK */
-    GG(2, 1, 2, 0, 0, 0), GG(1, 0, 3, 0, 0, 0), GG(1, 1, 0, 1, 0, 0), GG(1, 3, 0, 1, 1, 0),   /* FUNK DISCO BOOM BAP TRAP */
-    GG(1, 1, 1, 0, 1, 0), GG(1, 2, 0, 2, 0, 0), GG(1, 0, 0, 1, 1, 0), GG(1, 2, 0, 2, 1, 0),   /* UK GARAGE DUBSTEP BREAKS DNB */
-    GG(0, 1, 0, 0, 0, 0), GG(0, 0, 0, 0, 0, 0), GG(1, 1, 0, 0, 0, 0), GG(0, 1, 0, 0, 0, 0),   /* DUB STEPPERS JAZZ BOSSA */
-    GG(2, 0, 1, 0, 0, 0), GG(0, 1, 0, 0, 0, 1), GG(0, 0, 0, 0, 0, 0), GG(0, 0, 0, 0, 0, 0),   /* AFROBEAT AMBIENT NEO CLASSIC IMPRESSION */
-    GG(0, 0, 0, 0, 0, 1), GG(1, 1, 1, 1, 1, 1), GG(1, 1, 1, 0, 0, 0),                         /* SOUNDTRACK IDM BROKEN */
+#define GG_LIFT(g) ((int32_t)(((g) >> 10) & 7u) * 3 - 6)   /* (gen3) the bass, chords, arp, lead's LEVEL over the drums: -6 ..
+                                                         * +15 (half dB), by how the genre's kit weighs (gen.c gen_mix) */
+static const uint16_t GGRAM[] = {   /* (gen3: + LIFT, 2 = none; MUTATE on TECHNO and TECH HOUSE too) */
+    GG(1, 0, 1, 0, 0, 0, 4), GG(0, 1, 0, 0, 0, 0, 3), GG(1, 0, 0, 1, 0, 1, 0), GG(1, 0, 1, 1, 0, 1, 4),   /* HOUSE DEEP HOUSE MICRO HOUSE TECH HOUSE */
+    GG(0, 0, 0, 1, 0, 0, 2), GG(1, 0, 0, 2, 0, 1, 3), GG(1, 0, 1, 1, 0, 0, 4), GG(0, 0, 0, 1, 0, 1, 2),   /* ACID HOUSE TECHNO DETROIT DUB TECHNO */
+    GG(2, 0, 0, 2, 1, 0, 7), GG(1, 0, 0, 2, 0, 1, 0), GG(1, 0, 1, 1, 0, 0, 2), GG(2, 0, 2, 1, 1, 0, 4),   /* HARD TECHNO HYPNOTIC TRANCE ELECTRO */
+    GG(2, 0, 0, 2, 0, 0, 5), GG(1, 0, 2, 0, 0, 0, 5), GG(1, 0, 2, 0, 0, 0, 4), GG(1, 0, 1, 1, 0, 0, 6),   /* EBM ITALO SYNTH POP DARKWAVE */
+    GG(1, 0, 1, 0, 0, 0, 4), GG(1, 0, 0, 0, 0, 0, 3), GG(1, 0, 1, 0, 0, 1, 3), GG(1, 0, 1, 0, 0, 1, 1),   /* POST PUNK TRIBAL PUNK MINIMAL SYNTH MAN MACHINE */
+    GG(0, 0, 1, 0, 0, 1, 2), GG(1, 0, 0, 0, 0, 0, 1), GG(0, 1, 0, 0, 0, 0, 1), GG(0, 1, 0, 0, 0, 0, 1),   /* MOTORIK INDIE SHOEGAZE POST ROCK */
+    GG(2, 1, 2, 0, 0, 0, 2), GG(1, 0, 3, 0, 0, 0, 2), GG(1, 1, 0, 1, 0, 0, 3), GG(1, 3, 0, 1, 1, 0, 2),   /* FUNK DISCO BOOM BAP TRAP */
+    GG(1, 1, 1, 0, 1, 0, 2), GG(1, 2, 0, 2, 0, 0, 2), GG(1, 0, 0, 1, 1, 0, 2), GG(1, 2, 0, 2, 1, 0, 2),   /* UK GARAGE DUBSTEP BREAKS DRUM & BASS */
+    GG(0, 1, 0, 0, 0, 0, 2), GG(0, 0, 0, 0, 0, 0, 2), GG(1, 1, 0, 0, 0, 0, 1), GG(0, 1, 0, 0, 0, 0, 6),   /* DUB STEPPERS JAZZ BOSSA */
+    GG(2, 0, 1, 0, 0, 0, 2), GG(0, 1, 0, 0, 0, 1, 2), GG(0, 0, 0, 0, 0, 0, 2), GG(0, 0, 0, 0, 0, 0, 2),   /* AFROBEAT AMBIENT NEO CLASSIC IMPRESSION */
+    GG(0, 0, 0, 0, 0, 1, 2), GG(1, 1, 1, 1, 1, 1, 1), GG(1, 1, 1, 0, 0, 0, 2),   /* SOUNDTRACK IDM BROKEN */
 };
 _Static_assert(sizeof GGRAM / sizeof GGRAM[0] == NGENRE, "GGRAM: a grammar a genre");
 

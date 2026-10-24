@@ -1102,24 +1102,26 @@ seleccionada se graban como **automatización**. MENU > AUDIO tiene el **CLICK**
   componentes muestra arriba una marca chica por componente (violeta altura, naranja tiempo, gris flujo, blanco
   sonido) y una línea fina del mismo color sobre los pasos que cubre su LENGTH.
   - **ARP**: un arpegio durante su LENGTH, en lugar de esos pasos. VALUE: NOTES (el acorde del paso) o SCALE (desde su
-    nota más grave), el rango, ORDER (UP DOWN UP-DN RND) y RATE (x1 … 1/128, en el tiempo de la pista).
+    nota más grave), el rango, ORDER (UP DN UD RND: arriba, abajo, ida y vuelta, al azar) y al lado el RATE
+    (16 = 1/16, 32T; x1 … x8 pasado 1/64, en el tiempo de la pista). (0.9.9-gen3) Las tarjetas muestran cada valor entero,
+    en corto: STUT, TRANS, RAND; LENGTH "8 ST"; CONDITION "1:4", "!3:8", "50%", "1ST"; la etiqueta dice MONO / POLY.
   - **SEQ**: el caminante de notas. Cada pasada del patrón este paso toca la siguiente nota programada del patrón
     (pasada 1 su primera nota, pasada 2 la segunda…): las mismas notas que escribiste, recombinadas en el tiempo.
-    VALUE: la nota desde la que arranca, LOOP o BOUNCE.
+    VALUE: la nota desde la que arranca, LOOP o PING (ida y vuelta).
   - **OCT+ / OCT-**: los pasos de su LENGTH 1–3 octavas arriba / abajo, y vuelve.
-  - **RATCH**: cada paso de su LENGTH partido en x2 … x8; DECAY FLAT, DOWN (cada parte más suave) o UP.
-  - **STUTTER**: este paso otra vez en lugar de los siguientes (EVERY 1 … 4 pasos; los del medio, en silencio).
+  - **RATCH**: cada paso de su LENGTH partido en x2 … x8; DECAY FLAT, FADE (cada parte más suave) o RISE.
+  - **STUT** (stutter): este paso otra vez en lugar de los siguientes (EVERY 1 … 4 pasos; los del medio, en silencio).
   - **MUTE**: su LENGTH de pasos en silencio (CUT: además corta lo que suena en la pista).
-  - **TRANSP**: las notas se mueven MOVE grados (−7 … +7, en la escala). RANGE **FIX**: cada vez que su condición da;
+  - **TRANS** (transponer): las notas se mueven MOVE grados (−7 … +7, en la escala). RANGE **FIX**: cada vez que su condición da;
     RANGE 2 … 16: suma un MOVE cada pasada en que su condición da, en una vuelta de RANGE lugares (vuelve a 0), y actúa
     en todas las pasadas.
-  - **RANDOM**: cada nota sube o baja por la escala al azar, hasta 1–7 grados.
+  - **RAND**: cada nota sube o baja por la escala al azar, hasta 1–7 grados.
   - **LOCK**: los parameter locks del paso (paso sostenido y girar, ver Parameter locks) sólo cuando su condición da,
     sostenidos durante su LENGTH. VALUE muestra cuántos locks tiene el paso.
   - **JUMP**: después de este paso, el paso 1–64 (o **REV**: hacia atrás hasta el paso 1); a lo sumo una vez por
     pasada desde el mismo paso.
   - **SOUND** (pista DRUM): golpes SHORT, GHOST o FLAM. **BEND** (queda de antes): la nota se desliza ±12 semitonos.
-  - **CONDITION**: **ALWAYS**; **25 / 50 / 75 %**; **FIRST** / **!FIRST** (la primera pasada tras PLAY); **FILL** /
+  - **CONDITION**: **ALWAYS**; **25 / 50 / 75 %**; **1ST** / **!1ST** (la primera pasada tras PLAY); **FILL** /
     **!FILL** (FX apretado); **PRE** / **!PRE** (la última condición de la pista dio / no dio); **NEI** / **!NEI** (lo
     mismo, la pista anterior); **N:M** / **!N:M** (la pasada N de cada M, M hasta 16). Las pasadas se cuentan por
     pista, por vuelta de su patrón.

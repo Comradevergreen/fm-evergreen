@@ -1053,29 +1053,32 @@ recorded into the pattern, quantized to its steps, overdubbing. Knob moves on th
   is the same four fields: **KNOB 1 ACTION**, **KNOB 2 LENGTH** (1–32: the steps it stays on, from its own on, as
   the track plays them), **KNOB 3 CONDITION** (on which passes of the pattern it acts), **KNOB 4 VALUE**. On the roll a
   step with components shows a small mark per component on top (violet pitch, orange time, grey flow, white sound),
-  and a thin line of the same colour over the steps its LENGTH covers.
+  and a thin line of the same colour over the steps its LENGTH covers. (0.9.9-gen3) The cards show every value whole,
+  in short: ACTION as below (STUT, TRANS, RAND), LENGTH as "8 ST", CONDITION as "1:4", "!3:8", "50%", "1ST", the
+  card's label MONO / POLY where the step is either.
   - **ARP**: an arpeggio over its LENGTH, replacing those steps. VALUE: NOTES (the step's chord) or SCALE (up from
-    its lowest note), the range, ORDER (UP DOWN UP-DN RND) and RATE (x1 … 1/128, in the track's time).
+    its lowest note), the range, ORDER (UP DN UD RND: up, down, up-down, random) and RATE beside it (16 = 1/16, 32T,
+    x1 … x8 past 1/64, in the track's time).
   - **SEQ**: the note walker. Each pass of the pattern this step plays the pattern's next programmed note (pass 1 its
     first note, pass 2 the second …): the same notes you wrote, recombined in time. VALUE: the note it starts from,
-    LOOP or BOUNCE.
+    LOOP or PING (bouncing back and forth).
   - **OCT+ / OCT-**: the steps of its LENGTH 1–3 octaves up / down, then back.
-  - **RATCH**: every step of its LENGTH split into x2 … x8 parts; DECAY FLAT, DOWN (each softer) or UP.
-  - **STUTTER**: this step again in place of the next ones (EVERY 1 … 4 steps; the steps between silent).
+  - **RATCH**: every step of its LENGTH split into x2 … x8 parts; DECAY FLAT, FADE (each softer) or RISE.
+  - **STUT** (stutter): this step again in place of the next ones (EVERY 1 … 4 steps; the steps between silent).
   - **MUTE**: its LENGTH of steps silent (CUT: what the track sounds is cut first).
-  - **TRANSP**: the notes moved MOVE degrees (−7 … +7, in the scale). RANGE **FIX**: whenever its condition holds;
+  - **TRANS** (transpose): the notes moved MOVE degrees (−7 … +7, in the scale). RANGE **FIX**: whenever its condition holds;
     RANGE 2 … 16: it adds a MOVE each pass its condition holds, round RANGE places (back to 0), acting every pass.
-  - **RANDOM**: each note up or down the scale at random, up to 1–7 degrees.
+  - **RAND**: each note up or down the scale at random, up to 1–7 degrees.
   - **LOCK**: the step's parameter locks (hold the step and turn, see Parameter locks) only when its condition holds,
     held over its LENGTH. VALUE shows how many locks the step has.
   - **JUMP**: after this step, step 1–64 (or **REV**: backwards to step 1); at most once a pass from the same step.
   - **SOUND** (a DRUM track): SHORT, GHOST or FLAM hits. **BEND** (kept from before): the note glides ±12 semitones.
-  - **CONDITION**: **ALWAYS**; **25 / 50 / 75 %**; **FIRST** / **!FIRST** (the first pass after PLAY); **FILL** /
+  - **CONDITION**: **ALWAYS**; **25 / 50 / 75 %**; **1ST** / **!1ST** (the first pass after PLAY); **FILL** /
     **!FILL** (FX held); **PRE** / **!PRE** (the track's last condition held / did not); **NEI** / **!NEI** (the same,
     the track before); **N:M** / **!N:M** (pass N of every M, M up to 16). Passes are counted per track, per lap of
     its pattern.
   - **MONO / POLY**: C2's condition **ELSE** makes the step MONO: one component acts, C1 if its condition holds, else
-    C2 (the card says MONO). Any other condition on C2 is POLY: both act, C1 on the step, C2 over the result.
+    C2 (the card's label says MONO). Any other condition on C2 is POLY: both act, C1 on the step, C2 over the result.
   - Example: four notes on steps 1 5 9 13, each with C1 MUTE at !1:4, !2:4, !3:4, !4:4 (one note a bar), and on step 1
     C2 TRANSP +1 RANGE 4 at 1:4, LENGTH 16: a 16-bar melody, every bar different, then again.
   - **Projects before 0.9.9-seq2d** load migrated: ARP NOTES / SCALE an ARP over the TIEs after it, ARP SEQ the SEQ

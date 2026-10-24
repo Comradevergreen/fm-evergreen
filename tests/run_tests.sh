@@ -228,7 +228,7 @@ if [ -f build/gen/felucca_tables.h ]; then
     $CC -O1 -w -Ibuild/gen -Ifirmware/src -Itests -o "$OUT/ctl64_timing_test" tests/ctl64_timing_test.c -lm
     run "ctl64 (0.9.9): the rendered notes at the sequencer's sample (MICRO-shifted steps, POLY, MONO cuts, kit hits) in blocks of CTL" "$OUT/ctl64_timing_test"
     $CC -O1 -w -Ibuild/gen -Ifirmware/src -Itests -o "$OUT/gen_test" tests/gen_test.c -lm
-    run "GEN (0.6.91): the song generator, every genre: deterministic, one scale, the kick anchored, the bass's roots, chord tones, forms, the screen; (0.9.9-gen1) the clean base, the archetypes, the CPU budget; (gen2) the 303 line and its legato slides, the leads' vibrato, the drums' decays" "$OUT/gen_test"
+    run "GEN (0.6.91): the song generator, every genre: deterministic, one scale, the kick anchored, the bass's roots, chord tones, forms, the screen; (0.9.9-gen1) the clean base, the archetypes, the CPU budget; (gen2) the 303 line and its legato slides, the leads' vibrato, the drums' decays; (gen3) the rules by role, the drums' share, the loudness" "$OUT/gen_test"
     $CC -O1 -w -Ibuild/gen -Ifirmware/src -Itests -o "$OUT/stems_test" tests/stems_test.c -lm
     run "STEMS (0.9.8): DICE songs, each stem = its track's solo render (FULL LITE ECO, CORES 1 / 2), the sum = the mix, the SLICER" "$OUT/stems_test"
     $CC -O1 -w -Ibuild/gen -Ifirmware/src -o "$OUT/ratchet_test" tests/ratchet_test.c -lm
