@@ -302,6 +302,9 @@ int main(void)
                     const track_t *t = &trk[k];
                     uint32_t r = gs.role[k], len = dlen(t);
                     if (drum_track(t) || !gs.act[r]) continue;
+                    if (r == RL_PAD && gclub() && gs.g->pads == CS_STAB && gs.g->drum != DM_TECHHOUSE && gs.g->drum != DM_TECHNO)
+                        continue;                       /* (gen5: house's and Detroit's CHORD MEMORY, a shape moved in
+                                                         * parallel: out of the key by design) */
                     for (i = 0; i < len; i++) {         /* every note in the key, or chromatic by a rule */
                         const step_t *st = &t->step[i];
                         uint32_t j;
@@ -548,11 +551,11 @@ int main(void)
         uint8_t seen_m[64] = {0}, seen_p[16] = {0};
         gen_reset();
         for (seeds = 1; seeds <= 12u; seeds++) {
-            gen_with(1, seeds, 50, 0);
+            gen_with(14, seeds, 50, 0);                 /* (gen5: ITALO; the club's keep their records' parts) */
             if (!seen_m[gs.g->drum]) { seen_m[gs.g->drum] = 1; maps++; }
             if (!seen_p[gs.g->pads]) { seen_p[gs.g->pads] = 1; plays++; }
         }
-        bad += gcheck("HOUSE x 12 seeds: two drum maps at least, two chord plays at least", maps >= 2u && plays >= 2u);
+        bad += gcheck("ITALO x 12 seeds: two drum maps at least, two chord plays at least (gen5: HOUSE keeps its own)", maps >= 2u && plays >= 2u);
         for (seeds = 1; seeds <= 40u; seeds++) {
             gen_with(0, seeds, 50, 0);
             if (gs.mutant) {
@@ -1095,14 +1098,17 @@ int main(void)
                 { int32_t o[2 * CTL]; ui_input(); mix_block(o, CTL); }
                 sh = ea > 0 ? ed / ea : 0;
                 if (sh > worst) { worst = sh; wn = GENRE[g].name; }
-                if (sh > 0.60) { over++; printf("  %s seed %u: the drums %.1f %% of the energy\n", GENRE[g].name, 2026u + 7u * g + 1000u * sd, 100 * sh); }
+                if (sh > (gclub() ? 0.75 : 0.60)) {      /* (gen5: the club's kick in front, 75 %) */
+                    over++;
+                    printf("  %s seed %u: the drums %.1f %% of the energy\n", GENRE[g].name, 2026u + 7u * g + 1000u * sd, 100 * sh);
+                }
                 lev_bad += lsum / nb < 0.4 || lsum / nb > 1.9;
                 rms_db += 20 * log10(sqrt(acc / (2.0 * nb * CTL)) / 32768.0 + 1e-9);
                 n++;
             }
         printf("gen: the drums' share at most %.1f %% (%s); the mix %.1f dBFS RMS on average, the leveler's gain off its range %u times\n",
                100 * worst, wn, rms_db / n, lev_bad);
-        bad += gcheck("(0.9.9-gen3) every genre x 2: the drums 60 % of the parts' energy at most, the leveler in its range, the mix loud",
+        bad += gcheck("(0.9.9-gen3) every genre x 2: the drums 60 % of the parts' energy at most (gen5: the club 75 %), the leveler in its range, the mix loud",
                       !over && !lev_bad && rms_db / n >= -15.5);
     }
     /* ---- (0.9.9-gen1) the same seed, the same piece (and a different one from another seed), every genre */

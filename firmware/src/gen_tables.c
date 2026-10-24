@@ -284,6 +284,11 @@ static const garp_t ARP[AP_N] = {
     [AP_BROKEN]  = {{0, 2, 1, 3, -1}, 2, 60, 0xB6DB},
     [AP_OCTAVES] = {{0, 4, 0, 4, 1, 5, 0, 4}, 1, 45, 0xFFFF},
 };
+/* (gen5) the club's chord stabs, off the records (gen.c gen_pads): bit p the step p of the bar. The organ / M1 offbeats,
+ * the piano's 3 + 3 + 2, deep house's syncopations, Detroit's strings, techno's stab a bar or its answer; the figures a
+ * genre draws from (HOUSE DEEP TECH HOUSE TECHNO DETROIT). (Nine: out of the merged constants, a table of its own) */
+static const uint16_t STAB_FIG[9] = {0x4444u, 0x1249u, 0x4848u, 0x4141u, 0x2424u, 0x0001u, 0x0408u, 0x2492u, 0x4444u};
+static const uint8_t STAB_SET[5][3] = {{0, 1, 4}, {2, 3, 4}, {0, 2, 6}, {5, 6, 2}, {1, 7, 3}};
 /* the lead: a motif in phrases, an ostinato cell on an euclid, sparse long chord tones, Part's scale line, a machine's
  * figure, a two-bar hook (call and answer), none */
 enum { LD_MOTIF, LD_OSTINATO, LD_SPARSE, LD_TINTI, LD_MECH, LD_HOOK, LD_NONE };
@@ -442,14 +447,14 @@ static const ggenre_t GENRE[] = {
     /* Chicago / New York house (Frankie Knuckles, Marshall Jefferson, Kerri Chandler): a 909 four on the floor, the
      * open hat off the beat, M1 piano / organ stabs on the chords, a synth bass answering the kick, swing ~56 % */
     {"HOUSE", 120, 126, 30, {SC_MIN, SC_DOR, SC_MAJ, SC_MIN}, DM_HOUSE, 100, KIT_909, 0, HC_HOUSE, FL_ROLL, 0,
-     {BA_OFFBEAT, BA_BOUNCE, BA_OFFOCT}, 36, KM_ANSWER, 45, {PR_I_IV, PR_I_VI, PR_DEEP4}, 1, CS_STAB, VM_RICH,
-     {AP_BROKEN, AP_UP}, LD_HOOK, AMT(80, 70, 60, 30, 40), {KIT_909, SR_FMBASS, SR_KEYS, SR_PLUCK, SR_ORGAN}, SR_NOISE,
+     {BA_OFFBEAT, BA_BOUNCE, BA_OFFOCT}, 36, KM_ANSWER, 45, {PR_I_IV, PR_I_VI, PR_DEEP4}, 1, CS_STAB, VM_PLANE,
+     {AP_BROKEN, AP_UP}, LD_HOOK, AMT(90, 75, 70, 0, 0), {KIT_909, SR_FMBASS, SR_KEYS, SR_PLUCK, SR_ORGAN}, SR_NOISE,
      0, 1, 40, 0, FM_CLUB, 10, HF_JAZZY},
     /* Larry Heard (Can You Feel It), Chez Damier, Kerri Chandler: an 808, a Rhodes on 7ths and 9ths through the
      * delay, a walking sub, swing ~57 % */
     {"DEEP HOUSE", 118, 124, 35, {SC_MIN, SC_DOR, SC_DOR, SC_MPEN}, DM_DEEP, 100, KIT_808, 0, HC_HOUSE, FL_DROP, 1,
-     {BA_DEEPWALK, BA_OFFBEAT, BA_UKG}, 36, KM_ANSWER, 50, {PR_I_IV, PR_JAZZ, PR_IV_I}, 2, CS_DUB, VM_RICH,
-     {AP_BROKEN, AP_UPDOWN}, LD_SPARSE, AMT(70, 75, 70, 30, 30), {KIT_808, SR_SUB, SR_EP, SR_KEYS, SR_SINEKEY}, SR_TEXTURE,
+     {BA_DEEPWALK, BA_OFFBEAT, BA_UKG}, 36, KM_ANSWER, 50, {PR_I_IV, PR_JAZZ, PR_IV_I}, 2, CS_STAB, VM_PLANE,
+     {AP_BROKEN, AP_UPDOWN}, LD_SPARSE, AMT(85, 75, 75, 0, 0), {KIT_808, SR_SUB, SR_EP, SR_KEYS, SR_SINEKEY}, SR_TEXTURE,
      0, 1, 55, 0, FM_CLUB, 20, HF_JAZZY},
     /* Perlon, Villalobos, Akufen: clicks for a kit, a plucked loop that orbits, a dry FM bass, swing ~54 % */
     {"MICRO HOUSE", 122, 128, 20, {SC_MIN, SC_DOR, SC_MIN, SC_PHRY}, DM_MICRO, 100, KIT_CLICK, 0, HC_FLAT, FL_DROP, 0,
@@ -459,7 +464,7 @@ static const ggenre_t GENRE[] = {
     /* Terry Francis, Mr. C, Fuse: house's swing on techno's machines, a rolling bass, a stab with the filter moving */
     {"TECH HOUSE", 124, 128, 15, {SC_MIN, SC_PHRY, SC_DOR, SC_MIN}, DM_TECHHOUSE, 100, KIT_909, 0, HC_HOUSE, FL_ROLL, 0,
      {BA_OFFBEAT, BA_OFFOCT, BA_BOUNCE}, 36, KM_ANSWER, 40, {PR_ONE, PR_I_VII, PR_I_VI}, 2, CS_STAB, VM_SUS,
-     {AP_BROKEN, AP_SEQ}, LD_SPARSE, AMT(85, 80, 40, 30, 25), {KIT_909, SR_TECHBASS, SR_STAB, SR_PLUCK, SR_LEAD}, SR_NOISE,
+     {AP_BROKEN, AP_SEQ}, LD_SPARSE, AMT(95, 85, 45, 0, 0), {KIT_909, SR_TECHBASS, SR_STAB, SR_PLUCK, SR_LEAD}, SR_NOISE,
      0, 1, 35, 0, FM_CLUB, 0, HF_LOOP},
     /* Phuture (Acid Tracks), DJ Pierre, Hardfloor: the TB-303 over a 909 (the owner: as it is) */
     {"ACID HOUSE", 122, 130, 8, {SC_MIN, SC_PHRY, SC_DOR, SC_MIN}, DM_HOUSE, 100, KIT_909, 0, HC_HOUSE, FL_ROLL, 0,
@@ -471,13 +476,13 @@ static const ggenre_t GENRE[] = {
      * swept over the bars */
     {"TECHNO", 128, 136, 4, {SC_MIN, SC_PHRY, SC_MIN, SC_MIN}, DM_TECHNO, 100, KIT_909, 0, HC_MACHINE, FL_DROP, 0,
      {BA_ROLL16, BA_OCTBNC, BA_OFFBEAT}, 33, KM_SUSTAIN, 45, {PR_ONE, PR_PHRY, PR_I_VII}, 4, CS_STAB, VM_PLANE,
-     {AP_PULSE, AP_SEQ}, LD_OSTINATO, AMT(90, 80, 35, 35, 25), {KIT_909, SR_TECHBASS, SR_STAB, SR_PLUCK, SR_LEAD}, SR_NOISE,
+     {AP_PULSE, AP_SEQ}, LD_OSTINATO, AMT(95, 80, 40, 0, 0), {KIT_909, SR_TECHBASS, SR_STAB, SR_PLUCK, SR_LEAD}, SR_NOISE,
      0, 2, 35, 0, FM_CLUB, 0, HF_LOOP},
     /* Derrick May (Strings of Life), Carl Craig, UR: string stabs on minor 7ths, a melodic lead, a 909 with a light
      * swing */
     {"DETROIT", 124, 132, 12, {SC_MIN, SC_DOR, SC_MIN, SC_MAJ}, DM_DETROIT, 100, KIT_909, 0, HC_HOUSE, FL_ROLL, 0,
-     {BA_DETROIT, BA_OCTBNC, BA_SYNTHW}, 36, KM_SUSTAIN, 50, {PR_I_VI, PR_MINOR4, PR_DEEPVI}, 1, CS_STAB, VM_RICH,
-     {AP_UPDOWN, AP_BROKEN}, LD_MOTIF, AMT(85, 80, 60, 45, 45), {KIT_909, SR_HOOK, SR_STRINGS, SR_PLUCK, SR_LEAD}, SR_PAD,
+     {BA_DETROIT, BA_OCTBNC, BA_SYNTHW}, 36, KM_SUSTAIN, 50, {PR_I_VI, PR_MINOR4, PR_DEEPVI}, 1, CS_STAB, VM_PLANE,
+     {AP_UPDOWN, AP_BROKEN}, LD_MOTIF, AMT(90, 80, 65, 0, 40), {KIT_909, SR_HOOK, SR_STRINGS, SR_PLUCK, SR_LEAD}, SR_PAD,
      0, 1, 45, 0, FM_CLUB, 5, HF_JAZZY},
     /* Basic Channel (Phylyps Trak), Maurizio, Deepchord: one chord stab through a long delay and reverb, its filter
      * swept, a sub, the hats soft */
@@ -698,8 +703,8 @@ static const ggenre_t GENRE[] = {
 #define GG_LIFT(g) ((int32_t)(((g) >> 10) & 7u) * 3 - 6)   /* (gen3) the bass, chords, arp, lead's LEVEL over the drums: -6 ..
                                                          * +15 (half dB), by how the genre's kit weighs (gen.c gen_mix) */
 static const uint16_t GGRAM[] = {   /* (gen3: + LIFT, 2 = none; MUTATE on TECHNO and TECH HOUSE too) */
-    GG(1, 0, 1, 0, 0, 0, 4), GG(0, 1, 0, 0, 0, 0, 3), GG(1, 0, 0, 1, 0, 1, 0), GG(1, 0, 1, 1, 0, 1, 4),   /* HOUSE DEEP HOUSE MICRO HOUSE TECH HOUSE */
-    GG(0, 0, 0, 1, 0, 0, 2), GG(1, 0, 0, 2, 0, 1, 3), GG(1, 0, 1, 1, 0, 0, 4), GG(0, 0, 0, 1, 0, 1, 2),   /* ACID HOUSE TECHNO DETROIT DUB TECHNO */
+    GG(1, 0, 1, 0, 0, 0, 6), GG(0, 1, 0, 0, 0, 0, 4), GG(1, 0, 0, 1, 0, 1, 0), GG(1, 0, 1, 1, 0, 1, 5),   /* HOUSE DEEP HOUSE MICRO HOUSE TECH HOUSE */
+    GG(0, 0, 0, 1, 0, 0, 2), GG(1, 0, 0, 2, 0, 1, 5), GG(1, 0, 1, 1, 0, 0, 4), GG(0, 0, 0, 1, 0, 1, 2),   /* ACID HOUSE TECHNO DETROIT DUB TECHNO */
     GG(2, 0, 0, 2, 1, 0, 7), GG(1, 0, 0, 2, 0, 1, 0), GG(1, 0, 1, 1, 0, 0, 2), GG(2, 0, 2, 1, 1, 0, 4),   /* HARD TECHNO HYPNOTIC TRANCE ELECTRO */
     GG(2, 0, 0, 2, 0, 0, 5), GG(1, 0, 2, 0, 0, 0, 5), GG(1, 0, 2, 0, 0, 0, 4), GG(1, 0, 1, 1, 0, 0, 6),   /* EBM ITALO SYNTH POP DARKWAVE */
     GG(1, 0, 1, 0, 0, 0, 4), GG(1, 0, 0, 0, 0, 0, 3), GG(1, 0, 1, 0, 0, 1, 3), GG(1, 0, 1, 0, 0, 1, 1),   /* POST PUNK TRIBAL PUNK MINIMAL SYNTH MAN MACHINE */

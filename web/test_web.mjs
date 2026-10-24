@@ -387,16 +387,16 @@ async function editorMock() {
 }
 
 async function editorSamplePresets() {
-  /* (JIANT) SAMPLE, GRAIN and SLICE are retired (core.h eng_gone): their numbers named "-", no presets; picking one gives
-   * ANALOG; SAMPLE's preset 4 (once PERC) still gives DRUM's kit */
+  /* (JIANT) SAMPLE and PHYS are retired (core.h eng_gone; GRAIN's 8 and SLICE's 13 are STRING and ADD since snd5): their
+   * numbers named "-", no presets; picking one gives ANALOG; SAMPLE's preset 4 (once PERC) still gives DRUM's kit */
   const C = E.CMD;
   const { rq, done } = attachMock();
   const info = E.parse[C.INFO](await rq(E.req.info()));
-  ok([4, 8, 13].every((e) => info.engines[e] === "-"), "JIANT: SAMPLE GRAIN SLICE retired: their numbers are \"-\"");
+  ok([4, 9].every((e) => info.engines[e] === "-"), "JIANT: SAMPLE PHYS retired: their numbers are \"-\"");
   const names = E.parse[C.NAMES](await rq(E.req.names(4)));
-  const g = E.parse[C.PRESET](await rq(E.req.preset(8, 0)));
-  const s = E.parse[C.PRESET](await rq(E.req.preset(13, 0)));
-  ok(!names.names.length && g.engine === 0 && s.engine === 0, "  no presets; a GRAIN or SLICE preset asked for: ANALOG");
+  const g = E.parse[C.PRESET](await rq(E.req.preset(9, 0)));
+  const s = E.parse[C.PRESET](await rq(E.req.preset(4, 1)));
+  ok(!names.names.length && g.engine === 0 && s.engine === 0, "  no presets; a PHYS or SAMPLE preset asked for: ANALOG");
   await rq(E.req.preset(10, 0));
   const kitD = E.parse[C.DESC](await rq(E.req.desc(0, info.pe0)));
   ok(kitD.label === "MORPH" && kitD.max === 127 && kitD.def === 64,

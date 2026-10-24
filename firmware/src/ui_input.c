@@ -1699,24 +1699,17 @@ static void seq_entry(uint32_t pressed)
  * (preset_step; a sound load keeps the steps); in SEQ the patterns: the PHRASES loader over the page (KNOB 1 the pattern
  * too, OCT+ LOAD, OCT- back to the page), each detent the next one. Never a page, a track, a module, a step or a row
  * (until 0.9.1 it was the bar, the step, the row, the module, the track, ROOT ..: KNOB 1's now, rule 4) */
-static uint32_t phrases_page(void)
-{
-    uint32_t i;
-    for (i = 0; i < NPAGES && PAGES[i].graph != GR_PATS; i++) {}
-    return i;
-}
+/* PRESETS: the sounds; (0.9.9-seq2i, the owner) on SEQ's pages the step picked, a step a detent (round in LEN), the same
+ * step every SEQ page edits (STEP's cursor, COMP's, the locks'): the factory PATTERNS' loader it opened is gone (the
+ * generator, MUTATE and the components make patterns enough) */
 static void presets_turn(int32_t s)
 {
     if (!ui.home && PAGES[ui.page].fam == FAM_SEQ) {
-        uint32_t i = phrases_page();
-        ui.ppick = (uint8_t)clamp((int32_t)pat_pick() + s, 0, (int32_t)pat_count() - 1);
-        if (ui.page != i) {                             /* (the entry stays: SELECT, SEQ and OCT- go on from there) */
-            ui.page = (uint8_t)i;
-            page_entered();
-            page_flash();
-        }
-        ui.hot_col = 0;
-        ui.hot_t = 40, ui.knob_ms = fm1_ms;
+        char b[12];
+        cursor_set((int32_t)ui.cursor + s);
+        str_cpy(b, "STEP ", sizeof b);
+        fmt_int(b + 5, (int32_t)ui.cursor + 1);
+        ui_message(b);
         return;
     }
     preset_step(s);

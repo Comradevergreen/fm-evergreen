@@ -12,8 +12,8 @@ static favorites_t favorites;
 static void settings_save(void);
 static __attribute__((noinline)) void fav_rows_new(void)
 {
-    memset(favorites.factory[ENGI_STRING], 0, sizeof favorites.factory[ENGI_STRING]);
-    memset(favorites.factory[ENGI_ADD], 0, sizeof favorites.factory[ENGI_ADD]);
+    memset(favorites.factory[8], 0, sizeof favorites.factory[8]);           /* (core.h ENGI_STRING) */
+    memset(favorites.factory[13], 0, sizeof favorites.factory[13]);         /* (core.h ENGI_ADD) */
     favorites.factory[15][25] = 3u;                    /* (prefs_rev) */
     settings_save();
 }

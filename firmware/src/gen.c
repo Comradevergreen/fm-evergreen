@@ -98,6 +98,13 @@ static void gclear(step_t *s) { memset(s, 0, sizeof *s); s->time = ST_REST; }
 /* (0.8.6) EXPLORE: on (this piece is EXPLORE's), dirty (an EXPLORE piece set DIV and PLAYHEADS, which a genre's piece
  * put back; 0.9.9-gen1: the clean base does), the engine gen_sound takes (-1: the recipe's), ANIMAL and VOICE tracks so far (two each at most, as FM6) */
 static struct { uint8_t on, nan, nvo; int8_t eng; } gx = {0, 0, 0, -1};
+/* (gen5) the club's four on the floor (HOUSE DEEP HOUSE TECH HOUSE TECHNO DETROIT; not ACID's 303, not MICRO's clicks): the
+ * kick in front, the parts the records give it (no arp, no texture), the stabs' figures off the records */
+static int gclub(void)
+{
+    uint32_t d = gs.g->drum;
+    return !gx.on && gs.g->bass[0] != BA_ACID && (d == DM_HOUSE || d == DM_DEEP || d == DM_TECHHOUSE || d == DM_TECHNO || d == DM_DETROIT);
+}
 
 static void gnote(step_t *s, const int32_t *n, uint32_t cnt, int32_t vel, uint32_t flags)
 {
@@ -809,8 +816,19 @@ static void gen_pads(track_t *t, uint32_t len)
      * a part's bar repeats, 90 % and more): before, a coin each step made every bar another; fig[1] the phrase's last
      * bar (the fourth of four), the figure with one step moved (a push into the next phrase); hold and velocity still
      * by the step */
-    uint32_t fig[2] = {0, 0}, stab1 = gch(50), sparse = 40u + a / 3u, keep = 70u + a * 3u / 10u, p;
-    for (p = 0; p < 16u; p++) {
+    uint32_t fig[2] = {0, 0}, stab1 = gch(50), sparse = 40u + a / 3u, keep = 70u + a * 3u / 10u, p, club = style == CS_STAB && gclub(), mem_n = 0;
+    int32_t mem_r = 0;
+    int8_t mem_iv[4];
+    /* (gen5) the club's stabs off the records: the organ / M1 offbeats (Marshall Jefferson, Kerri Chandler), the piano's
+     * 3 + 3 + 2 (Big Fun, Inner City), the deep house syncopation (Larry Heard, Chez Damier), Detroit's strings (Strings
+     * of Life), techno's one stab a bar or its answer (Jeff Mills, Robert Hood): a figure a piece, the chord memory's
+     * shape moved with the chords (VM_PLANE) */
+    if (club) {
+        uint32_t d = g->drum, set = d == DM_HOUSE ? 0u : d == DM_DEEP ? 1u : d == DM_TECHHOUSE ? 2u : d == DM_TECHNO ? 3u : 4u;
+        fig[0] = STAB_FIG[STAB_SET[set][gr() % 3u]];
+        stab1 = 0;
+    }
+    for (p = 0; p < 16u && !club; p++) {
         int o = 0;
         switch (style) {
         case CS_STAB: o = p % 4u == 2u && gch(40 + a / 2u); break;
@@ -856,6 +874,24 @@ static void gen_pads(track_t *t, uint32_t len)
         if (!on) continue;
         if (gci(i) != last || !cnt || style == CS_HOLD || style == CS_SWELL || style == CS_SPARSE) {
             cnt = gchord_at(i, 48, 79, n, gs.vo, &gs.nvo, mode, rootless);
+            if (club && g->drum != DM_TECHHOUSE && g->drum != DM_TECHNO) {   /* (gen5) the CHORD MEMORY of house and
+                                                         * Detroit (an M1, a Juno's): the first chord's shape, the same
+                                                         * intervals over every chord's root (the nearest), so the chords
+                                                         * move in parallel, their colour kept */
+                int32_t r = (int32_t)gchord_root_pc(i), d;
+                uint32_t j;
+                if (!mem_n) {
+                    mem_n = cnt;
+                    mem_r = n[0] - (((n[0] - r) % 12) + 12) % 12;   /* (the root under the voicing's lowest note) */
+                    for (j = 0; j < cnt; j++) mem_iv[j] = (int8_t)(n[j] - mem_r);
+                }
+                d = ((r - mem_r) % 12 + 12) % 12;
+                d = d > 6 ? d - 12 : d;                 /* (the nearest: up to a tritone either way) */
+                cnt = mem_n;
+                for (j = 0; j < cnt; j++) n[j] = clamp(mem_r + d + mem_iv[j], 36, 96);
+                for (j = 0; j < cnt; j++) gs.vo[j] = n[j];
+                gs.nvo = cnt;
+            }
             last = gci(i);
         } else {
             uint32_t j;
@@ -1526,6 +1562,14 @@ static void gen_kit(track_t *t)
     t->p[P_LN3] = (int16_t)(gs.g->hats == HC_MACHINE ? 112 : 118);   /* (the hats a little under) */
     t->p[P_LN4] = 118;
     t->p[P_LN6] = t->p[P_LN7] = 110;
+    if (gclub()) {                                      /* (gen5) the kick in front: the rest of the kit under it */
+        t->p[P_LN0] = 127;
+        t->p[P_LN1] = 104;
+        t->p[P_LN2] = 110;
+        t->p[P_LN3] = 98;
+        t->p[P_LN4] = 106;
+        t->p[P_LN6] = t->p[P_LN7] = 100;
+    }
 }
 /* the mix and the humanity of a role */
 static void gen_mix(track_t *t, uint32_t r)
@@ -2108,9 +2152,11 @@ static void gen_make(void)
         }
         /* (0.6.95) a throw its own: the drums from the map's family, the chords' play from the neighbours (0.9.9-gen1: a
          * role's sound always its archetype) */
-        if (gmut.drum < DM_NONE && gmut.drum != DM_IDM && gch(35)) gmut.drum = DM_ALT[gmut.drum][gr() % 2u];
-        if (gmut.pads <= CS_TRANCE && gch(35)) gmut.pads = CS_ALT[gmut.pads][gr() % 2u];
         g = gs.g = &gmut;
+        if (!gclub()) {                                 /* (gen5: the club's four on the floor keep their records' parts) */
+            if (gmut.drum < DM_NONE && gmut.drum != DM_IDM && gch(35)) gmut.drum = DM_ALT[gmut.drum][gr() % 2u];
+            if (gmut.pads <= CS_TRANCE && gch(35)) gmut.pads = CS_ALT[gmut.pads][gr() % 2u];
+        }
     }
     gs.root = (int16_t)grr(0, 11);
     {   /* (0.8.3) the key: always a mode of seven, so the CHORD page, the chords, the arp and the lead stand on it; a
@@ -2214,7 +2260,8 @@ static void gen_make(void)
             if (gs.trk_of[gs.role[k]] == NTRK) gs.trk_of[gs.role[k]] = (uint8_t)k;
             next++;
         }
-        gs.act[RL_TEX] = (uint8_t)(nlive > 5u && gs.trk_of[RL_TEX] < nlive && gs.amt[GP_CHORDS] > 0u);
+        gs.act[RL_TEX] = (uint8_t)(nlive > 5u && gs.trk_of[RL_TEX] < nlive && gs.amt[GP_CHORDS] > 0u && !gclub());   /* (gen5:
+                                                         * no hiss under the club's kick) */
     }
     gen_scale_page();
     wet = (uint32_t)clamp((int32_t)g->wet + (gs.energy < 34 ? 20 : gs.energy > 66 ? -15 : 0), 0, 100);

@@ -3315,7 +3315,7 @@ static int test_presets_knob(void)
     uint32_t i, n_snd = 0, n_seq = 0;
     for (i = 0; i < NPAGES; i++) {
         track_t before;
-        uint32_t g = PAGES[i].graph, ppick, pg;
+        uint32_t g = PAGES[i].graph, ppick, pg, cur0;
         ui_power_on();
         song.sel = 0;
         my_steps(TSEL);
@@ -3326,18 +3326,15 @@ static int test_presets_knob(void)
         before = *TSEL;
         ppick = pat_pick();
         pg = ui.page;
+        cur0 = ui.cursor;
         turn(EN_PRESET, 1);
         {
             int same_snd = TSEL->preset == before.preset && TSEL->eng_req == before.eng_req &&
                            !memcmp(TSEL->p, before.p, sizeof before.p);
             int same_steps = !memcmp(TSEL->step, before.step, sizeof before.step);
-            if (g == GR_PATS) {                           /* (PHRASES itself, put by code: its pick) */
-                pat_ok &= pat_pick() == ppick + 1u && same_snd && same_steps;
-            } else if (PAGES[i].fam == FAM_SEQ) {         /* SEQ: the patterns' loader over the page, the pick on */
-                seq_ok &= cur_page()->graph == GR_PATS && pat_pick() == ppick + 1u && same_snd && same_steps && song.sel == 0u;
-                press(B_OCTDN); frame();
-                seq_ok &= (ui.page == pg || g == GR_CHANCE || seq_off_chain(i)) && same_steps;   /* (OCT-: back to the page it
-                                                         * was opened on; CHANCE, BAR, NOTE, out of the chain: to its entry's) */
+            if (PAGES[i].fam == FAM_SEQ) {                /* SEQ (seq2i): the step on, the page, the sound, the steps stay */
+                seq_ok &= ui.page == pg && ui.cursor == (cur0 + 1u) % (uint32_t)(TSEL->p[P_SLEN] > 0 ? TSEL->p[P_SLEN] : 1) && same_snd && same_steps && song.sel == 0u;
+                if (g == GR_PATS) pat_ok &= pat_pick() == ppick;   /* (PHRASES: its pick untouched; KNOB 1 picks) */
                 n_seq++;
             } else {
                 snd_ok &= !same_snd && same_steps && ui.page == pg && !ui.home && song.sel == 0u && !ui.confirm;
@@ -3346,9 +3343,9 @@ static int test_presets_knob(void)
             }
         }
     }
-    bad += check("0.9.2 PRESETS on every SEQ page (STEP NOTE COMP BAR PATTERN TRACK AUTO ..): the patterns' loader, OCT- back",
+    bad += check("seq2i PRESETS on every SEQ page (STEP NOTE COMP BAR PATTERN TRACK AUTO ..): the next step, the page stays",
                  seq_ok && n_seq >= 11u);
-    bad += check("0.9.2 PRESETS on PHRASES: the next pattern (KNOB 1's too); nothing loaded until OCT+", pat_ok);
+    bad += check("seq2i PRESETS on PHRASES: the step too, the pick untouched", pat_ok);
     bad += check("0.9.2 PRESETS everywhere else (EDIT ENV LFO FX SCL ARP GLO SAVE: USER TOOLS PROJECT ..): the next sound, the page stays",
                  snd_ok && n_snd >= 40u);
     ui_power_on();
@@ -3362,8 +3359,10 @@ static int test_presets_knob(void)
     turn(EN_K1, -18);
     grid_ok &= ui.cursor == 31u;
     turn(EN_PRESET, 1);
-    grid_ok &= cur_page()->graph == GR_PATS && ui.cursor == 31u;
-    bad += check("0.9.2 the DRUM grid: KNOB 1 the cursor (and the page; wraps), PRESETS the patterns (was the cursor too)", grid_ok);
+    grid_ok &= cur_page()->graph == GR_ROLL && ui.cursor == 0u;
+    turn(EN_PRESET, -2);
+    grid_ok &= ui.cursor == 30u;
+    bad += check("seq2i the DRUM grid: KNOB 1 the cursor (and the page; wraps), PRESETS the step too (wraps in LEN)", grid_ok);
     ui_power_on();
     hold(B_HOME);
     i = ui.menu_sel;
@@ -7168,10 +7167,8 @@ static int test_lente(void)
     turn(EN_K1, 1);
     ok &= str_eq(cur_page()->title, "STEP") && ui.cursor == 16u && ui.bank == 1u;  /* STEP: the step, into the next bar */
     turn(EN_PRESET, 1); frames(2);
-    ok &= cur_page()->graph == GR_PATS && ui.cursor == 16u;                        /* PRESETS: the patterns */
-    press(B_OCTDN); frame();
-    ok &= str_eq(cur_page()->title, "STEP");
-    bad += check("0.9.2 SEQ > BAR: KNOB 1 the bar (no wrap), KNOB 2 LEN; STEP's KNOB 1 into the next bar; PRESETS the patterns", ok);
+    ok &= str_eq(cur_page()->title, "STEP") && ui.cursor == 17u;                  /* PRESETS: the next step */
+    bad += check("0.9.2 SEQ > BAR: KNOB 1 the bar (no wrap), KNOB 2 LEN; STEP's KNOB 1 into the next bar; PRESETS the step", ok);
     {
         char ti[20];
         go_title("COMP 2"); frame();
@@ -11978,15 +11975,12 @@ static int test_lz_reach(void)
             rv_n = 0;
             for (sec = 0; sec < SEC_N; sec++)
                 rv_walk(sec);
-            go_home(); frames(32); press(B_SEQ); frames(32);
-            turn(EN_PRESET, 1); frames(2);              /* (SEQ: PRESETS, the patterns' loader) */
-            rv_add();
-            okh &= cur_page()->graph == GR_PATS;
             for (i = 0; i < NPAGES; i++) {              /* every page this track shows, in a section */
-                if (!page_visible(i) && PAGES[i].graph != GR_PATS)
+                if (!page_visible(i))
                     continue;
-                if (PAGES[i].graph == GR_CHANCE || (PAGES[i].graph == GR_SONG && PAGES[i].fam == FAM_SEQ) || seq_off_chain(i))
-                    continue;                           /* (hidden in 0.9.1 too: code puts them; seq2: BAR NOTE) */
+                if (PAGES[i].graph == GR_CHANCE || PAGES[i].graph == GR_PATS || (PAGES[i].graph == GR_SONG && PAGES[i].fam == FAM_SEQ) || seq_off_chain(i))
+                    continue;                           /* (hidden in 0.9.1 too: code puts them; seq2: BAR NOTE; seq2i:
+                                                         * PHRASES, its PRESETS loader gone) */
                 for (k = 0; k < rv_n && rv_pg[k] != i; k++) {}
                 if (k == rv_n) { printf("  %s%s: %s not reached\n", ENGINES[e]->name, v ? (v == 1u ? " BYTE" : " ECO") : "", PAGES[i].title); ok = 0; }
                 for (k = 0; k < 4u; k++)
@@ -12035,7 +12029,7 @@ static int test_lz_reach(void)
     bad += check("0.9.2 reach: every page each engine shows (LOFI BYTE, LOAD ECO too) by its button and SELECT alone", ok);
     bad += check("0.9.2 reach: every parameter of those pages (the ids on them)", okp);
     bad += check("0.9.2 reach: every 0.9.1 lens page at its 0.9.1 level (drawn as it was; NOTE's STEP view merged)", okold);
-    bad += check("0.9.2 reach: HOME's seven pages by SELECT (ECO MACROS BEING ROUTES GEN 1..3); PHRASES by SEQ's PRESETS", okh);
+    bad += check("0.9.2 reach: HOME's seven pages by SELECT (ECO MACROS BEING ROUTES GEN 1..3)", okh);
     ui_power_on();
     return bad;
 }
