@@ -30,7 +30,13 @@ MEMORY
 }
 SECTIONS
 {
-    .text : { KEEP(*(.text.crt0)) *(.text*) *(.rodata*) . = ALIGN(4); _etext = .; } > XIP
+    /* (0.9.9-snd3) the code in tools/audio_layout.txt's order, each run of the sound at its recorded address (tools/build.py
+     * writes build/layout.ld: the UI cannot move the sound; "cannot move location counter backwards" = the code before a
+     * run grew: FELUCCA_REPIN=1), the tables (the sound's first), the merged constants (their small tables, then the
+     * strings), the UI's tables that filled no hole (.rodata.n.*), code not in the layout */
+    .text : { KEEP(*(.text.crt0)) *(.text) INCLUDE build/layout.ld *(.rodata) *(.rodata.cst*) *(.rodata.str*)
+              *(SORT_BY_ALIGNMENT(.rodata.n.*)) *(.text*) *(.rodata*)
+              . = ALIGN(4); _etext = .; } > XIP
     .ram_text : { _rt_start = .; KEEP(*(.ram_text*)) . = ALIGN(4); _rt_end = .; } > RAMTEXT AT > XIP
     _rt_load = LOADADDR(.ram_text);
     /* (JIANT 0.6.71) the second core's waiting loop (hal/fm1_multicore.h): in RAM, after the flash driver, inside the

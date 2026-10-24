@@ -33,6 +33,7 @@ LDR = OUT / "loader"
 sys.path.insert(0, str(SRC / "tools"))
 import fm1pkg_make  # noqa: E402
 import lz4blk  # noqa: E402
+import size_fns  # noqa: E402
 
 APP_XIP = 0x02000120                # app.bin offset 0 in the XIP map; the SPL jumps here
 APP_SLOT = fm1pkg_make.APP_SLOT
@@ -206,6 +207,129 @@ def hot_sections(ir):
     return ir, found
 
 
+# (0.9.9-snd3) the flash layout of the sound, pinned: from 0.9.9 to 0.9.10 +6 KB of UI code moved every engine's render
+# 6 KB further through the XIP flash's small shared cache (none of the sound changed) and the owner's FM-1 went from fine to
+# 94 % load and crackling. tools/audio_layout.txt keeps the order of every code section in .text and the address of what
+# an interrupt reaches (tools/size_fns.py isr_reach: the audio ISR, TIMER5, the second core's jobs, the tables they read):
+# each run of the sound's code starts at its recorded address ('@', the linker script build/layout.ld places it there),
+# every audio function ('a') and constant table ('r') is checked at its address. Code the UI loses leaves a hole before
+# the next run: build.py fills it with the UI's constant tables ('n': fonts, icons, ...; moved out of .rodata into
+# .rodata.n.<name>), so the image shrinks while the sound stays where it was. FELUCCA_REPIN=1 records the layout anew
+# (after a change to the sound's code, which moves what follows it in its run)
+LAYOUT = SRC / "tools" / "audio_layout.txt"
+LAYOUT_LD = OUT / "layout.ld"
+
+
+def map_inputs(text):
+    """the linker map's input sections: [(section, address, size, object)]"""
+    out, pend = [], None
+    for ln in text.splitlines():
+        if pend:
+            m = re.match(r"^\s+0x([0-9a-f]+)\s+0x([0-9a-f]+)\s+(\S+)$", ln)
+            if m:
+                out.append((pend, int(m[1], 16), int(m[2], 16), m[3]))
+                pend = None
+                continue
+            pend = None
+        m = re.match(r"^ (\.\S+)\s+0x([0-9a-f]+)\s+0x([0-9a-f]+)\s+(\S+)$", ln)
+        if m:
+            out.append((m[1], int(m[2], 16), int(m[3], 16), m[4]))
+        else:
+            m = re.match(r"^ (\.\S+)$", ln)
+            pend = m[1] if m else None
+    return out
+
+
+def sym_table(syms):
+    """objdump -t: {name: address} of the symbols in .text"""
+    out = {}
+    for ln in syms.splitlines():
+        p = ln.split()
+        if len(p) >= 4 and p[-3] == ".text" and re.fullmatch(r"[0-9a-f]{8}", p[0]):
+            out.setdefault(p[-1], int(p[0], 16))
+    return out
+
+
+def layout_write(lines):
+    LAYOUT.write_text("# tools/build.py (FELUCCA_REPIN=1): the order of the code in .text and where the sound sits\n"
+                      "# offset in the image, @ a run of the sound's code pinned there, a its code, r its tables, c its merged\n"
+                      "# constants (all checked), - the UI's code (order only), n the UI's tables (moved to fill the holes)\n"
+                      + "\n".join(lines) + "\n")
+
+
+def layout_read():
+    rows = []
+    for ln in LAYOUT.read_text().splitlines():
+        if ln and not ln.startswith("#"):
+            off, flag, name = ln.split()
+            rows.append((int(off, 16), flag, name))
+    return rows
+
+
+def layout_record(mapt, syms, reach):
+    """tools/audio_layout.txt from a link in the compiler's order"""
+    ins = map_inputs(mapt)
+    text = [(a, n, o) for n, a, sz, o in ins if n.startswith(".text.") and n != ".text.crt0" and APP_XIP <= a < 0x02100000]
+    rodata = [(a, sz) for n, a, sz, o in ins if (n == ".rodata" or n.startswith(".rodata.cst")) and o.endswith("felucca.o")]
+    lines, prev = [], False
+    for a, n, o in text:
+        audio = n[6:] in reach or not o.endswith("felucca.o")     # (the ISR entries of hal/*.S: the sound's too)
+        lines.append(f"{a - APP_XIP:06x} {'@' if audio and not prev else 'a' if audio else '-'} {n[6:]}")
+        prev = audio
+    for name, a in sorted(sym_table(syms).items(), key=lambda kv: kv[1]):
+        if any(lo <= a < lo + sz for lo, sz in rodata) and not name.startswith("."):
+            cst = not (rodata[0][0] <= a < rodata[0][0] + rodata[0][1])
+            if name in reach or not cst:            # (the UI's small merged constants stay merged)
+                lines.append(f"{a - APP_XIP:06x} {'c' if cst else 'r' if name in reach else 'n'} {name}")
+    layout_write(lines)
+    print(f"layout: recorded {len(text)} code sections, {sum(1 for x in lines if ' @ ' in x)} runs of the sound pinned")
+
+
+def layout_ld(rows, fills=None):
+    """build/layout.ld: the code sections in the recorded order, each run of the sound at its address; fills: {run: [n
+    sections]} put in the hole before it"""
+    out, k = [], 0
+    for off, flag, name in rows:
+        if flag == "@":
+            out += [f"*(.rodata.n.{f})" for f in (fills or {}).get(k, [])]
+            out += [f"_lay_gap{k} = .;", f". = {off:#x};"]
+            k += 1
+        if flag in "@a-":
+            out.append(f"*(.text.{name})")
+    LAYOUT_LD.write_text("\n".join(out) + "\n")
+
+
+def layout_fills(rows, symt, ins, aligns):
+    """the holes before the pinned runs filled with the UI's tables, largest first (best fit)"""
+    pins = [off for off, flag, _ in rows if flag == "@"]
+    holes = [(k, symt[f"_lay_gap{k}"], APP_XIP + off) for k, off in enumerate(pins) if f"_lay_gap{k}" in symt]
+    items = sorted(((sz, n[10:]) for n, a, sz, o in ins if n.startswith(".rodata.n.")), reverse=True)
+    fills, used, lost = {}, set(), 0
+    for k, lo, hi in holes:
+        pos = lo
+        for sz, name in items:
+            if name in used:
+                continue
+            al = aligns.get(name, 4)
+            at = -(-pos // al) * al
+            if at + sz <= hi:
+                fills.setdefault(k, []).append(name)
+                used.add(name)
+                pos = at + sz
+        lost += hi - pos
+    return fills, sum(hi - lo for _, lo, hi in holes), lost
+
+
+def layout_check(rows, mapt, symt):
+    sect = {n[6:]: a for n, a, sz, o in map_inputs(mapt) if n.startswith(".text.")}
+    moved = []
+    for off, flag, name in rows:
+        at = sect.get(name) if flag in "@a" else symt.get(name) if flag in "rc" else None
+        if at is not None and at != APP_XIP + off:
+            moved.append(f"{name} {APP_XIP + off:#x} -> {at:#x}")
+    return moved
+
+
 def build_app():
     flags = [*CFLAGS, "-Ifirmware/hal", "-Ifirmware/src", "-Ibuild/gen"]
     for flag in ("FELUCCA_FLASH", "FELUCCA_OTA", "FELUCCA_OTA_DRYRUN", "FELUCCA_OTA_RAMONLY", "FELUCCA_CDC",
@@ -243,13 +367,63 @@ def build_app():
             ir, n = hot_sections((OUT / "felucca_opt.ll").read_text())
             if n != len(HOT_FNS):
                 raise SystemExit(f"hot RAM code: {n} of the {len(HOT_FNS)} functions found in the IR ({HOT_FNS})")
-            (OUT / "felucca_hot.ll").write_text(ir)
-            tc("cc", *cf, "-Xclang", "-disable-llvm-optzns", "-c", OUT / "felucca_hot.ll", "-o", OUT / "felucca.o")
+            hot_ir = ir
         else:
             tc("cc", *cf, "-c", OUT / "felucca_size.ll", "-o", OUT / "felucca.o")
     elf = OUT / "felucca.elf"
-    tc("pi32v2/bin/ld", "-T", FW / "app.ld", OUT / "crt0.o", OUT / "fm1_vec.o", OUT / "fm1_isr.o",
-       OUT / "felucca.o", "-o", elf)
+    objs = (OUT / "crt0.o", OUT / "fm1_vec.o", OUT / "fm1_isr.o", OUT / "felucca.o")
+
+    def link():
+        tc("pi32v2/bin/ld", "-T", FW / "app.ld", *objs, "-o", elf, "-Map", OUT / "felucca.map")
+        return (OUT / "felucca.map").read_text(), tc("common/bin/objdump", "-t", elf)
+
+    def compile_hot(rows):
+        """the hot IR, the UI's tables of the layout ('n') in sections of their own; {table: alignment}"""
+        tables, aligns = {name for _, flag, name in rows if flag == "n"}, {}
+
+        def const(m):
+            if m.group(2) not in tables or ' section "' in m.group(0):
+                return m.group(0)
+            aligns[m.group(2)] = int(m.group(4))
+            return f'{m.group(1)}, section ".rodata.n.{m.group(2)}"{m.group(3)}'
+        ir = re.sub(r'^(@"?([\w.]+)"? = [^\n]*? constant [^\n]*?)(, align (\d+))$', const, hot_ir, flags=re.M)
+        (OUT / "felucca_hot.ll").write_text(ir)
+        tc("cc", *cf, "-Xclang", "-disable-llvm-optzns", "-c", OUT / "felucca_hot.ll", "-o", OUT / "felucca.o")
+        return aligns
+    if not hot:
+        LAYOUT_LD.write_text("*(.text*)\n")            # (FELUCCA_SIZE=0 / FELUCCA_HOTRAM=0: the compiler's order)
+        link()
+    else:
+        reach = size_fns.isr_reach((OUT / "felucca_size.ll").read_text(), True)
+        if os.environ.get("FELUCCA_REPIN") == "1" or not LAYOUT.exists():
+            compile_hot([])
+            LAYOUT_LD.write_text("*(.text*)\n")
+            mapt, syms = link()
+            layout_record(mapt, syms, reach)
+            rows = layout_read()          # (the merged constants' place once the UI's tables have left .rodata)
+            compile_hot(rows)
+            layout_ld(rows)
+            symt = sym_table(link()[1])
+            layout_write([f"{(symt[n] - APP_XIP) if f == 'c' else o:06x} {f} {n}" for o, f, n in rows])
+        rows = layout_read()
+        aligns = compile_hot(rows)
+        layout_ld(rows)
+        mapt, syms = link()
+        fills, hole, lost = layout_fills(rows, sym_table(syms), map_inputs(mapt), aligns)
+        if fills:
+            layout_ld(rows, fills)
+            mapt, syms = link()
+        moved = layout_check(rows, mapt, sym_table(syms))
+        new = [n for n in reach if f".text.{n}" in {s[0] for s in map_inputs(mapt)}
+               and n not in {name for _, _, name in rows}]
+        print(f"layout: {sum(1 for r in rows if r[1] == '@')} runs of the sound pinned, "
+              f"{sum(1 for r in rows if r[1] in '@a')} functions and {sum(1 for r in rows if r[1] in 'rc')} tables recorded; "
+              f"holes {hole} B, {sum(map(len, fills.values()))} UI tables moved into them, {lost} B left as padding")
+        if moved:
+            raise SystemExit("layout: the sound's code or tables moved (FELUCCA_REPIN=1 records the layout anew, only "
+                             "after a change to the sound itself): " + "; ".join(moved[:6]) + (" ..." if len(moved) > 6 else ""))
+        if new:
+            print(f"  note  sound functions not in the layout (placed after the tables; FELUCCA_REPIN=1): {sorted(new)[:6]}")
     for sect in ("text.bin", "data.bin", "ramtext.bin", "c1text.bin", "hottext.bin"):
         (OUT / sect).unlink(missing_ok=True)
     *_, syms, dis, rt = tc_all(("common/bin/objcopy", "-O", "binary", "-j", ".text", elf, OUT / "text.bin"),
