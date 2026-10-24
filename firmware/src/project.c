@@ -840,6 +840,8 @@ static uint32_t proj_packed_size(const project_t *q)
         n += 3u + sizeof q->gl;
     if (q->dx_hands >> 4)                               /* (snd1) the kit's GLUE, when on */
         n += 3u;
+    if (q->g[G_DDRV])                                   /* (snd2) the delay's DRIVE, when on */
+        n += 3u;
     if (q->g[G_DMOD] != GP[G_DMOD].def)                 /* (0.6.86) the delay's MOD's, when not the default */
         n += 3u;
     if (q->g[G_DTYPE] || q->g[G_DPING])                 /* (0.6.90) its TYPE and PING-PONG's */
@@ -1007,6 +1009,10 @@ static int proj_pack(project_store_t *out, const project_t *q)
     if (q->dx_hands >> 4) {                             /* (0.9.9-snd1) the kit's GLUE, when on (after the lane: seq2h
                                                          * stops at it, the rest loads; a project without it as before) */
         b[pos++] = 'D'; b[pos++] = 'G'; b[pos++] = (uint8_t)(q->dx_hands >> 4);
+    }
+    if (q->g[G_DDRV]) {                                 /* (0.9.9-snd2) the delay's DRIVE, when on (after GLUE's: snd1 stops
+                                                         * at it, the rest loads) */
+        b[pos++] = 'D'; b[pos++] = 'D'; b[pos++] = (uint8_t)clamp(q->g[G_DDRV], 0, 100);
     }
     memcpy(b + PROJC_PFX_OFF, q->pfx_lane, sizeof q->pfx_lane);
     b[PROJC_PFX_OFF + sizeof q->pfx_lane] = q->pfx_ltgt > 2u ? 0u : q->pfx_ltgt;
@@ -1290,6 +1296,10 @@ static int proj_unpack_c(project_t *q, const uint8_t *b)
     }
     if (pos + 3u <= room && b[pos] == 'D' && b[pos + 1u] == 'G') {   /* (0.9.9-snd1) the kit's GLUE (else OFF) */
         glue = b[pos + 2u] > 15u ? 15u : b[pos + 2u];
+        pos += 3u;
+    }
+    if (pos + 3u <= room && b[pos] == 'D' && b[pos + 1u] == 'D') {   /* (0.9.9-snd2) the delay's DRIVE (else 0) */
+        q->g[G_DDRV] = (int16_t)(b[pos + 2u] > 100u ? 100u : b[pos + 2u]);
         pos += 3u;
     }
     proj_new_tracks(q, nt);                             /* (a FUNC of fewer tracks: the rest at power-on) */

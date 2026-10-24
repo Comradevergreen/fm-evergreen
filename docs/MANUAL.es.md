@@ -408,7 +408,7 @@ PHASE −1, como desde 0.6.51: todo proyecto abre como estaba.
 | SL PITCH | STEP | PITCH | LEN | QUANT |
 | DLY | TIME | FEEDBK | TONE | MIX |
 | DLY 2 | WIDE | PITCH | SPRAY | MOD |
-| DLY 3 | TYPE (ANALOG / DIGITAL) | PING (OFF / ON) | — | — |
+| DLY 3 | TYPE (ANALOG / DIGITAL) | PING (OFF / ON) | DRIVE | — |
 | REVERB | TYPE | SIZE | DAMP (RESO: FOLLOW) | PRE (SHIMMER/CLOUD: AIR; RESO: PITCH) |
 | REVERB 2 | MOD | RATE | FILT | WIDE |
 | CHORUS | RATE | DEPTH | STEREO | — |
@@ -903,6 +903,11 @@ entrada caliente gruñe en vez de reventar); RES es exponencial (suave en 0, muy
 resonancia igual se apaga cuando la parte queda en silencio). Las mismas perillas: CUT (con LFO / ENV DEST FILTER),
 RES y el drive de la KNOB 4. En ANALOG y LOFI el MS20 (como los peines) es el filtro de la pista después de las voces:
 su propio filtro se abre. LP, HP y BP suenan exactamente igual que antes.
+
+**DELAY DRIVE** (0.9.9-snd2; DLY 3 KNOB 3, la perilla libre de la página; 0–100): una saturación suave dentro del lazo
+de realimentación del delay. Una repetición suave vuelve como entró, una fuerte sale redondeada y aplastada, así que
+cada pasada queda un poco más sucia y un poco más baja, como una cinta o un BBD manejados fuerte; con FEEDBK pasado
+100 sostiene el desborde más abajo. En 0 el delay es exactamente el de antes (un proyecto viejo abre con DRIVE 0).
 
 ### VOICE (todos los motores)
 

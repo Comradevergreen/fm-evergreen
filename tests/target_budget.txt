@@ -37,7 +37,7 @@ rev_spring 138
 dist_amp 84
 dx_hands_step 36
 drw_dust 29
-dly_lo 2949
+dly_lo 3570
 animal_render 731
 formant_word_render 552
 formant_block 98

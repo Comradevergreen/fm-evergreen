@@ -220,6 +220,8 @@ enum {                          /* global parameters */
     G_DTYPE, G_DPING,           /* (0.6.90) the delay's TYPE (ANALOG / DIGITAL) and PING-PONG (project.c: block 'DT') */
     G_PFXLEN, G_PFXRES,         /* (0.6.99) the punch-in lane's length (1..64 steps) and resolution (1/8 1/16 1/32)
                                  * (pfx.c; project.c: block 'PX') */
+    G_DDRV,                     /* (0.9.9-snd2) the delay's DRIVE, 0..100: a soft saturation inside its loop (fx.c dly_drive;
+                                 * project.c: block 'DD', after GLUE's) */
     G_COUNT
 };
 #define G_SL_N (G_SLP15 + 1 - G_SLMODE)     /* the SLICER's globals (stored together: project.c, song_chain.c) */

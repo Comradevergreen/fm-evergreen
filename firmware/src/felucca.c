@@ -38,7 +38,7 @@
 #define FELUCCA_ID "FM-1_900"    /* package identity (build.py: the .fwsc marker string) */
 #endif
 #ifndef FELUCCA_VERSION
-#define FELUCCA_VERSION "v0.9.9-snd1" /* sound beta A: COMB tuned with damping and polarity, the MS20 filter, LFO MODE TRIG / FREE, DRUM-X GLUE, DRUM-X FEEDBK / FM curves; on seq2h */
+#define FELUCCA_VERSION "v0.9.9-snd2" /* sound beta B: the delay's DRIVE, the punch-in delay band-limited, LOOP 3 / 5 / 6 / 7, CLEAR AUTOMATION on PUNCH, MASTER last in FX, a lighter chorus; on snd1 */
 #endif
 #if FELUCCA_OTA && !FELUCCA_FLASH
 #error "FELUCCA_OTA needs FELUCCA_FLASH"

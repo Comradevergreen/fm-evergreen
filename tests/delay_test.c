@@ -21,6 +21,10 @@
 #include "hostsim.c"
 #undef main
 
+#ifndef DRIVE_HASHES                                /* (tests/delay_test.c test_drive: 0.9.9-snd1's, -DDRIVE_REF prints them) */
+#define DRIVE_HASHES 0x61b7f8c324f58397ull, 0x61b7f8c324f58397ull, 0x8ba209e7bf974d27ull, 0xa970e37d322ef1c9ull, \
+                     0x1ea7f5085e28e345ull, 0x5946fa168d9f7865ull, 0x50e06626e74308e7ull
+#endif
 static int bad;
 static void check(const char *what, int ok)
 {
@@ -694,11 +698,95 @@ static void demos(const char *dir)
     drun(pluck, 0, 14u * FS);
     for (uint32_t i = 0; i < 14u * FS; i++) { L[i] += pluck(i) / 2; R[i] += pluck(i) / 2; }
     wav(dir, "delay_quarter_120bpm_2bar.wav", 14u * FS);
+    for (uint32_t d = 0; d <= 100u; d += 50u) {        /* (snd2) DRIVE 0 / 50 / 100, FEEDBK 90 */
+        char nm[40];
+        dreset(); song.g[G_BPM] = 100; song.g[G_DTIME] = 4; song.g[G_DFDBK] = 90; song.g[G_DMOD] = 20; song.g[G_DMIX] = 100;
+        song.g[G_DDRV] = (int16_t)d;
+        drun(pluck, 0, 8u * FS);
+        for (uint32_t i = 0; i < 8u * FS; i++) { L[i] += pluck(i) / 2; R[i] += pluck(i) / 2; }
+        snprintf(nm, sizeof nm, "delay_drive_%03u.wav", (unsigned)d);
+        wav(dir, nm, 8u * FS);
+    }
 }
 #endif
 
+/* (0.9.9-snd2) DRIVE: at 0 the loop bit for bit as before it (the hashes of 0.9.9-snd1's delay, these scenes: full
+ * rate ANALOG / DIGITAL / PING-PONG / WIDE + MOD, half and a quarter rate); up, a loud repeat pressed down and a quiet one
+ * as it was, FEEDBK 120 still bounded */
+static uint64_t dhash(uint32_t a, uint32_t b)
+{
+    uint64_t h = 1469598103934665603ull;
+    uint32_t i;
+    for (i = a; i < b; i++) { h = (h ^ (uint32_t)L[i]) * 1099511628211ull; h = (h ^ (uint32_t)R[i]) * 1099511628211ull; }
+    return h;
+}
+static void drive_scene(uint32_t k, int drv)
+{
+    dreset();
+    song.g[G_DFDBK] = k == 4u ? 120 : 80; song.g[G_DMOD] = k == 3u ? 20 : 0; song.g[G_DTIME] = 4;
+    song.g[G_DTYPE] = k == 1u; song.g[G_DPING] = k == 2u; song.g[G_WIDTH] = k == 3u ? 60 : 0;
+    song.g[G_DCOLOR] = k == 3u ? 40 : 64;
+    if (k == 5u) { song.g[G_BPM] = 60; song.g[G_DTIME] = 8; }   /* (1/2 at 60: half rate) */
+    if (k == 6u) { song.g[G_BPM] = 120; song.g[G_DTIME] = 11; }  /* (2BAR: a quarter) */
+#ifndef DRIVE_REF
+    song.g[G_DDRV] = (int16_t)drv;
+#else
+    (void)drv;
+#endif
+    xs = 0x2468aceu;
+    drun(burst_src, 0, 3u * FS);
+}
+static void test_drive(void)
+{
+    static const uint64_t REF[7] = {DRIVE_HASHES};
+    uint32_t k, same = 0;
+    for (k = 0; k < 7u; k++) {
+        uint64_t h;
+        drive_scene(k, 0);
+        h = dhash(0, 3u * FS);
+#ifdef DRIVE_REF
+        printf("0x%016llxull,\n", (unsigned long long)h);
+#endif
+        same += h == REF[k];
+    }
+    check("DRIVE 0: the loop bit for bit as 0.9.9-snd1's (7 scenes: ANALOG DIGITAL PING WIDE+MOD 120 % half quarter)", same == 7u);
+#ifndef DRIVE_REF
+    {   /* a 1 kHz sine at -3 dBFS sent once: DRIVE 100 presses the first repeats down; at -40 dBFS they are as at 0 */
+        double r0[2], r1[2];
+        int32_t pk;
+        uint32_t a, j, d;
+        for (j = 0; j < 2u; j++) {
+            dreset(); song.g[G_DFDBK] = 90; song.g[G_DTIME] = 4; song.g[G_DDRV] = 0;
+            d = delay_samples();
+            s_f = 1000.0; s_a = j ? 330.0 : 23000.0; s_len = FS / 20u;
+            drun(sine_src, 0, 4u * d + FS / 10u);
+            a = 3u * d;                                  /* (the third repeat) */
+            r0[j] = rms(L, a + 200u, a + s_len - 200u);
+            dreset(); song.g[G_DFDBK] = 90; song.g[G_DTIME] = 4; song.g[G_DDRV] = 100;
+            drun(sine_src, 0, 4u * d + FS / 10u);
+            r1[j] = rms(L, a + 200u, a + s_len - 200u);
+        }
+        printf("delay: DRIVE 100, the third repeat of a loud sine %.1f dB, of a quiet one %.2f dB (against DRIVE 0)\n",
+               20.0 * log10(r1[0] / r0[0]), 20.0 * log10(r1[1] / r0[1]));
+        check("DRIVE 100: a loud repeat pressed down (> 2 dB), a quiet one as it was (within 0.5 dB)",
+              r1[0] < r0[0] * 0.8 && fabs(20.0 * log10(r1[1] / r0[1])) < 0.5);
+        for (j = 0; j < 2u; j++) {
+            dreset(); song.g[G_DFDBK] = 120; song.g[G_DTIME] = 4; song.g[G_DDRV] = (int16_t)(j * 100u);
+            xs = 0x2468aceu;
+            drun(burst_src, 0, 6u * FS);
+            r0[j] = peak(L, 5u * FS, 6u * FS);
+        }
+        pk = (int32_t)r0[1];
+        printf("delay: FEEDBK 120, the line grown into itself after 5 s: peak %d at DRIVE 0, %d at DRIVE 100\n", (int)r0[0], (int)pk);
+        check("DRIVE 100 at FEEDBK 120: bounded, held lower than at DRIVE 0", pk > 1000 && pk <= (int32_t)r0[0]);
+    }
+#endif
+}
+
 int main(int argc, char **argv)
 {
+    test_drive();
+    if (argc > 2 && !strcmp(argv[2], "drive")) return bad != 0;
     test_leak();
 #ifdef DLY_SPAN
     test_times();

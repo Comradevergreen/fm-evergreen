@@ -393,7 +393,7 @@ since 0.6.51: every project opens as it was.
 | SL PITCH | STEP | PITCH | LEN | QUANT |
 | DLY | TIME | FEEDBK | TONE | MIX |
 | DLY 2 | WIDE | PITCH | SPRAY | MOD |
-| DLY 3 | TYPE (ANALOG / DIGITAL) | PING (OFF / ON) | — | — |
+| DLY 3 | TYPE (ANALOG / DIGITAL) | PING (OFF / ON) | DRIVE | — |
 | REVERB | TYPE | SIZE | DAMP (RESO: FOLLOW) | PRE (SHIMMER/CLOUD: AIR; RESO: PITCH) |
 | REVERB 2 | MOD | RATE | FILT | WIDE |
 | CHORUS | RATE | DEPTH | STEREO | — |
@@ -865,6 +865,11 @@ input growls instead of blowing up); RES is exponential (soft at 0, very sharp i
 ring still dies out when the part goes silent). Same knobs: CUT (with LFO / ENV DEST FILTER), RES, and the drive of
 KNOB 4. On ANALOG and LOFI the MS20 (like the combs) is the track's filter after the voices: their own filter opens.
 LP, HP and BP sound exactly as before.
+
+**DELAY DRIVE** (0.9.9-snd2; DLY 3 KNOB 3, the page's free knob; 0–100): a soft saturation inside the delay's
+feedback loop. A quiet repeat comes back as it went, a loud one is rounded and pressed down, so every pass gets a little
+grittier and a little quieter, like a tape or a BBD driven hard; with FEEDBK past 100 it holds the runaway lower. 0 is
+the delay exactly as before (a project of before opens with DRIVE 0).
 
 ### VOICE (every engine)
 

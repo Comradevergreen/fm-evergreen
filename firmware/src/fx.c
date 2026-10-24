@@ -651,6 +651,18 @@ static inline int32_t dly_sat(int32_t u)            /* Q15 in, out within +-3276
     if (a > 32767) a = 32767;
     return u < 0 ? -a : a;
 }
+/* (0.9.9-snd2) DRIVE: the loop's repeat x g (1 .. 4: DRIVE 0 .. 100) into a soft clip (u - 4/27 u^3, flat from 1.5),
+ * then / g: a quiet repeat comes back as it went, a loud one rounded and pressed down, a little more grit and a little
+ * less level each pass (a tape driven, a BBD's input pushed). x within +-32767; g Q12, gi = 1 / g Q15. DRIVE 0: not
+ * called (the loop as before, bit for bit) */
+static inline int32_t dly_drive(int32_t x, int32_t g, int32_t gi)
+{
+    int32_t u = (x * g) >> 12, u3;
+    if (u > 49152) u = 49152;
+    else if (u < -49152) u = -49152;
+    u3 = (((u * u) >> 15) * (u >> 2)) >> 13;
+    return mulq15(u - ((u3 * 4855) >> 15), gi);
+}
 /* (0.6.86) TONE / FILT resonant: one knob, the middle open; one way a low-pass sweeping down, the other a low cut
  * sweeping up, both resonant (Q 0.7 near the middle, up to qmax from a third of the way): the band at the cutoff
  * stands out, so the knob carves where the repeats / the room sit. The level evened out (x 1/Q: the peak about
@@ -1475,7 +1487,7 @@ static __attribute__((noinline)) void dly_line_clear(uint32_t from, uint32_t n)
         p[3] = 0;
     }
 }
-typedef struct { int32_t fb, fb2, hk, dig, dton, png, wd; tone_t tn; } dlyk_t;   /* the block's settings (fx_buses) */
+typedef struct { int32_t fb, fb2, hk, dig, dton, png, wd, dg, dgi; tone_t tn; } dlyk_t;   /* the block's settings (fx_buses) */
 /* the delay's block, when not plain at the full rate (fx_buses: dly_lo_on): into dx (the left / mid echo) and dxr (the
  * right), FS; as the full-rate loop in fx_buses, step for step (at FS: the same arithmetic) */
 static __attribute__((noinline)) void dly_lo(const int32_t *dly_in, int32_t *dx, int32_t *dxr, uint32_t n,
@@ -1539,7 +1551,9 @@ static __attribute__((noinline)) void dly_lo(const int32_t *dly_in, int32_t *dx,
             fx.dly_hp += (((lf << 8) - fx.dly_hp) * k->hk + 16384) >> 15;
             lf -= (fx.dly_hp + 128) >> 8;
             if (k->dton) lf = tone_run(&k->tn, lf, &fx.dt1, &fx.dt2);
-            w = u + mulq15(clamp(lf, -32767, 32767), k->png ? k->fb2 : k->fb);
+            lf = clamp(lf, -32767, 32767);
+            if (k->dg) lf = dly_drive(lf, k->dg, k->dgi);  /* (snd2) DRIVE */
+            w = u + mulq15(lf, k->png ? k->fb2 : k->fb);
             dly_buf[fx.dly_w & (DLY_LEN - 1u)] = (int16_t)(k->dig ? clamp(w, -32767, 32767) : dly_sat(w));
             fx.dly_w++;
             if (k->png)
@@ -1728,6 +1742,8 @@ static inline __attribute__((always_inline)) void fx_buses(const int32_t *cho_in
     int32_t cdepth = GFX(GF_CDEPTH) * 6, rt;
     uint32_t cinc = LFO_INC[GFX(GF_CRATE) & 127] / CTL;
     int32_t hk = 5, wd = song.g[G_WIDTH];             /* (the loop's DC block: ~1 Hz, 0.6.89); WIDTH */
+    int32_t dg = song.g[G_DDRV] > 0 ? 4096 + 123 * clamp(song.g[G_DDRV], 0, 100) : 0;   /* (snd2) DRIVE: x1 .. x4, Q12 */
+    int32_t dgi = dg ? (int32_t)(134217728u / (uint32_t)dg) : 0;
     int32_t gr = !sys_load && (song.g[G_DPIT] || song.g[G_DSPRY]);   /* (JIANT) the GRAIN delay (LOAD LITE / ECO: plain) */
     /* (0.6.90) PING-PONG (not with the GRAIN): the line read at TIME (left) and twice TIME (right, the loop's tap), the
      * loop's gain squared, the right x FEEDBK: the repeats left, right, left .., each FEEDBK softer; TIME at most half
@@ -1807,7 +1823,7 @@ static inline __attribute__((always_inline)) void fx_buses(const int32_t *cho_in
                                                          * rate: its block first (dly_lo), the loop below takes it */
         dlyk_t k;
         k.fb = fb; k.fb2 = fb2; k.hk = hk << fx.dr_sh; k.dig = dig; k.dton = dton; k.png = png; k.wd = wd;
-        k.tn = dtn;
+        k.tn = dtn; k.dg = dg; k.dgi = dgi;
         dly_lo(dly_in, dlo_x, dlo_xr, n, &k, wm, dwm);
     }
     for (i = 0; i < n; i++) {
@@ -1869,7 +1885,9 @@ static inline __attribute__((always_inline)) void fx_buses(const int32_t *cho_in
             {
                 int32_t lf = (wr == 2 ? xr : x) - ((fx.dly_hp + 128) >> 8), w;
                 if (dton) lf = tone_run(&dtn, lf, &fx.dt1, &fx.dt2);
-                w = (dly_in[i] >> 1) + mulq15(clamp(lf, -32767, 32767), wr == 2 ? fb2 : fb);
+                lf = clamp(lf, -32767, 32767);
+                if (dg) lf = dly_drive(lf, dg, dgi);        /* (snd2) DRIVE */
+                w = (dly_in[i] >> 1) + mulq15(lf, wr == 2 ? fb2 : fb);
                 dly_buf[fx.dly_w & (DLY_LEN - 1u)] = (int16_t)(dig ? clamp(w, -32767, 32767) : dly_sat(w));   /* (DIGITAL: clean, a clip
                                                              * at full scale only) */
             }
