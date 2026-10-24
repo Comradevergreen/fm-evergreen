@@ -805,27 +805,55 @@ static void gen_pads(track_t *t, uint32_t len)
         comp[gch(50) ? 6u : 14u] = 1;                   /* (the anticipation of 3 or of the bar) */
         for (j = 0, m = (uint32_t)grr(3, 4); j < m; j++) brk[BR[gr() % 6u]] = 1;
     }
+    /* (gen4) the bar's figure drawn once and played every bar, as the records keep theirs (Mr Fingers, Jeff Mills, DAF:
+     * a part's bar repeats, 90 % and more): before, a coin each step made every bar another; fig[1] the phrase's last
+     * bar (the fourth of four), the figure with one step moved (a push into the next phrase); hold and velocity still
+     * by the step */
+    uint32_t fig[2] = {0, 0}, stab1 = gch(50), sparse = 40u + a / 3u, keep = 70u + a * 3u / 10u, p;
+    for (p = 0; p < 16u; p++) {
+        int o = 0;
+        switch (style) {
+        case CS_STAB: o = p % 4u == 2u && gch(40 + a / 2u); break;
+        case CS_PULSE: o = p % (gs.energy > 66u ? 2u : 4u) == 0u && !(p == 12u && gch(40)); break;
+        case CS_DUB: o = dub[p]; break;
+        case CS_SKANK: o = p % 4u == 2u; break;
+        case CS_COMP: o = (comp[p] && gch(70 + a / 4u)) || (p == 0u && gch(40)) || (!comp[p] && (p == 6u || p == 10u || p == 13u) && gch(a / 4u)); break;
+        case CS_POWER: o = p == 0u || (p == 8u && gch(60)); break;
+        case CS_BROKEN: o = brk[p]; break;
+        case CS_HOLD: case CS_SWELL: case CS_DRONE: case CS_SPARSE: break;
+        default: o = ((0xDB6Du >> p) & 1u) && gch(70 + a / 4u); break;   /* CS_TRANCE */
+        }
+        if (o && (p == 0u || style == CS_SKANK || gch(keep))) fig[0] |= 1u << p;
+    }
+    if (!fig[0]) fig[0] = style == CS_STAB || style == CS_SKANK ? 0x4444u : 1u;
+    fig[1] = fig[0];
+    if (gch(70)) {
+        uint32_t at = 10u + gr() % 6u;                  /* (a step of the bar's second half on or off) */
+        fig[1] ^= 1u << at;
+        if (!fig[1]) fig[1] = fig[0];
+    }
     for (i = 0; i < len; i++) {
         step_t *s = &t->step[i];
         const gch_t *c = gchord(i);
-        uint32_t pp = i % gs.len - c->at, p = i % 16u, b = i / 16u, cl = c->len;
-        int on = 0, vel = 80, hold = 0;
+        uint32_t pp = i % gs.len - c->at, b = i / 16u, cl = c->len, f = fig[len >= 64u && b % 4u == 3u];
+        int on, vel = 80, hold = 0;
+        p = i % 16u;
+        on = (int)((f >> p) & 1u);
         switch (style) {
         case CS_HOLD: on = pp == 0u; hold = (int)cl - 1; break;
         case CS_SWELL: on = pp == 0u; hold = (int)cl - 1; vel = 72; break;
-        case CS_STAB: on = (p % 4u == 2u && gch(40 + a / 2u)) || (pp == 0u && gch(50)); vel = p % 4u == 2u ? 84 : 92; break;
-        case CS_PULSE: on = i % (gs.energy > 66u ? 2u : 4u) == 0u && !(p == 12u && gch(40)); hold = gch(40); vel = p % 4u ? 76 : 86; break;
-        case CS_DUB: on = dub[p]; vel = p == 2u ? 92 : 78; break;
-        case CS_SKANK: on = p % 4u == 2u; vel = 84; break;
-        case CS_COMP: on = (comp[p] && gch(70 + a / 4u)) || (p == 0u && gch(40)) || (!comp[p] && (p == 6u || p == 10u || p == 13u) && gch(a / 4u));
-            hold = p == 14u || p == 7u; vel = p == 0u ? 84 : 80; break;   /* (0.6.93: the bar's figure, varied a bar) */
-        case CS_POWER: on = p == 0u || (p == 8u && (b & 1u) && gch(60)); hold = p == 8u ? 5 : 7; vel = 96; break;   /* (0.6.93: a push every bar) */
+        case CS_STAB: on |= pp == 0u && stab1; vel = p % 4u == 2u ? 84 : 92; break;
+        case CS_PULSE: hold = (int)stab1; vel = p % 4u ? 76 : 86; break;
+        case CS_DUB: vel = p == 2u ? 92 : 78; break;
+        case CS_SKANK: vel = 84; break;
+        case CS_COMP: hold = p == 14u || p == 7u; vel = p == 0u ? 84 : 80; break;
+        case CS_POWER: on = on && (p != 8u || (b & 1u)); hold = p == 8u ? 5 : 7; vel = 96; break;   /* (a push every other bar) */
         case CS_DRONE: on = i == 0u; hold = (int)len - 1; vel = 70; break;
-        case CS_SPARSE: on = pp == 0u && (i == 0u || gch(40 + a / 3u)); hold = (int)cl - 1; vel = 76; break;
-        case CS_BROKEN: on = brk[p]; vel = p ? 80 : 92; break;
-        default: on = ((0xDB6Du >> p) & 1u) && gch(70 + a / 4u); vel = p % 4u ? 78 : 96; break;   /* CS_TRANCE */
+        case CS_SPARSE: on = pp == 0u && (i == 0u || (gci(i) & 1u) == 0u || sparse > 66u); hold = (int)cl - 1; vel = 76; break;
+        case CS_BROKEN: vel = p ? 80 : 92; break;
+        default: vel = p % 4u ? 78 : 96; break;         /* CS_TRANCE */
         }
-        if (!on || !gch(style == CS_HOLD || style == CS_SWELL || style == CS_DRONE || style == CS_SPARSE ? 100 : 70 + a * 3u / 10u)) continue;
+        if (!on) continue;
         if (gci(i) != last || !cnt || style == CS_HOLD || style == CS_SWELL || style == CS_SPARSE) {
             cnt = gchord_at(i, 48, 79, n, gs.vo, &gs.nvo, mode, rootless);
             last = gci(i);
@@ -845,7 +873,7 @@ static void gen_pads(track_t *t, uint32_t len)
 static void gen_arp(track_t *t, uint32_t len)
 {
     const garp_t *ap;
-    uint32_t i, k = 0, idx = 0, a = gs.amt[GP_ARP], no = 0, last = 0xFFFFu, cnt = 0, rate;
+    uint32_t i, k = 0, idx = 0, a = gs.amt[GP_ARP], no = 0, last = 0xFFFFu, cnt = 0, rate, mask;
     int32_t c[4], n[1];
     gseed(GS_ARP);
     ap = &ARP[gs.g->arp[gch(70) ? 0 : 1]];
@@ -853,13 +881,29 @@ static void gen_arp(track_t *t, uint32_t len)
     if (rate == 1u && (a < 35u || (gs.energy < 34u && gch(50)))) rate = 2;   /* (0.6.93) a small amount: eighths */
     gs.navo = 0;
     for (no = 0; no < 8u && ap->ord[no] >= 0; no++) {}
+    {   /* (gen4) the holes chosen once, the same every figure (before: a coin each step, every bar another: 30 % of the
+         * bars as the one before): the amount is how many of the figure's steps play (a quarter .. all, three at the least), the strong
+         * ones kept first (the beats, then the eighths, then the rest), a drawn turn among equals */
+        uint32_t j, tier, nb = 0, want, got = 0, rot = gr() % 16u;
+        for (j = 0; j < 16u; j++) nb += (ap->mask >> j) & 1u;
+        want = (nb * (25u + a * 3u / 4u) + 99u) / 100u;
+        if (want < 3u) want = nb < 3u ? nb : 3u;          /* (three at the least: a figure) */
+        mask = 0;
+        for (tier = 0; tier < 3u && got < want; tier++)
+            for (j = 0; j < 16u && got < want; j++) {
+                uint32_t q = tier ? (j + rot) % 16u : j;
+                if (!((ap->mask >> q) & 1u) || ((mask >> q) & 1u)) continue;
+                if (tier == 0u ? q % 4u != 0u : tier == 1u ? q % 2u != 0u : 0) continue;
+                mask |= 1u << q;
+                got++;
+            }
+    }
     for (i = 0; i < len; i++) {
         uint32_t j;
         int32_t o;
         if (i % rate) continue;
         idx = i / rate;
-        if (!((ap->mask >> (idx % 16u)) & 1u)) { k++; continue; }
-        if (gr() % 100u >= 20u + a * 3u / 4u) { k++; continue; }   /* (holes: space; 0.6.93: the amount is the density) */
+        if (!((mask >> (idx % 16u)) & 1u)) { k++; continue; }
         if (gci(i) != last || !cnt) {
             cnt = gchord_at(i, 50, 74, c, gs.avo, &gs.navo, gvo_mode() == VO_PLANE ? VO_PLANE : VO_CLOSE, 0);
             last = gci(i);
@@ -1926,7 +1970,11 @@ static void gen_post(void)
             uint32_t r = gs.role[k], tries, want = 1u + (gs.complex > 60u) + (gs.complex > 85u), got = 0;
             if (!gs.act[r] || r == RL_DRUM || r == RL_TEX || r == RL_BASS || !gch(40 + gs.complex / 3u)) continue;
             for (tries = 0; tries < 12u && got < want; tries++) {
-                uint32_t at = 1u + gr() % (dlen(&trk[k]) - 1u > 0u ? dlen(&trk[k]) - 1u : 1u);
+                /* (gen4) at a phrase's end: the second half of the fourth bar of four (or the loop's last bar), where
+                 * the records turn a figure; before, any step: a bar unlike its neighbours anywhere */
+                uint32_t nb = dlen(&trk[k]) / 16u, bar = nb >= 4u ? (gr() % (nb / 4u)) * 4u + 3u : nb ? nb - 1u : 0u;
+                uint32_t at = bar * 16u + 8u + gr() % 8u;
+                if (at >= dlen(&trk[k])) continue;
                 step_t *s = &trk[k].step[at];
                 if (s->time != ST_NOTE || !s->n || s->comp) continue;
                 if (r == RL_PAD) {
