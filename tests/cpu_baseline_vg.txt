@@ -2,6 +2,7 @@
 # x86-64 gcc -O2. Exact counts; the check allows +8 %. Rewritten by BUDGET_UPDATE=1.
 dly/full 1350
 dly/full.drive 1374
+dly/full.throw 1508
 dly/half 1512
 dly/half.drive 1522
 dly/quarter 1553

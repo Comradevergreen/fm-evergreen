@@ -10,7 +10,7 @@
  *   eng/ANIMAL.<MODE>  (0.8.3) ANIMAL's five sources at their heaviest: 8 notes, no gaps (GROUP HOLD), every option on
  *   rev/<TYPE>     a pad soaked in the reverb, each REVERB TYPE (ROOM SPRING SHIMR RESO CLOUD)
  *   dly/<RATE>     (0.8.4) a pad into the delay, its line at the full rate, half, a quarter (fx.c dly_lo); (snd2)
- *                  .drive: DRIVE 100
+ *                  .drive: DRIVE 100; .throw: THROW held (KNOB 3 of the FX layer at 100), the loop's band in
  *   mix/full       six parts: four ANALOG / FM6 chords, drums, every FX on
  *   seq/plain      the sequencer: six tracks of chords / hits on every step at 200 BPM
  *   seq/heavy      .. with two step components on each (ARP / RATCHET x8, RANDOM / OCT+ at 75 %), DIV, LEN, chord glides
@@ -206,6 +206,13 @@ int main(void)
         vg_section(DN[i]);
         song.g[G_DDRV] = 0;
     }
+    vg_quiet();                                         /* (snd2) THROW held (the FX layer's KNOB 3 at 100): the mix */
+    song.g[G_DTIME] = DT_FREE + 40; song.g[G_DFDBK] = 70; song.g[G_DMOD] = 20;   /* sent, the loop's band */
+    vg_part(0, ENGI_ANALOG, 0, 4);
+    trk[0].p[P_DLY] = 127;
+    perf_k[2] = 100;
+    vg_section("dly/full.throw");
+    perf_k[2] = 0;
     vg_quiet();
     for (i = 0; i < 4u; i++) {
         vg_part(i, i == 1u ? ENGI_FM6 : ENGI_ANALOG, 0, 4);

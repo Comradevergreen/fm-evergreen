@@ -52,6 +52,9 @@ static int32_t rpre_out[CTL];                     /* .. the block out of it (the
 static struct {
     uint32_t dly_w, cho_w, cho_ph;
     int32_t dly_lp, dly_hp;              /* the delay's feedback: high cut (COLR), low cut (JIANT: HPF) */
+    int32_t db_h, db_l1, db_l2;          /* (snd2) the loop's band (dly_band): its low cut (Q3), its two low-pass poles */
+    uint16_t db_t;                       /* .. blocks it is held after THROW let go (0: not); */
+    int16_t db_a;                        /* .. its share, 0..256 (0: out of the loop) */
     uint32_t rpre_w, rm_ph;              /* (JIANT) the pre-delay's write count (samples); the reverb modulation's phase */
     int32_t rm_m[4], rf_lp;              /* .. the combs' offsets (Q8 samples); the reverb's input filter (FILT) */
     uint32_t gr_ph, gr_sp[2];            /* .. the GRAIN delay: grain 0's phase (Q16), each grain's spray (samples) */
@@ -662,6 +665,51 @@ static inline int32_t dly_drive(int32_t x, int32_t g, int32_t gi)
     else if (u < -49152) u = -49152;
     u3 = (((u * u) >> 15) * (u >> 2)) >> 13;
     return mulq15(u - ((u3 * 4855) >> 15), gi);
+}
+/* (0.9.9-snd2) the loop's band, tape-echo style: while THROW (the FX layer's KNOB 3: the punch-in delay) sends the
+ * whole mix in, and DB_HOLD blocks after (its tail), the repeat goes
+ * through a low cut (~180 Hz, one pole) and a low-pass (two poles at ~4.8 kHz, closing to ~3 kHz with FEEDBK at 100 %
+ * and to ~1.8 kHz over the tail's hold), mixed in by the share a: each pass loses a hat's / a snare's noise energy
+ * (most of it above the low-pass) much faster than a note's (in the band), so a thrown drum loop rings out as echoes,
+ * not as a wash. a 0: not run (the loop as before, bit for bit). ah / al Q15 one-pole coefficients at the line's rate */
+#define DB_HOLD 8268u                    /* 12 s of blocks of 64 */
+typedef struct { int32_t ah, al, a; } dband_t;
+static inline int32_t dly_band(int32_t x, const dband_t *b)
+{
+    int32_t h;
+    fx.db_h += (((x << 3) - fx.db_h) * b->ah + 16384) >> 15;
+    h = clamp(x - (fx.db_h >> 3), -32767, 32767);
+    fx.db_l1 += ((h - fx.db_l1) * b->al + 16384) >> 15;
+    fx.db_l2 += ((fx.db_l1 - fx.db_l2) * b->al + 16384) >> 15;
+    return x + (((fx.db_l2 - x) * b->a) >> 8);
+}
+static uint32_t db_coef(uint32_t hz, uint32_t fse)   /* a one-pole's coefficient, w / (1 + w), Q15; hz <= 5 kHz */
+{
+    uint32_t w = 205887u * hz / fse;                 /* (2 pi hz / fse, Q15) */
+    return (w << 15) / (32768u + w);
+}
+/* the block's band: from THROW (pf.td, perform.c), its hold, FEEDBK (fb Q15); sh the line's rate (0 full) */
+static __attribute__((noinline)) void db_block(dband_t *b, int32_t fb, uint32_t sh)   /* (out of the RAM code: once a block) */
+{
+    int32_t t = 0, lp;
+    if (pf.td > 0) {
+        fx.db_t = DB_HOLD;
+        t = 256;
+    } else if (fx.db_t) {
+        fx.db_t--;
+        t = fx.db_t > 256u ? 256 : (int32_t)fx.db_t;   /* (its last 0.4 s: out again, slowly) */
+    }
+    fx.db_a = (int16_t)(t > fx.db_a + 4 ? fx.db_a + 4 : t < fx.db_a - 4 ? fx.db_a - 4 : t);
+    b->a = fx.db_a;
+    if (!b->a) {
+        fx.db_h = fx.db_l1 = fx.db_l2 = 0;
+        return;
+    }
+    lp = 4800 - 1800 * (fb > 32767 ? 32767 : fb) / 32767;
+    if (!(pf.td > 0) && fx.db_t)
+        lp -= 1200 * (int32_t)(DB_HOLD - fx.db_t) / (int32_t)DB_HOLD;
+    b->ah = (int32_t)db_coef(180u, FS >> sh);
+    b->al = (int32_t)db_coef((uint32_t)lp, FS >> sh);
 }
 /* (0.6.86) TONE / FILT resonant: one knob, the middle open; one way a low-pass sweeping down, the other a low cut
  * sweeping up, both resonant (Q 0.7 near the middle, up to qmax from a third of the way): the band at the cutoff
@@ -1487,7 +1535,7 @@ static __attribute__((noinline)) void dly_line_clear(uint32_t from, uint32_t n)
         p[3] = 0;
     }
 }
-typedef struct { int32_t fb, fb2, hk, dig, dton, png, wd, dg, dgi; tone_t tn; } dlyk_t;   /* the block's settings (fx_buses) */
+typedef struct { int32_t fb, fb2, hk, dig, dton, png, wd, dg, dgi; tone_t tn; dband_t db; } dlyk_t;   /* the block's settings (fx_buses) */
 /* the delay's block, when not plain at the full rate (fx_buses: dly_lo_on): into dx (the left / mid echo) and dxr (the
  * right), FS; as the full-rate loop in fx_buses, step for step (at FS: the same arithmetic) */
 static __attribute__((noinline)) void dly_lo(const int32_t *dly_in, int32_t *dx, int32_t *dxr, uint32_t n,
@@ -1552,6 +1600,7 @@ static __attribute__((noinline)) void dly_lo(const int32_t *dly_in, int32_t *dx,
             lf -= (fx.dly_hp + 128) >> 8;
             if (k->dton) lf = tone_run(&k->tn, lf, &fx.dt1, &fx.dt2);
             lf = clamp(lf, -32767, 32767);
+            if (k->db.a) lf = dly_band(lf, &k->db);        /* (snd2) the band (THROW's) */
             if (k->dg) lf = dly_drive(lf, k->dg, k->dgi);  /* (snd2) DRIVE */
             w = u + mulq15(lf, k->png ? k->fb2 : k->fb);
             dly_buf[fx.dly_w & (DLY_LEN - 1u)] = (int16_t)(k->dig ? clamp(w, -32767, 32767) : dly_sat(w));
@@ -1744,6 +1793,7 @@ static inline __attribute__((always_inline)) void fx_buses(const int32_t *cho_in
     int32_t hk = 5, wd = song.g[G_WIDTH];             /* (the loop's DC block: ~1 Hz, 0.6.89); WIDTH */
     int32_t dg = song.g[G_DDRV] > 0 ? 4096 + 123 * clamp(song.g[G_DDRV], 0, 100) : 0;   /* (snd2) DRIVE: x1 .. x4, Q12 */
     int32_t dgi = dg ? (int32_t)(134217728u / (uint32_t)dg) : 0;
+    dband_t db;
     int32_t gr = !sys_load && (song.g[G_DPIT] || song.g[G_DSPRY]);   /* (JIANT) the GRAIN delay (LOAD LITE / ECO: plain) */
     /* (0.6.90) PING-PONG (not with the GRAIN): the line read at TIME (left) and twice TIME (right, the loop's tap), the
      * loop's gain squared, the right x FEEDBK: the repeats left, right, left .., each FEEDBK softer; TIME at most half
@@ -1755,8 +1805,10 @@ static inline __attribute__((always_inline)) void fx_buses(const int32_t *cho_in
     int32_t cs = song.g[G_CSTER], cw = 80 + wd / 2;    /* (0.6.9) the chorus's side: 0 as before, - to mono, + ~2x */
     cw = cs >= 0 ? cw + cs * 2 : (cw * (64 + cs)) >> 6;
 #ifndef FX_REST_OFF                                     /* (tests/fx_rest_test.c: the reference without it) */
-    if (!any && fx.primed && fx_rest(wet, n, cinc, cdepth, cw, dmix))   /* (cpu5) at rest: not run */
+    if (!any && fx.primed && fx_rest(wet, n, cinc, cdepth, cw, dmix)) {   /* (cpu5) at rest: not run */
+        fx.db_t = 0; fx.db_a = 0;                       /* (snd2: the tail gone, THROW's band with it) */
         return;
+    }
 #endif
     rest_ph = 0;
     uint32_t dro = wd && !png ? div_samples(3) * (uint32_t)wd / 127u : 0u, dr;   /* the right echo: up to 1/32 later */
@@ -1771,6 +1823,7 @@ static inline __attribute__((always_inline)) void fx_buses(const int32_t *cho_in
                                                          * self-oscillate) */
     }
     if (!dton) fx.dt1 = fx.dt2 = 0;   /* (8 kHz .. 250 Hz | 73 Hz .. 3 kHz, Q 1.4) */
+    db_block(&db, fb, fx.dr_sh);  /* (snd2) the loop's band, THROW's */
     /* (0.6.81) a new read point (TIME, WIDE) or read (the GRAIN in or out): faded into over DXF_LEN samples from the
      * old one, the next change once that fade is done (each step of the knob jumped the read: a click) */
     if (!fx.primed) {
@@ -1823,7 +1876,7 @@ static inline __attribute__((always_inline)) void fx_buses(const int32_t *cho_in
                                                          * rate: its block first (dly_lo), the loop below takes it */
         dlyk_t k;
         k.fb = fb; k.fb2 = fb2; k.hk = hk << fx.dr_sh; k.dig = dig; k.dton = dton; k.png = png; k.wd = wd;
-        k.tn = dtn; k.dg = dg; k.dgi = dgi;
+        k.tn = dtn; k.dg = dg; k.dgi = dgi; k.db = db;
         dly_lo(dly_in, dlo_x, dlo_xr, n, &k, wm, dwm);
     }
     for (i = 0; i < n; i++) {
@@ -1886,6 +1939,7 @@ static inline __attribute__((always_inline)) void fx_buses(const int32_t *cho_in
                 int32_t lf = (wr == 2 ? xr : x) - ((fx.dly_hp + 128) >> 8), w;
                 if (dton) lf = tone_run(&dtn, lf, &fx.dt1, &fx.dt2);
                 lf = clamp(lf, -32767, 32767);
+                if (db.a) lf = dly_band(lf, &db);           /* (snd2) the band (THROW's) */
                 if (dg) lf = dly_drive(lf, dg, dgi);        /* (snd2) DRIVE */
                 w = (dly_in[i] >> 1) + mulq15(lf, wr == 2 ? fb2 : fb);
                 dly_buf[fx.dly_w & (DLY_LEN - 1u)] = (int16_t)(dig ? clamp(w, -32767, 32767) : dly_sat(w));   /* (DIGITAL: clean, a clip
