@@ -1233,6 +1233,74 @@ static void engine_columns(void)
     draw_column(2, "FAV", preset_favorite() ? "ON" : "OFF", "", VAL(2u), -1, ICON_X_STAR);
     draw_column(3, "", "", "", T_THEME, -1, ICON_NONE);
 }
+/* (0.9.9-seq2d / seq2f) the step components' cards: GLO > COMPS / COMPS 2, SEQ > COMP / COMP 2. (gen3) Its own function,
+ * out of draw_columns: new code lands past the pinned sound (tools/build.py), draw_columns' run before it stays as long */
+/* (gen3) KNOB 4's card: ARP's ORDER DOWN UP-DN as DN UD, the RATE beside them (here: comp_vname's code pinned in its run,
+ * its ORD ui_input.c ENT_ORD's twin, one table) */
+static void comp_value(const step_t *s, uint32_t a, uint32_t v, char *lb, char *val, char *un)
+{
+    comp_vname(TSEL, s, a, v, lb, val, un);
+    if (a == CA_ARP && (val[0] == 'D' || val[2] == '-'))
+        val[1] = val[0] == 'D' ? 'N' : 'D', val[2] = 0;
+}
+static __attribute__((noinline)) void comp_columns(void)
+{
+    char val[12];
+    if (cur_page()->graph == GR_GCOMP) {               /* (0.9.9-seq2f) GLO > COMPS: the lane's step; COMPS 2 its tracks */
+        const gcomp_t *gc = &glane[gl_cur % GL_N];
+        uint32_t a = CO_ACT(gc->comp) % CA_N;
+        char lb[10], un[8];
+        if (gco_slot()) {
+            fmt_int(val, (int32_t)gl_cur + 1);
+            draw_column(0, "STEP", val, "", VAL(0u), -1, ICON_AUTO);
+            val[0] = 'T'; fmt_int(val + 1, (int32_t)gl_trk + 1);
+            draw_column(1, "TRACK", val, "", VAL(1u), -1, ICON_NONE);
+            draw_column(2, "APPLIES", (gc->mask >> gl_trk) & 1u ? "ON" : "OFF", "", a ? VAL(2u) : T_DIM, -1, ICON_NONE);
+            draw_column(3, "MODE", gl_mono ? "MONO" : "POLY", "", VAL(3u), -1, ICON_ORDER);
+            return;
+        }
+        draw_column(0, "ACTION", CA_NAMES[a], "", a ? VAL(0u) : T_DIM, -1, ICON_ARP);
+        if (a && a != CA_JUMP) {
+            fmt_int(val, (int32_t)gc->len + 1);
+            draw_column(1, "LENGTH", val, "ST", VAL(1u), -1, ICON_RATE);   /* (gen3: "32 ST" in M) */
+        } else
+            draw_column(1, "LENGTH", "-", "", T_DIM, -1, ICON_RATE);
+        if (a) {
+            cond_name(CO_COND(gc->comp), gc->nm, val);
+            draw_column(2, "COND", val, "", CO_COND(gc->comp) ? VAL(2u) : T_DIM, -1, ICON_PROB);   /* (gen3: MONO / POLY on
+                                                         * COMPS 2, the value whole) */
+            comp_value(TSEL->step, a, gc->val, lb, val, un);
+            draw_column(3, lb, val, un, lb[0] ? VAL(3u) : T_DIM, -1, ICON_ORDER);
+        } else {
+            draw_column(2, "COND", "", "", T_DIM, -1, ICON_PROB);
+            draw_column(3, "", "", "", T_THEME, -1, ICON_NONE);
+        }
+        return;
+    }
+    {                                                   /* (seq2d) the cursor step's C1 / C2: ACTION LENGTH COND VALUE */
+        const step_t *cs = &TSEL->step[ui.cursor];
+        uint32_t a = comp_view(), k = comp_slot(), c = CO_COND(k ? cs->comp2 : cs->comp), l = cs->clen[k & 1u];
+        char lb[10], un[8];
+        draw_column(0, k ? "ACTION 2" : "ACTION", CA_NAMES[a], "", a ? VAL(0u) : T_DIM, -1, ICON_ARP);
+        if (a && a != CA_JUMP) {
+            fmt_int(val, (int32_t)(l < CL_MAX ? l + 1u : 1u));
+            draw_column(1, "LENGTH", val, "ST", VAL(1u), -1, ICON_RATE);
+        } else
+            draw_column(1, "LENGTH", "-", "", T_DIM, -1, ICON_RATE);
+        if (a) {
+            cond_name(c, cs->cnm[k & 1u], val);
+            /* (gen3) MONO / POLY the label (it took the value's room as its unit: "AL..", "!1.."), the condition whole */
+            draw_column(2, CO_COND(cs->comp2) == CC_ELSE && CO_ACT(cs->comp2) ? "MONO" : CO_ACT(cs->comp) && CO_ACT(cs->comp2) ?
+                        "POLY" : "COND", val, "", c ? VAL(2u) : T_DIM, -1, ICON_PROB);
+            comp_value(cs, a, comp_arg(cs), lb, val, un);
+            draw_column(3, lb, val, un, lb[0] ? VAL(3u) : T_DIM, -1, ICON_ORDER);
+        } else {
+            draw_column(2, "COND", "", "", T_DIM, -1, ICON_PROB);
+            draw_column(3, "", "", "", T_THEME, -1, ICON_NONE);
+        }
+        return;
+    }
+}
 static void draw_columns(void)
 {
     uint32_t c;
@@ -1357,56 +1425,8 @@ static void draw_columns(void)
         draw_column(3, "INTVL", val, "DEG", f->rate ? VAL(3u) : T_DIM, (int32_t)(f->ivl + 14) * 1000 / 28, ICON_PITCH);
         return;
     }
-    if (cur_page()->graph == GR_GCOMP) {               /* (0.9.9-seq2f) GLO > COMPS: the lane's step; COMPS 2 its tracks */
-        const gcomp_t *gc = &glane[gl_cur % GL_N];
-        uint32_t a = CO_ACT(gc->comp) % CA_N;
-        char lb[10], un[8];
-        if (gco_slot()) {
-            fmt_int(val, (int32_t)gl_cur + 1);
-            draw_column(0, "STEP", val, "", VAL(0u), -1, ICON_AUTO);
-            val[0] = 'T'; fmt_int(val + 1, (int32_t)gl_trk + 1);
-            draw_column(1, "TRACK", val, "", VAL(1u), -1, ICON_NONE);
-            draw_column(2, "APPLIES", (gc->mask >> gl_trk) & 1u ? "ON" : "OFF", "", a ? VAL(2u) : T_DIM, -1, ICON_NONE);
-            draw_column(3, "MODE", gl_mono ? "MONO" : "POLY", "", VAL(3u), -1, ICON_ORDER);
-            return;
-        }
-        draw_column(0, "ACTION", CA_NAMES[a], "", a ? VAL(0u) : T_DIM, -1, ICON_ARP);
-        if (a && a != CA_JUMP) {
-            fmt_int(val, (int32_t)gc->len + 1);
-            draw_column(1, "LENGTH", val, gc->len ? "STEPS" : "STEP", VAL(1u), -1, ICON_RATE);
-        } else
-            draw_column(1, "LENGTH", "-", "", T_DIM, -1, ICON_RATE);
-        if (a) {
-            cond_name(CO_COND(gc->comp), gc->nm, val);
-            draw_column(2, "COND", val, gl_mono ? "MONO" : "POLY", CO_COND(gc->comp) ? VAL(2u) : T_DIM, -1, ICON_PROB);
-            comp_vname(TSEL, TSEL->step, a, gc->val, lb, val, un);
-            draw_column(3, lb, val, un, lb[0] ? VAL(3u) : T_DIM, -1, ICON_ORDER);
-        } else {
-            draw_column(2, "COND", "", "", T_DIM, -1, ICON_PROB);
-            draw_column(3, "", "", "", T_THEME, -1, ICON_NONE);
-        }
-        return;
-    }
-    if (cur_page()->graph == GR_COMP) {                /* (seq2d) the cursor step's C1 / C2: ACTION LENGTH COND VALUE */
-        const step_t *cs = &TSEL->step[ui.cursor];
-        uint32_t a = comp_view(), k = comp_slot(), c = CO_COND(k ? cs->comp2 : cs->comp), l = cs->clen[k & 1u];
-        char lb[10], un[8];
-        draw_column(0, k ? "ACTION 2" : "ACTION", CA_NAMES[a], "", a ? VAL(0u) : T_DIM, -1, ICON_ARP);
-        if (a && a != CA_JUMP) {
-            fmt_int(val, (int32_t)(l < CL_MAX ? l + 1u : 1u));
-            draw_column(1, "LENGTH", val, l ? "STEPS" : "STEP", VAL(1u), -1, ICON_RATE);
-        } else
-            draw_column(1, "LENGTH", "-", "", T_DIM, -1, ICON_RATE);
-        if (a) {
-            cond_name(c, cs->cnm[k & 1u], val);
-            str_cpy(un, CO_COND(cs->comp2) == CC_ELSE && CO_ACT(cs->comp2) ? "MONO" : CO_ACT(cs->comp) && CO_ACT(cs->comp2) ? "POLY" : "", sizeof un);
-            draw_column(2, "COND", val, un, c ? VAL(2u) : T_DIM, -1, ICON_PROB);
-            comp_vname(TSEL, cs, a, comp_arg(cs), lb, val, un);
-            draw_column(3, lb, val, un, lb[0] ? VAL(3u) : T_DIM, -1, ICON_ORDER);
-        } else {
-            draw_column(2, "COND", "", "", T_DIM, -1, ICON_PROB);
-            draw_column(3, "", "", "", T_THEME, -1, ICON_NONE);
-        }
+    if (cur_page()->graph == GR_GCOMP || cur_page()->graph == GR_COMP) {
+        comp_columns();
         return;
     }
     if (cur_page()->graph == GR_CHANCE) {              /* STEP CHANCE RATCH: the cursor step's, of all of it */

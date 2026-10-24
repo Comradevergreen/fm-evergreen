@@ -124,7 +124,31 @@ static uint64_t ui_sent_px;                              /* (0.9.0) pixels sent 
 #ifndef GFX_HOOK_SENT
 #define GFX_HOOK_SENT(n) (ui_sent_px += (n))
 #endif
+/* (gen3) a text on a card's canvas (COL_W wide) ellipsised, cut or past its inner edge (x 5 + 49): test_comp_cards */
+static uint32_t ut_card_bad, ut_card_txt;
+static char ut_card_what[48];
+#ifndef GFX_HOOK_TEXT
+#define GFX_HOOK_TEXT(x0, y0, x1, y1, s, flags) ut_text(x0, x1, s, flags)
+#define GFX_HOOK_BLIT(x, y, r0) ((void)0)
+#define GFX_HOOK_BEGIN() ((void)0)
+#define GFX_HOOK_PIXELS(n) ((void)0)
+static int32_t ut_cv_w(void);
+static void ut_text(int32_t x0, int32_t x1, const char *s, uint32_t flags)
+{
+    if (ut_cv_w() != 57)                           /* (ui_draw.c COL_W: a card) */
+        return;
+    ut_card_txt++;
+    if ((flags & 3u) || x0 < 0 || x1 > 57 - 2) {
+        if (!ut_card_bad++)
+            snprintf(ut_card_what, sizeof ut_card_what, "'%.16s' x %d..%d flags %u", s, (int)x0, (int)x1, (unsigned)flags);
+    }
+}
+#define UT_CV_W 1
+#endif
 #include "../firmware/src/gfx.c"
+#ifdef UT_CV_W
+static int32_t ut_cv_w(void) { return (int32_t)cv_w; }
+#endif
 #include "../firmware/src/panel.c"
 #include "../firmware/src/ui.c"
 #include "../firmware/src/menu_items.c"
@@ -12400,10 +12424,83 @@ static int test_engine_order_099(void)
     return bad;
 }
 
+/* (gen3) SEQ > COMP / COMP 2 and GLO > COMPS: the four cards (ACTION LENGTH CONDITION VALUE) read whole, every value of
+ * every knob (every ACTION, every LENGTH, the 283 CONDITIONs, every VALUE of each ACTION) in the four skins (COLORS
+ * BOTTOM HUD AIR) and MENU > LARGE: no text on a card ellipsised, cut, or past its inner edge (x 55); the value in M as
+ * it can (gfx.c's hook, ut_text) */
+static int test_comp_cards(void)
+{
+    static const uint8_t SK[4] = {SKIN_COLORS, SKIN_BOTTOM, SKIN_HUD, SKIN_AIR};
+    int bad = 0;
+    uint32_t sk, lg, pg, a, i, n = 0;
+    char what[96] = "";
+    for (sk = 0; sk < 4u; sk++)
+        for (lg = 0; lg < 2u; lg++)
+            for (pg = 0; pg < 3u; pg++) {
+                step_t *st;
+                ui_power_on();
+                ui_skin = SK[sk];
+                if (lg) ui_prefs |= PREF_LARGE; else ui_prefs &= ~PREF_LARGE;
+                TSEL->step[0] = (step_t){{60}, 1, ST_NOTE, 0, 100};
+                st = &TSEL->step[0];
+                go_page(pg == 2u ? GR_GCOMP : GR_COMP);
+                if (pg == 1u) { ui.page++; page_entered(); }
+                cursor_set(0);
+                frame();
+                for (a = 0; a < CA_N; a++) {
+                    uint32_t nv = (uint32_t)CA_VMAX[a] + 1u, nc = a ? CCL_N : 1u, nl = a ? CL_MAX : 1u, k;
+                    if (pg == 2u && ga_idx(a) == 0u && a) continue;   /* (the lane's actions: GA_LIST) */
+                    for (k = 0; k < nv + nc + nl; k++) {
+                        uint32_t v = k < nv ? k : 0u, ci = k >= nv && k < nv + nc ? k - nv : 0u, l = k >= nv + nc ? k - nv - nc : 0u;
+                        uint32_t c, nm;
+                        cond_at(ci, &c, &nm);
+                        if (pg == 2u && c >= CC_NEI && c <= CC_ELSE) continue;
+                        if (pg == 2u) {
+                            gcomp_t *g = &glane[gl_cur % GL_N];
+                            g->comp = CO_MAKE(a, c); g->nm = (uint8_t)nm; g->len = (uint8_t)l;
+                            g->val = (uint8_t)comp_vat(a, v); g->mask = 0x3F;
+                        } else if (pg == 1u) {
+                            st->comp = CO_MAKE(CA_OCTU, CC_ALWAYS);
+                            st->comp2 = (uint8_t)CO_MAKE(a, c); st->carg2 = (uint8_t)comp_vat(a, v);
+                            st->cnm[1] = (uint8_t)nm; st->clen[1] = (uint8_t)l;
+                        } else {
+                            st->comp = (uint8_t)CO_MAKE(a, c); st->carg = (uint8_t)comp_vat(a, v);
+                            st->cnm[0] = (uint8_t)nm; st->clen[0] = (uint8_t)l;
+                        }
+                        ut_card_bad = 0; ut_card_txt = 0;
+                        ui.force = 1; frame();                /* (drawn whole: no rolling digits) */
+                        n++;
+                        if (ut_card_bad && !what[0])
+                            snprintf(what, sizeof what, "skin %u large %u page %u action %u k %u: %s", (unsigned)sk,
+                                     (unsigned)lg, (unsigned)pg, (unsigned)a, (unsigned)k, ut_card_what);
+                        bad += ut_card_bad != 0u;
+                    }
+                }
+            }
+    {   /* ARP's RATE by the track's DIV (1/4 .. 4BAR): its every VALUE on COMP */
+        uint32_t d;
+        ui_power_on();
+        TSEL->step[0] = (step_t){{60}, 1, ST_NOTE, 0, 100};
+        go_page(GR_COMP); cursor_set(0); frame();
+        for (d = 0; d < 10u; d++)
+            for (i = 0; i <= CA_VMAX[CA_ARP]; i++) {
+                TSEL->p[P_SDIV] = (int16_t)d;
+                TSEL->step[0].comp = (uint8_t)CO_MAKE(CA_ARP, CC_ALWAYS); TSEL->step[0].carg = (uint8_t)comp_vat(CA_ARP, i);
+                ut_card_bad = 0; ui.force = 1; frame(); n++;
+                if (ut_card_bad && !what[0])
+                    snprintf(what, sizeof what, "ARP DIV %u value %u: %s", (unsigned)d, (unsigned)i, ut_card_what);
+                bad += ut_card_bad != 0u;
+            }
+    }
+    printf("  comp cards: %u states drawn, %d with a card's text cut%s%s\n", (unsigned)n, bad, what[0] ? ": " : "", what);
+    return check("COMP / COMP 2 / COMPS: every value of the four cards whole, in the four skins and LARGE", bad == 0 && n > 1000u);
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IONBF, 0);
     int bad = 0;
+    bad += test_comp_cards();
     bad += test_large_face();
     bad += test_lz_home();
     bad += test_lz_edit();

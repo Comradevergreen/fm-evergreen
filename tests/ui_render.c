@@ -849,7 +849,14 @@ static void roll_scene(int s)
 /* (0.9.2) a section's page by its name in the chain (ui_lens.c nav_put), as a scene: no page flash over the footer */
 static void nav_scene(uint32_t sec, const char *nm)
 {
-    if (!nav_put(sec, nm)) {
+    uint32_t i;
+    if (!nav_put(sec, nm)) {                            /* (seq2: BAR, NOTE out of the chain, the PATTERN page "LENGTH"
+                                                         * in it: a page that code puts, by its title) */
+        for (i = 0; i < NPAGES; i++)
+            if (str_eq(PAGES[i].title, nm)) {
+                ui.home = 0; ui.page = (uint8_t)i; page_entered(); pf_on = 0;
+                return;
+            }
         fprintf(stderr, "nav_scene: no page \"%s\"\n", nm);
         exit(2);
     }
@@ -1410,7 +1417,7 @@ static void setup(int s)
         if (s == S_LENTE_BAR_LONG)                      /* (0.8.5) ALL TR at the right of the bars' strip */
             song.g[G_STRN] = -12;
         song.playing = 1; t->seq_idx = 21;
-        nav_scene(SEC_SEQ, s == S_LENTE_PAT ? "PATTERN" : s == S_LENTE_STRETCH ? "STRETCH" : s == S_LENTE_BAR || s == S_LENTE_BAR_LONG ?
+        nav_scene(SEC_SEQ, s == S_LENTE_PAT ? "LENGTH" : s == S_LENTE_STRETCH ? "STRETCH" : s == S_LENTE_BAR || s == S_LENTE_BAR_LONG ?
                   "STEP" : s == S_LENTE_STEP_COMP2 ? "COMP 2" : s == S_LENTE_STEP ? "NOTE" : s == S_SEQ_BAR ? "BAR" : "COMP");   /* (0.9.2: NOTE the roll; the
                                                          * step large on COMP: TIE, REST, LONG there) */
         cursor_set(s == S_LENTE_STEP_TIE ? 35 : s == S_LENTE_STEP_REST ? 36 : s == S_LENTE_BAR_LONG || s == S_LENTE_STEP_LONG ? 40 : 34);
@@ -1424,7 +1431,7 @@ static void setup(int s)
         drum(0); trk[3].p[P_SLEN] = 32;
         memcpy(&trk[3].step[16], &trk[3].step[0], 16u * sizeof(step_t));
         trk[3].step[20].hit |= 0x30u; trk[3].step[20].acc |= 0x10u;
-        nav_scene(SEC_SEQ, s == S_LENTE_PAT_DRUM ? "PATTERN" : s == S_LENTE_BAR_DRUM ? "STEP" : s == S_SEQ_BAR_DRUM ? "BAR" : "COMP");
+        nav_scene(SEC_SEQ, s == S_LENTE_PAT_DRUM ? "LENGTH" : s == S_LENTE_BAR_DRUM ? "STEP" : s == S_SEQ_BAR_DRUM ? "BAR" : "COMP");
         cursor_set(20); ui.lane = 4;
         break;
     /* NAME (ui_name.c): USER SAVE prefilled; a letter cycling (RS: S, R next); 123 on a project; an empty project name

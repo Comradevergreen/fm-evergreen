@@ -802,23 +802,26 @@ static uint32_t note_len(const track_t *t, uint32_t c, uint32_t len)
     return l;
 }
 
-/* (0.6.92) a part of the step as a note value: n parts a step of the track's DIV (1/16: x2 1/32, x3 1/32T, x4 1/64 ..;
- * a triplet or a bar's DIV, or an odd count: "xn") */
+/* (0.6.92) a part of the step as a note value: n parts a step of the track's DIV (1/16: x2 32, x3 32T, x4 64 ..; a
+ * bar's DIV, an odd count or past 1/64: "xn"). (gen3) Short, as a card's unit beside its value: "16" for 1/16, "32T";
+ * x1 of an 8T / 16T DIV its name */
 static void rate_name(const track_t *t, uint32_t n, char *b)
 {
     static const uint8_t BASE[10] = {4, 8, 16, 32, 0, 0, 2, 1, 0, 0};   /* N_DIV: 1/4 1/8 1/16 1/32 8T 16T 1/2 1/1 2BAR 4BAR */
     uint32_t d = (uint32_t)clamp(t->p[P_SDIV], 0, 9), base = BASE[d], v = 0;
     const char *tr = "";
-    if (n == 1u && base) { str_cpy(b, N_DIV[d], 8); return; }
-    if (base && (n == 2u || n == 4u || n == 8u)) v = base * n;
+    if (n == 1u && (d == 4u || d == 5u)) { str_cpy(b, N_DIV[d], 8); return; }   /* (8T 16T; a bar DIV x1) */
+    if (base && (n == 1u || n == 2u || n == 4u || n == 8u)) v = base * n;
     else if (base && (n == 3u || n == 6u)) { v = base * n * 2u / 3u; tr = "T"; }
-    if (!v) { b[0] = 'x'; fmt_int(b + 1, (int32_t)n); return; }
-    b[0] = '1'; b[1] = '/'; fmt_int(b + 2, (int32_t)v); str_cpy(b + str_len(b), tr, 2);
+    if (!v || v > 64u) { b[0] = 'x'; fmt_int(b + 1, (int32_t)n); return; }   /* (past 1/64: "x6") */
+    fmt_int(b, (int32_t)v); str_cpy(b + str_len(b), tr, 2);
 }
 /* (0.9.9-seq2d) SEQ > COMP / COMP 2: the step's C1 / C2 as ACTION LENGTH CONDITION VALUE (core.h CA_* CC_*) */
-static const char *const CA_NAMES[CA_N] = {"OFF", "ARP", "SEQ", "OCT+", "OCT-", "RATCH", "STUTTER", "MUTE", "TRANSP",
-                                           "RANDOM", "LOCK", "JUMP", "SOUND", "BEND"};
-static const char *const CC_NAMES[CC_NM] = {"ALWAYS", "25%", "50%", "75%", "FIRST", "!FIRST", "FILL", "!FILL", "PRE",
+/* (gen3) the names short, each read whole on its card: the value's M where it fits with its unit (COMP's 49 px), else S
+ * (ui_test test_comp_cards: every value of every knob, every page) */
+static const char *const CA_NAMES[CA_N] = {"OFF", "ARP", "SEQ", "OCT+", "OCT-", "RATCH", "STUT", "MUTE", "TRANS",
+                                           "RAND", "LOCK", "JUMP", "SOUND", "BEND"};
+static const char *const CC_NAMES[CC_NM] = {"ALWAYS", "25%", "50%", "75%", "1ST", "!1ST", "FILL", "!FILL", "PRE",
                                             "!PRE", "NEI", "!NEI", "ELSE"};
 #define CCL_NM 135u                                     /* N:M, M 2..16, N 1..M */
 #define CCL_N (CC_NM + 2u * CCL_NM)                     /* KNOB 3's list: the thirteen, the N:Ms, the !N:Ms */
@@ -894,7 +897,7 @@ static void rate_name(const track_t *t, uint32_t n, char *b);
 static void comp_vname(const track_t *t, const step_t *s, uint32_t a, uint32_t v, char *lb, char *val, char *un)
 {
     static const char *const ORD[4] = {"UP", "DOWN", "UP-DN", "RND"};
-    static const char *const DEC[3] = {"FLAT", "DOWN", "UP"};
+    static const char *const DEC[3] = {"FLAT", "FADE", "RISE"};
     static const char *const HIT[3] = {"SHORT", "GHOST", "FLAM"};
     int32_t m;
     lb[0] = val[0] = un[0] = 0;
@@ -902,10 +905,10 @@ static void comp_vname(const track_t *t, const step_t *s, uint32_t a, uint32_t v
     case CA_ARP:
         str_cpy(lb, v & CV_ARP_SCALE ? "SCALE " : "NOTES ", 8);
         fmt_int(lb + 6, v & CV_ARP_SCALE ? CP_DEGS[CP_RNG(v)] : (int32_t)CP_RNG(v) + 1);
-        str_cpy(val, ORD[CP_ORD(v)], 8);
+        str_cpy(val, ORD[CP_ORD(v)], 8);               /* (gen3: ui_draw.c comp_value says DOWN UP-DN as DN UD) */
         rate_name(t, CP_RATES[CP_RATE(v) % CP_NRATE], un);
         break;
-    case CA_SEQ: str_cpy(lb, "FROM", 8); fmt_int(val, (int32_t)(v & 63u) + 1); str_cpy(un, v & CV_SEQ_BOUNCE ? "BOUNCE" : "LOOP", 8); break;
+    case CA_SEQ: str_cpy(lb, "FROM", 8); fmt_int(val, (int32_t)(v & 63u) + 1); str_cpy(un, v & CV_SEQ_BOUNCE ? "PING" : "LOOP", 8); break;
     case CA_OCTU: case CA_OCTD: str_cpy(lb, "OCTAVES", 8); fmt_int(val, (int32_t)(v % 3u) + 1); break;
     case CA_RATCH: str_cpy(lb, "RATE", 8); val[0] = 'x'; fmt_int(val + 1, (int32_t)CV_RAT_HITS(v)); str_cpy(un, DEC[CV_RAT_DEC(v)], 8); break;
     case CA_STUT: str_cpy(lb, "EVERY", 8); fmt_int(val, (int32_t)(v % 4u) + 1); str_cpy(un, v % 4u ? "STEPS" : "STEP", 8); break;
