@@ -1898,7 +1898,7 @@ static void graph_scope(uint16_t c)
 /* .. pw px wide from x0, about the line cy, +-a px (0.8.5: EDIT's SOUND, in its well) */
 static void scope_at(int32_t x0, int32_t pw, int32_t cy, int32_t a, uint16_t c)
 {
-    static int16_t snap[SCOPE_N];
+    int16_t *snap = mscr.snap;                       /* (seq2h) core.h mscr: this draw's */
     uint32_t w = scope_w, i, trig = 0;
     int32_t py = cy, x, peak = 1500;
     for (i = 0; i < SCOPE_N; i++) {

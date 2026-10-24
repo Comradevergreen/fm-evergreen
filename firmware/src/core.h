@@ -466,6 +466,19 @@ typedef struct {                 /* acid-style step: up to 4 notes (POLY), time,
                                   * to migrate, seq.c comp_migrate) */
     uint8_t cnm[2];              /* .. their N:M: N - 1 | (M - 1) << 4 */
 } step_t;
+/* (0.9.9-seq2h) the main loop's scratch: buffers each used only inside one call of its own, never across a frame nor
+ * from an interrupt, and none of those calls reaching another's (one storage, 4.5 KiB of .bss back):
+ *   tl_src    ui_tools.c: the steps as they were, taken at the start of a SEQ TOOLS action and read by that action
+ *   gen_keep  gen.c gen_parts: the drums of the section before, while DICE makes the sections
+ *   ota       ota.c ota_stage: the package's header in step 1, then its blocks (the main loop is inside the update)
+ *   snap      ui_graph.c scope_at: the HOME / EDIT scope's 512 samples, copied from the audio's ring for one draw */
+#define MSCR 1
+static union {
+    step_t tl_src[NSTEP];
+    step_t gen_keep[NSTEP];
+    union { uint8_t hdr[0x400]; struct { uint8_t b[512], mine[512]; } blk; } ota;   /* (hdr: step 1 only) */
+    int16_t snap[512];
+} mscr;
 /* (0.8.5) a lane's mode (eng_drum.c, the DRUM-X octaves): its hit ratcheted x2 / x4 / x8 over the step, or struck SHORT,
  * GHOST, FLAM; that lane only. 0: as ever (every step before 0.8.5) */
 enum { LM_NONE, LM_X2, LM_X4, LM_X8, LM_SHORT, LM_GHOST, LM_FLAM, LM_N };

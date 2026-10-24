@@ -1523,7 +1523,7 @@ static void gen_pitched(uint32_t rot, int32_t lift)
         pat_sig[k] = steps_sig(t);
     }
 }
-static step_t gen_keep[NSTEP];                          /* (the drums of the section before; 0.8.3: the chords are made
+#define gen_keep (mscr.gen_keep)                        /* (seq2h: core.h mscr) (the drums of the section before; 0.8.3: the chords are made
                                                          * again, not kept) */
 static void section_store(uint32_t s);                  /* (song_main.c) */
 static int section_load(uint32_t s);
