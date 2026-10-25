@@ -212,7 +212,18 @@ run "M-UPGRADE entry (own loader)" "$OUT/ota_test" build/felucca.fwsc
 head -c 200000 build/felucca.bin > "$OUT/old_app.bin"
 python3 tools/fm1pkg_make.py "$OUT/old_app.bin" build/loader/ota.bin "$OUT/old.fwsc" >/dev/null
 $CC -o "$OUT/ldr_test" tests/ldr_test.c
-run "update loader: other app -> this build" "$OUT/ldr_test" "$OUT/old.fwsc" build/felucca.fwsc
+SLOT=$(python3 -c 'import sys; sys.path.insert(0, "tools"); import fm1pkg_make; print(fm1pkg_make.APP_SLOT)')
+run "update loader: other app -> this build" "$OUT/ldr_test" "$OUT/old.fwsc" build/felucca.fwsc "$SLOT"
+# (0.9.13) an app that fills the whole grown slot (the region then ends at 0x92FFE), with today's loader
+python3 -c 'import os, sys; a = open(sys.argv[1], "rb").read(); n = int(sys.argv[3]); open(sys.argv[2], "wb").write(a + os.urandom(n - len(a)))' \
+    build/felucca.bin "$OUT/full_app.bin" "$SLOT"
+python3 tools/fm1pkg_make.py "$OUT/full_app.bin" build/loader/ota.bin "$OUT/full.fwsc" >/dev/null
+run "update loader: an app filling the whole slot" "$OUT/ldr_test" "$OUT/old.fwsc" "$OUT/full.fwsc" "$SLOT"
+run "update loader: full slot -> this build" "$OUT/ldr_test" "$OUT/full.fwsc" build/felucca.fwsc "$SLOT"
+python3 -c 'import sys; open(sys.argv[2], "wb").write(open(sys.argv[1], "rb").read() + b"\0")' "$OUT/full_app.bin" "$OUT/over_app.bin"
+if python3 tools/fm1pkg_make.py "$OUT/over_app.bin" build/loader/ota.bin "$OUT/over.fwsc" >/dev/null 2>&1; then
+    echo "FAIL: the packager took an app one byte past the slot"; fail=1
+else echo "ok: the packager refuses an app one byte past the slot"; fi
 
 if [ -f build/gen/felucca_tables.h ]; then
     $CC -O2 -w -Ibuild/gen -Ifirmware/src -o "$OUT/hostsim" tests/hostsim.c -lm
