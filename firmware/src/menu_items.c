@@ -7,17 +7,17 @@
  * USB LEVEL; 1.1: CLICK, CLICK LEVEL, COUNT-IN), USB SERIAL, RESTORE LAST (1.2), then CALIBRATION (the setup screen: HARDWARE CALIBRATION) and ABOUT, the two rows with no
  * value (MI_VALUES: the rows before them hold one). 1.0.5: in four tabs (MI_TAB). */
 enum { MI_COLOR, MI_SKIN, MI_SCOPE, MI_STYLE, MI_LARGE, MI_ANIM, MI_LEDS, MI_SCROFF, MI_HOLD, MI_ACCEL, MI_LATCH, MI_BPMLOCK, MI_SCLLED, MI_MIDIOUT,
-       MI_LOWCUT, MI_USB,
-       MI_CLICK, MI_CLKLVL, MI_COUNTIN, MI_TRACKS, MI_SERIAL, MI_RESTORE, MI_LOAD, MI_CPU, MI_CLOCK, MI_PANEL, MI_INIT, MI_ABOUT, MI_COUNT };   /* (1.1: the
+       MI_MIDIMAP, MI_LEARN, MI_LOWCUT, MI_USB,
+       MI_CLICK, MI_CLKLVL, MI_COUNTIN, MI_TRACKS, MI_LOAD, MI_SERIAL, MI_RESTORE, MI_CPU, MI_CLOCK, MI_PANEL, MI_INIT, MI_ABOUT, MI_COUNT };   /* (1.1: the
                                                                                              * metronome's rows in AUDIO; 1.2: RESTORE LAST in
                                                                                              * SYSTEM, SCALE LEDS in CONTROL; 0.9.9-stab: CPU
                                                                                              * CLOCK in SYSTEM) */
 #define MI_VALUES MI_PANEL
 static const char *const MI_NAME[MI_COUNT] = {"COLOR", "SKIN", "SCOPE", "STYLE", "LARGE", "ANIM", "LEDS", "SCREEN OFF", "HOLD", "KNOB ACCEL", "FX LATCH", "BPM LOCK",
-                                              "SCALE LEDS", "MIDI OUT",
-                                              "SPEAKER EQ", "USB LEVEL", "CLICK", "CLICK LEVEL", "COUNT-IN", "TRACKS",
+                                              "SCALE LEDS", "MIDI OUT", "MIDI MAP", "LEARN",
+                                              "SPEAKER EQ", "USB LEVEL", "CLICK", "CLICK LEVEL", "COUNT-IN", "TRACKS", "LOAD",
                                               "USB",
-                                              "RESTORE LAST", "LOAD", "CPU CORES", "CPU CLOCK", "CALIBRATION", "INIT SYSTEM", "ABOUT"};
+                                              "RESTORE LAST", "CPU CORES", "CPU CLOCK", "CALIBRATION", "INIT SYSTEM", "ABOUT"};
 /* 1.0.5: the MENU's tabs (ui_menu.c: ALGORITHM steps between them, PRESETS among one tab's rows; the editor gets a
  * row's tab after its MENU_DESC reply). A tab's rows follow each other in MI order (tests/ui_test.c checks it); at
  * most MTAB_ROWS each (the page does not scroll: ui_menu.c fits them). A new row joins a tab here, a new tab is
@@ -33,12 +33,14 @@ static const uint8_t MI_TAB[MI_COUNT] = {
     MTAB_CONTROL, MTAB_CONTROL, MTAB_CONTROL, MTAB_CONTROL,                 /* HOLD KNOB ACCEL FX LATCH BPM LOCK */
     MTAB_CONTROL,                                                           /* SCALE LEDS (1.2) */
     MTAB_CONTROL,                                                           /* MIDI OUT (JIANT 0.6.72) */
+    MTAB_CONTROL, MTAB_CONTROL,                                             /* MIDI MAP, LEARN (p1, main 0.9.12's LEARN) */
     MTAB_AUDIO, MTAB_AUDIO, MTAB_AUDIO, MTAB_AUDIO, MTAB_AUDIO,             /* SPEAKER EQ, USB LEVEL, CLICK, CLICK LEVEL,
                                                                              * COUNT-IN */
     MTAB_AUDIO,                                                             /* TRACKS (JIANT 0.6.18) */
-    MTAB_SYSTEM, MTAB_SYSTEM, MTAB_SYSTEM, MTAB_SYSTEM, MTAB_SYSTEM,        /* USB SERIAL, RESTORE LAST, LOAD (JIANT
-                                                                             * 0.6.30), CPU CORES (p1, main 0.9.12), CPU
-                                                                             * CLOCK (0.9.9-stab) */
+    MTAB_AUDIO,                                                             /* LOAD (JIANT 0.6.30; p1, as main 0.9.12: was
+                                                                             * SYSTEM's, whose tile holds seven rows) */
+    MTAB_SYSTEM, MTAB_SYSTEM, MTAB_SYSTEM, MTAB_SYSTEM,                     /* USB SERIAL, RESTORE LAST, CPU CORES (p1,
+                                                                             * main 0.9.12), CPU CLOCK (0.9.9-stab) */
     MTAB_SYSTEM,                                                            /* CALIBRATION */
     MTAB_SYSTEM, MTAB_SYSTEM,                                               /* INIT SYSTEM (0.6.58), ABOUT */
 };
@@ -157,7 +159,7 @@ static const menu_flag_t *menu_flag(uint32_t row)
 static uint32_t menu_n(uint32_t row)
 {
     return row == MI_COLOR ? NPALETTES : row == MI_SKIN ? SKIN_N : row == MI_LOWCUT || (row >= MI_CLICK && row <= MI_COUNTIN) || row == MI_LOAD ? 3u :
-           row == MI_HOLD || row == MI_MIDIOUT ? 4u : row == MI_USB ? 6u : row == MI_SERIAL ? 5u : row == MI_LEDS ? LEDS_COUNT : row == MI_SCROFF ? NELEM(SCROFF_N) : 2u;
+           row == MI_HOLD || row == MI_MIDIOUT || row == MI_LEARN ? 4u : row == MI_MIDIMAP ? MLM_N : row == MI_USB ? 6u : row == MI_SERIAL ? 5u : row == MI_LEDS ? LEDS_COUNT : row == MI_SCROFF ? NELEM(SCROFF_N) : 2u;
 }
 static uint32_t menu_get(uint32_t row)
 {
@@ -178,6 +180,8 @@ static uint32_t menu_get(uint32_t row)
     case MI_CLICK: case MI_CLKLVL: case MI_COUNTIN: return rp_get(row - MI_CLICK);
     case MI_LOAD: return load_get();
     case MI_MIDIOUT: return midi_out_mode & 3u;
+    case MI_MIDIMAP: return ml_map();
+    case MI_LEARN: return ml.on & 3u;
     case MI_CPU: return cpu_get(0);
     case MI_CLOCK: return cpu_get(1);
     case MI_LEDS:
@@ -206,6 +210,8 @@ static const char *menu_vname(uint32_t row, uint32_t v)
     case MI_COUNTIN: return COUNTIN_N[v % 3u];
     case MI_LOAD: return N_LOAD[v % 3u];
     case MI_MIDIOUT: return MIDIOUT_N[v & 3u];
+    case MI_MIDIMAP: return MLMAP_N[v % MLM_N];
+    case MI_LEARN: return MLON_N[v & 3u];
     case MI_CPU: return CPU_N[0][v & 1u];
     case MI_CLOCK: return CPU_N[1][v & 1u];
     case MI_SCROFF: return SCROFF_N[v % NELEM(SCROFF_N)];
@@ -253,6 +259,8 @@ static void menu_put(uint32_t row, uint32_t v)
     case MI_CLICK: case MI_CLKLVL: case MI_COUNTIN: rp_put(row - MI_CLICK, v); break;   /* (at once: click.c, seq.c) */
     case MI_LOAD: load_put(v % 3u); break;
     case MI_MIDIOUT: midi_out_mode = (uint8_t)(v & 3u); break;   /* (seq.c reads it every frame: ui_input) */         /* (at once: voice.c sys_load) */
+    case MI_MIDIMAP: ml_tab[0] = (uint8_t)(v % MLM_N); break;   /* (p1: at once, midi_control.c) */
+    case MI_LEARN: ml_set(v); break;                   /* (p1: armed, or cleared, at the MENU's close; not saved) */
     case MI_CPU: cpu_put(0, v & 1u); break;            /* (p1: at the next power-on, main.c) */
     case MI_CLOCK: cpu_put(1, v & 1u); break;          /* (0.9.9-stab: at the next power-on, main.c cpu_clock) */
     }

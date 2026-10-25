@@ -76,7 +76,8 @@ static int settings_import(persist_t *p, int n)
         for (k = 0; k < FM4_NPRESETS; k++)
             if ((favorites.factory[ENGI_DIGITAL][0] >> k) & 1u)
                 favorites.factory[ENGI_FM6][FM4_TO_FM6[k] / 8u] |= (uint8_t)(1u << (FM4_TO_FM6[k] % 8u));
-        memset(favorites.factory[ENGI_DIGITAL], 0, sizeof favorites.factory[ENGI_DIGITAL]);
+        favorites.factory[ENGI_DIGITAL][0] = 0;   /* (p1, as main 0.9.12: the row's bytes 1..31 MIDI MAP and LEARN's,
+                                                   * midi_learn.c) */
     }
 #endif
 #ifdef SMP_SET_PERC

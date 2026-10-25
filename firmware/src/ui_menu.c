@@ -313,7 +313,7 @@ static void menu_panel(void)
                 lz_uline(x + 5, y + 12, &AF_X, MTAB_NAME[k], T_THEME);
             for (r = 0; r < mtab_rows(k); r++) {
                 uint32_t row = mtab_first(k) + r;
-                int32_t ry = y + 15 + (int32_t)r * (mtab_rows(k) > 7u ? 7 : 8);   /* (0.9.7: DISPLAY's eight 7 apart) */
+                int32_t ry = y + 15 + (int32_t)r * (mtab_rows(k) > 6u ? 7 : 8);   /* (0.9.7: DISPLAY's eight 7 apart; p1: seven too, a bottom tile's) */
                 uint16_t bg = lz_tile_bg();
                 menu_val(row, v);
                 cv_clip_text(x + 5, ry - AF_X_CAP_Y, &AF_X, menu_short(row), T_DIM, bg, 64);
@@ -443,6 +443,7 @@ static void enc_drop(void)                             /* knob turns nobody take
 
 static void menu_close(void)
 {
+    ml_menu_closed();                                  /* (p1) MENU > CONTROL > LEARN armed, or CLEAR ALL */
     settings_save();                                   /* palette / panel table, if changed */
     ui.menu = 0;
     ui.force = 1;

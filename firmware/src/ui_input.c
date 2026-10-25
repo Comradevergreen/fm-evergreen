@@ -460,6 +460,12 @@ static void lfo_view_put(track_t *t, int mode, int32_t v)
 /* MIXER page: KNOB 1 LEVEL, 2 PAN, 3 REV send of the selected track (the track itself is ALGORITHM's, on every page),
  * (0.9.1) KNOB 4 the master DJ FILTER (G_DJF: was the track's MUTE, which the GLO layer's black keys latch, as before).
  * Pattern length stays on SEQ. */
+/* a knob turned parameter id of track t: recorded (AUTOMATION), and picked by MIDI LEARN (p1, main 0.9.12, midi_learn.c) */
+static void knob_cap(track_t *t, uint32_t id)
+{
+    motion_capture(t, id, t->p[id]);
+    ml_knob(t, id);
+}
 static void tracks_edit(uint32_t slot, int32_t steps)
 {
     track_t *t = TSEL;
@@ -487,7 +493,7 @@ static void tracks_edit(uint32_t slot, int32_t steps)
         break;
     }
     *vp = (int16_t)clamp(*vp + accel(EN_K1 + slot, steps, d->max - d->min), d->min, d->max);
-    motion_capture(t, (uint32_t)(vp - t->p), *vp);
+    knob_cap(t, (uint32_t)(vp - t->p));
 }
 
 /* SEQ > STEP's piano roll (not the DRUM grid, whose white keys stay its steps): where step recording writes */
@@ -1086,7 +1092,7 @@ static void shape_knob(uint32_t slot, int32_t steps)
         ui_message(d > 0 ? "NUDGED RIGHT" : "NUDGED LEFT");
     } else {
         TSEL->p[P_SOFS] = (int16_t)clamp(TSEL->p[P_SOFS] + steps, -32, 32);
-        motion_capture(TSEL, P_SOFS, TSEL->p[P_SOFS]);
+        knob_cap(TSEL, P_SOFS);
     }
 }
 /* (0.8.5) EDIT > FOCUS: KNOB 1 the parameter (E1..E8 with a name, no wrap), 2 its value, 3 the SRC of the MOD slot aimed
@@ -1113,7 +1119,7 @@ static void focus_knob(uint32_t slot, int32_t steps)
     if (slot == 1u) {
         d = track_desc(TSEL, P_E0 + k);
         TSEL->p[P_E0 + k] = (int16_t)param_turn(d, TSEL->p[P_E0 + k], accel(EN_K1 + 1u, steps, d->fmt == F_ENUM ? 0 : d->max - d->min));
-        motion_capture(TSEL, P_E0 + k, TSEL->p[P_E0 + k]);
+        knob_cap(TSEL, P_E0 + k);
         return;
     }
     if (slot == 2u && j < 0) {                          /* (no slot aims at it: a free one, turned up) */
@@ -1196,7 +1202,7 @@ static void edit_param(uint32_t slot, int32_t steps)
         else {
             uint32_t id = P_ATK + (ui.stage & 3u);
             TSEL->p[id] = (int16_t)param_turn(&TP[id], TSEL->p[id], accel(EN_K1 + 1u, steps, 127));
-            motion_capture(TSEL, id, TSEL->p[id]);
+            knob_cap(TSEL, id);
         }
         return;
     }
@@ -1355,7 +1361,7 @@ static void edit_param(uint32_t slot, int32_t steps)
     if (vp == &lmode_ui || vp == &lphase_ui) {          /* (0.9.18) LFO MODE / PHASE: P_LPHASE written back */
         lfo_view_put(TSEL, vp == &lmode_ui, v);
         if (!mom_on)
-            motion_capture(TSEL, P_LPHASE, TSEL->p[P_LPHASE]);
+            knob_cap(TSEL, P_LPHASE);
         return;
     }
     if (vp == &load_ui) {                               /* (0.6.30) GLO > SYSTEM's LOAD: the same */
@@ -1366,7 +1372,7 @@ static void edit_param(uint32_t slot, int32_t steps)
     }
     if (!mom_on && pg->scope != SC_GLOBAL && vp >= TSEL->p && vp < TSEL->p + P_COUNT)   /* (0.7.6: SCL's ALL TR is a
                                                          * global; 0.9.9-seq2e: MOMENTARY records nothing) */
-        motion_capture(TSEL, (uint32_t)(vp - TSEL->p), *vp);
+        knob_cap(TSEL, (uint32_t)(vp - TSEL->p));
 }
 
 /* (0.9.9-seq2c) a MUTATE knob k (params.c MK_*) to v, packed into P_MCFG / P_MMODE. A 0.6.43 MUTATE (P_MSND / P_MPAT,
@@ -2150,6 +2156,7 @@ static void ui_input_frame(void)
     fx_usb_gain = USB_GAIN[fx_usb_fixed ? usb_lvl % 5u : 0u];   /* (0.7.0) .. and its attenuation (usb.c uac_tap) */
     mo_lvl = (uint8_t)(midi_out_mode & 3u);             /* (0.6.72) MENU > MIDI OUT (seq.c) */
     midi_pc_poll();                                     /* (0.6.72) PROGRAM CHANGE in: the sounds it asked for */
+    ml_poll();                                          /* (p1) MIDI LEARN: a CC came for the picked parameter */
     rp_apply();                                        /* (MENU > CLICK, CLICK LEVEL, COUNT-IN: click.c, seq.c) */
     {   /* (0.6.55) TRACKS 6 -> 4 (MENU or GLO > SYSTEM) on T5 / T6: T4 selected (ALGORITHM stops there) */
         static uint8_t live0 = NTRK;
@@ -2666,7 +2673,7 @@ static void ui_input_frame(void)
             int16_t *vp;
             const param_desc_t *d = home_param(k, &vp);
             *vp = (int16_t)param_turn(d, *vp, accel(EN_K1 + k, s, d->fmt == F_ENUM ? 0 : d->max - d->min));
-            motion_capture(TSEL, (uint32_t)(vp - TSEL->p), *vp);
+            knob_cap(TSEL, (uint32_t)(vp - TSEL->p));
         } else {
             edit_param(k, s);
         }

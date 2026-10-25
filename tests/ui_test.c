@@ -2542,9 +2542,9 @@ static int test_menu_tabs(void)
     }
     for (i = 0; i < MI_COUNT; i++) ok &= MI_TAB[i] < MTAB_COUNT;
     ui_prefs = 0;
-    bad += check("MENU tabs: DISPLAY CONTROL AUDIO SYSTEM (8 6 6 8 rows: 0.8.9 SKIN, 0.9.7 SCOPE, 0.9.9-stab CPU CLOCK, p1 CPU CORES), 1..8 each in a run, their rows and values fit the lens's panel",
+    bad += check("MENU tabs: DISPLAY CONTROL AUDIO SYSTEM (8 8 7 7 rows: 0.8.9 SKIN, 0.9.7 SCOPE, 0.9.9-stab CPU CLOCK, p1 CPU CORES, MIDI MAP, LEARN, LOAD in AUDIO), 1..8 each in a run, their rows and values fit the lens's panel",
                  ok && MTAB_COUNT == 4u && str_eq(MTAB_NAME[0], "DISPLAY") && mtab_rows(MTAB_DISPLAY) == 8u &&
-                 mtab_rows(MTAB_CONTROL) == 6u && mtab_rows(MTAB_AUDIO) == 6u && mtab_rows(MTAB_SYSTEM) == 8u);   /* (0.6.58: INIT SYSTEM;
+                 mtab_rows(MTAB_CONTROL) == 8u && mtab_rows(MTAB_AUDIO) == 7u && mtab_rows(MTAB_SYSTEM) == 7u);   /* (0.6.58: INIT SYSTEM;
                                                                          * 0.6.72: MIDI OUT in CONTROL; 0.9.9-stab: CPU CLOCK in SYSTEM) */
 
     ui_power_on();
@@ -2704,9 +2704,9 @@ static int test_menu_tabs(void)
     hold(B_HOME);
     frame();
     ok = ui.menu == 1 && ui.mlv == 1u && lz_on() && lz_fam() == LZ_MENU && lz_tabs() == 4u && lz_tab_lit(0) &&
-         lz_crumb_is("MENU \xB7 DISPLAY \xB7 COLOR") && lz_count_is("1/28");
+         lz_crumb_is("MENU \xB7 DISPLAY \xB7 COLOR") && lz_count_is("1/30");
     turn(EN_SELECT, 1); frame();
-    ok &= ui.mlv == 1u && lz_tab_lit(0) && lz_crumb_is("MENU \xB7 DISPLAY \xB7 SKIN") && lz_count_is("2/28");
+    ok &= ui.mlv == 1u && lz_tab_lit(0) && lz_crumb_is("MENU \xB7 DISPLAY \xB7 SKIN") && lz_count_is("2/30");
     turn(EN_ALGO, 1); frame();
     ok &= menu_tab() == MTAB_CONTROL && lz_tab_lit(1) && lz_crumb_is("MENU \xB7 CONTROL \xB7 HOLD");
     turn(EN_SELECT, 2); frame();
@@ -2715,7 +2715,7 @@ static int test_menu_tabs(void)
     ok &= (fx_latch & 1u) != 0u;
     turn(EN_K3, -1); frame();
     menu_close();
-    bad += check("0.9.2 MENU: four tabs (the row's lit), MENU . TAB . ROW and n/28 (0.9.7: SCOPE; 0.9.9-stab: CPU CLOCK; p1: CPU CORES); ALGORITHM the tab, any knob the value", ok && MI_COUNT == 28u);
+    bad += check("0.9.2 MENU: four tabs (the row's lit), MENU . TAB . ROW and n/30 (0.9.7: SCOPE; 0.9.9-stab: CPU CLOCK; p1: CPU CORES, MIDI MAP, LEARN); ALGORITHM the tab, any knob the value", ok && MI_COUNT == 30u);
     return bad;
 }
 
@@ -9481,6 +9481,7 @@ static int test_click_menu(void)
     turn(EN_SELECT, 1); ok &= ui.menu_sel == MI_TRACKS;
     turn(EN_K1, -1); frame(); ok &= trk_live == 4u && !(ui_rec_prefs & 0x80u);   /* (0.6.18) TRACKS 4 */
     turn(EN_K1, 1); frame(); ok &= trk_live == NTRK && (ui_rec_prefs & 0x80u);   /* 6 */
+    turn(EN_SELECT, 1); ok &= ui.menu_sel == MI_LOAD;     /* (p1: LOAD in AUDIO, as main 0.9.12) */
     turn(EN_SELECT, 1); ok &= ui.menu_sel == MI_SERIAL;   /* (0.9.2: on into SYSTEM; was round within AUDIO) */
     press(B_HOME);
     ok &= !ui.menu;
@@ -9829,6 +9830,100 @@ static int plain_desc(void)                             /* device + configuratio
     uint16_t n, m;
     return get_desc(0x0100, &d, &n) && get_desc(0x0200, &c, &m) && n == 18u && !memcmp(d, DEV_DESC_PLAIN, 18) &&
            m == sizeof CFG_DESC_PLAIN && !memcmp(c, CFG_DESC_PLAIN, m);
+}
+
+/* (p1) MIDI LEARN with MIDI MAP (midi_control.c, midi_learn.c): FACTORY the fixed map as ever; LEARN FIXED TRK / SEL
+ * TRACK from the MENU, a knob turned, a CC sent: learned (the map to CUSTOM ADD); fixed to its track or following the
+ * selected one; CUSTOM the learned alone; ADD a learned CC over the factory's meaning; reserved CCs refused; kept with
+ * the settings; CLEAR ALL */
+static int test_midi_learn(void)
+{
+    int bad = 0, ok;
+    uint32_t id, id2, lv;
+    persist_t p;
+    ui_power_on();
+    ml_set(0);                                           /* (the MENU sweeps before left it armed: not saved, a power-on's 0) */
+    ml_clear_all();
+    ml_tab[0] = MLM_FACTORY;
+    ui.home = 1; ui.menu = 0; frame();
+    trk[0].p[P_LEVEL] = 10;
+    midi_event(0xB0, 0, 7, 127);                         /* (ROUT CH1-6: channel 1 plays T1) */
+    lv = (uint32_t)trk[0].p[P_LEVEL];
+    ok = lv > 10u && ml_map() == MLM_FACTORY && str_eq(MI_NAME[MI_MIDIMAP], "MIDI MAP") && menu_n(MI_MIDIMAP) == 3u &&
+         str_eq(menu_vname(MI_MIDIMAP, 0), "FACTORY") && str_eq(menu_vname(MI_MIDIMAP, 1), "CUSTOM ADD") &&
+         str_eq(menu_vname(MI_MIDIMAP, 2), "CUSTOM") && menu_n(MI_LEARN) == 4u && str_eq(menu_vname(MI_LEARN, 3), "CLEAR ALL");
+    if (!ok) printf("  lv %u map %u n %u '%s' '%s' '%s' %u '%s'\n", lv, ml_map(), menu_n(MI_MIDIMAP), menu_vname(MI_MIDIMAP, 0), menu_vname(MI_MIDIMAP, 1), menu_vname(MI_MIDIMAP, 2), menu_n(MI_LEARN), menu_vname(MI_LEARN, 3));
+    bad += check("MIDI MAP FACTORY by default (older settings: 0): CC7 sets T1's LEVEL as ever; LEARN OFF SEL TRACK FIXED TRK CLEAR ALL", ok);
+
+    song.sel = 1; frame();
+    menu_put(MI_LEARN, 2u); ui.menu = 1; menu_close(); frame();
+    turn(EN_K1, 1); frame();                             /* (HOME KNOB 1 on T2) */
+    id = ml.id;
+    ok = ml.on == 2u && ml.pick && ml.arm && ml.trk == 1u && id < P_COUNT;
+    midi_event(0xB0, 0, 21, 0);
+    frame();
+    ok &= ml_count() == 1u && ml_cc_of(1, id) == 22u && !ml.arm && ml_map() == MLM_ADD;
+    song.sel = 2; frame();
+    trk[1].p[id] = trk[2].p[id] = 0;
+    midi_event(0xB0, 4, 21, 127);                        /* (any channel) */
+    ok &= trk[1].p[id] == track_desc(&trk[1], id)->max && trk[2].p[id] == 0;
+    if (!ok) printf("  on %u pick %u arm %u trk %u id %u count %u cc %u map %u p1 %d p2 %d\n", ml.on, ml.pick, ml.arm, ml.trk, id, ml_count(), ml_cc_of(1, id), ml_map(), trk[1].p[id], trk[2].p[id]);
+    bad += check("LEARN FIXED TRK: T2's knob, then CC21: learned on T2 (the map to CUSTOM ADD); T3 selected, CC21 still T2's", ok);
+
+    menu_put(MI_LEARN, 1u); ui.menu = 1; menu_close(); frame();
+    turn(EN_K2, 1); frame();
+    id2 = ml.id;
+    ok = ml.trk == ML_SEL && ml.arm;
+    midi_event(0xB0, 0, 22, 0); frame();
+    ok &= ml_count() == 2u && ml_cc_of(ML_SEL, id2) == 23u;
+    song.sel = 3; frame();
+    trk[3].p[id2] = trk[2].p[id2] = (int16_t)track_desc(&trk[3], id2)->min;
+    midi_event(0xB0, 0, 22, 127);
+    ok &= trk[3].p[id2] == track_desc(&trk[3], id2)->max && trk[2].p[id2] == track_desc(&trk[2], id2)->min;
+    bad += check("LEARN SEL TRACK: CC22 learned on the selected track's parameter: T4 selected, CC22 moves T4's", ok);
+
+    turn(EN_K3, 1); frame();
+    midi_event(0xB0, 0, 64, 0); frame();                 /* (the pedal: never learned, the wait goes on) */
+    ok = ml_count() == 2u && ml.arm && str_eq(ui.msg, "CC64 RESERVED");
+    midi_event(0xB0, 0, 7, 0); frame();                  /* (ADD: a factory CC learned is the learned one) */
+    id = ml.id;
+    trk[3].p[P_LEVEL] = 50;
+    trk[3].p[id] = (int16_t)track_desc(&trk[3], id)->min;
+    midi_event(0xB0, 3, 7, 127);
+    ok &= ml_cc_of(ML_SEL, id) == 8u && trk[3].p[id] == track_desc(&trk[3], id)->max && (id == P_LEVEL || trk[3].p[P_LEVEL] == 50);
+    bad += check("  CC64 refused (RESERVED); CC7 learned in CUSTOM ADD: the learned parameter, not LEVEL", ok);
+
+    menu_put(MI_LEARN, 0u); ui.menu = 1; menu_close(); frame();
+    menu_put(MI_MIDIMAP, 2u);
+    trk[0].p[P_LEVEL] = 10; trk[1].p[P_PAN] = 0;
+    midi_event(0xB0, 0, 10, 127);                        /* (CC10 PAN: not learned) */
+    trk[1].p[ml_id(ml_e(0)[2])] = 0;
+    midi_event(0xB0, 0, 21, 127);
+    ok = trk[0].p[P_PAN] == 0 && trk[1].p[ml_id(ml_e(0)[2])] != 0;
+    menu_put(MI_MIDIMAP, 0u);
+    trk[1].p[ml_id(ml_e(0)[2])] = 0;
+    midi_event(0xB0, 0, 21, 127);
+    midi_event(0xB0, 0, 10, 127);
+    ok &= trk[1].p[ml_id(ml_e(0)[2])] == 0 && trk[0].p[P_PAN] != 0;
+    bad += check("MIDI MAP CUSTOM: the learned CCs alone (CC10 does nothing); FACTORY: the fixed map alone (CC21 nothing)", ok);
+
+    menu_put(MI_MIDIMAP, 1u);
+    settings_export(&p);
+    {
+        uint8_t keep[32];
+        uint32_t n = ml_count();
+        memcpy(keep, favorites.factory[ENGI_DIGITAL], 32);
+        memset(favorites.factory[ENGI_DIGITAL], 0, 32);
+        ok = settings_import(&p, (int)sizeof p) != 0 && !memcmp(keep + 1, favorites.factory[ENGI_DIGITAL] + 1, 31) && ml_map() == MLM_ADD &&
+             ml_count() == n && n >= 2u;
+    }
+    bad += check("kept with the settings (the editor's backup too): MIDI MAP and the learned CCs", ok);
+
+    menu_put(MI_LEARN, 3u); ui.menu = 1; menu_close(); frame();
+    ok = ml_count() == 0u && ml.on == 0u && str_eq(ui.msg, "LEARN CLEARED");
+    bad += check("LEARN CLEAR ALL: every CC gone at the MENU's close", ok);
+    ml_tab[0] = MLM_FACTORY;
+    return bad;
 }
 static int test_usb_serial(void)
 {
@@ -12661,6 +12756,7 @@ int main(void)
     bad += test_drum_kits();
     bad += test_click_menu();
     bad += test_usb_serial();
+    bad += test_midi_learn();
     bad += test_bpm_lock();
     bad += test_large();
     bad += test_skin();

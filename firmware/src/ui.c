@@ -708,6 +708,7 @@ static void ui_say(const char *a, const char *b)
 }
 
 static void ui_message(const char *s) { ui_say(s, ""); }
+#include "midi_learn.c"                       /* (p1, main 0.9.12) MIDI LEARN's UI (the map: midi_control.c) */
 
 /* (0.9.9-seq2h) SEQ's clipboard (ui_input.c cp_copy / cp_paste): up to a bar of steps, whole (notes, time, flags, the
  * DRUM hits, accents and lane modes, the components), their parameter locks by offset; n 0: empty (the footer's [n]) */
