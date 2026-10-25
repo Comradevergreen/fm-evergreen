@@ -29,4 +29,4 @@ thanks the work below; each keeps its own licence (see [LICENSE](LICENSE), [LICE
   [renebohne](https://github.com/renebohne) (MIDI Program Change, #179),
   [gospodindilly-ops](https://github.com/gospodindilly-ops) (the second core, #247),
   [bonszaimusic](https://www.youtube.com/@bonszaimusic) / [fgunited](https://github.com/fgunited)
-  (external MIDI-clock sequencer and ARP phase drift fix)
+  (external MIDI-clock sequencer and ARP phase drift fix; TRS MIDI clock timestamping under CC load)
