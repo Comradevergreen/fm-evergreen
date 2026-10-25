@@ -1658,74 +1658,124 @@ static VX_CODE void vx_lofi(const track_t *t, const int32_t *A, int32_t en_home)
 #define VX_K_STRING 7u
 #define VX_K_ADD 5u
 /* ---------------------------------------------------------------------------------------- (snd5) STRING --- */
-/* TEJEDORA */
+/* TEJEDORA II: a radial web, a ray a voice (its line, one period, along it); the spider stands on the newest ray at POS
+ * and plucks it with the exciter EXCITE draws; STRETCH warps the spiral, BODY and SIZE the cocoon hanging at the side */
 static VX_CODE void vx_string(const track_t *t, const int32_t *A, int32_t en_home)
 {
     const int16_t *p = t->p;
-    vxf_t f = vx_uf(A, 100, 0);
-    int32_t en = vx_level(t, VX_K_STRING, en_home), silk = 40 + p[P_E2] / 3, sx, sy, k, j, nth = 0, q[2 * 25], bow = 0;
-    uint32_t age = vx_age(t, VX_K_STRING, 0), mt = vxs.mt[VX_K_STRING], i;
+    vxf_t f = vx_uf(A, 95, 0);
+    int32_t en = vx_level(t, VX_K_STRING, en_home), silk = 30 + p[P_E2] / 2, st = p[P_E4], k, j, r, q[2 * 24], ux = 0, uy = 0;
+    int32_t cx = -6 * 16, cy = -6 * 16, R = 44, bow = 0, nw = -1;
+    uint32_t age = vx_age(t, VX_K_STRING, 0), mt = vxs.mt[VX_K_STRING], i, a, th = 0, na = 0, seen = 0;
     vxs.kc = 1;
-    for (k = -1; k <= 1; k += 2)                         /* the two twigs the web hangs from */
-        vx_line(&f, k * 58 * 16, -42 * 16, k * 55 * 16, 34 * 16, 64 + en / 6);
-    for (i = 0; i < NVOICE; i++) {                       /* a thread a voice sounding: its line, one period */
-        const voice_t *v = &t->v[i];
-        const int16_t *b = str_line(t, v);
-        uint32_t d, n = str_period(pitch_inc((uint32_t)clamp(v->pitch_cur, 0, 2047)), &d) >> 8, w = v->ph[1] % ST_SL;
-        int32_t y = (-30 + nth * 9) * 16, pk = 0;
-        if (!v->active || nth >= 7) continue;
-        if (n < 2u) n = 2u;
-        for (j = 0; j <= 24; j++) {
-            int32_t a = b[(w + ST_SL - n + (uint32_t)j * n / 25u) % ST_SL];
-            pk = a > pk ? a : -a > pk ? -a : pk;
-            q[2 * j] = (-55 + j * 110 / 24) * 16;
-            q[2 * j + 1] = y + ((j && j < 24 ? a : 0) * 5 >> 10);
+    for (r = 10; r < R; r += 8) {                        /* the spiral, warped by STRETCH */
+        for (k = 0; k < 24; k++) {
+            int32_t rr = r * 16 + ((og_sin((uint32_t)k * 8192u + (uint32_t)r * 10430u) * st >> 15) * r * 16 * 31 >> 8) / 127;
+            a = (uint32_t)k * 65536u / 24u;
+            q[2 * k] = cx + ((og_cos(a) * rr) >> 15);
+            q[2 * k + 1] = cy + ((og_sin(a) * rr * 4 / 5) >> 15);
         }
-        vx_curve(&f, q, 25, 0, silk + (pk >> 8) + en / 4);
-        if (v->gate && p[P_E7]) bow = 1;
-        nth++;
+        vx_curve(&f, q, 24, 1, silk - 10);
     }
-    for (; nth < 3; nth++)                               /* (at rest: the web's empty threads, still) */
-        vx_line(&f, -55 * 16, (-30 + nth * 9) * 16, 55 * 16, (-30 + nth * 9) * 16, 36);
-    for (k = -2; k <= 2; k++)                            /* the web's spokes */
-        vx_line(&f, k * 8 * 16, -38 * 16, k * 22 * 16, 26 * 16, 28 + en / 10);
-    {   /* the cocoon under it: SIZE its size, BODY its glow */
-        int32_t rx = (9 + p[P_E6] / 9) * 16, ry = (5 + p[P_E6] / 14) * 16, g = 40 + (p[P_E5] * (64 + en) >> 7);
-        vx_ring(&f, 0, 30 * 16, rx, ry, g);
-        vx_ring(&f, 0, 30 * 16, rx * 2 / 3, ry * 2 / 3, g - 20);
-        vx_line(&f, 0, -30 * 16, 0, 30 * 16 - ry, 30);
-    }
-    sx = (-50 + p[P_E3] * 50 / 127) * 16;                /* the spider at POS on the top thread */
-    sy = -36 * 16;
-    {
-        int32_t pl = age < 160u ? (int32_t)(160u - age) * 256 / 160 : 0, saw = bow ? (og_sin(vx_ang(mt, 900)) * 5 >> 15) * 16 : 0;
-        int32_t h = 120 + en / 3;
-        vx_ring(&f, sx - 4 * 16, sy, 5 * 16, 4 * 16, h);  /* the abdomen */
-        vx_ring(&f, sx + 3 * 16, sy + 8, 3 * 16, 3 * 16, h + 20);   /* the head */
-        for (k = 0; k < 8; k++) {                        /* eight legs, four a side, each a knee up and a foot down; the
-                                                         * front right one plucks (or saws while BOW feeds it) */
-            int32_t side = k < 4 ? -1 : 1, j4 = k & 3, kx = sx + side * (3 + j4) * 16 - 2 * 16;
-            int32_t ky = sy - (7 + (j4 == 1 || j4 == 2) * 2) * 16, fx = sx + side * (9 + j4 * 2) * 16 - 2 * 16, fy = sy + (4 + j4) * 16;
-            if (k == 4) { kx += saw; fx += saw; fy -= pl * 7 * 16 >> 8; }
-            vx_line(&f, sx + side * 2 * 16 - 2 * 16, sy, kx, ky, h - 10);
-            vx_line(&f, kx, ky, fx, fy, h - 25);
+    for (i = 0; i < NVOICE; i++)                         /* (the newest voice: the spider's ray) */
+        if (t->v[i].active && t->v[i].age >= na) { na = t->v[i].age; nw = (int32_t)i; }
+    for (i = 0; i < NVOICE + 6u; i++) {                  /* the rays: voice i on ray i % 6, a ray no voice holds still */
+        const voice_t *v = &t->v[i % NVOICE];
+        uint32_t ray = i < NVOICE ? i % 6u : i - NVOICE, live = i < NVOICE && v->active, n = 2u, w = 0, d;
+        const int16_t *b = live ? str_line(t, v) : 0;
+        int32_t pk = 0, rx, ry;
+        if (i >= NVOICE && (seen >> ray & 1u)) continue;
+        if (i < NVOICE && !live) continue;
+        seen |= 1u << ray;
+        a = 49152u + ray * 10923u + 3129u;
+        rx = og_cos(a);
+        ry = og_sin(a) * 4 / 5;
+        if (live) {
+            n = str_period(pitch_inc((uint32_t)clamp(v->pitch_cur, 0, 2047)), &d) >> 8;
+            n = n < 2u ? 2u : n;
+            w = v->ph[1] % ST_SL;
+            if ((int32_t)i == nw) { th = a; ux = rx; uy = ry; if (v->gate && p[P_E7]) bow = 1; }
         }
-        vx_face(&f, sx + 3 * 16, sy + 4, 14, 10, age < 90u, sy + 28, 8, pl > 64 ? 14 : 0, 12, 243, 218, 154);
+        for (j = 0; j <= 20; j++) {
+            int32_t s = live && j && j < 20 ? b[(w + ST_SL - n + (uint32_t)j * n / 21u) % ST_SL] : 0, dd = s * 7 >> 11;
+            pk = s > pk ? s : -s > pk ? -s : pk;
+            q[2 * j] = cx + ((rx * R * j / 20 * 16) >> 15) - ((ry * dd) >> 15);
+            q[2 * j + 1] = cy + ((ry * R * j / 20 * 16) >> 15) + ((rx * dd) >> 15);
+        }
+        vx_curve(&f, q, 21, 0, silk + ((pk >> 8) * 110 >> 7));
+    }
+    if (nw < 0) { th = 49152u + 3129u; ux = og_cos(th); uy = og_sin(th) * 4 / 5; }   /* (at rest: on the top ray) */
+    {   /* the spider at POS along its ray: two rings, eight legs, the front one plucking (sawing while BOW feeds it) */
+        int32_t pu = 26 + p[P_E3] * 205 / 127, sx = cx + ((ux * R * pu >> 8) * 16 >> 15), sy = cy + ((uy * R * pu >> 8) * 16 >> 15);
+        int32_t h = 150 + (en * 60 >> 8), pl = age < 200u ? (int32_t)(200u - age) * 256 / 200 : 0, bx, by, nx, ny, o, e;
+        vx_ring(&f, sx - (ux * 4 * 16 >> 15), sy - (uy * 4 * 16 >> 15), 4 * 16, 3 * 16, h);
+        vx_ring(&f, sx + (ux * 2 * 16 >> 15), sy + (uy * 2 * 16 >> 15), 40, 40, h + 20);
+        for (k = 0; k < 8; k++) {
+            int32_t sd = k < 4 ? -1 : 1, j4 = k & 3, fx, fy, kx, ky;
+            a = th + (uint32_t)(sd * (5215 + j4 * 3650));
+            fx = sx + og_cos(a) * (8 + j4) * 16 / 32768;
+            fy = sy + og_sin(a) * (7 + j4) * 16 / 32768;
+            if (k == 4) {
+                fx = sx + ((ux * 9 * 16 - uy * (pl * 4 * 16 >> 8)) >> 15);
+                fy = sy + ((uy * 9 * 16 + ux * (pl * 4 * 16 >> 8)) >> 15);
+                if (bow) fx += (og_sin(vx_ang(mt, 12000)) * 3 * 16) >> 15;
+            }
+            kx = (sx + fx) / 2 - ((uy * 3 * 16 * sd) >> 15);
+            ky = (sy + fy) / 2 + ((ux * 3 * 16 * sd) >> 15) - 32;
+            vx_line(&f, sx, sy, kx, ky, h - 20);
+            vx_line(&f, kx, ky, fx, fy, h - 35);
+        }
+        /* the exciter past the foot: NOISE dust, PLUCK a finger, PICK a plectrum, HAMMR a hammer, STICK a mallet */
+        nx = -uy; ny = ux;
+        o = (3 * 256 + 5 * (256 - (age < 250u ? 256 - (int32_t)age * 256 / 250 : 0))) * 16 >> 8;
+        bx = sx + ((ux * (10 * 16 - o)) >> 15);
+        by = sy + ((uy * (10 * 16 - o)) >> 15);
+#define XP(m, c) (bx - ((ux * (m) * 16 - nx * (c) * 16) >> 15)), (by - ((uy * (m) * 16 - ny * (c) * 16) >> 15))
+        e = clamp(p[P_E0], 0, SX_N - 1);
+        if (e == SX_NOISE)
+            for (k = 0; k < 9; k++)
+                vx_dot(&f, bx + (vx_hash((uint32_t)k + (mt >> 11)) - 128) * 9 * 16 / 256,
+                       by + (vx_hash((uint32_t)k * 7u + (mt >> 11) + 99u) - 128) * 9 * 16 / 256, 0, 190);
+        else if (e <= SX_PICK) {
+            int32_t c[8] = {XP(8, 2), XP(3, 3), XP(0, 0), XP(-2, 2)}, c2[6] = {XP(0, 0), XP(5, 3), XP(5, -3)};
+            if (e == SX_PLUCK) vx_curve(&f, c, 4, 0, 190); else vx_poly(&f, c2, 3, 1, 190);
+        } else {
+            int32_t c[4] = {XP(9 + (e == SX_MALLET), 0), XP(2, 0)};
+            vx_line(&f, c[0], c[1], c[2], c[3], 160);
+            vx_ring(&f, c[2] + ((ux * 16) >> 15), c[3] + ((uy * 16) >> 15), e == SX_HAMMER ? 3 * 16 : 2 * 16, e == SX_HAMMER ? 48 : 32, 190);
+        }
+#undef XP
+        sx += ux * 2 * 16 >> 15;
+        sy += (uy * 2 * 16 >> 15) - 8;
+        vx_face(&f, sx, sy, 31, 12, age < 120u, sy + 37, 12, pl > 64 ? 20 : 0, 16, 220, 220, 200);
+    }
+    {   /* the cocoon: SIZE its size, BODY its glow */
+        int32_t rx = (4 * 127 + p[P_E6] * 7) * 16 / 127, ry = (6 * 127 + p[P_E6] * 9) * 16 / 127, gl = p[P_E5] * (77 + en) / 127;
+        vx_line(&f, cx + 34 * 16, cy + 2 * 16, cx + 34 * 16, 46 * 16 - ry * 2, 40);
+        vx_ring(&f, cx + 34 * 16, 46 * 16 - ry, rx, ry, 60 + (gl * 170 >> 8));
+        vx_ring(&f, cx + 34 * 16, 46 * 16 - ry, rx * 55 / 100, ry * 6 / 10, 40 + (gl * 140 >> 8));
     }
     vxs.kc = 0;
 }
 
 /* ------------------------------------------------------------------------------------------- (snd5) ADD --- */
-/* MEDUSA: the bell's half widths by MODE (x y, / 64) */
-static const int8_t VM_BELL[AD_N][2] = {{64, 64}, {64, 48}, {72, 34}, {52, 80}, {40, 88}, {70, 22}};
+/* log2 of a Q10 ratio (Q8) */
+static int32_t vx_lg2(uint32_t r)
+{
+    int32_t m = 0;
+    while ((r >> m) > 1u) m++;
+    return (m - 10) * 256 + (int32_t)(((r - (1u << m)) << 8) >> m);
+}
+/* TOTEM: nine rings stacked, each a partial at its frequency's height (the low ones at the bottom), as wide as it sounds,
+ * a bead orbiting it at its speed; BRIGHT makes it a pyramid or a top, PARTIAL's cut ones dots, COMB a waist, SHIMMER a
+ * wobble; the face on top */
 static VX_CODE void vx_add(const track_t *t, const int32_t *A, int32_t en_home)
 {
     const int16_t *p = t->p;
-    vxf_t f = vx_uf(A, 100, 0);
+    vxf_t f = vx_uf(A, 85, 0);
     uint32_t mode = (uint32_t)p[P_E0] % AD_N, age = vx_age(t, VX_K_ADD, 0), mt = vxs.mt[VX_K_ADD], i, k;
-    int32_t en = vx_level(t, VX_K_ADD, en_home), g[DRW_NP], gmax = 1, rx, ry, cy = -16 * 16, pulse, j, q[2 * 11];
-    int32_t pk = clamp(p[P_E5], 0, 127) * 8 / 127, st = clamp(p[P_E4], -64, 63), form = clamp(p[P_E5], 0, 127);   /* (gen6d:
-                                                         * COMB the ring, SHIFT the spread) */
+    int32_t en = vx_level(t, VX_K_ADD, en_home), g[DRW_NP], ys[DRW_NP], gmax = 1, top = 48 * 16, sh = clamp(p[P_E4], -64, 63);
+    int32_t np = 256 + clamp(p[P_E3], 0, 127) * 2048 / 127, mot = clamp(p[P_E7], 0, 63), comb = clamp(p[P_E5], 0, 127), fy;
     vxs.kc = 1;
     for (k = 0; k < DRW_NP; k++) {                       /* each partial's gain now, the voices' summed */
         g[k] = 0;
@@ -1733,33 +1783,39 @@ static VX_CODE void vx_add(const track_t *t, const int32_t *A, int32_t en_home)
             if (t->v[i].active) g[k] += drw_v[drw_part(t)][i].gp[k];
         if (g[k] > gmax) gmax = g[k];
     }
-    if (gmax <= 1)                                       /* (silent: the tilt at rest, short) */
+    if (gmax <= 1)                                       /* (silent: the tilt at rest, narrow) */
         for (k = 0; k < DRW_NP; k++) {
             g[k] = (int32_t)(str_exp2n((uint32_t)((127 - clamp(p[P_E2], 0, 127)) * 4 * ADD_LOG2[k]) >> 8) >> 2);
-            gmax = 65536;
+            gmax = 3 * 65536;
         }
-    pulse = age < 400u ? vx_sq(256, age) : 0;            /* (a note: the bell contracts, swims) */
-    rx = (30 * VM_BELL[mode][0] / 64) * 16 * (256 - pulse / 5) / 256;
-    ry = (18 * VM_BELL[mode][1] / 64) * 16 * (256 + pulse / 6) / 256;
-    vx_arc(&f, 0, cy, rx, ry, 32768u, 65536u, 18, 110 + en / 3);   /* the bell, its rim */
-    vx_arc(&f, 0, cy, rx * 3 / 4, ry * 2 / 3, 32768u, 65536u, 14, 70 + en / 4);
-    vx_line(&f, -rx, cy, rx, cy, 90 + en / 4);
-    if (mode == AD_BELL)                                 /* (a church bell's flare and lip) */
-        for (k = -1; k <= 1; k += 2)
-            vx_line(&f, k * rx, cy, k * (rx + 5 * 16), cy + 4 * 16, 100 + en / 4);
-    if (form)                                            /* the glow ring: PEAK's place in the bell */
-        vx_ring(&f, (pk - 4) * rx / 5, cy - ry / 3, 4 * 16, 3 * 16, 80 + form);
-    vx_face(&f, 0, cy - ry / 2, 7 * 16, 14, age < 90u, cy - ry / 2 + 6 * 16, 10, pulse > 96 ? 20 : 0, 16, 243, 218, 154);
-    for (k = 0; k < DRW_NP; k++) {                       /* the tentacles: the partials */
-        int32_t x0 = (-rx + (2 * (int32_t)k + 1) * rx / DRW_NP) * (128 + st) / 128, len = 6 * 16 + g[k] * 52 / gmax * 16;
-        int32_t rat = ADD_RATIO[mode][k], hot = 60 + g[k] * 150 / gmax + ((int32_t)k == pk ? form : 0);
-        for (j = 0; j <= 10; j++) {
-            int32_t yy = cy + 2 * 16 + len * j / 10;
-            q[2 * j] = x0 + (int32_t)k * (st * j) / 6 + ((og_sin((uint32_t)(j * rat * 7) + k * 7919u - vx_ang(mt, 150 + rat / 12)) * (1 + j / 3)) >> 15) * 16 * (96 + en) / 256;
-            q[2 * j + 1] = yy;
-        }
-        vx_curve(&f, q, 11, 0, hot);
+    vx_line(&f, 0, 48 * 16, 0, -38 * 16, 40);           /* the pole */
+    for (k = 0; k < DRW_NP; k++) {
+        int32_t R = ADD_RATIO[mode][k], r = R + (ADD_RATIO[(mode + 1u) % AD_N][k] - R) * clamp(p[P_E1], 0, 127) / 127;
+        int32_t y, w, h, wob, x;
+        uint32_t a;
+        if (sh < 0) r += ((r * ((r - 1024) >> 4)) >> 10) * -sh * 9 >> 8;   /* SHIFT: stretched, or every partial up */
+        else r += sh * 1331 / 63;
+        y = vx_lg2((uint32_t)clamp(r, 461, 65535)) + 18;
+        y = 48 * 16 - y * 80 * 16 / 1087;
+        ys[k] = y = y > -40 * 16 ? y : -40 * 16;
+        wob = mot ? (og_sin(vx_ang(mt, 2000 + (int32_t)k * 1000) + k * 10430u) * mot * 48 / 63) >> 15 : 0;
+        if ((int32_t)k * 256 >= np) { vx_dot(&f, wob, y, 0, 60); continue; }
+        w = 48 + g[k] * 30 / gmax * 16 + (g[k] * 30 % gmax) * 16 / gmax;
+        h = 50 + g[k] * 190 / gmax;
+        vx_ring(&f, wob, y, w, w * 56 >> 8 > 19 ? w * 56 >> 8 : 19, h);
+        a = vx_ang(mt, 1000 + r * 500 / 1024) + k * 10430u;
+        x = wob + ((og_cos(a) * w) >> 15);
+        vx_dot(&f, x, y + ((og_sin(a) * (w * 56 >> 8)) >> 15), 0, h + 40);
+        top = y < top ? y : top;
     }
+    if (comb) {                                          /* COMB: the waist over its rings */
+        int32_t c = clamp((comb * 10 * 2 / 127 - 2 + 1) / 2, 0, DRW_NP - 1), y = ys[c];
+        vx_line(&f, -34 * 16, y, -6 * 16, y, 70);
+        vx_line(&f, 6 * 16, y, 34 * 16, y, 70);
+    }
+    fy = (top < 30 * 16 ? top : 30 * 16) - 9 * 16;
+    vx_ring(&f, 0, fy, 8 * 16, 7 * 16, 140 + (en * 80 >> 8));
+    vx_face(&f, 0, fy, 56, 23, age < 100u, fy + 67, 21, en > 13 ? en * 53 >> 8 : 0, 28, 230, 230, 210);
     vxs.kc = 0;
 }
 
