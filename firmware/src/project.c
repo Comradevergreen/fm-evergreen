@@ -1931,6 +1931,7 @@ static __attribute__((noinline)) void system_init(void)   /* (snd8: out of its c
     memset(dx_snd, 0, sizeof dx_snd);
     memcpy(dx_lay, DX_LAY_DEF, sizeof dx_lay);
     memset(fg_set, 0, sizeof fg_set);                   /* (0.6.52) no FUGUE */
+    live_reset();                                       /* (p2) no LIVE modifier (seq_live.c) */
     dx_mute_set(0);
     fm6_init();
     for (i = 0; i < NTRK; i++) {

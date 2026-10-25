@@ -80,9 +80,11 @@ static const nv_t CE_FX[] = {NV("FX", "SENDS", 0, FXL_TRACK), NV("DIST", 0, 0, F
                                                          * end of the chain; snd8: its TAPE) */
 static const ng_t CG_FX[] = {{"TRACK", "TRK"}, {"BUSES", "BUS"}, {"DELAY", "DLY"}, {"REVERB", "REV"}, {"CHORUS", "CHO"},
                              {"SLICER", "SLC"}, {"PUNCH", "PCH"}, {"MASTER", "MST"}};
-static const nv_t CE_GLO[] = {NV("MIXER", 0, 0, 0), NV("SENDS", 0, 0, 0), NV("GLOBAL", 0, 1, 1), NV("SYSTEM", 0, 2, 2), NV("SYSTEM 2", 0, 2, 2),
-                              NV("COMPS", 0, 3, 3), NV("COMPS 2", 0, 3, 3)};   /* (0.9.9-seq2f) the global lane */
-static const ng_t CG_GLO[] = {{"MIX", 0}, {"GLOBAL", 0}, {"SYSTEM", 0}, {"COMPS", "CMP"}};
+static const nv_t CE_GLO[] = {NV("MANO", 0, 0, 0), NV("RIELES", 0, 0, 0), NV("MIXER", 0, 1, 0), NV("SENDS", 0, 1, 0),
+                              NV("GLOBAL", 0, 2, 1), NV("SYSTEM", 0, 3, 2), NV("SYSTEM 2", 0, 3, 2),
+                              NV("COMPS", 0, 4, 3), NV("COMPS 2", 0, 4, 3)};   /* (0.9.9-seq2f) the global lane; (p2) LIVE first
+                                                         * (ui_live.c) */
+static const ng_t CG_GLO[] = {{"LIVE", 0}, {"MIX", 0}, {"GLOBAL", 0}, {"SYSTEM", 0}, {"COMPS", "CMP"}};
 static const nv_t CE_ENV[] = {NV("ENV", "TRACKS", 0, 0), NV("ENV DEST", "TRACKS DEST", 0, 0), NV("ENV", 0, 1, 1),
                               NV("ENV DEST", 0, 1, 1), NV("STAGE", 0, 2, 2)};
 static const ng_t CG_ENV[] = {{"TRACKS", 0}, {"ENV", 0}, {"STAGE", 0}};
@@ -103,8 +105,9 @@ static const ch_t CHAINS[NAV_KEYS] = {CH(CE_HOME, CG_HOME), CH(CE_SYN, CG_SYN), 
                                       CH(CE_GLO, CG_GLO), CH(CE_ENV, CG_ENV), CH(CE_LFO, CG_LFO), CH(CE_SCL, CG_SCL),
                                       CH(CE_ARP, CG_ARP), CH(CE_SAVE, CG_SAVE), CH(CE_FM6, CG_FM6), CH(CE_DRM, CG_DRM),
                                       CH(CE_DIG, CG_DIG)};
-/* the page each opens on at power-on (the mock-up's): SEQ its STEP, ENV its ENV, LFO its LFO; ui.nmem holds it ^ this */
-static const uint8_t NAV_DEF[NAV_KEYS] = {0, 0, 0, 0, 0, 2, 1, 0, 0, 0, 0, 0, 0};
+/* the page each opens on at power-on (the mock-up's): SEQ its STEP, ENV its ENV, LFO its LFO, (p2) GLO its MIXER (LIVE's
+ * pages before it: a GLO tap inside, rule 2); ui.nmem holds it ^ this */
+static const uint8_t NAV_DEF[NAV_KEYS] = {0, 0, 0, 0, 2, 2, 1, 0, 0, 0, 0, 0, 0};
 static uint32_t nav_key(uint32_t sec) { uint32_t k = sec == SEC_EDIT ? edit_kind() : 0u; return k ? SEC_N - 1u + k : sec; }
 static const ch_t *nav_ch(uint32_t sec) { return &CHAINS[nav_key(sec)]; }
 static uint32_t nav_mem(uint32_t key) { return (uint32_t)(ui.nmem[key] ^ NAV_DEF[key]); }

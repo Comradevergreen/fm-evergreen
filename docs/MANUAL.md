@@ -103,7 +103,7 @@ The names below are the ones the firmware uses (the HARDWARE CALIBRATION screen 
 | **FX** | The FX section: from elsewhere the page last shown; inside, the next module: **TRACK → BUSES → DELAY → REVERB → CHORUS → SLICER → PUNCH → MASTER**, round. | **Punch-in FX** layer. |
 | **SCL** | The SCL section (0.9.2: its own, ARP apart): **KEY ↔ CHORD**. | **SCL** layer: keys set the root. |
 | **EDIT** | The EDIT section: from elsewhere the page last shown (one memory for the synths, one each for FM6 and DRUM); inside the next group: **SOUND → TONE → FOCUS** (FM6: SOUND → TONE → OPERATOR; DRUM: KIT → SOUND → LEVELS → TONE). Always EDIT (0.9.2: clearing a step is SEQ + G5, renaming SAVE + C5). A step held + EDIT still clears that step's locks. | **EDIT** layer: INIT, RECALL, DRUM-X sound mutes, SELECT the sound dice. Held + KNOB 1–4: **MOMENTARY** (the page under, put back when let go). |
-| **GLO** | The GLO section: from elsewhere the page last shown; inside **MIX → GLOBAL → SYSTEM**, round. | **GLO** layer: mutes, solos, levels, tap tempo, UNDO. |
+| **GLO** | The GLO section: from elsewhere the page last shown; inside **LIVE → MIX → GLOBAL → SYSTEM → COMPS**, round (at power-on MIXER; LIVE, the live sequences, first). | **GLO** layer: mutes, solos, levels, tap tempo, UNDO. |
 | **SAVE** | The SAVE section: from elsewhere the page last shown, and USER or SECTIONS come with their **SAVE already picked** (SAVE, OCT+, OCT+ as before); inside **SOUND → PROJECT → LIBRARY**, round. | **SAVE** layer: play/store sections live; C5 NAME. |
 | **ARP** | The ARP section (ARP · ARP 2, one group): from elsewhere the page last shown; inside, back to ARP. A chord held + ARP during step recording still arpeggiates it. | (no layer) |
 | **SEQ** | The SEQ section: from elsewhere the page last shown (at power-on STEP, the piano roll); inside the next group: **PATTERN → TRACK → BAR → STEP → AUTO**, round. | **SEQ TOOLS** layer (on every SEQ page); G5 CLR STEP. |
@@ -296,7 +296,7 @@ it was in 0.9.1, with its knobs and its picture (the ones 0.8.5's lenses drew).
 | **EDIT** (DRUM) | **KIT**: KIT · KIT 2 · KIT 3 — **SOUND**: SOUND · SOUND 2 · SOUND 3 · SOUND 4 — **LEVELS**: LEVELS · LEVELS 2 — **TONE**: X-MOD · FILTER · STEREO · VOICE | 13 |
 | **SEQ** | STEP · **LENGTH**: LENGTH · TRACK · **MUTATE**: MUTATE · MUTATE 2 · PLAYHEADS · STRETCH · **COMP**: COMP · COMP 2 · **AUTO**: AUTOMATION · AUTO LIST | 11 |
 | **FX** | **TRACK**: SENDS · DIST · AUTO PAN — **BUSES**: BUSES — **DELAY**: DLY · DLY 2 · DLY 3 — **REVERB**: REVERB · REVERB 2 — **CHORUS**: CHORUS — **SLICER**: SLICER · SL BUS · SL BUS 2 · SL PITCH — **PUNCH**: PUNCH — **MASTER**: MASTER | 16 |
-| **GLO** | **MIX**: MIXER · SENDS — **GLOBAL**: GLOBAL — **SYSTEM**: SYSTEM | 4 |
+| **GLO** | **LIVE**: MANO · RIELES — **MIX**: MIXER · SENDS — **GLOBAL**: GLOBAL — **SYSTEM**: SYSTEM · SYSTEM 2 — **COMPS**: COMPS · COMPS 2 | 9 |
 | **ENV** | **TRACKS**: TRACKS · TRACKS DEST — **ENV**: ENV · ENV DEST — **STAGE**: STAGE | 5 |
 | **LFO** | **MOD**: MOD — **LFO**: LFO · LFO DEST — **MSEQ**: MSEQ · MSEQ 2 | 5 |
 | **SCL** | **KEY**: SCL — **CHORD**: CHORD | 2 |
@@ -431,10 +431,12 @@ since 0.6.51: every project opens as it was.
 | VOICE 2 (0.8.5) | ALLOC | DETUNE (UNI's spread) | — | — | every engine but DRUM |
 | FOCUS (0.8.5) | PARAM (E1–E8) | its value | SRC (the MOD slot on it) | AMT | the synths (not FM6, DRUM) |
 
-**GLO** (MIXER is per track; GLOBAL and SYSTEM are global)
+**GLO** (MANO and RIELES act on the tracks picked; MIXER is per track; GLOBAL and SYSTEM are global)
 
 | Page | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 | --- | --- | --- | --- | --- |
+| MANO (main 0.9.11) | RATE | LOOP | THIN | DJ FILT (MIXER's; the keys: the live modifiers, [11](#11-performance)) |
+| RIELES (main 0.9.11) | PISTAS (ALL, T1 … T6, SYN, DRM) | RATE | CORTE | DENS |
 | MIXER | LEVEL | PAN | REV | DJ FILT (0.9.1: the master DJ FILTER; was MUTE, now on the GLO layer) |
 | SENDS (0.8.5) | DIST | CHORUS | DLY | REV (the selected track's, as FX > SENDS) |
 | GLOBAL | BPM | SWING | CLOCK | TUNE |
@@ -1754,6 +1756,66 @@ curve where the bar would be.
 ---
 
 ## 11. Performance
+
+### Live sequences: GLO › LIVE (main 0.9.11; v0.9.9-par2)
+
+The six sequences side by side, and modifiers you play over them like MIDI effects on a master: divide, multiply,
+shorten, reverse, thin, repeat. They never touch the steps: they change how the sequencer walks them, and a track
+always comes back in phase. Two pages, the first group of GLO (**LIVE · MIX · GLOBAL · SYSTEM · COMPS**): a GLO tap inside goes
+round the groups, SELECT left of MIXER reaches them; at power-on GLO still opens the MIXER.
+
+**RIELES** (rails): each track's loop across the screen at its own length, its playhead (orange) running at its own
+speed, the **ghost** (violet dots: where the track would be if nothing were done to it) and the window of CORTE or LOOP
+framed in violet (the steps outside it dim). The numbers at the left: ALGORITHM's track on the orange badge, the
+tracks the knobs act on in violet with a bar.
+
+- **KNOB 1 PISTAS**: which tracks the other three act on: **ALL**, then **T1 … T6** one by one, then **SYN** (the
+  synths) and **DRM** (the drum tracks). The track you edit is still ALGORITHM's.
+- **KNOB 2 RATE**: /4 /3 /2 2/3 · x1 · 3/2 x2 x3 x4 (2/3 dotted, 3/2 triplets). It goes in on the next beat.
+- **KNOB 3 CORTE**: the first N steps only (32 … 1, OFF). On the next 1/16.
+- **KNOB 4 DENS**: to the left THIN (90 … 10 % of the steps play; the same steps on the same loop every PLAY), in the
+  middle everything, to the right RATCH (every step x2 … x4, never a part shorter than ~1.4 ms). On the next 1/16.
+
+**MANO** (hand): the keys become a board; the rails small on top, the board under them (held: orange; latched: violet).
+
+- **Black keys 1–6** (F#3 … F#4): hold them to pick the tracks (several at once); none held, or **A#4**: all of them.
+- **White keys**, on while held, back in phase when let go: **F3** /2, **G3** x2, **A3** TR (3/2), **B3** DT (2/3),
+  **C4 … F4** LOOP 8 4 2 1 (the N steps the playhead is in; the shortest held wins), **G4** REV, **A4** PING, **B4 C5**
+  RATCH x2 x3, **D5** THIN 50 %, **E5 F5** OCT+ OCT− (the sequence's notes an octave up / down), **G5** RETURN. They go
+  in on the next 1/16 (the rate keys too).
+- **G#4 LATCH**: then a white key turns its modifier on and the next press off (for the tracks held at the time).
+  **C#5 / D#5** GIRO: the playhead a step back / on (a rotation). **F#5** RND: the steps in any order (on / off).
+- **KNOB 1 RATE, 2 LOOP, 3 THIN** on the tracks held (none: all), latched as any knob; **KNOB 4** the DJ FILTER, the
+  same as MIXER's KNOB 4.
+- On MANO the keys play no notes; on any other page they play again (a key still held keeps its modifier until it is
+  let go).
+
+**On both pages**: **OCT− tapped** is RETURN: the tracks picked lose every modifier and land on their ghost on the next
+beat. **OCT− held** is BYPASS: the original while you hold it, every track; let go, the modifiers are back. **OCT+** is
+COMMIT: it asks (WRITE LIVE CHANGES?) and **OCT+ again** writes what plays into the tracks: RATE into DIV when one fits
+(x2 of 1/16 = 1/32, 3/2 = 16T, /2 = 1/8), else STRETCH (/2 /3 /4 slower, x3 x4 faster); CORTE into LEN (a LOOP's steps
+moved to the start); GIRO into ROTATE; THIN into the track's CHANCE. REV, PING, RND, RATCH, OCT and a rate with no DIV
+or STRETCH (2/3 of a 1/16) stay live. **UNDO: GLO + G4.**
+
+**How the two pages combine**: they drive the same modifiers, one set per track. The knobs of both pages are one
+latched layer: RATE is the same value on both; MANO's LOOP and RIELES' CORTE are the same window (LOOP counts from where
+the playhead is, CORTE from step 1; the last one turned wins); THIN and DENS are the same density. MANO's keys sit on
+top while held or latched: a rate key replaces the rate, a LOOP key shortens the window (the shortest wins), THIN takes
+the thinner, RATCH the larger; REV, PING and OCT are the keys' alone. MANO is the hands-on face (momentary, several
+tracks at once), RIELES the latched, visual one.
+
+**Recording**: with REC armed, a note played while its track is modified lands where the ghost is (where the step is
+in the written pattern), so recording over a modified track never scrambles it; the automation and the locks follow
+the step that sounds.
+
+**Never saved**: the modifiers are performance state, like the punch-in FX; STOP keeps them, NEW PROJECT clears them.
+What you COMMIT is what stays. They cost nothing in the audio render, a few instructions a track in the sequencer.
+
+**The FX layer's 1/2 TEMPO and LOOP 3 / 5 / 7** are these same modifiers: 1/2 TEMPO is RATE /2 (or slower, if LIVE
+already has the track slower), a LOOP the last N steps (the one playing the last of them), in at once on the 1/16 the
+punch-in starts on, and let go the track lands on its ghost, where it would have been. With a slower RATE (or 1/2
+TEMPO) the PLAYHEADS (SEQ › PLAYHEADS) slow down with the track and, back in phase, skip what they missed; a faster one
+leaves them in time.
 
 ### Punch-in FX (hold FX)
 

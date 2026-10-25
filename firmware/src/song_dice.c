@@ -86,10 +86,8 @@ static int32_t dsounding(const track_t *t, uint32_t i)  /* the note sounding at 
  * on every step at 160 BPM, gliding into each other (GLIDE, POLY), two step components on each (ARP SEQ / ECHO x8 and
  * RAND / OCT, DIV, LEN); the last live track the DRUM kit, every lane on every step, OCT / ARP on its steps; every FX
  * on (DIST, CHORUS, DLY with PITCH, the CLOUD reverb). UNDO (GLO + G4) brings the music back */
-static void dice_room_touch(void);
 static void cpu_test_song(void)
 {
-    dice_room_touch();
     uint32_t k, i, n = trk_live;
     if (song.playing) transport_req = 2;
     song.g[G_BPM] = 160;
@@ -125,18 +123,4 @@ static void cpu_test_song(void)
         comp_migrate(t->step, 32u);                     /* (seq2d: as components v2) */
         load_end(t);
     }
-}
-/* (p2) the old generator's state (dh) kept as room: the merged statics' places are recorded (the sound's) */
-static uint32_t dh_r0, dh_r1, dh_r2, dh_r3, dh_r4, dh_r5, dh_r8;
-static int32_t dh_r9[4];
-static const uint8_t DH_C4A[4] = {0xD1, 0x4A, 0x01, 0x9E}, DH_C4B[4] = {0xD1, 0x4B, 0x02, 0x9D}, DH_C4C[4] = {0xD1, 0x4C, 0x03, 0x9C};
-static const uint8_t DH_C8[8] = {0xD1, 0x08, 0x11, 0x22, 0x33, 0x44, 0x55, 0x9B};
-static const uint8_t DH_C16[16] = {0xD1, 0x16, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 0x9A};
-static const uint8_t DH_C32[32] = {0xD1, 0x32, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
-                                   23, 24, 25, 26, 27, 28, 29, 0x99};   /* (and its small constants: the sound's are after them) */
-static void dice_room_touch(void)
-{
-    uint32_t i = dh_r0 & 3u;
-    dh_r0++; dh_r1 += DH_C4A[i]; dh_r2 += DH_C4B[i]; dh_r3 += DH_C4C[i]; dh_r4 += DH_C8[dh_r1 & 7u]; dh_r5 += DH_C16[dh_r2 & 15u];
-    dh_r8 += DH_C32[dh_r3 & 31u]; dh_r9[i]++;
 }

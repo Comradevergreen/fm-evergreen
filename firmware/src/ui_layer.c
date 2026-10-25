@@ -1392,3 +1392,5 @@ static void draw_layer(void)
     draw_tabs();                                        /* (0.8.5: MAP . KNOBS . STATE, the breadcrumb) */
     draw_foot();
 }
+
+#include "ui_live.c"                                    /* (p2, main 0.9.11) GLO > LIVE: MANO, RIELES */

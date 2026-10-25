@@ -16,6 +16,8 @@
  *                  REPEAT 1/16 / GLITCH held on it
  *   seq/plain      the sequencer: six tracks of chords / hits on every step at 200 BPM
  *   seq/heavy      .. with two step components on each (ARP / RATCHET x8, RANDOM / OCT+ at 75 %), DIV, LEN, chord glides
+ *   seqtick/plain  (p2, main 0.9.11) the sequencer alone (events_block, no render): seq/plain's six tracks
+ *   seqtick/live   .. every track under GLO > LIVE's modifiers (seq_live.c: x2, a LOOP of 4, REV, THIN 30 %, GIRO +1)
  *   song/cputest   SAVE > TOOLS 6 CPU TEST's song (song_dice.c cpu_test_song), playing: what the device is measured on
  *   song/cputest.djf  (0.9.1) .. with the master DJ FILTER on (GLO > MIXER KNOB 4 at -24, a low-pass): its cost on top
  *   mix/idle       (0.9.9 ctl64) nothing sounding, stopped: the fixed cost of a block (the events, the split, the buses,
@@ -241,6 +243,26 @@ int main(void)
     vg_section("seq/plain");
     vg_seq(1);
     vg_section("seq/heavy");
+    {   /* (p2, main 0.9.11) the sequencer alone, plain and under LIVE's modifiers on every track */
+        uint32_t b, k, r;
+        for (r = 0; r < 2u; r++) {
+            vg_seq(0);
+            for (k = 0; k < NTRK && r; k++) {
+                lv.rate[k] = 2; lv.cut[k] = 7; lv.dn[k] = -3; lv.rot[k] = 1;
+                lv.here |= (uint8_t)(1u << k); lv.lt[8] |= (uint8_t)(1u << k);
+            }
+            live_publish();
+            for (b = 0; b < 64u; b++)
+                events_block(CTL);
+            CALLGRIND_ZERO_STATS;
+            CALLGRIND_START_INSTRUMENTATION;
+            for (b = 0; b < NB; b++)
+                events_block(CTL);
+            CALLGRIND_DUMP_STATS_AT(r ? "seqtick/live" : "seqtick/plain");
+            CALLGRIND_STOP_INSTRUMENTATION;
+            memset(&lv, 0, sizeof lv);
+        }
+    }
     ui_power_on();
     cpu_test_song();
     transport_req = 1; ui_input();

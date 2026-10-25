@@ -601,6 +601,8 @@ static uint32_t seq_src(const track_t *t, uint32_t idx)
     return (uint32_t)(((int32_t)(idx % (uint32_t)len) - o + len) % len);
 }
 
+#include "seq_live.c"                              /* (p2, main 0.9.11) GLO > LIVE: the live modifiers, the ghost playhead */
+
 /* (0.8.5) a recorded hit's octave (dx_in_rat / dx_in_tch: the key's or MIDI note's, eng_drum.c) as its lane's mode on
  * the step (core.h LM_*): x2 / x4 / x8 above the kit's octave, SHORT / GHOST / FLAM below, none in it; that lane only
  * (its hit and its notes), the rest of the step as it was. The last hit recorded on a lane sets it */
@@ -663,7 +665,7 @@ static uint8_t rec_at, rec_late;                        /* (0.8.5) the step (pla
  * of the last one puts that step back (rec_release), so a short note stays one step.
  * A note recorded into another step ends the hold before (the step model ties the
  * notes of one step only). */
-static void rec_note(track_t *t, uint32_t note, uint32_t vel)
+static void rec_note_at(track_t *t, uint32_t note, uint32_t vel)
 {
     uint32_t len = t->p[P_SLEN] > 0 ? (uint32_t)t->p[P_SLEN] : 1u, idx = t->seq_idx % len, k;
     uint32_t period = div_samples((uint32_t)t->p[P_SDIV]), sl = step_samples(t, period, t->seq_idx);
@@ -762,8 +764,21 @@ static void rec_hold(track_t *t, uint32_t idx, uint32_t len)
     s->lm[0] = s->lm[1] = s->lm[2] = 0;
 }
 
+/* (p2, main 0.9.11) LIVE: a modified track records at its ghost's place (seq_live.c), where the step is in the written
+ * pattern */
+static void rec_note(track_t *t, uint32_t note, uint32_t vel)
+{
+    uint16_t e = t->ext;
+    int s = live_swap(t);
+    if (s)
+        t->ext = 0;
+    rec_note_at(t, note, vel);
+    if (s)
+        live_swap(t);
+    t->ext = e;
+}
 /* a key of a recorded note is up: the hold ends with the last one */
-static void rec_release(track_t *t, uint32_t note)
+static void rec_release_at(track_t *t, uint32_t note)
 {
     uint32_t i, k = 0;
     for (i = 0; i < t->rh_n; i++)
@@ -774,6 +789,13 @@ static void rec_release(track_t *t, uint32_t note)
     if (t->rh_ties && seq_src(t, t->seq_idx) == t->rh_last &&
         t->seq_pos < step_samples(t, div_samples((uint32_t)t->p[P_SDIV]), t->seq_idx) / 2u)
         t->step[t->rh_last] = t->rh_bak;            /* released early in it: not held into this step */
+}
+static void rec_release(track_t *t, uint32_t note)
+{
+    int s = live_swap(t);
+    rec_release_at(t, note);
+    if (s)
+        live_swap(t);
 }
 
 /* a note into armed track t in the count-in's last eighth: kept for step 1 (cin_flush); once each, 4 per track */
@@ -1174,9 +1196,12 @@ static void keyboard_block(void)
                     perf_press(perf_key(k), 1);
                 continue;
             }
-            if (song.grid == 2u)                  /* NAME (ui_name.c): every key types, none sounds */
+            if (song.grid >= 2u) {                /* NAME (ui_name.c): every key types, none sounds; (p2) 3: GLO > LIVE
+                                                   * MANO, the keys its board (seq_live.c, ui_live.c) */
                 kb_note[k] = KB_SILENT;
-            else if (song.grid)                   /* the DRUM grid: a lane key plays its lane, the rest are the UI's */
+                if (song.grid == 3u)
+                    lv.kb |= 1u << k;
+            } else if (song.grid)                   /* the DRUM grid: a lane key plays its lane, the rest are the UI's */
                 kb_note[k] = key_black(k) && key_place(k) < NLANE ? DRUM_LANE_NOTE[key_place(k)] : KB_SILENT;
             else
                 kb_note[k] = (uint8_t)kb_map(&trk[kb_trk[k]], k);
@@ -1193,8 +1218,10 @@ static void keyboard_block(void)
                 perf_press(perf_key(k), 0);
                 continue;
             }
-            if (kb_note[k] == KB_SILENT)
+            if (kb_note[k] == KB_SILENT) {
+                lv.kb &= ~(1u << k);
                 continue;
+            }
             key_off(k, &trk[kb_trk[k] % NTRK]);
         }
     }
@@ -1232,6 +1259,7 @@ static void seq_start(void)
         fl_reset(i), fl_pass[i] = 0;               /* (0.6.62) TIMES from the first pass */
     }
     fg_reset();                                    /* (0.6.52) FUGUE's heads from their first step */
+    lv.act = 0;                                    /* (p2) LIVE: the ghosts from step 0 too (live_q) */
     gl_reset();                                    /* (seq2f) the global lane from its first step, its first pass */
     song.tick = 0;
     beat_pos = 0; beat_n = 0;                      /* the ARP LED's beat from the top too */
@@ -1253,6 +1281,8 @@ static volatile uint8_t seq_fill;
 static int step_rolls(const track_t *t, const step_t *s)
 {
     uint32_t c = trk_chance(t, s);
+    if (live_drop(t))                               /* (p2) LIVE THIN */
+        return 0;
     return c >= 100u || rng() % 100u < c;
 }
 /* (0.9.9-seq2d) STEP COMPONENTS v2 (core.h CA_* CC_*). Component k's CONDITION on step s this pass (t->loops: the
@@ -1785,6 +1815,8 @@ static uint32_t step_parts(const track_t *t, const step_t *s, uint32_t *div)
     if (o)
         return *div = CP_RATES[CP_RATE(o->carg) % CP_NRATE];
     h = s->time == ST_NOTE && t->cx_rat ? t->cx_rat : step_ratchet(s);   /* (seq2d: a RATCHET, x2..x8) */
+    if ((d = live_rat(t)) > h)                      /* (p2) LIVE RATCH: every step at least that many parts, inside it */
+        return *div = d;
     d = CT_DIVS[CT_DIV(s) % CT_NDIV];
     if (h < 2u || !d)
         return *div = h;
@@ -2071,7 +2103,7 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
     const engine_t *e = ENGINES[eng_idx(t->eng_req)];
     uint32_t kit = e->oneshot || (e->keys && e->keys(t, 0) >= 0);
     uint32_t qseq = t->p[P_QUANT] == QN_SEQ && !kit;
-    int32_t up = (kit ? 0 : t->p[P_POFS]) +         /* SHIFT PIT: the notes up (a kit keeps its lanes) */
+    int32_t up = (kit ? 0 : t->p[P_POFS] + live_up(t)) +   /* SHIFT PIT: the notes up (a kit keeps its lanes); LIVE OCT */
                  (t->p[P_AMODE] == AM_TRNS ? t->trn : 0);   /* ARP TRNS: the keys' interval */
     if (!(skip & SEQ_REP)) {
         t->rat_left = 0;
@@ -2359,23 +2391,31 @@ static __attribute__((noinline)) void seq_lane_rat(track_t *t, uint32_t period, 
     t->lr_on = (uint8_t)any;
 }
 
-/* 1/2 TEMPO let go (pfx.c): the track back where it would be had it run on, from where it was pressed */
-static __attribute__((noinline)) void pfx_resync(track_t *t, uint32_t period, uint32_t len)
-{
-    uint32_t idx = t->pfx_idx0 % (len ? len : 1u), pos = t->pfx_pos0 >= 0x7FFFFFFFu ? 0u : t->pfx_pos0;
-    pos += t->pfx_el;
-    for (;;) {
-        uint32_t cur = step_samples(t, period, idx);
-        if (!cur || pos < cur)
-            break;
-        pos -= cur;
-        idx = (idx + 1u) % (len ? len : 1u);
-    }
-    t->seq_idx = (uint16_t)idx;
-    t->seq_pos = pos;
-}
-
 #include "fugue.c"                                 /* (JIANT 0.6.52) SEQ > FUGUE: three more playheads a track */
+
+/* (p2, snd6's for 1/2 TEMPO) a track back in phase from a slower LIVE RATE (or 1/2 TEMPO): its PLAYHEADS on by the
+ * samples they missed, silently (live_q) */
+static __attribute__((noinline)) void live_heads(track_t *t, uint32_t ti, uint32_t ln)
+{
+    uint32_t pd = div_samples((uint32_t)t->p[P_SDIV]), k;
+    for (k = 0; k < FG_HEADS && ln; k++) {
+        const fg_set_t *f = &fg_set[ti % NTRK][k];
+        fg_head_t *h = &fg_head[ti % NTRK][k];
+        uint32_t r = f->rate, sl, g;
+        if (!r || r >= FG_NRATE || h->pos == 0x7FFFFFFFu)
+            continue;
+        sl = pd * FG_DEN[r] / FG_NUM[r];
+        if (sl < CTL)
+            sl = CTL;
+        h->pos += lv.hd[ti % NTRK];
+        for (g = 0; h->pos >= sl && g < 256u; g++) {
+            h->pos -= sl;
+            h->idx = (uint16_t)fg_next(h, f->dir, ln);
+        }
+        h->pos %= sl;
+    }
+    lv.hd[ti % NTRK] = 0;
+}
 
 /* (0.9.9 ctl64) what a step queued, due within this block: a STRUM's or HUMAN TIME's notes (ss_due, from this block's
  * first sample) and the gate's end (seq_off). After the steps of the block (seq_tick): a step at its sample queues from
@@ -2415,49 +2455,22 @@ static void seq_due(track_t *t, uint32_t n)
 
 static void seq_tick(track_t *t, uint32_t n)
 {
-    uint32_t period, len;
+    uint32_t period, len, lon, nf;
     if (n > blk_n)
         blk_n = n;                                    /* (ctl64: ticked on its own, by a test, with more than a block) */
-    if (t->pfx_rs) {                                  /* 1/2 TEMPO let go */
-        uint32_t pd = div_samples((uint32_t)t->p[P_SDIV]), ln = (uint32_t)t->p[P_SLEN], k;
-        if (song.playing) {
-            pfx_resync(t, pd, ln);
-            for (k = 0; k < FG_HEADS && t->pfx_rs == 2u && ln; k++) {   /* (gen6d, a tester) the PLAYHEADS ran at half
-                                                         * the samples too: on by the half they missed, silently (pfx.c
-                                                         * sets 2 for 1/2 TEMPO); a head's step as fugue_tick has it, its
-                                                         * rate's NUM / DEN in 3 bits each (no table: this runs from RAM) */
-                const fg_set_t *f = &fg_set[(uint32_t)(t - trk) % NTRK][k];
-                fg_head_t *h = &fg_head[(uint32_t)(t - trk) % NTRK][k];
-                uint32_t r = f->rate, sl, g;
-                if (!r || r >= FG_NRATE || h->pos == 0x7FFFFFFFu)
-                    continue;
-                sl = pd * ((0x0928B4E1u >> (3u * r)) & 7u) / ((0x234CA248u >> (3u * r)) & 7u);   /* (FG_DEN, FG_NUM) */
-                if (sl < CTL)
-                    sl = CTL;
-                h->pos += t->pfx_el - t->pfx_el / 2u;
-                for (g = 0; h->pos >= sl && g < 256u; g++) {
-                    h->pos -= sl;
-                    h->idx = (uint16_t)fg_next(h, f->dir, ln);
-                }
-                h->pos %= sl;
-            }
-        }
-        t->pfx_rs = 0;
-    }
-    if ((t->pfx & PFX_HALF) && song.playing) {        /* 1/2 TEMPO held: half the samples (the odd one carried) */
-        uint32_t h = n + t->pfx_half;
-        t->pfx_el += n;
-        t->pfx_half = (uint8_t)(h & 1u);
-        n = h >> 1;
-    } else if ((t->pfx & PFX_LOOP) && song.playing) {  /* (snd2) LOOP: the samples since it went in (pfx_resync) */
-        t->pfx_el += n;
-    }
     if (!song.playing) {
         seq_due(t, n);
         return;
     }
     period = div_samples((uint32_t)t->p[P_SDIV]);
     len = (uint32_t)t->p[P_SLEN];
+    nf = n;
+    if ((lon = LV_ON(trk_index(t))) != 0u) {
+        n = live_adv(t, n, period, len);            /* (p2) LIVE (and the FX layer's 1/2 TEMPO, LOOP): the ghost on, the
+                                                     * playhead at its RATE, its next step (the window, the direction)
+                                                     * as a JUMP's */
+        nf = n < nf ? n : nf;                       /* (the PLAYHEADS: slower with it, never faster) */
+    }
     t->seq_pos += n;
     for (;;) {
         uint32_t cur_len = step_samples(t, period, t->seq_idx) + t->ext, start, e = seq_early(t, period, len);
@@ -2469,14 +2482,7 @@ static void seq_tick(track_t *t, uint32_t n)
         ev_at(start || t->seq_pos >= n ? 0u : n - t->seq_pos);   /* (ctl64) the step's first sample (seq_pos: the samples
                                                          * past it at the block's end; 0 past it: the next block's first) */
         t->ext = (uint16_t)(start ? 0u : e);            /* (the next one longer by as much: the grid kept) */
-        if ((t->pfx & PFX_LOOP) && !start) {            /* (snd2) LOOP 3 / 5: the last N steps again (pfx.c) */
-            if (++t->pfx_lpc >= t->pfx_lpn) {
-                t->pfx_lpc = 0;
-                t->seq_idx = (uint16_t)(t->pfx_lps % (len ? len : 1u));
-            } else {
-                t->seq_idx = (uint16_t)((t->seq_idx + 1u) % (len ? len : 1u));
-            }
-        } else if (t->jump_to && !start) {              /* (0.6.42) JUMP: the step it names */
+        if (t->jump_to && !start) {              /* (0.6.42) JUMP: the step it names */
             t->seq_idx = (uint16_t)((t->jump_to - 1u) % (len ? len : 1u));
             t->rev = 0;
         } else if (t->rev && !start && t->seq_idx > 1u) {   /* REV: back towards step 1 */
@@ -2495,7 +2501,8 @@ static void seq_tick(track_t *t, uint32_t n)
         if (start) t->rev = 0;
         if (!t->seq_idx && !start && t->loops < 0xFFFFu)
             t->loops++;                                 /* (0.6.39) one more loop of the pattern (TRIG) */
-        rec_hold(t, t->seq_idx, len ? len : 1u);
+        if (!lon)
+            rec_hold(t, t->seq_idx, len ? len : 1u);   /* (LIVE: the ghost's steps, live_adv) */
         if (trk_index(t) < NPART && dxo_n[trk_index(t)])
             dxo_rec_hold(t, t->seq_idx);                /* (0.8.5) a held ratchet records into it */
         {
@@ -2540,7 +2547,7 @@ static void seq_tick(track_t *t, uint32_t n)
     if (t->lr_on)
         seq_lane_rat(t, period, n);
     seq_due(t, n);                                      /* (ctl64: after the steps: what they queued, due in this block) */
-    fugue_tick(t, n, period, len);                      /* (0.6.52) */
+    fugue_tick(t, nf, period, len);                     /* (0.6.52) */
 }
 
 /* MIDI in: the track a channel plays (0..15): G_ROUTE CH1-6 (0) channels 1..6 their parts (7..16 never get
@@ -2758,6 +2765,7 @@ static void events_block(uint32_t n)
         }
     }
     chain_tick(seq_n);
+    live_q(seq_n);                                  /* (p2) LIVE: what goes in now (seq_live.c; idle: a test) */
     for (i = 0; i < NTRK; i++)
         seq_tick(&trk[i], seq_n);
     for (i = 0; i < NPART; i++)                       /* (0.8.5) the kit's octaves held: their ratchets */

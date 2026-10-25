@@ -791,16 +791,17 @@ typedef struct track {
     uint16_t ext;                /* (0.6.88) TIMING: samples the playing step began before its place (it is early) */
     int8_t mic;                  /* .. the playing step's own TIMING (ST_MICRO), late: seq_step queues its notes */
     int8_t hum_env;              /* (0.6.92) HUMAN: the next notes' DEC / REL move (seq_step sets it, voice_start takes it) */
-    uint8_t pfx_half;            /* 1/2 TEMPO: the odd sample carried; pfx_rs: let go, back to the real place */
+    uint8_t pfx_half;            /* (p2: unused, kept for track_t's size: 1/2 TEMPO and LOOP are LIVE's now, seq_live.c,
+                                  * its ghost where the track would be) */
     uint8_t pfx_rs;
-    uint16_t pfx_idx0;           /* .. where it was pressed (step, samples into it) and the samples since */
+    uint16_t pfx_idx0;
     uint32_t pfx_pos0, pfx_el;
     uint8_t pfx_ln[4], pfx_lv[4], pfx_lnn;   /* the last notes struck together (a step's), STUTTER / ARP repeat them */
     uint32_t pfx_lblk;           /* .. the block they were struck in */
     uint8_t pfx_sn[4], pfx_snn;  /* the notes a repeat holds now */
     uint8_t pfx_si;              /* ARP: the next of them */
     uint32_t pfx_sc;             /* samples since the last repeat */
-    uint8_t pfx_lpn, pfx_lpc;    /* (0.9.9-snd2) LOOP 3 / 5 (pfx.c): the steps it repeats, how far into them; */
+    uint8_t pfx_lpn, pfx_lpc;    /* (0.9.9-snd2) LOOP 3 / 5 (pfx.c): the steps it repeats (p2: lpc unused); */
     uint16_t pfx_lps;            /* .. the first of them */
 } track_t;
 enum { PFX_RND = 1, PFX_HALF = 2, PFX_REP = 4, PFX_DEC = 8, PFX_ATK = 16, PFX_LOOP = 32 };   /* (snd2) LOOP 3 / 5 / 7 */   /* (track_t.pfx) */

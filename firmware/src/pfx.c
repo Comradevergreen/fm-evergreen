@@ -4,7 +4,8 @@
  * the sound of the tracks while their key is held (or latched: FX LATCH), never on what is stored: let go, all is
  * as it was. White keys after the audio ones (perform.c PF_*):
  *   D4 OCT-, E4 OCT+   every voice an octave down / up (both: none), at once, notes held too
- *   F4 1/2 TEMPO       the track's sequencer at half speed; let go, it is back where it would have been
+ *   F4 1/2 TEMPO       the track's sequencer at half speed; let go, it is back where it would have been (p2: LIVE's
+ *                      RATE /2, seq_live.c; the LOOPs a LIVE LOOP of the last N steps)
  *   G4 DEC-, A4 DEC+   short / long decays: a synth's DEC and REL, DRUM's DECY (DEC- wins); (JIANT 0.4) DEC- also
  *                      takes a synth's sustain to 0: the whole instrument plucks
  *   B4 C5              STUTTER 1/8, 1/16 (JIANT 0.4; were 1/16 1/32): the notes the track struck last together (a
@@ -200,28 +201,16 @@ static __attribute__((noinline)) void pfx_block(uint32_t n, uint32_t held)
         f = ((on >> PF_RND) & 1u ? PFX_RND : 0u) | ((on >> PF_HALF) & 1u ? PFX_HALF : 0u) | (rep ? PFX_REP : 0u) |
             (on & (PF_BIT(PF_DSHT) | PF_BIT(PF_DLNG)) ? PFX_DEC : 0u) | ((on >> PF_ATK) & 1u ? PFX_ATK : 0u) |
             (lpn && song.playing ? PFX_LOOP : 0u);
-        if ((f & (PFX_HALF | PFX_LOOP)) && !(old & (PFX_HALF | PFX_LOOP)) && song.playing) {   /* 1/2 TEMPO, LOOP: where */
-            t->pfx_idx0 = t->seq_idx;                   /* it was (and the samples since: let go, back where it would be) */
-            t->pfx_pos0 = t->seq_pos;
-            t->pfx_el = 0;
-        } else if (!(f & (PFX_HALF | PFX_LOOP)) && (old & (PFX_HALF | PFX_LOOP))) {
-            t->pfx_rs = (uint8_t)(old & PFX_HALF ? 2u : 1u);   /* (seq.c seq_tick: back to the real place; 2: 1/2 TEMPO,
-                                                         * the PLAYHEADS too) */
-        }
-        if ((f & PFX_HALF) && !(old & PFX_HALF))
-            t->pfx_half = 0;
+        /* (p2) 1/2 TEMPO and LOOP are LIVE's RATE /2 and a LOOP (seq_live.c live_q): its ghost keeps where the track
+         * would be, let go it is back there */
         if ((f & PFX_LOOP) && !(old & PFX_LOOP)) {      /* (snd2) LOOP N: the last N steps, the one playing the last of
                                                          * them; its next step is the first again (not on the bar: a 3
                                                          * or a 5 against the 4 of the bar) */
             uint32_t len = t->p[P_SLEN] > 0 ? (uint32_t)t->p[P_SLEN] : 1u;
             t->pfx_lps = (uint16_t)(((uint32_t)t->seq_idx % len + lpn * len - (lpn - 1u)) % len);
-            t->pfx_lpc = (uint8_t)(lpn - 1u);
         }
-        if (lpn) {
+        if (lpn)
             t->pfx_lpn = (uint8_t)lpn;
-            if (t->pfx_lpc >= lpn)
-                t->pfx_lpc = (uint8_t)(lpn - 1u);
-        }
         if (rep && !(old & PFX_REP)) {
             t->pfx_si = 0;
             t->pfx_sc = per;                            /* (the first repeat now) */
@@ -257,7 +246,7 @@ static __attribute__((noinline)) void pfx_block(uint32_t n, uint32_t held)
             pfx_keep[k][2] = t->p[P_ATK];
             t->p[P_ATK] = (int16_t)(t->p[P_ATK] + (127 - t->p[P_ATK]) * 2 / 3);
         }
-        if (f || t->pfx_rs || t->pfx_pit)
+        if (f || t->pfx_pit)
             pfx_any = 1;
     }
 }

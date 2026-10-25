@@ -16,6 +16,20 @@ the FM-1, with sound, and is played with your computer keyboard or the mouse. Th
 editor update themselves with every change merged into `main`.
 
 > **Status: in development (v0.9.9).** It builds and passes every test (Felucca's and its own). Back up the flash before installing it.
+  **GLO › LIVE: the six sequences in parallel, with live modifiers** (main 0.9.11, here since v0.9.9-par2), a new
+  first group of GLO (**LIVE · MIX · GLOBAL · SYSTEM · COMPS**; at power-on GLO still opens the MIXER). **MANO** makes
+  the keys a performance board: the black keys 1–6 pick the tracks while held (several at once, none = all), the white
+  keys are momentary modifiers (/2 x2 3/2 2/3, LOOP 8 4 2 1, REV, PING, RATCH x2 x3, THIN, OCT±, RETURN) with a LATCH
+  key, GIRO and RND; KNOB 1–3 RATE LOOP THIN, KNOB 4 the DJ FILTER; off the page the keys play notes again. **RIELES**
+  draws six rails, each loop at its own length with its playhead and its ghost; KNOB 1 PISTAS (ALL, T1 … T6, SYN, DRM),
+  KNOB 2 RATE (/4 … x4 with 2/3 and 3/2, on the next beat), KNOB 3 CORTE (the first N steps), KNOB 4 DENS (THIN ← →
+  RATCH x2–x4). One set of modifiers per track; never destructive: a ghost playhead keeps each track's true place; OCT−
+  tapped RETURNs on the next beat, held is BYPASS (the original), OCT+ twice COMMITs into DIV (or STRETCH), LEN, ROTATE
+  and CHANCE, with UNDO (GLO + G4). Recording while modified writes at the ghost's step. Not saved. The FX layer's 1/2
+  TEMPO and LOOP 3 / 5 / 7 are LIVE's RATE /2 and LOOP now (the same ghost; the PLAYHEADS keep in step). Only the
+  sequencer changed, nothing in the audio render. The manual's [§ 11](docs/MANUAL.md#11-performance).
+  **SEQ + SELECT dices with GEN's own generator** (main 0.9.18, v0.9.9-par2): the part on the song's harmony and in the
+  track's role where a GEN piece plays, never what was there before nor one of the last four (6 KB of flash back).
   **DRUM-X, VOICE and ANIMAL first** (0.9.9): the FM-1 powers on with T1 DRUM-X, T2 VOICE singing words, T3 ANIMAL's
   bird, T4 LOFI's bytebeat, T5 ANALOG's bass and T6 FM6's electric piano, and PRESETS lists the engines in that order.
   **A new skin, AIR** (0.9.7, the default of new settings): HUD's light look on every page with the knob row on top,

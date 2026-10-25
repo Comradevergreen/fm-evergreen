@@ -38,5 +38,7 @@ rev/SPRING 1411
 seq/heavy 2582
 seq/mono4 975
 seq/plain 2186
+seqtick/live 85
+seqtick/plain 68
 song/cputest 2830
 song/cputest.djf 2902
