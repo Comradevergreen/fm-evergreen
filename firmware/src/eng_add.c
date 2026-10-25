@@ -17,8 +17,8 @@
  * part's either way (a part is WHEEL or ADD); the voice's age in blocks in its perc. Cost: WHEEL's (a table lookup and a
  * multiply-add a partial a sample); the levels and the decays once a block. A note from silence starts its partials in
  * phase (a bell's, a pluck's attack the same every time). */
-static const char *const N_ADD_MODE[] = {"HARM", "ODD", "WIDE", "BELL", "BAR", "DRUM"};
-enum { AD_HARM, AD_ODD, AD_WIDE, AD_BELL, AD_BAR, AD_DRUM, AD_N };
+static const char *const N_ADD_MODE[] = {"HARM", "ODD", "WIDE", "BELL", "BAR", "DRUM", "PRIME", "FIFTH", "SUB", "PLATE"};
+enum { AD_HARM, AD_ODD, AD_WIDE, AD_BELL, AD_BAR, AD_DRUM, AD_PRIME, AD_FIFTH, AD_SUB, AD_PLATE, AD_N };
 #define AD_R(x) ((uint16_t)((x) * 1024.0 + 0.5))         /* a ratio, Q10 */
 static const uint16_t ADD_RATIO[AD_N][DRW_NP] = {
     {AD_R(1), AD_R(2), AD_R(3), AD_R(4), AD_R(5), AD_R(6), AD_R(7), AD_R(8), AD_R(9)},
@@ -27,6 +27,14 @@ static const uint16_t ADD_RATIO[AD_N][DRW_NP] = {
     {AD_R(0.5), AD_R(1), AD_R(1.183), AD_R(1.506), AD_R(2), AD_R(2.514), AD_R(2.662), AD_R(3.011), AD_R(4.166)},
     {AD_R(1), AD_R(2.756), AD_R(5.404), AD_R(8.933), AD_R(13.344), AD_R(17.4), AD_R(9.85), AD_R(3.93), AD_R(15.1)},
     {AD_R(1), AD_R(1.594), AD_R(2.136), AD_R(2.296), AD_R(2.653), AD_R(2.918), AD_R(3.156), AD_R(3.501), AD_R(3.6)},
+    /* (p5, the owner: what is additive's own) PRIME the prime harmonics only (a hollow, glassy organ: no octaves past the
+     * 2nd), FIFTH an organ's mixture of fifths and octaves (a Quint stop), SUB under the note (the 1/4 and 1/2 a sub, a
+     * deep drone over its own octaves), PLATE a plate's square-root partials (a gong, a thunder sheet). MORPH between
+     * any two neighbours: a choir of spectra no other engine reaches */
+    {AD_R(1), AD_R(2), AD_R(3), AD_R(5), AD_R(7), AD_R(11), AD_R(13), AD_R(17), AD_R(19)},
+    {AD_R(1), AD_R(1.5), AD_R(2), AD_R(3), AD_R(4), AD_R(4.5), AD_R(6), AD_R(8), AD_R(9)},
+    {AD_R(0.25), AD_R(0.5), AD_R(1), AD_R(1.5), AD_R(2), AD_R(3), AD_R(4), AD_R(5), AD_R(6)},
+    {AD_R(1), AD_R(1.414), AD_R(1.732), AD_R(2), AD_R(2.236), AD_R(2.449), AD_R(2.646), AD_R(2.828), AD_R(3)},
 };
 /* log2(k + 1), Q8: the tilt over the partials' ranks */
 static const uint16_t ADD_LOG2[DRW_NP] = {0, 256, 406, 512, 594, 662, 719, 768, 811};
@@ -134,6 +142,10 @@ static const preset_t ADD_PRESETS[] = {
     {"AIR PAD", {AD_WIDE, 64, 100, 127, -10, 20, 127, 50}, {64, 64, 127, 80}, 0, TAG(PAD), FX(0, 30, 15, 75), PAT(5)},
     {"SWELL", {AD_HARM, 40, 104, 127, 0, 0, 127, -50}, {20, 64, 127, 60}, 0, TAG(PAD), FX(0, 20, 20, 50), PAT(5)},
     {"SUB ADD", {AD_ODD, 0, 20, 40, 0, 0, 127, 0}, {0, 64, 127, 25}, 0, 1 | TAG(BASS), FX(0, 0, 0, 5), PAT(2)},
+    {"PRIME ORG", {AD_PRIME, 0, 84, 127, 0, 0, 127, 0}, {2, 64, 127, 45}, 0, TAG(KEYS), FX(0, 20, 0, 35), PAT(5)},
+    {"QUINT", {AD_FIFTH, 0, 80, 127, 0, 24, 127, 20}, {6, 64, 127, 50}, 0, TAG(PAD), FX(0, 25, 10, 45), PAT(5)},
+    {"DRONE", {AD_SUB, 50, 70, 127, 0, 30, 127, 40}, {40, 64, 127, 90}, 0, TAG(PAD), FX(0, 20, 15, 70), PAT(5)},
+    {"GONG", {AD_PLATE, 30, 104, 127, -12, 0, 88, 30}, {0, 64, 127, 90}, 0, TAG(BELL), FX(0, 0, 20, 70), PAT(6)},
 };
 
 static const engine_t ENG_ADD = {

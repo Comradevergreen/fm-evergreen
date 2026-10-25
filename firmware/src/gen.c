@@ -711,7 +711,8 @@ static void gen_bass(track_t *t, uint32_t len)
     gseed(GS_BASS);
     if (gs.ba == BA_ACID) { gen_acid(t, len, lo); return; }
     memcpy(bc, &BA_STEP[a->at], alen);
-    if (gs.vary && !walk) gba_vary(bc, alen);
+    if ((gs.vary || g->lead == LD_EBM) && !walk) gba_vary(bc, alen);   /* (p5, the owner: EBM's basses were two
+                                                         * motifs whatever the seed: its riff moved a seed, as the dice's) */
     for (i = 0; i < len; i++) {
         step_t *s = &t->step[i];
         char c = BA_NOTE(bc[i % alen]), f = BA_FLAG(bc[i % alen]);

@@ -121,7 +121,7 @@ static void string_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, cons
     int32_t lp = v->s[0], r1 = v->s[1], apx = v->s[2], apy = v->s[3], y0 = v->s[4], y1 = v->s[5], bl = v->s[6], bb = v->s[7];
     int32_t dc = (int32_t)v->ph[2], nst = (int32_t)v->ph[0] | 1, bow = v->gate ? clamp(p[P_E7], 0, 127) : 0, body = clamp(p[P_E5], 0, 127), bf;
     int32_t br = clamp(p[P_E2] + ((m->shape - (64 << 8)) >> 8), 0, 127), a = 5000 + br * 218;
-    int32_t s15 = clamp(p[P_E4], 0, 127) * 193, comp, dly, di, fr, g;
+    int32_t s15 = clamp(p[P_E4], 0, 127) * 193, comp, dly, di, fr, g, pk = 0;
     comp = 128 + ((32768 - a) << 8) / a + ((32768 + s15) << 8) / (32768 - s15);   /* the average's, the low-pass's, the allpass's delays */
     dly = (int32_t)per - comp;
     if (dly < (2 << 8))
@@ -129,6 +129,9 @@ static void string_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, cons
     di = dly >> 8;
     fr = dly & 255;
     g = str_gain(per << d, p[P_E1]);
+    if (!v->gate)                                        /* (p5) let go: RELEASE the damper (low: a palm mute; high: it
+                                                         * rings its DECAY out) */
+        g = (g * str_gain(per << d, p[P_REL])) >> 15;   /* (both < 2^15: in 32 bits) */
     bf = (int32_t)((327u * str_exp2n(2048u - (uint32_t)clamp(p[P_E6], 0, 127) * 896u / 127u)) >> 8);   /* (2 sin(pi f / FS), Q15: 70 .. 790 Hz) */
     if (n > CTL)
         n = CTL;
@@ -139,13 +142,14 @@ static void string_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, cons
             int32_t r = x0 + (((x1 - x0) * fr) >> 8), x, yy;
             x = (r + r1) >> 1;
             r1 = r;
+            if (bow)                                     /* BOW (p5): noise into the loop before its low-pass, so what
+                                                         * sounds is the string, not a layer of noise over it */
+                x += (((int32_t)(noise32(&nst) >> 20) - (int32_t)(noise32(&nst) >> 20)) * bow) >> 7;
             lp += ((x - lp) * a) >> 15;
             yy = ((-s15 * (lp - apy)) >> 15) + apx;      /* (the allpass, its coefficient -STRETCH) */
             apx = lp;
             apy = clamp(yy, -32767, 32767);
             yy = apy * g / 32768;                        /* (towards 0: no limit cycle left ringing) */
-            if (bow)                                     /* BOW: noise into the loop while held (two draws' difference: no DC) */
-                yy += (((int32_t)(noise32(&nst) >> 20) - (int32_t)(noise32(&nst) >> 20)) * bow) >> 6;
             yy = clamp(yy, -32767, 32767);
             b[w] = (int16_t)yy;
             w = (w + 1u) % ST_SL;
@@ -164,12 +168,20 @@ static void string_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, cons
         }
         dc += ((s << 12) - dc) >> 10;                    /* (the output's DC blocked: ~7 Hz; Q12, what sticks under a
                                                          * quarter of a step: rounded away) */
-        out[i] += voice_amp(s - ((dc + 2048) >> 12), m, i);
+        s -= (dc + 2048) >> 12;
+        pk = s > pk ? s : -s > pk ? -s : pk;
+        out[i] += voice_amp(s, m, i);
     }
     v->ph[0] = (uint32_t)nst;
-    v->ph[1] = w | cnt << 8;
+    v->ph[1] = w | cnt << 8 | (uint32_t)(pk > 65535 ? 65535 : pk) << 16;   /* (p5: the block's peak, string_done) */
     v->ph[2] = (uint32_t)dc;
     v->s[0] = lp; v->s[1] = r1; v->s[2] = apx; v->s[3] = apy; v->s[4] = y0; v->s[5] = y1; v->s[6] = bl; v->s[7] = bb;
+}
+/* (p5) the string its own amplitude (ownenv): the voice ends once let go and silent (its last block's peak ~-66 dB) */
+static int string_done(track_t *t, voice_t *v)
+{
+    (void)t;
+    return !v->gate && (v->ph[1] >> 16) < 16u;
 }
 /* the part's FILTER: its COMB lines are the strings, so a COMB TYPE plays as BP (the body's band) */
 static void string_block(track_t *t)
@@ -180,18 +192,18 @@ static void string_block(track_t *t)
 
 /* {EXCITE, DECAY, BRIGHT, POS, STRETCH, BODY, SIZE, BOW}, {A D S R}, fenv, mono */
 static const preset_t STRING_PRESETS[] = {
-    {"NYLON", {SX_PLUCK, 72, 52, 28, 0, 60, 40, 0}, {0, 64, 127, 45}, 0, TAG(PLUCK), FX(0, 0, 0, 30), PAT(3)},
-    {"STEEL GTR", {SX_PICK, 86, 88, 24, 6, 40, 52, 0}, {0, 64, 127, 45}, 0, TAG(PLUCK), FX(0, 15, 0, 30), PAT(3)},
-    {"HARP", {SX_PLUCK, 96, 62, 64, 0, 30, 30, 0}, {0, 64, 127, 60}, 0, TAG(PLUCK), FX(0, 0, 10, 55), PAT(6)},
-    {"KOTO", {SX_PICK, 78, 98, 14, 16, 30, 62, 0}, {0, 64, 127, 50}, 0, TAG(PLUCK), FX(0, 0, 15, 40), PAT(5)},
-    {"BANJO", {SX_PICK, 52, 112, 10, 4, 90, 92, 0}, {0, 64, 127, 35}, 0, TAG(PLUCK), FX(0, 0, 0, 20), PAT(4)},
-    {"PIANO", {SX_HAMMER, 104, 76, 18, 42, 20, 22, 0}, {0, 64, 127, 50}, 0, TAG(KEYS), FX(0, 0, 0, 35), PAT(6)},
-    {"DULCIMER", {SX_HAMMER, 92, 100, 20, 26, 36, 60, 0}, {0, 64, 127, 55}, 0, TAG(PLUCK), FX(0, 10, 10, 40), PAT(5)},
-    {"MARIMBA", {SX_MALLET, 56, 40, 64, 72, 80, 70, 0}, {0, 64, 127, 40}, 0, TAG(BELL), FX(0, 0, 0, 30), PAT(5)},
-    {"PLUCK BASS", {SX_PLUCK, 62, 36, 20, 0, 50, 10, 0}, {0, 64, 127, 30}, 0, 1 | TAG(BASS), FX(0, 0, 0, 5), PAT(2)},
-    {"BOWED", {SX_NOISE, 118, 46, 30, 0, 50, 40, 70}, {30, 64, 127, 60}, 0, TAG(PAD), FX(0, 20, 10, 60), PAT(5)},
-    {"KS NOISE", {SX_NOISE, 80, 127, 0, 0, 0, 0, 0}, {0, 64, 127, 40}, 0, TAG(FX), FX(0, 0, 15, 30), PAT(4)},
-    {"METAL STR", {SX_NOISE, 100, 120, 10, 112, 0, 0, 0}, {0, 64, 127, 50}, 0, TAG(PLUCK), FX(0, 0, 20, 45), PAT(3)},
+    {"NYLON", {SX_PLUCK, 72, 52, 28, 0, 60, 40, 0}, {0, 64, 127, 104}, 0, TAG(PLUCK), FX(0, 0, 0, 30), PAT(3)},
+    {"STEEL GTR", {SX_PICK, 86, 88, 24, 6, 40, 52, 0}, {0, 64, 127, 104}, 0, TAG(PLUCK), FX(0, 15, 0, 30), PAT(3)},
+    {"HARP", {SX_PLUCK, 96, 62, 64, 0, 30, 30, 0}, {0, 64, 127, 112}, 0, TAG(PLUCK), FX(0, 0, 10, 55), PAT(6)},
+    {"KOTO", {SX_PICK, 78, 98, 14, 16, 30, 62, 0}, {0, 64, 127, 104}, 0, TAG(PLUCK), FX(0, 0, 15, 40), PAT(5)},
+    {"BANJO", {SX_PICK, 52, 112, 10, 4, 90, 92, 0}, {0, 64, 127, 96}, 0, TAG(PLUCK), FX(0, 0, 0, 20), PAT(4)},
+    {"PIANO", {SX_HAMMER, 104, 76, 18, 42, 20, 22, 0}, {0, 64, 127, 100}, 0, TAG(KEYS), FX(0, 0, 0, 35), PAT(6)},
+    {"DULCIMER", {SX_HAMMER, 92, 100, 20, 26, 36, 60, 0}, {0, 64, 127, 108}, 0, TAG(PLUCK), FX(0, 10, 10, 40), PAT(5)},
+    {"MARIMBA", {SX_MALLET, 56, 40, 64, 72, 80, 70, 0}, {0, 64, 127, 96}, 0, TAG(BELL), FX(0, 0, 0, 30), PAT(5)},
+    {"PLUCK BASS", {SX_PLUCK, 62, 36, 20, 0, 50, 10, 0}, {0, 64, 127, 80}, 0, 1 | TAG(BASS), FX(0, 0, 0, 5), PAT(2)},
+    {"BOWED", {SX_NOISE, 118, 46, 30, 0, 50, 40, 70}, {30, 64, 127, 96}, 0, TAG(PAD), FX(0, 20, 10, 60), PAT(5)},
+    {"KS NOISE", {SX_NOISE, 80, 127, 0, 0, 0, 0, 0}, {0, 64, 127, 90}, 0, TAG(FX), FX(0, 0, 15, 30), PAT(4)},
+    {"METAL STR", {SX_NOISE, 100, 120, 10, 112, 0, 0, 0}, {0, 64, 127, 104}, 0, TAG(PLUCK), FX(0, 0, 20, 45), PAT(3)},
 };
 
 static const engine_t ENG_STRING = {
@@ -214,4 +226,6 @@ static const engine_t ENG_STRING = {
     .render = string_render,
     .knob = {P_E0, P_E1, P_E2, P_E3},
     .block = string_block,
+    .ownenv = 1,                                         /* (p5: RELEASE its damper; the sequencer's short gates let it ring) */
+    .done = string_done,
 };

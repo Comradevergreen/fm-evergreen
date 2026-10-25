@@ -532,7 +532,7 @@ static const ggenre_t GENRE[] = {
     /* DAF (Der Mussolini), Nitzer Ebb: a sequenced mono MS-20 bass in driving 8ths / 16ths, a dry minimal kit, VOICE
      * shouts */
     {"EBM", 100, 110, 0,   /* (p4b: the owner's references, ~96 .. 108 BPM) */ {SC_PHRY, SC_MIN, SC_PHRY, SC_PHRY}, DM_EBM, 100, KIT_INDUS, 0, HC_MACHINE, FL_NONE, 1,
-     {BA_PUMP8, BA_NITZER1, BA_PUMP8}, 33, KM_DOUBLE, 95, {PR_ONE, PR_ONE, PR_I_VI}, 4, CS_STAB, VM_POWER,
+     {BA_NITZER3, BA_DARK8, BA_SUICIDE}, 33, KM_DOUBLE, 95, {PR_ONE, PR_ONE, PR_I_VI}, 4, CS_STAB, VM_POWER,
      {AP_SEQ, AP_OCTAVES}, LD_EBM, AMT(100, 100, 0, 20, 0),   /* (p3, the owner: the bass half as fast, with body, not
                                      * a pluck; no lead) */ {KIT_INDUS, SR_EBMBASS, SR_STAB, SR_PLUCK, SR_VOXLEAD}, SR_NOISE,
      1, 0, 8, 0, FM_PARTS, 0, HF_LOOP},   /* (gen6, the owner: DAF, Gesaffelstein (Viol, Aleph): a dry 909 four on the
