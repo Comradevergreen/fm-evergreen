@@ -2,7 +2,7 @@
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments */
 /* USB full-speed device on USB0: a
  * class-compliant USB-MIDI interface. All SIE traffic happens in one place,
- * usb_poll(), called from the TIMER5 ISR at 2 kHz, so INDEX is never shared
+ * usb_poll(), called from the TIMER5 ISR at 2 kHz (uac_service at 10 kHz), so INDEX is never shared
  * and no USB IRQ is needed. MIDI in goes to a ring the audio ISR drains;
  * MIDI out (the panel keys) comes from a ring the audio ISR fills.
  * SysEx F0 22 24 35 7D F7 (the stock soft key, tools/fm1_softkey.py) asks
@@ -225,6 +225,7 @@ static struct {
     uint8_t rx_pend;             /* EP1 OUT packet seen, not yet taken (the MIDI ring was too full) */
     volatile uint8_t uboot_req;
     volatile uint8_t ota_req;    /* F0 22 24 35 7F F7: M-UPGRADE upgrade command (FELUCCA_OTA) */
+    uint8_t replug;              /* (0.9.10) a mode switch dropped off the bus: usb_retry waits USB_REPLUG_MS */
 } usb;
 
 #if FELUCCA_OTA
@@ -297,6 +298,12 @@ static void midi_out_event(uint32_t pkt)            /* from the audio ISR */
 #ifndef FELUCCA_CDC_DEFAULT
 #define FELUCCA_CDC_DEFAULT 1
 #endif
+/* (0.9.12) iProduct's string index. Windows' USB audio driver keeps a MIDI port's name in the registry
+ * (MediaCategories\{GUID}\Name) under a GUID made of VID, PID and this index only (ksmedia.h
+ * INIT_USBAUDIO_PRODUCT_NAME), written the first time it sees the device and never again: every FM-1 that had
+ * Felucca (1209:0001, index 2) kept showing "Felucca" in Live / Windows after JIANT's rename. A new index is a new
+ * GUID, so the host reads the name again. Index 2 is no longer answered. Rename the product again: move it again. */
+#define USB_STR_PRODUCT 4u
 #ifndef FELUCCA_USB_PID
 #define FELUCCA_USB_PID 0x0001   /* the update loader is 0x0002 */
 #endif
@@ -406,7 +413,7 @@ _Static_assert(UAC_MAXP8 >= (45u + 1u) * 16u && UAC_MAXP10 >= (45u + 1u) * 20u &
 #define BCD_LO(cdc) (0x10 * (FELUCCA_UAC + FELUCCA_UAC_48K) + ((cdc) ? 0x01 + 2 * FELUCCA_USB_LAYOUT : 0))
 #define D_DEV_LO(bcdusb, cls, sub, proto, lo)                                                        \
     18, 1, (bcdusb) & 0xFF, (bcdusb) >> 8, (cls), (sub), (proto), 64, 0x09, 0x12, FELUCCA_USB_PID & 0xFF, \
-    FELUCCA_USB_PID >> 8, (lo), 0x03, 1, 2, 0, 1
+    FELUCCA_USB_PID >> 8, (lo), 0x03, 1, USB_STR_PRODUCT, 0, 1
 #define D_DEV(bcdusb, cls, sub, proto, cdc) D_DEV_LO(bcdusb, cls, sub, proto, BCD_LO(cdc))
 
 /* without the console (FELUCCA_CDC=0, or usb_cdc_on = 0): class 0, no IAD, as a plain USB-MIDI / audio device */
@@ -478,10 +485,12 @@ static uint8_t usb_cdc_on = FELUCCA_CDC_DEFAULT != 0;      /* the console is pre
 #define UAC_AS_IF (AUD_IF + 2u)
 static const uint8_t STR0[4] = {4, 3, 0x09, 0x04};
 static const uint8_t STR1[] = {22, 3, 'J', 0, 'u', 0, 'a', 0, 'n', 0, ' ', 0, 'J', 0, 'i', 0, 'a', 0, 'n', 0, 't', 0};   /* (0.7.0) the names JIANT's; the editor and the installer match /jiant|felucca/ */
+/* the product (USB_STR_PRODUCT): Windows names the MIDI port after it, macOS the device and its port; no interface
+ * or jack has a name of its own (iInterface / iJack 0). 0.7.0..0.9.11: "JIANT FM" (index 2); Felucca: "Felucca" */
 #ifdef FELUCCA_LOADER
-static const uint8_t STR2[] = {26, 3, 'J', 0, 'I', 0, 'A', 0, 'N', 0, 'T', 0, ' ', 0, 'U', 0, 'p', 0, 'd', 0, 'a', 0, 't', 0, 'e', 0};
+static const uint8_t STR_PROD[] = {26, 3, 'J', 0, 'I', 0, 'A', 0, 'N', 0, 'T', 0, ' ', 0, 'U', 0, 'p', 0, 'd', 0, 'a', 0, 't', 0, 'e', 0};
 #else
-static const uint8_t STR2[] = {18, 3, 'J', 0, 'I', 0, 'A', 0, 'N', 0, 'T', 0, ' ', 0, 'F', 0, 'M', 0};
+static const uint8_t STR_PROD[] = {12, 3, 'J', 0, 'I', 0, 'A', 0, 'N', 0, 'T', 0};
 #endif
 
 static int get_desc(uint32_t wvalue, const uint8_t **d, uint16_t *l)
@@ -515,9 +524,9 @@ static int get_desc(uint32_t wvalue, const uint8_t **d, uint16_t *l)
             *d = STR1;
             *l = sizeof STR1;
             return 1;
-        case 2:
-            *d = STR2;
-            *l = sizeof STR2;
+        case USB_STR_PRODUCT:
+            *d = STR_PROD;
+            *l = sizeof STR_PROD;
             return 1;
         default:
             return 0;
@@ -1577,24 +1586,19 @@ static uint32_t uac_packet(uint32_t *d)
     return n;
 }
 
-/* TIMER5, 2 kHz, also nested in the render: the host takes one packet per 1 ms frame; queue the
+/* TIMER5, every tick (10 kHz), also nested in the render: the host takes one packet per 1 ms frame; queue the
  * next one as soon as the last has gone (TxPktRdy clear). Not paced on SOF-pending (see usb_poll).
+ * (0.9.10) Every tick, not every 5th: TxPktRdy stays set while the packet is on the wire ((bytes + 9) x 8 x ~1.04
+ * / 12 MHz: STEMS+IN's 920 bytes ~0.65 ms, STEMS' 736 ~0.52 ms), so the next one could only be queued in the
+ * ~0.35 ms before the next IN token, less than 2 kHz's 0.5 ms. Whenever TIMER5's phase drifted into it against the
+ * host's frames, tokens found nothing, the ring overran and uac_tap8 dropped 32-frame blocks, in bursts, in every
+ * stem (tests/stems_usb_test.c). Nothing to do costs the guard; streaming, two SIE round trips (ep4_tx).
  * The ring is fed only while the host reads: it often selects alt 1 long before its first IN token,
  * and a recorder may stop reading without going back to alt 0 (a packet waiting > 20 ms). */
-static void uac_service(void)
+#define UAC_POLL_HZ 10000u                              /* uac_service's rate (main.c fm1_timer5_irq; the tests' too) */
+static __attribute__((noinline)) void ep4_fill(uint32_t csr)   /* (out of ep4_tx: its registers pushed once a ms) */
 {
-    uint32_t csr, n;
-    if (!usb.up || !usb.config || !uac.alt)
-        return;
-    sie_wr(S_INDEX, 4);
-    csr = sie_rd(S_TXCSR1);
-    if (csr & 0x01u) {                                  /* still queued */
-        if (uac.wait < 255u && ++uac.wait == 40u && uac.flowing) {
-            uac.flowing = 0;
-            uac.stalls++;
-        }
-        return;
-    }
+    uint32_t n;
     if (uac.queued) {
         if (csr & 0x04u)
             uac.missed++;                               /* UnderRun: an IN token found nothing queued */
@@ -1605,6 +1609,34 @@ static void uac_service(void)
     n = uac_packet(ep4tx);
     fm1_usb_ep4_send(ep4tx, n * 4u * UA_FW);
     sie_wr(S_TXCSR1, 0x01);                             /* TxPktRdy (and UnderRun cleared) */
+}
+static __attribute__((noinline)) void ep4_tx(void)
+{
+    uint32_t csr;
+    sie_wr(S_INDEX, 4);
+    csr = sie_rd(S_TXCSR1);
+    if (!(csr & 0x01u)) {
+        ep4_fill(csr);
+        return;
+    }
+    if (uac.wait < 255u && ++uac.wait == UAC_POLL_HZ / 50u && uac.flowing) {   /* still queued, 20 ms */
+        uac.flowing = 0;
+        uac.stalls++;
+    }
+}
+/* (p1, main 0.9.12) a packet just queued is on its way: TxPktRdy stays set until the next IN token has taken it, >= ~0.9
+ * ms after the fill (the token after the one that took the last, then its time on the wire), so the first UAC_SKIP
+ * ticks after a fill are not polled (their wait still counted): ~4 SIE round trips a ms instead of ~10, inside the
+ * render too (TIMER5 nests in it) */
+#define UAC_SKIP 6u
+static inline void uac_service(void)                   /* (inline: the guard alone in the tick, nothing pushed) */
+{
+    if (usb.up && usb.config && uac.alt) {
+        if (uac.queued && uac.wait < UAC_SKIP)
+            uac.wait++;
+        else
+            ep4_tx();
+    }
 }
 
 /* (0.7.5) MENU > USB IN+OUT, TIMER5: a packet the host played to us (n bytes of L | R << 16 frames) into ui_ring;
@@ -1839,13 +1871,28 @@ static void usb_start(void)                             /* boot, or main-loop re
 
 /* Powered on without a cable, the SIE does not answer and usb_start leaves
  * USB off: retry once a second from the main loop so a cable plugged in
- * later still enumerates. */
-static void usb_retry(uint32_t now_ms)
+ * later still enumerates.
+ * (0.9.10) After a mode switch (usb_replug) the device stays off the bus USB_REPLUG_MS first: it came back on the
+ * next pass (~25 ms, usb_start's reset), too short for some hosts (a phone, a hub polled every 256 ms) to see it
+ * leave, and they kept the old function: MENU > SYSTEM > USB > STEMS took several tries to appear. */
+#define USB_REPLUG_MS 500u
+static int usb_retry_due(uint32_t now_ms)              /* (apart: the host tests run it) */
 {
     static uint32_t t;
+    if (usb.replug) {
+        usb.replug = 0;
+        t = now_ms - 1000u + USB_REPLUG_MS;             /* (the next retry USB_REPLUG_MS from now) */
+        return 0;
+    }
     if (usb.up || usb.detached || now_ms - t < 1000u)
-        return;
+        return 0;
     t = now_ms;
+    return 1;
+}
+static void usb_retry(uint32_t now_ms)
+{
+    if (!usb_retry_due(now_ms))
+        return;
     usb.retries++;
     usb_start();
 }
@@ -1857,21 +1904,29 @@ static void usb_detach(void)
     fm1_usb_off();
 }
 
-#if FELUCCA_CDC
-/* Present the device with or without the serial console (main loop; at boot before usb_start, or later
- * from a setting). A change while attached drops off the bus; usb_retry attaches again within a second
- * with the other descriptors, and the host enumerates the device afresh. */
-static __attribute__((unused)) void usb_cdc_switch(uint32_t on)
+/* a mode switch (main loop): off the bus, attached again by usb_retry with the new descriptors. Two switches in one
+ * apply (the console off, the stems on) drop it once: the second finds it off */
+static __attribute__((unused)) void usb_replug(void)
 {
-    on = on != 0;
-    if (on == usb_cdc_on)
-        return;
     if (usb.up) {
         usb.up = 0;                                     /* usb_poll (TIMER5) stops before the SIE goes */
         RING_PUBLISH();
         fm1_usb_off();
     }
     usb.config = 0;
+    usb.replug = 1;
+}
+
+#if FELUCCA_CDC
+/* Present the device with or without the serial console (main loop; at boot before usb_start, or later
+ * from a setting). A change while attached drops off the bus; usb_retry attaches again 0.5 s later
+ * with the other descriptors, and the host enumerates the device afresh. */
+static __attribute__((unused)) void usb_cdc_switch(uint32_t on)
+{
+    on = on != 0;
+    if (on == usb_cdc_on)
+        return;
+    usb_replug();
     cdc.dtr = 0;                                        /* the console stops writing */
     cdc.rx_pend = 0;
     usb_cdc_on = (uint8_t)on;
@@ -1885,12 +1940,7 @@ static __attribute__((unused)) void usb_stems_switch(uint32_t on)
     on = on != 0;                                       /* ((0.8.0) STEMS+IN: this and usb_duplex_switch both on) */
     if (on == usb_stems)
         return;
-    if (usb.up) {
-        usb.up = 0;
-        RING_PUBLISH();
-        fm1_usb_off();
-    }
-    usb.config = 0;
+    usb_replug();
     uac.go = 0;                                         /* the ring restarts in the new frame size */
     usb_stems = (uint8_t)on;
 }
@@ -1900,12 +1950,7 @@ static __attribute__((unused)) void usb_duplex_switch(uint32_t on)
     on = on != 0;
     if (on == usb_duplex)
         return;
-    if (usb.up) {
-        usb.up = 0;
-        RING_PUBLISH();
-        fm1_usb_off();
-    }
-    usb.config = 0;
+    usb_replug();
     uac.go = 0;
     uin.alt = 0;
     uin.gen++;

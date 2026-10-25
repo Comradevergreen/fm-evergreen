@@ -459,9 +459,12 @@ grid lives in the steps themselves, so every engine has it:
   (about 10 ms each); with the next piece sent before the reply, every second piece was dropped.
 - **Following the device.** With v2 firmware, `WATCH` and `PING` (above). Older firmware pushes
   nothing (no reply to `PING`): poll `DUMP` about every 300–500 ms while the page is visible.
-- **Port.** The device's MIDI port is named "Felucca" (USB 1209:0001). Updates use the same
+- **Port.** The device's MIDI port is named "JIANT" (USB 1209:0001; JIANT 0.9.12, iProduct at string index 4;
+  JIANT 0.7.0 .. 0.9.11 "JIANT FM", Felucca "Felucca", both at index 2; Windows may still show the name it cached for
+  index 2). Match the port by name loosely (`/felucca|jiant/i`: Windows numbers ports "2- JIANT",
+  "MIDIIN2 (JIANT)") and tell the firmware by `INFO` / the identity reply, never by the name. Updates use the same
   port with other SysEx (the `F0 22 24 35 …` keys, `00 59 …` frames); never send those
-  from the editor. Since 1.0 the same USB device also has an audio input ("Felucca",
+  from the editor. Since 1.0 the same USB device also has an audio input (the same name,
   44.1 kHz stereo; bcdDevice 3.11; since 1.1 44.1 or 48 kHz, the host's choice, bcdDevice 3.21
   (3.20 with MENU > USB SERIAL OFF)); the MIDI port and this protocol are unchanged, and both
   work while the computer records.

@@ -9891,6 +9891,29 @@ static int test_usb_serial(void)
     frame();
     ok &= !usb_out && !fx_stems;
     bad += check("  STEMS+IN closed: fx_stems 2 (the stems with the host's audio apart), no console; STEREO again: off", ok);
+    {   /* (0.9.10) a switch keeps the device off the bus USB_REPLUG_MS before usb_retry attaches it again (it came
+         * back on the next pass, ~25 ms: hosts missed it); CONSOLE to STEMS (two switches, the console off and the stems
+         * on) drops it once */
+        uint32_t k, n = 0, ms = 123456u;
+        char m[160];
+        menu_put(MI_SERIAL, 0u);
+        frame();
+        usb_retry_due(ms);
+        ok = !usb.replug && usb_cdc_on;
+        menu_put(MI_SERIAL, 2u);
+        frame();
+        ok &= usb.replug == 1u && !usb_cdc_on && usb_out == 1u && !usb.config;
+        for (k = 0; k < USB_REPLUG_MS; k++)               /* (the last retry long ago: it would attach at once) */
+            n += (uint32_t)usb_retry_due(ms + 5000u + k);
+        ok &= !usb.replug && n == 0u && usb_retry_due(ms + 5000u + USB_REPLUG_MS) && !usb_retry_due(ms + 5000u + USB_REPLUG_MS + 1u);
+        menu_put(MI_SERIAL, 1u);
+        frame();
+        usb.replug = 0;
+        ok &= !usb_out && !usb_cdc_on;
+        snprintf(m, sizeof m, "  a switch: off the bus %u ms before the retry attaches it (was the next pass); two switches, one drop",
+                 USB_REPLUG_MS);
+        bad += check(m, ok);
+    }
     {
         persist_t p;
         settings_export(&p);
