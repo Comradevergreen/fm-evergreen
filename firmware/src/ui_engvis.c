@@ -1760,11 +1760,12 @@ static VX_CODE void vx_string(const track_t *t, const int32_t *A, int32_t en_hom
 
 /* ------------------------------------------------------------------------------------------- (snd5) ADD --- */
 /* log2 of a Q10 ratio (Q8) */
-static int32_t vx_lg2(uint32_t r)
+static __attribute__((noinline)) int32_t vx_lg2(uint32_t r)   /* (noinline: inlined, its (m - 10) * 256 became a constant
+                                                         * in the chip ROM's range, which the build refuses) */
 {
-    int32_t m = 0;
+    uint32_t m = 0;
     while ((r >> m) > 1u) m++;
-    return (m - 10) * 256 + (int32_t)(((r - (1u << m)) << 8) >> m);
+    return (int32_t)(m << 8) + (int32_t)(((r - (1u << m)) << 8) >> m) - 2560;
 }
 /* TOTEM: nine rings stacked, each a partial at its frequency's height (the low ones at the bottom), as wide as it sounds,
  * a bead orbiting it at its speed; BRIGHT makes it a pyramid or a top, PARTIAL's cut ones dots, COMB a waist, SHIMMER a
