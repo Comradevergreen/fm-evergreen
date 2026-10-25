@@ -24,8 +24,8 @@ static const uint8_t ED_MENU[][2] = {
     {MI_SKIN, 21},                                     /* (JIANT 0.8.9) SKIN COLORS / BOTTOM / HUD (0.9.7: AIR COLORS BOTTOM
                                                         * HUD), a row of DISPLAY */
     {MI_SCOPE, 22},                                    /* (0.9.7) SCOPE OFF / ON, a row of DISPLAY */
-    {MI_CLOCK, 24},                                    /* (0.9.9-stab) CPU CLOCK 360 / 320 MHZ, a row of SYSTEM (24 as 0.9.12's;
-                                                        * 23 is its CPU CORES, not on this line) */
+    {MI_CLOCK, 24},                                    /* (0.9.9-stab) CPU CLOCK 360 / 320 MHZ, a row of SYSTEM (24 as 0.9.12's) */
+    {MI_CPU, 23},                                      /* (p1, main 0.9.12) CPU CORES 2 / 1, a row of SYSTEM (23 as main's) */
 };
 #define ED_MENU_N NELEM(ED_MENU)
 

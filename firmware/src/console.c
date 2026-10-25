@@ -334,6 +334,12 @@ static void con_inp(void)
 
 static void con_crash(void)
 {
+    char b[CRASH_LOG_N + 1u];
+    if (crash_log_get(b)) {                         /* (p1, main 0.9.12) the last one, kept in the settings */
+        con_puts("last ");
+        con_puts(b);
+        con_puts("\r\n");
+    }
     if (fm1_crash.magic != FM1_CRASH_MAGIC) {
         con_puts("no crash record\r\n");
         return;

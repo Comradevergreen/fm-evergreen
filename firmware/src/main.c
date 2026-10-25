@@ -88,17 +88,54 @@ static void hexs(char *b, uint32_t v)
  * DMA that wrote into a closed window (PRP_WR_LIMIT_ID), N the windows hit by core 0 / core 1 / the DMA
  * (_WR_LIMIT_ERR_NUM). 10 s, then a reset (was 4: time for a photo); MENU > ABOUT repeats the main numbers until the
  * unit is switched off */
+#if FELUCCA_DUAL_CORE
+/* (p1, main 0.9.12) the crash's CR_* flags for the next boot (cpu_boot); out of fm1_fault (its room before the sound's
+ * first pinned run is full) */
+static __attribute__((noinline)) void fault_flags(uint32_t two)
+{
+    uint32_t fl = (fm1_clk_320() ? CR_320 : 0u) | (two ? CR_2C : 0u);
+    fm1_mc_bar.barred = (fm1_mc_bar.barred & ~0xFF00u) | fl << 8;
+}
+#endif
+/* the screen's last two lines (the bus culprits; p1: the short code, cpu_safe.c crash_code), 10 s, the reset */
+static __attribute__((noinline)) void fault_tail(const fm1_crash_t *c, char *b)
+{
+    uint32_t t0, i;
+    str_cpy(b, "WR ", 4); hexs(b + 3, c->bus[5]);
+    str_cpy(b + 11, " RD ", 5); hexs(b + 15, c->bus[4]);
+    draw_text_line(10, 48 + 17 * 9, 220, &AF_S, b, UI_CRASH_INK, UI_CRASH_BG, 0);
+    str_cpy(b, "P ", 3); hexs(b + 2, c->bus[3]);
+    str_cpy(b + 10, " N ", 4);
+    for (i = 0; i < 3u; i++) {                        /* (a window's number, 0..15, a digit each; '-' past 9) */
+        uint32_t n = c->bus[i] & 15u;
+        b[13 + i] = n < 10u ? (char)('0' + n) : '-';
+    }
+    str_cpy(b + 16, "  ", 3);                         /* (p1, main 0.9.12) the short code (the cause, then the vector), as
+                                                       * MENU > ABOUT > LAST CRASH keeps it: "IL-01" */
+    crash_code(b + 18, c->emu, c->dbg, 0);
+    b[20] = '-';
+    hexs(b + 21, c->vec);
+    b[21] = b[27];
+    b[22] = b[28];
+    b[23] = 0;
+    draw_text_line(10, 48 + 17 * 10, 220, &AF_S, b, UI_CRASH_INK, UI_CRASH_BG, 0);
+    t0 = fm1_ticks();
+    while ((uint32_t)(fm1_ticks() - t0) < 10000u * 1000u * FM1_TICKS_PER_US)
+        ;
+    fm1_reboot();
+}
 static void fm1_fault(const fm1_crash_t *c)
 {
     static const char L[9][6] = {"VEC ", "PC ", "EMU ", "DBG ", "RETS ", "SP ", "USP ", "SSP ", "C2 PC "};
     const uint32_t v[9] = {c->vec, c->pc, c->emu, c->dbg, c->rets, c->sp, c->usp, c->ssp, c->other_pc};
     char b[40];
-    uint32_t t0, i, two = 0;
+    uint32_t i, two = 0;
 #if FELUCCA_DUAL_CORE
     if (fm1_mc_on) {
         fm1_mc_bar_set();                             /* (0.6.71) a crash beside the second core: one core until power-off */
         two = 1;
     }
+    fault_flags(two);
     fm1_mc_hold();
 #endif
     fm1_crash.app = (felucca_dbg.in_audio ? 1u : 0u) | (uint32_t)felucca_dbg.stage << 8 | (uint32_t)felucca_dbg.page << 16;
@@ -116,21 +153,7 @@ static void fm1_fault(const fm1_crash_t *c)
         hexs(b + str_len(b), v[i]);
         draw_text_line(10, 48 + 17 * i, 220, &AF_S, b, UI_CRASH_INK, UI_CRASH_BG, 0);
     }
-    str_cpy(b, "WR ", 4); hexs(b + 3, c->bus[5]);
-    str_cpy(b + 11, " RD ", 5); hexs(b + 15, c->bus[4]);
-    draw_text_line(10, 48 + 17 * 9, 220, &AF_S, b, UI_CRASH_INK, UI_CRASH_BG, 0);
-    str_cpy(b, "P ", 3); hexs(b + 2, c->bus[3]);
-    str_cpy(b + 10, " N ", 4);
-    for (i = 0; i < 3u; i++) {                        /* (a window's number, 0..15, a digit each; '-' past 9) */
-        uint32_t n = c->bus[i] & 15u;
-        b[13 + i] = n < 10u ? (char)('0' + n) : '-';
-    }
-    b[16] = 0;
-    draw_text_line(10, 48 + 17 * 10, 220, &AF_S, b, UI_CRASH_INK, UI_CRASH_BG, 0);
-    t0 = fm1_ticks();
-    while ((uint32_t)(fm1_ticks() - t0) < 10000u * 1000u * FM1_TICKS_PER_US)
-        ;
-    fm1_reboot();
+    fault_tail(c, b);
 }
 
 /* power-on: the parts with their power-on sounds (0.9.9: T1 DRUM-X, T2 VOICE, T3 ANIMAL, T4 LOFI, T5 ANALOG, T6 FM6,
@@ -177,6 +200,40 @@ static void boot_leds(void)
         fm1_led_anim_start(settings_leds == LEDS_DIM || settings_leds == LEDS_DIM_LO);
 }
 
+/* (p1, main 0.9.12 / 0.9.13) what the last run left (cpu_safe.c): a crash (a record newer than the last boot saw,
+ * boot_leds) or a hang (a watchdog reset: the main loop's breadcrumbs in PC / RETS, felucca_dbg) is logged into the
+ * settings (MENU > ABOUT LAST CRASH, the editor's backup: kept across power-off); with both cores at work then, MENU >
+ * SYSTEM > CPU CORES goes to 1 CORE for three power-ons, a second time for good. 1: that (the UI says so at its start) */
+static __attribute__((noinline)) uint32_t cpu_boot(void)
+{
+    uint32_t fl = 0, cfg = cpu_cfg;
+#if FELUCCA_DUAL_CORE
+    uint32_t bar = fm1_mc_bar.barred;
+    fm1_mc_bar.barred = bar & ~0xFF02u;                 /* (this run's own from here) */
+    if (fm1_crash.magic == FM1_CRASH_MAGIC && fm1_crash.count != crash_seen) {
+        fl = (bar >> 8) & 0xFFu;
+        crash_log_put(fl, fm1_crash.vec, fm1_crash.pc, fm1_crash.rets, fm1_crash.emu, fm1_crash.dbg);
+    } else if (fm1_boot.p3_rst & 4u) {
+        fl = CR_WDT | (bar & 2u ? CR_2C : 0u) | (fm1_clk_320() ? CR_320 : 0u);
+        if (fl & CR_2C)
+            fm1_mc_bar_set();                           /* (a hang beside the second core: as a crash, fm1_fault) */
+        crash_log_put(fl, 0xFFu, felucca_dbg.prev_stage, felucca_dbg.prev_page, 0, 0);
+    } else {
+        cpu_cfg = (uint8_t)cpu_retry(cfg);              /* (0.9.13) a clean power-on: after a crash, both cores again
+                                                         * on the third */
+        if (cpu_cfg != cfg)
+            settings_save();
+        return 0;
+    }
+    cpu_cfg = (uint8_t)cpu_after(cfg, fl);
+    settings_save();
+    return cpu_cfg != cfg;
+#else
+    (void)fl; (void)cfg;
+    return 0;
+#endif
+}
+
 /* (0.9.9-stab, as 0.9.12) MENU > SYSTEM > CPU CLOCK 320 MHZ: from the boot stage's 360 to JieLi's rated 320 (hal/fm1_clk320.h,
  * curist's, as Skiff runs it), the screen up, on one core, before the scan, the second core, the audio and USB. Not after
  * a failed boot, nor again until power-off after a reset in it (fm1_cstart); a soft reset keeps the PLL (the check:
@@ -200,20 +257,10 @@ static __attribute__((noinline)) void cpu_clock(void)
 #endif
 }
 
-static void fm1_main(void)
+/* the debug record at boot (its breadcrumbs: a watchdog reset's), then (p1) cpu_boot; out of fm1_main (its room is
+ * pinned: tools/audio_layout.txt) */
+static __attribute__((noinline)) uint32_t dbg_boot(void)
 {
-    uint32_t ms;
-    persist_boot();
-#if FELUCCA_OTA
-    if (flash_ok)
-        ota_boot_cleanup();                             /* staging area left by an update */
-#endif
-    settings_init();
-    prefs_update();                                     /* (JIANT 0.6.44) FX LATCH ON by default, once */
-    usb_serial_apply();                                 /* (#67: the saved USB SERIAL before usb_start) */
-    lcd_init();
-    spl_anim = 1;                                       /* (JIANT 0.5) the signature written: splash_write */
-    draw_splash();                                      /* ui_draw.c (1.1.5) */
     if (felucca_dbg.magic != DBG_MAGIC) {
         memset(&felucca_dbg, 0, sizeof felucca_dbg);
         felucca_dbg.magic = DBG_MAGIC;
@@ -227,6 +274,47 @@ static void fm1_main(void)
     felucca_dbg.prev_home = felucca_dbg.home;
     felucca_dbg.prev_frames = felucca_dbg.ui_frames;
     felucca_dbg.prev_rst = fm1_boot.p3_rst;
+    return cpu_boot();
+}
+#if FELUCCA_DUAL_CORE
+/* (p1, main 0.9.12) the second core given up while it plays (a misread, no answer, a fault): 1 CORE for good, said once */
+static __attribute__((noinline)) uint32_t cpu_lost(uint32_t said)
+{
+    if (fm1_mc_lost && said != 2u) {
+        said = 2;
+        cpu_off("CORE 2 FAILED: 1 CORE");
+    }
+    return said;
+}
+#endif
+/* the splash, its signature written (JIANT 0.5: was 400 ms); the pot followed (MIDI IN plays under it). (0.5.2) On the
+ * clock: drawing the beings does not make it longer */
+static __attribute__((noinline)) void boot_splash(void)
+{
+    uint32_t t0 = fm1_ms, n, ms;
+    for (n = 0; n < 600u && (ms = fm1_ms - t0) < SPL_WRITE + SPL_HOLD; n++) {   /* (600: a stalled clock still ends it,
+                                                                               * in ~2.4 s) */
+        splash_write(ms);
+        fm1_delay_ms(4);
+        master_poll();
+    }
+}
+static void fm1_main(void)
+{
+    uint32_t said;
+    persist_boot();
+#if FELUCCA_OTA
+    if (flash_ok)
+        ota_boot_cleanup();                             /* staging area left by an update */
+#endif
+    settings_init();
+    prefs_update();                                     /* (JIANT 0.6.44) FX LATCH ON by default, once */
+    usb_serial_apply();                                 /* (#67: the saved USB SERIAL before usb_start) */
+    lcd_init();
+    spl_anim = 1;                                       /* (JIANT 0.5) the signature written: splash_write */
+    draw_splash();                                      /* ui_draw.c (1.1.5) */
+    said = dbg_boot();                                  /* (p1) the breadcrumbs; the last run's crash or hang kept, CPU
+                                                         * CORES after it */
     cpu_clock();                                        /* (0.9.9-stab) MENU > SYSTEM > CPU CLOCK 320 MHZ, if set */
     fm1_input_init();
     fm1_adc_init();
@@ -253,7 +341,7 @@ static void fm1_main(void)
      * would enter UBOOT), or it was given up / beside a crash since power-on (hal/fm1_multicore.h fm1_mc_bar). Its entry
      * word is in the protected top of RAM: opened for it, interrupts off (up to 20 ms: under the splash) */
     mc_off = (uint8_t)((fm1_in.buttons >> panel.btn[B_REC]) & 1u);
-    if (!mc_off && !bootguard.failed && !fm1_mc_barred()) {
+    if (!mc_off && !bootguard.failed && !fm1_mc_barred() && !(cpu_cfg & CPU_1CORE)) {   /* (p1: MENU > CPU CORES) */
         fm1_irq_off();
         fm1_guard_unlock_top();
         fm1_mc_start();
@@ -263,20 +351,12 @@ static void fm1_main(void)
 #endif
     autosave_boot(boot_clean);                /* (1.2) the last session's music, under the splash */
     session_dice(fm1_ticks() ^ (uint32_t)fm1_adc_read(FM1_ADC_BATT) << 16);   /* (JIANT 0.4) this session's macros */
-    {                                         /* the splash, its signature written (JIANT 0.5: was 400 ms); the pot
-                                               * followed (MIDI IN plays under it). (0.5.2) On the clock: drawing the
-                                               * beings does not make it longer */
-        uint32_t t0 = fm1_ms, n;
-        for (n = 0; n < 600u && (ms = fm1_ms - t0) < SPL_WRITE + SPL_HOLD; n++) {   /* (600: a stalled clock still
-                                                                                   * ends it, in ~2.4 s) */
-            splash_write(ms);
-            fm1_delay_ms(4);
-            master_poll();
-        }
-    }
+    boot_splash();                            /* (p1: out of line, fm1_main's room is pinned) */
     kb_boot_hold = 0;
     lcd_fill(0, 0, 240, 240, T_BG);
     scrn.idle = fm1_ms;                        /* (MENU > SCREEN OFF: from here) */
+    if (said)                                  /* (p1) cpu_boot */
+        cpu_off("2 CORES OFF AFTER A CRASH");
 
     for (;;) {
         uint32_t m = fm1_ms;
@@ -292,6 +372,9 @@ static void fm1_main(void)
                 song.batt_raw = song.batt_raw ? song.batt_raw + (b - song.batt_raw) / 32 : b;
         }
         master_poll();
+#if FELUCCA_DUAL_CORE
+        said = cpu_lost(said);                          /* (p1) the second core given up: 1 CORE for good */
+#endif
         {   /* OCT- + OCT+ held 5 s: enter UBOOT with RAM intact (debug / update); a countdown
              * shows from 2 s over the whole screen (the menu and the dialogs too: ui_draw), letting
              * go cancels it */

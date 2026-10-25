@@ -108,6 +108,53 @@ static int32_t menu_text(const char *s, int32_t y, uint16_t col, int draw)
     return y;
 }
 
+/* MENU > ABOUT: the clock and the rails, the crash since power-on; (p1, main 0.9.12) the last crash kept in the settings
+ * (cpu_safe.c) */
+static __attribute__((noinline)) int32_t about_cpu(int32_t y, int draw)
+{
+    char b[40], n[12];
+    (void)n;
+#if defined(FM1_IRQ_TARGET)
+    {   /* (0.9.9-stab) the clock (MENU > SYSTEM > CPU CLOCK, hal/fm1_sys.h fm1_clk_320) and the core supplies' steps
+         * as reached, and as the boot loader left them (fm1_rails_boot: V15's 7 / 15 wanted; the boot loader's 3 / 11) */
+        static const char RL[4][3] = {"S ", "/", " (", "/"};
+        uint32_t i;
+        str_cpy(b, fm1_clk_320() ? "CPU 320 MHZ  RAIL" : "CPU 360 MHZ  RAIL", sizeof b);
+        for (i = 0; i < 4u; i++) {
+            str_cpy(b + str_len(b), RL[i], 4);
+            fmt_int(n, fm1_rails[(i + 2u) & 3u]);
+            str_cpy(b + str_len(b), n, 4);
+        }
+        str_cpy(b + str_len(b), ")", 2);
+        y = menu_text(b, y, T_TEXT, draw);
+        if (fm1_crash.magic == FM1_CRASH_MAGIC && fm1_crash.count) {   /* (0.9.9-stab) the last crash since power-on
+                                                     * (.noinit, hal/fm1_irq.h): what its red screen showed, in hex */
+            static const char *const CL[6] = {"CRASH ", " VEC ", "PC ", " SP ", "C2 ", " BUS "};
+            const uint32_t cv[6] = {fm1_crash.count, fm1_crash.vec, fm1_crash.pc, fm1_crash.sp, fm1_crash.other_pc,
+                                    fm1_crash.bus[5] | fm1_crash.bus[3]};
+            for (i = 0; i < 6u; i++) {
+                uint32_t k, v = cv[i];
+                if (!(i & 1u))
+                    b[0] = 0;
+                str_cpy(b + str_len(b), CL[i], 7);
+                if (i == 0) {
+                    fmt_int(n, (int32_t)v);
+                    str_cpy(b + str_len(b), n, 8);
+                } else {
+                    for (k = str_len(b) + 8u; k > str_len(b); k--, v >>= 4)
+                        b[k - 1u] = "0123456789ABCDEF"[v & 15u];
+                    b[k + 8u] = 0;
+                }
+                if (i & 1u)
+                    y = menu_text(b, y, T_TEXT, draw);
+            }
+        }
+    }
+#endif
+    y = menu_text("LAST CRASH", y + 4, T_THEME, draw);   /* (p1, main 0.9.12) kept across power-off (cpu_safe.c) */
+    y = menu_text(crash_log_get(b) ? b : "NONE", y, T_TEXT, draw);
+    return y;
+}
 static int32_t menu_document(int32_t y, int draw)
 {
     uint32_t i;
@@ -144,7 +191,7 @@ static int32_t menu_document(int32_t y, int draw)
         str_cpy(b, "LATE ", sizeof b); fmt_int(n, (int32_t)load_diag.late); str_cpy(b + str_len(b), n, 12);
         str_cpy(b + str_len(b), "  SHED ", 8); fmt_int(n, (int32_t)load_diag.shed); str_cpy(b + str_len(b), n, 12);
         y = menu_text(b, y, T_TEXT, draw);
-        y = menu_text(mc_status(), y, T_TEXT, draw);
+        y = menu_text(cpu_status(), y, T_TEXT, draw);   /* (the second core: fx.c; p1: MENU > CPU CORES, cpu_safe.c) */
         /* Existing per-block scheduler timings, read while main is running:
          * audio IRQ dispatches and joins core 1 before returning to this UI.
          * These elapsed times overlap across cores; do not add them as load. */
@@ -171,43 +218,7 @@ static int32_t menu_document(int32_t y, int draw)
                 y = menu_text(d, y, T_TEXT, draw);
             }
         }
-#if defined(FM1_IRQ_TARGET)
-        {   /* (0.9.9-stab) the clock (MENU > SYSTEM > CPU CLOCK, hal/fm1_sys.h fm1_clk_320) and the core supplies' steps
-             * as reached, and as the boot loader left them (fm1_rails_boot: V15's 7 / 15 wanted; the boot loader's 3 / 11) */
-            static const char RL[4][3] = {"S ", "/", " (", "/"};
-            uint32_t i;
-            str_cpy(b, fm1_clk_320() ? "CPU 320 MHZ  RAIL" : "CPU 360 MHZ  RAIL", sizeof b);
-            for (i = 0; i < 4u; i++) {
-                str_cpy(b + str_len(b), RL[i], 4);
-                fmt_int(n, fm1_rails[(i + 2u) & 3u]);
-                str_cpy(b + str_len(b), n, 4);
-            }
-            str_cpy(b + str_len(b), ")", 2);
-            y = menu_text(b, y, T_TEXT, draw);
-            if (fm1_crash.magic == FM1_CRASH_MAGIC && fm1_crash.count) {   /* (0.9.9-stab) the last crash since power-on
-                                                         * (.noinit, hal/fm1_irq.h): what its red screen showed, in hex */
-                static const char *const CL[6] = {"CRASH ", " VEC ", "PC ", " SP ", "C2 ", " BUS "};
-                const uint32_t cv[6] = {fm1_crash.count, fm1_crash.vec, fm1_crash.pc, fm1_crash.sp, fm1_crash.other_pc,
-                                        fm1_crash.bus[5] | fm1_crash.bus[3]};
-                for (i = 0; i < 6u; i++) {
-                    uint32_t k, v = cv[i];
-                    if (!(i & 1u))
-                        b[0] = 0;
-                    str_cpy(b + str_len(b), CL[i], 7);
-                    if (i == 0) {
-                        fmt_int(n, (int32_t)v);
-                        str_cpy(b + str_len(b), n, 8);
-                    } else {
-                        for (k = str_len(b) + 8u; k > str_len(b); k--, v >>= 4)
-                            b[k - 1u] = "0123456789ABCDEF"[v & 15u];
-                        b[k + 8u] = 0;
-                    }
-                    if (i & 1u)
-                        y = menu_text(b, y, T_TEXT, draw);
-                }
-            }
-        }
-#endif
+        y = about_cpu(y, draw);                     /* (p1: out of line, menu_document's room is pinned) */
         y = y - 216 + 8;
     }
     y = menu_text("CREDITS", y + 216, T_THEME, draw) + 8;
@@ -254,7 +265,7 @@ static const char *menu_short(uint32_t row)          /* a card's label: the row'
 {
     static const struct { uint8_t row; char s[9]; } SH[] = {
         {MI_SCROFF, "SCR OFF"}, {MI_ACCEL, "ACCEL"}, {MI_SCLLED, "SCL LEDS"}, {MI_LOWCUT, "SPK EQ"}, {MI_USB, "USB LVL"},
-        {MI_CLKLVL, "CLICK LV"}, {MI_RESTORE, "RESTORE"}, {MI_CLOCK, "CPU MHZ"}, {MI_PANEL, "CALIBR"}, {MI_INIT, "INIT SYS"}};
+        {MI_CLKLVL, "CLICK LV"}, {MI_RESTORE, "RESTORE"}, {MI_CPU, "CORES"}, {MI_CLOCK, "CPU MHZ"}, {MI_PANEL, "CALIBR"}, {MI_INIT, "INIT SYS"}};
     uint32_t k;
     for (k = 0; k < NELEM(SH); k++)
         if (SH[k].row == row)

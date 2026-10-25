@@ -52,7 +52,8 @@ static uint8_t fm1_mc_lost;                     /* why it stopped: 1 a wrong job
 static uint32_t fm1_mc_max_ticks;               /* the longest wait for a job (TIMER4 ticks): MENU > ABOUT */
 
 /* carried across soft resets (a crash, the watchdog, an update), gone at power-off (main.c fm1_cstart clears it then).
- * (0.9.9-stab, as 0.9.12) barred's bits: 0 barred; 16..17 the 320 MHz switch (main.c: 1 armed, 2 a reset in it). One
+ * (0.9.9-stab, as 0.9.12) barred's bits: 0 barred; (p1) 1 core 1 started this run (a watchdog reset with it: main.c);
+ * 8..15 the crash's CR_* flags (main.c fm1_fault, cpu_safe.c); 16..17 the 320 MHz switch (main.c: 1 armed, 2 a reset in it). One
  * word: .noinit's layout as before */
 #define FM1_MC_BAR_MAGIC 0x3152414Au            /* "JAR1" */
 #define FM1_MC_CLK_ARMED (1u << 16)             /* barred: the 320 MHz switch under way, */
@@ -60,7 +61,11 @@ static uint32_t fm1_mc_max_ticks;               /* the longest wait for a job (T
 typedef struct { uint32_t magic, barred; } fm1_mc_bar_t;
 fm1_mc_bar_t fm1_mc_bar __attribute__((section(".noinit")));   /* (not static: no assumed zero start) */
 static inline int fm1_mc_barred(void) { return fm1_mc_bar.magic == FM1_MC_BAR_MAGIC && (fm1_mc_bar.barred & 1u); }
-static inline void fm1_mc_bar_set(void) { fm1_mc_bar.magic = FM1_MC_BAR_MAGIC; fm1_mc_bar.barred |= 1u; }
+static inline __attribute__((always_inline)) void fm1_mc_bar_set(void)   /* (p1: always inlined: fx.c mc_lost is pinned) */
+{
+    fm1_mc_bar.magic = FM1_MC_BAR_MAGIC;
+    fm1_mc_bar.barred |= 1u;
+}
 
 void fm1_c1_main(void);
 void __attribute__((section(".c1_text"), noinline, noreturn, used)) fm1_c1_main(void)
@@ -133,6 +138,7 @@ static int fm1_mc_start(void)
         return 0;
     }
     fm1_mc_on = 1;
+    fm1_mc_bar.barred |= 2u;                    /* (p1, main 0.9.12) a watchdog reset from here on: beside core 1 (main.c) */
     fm1_other_live = 1;                         /* (0.9.9-stab) a crash of core 0 pauses it and notes its PC (fm1_irq.h) */
     return 1;
 }
