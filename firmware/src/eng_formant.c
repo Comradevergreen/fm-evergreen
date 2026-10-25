@@ -432,25 +432,25 @@ static void formant_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, con
 
 static const preset_t FORMANT_PRESETS[] = {
     /* VOWEL VOWL2 TALK SHIFT | BUZZ BREATH Q RAND */
-    {"CHOIR AAH", {0, 0, 0, 0, 40, 22, 60, 0}, {85, 90, 115, 95}, 0, 0, FX(0, 70, 15, 90), PAT(5)},
-    {"VOX LEAD", {32, 0, 0, 2, 90, 8, 72, 0}, {6, 70, 105, 55}, 0, 1, FX(0, 20, 45, 40), PAT(4)},
-    {"WOW BASS", {95, 0, 68, 0, 100, 0, 80, 0}, {0, 70, 70, 30}, 0, 1, FX(10, 0, 10, 10), PAT(8)},
-    {"WHISPER", {0, 95, 88, 3, 50, 120, 50, 0}, {50, 90, 110, 90}, 0, 0, FX(0, 40, 30, 70), PAT(5)},
+    {"CHOIR AAH", {0, 0, 0, 0, 40, 22, 60, 0}, {85, 90, 115, 95}, 0, TAG(VOX), FX(0, 70, 15, 90), PAT(5)},
+    {"VOX LEAD", {32, 0, 0, 2, 90, 8, 72, 0}, {6, 70, 105, 55}, 0, 1 | TAG(VOX), FX(0, 20, 45, 40), PAT(4)},
+    {"WOW BASS", {95, 0, 68, 0, 100, 0, 80, 0}, {0, 70, 70, 30}, 0, 1 | TAG(BASS), FX(10, 0, 10, 10), PAT(8)},
+    {"WHISPER", {0, 95, 88, 3, 50, 120, 50, 0}, {50, 90, 110, 90}, 0, TAG(VOX), FX(0, 40, 30, 70), PAT(5)},
     /* (0.7.0) an OOH pad, a chant an octave down, a talk box lead */
-    {"OOH PAD", {80, 100, 50, 0, 55, 25, 55, 0}, {70, 90, 115, 95}, 0, 0, FX(0, 60, 25, 85), PAT(5)},
-    {"CHANT", {20, 60, 100, -12, 70, 15, 65, 10}, {30, 90, 110, 80}, 0, 0, FX(0, 30, 35, 75), PAT(5)},
-    {"TALK BOX", {10, 110, 40, 0, 110, 4, 85, 0}, {2, 65, 95, 40}, 0, 1, FX(10, 10, 35, 30), PAT(4)},
+    {"OOH PAD", {80, 100, 50, 0, 55, 25, 55, 0}, {70, 90, 115, 95}, 0, TAG(VOX), FX(0, 60, 25, 85), PAT(5)},
+    {"CHANT", {20, 60, 100, -12, 70, 15, 65, 10}, {30, 90, 110, 80}, 0, TAG(VOX), FX(0, 30, 35, 75), PAT(5)},
+    {"TALK BOX", {10, 110, 40, 0, 110, 4, 85, 0}, {2, 65, 95, 40}, 0, 1 | TAG(VOX), FX(10, 10, 35, 30), PAT(4)},
     /* (0.8.5) WORDS (sing.c): LANG and LYRIC in WORDS(); the EDIT values POS THEME ARTIC SHIFT | BUZZ BREATH Q LOOP.
      * (0.9.8) the singers' REL longer (~190 ms to -40 dB, was ~70): a syllable's vowel carries on into the next note's
      * consonant, as sung, not cut off by the step's gate; their ATK ~5 ms (was ~1.5): a voice's onset, no tick */
-    {"CANTOR ES", {0, 64, 0, 0, 80, 6, 72, 0}, {24, 70, 112, 72}, 0, 1, FX(0, 10, 30, 35), PAT(4), WORDS(LG_ES, 1)},
-    {"CANTORA ES", {0, 0, 0, 4, 70, 10, 74, 0}, {26, 70, 112, 72}, 0, 1, FX(0, 15, 30, 45), PAT(4), WORDS(LG_ES, 2)},
-    {"SINGER EN", {0, 64, 0, 0, 84, 6, 72, 0}, {24, 70, 112, 72}, 0, 1, FX(0, 10, 30, 35), PAT(4), WORDS(LG_EN, 3)},
-    {"UTA JA", {0, 48, 0, 5, 76, 8, 74, 0}, {24, 70, 112, 70}, 0, 1, FX(0, 15, 30, 40), PAT(4), WORDS(LG_JA, 4)},
-    {"WORD CHOIR", {0, 64, 16, 0, 45, 20, 62, 0}, {60, 90, 115, 85}, 0, 0, FX(0, 70, 15, 90), PAT(5), WORDS(LG_ES, 5)},
-    {"SCAT EN", {0, 64, 0, 0, 96, 4, 76, 0}, {16, 60, 100, 60}, 0, 1, FX(0, 0, 35, 30), PAT(4), WORDS(LG_EN, 17)},
-    {"ROBOT EN", {0, 64, 0, -3, 127, 0, 90, 0}, {2, 65, 120, 56}, 0, 1, FX(10, 10, 35, 30), PAT(4), WORDS(LG_EN, 6)},
-    {"WHISPER JA", {0, 64, 0, 3, 50, 120, 52, 0}, {40, 90, 110, 80}, 0, 0, FX(0, 40, 30, 70), PAT(5), WORDS(LG_JA, 7)},
+    {"CANTOR ES", {0, 64, 0, 0, 80, 6, 72, 0}, {24, 70, 112, 72}, 0, 1 | TAG(VOX), FX(0, 10, 30, 35), PAT(4), WORDS(LG_ES, 1)},
+    {"CANTORA ES", {0, 0, 0, 4, 70, 10, 74, 0}, {26, 70, 112, 72}, 0, 1 | TAG(VOX), FX(0, 15, 30, 45), PAT(4), WORDS(LG_ES, 2)},
+    {"SINGER EN", {0, 64, 0, 0, 84, 6, 72, 0}, {24, 70, 112, 72}, 0, 1 | TAG(VOX), FX(0, 10, 30, 35), PAT(4), WORDS(LG_EN, 3)},
+    {"UTA JA", {0, 48, 0, 5, 76, 8, 74, 0}, {24, 70, 112, 70}, 0, 1 | TAG(VOX), FX(0, 15, 30, 40), PAT(4), WORDS(LG_JA, 4)},
+    {"WORD CHOIR", {0, 64, 16, 0, 45, 20, 62, 0}, {60, 90, 115, 85}, 0, TAG(VOX), FX(0, 70, 15, 90), PAT(5), WORDS(LG_ES, 5)},
+    {"SCAT EN", {0, 64, 0, 0, 96, 4, 76, 0}, {16, 60, 100, 60}, 0, 1 | TAG(VOX), FX(0, 0, 35, 30), PAT(4), WORDS(LG_EN, 17)},
+    {"ROBOT EN", {0, 64, 0, -3, 127, 0, 90, 0}, {2, 65, 120, 56}, 0, 1 | TAG(VOX), FX(10, 10, 35, 30), PAT(4), WORDS(LG_EN, 6)},
+    {"WHISPER JA", {0, 64, 0, 3, 50, 120, 52, 0}, {40, 90, 110, 80}, 0, TAG(VOX), FX(0, 40, 30, 70), PAT(5), WORDS(LG_JA, 7)},
 };
 
 static const engine_t ENG_FORMANT = {

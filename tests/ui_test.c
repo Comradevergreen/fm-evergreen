@@ -9925,6 +9925,51 @@ static int test_midi_learn(void)
     ml_tab[0] = MLM_FACTORY;
     return bad;
 }
+
+/* (p1, main 0.9.12) sound types: every factory preset has one (core.h PT_*, preset_t.mono bits 1..4, MONO kept in bit
+ * 0); PRESETS' LIST (KNOB 4) ALL FAV BASS .. FX, each type's list only its presets across engines, kept with the
+ * settings */
+static int test_preset_types(void)
+{
+    int bad = 0, ok = 1;
+    uint32_t e, k, ty, n, total, cnt[PT_N] = {0};
+    ui_power_on();
+    for (e = 0; e < NENGINES; e++)
+        for (k = 0; k < ENGINES[e]->npresets; k++) {
+            ty = PR_TAG(&ENGINES[e]->presets[k]);
+            ok &= ty > PT_NONE && ty < PT_N && ENGINES[e]->presets[k].mono <= (PT_FX << 1 | 1u);
+            if (ty < PT_N) cnt[ty]++;
+        }
+    for (ty = PT_BASS; ty < PT_N; ty++)
+        ok &= cnt[ty] > 0u;
+    bad += check("every factory preset has a sound type (BASS .. FX), each type some presets", ok);
+    list_put(0);
+    go_page(GR_BROWSE); frame();
+    turn(EN_K4, 1); frame();
+    ok = list_get() == 1u && favorites.filter == 1u;
+    turn(EN_K4, 1); frame();
+    ok &= list_get() == 2u && !favorites.filter && str_eq(N_LIST[list_get()], "BASS");
+    preset_pos(&total);
+    for (n = 0; n < total; n++) {
+        e = preset_at(n, &k);
+        ok &= e < NENGINES && PR_TAG(&ENGINES[e]->presets[k]) == PT_BASS;
+    }
+    ok &= total == cnt[PT_BASS];
+    {
+        persist_t p;
+        settings_export(&p);
+        list_put(0);
+        ok &= settings_import(&p, (int)sizeof p) && list_get() == 2u;
+    }
+    for (k = 0; k < 20u; k++) turn(EN_K4, 1);
+    frame();
+    ok &= list_get() == PT_N && str_eq(N_LIST[list_get()], "FX");
+    for (k = 0; k < 20u; k++) turn(EN_K4, -1);
+    frame();
+    ok &= list_get() == 0u && !favorites.filter;
+    bad += check("PRESETS LIST: ALL FAV BASS .. FX (KNOB 4, no wrap); BASS lists every engine's basses only; kept with the settings", ok);
+    return bad;
+}
 static int test_usb_serial(void)
 {
     int bad = 0, ok;
@@ -12757,6 +12802,7 @@ int main(void)
     bad += test_click_menu();
     bad += test_usb_serial();
     bad += test_midi_learn();
+    bad += test_preset_types();
     bad += test_bpm_lock();
     bad += test_large();
     bad += test_skin();

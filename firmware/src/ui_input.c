@@ -1279,10 +1279,8 @@ static void edit_param(uint32_t slot, int32_t steps)
             select_engine(eng_step(TSEL->eng_req, steps));
         } else if (slot == 2u) {
             preset_mark(steps > 0);
-        } else if (slot == 3u && favorites.filter != (uint32_t)(steps > 0)) {
-            favorites.filter = steps > 0;
-            ui.force = 1;
-            settings_save();
+        } else if (slot == 3u) {                         /* (p1, main 0.9.12) LIST: ALL FAV, then the types */
+            list_turn(steps);
         }
         return;
     }

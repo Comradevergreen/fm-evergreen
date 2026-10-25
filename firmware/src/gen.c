@@ -1446,7 +1446,8 @@ static void gen_sound(track_t *t, uint32_t role, uint32_t ri)
     if (!n) return;
     for (i = 0; pre == 255u && i < 8u; i++) {           /* (EXPLORE: a preset of the engine, not the odd ones) */
         uint32_t k = gr() % n;
-        if (!gnever(en->presets[k].name)) pre = k;
+        if (!gnever(en->presets[k].name) && (role == RL_BASS || PR_TAG(&en->presets[k]) != PT_BASS))
+            pre = k;                                    /* (p1, main 0.9.12: a bass's sound only on the bass, by its type) */
     }
     apply_preset_to(t, pre % n);
     for (i = 0; i < 8u; i++) {                          /* (a sixteenth of each range: still that sound, a bit its own) */

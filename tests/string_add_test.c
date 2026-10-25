@@ -436,7 +436,7 @@ static void demos(const char *dir)
             static int32_t b[CTL];
             uint32_t nb = (uint32_t)(FS * 4.0 / CTL), step = (uint32_t)(FS * 0.25 / CTL);
             setup((int32_t)pi, 0);
-            if (EG->presets[pi].mono) trk[0].p[P_VOICE] = V_LEGATO;
+            if (PR_MONO(&EG->presets[pi])) trk[0].p[P_VOICE] = V_LEGATO;
             snprintf(path, sizeof path, "%s/%s_%02u_%s.wav", dir, EG->name, pi, EG->presets[pi].name);
             for (k = 0; path[k]; k++) if (path[k] == ' ') path[k] = '_';
             if (!(f = fopen(path, "wb"))) return;
@@ -444,10 +444,10 @@ static void demos(const char *dir)
             for (i = 0; i < nb; i++) {
                 uint32_t j, n8 = i / step;
                 if (i % step == 0 && n8 < 12u) {
-                    if (n8) trk_note_off(&trk[0], PH[(n8 - 1u) % 8u] - (EG->presets[pi].mono ? 12 : 0));
-                    trk_note_on(&trk[0], PH[n8 % 8u] - (EG->presets[pi].mono ? 12 : 0), 90 + (n8 % 4u == 0) * 30);
+                    if (n8) trk_note_off(&trk[0], PH[(n8 - 1u) % 8u] - (PR_MONO(&EG->presets[pi]) ? 12 : 0));
+                    trk_note_on(&trk[0], PH[n8 % 8u] - (PR_MONO(&EG->presets[pi]) ? 12 : 0), 90 + (n8 % 4u == 0) * 30);
                 }
-                if (i == step * 12u) trk_note_off(&trk[0], PH[11u % 8u] - (EG->presets[pi].mono ? 12 : 0));
+                if (i == step * 12u) trk_note_off(&trk[0], PH[11u % 8u] - (PR_MONO(&EG->presets[pi]) ? 12 : 0));
                 memset(b, 0, sizeof b);
                 track_render(&trk[0], b, CTL);
                 for (j = 0; j < CTL; j++) {

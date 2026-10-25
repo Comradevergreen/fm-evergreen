@@ -588,29 +588,29 @@ static void lofi_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const 
 static const preset_t LOFI_PRESETS[] = {
     /* name, {CHIP, WAVE, DUTY, CRSH, CUT, VIB, BEND, MASK} (JIANT 0.4: BYTE first; CUT BEND MASK were SWP ARP TONE) */
     /* BYTE: 8 bits, ALGO B02 (DUTY 4 / 4 = 1); B17 (64 / 4 = 16) with VAR 40 (a = 6); B05 folded (BEND), resonant */
-    {"BYTEBEAT", {2, 5, 4, 0, 64, 0, 0, 0}, {0, 80, 110, 40}, 0, 1, FX(0, 0, 25, 20), PAT(4)},
-    {"BYTE VAR", {2, 5, 64, 40, 64, 0, 0, 0}, {0, 80, 110, 50}, 0, 1, FX(0, 20, 30, 25), PAT(3)},
-    {"BYTE BENT", {2, 5, 16, 0, 64, 24, 70, 0}, {0, 80, 110, 45}, 0, 1, FX(10, 10, 30, 25), PAT(4)},   /* (0.5.4: GRIT 24) */
-    {"PULSE LD", {0, 0, 32, 0, 127, 20, 0, 0}, {0, 60, 90, 30}, 0, 1, FX(0, 0, 40, 20), PAT(4)},
-    {"WAVE BASS", {1, 1, 0, 0, 90, 0, 0, 0}, {0, 50, 70, 20}, 0, 1, FX(0, 0, 10, 0), PAT(2)},
-    {"8BIT KEYS", {2, 0, 96, 0, 110, 0, 30, 0}, {0, 60, 80, 40}, 0, 0, FX(0, 0, 30, 20), PAT(13)},
+    {"BYTEBEAT", {2, 5, 4, 0, 64, 0, 0, 0}, {0, 80, 110, 40}, 0, 1 | TAG(FX), FX(0, 0, 25, 20), PAT(4)},
+    {"BYTE VAR", {2, 5, 64, 40, 64, 0, 0, 0}, {0, 80, 110, 50}, 0, 1 | TAG(FX), FX(0, 20, 30, 25), PAT(3)},
+    {"BYTE BENT", {2, 5, 16, 0, 64, 24, 70, 0}, {0, 80, 110, 45}, 0, 1 | TAG(FX), FX(10, 10, 30, 25), PAT(4)},   /* (0.5.4: GRIT 24) */
+    {"PULSE LD", {0, 0, 32, 0, 127, 20, 0, 0}, {0, 60, 90, 30}, 0, 1 | TAG(LEAD), FX(0, 0, 40, 20), PAT(4)},
+    {"WAVE BASS", {1, 1, 0, 0, 90, 0, 0, 0}, {0, 50, 70, 20}, 0, 1 | TAG(BASS), FX(0, 0, 10, 0), PAT(2)},
+    {"8BIT KEYS", {2, 0, 96, 0, 110, 0, 30, 0}, {0, 60, 80, 40}, 0, TAG(KEYS), FX(0, 0, 30, 20), PAT(13)},
     /* wave RAM VOXA (DUTY 92 / 8 = 11), a little vibrato */
-    {"WAVE LEAD", {0, 4, 92, 0, 110, 18, 0, 0}, {0, 70, 90, 30}, 0, 1, FX(0, 0, 40, 25), PAT(3)},
+    {"WAVE LEAD", {0, 4, 92, 0, 110, 18, 0, 0}, {0, 70, 90, 30}, 0, 1 | TAG(LEAD), FX(0, 0, 40, 25), PAT(3)},
     /* STEP: 25 % pulse, DCY 34 = D7 (a 15-step decay over 0.5 s), REL ~54 ms of staircase after note-off */
-    {"STEP LEAD", {4, 0, 40, 34, 127, 16, 0, 0}, {0, 64, 127, 55}, 0, 1, FX(0, 0, 40, 20), PAT(4)},
+    {"STEP LEAD", {4, 0, 40, 34, 127, 16, 0, 0}, {0, 64, 127, 55}, 0, 1 | TAG(LEAD), FX(0, 0, 40, 20), PAT(4)},
     /* (JIANT 0.5, appended: the stored numbers stay) BYTE B11 looped (LOOP 80: a short cycle, a tone at the note), resonant */
-    {"BYTE TONE", {2, 5, 40, 0, 64, 0, 0, 80}, {0, 70, 100, 40}, 0, 1, FX(0, 0, 30, 20), PAT(4)},
+    {"BYTE TONE", {2, 5, 40, 0, 64, 0, 0, 80}, {0, 70, 100, 40}, 0, 1 | TAG(LEAD), FX(0, 0, 30, 20), PAT(4)},
     /* (JIANT 0.5.1, appended; 0.5.6 floatbeat) FLOAT: F02 FM whose index walks; F03 a nibble-table melody;
      * F29 FM breathing at 1 Hz, slow */
-    {"FLOAT FM", {2, 6, 4, 0, 64, 0, 0, 0}, {0, 60, 90, 40}, 0, 1, FX(0, 15, 25, 25), PAT(4)},
-    {"FLOAT ARP", {2, 6, 8, 0, 64, 0, 0, 0}, {0, 50, 80, 50}, 0, 1, FX(0, 25, 30, 30), PAT(3)},
-    {"FLOAT PAD", {2, 6, 112, 0, 40, 0, 0, 0}, {60, 90, 110, 90}, 0, 1, FX(30, 10, 50, 40), PAT(3)},
+    {"FLOAT FM", {2, 6, 4, 0, 64, 0, 0, 0}, {0, 60, 90, 40}, 0, 1 | TAG(FX), FX(0, 15, 25, 25), PAT(4)},
+    {"FLOAT ARP", {2, 6, 8, 0, 64, 0, 0, 0}, {0, 50, 80, 50}, 0, 1 | TAG(PLUCK), FX(0, 25, 30, 30), PAT(3)},
+    {"FLOAT PAD", {2, 6, 112, 0, 40, 0, 0, 0}, {60, 90, 110, 90}, 0, 1 | TAG(PAD), FX(30, 10, 50, 40), PAT(3)},
     /* (0.7.0) the chip as a band: a pad, a Game Boy arp, a triangle bass, soft keys, a saw lead */
-    {"CHIP PAD", {0, 1, 64, 0, 90, 12, 0, 0}, {40, 90, 115, 80}, 0, 0, FX(0, 50, 30, 60), PAT(5)},
-    {"GB ARP", {2, 0, 16, 0, 120, 0, 0, 0}, {0, 55, 0, 35}, 0, 0, FX(0, 10, 45, 25), PAT(3)},
-    {"TRI BASS", {0, 1, 64, 0, 80, 0, 0, 0}, {0, 60, 90, 20}, 0, 1, FX(0, 0, 5, 0), PAT(2)},
-    {"SOFT CHIP", {1, 0, 64, 0, 85, 8, 0, 0}, {5, 70, 80, 50}, 0, 0, FX(0, 20, 35, 40), PAT(6)},
-    {"SAW CHIP", {2, 2, 64, 0, 100, 10, 0, 0}, {0, 65, 90, 35}, 0, 1, FX(5, 0, 35, 25), PAT(4)},
+    {"CHIP PAD", {0, 1, 64, 0, 90, 12, 0, 0}, {40, 90, 115, 80}, 0, TAG(PAD), FX(0, 50, 30, 60), PAT(5)},
+    {"GB ARP", {2, 0, 16, 0, 120, 0, 0, 0}, {0, 55, 0, 35}, 0, TAG(PLUCK), FX(0, 10, 45, 25), PAT(3)},
+    {"TRI BASS", {0, 1, 64, 0, 80, 0, 0, 0}, {0, 60, 90, 20}, 0, 1 | TAG(BASS), FX(0, 0, 5, 0), PAT(2)},
+    {"SOFT CHIP", {1, 0, 64, 0, 85, 8, 0, 0}, {5, 70, 80, 50}, 0, TAG(KEYS), FX(0, 20, 35, 40), PAT(6)},
+    {"SAW CHIP", {2, 2, 64, 0, 100, 10, 0, 0}, {0, 65, 90, 35}, 0, 1 | TAG(LEAD), FX(5, 0, 35, 25), PAT(4)},
 };
 
 static const engine_t ENG_LOFI = {
