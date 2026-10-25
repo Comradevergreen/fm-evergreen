@@ -1214,10 +1214,21 @@ static void engine_block(track_t *t)
     uint32_t i, any = 0;
     if (!t->xf_on && t->eng_req == t->engine && !eng_kit(t->engine)) {   /* a list value changed while it sounds */
         const engine_t *e = ENGINES[t->engine % NENGINES];
-        for (i = 0; i < 8u; i++) {
-            const param_desc_t *d = e->desc ? e->desc(t, i) : 0;
-            if (t->p[P_E0 + i] != t->pe_old[i] && ((d ? d : &e->edit[i])->fmt == F_ENUM || (d ? d : &e->edit[i])->names))
+        for (i = 0; i < 8u; i++) {                      /* (p1, main 0.9.16) only a value that changed, then followed
+                                                         * (pe_old: the last value heard): the engine's desc was asked for
+                                                         * all 8 of every part, every block, stopped too */
+            const param_desc_t *d;
+            uint32_t k;
+            if (t->p[P_E0 + i] == t->pe_old[i])
+                continue;
+            d = e->desc ? e->desc(t, i) : 0;
+            d = d ? d : &e->edit[i];
+            /* (p1, main 0.9.17) a value with names: only a new name dips; VOICE's THEME and LOOP never (the words, not
+             * the sound: a THEME swept dipped at every one of its values, a held note crackling) */
+            if (d->fmt == F_ENUM || (d->names && !(d >= FMT_WDESC && d < FMT_WDESC + 8) &&
+                                     name_of(d, t->p[P_E0 + i], &k) != name_of(d, t->pe_old[i], &k)))
                 break;
+            t->pe_old[i] = t->p[P_E0 + i];
         }
         for (any = 0; i < 8u && any < NVOICE; any++)
             if (t->v[any].active && t->v[any].env_out)

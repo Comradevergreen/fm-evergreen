@@ -766,7 +766,8 @@ static __attribute__((noinline)) uint32_t sy_take_entry(const uint8_t *e, uint8_
  * LYB_NONE */
 static uint32_t sy_gen_word(const track_t *t, sing_t *s, uint32_t lang, uint32_t lyr)
 {
-    uint32_t theme = (uint32_t)clamp(t->p[P_E1], 0, 127) >> 4, tries, pcat = 0;
+    uint32_t theme = (uint32_t)clamp(t->p[P_E1], 0, 127) >> 4, f = (uint32_t)clamp(t->p[P_E1], 0, 127) & 15u, tries,
+             pcat = 0;
     int32_t j = -1;
     const ly_bank_t *b = &LY_BANK[(lang - 1u) % 3u];
     uint32_t src = LYB_NONE;
@@ -813,7 +814,12 @@ static uint32_t sy_gen_word(const track_t *t, sing_t *s, uint32_t lang, uint32_t
         case 'P': cat = 4; break;
         default: cat = 5; break;
         }
-        th = cat >= 3u ? TH_FN : theme == TH_ANY ? (sy_rnd(&s->rng) % 7u + 5u) % 8u : theme;   /* (ANY: 5 6 7 0 1 2 3) */
+        th = theme;                                      /* (p1, main 0.9.17) THEME between its detents (automation, a mod):
+                                                          * the top half of a name's 16 a blend, its words from the
+                                                          * next theme 1/8 .. 7/8 (the rest, the detents, as before) */
+        if (cat < 3u && f > 8u && sy_rnd(&s->rng) % 8u < f - 8u)
+            th = (theme + 1u) & 7u;
+        th = cat >= 3u ? TH_FN : th == TH_ANY ? (sy_rnd(&s->rng) % 7u + 5u) % 8u : th;   /* (ANY: 5 6 7 0 1 2 3) */
         if (s->prem <= 2u && cat < 3u)                   /* the phrase's end: a word that fits it */
             j = ly_pick(lang, th, cat, s->prem, 1, &s->rng);
         if (j < 0)

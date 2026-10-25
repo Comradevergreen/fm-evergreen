@@ -398,12 +398,28 @@ static int32_t enum_rank(const param_desc_t *d, int32_t v)   /* v's place in the
     return o ? r + d->min : v;
 }
 /* a knob turned `steps` (signed) from v: clamped, over the shown order, past aliases (enum_step) */
+/* (p1, main 0.9.16) a value with names (F_INT, its range split evenly over them: engine desc hooks): its name's index,
+ * *k the names */
+static uint32_t name_of(const param_desc_t *d, int32_t v, uint32_t *k)
+{
+    uint32_t n = 0;
+    while (d->names[n])
+        n++;
+    *k = n;
+    return (uint32_t)(clamp(v, d->min, d->max) - d->min) * n / (uint32_t)(d->max - d->min + 1);
+}
 static int32_t param_turn(const param_desc_t *d, int32_t v, int32_t steps)
 {
     const uint8_t *o = enum_order(d);
+    uint32_t k, i, w = (uint32_t)(d->max - d->min + 1);
     if (d->fmt == F_PCTINV) steps = -steps;         /* (right: more chance, less skipped) */
     if (o)
         return o[clamp(enum_rank(d, v) - d->min + steps, 0, d->max - d->min)] + d->min;
+    if (d->fmt == F_INT && d->names && (i = name_of(d, v, &k), k < w)) {   /* (p1, main 0.9.16) a name a detent (VOICE's
+                                                         * THEME was 16 detents a name), onto its middle */
+        i = (uint32_t)clamp((int32_t)i + steps, 0, (int32_t)k - 1);
+        return d->min + (int32_t)((2u * i + 1u) * w / (2u * k));
+    }
     return enum_step(d, v, clamp(v + steps, d->min, d->max));
 }
 
@@ -523,10 +539,8 @@ static void param_format(const param_desc_t *d, int32_t v, char *val, const char
         break;
     default:
         if (d->names) {                               /* F_INT with a 0-terminated name list: the range */
-            uint32_t k = 0;                           /* split evenly over the names (engine desc hooks) */
-            while (d->names[k])
-                k++;
-            str_cpy(val, d->names[(uint32_t)(clamp(v, d->min, d->max) - d->min) * k / (uint32_t)(d->max - d->min + 1)], 6);
+            uint32_t k;                               /* split evenly over the names (engine desc hooks) */
+            str_cpy(val, d->names[name_of(d, v, &k)], 6);
         } else {
             fmt_int(val, v);
         }

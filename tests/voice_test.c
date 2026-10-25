@@ -474,7 +474,7 @@ static uint32_t gen_text(uint32_t lang, uint32_t lyr, uint32_t theme, uint32_t n
     memset(trk, 0, sizeof trk);
     host_tracks_init();
     host_preset(&trk[0], eng_voice(), 7);
-    trk[0].p[P_E1] = (int16_t)(theme * 16u + 8u);
+    trk[0].p[P_E1] = (int16_t)(theme & 0x100u ? theme & 127u : theme * 16u + 8u);   /* (0x100: THEME's value) */
     trk[0].p[P_SLEN] = 16;
     for (k = 0; k < 16u; k++) {                          /* pl NOTE steps */
         trk[0].step[k].time = k < pl ? ST_NOTE : ST_REST;
@@ -1255,6 +1255,66 @@ static void check_seek_cycles(void)
     check("POS cycle skipping preserves the original singer and phoneme state at every position", errors == 0);
 }
 
+/* (p1, main 0.9.16) THEME: a name a detent (the knob, params.c param_turn), and swept while a note is held the voice goes on as
+ * it was, bit for bit: THEME is the next words', never the sound (voice.c engine_block dipped at every value: crackle);
+ * the other named values (LOFI WAV#, NOISE LEN) a name a detent too, a new name still a dip */
+static void check_theme(void)
+{
+    static double a[FS], b[FS];
+    const param_desc_t *d = &FMT_WDESC[1];
+    uint32_t i, k, dips = 0, names = 1, ok = 1;
+    int32_t v = 0, w;
+    char nm[8], prev[8];
+    const char *u;
+    for (i = 0; i < 2u; i++) {
+        vsetup(0, LG_ES, "laaa");
+        trk[0].p[P_E1] = 0;
+        trk_note_on(&trk[0], 60, 100);
+        for (k = 0; k < FS; k += CTL) {
+            if (i && k >= FS / 4)
+                trk[0].p[P_E1] = (int16_t)((k / CTL) % 128u);   /* a value a block: swept back and forth */
+            engine_block(&trk[0]);
+            dips += trk[0].xf_dip;
+            vrender(i ? b + k : a + k, CTL);
+        }
+    }
+    for (k = 0; k < FS; k++)
+        ok &= a[k] == b[k];
+    check("THEME swept every block over a held note: no dip, the voice bit for bit as without it", ok && !dips);
+    param_format(d, 0, prev, &u);
+    for (k = 0; k < 7u; k++) {                           /* a detent: the next name, onto its middle */
+        w = param_turn(d, v, 1);
+        param_format(d, w, nm, &u);
+        names += strcmp(nm, prev) != 0;
+        ok &= w == (int32_t)(16u * (k + 1u) + 8u);
+        memcpy(prev, nm, sizeof prev);
+        v = w;
+    }
+    ok &= names == 8u && param_turn(d, v, 1) == 120 && param_turn(d, 64, 1) == 88 && param_turn(d, 64, -1) == 56 &&
+          param_turn(d, 127, -2) == 88;
+    check("THEME: LOVE .. FIRE in 7 detents, each onto its name's middle (stored 0..127 as before)", ok);
+    ok = param_turn(&FMT_WDESC[7], 0, 1) == 38 && param_turn(&LOFI_WAVNUM, 64, 1) == 76 && param_turn(&NOISE_LONG, 0, 3) == 56 &&
+         param_turn(&FMT_WDESC[0], 5, 1) == 6;       /* (LOOP 5 names; WAV# 16; LEN 8; POS no names: a value) */
+    check("  the other named values a name a detent (LOOP, LOFI WAV#, NOISE LEN); POS a value a detent", ok);
+    {                                                    /* (0.9.17) between the detents: the blend */
+        static char t8[2048], tv[2048];
+        uint32_t s1, l, same = 1, diff = 1;
+        for (l = LG_ES; l <= LG_JA; l++) {
+            gen_text(l, 1, 0, 6, 9, t8, sizeof t8, &s1);
+            for (k = 0; k <= 8u; k += 4u) {              /* a name's low half: its words, bit for bit (projects) */
+                gen_text(l, 1, 0x100u + k, 6, 9, tv, sizeof tv, &s1);
+                same &= !strcmp(t8, tv);
+            }
+            gen_text(l, 1, 0x100u + 15u, 6, 9, tv, sizeof tv, &s1);
+            diff &= strcmp(t8, tv) != 0 && s1;           /* the top: the next theme's words in it, phrases whole */
+            gen_text(l, 1, 1, 6, 9, t8, sizeof t8, &s1);
+            gen_text(l, 1, 0x100u + 16u, 6, 9, tv, sizeof tv, &s1);
+            same &= !strcmp(t8, tv);
+        }
+        check("  THEME between detents: 0..8 of a name its words as at the detent, 15 a blend with the next", same && diff);
+    }
+}
+
 int main(int argc, char **argv)
 {
     if (argc > 2 && !strcmp(argv[1], "--g2p")) {
@@ -1273,6 +1333,7 @@ int main(int argc, char **argv)
     check_singer();
     check_presets();
     check_lyric();
+    check_theme();
     check_cost();
     if (argc > 1)
         demos(argv[1]);
