@@ -11517,6 +11517,11 @@ static int test_lz_glo(void)
     press(B_GLO); frame();
     ok &= str_eq(cur_page()->title, "SYSTEM");
     bad += check("0.9.2 GLO: MIXER SENDS GLOBAL SYSTEM (seq2f: COMPS COMPS 2) by SELECT, a GLO tap the next group; from elsewhere the page left", ok);
+    {   /* (0.9.9-snd8b) every chain fits nav_list's buffer (FX's 17th page, TAPE, overran a 16: a crash entering FX) */
+        uint32_t k, worst = 0;
+        for (k = 0; k < NELEM(CHAINS); k++) worst = CHAINS[k].n > worst ? CHAINS[k].n : worst;
+        bad += check("  every page chain fits nav_list's NAV_MAX (the longest: FX's)", worst <= NAV_MAX);
+    }
     {   /* (0.9.9-snd8) MIXER: ALGORITHM to another track redraws only what changed (no forced frame: it blanked the faders
          * first, a flash at each track); the screen then equals a full redraw of the same state */
         static uint16_t lazy[240 * 240];

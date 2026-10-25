@@ -172,7 +172,10 @@ static uint32_t save_level(void) { return nav_lv(); }
 static uint32_t home_level(void) { return gen_on() ? 2u : ui.hlv ? 1u : 0u; }
 static uint32_t home_set(void) { return ui.hset[home_level() & 1u] & 1u; }
 static int home_macros(void) { return ui.home && !ui.menu && !gen_on() && home_set(); }   /* MACROS / ROUTES: M1..M4 */
-/* the entries shown now (on this track, at this LOAD), in order: their indices in v; how many */
+/* the entries shown now (on this track, at this LOAD), in order: their indices in v (NAV_MAX at most: the longest chain,
+ * FX's 17 since snd8's TAPE, fits: ui_test checks every chain against it; snd8b's 17th page overran a 16 and crashed
+ * FX); how many */
+#define NAV_MAX 24u
 static uint32_t nav_list(uint32_t sec, uint8_t *v)
 {
     const ch_t *c = nav_ch(sec);
@@ -260,7 +263,7 @@ static void nav_button(uint32_t sec)
 /* rule 1: SELECT, s detents along the chain (no wrap) */
 static void nav_select(int32_t s)
 {
-    uint8_t v[16];
+    uint8_t v[NAV_MAX];
     uint32_t sec = nav_sec(), n = nav_list(sec, v), e = nav_cur(), i;
     int32_t at = -1, to;
     for (i = 0; i < n; i++)
@@ -286,7 +289,7 @@ static void nav_jump(uint32_t sec, int32_t s)
  * one's pages (cnt) and chain index of the first (first); the chain's place *i of *m */
 static uint32_t nav_groups(uint8_t *cnt, uint8_t *gi, uint32_t *g, uint32_t *p, uint32_t *i, uint32_t *m)
 {
-    uint8_t v[16];
+    uint8_t v[NAV_MAX];
     uint32_t sec = nav_sec(), n = nav_list(sec, v), e = nav_cur(), k, ng = 0, last = 0xFFu;
     const ch_t *c = nav_ch(sec);
     *g = *p = *i = 0;
