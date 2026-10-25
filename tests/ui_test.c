@@ -12075,6 +12075,46 @@ static int test_engvis(void)
     }
     bad += check("0.9.4 / 0.9.6 the engines' creatures (VOICE ANIMAL DRUM-X ANALOG FM6 WHEEL NOISE PHASE LOFI; EDIT, FM6's OPERATOR "
                  "pages, HOME): move with the sound, still in silence", ok);
+    {   /* (0.9.9) VOICE's tract (SCOPE OFF, the whole panel; WORDS on): an open vowel opens the jaw down (the chin
+         * drops; the condyle glides forward), the lips apart; a nasal drops the velum and the branch to the nose opens (its ink over the
+         * palate, where an open vowel leaves none); the pulses travel and the waves leave while it sings */
+        static const uint8_t PH3[3] = {PH_I, PH_A, PH_M};
+        uint32_t ink[3], x, y, f, k;
+        int32_t chin[3][2], cond[2], lips[3] = {0, 0, 0}, pul = 0, wav = 0;
+        sing_t *g = &sing[0];
+        ui_power_on();
+        ui_scope = 0;
+        for (x = 1; x < NTRK; x++) trk[x].p[P_MUTE] = 1;
+        song.sel = 0;
+        set_engine_of(TSEL, 5);
+        TSEL->p[P_VLANG] = LG_ES;
+        go_title("EDIT 1");
+        for (k = 0; k < 3u; k++) {
+            const phon_t *P = &PHON[PH3[k]];
+            vxs.init = 0;
+            for (f = 0; f < 24u; f++) {
+                memset(g, 0, sizeof *g);
+                g->lang = LG_ES; g->live = 1; g->np = 1; g->cd = 1; g->ph[0] = PH3[k]; g->st = 1;
+                g->f[0] = (int16_t)P->f1; g->f[1] = (int16_t)P->f2; g->gv = (int16_t)(P->av << 7);
+                TSEL->peak = 6500;
+                frame();
+                for (x = 0; x < 4u; x++) { pul |= vxs.pw[0][x] != 0; wav |= vxs.pw[1][x] != 0; }
+            }
+            vh_jaw(chin[k], -31 * 16, 54 * 16);         /* (the chin, turned with the jaw as it now is) */
+            lips[k] = vxs.art[5];
+            if (k == 1u) vh_jaw(cond, 14 * 16, 6 * 16);  /* (the condyle: gliding forward as it opens) */
+            for (ink[k] = 0, y = LZ_GRAPH_Y + 8; y < LZ_GRAPH_Y + 22; y++)   /* (over the palate, behind the nose: the
+                                                         * branch's middle, units -36 .. -12 x 10 .. 14) */
+                for (x = 88; x < 136u; x++)
+                    ink[k] += host_screen[y * 240 + x] != host_screen[(LZ_GRAPH_Y + 15) * 240 + 200];
+        }
+        ok = chin[1][1] > chin[0][1] + 24 && chin[0][1] >= 54 * 16 && cond[0] < 14 * 16 - 16 && lips[1] < 40 &&
+             vxs.art[6] > 200 && ink[2] > 20u && ink[1] < 4u && pul && wav;
+        if (!ok) printf("  chin I %d,%d A %d,%d; ink A %u M %u; pulses %d waves %d\n", chin[0][0], chin[0][1], chin[1][0],
+                        chin[1][1], ink[1], ink[2], pul, wav);
+        bad += check("0.9.9 VOICE's tract: an open vowel opens the jaw down (its condyle gliding forward); a nasal drops the velum and opens "
+                     "the branch to the nose; glottal pulses up the tube and waves out while it sings", ok);
+    }
     {   /* MODE turned in silence: the creature glides to the mammal, then holds */
         int32_t m0, m1;
         int changed;

@@ -44,8 +44,9 @@ editor update themselves with every change merged into `main`.
   it, clear of the page's words; a page's hint comes only once you stay on it (never while SELECT walks past), at most
   twice ever; a layer button's tap no longer says "HOLD [X] QUICK". On JIANT each card's colour follows its value
   again, as in 0.6.
-  **Three engines draw their own creature** (0.9.4): VOICE a CT scan of a singing head (the tongue, jaw, lips and velum
-  move with the phoneme sung), ANIMAL a creature that metamorphoses between bird, insect and mammal, DRUM-X its kit as
+  **Three engines draw their own creature** (0.9.4): VOICE its vocal tract singing, a glowing tube in a ghost of a
+  head (main 0.9.10's "Tracto vivo", v0.9.9-par2: the tongue, jaw, lips and velum move with the phoneme sung, glottal
+  pulses travel up it, waves leave the mouth, the jaw opens downward), ANIMAL a creature that metamorphoses between bird, insect and mammal, DRUM-X its kit as
   little beings that squash, shut their eyes and shout with every hit.
   **MUTATE can go back** (0.9.3): turning MUTATE off asks to return the track to its anchor; SEQ + D5 REVERT, GLO + B4 REVERT ALL, undoable.
   **0.9.2 is driven by six rules** (see [Navigation](#navigation)): SELECT walks a section's pages as one chain, the

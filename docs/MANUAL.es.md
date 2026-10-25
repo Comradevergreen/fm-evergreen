@@ -810,17 +810,19 @@ Donde cada motor muestra su ser (EDIT › SOUND a la izquierda, HOME › BEING g
 con el mismo dibujo de líneas térmico (cuanto más fría la línea, menos densa o más callada; el blanco es lo más
 caliente), que se mueve solo mientras la pista suena y queda quieto en silencio:
 
-- **VOICE: una tomografía de una cabeza** de perfil, la cara a la izquierda: la piel, las dos tablas del cráneo (el
-  hueso al rojo blanco), el cerebro con sus pliegues y el cuerpo calloso, el cerebelo, la columna, la cavidad nasal y
-  sus cornetes, el paladar, el velo, la lengua, la mandíbula, los labios, la faringe, la laringe y la tráquea. **El
-  tracto vocal canta lo que se oye**: la lengua sube y baja con el F1 de la vocal y va adelante y atrás con el F2, la
-  mandíbula se abre con el F1, los labios se redondean en o, u, w y sh y se cierran en p, b, m, el labio de abajo toca
-  los dientes en f y v, la punta, la lámina o el dorso de la lengua van al punto de cada consonante (t d n l r en los
-  alvéolos, k g ng en el velo ..) con una marca caliente donde se cierra el tracto, el velo baja en m, n y ng (los
-  cornetes se calientan con el aire por la nariz), las cuerdas vocales vibran y los anillos de la tráquea laten con la
-  sonoridad, sale un chorro de turbulencia de la constricción en s, sh, f, x y las explosiones, y sube aliento en la
-  glotis con la h y BREATH. Con WORDS sigue la sílaba que canta (el fonema, sus formantes y ganancias); sin WORDS,
-  VOWEL → VOWEL2 en TALK y BREATH. Una línea de escaneo baja despacio por la cabeza mientras suena.
+- **VOICE: el tracto vocal, vivo** (0.9.9), visto de cerca, la boca y el cuello llenando el panel: el contorno de la
+  cabeza es un fantasma tenue (la frente, la nariz, los labios, el mentón, la garganta) y el tracto vocal un tubo
+  brillante de dos paredes, de los labios por el paladar y el velo, bajando por la faringe hasta la glotis, con la
+  tráquea abajo. **Canta lo que se oye**: la lengua (el piso del tubo) sube y baja con el F1 de la vocal y va adelante y
+  atrás con el F2, la mandíbula se abre hacia abajo con el F1, los labios se redondean en o, u, w y sh y se cierran en p,
+  b, m, el labio de abajo toca los dientes en f y v, la punta, la lámina o el dorso de la lengua van al punto de cada
+  consonante (t d n l r en los alvéolos, k g ng en el velo ..) y el tubo se angosta y se calienta ahí, con una marca
+  caliente donde se cierra; en m, n y ng baja el velo y se abre una rama hacia la nariz. Cada pulso glótico es un
+  abultamiento que sube por el tubo (por la nariz en m, n, ng), las cuerdas vocales se abren y cierran como una V con la
+  sonoridad, y salen ondas de sonido por la boca (por la nariz en las nasales); sale un chorro de turbulencia de la
+  constricción en s, sh, f, x y las explosiones, y sube aliento en la glotis con la h y BREATH. La cabeza cabecea un poco
+  al empezar cada vocal y se balancea y respira despacio con el nivel. Con WORDS sigue la sílaba que canta (el fonema,
+  sus formantes y ganancias); sin WORDS, VOWEL → VOWEL2 en TALK y BREATH (el cabeceo en cada nota).
 - **ANIMAL: una criatura entre pájaro, bicho y mamífero.** Su contorno, patas, ala, antenas y ojo son los mismos puntos
   en los tres animales, mezclados: MODE elige el animal (CMOS y WHSTL un pájaro, PULSE y WING un insecto, GLOTT un
   mamífero) y la criatura **se metamorfosea** hacia él en medio segundo; **SIZE** la inclina por la línea insecto –
