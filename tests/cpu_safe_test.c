@@ -67,20 +67,12 @@ int main(void)
     check("  the record is the row's 32 bytes, the settings around it untouched",
           favorites.factory[8][31] == 0x11 && favorites.factory[10][0] == 0x22);
 
-    check("fallback: a crash with 2 CORES on turns it to 1 CORE (AFTER A CRASH), the clock kept",
-          cpu_after(CPU_320, CR_2C) == (CPU_320 | CPU_1CORE | CPU_AUTO) && cpu_after(0, CR_2C | CR_WDT) == (CPU_1CORE | CPU_AUTO));
-    check("  a crash on one core, or already 1 CORE (set by hand): unchanged",
-          cpu_after(0, 0) == 0 && cpu_after(CPU_1CORE, CR_2C) == CPU_1CORE && cpu_after(CPU_320, CR_WDT) == CPU_320);
-    {   /* (0.9.13) the fallback lasts three power-ons, then both cores again; a crash after that retry: for good */
-        uint32_t c = cpu_after(CPU_320, CR_2C), c1 = cpu_retry(c), c2 = cpu_retry(c1), c3 = cpu_retry(c2), c4 = cpu_after(c3, CR_2C);
-        check("(0.9.13) after a crash: 1 CORE for two clean power-ons, the third both cores (the clock kept)",
-              (c1 & CPU_1CORE) && (c2 & CPU_1CORE) && !(c3 & (CPU_1CORE | CPU_AUTO)) && (c3 & CPU_TRIED) && (c3 & CPU_320));
-        check("  a crash with both cores again after the retry: 1 CORE for good (no retry), MENU > CPU clears it all",
-              (c4 & (CPU_1CORE | CPU_AUTO | CPU_GOOD)) == (CPU_1CORE | CPU_AUTO | CPU_GOOD) && cpu_retry(c4) == c4 &&
-              cpu_retry(CPU_1CORE) == CPU_1CORE && cpu_retry(0) == 0);
-        cpu_cfg = (uint8_t)c4; cpu_put(0, 1);
-        check("  MENU > SYSTEM > CPU 2 CORES by hand: the crash state gone", cpu_cfg == CPU_320);
-    }
+    check("(p2b) a crash with 2 CORES on keeps 2 CORES (logged only), the clock kept",
+          cpu_after(CPU_320, CR_2C) == CPU_320 && cpu_after(0, CR_2C | CR_WDT) == 0);
+    check("  1 CORE set by hand: kept; an old fallback (AFTER A CRASH, for good or waiting): both cores again",
+          cpu_after(CPU_1CORE, CR_2C) == CPU_1CORE && cpu_retry(CPU_1CORE) == CPU_1CORE &&
+          cpu_retry(CPU_1CORE | CPU_AUTO | CPU_320) == CPU_320 && cpu_retry(CPU_1CORE | CPU_AUTO | CPU_GOOD) == 0 &&
+          cpu_retry(CPU_1CORE | CPU_AUTO | (1u << 3)) == 0 && cpu_retry(CPU_TRIED) == 0);
 
     cpu_cfg = 0;
     mc_host = 1;
@@ -105,25 +97,19 @@ int main(void)
           !strcmp(cpu_status(), "CORES 1 (AFTER A CRASH)") && (cpu_cfg = CPU_1CORE, !strcmp(cpu_status(), "CORES 1 (MENU > CORES)")) &&
           (cpu_cfg = 0, !strcmp(cpu_status(), "CORES 1")) && (mc_host = 1, !strcmp(cpu_status(), "CORES 2")));
 
-    {   /* the boot after a crash beside core 1 (main.c cpu_boot, then the UI's start: cpu_off), and the second core given
-         * up while it plays (the main loop: cpu_off) */
-        uint32_t cfg = 0;
+    {   /* the boot after a crash beside core 1 (main.c cpu_boot: logged, nothing said), and the second core given up
+         * while it plays (the main loop: cpu_off, this power-on only) */
         memset(favorites.factory[9], 0, 32);
         saves = 0;
-        cpu_cfg = (uint8_t)cfg;
+        cpu_cfg = 0;
         crash_log_put(CR_2C, 1, 0x0201ABCDu, 0x02012345u, 0, 1u << 21);
         cpu_cfg = (uint8_t)cpu_after(cpu_cfg, CR_2C);
         settings_save();
-        k = cpu_cfg != cfg;
-        if (k)
-            cpu_off("2 CORES OFF AFTER A CRASH");
-        check("boot after a crash with 2 CORES: logged, 1 CORE for good, saved, said with where to undo it",
-              k && cpu_cfg == (CPU_1CORE | CPU_AUTO) && saves == 2 && crash_log_get(b) && !strncmp(b, "BU01 2C", 7) &&
-              !strcmp(ui.msg, "2 CORES OFF AFTER A CRASH") && !strcmp(ui.msg2, "MENU > SYSTEM > CORES"));
-        cpu_cfg = 0;
+        check("boot after a crash with 2 CORES: logged, saved, 2 CORES kept",
+              cpu_cfg == 0 && saves == 1 && crash_log_get(b) && !strncmp(b, "BU01 2C", 7));
         cpu_off("CORE 2 FAILED: 1 CORE");
-        check("the second core given up while playing: 1 CORE for good, said",
-              cpu_cfg == (CPU_1CORE | CPU_AUTO) && !strcmp(ui.msg, "CORE 2 FAILED: 1 CORE"));
+        check("the second core given up while playing: said, until the power-off (the setting untouched, not saved)",
+              cpu_cfg == 0 && saves == 1 && !strcmp(ui.msg, "CORE 2 FAILED: 1 CORE") && !strcmp(ui.msg2, "UNTIL SWITCHED OFF"));
     }
     puts(ok_all ? "cpu_safe: all passed" : "cpu_safe: FAILED");
     return !ok_all;

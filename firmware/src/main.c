@@ -227,7 +227,7 @@ static __attribute__((noinline)) uint32_t cpu_boot(void)
     }
     cpu_cfg = (uint8_t)cpu_after(cfg, fl);
     settings_save();
-    return cpu_cfg != cfg;
+    return 0;                                           /* (p2b: a crash no longer turns 2 CORES off) */
 #else
     (void)fl; (void)cfg;
     return 0;
@@ -277,7 +277,8 @@ static __attribute__((noinline)) uint32_t dbg_boot(void)
     return cpu_boot();
 }
 #if FELUCCA_DUAL_CORE
-/* (p1, main 0.9.12) the second core given up while it plays (a misread, no answer, a fault): 1 CORE for good, said once */
+/* (p1, main 0.9.12) the second core given up while it plays (a misread, no answer, a fault): said once (p2b: one core
+ * until the power-off, not for good) */
 static __attribute__((noinline)) uint32_t cpu_lost(uint32_t said)
 {
     if (fm1_mc_lost && said != 2u) {

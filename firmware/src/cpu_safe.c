@@ -98,34 +98,25 @@ static int crash_log_get(char *b)
     return b[4] == ' ' && (b[5] == '1' || b[5] == '2') && b[6] == 'C' && b[7] == ' ' && b[0] >= '?' && b[0] <= 'Z';
 }
 
-/* the boot's CPU setting after the last run: a crash or a hang while both cores ran turns 2 CORES off; (0.9.13) for
- * three power-ons, then both cores again (cpu_retry: a crash in 0.9.12 left a unit on one core for good, every song past
- * four tracks over its CPU); a crash again after that retry: for good (until MENU > SYSTEM > CPU) */
+/* the boot's CPU setting after the last run. (p2b) A crash never turns 2 CORES off any more: on seq-v2 the crashes were
+ * the firmware's own (FX's nav_list), and one core halves the sound's room (0.9.12's fallback left units on one core,
+ * clicking, where snd8f kept both). A crash is logged (ABOUT); the second core given up while it plays is this power-on
+ * only (fm1_mc_bar, as 0.6.71 .. snd8f); 1 CORE stays MENU > SYSTEM > CORES's, set by hand. An old fallback (CPU_AUTO)
+ * is undone: both cores again */
 static uint32_t cpu_after(uint32_t cfg, uint32_t crash_flags)
 {
-    if (cfg & CPU_1CORE || !(crash_flags & CR_2C))
-        return cfg;
-    return (cfg & ~(uint32_t)CPU_WAIT) | CPU_1CORE | CPU_AUTO | (cfg & CPU_TRIED ? CPU_GOOD : 0u);
+    (void)crash_flags;
+    if (cfg & CPU_AUTO)
+        cfg &= ~(uint32_t)CPU_1CORE;
+    return cfg & ~(uint32_t)(CPU_AUTO | CPU_WAIT | CPU_GOOD | CPU_TRIED);
 }
-/* a power-on with no crash before it: one on one core after a crash counted, the third gives both cores back */
-static uint32_t cpu_retry(uint32_t cfg)
-{
-    uint32_t w = (cfg & CPU_WAIT) >> 3;
-    if ((cfg & (CPU_1CORE | CPU_AUTO | CPU_GOOD)) != (CPU_1CORE | CPU_AUTO))
-        return cfg;
-    if (w < 2u)
-        return (cfg & ~(uint32_t)CPU_WAIT) | (w + 1u) << 3;
-    return (cfg & ~(uint32_t)(CPU_WAIT | CPU_1CORE | CPU_AUTO)) | CPU_TRIED;
-}
+static uint32_t cpu_retry(uint32_t cfg) { return cpu_after(cfg, 0); }
 
-/* 2 CORES off for good (cpu_after), saved, and said: why, then where to set it back (main.c: after a crash at boot, the
- * second core given up while it plays) */
+/* the second core given up while it plays: said, one core until the power-off (main.c) */
 static __attribute__((noinline)) void cpu_off(const char *why)
 {
-    cpu_cfg = (uint8_t)cpu_after(cpu_cfg, CR_2C);
-    settings_save();
     ui_message(why);
-    str_cpy(ui.msg2, "MENU > SYSTEM > CORES", sizeof ui.msg2);   /* (0.9.18: CPU CORES, was CPU) */
+    str_cpy(ui.msg2, "UNTIL SWITCHED OFF", sizeof ui.msg2);
 }
 
 static const char CPU_APPLY[] CPU_RO = "SWITCH OFF AND ON TO APPLY";

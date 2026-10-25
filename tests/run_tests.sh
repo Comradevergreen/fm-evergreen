@@ -254,7 +254,7 @@ if [ -f build/gen/felucca_tables.h ]; then
     $CC -O1 -w -Ibuild/gen -Ifirmware/src -Itests -o "$OUT/stems_test" tests/stems_test.c -lm
     run "STEMS (0.9.8): DICE songs, each stem = its track's solo render (FULL LITE ECO, CORES 1 / 2), the sum = the mix, the SLICER" "$OUT/stems_test"
     $CC -O1 -w -o "$OUT/cpu_safe_test" tests/cpu_safe_test.c
-    run "CPU safety (p1, main 0.9.12 / 0.9.13): crash code, the crash record (row 9), 1 CORE after a crash, both again on the third power-on, MENU > SYSTEM > CPU CORES / CPU CLOCK" "$OUT/cpu_safe_test"
+    run "CPU safety (p1, main 0.9.12 / 0.9.13): crash code, the crash record (row 9), a crash logged (p2b: 2 CORES kept), MENU > SYSTEM > CPU CORES / CPU CLOCK" "$OUT/cpu_safe_test"
     $CC -O1 -w -Ibuild/gen -Ifirmware/src -o "$OUT/ratchet_test" tests/ratchet_test.c -lm
     run "RATCH: x1..x4 in a step (notes, chords, drum hits), gates, chance, swing, projects, user presets, CHANCE page" "$OUT/ratchet_test"
     $CC -O1 -w -Ibuild/gen -Ifirmware/src -Itests -o "$OUT/live_test" tests/live_test.c -lm
