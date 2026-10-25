@@ -451,7 +451,7 @@ def build_app():
             rows = layout_read()          # (the merged constants' place once the UI's tables have left .rodata)
             compile_hot(rows)
             layout_ld(rows)
-            symt = sym_table(link()[1])
+            symt = sym_table(link(probe=True)[1])   # (p1) the UI's tables not yet in the holes: in the larger region
             layout_write([f"{(symt[n] - APP_XIP) if f == 'c' else o:06x} {f} {n}" for o, f, n in rows])
         rows = layout_read()
         aligns = compile_hot(rows)
