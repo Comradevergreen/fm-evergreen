@@ -1746,6 +1746,11 @@ static void draw_columns(void)
             continue;
         }
         if (cur_page()->id[c] == G_MIDI && cur_page()->scope == SC_GLOBAL) {
+            if (c) {                                     /* (0.9.9-snd8) SYSTEM 2's KNOB 2: the TRS messages come in */
+                fmt_int(val, (int32_t)(um.msgs % 10000u));
+                draw_column(c, "TRS IN", val, "MSG", T_THEME, -1, ICON_AUTO);
+                continue;
+            }
             str_cpy(val, !usb.up ? "OFF" : usb.config ? "MIDI" : usb.setups ? "ENUM" : usb.sof_seen ? "BUS" : "WAIT", 12);
             unit = "USB";
             draw_column(c, "USB", val, unit, T_THEME, -1, ICON_AUTO);

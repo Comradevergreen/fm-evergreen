@@ -11497,7 +11497,7 @@ static int test_lz_glo(void)
     ui_power_on(); frame();
     press(B_GLO); frame();
     ok = pd_on() && lz_fam() == LZ_GLO && pd_level() == 0u && str_eq(cur_page()->title, "MIXER") && lz_tab_lit(0) &&
-         lz_crumb_is("GLO \xB7 MIX \xB7 MIXER") && lz_count_is("1/6");
+         lz_crumb_is("GLO \xB7 MIX \xB7 MIXER") && lz_count_is("1/7");   /* (snd8: SYSTEM 2) */
     turn(EN_SELECT, 1); frame();
     ok &= str_eq(cur_page()->title, "SENDS") && lz_crumb_is("GLO \xB7 MIX \xB7 SENDS");
     v = TSEL->p[P_DLY];
@@ -11974,7 +11974,7 @@ static const old_lv_t OLD_LV[] = {
     {FAM_ENV, 0, 9, {"ENV", "ENV DEST"}}, {FAM_ENV, 1, 9, {"ENV", "ENV DEST"}}, {FAM_ENV, 2, 9, {"STAGE"}},
     {FAM_LFO, 0, 9, {"MOD"}}, {FAM_LFO, 1, 9, {"LFO", "LFO 2", "LFO DEST"}}, {FAM_LFO, 2, 9, {"MSEQ", "MSEQ 2"}},
     {FAM_SCL, 0, 9, {"SCL"}}, {FAM_SCL, 1, 9, {"CHORD"}}, {FAM_ARP, 2, 9, {"ARP", "ARP 2"}},
-    {FAM_GLO, 0, 9, {"MIXER", "SENDS"}}, {FAM_GLO, 1, 9, {"GLOBAL"}}, {FAM_GLO, 2, 9, {"SYSTEM"}},
+    {FAM_GLO, 0, 9, {"MIXER", "SENDS"}}, {FAM_GLO, 1, 9, {"GLOBAL"}}, {FAM_GLO, 2, 9, {"SYSTEM", "SYSTEM 2"}},
     {FAM_SAVE, SV_LIB, 9, {"PROJECT", "TOOLS"}}, {FAM_SAVE, SV_PROJ, 9, {"PROJECT", "ARRANGE"}},
     {FAM_SAVE, SV_SOUND, 9, {"USER", "PRESETS"}},
     {FAM_SEQ, LV_PAT, 9, {"PATTERN", "STRETCH", "PLAYHEADS", "TRACK", "MUTATE"}},   /* (seq2: BAR, NOTE out of the chain) */

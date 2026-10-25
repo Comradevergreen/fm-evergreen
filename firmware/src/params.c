@@ -654,6 +654,8 @@ static const page_t PAGES[] = {
     {"GLOBAL", FAM_GLO, SC_GLOBAL, GR_NONE, {G_BPM, G_SWING, G_CLOCK, G_TUNE}},
     {"SYSTEM", FAM_GLO, SC_GLOBAL, GR_NONE, {G_TRKS, G_LOADP, G_ROUTE, G_INFO}},   /* (0.6.18) TRACKS 4 / 6; (0.6.30)
                                                          * LOAD ECO / LITE / FULL (the USB card: the header's icon) */
+    {"SYSTEM 2", FAM_GLO, SC_GLOBAL, GR_NONE, {G_MIDI, G_MIDI, 0xFF, 0xFF}},   /* (0.9.9-snd8) MIDI IN at a glance (ui_draw.c):
+                                                         * KNOB 1 USB's state OFF WAIT BUS ENUM MIDI, KNOB 2 the TRS messages come in */
     {"COMPS", FAM_GLO, SC_GLOBAL, GR_GCOMP, {0xFF, 0xFF, 0xFF, 0xFF}},   /* (0.9.9-seq2f) the global lane's step: ACTION
                                                          * LENGTH CONDITION VALUE (ui_input.c gco_knob) */
     {"COMPS 2", FAM_GLO, SC_GLOBAL, GR_GCOMP, {0xFF, 0xFF, 0xFF, 0xFF}},   /* .. its TRACKS, MONO / POLY */

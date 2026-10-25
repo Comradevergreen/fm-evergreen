@@ -80,7 +80,7 @@ static const nv_t CE_FX[] = {NV("FX", "SENDS", 0, FXL_TRACK), NV("DIST", 0, 0, F
                                                          * end of the chain; snd8: its TAPE) */
 static const ng_t CG_FX[] = {{"TRACK", "TRK"}, {"BUSES", "BUS"}, {"DELAY", "DLY"}, {"REVERB", "REV"}, {"CHORUS", "CHO"},
                              {"SLICER", "SLC"}, {"PUNCH", "PCH"}, {"MASTER", "MST"}};
-static const nv_t CE_GLO[] = {NV("MIXER", 0, 0, 0), NV("SENDS", 0, 0, 0), NV("GLOBAL", 0, 1, 1), NV("SYSTEM", 0, 2, 2),
+static const nv_t CE_GLO[] = {NV("MIXER", 0, 0, 0), NV("SENDS", 0, 0, 0), NV("GLOBAL", 0, 1, 1), NV("SYSTEM", 0, 2, 2), NV("SYSTEM 2", 0, 2, 2),
                               NV("COMPS", 0, 3, 3), NV("COMPS 2", 0, 3, 3)};   /* (0.9.9-seq2f) the global lane */
 static const ng_t CG_GLO[] = {{"MIX", 0}, {"GLOBAL", 0}, {"SYSTEM", 0}, {"COMPS", "CMP"}};
 static const nv_t CE_ENV[] = {NV("ENV", "TRACKS", 0, 0), NV("ENV DEST", "TRACKS DEST", 0, 0), NV("ENV", 0, 1, 1),

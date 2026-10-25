@@ -190,7 +190,7 @@ enum {                          /* global parameters */
     G_BPM, G_SWING, G_CLOCK, G_TUNE,
     G_DTIME, G_DFDBK, G_DCOLOR, G_DMIX,
     G_RSIZE, G_RDAMP, G_CRATE, G_CDEPTH,
-    G_MIDI, G_DREL, G_ROUTE, G_INFO,   /* G_DREL (JIANT): DUCK's release; was G_SYNC, a placeholder ("--", 0..0) */   /* G_ROUTE: MIDI IN, 0 CH1-4 (channels 1..4 -> parts 1..4, 5..16 ignored), 1 SEL (seq.c) */
+    G_MIDI, G_DREL, G_ROUTE, G_INFO,   /* G_DREL (JIANT): DUCK's release; was G_SYNC, a placeholder ("--", 0..0) */   /* G_ROUTE: MIDI IN, 0 CH1-6 (channels 1..6 -> parts 1..6, 7..16 ignored), 1 SEL (seq.c) */
     G_SLOT, G_DJF, G_LOAD, G_SAVE,  /* G_DJF (0.9.1): GLO > MIXER KNOB 4, the master DJ FILTER (fx.c djf_block), -64 .. 63:
                                  * 0 out of the chain, below a low-pass sweeping down, above a high-pass sweeping up. Was
                                  * G_NAME, a placeholder ("--", 0..0, never set): every project before holds 0 there */

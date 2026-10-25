@@ -6,7 +6,7 @@
  * ends in trk_note_on / trk_note_off: engines never see where a note came from.
  * Four tracks, one transport: every track's pattern loops on its own LEN / DIV /
  * SWING / GATE (polymeter). The keys play the selected track; MIDI IN by GLO > SYSTEM ROUT (G_ROUTE):
- * CH1-4 (0) channels 1..4 play parts 1..4, channels 5..16 are ignored (midi_control.c midi_event); SEL (1)
+ * CH1-6 (0) channels 1..6 play parts 1..6, channels 7..16 are ignored (midi_control.c midi_event); SEL (1)
  * every channel the selected track. Their CC1 (mod wheel), CC11 (expression) and channel aftertouch go to
  * the same track's modulation matrix (mod.c; the selected track: the one selected then).
  * A note into an armed track (song.rec) while
@@ -2493,9 +2493,9 @@ static void seq_tick(track_t *t, uint32_t n)
     fugue_tick(t, n, period, len);                      /* (0.6.52) */
 }
 
-/* MIDI in: the track a channel plays (0..15): G_ROUTE CH1-4 (0) channels 1..4 their parts (5..16 never get
+/* MIDI in: the track a channel plays (0..15): G_ROUTE CH1-6 (0) channels 1..6 their parts (7..16 never get
  * here: midi_event drops them), SEL (1) every channel the selected track */
-static uint8_t midi_route;                 /* the G_ROUTE events_block last saw (a change to CH1-4: midi_route_ch14) */
+static uint8_t midi_route;                 /* the G_ROUTE events_block last saw (a change to CH1-6: midi_route_ch14) */
 static track_t *midi_track(uint32_t ch) { return ch < NPART && !song.g[G_ROUTE] ? &trk[ch] : TSEL; }
 
 #include "midi_control.c"
@@ -2614,7 +2614,7 @@ static void events_block(uint32_t n)
         }
         transport_req = 0;
     }
-    if (midi_route != (uint8_t)song.g[G_ROUTE]) {     /* ROUT changed: CH1-4 lets go of channels 5..16 */
+    if (midi_route != (uint8_t)song.g[G_ROUTE]) {     /* ROUT changed: CH1-6 lets go of channels 7..16 */
         midi_route = (uint8_t)song.g[G_ROUTE];
         if (!midi_route)
             midi_route_ch14();
