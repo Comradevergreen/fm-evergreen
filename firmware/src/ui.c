@@ -1817,6 +1817,10 @@ static void track_select(uint32_t i)
     ui.cursor = 0;
     ui.bank = 0;
     sync_reload = 1;
+    if (!ui.home && PAGES[ui.page].graph == GR_TRK)  /* (0.9.9-snd8) MIXER / SENDS: the six columns redraw what changed
+                                                     * (their signatures hold the selection); a forced frame blanked the
+                                                     * faders first, a flash at each track */
+        return;
     ui.force = 1;
     page_flash();                                    /* (0.6.51) the track's number and engine shown big */
 }

@@ -11517,6 +11517,28 @@ static int test_lz_glo(void)
     press(B_GLO); frame();
     ok &= str_eq(cur_page()->title, "SYSTEM");
     bad += check("0.9.2 GLO: MIXER SENDS GLOBAL SYSTEM (seq2f: COMPS COMPS 2) by SELECT, a GLO tap the next group; from elsewhere the page left", ok);
+    {   /* (0.9.9-snd8) MIXER: ALGORITHM to another track redraws only what changed (no forced frame: it blanked the faders
+         * first, a flash at each track); the screen then equals a full redraw of the same state */
+        static uint16_t lazy[240 * 240];
+        uint32_t k, i, same = 1, forced = 0;
+        ui_power_on(); frame();
+        press(B_GLO); frame(); frames(40);
+        for (k = 0; k < 6u; k++) {
+            {
+                uint64_t s0 = ui_sent_px;
+                turn(EN_ALGO, k < 3u ? 1 : -1);
+                frames(3);
+                forced |= ui_sent_px - s0 > 30000u;      /* (a forced frame: the whole screen again) */
+            }
+            memcpy(lazy, host_screen, sizeof lazy);
+            for (i = 0; i < 240u * 240u; i++) host_screen[i] = 0xA5A5u;
+            ui.force = 1;
+            ui_draw_page(0);
+            for (i = 0; i < 240u * 240u; i++) same &= lazy[i] == host_screen[i];
+        }
+        bad += check("  MIXER: a track picked by ALGORITHM redraws what changed, no forced frame (no flash); the screen as a full redraw",
+                     !forced && same && str_eq(cur_page()->title, "MIXER"));
+    }
     ui_power_on();
     return bad;
 }
