@@ -1558,8 +1558,10 @@ the music plays on). After OK, **GLO held + G4** still undoes it.
 The same idea for the other parts of the selected track, each heard at once under its **KEEP DICED …?** dialog
 (SELECT again: another roll, **OCT+ OK** keeps it, **OCT− CANCEL** puts back what was there, the rest plays on):
 
-- **SEQ + SELECT**: a new sequence as DICE ALL writes a part, in the track's own scale: a beat on a DRUM track, else
-  the role its steps sound like (low notes: a bass line, chords: a pad, else a lead or an arp). Its sound, mix and
+- **SEQ + SELECT**: a new sequence written by GEN's own generator. Where a GEN piece plays in the track's key, on the
+  piece's chords, in the track's role in it (the part fits the others); else on choices made up for it, in the track's
+  own scale: a beat on a DRUM track, else the role its steps sound like (low notes: a bass line, chords: the chords,
+  else a lead or an arp). Never what it played before the press, nor one of its last four. Its sound, mix and
   automation stay.
 - **LFO + SELECT**: the track's LFO: a rate in the middle of the range, any wave and phase, a fade now and then, aimed
   mostly at the filter, a little at the shape, seldom at the pitch or the level.

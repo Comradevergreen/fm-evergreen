@@ -1785,7 +1785,7 @@ static struct {                                         /* what CANCEL puts back
     int16_t slen, v[9], g[6];
     const char *msg;
 } dk;
-static const char *dice_seq(track_t *t);                /* song_dice.c */
+static const char *dice_seq(track_t *t);                /* gen.c */
 static int32_t dk_rr(int32_t lo, int32_t hi) { return hi <= lo ? lo : lo + (int32_t)(rng() % (uint32_t)(hi - lo + 1)); }
 static int32_t dk_frac(const param_desc_t *d, int32_t a, int32_t b)   /* a value a% .. b% up the range */
 {

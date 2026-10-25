@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * JIANT (0.6.91) the song generator, second version: HOME + SELECT opens GEN, a screen of three pages (GENRE SEED
  * ENERGY FORM; DRUMS BASS CHORDS ARP; LEAD COMPLEX SWING HUMAN), OCT+ makes the piece, HOME (or OCT-) is done. Included by
- * ui_input.c after song_dice.c (whose helpers it shares: the roles, dhold, euclid, dtonic, dname_has, dlevel ..).
+ * ui_input.c after song_dice.c (whose helpers it shares: the roles, dhold, euclid, dname_has, dlevel ..).
  *
  * The piece is deterministic: a seed and the knobs make the same piece every time (the same settings and OCT+ again
  * throw a new seed). Each part (drums, bass, chords, arp, lead, sounds, form) draws from its own stream, so turning
@@ -87,6 +87,7 @@ static struct {
     uint8_t role[NTRK], act[RL_N], trk_of[RL_N];
     uint32_t drum_fill;                                 /* the fill forced (a BUILD section) */
     uint8_t mutant;                                     /* (0.6.95) RANDOM: a hybrid of two or three genres */
+    uint8_t vary;                                       /* (p2) SEQ + SELECT: the bass's archetype moved (gba_vary) */
 } gs;
 #define GKICK(i) ((uint32_t)(gs.kick >> ((i) & 63u)) & 1u)
 static uint32_t gseed_mix(uint32_t part) { return part == GS_PICK ? 0u : (gs.gi + 1u) * 0x85EBCA6Bu; }
@@ -680,19 +681,40 @@ static int32_t gbass_near(int32_t lo, const gch_t *c, int32_t ref)   /* (a walk'
     return n;
 }
 /* (0.9.7) an archetype's note and flag at step i (gen_bass.h: the text's characters) */
-static char ba_note(const barch_t *a, uint32_t i) { return ".=R23456789ALNSx"[BA_STEP[a->at + i] & 15u]; }
-static char ba_flag(const barch_t *a, uint32_t i) { return ".asg"[(BA_STEP[a->at + i] >> 4) & 3u]; }
+#define BA_NOTE(c) (".=R23456789ALNSx"[(c) & 15u])
+#define BA_FLAG(c) (".asg"[((c) >> 4) & 3u])
+/* (p2, main 0.9.18's gba_vary) SEQ + SELECT's bass: the archetype as this press plays it, one to three of its steps
+ * moved (a ghost or a soft root after a note on an off sixteenth, a weak root up the octave or to the fifth, a weak
+ * note left out, a note a sixteenth late or early), the same in every bar (a riff, its own); GEN's pieces play it as
+ * written (gs.vary 0) */
+static void gba_vary(uint8_t *bc, uint32_t alen)
+{
+    uint32_t n = (uint32_t)grr(1, 2 + (int32_t)gs.complex / 40), j, tries;
+    for (j = 0, tries = 0; j < n && tries < 24u; tries++) {
+        uint32_t p = 1u + gr() % (alen - 1u), q = (p + 1u) % alen, c = bc[p] & 15u, pc = bc[p - 1u] & 15u, op = gr() % 4u;
+        if (!(p % 4u) || (bc[q] & 15u) == 1u) continue;  /* (the beats kept; a note held on kept whole) */
+        if (op == 0u && !c && (p & 1u) && pc > 1u) bc[p] = gch(50) ? 15u : 2u | 3u << 4;
+        else if (op == 1u && c == 2u) bc[p] = (uint8_t)((bc[p] & 0xF0u) | (gch(60) ? 9u : 6u));
+        else if (op == 2u && (c == 2u || c == 6u || c == 9u) && pc != 0u) bc[p] = 0;
+        else if (op == 3u && q % 4u && (!c) != !(bc[q] & 15u) && c != 1u) { uint8_t x = bc[p]; bc[p] = bc[q]; bc[q] = x; }
+        else continue;
+        j++;
+    }
+}
 static void gen_bass(track_t *t, uint32_t len)
 {
     const ggenre_t *g = gs.g;
     const barch_t *a = &BASS_ARCH[gs.ba];
     int32_t lo = g->bass_lo, prev = -1, root0 = -1;
     uint32_t i, alen = 16u * a->bars, held = 0, walk = gs.ba == BA_WALK || gs.ba == BA_WALK2 || gs.ba == BA_TWOFEEL;
+    uint8_t bc[64];
     gseed(GS_BASS);
     if (gs.ba == BA_ACID) { gen_acid(t, len, lo); return; }
+    memcpy(bc, &BA_STEP[a->at], alen);
+    if (gs.vary && !walk) gba_vary(bc, alen);
     for (i = 0; i < len; i++) {
         step_t *s = &t->step[i];
-        char c = ba_note(a, i % alen), f = ba_flag(a, i % alen);
+        char c = BA_NOTE(bc[i % alen]), f = BA_FLAG(bc[i % alen]);
         const gch_t *cc = gchord(i), *nc = gchord_next(i);
         int32_t root, n[1], vel = 96, same = nc == cc || (nc->deg == cc->deg && nc->alt == cc->alt);
         uint32_t fl = 0, chg = gchord_starts(i);
@@ -709,8 +731,8 @@ static void gen_bass(track_t *t, uint32_t len)
         switch (c) {
         case '7':                                       /* (a seventh alone over a major one with a major seventh: its
                                                          * sixth, the reggae's and the funk's note; in a run 6 7 8 it passes) */
-            n[0] = gbass_tone(cc, root, giv(cc, 6) == 11 && giv(cc, 2) == 4 && ba_note(a, (i + alen - 1u) % alen) != '6' &&
-                                        ba_note(a, (i + 1u) % alen) != '8' ? '6' : '7');
+            n[0] = gbass_tone(cc, root, giv(cc, 6) == 11 && giv(cc, 2) == 4 && BA_NOTE(bc[(i + alen - 1u) % alen]) != '6' &&
+                                        BA_NOTE(bc[(i + 1u) % alen]) != '8' ? '6' : '7');
             break;
         case '2': case '3': case '5': case '6': case '9': n[0] = gbass_tone(cc, root, c); break;
         case 'L': n[0] = gbass_tone(cc, root, '5') - 12; break;
@@ -2134,63 +2156,13 @@ static void gen_clean(void)
     live.mode = 0;
 }
 static int8_t dice_force_style = -1, dice_force_energy = -1;   /* (a film's script, the renders: this genre, this energy) */
-static void gen_make(void)
+/* (p2, main 0.9.18) the piece's choices after its genre (gen_make's, from the GS_PICK stream: the same calls in the same
+ * order): the key, the energy and the amounts, the progression, the loop, the plan, the bass's archetype. SEQ + SELECT's
+ * too (dice_seq: a part where no piece of the generator plays) */
+static void gen_pick(void)
 {
-    const ggenre_t *g;
-    uint32_t k, dr = NTRK, nlive = trk_live < NTRK ? trk_live : NTRK, nmel, drums, next, pr, wet;
-    uint32_t steps;
-    gen_clean();                                        /* (0.9.9-gen1) from NEW PROJECT's state, nothing of before */
-    /* the choices from the seed: the genre (RANDOM), the root, the scale, the progression, the bass */
-    gseed(GS_PICK);
-    gx.on = (uint8_t)(dice_force_style < 0 && gp.genre == GEN_EXPLORE);
-    gx.nan = gx.nvo = 0; gx.eng = -1;
-    if (gx.on) {                                        /* (0.8.6) EXPLORE: a genre of its own a seed */
-        gs.gi = NGENRE;
-        gx_genre(&gmut);
-        g = gs.g = &gmut;
-    } else {
-        gs.gi = dice_force_style >= 0 ? (uint32_t)dice_force_style % NGENRE : gp.genre ? (gp.genre - 1u) % NGENRE : gr() % NGENRE;
-        g = gs.g = &GENRE[gs.gi];
-        gmut = *g;
-        if (!gp.genre && dice_force_style < 0 && gch(45)) {   /* (0.6.95) RANDOM: a mutant, the drums of one genre, the bass
-                                                             * of another, the rest from either; a name of its own: "EBM+JAZZ" */
-            const ggenre_t *b = &GENRE[gr() % NGENRE], *c = &GENRE[gr() % NGENRE];
-            uint32_t k2, n2 = 0;
-            gmut.drum = b->drum; gmut.kit = b->kit; gmut.ghosts = b->ghosts; gmut.hats = b->hats; gmut.fills = b->fills;
-            gmut.sd_micro = b->sd_micro; gmut.snd[GP_DRUMS] = b->snd[GP_DRUMS];
-            gmut.drum_pct = (uint8_t)(b->drum_pct > g->drum_pct ? b->drum_pct : g->drum_pct);
-            for (k2 = 0; k2 < 3u; k2++) gmut.bass[k2] = c->bass[k2];
-            gmut.bass_lo = c->bass_lo; gmut.kick_mode = c->kick_mode; gmut.bass_gate = c->bass_gate; gmut.snd[GP_BASS] = c->snd[GP_BASS];
-            if (gch(50)) {
-                for (k2 = 0; k2 < 3u; k2++) gmut.prog[k2] = b->prog[k2];
-                gmut.cbars = b->cbars; gmut.pads = b->pads; gmut.voicing = b->voicing; gmut.snd[GP_CHORDS] = b->snd[GP_CHORDS];
-                gmut.hx = b->hx;                            /* (0.8.3: the harmony with its progressions) */
-            }
-            if (gch(50)) { gmut.arp[0] = c->arp[0]; gmut.arp[1] = c->arp[1]; gmut.snd[GP_ARP] = c->snd[GP_ARP]; }
-            if (gch(50)) { gmut.lead = b->lead; gmut.snd[GP_LEAD] = b->snd[GP_LEAD]; }
-            if (gch(50)) { gmut.rtype = b->rtype; gmut.dtime = b->dtime; gmut.wet = b->wet; gmut.dtype = b->dtype; }
-            gmut.scale[1] = b->scale[0]; gmut.scale[3] = c->scale[0];
-            gmut.tex = c->tex;
-            gmut.bpm_lo = (uint8_t)(((uint32_t)g->bpm_lo + b->bpm_lo) / 2u);
-            gmut.bpm_hi = (uint8_t)(((uint32_t)g->bpm_hi + b->bpm_hi) / 2u);
-            if (gmut.bpm_hi < gmut.bpm_lo + 4u) gmut.bpm_hi = (uint8_t)(gmut.bpm_lo + 4u);
-            gmut.swing = (uint8_t)(((uint32_t)g->swing + b->swing) / 2u);
-            for (k2 = 0; g->name[k2] && g->name[k2] != ' ' && k2 < 7u; k2++) gmut_name[n2++] = g->name[k2];   /* (the first words) */
-            gmut_name[n2++] = '+';
-            for (k2 = 0; b->name[k2] && b->name[k2] != ' ' && k2 < 6u; k2++) gmut_name[n2++] = b->name[k2];
-            gmut_name[n2] = 0;
-            gmut.name = gmut_name;
-            gs.mutant = 1;
-        }
-        /* (0.6.95) a throw its own: the drums from the map's family, the chords' play from the neighbours (0.9.9-gen1: a
-         * role's sound always its archetype) */
-        g = gs.g = &gmut;
-        if (!gclub() && g->lead <= LD_NONE) {           /* (gen5: the club's four on the floor keep their records' parts;
-                                                         * gen6: an archetype its own) */
-            if (gmut.drum < DM_NONE && gmut.drum != DM_IDM && gch(35)) gmut.drum = DM_ALT[gmut.drum][gr() % 2u];
-            if (gmut.pads <= CS_TRANCE && gch(35)) gmut.pads = CS_ALT[gmut.pads][gr() % 2u];
-        }
-    }
+    const ggenre_t *g = gs.g;
+    uint32_t k, pr, steps;
     gs.root = (int16_t)(g->lead == LD_EBM ? grr(4, 7) : g->lead == LD_KRAFT ? grr(0, 1) * 2 : grr(0, 11));   /* (gen6: DAF's
                                                          * dark E F F# G, Kraftwerk's C D) */
     {   /* (0.8.3) the key: always a mode of seven, so the CHORD page, the chords, the arp and the lead stand on it; a
@@ -2267,6 +2239,64 @@ static void gen_make(void)
     gplan(0);
     gs.ba = g->bass[gr() % 3u];
     if (gs.amt[GP_BASS] > 70u && gch(30)) gs.ba = g->bass[0];
+}
+static void gen_make(void)
+{
+    const ggenre_t *g;
+    uint32_t k, dr = NTRK, nlive = trk_live < NTRK ? trk_live : NTRK, nmel, drums, next, wet;
+    gen_clean();                                        /* (0.9.9-gen1) from NEW PROJECT's state, nothing of before */
+    /* the choices from the seed: the genre (RANDOM), the root, the scale, the progression, the bass */
+    gseed(GS_PICK);
+    gx.on = (uint8_t)(dice_force_style < 0 && gp.genre == GEN_EXPLORE);
+    gx.nan = gx.nvo = 0; gx.eng = -1;
+    if (gx.on) {                                        /* (0.8.6) EXPLORE: a genre of its own a seed */
+        gs.gi = NGENRE;
+        gx_genre(&gmut);
+        g = gs.g = &gmut;
+    } else {
+        gs.gi = dice_force_style >= 0 ? (uint32_t)dice_force_style % NGENRE : gp.genre ? (gp.genre - 1u) % NGENRE : gr() % NGENRE;
+        g = gs.g = &GENRE[gs.gi];
+        gmut = *g;
+        if (!gp.genre && dice_force_style < 0 && gch(45)) {   /* (0.6.95) RANDOM: a mutant, the drums of one genre, the bass
+                                                             * of another, the rest from either; a name of its own: "EBM+JAZZ" */
+            const ggenre_t *b = &GENRE[gr() % NGENRE], *c = &GENRE[gr() % NGENRE];
+            uint32_t k2, n2 = 0;
+            gmut.drum = b->drum; gmut.kit = b->kit; gmut.ghosts = b->ghosts; gmut.hats = b->hats; gmut.fills = b->fills;
+            gmut.sd_micro = b->sd_micro; gmut.snd[GP_DRUMS] = b->snd[GP_DRUMS];
+            gmut.drum_pct = (uint8_t)(b->drum_pct > g->drum_pct ? b->drum_pct : g->drum_pct);
+            for (k2 = 0; k2 < 3u; k2++) gmut.bass[k2] = c->bass[k2];
+            gmut.bass_lo = c->bass_lo; gmut.kick_mode = c->kick_mode; gmut.bass_gate = c->bass_gate; gmut.snd[GP_BASS] = c->snd[GP_BASS];
+            if (gch(50)) {
+                for (k2 = 0; k2 < 3u; k2++) gmut.prog[k2] = b->prog[k2];
+                gmut.cbars = b->cbars; gmut.pads = b->pads; gmut.voicing = b->voicing; gmut.snd[GP_CHORDS] = b->snd[GP_CHORDS];
+                gmut.hx = b->hx;                            /* (0.8.3: the harmony with its progressions) */
+            }
+            if (gch(50)) { gmut.arp[0] = c->arp[0]; gmut.arp[1] = c->arp[1]; gmut.snd[GP_ARP] = c->snd[GP_ARP]; }
+            if (gch(50)) { gmut.lead = b->lead; gmut.snd[GP_LEAD] = b->snd[GP_LEAD]; }
+            if (gch(50)) { gmut.rtype = b->rtype; gmut.dtime = b->dtime; gmut.wet = b->wet; gmut.dtype = b->dtype; }
+            gmut.scale[1] = b->scale[0]; gmut.scale[3] = c->scale[0];
+            gmut.tex = c->tex;
+            gmut.bpm_lo = (uint8_t)(((uint32_t)g->bpm_lo + b->bpm_lo) / 2u);
+            gmut.bpm_hi = (uint8_t)(((uint32_t)g->bpm_hi + b->bpm_hi) / 2u);
+            if (gmut.bpm_hi < gmut.bpm_lo + 4u) gmut.bpm_hi = (uint8_t)(gmut.bpm_lo + 4u);
+            gmut.swing = (uint8_t)(((uint32_t)g->swing + b->swing) / 2u);
+            for (k2 = 0; g->name[k2] && g->name[k2] != ' ' && k2 < 7u; k2++) gmut_name[n2++] = g->name[k2];   /* (the first words) */
+            gmut_name[n2++] = '+';
+            for (k2 = 0; b->name[k2] && b->name[k2] != ' ' && k2 < 6u; k2++) gmut_name[n2++] = b->name[k2];
+            gmut_name[n2] = 0;
+            gmut.name = gmut_name;
+            gs.mutant = 1;
+        }
+        /* (0.6.95) a throw its own: the drums from the map's family, the chords' play from the neighbours (0.9.9-gen1: a
+         * role's sound always its archetype) */
+        g = gs.g = &gmut;
+        if (!gclub() && g->lead <= LD_NONE) {           /* (gen5: the club's four on the floor keep their records' parts;
+                                                         * gen6: an archetype its own) */
+            if (gmut.drum < DM_NONE && gmut.drum != DM_IDM && gch(35)) gmut.drum = DM_ALT[gmut.drum][gr() % 2u];
+            if (gmut.pads <= CS_TRANCE && gch(35)) gmut.pads = CS_ALT[gmut.pads][gr() % 2u];
+        }
+    }
+    gen_pick();
     gs.fm6 = 0;
     /* the orchestration: the drums (unless the genre or the knob leaves them out), then the melodic roles with an
      * amount, the most important first; the drums on the DRUM track (none: the fourth, or the last live) */
@@ -2473,6 +2503,102 @@ static uint32_t dice_print(void)                        /* a fingerprint of the 
     uint32_t k, h = 2166136261u ^ (uint32_t)song.g[G_BPM];
     for (k = 0; k < NTRK; k++) h = (h ^ steps_sig(&trk[k]) ^ trk[k].eng_req) * 16777619u;
     return h;
+}
+
+/* (0.6.67; p2 as main 0.9.18: the generator's) SEQ + SELECT: the selected track's sequence diced as GEN writes its part,
+ * a new stream each press (the random numbers, the ticks in them). Where a piece of the generator plays in the track's
+ * key, on its harmony (its plan, its genre, the track's role in it): the part fits the others. Else a piece's choices
+ * made up for it (the last genre, or any; the track's own key where it is a mode of seven): the drums on a DRUM track,
+ * else the role its steps sound like (low: the bass, chords: the chords, else a lead or an arp). Until p2 song_dice.c's
+ * own parts: a random genre's progression against the song's (its lead's strong steps on the chords' tones 64 % of the
+ * time, GEN's 85 %). Never what it played before the press (90 % of its steps the same, transposed or not) nor one of
+ * the track's last four: another stream, and from the second try the role's figure from the whole generator (a lead's
+ * way, an arp's order, the chords' play, the drums' family; the bass's archetype moved, gba_vary). The sound, the mix
+ * and the automation stay. Its message */
+static uint32_t dsq_last[NTRK][4] __attribute__((section(".bss.dice")));   /* (each track's last diced shapes; their own
+                                                         * section: out of the merged statics, whose places are recorded) */
+static uint32_t dsq_shape(const track_t *t, int16_t *v, uint32_t len)   /* the steps as notes over the root (or hits) */
+{
+    uint32_t i, h = 2166136261u;
+    for (i = 0; i < len; i++) {
+        const step_t *s = &t->step[i];
+        v[i] = (int16_t)(drum_track(t) ? (s->time == ST_NOTE ? s->hit : 0) :
+                         s->time == ST_NOTE && s->n ? 200 + s->note[0] - t->p[P_ROOT] : s->time == ST_TIE ? 1 : 0);
+        h = (h ^ (uint16_t)v[i]) * 16777619u;
+    }
+    return h ^ len;
+}
+static const char *dice_seq(track_t *t)
+{
+    static const char *const RN[RL_N] = {"SEQ DICED: DRUMS", "SEQ DICED: BASS", "SEQ DICED: PAD", "SEQ DICED: LEAD",
+                                         "SEQ DICED: ARP", "SEQ DICED: TEXTURE"};
+    uint32_t k = trk_index(t) % NTRK, r, i, len, lo = 0, cnt = 0, chord = 0, here, plen = dlen(t), h = 0;
+    uint16_t s0 = gp.seed;
+    int16_t was[NSTEP], now[NSTEP];
+    uint8_t lead0, arp0, arp1, pads0, drum0;
+    rng_state ^= fm1_ticks() * 2654435761u;
+    if (!rng_state) rng_state = 0x1234567u;
+    for (i = 0; i < NSTEP; i++)                         /* (what it plays now: its register, its chords) */
+        if (t->step[i].time == ST_NOTE && t->step[i].n) { lo += t->step[i].note[0]; cnt++; chord += t->step[i].n > 1u; }
+    here = gs.g && gs.root == t->p[P_ROOT] && gs.scale == t->p[P_SCALE];   /* (a piece of the generator plays here) */
+    r = drum_track(t) ? RL_DRUM : here && gs.role[k] != RL_DRUM && gs.role[k] != RL_TEX ? gs.role[k] :
+        cnt && lo / cnt < 48u ? RL_BASS : chord * 3u > cnt && cnt ? RL_PAD : rng() % 2u ? RL_LEAD : RL_ARP;
+    gp.seed = (uint16_t)(rng() % 10000u);
+    if (!here) {                                        /* (no piece here: its choices made up) */
+        uint32_t m = SCALE_MASK[(uint32_t)t->p[P_SCALE] % (sizeof SCALE_MASK / sizeof SCALE_MASK[0])], c, d;
+        gs.gi = gs.g && gs.gi < NGENRE ? gs.gi : rng() % NGENRE;
+        gmut = GENRE[gs.gi]; gs.g = &gmut; gs.mutant = 0; gx.on = 0;
+        gseed(GS_PICK);
+        gen_pick();
+        for (d = 0, c = 0; c < 12u; c++) d += (m >> c) & 1u;
+        gs.root = t->p[P_ROOT];
+        if (d == 7u && t->p[P_SCALE] != 10) {           /* (its own mode, LOC aside) */
+            gs.scale = t->p[P_SCALE];
+            for (d = 0, c = 0; c < 12u && d < 7u; c++) if ((m >> c) & 1u) gs.sc[d++] = (uint8_t)c;
+            gplan(0);
+        }
+        gs.kick = 0;
+        for (c = 0; c < NTRK; c++)                      /* (the kick a bass answers: the DRUM track's) */
+            if (drum_track(&trk[c]) && &trk[c] != t)
+                for (i = 0; i < dlen(&trk[c]); i++) gs.kick |= (uint64_t)(trk[c].step[i].time == ST_NOTE && (trk[c].step[i].hit & 1u)) << i;
+    }
+    gs.ba = gs.g->bass[rng() % 3u];
+    if (gmut.lead == LD_NONE) gmut.lead = LD_HOOK;      /* (asked for: a lead) */
+    lead0 = gmut.lead; arp0 = gmut.arp[0]; arp1 = gmut.arp[1]; pads0 = gmut.pads; drum0 = gmut.drum;
+    for (i = 0; i < GP_N; i++) if (!gs.amt[i]) gs.amt[i] = 60;
+    gs.role[k] = (uint8_t)r; gs.act[r] = 1; gs.trk_of[r] = (uint8_t)k;
+    len = (uint32_t)t->p[P_SLEN];
+    if (len < 8u || len > NSTEP) len = gs.len < 16u ? 16u : gs.len;
+    dsq_shape(t, was, plen);
+    load_begin(t, LOAD_PAT);
+    latch_drop_req |= (uint8_t)(1u << k);
+    gs.vary = 1;
+    for (cnt = 0; cnt < 8u; cnt++) {                    /* (seven more tries at most) */
+        uint32_t j, same = 0;
+        for (i = 0; i < NSTEP; i++) step_clear(&t->step[i]);
+        gen_role(t, k, len);
+        h = dsq_shape(t, now, len);
+        for (i = 0; i < len && plen == len; i++) same += now[i] == was[i];
+        for (j = 0; j < 4u && dsq_last[k][j] != h; j++) {}
+        if (j == 4u && same * 10u < len * 9u) break;
+        gp.seed = (uint16_t)(rng() % 10000u);
+        gs.ba = gs.g->bass[rng() % 3u];
+        if (cnt) {                                      /* (the figure from the whole generator) */
+            gmut.lead = (uint8_t)(rng() % LD_NONE);
+            gmut.arp[0] = gmut.arp[1] = (uint8_t)(rng() % AP_N);
+            gmut.pads = (uint8_t)(rng() % (CS_TRANCE + 1u));
+            if (drum0 < DM_NONE && drum0 != DM_IDM) gmut.drum = DM_ALT[drum0][rng() % 2u];
+        }
+    }
+    gs.vary = 0;
+    gmut.lead = lead0; gmut.arp[0] = arp0; gmut.arp[1] = arp1; gmut.pads = pads0; gmut.drum = drum0;
+    for (i = 3; i; i--) dsq_last[k][i] = dsq_last[k][i - 1u];   /* (no memmove on the target) */
+    dsq_last[k][0] = h;
+    t->p[P_SLEN] = (int16_t)len;
+    if (r != RL_DRUM) dlevel(t, len);
+    load_end(t);
+    gp.seed = s0;
+    return RN[r];
 }
 
 /* ------------------------------------------------------------------------------------------- the GEN screen --- */
