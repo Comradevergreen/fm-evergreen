@@ -1631,8 +1631,12 @@ static void gen_mix(track_t *t, uint32_t r)
      * the drums 5 dB, then the genre's own lift (GG_LIFT: -3 .. +7.5 dB on the four, by what its kit and its kick weigh).
      * The whole louder into the LEVELER (fx.c lev_block, 2:1 toward its target, x0.35 .. x2): gen2's mix sat ~3 dB under
      * gen1's; now its gain ~0.5 .. 0.8 (inside its range), the mix as loud as gen1's (gen_test: the drums' share, the gain) */
-    t->p[P_LEVEL] = (int16_t)clamp((r == RL_DRUM ? 104 : r == RL_BASS ? 118 : r == RL_LEAD ? 112 : r == RL_TEX ? (g->tex == SR_NOISE ? 62 : 74) : 104) +
-                                   (r != RL_DRUM && r != RL_TEX ? GG_LIFT(GGR) : 0), 1, 127);   /* (the genre's own: GGRAM) */
+    /* (p3, the owner: "the leads eat the drums and everything else; the drums always in front, the rest accompanies")
+     * the drums up, the bass under them, the chords and the arp back, the lead ~6 dB under gen3's; the genre's lift at
+     * half and on the bass and the chords only */
+    t->p[P_LEVEL] = (int16_t)clamp((r == RL_DRUM ? 110 : r == RL_BASS ? 114 : r == RL_LEAD ? 92 : r == RL_ARP ? 96 :
+                                    r == RL_TEX ? (g->tex == SR_NOISE ? 56 : 66) : 100) +
+                                   (r == RL_BASS || r == RL_PAD ? GG_LIFT(GGR) / 2 : 0), 1, 127);   /* (the genre's own: GGRAM) */
     t->p[P_PAN] = (int16_t)(r == RL_ARP ? grr(-30, -10) : r == RL_TEX ? grr(10, 30) : r == RL_PAD ? grr(-8, 8) : r == RL_LEAD ? grr(-6, 12) : 0);
     t->p[P_REV] = (int16_t)clamp((r == RL_PAD || r == RL_TEX ? grr(45, 95) : r == RL_LEAD ? grr(30, 70) : r == RL_ARP ? grr(20, 60) :
                                   r == RL_DRUM ? grr(4, 20) : grr(0, 6)) * (40 + wet) / 100, 0, 127);
@@ -1857,15 +1861,17 @@ static void gen_parts(void)
 /* its fields thrown: each grr(lo, hi), 0 one time in z % (a part left out) */
 typedef struct { uint8_t off, lo, hi, z; } gxf_t;
 #define GXF(f, lo, hi, z) {(uint8_t)__builtin_offsetof(ggenre_t, f), (uint8_t)(lo), (uint8_t)(hi), z}
-static const gxf_t GX_FIELD[] = {
-    GXF(swing, 8, 60, 60), GXF(drum, 0, DM_NONE - 1, 0), GXF(kit, 0, KIT_N - 1, 0), GXF(ghosts, 0, 4, 0),
-    GXF(hats, 0, HC_MACHINE, 0), GXF(fills, 0, FL_BREAK, 0), GXF(bass[0], 0, BA_N - 1, 0), GXF(bass[1], 0, BA_N - 1, 0),
-    GXF(bass[2], 0, BA_N - 1, 0), GXF(bass_lo, 29, 40, 0), GXF(kick_mode, 0, KM_INTERLOCK, 0), GXF(bass_gate, 30, 115, 0),
+static const gxf_t GX_FIELD[] = {   /* (p3, the owner: "90 % of EXPLORE's pieces far too busy, drums without sense":
+                                     * the ghosts, the fills, the swing and the amounts relaxed; the arp and the lead
+                                     * often left out, the chords sometimes: an idea outside the archetypes, still music) */
+    GXF(swing, 8, 34, 50), GXF(drum, 0, DM_NONE - 1, 0), GXF(kit, 0, KIT_N - 1, 0), GXF(ghosts, 0, 1, 50),
+    GXF(hats, 0, HC_MACHINE, 0), GXF(fills, 0, FL_DROP, 40), GXF(bass[0], 0, BA_N - 1, 0), GXF(bass[1], 0, BA_N - 1, 0),
+    GXF(bass[2], 0, BA_N - 1, 0), GXF(bass_lo, 29, 40, 0), GXF(kick_mode, 0, KM_INTERLOCK, 0), GXF(bass_gate, 40, 115, 0),
     GXF(cbars, 1, 2, 0), GXF(pads, 0, CS_TRANCE, 0), GXF(voicing, 0, VM_PLANE, 0), GXF(arp[0], 0, AP_N - 1, 0),
     GXF(arp[1], 0, AP_N - 1, 0), GXF(lead, 0, LD_NONE - 1, 0),   /* (never NONE: LEAD OFF is the knob's) */
-    GXF(amt[GP_DRUMS], 40, 100, 12), GXF(amt[GP_BASS], 40, 100, 0), GXF(amt[GP_CHORDS], 30, 100, 15),
-    GXF(amt[GP_ARP], 20, 100, 25), GXF(amt[GP_LEAD], 25, 90, 15), GXF(rtype, 0, 4, 0), GXF(dtime, 0, 7, 0),
-    GXF(wet, 10, 95, 0), GXF(dtype, 0, 3, 0), GXF(form, 0, FM_ARC, 0), GXF(human, 0, 90, 0),
+    GXF(amt[GP_DRUMS], 35, 70, 12), GXF(amt[GP_BASS], 35, 75, 0), GXF(amt[GP_CHORDS], 25, 70, 25),
+    GXF(amt[GP_ARP], 15, 60, 45), GXF(amt[GP_LEAD], 20, 55, 40), GXF(rtype, 0, 4, 0), GXF(dtime, 0, 7, 0),
+    GXF(wet, 10, 95, 0), GXF(dtype, 0, 3, 0), GXF(form, 0, FM_ARC, 0), GXF(human, 0, 45, 0),
 };
 static const uint8_t *const GX_POOL[5] = {0, GX_BASS, GX_PADS, GX_ARPS, GX_LEADS};   /* (a role's recipes, GP_ order) */
 static const uint8_t GX_NPOOL[5] = {0, NELEM(GX_BASS), NELEM(GX_PADS), NELEM(GX_ARPS), NELEM(GX_LEADS)};

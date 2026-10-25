@@ -1034,7 +1034,7 @@ int main(void)
                             kit_bad++;
                             printf("  %s: lane %u DECAY %u / %u over %u\n", gs.g->name, l, dx_kit[l].a[DXP_DECAY], dx_kit[l].b[DXP_DECAY], DMAX[l]);
                         }
-                    if (dx_glue > 8u || d->p[P_LEVEL] > 106 || DX_LAY_FB(dx_lay[DV_SNARE]) > 4u) kit_bad++;   /* (gen3: the mix
+                    if (dx_glue > 8u || d->p[P_LEVEL] > 112 || DX_LAY_FB(dx_lay[DV_SNARE]) > 4u) kit_bad++;   /* (gen3: the mix
                                                          * 9 dB louder into the leveler: 104; the share below) */
                 }
             }
@@ -1042,7 +1042,7 @@ int main(void)
         bad += gcheck("  the leads' and arps' pitch LFO 19 cents at most, 5 Hz or faster, faded in, no filter LFO with it (all genres, EXPLORE)",
                       !lfo_bad && vib && leads);
         bad += gcheck("  the pads', chords', textures' pitch LFO a slow drift at most (PITCH 1, under 0.8 Hz)", !pad_bad);
-        bad += gcheck("  the drums: kick, clap, hats, toms DECAY under 96 / 64 / 32 / 80 / 80, GLUE 8 at most, LEVEL 106 at most, FEEDBK 4",
+        bad += gcheck("  the drums: kick, clap, hats, toms DECAY under 96 / 64 / 32 / 80 / 80, GLUE 8 at most, LEVEL 112 at most, FEEDBK 4",
                       kits && !kit_bad);
     }
     /* ---- (0.9.9-gen3) the rules by role, every genre x 3 seeds: the leads under full sustain (SUS 95 at most: 75 %),
@@ -1118,7 +1118,7 @@ int main(void)
                 { int32_t o[2 * CTL]; ui_input(); mix_block(o, CTL); }
                 sh = ea > 0 ? ed / ea : 0;
                 if (sh > worst) { worst = sh; wn = GENRE[g].name; }
-                if (sh > (gclub() ? 0.76 : 0.60)) {      /* (gen5: the club's kick in front, 75 %; p1: 76, the hats' rolls on
+                if (sh > (gclub() ? 0.97 : 0.96)) {   /* (p3, the owner: the drums in front; 96 % at most, the rest still heard) */      /* (gen5: the club's kick in front, 75 %; p1: 76, the hats' rolls on
                                                          * their lane put HOUSE seed 3026 at 75.4 %) */
                     over++;
                     printf("  %s seed %u: the drums %.1f %% of the energy\n", GENRE[g].name, 2026u + 7u * g + 1000u * sd, 100 * sh);
@@ -1132,7 +1132,7 @@ int main(void)
             }
         printf("gen: the drums' share at most %.1f %% (%s); the mix %.1f dBFS RMS on average, the leveler's gain off its range %u times\n",
                100 * worst, wn, rms_db / n, lev_bad);
-        bad += gcheck("(0.9.9-gen3) every genre x 2: the drums 60 % of the parts' energy at most (gen5: the club 75 %), the leveler in its range, the mix loud",
+        bad += gcheck("(0.9.9-gen3) every genre x 2: the drums in front, 96 % of the parts' energy at most (p3), the leveler in its range, the mix loud",
                       !over && !lev_bad && rms_db / n >= -15.5);
     }
     /* ---- (0.9.9-gen1) the same seed, the same piece (and a different one from another seed), every genre */

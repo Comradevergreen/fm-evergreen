@@ -488,9 +488,9 @@ static const ggenre_t GENRE[] = {
     /* ---- the club: techno */
     /* Detroit / Berlin (Jeff Mills, Robert Hood, Surgeon): a 909, a rolling bass, one hypnotic stab with its filter
      * swept over the bars */
-    {"TECHNO", 128, 136, 4, {SC_MIN, SC_PHRY, SC_MIN, SC_MIN}, DM_TECHNO, 100, KIT_909, 0, HC_MACHINE, FL_DROP, 0,
-     {BA_ROLL16, BA_OCTBNC, BA_OFFBEAT}, 33, KM_SUSTAIN, 45, {PR_ONE, PR_PHRY, PR_I_VII}, 4, CS_STAB, VM_PLANE,
-     {AP_PULSE, AP_SEQ}, LD_OSTINATO, AMT(95, 80, 40, 0, 0), {KIT_909, SR_TECHBASS, SR_STAB, SR_PLUCK, SR_LEAD}, SR_NOISE,
+    {"TECHNO", 128, 136, 4, {SC_MIN, SC_PHRY, SC_MIN, SC_MIN}, DM_TECHNO, 100, KIT_909, 0, HC_MACHINE, FL_NONE, 0,
+     {BA_OFFBEAT, BA_PEDAL, BA_OFFBEAT}, 33, KM_SUSTAIN, 45, {PR_ONE, PR_PHRY, PR_I_VII}, 4, CS_STAB, VM_PLANE,
+     {AP_PULSE, AP_SEQ}, LD_OSTINATO, AMT(95, 60, 25, 0, 0), {KIT_909, SR_TECHBASS, SR_STAB, SR_PLUCK, SR_LEAD}, SR_NOISE,
      0, 2, 35, 0, FM_CLUB, 0, HF_LOOP},
     /* Derrick May (Strings of Life), Carl Craig, UR: string stabs on minor 7ths, a melodic lead, a 909 with a light
      * swing */
@@ -507,7 +507,7 @@ static const ggenre_t GENRE[] = {
     /* Ancient Methods, Perc, the Birmingham sound: an industrial kit hard, a rolling 16th bass, a hoover lead */
     {"HARD TECHNO", 138, 150, 0, {SC_PHRY, SC_MIN, SC_HARM, SC_PHRY}, DM_HARD, 100, KIT_INDUS, 0, HC_MACHINE, FL_DROP, 0,
      {BA_ROLL16, BA_PSY, BA_OCTBNC}, 33, KM_SUSTAIN, 40, {PR_ONE, PR_PHRY, PR_I_VII}, 4, CS_STAB, VM_POWER,
-     {AP_PULSE, AP_OCTAVES}, LD_OSTINATO, AMT(100, 85, 30, 30, 25), {KIT_INDUS, SR_TECHBASS, SR_STAB, SR_PLUCK, SR_HOOVER}, SR_NOISE,
+     {AP_PULSE, AP_OCTAVES}, LD_OSTINATO, AMT(100, 80, 20, 20, 0), {KIT_INDUS, SR_TECHBASS, SR_STAB, SR_PLUCK, SR_HOOVER}, SR_NOISE,
      1, 2, 25, 0, FM_CLUB, 0, HF_LOOP},
     /* Donato Dozzy, Voices From The Lake: a click kit, a 16th bass, a pluck cycling in fives and threes, everything
      * orbiting slowly */
@@ -532,8 +532,9 @@ static const ggenre_t GENRE[] = {
     /* DAF (Der Mussolini), Nitzer Ebb: a sequenced mono MS-20 bass in driving 8ths / 16ths, a dry minimal kit, VOICE
      * shouts */
     {"EBM", 126, 135, 0, {SC_PHRY, SC_MIN, SC_PHRY, SC_PHRY}, DM_EBM, 100, KIT_INDUS, 0, HC_MACHINE, FL_NONE, 1,
-     {BA_DAF, BA_NITZER1, BA_DAF}, 33, KM_DOUBLE, 40, {PR_ONE, PR_ONE, PR_I_VI}, 4, CS_STAB, VM_POWER,
-     {AP_SEQ, AP_OCTAVES}, LD_EBM, AMT(100, 100, 0, 45, 35), {KIT_INDUS, SR_EBMBASS, SR_STAB, SR_PLUCK, SR_VOXLEAD}, SR_NOISE,
+     {BA_PUMP8, BA_NITZER1, BA_PUMP8}, 33, KM_DOUBLE, 95, {PR_ONE, PR_ONE, PR_I_VI}, 4, CS_STAB, VM_POWER,
+     {AP_SEQ, AP_OCTAVES}, LD_EBM, AMT(100, 100, 0, 20, 0),   /* (p3, the owner: the bass half as fast, with body, not
+                                     * a pluck; no lead) */ {KIT_INDUS, SR_EBMBASS, SR_STAB, SR_PLUCK, SR_VOXLEAD}, SR_NOISE,
      1, 0, 8, 0, FM_PARTS, 0, HF_LOOP},   /* (gen6, the owner: DAF, Gesaffelstein (Viol, Aleph): a dry 909 four on the
                                      * floor, the clap on 2 and 4, accented 16th hats, a metal hit, no open hat; 16ths of
                                      * bass that never stop (gen6b), a second sequence an octave up, one chord;
