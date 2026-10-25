@@ -834,7 +834,8 @@ static void input_off(track_t *t, uint32_t note)
 /* ------------------------------------------- (0.8.5) the kit's octaves --- */
 /* A DRUM track's note in another octave than the kit's (eng_drum.c DXO_*): a key at OCT +-n (kb_oct), a MIDI note of a
  * band around the GM map (drum_oct_of). Below: the hit with TOUCH n (dx_in_tch on its note-on: SHORT GHOST FLAM).
- * Above: the hit, then again x2 / x4 / x8 a step while held (dxo_tick): playing, on the grid the sequencer's lane
+ * Above: the hit, then again every other step / once / x2 a step while held (dxo_tick; p1, as main 0.9.17: was x2 x4
+ * x8): playing, on the grid the sequencer's lane
  * ratchets use (a part every step / n from each step's start, swung as the steps are: seq_lane_rat), stopped, every
  * step / n from the press. Recording, playing (rec_on), the step it goes into gets the hit and its lane's mode
  * (rec_lmode: that lane only); every step entered while it is held too, before it plays (dxo_rec_hold: the sequencer
@@ -849,6 +850,8 @@ typedef struct {
     uint8_t note, vel, r, part;                         /* the hit, its hits a step, the part struck last (255 none) */
     uint8_t quiet, rec;                                 /* a step (+ 1) it is silent in (the sequencer plays it); the
                                                          * step (+ 1) its press was recorded into */
+    uint8_t half, ph;                                   /* (p1, main 0.9.17) OCT +1: every other step; ph the steps since
+                                                         * the press, odd: none */
     uint32_t cnt;                                       /* stopped: samples since its last hit */
 } dxo_t;
 static dxo_t dxo[NPART][DXO_N];
@@ -888,6 +891,8 @@ static void dxo_on(track_t *t, uint32_t note, int32_t o, uint32_t vel, uint32_t 
     e->note = (uint8_t)note;
     e->vel = (uint8_t)vel;
     e->r = dx_in_rat;
+    e->half = o == 1;
+    e->ph = 0;
     e->cnt = 0;
     e->idx = t->seq_idx;
     e->part = song.playing && t->seq_pos < 0x7FFFFFFFu ? (uint8_t)dxo_part(t, e->r) : 255u;
@@ -929,7 +934,7 @@ static __attribute__((noinline)) void dxo_rec_hold(track_t *t, uint32_t idx)
             e->quiet = (uint8_t)(idx + 1u);
             continue;
         }
-        if (!rec_on(t) || !drum_track(t))
+        if (!rec_on(t) || !drum_track(t) || (e->half && !e->ph))   /* (p1: OCT +1, every other step) */
             continue;
         if (!bak) {
             dxo_bak[ti] = t->step[src];
@@ -956,7 +961,7 @@ static __attribute__((noinline)) void dxo_tick(track_t *t, uint32_t n)
         dxo_t *e = &dxo[ti][k];
         uint32_t r = e->r ? e->r : 1u, part;
         if (!song.playing || t->seq_pos >= 0x7FFFFFFFu) {   /* stopped: from the press */
-            uint32_t per = div_samples((uint32_t)t->p[P_SDIV]) / r;
+            uint32_t per = div_samples((uint32_t)t->p[P_SDIV]) / r << e->half;
             e->part = 255u;
             e->idx = 0xFFFFu;
             e->cnt += n;
@@ -975,6 +980,7 @@ static __attribute__((noinline)) void dxo_tick(track_t *t, uint32_t n)
         if (t->seq_idx != e->idx) {
             e->idx = t->seq_idx;
             e->part = 255u;
+            e->ph ^= 1u;
         }
         if (e->quiet == t->seq_idx + 1u) {
             e->part = (uint8_t)part;
@@ -985,7 +991,8 @@ static __attribute__((noinline)) void dxo_tick(track_t *t, uint32_t n)
             e->part = (uint8_t)part;
             past = t->seq_pos - part * sl;              /* (ctl64) the part's first sample in this block */
             ev_at(past >= n ? 0u : n - past);
-            dxo_hit(t, e);
+            if (!(e->half & e->ph))                     /* (p1: OCT +1, every other step) */
+                dxo_hit(t, e);
             ev_off = 0;
         }
     }

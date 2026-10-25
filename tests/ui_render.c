@@ -1674,7 +1674,7 @@ static void setup(int s)
         go_page(GR_LYRIC); name_open(NK_LYRIC, song.sel); nm.cur = 40; nm.key = 3; nm.tap = 1; nm.t = fm1_ms;
         break;
     /* (0.8.5) DRUM-X octaves: the grid's HIT as its modes (the hat on step 3 x4; the snare on step 5 GHOST, the hat
-     * beside it FLAM); OCT on a DRUM track names the octave (+3 RATCHET x8, -3 FLAM); COMP's TOUCH and ECHO EVEN */
+     * beside it FLAM); OCT on a DRUM track names the octave (+3 RATCHET x2 since p1, -3 FLAM); COMP's TOUCH and ECHO EVEN */
     case S_DRUM_X4: case S_DRUM_GHOST:
         drum(0); go_page(GR_ROLL); trk[3].seq_idx = 9;
         step_set_lmode(&trk[3].step[2], 3, LM_X4); step_set_lmode(&trk[3].step[4], 1, LM_GHOST);

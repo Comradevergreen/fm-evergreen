@@ -985,9 +985,9 @@ ahora cambia **cómo** suenan, no qué sonido. La pantalla lo dice cuando apret�
 
 | OCT | Qué hace una tecla | Se graba (REC) como el golpe y el modo de su sonido |
 |---|---|---|
-| **+3** | **RATCHET x8**: el golpe ocho veces por paso mientras la mantenés | **x8** |
-| **+2** | **RATCHET x4** | **x4** |
-| **+1** | **RATCHET x2** | **x2** |
+| **+3** | **RATCHET x2**: el golpe dos veces por paso mientras la mantenés | **x2** |
+| **+2** | **REPEAT**: el golpe una vez por paso mientras la mantenés (un redoble al ritmo del paso) | ninguno, en cada paso que mantenés |
+| **+1** | **REPEAT 1/2**: el golpe cada dos pasos mientras la mantenés | ninguno, cada dos pasos que mantenés |
 | **0** | el kit como siempre | ninguno (**ON**) |
 | **−1** | **SHORT**: la mitad del decay | **SHORT** |
 | **−2** | **GHOST**: corto, más suave (~45 %), más oscuro: una nota fantasma | **GHOST** |

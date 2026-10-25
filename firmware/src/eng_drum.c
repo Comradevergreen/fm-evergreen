@@ -98,15 +98,18 @@ static uint32_t drum_gm_ix(uint32_t note) { return (note >= 35u && note <= 81u ?
 
 /* (JIANT 0.8.5) the octaves of the kit. OCT 0, where the keys play the GM map (key 7 the kick, 36), is the kit as it
  * always was. The other octaves play the same sounds on the same keys (drum_keys: OCT no longer moves the notes).
- * Above, ratcheted in time while held (seq.c dxo_tick): x2 at OCT +1, x4 at +2, x8 at +3; recorded as the hit and the
- * step's RATCH x2 / x4, at +3 its ECHO x8 EVEN (core.h CP_ECHO_EVEN: the eight at one level). Below, each hit with a
+ * Above, repeated in time while held (seq.c dxo_tick; p1, as main 0.9.13 / 0.9.17: twice over half as fast, x2 at
+ * OCT +1 already too fast to play): OCT +1 the hit every other step (REPEAT 1/2), +2 once a step (REPEAT: a roll at the
+ * step rate), +3 x2 a step (RATCHET x2); recorded as the hit on each step entered while held (+1 every other one) and,
+ * at +3, its lane's x2 (seq.c rec_lmode). Below, each hit with a
  * TOUCH (drum_lane_t.dm; the step's TOUCH component, core.h CP_TOUCH, when recorded): OCT -1 SHORT (half the decay),
  * -2 GHOST (short, darker, at ~45 % of its level: a ghost note), -3 FLAM (a soft grace hit, then the hit itself
  * DXO_FLAM later, ~20 ms whatever the tempo). MIDI keeps the GM map on 35..81, as ever; the notes around it, which
  * played their octave of 36..47 plain, are those octaves' bands: 23..34 -1, 11..22 -2, 0..10 -3, 82..93 +1, 94..105
- * +2, 106..127 +3, each by its pitch class (84 the kick x2, 24 the kick SHORT). dx_in_tch: a live hit's TOUCH,
+ * +2, 106..127 +3, each by its pitch class (84 the kick REPEAT 1/2, 24 the kick SHORT). dx_in_tch: a live hit's TOUCH,
  * track_t.dtch: a step's */
-static const uint8_t DXO_RAT[4] = {1, 2, 4, 8};          /* OCT 0 +1 +2 +3: hits a step */
+static const uint8_t DXO_RAT[4] = {1, 1, 1, 2};          /* OCT 0 +1 +2 +3: hits a step (p1, main 0.9.13 / 0.9.17: was 1 2 4
+                                                          * 8; +1 every other step: seq.c dxo_t.half) */
 static const int8_t DXO_DEC[4] = {0, -14, -14, 0};       /* TOUCH 0..3: on DECAY (14: half the decay time, dx_tau) */
 static const int8_t DXO_TON[4] = {0, 0, -24, 0};         /* .. on TONE (COLOR: the lane's filter, its drive) */
 static const uint8_t DXO_VEL[4] = {128, 128, 58, 58};    /* .. on the velocity, /128 (FLAM: its grace hit's) */
@@ -135,7 +138,7 @@ static uint32_t drum_oct_note(uint32_t note, int32_t o)
 }
 static const char *drum_oct_name(int32_t o)              /* what OCT does on a DRUM track (ui_input.c) */
 {
-    static const char *const N[7] = {"FLAM", "GHOST", "SHORT", "DRUM-X KIT", "RATCHET x2", "RATCHET x4", "RATCHET x8"};
+    static const char *const N[7] = {"FLAM", "GHOST", "SHORT", "DRUM-X KIT", "REPEAT 1/2", "REPEAT", "RATCHET x2"};
     return N[clamp(o, -3, 3) + 3];
 }
 

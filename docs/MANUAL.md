@@ -943,9 +943,9 @@ changes **how** they play, not which sound. The screen says it when you press OC
 
 | OCT | What a key does | Recorded (REC) as the hit and its sound's mode |
 |---|---|---|
-| **+3** | **RATCHET x8**: the hit eight times a step while held | **x8** |
-| **+2** | **RATCHET x4** | **x4** |
-| **+1** | **RATCHET x2** | **x2** |
+| **+3** | **RATCHET x2**: the hit twice a step while held | **x2** |
+| **+2** | **REPEAT**: the hit once a step while held (a roll at the step rate) | none, on every step held into |
+| **+1** | **REPEAT 1/2**: the hit every other step while held | none, on every other step held into |
 | **0** | the kit as it always was | none (**ON**) |
 | **−1** | **SHORT**: half the decay | **SHORT** |
 | **−2** | **GHOST**: short, softer (~45 %), darker: a ghost note | **GHOST** |
