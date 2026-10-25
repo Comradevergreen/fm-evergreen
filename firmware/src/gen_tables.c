@@ -691,7 +691,7 @@ static const ggenre_t GENRE[] = {
     {"IMPRESSION", 60, 92, 0, {SC_LYD, SC_MAJ, SC_LYD, SC_PEN}, DM_SPARSE, 25, KIT_SOFT, 0, HC_FLAT, FL_NONE, 0,
      {BA_FIFTHS, BA_PEDAL, BA_NEOARP}, 36, KM_SUSTAIN, 110, {PR_I_II, PR_I_III, PR_SUS}, 2, CS_SWELL, VM_PLANE,
      {AP_UPDOWN, AP_GLASS}, LD_TINTI, AMT(15, 50, 85, 75, 40), {KIT_SOFT, SR_SINEKEY, SR_PAD, SR_EP, SR_BELL}, SR_CHOIR,
-     4, 0, 90, 0, FM_ARC, 30, HF_COLOR},
+     4, 0, 80, 0, FM_ARC, 30, HF_COLOR},
     /* Vangelis (Blade Runner), Hans Zimmer: strings swelling, a CS-80-like brass lead with vibrato, a choir behind */
     {"SOUNDTRACK", 64, 92, 0, {SC_MIN, SC_MIN, SC_MEL, SC_MPEN}, DM_SPARSE, 40, KIT_DUB, 0, HC_FLAT, FL_NONE, 0,
      {BA_PEDAL, BA_FIFTHS, BA_DUB}, 29, KM_SUSTAIN, 120, {PR_50S, PR_ANDAL, PR_EPIC}, 2, CS_SWELL, VM_RICH,

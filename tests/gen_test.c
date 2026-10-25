@@ -1122,7 +1122,10 @@ int main(void)
                     over++;
                     printf("  %s seed %u: the drums %.1f %% of the energy\n", GENRE[g].name, 2026u + 7u * g + 1000u * sd, 100 * sh);
                 }
-                lev_bad += lsum / nb < 0.4 || lsum / nb > 1.9;
+                if (lsum / nb < 0.4 || lsum / nb > 1.9) {
+                    lev_bad++;
+                    printf("  %s seed %u: the leveler's gain x%.2f on average\n", GENRE[g].name, 2026u + 7u * g + 1000u * sd, lsum / nb);
+                }
                 rms_db += 20 * log10(sqrt(acc / (2.0 * nb * CTL)) / 32768.0 + 1e-9);
                 n++;
             }
