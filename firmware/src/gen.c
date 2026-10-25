@@ -2517,6 +2517,26 @@ static uint32_t dice_print(void)                        /* a fingerprint of the 
  * and the automation stay. Its message */
 static uint32_t dsq_last[NTRK][4] __attribute__((section(".bss.dice")));   /* (each track's last diced shapes; their own
                                                          * section: out of the merged statics, whose places are recorded) */
+/* (p2b) the last 8 presses' shapes (a byte a step, over the root: transposed the same), whichever track: a new one is
+ * never 90 % of one of them on its track (played live, the dice give something new each press: an arp on the piece's
+ * own chords came out near one of its last 8 half of the time) */
+static struct { uint8_t v[8][NSTEP], trk[8], len[8], at; } dsq_h __attribute__((section(".bss.dice")));
+static __attribute__((noinline)) uint32_t dsq_near(uint32_t k, const int16_t *now, uint32_t len)
+{
+    uint32_t j, i, same;
+    for (j = 0; j < 8u; j++) {
+        if (dsq_h.len[j] != len || dsq_h.trk[j] != k) continue;
+        for (i = 0, same = 0; i < len; i++) same += dsq_h.v[j][i] == (uint8_t)now[i];
+        if (same * 10u >= len * 9u) return 1;
+    }
+    return 0;
+}
+static __attribute__((noinline)) void dsq_keep(uint32_t k, const int16_t *now, uint32_t len)
+{
+    uint32_t j = dsq_h.at++ & 7u, i;
+    for (i = 0; i < len; i++) dsq_h.v[j][i] = (uint8_t)now[i];
+    dsq_h.trk[j] = (uint8_t)k; dsq_h.len[j] = (uint8_t)len;
+}
 static uint32_t dsq_shape(const track_t *t, int16_t *v, uint32_t len)   /* the steps as notes over the root (or hits) */
 {
     uint32_t i, h = 2166136261u;
@@ -2573,14 +2593,14 @@ static const char *dice_seq(track_t *t)
     load_begin(t, LOAD_PAT);
     latch_drop_req |= (uint8_t)(1u << k);
     gs.vary = 1;
-    for (cnt = 0; cnt < 8u; cnt++) {                    /* (seven more tries at most) */
+    for (cnt = 0; cnt < 12u; cnt++) {                   /* (eleven more tries at most) */
         uint32_t j, same = 0;
         for (i = 0; i < NSTEP; i++) step_clear(&t->step[i]);
         gen_role(t, k, len);
         h = dsq_shape(t, now, len);
         for (i = 0; i < len && plen == len; i++) same += now[i] == was[i];
         for (j = 0; j < 4u && dsq_last[k][j] != h; j++) {}
-        if (j == 4u && same * 10u < len * 9u) break;
+        if (j == 4u && same * 10u < len * 9u && (cnt == 11u || !dsq_near(k, now, len))) break;
         gp.seed = (uint16_t)(rng() % 10000u);
         gs.ba = gs.g->bass[rng() % 3u];
         if (cnt) {                                      /* (the figure from the whole generator) */
@@ -2594,6 +2614,7 @@ static const char *dice_seq(track_t *t)
     gmut.lead = lead0; gmut.arp[0] = arp0; gmut.arp[1] = arp1; gmut.pads = pads0; gmut.drum = drum0;
     for (i = 3; i; i--) dsq_last[k][i] = dsq_last[k][i - 1u];   /* (no memmove on the target) */
     dsq_last[k][0] = h;
+    dsq_keep(k, now, len);
     t->p[P_SLEN] = (int16_t)len;
     if (r != RL_DRUM) dlevel(t, len);
     load_end(t);
