@@ -617,6 +617,40 @@ static int test_transitions(void)
     j0 = tr_jump(t, 30u, 7u, 2, 0);
     bad += check("WAVE changed under a held note: a dip (the voice goes on), a smaller jump than at once", ok && j1 < j0);
     trk_note_off(t, 57);
+    {   /* (gen6e, the owner and a tester: "a sound with some release eats the steps after it") a step on a voice still in
+         * its release (MONO, or the same note POLY): its note starts at its sample, not let go at once */
+        uint32_t m, st, bb, j;
+        int ok2 = 1;
+        for (m = 0; m < 2u; m++) {
+            double pk[12] = {0};
+            ui_power_on();
+            song.master_q12 = 4096;
+            t = &trk[0];
+            for (k = 1; k < NTRK; k++) trk[k].p[P_MUTE] = 1;
+            set_engine_of(t, ENGI_ANALOG);
+            t->engine = t->eng_req;
+            t->p[P_ATK] = 0; t->p[P_DEC] = 60; t->p[P_SUS] = 100; t->p[P_REL] = 96; t->p[P_VOICE] = (int16_t)m;
+            t->p[P_REV] = t->p[P_DLY] = t->p[P_CHOR] = 0; t->p[P_SLEN] = 16;
+            for (j = 0; j < 16u; j++) {
+                step_t *sp = &t->step[j];
+                memset(sp, 0, sizeof *sp);
+                sp->time = ST_NOTE; sp->vel = 100; sp->n = 1; sp->note[0] = (uint8_t)(m ? 60u + (j % 4u) * 3u : 60u);
+            }
+            song.g[G_BPM] = 120;
+            press(B_PLAY); frames(2);
+            for (bb = 0; bb < (5512u / CTL) * 12u; bb++) {
+                events_block(CTL), mix_block(o, CTL);
+                st = bb / (5512u / CTL);
+                for (j = 0; j < 2u * CTL; j++) if (fabs((double)o[j]) > pk[st]) pk[st] = fabs((double)o[j]);
+            }
+            for (st = 4; st < 12u; st++) ok2 &= pk[st] > pk[2] * 0.5;
+            press(B_PLAY); frames(2);
+            for (bb = 0; bb < 8u; bb++) events_block(CTL), mix_block(o, CTL);
+            song.playing = 0; transport_req = 0;
+            trk_all_off(t);
+        }
+        bad += check("gen6e: REL 96, POLY (the same note) and MONO: every step as loud as the first (the release eats none)", ok2);
+    }
     return bad;
 }
 /* (0.6.43) MUTATE (project.c mutate_poll): on the bar, AMOUNT 64 when turned on, never LEVEL / PAN, ORBIT near the

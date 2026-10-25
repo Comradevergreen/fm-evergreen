@@ -949,7 +949,11 @@ static __attribute__((noinline)) void voice_start_rec(track_t *t, voice_t *v)
     uint8_t mv = t->m_vel, tch = t->dtch;
     int16_t mr = t->m_rnd, db = t->dbend;
     uint16_t dbt = t->dbt;
-    uint32_t off = !v->gate || v->stage == 3u;          /* let go (or ended) since it was asked for: on, then off */
+    uint32_t off = !v->gate || v->stage == 4u;          /* let go since it was asked for (voice_off_at: the gate down), or
+                                                         * given up: on, then off. (gen6e, the owner and a tester: not
+                                                         * stage 3: that was the note before's release, still ringing up
+                                                         * to this one's sample, so every note on a voice in its release
+                                                         * was let go at once: a release ate the steps after it) */
     t->hum_env = v->pn_henv; t->m_vel = v->pn_mvel; t->m_rnd = v->pn_mrnd;
     t->dpit = v->pn_dpit; t->dbend = v->pn_dbend; t->dbt = v->pn_dbt; t->dtch = v->pn_tch;
     v->fine = v->pn_fine;
