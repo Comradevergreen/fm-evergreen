@@ -257,6 +257,73 @@ static __attribute__((noinline)) void clip_block(uint32_t n)
         wet[i] = 0;
     }
 }
+/* (0.9.9-snd8) the master's TAPE (FX > TAPE: tape_v, params.c, 0..100; both 0: out of the chain, not run), ahead of CLIP:
+ * WOW reads the mix from a short line at a delay swinging 0 .. 2 x (a wow ~0.55 Hz and a drift, up to ~40 samples: a few
+ * cents; a flutter ~7 Hz, ~3 samples), 0 at WOW 0 (no jump when it comes in), with a faint hiss; TAPE drives it x1 .. x4
+ * into the soft clip with a bias (even harmonics; made up at a mix's usual level, as CLIP), loses the highs (a one-pole
+ * down to ~7 kHz) and lifts the low end (a band about 60..100 Hz, up to ~+3 dB). Both knobs smoothed block to block */
+#define TP_LEN 128u
+#ifndef FM1_OPAQUE
+#define FM1_OPAQUE(v) ((void)(v))                    /* (the host: no reach to mind) */
+#endif
+static struct {
+    int32_t buf[2][TP_LEN];
+    uint32_t w, ph_w, ph_d, ph_f;
+    int32_t d, wa, lp[2], b1[2], b2[2], noise;
+    int32_t drv, wow;                                   /* the knobs smoothed (Q8: 0 .. 100 << 8) */
+} tp __attribute__((section(".pool")));
+static __attribute__((noinline)) void tape_block(uint32_t n)
+{
+    uint32_t i, c;
+    int32_t dv, wv, g, bias, mk, hf, bump, d0, d1, wa;
+    dv = (clamp(tape_v[0], 0, 100) << 8) - tp.drv;
+    wv = (clamp(tape_v[1], 0, 100) << 8) - tp.wow;
+    tp.drv += dv > -8 && dv < 8 ? dv : dv >> 2;
+    tp.wow += wv > -8 && wv < 8 ? wv : wv >> 2;
+    dv = tp.drv >> 8;
+    wv = tp.wow >> 8;
+    g = 4096 + dv * 12288 / 100;                        /* the drive, Q12 */
+    bias = dv * 1600 / 100;                             /* (Q15: the curve's offset, its DC taken back) */
+    mk = (int32_t)((6000u << 15) / (uint32_t)(softclip(((6000 * g) >> 12) + bias) - softclip(bias)));
+    hf = 32767 - dv * 100;                              /* the highs: a one-pole's coefficient, Q15 */
+    bump = dv * 160 / 100;                              /* the head bump's gain, Q8 */
+    d0 = tp.d;                                          /* the delay at the block's start and end (Q8 samples) */
+    tp.ph_w += 52u * n << 10;                           /* (0.55 Hz, 0.13 Hz, 7 Hz: 2^32 / 44100 a sample = 97391) */
+    tp.ph_d += 13u * n << 10;
+    tp.ph_f += 682u * n << 10;
+    wa = wv * 40 * 256 / 100;
+    d1 = ((wa * (32768 - sine_i(tp.ph_w + 0x40000000u))) >> 16) + ((wa * (32768 - sine_i(tp.ph_d))) >> 17) +
+         (((wv * 768 / 100) * (32768 - sine_i(tp.ph_f))) >> 16);
+    tp.d = d1;
+    for (i = 0; i < n; i++) {
+        int32_t x[2], d = d0 + (d1 - d0) * (int32_t)i / (int32_t)n, di = d >> 8, fr = d & 255;
+        x[0] = (mix_l[i] + wet[i] + 2) >> 2;
+        x[1] = (mix_r[i] + wet[i] + 2) >> 2;
+        wet[i] = 0;
+        tp.w = (tp.w + 1u) & (TP_LEN - 1u);
+        for (c = 0; c < 2u; c++) {
+            int32_t y = x[c], a, b;
+            tp.buf[c][tp.w] = y;
+            if (wv) {
+                a = tp.buf[c][(tp.w - (uint32_t)di) & (TP_LEN - 1u)];
+                b = tp.buf[c][(tp.w - (uint32_t)di - 1u) & (TP_LEN - 1u)];
+                y = a + (((b - a) * fr) >> 8) + (int32_t)((noise32(&tp.noise) >> 28) - 8u) * wv / 50;
+            }
+            if (dv) {
+                y = clamp(y, -131071, 131071);
+                y = (((softclip(((y * (g >> 2)) >> 10) + bias) - softclip(bias)) >> 1) * mk) >> 14;
+                tp.lp[c] += (((y - tp.lp[c]) >> 1) * hf) >> 14;
+                y = tp.lp[c];
+                tp.b1[c] += (y - tp.b1[c]) >> 6;            /* (~110 Hz and ~27 Hz: their difference the bump) */
+                tp.b2[c] += (y - tp.b2[c]) >> 8;
+                y += ((tp.b1[c] - tp.b2[c]) * bump) >> 8;
+            }
+            x[c] = y;
+        }
+        mix_l[i] = x[0] * 4;
+        mix_r[i] = x[1] * 4;
+    }
+}
 /* (0.9.1) the master DJ FILTER (G_DJF, GLO > MIXER KNOB 4): one bipolar knob on the whole mix, just before CLIP and the
  * leveler. 0: out of the chain, not run at all (the mix bit for bit as without it). Below 0 a low-pass sweeping down
  * (darker), above 0 a high-pass sweeping up (thinner): a trapezoidal SVF (A. Simper's, as dsp.c tsvf) in 64-bit products,
@@ -2744,6 +2811,12 @@ static __attribute__((noinline)) void mix_block(int32_t *out, uint32_t n)   /* (
     }
     if (song.g[G_DJF] || djf.mode)                      /* (0.9.1) the DJ FILTER; centred and out: not run */
         djf_block(n);
+    if (tape_v[0] || tape_v[1] || tp.drv || tp.wow) {   /* (0.9.9-snd8) TAPE; both 0 (and settled): not run */
+        void (*f)(uint32_t) = tape_block;
+        FM1_OPAQUE(f);                                  /* (through a register: mix_block runs from RAM, tape_block is in
+                                                         * the flash past the tables, out of a direct call's reach) */
+        f(n);
+    }
     if (clip_g)
         clip_block(n);
     lev_block(n);                                       /* (JIANT 0.5) the leveler: the loudness held */

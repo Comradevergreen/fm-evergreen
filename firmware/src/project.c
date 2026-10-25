@@ -253,6 +253,30 @@ static int proj_ok(const project_t *q) { return q->magic == PROJ_MAGIC && q->siz
  * format before FUN7 may hold any channel there. FUN7 came after it was inert (always 0), so only those imports
  * set it: ROOM, the only reverb they knew */
 static void proj_rtype_room(int16_t *g) { g[G_RTYPE] = 0; }
+/* (0.9.9-snd8) the master's TAPE block ('T' 'P' DRIVE WOW, only when on). The live TAPE (params.c tape_v), not the
+ * project's: not in project_t (its size is recorded code's); a project is only packed from the live state and only
+ * unpacked to be opened (an UNDO, MUTATE's anchor: the TAPE as it was then). b 0: its size; room 0: written at b + pos;
+ * else read from there (absent: TAPE out): the bytes taken. Out of the recorded code: project.c's layout holds */
+static __attribute__((noinline)) uint32_t proj_tp(const project_t *q, const uint8_t *bc, uint32_t pos, uint32_t room)
+{
+    uint8_t *b = (uint8_t *)(uintptr_t)bc;               /* (written only when writing: room 0) */
+    (void)q;
+    if (!room) {
+        if (!tape_v[0] && !tape_v[1]) return 0;
+        if (b) {
+            b[pos] = 'T'; b[pos + 1u] = 'P';
+            b[pos + 2u] = (uint8_t)tape_v[0]; b[pos + 3u] = (uint8_t)tape_v[1];
+        }
+        return 4u;
+    }
+    if (pos + 4u > room || b[pos] != 'T' || b[pos + 1u] != 'P') {
+        tape_v[0] = tape_v[1] = 0;
+        return 0;
+    }
+    tape_v[0] = b[pos + 2u] > 100u ? 100 : b[pos + 2u];
+    tape_v[1] = b[pos + 3u] > 100u ? 100 : b[pos + 3u];
+    return 4u;
+}
 
 /* the globals of formats 1 and 2 (G_* unchanged since; any added later: their defaults) */
 static void proj_g_from_v2(int16_t *g, const int16_t *g2)
@@ -570,7 +594,7 @@ static void proj_fm6_init(project_t *q)
 }
 static int proj_import_old(project_t *q, const void *b, int n);
 static int proj_import_any(project_t *q, const void *b, int n);
-static int proj_unpack_c(project_t *q, const uint8_t *b);
+static __attribute__((noinline)) int proj_unpack_c(project_t *q, const uint8_t *b);   /* (snd8: out of proj_import's recorded code) */
 /* every track's engine one this firmware has (DIGITAL, 1, is one: it converts): a project of another number
  * is not one (it never was: no engine number past the last was ever stored) */
 static int proj_engines_ok(const project_t *q)
@@ -842,6 +866,7 @@ static uint32_t proj_packed_size(const project_t *q)
         n += 3u;
     if (q->g[G_DDRV])                                   /* (snd2) the delay's DRIVE, when on */
         n += 3u;
+    n += proj_tp(q, 0, 0, 0);                           /* (snd8) the master's TAPE, when on */
     if (q->g[G_DMOD] != GP[G_DMOD].def)                 /* (0.6.86) the delay's MOD's, when not the default */
         n += 3u;
     if (q->g[G_DTYPE] || q->g[G_DPING])                 /* (0.6.90) its TYPE and PING-PONG's */
@@ -1014,6 +1039,7 @@ static int proj_pack(project_store_t *out, const project_t *q)
                                                          * at it, the rest loads) */
         b[pos++] = 'D'; b[pos++] = 'D'; b[pos++] = (uint8_t)clamp(q->g[G_DDRV], 0, 100);
     }
+    pos += proj_tp(q, b, pos, 0);                       /* (0.9.9-snd8) the master's TAPE, when on (after DRIVE's) */
     memcpy(b + PROJC_PFX_OFF, q->pfx_lane, sizeof q->pfx_lane);
     b[PROJC_PFX_OFF + sizeof q->pfx_lane] = q->pfx_ltgt > 2u ? 0u : q->pfx_ltgt;
     for (i = 0; i < 4u; i++)
@@ -1302,6 +1328,7 @@ static int proj_unpack_c(project_t *q, const uint8_t *b)
         q->g[G_DDRV] = (int16_t)(b[pos + 2u] > 100u ? 100u : b[pos + 2u]);
         pos += 3u;
     }
+    pos += proj_tp(q, b, pos, room);                    /* (0.9.9-snd8) the master's TAPE (else 0) */
     proj_new_tracks(q, nt);                             /* (a FUNC of fewer tracks: the rest at power-on) */
     for (t = nt; t < NTRK; t++)
         memcpy(q->fm6[t], FM6_INIT, FM6_PACKED);
@@ -1556,6 +1583,7 @@ static void project_capture(project_t *p)
     uint32_t i;
     uint32_t f = motion_guard();
     memset(p, 0, sizeof *p);
+       /* (snd8) the master's TAPE */
     p->magic = PROJ_MAGIC;
     p->size = sizeof *p;
     for (i = 0; i < G_COUNT; i++)
@@ -1879,13 +1907,14 @@ static project_store_t undo_st[2] __attribute__((section(".lowbuf")));   /* (0.6
  * the macros at 0, the punch-in lane clear, the factory DRUM-X kit (X-MOD, TONE off, nothing muted), every FM6 patch
  * the init voice. What is saved (projects, user presets) and the setup (CLOCK, TUNE, MIDI, ROUTE, the project slot,
  * MENU) stay */
-static void system_init(void)
+static __attribute__((noinline)) void system_init(void)   /* (snd8: out of its callers' recorded code) */
 {
     static const uint8_t KEEP[5] = {G_CLOCK, G_TUNE, G_MIDI, G_ROUTE, G_SLOT};
     int16_t kept[5];
     uint32_t i;
     for (i = 0; i < 5u; i++) kept[i] = song.g[KEEP[i]];
     for (i = 0; i < G_COUNT; i++) song.g[i] = GP[i].def;
+    tape_v[0] = tape_v[1] = 0;                          /* (snd8) the master's TAPE out */
     for (i = 0; i < 5u; i++) song.g[KEEP[i]] = kept[i];
     kept[0] = dice_secs;
     chain_defaults(&chain_config);

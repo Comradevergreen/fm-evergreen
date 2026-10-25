@@ -136,6 +136,8 @@
 # FM6 BANK (tests/fm6bank_test.c, JIANT 0.6.11 from Felucca 1.4.1): the voice bank (src/fm6_vbank.c) and its editor
 #                   commands against simulated NOR: write / read back, its sectors only, a power cut at any byte or erase
 #                   (the old bank or the new one), a wrong CRC, SLOT B1..B32, the SLOT values stored before as before.
+# TAPE (tests/tape_test.c, 0.9.9-snd8): the master's TAPE (src/fx.c tape_block, FX > TAPE): off never runs; TAPE's harmonics,
+#                   the highs lost, the head bump; WOW's few cents; no click turning them; kept in a project ('T' 'P').
 # DJ FILTER (tests/djf_test.c, 0.9.1): the master DJ FILTER (src/fx.c djf_block, GLO > MIXER KNOB 4): centred, a sequenced
 #                   mix bit for bit as 0.9.0 rendered it (never run); the low-pass / high-pass responses (pass band, 12 dB an
 #                   octave, the peak, the ends, stereo); no click crossing the middle, jumping sides, swept, automated; its
@@ -227,6 +229,8 @@ if [ -f build/gen/felucca_tables.h ]; then
     run "motion, whole-step chance, FUN7 migration, song restore, ARP repeat and the 1.2 ARP modes" "$OUT/motion_test"
     $CC -O1 -w -Ibuild/gen -Ifirmware/src -Itests -o "$OUT/djf_test" tests/djf_test.c -lm
     run "DJ FILTER (0.9.1): centred bit for bit 0.9.0, LP / HP response, no click crossing the middle, automation, old projects" "$OUT/djf_test"
+    $CC -O1 -w -Ibuild/gen -Ifirmware/src -Itests -o "$OUT/tape_test" tests/tape_test.c -lm
+    run "TAPE (0.9.9-snd8): off never runs, the drive's harmonics, the highs lost, the head bump, WOW's few cents, no click, kept in a project" "$OUT/tape_test"
     $CC -O1 -w -Ibuild/gen -Ifirmware/src -Itests -o "$OUT/micro_test" tests/micro_test.c -lm
     run "MICRO in 64ths (0.9.1): recorded within 1/64 of a step at any tempo / division, played there, REC Q 50 %, old projects, 'M' 'F'" "$OUT/micro_test"
     $CC -O1 -w -Ibuild/gen -Ifirmware/src -Itests -o "$OUT/ctl64_timing_test" tests/ctl64_timing_test.c -lm
