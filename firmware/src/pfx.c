@@ -205,7 +205,8 @@ static __attribute__((noinline)) void pfx_block(uint32_t n, uint32_t held)
             t->pfx_pos0 = t->seq_pos;
             t->pfx_el = 0;
         } else if (!(f & (PFX_HALF | PFX_LOOP)) && (old & (PFX_HALF | PFX_LOOP))) {
-            t->pfx_rs = 1;                              /* (seq.c seq_tick: back to the real place) */
+            t->pfx_rs = (uint8_t)(old & PFX_HALF ? 2u : 1u);   /* (seq.c seq_tick: back to the real place; 2: 1/2 TEMPO,
+                                                         * the PLAYHEADS too) */
         }
         if ((f & PFX_HALF) && !(old & PFX_HALF))
             t->pfx_half = 0;

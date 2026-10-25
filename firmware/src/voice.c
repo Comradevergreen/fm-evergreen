@@ -201,6 +201,7 @@ static uint8_t tf_xb[NTRK], tf_fo[NTRK];        /* (0.6.81) a TYPE's crossfade: 
 /* the filter of TYPE ft on a part's block; fo (not TF_DRY, an SVF TYPE): from fo's output to ft's, w0 + (i + 1) dw
  * (Q12) of the way (the SVF's three outputs from one state); own: the engine filters its notes itself (ANALOG, LOFI):
  * only the COMB here, at cut / res */
+static int32_t drum_env(track_t *t);                    /* (gen6d: DRUM-X's ENV, below) */
 static __attribute__((noinline)) void tf_run(track_t *t, int32_t *out, uint32_t n, uint32_t ft, uint32_t fo, int32_t w0,
                                              int32_t dw, uint32_t own, int32_t ccut, int32_t cres)
 {
@@ -221,9 +222,12 @@ static __attribute__((noinline)) void tf_run(track_t *t, int32_t *out, uint32_t 
     }
     if (own && ft != FT_MS20)
         return;
-    for (i = 0; i < NVOICE; i++)
-        if (t->v[i].active && t->v[i].stage && t->v[i].stage < 4u && (t->v[i].env >> 9) > envq)
-            envq = t->v[i].env >> 9;
+    if (t->engine == ENGI_DRUM)
+        envq = (uint16_t)drum_env(t) + 1;                   /* (gen6d: the kit's ENV, its voices held at full) */
+    else
+        for (i = 0; i < NVOICE; i++)
+            if (t->v[i].active && t->v[i].stage && t->v[i].stage < 4u && (t->v[i].env >> 9) > envq)
+                envq = t->v[i].env >> 9;
     {   /* (0.6.81) the sweep kept where it is heard: CUT moved down so its top stays open at most (an open filter swept
          * up did nothing: half an LFO's cycle, a whole ENV, lost) */
         int32_t span = (p[P_LD_FLT] < 0 ? -p[P_LD_FLT] : p[P_LD_FLT]) * 256 + (p[P_ED_FLT] > 0 ? p[P_ED_FLT] * 256 : 0);
@@ -1346,6 +1350,56 @@ static int32_t env_tick(track_t *t, voice_t *v)
         break;
     }
     return v->env >> 9;
+}
+
+/* (gen6d, a tester: "ENV does nothing on DRUM-X") DRUM-X's ENV: its hits keep their own amplitude (drum_amp holds the
+ * voices' ADSR at full), so the ENV page drives one envelope for the kit instead, restarted by every hit (from where it
+ * is: no click), its peak the hit's velocity (the kick, the snare and the clap whole, the rest at 5/8): ATK up, DEC to
+ * SUS, then REL from there (a hit has no key to let go). ENV DEST's FILTER reads it, once a block (the part's filter:
+ * tf_run; PITCH and SHAPE stay the hits' own), and a hit is seen there: a voice newer than the last one seen.
+ * No RAM of its own: a kit's part is always POLY, so its mono_stack (MONO's held keys) is free: bytes 0..3 the level
+ * (Q24), 4 the stage, 5 the peak, 6..7 the newest voice's age seen; a part come from another engine starts silent */
+#define DENV_ST(t) ((t)->mono_stack[4])
+#define DENV_PK(t) ((t)->mono_stack[5])
+static __attribute__((noinline)) int32_t drum_env(track_t *t)
+{
+    const int16_t *p = t->p;
+    int32_t e, sus = (int32_t)p[P_SUS] << 17;
+    uint32_t st = DENV_ST(t), i, pk = 0;
+    uint16_t seen, top;
+    memcpy(&seen, t->mono_stack + 6, 2);
+    top = seen;
+    for (i = 0; i < NVOICE; i++) {                      /* the hits since the last block: the loudest of them */
+        const voice_t *v = &t->v[i];
+        uint32_t w;
+        if (!v->active || (int16_t)((uint16_t)v->age - seen) <= 0)
+            continue;
+        w = drum_lane(v->note) <= DV_CLAP ? v->vel : v->vel * 5u / 8u;
+        if (w > pk) pk = w;
+        if ((int16_t)((uint16_t)v->age - top) > 0) top = (uint16_t)v->age;
+    }
+    memcpy(t->mono_stack + 6, &top, 2);
+    if (pk) {
+        DENV_PK(t) = (uint8_t)pk;
+        st = 1;
+    }
+    if (st - 1u > 2u)
+        return 0;
+    memcpy(&e, t->mono_stack, 4);
+    if (st == 1u) {
+        if (e < 0 || e > (1 << 24)) e = 0;              /* (another engine's keys there before: from silence) */
+        e += (int32_t)ENV_LIN[p[P_ATK] & 127];
+        if (e >= (1 << 24)) { e = 1 << 24; st = 2; }
+    } else if (st == 2u) {
+        e += mulq16(sus - e, ENV_EXP[p[P_DEC] & 127]);
+        if (e - sus < (1 << 18)) st = 3;
+    } else {
+        e -= mulq16(e, ENV_EXP[p[P_REL] & 127]);
+        if (e < (1 << 12)) { e = 0; st = 0; }
+    }
+    memcpy(t->mono_stack, &e, 4);
+    DENV_ST(t) = (uint8_t)st;
+    return ((e >> 9) * (int32_t)DENV_PK(t)) / 127;
 }
 
 /* (JIANT 0.7.8) DRIFT: each voice its own slow value noise (mod.c drift_noise), on the track's blocks */

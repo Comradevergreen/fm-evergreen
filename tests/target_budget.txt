@@ -43,10 +43,10 @@ drw_dust 29
 dly_lo 2351
 animal_render 731
 string_render 148
-add_render 248
+add_render 297
 formant_word_render 552
 formant_block 98
 djf_block 199
 track_comb 122
-tf_run 126
+tf_run 123
 tf_ms20 94

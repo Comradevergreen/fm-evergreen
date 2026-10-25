@@ -303,7 +303,7 @@ static void add_partials(void)
     char what[200];
     EG = &ENG_ADD;
     for (mo = 0; mo < AD_N; mo++) {
-        int16_t e[8] = {(int16_t)mo, 127, 0, 0, 0, 0, 127, 0};   /* (flat, held) */
+        int16_t e[8] = {(int16_t)mo, 0, 96, 127, 0, 0, 127, 0};   /* (flat, held) */
         double f0 = want_hz(36), top = -999, l;
         setup(-1, e);
         voice_render(36, 0.1, Y, NFFT * 2);
@@ -322,31 +322,37 @@ static void add_partials(void)
             ok &= l > -12;                               /* (flat: every partial there, within 12 dB of the loudest) */
         }
     }
-    snprintf(what, sizeof what, "ADD: every MODE's nine partials at their ratios (BRIGHT 127, flat): the weakest %.1f dB under the loudest", worst);
+    snprintf(what, sizeof what, "ADD: every MODE's nine partials at their ratios (BRIGHT 96, flat): the weakest %.1f dB under the loudest", worst);
     check(what, ok);
 }
 static void add_shape(void)
 {
-    int16_t dark[8] = {AD_HARM, 0, 0, 0, 0, 0, 127, 0}, odd[8] = {AD_HARM, 127, -64, 0, 0, 0, 127, 0};
-    int16_t dmp[8] = {AD_HARM, 127, 0, 0, 0, 0, 96, 127};
-    double f0 = want_hz(36), d9, e2, early, late;
-    char what[200];
+    /* {MODE, MORPH, BRIGHT, PARTIAL, SHIFT, COMB, DECAY, MOTION} */
+    int16_t dark[8] = {AD_HARM, 0, 0, 127, 0, 0, 127, 0}, inv[8] = {AD_HARM, 0, 127, 127, 0, 0, 127, 0};
+    int16_t two[8] = {AD_HARM, 0, 96, 16, 0, 0, 127, 0}, cmb[8] = {AD_HARM, 0, 96, 127, 0, 64, 127, 0};
+    int16_t dk[8] = {AD_HARM, 0, 96, 127, 0, 0, 90, 0};
+    double f0 = want_hz(36), d9, i9, p3, c2, early, late;
+    char what[240];
     EG = &ENG_ADD;
     setup(-1, dark); voice_render(36, 0.1, Y, NFFT * 2); spectrum(Y, NFFT * 2, PS);
     d9 = lvl_at(PS, f0 * 9) - lvl_at(PS, f0);
-    setup(-1, odd); voice_render(36, 0.1, Y, NFFT * 2); spectrum(Y, NFFT * 2, PS);
-    e2 = lvl_at(PS, f0 * 2) - lvl_at(PS, f0 * 3);
-    setup(-1, dmp); voice_render(36, 0, Y, NFFT); spectrum(Y, NFFT, PS);
+    setup(-1, inv); voice_render(36, 0.1, Y, NFFT * 2); spectrum(Y, NFFT * 2, PS);
+    i9 = lvl_at(PS, f0 * 9) - lvl_at(PS, f0);
+    setup(-1, two); voice_render(36, 0.1, Y, NFFT * 2); spectrum(Y, NFFT * 2, PS);
+    p3 = lvl_at(PS, f0 * 3) - lvl_at(PS, f0);
+    setup(-1, cmb); voice_render(36, 0.1, Y, NFFT * 2); spectrum(Y, NFFT * 2, PS);
+    c2 = lvl_at(PS, f0 * 2) - lvl_at(PS, f0);         /* (phi = pi/4: the 2nd on a notch) */
+    setup(-1, dk); voice_render(36, 0, Y, NFFT); spectrum(Y, NFFT, PS);
     early = lvl_at(PS, f0 * 8) - lvl_at(PS, f0);
-    setup(-1, dmp); voice_render(36, 1.0, Y, NFFT); spectrum(Y, NFFT, PS);
+    setup(-1, dk); voice_render(36, 1.0, Y, NFFT); spectrum(Y, NFFT, PS);
     late = lvl_at(PS, f0 * 8) - lvl_at(PS, f0);
-    snprintf(what, sizeof what, "ADD: BRIGHT 0 the 9th %.0f dB under the 1st; EVEN -64 the 2nd %.0f dB under the 3rd; DAMP: the 8th %.0f -> %.0f dB",
-             d9, e2, early, late);
-    check(what, d9 < -30 && e2 < -30 && late < early - 10);
+    snprintf(what, sizeof what, "ADD: BRIGHT 0 the 9th %.0f dB under the 1st, 127 %+.0f dB over; PARTIAL 16 the 3rd %.0f dB; COMB the 2nd %.0f dB; "
+             "DECAY: the 8th %.0f -> %.0f dB", d9, i9, p3, c2, early, late);
+    check(what, d9 < -30 && i9 > 3 && p3 < -40 && c2 < -12 && late < early - 10);
 }
 static void add_alias(void)
 {
-    int16_t e[8] = {AD_WIDE, 127, 0, 63, 0, 0, 127, 0};
+    int16_t e[8] = {AD_WIDE, 0, 127, 127, 63, 0, 127, 0};   /* (the highs loudest, SHIFT +63: +794 Hz) */
     double hi = 0, all = 0;
     uint32_t i;
     char what[200];
@@ -358,7 +364,7 @@ static void add_alias(void)
         all += PS[i];
         if ((double)i * FS / NFFT < want_hz(96) * 0.97) hi += PS[i];   /* (below the fundamental: folded partials) */
     }
-    snprintf(what, sizeof what, "ADD: no alias at the top (WIDE, STRETCH +63, the key C8): %.1f dB below the fundamental", 10 * log10(hi / all + 1e-30));
+    snprintf(what, sizeof what, "ADD: no alias at the top (WIDE, BRIGHT 127, SHIFT +63, the key C8): %.1f dB below the fundamental", 10 * log10(hi / all + 1e-30));
     check(what, hi / all < 1e-3);
 }
 

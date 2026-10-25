@@ -2369,9 +2369,30 @@ static void seq_tick(track_t *t, uint32_t n)
     if (n > blk_n)
         blk_n = n;                                    /* (ctl64: ticked on its own, by a test, with more than a block) */
     if (t->pfx_rs) {                                  /* 1/2 TEMPO let go */
+        uint32_t pd = div_samples((uint32_t)t->p[P_SDIV]), ln = (uint32_t)t->p[P_SLEN], k;
+        if (song.playing) {
+            pfx_resync(t, pd, ln);
+            for (k = 0; k < FG_HEADS && t->pfx_rs == 2u && ln; k++) {   /* (gen6d, a tester) the PLAYHEADS ran at half
+                                                         * the samples too: on by the half they missed, silently (pfx.c
+                                                         * sets 2 for 1/2 TEMPO); a head's step as fugue_tick has it, its
+                                                         * rate's NUM / DEN in 3 bits each (no table: this runs from RAM) */
+                const fg_set_t *f = &fg_set[(uint32_t)(t - trk) % NTRK][k];
+                fg_head_t *h = &fg_head[(uint32_t)(t - trk) % NTRK][k];
+                uint32_t r = f->rate, sl, g;
+                if (!r || r >= FG_NRATE || h->pos == 0x7FFFFFFFu)
+                    continue;
+                sl = pd * ((0x0928B4E1u >> (3u * r)) & 7u) / ((0x234CA248u >> (3u * r)) & 7u);   /* (FG_DEN, FG_NUM) */
+                if (sl < CTL)
+                    sl = CTL;
+                h->pos += t->pfx_el - t->pfx_el / 2u;
+                for (g = 0; h->pos >= sl && g < 256u; g++) {
+                    h->pos -= sl;
+                    h->idx = (uint16_t)fg_next(h, f->dir, ln);
+                }
+                h->pos %= sl;
+            }
+        }
         t->pfx_rs = 0;
-        if (song.playing)
-            pfx_resync(t, div_samples((uint32_t)t->p[P_SDIV]), (uint32_t)t->p[P_SLEN]);
     }
     if ((t->pfx & PFX_HALF) && song.playing) {        /* 1/2 TEMPO held: half the samples (the odd one carried) */
         uint32_t h = n + t->pfx_half;

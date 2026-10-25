@@ -1724,7 +1724,8 @@ static VX_CODE void vx_add(const track_t *t, const int32_t *A, int32_t en_home)
     vxf_t f = vx_uf(A, 100, 0);
     uint32_t mode = (uint32_t)p[P_E0] % AD_N, age = vx_age(t, VX_K_ADD, 0), mt = vxs.mt[VX_K_ADD], i, k;
     int32_t en = vx_level(t, VX_K_ADD, en_home), g[DRW_NP], gmax = 1, rx, ry, cy = -16 * 16, pulse, j, q[2 * 11];
-    int32_t pk = clamp(p[P_E4], 0, 127) * 8 / 127, st = clamp(p[P_E3], -64, 63), form = clamp(p[P_E5], 0, 127);
+    int32_t pk = clamp(p[P_E5], 0, 127) * 8 / 127, st = clamp(p[P_E4], -64, 63), form = clamp(p[P_E5], 0, 127);   /* (gen6d:
+                                                         * COMB the ring, SHIFT the spread) */
     vxs.kc = 1;
     for (k = 0; k < DRW_NP; k++) {                       /* each partial's gain now, the voices' summed */
         g[k] = 0;
@@ -1734,7 +1735,7 @@ static VX_CODE void vx_add(const track_t *t, const int32_t *A, int32_t en_home)
     }
     if (gmax <= 1)                                       /* (silent: the tilt at rest, short) */
         for (k = 0; k < DRW_NP; k++) {
-            g[k] = (int32_t)(str_exp2n((uint32_t)((127 - clamp(p[P_E1], 0, 127)) * 4 * ADD_LOG2[k]) >> 8) >> 2);
+            g[k] = (int32_t)(str_exp2n((uint32_t)((127 - clamp(p[P_E2], 0, 127)) * 4 * ADD_LOG2[k]) >> 8) >> 2);
             gmax = 65536;
         }
     pulse = age < 400u ? vx_sq(256, age) : 0;            /* (a note: the bell contracts, swims) */

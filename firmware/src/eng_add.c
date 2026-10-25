@@ -4,10 +4,13 @@
 /* ADD (JIANT 0.9.9-snd5): additive, nine sine partials a voice whose ratios, levels and decays are the sound.
  * MODE picks the partials' ratios: HARM the first nine harmonics, ODD the odd ones (a clarinet's, a square's), WIDE
  * 1 2 3 4 6 8 11 13 16 (bright, airy), BELL a church bell's (hum, prime, tierce, quint, nominal ..), BAR a free bar's
- * (a vibraphone's, a xylophone's), DRUM a membrane's (Bessel's zeros). BRIGHT tilts the levels (1/k^2 .. flat), EVEN
- * the even partials against the odd, STRETCH spreads the ratios out or pulls them in (a stiff string, a bell bent),
- * PEAK a formant over the partials (FORMNT its height: a vowel, a resonance that LFO / ENV -> SHAPE sweep), DECAY each
- * partial's ring (127: held, an organ's, a pad's), DAMP the higher ones dying sooner (a pluck, a bell's tail). A
+ * (a vibraphone's, a xylophone's), DRUM a membrane's (Bessel's zeros). (gen6d, the owner: the old knobs moved too
+ * little) MORPH fades the ratios to the next MODE's (a saw into a bell), BRIGHT tilts the levels (dark .. flat at 96 ..
+ * the highs over the fundamental), PARTIAL how many sound (1 .. 9, the last by its fraction: an additive filter),
+ * SHIFT down stretches the ratios, up adds the same Hz to every partial (inharmonic, a ring's, a radio's), COMB notches
+ * sweeping over the partials (|cos k phi|: a phaser of partials; LFO / ENV -> SHAPE sweep it), DECAY each partial's
+ * ring (127: held), the higher ones sooner, MOTION down a BLOOM (the higher partials come in later), up a SHIMMER
+ * (each partial its own slow wander). A
  * partial past ~19 kHz is silent (nothing aliases).
  *
  * Memory: none of its own. WHEEL's per voice state (eng_wheel.c drw_v: nine phases and gains a voice, by part) is a
@@ -47,41 +50,51 @@ static void add_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const v
 {
     const int16_t *p = t->p;
     drw_vc_t *V = &drw_v[drw_part(t)][(uint32_t)(v - t->v) % NVOICE];
-    const uint16_t *R = ADD_RATIO[(uint32_t)p[P_E0] % AD_N];
-    int32_t acc[CTL], lv[DRW_NP], sum = 0, norm, slope = (127 - clamp(p[P_E1], 0, 127)) * 4, ev = clamp(p[P_E2], -64, 63);
-    int32_t st = clamp(p[P_E3], -64, 63), form = clamp(p[P_E5], 0, 127), dec = clamp(p[P_E6], 0, 127), damp = clamp(p[P_E7], 0, 127);
-    int32_t pos = clamp(p[P_E4] + ((m->shape - (64 << 8)) >> 8), 0, 127) * 2048 / 127;   /* (PEAK's rank, Q8: 0 .. 8) */
+    uint32_t mo = (uint32_t)p[P_E0] % AD_N;
+    const uint16_t *R = ADD_RATIO[mo], *R2 = ADD_RATIO[(mo + 1u) % AD_N];
+    int32_t acc[CTL], lv[DRW_NP], sum = 0, norm, mp = clamp(p[P_E1], 0, 127), slope = (96 - clamp(p[P_E2], 0, 127)) * 5;
+    int32_t np = 256 + clamp(p[P_E3], 0, 127) * 2048 / 127, sh = clamp(p[P_E4], -64, 63), dec = clamp(p[P_E6], 0, 127);
+    int32_t mot = clamp(p[P_E7], -64, 63), cmb = clamp(p[P_E5] + ((m->shape - (64 << 8)) >> 8), 0, 127) * 2;
     uint32_t i, k, age = (uint32_t)V->perc, rate = dec >= 127 ? 0u : str_exp2n((uint32_t)dec * 2201u / 127u) * 19u / 65u;
+    uint32_t shz = sh > 0 ? (uint32_t)(sh * sh) * 19478u : 0u;   /* (SHIFT up: + sh^2 / 5 Hz to every partial) */
     if (n > CTL)
         n = CTL;
-    for (k = 0; k < DRW_NP; k++) {                       /* the levels: the tilt, EVEN, the formant */
-        int32_t l = (int32_t)(str_exp2n((uint32_t)(slope * ADD_LOG2[k]) >> 8) >> 1), dx = (int32_t)k * 256 - pos;
-        if (k && (k & 1u) && ev < 0) l = l * (64 + ev) >> 6;        /* (k odd: the 2nd, 4th .. partials) */
-        if (k && !(k & 1u) && ev > 0) l = l * (64 - ev) >> 6;
-        dx = dx < 0 ? -dx : dx;
-        if (form && dx < 384)
-            l += (l * form * (384 - dx)) >> 14;          /* (up to x4 at the peak, 1.5 ranks wide) */
+    for (k = 0; k < DRW_NP; k++) {                       /* the levels: BRIGHT's tilt, COMB's notches, PARTIALS */
+        uint32_t lt = slope >= 0 ? (uint32_t)(slope * ADD_LOG2[k]) : (uint32_t)(-slope * (ADD_LOG2[DRW_NP - 1u] - ADD_LOG2[k]));
+        int32_t l = (int32_t)(str_exp2n(lt >> 8) >> 1), kq = (int32_t)k << 8;
+        if (cmb) {                                       /* |cos((k + 1) phi)|, phi 0 .. pi/2: notches sweeping */
+            int32_t c = SINE[((k + 1u) * (uint32_t)cmb + 256u) & 1023u];
+            c = c < 0 ? -c : c;
+            l = (l * (c + 1024)) >> 15;              /* (l < 2^15, c < 2^15: in 32 bits) */
+        }
+        if (kq >= np) l = 0;
+        else if (np - kq < 256) l = l * (np - kq) >> 8;  /* (the last one in by its fraction: a smooth sweep) */
         lv[k] = l;
         sum += l;
     }
-    norm = (int32_t)((32768u * 32768u) / (uint32_t)(sum + 16384));   /* (the gains' sum: 0.67 one partial .. 0.95 nine: in
-                                                         * phase at the note, their peaks add) */
+    norm = (int32_t)((32768u * 32768u) / (uint32_t)(sum + 16384));
     for (i = 0; i < n; i++)
         acc[i] = 0;
     for (k = 0; k < DRW_NP; k++) {
-        uint32_t r = R[k], inc, ph = V->ph[k];
-        int32_t g1, g0 = V->gp[k];
-        if (st)                                          /* STRETCH: r (1 + st (r - 1) / 1024), at least a quarter */
-            r = (uint32_t)clamp((int32_t)r + (int32_t)(((int32_t)r * ((st * ((int32_t)r - 1024)) >> 10)) >> 10), 256, 40000);
-        if ((m->inc >> 16) * r >= (AD_TOP >> 16) << 10)  /* (above the top: silent) */
+        int32_t r = (int32_t)R[k] + ((((int32_t)R2[k] - (int32_t)R[k]) * mp * 258) >> 15), g0 = V->gp[k], g1;
+        uint32_t inc, ph = V->ph[k];
+        if (sh < 0)                                      /* SHIFT down: the ratios stretched (a stiff string, a bell bent) */
+            r = clamp(r + ((r * ((-sh * (r - 1024)) >> 10)) >> 10), 256, 40000);
+        inc = (m->inc >> 10) * (uint32_t)r + shz;
+        if (inc >= AD_TOP || !lv[k])
             g1 = 0;
         else {
-            uint32_t rk = rate + rate * (uint32_t)damp * k / 128u, x;  /* (its decay: Q16 octaves a block; DAMP 127: the
-                                                         * ninth 8 x faster) */
-            x = !rk ? 0u : age >= 0xFFFFFFFFu / rk ? 0xFFFFu : (age * rk) >> 8;   /* (Q8 octaves down by now) */
+            uint32_t rk = rate + rate * k / 2u, x;       /* (its decay: Q16 octaves a block; the higher ones sooner) */
+            x = !rk ? 0u : age >= 0xFFFFFFFFu / rk ? 0xFFFFu : (age * rk) >> 8;
             g1 = mulq15(mulq15(lv[k], norm), (int32_t)(str_exp2n(x) >> 1));
+            if (mot < 0 && k) {                          /* BLOOM: partial k full after k * |MOTION| * 2 blocks */
+                uint32_t span = k * (uint32_t)-mot * 2u;
+                if (age < span) g1 = g1 * (int32_t)age / (int32_t)span;
+            } else if (mot > 0) {                        /* SHIMMER: each partial its own slow wander */
+                int32_t w = SINE[((age * (2u + 3u * k)) / 2u + k * 397u) & 1023u];
+                g1 = (g1 * (32768 - ((mot * 300 * ((w + 32767) >> 1)) >> 15))) >> 15;
+            }
         }
-        inc = (m->inc >> 10) * r;
         V->gp[k] = g1;
         if (!g0 && !g1) {
             V->ph[k] = ph + inc * n;
@@ -107,38 +120,38 @@ static void add_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const v
         out[i] += voice_amp(acc[i] >> 1, m, i) << 1;
 }
 
-/* {MODE, BRIGHT, EVEN, STRETCH, PEAK, FORMNT, DECAY, DAMP}, {A D S R}, fenv, mono */
+/* {MODE, MORPH, BRIGHT, PARTIAL, SHIFT, COMB, DECAY, MOTION}, {A D S R}, fenv, mono */
 static const preset_t ADD_PRESETS[] = {
-    {"ADD ORGAN", {AD_HARM, 70, 0, 0, 0, 0, 127, 0}, {0, 64, 127, 40}, 0, 0, FX(0, 15, 0, 30), PAT(5)},
-    {"ADD SAW", {AD_HARM, 66, 0, 0, 0, 0, 127, 0}, {0, 64, 127, 35}, 0, 0, FX(0, 20, 0, 25), PAT(4)},
-    {"HOLLOW", {AD_ODD, 58, 0, 0, 0, 0, 127, 0}, {4, 64, 127, 40}, 0, 0, FX(0, 10, 10, 35), PAT(5)},
-    {"VOWEL AH", {AD_HARM, 84, 0, 0, 40, 110, 127, 0}, {10, 64, 127, 45}, 0, 0, FX(0, 20, 0, 40), PAT(5)},
-    {"BELL", {AD_BELL, 100, 0, 0, 0, 0, 74, 60}, {0, 64, 127, 70}, 0, 0, FX(0, 0, 15, 55), PAT(6)},
-    {"TUBULAR", {AD_BELL, 90, 0, 6, 70, 40, 88, 40}, {0, 64, 127, 80}, 0, 0, FX(0, 0, 10, 60), PAT(6)},
-    {"VIBES", {AD_BAR, 72, 0, 0, 0, 0, 76, 74}, {0, 64, 127, 55}, 0, 0, FX(0, 25, 0, 40), PAT(6)},
-    {"GLASS", {AD_WIDE, 112, 0, 20, 90, 60, 80, 34}, {0, 64, 127, 70}, 0, 0, FX(0, 20, 20, 60), PAT(5)},
-    {"SKIN TOM", {AD_DRUM, 92, 0, 0, 0, 0, 46, 52}, {0, 64, 127, 30}, 0, 0, FX(0, 0, 0, 20), PAT(4)},
-    {"AIR PAD", {AD_WIDE, 100, 20, -10, 100, 50, 127, 0}, {64, 64, 127, 80}, 0, 0, FX(0, 30, 15, 75), PAT(5)},
-    {"PLUCK ADD", {AD_HARM, 112, 0, 4, 0, 0, 56, 92}, {0, 64, 127, 40}, 0, 0, FX(0, 0, 20, 30), PAT(3)},
-    {"SUB ADD", {AD_ODD, 20, -40, 0, 0, 0, 127, 0}, {0, 64, 127, 25}, 0, 1, FX(0, 0, 0, 5), PAT(2)},
+    {"ADD ORGAN", {AD_HARM, 0, 70, 127, 0, 0, 127, 0}, {0, 64, 127, 40}, 0, 0, FX(0, 15, 0, 30), PAT(5)},
+    {"ADD SAW", {AD_HARM, 0, 92, 127, 0, 0, 127, 0}, {0, 64, 127, 35}, 0, 0, FX(0, 20, 0, 25), PAT(4)},
+    {"HOLLOW", {AD_ODD, 0, 84, 127, 0, 0, 127, 0}, {4, 64, 127, 40}, 0, 0, FX(0, 10, 10, 35), PAT(5)},
+    {"PHASER", {AD_HARM, 0, 96, 127, 0, 40, 127, 0}, {10, 64, 127, 45}, 0, 0, FX(0, 20, 0, 40), PAT(5)},
+    {"BELL", {AD_BELL, 0, 100, 127, 0, 0, 74, 0}, {0, 64, 127, 70}, 0, 0, FX(0, 0, 15, 55), PAT(6)},
+    {"RADIO", {AD_HARM, 0, 96, 127, 40, 0, 127, 20}, {0, 64, 127, 80}, 0, 0, FX(0, 0, 10, 60), PAT(6)},
+    {"VIBES", {AD_BAR, 0, 72, 127, 0, 0, 76, 0}, {0, 64, 127, 55}, 0, 0, FX(0, 25, 0, 40), PAT(6)},
+    {"GLASS", {AD_WIDE, 0, 118, 127, -20, 0, 80, 30}, {0, 64, 127, 70}, 0, 0, FX(0, 20, 20, 60), PAT(5)},
+    {"SKIN TOM", {AD_DRUM, 0, 92, 127, 0, 0, 46, 0}, {0, 64, 127, 30}, 0, 0, FX(0, 0, 0, 20), PAT(4)},
+    {"AIR PAD", {AD_WIDE, 64, 100, 127, -10, 20, 127, 50}, {64, 64, 127, 80}, 0, 0, FX(0, 30, 15, 75), PAT(5)},
+    {"SWELL", {AD_HARM, 40, 104, 127, 0, 0, 127, -50}, {20, 64, 127, 60}, 0, 0, FX(0, 20, 20, 50), PAT(5)},
+    {"SUB ADD", {AD_ODD, 0, 20, 40, 0, 0, 127, 0}, {0, 64, 127, 25}, 0, 1, FX(0, 0, 0, 5), PAT(2)},
 };
 
 static const engine_t ENG_ADD = {
     .name = "ADD",
-    .page_title = {"SPECTRUM", "SHAPE"},
+    .page_title = {"SPECTRUM", "MOTION"},
     .edit = {
         {"MODE", F_ENUM, 0, AD_N - 1, AD_HARM, N_ADD_MODE, 0},
+        {"MORPH", F_PCT, 0, 127, 0, 0, 0},
         {"BRIGHT", F_PCT, 0, 127, 70, 0, 0},
-        {"EVEN", F_INT, -64, 63, 0, 0, 0},
-        {"STRETCH", F_INT, -64, 63, 0, 0, 0},
-        {"PEAK", F_PCT, 0, 127, 40, 0, 0},
-        {"FORMNT", F_PCT, 0, 127, 0, 0, 0},
+        {"PARTIAL", F_PCT, 0, 127, 127, 0, 0},
+        {"SHIFT", F_INT, -64, 63, 0, 0, 0},
+        {"COMB", F_PCT, 0, 127, 0, 0, 0},
         {"DECAY", F_PCT, 0, 127, 127, 0, 0},
-        {"DAMP", F_PCT, 0, 127, 0, 0, 0},
+        {"MOTION", F_INT, -64, 63, 0, 0, 0},
     },
     .presets = ADD_PRESETS,
     .npresets = NELEM(ADD_PRESETS),
     .note_on = add_note_on,
     .render = add_render,
-    .knob = {P_E0, P_E1, P_E4, P_E6},
+    .knob = {P_E0, P_E3, P_E5, P_E6},
 };
