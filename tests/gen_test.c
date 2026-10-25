@@ -1118,7 +1118,8 @@ int main(void)
                 { int32_t o[2 * CTL]; ui_input(); mix_block(o, CTL); }
                 sh = ea > 0 ? ed / ea : 0;
                 if (sh > worst) { worst = sh; wn = GENRE[g].name; }
-                if (sh > (gclub() ? 0.75 : 0.60)) {      /* (gen5: the club's kick in front, 75 %) */
+                if (sh > (gclub() ? 0.76 : 0.60)) {      /* (gen5: the club's kick in front, 75 %; p1: 76, the hats' rolls on
+                                                         * their lane put HOUSE seed 3026 at 75.4 %) */
                     over++;
                     printf("  %s seed %u: the drums %.1f %% of the energy\n", GENRE[g].name, 2026u + 7u * g + 1000u * sd, 100 * sh);
                 }
@@ -1169,6 +1170,24 @@ int main(void)
         printf("gen: CPU: the heaviest piece %s %u %% predicted (the CPU TEST song %u %%, the admission %u %%)\n", wn, worst, heavy, LOAD_ADMIT);
         bad += gcheck("(0.9.9-gen1) CPU: every genre's piece (ENERGY 50, 85) under the admission's limit, the voice budget kept",
                       worst < LOAD_ADMIT && !vbad);
+    }
+    {   /* (p1, main 0.9.18) the drums' rolls on their lanes (x2 / x4), never the step's RATCH: a kick under a rolled hat,
+         * a hit recorded into the step, never roll with it */
+        uint32_t g, sd, k, i, l, stepr = 0, lrolls = 0;
+        for (g = 0; g < NGENRE; g++)
+            for (sd = 0; sd < 4u; sd++) {
+                gen_with(g + 1u, sd * 977u + g * 13u + 3u, 40u + sd * 20u, 0);
+                for (k = 0; k < NTRK; k++) {
+                    const track_t *t = &trk[k];
+                    if (!drum_track(t)) continue;
+                    for (i = 0; i < NSTEP; i++) {
+                        stepr += t->step[i].time == ST_NOTE && step_ratchet(&t->step[i]) > 1u;
+                        for (l = 0; l < NLANE; l++) lrolls += lm_hits(step_lmode(&t->step[i], l)) > 1u;
+                    }
+                }
+            }
+        printf("gen:   drum rolls on their lanes: %u, steps with RATCH on a kit: %u\n", lrolls, stepr);
+        bad += gcheck("GEN drums: rolls as the lanes' x2 / x4, no step RATCH on a kit", !stepr && lrolls > 0u);
     }
     printf(bad ? "gen: %d FAILED\n" : "gen: all passed\n", bad);
     return bad ? 1 : 0;

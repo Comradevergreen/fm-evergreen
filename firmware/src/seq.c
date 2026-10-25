@@ -610,10 +610,11 @@ static uint32_t rec_lmode(void)
         return LM_SHORT + (dx_in_tch - 1u) % 3u;
     return dx_in_rat >= 8u ? LM_X8 : dx_in_rat >= 4u ? LM_X4 : dx_in_rat >= 2u ? LM_X2 : LM_NONE;
 }
+static uint32_t rec_repeats(const track_t *t, const step_t *s);
 /* a hit (a GM note) into step s of a DRUM track (rec_note, a held ratchet's next step: dxo_rec_hold) */
 static void rec_drum(track_t *t, step_t *s, uint32_t note, uint32_t vel, int32_t mic)
 {
-    uint32_t l = drum_lane(note), k;
+    uint32_t l = drum_lane(note), k, m = rec_lmode(), was;
     if (s->time != ST_NOTE || (!s->n && !s->hit)) {
         s->n = s->hit = s->acc = 0;
         s->flags = 0;
@@ -627,13 +628,14 @@ static void rec_drum(track_t *t, step_t *s, uint32_t note, uint32_t vel, int32_t
     }
     s->time = ST_NOTE;
     if (note == DRUM_LANE_NOTE[l]) {                    /* a lane's note: its hit */
+        was = (s->hit >> l) & 1u;                       /* (p1) the sound in the step already (it rolls with it) */
         s->hit |= (uint8_t)(1u << l);
         if (vel > 110)
             s->acc |= (uint8_t)(1u << l);
     } else {                                            /* another GM drum (a low tom, a crash): a note */
         for (k = 0; k < s->n && s->note[k] != note; k++)
             ;
-        if (k == s->n) {
+        if (!(was = k < s->n)) {
             if (s->n < 4u)
                 s->n++;
             s->note[s->n - 1u] = (uint8_t)note;
@@ -643,7 +645,11 @@ static void rec_drum(track_t *t, step_t *s, uint32_t note, uint32_t vel, int32_t
     }
     if (vel > s->vel)
         s->vel = (uint8_t)vel;
-    step_set_lmode(s, l, rec_lmode());
+    /* (p1, main 0.9.16: Danil's "random rolls") a plain hit on a lane new to a step that repeats: once, as played (the
+     * step's next parts replayed it at once, x2..x8, and on every pass after); played there again, still once */
+    if (!m && (was ? step_lm_raw(s, l) == LM_ONCE : rec_repeats(t, s)))
+        m = LM_ONCE;
+    step_set_lmode(s, l, m);
     t->seq_active = 1;
 }
 static uint8_t rec_at, rec_late;                        /* (0.8.5) the step (play index + 1) the last hit went into;
@@ -691,14 +697,19 @@ static void rec_note(track_t *t, uint32_t note, uint32_t vel)
         s->n = 0;                                   /* a fresh step */
         s->flags = 0;
         s->vel = 0;
+        s->lm[0] = s->lm[1] = s->lm[2] = 0;         /* (p1: no note of it once) */
         ST_MICRO_SET(s, mic);                       /* (0.6.88) its place off the grid (REC Q) */
     }
     for (k = 0; k < s->n && s->note[k] != note; k++)
         ;
     if (k == s->n) {
+        /* (p1, main 0.9.18) a note added to a POLY step that repeats: once, as played, not rolled with the step's own
+         * (its slot LM_ONCE) */
+        uint32_t rep = s->n && rec_repeats(t, s);
         if (s->n < 4u)
             s->n++;
         s->note[s->n - 1u] = (uint8_t)note;
+        step_set_lmode(s, s->n - 1u, rep ? LM_ONCE : LM_NONE);
     }
     s->time = ST_NOTE;
     if (vel > 110)
@@ -1325,6 +1336,26 @@ static void gl_touch(void)                              /* (after an edit or a l
     gl_on = (uint8_t)on;
 }
 static void gl_reset(void) { gsp_n = gl_ser = gl_pre = gl_acc = 0; gl_next = 0; gl_rs = 0x2545F491u; memset(gl_took, 0, sizeof gl_took); }
+/* (p1) a live recording into step s (rec_drum, rec_note): does it repeat as it plays? Its RATCH, a RATCHET of its own,
+ * one acting on it now (a span of an earlier step's, the C.LEN lane's, the global lane's: comp_run's cx_rat), one of
+ * the track's spanning more steps, or the global lane's on the track */
+static __attribute__((noinline)) uint32_t rec_repeats(const track_t *t, const step_t *s)
+{
+    uint32_t i, k, len = t->p[P_SLEN] > 0 ? (uint32_t)t->p[P_SLEN] : 1u, ti = trk_index(t) % NTRK;
+    if (step_ratchet(s) > 1u || CO_ACT(s->comp) == CA_RATCH || CO_ACT(s->comp2) == CA_RATCH)
+        return 1;
+    if (t->cx_rat > 1u && s == &t->step[seq_src(t, t->seq_idx % len)])
+        return 1;
+    for (i = 0; i < NSTEP; i++)
+        for (k = 0; k < 2u; k++)
+            if (CO_ACT(k ? t->step[i].comp2 : t->step[i].comp) == CA_RATCH && t->step[i].clen[k] &&
+                t->step[i].clen[k] != CL_LEGACY)
+                return 1;
+    for (i = 0; i < GL_N; i++)
+        if (CO_ACT(glane[i].comp) == CA_RATCH && ((glane[i].mask >> ti) & 1u))
+            return 1;
+    return 0;
+}
 /* the global step a track's step starting off samples into this block falls on (the nearest 1/16 of the transport) */
 static uint32_t gl_step_at(uint32_t off)
 {
@@ -2006,6 +2037,13 @@ static uint32_t hum_amt(const track_t *t, uint32_t id)
 }
 static int32_t hum_pm(uint32_t r) { return (int32_t)(hum_rnd() % (2u * r + 1u)) - (int32_t)r; }   /* -r .. r */
 #define HUM_TMAX (FS * 40u / 1000u)                 /* at 100 %: up to 40 ms late (0.6.92: was 30) */
+/* (p1, main 0.9.18) an entry of a step left out of its repeats: on a kit lane l recorded once (LM_ONCE) or with its own
+ * x2 x4 x8; on a synth note l (0..3) overdubbed once (its lm slot l LM_ONCE: rec_note) */
+static int lm_once(const step_t *s, uint32_t l, uint32_t kit)
+{
+    uint32_t r = step_lm_raw(s, l % NLANE);
+    return r == LM_ONCE || (kit && lm_hits(r) > 1u);
+}
 static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint32_t period, uint32_t skip)
 {
     uint32_t i, j, gate = period * (uint32_t)t->p[P_SGATE] / 128u;
@@ -2020,7 +2058,7 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
     int32_t octs = t->cx_oct;
     int cont = 0;                                   /* .. going on over a TIE */
     uint8_t nn[4 + NLANE], vv[4 + NLANE];           /* the notes it plays: its notes, then its hits */
-    uint32_t m = 0, sk = 0, sk0, hdel = 0;
+    uint32_t m = 0, sk = 0, sk0, hdel = 0, once = 0;
     /* QNT SEQ: the step's notes (not the lane hits) snap to the scale as they play; never on a drum kit, the slices
      * or another engine that maps the keys itself. seq_notes keeps the notes that sound: their note-offs match */
     const engine_t *e = ENGINES[eng_idx(t->eng_req)];
@@ -2107,6 +2145,7 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
         nn[m] = (uint8_t)x;
         vv[m] = (uint8_t)vel;
         sk |= ((skip >> i) & 1u) << m;
+        once |= (uint32_t)(arp ? 0 : lm_once(s, kit ? drum_lane(s->note[i]) : i, kit)) << m;
         m++;
     }
     for (i = 0; i < NLANE && !arp; i++)
@@ -2114,8 +2153,12 @@ static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint
             nn[m] = DRUM_LANE_NOTE[i];
             vv[m] = (uint8_t)((s->acc >> i) & 1u ? 127u : vel);
             sk |= ((skip >> (8u + i)) & 1u) << m;
+            once |= (uint32_t)lm_once(s, i, 1u) << m;
             m++;
         }
+    if (skip & SEQ_REP)                             /* (p1) the step's repeats: not what was recorded once, nor a lane
+                                                     * with its own x2 x4 x8 (no repeats of repeats: seq_lane_rat) */
+        sk |= once;
     if (kit) {                                      /* (0.6.82) on a drum kit: an ARP plays its sounds (cp_kit_arp); */
         int32_t dp = 0, deg = 0;                    /* OCT RAND TONAL and ARP SCALE tune the hits, BEND bends them */
         if (arp) {

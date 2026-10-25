@@ -1205,12 +1205,9 @@ static int proj_unpack_c(project_t *q, const uint8_t *b)
                 if (CT_DIV(s) >= CT_NDIV || s->ctime > 127u) return 0;
             }
             s->lm[0] = s->lm[1] = s->lm[2] = 0;
-            if (x & 64u) {                              /* (0.8.5) the lanes' modes (a 7: none) */
-                uint32_t l;
+            if (x & 64u) {                              /* (0.8.5) the lanes' modes (p1: a 7, LM_ONCE, kept as it is) */
                 if (pos + 3u > room) return 0;
                 s->lm[0] = b[pos++]; s->lm[1] = b[pos++]; s->lm[2] = b[pos++];
-                for (l = 0; l < NLANE; l++)
-                    step_set_lmode(s, l, step_lmode(s, l));
             }
             s->clen[0] = s->clen[1] = s->cnm[0] = s->cnm[1] = 0;
             if (x & 128u) {                             /* (seq2d) components v2: LENGTHs and N:Ms */

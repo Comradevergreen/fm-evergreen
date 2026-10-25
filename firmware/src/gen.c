@@ -404,6 +404,13 @@ static void gx_drums(track_t *t, uint32_t len)
         if (!(s->hit & 1u) && gch(8)) step_set_chance(s, (uint32_t)grr(40, 85));
     }
 }
+/* (p1, main 0.9.18) a roll on lane l of step s alone (its mode x2 / x4: n 2..3, 4; main's x3 -> x4 put HOUSE's drums
+ * past gen5's 75 % of the energy), not the step's RATCH: the step's other sounds (a kick under the hat) and a hit
+ * recorded live into it never roll with it */
+static void glane_rat(step_t *s, uint32_t l, uint32_t n)
+{
+    step_set_lmode(s, l, n > 2u ? LM_X4 : LM_X2);
+}
 static void gen_drums_idm(track_t *t, uint32_t len)
 {
     uint32_t i, kb = (uint32_t)grr(3, 6), ks = (uint32_t)grr(2, 4), kh = (uint32_t)grr(7, 13), rot = (uint32_t)grr(0, 7);
@@ -417,7 +424,7 @@ static void gen_drums_idm(track_t *t, uint32_t len)
         if (!h) continue;
         s->time = ST_NOTE; s->hit = (uint8_t)h; s->acc = (uint8_t)(i % 4u == 0u ? h & 1u : 0u);
         s->vel = (uint8_t)(h & 1u ? 104 : grr(70, 100));
-        if ((h & 8u) && gch(25)) step_set_ratchet(s, (uint32_t)grr(2, 4));
+        if ((h & 8u) && gch(25)) glane_rat(s, 3u, (uint32_t)grr(2, 4));
         if (!(h & 1u) && gch(30)) step_set_chance(s, (uint32_t)grr(45, 85));
     }
 }
@@ -535,7 +542,7 @@ static void gen_drums(track_t *t, uint32_t len)
                 gdrum_clear_region(t, base + 12u, base + 16u, 0x10u);
                 for (k = 0; k < 4u; k++) {
                     gdrum_hit(t, base + 12u + k, lane, 70 + (int32_t)k * 15, k == 3u);
-                    if (e > 55 && k >= 2u) step_set_ratchet(&t->step[base + 12u + k], 2);
+                    if (e > 55 && k >= 2u) glane_rat(&t->step[base + 12u + k], lane, 2);
                 }
                 if (bars >= 8u) { gdrum_clear_region(t, base + 8u, base + 12u, 0x10u); for (k = 0; k < 4u; k++) gdrum_hit(t, base + 8u + k, lane, 50 + (int32_t)k * 5, 0); }
                 break;
@@ -551,7 +558,7 @@ static void gen_drums(track_t *t, uint32_t len)
                 gdrum_hit(t, base + 15u, 4, 100, 1);
                 break;
             case FL_HAT:
-                for (k = 12; k < 16u; k++) { gdrum_hit(t, base + k, 3, 70 + (int32_t)(k - 12u) * 12, 0); step_set_ratchet(&t->step[base + k], k < 14u ? 2u : 3u); }
+                for (k = 12; k < 16u; k++) { gdrum_hit(t, base + k, 3, 70 + (int32_t)(k - 12u) * 12, 0); glane_rat(&t->step[base + k], 3u, k < 14u ? 2u : 3u); }
                 break;
             case FL_LINEAR: {
                 static const uint8_t BD[8] = {1, 0, 1, 0, 1, 0, 0, 1}, SD[8] = {0, 1, 0, 1, 0, 1, 1, 0};
@@ -584,7 +591,7 @@ static void gen_drums(track_t *t, uint32_t len)
             step_t *s = &t->step[i];
             uint32_t p = i % 16u;
             if (s->time != ST_NOTE || !(s->hit & 8u) || (s->hit & 3u)) continue;
-            if ((p == 6u || p == 14u || p == 10u) && gch(35 + gs.complex / 2u)) step_set_ratchet(s, (uint32_t)grr(2, p == 14u ? 4 : 3));
+            if ((p == 6u || p == 14u || p == 10u) && gch(35 + gs.complex / 2u)) glane_rat(s, 3u, (uint32_t)grr(2, p == 14u ? 4 : 3));
         }
     }
     for (i = 0; i < len; i++) {                         /* the snare laid back where the genre plays late; the kick's steps */

@@ -558,9 +558,36 @@ static int timing(void)
     return bad;
 }
 
+/* (p1, main 0.9.18) a POLY note recorded into a ratcheted synth step: once, live and on the passes after, not rolled with
+ * the step's own (its lm slot LM_ONCE); into a plain step: no mark */
+static int poly_once(void)
+{
+    uint32_t n60 = 0, n64 = 0, n, k;
+    uint8_t nt[32];
+    int ok;
+    track_t *t = one_step(2, 0);
+    t->p[P_VOICE] = V_POLY;
+    run(t, 2, 0, 0, 0);                                   /* (early in the step) */
+    rec_note(t, 64, 100);
+    rec_release(t, 64);
+    ok = t->step[0].n == 2u && t->step[0].note[1] == 64u && step_lm_raw(&t->step[0], 1u) == LM_ONCE &&
+         step_lm_raw(&t->step[0], 0u) == LM_NONE;
+    seq_start();
+    n = run_notes(t, passes(t, 1), nt, sizeof nt);
+    for (k = 0; k < n; k++) { n60 += nt[k] == 60u; n64 += nt[k] == 64u; }
+    if (n60 != 2u || n64 != 1u) printf("ui:   POLY overdub into x2: 60 x%u, 64 x%u\n", n60, n64);
+    ok &= n60 == 2u && n64 == 1u;
+    t = one_step(1, 0);
+    t->p[P_VOICE] = V_POLY;
+    run(t, 2, 0, 0, 0);
+    rec_note(t, 64, 100);
+    rec_release(t, 64);
+    ok &= t->step[0].n == 2u && !step_lm_any(&t->step[0]);
+    return check("  a POLY note recorded into an x2 step: once (60 x2, 64 x1); into an x1 step: no mark", ok);
+}
 int main(void)
 {
-    int bad = play() + projects() + presets() + screens() + ratch_div_len() + human() + timing();
+    int bad = play() + poly_once() + projects() + presets() + screens() + ratch_div_len() + human() + timing();
     printf("%s\n", bad ? "RATCHET TEST FAILED" : "ratchet tests passed");
     return bad != 0;
 }

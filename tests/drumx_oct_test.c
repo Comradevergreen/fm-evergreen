@@ -514,6 +514,20 @@ static int per_lane(void)
     run_c(step_len(0) / CTL);
     seq_stop();
     bad += check("  a step's RATCH x2 as before (lanes without a mode)", cnt[36] == 2u);
+    /* (p1, main 0.9.18) a lane's own x4 on a step with RATCH x2: the lane's mode wins (4 hats, not 4 + the step's
+     * repeat); the kick, plain, x2 with the step */
+    drum_setup();
+    dt->p[P_SLEN] = 1;
+    dt->step[0] = (step_t){{0}, 0, ST_NOTE, 0, 100, 1u << DV_KICK | 1u << DV_HATC};
+    step_set_ratchet(&dt->step[0], 2);
+    step_set_lmode(&dt->step[0], DV_HATC, LM_X4);
+    seq_start();
+    memset(cnt, 0, sizeof cnt);
+    run_c(step_len(0) / CTL);
+    seq_stop();
+    if (cnt[36] != 2u || cnt[42] != 4u) printf("  lane x4 on RATCH x2: kick %u hat %u\n", cnt[36], cnt[42]);
+    bad += check("  a lane's x4 on a RATCH x2 step: the lane's 4 (no repeats of repeats), the kick x2", cnt[36] == 2u &&
+                 cnt[42] == 4u);
     /* recorded live: the kick at OCT 0 and the closed hat at OCT +2 into the same step, then the snare at OCT -2 */
     drum_setup();
     song.rec = 1u << 3;
@@ -729,6 +743,130 @@ static int ui_part(void)
     return bad;
 }
 
+/* (p1, main 0.9.16) finger drumming at OCT 0, recording over a beat with steps that repeat (RATCH, DICE and GEN's
+ * x2..x4; seq-v2's RATCHET component, a span of one, the global lane's): Danil's "random rolls". A key's hit on a lane
+ * the step did not play is struck once, live and on every pass after (LM_ONCE), not xN with the step's repeats; the
+ * step's own hits still roll; FUNC keeps it */
+static uint32_t lane_n[NLANE], lane_age[NVOICE];
+static void lanes_b(uint32_t nb)                         /* nb blocks, the hits of each lane counted */
+{
+    uint32_t i;
+    while (nb--) {
+        events_block(CTL);
+        for (i = 0; i < NVOICE; i++)
+            if (dt->v[i].age != lane_age[i]) {
+                lane_age[i] = dt->v[i].age;
+                lane_n[drum_lane(dt->v[i].note)]++;
+            }
+    }
+}
+static void lanes_until(uint32_t idx, uint32_t from)   /* to play index idx, from its sample from on */
+{
+    while (!(dt->seq_idx == idx && dt->seq_pos >= from && dt->seq_pos < 0x7FFFFFFFu))
+        lanes_b(1);
+}
+/* the hat on step 3 repeating r times by way w: 0 its RATCH, 1 its RATCHET component, 2 step 2's RATCHET over LENGTH 2,
+ * 3 the global lane's RATCHET on track 4 */
+static void hat_rolls(uint32_t w, uint32_t r)
+{
+    dt->step[2] = (step_t){{0}, 0, ST_NOTE, 0, 100, 1u << DV_HATC};
+    if (w == 0u) {
+        step_set_ratchet(&dt->step[2], r);
+    } else if (w == 1u) {
+        dt->step[2].comp = CO_MAKE(CA_RATCH, CC_ALWAYS);
+        dt->step[2].carg = (uint8_t)(r - 2u);
+    } else if (w == 2u) {
+        dt->step[1].comp = CO_MAKE(CA_RATCH, CC_ALWAYS);
+        dt->step[1].carg = (uint8_t)(r - 2u);
+        dt->step[1].clen[0] = 1;                          /* (LENGTH 2: steps 2 and 3) */
+    } else {
+        uint32_t g;
+        memset(glane, 0, sizeof glane);
+        for (g = 0; g < GL_N; g++) {
+            glane[g].comp = CO_MAKE(CA_RATCH, CC_ALWAYS);
+            glane[g].val = (uint8_t)(r - 2u);
+            glane[g].mask = 1u << 3;
+        }
+        gl_touch();
+    }
+}
+static int rec_ratch(void)
+{
+    static const char *const WAY[4] = {"RATCH", "a RATCHET", "a RATCHET's span", "the global lane's RATCHET"};
+    int bad = 0, ok, late;
+    uint32_t r, w;
+    for (w = 0; w < 4u; w++)
+        for (late = 0; late < 2; late++)
+            for (r = 2; r <= 4u; r++) {
+                uint32_t sl, at = late ? 1u : 2u, hats;
+                char what[160];
+                drum_setup();
+                hat_rolls(w, r);
+                song.rec = 1u << 3;
+                seq_start();
+                sl = step_len(2);
+                lanes_until(at, late ? sl * 3u / 4u : sl / 8u);   /* early in step 3, or late in step 2 (into step 3) */
+                memset(lane_n, 0, sizeof lane_n);
+                key_dn(KICK_KEY);
+                lanes_b(4);
+                key_upk(KICK_KEY);
+                lanes_until(3, 0);
+                hats = lane_n[DV_HATC];
+                ok = lane_n[DV_KICK] == 1u && hats == r - (late ? 0u : 1u) &&
+                     dt->step[2].hit == (1u << DV_HATC | 1u << DV_KICK) && step_lm_raw(&dt->step[2], DV_KICK) == LM_ONCE &&
+                     step_lmode(&dt->step[2], DV_KICK) == LM_NONE;
+                memset(lane_n, 0, sizeof lane_n);             /* the next pass: once, the hats x r */
+                lanes_until(1, 0);
+                lanes_until(3, 0);
+                ok &= lane_n[DV_KICK] == 1u && lane_n[DV_HATC] == r;
+                memset(lane_n, 0, sizeof lane_n);             /* played there again: the recorded one and the key's */
+                lanes_until(2, sl / 8u);
+                key_dn(KICK_KEY);
+                lanes_b(4);
+                key_upk(KICK_KEY);
+                lanes_until(3, 0);
+                ok &= lane_n[DV_KICK] == 2u && step_lm_raw(&dt->step[2], DV_KICK) == LM_ONCE;
+                memset(lane_n, 0, sizeof lane_n);             /* a hat played into its own step: it rolls with it */
+                lanes_until(2, sl / 8u);
+                fm1_in.notes |= 1u << 13;                     /* (key 13: 42, the closed hat) */
+                lanes_b(4);
+                fm1_in.notes &= ~(1u << 13);
+                lanes_until(3, 0);
+                ok &= drum_lane(29u + 13u) == DV_HATC && step_lm_raw(&dt->step[2], DV_HATC) == LM_NONE;
+                seq_stop();
+                memset(glane, 0, sizeof glane);
+                gl_touch();
+                if (!ok) printf("  %s x%u%s: hats %u\n", WAY[w], r, late ? " late" : "", hats);
+                snprintf(what, sizeof what, "REC at OCT 0 %sinto %s x%u: the new hit once (live, after)",
+                         late ? "late " : "", WAY[w], r);
+                bad += check(what, ok);
+            }
+    {   /* a step without repeats as before (no mode) */
+        drum_setup();
+        dt->step[5] = (step_t){{0}, 0, ST_NOTE, 0, 100, 1u << DV_HATC};
+        song.rec = 1u << 3;
+        seq_start();
+        lanes_until(5, step_len(5) / 8u);
+        key_dn(KICK_KEY);
+        lanes_b(4);
+        key_upk(KICK_KEY);
+        lanes_b(4);
+        ok = !step_lm_any(&dt->step[5]) && dt->step[5].hit == (1u << DV_HATC | 1u << DV_KICK);
+        seq_stop();
+        bad += check("REC at OCT 0 into a plain step: no lane mode, as before", ok);
+    }
+    {   /* FUNC keeps it; read as none by the rest (and by a firmware before: the hit rolls with the step, as it did) */
+        project_t before, after;
+        project_store_t b;
+        step_set_lmode(&dt->step[2], DV_KICK, LM_ONCE);
+        project_capture(&before);
+        ok = proj_pack(&b, &before) && proj_import(&after, &b, sizeof b) &&
+             step_lm_raw(&after.t[3].step[2], DV_KICK) == LM_ONCE && step_lmode(&after.t[3].step[2], DV_KICK) == LM_NONE;
+        bad += check("FUNC: LM_ONCE round trip (step_lmode: none)", ok);
+    }
+    return bad;
+}
+
 int main(void)
 {
     int bad = 0;
@@ -740,6 +878,7 @@ int main(void)
     bad += midi();
     bad += per_lane();
     bad += ui_part();
+    bad += rec_ratch();
     if (bad) {
         printf("drumx octaves: %d FAILED\n", bad);
         return 1;
