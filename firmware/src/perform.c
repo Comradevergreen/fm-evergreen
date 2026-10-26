@@ -445,7 +445,8 @@ static __attribute__((noinline)) void perf_glt_seg(void)
     } else if (a == GA_DN) {
         pf.u.g.rate = 32768;
     } else if (a == GA_SKIP) {
-        s = g0 - pf.u.g.sp + pf_hash(pf.gs * 64u + (pf.u.g.k >> 1)) % (pf.u.g.sp - L + 1u);
+        s = g0 - pf.u.g.sp + pf_hash(pf.gs * 64u + (pf.u.g.k >> 1)) % (pf.u.g.sp / L) * L;   /* (p9c: on its own grid,
+                                                         * a whole number of fragments into the 1/16, not any sample) */
     }
     pf.u.g.src = s << 16;
 }
@@ -506,7 +507,8 @@ static __attribute__((noinline)) int perf_glt(int32_t l, int32_t r)
         perf_glt_seg();
     }
     if (++pf.gph >= pf.P) {
-        pf.gs++;
+        pf.gs = song.playing && clk_pos != CLK_START ? clk_n + 1u : pf.gs + 1u;   /* (p9c: the transport's own 1/16, so its
+                                                         * 2-bar cycle stays on the bar) */
         perf_glt_step();
     }
     return a != GA_PASS;
