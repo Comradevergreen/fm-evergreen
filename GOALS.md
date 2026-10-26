@@ -1,6 +1,6 @@
 # FM Evergreen: goals, rules, backlog
 
-Status: **draft**, 2026-10-26. Rows marked **DECIDE** wait for the owner.
+Status: **reviewed by the owner on 2026-10-27.** No open questions.
 
 FM Evergreen is a fork of [JIANT FM](https://github.com/juanjiant-bit/JIANT) for the M-VAVE FM-1. JIANT is a fork of
 Felucca and takes its song system from SLOOP.
@@ -21,14 +21,15 @@ when needed.
 
 ## 1. Goals
 
-1. **Lean.** Remove the randomize and generate features that do not help you play or edit (inventory in §3).
+1. **Lean.** Remove the randomize and generate features that do not help you play or edit (§3).
 2. **UX first.** Every function sits where you would look for it. No extra screens, no long button combos, no odd routing.
 3. **Sound design from scratch.** Make a synth patch in one obvious path: INIT, choose the engine, tweak, save.
 4. **Every parameter explains itself.** One shared popup gives the full name, the value with its unit and one line on
    what the parameter does.
-5. **One sound library.** Factory and user sounds are browsed and saved in one place.
+5. **One sound library.** Factory and user sounds live in one place. Any sound can be overwritten, or copied to a new
+   slot.
 6. **A full drum lane.** Each step of each drum instrument gets its own velocity and probability.
-7. **Correct timing and data.** Fix the ENV attack and the leftover p-locks.
+7. **Correct timing and data.** Fix the ENV page on DRUM-X and FM6, and the leftover p-locks.
 
 ## 2. Rules
 
@@ -70,35 +71,36 @@ boot, flash, audio, performance and recovery. Read the relevant page before touc
    - spread bursts of work over several blocks;
    - run slow things (envelopes, LFOs, smoothing) at control rate;
    - check the audio load with the busiest screen showing, because drawing shares the CPU with the audio.
-3. **Formats stay compatible.** Old projects and presets keep loading. A change to `step_t` or to the preset layout
-   needs a format version bump, a migration and a test (`tests/project_test.c`, `tests/upreset_test.c`).
+3. **Formats: no migrations for now** (owner, 2026-10-27: there are no saved projects). Projects and presets from
+   before may be dropped.
+   - A change to `step_t` or to the preset layout still bumps the format version, so old data in flash is refused
+     cleanly instead of being misread.
+   - Revisit this rule before the first public release.
 4. **Gates before release.**
    - `tests/run_tests.sh` passes before every build.
    - Every build is tried on the FM-1 before it is called stable.
    - Know the recovery path first: see the wiki's [Recovery](https://sbegueria.github.io/fm1-dev-wiki/Recovery.html) page.
 5. **One change, one reason.** A removal, a UX change and a bug fix go in separate commits.
 
-## 3. Random and generative inventory (DECIDE per row)
-
-The proposals are a first pass. Mark each row Remove, Keep or Rework.
+## 3. Random and generative inventory (decided 2026-10-27)
 
 ### A. Generators (they write music for you)
 
-| # | Feature | How it's reached | Code | Proposal |
+| # | Feature | How it's reached | Code | Decision |
 | --- | --- | --- | --- | --- |
 | A1 | **GEN**, the song generator: 43 genres, EXPLORE, RANDOM, seed, energy, form | HOME > GEN 1–3, HOME + SELECT | `gen.c` (2791 lines), `gen_tables.c`, `song_dice.c`; tests `gen_test.c`, `dice_metrics.c`, `gen_dump.c`; `tools/dice_render.c` | **Remove.** This is the biggest flash win |
 | A2 | **DICE ALL**, a whole project rolled at once (and MENU > CONTROL > BPM LOCK, which only affects it) | from GEN | `gen.c dice_all` | **Remove** with A1 |
 | A3 | **SEQ + SELECT**, the sequence dice | any SEQ page | `gen.c dice_seq` | **Remove** |
 | A4 | SEQ TOOLS **RANDOM** (C4) and **COOK** (D4, moves 10–25 % of the hits or notes at random) | SEQ held | `ui_tools.c` | **Remove** |
 | A5 | SEQ TOOLS lane **RND** (C5) | SEQ held, DRUM track | `ui_tools.c` | **Remove** |
-| A6 | SEQ TOOLS **BEAT** (E4: four on the floor, backbeat, 8th hats). It is a template, not random | SEQ held, DRUM track | `ui_tools.c` | DECIDE. Proposed: remove |
-| A7 | The **RAND** component action (each note moved up or down the scale at random) and the global COMPS lane's RANDOM | SEQ > COMP, GLO > COMPS | `seq.c CA_RAND` | **Remove**. Keep the % conditions (see D1) |
-| A8 | **PLAYHEADS** (was FUGUE): 3 extra playheads with rate, direction (including RND) and interval | SEQ > PLAYHEADS | `fugue.c`, a SEQ page | DECIDE. Proposed: remove (it is generative sequencing) |
-| A9 | VOICE **lyric dice**: W1–W16 phrases and the NAME screen's KNOB 3 | VOICE WORDS, NAME | `sing.c`, `ui_name.c` | DECIDE. Proposed: keep W1–W16 (a fixed phrase bank), remove the random throw |
+| A6 | SEQ TOOLS **BEAT** (E4: four on the floor, backbeat, 8th hats). It is a template, not random | SEQ held, DRUM track | `ui_tools.c` | **Remove** |
+| A7 | The **RAND** component action (each note moved up or down the scale at random) and the global COMPS lane's RANDOM | SEQ > COMP, GLO > COMPS | `seq.c CA_RAND` | **Remove**. The % conditions stay (D1) |
+| A8 | **PLAYHEADS** (was FUGUE): 3 extra playheads with rate, direction (including RND) and interval | SEQ > PLAYHEADS | `fugue.c`, a SEQ page | **Keep** |
+| A9 | VOICE **lyric dice**: W1–W16 phrases and the NAME screen's KNOB 3 | VOICE WORDS, NAME | `sing.c`, `ui_name.c` | **Keep** W1–W16 (a fixed phrase bank); **remove** the random throw |
 
 ### B. Sound dice
 
-| # | Feature | How it's reached | Code | Proposal |
+| # | Feature | How it's reached | Code | Decision |
 | --- | --- | --- | --- | --- |
 | B1 | **Sound and kit dice**: a random factory preset plus up to ±25 % on every parameter, with KEEP DICED? | EDIT + SELECT | `ui_input.c`, `ui_layer.c` | **Remove** |
 | B2 | **LFO dice** | LFO + SELECT | same | **Remove** |
@@ -109,49 +111,52 @@ Removing B1–B4 also removes the KEEP DICED / BEFORE-NOW dialog and frees four 
 
 ### C. Self-changing music
 
-| # | Feature | How it's reached | Code | Proposal |
+| # | Feature | How it's reached | Code | Decision |
 | --- | --- | --- | --- | --- |
 | C1 | **MUTATE / MUTATE 2**: notes, rhythm, sound or a parameter change by themselves each bar. Comes with FREEZE (GLO + A4), REVERT (SEQ + D5), REVERT ALL (GLO + B4), KEEP and the "BACK TO BEFORE MUTATE?" notice | SEQ > MUTATE | `project.c mut_*`, the anchor | **Remove.** This frees 2 SEQ pages and 3 layer keys |
 
 ### D. Variation each time a step plays (performance)
 
-| # | Feature | How it's reached | Proposal |
+| # | Feature | How it's reached | Decision |
 | --- | --- | --- | --- |
 | D1 | **Step probability** (`step_t.probability`). It exists, but **no page on the device edits it** (only the dice and the web editor). Component conditions also offer 25 / 50 / 75 % | none | **Keep and expose**, per lane on drums (§4.6) |
-| D2 | Track **CHANCE**: scales every step's probability | SEQ > TRACK | Keep |
-| D3 | **HUMAN**: random velocity, timing, length and envelope a little each pass | SEQ > TRACK | DECIDE. Proposed: keep (it is musical, and 0 % is off) |
-| D4 | The ARP's **RND** order, and RND in step-record ARP | ARP, STEP | Keep (a standard arp mode) |
-| D5 | Punch-in FX **F5 RANDOM** (random pitch while held) | FX held | DECIDE. Proposed: remove and give the key to something useful |
-| D6 | Mod source **RAND** (per note), the LFO **S&H** wave, the NOISE source | LFO / MOD | Keep (standard modulation) |
-| D7 | DRUM-X **X-MOD RAND** and **S&H** | EDIT > X-MOD | Keep (sound design) |
+| D2 | Track **CHANCE**: scales every step's probability | SEQ > TRACK | **Keep** |
+| D3 | **HUMAN**: random velocity, timing, length and envelope a little each pass | SEQ > TRACK | **Keep** (it is musical, and 0 % is off) |
+| D4 | The ARP's **RND** order, and RND in step-record ARP | ARP, STEP | **Keep** (a standard arp mode) |
+| D5 | Punch-in FX **F5 RANDOM** (random pitch while held) | FX held | **Remove**. The key gets something useful (§4.2) |
+| D6 | Mod source **RAND** (per note), the LFO **S&H** wave, the NOISE source | LFO / MOD | **Keep** (standard modulation) |
+| D7 | DRUM-X **X-MOD RAND** and **S&H** | EDIT > X-MOD | **Keep** (sound design) |
 
-### E. Randomness inside the engines (keep)
+### E. Randomness inside the engines: keep
 
 ANALOG DRIFT, NOISE DRIFT, ANIMAL CHAOS, VOICE jitter / shimmer / RAND, WING DRIFT, LOFI BYTE VAR. These are timbre
 parameters, not features.
 
-### F. Decoration (UX review, not a removal)
+### F. Decoration: UX review, not a removal
 
 HOME's ECO and BEING pages, with the creatures, granules and faces. Once GEN is gone, HOME is ECO · MACROS · BEING ·
-ROUTES. **DECIDE** later whether HOME should be the information screen instead (rule UX 5).
+ROUTES. Whether HOME should become the information screen instead (rule UX 5) is decided in §4.2.
 
-## 4. Backlog: findings so far
+## 4. Backlog
 
 All code refs are to `upstream/port-p2` (par9).
 
 ### 4.1 Remove the random and generative features
 
-The order follows §3 once it is decided. Each removal has to:
+The rows marked Remove in §3. Each removal:
 
-- delete its code, its pages and the combos that reach it;
-- turn its project fields into no-ops so old projects still load;
-- update `docs/MANUAL.md`;
-- report the flash it freed.
+- deletes its code, its pages, the combos that reach it and its tests;
+- needs no migration (Eng 3): its project fields are dropped together with the format version bump;
+- updates `docs/MANUAL.md`;
+- reports the flash it freed.
 
 ### 4.2 UX rules audit
 
 Walk every section's chain (`tools/gen_nav_map.py` draws it) and list each place that breaks a rule in §2. Fix them in
-priority order.
+priority order. This includes:
+
+- what to give the freed keys and combos: punch-in F5, the four `X + SELECT` combos, GLO A4 / B4, SEQ D5;
+- HOME's role (§3 F).
 
 ### 4.3 Sound design from scratch
 
@@ -162,15 +167,20 @@ What exists today:
   the engine you play in the SAVE section is a routing problem.
 - There is no "new sound" flow.
 
-Proposal (DECIDE):
+Plan:
 
-- An EDIT page **ENGINE** (or EDIT's first card): choose an engine and get it INIT'd.
-- INIT also visible on the EDIT page, not only in the hold layer.
-- Then SAVE AS from the sound library (4.8).
+1. An EDIT page **ENGINE** (or EDIT's first card): choose an engine and get it INIT'd.
+2. INIT is visible on the EDIT page, not only in the hold layer.
+3. Then save into the sound library (§4.8).
 
-### 4.4 The parameter popup (inspiration: Deluge community firmware)
+### 4.4 Parameter popup, after a UI architecture study
 
-When a knob turns, show a card over the middle of the screen for about 1.2 s after the last turn:
+**First a study** (owner, 2026-10-27): could a redesigned UI architecture make the popup, and the UI as a whole, cheaper
+in flash and code? Study the current drawing and page code (`ui_*.c`, `params.c` pages, `gfx.c`). Write down the
+options and their cost, then decide before building the popup.
+
+The popup (inspiration: Deluge community firmware). When a knob turns, a card shows over the middle of the screen for
+about 1.2 s after the last turn, with:
 
 - the full name (PM.TYPE becomes PHASE-MOD TYPE);
 - the value, large, with its unit;
@@ -181,34 +191,39 @@ The same component carries the messages, confirmations and save results, so ther
 gets HINTS ON / OFF.
 
 Cost: there are 95 core parameters (`params.c`), plus each engine's own labels (`ui_dx.c`, the EDIT pages), at roughly
-32–48 B of text each, so **several KB of flash**. It needs 4.1 first.
+32–48 B of text each, so **several KB of flash**. It needs §4.1 first.
 
-### 4.5 ENV attack: suspects (not reproduced yet)
+### 4.5 ENV page on DRUM-X and FM6
 
-Checked:
+The owner's report is about DRUM-X's and FM6's behaviour (2026-10-27).
 
-- The main ADSR (`voice.c env_tick`) is a linear ramp at control rate (64 samples, 1.45 ms). It is interpolated within
-  each block, from a 1 ms–10 s exponential table (`tools/gen_tables.py`).
+What the code does:
+
+- **DRUM-X** ignores the ADSR (`eng_drum.c drum_amp`): the ENV page does nothing there.
+- **FM6**: the ENV page's ATK, DEC and REL do not set times. They slow the carriers' DX rates, for example R1 by
+  `ATK*90/127` (`eng_fm6.c:355`), while the page shows ms.
+- **STRING** also uses its own envelope (`ownenv`).
+
+The main ADSR on the other engines is fine:
+
+- `voice.c env_tick` is a linear ramp at control rate (64 samples, 1.45 ms), interpolated within each block, from a
+  1 ms–10 s exponential table (`tools/gen_tables.py`).
 - The displayed ms match the real time (2 ms → 2.9 ms; 104 ms → 104.5 ms; 10 s → 10 s).
 - Anything under ~1.5 ms is one control tick.
+- Smaller points to check later: retrigger and legato start the attack from the current level (`voice.c:872`), and a
+  step shorter than the attack releases before the peak.
 
-Suspects:
+Decided (owner, 2026-10-27):
 
-1. **FM6:** the ENV page's ATK does not set a time. It slows the carriers' DX rate R1 by `ATK*90/127`
-   (`eng_fm6.c:355`), while the page shows ms.
-2. **DRUM-X** ignores the ADSR (`eng_drum.c drum_amp`). **STRING** and **FM6** use their own envelopes (`ownenv`).
-3. **Retrigger and legato** start the attack from the current level (`voice.c:872`), so it is shorter than set.
-4. **Short gates:** a step shorter than the attack releases before the peak.
-5. **Linear amplitude**, where most synths use a curved (convex) attack, so the onset can feel late or soft.
-
-**Owner question:** which engine, and is it played from the keys or from SEQ? Then capture it with a `voice_test.c`
-case or an emulator recording.
+- **DRUM-X:** hide the ENV page. Each drum sound has its own DECAY.
+- **FM6:** show ATK, DEC and REL as what they are, offsets on the carriers (for example "+40 SLOWER"), not ms.
+- **STRING:** check it the same way and apply the same rule (UX 6).
 
 ### 4.6 Drum lane velocity and probability
 
 Today a step stores one `vel` and one `probability` for all 8 lanes, plus an accent bit per lane (`core.h step_t`).
 
-Proposal:
+Plan:
 
 - per-lane velocity and probability (one possible layout: 4 bits each, 8 B a step);
 - edited on the grid by holding a step and turning a knob, in the same gesture as p-locks;
@@ -217,7 +232,7 @@ Proposal:
 Cost:
 
 - RAM is NSTEP 64 × 6 tracks × 8 B = 3 KB if every track gets it. A drum-only side table costs less.
-- It changes the project format (rule Eng 3).
+- The format version goes up; there is no migration (Eng 3).
 
 ### 4.7 Drum steps keep their p-locks (root cause found, not yet reproduced)
 
@@ -226,9 +241,9 @@ The cause: `ui.c grid_hit()` (about line 1090) calls `step_clear(s)` when a step
 
 Fix:
 
-1. Clear the step's locks when the step becomes empty.
-2. Check every other path that empties a step: `ui.c:1303/1323`, `ui_tools.c`, live record.
-3. Add a regression test (`tests/motion_test.c`).
+1. Write a failing regression test (`tests/motion_test.c` or `tests/ui_test.c`).
+2. Clear the step's locks when the step becomes empty.
+3. Check every other path that empties a step: `ui.c:1303/1323`, `ui_tools.c`, live record.
 
 Note: locks are per step, not per lane, and the whole section shares 64 records.
 
@@ -236,21 +251,39 @@ Note: locks are per step, not per lane, and the whole section shares 64 records.
 
 Today the sounds are split:
 
-- SAVE > USER holds 32 user slots;
-- SAVE > PRESETS holds the factory sounds;
+- SAVE > USER holds 32 user slots (`UP_SLOTS`);
+- SAVE > PRESETS holds the factory sounds, which are constant tables in the firmware (`eng_*.c *_PRESETS`);
 - the PRESETS encoder lists factory first, then user;
 - a user preset also stores a 16-step pattern;
 - a DRUM-X kit cannot be saved as a preset (it lives in project sections).
 
-Proposal (DECIDE):
+Decided (owner, 2026-10-27):
 
-- One **LIBRARY** browser per engine. Factory sounds are read-only and marked; user sounds sit beside them.
-- **SAVE** = overwrite if it's a user sound, **SAVE AS** = new slot plus NAME.
-- Drop the pattern from sound presets.
-- Let kits be saved like sounds.
+- **One library**, browsed in one place.
+- **Every sound can be overwritten**, factory ones included, just like user ones.
+- **SAVE** overwrites the sound in its slot. **COPY TO NEW SLOT** stores the sound being edited in a new slot, with
+  NAME.
+- Kits are saved like sounds.
+- Sound presets no longer store a pattern.
 
-### 4.9 Not reachable
+How: the factory tables stay in the firmware. Overwriting a factory sound stores your copy in flash, which takes that
+slot's place. The flash space this needs is measured once the build works.
 
-The [Reddit thread](https://www.reddit.com/r/MVaveFM1/comments/1xe8c9x/all_right_stop_collaborate_and_listen/) blocks
-automated fetching. The wiki grew out of it, and its notes are used above. To use the thread itself, paste its key points
-here.
+**RESTORE FACTORY** for an overwritten factory slot (owner, 2026-10-27): yes, if the overhead is small. It is expected
+to be small: it deletes the stored copy, as the user slots' ERASE does today. Drop it if it turns out to cost real
+flash or code.
+
+## 5. Work order
+
+1. **Build setup** (~30 min):
+   - start Docker (BUILDING.md: the JieLi toolchain is Linux x86-64 and runs in a container);
+   - `tools/get_toolchain.sh`;
+   - clone the AC79 SDK (BUILDING.md).
+
+   This is needed to build, to measure flash and to make a package to install on the FM-1.
+2. **P-lock bug** (§4.7): first a failing test, then the fix.
+3. **Removals** (§4.1): one commit per group (A, B, C, D5), each reporting the flash freed. Then try a build on the FM-1.
+4. **ENV on DRUM-X and FM6** (§4.5), **sound from scratch** (§4.3), **one library**
+   (§4.8).
+5. **Drum lane velocity and probability** (§4.6), then the **UI architecture study** and the **popup** (§4.4), then
+   the **UX audit** (§4.2).
