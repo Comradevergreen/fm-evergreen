@@ -665,11 +665,15 @@ static uint8_t rec_at, rec_late;                        /* (0.8.5) the step (pla
  * of the last one puts that step back (rec_release), so a short note stays one step.
  * A note recorded into another step ends the hold before (the step model ties the
  * notes of one step only). */
+#define REC_LAT ((int32_t)(HALF_FRAMES + CTL + HALF_FRAMES / 2u))   /* (p8) ~5.8 ms: the output's and the key's latency */
 static void rec_note_at(track_t *t, uint32_t note, uint32_t vel)
 {
     uint32_t len = t->p[P_SLEN] > 0 ? (uint32_t)t->p[P_SLEN] : 1u, idx = t->seq_idx % len, k;
     uint32_t period = div_samples((uint32_t)t->p[P_SDIV]), sl = step_samples(t, period, t->seq_idx);
-    int32_t gp = (int32_t)t->seq_pos - (int32_t)t->ext;   /* (0.6.88: from the step's place; an early one began before) */
+    int32_t gp = (int32_t)t->seq_pos - (int32_t)t->ext   /* (0.6.88: from the step's place; an early one began before) */
+                 - REC_LAT;                         /* (p8, the owner: live notes landed late) what was heard: the
+                                                         * sequencer a half buffer and a block ahead of the DAC, the key
+                                                         * up to a half more: the press placed where its sound was heard */
     uint32_t next = t->seq_pos < 0x7FFFFFFFu && gp > (int32_t)(sl / 2u);
     int32_t mic = 0;
     step_t *s;
