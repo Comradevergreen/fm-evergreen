@@ -2184,7 +2184,7 @@ static void gen_pick(void)
 {
     const ggenre_t *g = gs.g;
     uint32_t k, pr, steps;
-    gs.root = (int16_t)(g->lead == LD_EBM ? grr(4, 7) : g->lead == LD_KRAFT ? grr(0, 1) * 2 : grr(0, 11));   /* (gen6: DAF's
+    gs.root = (int16_t)(g->lead == LD_EBM ? grr(2, 9) : g->lead == LD_KRAFT ? grr(0, 1) * 2 : grr(0, 11));   /* (gen6: DAF's
                                                          * dark E F F# G, Kraftwerk's C D) */
     {   /* (0.8.3) the key: always a mode of seven, so the CHORD page, the chords, the arp and the lead stand on it; a
          * genre's pentatonic or blues is its lead's palette over the mode that holds it (dorian where the genre is
@@ -2260,6 +2260,14 @@ static void gen_pick(void)
     gplan(0);
     gs.ba = g->bass[gr() % 3u];
     if (gs.amt[GP_BASS] > 70u && gch(30)) gs.ba = g->bass[0];
+    if (g->lead == LD_EBM) {                            /* (p7c, the owner: EBM always the same sequence on the same
+                                                         * synth) six riffs in 8ths with body, four basses */
+        static const uint8_t EBA[6] __attribute__((section(".rodata.ebm"))) =
+            {BA_NITZER3, BA_DARK8, BA_SUICIDE, BA_NITZER1, BA_MOTORIK, BA_PUMP8};
+        static const uint8_t ESN[4] __attribute__((section(".rodata.ebm"))) = {SR_EBMBASS, SR_TECHBASS, SR_REESE, SR_FMBASS};
+        gs.ba = EBA[gr() % 6u];
+        gmut.snd[GP_BASS] = ESN[gr() % 4u];
+    }
 }
 static void gen_make(void)
 {
