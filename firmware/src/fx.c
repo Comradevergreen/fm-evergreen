@@ -285,18 +285,18 @@ static __attribute__((noinline)) void tape_block(uint32_t n)
     tp.wow += wv > -8 && wv < 8 ? wv : wv >> 2;
     dv = tp.drv >> 8;
     wv = tp.wow >> 8;
-    g = 4096 + dv * 12288 / 100;                        /* the drive, Q12 */
+    g = 4096 + dv * 36864 / 100;                        /* the drive, Q12 (p9b: x10 at 100, was x4) */
     bias = dv * 1600 / 100;                             /* (Q15: the curve's offset, its DC taken back) */
     mk = (int32_t)((6000u << 15) / (uint32_t)(softclip(((6000 * g) >> 12) + bias) - softclip(bias)));
-    hf = 32767 - dv * 100;                              /* the highs: a one-pole's coefficient, Q15 */
-    bump = dv * 160 / 100;                              /* the head bump's gain, Q8 */
+    hf = 32767 - dv * 190;                              /* the highs: a one-pole's coefficient, Q15 (p9b: darker) */
+    bump = dv * 300 / 100;                              /* the head bump's gain, Q8 (p9b: more) */
     d0 = tp.d;                                          /* the delay at the block's start and end (Q8 samples) */
     tp.ph_w += 52u * n << 10;                           /* (0.55 Hz, 0.13 Hz, 7 Hz: 2^32 / 44100 a sample = 97391) */
     tp.ph_d += 13u * n << 10;
     tp.ph_f += 682u * n << 10;
-    wa = wv * 40 * 256 / 100;
+    wa = wv * 64 * 256 / 100;                           /* (p9b: x1.6 the wow; with the flutter ~105 samples of TP_LEN) */
     d1 = ((wa * (32768 - sine_i(tp.ph_w + 0x40000000u))) >> 16) + ((wa * (32768 - sine_i(tp.ph_d))) >> 17) +
-         (((wv * 768 / 100) * (32768 - sine_i(tp.ph_f))) >> 16);
+         (((wv * 2304 / 100) * (32768 - sine_i(tp.ph_f))) >> 16);   /* (p9b: thrice the flutter) */
     tp.d = d1;
     for (i = 0; i < n; i++) {
         int32_t x[2], d = d0 + (d1 - d0) * (int32_t)i / (int32_t)n, di = d >> 8, fr = d & 255;

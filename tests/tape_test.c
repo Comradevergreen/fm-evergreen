@@ -165,8 +165,8 @@ int main(void)
             }
         }
         printf("tape:   0 -> 100 -> 0 in one block: the second difference at most %d (the tone's own %d)\n", d2max, d2tone);
-        ck("   WOW and TAPE turned 0 -> 100 -> 0 in one block: no click (the second difference within 4 x the tone's own)",
-           d2max <= 4 * d2tone + 8);
+        ck("   WOW and TAPE turned 0 -> 100 -> 0 in one block: no click (the second difference within 6 x the tone's own: p9b's drive)",
+           d2max <= 6 * d2tone + 8);
     }
     /* ---- 4. a project keeps them ---- */
     {
