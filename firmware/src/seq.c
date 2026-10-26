@@ -665,7 +665,11 @@ static uint8_t rec_at, rec_late;                        /* (0.8.5) the step (pla
  * of the last one puts that step back (rec_release), so a short note stays one step.
  * A note recorded into another step ends the hold before (the step model ties the
  * notes of one step only). */
-#define REC_LAT ((int32_t)(HALF_FRAMES + CTL + HALF_FRAMES / 2u))   /* (p8) ~5.8 ms: the output's and the key's latency */
+#if FELUCCA_DUAL_CORE                                    /* (p8) ~5.8 ms on the FM-1: the output's and the key's latency */
+#define REC_LAT ((int32_t)(HALF_FRAMES + CTL + HALF_FRAMES / 2u))
+#else
+#define REC_LAT 0                                        /* (the host's tests, the emulator: no DAC between) */
+#endif
 static void rec_note_at(track_t *t, uint32_t note, uint32_t vel)
 {
     uint32_t len = t->p[P_SLEN] > 0 ? (uint32_t)t->p[P_SLEN] : 1u, idx = t->seq_idx % len, k;
