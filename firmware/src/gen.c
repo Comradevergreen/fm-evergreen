@@ -1646,6 +1646,9 @@ static void gen_mix(track_t *t, uint32_t r)
     if (r == RL_LEAD && t->p[P_REV] < 25 && t->p[P_DLY] < 20) t->p[P_DLY] = (int16_t)grr(25, 55);
     t->p[P_HVEL] = (int16_t)(127 - clamp((HV[r] + HT[r] + HG[r]) * hum / 150, 0, 127));   /* (0.6.92: one amount) */
     t->p[P_HTIM] = t->p[P_HGAT] = 127;
+    if (r == RL_PAD || r == RL_ARP || r == RL_LEAD)     /* (p6b: the owner's references all dark, their centroid 350 ..
+                                                         * 660 Hz: the melodic parts' cutoff 15 % down) */
+        t->p[P_FCUT] = (int16_t)(t->p[P_FCUT] * 85 / 100);
     if (r == RL_DRUM && g->lead == LD_EBM)              /* (p4b, the owner: EBM's drums industrial, distorted, simple) */
         t->p[P_DIST] = (int16_t)grr(36, 56);
 }
