@@ -4763,9 +4763,9 @@ static int test_rec_combos(void)
     ok = motion_find(t, 4, P_DIST) < 0 && !pfx_lane[0] && motion_find(t, 3, P_ATK) >= 0 && !song.rec && ui.home;
     bad += check("  REC + FX (REC first): the FX automation and the punch-in lane go, ENV stays, REC not armed", ok);
     /* (0.9.9-snd2) the FX chain: MASTER its last page, after PUNCH (ui_lens.c CE_FX), its module last on BUSES */
-    bad += check("  FX chain: ... SL PITCH, PUNCH, MASTER and its TAPE last (the BUSES tiles too)",
-                 !strcmp(CE_FX[NELEM(CE_FX) - 1u].t, "TAPE") && !strcmp(CE_FX[NELEM(CE_FX) - 2u].t, "MASTER") &&
-                 !strcmp(CE_FX[NELEM(CE_FX) - 3u].t, "PUNCH") &&
+    bad += check("  FX chain: ... SL PITCH, PUNCH, MASTER, its TAPE and EQ last (the BUSES tiles too)",
+                 !strcmp(CE_FX[NELEM(CE_FX) - 1u].t, "EQ") && !strcmp(CE_FX[NELEM(CE_FX) - 2u].t, "TAPE") &&
+                 !strcmp(CE_FX[NELEM(CE_FX) - 3u].t, "MASTER") && !strcmp(CE_FX[NELEM(CE_FX) - 4u].t, "PUNCH") &&
                  !strcmp(CG_FX[NELEM(CG_FX) - 1u].nm, "MASTER") && !strcmp(FX_MOD[FX_NMOD - 1u], "MASTER"));
     {   /* (0.9.9-snd2) CLEAR AUTOMATION on the punch-in layer itself: FX + G5 (CLR AUTO on the map) empties the lane
          * only, stopped or playing (not recording); the tracks' automation stays */
@@ -8137,17 +8137,17 @@ static int test_scl_alltr(void)
  * the page left. (Was 0.8.5's lens: SELECT TRACK <-> BUSES <-> EFFECT, PRESETS the module, the FX tap the level's next) */
 static int test_fx_sections(void)
 {
-    static const char *const CH[17] = {"SENDS", "DIST", "AUTO PAN", "BUSES", "DLY", "DLY 2", "DLY 3", "REVERB", "REVERB 2",
-                                       "CHORUS", "SLICER", "SL BUS", "SL BUS 2", "SL PITCH", "PUNCH", "MASTER", "TAPE"};
+    static const char *const CH[18] = {"SENDS", "DIST", "AUTO PAN", "BUSES", "DLY", "DLY 2", "DLY 3", "REVERB", "REVERB 2",
+                                       "CHORUS", "SLICER", "SL BUS", "SL BUS 2", "SL PITCH", "PUNCH", "MASTER", "TAPE", "EQ"};
     static const char *const TP[7] = {"BUSES", "DLY", "REVERB", "CHORUS", "SLICER", "PUNCH", "MASTER"};
     int bad = 0, ok;
     uint32_t pr;
     ui_power_on();
-    bad += check("0.9.2 FX: one chain of 17 (TRK BUS DLY REV CHO SLC PCH MST; snd8: MASTER, TAPE) by SELECT, no wrap; an FX tap each group's first, round",
-                 chain_walk(B_FX, CH, 17, TP, 7));
+    bad += check("0.9.2 FX: one chain of 18 (TRK BUS DLY REV CHO SLC PCH MST; snd8: MASTER, TAPE; p9: EQ) by SELECT, no wrap; an FX tap each group's first, round",
+                 chain_walk(B_FX, CH, 18, TP, 7));
     ui_power_on(); go_home(); frame(); press(B_FX); frame();
     ok = fx_on() && fx_level() == FXL_TRACK && lz_on() && card_y() == LZ_CARD_Y && lz_tabs() == 8u && lz_tab_lit(0) &&
-         lz_crumb_is("FX \xB7 TRACK \xB7 SENDS") && lz_count_is("1/17");
+         lz_crumb_is("FX \xB7 TRACK \xB7 SENDS") && lz_count_is("1/18");
     turn(EN_SELECT, 3); frame();
     ok &= fx_level() == FXL_BUSES && cur_page()->graph == GR_BUSES && lz_tab_lit(1) && lz_crumb_is("FX \xB7 BUSES \xB7 BUSES");
     ok &= cur_page()->id[0] == G_DMIX && cur_page()->id[1] == G_RSIZE && cur_page()->id[2] == G_CDEPTH && cur_page()->id[3] == G_SLDEP;
@@ -8155,7 +8155,7 @@ static int test_fx_sections(void)
     ok &= song.g[G_RSIZE] > 50;
     turn(EN_SELECT, 2); frame();
     ok &= fx_level() == FXL_EFFECT && str_eq(cur_page()->title, "DLY 2") && lz_tab_lit(2) &&
-          lz_crumb_is("FX \xB7 DELAY \xB7 DLY 2") && lz_count_is("6/17") && ui.fxmod == 0u;
+          lz_crumb_is("FX \xB7 DELAY \xB7 DLY 2") && lz_count_is("6/18") && ui.fxmod == 0u;
     {   /* the eight tabs: their short names (the full ones do not fit) */
         const char *nm[8], *tab[8];
         uint8_t cnt[8];
@@ -8167,14 +8167,14 @@ static int test_fx_sections(void)
     ok &= str_eq(cur_page()->title, "DLY 2") && (TSEL->preset != pr || TSEL->eng_req != trk_def_engine(0));
     frames(320); press(B_FX); frame();
     ok &= str_eq(cur_page()->title, "REVERB") && ui.fxmod == 1u;
-    bad += check("0.9.2 FX: tabs (eight, short names, dots), crumb FX . DELAY . DLY 2 6/17; BUSES' knobs; PRESETS a sound (was the module)", ok);
+    bad += check("0.9.2 FX: tabs (eight, short names, dots), crumb FX . DELAY . DLY 2 6/18; BUSES' knobs; PRESETS a sound (was the module)", ok);
     go_home(); frame();
     press(B_FX); frame();
     ok = str_eq(cur_page()->title, "REVERB") && fx_level() == FXL_EFFECT;
     ui_load = LOAD_ECO; frame();                                   /* LOAD ECO: no CHORUS, no SLICER */
     turn(EN_SELECT, 1); frame(); ok &= str_eq(cur_page()->title, "REVERB 2");
     turn(EN_SELECT, 1); frame(); ok &= str_eq(cur_page()->title, "PUNCH");   /* (CHORUS, SLICER skipped) */
-    ok &= lz_tabs() == 6u && lz_count_is("10/12");
+    ok &= lz_tabs() == 6u && lz_count_is("10/13");
     frames(320); press(B_FX); frame(); ok &= str_eq(cur_page()->title, "MASTER");
     ui_load = LOAD_FULL; frame();
     bad += check("0.9.2 FX: from elsewhere the page left; LOAD ECO: CHORUS and SLICER out of the chain and the tabs", ok);
