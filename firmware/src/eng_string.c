@@ -129,9 +129,12 @@ static void string_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, cons
     di = dly >> 8;
     fr = dly & 255;
     g = str_gain(per << d, p[P_E1]);
-    if (!v->gate)                                        /* (p5) let go: RELEASE the damper (low: a palm mute; high: it
+    if (!v->gate) {                                      /* (p5) let go: RELEASE the damper (low: a palm mute; high: it
                                                          * rings its DECAY out) */
         g = (g * str_gain(per << d, p[P_REL])) >> 15;   /* (both < 2^15: in 32 bits) */
+        if ((v->ph[1] >> 16) < 512u)                     /* (under ~-36 dB: damped out, no limit cycle left ringing) */
+            g = (g * 29000) >> 15;
+    }
     bf = (int32_t)((327u * str_exp2n(2048u - (uint32_t)clamp(p[P_E6], 0, 127) * 896u / 127u)) >> 8);   /* (2 sin(pi f / FS), Q15: 70 .. 790 Hz) */
     if (n > CTL)
         n = CTL;
