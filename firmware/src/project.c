@@ -278,6 +278,28 @@ static __attribute__((noinline)) uint32_t proj_tp(const project_t *q, const uint
     return 4u;
 }
 
+/* (p9) the master's EQ: 'E' 'Q' and its four gains (-12 .. 12, a byte each), when any is set; a project without it
+ * opens flat (as proj_tp) */
+static __attribute__((noinline)) uint32_t proj_eq(const uint8_t *bc, uint32_t pos, uint32_t room)
+{
+    uint8_t *b = (uint8_t *)(uintptr_t)bc;
+    uint32_t k;
+    if (!room) {
+        if (!eq_v[0] && !eq_v[1] && !eq_v[2] && !eq_v[3]) return 0;
+        if (b) {
+            b[pos] = 'E'; b[pos + 1u] = 'Q';
+            for (k = 0; k < 4u; k++) b[pos + 2u + k] = (uint8_t)(eq_v[k] + 12);
+        }
+        return 6u;
+    }
+    if (pos + 6u > room || b[pos] != 'E' || b[pos + 1u] != 'Q') {
+        eq_v[0] = eq_v[1] = eq_v[2] = eq_v[3] = 0;
+        return 0;
+    }
+    for (k = 0; k < 4u; k++) eq_v[k] = (int16_t)(b[pos + 2u + k] > 24u ? 0 : b[pos + 2u + k] - 12);
+    return 6u;
+}
+
 /* the globals of formats 1 and 2 (G_* unchanged since; any added later: their defaults) */
 static void proj_g_from_v2(int16_t *g, const int16_t *g2)
 {
@@ -867,6 +889,7 @@ static uint32_t proj_packed_size(const project_t *q)
     if (q->g[G_DDRV])                                   /* (snd2) the delay's DRIVE, when on */
         n += 3u;
     n += proj_tp(q, 0, 0, 0);                           /* (snd8) the master's TAPE, when on */
+    n += proj_eq(0, 0, 0);                              /* (p9) its EQ, when set */
     if (q->g[G_DMOD] != GP[G_DMOD].def)                 /* (0.6.86) the delay's MOD's, when not the default */
         n += 3u;
     if (q->g[G_DTYPE] || q->g[G_DPING])                 /* (0.6.90) its TYPE and PING-PONG's */
@@ -1040,6 +1063,7 @@ static int proj_pack(project_store_t *out, const project_t *q)
         b[pos++] = 'D'; b[pos++] = 'D'; b[pos++] = (uint8_t)clamp(q->g[G_DDRV], 0, 100);
     }
     pos += proj_tp(q, b, pos, 0);                       /* (0.9.9-snd8) the master's TAPE, when on (after DRIVE's) */
+    pos += proj_eq(b, pos, 0);                          /* (p9) its EQ, when set */
     memcpy(b + PROJC_PFX_OFF, q->pfx_lane, sizeof q->pfx_lane);
     b[PROJC_PFX_OFF + sizeof q->pfx_lane] = q->pfx_ltgt > 2u ? 0u : q->pfx_ltgt;
     for (i = 0; i < 4u; i++)
@@ -1326,6 +1350,7 @@ static int proj_unpack_c(project_t *q, const uint8_t *b)
         pos += 3u;
     }
     pos += proj_tp(q, b, pos, room);                    /* (0.9.9-snd8) the master's TAPE (else 0) */
+    pos += proj_eq(b, pos, room);                       /* (p9) its EQ (else flat) */
     proj_new_tracks(q, nt);                             /* (a FUNC of fewer tracks: the rest at power-on) */
     for (t = nt; t < NTRK; t++)
         memcpy(q->fm6[t], FM6_INIT, FM6_PACKED);
@@ -1912,6 +1937,7 @@ static __attribute__((noinline)) void system_init(void)   /* (snd8: out of its c
     for (i = 0; i < 5u; i++) kept[i] = song.g[KEEP[i]];
     for (i = 0; i < G_COUNT; i++) song.g[i] = GP[i].def;
     tape_v[0] = tape_v[1] = 0;                          /* (snd8) the master's TAPE out */
+    eq_v[0] = eq_v[1] = eq_v[2] = eq_v[3] = 0;          /* (p9) its EQ flat */
     for (i = 0; i < 5u; i++) song.g[KEEP[i]] = kept[i];
     kept[0] = dice_secs;
     chain_defaults(&chain_config);

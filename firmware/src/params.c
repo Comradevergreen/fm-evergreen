@@ -599,7 +599,14 @@ static int16_t lmode_ui, lphase_ui;
 static const param_desc_t TAPE_DESC __attribute__((section(".rodata.tape"))) = PD("TAPE", F_PCT, 0, 100, 0);
 static const param_desc_t TWOW_DESC __attribute__((section(".rodata.tape"))) = PD("WOW", F_PCT, 0, 100, 0);   /* (their own
                                                          * section: out of the merged constants, whose places are recorded) */
-static int16_t tape_v[2] __attribute__((section(".bss.tape")));   /* (out of the merged statics, as fx.c's djf) */
+static int16_t tape_v[2] __attribute__((section(".bss.tape")));
+/* (p9, the owner: "a light 4-band EQ on the master, to refine the song") FX > EQ: LOW (under ~200 Hz), LO MID (200 Hz ..
+ * 1 kHz), HI MID (1 .. 4 kHz), HIGH (over 4 kHz), -12 .. +12 dB each (fx.c eq_block; all 0: not run). Kept with the
+ * project ('E' 'Q', project.c proj_eq) */
+#define ID_EQ0 0xE0u
+static const param_desc_t EQ_DESC[4] __attribute__((section(".rodata.tape"))) = {
+    PD("LOW", F_INT, -12, 12, 0), PD("LO MID", F_INT, -12, 12, 0), PD("HI MID", F_INT, -12, 12, 0), PD("HIGH", F_INT, -12, 12, 0)};
+static int16_t eq_v[4] __attribute__((section(".bss.tape")));   /* (out of the merged statics, as fx.c's djf) */
 static uint8_t lfo_ph_mem[NTRK];
 static int lfo_mode_of(const track_t *t) { return t->p[P_LPHASE] < 0; }   /* 1 FREE */
 static const page_t PAGES[] = {
@@ -613,7 +620,8 @@ static const page_t PAGES[] = {
     {"FX", FAM_FX, SC_TRACK, GR_FX, {P_DIST, P_CHOR, P_DLY, P_REV}},
     {"MASTER", FAM_FX, SC_GLOBAL, GR_NONE, {G_CLIP, G_PUNCH, G_DUCK, G_DREL}},   /* JIANT: clipper, drum bus, ducking;
                                                          * (0.7.6) FX's second page, at hand (was after SL PITCH) */
-    {"TAPE", FAM_FX, SC_GLOBAL, GR_NONE, {ID_TAPE, ID_TWOW, 0xFF, 0xFF}},   /* (0.9.9-snd8) the master's tape, after MASTER */
+    {"TAPE", FAM_FX, SC_GLOBAL, GR_NONE, {ID_TAPE, ID_TWOW, 0xFF, 0xFF}},
+    {"EQ", FAM_FX, SC_GLOBAL, GR_NONE, {ID_EQ0, ID_EQ0 + 1u, ID_EQ0 + 2u, ID_EQ0 + 3u}},   /* (p9) the master's EQ, last */   /* (0.9.9-snd8) the master's tape, after MASTER */
     {"DIST", FAM_FX, SC_TRACK, GR_NONE, {P_DIST, P_DTYPE, P_DTONE, 0xFF}},   /* JIANT: the drive's type and tone */
     {"AUTO PAN", FAM_FX, SC_TRACK, GR_NONE, {P_APDEP, P_APRATE, P_APSYNC, P_APWAVE}},   /* (JIANT 0.6.9) the track's pan swung */
     {"BUSES", FAM_FX, SC_GLOBAL, GR_BUSES, {G_DMIX, G_RSIZE, G_CDEPTH, G_SLDEP}},   /* (0.8.5) FX's lens: the buses' main values */
@@ -742,6 +750,10 @@ static uint8_t sl_ui_step;       /* (JIANT 0.6.3) the SL PITCH page: the step KN
  * master's TAPE (noinline: page_desc is recorded code) */
 static __attribute__((noinline)) const param_desc_t *page_desc_v(uint32_t id, int16_t **valp)
 {
+    if (id >= ID_EQ0 && id < ID_EQ0 + 4u) {           /* (p9) the master's EQ */
+        *valp = &eq_v[id - ID_EQ0];
+        return &EQ_DESC[id - ID_EQ0];
+    }
     if (id == ID_TAPE || id == ID_TWOW) {
         *valp = &tape_v[id - ID_TAPE];
         return id == ID_TAPE ? &TAPE_DESC : &TWOW_DESC;
@@ -768,7 +780,8 @@ static const param_desc_t *page_desc(const page_t *pg, uint32_t slot, int16_t **
         *valp = &trks_ui;
         return &TRKS_DESC;
     }
-    if (id >= ID_TAPE && id <= ID_LMODE)              /* (0.9.18) the LFO's MODE and PHASE; (snd8) the master's TAPE */
+    if ((id >= ID_TAPE && id <= ID_LMODE) || (id >= ID_EQ0 && id < ID_EQ0 + 4u))   /* (0.9.18) the LFO's MODE and PHASE;
+                                                         * (snd8) the master's TAPE; (p9) its EQ */
         return page_desc_v(id, valp);
     if (id == G_LOADP) {                              /* (0.6.30) the same */
         *valp = &load_ui;

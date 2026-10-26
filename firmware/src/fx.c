@@ -327,6 +327,47 @@ static __attribute__((noinline)) void tape_block(uint32_t n)
         mix_r[i] = x[1] * 4;
     }
 }
+/* (p9) the master's EQ (FX > EQ, params.c eq_v): three one-pole low-passes (~200 Hz, ~1 kHz, ~4 kHz) split the mix into
+ * four bands that sum back to it exactly; each band's gain - 1 added (eq_gain: -12 .. +12 dB, Q12), the gains moved to
+ * their knobs a block at a time. ~10 multiplies a sample and channel; every knob at 0 (and settled): not run */
+static struct { int32_t lp[2][3], g[4]; } eqs __attribute__((section(".bss.tape")));
+static __attribute__((noinline)) int32_t eq_gain(int32_t db)   /* 10^(db / 20) - 1, Q12 */
+{
+    static const int16_t UP[13] __attribute__((section(".rodata.tape"))) =
+        {0, 500, 1061, 1690, 2396, 3188, 4077, 5074, 6193, 7448, 8857, 10437, 12210};
+    static const int16_t DN[13] __attribute__((section(".rodata.tape"))) =
+        {0, -445, -845, -1202, -1520, -1803, -2055, -2280, -2481, -2660, -2819, -2961, -3088};
+    db = clamp(db, -12, 12);
+    return db >= 0 ? UP[db] : DN[-db];
+}
+static __attribute__((noinline)) void eq_block(uint32_t n)
+{
+    static const int16_t A[3] __attribute__((section(".rodata.tape"))) = {922, 4349, 14220};   /* (Q15: 1 - e^(-2 pi f / FS)) */
+    int32_t g0[4], dg[4];
+    uint32_t i, c, k;
+    for (k = 0; k < 4u; k++) {
+        g0[k] = eqs.g[k];
+        dg[k] = (eq_gain(eq_v[k]) - g0[k]) / (int32_t)n;
+        eqs.g[k] = g0[k] + dg[k] * (int32_t)n;
+    }
+    for (i = 0; i < n; i++) {
+        int32_t x[2];
+        x[0] = mix_l[i] + wet[i];
+        x[1] = mix_r[i] + wet[i];
+        wet[i] = 0;
+        for (c = 0; c < 2u; c++) {
+            int32_t *lp = eqs.lp[c], b0, b1, b2, b3, y = x[c];
+            for (k = 0; k < 3u; k++)
+                lp[k] += ((y - lp[k]) >> 3) * A[k] >> 12;
+            b0 = lp[0]; b1 = lp[1] - lp[0]; b2 = lp[2] - lp[1]; b3 = y - lp[2];
+            y += ((b0 >> 4) * (g0[0] + dg[0] * (int32_t)i) >> 8) + ((b1 >> 4) * (g0[1] + dg[1] * (int32_t)i) >> 8) +
+                 ((b2 >> 4) * (g0[2] + dg[2] * (int32_t)i) >> 8) + ((b3 >> 4) * (g0[3] + dg[3] * (int32_t)i) >> 8);
+            x[c] = y;
+        }
+        mix_l[i] = x[0];
+        mix_r[i] = x[1];
+    }
+}
 /* (0.9.1) the master DJ FILTER (G_DJF, GLO > MIXER KNOB 4): one bipolar knob on the whole mix, just before CLIP and the
  * leveler. 0: out of the chain, not run at all (the mix bit for bit as without it). Below 0 a low-pass sweeping down
  * (darker), above 0 a high-pass sweeping up (thinner): a trapezoidal SVF (A. Simper's, as dsp.c tsvf) in 64-bit products,
@@ -2852,6 +2893,11 @@ static __attribute__((noinline)) void mix_block(int32_t *out, uint32_t n)   /* (
         void (*f)(uint32_t) = tape_block;
         FM1_OPAQUE(f);                                  /* (through a register: mix_block runs from RAM, tape_block is in
                                                          * the flash past the tables, out of a direct call's reach) */
+        f(n);
+    }
+    if (eq_v[0] || eq_v[1] || eq_v[2] || eq_v[3] || eqs.g[0] || eqs.g[1] || eqs.g[2] || eqs.g[3]) {   /* (p9) the EQ */
+        void (*f)(uint32_t) = eq_block;
+        FM1_OPAQUE(f);                                  /* (as tape_block: out of the RAM code's direct reach) */
         f(n);
     }
     if (clip_g)
