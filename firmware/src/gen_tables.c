@@ -541,7 +541,7 @@ static const ggenre_t GENRE[] = {
                                      * a shout on the bar's one; no pads, no reverb) */
     /* Gazebo, Kano, Laserdance, Moroder: an 808, the octave bass, brassy stabs, a saw lead's hook */
     {"ITALO", 118, 124, 0,   /* (p6b: the owner's reference, 120) */ {SC_MIN, SC_MIN, SC_MAJ, SC_MIN}, DM_ITALO, 100, KIT_808, 0, HC_MACHINE, FL_TOM, 0,
-     {BA_ITALO, BA_ITALO16, BA_SYNTHW}, 36, KM_DOUBLE, 40, {PR_AEOL, PR_ANDAL, PR_POP}, 1, CS_STAB, VM_PLAIN,
+     {BA_ITALO, BA_ITALO16, BA_SYNTHW}, 36, KM_DOUBLE, 40, {PR_AEOL, PR_ANDAL, PR_POP}, 2, CS_STAB, VM_PLAIN,   /* (p7b: the reference, ~2 bars a chord) */
      {AP_OCTAVES, AP_UP}, LD_HOOK, AMT(90, 90, 60, 60, 45), {KIT_808, SR_HOOK, SR_STAB, SR_PLUCK, SR_LEAD}, SR_PAD,
      0, 1, 40, 2, FM_PARTS, 0, HF_POP | HX_RAISE | HX_LIFT},
     /* Depeche Mode (Just Can't Get Enough), OMD, the Human League: an 808, a pad held, a plucked sequence, a saw
@@ -553,7 +553,7 @@ static const ggenre_t GENRE[] = {
     /* (gen6, the owner's reference) Crystal Castles (I, II), Pictureplane, Salem: a dirty kit, the kick long, 8th hats,
      * a 16th bass arpeggio (root octave seventh octave), a chiptune lead's octave glitch, a dark pad in a long reverb */
     {"DARKWAVE", 132, 140, 0,   /* (p6b: the owner's reference, 136) */ {SC_MIN, SC_PHRY, SC_MIN, SC_MIN}, DM_DARKWAVE, 100, KIT_INDUS, 0, HC_MACHINE, FL_NONE, 0,
-     {BA_CCARP, BA_DARK8, BA_CCARP}, 31, KM_DOUBLE, 35, {PR_I_VI, PR_EPIC, PR_AEOL}, 4, CS_HOLD, VM_PLAIN,
+     {BA_CCARP, BA_DARK8, BA_CCARP}, 31, KM_DOUBLE, 35, {PR_I_VI, PR_EPIC, PR_AEOL}, 2, CS_HOLD, VM_PLAIN,   /* (p7b: the reference changes chord every ~2 bars) */
      {AP_PULSE, AP_SEQ}, LD_CC, AMT(95, 90, 70, 0, 35), {KIT_INDUS, SR_EBMBASS, SR_PAD, SR_PLUCK, SR_CHIP}, SR_NOISE,
      2, 1, 75, 0,   /* (p6b: the reference sustained 74 % of the time: the pads held, wetter, the lead under them) */ FM_PARTS, 0, HF_POP},
     /* Joy Division and New Order: Hook's bass high on the neck, Morris's drums, Sumner's pulsed chords */
