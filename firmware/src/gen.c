@@ -1646,6 +1646,15 @@ static void gen_mix(track_t *t, uint32_t r)
     if (r == RL_LEAD && t->p[P_REV] < 25 && t->p[P_DLY] < 20) t->p[P_DLY] = (int16_t)grr(25, 55);
     t->p[P_HVEL] = (int16_t)(127 - clamp((HV[r] + HT[r] + HG[r]) * hum / 150, 0, 127));   /* (0.6.92: one amount) */
     t->p[P_HTIM] = t->p[P_HGAT] = 127;
+    {   /* (p7b, the owner's references measured: the bass's and the pads' brightness swings 30 .. 38 % on a slow cycle,
+         * 4 bars in EBM and darkwave, 2 in italo; darkwave's bass saturated and wide, EBM's a little driven, both held) */
+        uint32_t dk = str_eq(g->name, "DARKWAVE"), sw = g->lead == LD_EBM || dk ? 2u : str_eq(g->name, "ITALO") ? 1u : 0u;
+        if (sw && (r == RL_BASS || r == RL_PAD) && t->p[P_LD_FLT] < 3 && !t->p[P_LD_AMP]) {
+            t->p[P_LWAVE] = 0; t->p[P_LRATE] = (int16_t)-(int32_t)sw; t->p[P_LD_FLT] = (int16_t)grr(10, 18);
+        }
+        if (r == RL_BASS && dk) { t->p[P_DIST] = (int16_t)grr(40, 60); t->p[P_CHOR] = (int16_t)grr(20, 40); }
+        if (r == RL_BASS && g->lead == LD_EBM && t->p[P_DIST] < 20) t->p[P_DIST] = (int16_t)grr(20, 35);
+    }
     if (r == RL_PAD || r == RL_ARP || r == RL_LEAD)     /* (p6b: the owner's references all dark, their centroid 350 ..
                                                          * 660 Hz: the melodic parts' cutoff 15 % down) */
         t->p[P_FCUT] = (int16_t)(t->p[P_FCUT] * 85 / 100);
