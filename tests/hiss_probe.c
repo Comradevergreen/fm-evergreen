@@ -12,6 +12,9 @@ static void take(const char *path, int tk, int fxoff, int lvl, int note)
     if (getenv("ENG")) set_engine_of(&trk[tk], (uint32_t)atoi(getenv("ENG")));
     if (fxoff) trk[tk].p[P_REV] = trk[tk].p[P_DLY] = trk[tk].p[P_CHOR] = 0;
     if (lvl >= 0) trk[tk].p[P_LEVEL] = (int16_t)lvl;
+    if (getenv("CUT")) trk[tk].p[P_FCUT] = (int16_t)atoi(getenv("CUT"));
+    if (getenv("RES")) trk[tk].p[P_FRES] = (int16_t)atoi(getenv("RES"));
+    printf("filter: type %d cut %d res %d\n", trk[tk].p[P_FTYPE], trk[tk].p[P_FCUT], trk[tk].p[P_FRES]);
     for (i = 0; i < 16u; i++) {
         step_t *s = &trk[tk].step[i];
         memset(s, 0, sizeof *s);
