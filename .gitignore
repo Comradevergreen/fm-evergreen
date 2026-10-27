@@ -8,3 +8,4 @@ android/probe/app/build/
 android/stems/.gradle/
 android/stems/.kotlin/
 android/stems/local.properties
+.venv/

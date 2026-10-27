@@ -12,8 +12,8 @@ Felucca and takes its song system from SLOOP.
 | On the owner's FM-1 | **0.9.9-par9**, `1502f55` = `upstream/port-p2` |
 | This repo's `main` | `75a17b7` = `upstream/main`: the 0.9.18 line plus installer commits. It is **not** what the device runs |
 | Split point | `6968b20` (0.9.9). `port-p2` has 133 commits since, `main` has 192, and 88 firmware files differ |
-| Toolchain on this Mac | none yet (`~/.jieli/toolchain`, the AC79 SDK and `emcc` are missing). See [BUILDING.md](BUILDING.md). The host tests run without it: generate `build/gen` with `tools/build.py`'s `generate()` (needs Python's `pillow` and `fonttools`), then compile the tests with `cc` |
-| Host tests on the base (2026-10-26, arm64 Mac) | Pass: `project_test`, `motion_test`, `ui_test`, `drumx_test`. **Fail before any change of ours:** (1) `regress`: the 12 STRING goldens are stale upstream (STRING's sound changed in par6, `8d99120` / `63b59cf`; `tests/golden.txt` was last updated in par1, `fd95915`); its CPU budget entries are x86 CI baselines and mean nothing on arm64. (2) `ratchet_test`: "the piano roll draws an x2 step in two parts", cause not yet looked at |
+| Build on this Mac (2026-10-27) | Docker is colima (vz, arm64), not Docker Desktop: run `docker` with a clean `DOCKER_CONFIG` (`~/.docker/config.json` names Docker Desktop's credential helper, which is not installed). The JieLi toolchain (`~/.jieli/toolchain` → `jieli-linux-toolchains-20260730.1`) is Linux x86-64 only and runs in `linux/amd64` containers under QEMU. The AC79 SDK is only the 3 files CI uses, in `~/fw-AC79_AIoT_SDK/cpu/wl82/tools/`, SHA-256 equal to CI's pin `d179b44`. Python's `pillow` and `fonttools` live in the repo's `.venv` (ignored). Build: `PYTHON=.venv/bin/python ./build.sh`, about 70 s. The base builds to 583208 B of the 584336 B slot (**1128 B free**), `build/felucca.fwsc` 610280 B, identity FM-1_909. No `emcc` (browser emulator) |
+| Host tests on the base (2026-10-27) | `tests/run_tests.sh` does not compile on macOS (Mach-O rejects the ELF section attributes, `storage.c:88`). Run it in a native **arm64** Linux container, [tools/tests.Dockerfile](tools/tests.Dockerfile) (Ubuntu 24.04 and CI's Python pins; the build and run commands are at its top): about 10 min. Not under `linux/amd64`: QEMU took 4.5 h for 40 suites and then hung. Result: 103 suites run, 98 pass, 5 skipped (valgrind CPU: x86-64 only; Stems; web; emulator). **5 fail before any change of ours:** (1) `regress`: the 12 STRING goldens are stale (STRING's sound changed in par6, `8d99120` / `63b59cf`; `tests/golden.txt` was last updated in par1, `fd95915`); its CPU budget passes in the container. (2) RATCH: "the piano roll draws an x2 step in two parts". (3) DJ FILTER: centred mix bit for bit 0.9.0's. (4) MICRO in 64ths: an old project sample for sample 0.9.0's. (5) text spacing: x2 phase glyph gaps over 0.5 px. (2)–(5) fail the same way under amd64, so they are not arm64 artifacts. Upstream CI never ran these on `port-p2`: `firmware-preview.yml` triggers only on `codex/fm1-v099-preview`. Until they are fixed, the gate is "no new failures against this list" |
 
 **Decided (2026-10-26):** Evergreen is based on `upstream/port-p2` (par9, `1502f55`), because it is what runs on the
 device and what has been tested there. The work branch is `evergreen`. Pieces of 0.9.18 come in by cherry-pick, only
@@ -275,7 +275,7 @@ flash or code.
 
 ## 5. Work order
 
-1. **Build setup** (~30 min):
+1. **Build setup** (~30 min). **Done 2026-10-27**, see §0:
    - start Docker (BUILDING.md: the JieLi toolchain is Linux x86-64 and runs in a container);
    - `tools/get_toolchain.sh`;
    - clone the AC79 SDK (BUILDING.md).
