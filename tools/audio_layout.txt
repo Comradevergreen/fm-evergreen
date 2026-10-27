@@ -836,7 +836,6 @@
 02ad3a - len_turn
 02ae16 - grid_hit_of
 02ae3a - grid_own
-02ae8c - grid_hit
 02af18 - grid_acc
 02afa4 - list_get
 02afca - preset_all_at

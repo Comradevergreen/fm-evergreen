@@ -659,17 +659,17 @@ static int lock_ui(void)
     bad += check("a key pressed on a hit and held for a lock: the hit stays", (t->step[0].hit & 1u) &&
         motion_lock_get(t, 0, P_E1, &v));
     tap_key(k0);
-    bad += check("  tapped alone: the hit goes (when let go), its lock stays", !(t->step[0].hit & 1u) &&
-        motion_lock_count(t) == 2u);
+    bad += check("  tapped alone: the hit goes (when let go), its lock with it (Evergreen: an empty step, no locks)",
+        !(t->step[0].hit & 1u) && !motion_lock_get(t, 0, P_E1, &v) && motion_lock_count(t) == 1u);
     fm1_in.notes |= 1u << k0 | 1u << k4; host_notes |= 1u << k0 | 1u << k4; frame();
     turn(EN_K4, 1);
     fm1_in.notes = 0; frame();
     bad += check("two step keys held: both get the lock", motion_lock_get(t, 0, P_E3, &v) && motion_lock_get(t, 4, P_E3, &v) &&
-        motion_lock_count(t) == 4u);
+        (t->step[0].hit & 1u) && motion_lock_count(t) == 3u);
     lk_down(k4);
     press(B_EDIT);
     lk_up(k4);
-    bad += check("a step held + [EDIT]: its locks go, the step and the others' locks stay", motion_lock_count(t) == 2u &&
+    bad += check("a step held + [EDIT]: its locks go, the step and the others' locks stay", motion_lock_count(t) == 1u &&
         !motion_lock_get(t, 4, P_E0, &v) && motion_lock_get(t, 0, P_E3, &v) && (t->step[4].hit & 1u) &&
         str_eq(ui.msg, "LOCKS CLEARED"));
     bad += check("the steps with a lock (the grid marks them): step 1", motion_lock_steps(3) == 1u);
@@ -681,7 +681,7 @@ static int lock_ui(void)
     bad += check("  step 5 gets a REV lock", motion_lock_get(t, 4, P_REV, &v) && v == t->p[P_REV] + 5);
     go_page(GR_MOTION);
     frame();
-    bad += check("AUTOMATION: EVENT 0, LOCK 3", motion_count(t) - motion_lock_count(t) == 0u && motion_lock_count(t) == 3u);
+    bad += check("AUTOMATION: EVENT 0, LOCK 2", motion_count(t) - motion_lock_count(t) == 0u && motion_lock_count(t) == 2u);
     /* the roll: the step being entered is the one held */
     ui_power_on();
     t = &trk[0];
@@ -713,6 +713,31 @@ static int lock_ui(void)
     lk_down(kn); turn(EN_K3, 1); lk_up(kn);
     bad += check("  a song playing: STOP TO EDIT, no lock", !motion_lock_count(t));
     song.playing = 0; chain.running = 0; song.rec = 0;
+    return bad;
+}
+/* (Evergreen) a drum step emptied on the grid loses its locks: hit again, it starts without them */
+static int lock_drum_empty(void)
+{
+    int bad = 0, ok;
+    int16_t v, e1;
+    track_t *t;
+    ui_power_on();
+    song.sel = 3;                                        /* track 4: DRUM, the grid */
+    t = &trk[3];
+    track_defaults_steps(t);
+    t->p[P_SLEN] = 16;
+    e1 = (int16_t)(motion_base_value(t, P_E0) + 5);
+    grid_hit(t, 2, 0, 1);                                /* step 3: lane 1; step 6: lanes 1 and 2 */
+    grid_hit(t, 5, 0, 1); grid_hit(t, 5, 1, 1);
+    ok = !motion_set_lock(t, 2, P_E0, e1) && !motion_set_lock(t, 5, P_E0, e1) && motion_lock_count(t) == 2u;
+    grid_hit(t, 2, 0, 0);
+    bad += check("a drum step's last hit off: its locks go", ok && !t->step[2].hit && !motion_lock_get(t, 2, P_E0, &v));
+    grid_hit(t, 2, 0, 1);
+    bad += check("  hit again: it comes back without them", (t->step[2].hit & 1u) && !motion_lock_get(t, 2, P_E0, &v));
+    grid_hit(t, 5, 0, 0);
+    bad += check("one hit of two off: the step and its locks stay", (t->step[5].hit & 2u) && motion_lock_get(t, 5, P_E0, &v));
+    grid_hit(t, 5, 1, 0);
+    bad += check("  the other one off too: its locks go", !t->step[5].hit && !motion_lock_count(t));
     return bad;
 }
 /* lock edits by hand (TONIC: no undo; SAVE held does nothing to them) */
@@ -876,6 +901,6 @@ int main(void)
 {
     int bad = motion_recording() + motion_capacity() + probability_playback() + compact_project() + fun7_89() + loads_and_song() + repeat_mode();
     bad += arp_new_modes() + seq_shift() + song_scenes();
-    bad += lock_playback() + lock_edit() + lock_project() + lock_ui() + lock_undo() + auto_list();
+    bad += lock_playback() + lock_edit() + lock_project() + lock_ui() + lock_drum_empty() + lock_undo() + auto_list();
     printf("%s\n", bad ? "MOTION TEST FAILED" : "motion/chance/compact storage tests passed"); return bad != 0;
 }

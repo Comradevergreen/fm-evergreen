@@ -1106,8 +1106,10 @@ static void grid_hit(track_t *t, uint32_t i, uint32_t l, uint32_t on)
         s->hit &= (uint8_t)~b;
         s->acc &= (uint8_t)~b;
         step_set_lmode(s, l % NLANE, LM_NONE);         /* (0.8.5) its mode goes with it */
-        if (!s->n && !s->hit)
-            step_clear(s);
+        if (!s->n && !s->hit) {                        /* (Evergreen) an empty step, its locks too: hit again, it */
+            step_clear(s);                              /* starts without them (as a REST, SEQ + G5, the tools) */
+            (void)motion_clear_locks(t, i % NSTEP);
+        }
     }
 }
 /* (0.8.5) the grid's HIT of lane l at step i as one list: --, ON, then its modes x2 x4 x8 SHORT GHOST FLAM (0..7) */
